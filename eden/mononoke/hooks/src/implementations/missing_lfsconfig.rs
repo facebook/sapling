@@ -20,7 +20,7 @@ use crate::ChangesetHook;
 use crate::CrossRepoPushSource;
 use crate::HookExecution;
 use crate::HookRejectionInfo;
-use crate::HookStateProvider;
+use crate::HookRepo;
 use crate::PathContent;
 use crate::PushAuthoredBy;
 
@@ -35,18 +35,18 @@ impl MissingLFSConfigHook {
 
 #[async_trait]
 impl ChangesetHook for MissingLFSConfigHook {
-    async fn run<'this: 'cs, 'ctx: 'this, 'cs, 'fetcher: 'cs>(
+    async fn run<'this: 'cs, 'ctx: 'this, 'cs, 'repo: 'cs>(
         &'this self,
         ctx: &'ctx CoreContext,
+        hook_repo: &'repo HookRepo,
         _bookmark: &BookmarkKey,
         changeset: &'cs BonsaiChangeset,
-        content_manager: &'fetcher dyn HookStateProvider,
         _cross_repo_push_source: CrossRepoPushSource,
         _push_authored_by: PushAuthoredBy,
     ) -> Result<HookExecution, Error> {
         let lfsconfig_path: NonRootMPath = MPathElement::new_from_slice(b".lfsconfig")?.into();
 
-        let lfsconfig_file: HashMap<NonRootMPath, PathContent> = content_manager
+        let lfsconfig_file: HashMap<NonRootMPath, PathContent> = hook_repo
             .find_content_by_changeset_id(
                 ctx,
                 changeset.get_changeset_id(),

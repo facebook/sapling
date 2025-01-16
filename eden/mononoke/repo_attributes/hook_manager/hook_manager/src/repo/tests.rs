@@ -18,15 +18,6 @@ use bytes::Bytes;
 use context::CoreContext;
 use fbinit::FacebookInit;
 use futures::TryFutureExt;
-use hook_manager::ChangesetHook;
-use hook_manager::CrossRepoPushSource;
-use hook_manager::FileChangeType;
-use hook_manager::HookExecution;
-use hook_manager::HookManager;
-use hook_manager::HookRejectionInfo;
-use hook_manager::HookStateProvider;
-use hook_manager::PathContent;
-use hook_manager::PushAuthoredBy;
 use maplit::hashmap;
 use metaconfig_types::HookManagerParams;
 use mononoke_macros::mononoke;
@@ -51,7 +42,15 @@ use tests_utils::bookmark;
 use tests_utils::BasicTestRepo;
 use tests_utils::CreateCommitContext;
 
-use crate::RepoHookStateProvider;
+use crate::ChangesetHook;
+use crate::CrossRepoPushSource;
+use crate::FileChangeType;
+use crate::HookExecution;
+use crate::HookManager;
+use crate::HookRejectionInfo;
+use crate::HookRepo;
+use crate::PathContent;
+use crate::PushAuthoredBy;
 
 #[derive(Clone)]
 struct FindFilesChangesetHook {
@@ -60,17 +59,17 @@ struct FindFilesChangesetHook {
 
 #[async_trait]
 impl ChangesetHook for FindFilesChangesetHook {
-    async fn run<'this: 'cs, 'ctx: 'this, 'cs, 'fetcher: 'cs>(
+    async fn run<'this: 'cs, 'ctx: 'this, 'cs, 'repo: 'cs>(
         &'this self,
         ctx: &'ctx CoreContext,
+        repo: &'repo HookRepo,
         _bookmark: &BookmarkKey,
         _changeset: &'cs BonsaiChangeset,
-        content_manager: &'fetcher dyn HookStateProvider,
         _cross_repo_push_source: CrossRepoPushSource,
         _push_authored_by: PushAuthoredBy,
     ) -> Result<HookExecution, Error> {
         let path = to_mpath(self.filename.as_str());
-        let res = content_manager
+        let res = repo
             .find_content(ctx, BookmarkKey::new("master")?, vec![path.clone()])
             .await;
 
@@ -85,7 +84,7 @@ impl ChangesetHook for FindFilesChangesetHook {
                         "no master bookmark found",
                     )));
                 }
-                Err(Error::from(err))
+                Err(err)
             }
         }
     }
@@ -100,18 +99,18 @@ struct FileChangesChangesetHook {
 
 #[async_trait]
 impl ChangesetHook for FileChangesChangesetHook {
-    async fn run<'this: 'cs, 'ctx: 'this, 'cs, 'fetcher: 'cs>(
+    async fn run<'this: 'cs, 'ctx: 'this, 'cs, 'repo: 'cs>(
         &'this self,
         ctx: &'ctx CoreContext,
+        repo: &'repo HookRepo,
         _bookmark: &BookmarkKey,
         changeset: &'cs BonsaiChangeset,
-        content_manager: &'fetcher dyn HookStateProvider,
         _cross_repo_push_source: CrossRepoPushSource,
         _push_authored_by: PushAuthoredBy,
     ) -> Result<HookExecution, Error> {
         let parent = changeset.parents().next();
         let (added, changed, removed) = if let Some(parent) = parent {
-            let file_changes = content_manager
+            let file_changes = repo
                 .file_changes(ctx, changeset.get_changeset_id(), parent)
                 .await?;
 
@@ -143,17 +142,17 @@ struct LatestChangesChangesetHook(HashMap<NonRootMPath, Option<ChangesetId>>);
 
 #[async_trait]
 impl ChangesetHook for LatestChangesChangesetHook {
-    async fn run<'this: 'cs, 'ctx: 'this, 'cs, 'fetcher: 'cs>(
+    async fn run<'this: 'cs, 'ctx: 'this, 'cs, 'repo: 'cs>(
         &'this self,
         ctx: &'ctx CoreContext,
+        repo: &'repo HookRepo,
         _bookmark: &BookmarkKey,
         _changeset: &'cs BonsaiChangeset,
-        content_manager: &'fetcher dyn HookStateProvider,
         _cross_repo_push_source: CrossRepoPushSource,
         _push_authored_by: PushAuthoredBy,
     ) -> Result<HookExecution, Error> {
         let paths = self.0.keys().cloned().collect();
-        let res = content_manager
+        let res = repo
             .latest_changes(ctx, BookmarkKey::new("master")?, paths)
             .map_err(Error::from)
             .await?;
@@ -423,11 +422,11 @@ fn default_changeset() -> BonsaiChangeset {
 async fn hook_manager_repo(fb: FacebookInit, repo: &BasicTestRepo) -> HookManager {
     let ctx = CoreContext::test_mock(fb);
 
-    let content_manager = RepoHookStateProvider::new(repo);
+    let repo = HookRepo::build_from(repo);
     HookManager::new(
         ctx.fb,
         &InternalAclProvider::default(),
-        Box::new(content_manager),
+        repo,
         HookManagerParams {
             disable_acl_checker: true,
             ..Default::default()
@@ -447,7 +446,12 @@ fn to_mpath(string: &str) -> NonRootMPath {
 #[mononoke::fbinit_test]
 async fn test_hook_file_content_provider_limit_file_size(fb: FacebookInit) -> Result<(), Error> {
     let ctx = CoreContext::test_mock(fb);
-    let repo: BasicTestRepo = test_repo_factory::build_empty(ctx.fb).await?;
+    let repo: BasicTestRepo = test_repo_factory::TestRepoFactory::new(fb)?
+        .with_config_override(|config| {
+            config.hook_max_file_size = 10;
+        })
+        .build()
+        .await?;
     let root_id = CreateCommitContext::new_root(&ctx, &repo)
         .add_file("small", "small")
         .add_file("large", "this-file-is-very-very-long")
@@ -466,15 +470,11 @@ async fn test_hook_file_content_provider_limit_file_size(fb: FacebookInit) -> Re
         .unwrap()
         .content_id()
         .unwrap();
-    let mut hook_state_provider = RepoHookStateProvider::new(&repo);
-    hook_state_provider.max_file_size = 10;
+    let hook_repo = HookRepo::build_from(&repo);
     assert_eq!(
-        hook_state_provider.get_file_text(&ctx, small_id).await?,
+        hook_repo.get_file_text(&ctx, small_id).await?,
         Some(Bytes::from_static(b"small")),
     );
-    assert_eq!(
-        hook_state_provider.get_file_text(&ctx, large_id).await?,
-        None,
-    );
+    assert_eq!(hook_repo.get_file_text(&ctx, large_id).await?, None,);
     Ok(())
 }

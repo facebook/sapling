@@ -28,7 +28,7 @@ use crate::CrossRepoPushSource;
 use crate::HookConfig;
 use crate::HookExecution;
 use crate::HookRejectionInfo;
-use crate::HookStateProvider;
+use crate::HookRepo;
 use crate::PushAuthoredBy;
 
 const NAMED_CAPTURE_NAME: &str = "marker_capture";
@@ -102,16 +102,16 @@ fn extract_value_from_marker<'a>(
 
 #[async_trait]
 impl BookmarkHook for BlockAccidentalNewBookmarkCreationHook {
-    async fn run<'this: 'cs, 'ctx: 'this, 'cs, 'fetcher: 'cs>(
+    async fn run<'this: 'cs, 'ctx: 'this, 'cs, 'repo: 'cs>(
         &'this self,
         ctx: &'ctx CoreContext,
+        hook_repo: &'repo HookRepo,
         bookmark: &BookmarkKey,
         to: &'cs BonsaiChangeset,
-        content_manager: &'fetcher dyn HookStateProvider,
         _cross_repo_push_source: CrossRepoPushSource,
         _push_authored_by: PushAuthoredBy,
     ) -> Result<HookExecution, Error> {
-        let bookmark_state = content_manager.get_bookmark_state(ctx, bookmark).await?;
+        let bookmark_state = hook_repo.get_bookmark_state(ctx, bookmark).await?;
         if !bookmark_state.is_new() {
             return Ok(HookExecution::Accepted);
         }

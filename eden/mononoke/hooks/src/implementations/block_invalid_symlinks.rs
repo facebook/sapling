@@ -19,7 +19,7 @@ use crate::FileHook;
 use crate::HookConfig;
 use crate::HookExecution;
 use crate::HookRejectionInfo;
-use crate::HookStateProvider;
+use crate::HookRepo;
 use crate::PushAuthoredBy;
 
 const DEFAULT_MAX_SYMLINK_SIZE: u64 = 1024;
@@ -65,10 +65,10 @@ impl BlockInvalidSymlinksHook {
 
 #[async_trait]
 impl FileHook for BlockInvalidSymlinksHook {
-    async fn run<'this: 'change, 'ctx: 'this, 'change, 'fetcher: 'change, 'path: 'change>(
+    async fn run<'this: 'change, 'ctx: 'this, 'change, 'repo: 'change, 'path: 'change>(
         &'this self,
         ctx: &'ctx CoreContext,
-        content_manager: &'fetcher dyn HookStateProvider,
+        hook_repo: &'repo HookRepo,
         change: Option<&'change BasicFileChange>,
         path: &'path NonRootMPath,
         _cross_repo_push_source: CrossRepoPushSource,
@@ -107,10 +107,7 @@ impl FileHook for BlockInvalidSymlinksHook {
                     )));
                 }
 
-                if let Some(text) = content_manager
-                    .get_file_bytes(ctx, change.content_id())
-                    .await?
-                {
+                if let Some(text) = hook_repo.get_file_bytes(ctx, change.content_id()).await? {
                     if !self.config.allow_newlines && text.contains(&b'\n') {
                         return Ok(HookExecution::Rejected(HookRejectionInfo::new_long(
                             "symlink contains newline",

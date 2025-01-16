@@ -46,8 +46,7 @@ use crate::FileHook;
 use crate::HookExecution;
 use crate::HookManager;
 use crate::HookRejectionInfo;
-use crate::HookStateProvider;
-use crate::InMemoryHookStateProvider;
+use crate::HookRepo;
 use crate::PushAuthoredBy;
 
 #[derive(Clone, Debug)]
@@ -63,12 +62,12 @@ impl FnChangesetHook {
 
 #[async_trait]
 impl ChangesetHook for FnChangesetHook {
-    async fn run<'this: 'cs, 'ctx: 'this, 'cs, 'fetcher: 'cs>(
+    async fn run<'this: 'cs, 'ctx: 'this, 'cs, 'repo: 'cs>(
         &'this self,
         _ctx: &'ctx CoreContext,
+        _repo: &'repo HookRepo,
         _bookmark: &BookmarkKey,
         _changeset: &'cs BonsaiChangeset,
-        _content_manager: &'fetcher dyn HookStateProvider,
         _cross_repo_push_source: CrossRepoPushSource,
         _push_authored_by: PushAuthoredBy,
     ) -> Result<HookExecution, Error> {
@@ -93,12 +92,12 @@ struct ContentIdMatchingChangesetHook {
 
 #[async_trait]
 impl ChangesetHook for ContentIdMatchingChangesetHook {
-    async fn run<'this: 'cs, 'ctx: 'this, 'cs, 'fetcher: 'cs>(
+    async fn run<'this: 'cs, 'ctx: 'this, 'cs, 'repo: 'cs>(
         &'this self,
         _ctx: &'ctx CoreContext,
+        _repo: &'repo HookRepo,
         _bookmark: &BookmarkKey,
         changeset: &'cs BonsaiChangeset,
-        _content_manager: &'fetcher dyn HookStateProvider,
         _cross_repo_push_source: CrossRepoPushSource,
         _push_authored_by: PushAuthoredBy,
     ) -> Result<HookExecution, Error> {
@@ -139,10 +138,10 @@ impl FnFileHook {
 
 #[async_trait]
 impl FileHook for FnFileHook {
-    async fn run<'this: 'change, 'ctx: 'this, 'change, 'fetcher: 'change, 'path: 'change>(
+    async fn run<'this: 'change, 'ctx: 'this, 'change, 'repo: 'change, 'path: 'change>(
         &'this self,
         _ctx: &'ctx CoreContext,
-        _content_manager: &'fetcher dyn HookStateProvider,
+        _repo: &'repo HookRepo,
         _change: Option<&'change BasicFileChange>,
         _path: &'path NonRootMPath,
         _cross_repo_push_source: CrossRepoPushSource,
@@ -169,10 +168,10 @@ struct PathMatchingFileHook {
 
 #[async_trait]
 impl FileHook for PathMatchingFileHook {
-    async fn run<'this: 'change, 'ctx: 'this, 'change, 'fetcher: 'change, 'path: 'change>(
+    async fn run<'this: 'change, 'ctx: 'this, 'change, 'repo: 'change, 'path: 'change>(
         &'this self,
         _ctx: &'ctx CoreContext,
-        _content_manager: &'fetcher dyn HookStateProvider,
+        _repo: &'repo HookRepo,
         _change: Option<&'change BasicFileChange>,
         path: &'path NonRootMPath,
         _cross_repo_push_source: CrossRepoPushSource,
@@ -197,10 +196,10 @@ struct ContentIdMatchingFileHook {
 
 #[async_trait]
 impl FileHook for ContentIdMatchingFileHook {
-    async fn run<'this: 'change, 'ctx: 'this, 'change, 'fetcher: 'change, 'path: 'change>(
+    async fn run<'this: 'change, 'ctx: 'this, 'change, 'repo: 'change, 'path: 'change>(
         &'this self,
         _ctx: &'ctx CoreContext,
-        _content_manager: &'fetcher dyn HookStateProvider,
+        _repo: &'repo HookRepo,
         change: Option<&'change BasicFileChange>,
         _path: &'path NonRootMPath,
         _cross_repo_push_source: CrossRepoPushSource,
@@ -227,10 +226,10 @@ struct IsSymLinkMatchingFileHook {
 
 #[async_trait]
 impl FileHook for IsSymLinkMatchingFileHook {
-    async fn run<'this: 'change, 'ctx: 'this, 'change, 'fetcher: 'change, 'path: 'change>(
+    async fn run<'this: 'change, 'ctx: 'this, 'change, 'repo: 'change, 'path: 'change>(
         &'this self,
         _ctx: &'ctx CoreContext,
-        _content_manager: &'fetcher dyn HookStateProvider,
+        _repo: &'repo HookRepo,
         change: Option<&'change BasicFileChange>,
         _path: &'path NonRootMPath,
         _cross_repo_push_source: CrossRepoPushSource,
@@ -252,18 +251,20 @@ fn is_symlink_matching_file_hook(is_symlink: bool) -> Box<dyn FileHook> {
     Box::new(IsSymLinkMatchingFileHook { is_symlink })
 }
 
-async fn hook_manager_inmem(fb: FacebookInit) -> HookManager {
+async fn setup_hook_manager(
+    fb: FacebookInit,
+    bookmarks: HashMap<String, Vec<String>>,
+    regexes: HashMap<String, Vec<String>>,
+) -> HookManager {
     let ctx = CoreContext::test_mock(fb);
+    let repo = test_repo_factory::build_empty(ctx.fb)
+        .await
+        .expect("Failed to construct repo");
 
-    let mut content_manager = InMemoryHookStateProvider::new();
-    content_manager.insert(ONES_CTID, "elephants");
-    content_manager.insert(TWOS_CTID, "hippopatami");
-    content_manager.insert(THREES_CTID, "eels");
-
-    HookManager::new(
+    let mut hook_manager = HookManager::new(
         ctx.fb,
         &InternalAclProvider::default(),
-        Box::new(content_manager),
+        repo,
         HookManagerParams {
             disable_acl_checker: true,
             ..Default::default()
@@ -273,15 +274,8 @@ async fn hook_manager_inmem(fb: FacebookInit) -> HookManager {
         "zoo".to_string(),
     )
     .await
-    .expect("Failed to construct HookManager")
-}
+    .expect("Failed to construct HookManager");
 
-async fn setup_hook_manager(
-    fb: FacebookInit,
-    bookmarks: HashMap<String, Vec<String>>,
-    regexes: HashMap<String, Vec<String>>,
-) -> HookManager {
-    let mut hook_manager = hook_manager_inmem(fb).await;
     for (bookmark_name, hook_names) in bookmarks {
         hook_manager
             .set_hooks_for_bookmark(BookmarkKey::new(bookmark_name).unwrap().into(), hook_names);

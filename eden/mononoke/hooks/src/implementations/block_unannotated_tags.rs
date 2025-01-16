@@ -10,14 +10,14 @@ use anyhow::Result;
 use async_trait::async_trait;
 use bookmarks::BookmarkKey;
 use context::CoreContext;
-use hook_manager::provider::TagType;
+use hook_manager::TagType;
 use mononoke_types::BonsaiChangeset;
 
 use crate::BookmarkHook;
 use crate::CrossRepoPushSource;
 use crate::HookExecution;
 use crate::HookRejectionInfo;
-use crate::HookStateProvider;
+use crate::HookRepo;
 use crate::PushAuthoredBy;
 
 #[derive(Clone, Debug)]
@@ -31,12 +31,12 @@ impl BlockUnannotatedTagsHook {
 
 #[async_trait]
 impl BookmarkHook for BlockUnannotatedTagsHook {
-    async fn run<'this: 'cs, 'ctx: 'this, 'cs, 'fetcher: 'cs>(
+    async fn run<'this: 'cs, 'ctx: 'this, 'cs, 'repo: 'cs>(
         &'this self,
         ctx: &'ctx CoreContext,
+        hook_repo: &'repo HookRepo,
         bookmark: &BookmarkKey,
         _to: &'cs BonsaiChangeset,
-        content_manager: &'fetcher dyn HookStateProvider,
         _cross_repo_push_source: CrossRepoPushSource,
         _push_authored_by: PushAuthoredBy,
     ) -> Result<HookExecution, Error> {
@@ -44,7 +44,7 @@ impl BookmarkHook for BlockUnannotatedTagsHook {
             return Ok(HookExecution::Accepted);
         }
 
-        if let TagType::LightweightTag = content_manager.get_tag_type(ctx, bookmark).await? {
+        if let TagType::LightweightTag = hook_repo.get_tag_type(ctx, bookmark).await? {
             return Ok(HookExecution::Rejected(HookRejectionInfo::new_long(
                 "Git unannotated tags are not allowed in this repository.",
                 format!(

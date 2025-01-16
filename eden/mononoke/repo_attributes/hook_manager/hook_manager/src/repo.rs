@@ -10,38 +10,29 @@ mod tests;
 
 use std::collections::HashMap;
 
-use anyhow::format_err;
-use anyhow::Context as _;
-use async_trait::async_trait;
+use anyhow::anyhow;
+use anyhow::Context;
+use anyhow::Result;
 use blobstore::Loadable;
-use bonsai_git_mapping::ArcBonsaiGitMapping;
-use bonsai_git_mapping::BonsaiGitMappingArc;
-use bonsai_tag_mapping::ArcBonsaiTagMapping;
-use bonsai_tag_mapping::BonsaiTagMappingArc;
+use bonsai_git_mapping::BonsaiGitMapping;
+use bonsai_tag_mapping::BonsaiTagMapping;
 use bonsai_tag_mapping::Freshness;
-use bookmarks::ArcBookmarks;
 use bookmarks::BookmarkCategory;
 use bookmarks::BookmarkKey;
 use bookmarks::BookmarkKind;
 use bookmarks::BookmarkPagination;
 use bookmarks::BookmarkPrefix;
-use bookmarks::BookmarksArc;
+use bookmarks::Bookmarks;
 use bytes::Bytes;
 use changeset_info::ChangesetInfo;
 use context::CoreContext;
 use fsnodes::RootFsnodeId;
 use futures::future;
 use futures::stream::TryStreamExt;
-use futures_util::future::TryFutureExt;
-use hook_manager::provider::BookmarkState;
-use hook_manager::provider::TagType;
-use hook_manager::FileChangeType;
-use hook_manager::HookStateProvider;
-use hook_manager::HookStateProviderError;
-use hook_manager::PathContent;
 use manifest::Diff;
 use manifest::Entry;
 use manifest::ManifestOps;
+use metaconfig_types::RepoConfig;
 use mononoke_types::hash::GitSha1;
 use mononoke_types::ChangesetId;
 use mononoke_types::ContentId;
@@ -50,42 +41,59 @@ use mononoke_types::FsnodeId;
 use mononoke_types::MPath;
 use mononoke_types::ManifestUnodeId;
 use mononoke_types::NonRootMPath;
-use repo_blobstore::ArcRepoBlobstore;
-use repo_blobstore::RepoBlobstoreArc;
-use repo_derived_data::ArcRepoDerivedData;
+use repo_blobstore::RepoBlobstore;
 use repo_derived_data::RepoDerivedData;
-use repo_derived_data::RepoDerivedDataArc;
+use repo_identity::RepoIdentity;
 use skeleton_manifest::RootSkeletonManifestId;
 use unodes::RootUnodeManifestId;
 
-pub struct RepoHookStateProvider {
-    repo_blobstore: ArcRepoBlobstore,
-    bookmarks: ArcBookmarks,
-    repo_derived_data: ArcRepoDerivedData,
-    bonsai_tag_mapping: ArcBonsaiTagMapping,
-    bonsai_git_mapping: ArcBonsaiGitMapping,
-    max_file_size: u64,
+use crate::BookmarkState;
+use crate::FileChangeType;
+use crate::PathContent;
+use crate::TagType;
+
+/// Repo available to hooks.
+#[facet::container]
+#[derive(Clone)]
+pub struct HookRepo {
+    #[facet]
+    pub repo_identity: RepoIdentity,
+
+    #[facet]
+    pub repo_config: RepoConfig,
+
+    #[facet]
+    pub repo_blobstore: RepoBlobstore,
+
+    #[facet]
+    pub bookmarks: dyn Bookmarks,
+
+    #[facet]
+    pub repo_derived_data: RepoDerivedData,
+
+    #[facet]
+    pub bonsai_git_mapping: dyn BonsaiGitMapping,
+
+    #[facet]
+    pub bonsai_tag_mapping: dyn BonsaiTagMapping,
 }
 
-#[async_trait]
-impl HookStateProvider for RepoHookStateProvider {
-    async fn get_file_metadata<'a>(
+impl HookRepo {
+    pub async fn get_file_metadata<'a>(
         &'a self,
         ctx: &'a CoreContext,
         id: ContentId,
-    ) -> Result<ContentMetadataV2, HookStateProviderError> {
-        Ok(
-            filestore::get_metadata(&self.repo_blobstore, ctx, &id.into())
-                .await?
-                .ok_or(HookStateProviderError::ContentIdNotFound(id))?,
-        )
+    ) -> Result<ContentMetadataV2> {
+        filestore::get_metadata(&self.repo_blobstore, ctx, &id.into())
+            .await?
+            .ok_or_else(|| anyhow!("Content with id '{id}' not found"))
     }
 
-    async fn get_file_text<'a>(
+    pub async fn get_file_text<'a>(
         &'a self,
         ctx: &'a CoreContext,
         id: ContentId,
-    ) -> Result<Option<Bytes>, HookStateProviderError> {
+    ) -> Result<Option<Bytes>> {
         let file_bytes = self.get_file_bytes(ctx, id).await?;
 
         // Filter out files with null bytes
@@ -94,47 +102,47 @@ impl HookStateProvider for RepoHookStateProvider {
         Ok(file_bytes)
     }
 
-    async fn get_file_bytes<'a>(
+    pub async fn get_file_bytes<'a>(
         &'a self,
         ctx: &'a CoreContext,
         id: ContentId,
-    ) -> Result<Option<Bytes>, HookStateProviderError> {
+    ) -> Result<Option<Bytes>> {
         // Don't fetch content if we know the object is too large
         let size = self.get_file_metadata(ctx, id).await?.total_size;
-        if size > self.max_file_size {
+        if size > self.repo_config.hook_max_file_size {
             return Ok(None);
         }
 
         let file_bytes = filestore::fetch_concat_opt(&self.repo_blobstore, ctx, &id.into())
             .await?
-            .ok_or(HookStateProviderError::ContentIdNotFound(id))?;
+            .ok_or_else(|| anyhow!("Content with id '{id}' not found"))?;
 
         Ok(Some(file_bytes))
     }
 
-    async fn find_content<'a>(
+    pub async fn find_content<'a>(
         &'a self,
         ctx: &'a CoreContext,
         bookmark: BookmarkKey,
         paths: Vec<NonRootMPath>,
-    ) -> Result<HashMap<NonRootMPath, PathContent>, HookStateProviderError> {
+    ) -> Result<HashMap<NonRootMPath, PathContent>> {
         let changeset_id = self
             .bookmarks
             .get(ctx.clone(), &bookmark)
             .await
             .with_context(|| format!("Error fetching bookmark: {}", bookmark))?
-            .ok_or_else(|| format_err!("Bookmark {} does not exist", bookmark))?;
+            .ok_or_else(|| anyhow!("Bookmark {} does not exist", bookmark))?;
 
         self.find_content_by_changeset_id(ctx, changeset_id, paths)
             .await
     }
 
-    async fn find_content_by_changeset_id<'a>(
+    pub async fn find_content_by_changeset_id<'a>(
         &'a self,
         ctx: &'a CoreContext,
         changeset_id: ChangesetId,
         paths: Vec<NonRootMPath>,
-    ) -> Result<HashMap<NonRootMPath, PathContent>, HookStateProviderError> {
+    ) -> Result<HashMap<NonRootMPath, PathContent>> {
         let fsnode_id = derive_fsnode(ctx, &self.repo_derived_data, changeset_id).await?;
 
         fsnode_id
@@ -155,16 +163,15 @@ impl HookStateProvider for RepoHookStateProvider {
             .try_buffer_unordered(100)
             .try_filter_map(future::ok)
             .try_collect::<HashMap<_, _>>()
-            .map_err(HookStateProviderError::from)
             .await
     }
 
-    async fn file_changes<'a>(
+    pub async fn file_changes<'a>(
         &'a self,
         ctx: &'a CoreContext,
         new_cs_id: ChangesetId,
         old_cs_id: ChangesetId,
-    ) -> Result<Vec<(NonRootMPath, FileChangeType)>, HookStateProviderError> {
+    ) -> Result<Vec<(NonRootMPath, FileChangeType)>> {
         let new_mf_fut = derive_fsnode(ctx, &self.repo_derived_data, new_cs_id);
         let old_mf_fut = derive_fsnode(ctx, &self.repo_derived_data, old_cs_id);
 
@@ -172,7 +179,6 @@ impl HookStateProvider for RepoHookStateProvider {
 
         old_mf
             .diff(ctx.clone(), self.repo_blobstore.clone(), new_mf)
-            .map_err(HookStateProviderError::from)
             .map_ok(move |diff| async move {
                 match diff {
                     Diff::Added(path, entry) => match Option::<NonRootMPath>::from(path) {
@@ -215,18 +221,18 @@ impl HookStateProvider for RepoHookStateProvider {
             .await
     }
 
-    async fn latest_changes<'a>(
+    pub async fn latest_changes<'a>(
         &'a self,
         ctx: &'a CoreContext,
         bookmark: BookmarkKey,
         paths: Vec<NonRootMPath>,
-    ) -> Result<HashMap<NonRootMPath, ChangesetInfo>, HookStateProviderError> {
+    ) -> Result<HashMap<NonRootMPath, ChangesetInfo>> {
         let changeset_id = self
             .bookmarks
             .get(ctx.clone(), &bookmark)
             .await
             .with_context(|| format!("Error fetching bookmark: {}", bookmark))?
-            .ok_or_else(|| format_err!("Bookmark {} does not exist", bookmark))?;
+            .ok_or_else(|| anyhow!("Bookmark {} does not exist", bookmark))?;
 
         let master_mf = derive_unode_manifest(ctx, &self.repo_derived_data, changeset_id).await?;
         master_mf
@@ -260,16 +266,15 @@ impl HookStateProvider for RepoHookStateProvider {
             .try_buffer_unordered(100)
             .try_filter_map(future::ok)
             .try_collect::<HashMap<_, _>>()
-            .map_err(HookStateProviderError::from)
             .await
     }
 
-    async fn directory_sizes<'a>(
+    pub async fn directory_sizes<'a>(
         &'a self,
         ctx: &'a CoreContext,
         changeset_id: ChangesetId,
         paths: Vec<MPath>,
-    ) -> Result<HashMap<MPath, u64>, HookStateProviderError> {
+    ) -> Result<HashMap<MPath, u64>> {
         let sk_mf = self
             .repo_derived_data
             .derive::<RootSkeletonManifestId>(ctx, changeset_id)
@@ -294,14 +299,13 @@ impl HookStateProvider for RepoHookStateProvider {
             })
             .try_collect()
             .await
-            .map_err(HookStateProviderError::from)
     }
 
-    async fn get_bookmark_state<'a, 'b>(
+    pub async fn get_bookmark_state<'a, 'b>(
         &'a self,
         ctx: &'a CoreContext,
         bookmark: &'b BookmarkKey,
-    ) -> Result<BookmarkState, HookStateProviderError> {
+    ) -> Result<BookmarkState> {
         let maybe_bookmark_val = self
             .bookmarks
             .get(ctx.clone(), bookmark)
@@ -314,11 +318,11 @@ impl HookStateProvider for RepoHookStateProvider {
         }
     }
 
-    async fn bookmark_exists_with_prefix<'a, 'b>(
+    pub async fn bookmark_exists_with_prefix<'a, 'b>(
         &'a self,
         ctx: CoreContext,
         prefix: &'b BookmarkPrefix,
-    ) -> Result<bool, HookStateProviderError> {
+    ) -> Result<bool> {
         let bookmark_with_prefix_count = self
             .bookmarks
             .list(
@@ -338,11 +342,11 @@ impl HookStateProvider for RepoHookStateProvider {
         Ok(bookmark_with_prefix_count > 0)
     }
 
-    async fn get_tag_type<'a, 'b>(
+    pub async fn get_tag_type<'a, 'b>(
         &'a self,
         _ctx: &'a CoreContext,
         bookmark: &'b BookmarkKey,
-    ) -> Result<TagType, HookStateProviderError> {
+    ) -> Result<TagType> {
         if !bookmark.is_tag() {
             return Ok(TagType::NotATag);
         }
@@ -356,11 +360,11 @@ impl HookStateProvider for RepoHookStateProvider {
         }
     }
 
-    async fn get_git_commit<'a>(
+    pub async fn get_git_commit<'a>(
         &'a self,
         ctx: &'a CoreContext,
         bonsai_commit_id: ChangesetId,
-    ) -> Result<Option<GitSha1>, HookStateProviderError> {
+    ) -> Result<Option<GitSha1>> {
         let maybe_git_sha1 = self
             .bonsai_git_mapping
             .get_git_sha1_from_bonsai(ctx, bonsai_commit_id)
@@ -369,57 +373,11 @@ impl HookStateProvider for RepoHookStateProvider {
     }
 }
 
-impl RepoHookStateProvider {
-    pub fn new(
-        repo: &(
-             impl RepoBlobstoreArc
-             + BookmarksArc
-             + RepoDerivedDataArc
-             + BonsaiTagMappingArc
-             + BonsaiGitMappingArc
-         ),
-    ) -> RepoHookStateProvider {
-        let repo_blobstore = repo.repo_blobstore_arc();
-        let bookmarks = repo.bookmarks_arc();
-        let repo_derived_data = repo.repo_derived_data_arc();
-        let bonsai_tag_mapping = repo.bonsai_tag_mapping_arc();
-        let bonsai_git_mapping = repo.bonsai_git_mapping_arc();
-        let max_file_size = u64::MAX;
-
-        RepoHookStateProvider {
-            repo_blobstore,
-            bookmarks,
-            repo_derived_data,
-            bonsai_tag_mapping,
-            bonsai_git_mapping,
-            max_file_size,
-        }
-    }
-
-    pub fn from_parts(
-        bookmarks: ArcBookmarks,
-        repo_blobstore: ArcRepoBlobstore,
-        repo_derived_data: ArcRepoDerivedData,
-        bonsai_tag_mapping: ArcBonsaiTagMapping,
-        bonsai_git_mapping: ArcBonsaiGitMapping,
-        max_file_size: u64,
-    ) -> Self {
-        RepoHookStateProvider {
-            repo_blobstore,
-            bookmarks,
-            repo_derived_data,
-            bonsai_tag_mapping,
-            bonsai_git_mapping,
-            max_file_size,
-        }
-    }
-}
-
 async fn derive_fsnode(
     ctx: &CoreContext,
     repo_derived_data: &RepoDerivedData,
     changeset_id: ChangesetId,
-) -> Result<FsnodeId, HookStateProviderError> {
+) -> Result<FsnodeId> {
     let fsnode_id = repo_derived_data
         .derive::<RootFsnodeId>(ctx, changeset_id.clone())
         .await
@@ -429,8 +387,7 @@ async fn derive_fsnode(
                 changeset_id
             )
         })?
-        .into_fsnode_id()
-        .clone();
+        .into_fsnode_id();
 
     Ok(fsnode_id)
 }
@@ -439,7 +396,7 @@ async fn derive_unode_manifest(
     ctx: &CoreContext,
     repo_derived_data: &RepoDerivedData,
     changeset_id: ChangesetId,
-) -> Result<ManifestUnodeId, HookStateProviderError> {
+) -> Result<ManifestUnodeId> {
     let unode_mf = repo_derived_data
         .derive::<RootUnodeManifestId>(ctx, changeset_id.clone())
         .await

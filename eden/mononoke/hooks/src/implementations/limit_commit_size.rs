@@ -18,7 +18,7 @@ use crate::CrossRepoPushSource;
 use crate::HookConfig;
 use crate::HookExecution;
 use crate::HookRejectionInfo;
-use crate::HookStateProvider;
+use crate::HookRepo;
 use crate::PushAuthoredBy;
 
 #[derive(Deserialize, Clone, Debug)]
@@ -85,12 +85,12 @@ impl LimitCommitSizeHook {
 
 #[async_trait]
 impl ChangesetHook for LimitCommitSizeHook {
-    async fn run<'this: 'cs, 'ctx: 'this, 'cs, 'fetcher: 'cs>(
+    async fn run<'this: 'cs, 'ctx: 'this, 'cs, 'repo: 'cs>(
         &'this self,
         _ctx: &'ctx CoreContext,
+        _hook_repo: &'repo HookRepo,
         _bookmark: &BookmarkKey,
         changeset: &'cs BonsaiChangeset,
-        _content_manager: &'fetcher dyn HookStateProvider,
         cross_repo_push_source: CrossRepoPushSource,
         push_authored_by: PushAuthoredBy,
     ) -> Result<HookExecution> {
@@ -175,8 +175,8 @@ mod test {
     use blobstore::Loadable;
     use borrowed::borrowed;
     use fbinit::FacebookInit;
+    use hook_manager::HookRepo;
     use mononoke_macros::mononoke;
-    use repo_hook_file_content_provider::RepoHookStateProvider;
     use tests_utils::BasicTestRepo;
     use tests_utils::CreateCommitContext;
 
@@ -209,16 +209,16 @@ mod test {
 
         let bcs = cs_id.load(ctx, &repo.repo_blobstore).await?;
 
-        let content_manager = RepoHookStateProvider::new(&repo);
+        let hook_repo = HookRepo::build_from(&repo);
 
         let config = make_test_config();
         let hook = LimitCommitSizeHook::with_config(config)?;
         let hook_execution = hook
             .run(
                 ctx,
+                &hook_repo,
                 &BookmarkKey::new("book")?,
                 &bcs,
-                &content_manager,
                 CrossRepoPushSource::NativeToThisRepo,
                 PushAuthoredBy::User,
             )
@@ -232,9 +232,9 @@ mod test {
         let hook_execution = hook
             .run(
                 ctx,
+                &hook_repo,
                 &BookmarkKey::new("book")?,
                 &bcs,
-                &content_manager,
                 CrossRepoPushSource::NativeToThisRepo,
                 PushAuthoredBy::User,
             )
@@ -248,9 +248,9 @@ mod test {
         let hook_execution = hook
             .run(
                 ctx,
+                &hook_repo,
                 &BookmarkKey::new("book")?,
                 &bcs,
-                &content_manager,
                 CrossRepoPushSource::NativeToThisRepo,
                 PushAuthoredBy::User,
             )
@@ -271,9 +271,9 @@ mod test {
         let hook_execution = hook
             .run(
                 ctx,
+                &hook_repo,
                 &BookmarkKey::new("book")?,
                 &bcs,
-                &content_manager,
                 CrossRepoPushSource::NativeToThisRepo,
                 PushAuthoredBy::User,
             )
@@ -309,7 +309,7 @@ mod test {
 
         let bcs = cs_id.load(ctx, &repo.repo_blobstore).await?;
 
-        let content_manager = RepoHookStateProvider::new(&repo);
+        let hook_repo = HookRepo::build_from(&repo);
         let mut config = make_test_config();
         config.commit_size_limit = Some(100);
         config.changed_files_limit = Some(2);
@@ -317,9 +317,9 @@ mod test {
         let hook_execution = hook
             .run(
                 ctx,
+                &hook_repo,
                 &BookmarkKey::new("book")?,
                 &bcs,
-                &content_manager,
                 CrossRepoPushSource::NativeToThisRepo,
                 PushAuthoredBy::User,
             )
@@ -333,9 +333,9 @@ mod test {
         let hook_execution = hook
             .run(
                 ctx,
+                &hook_repo,
                 &BookmarkKey::new("book")?,
                 &bcs,
-                &content_manager,
                 CrossRepoPushSource::NativeToThisRepo,
                 PushAuthoredBy::User,
             )
@@ -366,7 +366,7 @@ mod test {
 
         let bcs = cs_id.load(ctx, &repo.repo_blobstore).await?;
 
-        let content_manager = RepoHookStateProvider::new(&repo);
+        let hook_repo = HookRepo::build_from(&repo);
         let mut config = make_test_config();
         config.commit_size_limit = Some(1);
         config.changed_files_limit = Some(3);
@@ -378,9 +378,9 @@ mod test {
         let hook_execution = hook
             .run(
                 ctx,
+                &hook_repo,
                 &BookmarkKey::new("book")?,
                 &bcs,
-                &content_manager,
                 CrossRepoPushSource::NativeToThisRepo,
                 PushAuthoredBy::User,
             )
@@ -406,7 +406,7 @@ mod test {
 
         let bcs = cs_id.load(ctx, &repo.repo_blobstore).await?;
 
-        let content_manager = RepoHookStateProvider::new(&repo);
+        let hook_repo = HookRepo::build_from(&repo);
 
         let mut config = make_test_config();
         config.commit_size_limit = Some(1);
@@ -419,9 +419,9 @@ mod test {
         let hook_execution = hook
             .run(
                 ctx,
+                &hook_repo,
                 &BookmarkKey::new("book")?,
                 &bcs,
-                &content_manager,
                 CrossRepoPushSource::NativeToThisRepo,
                 PushAuthoredBy::User,
             )
@@ -457,7 +457,7 @@ mod test {
 
         let bcs = cs_id.load(ctx, &repo.repo_blobstore).await?;
 
-        let content_manager = RepoHookStateProvider::new(&repo);
+        let hook_repo = HookRepo::build_from(&repo);
         let mut config = make_test_config();
         config.commit_size_limit = Some(2);
         config.changed_files_limit = Some(2);
@@ -468,9 +468,9 @@ mod test {
         let hook_execution = hook
             .run(
                 ctx,
+                &hook_repo,
                 &BookmarkKey::new("book")?,
                 &bcs,
-                &content_manager,
                 CrossRepoPushSource::NativeToThisRepo,
                 PushAuthoredBy::User,
             )

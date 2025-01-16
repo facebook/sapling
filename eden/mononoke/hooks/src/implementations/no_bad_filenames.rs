@@ -19,7 +19,7 @@ use crate::CrossRepoPushSource;
 use crate::FileHook;
 use crate::HookExecution;
 use crate::HookRejectionInfo;
-use crate::HookStateProvider;
+use crate::HookRepo;
 use crate::PushAuthoredBy;
 
 #[derive(Debug, Deserialize, Clone)]
@@ -72,10 +72,10 @@ impl NoBadFilenamesHook {
 
 #[async_trait]
 impl FileHook for NoBadFilenamesHook {
-    async fn run<'this: 'change, 'ctx: 'this, 'change, 'fetcher: 'change, 'path: 'change>(
+    async fn run<'this: 'change, 'ctx: 'this, 'change, 'repo: 'change, 'path: 'change>(
         &'this self,
         _ctx: &'ctx CoreContext,
-        _content_manager: &'fetcher dyn HookStateProvider,
+        _hook_repo: &'repo HookRepo,
         change: Option<&'change BasicFileChange>,
         path: &'path NonRootMPath,
         _cross_repo_push_source: CrossRepoPushSource,
@@ -115,8 +115,8 @@ mod test {
     use blobstore::Loadable;
     use borrowed::borrowed;
     use fbinit::FacebookInit;
+    use hook_manager::HookRepo;
     use mononoke_macros::mononoke;
-    use repo_hook_file_content_provider::RepoHookStateProvider;
     use tests_utils::BasicTestRepo;
     use tests_utils::CreateCommitContext;
 
@@ -143,7 +143,7 @@ mod test {
         let ctx = CoreContext::test_mock(fb);
         let repo: BasicTestRepo = test_repo_factory::build_empty(ctx.fb).await?;
         borrowed!(ctx, repo);
-        let content_manager = RepoHookStateProvider::new(&repo);
+        let hook_repo = HookRepo::build_from(&repo);
         let cs_id = CreateCommitContext::new_root(ctx, repo)
             .add_file("dir/a", "a")
             .add_file("dir/b", "b")
@@ -158,7 +158,7 @@ mod test {
             let hook_execution = hook
                 .run(
                     ctx,
-                    &content_manager,
+                    &hook_repo,
                     change.simplify(),
                     path,
                     CrossRepoPushSource::NativeToThisRepo,
@@ -175,7 +175,7 @@ mod test {
         let ctx = CoreContext::test_mock(fb);
         let repo: BasicTestRepo = test_repo_factory::build_empty(ctx.fb).await?;
         borrowed!(ctx, repo);
-        let content_manager = RepoHookStateProvider::new(&repo);
+        let hook_repo = HookRepo::build_from(&repo);
         // Illegal file names
         let cs_id = CreateCommitContext::new_root(ctx, repo)
             .add_file("foo/bar:baz/quux", "a")
@@ -196,7 +196,7 @@ mod test {
             let hook_execution = hook
                 .run(
                     ctx,
-                    &content_manager,
+                    &hook_repo,
                     change.simplify(),
                     path,
                     CrossRepoPushSource::NativeToThisRepo,
@@ -225,7 +225,7 @@ mod test {
         let ctx = CoreContext::test_mock(fb);
         let repo: BasicTestRepo = test_repo_factory::build_empty(ctx.fb).await?;
         borrowed!(ctx, repo);
-        let content_manager = RepoHookStateProvider::new(&repo);
+        let hook_repo = HookRepo::build_from(&repo);
         // Illegal file names
         let cs_id = CreateCommitContext::new_root(ctx, repo)
             .add_file("foo/bar/baz", "a")
@@ -241,7 +241,7 @@ mod test {
             let hook_execution = hook
                 .run(
                     ctx,
-                    &content_manager,
+                    &hook_repo,
                     change.simplify(),
                     path,
                     CrossRepoPushSource::NativeToThisRepo,
@@ -260,7 +260,7 @@ mod test {
         let ctx = CoreContext::test_mock(fb);
         let repo: BasicTestRepo = test_repo_factory::build_empty(ctx.fb).await?;
         borrowed!(ctx, repo);
-        let content_manager = RepoHookStateProvider::new(&repo);
+        let hook_repo = HookRepo::build_from(&repo);
         // Illegal file names
         let cs_id = CreateCommitContext::new_root(ctx, repo)
             .add_file("foo/bar:baz/quux", "a")
@@ -277,7 +277,7 @@ mod test {
             let hook_execution = hook
                 .run(
                     ctx,
-                    &content_manager,
+                    &hook_repo,
                     change.simplify(),
                     path,
                     CrossRepoPushSource::NativeToThisRepo,

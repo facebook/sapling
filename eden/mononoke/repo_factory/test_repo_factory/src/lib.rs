@@ -54,6 +54,7 @@ use git_symbolic_refs::ArcGitSymbolicRefs;
 use git_symbolic_refs::SqlGitSymbolicRefsBuilder;
 use hook_manager::manager::ArcHookManager;
 use hook_manager::manager::HookManager;
+use hook_manager::HookRepo;
 use live_commit_sync_config::LiveCommitSyncConfig;
 use live_commit_sync_config::TestLiveCommitSyncConfig;
 use maplit::hashmap;
@@ -97,7 +98,6 @@ use repo_cross_repo::ArcRepoCrossRepo;
 use repo_cross_repo::RepoCrossRepo;
 use repo_derived_data::ArcRepoDerivedData;
 use repo_derived_data::RepoDerivedData;
-use repo_hook_file_content_provider::RepoHookStateProvider;
 use repo_identity::ArcRepoIdentity;
 use repo_identity::RepoIdentity;
 use repo_lock::AlwaysUnlockedRepoLock;
@@ -207,6 +207,7 @@ pub fn default_test_repo_config() -> RepoConfig {
             disable_acl_checker: true,
             ..Default::default()
         }),
+        hook_max_file_size: 1000000,
         ..Default::default()
     }
 }
@@ -741,24 +742,26 @@ impl TestRepoFactory {
     pub fn hook_manager(
         &self,
         repo_identity: &ArcRepoIdentity,
+        repo_blobstore: &ArcRepoBlobstore,
+        repo_config: &ArcRepoConfig,
         repo_derived_data: &ArcRepoDerivedData,
         bookmarks: &ArcBookmarks,
-        repo_blobstore: &ArcRepoBlobstore,
         bonsai_tag_mapping: &ArcBonsaiTagMapping,
         bonsai_git_mapping: &ArcBonsaiGitMapping,
     ) -> ArcHookManager {
-        let content_store = RepoHookStateProvider::from_parts(
-            bookmarks.clone(),
-            repo_blobstore.clone(),
-            repo_derived_data.clone(),
-            bonsai_tag_mapping.clone(),
-            bonsai_git_mapping.clone(),
-            u64::MAX,
-        );
+        let hook_repo = HookRepo {
+            repo_identity: repo_identity.clone(),
+            repo_config: repo_config.clone(),
+            repo_blobstore: repo_blobstore.clone(),
+            bookmarks: bookmarks.clone(),
+            repo_derived_data: repo_derived_data.clone(),
+            bonsai_git_mapping: bonsai_git_mapping.clone(),
+            bonsai_tag_mapping: bonsai_tag_mapping.clone(),
+        };
 
         Arc::new(HookManager::new_test(
             repo_identity.name().to_string(),
-            Box::new(content_store),
+            hook_repo,
         ))
     }
 

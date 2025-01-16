@@ -18,7 +18,7 @@ use crate::CrossRepoPushSource;
 use crate::HookConfig;
 use crate::HookExecution;
 use crate::HookRejectionInfo;
-use crate::HookStateProvider;
+use crate::HookRepo;
 use crate::PushAuthoredBy;
 
 const DEFAULT_TITLE_LENGTH: usize = 80;
@@ -47,12 +47,12 @@ impl LimitCommitMessageLengthHook {
 
 #[async_trait]
 impl ChangesetHook for LimitCommitMessageLengthHook {
-    async fn run<'this: 'cs, 'ctx: 'this, 'cs, 'fetcher: 'cs>(
+    async fn run<'this: 'cs, 'ctx: 'this, 'cs, 'repo: 'cs>(
         &'this self,
         _ctx: &'ctx CoreContext,
+        _hook_repo: &'repo HookRepo,
         _bookmark: &BookmarkKey,
         changeset: &'cs BonsaiChangeset,
-        _content_manager: &'fetcher dyn HookStateProvider,
         _cross_repo_push_source: CrossRepoPushSource,
         push_authored_by: PushAuthoredBy,
     ) -> Result<HookExecution, Error> {

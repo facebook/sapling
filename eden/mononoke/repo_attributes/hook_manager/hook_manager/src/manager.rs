@@ -41,12 +41,12 @@ use scuba_ext::MononokeScubaSampleBuilder;
 use slog::debug;
 
 use crate::errors::HookManagerError;
-use crate::provider::HookStateProvider;
 use crate::BookmarkHook;
 use crate::ChangesetHook;
 use crate::CrossRepoPushSource;
 use crate::FileHook;
 use crate::HookOutcome;
+use crate::HookRepo;
 use crate::PushAuthoredBy;
 
 /// Manages hooks and allows them to be installed and uninstalled given a name
@@ -58,7 +58,7 @@ pub struct HookManager {
     hooks: HashMap<String, Hook>,
     bookmark_hooks: HashMap<BookmarkKey, Vec<String>>,
     regex_hooks: Vec<(Regex, Vec<String>)>,
-    content_provider: Box<dyn HookStateProvider>,
+    repo: HookRepo,
     reviewers_membership: ArcMembershipChecker,
     admin_membership: ArcMembershipChecker,
     repo_permission_checker: ArcRepoPermissionChecker,
@@ -71,7 +71,7 @@ impl HookManager {
     pub async fn new(
         fb: FacebookInit,
         acl_provider: &dyn AclProvider,
-        content_provider: Box<dyn HookStateProvider>,
+        repo: HookRepo,
         hook_manager_params: HookManagerParams,
         repo_permission_checker: ArcRepoPermissionChecker,
         mut scuba: MononokeScubaSampleBuilder,
@@ -115,7 +115,7 @@ impl HookManager {
             hooks,
             bookmark_hooks: HashMap::new(),
             regex_hooks: Vec::new(),
-            content_provider,
+            repo,
             reviewers_membership: reviewers_membership.into(),
             admin_membership: admin_membership.into(),
             scuba,
@@ -126,13 +126,13 @@ impl HookManager {
     }
 
     // Create a very simple HookManager, for use inside of the TestRepoFactory.
-    pub fn new_test(repo_name: String, content_provider: Box<dyn HookStateProvider>) -> Self {
+    pub fn new_test(repo_name: String, repo: HookRepo) -> Self {
         Self {
             repo_name,
             hooks: HashMap::new(),
             bookmark_hooks: HashMap::new(),
             regex_hooks: Vec::new(),
-            content_provider,
+            repo,
             reviewers_membership: NeverMember::new().into(),
             admin_membership: NeverMember::new().into(),
             scuba: MononokeScubaSampleBuilder::with_discard(),
@@ -285,8 +285,8 @@ impl HookManager {
 
             for future in hook.get_futures_for_bookmark_hooks(
                 ctx,
+                &self.repo,
                 bookmark,
-                &*self.content_provider,
                 hook_name,
                 to,
                 scuba,
@@ -353,8 +353,8 @@ impl HookManager {
                 scuba.add("hook", hook_name.to_string());
                 hook.get_futures_for_changeset_or_file_hooks(
                     ctx,
+                    &self.repo,
                     bookmark,
-                    &*self.content_provider,
                     hook_name,
                     changesets,
                     scuba,
@@ -519,8 +519,8 @@ impl<'a> HookInstance<'a> {
     fn run_changeset_hook_on_many_changesets(
         self,
         ctx: &'a CoreContext,
+        repo: &'a HookRepo,
         bookmark: &'a BookmarkKey,
-        content_provider: &'a dyn HookStateProvider,
         hook_name: &'a str,
         scuba: MononokeScubaSampleBuilder,
         changesets: Vec<&'a BonsaiChangeset>,
@@ -538,9 +538,9 @@ impl<'a> HookInstance<'a> {
             }
             Self::Changeset(hook) => hook.run_hook_on_many_changesets(
                 ctx,
+                repo,
                 bookmark,
                 changesets,
-                content_provider,
                 cross_repo_push_source,
                 push_authored_by,
                 hook_name,
@@ -552,8 +552,8 @@ impl<'a> HookInstance<'a> {
     pub(crate) async fn run_hook(
         self,
         ctx: &CoreContext,
+        repo: &HookRepo,
         bookmark: &BookmarkKey,
-        content_provider: &dyn HookStateProvider,
         hook_name: &str,
         scuba: MononokeScubaSampleBuilder,
         cs: &BonsaiChangeset,
@@ -565,9 +565,9 @@ impl<'a> HookInstance<'a> {
         match self {
             Self::Bookmark(hook) => hook.run_hook(
                 ctx,
+                repo,
                 bookmark,
                 cs,
-                content_provider,
                 cross_repo_push_source,
                 push_authored_by,
                 hook_name,
@@ -576,9 +576,9 @@ impl<'a> HookInstance<'a> {
             ),
             Self::Changeset(hook) => hook.run_hook(
                 ctx,
+                repo,
                 bookmark,
                 cs,
-                content_provider,
                 cross_repo_push_source,
                 push_authored_by,
                 hook_name,
@@ -587,7 +587,7 @@ impl<'a> HookInstance<'a> {
             ),
             Self::File(hook, path, change) => hook.run_hook(
                 ctx,
-                content_provider,
+                repo,
                 change,
                 path,
                 cross_repo_push_source,
@@ -626,8 +626,8 @@ impl Hook {
     pub fn get_futures_for_bookmark_hooks<'a: 'cs, 'cs>(
         &'a self,
         ctx: &'a CoreContext,
+        repo: &'a HookRepo,
         bookmark: &'a BookmarkKey,
-        content_provider: &'a dyn HookStateProvider,
         hook_name: &'cs str,
         to: &'cs BonsaiChangeset,
         scuba: MononokeScubaSampleBuilder,
@@ -640,8 +640,8 @@ impl Hook {
         match self {
             Self::Bookmark(hook, _) => futures.push(HookInstance::Bookmark(&**hook).run_hook(
                 ctx,
+                repo,
                 bookmark,
-                content_provider,
                 hook_name,
                 scuba,
                 to,
@@ -659,8 +659,8 @@ impl Hook {
     pub fn get_futures_for_changeset_or_file_hooks<'a: 'cs, 'cs>(
         &'a self,
         ctx: &'a CoreContext,
+        repo: &'a HookRepo,
         bookmark: &'a BookmarkKey,
-        content_provider: &'a dyn HookStateProvider,
         hook_name: &'cs str,
         changesets: Vec<&'cs BonsaiChangeset>,
         scuba: MononokeScubaSampleBuilder,
@@ -672,8 +672,8 @@ impl Hook {
             Self::Changeset(hook, _) => HookInstance::Changeset(&**hook)
                 .run_changeset_hook_on_many_changesets(
                     ctx,
+                    repo,
                     bookmark,
-                    content_provider,
                     hook_name,
                     scuba,
                     changesets,
@@ -691,8 +691,8 @@ impl Hook {
                                 HookInstance::File(&**hook, path, change)
                                     .run_hook(
                                         ctx,
+                                        repo,
                                         bookmark,
-                                        content_provider,
                                         hook_name,
                                         scuba.clone(),
                                         cs,

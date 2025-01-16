@@ -112,6 +112,7 @@ use git_symbolic_refs::ArcGitSymbolicRefs;
 use git_symbolic_refs::SqlGitSymbolicRefsBuilder;
 use hook_manager::manager::ArcHookManager;
 use hook_manager::manager::HookManager;
+use hook_manager::HookRepo;
 use hooks::hook_loader::load_hooks;
 use live_commit_sync_config::CfgrLiveCommitSyncConfig;
 use memcache::KeyGen;
@@ -159,7 +160,6 @@ use repo_cross_repo::RepoCrossRepo;
 use repo_derivation_queues::ArcRepoDerivationQueues;
 use repo_derived_data::ArcRepoDerivedData;
 use repo_derived_data::RepoDerivedData;
-use repo_hook_file_content_provider::RepoHookStateProvider;
 use repo_identity::ArcRepoIdentity;
 use repo_identity::RepoIdentity;
 use repo_lock::AlwaysLockedRepoLock;
@@ -1495,19 +1495,20 @@ impl RepoFactory {
         }
 
         let hook_manager = async {
-            let content_provider = Box::new(RepoHookStateProvider::from_parts(
-                bookmarks.clone(),
-                repo_blobstore.clone(),
-                repo_derived_data.clone(),
-                bonsai_tag_mapping.clone(),
-                bonsai_git_mapping.clone(),
-                repo_config.hook_max_file_size,
-            ));
+            let hook_repo = HookRepo {
+                repo_identity: repo_identity.clone(),
+                repo_config: repo_config.clone(),
+                repo_blobstore: repo_blobstore.clone(),
+                repo_derived_data: repo_derived_data.clone(),
+                bookmarks: bookmarks.clone(),
+                bonsai_tag_mapping: bonsai_tag_mapping.clone(),
+                bonsai_git_mapping: bonsai_git_mapping.clone(),
+            };
 
             let mut hook_manager = HookManager::new(
                 self.env.fb,
                 self.env.acl_provider.as_ref(),
-                content_provider,
+                hook_repo,
                 repo_config.hook_manager_params.clone().unwrap_or_default(),
                 permission_checker.clone(),
                 hooks_scuba,

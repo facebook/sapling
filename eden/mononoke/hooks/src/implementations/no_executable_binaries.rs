@@ -10,6 +10,7 @@ use anyhow::Context;
 use anyhow::Result;
 use async_trait::async_trait;
 use context::CoreContext;
+use hook_manager::HookRepo;
 use metaconfig_types::HookConfig;
 use mononoke_types::BasicFileChange;
 use mononoke_types::FileType;
@@ -20,7 +21,6 @@ use crate::CrossRepoPushSource;
 use crate::FileHook;
 use crate::HookExecution;
 use crate::HookRejectionInfo;
-use crate::HookStateProvider;
 use crate::PushAuthoredBy;
 
 #[derive(Debug, Deserialize, Clone)]
@@ -57,10 +57,10 @@ impl NoExecutableBinariesHook {
 
 #[async_trait]
 impl FileHook for NoExecutableBinariesHook {
-    async fn run<'this: 'change, 'ctx: 'this, 'change, 'fetcher: 'change, 'path: 'change>(
+    async fn run<'this: 'change, 'ctx: 'this, 'change, 'repo: 'change, 'path: 'change>(
         &'this self,
         ctx: &'ctx CoreContext,
-        content_manager: &'fetcher dyn HookStateProvider,
+        hook_repo: &'repo HookRepo,
         change: Option<&'change BasicFileChange>,
         path: &'path NonRootMPath,
         _cross_repo_push_source: CrossRepoPushSource,
@@ -89,7 +89,7 @@ impl FileHook for NoExecutableBinariesHook {
             }
         };
 
-        let content_metadata = content_manager.get_file_metadata(ctx, content_id).await?;
+        let content_metadata = hook_repo.get_file_metadata(ctx, content_id).await?;
 
         let is_allow_listed_file =
             self.config
@@ -131,7 +131,6 @@ mod test {
     use maplit::hashset;
     use mononoke_macros::mononoke;
     use mononoke_types::BonsaiChangeset;
-    use repo_hook_file_content_provider::RepoHookStateProvider;
     use tests_utils::BasicTestRepo;
     use tests_utils::CreateCommitContext;
 
@@ -155,23 +154,23 @@ mod test {
     ) -> (
         CoreContext,
         BasicTestRepo,
-        RepoHookStateProvider,
+        HookRepo,
         NoExecutableBinariesHook,
     ) {
         let ctx = CoreContext::test_mock(fb);
         let repo: BasicTestRepo = test_repo_factory::build_empty(ctx.fb)
             .await
             .expect("Failed to create test repo");
-        let content_manager = RepoHookStateProvider::new(&repo);
+        let hook_repo = HookRepo::build_from(&repo);
         let config = make_test_config();
         let hook = NoExecutableBinariesHook::with_config(config);
 
-        (ctx, repo, content_manager, hook)
+        (ctx, repo, hook_repo, hook)
     }
 
     async fn assert_hook_execution(
         ctx: &CoreContext,
-        content_manager: RepoHookStateProvider,
+        hook_repo: HookRepo,
         bcs: BonsaiChangeset,
         hook: NoExecutableBinariesHook,
         valid_files: HashSet<&str>,
@@ -181,7 +180,7 @@ mod test {
             let hook_execution = hook
                 .run(
                     ctx,
-                    &content_manager,
+                    &hook_repo,
                     change.simplify(),
                     path,
                     CrossRepoPushSource::NativeToThisRepo,
@@ -206,7 +205,7 @@ mod test {
     /// Test that the hook rejects an executable binary file
     #[mononoke::fbinit_test]
     async fn test_reject_single_executable_binary(fb: FacebookInit) -> Result<()> {
-        let (ctx, repo, content_manager, hook) = test_setup(fb).await;
+        let (ctx, repo, hook_repo, hook) = test_setup(fb).await;
 
         borrowed!(ctx, repo);
 
@@ -228,13 +227,13 @@ mod test {
         let illegal_files: HashMap<&str, &str> =
             hashmap! {"foo/bar/exec" => "Executable file 'foo/bar/exec' can't be committed."};
 
-        assert_hook_execution(ctx, content_manager, bcs, hook, valid_files, illegal_files).await
+        assert_hook_execution(ctx, hook_repo, bcs, hook, valid_files, illegal_files).await
     }
 
     /// Test that the hook rejects multiple executable binaries
     #[mononoke::fbinit_test]
     async fn test_reject_multiple_executable_binaries(fb: FacebookInit) -> Result<()> {
-        let (ctx, repo, content_manager, hook) = test_setup(fb).await;
+        let (ctx, repo, hook_repo, hook) = test_setup(fb).await;
 
         borrowed!(ctx, repo);
 
@@ -263,13 +262,13 @@ mod test {
             "foo/bar/another_exec" => "Executable file 'foo/bar/another_exec' can't be committed."
         };
 
-        assert_hook_execution(ctx, content_manager, bcs, hook, valid_files, illegal_files).await
+        assert_hook_execution(ctx, hook_repo, bcs, hook, valid_files, illegal_files).await
     }
 
     /// That that non-executable binaries pass
     #[mononoke::fbinit_test]
     async fn test_non_executable_binaries_pass(fb: FacebookInit) -> Result<()> {
-        let (ctx, repo, content_manager, hook) = test_setup(fb).await;
+        let (ctx, repo, hook_repo, hook) = test_setup(fb).await;
 
         borrowed!(ctx, repo);
 
@@ -287,13 +286,13 @@ mod test {
 
         let illegal_files: HashMap<&str, &str> = hashmap! {};
 
-        assert_hook_execution(ctx, content_manager, bcs, hook, valid_files, illegal_files).await
+        assert_hook_execution(ctx, hook_repo, bcs, hook, valid_files, illegal_files).await
     }
 
     /// That that executable scripts pass
     #[mononoke::fbinit_test]
     async fn test_executable_scripts_pass(fb: FacebookInit) -> Result<()> {
-        let (ctx, repo, content_manager, hook) = test_setup(fb).await;
+        let (ctx, repo, hook_repo, hook) = test_setup(fb).await;
 
         borrowed!(ctx, repo);
 
@@ -311,13 +310,13 @@ mod test {
 
         let illegal_files: HashMap<&str, &str> = hashmap! {};
 
-        assert_hook_execution(ctx, content_manager, bcs, hook, valid_files, illegal_files).await
+        assert_hook_execution(ctx, hook_repo, bcs, hook, valid_files, illegal_files).await
     }
 
     /// That that changes without executable file types are still allowed
     #[mononoke::fbinit_test]
     async fn test_changes_without_binaries_pass(fb: FacebookInit) -> Result<()> {
-        let (ctx, repo, content_manager, hook) = test_setup(fb).await;
+        let (ctx, repo, hook_repo, hook) = test_setup(fb).await;
 
         borrowed!(ctx, repo);
 
@@ -335,13 +334,13 @@ mod test {
 
         let illegal_files: HashMap<&str, &str> = hashmap! {};
 
-        assert_hook_execution(ctx, content_manager, bcs, hook, valid_files, illegal_files).await
+        assert_hook_execution(ctx, hook_repo, bcs, hook, valid_files, illegal_files).await
     }
 
     /// Test that the hook allows executable binaries under allow-listed paths
     #[mononoke::fbinit_test]
     async fn test_executable_binaries_under_allow_listed_path_pass(fb: FacebookInit) -> Result<()> {
-        let (ctx, repo, content_manager, hook) = test_setup(fb).await;
+        let (ctx, repo, hook_repo, hook) = test_setup(fb).await;
 
         borrowed!(ctx, repo);
 
@@ -363,7 +362,7 @@ mod test {
 
         let illegal_files: HashMap<&str, &str> = hashmap! {};
 
-        assert_hook_execution(ctx, content_manager, bcs, hook, valid_files, illegal_files).await
+        assert_hook_execution(ctx, hook_repo, bcs, hook, valid_files, illegal_files).await
     }
 
     /// Test that the hook allows executable binaries allow-listed by sha256 and
@@ -372,7 +371,7 @@ mod test {
     async fn test_executable_binaries_allow_listed_by_sha256_and_size_pass(
         fb: FacebookInit,
     ) -> Result<()> {
-        let (ctx, repo, content_manager, hook) = test_setup(fb).await;
+        let (ctx, repo, hook_repo, hook) = test_setup(fb).await;
 
         borrowed!(ctx, repo);
 
@@ -394,6 +393,6 @@ mod test {
 
         let illegal_files: HashMap<&str, &str> = hashmap! {};
 
-        assert_hook_execution(ctx, content_manager, bcs, hook, valid_files, illegal_files).await
+        assert_hook_execution(ctx, hook_repo, bcs, hook, valid_files, illegal_files).await
     }
 }

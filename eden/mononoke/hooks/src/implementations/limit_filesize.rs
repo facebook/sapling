@@ -19,7 +19,7 @@ use crate::FileHook;
 use crate::HookConfig;
 use crate::HookExecution;
 use crate::HookRejectionInfo;
-use crate::HookStateProvider;
+use crate::HookRepo;
 use crate::PushAuthoredBy;
 
 #[derive(Default)]
@@ -86,10 +86,10 @@ impl LimitFilesize {
 
 #[async_trait]
 impl FileHook for LimitFilesize {
-    async fn run<'this: 'change, 'ctx: 'this, 'change, 'fetcher: 'change, 'path: 'change>(
+    async fn run<'this: 'change, 'ctx: 'this, 'change, 'repo: 'change, 'path: 'change>(
         &'this self,
         ctx: &'ctx CoreContext,
-        content_manager: &'fetcher dyn HookStateProvider,
+        hook_repo: &'repo HookRepo,
         change: Option<&'change BasicFileChange>,
         path: &'path NonRootMPath,
         cross_repo_push_source: CrossRepoPushSource,
@@ -115,7 +115,7 @@ impl FileHook for LimitFilesize {
             return Ok(HookExecution::Accepted);
         }
 
-        let len = content_manager
+        let len = hook_repo
             .get_file_metadata(ctx, change.content_id())
             .await?
             .total_size;

@@ -32,7 +32,7 @@ use crate::CrossRepoPushSource;
 use crate::HookConfig;
 use crate::HookExecution;
 use crate::HookRejectionInfo;
-use crate::HookStateProvider;
+use crate::HookRepo;
 use crate::PushAuthoredBy;
 
 #[derive(Clone, Debug, Deserialize)]
@@ -57,16 +57,16 @@ impl BlockNewBookmarkCreationsByPrefixHook {
 
 #[async_trait]
 impl BookmarkHook for BlockNewBookmarkCreationsByPrefixHook {
-    async fn run<'this: 'cs, 'ctx: 'this, 'cs, 'fetcher: 'cs>(
+    async fn run<'this: 'cs, 'ctx: 'this, 'cs, 'repo: 'cs>(
         &'this self,
         ctx: &'ctx CoreContext,
+        hook_repo: &'repo HookRepo,
         bookmark: &BookmarkKey,
         _from: &'cs BonsaiChangeset,
-        content_manager: &'fetcher dyn HookStateProvider,
         _cross_repo_push_source: CrossRepoPushSource,
         _push_authored_by: PushAuthoredBy,
     ) -> Result<HookExecution, Error> {
-        let bookmark_state = content_manager.get_bookmark_state(ctx, bookmark).await?;
+        let bookmark_state = hook_repo.get_bookmark_state(ctx, bookmark).await?;
         if !bookmark_state.is_new() {
             return Ok(HookExecution::Accepted);
         }
@@ -80,7 +80,7 @@ impl BookmarkHook for BlockNewBookmarkCreationsByPrefixHook {
         };
         // Check if this bookmark itself is a path prefix of any existing bookmark
         let bookmark_prefix = BookmarkPrefix::from_str(bookmark_prefix_str.as_str())?;
-        if content_manager
+        if hook_repo
             .bookmark_exists_with_prefix(ctx.clone(), &bookmark_prefix)
             .await?
         {
@@ -104,7 +104,7 @@ impl BookmarkHook for BlockNewBookmarkCreationsByPrefixHook {
             let bookmark_prefix_path =
                 BookmarkKey::from_str(std::str::from_utf8(&bookmark_prefix_path.to_vec())?)?;
             // Check if the path ancestors of this bookmark already exist as bookmark in the repo
-            if content_manager
+            if hook_repo
                 .get_bookmark_state(ctx, &bookmark_prefix_path)
                 .await?
                 .is_existing()

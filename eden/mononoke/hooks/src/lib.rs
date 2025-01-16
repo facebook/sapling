@@ -28,7 +28,7 @@ pub use hook_manager::HookManagerError;
 pub use hook_manager::HookOutcome;
 pub use hook_manager::HookRejection;
 pub use hook_manager::HookRejectionInfo;
-pub use hook_manager::HookStateProvider;
+pub use hook_manager::HookRepo;
 pub use hook_manager::PathContent;
 pub use hook_manager::PushAuthoredBy;
 pub use implementations::deny_files::DenyFiles;

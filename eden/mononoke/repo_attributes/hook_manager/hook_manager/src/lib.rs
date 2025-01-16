@@ -11,7 +11,7 @@
 
 pub mod errors;
 pub mod manager;
-pub mod provider;
+pub mod repo;
 #[cfg(test)]
 mod tests;
 
@@ -29,20 +29,18 @@ use futures::FutureExt;
 use futures::TryFutureExt;
 use futures_stats::FutureStats;
 use futures_stats::TimedFutureExt;
+use mononoke_types::hash::GitSha1;
 use mononoke_types::BasicFileChange;
 use mononoke_types::BonsaiChangeset;
 use mononoke_types::ChangesetId;
+use mononoke_types::ContentId;
 use mononoke_types::NonRootMPath;
 use scuba_ext::MononokeScubaSampleBuilder;
 
 pub use crate::errors::HookManagerError;
-pub use crate::errors::HookStateProviderError;
 pub use crate::manager::HookManager;
 use crate::manager::HooksOutcome;
-pub use crate::provider::memory::InMemoryHookStateProvider;
-pub use crate::provider::FileChangeType;
-pub use crate::provider::HookStateProvider;
-pub use crate::provider::PathContent;
+pub use crate::repo::HookRepo;
 
 /// Whether changesets were created by a user or a service.
 ///
@@ -77,6 +75,51 @@ pub enum CrossRepoPushSource {
     NativeToThisRepo,
     /// Changeset push-redirected from the small repo
     PushRedirected,
+}
+
+/// Enum describing the state of a bookmark for which hooks are being run.
+pub enum BookmarkState {
+    /// The bookmark is new and is being created by the current push
+    New,
+    /// The bookmark is existing and is being moved by the current push
+    Existing(ChangesetId),
+    // No Deleted state because hooks are not run on deleted bookmarks
+}
+
+impl BookmarkState {
+    pub fn is_new(&self) -> bool {
+        if let BookmarkState::New = *self {
+            return true;
+        }
+        false
+    }
+
+    pub fn is_existing(&self) -> bool {
+        !self.is_new()
+    }
+}
+
+#[derive(Clone, Debug)]
+pub enum PathContent {
+    Directory,
+    File(ContentId),
+}
+
+#[derive(Clone, Debug)]
+pub enum FileChangeType {
+    Added(ContentId),
+    Changed(ContentId, ContentId),
+    Removed,
+}
+
+/// Enum describing the type of a tag for which hooks are being run.
+pub enum TagType {
+    /// The bookmark is not a tag at all
+    NotATag,
+    /// The bookmark is a simple tag with no object associated with it
+    LightweightTag,
+    /// The bookmark is an annotated tag with an associated object with GitSha1 hash
+    AnnotatedTag(GitSha1),
 }
 
 fn log_execution_stats(
@@ -131,22 +174,22 @@ fn log_execution_stats(
 /// with bookmarks metadata.
 #[async_trait]
 pub trait BookmarkHook: Send + Sync {
-    async fn run<'this: 'cs, 'ctx: 'this, 'cs, 'provider: 'cs>(
+    async fn run<'this: 'cs, 'ctx: 'this, 'cs, 'repo: 'cs>(
         &'this self,
         ctx: &'ctx CoreContext,
+        repo: &'repo HookRepo,
         bookmark: &BookmarkKey,
         to: &'cs BonsaiChangeset,
-        content_provider: &'provider dyn HookStateProvider,
         cross_repo_push_source: CrossRepoPushSource,
         push_authored_by: PushAuthoredBy,
     ) -> Result<HookExecution, Error>;
 
-    async fn run_hook<'this: 'cs, 'ctx: 'this, 'cs, 'provider: 'cs>(
+    async fn run_hook<'this: 'cs, 'ctx: 'this, 'cs, 'repo: 'cs>(
         &'this self,
         ctx: &'ctx CoreContext,
+        repo: &'repo HookRepo,
         bookmark: &BookmarkKey,
         to: &'cs BonsaiChangeset,
-        content_provider: &'provider dyn HookStateProvider,
         cross_repo_push_source: CrossRepoPushSource,
         push_authored_by: PushAuthoredBy,
         hook_name: &str,
@@ -156,9 +199,9 @@ pub trait BookmarkHook: Send + Sync {
         let (stats, mut result) = self
             .run(
                 ctx,
+                repo,
                 bookmark,
                 to,
-                content_provider,
                 cross_repo_push_source,
                 push_authored_by,
             )
@@ -185,22 +228,23 @@ pub trait BookmarkHook: Send + Sync {
 /// with changeset metadata, or the overall set of modified files.
 #[async_trait]
 pub trait ChangesetHook: Send + Sync {
-    async fn run<'this: 'cs, 'ctx: 'this, 'cs, 'provider: 'cs>(
+    async fn run<'this: 'cs, 'ctx: 'this, 'cs, 'repo: 'cs>(
         &'this self,
         ctx: &'ctx CoreContext,
+        repo: &'repo HookRepo,
         bookmark: &BookmarkKey,
         changeset: &'cs BonsaiChangeset,
-        content_provider: &'provider dyn HookStateProvider,
+
         cross_repo_push_source: CrossRepoPushSource,
         push_authored_by: PushAuthoredBy,
     ) -> Result<HookExecution, Error>;
 
-    async fn run_hook<'this: 'cs, 'ctx: 'this, 'cs, 'provider: 'cs>(
+    async fn run_hook<'this: 'cs, 'ctx: 'this, 'cs, 'repo: 'cs>(
         &'this self,
         ctx: &'ctx CoreContext,
+        repo: &'repo HookRepo,
         bookmark: &BookmarkKey,
         changeset: &'cs BonsaiChangeset,
-        content_provider: &'provider dyn HookStateProvider,
         cross_repo_push_source: CrossRepoPushSource,
         push_authored_by: PushAuthoredBy,
         hook_name: &str,
@@ -210,9 +254,9 @@ pub trait ChangesetHook: Send + Sync {
         let (stats, mut result) = self
             .run(
                 ctx,
+                repo,
                 bookmark,
                 changeset,
-                content_provider,
                 cross_repo_push_source,
                 push_authored_by,
             )
@@ -232,12 +276,12 @@ pub trait ChangesetHook: Send + Sync {
         result.map_err(|e| e.context(format!("while executing hook {}", hook_name)))
     }
 
-    fn run_hook_on_many_changesets<'this: 'cs, 'ctx: 'this, 'cs, 'provider: 'cs>(
+    fn run_hook_on_many_changesets<'this: 'cs, 'ctx: 'this, 'cs, 'repo: 'cs>(
         &'this self,
         ctx: &'ctx CoreContext,
+        repo: &'repo HookRepo,
         bookmark: &'cs BookmarkKey,
         changesets: Vec<&'cs BonsaiChangeset>,
-        content_provider: &'provider dyn HookStateProvider,
         cross_repo_push_source: CrossRepoPushSource,
         push_authored_by: PushAuthoredBy,
         hook_name: &'cs str,
@@ -250,9 +294,9 @@ pub trait ChangesetHook: Send + Sync {
                 .map(|cs| {
                     self.run_hook(
                         ctx,
+                        repo,
                         bookmark,
                         cs,
-                        content_provider,
                         cross_repo_push_source,
                         push_authored_by,
                         hook_name,
@@ -272,20 +316,20 @@ pub trait ChangesetHook: Send + Sync {
 /// the file's path or contents.
 #[async_trait]
 pub trait FileHook: Send + Sync {
-    async fn run<'this: 'change, 'ctx: 'this, 'change, 'provider: 'change, 'path: 'change>(
+    async fn run<'this: 'change, 'ctx: 'this, 'change, 'repo: 'change, 'path: 'change>(
         &'this self,
         ctx: &'ctx CoreContext,
-        content_provider: &'provider dyn HookStateProvider,
+        repo: &'repo HookRepo,
         change: Option<&'change BasicFileChange>,
         path: &'path NonRootMPath,
         cross_repo_push_source: CrossRepoPushSource,
         push_authored_by: PushAuthoredBy,
     ) -> Result<HookExecution, Error>;
 
-    async fn run_hook<'this: 'change, 'ctx: 'this, 'change, 'provider: 'change, 'path: 'change>(
+    async fn run_hook<'this: 'change, 'ctx: 'this, 'change, 'repo: 'change, 'path: 'change>(
         &'this self,
         ctx: &'ctx CoreContext,
-        content_provider: &'provider dyn HookStateProvider,
+        repo: &'repo HookRepo,
         change: Option<&'change BasicFileChange>,
         path: &'path NonRootMPath,
         cross_repo_push_source: CrossRepoPushSource,
@@ -298,7 +342,7 @@ pub trait FileHook: Send + Sync {
         let (stats, mut result) = self
             .run(
                 ctx,
-                content_provider,
+                repo,
                 change,
                 path,
                 cross_repo_push_source,

@@ -7,17 +7,13 @@
 
 use anyhow::Result;
 use blobstore::Loadable;
-use bonsai_git_mapping::BonsaiGitMappingArc;
-use bonsai_tag_mapping::BonsaiTagMappingArc;
 use bookmarks::BookmarkKey;
-use bookmarks::BookmarksArc;
 use context::CoreContext;
+use hook_manager::repo::HookRepoLike;
+use hook_manager::HookRepo;
 use mononoke_types::ChangesetId;
 use mononoke_types::NonRootMPath;
-use repo_blobstore::RepoBlobstoreArc;
 use repo_blobstore::RepoBlobstoreRef;
-use repo_derived_data::RepoDerivedDataArc;
-use repo_hook_file_content_provider::RepoHookStateProvider;
 
 use crate::ChangesetHook;
 use crate::CrossRepoPushSource;
@@ -25,19 +21,12 @@ use crate::FileHook;
 use crate::HookExecution;
 use crate::PushAuthoredBy;
 
-pub trait Repo = RepoBlobstoreRef
-    + RepoBlobstoreArc
-    + BookmarksArc
-    + RepoDerivedDataArc
-    + BonsaiTagMappingArc
-    + BonsaiGitMappingArc;
-
 /// Test a changeset hook
 ///
 /// Runs the hook against a changeset and returns the outcome.
 pub async fn test_changeset_hook(
     ctx: &CoreContext,
-    repo: &impl Repo,
+    repo: &impl HookRepoLike,
     hook: &impl ChangesetHook,
     bookmark_name: &str,
     cs_id: ChangesetId,
@@ -46,12 +35,12 @@ pub async fn test_changeset_hook(
 ) -> Result<HookExecution> {
     let bcs = cs_id.load(ctx, repo.repo_blobstore()).await?;
     let bookmark = BookmarkKey::new(bookmark_name)?;
-    let content_provider = RepoHookStateProvider::new(repo);
+    let hook_repo = HookRepo::build_from(repo);
     hook.run(
         ctx,
+        &hook_repo,
         &bookmark,
         &bcs,
-        &content_provider,
         cross_repo_push_source,
         push_authored_by,
     )
@@ -64,20 +53,20 @@ pub async fn test_changeset_hook(
 /// the outcomes.
 pub async fn test_file_hook(
     ctx: &CoreContext,
-    repo: &impl Repo,
+    repo: &impl HookRepoLike,
     hook: &impl FileHook,
     cs_id: ChangesetId,
     cross_repo_push_source: CrossRepoPushSource,
     push_authored_by: PushAuthoredBy,
 ) -> Result<Vec<(NonRootMPath, HookExecution)>> {
     let bcs = cs_id.load(ctx, repo.repo_blobstore()).await?;
-    let content_provider = RepoHookStateProvider::new(repo);
+    let hook_repo = HookRepo::build_from(repo);
     let mut results = Vec::new();
     for (path, change) in bcs.file_changes() {
         let outcome = hook
             .run(
                 ctx,
-                &content_provider,
+                &hook_repo,
                 change.simplify(),
                 path,
                 cross_repo_push_source,

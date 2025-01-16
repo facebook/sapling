@@ -11,6 +11,7 @@ use bookmarks::BookmarkKey;
 use context::CoreContext;
 use fbinit::FacebookInit;
 use fixtures::TestRepoFixture;
+use hook_manager::HookRepo;
 use maplit::hashset;
 use metaconfig_types::BookmarkParams;
 use metaconfig_types::HookManagerParams;
@@ -18,7 +19,6 @@ use metaconfig_types::HookParams;
 use metaconfig_types::RepoConfig;
 use mononoke_macros::mononoke;
 use permission_checker::InternalAclProvider;
-use repo_hook_file_content_provider::RepoHookStateProvider;
 use repo_permission_checker::NeverAllowRepoPermissionChecker;
 use scuba_ext::MononokeScubaSampleBuilder;
 use tests_utils::BasicTestRepo;
@@ -30,11 +30,11 @@ use crate::HookManager;
 async fn hook_manager_repo(fb: FacebookInit, repo: &BasicTestRepo) -> HookManager {
     let ctx = CoreContext::test_mock(fb);
 
-    let content_manager = RepoHookStateProvider::new(&repo);
+    let hook_repo = HookRepo::build_from(&repo);
     HookManager::new(
         ctx.fb,
         &InternalAclProvider::default(),
-        Box::new(content_manager),
+        hook_repo,
         HookManagerParams {
             disable_acl_checker: true,
             ..Default::default()

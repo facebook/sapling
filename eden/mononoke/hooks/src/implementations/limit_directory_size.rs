@@ -23,7 +23,7 @@ use crate::CrossRepoPushSource;
 use crate::HookConfig;
 use crate::HookExecution;
 use crate::HookRejectionInfo;
-use crate::HookStateProvider;
+use crate::HookRepo;
 use crate::PushAuthoredBy;
 
 /// Limit the size of directories to prevent very large directories from being
@@ -135,12 +135,12 @@ impl LimitDirectorySizeHook {
 
 #[async_trait]
 impl ChangesetHook for LimitDirectorySizeHook {
-    async fn run<'this: 'cs, 'ctx: 'this, 'cs, 'fetcher: 'cs>(
+    async fn run<'this: 'cs, 'ctx: 'this, 'cs, 'repo: 'cs>(
         &'this self,
         ctx: &'ctx CoreContext,
+        hook_repo: &'repo HookRepo,
         _bookmark: &BookmarkKey,
         changeset: &'cs BonsaiChangeset,
-        content_manager: &'fetcher dyn HookStateProvider,
         cross_repo_push_source: CrossRepoPushSource,
         push_authored_by: PushAuthoredBy,
     ) -> Result<HookExecution> {
@@ -176,8 +176,8 @@ impl ChangesetHook for LimitDirectorySizeHook {
         let changed_dirs: Vec<_> = changed_dirs.into_iter().collect();
 
         let (source_directory_sizes, parent_directory_sizes) = future::try_join(
-            content_manager.directory_sizes(ctx, source_changeset_id, changed_dirs.clone()),
-            content_manager.directory_sizes(ctx, parent_changeset_id, changed_dirs.clone()),
+            hook_repo.directory_sizes(ctx, source_changeset_id, changed_dirs.clone()),
+            hook_repo.directory_sizes(ctx, parent_changeset_id, changed_dirs.clone()),
         )
         .await?;
 
@@ -275,8 +275,8 @@ mod test {
     use blobstore::Loadable;
     use borrowed::borrowed;
     use fbinit::FacebookInit;
+    use hook_manager::HookRepo;
     use mononoke_macros::mononoke;
-    use repo_hook_file_content_provider::RepoHookStateProvider;
     use tests_utils::BasicTestRepo;
 
     use super::*;
@@ -341,7 +341,7 @@ mod test {
 
         let bookmark = BookmarkKey::new("bookmark")?;
 
-        let content_manager = RepoHookStateProvider::new(&repo);
+        let hook_repo = HookRepo::build_from(&repo);
 
         // Nothing enabled
         let config = make_test_config();
@@ -349,9 +349,9 @@ mod test {
         let hook_execution = hook
             .run(
                 ctx,
+                &hook_repo,
                 &bookmark,
                 &load_commit("B").await?,
-                &content_manager,
                 CrossRepoPushSource::NativeToThisRepo,
                 PushAuthoredBy::User,
             )
@@ -360,9 +360,9 @@ mod test {
         let hook_execution = hook
             .run(
                 ctx,
+                &hook_repo,
                 &bookmark,
                 &load_commit("C").await?,
-                &content_manager,
                 CrossRepoPushSource::NativeToThisRepo,
                 PushAuthoredBy::User,
             )
@@ -376,9 +376,9 @@ mod test {
         let hook_execution = hook
             .run(
                 ctx,
+                &hook_repo,
                 &bookmark,
                 &load_commit("B").await?,
-                &content_manager,
                 CrossRepoPushSource::NativeToThisRepo,
                 PushAuthoredBy::User,
             )
@@ -387,9 +387,9 @@ mod test {
         let hook_execution = hook
             .run(
                 ctx,
+                &hook_repo,
                 &bookmark,
                 &load_commit("C").await?,
-                &content_manager,
                 CrossRepoPushSource::NativeToThisRepo,
                 PushAuthoredBy::User,
             )
@@ -398,9 +398,9 @@ mod test {
         let hook_execution = hook
             .run(
                 ctx,
+                &hook_repo,
                 &bookmark,
                 &load_commit("D").await?,
-                &content_manager,
                 CrossRepoPushSource::NativeToThisRepo,
                 PushAuthoredBy::User,
             )
@@ -409,9 +409,9 @@ mod test {
         let hook_execution = hook
             .run(
                 ctx,
+                &hook_repo,
                 &bookmark,
                 &load_commit("E").await?,
-                &content_manager,
                 CrossRepoPushSource::NativeToThisRepo,
                 PushAuthoredBy::User,
             )
@@ -426,9 +426,9 @@ mod test {
         let hook_execution = hook
             .run(
                 ctx,
+                &hook_repo,
                 &bookmark,
                 &load_commit("C").await?,
-                &content_manager,
                 CrossRepoPushSource::NativeToThisRepo,
                 PushAuthoredBy::User,
             )
@@ -437,9 +437,9 @@ mod test {
         let hook_execution = hook
             .run(
                 ctx,
+                &hook_repo,
                 &bookmark,
                 &load_commit("D").await?,
-                &content_manager,
                 CrossRepoPushSource::NativeToThisRepo,
                 PushAuthoredBy::User,
             )
@@ -448,9 +448,9 @@ mod test {
         let hook_execution = hook
             .run(
                 ctx,
+                &hook_repo,
                 &bookmark,
                 &load_commit("E").await?,
-                &content_manager,
                 CrossRepoPushSource::NativeToThisRepo,
                 PushAuthoredBy::User,
             )
@@ -467,9 +467,9 @@ mod test {
         let hook_execution = hook
             .run(
                 ctx,
+                &hook_repo,
                 &bookmark,
                 &load_commit("C").await?,
-                &content_manager,
                 CrossRepoPushSource::NativeToThisRepo,
                 PushAuthoredBy::User,
             )
@@ -478,9 +478,9 @@ mod test {
         let hook_execution = hook
             .run(
                 ctx,
+                &hook_repo,
                 &bookmark,
                 &load_commit("D").await?,
-                &content_manager,
                 CrossRepoPushSource::NativeToThisRepo,
                 PushAuthoredBy::User,
             )
@@ -489,9 +489,9 @@ mod test {
         let hook_execution = hook
             .run(
                 ctx,
+                &hook_repo,
                 &bookmark,
                 &load_commit("E").await?,
-                &content_manager,
                 CrossRepoPushSource::NativeToThisRepo,
                 PushAuthoredBy::User,
             )
@@ -500,9 +500,9 @@ mod test {
         let hook_execution = hook
             .run(
                 ctx,
+                &hook_repo,
                 &bookmark,
                 &load_commit("F").await?,
-                &content_manager,
                 CrossRepoPushSource::NativeToThisRepo,
                 PushAuthoredBy::User,
             )
@@ -511,9 +511,9 @@ mod test {
         let hook_execution = hook
             .run(
                 ctx,
+                &hook_repo,
                 &bookmark,
                 &load_commit("G").await?,
-                &content_manager,
                 CrossRepoPushSource::NativeToThisRepo,
                 PushAuthoredBy::User,
             )
@@ -528,9 +528,9 @@ mod test {
         let hook_execution = hook
             .run(
                 ctx,
+                &hook_repo,
                 &bookmark,
                 &load_commit("C").await?,
-                &content_manager,
                 CrossRepoPushSource::NativeToThisRepo,
                 PushAuthoredBy::User,
             )
@@ -548,9 +548,9 @@ mod test {
         let hook_execution = hook
             .run(
                 ctx,
+                &hook_repo,
                 &bookmark,
                 &load_commit("C").await?,
-                &content_manager,
                 CrossRepoPushSource::NativeToThisRepo,
                 PushAuthoredBy::User,
             )
@@ -559,9 +559,9 @@ mod test {
         let hook_execution = hook
             .run(
                 ctx,
+                &hook_repo,
                 &bookmark,
                 &load_commit("D").await?,
-                &content_manager,
                 CrossRepoPushSource::NativeToThisRepo,
                 PushAuthoredBy::User,
             )

@@ -20,7 +20,7 @@ use crate::CrossRepoPushSource;
 use crate::FileHook;
 use crate::HookExecution;
 use crate::HookRejectionInfo;
-use crate::HookStateProvider;
+use crate::HookRepo;
 use crate::PushAuthoredBy;
 
 const BAD_WINDOWS_PATH_ELEMENT_REGEX: &str =
@@ -84,10 +84,10 @@ impl NoWindowsFilenamesHook {
 
 #[async_trait]
 impl FileHook for NoWindowsFilenamesHook {
-    async fn run<'this: 'change, 'ctx: 'this, 'change, 'fetcher: 'change, 'path: 'change>(
+    async fn run<'this: 'change, 'ctx: 'this, 'change, 'repo: 'change, 'path: 'change>(
         &'this self,
         _ctx: &'ctx CoreContext,
-        _context_fetcher: &'fetcher dyn HookStateProvider,
+        _context_fetcher: &'repo HookRepo,
         change: Option<&'change BasicFileChange>,
         path: &'path NonRootMPath,
         cross_repo_push_source: CrossRepoPushSource,

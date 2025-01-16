@@ -20,7 +20,7 @@ use crate::FileHook;
 use crate::HookConfig;
 use crate::HookExecution;
 use crate::HookRejectionInfo;
-use crate::HookStateProvider;
+use crate::HookRepo;
 use crate::PushAuthoredBy;
 
 #[derive(Deserialize, Clone, Debug)]
@@ -62,10 +62,10 @@ impl BlockContentPatternHook {
 
 #[async_trait]
 impl FileHook for BlockContentPatternHook {
-    async fn run<'this: 'change, 'ctx: 'this, 'change, 'fetcher: 'change, 'path: 'change>(
+    async fn run<'this: 'change, 'ctx: 'this, 'change, 'repo: 'change, 'path: 'change>(
         &'this self,
         ctx: &'ctx CoreContext,
-        content_manager: &'fetcher dyn HookStateProvider,
+        hook_repo: &'repo HookRepo,
         change: Option<&'change BasicFileChange>,
         path: &'path NonRootMPath,
         _cross_repo_push_source: CrossRepoPushSource,
@@ -86,10 +86,7 @@ impl FileHook for BlockContentPatternHook {
         }
 
         if let Some(change) = change {
-            if let Some(text) = content_manager
-                .get_file_text(ctx, change.content_id())
-                .await?
-            {
+            if let Some(text) = hook_repo.get_file_text(ctx, change.content_id()).await? {
                 // Ignore non-UTF8 or binary files
                 if let Ok(text) = std::str::from_utf8(&text) {
                     if let Some(caps) = self.config.pattern.captures(text) {
