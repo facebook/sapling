@@ -40,7 +40,7 @@
 
 # Capture all the known Git objects from the repo
   $ cd $GIT_REPO
-  $ git rev-list --objects --all | git cat-file --batch-check='%(objectname) %(objecttype) %(rest)' | sort > $TESTTMP/object_list
+  $ git rev-list --objects --no-object-names --all | git cat-file --batch-check='%(objectname) %(objecttype) %(rest)' | sort > $TESTTMP/object_list
 
 # Import it into Mononoke
   $ cd "$TESTTMP"
@@ -48,9 +48,26 @@
 
 # Start up the Mononoke Git Service
   $ mononoke_git_service
-# List the known refs for the repo from Mononoke. Note that refs pointing to trees and blobs are not listed
+# List the known refs for the repo from Mononoke
   $ git_client ls-remote $MONONOKE_GIT_SERVICE_BASE_URL/$REPONAME.git
   8ce3eae44760b500bf3f2c3922a95dcd3c908e9e	HEAD
   8ce3eae44760b500bf3f2c3922a95dcd3c908e9e	refs/heads/master_bookmark
+  433eb172726bc7b6d60e8d68efb0f0ef4e67a667	refs/refs/heads/branch_to_blob
+  cb2ef838eb24e4667fee3a8b89c930234ae6e4bb	refs/refs/heads/branch_to_root_tree
+  cb2ef838eb24e4667fee3a8b89c930234ae6e4bb	refs/refs/tags/simple_tag_to_tree
+  cb2ef838eb24e4667fee3a8b89c930234ae6e4bb	refs/refs/tags/tag_to_tree
   8963e1f55d1346a07c3aec8c8fc72bf87d0452b1	refs/tags/first_tag
   8ce3eae44760b500bf3f2c3922a95dcd3c908e9e	refs/tags/first_tag^{}
+
+# Clone the repo from Mononoke and compare the objects
+  $ git_client clone $MONONOKE_GIT_SERVICE_BASE_URL/$REPONAME.git
+  Cloning into 'repo'...
+
+# Verify that we get the same Git repo back that we started with. Because Mononoke Git doesn't yet return these objects, we get different output
+  $ cd $REPONAME  
+  $ git rev-list --objects --no-object-names --all | git cat-file --batch-check='%(objectname) %(objecttype) %(rest)' | sort > $TESTTMP/new_object_list
+  $ diff -w $TESTTMP/new_object_list $TESTTMP/object_list
+  3a4,5
+  * 98517855d851d4ed98d78cf903cefa46d95f3623 tag* (glob)
+  * a8c14233f14d030ddbc16eb955df7fbc1922a5de tag* (glob)
+  [1]

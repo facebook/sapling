@@ -5,6 +5,7 @@
  * GNU General Public License version 2.
  */
 
+use std::str::FromStr;
 use std::sync::Arc;
 
 use anyhow::Context;
@@ -207,47 +208,70 @@ pub(crate) async fn refs_to_include(
         .into_iter()
         .map(|entry| Ok((entry.tag_name, entry.tag_hash.to_object_id()?)))
         .collect::<Result<FxHashMap<_, _>>>()?;
+    let content_refs = repo
+        .git_ref_content_mapping()
+        .get_all_entries()
+        .await
+        .with_context(|| {
+            format!(
+                "Error while fetching git ref content mapping entries for repo {}",
+                repo.repo_identity().name()
+            )
+        })?
+        .into_iter()
+        .map(|entry| {
+            Ok((
+                BookmarkKey::from_str(&entry.ref_name)?,
+                entry.git_hash.to_object_id()?,
+            ))
+        });
 
-    bookmarks.iter().map(|(bookmark, cs_id)| {
-        if bookmark.is_tag() {
-            match tag_inclusion {
-                TagInclusion::AsIs => {
-                    if let Some(git_objectid) = bonsai_tag_map.get(&bookmark.to_string()) {
-                        let ref_name = format!("{}{}", REF_PREFIX, bookmark);
-                        return Ok((ref_name, RefTarget::Plain(git_objectid.clone())));
+    bookmarks
+        .iter()
+        .map(|(bookmark, cs_id)| {
+            let git_objectid = bonsai_git_map.get(cs_id).ok_or_else(|| {
+                anyhow::anyhow!(
+                    "No Git ObjectId found for changeset {:?} during refs-to-include",
+                    cs_id
+                )
+            })?;
+            Ok((bookmark.clone(), *git_objectid))
+        })
+        .chain(content_refs)
+        .map(|fallible| match fallible {
+            Ok((bookmark, git_objectid)) => {
+                if bookmark.is_tag() {
+                    match tag_inclusion {
+                        TagInclusion::AsIs => {
+                            if let Some(git_objectid) = bonsai_tag_map.get(&bookmark.to_string()) {
+                                let ref_name = format!("{}{}", REF_PREFIX, bookmark);
+                                return Ok((ref_name, RefTarget::Plain(git_objectid.clone())));
+                            }
+                        }
+                        TagInclusion::Peeled => {
+                            let ref_name = format!("{}{}", REF_PREFIX, bookmark);
+                            return Ok((ref_name, RefTarget::Plain(git_objectid.clone())));
+                        }
+                        TagInclusion::WithTarget => {
+                            if let Some(tag_objectid) = bonsai_tag_map.get(&bookmark.to_string()) {
+                                let ref_name = format!("{}{}", REF_PREFIX, bookmark);
+                                let metadata = format!("peeled:{}", git_objectid.to_hex());
+                                return Ok((
+                                    ref_name,
+                                    RefTarget::WithMetadata(tag_objectid.clone(), metadata),
+                                ));
+                            }
+                        }
                     }
-                }
-                TagInclusion::Peeled => {
-                    let git_objectid = bonsai_git_map.get(cs_id).ok_or_else(|| {
-                        anyhow::anyhow!("No Git ObjectId found for changeset {:?} during refs-to-include", cs_id)
-                    })?;
-                    let ref_name = format!("{}{}", REF_PREFIX, bookmark);
-                    return Ok((ref_name, RefTarget::Plain(git_objectid.clone())));
-                }
-                TagInclusion::WithTarget => {
-                    if let Some(tag_objectid) = bonsai_tag_map.get(&bookmark.to_string()) {
-                        let commit_objectid = bonsai_git_map.get(cs_id).ok_or_else(|| {
-                            anyhow::anyhow!("No Git ObjectId found for changeset {:?} during refs-to-include", cs_id)
-                        })?;
-                        let ref_name = format!("{}{}", REF_PREFIX, bookmark);
-                        let metadata = format!("peeled:{}", commit_objectid.to_hex());
-                        return Ok((
-                            ref_name,
-                            RefTarget::WithMetadata(tag_objectid.clone(), metadata),
-                        ));
-                    }
-                }
+                };
+                // If the bookmark is a branch or if its just a simple (non-annotated) tag, we generate the
+                // ref to target mapping based on the changeset id
+                let ref_name = format!("{}{}", REF_PREFIX, bookmark);
+                Ok((ref_name, RefTarget::Plain(git_objectid.clone())))
             }
-        };
-        // If the bookmark is a branch or if its just a simple (non-annotated) tag, we generate the
-        // ref to target mapping based on the changeset id
-        let git_objectid = bonsai_git_map.get(cs_id).ok_or_else(|| {
-            anyhow::anyhow!("No Git ObjectId found for changeset {:?} during refs-to-include", cs_id)
-        })?;
-        let ref_name = format!("{}{}", REF_PREFIX, bookmark);
-        Ok((ref_name, RefTarget::Plain(git_objectid.clone())))
-    })
-    .collect::<Result<FxHashMap<_, _>>>()
+            Err(e) => Err(e),
+        })
+        .collect::<Result<FxHashMap<_, _>>>()
 }
 
 /// The HEAD ref in Git doesn't have a direct counterpart in Mononoke bookmarks and is instead
