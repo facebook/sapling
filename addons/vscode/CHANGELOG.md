@@ -1,5 +1,16 @@
 # Changelog
 
+## 0.1.65
+
+### Jan 16 2025
+
+- Add "Keep Rebased Commits on Abort" checkbox
+- Experimental "absorb" feature to distribute your changes into your stack, disabled by default
+- Improve error messages from spawned commands
+- Fix changes with >1000 files not rendering files after the first 1000
+- Don't load public commit changed files by default for performance
+- Load older commits with Commit Cloud, in supported repos
+
 ## 0.1.64
 
 ### Nov 19 2024
