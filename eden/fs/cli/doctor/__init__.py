@@ -37,6 +37,8 @@ from eden.fs.cli.doctor.util import (
 from facebook.eden.ttypes import MountState
 from fb303_core.ttypes import fb303_status
 
+from filelock import FileLock, Timeout
+
 from . import (
     check_filesystems,
     check_hg,
@@ -395,6 +397,7 @@ class EdenDoctor(EdenDoctorChecker):
     fixer: ProblemFixer
     dry_run: bool
     min_severity_to_report: ProblemSeverity
+    lock_file_path: Path
 
     def __init__(
         self,
@@ -412,6 +415,7 @@ class EdenDoctor(EdenDoctorChecker):
     ) -> None:
         self.dry_run = dry_run
         self.min_severity_to_report = min_severity_to_report
+        self.lock_file_path = instance.state_dir / ".doctor.lock"
         out = out if out is not None else ui.get_output()
         if dry_run:
             self.fixer = DryRunFixer(
@@ -442,8 +446,18 @@ class EdenDoctor(EdenDoctorChecker):
         )
 
     def cure_what_ails_you(self) -> int:
-        self.run_checks()
-        return self._report_problems()
+        if self.instance.get_config_bool("doctor.single-instance-only", False):
+            lock = FileLock(self.lock_file_path, timeout=10)
+            try:
+                with lock:
+                    self.run_checks()
+                    return self._report_problems()
+            except Timeout:
+                print("An instance of EdenFS doctor is already running")
+                return 1
+        else:
+            self.run_checks()
+            return self._report_problems()
 
     def _report_problems(self) -> int:
         fixer = self.fixer
@@ -509,6 +523,7 @@ class EdenDoctor(EdenDoctorChecker):
                 f"Successfully fixed {problem_count(fixer.num_fixed_problems)}.",
                 fg=out.YELLOW,
             )
+
         if fixer.num_failed_fixes:
             out.writeln(
                 f"Failed to fix {problem_count(fixer.num_failed_fixes)}.", fg=out.RED
