@@ -15,7 +15,7 @@
 
 /*
  * XDR datastructures described in
- * https://opensource.apple.com/source/NFS/NFS-150.40.3/mount_nfs/nfs_sys_prot.x.auto.html
+ * https://github.com/apple-oss-distributions/NFS/blob/main/mount_nfs/nfs_sys_prot.x
  */
 
 namespace facebook::eden {
