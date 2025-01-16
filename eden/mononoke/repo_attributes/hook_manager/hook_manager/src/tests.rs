@@ -15,9 +15,6 @@ use async_trait::async_trait;
 use bookmarks_types::BookmarkKey;
 use context::CoreContext;
 use fbinit::FacebookInit;
-use futures::future;
-use futures::stream::futures_unordered;
-use futures::stream::TryStreamExt;
 use maplit::hashmap;
 use maplit::hashset;
 use metaconfig_types::HookManagerParams;
@@ -25,12 +22,16 @@ use mononoke_macros::mononoke;
 use mononoke_types::BasicFileChange;
 use mononoke_types::BonsaiChangeset;
 use mononoke_types::BonsaiChangesetMut;
+use mononoke_types::ContentId;
 use mononoke_types::DateTime;
 use mononoke_types::FileChange;
 use mononoke_types::FileType;
 use mononoke_types::GitLfs;
 use mononoke_types::NonRootMPath;
+use mononoke_types_mocks::contentid::FIVES_CTID;
+use mononoke_types_mocks::contentid::FOURS_CTID;
 use mononoke_types_mocks::contentid::ONES_CTID;
+use mononoke_types_mocks::contentid::SIXES_CTID;
 use mononoke_types_mocks::contentid::THREES_CTID;
 use mononoke_types_mocks::contentid::TWOS_CTID;
 use permission_checker::InternalAclProvider;
@@ -86,132 +87,43 @@ fn always_rejecting_changeset_hook() -> Box<dyn ChangesetHook> {
 }
 
 #[derive(Clone, Debug)]
-struct FileContentMatchingChangesetHook {
-    expected_content: HashMap<NonRootMPath, Option<String>>,
+struct ContentIdMatchingChangesetHook {
+    expected_content_ids: HashMap<NonRootMPath, Option<ContentId>>,
 }
 
 #[async_trait]
-impl ChangesetHook for FileContentMatchingChangesetHook {
+impl ChangesetHook for ContentIdMatchingChangesetHook {
     async fn run<'this: 'cs, 'ctx: 'this, 'cs, 'fetcher: 'cs>(
         &'this self,
-        ctx: &'ctx CoreContext,
+        _ctx: &'ctx CoreContext,
         _bookmark: &BookmarkKey,
         changeset: &'cs BonsaiChangeset,
-        content_manager: &'fetcher dyn HookStateProvider,
+        _content_manager: &'fetcher dyn HookStateProvider,
         _cross_repo_push_source: CrossRepoPushSource,
         _push_authored_by: PushAuthoredBy,
     ) -> Result<HookExecution, Error> {
-        let futs = futures_unordered::FuturesUnordered::new();
-
         for (path, change) in changeset.simplified_file_changes() {
             // If we have a change to a path, but no expected change, fail
-            let expected_content = match self.expected_content.get(path) {
+            let expected_content = match self.expected_content_ids.get(path) {
                 Some(expected) => expected,
                 None => return Ok(default_rejection()),
             };
 
-            match change {
-                Some(change) => {
-                    let fut = async move {
-                        let content = content_manager
-                            .get_file_text(ctx, change.content_id())
-                            .await?;
-                        let content =
-                            content.map(|c| std::str::from_utf8(c.as_ref()).unwrap().to_string());
-
-                        // True only if there is content containing the expected content
-                        Ok(match (content, expected_content.as_ref()) {
-                            (Some(content), Some(expected_content)) => {
-                                content.contains(expected_content)
-                            }
-                            (None, None) => true,
-                            _ => false,
-                        })
-                    };
-                    futs.push(fut);
-                }
-                None => {
-                    // If we have a deletion, but expect it to be present, fail
-                    if expected_content.is_some() {
-                        return Ok(default_rejection());
-                    }
-                }
+            if change.map(|change| change.content_id()) != *expected_content {
+                return Ok(default_rejection());
             }
         }
 
-        let opt_item = futs
-            .try_skip_while(|b: &bool| future::ok::<_, Error>(*b))
-            .try_next()
-            .await?;
-        Ok(if opt_item.is_some() {
-            default_rejection()
-        } else {
-            HookExecution::Accepted
-        })
+        Ok(HookExecution::Accepted)
     }
 }
 
-fn file_text_matching_changeset_hook(
-    expected_content: HashMap<NonRootMPath, Option<String>>,
+fn content_id_matching_changeset_hook(
+    expected_content_ids: HashMap<NonRootMPath, Option<ContentId>>,
 ) -> Box<dyn ChangesetHook> {
-    Box::new(FileContentMatchingChangesetHook { expected_content })
-}
-
-#[derive(Clone, Debug)]
-struct LengthMatchingChangesetHook {
-    expected_lengths: HashMap<NonRootMPath, u64>,
-}
-
-#[async_trait]
-impl ChangesetHook for LengthMatchingChangesetHook {
-    async fn run<'this: 'cs, 'ctx: 'this, 'cs, 'fetcher: 'cs>(
-        &'this self,
-        ctx: &'ctx CoreContext,
-        _bookmark: &BookmarkKey,
-        changeset: &'cs BonsaiChangeset,
-        content_manager: &'fetcher dyn HookStateProvider,
-        _cross_repo_push_source: CrossRepoPushSource,
-        _push_authored_by: PushAuthoredBy,
-    ) -> Result<HookExecution, Error> {
-        let futs = futures_unordered::FuturesUnordered::new();
-        for (path, change) in changeset.simplified_file_changes() {
-            let expected_length = self.expected_lengths.get(path);
-
-            match change {
-                Some(change) => {
-                    let fut = async move {
-                        let size = content_manager
-                            .get_file_metadata(ctx, change.content_id())
-                            .await?
-                            .total_size;
-
-                        Ok(expected_length == Some(size).as_ref())
-                    };
-                    futs.push(fut);
-                }
-                None => {
-                    if expected_length.is_some() {
-                        return Ok(default_rejection());
-                    }
-                }
-            }
-        }
-        let opt_item = futs
-            .try_skip_while(|b: &bool| future::ok::<_, Error>(*b))
-            .try_next()
-            .await?;
-        Ok(if opt_item.is_some() {
-            default_rejection()
-        } else {
-            HookExecution::Accepted
-        })
-    }
-}
-
-fn length_matching_changeset_hook(
-    expected_lengths: HashMap<NonRootMPath, u64>,
-) -> Box<dyn ChangesetHook> {
-    Box::new(LengthMatchingChangesetHook { expected_lengths })
+    Box::new(ContentIdMatchingChangesetHook {
+        expected_content_ids,
+    })
 }
 
 #[derive(Clone, Debug)]
@@ -279,47 +191,33 @@ fn path_matching_file_hook(paths: HashSet<NonRootMPath>) -> Box<dyn FileHook> {
 }
 
 #[derive(Clone, Debug)]
-struct FileContentMatchingFileHook {
-    expected_content: Option<String>,
+struct ContentIdMatchingFileHook {
+    expected_content_id: Option<ContentId>,
 }
 
 #[async_trait]
-impl FileHook for FileContentMatchingFileHook {
+impl FileHook for ContentIdMatchingFileHook {
     async fn run<'this: 'change, 'ctx: 'this, 'change, 'fetcher: 'change, 'path: 'change>(
         &'this self,
-        ctx: &'ctx CoreContext,
-        content_manager: &'fetcher dyn HookStateProvider,
+        _ctx: &'ctx CoreContext,
+        _content_manager: &'fetcher dyn HookStateProvider,
         change: Option<&'change BasicFileChange>,
         _path: &'path NonRootMPath,
         _cross_repo_push_source: CrossRepoPushSource,
         _push_authored_by: PushAuthoredBy,
     ) -> Result<HookExecution, Error> {
-        match change {
-            Some(change) => {
-                let content = content_manager
-                    .get_file_text(ctx, change.content_id())
-                    .await?;
-                let content = content.map(|c| std::str::from_utf8(c.as_ref()).unwrap().to_string());
-                Ok(match (content, self.expected_content.as_ref()) {
-                    (Some(content), Some(expected_content)) => {
-                        if content.contains(expected_content) {
-                            HookExecution::Accepted
-                        } else {
-                            default_rejection()
-                        }
-                    }
-                    (None, None) => HookExecution::Accepted,
-                    _ => default_rejection(),
-                })
-            }
-
-            None => Ok(default_rejection()),
+        if change.map(|change| change.content_id()) == self.expected_content_id {
+            Ok(HookExecution::Accepted)
+        } else {
+            Ok(default_rejection())
         }
     }
 }
 
-fn file_text_matching_file_hook(expected_content: Option<String>) -> Box<dyn FileHook> {
-    Box::new(FileContentMatchingFileHook { expected_content })
+fn content_id_matching_file_hook(expected_content_id: Option<ContentId>) -> Box<dyn FileHook> {
+    Box::new(ContentIdMatchingFileHook {
+        expected_content_id,
+    })
 }
 
 #[derive(Clone, Debug)]
@@ -352,42 +250,6 @@ impl FileHook for IsSymLinkMatchingFileHook {
 
 fn is_symlink_matching_file_hook(is_symlink: bool) -> Box<dyn FileHook> {
     Box::new(IsSymLinkMatchingFileHook { is_symlink })
-}
-
-#[derive(Clone, Debug)]
-struct LengthMatchingFileHook {
-    length: u64,
-}
-
-#[async_trait]
-impl FileHook for LengthMatchingFileHook {
-    async fn run<'this: 'change, 'ctx: 'this, 'change, 'fetcher: 'change, 'path: 'change>(
-        &'this self,
-        ctx: &'ctx CoreContext,
-        content_manager: &'fetcher dyn HookStateProvider,
-        change: Option<&'change BasicFileChange>,
-        _path: &'path NonRootMPath,
-        _cross_repo_push_source: CrossRepoPushSource,
-        _push_authored_by: PushAuthoredBy,
-    ) -> Result<HookExecution, Error> {
-        let length = match change {
-            Some(change) => {
-                content_manager
-                    .get_file_metadata(ctx, change.content_id())
-                    .await?
-                    .total_size
-            }
-            None => return Ok(HookExecution::Accepted),
-        };
-        if length == self.length {
-            return Ok(HookExecution::Accepted);
-        }
-        Ok(default_rejection())
-    }
-}
-
-fn length_matching_file_hook(length: u64) -> Box<dyn FileHook> {
-    Box::new(LengthMatchingFileHook { length })
 }
 
 async fn hook_manager_inmem(fb: FacebookInit) -> HookManager {
@@ -575,70 +437,33 @@ async fn test_changeset_hook_mix(fb: FacebookInit) {
 }
 
 #[mononoke::fbinit_test]
-async fn test_changeset_hook_file_text(fb: FacebookInit) {
+async fn test_changeset_hook_content_id(fb: FacebookInit) {
     let ctx = CoreContext::test_mock(fb);
-    let hook1_map = hashmap![
-        to_mpath("dir1/subdir1/subsubdir1/file_1") => Some("elephants".to_string()),
-        to_mpath("dir1/subdir1/subsubdir2/file_1") => Some("hippopatami".to_string()),
-        to_mpath("dir1/subdir1/subsubdir2/file_2") => Some("eels".to_string()),
-    ];
-    let hook2_map = hashmap![
-        to_mpath("dir1/subdir1/subsubdir1/file_1") => Some("anteaters".to_string()),
-        to_mpath("dir1/subdir1/subsubdir2/file_1") => Some("hippopatami".to_string()),
-        to_mpath("dir1/subdir1/subsubdir2/file_2") => Some("eels".to_string()),
-    ];
-    let hook3_map = hashmap![
-        to_mpath("dir1/subdir1/subsubdir1/file_1") => Some("anteaters".to_string()),
-        to_mpath("dir1/subdir1/subsubdir2/file_1") => Some("giraffes".to_string()),
-        to_mpath("dir1/subdir1/subsubdir2/file_2") => Some("lions".to_string()),
-    ];
+    let hook1_map = hashmap! {
+        to_mpath("dir1/subdir1/subsubdir1/file_1") => Some(ONES_CTID),
+        to_mpath("dir1/subdir1/subsubdir2/file_1") => Some(TWOS_CTID),
+        to_mpath("dir1/subdir1/subsubdir2/file_2") => Some(THREES_CTID),
+    };
+    let hook2_map = hashmap! {
+        to_mpath("dir1/subdir1/subsubdir1/file_1") => Some(FOURS_CTID),
+        to_mpath("dir1/subdir1/subsubdir2/file_1") => Some(TWOS_CTID),
+        to_mpath("dir1/subdir1/subsubdir2/file_2") => Some(THREES_CTID),
+    };
+    let hook3_map = hashmap! {
+        to_mpath("dir1/subdir1/subsubdir1/file_1") => Some(FOURS_CTID),
+        to_mpath("dir1/subdir1/subsubdir2/file_1") => Some(FIVES_CTID),
+        to_mpath("dir1/subdir1/subsubdir2/file_2") => Some(SIXES_CTID),
+    };
     let hooks: HashMap<String, Box<dyn ChangesetHook>> = hashmap! {
-        "hook1".to_string() => file_text_matching_changeset_hook(hook1_map),
-        "hook2".to_string() => file_text_matching_changeset_hook(hook2_map),
-        "hook3".to_string() => file_text_matching_changeset_hook(hook3_map),
+        "hook1".to_string() => content_id_matching_changeset_hook(hook1_map),
+        "hook2".to_string() => content_id_matching_changeset_hook(hook2_map),
+        "hook3".to_string() => content_id_matching_changeset_hook(hook3_map),
     };
     let bookmarks = hashmap! {
         "bm1".to_string() => vec!["hook1".to_string(), "hook2".to_string()]
     };
     let regexes = hashmap! {
         "b.*".to_string() => vec!["hook2".to_string(), "hook3".to_string()]
-    };
-    let expected = hashmap! {
-        "hook1".to_string() => HookExecution::Accepted,
-        "hook2".to_string() => default_rejection(),
-        "hook3".to_string() => default_rejection(),
-    };
-    run_changeset_hooks(ctx, "bm1", hooks, bookmarks, regexes, expected).await;
-}
-
-#[mononoke::fbinit_test]
-async fn test_changeset_hook_lengths(fb: FacebookInit) {
-    let ctx = CoreContext::test_mock(fb);
-    let hook1_map = hashmap![
-        to_mpath("dir1/subdir1/subsubdir1/file_1") => 9,
-        to_mpath("dir1/subdir1/subsubdir2/file_1") => 11,
-        to_mpath("dir1/subdir1/subsubdir2/file_2") => 4
-    ];
-    let hook2_map = hashmap![
-        to_mpath("dir1/subdir1/subsubdir1/file_1") => 9,
-        to_mpath("dir1/subdir1/subsubdir2/file_1") => 12,
-        to_mpath("dir1/subdir1/subsubdir2/file_2") => 4
-    ];
-    let hook3_map = hashmap![
-        to_mpath("dir1/subdir1/subsubdir1/file_1") => 15,
-        to_mpath("dir1/subdir1/subsubdir2/file_1") => 17,
-        to_mpath("dir1/subdir1/subsubdir2/file_2") => 2
-    ];
-    let hooks: HashMap<String, Box<dyn ChangesetHook>> = hashmap! {
-        "hook1".to_string() => length_matching_changeset_hook(hook1_map),
-        "hook2".to_string() => length_matching_changeset_hook(hook2_map),
-        "hook3".to_string() => length_matching_changeset_hook(hook3_map),
-    };
-    let bookmarks = hashmap! {
-        "bm1".to_string() => vec!["hook1".to_string(), "hook2".to_string()],
-    };
-    let regexes = hashmap! {
-        "b.*".to_string() => vec!["hook3".to_string()],
     };
     let expected = hashmap! {
         "hook1".to_string() => HookExecution::Accepted,
@@ -774,12 +599,12 @@ async fn test_file_hooks_paths_mix(fb: FacebookInit) {
 }
 
 #[mononoke::fbinit_test]
-async fn test_file_hook_file_text(fb: FacebookInit) {
+async fn test_file_hook_content_id(fb: FacebookInit) {
     let ctx = CoreContext::test_mock(fb);
     let hooks: HashMap<String, Box<dyn FileHook>> = hashmap! {
-        "hook1".to_string() => file_text_matching_file_hook(Some("elephants".to_string())),
-        "hook2".to_string() => file_text_matching_file_hook(Some("hippopatami".to_string())),
-        "hook3".to_string() => file_text_matching_file_hook(Some("eels".to_string()))
+        "hook1".to_string() => content_id_matching_file_hook(Some(ONES_CTID)),
+        "hook2".to_string() => content_id_matching_file_hook(Some(TWOS_CTID)),
+        "hook3".to_string() => content_id_matching_file_hook(Some(THREES_CTID)),
     };
     let bookmarks = hashmap! {
         "bm1".to_string() => vec!["hook1".to_string(), "hook2".to_string()],
@@ -830,46 +655,6 @@ async fn test_file_hook_is_symlink(fb: FacebookInit) {
             "dir1/subdir1/subsubdir1/file_1".to_string() => default_rejection(),
             "dir1/subdir1/subsubdir2/file_1".to_string() => HookExecution::Accepted,
             "dir1/subdir1/subsubdir2/file_2".to_string() => HookExecution::Accepted,
-        },
-    };
-    run_file_hooks(ctx, "bm1", hooks, bookmarks, regexes, expected).await;
-}
-
-#[mononoke::fbinit_test]
-async fn test_file_hook_length(fb: FacebookInit) {
-    let ctx = CoreContext::test_mock(fb);
-    let hooks: HashMap<String, Box<dyn FileHook>> = hashmap! {
-        "hook1".to_string() => length_matching_file_hook("elephants".len() as u64),
-        "hook2".to_string() => length_matching_file_hook("hippopatami".len() as u64),
-        "hook3".to_string() => length_matching_file_hook("eels".len() as u64),
-        "hook4".to_string() => length_matching_file_hook(999)
-    };
-    let bookmarks = hashmap! {
-        "bm1".to_string() => vec!["hook1".to_string(), "hook2".to_string(), "hook3".to_string()],
-    };
-    let regexes = hashmap! {
-        "b.*".to_string() => vec!["hook3".to_string(), "hook4".to_string()],
-    };
-    let expected = hashmap! {
-        "hook1".to_string() => hashmap! {
-            "dir1/subdir1/subsubdir1/file_1".to_string() => HookExecution::Accepted,
-            "dir1/subdir1/subsubdir2/file_1".to_string() => default_rejection(),
-            "dir1/subdir1/subsubdir2/file_2".to_string() => default_rejection(),
-        },
-        "hook2".to_string() => hashmap! {
-            "dir1/subdir1/subsubdir1/file_1".to_string() => default_rejection(),
-            "dir1/subdir1/subsubdir2/file_1".to_string() => HookExecution::Accepted,
-            "dir1/subdir1/subsubdir2/file_2".to_string() => default_rejection(),
-        },
-        "hook3".to_string() => hashmap! {
-            "dir1/subdir1/subsubdir1/file_1".to_string() => default_rejection(),
-            "dir1/subdir1/subsubdir2/file_1".to_string() => default_rejection(),
-            "dir1/subdir1/subsubdir2/file_2".to_string() => HookExecution::Accepted,
-        },
-        "hook4".to_string() => hashmap! {
-            "dir1/subdir1/subsubdir1/file_1".to_string() => default_rejection(),
-            "dir1/subdir1/subsubdir2/file_1".to_string() => default_rejection(),
-            "dir1/subdir1/subsubdir2/file_2".to_string() => default_rejection(),
         },
     };
     run_file_hooks(ctx, "bm1", hooks, bookmarks, regexes, expected).await;

@@ -20,8 +20,6 @@ use mononoke_types::ContentId;
 use mononoke_types::ContentMetadataV2;
 use mononoke_types::MPath;
 use mononoke_types::NonRootMPath;
-use quickcheck::Arbitrary;
-use quickcheck::Gen;
 
 use crate::errors::HookStateProviderError;
 use crate::provider::BookmarkState;
@@ -65,38 +63,20 @@ impl HookStateProvider for InMemoryHookStateProvider {
     async fn get_file_metadata<'a>(
         &'a self,
         _ctx: &'a CoreContext,
-        id: ContentId,
+        _id: ContentId,
     ) -> Result<ContentMetadataV2, HookStateProviderError> {
-        let mb_content_md = self
-            .id_to_text
-            .get(&id)
-            .map(|maybe_bytes| match maybe_bytes {
-                InMemoryFileText::Present(bytes) => Some(ContentMetadataV2 {
-                    total_size: bytes.len() as u64,
-                    ..ContentMetadataV2::arbitrary(&mut Gen::new(100))
-                }),
-                InMemoryFileText::Elided(size) => Some(ContentMetadataV2 {
-                    total_size: *size,
-                    ..ContentMetadataV2::arbitrary(&mut Gen::new(100))
-                }),
-            });
-        mb_content_md
-            .flatten()
-            .ok_or(HookStateProviderError::ContentIdNotFound(id))
+        Err(
+            anyhow!("`get_file_metadata` is not implemented for `InMemoryHookStateProvider`")
+                .into(),
+        )
     }
 
     async fn get_file_text<'a>(
         &'a self,
         _ctx: &'a CoreContext,
-        id: ContentId,
+        _id: ContentId,
     ) -> Result<Option<Bytes>, HookStateProviderError> {
-        self.id_to_text
-            .get(&id)
-            .ok_or(HookStateProviderError::ContentIdNotFound(id))
-            .map(|maybe_bytes| match maybe_bytes {
-                InMemoryFileText::Present(bytes) => Some(bytes.clone()),
-                InMemoryFileText::Elided(_) => None,
-            })
+        Err(anyhow!("`get_file_text` is not implemented for `InMemoryHookStateProvider`").into())
     }
 
     async fn get_file_bytes<'a>(
