@@ -22,6 +22,7 @@ use rustc_hash::FxHashSet;
 use crate::bookmarks_provider::bookmarks;
 use crate::bookmarks_provider::list_tags;
 use crate::types::CommitTagMappings;
+use crate::types::GitBookmarks;
 use crate::types::RefTarget;
 use crate::types::RefsSource;
 use crate::types::RequestedRefs;
@@ -51,10 +52,11 @@ pub async fn ref_oid_mapping(
         .await
         .context("Error while fetching bookmarks for ref_oid_mapping")?;
     let bonsai_git_mappings =
-        bonsai_git_mappings_by_bonsai(ctx, repo, wanted_refs.values().copied().collect())
+        bonsai_git_mappings_by_bonsai(ctx, repo, wanted_refs.entries.values().copied().collect())
             .await
             .context("Error while fetching bonsai_git_mapping for ref_oid_mapping")?;
     let wanted_refs_with_oid = wanted_refs
+        .entries
         .into_iter()
         .map(|(bookmark, cs_id)| {
             let oid = bonsai_git_mappings.get(&cs_id).with_context(|| {
@@ -130,6 +132,26 @@ pub async fn bonsai_git_mappings_by_bonsai(
         .context("Error while converting Git Sha1 to Git Object Id during fetch")
 }
 
+pub async fn git_ref_content_mapping(repo: &impl Repo) -> Result<Vec<(BookmarkKey, ObjectId)>> {
+    repo.git_ref_content_mapping()
+        .get_all_entries()
+        .await
+        .with_context(|| {
+            format!(
+                "Error while fetching git ref content mapping entries for repo {}",
+                repo.repo_identity().name()
+            )
+        })?
+        .into_iter()
+        .map(|entry| {
+            Ok((
+                BookmarkKey::from_str(&entry.ref_name)?,
+                entry.git_hash.to_object_id()?,
+            ))
+        })
+        .collect::<Result<Vec<_>>>()
+}
+
 /// Fetch all the bonsai commits pointed to by the annotated tags corresponding
 /// to the input object ids along with the tag names. For all the input Git shas
 /// that we could not find a corresponding tag for, return the shas as blob and tree
@@ -188,13 +210,10 @@ pub(crate) async fn tagged_commits(
 /// will be bookmarks created from branches and tags. Branches and simple tags will be mapped to the
 /// Git commit that they point to. Annotated tags will be handled based on the `tag_inclusion` parameter
 pub(crate) async fn refs_to_include(
-    ctx: &CoreContext,
     repo: &impl Repo,
-    bookmarks: &FxHashMap<BookmarkKey, ChangesetId>,
+    bookmarks: &GitBookmarks,
     tag_inclusion: TagInclusion,
 ) -> Result<FxHashMap<String, RefTarget>> {
-    let bonsai_git_map =
-        bonsai_git_mappings_by_bonsai(ctx, repo, bookmarks.values().cloned().collect()).await?;
     let bonsai_tag_map = repo
         .bonsai_tag_mapping()
         .get_all_entries()
@@ -208,68 +227,43 @@ pub(crate) async fn refs_to_include(
         .into_iter()
         .map(|entry| Ok((entry.tag_name, entry.tag_hash.to_object_id()?)))
         .collect::<Result<FxHashMap<_, _>>>()?;
-    let content_refs = repo
-        .git_ref_content_mapping()
-        .get_all_entries()
+    let content_refs = git_ref_content_mapping(repo)
         .await
-        .with_context(|| {
-            format!(
-                "Error while fetching git ref content mapping entries for repo {}",
-                repo.repo_identity().name()
-            )
-        })?
-        .into_iter()
-        .map(|entry| {
-            Ok((
-                BookmarkKey::from_str(&entry.ref_name)?,
-                entry.git_hash.to_object_id()?,
-            ))
-        });
-
+        .context("ls-refs failed")?;
     bookmarks
-        .iter()
-        .map(|(bookmark, cs_id)| {
-            let git_objectid = bonsai_git_map.get(cs_id).ok_or_else(|| {
-                anyhow::anyhow!(
-                    "No Git ObjectId found for changeset {:?} during refs-to-include",
-                    cs_id
-                )
-            })?;
-            Ok((bookmark.clone(), *git_objectid))
-        })
+        .entries
+        .clone()
+        .into_iter()
         .chain(content_refs)
-        .map(|fallible| match fallible {
-            Ok((bookmark, git_objectid)) => {
-                if bookmark.is_tag() {
-                    match tag_inclusion {
-                        TagInclusion::AsIs => {
-                            if let Some(git_objectid) = bonsai_tag_map.get(&bookmark.to_string()) {
-                                let ref_name = format!("{}{}", REF_PREFIX, bookmark);
-                                return Ok((ref_name, RefTarget::Plain(git_objectid.clone())));
-                            }
-                        }
-                        TagInclusion::Peeled => {
+        .map(|(bookmark, git_objectid)| {
+            if bookmark.is_tag() {
+                match tag_inclusion {
+                    TagInclusion::AsIs => {
+                        if let Some(git_objectid) = bonsai_tag_map.get(&bookmark.to_string()) {
                             let ref_name = format!("{}{}", REF_PREFIX, bookmark);
                             return Ok((ref_name, RefTarget::Plain(git_objectid.clone())));
                         }
-                        TagInclusion::WithTarget => {
-                            if let Some(tag_objectid) = bonsai_tag_map.get(&bookmark.to_string()) {
-                                let ref_name = format!("{}{}", REF_PREFIX, bookmark);
-                                let metadata = format!("peeled:{}", git_objectid.to_hex());
-                                return Ok((
-                                    ref_name,
-                                    RefTarget::WithMetadata(tag_objectid.clone(), metadata),
-                                ));
-                            }
+                    }
+                    TagInclusion::Peeled => {
+                        let ref_name = format!("{}{}", REF_PREFIX, bookmark);
+                        return Ok((ref_name, RefTarget::Plain(git_objectid.clone())));
+                    }
+                    TagInclusion::WithTarget => {
+                        if let Some(tag_objectid) = bonsai_tag_map.get(&bookmark.to_string()) {
+                            let ref_name = format!("{}{}", REF_PREFIX, bookmark);
+                            let metadata = format!("peeled:{}", git_objectid.to_hex());
+                            return Ok((
+                                ref_name,
+                                RefTarget::WithMetadata(tag_objectid.clone(), metadata),
+                            ));
                         }
                     }
-                };
-                // If the bookmark is a branch or if its just a simple (non-annotated) tag, we generate the
-                // ref to target mapping based on the changeset id
-                let ref_name = format!("{}{}", REF_PREFIX, bookmark);
-                Ok((ref_name, RefTarget::Plain(git_objectid.clone())))
-            }
-            Err(e) => Err(e),
+                }
+            };
+            // If the bookmark is a branch or if its just a simple (non-annotated) tag, we generate the
+            // ref to target mapping based on the changeset id
+            let ref_name = format!("{}{}", REF_PREFIX, bookmark);
+            Ok((ref_name, RefTarget::Plain(git_objectid.clone())))
         })
         .collect::<Result<FxHashMap<_, _>>>()
 }

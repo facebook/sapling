@@ -16,6 +16,7 @@ use std::sync::Arc;
 
 use anyhow::anyhow;
 use anyhow::Result;
+use bookmarks::BookmarkKey;
 use context::CoreContext;
 use futures::stream::BoxStream;
 use git_types::DeltaObjectKind;
@@ -31,9 +32,11 @@ use packfile::pack::DeltaForm;
 use packfile::types::PackfileItem;
 use repo_blobstore::RepoBlobstore;
 use repo_derived_data::RepoDerivedData;
+use rustc_hash::FxHashMap;
 use rustc_hash::FxHashSet;
 use tokio::io::AsyncWrite;
 
+use crate::mapping::bonsai_git_mappings_by_bonsai;
 use crate::Repo;
 
 const SYMREF_HEAD: &str = "HEAD";
@@ -688,4 +691,43 @@ impl TranslatedShas {
             non_tag_non_commit_oids: mappings.non_tag_oids,
         }
     }
+}
+
+#[derive(Debug, Clone)]
+pub(crate) struct BonsaiBookmarks {
+    pub(crate) entries: FxHashMap<BookmarkKey, ChangesetId>,
+}
+
+impl BonsaiBookmarks {
+    pub(crate) fn new(entries: FxHashMap<BookmarkKey, ChangesetId>) -> Self {
+        Self { entries }
+    }
+
+    pub(crate) async fn try_into_git_bookmarks(
+        self,
+        ctx: &CoreContext,
+        repo: &impl Repo,
+    ) -> Result<GitBookmarks> {
+        let bonsai_git_map =
+            bonsai_git_mappings_by_bonsai(ctx, repo, self.entries.values().cloned().collect())
+                .await?;
+        self.entries
+            .into_iter()
+            .map(|(bookmark, cs_id)| {
+                let git_objectid = bonsai_git_map.get(&cs_id).ok_or_else(|| {
+                    anyhow::anyhow!(
+                        "No Git ObjectId found for changeset {:?} when converting to GitBookmarks",
+                        cs_id
+                    )
+                })?;
+                Ok((bookmark, *git_objectid))
+            })
+            .collect::<Result<FxHashMap<_, _>>>()
+            .map(|entries| GitBookmarks { entries })
+    }
+}
+
+#[derive(Debug, Clone)]
+pub(crate) struct GitBookmarks {
+    pub(crate) entries: FxHashMap<BookmarkKey, ObjectId>,
 }

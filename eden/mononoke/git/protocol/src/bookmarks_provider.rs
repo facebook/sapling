@@ -17,6 +17,7 @@ use futures::TryStreamExt;
 use mononoke_types::ChangesetId;
 use rustc_hash::FxHashMap;
 
+use crate::types::BonsaiBookmarks;
 use crate::types::RefsSource;
 use crate::types::RequestedRefs;
 use crate::Repo;
@@ -31,7 +32,7 @@ pub(crate) async fn bookmarks(
     repo: &impl Repo,
     requested_refs: &RequestedRefs,
     refs_source: RefsSource,
-) -> Result<FxHashMap<BookmarkKey, ChangesetId>> {
+) -> Result<BonsaiBookmarks> {
     let mut bookmarks = list_bookmarks(ctx, repo, refs_source, &BookmarkPrefix::empty())
         .await?
         .into_iter()
@@ -69,7 +70,7 @@ pub(crate) async fn bookmarks(
             );
         }
     }
-    Ok(bookmarks)
+    Ok(BonsaiBookmarks::new(bookmarks))
 }
 
 /// Method for listing tags for the current repo based on specified freshness

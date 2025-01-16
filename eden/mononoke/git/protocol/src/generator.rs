@@ -12,7 +12,6 @@ use std::task::Poll;
 use anyhow::Context;
 use anyhow::Ok;
 use anyhow::Result;
-use bookmarks::BookmarkKey;
 use buffered_weighted::MemoryBound;
 use cloned::cloned;
 use commit_graph_types::frontier::AncestorsWithinDistance;
@@ -35,7 +34,6 @@ use mononoke_types::hash::GitSha1;
 use mononoke_types::path::MPath;
 use mononoke_types::ChangesetId;
 use packfile::types::PackfileItem;
-use rustc_hash::FxHashMap;
 use rustc_hash::FxHashSet;
 
 use crate::bookmarks_provider::bookmarks;
@@ -52,6 +50,7 @@ use crate::types::FetchContainer;
 use crate::types::FetchRequest;
 use crate::types::FetchResponse;
 use crate::types::FullObjectEntry;
+use crate::types::GitBookmarks;
 use crate::types::LsRefsRequest;
 use crate::types::LsRefsResponse;
 use crate::types::PackItemStreamRequest;
@@ -525,11 +524,11 @@ fn tag_entries_to_stream<'a>(
 async fn tag_packfile_stream<'a>(
     fetch_container: FetchContainer,
     repo: &'a impl Repo,
-    bookmarks: &FxHashMap<BookmarkKey, ChangesetId>,
+    bookmarks: &GitBookmarks,
 ) -> Result<(BoxStream<'a, Result<PackfileItem>>, usize)> {
     // Since we need the count of items, we would have to consume the stream either for counting or collecting the items.
     // This is fine, since unlike commits, blobs and trees there will only be thousands of tags in the worst case.
-    let annotated_tags = stream::iter(bookmarks.keys())
+    let annotated_tags = stream::iter(bookmarks.entries.keys())
         .filter_map(|bookmark| async move {
             // If the bookmark is actually a tag but there is no mapping in bonsai_tag_mapping table for it, then it
             // means that its a simple tag and won't be included in the packfile as an object. If a mapping exists, then
@@ -661,13 +660,18 @@ pub async fn generate_pack_item_stream<'a>(
         .commit_graph()
         .ancestors_difference_stream(
             &ctx,
-            bookmarks.values().copied().collect(),
+            bookmarks.entries.values().copied().collect(),
             request.have_heads.clone(),
         )
         .await
         .context("Error in getting ancestors difference while generating packitem stream")?
         .try_collect::<Vec<_>>()
         .await?;
+    let bookmarks = bookmarks
+        .clone()
+        .try_into_git_bookmarks(&ctx, repo)
+        .await
+        .context("Error while converting bookmarks to Git format during upload-pack")?;
     // Reverse the list of commits so that we can prevent delta cycles from appearing in the packfile
     target_commits.reverse();
     // STEP 1: Get the count of distinct blob and tree objects to be included in the packfile/bundle.
@@ -680,7 +684,8 @@ pub async fn generate_pack_item_stream<'a>(
 
     // STEP 2: Create a mapping of all known bookmarks (i.e. branches, tags) and the commit that they point to. The commit should be represented
     // as a Git hash instead of a Bonsai hash since it will be part of the packfile/bundle
-    let mut refs_to_include = refs_to_include(&ctx, repo, &bookmarks, request.tag_inclusion)
+
+    let mut refs_to_include = refs_to_include(repo, &bookmarks, request.tag_inclusion)
         .await
         .context("Error while determining refs to include in the pack")?;
 
@@ -744,9 +749,12 @@ pub async fn ls_refs_response(
                 "Error in fetching bookmarks for repo {}",
                 repo.repo_identity().name()
             )
-        })?;
+        })?
+        .try_into_git_bookmarks(ctx, repo)
+        .await
+        .context("Error while converting bookmarks to Git format during ls-refs")?;
     // Convert the above bookmarks into refs that can be sent in the response
-    let mut refs_to_include = refs_to_include(ctx, repo, &bookmarks, request.tag_inclusion)
+    let mut refs_to_include = refs_to_include(repo, &bookmarks, request.tag_inclusion)
         .await
         .context("Error while determining refs to include in the response")?;
 
