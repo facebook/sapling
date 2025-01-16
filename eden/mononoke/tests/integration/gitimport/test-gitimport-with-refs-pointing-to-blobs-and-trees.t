@@ -56,3 +56,10 @@
   All repos initialized. It took: * seconds (glob)
   Bookmark: "heads/master_bookmark": ChangesetId(Blake2(032cd4dce0406f1c1dd1362b6c3c9f9bdfa82f2fc5615e237a890be4fe08b044)) (created)
   Bookmark: "tags/first_tag": ChangesetId(Blake2(032cd4dce0406f1c1dd1362b6c3c9f9bdfa82f2fc5615e237a890be4fe08b044)) (created)
+
+# Ensure that the refs pointing to trees and blobs are recorded as expected. Note that currently we record the refs with the "refs/" prefix which is incorrect
+  $ sqlite3 "$TESTTMP/monsql/sqlite_dbs" "SELECT ref_name, hex(git_hash) as git_hash, is_tree FROM git_ref_content_mapping ORDER BY ref_name"
+  refs/heads/branch_to_blob|433EB172726BC7B6D60E8D68EFB0F0EF4E67A667|0
+  refs/heads/branch_to_root_tree|CB2EF838EB24E4667FEE3A8B89C930234AE6E4BB|1
+  refs/tags/simple_tag_to_tree|CB2EF838EB24E4667FEE3A8B89C930234AE6E4BB|1
+  refs/tags/tag_to_tree|CB2EF838EB24E4667FEE3A8B89C930234AE6E4BB|1
