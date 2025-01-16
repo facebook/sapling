@@ -5,18 +5,18 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-import type {Logger} from '../isl-server/src/logger';
 import type {Json} from './typeUtils';
 import type {MeasureMemoryOptions} from 'node:vm';
 
+import {Logger} from '../isl-server/src/logger';
 import {measureMemory} from 'node:vm';
 
-export const mockLogger: Logger = {
-  log: jest.fn(),
-  info: jest.fn(),
-  warn: jest.fn(),
-  error: jest.fn(),
-};
+export class MockLogger extends Logger {
+  write() {
+    // noop
+  }
+}
+export const mockLogger = new MockLogger();
 
 export function clone<T extends Json>(o: T): T {
   return JSON.parse(JSON.stringify(o));

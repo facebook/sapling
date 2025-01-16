@@ -7,7 +7,6 @@
 
 import type {EnabledSCMApiFeature} from '../types';
 import type {Repository} from 'isl-server/src/Repository';
-import type {Logger} from 'isl-server/src/logger';
 import type {ServerPlatform} from 'isl-server/src/serverPlatform';
 import type {RepositoryContext} from 'isl-server/src/serverTypes';
 import type {RepoInfo, ValidatedRepoInfo} from 'isl/src/types';
@@ -15,11 +14,17 @@ import type {RepoInfo, ValidatedRepoInfo} from 'isl/src/types';
 import {VSCodeReposList} from '../VSCodeRepo';
 import {repositoryCache} from 'isl-server/src/RepositoryCache';
 import {makeServerSideTracker} from 'isl-server/src/analytics/serverSideTracker';
+import {Logger} from 'isl-server/src/logger';
 import {TypedEventEmitter} from 'shared/TypedEventEmitter';
 import {nextTick} from 'shared/testUtils';
 import * as vscode from 'vscode';
 
-const mockLogger: Logger = {info: jest.fn(), warn: jest.fn(), log: jest.fn(), error: jest.fn()};
+export class MockLogger extends Logger {
+  write() {
+    // noop
+  }
+}
+export const mockLogger = new MockLogger();
 
 const mockTracker = makeServerSideTracker(
   mockLogger,

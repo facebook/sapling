@@ -9,10 +9,11 @@ import type {Logger} from './logger';
 import type {ServerPlatform} from './serverPlatform';
 import type {AppMode} from 'isl/src/types';
 
+import {FileLogger} from './FileLogger';
 import {Internal} from './Internal';
 import ServerToClientAPI from './ServerToClientAPI';
 import {makeServerSideTracker} from './analytics/serverSideTracker';
-import {fileLogger, stdoutLogger} from './logger';
+import {StdoutLogger} from './logger';
 import {browserServerPlatform} from './serverPlatform';
 
 export interface ClientConnection {
@@ -53,7 +54,7 @@ export interface ClientConnection {
 export function onClientConnection(connection: ClientConnection): () => void {
   const logger =
     connection.logger ??
-    (connection.logFileLocation ? fileLogger(connection.logFileLocation) : stdoutLogger);
+    (connection.logFileLocation ? new FileLogger(connection.logFileLocation) : new StdoutLogger());
   connection.logger = logger;
   const platform = connection?.platform ?? browserServerPlatform;
   const version = connection?.version ?? 'unknown';

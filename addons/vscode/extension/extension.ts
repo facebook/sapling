@@ -6,7 +6,7 @@
  */
 
 import type {EnabledSCMApiFeature} from './types';
-import type {Logger} from 'isl-server/src/logger';
+import type {Level} from 'isl-server/src/logger';
 import type {ServerPlatform} from 'isl-server/src/serverPlatform';
 import type {RepositoryContext} from 'isl-server/src/serverTypes';
 
@@ -22,6 +22,7 @@ import {registerISLCommands} from './islWebviewPanel';
 import {extensionVersion} from './utils';
 import {getVSCodePlatform} from './vscodePlatform';
 import {makeServerSideTracker} from 'isl-server/src/analytics/serverSideTracker';
+import {Logger} from 'isl-server/src/logger';
 import * as util from 'node:util';
 import * as vscode from 'vscode';
 
@@ -90,23 +91,25 @@ export async function activate(context: vscode.ExtensionContext) {
   }
 }
 
-const logFileContents: Array<string> = [];
 function createOutputChannelLogger(): [vscode.OutputChannel, Logger] {
   const outputChannel = vscode.window.createOutputChannel('Sapling ISL');
-  const log = (...data: Array<unknown>) => {
-    const line = util.format(...data);
-    logFileContents.push(line);
-    outputChannel.appendLine(line);
-  };
-  const outputChannelLogger = {
-    log,
-    info: log,
-    warn: log,
-    error: log,
-
-    getLogFileContents() {
-      return Promise.resolve(logFileContents.join('\n'));
-    },
-  } as Logger;
+  const outputChannelLogger = new VSCodeOutputChannelLogger(outputChannel);
   return [outputChannel, outputChannelLogger];
+}
+
+class VSCodeOutputChannelLogger extends Logger {
+  private logFileContents: Array<string> = []; // TODO: we should just move this into Logger itself... and maybe do some rotation or cap memory usage!
+  constructor(private outputChannel: vscode.OutputChannel) {
+    super();
+  }
+
+  write(level: Level, timeStr: string, ...args: Parameters<typeof console.log>): void {
+    const str = util.format('%s%s', timeStr, this.levelToString(level), ...args);
+    this.logFileContents.push(str);
+    this.outputChannel.appendLine(str);
+  }
+
+  getLogFileContents() {
+    return Promise.resolve(this.logFileContents.join('\n'));
+  }
 }

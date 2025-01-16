@@ -7,17 +7,18 @@
 
 import type {MessageBusStatus} from '../src/MessageBus';
 import type {Disposable, RepoRelativePath} from '../src/types';
-import type {EjecaOptions} from 'shared/ejeca';
-import type {Logger} from 'isl-server/src/logger';
+import type {Level} from 'isl-server/src/logger';
 import type {ServerPlatform} from 'isl-server/src/serverPlatform';
 import type {RepositoryContext} from 'isl-server/src/serverTypes';
 import type {TypedEventEmitter} from 'shared/TypedEventEmitter';
+import type {EjecaOptions} from 'shared/ejeca';
 
 import {onClientConnection} from '../../isl-server/src/index';
 import platform from '../src/platform';
 import {fireEvent, render, screen} from '@testing-library/react';
 import {makeServerSideTracker} from 'isl-server/src/analytics/serverSideTracker';
 import {runCommand} from 'isl-server/src/commands';
+import {StdoutLogger} from 'isl-server/src/logger';
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
@@ -25,7 +26,7 @@ import path from 'node:path';
 const IS_CI = !!process.env.SANDCASTLE || !!process.env.GITHUB_ACTIONS;
 
 const mockTracker = makeServerSideTracker(
-  console,
+  new StdoutLogger(),
   {platformName: 'test'} as ServerPlatform,
   '0.1',
   jest.fn(),
@@ -38,7 +39,7 @@ jest.mock('../src/LocalWebSocketEventBus', () => {
     // eslint-disable-next-line @typescript-eslint/no-var-requires,@typescript-eslint/consistent-type-imports
     require('shared/TypedEventEmitter') as typeof import('shared/TypedEventEmitter');
 
-  const {log} = console;
+  const log = console.log.bind(console);
 
   class IntegrationTestMessageBus {
     disposables: Array<() => void> = [];
@@ -108,20 +109,15 @@ beforeAll(() => {
   };
 });
 
-const wrapLogger = (logger: Logger, label: string): Logger => ({
-  log: (...args: Array<unknown>) => {
-    logger.log(label, ...args);
-  },
-  info: (...args: Array<unknown>) => {
-    logger.info(label, ...args);
-  },
-  warn: (...args: Array<unknown>) => {
-    logger.info(label, ...args);
-  },
-  error: (...args: Array<unknown>) => {
-    logger.info(label, ...args);
-  },
-});
+class TaggedStdoutLogger extends StdoutLogger {
+  constructor(private tag: string) {
+    super();
+  }
+
+  write(level: Level, timeStr: string, ...args: Parameters<typeof console.log>): void {
+    super.write(level, timeStr, this.tag, ...args);
+  }
+}
 
 /**
  * Creates an sl repository in a temp dir on disk,
@@ -130,7 +126,7 @@ const wrapLogger = (logger: Logger, label: string): Logger => ({
  */
 export async function initRepo() {
   const repoDir = await fs.promises.mkdtemp(path.join(os.tmpdir(), 'isl-integration-test-repo-'));
-  const testLogger = wrapLogger(console, '[ test ]');
+  const testLogger = new TaggedStdoutLogger('[ test ]');
 
   let cmd = 'sl';
   if (process.env.SANDCASTLE) {
@@ -216,7 +212,7 @@ commit(date='now')
     dispose: disposeClientConnection,
   } = platform.messageBus as unknown as MockedClientMessageBus;
 
-  const serverLogger = wrapLogger(console, '[server]');
+  const serverLogger = new TaggedStdoutLogger('[server]');
 
   // start "server" in the same process, connected to fake client message bus via eventEmitters
   const disposeServer = onClientConnection({

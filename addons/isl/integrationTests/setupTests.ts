@@ -13,14 +13,6 @@ import '@testing-library/jest-dom';
 
 /* eslint-disable no-console */
 global.console = require('console');
-jest.mock('../src/logger', () => ({
-  logger: {
-    log: (...args: Array<unknown>) => console.log('[client]', ...args),
-    info: (...args: Array<unknown>) => console.info('[client]', ...args),
-    error: (...args: Array<unknown>) => console.error('[client]', ...args),
-    warn: (...args: Array<unknown>) => console.warn('[client]', ...args),
-  },
-}));
 
 jest.mock('@stylexjs/stylex');
 
