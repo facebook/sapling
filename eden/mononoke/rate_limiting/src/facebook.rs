@@ -19,6 +19,7 @@ use ratelim::loadlimiter::LoadLimitCounter;
 use scuba_ext::MononokeScubaSampleBuilder;
 
 use crate::BoxRateLimiter;
+use crate::FciMetric;
 use crate::LoadShedResult;
 use crate::Metric;
 use crate::MononokeRateLimitConfig;
@@ -43,7 +44,7 @@ pub fn create_rate_limiter(
 
 pub fn log_or_enforce_status(
     body: &RateLimitBody,
-    metric: Metric,
+    metric: FciMetric,
     scuba: &mut MononokeScubaSampleBuilder,
 ) -> RateLimitResult {
     match body.raw_config.status {
@@ -53,14 +54,15 @@ pub fn log_or_enforce_status(
                 "Would have rate limited",
                 format!(
                     "{:?}",
-                    (RateLimitReason::RateLimitedMetric(metric, body.window))
+                    (RateLimitReason::RateLimitedMetric(metric.metric, metric.window))
                 ),
             );
             RateLimitResult::Pass
         }
-        RateLimitStatus::Enforced => {
-            RateLimitResult::Fail(RateLimitReason::RateLimitedMetric(metric, body.window))
-        }
+        RateLimitStatus::Enforced => RateLimitResult::Fail(RateLimitReason::RateLimitedMetric(
+            metric.metric,
+            metric.window,
+        )),
         _ => panic!(
             "Thrift enums aren't real enums once in Rust. We have to account for other values here."
         ),
@@ -95,7 +97,7 @@ impl RateLimiter for MononokeRateLimits {
             )
             .await?
             {
-                match log_or_enforce_status(&limit.body, fci_metric.metric, scuba) {
+                match log_or_enforce_status(&limit.body, fci_metric, scuba) {
                     RateLimitResult::Pass => {
                         break;
                     }

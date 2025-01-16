@@ -206,7 +206,7 @@ async fn ratelimit_commit_creation(ctx: CoreContext) -> Result<(), Error> {
         _ => panic!("Invalid limit status: {:?}", limit.body.raw_config.status),
     };
     let max_value = limit.body.raw_config.limit;
-    let time_window = limit.body.window.as_secs() as u32;
+    let time_window = limit.fci_metric.window.as_secs() as u32;
 
     let client_request_info = match ctx.client_request_info() {
         Some(client_request_info) => client_request_info,

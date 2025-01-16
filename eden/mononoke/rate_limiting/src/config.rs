@@ -79,12 +79,7 @@ impl TryFrom<rate_limiting_config::RateLimitBody> for RateLimitBody {
     type Error = Error;
 
     fn try_from(value: rate_limiting_config::RateLimitBody) -> Result<Self, Self::Error> {
-        let window: u64 = value.window.try_into().context("Invalid window")?;
-
-        Ok(Self {
-            raw_config: value,
-            window: Duration::from_secs(window),
-        })
+        Ok(Self { raw_config: value })
     }
 }
 

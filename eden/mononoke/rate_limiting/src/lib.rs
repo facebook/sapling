@@ -100,7 +100,6 @@ impl RateLimitEnvironment {
 #[derive(Debug, Clone)]
 pub struct RateLimitBody {
     pub raw_config: rate_limiting_config::RateLimitBody,
-    pub window: Duration,
 }
 
 #[derive(Debug, Clone)]
@@ -115,7 +114,7 @@ pub struct RateLimit {
     #[allow(dead_code)]
     target: Option<Target>,
     #[allow(dead_code)]
-    fci_metric: FciMetric,
+    pub fci_metric: FciMetric,
 }
 
 #[cfg(fbcode_build)]
@@ -219,7 +218,7 @@ pub enum Scope {
 #[derive(Debug, Copy, Clone, PartialEq)]
 pub struct FciMetric {
     metric: Metric,
-    window: Duration,
+    pub window: Duration,
     scope: Scope,
 }
 

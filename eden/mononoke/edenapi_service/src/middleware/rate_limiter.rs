@@ -80,7 +80,7 @@ impl Middleware for ThrottleMiddleware {
         };
         let counter = build_counter(&ctx, category, EDENAPI_QPS_LIMIT, &main_client_id);
         let max_value = limit.body.raw_config.limit;
-        let time_window = limit.body.window.as_secs() as u32;
+        let time_window = limit.fci_metric.window.as_secs() as u32;
 
         match counter_check_and_bump(
             &ctx,
