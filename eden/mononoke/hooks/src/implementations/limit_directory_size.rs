@@ -224,7 +224,7 @@ impl ChangesetHook for LimitDirectorySizeHook {
                             {
                                 // The threshold is the next multiple of the growth limit after the size.
                                 let next_growth_limit =
-                                    (parent_size + growth_limit - 1) / growth_limit * growth_limit;
+                                    parent_size.div_ceil(growth_limit) * growth_limit;
                                 if source_size > next_growth_limit {
                                     return Ok(HookExecution::Rejected(
                                         HookRejectionInfo::new_long(
