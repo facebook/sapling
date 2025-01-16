@@ -966,7 +966,12 @@ def bisect(
     """
     # backward compatibility
     if rev in "good bad reset init".split():
-        ui.warn(_("(use of '@prog@ bisect <cmd>' is deprecated)\n"))
+        ui.warn(
+            _(
+                "(use of '@prog@ bisect <cmd>' is deprecated.\n"
+                "Use '@prog@ bisect --good ARGS', '@prog@ bisect --bad ARGS' etc. instead.)\n"
+            )
+        )
         cmd, rev, extra = rev, extra, None
         if cmd == "good":
             good = True
