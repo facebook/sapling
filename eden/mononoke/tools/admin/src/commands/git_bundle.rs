@@ -18,6 +18,7 @@ use clap::Subcommand;
 use commit_graph::CommitGraph;
 use commit_graph::CommitGraphWriter;
 use filestore::FilestoreConfig;
+use git_ref_content_mapping::GitRefContentMapping;
 use git_symbolic_refs::GitSymbolicRefs;
 use metaconfig_types::RepoConfig;
 use mononoke_app::MononokeApp;
@@ -53,6 +54,8 @@ pub struct Repo {
     bonsai_git_mapping: dyn BonsaiGitMapping,
     #[facet]
     bonsai_tag_mapping: dyn BonsaiTagMapping,
+    #[facet]
+    git_content_ref_mapping: dyn GitRefContentMapping,
     #[facet]
     git_symbolic_refs: dyn GitSymbolicRefs,
     #[facet]

@@ -14,6 +14,7 @@ use bookmarks_cache::BookmarksCacheRef;
 use commit_graph::CommitGraphRef;
 use commit_graph::CommitGraphWriterRef;
 use filestore::FilestoreConfigRef;
+use git_ref_content_mapping::GitRefContentMappingRef;
 use git_symbolic_refs::GitSymbolicRefsRef;
 use metaconfig_types::RepoConfigRef;
 use repo_blobstore::RepoBlobstoreArc;
@@ -39,6 +40,7 @@ pub trait Repo = RepoIdentityRef
     + BookmarksRef
     + BonsaiGitMappingRef
     + BonsaiTagMappingRef
+    + GitRefContentMappingRef
     + FilestoreConfigRef
     + RepoDerivedDataRef
     + GitSymbolicRefsRef

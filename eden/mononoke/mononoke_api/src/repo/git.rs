@@ -344,6 +344,7 @@ pub trait Repo = RepoIdentityRef
     + BookmarksRef
     + BonsaiGitMappingRef
     + BonsaiTagMappingRef
+    + GitRefContentMappingRef
     + RepoDerivedDataRef
     + FilestoreConfigRef
     + GitSymbolicRefsRef
