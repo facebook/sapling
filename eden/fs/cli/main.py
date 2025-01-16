@@ -1190,6 +1190,12 @@ class DoctorCmd(Subcmd):
             action="store_true",
             help="Don't show warnings (but still log them to scuba). ",
         )
+        parser.add_argument(
+            "--wait",
+            action="store_true",
+            default=False,
+            help="Wait to run if other instances of doctor are running. Without this flag, doctor times out after 10s. ",
+        )
 
     def run(self, args: argparse.Namespace) -> int:
         instance = get_eden_instance(args)
@@ -1198,6 +1204,7 @@ class DoctorCmd(Subcmd):
             args.dry_run,
             args.debug,
             args.fast,
+            args.wait,
             (
                 ProblemSeverity.POTENTIALLY_SERIOUS
                 if args.no_warnings

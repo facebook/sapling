@@ -439,7 +439,7 @@ def print_eden_doctor_report(instance: EdenInstance, out: IOWithRedaction) -> No
     doctor_output = io.StringIO()
     try:
         doctor_rc = doctor_mod.cure_what_ails_you(
-            instance, dry_run=True, out=ui_mod.PlainOutput(doctor_output)
+            instance, dry_run=True, wait=True, out=ui_mod.PlainOutput(doctor_output)
         )
         doctor_report_title = f"eden doctor --dry-run (exit code {doctor_rc}):"
         section_title(doctor_report_title, out)

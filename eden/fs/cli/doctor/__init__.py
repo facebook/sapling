@@ -139,6 +139,7 @@ def cure_what_ails_you(
     *,
     debug: bool = False,
     fast: bool = False,
+    wait: bool = False,
     min_severity_to_report: ProblemSeverity = ProblemSeverity.ADVICE,
     mount_table: Optional[mtab.MountTable] = None,
     fs_util: Optional[filesystem.FsUtil] = None,
@@ -152,6 +153,7 @@ def cure_what_ails_you(
         dry_run,
         debug,
         fast,
+        wait,
         min_severity_to_report,
         mount_table,
         fs_util,
@@ -398,6 +400,8 @@ class EdenDoctor(EdenDoctorChecker):
     dry_run: bool
     min_severity_to_report: ProblemSeverity
     lock_file_path: Path
+    timeout: int
+    TIMEOUT_SECONDS: int = 10
 
     def __init__(
         self,
@@ -405,6 +409,7 @@ class EdenDoctor(EdenDoctorChecker):
         dry_run: bool,
         debug: bool,
         fast: bool,
+        wait: bool,
         min_severity_to_report: ProblemSeverity,
         mount_table: Optional[mtab.MountTable] = None,
         fs_util: Optional[filesystem.FsUtil] = None,
@@ -416,6 +421,10 @@ class EdenDoctor(EdenDoctorChecker):
         self.dry_run = dry_run
         self.min_severity_to_report = min_severity_to_report
         self.lock_file_path = instance.state_dir / ".doctor.lock"
+        if wait:
+            self.timeout = -1  # wait forever
+        else:
+            self.timeout = self.TIMEOUT_SECONDS
         out = out if out is not None else ui.get_output()
         if dry_run:
             self.fixer = DryRunFixer(
@@ -447,7 +456,7 @@ class EdenDoctor(EdenDoctorChecker):
 
     def cure_what_ails_you(self) -> int:
         if self.instance.get_config_bool("doctor.single-instance-only", False):
-            lock = FileLock(self.lock_file_path, timeout=10)
+            lock = FileLock(self.lock_file_path, timeout=self.timeout)
             try:
                 with lock:
                     self.run_checks()
