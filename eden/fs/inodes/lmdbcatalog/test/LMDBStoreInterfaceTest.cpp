@@ -7,7 +7,7 @@
 
 #include "eden/fs/inodes/lmdbcatalog/LMDBStoreInterface.h"
 
-#include <folly/portability/GTest.h>
+#include <gtest/gtest.h>
 #include <thrift/lib/cpp2/protocol/Serializer.h>
 #include <memory>
 #include <optional>

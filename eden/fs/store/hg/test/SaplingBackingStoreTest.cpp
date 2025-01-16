@@ -7,9 +7,9 @@
 
 #include <folly/executors/CPUThreadPoolExecutor.h>
 #include <folly/logging/xlog.h>
-#include <folly/portability/GMock.h>
-#include <folly/portability/GTest.h>
 #include <folly/testing/TestUtil.h>
+#include <gmock/gmock.h>
+#include <gtest/gtest.h>
 #include <algorithm>
 #include <memory>
 

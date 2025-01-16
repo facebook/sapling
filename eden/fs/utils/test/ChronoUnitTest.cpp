@@ -7,7 +7,7 @@
 
 #include "eden/fs/utils/ChronoUnit.h"
 
-#include <folly/portability/GTest.h>
+#include <gtest/gtest.h>
 
 using folly::StringPiece;
 

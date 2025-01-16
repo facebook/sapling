@@ -9,9 +9,9 @@
 #include <folly/Random.h>
 #include <folly/executors/ManualExecutor.h>
 #include <folly/portability/GFlags.h>
-#include <folly/portability/GMock.h>
-#include <folly/portability/GTest.h>
 #include <folly/test/TestUtils.h>
+#include <gmock/gmock.h>
+#include <gtest/gtest.h>
 
 #include "eden/common/utils/CaseSensitivity.h"
 #include "eden/common/utils/FaultInjector.h"

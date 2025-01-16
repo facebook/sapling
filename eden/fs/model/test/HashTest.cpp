@@ -10,7 +10,7 @@
 #include <folly/String.h>
 #include <folly/container/Array.h>
 #include <folly/io/Cursor.h>
-#include <folly/portability/GTest.h>
+#include <gtest/gtest.h>
 
 using namespace facebook::eden;
 using folly::ByteRange;

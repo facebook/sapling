@@ -7,8 +7,8 @@
 
 #include "eden/fs/testharness/TestUtil.h"
 
-#include <folly/portability/GTest.h>
 #include <folly/test/TestUtils.h>
+#include <gtest/gtest.h>
 
 #include "eden/fs/model/ObjectId.h"
 #include "eden/fs/model/TestOps.h"

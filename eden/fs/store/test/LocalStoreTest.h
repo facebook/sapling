@@ -8,7 +8,7 @@
 #pragma once
 
 #include <folly/io/IOBuf.h>
-#include <folly/portability/GTest.h>
+#include <gtest/gtest.h>
 
 #include "eden/common/testharness/TempFile.h"
 #include "eden/common/utils/FaultInjector.h"

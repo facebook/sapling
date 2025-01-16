@@ -12,10 +12,10 @@
 #include <folly/futures/Future.h>
 #include <folly/io/async/EventBase.h>
 #include <folly/io/async/EventBaseThread.h>
-#include <folly/portability/GMock.h>
-#include <folly/portability/GTest.h>
 #include <folly/test/TestUtils.h>
 #include <folly/testing/TestUtil.h>
+#include <gmock/gmock.h>
+#include <gtest/gtest.h>
 #include <chrono>
 #include <unordered_map>
 

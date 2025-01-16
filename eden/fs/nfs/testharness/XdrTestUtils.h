@@ -10,7 +10,7 @@
 #include <fmt/core.h>
 #include <folly/io/Cursor.h>
 #include <folly/io/IOBuf.h>
-#include <folly/portability/GTest.h>
+#include <gtest/gtest.h>
 #include "eden/fs/nfs/xdr/Xdr.h"
 
 namespace facebook::eden {

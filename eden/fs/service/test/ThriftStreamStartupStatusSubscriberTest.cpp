@@ -9,7 +9,7 @@
 
 #include <memory>
 
-#include <folly/portability/GTest.h>
+#include <gtest/gtest.h>
 
 // its not very easy to get the data out of a thrift stream, so we don't have
 // any tests for this. We already test that correct data is published to

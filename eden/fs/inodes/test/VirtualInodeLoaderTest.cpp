@@ -6,9 +6,9 @@
  */
 
 #include "eden/fs/inodes/VirtualInodeLoader.h"
-#include <folly/portability/GTest.h>
 #include <folly/test/TestUtils.h>
 #include <folly/testing/TestUtil.h>
+#include <gtest/gtest.h>
 #include "eden/fs/inodes/TreeInode.h"
 #include "eden/fs/testharness/FakeBackingStore.h"
 #include "eden/fs/testharness/FakeTreeBuilder.h"

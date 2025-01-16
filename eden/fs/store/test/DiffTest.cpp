@@ -8,9 +8,9 @@
 #include "eden/fs/store/Diff.h"
 
 #include <folly/executors/ManualExecutor.h>
-#include <folly/portability/GMock.h>
-#include <folly/portability/GTest.h>
 #include <folly/test/TestUtils.h>
+#include <gmock/gmock.h>
+#include <gtest/gtest.h>
 
 #include "eden/common/telemetry/NullStructuredLogger.h"
 #include "eden/common/utils/ImmediateFuture.h"

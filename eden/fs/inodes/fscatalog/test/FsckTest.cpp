@@ -11,8 +11,8 @@
 #include <folly/FileUtil.h>
 #include <folly/Range.h>
 #include <folly/logging/xlog.h>
-#include <folly/portability/GMock.h>
-#include <folly/portability/GTest.h>
+#include <gmock/gmock.h>
+#include <gtest/gtest.h>
 
 #include "eden/common/telemetry/NullStructuredLogger.h"
 #include "eden/common/testharness/TempFile.h"

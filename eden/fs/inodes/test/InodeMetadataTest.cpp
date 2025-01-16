@@ -9,7 +9,7 @@
 
 #include "eden/fs/inodes/InodeMetadata.h"
 
-#include <folly/portability/GTest.h>
+#include <gtest/gtest.h>
 
 using namespace facebook::eden;
 

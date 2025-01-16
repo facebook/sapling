@@ -6,7 +6,7 @@
  */
 
 #include <folly/String.h>
-#include <folly/portability/GTest.h>
+#include <gtest/gtest.h>
 
 #include "eden/common/utils/PathFuncs.h"
 #include "eden/fs/model/Hash.h"

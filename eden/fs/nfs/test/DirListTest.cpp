@@ -7,7 +7,7 @@
 
 #ifndef _WIN32
 
-#include <folly/portability/GTest.h>
+#include <gtest/gtest.h>
 #include "eden/fs/nfs/NfsDirList.h"
 #include "eden/fs/nfs/NfsdRpc.h"
 #include "eden/fs/nfs/testharness/XdrTestUtils.h"

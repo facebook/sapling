@@ -13,7 +13,7 @@
 #include "eden/fs/model/TestOps.h"
 #include "eden/fs/testharness/FakeTreeBuilder.h"
 
-#include <folly/portability/GTest.h>
+#include <gtest/gtest.h>
 
 using namespace facebook::eden;
 using folly::ByteRange;

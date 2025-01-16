@@ -17,10 +17,10 @@
 #include <folly/Range.h>
 #include <folly/executors/CPUThreadPoolExecutor.h>
 #include <folly/logging/test/TestLogHandler.h>
-#include <folly/portability/GTest.h>
 #include <folly/synchronization/test/Barrier.h>
 #include <folly/test/TestUtils.h>
 #include <folly/testing/TestUtil.h>
+#include <gtest/gtest.h>
 #include <algorithm>
 
 #include "eden/common/telemetry/NullStructuredLogger.h"

@@ -9,9 +9,9 @@
 
 #include <boost/algorithm/string/replace.hpp>
 #include <folly/Range.h>
-#include <folly/portability/GTest.h>
 #include <folly/test/TestUtils.h>
 #include <folly/testing/TestUtil.h>
+#include <gtest/gtest.h>
 #include <optional>
 
 #include "eden/common/utils/Bug.h"

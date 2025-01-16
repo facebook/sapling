@@ -9,7 +9,7 @@
 
 #include <memory>
 
-#include <folly/portability/GTest.h>
+#include <gtest/gtest.h>
 
 #include "eden/fs/utils/EdenError.h"
 

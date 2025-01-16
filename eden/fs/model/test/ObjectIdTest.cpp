@@ -9,7 +9,7 @@
 
 #include <folly/Range.h>
 #include <folly/container/Array.h>
-#include <folly/portability/GTest.h>
+#include <gtest/gtest.h>
 
 namespace {
 

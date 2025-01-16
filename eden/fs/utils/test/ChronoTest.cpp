@@ -8,7 +8,7 @@
 #include "eden/fs/utils/ChronoParse.h"
 
 #include <folly/Conv.h>
-#include <folly/portability/GTest.h>
+#include <gtest/gtest.h>
 
 using namespace facebook::eden;
 using namespace folly::string_piece_literals;

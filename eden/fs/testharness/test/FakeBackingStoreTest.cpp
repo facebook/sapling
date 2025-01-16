@@ -10,9 +10,9 @@
 #include <folly/executors/ManualExecutor.h>
 #include <folly/io/Cursor.h>
 #include <folly/io/IOBuf.h>
-#include <folly/portability/GTest.h>
 #include <folly/test/TestUtils.h>
 #include <folly/testing/TestUtil.h>
+#include <gtest/gtest.h>
 
 #include "eden/common/utils/PathFuncs.h"
 #include "eden/fs/model/TestOps.h"

@@ -7,7 +7,7 @@
 
 #include <folly/Try.h>
 #include <folly/logging/xlog.h>
-#include <folly/portability/GTest.h>
+#include <gtest/gtest.h>
 #include <array>
 #include <memory>
 

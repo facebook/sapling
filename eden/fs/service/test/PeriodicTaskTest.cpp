@@ -12,8 +12,8 @@
 #include <folly/io/async/test/Util.h>
 #include <folly/logging/test/TestLogHandler.h>
 #include <folly/logging/xlog.h>
-#include <folly/portability/GMock.h>
-#include <folly/portability/GTest.h>
+#include <gmock/gmock.h>
+#include <gtest/gtest.h>
 #include <thrift/lib/cpp2/server/ThriftServer.h>
 
 #include "eden/fs/service/EdenServer.h"

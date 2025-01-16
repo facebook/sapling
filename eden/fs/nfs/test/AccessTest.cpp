@@ -9,7 +9,7 @@
 
 #include <utility>
 
-#include <folly/portability/GTest.h>
+#include <gtest/gtest.h>
 
 #include "eden/fs/nfs/NfsUtils.h"
 #include "eden/fs/nfs/NfsdRpc.h"

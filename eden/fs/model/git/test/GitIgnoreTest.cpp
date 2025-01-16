@@ -5,7 +5,7 @@
  * GNU General Public License version 2.
  */
 
-#include <folly/portability/GTest.h>
+#include <gtest/gtest.h>
 
 #include "eden/fs/model/git/GitIgnore.h"
 

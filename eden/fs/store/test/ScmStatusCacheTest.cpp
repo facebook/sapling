@@ -6,7 +6,7 @@
  */
 
 #include "eden/fs/store/ScmStatusCache.h"
-#include <folly/portability/GTest.h>
+#include <gtest/gtest.h>
 #include "eden/fs/config/EdenConfig.h"
 #include "eden/fs/journal/Journal.h"
 #include "eden/fs/journal/JournalDelta.h"

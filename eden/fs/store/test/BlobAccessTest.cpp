@@ -6,7 +6,7 @@
  */
 
 #include "eden/fs/store/BlobAccess.h"
-#include <folly/portability/GTest.h>
+#include <gtest/gtest.h>
 #include <chrono>
 #include "eden/common/telemetry/NullStructuredLogger.h"
 #include "eden/common/utils/ProcessInfoCache.h"

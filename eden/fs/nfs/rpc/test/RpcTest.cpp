@@ -7,7 +7,7 @@
 
 #include "eden/fs/nfs/rpc/Rpc.h"
 
-#include <folly/portability/GTest.h>
+#include <gtest/gtest.h>
 
 #include "eden/fs/nfs/testharness/XdrTestUtils.h"
 

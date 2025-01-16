@@ -7,7 +7,7 @@
 
 #ifndef _WIN32
 
-#include <folly/portability/GTest.h>
+#include <gtest/gtest.h>
 
 #include "eden/fs/journal/Journal.h"
 #include "eden/fs/testharness/FakeTreeBuilder.h"

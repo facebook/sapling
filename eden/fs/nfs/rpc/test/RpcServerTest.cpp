@@ -7,7 +7,7 @@
 
 #include "eden/fs/nfs/rpc/RpcServer.h"
 
-#include <folly/portability/GTest.h>
+#include <gtest/gtest.h>
 #include "eden/common/telemetry/NullStructuredLogger.h"
 
 namespace {

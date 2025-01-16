@@ -9,7 +9,7 @@
 
 #include <folly/Portability.h>
 #include <folly/Utility.h>
-#include <folly/portability/GTest.h>
+#include <gtest/gtest.h>
 
 using namespace facebook::eden;
 

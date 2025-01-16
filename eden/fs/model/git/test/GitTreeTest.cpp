@@ -7,7 +7,7 @@
 
 #include "eden/fs/model/git/GitTree.h"
 
-#include <folly/portability/GTest.h>
+#include <gtest/gtest.h>
 #include <string>
 
 #include <folly/String.h>

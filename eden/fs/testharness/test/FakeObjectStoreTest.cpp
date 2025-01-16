@@ -8,7 +8,7 @@
 #include "eden/fs/testharness/FakeObjectStore.h"
 #include <folly/futures/Future.h>
 #include <folly/io/IOBuf.h>
-#include <folly/portability/GTest.h>
+#include <gtest/gtest.h>
 
 #include "eden/common/utils/ImmediateFuture.h"
 #include "eden/fs/model/Blob.h"

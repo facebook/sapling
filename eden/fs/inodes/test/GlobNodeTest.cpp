@@ -13,10 +13,10 @@
 #include <folly/Conv.h>
 #include <folly/Exception.h>
 #include <folly/Range.h>
-#include <folly/portability/GMock.h>
-#include <folly/portability/GTest.h>
 #include <folly/test/TestUtils.h>
 #include <folly/testing/TestUtil.h>
+#include <gmock/gmock.h>
+#include <gtest/gtest.h>
 
 #include "eden/fs/inodes/TreeInode.h"
 #include "eden/fs/model/TestOps.h"

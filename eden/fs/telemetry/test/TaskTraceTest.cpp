@@ -7,7 +7,7 @@
 
 #include "eden/fs/telemetry/TaskTrace.h"
 #include <folly/futures/Promise.h>
-#include <folly/portability/GTest.h>
+#include <gtest/gtest.h>
 
 using namespace std::literals;
 using namespace facebook::eden;

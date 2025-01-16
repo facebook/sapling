@@ -8,8 +8,8 @@
 #include "eden/fs/telemetry/EdenStructuredLogger.h"
 
 #include <folly/json/json.h>
-#include <folly/portability/GMock.h>
-#include <folly/portability/GTest.h>
+#include <gmock/gmock.h>
+#include <gtest/gtest.h>
 
 #include "eden/common/telemetry/LogEvent.h"
 #include "eden/common/telemetry/ScribeLogger.h"

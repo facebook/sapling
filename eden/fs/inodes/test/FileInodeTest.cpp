@@ -11,8 +11,8 @@
 
 #include <fmt/format.h>
 #include <folly/Range.h>
-#include <folly/portability/GTest.h>
 #include <folly/test/TestUtils.h>
+#include <gtest/gtest.h>
 #include <chrono>
 
 #include "eden/common/utils/StatTimes.h"

@@ -7,7 +7,7 @@
 
 #include "eden/fs/store/BlobCache.h"
 
-#include <folly/portability/GTest.h>
+#include <gtest/gtest.h>
 #include "eden/fs/config/EdenConfig.h"
 #include "eden/fs/config/ReloadableConfig.h"
 #include "eden/fs/model/Blob.h"

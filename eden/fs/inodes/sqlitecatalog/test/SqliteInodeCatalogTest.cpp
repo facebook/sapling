@@ -9,8 +9,8 @@
 #include "eden/fs/inodes/sqlitecatalog/BufferedSqliteInodeCatalog.h"
 #include "eden/fs/inodes/test/OverlayTestUtil.h"
 
-#include <folly/portability/GTest.h>
 #include <folly/test/TestUtils.h>
+#include <gtest/gtest.h>
 
 #include "eden/common/telemetry/NullStructuredLogger.h"
 #include "eden/common/testharness/TempFile.h"

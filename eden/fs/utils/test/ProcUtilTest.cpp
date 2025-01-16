@@ -12,7 +12,7 @@
 #include <fstream>
 
 #include <folly/Portability.h>
-#include <folly/portability/GTest.h>
+#include <gtest/gtest.h>
 #include "eden/common/utils/PathFuncs.h"
 
 using namespace facebook::eden;

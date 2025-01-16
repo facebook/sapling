@@ -7,7 +7,7 @@
 
 #include <folly/Range.h>
 #include <folly/logging/xlog.h>
-#include <folly/portability/GTest.h>
+#include <gtest/gtest.h>
 #include <memory>
 
 #include "eden/common/utils/IDGen.h"

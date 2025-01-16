@@ -9,8 +9,8 @@
 
 #include <folly/Random.h>
 #include <folly/executors/GlobalExecutor.h>
-#include <folly/portability/GTest.h>
 #include <folly/test/TestUtils.h>
+#include <gtest/gtest.h>
 
 #include "eden/common/telemetry/NullStructuredLogger.h"
 #include "eden/common/utils/CaseSensitivity.h"

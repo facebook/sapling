@@ -35,9 +35,9 @@
 #include <folly/FileUtil.h>
 #include <folly/init/Init.h>
 #include <folly/logging/xlog.h>
-#include <folly/portability/GMock.h>
-#include <folly/portability/GTest.h>
 #include <folly/testing/TestUtil.h>
+#include <gmock/gmock.h>
+#include <gtest/gtest.h>
 #include <sysexits.h>
 #include <cerrno>
 #include <chrono>

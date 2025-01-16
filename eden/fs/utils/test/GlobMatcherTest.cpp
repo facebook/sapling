@@ -8,7 +8,7 @@
 #include "eden/fs/utils/GlobMatcher.h"
 
 #include <fmt/core.h>
-#include <folly/portability/GTest.h>
+#include <gtest/gtest.h>
 
 namespace {
 

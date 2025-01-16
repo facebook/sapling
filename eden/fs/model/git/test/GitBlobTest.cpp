@@ -7,7 +7,7 @@
 
 #include "eden/fs/model/git/GitBlob.h"
 
-#include <folly/portability/GTest.h>
+#include <gtest/gtest.h>
 
 #include <folly/String.h>
 #include <folly/io/Cursor.h>

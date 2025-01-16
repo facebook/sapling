@@ -6,7 +6,7 @@
  */
 
 #include "eden/fs/telemetry/ActivityBuffer.h"
-#include <folly/portability/GTest.h>
+#include <gtest/gtest.h>
 
 using namespace facebook::eden;
 namespace {

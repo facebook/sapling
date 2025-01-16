@@ -6,7 +6,7 @@
  */
 
 #include "eden/fs/inodes/InodeBase.h"
-#include <folly/portability/GTest.h>
+#include <gtest/gtest.h>
 #include "eden/fs/inodes/FileInode.h"
 #include "eden/fs/inodes/TreeInode.h"
 #include "eden/fs/store/ObjectFetchContext.h"

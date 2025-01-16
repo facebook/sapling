@@ -11,7 +11,7 @@
 #include "eden/fs/service/EdenServer.h"
 #include "eden/fs/testharness/TestServer.h"
 
-#include <folly/portability/GTest.h>
+#include <gtest/gtest.h>
 
 using namespace facebook::eden;
 

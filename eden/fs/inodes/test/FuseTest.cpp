@@ -17,9 +17,9 @@
 #include <folly/io/async/EventBase.h>
 #include <folly/io/async/ScopedEventBaseThread.h>
 #include <folly/logging/xlog.h>
-#include <folly/portability/GMock.h>
-#include <folly/portability/GTest.h>
 #include <folly/test/TestUtils.h>
+#include <gmock/gmock.h>
+#include <gtest/gtest.h>
 
 using namespace facebook::eden;
 using namespace std::chrono_literals;

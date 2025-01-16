@@ -6,8 +6,8 @@
  */
 
 #include <folly/String.h>
-#include <folly/portability/GTest.h>
 #include <folly/test/TestUtils.h>
+#include <gtest/gtest.h>
 
 #include "eden/common/utils/Bug.h"
 #include "eden/fs/inodes/EdenMount.h"
