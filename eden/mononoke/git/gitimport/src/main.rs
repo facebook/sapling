@@ -496,12 +496,7 @@ async fn async_main(app: MononokeApp) -> Result<(), Error> {
                 // tree or blob. If the ref is nested, do not add the mapping.
                 if !ref_metadata.nested_tag {
                     uploader
-                        .generate_ref_content_mapping(
-                            &ctx,
-                            content_ref_name.to_string(),
-                            git_hash,
-                            is_tree,
-                        )
+                        .generate_ref_content_mapping(&ctx, ref_name.to_string(), git_hash, is_tree)
                         .await?;
                 }
             }
