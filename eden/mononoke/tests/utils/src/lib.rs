@@ -42,6 +42,7 @@ use futures::stream::TryStreamExt;
 use manifest::ManifestOps;
 use maplit::btreemap;
 use mercurial_types::HgChangesetId;
+use metaconfig_types::RepoConfig;
 use mononoke_types::BonsaiChangesetMut;
 use mononoke_types::ChangesetId;
 use mononoke_types::DateTime;
@@ -78,6 +79,12 @@ pub trait Repo = BonsaiHgMappingRef
 /// new struct and use delegate to make its facets accessible.
 pub struct BasicTestRepo {
     #[facet]
+    pub repo_identity: RepoIdentity,
+
+    #[facet]
+    pub repo_config: RepoConfig,
+
+    #[facet]
     pub repo_blobstore: RepoBlobstore,
 
     #[facet]
@@ -97,9 +104,6 @@ pub struct BasicTestRepo {
 
     #[facet]
     pub repo_derived_data: RepoDerivedData,
-
-    #[facet]
-    pub repo_identity: RepoIdentity,
 
     #[facet]
     pub bonsai_tag_mapping: dyn BonsaiTagMapping,
