@@ -34,6 +34,9 @@ import React from 'react';
 import {nullthrows} from 'shared/utils';
 
 const styles = stylex.create({
+  container: {
+    padding: 'var(--pad)',
+  },
   absorbEditSingleChunk: {
     border: '1px solid var(--tooltip-border)',
     // The negative margins match <FileHeader />.
@@ -115,6 +118,7 @@ const styles = stylex.create({
   },
   commitExtras: {
     paddingLeft: 'var(--pad)',
+    marginBottom: 'var(--pad)',
   },
 });
 
@@ -130,7 +134,7 @@ export function AbsorbStackEditPanel() {
   const subset = relevantSubset(stack, dag);
   return (
     <>
-      <Column>
+      <Column xstyle={styles.container}>
         <AbsorbInstruction dag={dag} subset={subset} />
         <ScrollY maxSize="calc(100vh - 200px)" {...stylex.props(styles.scrollYPadding)}>
           <RenderDag
