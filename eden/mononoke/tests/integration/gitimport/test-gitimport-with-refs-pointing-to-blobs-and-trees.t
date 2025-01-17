@@ -61,5 +61,6 @@
   $ sqlite3 "$TESTTMP/monsql/sqlite_dbs" "SELECT ref_name, hex(git_hash) as git_hash, is_tree FROM git_ref_content_mapping ORDER BY ref_name"
   heads/branch_to_blob|433EB172726BC7B6D60E8D68EFB0F0EF4E67A667|0
   heads/branch_to_root_tree|CB2EF838EB24E4667FEE3A8B89C930234AE6E4BB|1
+  tags/recursive_tag|CB2EF838EB24E4667FEE3A8B89C930234AE6E4BB|1
   tags/simple_tag_to_tree|CB2EF838EB24E4667FEE3A8B89C930234AE6E4BB|1
   tags/tag_to_tree|CB2EF838EB24E4667FEE3A8B89C930234AE6E4BB|1

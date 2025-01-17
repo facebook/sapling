@@ -492,13 +492,9 @@ async fn async_main(app: MononokeApp) -> Result<(), Error> {
                 } else {
                     upload_git_object(&ctx, uploader.clone(), reader.clone(), &git_hash).await?;
                 }
-                // Only add git ref content mapping if the ref itself directly points to a
-                // tree or blob. If the ref is nested, do not add the mapping.
-                if !ref_metadata.nested_tag {
-                    uploader
-                        .generate_ref_content_mapping(&ctx, ref_name.to_string(), git_hash, is_tree)
-                        .await?;
-                }
+                uploader
+                    .generate_ref_content_mapping(&ctx, ref_name.to_string(), git_hash, is_tree)
+                    .await?;
             }
 
             for (maybe_tag_id, name, changeset) in

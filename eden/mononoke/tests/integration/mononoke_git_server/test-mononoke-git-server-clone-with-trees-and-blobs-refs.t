@@ -56,6 +56,8 @@
   8ce3eae44760b500bf3f2c3922a95dcd3c908e9e	refs/heads/master_bookmark
   8963e1f55d1346a07c3aec8c8fc72bf87d0452b1	refs/tags/first_tag
   8ce3eae44760b500bf3f2c3922a95dcd3c908e9e	refs/tags/first_tag^{}
+  a8c14233f14d030ddbc16eb955df7fbc1922a5de	refs/tags/recursive_tag
+  cb2ef838eb24e4667fee3a8b89c930234ae6e4bb	refs/tags/recursive_tag^{}
   cb2ef838eb24e4667fee3a8b89c930234ae6e4bb	refs/tags/simple_tag_to_tree
   98517855d851d4ed98d78cf903cefa46d95f3623	refs/tags/tag_to_tree
   cb2ef838eb24e4667fee3a8b89c930234ae6e4bb	refs/tags/tag_to_tree^{}
@@ -63,6 +65,6 @@
 # Clone the repo from Mononoke. Because we do not support refs to trees and blobs in Mononoke Git, the clone fails
   $ git_client clone $MONONOKE_GIT_SERVICE_BASE_URL/$REPONAME.git
   Cloning into 'repo'...
-  fatal: pack has bad object at offset 429: unknown object type 0
+  fatal: pack has bad object at offset 563: delta base offset is out of bound
   fatal: fetch-pack: invalid index-pack output
   [128]
