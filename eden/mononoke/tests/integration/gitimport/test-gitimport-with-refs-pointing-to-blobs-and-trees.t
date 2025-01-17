@@ -39,11 +39,29 @@
   done.
 
 
-# Import it into Mononoke
+# Try importing tree refs into Mononoke without enabling --allow-content-refs. This should fail.
   $ cd "$TESTTMP"
-  $ with_stripped_logs gitimport "$GIT_REPO" --concurrency 100 --generate-bookmarks --allow-content-refs full-repo
+  $ with_stripped_logs gitimport "$GIT_REPO" --concurrency 100 --generate-bookmarks --include-refs refs/heads/branch_to_root_tree full-repo | head -6
   using repo "repo" repoid RepositoryId(0)
   GitRepo:$TESTTMP/repo-git commit 1 of 1 - Oid:8ce3eae4 => Bid:032cd4dc, repo: $TESTTMP/repo-git
+  Execution error: read_git_refs failed
+  
+  Caused by:
+      Ref: refs/heads/branch_to_blob points to a blob
+
+# Try importing blob refs into Mononoke without enabling --allow-content-refs. This should fail.
+  $ with_stripped_logs gitimport "$GIT_REPO" --concurrency 100 --generate-bookmarks --include-refs refs/heads/branch_to_blob full-repo | head -6
+  using repo "repo" repoid RepositoryId(0)
+  GitRepo:$TESTTMP/repo-git 1 of 1 commit(s) already exist, repo: $TESTTMP/repo-git
+  Execution error: read_git_refs failed
+  
+  Caused by:
+      Ref: refs/heads/branch_to_blob points to a blob
+
+# Import it into Mononoke
+  $ with_stripped_logs gitimport "$GIT_REPO" --concurrency 100 --generate-bookmarks --allow-content-refs full-repo
+  using repo "repo" repoid RepositoryId(0)
+  GitRepo:$TESTTMP/repo-git 1 of 1 commit(s) already exist, repo: $TESTTMP/repo-git
   Ref: "refs/heads/branch_to_blob": None
   Ref: "refs/heads/branch_to_root_tree": None
   Ref: "refs/heads/master_bookmark": Some(ChangesetId(Blake2(032cd4dce0406f1c1dd1362b6c3c9f9bdfa82f2fc5615e237a890be4fe08b044)))

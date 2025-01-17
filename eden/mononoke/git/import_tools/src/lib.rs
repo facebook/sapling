@@ -877,10 +877,11 @@ pub async fn read_git_refs(
                         break;
                     }
                     Object::Tree(_) => {
-                        if prefs.allow_content_refs {
-                            git_ref.metadata.target = RefTarget::Tree(oid);
-                            refs.insert(git_ref, oid);
+                        if !prefs.allow_content_refs {
+                            anyhow::bail!("Ref: {ref_name} points to a tree");
                         }
+                        git_ref.metadata.target = RefTarget::Tree(oid);
+                        refs.insert(git_ref, oid);
                         break;
                     }
                     // If the ref is a tag, then we capture the object id of the tag.
