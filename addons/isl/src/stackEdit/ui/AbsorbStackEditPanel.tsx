@@ -256,6 +256,9 @@ function relevantSubset(stack: CommitStackState, dag: Dag) {
 // NOTE: To avoid re-render, the "renderCommit" and "renderCommitExtras" functions
 // need to be "static" instead of anonymous functions.
 function renderCommit(info: DagCommitInfo) {
+  if (info.phase === 'public') {
+    return <div />;
+  }
   // Just show the commit title for now.
   return <div {...stylex.props(styles.commitTitle)}>{info.title}</div>;
 }
