@@ -33,7 +33,7 @@ use stats::prelude::*;
 
 use crate::store::SelectBookmark;
 
-const MAX_BOOKMARK_TRANSACTION_ATTEMPT_COUNT: usize = 5;
+const MAX_BOOKMARK_TRANSACTION_ATTEMPT_COUNT: usize = 10;
 
 define_stats! {
     prefix = "mononoke.dbbookmarks";
