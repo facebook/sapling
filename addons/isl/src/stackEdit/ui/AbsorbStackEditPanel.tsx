@@ -109,7 +109,8 @@ const styles = stylex.create({
     padding: 'var(--halfpad) var(--pad)',
   },
   inlineIcon: {
-    verticalAlign: 'bottom',
+    verticalAlign: 'top',
+    height: 12,
   },
   scrollYPadding: {
     paddingRight: 'var(--pad)',
@@ -117,6 +118,9 @@ const styles = stylex.create({
   commitExtras: {
     paddingLeft: 'var(--pad)',
     marginBottom: 'var(--pad)',
+  },
+  instruction: {
+    width: '100%',
   },
 });
 
@@ -160,14 +164,11 @@ function AbsorbInstruction(props: {subset: HashSet; dag: Dag}) {
   const hasDndDestinations = subset.intersect(dag.draft()).size > 1;
   const tips: ReactNode[] = [];
   if (hasDndDestinations) {
-    tips.push(<T>Diff chunks under a commit will be amended to the commit.</T>);
-  }
-  tips.push(<T>Diff chunks under "You are here" will be left in the working copy.</T>);
-  if (hasDndDestinations) {
     tips.push(
+      <T> Changes have been automatically distributed through your stack</T>,
       <T
         replace={{$grabber: <Icon icon="grabber" size="S" {...stylex.props(styles.inlineIcon)} />}}>
-        Commits are pre-selected based on blame information. Drag $grabber to adjust.
+        Drag $grabber to move changes to different commits
       </T>,
     );
     if (hasOmittedCommits) {
@@ -176,9 +177,14 @@ function AbsorbInstruction(props: {subset: HashSet; dag: Dag}) {
   } else {
     tips.push(<T>Nothing to absorb. The commit stack did not modify relevant files.</T>);
   }
+
+  if (hasDndDestinations) {
+    tips.push(<T>Diff chunks under a commit will be amended to the commit.</T>);
+  }
+  tips.push(<T>Diff chunks under "You are here" will be left in the working copy.</T>);
   return (
-    <Row>
-      <Banner>
+    <Row xstyle={styles.instruction}>
+      <Banner xstyle={styles.instruction}>
         <Icon icon="info" />
         <div>
           {tips.map((tip, idx) => (
