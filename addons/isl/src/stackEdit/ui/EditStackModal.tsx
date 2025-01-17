@@ -58,7 +58,10 @@ export function MaybeEditStackModal() {
         setStackIntention(['general', new Set()]);
       }}>
       <Center
-        xstyle={[stackIntention === 'general' && styles.container, styles.loading]}
+        xstyle={[
+          (stackIntention === 'general' || stackIntention === 'absorb') && styles.container,
+          styles.loading,
+        ]}
         className={stackIntention === 'split' ? 'interactive-split' : undefined}>
         {loadingState.state === 'hasError' ? (
           <ErrorNotice error={new Error(loadingState.error)} title={t('Loading stack failed')} />
