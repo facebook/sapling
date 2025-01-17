@@ -227,14 +227,9 @@ pub(crate) async fn refs_to_include(
         .into_iter()
         .map(|entry| Ok((entry.tag_name, entry.tag_hash.to_object_id()?)))
         .collect::<Result<FxHashMap<_, _>>>()?;
-    let content_refs = git_ref_content_mapping(repo)
-        .await
-        .context("ls-refs failed")?;
     bookmarks
         .entries
-        .clone()
-        .into_iter()
-        .chain(content_refs)
+        .iter()
         .map(|(bookmark, git_objectid)| {
             if bookmark.is_tag() {
                 match tag_inclusion {

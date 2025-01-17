@@ -37,6 +37,7 @@ use rustc_hash::FxHashSet;
 use tokio::io::AsyncWrite;
 
 use crate::mapping::bonsai_git_mappings_by_bonsai;
+use crate::mapping::git_ref_content_mapping;
 use crate::Repo;
 
 const SYMREF_HEAD: &str = "HEAD";
@@ -730,4 +731,13 @@ impl BonsaiBookmarks {
 #[derive(Debug, Clone)]
 pub(crate) struct GitBookmarks {
     pub(crate) entries: FxHashMap<BookmarkKey, ObjectId>,
+}
+
+impl GitBookmarks {
+    pub(crate) async fn with_content_refs(&mut self, repo: &impl Repo) -> Result<&mut Self> {
+        let content_refs = git_ref_content_mapping(repo).await?;
+        self.entries
+            .extend(content_refs.into_iter().collect::<FxHashMap<_, _>>());
+        Ok(self)
+    }
 }

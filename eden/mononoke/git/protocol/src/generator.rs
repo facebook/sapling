@@ -140,6 +140,7 @@ async fn boundary_trees_and_blobs(
 async fn trees_and_blobs_count(
     fetch_container: FetchContainer,
     target_commits: BoxStream<'_, Result<ChangesetId>>,
+    explicitly_requested_objects: Vec<ObjectId>,
 ) -> Result<(usize, FxHashSet<ObjectId>)> {
     let FetchContainer {
         ctx,
@@ -209,11 +210,13 @@ async fn trees_and_blobs_count(
             }
         })
         .try_buffered(concurrency.trees_and_blobs);
-
+    let object_set = explicitly_requested_objects
+        .into_iter()
+        .collect::<FxHashSet<_>>();
     boundary_stream
         .chain(body_stream)
         .try_fold(
-            (FxHashSet::default(), FxHashSet::default()),
+            (object_set, FxHashSet::default()),
             |(mut object_set, mut base_set), objects_with_bases| async move {
                 for (object, base) in objects_with_bases {
                     // If the object is already used as a base, then it should NOT be
@@ -667,25 +670,29 @@ pub async fn generate_pack_item_stream<'a>(
         .context("Error in getting ancestors difference while generating packitem stream")?
         .try_collect::<Vec<_>>()
         .await?;
-    let bookmarks = bookmarks
+    let mut bookmarks = bookmarks
         .clone()
         .try_into_git_bookmarks(&ctx, repo)
         .await
         .context("Error while converting bookmarks to Git format during upload-pack")?;
+    let bookmarks = bookmarks
+        .with_content_refs(repo)
+        .await
+        .context("Error while getting content refs during upload-pack")?;
     // Reverse the list of commits so that we can prevent delta cycles from appearing in the packfile
     target_commits.reverse();
     // STEP 1: Get the count of distinct blob and tree objects to be included in the packfile/bundle.
     let (trees_and_blobs_count, base_set) = trees_and_blobs_count(
         fetch_container.clone(),
         to_commit_stream(target_commits.clone()),
+        vec![],
     )
     .await
     .context("Error while calculating object count")?;
 
     // STEP 2: Create a mapping of all known bookmarks (i.e. branches, tags) and the commit that they point to. The commit should be represented
     // as a Git hash instead of a Bonsai hash since it will be part of the packfile/bundle
-
-    let mut refs_to_include = refs_to_include(repo, &bookmarks, request.tag_inclusion)
+    let mut refs_to_include = refs_to_include(repo, bookmarks, request.tag_inclusion)
         .await
         .context("Error while determining refs to include in the pack")?;
 
@@ -714,7 +721,7 @@ pub async fn generate_pack_item_stream<'a>(
 
     // STEP 5: Get the stream of tag packfile items to include in the pack/bundle. Note that we have not yet included the tag count in the
     // total object count so we will need the stream + count of elements in the stream
-    let (tag_stream, tags_count) = tag_packfile_stream(fetch_container.clone(), repo, &bookmarks)
+    let (tag_stream, tags_count) = tag_packfile_stream(fetch_container.clone(), repo, bookmarks)
         .await
         .context("Error while generating tag packfile item stream")?;
     // Compute the overall object count by summing the trees, blobs, tags and commits count
@@ -742,7 +749,7 @@ pub async fn ls_refs_response(
     request: LsRefsRequest,
 ) -> Result<LsRefsResponse> {
     // We need to include the bookmarks (i.e. branches, tags) based on the request parameters
-    let bookmarks = bookmarks(ctx, repo, &request.requested_refs, request.refs_source)
+    let mut bookmarks = bookmarks(ctx, repo, &request.requested_refs, request.refs_source)
         .await
         .with_context(|| {
             format!(
@@ -753,6 +760,10 @@ pub async fn ls_refs_response(
         .try_into_git_bookmarks(ctx, repo)
         .await
         .context("Error while converting bookmarks to Git format during ls-refs")?;
+    let bookmarks = bookmarks
+        .with_content_refs(repo)
+        .await
+        .context("Error while getting content refs during ls-refs")?;
     // Convert the above bookmarks into refs that can be sent in the response
     let mut refs_to_include = refs_to_include(repo, &bookmarks, request.tag_inclusion)
         .await
@@ -812,13 +823,12 @@ pub async fn fetch_response<'a>(
     let (trees_and_blobs_count, base_set) = trees_and_blobs_count(
         fetch_container.clone(),
         to_commit_stream(target_commits.clone()),
+        translated_sha_heads.non_tag_non_commit_oids.clone(),
     )
     .await
     .context("Error while calculating object count during fetch")?;
     // Get the stream of blob and tree packfile items (with deltas where possible) to include in the pack/bundle. Note that
     // we have already counted these items as part of object count.
-    let explicitly_requested_trees_and_blobs_count =
-        translated_sha_heads.non_tag_non_commit_oids.len();
     let tree_and_blob_stream = tree_and_blob_packfile_stream(
         fetch_container.clone(),
         target_commits.clone(),
@@ -834,8 +844,6 @@ pub async fn fetch_response<'a>(
             .await
             .context("Error while generating commit packfile item stream during fetch")?;
     // Get the stream of all annotated tag items in the repo
-    // NOTE: Ideally, we should filter it based on the requested refs but its much faster to just send all the tags.
-    // Git ignores the unnecessary objects and the extra size overhead in the pack is just a few KBs
     let (tag_stream, tags_count) = tags_packfile_stream(
         fetch_container,
         repo,
@@ -845,10 +853,7 @@ pub async fn fetch_response<'a>(
     .await
     .context("Error while generating tag packfile item stream during fetch")?;
     // Compute the overall object count by summing the trees, blobs, tags and commits count
-    let object_count = commits_count
-        + trees_and_blobs_count
-        + tags_count
-        + explicitly_requested_trees_and_blobs_count;
+    let object_count = commits_count + trees_and_blobs_count + tags_count;
     // Combine all streams together and return the response. The ordering of the streams in this case is irrelevant since the commit
     // and tag stream include full objects and the tree_and_blob_stream has deltas in the correct order
     let packfile_stream = tag_stream

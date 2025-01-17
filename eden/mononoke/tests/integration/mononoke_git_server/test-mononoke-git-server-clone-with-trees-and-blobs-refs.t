@@ -63,8 +63,10 @@
   cb2ef838eb24e4667fee3a8b89c930234ae6e4bb	refs/tags/tag_to_tree^{}
 
 # Clone the repo from Mononoke. Because we do not support refs to trees and blobs in Mononoke Git, the clone fails
-  $ git_client clone $MONONOKE_GIT_SERVICE_BASE_URL/$REPONAME.git
+  $ git_client clone $MONONOKE_GIT_SERVICE_BASE_URL/$REPONAME.git  
   Cloning into 'repo'...
-  fatal: pack has bad object at offset 563: delta base offset is out of bound
-  fatal: fetch-pack: invalid index-pack output
-  [128]
+
+# Verify that we get the same Git repo back that we started with
+  $ cd $REPONAME  
+  $ git rev-list --objects --no-object-names --all | git cat-file --batch-check='%(objectname) %(objecttype) %(rest)' | sort > $TESTTMP/new_object_list
+  $ diff -w $TESTTMP/new_object_list $TESTTMP/object_list
