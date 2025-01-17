@@ -727,11 +727,11 @@ async function maybeWarnAboutRebaseOffWarm(dest: CommitInfo): Promise<boolean> {
   );
   if (await warning) {
     tracker.track('WarnAboutRebaseOffWarm');
-    const buttons = [t('Opt Out of Future Warnings'), t('Cancel'), t('Rebase Anyway')];
+    const buttons = [t('Opt Out of Future Warnings'), t('Cancel'), t('Goto Anyway')];
     const answer = await showModal({
       type: 'confirm',
       buttons,
-      title: <T>Rebase off Warm Commit</T>,
+      title: <T>Move off Warm Commit</T>,
       message: t(
         Internal.warnAboutRebaseOffWarmReason ??
           "The commit you're on is a warmed up commit. Moving off will cause slower builds and performance.\n" +
