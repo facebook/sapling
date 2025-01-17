@@ -27,6 +27,7 @@ import {prev} from '../revMath';
 import {calculateDagFromStack} from '../stackDag';
 import {stackEditStack, useStackEditState} from './stackEditState';
 import * as stylex from '@stylexjs/stylex';
+import {Banner} from 'isl-components/Banner';
 import {Column, Row} from 'isl-components/Flex';
 import {Icon} from 'isl-components/Icon';
 import {atom, useAtomValue} from 'jotai';
@@ -107,9 +108,6 @@ const styles = stylex.create({
   commitTitle: {
     padding: 'var(--halfpad) var(--pad)',
   },
-  instruction: {
-    padding: 'var(--halfpad) var(--pad)',
-  },
   inlineIcon: {
     verticalAlign: 'bottom',
   },
@@ -179,8 +177,8 @@ function AbsorbInstruction(props: {subset: HashSet; dag: Dag}) {
     tips.push(<T>Nothing to absorb. The commit stack did not modify relevant files.</T>);
   }
   return (
-    <div {...stylex.props(styles.instruction)}>
-      <Row>
+    <Row>
+      <Banner>
         <Icon icon="info" />
         <div>
           {tips.map((tip, idx) => (
@@ -190,8 +188,8 @@ function AbsorbInstruction(props: {subset: HashSet; dag: Dag}) {
             </React.Fragment>
           ))}
         </div>
-      </Row>
-    </div>
+      </Banner>
+    </Row>
   );
 }
 
