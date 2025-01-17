@@ -27,7 +27,7 @@ import {prev} from '../revMath';
 import {calculateDagFromStack} from '../stackDag';
 import {stackEditStack, useStackEditState} from './stackEditState';
 import * as stylex from '@stylexjs/stylex';
-import {Banner} from 'isl-components/Banner';
+import {Banner, BannerKind} from 'isl-components/Banner';
 import {Column, Row} from 'isl-components/Flex';
 import {Icon} from 'isl-components/Icon';
 import {atom, useAtomValue} from 'jotai';
@@ -169,6 +169,7 @@ function AbsorbInstruction(props: {subset: HashSet; dag: Dag}) {
   const {dag, subset} = props;
   const hasOmittedCommits = subset.size < dag.all().size;
   const hasDndDestinations = subset.intersect(dag.draft()).size > 1;
+  let bannerKind = BannerKind.default;
   const tips: ReactNode[] = [];
   if (hasDndDestinations) {
     tips.push(
@@ -182,12 +183,13 @@ function AbsorbInstruction(props: {subset: HashSet; dag: Dag}) {
       tips.push(<T>Only commits that modify related files/areas are shown.</T>);
     }
   } else {
+    bannerKind = BannerKind.warning;
     tips.push(<T>Nothing to absorb. The commit stack did not modify relevant files.</T>);
   }
 
   return (
     <Row xstyle={styles.instruction}>
-      <Banner xstyle={styles.instruction}>
+      <Banner xstyle={styles.instruction} kind={bannerKind}>
         <Icon icon="info" />
         <div>
           {tips.map((tip, idx) => (
