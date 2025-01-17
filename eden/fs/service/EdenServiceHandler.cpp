@@ -1226,6 +1226,12 @@ void EdenServiceHandler::getCurrentJournalPosition(
 apache::thrift::ServerStream<JournalPosition>
 EdenServiceHandler::subscribeStreamTemporary(
     std::unique_ptr<std::string> mountPoint) {
+  return streamJournalChanged(std::move(mountPoint));
+}
+
+apache::thrift::ServerStream<JournalPosition>
+EdenServiceHandler::streamJournalChanged(
+    std::unique_ptr<std::string> mountPoint) {
   auto helper = INSTRUMENT_THRIFT_CALL(DBG3, *mountPoint);
   auto mountHandle = lookupMount(mountPoint);
 

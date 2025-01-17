@@ -230,6 +230,9 @@ class EdenServiceHandler : virtual public StreamingEdenServiceSvIf,
   apache::thrift::ServerStream<JournalPosition> subscribeStreamTemporary(
       std::unique_ptr<std::string> mountPoint) override;
 
+  apache::thrift::ServerStream<JournalPosition> streamJournalChanged(
+      std::unique_ptr<std::string> mountPoint) override;
+
   apache::thrift::ServerStream<FsEvent> traceFsEvents(
       std::unique_ptr<std::string> mountPoint,
       int64_t eventCategoryMask) override;
