@@ -29,7 +29,7 @@ bookmarks_movement = { version = "0.1.0", path = "../../bookmarks/bookmarks_move
 borrowed = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 bounded_traversal = { version = "0.1.0", path = "../../common/bounded_traversal" }
 bulk_derivation = { version = "0.1.0", path = "../../derived_data/bulk_derivation" }
-bytes = { version = "1.6.0", features = ["serde"] }
+bytes = { version = "1.9.0", features = ["serde"] }
 cacheblob = { version = "0.1.0", path = "../../blobstore/cacheblob" }
 cas_client = { version = "0.1.0", path = "../../cas_client/client" }
 case_conflict_skeleton_manifest = { version = "0.1.0", path = "../../derived_data/case_conflict_skeleton_manifest" }

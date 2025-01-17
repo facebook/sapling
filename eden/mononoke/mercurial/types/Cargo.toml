@@ -18,7 +18,7 @@ base64 = "0.21"
 bitflags = { version = "2.6", features = ["serde"] }
 blake3 = { version = "=1.5.0", features = ["rayon", "traits-preview"] }
 blobstore = { version = "0.1.0", path = "../../blobstore" }
-bytes = { version = "1.6.0", features = ["serde"] }
+bytes = { version = "1.9.0", features = ["serde"] }
 cloned = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 context = { version = "0.1.0", path = "../../server/context" }
 fbthrift = { version = "0.0.1+unstable", git = "https://github.com/facebook/fbthrift.git", branch = "main" }

@@ -15,7 +15,7 @@ async_requests = { version = "0.1.0", path = "../../async_requests/lib" }
 bookmarks = { version = "0.1.0", path = "../../bookmarks" }
 bookmarks_movement = { version = "0.1.0", path = "../../bookmarks/bookmarks_movement" }
 borrowed = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
-bytes = { version = "1.6.0", features = ["serde"] }
+bytes = { version = "1.9.0", features = ["serde"] }
 chrono = { version = "0.4", features = ["clock", "serde", "std"], default-features = false }
 cloned = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 commit_cloud_helpers = { version = "0.1.0", path = "../../commit_cloud/helpers" }
