@@ -122,6 +122,13 @@ const styles = stylex.create({
   instruction: {
     width: '100%',
   },
+  uncommittedChanges: {
+    opacity: 0.9,
+    fontVariant: 'all-small-caps',
+    fontSize: '90%',
+    fontWeight: 'bold',
+    marginBottom: 'var(--halfpad)',
+  },
 });
 
 /** The `AbsorbEdit` that is currently being dragged. */
@@ -165,7 +172,7 @@ function AbsorbInstruction(props: {subset: HashSet; dag: Dag}) {
   const tips: ReactNode[] = [];
   if (hasDndDestinations) {
     tips.push(
-      <T> Changes have been automatically distributed through your stack</T>,
+      <T>Changes have been automatically distributed through your stack.</T>,
       <T
         replace={{$grabber: <Icon icon="grabber" size="S" {...stylex.props(styles.inlineIcon)} />}}>
         Drag $grabber to move changes to different commits
@@ -178,10 +185,6 @@ function AbsorbInstruction(props: {subset: HashSet; dag: Dag}) {
     tips.push(<T>Nothing to absorb. The commit stack did not modify relevant files.</T>);
   }
 
-  if (hasDndDestinations) {
-    tips.push(<T>Diff chunks under a commit will be amended to the commit.</T>);
-  }
-  tips.push(<T>Diff chunks under "You are here" will be left in the working copy.</T>);
   return (
     <Row xstyle={styles.instruction}>
       <Banner xstyle={styles.instruction}>
@@ -321,8 +324,15 @@ function AbsorbDagCommitExtras(props: {info: DagCommitInfo}) {
     return null;
   }
 
+  const isWdir = info.hash === YOU_ARE_HERE_VIRTUAL_COMMIT.hash;
+
   return (
     <div {...stylex.props(styles.commitExtras)}>
+      {isWdir && (
+        <div {...stylex.props(styles.uncommittedChanges)}>
+          <T>Uncommitted Changes</T>
+        </div>
+      )}
       {fileIdxToEdits
         .map((edits, fileIdx) => (
           <AbsorbEditsForFile fileStackIndex={fileIdx} absorbEdits={edits} key={fileIdx} />
