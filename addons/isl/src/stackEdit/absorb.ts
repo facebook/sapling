@@ -229,6 +229,9 @@ export function analyseFileStack(
     const involvedRevs = dedup(
       involvedLineInfos.map(info => info.rev as FileRev).filter(rev => rev > 0),
     );
+    // Normalize `selectedRev` so it cannot be a public commit (fileRev === 0).
+    // Setting to `null` to make the edit deselected (left in the working copy).
+    const normalizeSelectedRev = (rev: FileRev): FileRev | null => (rev === 0 ? null : rev);
     if (involvedRevs.length === 1) {
       // Only one rev. Set selectedRev to this.
       // For simplicity, we're not checking the "continuous" lines here yet (different from Python).
@@ -242,7 +245,7 @@ export function analyseFileStack(
           newEnd: b2,
           newLines: List(newLines.slice(b1, b2)),
           introductionRev,
-          selectedRev: introductionRev,
+          selectedRev: normalizeSelectedRev(introductionRev),
           absorbEditId: allocateAbsorbId(),
         }),
       );
@@ -259,7 +262,7 @@ export function analyseFileStack(
             newEnd: b2,
             newLines: List([]),
             introductionRev,
-            selectedRev: introductionRev,
+            selectedRev: normalizeSelectedRev(introductionRev),
             absorbEditId: allocateAbsorbId(),
           }),
         );
@@ -282,7 +285,7 @@ export function analyseFileStack(
             newEnd,
             newLines: List(newLines.slice(newStart, newEnd)),
             introductionRev,
-            selectedRev: introductionRev === 0 ? null : introductionRev,
+            selectedRev: normalizeSelectedRev(introductionRev),
             absorbEditId: allocateAbsorbId(),
           }),
         );
