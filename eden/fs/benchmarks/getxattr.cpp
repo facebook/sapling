@@ -7,7 +7,7 @@
 
 #include <folly/Exception.h>
 #include <folly/File.h>
-#include <folly/portability/GFlags.h>
+#include <gflags/gflags.h>
 #include <sys/xattr.h>
 #include "eden/common/utils/benchharness/Bench.h"
 

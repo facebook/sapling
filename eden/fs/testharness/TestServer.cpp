@@ -7,7 +7,7 @@
 
 #include "eden/fs/testharness/TestServer.h"
 
-#include <folly/portability/GFlags.h>
+#include <gflags/gflags.h>
 
 #include "eden/common/telemetry/SessionInfo.h"
 #include "eden/common/testharness/TempFile.h"

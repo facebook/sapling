@@ -7,6 +7,6 @@
 
 #pragma once
 
-#include <folly/portability/GFlags.h>
+#include <gflags/gflags.h>
 
 DECLARE_int32(privhelper_fd);

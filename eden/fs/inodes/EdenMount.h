@@ -16,7 +16,7 @@
 #include <folly/futures/Promise.h>
 #include <folly/futures/SharedPromise.h>
 #include <folly/logging/Logger.h>
-#include <folly/portability/GFlags.h>
+#include <gflags/gflags.h>
 #include <chrono>
 #include <cstdint>
 #include <memory>

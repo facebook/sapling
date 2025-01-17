@@ -6,7 +6,7 @@
  */
 
 #include <folly/init/Init.h>
-#include <folly/portability/GFlags.h>
+#include <gflags/gflags.h>
 #include <cstdlib>
 
 #include "eden/common/telemetry/NullStructuredLogger.h"

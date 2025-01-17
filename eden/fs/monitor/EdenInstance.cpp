@@ -9,7 +9,7 @@
 
 #include <folly/futures/Future.h>
 #include <folly/logging/xlog.h>
-#include <folly/portability/GFlags.h>
+#include <gflags/gflags.h>
 
 #include "eden/common/utils/SpawnedProcess.h"
 #include "eden/fs/monitor/EdenMonitor.h"

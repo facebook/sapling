@@ -11,8 +11,8 @@
 #include <folly/FileUtil.h>
 #include <folly/String.h>
 #include <folly/logging/xlog.h>
-#include <folly/portability/GFlags.h>
 #include <folly/portability/Unistd.h>
+#include <gflags/gflags.h>
 #include <sys/types.h>
 
 #include "eden/common/os/ProcessId.h"

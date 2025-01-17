@@ -20,7 +20,7 @@
 #include <string>
 
 #include <folly/Conv.h>
-#include <folly/portability/GFlags.h>
+#include <gflags/gflags.h>
 
 #include "eden/common/utils/PathFuncs.h"
 

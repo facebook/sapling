@@ -8,7 +8,7 @@
 #include "eden/fs/inodes/ServerState.h"
 
 #include <folly/logging/xlog.h>
-#include <folly/portability/GFlags.h>
+#include <gflags/gflags.h>
 
 #include "eden/common/telemetry/SessionInfo.h"
 #include "eden/common/telemetry/StructuredLoggerFactory.h"

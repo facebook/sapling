@@ -12,7 +12,7 @@
 #include <folly/io/async/EventBaseThread.h>
 #include <folly/logging/LogConfigParser.h>
 #include <folly/logging/xlog.h>
-#include <folly/portability/GFlags.h>
+#include <gflags/gflags.h>
 #include <sysexits.h>
 #include <csignal>
 

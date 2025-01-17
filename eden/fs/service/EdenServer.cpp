@@ -36,9 +36,9 @@
 #include <folly/io/async/AsyncSignalHandler.h>
 #include <folly/io/async/HHWheelTimer.h>
 #include <folly/logging/xlog.h>
-#include <folly/portability/GFlags.h>
 #include <folly/portability/SysTypes.h>
 #include <folly/stop_watch.h>
+#include <gflags/gflags.h>
 #include <thrift/lib/cpp/concurrency/ThreadManager.h>
 #include <thrift/lib/cpp2/async/ServerPublisherStream.h>
 #include <thrift/lib/cpp2/async/ServerStream.h>

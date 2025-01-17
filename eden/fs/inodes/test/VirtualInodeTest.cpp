@@ -8,8 +8,8 @@
 #include <folly/Exception.h>
 #include <folly/Random.h>
 #include <folly/executors/ManualExecutor.h>
-#include <folly/portability/GFlags.h>
 #include <folly/test/TestUtils.h>
+#include <gflags/gflags.h>
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
 

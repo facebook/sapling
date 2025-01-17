@@ -7,7 +7,7 @@
 
 #pragma once
 
-#include <folly/portability/GFlags.h>
+#include <gflags/gflags.h>
 #include <memory>
 #include "eden/common/utils/PathFuncs.h"
 

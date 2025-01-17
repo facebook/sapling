@@ -11,8 +11,8 @@
 #include <folly/executors/ManualExecutor.h>
 #include <folly/io/IOBuf.h>
 #include <folly/logging/xlog.h>
-#include <folly/portability/GFlags.h>
 #include <folly/testing/TestUtil.h>
+#include <gflags/gflags.h>
 #include <gtest/gtest.h>
 #include <sys/stat.h>
 #include <sys/types.h>

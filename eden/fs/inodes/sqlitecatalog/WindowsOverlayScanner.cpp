@@ -11,7 +11,7 @@
 #include <folly/logging/Init.h>
 #include <folly/logging/LogConfigParser.h>
 #include <folly/logging/xlog.h>
-#include <folly/portability/GFlags.h>
+#include <gflags/gflags.h>
 
 #include "eden/common/telemetry/NullStructuredLogger.h"
 #include "eden/common/utils/PathFuncs.h"

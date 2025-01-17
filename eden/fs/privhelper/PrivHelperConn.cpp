@@ -20,9 +20,9 @@
 #include <folly/io/Cursor.h>
 #include <folly/io/IOBuf.h>
 #include <folly/logging/xlog.h>
-#include <folly/portability/GFlags.h>
 #include <folly/portability/Sockets.h>
 #include <folly/portability/Unistd.h>
+#include <gflags/gflags.h>
 #include <sys/types.h>
 
 #include "eden/common/utils/Bug.h"

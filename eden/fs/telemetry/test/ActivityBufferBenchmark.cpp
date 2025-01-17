@@ -8,8 +8,8 @@
 #include <folly/Exception.h>
 #include <folly/File.h>
 #include <folly/init/Init.h>
-#include <folly/portability/GFlags.h>
 #include <folly/stop_watch.h>
+#include <gflags/gflags.h>
 #include "eden/common/utils/SpawnedProcess.h"
 
 using namespace facebook::eden;

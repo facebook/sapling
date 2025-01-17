@@ -10,7 +10,7 @@
 #include <folly/FileUtil.h>
 #include <folly/String.h>
 #include <folly/logging/xlog.h>
-#include <folly/portability/GFlags.h>
+#include <gflags/gflags.h>
 #include <algorithm>
 #include <random>
 #include "eden/common/utils/benchharness/Bench.h"

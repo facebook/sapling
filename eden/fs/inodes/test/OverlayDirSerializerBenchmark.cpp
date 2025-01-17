@@ -6,8 +6,8 @@
  */
 
 #include <folly/init/Init.h>
-#include <folly/portability/GFlags.h>
 #include <folly/stop_watch.h>
+#include <gflags/gflags.h>
 #include <thrift/lib/cpp2/protocol/Serializer.h>
 #include <algorithm>
 #include <cstdlib>

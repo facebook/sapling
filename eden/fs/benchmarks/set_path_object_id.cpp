@@ -8,7 +8,7 @@
 #include <boost/uuid/random_generator.hpp>
 #include <boost/uuid/uuid_io.hpp>
 #include <folly/io/async/EventBaseThread.h>
-#include <folly/portability/GFlags.h>
+#include <gflags/gflags.h>
 #include <thrift/lib/cpp2/async/HeaderClientChannel.h>
 
 #include "eden/common/utils/PathFuncs.h"

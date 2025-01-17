@@ -16,10 +16,10 @@
 #include <folly/io/async/EventBase.h>
 #include <folly/logging/Logger.h>
 #include <folly/logging/xlog.h>
-#include <folly/portability/GFlags.h>
 #include <folly/stop_watch.h>
 #include <folly/system/Pid.h>
 #include <folly/system/ThreadName.h>
+#include <gflags/gflags.h>
 
 #include "eden/common/telemetry/StructuredLogger.h"
 #include "eden/common/utils/Bug.h"
