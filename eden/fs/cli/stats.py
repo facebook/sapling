@@ -112,12 +112,12 @@ def print_stats(stat_info, out: io.TextIOWrapper) -> None:
             duration = journal.durationSeconds
             if duration is None:
                 journalLine = (
-                    f"- Journal: {entries:_} entries "
+                    f"- Journal: {entries:,} entries "
                     f"({stats_print.format_size(mem)})\n"
                 )
             else:
                 journalLine = (
-                    f"- Journal: {entries:_} entries over "
+                    f"- Journal: {entries:,} entries over "
                     f"{stats_print.format_time(duration)} "
                     f"({stats_print.format_size(mem)})\n"
                 )
@@ -125,8 +125,8 @@ def print_stats(stat_info, out: io.TextIOWrapper) -> None:
             textwrap.dedent(
                 f"""\
             {mount_path}
-              - Inodes in memory: {in_memory:_} ({trees:_} trees, {files:_} files)
-              - Unloaded, tracked inodes: {info.unloadedInodeCount}
+              - Inodes in memory: {in_memory:,} ({trees:,} trees, {files:,} files)
+              - Unloaded, tracked inodes: {info.unloadedInodeCount:,}
               {journalLine}
             """
             )
