@@ -40,6 +40,7 @@ use thrift_types::edenfs::DaemonInfo;
 use thrift_types::edenfs::GetConfigParams;
 use thrift_types::edenfs::GetCurrentSnapshotInfoRequest;
 use thrift_types::edenfs::GetScmStatusParams;
+use thrift_types::edenfs::GlobParams;
 use thrift_types::edenfs::MountId;
 use thrift_types::edenfs_clients::EdenService;
 use thrift_types::fb303_core::fb303_status;
@@ -484,6 +485,36 @@ impl EdenFsInstance {
             })
             .await
             .map_err(|_| EdenFsError::Other(anyhow!("failed to get scm status v2 result")))
+    }
+
+    pub async fn glob_files<P: AsRef<Path>, S: AsRef<Path>>(
+        &self,
+        mount_point: P,
+        globs: Vec<String>,
+        include_dotfiles: bool,
+        prefetch_files: bool,
+        suppress_file_list: bool,
+        want_dtype: bool,
+        search_root: S,
+        background: bool,
+        list_only_files: bool,
+    ) -> Result<thrift_types::edenfs::Glob> {
+        let client = self.get_connected_thrift_client(None).await?;
+        client
+            .globFiles(&GlobParams {
+                mountPoint: bytes_from_path(mount_point.as_ref().to_path_buf())?,
+                globs,
+                includeDotfiles: include_dotfiles,
+                prefetchFiles: prefetch_files,
+                suppressFileList: suppress_file_list,
+                wantDtype: want_dtype,
+                searchRoot: bytes_from_path(search_root.as_ref().to_path_buf())?,
+                background,
+                listOnlyFiles: list_only_files,
+                ..Default::default()
+            })
+            .await
+            .map_err(|_| EdenFsError::Other(anyhow!("failed to get glob files result")))
     }
 
     #[cfg(target_os = "linux")]
