@@ -131,6 +131,8 @@ async fn main_impl(fb: FacebookInit) -> anyhow::Result<()> {
 
 #[fbinit::main]
 async fn main(fb: FacebookInit) -> ExitCode {
+    cpp_log_spew::disable(fb);
+
     if let Err(e) = main_impl(fb).await {
         let prog_name = env::args().next().unwrap_or_else(|| "scsc".to_string());
         if stderr().is_terminal() {
