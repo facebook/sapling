@@ -7,7 +7,7 @@
  * of this source tree.
  */
 
-use once_cell::sync::Lazy;
+use std::sync::LazyLock;
 
 #[cfg(fbcode_build)]
 mod facebook;
@@ -22,9 +22,9 @@ pub use facebook::is_prod;
 #[cfg(fbcode_build)]
 pub use facebook::Env;
 
-pub static IN_PROD: Lazy<bool> = Lazy::new(is_prod);
-pub static IN_CORP: Lazy<bool> = Lazy::new(is_corp);
-pub static IN_LAB: Lazy<bool> = Lazy::new(is_lab);
+pub static IN_PROD: LazyLock<bool> = LazyLock::new(is_prod);
+pub static IN_CORP: LazyLock<bool> = LazyLock::new(is_corp);
+pub static IN_LAB: LazyLock<bool> = LazyLock::new(is_lab);
 
 #[cfg(not(fbcode_build))]
 pub fn get_env() -> u8 {
