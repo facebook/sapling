@@ -22,7 +22,6 @@ cpp = { version = "0.0.1+unstable", git = "https://github.com/facebook/fbthrift.
 fb303_core = { version = "0.0.0", git = "https://github.com/facebook/fb303.git", branch = "main" }
 fbthrift = { version = "0.0.1+unstable", git = "https://github.com/facebook/fbthrift.git", branch = "main" }
 futures = { version = "0.3.30", features = ["async-await", "compat"] }
-once_cell = "1.12"
 ref-cast = "1.0.18"
 sorted_vector_map = { version = "0.2.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 thiserror = "2"
