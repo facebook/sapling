@@ -127,11 +127,17 @@ pub(super) async fn run(app: ScscApp, args: CommandArgs) -> Result<()> {
     };
     let response = large_repo_conn
         .repo_update_submodule_expansion(&params)
-        .await?;
+        .await;
+
+    if response.is_err() {
+        println!(
+            "Failed to update submodule expansion. Please reach out for help in the Source Control Server Suppport group: https://fburl.com/workplace/1a1eqj4z"
+        );
+    }
 
     let output = SubmoduleExpansionUpdateOutput {
         requested: "Commit".to_string(),
-        ids: map_commit_ids(response.ids.values()),
+        ids: map_commit_ids(response?.ids.values()),
     };
 
     app.target.render_one(&args.scheme_args, output).await

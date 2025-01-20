@@ -69,6 +69,7 @@ impl<R: MononokeRepo> RepoContext<R> {
         commit_info: SubmoduleExpansionUpdateCommitInfo,
     ) -> Result<ChangesetContext<R>, MononokeError> {
         let ctx = &self.ctx;
+        let large_repo_name = self.name();
 
         // Get the small repo to which the submodule expansion belongs and the
         // adjusted submodule path (removing small repo prefix)
@@ -79,11 +80,12 @@ impl<R: MononokeRepo> RepoContext<R> {
         let small_repo = self
             .repos
             .get_by_id(small_repo_id.id())
-            .ok_or_else(|| anyhow!("Failed to open small repo with id {small_repo_id}"))?;
+            .ok_or_else(|| anyhow!("Failed to load git repo with id {small_repo_id}"))?;
         let small_repo_ctx = RepoContextBuilder::new(ctx.clone(), small_repo, self.repos.clone())
             .await?
             .build()
             .await?;
+        let small_repo_name = small_repo_ctx.name();
 
         // Create a commit in the small repo with a GitSubmodule file change
         // or deleting the submodule, based on `submodule_expansion_update`
@@ -109,7 +111,11 @@ impl<R: MononokeRepo> RepoContext<R> {
                 XRepoLookupExactBehaviour::OnlyExactMapping,
             )
             .await
-            .context("Failed to sync small repo commit updating submodule to large repo")?;
+            .with_context(|| {
+                format!(
+                    "Failed to sync {small_repo_name} commit updating submodule to {large_repo_name}"
+                )
+            })?;
 
         // The small repo commit will not necessarily be synced to the large repo
         // on top of the base changeset id provided, so rebase it and get a new
@@ -126,7 +132,7 @@ impl<R: MononokeRepo> RepoContext<R> {
         match mb_rebased_large_repo_cs_ctx {
             Some(cs_ctx) => Ok(cs_ctx),
             None => Err(anyhow!(
-                "Small repo commit updating submodule wasn't synced to large repo"
+                "{small_repo_name} commit updating submodule wasn't synced to {large_repo_name}"
             )
             .into()),
         }
@@ -147,6 +153,8 @@ impl<R: MononokeRepo> RepoContext<R> {
         commit_info: SubmoduleExpansionUpdateCommitInfo,
     ) -> Result<ChangesetContext<R>, MononokeError> {
         let large_repo_ctx = self; // For readability
+        let large_repo_name = self.name();
+        let small_repo_name = small_repo_ctx.name();
 
         // Get small repo changeset with working copy equivalence to the provided
         // large repo base changeset. This will be the parent of the small repo
@@ -160,8 +168,8 @@ impl<R: MononokeRepo> RepoContext<R> {
                 XRepoLookupExactBehaviour::WorkingCopyEquivalence,
             )
             .await
-            .context("Failed to sync small repo commit updating submodule to large repo")?.ok_or(anyhow!(
-                "Couldn't find small repo commit that's working copy equivalent to base commit {base_changeset_id}")
+            .with_context(|| anyhow!("Failed to sync {small_repo_name} commit updating submodule to {large_repo_name}"))?.ok_or(anyhow!(
+                "Couldn't find {small_repo_name} commit that's working copy equivalent to base commit {base_changeset_id} in {large_repo_name}")
             )?;
 
         let small_repo_base_cs = small_repo_base_cs_ctx.id();
