@@ -66,6 +66,10 @@ use stats::schedule_stats_aggregation_preview;
 use tokio::runtime::Handle;
 use tokio::runtime::Runtime;
 use tokio::sync::oneshot;
+#[cfg(fbcode_build)]
+use MononokeAppStats_ods3::Instrument_MononokeAppStats;
+#[cfg(fbcode_build)]
+use MononokeAppStats_ods3_types::MononokeAppStats;
 
 use crate::args::AsRepoArg;
 use crate::args::ConfigArgs;
@@ -806,6 +810,15 @@ impl MononokeApp {
         );
         STATS::completion_duration_secs
             .add_value(start.elapsed().as_secs().try_into().unwrap_or(i64::MAX));
+
+        #[cfg(fbcode_build)]
+        {
+            let instrument = Instrument_MononokeAppStats::new();
+            instrument.observe(MononokeAppStats {
+                completion_duration_secs: Some(start.elapsed().as_secs() as f64),
+                ..Default::default()
+            });
+        }
         Ok(repos_mgr)
     }
 

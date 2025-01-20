@@ -43,7 +43,7 @@ Update. Check for multiple requests
   $ sha256sum large
   76903e148255cbd5ba91d3f47fe04759afcffdf64104977fc83f688892ac0dfd  large
 
-  $ cat "$lfs_log"
+  $ with_stripped_logs cat "$lfs_log"
   IN  > POST /repo/objects/batch -
   OUT < POST /repo/objects/batch 200 OK
   IN  > GET /repo/download/ba7c3ab5dd42a490fff73f34356f5f4aa76aaf0b67d14a416bcad80a0ee8d4c9?server_hostname=* - (glob)

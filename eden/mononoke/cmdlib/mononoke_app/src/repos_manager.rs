@@ -32,6 +32,10 @@ use slog::info;
 use slog::o;
 use slog::Logger;
 use stats::prelude::*;
+#[cfg(fbcode_build)]
+use MononokeAppStats_ods3::Instrument_MononokeAppStats;
+#[cfg(fbcode_build)]
+use MononokeAppStats_ods3_types::MononokeAppStats;
 
 define_stats! {
     prefix = "mononoke.app";
@@ -205,6 +209,16 @@ impl<Repo> MononokeReposManager<Repo> {
                         start.elapsed().as_millis().try_into().unwrap_or(i64::MAX),
                         (repo_name.to_string(),),
                     );
+
+                    #[cfg(fbcode_build)]
+                    let instrument = Instrument_MononokeAppStats::new();
+                    #[cfg(fbcode_build)]
+                    instrument.observe(MononokeAppStats {
+                        repo_name: Some(repo_name.to_string()),
+                        initialization_time_millisecs: Some(start.elapsed().as_millis() as f64),
+                        ..Default::default()
+                    });
+
                     anyhow::Ok((repo_id, repo_name, repo))
                 }
             })
