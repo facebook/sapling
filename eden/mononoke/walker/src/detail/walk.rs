@@ -1461,10 +1461,10 @@ async fn unode_file_step<V: VisitOne>(
     ))
 }
 
-async fn unode_manifest_step<V: VisitOne>(
+async fn unode_manifest_step<V: VisitOne + Send + Sync + 'static>(
     ctx: &CoreContext,
     repo: &Repo,
-    checker: &Checker<V>,
+    checker: Arc<Checker<V>>,
     key: &UnodeKey<ManifestUnodeId>,
     path: Option<&WrappedPath>,
 ) -> Result<StepOutput, StepError> {
@@ -1514,41 +1514,51 @@ async fn unode_manifest_step<V: VisitOne>(
             || path.cloned(),
         );
     }
+    let edges = tokio::task::spawn_blocking({
+        let checker = checker.clone();
+        let unode_manifest = unode_manifest.clone();
+        let path = path.cloned();
+        move || {
+            let mut file_edges = vec![];
 
-    let mut file_edges = vec![];
-    for (child, subentry) in unode_manifest.subentries() {
-        match subentry {
-            UnodeEntry::Directory(id) => {
-                checker.add_edge_with_path(
-                    &mut edges,
-                    EdgeType::UnodeManifestToUnodeManifestChild,
-                    || Node::UnodeManifest(UnodeKey { inner: *id, flags }),
-                    || {
-                        path.map(|p| {
-                            let path: &MPath = p.as_ref().into();
-                            WrappedPath::from(path.join_element(Some(child)))
-                        })
-                    },
-                );
+            for (child, subentry) in unode_manifest.subentries() {
+                match subentry {
+                    UnodeEntry::Directory(id) => {
+                        checker.add_edge_with_path(
+                            &mut edges,
+                            EdgeType::UnodeManifestToUnodeManifestChild,
+                            || Node::UnodeManifest(UnodeKey { inner: *id, flags }),
+                            || {
+                                path.as_ref().map(|p| {
+                                    let path: &MPath = p.as_ref().into();
+                                    WrappedPath::from(path.join_element(Some(child)))
+                                })
+                            },
+                        );
+                    }
+                    UnodeEntry::File(id) => {
+                        checker.add_edge_with_path(
+                            &mut file_edges,
+                            EdgeType::UnodeManifestToUnodeFileChild,
+                            || Node::UnodeFile(UnodeKey { inner: *id, flags }),
+                            || {
+                                path.as_ref().map(|p| {
+                                    let path: &MPath = p.as_ref().into();
+                                    WrappedPath::from(path.join_element(Some(child)))
+                                })
+                            },
+                        );
+                    }
+                }
             }
-            UnodeEntry::File(id) => {
-                checker.add_edge_with_path(
-                    &mut file_edges,
-                    EdgeType::UnodeManifestToUnodeFileChild,
-                    || Node::UnodeFile(UnodeKey { inner: *id, flags }),
-                    || {
-                        path.map(|p| {
-                            let path: &MPath = p.as_ref().into();
-                            WrappedPath::from(path.join_element(Some(child)))
-                        })
-                    },
-                );
-            }
+
+            // Ordering to reduce queue depth
+            edges.append(&mut file_edges);
+            edges
         }
-    }
-
-    // Ordering to reduce queue depth
-    edges.append(&mut file_edges);
+    })
+    .await
+    .map_err(Error::from)?;
 
     Ok(StepOutput::Done(
         checker.step_data(NodeType::UnodeManifest, || {
@@ -2060,7 +2070,7 @@ async fn walk_one<V, VOut, Route>(
     Error,
 >
 where
-    V: 'static + Clone + WalkVisitor<VOut, Route> + Send,
+    V: 'static + Clone + WalkVisitor<VOut, Route> + Send + Sync,
     VOut: 'static + Send,
     Route: 'static + Send + Clone + StepRoute,
 {
@@ -2166,7 +2176,7 @@ where
             unode_file_step(&ctx, &repo, &checker, &id, walk_item.path.as_ref()).await
         }
         Node::UnodeManifest(id) => {
-            unode_manifest_step(&ctx, &repo, &checker, &id, walk_item.path.as_ref()).await
+            unode_manifest_step(&ctx, &repo, checker.clone(), &id, walk_item.path.as_ref()).await
         }
         Node::UnodeMapping(bcs_id) => {
             bonsai_to_unode_mapping_step(&ctx, &repo, &checker, bcs_id, enable_derive).await
