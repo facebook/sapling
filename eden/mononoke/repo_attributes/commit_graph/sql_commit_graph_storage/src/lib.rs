@@ -43,6 +43,7 @@ use rendezvous::RendezVousOptions;
 use rendezvous::RendezVousStats;
 use retry::retry;
 use retry::RetryLogic;
+use sql::mysql::IsolationLevel;
 use sql::Connection;
 use sql::SqlConnections;
 use sql_construct::SqlConstruct;
@@ -76,7 +77,27 @@ impl SqlConstruct for SqlCommitGraphStorageBuilder {
     const CREATION_QUERY: &'static str = include_str!("../schemas/sqlite-commit-graph.sql");
 
     fn from_sql_connections(connections: SqlConnections) -> Self {
-        Self { connections }
+        let SqlConnections {
+            read_connection,
+            read_master_connection,
+            mut write_connection,
+        } = connections;
+
+        if justknobs::eval("scm/mononoke:commit_graph_use_read_committed", None, None)
+            .unwrap_or(false)
+        {
+            if let Connection::Mysql(conn) = &mut write_connection {
+                conn.set_isolation_level(Some(IsolationLevel::ReadCommitted));
+            }
+        }
+
+        Self {
+            connections: SqlConnections {
+                read_connection,
+                read_master_connection,
+                write_connection,
+            },
+        }
     }
 }
 
