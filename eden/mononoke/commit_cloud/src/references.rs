@@ -8,8 +8,8 @@
 use std::collections::HashMap;
 use std::sync::Arc;
 
-use anyhow::anyhow;
 use bonsai_hg_mapping::BonsaiHgMapping;
+use bonsai_hg_mapping::BonsaiHgMappingEntry;
 use changeset_info::ChangesetInfo;
 use clientinfo::ClientRequestInfo;
 use commit_cloud_types::references::WorkspaceRemoteBookmark;
@@ -20,6 +20,10 @@ use commit_cloud_types::WorkspaceHead;
 use commit_cloud_types::WorkspaceLocalBookmark;
 use commit_cloud_types::WorkspaceSnapshot;
 use context::CoreContext;
+use futures::future;
+use futures::stream;
+use futures::stream::TryStreamExt;
+use futures::FutureExt;
 use history::WorkspaceHistory;
 use mercurial_types::HgChangesetId;
 use repo_derived_data::ArcRepoDerivedData;
@@ -86,33 +90,48 @@ pub(crate) async fn cast_references_data(
     repo_derived_data: ArcRepoDerivedData,
     core_ctx: &CoreContext,
 ) -> Result<ReferencesData, anyhow::Error> {
-    let mut heads: Vec<HgChangesetId> = Vec::new();
     let mut bookmarks: HashMap<String, HgChangesetId> = HashMap::new();
-    let mut heads_dates: HashMap<HgChangesetId, i64> = HashMap::new();
     let remote_bookmarks: Vec<WorkspaceRemoteBookmark> = raw_references_data.remote_bookmarks;
     let mut snapshots: Vec<HgChangesetId> = Vec::new();
 
-    for head in raw_references_data.heads {
-        heads.push(head.commit);
-        let bonsai = bonsai_hg_mapping
-            .get_bonsai_from_hg(core_ctx, head.commit)
-            .await?;
-        match bonsai {
-            Some(bonsai) => {
-                let cs_info = repo_derived_data
-                    .derive::<ChangesetInfo>(core_ctx, bonsai.clone())
-                    .await?;
-                let cs_date = cs_info.author_date();
-                heads_dates.insert(head.commit, cs_date.as_chrono().timestamp());
-            }
-            None => {
-                return Err(anyhow!(
-                    "Changeset {} not found in bonsai mapping",
-                    head.commit
-                ));
-            }
-        }
-    }
+    // Start the pipeline with batches of 1000 heads.
+    let chunks_iter = raw_references_data.heads.chunks(1000).map(|chunk| {
+        let chunk_heads: Vec<_> = chunk.iter().map(|head| head.commit).collect();
+        Ok::<_, anyhow::Error>(chunk_heads)
+    });
+
+    let repo_derived_data = &repo_derived_data;
+    let bonsai_hg_mapping = &bonsai_hg_mapping;
+
+    let heads_dates: HashMap<HgChangesetId, i64> = stream::iter(chunks_iter)
+        // map [HgChangesetId] to [(HgChangesetId, BonsaiChangesetId)]
+        .and_then(|heads| async move {
+            Ok(stream::iter(
+                bonsai_hg_mapping
+                    .get(core_ctx, heads.into())
+                    .await?
+                    .into_iter()
+                    .map(Ok::<_, anyhow::Error>),
+            ))
+        })
+        // do up to 10 hg->bonsai mappings concurrently, flattening out results
+        .try_flatten_unordered(10)
+        // map (HgChangesetId, BonsaiChangesetId) to (HgChangesetId, unix_timestamp)
+        .and_then(|BonsaiHgMappingEntry { hg_cs_id, bcs_id }| async move {
+            repo_derived_data
+                .derive::<ChangesetInfo>(core_ctx, bcs_id)
+                .await
+                .map_err(Into::into)
+                .map(|cs_info| {
+                    future::ok((hg_cs_id, cs_info.author_date().as_chrono().timestamp()))
+                })
+        })
+        // do up to 100 derived data fetches concurrently
+        .try_buffer_unordered(100)
+        .try_collect()
+        .boxed()
+        .await?;
+
     for bookmark in raw_references_data.local_bookmarks {
         bookmarks.insert(bookmark.name().clone(), *bookmark.commit());
     }
@@ -123,7 +142,13 @@ pub(crate) async fn cast_references_data(
 
     Ok(ReferencesData {
         version: latest_version,
-        heads: Some(heads),
+        heads: Some(
+            raw_references_data
+                .heads
+                .iter()
+                .map(|head| head.commit)
+                .collect(),
+        ),
         bookmarks: Some(bookmarks),
         heads_dates: Some(heads_dates),
         remote_bookmarks: Some(remote_bookmarks),

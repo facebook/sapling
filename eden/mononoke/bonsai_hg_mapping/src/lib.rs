@@ -159,6 +159,7 @@ pub trait BonsaiHgMapping: Send + Sync {
     ) -> Result<Vec<HgChangesetId>, Error>;
 
     /// Convert a set of hg changeset ids to bonsai changesets.  If a changeset doesn't exist, it is omitted from the result.
+    /// Order of returned ids is random.
     async fn convert_available_hg_to_bonsai(
         &self,
         ctx: &CoreContext,
@@ -169,6 +170,7 @@ pub trait BonsaiHgMapping: Send + Sync {
     }
 
     /// Convert a set of hg changeset ids to bonsai changesets.  If a changeset doesn't exist, this is an error.
+    /// Order of returned ids is random.
     async fn convert_all_hg_to_bonsai(
         &self,
         ctx: &CoreContext,
