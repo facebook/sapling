@@ -58,34 +58,13 @@ pub async fn classify_path(path: &str) -> Result<(PathBuf, PathType)> {
 
             debug!("{} is not an active EdenFS mount", path.display());
 
-            // Check if it's a directory managed under eden
-            let mut path_copy = canonicalized_path.clone();
-            loop {
-                if path_copy.pop() {
-                    if utils::is_active_eden_mount(&path_copy) {
-                        let err_msg = format!(
-                            "{} is not the root of checkout {}, not removing",
-                            path.display(),
-                            path_copy.display()
-                        );
-                        return Err(anyhow!(err_msg));
-                    } else {
-                        continue;
-                    }
-                }
-                break;
-            }
+            if utils::is_inactive_eden_mount(&canonicalized_path).await? {
+                debug!(
+                    "path {} is determined to be an inactive EdenFS mount",
+                    path.display()
+                );
 
-            // Maybe it's a directory that is left after unmount
-            // If so, unregister it and clean from there
-            match utils::path_in_eden_config(path).await {
-                Ok(true) => {
-                    return Ok((canonicalized_path, PathType::InactiveEdenMount));
-                }
-                Err(e) => {
-                    return Err(e);
-                }
-                _ => (),
+                return Ok((canonicalized_path, PathType::InactiveEdenMount));
             }
 
             // It's a directory that is not listed inside config.json
