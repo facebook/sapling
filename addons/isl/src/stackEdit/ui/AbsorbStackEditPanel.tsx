@@ -36,7 +36,7 @@ import {Banner, BannerKind} from 'isl-components/Banner';
 import {Column, Row} from 'isl-components/Flex';
 import {Icon} from 'isl-components/Icon';
 import {atom, useAtomValue} from 'jotai';
-import React, {useMemo, useRef} from 'react';
+import React, {useEffect, useMemo, useRef} from 'react';
 import {ComparisonType} from 'shared/Comparison';
 import {nullthrows} from 'shared/utils';
 
@@ -51,6 +51,7 @@ const styles = stylex.create({
     marginRight: -1,
     marginBottom: -1,
     display: 'flex',
+    borderTopWidth: 0,
   },
   inDraggingOverlay: {
     border: 'none',
@@ -127,10 +128,12 @@ const draggingHint = atom<string | null>(null);
 const onDragRef: {current: null | DragHandler} = {current: null};
 
 export function AbsorbStackEditPanel() {
+  useResetCollapsedFilesOnMount();
   const stackEdit = useStackEditState();
   const stack = stackEdit.commitStack;
   const dag = calculateDagFromStack(stack);
   const subset = relevantSubset(stack, dag);
+
   return (
     <>
       <Column xstyle={styles.container}>
@@ -344,6 +347,29 @@ function AbsorbDagCommitExtras(props: {info: DagCommitInfo}) {
   );
 }
 
+const absorbCollapsedFiles = atom<Map<string, boolean>>(new Map());
+
+function useCollapsedFile(
+  path: string | undefined,
+): [boolean, (value: boolean) => void] | [undefined, undefined] {
+  const collapsedFiles = useAtomValue(absorbCollapsedFiles);
+  if (path == null) {
+    return [undefined, undefined];
+  }
+  const isCollapsed = collapsedFiles.get(path) || false;
+  const setCollapsed = (collapsed: boolean) => {
+    const newMap = new Map(collapsedFiles);
+    newMap.set(path, collapsed);
+    writeAtom(absorbCollapsedFiles, newMap);
+  };
+  return [isCollapsed, setCollapsed];
+}
+function useResetCollapsedFilesOnMount() {
+  useEffect(() => {
+    writeAtom(absorbCollapsedFiles, new Map());
+  }, []);
+}
+
 function AbsorbEditsForFile(props: {
   fileStackIndex: FileStackIndex;
   absorbEdits: ImMap<AbsorbEditId, AbsorbEdit>;
@@ -361,17 +387,41 @@ function AbsorbEditsForFile(props: {
   const pathInWorkingCopy = stack.getFileStackPath(fileStackIndex, wdirRev);
   const path = pathInWorkingCopy ?? pathInCommit;
 
+  const [isCollapsed, setCollapsed] = useCollapsedFile(path);
+
   return (
     <div>
-      {path && <FileHeader copyFrom={pathInCommit} path={path} iconType={IconType.Modified} />}
-      {props.absorbEdits
-        .map((edit, i) => <SingleAbsorbEdit path={path} edit={edit} key={i} />)
-        .valueSeq()}
+      {path && (
+        <FileHeader
+          {...(isCollapsed == null
+            ? {open: undefined, onChangeOpen: undefined}
+            : {
+                open: isCollapsed === false,
+                onChangeOpen: open => setCollapsed(!open),
+              })}
+          copyFrom={pathInCommit}
+          path={path}
+          iconType={IconType.Modified}
+        />
+      )}
+      {
+        // Edits are rendered even when collapsed, so the reordering id animation doesn't trigger when collapsing.
+        props.absorbEdits
+          .map((edit, i) => (
+            <SingleAbsorbEdit collapsed={isCollapsed} path={path} edit={edit} key={i} />
+          ))
+          .valueSeq()
+      }
     </div>
   );
 }
 
-function SingleAbsorbEdit(props: {edit: AbsorbEdit; inDraggingOverlay?: boolean; path?: string}) {
+function SingleAbsorbEdit(props: {
+  collapsed?: boolean;
+  edit: AbsorbEdit;
+  inDraggingOverlay?: boolean;
+  path?: string;
+}) {
   const {edit, inDraggingOverlay, path} = props;
   const isDragging = useAtomValue(draggingAbsorbEdit);
   const stackEdit = useStackEditState();
@@ -457,12 +507,16 @@ function SingleAbsorbEdit(props: {edit: AbsorbEdit; inDraggingOverlay?: boolean;
         !inDraggingOverlay && isDragging === edit && styles.beingDragged,
       )}
       data-reorder-id={reorderId}>
-      <div {...stylex.props(styles.dragHandlerWrapper)}>
-        <DragHandle onDrag={handleDrag} xstyle={styles.dragHandle}>
-          <Icon icon="grabber" />
-        </DragHandle>
-      </div>
-      <SplitDiffTable ctx={ctx} path={path ?? ''} patch={patch} />
+      {props.collapsed ? null : (
+        <>
+          <div {...stylex.props(styles.dragHandlerWrapper)}>
+            <DragHandle onDrag={handleDrag} xstyle={styles.dragHandle}>
+              <Icon icon="grabber" />
+            </DragHandle>
+          </div>
+          <SplitDiffTable ctx={ctx} path={path ?? ''} patch={patch} />
+        </>
+      )}
     </div>
   );
 }
