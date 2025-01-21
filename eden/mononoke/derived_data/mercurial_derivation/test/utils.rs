@@ -117,6 +117,7 @@ fn upload_hg_tree_entry(
         p1: p1.map(|mfid| mfid.into_nodehash()),
         p2: p2.map(|mfid| mfid.into_nodehash()),
         path,
+        computed_node_id: None,
     };
     upload.upload(ctx, repo.repo_blobstore_arc()).unwrap()
 }

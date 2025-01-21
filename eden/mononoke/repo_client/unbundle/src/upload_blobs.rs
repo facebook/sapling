@@ -78,6 +78,7 @@ impl UploadableHgBlob for TreemanifestEntry {
             p1: self.p1,
             p2: self.p2,
             path: node_key.path.clone(),
+            computed_node_id: None,
         };
         let (_node, value) = upload.upload(ctx.clone(), repo.repo_blobstore_arc())?;
         Ok((node_key, (manifest_content, p1, p2, value.try_shared())))

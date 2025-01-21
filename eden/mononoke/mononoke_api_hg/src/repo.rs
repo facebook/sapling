@@ -357,6 +357,7 @@ impl<R: MononokeRepo> HgRepoContext<R> {
         p1: Option<HgNodeHash>,
         p2: Option<HgNodeHash>,
         contents: Bytes,
+        computed_node_id: Option<HgNodeHash>,
     ) -> Result<(), MononokeError> {
         let entry = UploadHgTreeEntry {
             upload_node_id: UploadHgNodeHash::Checked(upload_node_id),
@@ -364,6 +365,7 @@ impl<R: MononokeRepo> HgRepoContext<R> {
             p1,
             p2,
             path: RepoPath::RootPath, // only used for logging
+            computed_node_id,
         };
         let (_, upload_future) = entry.upload(
             self.ctx().clone(),

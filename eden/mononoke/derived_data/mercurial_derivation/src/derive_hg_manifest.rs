@@ -281,6 +281,7 @@ async fn create_hg_manifest(
         p1,
         p2,
         path,
+        computed_node_id: None,
     }
     .upload(ctx, blobstore);
 

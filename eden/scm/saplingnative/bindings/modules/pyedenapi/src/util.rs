@@ -62,6 +62,7 @@ pub fn to_trees_upload_item(
         node_id: hgid,
         data: data.data(py).to_vec(),
         parents: Parents::new(p1, p2),
+        computed_node_id: None,
     })
 }
 

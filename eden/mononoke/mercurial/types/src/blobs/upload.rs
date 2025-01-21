@@ -81,6 +81,11 @@ pub struct UploadHgTreeEntry {
     pub p1: Option<HgNodeHash>, // TODO: How hard is it to udpate those?
     pub p2: Option<HgNodeHash>,
     pub path: RepoPath,
+    // Computed ID for this node when it differs from the node id being used as the identity.
+    // This is for flatmanifest root manifests that have been migrated to treemanifest.
+    // If present then the server should accept the tree even though the id does not match as long
+    // as it matches this instead. Note: this requires the "mirror_commit_upload" permission.
+    pub computed_node_id: Option<HgNodeHash>,
 }
 
 impl UploadHgTreeEntry {
@@ -107,18 +112,27 @@ impl UploadHgTreeEntry {
             p1,
             p2,
             path,
+            computed_node_id,
         } = self;
 
-        let computed_node_id = HgBlobNode::new(contents.clone(), p1, p2).nodeid();
+        let new_computed_node_id = HgBlobNode::new(contents.clone(), p1, p2).nodeid();
         let node_id: HgNodeHash = match upload_node_id {
-            UploadHgNodeHash::Generate => computed_node_id,
+            UploadHgNodeHash::Generate => new_computed_node_id,
             UploadHgNodeHash::Supplied(node_id) => node_id,
             UploadHgNodeHash::Checked(node_id) => {
-                if node_id != computed_node_id {
+                // If a computed node id is provided, check that it matches the calculated result
+                if let Some(computed_node_id) = computed_node_id {
+                    if new_computed_node_id != computed_node_id {
+                        bail!(MononokeHgBlobError::InconsistentComputedEntryHash(
+                            computed_node_id,
+                            new_computed_node_id
+                        ));
+                    }
+                } else if node_id != new_computed_node_id {
                     bail!(MononokeHgBlobError::InconsistentEntryHashForPath(
                         path,
                         node_id,
-                        computed_node_id
+                        new_computed_node_id
                     ));
                 }
                 node_id
@@ -131,7 +145,7 @@ impl UploadHgTreeEntry {
             node_id,
             p1,
             p2,
-            computed_node_id,
+            computed_node_id: new_computed_node_id,
             contents,
         };
         let envelope_blob = envelope.freeze().into_blob();

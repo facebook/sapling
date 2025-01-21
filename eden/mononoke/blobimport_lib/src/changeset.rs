@@ -239,6 +239,7 @@ fn upload_entry(
                         p1,
                         p2,
                         path: RepoPath::DirectoryPath(path),
+                        computed_node_id: None,
                     };
                     let (_, upload_fut) = try_boxfuture!(upload.upload_as_entry(ctx, blobstore));
                     upload_fut.boxed().compat().boxify()
@@ -395,6 +396,7 @@ impl<R: BlobimportRepoLike + Clone + 'static> UploadChangesets<R> {
                                         p1,
                                         p2,
                                         path: RepoPath::root(),
+                                        computed_node_id: None,
                                     };
                                     upload
                                         .upload(ctx, repo.repo_blobstore_arc())

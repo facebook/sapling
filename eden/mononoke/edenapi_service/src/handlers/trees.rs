@@ -378,8 +378,15 @@ async fn store_tree<R: MononokeRepo>(
     let contents = item.entry.data;
     let p1 = item.entry.parents.p1().cloned().map(HgNodeHash::from);
     let p2 = item.entry.parents.p2().cloned().map(HgNodeHash::from);
-    repo.store_tree(upload_node_id, p1, p2, Bytes::from(contents))
-        .await?;
+    let computed_node_id = item.entry.computed_node_id.map(HgNodeHash::from);
+    repo.store_tree(
+        upload_node_id,
+        p1,
+        p2,
+        Bytes::from(contents),
+        computed_node_id,
+    )
+    .await?;
     Ok(UploadTreeResponse {
         token: UploadToken::new_fake_token(AnyId::HgTreeId(item.entry.node_id), None),
     })

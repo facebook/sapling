@@ -58,6 +58,7 @@ pub async fn from_tree_to_entry(
         node_id: envelope.node_id().into(),
         data: content.to_vec(),
         parents,
+        computed_node_id: Some(envelope.computed_node_id().into()),
     })
 }
 

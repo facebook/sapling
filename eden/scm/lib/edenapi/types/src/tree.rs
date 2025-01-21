@@ -357,6 +357,8 @@ pub struct UploadTreeEntry {
     pub data: Vec<u8>,
     #[id(2)]
     pub parents: Parents,
+    #[id(3)]
+    pub computed_node_id: Option<HgId>,
 }
 
 #[auto_wire]

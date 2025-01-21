@@ -34,4 +34,6 @@ pub enum MononokeHgBlobError {
     InconsistentEntryHashForPath(RepoPath, HgNodeHash, HgNodeHash),
     #[error("Inconsistent node hash for entry: provided: {0}, computed: {1}")]
     InconsistentEntryHash(HgNodeHash, HgNodeHash),
+    #[error("Inconsistent computed node hash override for entry: provided: {0}, computed: {1}")]
+    InconsistentComputedEntryHash(HgNodeHash, HgNodeHash),
 }
