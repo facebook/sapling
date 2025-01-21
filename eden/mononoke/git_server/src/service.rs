@@ -13,7 +13,6 @@ mod uploader;
 
 pub use bookmark_mover::set_ref;
 pub use bookmark_mover::set_refs;
-pub use bookmark_mover::RefUpdateOperation;
 pub use reader::GitMappingsStore;
 pub use reader::GitObjectStore;
 pub use router::build_router;

@@ -40,27 +40,20 @@ use crate::util::mononoke_source_of_truth;
 const HOOK_WIKI_LINK: &str = "https://fburl.com/wiki/mb4wtk1j";
 const COMMIT_CLOUD_REF: &str = "refs/commitcloud/upload";
 
-/// Struct representing a ref update (create, move, delete) operation
-pub struct RefUpdateOperation {
-    ref_update: RefUpdate,
-}
-
-impl RefUpdateOperation {
-    pub fn new(ref_update: RefUpdate) -> Self {
-        Self { ref_update }
-    }
-}
-
 /// Method responsible for creating, moving or deleting a git ref
 pub async fn set_ref(
     request_context: Arc<RepositoryRequestContext>,
     mappings_store: Arc<GitMappingsStore>,
     object_store: Arc<GitObjectStore>,
-    ref_update_op: RefUpdateOperation,
+    ref_update: RefUpdate,
 ) -> (RefUpdate, Result<()>) {
-    let ref_update = ref_update_op.ref_update.clone();
-    // TODO(rajshar): Provide better information about failures instead of just an anyhow::Err
-    let result = set_ref_inner(request_context, mappings_store, object_store, ref_update_op).await;
+    let result = set_ref_inner(
+        request_context,
+        mappings_store,
+        object_store,
+        ref_update.clone(),
+    )
+    .await;
     (ref_update, result)
 }
 
@@ -69,7 +62,7 @@ pub async fn set_refs(
     request_context: Arc<RepositoryRequestContext>,
     mappings_store: Arc<GitMappingsStore>,
     object_store: Arc<GitObjectStore>,
-    ref_update_ops: Vec<RefUpdateOperation>,
+    ref_updates: Vec<RefUpdate>,
 ) -> Result<()> {
     let (ctx, repo, repos) = (
         request_context.ctx.clone(),
@@ -84,27 +77,21 @@ pub async fn set_refs(
         .build()
         .await
         .context("Failure in creating RepoContext for git push")?;
-    let bookmark_operations = stream::iter(ref_update_ops)
-        .map(|ref_update_op| {
+    let bookmark_operations = stream::iter(ref_updates)
+        .map(|ref_update| {
             cloned!(mappings_store, object_store);
             async move {
                 // Get the bonsai changeset id of the old and the new git commits
-                let old_changeset = get_bonsai(
-                    &mappings_store,
-                    &object_store,
-                    &ref_update_op.ref_update.from,
-                )
-                .await?;
+                let old_changeset =
+                    get_bonsai(&mappings_store, &object_store, &ref_update.from).await?;
                 let new_changeset =
-                    get_bonsai(&mappings_store, &object_store, &ref_update_op.ref_update.to)
-                        .await?;
+                    get_bonsai(&mappings_store, &object_store, &ref_update.to).await?;
                 // Create the bookmark key by stripping the refs/ prefix from the ref name
                 let bookmark_key = BookmarkKey::new(
-                    ref_update_op
-                        .ref_update
+                    ref_update
                         .ref_name
                         .strip_prefix("refs/")
-                        .unwrap_or(ref_update_op.ref_update.ref_name.as_str()),
+                        .unwrap_or(ref_update.ref_name.as_str()),
                 )?;
                 BookmarkOperation::new(bookmark_key.clone(), old_changeset, new_changeset)
             }
@@ -160,7 +147,7 @@ async fn set_ref_inner(
     request_context: Arc<RepositoryRequestContext>,
     mappings_store: Arc<GitMappingsStore>,
     object_store: Arc<GitObjectStore>,
-    ref_update_op: RefUpdateOperation,
+    ref_update: RefUpdate,
 ) -> Result<()> {
     let (ctx, repo, repos) = (
         request_context.ctx.clone(),
@@ -168,7 +155,7 @@ async fn set_ref_inner(
         request_context.mononoke_repos.clone(),
     );
     // Check if the push is to a commit cloud ref, if yes then reject it with proper message
-    if ref_update_op.ref_update.ref_name == COMMIT_CLOUD_REF {
+    if ref_update.ref_name == COMMIT_CLOUD_REF {
         return Err(anyhow::anyhow!(
             "Commit-cloud upload succeeded. Your commit is now backed up in Mononoke"
         ));
@@ -189,21 +176,14 @@ async fn set_ref_inner(
         .await
         .context("Failure in creating RepoContext for git push")?;
     // Get the bonsai changeset id of the old and the new git commits
-    let old_changeset = get_bonsai(
-        &mappings_store,
-        &object_store,
-        &ref_update_op.ref_update.from,
-    )
-    .await?;
-    let new_changeset =
-        get_bonsai(&mappings_store, &object_store, &ref_update_op.ref_update.to).await?;
+    let old_changeset = get_bonsai(&mappings_store, &object_store, &ref_update.from).await?;
+    let new_changeset = get_bonsai(&mappings_store, &object_store, &ref_update.to).await?;
     // Create the bookmark key by stripping the refs/ prefix from the ref name
     let bookmark_key = BookmarkKey::new(
-        ref_update_op
-            .ref_update
+        ref_update
             .ref_name
             .strip_prefix("refs/")
-            .unwrap_or(ref_update_op.ref_update.ref_name.as_str()),
+            .unwrap_or(ref_update.ref_name.as_str()),
     )?;
     let bookmark_operation =
         BookmarkOperation::new(bookmark_key.clone(), old_changeset, new_changeset)?;

@@ -46,7 +46,6 @@ use crate::service::set_refs;
 use crate::service::upload_objects;
 use crate::service::GitMappingsStore;
 use crate::service::GitObjectStore;
-use crate::service::RefUpdateOperation;
 use crate::util::empty_body;
 use crate::util::get_body;
 use crate::util::mononoke_source_of_truth;
@@ -240,7 +239,7 @@ async fn non_atomic_refs_update(
                         request_context,
                         git_bonsai_mapping_store,
                         object_store,
-                        RefUpdateOperation::new(ref_update),
+                        ref_update,
                     )
                     .await
                 })
@@ -267,17 +266,12 @@ async fn atomic_refs_update(
     git_bonsai_mapping_store: Arc<GitMappingsStore>,
     object_store: Arc<GitObjectStore>,
 ) -> anyhow::Result<Vec<(RefUpdate, anyhow::Result<()>)>> {
-    let ref_update_ops = push_args
-        .ref_updates
-        .iter()
-        .map(|ref_update| RefUpdateOperation::new(ref_update.clone()))
-        .collect::<Vec<_>>();
     let ref_updates = push_args.ref_updates.clone();
     match set_refs(
         request_context,
         git_bonsai_mapping_store,
         object_store,
-        ref_update_ops,
+        ref_updates.clone(),
     )
     .await
     {
