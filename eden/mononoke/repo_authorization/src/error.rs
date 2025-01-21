@@ -31,6 +31,7 @@ pub enum DeniedAction {
     GitImportOperation,
     CommitCloudOperation(String, String),
     CreateRepo,
+    MirrorUpload,
 }
 
 impl fmt::Display for DeniedAction {
@@ -67,6 +68,7 @@ impl fmt::Display for DeniedAction {
                 .as_str(),
             ),
             DeniedAction::CreateRepo => f.write_str("Repository creation"),
+            DeniedAction::MirrorUpload => f.write_str("Mirror upload"),
         }
     }
 }

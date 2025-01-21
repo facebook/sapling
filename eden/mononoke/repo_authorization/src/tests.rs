@@ -84,6 +84,7 @@ struct TestPermissionChecker {
     all_hooks_bypass: bool,
     any_region_read: bool,
     service_writes: HashMap<String, bool>,
+    mirror_upload: bool,
 }
 
 #[async_trait]
@@ -132,6 +133,10 @@ impl RepoPermissionChecker for TestPermissionChecker {
             .get(service_name)
             .copied()
             .unwrap_or(false)
+    }
+
+    async fn check_if_mirror_upload_allowed(&self, _identities: &MononokeIdentitySet) -> bool {
+        self.mirror_upload
     }
 }
 

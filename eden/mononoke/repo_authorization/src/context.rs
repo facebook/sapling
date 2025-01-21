@@ -706,6 +706,38 @@ impl AuthorizationContext {
                 )
             })
     }
+
+    /// Check whether the caller is allowed to invoke mirror upload related
+    /// operations for the given repo.
+    pub async fn check_mirror_upload_operations(
+        &self,
+        ctx: &CoreContext,
+        repo: &impl RepoPermissionCheckerRef,
+    ) -> AuthorizationCheckOutcome {
+        let permitted = match self {
+            AuthorizationContext::FullAccess => true,
+            AuthorizationContext::Identity | AuthorizationContext::Service(_) => {
+                repo.repo_permission_checker()
+                    .check_if_mirror_upload_allowed(ctx.metadata().identities())
+                    .await
+            }
+            AuthorizationContext::ReadOnlyIdentity | AuthorizationContext::DraftOnlyIdentity => {
+                false
+            }
+        };
+        AuthorizationCheckOutcome::from_permitted(permitted)
+    }
+
+    /// Require that the caller is allowed to invoke mirror_upload operations
+    pub async fn require_mirror_upload_operations(
+        &self,
+        ctx: &CoreContext,
+        repo: &impl RepoPermissionCheckerRef,
+    ) -> Result<(), AuthorizationError> {
+        self.check_mirror_upload_operations(ctx, repo)
+            .await
+            .permitted_or_else(|| self.permission_denied(ctx, DeniedAction::MirrorUpload))
+    }
 }
 
 /// Write operations that can be performed on a repo.

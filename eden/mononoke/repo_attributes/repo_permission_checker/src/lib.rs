@@ -110,6 +110,8 @@ pub trait RepoPermissionChecker: Send + Sync + 'static {
         }
         self.check_if_read_access_allowed(identities).await
     }
+
+    async fn check_if_mirror_upload_allowed(&self, identities: &MononokeIdentitySet) -> bool;
 }
 
 /// The type of the repo ACL based on type of the target repo
@@ -138,6 +140,7 @@ pub struct ProdRepoPermissionChecker {
     service_permchecker: BoxPermissionChecker,
     repo_region_permcheckers: HashMap<String, BoxPermissionChecker>,
     repo_acl_type: RepoAclType,
+    mirror_upload_permchecker: BoxPermissionChecker,
 }
 
 impl ProdRepoPermissionChecker {
@@ -182,6 +185,17 @@ impl ProdRepoPermissionChecker {
             // (this happens in integration tests).
             PermissionCheckerBuilder::new().allow_all().build()
         };
+
+        let mirror_upload_permchecker = PermissionCheckerBuilder::new()
+            .allow(
+                acl_provider
+                    .tier_acl("mirror_commit_upload")
+                    .await
+                    .with_context(|| {
+                        "Failed to create mirror upload PermissionChecker".to_string()
+                    })?,
+            )
+            .build();
         let mut repo_region_permcheckers = HashMap::new();
         for acl_name in repo_region_hipster_acls {
             if !repo_region_permcheckers.contains_key(acl_name) {
@@ -207,6 +221,7 @@ impl ProdRepoPermissionChecker {
             service_permchecker,
             repo_region_permcheckers,
             repo_acl_type,
+            mirror_upload_permchecker,
         })
     }
 }
@@ -280,6 +295,12 @@ impl RepoPermissionChecker for ProdRepoPermissionChecker {
             .check_set(identities, &[service_name])
             .await
     }
+
+    async fn check_if_mirror_upload_allowed(&self, identities: &MononokeIdentitySet) -> bool {
+        self.mirror_upload_permchecker
+            .check_set(identities, &["mirror_upload"])
+            .await
+    }
 }
 
 pub struct AlwaysAllowRepoPermissionChecker {}
@@ -334,6 +355,10 @@ impl RepoPermissionChecker for AlwaysAllowRepoPermissionChecker {
     ) -> bool {
         true
     }
+
+    async fn check_if_mirror_upload_allowed(&self, _identities: &MononokeIdentitySet) -> bool {
+        true
+    }
 }
 
 pub struct NeverAllowRepoPermissionChecker {}
@@ -386,6 +411,10 @@ impl RepoPermissionChecker for NeverAllowRepoPermissionChecker {
         _identities: &MononokeIdentitySet,
         _service_name: &str,
     ) -> bool {
+        false
+    }
+
+    async fn check_if_mirror_upload_allowed(&self, _identities: &MononokeIdentitySet) -> bool {
         false
     }
 }
