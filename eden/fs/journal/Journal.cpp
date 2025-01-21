@@ -518,16 +518,64 @@ bool Journal::forEachDelta(
 
 bool Journal::forEachDeltaForwards(
     SequenceNumber from,
-    FileChangeCallback&& /*fileChangeCallback*/,
-    HashUpdateCallback&& /*hashUpdateCallback*/) {
+    FileChangeCallback&& fileChangeCallback,
+    HashUpdateCallback&& hashUpdateCallback) {
   XDCHECK(from > 0);
   auto deltaState = deltaState_.lock();
   // If this is going to be truncated, handle it before iterating.
   if (!deltaState->empty() && deltaState->getFrontSequenceID() > from) {
     return true;
   } else {
-    /* Implement a forEachDelta function that iterates towards 'from', then
-       forwards to the latest delta*/
+    bool shouldContinue;
+    auto fileChangeIt = deltaState->fileChangeDeltas.end();
+    auto hashUpdateIt = deltaState->hashUpdateDeltas.end();
+    // Move iterators to latest element
+    --fileChangeIt;
+    --hashUpdateIt;
+    auto fileChangeBegin = deltaState->fileChangeDeltas.begin();
+    auto hashUpdateBegin = deltaState->hashUpdateDeltas.begin();
+    auto fileChangeEnd = deltaState->fileChangeDeltas.end();
+    auto hashUpdateEnd = deltaState->hashUpdateDeltas.end();
+    // Iterate backwards through the deltas, stopping when we reach 'from'
+    while (fileChangeIt->sequenceID >= from &&
+           fileChangeIt != fileChangeBegin) {
+      --fileChangeIt;
+    }
+    // Backwards iteration moves one entry past `from`,
+    // move forward one entry to position iterators be on or just
+    // after `from`
+    if (fileChangeIt->sequenceID < from) {
+      ++fileChangeIt;
+    }
+    while (hashUpdateIt->sequenceID >= from &&
+           hashUpdateIt != hashUpdateBegin) {
+      --hashUpdateIt;
+    }
+    // Backwards iteration moves one entry past `from`,
+    // move forward one entry to position iterators be on or just
+    // after `from`
+    if (hashUpdateIt->sequenceID < from) {
+      ++hashUpdateIt;
+    }
+
+    while (fileChangeIt != fileChangeEnd || hashUpdateIt != hashUpdateEnd) {
+      bool isFileChange = hashUpdateIt == hashUpdateEnd ||
+          (fileChangeIt != fileChangeEnd &&
+           fileChangeIt->sequenceID <= hashUpdateIt->sequenceID);
+      const Journal::SequenceNumber currentSequenceID =
+          isFileChange ? fileChangeIt->sequenceID : hashUpdateIt->sequenceID;
+      XDCHECK(currentSequenceID >= from);
+      if (isFileChange) {
+        shouldContinue = fileChangeCallback(*fileChangeIt);
+        ++fileChangeIt;
+      } else {
+        shouldContinue = hashUpdateCallback(*hashUpdateIt);
+        ++hashUpdateIt;
+      }
+      if (!shouldContinue) {
+        break;
+      }
+    }
   }
   deltaState->lastModificationHasBeenObserved = true;
   return false;

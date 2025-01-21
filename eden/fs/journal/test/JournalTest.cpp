@@ -692,3 +692,62 @@ TEST_F(JournalTest, all_subscribers_are_notified_after_any_observation) {
   EXPECT_EQ(2u, calls1);
   EXPECT_EQ(2u, calls2);
 }
+
+TEST_F(JournalTest, for_each_delta_forwards) {
+  RootId hash1{"1111111111111111111111111111111111111111"};
+  RootId hash2{"2222222222222222222222222222222222222222"};
+  std::vector<int> expectedFileChangeSequences{1, 2, 3, 4, 6, 7};
+  std::vector<int> expectedHashUpdateSequences{5, 8};
+  std::vector<RelativePathPiece> expectedFileChangeNames{
+      "foo1"_relpath,
+      "foo2"_relpath,
+      "foo3"_relpath,
+      "foo4"_relpath,
+      "foo6"_relpath,
+      "foo7"_relpath};
+  std::vector<dtype_t> expectedFileChangeDtypes{
+      dtype_t::Regular,
+      dtype_t::Symlink,
+      dtype_t::Regular,
+      dtype_t::Symlink,
+      dtype_t::Regular,
+      dtype_t::Regular};
+  std::vector<RootId> expectedHashUpdateHashes{hash1, hash2};
+
+  std::vector<int> fileChangeSequences;
+  std::vector<int> hashUpdateSequences;
+  std::vector<RelativePathPiece> fileChangeNames;
+  std::vector<RootId> hashUpdateHashes;
+  std::vector<dtype_t> fileChangeDtypes;
+
+  journal.recordChanged("foo1"_relpath, dtype_t::Regular);
+  journal.recordChanged("foo2"_relpath, dtype_t::Symlink);
+  EXPECT_EQ(2u, journal.getLatest()->sequenceID);
+  journal.recordChanged("foo3"_relpath, dtype_t::Regular);
+  journal.recordChanged("foo4"_relpath, dtype_t::Symlink);
+  EXPECT_EQ(4u, journal.getLatest()->sequenceID);
+  journal.recordHashUpdate(hash1, hash2);
+  EXPECT_EQ(5u, journal.getLatest()->sequenceID);
+  journal.recordChanged("foo6"_relpath, dtype_t::Regular);
+  journal.recordChanged("foo7"_relpath, dtype_t::Regular);
+  journal.recordHashUpdate(hash2, hash1);
+
+  bool truncated = journal.forEachDeltaForwards(
+      1u,
+      [&](const FileChangeJournalDelta& current) -> bool {
+        fileChangeSequences.push_back(current.sequenceID);
+        fileChangeNames.push_back(current.path1);
+        fileChangeDtypes.push_back(current.type);
+        return true;
+      },
+      [&](const RootUpdateJournalDelta& current) -> bool {
+        hashUpdateSequences.push_back(current.sequenceID);
+        hashUpdateHashes.push_back(current.fromHash);
+        return true;
+      });
+  EXPECT_FALSE(truncated);
+  EXPECT_EQ(expectedFileChangeSequences, fileChangeSequences);
+  EXPECT_EQ(expectedFileChangeNames, fileChangeNames);
+  EXPECT_EQ(expectedFileChangeDtypes, fileChangeDtypes);
+  EXPECT_EQ(expectedHashUpdateHashes, hashUpdateHashes);
+}
