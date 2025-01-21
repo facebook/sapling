@@ -63,6 +63,14 @@ mononoke_queries! {
         "{insert_or_ignore} INTO bookmarks (repo_id, log_id, name, category, changeset_id, hg_kind) VALUES {values}"
     }
 
+    write InsertOrUpdateBookmarks(
+        values: (repo_id: RepositoryId, log_id: Option<u64>, name: BookmarkName, category: BookmarkCategory, changeset_id: ChangesetId, kind: BookmarkKind)
+    ) {
+         none,
+        mysql("INSERT INTO bookmarks (repo_id, log_id, name, category, changeset_id, hg_kind) VALUES {values} ON DUPLICATE KEY UPDATE changeset_id = VALUES(changeset_id), hg_kind = VALUES(hg_kind)")
+        sqlite("INSERT INTO bookmarks (repo_id, log_id, name, category, changeset_id, hg_kind) VALUES {values} ON CONFLICT (repo_id, name, category) DO UPDATE SET changeset_id = EXCLUDED.changeset_id, hg_kind = EXCLUDED.hg_kind")
+    }
+
     write UpdateBookmark(
         repo_id: RepositoryId,
         log_id: Option<u64>,
@@ -159,6 +167,14 @@ struct SqlBookmarksTransactionPayload {
         Option<NewUpdateLogEntry>,
     )>,
 
+    /// Operations to create or update a bookmark.
+    creates_or_updates: Vec<(
+        BookmarkKey,
+        ChangesetId,
+        BookmarkKind,
+        Option<NewUpdateLogEntry>,
+    )>,
+
     /// Operations to update a bookmark from an old id to a new id, provided
     /// it has a matching kind.
     updates: Vec<(
@@ -205,6 +221,7 @@ impl SqlBookmarksTransactionPayload {
             repo_id,
             force_sets: Vec::new(),
             creates: Vec::new(),
+            creates_or_updates: Vec::new(),
             updates: Vec::new(),
             force_deletes: Vec::new(),
             deletes: Vec::new(),
@@ -337,6 +354,45 @@ impl SqlBookmarksTransactionPayload {
         Ok(txn)
     }
 
+    async fn store_creates_or_updates<'op, 'log: 'op>(
+        &'log self,
+        ctx: &CoreContext,
+        txn: SqlTransaction,
+        log: &'op mut TransactionLogUpdates<'log>,
+    ) -> Result<SqlTransaction, BookmarkTransactionError> {
+        let mut data = Vec::new();
+        for (bookmark, cs_id, kind, maybe_log_entry) in self.creates_or_updates.iter() {
+            let log_id = maybe_log_entry
+                .as_ref()
+                .map(|log_entry| log.push_log_entry(bookmark, log_entry));
+            data.push((self.repo_id, log_id, bookmark, cs_id, kind))
+        }
+        let data = data
+            .iter()
+            .map(|(repo_id, log_id, bookmark, cs_id, kind)| {
+                (
+                    repo_id,
+                    log_id,
+                    bookmark.name(),
+                    bookmark.category(),
+                    *cs_id,
+                    *kind,
+                )
+            })
+            .collect::<Vec<_>>();
+        let rows_to_insert = data.len() as u64;
+        let (txn, result) = InsertOrUpdateBookmarks::maybe_traced_query_with_transaction(
+            txn,
+            ctx.client_request_info(),
+            data.as_slice(),
+        )
+        .await?;
+        if result.affected_rows() != rows_to_insert {
+            return Err(BookmarkTransactionError::LogicError);
+        }
+        Ok(txn)
+    }
+
     async fn store_updates<'op, 'log: 'op>(
         &'log self,
         ctx: &CoreContext,
@@ -447,6 +503,7 @@ impl SqlBookmarksTransactionPayload {
 
         txn = self.store_force_sets(ctx, txn, &mut log).await?;
         txn = self.store_creates(ctx, txn, &mut log).await?;
+        txn = self.store_creates_or_updates(ctx, txn, &mut log).await?;
         txn = self.store_updates(ctx, txn, &mut log).await?;
         txn = self.store_force_deletes(ctx, txn, &mut log).await?;
         txn = self.store_deletes(ctx, txn, &mut log).await?;
@@ -539,12 +596,25 @@ impl BookmarkTransaction for SqlBookmarksTransaction {
     ) -> Result<()> {
         self.check_not_seen(bookmark)?;
         let log = NewUpdateLogEntry::new(None, Some(new_cs), reason)?;
-        self.payload.creates.push((
-            bookmark.clone(),
-            new_cs,
-            BookmarkKind::PullDefaultPublishing,
-            Some(log),
-        ));
+        match reason {
+            BookmarkUpdateReason::MirrorUpload => {
+                self.payload.creates_or_updates.push((
+                    bookmark.clone(),
+                    new_cs,
+                    BookmarkKind::PullDefaultPublishing,
+                    Some(log),
+                ));
+            }
+            _ => {
+                self.payload.creates.push((
+                    bookmark.clone(),
+                    new_cs,
+                    BookmarkKind::PullDefaultPublishing,
+                    Some(log),
+                ));
+            }
+        }
+
         Ok(())
     }
 

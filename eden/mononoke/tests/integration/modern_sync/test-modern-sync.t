@@ -129,5 +129,5 @@ Sync all bookmarks moves
 
 // Try to re-sync and hit error cause bookmark can't be re-written
   $ with_stripped_logs mononoke_modern_sync sync-once orig dest --start-id 0 | grep "Move bookmark"
-  Move bookmark response SetBookmarkResponse { data: Err(ServerError { message: "invalid request: Bookmark transaction failed", code: 0 }) }
-  Move bookmark response SetBookmarkResponse { data: Err(ServerError { message: "invalid request: Bookmark transaction failed", code: 0 }) }
+  Move bookmark response SetBookmarkResponse { data: Ok(()) }
+  Move bookmark response SetBookmarkResponse { data: Ok(()) }

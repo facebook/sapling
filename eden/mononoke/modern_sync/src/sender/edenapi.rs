@@ -224,7 +224,10 @@ impl ModernSyncSender for EdenapiSender {
                 bookmark,
                 to.map(|cs| cs.into()),
                 from.map(|cs| cs.into()),
-                HashMap::from([("BYPASS_READONLY".to_owned(), "true".to_owned())]),
+                HashMap::from([
+                    ("BYPASS_READONLY".to_owned(), "true".to_owned()),
+                    ("MIRROR_UPLOAD".to_owned(), "true".to_owned()),
+                ]),
             )
             .await?;
         info!(&self.logger, "Move bookmark response {:?}", res);

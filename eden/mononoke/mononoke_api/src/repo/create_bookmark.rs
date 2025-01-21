@@ -39,9 +39,19 @@ impl<R: MononokeRepo> RepoContext<R> {
             target: ChangesetId,
             pushvars: Option<&'a HashMap<String, Bytes>>,
         ) -> CreateBookmarkOp<'a> {
+            let is_mirror_upload = pushvars
+                .and_then(|p| p.get("MIRROR_UPLOAD"))
+                .map_or(false, |v| **v == *b"true");
+
+            // TODO: Check mirrror upload is only used for people in the "mirror_commit_upload" ACL
+            let reason = if is_mirror_upload {
+                BookmarkUpdateReason::MirrorUpload
+            } else {
+                BookmarkUpdateReason::ApiRequest
+            };
+
             let op =
-                CreateBookmarkOp::new(bookmark.clone(), target, BookmarkUpdateReason::ApiRequest)
-                    .with_pushvars(pushvars);
+                CreateBookmarkOp::new(bookmark.clone(), target, reason).with_pushvars(pushvars);
             op.log_new_public_commits_to_scribe()
         }
         let create_op = if let Some(redirector) = self.push_redirector.as_ref() {
