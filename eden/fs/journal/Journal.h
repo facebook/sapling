@@ -62,8 +62,8 @@ class Journal {
   using SequenceNumber = JournalDelta::SequenceNumber;
   using SubscriberId = uint64_t;
   using SubscriberCallback = std::function<void()>;
-  using FileChangeCallback = std::function<void(const FileChangeJournalDelta&)>;
-  using HashUpdateCallback = std::function<void(const RootUpdateJournalDelta&)>;
+  using FileChangeCallback = std::function<bool(const FileChangeJournalDelta&)>;
+  using HashUpdateCallback = std::function<bool(const RootUpdateJournalDelta&)>;
 
   explicit Journal(EdenStatsPtr edenStats);
 
@@ -133,12 +133,29 @@ class Journal {
       SequenceNumber limitSequence = 1);
 
   /**
-   * Enumerates over all deltas with sequence number >= limitSequence.
+   * Runs from the latest delta to the delta with sequence ID (if 'lengthLimit'
+   * is not nullopt then checks at most 'lengthLimit' entries) and runs
+   * appropriate callback on each entry encountered.
+   *
+   * Return bool indicating whether the journal is truncated
    */
-  // return bool indicating whether the journal is truncated
   bool forEachDelta(
       JournalDelta::SequenceNumber from,
       std::optional<size_t> lengthLimit,
+      FileChangeCallback&& fileChangeCallback,
+      HashUpdateCallback&& hashUpdateCallback);
+
+  /**
+   * Runs from the earliest delta with sequence ID >= from to latest delta and
+   * runs appropriate callback on each entry encountered.
+   *
+   * Allows for early exit if any callback returns false.
+   *
+   * Return bool indicating whether the journal is truncated
+   *
+   */
+  bool forEachDeltaForwards(
+      JournalDelta::SequenceNumber from,
       FileChangeCallback&& fileChangeCallback,
       HashUpdateCallback&& hashUpdateCallback);
 

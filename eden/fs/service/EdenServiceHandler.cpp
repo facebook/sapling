@@ -2377,7 +2377,7 @@ void EdenServiceHandler::sync_changesSinceV2(
     const auto isTruncated = mountHandle.getJournal().forEachDelta(
         *fromPosition.sequenceNumber_ref() + 1,
         std::nullopt,
-        [&](const FileChangeJournalDelta& current) -> void {
+        [&](const FileChangeJournalDelta& current) -> bool {
           if (!current.isPath1Valid) {
             XLOG(DFATAL)
                 << "FileChangeJournalDetal::isPath1Valid should never be false";
@@ -2472,8 +2472,10 @@ void EdenServiceHandler::sync_changesSinceV2(
           if (includePath1 || includePath2) {
             result.changes_ref()->push_back(std::move(change));
           }
+          // Return value ignored here
+          return true;
         },
-        [&](const RootUpdateJournalDelta& current) -> void {
+        [&](const RootUpdateJournalDelta& current) -> bool {
           CommitTransition commitTransition;
           commitTransition.from_ref() =
               rootIdCodec.renderRootId(current.fromHash);
@@ -2487,6 +2489,8 @@ void EdenServiceHandler::sync_changesSinceV2(
           change.largeChange_ref() = std::move(largeChange);
 
           result.changes_ref()->push_back(std::move(change));
+          // Return value ignored here
+          return true;
         });
 
     if (isTruncated || result.changes_ref()->size() > maxNumberOfChanges) {

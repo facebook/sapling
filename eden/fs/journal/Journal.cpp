@@ -415,7 +415,7 @@ std::unique_ptr<JournalDeltaRange> Journal::accumulateRange(
         *deltaState,
         from,
         std::nullopt,
-        [&](const FileChangeJournalDelta& current) -> void {
+        [&](const FileChangeJournalDelta& current) -> bool {
           ++filesAccumulated;
           if (!result) {
             result = std::make_unique<JournalDeltaRange>();
@@ -449,8 +449,10 @@ std::unique_ptr<JournalDeltaRange> Journal::accumulateRange(
               resultInfo->existedBefore = currentInfo.existedBefore;
             }
           }
+          // Return value ignored here
+          return true;
         },
-        [&](const RootUpdateJournalDelta& current) -> void {
+        [&](const RootUpdateJournalDelta& current) -> bool {
           if (!result) {
             result = std::make_unique<JournalDeltaRange>();
             result->toSequence = current.sequenceID;
@@ -465,6 +467,8 @@ std::unique_ptr<JournalDeltaRange> Journal::accumulateRange(
           // Merge the unclean status list
           result->uncleanPaths.insert(
               current.uncleanPaths.begin(), current.uncleanPaths.end());
+          // Return value ignored here
+          return true;
         });
   }
 
@@ -512,6 +516,23 @@ bool Journal::forEachDelta(
   return false;
 }
 
+bool Journal::forEachDeltaForwards(
+    SequenceNumber from,
+    FileChangeCallback&& /*fileChangeCallback*/,
+    HashUpdateCallback&& /*hashUpdateCallback*/) {
+  XDCHECK(from > 0);
+  auto deltaState = deltaState_.lock();
+  // If this is going to be truncated, handle it before iterating.
+  if (!deltaState->empty() && deltaState->getFrontSequenceID() > from) {
+    return true;
+  } else {
+    /* Implement a forEachDelta function that iterates towards 'from', then
+       forwards to the latest delta*/
+  }
+  deltaState->lastModificationHasBeenObserved = true;
+  return false;
+}
+
 std::vector<DebugJournalDelta> Journal::getDebugRawJournalInfo(
     SequenceNumber from,
     std::optional<size_t> limit,
@@ -524,7 +545,7 @@ std::vector<DebugJournalDelta> Journal::getDebugRawJournalInfo(
       *deltaState,
       from,
       limit,
-      [&](const FileChangeJournalDelta& current) -> void {
+      [&](const FileChangeJournalDelta& current) -> bool {
         DebugJournalDelta delta;
         JournalPosition fromPosition;
         fromPosition.mountGeneration_ref() = mountGeneration;
@@ -549,8 +570,10 @@ std::vector<DebugJournalDelta> Journal::getDebugRawJournalInfo(
         }
 
         result.push_back(delta);
+        // Return value ignored here
+        return true;
       },
-      [&](const RootUpdateJournalDelta& current) -> void {
+      [&](const RootUpdateJournalDelta& current) -> bool {
         DebugJournalDelta delta;
         JournalPosition fromPosition;
         fromPosition.mountGeneration_ref() = mountGeneration;
@@ -571,6 +594,8 @@ std::vector<DebugJournalDelta> Journal::getDebugRawJournalInfo(
         }
 
         result.push_back(delta);
+        // Return value ignored here
+        return true;
       });
   return result;
 }
