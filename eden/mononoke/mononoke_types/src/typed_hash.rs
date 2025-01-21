@@ -98,6 +98,10 @@ impl ChangesetId {
     pub fn empty() -> Self {
         Self(Blake2::from_byte_array([0; 32]))
     }
+
+    pub fn is_empty(&self) -> bool {
+        self.0.into_inner() == [0; 32]
+    }
 }
 
 /// An identifier for a changeset hash prefix in Mononoke.

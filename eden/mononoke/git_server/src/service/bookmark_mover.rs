@@ -77,28 +77,31 @@ pub async fn set_refs(
         .build()
         .await
         .context("Failure in creating RepoContext for git push")?;
-    let bookmark_operations = stream::iter(ref_updates)
-        .map(|ref_update| {
-            cloned!(mappings_store, object_store);
-            async move {
-                // Get the bonsai changeset id of the old and the new git commits
-                let old_changeset =
-                    get_bonsai(&mappings_store, &object_store, &ref_update.from).await?;
-                let new_changeset =
-                    get_bonsai(&mappings_store, &object_store, &ref_update.to).await?;
-                // Create the bookmark key by stripping the refs/ prefix from the ref name
-                let bookmark_key = BookmarkKey::new(
-                    ref_update
-                        .ref_name
-                        .strip_prefix("refs/")
-                        .unwrap_or(ref_update.ref_name.as_str()),
-                )?;
-                BookmarkOperation::new(bookmark_key.clone(), old_changeset, new_changeset)
-            }
-        })
-        .buffer_unordered(20)
-        .try_collect::<Vec<_>>()
-        .await?;
+    let bookmark_operations = stream::iter(
+        ref_updates
+            .into_iter()
+            .filter(|ref_update| !ref_update.is_content()),
+    )
+    .map(|ref_update| {
+        cloned!(mappings_store, object_store);
+        async move {
+            // Get the bonsai changeset id of the old and the new git commits
+            let old_changeset =
+                get_bonsai(&mappings_store, &object_store, &ref_update.from).await?;
+            let new_changeset = get_bonsai(&mappings_store, &object_store, &ref_update.to).await?;
+            // Create the bookmark key by stripping the refs/ prefix from the ref name
+            let bookmark_key = BookmarkKey::new(
+                ref_update
+                    .ref_name
+                    .strip_prefix("refs/")
+                    .unwrap_or(ref_update.ref_name.as_str()),
+            )?;
+            BookmarkOperation::new(bookmark_key.clone(), old_changeset, new_changeset)
+        }
+    })
+    .buffer_unordered(20)
+    .try_collect::<Vec<_>>()
+    .await?;
     // If the bookmark is a tag and the operation is a delete, then we need to remove the tag entry
     // from bonsai_tag_mapping table in addition to removing the bookmark entry from bookmarks table
     let tags_to_delete = bookmark_operations
@@ -166,6 +169,11 @@ async fn set_ref_inner(
             "Pushes to repo {0} are disallowed because its source of truth has been moved. Use `git pushrebase` or make changes directly in the repo where the source of truth was moved.",
             repo.repo_identity().name()
         ));
+    }
+    // If the ref is a content ref, then we have already processed it in the uploader. There is no
+    // bookmark to move in this case
+    if ref_update.is_content() {
+        return Ok(());
     }
     // Create the repo context which is the pre-requisite for moving bookmarks
     let repo_context = RepoContextBuilder::new(ctx.clone(), repo.clone(), repos)
@@ -240,7 +248,9 @@ async fn get_bonsai(
                         return mappings_store.get_bonsai(&oid).await;
                     }
                 }
-                anyhow::bail!("*** Refs pointing to tree or blobs is not allowed")
+                anyhow::bail!(
+                    "Refs pointing to trees and blobs should have already been processed."
+                )
             }
             _ => err,
         },

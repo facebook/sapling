@@ -49,17 +49,45 @@ impl Default for ObjectFormat {
     }
 }
 
+/// Enum representing the type of ref that is being pushed
+#[derive(Clone, Debug, Copy, PartialEq, Eq)]
+pub enum RefType {
+    /// The type of ref is not determined
+    Unknown,
+    /// Variant representing ref pointing to a commit or tag
+    Standard,
+    /// Variant representing ref pointing to blob or tree
+    Content,
+}
+
+impl From<gix_object::Kind> for RefType {
+    fn from(kind: gix_object::Kind) -> Self {
+        match kind {
+            gix_object::Kind::Commit | gix_object::Kind::Tag => Self::Standard,
+            gix_object::Kind::Tree | gix_object::Kind::Blob => Self::Content,
+        }
+    }
+}
+
 /// Struct representing the move of a ref/bookmark from "from" commit ID to "to" commit ID
 #[derive(Clone, Debug)]
 pub struct RefUpdate {
     pub ref_name: String,
-    #[allow(dead_code)]
+    pub ref_type: RefType,
     pub from: ObjectId,
-    #[allow(dead_code)]
     pub to: ObjectId,
 }
 
 impl RefUpdate {
+    pub fn new(ref_name: String, ref_type: RefType, from: ObjectId, to: ObjectId) -> Self {
+        Self {
+            ref_name,
+            ref_type,
+            from,
+            to,
+        }
+    }
+
     fn parse(input: &[u8]) -> Result<Self> {
         let parsed_input =
             from_utf8(input).context("Failure in converting ref-update line into UTF-8 string")?;
@@ -70,12 +98,17 @@ impl RefUpdate {
                 let to_oid = parse_oid(to.as_bytes(), b"to ")?;
                 Ok(Self {
                     ref_name: ref_name.to_string(),
+                    ref_type: RefType::Unknown,
                     from: from_oid,
                     to: to_oid,
                 })
             }
             split_parts => bail!("Invalid format for ref-update: {:?}", split_parts),
         }
+    }
+
+    pub fn is_content(&self) -> bool {
+        self.ref_type == RefType::Content
     }
 }
 

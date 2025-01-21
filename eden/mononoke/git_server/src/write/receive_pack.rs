@@ -33,7 +33,6 @@ use scuba_ext::FutureStatsScubaExt;
 use slog::info;
 
 use crate::command::Command;
-use crate::command::PushArgs;
 use crate::command::RefUpdate;
 use crate::command::RequestCommand;
 use crate::model::GitMethodInfo;
@@ -120,7 +119,7 @@ async fn push<'a>(
             GitImportLfs::new_disabled()
         };
         // Upload the objects corresponding to the push to the underlying store
-        let ref_map = upload_objects(
+        let (ref_map, ref_updates) = upload_objects(
             ctx,
             request_context.repo.clone(),
             object_store.clone(),
@@ -148,10 +147,11 @@ async fn push<'a>(
         ));
 
         let updated_refs = refs_update(
-            &push_args,
+            ref_updates,
             request_context.clone(),
             git_bonsai_mapping_store.clone(),
             object_store.clone(),
+            push_args.settings.atomic,
         )
         .try_timed()
         .await?
@@ -190,14 +190,15 @@ async fn push<'a>(
 
 /// Function responsible for updating the refs in the repo
 async fn refs_update(
-    push_args: &PushArgs<'_>,
+    ref_updates: Vec<RefUpdate>,
     request_context: Arc<RepositoryRequestContext>,
     git_bonsai_mapping_store: Arc<GitMappingsStore>,
     object_store: Arc<GitObjectStore>,
+    atomic_update: bool,
 ) -> anyhow::Result<Vec<(RefUpdate, anyhow::Result<()>)>> {
-    if push_args.settings.atomic {
+    if atomic_update {
         atomic_refs_update(
-            push_args,
+            ref_updates,
             request_context,
             git_bonsai_mapping_store,
             object_store,
@@ -205,7 +206,7 @@ async fn refs_update(
         .await
     } else {
         non_atomic_refs_update(
-            push_args,
+            ref_updates,
             request_context,
             git_bonsai_mapping_store,
             object_store,
@@ -216,12 +217,12 @@ async fn refs_update(
 
 /// Function responsible for updating the refs in the repo non-atomically.
 async fn non_atomic_refs_update(
-    push_args: &PushArgs<'_>,
+    ref_updates: Vec<RefUpdate>,
     request_context: Arc<RepositoryRequestContext>,
     git_bonsai_mapping_store: Arc<GitMappingsStore>,
     object_store: Arc<GitObjectStore>,
 ) -> anyhow::Result<Vec<(RefUpdate, anyhow::Result<()>)>> {
-    stream::iter(push_args.ref_updates.clone())
+    stream::iter(ref_updates.clone())
         .map(|ref_update| {
             cloned!(request_context, git_bonsai_mapping_store, object_store);
             async move {
@@ -261,12 +262,11 @@ async fn non_atomic_refs_update(
 
 /// Function responsible for updating the refs in the repo atomically.
 async fn atomic_refs_update(
-    push_args: &PushArgs<'_>,
+    ref_updates: Vec<RefUpdate>,
     request_context: Arc<RepositoryRequestContext>,
     git_bonsai_mapping_store: Arc<GitMappingsStore>,
     object_store: Arc<GitObjectStore>,
 ) -> anyhow::Result<Vec<(RefUpdate, anyhow::Result<()>)>> {
-    let ref_updates = push_args.ref_updates.clone();
     match set_refs(
         request_context,
         git_bonsai_mapping_store,

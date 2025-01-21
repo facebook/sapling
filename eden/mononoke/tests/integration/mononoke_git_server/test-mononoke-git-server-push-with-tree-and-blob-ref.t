@@ -27,6 +27,8 @@
   $ git clone "$GIT_REPO_ORIGIN"
   Cloning into 'repo-git'...
   done.
+  $ cd $GIT_REPO
+  $ current_head=$(git rev-parse HEAD)
 
 # Import it into Mononoke
   $ cd "$TESTTMP"
@@ -51,13 +53,25 @@
 # Create a new branch that points to a tree instead of pointing to a commit
   $ echo $(git log --pretty=format:"%T" -1 HEAD) > .git/refs/heads/new_branch
 # Create a new branch that points to a blob instead of pointing to a commit
-  $ git tag -a push_tag $(git hash-object new_file) -m "Tag for push" 
+  $ git tag -a push_tag $(git hash-object new_file) -m "Tag for push"
+# Capture all the known Git objects from the repo
+  $ git rev-list --objects --all | git cat-file --batch-check='%(objectname) %(objecttype) %(rest)' | sort > $TESTTMP/object_list
 
 # Push all the changes made so far
   $ git_client push origin master_bookmark push_tag new_branch
   To https://*/repos/git/ro/repo.git (glob)
      e8615d6..e8b927e  master_bookmark -> master_bookmark
-   ! [remote rejected] push_tag -> push_tag (*** Refs pointing to tree or blobs is not allowed)
-   ! [remote rejected] new_branch -> new_branch (*** Refs pointing to tree or blobs is not allowed)
-  error: failed to push some refs to 'https://localhost:$LOCAL_PORT/repos/git/ro/repo.git'
-  [1]
+   * [new tag]         push_tag -> push_tag
+   * [new branch]      new_branch -> new_branch
+
+# Wait for the WBC to catch up
+  $ wait_for_git_bookmark_move HEAD $current_head
+
+# Reclone the repo and validate that we get back all the expected objects
+  $ cd $TESTTMP
+  $ git_client clone --mirror $MONONOKE_GIT_SERVICE_BASE_URL/$REPONAME.git new_repo
+  Cloning into bare repository 'new_repo'...
+  $ cd new_repo
+# Verify that we get the same Git repo back that we started with
+  $ git rev-list --objects --all | git cat-file --batch-check='%(objectname) %(objecttype) %(rest)' | sort > $TESTTMP/new_object_list
+  $ diff -w $TESTTMP/new_object_list $TESTTMP/object_list
