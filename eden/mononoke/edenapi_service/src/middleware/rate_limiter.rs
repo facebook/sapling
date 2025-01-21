@@ -69,8 +69,13 @@ impl Middleware for ThrottleMiddleware {
             None
         })?;
 
-        let category = rate_limiter.category();
-        let limit = rate_limiter.find_rate_limit(Metric::EdenApiQps)?;
+        let identities = state.try_borrow::<MetadataState>()?.metadata().identities();
+
+        let limit = rate_limiter.find_rate_limit(
+            Metric::EdenApiQps,
+            Some(identities.clone()),
+            Some(&main_client_id),
+        )?;
 
         let enforced = match limit.body.raw_config.status {
             RateLimitStatus::Disabled => return None,
@@ -78,6 +83,8 @@ impl Middleware for ThrottleMiddleware {
             RateLimitStatus::Enforced => true,
             _ => panic!("Invalid limit status: {:?}", limit.body.raw_config.status),
         };
+
+        let category = rate_limiter.category();
         let counter = build_counter(&ctx, category, EDENAPI_QPS_LIMIT, &main_client_id);
         let max_value = limit.body.raw_config.limit;
         let time_window = limit.fci_metric.window.as_secs() as u32;

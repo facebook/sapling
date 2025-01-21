@@ -132,12 +132,60 @@ impl RateLimiter for MononokeRateLimits {
         &self.category
     }
 
-    fn find_rate_limit(&self, metric: Metric) -> Option<crate::RateLimit> {
-        self.config
-            .rate_limits
-            .iter()
-            .find(|r| r.fci_metric.metric == metric)
-            .cloned()
+    // Find the most specific rate limit that applies to the given identities or main_id
+    // If no rate limit applies, return None
+    // If multiple rate limits apply, return the most specific one
+    // The most specific rate limit is the one that strictly matches the main_id
+    // If none match, return the most specific rate limit that matches the most identities
+    fn find_rate_limit(
+        &self,
+        metric: Metric,
+        identities: Option<MononokeIdentitySet>,
+        main_id: Option<&str>,
+    ) -> Option<crate::RateLimit> {
+        // First, try to find a rate limit that matches the main client ID
+        if let Some(main_id) = main_id {
+            if let Some(rate_limit) = self
+                .config
+                .rate_limits
+                .iter()
+                .filter(|r| r.fci_metric.metric == metric)
+                .find(|r| {
+                    if let Some(crate::Target::MainClientId(ref id)) = r.target {
+                        id == main_id
+                    } else {
+                        false
+                    }
+                })
+                .cloned()
+            {
+                return Some(rate_limit);
+            }
+        }
+
+        // If no main client ID match is found, find the most specific one that applies to the identities
+        let mut max_identities = 0;
+        let mut most_specific_rate_limit = None;
+
+        if let Some(identities) = identities {
+            self.config
+                .rate_limits
+                .iter()
+                .filter(|r| r.fci_metric.metric == metric)
+                .filter(|r| r.applies_to_client(&identities, None))
+                .for_each(|r| match &r.target {
+                    Some(crate::Target::Identities(is)) => {
+                        let num_identities = is.len();
+                        if num_identities >= max_identities {
+                            max_identities = num_identities;
+                            most_specific_rate_limit = Some(r.clone());
+                        }
+                    }
+                    _ => {}
+                });
+        }
+
+        most_specific_rate_limit
     }
 }
 

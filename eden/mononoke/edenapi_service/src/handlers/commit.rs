@@ -191,7 +191,20 @@ async fn ratelimit_commit_creation(ctx: CoreContext) -> Result<(), Error> {
         }
     };
     let category = rate_limiter.category();
-    let limit = match rate_limiter.find_rate_limit(Metric::CommitsPerUser) {
+
+    let client_request_info = match ctx.client_request_info() {
+        Some(client_request_info) => client_request_info,
+        None => {
+            debug!(ctx.logger(), "No client request info found");
+            return Ok(());
+        }
+    };
+
+    let limit = match rate_limiter.find_rate_limit(
+        Metric::CommitsPerUser,
+        None,
+        client_request_info.main_id.as_deref(),
+    ) {
         Some(limit) => limit,
         None => {
             debug!(ctx.logger(), "No commits_per_user rate limit found");
@@ -207,14 +220,6 @@ async fn ratelimit_commit_creation(ctx: CoreContext) -> Result<(), Error> {
     };
     let max_value = limit.body.raw_config.limit;
     let time_window = limit.fci_metric.window.as_secs() as u32;
-
-    let client_request_info = match ctx.client_request_info() {
-        Some(client_request_info) => client_request_info,
-        None => {
-            debug!(ctx.logger(), "No client request info found");
-            return Ok(());
-        }
-    };
 
     let main_client_id = match &client_request_info.main_id {
         Some(main_client_id) => main_client_id,

@@ -65,7 +65,12 @@ impl RateLimiter for FakeLimiter {
         &self.category
     }
 
-    fn find_rate_limit(&self, metric: Metric) -> Option<RateLimit> {
+    fn find_rate_limit(
+        &self,
+        metric: Metric,
+        identities: Option<MononokeIdentitySet>,
+        main_id: Option<&str>,
+    ) -> Option<crate::RateLimit> {
         None
     }
 }

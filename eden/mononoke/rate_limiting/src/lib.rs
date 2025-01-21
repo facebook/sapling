@@ -63,7 +63,12 @@ pub trait RateLimiter {
 
     fn category(&self) -> &str;
 
-    fn find_rate_limit(&self, metric: Metric) -> Option<RateLimit>;
+    fn find_rate_limit(
+        &self,
+        metric: Metric,
+        identities: Option<MononokeIdentitySet>,
+        main_id: Option<&str>,
+    ) -> Option<RateLimit>;
 }
 
 define_stats! {
@@ -97,7 +102,7 @@ impl RateLimitEnvironment {
     }
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Default, PartialEq)]
 pub struct RateLimitBody {
     pub raw_config: rate_limiting_config::RateLimitBody,
 }
@@ -108,11 +113,11 @@ pub struct MononokeRateLimitConfig {
     pub load_shed_limits: Vec<LoadShedLimit>,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct RateLimit {
     pub body: RateLimitBody,
     #[allow(dead_code)]
-    target: Option<Target>,
+    pub target: Option<Target>,
     #[allow(dead_code)]
     pub fci_metric: FciMetric,
 }
@@ -231,14 +236,14 @@ pub enum RateLimitReason {
     LoadShedMetric(String, i64, i64),
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub enum Target {
     StaticSlice(StaticSlice),
     MainClientId(String),
     Identities(MononokeIdentitySet),
 }
 
-#[derive(Debug, Copy, Clone)]
+#[derive(Debug, Copy, Clone, PartialEq)]
 struct SlicePct(u8);
 
 impl TryFrom<i32> for SlicePct {
@@ -253,7 +258,7 @@ impl TryFrom<i32> for SlicePct {
     }
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct StaticSlice {
     slice_pct: SlicePct,
     // This is hashed with a client's hostname to allow us to change
@@ -262,7 +267,7 @@ pub struct StaticSlice {
     target: StaticSliceTarget,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub enum StaticSliceTarget {
     Identities(MononokeIdentitySet),
     MainClientId(String),
@@ -345,6 +350,8 @@ fn in_throttled_slice(
 
 #[cfg(test)]
 mod test {
+    use std::sync::Arc;
+
     use mononoke_macros::mononoke;
     use permission_checker::MononokeIdentity;
 
@@ -462,5 +469,82 @@ mod test {
 
         // 100% of SERVICE_IDENTITY: bar
         assert!(hundred_pct_service_identity.matches_client(idents2.as_ref(), None));
+    }
+
+    #[cfg(fbcode_build)]
+    #[mononoke::fbinit_test]
+    fn test_find_rate_limit(fb: FacebookInit) {
+        let main_client_id_rate_limit = RateLimit {
+            body: RateLimitBody::default(),
+            target: Some(Target::MainClientId("client_id".to_string())),
+            fci_metric: FciMetric {
+                metric: Metric::EgressBytes,
+                window: Duration::from_secs(60),
+                scope: Scope::Global,
+            },
+        };
+
+        let identities_rate_limit = RateLimit {
+            body: RateLimitBody::default(),
+            target: Some(Target::Identities(
+                [MononokeIdentity::new("TIER", "foo")].into(),
+            )),
+            fci_metric: FciMetric {
+                metric: Metric::EgressBytes,
+                window: Duration::from_secs(60),
+                scope: Scope::Global,
+            },
+        };
+
+        let empty_target_rate_limit = RateLimit {
+            body: RateLimitBody::default(),
+            target: Some(Target::Identities([].into())),
+            fci_metric: FciMetric {
+                metric: Metric::EgressBytes,
+                window: Duration::from_secs(60),
+                scope: Scope::Global,
+            },
+        };
+
+        let rate_limiter = create_rate_limiter(
+            fb,
+            "test".to_string(),
+            Arc::new(MononokeRateLimitConfig {
+                rate_limits: vec![
+                    main_client_id_rate_limit.clone(),
+                    identities_rate_limit.clone(),
+                    empty_target_rate_limit.clone(),
+                ],
+                load_shed_limits: vec![],
+            }),
+        );
+
+        let mut idents = MononokeIdentitySet::new();
+        idents.insert(MononokeIdentity::new("USER", "bar"));
+
+        assert!(
+            rate_limiter.find_rate_limit(
+                Metric::EgressBytes,
+                Some(idents.clone()),
+                Some("non_matching_id")
+            ) == Some(empty_target_rate_limit)
+        );
+        assert!(
+            rate_limiter.find_rate_limit(
+                Metric::EgressBytes,
+                Some(idents.clone()),
+                Some("client_id")
+            ) == Some(main_client_id_rate_limit.clone())
+        );
+
+        idents.insert(MononokeIdentity::new("TIER", "foo"));
+        assert!(
+            rate_limiter.find_rate_limit(Metric::EgressBytes, Some(idents.clone()), None)
+                == Some(identities_rate_limit)
+        );
+        assert!(
+            rate_limiter.find_rate_limit(Metric::EgressBytes, Some(idents), Some("client_id"))
+                == Some(main_client_id_rate_limit)
+        );
     }
 }
