@@ -62,10 +62,16 @@ const styles = stylex.create({
     width: 'fit-content',
     display: 'flex',
     alignItems: 'center',
-    padding: '0 var(--pad)',
     backgroundColor: {
       ':hover': 'var(--tooltip-background)',
     },
+  },
+  dragHandle: {
+    padding: '0 var(--pad)',
+    alignItems: 'center',
+    height: '100%',
+    userSelect: 'none',
+    cursor: 'grab',
   },
   candidateDropTarget: {
     backgroundColor: 'var(--tooltip-background)',
@@ -452,7 +458,7 @@ function SingleAbsorbEdit(props: {edit: AbsorbEdit; inDraggingOverlay?: boolean;
       )}
       data-reorder-id={reorderId}>
       <div {...stylex.props(styles.dragHandlerWrapper)}>
-        <DragHandle onDrag={handleDrag}>
+        <DragHandle onDrag={handleDrag} xstyle={styles.dragHandle}>
           <Icon icon="grabber" />
         </DragHandle>
       </div>
