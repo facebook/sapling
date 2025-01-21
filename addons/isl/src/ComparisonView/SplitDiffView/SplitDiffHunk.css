@@ -13,6 +13,10 @@
   tab-size: var(--tab-size);
 }
 
+.split-diff-view-hunk-table {
+  font-family: var(--monospace-fontFamily);
+}
+
 .split-diff-view-file-header {
   display: flex;
   align-items: center;

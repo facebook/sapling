@@ -5,6 +5,7 @@
  * LICENSE file in the root directory of this source tree.
  */
 
+import type {Context} from '../../ComparisonView/SplitDiffView/types';
 import type {DragHandler} from '../../DragHandle';
 import type {RenderGlyphResult} from '../../RenderDag';
 import type {Dag} from '../../dag/dag';
@@ -14,8 +15,11 @@ import type {AbsorbEdit, AbsorbEditId} from '../absorb';
 import type {CommitStackState, FileRev, FileStackIndex, CommitRev} from '../commitStackState';
 import type {Map as ImMap} from 'immutable';
 import type {ReactNode} from 'react';
+import type {Comparison} from 'shared/Comparison';
+import type {ParsedDiff} from 'shared/patch/parse';
 
 import {FileHeader, IconType} from '../../ComparisonView/SplitDiffView/SplitDiffFileHeader';
+import {SplitDiffTable} from '../../ComparisonView/SplitDiffView/SplitDiffHunk';
 import {ScrollY} from '../../ComponentUtils';
 import {DragHandle} from '../../DragHandle';
 import {DraggingOverlay} from '../../DraggingOverlay';
@@ -23,6 +27,7 @@ import {defaultRenderGlyph, RenderDag} from '../../RenderDag';
 import {YOU_ARE_HERE_VIRTUAL_COMMIT} from '../../dag/virtualCommit';
 import {t, T} from '../../i18n';
 import {readAtom, writeAtom} from '../../jotaiUtils';
+import {themeState} from '../../theme';
 import {prev} from '../revMath';
 import {calculateDagFromStack} from '../stackDag';
 import {stackEditStack, useStackEditState} from './stackEditState';
@@ -31,7 +36,8 @@ import {Banner, BannerKind} from 'isl-components/Banner';
 import {Column, Row} from 'isl-components/Flex';
 import {Icon} from 'isl-components/Icon';
 import {atom, useAtomValue} from 'jotai';
-import React from 'react';
+import React, {useMemo, useRef} from 'react';
+import {ComparisonType} from 'shared/Comparison';
 import {nullthrows} from 'shared/utils';
 
 const styles = stylex.create({
@@ -68,8 +74,6 @@ const styles = stylex.create({
     borderCollapse: 'collapse',
     wordBreak: 'break-all',
     whiteSpace: 'pre-wrap',
-    fontFamily: 'var(--monospace-fontFamily)',
-    fontSize: 'var(--editor-font-size)',
     // Fill the width when there are long lines in another diff chunk.
     flexGrow: 1,
   },
@@ -84,26 +88,6 @@ const styles = stylex.create({
   },
   lineContentCell: {
     minWidth: 300,
-  },
-  lineContentText: {
-    marginLeft: 'var(--pad)',
-  },
-  lineNumber: {
-    textAlign: 'right',
-    whiteSpace: 'nowrap',
-    minWidth: 50,
-  },
-  lineNumberSpan: {
-    marginRight: 'var(--pad)',
-  },
-  addLineNumber: {
-    backgroundColor: 'var(--diffEditor-insertedLineHighlightBackground)',
-  },
-  delLineNumber: {
-    backgroundColor: 'var(--diffEditor-removedLineHighlightBackground)',
-  },
-  inselectable: {
-    userSelect: 'none',
   },
   commitTitle: {
     padding: 'var(--halfpad) var(--pad)',
@@ -237,9 +221,19 @@ function RenderGlyph(info: DagCommitInfo): RenderGlyphResult {
 function AbsorbDraggingOverlay() {
   const absorbEdit = useAtomValue(draggingAbsorbEdit);
   const hint = useAtomValue(draggingHint);
+  const stack = useAtomValue(stackEditStack);
+
+  const fileStackIndex = absorbEdit?.fileStackIndex;
+  // Path extension is used by the syntax highlighter
+  let path = '';
+  if (stack && fileStackIndex) {
+    const fileRev = absorbEdit.selectedRev ?? (0 as FileRev);
+    path = nullthrows(stack.getFileStackPath(fileStackIndex, fileRev));
+  }
+
   return (
     <DraggingOverlay onDragRef={onDragRef} hint={hint}>
-      {absorbEdit && <SingleAbsorbEdit edit={absorbEdit} inDraggingOverlay={true} />}
+      {absorbEdit && <SingleAbsorbEdit path={path} edit={absorbEdit} inDraggingOverlay={true} />}
     </DraggingOverlay>
   );
 }
@@ -364,16 +358,19 @@ function AbsorbEditsForFile(props: {
   return (
     <div>
       {path && <FileHeader copyFrom={pathInCommit} path={path} iconType={IconType.Modified} />}
-      {props.absorbEdits.map((edit, i) => <SingleAbsorbEdit edit={edit} key={i} />).valueSeq()}
+      {props.absorbEdits
+        .map((edit, i) => <SingleAbsorbEdit path={path} edit={edit} key={i} />)
+        .valueSeq()}
     </div>
   );
 }
 
-function SingleAbsorbEdit(props: {edit: AbsorbEdit; inDraggingOverlay?: boolean}) {
-  const {edit, inDraggingOverlay} = props;
+function SingleAbsorbEdit(props: {edit: AbsorbEdit; inDraggingOverlay?: boolean; path?: string}) {
+  const {edit, inDraggingOverlay, path} = props;
   const isDragging = useAtomValue(draggingAbsorbEdit);
   const stackEdit = useStackEditState();
   const reorderId = `absorb-${edit.fileStackIndex}-${edit.absorbEditId}`;
+  const ref = useRef<HTMLDivElement | null>(null);
 
   const handleDrag = (x: number, y: number, isDragging: boolean) => {
     // Visual update.
@@ -414,8 +411,40 @@ function SingleAbsorbEdit(props: {edit: AbsorbEdit; inDraggingOverlay?: boolean}
     writeAtom(draggingAbsorbEdit, isDragging ? edit : null);
   };
 
+  const useThemeHook = () => useAtomValue(themeState);
+  const ctx: Context = {
+    id: {comparison: {type: ComparisonType.UncommittedChanges} as Comparison, path: path ?? ''},
+    collapsed: false,
+    setCollapsed: () => null,
+    useThemeHook,
+    t,
+    display: 'unified' as const,
+  };
+
+  const patch = useMemo(() => {
+    const lines = [
+      ...edit.oldLines.toArray().map(l => `-${l}`),
+      ...edit.newLines.toArray().map(l => `+${l}`),
+    ];
+    return {
+      oldFileName: path,
+      newFileName: path,
+      hunks: [
+        {
+          oldStart: edit.oldStart,
+          oldLines: edit.oldEnd - edit.oldStart,
+          newStart: edit.newStart,
+          newLines: edit.newEnd - edit.newStart,
+          lines,
+          linedelimiters: new Array(lines.length).fill('\n'),
+        },
+      ],
+    } as ParsedDiff;
+  }, [edit, path]);
+
   return (
     <div
+      ref={ref}
       {...stylex.props(
         styles.absorbEditSingleChunk,
         inDraggingOverlay && styles.inDraggingOverlay,
@@ -427,39 +456,7 @@ function SingleAbsorbEdit(props: {edit: AbsorbEdit; inDraggingOverlay?: boolean}
           <Icon icon="grabber" />
         </DragHandle>
       </div>
-      <table {...stylex.props(styles.absorbEditCode)} border={0} cellPadding={0} cellSpacing={0}>
-        <colgroup>
-          <col width={50} />
-          <col width="100%" />
-        </colgroup>
-        <tbody>
-          {edit.oldLines.map((l, i) => (
-            <DiffLine key={i} num={edit.oldStart + i} text={l} sign="-" />
-          ))}
-          {edit.newLines.map((l, i) => (
-            <DiffLine key={i} num={edit.newStart + i} text={l} sign="+" />
-          ))}
-        </tbody>
-      </table>
+      <SplitDiffTable ctx={ctx} path={path ?? ''} patch={patch} />
     </div>
-  );
-}
-
-function DiffLine(props: {num: number; text: string; sign: '+' | '-'}) {
-  const {num, text, sign} = props;
-  return (
-    <tr key={`${sign}${num}`}>
-      <td
-        {...stylex.props(
-          sign === '+' ? styles.addLineNumber : styles.delLineNumber,
-          styles.lineNumber,
-          styles.inselectable,
-        )}>
-        <span {...stylex.props(styles.lineNumberSpan)}>{num}</span>
-      </td>
-      <td {...stylex.props(sign === '+' ? styles.addLine : styles.delLine, styles.lineContentCell)}>
-        <span {...stylex.props(styles.lineContentText)}>{text}</span>
-      </td>
-    </tr>
   );
 }
