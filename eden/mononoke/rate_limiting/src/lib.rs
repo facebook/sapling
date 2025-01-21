@@ -276,12 +276,16 @@ impl Target {
     ) -> bool {
         match self {
             Self::Identities(target_identities) => {
-                match identities {
-                    Some(identities) => {
-                        // Check that identities is a subset of client_idents
-                        target_identities.is_subset(identities)
+                if target_identities.is_empty() {
+                    true
+                } else {
+                    match identities {
+                        Some(identities) => {
+                            // Check that identities is a subset of client_idents
+                            target_identities.is_subset(identities)
+                        }
+                        None => false,
                     }
-                    None => false,
                 }
             }
             Self::MainClientId(id) => match main_client_id {
@@ -369,7 +373,14 @@ mod test {
         assert!(two_idents.matches_client(idents.as_ref(), None));
 
         let client_id_target = Target::MainClientId(test_client_id.clone());
-        assert!(client_id_target.matches_client(None, Some(&test_client_id)))
+        assert!(client_id_target.matches_client(None, Some(&test_client_id)));
+
+        // Check that all match if the target is empty.
+        let empty_ident_target = Target::Identities([].into());
+        assert!(empty_ident_target.matches_client(None, None));
+        assert!(empty_ident_target.matches_client(idents.as_ref(), None));
+        assert!(empty_ident_target.matches_client(None, Some(&test_client_id)));
+        assert!(empty_ident_target.matches_client(idents.as_ref(), Some(&test_client_id)));
     }
 
     #[mononoke::test]
