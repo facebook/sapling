@@ -45,6 +45,8 @@ use super::reader::GitObjectStore;
 use crate::command::RefUpdate;
 use crate::Repo;
 
+type ContentTags = HashMap<String, ObjectId>;
+
 #[derive(Clone, Debug)]
 struct TagMetadata {
     name: Option<String>,
@@ -189,6 +191,61 @@ async fn tags(
     Ok(result)
 }
 
+/// Method responsible for processing all the tags that are part of this push and returning the
+/// content tags among them
+async fn process_tags<Uploader: GitUploader>(
+    ctx: &CoreContext,
+    repo: &Repo,
+    uploader: Arc<Uploader>,
+    object_store: Arc<GitObjectStore>,
+    ref_map: &mut RefMap,
+    ref_updates: &[RefUpdate],
+) -> Result<ContentTags> {
+    let repo_name = repo.repo_identity().name().to_string();
+    let mut content_tags = HashMap::new();
+    // Fetch all the tags to be uploaded as part of this push
+    let mut tags = tags(ctx, repo, &object_store, ref_map).await?;
+    // Ensure that the tags are mapped to the right name (necessary for tags with namespaced refs)
+    for ref_update in ref_updates {
+        let (name, oid) = (ref_update.ref_name.clone(), ref_update.to.as_ref());
+        let ref_name = name
+            .strip_prefix("refs/")
+            .map_or(name.to_string(), |name| name.to_string());
+        tags.entry(oid.to_owned()).and_modify(|tag_metadata| {
+            tag_metadata.name = Some(ref_name);
+        });
+    }
+    info!(ctx.logger(), "Uploading tags for repo {}", repo_name);
+    // Upload the tags to the blobstore and also create bonsai mapping for it
+    for (tag_id, tag_metadata) in tags {
+        let TagMetadata {
+            name,
+            bonsai_target,
+            git_target,
+        } = tag_metadata;
+        // Add a mapping from the tag object id to the commit changeset id where it points. This will later
+        // be used in bookmark movement
+        if !bonsai_target.is_empty() {
+            ref_map.insert_tag(&tag_id, bonsai_target);
+        } else if let Some(name) = name.as_ref() {
+            content_tags.insert(format!("refs/{}", name), git_target);
+        }
+        // Store the raw tag object first
+        upload_git_tag(ctx, uploader.clone(), object_store.clone(), &tag_id).await?;
+        // Create the changeset corresponding to the commit pointed to by the tag.
+        create_changeset_for_annotated_tag(
+            ctx,
+            uploader.clone(),
+            object_store.clone(),
+            &tag_id,
+            name,
+            &bonsai_target,
+        )
+        .await?;
+    }
+    Ok(content_tags)
+}
+
 /// Method responsible for uploading git tree and blob objects pointed to by the content refs
 /// that are part of this push
 async fn upload_content_ref_objects<Uploader: GitUploader, Reader: GitReader>(
@@ -196,7 +253,7 @@ async fn upload_content_ref_objects<Uploader: GitUploader, Reader: GitReader>(
     uploader: Arc<Uploader>,
     reader: Arc<Reader>,
     ref_updates: &[RefUpdate],
-    content_tags: HashMap<String, ObjectId>,
+    content_tags: ContentTags,
 ) -> Result<Vec<RefUpdate>> {
     stream::iter(ref_updates.to_vec())
         .map(anyhow::Ok)
@@ -301,47 +358,17 @@ pub async fn upload_objects(
     .collect();
     let mut ref_map = RefMap::from_commits(git_bonsai_mappings);
 
-    // Fetch all the tags to be uploaded as part of this push
-    let mut tags = tags(ctx, &repo, &object_store, &ref_map).await?;
-    let mut content_tags = HashMap::new();
-    // Ensure that the tags are mapped to the right name (necessary for tags with namespaced refs)
-    for ref_update in ref_updates {
-        let (name, oid) = (ref_update.ref_name.clone(), ref_update.to.as_ref());
-        let ref_name = name
-            .strip_prefix("refs/")
-            .map_or(name.to_string(), |name| name.to_string());
-        tags.entry(oid.to_owned()).and_modify(|tag_metadata| {
-            tag_metadata.name = Some(ref_name);
-        });
-    }
-    info!(ctx.logger(), "Uploading tags for repo {}", repo_name);
-    // Upload the tags to the blobstore and also create bonsai mapping for it
-    for (tag_id, tag_metadata) in tags {
-        let TagMetadata {
-            name,
-            bonsai_target,
-            git_target,
-        } = tag_metadata;
-        // Add a mapping from the tag object id to the commit changeset id where it points. This will later
-        // be used in bookmark movement
-        if !bonsai_target.is_empty() {
-            ref_map.insert_tag(&tag_id, bonsai_target);
-        } else if let Some(name) = name.as_ref() {
-            content_tags.insert(format!("refs/{}", name), git_target);
-        }
-        // Store the raw tag object first
-        upload_git_tag(ctx, uploader.clone(), object_store.clone(), &tag_id).await?;
-        // Create the changeset corresponding to the commit pointed to by the tag.
-        create_changeset_for_annotated_tag(
-            ctx,
-            uploader.clone(),
-            object_store.clone(),
-            &tag_id,
-            name,
-            &bonsai_target,
-        )
-        .await?;
-    }
+    // Process all the tags that are part of this push
+    let content_tags = process_tags(
+        ctx,
+        &repo,
+        uploader.clone(),
+        object_store.clone(),
+        &mut ref_map,
+        ref_updates,
+    )
+    .await
+    .context("Error during process_tags")?;
     // Upload all the content refs that are part of this push
     let ref_updates =
         upload_content_ref_objects(ctx, uploader, object_store, ref_updates, content_tags)
