@@ -38,6 +38,7 @@ use mononoke_api::repo::upload_non_blob_git_object;
 use mononoke_types::bonsai_changeset::BonsaiAnnotatedTag;
 use mononoke_types::bonsai_changeset::BonsaiAnnotatedTagTarget;
 use mononoke_types::hash;
+use mononoke_types::hash::Blake2;
 use mononoke_types::BonsaiChangeset;
 use mononoke_types::ChangesetId;
 use mononoke_types::FileChange;
@@ -182,9 +183,11 @@ where
     async fn generate_changeset_for_annotated_tag(
         &self,
         ctx: &CoreContext,
-        target_changeset_id: ChangesetId,
+        target_changeset_id: Option<ChangesetId>,
         mut tag: TagMetadata,
     ) -> Result<ChangesetId, Error> {
+        let target_changeset_id = target_changeset_id
+            .unwrap_or_else(|| ChangesetId::new(Blake2::from_byte_array([0; 32])));
         let annotated_tag = BonsaiAnnotatedTag {
             target: BonsaiAnnotatedTagTarget::Changeset(target_changeset_id),
             pgp_signature: tag.pgp_signature.take(),

@@ -163,7 +163,7 @@ pub trait GitUploader: Clone + Send + Sync + 'static {
     async fn generate_changeset_for_annotated_tag(
         &self,
         ctx: &CoreContext,
-        target_changeset_id: ChangesetId,
+        target_changeset_id: Option<ChangesetId>,
         tag: TagMetadata,
     ) -> Result<ChangesetId, Error>;
 

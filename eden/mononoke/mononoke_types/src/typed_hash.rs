@@ -94,12 +94,6 @@ where
 #[derive(mysql::OptTryFromRowField)]
 pub struct ChangesetId(Blake2);
 
-impl ChangesetId {
-    pub fn empty() -> Self {
-        Self(Blake2::from_byte_array([0; 32]))
-    }
-}
-
 /// An identifier for a changeset hash prefix in Mononoke.
 #[derive(Clone, Copy, Eq, PartialEq, Ord, PartialOrd, Debug, Hash, Abomonation)]
 pub struct ChangesetIdPrefix(Blake2Prefix);
