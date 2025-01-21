@@ -219,15 +219,16 @@ pub async fn create_changeset_for_annotated_tag<Uploader: GitUploader, Reader: G
     reader: Arc<Reader>,
     tag_id: &ObjectId,
     maybe_tag_name: Option<String>,
-    original_changeset_id: &ChangesetId,
+    original_changeset_id: Option<ChangesetId>,
 ) -> Result<ChangesetId> {
     // Get the parsed Git Tag
     let tag_metadata = TagMetadata::new(ctx, *tag_id, maybe_tag_name, &reader)
         .await
         .with_context(|| format_err!("Failed to create TagMetadata from git tag {}", tag_id))?;
     // Create the corresponding changeset for the Git Tag at Mononoke end
+    let original_changeset_id = original_changeset_id.unwrap_or_else(ChangesetId::empty);
     let changeset_id = uploader
-        .generate_changeset_for_annotated_tag(ctx, *original_changeset_id, tag_metadata)
+        .generate_changeset_for_annotated_tag(ctx, original_changeset_id, tag_metadata)
         .await
         .with_context(|| format_err!("Failed to generate changeset for git tag {}", tag_id))?;
     Ok(changeset_id)

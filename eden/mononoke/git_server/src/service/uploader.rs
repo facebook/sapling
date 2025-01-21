@@ -50,12 +50,12 @@ type ContentTags = HashMap<String, ObjectId>;
 #[derive(Clone, Debug)]
 struct TagMetadata {
     name: Option<String>,
-    bonsai_target: ChangesetId,
+    bonsai_target: Option<ChangesetId>,
     git_target: ObjectId,
 }
 
 impl TagMetadata {
-    fn new(name: Option<String>, bonsai_target: ChangesetId, git_target: ObjectId) -> Self {
+    fn new(name: Option<String>, bonsai_target: Option<ChangesetId>, git_target: ObjectId) -> Self {
         Self {
             name,
             bonsai_target,
@@ -178,12 +178,12 @@ async fn tags(
         if let Some(tag) = object.parsed.as_tag() {
             let (target_id, kind) = peel_tag_target(tag, object_store).await?;
             let bonsai_id = if let Some(bonsai_id) = ref_map.commit_bonsai_by_oid(&target_id) {
-                bonsai_id
+                Some(bonsai_id)
             } else if kind != Kind::Commit {
                 // If the target is not a commit, we can't create a changeset for it
-                ChangesetId::empty()
+                None
             } else {
-                git_to_bonsai(ctx, repo, &target_id).await?
+                Some(git_to_bonsai(ctx, repo, &target_id).await?)
             };
             result.insert(id.clone(), TagMetadata::new(None, bonsai_id, target_id));
         }
@@ -225,8 +225,8 @@ async fn process_tags<Uploader: GitUploader>(
         } = tag_metadata;
         // Add a mapping from the tag object id to the commit changeset id where it points. This will later
         // be used in bookmark movement
-        if !bonsai_target.is_empty() {
-            ref_map.insert_tag(&tag_id, bonsai_target);
+        if let Some(bonsai_target) = bonsai_target.as_ref() {
+            ref_map.insert_tag(&tag_id, *bonsai_target);
         } else if let Some(name) = name.as_ref() {
             content_tags.insert(format!("refs/{}", name), git_target);
         }
@@ -239,7 +239,7 @@ async fn process_tags<Uploader: GitUploader>(
             object_store.clone(),
             &tag_id,
             name,
-            &bonsai_target,
+            bonsai_target,
         )
         .await?;
     }
