@@ -44,7 +44,6 @@
 #include <thrift/lib/cpp2/async/ServerStream.h>
 #include <thrift/lib/cpp2/server/ParallelConcurrencyController.h>
 #include <thrift/lib/cpp2/server/RoundRobinRequestPile.h>
-#include <thrift/lib/cpp2/server/SEParallelConcurrencyController.h>
 #include <thrift/lib/cpp2/server/ThriftProcessor.h>
 #include <thrift/lib/cpp2/server/ThriftServer.h>
 
@@ -2241,17 +2240,19 @@ folly::SemiFuture<Unit> EdenServer::createThriftServer() {
         apache::thrift::RoundRobinRequestPile::Options{});
     std::unique_ptr<apache::thrift::ConcurrencyControllerInterface>
         concurrencyController;
+    auto mode = apache::thrift::ParallelConcurrencyController::
+        RequestExecutionMode::Parallel;
     if (thriftUseSerialExecution_) {
       XLOG(INFO, "Using Serial Execution for Thrift Server");
-      concurrencyController =
-          std::make_unique<apache::thrift::SEParallelConcurrencyController>(
-              *requestPile, *executor);
+      mode = apache::thrift::ParallelConcurrencyController::
+          RequestExecutionMode::Serial;
     } else {
       XLOG(INFO, "Using Resource Pools for Thrift Server");
-      concurrencyController =
-          std::make_unique<apache::thrift::ParallelConcurrencyController>(
-              *requestPile, *executor);
     }
+
+    concurrencyController =
+        std::make_unique<apache::thrift::ParallelConcurrencyController>(
+            *requestPile, *executor, mode);
 
     server_->resourcePoolSet().setResourcePool(
         apache::thrift::ResourcePoolHandle::defaultAsync(),
