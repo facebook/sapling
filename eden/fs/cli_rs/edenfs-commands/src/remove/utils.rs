@@ -1,0 +1,107 @@
+/*
+ * Copyright (c) Meta Platforms, Inc. and affiliates.
+ *
+ * This software may be used and distributed according to the terms of the
+ * GNU General Public License version 2.
+ */
+
+use std::fs;
+#[cfg(unix)]
+use std::fs::Permissions;
+use std::io::ErrorKind;
+#[cfg(unix)]
+use std::os::unix::fs::PermissionsExt;
+use std::path::Path;
+
+use anyhow::anyhow;
+use anyhow::Context;
+use anyhow::Result;
+use edenfs_client::checkout::get_mounts;
+use edenfs_client::fsutil::forcefully_remove_dir_all;
+use edenfs_client::EdenFsInstance;
+
+use super::types::RemoveContext;
+
+pub fn remove_client_config_dir(context: &RemoveContext) -> Result<()> {
+    let instance = EdenFsInstance::global();
+
+    match fs::remove_dir_all(instance.client_dir_for_mount_point(&context.canonical_path)?) {
+        Ok(_) => Ok(()),
+        Err(e) if e.kind() == ErrorKind::NotFound => Ok(()),
+        Err(e) => Err(anyhow!(
+            "Failed to remove client config directory for {}: {}",
+            context,
+            e
+        )),
+    }
+}
+
+pub fn remove_client_config_entry(context: &RemoveContext) -> Result<()> {
+    let instance = EdenFsInstance::global();
+
+    instance
+        .remove_path_from_directory_map(&context.canonical_path)
+        .with_context(|| format!("Failed to remove {} from config json file", context))
+}
+
+#[cfg(unix)]
+pub fn clean_mount_point(path: &Path) -> Result<()> {
+    let perms = Permissions::from_mode(0o755);
+    fs::set_permissions(path, perms)
+        .with_context(|| format!("Failed to set permission 755 for path {}", path.display()))?;
+    forcefully_remove_dir_all(path)
+        .with_context(|| format!("Failed to remove mount point {}", path.display()))
+}
+
+#[cfg(windows)]
+pub fn clean_mount_point(path: &Path) -> Result<()> {
+    // forcefully_remove_dir_all() is simply a wrapper of remove_dir_all() which handles the retry logic.
+    //
+    // There is a chance that remove_dir_all() can hit the error:
+    // """
+    // Failed to remove mount point \\?\C:\open\repo-for-safe-remove: The provider that supports,
+    // file system virtualization is temporarily unavailable. (os error 369)
+    // """
+    //
+    // Hopefully, retrying the command will fix the issue since it's temporary.
+    // But if we keep seeing this error even after retrying, we should consider implementing
+    // something similar to Remove-Item(rm) cmdlet from PowerShell.
+    //
+    // Note: It's known that "rm -f -r" should be able to remove the repo but we should not rely
+    // on it from the code.
+    forcefully_remove_dir_all(path)
+        .with_context(|| anyhow!("Failed to remove repo directory {}", path.display()))
+}
+
+#[cfg(unix)]
+pub fn is_active_eden_mount(path: &Path) -> bool {
+    // For Linux and Mac, an active Eden mount should have a dir named ".eden" under the
+    // repo root and there should be a symlink named "root" which points to the repo root
+    let unix_eden_dot_dir_path = path.join(".eden").join("root");
+
+    match unix_eden_dot_dir_path.canonicalize() {
+        Ok(resolved_path) => resolved_path == path,
+        _ => false,
+    }
+}
+
+#[cfg(windows)]
+pub fn is_active_eden_mount(path: &Path) -> bool {
+    // For Windows, an active EdenFS mount should have a dir named ".eden" under the
+    // repo and there should be a file named "config" under the ".eden" dir
+    let config_path = path.join(".eden").join("config");
+    if !config_path.exists() {
+        return false;
+    }
+    true
+}
+
+pub async fn path_in_eden_config(path: &Path) -> Result<bool> {
+    let mut mounts = get_mounts(EdenFsInstance::global())
+        .await
+        .with_context(|| anyhow!("Failed to call eden list"))?;
+    let entry_key = dunce::simplified(path);
+    mounts.retain(|mount_path_key, _| dunce::simplified(mount_path_key) == entry_key);
+
+    Ok(!mounts.is_empty())
+}
