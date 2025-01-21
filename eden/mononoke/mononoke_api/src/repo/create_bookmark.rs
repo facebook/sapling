@@ -31,6 +31,7 @@ impl<R: MononokeRepo> RepoContext<R> {
         bookmark: &'_ BookmarkKey,
         target: ChangesetId,
         pushvars: Option<&'a HashMap<String, Bytes>>,
+        is_mirror_upload: bool,
     ) -> Result<CreateBookmarkOp<'a>, MononokeError> {
         self.start_write()?;
 
@@ -38,12 +39,8 @@ impl<R: MononokeRepo> RepoContext<R> {
             bookmark: &'_ BookmarkKey,
             target: ChangesetId,
             pushvars: Option<&'a HashMap<String, Bytes>>,
+            is_mirror_upload: bool,
         ) -> CreateBookmarkOp<'a> {
-            let is_mirror_upload = pushvars
-                .and_then(|p| p.get("MIRROR_UPLOAD"))
-                .map_or(false, |v| **v == *b"true");
-
-            // TODO: Check mirrror upload is only used for people in the "mirror_commit_upload" ACL
             let reason = if is_mirror_upload {
                 BookmarkUpdateReason::MirrorUpload
             } else {
@@ -79,9 +76,9 @@ impl<R: MononokeRepo> RepoContext<R> {
                         target,
                     )
                 })?;
-            make_create_op(&large_bookmark, target, pushvars)
+            make_create_op(&large_bookmark, target, pushvars, is_mirror_upload)
         } else {
-            make_create_op(bookmark, target, pushvars)
+            make_create_op(bookmark, target, pushvars, is_mirror_upload)
         };
         Ok(create_op)
     }
@@ -93,7 +90,11 @@ impl<R: MononokeRepo> RepoContext<R> {
         target: ChangesetId,
         pushvars: Option<&HashMap<String, Bytes>>,
     ) -> Result<(), MononokeError> {
-        let create_op = self.create_bookmark_op(bookmark, target, pushvars).await?;
+        let is_mirror_upload = self.is_mirror_upload(pushvars).await?;
+
+        let create_op = self
+            .create_bookmark_op(bookmark, target, pushvars, is_mirror_upload)
+            .await?;
         if let Some(redirector) = self.push_redirector.as_ref() {
             let ctx = self.ctx();
             let log_id = create_op
@@ -128,12 +129,16 @@ impl<R: MononokeRepo> RepoContext<R> {
         txn: Option<Box<dyn BookmarkTransaction>>,
         txn_hooks: Vec<BookmarkTransactionHook>,
     ) -> Result<BookmarkInfoTransaction, MononokeError> {
+        let is_mirror_upload = self.is_mirror_upload(pushvars).await?;
+
         if self.push_redirector.is_some() {
             return Err(invalid_push_redirected_request(
                 "create_bookmark_with_transaction",
             ));
         }
-        let create_op = self.create_bookmark_op(bookmark, target, pushvars).await?;
+        let create_op = self
+            .create_bookmark_op(bookmark, target, pushvars, is_mirror_upload)
+            .await?;
         let bookmark_info_transaction = create_op
             .run_with_transaction(
                 self.ctx(),
@@ -145,5 +150,22 @@ impl<R: MononokeRepo> RepoContext<R> {
             )
             .await?;
         Ok(bookmark_info_transaction)
+    }
+
+    async fn is_mirror_upload(
+        &self,
+        pushvars: Option<&HashMap<String, Bytes>>,
+    ) -> anyhow::Result<bool> {
+        let is_mirror_upload = pushvars
+            .and_then(|p| p.get("MIRROR_UPLOAD"))
+            .map_or(false, |v| **v == *b"true");
+
+        if is_mirror_upload {
+            self.authorization_context()
+                .require_mirror_upload_operations(self.ctx(), self.repo())
+                .await?;
+        }
+
+        Ok(is_mirror_upload)
     }
 }
