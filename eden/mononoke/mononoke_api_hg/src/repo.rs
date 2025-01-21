@@ -359,6 +359,12 @@ impl<R: MononokeRepo> HgRepoContext<R> {
         contents: Bytes,
         computed_node_id: Option<HgNodeHash>,
     ) -> Result<(), MononokeError> {
+        if computed_node_id.is_some() {
+            self.repo_ctx
+                .authorization_context()
+                .require_mirror_upload_operations(self.ctx(), self.repo())
+                .await?;
+        }
         let entry = UploadHgTreeEntry {
             upload_node_id: UploadHgNodeHash::Checked(upload_node_id),
             contents,
