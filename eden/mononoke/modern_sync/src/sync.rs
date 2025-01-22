@@ -185,14 +185,17 @@ pub async fn sync(
                         let from = entry.from_changeset_id.into_iter().collect();
                         let to = entry.to_changeset_id.into_iter().collect();
 
-                        let mut commits = repo
+                        let commits = repo
                             .commit_graph()
                             .ancestors_difference(ctx, to, from)
                             .await?;
 
-                        commits.reverse();
+                        let mut missing_changesets =
+                            sender.filter_existing_commits(commits).await?;
 
-                        stream::iter(commits.into_iter().map(Ok))
+                        missing_changesets.reverse();
+
+                        stream::iter(missing_changesets.into_iter().map(Ok))
                             .try_for_each(|cs_id| {
                                 cloned!(ctx, repo, logger, sender);
                                 async move {

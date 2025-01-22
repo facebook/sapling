@@ -132,30 +132,7 @@ Sync all bookmarks moves
   Running sync-once loop
   Connecting to https://localhost:$LOCAL_PORT/edenapi/
   Health check outcome: Ok(ResponseMeta { version: HTTP/2.0, status: 200, server: Some("edenapi_server"), request_id: Some("*"), tw_task_handle: None, tw_task_version: None, tw_canary_id: None, server_load: Some(1), content_length: Some(10), content_encoding: None, mononoke_host: Some("*") }) (glob)
-  Processing changeset ChangesetId(Blake2(53b034a90fe3002a707a7da9cdf6eac3dea460ad72f7c6969dfb88fd0e69f856))
-  Uploaded 2 contents successfully
-  Uploaded 3 trees successfully
-  Uploaded 2 filenodes successfully
-  Upload hg changeset response: [UploadTokensResponse { token: UploadToken { data: UploadTokenData { id: HgChangesetId(HgId("e20237022b1290d98c3f14049931a8f498c18c53")), bubble_id: None, metadata: None }, signature: UploadTokenSignature { signature: [102, 97, 107, 101, 116, 111, 107, 101, 110, 115, 105, 103, 110, 97, 116, 117, 114, 101] } } }]
+  Skipping 1 commits
   Move bookmark response SetBookmarkResponse { data: Ok(()) }
-  Processing changeset ChangesetId(Blake2(8a9d572a899acdef764b88671c24b94a8b0780c1591a5a9bca97184c2ef0f304))
-  Uploaded 2 contents successfully
-  Uploaded 3 trees successfully
-  Uploaded 2 filenodes successfully
-  Upload hg changeset response: [UploadTokensResponse { token: UploadToken { data: UploadTokenData { id: HgChangesetId(HgId("5a95ef0f59a992dcb5385649217862599de05565")), bubble_id: None, metadata: None }, signature: UploadTokenSignature { signature: [102, 97, 107, 101, 116, 111, 107, 101, 110, 115, 105, 103, 110, 97, 116, 117, 114, 101] } } }]
-  Processing changeset ChangesetId(Blake2(41deea4804cd27d1f4efbec135d839338804a5dfcaf364863bd0289067644db5))
-  Uploaded 2 contents successfully
-  Uploaded 3 trees successfully
-  Uploaded 2 filenodes successfully
-  Upload hg changeset response: [UploadTokensResponse { token: UploadToken { data: UploadTokenData { id: HgChangesetId(HgId("fc03e5f3125836eb107f2fa5b070f841d0b62b85")), bubble_id: None, metadata: None }, signature: UploadTokenSignature { signature: [102, 97, 107, 101, 116, 111, 107, 101, 110, 115, 105, 103, 110, 97, 116, 117, 114, 101] } } }]
-  Processing changeset ChangesetId(Blake2(ba1a2b3ca64cead35117cb2b707da1211cf43639ade917aee655f3875f4922c3))
-  Uploaded 2 contents successfully
-  Uploaded 3 trees successfully
-  Uploaded 2 filenodes successfully
-  Upload hg changeset response: [UploadTokensResponse { token: UploadToken { data: UploadTokenData { id: HgChangesetId(HgId("2571175c538cc794dc974c705fcb12bc848efab4")), bubble_id: None, metadata: None }, signature: UploadTokenSignature { signature: [102, 97, 107, 101, 116, 111, 107, 101, 110, 115, 105, 103, 110, 97, 116, 117, 114, 101] } } }]
-  Processing changeset ChangesetId(Blake2(5b1c7130dde8e54b4285b9153d8e56d69fbf4ae685eaf9e9766cc409861995f8))
-  Uploaded 2 contents successfully
-  Uploaded 3 trees successfully
-  Uploaded 2 filenodes successfully
-  Upload hg changeset response: [UploadTokensResponse { token: UploadToken { data: UploadTokenData { id: HgChangesetId(HgId("8c3947e5d8bd4fe70259eca001b8885651c75850")), bubble_id: None, metadata: None }, signature: UploadTokenSignature { signature: [102, 97, 107, 101, 116, 111, 107, 101, 110, 115, 105, 103, 110, 97, 116, 117, 114, 101] } } }]
+  Skipping 4 commits
   Move bookmark response SetBookmarkResponse { data: Ok(()) }

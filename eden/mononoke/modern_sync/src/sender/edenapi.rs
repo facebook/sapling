@@ -21,6 +21,9 @@ use edenapi::HttpClientBuilder;
 use edenapi::HttpClientConfig;
 use edenapi::SaplingRemoteApi;
 use edenapi_types::AnyFileContentId;
+use edenapi_types::AnyId;
+use edenapi_types::IndexableId;
+use edenapi_types::LookupResult;
 use filestore::stream_file_bytes;
 use filestore::Range;
 use futures::stream;
@@ -32,6 +35,7 @@ use mercurial_types::HgFileNodeId;
 use mercurial_types::HgManifestId;
 use mononoke_app::args::TLSArgs;
 use mononoke_types::BonsaiChangeset;
+use mononoke_types::ChangesetId;
 use mononoke_types::FileContents;
 use repo_blobstore::RepoBlobstore;
 use slog::info;
@@ -252,5 +256,31 @@ impl ModernSyncSender for EdenapiSender {
         );
 
         Ok(())
+    }
+
+    async fn filter_existing_commits(&self, csids: Vec<ChangesetId>) -> Result<Vec<ChangesetId>> {
+        let ids = csids
+            .into_iter()
+            .map(|csid| AnyId::BonsaiChangesetId(csid.into()))
+            .collect::<Vec<_>>();
+
+        let all = ids.len();
+        let res = self.client.lookup_batch(ids, None, None).await?;
+
+        let missing = res
+            .into_iter()
+            .filter_map(|r| match r.result {
+                LookupResult::NotPresent(IndexableId {
+                    id: AnyId::BonsaiChangesetId(id),
+                    bubble_id: _,
+                }) => Some(id.into()),
+                _ => None,
+            })
+            .collect::<Vec<_>>();
+        let cached = all - missing.len();
+        if cached > 0 {
+            info!(&self.logger, "Skipping {} commits", cached);
+        }
+        Ok(missing)
     }
 }

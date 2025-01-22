@@ -13,7 +13,9 @@ use mercurial_types::HgChangesetId;
 use mercurial_types::HgFileNodeId;
 use mercurial_types::HgManifestId;
 use mononoke_types::BonsaiChangeset;
+use mononoke_types::ChangesetId;
 use mononoke_types::FileContents;
+
 pub mod dummy;
 pub mod edenapi;
 
@@ -50,4 +52,6 @@ pub trait ModernSyncSender {
         from: Option<HgChangesetId>,
         to: Option<HgChangesetId>,
     ) -> Result<()>;
+
+    async fn filter_existing_commits(&self, csids: Vec<ChangesetId>) -> Result<Vec<ChangesetId>>;
 }

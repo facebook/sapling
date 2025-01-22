@@ -13,6 +13,7 @@ use mercurial_types::HgChangesetId;
 use mercurial_types::HgFileNodeId;
 use mercurial_types::HgManifestId;
 use mononoke_types::BonsaiChangeset;
+use mononoke_types::ChangesetId;
 use mononoke_types::FileContents;
 use slog::info;
 use slog::Logger;
@@ -94,5 +95,12 @@ impl ModernSyncSender for DummySender {
             );
         }
         Ok(())
+    }
+
+    async fn filter_existing_commits(&self, csids: Vec<ChangesetId>) -> Result<Vec<ChangesetId>> {
+        for csid in csids.clone() {
+            info!(&self.logger, "Looking up hg changeset with hgid {}", csid);
+        }
+        Ok(csids)
     }
 }
