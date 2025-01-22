@@ -21,7 +21,8 @@ mod subscribe;
 #[derive(Parser, Debug)]
 #[clap(
     about = "Internal commands for examining eden state",
-    disable_help_flag = true
+    disable_help_flag = true,
+    disable_help_subcommand = true
 )]
 pub struct DebugCmd {
     #[clap(subcommand)]
