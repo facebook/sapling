@@ -16,6 +16,7 @@ import type {CommitStackState, FileRev, FileStackIndex, CommitRev} from '../comm
 import type {Map as ImMap} from 'immutable';
 import type {ReactNode} from 'react';
 import type {Comparison} from 'shared/Comparison';
+import type {ContextMenuItem} from 'shared/ContextMenu';
 import type {ParsedDiff} from 'shared/patch/parse';
 
 import {FileHeader, IconType} from '../../ComparisonView/SplitDiffView/SplitDiffFileHeader';
@@ -33,12 +34,16 @@ import {calculateDagFromStack} from '../stackDag';
 import {stackEditStack, useStackEditState} from './stackEditState';
 import * as stylex from '@stylexjs/stylex';
 import {Banner, BannerKind} from 'isl-components/Banner';
+import {Button} from 'isl-components/Button';
 import {Column, Row} from 'isl-components/Flex';
 import {Icon} from 'isl-components/Icon';
+import {Tooltip} from 'isl-components/Tooltip';
+import {stylexPropsWithClassName} from 'isl-components/utils';
 import {atom, useAtomValue} from 'jotai';
 import React, {useEffect, useMemo, useRef} from 'react';
 import {ComparisonType} from 'shared/Comparison';
-import {nullthrows} from 'shared/utils';
+import {useContextMenu} from 'shared/ContextMenu';
+import {firstLine, nullthrows} from 'shared/utils';
 
 const styles = stylex.create({
   container: {
@@ -52,6 +57,12 @@ const styles = stylex.create({
     marginBottom: -1,
     display: 'flex',
     borderTopWidth: 0,
+    ':not(#__unused__):hover .send-to-commit': {
+      visibility: 'visible',
+    },
+    ':not(#__unused__):focus-within .send-to-commit': {
+      visibility: 'visible',
+    },
   },
   inDraggingOverlay: {
     border: 'none',
@@ -66,6 +77,7 @@ const styles = stylex.create({
     backgroundColor: {
       ':hover': 'var(--tooltip-background)',
     },
+    position: 'relative',
   },
   dragHandle: {
     padding: '0 var(--pad)',
@@ -76,6 +88,18 @@ const styles = stylex.create({
   },
   candidateDropTarget: {
     backgroundColor: 'var(--tooltip-background)',
+  },
+  sendToCommitButton: {
+    position: 'absolute',
+    left: '100%',
+    zIndex: 100,
+    visibility: 'hidden',
+    borderRadius: '5px',
+    marginInline: 'var(--pad)',
+    ':not(#__unused__) .tooltip-creator': {
+      backgroundColor: 'var(--background)',
+      borderRadius: '5px',
+    },
   },
   absorbEditCode: {
     borderCollapse: 'collapse',
@@ -513,10 +537,62 @@ function SingleAbsorbEdit(props: {
             <DragHandle onDrag={handleDrag} xstyle={styles.dragHandle}>
               <Icon icon="grabber" />
             </DragHandle>
+            {!inDraggingOverlay && <SendToCommitButton edit={edit} />}
           </div>
           <SplitDiffTable ctx={ctx} path={path ?? ''} patch={patch} />
         </>
       )}
+    </div>
+  );
+}
+
+function SendToCommitButton({edit}: {edit: AbsorbEdit}) {
+  const stackEdit = useStackEditState();
+  const menu = useContextMenu(() => {
+    const stack = readAtom(stackEditStack);
+
+    const {fileStackIndex, absorbEditId} = edit;
+    if (stack == null || fileStackIndex == null || absorbEditId == null) {
+      return [];
+    }
+
+    const items: Array<ContextMenuItem> = [];
+
+    const absorbRevs = stack.getAbsorbCommitRevs(fileStackIndex, absorbEditId);
+    for (const rev of absorbRevs.candidateRevs.toReversed()) {
+      const info = nullthrows(stack.get(rev));
+
+      if (
+        rev === absorbRevs.selectedRev ||
+        (absorbRevs.selectedRev == null && info.key === YOU_ARE_HERE_VIRTUAL_COMMIT.hash)
+      ) {
+        // skip rev this edit is already in
+        continue;
+      }
+
+      items.push({
+        label: (
+          <div>
+            {info.key === YOU_ARE_HERE_VIRTUAL_COMMIT.hash
+              ? 'Uncommitted Changes'
+              : firstLine(info.text)}
+          </div>
+        ),
+        onClick: () => {
+          const newStack = stack.setAbsorbEditDestination(fileStackIndex, absorbEditId, rev);
+          stackEdit.push(newStack, {name: 'absorbMove', commit: info});
+        },
+      });
+    }
+    return items;
+  });
+  return (
+    <div {...stylexPropsWithClassName(styles.sendToCommitButton, 'send-to-commit')}>
+      <Tooltip title={t('Move to a specific commit')}>
+        <Button icon onClick={menu}>
+          <Icon icon="insert" />
+        </Button>
+      </Tooltip>
     </div>
   );
 }
