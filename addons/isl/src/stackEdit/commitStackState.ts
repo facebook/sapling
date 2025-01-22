@@ -641,7 +641,7 @@ export class CommitStackState extends SelfUpdate<CommitStackRecord> {
     const startCandidateFileRev = Math.max(1, edit.introductionRev); // skip file rev 0 (bottomFiles)
     const endCandidateFileRev = fileStack.revLength;
     const candidateRevs: CommitRev[] = [];
-    for (let fileRev = startCandidateFileRev; fileRev < endCandidateFileRev; ++fileRev) {
+    for (let fileRev = startCandidateFileRev; fileRev <= endCandidateFileRev; ++fileRev) {
       const rev = toCommitRev(fileRev as FileRev);
       // Skip immutable (public) commits.
       if (rev != null && this.get(rev)?.immutableKind !== 'hash') {

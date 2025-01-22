@@ -1233,28 +1233,28 @@ describe('CommitStackState', () => {
           id: 'a.txt/0',
           diff: ['a1↵', 'A1↵'],
           selected: 'CommitA',
-          candidates: ['CommitA', 'CommitC'],
+          candidates: ['CommitA', 'CommitC', 'Wdir'],
         },
         {
           // The "x1 -> X1" change is applied to "CommitC" which introduced "c".
           id: 'a.txt/1',
           diff: ['x1↵', 'X1↵'],
           selected: 'CommitC',
-          candidates: ['CommitC'],
+          candidates: ['CommitC', 'Wdir'],
         },
         {
           // The "b1 -> B1" change belongs to CommitB.
           id: 'b.txt/0',
           diff: ['b1↵', 'B1↵'],
           selected: 'CommitB',
-          candidates: ['CommitB', 'CommitC'],
+          candidates: ['CommitB', 'CommitC', 'Wdir'],
         },
         {
           // The "y1 -> Y1" change belongs to CommitB.
           id: 'b.txt/1',
           diff: ['y1↵', 'Y1↵'],
           selected: 'CommitC',
-          candidates: ['CommitC'],
+          candidates: ['CommitC', 'Wdir'],
         },
         {
           // The "c1c2 -> C1C2" change is not automatically absorbed, since
