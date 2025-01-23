@@ -16,12 +16,6 @@ use hyper::Response;
 use hyper::StatusCode;
 use permission_checker::MononokeIdentitySetExt;
 use stats::prelude::*;
-#[cfg(fbcode_build)]
-use MononokeEdenapiRequest_ods3::Instrument_MononokeEdenapiRequest;
-#[cfg(fbcode_build)]
-use MononokeEdenapiRequest_ods3_types::EdenApiRequestOutcome;
-#[cfg(fbcode_build)]
-use MononokeEdenapiRequest_ods3_types::MononokeEdenapiRequest;
 
 use crate::handlers::HandlerInfo;
 use crate::handlers::SaplingRemoteApiMethod;
@@ -91,10 +85,6 @@ fn log_stats(state: &mut State, status: StatusCode) -> Option<()> {
 
     let hander_info = state.try_borrow::<HandlerInfo>()?;
     let method = hander_info.method?;
-    let request_load = state.try_borrow::<RequestLoad>()?.0;
-
-    #[cfg(fbcode_build)]
-    let instrument = Instrument_MononokeEdenapiRequest::new();
 
     let callbacks = state.try_borrow_mut::<PostResponseCallbacks>()?;
 
@@ -103,7 +93,6 @@ fn log_stats(state: &mut State, status: StatusCode) -> Option<()> {
             let dur_ms = duration.as_millis() as i64;
 
             use SaplingRemoteApiMethod::*;
-            // Log the duration of the request on ODS1
             match method {
                 AlterSnapshot => STATS::alter_snapshot_duration_ms.add_value(dur_ms),
                 Blame => STATS::blame_duration_ms.add_value(dur_ms),
@@ -174,32 +163,9 @@ fn log_stats(state: &mut State, status: StatusCode) -> Option<()> {
             STATS::failure_5xx.add_value(1, (method.clone(),));
         }
 
-        #[cfg(fbcode_build)]
-        let outcome = if status.is_success() {
-            Some(EdenApiRequestOutcome::Success)
-        } else if status.is_client_error() {
-            Some(EdenApiRequestOutcome::Failure_4xx)
-        } else if status.is_server_error() {
-            Some(EdenApiRequestOutcome::Failure_5xx)
-        } else {
-            None
-        };
-
         if let Some(response_bytes_sent) = info.meta.as_ref().map(|m| m.body().bytes_sent) {
-            STATS::response_bytes_sent.add_value(response_bytes_sent as i64, (method.clone(),))
-        };
-
-        #[cfg(fbcode_build)]
-        // Log the duration of the request on ODS3
-        instrument.observe(MononokeEdenapiRequest {
-            edenapi_method: Some(method),
-            duration_ms: info.duration.map(|d| d.as_millis() as f64),
-            outcome,
-            response_bytes_sent: info.meta.as_ref().map(|m| m.body().bytes_sent as f64),
-            requests: Some(1.0),
-            request_load: Some(request_load as f64),
-            ..Default::default()
-        });
+            STATS::response_bytes_sent.add_value(response_bytes_sent as i64, (method,))
+        }
     });
 
     if let Some(request_load) = RequestLoad::try_borrow_from(state) {
