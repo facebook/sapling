@@ -526,6 +526,73 @@ class ChangesTestNix(JournalTestBase):
         self.assertTrue(self.check_changes(changes1.changes, expected_changes1))
         self.assertTrue(self.check_changes(changes2.changes, expected_changes2))
 
+    def test_too_many_changes_filtering(self):
+        self.mkdir("test_folder1")
+        self.mkdir("test_folder2")
+        expected_changes1 = []
+        expected_changes2 = []
+        expected_changes3 = []
+        expected_changes4 = []
+        position = self.client.getCurrentJournalPosition(self.mount_path_bytes)
+
+        # usually the max changes is 10k but for test speed reasons we set it to 100
+        # Each file add creates 2 changes, one for the add and one for the modify
+        for i in range(25):
+            expected_changes1 += self.add_file_expect(
+                f"test_folder1/test_file{i}.suf1", f"{i}"
+            )
+        for i in range(25):
+            expected_changes2 += self.add_file_expect(
+                f"test_folder1/test_file{i}.suf2", f"{i}"
+            )
+        for i in range(25):
+            expected_changes3 += self.add_file_expect(
+                f"test_folder2/test_file{i}.suf3", f"{i}"
+            )
+        for i in range(25):
+            expected_changes4 += self.add_file_expect(
+                f"test_folder2/test_file{i}.suf4", f"{i}"
+            )
+        changes1 = self.getChangesSinceV2(position=position)
+        expected_changes_too_many = [
+            buildLargeChange(
+                LargeChangeNotification.LOSTCHANGES,
+                lost_change_reason=LostChangesReason.TOO_MANY_CHANGES,
+            ),
+        ]
+        self.assertTrue(self.check_changes(changes1.changes, expected_changes_too_many))
+
+        # Test filtering by includes
+        changes2 = self.getChangesSinceV2(
+            position=position, included_roots=["test_folder1"]
+        )
+        self.assertTrue(
+            self.check_changes(changes2.changes, expected_changes1 + expected_changes2)
+        )
+
+        # Test filtering by excludes
+        changes3 = self.getChangesSinceV2(
+            position=position, excluded_roots=["test_folder1"]
+        )
+        self.assertTrue(
+            self.check_changes(changes3.changes, expected_changes3 + expected_changes4)
+        )
+
+        # Test filtering by suffix
+        changes4 = self.getChangesSinceV2(
+            position=position, included_suffixes=[".suf1", ".suf3"]
+        )
+        self.assertTrue(
+            self.check_changes(changes4.changes, expected_changes1 + expected_changes3)
+        )
+
+        changes5 = self.getChangesSinceV2(
+            position=position, excluded_suffixes=[".suf1", ".suf3"]
+        )
+        self.assertTrue(
+            self.check_changes(changes5.changes, expected_changes2 + expected_changes4)
+        )
+
 
 @testcase.eden_repo_test
 class ChangesTestWin(WindowsJournalTestBase):
