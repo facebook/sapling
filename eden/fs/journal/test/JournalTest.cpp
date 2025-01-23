@@ -31,6 +31,77 @@ struct JournalTest : ::testing::Test {
   IdentityCodec codec;
 };
 
+struct JournalDeltaTest : ::testing::Test {
+  EdenStatsPtr edenStats{makeRefPtr<EdenStats>()};
+  Journal journal{edenStats.copy()};
+  IdentityCodec codec;
+
+  RootId hash0;
+  RootId hash1{"1111111111111111111111111111111111111111"};
+  RootId hash2{"2222222222222222222222222222222222222222"};
+
+  std::vector<int> expectedFileChangeSequences;
+  std::vector<RelativePathPiece> expectedFileChangeNames;
+  std::vector<dtype_t> expectedFileChangeDtypes;
+  std::vector<int> expectedHashUpdateSequences;
+  std::vector<RootId> expectedHashUpdateHashes;
+
+  std::vector<int> fileChangeSequences;
+  std::vector<RelativePathPiece> fileChangeNames;
+  std::vector<dtype_t> fileChangeDtypes;
+  std::vector<int> hashUpdateSequences;
+  std::vector<RootId> hashUpdateHashes;
+
+  void addFileChange(RelativePathPiece path, dtype_t dtype) {
+    journal.recordChanged(path, dtype);
+    expectedFileChangeNames.push_back(path);
+    expectedFileChangeDtypes.push_back(dtype);
+    expectedFileChangeSequences.push_back(journal.getLatest()->sequenceID);
+  }
+
+  void flush() {
+    journal.flush();
+    expectedFileChangeDtypes.clear();
+    expectedFileChangeNames.clear();
+    expectedFileChangeSequences.clear();
+    expectedHashUpdateHashes.clear();
+    expectedHashUpdateSequences.clear();
+
+    expectedHashUpdateSequences.push_back(journal.getLatest()->sequenceID);
+    expectedHashUpdateHashes.push_back(journal.getLatest()->toHash);
+  }
+
+  void addHashUpdate(RootId to) {
+    addHashUpdate(hash0, std::move(to));
+  }
+
+  void addHashUpdate(const RootId& from, RootId to) {
+    journal.recordHashUpdate(from, std::move(to));
+    expectedHashUpdateSequences.push_back(journal.getLatest()->sequenceID);
+    expectedHashUpdateHashes.push_back(from);
+  }
+
+  void checkExpect() {
+    EXPECT_EQ(expectedFileChangeSequences, fileChangeSequences);
+    EXPECT_EQ(expectedFileChangeNames, fileChangeNames);
+    EXPECT_EQ(expectedFileChangeDtypes, fileChangeDtypes);
+    EXPECT_EQ(expectedHashUpdateSequences, hashUpdateSequences);
+    EXPECT_EQ(expectedHashUpdateHashes, hashUpdateHashes);
+  }
+
+  /*
+    This sets the journal state to be in a post-flush state.
+    The current hash will be set to hash1
+    The current sequence will be set to 5
+  */
+  void setupFlushedJournal() {
+    journal.recordHashUpdate(hash1);
+    journal.recordChanged("foo1"_relpath, dtype_t::Regular);
+    journal.recordChanged("foo2"_relpath, dtype_t::Symlink);
+    flush();
+  }
+};
+
 } // namespace
 
 TEST_F(JournalTest, accumulate_range_all_changes) {
@@ -750,4 +821,76 @@ TEST_F(JournalTest, for_each_delta_forwards) {
   EXPECT_EQ(expectedFileChangeNames, fileChangeNames);
   EXPECT_EQ(expectedFileChangeDtypes, fileChangeDtypes);
   EXPECT_EQ(expectedHashUpdateHashes, hashUpdateHashes);
+}
+
+/*
+ * This test covers the case where 'from' is a value below the sequence number
+ * of the first delta in fileChanges and there are hashUpdates present between
+ * the two. It checks that fileChanges starts from the first entry in the
+ * fileChanges vector.
+ */
+TEST_F(JournalDeltaTest, for_each_delta_forwards_file_change_ends_above_from) {
+  setupFlushedJournal();
+  EXPECT_EQ(5u, journal.getLatest()->sequenceID);
+
+  // Create hashUpdates after from and before file changes
+  addHashUpdate(hash1, hash2);
+  addHashUpdate(hash2, hash1);
+  EXPECT_EQ(7u, journal.getLatest()->sequenceID);
+
+  // Create file changes
+  addFileChange("foo3"_relpath, dtype_t::Regular);
+  addFileChange("foo4"_relpath, dtype_t::Symlink);
+  EXPECT_EQ(9u, journal.getLatest()->sequenceID);
+
+  bool truncated = journal.forEachDeltaForwards(
+      5u,
+      [&](const FileChangeJournalDelta& current) -> bool {
+        fileChangeSequences.push_back(current.sequenceID);
+        fileChangeNames.push_back(current.path1);
+        fileChangeDtypes.push_back(current.type);
+        return true;
+      },
+      [&](const RootUpdateJournalDelta& current) -> bool {
+        hashUpdateSequences.push_back(current.sequenceID);
+        hashUpdateHashes.push_back(current.fromHash);
+        return true;
+      });
+  EXPECT_FALSE(truncated);
+  checkExpect();
+}
+
+/*
+ * This test covers the case where 'from' is a value below the sequence number
+ * of the first delta in hashUpdates and there are fileChanges present between
+ * the two. It checks that hashUpdates starts from the first entry in the
+ * hashUpdates vector.
+ */
+TEST_F(JournalDeltaTest, for_each_delta_forwards_hash_update_ends_above_from) {
+  setupFlushedJournal();
+  EXPECT_EQ(5u, journal.getLatest()->sequenceID);
+  // Create file changes after from and before hashUpdates
+  addFileChange("foo3"_relpath, dtype_t::Regular);
+  addFileChange("foo4"_relpath, dtype_t::Symlink);
+  EXPECT_EQ(7u, journal.getLatest()->sequenceID);
+  // Create hashUpdates
+  addHashUpdate(hash1, hash2);
+  addHashUpdate(hash2, hash1);
+  EXPECT_EQ(9u, journal.getLatest()->sequenceID);
+
+  bool truncated = journal.forEachDeltaForwards(
+      5u,
+      [&](const FileChangeJournalDelta& current) -> bool {
+        fileChangeSequences.push_back(current.sequenceID);
+        fileChangeNames.push_back(current.path1);
+        fileChangeDtypes.push_back(current.type);
+        return true;
+      },
+      [&](const RootUpdateJournalDelta& current) -> bool {
+        hashUpdateSequences.push_back(current.sequenceID);
+        hashUpdateHashes.push_back(current.fromHash);
+        return true;
+      });
+  EXPECT_FALSE(truncated);
+  checkExpect();
 }
