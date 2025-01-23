@@ -38,6 +38,7 @@ use rustc_hash::FxHashSet;
 
 use crate::bookmarks_provider::bookmarks;
 use crate::bookmarks_provider::list_tags;
+use crate::mapping::bonsai_git_mappings_by_bonsai;
 use crate::mapping::git_shas_to_bonsais;
 use crate::mapping::include_symrefs;
 use crate::mapping::refs_to_include;
@@ -66,6 +67,7 @@ use crate::utils::entry_weight;
 use crate::utils::filter_object;
 use crate::utils::tag_entries_to_hashes;
 use crate::utils::to_commit_stream;
+use crate::utils::to_git_object_stream;
 use crate::Repo;
 
 /// Fetch and collect the tree and blob objects that are expressed as full objects
@@ -457,26 +459,16 @@ async fn commit_packfile_stream<'a>(
         None => Vec::new(),
     };
     commit_count += shallow_commits.len();
-    let commit_stream = to_commit_stream(shallow_commits)
-        .chain(to_commit_stream(target_commits))
-        .map_ok(move |changeset_id| {
+    let final_commits = [target_commits, shallow_commits].concat();
+    let git_commits = bonsai_git_mappings_by_bonsai(&ctx, repo, final_commits)
+        .await?
+        .into_values()
+        .collect::<Vec<_>>();
+    let commit_stream = to_git_object_stream(git_commits)
+        .map_ok(move |git_objectid| {
             let blobstore = blobstore.clone();
             let ctx = ctx.clone();
             async move {
-                let maybe_git_sha1 = repo
-                .bonsai_git_mapping()
-                .get_git_sha1_from_bonsai(&ctx, changeset_id)
-                .await
-                .with_context(|| {
-                    format!(
-                        "Error in fetching Git Sha1 for changeset {:?} through BonsaiGitMapping",
-                        changeset_id
-                    )
-                })?;
-                let git_sha1 = maybe_git_sha1.ok_or_else(|| {
-                    anyhow::anyhow!("Git Sha1 not found for changeset {:?}", changeset_id)
-                })?;
-                let git_objectid = git_sha1.to_object_id()?;
                 base_packfile_item(
                     ctx.clone(),
                     blobstore,
@@ -765,7 +757,7 @@ pub async fn ls_refs_response(
         .await
         .context("Error while getting content refs during ls-refs")?;
     // Convert the above bookmarks into refs that can be sent in the response
-    let mut refs_to_include = refs_to_include(repo, &bookmarks, request.tag_inclusion)
+    let mut refs_to_include = refs_to_include(repo, bookmarks, request.tag_inclusion)
         .await
         .context("Error while determining refs to include in the response")?;
 

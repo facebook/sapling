@@ -136,6 +136,12 @@ pub(crate) fn to_commit_stream(
     stream::iter(commits.into_iter().map(Ok)).boxed()
 }
 
+pub(crate) fn to_git_object_stream(
+    git_objects: Vec<ObjectId>,
+) -> BoxStream<'static, Result<ObjectId>> {
+    stream::iter(git_objects.into_iter().map(Ok)).boxed()
+}
+
 /// Function responsible for fetching the vec of commits between heads and bases. If the fetch
 /// request is shallow, return the shallow commits instead
 pub(crate) async fn commits(

@@ -12,10 +12,12 @@ use anyhow::Context;
 use anyhow::Result;
 use bonsai_git_mapping::BonsaisOrGitShas;
 use bookmarks::BookmarkKey;
+use bulk_derivation::BulkDerivation;
 use context::CoreContext;
 use gix_hash::ObjectId;
 use mononoke_types::hash::GitSha1;
 use mononoke_types::ChangesetId;
+use mononoke_types::DerivableType;
 use rustc_hash::FxHashMap;
 use rustc_hash::FxHashSet;
 
@@ -110,15 +112,13 @@ pub(crate) async fn git_shas_to_bonsais(
     ))
 }
 
-/// Fetch the Bonsai Git Mappings for the given bonsais
-pub async fn bonsai_git_mappings_by_bonsai(
+async fn git_to_bonsai(
     ctx: &CoreContext,
     repo: &impl Repo,
     cs_ids: Vec<ChangesetId>,
 ) -> Result<FxHashMap<ChangesetId, ObjectId>> {
-    // Get the Git shas corresponding to the Bonsai commits
     repo.bonsai_git_mapping()
-        .get(ctx, BonsaisOrGitShas::Bonsai(cs_ids))
+        .get(ctx, BonsaisOrGitShas::Bonsai(cs_ids.clone()))
         .await
         .with_context(|| {
             format!(
@@ -130,6 +130,36 @@ pub async fn bonsai_git_mappings_by_bonsai(
         .map(|entry| Ok((entry.bcs_id, entry.git_sha1.to_object_id()?)))
         .collect::<Result<FxHashMap<_, _>>>()
         .context("Error while converting Git Sha1 to Git Object Id during fetch")
+}
+
+/// Fetch the Bonsai Git Mappings for the given bonsais
+pub async fn bonsai_git_mappings_by_bonsai(
+    ctx: &CoreContext,
+    repo: &impl Repo,
+    cs_ids: Vec<ChangesetId>,
+) -> Result<FxHashMap<ChangesetId, ObjectId>> {
+    // Get the Git shas corresponding to the Bonsai commits
+    let bonsai_git_mappings = git_to_bonsai(ctx, repo, cs_ids.clone()).await?;
+    let unmapped_bonsais = cs_ids
+        .into_iter()
+        .filter(|cs_id| !bonsai_git_mappings.contains_key(cs_id))
+        .collect::<Vec<_>>();
+    repo.repo_derived_data()
+        .manager()
+        .derive_bulk(
+            ctx,
+            unmapped_bonsais.as_slice(),
+            None,
+            &[DerivableType::GitCommits],
+            None,
+        )
+        .await
+        .context("Error while deriving GitCommit for Bonsai Changesets")?;
+    let found_bonsai_git_mappings = git_to_bonsai(ctx, repo, unmapped_bonsais).await?;
+    Ok(bonsai_git_mappings
+        .into_iter()
+        .chain(found_bonsai_git_mappings)
+        .collect())
 }
 
 pub async fn git_ref_content_mapping(repo: &impl Repo) -> Result<Vec<(BookmarkKey, ObjectId)>> {
