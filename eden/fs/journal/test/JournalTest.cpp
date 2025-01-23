@@ -52,11 +52,16 @@ struct JournalDeltaTest : ::testing::Test {
   std::vector<int> hashUpdateSequences;
   std::vector<RootId> hashUpdateHashes;
 
-  void addFileChange(RelativePathPiece path, dtype_t dtype) {
+  void addFileChange(
+      RelativePathPiece path,
+      dtype_t dtype,
+      JournalDelta::SequenceNumber after = 0) {
     journal.recordChanged(path, dtype);
-    expectedFileChangeNames.push_back(path);
-    expectedFileChangeDtypes.push_back(dtype);
-    expectedFileChangeSequences.push_back(journal.getLatest()->sequenceID);
+    if (journal.getLatest()->sequenceID >= after) {
+      expectedFileChangeNames.push_back(path);
+      expectedFileChangeDtypes.push_back(dtype);
+      expectedFileChangeSequences.push_back(journal.getLatest()->sequenceID);
+    }
   }
 
   void flush() {
@@ -71,14 +76,19 @@ struct JournalDeltaTest : ::testing::Test {
     expectedHashUpdateHashes.push_back(journal.getLatest()->toHash);
   }
 
-  void addHashUpdate(RootId to) {
-    addHashUpdate(hash0, std::move(to));
+  void addHashUpdate(RootId to, JournalDelta::SequenceNumber after = 0) {
+    addHashUpdate(hash0, std::move(to), after);
   }
 
-  void addHashUpdate(const RootId& from, RootId to) {
+  void addHashUpdate(
+      const RootId& from,
+      RootId to,
+      JournalDelta::SequenceNumber after = 0) {
     journal.recordHashUpdate(from, std::move(to));
-    expectedHashUpdateSequences.push_back(journal.getLatest()->sequenceID);
-    expectedHashUpdateHashes.push_back(from);
+    if (journal.getLatest()->sequenceID >= after) {
+      expectedHashUpdateSequences.push_back(journal.getLatest()->sequenceID);
+      expectedHashUpdateHashes.push_back(from);
+    }
   }
 
   void checkExpect() {
@@ -99,6 +109,24 @@ struct JournalDeltaTest : ::testing::Test {
     journal.recordChanged("foo1"_relpath, dtype_t::Regular);
     journal.recordChanged("foo2"_relpath, dtype_t::Symlink);
     flush();
+  }
+
+  /*
+   * Set up journal state with a mix of fileChanges and hashUpdates
+   */
+  void setupGeneric(JournalDelta::SequenceNumber after) {
+    addHashUpdate(hash1, after);
+    addFileChange("foo1"_relpath, dtype_t::Regular, after);
+    addFileChange("foo2"_relpath, dtype_t::Regular, after);
+    addFileChange("foo1"_relpath, dtype_t::Regular, after);
+    addFileChange("foo2"_relpath, dtype_t::Regular, after);
+    EXPECT_EQ(5u, journal.getLatest()->sequenceID);
+    addFileChange("foo3"_relpath, dtype_t::Regular, after);
+    addFileChange("foo4"_relpath, dtype_t::Regular, after);
+    EXPECT_EQ(7u, journal.getLatest()->sequenceID);
+    addHashUpdate(hash1, hash2, after);
+    addHashUpdate(hash2, hash1, after);
+    EXPECT_EQ(9u, journal.getLatest()->sequenceID);
   }
 };
 
@@ -880,6 +908,52 @@ TEST_F(JournalDeltaTest, for_each_delta_forwards_hash_update_ends_above_from) {
 
   bool truncated = journal.forEachDeltaForwards(
       5u,
+      [&](const FileChangeJournalDelta& current) -> bool {
+        fileChangeSequences.push_back(current.sequenceID);
+        fileChangeNames.push_back(current.path1);
+        fileChangeDtypes.push_back(current.type);
+        return true;
+      },
+      [&](const RootUpdateJournalDelta& current) -> bool {
+        hashUpdateSequences.push_back(current.sequenceID);
+        hashUpdateHashes.push_back(current.fromHash);
+        return true;
+      });
+  EXPECT_FALSE(truncated);
+  checkExpect();
+}
+
+/*
+ * Tests that when 'from' is in the middle of the result set,
+ * returns all results starting from that value
+ */
+TEST_F(JournalDeltaTest, for_each_delta_forwards_partial_results) {
+  setupGeneric(6u);
+  bool truncated = journal.forEachDeltaForwards(
+      6u,
+      [&](const FileChangeJournalDelta& current) -> bool {
+        fileChangeSequences.push_back(current.sequenceID);
+        fileChangeNames.push_back(current.path1);
+        fileChangeDtypes.push_back(current.type);
+        return true;
+      },
+      [&](const RootUpdateJournalDelta& current) -> bool {
+        hashUpdateSequences.push_back(current.sequenceID);
+        hashUpdateHashes.push_back(current.fromHash);
+        return true;
+      });
+  EXPECT_FALSE(truncated);
+  checkExpect();
+}
+
+/*
+ * Tests that when 'from' is higher than the current sequence id,
+ * returns no values.
+ */
+TEST_F(JournalDeltaTest, for_each_delta_forwards_no_results) {
+  setupGeneric(10u);
+  bool truncated = journal.forEachDeltaForwards(
+      10u,
       [&](const FileChangeJournalDelta& current) -> bool {
         fileChangeSequences.push_back(current.sequenceID);
         fileChangeNames.push_back(current.path1);
