@@ -341,6 +341,9 @@ def get_edenfs_environment() -> Dict[str, str]:
         "SL_CONFIG_PATH",
         "TESTTMP",
         "HGUSER",
+        # The following are used to identify RE platform
+        "REMOTE_EXECUTION_SCM_REPO",
+        "INSIDE_RE_WORKER",
     ]
 
     if sys.platform == "win32":
