@@ -108,9 +108,8 @@
   edenapi: uploaded 3 changesets
 
 # Get the bonsai changeset ID for the latest commit in the stack
-  $ mononoke_admin convert -R repo -f hg -t bonsai -t git $(hg whereami) --derive
-  bonsai: 19881757b04cb22f8c86ac8b30d0e7f8eb26348ee271ff6c1f0f9b4fabb266ac
-  git: e959bd2ad89c8eecebbd49c5fd6ed4081333d6ac
+  $ mononoke_admin convert -R repo -f hg -t bonsai $(hg whereami) --derive
+  19881757b04cb22f8c86ac8b30d0e7f8eb26348ee271ff6c1f0f9b4fabb266ac
 
 # Generate a git bundle for the changes made in the draft commit
   $ mononoke_admin git-bundle create from-repo -R repo --output-location "$BUNDLE_PATH" --have-heads da93dc81badd8d407db0f3219ec0ec78f1ef750ebfa95735bb483310371af80c --included-refs-with-value heads/master_bookmark=19881757b04cb22f8c86ac8b30d0e7f8eb26348ee271ff6c1f0f9b4fabb266ac,heads/non_existent_ref=19881757b04cb22f8c86ac8b30d0e7f8eb26348ee271ff6c1f0f9b4fabb266ac
