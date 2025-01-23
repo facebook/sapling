@@ -23,7 +23,7 @@ lru = "0.12.3"
 memmap2 = "0.5.10"
 notify = { version = "5", optional = true }
 regex = "1.9.2"
-scopeguard = "1.0.0"
+scopeguard = "1.2.0"
 serde = { version = "1.0.185", features = ["derive"] }
 smallvec = { version = "1.6.1", default-features = false }
 tempfile = "3.8"
