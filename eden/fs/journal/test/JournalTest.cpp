@@ -39,6 +39,7 @@ struct JournalDeltaTest : ::testing::Test {
   RootId hash0;
   RootId hash1{"1111111111111111111111111111111111111111"};
   RootId hash2{"2222222222222222222222222222222222222222"};
+  RootId hash3{"3333333333333333333333333333333333333333"};
 
   std::vector<int> expectedFileChangeSequences;
   std::vector<RelativePathPiece> expectedFileChangeNames;
@@ -97,6 +98,14 @@ struct JournalDeltaTest : ::testing::Test {
     EXPECT_EQ(expectedFileChangeDtypes, fileChangeDtypes);
     EXPECT_EQ(expectedHashUpdateSequences, hashUpdateSequences);
     EXPECT_EQ(expectedHashUpdateHashes, hashUpdateHashes);
+  }
+
+  void reverseResults() {
+    std::reverse(fileChangeSequences.begin(), fileChangeSequences.end());
+    std::reverse(fileChangeNames.begin(), fileChangeNames.end());
+    std::reverse(fileChangeDtypes.begin(), fileChangeDtypes.end());
+    std::reverse(hashUpdateSequences.begin(), hashUpdateSequences.end());
+    std::reverse(hashUpdateHashes.begin(), hashUpdateHashes.end());
   }
 
   /*
@@ -1037,6 +1046,58 @@ TEST_F(JournalDeltaTest, for_each_delta_forwards_early_exit_hash) {
         hashUpdateHashes.push_back(current.fromHash);
         return true;
       });
+  EXPECT_FALSE(truncated);
+  checkExpect();
+}
+
+/*
+ * Tests all file change dtypes and empty hash update
+ */
+TEST_F(JournalDeltaTest, for_each_delta_file_changes_only) {
+  addFileChange("foo1"_relpath, dtype_t::Unknown);
+  addFileChange("foo2"_relpath, dtype_t::Fifo);
+  addFileChange("foo3"_relpath, dtype_t::Char);
+  addFileChange("foo4"_relpath, dtype_t::Dir);
+  addFileChange("foo5"_relpath, dtype_t::Regular);
+  addFileChange("foo6"_relpath, dtype_t::Symlink);
+  addFileChange("foo7"_relpath, dtype_t::Socket);
+  EXPECT_EQ(7u, journal.getLatest()->sequenceID);
+
+  bool truncated = journal.forEachDelta(
+      1u,
+      std::nullopt,
+      [&](const FileChangeJournalDelta& current) -> bool {
+        fileChangeSequences.push_back(current.sequenceID);
+        fileChangeNames.push_back(current.path1);
+        fileChangeDtypes.push_back(current.type);
+        return true;
+      },
+      [&](const RootUpdateJournalDelta& /*current*/) -> bool { return true; });
+  EXPECT_FALSE(truncated);
+  reverseResults();
+  checkExpect();
+}
+
+/*
+ * Tests hashUpdate with empty fileChange
+ */
+TEST_F(JournalDeltaTest, for_each_delta_hash_update_only) {
+  addHashUpdate(hash1);
+  addHashUpdate(hash1, hash2);
+  addHashUpdate(hash2, hash1);
+  addHashUpdate(hash1, hash3);
+  EXPECT_EQ(4u, journal.getLatest()->sequenceID);
+
+  bool truncated = journal.forEachDelta(
+      1u,
+      std::nullopt,
+      [&](const FileChangeJournalDelta& /*current*/) -> bool { return true; },
+      [&](const RootUpdateJournalDelta& current) -> bool {
+        hashUpdateSequences.push_back(current.sequenceID);
+        hashUpdateHashes.push_back(current.fromHash);
+        return true;
+      });
+  reverseResults();
   EXPECT_FALSE(truncated);
   checkExpect();
 }
