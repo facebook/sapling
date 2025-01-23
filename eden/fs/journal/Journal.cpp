@@ -681,10 +681,14 @@ void Journal::forEachDelta(
       break;
     }
     if (isFileChange) {
-      fileChangeDeltaCallback(*fileChangeIt);
+      if (!fileChangeDeltaCallback(*fileChangeIt)) {
+        break;
+      };
       ++fileChangeIt;
     } else {
-      hashUpdateDeltaCallback(*hashUpdateIt);
+      if (!hashUpdateDeltaCallback(*hashUpdateIt)) {
+        break;
+      }
       ++hashUpdateIt;
     }
 
