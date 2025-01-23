@@ -24,6 +24,8 @@ use tracing::Level;
 mod config;
 mod debug;
 mod du;
+#[cfg(target_os = "macos")]
+mod file_access_monitor;
 mod gc;
 mod handles;
 mod list;
@@ -114,6 +116,8 @@ pub enum TopLevelSubcommand {
     Status(crate::status::StatusCmd),
     // Top(crate::top::TopCmd),
     Uptime(crate::uptime::UptimeCmd),
+    #[cfg(target_os = "macos")]
+    FileAccessMonitor(crate::file_access_monitor::FileAccessMonitorCmd),
 }
 
 impl TopLevelSubcommand {
@@ -139,6 +143,8 @@ impl TopLevelSubcommand {
             Status(cmd) => cmd,
             // Top(cmd) => cmd,
             Uptime(cmd) => cmd,
+            #[cfg(target_os = "macos")]
+            FileAccessMonitor(cmd) => cmd,
         }
     }
 
@@ -164,6 +170,8 @@ impl TopLevelSubcommand {
             TopLevelSubcommand::Status(_) => "status",
             //TopLevelSubcommand::Top(_) => "top",
             TopLevelSubcommand::Uptime(_) => "uptime",
+            #[cfg(target_os = "macos")]
+            TopLevelSubcommand::FileAccessMonitor(_) => "file-access-monitor",
         }
     }
 }
