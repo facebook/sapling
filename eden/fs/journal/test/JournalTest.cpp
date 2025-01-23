@@ -801,47 +801,22 @@ TEST_F(JournalTest, all_subscribers_are_notified_after_any_observation) {
   EXPECT_EQ(2u, calls2);
 }
 
-TEST_F(JournalTest, for_each_delta_forwards) {
-  RootId hash1{"1111111111111111111111111111111111111111"};
-  RootId hash2{"2222222222222222222222222222222222222222"};
-  std::vector<int> expectedFileChangeSequences{1, 2, 3, 4, 6, 7};
-  std::vector<int> expectedHashUpdateSequences{5, 8};
-  std::vector<RelativePathPiece> expectedFileChangeNames{
-      "foo1"_relpath,
-      "foo2"_relpath,
-      "foo3"_relpath,
-      "foo4"_relpath,
-      "foo6"_relpath,
-      "foo7"_relpath};
-  std::vector<dtype_t> expectedFileChangeDtypes{
-      dtype_t::Regular,
-      dtype_t::Symlink,
-      dtype_t::Regular,
-      dtype_t::Symlink,
-      dtype_t::Regular,
-      dtype_t::Regular};
-  std::vector<RootId> expectedHashUpdateHashes{hash1, hash2};
-
-  std::vector<int> fileChangeSequences;
-  std::vector<int> hashUpdateSequences;
-  std::vector<RelativePathPiece> fileChangeNames;
-  std::vector<RootId> hashUpdateHashes;
-  std::vector<dtype_t> fileChangeDtypes;
-
-  journal.recordChanged("foo1"_relpath, dtype_t::Regular);
-  journal.recordChanged("foo2"_relpath, dtype_t::Symlink);
+TEST_F(JournalDeltaTest, for_each_delta) {
+  addFileChange("foo1"_relpath, dtype_t::Regular);
+  addFileChange("foo2"_relpath, dtype_t::Symlink);
   EXPECT_EQ(2u, journal.getLatest()->sequenceID);
-  journal.recordChanged("foo3"_relpath, dtype_t::Regular);
-  journal.recordChanged("foo4"_relpath, dtype_t::Symlink);
+  addFileChange("foo3"_relpath, dtype_t::Regular);
+  addFileChange("foo4"_relpath, dtype_t::Symlink);
   EXPECT_EQ(4u, journal.getLatest()->sequenceID);
-  journal.recordHashUpdate(hash1, hash2);
+  addHashUpdate(hash1, hash2);
   EXPECT_EQ(5u, journal.getLatest()->sequenceID);
-  journal.recordChanged("foo6"_relpath, dtype_t::Regular);
-  journal.recordChanged("foo7"_relpath, dtype_t::Regular);
-  journal.recordHashUpdate(hash2, hash1);
+  addFileChange("foo6"_relpath, dtype_t::Regular);
+  addFileChange("foo7"_relpath, dtype_t::Regular);
+  addHashUpdate(hash2, hash1);
 
-  bool truncated = journal.forEachDeltaForwards(
+  bool truncated = journal.forEachDelta(
       1u,
+      std::nullopt,
       [&](const FileChangeJournalDelta& current) -> bool {
         fileChangeSequences.push_back(current.sequenceID);
         fileChangeNames.push_back(current.path1);
@@ -854,10 +829,8 @@ TEST_F(JournalTest, for_each_delta_forwards) {
         return true;
       });
   EXPECT_FALSE(truncated);
-  EXPECT_EQ(expectedFileChangeSequences, fileChangeSequences);
-  EXPECT_EQ(expectedFileChangeNames, fileChangeNames);
-  EXPECT_EQ(expectedFileChangeDtypes, fileChangeDtypes);
-  EXPECT_EQ(expectedHashUpdateHashes, hashUpdateHashes);
+  reverseResults();
+  checkExpect();
 }
 
 /*
@@ -866,7 +839,7 @@ TEST_F(JournalTest, for_each_delta_forwards) {
  * the two. It checks that fileChanges starts from the first entry in the
  * fileChanges vector.
  */
-TEST_F(JournalDeltaTest, for_each_delta_forwards_file_change_ends_above_from) {
+TEST_F(JournalDeltaTest, for_each_delta_file_change_ends_above_from) {
   setupFlushedJournal();
   EXPECT_EQ(5u, journal.getLatest()->sequenceID);
 
@@ -880,8 +853,9 @@ TEST_F(JournalDeltaTest, for_each_delta_forwards_file_change_ends_above_from) {
   addFileChange("foo4"_relpath, dtype_t::Symlink);
   EXPECT_EQ(9u, journal.getLatest()->sequenceID);
 
-  bool truncated = journal.forEachDeltaForwards(
+  bool truncated = journal.forEachDelta(
       5u,
+      std::nullopt,
       [&](const FileChangeJournalDelta& current) -> bool {
         fileChangeSequences.push_back(current.sequenceID);
         fileChangeNames.push_back(current.path1);
@@ -894,6 +868,7 @@ TEST_F(JournalDeltaTest, for_each_delta_forwards_file_change_ends_above_from) {
         return true;
       });
   EXPECT_FALSE(truncated);
+  reverseResults();
   checkExpect();
 }
 
@@ -903,20 +878,23 @@ TEST_F(JournalDeltaTest, for_each_delta_forwards_file_change_ends_above_from) {
  * the two. It checks that hashUpdates starts from the first entry in the
  * hashUpdates vector.
  */
-TEST_F(JournalDeltaTest, for_each_delta_forwards_hash_update_ends_above_from) {
+TEST_F(JournalDeltaTest, for_each_delta_hash_update_ends_above_from) {
   setupFlushedJournal();
   EXPECT_EQ(5u, journal.getLatest()->sequenceID);
+
   // Create file changes after from and before hashUpdates
   addFileChange("foo3"_relpath, dtype_t::Regular);
   addFileChange("foo4"_relpath, dtype_t::Symlink);
   EXPECT_EQ(7u, journal.getLatest()->sequenceID);
+
   // Create hashUpdates
   addHashUpdate(hash1, hash2);
   addHashUpdate(hash2, hash1);
   EXPECT_EQ(9u, journal.getLatest()->sequenceID);
 
-  bool truncated = journal.forEachDeltaForwards(
+  bool truncated = journal.forEachDelta(
       5u,
+      std::nullopt,
       [&](const FileChangeJournalDelta& current) -> bool {
         fileChangeSequences.push_back(current.sequenceID);
         fileChangeNames.push_back(current.path1);
@@ -929,6 +907,7 @@ TEST_F(JournalDeltaTest, for_each_delta_forwards_hash_update_ends_above_from) {
         return true;
       });
   EXPECT_FALSE(truncated);
+  reverseResults();
   checkExpect();
 }
 
@@ -936,10 +915,11 @@ TEST_F(JournalDeltaTest, for_each_delta_forwards_hash_update_ends_above_from) {
  * Tests that when 'from' is in the middle of the result set,
  * returns all results starting from that value
  */
-TEST_F(JournalDeltaTest, for_each_delta_forwards_partial_results) {
+TEST_F(JournalDeltaTest, for_each_delta_partial_results) {
   setupGeneric(6u);
-  bool truncated = journal.forEachDeltaForwards(
+  bool truncated = journal.forEachDelta(
       6u,
+      std::nullopt,
       [&](const FileChangeJournalDelta& current) -> bool {
         fileChangeSequences.push_back(current.sequenceID);
         fileChangeNames.push_back(current.path1);
@@ -952,6 +932,7 @@ TEST_F(JournalDeltaTest, for_each_delta_forwards_partial_results) {
         return true;
       });
   EXPECT_FALSE(truncated);
+  reverseResults();
   checkExpect();
 }
 
@@ -959,10 +940,11 @@ TEST_F(JournalDeltaTest, for_each_delta_forwards_partial_results) {
  * Tests that when 'from' is higher than the current sequence id,
  * returns no values.
  */
-TEST_F(JournalDeltaTest, for_each_delta_forwards_no_results) {
+TEST_F(JournalDeltaTest, for_each_delta_no_results) {
   setupGeneric(10u);
-  bool truncated = journal.forEachDeltaForwards(
+  bool truncated = journal.forEachDelta(
       10u,
+      std::nullopt,
       [&](const FileChangeJournalDelta& current) -> bool {
         fileChangeSequences.push_back(current.sequenceID);
         fileChangeNames.push_back(current.path1);
@@ -975,27 +957,31 @@ TEST_F(JournalDeltaTest, for_each_delta_forwards_no_results) {
         return true;
       });
   EXPECT_FALSE(truncated);
+  reverseResults();
   checkExpect();
 }
 
 /*
  * Tests that when the fileChange callback returns false, iteration stops
+ * Since iteration is backwards, the contents will be from most recent to
+ * stopping point
  */
-TEST_F(JournalDeltaTest, for_each_delta_forwards_early_exit_file) {
+TEST_F(JournalDeltaTest, for_each_delta_early_exit_file) {
   // We're using a custom expect values so the input to setupGeneric doesn't
   // matter
   setupGeneric(0u);
 
   // We expect to stop when sequenceID == 7, so only the first entry is
   // populated
-  expectedFileChangeSequences = {6};
-  expectedFileChangeNames = {"foo3"_relpath};
-  expectedFileChangeDtypes = {dtype_t::Regular};
-  expectedHashUpdateSequences = {};
-  expectedHashUpdateHashes = {};
+  expectedFileChangeSequences = {};
+  expectedFileChangeNames = {};
+  expectedFileChangeDtypes = {};
+  expectedHashUpdateSequences = {8, 9};
+  expectedHashUpdateHashes = {hash1, hash2};
 
-  bool truncated = journal.forEachDeltaForwards(
+  bool truncated = journal.forEachDelta(
       6u,
+      std::nullopt,
       [&](const FileChangeJournalDelta& current) -> bool {
         if (current.sequenceID == 7) {
           return false;
@@ -1011,27 +997,31 @@ TEST_F(JournalDeltaTest, for_each_delta_forwards_early_exit_file) {
         return true;
       });
   EXPECT_FALSE(truncated);
+  reverseResults();
   checkExpect();
 }
 
 /*
  * Tests that when the hashUpdate callback returns false, iteration stops
+ * Since iteration is backwards, the contents will be from most recent to
+ * stopping point
  */
-TEST_F(JournalDeltaTest, for_each_delta_forwards_early_exit_hash) {
+TEST_F(JournalDeltaTest, for_each_delta_early_exit_hash) {
   // We're using a custom expect values so the input to setupGeneric doesn't
   // matter
   setupGeneric(0u);
 
   // We expect to stop when sequenceID == 9, so only the first entry is
   // populated in hashUpdate
-  expectedFileChangeSequences = {6, 7};
-  expectedFileChangeNames = {"foo3"_relpath, "foo4"_relpath};
-  expectedFileChangeDtypes = {dtype_t::Regular, dtype_t::Regular};
-  expectedHashUpdateSequences = {8};
-  expectedHashUpdateHashes = {hash1};
+  expectedFileChangeSequences = {};
+  expectedFileChangeNames = {};
+  expectedFileChangeDtypes = {};
+  expectedHashUpdateSequences = {9};
+  expectedHashUpdateHashes = {hash2};
 
-  bool truncated = journal.forEachDeltaForwards(
+  bool truncated = journal.forEachDelta(
       6u,
+      std::nullopt,
       [&](const FileChangeJournalDelta& current) -> bool {
         fileChangeSequences.push_back(current.sequenceID);
         fileChangeNames.push_back(current.path1);
@@ -1039,7 +1029,7 @@ TEST_F(JournalDeltaTest, for_each_delta_forwards_early_exit_hash) {
         return true;
       },
       [&](const RootUpdateJournalDelta& current) -> bool {
-        if (current.sequenceID == 9) {
+        if (current.sequenceID == 8) {
           return false;
         }
         hashUpdateSequences.push_back(current.sequenceID);
@@ -1047,6 +1037,7 @@ TEST_F(JournalDeltaTest, for_each_delta_forwards_early_exit_hash) {
         return true;
       });
   EXPECT_FALSE(truncated);
+  reverseResults();
   checkExpect();
 }
 
