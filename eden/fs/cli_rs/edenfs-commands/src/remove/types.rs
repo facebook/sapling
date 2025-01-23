@@ -13,6 +13,10 @@ use std::sync::Arc;
 use anyhow::Result;
 use crossterm::style::Stylize;
 use dialoguer::Confirm;
+#[cfg(fbcode_build)]
+use edenfs_telemetry::send;
+#[cfg(fbcode_build)]
+use edenfs_telemetry::EDEN_EVENTS_SCUBA;
 use io::IO;
 use termlogger::TermLogger;
 
@@ -24,6 +28,17 @@ pub enum PathType {
     InactiveEdenMount,
     RegularFile,
     Unknown,
+}
+
+impl std::fmt::Display for PathType {
+    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
+        match self {
+            PathType::ActiveEdenMount => write!(f, "active edenfs mount"),
+            PathType::InactiveEdenMount => write!(f, "inactive edenfs mount"),
+            PathType::RegularFile => write!(f, "regular file"),
+            PathType::Unknown => write!(f, "unknown"),
+        }
+    }
 }
 
 impl PathType {
@@ -60,6 +75,12 @@ impl PathType {
     }
 
     pub async fn remove(&self, context: &RemoveContext) -> Result<()> {
+        #[cfg(fbcode_build)]
+        {
+            let sample = edenfs_telemetry::remove::build(&self.to_string());
+            send(EDEN_EVENTS_SCUBA.to_string(), sample);
+        }
+
         match self {
             PathType::ActiveEdenMount => operations::remove_active_eden_mount(context).await,
             PathType::InactiveEdenMount => operations::remove_inactive_eden_mount(context).await,
