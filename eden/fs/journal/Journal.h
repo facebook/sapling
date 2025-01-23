@@ -145,20 +145,6 @@ class Journal {
       FileChangeCallback&& fileChangeCallback,
       HashUpdateCallback&& hashUpdateCallback);
 
-  /**
-   * Runs from the earliest delta with sequence ID >= from to latest delta and
-   * runs appropriate callback on each entry encountered.
-   *
-   * Allows for early exit if any callback returns false.
-   *
-   * Return bool indicating whether the journal is truncated
-   *
-   */
-  bool forEachDeltaForwards(
-      JournalDelta::SequenceNumber from,
-      FileChangeCallback&& fileChangeCallback,
-      HashUpdateCallback&& hashUpdateCallback);
-
   // Subscription functionality:
 
   /**
