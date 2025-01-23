@@ -968,3 +968,75 @@ TEST_F(JournalDeltaTest, for_each_delta_forwards_no_results) {
   EXPECT_FALSE(truncated);
   checkExpect();
 }
+
+/*
+ * Tests that when the fileChange callback returns false, iteration stops
+ */
+TEST_F(JournalDeltaTest, for_each_delta_forwards_early_exit_file) {
+  // We're using a custom expect values so the input to setupGeneric doesn't
+  // matter
+  setupGeneric(0u);
+
+  // We expect to stop when sequenceID == 7, so only the first entry is
+  // populated
+  expectedFileChangeSequences = {6};
+  expectedFileChangeNames = {"foo3"_relpath};
+  expectedFileChangeDtypes = {dtype_t::Regular};
+  expectedHashUpdateSequences = {};
+  expectedHashUpdateHashes = {};
+
+  bool truncated = journal.forEachDeltaForwards(
+      6u,
+      [&](const FileChangeJournalDelta& current) -> bool {
+        if (current.sequenceID == 7) {
+          return false;
+        }
+        fileChangeSequences.push_back(current.sequenceID);
+        fileChangeNames.push_back(current.path1);
+        fileChangeDtypes.push_back(current.type);
+        return true;
+      },
+      [&](const RootUpdateJournalDelta& current) -> bool {
+        hashUpdateSequences.push_back(current.sequenceID);
+        hashUpdateHashes.push_back(current.fromHash);
+        return true;
+      });
+  EXPECT_FALSE(truncated);
+  checkExpect();
+}
+
+/*
+ * Tests that when the hashUpdate callback returns false, iteration stops
+ */
+TEST_F(JournalDeltaTest, for_each_delta_forwards_early_exit_hash) {
+  // We're using a custom expect values so the input to setupGeneric doesn't
+  // matter
+  setupGeneric(0u);
+
+  // We expect to stop when sequenceID == 9, so only the first entry is
+  // populated in hashUpdate
+  expectedFileChangeSequences = {6, 7};
+  expectedFileChangeNames = {"foo3"_relpath, "foo4"_relpath};
+  expectedFileChangeDtypes = {dtype_t::Regular, dtype_t::Regular};
+  expectedHashUpdateSequences = {8};
+  expectedHashUpdateHashes = {hash1};
+
+  bool truncated = journal.forEachDeltaForwards(
+      6u,
+      [&](const FileChangeJournalDelta& current) -> bool {
+        fileChangeSequences.push_back(current.sequenceID);
+        fileChangeNames.push_back(current.path1);
+        fileChangeDtypes.push_back(current.type);
+        return true;
+      },
+      [&](const RootUpdateJournalDelta& current) -> bool {
+        if (current.sequenceID == 9) {
+          return false;
+        }
+        hashUpdateSequences.push_back(current.sequenceID);
+        hashUpdateHashes.push_back(current.fromHash);
+        return true;
+      });
+  EXPECT_FALSE(truncated);
+  checkExpect();
+}
