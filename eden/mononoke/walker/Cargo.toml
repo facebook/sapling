@@ -23,7 +23,7 @@ bookmarks = { version = "0.1.0", path = "../bookmarks" }
 bounded_traversal = { version = "0.1.0", path = "../common/bounded_traversal" }
 bytes = { version = "1.9.0", features = ["serde"] }
 changeset_info = { version = "0.1.0", path = "../derived_data/changeset_info" }
-clap = { version = "4.5.27", features = ["derive", "env", "string", "unicode", "wrap_help"] }
+clap = { version = "4.5.20", features = ["derive", "env", "string", "unicode", "wrap_help"] }
 cloned = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 cmdlib_caching = { version = "0.1.0", path = "../cmdlib/caching" }
 cmdlib_scrubbing = { version = "0.1.0", path = "../cmdlib/scrubbing" }
