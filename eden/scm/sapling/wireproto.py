@@ -40,7 +40,6 @@ from .i18n import _
 from .node import bbin, bin, hex, nullid
 from .pycompat import decodeutf8, range
 
-
 urlerr = util.urlerr
 urlreq = util.urlreq
 
@@ -393,6 +392,9 @@ class wirepeer(repository.legacypeer):
             opts = {}
             opts["noflatmanifest"] = "True"
             tag = self.ui.config("stream_out_shallow", "tag")
+            if not tag and self.ui.configbool("stream_out_shallow", "auto"):
+                if names := self.ui.configlist("remotenames", "selectivepulldefault"):
+                    tag = names[0]
             if tag:
                 opts["tag"] = tag
             return self._callstream("stream_out_shallow", **opts)
