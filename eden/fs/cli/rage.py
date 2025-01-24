@@ -40,6 +40,7 @@ try:
     from .facebook.rage import (
         find_fb_cdb,
         get_host_dashboard_url,
+        get_networking_environment,
         get_quickstack_cmd,
         setup_fb_env,
     )
@@ -60,6 +61,9 @@ except ImportError:
     def get_quickstack_cmd(
         instance: EdenInstance,
     ) -> Optional[List[str]]:
+        return None
+
+    def get_networking_environment() -> Optional[str]:
         return None
 
 
@@ -179,11 +183,16 @@ def print_diagnostic_info(
     section_title("System info:", out)
     user = getpass.getuser()
     host = hostname_mod.get_normalized_hostname()
+    net_env = get_networking_environment()
     header = (
         f"User                    : {user}\n"
         f"Hostname                : {host}\n"
         f"Version                 : {version_mod.get_current_version()}\n"
     )
+
+    if net_env:
+        header += f"Network                 : {net_env}\n"
+
     out.write(header)
     if sys.platform != "win32":
         # We attempt to report the RPM version on Linux as well as Mac, since Mac OS
