@@ -147,6 +147,7 @@ pub enum ClientEntryPoint {
     MononokeGitServer,
     Git,
     ModernSync,
+    ScmRepoManager,
 }
 
 impl ClientRequestInfo {
@@ -236,6 +237,7 @@ impl Display for ClientEntryPoint {
             ClientEntryPoint::BookmarkServiceClientCli => "bookmark_service_client_cli",
             ClientEntryPoint::MononokeGitServer => "mononoke_git_server",
             ClientEntryPoint::Git => "git",
+            ClientEntryPoint::ScmRepoManager => "scm_repo_manager",
         };
         write!(f, "{}", out)
     }
@@ -279,6 +281,7 @@ impl TryFrom<&str> for ClientEntryPoint {
             "bookmark_service_client_clie" => Ok(ClientEntryPoint::BookmarkServiceClientCli),
             "mononoke_git_server" => Ok(ClientEntryPoint::MononokeGitServer),
             "git" => Ok(ClientEntryPoint::Git),
+            "scm_repo_manager" => Ok(ClientEntryPoint::ScmRepoManager),
             _ => Err(anyhow!("Invalid client entry point")),
         }
     }
