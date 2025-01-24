@@ -50,6 +50,13 @@ except ImportError:
     # pyre-fixme[31]: Expression `eden.fs.cli.main.ParTelemetryStub()` is not a
     #  valid type.
     usage = ParTelemetryStub()
+try:
+    from eden.fs.cli.facebook.hostcaps import is_on_demand
+except ImportError:
+    # in OSS define a stub
+    def is_on_demand() -> bool:
+        return False
+
 
 from eden.fs.cli.buck import get_buck_command, run_buck_command
 from eden.fs.cli.config import HG_REPO_TYPES
@@ -1320,12 +1327,14 @@ class HealthReportCmd(Subcmd):
 
     def is_chef_running(self) -> bool:
         """Examine the status of Chef runs."""
-        chef_log_path = get_chef_log_path(platform.system())
-        if chef_log_path is None or chef_log_path == "":
-            print(f"Skipping chef run check for platform {platform.system()}.")
+        if is_on_demand() or get_chef_log_path(platform.system()) is None:
+            print("Skipping chef run check for unsupported platform.")
             return True
+
+        chef_log_path = get_chef_log_path(platform.system())
+
         try:
-            with open(chef_log_path, "r") as f:
+            with open(str(chef_log_path), "r") as f:
                 chef_log_raw = f.read()
                 chef_log = json.loads(chef_log_raw)
                 last_chef_run_sec = chef_log[CHEF_LOG_TIMESTAMP_KEY]
