@@ -187,27 +187,32 @@ pub async fn sync(
 
                         let commits = repo
                             .commit_graph()
-                            .ancestors_difference(ctx, to, from)
+                            .ancestors_difference_segment_slices(ctx, to, from, 5000)
                             .await?;
 
-                        let mut missing_changesets =
-                            sender.filter_existing_commits(commits).await?;
-
-                        missing_changesets.reverse();
-
-                        stream::iter(missing_changesets.into_iter().map(Ok))
-                            .try_for_each(|cs_id| {
+                        commits
+                            .try_for_each(|chunk| {
                                 cloned!(ctx, repo, logger, sender);
                                 async move {
-                                    process_one_changeset(
-                                        &cs_id,
-                                        &ctx,
-                                        repo,
-                                        &logger,
-                                        sender,
-                                        app_args.log_to_ods,
-                                    )
-                                    .await
+                                    let missing_changesets =
+                                        sender.filter_existing_commits(chunk).await?;
+                                    stream::iter(missing_changesets.into_iter().map(Ok))
+                                        .try_for_each(|cs_id| {
+                                            cloned!(ctx, repo, logger, sender);
+                                            async move {
+                                                process_one_changeset(
+                                                    &cs_id,
+                                                    &ctx,
+                                                    repo,
+                                                    &logger,
+                                                    sender,
+                                                    app_args.log_to_ods,
+                                                )
+                                                .await
+                                            }
+                                        })
+                                        .await?;
+                                    Ok(())
                                 }
                             })
                             .await?;
