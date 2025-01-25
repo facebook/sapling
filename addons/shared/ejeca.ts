@@ -74,6 +74,18 @@ export interface EjecaOptions {
   readonly stdin?: IOType | Stream | number | null | undefined;
 
   /**
+   * Same options as [`stdio`](https://nodejs.org/docs/latest-v18.x/api/child_process.html#optionsstdio).
+   * @default 'pipe'
+   */
+  readonly stdout?: IOType | Stream | number | null | undefined;
+
+  /**
+   * Same options as [`stdio`](https://nodejs.org/docs/latest-v18.x/api/child_process.html#optionsstdio).
+   * @default 'pipe'
+   */
+  readonly stderr?: IOType | Stream | number | null | undefined;
+
+  /**
    * Strip the final newline character from the (awaitable) output.
    * @default true
    */
@@ -298,10 +310,13 @@ function commonToSpawnOptions(options?: EjecaOptions): SpawnOptions {
       ? {...process.env, ...options.env}
       : options.env
     : process.env;
+  const stdin = options?.stdin ?? 'pipe';
+  const stdout = options?.stdout ?? 'pipe';
+  const stderr = options?.stderr ?? 'pipe';
   return {
     cwd: options?.cwd || process.cwd(),
     env,
-    stdio: options?.ipc ? [options.stdin, 'pipe', 'pipe', 'ipc'] : [options?.stdin, 'pipe', 'pipe'],
+    stdio: options?.ipc ? [stdin, stdout, stderr, 'ipc'] : [stdin, stdout, stderr],
     windowsHide: true,
   };
 }
