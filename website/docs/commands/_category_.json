@@ -2,6 +2,7 @@
   "label": "Commands",
   "position": 4.5,
   "link": {
-    "type": "generated-index"
+    "type": "generated-index",
+    "description": "These are some common Sapling commands.  Use 'sl help commands' to list all commands, and 'sl help COMMAND' to get help on a specific command."
   }
 }
