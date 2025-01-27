@@ -9,30 +9,42 @@ import type {EjecaChildProcess} from 'shared/ejeca';
 
 import chalk from 'chalk';
 import {ejeca} from 'shared/ejeca';
+import {defer} from 'shared/utils';
 
 function usage() {
   process.stdout.write(`
 ${chalk.bold('yarn dev')} - Combined server + client builds for ISL.
 
 ${chalk.bold('Usage:')} yarn dev [browser|vscode]
-  --production   Build in production mode
+  --production     Build in production mode
+  --launch [CWD]   Launch browser or VS Code in CWD
 
 ${chalk.bold('Examples:')}
   yarn dev browser
     ${chalk.gray('Build client and server in development mode, watch for changes')}
   yarn dev browser --production
     ${chalk.gray('Build client and server in production mode, without watching for changes')}
+  yarn dev browser --launch ~/my-repo
+    ${chalk.gray(
+      'Build client and server in development mode, watch for changes, and launch ISL server in ~/my-repo',
+    )}
 
   yarn dev vscode
     ${chalk.gray('Build extension and webview in dev mode, watch for changes')}
   yarn dev vscode --production
     ${chalk.gray('Build extension and webview in production mode, without watching for changes')}
+  yarn dev browser --launch ~/my-repo
+    ${chalk.gray(
+      'Build extension and webview in dev mode, watch for changes, and launch VS Code in ~/my-repo',
+    )}
 `);
 }
 
 type Args = {
   kind: 'browser' | 'vscode';
   isProduction: boolean;
+  /** If provided, launch server/vscode with this as the cwd */
+  launchDir?: string;
 };
 function parseArgs(): Args {
   const args = process.argv.slice(2);
@@ -53,15 +65,39 @@ function parseArgs(): Args {
   // vite/rollup look for this env var
   process.env.NODE_ENV = isProduction ? 'production' : 'development';
 
+  let launchDir;
+  const launchArgIndex = args.indexOf('--launch');
+  if (launchArgIndex > 0) {
+    if (launchArgIndex + 1 >= args.length) {
+      process.stdout.write(chalk.red('Missing launch directory') + '\n');
+      usage();
+      process.exit(1);
+    }
+    launchDir = args[launchArgIndex + 1];
+  }
+
   return {
     kind,
     isProduction,
+    launchDir,
   };
 }
 
 const MOVE_TO_START = '\x1b[0G\x1b[K';
 const CLEAR_LINE = '\x1b[K';
 const MOVE_UP_1 = '\x1b[1A';
+
+type MultiRunnerConfig = {
+  cwd: string;
+  cmd: string;
+  args: Array<string>;
+  /** Provide this callback to change the status label.
+   * It gets called for each new chunk of output, and the status persists until it is changed again.
+   * For example, detect that the build command is ready, and change "Running..." to "Ready, watching for changes..."  */
+  customStatus?: (chunk: string, status?: string) => string | undefined;
+  /** If provided, wait for this promise to resolve before starting this command. Useful for enforcing dependencies between commands. */
+  waitFor?: Promise<unknown>;
+};
 
 /**
  * Spawn multiple processes, show their execution status and output in parallel
@@ -91,17 +127,7 @@ class MultiRunner {
     end?: Date;
     status?: string;
   }>;
-  constructor(
-    public configs: Array<{
-      cwd: string;
-      cmd: string;
-      args: Array<string>;
-      /** Provide this callback to change the status label.
-       * It gets called for each new chunk of output, and the status persists until it is changed again.
-       * For example, detect that the build command is ready, and change "Running..." to "Ready, watching for changes..."  */
-      customStatus?: (chunk: string, status?: string) => string | undefined;
-    }>,
-  ) {
+  constructor(public configs: Array<MultiRunnerConfig>) {
     this.infos = configs.map(() => {
       return {
         handle: undefined,
@@ -114,18 +140,22 @@ class MultiRunner {
   }
 
   async spawnAll() {
-    this.configs.forEach(({cwd, cmd, args}, i) => {
+    this.configs.forEach(async ({cwd, cmd, args, waitFor}, i) => {
+      waitFor != null && (await waitFor);
+
       const info = this.infos[i]!;
       info.start = new Date();
       const proc = ejeca(cmd, args, {cwd, stdout: 'pipe', stderr: 'pipe'});
       const output: Array<string> = [];
       proc.stdout!.on('data', data => {
-        output.push(...data.toString().split('\n'));
+        const lines = data.toString().split('\n');
+        output.push(...lines.slice(0, -1));
         this.updateCustomStatus(i, data.toString());
         this.redraw();
       });
       proc.stderr!.on('data', data => {
-        output.push(...data.toString().split('\n'));
+        const lines = data.toString().split('\n');
+        output.push(...lines.slice(0, -1));
         this.updateCustomStatus(i, data.toString());
         this.redraw();
       });
@@ -191,7 +221,7 @@ class MultiRunner {
       );
       const LINES_TO_SHOW = printAllOutput
         ? Infinity
-        : process.stdout.columns / this.infos.length - 5; // Fit all processes on the screen, with padding
+        : Math.floor(process.stdout.rows / this.infos.length - 4); // Fit all processes on the screen, with padding
       if (lines.length > LINES_TO_SHOW + 1) {
         output.push(
           `${chalk.cyan('┣━ ')} ${chalk.gray(
@@ -221,66 +251,84 @@ class MultiRunner {
 
 async function main() {
   const args = parseArgs();
-  const {kind, isProduction} = args;
-  const runner = new MultiRunner(
-    kind === 'vscode'
-      ? [
-          {
+  const {kind, isProduction, launchDir} = args;
+  const clientReady = defer();
+  const serverReady = defer();
+  const configs: Array<MultiRunnerConfig> = [];
+
+  // Build Client/Webview
+  configs.push({
+    cwd: kind === 'vscode' ? 'vscode' : 'isl',
+    cmd: 'yarn',
+    args:
+      kind === 'vscode'
+        ? isProduction
+          ? ['build-webview']
+          : ['watch-webview']
+        : isProduction
+        ? ['build']
+        : ['start'],
+    customStatus: isProduction
+      ? undefined
+      : (chunk: string, status?: string) => {
+          if (chunk.includes('ready in')) {
+            clientReady.resolve(null);
+            return (
+              chalk.green(kind === 'vscode' ? 'Webview Ready' : 'Client Ready') +
+              ' watching for changes...'
+            );
+          }
+          return status;
+        },
+  });
+
+  // Build server/extension
+  configs.push({
+    cwd: kind === 'vscode' ? 'vscode' : 'isl-server',
+    cmd: 'yarn',
+    args:
+      kind === 'vscode'
+        ? isProduction
+          ? ['build-extension']
+          : ['watch-extension']
+        : isProduction
+        ? ['build']
+        : ['watch'],
+    customStatus: isProduction
+      ? undefined
+      : (chunk: string, status?: string) => {
+          if (chunk.includes('created ')) {
+            serverReady.resolve(null);
+            return (
+              chalk.green(kind === 'vscode' ? 'Extension Ready' : 'Server Ready') +
+              ' watching for changes...'
+            );
+          }
+          return status;
+        },
+  });
+
+  // Launch browser / VS Code
+  if (launchDir != null) {
+    const waitFor = Promise.all([clientReady.promise, serverReady.promise]);
+    configs.push(
+      kind === 'vscode'
+        ? {
             cwd: 'vscode',
-            cmd: 'yarn',
-            args: isProduction ? ['build-webview'] : ['watch-webview'],
-            customStatus: isProduction
-              ? undefined
-              : (chunk: string, status?: string) => {
-                  if (chunk.includes('ready in')) {
-                    return chalk.green('Webview Ready') + ' watching for changes...';
-                  }
-                  return status;
-                },
-          },
-          {
-            cwd: 'vscode',
-            cmd: 'yarn',
-            args: isProduction ? ['build-extension'] : ['watch-extension'],
-            customStatus: isProduction
-              ? undefined
-              : (chunk: string, status?: string) => {
-                  if (chunk.includes('created ')) {
-                    return chalk.green('Extension Ready') + ' watching for changes...';
-                  }
-                  return status;
-                },
-          },
-        ]
-      : [
-          {
-            cwd: 'isl',
-            cmd: 'yarn',
-            args: isProduction ? ['build'] : ['start'],
-            customStatus: isProduction
-              ? undefined
-              : (chunk: string, status?: string) => {
-                  if (chunk.includes('ready in')) {
-                    return chalk.green('Client Ready') + ' watching for changes...';
-                  }
-                  return status;
-                },
-          },
-          {
+            cmd: 'code',
+            args: ['--extensionDevelopmentPath=.', launchDir],
+            waitFor,
+          }
+        : {
             cwd: 'isl-server',
             cmd: 'yarn',
-            args: isProduction ? ['build'] : ['watch'],
-            customStatus: isProduction
-              ? undefined
-              : (chunk: string, status?: string) => {
-                  if (chunk.includes('created ')) {
-                    return chalk.green('Server Ready') + ' watching for changes...';
-                  }
-                  return status;
-                },
+            args: ['serve', '--dev', '--foreground', '--stdout', '--force', '--cwd', launchDir],
+            waitFor,
           },
-        ],
-  );
+    );
+  }
+
+  const runner = new MultiRunner(configs);
 
   await runner.spawnAll();
 }
