@@ -29,7 +29,7 @@ export class TestRepo {
     logger.info(keepTmp ? '' : 'Temporary', 'repo path:', repoPath);
     await fs.mkdir(repoPath);
     const repo = new TestRepo(repoPath, command);
-    await repo.run(['init', '--git']);
+    await repo.run(['init', '--config=format.use-eager-repo=true']);
     return repo;
   }
 
