@@ -21,7 +21,6 @@ use std::time::Duration;
 use anyhow::Error;
 use anyhow::Result;
 use async_requests::types::AsynchronousRequestParams;
-use async_requests::types::RequestStatus;
 use async_requests::AsyncMethodRequestQueue;
 use async_requests::AsyncRequestsError;
 use async_requests::ClaimedBy;
@@ -55,6 +54,7 @@ use crate::methods::megarepo_async_request_compute;
 use crate::scuba::log_result;
 use crate::scuba::log_retriable_error;
 use crate::scuba::log_start;
+use crate::stats::stats_loop;
 use crate::AsyncRequestsWorkerArgs;
 
 const DEQUEUE_STREAM_SLEEP_TIME: u64 = 1000;
@@ -62,13 +62,6 @@ const DEQUEUE_STREAM_SLEEP_TIME: u64 = 1000;
 // if it hasn't updated inprogress timestamp
 const ABANDONED_REQUEST_THRESHOLD_SECS: i64 = 5 * 60;
 const KEEP_ALIVE_INTERVAL: Duration = Duration::from_secs(10);
-const STATS_LOOP_INTERNAL: Duration = Duration::from_secs(5 * 60);
-const STATUSES: [RequestStatus; 4] = [
-    RequestStatus::New,
-    RequestStatus::InProgress,
-    RequestStatus::Ready,
-    RequestStatus::Polled,
-];
 
 define_stats! {
     prefix = "async_requests.worker";
@@ -78,10 +71,6 @@ define_stats! {
     process_aborted: timeseries("process.aborted"; Count),
     process_failed: timeseries("process.failed"; Count),
     requested: timeseries("requested"; Count),
-
-    stats_error: timeseries("stats.error"; Count),
-    queue_length_by_status: dynamic_singleton_counter("stats.queue.length.{}", (status: String)),
-    queue_age_by_status: dynamic_singleton_counter("stats.queue.age_s.{}", (status: String)),
 }
 
 #[derive(Clone)]
@@ -144,7 +133,7 @@ impl RepoShardedProcessExecutor for AsyncMethodRequestWorker {
         // Start the stats logger loop
         let (stats, stats_abort_handle) = abortable({
             cloned!(self.ctx, self.queue);
-            async move { Self::stats_loop(&ctx, &queue).await }
+            async move { stats_loop(&ctx, &queue).await }
         });
         let _stats = tokio::spawn(stats);
 
@@ -419,38 +408,6 @@ impl AsyncMethodRequestWorker {
                 }
             }
             tokio::time::sleep(KEEP_ALIVE_INTERVAL).await;
-        }
-    }
-
-    async fn stats_loop(ctx: &CoreContext, queue: &AsyncMethodRequestQueue) {
-        loop {
-            let now = Timestamp::now();
-            let res = queue.get_queue_stats(ctx).await;
-            match res {
-                Ok(res) => {
-                    for status in STATUSES {
-                        let count = res.queue_length_by_status.get(&status).unwrap_or(&0);
-                        STATS::queue_length_by_status.set_value(
-                            ctx.fb,
-                            *count as i64,
-                            (status.to_string(),),
-                        );
-
-                        let ts = res.queue_age_by_status.get(&status).unwrap_or(&now);
-                        let diff = now.timestamp_seconds() - ts.timestamp_seconds();
-                        STATS::queue_age_by_status.set_value(ctx.fb, diff, (status.to_string(),));
-                    }
-                }
-                Err(err) => {
-                    STATS::stats_error.add_value(1);
-                    warn!(
-                        ctx.logger(),
-                        "error while getting queue stats, skipping: {}", err
-                    );
-                }
-            }
-
-            tokio::time::sleep(STATS_LOOP_INTERNAL).await;
         }
     }
 }

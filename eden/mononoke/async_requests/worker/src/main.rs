@@ -9,6 +9,7 @@
 
 mod methods;
 mod scuba;
+mod stats;
 mod worker;
 
 use std::sync::atomic::AtomicBool;
