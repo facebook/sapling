@@ -19,7 +19,7 @@ mononoke_types = { version = "0.1.0", path = "../../mononoke_types" }
 nonzero_ext = "0.2"
 regex = "1.9.2"
 repos = { version = "0.1.0", path = "../../../../configerator/structs/scm/mononoke/repos/repos" }
-rusoto_core = "0.46.0"
+rusoto_core = "0.48.0"
 sapling-repourl = { version = "0.1.0", path = "../../../scm/lib/repo/url" }
 serde = { version = "1.0.185", features = ["derive", "rc"] }
 serde_ignored = "0.1.8"
