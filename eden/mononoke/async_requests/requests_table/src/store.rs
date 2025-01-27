@@ -5,8 +5,6 @@
  * GNU General Public License version 2.
  */
 
-use std::collections::HashMap;
-
 use anyhow::bail;
 use anyhow::Context;
 use anyhow::Result;
@@ -749,7 +747,7 @@ impl LongRunningRequestsQueue for SqlLongRunningRequestsQueue {
 async fn get_queue_length(
     conn: &Connection,
     repo_ids: Option<&[RepositoryId]>,
-) -> Result<HashMap<RequestStatus, u64>> {
+) -> Result<Vec<(RequestStatus, u64)>> {
     Ok(match repo_ids {
         Some(repos) => GetQueueLengthForRepos::query(conn, repos).await,
         None => GetQueueLengthForAllRepos::query(conn).await,
@@ -776,7 +774,7 @@ async fn get_queue_length_by_repo(
 async fn get_queue_age(
     conn: &Connection,
     repo_ids: Option<&[RepositoryId]>,
-) -> Result<HashMap<RequestStatus, Timestamp>> {
+) -> Result<Vec<(RequestStatus, Timestamp)>> {
     Ok(match repo_ids {
         Some(repos) => GetQueueAgeForRepos::query(conn, repos).await,
         None => GetQueueAgeForAllRepos::query(conn).await,
@@ -1135,17 +1133,14 @@ mod test {
 
         let stats = queue.get_queue_stats(&ctx, Some(&[repo_id])).await?;
         assert_eq!(stats.queue_length_by_status.len(), 1);
-        assert_eq!(
-            stats
-                .queue_length_by_status
-                .get(&RequestStatus::New)
-                .unwrap(),
-            &1
-        );
+        let entry = &stats.queue_length_by_status[0];
+        assert_eq!(entry.0, RequestStatus::New);
+        assert_eq!(entry.1, 1);
+
         assert_eq!(stats.queue_age_by_status.len(), 1);
-        let age = stats.queue_age_by_status.get(&RequestStatus::New).unwrap();
-        println!("now {} age {}", now.since_seconds(), age.since_seconds());
-        assert!((age.since_seconds() - now.since_seconds()) < 1);
+        let entry = &stats.queue_age_by_status[0];
+        assert_eq!(entry.0, RequestStatus::New);
+        assert!((entry.1.since_seconds() - now.since_seconds()) < 1);
 
         // This claims new request from queue and makes it inprogress
         let now = Timestamp::now();
@@ -1157,22 +1152,15 @@ mod test {
         tokio::time::sleep(Duration::from_secs(3)).await;
 
         let stats = queue.get_queue_stats(&ctx, Some(&[repo_id])).await?;
-
         assert_eq!(stats.queue_length_by_status.len(), 1);
-        assert_eq!(
-            stats
-                .queue_length_by_status
-                .get(&RequestStatus::InProgress)
-                .unwrap(),
-            &1
-        );
+        let entry = &stats.queue_length_by_status[0];
+        assert_eq!(entry.0, RequestStatus::InProgress);
+        assert_eq!(entry.1, 1);
 
         assert_eq!(stats.queue_age_by_status.len(), 1);
-        let age = stats
-            .queue_age_by_status
-            .get(&RequestStatus::InProgress)
-            .unwrap();
-        assert!((age.since_seconds() - now.since_seconds()) < 1);
+        let entry = &stats.queue_age_by_status[0];
+        assert_eq!(entry.0, RequestStatus::InProgress);
+        assert!((entry.1.since_seconds() - now.since_seconds()) < 1);
 
         assert_eq!(stats.queue_length_by_repo_and_status.len(), 1);
         let entry = &stats.queue_length_by_repo_and_status[0];

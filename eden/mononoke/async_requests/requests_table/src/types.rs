@@ -5,8 +5,6 @@
  * GNU General Public License version 2.
  */
 
-use std::collections::HashMap;
-
 use anyhow::Result;
 use mononoke_types::RepositoryId;
 use mononoke_types::Timestamp;
@@ -188,8 +186,8 @@ pub struct QueueStatsEntry {
 }
 
 pub struct QueueStats {
-    pub queue_length_by_status: HashMap<RequestStatus, u64>,
-    pub queue_age_by_status: HashMap<RequestStatus, Timestamp>,
+    pub queue_length_by_status: Vec<(RequestStatus, u64)>,
+    pub queue_age_by_status: Vec<(RequestStatus, Timestamp)>,
 
     pub queue_length_by_repo_and_status: Vec<(QueueStatsEntry, u64)>,
     pub queue_age_by_repo_and_status: Vec<(QueueStatsEntry, Timestamp)>,

@@ -101,9 +101,15 @@ impl Seen {
 }
 
 fn process_queue_length_by_status(ctx: &CoreContext, res: &requests_table::QueueStats) {
-    for status in STATUSES {
-        let count = res.queue_length_by_status.get(&status).unwrap_or(&0);
+    let mut seen = Seen::new(&vec![]);
+    let stats = &res.queue_length_by_status;
+    for (status, count) in stats {
+        seen.mark(None, *status);
         STATS::queue_length_by_status.set_value(ctx.fb, *count as i64, (status.to_string(),));
+    }
+
+    for entry in seen.get_missing() {
+        STATS::queue_length_by_status.set_value(ctx.fb, 0, (entry.status.to_string(),));
     }
 }
 
@@ -112,10 +118,16 @@ fn process_queue_age_by_status(
     now: Timestamp,
     res: &requests_table::QueueStats,
 ) {
-    for status in STATUSES {
-        let ts = res.queue_age_by_status.get(&status).unwrap_or(&now);
+    let mut seen = Seen::new(&vec![]);
+    let stats = &res.queue_age_by_status;
+    for (status, ts) in stats {
+        seen.mark(None, *status);
         let diff = now.timestamp_seconds() - ts.timestamp_seconds();
         STATS::queue_age_by_status.set_value(ctx.fb, diff, (status.to_string(),));
+    }
+
+    for entry in seen.get_missing() {
+        STATS::queue_age_by_status.set_value(ctx.fb, 0, (entry.status.to_string(),));
     }
 }
 
