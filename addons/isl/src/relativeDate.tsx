@@ -129,11 +129,12 @@ export function relativeDate(
   }
 
   const delta = reference - input;
+  const absDelta = Math.abs(delta);
 
   // Use Intl.RelativeTimeFormat for non-en locales, if available.
   if (getCurrentLanguage() != 'en' && typeof Intl !== 'undefined') {
     for (const unit of Object.keys(units) as Array<keyof typeof units>) {
-      if (Math.abs(delta) > units[unit] || unit == 'minute') {
+      if (absDelta > units[unit] || unit == 'minute') {
         return new Intl.RelativeTimeFormat(getCurrentLanguage(), {
           style: options.useShortVariant ? 'narrow' : 'short',
           numeric: 'auto',
@@ -150,7 +151,7 @@ export function relativeDate(
     ? longFormatsNumbers
     : longFormats;
   for (const [limit, relativeFormat, remainder] of formats) {
-    if (delta < limit) {
+    if (absDelta < limit) {
       if (typeof remainder === 'number') {
         return (
           Math.round(delta / remainder) + (options.useShortVariant ? '' : ' ') + relativeFormat
