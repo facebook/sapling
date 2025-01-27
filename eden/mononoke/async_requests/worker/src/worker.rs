@@ -133,7 +133,8 @@ impl RepoShardedProcessExecutor for AsyncMethodRequestWorker {
         // Start the stats logger loop
         let (stats, stats_abort_handle) = abortable({
             cloned!(self.ctx, self.queue);
-            async move { stats_loop(&ctx, &queue).await }
+            let repo_ids = self.mononoke.known_repo_ids().clone();
+            async move { stats_loop(&ctx, repo_ids, &queue).await }
         });
         let _stats = tokio::spawn(stats);
 

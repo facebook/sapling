@@ -181,6 +181,7 @@ impl From<RequestStatus> for Value {
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct RequestId(pub RowId, pub RequestType);
 
+#[derive(Clone, Hash, Eq, PartialEq)]
 pub struct QueueStatsEntry {
     pub repo_id: Option<RepositoryId>,
     pub status: RequestStatus,

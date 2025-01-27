@@ -19,6 +19,7 @@ pub use crate::types::BlobstoreKey;
 pub use crate::types::ClaimedBy;
 pub use crate::types::LongRunningRequestEntry;
 pub use crate::types::QueueStats;
+pub use crate::types::QueueStatsEntry;
 pub use crate::types::RequestId;
 pub use crate::types::RequestStatus;
 pub use crate::types::RequestType;
