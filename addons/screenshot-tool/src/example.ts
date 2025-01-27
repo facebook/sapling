@@ -5,14 +5,18 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-import type {OpenISLOptions, PageOptions, TestBrowser} from './testBrowser';
-import type {TestRepo} from './testRepo';
+import type {OpenISLOptions, PageOptions} from './testBrowser';
+
+import {TestBrowser} from './testBrowser';
+import {TestRepo} from './testRepo';
 
 /** Reexport for convenience. */
 export type {TestBrowser, TestRepo};
 
 /** Defines an example - what does the repo looks like and what to do after opening ISL. */
 export interface Example {
+  // Actual examples might want to replace these fields:
+
   /** Prepare the test repo. */
   populateRepo(repo: TestRepo): Promise<void>;
 
@@ -24,21 +28,28 @@ export interface Example {
 
   /** Initial ISL options. */
   openISLOptions: OpenISLOptions;
+
+  /** Repo configs. */
+  repoConfigs: Record<string, string>;
+
+  // Utilitity methods. Usually inherited as-is by actual examples:
+
+  /** Create and populate a test repo. */
+  createRepo(): Promise<TestRepo>;
+
+  /** Create a test browser. */
+  createBrowser(): Promise<TestBrowser>;
+
+  /** Run this example. */
+  run(): Promise<void>;
 }
+
+const logger = console;
 
 export const BASE_EXAMPLE: Example = {
   async populateRepo(repo: TestRepo): Promise<void> {
-    const now = this.openISLOptions.now ?? 0;
-    await repo.cached(async repo => {
-      const username = 'Mary <mary@example.com>';
-      await repo.setConfig([
-        `ui.username=${username}`,
-        `devel.default-date=${now} 0`,
-        'remotenames.selectivepulldefault=main',
-        'smartlog.names=main,stable',
-      ]);
-      await repo.drawdag(
-        `
+    await repo.drawdag(
+      `
         P9
          : C3
          | :
@@ -58,10 +69,8 @@ export const BASE_EXAMPLE: Example = {
         P3
          :
         P1
-        `,
-        `
-        now('${now} 0')
-        commit(user='${username}')
+      `,
+      `
         commit('A1', '[sl] windows: update Python', date='300h ago')
         commit('A2', 'debug', date='300h ago')
         commit('B1', '[eden] Thread EdenConfig down to Windows fsck', date='3d ago')
@@ -86,9 +95,8 @@ export const BASE_EXAMPLE: Example = {
             date = kwargs.pop('date', None) or date
             commit(name, date=date, **kwargs)
             date = str(int(date.split('h')[0]) + 1) + 'h ago'
-        `,
-      );
-    });
+      `,
+    );
   },
   async postOpenISL(browser: TestBrowser, _repo: TestRepo): Promise<void> {
     await browser.page.screenshot({path: 'example.png'});
@@ -103,5 +111,47 @@ export const BASE_EXAMPLE: Example = {
     lightTheme: true,
     sidebarOpen: false,
     now: 964785600, // 2000-7-28
+  },
+  repoConfigs: {
+    'ui.username': 'Mary <mary@example.com>',
+    'remotenames.selectivepulldefault': 'main',
+    'smartlog.names': 'main,stable',
+  },
+  async createRepo(): Promise<TestRepo> {
+    const repo = await TestRepo.new();
+    const cacheKey = JSON.stringify([
+      this.populateRepo.toString(),
+      this.repoConfigs,
+      this.openISLOptions.now,
+      process.env.SL,
+    ]);
+    await repo.cached(async repo => {
+      const configs = Object.entries(this.repoConfigs).map(([k, v]) => `${k}=${v}`);
+      const now = this.openISLOptions.now;
+      if (now != null) {
+        configs.push(`devel.default-date=${now} 0`);
+      }
+      await repo.setConfig(configs);
+      await this.populateRepo(repo);
+    }, cacheKey);
+    return repo;
+  },
+  async createBrowser(): Promise<TestBrowser> {
+    const browser = await TestBrowser.new(this.pageOptions());
+    return browser;
+  },
+  async run(): Promise<void> {
+    // Both operations are slow. Run them in parallel.
+    const [repo, browser] = await Promise.all([this.createRepo(), this.createBrowser()]);
+
+    // Open ISL after the repo is populated.
+    await browser.openISL(repo, this.openISLOptions);
+
+    // Run example-defined extra logic.
+    await this.postOpenISL(browser, repo);
+
+    // Close the browser.
+    logger.info('Closing browser');
+    browser.browser.close();
   },
 };

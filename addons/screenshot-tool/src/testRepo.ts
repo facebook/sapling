@@ -39,8 +39,8 @@ export class TestRepo {
    * The next time the same `func` is passed here, restore the files from the cache
    * directory without running `func`.
    */
-  async cached(func: (repo: TestRepo) => Promise<void>): Promise<void> {
-    const hash = sha1(func.toString());
+  async cached(func: (repo: TestRepo) => Promise<void>, cacheKey?: string): Promise<void> {
+    const hash = sha1(cacheKey ?? func.toString());
     const cacheDir = join(await getCacheDir('repos'), hash.substring(0, 8));
     let cacheExists: boolean;
     try {
@@ -75,7 +75,7 @@ export class TestRepo {
 
   /** Runs command in the repo. Returns its stdout. */
   async run(args: Array<string>, input = ''): Promise<string> {
-    const env = {...process.env, SL_AUTOMATION: '1', HGPLAIN: '1'};
+    const env = {...process.env, SL_AUTOMATION: '1', HGPLAIN: '1', NOSCMLOG: '1'};
     logger.info('Running', this.command, args.join(' '));
     const child = await ejeca(this.command, args, {
       cwd: this.repoPath,
