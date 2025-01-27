@@ -231,7 +231,7 @@ impl AsyncMethodRequestWorker {
                 match queue.dequeue(&ctx, &claimed_by).await {
                     Err(e) => {
                         STATS::dequeue_error.add_value(1);
-                        warn!(ctx.logger(), "error while dequeueing, skipping: {}", e);
+                        warn!(ctx.logger(), "error while dequeueing, skipping: {:?}", e);
                         tokio::time::sleep(sleep_time).await;
                     }
                     Ok(Some((request_id, params))) => {

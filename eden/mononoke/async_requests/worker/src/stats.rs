@@ -56,7 +56,7 @@ pub(crate) async fn stats_loop(
                 STATS::stats_error.add_value(1);
                 warn!(
                     ctx.logger(),
-                    "error while getting queue stats, skipping: {}", err
+                    "error while getting queue stats, skipping: {:?}", err
                 );
             }
         }
