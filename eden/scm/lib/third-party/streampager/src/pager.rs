@@ -61,42 +61,84 @@ fn termcaps() -> Result<Capabilities> {
 }
 
 impl Pager {
-    /// Build a `Pager` using the system terminal.
+    /// Build a `Pager` using the system terminal and config read from the
+    /// config file and environment variables.
     pub fn new_using_system_terminal() -> Result<Self> {
-        Self::new_with_terminal_func(move |caps| SystemTerminal::new(caps).map_err(Error::Termwiz))
+        Self::new_using_system_terminal_with_config(Config::from_user_config())
     }
 
-    /// Build a `Pager` using the system stdio.
+    /// Build a `Pager` using the system terminal and the given config
+    pub fn new_using_system_terminal_with_config(config: Config) -> Result<Self> {
+        Self::new_with_terminal_func_with_config(
+            move |caps| SystemTerminal::new(caps).map_err(Error::Termwiz),
+            config,
+        )
+    }
+
+    /// Build a `Pager` using the system stdio and config read from the config
+    /// file and environment variables.
     pub fn new_using_stdio() -> Result<Self> {
-        Self::new_with_terminal_func(move |caps| {
-            SystemTerminal::new_from_stdio(caps).map_err(Error::Termwiz)
-        })
+        Self::new_using_stdio_with_config(Config::from_user_config())
+    }
+
+    /// Build a `Pager` using the system stdio and the given config.
+    pub fn new_using_stdio_with_config(config: Config) -> Result<Self> {
+        Self::new_with_terminal_func_with_config(
+            move |caps| SystemTerminal::new_from_stdio(caps).map_err(Error::Termwiz),
+            config,
+        )
     }
 
     #[cfg(unix)]
-    /// Build a `Pager` using the specified terminal input and output.
+    /// Build a `Pager` using the specified terminal input and output and config
+    /// read from the config file and environment variables.
     pub fn new_with_input_output(
         input: &impl std::os::unix::io::AsRawFd,
         output: &impl std::os::unix::io::AsRawFd,
     ) -> Result<Self> {
-        Self::new_with_terminal_func(move |caps| {
-            SystemTerminal::new_with(caps, input, output).map_err(Error::Termwiz)
-        })
+        Self::new_with_input_output_with_config(input, output, Config::from_user_config())
+    }
+
+    #[cfg(unix)]
+    /// Build a `Pager` using the specified terminal input and output and the
+    /// given config.
+    pub fn new_with_input_output_with_config(
+        input: &impl std::os::unix::io::AsRawFd,
+        output: &impl std::os::unix::io::AsRawFd,
+        config: Config,
+    ) -> Result<Self> {
+        Self::new_with_terminal_func_with_config(
+            move |caps| SystemTerminal::new_with(caps, input, output).map_err(Error::Termwiz),
+            config,
+        )
     }
 
     #[cfg(windows)]
-    /// Build a `Pager` using the specified terminal input and output.
+    /// Build a `Pager` using the specified terminal input and output and config
+    /// read from the config file and environment variables.
     pub fn new_with_input_output(
         input: impl std::io::Read + termwiz::istty::IsTty + std::os::windows::io::AsRawHandle,
         output: impl std::io::Write + termwiz::istty::IsTty + std::os::windows::io::AsRawHandle,
     ) -> Result<Self> {
-        Self::new_with_terminal_func(move |caps| {
-            SystemTerminal::new_with(caps, input, output).map_err(Error::Termwiz)
-        })
+        Self::new_with_input_output_with_config(input, output, Config::from_user_config())
     }
 
-    fn new_with_terminal_func(
+    #[cfg(windows)]
+    /// Build a `Pager` using the specified terminal input and output and the given config.
+    pub fn new_with_input_output_with_config(
+        input: impl std::io::Read + termwiz::istty::IsTty + std::os::windows::io::AsRawHandle,
+        output: impl std::io::Write + termwiz::istty::IsTty + std::os::windows::io::AsRawHandle,
+        config: Config,
+    ) -> Result<Self> {
+        Self::new_with_terminal_func_with_config(
+            move |caps| SystemTerminal::new_with(caps, input, output).map_err(Error::Termwiz),
+            config,
+        )
+    }
+
+    fn new_with_terminal_func_with_config(
         create_term: impl FnOnce(Capabilities) -> Result<SystemTerminal>,
+        config: Config,
     ) -> Result<Self> {
         let caps = termcaps()?;
         let term = create_term(caps.clone())?;
@@ -105,7 +147,6 @@ impl Pager {
         let files = Vec::new();
         let error_files = VecMap::new();
         let progress = None;
-        let config = Config::from_config_file().with_env();
 
         Ok(Self {
             term,
