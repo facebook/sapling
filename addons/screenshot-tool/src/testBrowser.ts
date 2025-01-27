@@ -25,6 +25,8 @@ export type PageOptions = {
 export type OpenISLOptions = {
   lightTheme: boolean;
   sidebarOpen: boolean;
+  /** UTC unixtime for relative dates, in seconds */
+  now?: number;
 };
 
 const logger = console;
@@ -83,7 +85,11 @@ export class TestBrowser {
 
   /** Open the ISL page for a repo. */
   async openISL(repo: testRepo.TestRepo, options: OpenISLOptions): Promise<void> {
-    const url = await repo.serveUrl();
+    let url = await repo.serveUrl();
+    if (options.now != null) {
+      // The query param is in milliseconds.
+      url += `&now=${options.now * 1000}`;
+    }
     logger.info(`Opening ${url}`);
     await this.page.goto(url, {waitUntil: 'networkidle2'});
     await this.waitForSpinners();
