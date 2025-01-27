@@ -387,7 +387,7 @@ impl SqlBookmarksTransactionPayload {
             data.as_slice(),
         )
         .await?;
-        if result.affected_rows() != rows_to_insert {
+        if result.affected_rows() < rows_to_insert {
             return Err(BookmarkTransactionError::LogicError);
         }
         Ok(txn)
