@@ -6,9 +6,11 @@
  */
 
 import type {OpenISLOptions, PageOptions} from './testBrowser';
+import type {Context} from 'node:vm';
 
 import {TestBrowser} from './testBrowser';
 import {TestRepo} from './testRepo';
+import * as repl from 'node:repl';
 
 /** Reexport for convenience. */
 export type {TestBrowser, TestRepo};
@@ -42,6 +44,11 @@ export interface Example {
 
   /** Run this example. */
   run(): Promise<void>;
+
+  /** Start REPL for debugging. */
+  repl(): Promise<void>;
+  browser?: TestBrowser;
+  repo?: TestRepo;
 }
 
 const logger = console;
@@ -134,10 +141,12 @@ export const BASE_EXAMPLE: Example = {
       await repo.setConfig(configs);
       await this.populateRepo(repo);
     }, cacheKey);
+    this.repo = repo;
     return repo;
   },
   async createBrowser(): Promise<TestBrowser> {
     const browser = await TestBrowser.new(this.pageOptions());
+    this.browser = browser;
     return browser;
   },
   async run(): Promise<void> {
@@ -153,5 +162,33 @@ export const BASE_EXAMPLE: Example = {
     // Close the browser.
     logger.info('Closing browser');
     browser.browser.close();
+  },
+  repl(): Promise<void> {
+    // Start node REPL to play with Puppeteer internals.
+    logger.info('REPL context:');
+    const context: Context = {};
+    const {browser, repo} = this;
+    if (browser != null) {
+      logger.info('- page: Puppeteer page object');
+      logger.info('- browser: Puppeteer browser object');
+      logger.info('- testBrowser: TestBrowser object');
+      context.page = browser.page;
+      context.browser = browser.browser;
+      context.testBrowser = browser;
+    }
+    if (repo != null) {
+      logger.info('- repo: TestRepo object');
+      context.repo = repo;
+    }
+
+    const replServer = repl.start('> ');
+    Object.assign(replServer.context, context);
+
+    // Wait for REPL exit.
+    return new Promise<void>(resolve => {
+      replServer.on('exit', () => {
+        resolve();
+      });
+    });
   },
 };
