@@ -77,6 +77,7 @@ pub async fn sync(
     repo_arg: RepoArg,
     exec_type: ExecutionType,
     dry_run: bool,
+    chunk_size: u64,
 ) -> Result<()> {
     let repo: Repo = app.open_repo(&repo_arg).await?;
     let _repo_id = repo.repo_identity().id();
@@ -187,7 +188,7 @@ pub async fn sync(
 
                         let commits = repo
                             .commit_graph()
-                            .ancestors_difference_segment_slices(ctx, to, from, 5000)
+                            .ancestors_difference_segment_slices(ctx, to, from, chunk_size)
                             .await?;
 
                         commits

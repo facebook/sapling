@@ -23,6 +23,7 @@ use crate::sync::ExecutionType;
 use crate::ModernSyncArgs;
 
 const SM_CLEANUP_TIMEOUT_SECS: u64 = 120;
+pub const CHUNK_SIZE_DEFAULT: u64 = 1000;
 
 /// Replays bookmark's moves
 #[derive(Parser)]
@@ -31,6 +32,8 @@ pub struct CommandArgs {
     start_id: Option<u64>,
     #[clap(long, help = "Print sent items without actually syncing")]
     dry_run: bool,
+    #[clap(long, help = "Chunk size for the sync [default: 1000]")]
+    chunk_size: Option<u64>,
 }
 
 pub struct ModernSyncProcess {
@@ -70,6 +73,7 @@ impl RepoShardedProcessExecutor for ModernSyncProcessExecutor {
             self.repo_arg.clone(),
             ExecutionType::Tail,
             self.sync_args.dry_run,
+            self.sync_args.chunk_size.unwrap_or(CHUNK_SIZE_DEFAULT),
         )
         .await?;
         Ok(())
@@ -106,6 +110,11 @@ pub async fn run(app: MononokeApp, args: CommandArgs) -> Result<()> {
             app_args.repo.as_repo_arg().clone(),
             ExecutionType::Tail,
             process.sync_args.dry_run.clone(),
+            process
+                .sync_args
+                .chunk_size
+                .clone()
+                .unwrap_or(CHUNK_SIZE_DEFAULT),
         )
         .await?;
     }
