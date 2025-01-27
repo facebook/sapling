@@ -28,7 +28,67 @@ export interface Example {
 
 export const BASE_EXAMPLE: Example = {
   async populateRepo(repo: TestRepo): Promise<void> {
-    await repo.cached(repo => repo.drawdag('A..D', `goto('D')`));
+    const now = this.openISLOptions.now ?? 0;
+    await repo.cached(async repo => {
+      const username = 'Mary <mary@example.com>';
+      await repo.setConfig([
+        `ui.username=${username}`,
+        `devel.default-date=${now} 0`,
+        'remotenames.selectivepulldefault=main',
+        'smartlog.names=main,stable',
+      ]);
+      await repo.drawdag(
+        `
+        P9
+         : C3
+         | :
+         | C1
+         |/
+        P7
+         :
+         | B3
+         | :
+         | B1
+         |/
+        P5
+         : A2
+         | |
+         | A1
+         |/
+        P3
+         :
+        P1
+        `,
+        `
+        now('${now} 0')
+        commit(user='${username}')
+        commit('A1', '[sl] windows: update Python', date='300h ago')
+        commit('A2', 'debug', date='300h ago')
+        commit('B1', '[eden] Thread EdenConfig down to Windows fsck', date='3d ago')
+        commit('B2', '[eden] Remove n^2 path comparisons from Windows fsck', date='3d ago')
+        commit('B3', '[edenfs] Recover Overlay from disk/scm for Windows fsck', date='3d ago')
+        commit('C1', '[eden] Use PathMap for WindowsFsck', date='2d ago')
+        commit('C2', '[eden] Close Windows file handle during Windows Fsck', date='2d ago')
+        commit('C3', 'temp', date='2d ago')
+        commit('C4', '[eden] Support long paths in Windows FSCK', date='12m ago')
+        # Use different dates for public commits so ISL forceConnectPublic() can sort them.
+        opts = {
+            'P9': {'remotename': 'remote/main'},
+            'P7': {'remotename': 'remote/stable', 'date': '48h ago'},
+            'P6': {'pred': 'A1', 'op': 'land'},
+            'P5': {'date': '73h ago'},
+            'P3': {'date': '301h ago'},
+        }
+        date = '0h ago'
+        for i in range(9, 0, -1):
+            name = f'P{i}'
+            kwargs = opts.get(name) or {}
+            date = kwargs.pop('date', None) or date
+            commit(name, date=date, **kwargs)
+            date = str(int(date.split('h')[0]) + 1) + 'h ago'
+        `,
+      );
+    });
   },
   async postOpenISL(browser: TestBrowser, _repo: TestRepo): Promise<void> {
     await browser.page.screenshot({path: 'example.png'});
@@ -42,5 +102,6 @@ export const BASE_EXAMPLE: Example = {
   openISLOptions: {
     lightTheme: true,
     sidebarOpen: false,
+    now: 964785600, // 2000-7-28
   },
 };

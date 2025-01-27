@@ -59,6 +59,11 @@ export class TestRepo {
     }
   }
 
+  /** Set repo-level configs. `configs` are in "foo.bar=baz" form. */
+  async setConfig(configs: Array<string>) {
+    await this.run(['config', '--local', ...configs]);
+  }
+
   /** Adds commits via the `debugdrawdag` command. */
   async drawdag(ascii = '', script?: string) {
     let input = ascii;
