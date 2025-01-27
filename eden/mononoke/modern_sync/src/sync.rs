@@ -62,7 +62,7 @@ define_stats! {
     prefix = "mononoke.modern_sync";
     completion_duration_secs: timeseries(Average, Sum, Count),
     synced_commits:  dynamic_timeseries("{}.commits_synced", (repo: String); Rate, Sum),
-    lag_to_master:  dynamic_timeseries("{}.lag_to_master", (repo: String); Rate, Sum),
+    sync_lag_seconds:  dynamic_timeseries("{}.sync_lag_seconds", (repo: String); Average),
 }
 
 #[derive(Clone)]
@@ -185,6 +185,7 @@ pub async fn sync(
                     for entry in entries {
                         let from = entry.from_changeset_id.into_iter().collect();
                         let to = entry.to_changeset_id.into_iter().collect();
+                        let bookmark_name = entry.bookmark_name.name().to_string();
 
                         let commits = repo
                             .commit_graph()
@@ -193,13 +194,13 @@ pub async fn sync(
 
                         commits
                             .try_for_each(|chunk| {
-                                cloned!(ctx, repo, logger, sender);
+                                cloned!(ctx, repo, logger, sender, bookmark_name);
                                 async move {
                                     let missing_changesets =
                                         sender.filter_existing_commits(chunk).await?;
                                     stream::iter(missing_changesets.into_iter().map(Ok))
                                         .try_for_each(|cs_id| {
-                                            cloned!(ctx, repo, logger, sender);
+                                            cloned!(ctx, repo, logger, sender, bookmark_name);
                                             async move {
                                                 process_one_changeset(
                                                     &cs_id,
@@ -208,6 +209,7 @@ pub async fn sync(
                                                     &logger,
                                                     sender,
                                                     app_args.log_to_ods,
+                                                    bookmark_name.as_str(),
                                                 )
                                                 .await
                                             }
@@ -243,42 +245,6 @@ pub async fn sync(
                                 )
                                 .await?;
                         }
-
-                        if app_args.log_to_ods {
-                            // Get current master commit
-                            if let Some(cs_id) = repo
-                                .bookmarks()
-                                .get(
-                                    ctx.clone(),
-                                    &BookmarkKey::new(entry.bookmark_name.name().to_string())?,
-                                )
-                                .await?
-                            {
-                                let cs = cs_id.load(ctx, repo.repo_blobstore()).await?;
-                                let master_time = cs.author_date().timestamp_secs();
-
-                                // Latest synced commmit
-                                if let Some(cs_id) = entry.to_changeset_id {
-                                    let cs = cs_id.load(ctx, repo.repo_blobstore()).await?;
-                                    let commit_time = cs.author_date().timestamp_secs();
-
-                                    info!(
-                                        logger,
-                                        "Commit {} is {} seconds behind master",
-                                        cs_id,
-                                        master_time - commit_time
-                                    );
-                                    STATS::lag_to_master.add_value(
-                                        master_time - commit_time,
-                                        (repo.repo_identity().name().to_string(),),
-                                    );
-                                } else {
-                                    info!(logger, "No dest commit for entry {} found", entry.id);
-                                }
-                            } else {
-                                info!(logger, "Bookmark {} not found", entry.bookmark_name.name());
-                            }
-                        }
                     }
                     Ok(())
                 }
@@ -298,6 +264,7 @@ pub async fn process_one_changeset(
     logger: &Logger,
     sender: Arc<dyn ModernSyncSender + Send + Sync>,
     log_to_ods: bool,
+    bookmark_name: &str,
 ) -> Result<()> {
     info!(logger, "Processing changeset {:?}", cs_id);
 
@@ -305,8 +272,9 @@ pub async fn process_one_changeset(
         .repo_derived_data()
         .derive::<ChangesetInfo>(ctx, cs_id.clone())
         .await?;
-    let bs = cs_id.load(ctx, repo.repo_blobstore()).await?;
-    let bs_fc: Vec<_> = bs.file_changes().collect();
+    let bs_cs = cs_id.load(ctx, repo.repo_blobstore()).await?;
+    let commit_time = bs_cs.author_date().timestamp_secs();
+    let bs_fc: Vec<_> = bs_cs.file_changes().collect();
 
     let mut contents = Vec::new();
 
@@ -344,10 +312,28 @@ pub async fn process_one_changeset(
 
     sender.upload_trees(mf_ids).await?;
     sender.upload_filenodes(file_ids).await?;
-    sender.upload_identical_changeset(vec![(hg_cs, bs)]).await?;
+    sender
+        .upload_identical_changeset(vec![(hg_cs, bs_cs)])
+        .await?;
 
     if log_to_ods {
         STATS::synced_commits.add_value(1, (repo.repo_identity().name().to_string(),));
+
+        if let Some(cs_id) = repo
+            .bookmarks()
+            .get(ctx.clone(), &BookmarkKey::new(bookmark_name)?)
+            .await?
+        {
+            let bookmark_commit = cs_id.load(ctx, repo.repo_blobstore()).await?;
+            let bookmark_commit_time = bookmark_commit.author_date().timestamp_secs();
+
+            STATS::sync_lag_seconds.add_value(
+                bookmark_commit_time - commit_time,
+                (repo.repo_identity().name().to_string(),),
+            );
+        } else {
+            info!(logger, "Bookmark {} not found", bookmark_name);
+        }
     }
 
     Ok(())

@@ -97,7 +97,7 @@ pub async fn run(app: MononokeApp, args: CommandArgs) -> Result<()> {
         )
     };
 
-    crate::sync::process_one_changeset(&args.cs_id, &ctx, repo, &logger, sender, false).await?;
+    crate::sync::process_one_changeset(&args.cs_id, &ctx, repo, &logger, sender, false, "").await?;
 
     Ok(())
 }
