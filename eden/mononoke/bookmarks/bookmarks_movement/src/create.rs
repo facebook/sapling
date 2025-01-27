@@ -169,6 +169,15 @@ impl<'op> CreateBookmarkOp<'op> {
         )
         .await?;
 
+        let is_mirror_upload = self
+            .pushvars
+            .and_then(|p| p.get("MIRROR_UPLOAD"))
+            .map_or(false, |v| **v == *b"true");
+
+        if is_mirror_upload {
+            authz.require_mirror_upload_operations(ctx, repo).await?;
+        }
+
         let mut txn = txn.unwrap_or_else(|| repo.bookmarks().create_transaction(ctx.clone()));
 
         let commits_to_log = match kind {
@@ -225,7 +234,12 @@ impl<'op> CreateBookmarkOp<'op> {
                     .add("bookmark", self.bookmark.to_string())
                     .log_with_msg("Creating public bookmark", None);
 
-                txn.create(&self.bookmark, self.target, self.reason)?;
+                if is_mirror_upload {
+                    txn.creates_or_updates(&self.bookmark, self.target, self.reason)?;
+                } else {
+                    txn.create(&self.bookmark, self.target, self.reason)?;
+                }
+
                 to_log
             }
         };

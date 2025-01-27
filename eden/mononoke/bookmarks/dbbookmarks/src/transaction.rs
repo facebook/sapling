@@ -596,24 +596,32 @@ impl BookmarkTransaction for SqlBookmarksTransaction {
     ) -> Result<()> {
         self.check_not_seen(bookmark)?;
         let log = NewUpdateLogEntry::new(None, Some(new_cs), reason)?;
-        match reason {
-            BookmarkUpdateReason::MirrorUpload => {
-                self.payload.creates_or_updates.push((
-                    bookmark.clone(),
-                    new_cs,
-                    BookmarkKind::PullDefaultPublishing,
-                    Some(log),
-                ));
-            }
-            _ => {
-                self.payload.creates.push((
-                    bookmark.clone(),
-                    new_cs,
-                    BookmarkKind::PullDefaultPublishing,
-                    Some(log),
-                ));
-            }
-        }
+
+        self.payload.creates.push((
+            bookmark.clone(),
+            new_cs,
+            BookmarkKind::PullDefaultPublishing,
+            Some(log),
+        ));
+
+        Ok(())
+    }
+
+    fn creates_or_updates(
+        &mut self,
+        bookmark: &BookmarkKey,
+        new_cs: ChangesetId,
+        reason: BookmarkUpdateReason,
+    ) -> Result<()> {
+        self.check_not_seen(bookmark)?;
+        let log = NewUpdateLogEntry::new(None, Some(new_cs), reason)?;
+
+        self.payload.creates_or_updates.push((
+            bookmark.clone(),
+            new_cs,
+            BookmarkKind::PullDefaultPublishing,
+            Some(log),
+        ));
 
         Ok(())
     }

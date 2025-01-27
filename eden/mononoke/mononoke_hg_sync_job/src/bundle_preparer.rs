@@ -90,8 +90,8 @@ impl BundlePreparer {
 
         for log_entry in &entries {
             match log_entry.reason {
-                Pushrebase | Backsyncer | ManualMove | ApiRequest | XRepoSync | Push | TestMove
-                | MirrorUpload => {}
+                Pushrebase | Backsyncer | ManualMove | ApiRequest | XRepoSync | Push | TestMove => {
+                }
                 Blobimport => {
                     return Err(UnexpectedBookmarkMove(format!("{}", log_entry.reason)).into());
                 }

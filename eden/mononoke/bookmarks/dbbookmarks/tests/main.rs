@@ -984,19 +984,10 @@ fn test_update_reason_conversion() -> Result<(), Error> {
         TestMove => {}
         XRepoSync => {}
         ApiRequest => {}
-        MirrorUpload => {}
     };
 
     let reasons = vec![
-        Backsyncer,
-        Blobimport,
-        ManualMove,
-        Push,
-        Pushrebase,
-        TestMove,
-        XRepoSync,
-        ApiRequest,
-        MirrorUpload,
+        Backsyncer, Blobimport, ManualMove, Push, Pushrebase, TestMove, XRepoSync, ApiRequest,
     ];
 
     for reason in reasons {

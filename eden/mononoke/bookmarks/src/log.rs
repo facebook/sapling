@@ -152,6 +152,7 @@ pub trait BookmarkUpdateLog: Send + Sync + 'static {
 }
 
 /// Describes why a bookmark was moved
+/// NOTE: If you wanna add a new reason you need to update the schema of the table aswell
 #[derive(
     Clone,
     Copy,
@@ -187,9 +188,6 @@ pub enum BookmarkUpdateReason {
 
     /// Bookmark was moved by an API request.
     ApiRequest,
-
-    /// Bookmark was moved using modern sync
-    MirrorUpload,
 }
 
 impl std::fmt::Display for BookmarkUpdateReason {
@@ -205,7 +203,6 @@ impl std::fmt::Display for BookmarkUpdateReason {
             Backsyncer => "backsyncer",
             XRepoSync => "xreposync",
             ApiRequest => "apirequest",
-            MirrorUpload => "mirrorupload",
         };
         write!(f, "{}", s)
     }
@@ -224,7 +221,6 @@ impl ConvIr<BookmarkUpdateReason> for BookmarkUpdateReason {
             Value::Bytes(ref b) if b == b"backsyncer" => Ok(Backsyncer),
             Value::Bytes(ref b) if b == b"xreposync" => Ok(XRepoSync),
             Value::Bytes(ref b) if b == b"apirequest" => Ok(ApiRequest),
-            Value::Bytes(ref b) if b == b"mirrorupload" => Ok(MirrorUpload),
             v => Err(FromValueError(v)),
         }
     }
@@ -255,7 +251,6 @@ impl From<BookmarkUpdateReason> for Value {
             Backsyncer => Value::Bytes(b"backsyncer".to_vec()),
             XRepoSync => Value::Bytes(b"xreposync".to_vec()),
             ApiRequest => Value::Bytes(b"apirequest".to_vec()),
-            MirrorUpload => Value::Bytes(b"mirrorupload".to_vec()),
         }
     }
 }

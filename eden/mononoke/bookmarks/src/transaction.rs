@@ -65,6 +65,16 @@ pub trait BookmarkTransaction: Send + Sync + 'static {
         reason: BookmarkUpdateReason,
     ) -> Result<()>;
 
+    /// Adds create() operation to the transaction set.
+    /// Forces creation of a bookmark. If bookmark already exists, it will be overwritten.
+    /// This should only be used in mirror upload operations.
+    fn creates_or_updates(
+        &mut self,
+        bookmark: &BookmarkKey,
+        new_cs: ChangesetId,
+        reason: BookmarkUpdateReason,
+    ) -> Result<()>;
+
     /// Adds force_set() operation to the transaction set.
     /// Unconditionally sets the new value of the bookmark. Succeeds regardless of whether bookmark
     /// exists or not.
