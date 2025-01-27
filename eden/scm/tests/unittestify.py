@@ -91,10 +91,6 @@ def prepareargsenv(runtestsdir, port=None):
         env["MONONOKE_SERVER"] = mononoke_server
         env["GET_FREE_SOCKET"] = get_free_socket
 
-    for k, v in env.items():
-        if v is None:
-            print(f"Found a none at {k}")
-
     return args, env
 
 
@@ -106,7 +102,6 @@ def gettestmethod(name, port):
             args, env = prepareargsenv(self._runtests_dir, port)
             args += os.getenv("HGTEST_RUNTESTS_ARGS", "").split()
             # run run-tests.py for a single test
-            print(f"The args are {args}, and the name is {name}")
             p = subprocess.Popen(
                 args + [name], env=env, stderr=subprocess.PIPE, stdout=subprocess.PIPE
             )
