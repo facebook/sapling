@@ -17,33 +17,30 @@ The code for ISL lives in the addons folder:
 ## Development
 
 As always, first run `yarn` to make sure all of the Node dependencies are installed.
-Then launch the following three components in order:
+Then, start the client & server builds from the addons/ folder:
 
-### Client
+```
+yarn dev browser
+```
 
-**In the isl folder, run `yarn start`**.
-This will make a development build with [vite](https://vitejs.dev/).
-This watches for changes to the front end and incrementally re-compiles.
-Unlike most vite apps, this will not yet open the browser,
-because we need to open it using a token from when we start the server.
+This will run `yarn start` from isl/ and `yarn watch` from isl-server/ in parallel.
+This will watch for changes and recompile automatically.
+It'll be ready in a few seconds; just leave this running.
 
-### Server
+Note: you can also run these commands manually.
 
-**In the `isl-server/` folder, run `yarn watch` and leave it running.**
-This watches for changes to the server side back end and incrementally re-compiles.
-This ensures the server code is bundled into a js file that runs a proxy
-(in `isl-server/dist/run-proxy.js`) to handle requests.
+Next, you need to spawn a server and open it in your browser:
 
 ### Proxy
-
-We launch a WebSocket Server to proxy requests between the server and the
-client. The entry point code lives in the `isl-server/proxy/` folder and is a
-simple HTTP server that processes `upgrade` requests and forwards
-them to the WebSocket Server that expects connections at `/ws`.
 
 **In the `isl-server/` folder, run `yarn serve --dev` to start the proxy and open the browser**.
 You will have to manually restart it in order to pick up server changes.
 This is the development mode equivalent of running `sl web`.
+
+This launches a WebSocket Server to proxy requests between the server and the
+client. The entry point code lives in the `isl-server/proxy/` folder and is a
+simple HTTP server that processes `upgrade` requests and forwards
+them to the WebSocket Server that expects connections at `/ws`.
 
 Note: When the server is started, it creates a token to prevent unwanted access.
 `--dev` opens the browser on the port used by vite in `yarn start`
@@ -51,9 +48,11 @@ to ensure the client connects with the right token.
 
 See `../vscode/CONTRIBUTING.md` for build instructions for the vscode extension.
 
-When developing, it's useful to add a few extra arguments to `yarn serve`:
+**When developing, it's useful to add a few extra arguments to `yarn serve`:**
 
-`yarn serve --dev --force --foreground --stdout --command sl`
+```
+yarn serve --dev --force --foreground --stdout
+```
 
 - `--dev`: Connect to the vite dev build's hot-reloading front-end server (defaulting to 3000), even though this server will spawn on 3001.
 - `--force`: Kill any other active ISL server running on this port, which makes sure it's the latest version of the code.
@@ -69,6 +68,27 @@ along with `sl`. It can be launched by the `sl web` command.
 
 `yarn build` lets you build production bundles without watching for changes, in either
 `isl/` or `isl-server/`.
+
+You can also use `yarn dev --production` to run both client & server `yarn build`.
+
+## VS Code build
+
+Similarly to the browser, first start the build job:
+
+```
+yarn dev vscode
+```
+
+This will run yarn watch-webview and yarn watch-extension from the vscode/ directory in parallel.
+You can also do each of these manually.
+
+Then, you need to launch VS Code pointing to your extension build. You can do this from the "Run & Debug" menu if you mount addons/ in VS Code. Alternatively, manually launch:
+
+```
+code --extension-development-dir path/to/addons/vscode
+```
+
+Internal @Meta users: See internal wiki for launching internal VS Code instead.
 
 ## Testing
 
