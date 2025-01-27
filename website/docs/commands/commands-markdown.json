@@ -501,6 +501,12 @@
         "description": "display with template (EXPERIMENTAL)"
       },
       {
+        "shortname": "",
+        "fullname": "list-remote",
+        "default": null,
+        "description": "list remote bookmarks. Positional arguments are interpreted as wildcard patterns. Only allowed wildcard is '*' in the end of the pattern. If no positional arguments are specified then it will list the most \"important\" remote bookmarks. Otherwise it will list remote bookmarks that match at least one pattern "
+      },
+      {
         "shortname": "t",
         "fullname": "track",
         "default": "",
@@ -511,12 +517,6 @@
         "fullname": "untrack",
         "default": null,
         "description": "remove tracking for this bookmark"
-      },
-      {
-        "shortname": "",
-        "fullname": "list-remote",
-        "default": null,
-        "description": "list remote bookmarks. Positional arguments are interpreted as wildcard patterns. Only allowed wildcard is '*' in the end of the pattern. If no positional arguments are specified then it will list the most \"important\" remote bookmarks. Otherwise it will list remote bookmarks that match at least one pattern "
       },
       {
         "shortname": "a",
