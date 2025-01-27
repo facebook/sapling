@@ -22,8 +22,9 @@ use edenapi::HttpClientConfig;
 use edenapi::SaplingRemoteApi;
 use edenapi_types::AnyFileContentId;
 use edenapi_types::AnyId;
-use edenapi_types::IndexableId;
 use edenapi_types::LookupResult;
+use edenapi_types::UploadToken;
+use edenapi_types::UploadTokenData;
 use filestore::stream_file_bytes;
 use filestore::Range;
 use futures::stream;
@@ -260,23 +261,30 @@ impl ModernSyncSender for EdenapiSender {
 
     async fn filter_existing_commits(&self, csids: Vec<ChangesetId>) -> Result<Vec<ChangesetId>> {
         let ids = csids
-            .into_iter()
-            .map(|csid| AnyId::BonsaiChangesetId(csid.into()))
+            .iter()
+            .map(|csid| AnyId::BonsaiChangesetId(csid.clone().into()))
             .collect::<Vec<_>>();
-
         let all = ids.len();
         let res = self.client.lookup_batch(ids, None, None).await?;
-
-        let missing = res
+        let present_ids: HashSet<_> = res
             .into_iter()
             .filter_map(|r| match r.result {
-                LookupResult::NotPresent(IndexableId {
-                    id: AnyId::BonsaiChangesetId(id),
-                    bubble_id: _,
-                }) => Some(id.into()),
+                LookupResult::Present(UploadToken {
+                    data:
+                        UploadTokenData {
+                            id,
+                            bubble_id: _,
+                            metadata: _,
+                        },
+                    signature: _,
+                }) => Some(id),
                 _ => None,
             })
-            .collect::<Vec<_>>();
+            .collect();
+        let missing: Vec<_> = csids
+            .into_iter()
+            .filter(|csid| !present_ids.contains(&AnyId::BonsaiChangesetId((*csid).into())))
+            .collect();
         let cached = all - missing.len();
         if cached > 0 {
             info!(&self.logger, "Skipping {} commits", cached);
