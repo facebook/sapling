@@ -718,12 +718,13 @@ where
     }
 }
 
+// TODO(T182311609): use Small/Large wrappers for type safety.
 #[derive(Clone)]
 pub enum CommitSyncRepos<R> {
     LargeToSmall {
         large_repo: R,
         small_repo: R,
-        // TODO(T186874619): stop duplicating all these fields. Create new
+        // TODO(T182311609): stop duplicating all these fields. Create new
         // struct that takes small_repo, large_repo and submodule deps, along
         // with sync direction.
         submodule_deps: SubmoduleDeps<R>,

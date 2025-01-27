@@ -1431,6 +1431,7 @@ pub struct SmallRepoCommitSyncConfig {
 /// Commit sync direction
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
 pub enum CommitSyncDirection {
+    // TODO(T182311609): rename this to forward/backwards.
     /// Syncing commits from large repo to small ones
     LargeToSmall,
     /// Syncing commits from small repos to large one
