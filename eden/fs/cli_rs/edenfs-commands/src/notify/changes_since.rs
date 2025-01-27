@@ -22,9 +22,14 @@ use crate::ExitCode;
 #[derive(Parser, Debug)]
 #[clap(about = "Returns the changes since the given EdenFS journal position")]
 pub struct ChangesSinceCmd {
-    #[clap(long, short = 'p', allow_hyphen_values = true)]
+    #[clap(
+        long,
+        short = 'p',
+        allow_hyphen_values = true,
+        required_unless_present_any = ["subscribe"],
+    )]
     /// Journal position to start from
-    position: JournalPosition,
+    position: Option<JournalPosition>,
 
     #[clap(parse(from_str = expand_path))]
     /// Path to the mount point
@@ -57,6 +62,13 @@ pub struct ChangesSinceCmd {
     )]
     excluded_suffixes: Option<Vec<String>>,
 
+    #[clap(
+        long,
+        alias = "wait",
+        help = "Return any immediate changes as well as following instances of changes"
+    )]
+    subscribe: bool,
+
     #[clap(long, help = "Print the output in JSON format")]
     json: bool,
 }
@@ -72,10 +84,18 @@ impl crate::Subcommand for ChangesSinceCmd {
     #[cfg(fbcode_build)]
     async fn run(&self) -> Result<ExitCode> {
         let instance = EdenFsInstance::global();
+        let position = match &self.position {
+            Some(result) => result.clone(),
+            None => {
+                instance
+                    .get_journal_position(&self.mount_point, None)
+                    .await?
+            }
+        };
         let result = instance
             .get_changes_since(
                 &self.mount_point,
-                &self.position,
+                &position,
                 self.include_vcs_roots,
                 &self.included_roots,
                 &self.excluded_roots,
