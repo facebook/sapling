@@ -84,10 +84,13 @@ const MOVE_UP_1 = '\x1b[1A';
       ┗━ Running...
  */
 class MultiRunner {
-  private handles = Array<EjecaChildProcess>();
-  private output = Array<Array<string>>();
-  private timing = Array<{start: Date; end?: Date}>();
-  private statuses = Array<string | undefined>();
+  private infos: Array<{
+    handle?: EjecaChildProcess;
+    output: Array<string>;
+    start?: Date;
+    end?: Date;
+    status?: string;
+  }>;
   constructor(
     public configs: Array<{
       cwd: string;
@@ -98,31 +101,43 @@ class MultiRunner {
        * For example, detect that the build command is ready, and change "Running..." to "Ready, watching for changes..."  */
       customStatus?: (chunk: string, status?: string) => string | undefined;
     }>,
-  ) {}
+  ) {
+    this.infos = configs.map(() => {
+      return {
+        handle: undefined,
+        output: [],
+        start: undefined,
+        end: undefined,
+        status: undefined,
+      };
+    });
+  }
 
   async spawnAll() {
-    this.handles = this.configs.map(({cwd, cmd, args}, i) => {
+    this.configs.forEach(({cwd, cmd, args}, i) => {
+      const info = this.infos[i]!;
+      info.start = new Date();
       const proc = ejeca(cmd, args, {cwd, stdout: 'pipe', stderr: 'pipe'});
-      this.output[i] = [];
-      this.timing[i] = {start: new Date(), end: undefined};
+      const output: Array<string> = [];
       proc.stdout!.on('data', data => {
-        this.output[i].push(...data.toString().split('\n'));
+        output.push(...data.toString().split('\n'));
         this.updateCustomStatus(i, data.toString());
         this.redraw();
       });
       proc.stderr!.on('data', data => {
-        this.output[i].push(...data.toString().split('\n'));
+        output.push(...data.toString().split('\n'));
         this.updateCustomStatus(i, data.toString());
         this.redraw();
       });
       proc.stderr!.on('close', () => {
-        this.timing[i].end = new Date();
+        this.infos[i]!.end = new Date();
         this.redraw();
       });
-      return proc;
+      info.handle = proc;
+      info.output = output;
     });
     this.redraw();
-    await Promise.all(this.handles);
+    await Promise.all(this.infos.map(info => info.handle));
 
     // Redraw one last time, with all output
     this.redraw(/* printAllOutput */ true);
@@ -131,8 +146,8 @@ class MultiRunner {
   private updateCustomStatus(i: number, chunk: string) {
     const customStatus = this.configs[i].customStatus;
     if (customStatus) {
-      const status = this.statuses[i];
-      this.statuses[i] = customStatus(chunk, status);
+      const status = this.infos[i].status;
+      this.infos[i].status = customStatus(chunk, status);
     }
     return undefined;
   }
@@ -145,15 +160,11 @@ class MultiRunner {
     }
 
     let totalLines = 0;
-    for (let i = 0; i < this.handles.length; i++) {
+    for (let i = 0; i < this.infos.length; i++) {
       const {cwd, cmd, args} = this.configs[i];
-      const proc = this.handles[i];
-      const lines = this.output[i];
-      const timing = this.timing[i];
-      const status = this.statuses[i];
+      const {handle, output: lines, start, end, status} = this.infos[i];
 
-      const durationMs =
-        timing.end == null ? null : timing.end.valueOf() - this.timing[i].start.valueOf();
+      const durationMs = end == null || start == null ? null : end.valueOf() - start.valueOf();
       const durationStr =
         durationMs == null
           ? ''
@@ -165,11 +176,13 @@ class MultiRunner {
               }`,
             );
       const statusStr =
-        proc.exitCode == null
+        handle == null
+          ? chalk.gray('Waiting...')
+          : handle.exitCode == null
           ? status ?? chalk.gray('Running...')
-          : proc.exitCode === 0
+          : handle.exitCode === 0
           ? chalk.green(`Suceeded${durationStr}`)
-          : chalk.red(`Exited ${proc.exitCode}`);
+          : chalk.red(`Exited ${handle.exitCode}`);
 
       const output = [];
 
@@ -178,7 +191,7 @@ class MultiRunner {
       );
       const LINES_TO_SHOW = printAllOutput
         ? Infinity
-        : process.stdout.columns / this.handles.length - 5; // Fit all processes on the screen, with padding
+        : process.stdout.columns / this.infos.length - 5; // Fit all processes on the screen, with padding
       if (lines.length > LINES_TO_SHOW + 1) {
         output.push(
           `${chalk.cyan('┣━ ')} ${chalk.gray(
