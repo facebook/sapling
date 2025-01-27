@@ -181,7 +181,15 @@ impl From<RequestStatus> for Value {
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct RequestId(pub RowId, pub RequestType);
 
+pub struct QueueStatsEntry {
+    pub repo_id: Option<RepositoryId>,
+    pub status: RequestStatus,
+}
+
 pub struct QueueStats {
     pub queue_length_by_status: HashMap<RequestStatus, u64>,
     pub queue_age_by_status: HashMap<RequestStatus, Timestamp>,
+
+    pub queue_length_by_repo_and_status: Vec<(QueueStatsEntry, u64)>,
+    pub queue_age_by_repo_and_status: Vec<(QueueStatsEntry, Timestamp)>,
 }

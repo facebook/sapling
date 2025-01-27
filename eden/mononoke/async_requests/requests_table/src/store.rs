@@ -21,6 +21,7 @@ use sql_ext::mononoke_queries;
 use sql_ext::SqlConnections;
 
 use crate::types::QueueStats;
+use crate::types::QueueStatsEntry;
 use crate::BlobstoreKey;
 use crate::ClaimedBy;
 use crate::LongRunningRequestEntry;
@@ -337,10 +338,22 @@ mononoke_queries! {
         "SELECT status, count(*) FROM long_running_request_queue WHERE repo_id IN {repo_ids} GROUP BY status"
     }
 
+    read GetQueueLengthByRepoForRepos(>list repo_ids: RepositoryId) -> (
+        Option<RepositoryId>, RequestStatus, u64
+    ) {
+        "SELECT repo_id, status, count(*) FROM long_running_request_queue WHERE repo_id IN {repo_ids} GROUP BY repo_id, status"
+    }
+
     read GetQueueLengthForAllRepos() -> (
         RequestStatus, u64
     ) {
         "SELECT status, count(*) FROM long_running_request_queue GROUP BY status"
+    }
+
+    read GetQueueLengthByRepoForAllRepos() -> (
+        Option<RepositoryId>, RequestStatus, u64
+    ) {
+        "SELECT repo_id, status, count(*) FROM long_running_request_queue GROUP BY repo_id, status"
     }
 
     read GetQueueAgeForRepos(>list repo_ids: RepositoryId) -> (
@@ -353,6 +366,16 @@ mononoke_queries! {
         "
     }
 
+    read GetQueueAgeByRepoForRepos(>list repo_ids: RepositoryId) -> (
+        Option<RepositoryId>, RequestStatus, u64, Option<u64>, Option<u64>
+    ) {
+        "SELECT repo_id, status, min(created_at), min(inprogress_last_updated_at), min(ready_at)
+        FROM long_running_request_queue
+        WHERE repo_id IN {repo_ids} AND status != 'polled'
+        GROUP BY repo_id, status
+        "
+    }
+
     read GetQueueAgeForAllRepos() -> (
         RequestStatus, u64, Option<u64>, Option<u64>
     ) {
@@ -360,6 +383,16 @@ mononoke_queries! {
         FROM long_running_request_queue
         WHERE status != 'polled'
         GROUP BY status
+        "
+    }
+
+    read GetQueueAgeByRepoForAllRepos() -> (
+        Option<RepositoryId>, RequestStatus, u64, Option<u64>, Option<u64>
+    ) {
+        "SELECT repo_id, status, min(created_at), min(inprogress_last_updated_at), min(ready_at)
+        FROM long_running_request_queue
+        WHERE status != 'polled'
+        GROUP BY repo_id, status
         "
     }
 }
@@ -699,6 +732,16 @@ impl LongRunningRequestsQueue for SqlLongRunningRequestsQueue {
             queue_length_by_status: get_queue_length(&self.connections.read_connection, repo_ids)
                 .await?,
             queue_age_by_status: get_queue_age(&self.connections.read_connection, repo_ids).await?,
+            queue_length_by_repo_and_status: get_queue_length_by_repo(
+                &self.connections.read_connection,
+                repo_ids,
+            )
+            .await?,
+            queue_age_by_repo_and_status: get_queue_age_by_repo(
+                &self.connections.read_connection,
+                repo_ids,
+            )
+            .await?,
         })
     }
 }
@@ -713,6 +756,20 @@ async fn get_queue_length(
     }
     .context("fetching queue length stats")?
     .into_iter()
+    .collect())
+}
+
+async fn get_queue_length_by_repo(
+    conn: &Connection,
+    repo_ids: Option<&[RepositoryId]>,
+) -> Result<Vec<(QueueStatsEntry, u64)>> {
+    Ok(match repo_ids {
+        Some(repos) => GetQueueLengthByRepoForRepos::query(conn, repos).await,
+        None => GetQueueLengthByRepoForAllRepos::query(conn).await,
+    }
+    .context("fetching queue length stats")?
+    .into_iter()
+    .map(|(repo_id, status, count)| (QueueStatsEntry { repo_id, status }, count))
     .collect())
 }
 
@@ -737,6 +794,37 @@ async fn get_queue_age(
         },
     )
     .map(|(status, timestamp)| (status, Timestamp::from_timestamp_nanos(timestamp as i64)))
+    .collect())
+}
+
+async fn get_queue_age_by_repo(
+    conn: &Connection,
+    repo_ids: Option<&[RepositoryId]>,
+) -> Result<Vec<(QueueStatsEntry, Timestamp)>> {
+    Ok(match repo_ids {
+        Some(repos) => GetQueueAgeByRepoForRepos::query(conn, repos).await,
+        None => GetQueueAgeByRepoForAllRepos::query(conn).await,
+    }
+    .context("fetching queue age stats")?
+    .into_iter()
+    .map(
+        |(repo_id, status, created_at, inprogress_last_updated_at, ready_at)| {
+            match &status {
+                RequestStatus::New => (repo_id, status, created_at),
+                RequestStatus::InProgress => {
+                    (repo_id, status, inprogress_last_updated_at.unwrap_or(0))
+                }
+                RequestStatus::Ready => (repo_id, status, ready_at.unwrap_or(0)),
+                RequestStatus::Polled => (repo_id, status, 0), // should not happen, but if it does we'll ignore
+            }
+        },
+    )
+    .map(|(repo_id, status, timestamp)| {
+        (
+            QueueStatsEntry { repo_id, status },
+            Timestamp::from_timestamp_nanos(timestamp as i64),
+        )
+    })
     .collect())
 }
 
@@ -1069,6 +1157,7 @@ mod test {
         tokio::time::sleep(Duration::from_secs(3)).await;
 
         let stats = queue.get_queue_stats(&ctx, Some(&[repo_id])).await?;
+
         assert_eq!(stats.queue_length_by_status.len(), 1);
         assert_eq!(
             stats
@@ -1077,13 +1166,25 @@ mod test {
                 .unwrap(),
             &1
         );
+
         assert_eq!(stats.queue_age_by_status.len(), 1);
         let age = stats
             .queue_age_by_status
             .get(&RequestStatus::InProgress)
             .unwrap();
-        println!("now {} age {}", now.since_seconds(), age.since_seconds());
         assert!((age.since_seconds() - now.since_seconds()) < 1);
+
+        assert_eq!(stats.queue_length_by_repo_and_status.len(), 1);
+        let entry = &stats.queue_length_by_repo_and_status[0];
+        assert_eq!(entry.0.repo_id.unwrap(), repo_id);
+        assert_eq!(entry.0.status, RequestStatus::InProgress);
+        assert_eq!(entry.1, 1);
+
+        assert_eq!(stats.queue_age_by_repo_and_status.len(), 1);
+        let entry = &stats.queue_age_by_repo_and_status[0];
+        assert_eq!(entry.0.repo_id.unwrap(), repo_id);
+        assert_eq!(entry.0.status, RequestStatus::InProgress);
+        assert!((entry.1.since_seconds() - now.since_seconds()) < 1);
 
         Ok(())
     }
