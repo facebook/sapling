@@ -157,32 +157,29 @@ impl RepoPathDisposition {
         // symlink_metadata() returns an error type if the path DNE and it returns the file
         // metadata otherwise. We can leverage this to tell whether or not the file exists, and
         // whether it's a symlink if it does exist.
-        if let Ok(file_type) = std::fs::symlink_metadata(path).map(|m| m.file_type()) {
-            if file_type.is_symlink() {
-                return Ok(RepoPathDisposition::IsSymlink);
-            }
-            if file_type.is_dir() {
-                if is_bind_mount(path.into()).with_context(|| {
+        match std::fs::symlink_metadata(path).map(|m| m.file_type()) {
+            Ok(file_type) if file_type.is_symlink() => Ok(RepoPathDisposition::IsSymlink),
+            Ok(file_type) if file_type.is_dir() => match is_bind_mount(path.to_path_buf()) {
+                Ok(true) => Ok(RepoPathDisposition::IsBindMount),
+                Ok(false) => match is_empty_dir(path) {
+                    Ok(true) => Ok(RepoPathDisposition::IsEmptyDir),
+                    Ok(false) => Ok(RepoPathDisposition::IsNonEmptyDir),
+                    Err(e) => Err(e).with_context(|| {
+                        format!(
+                            "failed to determine whether {} is an empty dir",
+                            path.display()
+                        )
+                    })?,
+                },
+                Err(e) => Err(e).with_context(|| {
                     format!(
                         "failed to determine whether {} is a bind mount",
                         path.display()
                     )
-                })? {
-                    return Ok(RepoPathDisposition::IsBindMount);
-                }
-                if is_empty_dir(path).with_context(|| {
-                    format!(
-                        "failed to determine whether {} is an empty dir",
-                        path.display()
-                    )
-                })? {
-                    return Ok(RepoPathDisposition::IsEmptyDir);
-                }
-                return Ok(RepoPathDisposition::IsNonEmptyDir);
-            }
-            Ok(RepoPathDisposition::IsFile)
-        } else {
-            Ok(RepoPathDisposition::DoesNotExist)
+                })?,
+            },
+            Ok(_) => Ok(RepoPathDisposition::IsFile),
+            Err(_) => Ok(RepoPathDisposition::DoesNotExist),
         }
     }
 }
