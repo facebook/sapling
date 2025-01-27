@@ -1,10 +1,10 @@
 ---
-sidebar_position: 9
+sidebar_position: 10
 ---
 
 ## commit | ci
 <!--
-  @generated SignedSource<<7b180547536d1b2ee17f9fbfc0a1cb94>>
+  @generated SignedSource<<66d08f77a3ddb8942313f00044fa03c5>>
   Run `./scripts/generate-command-markdown.py` to regenerate.
 -->
 

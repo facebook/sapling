@@ -545,6 +545,52 @@
     ],
     "subcommands": null
   },
+  "cat": {
+    "name": "cat",
+    "aliases": [
+      "cat"
+    ],
+    "doc": "output the current or given revision of files\n\n    Print the specified files as they were at the given revision. If\n    no revision is given, the parent of the working directory is used.\n\n    Output may be to a file, in which case the name of the file is\n    given using a format string. The formatting rules as follows:\n\n    :``%%``: literal \"%\" character\n    :``%s``: basename of file being printed\n    :``%d``: dirname of file being printed, or '.' if in repository root\n    :``%p``: root-relative path name of file being printed\n    :``%H``: changeset hash (40 hexadecimal digits)\n    :``%R``: changeset revision number\n    :``%h``: short-form changeset hash (12 hexadecimal digits)\n    :``%r``: zero-padded changeset revision number\n    :``%b``: basename of the exporting repository\n\n    Returns 0 on success.\n    ",
+    "args": [
+      {
+        "shortname": "o",
+        "fullname": "output",
+        "default": "",
+        "description": "print output to file with formatted name"
+      },
+      {
+        "shortname": "r",
+        "fullname": "rev",
+        "default": "",
+        "description": "print the given revision"
+      },
+      {
+        "shortname": "",
+        "fullname": "decode",
+        "default": null,
+        "description": "apply any matching decode filter (DEPRECATED)"
+      },
+      {
+        "shortname": "I",
+        "fullname": "include",
+        "default": [],
+        "description": "include files matching the given patterns"
+      },
+      {
+        "shortname": "X",
+        "fullname": "exclude",
+        "default": [],
+        "description": "exclude files matching the given patterns"
+      },
+      {
+        "shortname": "T",
+        "fullname": "template",
+        "default": "",
+        "description": "display with template (EXPERIMENTAL)"
+      }
+    ],
+    "subcommands": null
+  },
   "clean": {
     "name": "clean",
     "aliases": [

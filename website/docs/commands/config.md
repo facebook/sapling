@@ -1,10 +1,10 @@
 ---
-sidebar_position: 10
+sidebar_position: 11
 ---
 
 ## config | conf
 <!--
-  @generated SignedSource<<f2bd182cd96f4902a67381f7484ac865>>
+  @generated SignedSource<<86b8dfadfe5f6ca486fa055cd19bfd22>>
   Run `./scripts/generate-command-markdown.py` to regenerate.
 -->
 

@@ -43,6 +43,7 @@ DEFAULT_COMMAND_LIST = [
     "annotate",
     "backout",
     "bookmark",
+    "cat",
     "clean",
     "clone",
     "commit",

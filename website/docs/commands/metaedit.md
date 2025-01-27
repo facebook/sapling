@@ -1,10 +1,10 @@
 ---
-sidebar_position: 24
+sidebar_position: 25
 ---
 
 ## metaedit | meta | me
 <!--
-  @generated SignedSource<<4e45797360094c6ddaf344324bf6aca3>>
+  @generated SignedSource<<921626735a32a6b76e95c74a2a8afefa>>
   Run `./scripts/generate-command-markdown.py` to regenerate.
 -->
 
