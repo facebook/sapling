@@ -24,6 +24,7 @@
     "@stylexjs/babel-plugin": "0.4.1"
   },
   "scripts": {
+    "dev": "tsx ./scripts/dev.ts",
     "prettier-check": "prettier --check .",
     "prettier-fix": "prettier --write ."
   },
