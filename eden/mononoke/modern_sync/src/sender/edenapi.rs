@@ -90,8 +90,8 @@ impl EdenapiSender {
             .timeout(Duration::from_secs(20))
             .build()?;
 
-        let res = client.health().await;
-        info!(logger, "Health check outcome: {:?}", res);
+        client.health().await?;
+
         Ok(Self {
             client,
             logger,
