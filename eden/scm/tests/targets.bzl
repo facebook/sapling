@@ -1,3 +1,4 @@
+load("@fbcode_macros//build_defs:native_rules.bzl", "buck_command_alias")
 load("@fbcode_macros//build_defs:python_unittest.bzl", "python_unittest")
 load("@fbsource//tools/build_defs:buckconfig.bzl", "read_bool")
 load("//eden:defs.bzl", "get_integration_test_env_and_deps")
@@ -198,6 +199,11 @@ def run_tests_target(
         supports_static_listing = False,
         runtime_deps = rt_deps,
         **kwargs
+    )
+    buck_command_alias(
+        name = name + "_cli",
+        env = ENV,
+        exe = ":unittestify",
     )
 
 def generate_trinity_smoketests(included, **kwargs):
