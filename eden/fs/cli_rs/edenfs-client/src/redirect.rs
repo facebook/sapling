@@ -334,12 +334,12 @@ impl Redirection {
             #[cfg(unix)]
             {
                 let path = output.stdout.strip_suffix(b"\n").unwrap_or(&output.stdout);
-                return Ok(PathBuf::from(OsStr::from_bytes(path)));
+                Ok(PathBuf::from(OsStr::from_bytes(path)))
             }
             #[cfg(windows)]
-            return Ok(PathBuf::from(
+            Ok(PathBuf::from(
                 std::str::from_utf8(&output.stdout).from_err()?.trim_end(),
-            ));
+            ))
         } else {
             Err(EdenFsError::Other(anyhow!(
                 "Failed to execute `{} {}`, stderr: {}, exit status: {:?}",
@@ -838,7 +838,7 @@ To detect and kill such processes, follow https://fburl.com/edenfs-redirection-n
         } else {
             Err(EdenFsError::Other(anyhow!(
                 "A non-empty directory (full path `{}`) found. Either-
-- Try again after reviewing and manually deleting the directory, or 
+- Try again after reviewing and manually deleting the directory, or
 - Run `eden redirect {} --force` with relevant params (if any) to attempt inline deletion of the directory if none of its files are in use.",
                 self.expand_repo_path(checkout).display(),
                 cli_name
@@ -869,7 +869,7 @@ To detect and kill such processes, follow https://fburl.com/edenfs-redirection-n
         } else {
             Err(EdenFsError::Other(anyhow!(
                 "Redirection path found to be a file (full path `{}`). Either-
-- Try again after reviewing and manually deleting the file, or 
+- Try again after reviewing and manually deleting the file, or
 - Run `eden redirect {} --force` with relevant params (if any) to attempt inline deletion of the file if it is not in use by another process.",
                 self.expand_repo_path(checkout).display(),
                 cli_name
