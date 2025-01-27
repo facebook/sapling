@@ -87,7 +87,18 @@ class MultiRunner {
   private handles = Array<EjecaChildProcess>();
   private output = Array<Array<string>>();
   private timing = Array<{start: Date; end?: Date}>();
-  constructor(public configs: Array<{cwd: string; cmd: string; args: Array<string>}>) {}
+  private statuses = Array<string | undefined>();
+  constructor(
+    public configs: Array<{
+      cwd: string;
+      cmd: string;
+      args: Array<string>;
+      /** Provide this callback to change the status label.
+       * It gets called for each new chunk of output, and the status persists until it is changed again.
+       * For example, detect that the build command is ready, and change "Running..." to "Ready, watching for changes..."  */
+      customStatus?: (chunk: string, status?: string) => string | undefined;
+    }>,
+  ) {}
 
   async spawnAll() {
     this.handles = this.configs.map(({cwd, cmd, args}, i) => {
@@ -96,10 +107,12 @@ class MultiRunner {
       this.timing[i] = {start: new Date(), end: undefined};
       proc.stdout!.on('data', data => {
         this.output[i].push(...data.toString().split('\n'));
+        this.updateCustomStatus(i, data.toString());
         this.redraw();
       });
       proc.stderr!.on('data', data => {
         this.output[i].push(...data.toString().split('\n'));
+        this.updateCustomStatus(i, data.toString());
         this.redraw();
       });
       proc.stderr!.on('close', () => {
@@ -115,6 +128,15 @@ class MultiRunner {
     this.redraw(/* printAllOutput */ true);
   }
 
+  private updateCustomStatus(i: number, chunk: string) {
+    const customStatus = this.configs[i].customStatus;
+    if (customStatus) {
+      const status = this.statuses[i];
+      this.statuses[i] = customStatus(chunk, status);
+    }
+    return undefined;
+  }
+
   private lastNumLines = 0;
   redraw(printAllOutput = false) {
     if (this.lastNumLines > 0) {
@@ -128,6 +150,7 @@ class MultiRunner {
       const proc = this.handles[i];
       const lines = this.output[i];
       const timing = this.timing[i];
+      const status = this.statuses[i];
 
       const durationMs =
         timing.end == null ? null : timing.end.valueOf() - this.timing[i].start.valueOf();
@@ -143,7 +166,7 @@ class MultiRunner {
             );
       const statusStr =
         proc.exitCode == null
-          ? chalk.gray('Running...')
+          ? status ?? chalk.gray('Running...')
           : proc.exitCode === 0
           ? chalk.green(`Suceeded${durationStr}`)
           : chalk.red(`Exited ${proc.exitCode}`);
@@ -189,16 +212,60 @@ async function main() {
   const runner = new MultiRunner(
     kind === 'vscode'
       ? [
-          {cwd: 'vscode', cmd: 'yarn', args: isProduction ? ['build-webview'] : ['watch-webview']},
+          {
+            cwd: 'vscode',
+            cmd: 'yarn',
+            args: isProduction ? ['build-webview'] : ['watch-webview'],
+            customStatus: isProduction
+              ? undefined
+              : (chunk: string, status?: string) => {
+                  if (chunk.includes('ready in')) {
+                    return chalk.green('Webview Ready') + ' watching for changes...';
+                  }
+                  return status;
+                },
+          },
           {
             cwd: 'vscode',
             cmd: 'yarn',
             args: isProduction ? ['build-extension'] : ['watch-extension'],
+            customStatus: isProduction
+              ? undefined
+              : (chunk: string, status?: string) => {
+                  if (chunk.includes('created ')) {
+                    return chalk.green('Extension Ready') + ' watching for changes...';
+                  }
+                  return status;
+                },
           },
         ]
       : [
-          {cwd: 'isl', cmd: 'yarn', args: isProduction ? ['build'] : ['start']},
-          {cwd: 'isl-server', cmd: 'yarn', args: isProduction ? ['build'] : ['watch']},
+          {
+            cwd: 'isl',
+            cmd: 'yarn',
+            args: isProduction ? ['build'] : ['start'],
+            customStatus: isProduction
+              ? undefined
+              : (chunk: string, status?: string) => {
+                  if (chunk.includes('ready in')) {
+                    return chalk.green('Client Ready') + ' watching for changes...';
+                  }
+                  return status;
+                },
+          },
+          {
+            cwd: 'isl-server',
+            cmd: 'yarn',
+            args: isProduction ? ['build'] : ['watch'],
+            customStatus: isProduction
+              ? undefined
+              : (chunk: string, status?: string) => {
+                  if (chunk.includes('created ')) {
+                    return chalk.green('Server Ready') + ' watching for changes...';
+                  }
+                  return status;
+                },
+          },
         ],
   );
 
