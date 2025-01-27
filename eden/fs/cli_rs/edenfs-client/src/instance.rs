@@ -13,8 +13,10 @@ use std::collections::BTreeMap;
 use std::fs::remove_file;
 use std::path::Path;
 use std::path::PathBuf;
+use std::sync::Arc;
 use std::sync::OnceLock;
 use std::time::Duration;
+use std::time::Instant;
 
 use anyhow::anyhow;
 use anyhow::Context;
@@ -30,6 +32,7 @@ use edenfs_utils::strip_unc_prefix;
 #[cfg(fbcode_build)]
 use fbinit::expect_init;
 use fbthrift_socket::SocketTransport;
+use futures::StreamExt;
 #[cfg(fbcode_build)]
 use thrift_streaming_clients::errors::StreamStartStatusError;
 #[cfg(fbcode_build)]
@@ -50,6 +53,7 @@ use thrift_types::fbthrift::ApplicationExceptionErrorCode;
 use thriftclient::ThriftChannelBuilder;
 #[cfg(fbcode_build)]
 use thriftclient::TransportType;
+use tokio::time;
 use tokio_uds_compat::UnixStream;
 use tracing::event;
 use tracing::Level;
@@ -321,6 +325,68 @@ impl EdenFsInstance {
             .await
             .map(|r| r.into())
             .from_err()
+    }
+
+    pub async fn subscribe(
+        &self,
+        mount_point: &Vec<u8>,
+        throttle_time_ms: u64,
+        guard_time_s: u64,
+        notify: Arc<tokio::sync::Notify>,
+    ) -> Result<(), anyhow::Error> {
+        let stream_client = self
+            .connect_streaming(None)
+            .await
+            .with_context(|| anyhow!("unable to establish Thrift connection to EdenFS server"))?;
+
+        // TODO: feels weird that this method accepts a `&Vec<u8>` instead of a `&[u8]`.
+        let mut subscription = stream_client.streamJournalChanged(mount_point).await?;
+        let mount_point_string =
+            String::from_utf8(mount_point.to_vec()).expect("Found invalid UTF-8");
+        tracing::info!(?mount_point_string, "subscription created");
+
+        let mut last = Instant::now();
+        let throttle = Duration::from_millis(throttle_time_ms);
+        // streamJournalChanged requires a call to `getCurrentJournalPosition` in response to a subscription in order to
+        // ensure future updates. We have this guard timer to
+        // call every `guard_time_s` to make sure we get event from EdenFS.
+        let mut guard = time::interval(Duration::from_secs(guard_time_s));
+
+        loop {
+            tokio::select! {
+                // when we get a notification from EdenFS subscription
+                result = subscription.next() => {
+                    match result {
+                        // if the stream is ended somehow, we terminates as well
+                        None => break,
+                        // if there is any error happened during the stream, log them
+                        Some(Err(e)) => {
+                            tracing::error!(?e, "error while processing subscription");
+                            continue;
+                        },
+                        // otherwise, trigger an event if we haven't sent one in the last 500ms (or other configured throttle limit)
+                        Some(Ok(_)) => {
+                            if last.elapsed() < throttle {
+                                continue;
+                            }
+                        }
+                    }
+                },
+                // if the guard timer triggers, trigger an event if it's not under throttling
+                _ = guard.tick() => {
+                    if last.elapsed() < throttle {
+                        continue;
+                    }
+                },
+                // in all other cases, we terminate
+                else => break,
+            }
+
+            notify.notify_one();
+            last = Instant::now();
+        }
+
+        Ok(())
     }
 
     /// Returns a map of mount paths to mount names

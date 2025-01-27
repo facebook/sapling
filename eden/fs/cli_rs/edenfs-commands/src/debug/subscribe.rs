@@ -15,8 +15,6 @@ use std::os::unix::ffi::OsStringExt;
 use std::path::Path;
 use std::path::PathBuf;
 use std::sync::Arc;
-use std::time::Duration;
-use std::time::Instant;
 
 use anyhow::anyhow;
 use anyhow::Context;
@@ -26,13 +24,11 @@ use clap::Parser;
 use edenfs_client::types::JournalPosition;
 use edenfs_client::utils::locate_repo_root;
 use edenfs_client::EdenFsInstance;
-use futures::StreamExt;
 use hg_util::path::expand_path;
 use serde::Serialize;
 use thrift_types::edenfs as edenfs_thrift;
 use tokio::io::AsyncWriteExt;
 use tokio::sync::Notify;
-use tokio::time;
 
 use crate::util::jsonrpc::ResponseBuilder;
 use crate::ExitCode;
@@ -275,6 +271,8 @@ impl crate::Subcommand for SubscribeCmd {
 
     #[cfg(fbcode_build)]
     async fn run(&self) -> Result<ExitCode> {
+        let instance = EdenFsInstance::global();
+
         let mount_point_path = self.get_mount_point()?;
         #[cfg(unix)]
         let mount_point = <Path as AsRef<OsStr>>::as_ref(&mount_point_path)
@@ -283,10 +281,6 @@ impl crate::Subcommand for SubscribeCmd {
         // SAFETY: paths on Windows are Unicode
         #[cfg(windows)]
         let mount_point = mount_point_path.to_string_lossy().into_owned().into_bytes();
-        let stream_client = EdenFsInstance::global()
-            .connect_streaming(None)
-            .await
-            .with_context(|| anyhow!("unable to establish Thrift connection to EdenFS server"))?;
 
         let notify = Arc::new(Notify::new());
 
@@ -310,7 +304,6 @@ impl crate::Subcommand for SubscribeCmd {
 
                 let mount_point_path_opt = Some(mount_point_path);
 
-                let instance = EdenFsInstance::global();
                 let mut last_position = match instance
                     .get_journal_position(&mount_point_path_opt, None)
                     .await
@@ -345,51 +338,9 @@ impl crate::Subcommand for SubscribeCmd {
             }
         });
 
-        // TODO: feels weird that this method accepts a `&Vec<u8>` instead of a `&[u8]`.
-        let mut subscription = stream_client.subscribeStreamTemporary(&mount_point).await?;
-        tracing::info!(?mount_point_path, "subscription created");
-
-        let mut last = Instant::now();
-        let throttle = Duration::from_millis(self.throttle);
-        // Since EdenFS will not be sending us event if no
-        // `getCurrentJournalPosition` is called. We have this guard timer to
-        // trigger a round of manual check every few seconds (see command line
-        // option for exactly how long).
-        let mut guard = time::interval(Duration::from_secs(self.guard));
-
-        loop {
-            tokio::select! {
-                // when we get a notification from EdenFS subscription
-                result = subscription.next() => {
-                    match result {
-                        // if the stream is ended somehow, we terminates as well
-                        None => break,
-                        // if there is any error happened during the stream, log them
-                        Some(Err(e)) => {
-                            tracing::error!(?e, "error while processing subscription");
-                            continue;
-                        },
-                        // otherwise, trigger an event if we haven't sent one in the last 500ms (or other configured throttle limit)
-                        Some(Ok(_)) => {
-                            if last.elapsed() < throttle {
-                                continue;
-                            }
-                        }
-                    }
-                },
-                // if the guard timer triggers, trigger an event if it's not under throttling
-                _ = guard.tick() => {
-                    if last.elapsed() < throttle {
-                        continue;
-                    }
-                },
-                // in all other cases, we terminate
-                else => break,
-            }
-
-            notify.notify_one();
-            last = Instant::now();
-        }
+        instance
+            .subscribe(&mount_point, self.throttle, self.guard, notify)
+            .await?;
 
         Ok(0)
     }
