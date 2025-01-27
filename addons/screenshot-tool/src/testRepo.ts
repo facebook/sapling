@@ -19,7 +19,11 @@ const keepTmp = process.env.KEEP != null;
  * Add convinent methods to modify the repo here.
  */
 export class TestRepo {
-  /** Creates a new temporary repo. The repo will be deleted on exit. */
+  /**
+   * Creates a new temporary directory.
+   * The directory will be deleted on exit, unless KEEP is set.
+   * This does not initialize the repo. Use `init()` to initialize it.
+   */
   static async new(repoName = 'example', command = process.env.SL ?? 'sl'): Promise<TestRepo> {
     const tmpDir = dirSync({unsafeCleanup: true});
     if (!keepTmp) {
@@ -29,8 +33,12 @@ export class TestRepo {
     logger.info(keepTmp ? '' : 'Temporary', 'repo path:', repoPath);
     await fs.mkdir(repoPath);
     const repo = new TestRepo(repoPath, command);
-    await repo.run(['init', '--config=format.use-eager-repo=true']);
     return repo;
+  }
+
+  /** Initialize the repo. */
+  async init(): Promise<void> {
+    await this.run(['init', '--config=format.use-eager-repo=true']);
   }
 
   /**
@@ -71,6 +79,11 @@ export class TestRepo {
       input += `\npython:\n${dedent(script)}\n`;
     }
     await this.run(['debugdrawdag', '--no-bookmarks'], input);
+  }
+
+  /** Import patches from the given file. */
+  async import(patchFile: string) {
+    await this.run(['import', patchFile]);
   }
 
   /** Runs command in the repo. Returns its stdout. */

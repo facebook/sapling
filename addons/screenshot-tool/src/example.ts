@@ -133,6 +133,7 @@ export const BASE_EXAMPLE: Example = {
       process.env.SL,
     ]);
     await repo.cached(async repo => {
+      await repo.init();
       const configs = Object.entries(this.repoConfigs).map(([k, v]) => `${k}=${v}`);
       const now = this.openISLOptions.now;
       if (now != null) {
