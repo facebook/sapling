@@ -63,7 +63,7 @@ export class TestRepo {
   async drawdag(ascii = '', script?: string) {
     let input = ascii;
     if (script != null) {
-      input += `\npython:\n${script}\n`;
+      input += `\npython:\n${dedent(script)}\n`;
     }
     await this.run(['debugdrawdag', '--no-bookmarks'], input);
   }
@@ -113,4 +113,14 @@ async function copyRecursive(src: string, dst: string): Promise<void> {
   } else if (srcStats.isFile()) {
     await fs.copyFile(src, dst);
   }
+}
+
+/** Remove common prefix spaces for non-empty lines. */
+function dedent(s: string): string {
+  const lines = s.split('\n');
+  const indent = Math.min(
+    ...lines.filter(l => l.trim().length > 0).map(l => l.length - l.trimStart().length),
+  );
+  const newLines = lines.map(l => l.slice(indent));
+  return newLines.join('\n');
 }
