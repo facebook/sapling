@@ -213,8 +213,8 @@ where
     R: RepoLike + Send + Sync + Clone + 'static,
 {
     // TODO(ikostia): start borrowing `CommitSyncer`, no reason to consume it
-    let source_repo_id = commit_syncer.get_source_repo().repo_identity().id();
-    let counter_name = format_counter(&source_repo_id);
+    let large_repo_id = commit_syncer.get_source_repo().repo_identity().id();
+    let counter_name = format_counter(&large_repo_id);
 
     let counter: BookmarkUpdateLogId = target_repo_dbs
         .counters

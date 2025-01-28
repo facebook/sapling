@@ -1994,38 +1994,40 @@ mod test {
     async fn test_verify_working_copy_fp(fb: FacebookInit) -> Result<(), Error> {
         let ctx = CoreContext::test_mock(fb);
         let mut factory = TestRepoFactory::new(fb)?;
-        let source = factory.with_id(RepositoryId::new(0)).build().await?;
-        let root_source_cs_id = CreateCommitContext::new_root(&ctx, &source)
+        let large_repo = factory.with_id(RepositoryId::new(0)).build().await?;
+        let root_large_cs_id = CreateCommitContext::new_root(&ctx, &large_repo)
             .add_file("prefix/sub/file1", "1")
             .add_file("somefile", "content")
             .commit()
             .await?;
-        let first_source_cs_id = CreateCommitContext::new(&ctx, &source, vec![root_source_cs_id])
+        let first_large_cs_id = CreateCommitContext::new(&ctx, &large_repo, vec![root_large_cs_id])
             .add_file("prefix/sub/file2", "1")
             .commit()
             .await?;
-        let second_source_cs_id = CreateCommitContext::new(&ctx, &source, vec![first_source_cs_id])
-            .add_file("special/1", "special")
-            .commit()
-            .await?;
+        let second_large_cs_id =
+            CreateCommitContext::new(&ctx, &large_repo, vec![first_large_cs_id])
+                .add_file("special/1", "special")
+                .commit()
+                .await?;
 
-        let target: TestRepo = factory.with_id(RepositoryId::new(1)).build().await?;
-        let root_target_cs_id = CreateCommitContext::new_root(&ctx, &target)
+        let small_repo: TestRepo = factory.with_id(RepositoryId::new(1)).build().await?;
+        let root_small_cs_id = CreateCommitContext::new_root(&ctx, &small_repo)
             .add_file("sub/file1", "1")
             .commit()
             .await?;
-        let first_target_cs_id = CreateCommitContext::new(&ctx, &target, vec![root_target_cs_id])
+        let first_small_cs_id = CreateCommitContext::new(&ctx, &small_repo, vec![root_small_cs_id])
             .add_file("sub/file2", "1")
             .commit()
             .await?;
-        let second_target_cs_id = CreateCommitContext::new(&ctx, &target, vec![first_target_cs_id])
-            .add_file("special/1", "special")
-            .commit()
-            .await?;
+        let second_small_cs_id =
+            CreateCommitContext::new(&ctx, &small_repo, vec![first_small_cs_id])
+                .add_file("special/1", "special")
+                .commit()
+                .await?;
 
         let repos = CommitSyncRepos::new(
-            target,
-            source,
+            small_repo,
+            large_repo,
             CommitSyncDirection::Backwards,
             SubmoduleDeps::ForSync(HashMap::new()),
         );
@@ -2040,8 +2042,8 @@ mod test {
             verify_working_copy_with_version(
                 &ctx,
                 &commit_syncer,
-                Source(root_source_cs_id),
-                Target(root_target_cs_id),
+                Source(root_large_cs_id),
+                Target(root_small_cs_id),
                 &CommitSyncConfigVersion(version.to_string()),
                 live_commit_sync_config.clone(),
             )
@@ -2054,8 +2056,8 @@ mod test {
             verify_working_copy_with_version(
                 &ctx,
                 &commit_syncer,
-                Source(first_source_cs_id),
-                Target(first_target_cs_id),
+                Source(first_large_cs_id),
+                Target(first_small_cs_id),
                 &CommitSyncConfigVersion(version.to_string()),
                 live_commit_sync_config.clone(),
             )
@@ -2067,8 +2069,8 @@ mod test {
         verify_working_copy_with_version(
             &ctx,
             &commit_syncer,
-            Source(second_source_cs_id),
-            Target(second_target_cs_id),
+            Source(second_large_cs_id),
+            Target(second_small_cs_id),
             &CommitSyncConfigVersion(version.to_string()),
             live_commit_sync_config.clone(),
         )
@@ -2079,8 +2081,8 @@ mod test {
         let res = verify_working_copy_with_version(
             &ctx,
             &commit_syncer,
-            Source(second_source_cs_id),
-            Target(second_target_cs_id),
+            Source(second_large_cs_id),
+            Target(second_small_cs_id),
             &CommitSyncConfigVersion(version.to_string()),
             live_commit_sync_config.clone(),
         )
@@ -2092,8 +2094,8 @@ mod test {
         let res = verify_working_copy_with_version(
             &ctx,
             &commit_syncer,
-            Source(first_source_cs_id),
-            Target(second_target_cs_id),
+            Source(first_large_cs_id),
+            Target(second_small_cs_id),
             &CommitSyncConfigVersion(version.to_string()),
             live_commit_sync_config.clone(),
         )

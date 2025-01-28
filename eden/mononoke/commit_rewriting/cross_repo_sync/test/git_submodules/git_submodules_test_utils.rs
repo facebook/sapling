@@ -234,7 +234,7 @@ pub(crate) async fn build_submodule_sync_test_data(
         .get("A_A")
         .expect("Failed to get root changeset id in repo A");
 
-    let commit_syncer = create_small_repo_to_large_repo_commit_syncer(
+    let commit_syncer = create_forward_commit_syncer(
         &ctx,
         small_repo.clone(),
         large_repo.clone(),
@@ -392,7 +392,7 @@ async fn build_mononoke_git_mirror_repo(
     Ok(repo)
 }
 
-pub(crate) fn create_small_repo_to_large_repo_commit_syncer(
+pub(crate) fn create_forward_commit_syncer(
     ctx: &CoreContext,
     small_repo: TestRepo,
     large_repo: TestRepo,
@@ -526,7 +526,7 @@ pub(crate) fn add_new_commit_sync_config_version_with_submodule_deps(
         known_dangling_pointers.clone(),
     )?;
     test_sync_config_source.add_config(commit_sync_config);
-    let commit_syncer = create_small_repo_to_large_repo_commit_syncer(
+    let commit_syncer = create_forward_commit_syncer(
         ctx,
         small_repo.clone(),
         large_repo.clone(),
