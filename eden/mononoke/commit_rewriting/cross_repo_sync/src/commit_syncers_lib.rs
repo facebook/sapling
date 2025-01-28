@@ -888,6 +888,20 @@ impl<R: Repo> From<CommitSyncRepos<R>> for CommitSyncReposWithDirection<R> {
 }
 
 impl<R: Repo> CommitSyncReposWithDirection<R> {
+    pub fn new(
+        small_repo: R,
+        large_repo: R,
+        sync_direction: CommitSyncDirection,
+        submodule_deps: SubmoduleDeps<R>,
+    ) -> Self {
+        Self {
+            small_repo,
+            large_repo,
+            sync_direction,
+            submodule_deps,
+        }
+    }
+
     /// Create a new instance of `CommitSyncReposWithDirection`
     /// Whether it's SmallToLarge or LargeToSmall is determined by
     /// source_repo/target_repo and common_commit_sync_config.
@@ -1131,7 +1145,7 @@ pub async fn update_mapping_with_version<'a, R: Repo>(
         return Err(ErrorKind::XRepoSyncDisabled.into());
     }
 
-    let commit_sync_repos = CommitSyncRepos::from(syncer.repos.clone());
+    let commit_sync_repos = syncer.repos.clone();
     let entries: Vec<_> = mapped
         .into_iter()
         .map(|(from, to)| {
@@ -1146,20 +1160,14 @@ pub async fn update_mapping_with_version<'a, R: Repo>(
 pub fn create_synced_commit_mapping_entry<R: Repo>(
     from: ChangesetId,
     to: ChangesetId,
-    repos: &CommitSyncRepos<R>,
+    repos: &CommitSyncReposWithDirection<R>,
     version_name: CommitSyncConfigVersion,
 ) -> SyncedCommitMappingEntry {
-    let (source_repo, target_repo, source_is_large) = match repos {
-        CommitSyncRepos::LargeToSmall {
-            large_repo,
-            small_repo,
-            ..
-        } => (large_repo, small_repo, true),
-        CommitSyncRepos::SmallToLarge {
-            small_repo,
-            large_repo,
-            ..
-        } => (small_repo, large_repo, false),
+    let small_repo = repos.get_small_repo().clone();
+    let large_repo = repos.get_large_repo().clone();
+    let (source_repo, target_repo, source_is_large) = match repos.get_direction() {
+        CommitSyncDirection::LargeToSmall => (large_repo, small_repo, true),
+        CommitSyncDirection::SmallToLarge => (small_repo, large_repo, false),
     };
 
     let source_repoid = source_repo.repo_identity().id();
@@ -1204,22 +1212,27 @@ pub fn create_commit_syncers<R>(
 where
     R: Repo,
 {
-    let small_to_large_commit_sync_repos = CommitSyncRepos::new(
+    let small_to_large_commit_sync_repos = CommitSyncReposWithDirection::new(
         small_repo.clone(),
         large_repo.clone(),
+        CommitSyncDirection::SmallToLarge,
         submodule_deps.clone(),
-    )?;
-    let large_to_small_commit_sync_repos =
-        CommitSyncRepos::new(large_repo, small_repo, submodule_deps)?;
+    );
+    let large_to_small_commit_sync_repos = CommitSyncReposWithDirection::new(
+        small_repo,
+        large_repo,
+        CommitSyncDirection::LargeToSmall,
+        submodule_deps,
+    );
 
     let large_to_small_commit_syncer = CommitSyncer::new(
         ctx,
-        large_to_small_commit_sync_repos.into(),
+        large_to_small_commit_sync_repos,
         live_commit_sync_config.clone(),
     );
     let small_to_large_commit_syncer = CommitSyncer::new(
         ctx,
-        small_to_large_commit_sync_repos.into(),
+        small_to_large_commit_sync_repos,
         live_commit_sync_config,
     );
 
