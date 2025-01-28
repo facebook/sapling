@@ -2197,6 +2197,18 @@ folly::Future<folly::Unit> EdenMount::fsChannelMount(bool readOnly) {
           options.useReaddirplus = edenConfig->useReaddirplus.getValue();
           options.useSoftMount = edenConfig->useSoftMounts.getValue();
           options.readOnly = readOnly;
+          options.readIOSize = edenConfig->nfsReadIoSize.getValue();
+          options.writeIOSize = edenConfig->nfsWriteIoSize.getValue();
+          options.directoryReadSize =
+              edenConfig->nfsDirectoryReadSize.getValue();
+          options.readAheadSize = edenConfig->nfsReadAhead.getValue();
+          options.retransmitTimeoutTenthSeconds =
+              edenConfig->nfsRetransmitTimeoutTenthSeconds.getValue();
+          options.retransmitAttempts =
+              edenConfig->nfsRetransmitAttempts.getValue();
+          options.deadTimeoutSeconds =
+              edenConfig->nfsDeadTimeoutSeconds.getValue();
+          options.dumbtimer = edenConfig->nfsDumbtimer.getValue();
 
           // Make sure that we are running on the EventBase while registering
           // the mount point.
