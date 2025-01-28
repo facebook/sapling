@@ -438,7 +438,11 @@ pub(crate) fn create_small_repo_to_large_repo_commit_syncer(
 
     let repos = CommitSyncRepos::new(small_repo, large_repo, submodule_deps)?;
 
-    Ok(CommitSyncer::new(ctx, repos, live_commit_sync_config))
+    Ok(CommitSyncer::new(
+        ctx,
+        repos.into(),
+        live_commit_sync_config,
+    ))
 }
 
 /// Creates the commit sync config to setup the sync from repo A to the large repo,

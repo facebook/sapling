@@ -1614,8 +1614,11 @@ impl<R: MononokeRepo> RepoContext<R> {
             MononokeError::InvalidRequest(format!("unknown commit specifier {}", specifier))
         })?;
 
-        let commit_syncer =
-            CommitSyncer::new(&self.ctx, commit_sync_repos, self.live_commit_sync_config());
+        let commit_syncer = CommitSyncer::new(
+            &self.ctx,
+            commit_sync_repos.into(),
+            self.live_commit_sync_config(),
+        );
 
         if sync_behaviour == XRepoLookupSyncBehaviour::SyncIfAbsent {
             let _ = commit_syncer

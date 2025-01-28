@@ -312,7 +312,11 @@ fn create_small_to_large_commit_syncer(
     let submodule_deps = SubmoduleDeps::ForSync(HashMap::new());
     let repos = CommitSyncRepos::new(small_repo, large_repo, submodule_deps)?;
 
-    Ok(CommitSyncer::new(ctx, repos, live_commit_sync_config))
+    Ok(CommitSyncer::new(
+        ctx,
+        repos.into(),
+        live_commit_sync_config,
+    ))
 }
 
 fn create_large_to_small_commit_syncer(
@@ -325,7 +329,11 @@ fn create_large_to_small_commit_syncer(
     let submodule_deps = SubmoduleDeps::NotNeeded;
     let repos = CommitSyncRepos::new(large_repo, small_repo, submodule_deps)?;
 
-    Ok(CommitSyncer::new(ctx, repos, live_commit_sync_config))
+    Ok(CommitSyncer::new(
+        ctx,
+        repos.into(),
+        live_commit_sync_config,
+    ))
 }
 
 #[mononoke::fbinit_test]
@@ -751,7 +759,7 @@ async fn test_sync_implicit_deletes(fb: FacebookInit) -> Result<(), Error> {
     };
     let version = version_name_with_small_repo();
     commit_syncer.live_commit_sync_config = live_commit_sync_config;
-    commit_syncer.repos = commit_sync_repos;
+    commit_syncer.repos = commit_sync_repos.into();
 
     let megarepo_initial_bcs_id = create_initial_commit(ctx.clone(), &megarepo).await;
 
@@ -1853,7 +1861,8 @@ async fn merge_test_setup(
             small_repo: small_repo.clone(),
             large_repo: large_repo.clone(),
             submodule_deps: SubmoduleDeps::ForSync(HashMap::new()),
-        };
+        }
+        .into();
         lts_syncer.live_commit_sync_config = get_merge_sync_live_commit_sync_config(
             large_repo.repo_identity().id(),
             small_repo.repo_identity().id(),
@@ -2129,7 +2138,7 @@ async fn test_no_accidental_preserved_roots(
         let live_commit_sync_config = Arc::new(sync_config);
 
         commit_syncer.live_commit_sync_config = live_commit_sync_config;
-        commit_syncer.repos = commit_sync_repos.clone();
+        commit_syncer.repos = commit_sync_repos.clone().into();
 
         commit_syncer
     };
@@ -2238,7 +2247,7 @@ async fn test_not_sync_candidate_if_mapping_does_not_have_small_repo(
         submodule_deps: SubmoduleDeps::ForSync(HashMap::new()),
     };
     let large_to_first_small_commit_syncer =
-        CommitSyncer::new(&ctx, repos.clone(), live_commit_sync_config.clone());
+        CommitSyncer::new(&ctx, repos.clone().into(), live_commit_sync_config.clone());
 
     let first_bcs_id = CreateCommitContext::new_root(&ctx, &large_repo)
         .add_file("file", "content")
@@ -2261,7 +2270,7 @@ async fn test_not_sync_candidate_if_mapping_does_not_have_small_repo(
         submodule_deps: SubmoduleDeps::ForSync(HashMap::new()),
     };
     let large_to_second_small_commit_syncer =
-        CommitSyncer::new(&ctx, repos.clone(), live_commit_sync_config.clone());
+        CommitSyncer::new(&ctx, repos.clone().into(), live_commit_sync_config.clone());
     large_to_second_small_commit_syncer
         .sync_commit(
             &ctx,

@@ -826,68 +826,27 @@ impl<R: Repo> CommitSyncRepos<R> {
             CommitSyncRepos::SmallToLarge { .. } => SyncedCommitSourceRepo::Small,
         }
     }
+}
 
-    pub(crate) fn get_direction(&self) -> CommitSyncDirection {
-        match self {
-            CommitSyncRepos::LargeToSmall { .. } => CommitSyncDirection::LargeToSmall,
-            CommitSyncRepos::SmallToLarge { .. } => CommitSyncDirection::SmallToLarge,
-        }
-    }
-
-    pub(crate) fn get_x_repo_sync_lease(&self) -> &Arc<dyn LeaseOps> {
-        self.get_large_repo().repo_cross_repo().sync_lease()
-    }
-
-    pub(crate) fn get_mapping(&self) -> &ArcSyncedCommitMapping {
-        self.get_large_repo()
-            .repo_cross_repo()
-            .synced_commit_mapping()
-    }
-    /// Whether Hg or Git extras should be stripped from the commit when rewriting
-    /// it for this source and target repo pair, to avoid creating many to one
-    /// mappings between repos.
-    ///
-    /// For example: if the source repo is Hg and the target repo is Git, two
-    /// commits that differ only by hg extra would be mapped to the same git commit.
-    /// In this case, hg extras have to be stripped when syncing from Hg to Git.
-    pub(crate) fn get_strip_commit_extras(&self) -> Result<StripCommitExtras> {
-        let source_scheme = &self
-            .get_source_repo()
-            .repo_config()
-            .default_commit_identity_scheme;
-        let target_scheme = &self
-            .get_target_repo()
-            .repo_config()
-            .default_commit_identity_scheme;
-
-        match (source_scheme, target_scheme) {
-            (CommitIdentityScheme::HG, CommitIdentityScheme::GIT) => Ok(StripCommitExtras::Hg),
-            (CommitIdentityScheme::GIT, CommitIdentityScheme::HG) => Ok(StripCommitExtras::Git),
-            (CommitIdentityScheme::BONSAI, _) | (_, CommitIdentityScheme::BONSAI) => {
-                bail!("No repos should use bonsai as default scheme")
-            }
-
-            _ => Ok(StripCommitExtras::None),
-        }
-    }
-
-    pub(crate) fn should_set_committer_info_to_author_info_if_empty(&self) -> Result<bool> {
-        let source_scheme = &self
-            .get_source_repo()
-            .repo_config()
-            .default_commit_identity_scheme;
-        let target_scheme = &self
-            .get_target_repo()
-            .repo_config()
-            .default_commit_identity_scheme;
-
-        match (source_scheme, target_scheme) {
-            (CommitIdentityScheme::HG, CommitIdentityScheme::GIT) => Ok(true),
-            (CommitIdentityScheme::GIT, CommitIdentityScheme::HG) => Ok(false),
-            (CommitIdentityScheme::BONSAI, _) | (_, CommitIdentityScheme::BONSAI) => {
-                bail!("No repos should use bonsai as default scheme")
-            }
-            _ => Ok(false),
+impl<R: Repo> From<CommitSyncReposWithDirection<R>> for CommitSyncRepos<R> {
+    fn from(repos: CommitSyncReposWithDirection<R>) -> Self {
+        let CommitSyncReposWithDirection {
+            small_repo,
+            large_repo,
+            sync_direction,
+            submodule_deps,
+        } = repos;
+        match sync_direction {
+            CommitSyncDirection::SmallToLarge => CommitSyncRepos::SmallToLarge {
+                small_repo,
+                large_repo,
+                submodule_deps,
+            },
+            CommitSyncDirection::LargeToSmall => CommitSyncRepos::LargeToSmall {
+                small_repo,
+                large_repo,
+                submodule_deps,
+            },
         }
     }
 }
@@ -1172,10 +1131,11 @@ pub async fn update_mapping_with_version<'a, R: Repo>(
         return Err(ErrorKind::XRepoSyncDisabled.into());
     }
 
+    let commit_sync_repos = CommitSyncRepos::from(syncer.repos.clone());
     let entries: Vec<_> = mapped
         .into_iter()
         .map(|(from, to)| {
-            create_synced_commit_mapping_entry(from, to, &syncer.repos, version_name.clone())
+            create_synced_commit_mapping_entry(from, to, &commit_sync_repos, version_name.clone())
         })
         .collect();
 
@@ -1254,12 +1214,12 @@ where
 
     let large_to_small_commit_syncer = CommitSyncer::new(
         ctx,
-        large_to_small_commit_sync_repos,
+        large_to_small_commit_sync_repos.into(),
         live_commit_sync_config.clone(),
     );
     let small_to_large_commit_syncer = CommitSyncer::new(
         ctx,
-        small_to_large_commit_sync_repos,
+        small_to_large_commit_sync_repos.into(),
         live_commit_sync_config,
     );
 

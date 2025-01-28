@@ -2034,7 +2034,7 @@ mod test {
 
         let live_commit_sync_config = get_live_commit_sync_config();
 
-        let commit_syncer = CommitSyncer::new(&ctx, repos, live_commit_sync_config.clone());
+        let commit_syncer = CommitSyncer::new(&ctx, repos.into(), live_commit_sync_config.clone());
 
         println!("checking root commit");
         for version in &["first_version", "second_version"] {

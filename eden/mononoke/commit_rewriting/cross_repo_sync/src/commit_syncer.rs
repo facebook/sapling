@@ -32,6 +32,7 @@ use live_commit_sync_config::LiveCommitSyncConfig;
 use maplit::hashmap;
 use maplit::hashset;
 use metaconfig_types::CommitSyncConfigVersion;
+use metaconfig_types::CommitSyncDirection;
 use metaconfig_types::PushrebaseFlags;
 use mononoke_types::BonsaiChangeset;
 use mononoke_types::BonsaiChangesetMut;
@@ -73,7 +74,7 @@ use crate::commit_syncers_lib::run_with_lease;
 use crate::commit_syncers_lib::submodule_metadata_file_prefix_and_dangling_pointers;
 use crate::commit_syncers_lib::submodule_repos_with_content_ids;
 use crate::commit_syncers_lib::update_mapping_with_version;
-use crate::commit_syncers_lib::CommitSyncRepos;
+use crate::commit_syncers_lib::CommitSyncReposWithDirection;
 use crate::commit_syncers_lib::SyncedAncestorsVersions;
 use crate::git_submodules::InMemoryRepo;
 use crate::git_submodules::SubmoduleExpansionData;
@@ -92,7 +93,7 @@ use crate::types::Target;
 
 #[derive(Clone)]
 pub struct CommitSyncer<R> {
-    pub repos: CommitSyncRepos<R>,
+    pub repos: CommitSyncReposWithDirection<R>,
     pub live_commit_sync_config: Arc<dyn LiveCommitSyncConfig>,
     pub scuba_sample: MononokeScubaSampleBuilder,
 }
@@ -117,7 +118,7 @@ where
 
     pub fn new(
         ctx: &CoreContext,
-        repos: CommitSyncRepos<R>,
+        repos: CommitSyncReposWithDirection<R>,
         live_commit_sync_config: Arc<dyn LiveCommitSyncConfig>,
     ) -> Self {
         let scuba_sample = reporting::get_scuba_sample(
@@ -356,19 +357,11 @@ where
     }
 
     pub fn get_large_repo(&self) -> &R {
-        use CommitSyncRepos::*;
-        match &self.repos {
-            LargeToSmall { large_repo, .. } => large_repo,
-            SmallToLarge { large_repo, .. } => large_repo,
-        }
+        self.repos.get_large_repo()
     }
 
     pub fn get_small_repo(&self) -> &R {
-        use CommitSyncRepos::*;
-        match &self.repos {
-            LargeToSmall { small_repo, .. } => small_repo,
-            SmallToLarge { small_repo, .. } => small_repo,
-        }
+        self.repos.get_small_repo()
     }
 
     pub fn get_mapping(&self) -> &ArcSyncedCommitMapping {
@@ -597,18 +590,11 @@ where
             return Err(ErrorKind::XRepoSyncDisabled.into());
         }
 
-        let repos = self.repos.clone();
-        let (source_repo, target_repo, source_is_large) = match repos {
-            CommitSyncRepos::LargeToSmall {
-                large_repo,
-                small_repo,
-                ..
-            } => (large_repo, small_repo, true),
-            CommitSyncRepos::SmallToLarge {
-                small_repo,
-                large_repo,
-                ..
-            } => (small_repo, large_repo, false),
+        let small_repo = self.get_small_repo();
+        let large_repo = self.get_large_repo();
+        let (source_repo, target_repo, source_is_large) = match self.repos.get_direction() {
+            CommitSyncDirection::LargeToSmall => (large_repo.clone(), small_repo.clone(), true),
+            CommitSyncDirection::SmallToLarge => (small_repo.clone(), large_repo.clone(), true),
         };
 
         let source_repoid = source_repo.repo_identity().id();
@@ -817,7 +803,7 @@ where
             mapped_parents: &mapped_parents,
             target_repo_id: Target(self.get_target_repo_id()),
             live_commit_sync_config: Arc::clone(&self.live_commit_sync_config),
-            small_to_large: matches!(self.repos, CommitSyncRepos::SmallToLarge { .. }),
+            small_to_large: self.repos.get_direction() == CommitSyncDirection::SmallToLarge,
             submodule_deps,
             large_repo: large_in_memory_repo,
             strip_commit_extras,
@@ -1155,17 +1141,11 @@ where
     }
 
     fn get_source_target(&self) -> (R, R) {
-        match self.repos.clone() {
-            CommitSyncRepos::LargeToSmall {
-                large_repo,
-                small_repo,
-                ..
-            } => (large_repo, small_repo),
-            CommitSyncRepos::SmallToLarge {
-                small_repo,
-                large_repo,
-                ..
-            } => (small_repo, large_repo),
+        let small_repo = self.repos.get_small_repo().clone();
+        let large_repo = self.repos.get_large_repo().clone();
+        match self.repos.get_direction() {
+            CommitSyncDirection::LargeToSmall => (large_repo, small_repo),
+            CommitSyncDirection::SmallToLarge => (small_repo, large_repo),
         }
     }
 }

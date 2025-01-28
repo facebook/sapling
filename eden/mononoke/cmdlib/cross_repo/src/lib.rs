@@ -102,7 +102,7 @@ pub async fn create_single_direction_commit_syncer<R: CrossRepo>(
 
     Ok(CommitSyncer::new(
         ctx,
-        commit_sync_repos,
+        commit_sync_repos.into(),
         live_commit_sync_config,
     ))
 }

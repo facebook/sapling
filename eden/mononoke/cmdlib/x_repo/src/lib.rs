@@ -236,7 +236,7 @@ async fn create_commit_syncer<'a, R: Repo>(
     live_commit_sync_config: Arc<dyn LiveCommitSyncConfig>,
 ) -> Result<CommitSyncer<R>, Error> {
     let repos = CommitSyncRepos::new(source_repo.0, target_repo.0, submodule_deps)?;
-    let commit_syncer = CommitSyncer::new(ctx, repos, live_commit_sync_config);
+    let commit_syncer = CommitSyncer::new(ctx, repos.into(), live_commit_sync_config);
     Ok(commit_syncer)
 }
 

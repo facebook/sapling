@@ -332,7 +332,7 @@ where
     let live_commit_sync_config = sync_config.clone();
 
     let small_to_large_commit_syncer =
-        CommitSyncer::new(ctx, repos.clone(), live_commit_sync_config.clone());
+        CommitSyncer::new(ctx, repos.clone().into(), live_commit_sync_config.clone());
 
     let repos = CommitSyncRepos::LargeToSmall {
         small_repo: smallrepo.clone(),
@@ -341,7 +341,7 @@ where
     };
 
     let large_to_small_commit_syncer =
-        CommitSyncer::new(ctx, repos.clone(), live_commit_sync_config);
+        CommitSyncer::new(ctx, repos.clone().into(), live_commit_sync_config);
 
     let first_bcs_id = CreateCommitContext::new_root(ctx, &smallrepo)
         .add_file("file", "content")

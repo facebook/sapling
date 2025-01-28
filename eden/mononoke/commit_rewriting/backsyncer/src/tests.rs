@@ -769,7 +769,7 @@ async fn backsync_change_mapping(fb: FacebookInit) -> Result<(), Error> {
 
     let live_commit_sync_config = Arc::new(lv_cfg);
 
-    let commit_syncer = CommitSyncer::new(&ctx, repos, live_commit_sync_config);
+    let commit_syncer = CommitSyncer::new(&ctx, repos.into(), live_commit_sync_config);
 
     // Rewrite root commit with current version
     let root_cs_id = CreateCommitContext::new_root(&ctx, &source_repo)
@@ -1381,7 +1381,7 @@ async fn init_repos(
     )
     .await?;
 
-    let commit_syncer = CommitSyncer::new(&ctx, repos, live_commit_sync_config.clone());
+    let commit_syncer = CommitSyncer::new(&ctx, repos.into(), live_commit_sync_config.clone());
 
     // Sync first commit manually
     let initial_bcs_id = source_repo
@@ -1709,7 +1709,7 @@ async fn init_merged_repos(
             submodule_deps: SubmoduleDeps::ForSync(HashMap::new()),
         };
 
-        let commit_syncer = CommitSyncer::new(&ctx, repos, live_commit_sync_config);
+        let commit_syncer = CommitSyncer::new(&ctx, repos.into(), live_commit_sync_config);
         output.push((commit_syncer, small_repo_dbs));
 
         let filename = format!("file_in_smallrepo{}", small_repo.repo_identity().id().id());
@@ -1982,7 +1982,7 @@ async fn preserve_premerge_commit(
         lv_cfg_src.add_common_config(common);
 
         let live_commit_sync_config = Arc::new(lv_cfg);
-        CommitSyncer::new(&ctx, repos, live_commit_sync_config)
+        CommitSyncer::new(&ctx, repos.into(), live_commit_sync_config)
     };
 
     small_to_large_sync_config
