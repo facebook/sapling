@@ -28,6 +28,7 @@
 #include "eden/common/utils/Bug.h"
 #include "eden/common/utils/SystemError.h"
 #include "eden/common/utils/Throw.h"
+#include "eden/fs/privhelper/PrivHelper.h"
 
 using folly::ByteRange;
 using folly::checkUnixError;
@@ -123,6 +124,34 @@ folly::SocketAddress deserializeSocketAddress(Cursor& cursor) {
     auto path = deserializeString(cursor);
     return folly::SocketAddress::makeFromPath(path);
   }
+}
+
+[[maybe_unused]] void serializeNFSMountOptions(
+    Appender& a,
+    const NFSMountOptions& options) {
+  serializeSocketAddress(a, options.mountdAddr);
+  serializeSocketAddress(a, options.nfsdAddr);
+  serializeBool(a, options.readOnly);
+  serializeUint32(a, options.iosize);
+  serializeBool(a, options.useReaddirplus);
+  if (options.useSoftMount.has_value()) {
+    serializeBool(a, options.useSoftMount.value());
+  }
+}
+
+[[maybe_unused]] NFSMountOptions deserializeNFSMountOptions(Cursor& cursor) {
+  NFSMountOptions options;
+  options.mountdAddr = deserializeSocketAddress(cursor);
+  options.nfsdAddr = deserializeSocketAddress(cursor);
+  options.readOnly = deserializeBool(cursor);
+  options.iosize = deserializeUint32(cursor);
+  options.useReaddirplus = deserializeBool(cursor);
+  if (!cursor.isAtEnd()) {
+    options.useSoftMount = deserializeBool(cursor);
+  } else {
+    options.useSoftMount = folly::kIsLinux ? true : false;
+  }
+  return options;
 }
 
 // Helper for setting close-on-exec.  Not needed on systems

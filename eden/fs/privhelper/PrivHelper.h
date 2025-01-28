@@ -24,6 +24,19 @@ struct Unit;
 
 namespace facebook::eden {
 
+/*
+ * NFS-specific options for PrivHelper NFS mount requests.
+ */
+struct NFSMountOptions {
+ public:
+  folly::SocketAddress mountdAddr;
+  folly::SocketAddress nfsdAddr;
+  bool readOnly;
+  uint32_t iosize;
+  bool useReaddirplus;
+  std::optional<bool> useSoftMount;
+};
+
 /**
  * A helper class for performing operations that require elevated privileges.
  *
