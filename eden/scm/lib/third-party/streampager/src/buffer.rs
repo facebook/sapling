@@ -2,10 +2,10 @@
 //!
 //! Buffers used for loading streams.
 
-use std::cell::UnsafeCell;
 use std::ops::{Deref, DerefMut};
 use std::sync::atomic::{AtomicUsize, Ordering};
 use std::sync::{Mutex, MutexGuard};
+use std::usize;
 
 use memmap2::MmapMut;
 
@@ -17,7 +17,13 @@ use memmap2::MmapMut;
 pub(crate) struct Buffer {
     /// The underlying memory map.  This can be accessed for both reading and writing, and so is
     /// stored in an UnsafeCell.
-    mmap: UnsafeCell<MmapMut>,
+    _mmap: MmapMut,
+
+    /// Pointer to the data in `_mmap`.
+    data_ptr: *mut u8,
+
+    /// The underlying memory map's capacity.
+    capacity: usize,
 
     /// How much of the buffer has been filled.  Reads are permitted in the range `0..filled`.
     /// Writes are permitted in the range `filled..`.
@@ -40,8 +46,12 @@ pub(crate) struct BufferWrite<'buffer> {
 
 impl Buffer {
     pub(crate) fn new(capacity: usize) -> Buffer {
+        let mut mmap = MmapMut::map_anon(capacity).unwrap();
+        let data_ptr = mmap.as_mut_ptr();
         Buffer {
-            mmap: UnsafeCell::new(MmapMut::map_anon(capacity).unwrap()),
+            _mmap: mmap,
+            data_ptr,
+            capacity,
             filled: AtomicUsize::new(0usize),
             lock: Mutex::new(()),
         }
@@ -58,8 +68,8 @@ impl Buffer {
     /// Returns the readable portion of the buffer
     pub(crate) fn read(&self) -> &[u8] {
         let end = self.filled.load(Ordering::SeqCst);
-        let data = unsafe { &*self.mmap.get() };
-        &data[..end]
+        // Safety: `BufferWrite::written()` checks that `end <= capacity`
+        unsafe { std::slice::from_raw_parts(self.data_ptr, end) }
     }
 
     #[cfg(feature = "load_file")]
@@ -73,7 +83,9 @@ impl<'buffer> BufferWrite<'buffer> {
     /// Completes the write operation for `len` bytes to the buffer.  After calling `written`, the
     /// data is made available to callers to `read`.
     pub(crate) fn written(self, len: usize) {
-        self.buffer.filled.fetch_add(len, Ordering::SeqCst);
+        let new_filled = self.buffer.filled.load(Ordering::SeqCst).saturating_add(len).clamp(0, isize::MAX as usize);
+        assert!(new_filled <= self.buffer.capacity);
+        self.buffer.filled.store(new_filled, Ordering::SeqCst);
     }
 }
 
@@ -81,16 +93,32 @@ impl<'buffer> Deref for BufferWrite<'buffer> {
     type Target = [u8];
     fn deref(&self) -> &[u8] {
         let start = self.buffer.filled.load(Ordering::SeqCst);
-        let data = unsafe { &*self.buffer.mmap.get() };
-        &data[start..]
+        let start_ptr = unsafe { self.buffer.data_ptr.add( start) };
+        // Safety:
+        // * `BufferWrite::written()` enforces that `filled` is within capacity. It starts at 0 and
+        //    never shrinks.
+        // * `_guard` enforces that no concurrent mutable reference exists
+        // * The slices returned from `BufferWrite::deref()/deref_mut()` never overlap with those
+        //   from `Buffer::read` because the latter goes from `0..filled` and the former go from
+        //   `filled..capacity`. The latter are no longer accessible once `filled` has been updated
+        //   because `written()` consumes its argument.
+        unsafe { std::slice::from_raw_parts(start_ptr, self.buffer.capacity - start) }
     }
 }
 
 impl<'buffer> DerefMut for BufferWrite<'buffer> {
     fn deref_mut(&mut self) -> &mut [u8] {
         let start = self.buffer.filled.load(Ordering::SeqCst);
-        let data = unsafe { &mut *self.buffer.mmap.get() };
-        &mut data[start..]
+        let start_ptr = unsafe { self.buffer.data_ptr.add( start) };
+        // Safety:
+        // * `BufferWrite::written()` enforces that `filled` is within capacity. It starts at 0 and
+        //    never shrinks.
+        // * `_guard` enforces that no concurrent mutable reference exists
+        // * The slices returned from `BufferWrite::deref()/deref_mut()` never overlap with those
+        //   from `Buffer::read` because the latter goes from `0..filled` and the former go from
+        //   `filled..capacity`. The latter are no longer accessible once `filled` has been updated
+        //   because `written()` consumes its argument.
+        unsafe { std::slice::from_raw_parts_mut(start_ptr, self.buffer.capacity - start) }
     }
 }
 
