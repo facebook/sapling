@@ -1438,6 +1438,16 @@ pub enum CommitSyncDirection {
     SmallToLarge,
 }
 
+impl CommitSyncDirection {
+    /// Return the opposite sync direction
+    pub fn reverse(&self) -> Self {
+        match self {
+            Self::LargeToSmall => Self::SmallToLarge,
+            Self::SmallToLarge => Self::LargeToSmall,
+        }
+    }
+}
+
 /// CommitSyncConfig version name
 #[derive(Abomonation, Debug, Clone, PartialEq, Eq, Hash, PartialOrd, Ord)]
 #[derive(mysql::OptTryFromRowField)]

@@ -892,6 +892,174 @@ impl<R: Repo> CommitSyncRepos<R> {
     }
 }
 
+#[derive(Clone)]
+pub struct CommitSyncReposWithDirection<R> {
+    // TODO(T182311609): use Small/Large wrappers for type safety.
+    small_repo: R,
+    large_repo: R,
+    sync_direction: CommitSyncDirection,
+    submodule_deps: SubmoduleDeps<R>,
+}
+
+impl<R: Repo> From<CommitSyncRepos<R>> for CommitSyncReposWithDirection<R> {
+    fn from(repos: CommitSyncRepos<R>) -> Self {
+        match repos {
+            CommitSyncRepos::LargeToSmall {
+                large_repo,
+                small_repo,
+                submodule_deps,
+            } => CommitSyncReposWithDirection {
+                large_repo,
+                small_repo,
+                sync_direction: CommitSyncDirection::LargeToSmall,
+                submodule_deps,
+            },
+            CommitSyncRepos::SmallToLarge {
+                large_repo,
+                small_repo,
+                submodule_deps,
+            } => CommitSyncReposWithDirection {
+                large_repo,
+                small_repo,
+                sync_direction: CommitSyncDirection::SmallToLarge,
+                submodule_deps,
+            },
+        }
+    }
+}
+
+impl<R: Repo> CommitSyncReposWithDirection<R> {
+    /// Create a new instance of `CommitSyncReposWithDirection`
+    /// Whether it's SmallToLarge or LargeToSmall is determined by
+    /// source_repo/target_repo and common_commit_sync_config.
+    pub fn from_source_and_target_repos(
+        source_repo: R,
+        target_repo: R,
+        submodule_deps: SubmoduleDeps<R>,
+    ) -> Result<Self, Error> {
+        let sync_direction = commit_sync_direction_from_config(&source_repo, &target_repo)?;
+        let (small_repo, large_repo) = match sync_direction {
+            CommitSyncDirection::SmallToLarge => (source_repo, target_repo),
+            CommitSyncDirection::LargeToSmall => (target_repo, source_repo),
+        };
+
+        Ok(CommitSyncReposWithDirection {
+            small_repo,
+            large_repo,
+            sync_direction,
+            submodule_deps,
+        })
+    }
+
+    // Builds the repos that can be used for opposite sync direction.
+    // Note: doesn't support large-to-small as input right now
+    // TODO(T182311609): stop returning a Result if there's no error.
+    pub fn reverse(&self) -> Result<Self> {
+        let clone = self.clone();
+        Ok(CommitSyncReposWithDirection {
+            sync_direction: self.sync_direction.reverse(),
+            ..clone
+        })
+    }
+
+    pub fn get_submodule_deps(&self) -> &SubmoduleDeps<R> {
+        &self.submodule_deps
+    }
+
+    pub fn get_source_repo(&self) -> &R {
+        match self.sync_direction {
+            CommitSyncDirection::SmallToLarge => &self.small_repo,
+            CommitSyncDirection::LargeToSmall => &self.large_repo,
+        }
+    }
+
+    pub fn get_target_repo(&self) -> &R {
+        match self.sync_direction {
+            CommitSyncDirection::SmallToLarge => &self.large_repo,
+            CommitSyncDirection::LargeToSmall => &self.small_repo,
+        }
+    }
+
+    pub fn get_small_repo(&self) -> &R {
+        &self.small_repo
+    }
+
+    pub fn get_large_repo(&self) -> &R {
+        &self.large_repo
+    }
+
+    pub fn get_source_repo_type(&self) -> SyncedCommitSourceRepo {
+        match self.sync_direction {
+            CommitSyncDirection::SmallToLarge => SyncedCommitSourceRepo::Small,
+            CommitSyncDirection::LargeToSmall => SyncedCommitSourceRepo::Large,
+        }
+    }
+
+    // TODO(T182311609): rename getters and setters and confirm which are
+    // actually needed.
+    pub fn get_direction(&self) -> CommitSyncDirection {
+        self.sync_direction
+    }
+
+    pub fn get_x_repo_sync_lease(&self) -> &Arc<dyn LeaseOps> {
+        self.get_large_repo().repo_cross_repo().sync_lease()
+    }
+
+    pub fn get_mapping(&self) -> &ArcSyncedCommitMapping {
+        self.get_large_repo()
+            .repo_cross_repo()
+            .synced_commit_mapping()
+    }
+
+    /// Whether Hg or Git extras should be stripped from the commit when rewriting
+    /// it for this source and target repo pair, to avoid creating many to one
+    /// mappings between repos.
+    ///
+    /// For example: if the source repo is Hg and the target repo is Git, two
+    /// commits that differ only by hg extra would be mapped to the same git commit.
+    /// In this case, hg extras have to be stripped when syncing from Hg to Git.
+    pub fn get_strip_commit_extras(&self) -> Result<StripCommitExtras> {
+        let source_scheme = &self
+            .get_source_repo()
+            .repo_config()
+            .default_commit_identity_scheme;
+        let target_scheme = &self
+            .get_target_repo()
+            .repo_config()
+            .default_commit_identity_scheme;
+
+        match (source_scheme, target_scheme) {
+            (CommitIdentityScheme::HG, CommitIdentityScheme::GIT) => Ok(StripCommitExtras::Hg),
+            (CommitIdentityScheme::GIT, CommitIdentityScheme::HG) => Ok(StripCommitExtras::Git),
+            (CommitIdentityScheme::BONSAI, _) | (_, CommitIdentityScheme::BONSAI) => {
+                bail!("No repos should use bonsai as default scheme")
+            }
+
+            _ => Ok(StripCommitExtras::None),
+        }
+    }
+
+    pub fn should_set_committer_info_to_author_info_if_empty(&self) -> Result<bool> {
+        let source_scheme = &self
+            .get_source_repo()
+            .repo_config()
+            .default_commit_identity_scheme;
+        let target_scheme = &self
+            .get_target_repo()
+            .repo_config()
+            .default_commit_identity_scheme;
+
+        match (source_scheme, target_scheme) {
+            (CommitIdentityScheme::HG, CommitIdentityScheme::GIT) => Ok(true),
+            (CommitIdentityScheme::GIT, CommitIdentityScheme::HG) => Ok(false),
+            (CommitIdentityScheme::BONSAI, _) | (_, CommitIdentityScheme::BONSAI) => {
+                bail!("No repos should use bonsai as default scheme")
+            }
+            _ => Ok(false),
+        }
+    }
+}
+
 /// Get the direction of the sync based on the common commit sync config.
 /// Forward sync -> SmallToLarge
 /// Backsync -> LargeToSmall
