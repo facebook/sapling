@@ -132,9 +132,7 @@ void serializeNFSMountOptions(Appender& a, const NFSMountOptions& options) {
   serializeBool(a, options.readOnly);
   serializeUint32(a, options.iosize);
   serializeBool(a, options.useReaddirplus);
-  if (options.useSoftMount.has_value()) {
-    serializeBool(a, options.useSoftMount.value());
-  }
+  serializeBool(a, options.useSoftMount);
 }
 
 NFSMountOptions deserializeNFSMountOptions(Cursor& cursor) {
@@ -144,11 +142,7 @@ NFSMountOptions deserializeNFSMountOptions(Cursor& cursor) {
   options.readOnly = deserializeBool(cursor);
   options.iosize = deserializeUint32(cursor);
   options.useReaddirplus = deserializeBool(cursor);
-  if (!cursor.isAtEnd()) {
-    options.useSoftMount = deserializeBool(cursor);
-  } else {
-    options.useSoftMount = folly::kIsLinux ? true : false;
-  }
+  options.useSoftMount = deserializeBool(cursor);
   return options;
 }
 

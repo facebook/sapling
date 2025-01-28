@@ -34,7 +34,7 @@ struct NFSMountOptions {
   bool readOnly;
   uint32_t iosize;
   bool useReaddirplus;
-  std::optional<bool> useSoftMount;
+  bool useSoftMount;
 };
 
 /**

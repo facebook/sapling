@@ -412,12 +412,9 @@ Future<Unit> PrivHelperClientImpl::nfsMount(
                   PrivHelperConn::REQ_MOUNT_NFS, response);
               return folly::unit;
             } catch (const PrivHelperError&) {
-              // T207191725: The PrivHelper we're utilizing may be out of date
-              // and therefore can't handle parsing an nfsMount request with
-              // soft/hard info. We can retry the request without that
-              // additional info. Clean this up after 2-3 months.
+              // TODO(cuev): I'm keeping this logic so I can reuse it in the
+              // next diff when I add new mount options
               auto retry_xid = getNextXid();
-              options.useSoftMount = std::nullopt;
               auto retry_request = PrivHelperConn::serializeMountNfsRequest(
                   retry_xid, mountPath, options);
               return sendAndRecv(retry_xid, std::move(retry_request))
