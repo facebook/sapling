@@ -16,7 +16,7 @@ use bytes::Bytes;
 use chrono::FixedOffset;
 use chrono::TimeZone;
 use cross_repo_sync::update_mapping_with_version;
-use cross_repo_sync::CommitSyncRepos;
+use cross_repo_sync::CommitSyncReposWithDirection;
 use cross_repo_sync::CommitSyncer;
 use cross_repo_sync::SubmoduleDeps;
 use cross_repo_sync_test_utils::init_small_large_repo;
@@ -809,7 +809,7 @@ async fn xrepo_commit_lookup_config_changing_live(fb: FacebookInit) -> Result<()
             .commit()
             .await?;
 
-    let commit_sync_repos = CommitSyncRepos::new(
+    let commit_sync_repos = CommitSyncReposWithDirection::from_source_and_target_repos(
         largerepo.repo().clone(),
         smallrepo.repo().clone(),
         SubmoduleDeps::ForSync(HashMap::new()),

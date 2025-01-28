@@ -59,7 +59,7 @@ use cross_repo_sync::get_all_submodule_deps_from_repo_pair;
 use cross_repo_sync::get_small_and_large_repos;
 use cross_repo_sync::CandidateSelectionHint;
 use cross_repo_sync::CommitSyncContext;
-use cross_repo_sync::CommitSyncRepos;
+use cross_repo_sync::CommitSyncReposWithDirection;
 use cross_repo_sync::CommitSyncer;
 use cross_repo_sync::RepoProvider;
 use cross_repo_sync::Target;
@@ -1606,8 +1606,11 @@ impl<R: MononokeRepo> RepoContext<R> {
         )
         .await?;
 
-        let commit_sync_repos =
-            CommitSyncRepos::new(self.repo().clone(), other.repo().clone(), submodule_deps)?;
+        let commit_sync_repos = CommitSyncReposWithDirection::from_source_and_target_repos(
+            self.repo().clone(),
+            other.repo().clone(),
+            submodule_deps,
+        )?;
 
         let specifier = specifier.into();
         let changeset = self.resolve_specifier(specifier).await?.ok_or_else(|| {
