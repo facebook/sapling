@@ -620,6 +620,12 @@ void PrivHelperServer::nfsMount(
   mattrFlags |= NFS_MATTR_WRITE_SIZE;
   XdrTrait<nfs_mattr_wsize>::serialize(attrSer, options.iosize);
 
+  // For NFSv2/v3 mounts, perform all file locking operations locally on the NFS
+  // client (in the VFS layer) instead of on the NFS server.  This option can
+  // provide file locking support on an NFS file system for which the server
+  // does not support file locking. However, because the file locking is only
+  // performed on the client, the NFS server and other NFS clients will have no
+  // knowledge of the locks.
   mattrFlags |= NFS_MATTR_LOCK_MODE;
   XdrTrait<nfs_mattr_lock_mode>::serialize(
       attrSer, nfs_lock_mode::NFS_LOCK_MODE_LOCAL);
