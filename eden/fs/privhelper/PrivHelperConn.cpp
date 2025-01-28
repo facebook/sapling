@@ -68,6 +68,33 @@ UnixSocket::Message serializeRequestPacket(
   return msg;
 }
 
+// Template function for serializing an optional value of any type that can be
+// trivially serialized (i.e. not strings or socket addresses)
+template <
+    typename T,
+    std::enable_if_t<std::is_arithmetic<T>::value, bool> = true>
+[[maybe_unused]] void serializeOption(Appender& a, std::optional<T> val) {
+  bool is_some = val.has_value();
+  a.write<bool>(is_some);
+  if (is_some) {
+    a.write<T>(val.value());
+  }
+}
+
+// Template function for deserializing an optional value of any type that can be
+//  trivially deserialized (i.e. not strings or socket addresses)
+template <
+    typename T,
+    std::enable_if_t<std::is_arithmetic<T>::value, bool> = true>
+[[maybe_unused]] std::optional<T> deserializeOption(Cursor& cursor) {
+  bool is_some = cursor.read<bool>();
+  if (is_some) {
+    return cursor.read<T>();
+  } else {
+    return std::nullopt;
+  }
+}
+
 void serializeString(Appender& a, StringPiece str) {
   a.write<uint32_t>(str.size());
   a.push(ByteRange(str));
