@@ -1,10 +1,10 @@
 ---
-sidebar_position: 8
+sidebar_position: 9
 ---
 
 ## clone
 <!--
-  @generated SignedSource<<a4d5e57eb0972054dc0c2bf63112841c>>
+  @generated SignedSource<<c87d240f56d0e2f7174b38dc26c20ce7>>
   Run `./scripts/generate-command-markdown.py` to regenerate.
 -->
 
