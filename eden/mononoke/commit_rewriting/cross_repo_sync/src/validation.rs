@@ -1707,7 +1707,7 @@ mod test {
 
     use super::*;
     use crate::create_commit_syncers;
-    use crate::CommitSyncRepos;
+    use crate::CommitSyncReposWithDirection;
     use crate::SubmoduleDeps;
     use crate::Syncers;
 
@@ -2026,15 +2026,16 @@ mod test {
             .commit()
             .await?;
 
-        let repos = CommitSyncRepos::LargeToSmall {
-            small_repo: target,
-            large_repo: source,
-            submodule_deps: SubmoduleDeps::ForSync(HashMap::new()),
-        };
+        let repos = CommitSyncReposWithDirection::new_with_source_target(
+            source,
+            target,
+            CommitSyncDirection::LargeToSmall,
+            SubmoduleDeps::ForSync(HashMap::new()),
+        );
 
         let live_commit_sync_config = get_live_commit_sync_config();
 
-        let commit_syncer = CommitSyncer::new(&ctx, repos.into(), live_commit_sync_config.clone());
+        let commit_syncer = CommitSyncer::new(&ctx, repos, live_commit_sync_config.clone());
 
         println!("checking root commit");
         for version in &["first_version", "second_version"] {
@@ -2137,18 +2138,12 @@ mod test {
 
         let current_version = CommitSyncConfigVersion("noop".to_string());
 
-        let repos = match direction {
-            CommitSyncDirection::LargeToSmall => CommitSyncRepos::LargeToSmall {
-                small_repo: small_repo.clone(),
-                large_repo: large_repo.clone(),
-                submodule_deps: SubmoduleDeps::ForSync(HashMap::new()),
-            },
-            CommitSyncDirection::SmallToLarge => CommitSyncRepos::SmallToLarge {
-                small_repo: small_repo.clone(),
-                large_repo: large_repo.clone(),
-                submodule_deps: SubmoduleDeps::ForSync(HashMap::new()),
-            },
-        };
+        let repos = CommitSyncReposWithDirection::new(
+            small_repo.clone(),
+            large_repo.clone(),
+            direction,
+            SubmoduleDeps::ForSync(HashMap::new()),
+        );
 
         let maybe_master_val = small_repo.bookmarks().get(ctx.clone(), &master).await?;
 
