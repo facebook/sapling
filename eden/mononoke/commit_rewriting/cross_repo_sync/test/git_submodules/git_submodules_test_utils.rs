@@ -25,7 +25,7 @@ use bookmarks::BookmarksRef;
 use bulk_derivation::BulkDerivation;
 use commit_graph::CommitGraphRef;
 use context::CoreContext;
-use cross_repo_sync::CommitSyncReposWithDirection;
+use cross_repo_sync::CommitSyncRepos;
 use cross_repo_sync::CommitSyncer;
 use cross_repo_sync::SubmoduleDeps;
 use cross_repo_sync_test_utils::rebase_root_on_master;
@@ -436,11 +436,8 @@ pub(crate) fn create_small_repo_to_large_repo_commit_syncer(
     test_sync_config_source.add_config(commit_sync_config);
     test_sync_config_source.add_common_config(common_config);
 
-    let repos = CommitSyncReposWithDirection::from_source_and_target_repos(
-        small_repo,
-        large_repo,
-        submodule_deps,
-    )?;
+    let repos =
+        CommitSyncRepos::from_source_and_target_repos(small_repo, large_repo, submodule_deps)?;
 
     Ok(CommitSyncer::new(
         ctx,

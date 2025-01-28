@@ -16,7 +16,7 @@ use anyhow::Result;
 use context::CoreContext;
 use cross_repo_sync::create_commit_syncers;
 use cross_repo_sync::get_all_submodule_deps_from_repo_pair;
-use cross_repo_sync::CommitSyncReposWithDirection;
+use cross_repo_sync::CommitSyncRepos;
 use cross_repo_sync::CommitSyncer;
 use cross_repo_sync::RepoProvider;
 use cross_repo_sync::Syncers;
@@ -98,11 +98,8 @@ pub async fn create_single_direction_commit_syncer<R: CrossRepo>(
         .repo_cross_repo()
         .live_commit_sync_config()
         .clone();
-    let commit_sync_repos = CommitSyncReposWithDirection::from_source_and_target_repos(
-        source_repo,
-        target_repo,
-        submodule_deps,
-    )?;
+    let commit_sync_repos =
+        CommitSyncRepos::from_source_and_target_repos(source_repo, target_repo, submodule_deps)?;
 
     Ok(CommitSyncer::new(
         ctx,

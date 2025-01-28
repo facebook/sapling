@@ -1707,7 +1707,7 @@ mod test {
 
     use super::*;
     use crate::create_commit_syncers;
-    use crate::CommitSyncReposWithDirection;
+    use crate::CommitSyncRepos;
     use crate::SubmoduleDeps;
     use crate::Syncers;
 
@@ -2026,7 +2026,7 @@ mod test {
             .commit()
             .await?;
 
-        let repos = CommitSyncReposWithDirection::new_with_source_target(
+        let repos = CommitSyncRepos::new_with_source_target(
             source,
             target,
             CommitSyncDirection::LargeToSmall,
@@ -2138,7 +2138,7 @@ mod test {
 
         let current_version = CommitSyncConfigVersion("noop".to_string());
 
-        let repos = CommitSyncReposWithDirection::new(
+        let repos = CommitSyncRepos::new(
             small_repo.clone(),
             large_repo.clone(),
             direction,

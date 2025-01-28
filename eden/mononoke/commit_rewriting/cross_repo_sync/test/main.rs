@@ -28,7 +28,7 @@ use cross_repo_sync::verify_working_copy;
 use cross_repo_sync::CandidateSelectionHint;
 use cross_repo_sync::CommitSyncContext;
 use cross_repo_sync::CommitSyncOutcome;
-use cross_repo_sync::CommitSyncReposWithDirection;
+use cross_repo_sync::CommitSyncRepos;
 use cross_repo_sync::CommitSyncer;
 use cross_repo_sync::ErrorKind;
 use cross_repo_sync::PluralCommitSyncOutcome;
@@ -311,7 +311,7 @@ fn create_small_to_large_commit_syncer(
     live_commit_sync_config: Arc<dyn LiveCommitSyncConfig>,
 ) -> Result<CommitSyncer<TestRepo>, Error> {
     let submodule_deps = SubmoduleDeps::ForSync(HashMap::new());
-    let repos = CommitSyncReposWithDirection::new(
+    let repos = CommitSyncRepos::new(
         small_repo,
         large_repo,
         CommitSyncDirection::SmallToLarge,
@@ -329,7 +329,7 @@ fn create_large_to_small_commit_syncer(
 ) -> Result<CommitSyncer<TestRepo>, Error> {
     // Large to small has no submodule_deps
     let submodule_deps = SubmoduleDeps::NotNeeded;
-    let repos = CommitSyncReposWithDirection::new(
+    let repos = CommitSyncRepos::new(
         small_repo,
         large_repo,
         CommitSyncDirection::LargeToSmall,
@@ -755,7 +755,7 @@ async fn test_sync_implicit_deletes(fb: FacebookInit) -> Result<(), Error> {
 
     let live_commit_sync_config = Arc::new(sync_config);
 
-    let commit_sync_repos = CommitSyncReposWithDirection::new(
+    let commit_sync_repos = CommitSyncRepos::new(
         repo.clone(),
         megarepo.clone(),
         CommitSyncDirection::SmallToLarge,
@@ -1863,7 +1863,7 @@ async fn merge_test_setup(
             live_commit_sync_config.clone(),
         )?;
 
-        lts_syncer.repos = CommitSyncReposWithDirection::new(
+        lts_syncer.repos = CommitSyncRepos::new(
             small_repo.clone(),
             large_repo.clone(),
             CommitSyncDirection::LargeToSmall,
@@ -2072,7 +2072,7 @@ async fn assert_working_copy(
 
 async fn test_no_accidental_preserved_roots(
     ctx: CoreContext,
-    commit_sync_repos: CommitSyncReposWithDirection<TestRepo>,
+    commit_sync_repos: CommitSyncRepos<TestRepo>,
     live_commit_sync_config: Arc<dyn LiveCommitSyncConfig>,
 ) -> Result<(), Error> {
     let version = version_name_with_small_repo();
@@ -2165,7 +2165,7 @@ async fn test_no_accidental_preserved_roots_large_to_small(fb: FacebookInit) -> 
         prepare_repos_mapping_and_config(fb).await.unwrap();
     populate_config(&small_repo, &large_repo, "prefix", &source)?;
 
-    let commit_sync_repos = CommitSyncReposWithDirection::new(
+    let commit_sync_repos = CommitSyncRepos::new(
         small_repo.clone(),
         large_repo.clone(),
         CommitSyncDirection::LargeToSmall,
@@ -2181,7 +2181,7 @@ async fn test_no_accidental_preserved_roots_small_to_large(fb: FacebookInit) -> 
         prepare_repos_mapping_and_config(fb).await.unwrap();
     populate_config(&small_repo, &large_repo, "prefix", &source)?;
 
-    let commit_sync_repos = CommitSyncReposWithDirection::new(
+    let commit_sync_repos = CommitSyncRepos::new(
         small_repo.clone(),
         large_repo.clone(),
         CommitSyncDirection::SmallToLarge,
@@ -2242,7 +2242,7 @@ async fn test_not_sync_candidate_if_mapping_does_not_have_small_repo(
     // created above.
     let live_commit_sync_config = Arc::new(sync_config);
 
-    let repos = CommitSyncReposWithDirection::new(
+    let repos = CommitSyncRepos::new(
         first_smallrepo.clone(),
         large_repo.clone(),
         CommitSyncDirection::LargeToSmall,
@@ -2268,7 +2268,7 @@ async fn test_not_sync_candidate_if_mapping_does_not_have_small_repo(
 
     // Now try to sync it to the other small repo, it should return NotSyncCandidate
 
-    let repos = CommitSyncReposWithDirection::new(
+    let repos = CommitSyncRepos::new(
         second_smallrepo.clone(),
         large_repo.clone(),
         CommitSyncDirection::LargeToSmall,

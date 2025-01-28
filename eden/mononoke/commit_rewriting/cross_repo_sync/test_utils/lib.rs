@@ -30,7 +30,7 @@ use cross_repo_sync::rewrite_commit;
 use cross_repo_sync::submodule_metadata_file_prefix_and_dangling_pointers;
 use cross_repo_sync::update_mapping_with_version;
 use cross_repo_sync::CommitSyncContext;
-use cross_repo_sync::CommitSyncReposWithDirection;
+use cross_repo_sync::CommitSyncRepos;
 use cross_repo_sync::CommitSyncer;
 use cross_repo_sync::InMemoryRepo;
 use cross_repo_sync::Repo;
@@ -289,7 +289,7 @@ where
         .build()
         .await?;
 
-    let repos = CommitSyncReposWithDirection::new(
+    let repos = CommitSyncRepos::new(
         smallrepo.clone(),
         megarepo.clone(),
         CommitSyncDirection::SmallToLarge,
@@ -336,7 +336,7 @@ where
     let small_to_large_commit_syncer =
         CommitSyncer::new(ctx, repos.clone().into(), live_commit_sync_config.clone());
 
-    let repos = CommitSyncReposWithDirection::new(
+    let repos = CommitSyncRepos::new(
         smallrepo.clone(),
         megarepo.clone(),
         CommitSyncDirection::LargeToSmall,

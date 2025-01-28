@@ -38,7 +38,7 @@ use cross_repo_sync::rewrite_commit;
 use cross_repo_sync::CandidateSelectionHint;
 use cross_repo_sync::CommitSyncContext;
 use cross_repo_sync::CommitSyncOutcome;
-use cross_repo_sync::CommitSyncReposWithDirection;
+use cross_repo_sync::CommitSyncRepos;
 use cross_repo_sync::CommitSyncer;
 use cross_repo_sync::SubmoduleDeps;
 use cross_repo_sync::CHANGE_XREPO_MAPPING_EXTRA;
@@ -717,7 +717,7 @@ async fn backsync_change_mapping(fb: FacebookInit) -> Result<(), Error> {
     init_target_repo(&ctx, &target_repo_dbs, source_repo_id).await?;
     let target_repo_dbs = Arc::new(target_repo_dbs);
 
-    let repos = CommitSyncReposWithDirection::new_with_source_target(
+    let repos = CommitSyncRepos::new_with_source_target(
         source_repo.clone(),
         target_repo.clone(),
         CommitSyncDirection::LargeToSmall,
@@ -1342,7 +1342,7 @@ async fn init_repos(
     };
     init_target_repo(&ctx, &target_repo_dbs, source_repo_id).await?;
 
-    let repos = CommitSyncReposWithDirection::new_with_source_target(
+    let repos = CommitSyncRepos::new_with_source_target(
         source_repo.clone(),
         target_repo.clone(),
         CommitSyncDirection::LargeToSmall,
@@ -1707,7 +1707,7 @@ async fn init_merged_repos(
 
         let live_commit_sync_config = Arc::new(lv_cfg);
 
-        let repos = CommitSyncReposWithDirection::new(
+        let repos = CommitSyncRepos::new(
             small_repo.clone(),
             large_repo.clone(),
             CommitSyncDirection::LargeToSmall,
@@ -1959,7 +1959,7 @@ async fn preserve_premerge_commit(
     let version = CommitSyncConfigVersion("noop".to_string());
     // Doesn't matter what mover to use - we are going to preserve the commit anyway
     let small_to_large_sync_config = {
-        let repos = CommitSyncReposWithDirection::new(
+        let repos = CommitSyncRepos::new(
             small_repo.clone(),
             large_repo.clone(),
             CommitSyncDirection::SmallToLarge,

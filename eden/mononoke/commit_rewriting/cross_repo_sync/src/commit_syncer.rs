@@ -74,7 +74,7 @@ use crate::commit_syncers_lib::run_with_lease;
 use crate::commit_syncers_lib::submodule_metadata_file_prefix_and_dangling_pointers;
 use crate::commit_syncers_lib::submodule_repos_with_content_ids;
 use crate::commit_syncers_lib::update_mapping_with_version;
-use crate::commit_syncers_lib::CommitSyncReposWithDirection;
+use crate::commit_syncers_lib::CommitSyncRepos;
 use crate::commit_syncers_lib::SyncedAncestorsVersions;
 use crate::git_submodules::InMemoryRepo;
 use crate::git_submodules::SubmoduleExpansionData;
@@ -93,7 +93,7 @@ use crate::types::Target;
 
 #[derive(Clone)]
 pub struct CommitSyncer<R> {
-    pub repos: CommitSyncReposWithDirection<R>,
+    pub repos: CommitSyncRepos<R>,
     pub live_commit_sync_config: Arc<dyn LiveCommitSyncConfig>,
     pub scuba_sample: MononokeScubaSampleBuilder,
 }
@@ -118,7 +118,7 @@ where
 
     pub fn new(
         ctx: &CoreContext,
-        repos: CommitSyncReposWithDirection<R>,
+        repos: CommitSyncRepos<R>,
         live_commit_sync_config: Arc<dyn LiveCommitSyncConfig>,
     ) -> Self {
         let scuba_sample = reporting::get_scuba_sample(

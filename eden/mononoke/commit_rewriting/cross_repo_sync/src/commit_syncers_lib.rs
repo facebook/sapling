@@ -719,7 +719,7 @@ where
 }
 
 #[derive(Clone)]
-pub struct CommitSyncReposWithDirection<R> {
+pub struct CommitSyncRepos<R> {
     // TODO(T182311609): use Small/Large wrappers for type safety.
     small_repo: R,
     large_repo: R,
@@ -727,7 +727,7 @@ pub struct CommitSyncReposWithDirection<R> {
     submodule_deps: SubmoduleDeps<R>,
 }
 
-impl<R: Repo> CommitSyncReposWithDirection<R> {
+impl<R: Repo> CommitSyncRepos<R> {
     pub fn new(
         small_repo: R,
         large_repo: R,
@@ -764,7 +764,7 @@ impl<R: Repo> CommitSyncReposWithDirection<R> {
         }
     }
 
-    /// Create a new instance of `CommitSyncReposWithDirection`
+    /// Create a new instance of `CommitSyncRepos`
     /// Whether it's SmallToLarge or LargeToSmall is determined by
     /// source_repo/target_repo and common_commit_sync_config.
     pub fn from_source_and_target_repos(
@@ -778,7 +778,7 @@ impl<R: Repo> CommitSyncReposWithDirection<R> {
             CommitSyncDirection::LargeToSmall => (target_repo, source_repo),
         };
 
-        Ok(CommitSyncReposWithDirection {
+        Ok(CommitSyncRepos {
             small_repo,
             large_repo,
             sync_direction,
@@ -791,7 +791,7 @@ impl<R: Repo> CommitSyncReposWithDirection<R> {
     // TODO(T182311609): stop returning a Result if there's no error.
     pub fn reverse(&self) -> Result<Self> {
         let clone = self.clone();
-        Ok(CommitSyncReposWithDirection {
+        Ok(CommitSyncRepos {
             sync_direction: self.sync_direction.reverse(),
             ..clone
         })
@@ -1022,7 +1022,7 @@ pub async fn update_mapping_with_version<'a, R: Repo>(
 pub fn create_synced_commit_mapping_entry<R: Repo>(
     from: ChangesetId,
     to: ChangesetId,
-    repos: &CommitSyncReposWithDirection<R>,
+    repos: &CommitSyncRepos<R>,
     version_name: CommitSyncConfigVersion,
 ) -> SyncedCommitMappingEntry {
     let small_repo = repos.get_small_repo().clone();
@@ -1074,13 +1074,13 @@ pub fn create_commit_syncers<R>(
 where
     R: Repo,
 {
-    let small_to_large_commit_sync_repos = CommitSyncReposWithDirection::new(
+    let small_to_large_commit_sync_repos = CommitSyncRepos::new(
         small_repo.clone(),
         large_repo.clone(),
         CommitSyncDirection::SmallToLarge,
         submodule_deps.clone(),
     );
-    let large_to_small_commit_sync_repos = CommitSyncReposWithDirection::new(
+    let large_to_small_commit_sync_repos = CommitSyncRepos::new(
         small_repo,
         large_repo,
         CommitSyncDirection::LargeToSmall,

@@ -20,7 +20,7 @@ use cmdlib::args::MononokeMatches;
 use context::CoreContext;
 use cross_repo_sync::create_commit_syncers;
 use cross_repo_sync::get_all_submodule_deps_from_repo_pair;
-use cross_repo_sync::CommitSyncReposWithDirection;
+use cross_repo_sync::CommitSyncRepos;
 use cross_repo_sync::CommitSyncer;
 use cross_repo_sync::RepoProvider;
 use cross_repo_sync::Source;
@@ -235,7 +235,7 @@ async fn create_commit_syncer<'a, R: Repo>(
     submodule_deps: SubmoduleDeps<R>,
     live_commit_sync_config: Arc<dyn LiveCommitSyncConfig>,
 ) -> Result<CommitSyncer<R>, Error> {
-    let repos = CommitSyncReposWithDirection::from_source_and_target_repos(
+    let repos = CommitSyncRepos::from_source_and_target_repos(
         source_repo.0,
         target_repo.0,
         submodule_deps,
