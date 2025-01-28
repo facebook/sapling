@@ -396,6 +396,19 @@ Future<File> PrivHelperClientImpl::fuseMount(
       });
 }
 
+namespace {
+void removeNewMountOptions(NFSMountOptions& options) {
+  options.readIOSize = std::nullopt;
+  options.writeIOSize = std::nullopt;
+  options.directoryReadSize = std::nullopt;
+  options.readAheadSize = std::nullopt;
+  options.retransmitTimeoutTenthSeconds = std::nullopt;
+  options.retransmitAttempts = std::nullopt;
+  options.deadTimeoutSeconds = std::nullopt;
+  options.dumbtimer = std::nullopt;
+}
+} // namespace
+
 Future<Unit> PrivHelperClientImpl::nfsMount(
     folly::StringPiece mountPath,
     NFSMountOptions options) {
@@ -412,8 +425,11 @@ Future<Unit> PrivHelperClientImpl::nfsMount(
                   PrivHelperConn::REQ_MOUNT_NFS, response);
               return folly::unit;
             } catch (const PrivHelperError&) {
-              // TODO(cuev): I'm keeping this logic so I can reuse it in the
-              // next diff when I add new mount options
+              // If the mount failed, it likely means we are communicating with
+              // a PrivHelper server that doesn't understand the new
+              // NFSMountOption fields.  Retry the mount without the new fields.
+              // TODO(T213499633): Clean up compatibility logic in 2-3 months.
+              removeNewMountOptions(options);
               auto retry_xid = getNextXid();
               auto retry_request = PrivHelperConn::serializeMountNfsRequest(
                   retry_xid, mountPath, options);
