@@ -893,30 +893,20 @@ UnixSocket::Message PrivHelperServer::processMountMsg(Cursor& cursor) {
 
 UnixSocket::Message PrivHelperServer::processMountNfsMsg(Cursor& cursor) {
   string mountPath;
-  folly::SocketAddress mountdAddr, nfsdAddr;
-  bool readOnly, useReaddirplus, useSoftMount;
-  uint32_t iosize;
-  PrivHelperConn::parseMountNfsRequest(
-      cursor,
-      mountPath,
-      mountdAddr,
-      nfsdAddr,
-      readOnly,
-      iosize,
-      useReaddirplus,
-      useSoftMount);
+  NFSMountOptions options;
+  PrivHelperConn::parseMountNfsRequest(cursor, mountPath, options);
   XLOGF(DBG3, "mount.nfs \"{}\"", mountPath);
 
   sanityCheckMountPoint(mountPath, true /* isNfs */);
 
   nfsMount(
       mountPath,
-      mountdAddr,
-      nfsdAddr,
-      readOnly,
-      iosize,
-      useReaddirplus,
-      useSoftMount);
+      options.mountdAddr,
+      options.nfsdAddr,
+      options.readOnly,
+      options.iosize,
+      options.useReaddirplus,
+      options.useSoftMount.value_or(folly::kIsLinux ? true : false));
   mountPoints_.insert(mountPath);
 
   return makeResponse();

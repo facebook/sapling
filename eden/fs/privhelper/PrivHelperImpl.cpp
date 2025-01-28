@@ -411,27 +411,15 @@ Future<Unit> PrivHelperClientImpl::nfsMount(
     bool useReaddirplus,
     bool useSoftMount) {
   auto xid = getNextXid();
-  auto request = PrivHelperConn::serializeMountNfsRequest(
-      xid,
-      mountPath,
-      mountdAddr,
-      nfsdAddr,
-      readOnly,
-      iosize,
-      useReaddirplus,
-      useSoftMount);
+  auto options = NFSMountOptions{
+      mountdAddr, nfsdAddr, readOnly, iosize, useReaddirplus, useSoftMount};
+  auto request =
+      PrivHelperConn::serializeMountNfsRequest(xid, mountPath, options);
 
   return sendAndRecv(xid, std::move(request))
       .thenValue(
-          [this,
-           mountPath = mountPath.str(),
-           mountdAddr,
-           nfsdAddr,
-           readOnly,
-           iosize,
-           useReaddirplus,
-           useSoftMount](UnixSocket::Message&& response) -> Future<Unit> {
-            (void)useSoftMount;
+          [this, mountPath = mountPath.str(), options](
+              UnixSocket::Message&& response) mutable -> Future<Unit> {
             try {
               PrivHelperConn::parseEmptyResponse(
                   PrivHelperConn::REQ_MOUNT_NFS, response);
@@ -442,15 +430,9 @@ Future<Unit> PrivHelperClientImpl::nfsMount(
               // soft/hard info. We can retry the request without that
               // additional info. Clean this up after 2-3 months.
               auto retry_xid = getNextXid();
+              options.useSoftMount = std::nullopt;
               auto retry_request = PrivHelperConn::serializeMountNfsRequest(
-                  retry_xid,
-                  mountPath,
-                  mountdAddr,
-                  nfsdAddr,
-                  readOnly,
-                  iosize,
-                  useReaddirplus,
-                  std::nullopt);
+                  retry_xid, mountPath, options);
               return sendAndRecv(retry_xid, std::move(retry_request))
                   .thenValue([](UnixSocket::Message&& retry_response) {
                     PrivHelperConn::parseEmptyResponse(

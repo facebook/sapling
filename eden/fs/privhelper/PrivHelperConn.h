@@ -13,6 +13,7 @@
 #include <cinttypes>
 #include <stdexcept>
 #include "eden/common/utils/UnixSocket.h"
+#include "eden/fs/privhelper/PrivHelper.h"
 
 namespace folly {
 class File;
@@ -104,21 +105,11 @@ class PrivHelperConn {
   static UnixSocket::Message serializeMountNfsRequest(
       uint32_t xid,
       folly::StringPiece mountPoint,
-      folly::SocketAddress mountdAddr,
-      folly::SocketAddress nfsdAddr,
-      bool readOnly,
-      uint32_t iosize,
-      bool useReaddirplus,
-      std::optional<bool> useSoftMount);
+      const NFSMountOptions& options);
   static void parseMountNfsRequest(
       folly::io::Cursor& cursor,
       std::string& mountPoint,
-      folly::SocketAddress& mountdAddr,
-      folly::SocketAddress& nfsdAddr,
-      bool& readOnly,
-      uint32_t& iosize,
-      bool& useReaddirplus,
-      bool& useSoftMount);
+      NFSMountOptions& options);
 
   static UnixSocket::Message serializeUnmountRequest(
       uint32_t xid,

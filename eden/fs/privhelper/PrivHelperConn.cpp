@@ -126,9 +126,7 @@ folly::SocketAddress deserializeSocketAddress(Cursor& cursor) {
   }
 }
 
-[[maybe_unused]] void serializeNFSMountOptions(
-    Appender& a,
-    const NFSMountOptions& options) {
+void serializeNFSMountOptions(Appender& a, const NFSMountOptions& options) {
   serializeSocketAddress(a, options.mountdAddr);
   serializeSocketAddress(a, options.nfsdAddr);
   serializeBool(a, options.readOnly);
@@ -139,7 +137,7 @@ folly::SocketAddress deserializeSocketAddress(Cursor& cursor) {
   }
 }
 
-[[maybe_unused]] NFSMountOptions deserializeNFSMountOptions(Cursor& cursor) {
+NFSMountOptions deserializeNFSMountOptions(Cursor& cursor) {
   NFSMountOptions options;
   options.mountdAddr = deserializeSocketAddress(cursor);
   options.nfsdAddr = deserializeSocketAddress(cursor);
@@ -273,47 +271,21 @@ void PrivHelperConn::parseMountRequest(
 UnixSocket::Message PrivHelperConn::serializeMountNfsRequest(
     uint32_t xid,
     folly::StringPiece mountPoint,
-    folly::SocketAddress mountdAddr,
-    folly::SocketAddress nfsdAddr,
-    bool readOnly,
-    uint32_t iosize,
-    bool useReaddirplus,
-    std::optional<bool> useSoftMount) {
+    const NFSMountOptions& options) {
   auto msg = serializeRequestPacket(xid, REQ_MOUNT_NFS);
   Appender appender(&msg.data, kDefaultBufferSize);
 
   serializeString(appender, mountPoint);
-  serializeSocketAddress(appender, mountdAddr);
-  serializeSocketAddress(appender, nfsdAddr);
-  serializeBool(appender, readOnly);
-  serializeUint32(appender, iosize);
-  serializeBool(appender, useReaddirplus);
-  if (useSoftMount.has_value()) {
-    serializeBool(appender, useSoftMount.value());
-  }
+  serializeNFSMountOptions(appender, options);
   return msg;
 }
 
 void PrivHelperConn::parseMountNfsRequest(
     folly::io::Cursor& cursor,
     std::string& mountPoint,
-    folly::SocketAddress& mountdAddr,
-    folly::SocketAddress& nfsdAddr,
-    bool& readOnly,
-    uint32_t& iosize,
-    bool& useReaddirplus,
-    bool& useSoftMount) {
+    NFSMountOptions& options) {
   mountPoint = deserializeString(cursor);
-  mountdAddr = deserializeSocketAddress(cursor);
-  nfsdAddr = deserializeSocketAddress(cursor);
-  readOnly = deserializeBool(cursor);
-  iosize = deserializeUint32(cursor);
-  useReaddirplus = deserializeBool(cursor);
-  if (!cursor.isAtEnd()) {
-    useSoftMount = deserializeBool(cursor);
-  } else {
-    useSoftMount = folly::kIsLinux ? true : false;
-  }
+  options = deserializeNFSMountOptions(cursor);
   checkAtEnd(cursor, "mount nfs request");
 }
 
