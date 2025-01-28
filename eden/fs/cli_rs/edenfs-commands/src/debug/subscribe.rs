@@ -16,13 +16,11 @@ use std::path::Path;
 use std::path::PathBuf;
 use std::sync::Arc;
 
-use anyhow::anyhow;
-use anyhow::Context;
 use anyhow::Result;
 use async_trait::async_trait;
 use clap::Parser;
 use edenfs_client::types::JournalPosition;
-use edenfs_client::utils::locate_repo_root;
+use edenfs_client::utils::get_mount_point;
 use edenfs_client::EdenFsInstance;
 use hg_util::path::expand_path;
 use serde::Serialize;
@@ -151,20 +149,6 @@ pub struct SubscribeCmd {
     guard: u64,
 }
 
-impl SubscribeCmd {
-    fn get_mount_point(&self) -> Result<PathBuf> {
-        if let Some(path) = &self.mount_point {
-            Ok(path.clone())
-        } else {
-            locate_repo_root(
-                &std::env::current_dir().context("Unable to retrieve current working directory")?,
-            )
-            .map(|p| p.to_path_buf())
-            .ok_or_else(|| anyhow!("Unable to locate repository root"))
-        }
-    }
-}
-
 fn have_non_hg_changes(changes: &[edenfs_thrift::PathString]) -> bool {
     changes.iter().any(|f| !f.starts_with(b".hg"))
 }
@@ -273,7 +257,7 @@ impl crate::Subcommand for SubscribeCmd {
     async fn run(&self) -> Result<ExitCode> {
         let instance = EdenFsInstance::global();
 
-        let mount_point_path = self.get_mount_point()?;
+        let mount_point_path = get_mount_point(&self.mount_point)?;
         #[cfg(unix)]
         let mount_point = <Path as AsRef<OsStr>>::as_ref(&mount_point_path)
             .to_os_string()

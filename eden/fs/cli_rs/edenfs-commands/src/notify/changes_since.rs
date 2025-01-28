@@ -84,14 +84,11 @@ impl crate::Subcommand for ChangesSinceCmd {
     #[cfg(fbcode_build)]
     async fn run(&self) -> Result<ExitCode> {
         let instance = EdenFsInstance::global();
-        let position = match &self.position {
-            Some(result) => result.clone(),
-            None => {
-                instance
-                    .get_journal_position(&self.mount_point, None)
-                    .await?
-            }
-        };
+        let position = self.position.clone().unwrap_or(
+            instance
+                .get_journal_position(&self.mount_point, None)
+                .await?,
+        );
         let result = instance
             .get_changes_since(
                 &self.mount_point,
@@ -112,6 +109,10 @@ impl crate::Subcommand for ChangesSinceCmd {
                 result.to_string()
             }
         );
+
+        if self.subscribe {
+            println!("Getting changes since {}", result.to_position);
+        }
         Ok(0)
     }
 }
