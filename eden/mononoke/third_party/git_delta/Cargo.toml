@@ -15,4 +15,4 @@ libz-sys = "1.1.15"
 mononoke_macros = { version = "0.1.0", path = "../../mononoke_macros" }
 
 [build-dependencies]
-cc = "1.0.90"
+cc = "1.2.10"

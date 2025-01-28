@@ -13,4 +13,4 @@ license = "MIT"
 name = "mpatch_sys"
 
 [build-dependencies]
-cc = "1.0.90"
+cc = "1.2.10"

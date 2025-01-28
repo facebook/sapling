@@ -13,6 +13,8 @@ perf-event = { version = "0.4", git = "https://github.com/krallin/perf-event.git
 perf-event-open-sys = { version = "4.0", git = "https://github.com/krallin/perf-event.git", rev = "86224a9bc025d5d19f719542f27c8c629a08b167" }
 profiling = { version = "1.0.16", git = "https://github.com/aclysma/profiling.git", rev = "1b3e20c8e59eddbb6ae0d64fff849d07a903dd0c" }
 quickcheck = { git = "https://github.com/jakoschiko/quickcheck", rev = "6ecdf5bb4b0132ce66670b4d46453aa022ea892c" }
+tree-sitter-bash = { git = "https://github.com/cfsmp3/tree-sitter-bash", rev = "4e9968457cd1ee5a51f8ab875cc2fcaaf7294e94" }
+tree-sitter-c = { git = "https://github.com/cfsmp3/tree-sitter-c", rev = "d01f584b67e581e9888b4b8e71e7150fd3867e38" }
 uefisettings = { git = "https://github.com/linuxboot/uefisettings", rev = "f16daed1d2bd1216204fd24e876c6477d03aebb3" }
 uefisettings_backend_thrift = { git = "https://github.com/linuxboot/uefisettings", rev = "f16daed1d2bd1216204fd24e876c6477d03aebb3" }
 warp = { git = "https://github.com/jdthomas/warp.git", rev = "c794232d182abaa3add8184e7d661e084cc516c5", features = ["tls"] }
