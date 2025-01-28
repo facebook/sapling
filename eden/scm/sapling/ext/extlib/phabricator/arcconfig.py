@@ -69,8 +69,11 @@ def loadforpath(path):
             userconfig["_arcconfig_path"] = path
             return userconfig
         parent = os.path.dirname(path)
-        if parent == path:
-            # We have reached a root (e.g. "C:\\" on Windows).
+        if parent == path or path == homedir:
+            # We have reached a root (e.g. "C:\\" on Windows),
+            # or reached at homedir (set to TESTTMP in tests),
+            # do not look up further. This avoids random files
+            # in TMP affects test behavior unexpectedly.
             break
         path = parent
 

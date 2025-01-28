@@ -32,3 +32,16 @@
   $ echo '{"user": true}' > $HOME/.arcrc
   $ hg debugarcconfig
   {"_arcconfig_path": "$TESTTMP/repo", "hello": "world", "user": true}
+
+# .arcconfig lookup is scoped at $HOME
+
+  $ cd
+  $ mkdir -p x/y
+  $ echo '{"foo": "bar"}' > x/.arcconfig
+  $ cd x/y
+  $ hg init
+  $ hg debugarcconfig
+  {"_arcconfig_path": "$TESTTMP/x", "foo": "bar", "user": true}
+  $ HOME=$PWD hg debugarcconfig
+  abort: no .arcconfig found
+  [255]
