@@ -30,7 +30,7 @@ use cross_repo_sync::rewrite_commit;
 use cross_repo_sync::submodule_metadata_file_prefix_and_dangling_pointers;
 use cross_repo_sync::update_mapping_with_version;
 use cross_repo_sync::CommitSyncContext;
-use cross_repo_sync::CommitSyncRepos;
+use cross_repo_sync::CommitSyncReposWithDirection;
 use cross_repo_sync::CommitSyncer;
 use cross_repo_sync::InMemoryRepo;
 use cross_repo_sync::Repo;
@@ -47,6 +47,7 @@ use megarepolib::common::ChangesetArgs;
 use megarepolib::perform_move;
 use metaconfig_types::CommitSyncConfig;
 use metaconfig_types::CommitSyncConfigVersion;
+use metaconfig_types::CommitSyncDirection;
 use metaconfig_types::CommonCommitSyncConfig;
 use metaconfig_types::DefaultSmallToLargeCommitSyncPathAction;
 use metaconfig_types::RepoConfig;
@@ -288,11 +289,12 @@ where
         .build()
         .await?;
 
-    let repos = CommitSyncRepos::SmallToLarge {
-        small_repo: smallrepo.clone(),
-        large_repo: megarepo.clone(),
-        submodule_deps: SubmoduleDeps::ForSync(HashMap::new()),
-    };
+    let repos = CommitSyncReposWithDirection::new(
+        smallrepo.clone(),
+        megarepo.clone(),
+        CommitSyncDirection::SmallToLarge,
+        SubmoduleDeps::ForSync(HashMap::new()),
+    );
 
     let noop_version = CommitSyncConfigVersion("noop".to_string());
     let version_with_small_repo = xrepo_mapping_version_with_small_repo();
@@ -334,11 +336,12 @@ where
     let small_to_large_commit_syncer =
         CommitSyncer::new(ctx, repos.clone().into(), live_commit_sync_config.clone());
 
-    let repos = CommitSyncRepos::LargeToSmall {
-        small_repo: smallrepo.clone(),
-        large_repo: megarepo.clone(),
-        submodule_deps: SubmoduleDeps::ForSync(HashMap::new()),
-    };
+    let repos = CommitSyncReposWithDirection::new(
+        smallrepo.clone(),
+        megarepo.clone(),
+        CommitSyncDirection::LargeToSmall,
+        SubmoduleDeps::ForSync(HashMap::new()),
+    );
 
     let large_to_small_commit_syncer =
         CommitSyncer::new(ctx, repos.clone().into(), live_commit_sync_config);

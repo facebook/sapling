@@ -29,6 +29,7 @@ use cross_repo_sync::CandidateSelectionHint;
 use cross_repo_sync::CommitSyncContext;
 use cross_repo_sync::CommitSyncOutcome;
 use cross_repo_sync::CommitSyncRepos;
+use cross_repo_sync::CommitSyncReposWithDirection;
 use cross_repo_sync::CommitSyncer;
 use cross_repo_sync::ErrorKind;
 use cross_repo_sync::PluralCommitSyncOutcome;
@@ -56,6 +57,7 @@ use mercurial_derivation::DeriveHgChangeset;
 use mercurial_types::HgChangesetId;
 use metaconfig_types::CommitSyncConfig;
 use metaconfig_types::CommitSyncConfigVersion;
+use metaconfig_types::CommitSyncDirection;
 use metaconfig_types::CommonCommitSyncConfig;
 use metaconfig_types::DefaultSmallToLargeCommitSyncPathAction;
 use metaconfig_types::RepoConfig;
@@ -310,13 +312,14 @@ fn create_small_to_large_commit_syncer(
     live_commit_sync_config: Arc<dyn LiveCommitSyncConfig>,
 ) -> Result<CommitSyncer<TestRepo>, Error> {
     let submodule_deps = SubmoduleDeps::ForSync(HashMap::new());
-    let repos = CommitSyncRepos::new(small_repo, large_repo, submodule_deps)?;
+    let repos = CommitSyncReposWithDirection::new(
+        small_repo,
+        large_repo,
+        CommitSyncDirection::SmallToLarge,
+        submodule_deps,
+    );
 
-    Ok(CommitSyncer::new(
-        ctx,
-        repos.into(),
-        live_commit_sync_config,
-    ))
+    Ok(CommitSyncer::new(ctx, repos, live_commit_sync_config))
 }
 
 fn create_large_to_small_commit_syncer(
@@ -327,13 +330,14 @@ fn create_large_to_small_commit_syncer(
 ) -> Result<CommitSyncer<TestRepo>, Error> {
     // Large to small has no submodule_deps
     let submodule_deps = SubmoduleDeps::NotNeeded;
-    let repos = CommitSyncRepos::new(large_repo, small_repo, submodule_deps)?;
+    let repos = CommitSyncReposWithDirection::new(
+        small_repo,
+        large_repo,
+        CommitSyncDirection::LargeToSmall,
+        submodule_deps,
+    );
 
-    Ok(CommitSyncer::new(
-        ctx,
-        repos.into(),
-        live_commit_sync_config,
-    ))
+    Ok(CommitSyncer::new(ctx, repos, live_commit_sync_config))
 }
 
 #[mononoke::fbinit_test]
@@ -2241,11 +2245,13 @@ async fn test_not_sync_candidate_if_mapping_does_not_have_small_repo(
     // created above.
     let live_commit_sync_config = Arc::new(sync_config);
 
-    let repos = CommitSyncRepos::LargeToSmall {
-        small_repo: first_smallrepo.clone(),
-        large_repo: large_repo.clone(),
-        submodule_deps: SubmoduleDeps::ForSync(HashMap::new()),
-    };
+    let repos = CommitSyncReposWithDirection::new(
+        first_smallrepo.clone(),
+        large_repo.clone(),
+        CommitSyncDirection::LargeToSmall,
+        SubmoduleDeps::ForSync(HashMap::new()),
+    );
+
     let large_to_first_small_commit_syncer =
         CommitSyncer::new(&ctx, repos.clone().into(), live_commit_sync_config.clone());
 
@@ -2264,11 +2270,14 @@ async fn test_not_sync_candidate_if_mapping_does_not_have_small_repo(
         .await?;
 
     // Now try to sync it to the other small repo, it should return NotSyncCandidate
-    let repos = CommitSyncRepos::LargeToSmall {
-        small_repo: second_smallrepo.clone(),
-        large_repo: large_repo.clone(),
-        submodule_deps: SubmoduleDeps::ForSync(HashMap::new()),
-    };
+
+    let repos = CommitSyncReposWithDirection::new(
+        second_smallrepo.clone(),
+        large_repo.clone(),
+        CommitSyncDirection::LargeToSmall,
+        SubmoduleDeps::ForSync(HashMap::new()),
+    );
+
     let large_to_second_small_commit_syncer =
         CommitSyncer::new(&ctx, repos.clone().into(), live_commit_sync_config.clone());
     large_to_second_small_commit_syncer
