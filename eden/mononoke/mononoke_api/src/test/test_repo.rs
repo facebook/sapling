@@ -28,6 +28,7 @@ use fixtures::TestRepoFixture;
 use live_commit_sync_config::TestLiveCommitSyncConfigSource;
 use maplit::hashmap;
 use metaconfig_types::CommitSyncConfigVersion;
+use metaconfig_types::CommitSyncDirection;
 use metaconfig_types::DefaultSmallToLargeCommitSyncPathAction;
 use mononoke_macros::mononoke;
 use mononoke_types::hash::Blake3;
@@ -809,17 +810,15 @@ async fn xrepo_commit_lookup_config_changing_live(fb: FacebookInit) -> Result<()
             .commit()
             .await?;
 
-    let commit_sync_repos = CommitSyncRepos::from_source_and_target_repos(
-        largerepo.repo().clone(),
+    let commit_sync_repos = CommitSyncRepos::new(
         smallrepo.repo().clone(),
+        largerepo.repo().clone(),
+        CommitSyncDirection::Backwards,
         SubmoduleDeps::ForSync(HashMap::new()),
-    )?;
-
-    let commit_syncer = CommitSyncer::new(
-        &ctx,
-        commit_sync_repos.into(),
-        largerepo.live_commit_sync_config(),
     );
+
+    let commit_syncer =
+        CommitSyncer::new(&ctx, commit_sync_repos, largerepo.live_commit_sync_config());
 
     update_mapping_with_version(
         &ctx,

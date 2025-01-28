@@ -47,6 +47,7 @@ use maplit::btreemap;
 use maplit::hashmap;
 use metaconfig_types::CommitSyncConfig;
 use metaconfig_types::CommitSyncConfigVersion;
+use metaconfig_types::CommitSyncDirection;
 use metaconfig_types::CommonCommitSyncConfig;
 use metaconfig_types::DefaultSmallToLargeCommitSyncPathAction;
 use metaconfig_types::DerivedDataTypesConfig;
@@ -436,14 +437,14 @@ pub(crate) fn create_small_repo_to_large_repo_commit_syncer(
     test_sync_config_source.add_config(commit_sync_config);
     test_sync_config_source.add_common_config(common_config);
 
-    let repos =
-        CommitSyncRepos::from_source_and_target_repos(small_repo, large_repo, submodule_deps)?;
+    let repos = CommitSyncRepos::new(
+        small_repo,
+        large_repo,
+        CommitSyncDirection::Forward,
+        submodule_deps,
+    );
 
-    Ok(CommitSyncer::new(
-        ctx,
-        repos.into(),
-        live_commit_sync_config,
-    ))
+    Ok(CommitSyncer::new(ctx, repos, live_commit_sync_config))
 }
 
 /// Creates the commit sync config to setup the sync from repo A to the large repo,

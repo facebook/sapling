@@ -742,30 +742,8 @@ impl<R: Repo> CommitSyncRepos<R> {
         }
     }
 
-    /// Temporary constructor to replace all callsites that are instantiating
-    /// commit syncer with source/target repos. These will all be removed later.
-    /// TODO(T182311609): delete this constructor and remove all references to
-    /// source/target
-    pub fn new_with_source_target(
-        source_repo: R,
-        target_repo: R,
-        sync_direction: CommitSyncDirection,
-        submodule_deps: SubmoduleDeps<R>,
-    ) -> Self {
-        let (small_repo, large_repo) = match sync_direction {
-            CommitSyncDirection::Forward => (source_repo, target_repo),
-            CommitSyncDirection::Backwards => (target_repo, source_repo),
-        };
-        Self {
-            small_repo,
-            large_repo,
-            sync_direction,
-            submodule_deps,
-        }
-    }
-
     /// Create a new instance of `CommitSyncRepos`
-    /// Whether it's SmallToLarge or LargeToSmall is determined by
+    /// Whether direction is Forward or Backwards is determined by
     /// source_repo/target_repo and common_commit_sync_config.
     pub fn from_source_and_target_repos(
         source_repo: R,

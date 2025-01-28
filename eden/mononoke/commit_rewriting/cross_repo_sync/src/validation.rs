@@ -2023,9 +2023,9 @@ mod test {
             .commit()
             .await?;
 
-        let repos = CommitSyncRepos::new_with_source_target(
-            source,
+        let repos = CommitSyncRepos::new(
             target,
+            source,
             CommitSyncDirection::Backwards,
             SubmoduleDeps::ForSync(HashMap::new()),
         );

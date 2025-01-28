@@ -717,9 +717,9 @@ async fn backsync_change_mapping(fb: FacebookInit) -> Result<(), Error> {
     init_target_repo(&ctx, &target_repo_dbs, source_repo_id).await?;
     let target_repo_dbs = Arc::new(target_repo_dbs);
 
-    let repos = CommitSyncRepos::new_with_source_target(
-        source_repo.clone(),
+    let repos = CommitSyncRepos::new(
         target_repo.clone(),
+        source_repo.clone(),
         CommitSyncDirection::Backwards,
         SubmoduleDeps::ForSync(HashMap::new()),
     );
@@ -1342,9 +1342,9 @@ async fn init_repos(
     };
     init_target_repo(&ctx, &target_repo_dbs, source_repo_id).await?;
 
-    let repos = CommitSyncRepos::new_with_source_target(
-        source_repo.clone(),
+    let repos = CommitSyncRepos::new(
         target_repo.clone(),
+        source_repo.clone(),
         CommitSyncDirection::Backwards,
         SubmoduleDeps::ForSync(HashMap::new()),
     );
@@ -1988,7 +1988,7 @@ async fn preserve_premerge_commit(
         lv_cfg_src.add_common_config(common);
 
         let live_commit_sync_config = Arc::new(lv_cfg);
-        CommitSyncer::new(&ctx, repos.into(), live_commit_sync_config)
+        CommitSyncer::new(&ctx, repos, live_commit_sync_config)
     };
 
     small_to_large_sync_config
