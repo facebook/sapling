@@ -212,9 +212,9 @@ fn get_direction_and_small_repo_id(
     };
 
     let direction = if source_repo_id == small_repo_id {
-        CommitSyncDirection::SmallToLarge
+        CommitSyncDirection::Forward
     } else {
-        CommitSyncDirection::LargeToSmall
+        CommitSyncDirection::Backwards
     };
 
     Ok((direction, small_repo_id))

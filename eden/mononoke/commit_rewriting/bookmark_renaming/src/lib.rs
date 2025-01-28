@@ -133,14 +133,14 @@ pub fn get_bookmark_renamers(
     direction: CommitSyncDirection,
 ) -> Result<BookmarkRenamers> {
     match direction {
-        CommitSyncDirection::LargeToSmall => Ok(BookmarkRenamers {
+        CommitSyncDirection::Backwards => Ok(BookmarkRenamers {
             bookmark_renamer: get_large_to_small_renamer(commit_sync_config, small_repo_id)?,
             reverse_bookmark_renamer: get_small_to_large_renamer(
                 commit_sync_config,
                 small_repo_id,
             )?,
         }),
-        CommitSyncDirection::SmallToLarge => Ok(BookmarkRenamers {
+        CommitSyncDirection::Forward => Ok(BookmarkRenamers {
             bookmark_renamer: get_small_to_large_renamer(commit_sync_config, small_repo_id)?,
             reverse_bookmark_renamer: get_large_to_small_renamer(
                 commit_sync_config,

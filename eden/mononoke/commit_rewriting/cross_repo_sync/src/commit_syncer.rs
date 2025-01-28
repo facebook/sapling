@@ -593,8 +593,8 @@ where
         let small_repo = self.get_small_repo();
         let large_repo = self.get_large_repo();
         let (source_repo, target_repo, source_is_large) = match self.repos.get_direction() {
-            CommitSyncDirection::LargeToSmall => (large_repo.clone(), small_repo.clone(), true),
-            CommitSyncDirection::SmallToLarge => (small_repo.clone(), large_repo.clone(), true),
+            CommitSyncDirection::Backwards => (large_repo.clone(), small_repo.clone(), true),
+            CommitSyncDirection::Forward => (small_repo.clone(), large_repo.clone(), true),
         };
 
         let source_repoid = source_repo.repo_identity().id();
@@ -803,7 +803,7 @@ where
             mapped_parents: &mapped_parents,
             target_repo_id: Target(self.get_target_repo_id()),
             live_commit_sync_config: Arc::clone(&self.live_commit_sync_config),
-            small_to_large: self.repos.get_direction() == CommitSyncDirection::SmallToLarge,
+            small_to_large: self.repos.get_direction() == CommitSyncDirection::Forward,
             submodule_deps,
             large_repo: large_in_memory_repo,
             strip_commit_extras,
@@ -1144,8 +1144,8 @@ where
         let small_repo = self.repos.get_small_repo().clone();
         let large_repo = self.repos.get_large_repo().clone();
         match self.repos.get_direction() {
-            CommitSyncDirection::LargeToSmall => (large_repo, small_repo),
-            CommitSyncDirection::SmallToLarge => (small_repo, large_repo),
+            CommitSyncDirection::Backwards => (large_repo, small_repo),
+            CommitSyncDirection::Forward => (small_repo, large_repo),
         }
     }
 }

@@ -132,14 +132,14 @@ pub async fn verify_working_copy_with_version<'a, R: Repo>(
 
     let (small_repo, large_repo, small_root_fsnode_id, large_root_fsnode_id, commit_syncer) =
         match commit_syncer.repos.get_direction() {
-            CommitSyncDirection::SmallToLarge => (
+            CommitSyncDirection::Forward => (
                 source_repo,
                 target_repo,
                 source_root_fsnode_id,
                 target_root_fsnode_id,
                 commit_syncer.clone(),
             ),
-            CommitSyncDirection::LargeToSmall => (
+            CommitSyncDirection::Backwards => (
                 target_repo,
                 source_repo,
                 target_root_fsnode_id,
@@ -200,7 +200,7 @@ pub async fn verify_working_copy_with_version<'a, R: Repo>(
 
     verify_working_copy_inner(
         ctx,
-        CommitSyncDirection::LargeToSmall,
+        CommitSyncDirection::Backwards,
         Source(large_repo),
         large_root_fsnode_id,
         Target(small_repo),
@@ -230,7 +230,7 @@ pub async fn verify_working_copy_with_version<'a, R: Repo>(
         .collect();
     verify_working_copy_inner(
         ctx,
-        CommitSyncDirection::SmallToLarge,
+        CommitSyncDirection::Forward,
         Source(small_repo),
         small_root_fsnode_id,
         Target(large_repo),
@@ -838,7 +838,7 @@ async fn verify_and_filter_out_submodule_changes<'a>(
     match direction {
         // large to small: find all expansions and their metadata files and call the
         // appropiate validation function
-        CommitSyncDirection::LargeToSmall => {
+        CommitSyncDirection::Backwards => {
             match submodules_action {
                 // in case of keep and strip there should be nothing in the large repo
                 // that doesn't rewrite cleanly to small one with just mover - no filtering needed
@@ -890,7 +890,7 @@ async fn verify_and_filter_out_submodule_changes<'a>(
             }
         }
         // small to large is simpler: ws need to call validation for each submodule
-        CommitSyncDirection::SmallToLarge => {
+        CommitSyncDirection::Forward => {
             for (elem, entry) in source_dir.into_subentries() {
                 if let FsnodeEntry::File(fsnode_fileentry) = entry {
                     if *fsnode_fileentry.file_type() == FileType::GitSubmodule {
@@ -1714,7 +1714,7 @@ mod test {
     #[mononoke::fbinit_test]
     async fn test_bookmark_diff_with_renamer(fb: FacebookInit) -> Result<(), Error> {
         let ctx = CoreContext::test_mock(fb);
-        let (syncers, _config) = init(fb, CommitSyncDirection::LargeToSmall).await?;
+        let (syncers, _config) = init(fb, CommitSyncDirection::Backwards).await?;
         let commit_syncer = syncers.large_to_small;
 
         let small_repo = commit_syncer.get_small_repo();
@@ -1746,8 +1746,7 @@ mod test {
     #[mononoke::fbinit_test]
     async fn test_bookmark_diff_with_updates(fb: FacebookInit) -> Result<(), Error> {
         let ctx = CoreContext::test_mock(fb);
-        let (syncers, live_commit_sync_config) =
-            init(fb, CommitSyncDirection::LargeToSmall).await?;
+        let (syncers, live_commit_sync_config) = init(fb, CommitSyncDirection::Backwards).await?;
         let commit_syncer = &syncers.large_to_small;
 
         let small_repo = commit_syncer.get_small_repo();
@@ -1877,7 +1876,7 @@ mod test {
 
     async fn test_bookmark_small_to_large_impl(fb: FacebookInit) -> Result<(), Error> {
         let ctx = CoreContext::test_mock(fb);
-        let (syncers, _config) = init(fb, CommitSyncDirection::SmallToLarge).await?;
+        let (syncers, _config) = init(fb, CommitSyncDirection::Forward).await?;
         let commit_syncer = syncers.small_to_large;
 
         let large_repo = commit_syncer.get_large_repo();
@@ -1901,7 +1900,7 @@ mod test {
 
     async fn test_bookmark_no_sync_outcome_impl(fb: FacebookInit) -> Result<(), Error> {
         let ctx = CoreContext::test_mock(fb);
-        let (syncers, _config) = init(fb, CommitSyncDirection::LargeToSmall).await?;
+        let (syncers, _config) = init(fb, CommitSyncDirection::Backwards).await?;
         let commit_syncer = syncers.large_to_small;
 
         let large_repo = commit_syncer.get_large_repo();
@@ -1927,8 +1926,7 @@ mod test {
     #[mononoke::fbinit_test]
     async fn test_verify_working_copy(fb: FacebookInit) -> Result<(), Error> {
         let ctx = CoreContext::test_mock(fb);
-        let (syncers, live_commit_sync_config) =
-            init(fb, CommitSyncDirection::LargeToSmall).await?;
+        let (syncers, live_commit_sync_config) = init(fb, CommitSyncDirection::Backwards).await?;
         let commit_syncer = syncers.large_to_small;
 
         let source_cs_id = CreateCommitContext::new_root(&ctx, &commit_syncer.get_large_repo())
@@ -1960,8 +1958,7 @@ mod test {
     #[mononoke::fbinit_test]
     async fn test_verify_working_copy_with_prefixes(fb: FacebookInit) -> Result<(), Error> {
         let ctx = CoreContext::test_mock(fb);
-        let (syncers, live_commit_sync_config) =
-            init(fb, CommitSyncDirection::LargeToSmall).await?;
+        let (syncers, live_commit_sync_config) = init(fb, CommitSyncDirection::Backwards).await?;
         let commit_syncer = syncers.large_to_small;
 
         let source_cs_id = CreateCommitContext::new_root(&ctx, &commit_syncer.get_large_repo())
@@ -2029,7 +2026,7 @@ mod test {
         let repos = CommitSyncRepos::new_with_source_target(
             source,
             target,
-            CommitSyncDirection::LargeToSmall,
+            CommitSyncDirection::Backwards,
             SubmoduleDeps::ForSync(HashMap::new()),
         );
 

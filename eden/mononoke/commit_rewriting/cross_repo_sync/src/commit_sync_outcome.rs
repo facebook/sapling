@@ -214,7 +214,7 @@ pub async fn get_plural_commit_sync_outcome<'a, M: SyncedCommitMapping>(
 
     match maybe_wc_equivalence {
         None => {
-            if direction == CommitSyncDirection::LargeToSmall {
+            if direction == CommitSyncDirection::Backwards {
                 let maybe_version = mapping
                     .get_large_repo_commit_version(ctx, source_repo_id.0, source_cs_id.0)
                     .await?;
@@ -736,7 +736,7 @@ mod tests {
             Source(ONES_CSID),
             &mapping,
             hint,
-            CommitSyncDirection::SmallToLarge,
+            CommitSyncDirection::Forward,
             live_commit_sync_config,
         )
         .await

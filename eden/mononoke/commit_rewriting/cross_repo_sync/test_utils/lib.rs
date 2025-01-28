@@ -292,7 +292,7 @@ where
     let repos = CommitSyncRepos::new(
         smallrepo.clone(),
         megarepo.clone(),
-        CommitSyncDirection::SmallToLarge,
+        CommitSyncDirection::Forward,
         SubmoduleDeps::ForSync(HashMap::new()),
     );
 
@@ -339,7 +339,7 @@ where
     let repos = CommitSyncRepos::new(
         smallrepo.clone(),
         megarepo.clone(),
-        CommitSyncDirection::LargeToSmall,
+        CommitSyncDirection::Backwards,
         SubmoduleDeps::ForSync(HashMap::new()),
     );
 

@@ -385,11 +385,11 @@ pub fn get_movers(
     direction: CommitSyncDirection,
 ) -> Result<Movers> {
     match direction {
-        CommitSyncDirection::LargeToSmall => Ok(Movers {
+        CommitSyncDirection::Backwards => Ok(Movers {
             mover: get_large_to_small_mover(commit_sync_config, small_repo_id)?,
             reverse_mover: get_small_to_large_mover(commit_sync_config, small_repo_id)?,
         }),
-        CommitSyncDirection::SmallToLarge => Ok(Movers {
+        CommitSyncDirection::Forward => Ok(Movers {
             mover: get_small_to_large_mover(commit_sync_config, small_repo_id)?,
             reverse_mover: get_large_to_small_mover(commit_sync_config, small_repo_id)?,
         }),

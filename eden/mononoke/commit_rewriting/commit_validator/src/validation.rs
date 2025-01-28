@@ -245,7 +245,7 @@ impl ValidationHelper {
             Target(small_repo_id),
             Source(hash.0),
             mapping,
-            CommitSyncDirection::LargeToSmall,
+            CommitSyncDirection::Backwards,
             Arc::new(self.live_commit_sync_config.clone()),
         )
         .await?;
@@ -697,7 +697,7 @@ impl ValidationHelpers {
         let movers = get_movers(
             &commit_sync_config,
             small_repo_id.0,
-            CommitSyncDirection::SmallToLarge,
+            CommitSyncDirection::Forward,
         )?;
         Ok((movers.mover, movers.reverse_mover))
     }
@@ -999,7 +999,7 @@ async fn validate_topological_order<'a, R: RepoIdentityRef + CommitGraphRef + Co
                     Target(large_repo_id),
                     Source(small_parent),
                     &mapping,
-                    CommitSyncDirection::SmallToLarge,
+                    CommitSyncDirection::Forward,
                     live_commit_sync_config,
                 )
                 .await?;

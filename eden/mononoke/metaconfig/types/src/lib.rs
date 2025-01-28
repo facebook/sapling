@@ -1431,19 +1431,18 @@ pub struct SmallRepoCommitSyncConfig {
 /// Commit sync direction
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
 pub enum CommitSyncDirection {
-    // TODO(T182311609): rename this to forward/backwards.
     /// Syncing commits from large repo to small ones
-    LargeToSmall,
+    Backwards,
     /// Syncing commits from small repos to large one
-    SmallToLarge,
+    Forward,
 }
 
 impl CommitSyncDirection {
     /// Return the opposite sync direction
     pub fn reverse(&self) -> Self {
         match self {
-            Self::LargeToSmall => Self::SmallToLarge,
-            Self::SmallToLarge => Self::LargeToSmall,
+            Self::Backwards => Self::Forward,
+            Self::Forward => Self::Backwards,
         }
     }
 }

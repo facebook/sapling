@@ -314,7 +314,7 @@ fn create_small_to_large_commit_syncer(
     let repos = CommitSyncRepos::new(
         small_repo,
         large_repo,
-        CommitSyncDirection::SmallToLarge,
+        CommitSyncDirection::Forward,
         submodule_deps,
     );
 
@@ -332,7 +332,7 @@ fn create_large_to_small_commit_syncer(
     let repos = CommitSyncRepos::new(
         small_repo,
         large_repo,
-        CommitSyncDirection::LargeToSmall,
+        CommitSyncDirection::Backwards,
         submodule_deps,
     );
 
@@ -758,7 +758,7 @@ async fn test_sync_implicit_deletes(fb: FacebookInit) -> Result<(), Error> {
     let commit_sync_repos = CommitSyncRepos::new(
         repo.clone(),
         megarepo.clone(),
-        CommitSyncDirection::SmallToLarge,
+        CommitSyncDirection::Forward,
         SubmoduleDeps::ForSync(HashMap::new()),
     );
 
@@ -1866,7 +1866,7 @@ async fn merge_test_setup(
         lts_syncer.repos = CommitSyncRepos::new(
             small_repo.clone(),
             large_repo.clone(),
-            CommitSyncDirection::LargeToSmall,
+            CommitSyncDirection::Backwards,
             SubmoduleDeps::ForSync(HashMap::new()),
         );
         lts_syncer.live_commit_sync_config = get_merge_sync_live_commit_sync_config(
@@ -2078,13 +2078,13 @@ async fn test_no_accidental_preserved_roots(
     let version = version_name_with_small_repo();
     let commit_syncer = {
         let mut commit_syncer = match &commit_sync_repos.get_direction() {
-            CommitSyncDirection::LargeToSmall => create_large_to_small_commit_syncer(
+            CommitSyncDirection::Backwards => create_large_to_small_commit_syncer(
                 &ctx,
                 commit_sync_repos.get_small_repo().clone(),
                 commit_sync_repos.get_large_repo().clone(),
                 live_commit_sync_config.clone(),
             )?,
-            CommitSyncDirection::SmallToLarge => create_small_to_large_commit_syncer(
+            CommitSyncDirection::Forward => create_small_to_large_commit_syncer(
                 &ctx,
                 commit_sync_repos.get_small_repo().clone(),
                 commit_sync_repos.get_large_repo().clone(),
@@ -2168,7 +2168,7 @@ async fn test_no_accidental_preserved_roots_large_to_small(fb: FacebookInit) -> 
     let commit_sync_repos = CommitSyncRepos::new(
         small_repo.clone(),
         large_repo.clone(),
-        CommitSyncDirection::LargeToSmall,
+        CommitSyncDirection::Backwards,
         SubmoduleDeps::ForSync(HashMap::new()),
     );
     test_no_accidental_preserved_roots(ctx, commit_sync_repos, live_commit_sync_config).await
@@ -2184,7 +2184,7 @@ async fn test_no_accidental_preserved_roots_small_to_large(fb: FacebookInit) -> 
     let commit_sync_repos = CommitSyncRepos::new(
         small_repo.clone(),
         large_repo.clone(),
-        CommitSyncDirection::SmallToLarge,
+        CommitSyncDirection::Forward,
         SubmoduleDeps::ForSync(HashMap::new()),
     );
     test_no_accidental_preserved_roots(ctx, commit_sync_repos, live_commit_sync_config).await
@@ -2245,7 +2245,7 @@ async fn test_not_sync_candidate_if_mapping_does_not_have_small_repo(
     let repos = CommitSyncRepos::new(
         first_smallrepo.clone(),
         large_repo.clone(),
-        CommitSyncDirection::LargeToSmall,
+        CommitSyncDirection::Backwards,
         SubmoduleDeps::ForSync(HashMap::new()),
     );
 
@@ -2271,7 +2271,7 @@ async fn test_not_sync_candidate_if_mapping_does_not_have_small_repo(
     let repos = CommitSyncRepos::new(
         second_smallrepo.clone(),
         large_repo.clone(),
-        CommitSyncDirection::LargeToSmall,
+        CommitSyncDirection::Backwards,
         SubmoduleDeps::ForSync(HashMap::new()),
     );
 

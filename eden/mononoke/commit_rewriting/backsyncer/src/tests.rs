@@ -720,7 +720,7 @@ async fn backsync_change_mapping(fb: FacebookInit) -> Result<(), Error> {
     let repos = CommitSyncRepos::new_with_source_target(
         source_repo.clone(),
         target_repo.clone(),
-        CommitSyncDirection::LargeToSmall,
+        CommitSyncDirection::Backwards,
         SubmoduleDeps::ForSync(HashMap::new()),
     );
 
@@ -1345,7 +1345,7 @@ async fn init_repos(
     let repos = CommitSyncRepos::new_with_source_target(
         source_repo.clone(),
         target_repo.clone(),
-        CommitSyncDirection::LargeToSmall,
+        CommitSyncDirection::Backwards,
         SubmoduleDeps::ForSync(HashMap::new()),
     );
 
@@ -1710,7 +1710,7 @@ async fn init_merged_repos(
         let repos = CommitSyncRepos::new(
             small_repo.clone(),
             large_repo.clone(),
-            CommitSyncDirection::LargeToSmall,
+            CommitSyncDirection::Backwards,
             SubmoduleDeps::ForSync(HashMap::new()),
         );
 
@@ -1962,7 +1962,7 @@ async fn preserve_premerge_commit(
         let repos = CommitSyncRepos::new(
             small_repo.clone(),
             large_repo.clone(),
-            CommitSyncDirection::SmallToLarge,
+            CommitSyncDirection::Forward,
             SubmoduleDeps::ForSync(HashMap::new()),
         );
 

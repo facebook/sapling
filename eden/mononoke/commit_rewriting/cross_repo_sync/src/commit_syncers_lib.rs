@@ -753,8 +753,8 @@ impl<R: Repo> CommitSyncRepos<R> {
         submodule_deps: SubmoduleDeps<R>,
     ) -> Self {
         let (small_repo, large_repo) = match sync_direction {
-            CommitSyncDirection::SmallToLarge => (source_repo, target_repo),
-            CommitSyncDirection::LargeToSmall => (target_repo, source_repo),
+            CommitSyncDirection::Forward => (source_repo, target_repo),
+            CommitSyncDirection::Backwards => (target_repo, source_repo),
         };
         Self {
             small_repo,
@@ -774,8 +774,8 @@ impl<R: Repo> CommitSyncRepos<R> {
     ) -> Result<Self, Error> {
         let sync_direction = commit_sync_direction_from_config(&source_repo, &target_repo)?;
         let (small_repo, large_repo) = match sync_direction {
-            CommitSyncDirection::SmallToLarge => (source_repo, target_repo),
-            CommitSyncDirection::LargeToSmall => (target_repo, source_repo),
+            CommitSyncDirection::Forward => (source_repo, target_repo),
+            CommitSyncDirection::Backwards => (target_repo, source_repo),
         };
 
         Ok(CommitSyncRepos {
@@ -803,15 +803,15 @@ impl<R: Repo> CommitSyncRepos<R> {
 
     pub fn get_source_repo(&self) -> &R {
         match self.sync_direction {
-            CommitSyncDirection::SmallToLarge => &self.small_repo,
-            CommitSyncDirection::LargeToSmall => &self.large_repo,
+            CommitSyncDirection::Forward => &self.small_repo,
+            CommitSyncDirection::Backwards => &self.large_repo,
         }
     }
 
     pub fn get_target_repo(&self) -> &R {
         match self.sync_direction {
-            CommitSyncDirection::SmallToLarge => &self.large_repo,
-            CommitSyncDirection::LargeToSmall => &self.small_repo,
+            CommitSyncDirection::Forward => &self.large_repo,
+            CommitSyncDirection::Backwards => &self.small_repo,
         }
     }
 
@@ -825,8 +825,8 @@ impl<R: Repo> CommitSyncRepos<R> {
 
     pub fn get_source_repo_type(&self) -> SyncedCommitSourceRepo {
         match self.sync_direction {
-            CommitSyncDirection::SmallToLarge => SyncedCommitSourceRepo::Small,
-            CommitSyncDirection::LargeToSmall => SyncedCommitSourceRepo::Large,
+            CommitSyncDirection::Forward => SyncedCommitSourceRepo::Small,
+            CommitSyncDirection::Backwards => SyncedCommitSourceRepo::Large,
         }
     }
 
@@ -916,11 +916,11 @@ pub fn commit_sync_direction_from_config<R: Repo>(
     if common_commit_sync_config.large_repo_id == source_repo.repo_identity().id()
         && is_small_repo(target_repo)
     {
-        Ok(CommitSyncDirection::LargeToSmall)
+        Ok(CommitSyncDirection::Backwards)
     } else if common_commit_sync_config.large_repo_id == target_repo.repo_identity().id()
         && is_small_repo(source_repo)
     {
-        Ok(CommitSyncDirection::SmallToLarge)
+        Ok(CommitSyncDirection::Forward)
     } else {
         Err(format_err!(
             "CommitSyncMapping incompatible with source repo {:?} and target repo {:?}",
@@ -936,8 +936,8 @@ pub fn get_small_and_large_repos<'a, R: Repo>(
 ) -> Result<(&'a R, &'a R)> {
     let sync_direction = commit_sync_direction_from_config(source_repo, target_repo)?;
     match sync_direction {
-        CommitSyncDirection::SmallToLarge => Ok((source_repo, target_repo)),
-        CommitSyncDirection::LargeToSmall => Ok((target_repo, source_repo)),
+        CommitSyncDirection::Forward => Ok((source_repo, target_repo)),
+        CommitSyncDirection::Backwards => Ok((target_repo, source_repo)),
     }
 }
 
@@ -1028,8 +1028,8 @@ pub fn create_synced_commit_mapping_entry<R: Repo>(
     let small_repo = repos.get_small_repo().clone();
     let large_repo = repos.get_large_repo().clone();
     let (source_repo, target_repo, source_is_large) = match repos.get_direction() {
-        CommitSyncDirection::LargeToSmall => (large_repo, small_repo, true),
-        CommitSyncDirection::SmallToLarge => (small_repo, large_repo, false),
+        CommitSyncDirection::Backwards => (large_repo, small_repo, true),
+        CommitSyncDirection::Forward => (small_repo, large_repo, false),
     };
 
     let source_repoid = source_repo.repo_identity().id();
@@ -1077,13 +1077,13 @@ where
     let small_to_large_commit_sync_repos = CommitSyncRepos::new(
         small_repo.clone(),
         large_repo.clone(),
-        CommitSyncDirection::SmallToLarge,
+        CommitSyncDirection::Forward,
         submodule_deps.clone(),
     );
     let large_to_small_commit_sync_repos = CommitSyncRepos::new(
         small_repo,
         large_repo,
-        CommitSyncDirection::LargeToSmall,
+        CommitSyncDirection::Backwards,
         submodule_deps,
     );
 
