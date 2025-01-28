@@ -113,6 +113,14 @@ bool deserializeBool(Cursor& cursor) {
   return static_cast<bool>(cursor.read<uint8_t>());
 }
 
+[[maybe_unused]] void serializeUint8(Appender& a, uint8_t val) {
+  a.write<uint8_t>(val);
+}
+
+[[maybe_unused]] uint8_t deserializeUint8(Cursor& cursor) {
+  return cursor.read<uint8_t>();
+}
+
 void serializeUint16(Appender& a, uint16_t val) {
   a.write<uint16_t>(val);
 }
