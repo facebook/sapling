@@ -567,16 +567,6 @@ class EdenConfig : private ConfigSettingManager {
   // [nfs]
 
   /**
-   * The maximum time duration allowed for a NFS request. If a request exceeds
-   * this amount of time, an NFS3ERR_JUKEBOX error will be returned to the
-   * client to avoid blocking forever.
-   */
-  ConfigSetting<std::chrono::nanoseconds> nfsRequestTimeout{
-      "nfs:request-timeout",
-      std::chrono::minutes(1),
-      this};
-
-  /**
    * Controls whether Eden will run it's own rpcbind/portmapper server. On
    * Linux there is one built into the kernel that is always running, and on
    * mac there is one built into the kernel you just have to poke into running.
@@ -601,24 +591,6 @@ class EdenConfig : private ConfigSettingManager {
   ConfigSetting<bool> registerMountd{"nfs:register-mountd", false, this};
 
   /**
-   * Buffer size for read and writes requests. Default to 16 KiB.
-   *
-   * 16KiB was determined to offer the best tradeoff of random write speed to
-   * streaming writes on macOS, use the benchmarks/random_writes.cpp before
-   * changing this default value.
-   */
-  ConfigSetting<uint32_t> nfsIoSize{"nfs:iosize", 16 * 1024, this};
-
-  /**
-   * Whether EdenFS NFS sockets should bind themself to unix sockets instead of
-   * TCP ones.
-   *
-   * Unix sockets bypass the overhead of TCP and are thus significantly faster.
-   * This is only supported on macOS.
-   */
-  ConfigSetting<bool> useUnixSocket{"nfs:use-uds", false, this};
-
-  /**
    * Whether EdenFS should unload NFS inodes. NFSv3 does not notify us when
    * file handles are closed. We have no definitive info from NFS on how many
    * open handles there are for already removed inodes.
@@ -637,18 +609,136 @@ class EdenConfig : private ConfigSettingManager {
       this};
 
   /**
-   * When set to true, we will use readdirplus instead of readdir. Readdirplus
-   * will be enabled for all nfs mounts. If set to false, regular readdir is
-   * used instead.
-   */
-  ConfigSetting<bool> useReaddirplus{"nfs:use-readdirplus", false, this};
-
-  /**
    * On macOS, ._ (AppleDouble) are sprinkled all over the place. Enabling this
    * allows these file to be created. When disabled, the AppleDouble files
    * won't be created.
    */
   ConfigSetting<bool> allowAppleDouble{"nfs:allow-apple-double", true, this};
+
+  /**
+   * ============== NFS MOUNT OPTIONS ==============
+   *
+   * See `man mount_nfs` for more information on these options.
+   *
+   * https://www.unix.com/man-page/osx/8/mount_nfs/
+   */
+
+  /**
+   * The maximum time duration allowed for a NFS request. If a request exceeds
+   * this amount of time, an NFS3ERR_JUKEBOX error will be returned to the
+   * client to avoid blocking forever.
+   */
+  ConfigSetting<std::chrono::nanoseconds> nfsRequestTimeout{
+      "nfs:request-timeout",
+      std::chrono::minutes(1),
+      this};
+
+  /**
+   * ========= DEPRECATED: DO NOT USE =========
+   *
+   * Buffer size for read and write requests. Default to 16 KiB.
+   *
+   * 16KiB was determined to offer the best tradeoff of random write speed to
+   * streaming writes on macOS, use the benchmarks/random_writes.cpp before
+   * changing this default value.
+   */
+  ConfigSetting<uint32_t> nfsIoSize{"nfs:iosize", 16 * 1024, this};
+
+  /**
+   * Buffer size for read requests. Default to 16 KiB.
+   *
+   * 16KiB was determined to offer the best tradeoff of random write speed to
+   * streaming writes on macOS, use the benchmarks/random_writes.cpp before
+   * changing this default value.
+   */
+  ConfigSetting<uint32_t> nfsReadIoSize{"nfs:read-iosize", 16 * 1024, this};
+
+  /**
+   * Buffer size for write requests. Default to 16 KiB.
+   *
+   * 16KiB was determined to offer the best tradeoff of random write speed to
+   * streaming writes on macOS, use the benchmarks/random_writes.cpp before
+   * changing this default value.
+   */
+  ConfigSetting<uint32_t> nfsWriteIoSize{"nfs:write-iosize", 16 * 1024, this};
+
+  /**
+   * Whether EdenFS NFS sockets should bind themself to unix sockets instead of
+   * TCP ones.
+   *
+   * Unix sockets bypass the overhead of TCP and are thus significantly faster.
+   * This is only supported on macOS.
+   *
+   * Note: Using UDS for binding is currently believed to be buggy. Reads would
+   * randomly fail with some error due to a bug in the kernel not retrying
+   * some internal error (like buffer being too small).
+   */
+  ConfigSetting<bool> useUnixSocket{"nfs:use-uds", false, this};
+
+  /**
+   * Set the directory read size to the specified value. The value should
+   * normally be a multiple of DIRBLKSIZ that is <= the read size for the mount.
+   * The default is 8192 for UDP mounts and 32768 for TCP mounts.
+   */
+  ConfigSetting<std::optional<uint32_t>> nfsDirectoryReadSize{
+      "nfs:dir-read-size",
+      std::nullopt,
+      this};
+
+  /**
+   * Set the maximum read-ahead count to the specified value. This may be in the
+   * range of 0 - 128, and determines how many Read RPCs will be read ahead when
+   * a large file is being read sequentially. Trying larger values for this is
+   * suggested for mounts with a large bandwidth * delay product.
+   */
+  ConfigSetting<uint8_t> nfsReadAhead{"nfs:read-ahead", 16, this};
+
+  /**
+   * Set the initial retransmit timeout to the specified value. (Normally, the
+   * dumbtimer option should be specified when using this option to manually
+   * tune the timeout interval). The value is in tenths of a second.
+   */
+  ConfigSetting<int32_t> nfsRetransmitTimeoutTenthSeconds{
+      "nfs:retransmit-timeout-tenths",
+      10,
+      this};
+
+  /**
+   * Set the retransmit timeout count for soft mounts to the specified value.
+   */
+  ConfigSetting<uint32_t> nfsRetransmitAttempts{
+      "nfs:retransmit-attempts",
+      10,
+      this};
+
+  /**
+   * If the mount is still unresponsive X seconds after it is initially
+   * reported unresponsive, then mark the mount as dead so that it will be
+   * forcibly unmounted.  Note: mounts which are both soft and read-only will
+   * also have the deadtimeout mount option set to 60 seconds.  This can be
+   * explicitly overridden by setting deadtimeout=0.
+   */
+  ConfigSetting<int32_t> nfsDeadTimeoutSeconds{
+      "nfs:dead-timeout-seconds",
+      60,
+      this};
+
+  /**
+   * Turn off the dynamic retransmit timeout estimator.  This may be useful for
+   * UDP mounts that exhibit high retry rates, since it is possible that the
+   * dynamically estimated timeout interval is too short.
+   */
+  ConfigSetting<std::optional<bool>> nfsDumbtimer{
+      "nfs:dumbtimer",
+      std::nullopt,
+      this};
+
+  /**
+   * When set to true, we will use readdirplus instead of readdir. Readdirplus
+   * will be enabled for all nfs mounts. If set to false, regular readdir is
+   * used instead.
+   */
+  ConfigSetting<bool> useReaddirplus{"nfs:use-readdirplus", false, this};
 
   /**
    * When set to true, NFS mounts are mounted with the "soft" mount option. This
