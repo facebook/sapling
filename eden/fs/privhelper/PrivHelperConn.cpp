@@ -73,7 +73,7 @@ UnixSocket::Message serializeRequestPacket(
 template <
     typename T,
     std::enable_if_t<std::is_arithmetic<T>::value, bool> = true>
-[[maybe_unused]] void serializeOption(Appender& a, std::optional<T> val) {
+void serializeOption(Appender& a, std::optional<T> val) {
   bool is_some = val.has_value();
   a.write<bool>(is_some);
   if (is_some) {
@@ -86,7 +86,7 @@ template <
 template <
     typename T,
     std::enable_if_t<std::is_arithmetic<T>::value, bool> = true>
-[[maybe_unused]] std::optional<T> deserializeOption(Cursor& cursor) {
+std::optional<T> deserializeOption(Cursor& cursor) {
   bool is_some = cursor.read<bool>();
   if (is_some) {
     return cursor.read<T>();
@@ -113,11 +113,11 @@ bool deserializeBool(Cursor& cursor) {
   return static_cast<bool>(cursor.read<uint8_t>());
 }
 
-[[maybe_unused]] void serializeUint8(Appender& a, uint8_t val) {
+void serializeUint8(Appender& a, uint8_t val) {
   a.write<uint8_t>(val);
 }
 
-[[maybe_unused]] uint8_t deserializeUint8(Cursor& cursor) {
+uint8_t deserializeUint8(Cursor& cursor) {
   return cursor.read<uint8_t>();
 }
 
@@ -168,6 +168,19 @@ void serializeNFSMountOptions(Appender& a, const NFSMountOptions& options) {
   serializeUint32(a, options.iosize);
   serializeBool(a, options.useReaddirplus);
   serializeBool(a, options.useSoftMount);
+
+  // NFS options readIOSize => dumbtimer were all added at the same time, and
+  // therefore will either all be present or all be absent.
+  if (options.readIOSize.has_value()) {
+    serializeUint32(a, options.readIOSize.value());
+    serializeUint32(a, options.writeIOSize.value());
+    serializeOption(a, options.directoryReadSize.value());
+    serializeUint8(a, options.readAheadSize.value());
+    serializeUint32(a, options.retransmitTimeoutTenthSeconds.value());
+    serializeUint32(a, options.retransmitAttempts.value());
+    serializeUint32(a, options.deadTimeoutSeconds.value());
+    serializeOption(a, options.dumbtimer.value());
+  }
 }
 
 NFSMountOptions deserializeNFSMountOptions(Cursor& cursor) {
@@ -178,6 +191,20 @@ NFSMountOptions deserializeNFSMountOptions(Cursor& cursor) {
   options.iosize = deserializeUint32(cursor);
   options.useReaddirplus = deserializeBool(cursor);
   options.useSoftMount = deserializeBool(cursor);
+
+  // We must be reading from newer NFS options, which contains more fields.
+  if (!cursor.isAtEnd()) {
+    // NFS options readIOSize => dumbtimer were all added at the same time, and
+    // therefore will either all be present or all be absent.
+    options.readIOSize = deserializeUint32(cursor);
+    options.writeIOSize = deserializeUint32(cursor);
+    options.directoryReadSize = deserializeOption<uint32_t>(cursor);
+    options.readAheadSize = deserializeUint8(cursor);
+    options.retransmitTimeoutTenthSeconds = deserializeUint32(cursor);
+    options.retransmitAttempts = deserializeUint32(cursor);
+    options.deadTimeoutSeconds = deserializeUint32(cursor);
+    options.dumbtimer = deserializeOption<bool>(cursor);
+  }
   return options;
 }
 

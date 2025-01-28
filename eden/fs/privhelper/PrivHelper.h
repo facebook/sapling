@@ -36,6 +36,10 @@ struct NFSMountOptions {
   uint32_t iosize;
   bool useReaddirplus;
   bool useSoftMount;
+
+  // New fields for specifying more NFS mount options. These can be made
+  // non-optional once all running daemons have been updated to pass these
+  // values.
   std::optional<uint32_t> readIOSize;
   std::optional<uint32_t> writeIOSize;
   std::optional<std::optional<uint32_t>> directoryReadSize;
