@@ -137,7 +137,25 @@ mononoke_queries! {
         RequestStatus,
         Option<ClaimedBy>,
     ) {
-        "SELECT id,
+        mysql("SELECT id,
+            request_type,
+            repo_id,
+            args_blobstore_key,
+            result_blobstore_key,
+            created_at,
+            started_processing_at,
+            inprogress_last_updated_at,
+            ready_at,
+            polled_at,
+            status,
+            claimed_by
+        FROM long_running_request_queue
+        FORCE INDEX (request_dequeue)
+        WHERE status = 'new' AND repo_id IN {supported_repo_ids}
+        ORDER BY created_at ASC
+        LIMIT 1
+        ")
+        sqlite("SELECT id,
             request_type,
             repo_id,
             args_blobstore_key,
@@ -153,7 +171,7 @@ mononoke_queries! {
         WHERE status = 'new' AND repo_id IN {supported_repo_ids}
         ORDER BY created_at ASC
         LIMIT 1
-        "
+        ")
     }
 
     write AddRequestWithRepo(request_type: RequestType, repo_id: RepositoryId, args_blobstore_key: BlobstoreKey, created_at: Timestamp) {
