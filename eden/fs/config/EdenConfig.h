@@ -626,7 +626,7 @@ class EdenConfig : private ConfigSettingManager {
   /**
    * The maximum time duration allowed for a NFS request. If a request exceeds
    * this amount of time, an NFS3ERR_JUKEBOX error will be returned to the
-   * client to avoid blocking forever.
+   * client to avoid blocking forever. NOTE: This is currently unimplemented.
    */
   ConfigSetting<std::chrono::nanoseconds> nfsRequestTimeout{
       "nfs:request-timeout",
@@ -676,6 +676,8 @@ class EdenConfig : private ConfigSettingManager {
   ConfigSetting<bool> useUnixSocket{"nfs:use-uds", false, this};
 
   /**
+   * ========== MACOS ONLY ==========
+   *
    * Set the directory read size to the specified value. The value should
    * normally be a multiple of DIRBLKSIZ that is <= the read size for the mount.
    * The default is 8192 for UDP mounts and 32768 for TCP mounts.
@@ -686,6 +688,8 @@ class EdenConfig : private ConfigSettingManager {
       this};
 
   /**
+   * ========== MACOS ONLY ==========
+   *
    * Set the maximum read-ahead count to the specified value. This may be in the
    * range of 0 - 128, and determines how many Read RPCs will be read ahead when
    * a large file is being read sequentially. Trying larger values for this is
@@ -694,6 +698,9 @@ class EdenConfig : private ConfigSettingManager {
   ConfigSetting<uint8_t> nfsReadAhead{"nfs:read-ahead", 16, this};
 
   /**
+   * NOTE: This config currently is limited to multiples of 10 deciseconds due
+   * to a bug in the EdenFS mount implementation.
+   *
    * Set the initial retransmit timeout to the specified value. (Normally, the
    * dumbtimer option should be specified when using this option to manually
    * tune the timeout interval). The value is in tenths of a second.
@@ -712,6 +719,8 @@ class EdenConfig : private ConfigSettingManager {
       this};
 
   /**
+   * ========== MACOS ONLY ==========
+   *
    * If the mount is still unresponsive X seconds after it is initially
    * reported unresponsive, then mark the mount as dead so that it will be
    * forcibly unmounted.  Note: mounts which are both soft and read-only will

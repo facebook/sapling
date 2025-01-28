@@ -584,41 +584,93 @@ void PrivHelperServer::nfsMount(
   // must follow the increasing order of their associated flags.
   uint32_t mattrFlags = 0;
 
-  // Check if we should enable readdirplus. If so, set readdirplus to 0.
-  uint32_t readdirplus_flag = 0;
-  if (options.useReaddirplus) {
-    readdirplus_flag = NFS_MFLAG_RDIRPLUS;
-  }
-
   // Check if we should use a soft or hard mount. If soft is desired, set the
   // flag value to NFS_MFLAG_SOFT so it's used in the bitwise OR operation.
+  std::string softStr = "hard";
   uint32_t soft_flag = 0;
   if (options.useSoftMount) {
+    softStr = "soft";
     soft_flag = NFS_MFLAG_SOFT;
   }
 
-  // Make the client use any source port, enable/disable rdirplus, and set the
-  // mount type to hard (but make it interruptible). While in theory we would
-  // want the mount to be soft, macOS force a maximum timeout of 60s, which in
-  // some case is too short for files to be fetched, thus disable it.
+  // unmask_dumbtimer indicates whether we should mask/unmask the dumbtimer
+  // value bit in the nfs_matter_flags (i.e. nfs_flag_set) struct.
+  // dumbtimer_flag indicates the actual value that should be masked/unmasked
+  // depending on the value of unmask_dumbtimer.
   //
-  // See `man mount_nfs` for more options.
+  // This separate mask value is needed because dumbtimer is not always passed
+  // as a mount option, and therefore the value bit may be invalid.
+  uint32_t dumbtimer_flag = 0;
+  uint32_t unmask_dumbtimer = 0;
+  std::string dumbtimerStr = "nodumbtimer,";
+  if (options.dumbtimer.has_value() && options.dumbtimer.value().has_value()) {
+    unmask_dumbtimer = NFS_MFLAG_DUMBTIMER;
+    if (options.dumbtimer.value().value()) {
+      dumbtimer_flag = NFS_MFLAG_DUMBTIMER;
+      dumbtimerStr = "dumbtimer,";
+    }
+  }
+
+  // Check if we should enable readdirplus. If so, set readdirplus to
+  // NFS_MFLAG_RDIRPLUS.
+  std::string rdirplusStr = "nordirplus";
+  uint32_t readdirplus_flag = 0;
+  if (options.useReaddirplus) {
+    rdirplusStr = "rdirplus";
+    readdirplus_flag = NFS_MFLAG_RDIRPLUS;
+  }
+
+  /*
+   * The flag set does the following:
+   *
+   * Makes the client use any source port
+   * Enables or disables rdirplus (readdirplus) based on EdenConfig value
+   * Sets the mount type to soft/hard (but make it interruptible) based on an
+   *   EdenConfig value. While in theory we would always want the mount to be
+   *   soft, macOS force a maximum timeout of 60s, which in some case is too
+   *   short for files to be fetched, thus make it configurable.
+   * Possibly specifies dumbtimer behavior, iff an EdenConfig value is
+   *   explicitly set.
+   *
+   * See `man mount_nfs` for more options.
+   */
   mattrFlags |= NFS_MATTR_FLAGS;
   nfs_mattr_flags flags{
       NFS_MATTR_BITMAP_LEN,
-      NFS_MFLAG_RESVPORT | NFS_MFLAG_RDIRPLUS | NFS_MFLAG_SOFT | NFS_MFLAG_INTR,
+      NFS_MFLAG_RESVPORT | NFS_MFLAG_RDIRPLUS | NFS_MFLAG_SOFT |
+          NFS_MFLAG_INTR | unmask_dumbtimer,
       NFS_MATTR_BITMAP_LEN,
-      NFS_MFLAG_INTR | readdirplus_flag | soft_flag};
+      NFS_MFLAG_INTR | readdirplus_flag | soft_flag | dumbtimer_flag};
   XdrTrait<nfs_mattr_flags>::serialize(attrSer, flags);
 
   mattrFlags |= NFS_MATTR_NFS_VERSION;
   XdrTrait<nfs_mattr_nfs_version>::serialize(attrSer, 3);
 
   mattrFlags |= NFS_MATTR_READ_SIZE;
-  XdrTrait<nfs_mattr_rsize>::serialize(attrSer, options.iosize);
-
   mattrFlags |= NFS_MATTR_WRITE_SIZE;
-  XdrTrait<nfs_mattr_wsize>::serialize(attrSer, options.iosize);
+  uint32_t readSize, writeSize;
+  readSize = options.readIOSize.value_or(options.iosize);
+  writeSize = options.writeIOSize.value_or(options.iosize);
+  XdrTrait<nfs_mattr_rsize>::serialize(attrSer, readSize);
+  XdrTrait<nfs_mattr_wsize>::serialize(attrSer, writeSize);
+
+  std::string dsizeStr = "";
+  if (options.directoryReadSize.has_value() &&
+      options.directoryReadSize.value().has_value()) {
+    dsizeStr =
+        fmt::format("dsize={},", options.directoryReadSize.value().value());
+    mattrFlags |= NFS_MATTR_READDIR_SIZE;
+    XdrTrait<nfs_mattr_readdirsize>::serialize(
+        attrSer, options.directoryReadSize.value().value());
+  }
+
+  std::string readAheadStr = "";
+  if (options.readAheadSize.has_value()) {
+    readAheadStr = fmt::format("readahead={},", options.readAheadSize.value());
+    mattrFlags |= NFS_MATTR_READAHEAD;
+    XdrTrait<nfs_mattr_readahead>::serialize(
+        attrSer, options.readAheadSize.value());
+  }
 
   // For NFSv2/v3 mounts, perform all file locking operations locally on the NFS
   // client (in the VFS layer) instead of on the NFS server.  This option can
@@ -664,6 +716,48 @@ void PrivHelperServer::nfsMount(
     mattrFlags |= NFS_MATTR_MOUNT_PORT;
     XdrTrait<nfs_mattr_mount_port>::serialize(
         attrSer, options.mountdAddr.getPort());
+  }
+
+  // NOTE: This code currently has a bug that prevents timeouts from being set
+  // to non-multiples of 10 deciseconds (i.e. a timeout of 25 deciseconds will
+  // result in a mount with a timeout of 20 deciseconds). This should be
+  // investigated and fixed in the future.
+  //
+  // Initial RPC request timeout value in tenths of a second, so 10 = 1s.
+  std::string retransTimeoutStr = "";
+  if (options.retransmitTimeoutTenthSeconds.has_value()) {
+    retransTimeoutStr =
+        fmt::format("timeo={},", options.retransmitTimeoutTenthSeconds.value());
+    mattrFlags |= NFS_MATTR_REQUEST_TIMEOUT;
+    int32_t retransSeconds = options.retransmitTimeoutTenthSeconds.value() / 10;
+    uint32_t retransRemainderNanoseconds =
+        (options.retransmitTimeoutTenthSeconds.value() % 10) * 100000000;
+    XdrTrait<nfs_mattr_request_timeout>::serialize(
+        attrSer,
+        nfstime32{
+            /*seconds=*/retransSeconds,
+            /*nseconds=*/retransRemainderNanoseconds});
+  }
+
+  // Indicates the max RPC retransmissions for soft mounts
+  std::string retransAttemptsStr = "";
+  if (options.retransmitAttempts.has_value()) {
+    retransAttemptsStr =
+        fmt::format("retrans={},", options.retransmitAttempts.value());
+    mattrFlags |= NFS_MATTR_SOFT_RETRY_COUNT;
+    XdrTrait<nfs_mattr_soft_retry_count>::serialize(
+        attrSer, options.retransmitAttempts.value());
+  }
+
+  std::string deadTimeoutStr = "";
+  if (options.deadTimeoutSeconds.has_value()) {
+    deadTimeoutStr =
+        fmt::format("deadtimeout={}", options.deadTimeoutSeconds.value());
+    mattrFlags |= NFS_MATTR_DEAD_TIMEOUT;
+    XdrTrait<nfs_mattr_dead_timeout>::serialize(
+        attrSer,
+        nfstime32{
+            /*seconds=*/options.deadTimeoutSeconds.value(), /*nseconds=*/0});
   }
 
   mattrFlags |= NFS_MATTR_FS_LOCATIONS;
@@ -725,12 +819,20 @@ void PrivHelperServer::nfsMount(
 
   XLOGF(
       DBG1,
-      "Mounting {} via NFS with opts: mountaddr={},addr={},rsize={},wsize={},vers=3",
+      "Mounting {} via NFS with opts: mountaddr={},addr={},rsize={},wsize={},{},{},vers=3,{}{}{}{}{}{}",
       mountPath,
       options.mountdAddr.describe(),
       options.nfsdAddr.describe(),
-      options.iosize,
-      options.iosize);
+      readSize,
+      writeSize,
+      softStr,
+      rdirplusStr,
+      dumbtimerStr,
+      dsizeStr,
+      readAheadStr,
+      retransTimeoutStr,
+      retransAttemptsStr,
+      deadTimeoutStr);
 
   int rc = mount("nfs", mountPath.c_str(), mountFlags, (void*)buf->data());
   checkUnixError(rc, "failed to mount");
@@ -775,16 +877,24 @@ void PrivHelperServer::nfsMount(
   if (options.useSoftMount) {
     softOptionStr = "soft";
   }
+
+  uint32_t readSize, writeSize;
+  readSize = options.readIOSize.has_value() ? options.readIOSize.value()
+                                            : options.iosize;
+  writeSize = options.writeIOSize.has_value() ? options.writeIOSize.value()
+                                              : options.iosize;
   auto mountOpts = fmt::format(
       "addr={},vers=3,proto=tcp,port={},mountvers=3,mountproto=tcp,mountport={},"
-      "noresvport,nolock{}{},retrans=0,rsize={},wsize={}",
+      "noresvport,nolock{}{},retrans={},timeo={},rsize={},wsize={}",
       options.nfsdAddr.getAddressStr(),
       options.nfsdAddr.getPort(),
       options.mountdAddr.getPort(),
       noReaddirplusStr,
       softOptionStr,
-      options.iosize,
-      options.iosize);
+      options.retransmitAttempts.value_or(3),
+      options.retransmitTimeoutTenthSeconds.value_or(600),
+      readSize,
+      writeSize);
 
   // The mount flags.
   // We do not use MS_NODEV.  MS_NODEV prevents mount points from being created
