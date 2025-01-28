@@ -567,7 +567,7 @@ where
 
     // Let's first validate that the target bookmark is still working-copy equivalent to what the
     // parent of the commit we'd like to sync
-    let backsyncer = commit_syncer.reverse()?;
+    let backsyncer = commit_syncer.reverse();
     let mb_small_csid_equivalent_to_target_bookmark = backsyncer
         .sync_commit(
             ctx,
@@ -767,12 +767,11 @@ impl<R: Repo> CommitSyncRepos<R> {
     // Builds the repos that can be used for opposite sync direction.
     // Note: doesn't support large-to-small as input right now
     // TODO(T182311609): stop returning a Result if there's no error.
-    pub fn reverse(&self) -> Result<Self> {
-        let clone = self.clone();
-        Ok(CommitSyncRepos {
+    pub fn reverse(&self) -> Self {
+        CommitSyncRepos {
             sync_direction: self.sync_direction.reverse(),
-            ..clone
-        })
+            ..self.clone()
+        }
     }
 
     pub fn get_submodule_deps(&self) -> &SubmoduleDeps<R> {

@@ -723,7 +723,7 @@ pub(crate) async fn build_submodule_backsync_test_data(
         vec![], // Known dangling submodule pointers
     )
     .await?;
-    let reverse_syncer = test_data.commit_syncer.reverse()?;
+    let reverse_syncer = test_data.commit_syncer.reverse();
 
     Ok(SubmoduleSyncTestData {
         commit_syncer: reverse_syncer,

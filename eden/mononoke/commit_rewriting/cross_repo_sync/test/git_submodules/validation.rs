@@ -51,7 +51,7 @@ async fn test_verify_working_copy_with_submodules(fb: FacebookInit) -> Result<()
     .await?;
     verify_working_copy(
         &ctx,
-        &commit_syncer.reverse()?,
+        &commit_syncer.reverse(),
         large_repo_master,
         live_commit_sync_config,
     )

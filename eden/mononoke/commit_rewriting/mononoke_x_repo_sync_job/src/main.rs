@@ -345,7 +345,7 @@ async fn run_in_tailing_mode(
                                 )
                             })?;
                         commit_syncer
-                            .reverse()?
+                            .reverse()
                             .sync_commit(
                                 ctx,
                                 target_bookmark_value,

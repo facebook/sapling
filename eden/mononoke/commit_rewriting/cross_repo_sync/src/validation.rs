@@ -144,7 +144,7 @@ pub async fn verify_working_copy_with_version<'a, R: Repo>(
                 source_repo,
                 target_root_fsnode_id,
                 source_root_fsnode_id,
-                commit_syncer.reverse()?,
+                commit_syncer.reverse(),
             ),
         };
     let submodules_action = get_git_submodule_action_by_version(
