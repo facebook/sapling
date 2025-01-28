@@ -22,6 +22,7 @@ use edenapi::HttpClientConfig;
 use edenapi::SaplingRemoteApi;
 use edenapi_types::AnyFileContentId;
 use edenapi_types::AnyId;
+use edenapi_types::LookupResponse;
 use edenapi_types::LookupResult;
 use edenapi_types::UploadToken;
 use edenapi_types::UploadTokenData;
@@ -266,29 +267,74 @@ impl ModernSyncSender for EdenapiSender {
             .collect::<Vec<_>>();
         let all = ids.len();
         let res = self.client.lookup_batch(ids, None, None).await?;
-        let present_ids: HashSet<_> = res
-            .into_iter()
-            .filter_map(|r| match r.result {
-                LookupResult::Present(UploadToken {
-                    data:
-                        UploadTokenData {
-                            id,
-                            bubble_id: _,
-                            metadata: _,
-                        },
-                    signature: _,
-                }) => Some(id),
-                _ => None,
-            })
-            .collect();
-        let missing: Vec<_> = csids
-            .into_iter()
-            .filter(|csid| !present_ids.contains(&AnyId::BonsaiChangesetId((*csid).into())))
-            .collect();
-        let cached = all - missing.len();
-        if cached > 0 {
-            info!(&self.logger, "Skipping {} commits", cached);
+        let missing = get_missing_in_order(res, csids);
+        let present = all - missing.len();
+        if present > 0 {
+            info!(&self.logger, "Skipping {} commits", present);
         }
         Ok(missing)
+    }
+}
+
+fn get_missing_in_order(
+    lookup_res: Vec<LookupResponse>,
+    ids: Vec<ChangesetId>,
+) -> Vec<ChangesetId> {
+    let present_ids: HashSet<_> = lookup_res
+        .into_iter()
+        .filter_map(|r| match r.result {
+            LookupResult::Present(UploadToken {
+                data:
+                    UploadTokenData {
+                        id,
+                        bubble_id: _,
+                        metadata: _,
+                    },
+                signature: _,
+            }) => Some(id),
+            _ => None,
+        })
+        .collect();
+    let missing: Vec<_> = ids
+        .into_iter()
+        .filter(|csid| !present_ids.contains(&AnyId::BonsaiChangesetId((*csid).into())))
+        .collect();
+    missing
+}
+
+#[cfg(test)]
+mod test {
+
+    use edenapi_types::IndexableId;
+    use edenapi_types::LookupResponse;
+    use mononoke_macros::mononoke;
+
+    use super::*;
+
+    #[mononoke::test]
+    fn test_mpath_element_size() {
+        let cs_id1 = ChangesetId::from_bytes([0; 32]).unwrap();
+        let cs_id2 = ChangesetId::from_bytes([1; 32]).unwrap();
+
+        let response1 = LookupResponse {
+            result: LookupResult::NotPresent(IndexableId {
+                id: AnyId::BonsaiChangesetId(cs_id1.into()),
+                bubble_id: None,
+            }),
+        };
+
+        let response2 = LookupResponse {
+            result: LookupResult::NotPresent(IndexableId {
+                id: AnyId::BonsaiChangesetId(cs_id2.into()),
+                bubble_id: None,
+            }),
+        };
+
+        // Simulate responses in inverted order
+        let responses = vec![response2, response1];
+
+        // This should preserve the ids order
+        let missing = get_missing_in_order(responses, vec![cs_id1, cs_id2]);
+        assert_eq!(missing, vec![cs_id1, cs_id2]);
     }
 }
