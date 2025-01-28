@@ -38,7 +38,7 @@ use cross_repo_sync::rewrite_commit;
 use cross_repo_sync::CandidateSelectionHint;
 use cross_repo_sync::CommitSyncContext;
 use cross_repo_sync::CommitSyncOutcome;
-use cross_repo_sync::CommitSyncRepos;
+use cross_repo_sync::CommitSyncReposWithDirection;
 use cross_repo_sync::CommitSyncer;
 use cross_repo_sync::SubmoduleDeps;
 use cross_repo_sync::CHANGE_XREPO_MAPPING_EXTRA;
@@ -64,6 +64,7 @@ use mercurial_derivation::DeriveHgChangeset;
 use mercurial_types::HgChangesetId;
 use metaconfig_types::CommitSyncConfig;
 use metaconfig_types::CommitSyncConfigVersion;
+use metaconfig_types::CommitSyncDirection;
 use metaconfig_types::CommonCommitSyncConfig;
 use metaconfig_types::DefaultSmallToLargeCommitSyncPathAction;
 use metaconfig_types::SmallRepoCommitSyncConfig;
@@ -701,6 +702,7 @@ async fn backsync_change_mapping(fb: FacebookInit) -> Result<(), Error> {
     // Initialize source and target repos
     let ctx = CoreContext::test_mock(fb);
     let mut factory = TestRepoFactory::new(fb)?;
+    // TODO(T182311609): rename all source/target references to small/large
     let source_repo_id = RepositoryId::new(1);
     let source_repo: TestRepo = factory.with_id(source_repo_id).build().await?;
     let target_repo_id = RepositoryId::new(2);
@@ -715,11 +717,12 @@ async fn backsync_change_mapping(fb: FacebookInit) -> Result<(), Error> {
     init_target_repo(&ctx, &target_repo_dbs, source_repo_id).await?;
     let target_repo_dbs = Arc::new(target_repo_dbs);
 
-    let repos = CommitSyncRepos::LargeToSmall {
-        large_repo: source_repo.clone(),
-        small_repo: target_repo.clone(),
-        submodule_deps: SubmoduleDeps::ForSync(HashMap::new()),
-    };
+    let repos = CommitSyncReposWithDirection::new_with_source_target(
+        source_repo.clone(),
+        target_repo.clone(),
+        CommitSyncDirection::LargeToSmall,
+        SubmoduleDeps::ForSync(HashMap::new()),
+    );
 
     let current_version = CommitSyncConfigVersion("current_version".to_string());
     let new_version = CommitSyncConfigVersion("new_version".to_string());
@@ -1339,11 +1342,12 @@ async fn init_repos(
     };
     init_target_repo(&ctx, &target_repo_dbs, source_repo_id).await?;
 
-    let repos = CommitSyncRepos::LargeToSmall {
-        large_repo: source_repo.clone(),
-        small_repo: target_repo.clone(),
-        submodule_deps: SubmoduleDeps::ForSync(HashMap::new()),
-    };
+    let repos = CommitSyncReposWithDirection::new_with_source_target(
+        source_repo.clone(),
+        target_repo.clone(),
+        CommitSyncDirection::LargeToSmall,
+        SubmoduleDeps::ForSync(HashMap::new()),
+    );
 
     let empty: BTreeMap<_, Option<&str>> = BTreeMap::new();
     // Create fake empty commit in the target repo
@@ -1703,11 +1707,12 @@ async fn init_merged_repos(
 
         let live_commit_sync_config = Arc::new(lv_cfg);
 
-        let repos = CommitSyncRepos::LargeToSmall {
-            large_repo: large_repo.clone(),
-            small_repo: small_repo.clone(),
-            submodule_deps: SubmoduleDeps::ForSync(HashMap::new()),
-        };
+        let repos = CommitSyncReposWithDirection::new(
+            small_repo.clone(),
+            large_repo.clone(),
+            CommitSyncDirection::LargeToSmall,
+            SubmoduleDeps::ForSync(HashMap::new()),
+        );
 
         let commit_syncer = CommitSyncer::new(&ctx, repos.into(), live_commit_sync_config);
         output.push((commit_syncer, small_repo_dbs));
@@ -1954,11 +1959,12 @@ async fn preserve_premerge_commit(
     let version = CommitSyncConfigVersion("noop".to_string());
     // Doesn't matter what mover to use - we are going to preserve the commit anyway
     let small_to_large_sync_config = {
-        let repos = CommitSyncRepos::SmallToLarge {
-            large_repo: large_repo.clone(),
-            small_repo: small_repo.clone(),
-            submodule_deps: SubmoduleDeps::ForSync(HashMap::new()),
-        };
+        let repos = CommitSyncReposWithDirection::new(
+            small_repo.clone(),
+            large_repo.clone(),
+            CommitSyncDirection::SmallToLarge,
+            SubmoduleDeps::ForSync(HashMap::new()),
+        );
 
         let (lv_cfg, lv_cfg_src) = TestLiveCommitSyncConfig::new_with_source();
 
