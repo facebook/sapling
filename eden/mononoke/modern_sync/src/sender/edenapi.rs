@@ -88,7 +88,7 @@ impl EdenapiSender {
             .repo_name(&reponame)
             .server_url(url)
             .http_config(http_config)
-            .timeout(Duration::from_secs(20))
+            .timeout(Duration::from_secs(300))
             .build()?;
 
         client.health().await?;
