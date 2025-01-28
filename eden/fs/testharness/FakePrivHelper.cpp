@@ -100,12 +100,7 @@ Future<File> FakePrivHelper::fuseMount(
 
 Future<Unit> FakePrivHelper::nfsMount(
     folly::StringPiece /*mountPath*/,
-    folly::SocketAddress /*mountdPort*/,
-    folly::SocketAddress /*nfsdPort*/,
-    bool /*readOnly*/,
-    uint32_t /*iosize*/,
-    bool /*useReaddirplus*/,
-    bool /*useSoftMount*/) {
+    NFSMountOptions /*options*/) {
   return makeFuture<Unit>(
       runtime_error("FakePrivHelper::nfsMount() not implemented"));
 }

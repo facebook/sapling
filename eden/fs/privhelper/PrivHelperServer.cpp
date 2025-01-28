@@ -568,12 +568,7 @@ folly::File PrivHelperServer::fuseMount(
 
 void PrivHelperServer::nfsMount(
     std::string mountPath,
-    folly::SocketAddress mountdAddr,
-    folly::SocketAddress nfsdAddr,
-    bool readOnly,
-    uint32_t iosize,
-    bool useReaddirplus,
-    [[maybe_unused]] bool useSoftMount) {
+    NFSMountOptions options) {
 #ifdef __APPLE__
   if (shouldLoadNfsKext()) {
     XLOG(DBG3, "Apple nfs.kext is not loaded. Attempting to load");
@@ -591,14 +586,14 @@ void PrivHelperServer::nfsMount(
 
   // Check if we should enable readdirplus. If so, set readdirplus to 0.
   uint32_t readdirplus_flag = 0;
-  if (useReaddirplus) {
+  if (options.useReaddirplus) {
     readdirplus_flag = NFS_MFLAG_RDIRPLUS;
   }
 
   // Check if we should use a soft or hard mount. If soft is desired, set the
   // flag value to NFS_MFLAG_SOFT so it's used in the bitwise OR operation.
   uint32_t soft_flag = 0;
-  if (useSoftMount) {
+  if (options.useSoftMount) {
     soft_flag = NFS_MFLAG_SOFT;
   }
 
@@ -620,22 +615,22 @@ void PrivHelperServer::nfsMount(
   XdrTrait<nfs_mattr_nfs_version>::serialize(attrSer, 3);
 
   mattrFlags |= NFS_MATTR_READ_SIZE;
-  XdrTrait<nfs_mattr_rsize>::serialize(attrSer, iosize);
+  XdrTrait<nfs_mattr_rsize>::serialize(attrSer, options.iosize);
 
   mattrFlags |= NFS_MATTR_WRITE_SIZE;
-  XdrTrait<nfs_mattr_wsize>::serialize(attrSer, iosize);
+  XdrTrait<nfs_mattr_wsize>::serialize(attrSer, options.iosize);
 
   mattrFlags |= NFS_MATTR_LOCK_MODE;
   XdrTrait<nfs_mattr_lock_mode>::serialize(
       attrSer, nfs_lock_mode::NFS_LOCK_MODE_LOCAL);
 
-  auto mountdFamily = mountdAddr.getFamily();
-  auto nfsdFamily = nfsdAddr.getFamily();
+  auto mountdFamily = options.mountdAddr.getFamily();
+  auto nfsdFamily = options.nfsdAddr.getFamily();
   if (mountdFamily != nfsdFamily) {
     throwf<std::runtime_error>(
         "The mountd and nfsd socket must be of the same type: mountd=\"{}\", nfsd=\"{}\"",
-        mountdAddr.describe(),
-        nfsdAddr.describe());
+        options.mountdAddr.describe(),
+        options.nfsdAddr.describe());
   }
 
   mattrFlags |= NFS_MATTR_SOCKET_TYPE;
@@ -655,12 +650,14 @@ void PrivHelperServer::nfsMount(
   }
   XdrTrait<nfs_mattr_socket_type>::serialize(attrSer, socketType);
 
-  if (nfsdAddr.isFamilyInet()) {
+  if (options.nfsdAddr.isFamilyInet()) {
     mattrFlags |= NFS_MATTR_NFS_PORT;
-    XdrTrait<nfs_mattr_nfs_port>::serialize(attrSer, nfsdAddr.getPort());
+    XdrTrait<nfs_mattr_nfs_port>::serialize(
+        attrSer, options.nfsdAddr.getPort());
 
     mattrFlags |= NFS_MATTR_MOUNT_PORT;
-    XdrTrait<nfs_mattr_mount_port>::serialize(attrSer, mountdAddr.getPort());
+    XdrTrait<nfs_mattr_mount_port>::serialize(
+        attrSer, options.mountdAddr.getPort());
   }
 
   mattrFlags |= NFS_MATTR_FS_LOCATIONS;
@@ -671,10 +668,10 @@ void PrivHelperServer::nfsMount(
     components.push_back(std::string(component.value()));
   }
   nfs_fs_server server{"edenfs", {}, std::nullopt};
-  if (nfsdAddr.isFamilyInet()) {
-    server.nfss_address.push_back(nfsdAddr.getAddressStr());
+  if (options.nfsdAddr.isFamilyInet()) {
+    server.nfss_address.push_back(options.nfsdAddr.getAddressStr());
   } else {
-    server.nfss_address.push_back(nfsdAddr.getPath());
+    server.nfss_address.push_back(options.nfsdAddr.getPath());
   }
   nfs_fs_location location{{server}, components};
   nfs_mattr_fs_locations locations{{location}, std::nullopt};
@@ -683,7 +680,7 @@ void PrivHelperServer::nfsMount(
   mattrFlags |= NFS_MATTR_MNTFLAGS;
   // These are non-NFS specific and will be also passed directly to mount(2)
   nfs_mattr_mntflags mountFlags = MNT_NOSUID;
-  if (readOnly) {
+  if (options.readOnly) {
     mountFlags |= MNT_RDONLY;
   }
   XdrTrait<nfs_mattr_mntflags>::serialize(attrSer, mountFlags);
@@ -692,12 +689,12 @@ void PrivHelperServer::nfsMount(
   nfs_mattr_mntfrom serverName = "edenfs:";
   XdrTrait<nfs_mattr_mntfrom>::serialize(attrSer, serverName);
 
-  if (nfsdAddr.getFamily() == AF_UNIX) {
+  if (options.nfsdAddr.getFamily() == AF_UNIX) {
     mattrFlags |= NFS_MATTR_LOCAL_NFS_PORT;
-    XdrTrait<std::string>::serialize(attrSer, nfsdAddr.getPath());
+    XdrTrait<std::string>::serialize(attrSer, options.nfsdAddr.getPath());
 
     mattrFlags |= NFS_MATTR_LOCAL_MOUNT_PORT;
-    XdrTrait<std::string>::serialize(attrSer, mountdAddr.getPath());
+    XdrTrait<std::string>::serialize(attrSer, options.mountdAddr.getPath());
   }
 
   auto mountBuf = folly::IOBufQueue{folly::IOBufQueue::cacheChainLength()};
@@ -724,10 +721,10 @@ void PrivHelperServer::nfsMount(
       DBG1,
       "Mounting {} via NFS with opts: mountaddr={},addr={},rsize={},wsize={},vers=3",
       mountPath,
-      mountdAddr.describe(),
-      nfsdAddr.describe(),
-      iosize,
-      iosize);
+      options.mountdAddr.describe(),
+      options.nfsdAddr.describe(),
+      options.iosize,
+      options.iosize);
 
   int rc = mount("nfs", mountPath.c_str(), mountFlags, (void*)buf->data());
   checkUnixError(rc, "failed to mount");
@@ -750,45 +747,45 @@ void PrivHelperServer::nfsMount(
   }
 
 #else
-  if (!mountdAddr.isFamilyInet() || !nfsdAddr.isFamilyInet()) {
+  if (!options.mountdAddr.isFamilyInet() || !options.nfsdAddr.isFamilyInet()) {
     folly::throwSystemErrorExplicit(
         EINVAL,
         fmt::format(
             "only inet addresses are supported: mountdAddr=\"{}\", nfsdAddr=\"{}\"",
-            mountdAddr.describe(),
-            nfsdAddr.describe()));
+            options.mountdAddr.describe(),
+            options.nfsdAddr.describe()));
   }
   // Prepare the flags and options to pass to mount(2).
   // Since each mount point will have its own NFS server, we need to manually
   // specify it.
   folly::StringPiece noReaddirplusStr = ",nordirplus,";
-  if (useReaddirplus) {
+  if (options.useReaddirplus) {
     noReaddirplusStr = ",";
   }
 
   // Check if we should use a soft or hard mount.
   // https://linux.die.net/man/5/nfs
   folly::StringPiece softOptionStr = "hard";
-  if (useSoftMount) {
+  if (options.useSoftMount) {
     softOptionStr = "soft";
   }
   auto mountOpts = fmt::format(
       "addr={},vers=3,proto=tcp,port={},mountvers=3,mountproto=tcp,mountport={},"
       "noresvport,nolock{}{},retrans=0,rsize={},wsize={}",
-      nfsdAddr.getAddressStr(),
-      nfsdAddr.getPort(),
-      mountdAddr.getPort(),
+      options.nfsdAddr.getAddressStr(),
+      options.nfsdAddr.getPort(),
+      options.mountdAddr.getPort(),
       noReaddirplusStr,
       softOptionStr,
-      iosize,
-      iosize);
+      options.iosize,
+      options.iosize);
 
   // The mount flags.
   // We do not use MS_NODEV.  MS_NODEV prevents mount points from being created
   // inside our filesystem.  We currently use bind mounts to point the buck-out
   // directory to an alternate location outside of eden.
   int mountFlags = MS_NOSUID;
-  if (readOnly) {
+  if (options.readOnly) {
     mountFlags |= MS_RDONLY;
   }
   auto source = fmt::format("edenfs:{}", mountPath);
@@ -899,14 +896,7 @@ UnixSocket::Message PrivHelperServer::processMountNfsMsg(Cursor& cursor) {
 
   sanityCheckMountPoint(mountPath, true /* isNfs */);
 
-  nfsMount(
-      mountPath,
-      options.mountdAddr,
-      options.nfsdAddr,
-      options.readOnly,
-      options.iosize,
-      options.useReaddirplus,
-      options.useSoftMount.value_or(folly::kIsLinux ? true : false));
+  nfsMount(mountPath, options);
   mountPoints_.insert(mountPath);
 
   return makeResponse();

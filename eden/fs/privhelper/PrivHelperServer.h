@@ -113,14 +113,7 @@ class PrivHelperServer : private UnixSocket::ReceiveCallback {
   // These methods are virtual so we can override them during unit tests
   virtual folly::File
   fuseMount(const char* mountPath, bool readOnly, const char* vfsType);
-  virtual void nfsMount(
-      std::string mountPath,
-      folly::SocketAddress mountdPort,
-      folly::SocketAddress nfsdPort,
-      bool readOnly,
-      uint32_t iosize,
-      bool useReaddirplus,
-      bool useSoftMount);
+  virtual void nfsMount(std::string mountPath, NFSMountOptions options);
   virtual void unmount(const char* mountPath);
   // Both clientPath and mountPath must be existing directories.
   virtual void bindMount(const char* clientPath, const char* mountPath);

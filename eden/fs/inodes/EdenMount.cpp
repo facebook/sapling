@@ -2192,27 +2192,28 @@ folly::Future<folly::Unit> EdenMount::fsChannelMount(bool readOnly) {
         auto edenConfig = getEdenConfig();
 
         if (shouldBeOrIsNfsChannel()) {
-          auto iosize = edenConfig->nfsIoSize.getValue();
-          auto useReaddirplus = edenConfig->useReaddirplus.getValue();
-          auto useSoftMount = edenConfig->useSoftMounts.getValue();
+          NFSMountOptions options;
+          options.iosize = edenConfig->nfsIoSize.getValue();
+          options.useReaddirplus = edenConfig->useReaddirplus.getValue();
+          options.useSoftMount = edenConfig->useSoftMounts.getValue();
+          options.readOnly = readOnly;
 
           // Make sure that we are running on the EventBase while registering
           // the mount point.
           auto fut = makeNfsChannel(this);
           return std::move(fut).thenValue(
               [this,
-               readOnly,
-               iosize,
-               useReaddirplus,
-               useSoftMount,
+               options = std::move(options),
                mountPromise = std::move(mountPromise),
                mountPath = std::move(mountPath)](
                   NfsServer::NfsMountInfo mountInfo) mutable {
                 auto [channel, mountdAddr] = std::move(mountInfo);
+                options.mountdAddr = mountdAddr;
 #ifndef _WIN32
                 // Channel is later moved. We must assign addr to a local var
                 // to avoid the possibility of a use-after-move bug.
                 auto addr = channel->getAddr();
+                options.nfsdAddr = addr;
 
                 // For testing purposes only: allow tests to force an exception
                 // that mimics privhelper mount failing
@@ -2221,14 +2222,7 @@ folly::Future<folly::Unit> EdenMount::fsChannelMount(bool readOnly) {
 
                 // TODO: teach privhelper or something to mount on Windows
                 return serverState_->getPrivHelper()
-                    ->nfsMount(
-                        mountPath.view(),
-                        mountdAddr,
-                        addr,
-                        readOnly,
-                        iosize,
-                        useReaddirplus,
-                        useSoftMount)
+                    ->nfsMount(mountPath.view(), options)
                     .thenTry([this,
                               mountPromise = std::move(mountPromise),
                               channel_2 = std::move(channel)](
@@ -2243,10 +2237,7 @@ folly::Future<folly::Unit> EdenMount::fsChannelMount(bool readOnly) {
                       return makeFuture(folly::unit);
                     });
 #else
-                (void)readOnly;
-                (void)iosize;
-                (void)useReaddirplus;
-                (void)useSoftMount;
+                (void)options;
                 mountPromise->setValue();
                 channel_ = std::move(channel);
                 return folly::makeFutureWith([]() { NOT_IMPLEMENTED(); });

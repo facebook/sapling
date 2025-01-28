@@ -109,14 +109,8 @@ class PrivHelperClientImpl : public PrivHelper,
       folly::StringPiece mountPath,
       bool readOnly,
       StringPiece vfsType) override;
-  Future<Unit> nfsMount(
-      folly::StringPiece mountPath,
-      folly::SocketAddress mountdAddr,
-      folly::SocketAddress nfsdAddr,
-      bool readOnly,
-      uint32_t iosize,
-      bool useReaddirplus,
-      bool useSoftMount) override;
+  Future<Unit> nfsMount(folly::StringPiece mountPath, NFSMountOptions options)
+      override;
   Future<Unit> fuseUnmount(StringPiece mountPath) override;
   Future<Unit> nfsUnmount(StringPiece mountPath) override;
   Future<Unit> bindMount(StringPiece clientPath, StringPiece mountPath)
@@ -404,15 +398,8 @@ Future<File> PrivHelperClientImpl::fuseMount(
 
 Future<Unit> PrivHelperClientImpl::nfsMount(
     folly::StringPiece mountPath,
-    folly::SocketAddress mountdAddr,
-    folly::SocketAddress nfsdAddr,
-    bool readOnly,
-    uint32_t iosize,
-    bool useReaddirplus,
-    bool useSoftMount) {
+    NFSMountOptions options) {
   auto xid = getNextXid();
-  auto options = NFSMountOptions{
-      mountdAddr, nfsdAddr, readOnly, iosize, useReaddirplus, useSoftMount};
   auto request =
       PrivHelperConn::serializeMountNfsRequest(xid, mountPath, options);
 
@@ -785,19 +772,8 @@ class StubPrivHelper final : public PrivHelper {
 
   folly::Future<folly::Unit> nfsMount(
       folly::StringPiece mountPath,
-      folly::SocketAddress mountdAddr,
-      folly::SocketAddress nfsdAddr,
-      bool readOnly,
-      uint32_t iosize,
-      bool useReaddirplus,
-      bool useSoftMount) override {
-    (void)mountPath;
-    (void)mountdAddr;
-    (void)nfsdAddr;
-    (void)readOnly;
-    (void)iosize;
-    (void)useReaddirplus;
-    (void)useSoftMount;
+      NFSMountOptions options) override {
+    (void)options;
     // TODO: We do support NFS on Windows. Should the mount flow be
     // implemented here?
     NOT_IMPLEMENTED();

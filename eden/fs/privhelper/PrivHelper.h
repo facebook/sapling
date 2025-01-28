@@ -82,12 +82,7 @@ class PrivHelper {
 
   FOLLY_NODISCARD virtual folly::Future<folly::Unit> nfsMount(
       folly::StringPiece mountPath,
-      folly::SocketAddress mountdAddr,
-      folly::SocketAddress nfsdAddr,
-      bool readOnly,
-      uint32_t iosize,
-      bool useReaddirplus,
-      bool useSoftMount) = 0;
+      NFSMountOptions options) = 0;
 
   /**
    * Ask the privileged helper process to perform a fuse unmount.
