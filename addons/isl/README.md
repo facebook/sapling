@@ -16,24 +16,30 @@ The code for ISL lives in the addons folder:
 
 ## Development
 
-As always, first run `yarn` to make sure all of the Node dependencies are installed.
-Then, start the client & server builds from the addons/ folder:
+First run `yarn` to make sure all of the Node dependencies are installed.
+
+Use this command from the `addons/` folder to start ISL in development mode:
 
 ```
-yarn dev browser
+yarn dev browser --launch .
 ```
 
-This will run `yarn start` from isl/ and `yarn watch` from isl-server/ in parallel.
-This will watch for changes and recompile automatically.
-It'll be ready in a few seconds; just leave this running.
+This does 3 things:
 
-Note: you can also run these commands manually.
+- Build the client, and watch for changes (equivalent to `yarn start` in `isl/`)
+- Build the server, and watch for changes (equivalent to `yarn watch` in `isl-server/`)
+- Spawn a local server instance, which opens ISL in your browser (equivalent to `yarn serve` in `isl-server`, with some args). The server will open with `.` as the cwd. Use `--launch /path/to/my/repo` to use a different repository.
 
-Next, you need to spawn a server and open it in your browser:
+The `yarn dev` command is a shorthand to running each of these in their own terminal.
 
-### Proxy
+Note: the client and server build jobs will watch for changes. The webpage will hot reload as changes are made. The server must be restarted to pick up changes.
+Press `R` when running `yarn dev browser --launch CWD` to restart the server while leaving the build running.
 
-**In the `isl-server/` folder, run `yarn serve --dev` to start the proxy and open the browser**.
+### Launching an ISL Server
+
+To see more server output, you may sometimes want to use `yarn dev browser` WITHOUT `--launch` to build the client and server, and then launch the server yourself with `yarn serve`. This launches the local ISL server.
+
+**In the `isl-server/` folder, run `yarn serve --dev` to start the server and open the browser**.
 You will have to manually restart it in order to pick up server changes.
 This is the development mode equivalent of running `sl web`.
 
@@ -45,8 +51,6 @@ them to the WebSocket Server that expects connections at `/ws`.
 Note: When the server is started, it creates a token to prevent unwanted access.
 `--dev` opens the browser on the port used by vite in `yarn start`
 to ensure the client connects with the right token.
-
-See `../vscode/CONTRIBUTING.md` for build instructions for the vscode extension.
 
 **When developing, it's useful to add a few extra arguments to `yarn serve`:**
 
@@ -73,22 +77,21 @@ You can also use `yarn dev --production` to run both client & server `yarn build
 
 ## VS Code build
 
-Similarly to the browser, first start the build job:
+Similarly to developing in the browser, you can use this command:
 
 ```
-yarn dev vscode
+yarn dev vscode --launch .
 ```
 
-This will run yarn watch-webview and yarn watch-extension from the vscode/ directory in parallel.
-You can also do each of these manually.
+This again does 3 things:
 
-Then, you need to launch VS Code pointing to your extension build. You can do this from the "Run & Debug" menu if you mount addons/ in VS Code. Alternatively, manually launch:
+- Build the webview (client), and watch for changes (equivalent to `yarn watch-webview` in `vscode/`)
+- Build the extension (server), and watch for changes (equivalent to `yarn watch-extension` in `vscode/`)
+- Start VS Code in extension development mode with the given directory.
 
-```
-code --extension-development-dir path/to/addons/vscode
-```
+As with the server, you may want to launch vscode yourself. Just use `yarn dev vscode` to build without launching vscode.
 
-Internal @Meta users: See internal wiki for launching internal VS Code instead.
+See also `../vscode/CONTRIBUTING.md`.
 
 ## Testing
 
