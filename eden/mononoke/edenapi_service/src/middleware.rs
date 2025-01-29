@@ -5,7 +5,11 @@
  * GNU General Public License version 2.
  */
 
+#[cfg(fbcode_build)]
+mod facebook;
 pub mod ods;
+#[cfg(not(fbcode_build))]
+mod oss;
 pub mod rate_limiter;
 pub mod request_dumper;
 

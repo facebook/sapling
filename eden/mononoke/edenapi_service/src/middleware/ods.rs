@@ -19,6 +19,10 @@ use stats::prelude::*;
 
 use crate::handlers::HandlerInfo;
 use crate::handlers::SaplingRemoteApiMethod;
+#[cfg(fbcode_build)]
+use crate::middleware::facebook::log_ods3;
+#[cfg(not(fbcode_build))]
+use crate::middleware::oss::log_ods3;
 
 define_stats! {
     prefix = "mononoke.edenapi.request";
@@ -85,6 +89,7 @@ fn log_stats(state: &mut State, status: StatusCode) -> Option<()> {
 
     let hander_info = state.try_borrow::<HandlerInfo>()?;
     let method = hander_info.method?;
+    let request_load = RequestLoad::try_borrow_from(state).map(|r| r.0 as f64);
 
     let callbacks = state.try_borrow_mut::<PostResponseCallbacks>()?;
 
@@ -164,14 +169,14 @@ fn log_stats(state: &mut State, status: StatusCode) -> Option<()> {
         }
 
         if let Some(response_bytes_sent) = info.meta.as_ref().map(|m| m.body().bytes_sent) {
-            STATS::response_bytes_sent.add_value(response_bytes_sent as i64, (method,))
+            STATS::response_bytes_sent.add_value(response_bytes_sent as i64, (method.clone(),))
         }
+        log_ods3(info, &status, method, request_load);
     });
 
     if let Some(request_load) = RequestLoad::try_borrow_from(state) {
         STATS::request_load.add_value(request_load.0);
     }
-
     Some(())
 }
 
