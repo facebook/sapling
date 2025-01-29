@@ -42,7 +42,6 @@ from .i18n import _
 from .node import hex, nullid, short, wdirid, wdirrev
 from .pycompat import basestring, isint
 
-
 if pycompat.iswindows:
     from . import scmwindows as scmplatform
 else:
@@ -1567,15 +1566,19 @@ def rootrelpaths(ctx, paths):
     return [rootrelpath(ctx, path) for path in paths]
 
 
-def walkfiles(repo, walkctx, matcher, base=None):
+def walkfiles(repo, walkctx, matcher, base=None, nodes_only=False):
     """Return a list (path, filenode) pairs that match the matcher in the given context."""
     mf = walkctx.manifest()
     if base is None and hasattr(mf, "walkfiles"):
         # If there is no base, skip diff and use more efficient walk.
-        return mf.walkfiles(matcher)
+        return mf.walkfiles(matcher, nodes_only=nodes_only)
     else:
         basemf = repo[base or nullid].manifest()
-        return [(p, n[0]) for p, (n, _o) in mf.diff(basemf, matcher).items() if n[0]]
+        return [
+            (p, n[0])
+            for p, (n, _o) in mf.diff(basemf, matcher, nodes_only=nodes_only).items()
+            if n[0]
+        ]
 
 
 def publicbase(repo, ctx):

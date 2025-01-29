@@ -174,16 +174,24 @@ py_class!(pub class treemanifest |py| {
     }
 
     /// Like walk(), but includes file node as well.
-    def walkfiles(&self, pymatcher: PyObject) -> PyResult<Vec<(PyPathBuf, PyBytes)>> {
+    def walkfiles(&self, pymatcher: PyObject, nodes_only: bool = false) -> PyResult<Vec<(PyPathBuf, PyBytes)>> {
         let tree = self.underlying(py);
 
         let (matcher, is_rust_matcher) = extract_matcher(py, pymatcher)?;
+
+        let make_path = |path: RepoPathBuf| -> PyPathBuf {
+            if nodes_only {
+                PyPathBuf::default()
+            } else {
+                path.into()
+            }
+        };
 
         if is_rust_matcher {
             tree.read().files(matcher)
                 .map(|file| {
                     let file = file?;
-                    Ok((file.path.into(), PyBytes::new(py, file.meta.hgid.as_ref())))
+                    Ok((make_path(file.path), PyBytes::new(py, file.meta.hgid.as_ref())))
                 })
                 .collect::<Result<Vec<_>>>().map_pyerr(py)
         } else {
@@ -194,7 +202,7 @@ py_class!(pub class treemanifest |py| {
             let mut result = Vec::new();
             for entry in files.into_iter() {
                 let file = entry.map_pyerr(py)?;
-                result.push((file.path.into(), PyBytes::new(py, file.meta.hgid.as_ref())));
+                result.push((make_path(file.path), PyBytes::new(py, file.meta.hgid.as_ref())));
             }
             Ok(result)
         }
@@ -300,7 +308,7 @@ py_class!(pub class treemanifest |py| {
     /// Diff between two treemanifests.
     ///
     /// Return a dict of {path: (left, right)}, where left and right are (file_hgid, file_type) tuple.
-    def diff(&self, other: &treemanifest, matcher: Option<PyObject> = None) -> PyResult<PyDict> {
+    def diff(&self, other: &treemanifest, matcher: Option<PyObject> = None, nodes_only: bool = false) -> PyResult<PyDict> {
         fn convert_side_diff(
             py: Python,
             entry: Option<FileMetadata>
@@ -323,7 +331,11 @@ py_class!(pub class treemanifest |py| {
             this_tree.read().diff(&other_tree.read(), matcher)?.collect()
         }).map_pyerr(py)?;
         for entry in results {
-            let path = PyPathBuf::from(entry.path);
+            let path = if nodes_only {
+                PyPathBuf::default()
+            } else {
+                PyPathBuf::from(entry.path)
+            };
             let diff_left = convert_side_diff(py, entry.diff_type.left());
             let diff_right = convert_side_diff(py, entry.diff_type.right());
             result.set_item(py, path, (diff_left, diff_right))?;

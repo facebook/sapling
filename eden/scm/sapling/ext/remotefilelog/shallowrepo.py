@@ -109,8 +109,17 @@ def wraprepo(repo) -> None:
                     if matcher is None:
                         matcher = self.maybesparsematch(rev)
 
+                    # Don't store millions of file paths in memory unnecessarily. It maybe
+                    # be useful to turn paths back on to get more info for file specific
+                    # errors.
+                    omit_paths = self.ui.configbool(
+                        "experimental", "prefetch-omit-paths", True
+                    )
+
                     with progress.spinner(self.ui, _("computing files")):
-                        walked = walkfiles(repo, ctx, matcher, base)
+                        walked = walkfiles(
+                            repo, ctx, matcher, base, nodes_only=omit_paths
+                        )
                         if type(files) is set:
                             files.update(walked)
                         elif type(files) is list:
