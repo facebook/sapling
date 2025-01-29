@@ -100,6 +100,12 @@ pub struct ReloadConfigCmd {
 
     #[clap(
         long,
+        help = "Load configs from the edenfs_test_configs Manifold bucket instead of reading from remote. This is useful for testing changes locally without having to push them to production"
+    )]
+    manifold_key: Option<String>,
+
+    #[clap(
+        long,
         help = "If the script is ran as root, used to specify user when making requests to Configerator. Defaults to SUDO_USER, $LOGUSER, os.getlogin, or \"unknown\" in that order."
     )]
     user: Option<String>,
@@ -163,6 +169,10 @@ impl crate::Subcommand for ReloadConfigCmd {
 
         if let Some(canary_host) = &self.canary_host {
             cmd.arg("--canary-host").arg(canary_host);
+        }
+
+        if let Some(manifold_key) = &self.manifold_key {
+            cmd.arg("--manifold-key").arg(manifold_key);
         }
 
         if let Some(user) = &self.user {
