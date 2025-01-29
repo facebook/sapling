@@ -7,7 +7,9 @@
 
 import type {EjecaChildProcess} from 'shared/ejeca';
 
+import {Internal} from './Internal';
 import chalk from 'chalk';
+import path from 'path';
 import {ejeca} from 'shared/ejeca';
 import {defer} from 'shared/utils';
 
@@ -37,6 +39,8 @@ ${chalk.bold('Examples:')}
     ${chalk.gray(
       'Build extension and webview in dev mode, watch for changes, and launch VS Code in ~/my-repo',
     )}
+  VSCODE_CMD=code-insiders yarn dev vscode --launch .
+    ${chalk.gray('Build & launch VS Code Insiders instead of VS Code')}
 `);
 }
 
@@ -315,8 +319,12 @@ async function main() {
       kind === 'vscode'
         ? {
             cwd: 'vscode',
-            cmd: 'code',
-            args: ['--extensionDevelopmentPath=.', launchDir],
+            cmd: process.env.VSCODE_CMD || Internal.codeCommand || 'code',
+            args: [
+              `--extensionDevelopmentPath=${path.resolve('./vscode')}`,
+              launchDir,
+              ...(Internal.vscodeArgs ?? []),
+            ],
             waitFor,
           }
         : {
