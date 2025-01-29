@@ -620,11 +620,6 @@ py_class!(pub class filescmstore |py| {
         Ok(results)
     }
 
-    def blob(&self, name: &PyPath, node: &PyBytes) -> PyResult<PyBytes> {
-        let store = self.store(py);
-        store.blob_py(py, name, node)
-    }
-
     def metadata(&self, name: &PyPath, node: &PyBytes) -> PyResult<PyDict> {
         let store = self.store(py);
         store.metadata_py(py, name, node)
@@ -789,11 +784,6 @@ py_class!(pub class treescmstore |py| {
     def markforrefresh(&self) -> PyResult<PyNone> {
         let store = self.store(py);
         HgIdDataStorePyExt::refresh_py(store, py)
-    }
-
-    def blob(&self, name: &PyPath, node: &PyBytes) -> PyResult<PyBytes> {
-        let store = self.store(py);
-        store.blob_py(py, name, node)
     }
 
     def metadata(&self, name: &PyPath, node: &PyBytes) -> PyResult<PyDict> {

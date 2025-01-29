@@ -50,7 +50,6 @@ pub trait HgIdDataStorePyExt {
 }
 
 pub trait ContentDataStorePyExt {
-    fn blob_py(&self, py: Python, name: &PyPath, node: &PyBytes) -> PyResult<PyBytes>;
     fn metadata_py(&self, py: Python, name: &PyPath, node: &PyBytes) -> PyResult<PyDict>;
 }
 
@@ -185,15 +184,6 @@ impl<T: HgIdDataStore + ?Sized> HgIdDataStorePyExt for T {
 }
 
 impl<T: ContentDataStore + ?Sized> ContentDataStorePyExt for T {
-    fn blob_py(&self, py: Python, name: &PyPath, node: &PyBytes) -> PyResult<PyBytes> {
-        let key = StoreKey::hgid(to_key(py, name, node)?);
-        let res = py.allow_threads(|| self.blob(key)).map_pyerr(py)?;
-        match res {
-            StoreResult::Found(blob) => Ok(PyBytes::new(py, blob.as_ref())),
-            StoreResult::NotFound(key) => Err(key_error(py, &key)),
-        }
-    }
-
     fn metadata_py(&self, py: Python, name: &PyPath, node: &PyBytes) -> PyResult<PyDict> {
         let key = StoreKey::hgid(to_key(py, name, node)?);
         let res = py.allow_threads(|| self.metadata(key)).map_pyerr(py)?;
