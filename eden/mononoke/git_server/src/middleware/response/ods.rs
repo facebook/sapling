@@ -17,6 +17,10 @@ use hyper::StatusCode;
 use permission_checker::MononokeIdentitySetExt;
 use stats::prelude::*;
 
+#[cfg(fbcode_build)]
+use crate::middleware::response::facebook::log_ods3;
+#[cfg(not(fbcode_build))]
+use crate::middleware::response::oss::log_ods3;
 use crate::model::GitMethod;
 use crate::model::GitMethodInfo;
 
@@ -47,6 +51,7 @@ fn log_stats(state: &mut State, status: StatusCode) -> Option<()> {
     let method_info = state.try_borrow::<GitMethodInfo>()?;
     let method = method_info.method.clone();
     let repo = method_info.repo.clone();
+    let request_load = RequestLoad::try_borrow_from(state).map(|r| r.0 as f64);
 
     let callbacks = state.try_borrow_mut::<PostResponseCallbacks>()?;
 
@@ -75,8 +80,10 @@ fn log_stats(state: &mut State, status: StatusCode) -> Option<()> {
         }
 
         if let Some(response_bytes_sent) = info.meta.as_ref().map(|m| m.body().bytes_sent) {
-            STATS::response_bytes_sent.add_value(response_bytes_sent as i64, (method,))
+            STATS::response_bytes_sent.add_value(response_bytes_sent as i64, (method.clone(),))
         }
+
+        log_ods3(info, &status, method, repo, request_load);
     });
 
     if let Some(request_load) = RequestLoad::try_borrow_from(state) {
