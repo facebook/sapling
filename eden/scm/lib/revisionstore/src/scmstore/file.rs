@@ -702,6 +702,12 @@ impl ContentDataStore for FileStore {
     }
 
     fn metadata(&self, key: StoreKey) -> Result<StoreResult<ContentMetadata>> {
+        unimplemented!("not supported");
+    }
+}
+
+impl FileStore {
+    pub fn metadata(&self, key: StoreKey) -> Result<StoreResult<ContentMetadata>> {
         self.metrics.write().api.contentdatastore_metadata.call(0);
 
         if let Some(cache) = &self.lfs_cache {

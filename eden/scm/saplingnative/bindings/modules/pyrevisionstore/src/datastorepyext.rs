@@ -23,8 +23,6 @@ use cpython_ext::PyPathBuf;
 use cpython_ext::ResultPyErrExt;
 use revisionstore::datastore::Delta;
 use revisionstore::datastore::StoreResult;
-use revisionstore::ContentDataStore;
-use revisionstore::ContentHash;
 use revisionstore::HgIdDataStore;
 use revisionstore::HgIdMutableDeltaStore;
 use revisionstore::StoreKey;
@@ -47,10 +45,6 @@ pub trait HgIdDataStorePyExt {
     fn get_delta_py(&self, py: Python, name: &PyPath, node: &PyBytes) -> PyResult<PyObject>;
     fn get_missing_py(&self, py: Python, keys: &mut PyIterator) -> PyResult<PyList>;
     fn refresh_py(&self, py: Python) -> PyResult<PyNone>;
-}
-
-pub trait ContentDataStorePyExt {
-    fn metadata_py(&self, py: Python, name: &PyPath, node: &PyBytes) -> PyResult<PyDict>;
 }
 
 pub trait IterableHgIdDataStorePyExt {
@@ -180,29 +174,6 @@ impl<T: HgIdDataStore + ?Sized> HgIdDataStorePyExt for T {
     fn refresh_py(&self, py: Python) -> PyResult<PyNone> {
         self.refresh().map_pyerr(py)?;
         Ok(PyNone)
-    }
-}
-
-impl<T: ContentDataStore + ?Sized> ContentDataStorePyExt for T {
-    fn metadata_py(&self, py: Python, name: &PyPath, node: &PyBytes) -> PyResult<PyDict> {
-        let key = StoreKey::hgid(to_key(py, name, node)?);
-        let res = py.allow_threads(|| self.metadata(key)).map_pyerr(py)?;
-
-        let meta = match res {
-            StoreResult::Found(meta) => meta,
-            StoreResult::NotFound(key) => return Err(key_error(py, &key)),
-        };
-
-        let metadict = PyDict::new(py);
-        metadict.set_item(py, "size", meta.size)?;
-        match meta.hash {
-            ContentHash::Sha256(hash) => {
-                metadict.set_item(py, "sha256", PyBytes::new(py, hash.as_ref()))?
-            }
-        }
-        metadict.set_item(py, "isbinary", meta.is_binary)?;
-
-        Ok(metadict)
     }
 }
 
