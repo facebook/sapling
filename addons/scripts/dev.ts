@@ -143,38 +143,49 @@ class MultiRunner {
     });
   }
 
-  async spawnAll() {
-    this.configs.forEach(async ({cwd, cmd, args, waitFor}, i) => {
-      waitFor != null && (await waitFor);
+  async spawnProcess(i: number) {
+    const {cwd, cmd, args, waitFor} = this.configs[i];
 
-      const info = this.infos[i]!;
-      info.start = new Date();
-      const proc = ejeca(cmd, args, {cwd, stdout: 'pipe', stderr: 'pipe'});
-      const output: Array<string> = [];
-      proc.stdout!.on('data', data => {
-        const lines = data.toString().split('\n');
-        output.push(...lines.slice(0, -1));
-        this.updateCustomStatus(i, data.toString());
-        this.redraw();
-      });
-      proc.stderr!.on('data', data => {
-        const lines = data.toString().split('\n');
-        output.push(...lines.slice(0, -1));
-        this.updateCustomStatus(i, data.toString());
-        this.redraw();
-      });
-      proc.stderr!.on('close', () => {
-        this.infos[i]!.end = new Date();
-        this.redraw();
-      });
-      info.handle = proc;
-      info.output = output;
+    waitFor != null && (await waitFor);
+
+    const info = this.infos[i]!;
+    info.start = new Date();
+    info.end = undefined;
+    const proc = ejeca(cmd, args, {cwd, stdout: 'pipe', stderr: 'pipe'});
+    const output: Array<string> = [];
+    proc.stdout!.on('data', data => {
+      const lines = data.toString().split('\n');
+      output.push(...lines.slice(0, -1));
+      this.updateCustomStatus(i, data.toString());
+      this.redraw();
+    });
+    proc.stderr!.on('data', data => {
+      const lines = data.toString().split('\n');
+      output.push(...lines.slice(0, -1));
+      this.updateCustomStatus(i, data.toString());
+      this.redraw();
+    });
+    proc.stderr!.on('close', () => {
+      this.infos[i]!.end = new Date();
+      this.redraw();
+    });
+    info.handle = proc;
+    info.output = output;
+  }
+
+  async spawnAll() {
+    this.configs.forEach((config, i) => {
+      void this.spawnProcess(i);
     });
     this.redraw();
-    await Promise.all(this.infos.map(info => info.handle));
-
-    // Redraw one last time, with all output
-    this.redraw(/* printAllOutput */ true);
+    await Promise.all(this.infos.map(info => info.handle))
+      .then(() => {
+        // Redraw one last time, with all output
+        this.redraw(/* printAllOutput */ true);
+      })
+      .catch(err => {
+        console.error(chalk.red('Error when executing commands:'), err);
+      });
   }
 
   private updateCustomStatus(i: number, chunk: string) {
@@ -250,6 +261,21 @@ class MultiRunner {
     }
 
     this.lastNumLines = totalLines;
+  }
+
+  async restartProcess(i: number) {
+    const info = this.infos[i]!;
+    info.status = chalk.yellow('Restarting...');
+    this.redraw();
+    const {handle} = info;
+    if (handle) {
+      handle.kill();
+      await handle.catch(() => {});
+      info.handle = undefined;
+    }
+    info.output.length = 0;
+    info.status = undefined;
+    void this.spawnProcess(i);
   }
 }
 
@@ -332,13 +358,41 @@ async function main() {
             cmd: 'yarn',
             args: ['serve', '--dev', '--foreground', '--stdout', '--force', '--cwd', launchDir],
             waitFor,
+            customStatus: (_chunk: string, _status?: string) => {
+              return chalk.white(
+                `Press ${chalk.bold.white('R')} to restart server, ${chalk.bold.white(
+                  'Q',
+                )} to quit`,
+              );
+            },
           },
     );
   }
 
   const runner = new MultiRunner(configs);
 
+  if (launchDir != null && kind === 'browser') {
+    Promise.all([clientReady.promise, serverReady.promise]).then(() => {
+      onUserInput(input => {
+        if (input.toLowerCase() === 'r') {
+          runner.restartProcess(2);
+        }
+
+        if (input.toLowerCase() === 'q' || input.charCodeAt(0) === 3) {
+          process.exit(0);
+        }
+      });
+    });
+  }
+
   await runner.spawnAll();
 }
 
 main();
+
+function onUserInput(callback: (input: string) => void) {
+  process.stdin.setRawMode(true);
+  process.stdin.resume();
+  process.stdin.setEncoding('utf8');
+  process.stdin.on('data', data => callback(data.toString()));
+}
