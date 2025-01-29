@@ -277,6 +277,16 @@ class MultiRunner {
     info.status = undefined;
     void this.spawnProcess(i);
   }
+
+  killAll() {
+    for (const info of this.infos) {
+      const handle = info.handle;
+      if (handle) {
+        handle.kill();
+        handle.catch(() => {});
+      }
+    }
+  }
 }
 
 async function main() {
@@ -371,6 +381,14 @@ async function main() {
 
   const runner = new MultiRunner(configs);
 
+  const cleanupAndExit = () => {
+    runner.killAll();
+    process.exit(0);
+  };
+  process.on('SIGINT', cleanupAndExit);
+  process.on('SIGTERM', cleanupAndExit);
+  process.on('exit', cleanupAndExit);
+
   if (launchDir != null && kind === 'browser') {
     Promise.all([clientReady.promise, serverReady.promise]).then(() => {
       onUserInput(input => {
@@ -379,7 +397,7 @@ async function main() {
         }
 
         if (input.toLowerCase() === 'q' || input.charCodeAt(0) === 3) {
-          process.exit(0);
+          cleanupAndExit();
         }
       });
     });
