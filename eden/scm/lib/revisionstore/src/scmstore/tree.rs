@@ -532,28 +532,6 @@ impl HgIdDataStore for TreeStore {
         )
     }
 
-    fn get_meta(&self, key: StoreKey) -> Result<StoreResult<Metadata>> {
-        Ok(
-            match self
-                .fetch_batch(
-                    std::iter::once(key.clone()).filter_map(StoreKey::maybe_into_key),
-                    TreeAttributes::CONTENT,
-                    FetchMode::AllowRemote,
-                )
-                .single()?
-            {
-                // This is currently in a bit of an awkward state, as revisionstore metadata is no longer used for trees
-                // (it should always be default), but the get_meta function should return StoreResult::Found
-                // only when the content is available. Thus, we request the tree content, but ignore it and just
-                // return default metadata when it's found, and otherwise report StoreResult::NotFound.
-                // TODO(meyer): Replace this with an presence check once support for separate fetch and return attrs
-                // is added.
-                Some(_e) => StoreResult::Found(Metadata::default()),
-                None => StoreResult::NotFound(key),
-            },
-        )
-    }
-
     fn refresh(&self) -> Result<()> {
         self.refresh()
     }

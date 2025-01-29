@@ -23,7 +23,6 @@ use super::SaplingRemoteApiStoreKind;
 use super::Tree;
 use crate::datastore::HgIdDataStore;
 use crate::datastore::HgIdMutableDeltaStore;
-use crate::datastore::Metadata;
 use crate::datastore::RemoteDataStore;
 use crate::datastore::StoreResult;
 use crate::localstore::LocalStore;
@@ -175,11 +174,6 @@ impl HgIdDataStore for SaplingRemoteApiDataStore<File> {
         self.store.get(key)
     }
 
-    fn get_meta(&self, key: StoreKey) -> Result<StoreResult<Metadata>> {
-        self.prefetch(&[key.clone()])?;
-        self.store.get_meta(key)
-    }
-
     fn refresh(&self) -> Result<()> {
         Ok(())
     }
@@ -189,11 +183,6 @@ impl HgIdDataStore for SaplingRemoteApiDataStore<Tree> {
     fn get(&self, key: StoreKey) -> Result<StoreResult<Vec<u8>>> {
         self.prefetch(&[key.clone()])?;
         self.store.get(key)
-    }
-
-    fn get_meta(&self, key: StoreKey) -> Result<StoreResult<Metadata>> {
-        self.prefetch(&[key.clone()])?;
-        self.store.get_meta(key)
     }
 
     fn refresh(&self) -> Result<()> {

@@ -395,21 +395,6 @@ impl HgIdDataStore for IndexedLogHgIdDataStore {
         Ok(StoreResult::Found(content.as_ref().to_vec()))
     }
 
-    fn get_meta(&self, key: StoreKey) -> Result<StoreResult<Metadata>> {
-        let key = match key {
-            StoreKey::HgId(key) => key,
-            content => return Ok(StoreResult::NotFound(content)),
-        };
-
-        let entry = match self.get_raw_entry(&key.hgid)? {
-            None => return Ok(StoreResult::NotFound(StoreKey::HgId(key))),
-            Some(entry) => entry,
-        };
-
-        let metadata = entry.metadata();
-        Ok(StoreResult::Found(metadata.clone()))
-    }
-
     fn refresh(&self) -> Result<()> {
         self.flush_log()
     }

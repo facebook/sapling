@@ -48,7 +48,6 @@ impl<T> From<StoreResult<T>> for Option<T> {
 
 pub trait HgIdDataStore: LocalStore + Send + Sync {
     fn get(&self, key: StoreKey) -> Result<StoreResult<Vec<u8>>>;
-    fn get_meta(&self, key: StoreKey) -> Result<StoreResult<Metadata>>;
     fn refresh(&self) -> Result<()>;
 }
 
@@ -129,10 +128,6 @@ pub trait ContentDataStore: Send + Sync {
 impl<T: HgIdDataStore + ?Sized, U: Deref<Target = T> + Send + Sync> HgIdDataStore for U {
     fn get(&self, key: StoreKey) -> Result<StoreResult<Vec<u8>>> {
         T::get(self, key)
-    }
-
-    fn get_meta(&self, key: StoreKey) -> Result<StoreResult<Metadata>> {
-        T::get_meta(self, key)
     }
 
     /// Tell the underlying stores that there may be new data on disk.

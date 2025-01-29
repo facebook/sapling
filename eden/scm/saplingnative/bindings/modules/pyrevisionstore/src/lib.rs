@@ -277,10 +277,6 @@ impl HgIdDataStore for mutabledeltastore {
         self.store(py).get(key)
     }
 
-    fn get_meta(&self, key: StoreKey) -> Result<StoreResult<Metadata>> {
-        Ok(StoreResult::Found(Metadata::default()))
-    }
-
     fn refresh(&self) -> Result<()> {
         let gil = Python::acquire_gil();
         let py = gil.python();

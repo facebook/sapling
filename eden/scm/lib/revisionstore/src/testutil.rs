@@ -149,13 +149,6 @@ impl HgIdDataStore for FakeRemoteDataStore {
         }
     }
 
-    fn get_meta(&self, key: StoreKey) -> Result<StoreResult<Metadata>> {
-        match self.prefetch(&[key.clone()]) {
-            Err(_) => Ok(StoreResult::NotFound(key)),
-            Ok(_) => self.store.get_meta(key),
-        }
-    }
-
     fn refresh(&self) -> Result<()> {
         Ok(())
     }

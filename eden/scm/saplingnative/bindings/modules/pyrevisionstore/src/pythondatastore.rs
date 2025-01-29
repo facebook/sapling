@@ -21,7 +21,6 @@ use cpython_ext::PyErr;
 use cpython_ext::PyPathBuf;
 use revisionstore::HgIdDataStore;
 use revisionstore::LocalStore;
-use revisionstore::Metadata;
 use revisionstore::RemoteDataStore;
 use revisionstore::StoreKey;
 use revisionstore::StoreResult;
@@ -79,10 +78,6 @@ impl HgIdDataStore for PythonHgIdDataStore {
         let py_bytes = PyBytes::extract(py, &py_data).map_err(PyErr::from)?;
 
         Ok(StoreResult::Found(py_bytes.data(py).to_vec()))
-    }
-
-    fn get_meta(&self, key: StoreKey) -> Result<StoreResult<Metadata>> {
-        Ok(StoreResult::Found(Metadata::default()))
     }
 
     fn refresh(&self) -> Result<()> {
