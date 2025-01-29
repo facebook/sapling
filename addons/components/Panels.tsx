@@ -36,6 +36,9 @@ const styles = stylex.create({
   tabpanel: {
     padding: '0 6px 10px 6px',
   },
+  spaceBetween: {
+    justifyContent: 'space-between',
+  },
 });
 
 export type PanelInfo = {render: () => ReactNode; label: ReactNode};
@@ -47,6 +50,7 @@ export function Panels<T extends string>({
   alignmentProps,
   active,
   onSelect,
+  tabListOptionalComponent,
 }: {
   panels: Record<T, PanelInfo>;
   xstyle?: stylex.StyleXStyles;
@@ -55,22 +59,26 @@ export function Panels<T extends string>({
   alignmentProps?: ColumnAlignmentProps;
   active: T;
   onSelect: (item: T) => void;
+  tabListOptionalComponent?: ReactNode;
 }) {
   return (
     <Column xstyle={xstyle} {...(alignmentProps ?? {alignStart: true})}>
-      <Row xstyle={[styles.tabList, tabListXstyle]} role="tablist">
-        {(Object.entries(panels) as Array<[T, PanelInfo]>).map(([name, value]) => {
-          return (
-            <button
-              role="tab"
-              aria-selected={active === name}
-              key={name}
-              onClick={() => onSelect(name)}
-              {...stylex.props(styles.tab, active === name && styles.activeTab, tabXstyle)}>
-              {value.label}
-            </button>
-          );
-        })}
+      <Row xstyle={[styles.tabList, styles.spaceBetween, tabListXstyle]} role="tablist">
+        <Row>
+          {(Object.entries(panels) as Array<[T, PanelInfo]>).map(([name, value]) => {
+            return (
+              <button
+                role="tab"
+                aria-selected={active === name}
+                key={name}
+                onClick={() => onSelect(name)}
+                {...stylex.props(styles.tab, active === name && styles.activeTab, tabXstyle)}>
+                {value.label}
+              </button>
+            );
+          })}
+        </Row>
+        {tabListOptionalComponent}
       </Row>
       <div role="tabpanel" {...stylex.props(styles.tabpanel)}>
         {panels[active]?.render()}
