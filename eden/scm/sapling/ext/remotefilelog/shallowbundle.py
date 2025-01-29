@@ -25,7 +25,6 @@ from sapling.pycompat import range
 
 from . import remotefilelog, shallowutil
 
-
 NoFiles = NoTrees = 0
 # Local means: files and trees that are not available on the main server
 LocalFiles = LocalTrees = 1

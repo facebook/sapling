@@ -182,8 +182,7 @@ class remotefilelog:
 
         dpack, hpack = self.repo.fileslog.getmutablelocalpacks()
 
-        dpackmeta = {constants.METAKEYFLAG: flags}
-        dpack.add(self.filename, node, revlog.nullid, rawtext, metadata=dpackmeta)
+        dpack.add(self.filename, node, revlog.nullid, rawtext)
 
         copyfrom = ""
         realp1node = p1
@@ -272,14 +271,7 @@ class remotefilelog:
         return False
 
     def flags(self, node):
-        if isint(node):
-            raise error.ProgrammingError(
-                "remotefilelog does not accept integer rev for flags"
-            )
-        if node == nullid:
-            return revlog.REVIDX_DEFAULT_FLAGS
-        store = self.repo.fileslog.filestore
-        return store.getmeta(self.filename, node).get(constants.METAKEYFLAG, 0)
+        return 0
 
     def parents(self, node):
         if node == nullid:

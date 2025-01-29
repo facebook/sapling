@@ -102,17 +102,6 @@ class unioncontentstore:
 
         return chain
 
-    def getmeta(self, name, node):
-        """Returns the metadata dict for given node."""
-        assert isinstance(name, str)
-        assert isinstance(node, bytes)
-        for store in self.stores:
-            try:
-                return store.getmeta(name, node)
-            except KeyError:
-                pass
-        raise KeyError((name, hex(node)))
-
     def _getpartialchain(self, name, node):
         """Returns a partial delta chain for the given name/node pair.
 

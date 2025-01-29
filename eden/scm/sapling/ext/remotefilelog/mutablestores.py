@@ -4,6 +4,7 @@
 # GNU General Public License version 2.
 
 from bindings import revisionstore
+
 from sapling.node import hex
 
 from . import shallowutil
@@ -135,13 +136,6 @@ class mutabledatahistorystore:
             raise KeyError(name, hex(node))
 
         return dpack.getdeltachain(name, node)
-
-    def getmeta(self, name, node):
-        dpack = self.getpendingpacks().getmutabledpack(True)
-        if dpack is None:
-            raise KeyError(name, hex(node))
-
-        return dpack.getmeta(name, node)
 
     def getnodeinfo(self, name, node):
         hpack = self.getpendingpacks().getmutablehpack(True)

@@ -18,21 +18,17 @@ PACKSUFFIX = ".datapack"
 class memdatapack:
     def __init__(self):
         self.data = {}
-        self.meta = {}
 
     def add(self, name, node, deltabase, delta):
         self.data[(name, node)] = (deltabase, delta)
 
     def getdelta(self, name, node):
         deltabase, delta = self.data[(name, node)]
-        return (delta, name, deltabase, self.getmeta(name, node))
+        return (delta, name, deltabase, {})
 
     def getdeltachain(self, name, node):
         deltabase, delta = self.data[(name, node)]
         return [(name, node, name, deltabase, delta)]
-
-    def getmeta(self, name, node):
-        return self.meta[(name, node)]
 
     def getmissing(self, keys):
         missing = []

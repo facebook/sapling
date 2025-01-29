@@ -199,15 +199,6 @@ class wirepackstore:
         delta, deltabase, metadata = self._data[(name, node)]
         return [(name, node, name, deltabase, delta)]
 
-    def getmeta(self, name, node):
-        try:
-            delta, deltabase, metadata = self._data[(name, node)]
-            if metadata is not None:
-                return metadata
-        except KeyError:
-            raise KeyError((name, hex(node)))
-        return {constants.METAKEYFLAG: "", constants.METAKEYSIZE: len(delta)}
-
     def getnodeinfo(self, name, node):
         try:
             return self._history[(name, node)]

@@ -10,6 +10,7 @@ import hashlib
 import os
 
 from bindings import revisionstore
+
 from sapling import error, filelog, pycompat, revlog
 from sapling.i18n import _, _x
 from sapling.node import bin, hex, nullid, short
@@ -319,21 +320,12 @@ def debugdatastore(ui, store, verifynoduplicate=True, **opts):
             totalblobsize = 0
             totaldeltasize = 0
 
-        # Metadata could be missing, in which case it will be an empty dict.
-        meta = store.getmeta(filename, node)
-        if constants.METAKEYSIZE in meta:
-            blobsize = meta[constants.METAKEYSIZE]
-            totaldeltasize += deltalen
-            totalblobsize += blobsize
-        else:
-            blobsize = "(missing)"
         ui.write(
-            "%s  %s  %s%s\n"
+            "%s  %s  %s\n"
             % (
                 hashformatter(node),
                 hashformatter(deltabase),
                 str(deltalen).ljust(14),
-                blobsize,
             )
         )
 
