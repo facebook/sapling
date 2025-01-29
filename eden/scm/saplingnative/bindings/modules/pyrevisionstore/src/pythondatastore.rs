@@ -12,7 +12,6 @@ use cpython::NoArgs;
 use cpython::ObjectProtocol;
 use cpython::PyBytes;
 use cpython::PyClone;
-use cpython::PyDict;
 use cpython::PyList;
 use cpython::PyObject;
 use cpython::Python;
@@ -30,7 +29,6 @@ use storemodel::SerializationFormat;
 
 use crate::pythonutil::from_key_to_tuple;
 use crate::pythonutil::from_tuple_to_key;
-use crate::pythonutil::to_metadata;
 
 pub struct PythonHgIdDataStore {
     py_store: PyObject,
@@ -84,32 +82,7 @@ impl HgIdDataStore for PythonHgIdDataStore {
     }
 
     fn get_meta(&self, key: StoreKey) -> Result<StoreResult<Metadata>> {
-        let key = match key {
-            StoreKey::HgId(key) => key,
-            contentkey => return Ok(StoreResult::NotFound(contentkey)),
-        };
-
-        let gil = Python::acquire_gil();
-        let py = gil.python();
-        let py_name = PyPathBuf::from(key.path.as_repo_path());
-        let py_node = PyBytes::new(py, key.hgid.as_ref());
-        let py_meta = match self
-            .py_store
-            .call_method(py, "getmeta", (py_name, py_node), None)
-        {
-            Ok(data) => data,
-            Err(py_err) => {
-                if py_err.get_type(py) == exc::KeyError::type_object(py) {
-                    return Ok(StoreResult::NotFound(StoreKey::hgid(key)));
-                } else {
-                    return Err(PyErr::from(py_err).into());
-                }
-            }
-        };
-        let py_dict = PyDict::extract(py, &py_meta).map_err(PyErr::from)?;
-        to_metadata(py, &py_dict)
-            .map_err(|e| PyErr::from(e).into())
-            .map(StoreResult::Found)
+        Ok(StoreResult::Found(Metadata::default()))
     }
 
     fn refresh(&self) -> Result<()> {

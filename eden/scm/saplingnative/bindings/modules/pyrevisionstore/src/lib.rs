@@ -159,11 +159,6 @@ py_class!(class indexedlogdatastore |py| {
         store.get_delta_chain_py(py, name, node)
     }
 
-    def getmeta(&self, name: &PyPath, node: &PyBytes) -> PyResult<PyDict> {
-        let store = self.store(py);
-        store.get_meta_py(py, name, node)
-    }
-
     def getmissing(&self, keys: &PyObject) -> PyResult<PyList> {
         let store = self.store(py);
         store.get_missing_py(py, &mut keys.iter(py)?)
@@ -260,11 +255,6 @@ py_class!(pub class mutabledeltastore |py| {
         store.get_delta_chain_py(py, &name, node)
     }
 
-    def getmeta(&self, name: PyPathBuf, node: &PyBytes) -> PyResult<PyDict> {
-        let store = self.store(py);
-        store.get_meta_py(py, &name, node)
-    }
-
     def getmissing(&self, keys: &PyObject) -> PyResult<PyList> {
         let store = self.store(py);
         store.get_missing_py(py, &mut keys.iter(py)?)
@@ -288,10 +278,7 @@ impl HgIdDataStore for mutabledeltastore {
     }
 
     fn get_meta(&self, key: StoreKey) -> Result<StoreResult<Metadata>> {
-        let gil = Python::acquire_gil();
-        let py = gil.python();
-
-        self.store(py).get_meta(key)
+        Ok(StoreResult::Found(Metadata::default()))
     }
 
     fn refresh(&self) -> Result<()> {
@@ -582,11 +569,6 @@ py_class!(pub class filescmstore |py| {
         store.get_delta_chain_py(py, &name, node)
     }
 
-    def getmeta(&self, name: PyPathBuf, node: &PyBytes) -> PyResult<PyDict> {
-        let store = self.store(py);
-        store.get_meta_py(py, &name, node)
-    }
-
     def getmissing(&self, keys: &PyObject) -> PyResult<PyList> {
         let store = self.store(py);
         store.get_missing_py(py, &mut keys.iter(py)?)
@@ -770,11 +752,6 @@ py_class!(pub class treescmstore |py| {
     def getdeltachain(&self, name: PyPathBuf, node: &PyBytes) -> PyResult<PyList> {
         let store = self.store(py);
         store.get_delta_chain_py(py, &name, node)
-    }
-
-    def getmeta(&self, name: PyPathBuf, node: &PyBytes) -> PyResult<PyDict> {
-        let store = self.store(py);
-        store.get_meta_py(py, &name, node)
     }
 
     def getmissing(&self, keys: &PyObject) -> PyResult<PyList> {

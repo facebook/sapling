@@ -45,7 +45,6 @@ pub trait HgIdDataStorePyExt {
     fn get_py(&self, py: Python, name: &PyPath, node: &PyBytes) -> PyResult<PyBytes>;
     fn get_delta_chain_py(&self, py: Python, name: &PyPath, node: &PyBytes) -> PyResult<PyList>;
     fn get_delta_py(&self, py: Python, name: &PyPath, node: &PyBytes) -> PyResult<PyObject>;
-    fn get_meta_py(&self, py: Python, name: &PyPath, node: &PyBytes) -> PyResult<PyDict>;
     fn get_missing_py(&self, py: Python, keys: &mut PyIterator) -> PyResult<PyList>;
     fn refresh_py(&self, py: Python) -> PyResult<PyNone>;
 }
@@ -102,7 +101,7 @@ impl<T: HgIdDataStore + ?Sized> HgIdDataStorePyExt for T {
         let base_node = PyBytes::new(py, Node::null_id().as_ref());
 
         let bytes = PyBytes::new(py, &delta.data);
-        let meta = self.get_meta_py(py.clone(), name, node)?;
+        let meta = PyDict::new(py);
         Ok((
             bytes.into_object(),
             base_name.to_py_object(py).into_object(),
@@ -137,26 +136,6 @@ impl<T: HgIdDataStore + ?Sized> HgIdDataStorePyExt for T {
             .map(|d| from_delta_to_tuple(py, d))
             .collect::<Vec<PyObject>>();
         Ok(PyList::new(py, &pychain[..]))
-    }
-
-    fn get_meta_py(&self, py: Python, name: &PyPath, node: &PyBytes) -> PyResult<PyDict> {
-        let key = StoreKey::hgid(to_key(py, name, node)?);
-        let res = py.allow_threads(|| self.get_meta(key)).map_pyerr(py)?;
-
-        let metadata = match res {
-            StoreResult::Found(metadata) => metadata,
-            StoreResult::NotFound(key) => return Err(key_error(py, &key)),
-        };
-
-        let metadict = PyDict::new(py);
-        if let Some(size) = metadata.size {
-            metadict.set_item(py, "s", size)?;
-        }
-        if let Some(flags) = metadata.flags {
-            metadict.set_item(py, "f", flags)?;
-        }
-
-        Ok(metadict)
     }
 
     fn get_missing_py(&self, py: Python, keys: &mut PyIterator) -> PyResult<PyList> {
