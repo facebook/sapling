@@ -82,12 +82,6 @@
 //! `strip_file_metadata` to obtain the plain blob. Must implement the `LocalStore`
 //! trait. Metadata can be also separated with split_hg_file_metadata that returns raw metadata blob.
 //!
-//! ## `ContentDataStore`
-//!
-//! Implemented by content-only stores. The hash of the returned blob will
-//! match exactly the value of the passed in StoreKey hash. Used by the
-//! `LfsStore`.
-//!
 //! ## `HgIdMutableDeltaStore`, `HgIdMutableHistoryStore`
 //!
 //! Main interface to write to a store. Unflushed data may be lost. Must implement
@@ -130,7 +124,6 @@ pub mod util;
 use ::types::Key;
 pub use revisionstore_types::*;
 
-pub use crate::datastore::ContentDataStore;
 pub use crate::datastore::ContentMetadata;
 pub use crate::datastore::Delta;
 pub use crate::datastore::HgIdDataStore;

@@ -7,12 +7,8 @@
 
 // Union data store
 use anyhow::Result;
-use minibytes::Bytes;
 
-use crate::datastore::ContentDataStore;
-use crate::datastore::ContentMetadata;
 use crate::datastore::HgIdDataStore;
-use crate::datastore::Metadata;
 use crate::datastore::RemoteDataStore;
 use crate::datastore::StoreResult;
 use crate::types::StoreKey;
@@ -64,32 +60,6 @@ impl<T: RemoteDataStore> RemoteDataStore for UnionHgIdDataStore<T> {
                 Ok(Vec::new())
             }
         })
-    }
-}
-
-pub type UnionContentDataStore<T> = UnionStore<T>;
-
-impl<T: ContentDataStore> ContentDataStore for UnionContentDataStore<T> {
-    fn blob(&self, mut key: StoreKey) -> Result<StoreResult<Bytes>> {
-        for store in self {
-            match store.blob(key)? {
-                StoreResult::Found(blob) => return Ok(StoreResult::Found(blob)),
-                StoreResult::NotFound(next) => key = next,
-            }
-        }
-
-        Ok(StoreResult::NotFound(key))
-    }
-
-    fn metadata(&self, mut key: StoreKey) -> Result<StoreResult<ContentMetadata>> {
-        for store in self {
-            match store.metadata(key)? {
-                StoreResult::Found(meta) => return Ok(StoreResult::Found(meta)),
-                StoreResult::NotFound(next) => key = next,
-            }
-        }
-
-        Ok(StoreResult::NotFound(key))
     }
 }
 

@@ -58,7 +58,6 @@ use crate::lfs::LfsStore;
 use crate::scmstore::activitylogger::ActivityLogger;
 use crate::scmstore::fetch::FetchResults;
 use crate::scmstore::metrics::StoreLocation;
-use crate::ContentDataStore;
 use crate::ContentMetadata;
 use crate::Delta;
 use crate::LocalStore;
@@ -680,29 +679,6 @@ impl HgIdMutableDeltaStore for FileStore {
         self.metrics.write().api.hg_flush.call(0);
         self.flush()?;
         Ok(None)
-    }
-}
-
-impl ContentDataStore for FileStore {
-    fn blob(&self, key: StoreKey) -> Result<StoreResult<Bytes>> {
-        self.metrics.write().api.contentdatastore_blob.call(0);
-        Ok(
-            match self
-                .fetch(
-                    std::iter::once(key.clone()).filter_map(|sk| sk.maybe_into_key()),
-                    FileAttributes::CONTENT,
-                    FetchMode::LocalOnly,
-                )
-                .single()?
-            {
-                Some(entry) => StoreResult::Found(entry.content.unwrap().file_content()?.0),
-                None => StoreResult::NotFound(key),
-            },
-        )
-    }
-
-    fn metadata(&self, key: StoreKey) -> Result<StoreResult<ContentMetadata>> {
-        unimplemented!("not supported");
     }
 }
 

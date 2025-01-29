@@ -98,7 +98,6 @@ use util::path::create_dir;
 use util::path::create_shared_dir;
 use util::path::remove_file;
 
-use crate::datastore::ContentDataStore;
 use crate::datastore::ContentMetadata;
 use crate::datastore::Delta;
 use crate::datastore::HgIdDataStore;
@@ -876,7 +875,7 @@ impl From<LfsPointersEntry> for ContentMetadata {
     }
 }
 
-impl ContentDataStore for LfsStore {
+impl LfsStore {
     fn blob(&self, key: StoreKey) -> Result<StoreResult<Bytes>> {
         match self.blob_impl(key)? {
             StoreResult::Found((_, blob)) => Ok(StoreResult::Found(blob)),
@@ -884,7 +883,7 @@ impl ContentDataStore for LfsStore {
         }
     }
 
-    fn metadata(&self, key: StoreKey) -> Result<StoreResult<ContentMetadata>> {
+    pub fn metadata(&self, key: StoreKey) -> Result<StoreResult<ContentMetadata>> {
         let pointer = self.pointers.entry(&key)?;
 
         match pointer {

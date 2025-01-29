@@ -54,8 +54,6 @@ use crate::scmstore::tree::types::LazyTree;
 use crate::scmstore::tree::types::StoreTree;
 use crate::scmstore::tree::types::TreeAttributes;
 use crate::trait_impls::sha1_digest;
-use crate::ContentDataStore;
-use crate::ContentMetadata;
 use crate::Delta;
 use crate::HgIdHistoryStore;
 use crate::HgIdMutableDeltaStore;
@@ -660,19 +658,6 @@ impl RemoteHistoryStore for TreeStore {
 impl HistoryStore for TreeStore {
     fn with_shared_only(&self) -> Arc<dyn HistoryStore> {
         Arc::new(self.with_shared_only())
-    }
-}
-
-// TODO(meyer): Content addressing not supported at all for trees. I could look for HgIds present here and fetch with
-// that if available, but I feel like there's probably something wrong if this is called for trees. Do we need to implement
-// this at all for trees?
-impl ContentDataStore for TreeStore {
-    fn blob(&self, key: StoreKey) -> Result<StoreResult<Bytes>> {
-        Ok(StoreResult::NotFound(key))
-    }
-
-    fn metadata(&self, key: StoreKey) -> Result<StoreResult<ContentMetadata>> {
-        Ok(StoreResult::NotFound(key))
     }
 }
 
