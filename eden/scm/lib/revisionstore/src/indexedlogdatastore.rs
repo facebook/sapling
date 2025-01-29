@@ -29,8 +29,9 @@ use storemodel::SerializationFormat;
 use tracing::warn;
 use types::hgid::ReadHgIdExt;
 use types::HgId;
+use types::Id20;
 use types::Key;
-use types::RepoPath;
+use types::RepoPathBuf;
 
 use crate::datastore::Delta;
 use crate::datastore::HgIdDataStore;
@@ -60,7 +61,7 @@ pub struct IndexedLogHgIdDataStore {
 
 #[derive(Clone, Debug)]
 pub struct Entry {
-    key: Key,
+    node: Id20,
     metadata: Metadata,
 
     content: OnceCell<Bytes>,
@@ -69,7 +70,7 @@ pub struct Entry {
 
 impl std::cmp::PartialEq for Entry {
     fn eq(&self, other: &Self) -> bool {
-        self.key == other.key
+        self.node == other.node
             && self.metadata == other.metadata
             && match (self.calculate_content(), other.calculate_content()) {
                 (Ok(c1), Ok(c2)) if c1 == c2 => true,
@@ -79,9 +80,9 @@ impl std::cmp::PartialEq for Entry {
 }
 
 impl Entry {
-    pub fn new(key: Key, content: Bytes, metadata: Metadata) -> Self {
+    pub fn new(node: Id20, content: Bytes, metadata: Metadata) -> Self {
         Entry {
-            key,
+            node,
             metadata,
             content: OnceCell::with_value(content),
             compressed_content: None,
@@ -107,13 +108,9 @@ impl Entry {
         let mut cur = Cursor::new(data);
         let hgid = cur.read_hgid()?;
 
+        // skip reading name
         let name_len = cur.read_u16::<BigEndian>()? as u64;
-        let name_slice =
-            data.get_err(cur.position() as usize..(cur.position() + name_len) as usize)?;
         cur.set_position(cur.position() + name_len);
-        let filename = RepoPath::from_utf8(name_slice)?;
-
-        let key = Key::new(filename.to_owned(), hgid);
 
         let metadata = Metadata::read(&mut cur)?;
 
@@ -123,7 +120,7 @@ impl Entry {
         let bytes = bytes.slice_to_bytes(compressed);
 
         Ok(Entry {
-            key,
+            node: hgid,
             metadata,
             content: OnceCell::new(),
             compressed_content: Some(bytes),
@@ -147,10 +144,11 @@ impl Entry {
     /// Write an entry to the IndexedLog. See [`from_log`] for the detail about the on-disk format.
     pub fn write_to_log(self, log: &Store) -> Result<()> {
         let mut buf = Vec::new();
-        buf.write_all(self.key.hgid.as_ref())?;
-        let path_slice = self.key.path.as_byte_slice();
-        buf.write_u16::<BigEndian>(path_slice.len() as u16)?;
-        buf.write_all(path_slice)?;
+        buf.write_all(self.node.as_ref())?;
+
+        // write empty name (i.e. zero length)
+        buf.write_u16::<BigEndian>(0)?;
+
         self.metadata.write(&mut buf)?;
 
         let compressed = if let Some(compressed) = self.compressed_content {
@@ -187,18 +185,8 @@ impl Entry {
         &self.metadata
     }
 
-    pub fn key(&self) -> &Key {
-        &self.key
-    }
-
-    /// Replaces the Entry's key in case caller looked up a different path.
-    pub(crate) fn with_key(self, key: Key) -> Self {
-        Entry {
-            key,
-            metadata: self.metadata,
-            content: self.content,
-            compressed_content: self.compressed_content,
-        }
+    pub fn node(&self) -> Id20 {
+        self.node
     }
 }
 
@@ -272,8 +260,8 @@ impl IndexedLogHgIdDataStore {
     }
 
     /// Attempt to read an Entry from IndexedLog, replacing the stored path with the one from the provided Key
-    pub(crate) fn get_entry(&self, key: Key) -> Result<Option<Entry>> {
-        Ok(self.get_raw_entry(&key.hgid)?.map(|e| e.with_key(key)))
+    pub(crate) fn get_entry(&self, node: &Id20) -> Result<Option<Entry>> {
+        self.get_raw_entry(node)
     }
 
     /// Attempt to read an Entry from IndexedLog, without overwriting the Key (return Key path may not match the request Key path)
@@ -324,7 +312,7 @@ impl IndexedLogHgIdDataStore {
 impl From<TreeEntry> for Entry {
     fn from(v: TreeEntry) -> Self {
         Entry::new(
-            v.key().clone(),
+            v.key().hgid,
             // TODO(meyer): Why does this infallible conversion exist? Push the failure to consumer of TryFrom, at worst
             v.data_unchecked().unwrap(),
             Metadata::default(),
@@ -335,7 +323,7 @@ impl From<TreeEntry> for Entry {
 impl From<FileEntry> for Entry {
     fn from(v: FileEntry) -> Self {
         Entry::new(
-            v.key().clone(),
+            v.key().hgid,
             v.content()
                 .expect("missing content")
                 .data_unchecked()
@@ -349,7 +337,7 @@ impl HgIdMutableDeltaStore for IndexedLogHgIdDataStore {
     fn add(&self, delta: &Delta, metadata: &Metadata) -> Result<()> {
         ensure!(delta.base.is_none(), "Deltas aren't supported.");
 
-        let entry = Entry::new(delta.key.clone(), delta.data.clone(), metadata.clone());
+        let entry = Entry::new(delta.key.hgid, delta.data.clone(), metadata.clone());
         self.put_entry(entry)
     }
 
@@ -408,7 +396,7 @@ impl ToKeys for IndexedLogHgIdDataStore {
                 let bytes = log.slice_to_bytes(entry?);
                 Entry::from_bytes(bytes)
             })
-            .map(|entry| Ok(entry?.key))
+            .map(|entry| Ok(Key::new(RepoPathBuf::new(), entry?.node)))
             .collect()
     }
 }
@@ -593,7 +581,11 @@ mod tests {
         let metadata = Default::default();
 
         log.add(&delta, &metadata)?;
-        assert!(log.to_keys().into_iter().all(|e| e.unwrap() == k));
+        assert!(
+            log.to_keys()
+                .into_iter()
+                .all(|e| e.unwrap() == key("", "2"))
+        );
         Ok(())
     }
 
@@ -809,8 +801,8 @@ mod tests {
             flags: None,
         };
 
-        let lfs_entry = Entry::new(lfs_key.clone(), content.clone(), lfs_metadata);
-        let nonlfs_entry = Entry::new(nonlfs_key.clone(), content.clone(), nonlfs_metadata);
+        let lfs_entry = Entry::new(lfs_key.hgid, content.clone(), lfs_metadata);
+        let nonlfs_entry = Entry::new(nonlfs_key.hgid, content.clone(), nonlfs_metadata);
 
         log.put_entry(lfs_entry)?;
         log.put_entry(nonlfs_entry)?;

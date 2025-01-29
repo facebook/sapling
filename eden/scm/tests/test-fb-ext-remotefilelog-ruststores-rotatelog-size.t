@@ -41,18 +41,18 @@ Test max-bytes-per-log
   $ setconfig indexedlog.data.max-bytes-per-log=10
   $ hg up -q 'desc(u)'
   $ ls_l $(findfilessorted "$CACHEDIR/master/" | filter)
-  * 70 *0* (glob)
+  * 69 *0* (glob)
   * 12 *1* (glob)
   $ hg up -q 'desc(v)'
   $ ls_l $(findfilessorted "$CACHEDIR/master/" | filter)
-  * 70 *0* (glob)
-  * 70 *1* (glob)
+  * 69 *0* (glob)
+  * 69 *1* (glob)
   * 12 *2* (glob)
   $ hg up -q 'desc(w)'
   $ ls_l $(findfilessorted "$CACHEDIR/master/" | filter)
-  * 70 *0* (glob)
-  * 70 *1* (glob)
-  * 70 *2* (glob)
+  * 69 *0* (glob)
+  * 69 *1* (glob)
+  * 69 *2* (glob)
   * 12 *3* (glob)
 
   $ setconfig indexedlog.data.max-bytes-per-log=100
@@ -64,12 +64,12 @@ Test max-bytes-per-log
   * * *0* (glob)
   $ hg up -q 'desc(v)'
   $ ls_l $(findfilessorted "$CACHEDIR/master/" | filter)
-  * 128 *0* (glob)
+  * 126 *0* (glob)
   * 12 *1* (glob)
   $ hg up -q 'desc(w)'
   $ ls_l $(findfilessorted "$CACHEDIR/master/" | filter)
-  * 128 *0* (glob)
-  * 70 *1* (glob)
+  * 126 *0* (glob)
+  * 69 *1* (glob)
 
 Test max-log-count
   $ hg up -q null
@@ -103,12 +103,12 @@ Test remotefilelog.cachelimit
   $ setconfig remotefilelog.cachelimit=300B
   $ hg up -q 'desc(u)'
   $ ls_l $(findfilessorted "$CACHEDIR/master/" | filter)
-  * 70 *0* (glob)
+  * 69 *0* (glob)
   $ hg up -q 'desc(v)'
   $ ls_l $(findfilessorted "$CACHEDIR/master/" | filter)
-  * 128 *0* (glob)
+  * 126 *0* (glob)
   * 12 *1* (glob)
   $ hg up -q 'desc(w)'
   $ ls_l $(findfilessorted "$CACHEDIR/master/" | filter)
-  * 128 *0* (glob)
-  * 70 *1* (glob)
+  * 126 *0* (glob)
+  * 69 *1* (glob)

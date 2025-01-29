@@ -137,7 +137,7 @@ impl FetchState {
             }
 
             if let Some(indexedlog_cache) = &indexedlog_cache {
-                if let Some(entry) = entry.indexedlog_cache_entry(key.clone())? {
+                if let Some(entry) = entry.indexedlog_cache_entry(key.hgid)? {
                     indexedlog_cache.put_entry(entry)?;
                 }
             }

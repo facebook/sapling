@@ -352,12 +352,7 @@ Verify we do have tree locally, but don't have aux data locally:
           content: Some(
               IndexedLog(
                   Entry {
-                      key: Key {
-                          path: RepoPathBuf(
-                              "dir",
-                          ),
-                          hgid: HgId("2aabbe46539594a3aede2a262ebfbcd3107ad10c"),
-                      },
+                      node: HgId("2aabbe46539594a3aede2a262ebfbcd3107ad10c"),
                       metadata: Metadata {
                           size: None,
                           flags: None,

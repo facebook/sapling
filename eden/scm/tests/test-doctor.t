@@ -166,13 +166,13 @@ Test that 'hg doctor' can fix them:
   
   hgcommits/v1:
     Processing IndexedLog: * (glob)
-    Verified 3 entries, 506 bytes in log
+    Verified 3 entries, * bytes in log (glob)
     Index "id" passed integrity check
   
   
   allheads:
     Processing IndexedLog: * (glob)
-    Verified 0 entries, 12 bytes in log
+    Verified 0 entries, * bytes in log (glob)
     Index "node" passed integrity check
   
   
@@ -180,11 +180,11 @@ Test that 'hg doctor' can fix them:
     Processing RotateLog: "*" (glob)
     Attempt to repair log "0"
     Processing IndexedLog: * (glob)
-    Verified 0 entries, 12 bytes in log
+    Verified 0 entries, * bytes in log (glob)
     Index "node" passed integrity check
     Latest = 0
     Processing IndexedLog: * (glob)
-    Verified 3 entries, 153 bytes in log
+    Verified 3 entries, * bytes in log (glob)
     Index "node" passed integrity check
     Processing RotateLog: "*" (glob)
     Latest = 0
@@ -193,11 +193,11 @@ Test that 'hg doctor' can fix them:
     Processing RotateLog: "*" (glob)
     Attempt to repair log "0"
     Processing IndexedLog: * (glob)
-    Verified 0 entries, 12 bytes in log
+    Verified 0 entries, * bytes in log (glob)
     Index "node_and_path" passed integrity check
     Latest = 0
     Processing IndexedLog: * (glob)
-    Verified 3 entries, 357 bytes in log
+    Verified 3 entries, * bytes in log (glob)
     Index "node_and_path" passed integrity check
   
   
@@ -205,11 +205,11 @@ Test that 'hg doctor' can fix them:
     Processing RotateLog: "*" (glob)
     Attempt to repair log "0"
     Processing IndexedLog: * (glob)
-    Verified 0 entries, 12 bytes in log
+    Verified 0 entries, * bytes in log (glob)
     Index "node" passed integrity check
     Latest = 0
     Processing IndexedLog: * (glob)
-    Verified 3 entries, 373 bytes in log
+    Verified 3 entries, * bytes in log (glob)
     Index "node" passed integrity check
     Processing RotateLog: "*" (glob)
     Latest = 0
@@ -218,11 +218,11 @@ Test that 'hg doctor' can fix them:
     Processing RotateLog: "*" (glob)
     Attempt to repair log "0"
     Processing IndexedLog: * (glob)
-    Verified 0 entries, 12 bytes in log
+    Verified 0 entries, * bytes in log (glob)
     Index "node_and_path" passed integrity check
     Latest = 0
     Processing IndexedLog: * (glob)
-    Verified 3 entries, 348 bytes in log
+    Verified 3 entries, * bytes in log (glob)
     Index "node_and_path" passed integrity check
   
   

@@ -34,6 +34,7 @@ use types::fetch_mode::FetchMode;
 use types::CasDigest;
 use types::CasDigestType;
 use types::CasFetchedStats;
+use types::Id20;
 use types::Key;
 use types::Sha256;
 
@@ -124,10 +125,6 @@ impl FetchState {
         self.common.all_keys()
     }
 
-    pub(crate) fn metrics(&self) -> &FileStoreFetchMetrics {
-        &self.metrics
-    }
-
     pub(crate) fn format(&self) -> SerializationFormat {
         self.format
     }
@@ -175,19 +172,19 @@ impl FetchState {
     }
 
     fn evict_to_cache(
-        key: Key,
+        node: Id20,
         file: LazyFile,
         indexedlog_cache: &IndexedLogHgIdDataStore,
         format: SerializationFormat,
     ) -> Result<LazyFile> {
-        let cache_entry = file.indexedlog_cache_entry(key.clone())?.ok_or_else(|| {
+        let cache_entry = file.indexedlog_cache_entry(node)?.ok_or_else(|| {
             anyhow!(
                 "expected LazyFile::SaplingRemoteApi, other LazyFile variants should not be written to cache"
             )
         })?;
         indexedlog_cache.put_entry(cache_entry)?;
         let mmap_entry = indexedlog_cache
-            .get_entry(key)?
+            .get_entry(&node)?
             .ok_or_else(|| anyhow!("failed to read entry back from indexedlog after writing"))?;
         Ok(LazyFile::IndexedLog(mmap_entry, format))
     }
@@ -230,7 +227,7 @@ impl FetchState {
                     store.contains(&key.hgid).map(|contains| {
                         if contains {
                             // Insert a stub entry if caller is ignoring the results.
-                            Some(Entry::new(key.clone(), Bytes::new(), Metadata::default()))
+                            Some(Entry::new(key.hgid, Bytes::new(), Metadata::default()))
                         } else {
                             None
                         }
@@ -487,14 +484,14 @@ impl FetchState {
     ) -> Result<(StoreFile, Option<LfsPointersEntry>)> {
         let entry = entry.result?;
 
-        let key = entry.key.clone();
+        let hgid = entry.key.hgid;
         let mut file = StoreFile::default();
         let mut lfsptr = None;
 
         if let Some(aux_data) = entry.aux_data() {
             let aux_data = aux_data.clone();
             if let Some(aux_cache) = aux_cache.as_ref() {
-                aux_cache.put(key.hgid, &aux_data)?;
+                aux_cache.put(hgid, &aux_data)?;
             }
             file.aux_data = Some(aux_data);
         }
@@ -508,7 +505,7 @@ impl FetchState {
                 lfsptr = Some(ptr);
             } else if let Some(indexedlog_cache) = indexedlog_cache.as_ref() {
                 file.content = Some(Self::evict_to_cache(
-                    key,
+                    hgid,
                     LazyFile::SaplingRemoteApi(entry, format),
                     indexedlog_cache,
                     format,

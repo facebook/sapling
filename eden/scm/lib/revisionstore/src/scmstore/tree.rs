@@ -281,11 +281,9 @@ impl TreeStore {
 
                     let mut found_count: usize = 0;
                     for key in pending.into_iter() {
-                        if let Some(entry) = log.get_entry(key)? {
-                            tracing::trace!("{:?} found in {:?}", entry.key(), location);
-                            state
-                                .common
-                                .found(entry.key().clone(), LazyTree::IndexedLog(entry).into());
+                        if let Some(entry) = log.get_entry(&key.hgid)? {
+                            tracing::trace!("{:?} found in {:?}", key, location);
+                            state.common.found(key, LazyTree::IndexedLog(entry).into());
                             found_count += 1;
                         }
                     }
@@ -416,7 +414,7 @@ impl TreeStore {
     fn write_batch(&self, entries: impl Iterator<Item = (Key, Bytes, Metadata)>) -> Result<()> {
         if let Some(ref indexedlog_local) = self.indexedlog_local {
             for (key, bytes, meta) in entries {
-                indexedlog_local.put_entry(Entry::new(key, bytes, meta))?;
+                indexedlog_local.put_entry(Entry::new(key.hgid, bytes, meta))?;
             }
         }
         Ok(())

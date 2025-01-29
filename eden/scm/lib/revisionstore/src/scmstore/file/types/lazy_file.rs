@@ -13,7 +13,7 @@ use format_util::split_file_metadata;
 use minibytes::Bytes;
 use storemodel::SerializationFormat;
 use types::HgId;
-use types::Key;
+use types::Id20;
 
 use crate::indexedlogdatastore::Entry;
 use crate::lfs::content_header_from_pointer;
@@ -44,7 +44,7 @@ impl LazyFile {
     fn hgid(&self) -> Option<HgId> {
         use LazyFile::*;
         match self {
-            IndexedLog(ref entry, _) => Some(entry.key().hgid),
+            IndexedLog(ref entry, _) => Some(entry.node()),
             Lfs(_, ref ptr, _) => Some(ptr.hgid()),
             SaplingRemoteApi(ref entry, _) => Some(entry.key().hgid),
             Cas(_) => None,
@@ -118,12 +118,12 @@ impl LazyFile {
     }
 
     /// Convert the LazyFile to an indexedlog Entry, if it should ever be written to IndexedLog cache
-    pub(crate) fn indexedlog_cache_entry(&self, key: Key) -> Result<Option<Entry>> {
+    pub(crate) fn indexedlog_cache_entry(&self, node: Id20) -> Result<Option<Entry>> {
         use LazyFile::*;
         Ok(match self {
-            IndexedLog(ref entry, _) => Some(entry.clone().with_key(key)),
+            IndexedLog(ref entry, _) => Some(entry.clone()),
             SaplingRemoteApi(ref entry, _) => {
-                Some(Entry::new(key, entry.data()?, entry.metadata()?.clone()))
+                Some(Entry::new(node, entry.data()?, entry.metadata()?.clone()))
             }
             // LFS Files should be written to LfsCache instead
             Lfs(_, _, _) => None,
@@ -137,7 +137,7 @@ impl TryFrom<Entry> for LfsPointersEntry {
 
     fn try_from(e: Entry) -> Result<Self, Self::Error> {
         if e.metadata().is_lfs() {
-            Ok(LfsPointersEntry::from_bytes(e.content()?, e.key().hgid)?)
+            Ok(LfsPointersEntry::from_bytes(e.content()?, e.node())?)
         } else {
             bail!("failed to convert entry to LFS pointer, is_lfs is false")
         }

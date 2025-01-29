@@ -399,7 +399,7 @@ impl FileStore {
         let indexedlog_local = self.indexedlog_local.as_ref().ok_or_else(|| {
             anyhow!("trying to write non-LFS file but no local non-LFS IndexedLog is available")
         })?;
-        indexedlog_local.put_entry(Entry::new(key, bytes, meta))?;
+        indexedlog_local.put_entry(Entry::new(key.hgid, bytes, meta))?;
 
         Ok(())
     }

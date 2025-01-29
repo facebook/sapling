@@ -17,7 +17,7 @@ use types::hgid::NULL_ID;
 use types::AugmentedTreeEntry;
 use types::AugmentedTreeWithDigest;
 use types::HgId;
-use types::Key;
+use types::Id20;
 use types::Parents;
 
 use crate::indexedlogdatastore::Entry;
@@ -53,7 +53,7 @@ impl LazyTree {
     fn hgid(&self) -> Option<HgId> {
         use LazyTree::*;
         match self {
-            IndexedLog(entry) => Some(entry.key().hgid),
+            IndexedLog(entry) => Some(entry.node()),
             SaplingRemoteApi(entry) => Some(entry.key().hgid),
             Cas(entry) => Some(entry.augmented_tree.hg_node_id),
             Null => Some(NULL_ID),
@@ -77,12 +77,12 @@ impl LazyTree {
     }
 
     /// Convert the LazyTree to an indexedlog Entry, if it should ever be written to IndexedLog cache
-    pub(crate) fn indexedlog_cache_entry(&self, key: Key) -> Result<Option<Entry>> {
+    pub(crate) fn indexedlog_cache_entry(&self, node: Id20) -> Result<Option<Entry>> {
         use LazyTree::*;
         Ok(match self {
-            IndexedLog(ref entry) => Some(entry.clone().with_key(key)),
+            IndexedLog(ref entry) => Some(entry.clone()),
             SaplingRemoteApi(ref entry) => {
-                Some(Entry::new(key, entry.data()?, Metadata::default()))
+                Some(Entry::new(node, entry.data()?, Metadata::default()))
             }
             // Don't write CAS entries to local cache.
             Cas(_) => None,

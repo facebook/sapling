@@ -264,7 +264,7 @@ mod tests {
         assert_eq!(fetched.file_content()?.to_vec(), d.data.as_ref().to_vec());
 
         // Check that data was written to the local store.
-        let fetched = cache.get_entry(k)?.expect("key not found");
+        let fetched = cache.get_entry(&k.hgid)?.expect("key not found");
         assert_eq!(fetched.content()?.to_vec(), d.data.as_ref().to_vec());
 
         Ok(())
@@ -311,7 +311,7 @@ mod tests {
         assert_eq!(fetched.file_content()?.to_vec(), d.data.as_ref().to_vec());
 
         // Check that data was written to the local store.
-        let fetched = cache.get_entry(k)?.expect("key not found");
+        let fetched = cache.get_entry(&k.hgid)?.expect("key not found");
         assert_eq!(fetched.content()?.to_vec(), d.data.as_ref().to_vec());
 
         Ok(())
@@ -361,7 +361,7 @@ mod tests {
         );
 
         // Check that data was written to the local store.
-        let fetched = cache.get_entry(k)?.expect("key not found");
+        let fetched = cache.get_entry(&k.hgid)?.expect("key not found");
         assert_eq!(fetched.content()?.to_vec(), d.data.as_ref().to_vec());
 
         Ok(())
@@ -411,7 +411,7 @@ mod tests {
         );
 
         // Check that data was written to the local store.
-        let fetched = cache.get_entry(k)?.expect("key not found");
+        let fetched = cache.get_entry(&k.hgid)?.expect("key not found");
         assert_eq!(fetched.content()?.to_vec(), d.data.as_ref().to_vec());
 
         Ok(())
@@ -510,7 +510,7 @@ mod tests {
         assert_eq!(fetched.aux_data().expect("no aux data found"), expected);
 
         // Content shouldn't have been cached
-        assert_eq!(cache.get_entry(k)?, None);
+        assert_eq!(cache.get_entry(&k.hgid)?, None);
 
         Ok(())
     }

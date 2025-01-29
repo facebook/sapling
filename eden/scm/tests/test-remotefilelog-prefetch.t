@@ -67,12 +67,7 @@ Now we do have aux data locally:
       content: Some(
           IndexedLog(
               Entry {
-                  key: Key {
-                      path: RepoPathBuf(
-                          "A",
-                      ),
-                      hgid: HgId("005d992c5dcf32993668f7cede29d296c494a5d9"),
-                  },
+                  node: HgId("005d992c5dcf32993668f7cede29d296c494a5d9"),
                   metadata: Metadata {
                       size: None,
                       flags: None,
@@ -108,12 +103,7 @@ Make sure we don't have aux data yet:
       content: Some(
           IndexedLog(
               Entry {
-                  key: Key {
-                      path: RepoPathBuf(
-                          "B",
-                      ),
-                      hgid: HgId("35e7525ce3a48913275d7061dd9a867ffef1e34d"),
-                  },
+                  node: HgId("35e7525ce3a48913275d7061dd9a867ffef1e34d"),
                   metadata: Metadata {
                       size: None,
                       flags: None,
