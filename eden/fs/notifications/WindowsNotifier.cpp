@@ -47,6 +47,7 @@ const wchar_t kOptionEnable[] = L"Enable Notifications";
 enum MenuCommand : UINT {
   IDM_ACTION_CLEAN = 124,
   IDM_ACTION_DOCTOR,
+  IDM_ACTION_HEALTH_REPORT,
   IDM_ACTION_LIST,
   IDM_ACTION_RAGE,
   IDM_ACTION_SHOW_LOGS,
@@ -393,6 +394,12 @@ WndProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM lParam) noexcept {
 
           case IDM_ACTION_DOCTOR: {
             executeShellCommand("edenfsctl", "--press-to-continue doctor");
+            return 0;
+          }
+
+          case IDM_ACTION_HEALTH_REPORT: {
+            executeShellCommand(
+                "edenfsctl", "--press-to-continue health-report");
             return 0;
           }
 
@@ -774,6 +781,11 @@ void WindowsNotifier::appendActionsMenu(HMENU hMenu) {
       MF_BYPOSITION | MF_STRING,
       IDM_ACTION_DOCTOR,
       L"Diagnose EdenFS Issues (doctor)");
+  appendMenuEntry(
+      actionMenu.get(),
+      MF_BYPOSITION | MF_STRING,
+      IDM_ACTION_HEALTH_REPORT,
+      L"Diagnose EdenFS Health Issues (health-report)");
   appendMenuEntry(
       actionMenu.get(),
       MF_BYPOSITION | MF_STRING,
