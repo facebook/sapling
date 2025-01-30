@@ -33,6 +33,7 @@ use pathmatcher::Matcher;
 use repo_blobstore::RepoBlobstoreRef;
 use repo_sparse_profiles::RepoSparseProfiles;
 use slog::debug;
+use slog::warn;
 use types::RepoPath;
 
 use crate::errors::MononokeError;
@@ -266,7 +267,9 @@ async fn create_matchers<R: MononokeRepo>(
 ) -> Result<HashMap<String, Arc<dyn Matcher + Send + Sync>>> {
     stream::iter(paths)
         .yield_periodically()
-        .with_logger(ctx.logger())
+        .on_large_overshoot(|budget, elapsed| {
+            warn!(ctx.logger(), "yield_periodically(): budget overshot: current_budget={budget:?}, elapsed={elapsed:?}");
+        })
         .map(|path| async move {
             let content = format!("%include {path}");
             let dummy_source = "repo_root".to_string();

@@ -68,6 +68,7 @@ use repo_derived_data::RepoDerivedDataArc;
 use repo_derived_data::RepoDerivedDataRef;
 use skeleton_manifest::RootSkeletonManifestId;
 use skeleton_manifest_v2::RootSkeletonManifestV2Id;
+use slog::warn;
 use smallvec::SmallVec;
 use sorted_vector_map::SortedVectorMap;
 use unodes::RootUnodeManifestId;
@@ -1354,7 +1355,9 @@ impl<R: MononokeRepo> ChangesetContext<R> {
             .watched(self.ctx().logger())
             .await?
             .yield_periodically()
-            .with_logger(self.ctx().logger())
+            .on_large_overshoot(|budget, elapsed| {
+                warn!(self.ctx().logger(), "yield_periodically(): budget overshot: current_budget={budget:?}, elapsed={elapsed:?}");
+            })
             .try_filter_map(|(path, entry)| async move {
                 match (path.into_optional_non_root_path(), entry) {
                     (Some(mpath), ManifestEntry::Leaf(_)) if diff_files => Ok(Some(mpath)),

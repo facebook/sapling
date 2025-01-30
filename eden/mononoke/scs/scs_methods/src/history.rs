@@ -19,6 +19,7 @@ use mononoke_api::ChangesetContext;
 use mononoke_api::CoreContext;
 use mononoke_api::MononokeError;
 use mononoke_api::Repo;
+use slog::warn;
 use source_control as thrift;
 
 use crate::into_response::AsyncIntoResponseWith;
@@ -85,7 +86,9 @@ pub(crate) async fn collect_history(
                 })
                 .buffered(10)
                 .yield_periodically()
-                .with_logger(ctx.logger())
+                .on_large_overshoot(|budget, elapsed| {
+                    warn!(ctx.logger(), "yield_periodically(): budget overshot: current_budget={budget:?}, elapsed={elapsed:?}");
+                })
                 .try_collect()
                 .watched(ctx.logger())
                 .await?;
