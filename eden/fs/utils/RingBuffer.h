@@ -8,6 +8,8 @@
 #pragma once
 
 #include <stddef.h>
+#include <atomic>
+#include <stdexcept>
 #include <vector>
 
 namespace facebook::eden {
@@ -49,9 +51,17 @@ class RingBuffer {
    */
   std::vector<T> toVector() const;
 
+  /**
+   * Extracts the contents of the ring buffer. The order of the elements is
+   * not garunteed, and the ring buffer should not be used after this call.
+   */
+  std::vector<T> extractVector() &&;
+
  private:
   size_t capacity_;
   std::vector<T> entries_;
+  // Indicates whether the entries_ vector has been extracted.
+  std::atomic<bool> extracted_ = false;
   size_t write_ = 0;
 };
 
@@ -65,6 +75,10 @@ RingBuffer<T>::RingBuffer(size_t capacity) : capacity_{capacity} {
 
 template <typename T>
 size_t RingBuffer<T>::size() const {
+  auto extracted = extracted_.load(std::memory_order_acquire);
+  if (extracted) {
+    throw std::runtime_error("RingBuffer has been extracted");
+  }
   return entries_.size();
 }
 
@@ -72,6 +86,10 @@ template <typename T>
 template <typename U>
 void RingBuffer<T>::push(U&& entry) {
   static_assert(std::is_constructible_v<T, U&&>);
+  auto extracted = extracted_.load(std::memory_order_acquire);
+  if (extracted) {
+    throw std::runtime_error("RingBuffer has been extracted");
+  }
 
   if (capacity_ == 0) {
     return;
@@ -89,6 +107,10 @@ void RingBuffer<T>::push(U&& entry) {
 
 template <typename T>
 std::vector<T> RingBuffer<T>::toVector() const {
+  auto extracted = extracted_.load(std::memory_order_acquire);
+  if (extracted) {
+    throw std::runtime_error("RingBuffer has been extracted");
+  }
   if (write_ == 0) {
     return entries_;
   } else {
@@ -103,6 +125,11 @@ std::vector<T> RingBuffer<T>::toVector() const {
 
     return entries;
   }
+}
+template <typename T>
+std::vector<T> RingBuffer<T>::extractVector() && {
+  extracted_.store(true, std::memory_order_release);
+  return std::move(entries_);
 }
 
 } // namespace facebook::eden

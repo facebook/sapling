@@ -64,4 +64,23 @@ TEST(RingBufferTest, zero_size) {
   EXPECT_EQ(0, b.toVector().size());
 }
 
+TEST(RingBufferTest, extract) {
+  RingBuffer<int> b{4};
+  b.push(1);
+  b.push(2);
+  b.push(3);
+  b.push(4);
+  b.push(5);
+  b.push(6);
+  b.push(7);
+
+  auto v = std::move(b).extractVector();
+
+  EXPECT_EQ(4, v.size());
+  EXPECT_NE(v.end(), std::find(v.begin(), v.end(), 4));
+  EXPECT_NE(v.end(), std::find(v.begin(), v.end(), 5));
+  EXPECT_NE(v.end(), std::find(v.begin(), v.end(), 6));
+  EXPECT_NE(v.end(), std::find(v.begin(), v.end(), 7));
+}
+
 } // namespace
