@@ -544,6 +544,10 @@ impl PrefetchCmd {
                 checkout_path.display()
             )
         })?;
+
+        if options.foreground {
+            println!("Starting predictive prefetching in the foreground.")
+        }
         checkout
             .prefetch_profiles(
                 instance,
@@ -557,6 +561,14 @@ impl PrefetchCmd {
                 predictive_num_dirs,
             )
             .await?;
+
+        if options.foreground {
+            println!("Finished predictive prefetching.")
+        } else {
+            println!(
+                "Started predictive prefetching in the background. Use 'eden trace hg' to monitor prefetch progress."
+            );
+        }
         Ok(0)
     }
 }
