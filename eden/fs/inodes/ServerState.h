@@ -154,6 +154,23 @@ class ServerState {
   }
 
   /**
+   * Gets a thread pool for running validation. Validation will read file
+   * contents through the filesystem. Reads through the filesystem can call
+   * back into EdenFS, so we need to ensure that validation does not block
+   * any of the threads that EdenFS uses to serve filesystem operations.
+   *
+   * It's pretty similar to the invalidation threadpool that the channels use.
+   * However, this thread pool also errors when reaches capacity rather than
+   * blocking. We want this threadpoool to be bounded because we don't want
+   * blocking here to increase memory usage until we OOM. Additionally, we don't
+   * want to block because this could block checkout. Validation is an
+   * asynchronous action that should not effect EdenFS behavior.
+   */
+  const std::shared_ptr<folly::Executor>& getValidationThreadPool() const {
+    return validationThreadPool_;
+  }
+
+  /**
    * Get the Clock.
    */
   const std::shared_ptr<Clock>& getClock() const {
@@ -216,6 +233,7 @@ class ServerState {
   std::shared_ptr<PrivHelper> privHelper_;
   std::shared_ptr<UnboundedQueueExecutor> threadPool_;
   std::shared_ptr<folly::Executor> fsChannelThreadPool_;
+  std::shared_ptr<folly::Executor> validationThreadPool_;
   std::shared_ptr<Clock> clock_;
   std::shared_ptr<ProcessInfoCache> processInfoCache_;
   std::shared_ptr<StructuredLogger> structuredLogger_;

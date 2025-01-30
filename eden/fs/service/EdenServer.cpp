@@ -64,6 +64,7 @@
 #include "eden/fs/config/MountProtocol.h"
 #include "eden/fs/config/TomlConfig.h"
 #include "eden/fs/inodes/EdenMount.h"
+#include "eden/fs/inodes/FileInode.h"
 #include "eden/fs/inodes/InodeAccessLogger.h"
 #include "eden/fs/inodes/InodeBase.h"
 #include "eden/fs/inodes/InodeMap.h"
@@ -2119,6 +2120,128 @@ ImmediateFuture<CheckoutResult> EdenServer::checkOutRevision(
                     }
                   });
             }
+            // Verify if cache file invalidation works as expected after
+            // checkout
+            // TODO T213849128: This is to collect data for S439820.
+            // We can remove this once SEV close.
+            if (isNfs &&
+                serverState_->getReloadableConfig()
+                    ->getEdenConfig()
+                    ->verifyFilesAfterCheckout.getValue()) {
+              std::vector<InodeNumber> inodesToValidate;
+              inodesToValidate.swap(result.sampleInodesToValidate);
+              folly::via(
+                  this->getServerState()->getValidationThreadPool().get(),
+                  [this,
+                   inodesToValidate = std::move(inodesToValidate),
+                   mountPath = mountPath.copy(),
+                   maxSizeOfFileToVerifyInvalidation =
+                       this->serverState_->getReloadableConfig()
+                           ->getEdenConfig()
+                           ->maxSizeOfFileToVerifyInvalidation.getValue(),
+                   structuredLogger =
+                       this->serverState_->getStructuredLogger()]() {
+                    // for each inode
+                    std::vector<ImmediateFuture<std::tuple<
+                        RelativePath,
+                        InodeNumber,
+                        std::optional<Hash20>>>>
+                        expectedContents;
+                    {
+                      // note we don't want to hold the mount handle in the
+                      // capture because that would block shutdown until this
+                      // future completes. This check can block waiting for the
+                      // eden fuse threads to complete an fs request. We don't
+                      // want to make a cycle, so to be safe we just attempt to
+                      // lookup the mount and gracefully handle errors.
+                      auto mountHandle = this->getMount(mountPath);
+                      auto inodeMap = mountHandle.getEdenMount().getInodeMap();
+                      for (auto& inodeNum : inodesToValidate) {
+                        auto inode = inodeMap->lookupLoadedInode(inodeNum);
+                        if (!inode) {
+                          // Skip if inode doesn't exist because it is already
+                          // invalidated
+                          continue;
+                        }
+                        auto path = inode->getPath();
+                        if (!path.has_value()) {
+                          // skip if we can't get the path because we
+                          // can't validate it anyway
+                          continue;
+                        }
+                        if (auto fileInode = inode.asFile()) {
+                          expectedContents.emplace_back(
+                              fileInode
+                                  ->getSha1(
+                                      ObjectFetchContext::getNullContext())
+                                  .thenValue(
+                                      [path = inode->getPath(),
+                                       inodeNum](auto&& sha1) mutable
+                                      -> std::tuple<
+                                          RelativePath,
+                                          InodeNumber,
+                                          std::optional<Hash20>> {
+                                        return {
+                                            std::move(path).value(),
+                                            inodeNum,
+                                            std::move(sha1)};
+                                      }));
+                        } else {
+                          expectedContents.emplace_back(std::tuple<
+                                                        RelativePath,
+                                                        InodeNumber,
+                                                        std::optional<Hash20>>(
+                              std::move(path).value(), inodeNum, std::nullopt));
+                        }
+                      }
+                    }
+
+                    return collectAll(std::move(expectedContents))
+                        .thenValue([mountPath = mountPath.copy(),
+                                    maxSizeOfFileToVerifyInvalidation,
+                                    structuredLogger](auto&& expectedResults) {
+                          for (auto& result : expectedResults) {
+                            if (!result.hasValue()) {
+                              continue;
+                            }
+                            auto [path, inodeNum, sha1Result] = result.value();
+                            auto fileStat =
+                                getFileStat((mountPath + path).value().c_str());
+                            if (!fileStat.hasValue()) {
+                              // Skip if file stat is not available
+                              continue;
+                            } else if (
+                                fileStat.value().size >
+                                maxSizeOfFileToVerifyInvalidation) {
+                              // Skip verification for large files
+                              continue;
+                            }
+                            // sha1 the path
+                            std::string contents;
+                            folly::readFile(
+                                (mountPath + path).value().c_str(), contents);
+
+                            auto actualSha1 = Hash20::sha1(contents);
+
+                            if (actualSha1 != sha1Result) {
+                              // log to scuba.
+                              structuredLogger->logEvent(StaleContents{
+                                  path.value(), inodeNum.getRawValue()});
+                              std::string sha1ResultStr =
+                                  sha1Result ? sha1Result->toString() : "none";
+                              XLOG(
+                                  WARN,
+                                  "Stale file contents after checkout for path {} (ino {}) - actual sha1: {} , expected sha1: {}",
+                                  path.value(),
+                                  inodeNum.getRawValue(),
+                                  actualSha1.toString(),
+                                  sha1ResultStr);
+                            }
+                          }
+                        });
+                  });
+            }
+
             return std::move(result);
           });
 

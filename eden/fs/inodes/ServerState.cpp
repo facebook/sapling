@@ -7,6 +7,8 @@
 
 #include "eden/fs/inodes/ServerState.h"
 
+#include <folly/executors/CPUThreadPoolExecutor.h>
+#include <folly/executors/task_queue/LifoSemMPMCQueue.h>
 #include <folly/logging/xlog.h>
 #include <gflags/gflags.h>
 
@@ -64,6 +66,11 @@ ServerState::ServerState(
       privHelper_{std::move(privHelper)},
       threadPool_{std::move(threadPool)},
       fsChannelThreadPool_{std::move(fsChannelThreadPool)},
+      validationThreadPool_{std::make_shared<folly::CPUThreadPoolExecutor>(
+          initialConfig.numVerifierThreads.getValue(),
+          std::make_unique<
+              folly::LifoSemMPMCQueue<folly::CPUThreadPoolExecutor::CPUTask>>(
+              10 * initialConfig.maxNumberOfInvlidationsToVerify.getValue()))},
       clock_{std::move(clock)},
       processInfoCache_{std::move(processInfoCache)},
       structuredLogger_{std::move(structuredLogger)},

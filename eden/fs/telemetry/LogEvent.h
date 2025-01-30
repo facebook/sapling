@@ -262,6 +262,23 @@ struct FinishedCheckout : public EdenFSEvent {
   }
 };
 
+struct StaleContents : public EdenFSEvent {
+  std::string path;
+  uint64_t ino;
+
+  explicit StaleContents(std::string path, uint64_t ino)
+      : path(std::move(path)), ino(ino) {}
+
+  void populate(DynamicEvent& event) const override {
+    event.addString("path", path);
+    event.addInt("ino", ino);
+  }
+
+  const char* getType() const override {
+    return "stale_contents";
+  }
+};
+
 struct FinishedMount : public EdenFSEvent {
   std::string backing_store_type;
   std::string repo_type;
