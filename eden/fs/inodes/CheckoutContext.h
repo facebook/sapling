@@ -14,6 +14,7 @@
 #include <folly/Range.h>
 #include <folly/Synchronized.h>
 #include <folly/stop_watch.h>
+#include <gtest/gtest_prod.h>
 
 #include "eden/common/utils/PathFuncs.h"
 #include "eden/fs/inodes/EdenMount.h"
@@ -32,6 +33,9 @@ class CheckoutConflict;
 class TreeInode;
 class Tree;
 
+template <typename T>
+class RingBuffer;
+
 /**
  * CheckoutContext maintains state during a checkout operation.
  */
@@ -42,6 +46,9 @@ class CheckoutContext {
       CheckoutMode checkoutMode,
       OptionalProcessId clientPid,
       folly::StringPiece thriftMethodName,
+      bool verifyFilesAfterCheckout,
+      size_t verifyEveryNInvalidations,
+      size_t maxNumberOfInvlidationsToValidate,
       std::shared_ptr<std::atomic<uint64_t>> checkoutProgress = nullptr,
       const std::unordered_map<std::string, std::string>* requestInfo =
           nullptr);
@@ -90,7 +97,10 @@ class CheckoutContext {
    * Complete the checkout operation
    *
    * Returns the list of conflicts and errors that were encountered during the
-   * operation.
+   * operation as well as some sample paths that were invalidated during the
+   * checkout that can be used to validate that invalidation is working
+   * correctly.
+   TODO: The invalidated sample paths are used for S439820.
    */
   ImmediateFuture<std::vector<CheckoutConflict>> finish(RootId newSnapshot);
 
@@ -145,7 +155,14 @@ class CheckoutContext {
 
   void increaseCheckoutCounter(int64_t inc) const;
 
+  void maybeRecordInvalidation(InodeNumber number);
+
  private:
+  FRIEND_TEST(CheckoutContextTest, empty);
+  FRIEND_TEST(CheckoutContextTest, overMax);
+
+  std::vector<InodeNumber> extractFilesToVerfy();
+
   CheckoutMode checkoutMode_;
   EdenMount* const mount_;
   RenameLock renameLock_;
@@ -157,6 +174,13 @@ class CheckoutContext {
   // if some data load operations complete asynchronously on other threads.
   // Therefore access to the conflicts list must be synchronized.
   folly::Synchronized<std::vector<CheckoutConflict>> conflicts_;
+
+  bool verifyFilesAfterCheckout_;
+  size_t verifyEveryNInvalidations_;
+  size_t maxNumberOfInvlidationsToValidate_;
+  std::atomic_int64_t invalidationCount_{0};
+  folly::Synchronized<std::unique_ptr<RingBuffer<InodeNumber>>>
+      sampleInvalidations_;
 
   bool windowsSymlinksEnabled_;
 };
