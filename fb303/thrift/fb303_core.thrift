@@ -26,7 +26,6 @@ namespace hack fb303
 namespace node_module fb303
 namespace go fb303.thrift.fb303_core
 namespace js fb303
-namespace erl something
 
 /**
  * Common status reporting mechanism across all services
