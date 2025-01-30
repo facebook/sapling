@@ -12,6 +12,7 @@ pub fn log_ods3(
     _info: &PostResponseInfo,
     _status: &StatusCode,
     _method: String,
+    _method_variants: String,
     _repo: String,
     _request_load: Option<f64>,
 ) {

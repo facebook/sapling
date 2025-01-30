@@ -50,6 +50,7 @@ fn log_stats(state: &mut State, status: StatusCode) -> Option<()> {
 
     let method_info = state.try_borrow::<GitMethodInfo>()?;
     let method = method_info.method.clone();
+    let method_variants = method_info.variants_to_string();
     let repo = method_info.repo.clone();
     let request_load = RequestLoad::try_borrow_from(state).map(|r| r.0 as f64);
 
@@ -83,7 +84,7 @@ fn log_stats(state: &mut State, status: StatusCode) -> Option<()> {
             STATS::response_bytes_sent.add_value(response_bytes_sent as i64, (method.clone(),))
         }
 
-        log_ods3(info, &status, method, repo, request_load);
+        log_ods3(info, &status, method, method_variants, repo, request_load);
     });
 
     if let Some(request_load) = RequestLoad::try_borrow_from(state) {
