@@ -144,6 +144,13 @@ const styles = stylex.create({
     fontWeight: 'bold',
     marginBottom: 'var(--halfpad)',
   },
+  fileHint: {
+    padding: 'var(--pad)',
+    outline: '1px solid var(--panel-view-border)',
+    background: 'var(--hint-background)',
+    display: 'flex',
+    gap: 'var(--halfpad)',
+  },
 });
 
 /** The `AbsorbEdit` that is currently being dragged. */
@@ -364,7 +371,12 @@ function AbsorbDagCommitExtras(props: {info: DagCommitInfo}) {
       )}
       {fileIdxToEdits
         .map((edits, fileIdx) => (
-          <AbsorbEditsForFile fileStackIndex={fileIdx} absorbEdits={edits} key={fileIdx} />
+          <AbsorbEditsForFile
+            isWdir={isWdir}
+            fileStackIndex={fileIdx}
+            absorbEdits={edits}
+            key={fileIdx}
+          />
         ))
         .valueSeq()}
     </div>
@@ -375,12 +387,13 @@ const absorbCollapsedFiles = atom<Map<string, boolean>>(new Map());
 
 function useCollapsedFile(
   path: string | undefined,
+  fileHasAnyDestinations: boolean,
 ): [boolean, (value: boolean) => void] | [undefined, undefined] {
   const collapsedFiles = useAtomValue(absorbCollapsedFiles);
   if (path == null) {
     return [undefined, undefined];
   }
-  const isCollapsed = collapsedFiles.get(path) || false;
+  const isCollapsed = collapsedFiles.get(path) ?? (fileHasAnyDestinations ? false : true);
   const setCollapsed = (collapsed: boolean) => {
     const newMap = new Map(collapsedFiles);
     newMap.set(path, collapsed);
@@ -395,6 +408,7 @@ function useResetCollapsedFilesOnMount() {
 }
 
 function AbsorbEditsForFile(props: {
+  isWdir: boolean;
   fileStackIndex: FileStackIndex;
   absorbEdits: ImMap<AbsorbEditId, AbsorbEdit>;
 }) {
@@ -411,7 +425,15 @@ function AbsorbEditsForFile(props: {
   const pathInWorkingCopy = stack.getFileStackPath(fileStackIndex, wdirRev);
   const path = pathInWorkingCopy ?? pathInCommit;
 
-  const [isCollapsed, setCollapsed] = useCollapsedFile(path);
+  const fileHasAnyDestinations = !props.isWdir
+    ? true
+    : absorbEdits.some(edit => {
+        const absorbEditId = edit.absorbEditId;
+        const dests = stack?.getAbsorbCommitRevs(fileStackIndex, absorbEditId);
+        return dests != null && dests.candidateRevs.length > 1;
+      });
+
+  const [isCollapsed, setCollapsed] = useCollapsedFile(path, fileHasAnyDestinations);
 
   return (
     <div>
@@ -428,6 +450,12 @@ function AbsorbEditsForFile(props: {
           iconType={IconType.Modified}
         />
       )}
+      {fileHasAnyDestinations === false && !isCollapsed ? (
+        <div {...stylex.props(styles.fileHint)}>
+          <Icon icon="warning" />
+          <T>This file was not changed in this stack and can't be absorbed</T>
+        </div>
+      ) : null}
       {
         // Edits are rendered even when collapsed, so the reordering id animation doesn't trigger when collapsing.
         props.absorbEdits
