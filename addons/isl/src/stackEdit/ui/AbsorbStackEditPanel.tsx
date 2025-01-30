@@ -151,6 +151,9 @@ const styles = stylex.create({
     display: 'flex',
     gap: 'var(--halfpad)',
   },
+  unmoveable: {
+    cursor: 'not-allowed',
+  },
 });
 
 /** The `AbsorbEdit` that is currently being dragged. */
@@ -460,7 +463,13 @@ function AbsorbEditsForFile(props: {
         // Edits are rendered even when collapsed, so the reordering id animation doesn't trigger when collapsing.
         props.absorbEdits
           .map((edit, i) => (
-            <SingleAbsorbEdit collapsed={isCollapsed} path={path} edit={edit} key={i} />
+            <SingleAbsorbEdit
+              collapsed={isCollapsed}
+              path={path}
+              edit={edit}
+              key={i}
+              unmovable={fileHasAnyDestinations === false}
+            />
           ))
           .valueSeq()
       }
@@ -473,8 +482,9 @@ function SingleAbsorbEdit(props: {
   edit: AbsorbEdit;
   inDraggingOverlay?: boolean;
   path?: string;
+  unmovable?: boolean;
 }) {
-  const {edit, inDraggingOverlay, path} = props;
+  const {edit, inDraggingOverlay, path, unmovable} = props;
   const isDragging = useAtomValue(draggingAbsorbEdit);
   const stackEdit = useStackEditState();
   const reorderId = `absorb-${edit.fileStackIndex}-${edit.absorbEditId}`;
@@ -506,6 +516,7 @@ function SingleAbsorbEdit(props: {
           // So `push` can work like `replaceTopOperation` while dragging.
           stackEdit.push(newStack, {name: 'absorbMove', commit});
         } catch {
+          // This should be unreachable.
           newDraggingHint = t(
             'Diff chunk can only be applied to a commit that modifies the file and has matching context lines.',
           );
@@ -562,10 +573,12 @@ function SingleAbsorbEdit(props: {
       {props.collapsed ? null : (
         <>
           <div {...stylex.props(styles.dragHandlerWrapper)}>
-            <DragHandle onDrag={handleDrag} xstyle={styles.dragHandle}>
+            <DragHandle
+              onDrag={unmovable ? undefined : handleDrag}
+              xstyle={[styles.dragHandle, unmovable ? styles.unmoveable : undefined]}>
               <Icon icon="grabber" />
             </DragHandle>
-            {!inDraggingOverlay && <SendToCommitButton edit={edit} />}
+            {!inDraggingOverlay && !unmovable && <SendToCommitButton edit={edit} />}
           </div>
           <SplitDiffTable ctx={ctx} path={path ?? ''} patch={patch} />
         </>
