@@ -812,7 +812,7 @@ void WindowsNotifier::appendActionsMenu(HMENU hMenu) {
       hMenu,
       MF_BYPOSITION | MF_POPUP,
       reinterpret_cast<UINT_PTR>(actionMenu.get()),
-      L"Actions");
+      L"Diagnostics");
 }
 
 MenuHandle WindowsNotifier::createEdenMenu() {
@@ -826,8 +826,8 @@ MenuHandle WindowsNotifier::createEdenMenu() {
   appendInodePopulationReportMenu(hMenu.get());
   appendMenuEntry(
       hMenu.get(), MF_BYPOSITION | MF_STRING, IDM_INFO, kMenuAboutStr);
-  appendOptionsMenu(hMenu.get());
   appendActionsMenu(hMenu.get());
+  appendOptionsMenu(hMenu.get());
   if (debugIsEnabled()) {
     appendDebugMenu(hMenu.get());
   }
