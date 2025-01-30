@@ -187,7 +187,7 @@ impl RepoShardedProcessExecutor for BookmarkValidateProcessExecutor {
             &self.target_repo_name,
         );
         loop_forever(
-            self.ctx.clone(),
+            &self.ctx,
             &self.env,
             self.syncers.clone(),
             Arc::clone(&self.cancellation_requested),
@@ -212,7 +212,7 @@ impl RepoShardedProcessExecutor for BookmarkValidateProcessExecutor {
         info!(
             self.ctx.logger(),
             "Terminating bookmark validate command execution for repo pair {}-{}",
-            &self.source_repo_name,
+            self.source_repo_name,
             self.target_repo_name,
         );
         self.cancellation_requested.store(true, Ordering::Relaxed);
@@ -263,7 +263,7 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
                 return Err(format_err!("Source repo must be a large repo!"));
             }
             helpers::block_execute(
-                loop_forever(ctx, env, syncers, Arc::new(AtomicBool::new(false))),
+                loop_forever(&ctx, env, syncers, Arc::new(AtomicBool::new(false))),
                 fb,
                 APP_NAME,
                 &logger,
@@ -289,7 +289,7 @@ fn create_core_context(fb: FacebookInit, logger: Logger) -> CoreContext {
 }
 
 async fn loop_forever<R: CrossRepo>(
-    ctx: CoreContext,
+    ctx: &CoreContext,
     env: &Arc<MononokeEnvironment>,
     syncers: Syncers<R>,
     cancellation_requested: Arc<AtomicBool>,
