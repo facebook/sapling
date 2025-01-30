@@ -78,6 +78,10 @@ impl ScubaHandler for MononokeGitScubaHandler {
                 MononokeGitScubaKey::MethodVariants,
                 info.variants_to_string(),
             );
+            scuba.add(
+                MononokeGitScubaKey::MethodVariants,
+                info.variants_to_string_vector(),
+            );
         }
 
         if let Some(ctx) = self.request_context {

@@ -95,6 +95,16 @@ impl GitMethodInfo {
         variants.join(",")
     }
 
+    pub fn variants_to_string_vector(&self) -> Vec<String> {
+        let mut variants = self
+            .variants
+            .iter()
+            .map(|v| v.to_string())
+            .collect::<Vec<String>>();
+        variants.sort();
+        variants
+    }
+
     pub fn standard(repo: String, method: GitMethod) -> Self {
         Self {
             repo,

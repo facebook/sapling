@@ -61,3 +61,15 @@
     "poll_time_us": *, (glob)
     "poll_count": *, (glob)
     "poll_time_us": *, (glob)
+
+# Verify the method variants in scuba as a normvector
+  $ jq .normvector.method_variants "$SCUBA"
+  [
+    "standard"
+  ]
+  [
+    "standard"
+  ]
+  [
+    "standard"
+  ]
