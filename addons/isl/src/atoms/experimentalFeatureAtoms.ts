@@ -5,6 +5,7 @@
  * LICENSE file in the root directory of this source tree.
  */
 
+import {t} from '../i18n';
 import {configBackedAtom, localStorageBackedAtom} from '../jotaiUtils';
 import {atom} from 'jotai';
 
@@ -20,6 +21,12 @@ const localExperimentalFeatures = localStorageBackedAtom<number>(
   'isl.experimental-features-local-override',
   0,
 );
+
+/**
+ * List of all currently enabled experimental features, as UI labels.
+ * UI setting to enable experimental features is only shown if this list is non-empty.
+ */
+export const currentExperimentalFeaturesList: Array<string> = [t('Interactive Absorb')];
 
 /**
  * Whether experimental features are enabled.
