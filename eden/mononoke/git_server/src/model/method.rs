@@ -163,3 +163,45 @@ impl Display for PushValidationErrors {
         Ok(())
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use anyhow::Result;
+    use mononoke_macros::mononoke;
+
+    use super::*;
+
+    #[mononoke::test]
+    fn variants_to_string() -> Result<()> {
+        let info = GitMethodInfo {
+            repo: "repo".to_string(),
+            method: GitMethod::Push,
+            variants: vec![],
+        };
+        assert_eq!(info.variants_to_string(), "");
+
+        let info = GitMethodInfo {
+            repo: "repo".to_string(),
+            method: GitMethod::Push,
+            variants: vec![GitMethodVariant::Filter],
+        };
+        assert_eq!(info.variants_to_string(), "filter");
+
+        let info = GitMethodInfo {
+            repo: "repo".to_string(),
+            method: GitMethod::Push,
+            variants: vec![GitMethodVariant::Filter, GitMethodVariant::Shallow],
+        };
+        assert_eq!(info.variants_to_string(), "filter,shallow");
+
+        // Same but in reverse order
+        let info = GitMethodInfo {
+            repo: "repo".to_string(),
+            method: GitMethod::Push,
+            variants: vec![GitMethodVariant::Shallow, GitMethodVariant::Filter],
+        };
+        assert_eq!(info.variants_to_string(), "shallow,filter");
+
+        Ok(())
+    }
+}
