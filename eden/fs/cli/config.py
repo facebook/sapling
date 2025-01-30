@@ -816,17 +816,18 @@ Do you want to run `eden mount %s` instead?"""
                 env=env,
             )
 
-            configs = dict()
+            configs = {}
             if checkout.get_config().scm_type == "filteredhg":
                 configs["extensions.edensparse"] = ""
                 configs["extensions.sparse"] = "!"
-            for k, v in configs.items():
+            if len(configs) > 0:
+                args = [f"{k}={v}" for k, v in configs.items()]
                 subprocess.check_call(
                     [
                         os.environ.get("EDEN_HG_BINARY", "hg"),
                         "config",
                         "--local",
-                        f"{k}={v}",
+                        *args,
                         "-R",
                         str(checkout.path),
                     ],
