@@ -61,6 +61,7 @@ enum MenuCommand : UINT {
   IDM_REPORT_BUG,
   IDM_SIGNAL_CHECKOUT,
   IDM_TOGGLE_NOTIFICATIONS,
+  IDM_RESTART_EDENFS,
 };
 
 void check(bool opResult, std::string_view context) {
@@ -291,7 +292,10 @@ void showWinNotification(HWND hwnd, const WindowsNotification& notif) {
       "Failed to show E-Menu notification");
 }
 
-void executeShellCommand(std::string_view cmd, std::string_view params) {
+void executeShellCommand(
+    std::string_view cmd,
+    std::string_view params,
+    std::string_view cwd = "") {
   SHELLEXECUTEINFOW pExecInfo = {};
   pExecInfo.cbSize = sizeof(pExecInfo);
   // TODO(@cuev): Allow users to specify what shell they want us to
@@ -303,6 +307,10 @@ void executeShellCommand(std::string_view cmd, std::string_view params) {
   pExecInfo.lpFile = cmdStr.c_str();
   pExecInfo.lpParameters = paramsStr.c_str();
   pExecInfo.nShow = SW_SHOWNORMAL;
+  if (!cwd.empty()) {
+    auto cwdStr = multibyteToWideString(cwd);
+    SetCurrentDirectoryW(cwdStr.c_str());
+  }
   auto errStr = fmt::format("Failed to excute command: {} {}", cmd, params);
   checkNonZero(ShellExecuteExW(&pExecInfo), errStr);
 }
@@ -389,6 +397,12 @@ WndProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM lParam) noexcept {
           case IDM_REPORT_BUG: {
             executeShellCommand(
                 "edenfsctl", "--press-to-continue rage --report");
+            return 0;
+          }
+
+          case IDM_RESTART_EDENFS: {
+            executeShellCommand(
+                "edenfsctl", "--press-to-continue restart", "/");
             return 0;
           }
 
@@ -826,6 +840,11 @@ MenuHandle WindowsNotifier::createEdenMenu() {
   appendInodePopulationReportMenu(hMenu.get());
   appendMenuEntry(
       hMenu.get(), MF_BYPOSITION | MF_STRING, IDM_INFO, kMenuAboutStr);
+  appendMenuEntry(
+      hMenu.get(),
+      MF_BYPOSITION | MF_STRING,
+      IDM_RESTART_EDENFS,
+      L"Restart EdenFS");
   appendActionsMenu(hMenu.get());
   appendOptionsMenu(hMenu.get());
   if (debugIsEnabled()) {
