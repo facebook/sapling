@@ -1294,6 +1294,9 @@ class HealthReportCmd(Subcmd):
         return True
 
     def are_certs_valid(self) -> bool:
+        if util.is_sandcastle() or util.x2p_enabled():
+            return True
+
         if (cert := check_x509.find_x509_path()) and check_x509.validate_x509(cert):
             return True
         # cert error!

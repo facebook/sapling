@@ -224,13 +224,15 @@ class HealthReportTest(unittest.TestCase, TemporaryDirectoryMixin):
         result = test_health_report_cmd.run(args)
         self.assertIsNotNone(result)
 
+    @patch("eden.fs.cli.util.is_sandcastle")
+    @patch("eden.fs.cli.util.x2p_enabled")
     @patch("eden.fs.cli.util.get_chef_log_path")
     @patch("eden.fs.cli.doctor.facebook.check_x509.find_x509_path")
     @patch("eden.fs.cli.doctor.facebook.check_x509.validate_x509")
     @patch("eden.fs.cli.config.EdenInstance.get_running_version")
     @patch("eden.fs.cli.version.get_version_info")
     @patch("eden.fs.cli.util.HealthStatus.is_healthy")
-    def test_health_report_check_for_invalid_certs(
+    def test_health_report_check_for_invalid_certs_not_x2p_enabled(
         self,
         mock_is_healthy: MagicMock,
         mock_get_version_info: MagicMock,
@@ -238,6 +240,8 @@ class HealthReportTest(unittest.TestCase, TemporaryDirectoryMixin):
         mock_validate_x509: MagicMock,
         mock_find_x509_path: MagicMock,
         mock_get_chef_log_path: MagicMock,
+        mock_x2p_enabled: MagicMock,
+        mock_is_sandcastle: MagicMock,
     ) -> None:
         mock_argument_parser, args, file_path = self.setup()
         mock_get_chef_log_path.return_value = file_path
@@ -246,6 +250,8 @@ class HealthReportTest(unittest.TestCase, TemporaryDirectoryMixin):
         mock_get_running_version.return_value = acceptable_version
         mock_get_version_info.return_value = acceptable_running_version_info
         mock_is_healthy.return_value = True
+        mock_x2p_enabled.return_value = False
+        mock_is_sandcastle.return_value = False
 
         test_health_report_cmd = HealthReportCmd(mock_argument_parser)
         result = test_health_report_cmd.run(args)
@@ -257,3 +263,30 @@ class HealthReportTest(unittest.TestCase, TemporaryDirectoryMixin):
         )
 
         self.assertEqual(result, 1)
+
+    @patch("eden.fs.cli.util.is_sandcastle")
+    @patch("eden.fs.cli.util.x2p_enabled")
+    @patch("eden.fs.cli.util.get_chef_log_path")
+    @patch("eden.fs.cli.config.EdenInstance.get_running_version")
+    @patch("eden.fs.cli.version.get_version_info")
+    @patch("eden.fs.cli.util.HealthStatus.is_healthy")
+    def test_health_report_check_for_invalid_certs_x2p_enabled(
+        self,
+        mock_is_healthy: MagicMock,
+        mock_get_version_info: MagicMock,
+        mock_get_running_version: MagicMock,
+        mock_get_chef_log_path: MagicMock,
+        mock_x2p_enabled: MagicMock,
+        mock_is_sandcastle: MagicMock,
+    ) -> None:
+        mock_argument_parser, args, file_path = self.setup()
+        mock_get_chef_log_path.return_value = file_path
+        mock_get_running_version.return_value = acceptable_version
+        mock_get_version_info.return_value = acceptable_running_version_info
+        mock_is_healthy.return_value = True
+        mock_x2p_enabled.return_value = True
+        mock_is_sandcastle.return_value = False
+
+        test_health_report_cmd = HealthReportCmd(mock_argument_parser)
+        result = test_health_report_cmd.run(args)
+        self.assertIsNotNone(result)

@@ -741,6 +741,22 @@ def get_environment_suitable_for_subprocess() -> Dict[str, str]:
     return env
 
 
+def x2p_enabled() -> bool:
+    result = subprocess.run(
+        ["hg", "config", "auth_proxy.x2pagentd"],
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+        check=False,
+    )
+
+    # "hg config" exits 1 if config isn't set. If there is some other error,
+    # let's be conservative and run the x509 check.
+    if result.returncode:
+        return False
+
+    return result.stdout.strip().lower() in {b"1", b"t", b"true"}
+
+
 def is_sandcastle() -> bool:
     return "SANDCASTLE" in os.environ
 
