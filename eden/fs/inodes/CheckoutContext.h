@@ -56,6 +56,16 @@ class CheckoutContext {
   ~CheckoutContext();
 
   /**
+   * The list of conflicts that were encountered as well as some sample paths
+   * that were invalidated during the checkout.
+   * TODO: The invalidated sample paths are used for S439820. It can be deleted
+   * when the SEV closed*/
+  struct CheckoutConflictsAndInvalidations {
+    std::vector<CheckoutConflict> conflicts;
+    std::vector<InodeNumber> invalidations;
+  };
+
+  /**
    * Returns true if the checkout operation should do a dry run, looking for
    * conflicts without actually updating the inode contents. If it returns
    * false, it should actually update the inodes as part of the checkout.
@@ -96,13 +106,13 @@ class CheckoutContext {
   /**
    * Complete the checkout operation
    *
-   * Returns the list of conflicts and errors that were encountered during the
-   * operation as well as some sample paths that were invalidated during the
-   * checkout that can be used to validate that invalidation is working
-   * correctly.
-   TODO: The invalidated sample paths are used for S439820.
+   * Returns the list of conflicts and errors that were encountered as well as
+   some sample paths that were invalidated during the checkout.
+   TODO: The invalidations can be used to validate that NFS invalidation is
+   working correctly.The invalidated sample paths are used for S439820.
    */
-  ImmediateFuture<std::vector<CheckoutConflict>> finish(RootId newSnapshot);
+  ImmediateFuture<CheckoutConflictsAndInvalidations> finish(
+      const RootId& newSnapshot);
 
   /**
    * Flush the invalidation if needed.

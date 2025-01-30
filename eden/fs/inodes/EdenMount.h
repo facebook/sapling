@@ -238,6 +238,7 @@ struct SetPathObjectIdTimes {
 struct CheckoutResult {
   std::vector<CheckoutConflict> conflicts;
   CheckoutTimes times;
+  std::vector<InodeNumber> sampleInodesToValidate;
 };
 
 struct SetPathObjectIdResultAndTimes {

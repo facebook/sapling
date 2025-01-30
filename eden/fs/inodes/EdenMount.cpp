@@ -1598,12 +1598,14 @@ ImmediateFuture<CheckoutResult> EdenMount::checkout(
            stopWatch,
            oldParent,
            snapshotHash,
-           journalDiffCallback](std::vector<CheckoutConflict>&& conflicts) {
+           journalDiffCallback](
+              CheckoutContext::CheckoutConflictsAndInvalidations&& conflicts) {
             checkoutTimes->didFinish = stopWatch.elapsed();
 
             CheckoutResult result;
             result.times = *checkoutTimes;
-            result.conflicts = std::move(conflicts);
+            result.conflicts = std::move(conflicts.conflicts);
+            result.sampleInodesToValidate = std::move(conflicts.invalidations);
             if (ctx->isDryRun()) {
               // This is a dry run, so all we need to do is tell the caller
               // about the conflicts: we should not modify any files or add
