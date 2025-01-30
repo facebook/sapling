@@ -57,13 +57,6 @@ Should fail
   remote:   Error:
   remote:     hooks failed:
   remote:     block_merge_commits for abc80faa8edf0e540ee85dafdf80bce11f68743f: You must not commit merge commits
-  remote: 
-  remote:   Root cause:
-  remote:     hooks failed:
-  remote:     block_merge_commits for abc80faa8edf0e540ee85dafdf80bce11f68743f: You must not commit merge commits
-  remote: 
-  remote:   Debug context:
-  remote:     "hooks failed:\nblock_merge_commits for abc80faa8edf0e540ee85dafdf80bce11f68743f: You must not commit merge commits"
   abort: unexpected EOL, expected netstring digit
   [255]
 
@@ -75,13 +68,6 @@ Should fail
   remote:   Error:
   remote:     hooks failed:
   remote:     block_merge_commits for 5003ea84c31d677f3f537d85c65623a63c231ba9: This bookmark can't have merge commits
-  remote: 
-  remote:   Root cause:
-  remote:     hooks failed:
-  remote:     block_merge_commits for 5003ea84c31d677f3f537d85c65623a63c231ba9: This bookmark can't have merge commits
-  remote: 
-  remote:   Debug context:
-  remote:     "hooks failed:\nblock_merge_commits for 5003ea84c31d677f3f537d85c65623a63c231ba9: This bookmark can't have merge commits"
   abort: unexpected EOL, expected netstring digit
   [255]
 

@@ -76,36 +76,10 @@ Try non fastforward moves (backwards and across branches)
   remote: Command failed
   remote:   Error:
   remote:     While doing a push
-  remote: 
-  remote:   Root cause:
-  remote:     Non fast-forward bookmark move of 'master_bookmark' from 9b9805995990bb9a787f5290e75bd7926146098df1f2ce3420e91063d41789b7 to aa53d24251ff3f54b1b2c29ae02826701b2abeb0079f1bb13b8434b54cd87675
-  remote: 
-  remote:   Caused by:
-  remote:     Failed to move bookmark
-  remote:   Caused by:
-  remote:     Non fast-forward bookmark move of 'master_bookmark' from 9b9805995990bb9a787f5290e75bd7926146098df1f2ce3420e91063d41789b7 to aa53d24251ff3f54b1b2c29ae02826701b2abeb0079f1bb13b8434b54cd87675
-  remote: 
-  remote:   Debug context:
-  remote:     Error {
-  remote:         context: "While doing a push",
-  remote:         source: Error {
-  remote:             context: "Failed to move bookmark",
-  remote:             source: NonFastForwardMove {
-  remote:                 bookmark: BookmarkKey {
-  remote:                     name: BookmarkName {
-  remote:                         bookmark: "master_bookmark",
-  remote:                     },
-  remote:                     category: Branch,
-  remote:                 },
-  remote:                 from: ChangesetId(
-  remote:                     Blake2(9b9805995990bb9a787f5290e75bd7926146098df1f2ce3420e91063d41789b7),
-  remote:                 ),
-  remote:                 to: ChangesetId(
-  remote:                     Blake2(aa53d24251ff3f54b1b2c29ae02826701b2abeb0079f1bb13b8434b54cd87675),
-  remote:                 ),
-  remote:             },
-  remote:         },
-  remote:     }
+  remote:     
+  remote:     Caused by:
+  remote:         0: Failed to move bookmark
+  remote:         1: Non fast-forward bookmark move of 'master_bookmark' from 9b9805995990bb9a787f5290e75bd7926146098df1f2ce3420e91063d41789b7 to aa53d24251ff3f54b1b2c29ae02826701b2abeb0079f1bb13b8434b54cd87675
   abort: unexpected EOL, expected netstring digit
   [255]
   $ hg push --non-forward-move --pushvar NON_FAST_FORWARD=true -r 31b9c167eeea --to master_bookmark
@@ -115,36 +89,10 @@ Try non fastforward moves (backwards and across branches)
   remote: Command failed
   remote:   Error:
   remote:     While doing a push
-  remote: 
-  remote:   Root cause:
-  remote:     Non fast-forward bookmark move of 'master_bookmark' from 9b9805995990bb9a787f5290e75bd7926146098df1f2ce3420e91063d41789b7 to 99853792aa9e4c9ab4519940c25bd2c840dd7af70f1b2f8aaf5e52beec5fc372
-  remote: 
-  remote:   Caused by:
-  remote:     Failed to move bookmark
-  remote:   Caused by:
-  remote:     Non fast-forward bookmark move of 'master_bookmark' from 9b9805995990bb9a787f5290e75bd7926146098df1f2ce3420e91063d41789b7 to 99853792aa9e4c9ab4519940c25bd2c840dd7af70f1b2f8aaf5e52beec5fc372
-  remote: 
-  remote:   Debug context:
-  remote:     Error {
-  remote:         context: "While doing a push",
-  remote:         source: Error {
-  remote:             context: "Failed to move bookmark",
-  remote:             source: NonFastForwardMove {
-  remote:                 bookmark: BookmarkKey {
-  remote:                     name: BookmarkName {
-  remote:                         bookmark: "master_bookmark",
-  remote:                     },
-  remote:                     category: Branch,
-  remote:                 },
-  remote:                 from: ChangesetId(
-  remote:                     Blake2(9b9805995990bb9a787f5290e75bd7926146098df1f2ce3420e91063d41789b7),
-  remote:                 ),
-  remote:                 to: ChangesetId(
-  remote:                     Blake2(99853792aa9e4c9ab4519940c25bd2c840dd7af70f1b2f8aaf5e52beec5fc372),
-  remote:                 ),
-  remote:             },
-  remote:         },
-  remote:     }
+  remote:     
+  remote:     Caused by:
+  remote:         0: Failed to move bookmark
+  remote:         1: Non fast-forward bookmark move of 'master_bookmark' from 9b9805995990bb9a787f5290e75bd7926146098df1f2ce3420e91063d41789b7 to 99853792aa9e4c9ab4519940c25bd2c840dd7af70f1b2f8aaf5e52beec5fc372
   abort: unexpected EOL, expected netstring digit
   [255]
   $ hg push --non-forward-move --pushvar NON_FAST_FORWARD=true -r 20ca2a4749a4 --to withbook
@@ -167,36 +115,10 @@ Try non fastfoward moves on regex bookmark
   remote: Command failed
   remote:   Error:
   remote:     While doing a push
-  remote: 
-  remote:   Root cause:
-  remote:     Non fast-forward bookmark move of 'ffonly_bookmark' from 9b9805995990bb9a787f5290e75bd7926146098df1f2ce3420e91063d41789b7 to aa53d24251ff3f54b1b2c29ae02826701b2abeb0079f1bb13b8434b54cd87675
-  remote: 
-  remote:   Caused by:
-  remote:     Failed to move bookmark
-  remote:   Caused by:
-  remote:     Non fast-forward bookmark move of 'ffonly_bookmark' from 9b9805995990bb9a787f5290e75bd7926146098df1f2ce3420e91063d41789b7 to aa53d24251ff3f54b1b2c29ae02826701b2abeb0079f1bb13b8434b54cd87675
-  remote: 
-  remote:   Debug context:
-  remote:     Error {
-  remote:         context: "While doing a push",
-  remote:         source: Error {
-  remote:             context: "Failed to move bookmark",
-  remote:             source: NonFastForwardMove {
-  remote:                 bookmark: BookmarkKey {
-  remote:                     name: BookmarkName {
-  remote:                         bookmark: "ffonly_bookmark",
-  remote:                     },
-  remote:                     category: Branch,
-  remote:                 },
-  remote:                 from: ChangesetId(
-  remote:                     Blake2(9b9805995990bb9a787f5290e75bd7926146098df1f2ce3420e91063d41789b7),
-  remote:                 ),
-  remote:                 to: ChangesetId(
-  remote:                     Blake2(aa53d24251ff3f54b1b2c29ae02826701b2abeb0079f1bb13b8434b54cd87675),
-  remote:                 ),
-  remote:             },
-  remote:         },
-  remote:     }
+  remote:     
+  remote:     Caused by:
+  remote:         0: Failed to move bookmark
+  remote:         1: Non fast-forward bookmark move of 'ffonly_bookmark' from 9b9805995990bb9a787f5290e75bd7926146098df1f2ce3420e91063d41789b7 to aa53d24251ff3f54b1b2c29ae02826701b2abeb0079f1bb13b8434b54cd87675
   abort: unexpected EOL, expected netstring digit
   [255]
 
@@ -209,30 +131,10 @@ Try to delete master
   remote: Command failed
   remote:   Error:
   remote:     While doing a push
-  remote: 
-  remote:   Root cause:
-  remote:     Deletion of 'master_bookmark' is prohibited
-  remote: 
-  remote:   Caused by:
-  remote:     Failed to delete bookmark
-  remote:   Caused by:
-  remote:     Deletion of 'master_bookmark' is prohibited
-  remote: 
-  remote:   Debug context:
-  remote:     Error {
-  remote:         context: "While doing a push",
-  remote:         source: Error {
-  remote:             context: "Failed to delete bookmark",
-  remote:             source: DeletionProhibited {
-  remote:                 bookmark: BookmarkKey {
-  remote:                     name: BookmarkName {
-  remote:                         bookmark: "master_bookmark",
-  remote:                     },
-  remote:                     category: Branch,
-  remote:                 },
-  remote:             },
-  remote:         },
-  remote:     }
+  remote:     
+  remote:     Caused by:
+  remote:         0: Failed to delete bookmark
+  remote:         1: Deletion of 'master_bookmark' is prohibited
   abort: unexpected EOL, expected netstring digit
   [255]
 

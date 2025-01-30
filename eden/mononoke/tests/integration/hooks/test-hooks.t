@@ -77,13 +77,6 @@ Send large file
   remote:   Error:
   remote:     hooks failed:
   remote:     limit_filesize for 55663e031ec95e5bd19d804f9a09a1dbe4158d2a: File size limit is 10 bytes. You tried to push file largefile that is over the limit (12 bytes). This limit is enforced for files matching the following regex: ".*". See https://fburl.com/landing_big_diffs for instructions.
-  remote: 
-  remote:   Root cause:
-  remote:     hooks failed:
-  remote:     limit_filesize for 55663e031ec95e5bd19d804f9a09a1dbe4158d2a: File size limit is 10 bytes. You tried to push file largefile that is over the limit (12 bytes). This limit is enforced for files matching the following regex: ".*". See https://fburl.com/landing_big_diffs for instructions.
-  remote: 
-  remote:   Debug context:
-  remote:     "hooks failed:\nlimit_filesize for 55663e031ec95e5bd19d804f9a09a1dbe4158d2a: File size limit is 10 bytes. You tried to push file largefile that is over the limit (12 bytes). This limit is enforced for files matching the following regex: \".*\". See https://fburl.com/landing_big_diffs for instructions."
   abort: unexpected EOL, expected netstring digit
   [255]
 
@@ -109,12 +102,5 @@ Send large file inside a directory
   remote:   Error:
   remote:     hooks failed:
   remote:     limit_filesize for b2318b1f5fc817d36a6d771c5d2d9a0af64dfad0: File size limit is 10 bytes. You tried to push file dir/largefile that is over the limit (12 bytes). This limit is enforced for files matching the following regex: ".*". See https://fburl.com/landing_big_diffs for instructions.
-  remote: 
-  remote:   Root cause:
-  remote:     hooks failed:
-  remote:     limit_filesize for b2318b1f5fc817d36a6d771c5d2d9a0af64dfad0: File size limit is 10 bytes. You tried to push file dir/largefile that is over the limit (12 bytes). This limit is enforced for files matching the following regex: ".*". See https://fburl.com/landing_big_diffs for instructions.
-  remote: 
-  remote:   Debug context:
-  remote:     "hooks failed:\nlimit_filesize for b2318b1f5fc817d36a6d771c5d2d9a0af64dfad0: File size limit is 10 bytes. You tried to push file dir/largefile that is over the limit (12 bytes). This limit is enforced for files matching the following regex: \".*\". See https://fburl.com/landing_big_diffs for instructions."
   abort: unexpected EOL, expected netstring digit
   [255]

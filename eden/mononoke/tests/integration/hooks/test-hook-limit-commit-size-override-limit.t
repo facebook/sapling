@@ -44,12 +44,5 @@ Too large commit
   remote:   Error:
   remote:     hooks failed:
   remote:     limit_commit_size for a998ef262b2a9c8ad130d0fcb11a4577e0ff67a5: Too large: 11 > 10.
-  remote: 
-  remote:   Root cause:
-  remote:     hooks failed:
-  remote:     limit_commit_size for a998ef262b2a9c8ad130d0fcb11a4577e0ff67a5: Too large: 11 > 10.
-  remote: 
-  remote:   Debug context:
-  remote:     "hooks failed:\nlimit_commit_size for a998ef262b2a9c8ad130d0fcb11a4577e0ff67a5: Too large: 11 > 10."
   abort: unexpected EOL, expected netstring digit
   [255]

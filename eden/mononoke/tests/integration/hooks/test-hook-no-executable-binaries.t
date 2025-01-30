@@ -58,13 +58,6 @@ Executable binary - should fail
   remote:   Error:
   remote:     hooks failed:
   remote:     no_executable_binaries for 2738cc1d1b73a4e6e196f8f2075c42e24e8f3abf: Executable file binary_file.exe can't be committed.
-  remote: 
-  remote:   Root cause:
-  remote:     hooks failed:
-  remote:     no_executable_binaries for 2738cc1d1b73a4e6e196f8f2075c42e24e8f3abf: Executable file binary_file.exe can't be committed.
-  remote: 
-  remote:   Debug context:
-  remote:     "hooks failed:\nno_executable_binaries for 2738cc1d1b73a4e6e196f8f2075c42e24e8f3abf: Executable file binary_file.exe can't be committed."
   abort: unexpected EOL, expected netstring digit
   [255]
 
@@ -96,13 +89,6 @@ Executable binary under specific directory - should fail
   remote:   Error:
   remote:     hooks failed:
   remote:     no_executable_binaries for 03e66567b4257e9891da6db09f751d726a274fa9: Executable file some_dir/binary_file.exe can't be committed.
-  remote: 
-  remote:   Root cause:
-  remote:     hooks failed:
-  remote:     no_executable_binaries for 03e66567b4257e9891da6db09f751d726a274fa9: Executable file some_dir/binary_file.exe can't be committed.
-  remote: 
-  remote:   Debug context:
-  remote:     "hooks failed:\nno_executable_binaries for 03e66567b4257e9891da6db09f751d726a274fa9: Executable file some_dir/binary_file.exe can't be committed."
   abort: unexpected EOL, expected netstring digit
   [255]
 

@@ -40,12 +40,5 @@ Large commit, a lot of files changed
   remote:   Error:
   remote:     hooks failed:
   remote:     limit_commit_size for bb41d2a5d8c3492f085f4d276927533e79f269ae: Too many files: 6 > 5.
-  remote: 
-  remote:   Root cause:
-  remote:     hooks failed:
-  remote:     limit_commit_size for bb41d2a5d8c3492f085f4d276927533e79f269ae: Too many files: 6 > 5.
-  remote: 
-  remote:   Debug context:
-  remote:     "hooks failed:\nlimit_commit_size for bb41d2a5d8c3492f085f4d276927533e79f269ae: Too many files: 6 > 5."
   abort: unexpected EOL, expected netstring digit
   [255]

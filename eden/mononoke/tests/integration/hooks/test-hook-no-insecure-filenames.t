@@ -22,13 +22,6 @@ Add a .hg(sub|tags|substate) file
   remote:   Error:
   remote:     hooks failed:
   remote:     no_insecure_filenames for 42be02defdeedc5825555cc9adbbf537b1bf1c49: ABORT: Illegal filename: .hgtags
-  remote: 
-  remote:   Root cause:
-  remote:     hooks failed:
-  remote:     no_insecure_filenames for 42be02defdeedc5825555cc9adbbf537b1bf1c49: ABORT: Illegal filename: .hgtags
-  remote: 
-  remote:   Debug context:
-  remote:     "hooks failed:\nno_insecure_filenames for 42be02defdeedc5825555cc9adbbf537b1bf1c49: ABORT: Illegal filename: .hgtags"
   abort: unexpected EOL, expected netstring digit
   [255]
 
@@ -56,13 +49,6 @@ Add a dir with a naughty .Git directory inside
   remote:   Error:
   remote:     hooks failed:
   remote:     no_insecure_filenames for 63a821ce8ce6d0e38385bb41f49a77b46d1d81a1: ABORT: Illegal insecure name: test/.Git/test.py
-  remote: 
-  remote:   Root cause:
-  remote:     hooks failed:
-  remote:     no_insecure_filenames for 63a821ce8ce6d0e38385bb41f49a77b46d1d81a1: ABORT: Illegal insecure name: test/.Git/test.py
-  remote: 
-  remote:   Debug context:
-  remote:     "hooks failed:\nno_insecure_filenames for 63a821ce8ce6d0e38385bb41f49a77b46d1d81a1: ABORT: Illegal insecure name: test/.Git/test.py"
   abort: unexpected EOL, expected netstring digit
   [255]
 
@@ -78,13 +64,6 @@ Add a dir with a naughty .git directory inside
   remote:   Error:
   remote:     hooks failed:
   remote:     no_insecure_filenames for 214bf1e67d4847fabd9a134bae0a1bf466fea704: ABORT: Illegal insecure name: test/.git/test.py
-  remote: 
-  remote:   Root cause:
-  remote:     hooks failed:
-  remote:     no_insecure_filenames for 214bf1e67d4847fabd9a134bae0a1bf466fea704: ABORT: Illegal insecure name: test/.git/test.py
-  remote: 
-  remote:   Debug context:
-  remote:     "hooks failed:\nno_insecure_filenames for 214bf1e67d4847fabd9a134bae0a1bf466fea704: ABORT: Illegal insecure name: test/.git/test.py"
   abort: unexpected EOL, expected netstring digit
   [255]
 
@@ -100,13 +79,6 @@ Add a dir with a naughty .git directory inside that includes a ~1
   remote:   Error:
   remote:     hooks failed:
   remote:     no_insecure_filenames for 7800fe789a874b225e4974fa09a25a051ea3d1e0: ABORT: Illegal insecure name: test/.Git~1/test.py
-  remote: 
-  remote:   Root cause:
-  remote:     hooks failed:
-  remote:     no_insecure_filenames for 7800fe789a874b225e4974fa09a25a051ea3d1e0: ABORT: Illegal insecure name: test/.Git~1/test.py
-  remote: 
-  remote:   Debug context:
-  remote:     "hooks failed:\nno_insecure_filenames for 7800fe789a874b225e4974fa09a25a051ea3d1e0: ABORT: Illegal insecure name: test/.Git~1/test.py"
   abort: unexpected EOL, expected netstring digit
   [255]
 
@@ -122,13 +94,6 @@ Add a dir with a naughty .git directory inside that includes a ~1234
   remote:   Error:
   remote:     hooks failed:
   remote:     no_insecure_filenames for 8e508312f2d6a7f354ee17bc46a9dc618da9ded3: ABORT: Illegal insecure name: test/.Git~1234/test/test.py
-  remote: 
-  remote:   Root cause:
-  remote:     hooks failed:
-  remote:     no_insecure_filenames for 8e508312f2d6a7f354ee17bc46a9dc618da9ded3: ABORT: Illegal insecure name: test/.Git~1234/test/test.py
-  remote: 
-  remote:   Debug context:
-  remote:     "hooks failed:\nno_insecure_filenames for 8e508312f2d6a7f354ee17bc46a9dc618da9ded3: ABORT: Illegal insecure name: test/.Git~1234/test/test.py"
   abort: unexpected EOL, expected netstring digit
   [255]
 
@@ -144,13 +109,6 @@ Add a bad dir
   remote:   Error:
   remote:     hooks failed:
   remote:     no_insecure_filenames for 695a2a5c3e7ce0fdccefa1945c8bd8868027248b: ABORT: Illegal insecure name: dir1/.Git8B6C~2/file1
-  remote: 
-  remote:   Root cause:
-  remote:     hooks failed:
-  remote:     no_insecure_filenames for 695a2a5c3e7ce0fdccefa1945c8bd8868027248b: ABORT: Illegal insecure name: dir1/.Git8B6C~2/file1
-  remote: 
-  remote:   Debug context:
-  remote:     "hooks failed:\nno_insecure_filenames for 695a2a5c3e7ce0fdccefa1945c8bd8868027248b: ABORT: Illegal insecure name: dir1/.Git8B6C~2/file1"
   abort: unexpected EOL, expected netstring digit
   [255]
 
@@ -166,13 +124,6 @@ Add a dir with a naughty .git directory inside that includes 2 ~1
   remote:   Error:
   remote:     hooks failed:
   remote:     no_insecure_filenames for 014b76ac58ed568649b5308bece3aa75aefceca8: ABORT: Illegal insecure name: test~1/.Git~1/test/test.py
-  remote: 
-  remote:   Root cause:
-  remote:     hooks failed:
-  remote:     no_insecure_filenames for 014b76ac58ed568649b5308bece3aa75aefceca8: ABORT: Illegal insecure name: test~1/.Git~1/test/test.py
-  remote: 
-  remote:   Debug context:
-  remote:     "hooks failed:\nno_insecure_filenames for 014b76ac58ed568649b5308bece3aa75aefceca8: ABORT: Illegal insecure name: test~1/.Git~1/test/test.py"
   abort: unexpected EOL, expected netstring digit
   [255]
 
@@ -227,13 +178,6 @@ Add a file with an ignorable unicode char in it
   remote:   Error:
   remote:     hooks failed:
   remote:     no_insecure_filenames for 673dc62e3d09668ca2ef53b04d2527dd3c8e0b2e: ABORT: Illegal insecure name: test/.git\xe2\x80\x8c (esc)
-  remote: 
-  remote:   Root cause:
-  remote:     hooks failed:
-  remote:     no_insecure_filenames for 673dc62e3d09668ca2ef53b04d2527dd3c8e0b2e: ABORT: Illegal insecure name: test/.git\xe2\x80\x8c (esc)
-  remote: 
-  remote:   Debug context:
-  remote:     "hooks failed:\nno_insecure_filenames for 673dc62e3d09668ca2ef53b04d2527dd3c8e0b2e: ABORT: Illegal insecure name: test/.git\u{200c}"
   abort: unexpected EOL, expected netstring digit
   [255]
 

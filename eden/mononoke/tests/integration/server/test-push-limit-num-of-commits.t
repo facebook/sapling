@@ -66,22 +66,9 @@ create new commit in repo2 and check that push fails
   remote: Command failed
   remote:   Error:
   remote:     bundle2_resolver error
-  remote: 
-  remote:   Root cause:
-  remote:     Trying to push too many commits! Limit is 2, tried to push 3
-  remote: 
-  remote:   Caused by:
-  remote:     While resolving Changegroup
-  remote:   Caused by:
-  remote:     Trying to push too many commits! Limit is 2, tried to push 3
-  remote: 
-  remote:   Debug context:
-  remote:     Error {
-  remote:         context: "bundle2_resolver error",
-  remote:         source: Error {
-  remote:             context: "While resolving Changegroup",
-  remote:             source: "Trying to push too many commits! Limit is 2, tried to push 3",
-  remote:         },
-  remote:     }
+  remote:     
+  remote:     Caused by:
+  remote:         0: While resolving Changegroup
+  remote:         1: Trying to push too many commits! Limit is 2, tried to push 3
   abort: unexpected EOL, expected netstring digit
   [255]

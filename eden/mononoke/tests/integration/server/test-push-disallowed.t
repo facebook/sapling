@@ -54,23 +54,10 @@ try doing a non-pushrebase push with the new commits
   remote: Command failed
   remote:   Error:
   remote:     bundle2_resolver error
-  remote: 
-  remote:   Root cause:
-  remote:     Pure pushes are disallowed in this repo
-  remote: 
-  remote:   Caused by:
-  remote:     While resolving Changegroup
-  remote:   Caused by:
-  remote:     Pure pushes are disallowed in this repo
-  remote: 
-  remote:   Debug context:
-  remote:     Error {
-  remote:         context: "bundle2_resolver error",
-  remote:         source: Error {
-  remote:             context: "While resolving Changegroup",
-  remote:             source: "Pure pushes are disallowed in this repo",
-  remote:         },
-  remote:     }
+  remote:     
+  remote:     Caused by:
+  remote:         0: While resolving Changegroup
+  remote:         1: Pure pushes are disallowed in this repo
   abort: unexpected EOL, expected netstring digit
   [255]
 

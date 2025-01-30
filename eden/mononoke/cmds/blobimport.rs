@@ -28,7 +28,6 @@ use cmdlib::monitoring::AliveService;
 use commit_graph::CommitGraphRef;
 use context::CoreContext;
 use context::SessionContainer;
-use failure_ext::SlogKVError;
 use fbinit::FacebookInit;
 use futures::future::try_join;
 use futures::future::TryFutureExt;
@@ -337,10 +336,10 @@ async fn async_main(app: MononokeApp) -> Result<()> {
         Ok(())
     }
     .map_err({
-        move |err| {
+        move |err: anyhow::Error| {
             // NOTE: We log the error immediatley, then provide another one for main's
             // Result (which will set our exit code).
-            error!(ctx.logger(), "error while blobimporting"; SlogKVError(err));
+            error!(ctx.logger(), "error while blobimporting"; "error" => ?err);
             Error::msg("blobimport exited with a failure")
         }
     })

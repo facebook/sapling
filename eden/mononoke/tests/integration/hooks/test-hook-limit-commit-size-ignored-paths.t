@@ -46,12 +46,5 @@ Test with ignored paths
   remote:   Error:
   remote:     hooks failed:
   remote:     limit_commit_size for 74cf48a1943545fc730f13c2e5855eabcfa99d48: Too large: 20 > 10.
-  remote: 
-  remote:   Root cause:
-  remote:     hooks failed:
-  remote:     limit_commit_size for 74cf48a1943545fc730f13c2e5855eabcfa99d48: Too large: 20 > 10.
-  remote: 
-  remote:   Debug context:
-  remote:     "hooks failed:\nlimit_commit_size for 74cf48a1943545fc730f13c2e5855eabcfa99d48: Too large: 20 > 10."
   abort: unexpected EOL, expected netstring digit
   [255]

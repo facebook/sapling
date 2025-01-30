@@ -43,13 +43,6 @@ Large file
   remote:   Error:
   remote:     hooks failed:
   remote:     limit_commit_size for b4b4dcaa16f97662c6a6e70b6eb8c3af1aea8253: Too large: 11 > 10.
-  remote: 
-  remote:   Root cause:
-  remote:     hooks failed:
-  remote:     limit_commit_size for b4b4dcaa16f97662c6a6e70b6eb8c3af1aea8253: Too large: 11 > 10.
-  remote: 
-  remote:   Debug context:
-  remote:     "hooks failed:\nlimit_commit_size for b4b4dcaa16f97662c6a6e70b6eb8c3af1aea8253: Too large: 11 > 10."
   abort: unexpected EOL, expected netstring digit
   [255]
 
@@ -64,13 +57,6 @@ Large commit
   remote:   Error:
   remote:     hooks failed:
   remote:     limit_commit_size for 0d437325fdc4006bbd174b823446331bfa53a68d: Too large: 11 > 10.
-  remote: 
-  remote:   Root cause:
-  remote:     hooks failed:
-  remote:     limit_commit_size for 0d437325fdc4006bbd174b823446331bfa53a68d: Too large: 11 > 10.
-  remote: 
-  remote:   Debug context:
-  remote:     "hooks failed:\nlimit_commit_size for 0d437325fdc4006bbd174b823446331bfa53a68d: Too large: 11 > 10."
   abort: unexpected EOL, expected netstring digit
   [255]
 

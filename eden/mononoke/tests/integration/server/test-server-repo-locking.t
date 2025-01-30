@@ -53,14 +53,6 @@ Cannot push to the server
   remote: Command failed
   remote:   Error:
   remote:     Repo is locked: integration test
-  remote: 
-  remote:   Root cause:
-  remote:     Repo is locked: integration test
-  remote: 
-  remote:   Debug context:
-  remote:     RepoLocked(
-  remote:         "integration test",
-  remote:     )
   abort: unexpected EOL, expected netstring digit
   [255]
 

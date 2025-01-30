@@ -19,13 +19,6 @@
   remote:   Error:
   remote:     hooks failed:
   remote:     block_empty_commit for afd5c05eb235daf088b93d9cbc0dfecbb267a01a: You must include file changes in your commit for it to land
-  remote: 
-  remote:   Root cause:
-  remote:     hooks failed:
-  remote:     block_empty_commit for afd5c05eb235daf088b93d9cbc0dfecbb267a01a: You must include file changes in your commit for it to land
-  remote: 
-  remote:   Debug context:
-  remote:     "hooks failed:\nblock_empty_commit for afd5c05eb235daf088b93d9cbc0dfecbb267a01a: You must include file changes in your commit for it to land"
   abort: unexpected EOL, expected netstring digit
   [255]
 

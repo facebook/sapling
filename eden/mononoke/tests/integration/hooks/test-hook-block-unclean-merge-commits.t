@@ -58,13 +58,6 @@ Should fail
   remote:   Error:
   remote:     hooks failed:
   remote:     block_unclean_merge_commits for 6b4021133ae528b0305f8fe080af7c3bea865dc4: The bookmark matching regex master_bookmark can't have merge commits with conflicts, even if they have been resolved
-  remote: 
-  remote:   Root cause:
-  remote:     hooks failed:
-  remote:     block_unclean_merge_commits for 6b4021133ae528b0305f8fe080af7c3bea865dc4: The bookmark matching regex master_bookmark can't have merge commits with conflicts, even if they have been resolved
-  remote: 
-  remote:   Debug context:
-  remote:     "hooks failed:\nblock_unclean_merge_commits for 6b4021133ae528b0305f8fe080af7c3bea865dc4: The bookmark matching regex master_bookmark can't have merge commits with conflicts, even if they have been resolved"
   abort: unexpected EOL, expected netstring digit
   [255]
 

@@ -8,11 +8,9 @@
 use std::collections::HashSet;
 use std::fmt;
 use std::io;
-use std::str::FromStr;
 
 use anyhow::bail;
 use anyhow::Error;
-use failure_ext::SlogKVErrorKey;
 use slog::Drain;
 use slog::Never;
 use slog::OwnedKVList;
@@ -189,17 +187,14 @@ struct ErrorSerializer {
 
 impl Serializer for ErrorSerializer {
     fn emit_arguments(&mut self, key: slog::Key, val: &fmt::Arguments) -> slog::Result {
-        if let Ok(key) = SlogKVErrorKey::from_str(key) {
-            use SlogKVErrorKey::*;
-            match key {
-                Error => self.error = non_empty_str_maybe(format!("{}", val)),
-                RootCause => self.root_cause = non_empty_str_maybe(format!("{}", val)),
-                Backtrace => self.backtrace = non_empty_str_maybe(format!("{}", val)),
-                Cause => self.causes.push(format!("{}", val)),
-                ErrorDebug => self.error_debug = non_empty_str_maybe(format!("{}", val)),
-            }
+        match key {
+            "error" => self.error = non_empty_str_maybe(format!("{}", val)),
+            "root_cause" => self.root_cause = non_empty_str_maybe(format!("{}", val)),
+            "backtrace" => self.backtrace = non_empty_str_maybe(format!("{}", val)),
+            "cause" => self.causes.push(format!("{}", val)),
+            "error_debug" => self.error_debug = non_empty_str_maybe(format!("{}", val)),
+            _ => (), // if it's not an error, ignore it
         }
-
         Ok(())
     }
 }

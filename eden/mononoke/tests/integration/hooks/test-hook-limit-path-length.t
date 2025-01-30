@@ -43,13 +43,6 @@ File path too long - should fail
   remote:   Error:
   remote:     hooks failed:
   remote:     limit_path_length for 56fa24a5288379b752543077df52a8da6d6113ec: Path length for '1234567890' (10) exceeds length limit (>= 10)
-  remote: 
-  remote:   Root cause:
-  remote:     hooks failed:
-  remote:     limit_path_length for 56fa24a5288379b752543077df52a8da6d6113ec: Path length for '1234567890' (10) exceeds length limit (>= 10)
-  remote: 
-  remote:   Debug context:
-  remote:     "hooks failed:\nlimit_path_length for 56fa24a5288379b752543077df52a8da6d6113ec: Path length for '1234567890' (10) exceeds length limit (>= 10)"
   abort: unexpected EOL, expected netstring digit
   [255]
 
@@ -65,12 +58,5 @@ File path too long (UTF-8 multibyte characters) - should fail
   remote:   Error:
   remote:     hooks failed:
   remote:     limit_path_length for 2aa9727c0ca277205aedda2a1acf9d077eafc9d5: Path length for '12345678\xe2\x82\xac' (11) exceeds length limit (>= 10) (esc)
-  remote: 
-  remote:   Root cause:
-  remote:     hooks failed:
-  remote:     limit_path_length for 2aa9727c0ca277205aedda2a1acf9d077eafc9d5: Path length for '12345678\xe2\x82\xac' (11) exceeds length limit (>= 10) (esc)
-  remote: 
-  remote:   Debug context:
-  remote:     "hooks failed:\nlimit_path_length for 2aa9727c0ca277205aedda2a1acf9d077eafc9d5: Path length for '12345678€' (11) exceeds length limit (>= 10)"
   abort: unexpected EOL, expected netstring digit
   [255]

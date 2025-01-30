@@ -17,7 +17,6 @@ use connection_security_checker::ConnectionSecurityChecker;
 use context::LoggingContainer;
 use context::SessionContainer;
 use context::SessionId;
-use failure_ext::SlogKVError;
 use fbinit::FacebookInit;
 use futures::channel::mpsc;
 use futures::future::TryFutureExt;
@@ -244,7 +243,7 @@ pub async fn request_handler(
 
     if let Err(err) = result {
         error!(&conn_log, "Command failed";
-            SlogKVError(err),
+            "error" => ?err,
             "remote" => "true"
         );
     }

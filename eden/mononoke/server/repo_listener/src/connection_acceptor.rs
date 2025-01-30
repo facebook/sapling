@@ -17,13 +17,11 @@ use std::sync::Arc;
 use std::time::Duration;
 
 use anyhow::Context;
-use anyhow::Error;
 use anyhow::Result;
 use bytes::Bytes;
 use cached_config::ConfigStore;
 use connection_security_checker::ConnectionSecurityChecker;
 use edenapi_service::SaplingRemoteApi;
-use failure_ext::SlogKVError;
 use fbinit::FacebookInit;
 use futures::channel::mpsc;
 use futures::channel::oneshot;
@@ -198,7 +196,7 @@ pub async fn connection_acceptor(
                     conn.spawn_task(task, "Failed to handle_connection");
                 }
                 Err(err) => {
-                    error!(root_log, "{}", err.to_string(); SlogKVError(Error::from(err)));
+                    error!(root_log, "{}", err.to_string(); "error" => ?err);
                 }
             },
         };

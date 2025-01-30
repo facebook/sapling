@@ -73,25 +73,10 @@ create new commit in repo2 and check that push to a bookmark fails
   remote: * (glob)
   remote:   Error:
   remote:     While doing a push
-  remote: 
-  remote:   Root cause:
-  remote:     Repo is locked: Set by config option
-  remote: 
-  remote:   Caused by:
-  remote:     Failed to fast-forward bookmark (set pushvar NON_FAST_FORWARD=true for a non-fast-forward move)
-  remote:   Caused by:
-  remote:     Repo is locked: Set by config option
-  remote: 
-  remote:   Debug context:
-  remote:     Error {
-  remote:         context: "While doing a push",
-  remote:         source: Error {
-  remote:             context: "Failed to fast-forward bookmark (set pushvar NON_FAST_FORWARD=true for a non-fast-forward move)",
-  remote:             source: RepoLocked(
-  remote:                 "Set by config option",
-  remote:             ),
-  remote:         },
-  remote:     }
+  remote:     
+  remote:     Caused by:
+  remote:         0: Failed to fast-forward bookmark (set pushvar NON_FAST_FORWARD=true for a non-fast-forward move)
+  remote:         1: Repo is locked: Set by config option
   abort: unexpected EOL, expected netstring digit
   [255]
 

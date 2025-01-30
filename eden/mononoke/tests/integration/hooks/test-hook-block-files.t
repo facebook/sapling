@@ -1,4 +1,8 @@
-# (c) Meta Platforms, Inc. and affiliates. Confidential and proprietary.
+# Copyright (c) Meta Platforms, Inc. and affiliates.
+#
+# This software may be used and distributed according to the terms of the
+# GNU General Public License found in the LICENSE file in the root
+# directory of this source tree.
 
   $ . "${TEST_FIXTURES}/library.sh"
 
@@ -77,13 +81,6 @@ buck-out directory is not allowed in the root
   remote:   Error:
   remote:     hooks failed:
   remote:     block_files for f8301844633b60c2b4f8b990279394d831ab90c7: Blocked filename 'buck-out/file' matched name pattern '^buck-out/'. Rename or remove this file and try again.
-  remote: 
-  remote:   Root cause:
-  remote:     hooks failed:
-  remote:     block_files for f8301844633b60c2b4f8b990279394d831ab90c7: Blocked filename 'buck-out/file' matched name pattern '^buck-out/'. Rename or remove this file and try again.
-  remote: 
-  remote:   Debug context:
-  remote:     "hooks failed:\nblock_files for f8301844633b60c2b4f8b990279394d831ab90c7: Blocked filename 'buck-out/file' matched name pattern '^buck-out/'. Rename or remove this file and try again."
   abort: unexpected EOL, expected netstring digit
   [255]
 
@@ -99,13 +96,6 @@ buck-out directory is not allowed in any subdir
   remote:   Error:
   remote:     hooks failed:
   remote:     block_files for 40927395198136c0dc65978d4fec6a8bf8386d4d: Blocked filename 'dir/buck-out/file' matched name pattern '/buck-out/'. Rename or remove this file and try again.
-  remote: 
-  remote:   Root cause:
-  remote:     hooks failed:
-  remote:     block_files for 40927395198136c0dc65978d4fec6a8bf8386d4d: Blocked filename 'dir/buck-out/file' matched name pattern '/buck-out/'. Rename or remove this file and try again.
-  remote: 
-  remote:   Debug context:
-  remote:     "hooks failed:\nblock_files for 40927395198136c0dc65978d4fec6a8bf8386d4d: Blocked filename 'dir/buck-out/file' matched name pattern '/buck-out/'. Rename or remove this file and try again."
   abort: unexpected EOL, expected netstring digit
   [255]
 
@@ -120,13 +110,6 @@ DO_NOT_COMMIT_THIS_FILE_OR_YOU_WILL_BE_FIRED does the needful
   remote:   Error:
   remote:     hooks failed:
   remote:     block_files for d1a6e60539c6d4cd8df0c1fd442dcba98ef76bdf: Blocked filename 'important_DO_NOT_COMMIT_THIS_FILE_OR_YOU_WILL_BE_FIRED.txt' matched name pattern 'DO_NOT_COMMIT_THIS_FILE_OR_YOU_WILL_BE_FIRED'. Rename or remove this file and try again.
-  remote: 
-  remote:   Root cause:
-  remote:     hooks failed:
-  remote:     block_files for d1a6e60539c6d4cd8df0c1fd442dcba98ef76bdf: Blocked filename 'important_DO_NOT_COMMIT_THIS_FILE_OR_YOU_WILL_BE_FIRED.txt' matched name pattern 'DO_NOT_COMMIT_THIS_FILE_OR_YOU_WILL_BE_FIRED'. Rename or remove this file and try again.
-  remote: 
-  remote:   Debug context:
-  remote:     "hooks failed:\nblock_files for d1a6e60539c6d4cd8df0c1fd442dcba98ef76bdf: Blocked filename 'important_DO_NOT_COMMIT_THIS_FILE_OR_YOU_WILL_BE_FIRED.txt' matched name pattern 'DO_NOT_COMMIT_THIS_FILE_OR_YOU_WILL_BE_FIRED'. Rename or remove this file and try again."
   abort: unexpected EOL, expected netstring digit
   [255]
 
@@ -142,13 +125,6 @@ Old fbmake leftovers cannot be committed
   remote:   Error:
   remote:     hooks failed:
   remote:     block_files for 10b8f7a92bd16630481eac34cac5b832edb9cb71: Blocked filename 'fbcode/_bin/file' matched name pattern '^fbcode/_bin/'. Rename or remove this file and try again.
-  remote: 
-  remote:   Root cause:
-  remote:     hooks failed:
-  remote:     block_files for 10b8f7a92bd16630481eac34cac5b832edb9cb71: Blocked filename 'fbcode/_bin/file' matched name pattern '^fbcode/_bin/'. Rename or remove this file and try again.
-  remote: 
-  remote:   Debug context:
-  remote:     "hooks failed:\nblock_files for 10b8f7a92bd16630481eac34cac5b832edb9cb71: Blocked filename 'fbcode/_bin/file' matched name pattern '^fbcode/_bin/'. Rename or remove this file and try again."
   abort: unexpected EOL, expected netstring digit
   [255]
 
@@ -161,12 +137,8 @@ Cannot nest project dirs badly
   $ hg ci -Aqm failure
   $ hg push -r . --to master_bookmark |& grep -P 'remote:\s+block_files for' | sort
   remote:     block_files for 5d971d690977075710cf1270860e2ab65015eeec: Blocked filename 'fbandroid/fbandroid/files' matched name pattern '^fbandroid/fbandroid/'. Rename or remove this file and try again.
-  remote:     block_files for 5d971d690977075710cf1270860e2ab65015eeec: Blocked filename 'fbandroid/fbandroid/files' matched name pattern '^fbandroid/fbandroid/'. Rename or remove this file and try again.
-  remote:     block_files for 5d971d690977075710cf1270860e2ab65015eeec: Blocked filename 'fbcode/fbcode/files' matched name pattern '^fbcode/fbcode/'. Rename or remove this file and try again.
   remote:     block_files for 5d971d690977075710cf1270860e2ab65015eeec: Blocked filename 'fbcode/fbcode/files' matched name pattern '^fbcode/fbcode/'. Rename or remove this file and try again.
   remote:     block_files for 5d971d690977075710cf1270860e2ab65015eeec: Blocked filename 'fbobjc/fbobjc/files' matched name pattern '^fbobjc/fbobjc/'. Rename or remove this file and try again.
-  remote:     block_files for 5d971d690977075710cf1270860e2ab65015eeec: Blocked filename 'fbobjc/fbobjc/files' matched name pattern '^fbobjc/fbobjc/'. Rename or remove this file and try again.
-  remote:     block_files for 5d971d690977075710cf1270860e2ab65015eeec: Blocked filename 'xplat/xplat/files' matched name pattern '^xplat/xplat/'. Rename or remove this file and try again.
   remote:     block_files for 5d971d690977075710cf1270860e2ab65015eeec: Blocked filename 'xplat/xplat/files' matched name pattern '^xplat/xplat/'. Rename or remove this file and try again.
 
 Cannot put crud in xplat
@@ -178,10 +150,7 @@ Cannot put crud in xplat
   $ hg ci -Aqm failure
   $ hg push -r . --to master_bookmark |& grep -P 'remote:\s+block_files for' | sort
   remote:     block_files for 42bbe801bb55fd1eee91d4dbb56f5a5dc3f0f0ad: Blocked filename 'xplat/fbandroid/files' matched name pattern '^xplat/fbandroid/'. Rename or remove this file and try again.
-  remote:     block_files for 42bbe801bb55fd1eee91d4dbb56f5a5dc3f0f0ad: Blocked filename 'xplat/fbandroid/files' matched name pattern '^xplat/fbandroid/'. Rename or remove this file and try again.
   remote:     block_files for 42bbe801bb55fd1eee91d4dbb56f5a5dc3f0f0ad: Blocked filename 'xplat/fbcode/files' matched name pattern '^xplat/fbcode/'. Rename or remove this file and try again.
-  remote:     block_files for 42bbe801bb55fd1eee91d4dbb56f5a5dc3f0f0ad: Blocked filename 'xplat/fbcode/files' matched name pattern '^xplat/fbcode/'. Rename or remove this file and try again.
-  remote:     block_files for 42bbe801bb55fd1eee91d4dbb56f5a5dc3f0f0ad: Blocked filename 'xplat/fbobjc/files' matched name pattern '^xplat/fbobjc/'. Rename or remove this file and try again.
   remote:     block_files for 42bbe801bb55fd1eee91d4dbb56f5a5dc3f0f0ad: Blocked filename 'xplat/fbobjc/files' matched name pattern '^xplat/fbobjc/'. Rename or remove this file and try again.
 
 Owners files are disallowed
@@ -197,13 +166,6 @@ Owners files are disallowed
   remote:   Error:
   remote:     hooks failed:
   remote:     block_files for fb86edb431492c799bfb61c60137272899084b19: Blocked filename 'OWNERS' matched name pattern '^OWNERS$'. Rename or remove this file and try again.
-  remote: 
-  remote:   Root cause:
-  remote:     hooks failed:
-  remote:     block_files for fb86edb431492c799bfb61c60137272899084b19: Blocked filename 'OWNERS' matched name pattern '^OWNERS$'. Rename or remove this file and try again.
-  remote: 
-  remote:   Debug context:
-  remote:     "hooks failed:\nblock_files for fb86edb431492c799bfb61c60137272899084b19: Blocked filename 'OWNERS' matched name pattern '^OWNERS$'. Rename or remove this file and try again."
   abort: unexpected EOL, expected netstring digit
   [255]
 
@@ -220,13 +182,6 @@ Owners files are disallowed
   remote:   Error:
   remote:     hooks failed:
   remote:     block_files for a2511fd15afb17f7227bcf57c4313cb38b48d246: Blocked filename 'owners' matched name pattern '^owners$'. Rename or remove this file and try again.
-  remote: 
-  remote:   Root cause:
-  remote:     hooks failed:
-  remote:     block_files for a2511fd15afb17f7227bcf57c4313cb38b48d246: Blocked filename 'owners' matched name pattern '^owners$'. Rename or remove this file and try again.
-  remote: 
-  remote:   Debug context:
-  remote:     "hooks failed:\nblock_files for a2511fd15afb17f7227bcf57c4313cb38b48d246: Blocked filename 'owners' matched name pattern '^owners$'. Rename or remove this file and try again."
   abort: unexpected EOL, expected netstring digit
   [255]
 
@@ -244,13 +199,6 @@ Owners files are disallowed
   remote:   Error:
   remote:     hooks failed:
   remote:     block_files for 8d6b816aa4f370227f2b8263e630aa0e15b3d1a3: Blocked filename 'dir/owners' matched name pattern '.*/owners$'. Rename or remove this file and try again.
-  remote: 
-  remote:   Root cause:
-  remote:     hooks failed:
-  remote:     block_files for 8d6b816aa4f370227f2b8263e630aa0e15b3d1a3: Blocked filename 'dir/owners' matched name pattern '.*/owners$'. Rename or remove this file and try again.
-  remote: 
-  remote:   Debug context:
-  remote:     "hooks failed:\nblock_files for 8d6b816aa4f370227f2b8263e630aa0e15b3d1a3: Blocked filename 'dir/owners' matched name pattern '.*/owners$'. Rename or remove this file and try again."
   abort: unexpected EOL, expected netstring digit
   [255]
 
@@ -284,13 +232,6 @@ Cannot commit .git stuff into the repo
   remote:   Error:
   remote:     hooks failed:
   remote:     block_files for ad3e5bd3f2e3084dfd3c18dde9fc4d3642fc2637: Blocked filename 'dir/.git/HEAD' matched name pattern '/\.git/'. Rename or remove this file and try again.
-  remote: 
-  remote:   Root cause:
-  remote:     hooks failed:
-  remote:     block_files for ad3e5bd3f2e3084dfd3c18dde9fc4d3642fc2637: Blocked filename 'dir/.git/HEAD' matched name pattern '/\.git/'. Rename or remove this file and try again.
-  remote: 
-  remote:   Debug context:
-  remote:     "hooks failed:\nblock_files for ad3e5bd3f2e3084dfd3c18dde9fc4d3642fc2637: Blocked filename 'dir/.git/HEAD' matched name pattern '/\\.git/'. Rename or remove this file and try again."
   abort: unexpected EOL, expected netstring digit
   [255]
 
@@ -307,13 +248,6 @@ Cannot commit .git stuff into the repo root
   remote:   Error:
   remote:     hooks failed:
   remote:     block_files for cba7ce32b8b5ad219c7a5610933ec7d05d3f47b6: Blocked filename '.git/HEAD' matched name pattern '^\.git/'. Rename or remove this file and try again.
-  remote: 
-  remote:   Root cause:
-  remote:     hooks failed:
-  remote:     block_files for cba7ce32b8b5ad219c7a5610933ec7d05d3f47b6: Blocked filename '.git/HEAD' matched name pattern '^\.git/'. Rename or remove this file and try again.
-  remote: 
-  remote:   Debug context:
-  remote:     "hooks failed:\nblock_files for cba7ce32b8b5ad219c7a5610933ec7d05d3f47b6: Blocked filename '.git/HEAD' matched name pattern '^\\.git/'. Rename or remove this file and try again."
   abort: unexpected EOL, expected netstring digit
   [255]
 
@@ -376,13 +310,6 @@ The dot in the [.]git hook pattern isn't a wildcard that matches any character
   remote:   Error:
   remote:     hooks failed:
   remote:     block_files for 95659407febd3cf89a15cfbfb04eff3ae6b3d23b: Blocked filename 'dir/.watchmanconfig' matched name pattern '.*/\.watchmanconfig$'. Rename or remove this file and try again.
-  remote: 
-  remote:   Root cause:
-  remote:     hooks failed:
-  remote:     block_files for 95659407febd3cf89a15cfbfb04eff3ae6b3d23b: Blocked filename 'dir/.watchmanconfig' matched name pattern '.*/\.watchmanconfig$'. Rename or remove this file and try again.
-  remote: 
-  remote:   Debug context:
-  remote:     "hooks failed:\nblock_files for 95659407febd3cf89a15cfbfb04eff3ae6b3d23b: Blocked filename 'dir/.watchmanconfig' matched name pattern '.*/\\.watchmanconfig$'. Rename or remove this file and try again."
   abort: unexpected EOL, expected netstring digit
   [255]
 
@@ -413,13 +340,6 @@ Pushing to experimental directories should not work
   remote:   Error:
   remote:     hooks failed:
   remote:     block_files for 164dce8b98ef7d21f81b57bf868d14a33acc84ee: Blocked filename 'fbcode/experimental/this_is_a_test/file' matched name pattern '^fbcode/experimental'. Rename or remove this file and try again.
-  remote: 
-  remote:   Root cause:
-  remote:     hooks failed:
-  remote:     block_files for 164dce8b98ef7d21f81b57bf868d14a33acc84ee: Blocked filename 'fbcode/experimental/this_is_a_test/file' matched name pattern '^fbcode/experimental'. Rename or remove this file and try again.
-  remote: 
-  remote:   Debug context:
-  remote:     "hooks failed:\nblock_files for 164dce8b98ef7d21f81b57bf868d14a33acc84ee: Blocked filename 'fbcode/experimental/this_is_a_test/file' matched name pattern '^fbcode/experimental'. Rename or remove this file and try again."
   abort: unexpected EOL, expected netstring digit
   [255]
 

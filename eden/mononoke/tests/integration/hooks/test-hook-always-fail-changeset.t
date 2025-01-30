@@ -38,13 +38,6 @@ Matches regex - should NOT pass
   remote:   Error:
   remote:     hooks failed:
   remote:     always_fail_changeset for *: This hook always fails (glob)
-  remote: 
-  remote:   Root cause:
-  remote:     hooks failed:
-  remote:     always_fail_changeset for *: This hook always fails (glob)
-  remote: 
-  remote:   Debug context:
-  remote:     "hooks failed:\nalways_fail_changeset for *: This hook always fails" (glob)
   abort: unexpected EOL, expected netstring digit
   [255]
   $ mkcommit another
@@ -55,13 +48,6 @@ Matches regex - should NOT pass
   remote:   Error:
   remote:     hooks failed:
   remote:     always_fail_changeset for *: This hook always fails (glob)
-  remote: 
-  remote:   Root cause:
-  remote:     hooks failed:
-  remote:     always_fail_changeset for *: This hook always fails (glob)
-  remote: 
-  remote:   Debug context:
-  remote:     "hooks failed:\nalways_fail_changeset for *: This hook always fails" (glob)
   abort: unexpected EOL, expected netstring digit
   [255]
 
@@ -85,13 +71,5 @@ Matches regex - should NOT pass
   remote:     hooks failed:
   remote:     always_fail_changeset for *: This bookmark is locked and does not accept pushes (glob)
   remote:     always_fail_changeset for *: This bookmark is locked and does not accept pushes (glob)
-  remote: 
-  remote:   Root cause:
-  remote:     hooks failed:
-  remote:     always_fail_changeset for *: This bookmark is locked and does not accept pushes (glob)
-  remote:     always_fail_changeset for *: This bookmark is locked and does not accept pushes (glob)
-  remote: 
-  remote:   Debug context:
-  remote:     "hooks failed:\nalways_fail_changeset for *: This bookmark is locked and does not accept pushes\nalways_fail_changeset for *: This bookmark is locked and does not accept pushes" (glob)
   abort: unexpected EOL, expected netstring digit
   [255]

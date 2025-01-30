@@ -44,13 +44,6 @@ Commit message too long - should fail
   remote:   Error:
   remote:     hooks failed:
   remote:     limit_commit_message_length for 6ef9fe6a13fa92ed3a2fdc0843441c0511cd47f6: Commit message length for 'foo' (10) exceeds length limit (>= 10)
-  remote: 
-  remote:   Root cause:
-  remote:     hooks failed:
-  remote:     limit_commit_message_length for 6ef9fe6a13fa92ed3a2fdc0843441c0511cd47f6: Commit message length for 'foo' (10) exceeds length limit (>= 10)
-  remote: 
-  remote:   Debug context:
-  remote:     "hooks failed:\nlimit_commit_message_length for 6ef9fe6a13fa92ed3a2fdc0843441c0511cd47f6: Commit message length for 'foo' (10) exceeds length limit (>= 10)"
   abort: unexpected EOL, expected netstring digit
   [255]
 
@@ -66,12 +59,5 @@ Commit message too long (UTF-8 multibyte characters) - should fail
   remote:   Error:
   remote:     hooks failed:
   remote:     limit_commit_message_length for e363a5d266639d657f163422864c1e0259f88760: Commit message length for 'title' (39) exceeds length limit (>= 10)
-  remote: 
-  remote:   Root cause:
-  remote:     hooks failed:
-  remote:     limit_commit_message_length for e363a5d266639d657f163422864c1e0259f88760: Commit message length for 'title' (39) exceeds length limit (>= 10)
-  remote: 
-  remote:   Debug context:
-  remote:     "hooks failed:\nlimit_commit_message_length for e363a5d266639d657f163422864c1e0259f88760: Commit message length for 'title' (39) exceeds length limit (>= 10)"
   abort: unexpected EOL, expected netstring digit
   [255]

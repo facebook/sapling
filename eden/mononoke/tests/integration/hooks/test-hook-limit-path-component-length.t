@@ -36,13 +36,6 @@ S200449
   remote:   Error:
   remote:     hooks failed:
   remote:     limit_path_length for 9af0f6fef03e3490dddf78cc54e01e787d8a0046: Path component length for "GQLG:Intern::PlatformToolViewerContextCallsiteMigrationRuleChangeRuleDescriptionResponsePayload::EntPlatformToolViewerContextCallsiteMigrationRuleAction::genPerformGraphQLPlatformToolViewerContextCallsiteMigrationRuleChangeRuleDescriptionMutationType.php.i" (256) exceeds length limit (>= 255)
-  remote: 
-  remote:   Root cause:
-  remote:     hooks failed:
-  remote:     limit_path_length for 9af0f6fef03e3490dddf78cc54e01e787d8a0046: Path component length for "GQLG:Intern::PlatformToolViewerContextCallsiteMigrationRuleChangeRuleDescriptionResponsePayload::EntPlatformToolViewerContextCallsiteMigrationRuleAction::genPerformGraphQLPlatformToolViewerContextCallsiteMigrationRuleChangeRuleDescriptionMutationType.php.i" (256) exceeds length limit (>= 255)
-  remote: 
-  remote:   Debug context:
-  remote:     "hooks failed:\nlimit_path_length for 9af0f6fef03e3490dddf78cc54e01e787d8a0046: Path component length for \"GQLG:Intern::PlatformToolViewerContextCallsiteMigrationRuleChangeRuleDescriptionResponsePayload::EntPlatformToolViewerContextCallsiteMigrationRuleAction::genPerformGraphQLPlatformToolViewerContextCallsiteMigrationRuleChangeRuleDescriptionMutationType.php.i\" (256) exceeds length limit (>= 255)"
   abort: unexpected EOL, expected netstring digit
   [255]
 

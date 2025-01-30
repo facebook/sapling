@@ -68,13 +68,6 @@ fast-forward the bookmark over a commit that fails the hook
   remote:   Error:
   remote:     hooks failed:
   remote:     limit_filesize for 5e6585e50f1bf5a236028609e131851379bb311a: File size limit is 10 bytes. You tried to push file large that is over the limit (14 bytes). This limit is enforced for files matching the following regex: ".*". See https://fburl.com/landing_big_diffs for instructions.
-  remote: 
-  remote:   Root cause:
-  remote:     hooks failed:
-  remote:     limit_filesize for 5e6585e50f1bf5a236028609e131851379bb311a: File size limit is 10 bytes. You tried to push file large that is over the limit (14 bytes). This limit is enforced for files matching the following regex: ".*". See https://fburl.com/landing_big_diffs for instructions.
-  remote: 
-  remote:   Debug context:
-  remote:     "hooks failed:\nlimit_filesize for 5e6585e50f1bf5a236028609e131851379bb311a: File size limit is 10 bytes. You tried to push file large that is over the limit (14 bytes). This limit is enforced for files matching the following regex: \".*\". See https://fburl.com/landing_big_diffs for instructions."
   abort: unexpected EOL, expected netstring digit
   [255]
 
@@ -89,36 +82,10 @@ attempt a non-fast-forward move, it should fail
   remote: Command failed
   remote:   Error:
   remote:     While doing a push
-  remote: 
-  remote:   Root cause:
-  remote:     Non fast-forward bookmark move of 'master_bookmark' from cbe5624248da659ef8f938baaf65796e68252a0a735e885a814b94f38b901d5b to 2b7843b3fb41a99743420b26286cc5e7bc94ebf7576eaf1bbceb70cd36ffe8b0
-  remote: 
-  remote:   Caused by:
-  remote:     Failed to fast-forward bookmark (set pushvar NON_FAST_FORWARD=true for a non-fast-forward move)
-  remote:   Caused by:
-  remote:     Non fast-forward bookmark move of 'master_bookmark' from cbe5624248da659ef8f938baaf65796e68252a0a735e885a814b94f38b901d5b to 2b7843b3fb41a99743420b26286cc5e7bc94ebf7576eaf1bbceb70cd36ffe8b0
-  remote: 
-  remote:   Debug context:
-  remote:     Error {
-  remote:         context: "While doing a push",
-  remote:         source: Error {
-  remote:             context: "Failed to fast-forward bookmark (set pushvar NON_FAST_FORWARD=true for a non-fast-forward move)",
-  remote:             source: NonFastForwardMove {
-  remote:                 bookmark: BookmarkKey {
-  remote:                     name: BookmarkName {
-  remote:                         bookmark: "master_bookmark",
-  remote:                     },
-  remote:                     category: Branch,
-  remote:                 },
-  remote:                 from: ChangesetId(
-  remote:                     Blake2(cbe5624248da659ef8f938baaf65796e68252a0a735e885a814b94f38b901d5b),
-  remote:                 ),
-  remote:                 to: ChangesetId(
-  remote:                     Blake2(2b7843b3fb41a99743420b26286cc5e7bc94ebf7576eaf1bbceb70cd36ffe8b0),
-  remote:                 ),
-  remote:             },
-  remote:         },
-  remote:     }
+  remote:     
+  remote:     Caused by:
+  remote:         0: Failed to fast-forward bookmark (set pushvar NON_FAST_FORWARD=true for a non-fast-forward move)
+  remote:         1: Non fast-forward bookmark move of 'master_bookmark' from cbe5624248da659ef8f938baaf65796e68252a0a735e885a814b94f38b901d5b to 2b7843b3fb41a99743420b26286cc5e7bc94ebf7576eaf1bbceb70cd36ffe8b0
   abort: unexpected EOL, expected netstring digit
   [255]
 
@@ -131,13 +98,6 @@ allow the non-forward move
   remote:   Error:
   remote:     hooks failed:
   remote:     limit_filesize for 18c1f749e0296aca8bbb023822506c1eff9bc8a9: File size limit is 10 bytes. You tried to push file large that is over the limit (14 bytes). This limit is enforced for files matching the following regex: ".*". See https://fburl.com/landing_big_diffs for instructions.
-  remote: 
-  remote:   Root cause:
-  remote:     hooks failed:
-  remote:     limit_filesize for 18c1f749e0296aca8bbb023822506c1eff9bc8a9: File size limit is 10 bytes. You tried to push file large that is over the limit (14 bytes). This limit is enforced for files matching the following regex: ".*". See https://fburl.com/landing_big_diffs for instructions.
-  remote: 
-  remote:   Debug context:
-  remote:     "hooks failed:\nlimit_filesize for 18c1f749e0296aca8bbb023822506c1eff9bc8a9: File size limit is 10 bytes. You tried to push file large that is over the limit (14 bytes). This limit is enforced for files matching the following regex: \".*\". See https://fburl.com/landing_big_diffs for instructions."
   abort: unexpected EOL, expected netstring digit
   [255]
 
@@ -155,13 +115,6 @@ fails the hook
   remote:   Error:
   remote:     hooks failed:
   remote:     limit_filesize for 1cb9b9c4b7dd2e82083766050d166fffe209df6a: File size limit is 10 bytes. You tried to push file large that is over the limit (14 bytes). This limit is enforced for files matching the following regex: ".*". See https://fburl.com/landing_big_diffs for instructions.
-  remote: 
-  remote:   Root cause:
-  remote:     hooks failed:
-  remote:     limit_filesize for 1cb9b9c4b7dd2e82083766050d166fffe209df6a: File size limit is 10 bytes. You tried to push file large that is over the limit (14 bytes). This limit is enforced for files matching the following regex: ".*". See https://fburl.com/landing_big_diffs for instructions.
-  remote: 
-  remote:   Debug context:
-  remote:     "hooks failed:\nlimit_filesize for 1cb9b9c4b7dd2e82083766050d166fffe209df6a: File size limit is 10 bytes. You tried to push file large that is over the limit (14 bytes). This limit is enforced for files matching the following regex: \".*\". See https://fburl.com/landing_big_diffs for instructions."
   abort: unexpected EOL, expected netstring digit
   [255]
 

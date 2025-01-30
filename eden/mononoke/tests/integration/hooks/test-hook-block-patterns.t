@@ -38,13 +38,6 @@ Has marker in the title
   remote:   Error:
   remote:     hooks failed:
   remote:     block_commit_message_pattern for 228cf1cc53cb54cea0499f899fe8063b07b42e01: Message contains [@]nocommit (re)
-  remote: 
-  remote:   Root cause:
-  remote:     hooks failed:
-  remote:     block_commit_message_pattern for 228cf1cc53cb54cea0499f899fe8063b07b42e01: Message contains [@]nocommit (re)
-  remote: 
-  remote:   Debug context:
-  remote:     "hooks failed:\\nblock_commit_message_pattern for 228cf1cc53cb54cea0499f899fe8063b07b42e01: Message contains [@]nocommit" (re)
   abort: unexpected EOL, expected netstring digit
   [255]
   $ hg hide -q .
@@ -60,12 +53,5 @@ Has marker in a file, should fail
   remote:   Error:
   remote:     hooks failed:
   remote:     block_content_pattern for b950c81d785b1d845bd12055189cb3b63c9c8a1b: File contains [@]nocommit: foo (re)
-  remote: 
-  remote:   Root cause:
-  remote:     hooks failed:
-  remote:     block_content_pattern for b950c81d785b1d845bd12055189cb3b63c9c8a1b: File contains [@]nocommit: foo (re)
-  remote: 
-  remote:   Debug context:
-  remote:     "hooks failed:\\nblock_content_pattern for b950c81d785b1d845bd12055189cb3b63c9c8a1b: File contains [@]nocommit: foo" (re)
   abort: unexpected EOL, expected netstring digit
   [255]

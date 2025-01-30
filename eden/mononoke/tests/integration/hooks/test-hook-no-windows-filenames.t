@@ -39,13 +39,6 @@
   remote:   Error:
   remote:     hooks failed:
   remote:     no_windows_filenames for 0a31cb8056d10d69d6652e754aeee9ecdd5f9e7b: ABORT: Illegal windows filename: COM5. Name and path of file in windows should not match regex (^(?i)((((com|lpt)\d)|con|prn|aux|nul))($|\.))|<|>|:|"|/|\\|\||\?|\*|[\x00-\x1F]|(\.| )$
-  remote: 
-  remote:   Root cause:
-  remote:     hooks failed:
-  remote:     no_windows_filenames for 0a31cb8056d10d69d6652e754aeee9ecdd5f9e7b: ABORT: Illegal windows filename: COM5. Name and path of file in windows should not match regex (^(?i)((((com|lpt)\d)|con|prn|aux|nul))($|\.))|<|>|:|"|/|\\|\||\?|\*|[\x00-\x1F]|(\.| )$
-  remote: 
-  remote:   Debug context:
-  remote:     "hooks failed:\nno_windows_filenames for 0a31cb8056d10d69d6652e754aeee9ecdd5f9e7b: ABORT: Illegal windows filename: COM5. Name and path of file in windows should not match regex (^(?i)((((com|lpt)\\d)|con|prn|aux|nul))($|\\.))|<|>|:|\"|/|\\\\|\\||\\?|\\*|[\\x00-\\x1F]|(\\.| )$"
   abort: unexpected EOL, expected netstring digit
   [255]
 
@@ -60,13 +53,6 @@
   remote:   Error:
   remote:     hooks failed:
   remote:     no_windows_filenames for 7e7f8fb54a0b8f692fbf224a33476b864f11dfe9: ABORT: Illegal windows filename: nul.txt. Name and path of file in windows should not match regex (^(?i)((((com|lpt)\d)|con|prn|aux|nul))($|\.))|<|>|:|"|/|\\|\||\?|\*|[\x00-\x1F]|(\.| )$
-  remote: 
-  remote:   Root cause:
-  remote:     hooks failed:
-  remote:     no_windows_filenames for 7e7f8fb54a0b8f692fbf224a33476b864f11dfe9: ABORT: Illegal windows filename: nul.txt. Name and path of file in windows should not match regex (^(?i)((((com|lpt)\d)|con|prn|aux|nul))($|\.))|<|>|:|"|/|\\|\||\?|\*|[\x00-\x1F]|(\.| )$
-  remote: 
-  remote:   Debug context:
-  remote:     "hooks failed:\nno_windows_filenames for 7e7f8fb54a0b8f692fbf224a33476b864f11dfe9: ABORT: Illegal windows filename: nul.txt. Name and path of file in windows should not match regex (^(?i)((((com|lpt)\\d)|con|prn|aux|nul))($|\\.))|<|>|:|\"|/|\\\\|\\||\\?|\\*|[\\x00-\\x1F]|(\\.| )$"
   abort: unexpected EOL, expected netstring digit
   [255]
 
@@ -82,13 +68,6 @@
   remote:   Error:
   remote:     hooks failed:
   remote:     no_windows_filenames for 49604693a23c85a9ee0f6036d330b535842610dc: ABORT: Illegal windows filename: dir/CoN.txt. Name and path of file in windows should not match regex (^(?i)((((com|lpt)\d)|con|prn|aux|nul))($|\.))|<|>|:|"|/|\\|\||\?|\*|[\x00-\x1F]|(\.| )$
-  remote: 
-  remote:   Root cause:
-  remote:     hooks failed:
-  remote:     no_windows_filenames for 49604693a23c85a9ee0f6036d330b535842610dc: ABORT: Illegal windows filename: dir/CoN.txt. Name and path of file in windows should not match regex (^(?i)((((com|lpt)\d)|con|prn|aux|nul))($|\.))|<|>|:|"|/|\\|\||\?|\*|[\x00-\x1F]|(\.| )$
-  remote: 
-  remote:   Debug context:
-  remote:     "hooks failed:\nno_windows_filenames for 49604693a23c85a9ee0f6036d330b535842610dc: ABORT: Illegal windows filename: dir/CoN.txt. Name and path of file in windows should not match regex (^(?i)((((com|lpt)\\d)|con|prn|aux|nul))($|\\.))|<|>|:|\"|/|\\\\|\\||\\?|\\*|[\\x00-\\x1F]|(\\.| )$"
   abort: unexpected EOL, expected netstring digit
   [255]
 
@@ -128,12 +107,5 @@
   remote:   Error:
   remote:     hooks failed:
   remote:     no_windows_filenames for 115c8cee824903baec5607a5b5d731f4a92e5859: ABORT: Illegal windows filename: con/foo. Name and path of file in windows should not match regex (^(?i)((((com|lpt)\d)|con|prn|aux|nul))($|\.))|<|>|:|"|/|\\|\||\?|\*|[\x00-\x1F]|(\.| )$
-  remote: 
-  remote:   Root cause:
-  remote:     hooks failed:
-  remote:     no_windows_filenames for 115c8cee824903baec5607a5b5d731f4a92e5859: ABORT: Illegal windows filename: con/foo. Name and path of file in windows should not match regex (^(?i)((((com|lpt)\d)|con|prn|aux|nul))($|\.))|<|>|:|"|/|\\|\||\?|\*|[\x00-\x1F]|(\.| )$
-  remote: 
-  remote:   Debug context:
-  remote:     "hooks failed:\nno_windows_filenames for 115c8cee824903baec5607a5b5d731f4a92e5859: ABORT: Illegal windows filename: con/foo. Name and path of file in windows should not match regex (^(?i)((((com|lpt)\\d)|con|prn|aux|nul))($|\\.))|<|>|:|\"|/|\\\\|\\||\\?|\\*|[\\x00-\\x1F]|(\\.| )$"
   abort: unexpected EOL, expected netstring digit
   [255]

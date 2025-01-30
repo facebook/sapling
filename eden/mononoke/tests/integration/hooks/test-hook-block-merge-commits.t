@@ -56,13 +56,6 @@ Should fail
   remote:   Error:
   remote:     hooks failed:
   remote:     block_merge_commits for abc80faa8edf0e540ee85dafdf80bce11f68743f: You must not commit merge commits
-  remote: 
-  remote:   Root cause:
-  remote:     hooks failed:
-  remote:     block_merge_commits for abc80faa8edf0e540ee85dafdf80bce11f68743f: You must not commit merge commits
-  remote: 
-  remote:   Debug context:
-  remote:     "hooks failed:\nblock_merge_commits for abc80faa8edf0e540ee85dafdf80bce11f68743f: You must not commit merge commits"
   abort: unexpected EOL, expected netstring digit
   [255]
 
