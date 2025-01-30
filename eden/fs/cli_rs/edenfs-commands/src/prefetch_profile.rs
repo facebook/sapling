@@ -515,12 +515,10 @@ impl PrefetchCmd {
             })?;
 
         if if_active && !checkout_config.predictive_prefetch_is_active() {
-            if options.options.verbose {
-                println!(
-                    "Predictive prefetch profiles have not been activated and \
-                    --if-active was specified. Skipping fetch."
-                );
-            }
+            eprintln!(
+                "Predictive prefetch profiles have not been activated and \
+                --if-active was specified. Skipping fetch."
+            );
             return Ok(0);
         }
 
