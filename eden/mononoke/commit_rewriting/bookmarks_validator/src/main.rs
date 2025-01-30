@@ -19,7 +19,6 @@ use async_trait::async_trait;
 use blobstore_factory::MetadataSqlFactory;
 use bookmarks::BookmarkKey;
 use bookmarks::Freshness;
-use cached_config::ConfigStore;
 use clientinfo::ClientEntryPoint;
 use clientinfo::ClientInfo;
 use cmdlib::args;
@@ -51,7 +50,6 @@ use slog::error;
 use slog::info;
 use slog::Logger;
 use stats::prelude::*;
-use tokio::runtime::Runtime;
 
 define_stats! {
     prefix = "mononoke.bookmark_validator";
@@ -71,7 +69,6 @@ type Repo = cross_repo_sync::ConcreteRepo;
 pub struct BookmarkValidateProcess {
     matches: Arc<MononokeMatches<'static>>,
     fb: FacebookInit,
-    _runtime: Runtime,
 }
 
 impl BookmarkValidateProcess {
@@ -84,11 +81,7 @@ impl BookmarkValidateProcess {
             .build();
         let (matches, _runtime) = app.get_matches(fb)?;
         let matches = Arc::new(matches);
-        Ok(Self {
-            matches,
-            fb,
-            _runtime,
-        })
+        Ok(Self { matches, fb })
     }
 }
 
@@ -146,7 +139,6 @@ impl RepoShardedProcess for BookmarkValidateProcess {
             syncers,
             ctx,
             env.clone(),
-            config_store,
             source_repo_name,
             target_repo_name,
         );
@@ -161,7 +153,6 @@ pub struct BookmarkValidateProcessExecutor {
     syncers: Syncers<Repo>,
     ctx: CoreContext,
     env: Arc<MononokeEnvironment>,
-    config_store: ConfigStore,
     cancellation_requested: Arc<AtomicBool>,
     source_repo_name: String,
     target_repo_name: String,
@@ -172,7 +163,6 @@ impl BookmarkValidateProcessExecutor {
         syncers: Syncers<Repo>,
         ctx: CoreContext,
         env: Arc<MononokeEnvironment>,
-        config_store: ConfigStore,
         source_repo_name: String,
         target_repo_name: String,
     ) -> Self {
@@ -180,7 +170,6 @@ impl BookmarkValidateProcessExecutor {
             syncers,
             ctx,
             env,
-            config_store,
             source_repo_name,
             target_repo_name,
             cancellation_requested: Arc::new(AtomicBool::new(false)),
@@ -201,7 +190,6 @@ impl RepoShardedProcessExecutor for BookmarkValidateProcessExecutor {
             self.ctx.clone(),
             &self.env,
             self.syncers.clone(),
-            &self.config_store,
             Arc::clone(&self.cancellation_requested),
         )
         .await
@@ -275,13 +263,7 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
                 return Err(format_err!("Source repo must be a large repo!"));
             }
             helpers::block_execute(
-                loop_forever(
-                    ctx,
-                    env,
-                    syncers,
-                    config_store,
-                    Arc::new(AtomicBool::new(false)),
-                ),
+                loop_forever(ctx, env, syncers, Arc::new(AtomicBool::new(false))),
                 fb,
                 APP_NAME,
                 &logger,
@@ -310,7 +292,6 @@ async fn loop_forever<R: CrossRepo>(
     ctx: CoreContext,
     env: &Arc<MononokeEnvironment>,
     syncers: Syncers<R>,
-    _config_store: &ConfigStore,
     cancellation_requested: Arc<AtomicBool>,
 ) -> Result<(), Error> {
     let large_repo = syncers.large_to_small.get_large_repo();
