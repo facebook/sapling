@@ -126,6 +126,7 @@ use metaconfig_types::BlobConfig;
 use metaconfig_types::CommonConfig;
 use metaconfig_types::MetadataDatabaseConfig;
 use metaconfig_types::Redaction;
+#[cfg(fbcode_build)]
 use metaconfig_types::RemoteDerivationConfig;
 use metaconfig_types::RepoConfig;
 use metaconfig_types::RepoReadOnly;
@@ -214,6 +215,7 @@ use zeus_client::zeus_cpp_client::ZeusCppClient;
 use zeus_client::ZeusClient;
 
 const DERIVED_DATA_LEASE: &str = "derived-data-lease";
+#[cfg(fbcode_build)]
 const ZEUS_CLIENT_ID: &str = "mononoke";
 
 define_stats! {
@@ -1913,6 +1915,7 @@ fn build_scuba(
     Ok(scuba)
 }
 
+#[cfg(fbcode_build)]
 fn get_derivation_client(
     fb: FacebookInit,
     remote_derivation_options: RemoteDerivationOptions,
@@ -1921,7 +1924,6 @@ fn get_derivation_client(
 ) -> Result<Option<Arc<dyn DerivationClient>>> {
     let derivation_service_client: Option<Arc<dyn DerivationClient>> =
         if remote_derivation_options.derive_remotely {
-            #[cfg(fbcode_build)]
             {
                 match &repo_config.derived_data_config.remote_derivation_config {
                     Some(RemoteDerivationConfig::ShardManagerTier(shard_manager_tier)) => {
@@ -1940,13 +1942,18 @@ fn get_derivation_client(
                     None => None,
                 }
             }
-            #[cfg(not(fbcode_build))]
-            {
-                let _ = fb;
-                None
-            }
         } else {
             None
         };
     Ok(derivation_service_client)
+}
+
+#[cfg(not(fbcode_build))]
+fn get_derivation_client(
+    _fb: FacebookInit,
+    _remote_derivation_options: RemoteDerivationOptions,
+    _repo_config: &ArcRepoConfig,
+    _repo_name: &str,
+) -> Result<Option<Arc<dyn DerivationClient>>> {
+    Ok(None)
 }
