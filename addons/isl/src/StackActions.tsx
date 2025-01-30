@@ -14,7 +14,6 @@ import {shouldShowSubmitStackConfirmation, useShowConfirmSubmitStack} from './Co
 import {HighlightCommitsWhileHovering} from './HighlightedCommits';
 import {OperationDisabledButton} from './OperationDisabledButton';
 import {showSuggestedRebaseForStack, SuggestedRebaseButton} from './SuggestedRebase';
-import {hasExperimentalFeatures} from './atoms/experimentalFeatureAtoms';
 import {codeReviewProvider, allDiffSummaries} from './codeReview/CodeReviewInfo';
 import {SyncStatus, syncStatusAtom} from './codeReview/syncStatus';
 import {T, t} from './i18n';
@@ -318,14 +317,9 @@ function StackEditButton({info}: {info: DagCommitInfo}): React.ReactElement | nu
 }
 
 export function AbsorbButton() {
-  const experimentalFeatures = useAtomValue(hasExperimentalFeatures);
   const selection = useUncommittedSelection();
   const dag = useAtomValue(dagWithPreviews);
   const [[, stackHashes], setStackIntentionHashes] = useAtom(editingStackIntentionHashes);
-
-  if (!experimentalFeatures) {
-    return null;
-  }
 
   let disableReason = null;
   const dot = dag.resolve('.');

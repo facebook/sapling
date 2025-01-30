@@ -26,7 +26,7 @@ const localExperimentalFeatures = localStorageBackedAtom<number>(
  * List of all currently enabled experimental features, as UI labels.
  * UI setting to enable experimental features is only shown if this list is non-empty.
  */
-export const currentExperimentalFeaturesList: Array<string> = [t('Interactive Absorb')];
+export const currentExperimentalFeaturesList: Array<string> = [];
 
 /**
  * Whether experimental features are enabled.
