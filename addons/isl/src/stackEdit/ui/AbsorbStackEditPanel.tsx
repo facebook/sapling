@@ -180,7 +180,7 @@ export function AbsorbStackEditPanel() {
           <RenderDag
             className="absorb-dag"
             dag={dag}
-            renderCommit={RenderCommit}
+            renderCommit={renderCommit}
             renderCommitExtras={renderCommitExtras}
             renderGlyph={RenderGlyph}
             subset={subset}
@@ -301,7 +301,13 @@ function relevantSubset(stack: CommitStackState, dag: Dag) {
 
 // NOTE: To avoid re-render, the "renderCommit" and "renderCommitExtras" functions
 // need to be "static" instead of anonymous functions.
-function RenderCommit(info: DagCommitInfo) {
+// Note this is a regular function. To use React hooks, return a React component.
+function renderCommit(info: DagCommitInfo) {
+  return <RenderCommit info={info} />;
+}
+
+function RenderCommit(props: {info: DagCommitInfo}) {
+  const {info} = props;
   const revs = useAtomValue(candidateDropTargetRevs);
   const rev = info.stackRev;
   const fadeout = revs != null && rev != null && revs.includes(rev) === false;

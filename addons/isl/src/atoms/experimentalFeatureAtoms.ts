@@ -5,7 +5,6 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-import {t} from '../i18n';
 import {configBackedAtom, localStorageBackedAtom} from '../jotaiUtils';
 import {atom} from 'jotai';
 
