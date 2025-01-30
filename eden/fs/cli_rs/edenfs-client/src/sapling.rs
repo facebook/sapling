@@ -7,9 +7,27 @@
 
 use std::fs::read_to_string;
 use std::path::Path;
+use std::process::Stdio;
 
+use tokio::io::AsyncBufReadExt;
+use tokio::io::BufReader;
 use tokio::process::Command;
 
+#[derive(Debug, PartialEq)]
+pub enum SaplingStatus {
+    Modified,
+    Added,
+    Removed,
+    Missing,
+    NotTracked,
+}
+
+pub enum SaplingGetStatusResult {
+    Normal(Vec<(SaplingStatus, String)>),
+    TooManyChanges,
+}
+
+#[allow(dead_code)]
 pub fn is_fbsource_checkout(mount_point: &Path) -> bool {
     let project_id_path = mount_point.join(".projectid");
     let project_id = read_to_string(project_id_path).ok();
@@ -56,6 +74,103 @@ pub async fn is_commit_in_repo(commit_id: &str) -> anyhow::Result<bool> {
         .output()
         .await?;
     Ok(output.status.success())
+}
+
+pub async fn get_mergebase(commit: &str, mergegase_with: &str) -> anyhow::Result<Option<String>> {
+    let output = Command::new("sl")
+        .env("HGPLAIN", "1")
+        .args([
+            "log",
+            "-T",
+            "{node}",
+            "-r",
+            format!("ancestor({}, {})", commit, mergegase_with).as_str(),
+        ])
+        .output()
+        .await?;
+
+    let mergebase = String::from_utf8(output.stdout)?;
+    if mergebase.is_empty() {
+        Ok(None)
+    } else {
+        Ok(Some(mergebase))
+    }
+}
+
+// Get status between two revisions. If second is None, then it is the working copy.
+// Limit the number of results to limit_results. If the number of results is greater than
+// limit_results return TooManyResults.
+pub async fn get_status(
+    first: &str,
+    second: Option<&str>,
+    limit_results: usize,
+) -> anyhow::Result<SaplingGetStatusResult> {
+    let mut args = vec!["status", "-mardu", "--rev", first];
+    if let Some(second) = second {
+        args.push("--rev");
+        args.push(second);
+    }
+
+    let mut output = Command::new("sl")
+        .env("HGPLAIN", "1")
+        .args(args)
+        .stdout(Stdio::piped())
+        .spawn()?;
+
+    let stdout = output
+        .stdout
+        .take()
+        .ok_or_else(|| anyhow::anyhow!("Failed to read stdout when invoking 'sl status'."))?;
+    let reader = BufReader::new(stdout);
+
+    let mut status = vec![];
+    let mut lines = reader.lines();
+    while let Some(line) = lines.next_line().await? {
+        if let Some(status_line) = process_one_status_line(&line)? {
+            if status.len() >= limit_results {
+                return Ok(SaplingGetStatusResult::TooManyChanges);
+            }
+            status.push(status_line);
+        }
+    }
+
+    Ok(SaplingGetStatusResult::Normal(status))
+}
+
+//
+// Single line looks like:
+//    M fbcode/buck2/app/buck2_file_watcher/src/edenfs/sapling.rs
+//    A fbcode/buck2/app/buck2_file_watcher/src/edenfs/sapling.rs
+//    R fbcode/buck2/app/buck2_file_watcher/src/edenfs/sapling.rs
+//    ! fbcode/buck2/app/buck2_file_watcher/src/edenfs/sapling.rs
+//    ? fbcode/buck2/app/buck2_file_watcher/src/edenfs/sapling.rs
+//
+// Where:
+//   M = modified
+//   A = added
+//   R = removed
+//   C = clean
+//   ! = missing (deleted by a non-sl command, but still tracked)
+//   ? = not tracked
+//   I = ignored
+//     = origin of the previous file (with --copies)
+// Note:
+//   Paths can have spaces, but are not quoted.
+fn process_one_status_line(line: &str) -> anyhow::Result<Option<(SaplingStatus, String)>> {
+    // Must include a status and at least one char path.
+    let mut parts = line.split_whitespace();
+    if let (Some(change), Some(path), None) = (parts.next(), parts.next(), parts.next()) {
+        Ok(match change {
+            "M" => Some((SaplingStatus::Modified, path.to_owned())),
+            "A" => Some((SaplingStatus::Added, path.to_owned())),
+            "R" => Some((SaplingStatus::Removed, path.to_owned())),
+            "!" => Some((SaplingStatus::Missing, path.to_owned())),
+            "?" => Some((SaplingStatus::NotTracked, path.to_owned())),
+            _ => None, // Skip all others
+        })
+    } else {
+        Err(anyhow::anyhow!("Invalid status line: {line}"))
+    }
 }
 
 #[cfg(test)]
@@ -107,6 +222,69 @@ mod tests {
         // timestamp should be 1738089317.028800, but we truncate to the nearest second
         let timestamp = get_commit_timestamp(FBSOURCE_COMMIT_ID).await?;
         assert_eq!(timestamp, 1738089317);
+        Ok(())
+    }
+
+    #[test]
+    fn test_process_one_status_line() -> anyhow::Result<()> {
+        assert_eq!(
+            process_one_status_line("M buck2/app/buck2_file_watcher/src/edenfs/sapling.rs")?,
+            Some((
+                SaplingStatus::Modified,
+                "buck2/app/buck2_file_watcher/src/edenfs/sapling.rs".to_owned()
+            ))
+        );
+
+        assert_eq!(
+            process_one_status_line("A buck2/app/buck2_file_watcher/src/edenfs/interface.rs")?,
+            Some((
+                SaplingStatus::Added,
+                "buck2/app/buck2_file_watcher/src/edenfs/interface.rs".to_owned()
+            ))
+        );
+
+        assert_eq!(
+            process_one_status_line("R buck2/app/buck2_file_watcher/src/edenfs/utils.rs")?,
+            Some((
+                SaplingStatus::Removed,
+                "buck2/app/buck2_file_watcher/src/edenfs/utils.rs".to_owned()
+            ))
+        );
+
+        assert_eq!(
+            process_one_status_line("! buck2/app/buck2_file_watcher/src/edenfs/sapling.rs")?,
+            Some((
+                SaplingStatus::Missing,
+                "buck2/app/buck2_file_watcher/src/edenfs/sapling.rs".to_owned()
+            ))
+        );
+
+        assert_eq!(
+            process_one_status_line("? buck2/app/buck2_file_watcher/src/edenfs/sapling.rs")?,
+            Some((
+                SaplingStatus::NotTracked,
+                "buck2/app/buck2_file_watcher/src/edenfs/sapling.rs".to_owned()
+            ))
+        );
+
+        // Invalid status - C is valid, but we ignore it.
+        assert_eq!(
+            process_one_status_line("C buck2/app/buck2_file_watcher/src/edenfs/sapling.rs")?,
+            None
+        );
+
+        // Invalid status - ignore
+        assert_eq!(process_one_status_line("Invalid status")?, None);
+
+        // Malformed status (single string)
+        assert!(process_one_status_line("MalformedStatus").is_err());
+
+        // Malformed status (no space)
+        assert!(
+            process_one_status_line("M:buck2/app/buck2_file_watcher/src/edenfs/sapling.rs")
+                .is_err()
+        );
+
         Ok(())
     }
 }
