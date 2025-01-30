@@ -86,11 +86,13 @@ pub struct GitMethodInfo {
 
 impl GitMethodInfo {
     pub fn variants_to_string(&self) -> String {
-        self.variants
+        let mut variants = self
+            .variants
             .iter()
             .map(|v| v.to_string())
-            .collect::<Vec<String>>()
-            .join(",")
+            .collect::<Vec<String>>();
+        variants.sort();
+        variants.join(",")
     }
 
     pub fn standard(repo: String, method: GitMethod) -> Self {
@@ -200,7 +202,7 @@ mod tests {
             method: GitMethod::Push,
             variants: vec![GitMethodVariant::Shallow, GitMethodVariant::Filter],
         };
-        assert_eq!(info.variants_to_string(), "shallow,filter");
+        assert_eq!(info.variants_to_string(), "filter,shallow");
 
         Ok(())
     }
