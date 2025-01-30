@@ -867,11 +867,15 @@ class TreeInode final : public InodeBaseMetadata<DirContents> {
    * A TreeInodeState is required as a way to ensure that contents_ lock is
    * being held to avoid races between invalidation during checkout and use
    * lookups.
+   *
+   * During a checkout ctx should be passed and live for the lifetime of this
+   * call. May be `nullptr` if the caller is not doing a checkout.
    */
   FOLLY_NODISCARD folly::Try<folly::Unit> invalidateChannelEntryCache(
       TreeInodeState&,
       PathComponentPiece name,
-      std::optional<InodeNumber> ino);
+      std::optional<InodeNumber> ino,
+      CheckoutContext* FOLLY_NULLABLE ctx);
 
   /**
    * Attempts to find the child inode or other identifying information about
