@@ -122,6 +122,10 @@ const styles = stylex.create({
   },
   commitTitle: {
     padding: 'var(--halfpad) var(--pad)',
+    transition: 'opacity 0.1s ease-out',
+  },
+  deemphasizeCommitTitle: {
+    opacity: 0.5,
   },
   inlineIcon: {
     verticalAlign: 'top',
@@ -176,7 +180,7 @@ export function AbsorbStackEditPanel() {
           <RenderDag
             className="absorb-dag"
             dag={dag}
-            renderCommit={renderCommit}
+            renderCommit={RenderCommit}
             renderCommitExtras={renderCommitExtras}
             renderGlyph={RenderGlyph}
             subset={subset}
@@ -297,12 +301,20 @@ function relevantSubset(stack: CommitStackState, dag: Dag) {
 
 // NOTE: To avoid re-render, the "renderCommit" and "renderCommitExtras" functions
 // need to be "static" instead of anonymous functions.
-function renderCommit(info: DagCommitInfo) {
+function RenderCommit(info: DagCommitInfo) {
+  const revs = useAtomValue(candidateDropTargetRevs);
+  const rev = info.stackRev;
+  const fadeout = revs != null && rev != null && revs.includes(rev) === false;
+
   if (info.phase === 'public') {
     return <div />;
   }
   // Just show the commit title for now.
-  return <div {...stylex.props(styles.commitTitle)}>{info.title}</div>;
+  return (
+    <div {...stylex.props(styles.commitTitle, fadeout && styles.deemphasizeCommitTitle)}>
+      {info.title}
+    </div>
+  );
 }
 
 function renderCommitExtras(info: DagCommitInfo) {
