@@ -104,9 +104,6 @@ uefisettings = { git = "https://github.com/linuxboot/uefisettings", rev = "f16da
 uefisettings_backend_thrift = { git = "https://github.com/linuxboot/uefisettings", rev = "f16daed1d2bd1216204fd24e876c6477d03aebb3" }
 warp = { git = "https://github.com/jdthomas/warp.git", rev = "c794232d182abaa3add8184e7d661e084cc516c5", features = ["tls"] }
 
-[patch."https://github.com/rust-vmm/vfio"]
-vfio-bindings = "0.3.1"
-
 [workspace]
 members = [
   ".",
