@@ -43,8 +43,6 @@ class DebugSubscribeTest(testcase.EdenRepoTest):
             self.mount,
             "--throttle",
             "5",
-            "--guard",
-            "1",
         )
         env["EDENFS_LOG"] = "edenfs=trace"
 

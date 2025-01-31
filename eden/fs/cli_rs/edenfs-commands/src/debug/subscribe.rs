@@ -114,11 +114,6 @@ pub struct SubscribeCmd {
     #[clap(short, long, default_value = "500")]
     /// [Unit: ms] number of milliseconds to wait between events
     throttle: u64,
-
-    #[clap(short, long, default_value = "15")]
-    /// [Unit: seconds] number of seconds to trigger an arbitrary check of
-    /// current journal position in case of event missing.
-    guard: u64,
 }
 
 fn handle_result(result: &ChangesSinceV2Result) -> Result<(), EdenFsError> {
@@ -173,7 +168,6 @@ impl crate::Subcommand for SubscribeCmd {
             .subscribe(
                 &self.mount_point,
                 self.throttle,
-                self.guard,
                 None,
                 false,
                 &None,
