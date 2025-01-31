@@ -286,6 +286,21 @@ impl Client {
         Ok(url)
     }
 
+    /// Build URL, POST, and deserialize a single response item.
+    async fn request_single<I, O>(&self, path: &str, data: I) -> Result<O, SaplingRemoteApiError>
+    where
+        I: ToWire,
+        <O as ToWire>::Wire: Send + DeserializeOwned + 'static,
+        O: ToWire + Send + 'static,
+    {
+        let url = self.build_url(path)?;
+        let request = self
+            .configure_request(self.inner.client.post(url))?
+            .cbor(&data.to_wire())
+            .map_err(SaplingRemoteApiError::RequestSerializationFailed)?;
+        self.fetch_single(request).await
+    }
+
     /// Add configured values to a request.
     fn configure_request(&self, mut req: Request) -> Result<Request, SaplingRemoteApiError> {
         // This method should probably not exist. Request configuration should flow
@@ -1123,17 +1138,14 @@ impl Client {
         reponame: String,
     ) -> Result<WorkspaceDataResponse, SaplingRemoteApiError> {
         tracing::info!("Requesting workspace {} in repo {} ", workspace, reponame);
-        let url = self.build_url(paths::CLOUD_WORKSPACE)?;
-        let workspace_req = CloudWorkspaceRequest {
-            workspace: workspace.to_string(),
-            reponame: reponame.to_string(),
-        };
-        let request = self
-            .configure_request(self.inner.client.post(url))?
-            .cbor(&workspace_req.to_wire())
-            .map_err(SaplingRemoteApiError::RequestSerializationFailed)?;
-
-        self.fetch_single::<WorkspaceDataResponse>(request).await
+        self.request_single(
+            paths::CLOUD_WORKSPACE,
+            CloudWorkspaceRequest {
+                workspace: workspace.to_string(),
+                reponame: reponame.to_string(),
+            },
+        )
+        .await
     }
 
     async fn cloud_workspaces_attempt(
@@ -1146,17 +1158,14 @@ impl Client {
             prefix,
             reponame
         );
-        let url = self.build_url(paths::CLOUD_WORKSPACES)?;
-        let workspace_req = CloudWorkspacesRequest {
-            prefix: prefix.to_string(),
-            reponame: reponame.to_string(),
-        };
-        let request = self
-            .configure_request(self.inner.client.post(url))?
-            .cbor(&workspace_req.to_wire())
-            .map_err(SaplingRemoteApiError::RequestSerializationFailed)?;
-
-        self.fetch_single::<WorkspacesDataResponse>(request).await
+        self.request_single(
+            paths::CLOUD_WORKSPACES,
+            CloudWorkspacesRequest {
+                prefix: prefix.to_string(),
+                reponame: reponame.to_string(),
+            },
+        )
+        .await
     }
 
     async fn cloud_references_attempt(
@@ -1168,13 +1177,7 @@ impl Client {
             data.workspace,
             data.reponame
         );
-        let url = self.build_url(paths::CLOUD_REFERENCES)?;
-        let request = self
-            .configure_request(self.inner.client.post(url))?
-            .cbor(&data.to_wire())
-            .map_err(SaplingRemoteApiError::RequestSerializationFailed)?;
-
-        self.fetch_single::<ReferencesDataResponse>(request).await
+        self.request_single(paths::CLOUD_REFERENCES, data).await
     }
 
     async fn cloud_update_references_attempt(
@@ -1186,13 +1189,8 @@ impl Client {
             data.workspace,
             data.reponame
         );
-        let url = self.build_url(paths::CLOUD_UPDATE_REFERENCES)?;
-        let request = self
-            .configure_request(self.inner.client.post(url))?
-            .cbor(&data.to_wire())
-            .map_err(SaplingRemoteApiError::RequestSerializationFailed)?;
-
-        self.fetch_single::<ReferencesDataResponse>(request).await
+        self.request_single(paths::CLOUD_UPDATE_REFERENCES, data)
+            .await
     }
 
     async fn cloud_smartlog_attempt(
@@ -1204,13 +1202,7 @@ impl Client {
             data.workspace,
             data.reponame
         );
-        let url = self.build_url(paths::CLOUD_SMARTLOG)?;
-        let request = self
-            .configure_request(self.inner.client.post(url))?
-            .cbor(&data.to_wire())
-            .map_err(SaplingRemoteApiError::RequestSerializationFailed)?;
-
-        self.fetch_single::<SmartlogDataResponse>(request).await
+        self.request_single(paths::CLOUD_SMARTLOG, data).await
     }
 
     async fn cloud_share_workspace_attempt(
@@ -1222,13 +1214,7 @@ impl Client {
             data.workspace,
             data.reponame
         );
-        let url = self.build_url(paths::CLOUD_SHARE_WORKSPACE)?;
-        let request = self
-            .configure_request(self.inner.client.post(url))?
-            .cbor(&data.to_wire())
-            .map_err(SaplingRemoteApiError::RequestSerializationFailed)?;
-
-        self.fetch_single::<CloudShareWorkspaceResponse>(request)
+        self.request_single(paths::CLOUD_SHARE_WORKSPACE, data)
             .await
     }
 
@@ -1241,13 +1227,7 @@ impl Client {
             data.workspace,
             data.reponame
         );
-        let url = self.build_url(paths::CLOUD_UPDATE_ARCHIVE)?;
-        let request = self
-            .configure_request(self.inner.client.post(url))?
-            .cbor(&data.to_wire())
-            .map_err(SaplingRemoteApiError::RequestSerializationFailed)?;
-
-        self.fetch_single::<UpdateArchiveResponse>(request).await
+        self.request_single(paths::CLOUD_UPDATE_ARCHIVE, data).await
     }
 
     async fn cloud_rename_workspace_attempt(
@@ -1259,13 +1239,8 @@ impl Client {
             data.workspace,
             data.reponame
         );
-        let url = self.build_url(paths::CLOUD_RENAME_WORKSPACE)?;
-        let request = self
-            .configure_request(self.inner.client.post(url))?
-            .cbor(&data.to_wire())
-            .map_err(SaplingRemoteApiError::RequestSerializationFailed)?;
-
-        self.fetch_single::<RenameWorkspaceResponse>(request).await
+        self.request_single(paths::CLOUD_RENAME_WORKSPACE, data)
+            .await
     }
 
     async fn cloud_smartlog_by_version_attempt(
@@ -1277,13 +1252,8 @@ impl Client {
             data.workspace,
             data.reponame
         );
-        let url = self.build_url(paths::CLOUD_SMARTLOG_BY_VERSION)?;
-        let request = self
-            .configure_request(self.inner.client.post(url))?
-            .cbor(&data.to_wire())
-            .map_err(SaplingRemoteApiError::RequestSerializationFailed)?;
-
-        self.fetch_single::<SmartlogDataResponse>(request).await
+        self.request_single(paths::CLOUD_SMARTLOG_BY_VERSION, data)
+            .await
     }
 
     async fn cloud_historical_versions_attempt(
@@ -1295,13 +1265,7 @@ impl Client {
             data.workspace,
             data.reponame
         );
-        let url = self.build_url(paths::CLOUD_HISTORICAL_VERSIONS)?;
-        let request = self
-            .configure_request(self.inner.client.post(url))?
-            .cbor(&data.to_wire())
-            .map_err(SaplingRemoteApiError::RequestSerializationFailed)?;
-
-        self.fetch_single::<HistoricalVersionsResponse>(request)
+        self.request_single(paths::CLOUD_HISTORICAL_VERSIONS, data)
             .await
     }
 
@@ -1314,13 +1278,7 @@ impl Client {
             data.workspace,
             data.reponame
         );
-        let url = self.build_url(paths::CLOUD_ROLLBACK_WORKSPACE)?;
-        let request = self
-            .configure_request(self.inner.client.post(url))?
-            .cbor(&data.to_wire())
-            .map_err(SaplingRemoteApiError::RequestSerializationFailed)?;
-
-        self.fetch_single::<RollbackWorkspaceResponse>(request)
+        self.request_single(paths::CLOUD_ROLLBACK_WORKSPACE, data)
             .await
     }
 }
