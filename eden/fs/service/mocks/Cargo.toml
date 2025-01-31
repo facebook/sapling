@@ -29,6 +29,9 @@ fb303_core_clients = { version = "0.0.0", git = "https://github.com/facebook/fb3
 fb303_core_mocks = { version = "0.0.0", git = "https://github.com/facebook/fb303.git", branch = "main" }
 fbthrift = { version = "0.0.1+unstable", git = "https://github.com/facebook/fbthrift.git", branch = "main" }
 futures = { version = "0.3.30", features = ["async-await", "compat"] }
+rust = { version = "0.0.1+unstable", git = "https://github.com/facebook/fbthrift.git", branch = "main" }
+rust_clients = { version = "0.0.1+unstable", git = "https://github.com/facebook/fbthrift.git", branch = "main" }
+rust_mocks = { version = "0.0.1+unstable", git = "https://github.com/facebook/fbthrift.git", branch = "main" }
 thrift = { version = "0.0.1+unstable", git = "https://github.com/facebook/fbthrift.git", branch = "main" }
 thrift__clients = { package = "thrift_clients", version = "0.1.0", path = "../clients" }
 thrift__types = { package = "thrift", version = "0.1.0", path = ".." }

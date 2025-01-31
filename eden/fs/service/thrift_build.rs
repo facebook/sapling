@@ -10,6 +10,7 @@ eden/fs/config/eden_config.thrift config_thrift //eden/fs/config:config_thrift-r
 eden/fs/service/eden.thrift crate //eden/fs/service:thrift-rust
 fb303/thrift/fb303_core.thrift fb303_core //fb303/thrift:fb303_core-rust
 thrift/annotation/cpp.thrift cpp //thrift/annotation:cpp-rust
+thrift/annotation/rust.thrift rust //thrift/annotation:rust-rust
 thrift/annotation/scope.thrift cpp->scope //thrift/annotation:scope-rust
 thrift/annotation/thrift.thrift thrift //thrift/annotation:thrift-rust
 ";

@@ -11,6 +11,7 @@ eden/fs/service/eden.thrift thrift //eden/fs/service:thrift-rust
 eden/fs/service/streamingeden.thrift crate //eden/fs/service:thrift-streaming-rust
 fb303/thrift/fb303_core.thrift thrift->fb303_core //fb303/thrift:fb303_core-rust
 thrift/annotation/cpp.thrift thrift->cpp //thrift/annotation:cpp-rust
+thrift/annotation/rust.thrift thrift->rust //thrift/annotation:rust-rust
 thrift/annotation/scope.thrift thrift->cpp->scope //thrift/annotation:scope-rust
 thrift/annotation/thrift.thrift thrift->thrift //thrift/annotation:thrift-rust
 ";
