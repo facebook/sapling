@@ -73,6 +73,7 @@ justknobs = { version = "0.1.0", git = "https://github.com/facebookexperimental/
 manifest = { version = "0.1.0", path = "../../manifest" }
 maplit = "1.0"
 megarepo_error = { version = "0.1.0", path = "../../megarepo_api/megarepo_error" }
+megarepolib = { version = "0.1.0", path = "../../commit_rewriting/megarepo" }
 mercurial_derivation = { version = "0.1.0", path = "../../derived_data/mercurial_derivation" }
 mercurial_types = { version = "0.1.0", path = "../../mercurial/types" }
 metaconfig_types = { version = "0.1.0", path = "../../metaconfig/types" }
@@ -121,6 +122,7 @@ walkdir = "2.3"
 
 [dev-dependencies]
 fbinit-tokio = { version = "0.1.2", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
+fixtures = { version = "0.1.0", path = "../../tests/fixtures" }
 mononoke_macros = { version = "0.1.0", path = "../../mononoke_macros" }
 test_repo_factory = { version = "0.1.0", path = "../../repo_factory/test_repo_factory" }
 tests_utils = { version = "0.1.0", path = "../../tests/utils" }

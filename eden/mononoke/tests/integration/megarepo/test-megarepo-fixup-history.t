@@ -78,7 +78,11 @@ Start mononoke server
   f72c4b95a6f2e49b28c830406a0921e00621615b174cefee9f9e31c57346ac5a
   4b4ada0c9b89b1d4679e18ddf2100d725d48721571363bbf527e78ab6dbf161d
 
-  $ REPOID=$FBS_REPOID  megarepo_tool merge cee330c0c3ab8ee70923d9b750e8fb56579e3be4db9fb41a54b63578c975bc8a f72c4b95a6f2e49b28c830406a0921e00621615b174cefee9f9e31c57346ac5a author "history fixup"  --mark-public --commit-date-rfc3339 "$COMMIT_DATE" --bookmark master_bookmark 2> /dev/null
+  $ REPOID=$FBS_REPOID mononoke_admin megarepo merge --repo-id 0 \
+  > -i cee330c0c3ab8ee70923d9b750e8fb56579e3be4db9fb41a54b63578c975bc8a \
+  > -i f72c4b95a6f2e49b28c830406a0921e00621615b174cefee9f9e31c57346ac5a \
+  > -a author -m "history fixup" --mark-public --commit-date-rfc3339 "$COMMIT_DATE" \
+  > --set-bookmark master_bookmark 2> /dev/null
 
   $ cd "$TESTTMP"/fbs-hg-cnt
   $ hg pull -q

@@ -42,7 +42,6 @@ pub const DELETION_CHUNK_SIZE: &str = "deletion-chunk-size";
 pub const DIFF_MAPPING_VERSIONS: &str = "diff-mapping-versions";
 pub const DRY_RUN: &str = "dry-run";
 pub const EVEN_CHUNK_SIZE: &str = "even-chunk-size";
-pub const FIRST_PARENT: &str = "first-parent";
 pub const GRADUAL_MERGE_PROGRESS: &str = "gradual-merge-progress";
 pub const GRADUAL_MERGE: &str = "gradual-merge";
 pub const GRADUAL_DELETE: &str = "gradual-delete";
@@ -56,7 +55,6 @@ pub const MAPPING_VERSION_NAME: &str = "mapping-version-name";
 pub const MARK_NOT_SYNCED_COMMAND: &str = "mark-not-synced";
 pub const MARK_PUBLIC: &str = "mark-public";
 pub const MAX_NUM_OF_MOVES_IN_COMMIT: &str = "max-num-of-moves-in-commit";
-pub const MERGE: &str = "merge";
 pub const MOVE: &str = "move";
 pub const ORIGIN_REPO: &str = "origin-repo";
 pub const OVERWRITE: &str = "overwrite";
@@ -68,7 +66,6 @@ pub const PATHS_FILE: &str = "paths-file";
 pub const PRE_DELETION_COMMIT: &str = "pre-deletion-commit";
 pub const PRE_MERGE_DELETE: &str = "pre-merge-delete";
 pub const RUN_MOVER: &str = "run-mover";
-pub const SECOND_PARENT: &str = "second-parent";
 pub const SELECT_PARENTS_AUTOMATICALLY: &str = "select-parents-automatically";
 pub const SOURCE_CHANGESET: &str = "source-changeset";
 pub const SYNC_COMMIT_AND_ANCESTORS: &str = "sync-commit-and-ancestors";
@@ -244,21 +241,6 @@ pub fn setup_app<'a, 'b>() -> MononokeClapApp<'a, 'b> {
         .arg(
             Arg::with_name(CHANGESET)
                 .help("a changeset hash or bookmark of move commit's parent")
-                .takes_value(true)
-                .required(true),
-        );
-
-    let merge_subcommand = SubCommand::with_name(MERGE)
-        .about("create a merge commit with given parents")
-        .arg(
-            Arg::with_name(FIRST_PARENT)
-                .help("first parent of a produced merge commit")
-                .takes_value(true)
-                .required(true),
-        )
-        .arg(
-            Arg::with_name(SECOND_PARENT)
-                .help("second parent of a produced merge commit")
                 .takes_value(true)
                 .required(true),
         );
@@ -716,7 +698,6 @@ pub fn setup_app<'a, 'b>() -> MononokeClapApp<'a, 'b> {
         .with_source_and_target_repos()
         .build()
         .subcommand(add_resulting_commit_args(move_subcommand))
-        .subcommand(add_resulting_commit_args(merge_subcommand))
         .subcommand(sync_diamond_subcommand)
         .subcommand(add_light_resulting_commit_args(pre_merge_delete_subcommand))
         .subcommand(history_fixup_delete_subcommand)

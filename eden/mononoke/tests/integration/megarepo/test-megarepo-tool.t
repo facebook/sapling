@@ -110,10 +110,9 @@ move things in ovrsource in a stack
   * created 7 commits, with the last commit * (glob)
 
 merge things in both repos
-  $ megarepo_tool merge fbsource_move ovrsource_move user "megarepo merge" --mark-public --commit-date-rfc3339 "$COMMIT_DATE" --bookmark master_bookmark
-  * using repo "repo" repoid RepositoryId(0) (glob)
-  * changeset resolved as: * (glob)
-  * changeset resolved as: * (glob)
+  $ mononoke_admin megarepo merge --repo-id 0 -B fbsource_move  \
+  > -B ovrsource_move -a user -m "megarepo merge" --mark-public  \
+  > --commit-date-rfc3339 "$COMMIT_DATE" --set-bookmark master_bookmark
   * Creating a merge commit (glob)
   * Checking if there are any path conflicts (glob)
   * Done checking path conflicts (glob)

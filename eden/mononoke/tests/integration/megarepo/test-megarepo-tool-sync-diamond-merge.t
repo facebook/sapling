@@ -59,13 +59,19 @@ blobimport hg servers repos into Mononoke repos
 
   $ export COMMIT_DATE="1985-09-04T00:00:00.00Z"
 move things in small repo with merge
-  $ megarepo_tool move 1 with_merge_master user "with merge move" --mark-public --commit-date-rfc3339 "$COMMIT_DATE" --bookmark with_merge_move --mapping-version-name TEST_VERSION_NAME &> /dev/null
+  $ megarepo_tool move 1 with_merge_master user "with merge move" --mark-public \
+  > --commit-date-rfc3339 "$COMMIT_DATE" --bookmark with_merge_move \
+  > --mapping-version-name TEST_VERSION_NAME &> /dev/null
 
 move things in another small repo
-  $ megarepo_tool move 2 another_master user "another move" --mark-public --commit-date-rfc3339 "$COMMIT_DATE" --bookmark another_move --mapping-version-name TEST_VERSION_NAME &> /dev/null
+  $ megarepo_tool move 2 another_master user "another move" --mark-public \
+  > --commit-date-rfc3339 "$COMMIT_DATE" --bookmark another_move \
+  > --mapping-version-name TEST_VERSION_NAME &> /dev/null
 
 merge things in both repos
-  $ megarepo_tool merge with_merge_move another_move user "megarepo merge" --mark-public --commit-date-rfc3339 "$COMMIT_DATE" --bookmark master_bookmark &> /dev/null
+  $ mononoke_admin megarepo merge --repo-id 0 -B with_merge_move -B another_move -a user \
+  > -m "megarepo merge" --mark-public --commit-date-rfc3339 "$COMMIT_DATE" \
+  > --set-bookmark master_bookmark &> /dev/null
 
 start mononoke server
   $ start_and_wait_for_mononoke_server

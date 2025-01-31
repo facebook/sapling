@@ -135,7 +135,6 @@ use crate::cli::DELETION_CHUNK_SIZE;
 use crate::cli::DIFF_MAPPING_VERSIONS;
 use crate::cli::DRY_RUN;
 use crate::cli::EVEN_CHUNK_SIZE;
-use crate::cli::FIRST_PARENT;
 use crate::cli::GRADUAL_DELETE;
 use crate::cli::GRADUAL_MERGE;
 use crate::cli::GRADUAL_MERGE_PROGRESS;
@@ -148,7 +147,6 @@ use crate::cli::MANUAL_COMMIT_SYNC;
 use crate::cli::MAPPING_VERSION_NAME;
 use crate::cli::MARK_NOT_SYNCED_COMMAND;
 use crate::cli::MAX_NUM_OF_MOVES_IN_COMMIT;
-use crate::cli::MERGE;
 use crate::cli::MOVE;
 use crate::cli::ORIGIN_REPO;
 use crate::cli::OVERWRITE;
@@ -160,7 +158,6 @@ use crate::cli::PATH_REGEX;
 use crate::cli::PRE_DELETION_COMMIT;
 use crate::cli::PRE_MERGE_DELETE;
 use crate::cli::RUN_MOVER;
-use crate::cli::SECOND_PARENT;
 use crate::cli::SELECT_PARENTS_AUTOMATICALLY;
 use crate::cli::SOURCE_CHANGESET;
 use crate::cli::SYNC_COMMIT_AND_ANCESTORS;
@@ -169,13 +166,11 @@ use crate::cli::TARGET_CHANGESET;
 use crate::cli::TO_MERGE_CS_ID;
 use crate::cli::VERSION;
 use crate::cli::WAIT_SECS;
-use crate::merging::perform_merge;
 
 mod catchup;
 mod cli;
 mod gradual_merge;
 mod manual_commit_sync;
-mod merging;
 mod sync_diamond_merge;
 
 #[derive(Clone)]
@@ -271,37 +266,6 @@ async fn run_move<'a>(
         .await?;
     }
     Ok(())
-}
-
-async fn run_merge<'a>(
-    ctx: &CoreContext,
-    matches: &MononokeMatches<'a>,
-    sub_m: &ArgMatches<'a>,
-) -> Result<(), Error> {
-    let first_parent = sub_m.value_of(FIRST_PARENT).unwrap().to_owned();
-    let second_parent = sub_m.value_of(SECOND_PARENT).unwrap().to_owned();
-    let resulting_changeset_args = cs_args_from_matches(sub_m)?;
-    let repo = args::not_shardmanager_compatible::open_repo::<Repo>(
-        ctx.fb,
-        &ctx.logger().clone(),
-        matches,
-    )
-    .await?;
-
-    let first_parent_fut = helpers::csid_resolve(ctx, &repo, first_parent);
-    let second_parent_fut = helpers::csid_resolve(ctx, &repo, second_parent);
-    let (first_parent, second_parent) = try_join(first_parent_fut, second_parent_fut).await?;
-
-    info!(ctx.logger(), "Creating a merge commit");
-    perform_merge(
-        ctx.clone(),
-        repo.clone(),
-        first_parent,
-        second_parent,
-        resulting_changeset_args,
-    )
-    .await
-    .map(|_| ())
 }
 
 async fn run_sync_diamond_merge<'a>(
@@ -1438,7 +1402,6 @@ fn main(fb: FacebookInit) -> Result<()> {
             (MARK_NOT_SYNCED_COMMAND, Some(sub_m)) => {
                 run_mark_not_synced(ctx, &matches, sub_m).await
             }
-            (MERGE, Some(sub_m)) => run_merge(ctx, &matches, sub_m).await,
             (MOVE, Some(sub_m)) => run_move(ctx, &matches, sub_m).await,
             (RUN_MOVER, Some(sub_m)) => run_mover(ctx, &matches, sub_m).await,
             (SYNC_COMMIT_AND_ANCESTORS, Some(sub_m)) => {
