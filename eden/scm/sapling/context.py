@@ -53,7 +53,6 @@ from .node import (
     wdirnodes,
     wdirrev,
 )
-from .pycompat import isint
 from .utils import subtreeutil
 
 bytes_or_lazy_bytes = Union[bytes, Callable[[], bytes]]
@@ -453,7 +452,7 @@ class changectx(basectx):
         self._repo = repo
 
         try:
-            if isint(changeid):
+            if isinstance(changeid, int):
                 changeid = scmutil.revf64decode(changeid)
                 self._node = repo.changelog.node(changeid)
                 return

@@ -19,6 +19,7 @@ import errno
 import operator
 import os
 import random
+import shlex
 import socket
 import ssl
 import struct
@@ -1895,7 +1896,7 @@ def debuginstall(ui, **opts) -> int:
     editor = util.expandpath(editor)
     fm.write("editor", _("checking commit editor (%s)\n"), editor)
     if editor != "internal:none":
-        cmdpath = util.findexe(pycompat.shlexsplit(editor)[0])
+        cmdpath = util.findexe(shlex.split(editor)[0])
         fm.condwrite(
             not cmdpath and editor == "vi",
             "vinotfound",

@@ -30,7 +30,6 @@ from . import (
     match as matchmod,
     pathutil,
     phases,
-    pycompat,
     revsetlang,
     similar,
     smartset,
@@ -41,7 +40,6 @@ from . import (
 )
 from .i18n import _
 from .node import hex, nullid, short, wdirid, wdirrev
-from .pycompat import isint
 
 if util.iswindows:
     from . import scmwindows as scmplatform
@@ -537,7 +535,7 @@ def revsingle(repo, revspec, default=".", localalias=None):
         return repo[default]
 
     # Used by amend/common calling rebase.rebase with non-string opts.
-    if isint(revspec):
+    if isinstance(revspec, int):
         return repo[revspec]
 
     l = revrange(repo, [revspec], localalias=localalias)
@@ -618,7 +616,7 @@ def revrange(repo, specs, localalias=None):
         return specs
     allspecs = []
     for spec in specs:
-        if isint(spec):
+        if isinstance(spec, int):
             # specs are usually strings. int means legacy code using rev
             # numbers. revsetlang no longer accepts int revs. Wrap it before
             # passing to revsetlang.

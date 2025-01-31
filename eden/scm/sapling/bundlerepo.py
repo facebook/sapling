@@ -38,7 +38,6 @@ from . import (
     mutation,
     pathutil,
     phases,
-    pycompat,
     revlog,
     util,
     vfs as vfsmod,
@@ -46,7 +45,6 @@ from . import (
 )
 from .i18n import _
 from .node import nullid
-from .pycompat import isint
 
 
 class bundlerevlog(revlog.revlog):
@@ -161,7 +159,7 @@ class bundlerevlog(revlog.revlog):
         """return an uncompressed revision of a given node or revision
         number.
         """
-        if isint(nodeorrev):
+        if isinstance(nodeorrev, int):
             rev = nodeorrev
             node = self.node(rev)
         else:
@@ -275,7 +273,7 @@ class bundlemanifest(bundlerevlog, manifest.manifestrevlog):
 
     def baserevision(self, nodeorrev):
         node = nodeorrev
-        if isint(node):
+        if isinstance(node, int):
             node = self.node(node)
 
         if node in self.fulltextcache:

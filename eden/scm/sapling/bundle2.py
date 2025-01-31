@@ -1207,7 +1207,7 @@ class bundlepart:
             outdebug(ui, "closing payload chunk")
             # abort current part payload
             yield _pack(_fpayloadsize, 0)
-            pycompat.raisewithtb(exc, tb)
+            exc.with_traceback(tb)
         # end of payload
         outdebug(ui, "closing payload chunk")
         yield _pack(_fpayloadsize, 0)

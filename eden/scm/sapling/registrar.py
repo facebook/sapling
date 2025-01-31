@@ -14,7 +14,6 @@ from __future__ import absolute_import
 
 from . import configitems, error, identity, pycompat, util
 
-
 # unlike the other registered items, config options are neither functions or
 # classes. Registering the option is just small function call.
 #
@@ -245,11 +244,11 @@ class command(_funcregistrarbase):
             # If the command already was in the table it is because it was an existing Rust command.
             # We should keep and show the documentation for the Rust command. Since some Rust commands still
             # fall back into the Python command in some scenarios, we cannot entirely keep the Rust function
-            if util.istest() and (pycompat.getdoc(func) or synopsis):
+            if util.istest() and (util.getdoc(func) or synopsis):
                 msg = 'duplicate help message for name: "%s"' % name
                 raise error.ProgrammingError(msg)
             prevfunc, *helpargs = self._table[name]
-            func.__rusthelp__ = pycompat.getdoc(prevfunc), *helpargs
+            func.__rusthelp__ = util.getdoc(prevfunc), *helpargs
 
         if synopsis:
             self._table[name] = func, list(options), synopsis

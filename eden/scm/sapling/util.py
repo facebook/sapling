@@ -5033,3 +5033,31 @@ def getcwdsafe():
         if err.errno == errno.ENOENT:
             return None
         raise
+
+
+def getdoc(obj):
+    """Get docstring as bytes; may be None so gettext() won't confuse it
+    with _('')"""
+    if isinstance(obj, str):
+        return obj
+    doc = getattr(obj, "__doc__", None)
+    return doc
+
+
+def parse_email(fp):
+    # Rarely used, so let's lazy load it
+    import email.parser
+
+    ep = email.parser.Parser()
+    # disable the "universal newlines" mode, which isn't binary safe.
+    # Note, although we specific ascii+surrogateescape decoding here, we don't have
+    # to specify it elsewhere for reencoding as the email.parser detects the
+    # surrogates and automatically chooses the appropriate encoding.
+    # See: https://github.com/python/cpython/blob/3.8/Lib/email/message.py::get_payload()
+    fp = io.TextIOWrapper(
+        fp, encoding=r"ascii", errors=r"surrogateescape", newline=chr(10)
+    )
+    try:
+        return ep.parse(fp)
+    finally:
+        fp.detach()

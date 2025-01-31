@@ -12,10 +12,9 @@ import os
 
 from bindings import revisionstore
 
-from sapling import ancestor, error, filelog, mdiff, pycompat, revlog, util
+from sapling import ancestor, error, filelog, mdiff, revlog, util
 from sapling.i18n import _
 from sapling.node import bin, hex, nullid
-from sapling.pycompat import isint
 
 from . import constants, shallowutil
 
@@ -306,7 +305,7 @@ class remotefilelog:
 
     def node(self, rev):
         # This is a hack.
-        if isint(rev):
+        if isinstance(rev, int):
             raise error.ProgrammingError(
                 "remotefilelog does not convert integer rev to node"
             )

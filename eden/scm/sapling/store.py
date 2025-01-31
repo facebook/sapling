@@ -20,8 +20,7 @@ import bindings
 
 parsers = bindings.cext.parsers
 
-from . import error, pycompat, util, vfs as vfsmod
-from .pycompat import inttobyte
+from . import error, util, vfs as vfsmod
 
 
 # This avoids a collision between a file named foo and a dir named
@@ -83,6 +82,10 @@ def _reserved():
         yield x
 
 
+def _inttobyte(value):
+    return bytes([value])
+
+
 def _buildencodefun():
     """
     >>> enc, dec = _buildencodefun()
@@ -136,14 +139,14 @@ def _buildencodefun():
     """
     e = "_"
     xchr = chr
-    asciistr = list(map(inttobyte, range(127)))
+    asciistr = list(map(_inttobyte, range(127)))
     capitals = list(range(ord("A"), ord("Z") + 1))
 
     cmap = dict((x, x) for x in asciistr)
     for x in _reserved():
-        cmap[inttobyte(x)] = ("~%02x" % x).encode()
+        cmap[_inttobyte(x)] = ("~%02x" % x).encode()
     for x in capitals + [ord(e)]:
-        cmap[inttobyte(x)] = (e + xchr(x).lower()).encode()
+        cmap[_inttobyte(x)] = (e + xchr(x).lower()).encode()
 
     dmap = {}
     for k, v in cmap.items():
@@ -152,7 +155,7 @@ def _buildencodefun():
     cmaplong = cmap.copy()
 
     for i in capitals:
-        c = inttobyte(i)
+        c = _inttobyte(i)
         cmaplong[c] = c
         assert c not in dmap
         dmap[c] = c

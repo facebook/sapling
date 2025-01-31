@@ -121,8 +121,7 @@ import tempfile
 import threading
 import time
 
-from . import encoding, pycompat, util
-
+from . import encoding, util
 
 defaultdict = collections.defaultdict
 contextmanager = contextlib.contextmanager
@@ -989,7 +988,7 @@ def main(argv=None):
 
     # process options
     try:
-        opts, args = pycompat.getoptb(
+        opts, args = getopt.getopt(
             sys.argv[optstart:],
             "hl:f:o:p:",
             ["help", "limit=", "file=", "output-file=", "script-path="],

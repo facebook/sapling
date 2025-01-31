@@ -20,7 +20,6 @@ from bindings import cliparser
 
 from . import (
     cmdutil,
-    encoding,
     error,
     extensions,
     filemerge,
@@ -264,7 +263,7 @@ def makeitemsdoc(ui, topic, doc, marker, items, dedent: bool = False):
         if items[name] in seen:
             continue
         seen.add(items[name])
-        text = (pycompat.getdoc(items[name]) or "").rstrip()
+        text = (util.getdoc(items[name]) or "").rstrip()
         if not text or not ui.verbose and any(w in text for w in _exclkeywords):
             continue
         text = gettext(text)
@@ -293,7 +292,7 @@ def makesubcmdlist(cmd, categories, subcommands, verbose, quiet) -> List[str]:
 
     def getsubcommandrst(name, alias=None):
         entry = subcommands[name]
-        doc = pycompat.getdoc(entry[0]) or ""
+        doc = util.getdoc(entry[0]) or ""
         doc = gettext(doc)
         if not verbose and doc and any(w in doc for w in _exclkeywords):
             return []
@@ -509,7 +508,7 @@ class _helpdispatch:
         rst.append("\n")
 
         # description
-        doc = gettext(pycompat.getdoc(entry[0]))
+        doc = gettext(util.getdoc(entry[0]))
 
         if not doc:
             doc = _("(no help text available)")
@@ -546,7 +545,7 @@ class _helpdispatch:
         # extension help text
         try:
             mod = extensions.find(name)
-            doc = gettext(pycompat.getdoc(mod)) or ""
+            doc = gettext(util.getdoc(mod)) or ""
             if "\n" in doc.strip():
                 msg = _(
                     "(use '@prog@ help -e %s' to show help for the %s extension)"
@@ -603,7 +602,7 @@ class _helpdispatch:
         cmd = self.commandindex.get(name)
         if cmd is None:
             return None
-        doc = self._helpcmddoc(cmd[0], pycompat.getdoc(cmd[0]))
+        doc = self._helpcmddoc(cmd[0], util.getdoc(cmd[0]))
         return " :%s: %s\n" % (name, doc)
 
     def _helpaliasitem(self, name):
@@ -620,7 +619,7 @@ class _helpdispatch:
             if select and not select(c):
                 continue
             f = c.lstrip("^").partition("|")[0]
-            doc = pycompat.getdoc(e[0])
+            doc = util.getdoc(e[0])
             if filtercmd(self.ui, f, name, doc):
                 continue
             h[f] = self._helpcmddoc(e[0], doc)
@@ -729,7 +728,7 @@ class _helpdispatch:
     def helpext(self, name, subtopic=None):
         try:
             mod = extensions.find(name)
-            doc = gettext(pycompat.getdoc(mod)) or _("no help text available")
+            doc = gettext(util.getdoc(mod)) or _("no help text available")
         except KeyError:
             mod = None
             doc = extensions.disabledext(name)
@@ -766,7 +765,7 @@ class _helpdispatch:
 
     def helpextcmd(self, name, subtopic=None):
         cmd, ext, mod = extensions.disabledcmd(self.ui, name)
-        doc = gettext(pycompat.getdoc(mod))
+        doc = gettext(util.getdoc(mod))
         if doc is None:
             doc = _("(no help text available)")
         else:
@@ -815,7 +814,7 @@ class _helpdispatch:
             else:
                 summary = ""
             # translate docs *before* searching there
-            docs = _(pycompat.getdoc(entry[0])) or ""
+            docs = _(util.getdoc(entry[0])) or ""
             if kw in cmd or lowercontains(summary) or lowercontains(docs):
                 doclines = docs.splitlines()
                 if doclines:
@@ -842,7 +841,7 @@ class _helpdispatch:
             for cmd, entry in getattr(mod, "cmdtable", {}).items():
                 if kw in cmd or (len(entry) > 2 and lowercontains(entry[2])):
                     cmdname = cmd.partition("|")[0].lstrip("^")
-                    cmddoc = pycompat.getdoc(entry[0])
+                    cmddoc = util.getdoc(entry[0])
                     if cmddoc:
                         cmddoc = gettext(cmddoc).splitlines()[0]
                     else:

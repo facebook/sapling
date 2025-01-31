@@ -124,7 +124,6 @@ from sapling import (
 from sapling.commands import debug as hgdebugcommands
 from sapling.extensions import wrapfunction
 from sapling.i18n import _
-from sapling.pycompat import isint
 
 from . import (
     debugcommands,
@@ -418,7 +417,7 @@ def onetimeclientsetup(ui):
         cachedelta=None,
         _metatuple=None,
     ):
-        if isint(link):
+        if isinstance(link, int):
             pendingfilecommits.append(
                 (
                     self,

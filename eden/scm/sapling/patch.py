@@ -37,7 +37,6 @@ from . import (
     mail,
     mdiff,
     pathutil,
-    pycompat,
     scmutil,
     similar,
     util,
@@ -118,7 +117,7 @@ def split(stream):
             cur.append(line)
         c = chunk(cur)
 
-        m = pycompat.parse_email(c)
+        m = util.parse_email(c)
         if not m.is_multipart():
             yield msgfp(m)
         else:
@@ -228,7 +227,7 @@ def extract(ui, fileobj):
     fd, tmpname = tempfile.mkstemp(prefix="hg-patch-")
     tmpfp = util.fdopen(fd, "wb")
     try:
-        msg = pycompat.parse_email(fileobj)
+        msg = util.parse_email(fileobj)
 
         subject = msg["Subject"] and mail.headdecode(msg["Subject"])
         data["user"] = msg["From"] and mail.headdecode(msg["From"])
