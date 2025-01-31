@@ -26,8 +26,6 @@ use futures::stream::TryStreamExt;
 use futures_stats::TimedFutureExt;
 use hgproto::sshproto;
 use hgproto::HgProtoHandler;
-use maplit::hashmap;
-use maplit::hashset;
 use mononoke_api::Mononoke;
 use mononoke_api::Repo;
 use mononoke_configs::MononokeConfigs;
@@ -40,15 +38,9 @@ use repo_client::RepoClient;
 use repo_permission_checker::RepoPermissionCheckerRef;
 use scribe_ext::Scribe;
 use slog::error;
-use slog::o;
-use slog::Drain;
-use slog::Level;
-use slog::Logger;
-use slog_ext::SimpleFormatWithError;
-use slog_kvfilter::KVFilter;
-use sshrelay::SenderBytesWrite;
 use sshrelay::Stdio;
 use stats::prelude::*;
+use textwrap::indent;
 use time_ext::DurationExt;
 
 use crate::errors::ErrorKind;
@@ -83,16 +75,12 @@ pub async fn request_handler(
         metadata,
     } = stdio;
 
-    let session_id = metadata.session_id();
-
-    // We don't have a repository yet, so create without server drain
-    let conn_log = create_conn_logger(stderr.clone(), None, Some(session_id));
-
     let handler = repo_handler(mononoke, &reponame).with_context(|| {
-        error!(
-            conn_log,
-            "Requested repo \"{}\" does not exist or is disabled", &reponame;
-            "remote" => "true"
+        // We don't have a logger yet as the repo hasn't been created yet, so only log to client
+        log_error_to_client(
+            stderr.clone(),
+            "Unknown Repo:",
+            &format!("Requested repo \"{reponame}\" does not exist or is disabled"),
         );
 
         anyhow!("Unknown Repo: {}", &reponame)
@@ -108,8 +96,6 @@ pub async fn request_handler(
     } = handler;
 
     // Upgrade log to include server drain
-    let conn_log = create_conn_logger(stderr.clone(), Some(logger), Some(session_id));
-
     scuba = scuba.with_seq("seq");
     scuba.add("repo", reponame);
     if let Some(config_info) = configs.config_info().as_ref() {
@@ -133,7 +119,12 @@ pub async fn request_handler(
             )
         } {
             scuba.log_with_msg("Request rejected due to load shedding", format!("{}", err));
-            error!(conn_log, "Request rejected due to load shedding: {}", err; "remote" => "true");
+            error!(logger, "Request rejected due to load shedding: {}", err);
+            log_error_to_client(
+                stderr,
+                "Request rejected due to load shedding:",
+                &format!("{err}"),
+            );
 
             return Err(err.into());
         }
@@ -147,7 +138,8 @@ pub async fn request_handler(
     if !is_allowed_to_repo {
         let err: Error = ErrorKind::AuthorizationFailed.into();
         scuba.log_with_msg("Authorization failed", format!("{}", err));
-        error!(conn_log, "Authorization failed: {}", err; "remote" => "true");
+        error!(logger, "Authorization failed: {}", err);
+        log_error_to_client(stderr, "Authoization failed:", &format!("{err}"));
 
         return Err(err);
     }
@@ -164,7 +156,7 @@ pub async fn request_handler(
 
     let session = session_builder.build();
 
-    let mut logging = LoggingContainer::new(fb, conn_log.clone(), scuba.clone());
+    let mut logging = LoggingContainer::new(fb, logger.clone(), scuba.clone());
     logging.with_scribe(scribe);
 
     let repo_client = RepoClient::new(
@@ -179,7 +171,7 @@ pub async fn request_handler(
 
     // Construct a hg protocol handler
     let proto_handler = HgProtoHandler::new(
-        conn_log.clone(),
+        logger.clone(),
         stdin,
         repo_client,
         sshproto::HgSshCommandDecode,
@@ -242,48 +234,22 @@ pub async fn request_handler(
     }
 
     if let Err(err) = result {
-        error!(&conn_log, "Command failed";
+        error!(logger, "Command failed";
             "error" => ?err,
-            "remote" => "true"
         );
+        // log to client
+        log_error_to_client(stderr, "Command failed", &format!("{err:?}"));
     }
 
     Ok(())
 }
 
-pub fn create_conn_logger(
-    stderr: mpsc::UnboundedSender<Bytes>,
-    server_logger: Option<Logger>,
-    session_id: Option<&SessionId>,
-) -> Logger {
-    let session_id = match session_id {
-        Some(session_id) => session_id.to_string(),
-        None => "".to_string(),
-    };
-    let decorator = o!("session_uuid" => format!("{}", session_id));
-
-    let stderr_write = SenderBytesWrite { chan: stderr };
-    let client_drain = slog_term::PlainSyncDecorator::new(stderr_write);
-    let client_drain = SimpleFormatWithError::new(client_drain);
-    let client_drain = KVFilter::new(client_drain, Level::Critical).only_pass_any_on_all_keys(
-        (hashmap! {
-            "remote".into() => hashset!["true".into(), "remote_only".into()],
-        })
-        .into(),
-    );
-
-    if let Some(logger) = server_logger {
-        let server_drain = KVFilter::new(logger, Level::Critical).always_suppress_any(
-            (hashmap! {
-                "remote".into() => hashset!["remote_only".into()],
-            })
-            .into(),
-        );
-
-        // Don't fail logging if the client goes away
-        let drain = slog::Duplicate::new(client_drain, server_drain).ignore_res();
-        Logger::root(drain, decorator)
-    } else {
-        Logger::root(client_drain.ignore_res(), decorator)
-    }
+pub fn log_error_to_client(
+    client: mpsc::UnboundedSender<Bytes>,
+    description: &'static str,
+    error_msg: &str,
+) {
+    let msg = indent(error_msg, "    ");
+    let error_msg = Bytes::from(format!("{description}\n  Error:\n{msg}"));
+    let _ = client.unbounded_send(error_msg);
 }

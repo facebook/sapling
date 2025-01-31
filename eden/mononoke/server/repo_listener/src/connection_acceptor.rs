@@ -57,7 +57,6 @@ use scribe_ext::Scribe;
 use scuba_ext::MononokeScubaSampleBuilder;
 use slog::debug;
 use slog::error;
-use slog::info;
 use slog::warn;
 use slog::Logger;
 use sshrelay::IoStream;
@@ -77,7 +76,6 @@ use tokio_util::codec::FramedWrite;
 
 use crate::errors::ErrorKind;
 use crate::http_service::MononokeHttpService;
-use crate::request_handler::create_conn_logger;
 use crate::request_handler::request_handler;
 use crate::wireproto_sink::WireprotoSink;
 
@@ -345,18 +343,13 @@ where
         stdin,
         stdout,
         stderr,
-        logger,
         keep_alive,
         join_handle,
     } = ChannelConn::setup(framed, conn.clone(), metadata.clone());
 
     if metadata.client_debug() {
-        info!(&logger, "{:#?}", metadata; "remote" => "true");
+        let _ = stderr.unbounded_send(Bytes::from(format!("{metadata:#?}")));
     }
-
-    // Don't let the logger hold onto the channel. This is a bit fragile (but at least it breaks
-    // tests deterministically).
-    drop(logger);
 
     let stdio = Stdio {
         metadata,
@@ -415,7 +408,6 @@ pub struct ChannelConn {
     stdin: BoxStream<'static, Result<Bytes, io::Error>>,
     stdout: mpsc::Sender<Bytes>,
     stderr: mpsc::UnboundedSender<Bytes>,
-    logger: Logger,
     keep_alive: AbortHandle,
     join_handle: JoinHandle<Result<(), io::Error>>,
 }
@@ -528,13 +520,10 @@ impl ChannelConn {
             (otx, etx, keep_alive_abort, join_handle)
         };
 
-        let logger = create_conn_logger(stderr.clone(), None, None);
-
         ChannelConn {
             stdin,
             stdout,
             stderr,
-            logger,
             keep_alive,
             join_handle,
         }

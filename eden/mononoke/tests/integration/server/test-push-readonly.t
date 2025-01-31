@@ -73,7 +73,7 @@ create new commit in repo2 and check that push to a bookmark fails
   remote: * (glob)
   remote:   Error:
   remote:     While doing a push
-  remote:     
+  remote: 
   remote:     Caused by:
   remote:         0: Failed to fast-forward bookmark (set pushvar NON_FAST_FORWARD=true for a non-fast-forward move)
   remote:         1: Repo is locked: Set by config option

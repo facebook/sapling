@@ -66,7 +66,7 @@ create new commit in repo2 and check that push fails
   remote: Command failed
   remote:   Error:
   remote:     bundle2_resolver error
-  remote:     
+  remote: 
   remote:     Caused by:
   remote:         0: While resolving Changegroup
   remote:         1: Trying to push too many commits! Limit is 2, tried to push 3

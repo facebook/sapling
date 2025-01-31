@@ -70,7 +70,7 @@ Pushrebase of empty commit via small repo errors out as the commit rewrites into
 nothingness. (But it succeeds in the end.)
   $ hg commit --config ui.allowemptycommit=True -m "Empty3"
   $ hg push -r . --to master_bookmark -q
-  abort: failed reading from pipe: The read operation timed out
+  abort: * (glob)
   [255]
   $ log -r master_bookmark -r .
   @  Empty3 [draft;*] (glob)

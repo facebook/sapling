@@ -54,7 +54,7 @@ try doing a non-pushrebase push with the new commits
   remote: Command failed
   remote:   Error:
   remote:     bundle2_resolver error
-  remote:     
+  remote: 
   remote:     Caused by:
   remote:         0: While resolving Changegroup
   remote:         1: Pure pushes are disallowed in this repo

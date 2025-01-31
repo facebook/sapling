@@ -76,7 +76,7 @@ Try non fastforward moves (backwards and across branches)
   remote: Command failed
   remote:   Error:
   remote:     While doing a push
-  remote:     
+  remote: 
   remote:     Caused by:
   remote:         0: Failed to move bookmark
   remote:         1: Non fast-forward bookmark move of 'master_bookmark' from 9b9805995990bb9a787f5290e75bd7926146098df1f2ce3420e91063d41789b7 to aa53d24251ff3f54b1b2c29ae02826701b2abeb0079f1bb13b8434b54cd87675
@@ -89,7 +89,7 @@ Try non fastforward moves (backwards and across branches)
   remote: Command failed
   remote:   Error:
   remote:     While doing a push
-  remote:     
+  remote: 
   remote:     Caused by:
   remote:         0: Failed to move bookmark
   remote:         1: Non fast-forward bookmark move of 'master_bookmark' from 9b9805995990bb9a787f5290e75bd7926146098df1f2ce3420e91063d41789b7 to 99853792aa9e4c9ab4519940c25bd2c840dd7af70f1b2f8aaf5e52beec5fc372
@@ -115,7 +115,7 @@ Try non fastfoward moves on regex bookmark
   remote: Command failed
   remote:   Error:
   remote:     While doing a push
-  remote:     
+  remote: 
   remote:     Caused by:
   remote:         0: Failed to move bookmark
   remote:         1: Non fast-forward bookmark move of 'ffonly_bookmark' from 9b9805995990bb9a787f5290e75bd7926146098df1f2ce3420e91063d41789b7 to aa53d24251ff3f54b1b2c29ae02826701b2abeb0079f1bb13b8434b54cd87675
@@ -131,7 +131,7 @@ Try to delete master
   remote: Command failed
   remote:   Error:
   remote:     While doing a push
-  remote:     
+  remote: 
   remote:     Caused by:
   remote:         0: Failed to delete bookmark
   remote:         1: Deletion of 'master_bookmark' is prohibited

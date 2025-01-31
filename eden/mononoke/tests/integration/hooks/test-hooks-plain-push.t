@@ -82,7 +82,7 @@ attempt a non-fast-forward move, it should fail
   remote: Command failed
   remote:   Error:
   remote:     While doing a push
-  remote:     
+  remote: 
   remote:     Caused by:
   remote:         0: Failed to fast-forward bookmark (set pushvar NON_FAST_FORWARD=true for a non-fast-forward move)
   remote:         1: Non fast-forward bookmark move of 'master_bookmark' from cbe5624248da659ef8f938baaf65796e68252a0a735e885a814b94f38b901d5b to 2b7843b3fb41a99743420b26286cc5e7bc94ebf7576eaf1bbceb70cd36ffe8b0

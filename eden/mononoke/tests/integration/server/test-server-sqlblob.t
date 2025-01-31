@@ -110,7 +110,9 @@ start mononoke
 
   $ start_and_wait_for_mononoke_server
   $ hg debugwireargs mono:disabled_repo one two --three three
-  remote: Requested repo "disabled_repo" does not exist or is disabled
+  remote: Unknown Repo:
+  remote:   Error:
+  remote:     Requested repo "disabled_repo" does not exist or is disabled
   abort: unexpected EOL, expected netstring digit
   [255]
   $ hg debugwireargs mono:repo one two --three three
