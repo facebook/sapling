@@ -36,18 +36,6 @@ def identity(a):
     return a
 
 
-# Copied from util.py to avoid pycompat depending on Mercurial modules
-if "TESTTMP" in os.environ or "testutil" in sys.modules:
-
-    def istest():
-        return True
-
-else:
-
-    def istest():
-        return False
-
-
 import io
 
 oslinesep = os.linesep
@@ -71,9 +59,7 @@ stderr = sys.stderr.buffer
 
 sysargv = sys.argv
 
-bytechr = chr
 bytestr = str
-buffer = memoryview
 
 
 def raisewithtb(exc, tb):
@@ -120,10 +106,6 @@ def ensureunicode(s, errors="strict"):
     if not isinstance(s, str):
         s = s.decode("utf-8", errors=errors)
     return s
-
-
-def toutf8lossy(value: str) -> str:
-    return value
 
 
 def inttobyte(value):

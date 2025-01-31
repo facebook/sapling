@@ -1622,10 +1622,7 @@ class ui:
             pass
 
         if self.configbool("sampling", "debug"):
-            self.write_err(
-                "%s\n"
-                % pycompat.toutf8lossy(json.dumps({"data": opts, "category": category}))
-            )
+            self.write_err("%s\n" % json.dumps({"data": opts, "category": category}))
 
     def label(self, msg, label, usebytes=False):
         """style msg based on supplied label

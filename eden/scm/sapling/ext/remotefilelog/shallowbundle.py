@@ -414,7 +414,7 @@ def addchangegroupfiles(orig, repo, source, revmap, trp, *args):
                     raise error.Abort("unexpected deltabase")
                 base = reconstruct(f, deltabase)
             rawtext = mdiff.patch(base, delta)
-            if isinstance(rawtext, pycompat.buffer):  # noqa
+            if isinstance(rawtext, memoryview):  # noqa
                 rawtext = bytes(rawtext)
             return rawtext
 

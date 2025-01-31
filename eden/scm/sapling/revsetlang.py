@@ -55,7 +55,7 @@ _simpleopletters = set(iter("()[]#:=,-|&+!~^%"))
 
 # default set of valid characters for the initial letter of symbols
 _syminitletters = set(iter(string.ascii_letters + string.digits + "._@")) | set(
-    map(pycompat.bytechr, range(128, 256))
+    map(chr, range(128, 256))
 )
 
 # default set of valid characters for non-initial letters of symbols

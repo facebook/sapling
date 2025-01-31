@@ -134,7 +134,7 @@ def _buildencodefun():
     True
     """
     e = "_"
-    xchr = pycompat.bytechr
+    xchr = chr
     asciistr = list(map(inttobyte, range(127)))
     capitals = list(range(ord("A"), ord("Z") + 1))
 

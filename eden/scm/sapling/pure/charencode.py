@@ -43,7 +43,7 @@ def asciiupper(s):
 
 _jsonmap = []
 _jsonmap.extend("\\u%04x" % x for x in range(32))
-_jsonmap.extend(pycompat.bytechr(x) for x in range(32, 127))
+_jsonmap.extend(chr(x) for x in range(32, 127))
 _jsonmap.append("\\u007f")
 _jsonmap[0x09] = "\\t"
 _jsonmap[0x0A] = "\\n"
@@ -55,7 +55,7 @@ _jsonmap[0x0D] = "\\r"
 _paranoidjsonmap = _jsonmap[:]
 _paranoidjsonmap[0x3C] = "\\u003c"  # '<' (e.g. escape "</script>")
 _paranoidjsonmap[0x3E] = "\\u003e"  # '>'
-_jsonmap.extend(pycompat.bytechr(x) for x in range(128, 256))
+_jsonmap.extend(chr(x) for x in range(128, 256))
 
 
 def jsonescapeu8fast(u8chars, paranoid):
