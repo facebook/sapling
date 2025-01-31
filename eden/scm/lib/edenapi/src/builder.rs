@@ -137,6 +137,7 @@ pub struct HttpClientBuilder {
     max_commit_translate_id_per_batch: Option<usize>,
     min_batch_size: Option<usize>,
     timeout: Option<Duration>,
+    connect_timeout: Option<Duration>,
     debug: bool,
     http_version: Option<HttpVersion>,
     log_dir: Option<PathBuf>,
@@ -217,6 +218,7 @@ impl HttpClientBuilder {
             get_config(config, "edenapi", "maxcommittranslateid")?;
 
         let timeout = get_config(config, "edenapi", "timeout")?.map(Duration::from_secs);
+        let connect_timeout: Option<Duration> = get_config(config, "edenapi", "connect-timeout")?;
         let debug = get_config(config, "edenapi", "debug")?.unwrap_or_default();
         let http_version =
             get_config(config, "edenapi", "http-version")?.unwrap_or_else(|| "2".to_string());
@@ -268,6 +270,7 @@ impl HttpClientBuilder {
             max_commit_translate_id_per_batch,
             min_batch_size,
             timeout,
+            connect_timeout,
             debug,
             http_version,
             log_dir,
@@ -434,6 +437,7 @@ pub(crate) struct Config {
     pub(crate) max_commit_mutations_per_batch: Option<usize>,
     pub(crate) max_commit_translate_id_per_batch: Option<usize>,
     pub(crate) min_batch_size: Option<usize>,
+    pub(crate) connect_timeout: Option<Duration>,
     pub(crate) timeout: Option<Duration>,
     #[allow(dead_code)]
     pub(crate) debug: bool,
@@ -462,6 +466,7 @@ impl TryFrom<HttpClientBuilder> for Config {
             max_commit_mutations_per_batch,
             max_commit_translate_id_per_batch,
             min_batch_size,
+            connect_timeout,
             timeout,
             debug,
             http_version,
@@ -501,6 +506,7 @@ impl TryFrom<HttpClientBuilder> for Config {
             max_commit_mutations_per_batch,
             max_commit_translate_id_per_batch,
             min_batch_size,
+            connect_timeout,
             timeout,
             debug,
             http_version,

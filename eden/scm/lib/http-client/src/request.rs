@@ -176,7 +176,8 @@ pub struct Request {
     cert: Option<PathBuf>,
     key: Option<PathBuf>,
     cainfo: Option<PathBuf>,
-    timeout: Option<Duration>,
+    connect_timeout: Option<Duration>,
+    overall_timeout: Option<Duration>,
     http_version: HttpVersion,
     accept_encoding: Vec<Encoding>,
     min_transfer_speed: Option<MinTransferSpeed>,
@@ -266,7 +267,8 @@ impl Request {
             cert: None,
             key: None,
             cainfo: None,
-            timeout: None,
+            connect_timeout: None,
+            overall_timeout: None,
             http_version: DEFAULT_HTTP_VERSION.clone(),
             accept_encoding: Vec::new(),
             min_transfer_speed: None,
@@ -481,15 +483,24 @@ impl Request {
         self
     }
 
-    /// Set the maximum time this request is allowed to take.
+    /// Set the maximum time this request is allowed to take, including opening a
+    /// connection if needed (e.g. including DNS resolution).
     pub fn timeout(mut self, timeout: Duration) -> Self {
         self.set_timeout(timeout);
         self
     }
 
-    /// Set the maximum time this request is allowed to take.
+    /// Set the maximum time this request is allowed to take, including opening a
+    /// connection if needed (e.g. including DNS resolution).
     pub fn set_timeout(&mut self, timeout: Duration) -> &mut Self {
-        self.timeout = Some(timeout);
+        self.overall_timeout = Some(timeout);
+        self
+    }
+
+    /// Set the maximum time to spend opening a connection, if required.
+    /// This includes DNS resolution and TCP/TLS initiation.
+    pub fn set_connect_timeout(&mut self, timeout: Duration) -> &mut Self {
+        self.connect_timeout = Some(timeout);
         self
     }
 
@@ -795,8 +806,12 @@ impl Request {
             easy.cainfo(cainfo)?;
         }
 
-        if let Some(timeout) = self.timeout {
+        if let Some(timeout) = self.overall_timeout {
             easy.timeout(timeout)?;
+        }
+
+        if let Some(timeout) = self.connect_timeout {
+            easy.connect_timeout(timeout)?;
         }
 
         easy.http_version(self.http_version)?;

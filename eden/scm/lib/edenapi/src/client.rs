@@ -303,6 +303,10 @@ impl Client {
             req.set_timeout(timeout);
         }
 
+        if let Some(timeout) = config.connect_timeout {
+            req.set_connect_timeout(timeout);
+        }
+
         if let Some(http_version) = config.http_version {
             req.set_http_version(http_version);
         }
