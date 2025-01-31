@@ -1269,7 +1269,7 @@ def wraprepo(repo) -> None:
                         break
 
                     fullrevisions = []
-                    for chunks in pycompat.itervalues(groupedrevdata):
+                    for chunks in groupedrevdata.values():
                         chunkcount = chunks[0][2]
                         if chunkcount == 1:
                             fullrevisions.append(chunks[0])
@@ -1839,7 +1839,7 @@ def addentries(repo, queue, transaction, ignoreexisting: bool = False) -> None:
         if revlog.dfh and not revlog.dfh.closed:
             revlog.dfh.flush()
 
-    for filelog in pycompat.itervalues(revlogs):
+    for filelog in revlogs.values():
         flushrevlog(filelog)
 
     if manifest:

@@ -92,7 +92,7 @@ def unamend(ui, repo, **opts):
         cm = predctx.manifest()
         dirstate = repo.dirstate
         diff = cm.diff(wm)
-        changedfiles.extend(pycompat.iterkeys(diff))
+        changedfiles.extend(diff.keys())
 
         tr = repo.transaction("unamend")
         with dirstate.parentchange():

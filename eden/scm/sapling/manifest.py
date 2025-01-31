@@ -114,7 +114,7 @@ class manifestdict:
         return self._lm.__iter__()
 
     def iterkeys(self):
-        return pycompat.iterkeys(self._lm)
+        return self._lm.keys()
 
     def keys(self):
         return list(self._lm.keys())

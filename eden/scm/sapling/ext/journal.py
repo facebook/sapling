@@ -140,7 +140,7 @@ def _mergeentriesiter(*iterables, **kwargs):
             pass
 
     while iterable_map:
-        value, key, it = order(pycompat.itervalues(iterable_map))
+        value, key, it = order(iterable_map.values())
         yield value
         try:
             iterable_map[key][0] = next(it)

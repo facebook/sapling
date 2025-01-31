@@ -190,7 +190,7 @@ def _transform_attrs(cls, these):
             if isinstance(attr, _CountingAttr)
         ]
     else:
-        ca_list = [(name, ca) for name, ca in iteritems(these)]
+        ca_list = [(name, ca) for name, ca in these.items()]
 
     non_super_attrs = [
         Attribute.from_counting_attr(name=attr_name, ca=ca)
@@ -346,7 +346,7 @@ def attributes(
                     if isinstance(attr, _CountingAttr)
                 ]
             else:
-                ca_list = list(iterkeys(these))
+                ca_list = list(these.keys())
         _transform_attrs(cls, these)
 
         # Can't just re-use frozen name because Python's scoping. :(

@@ -479,7 +479,7 @@ class mergestate:
         """return counts for updated, merged and removed files in this
         session"""
         updated, merged, removed = 0, 0, 0
-        for r, action in pycompat.itervalues(self._results):
+        for r, action in self._results.values():
             if r is None:
                 updated += 1
             elif r == 0:
@@ -1200,7 +1200,7 @@ def _resolvetrivial(repo, wctx, mctx, ancestor, actions):
     """Resolves false conflicts where the nodeid changed but the content
     remained the same."""
 
-    for f, (m, args, msg) in pycompat.listitems(actions):
+    for f, (m, args, msg) in list(actions.items()):
         if (
             m == ACTION_CHANGED_DELETED
             and f in ancestor

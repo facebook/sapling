@@ -1103,7 +1103,7 @@ def _undoto(ui, repo, reverseindex, keep=False, branch=None):
         predctxmanifest = predctx.manifest()
         dirstate = repo.dirstate
         diff = predctxmanifest.diff(wctxmanifest)
-        changedfiles.extend(pycompat.iterkeys(diff))
+        changedfiles.extend(diff.keys())
 
         with dirstate.parentchange():
             dirstate.rebuild(prednode, predctxmanifest, changedfiles)

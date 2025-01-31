@@ -69,7 +69,7 @@ def decodeextra(text: bytes) -> "Dict[str, str]":
 
 
 def encodeextra(d):
-    for k, v in iteritems(d):
+    for k, v in d.items():
         if not isinstance(v, str):
             raise ValueError("extra '%s' should be type str not %s" % (k, v.__class__))
 

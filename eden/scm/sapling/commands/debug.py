@@ -3449,7 +3449,7 @@ def debugcheckcasecollisions(ui, repo, *testfiles, **opts) -> int:
                     res = 1
     else:
         seen = set()
-        for mfnf in pycompat.iterkeys(ctx.manifest()):
+        for mfnf in ctx.manifest().keys():
             for mfn in [mfnf] + list(util.finddirs(mfnf)):
                 if mfn in seen:
                     continue

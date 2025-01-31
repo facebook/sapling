@@ -796,7 +796,7 @@ class fixupstate:
                 return False
             pctx = parents[0]
         # ctx changes more files (not a subset of memworkingcopy)
-        if not set(ctx.files()).issubset(set(pycompat.iterkeys(memworkingcopy))):
+        if not set(ctx.files()).issubset(set(memworkingcopy.keys())):
             return False
         for path, content in memworkingcopy.items():
             if path not in pctx or path not in ctx:

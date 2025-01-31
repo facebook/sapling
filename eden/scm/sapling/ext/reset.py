@@ -109,7 +109,7 @@ def _moveto(repo, bookmark, ctx, clean=False):
         diff = m1.diff(m2)
 
         changedfiles = []
-        changedfiles.extend(pycompat.iterkeys(diff))
+        changedfiles.extend(diff.keys())
 
         dirstate = repo.dirstate
         dirchanges = [f for f in dirstate if dirstate[f] != "n"]

@@ -947,7 +947,7 @@ class rebaseruntime:
                     )
             if newnode is not None:
                 newrev = repo[newnode].rev()
-                for oldrev in pycompat.iterkeys(self.state):
+                for oldrev in self.state.keys():
                     self.state[oldrev] = newrev
 
         # restore original working directory
@@ -2492,7 +2492,7 @@ def summaryhook(ui, repo) -> None:
         msg = _('rebase: (use "hg rebase --abort" to clear broken state)\n')
         ui.write(msg)
         return
-    numrebased = len([i for i in pycompat.itervalues(state) if i >= 0])
+    numrebased = len([i for i in state.values() if i >= 0])
     # i18n: column positioning for "hg summary"
     ui.write(
         _("rebase: %s, %s (rebase --continue)\n")
