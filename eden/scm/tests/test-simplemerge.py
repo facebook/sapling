@@ -20,6 +20,7 @@
 
 from __future__ import absolute_import
 
+import io
 import unittest
 
 from sapling import error, util
@@ -49,7 +50,7 @@ class Merge3(Merge3Text):
 
 
 def split_lines(t):
-    return util.stringio(t).readlines()
+    return io.BytesIO(t).readlines()
 
 
 ############################################################

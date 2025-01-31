@@ -30,6 +30,7 @@ import datetime
 import errno
 import functools
 import hashlib
+import io
 import itertools
 import mmap
 import os
@@ -88,7 +89,6 @@ signal = signalmod.signal
 stdin = sys.stdin.buffer
 stdout = sys.stdout.buffer
 stderr = sys.stderr.buffer
-stringio = pycompat.stringio
 
 httpserver = urllibcompat.httpserver
 urlerr = urllibcompat.urlerr
@@ -3974,7 +3974,7 @@ class _zstdengine(compressionengine):
         level = opts.get("level", 3)
 
         zstd = self._module
-        buf = stringio()
+        buf = io.BytesIO()
         for chunk in it:
             buf.write(chunk)
 

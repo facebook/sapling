@@ -15,16 +15,14 @@
 
 from __future__ import absolute_import
 
+import io
 import os
 import re
 import signal
 from typing import Dict, Optional
 
-from . import encoding, error, patch as patchmod, progress, pycompat, scmutil, util
+from . import encoding, error, patch as patchmod, progress, scmutil, util
 from .i18n import _
-
-
-stringio = util.stringio
 
 # patch comments based on the git one
 diffhelptext: str = _(
@@ -206,7 +204,7 @@ class uiheader(patchnode):
         self.hunks = [uihunk(h, self) for h in self.hunks]
 
     def prettystr(self):
-        x = stringio()
+        x = io.BytesIO()
         self.pretty(x)
         return x.getvalue()
 
@@ -427,7 +425,7 @@ class uihunk(patchnode):
     pretty = write
 
     def prettystr(self):
-        x = stringio()
+        x = io.BytesIO()
         self.pretty(x)
         return x.getvalue()
 
@@ -1622,7 +1620,7 @@ are you sure you want to review/edit and confirm the selected changes [yn]?
                 return None
 
             # write the initial patch
-            patch = stringio()
+            patch = io.BytesIO()
             patch.write((diffhelptext + hunkhelptext).encode())
             chunk.header.write(patch)
             chunk.write(patch)

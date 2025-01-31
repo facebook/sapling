@@ -6,6 +6,7 @@
 # wirepack.py - wireprotocol for exchanging packs
 from __future__ import absolute_import
 
+import io
 import struct
 import time
 from typing import (
@@ -184,7 +185,7 @@ class wirepackstore:
     def __init__(self, wirepack, version=1):
         self._data = {}
         self._history = {}
-        fh = pycompat.stringio(wirepack)
+        fh = io.BytesIO(wirepack)
         self._load(fh, version)
 
     def __iter__(self):

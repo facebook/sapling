@@ -14,6 +14,7 @@ from __future__ import absolute_import, print_function
 
 import contextlib
 import errno
+import io
 import time
 
 from . import blackbox, error, extensions, pycompat, util
@@ -216,7 +217,7 @@ class profile:
                 self._ui.warn(_("unrecognized profiler '%s' - ignored\n") % profiler)
                 profiler = "stat"
 
-        self._fp = pycompat.stringutf8io()
+        self._fp = io.StringIO()
 
         if proffn is not None:
             pass

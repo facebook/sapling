@@ -8,6 +8,7 @@
 from __future__ import absolute_import
 
 import errno
+import io
 
 from bindings import treestate
 
@@ -345,7 +346,7 @@ class treestatemap:
 
     def _parsedirstate(content):
         """Parse given dirstate metadata file"""
-        f = util.stringio(content)
+        f = io.BytesIO(content)
         p1 = f.read(20) or node.nullid
         p2 = f.read(20) or node.nullid
         header = f.read(len(HEADER))

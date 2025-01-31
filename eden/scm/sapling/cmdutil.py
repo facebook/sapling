@@ -13,6 +13,7 @@
 from __future__ import absolute_import
 
 import errno
+import io
 import itertools
 import os
 import re
@@ -73,8 +74,6 @@ if typing.TYPE_CHECKING:
     from .ui import ui
     from .uiconfig import uiconfig
 
-
-stringio = util.stringio
 
 # templates of common command options
 
@@ -270,13 +269,13 @@ def comparechunks(chunks, headers):
     Generate patches for both sets of data and then compare the patches.
     """
 
-    originalpatch = stringio()
+    originalpatch = io.BytesIO()
     for header in headers:
         header.write(originalpatch)
         for hunk in header.hunks:
             hunk.write(originalpatch)
 
-    newpatch = stringio()
+    newpatch = io.BytesIO()
     for chunk in chunks:
         chunk.write(newpatch)
 
@@ -456,7 +455,7 @@ def dorecord(ui, repo, commitfunc, cmdsuggest, backupall, filterfn, *pats, **opt
                 util.copyfile(repo.wjoin(f), tmpname, copystat=True)
                 backups[f] = tmpname
 
-            fp = stringio()
+            fp = io.BytesIO()
             for c in chunks:
                 if c.filename() in backups:
                     c.write(fp)
@@ -4853,7 +4852,7 @@ def _performrevert(
         if tobackup is None:
             tobackup = set()
         # Apply changes
-        fp = stringio()
+        fp = io.BytesIO()
         for c in chunks:
             # Create a backup file only if this hunk should be backed up
             if ishunk(c) and c.header.filename() in tobackup:

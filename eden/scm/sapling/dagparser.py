@@ -12,6 +12,7 @@
 
 from __future__ import absolute_import
 
+import io
 import re
 import string
 from typing import Sized
@@ -540,7 +541,7 @@ def bindag(revs, parentrevs) -> bytes:
     """
 
     idmap = {}  # {rev: commit id}
-    buf = util.stringio()
+    buf = io.BytesIO()
 
     def push(value, encode=vlq.encode, write=buf.write):
         """Append an integer to the buffer"""

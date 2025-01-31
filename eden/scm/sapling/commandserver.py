@@ -14,9 +14,9 @@ from __future__ import absolute_import
 
 import errno
 import gc
+import io
 import os
 import random
-
 import selectors
 import signal
 import socket
@@ -28,7 +28,6 @@ import bindings
 
 from . import encoding, error, pycompat, util
 from .i18n import _
-
 
 logfile = None
 
@@ -386,7 +385,7 @@ def _serverequest(ui, repo, conn, createcmdserver):
     except:  # re-raises
         # print_exc requires a string file-like object in Python 3, so let's get
         # it a buffer then convert it to bytes before sending it to the server.
-        output = pycompat.stringutf8io()
+        output = io.StringIO()
         traceback.print_exc(file=output)
 
         # also write traceback to error channel. otherwise client cannot

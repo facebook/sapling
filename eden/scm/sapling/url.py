@@ -17,6 +17,7 @@ from __future__ import absolute_import
 import base64
 import http.client as httplib
 import http.cookiejar as cookielib
+import io
 import os
 import socket
 
@@ -31,8 +32,6 @@ from . import (
 )
 from .i18n import _
 
-# pyre-fixme[11]: Annotation `client` is not defined as a type.
-stringio = util.stringio
 urlerr = util.urlerr
 urlreq = util.urlreq
 
@@ -280,7 +279,7 @@ def _generic_proxytunnel(self):
         res.length = None
         res.chunked = 0
         res.will_close = 1
-        res.msg = httplib.HTTPMessage(stringio())
+        res.msg = httplib.HTTPMessage(io.BytesIO())
         return False
 
     res.msg = httplib.HTTPMessage(res.fp)

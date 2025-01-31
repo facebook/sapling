@@ -12,6 +12,7 @@ rpmbin = rpm
 
 import ctypes
 import glob
+import io
 import json
 import os
 import socket
@@ -332,8 +333,8 @@ def _makerage(ui, repo, **opts) -> str:
                 cmdargs += [f"--{flagname}={v}" for v in flagvalue]
             else:
                 cmdargs += [f"--{flagname}={flagvalue}"]
-        fin = util.stringio()
-        fout = ferr = util.stringio()
+        fin = io.BytesIO()
+        fout = ferr = io.BytesIO()
         status = bindings.commands.run(cmdargs, fin, fout, ferr)
 
         output = fout.getvalue().decode()

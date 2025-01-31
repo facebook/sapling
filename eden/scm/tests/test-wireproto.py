@@ -1,8 +1,8 @@
 from __future__ import absolute_import, print_function
 
-from sapling import ui, util, wireproto
+import io
 
-stringio = util.stringio
+from sapling import ui, wireproto
 
 
 class proto:
@@ -49,7 +49,7 @@ class clientpeer(wireproto.wirepeer):
         return res
 
     def _callstream(self, cmd, **args):
-        return stringio(self._call(cmd, **args))
+        return io.BytesIO(self._call(cmd, **args))
 
     @wireproto.batchable
     def greet(self, name):

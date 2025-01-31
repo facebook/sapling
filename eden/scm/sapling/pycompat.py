@@ -31,8 +31,6 @@ def identity(a):
 
 import io
 
-stringio = io.BytesIO
-stringutf8io = io.StringIO
 maplist = lambda *args: list(map(*args))
 ziplist = lambda *args: list(zip(*args))
 rawinput = input

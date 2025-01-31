@@ -13,18 +13,18 @@
 
 from __future__ import absolute_import
 
+import io
 import shlex
 import sys
 import time
 from typing import Any, Dict, List, Optional
 
 import bindings
-import sapling
 
+import sapling
 from sapling import ext, hgdemandimport, pycompat, registrar, traceimport, util
 from sapling.ext import commitcloud as cc
 from sapling.i18n import _
-
 
 cmdtable = {}
 command = registrar.command(cmdtable)
@@ -218,8 +218,8 @@ def c(args: List[str]) -> bytes:
     if isinstance(args, str):
         args = shlex.split(args)
     ui = globals()["ui"]
-    fin = util.stringio()
-    fout = util.stringio()
+    fin = io.BytesIO()
+    fout = io.BytesIO()
     bindings.commands.run(["hg"] + args, fin, fout, ui.ferr)
     return fout.getvalue()
 

@@ -28,6 +28,7 @@ from __future__ import absolute_import
 
 import bisect
 import collections
+import io
 
 import bindings
 
@@ -842,7 +843,7 @@ def _parsechunk(hunk):
     a1 = hunk.fromline + len(hunk.before) - 1
     # remove before and after context
     hunk.before = hunk.after = []
-    buf = util.stringio()
+    buf = io.BytesIO()
     hunk.write(buf)
     patchlines = mdiff.splitnewlines(buf.getvalue())
     # hunk.prettystr() will update hunk.removed

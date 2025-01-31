@@ -12,6 +12,7 @@
 
 from __future__ import absolute_import
 
+import io
 import stat
 from typing import Optional
 
@@ -369,10 +370,10 @@ class metavfs(util.proxy_wrapper, vfsmod.abstractvfs):
 
 
 class readablestream:
-    """Similar to stringio, but also works in a with context"""
+    """Similar to io.BytesIO, but also works in a with context"""
 
     def __init__(self, data):
-        self.stream = util.stringio(data)
+        self.stream = io.BytesIO(data)
 
     def __enter__(self):
         return self.stream
@@ -388,11 +389,11 @@ class readablestream:
 
 
 class writablestream:
-    """Writable stringio that writes to specified place on close"""
+    """Writable io.BytesIO that writes to specified place on close"""
 
     def __init__(self, writefunc):
         self.writefunc = writefunc
-        self.stream = util.stringio()
+        self.stream = io.BytesIO()
         self.closed = False
 
     def __enter__(self):

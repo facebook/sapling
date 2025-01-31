@@ -13,6 +13,7 @@
 from __future__ import absolute_import
 
 import gzip
+import io
 import os
 import struct
 import tarfile
@@ -22,7 +23,6 @@ import zlib
 
 from . import error, formatter, progress, pycompat, util, vfs as vfsmod
 from .i18n import _
-
 
 # from unzip source code:
 _UNX_IFREG = 0x8000
@@ -92,7 +92,7 @@ def buildmetadata(ctx):
 
     opts = {"template": repo.ui.config("experimental", "archivemetatemplate", default)}
 
-    out = pycompat.stringutf8io()
+    out = io.StringIO()
 
     fm = formatter.formatter(repo.ui, out, "archive", opts)
     fm.startitem()
@@ -147,7 +147,7 @@ class tarit:
             i.size = 0
         else:
             i.mode = mode
-            data = pycompat.stringio(data)
+            data = io.BytesIO(data)
         self.z.addfile(i, data)
 
     def done(self):
