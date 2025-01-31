@@ -349,7 +349,7 @@ impl Client {
     /// a struct that will be CBOR-encoded and used as the request body.
     fn prepare_requests<T, K, F, R, G>(
         &self,
-        url: &Url,
+        base_path: &str,
         keys: K,
         batch_size: Option<usize>,
         min_batch_size: Option<usize>,
@@ -362,10 +362,11 @@ impl Client {
         G: FnMut(&Url, &Vec<T>) -> Url,
         R: ToWire,
     {
+        let url = self.build_url(base_path)?;
         split_into_batches(keys, batch_size, min_batch_size)
             .into_iter()
             .map(|keys| {
-                let url = mutate_url(url, &keys);
+                let url = mutate_url(&url, &keys);
                 let req = make_req(keys).to_wire();
                 self.configure_request(self.inner.client.post(url))?
                     .cbor(&req)
@@ -557,8 +558,6 @@ impl Client {
             return Ok(Response::empty());
         }
 
-        let url = self.build_url(paths::TREES)?;
-
         let mut attrs = attributes.clone().unwrap_or_default();
         // Inject augmented trees attribute if configured.
         attrs = TreeAttributes {
@@ -573,7 +572,7 @@ impl Client {
         let min_batch_size: Option<usize> = self.config().min_batch_size;
 
         let requests = self.prepare_requests(
-            &url,
+            paths::TREES,
             keys,
             self.config().max_trees_per_batch,
             min_batch_size,
@@ -609,12 +608,11 @@ impl Client {
 
         let guards = vec![FILES_ATTRS_INFLIGHT.entrance_guard(reqs.len())];
 
-        let url = self.build_url(paths::FILES2)?;
         let try_route_consistently = self.config().try_route_consistently;
         let min_batch_size: Option<usize> = self.config().min_batch_size;
 
         let requests = self.prepare_requests(
-            &url,
+            paths::FILES2,
             reqs,
             self.config().max_files_per_batch,
             min_batch_size,
@@ -846,13 +844,11 @@ impl Client {
             return Ok(Response::empty());
         }
 
-        let url = self.build_url(paths::HISTORY)?;
-
         let try_route_consistently = self.config().try_route_consistently;
         let min_batch_size: Option<usize> = self.config().min_batch_size;
 
         let requests = self.prepare_requests(
-            &url,
+            paths::HISTORY,
             keys,
             self.config().max_history_per_batch,
             min_batch_size,
@@ -891,9 +887,8 @@ impl Client {
             return Ok(Response::empty());
         }
 
-        let url = self.build_url(paths::BLAME)?;
         let requests = self.prepare_requests(
-            &url,
+            paths::BLAME,
             files,
             Some(MAX_CONCURRENT_BLAMES_PER_REQUEST),
             None,
@@ -951,9 +946,8 @@ impl Client {
             commits.len(),
             scheme
         );
-        let url = self.build_url(paths::COMMIT_TRANSLATE_ID)?;
         let requests = self.prepare_requests(
-            &url,
+            paths::COMMIT_TRANSLATE_ID,
             commits,
             self.config().max_commit_translate_id_per_batch,
             None,
@@ -1079,9 +1073,8 @@ impl Client {
             return Ok(Response::empty());
         }
 
-        let url = self.build_url(paths::UPLOAD_FILENODES)?;
         let requests = self.prepare_requests(
-            &url,
+            paths::UPLOAD_FILENODES,
             items,
             Some(MAX_CONCURRENT_UPLOAD_FILENODES_PER_REQUEST),
             None,
@@ -1106,9 +1099,8 @@ impl Client {
             return Ok(Response::empty());
         }
 
-        let url = self.build_url(paths::UPLOAD_TREES)?;
         let requests = self.prepare_requests(
-            &url,
+            paths::UPLOAD_TREES,
             items,
             Some(MAX_CONCURRENT_UPLOAD_TREES_PER_REQUEST),
             None,
@@ -1381,13 +1373,12 @@ impl SaplingRemoteApi for Client {
         prefixes: Vec<String>,
     ) -> Result<Vec<CommitHashLookupResponse>, SaplingRemoteApiError> {
         tracing::info!("Requesting full hashes for {} prefix(es)", prefixes.len());
-        let url = self.build_url(paths::COMMIT_HASH_LOOKUP)?;
         let prefixes: Vec<CommitHashLookupRequest> = prefixes
             .into_iter()
             .map(make_hash_lookup_request)
             .collect::<Result<Vec<CommitHashLookupRequest>, _>>()?;
         let requests = self.prepare_requests(
-            &url,
+            paths::COMMIT_HASH_LOOKUP,
             prefixes,
             Some(MAX_CONCURRENT_HASH_LOOKUPS_PER_REQUEST),
             None,
@@ -1499,10 +1490,8 @@ impl SaplingRemoteApi for Client {
             return Ok(Vec::new());
         }
 
-        let url = self.build_url(paths::COMMIT_LOCATION_TO_HASH)?;
-
         let formatted = self.prepare_requests(
-            &url,
+            paths::COMMIT_LOCATION_TO_HASH,
             requests,
             self.config().max_location_to_hash_per_batch,
             None,
@@ -1532,10 +1521,8 @@ impl SaplingRemoteApi for Client {
             return Ok(Vec::new());
         }
 
-        let url = self.build_url(paths::COMMIT_HASH_TO_LOCATION)?;
-
         let formatted = self.prepare_requests(
-            &url,
+            paths::COMMIT_HASH_TO_LOCATION,
             hgids,
             self.config().max_location_to_hash_per_batch,
             None,
@@ -1663,9 +1650,8 @@ impl SaplingRemoteApi for Client {
             return Ok(Vec::new());
         }
 
-        let url = self.build_url(paths::LOOKUP)?;
         let requests = self.prepare_requests(
-            &url,
+            paths::LOOKUP,
             items,
             Some(MAX_CONCURRENT_LOOKUPS_PER_REQUEST),
             None,
@@ -1847,9 +1833,8 @@ impl SaplingRemoteApi for Client {
         commits: Vec<HgId>,
     ) -> Result<Vec<CommitMutationsResponse>, SaplingRemoteApiError> {
         tracing::info!("Requesting mutation info for {} commit(s)", commits.len());
-        let url = self.build_url(paths::COMMIT_MUTATIONS)?;
         let requests = self.prepare_requests(
-            &url,
+            paths::COMMIT_MUTATIONS,
             commits,
             self.config().max_commit_mutations_per_batch,
             None,
