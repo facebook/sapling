@@ -5,6 +5,7 @@
  * GNU General Public License version 2.
  */
 
+pub(crate) mod common;
 mod merge;
 mod pushredirection;
 

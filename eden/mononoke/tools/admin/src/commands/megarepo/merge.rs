@@ -10,7 +10,6 @@ use anyhow::format_err;
 use anyhow::Error;
 use anyhow::Result;
 use bonsai_hg_mapping::BonsaiHgMappingRef;
-use bookmarks::BookmarkKey;
 use cloned::cloned;
 use context::CoreContext;
 use futures::try_join;
@@ -24,8 +23,9 @@ use mononoke_app::args::ChangesetArgs;
 use mononoke_app::args::RepoArgs;
 use mononoke_app::MononokeApp;
 use mononoke_types::ChangesetId;
-use mononoke_types::DateTime;
 use slog::info;
+
+use super::common::ResultingChangesetArgs;
 
 /// Create a merge commit with given parents
 #[derive(Debug, clap::Args)]
@@ -35,42 +35,8 @@ pub struct MergeArgs {
     #[clap(flatten)]
     pub repo_args: RepoArgs,
 
-    #[clap(long, short = 'm')]
-    pub commit_message: String,
-    #[clap(long, short = 'a')]
-    pub commit_author: String,
-
-    #[clap(long = "commit-date-rfc3339")]
-    pub datetime: Option<String>,
-    #[clap(
-        long,
-        help = "bookmark to point to resulting commits (no sanity checks, will move existing bookmark, be careful)"
-    )]
-    pub set_bookmark: Option<String>,
-
-    #[clap(long = "mark-public")]
-    pub mark_public: bool,
-}
-
-impl TryInto<MegarepoNewChangesetArgs> for MergeArgs {
-    type Error = Error;
-
-    fn try_into(self) -> Result<MegarepoNewChangesetArgs> {
-        let mb_datetime = self
-            .datetime
-            .as_deref()
-            .map_or_else(|| Ok(DateTime::now()), DateTime::from_rfc3339)?;
-
-        let mb_bookmark = self.set_bookmark.map(BookmarkKey::new).transpose()?;
-        let res = MegarepoNewChangesetArgs {
-            message: self.commit_message,
-            author: self.commit_author,
-            datetime: mb_datetime,
-            bookmark: mb_bookmark,
-            mark_public: self.mark_public,
-        };
-        Ok(res)
-    }
+    #[command(flatten)]
+    pub res_cs_args: ResultingChangesetArgs,
 }
 
 async fn fail_on_path_conflicts(
@@ -102,7 +68,7 @@ pub async fn perform_merge(
     repo: Repo,
     first_bcs_id: ChangesetId,
     second_bcs_id: ChangesetId,
-    resulting_changeset_args: MegarepoNewChangesetArgs,
+    res_cs_args: MegarepoNewChangesetArgs,
 ) -> Result<HgChangesetId, Error> {
     cloned!(ctx, repo);
     let (first_hg_cs_id, second_hg_cs_id) = try_join!(
@@ -119,7 +85,7 @@ pub async fn perform_merge(
         &repo,
         vec![first_bcs_id, second_bcs_id],
         Default::default(),
-        resulting_changeset_args,
+        res_cs_args,
     )
     .await
 }
@@ -135,14 +101,14 @@ pub async fn run(ctx: &CoreContext, app: MononokeApp, args: MergeArgs) -> Result
         _ => bail!("Expected exactly two parent commits"),
     };
 
-    let resulting_changeset_args = MegarepoNewChangesetArgs::from(args.try_into()?);
+    let res_cs_args = args.res_cs_args.try_into()?;
 
     perform_merge(
         ctx.clone(),
         repo.clone(),
         first_parent,
         second_parent,
-        resulting_changeset_args,
+        res_cs_args,
     )
     .await
     .map(|_| ())
