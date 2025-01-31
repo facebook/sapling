@@ -14,11 +14,9 @@ from __future__ import absolute_import, print_function
 import _lsprof
 import sys
 
-
 Profiler = _lsprof.Profiler
 
-# PyPy doesn't expose profiler_entry from the module.
-profiler_entry = getattr(_lsprof, "profiler_entry", None)
+profiler_entry = _lsprof.profiler_entry
 
 __all__ = ["profile", "Stats"]
 
@@ -42,11 +40,7 @@ class Stats:
 
     def sort(self, crit="inlinetime"):
         """XXX docstring"""
-        # profiler_entries isn't defined when running under PyPy.
-        if profiler_entry:
-            if crit not in profiler_entry.__dict__:
-                raise ValueError("Can't sort by %s" % crit)
-        elif self.data and not getattr(self.data[0], crit, None):
+        if crit not in profiler_entry.__dict__:
             raise ValueError("Can't sort by %s" % crit)
 
         self.data.sort(key=lambda x: getattr(x, crit), reverse=True)

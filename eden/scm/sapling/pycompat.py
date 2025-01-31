@@ -21,14 +21,11 @@ import abc
 import errno
 import getopt
 import os
-import shlex
-import sys
-
-ispypy = r"__pypy__" in sys.builtin_module_names
-
 import pickle  # noqa: F401
 import queue as _queue
+import shlex
 import socketserver  # noqa: F401
+import sys
 
 empty = _queue.Empty
 # pyre-fixme[11]: Annotation `_queue` is not defined as a type.

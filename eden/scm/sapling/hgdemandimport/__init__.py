@@ -71,16 +71,6 @@ ignore = [
     "multiprocessing.reduction",  # module object for 'multiprocessing.reduction' substituted in sys.modules during a lazy load
 ]
 
-_pypy = "__pypy__" in sys.builtin_module_names
-
-if _pypy:
-    ignore.extend(
-        [
-            # _ctypes.pointer is shadowed by "from .. import pointer" (PyPy 5)
-            "_ctypes.pointer"
-        ]
-    )
-
 demandimport.init(ignore)
 
 # Re-export.

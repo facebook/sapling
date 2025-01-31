@@ -23,7 +23,6 @@ from typing import Any, Dict, Optional, Tuple
 from . import error, pycompat, util
 from .i18n import _
 
-
 # Python 2.7.9+ overhauled the built-in SSL/TLS features of Python. It added
 # support for TLS 1.1, TLS 1.2, SNI, system CA stores, etc. These features are
 # all exposed via the "ssl" module.
@@ -414,7 +413,7 @@ def wrapsocket(sock, keyfile, certfile, ui, serverhostname=None):
         try:
             sslcontext.load_verify_locations(cafile=settings["cafile"])
         except ssl.SSLError as e:
-            if len(e.args) == 1:  # pypy has different SSLError args
+            if len(e.args) == 1:
                 msg = e.args[0]
             else:
                 msg = e.args[1]

@@ -214,7 +214,7 @@ class CERT_CHAIN_PARA(ctypes.Structure):
     )
 
 
-# types of parameters of C functions used (required by pypy)
+# types of parameters of C functions used
 
 _crypt32.CertCreateCertificateContext.argtypes = [
     _DWORD,  # cert encoding

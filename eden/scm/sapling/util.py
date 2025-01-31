@@ -687,13 +687,7 @@ class sortdict(collections.OrderedDict):
     [b'a', b'b', b'c']
     """
 
-    if pycompat.ispypy:
-        # __setitem__() isn't called as of PyPy 5.8.0
-        def update(self, src):
-            if isinstance(src, dict):
-                src = src.items()
-            for k, v in src:
-                self[k] = v
+    pass
 
 
 class altsortdict(sortdict):
