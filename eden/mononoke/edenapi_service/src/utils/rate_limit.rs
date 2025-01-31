@@ -81,7 +81,7 @@ pub async fn counter_check_and_bump<'a>(
                     count,
                     max_value,
                 );
-                let msg = format!("{}: Exceeded (log only)", rate_limit_name);
+                let msg = format!("Rate limit exceeded: {} (log only)", rate_limit_name);
                 scuba.log_with_msg(&msg, None);
                 Ok(())
             } else {
@@ -92,7 +92,7 @@ pub async fn counter_check_and_bump<'a>(
                     count,
                     max_value,
                 );
-                let msg = format!("{}: Blocked", rate_limit_name);
+                let msg = format!("Rate limit exceeded: {} (enforced)", rate_limit_name);
                 scuba.log_with_msg(&msg, None);
                 Err(anyhow!(msg))
             }
