@@ -51,7 +51,6 @@ use repo_derived_data::RepoDerivedDataRef;
 use repo_identity::RepoIdentityRef;
 use slog::info;
 use slog::Logger;
-use stats::prelude::*;
 use tokio::sync::mpsc;
 use url::Url;
 
@@ -66,13 +65,6 @@ use crate::sender::ModernSyncSender;
 use crate::ModernSyncArgs;
 use crate::Repo;
 const MODERN_SYNC_COUNTER_NAME: &str = "modern_sync";
-
-define_stats! {
-    prefix = "mononoke.modern_sync";
-    completion_duration_secs: timeseries(Average, Sum, Count),
-    synced_commits:  dynamic_timeseries("{}.commits_synced", (repo: String); Rate, Sum),
-    sync_lag_seconds:  dynamic_timeseries("{}.sync_lag_seconds", (repo: String); Average),
-}
 
 #[derive(Clone)]
 pub enum ExecutionType {
@@ -435,9 +427,7 @@ pub async fn process_one_changeset(
     }
 
     if log_to_ods {
-        STATS::synced_commits.add_value(1, (repo.repo_identity().name().to_string(),));
-
-        if let Some(cs_id) = repo
+        let lag = if let Some(cs_id) = repo
             .bookmarks()
             .get(ctx.clone(), &BookmarkKey::new(bookmark_name)?)
             .await?
@@ -445,13 +435,18 @@ pub async fn process_one_changeset(
             let bookmark_commit = cs_id.load(ctx, repo.repo_blobstore()).await?;
             let bookmark_commit_time = bookmark_commit.author_date().timestamp_secs();
 
-            STATS::sync_lag_seconds.add_value(
-                bookmark_commit_time - commit_time,
-                (repo.repo_identity().name().to_string(),),
-            );
+            Some(bookmark_commit_time - commit_time)
         } else {
             info!(logger, "Bookmark {} not found", bookmark_name);
-        }
+            None
+        };
+
+        send_manager
+            .send_changeset(ChangesetMessage::Log((
+                repo.repo_identity().name().to_string(),
+                lag,
+            )))
+            .await?;
     }
 
     Ok(())

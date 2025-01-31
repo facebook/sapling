@@ -17,9 +17,18 @@ use mononoke_types::BonsaiChangeset;
 use mononoke_types::FileContents;
 use slog::error;
 use slog::Logger;
+use stats::define_stats;
+use stats::prelude::*;
 use tokio::sync::mpsc;
 
 use crate::sender::ModernSyncSender;
+
+define_stats! {
+    prefix = "mononoke.modern_sync";
+    completion_duration_secs: timeseries(Average, Sum, Count),
+    synced_commits:  dynamic_timeseries("{}.commits_synced", (repo: String); Rate, Sum),
+    sync_lag_seconds:  dynamic_timeseries("{}.sync_lag_seconds", (repo: String); Average),
+}
 
 const CONTENT_CHANNEL_SIZE: usize = 1000;
 const FILES_AND_TREES_CHANNEL_SIZE: usize = 1000;
@@ -57,6 +66,8 @@ pub enum ChangesetMessage {
     Changeset((HgBlobChangeset, BonsaiChangeset)),
     // Notify changeset sending is done
     ChangesetDone(mpsc::Sender<Result<()>>),
+    // Log changeset completion
+    Log((String, Option<i64>)),
 }
 
 impl SendManager {
@@ -230,6 +241,12 @@ impl SendManager {
                                 error!(changeset_logger, "Error sending changeset ready:  {:?}", e);
                                 return;
                             }
+                        }
+                    }
+                    ChangesetMessage::Log((reponame, lag)) => {
+                        STATS::synced_commits.add_value(1, (reponame.clone(),));
+                        if let Some(lag) = lag {
+                            STATS::sync_lag_seconds.add_value(lag, (reponame,));
                         }
                     }
                 }
