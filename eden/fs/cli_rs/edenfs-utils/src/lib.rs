@@ -227,7 +227,9 @@ pub fn remove_symlink(path: &Path) -> Result<()> {
 
 #[cfg(windows)]
 const PYTHON_CANDIDATES: &[&str] = &[
-    r"c:\tools\fb-python\fb-python312",
+    // (T214121626) Temporarily disable python312 due to reloadconfig issues
+    // S487049
+    // r"c:\tools\fb-python\fb-python312",
     r"c:\tools\fb-python\fb-python310",
     r"c:\Python310",
 ];
