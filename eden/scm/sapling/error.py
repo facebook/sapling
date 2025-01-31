@@ -49,8 +49,8 @@ def _tobytes(exc) -> Union[bytes, str]:
     if not exc.args:
         return b""
     if len(exc.args) == 1:
-        return pycompat.bytestr(exc.args[0])
-    return b"(%s)" % b", ".join(b"'%s'" % pycompat.bytestr(a) for a in exc.args)
+        return str(exc.args[0])
+    return b"(%s)" % b", ".join(b"'%s'" % str(a) for a in exc.args)
 
 
 class Hint:

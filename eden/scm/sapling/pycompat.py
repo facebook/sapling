@@ -31,12 +31,6 @@ def identity(a):
 
 import io
 
-maplist = lambda *args: list(map(*args))
-ziplist = lambda *args: list(zip(*args))
-rawinput = input
-
-bytestr = str
-
 
 def raisewithtb(exc, tb):
     """Raise exception with the given traceback"""

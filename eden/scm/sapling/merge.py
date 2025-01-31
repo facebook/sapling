@@ -955,8 +955,8 @@ def manifestmerge(
     if followcopies:
         copy = copies.mergecopies(repo, wctx, p2, pa)
 
-    boolbm = pycompat.bytestr(bool(branchmerge))
-    boolf = pycompat.bytestr(bool(force))
+    boolbm = str(bool(branchmerge))
+    boolf = str(bool(force))
     shouldsparsematch = hasattr(repo, "sparsematch") and (
         "eden" not in repo.requirements or "edensparse" in repo.requirements
     )
@@ -1249,7 +1249,7 @@ def calculateupdates(
     else:  # only when merge.preferancestor=* - the default
         repo.ui.note(
             _("note: merging %s and %s using bids from ancestors %s\n")
-            % (wctx, mctx, _(" and ").join(pycompat.bytestr(anc) for anc in ancestors))
+            % (wctx, mctx, _(" and ").join(str(anc) for anc in ancestors))
         )
 
         # Call for bids

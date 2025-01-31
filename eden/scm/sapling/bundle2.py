@@ -177,7 +177,6 @@ from . import (
 from .i18n import _
 from .vfs import abstractvfs
 
-
 _pack = struct.pack
 _unpack = struct.unpack
 
@@ -595,7 +594,7 @@ def _processpart(op, part):
 
         if output:
             outpart = op.reply.newpart("output", data=output, mandatory=False)
-            outpart.addparam("in-reply-to", pycompat.bytestr(part.id), mandatory=False)
+            outpart.addparam("in-reply-to", str(part.id), mandatory=False)
 
 
 def decodecaps(blob: str) -> "Dict[str, Tuple[str, ...]]":
@@ -688,7 +687,7 @@ class bundle20:
         """add a stream level parameter"""
         if not name:
             raise ValueError(r"empty parameter name")
-        if name[0:1] not in pycompat.bytestr(string.ascii_letters):
+        if name[0:1] not in str(string.ascii_letters):
             raise ValueError(r"non letter first character: %s" % name)
         self._params.append((name, value))
 
@@ -887,7 +886,7 @@ class unbundle20(unpackermixin):
         """
         if not name:
             raise ValueError(r"empty parameter name")
-        if name[0:1] not in pycompat.bytestr(string.ascii_letters):
+        if name[0:1] not in str(string.ascii_letters):
             raise ValueError(r"non letter first character: %s" % name)
         try:
             handler = b2streamparamsmap[name.lower()]
@@ -1143,7 +1142,7 @@ class bundlepart:
             parttype = self.type.upper()
         else:
             parttype = self.type.lower()
-        outdebug(ui, 'part %s: "%s"' % (pycompat.bytestr(self.id), parttype))
+        outdebug(ui, 'part %s: "%s"' % (str(self.id), parttype))
         ## parttype
         header = [
             _pack(_fparttypesize, len(parttype)),
@@ -1407,7 +1406,7 @@ class unbundlepart(unpackermixin):
         self.type = self._fromheader(typesize).decode()
         indebug(self.ui, 'part type: "%s"' % self.type)
         self.id = self._unpackheader(_fpartid)[0]
-        indebug(self.ui, 'part id: "%s"' % pycompat.bytestr(self.id))
+        indebug(self.ui, 'part id: "%s"' % str(self.id))
         # extract mandatory bit from type
         self.mandatory = self.type != self.type.lower()
         self.type = self.type.lower()
@@ -1833,7 +1832,7 @@ def handlechangegroup(op: "bundleoperation", inpart: "unbundlepart") -> None:
         # This is definitely not the final form of this
         # return. But one need to start somewhere.
         part = reply.newpart("reply:changegroup", mandatory=False)
-        part.addparam("in-reply-to", pycompat.bytestr(inpart.id), mandatory=False)
+        part.addparam("in-reply-to", str(inpart.id), mandatory=False)
         part.addparam("return", "%i" % ret, mandatory=False)
     assert not inpart.read()
 
@@ -1904,7 +1903,7 @@ def handleremotechangegroup(op: "bundleoperation", inpart: "unbundlepart") -> No
         # This is definitely not the final form of this
         # return. But one need to start somewhere.
         part = reply.newpart("reply:changegroup")
-        part.addparam("in-reply-to", pycompat.bytestr(inpart.id), mandatory=False)
+        part.addparam("in-reply-to", str(inpart.id), mandatory=False)
         part.addparam("return", "%i" % ret, mandatory=False)
     try:
         real_part.validate()
@@ -2088,7 +2087,7 @@ def handlepushkey(op: "bundleoperation", inpart: "unbundlepart") -> None:
     reply = op.reply
     if reply is not None:
         rpart = reply.newpart("reply:pushkey")
-        rpart.addparam("in-reply-to", pycompat.bytestr(inpart.id), mandatory=False)
+        rpart.addparam("in-reply-to", str(inpart.id), mandatory=False)
         rpart.addparam("return", "%i" % ret, mandatory=False)
     if inpart.mandatory and not ret:
         kwargs = {}

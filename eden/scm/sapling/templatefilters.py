@@ -400,7 +400,7 @@ def stringify(thing):
         return "".join([stringify(t) for t in thing if t is not None])
     if thing is None:
         return ""
-    return pycompat.bytestr(thing)
+    return str(thing)
 
 
 def byteify(thing):

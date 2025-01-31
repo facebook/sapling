@@ -628,7 +628,7 @@ def _debugphaseheads(ui, data, indent: int = 0) -> None:
 def _quasirepr(thing) -> str:
     if isinstance(thing, (dict, util.sortdict, collections.OrderedDict)):
         return "{%s}" % (", ".join("%s: %s" % (k, thing[k]) for k in sorted(thing)))
-    return pycompat.bytestr(repr(thing))
+    return str(repr(thing))
 
 
 def _debugbundle2(ui, gen: bundle2.unbundle20, all=None, **opts) -> None:

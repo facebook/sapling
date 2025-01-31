@@ -1043,7 +1043,7 @@ class ui:
         # - http://bugs.python.org/issue12833
         with self.timeblockedsection("stdio"):  # fin is not yet Rust IO
             if usereadline:
-                line = pycompat.rawinput("")
+                line = input("")
             else:
                 line = self.fin.readline().decode()
                 if not line:

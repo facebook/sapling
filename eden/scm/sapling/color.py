@@ -299,9 +299,9 @@ def _render_effects(ui, text, effects: List[str], usebytes: bool = False):
     activeeffects = _activeeffects(ui)
     # pyre-fixme[16]: `List` has no attribute `split`.
     effects = ["none"] + [e for effect in effects.split() for e in effect.split("+")]
-    start = [pycompat.bytestr(activeeffects[e]) for e in effects]
+    start = [str(activeeffects[e]) for e in effects]
     start = "\033[" + ";".join(start) + "m"
-    stop = "\033[" + pycompat.bytestr(activeeffects["none"]) + "m"
+    stop = "\033[" + str(activeeffects["none"]) + "m"
     return _mergeeffects(text, start, stop, usebytes=usebytes)
 
 

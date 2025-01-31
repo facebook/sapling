@@ -549,7 +549,7 @@ def _callcatch(ui, req, func):
 
     except error.CommandError as inst:
         if inst.args[0]:
-            msgbytes = pycompat.bytestr(inst.args[1])
+            msgbytes = str(inst.args[1])
             ui.warn(_("@prog@ %s: %s\n") % (inst.args[0], msgbytes))
             ui.warn(_("(use '@prog@ %s -h' to get help)\n") % (inst.args[0],))
         else:
@@ -1045,7 +1045,7 @@ def _dispatch(req):
                         if not func.optionalrepo:
                             if func.inferrepo and args and not path:
                                 # try to infer -R from command args
-                                repos = pycompat.maplist(cmdutil.findrepo, args)
+                                repos = list(map(cmdutil.findrepo, args))
                                 guess = repos[0]
                                 if guess and repos.count(guess) == len(repos):
                                     req.args = ["--repository", guess] + fullargs

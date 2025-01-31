@@ -665,7 +665,7 @@ def tersedir(statuslist, terseargs):
     allst = ("m", "a", "r", "d", "u", "i", "c")
 
     # checking the argument validity
-    for s in pycompat.bytestr(terseargs):
+    for s in str(terseargs):
         if s not in allst:
             raise error.Abort(_("'%s' not recognized") % s)
 

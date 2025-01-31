@@ -173,7 +173,7 @@ def parsedag(desc):
     if not desc:
         return
 
-    wordchars = pycompat.bytestr(string.ascii_letters + string.digits)
+    wordchars = str(string.ascii_letters + string.digits)
 
     labels = {}
     p1 = -1
@@ -182,7 +182,7 @@ def parsedag(desc):
     def resolve(ref):
         if not ref:
             return p1
-        elif ref[0] in pycompat.bytestr(string.digits):
+        elif ref[0] in str(string.digits):
             return r - int(ref)
         else:
             return labels[ref]
@@ -216,7 +216,7 @@ def parsedag(desc):
 
     c = nextch()
     while c != "\0":
-        while c in pycompat.bytestr(string.whitespace):
+        while c in str(string.whitespace):
             c = nextch()
         if c == ".":
             yield "n", (r, [p1])
@@ -224,7 +224,7 @@ def parsedag(desc):
             r += 1
             c = nextch()
         elif c == "+":
-            c, digs = nextrun(nextch(), pycompat.bytestr(string.digits))
+            c, digs = nextrun(nextch(), str(string.digits))
             n = int(digs)
             for i in range(0, n):
                 yield "n", (r, [p1])

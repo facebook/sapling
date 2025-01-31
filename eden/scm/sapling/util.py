@@ -2304,7 +2304,7 @@ def strdate(string, format, defaults=None):
     # add missing elements from defaults
     usenow = False  # default to using biased defaults
     for part in ("S", "M", "HI", "d", "mb", "yY"):  # decreasing specificity
-        part = pycompat.bytestr(part)
+        part = str(part)
         found = [True for p in part if ("%" + p) in format]
         if not found:
             date += "@" + defaults[part][usenow]
@@ -2648,10 +2648,10 @@ def forcebytestr(obj):
     """Portably format an arbitrary object (e.g. exception) into a byte
     string."""
     try:
-        return pycompat.bytestr(obj)
+        return str(obj)
     except UnicodeEncodeError:
         # non-ascii string, may be lossy
-        return pycompat.bytestr(encoding.strtolocal(str(obj)))
+        return str(encoding.strtolocal(str(obj)))
 
 
 def uirepr(s):

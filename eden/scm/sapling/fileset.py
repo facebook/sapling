@@ -44,7 +44,7 @@ globchars = ".*{}[]?/\\_"
 
 def tokenize(program):
     pos, l = 0, len(program)
-    program = pycompat.bytestr(program)
+    program = str(program)
     while pos < l:
         c = program[pos]
         if c.isspace():  # skip inter-token whitespace

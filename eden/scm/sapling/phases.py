@@ -302,13 +302,13 @@ class phasecache:
         assert not self._headbased
         cl = repo.changelog
         self._phasesets = [set() for phase in allphases]
-        roots = pycompat.maplist(cl.rev, self.phaseroots[secret])
+        roots = list(map(cl.rev, self.phaseroots[secret]))
         if roots:
             ps = set(cl.descendants(roots))
             for root in roots:
                 ps.add(root)
             self._phasesets[secret] = ps
-        roots = pycompat.maplist(cl.rev, self.phaseroots[draft])
+        roots = list(map(cl.rev, self.phaseroots[draft]))
         if roots:
             ps = set(cl.descendants(roots))
             for root in roots:

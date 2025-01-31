@@ -83,7 +83,7 @@ def tokenize(program, lookup=None, syminitletters=None, symletters=None):
     [('symbol', '@', 0), ('::', None, 1), ('end', None, 3)]
 
     """
-    program = pycompat.bytestr(program)
+    program = str(program)
     if syminitletters is None:
         syminitletters = _syminitletters
     if symletters is None:
@@ -702,7 +702,7 @@ def formatspec(expr, *args):
         m = l // 2
         return "(%s or %s)" % (listexp(s[:m], t), listexp(s[m:], t))
 
-    expr = pycompat.bytestr(expr)
+    expr = str(expr)
     ret = ""
     pos = 0
     arg = 0

@@ -419,7 +419,7 @@ def annotate(ui, repo, *pats, **opts):
 
     else:
         hexfn = rootfm.hexfunc
-        formatrev = formathex = pycompat.bytestr
+        formatrev = formathex = str
 
     now = time.time()
 
@@ -1328,7 +1328,7 @@ def bookmark(ui, repo, *names, **opts):
     if delete or rename or names or inactive:
         with repo.wlock(), repo.lock(), repo.transaction("bookmark") as tr:
             if delete:
-                names = pycompat.maplist(repo._bookmarks.expandname, set(names))
+                names = list(map(repo._bookmarks.expandname, set(names)))
                 bookmarks.delete(repo, tr, names)
             elif rename:
                 if not names:
@@ -1844,7 +1844,7 @@ def config(ui, repo, *values, **opts):
     matched = False
     for section, name, value in ui.walkconfig():
         source = ui.configsource(section, name)
-        value = pycompat.bytestr(value)
+        value = str(value)
         if fm.isplain():
             source = source or "none"
             value = value.replace("\n", "\\n")
@@ -3690,7 +3690,7 @@ def identify(
             fm.data(id=hexoutput)
 
             if num:
-                output.append(pycompat.bytestr(ctx.rev()))
+                output.append(str(ctx.rev()))
 
         if default and not ui.quiet:
             # multiple bookmarks for a single parent separated by '/'

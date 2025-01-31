@@ -112,7 +112,7 @@ class _mappable:
         self._makemap = makemap
 
     def gen(self):
-        yield pycompat.bytestr(self._value)
+        yield str(self._value)
 
     def tomap(self):
         return self._makemap(self._key)

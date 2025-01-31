@@ -32,7 +32,7 @@ def dumps(obj, paranoid=True):
     elif obj is True:
         return "true"
     elif isinstance(obj, (int, long, float)):
-        return pycompat.bytestr(obj)
+        return str(obj)
     elif isinstance(obj, bytes):
         return '"%s"' % encoding.jsonescape(obj, paranoid=paranoid)
     elif isinstance(obj, str):
