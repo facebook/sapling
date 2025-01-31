@@ -42,6 +42,8 @@ pub trait Repo = cross_repo_sync::Repo
     + for<'b> facet::AsyncBuildable<'b, repo_factory::RepoFactoryBuilder<'b>>;
 
 /// Instantiate the `Syncers` struct by parsing `matches`
+/// TODO(T213755338): delete this and use `create_commit_syncers_from_app` in
+/// cmdlib/cross_repo.
 pub async fn create_commit_syncers_from_matches<R: Repo>(
     ctx: &CoreContext,
     matches: &MononokeMatches<'_>,

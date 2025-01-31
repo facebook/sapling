@@ -1135,6 +1135,8 @@ async fn compare_contents(
     source_hg_cs_id: HgChangesetId,
     target_hg_cs_id: HgChangesetId,
     commit_syncer: CommitSyncer<TestRepo>,
+    // TODO(T182311609): stop taking Movers and call a commit syncer method to
+    // move paths.
     movers: Movers,
 ) -> Result<(), Error> {
     let source_content =

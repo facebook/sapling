@@ -376,32 +376,7 @@ where
         &self.live_commit_sync_config
     }
 
-    pub async fn get_movers_by_version(
-        &self,
-        version: &CommitSyncConfigVersion,
-    ) -> Result<Movers, Error> {
-        get_movers_by_version(
-            version,
-            Arc::clone(&self.live_commit_sync_config),
-            Source(self.repos.get_source_repo().repo_identity().id()),
-            Target(self.repos.get_target_repo().repo_identity().id()),
-        )
-        .boxed()
-        .await
-    }
-
-    pub async fn get_bookmark_renamer(&self) -> Result<BookmarkRenamer, Error> {
-        let (source_repo, target_repo) = self.get_source_target();
-
-        get_bookmark_renamer(
-            Arc::clone(&self.live_commit_sync_config),
-            source_repo.repo_identity().id(),
-            target_repo.repo_identity().id(),
-        )
-        .boxed()
-        .await
-    }
-
+    // TODO(T182311609): unify commit sync outcome methods
     pub async fn get_plural_commit_sync_outcome<'a>(
         &'a self,
         ctx: &'a CoreContext,
@@ -458,6 +433,7 @@ where
         .await
     }
 
+    // TODO(T182311609): should this be public?
     pub async fn get_common_pushrebase_bookmarks(&self) -> Result<Vec<BookmarkKey>, Error> {
         get_common_pushrebase_bookmarks(
             Arc::clone(&self.live_commit_sync_config),
@@ -467,6 +443,22 @@ where
         .await
     }
 
+    // TODO(T182311609): delete this. It shouldn't be used by CommitSyncer clients.
+    pub async fn get_movers_by_version(
+        &self,
+        version: &CommitSyncConfigVersion,
+    ) -> Result<Movers, Error> {
+        get_movers_by_version(
+            version,
+            Arc::clone(&self.live_commit_sync_config),
+            Source(self.repos.get_source_repo().repo_identity().id()),
+            Target(self.repos.get_target_repo().repo_identity().id()),
+        )
+        .boxed()
+        .await
+    }
+
+    // TODO(T182311609): delete this. It shouldn't be used by CommitSyncer clients.
     pub async fn get_reverse_mover_by_version(
         &self,
         version: &CommitSyncConfigVersion,
@@ -482,6 +474,20 @@ where
         .await
     }
 
+    // TODO(T182311609): delete this. It shouldn't be used by CommitSyncer clients.
+    pub async fn get_bookmark_renamer(&self) -> Result<BookmarkRenamer, Error> {
+        let (source_repo, target_repo) = self.get_source_target();
+
+        get_bookmark_renamer(
+            Arc::clone(&self.live_commit_sync_config),
+            source_repo.repo_identity().id(),
+            target_repo.repo_identity().id(),
+        )
+        .boxed()
+        .await
+    }
+
+    // TODO(T182311609): delete this. It shouldn't be used by CommitSyncer clients.
     pub(crate) async fn get_reverse_bookmark_renamer(&self) -> Result<BookmarkRenamer, Error> {
         let (source_repo, target_repo) = self.get_source_target();
 

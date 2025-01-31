@@ -1039,6 +1039,10 @@ pub struct Syncers<R: Repo> {
     pub small_to_large: CommitSyncer<R>,
 }
 
+// TODO(T182311609): Remove circular dependency between commit_syncers_lib
+// and commit_syncer.
+
+// TODO(T182311609): move this out of commit_syncers_lib module.
 pub fn create_commit_syncers<R>(
     ctx: &CoreContext,
     small_repo: R,
