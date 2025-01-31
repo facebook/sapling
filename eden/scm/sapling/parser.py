@@ -215,7 +215,7 @@ def unescapestr(s):
 def _brepr(obj):
     if isinstance(obj, bytes):
         return b"'%s'" % util.escapestr(obj)
-    return encoding.strtolocal(repr(obj))
+    return repr(obj)
 
 
 def _prettyformat(tree, leafnodes, level, lines):

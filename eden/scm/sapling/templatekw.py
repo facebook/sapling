@@ -454,12 +454,7 @@ def showchangesetdate(repo, ctx, templ, **args):
 @templatekeyword("desc")
 def showdescription(repo, ctx, templ, **args):
     """String. The text of the changeset description."""
-    s = ctx.description()
-    if isinstance(s, encoding.localstr):
-        # try hard to preserve utf-8 bytes
-        return encoding.tolocal(encoding.fromlocal(s).strip())
-    else:
-        return s.strip()
+    return ctx.description().strip()
 
 
 @templatekeyword("diffstat")

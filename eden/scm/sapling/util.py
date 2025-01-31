@@ -2244,7 +2244,7 @@ def datestr(date=None, format="%a %b %d %H:%M:%S %Y %1%2"):
     # because they use the gmtime() system call which is buggy on Windows
     # for negative values.
     t = datetime.datetime(1970, 1, 1) + datetime.timedelta(seconds=d)
-    s = encoding.strtolocal(t.strftime(encoding.strfromlocal(format)))
+    s = t.strftime(format)
     return s
 
 
@@ -2314,9 +2314,7 @@ def strdate(string, format, defaults=None):
             # elements are relative to today
             usenow = True
 
-    timetuple = time.strptime(
-        encoding.strfromlocal(date), encoding.strfromlocal(format)
-    )
+    timetuple = time.strptime(date, format)
     localunixtime = int(calendar.timegm(timetuple))
     if offset is None:
         # local timezone
@@ -2452,8 +2450,8 @@ def stringmatcher(pattern, casesensitive=True):
     match = pattern.__eq__
 
     if not casesensitive:
-        ipat = encoding.lower(pattern)
-        match = lambda s: ipat == encoding.lower(s)
+        ipat = pattern.lower()
+        match = lambda s: ipat == s.lower()
     return "literal", pattern, match
 
 
@@ -2651,7 +2649,7 @@ def forcebytestr(obj):
         return str(obj)
     except UnicodeEncodeError:
         # non-ascii string, may be lossy
-        return str(encoding.strtolocal(str(obj)))
+        return str(obj)
 
 
 def uirepr(s):
@@ -3104,7 +3102,6 @@ class url:
             if v is not None:
                 setattr(self, a, urlreq.unquote(v))
 
-    @encoding.strmethod
     def __repr__(self):
         attrs = []
         for a in (

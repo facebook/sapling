@@ -115,7 +115,7 @@ class eden_dirstate(dirstate.dirstate):
                 if self._ismissing(path):
                     explicit_matches[path] = None
                 else:
-                    match.bad(path, encoding.strtolocal(ex.strerror))
+                    match.bad(path, ex.strerror)
 
         return explicit_matches
 

@@ -923,7 +923,7 @@ def getsections(blocks):
             x = b["key"]
         else:
             x = b["lines"][0]
-        x = encoding.lower(x).strip('"')
+        x = x.lower().strip('"')
         if "(" in x:
             x = x.split("(")[0]
         return x

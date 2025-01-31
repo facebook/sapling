@@ -651,9 +651,7 @@ class transaction(util.transactional):
             if self.uiconfig and self.uiconfig.configbool("metalog", "track-config"):
                 metalog.set("config", self.uiconfig.configtostring().encode())
 
-            command = encoding.unifromlocal(
-                " ".join(map(util.shellquote, sys.argv[1:]))
-            )
+            command = " ".join(map(util.shellquote, sys.argv[1:]))
             parent = "Parent: %s" % hex(metalog.root())
             trdesc = "Transaction: %s" % self.desc
             message = "\n".join([command, parent, trdesc])

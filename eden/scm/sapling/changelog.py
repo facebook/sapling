@@ -23,7 +23,6 @@ from .i18n import _
 from .node import bbin, hex, nullid
 from .thirdparty import attr
 
-
 _defaultextra = {"branch": "default"}
 
 textwithheader = revlog.textwithheader
@@ -147,7 +146,7 @@ class changelogrevision:
     @property
     def user(self):
         off = self._offsets
-        return encoding.tolocalstr(self._text[off[0] + 1 : off[1]])
+        return self._text[off[0] + 1 : off[1]].decode()
 
     @property
     def _rawdate(self):
@@ -199,7 +198,7 @@ class changelogrevision:
 
     @property
     def description(self):
-        return encoding.tolocalstr(self._text[self._offsets[3] + 2 :])
+        return self._text[self._offsets[3] + 2 :].decode()
 
 
 class changelogrevision2:
@@ -257,10 +256,6 @@ class changelogrevision2:
 
 def hgcommittext(manifest, files, desc, user, date, extra, use_rust=True):
     """Generate the 'text' of a commit"""
-    # Convert to UTF-8 encoded bytestrings as the very first
-    # thing: calling any method on a localstr object will turn it
-    # into a str object and the cached UTF-8 string is thus lost.
-    user, desc = encoding.fromlocal(user), encoding.fromlocal(desc)
 
     user = user.strip()
     # An empty username or a username with a "\n" will make the

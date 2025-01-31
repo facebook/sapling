@@ -874,7 +874,7 @@ class dirstate:
             except OSError as ex:
                 if path not in seenset:
                     # This handles does-not-exist, permission error, etc.
-                    match.bad(path, encoding.strtolocal(ex.strerror))
+                    match.bad(path, ex.strerror)
                 continue
 
             typ = stat.S_IFMT(st.st_mode)

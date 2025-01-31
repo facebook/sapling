@@ -37,7 +37,6 @@ from sapling.node import bin
 
 from . import common, fold
 
-
 cmdtable = {}
 command = registrar.command(cmdtable)
 
@@ -215,7 +214,7 @@ def metaedit(ui, repo, templ, *revs, **opts) -> Optional[int]:
                         except IOError as inst:
                             raise error.Abort(
                                 _("can't read JSON input file '%s': %s")
-                                % (jsoninputfile, encoding.strtolocal(inst.strerror))
+                                % (jsoninputfile, inst.strerror)
                             )
                         except ValueError as inst:
                             raise error.Abort(

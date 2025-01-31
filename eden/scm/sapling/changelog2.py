@@ -459,7 +459,7 @@ class changelog:
         This function exists because creating a changectx object
         just to access this is costly."""
         extra = self.read(rev)[5]
-        return encoding.tolocal(extra.get("branch")), "close" in extra
+        return extra.get("branch"), "close" in extra
 
     def revision(
         self,

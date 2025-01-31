@@ -19,7 +19,6 @@ from sapling.node import hex
 
 from . import commitcloud
 
-
 DIFFERENTIAL_REGEX = re.compile(
     "Differential Revision: http.+?/"  # Line start, URL
     "D(?P<id>[0-9]+)"  # Differential ID, just numeric part
@@ -138,11 +137,11 @@ def crdump(ui, repo, *revs, **opts):
             rdata = {
                 "node": hex(ctx.node()),
                 "date": list(map(int, ctx.date())),
-                "desc": encoding.fromlocal(ctx.description()),
+                "desc": ctx.description(),
                 "files": ctx.files(),
                 "p1": {"node": ctx.p1().hex()},
-                "user": encoding.fromlocal(ctx.user()),
-                "bookmarks": list(map(encoding.fromlocal, ctx.bookmarks())),
+                "user": ctx.user(),
+                "bookmarks": ctx.bookmarks(),
                 "commit_cloud": False if ctx.rev() in notbackedup else True,
                 "manifest_node": hex(ctx.manifestnode()),
             }

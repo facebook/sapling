@@ -709,11 +709,6 @@ class ui:
             msgs = self._addprefixesandlabels(args, opts, bool(self._bufferapplylabels))
             self._buffers[-1].extend(msgs)
         else:
-            if self.formatted:
-                # Convert arguments from local encoding to output encoding
-                # if these encodings differ (e.g. Python 2.7 on Windows).
-                # pyre-fixme[9]: Unable to unpack `List[typing.Any]`, expected a tuple.
-                args = [encoding.localtooutput(arg) for arg in args]
             msgs = self._addprefixesandlabels(args, opts, bool(self._colormode))
             self._write(*msgs)
 

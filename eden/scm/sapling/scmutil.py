@@ -213,8 +213,7 @@ def callcatch(ui, req, func):
             ui.warn(_("(lock might be very busy)\n"))
     except error.LockUnavailable as inst:
         ui.warn(
-            _("could not lock %s: %s\n")
-            % (inst.desc or inst.filename, encoding.strtolocal(inst.strerror)),
+            _("could not lock %s: %s\n") % (inst.desc or inst.filename, inst.strerror),
             error=_("abort"),
         )
     except error.OutOfBandError as inst:
@@ -311,9 +310,6 @@ def callcatch(ui, req, func):
             except (AttributeError, IndexError):
                 # it might be anything, for example a string
                 reason = inst.reason
-            if isinstance(reason, str):
-                # SSLError of Python 2.7.9 contains a unicode
-                reason = encoding.unitolocal(reason)
             ui.warn(_("error: %s\n") % reason, error=_("abort"))
         elif (
             not ui.debugflag
@@ -331,13 +327,11 @@ def callcatch(ui, req, func):
             filename = getattr(inst, "filename", None)
             if filename:
                 ui.warn(
-                    _("%s: %s\n") % (encoding.strtolocal(inst.strerror), inst.filename),
+                    _("%s: %s\n") % (inst.strerror, inst.filename),
                     error=_("abort"),
                 )
             else:
-                ui.warn(
-                    _("%s\n") % encoding.strtolocal(inst.strerror), error=_("abort")
-                )
+                ui.warn(_("%s\n") % inst.strerror, error=_("abort"))
             if not util.iswindows:
                 # For permission errors on POSIX. Show more information about the
                 # current user, group, and stat results.
@@ -355,11 +349,11 @@ def callcatch(ui, req, func):
     except OSError as inst:
         if getattr(inst, "filename", None) is not None:
             ui.warn(
-                _("%s: %s\n") % (encoding.strtolocal(inst.strerror), inst.filename),
+                _("%s: %s\n") % (inst.strerror, inst.filename),
                 error=_("abort"),
             )
         else:
-            ui.warn(_("%s\n") % encoding.strtolocal(inst.strerror), error=_("abort"))
+            ui.warn(_("%s\n") % inst.strerror, error=_("abort"))
     except MemoryError:
         ui.warn(_("out of memory\n"), error=_("abort"))
     except SystemExit as inst:
@@ -470,13 +464,13 @@ class casecollisionauditor:
     def __call__(self, f):
         if f in self._newfiles:
             return
-        fl = encoding.lower(f)
+        fl = f.lower()
         ds = self._dirstate
         shouldwarn = False
         if f not in ds:
             dmap = ds._map
 
-            for candidate in dmap.getfiltered(fl, encoding.lower):
+            for candidate in dmap.getfiltered(fl, str.lower):
                 if candidate == f:
                     continue
                 node = dmap.get(candidate)

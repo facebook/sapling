@@ -29,15 +29,11 @@ asciilower = charencode.asciilower
 asciiupper = charencode.asciiupper
 _jsonescapeu8fast = charencode.jsonescapeu8fast
 
-
-if sys.version_info[0] >= 3:
-    unichr = chr
-
 # These unicode characters are ignored by HFS+ (Apple Technote 1150,
 # "Unicode Subtleties"), so we need to ignore them in some places for
 # sanity.
 _ignore = [
-    unichr(int(x, 16)).encode("utf-8")
+    chr(int(x, 16)).encode("utf-8")
     for x in (
         "200c 200d 200e 200f 202a 202b 202c 202d 202e "
         "206a 206b 206c 206d 206e 206f feff"
@@ -112,52 +108,10 @@ setfromenviron()
 fallbackencoding = "ISO-8859-1"
 
 
-class localstr(bytes):
-    """This class allows strings that are unmodified to be
-    round-tripped to the local encoding and back"""
-
-    def __new__(cls, u, l):
-        s = bytes.__new__(cls, l)
-        s._utf8 = u
-        return s
-
-    def __hash__(self):
-        return hash(self._utf8)  # avoid collisions in local string space
-
-
 def _setascii():
     """Set encoding to ascii. Used by some doctests."""
     global encoding
     encoding = "ascii"
-
-
-def unitolocal(u):
-    """Convert a unicode string to a byte string of local encoding"""
-    return tolocal(u.encode("utf-8"))
-
-
-def unifromlocal(s):
-    """Convert a byte string of local encoding to a unicode string"""
-    return fromlocal(s).decode("utf-8")
-
-
-def unimethod(bytesfunc):
-    """Create a proxy method that forwards __unicode__() and __str__() of
-    Python 3 to __bytes__()"""
-
-    def unifunc(obj):
-        return unifromlocal(bytesfunc(obj))
-
-    return unifunc
-
-
-# converter functions between native str and byte string. use these if the
-# character encoding is not aware (e.g. exception message) or is known to
-# be locale dependent (e.g. date formatting.)
-
-strtolocal = unitolocal
-strfromlocal = unifromlocal
-strmethod = unimethod
 
 
 def _colwidth(s):
@@ -265,36 +219,6 @@ def trim(s, width, ellipsis="", leftside=False):
     return ellipsis  # no enough room for multi-column characters
 
 
-def _lower(s):
-    "best-effort encoding-aware case-folding of local string s"
-    try:
-        return asciilower(s)
-    except UnicodeDecodeError:
-        pass
-    try:
-        if isinstance(s, localstr):
-            u = s._utf8.decode("utf-8")
-        else:
-            u = s.decode(encoding, encodingmode)
-
-        lu = u.lower()
-        if u == lu:
-            return s  # preserve localstring
-        return lu.encode(encoding)
-    except UnicodeError:
-        return s.lower()  # we don't know how to fold this except in ASCII
-    except LookupError as k:
-        raise error.Abort(k, hint="please check your locale settings")
-
-
-def _upper(s):
-    "best-effort encoding-aware case-folding of local string s"
-    try:
-        return asciiupper(s)
-    except UnicodeDecodeError:
-        return upperfallback(s)
-
-
 def upperfallback(s):
     return s.upper()
 
@@ -322,7 +246,6 @@ def jsonescape(s, paranoid=False):
     JSON is problematic for us because it doesn't support non-Unicode
     bytes. To deal with this, we take the following approach:
 
-    - localstr objects are converted back to UTF-8
     - valid UTF-8/ASCII strings are passed as-is
     - other strings are converted to UTF-8b surrogate encoding
     - apply JSON-specified string escaping
@@ -413,9 +336,6 @@ def toutf8b(s):
       by Unicode-oriented clients
     - filenames and file contents in arbitrary other encodings can have
       be round-tripped or recovered by clueful clients
-    - local strings that have a cached known UTF-8 encoding (aka
-      localstr) get sent as UTF-8 so Unicode-oriented clients get the
-      Unicode data they want
     - because we must preserve UTF-8 bytestring in places such as
       filenames, metadata can't be roundtripped without help
 
@@ -425,11 +345,9 @@ def toutf8b(s):
     internal surrogate encoding as a UTF-8 string.)
     """
 
-    if not isinstance(s, localstr) and isasciistr(s):
+    if isasciistr(s):
         return s
     if b"\xed" not in s:
-        if isinstance(s, localstr):
-            return s._utf8
         try:
             s.decode("utf-8", _utf8strict)
             return s
@@ -445,13 +363,13 @@ def toutf8b(s):
             if b"\xed\xb0\x80" <= c <= b"\xed\xb3\xbf":
                 # have to re-escape existing U+DCxx characters
                 value = s[pos]
-                c = unichr(0xDC00 + value).encode("utf-8", _utf8strict)
+                c = chr(0xDC00 + value).encode("utf-8", _utf8strict)
                 pos += 1
             else:
                 pos += len(c)
         except UnicodeDecodeError:
             value = s[pos]
-            c = unichr(0xDC00 + value).encode("utf-8", _utf8strict)
+            c = chr(0xDC00 + value).encode("utf-8", _utf8strict)
             pos += 1
         r += c
     return r
@@ -459,23 +377,3 @@ def toutf8b(s):
 
 # Prefer native unicode on Python
 colwidth = ucolwidth
-fromlocal = pycompat.identity
-strfromlocal = pycompat.identity
-strio = pycompat.identity
-strmethod = pycompat.identity
-strtolocal = pycompat.identity
-tolocal = pycompat.identity
-tolocalstr = bytes.decode
-unifromlocal = pycompat.identity
-unitolocal = pycompat.identity
-
-
-def lower(s):
-    return s.lower()
-
-
-def upper(s):
-    return s.upper()
-
-
-localtooutput = pycompat.identity

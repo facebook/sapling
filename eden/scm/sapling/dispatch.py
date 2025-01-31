@@ -835,8 +835,7 @@ def _getlocal(ui, rpath):
                 )
                 return "", ui
             raise error.Abort(
-                _("error getting current working directory: %s")
-                % encoding.strtolocal(e.strerror)
+                _("error getting current working directory: %s") % e.strerror
             )
         path = cmdutil.findrepo(wd) or ""
 

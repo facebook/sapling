@@ -990,8 +990,7 @@ def logmessage(repo, opts):
                 message = b"\n".join(util.readfile(logfile).splitlines()).decode()
         except IOError as inst:
             raise error.Abort(
-                _("can't read commit message '%s': %s")
-                % (logfile, encoding.strtolocal(inst.strerror))
+                _("can't read commit message '%s': %s") % (logfile, inst.strerror)
             )
     return message
 
@@ -1393,10 +1392,7 @@ def copy(ui, repo, pats, opts, rename=False):
                     ui.warn(_("%s: deleted in working directory\n") % relsrc)
                     srcexists = False
                 else:
-                    ui.warn(
-                        _("%s: cannot copy - %s\n")
-                        % (relsrc, encoding.strtolocal(inst.strerror))
-                    )
+                    ui.warn(_("%s: cannot copy - %s\n") % (relsrc, inst.strerror))
                     return True  # report a failure
 
         if ui.verbose or not exact:
@@ -3431,7 +3427,7 @@ def displaygraph(
         if out is not None:
             out(nextrow)
         else:
-            ui.write(encoding.unitolocal(nextrow))
+            ui.write(nextrow)
         if on_output is not None:
             on_output(ctx, nextrow)
         displayer.flush(ctx)

@@ -1454,13 +1454,12 @@ def keyword(repo, subset, x):
     ``grep(regex)``.
     """
     # i18n: "keyword" is a keyword
-    kw = encoding.lower(getstring(x, _("keyword requires a string")))
+    kw = getstring(x, _("keyword requires a string")).lower()
 
     def matches(r):
         c = repo[r]
         return any(
-            kw in encoding.lower(t)
-            for t in list(c.files()) + [c.user(), c.description()]
+            kw in t.lower() for t in list(c.files()) + [c.user(), c.description()]
         )
 
     return subset.prefetch("text").filter(matches, condrepr=("<keyword %r>", kw))
@@ -2374,8 +2373,8 @@ def _substringmatcher(pattern, casesensitive=True):
     kind, pattern, matcher = util.stringmatcher(pattern, casesensitive=casesensitive)
     if kind == "literal":
         if not casesensitive:
-            pattern = encoding.lower(pattern)
-            matcher = lambda s: pattern in encoding.lower(s)
+            pattern = pattern.lower()
+            matcher = lambda s: pattern in s.lower()
         else:
             matcher = lambda s: pattern in s
     return kind, pattern, matcher

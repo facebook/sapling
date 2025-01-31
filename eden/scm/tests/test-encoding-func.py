@@ -25,13 +25,6 @@ class IsasciistrTest(unittest.TestCase):
                 self.assertFalse(encoding.isasciistr(bytes(t)))
 
 
-class LocalEncodingTest(unittest.TestCase):
-    def testasciifastpath(self):
-        s = b"\0" * 100
-        self.assertTrue(s is encoding.tolocal(s))
-        self.assertTrue(s is encoding.fromlocal(s))
-
-
 if __name__ == "__main__":
     import silenttestrunner
 

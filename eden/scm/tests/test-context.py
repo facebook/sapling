@@ -33,9 +33,7 @@ def filectxfn(repo, memctx, path):
     return context.memfilectx(repo, memctx, "foo", b"")
 
 
-ctx = context.memctx(
-    repo, [repo["tip"]], encoding.tolocal("Gr\xc3\xbcezi!"), ["foo"], filectxfn
-)
+ctx = context.memctx(repo, [repo["tip"]], "Gr\xc3\xbcezi!", ["foo"], filectxfn)
 ctx.commit()
 
 # test performing a status

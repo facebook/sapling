@@ -562,8 +562,7 @@ class vfs(abstractvfs):
             except OSError as err:
                 raise OSError(
                     err.errno,
-                    _("could not symlink to %r: %s")
-                    % (src, encoding.strtolocal(err.strerror)),
+                    _("could not symlink to %r: %s") % (src, err.strerror),
                     linkname,
                 )
         else:

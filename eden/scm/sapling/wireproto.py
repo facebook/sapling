@@ -280,7 +280,7 @@ class wirepeer(repository.legacypeer):
     def lookup(self, key):
         self.requirecap("lookup", _("look up remote revision"))
         f = future()
-        yield {"key": encoding.fromlocal(key)}, f
+        yield {"key": key}, f
         d = f.value
         success, data = d[:-1].split(b" ", 1)
         if int(success):
@@ -331,7 +331,7 @@ class wirepeer(repository.legacypeer):
             yield {}, None
         f = future()
         self.ui.debug('preparing listkeys for "%s"\n' % namespace)
-        yield {"namespace": encoding.fromlocal(namespace)}, f
+        yield {"namespace": namespace}, f
         d = f.value
         self.ui.debug('received listkey for "%s": %i bytes\n' % (namespace, len(d)))
         yield pushkeymod.decodekeys(d)
@@ -346,7 +346,7 @@ class wirepeer(repository.legacypeer):
         )
         yield (
             {
-                "namespace": encoding.fromlocal(namespace),
+                "namespace": namespace,
                 "patterns": encodelist([p.encode() for p in patterns]),
             },
             f,
@@ -363,10 +363,10 @@ class wirepeer(repository.legacypeer):
         self.ui.debug('preparing pushkey for "%s:%s"\n' % (namespace, key))
         yield (
             {
-                "namespace": encoding.fromlocal(namespace),
-                "key": encoding.fromlocal(key),
-                "old": encoding.fromlocal(old),
-                "new": encoding.fromlocal(new),
+                "namespace": namespace,
+                "key": key,
+                "old": old,
+                "new": new,
             },
             f,
         )
@@ -931,7 +931,7 @@ def branchmap(repo, proto):
     branchmap = repo.branchmap()
     heads = []
     for branch, nodes in branchmap.items():
-        branchname = urlreq.quote(encoding.fromlocal(branch))
+        branchname = urlreq.quote(branch)
         branchnodes = encodelist(nodes)
         heads.append("%s %s" % (branchname, branchnodes))
     return "\n".join(heads)
@@ -1124,22 +1124,21 @@ def hello(repo, proto):
 
 @wireprotocommand("listkeys", "namespace")
 def listkeys(repo, proto, namespace):
-    d = repo.listkeys(encoding.tolocal(namespace)).items()
+    d = repo.listkeys(namespace).items()
     return pushkeymod.encodekeys(d)
 
 
 @wireprotocommand("listkeyspatterns", "namespace patterns")
 def listkeyspatterns(repo, proto, namespace, patterns):
     patterns = [p.decode() for p in decodelist(patterns)]
-    d = repo.listkeys(encoding.tolocal(namespace), patterns).items()
+    d = repo.listkeys(namespace, patterns).items()
     return pushkeymod.encodekeys(d)
 
 
 @wireprotocommand("lookup", "key")
 def lookup(repo, proto, key):
     try:
-        k = encoding.tolocal(key)
-        c = repo[k]
+        c = repo[key]
         r = c.hex()
         success = 1
     except Exception as inst:
@@ -1160,12 +1159,9 @@ def pushkey(repo, proto, namespace, key, old, new):
     if len(new) == 20 and util.escapestr(new) != new:
         # looks like it could be a binary node
         try:
-            new.decode("utf-8")
-            new = encoding.tolocal(new)  # but cleanly decodes as UTF-8
+            new = new.decode("utf-8")
         except UnicodeDecodeError:
             pass  # binary, leave unmodified
-    else:
-        new = encoding.tolocal(new)  # normal path
 
     if hasattr(proto, "restore"):
         proto.redirect()
@@ -1173,9 +1169,9 @@ def pushkey(repo, proto, namespace, key, old, new):
         try:
             r = (
                 repo.pushkey(
-                    encoding.tolocal(namespace),
-                    encoding.tolocal(key),
-                    encoding.tolocal(old),
+                    namespace,
+                    key,
+                    old,
                     new,
                 )
                 or False
@@ -1187,9 +1183,7 @@ def pushkey(repo, proto, namespace, key, old, new):
 
         return "%s\n%s" % (int(r), output)
 
-    r = repo.pushkey(
-        encoding.tolocal(namespace), encoding.tolocal(key), encoding.tolocal(old), new
-    )
+    r = repo.pushkey(namespace, key, old, new)
     return "%s\n" % int(r)
 
 

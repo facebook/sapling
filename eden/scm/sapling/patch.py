@@ -1257,7 +1257,7 @@ def filterpatch(ui, headers, operation=None):
             ui.write("\n")
             if r == 8:  # ?
                 for c, t in ui.extractchoices(resps)[1]:
-                    ui.write("%s - %s\n" % (c, encoding.lower(t)))
+                    ui.write("%s - %s\n" % (c, t.lower()))
                 continue
             elif r == 0:  # yes
                 ret = True

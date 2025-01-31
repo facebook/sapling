@@ -86,7 +86,6 @@ class bmstore(dict):
         try:
             for refspec, node in sorted(decoded.items()):
                 if node in nm:
-                    refspec = encoding.tolocal(refspec)
                     setitem(self, refspec, node)
                 else:
                     # This might happen if:
@@ -98,7 +97,6 @@ class bmstore(dict):
                     repo.invalidate()
                     nm = repo.changelog.nodemap
                     if node in nm:
-                        refspec = encoding.tolocal(refspec)
                         setitem(self, refspec, node)
                         repo.ui.log("features", feature="fix-bookmark-changelog-order")
                     else:
@@ -184,7 +182,7 @@ class bmstore(dict):
                     "bookmarks.current", "w", atomictemp=True, checkambig=True
                 )
                 try:
-                    f.write(encoding.fromlocal(self._active).encode())
+                    f.write(self._active.encode())
                 finally:
                     f.close()
             else:

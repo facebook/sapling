@@ -170,11 +170,6 @@ funcs = """os.path.join os.path.split os.path.splitext
  util.fspath util.pconvert util.normpath
  util.split"""
 
-# These functions are required to be called with local encoded string
-# because they expects argument is local encoded string and cause
-# problem with unicode string.
-rfuncs = """encoding.upper encoding.lower"""
-
 # List of Windows specific functions to be wrapped.
 winfuncs = """os.path.splitunc"""
 
@@ -202,9 +197,6 @@ def extsetup(ui) -> None:
                 wrapname(f, wrapper)
         wrapname("util.listdir", wrapperforlistdir)
         wrapname("windows.listdir", wrapperforlistdir)
-        # wrap functions to be called with local byte string arguments
-        for f in rfuncs.split():
-            wrapname(f, reversewrapper)
         # Check sys.args manually instead of using ui.debug() because
         # command line options is not yet applied when
         # extensions.loadall() is called.

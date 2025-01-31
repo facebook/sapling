@@ -86,10 +86,7 @@ def _pythonhook(ui, repo, htype, hname, funcname, args, throw):
         if isinstance(exc, error.Abort):
             ui.warn(_("error: %s hook failed: %s\n") % (hname, exc.args[0]))
         else:
-            ui.warn(
-                _("error: %s hook raised an exception: %s\n")
-                % (hname, encoding.strtolocal(str(exc)))
-            )
+            ui.warn(_("error: %s hook raised an exception: %s\n") % (hname, str(exc)))
         if throw:
             raise
         ui.traceback(force=True)

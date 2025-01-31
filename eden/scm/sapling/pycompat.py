@@ -22,14 +22,10 @@ import errno
 import getopt
 import os
 import shlex
-import sys
 
 
 def identity(a):
     return a
-
-
-import io
 
 
 def raisewithtb(exc, tb):

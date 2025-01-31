@@ -37,7 +37,6 @@ from . import (
 )
 from .i18n import _, gettext
 
-
 _exclkeywords: Set[str] = {
     "(ADVANCED)",
     "(DEPRECATED)",
@@ -791,10 +790,10 @@ class _helpdispatch:
         Returns {'section': [(name, summary), ...], ...} where section is
         one of topics, commands, extensions, or extensioncommands.
         """
-        kw = encoding.lower(kw)
+        kw = kw.lower()
 
         def lowercontains(container):
-            return kw in encoding.lower(container)  # translated in helptable
+            return kw in container.lower()  # translated in helptable
 
         results = {
             "topics": [],
@@ -922,7 +921,7 @@ def formattedhelp(
     subtopic = None
     if name and "." in name:
         name, remaining = name.split(".", 1)
-        remaining = encoding.lower(remaining)
+        remaining = remaining.lower()
         if "." in remaining:
             subtopic, section = remaining.split(".", 1)
         else:

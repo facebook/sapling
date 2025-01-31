@@ -172,7 +172,7 @@ def posixfile(name: str, mode: str = "r", buffering: int = -1) -> "IO":
     # pyre-fixme[10]: Name `WindowsError` is used but not defined.
     except WindowsError as err:
         # convert to a friendlier exception
-        raise IOError(err.errno, "%s: %s" % (name, encoding.strtolocal(err.strerror)))
+        raise IOError(err.errno, "%s: %s" % (name, err.strerror))
 
 
 def fdopen(fd, mode="r", bufsize=-1, **kwargs):
@@ -312,7 +312,7 @@ def normpath(path):
 
 
 def normcase(path):
-    return encoding.upper(path)  # NTFS compares via upper()
+    return path.upper()  # NTFS compares via upper()
 
 
 # see posix.py for definitions
@@ -586,9 +586,7 @@ def lookupreg(key, valname=None, scope=None):
         scope = (scope,)
     for s in scope:
         try:
-            val = winreg.QueryValueEx(winreg.OpenKey(s, key), valname)[0]
-            # never let a Unicode string escape into the wild
-            return encoding.unitolocal(val)
+            return winreg.QueryValueEx(winreg.OpenKey(s, key), valname)[0]
         except EnvironmentError:
             pass
 

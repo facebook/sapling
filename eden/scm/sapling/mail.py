@@ -386,4 +386,4 @@ def headdecode(s):
         except UnicodeDecodeError:
             pass
         uparts.append(part.decode("ISO-8859-1"))
-    return encoding.unitolocal(" ".join(uparts))
+    return " ".join(uparts)

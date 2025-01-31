@@ -266,7 +266,7 @@ def json(obj, paranoid=True):
 @templatefilter("lower")
 def lower(text):
     """Any text. Converts the text to lowercase."""
-    return encoding.lower(text)
+    return text.lower()
 
 
 @templatefilter("nonempty")
@@ -441,7 +441,7 @@ def tabindent(text):
 @templatefilter("upper")
 def upper(text):
     """Any text. Converts the text to uppercase."""
-    return encoding.upper(text)
+    return text.upper()
 
 
 @templatefilter("urlescape")

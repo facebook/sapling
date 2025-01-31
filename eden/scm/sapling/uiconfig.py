@@ -15,10 +15,8 @@ import os
 
 from bindings import configloader, context
 
-from . import configitems, error, pycompat, util
-from .encoding import unifromlocal, unitolocal
+from . import configitems, error, util
 from .i18n import _
-
 
 # unique object used to detect no default value has been provided when
 # retrieving configuration value.
@@ -521,6 +519,6 @@ class uiconfig:
 
 def parselist(value):
     if isinstance(value, str):
-        return [unitolocal(v) for v in configloader.parselist(unifromlocal(value))]
+        return configloader.parselist(value)
     else:
         return value
