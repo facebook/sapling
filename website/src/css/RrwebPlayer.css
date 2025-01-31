@@ -1,0 +1,30 @@
+/**
+ * Copyright (c) Meta Platforms, Inc. and affiliates.
+ *
+ * This source code is licensed under the MIT license found in the
+ * LICENSE file in the root directory of this source tree.
+ */
+
+.rr-replay-container {
+    margin: 1em 0;
+    position: relative;
+ }
+
+.rr-replay-container .rr-progress-inner {
+    height: 2px;
+    /* margin-top: -2px; */
+    /* z-index: 5000; */
+    background-color: var(--ifm-color-primary);
+    /* background-color: red; */
+}
+
+.rr-replay-container > .rr-progress-container {
+    transition: opacity 0.1s;
+    opacity: 0;
+    position: absolute;
+    bottom: 0;
+}
+
+.rr-replay-container:hover > .rr-progress-container {
+    opacity: 1;
+}
