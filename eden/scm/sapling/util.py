@@ -77,7 +77,6 @@ from . import (
     redact,
     urllibcompat,
 )
-from .pycompat import decodeutf8, encodeutf8
 
 osutil = bindings.cext.osutil
 

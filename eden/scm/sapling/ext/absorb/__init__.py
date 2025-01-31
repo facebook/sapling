@@ -50,7 +50,6 @@ from sapling import (
     util,
 )
 from sapling.i18n import _, _n
-from sapling.pycompat import decodeutf8, encodeutf8
 
 testedwith = "ships-with-fb-ext"
 

@@ -99,14 +99,6 @@ unicode = str
 shlexsplit = shlex.split
 
 
-def encodeutf8(s, errors="strict"):
-    return s.encode("utf-8", errors=errors)
-
-
-def decodeutf8(s: bytes, errors: str = "strict") -> str:
-    return s.decode("utf-8", errors=errors)
-
-
 def iteritems(s):
     return s.items()
 

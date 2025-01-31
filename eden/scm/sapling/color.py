@@ -19,7 +19,7 @@ import bindings
 
 from . import encoding, pycompat, util
 from .i18n import _
-from .pycompat import decodeutf8, encodeutf8
+
 
 curses = util.import_curses()
 

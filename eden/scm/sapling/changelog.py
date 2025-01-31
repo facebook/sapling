@@ -21,7 +21,7 @@ import bindings
 from . import encoding, error, revlog, util
 from .i18n import _
 from .node import bbin, hex, nullid
-from .pycompat import decodeutf8, encodeutf8, iteritems
+from .pycompat import iteritems
 from .thirdparty import attr
 
 

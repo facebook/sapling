@@ -25,7 +25,6 @@ import bindings
 from . import encoding, error, json, pycompat, util
 from .i18n import _
 from .node import bin, hex
-from .pycompat import decodeutf8, encodeutf8
 
 
 version = 2

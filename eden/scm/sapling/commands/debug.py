@@ -57,13 +57,11 @@ from .. import (
     json,
     lock as lockmod,
     match as matchmod,
-    merge as mergemod,
     mutation,
     phases,
     progress,
     pvec,
     pycompat,
-    repair,
     revlog,
     revset,
     revsetlang,
@@ -81,7 +79,6 @@ from .. import (
 )
 from ..i18n import _, _n, _x
 from ..node import bin, hex, nullid, nullrev, short
-from ..pycompat import decodeutf8
 from . import migratesymlinks
 from .cmdtable import command
 

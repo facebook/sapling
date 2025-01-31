@@ -17,7 +17,6 @@ from typing import Any, Optional
 
 from . import error, perftrace, pycompat, util, wireproto
 from .i18n import _
-from .pycompat import decodeutf8, encodeutf8
 
 
 def _writestderror(ui: "Any", s: bytes) -> None:

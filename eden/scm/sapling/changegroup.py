@@ -36,7 +36,6 @@ from typing import (
 from . import error, mdiff, perftrace, phases, progress, pycompat, util, visibility
 from .i18n import _
 from .node import hex, nullrev
-from .pycompat import decodeutf8, encodeutf8
 
 CFG_CGDELTA_ALWAYS_NULL = "always-null"
 CFG_CGDELTA_NO_EXTERNAL = "no-external"

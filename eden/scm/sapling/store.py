@@ -20,7 +20,7 @@ import bindings
 parsers = bindings.cext.parsers
 
 from . import error, pycompat, util, vfs as vfsmod
-from .pycompat import decodeutf8, encodeutf8, inttobyte
+from .pycompat import inttobyte
 
 
 # This avoids a collision between a file named foo and a dir named

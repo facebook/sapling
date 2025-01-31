@@ -20,7 +20,7 @@ import bindings
 from . import error, mdiff, pycompat, revlog, util
 from .i18n import _
 from .node import bin
-from .pycompat import encodeutf8, unicode
+from .pycompat import unicode
 
 
 parsers = bindings.cext.parsers

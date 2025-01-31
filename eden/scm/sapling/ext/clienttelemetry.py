@@ -18,8 +18,6 @@ from typing import Any, Dict
 
 from sapling import blackbox, dispatch, extensions, hg, perftrace, util, wireproto
 from sapling.i18n import _
-from sapling.pycompat import decodeutf8
-
 
 # Client telemetry functions generate client telemetry data at connection time.
 _clienttelemetryfuncs = {}

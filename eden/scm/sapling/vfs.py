@@ -36,7 +36,6 @@ from typing import (
 
 from . import encoding, error, pathutil, pycompat, util
 from .i18n import _
-from .pycompat import decodeutf8, encodeutf8
 
 
 def _avoidambig(path, oldstat):

@@ -9,7 +9,7 @@ import contextlib
 import os
 
 from sapling import error, node as nodemod, util
-from sapling.pycompat import encodeutf8
+
 
 FORMAT_VERSION = "v2"
 

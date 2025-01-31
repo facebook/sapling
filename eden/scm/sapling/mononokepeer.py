@@ -44,7 +44,7 @@ from bindings import cats, clientinfo, zstd
 
 from . import error, httpconnection, progress, sslutil, stdiopeer, url, util
 from .i18n import _
-from .pycompat import decodeutf8, encodeutf8, iswindows
+from .pycompat import iswindows
 from .thirdparty.pysocks import socks
 
 # Netencoding special characters

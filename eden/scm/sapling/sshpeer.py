@@ -22,8 +22,6 @@ from typing import Any, Optional, Tuple
 
 from . import error, progress, stdiopeer, util
 from .i18n import _
-from .pycompat import decodeutf8
-
 
 # Record of the bytes sent and received to SSH peers.  This records the
 # cumulative total bytes sent to all peers for the life of the process.

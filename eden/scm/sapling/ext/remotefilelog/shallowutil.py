@@ -15,7 +15,6 @@ from typing import Dict, IO, Mapping
 from sapling import error, filelog, pycompat, util
 from sapling.i18n import _
 from sapling.node import hex
-from sapling.pycompat import decodeutf8, encodeutf8
 
 from . import constants
 

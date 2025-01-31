@@ -47,7 +47,6 @@ import weakref
 
 from sapling import extensions, registrar, ui as uimod, util
 from sapling.node import hex
-from sapling.pycompat import encodeutf8
 
 # Note for extension authors: ONLY specify testedwith = 'ships-with-hg-core' for
 # extensions which SHIP WITH MERCURIAL. Non-mainline extensions should

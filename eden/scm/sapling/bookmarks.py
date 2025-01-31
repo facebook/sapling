@@ -33,7 +33,7 @@ from . import (
 )
 from .i18n import _
 from .node import bin, hex, nullid, short, wdirid
-from .pycompat import decodeutf8, encodeutf8
+
 
 # label constants
 # until 3.5, bookmarks.current was the advertised name, not

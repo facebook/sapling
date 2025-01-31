@@ -38,7 +38,6 @@ from sapling import (
 )
 from sapling.i18n import _
 from sapling.node import bin, hex, nullid, short
-from sapling.pycompat import decodeutf8, encodeutf8
 
 
 mpatch = bindings.cext.mpatch

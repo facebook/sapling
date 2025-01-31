@@ -8,10 +8,9 @@ from __future__ import absolute_import
 import json
 import time
 
-from sapling.pycompat import encodeutf8, ensurestr
+from sapling.pycompat import ensurestr
 
 from . import error as ccerror
-
 
 NOTSET = object()
 

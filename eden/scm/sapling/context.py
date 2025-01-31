@@ -53,7 +53,7 @@ from .node import (
     wdirnodes,
     wdirrev,
 )
-from .pycompat import encodeutf8, isint
+from .pycompat import isint
 from .utils import subtreeutil
 
 bytes_or_lazy_bytes = Union[bytes, Callable[[], bytes]]

@@ -27,7 +27,6 @@ from sapling import (
 )
 from sapling.i18n import _, _n
 from sapling.node import hex
-from sapling.pycompat import encodeutf8
 
 from . import (
     backuplock,

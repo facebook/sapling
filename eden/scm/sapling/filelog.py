@@ -20,7 +20,7 @@ import bindings
 
 from . import eagerepo, error, git, mdiff, revlog, util
 from .node import bin
-from .pycompat import decodeutf8, encodeutf8
+
 
 _mdre: Pattern[bytes] = re.compile(b"\1\n")
 

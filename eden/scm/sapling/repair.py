@@ -20,7 +20,6 @@ from typing import List, Optional
 from . import bookmarks, bundle2, changegroup, discovery, error, scmutil, util
 from .i18n import _
 from .node import bin, hex, short
-from .pycompat import encodeutf8
 
 
 def _bundle(repo, bases, heads, node, suffix, compress: bool = True) -> str:

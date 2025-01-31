@@ -19,7 +19,6 @@ import sys
 
 from . import encoding, error, hook, util, wireproto
 from .i18n import _
-from .pycompat import decodeutf8, encodeutf8
 
 
 class sshserver(wireproto.abstractserverproto):

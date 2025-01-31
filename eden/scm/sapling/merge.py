@@ -46,7 +46,6 @@ from . import (
 )
 from .i18n import _
 from .node import addednodeid, bin, hex, nullhex, nullid, wdirhex
-from .pycompat import encodeutf8
 from .utils import subtreeutil
 
 # merge action types

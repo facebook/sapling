@@ -68,7 +68,6 @@ import bindings
 
 from . import error, util
 from .i18n import _
-from .pycompat import encodeutf8
 
 parsers = bindings.cext.parsers
 

@@ -13,8 +13,6 @@ from bindings import treestate
 
 from . import error, node, pycompat, txnutil, util
 from .i18n import _
-from .pycompat import decodeutf8, encodeutf8
-
 
 # header after the first 40 bytes of dirstate.
 HEADER = b"\ntreestate\n\0"

@@ -11,7 +11,6 @@ import socket
 
 from sapling import vfs as vfsmod
 from sapling.i18n import _
-from sapling.pycompat import encodeutf8
 
 from . import error as ccerror, util as ccutil, workspace
 
