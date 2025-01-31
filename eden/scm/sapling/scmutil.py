@@ -40,7 +40,7 @@ from . import (
 )
 from .i18n import _
 from .node import hex, nullid, short, wdirid, wdirrev
-from .pycompat import basestring, isint
+from .pycompat import isint
 
 if pycompat.iswindows:
     from . import scmwindows as scmplatform
@@ -233,7 +233,7 @@ def callcatch(ui, req, func):
             ui.warn(_("(%s)\n") % inst.hint)
     except error.ResponseError as inst:
         ui.warn(inst.args[0], error=_("abort"))
-        if not isinstance(inst.args[1], basestring):
+        if not isinstance(inst.args[1], str):
             ui.warn(" %r\n" % (inst.args[1],))
         elif not inst.args[1]:
             ui.warn(_(" empty string\n"))
