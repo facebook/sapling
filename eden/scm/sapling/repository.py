@@ -14,11 +14,11 @@ from __future__ import absolute_import
 
 import abc
 
-from . import error, pycompat, util
+from . import error, util
 from .i18n import _
 
 
-class _basepeer(pycompat.ABC):
+class _basepeer(abc.ABC):
     """Represents a "connection" to a repository.
 
     This is the base interface for representing a connection to a repository.
@@ -73,7 +73,7 @@ class _basepeer(pycompat.ABC):
         """
 
 
-class _basewirecommands(pycompat.ABC):
+class _basewirecommands(abc.ABC):
     """Client-side interface for communicating over the wire protocol.
 
     This interface is used as a gateway to the Mercurial wire protocol.
@@ -188,7 +188,7 @@ class _basewirecommands(pycompat.ABC):
         """
 
 
-class _baselegacywirecommands(pycompat.ABC):
+class _baselegacywirecommands(abc.ABC):
     """Interface for implementing support for legacy wire protocol commands.
 
     Wire protocol commands transition to legacy status when they are no longer

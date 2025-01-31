@@ -741,7 +741,7 @@ class cowsortdict(cow, sortdict):
     """
 
 
-class transactional(pycompat.ABC):
+class transactional(abc.ABC):
     """Base class for making a transactional type into a context manager."""
 
     @abc.abstractmethod

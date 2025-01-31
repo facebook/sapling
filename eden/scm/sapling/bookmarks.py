@@ -12,6 +12,7 @@
 
 from __future__ import absolute_import
 
+import collections
 import errno
 import string
 import struct
@@ -26,7 +27,6 @@ from . import (
     git,
     lock as lockmod,
     mutation,
-    pycompat,
     scmutil,
     txnutil,
     util,
@@ -1146,7 +1146,7 @@ encoderemotenames = bindings.refencode.encoderemotenames
 decoderemotenames = bindings.refencode.decoderemotenames
 
 
-class lazyremotenamedict(pycompat.Mapping):
+class lazyremotenamedict(collections.abc.Mapping):
     """Read-only dict-like Class to lazily resolve remotename entries
 
     We are doing that because remotenames startup was slow.

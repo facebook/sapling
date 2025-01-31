@@ -142,7 +142,6 @@ from sapling import (
     patch,
     pathutil,
     progress,
-    pycompat,
     registrar,
     scmutil,
     ui as uimod,
@@ -1668,7 +1667,7 @@ PROFILE_INACTIVE, PROFILE_ACTIVE, PROFILE_INCLUDED = _profile_flags = range(3)
 
 
 @attr.s(slots=True, frozen=True)
-class ProfileInfo(pycompat.Mapping):
+class ProfileInfo(collections.abc.Mapping):
     path = attr.ib()
     active = attr.ib()
     _metadata = attr.ib(default=attr.Factory(dict))
@@ -2536,7 +2535,8 @@ def _explainprofile(ui, repo, *profiles, **opts) -> int:
 
     def sortedsets(d):
         return {
-            k: sorted(v) if isinstance(v, pycompat.Set) else v for k, v in d.items()
+            k: sorted(v) if isinstance(v, collections.abc.Set) else v
+            for k, v in d.items()
         }
 
     ui.pager("sparse explain")

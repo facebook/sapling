@@ -11,7 +11,7 @@ import collections
 
 import bindings
 
-from sapling import node as nodemod, pycompat
+from sapling import node as nodemod
 from sapling.graphmod import CHANGESET, GRANDPARENT, PARENT
 from sapling.pycompat import ensurestr
 
@@ -132,7 +132,7 @@ class SingletonDecorator:
         return self.instance
 
 
-class BaseService(pycompat.ABC):
+class BaseService(abc.ABC):
     @staticmethod
     def _makeemptyreferences(version):
         return References(version, None, None, None, None)

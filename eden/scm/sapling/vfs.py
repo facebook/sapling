@@ -58,7 +58,7 @@ def _avoidambig(path, oldstat):
         checkandavoid()
 
 
-class abstractvfs(pycompat.ABC):
+class abstractvfs(abc.ABC):
     """Abstract base class; cannot be instantiated"""
 
     _backgroundfilecloser: "Optional[backgroundfilecloser]" = None
