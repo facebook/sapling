@@ -27,7 +27,6 @@ from __future__ import absolute_import
 import collections
 import errno
 import itertools
-
 import os
 import time
 from typing import Optional
@@ -57,7 +56,6 @@ from sapling import (
 from sapling.i18n import _
 
 from . import rebase
-
 
 configtable = {}
 configitem = registrar.configitem(configtable)
@@ -218,50 +216,14 @@ class shelvedstate:
         return version
 
     @classmethod
-    def _readold(cls, repo):
-        """Read the old position-based version of a shelvestate file"""
-        # Order is important, because old shelvestate file uses it
-        # to detemine values of fields (i.g. name is on the second line,
-        # originalwctx is on the third and so forth). Please do not change.
-        keys = [
-            "version",
-            "name",
-            "originalwctx",
-            "pendingctx",
-            "parents",
-            "nodestoremove",
-            "branchtorestore",
-            "keep",
-            "activebook",
-            "obsshelve",
-        ]
-        # this is executed only seldomly, so it is not a big deal
-        # that we open this file twice
-        fp = repo.localvfs(cls._filename)
-        d = {}
-        try:
-            for key in keys:
-                d[key] = fp.readline().strip()
-        finally:
-            fp.close()
-        return d
-
-    @classmethod
     def load(cls, repo):
         version = cls._getversion(repo)
-        if version < cls._version:
-            d = cls._readold(repo)
-        elif version == cls._version:
-            d = scmutil.simplekeyvaluefile(repo.localvfs, cls._filename).read(
-                firstlinenonkeyval=True
-            )
-        else:
-            raise error.Abort(
-                _(
-                    "this version of shelve is incompatible "
-                    "with the version used in this repo"
-                )
-            )
+        if version != cls._version:
+            raise error.Abort(_("unsupported shelve version: %s") % version)
+
+        d = scmutil.simplekeyvaluefile(repo.localvfs, cls._filename).read(
+            firstlinenonkeyval=True
+        )
 
         cls._verifyandtransform(d)
         try:
@@ -539,15 +501,6 @@ def _docreatecmd(ui, repo, pats, opts) -> Optional[int]:
             bookmarks.activate(repo, activebookmark)
 
     merge.try_conclude_merge_state(repo)
-
-
-def _isbareshelve(pats, opts) -> bool:
-    return (
-        not pats
-        and not opts.get("interactive", False)
-        and not opts.get("include", False)
-        and not opts.get("exclude", False)
-    )
 
 
 def _listshelvefileinfos(repo, shelvedir):
