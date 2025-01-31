@@ -15,6 +15,7 @@ import abc
 import contextlib
 import errno
 import os
+import queue as queuemod
 import re
 import shutil
 import stat
@@ -669,7 +670,7 @@ class backgroundfilecloser:
         maxqueue = ui.configint("worker", "backgroundclosemaxqueue")
         threadcount = ui.configint("worker", "backgroundclosethreadcount")
 
-        self._queue = util.queue(maxsize=maxqueue)
+        self._queue = queuemod.Queue(maxsize=maxqueue)
         self._running = True
 
         for i in range(threadcount):
@@ -701,7 +702,7 @@ class backgroundfilecloser:
                 except Exception as e:
                     # Stash so can re-raise from main thread later.
                     self._threadexception = e
-            except util.empty:
+            except queuemod.Empty:
                 if not self._running:
                     break
 

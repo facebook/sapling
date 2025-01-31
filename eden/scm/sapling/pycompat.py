@@ -21,15 +21,8 @@ import abc
 import errno
 import getopt
 import os
-import pickle  # noqa: F401
-import queue as _queue
 import shlex
-import socketserver  # noqa: F401
 import sys
-
-empty = _queue.Empty
-# pyre-fixme[11]: Annotation `_queue` is not defined as a type.
-queue = _queue
 
 
 def identity(a):
@@ -52,10 +45,6 @@ stringutf8io = io.StringIO
 maplist = lambda *args: list(map(*args))
 ziplist = lambda *args: list(zip(*args))
 rawinput = input
-
-stdin = sys.stdin.buffer
-stdout = sys.stdout.buffer
-stderr = sys.stderr.buffer
 
 sysargv = sys.argv
 

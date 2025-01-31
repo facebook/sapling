@@ -33,11 +33,13 @@ import hashlib
 import itertools
 import mmap
 import os
+import pickle  # noqa: F401
 import random
 import re as remod
 import shutil
 import signal as signalmod
 import socket
+import socketserver  # noqa: F401
 import stat as statmod
 import string
 import subprocess
@@ -83,17 +85,9 @@ osutil = bindings.cext.osutil
 getsignal = signalmod.getsignal
 signal = signalmod.signal
 
-empty = pycompat.empty
-full = pycompat.queue.Full
-# pyre-fixme[11]: Annotation `client` is not defined as a type.
-# pyre-fixme[11]: Annotation `pickle` is not defined as a type.
-pickle = pycompat.pickle
-queue = pycompat.queue.Queue
-# pyre-fixme[11]: Annotation `socketserver` is not defined as a type.
-socketserver = pycompat.socketserver
-stderr = pycompat.stderr
-stdin = pycompat.stdin
-stdout = pycompat.stdout
+stdin = sys.stdin.buffer
+stdout = sys.stdout.buffer
+stderr = sys.stderr.buffer
 stringio = pycompat.stringio
 
 httpserver = urllibcompat.httpserver

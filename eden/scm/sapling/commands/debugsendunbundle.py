@@ -6,13 +6,13 @@
 # sendunbundle.py - send unbundle wireproto command
 from __future__ import absolute_import
 
-from .. import error, hg, pycompat, util
+from .. import error, hg, util
 from ..i18n import _
 from .cmdtable import command
 
 
 def getunbundlecontents():
-    return util.chunkbuffer([pycompat.stdin.read()])
+    return util.chunkbuffer([util.stdin.read()])
 
 
 def rununbundle(ui, remote, stream):

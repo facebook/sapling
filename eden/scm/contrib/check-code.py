@@ -351,7 +351,6 @@ pypats = [
 corepypats = [
     [
         (r"^import atexit", "don't use atexit, use ui.atexit"),
-        (r"^import Queue", "don't use Queue, use util.queue + util.empty"),
         (r"^import cStringIO", "don't use cStringIO.StringIO, use util.stringio"),
         (r"^import SocketServer", "don't use SockerServer, use util.socketserver"),
         (r"^import urlparse", "don't use urlparse, use util.urlreq"),

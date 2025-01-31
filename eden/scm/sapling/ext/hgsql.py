@@ -39,6 +39,7 @@ from __future__ import absolute_import
 
 import hashlib
 import os
+import queue as queuemod
 import sys
 import threading
 import time
@@ -70,7 +71,6 @@ from sapling import (
 )
 from sapling.i18n import _
 from sapling.node import bin, hex, nullid, nullrev
-from sapling.pycompat import queue
 
 wrapcommand = extensions.wrapcommand
 wrapfunction = extensions.wrapfunction
@@ -1123,7 +1123,7 @@ def wraprepo(repo) -> None:
                     # Inspect the changelog now that we have the lock
                     fetchstart = len(self.changelog)
 
-                    q = queue.Queue()
+                    q = queuemod.Queue()
                     abort = threading.Event()
 
                     t = threading.Thread(
@@ -2568,7 +2568,7 @@ def _sqlreplay(repo, startrev, endrev) -> None:
 
         try:
             repo.sqlreplaytransaction = True
-            q = queue.Queue()
+            q = queuemod.Queue()
             abort = threading.Event()
 
             t = threading.Thread(
@@ -2666,7 +2666,7 @@ def sqlverify(ui, repo, *args, **opts) -> None:
 
 
 def _sqlverify(repo, minrev, maxrev, revlogcache):
-    q = queue.Queue()
+    q = queuemod.Queue()
     abort = threading.Event()
     t = threading.Thread(target=repo.fetchthread, args=(q, abort, minrev, maxrev))
     t.daemon = True
