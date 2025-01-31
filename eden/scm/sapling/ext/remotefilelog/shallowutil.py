@@ -18,8 +18,7 @@ from sapling.node import hex
 
 from . import constants
 
-
-if not pycompat.iswindows:
+if not util.iswindows:
     import grp
 
 

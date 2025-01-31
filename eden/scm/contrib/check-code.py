@@ -32,7 +32,6 @@ import os
 import re
 import sys
 
-
 # for not skipping the checking of the code of this file
 SKIP_CODE_CHECK = "no-" + "check-code"
 
@@ -400,9 +399,9 @@ pyfilters = [
 # non-filter patterns
 pynfpats = [
     [
-        (r'pycompat\.osname\s*[=!]=\s*[\'"]nt[\'"]', "use pycompat.iswindows"),
-        (r'pycompat\.osname\s*[=!]=\s*[\'"]posix[\'"]', "use pycompat.isposix"),
-        (r'pycompat\.sysplatform\s*[!=]=\s*[\'"]darwin[\'"]', "use pycompat.isdarwin"),
+        (r'pycompat\.osname\s*[=!]=\s*[\'"]nt[\'"]', "use util.iswindows"),
+        (r'pycompat\.osname\s*[=!]=\s*[\'"]posix[\'"]', "use util.isposix"),
+        (r'pycompat\.sysplatform\s*[!=]=\s*[\'"]darwin[\'"]', "use util.isdarwin"),
     ],
     # warnings
     [],

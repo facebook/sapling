@@ -62,7 +62,6 @@ from sapling import (
     extensions,
     hg,
     patch,
-    pycompat,
     registrar,
     revsetlang,
     scmutil,
@@ -72,7 +71,6 @@ from sapling import (
 )
 from sapling.i18n import _
 from sapling.node import short
-
 
 wrapcommand = extensions.wrapcommand
 wrapfunction = extensions.wrapfunction
@@ -233,7 +231,7 @@ def extsetup(ui) -> None:
     )
 
     pipei_bufsize = ui.configint("experimental", "winpipebufsize", 4096)
-    if pipei_bufsize != 4096 and pycompat.iswindows:
+    if pipei_bufsize != 4096 and util.iswindows:
         wrapfunction(util, "popen4", get_winpopen4(pipei_bufsize))
 
     _fixpager(ui)

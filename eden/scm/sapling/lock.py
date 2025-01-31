@@ -25,7 +25,7 @@ from bindings import lock as nativelock
 from . import encoding, error, perftrace, progress, pycompat, util
 from .i18n import _
 
-if pycompat.iswindows:
+if util.iswindows:
     from . import win32
 
 
@@ -100,7 +100,7 @@ class lockinfo:
         if cls._currentnamespace is not None:
             return cls._currentnamespace
         result = socket.gethostname()
-        if pycompat.sysplatform.startswith("linux"):
+        if util.islinux:
             try:
                 result += "/%x" % os.stat("/proc/self/ns/pid").st_ino
             except OSError as ex:
@@ -111,7 +111,7 @@ class lockinfo:
 
     @staticmethod
     def getcurrentid():
-        if pycompat.iswindows:
+        if util.iswindows:
             return "%d/%d" % (util.getpid(), win32.getcurrentprocstarttime())
         return str(util.getpid())
 
@@ -126,7 +126,7 @@ class lockinfo:
         pid = int(self.pid)
         starttime = self.starttime and int(self.starttime)
         result = util.testpid(pid)
-        if result and pycompat.iswindows and starttime is not None:
+        if result and util.iswindows and starttime is not None:
             result = starttime == win32.getprocstarttime(pid)
         return result
 

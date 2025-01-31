@@ -20,7 +20,6 @@ from . import (
     git,
     mdiff,
     progress,
-    pycompat,
     revlog,
     smartset,
     util,
@@ -772,7 +771,7 @@ def _segmentsdir(svfs):
     command might fail. But it is one time so the chance is considered
     rare.
     """
-    if pycompat.iswindows and svfs.exists(SEGMENTS_DIR_NEXT):
+    if util.iswindows and svfs.exists(SEGMENTS_DIR_NEXT):
         # Attempt to rename SEGMENTS_DIR_NEXT to SEGMENTS_DIR.
         tmpreldir = "%s.%s" % (SEGMENTS_DIR, time.strftime("%Y%m%d_%H%M%S"))
         try:
@@ -847,7 +846,7 @@ def migratetolazy(repo):
         repo.ui.note_err(_("cannot migrate to lazy backend without edenapi\n"))
         return
 
-    if pycompat.iswindows and repo.svfs.exists(SEGMENTS_DIR_NEXT):
+    if util.iswindows and repo.svfs.exists(SEGMENTS_DIR_NEXT):
         repo.ui.note_err(_("cannot migrate to lazy backend with pending migration\n"))
         return
 
@@ -899,7 +898,7 @@ def _migratetosparsesegments(repo):
     except Exception:
         repo.svfs.rmtree(tmpreldir, ignore_errors=True)
         raise
-    if pycompat.iswindows:
+    if util.iswindows:
         # On Windows we cannot rename segments/v1 directory easily.
         # Let's just write a special file so we can use it next time.
         repo.svfs.rename(tmpreldir, SEGMENTS_DIR_NEXT)

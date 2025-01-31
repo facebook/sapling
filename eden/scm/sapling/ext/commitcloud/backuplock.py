@@ -12,7 +12,6 @@ import subprocess
 from sapling import error, json, lock as lockmod, node as nodemod, pycompat, util
 from sapling.i18n import _
 
-
 lockfilename = "infinitepushbackup.lock"
 
 # Progress reporting
@@ -73,7 +72,7 @@ def _getprocessetime(locker):
     holding the lock
     """
     # TODO: support windows
-    if not pycompat.isposix:
+    if not util.isposix:
         return None
     if not locker.pid or not locker.issamenamespace():
         return None

@@ -421,7 +421,7 @@ def supportedcolors(ui):
         realcolors = 16777216
     # XXX: The gitbash pager doesn't support more than 8 colors, remove once
     # we switched over to our embedded less pager.
-    elif pycompat.iswindows and ui.pageractive:
+    elif util.iswindows and ui.pageractive:
         realcolors = 8
     # Otherwise, pretend to support 256 colors.
     else:

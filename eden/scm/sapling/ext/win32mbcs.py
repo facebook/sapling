@@ -55,9 +55,8 @@ from __future__ import absolute_import
 import os
 import sys
 
-from sapling import encoding, error, pycompat, registrar
+from sapling import encoding, error, pycompat, registrar, util
 from sapling.i18n import _, _x
-
 
 # Note for extension authors: ONLY specify testedwith = 'ships-with-hg-core' for
 # extensions which SHIP WITH MERCURIAL. Non-mainline extensions should
@@ -198,7 +197,7 @@ def extsetup(ui) -> None:
     if _encoding.lower() in problematic_encodings.split():
         for f in funcs.split():
             wrapname(f, wrapper)
-        if pycompat.iswindows:
+        if util.iswindows:
             for f in winfuncs.split():
                 wrapname(f, wrapper)
         wrapname("util.listdir", wrapperforlistdir)

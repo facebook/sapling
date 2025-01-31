@@ -529,7 +529,7 @@ def wrapsocket(sock, keyfile, certfile, ui, serverhostname=None):
                         )
                     )
 
-            elif e.reason == "CERTIFICATE_VERIFY_FAILED" and pycompat.iswindows:
+            elif e.reason == "CERTIFICATE_VERIFY_FAILED" and util.iswindows:
                 ui.warn(
                     _(
                         "(the full certificate chain may not be available "
@@ -732,7 +732,7 @@ def _plainapplepython():
       for using system certificate store CAs in addition to the provided
       cacerts file
     """
-    if not pycompat.isdarwin or not pycompat.sysexecutable:
+    if not util.isdarwin or not pycompat.sysexecutable:
         return False
     exe = os.path.realpath(pycompat.sysexecutable).lower()
     return exe.startswith("/usr/bin/python") or exe.startswith(
@@ -775,7 +775,7 @@ def _defaultcacerts(ui) -> Optional[str]:
     # because we'll get a certificate verification error later and the lack
     # of loaded CA certificates will be the reason why.
     # Assertion: this code is only called if certificates are being verified.
-    if pycompat.iswindows:
+    if util.iswindows:
         if not _canloaddefaultcerts:
             ui.warn(
                 _(
@@ -797,7 +797,7 @@ def _defaultcacerts(ui) -> Optional[str]:
 
     # The Apple OpenSSL trick isn't available to us. If Python isn't able to
     # load system certs, we're out of luck.
-    if pycompat.isdarwin:
+    if util.isdarwin:
         # FUTURE Consider looking for Homebrew or MacPorts installed certs
         # files. Also consider exporting the keychain certs to a file during
         # Mercurial install.
@@ -814,7 +814,7 @@ def _defaultcacerts(ui) -> Optional[str]:
     # / is writable on Windows. Out of an abundance of caution make sure
     # we're not on Windows because paths from _systemcacerts could be installed
     # by non-admin users.
-    assert not pycompat.iswindows
+    assert not util.iswindows
 
     # Try to find CA certificates in well-known locations. We print a warning
     # when using a found file because we don't want too much silent magic

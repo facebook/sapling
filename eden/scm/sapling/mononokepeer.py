@@ -44,7 +44,6 @@ from bindings import cats, clientinfo, zstd
 
 from . import error, httpconnection, progress, sslutil, stdiopeer, url, util
 from .i18n import _
-from .pycompat import iswindows
 from .thirdparty.pysocks import socks
 
 # Netencoding special characters
@@ -400,7 +399,7 @@ class mononokepeer(stdiopeer.stdiopeer):
 
                 self.sock.send(httprequest)
 
-                if iswindows:
+                if util.iswindows:
                     self.handle = socket.socket.makefile(self.sock, mode="rwb")
                 else:
                     # Read HTTP response headers so we can start our own

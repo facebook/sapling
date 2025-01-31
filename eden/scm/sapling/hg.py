@@ -240,7 +240,7 @@ def share(
     destwvfs = vfsmod.vfs(
         dest,
         realpath=True,
-        disablesymlinks=pycompat.iswindows and "windowssymlinks" not in requirements,
+        disablesymlinks=util.iswindows and "windowssymlinks" not in requirements,
     )
     destvfs = vfsmod.vfs(
         os.path.join(destwvfs.base, ui.identity.dotdir()), realpath=True

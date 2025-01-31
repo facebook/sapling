@@ -9,8 +9,7 @@
 # GNU General Public License version 2 or any later version.
 """capabilities of well-known filesystems"""
 
-from . import pycompat
-
+from . import sysutil
 
 SYMLINK = "symlink"
 HARDLINK = "hardlink"
@@ -23,7 +22,7 @@ _EDENFS_POSIX_CAPS = {
     SYMLINK: True,
     HARDLINK: False,
     EXECBIT: True,
-    ALWAYSCASESENSITIVE: pycompat.islinux,
+    ALWAYSCASESENSITIVE: sysutil.islinux,
 }
 
 _EDENFS_WINDOWS_CAPS = {
@@ -33,7 +32,7 @@ _EDENFS_WINDOWS_CAPS = {
     ALWAYSCASESENSITIVE: False,
 }
 
-if pycompat.iswindows:
+if sysutil.iswindows:
     _EDENFS_CAPS = _EDENFS_WINDOWS_CAPS
 else:
     _EDENFS_CAPS = _EDENFS_POSIX_CAPS

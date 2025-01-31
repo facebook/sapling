@@ -3039,7 +3039,7 @@ def debugssl(ui, repo, source=None, **opts) -> None:
     If the update succeeds, retry the original operation.  Otherwise, the cause
     of the SSL error is likely another issue.
     """
-    if not pycompat.iswindows:
+    if not util.iswindows:
         raise error.Abort(_("certificate chain building is only possible on Windows"))
 
     if not source:
@@ -3547,7 +3547,7 @@ def debugmigratesymlinks(ui, repo, cmd: str = "enable", **opts) -> None:
     enable: makes the current repo support symlinks
     disable: makes the current repo NOT support symlinks
     """
-    if not pycompat.iswindows:
+    if not util.iswindows:
         raise error.Abort("this command only supports Windows")
     migratesymlinks.changereposymlinkstatus(ui, repo, cmd == "enable")
 

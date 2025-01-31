@@ -34,7 +34,7 @@ from __future__ import absolute_import
 
 import os
 
-from sapling import error, extensions, hg, pycompat, registrar, ui as uimod, util
+from sapling import error, extensions, hg, registrar, ui as uimod, util
 from sapling.i18n import _
 
 cmdtable = {}
@@ -102,7 +102,7 @@ def extsetup(ui) -> None:
     schemes.update(dict(ui.configitems("schemes")))
     for scheme, url in schemes.items():
         if (
-            pycompat.iswindows
+            util.iswindows
             and len(scheme) == 1
             and scheme.isalpha()
             and os.path.exists("%s:\\" % scheme)

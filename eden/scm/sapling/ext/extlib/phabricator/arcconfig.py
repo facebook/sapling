@@ -11,7 +11,7 @@ import errno
 import json
 import os
 
-from sapling import encoding, error, pycompat, registrar
+from sapling import encoding, error, registrar, util
 
 cmdtable = {}
 command = registrar.command(cmdtable)
@@ -40,7 +40,7 @@ def _loadfile(filename):
 
 def loadforpath(path):
     # location where `jf authenticate` writes .arcrc
-    if pycompat.iswindows:
+    if util.iswindows:
         envvar = "APPDATA"
     else:
         envvar = "HOME"

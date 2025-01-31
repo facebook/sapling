@@ -530,9 +530,7 @@ class localrepository:
             self.requirements.remove("windowssymlinks")
 
         # wvfs: rooted at the repository root, used to access the working copy
-        disablesymlinks = (
-            pycompat.iswindows and "windowssymlinks" not in self.requirements
-        )
+        disablesymlinks = util.iswindows and "windowssymlinks" not in self.requirements
         self.wvfs = vfsmod.vfs(
             path,
             expandpath=True,
@@ -2652,7 +2650,7 @@ class localrepository:
         # is the file changed?
         text = fctx.data()
         if (
-            pycompat.iswindows
+            util.iswindows
             and "windowssymlinks" in self.requirements
             and "l" in fctx.flags()
         ):

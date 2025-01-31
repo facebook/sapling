@@ -7,11 +7,10 @@ from __future__ import absolute_import
 
 import os
 
-from sapling import commands, encoding, error, pycompat, util
+from sapling import commands, encoding, error, util
 from sapling.i18n import _
 
 from . import error as ccerror
-
 
 SERVICE = "commitcloud"
 ACCOUNT = "commitcloud"
@@ -37,7 +36,7 @@ def getuserconfigpath(ui, overrideconfig):
     if path:
         return util.expandpath(path)
 
-    if pycompat.iswindows:
+    if util.iswindows:
         envvar = "APPDATA"
     else:
         envvar = "HOME"

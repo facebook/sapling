@@ -12,11 +12,10 @@ import sys
 from enum import Enum
 from typing import Union
 
-from sapling import error, pycompat, scmutil, util
+from sapling import error, scmutil, util
 from sapling.i18n import _, _x
 
-
-if not pycompat.iswindows:
+if not util.iswindows:
     import termios
     import tty
 
@@ -167,7 +166,7 @@ def _write_output(viewobj):
 
 
 def view(viewobj, readinput=getchar) -> None:
-    if pycompat.iswindows:
+    if util.iswindows:
         raise error.Abort(_("interactive UI does not support Windows"))
     if viewobj.ui.pageractive:
         raise error.Abort(_("interactiveui doesn't work with pager"))

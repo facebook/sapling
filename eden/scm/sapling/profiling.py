@@ -261,7 +261,7 @@ class profile:
                         # CreateFile(.., CREATE_ALWAYS, ...) can fail
                         # for existing "hidden" or "system" files.
                         # See D8099420.
-                        if pycompat.iswindows and e.errno == errno.EACCES:
+                        if util.iswindows and e.errno == errno.EACCES:
                             with open(path, "r+b") as f:
                                 f.write(content)
                 else:

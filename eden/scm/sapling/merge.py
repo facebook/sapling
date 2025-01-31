@@ -1670,7 +1670,7 @@ def applyupdates(repo, actions, wctx, mctx, overwrite, labels=None, ancestors=No
                 repo.fileslog.filestore, repo.wvfs.base, numworkers
             )
             fctx = mctx.filectx
-            slinkfix = pycompat.iswindows and repo.wvfs._cansymlink
+            slinkfix = util.iswindows and repo.wvfs._cansymlink
             slinks = []
             ftof2 = {}
             for f, (f2, flags, backup), msg in get_actions:

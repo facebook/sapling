@@ -55,7 +55,7 @@ from sapling import (
 )
 from sapling.i18n import _
 
-if not pycompat.iswindows:
+if not util.iswindows:
     from . import interactiveui
 else:
     interactiveui = None

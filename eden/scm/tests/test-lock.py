@@ -10,8 +10,8 @@ import tempfile
 import unittest
 
 import silenttestrunner
-from sapling import lock, pycompat, vfs as vfsmod
 
+from sapling import lock, util, vfs as vfsmod
 
 testlockname = "testlock"
 
@@ -165,7 +165,7 @@ class testlock(unittest.TestCase):
         # Make sure we release in reverse order.
         self.assertEqual(unlocks, ["three", "two", "one"])
 
-    if not pycompat.iswindows:
+    if not util.iswindows:
 
         def testlockfork(self):
             state = teststate(self, tempfile.mkdtemp(dir=os.getcwd()))

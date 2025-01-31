@@ -127,14 +127,6 @@ Mapping = collections.abc.Mapping
 Set = collections.abc.Set
 
 
-isjython = sysplatform.startswith("java")
-
-isdarwin = sysplatform == "darwin"
-islinux = sysplatform.startswith("linux")
-isposix = osname == "posix"
-iswindows = osname == "nt"
-
-
 def getoptb(args, shortlist, namelist):
     return getopt.getopt(args, shortlist, namelist)
 

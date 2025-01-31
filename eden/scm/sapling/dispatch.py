@@ -182,7 +182,7 @@ def _preimportmodules():
     extprefix = "sapling.ext."
     modnames = sorted(bindings.modules.list())
 
-    is_win = pycompat.iswindows
+    is_win = util.iswindows
     win_modnames = {
         "sapling.scmwindows",
         "sapling.win32",
@@ -356,7 +356,7 @@ def dispatch(req):
         # Windows does not have SIGPIPE, so pager exit does not
         # get raised as a SignalInterrupt. Let's handle the error
         # explicitly here
-        if not pycompat.iswindows or inst.errno != errno.EINVAL:
+        if not util.iswindows or inst.errno != errno.EINVAL:
             raise
         ret = -1
     finally:

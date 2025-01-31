@@ -33,7 +33,7 @@ DUMMY_MTIME = 0
 modefromflag: Dict[str, int] = {
     "": stat.S_IFREG | 0o644,
     "x": stat.S_IFREG | 0o755,
-    "l": (stat.S_IFREG if pycompat.iswindows else stat.S_IFLNK) | 0o755,
+    "l": (stat.S_IFREG if util.iswindows else stat.S_IFLNK) | 0o755,
     "t": stat.S_IFDIR | 0o755,
 }
 

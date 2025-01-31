@@ -8,7 +8,8 @@ import tempfile
 import unittest
 
 import silenttestrunner
-from sapling import error, lock, pycompat, ui, vfs
+
+from sapling import error, lock, ui, util, vfs
 
 
 class testrustlock(unittest.TestCase):
@@ -71,7 +72,7 @@ class testrustlock(unittest.TestCase):
         l.release()
         self.assertNotLocked("some_dir/foo")
 
-    if not pycompat.iswindows:
+    if not util.iswindows:
 
         def testpermissionerror(self):
             os.chmod(self.vfs.base, 0)

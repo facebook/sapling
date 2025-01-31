@@ -27,7 +27,7 @@ import unicodedata
 
 import bindings
 
-from . import encoding, error, fscap, identity, pycompat
+from . import encoding, error, fscap, identity, pycompat, sysutil
 from .i18n import _
 
 osutil = bindings.cext.osutil
@@ -329,13 +329,13 @@ def getmaxrss():
     res = resource.getrusage(resource.RUSAGE_SELF)
 
     # Linux returns the maxrss in KB, whereas macOS returns in bytes.
-    if pycompat.isdarwin:
+    if sysutil.isdarwin:
         return res.ru_maxrss
     else:
         return res.ru_maxrss * 1024
 
 
-if pycompat.isdarwin:
+if sysutil.isdarwin:
 
     def normcase(path):
         """
@@ -630,9 +630,6 @@ def bindunixsocket(sock, path):
 
 
 def _safehasattr(thing, attr):
-    # deferred import to avoid circular import
-    from . import util
-
     return hasattr(thing, attr)
 
 

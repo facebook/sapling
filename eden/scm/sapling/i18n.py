@@ -20,8 +20,7 @@ from typing import Sized
 
 import bindings
 
-from . import encoding, identity, pycompat
-
+from . import encoding, identity, pycompat, sysutil
 
 # modelled after templater.templatepath:
 # pyre-fixme[16]: Module `sys` has no attribute `frozen`.
@@ -37,7 +36,7 @@ except NameError:
 
 _languages = None
 if (
-    pycompat.iswindows
+    sysutil.iswindows
     and "LANGUAGE" not in encoding.environ
     and "LC_ALL" not in encoding.environ
     and "LC_MESSAGES" not in encoding.environ

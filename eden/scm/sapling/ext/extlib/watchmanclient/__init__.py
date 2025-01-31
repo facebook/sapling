@@ -448,7 +448,7 @@ class state_update:
             return False
 
 
-if pycompat.iswindows:
+if util.iswindows:
     from ctypes.wintypes import DWORD, HANDLE
 
     def openfilewin(path):
@@ -498,7 +498,7 @@ if pycompat.iswindows:
         finally:
             closehandler(h)
 
-elif pycompat.isdarwin:
+elif util.isdarwin:
     import ctypes.util
 
     F_GETPATH = 50

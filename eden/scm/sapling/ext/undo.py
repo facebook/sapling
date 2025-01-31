@@ -8,8 +8,8 @@
 from __future__ import absolute_import
 
 import bindings
-
 from bindings import cliparser
+
 from sapling import (
     cmdutil,
     commands,
@@ -23,8 +23,6 @@ from sapling import (
     lock as lockmod,
     merge,
     mutation,
-    phases,
-    pycompat,
     registrar,
     revlog,
     revset,
@@ -39,11 +37,10 @@ from sapling import (
 from sapling.i18n import _
 from sapling.node import bin, hex, nullid, short
 
-
 mpatch = bindings.cext.mpatch
 
 
-if not pycompat.iswindows:
+if not util.iswindows:
     from . import interactiveui
 else:
     interactiveui = None

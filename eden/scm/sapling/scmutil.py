@@ -42,7 +42,7 @@ from .i18n import _
 from .node import hex, nullid, short, wdirid, wdirrev
 from .pycompat import isint
 
-if pycompat.iswindows:
+if util.iswindows:
     from . import scmwindows as scmplatform
 else:
     from . import scmposix as scmplatform
@@ -337,7 +337,7 @@ def callcatch(ui, req, func):
                 ui.warn(
                     _("%s\n") % encoding.strtolocal(inst.strerror), error=_("abort")
                 )
-            if not pycompat.iswindows:
+            if not util.iswindows:
                 # For permission errors on POSIX. Show more information about the
                 # current user, group, and stat results.
                 num = getattr(inst, "errno", None)

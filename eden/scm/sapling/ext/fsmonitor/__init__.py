@@ -166,11 +166,10 @@ from __future__ import absolute_import
 
 import os
 
-from sapling import error, extensions, filesystem, localrepo, pycompat, registrar, util
+from sapling import error, extensions, filesystem, localrepo, registrar, util
 from sapling.i18n import _
 
 from ..extlib import watchmanclient
-
 
 # Note for extension authors: ONLY specify testedwith = 'ships-with-hg-core' for
 # extensions which SHIP WITH MERCURIAL. Non-mainline extensions should
@@ -309,7 +308,7 @@ def wrapdirstate(orig, self):
 
 def extsetup(ui):
     extensions.wrapfilecache(localrepo.localrepository, "dirstate", wrapdirstate)
-    if pycompat.isdarwin:
+    if util.isdarwin:
         # An assist for avoiding the dangling-symlink fsevents bug
         extensions.wrapfunction(os, "symlink", wrapsymlink)
 

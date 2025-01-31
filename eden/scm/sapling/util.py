@@ -29,7 +29,6 @@ import contextlib
 import datetime
 import errno
 import functools
-import gc
 import hashlib
 import itertools
 import mmap
@@ -75,6 +74,7 @@ from . import (
     identity,
     pycompat,
     redact,
+    sysutil,
     urllibcompat,
 )
 
@@ -100,6 +100,11 @@ httpserver = urllibcompat.httpserver
 urlerr = urllibcompat.urlerr
 urlreq = urllibcompat.urlreq
 
+isposix = sysutil.isposix
+isdarwin = sysutil.isdarwin
+islinux = sysutil.islinux
+iswindows = sysutil.iswindows
+
 
 def isatty(fp):
     try:
@@ -121,7 +126,7 @@ def isstdout(fp):
 if isatty(stdout):
     stdout = os.fdopen(stdout.fileno(), "wb")
 
-if pycompat.iswindows:
+if iswindows:
     from . import windows as platform
 
     stdout = platform.winstdout(stdout)
@@ -423,7 +428,7 @@ except NameError:
         return memoryview(sliceable)[offset:]
 
 
-closefds = pycompat.isposix
+closefds = os.name == "posix"
 
 
 def mmapread(fp):
@@ -1690,7 +1695,7 @@ def isvalidutf8(string):
 
 def gui():
     """Are we running in a GUI?"""
-    if pycompat.isdarwin:
+    if isdarwin:
         if "SSH_CONNECTION" in encoding.environ:
             # handle SSH access to a box where the user is logged in
             return False
@@ -1698,7 +1703,7 @@ def gui():
             # pretend that GUI is available
             return True
     else:
-        return pycompat.iswindows or encoding.environ.get("DISPLAY")
+        return iswindows or encoding.environ.get("DISPLAY")
 
 
 def mktempcopy(name, emptyok=False, createmode=None):
@@ -1769,7 +1774,7 @@ def truncatefile(fname, vfs, size, checkambig=False):
 
         return
     except IOError as e:
-        if not pycompat.iswindows:
+        if not iswindows:
             raise
 
         if e.errno != errno.EACCES:

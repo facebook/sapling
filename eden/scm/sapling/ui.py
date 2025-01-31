@@ -1735,7 +1735,7 @@ def _normalizepath(rawloc: str) -> str:
     rawloc = rawloc.split("?", 1)[0]
     if rawloc.startswith("file:"):
         rawloc = rawloc[5:]
-    if pycompat.iswindows:
+    if util.iswindows:
         rawloc = rawloc.replace("\\", "/")
     if os.path.sep != "/":
         rawloc = rawloc.replace(":///", ":")

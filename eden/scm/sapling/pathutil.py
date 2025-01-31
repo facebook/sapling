@@ -160,11 +160,11 @@ def canonpath(root, cwd, myname):
     ...     except error.Abort:
     ...         return 'aborted'
     >>> def unixonly(root, cwd, myname, expected='aborted'):
-    ...     if pycompat.iswindows:
+    ...     if util.iswindows:
     ...         return expected
     ...     return check(root, cwd, myname)
     >>> def winonly(root, cwd, myname, expected='aborted'):
-    ...     if not pycompat.iswindows:
+    ...     if not util.iswindows:
     ...         return expected
     ...     return check(root, cwd, myname)
     >>> winonly('d:\\\\repo', 'c:\\\\dir', 'filename')

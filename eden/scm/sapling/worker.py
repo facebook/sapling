@@ -54,7 +54,7 @@ def _numworkers(ui):
     return min(max(countcpus(), 4), 32)
 
 
-if pycompat.isposix or pycompat.iswindows:
+if util.isposix or util.iswindows:
     _startupcost = 0.01
 else:
     _startupcost = 1e30

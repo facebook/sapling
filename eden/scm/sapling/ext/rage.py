@@ -26,6 +26,7 @@ from pathlib import Path
 from typing import List, Optional, Tuple
 
 import bindings
+
 from sapling import (
     bookmarks,
     color,
@@ -39,7 +40,6 @@ from sapling import (
     util,
 )
 from sapling.i18n import _
-
 
 cmdtable = {}
 command = registrar.command(cmdtable)
@@ -368,7 +368,7 @@ def _makerage(ui, repo, **opts) -> str:
             lambda: shcmd(
                 (
                     "wmic LogicalDisk Where DriveType=3 Get DeviceId,FileSystem,FreeSpace,Size"
-                    if pycompat.iswindows
+                    if util.iswindows
                     else "df -h"
                 ),
                 check=False,
@@ -418,14 +418,14 @@ def _makerage(ui, repo, **opts) -> str:
             "uptime",
             lambda: shcmd(
                 "wmic path Win32_OperatingSystem get LastBootUpTime"
-                if pycompat.iswindows
+                if util.iswindows
                 else "uptime"
             ),
         ),
         ("watchman debug-status", lambda: shcmd("watchman debug-status", check=False)),
         ("rpm info", (partial(rpminfo, ui))),
         ("klist", lambda: shcmd("klist", check=False)),
-        ("ifconfig", lambda: shcmd("ipconfig" if pycompat.iswindows else "ifconfig")),
+        ("ifconfig", lambda: shcmd("ipconfig" if util.iswindows else "ifconfig")),
         (
             "airport",
             lambda: shcmd(
@@ -597,7 +597,7 @@ def rage(ui, repo, *pats, **opts) -> None:
                 stdout=subprocess.PIPE,
                 stdin=subprocess.PIPE,
                 stderr=subprocess.PIPE,
-                shell=pycompat.iswindows,
+                shell=util.iswindows,
             )
             out, err = p.communicate(input=(msg + "\n").encode())
             ret = p.returncode
@@ -633,7 +633,7 @@ def rage(ui, repo, *pats, **opts) -> None:
     ui.write(ui.config("rage", "advice", "") + "\n")
 
 
-if pycompat.iswindows:
+if util.iswindows:
     colortable = {"rage.link": "yellow bold"}
 else:
     colortable = {"rage.link": "blue bold"}
