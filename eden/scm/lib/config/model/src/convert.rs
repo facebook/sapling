@@ -203,7 +203,32 @@ impl FromConfigValue for PathBuf {
 
 impl FromConfigValue for Duration {
     fn try_from_str(s: &str) -> Result<Self> {
-        Ok(Duration::from_secs_f64(s.parse()?))
+        let unit_to_nanos = [
+            ("ns", 1u64),
+            ("us", 1_000),
+            ("ms", 1_000_000),
+            ("s", 1_000_000_000),
+            ("m", 60 * 1_000_000_000),
+            ("h", 3600 * 1_000_000_000),
+            // backwards compat - default to seconds
+            ("", 1_000_000_000),
+        ];
+
+        for (suffix, nanos) in unit_to_nanos.iter() {
+            if let Some(number_part) = s.strip_suffix(suffix) {
+                let number: f64 = number_part.parse()?;
+                if number < 0.0 {
+                    return Err(Error::Convert(format!(
+                        "invalid duration config value '{s}' (negative not supported)",
+                    )));
+                }
+                return Ok(Duration::from_nanos((number * (*nanos as f64)) as u64));
+            }
+        }
+
+        Err(Error::Convert(format!(
+            "cannot parse duration config value '{s}'"
+        )))
     }
 }
 
@@ -479,5 +504,29 @@ mod tests {
             parse_list("a,\" c\" \" d"),
             vec![b("a"), b(" c"), b("\""), b("d")]
         );
+    }
+
+    #[test]
+    fn test_duration() -> anyhow::Result<()> {
+        // Backwards compat - default to seconds.
+        assert_eq!(Duration::try_from_str("10")?, Duration::from_secs(10));
+        assert_eq!(
+            Duration::try_from_str("1.234")?,
+            Duration::from_secs_f64(1.234)
+        );
+
+        assert_eq!(Duration::try_from_str("555ns")?, Duration::from_nanos(555));
+        assert_eq!(Duration::try_from_str("1m")?, Duration::from_secs(60));
+        assert_eq!(Duration::try_from_str("2h")?, Duration::from_secs(7200));
+        assert_eq!(Duration::try_from_str("5ms")?, Duration::from_millis(5));
+        assert_eq!(Duration::try_from_str("123us")?, Duration::from_micros(123));
+        assert_eq!(Duration::try_from_str("1.5h")?, Duration::from_secs(5400));
+
+        assert!(Duration::try_from_str("-1").is_err());
+        // Don't allow capitals for now - ambiguous with "month" potentially if we ever
+        // want to support that.
+        assert!(Duration::try_from_str("1M").is_err());
+
+        Ok(())
     }
 }
