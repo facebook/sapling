@@ -36,7 +36,7 @@ import subprocess
 import sys
 import traceback
 
-from sapling import alerts, dispatch, encoding, extensions, pycompat, registrar, util
+from sapling import alerts, dispatch, encoding, extensions, registrar, util
 
 
 configtable = {}

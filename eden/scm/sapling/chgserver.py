@@ -56,7 +56,7 @@ from bindings import commands, hgtime
 
 from sapling import prefork, tracing
 
-from . import commandserver, encoding, error, pycompat, ui as uimod, util
+from . import commandserver, encoding, error, ui as uimod, util
 from .i18n import _
 
 _log = commandserver.log

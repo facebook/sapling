@@ -35,7 +35,6 @@ from sapling import (
     error,
     hintutil,
     progress,
-    pycompat,
     redact,
     registrar,
     util,

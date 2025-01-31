@@ -12,7 +12,7 @@ import io
 
 from bindings import treestate
 
-from . import error, node, pycompat, txnutil, util
+from . import error, node, txnutil, util
 from .i18n import _
 
 # header after the first 40 bytes of dirstate.

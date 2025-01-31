@@ -15,7 +15,7 @@ import bindings
 
 from bindings import webview
 
-from .. import error, pycompat
+from .. import error
 from ..i18n import _
 from ..node import hex
 

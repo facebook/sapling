@@ -21,7 +21,7 @@ import ssl
 import sys
 from typing import Any, Dict, Optional, Tuple
 
-from . import error, pycompat, util
+from . import error, util
 from .i18n import _
 
 # Python 2.7.9+ overhauled the built-in SSL/TLS features of Python. It added

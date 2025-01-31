@@ -28,7 +28,6 @@ Create an extension to test bundle2 API
   > from sapling import changegroup
   > from sapling import error
   > from sapling import obsolete
-  > from sapling import pycompat
   > from sapling import registrar
   > 
   > 

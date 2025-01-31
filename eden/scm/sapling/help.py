@@ -27,7 +27,6 @@ from . import (
     helptext,
     identity,
     minirst,
-    pycompat,
     revset,
     templatefilters,
     templatekw,

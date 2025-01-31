@@ -5,7 +5,7 @@
 
 from __future__ import absolute_import
 
-from .. import pycompat, scmutil, util
+from .. import scmutil, util
 from ..i18n import _
 from . import debug
 from .cmdtable import command

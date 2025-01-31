@@ -13,17 +13,7 @@ from typing import Optional, Sized
 
 import bindings
 
-from .. import (
-    bookmarks as bookmod,
-    changelog2,
-    clone,
-    extensions,
-    hg,
-    progress,
-    pycompat,
-    util,
-    visibility,
-)
+from .. import bookmarks as bookmod, changelog2, clone, extensions, hg, progress, util
 from ..i18n import _
 from ..node import bin, hex, nullid, short
 from ..revlog import hash as revloghash

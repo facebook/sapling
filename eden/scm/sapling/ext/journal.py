@@ -28,7 +28,6 @@ from sapling import (
     localrepo,
     lock,
     node,
-    pycompat,
     registrar,
     smartset,
     util,

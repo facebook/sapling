@@ -31,7 +31,7 @@ from typing import List, Optional, Tuple
 
 from bindings import clientinfo
 
-from . import error, match, mdiff, pycompat, util
+from . import error, match, mdiff, util
 from .i18n import _
 
 _DEFAULT_CACHE_SIZE = 10000

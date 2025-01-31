@@ -17,7 +17,7 @@ from typing import Dict, List, Optional, Pattern, Union
 
 import bindings
 
-from . import encoding, pycompat, util
+from . import encoding, util
 from .i18n import _
 
 

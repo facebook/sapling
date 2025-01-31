@@ -253,7 +253,6 @@ from sapling import (
     mutation,
     node,
     progress,
-    pycompat,
     registrar,
     repair,
     scmutil,

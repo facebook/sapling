@@ -35,7 +35,7 @@ from typing import (
     Union,
 )
 
-from . import encoding, error, pathutil, pycompat, util
+from . import encoding, error, pathutil, util
 from .i18n import _
 
 

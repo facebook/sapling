@@ -14,8 +14,6 @@ from __future__ import absolute_import
 
 import array
 
-from .. import pycompat
-
 
 def isasciistr(s):
     try:

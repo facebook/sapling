@@ -12,7 +12,7 @@ import struct
 import typing
 from typing import Dict, IO, Mapping
 
-from sapling import error, filelog, pycompat, util
+from sapling import error, filelog, util
 from sapling.i18n import _
 from sapling.node import hex
 

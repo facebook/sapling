@@ -14,7 +14,7 @@ from __future__ import absolute_import
 
 import string
 
-from . import error, node, parser, pycompat, util
+from . import error, node, parser, util
 from .i18n import _
 
 elements = {

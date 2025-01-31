@@ -24,7 +24,6 @@ from . import (
     formatter,
     match,
     pathutil,
-    pycompat,
     registrar,
     scmutil,
     simplemerge,

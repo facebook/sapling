@@ -14,7 +14,7 @@ from __future__ import absolute_import
 
 import json as _sysjson
 
-from sapling import encoding, pycompat
+from sapling import encoding
 
 JSONDecodeError = _sysjson.JSONDecodeError
 

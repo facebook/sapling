@@ -42,7 +42,6 @@ from . import (
     metrics,
     perftrace,
     progress,
-    pycompat,
     rcutil,
     scmutil,
     uiconfig,

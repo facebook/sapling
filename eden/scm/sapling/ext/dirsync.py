@@ -52,7 +52,6 @@ from sapling import (
     extensions,
     localrepo,
     match as matchmod,
-    pycompat,
     scmutil,
     tracing,
     util,

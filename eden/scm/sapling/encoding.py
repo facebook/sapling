@@ -19,7 +19,7 @@ import unicodedata
 
 import bindings
 
-from . import error, pycompat
+from . import error
 from .pure import charencode as charencodepure
 
 charencode = bindings.cext.parsers

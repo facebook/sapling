@@ -15,7 +15,6 @@ from sapling import (
     mdiff,
     phases,
     progress,
-    pycompat,
     revlog,
     util,
 )

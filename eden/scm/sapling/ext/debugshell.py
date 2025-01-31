@@ -22,7 +22,7 @@ from typing import Any, Dict, List, Optional
 import bindings
 
 import sapling
-from sapling import ext, hgdemandimport, pycompat, registrar, traceimport, util
+from sapling import ext, hgdemandimport, registrar, traceimport, util
 from sapling.ext import commitcloud as cc
 from sapling.i18n import _
 

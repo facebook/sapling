@@ -42,7 +42,6 @@ from sapling import (
     localrepo,
     mutation,
     push as pushmod,
-    pycompat,
     rcutil,
     registrar,
     revset,

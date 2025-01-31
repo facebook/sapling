@@ -27,7 +27,7 @@ from typing import Any, BinaryIO, List, Tuple
 
 import bindings
 
-from . import encoding, error, pycompat, util
+from . import encoding, error, util
 from .i18n import _
 
 logfile = None

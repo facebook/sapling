@@ -25,7 +25,7 @@ def _fixsys():
     libdir = dirname(dirname(os.path.abspath(__file__)))
 
     # stdin can be None if the parent process unset the stdin file descriptor.
-    # Replace it early, since it may be read in layer modules, like pycompat.
+    # Replace it early, since it may be read in layer modules.
     if sys.stdin is None:
         sys.stdin = open(os.devnull, "r")
 

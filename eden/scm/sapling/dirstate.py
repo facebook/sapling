@@ -39,14 +39,12 @@ import sapling.localrepo
 
 from . import (
     context,
-    encoding,
     error,
     filesystem,
     identity,
     match as matchmod,
     pathutil,
     perftrace,
-    pycompat,
     scmutil,
     transaction,
     treestate,

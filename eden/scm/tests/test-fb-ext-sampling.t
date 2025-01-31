@@ -65,7 +65,6 @@ Do a couple of commits.  We expect to log two messages per call to repo.commit.
   $ mkcommit c
   atexit handler executed
   atexit handler executed
-  >>> from sapling import pycompat
   >>> import json
   >>> with open("$LOGDIR/samplingpath.txt") as f:
   ...     data = f.read()

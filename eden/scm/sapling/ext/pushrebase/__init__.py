@@ -64,7 +64,6 @@ from sapling import (
     obsolete,
     perftrace,
     phases as phasesmod,
-    pycompat,
     registrar,
     revsetlang,
     scmutil,
@@ -79,8 +78,6 @@ from sapling.node import bin, hex, nullid, nullrev, short
 from .. import hgsql
 from ..remotefilelog import (
     contentstore,
-    datapack,
-    historypack,
     metadatastore,
     mutablestores,
     shallowbundle,

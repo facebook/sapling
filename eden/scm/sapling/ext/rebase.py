@@ -46,7 +46,6 @@ from sapling import (
     perftrace,
     phases,
     progress,
-    pycompat,
     registrar,
     revsetlang,
     scmutil,

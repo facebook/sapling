@@ -60,7 +60,6 @@ from . import (
     peer,
     phases,
     pushkey,
-    pycompat,
     repository,
     revset,
     revsetlang,

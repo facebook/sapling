@@ -28,7 +28,7 @@ from typing import IO, Optional, Tuple, Union
 
 import bindings
 
-from . import ancestor, error, mdiff, pycompat, templatefilters, util
+from . import ancestor, error, mdiff, templatefilters, util
 from .i18n import _
 
 # import stuff from node for others to import from revlog

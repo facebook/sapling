@@ -35,7 +35,6 @@ from . import (
     perftrace,
     phases,
     pushkey,
-    pycompat,
     scmutil,
     sslutil,
     streamclone,

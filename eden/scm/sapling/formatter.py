@@ -117,7 +117,7 @@ import contextlib
 import itertools
 import os
 
-from . import error, pycompat, templatefilters, templatekw, templater, util
+from . import error, templatefilters, templatekw, templater, util
 from .i18n import _
 from .node import hex, short
 

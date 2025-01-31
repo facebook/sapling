@@ -19,7 +19,7 @@ from typing import Sized
 
 from bindings import vlq
 
-from . import error, pycompat, util
+from . import error, util
 from .i18n import _
 
 

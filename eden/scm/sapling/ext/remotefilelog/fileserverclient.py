@@ -11,7 +11,7 @@ import struct
 import time
 import traceback
 
-from sapling import error, perftrace, pycompat, wireproto
+from sapling import error, perftrace, wireproto
 from sapling.i18n import _
 
 from . import constants, shallowutil, wirepack

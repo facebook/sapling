@@ -30,7 +30,7 @@ import stat
 import time
 
 import bindings
-from sapling import dispatch, encoding, extensions, pycompat, util
+from sapling import dispatch, encoding, extensions, util
 from sapling.i18n import _
 
 from . import workspace

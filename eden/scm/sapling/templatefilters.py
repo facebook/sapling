@@ -17,16 +17,7 @@ import re
 import sys
 import time
 
-from . import (
-    encoding,
-    hbisect,
-    json as jsonmod,
-    pycompat,
-    registrar,
-    templatekw,
-    url,
-    util,
-)
+from . import encoding, hbisect, json as jsonmod, registrar, templatekw, url, util
 
 urlerr = util.urlerr
 urlreq = util.urlreq

@@ -9,7 +9,7 @@ import contextlib
 import errno
 import subprocess
 
-from sapling import error, json, lock as lockmod, node as nodemod, pycompat, util
+from sapling import error, json, lock as lockmod, node as nodemod, util
 from sapling.i18n import _
 
 lockfilename = "infinitepushbackup.lock"

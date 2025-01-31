@@ -10,7 +10,7 @@ from __future__ import absolute_import
 import re
 from typing import Callable, Optional
 
-from . import bookmarks, error, pycompat, registrar, util
+from . import bookmarks, error, registrar, util
 from .i18n import _
 from .node import hex
 

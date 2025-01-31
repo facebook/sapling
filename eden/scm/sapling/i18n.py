@@ -20,7 +20,7 @@ from typing import Sized
 
 import bindings
 
-from . import encoding, identity, pycompat, sysutil
+from . import encoding, identity, sysutil
 
 # modelled after templater.templatepath:
 # pyre-fixme[16]: Module `sys` has no attribute `frozen`.

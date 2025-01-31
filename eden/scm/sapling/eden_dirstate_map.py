@@ -15,7 +15,6 @@ from . import (
     EdenThriftClient,
     localrepo,
     node,
-    pycompat,
     treestate,
     ui as ui_mod,
     util,

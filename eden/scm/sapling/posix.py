@@ -28,7 +28,7 @@ import unicodedata
 
 import bindings
 
-from . import encoding, error, fscap, identity, pycompat, sysutil
+from . import encoding, error, fscap, identity, sysutil
 from .i18n import _
 
 osutil = bindings.cext.osutil

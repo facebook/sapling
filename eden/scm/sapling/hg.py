@@ -39,7 +39,6 @@ from . import (
     perftrace,
     phases,
     progress,
-    pycompat,
     scmutil,
     sshpeer,
     ui as uimod,

@@ -17,7 +17,7 @@ import struct
 
 import bindings
 
-from . import error, mdiff, pycompat, revlog, util
+from . import error, mdiff, revlog, util
 from .i18n import _
 from .node import bin
 

@@ -17,7 +17,7 @@ import queue as queuemod
 import threading
 import time
 
-from . import encoding, error, pycompat, util
+from . import encoding, error, util
 from .i18n import _
 
 

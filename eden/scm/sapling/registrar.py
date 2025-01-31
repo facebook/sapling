@@ -12,7 +12,7 @@
 
 from __future__ import absolute_import
 
-from . import configitems, error, identity, pycompat, util
+from . import configitems, error, identity, util
 
 # unlike the other registered items, config options are neither functions or
 # classes. Registering the option is just small function call.

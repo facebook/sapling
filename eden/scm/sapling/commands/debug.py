@@ -62,7 +62,6 @@ from .. import (
     phases,
     progress,
     pvec,
-    pycompat,
     revlog,
     revset,
     revsetlang,

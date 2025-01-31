@@ -18,7 +18,6 @@ from sapling import (
     error,
     exchange,
     extensions,
-    pycompat,
     sshserver,
     store,
     util,

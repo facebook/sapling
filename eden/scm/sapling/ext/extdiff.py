@@ -73,16 +73,7 @@ import shlex
 import shutil
 import tempfile
 
-from sapling import (
-    archival,
-    cmdutil,
-    error,
-    filemerge,
-    pycompat,
-    registrar,
-    scmutil,
-    util,
-)
+from sapling import archival, cmdutil, error, filemerge, registrar, scmutil, util
 from sapling.i18n import _
 from sapling.node import nullid, short
 

@@ -23,7 +23,7 @@ from typing import IO
 
 import bindings
 
-from . import encoding, error, pycompat, win32, winutil
+from . import encoding, error, win32, winutil
 from .i18n import _
 
 osutil = bindings.cext.osutil

@@ -169,7 +169,6 @@ from . import (
     perftrace,
     phases,
     pushkey,
-    pycompat,
     url,
     urllibcompat,
     util,

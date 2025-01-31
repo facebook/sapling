@@ -8,7 +8,7 @@ from __future__ import absolute_import
 # Standard Library
 import os
 
-from sapling import error, json, pycompat
+from sapling import error, json
 from sapling.i18n import _
 
 from . import baseservice, error as ccerror, workspace as ccworkspace

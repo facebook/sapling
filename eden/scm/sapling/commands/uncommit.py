@@ -25,17 +25,7 @@ from __future__ import absolute_import
 
 from typing import Optional
 
-from .. import (
-    cmdutil,
-    context,
-    copies,
-    error,
-    pycompat,
-    rewriteutil,
-    scmutil,
-    treestate,
-    util,
-)
+from .. import cmdutil, context, copies, error, rewriteutil, scmutil, treestate
 from ..i18n import _
 from ..node import nullid
 from .cmdtable import command

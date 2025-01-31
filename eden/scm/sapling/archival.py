@@ -21,7 +21,7 @@ import time
 import zipfile
 import zlib
 
-from . import error, formatter, progress, pycompat, util, vfs as vfsmod
+from . import error, formatter, progress, util, vfs as vfsmod
 from .i18n import _
 
 # from unzip source code:

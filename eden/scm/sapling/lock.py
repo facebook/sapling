@@ -22,7 +22,7 @@ from typing import Optional
 
 from bindings import lock as nativelock
 
-from . import encoding, error, perftrace, progress, pycompat, util
+from . import encoding, error, perftrace, progress, util
 from .i18n import _
 
 if util.iswindows:

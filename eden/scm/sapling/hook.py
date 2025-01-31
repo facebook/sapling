@@ -19,7 +19,7 @@ import bindings
 
 from sapling import hgdemandimport as demandimport
 
-from . import encoding, error, extensions, pycompat, util
+from . import encoding, error, extensions, util
 from .i18n import _
 
 

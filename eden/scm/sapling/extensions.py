@@ -19,7 +19,7 @@ import inspect
 import os
 import sys
 
-from . import cmdutil, configitems, error, pycompat, util
+from . import cmdutil, configitems, error, util
 from .i18n import _, gettext
 
 _preimported = {}

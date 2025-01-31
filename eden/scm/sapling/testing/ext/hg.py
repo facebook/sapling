@@ -239,7 +239,7 @@ def hg(stdin: BinaryIO, stdout: BinaryIO, stderr: BinaryIO, env: Env) -> int:
 
     import bindings
 
-    from sapling import encoding, extensions, pycompat, util
+    from sapling import encoding, extensions, util
 
     # emulate ui.system via sheval
     rawsystem = partial(_rawsystem, env, stdin, stdout, stderr)

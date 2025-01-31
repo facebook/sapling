@@ -54,7 +54,6 @@ from . import (
     pathutil,
     perftrace,
     progress,
-    pycompat,
     registrar,
     revlog,
     revsetlang,

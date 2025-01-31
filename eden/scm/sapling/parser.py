@@ -241,7 +241,6 @@ def prettyformat(tree, leafnodes):
 def simplifyinfixops(tree, targetnodes):
     """Flatten chained infix operations to reduce usage of Python stack
 
-    >>> from . import pycompat
     >>> def f(tree):
     ...     s = prettyformat(simplifyinfixops(tree, ('or',)), ('symbol',))
     ...     print(s)
@@ -636,7 +635,6 @@ class basealiasrules:
         ``args`` is a list of alias argument names, or None if the alias
         is declared as a symbol.
 
-        >>> from . import pycompat
         >>> parsemap = {
         ...     '$1 or foo': ('or', ('symbol', '$1'), ('symbol', 'foo')),
         ...     '$1 or $bar':

@@ -15,7 +15,7 @@ import os
 import posixpath
 import stat
 
-from . import encoding, error, identity, pycompat, util
+from . import encoding, error, identity, util
 from .i18n import _
 
 

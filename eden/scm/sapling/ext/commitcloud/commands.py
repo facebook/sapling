@@ -18,7 +18,6 @@ from sapling import (
     lock as lockmod,
     node as nodemod,
     progress,
-    pycompat,
     registrar,
     scmutil,
     util,

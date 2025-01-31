@@ -44,8 +44,6 @@ from sapling import (
     mutation,
     node,
     patch,
-    phases,
-    pycompat,
     registrar,
     scmutil,
     util,

@@ -40,7 +40,6 @@ from . import (
     perftrace,
     profiling,
     progress,
-    pycompat,
     registrar,
     scmutil,
     tracing,

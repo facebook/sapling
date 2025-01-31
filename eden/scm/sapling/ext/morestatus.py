@@ -18,7 +18,6 @@ from sapling import (
     localrepo,
     merge as mergemod,
     node as nodeutil,
-    pycompat,
     registrar,
     scmutil,
 )

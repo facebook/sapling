@@ -7,17 +7,8 @@
 
 from __future__ import absolute_import
 
-from sapling import (
-    autopull,
-    error,
-    mutation,
-    node as nodemod,
-    pycompat,
-    registrar,
-    visibility,
-)
+from sapling import autopull, error, mutation, node as nodemod, registrar, visibility
 from sapling.i18n import _
-
 
 cmdtable = {}
 command = registrar.command(cmdtable)

@@ -22,7 +22,7 @@ from typing import (
     TYPE_CHECKING,
 )
 
-from sapling import perftrace, progress, pycompat
+from sapling import perftrace, progress
 from sapling.i18n import _
 from sapling.node import hex, nullid
 

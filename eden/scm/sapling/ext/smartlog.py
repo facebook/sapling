@@ -45,7 +45,6 @@ from sapling import (
     hintutil,
     node as nodemod,
     phases,
-    pycompat,
     registrar,
     revset,
     revsetlang,

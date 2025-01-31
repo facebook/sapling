@@ -41,7 +41,6 @@ from . import (
     match as matchmod,
     perftrace,
     progress,
-    pycompat,
     scmutil,
     util,
     worker,

@@ -75,7 +75,6 @@ from . import (
     fscap,
     i18n,
     identity as identitymod,
-    pycompat,
     redact,
     sysutil,
     urllibcompat,

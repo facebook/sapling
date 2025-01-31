@@ -14,7 +14,7 @@ from __future__ import absolute_import
 
 import bindings
 
-from . import progress, pycompat
+from . import progress
 from .i18n import _
 
 

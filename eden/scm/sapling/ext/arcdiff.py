@@ -15,7 +15,6 @@ from sapling import (
     extensions,
     mdiff,
     patch,
-    pycompat,
     registrar,
     revset,
     scmutil,
@@ -25,7 +24,6 @@ from sapling.i18n import _
 from sapling.node import hex
 
 from .extlib.phabricator import arcconfig, diffprops, graphql
-
 
 hint = registrar.hint()
 revsetpredicate = registrar.revsetpredicate()

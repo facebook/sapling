@@ -14,7 +14,7 @@ import os
 
 from typing import Optional
 
-from sapling import encoding, error, json, pycompat, util
+from sapling import encoding, error, json, util
 from sapling.i18n import _
 from sapling.node import bin, hex
 

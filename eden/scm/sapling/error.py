@@ -22,10 +22,6 @@ from typing import Union
 
 import bindings
 
-# Do not import anything but pycompat here, please
-from . import pycompat
-
-
 CertificateError = bindings.error.CertificateError
 CommitLookupError = bindings.error.CommitLookupError
 ConfigError = bindings.error.ConfigError

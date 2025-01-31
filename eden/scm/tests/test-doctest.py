@@ -9,7 +9,6 @@ import doctest
 import os
 import sys
 
-
 # this is hack to make sure no escape characters are inserted into the output
 
 if "TERM" in os.environ:
@@ -60,7 +59,6 @@ testmod("sapling.mutation")
 testmod("sapling.patch")
 testmod("sapling.pathutil")
 testmod("sapling.parser")
-testmod("sapling.pycompat")
 testmod("sapling.result")
 testmod("sapling.revset")
 testmod("sapling.revsetlang")

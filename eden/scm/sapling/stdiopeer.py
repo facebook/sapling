@@ -15,7 +15,7 @@ from __future__ import absolute_import
 import abc
 from typing import Any, Optional
 
-from . import error, perftrace, pycompat, util, wireproto
+from . import error, perftrace, util, wireproto
 from .i18n import _
 
 

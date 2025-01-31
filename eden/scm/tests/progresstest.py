@@ -4,7 +4,7 @@ import time
 
 import bindings
 
-from sapling import progress, pycompat, registrar, util
+from sapling import progress, registrar, util
 
 cmdtable = {}
 command = registrar.command(cmdtable)

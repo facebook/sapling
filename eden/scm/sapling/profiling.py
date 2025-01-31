@@ -17,7 +17,7 @@ import errno
 import io
 import time
 
-from . import blackbox, error, extensions, pycompat, util
+from . import blackbox, error, extensions, util
 from .i18n import _
 
 

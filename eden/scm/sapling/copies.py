@@ -80,7 +80,7 @@ The following are configs to tune the behavior of copy tracing algorithm:
 import codecs
 from collections import defaultdict
 
-from . import hgdemandimport, json, node, perftrace, pycompat
+from . import hgdemandimport, json, node, perftrace
 
 
 def _chain(src, dst, a, b):

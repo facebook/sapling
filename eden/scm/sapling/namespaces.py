@@ -12,7 +12,7 @@ from __future__ import absolute_import
 
 import contextlib
 
-from . import autopull, error, hintutil, pycompat, registrar, templatekw, util
+from . import autopull, error, hintutil, registrar, templatekw, util
 from .i18n import _
 
 namespacetable = util.sortdict()

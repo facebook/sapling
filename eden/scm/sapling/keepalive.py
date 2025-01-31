@@ -98,7 +98,7 @@ import sys
 import threading
 from typing import List
 
-from . import pycompat, urllibcompat, util
+from . import urllibcompat, util
 from .i18n import _
 
 urlerr = util.urlerr

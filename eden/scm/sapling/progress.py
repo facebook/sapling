@@ -22,7 +22,7 @@ from typing import Collection, Iterator
 import bindings
 from bindings import threading as rustthreading
 
-from . import pycompat, util
+from . import util
 from .i18n import _, _x
 
 _tracer = util.tracer

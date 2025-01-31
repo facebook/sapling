@@ -33,7 +33,7 @@ from typing import (
     Tuple,
 )
 
-from . import error, mdiff, perftrace, phases, progress, pycompat, util, visibility
+from . import error, mdiff, perftrace, phases, progress, util, visibility
 from .i18n import _
 from .node import hex, nullrev
 

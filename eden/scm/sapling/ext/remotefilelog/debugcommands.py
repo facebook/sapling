@@ -11,7 +11,7 @@ import os
 
 from bindings import revisionstore
 
-from sapling import error, filelog, pycompat, revlog
+from sapling import error, filelog, revlog
 from sapling.i18n import _, _x
 from sapling.node import bin, hex, nullid, short
 

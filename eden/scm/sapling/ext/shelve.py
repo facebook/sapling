@@ -45,7 +45,6 @@ from sapling import (
     merge,
     node as nodemod,
     patch,
-    pycompat,
     registrar,
     scmutil,
     templatefilters,

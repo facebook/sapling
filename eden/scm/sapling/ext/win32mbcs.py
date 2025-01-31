@@ -55,7 +55,7 @@ from __future__ import absolute_import
 import os
 import sys
 
-from sapling import encoding, error, pycompat, registrar, util
+from sapling import encoding, error, registrar, util
 from sapling.i18n import _, _x
 
 # Note for extension authors: ONLY specify testedwith = 'ships-with-hg-core' for

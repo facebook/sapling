@@ -10,7 +10,7 @@ from __future__ import absolute_import
 import os
 import time
 
-from . import json, pycompat, sshpeer, util
+from . import json, sshpeer, util
 
 
 class connectionpool:

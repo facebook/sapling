@@ -16,7 +16,7 @@ import os
 import sys
 import tempfile
 
-from . import chgserver, commandserver, error, pycompat, util
+from . import chgserver, commandserver, error, util
 from .i18n import _
 
 

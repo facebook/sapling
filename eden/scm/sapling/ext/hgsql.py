@@ -62,7 +62,6 @@ from sapling import (
     lock as lockmod,
     mdiff,
     progress,
-    pycompat,
     registrar,
     repair,
     revlog,
