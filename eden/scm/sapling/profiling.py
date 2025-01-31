@@ -256,7 +256,7 @@ class profile:
                     path = self._ui.expandpath(output)
                     try:
                         with open(path, "wb") as f:
-                            f.write(pycompat.encodeutf8(content))
+                            f.write(content.encode())
                     except IOError as e:
                         # CreateFile(.., CREATE_ALWAYS, ...) can fail
                         # for existing "hidden" or "system" files.

@@ -47,7 +47,7 @@ def _writessherror(ui: "Any", s: bytes) -> None:
                 prefix = ""
             else:
                 prefix = _("remote: ")
-            ui.write_err(prefix, decodeutf8(l, errors="replace"), "\n")
+            ui.write_err(prefix, l.decode(errors="replace"), "\n")
 
 
 class countingpipe:
@@ -189,8 +189,10 @@ class sshpeer(stdiopeer.stdiopeer):
                 self._abort(error.RepoError(_("could not create remote repo")))
 
         _sshpeerweakrefs.append(weakref.ref(self))
-        with self.ui.timeblockedsection("sshsetup"), progress.suspend(), util.traced(
-            "ssh_setup", cat="blocked"
+        with (
+            self.ui.timeblockedsection("sshsetup"),
+            progress.suspend(),
+            util.traced("ssh_setup", cat="blocked"),
         ):
             self._validaterepo(sshcmd, args, remotecmd, sshenv)
 
@@ -257,7 +259,7 @@ class sshpeer(stdiopeer.stdiopeer):
             max_noise = 500
             while lines[-1] and max_noise:
                 try:
-                    l = decodeutf8(r.readline())
+                    l = r.readline().decode()
                     if lines[-1] == "1\n" and l == "\n":
                         break
                     if l:

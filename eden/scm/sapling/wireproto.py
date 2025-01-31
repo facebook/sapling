@@ -288,7 +288,7 @@ class wirepeer(repository.legacypeer):
         if int(success):
             yield bbin(data)
         else:
-            self._abort(error.RepoError(pycompat.decodeutf8(data, errors="replace")))
+            self._abort(error.RepoError(data.decode(errors="replace")))
 
     @batchable
     def heads(self):
@@ -296,7 +296,7 @@ class wirepeer(repository.legacypeer):
         yield {}, f
         d = f.value
         try:
-            yield decodelist(decodeutf8(d[:-1]))
+            yield decodelist(d[:-1].decode())
         except ValueError:
             self._abort(error.ResponseError(_("unexpected response:"), d))
 
@@ -306,7 +306,7 @@ class wirepeer(repository.legacypeer):
         yield {"nodes": encodelist(nodes)}, f
         d = f.value
         try:
-            yield [bool(int(b)) for b in decodeutf8(d)]
+            yield [bool(int(b)) for b in d.decode()]
         except ValueError:
             self._abort(error.ResponseError(_("unexpected response:"), d))
 
@@ -318,7 +318,7 @@ class wirepeer(repository.legacypeer):
         try:
             branchmap = {}
             for branchpart in d.splitlines():
-                branchpart = pycompat.decodeutf8(branchpart)
+                branchpart = branchpart.decode()
                 branchname, branchheads = branchpart.split(" ", 1)
                 branchname = urlreq.unquote(branchname)
                 branchheads = decodelist(branchheads)
@@ -349,7 +349,7 @@ class wirepeer(repository.legacypeer):
         yield (
             {
                 "namespace": encoding.fromlocal(namespace),
-                "patterns": encodelist([pycompat.encodeutf8(p) for p in patterns]),
+                "patterns": encodelist([p.encode() for p in patterns]),
             },
             f,
         )
@@ -372,7 +372,7 @@ class wirepeer(repository.legacypeer):
             },
             f,
         )
-        d = decodeutf8(f.value)
+        d = f.value.decode()
         d, output = d.split("\n", 1)
         try:
             d = bool(int(d))
@@ -577,9 +577,7 @@ class wirepeer(repository.legacypeer):
             opts[r"three"] = three
         if four is not None:
             opts[r"four"] = four
-        return pycompat.decodeutf8(
-            self._call("debugwireargs", one=one, two=two, **opts)
-        )
+        return self._call("debugwireargs", one=one, two=two, **opts).decode()
 
     def _call(self, cmd, **args):
         """execute <cmd> on the server
@@ -916,7 +914,7 @@ def batch(repo, proto, cmds, others):
         if isinstance(result, ooberror):
             return result
         if isinstance(result, str):
-            result = pycompat.encodeutf8(result)
+            result = result.encode()
         res.append(escapebytearg(result))
     return b";".join(res)
 
@@ -1123,7 +1121,7 @@ def hello(repo, proto):
 
     capabilities: space separated list of tokens
     """
-    return b"capabilities: %s\n" % (pycompat.encodeutf8(capabilities(repo, proto)))
+    return b"capabilities: %s\n" % capabilities(repo, proto).encode()
 
 
 @wireprotocommand("listkeys", "namespace")
@@ -1134,7 +1132,7 @@ def listkeys(repo, proto, namespace):
 
 @wireprotocommand("listkeyspatterns", "namespace patterns")
 def listkeyspatterns(repo, proto, namespace, patterns):
-    patterns = [pycompat.decodeutf8(p) for p in decodelist(patterns)]
+    patterns = [p.decode() for p in decodelist(patterns)]
     d = repo.listkeys(encoding.tolocal(namespace), patterns).items()
     return pushkeymod.encodekeys(d)
 
@@ -1357,9 +1355,9 @@ def unbundleimpl(repo, proto, heads, replaydata=None, respondlightly=False):
                 # We did not change it to minimise code change.
                 # This need to be moved to something proper.
                 # Feel free to do it.
-                util.stderr.write(pycompat.encodeutf8("abort: %s\n" % exc))
+                util.stderr.write(("abort: %s\n" % exc).encode())
                 if exc.hint is not None:
-                    util.stderr.write(pycompat.encodeutf8("(%s)\n" % exc.hint))
+                    util.stderr.write(("(%s)\n" % exc.hint).encode())
                 return pushres(0)
             except error.PushRaced:
                 return pusherr(str(exc))

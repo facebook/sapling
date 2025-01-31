@@ -162,8 +162,8 @@ def _fm1encodeonemarker(marker):
     data[0] = totalsize
     data = [_pack(format, *data)]
     for key, value in metadata:
-        key = encodeutf8(key)
-        value = encodeutf8(value)
+        key = key.encode()
+        value = value.encode()
         data.append(key)
         data.append(value)
     return b"".join(data)

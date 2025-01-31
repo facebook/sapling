@@ -282,7 +282,7 @@ class mergestate:
         if fcl.isabsent():
             hash = nullhex
         else:
-            hash = hex(hashlib.sha1(encodeutf8(fcl.path())).digest())
+            hash = hex(hashlib.sha1(fcl.path().encode()).digest())
             wctx = fcl.changectx()
             if wctx.isinmemory() and self._optimize_inmemory:
                 # Detach data to maintain laziness, but disassociate the data from wctx
@@ -1586,9 +1586,10 @@ def applyupdates(repo, actions, wctx, mctx, overwrite, labels=None, ancestors=No
     rustworkers = userustworker()
 
     # record path conflicts
-    with progress.bar(
-        repo.ui, _("updating"), _("files"), numupdates
-    ) as prog, repo.ui.timesection("updateworker"):
+    with (
+        progress.bar(repo.ui, _("updating"), _("files"), numupdates) as prog,
+        repo.ui.timesection("updateworker"),
+    ):
         for f, args, msg in actions[ACTION_PATH_CONFLICT]:
             f1, fo = args
             s = repo.ui.status

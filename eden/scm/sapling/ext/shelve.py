@@ -590,7 +590,7 @@ def listcmd(ui, repo, pats, opts) -> None:
                 if not line:
                     break
                 if not line.startswith(b"#"):
-                    desc = pycompat.decodeutf8(line.rstrip())
+                    desc = line.rstrip().decode()
                     if ui.formatted:
                         desc = util.ellipsis(desc, width - used)
                     ui.write(desc)

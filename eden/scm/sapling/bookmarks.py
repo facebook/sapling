@@ -184,7 +184,7 @@ class bmstore(dict):
                     "bookmarks.current", "w", atomictemp=True, checkambig=True
                 )
                 try:
-                    f.write(encodeutf8(encoding.fromlocal(self._active)))
+                    f.write(encoding.fromlocal(self._active).encode())
                 finally:
                     f.close()
             else:
@@ -573,7 +573,7 @@ def binaryencode(bookmarks: typing.Iterable[typing.Tuple[str, bytes]]) -> bytes:
     for book, node in bookmarks:
         if not node:  # None or ''
             node = wdirid
-        book = pycompat.encodeutf8(book)
+        book = book.encode()
         binarydata.append(_binaryentry.pack(node, len(book)))
         binarydata.append(book)
     return b"".join(binarydata)
@@ -607,7 +607,7 @@ def binarydecode(stream):
                 raise error.Abort(_("bad bookmark stream"))
         if node == wdirid:
             node = None
-        books.append((decodeutf8(bookmark), node))
+        books.append((bookmark.decode(), node))
     return books
 
 

@@ -356,12 +356,10 @@ if pycompat.isdarwin:
         """
 
         try:
-            bytepath = pycompat.encodeutf8(path)
-            return pycompat.decodeutf8(
-                encoding.asciilower(bytepath)
-            )  # exception for non-ASCII
+            bytepath = path.encode()
+            return encoding.asciilower(bytepath).decode()  # exception for non-ASCII
         except UnicodeDecodeError:
-            return pycompat.decodeutf8(normcasefallback(path))
+            return normcasefallback(path).decode()
 
     normcasespec = encoding.normcasespecs.lower
 

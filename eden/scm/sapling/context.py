@@ -121,7 +121,7 @@ class basectx:
         return self._repo.changelog.rev(self._node)
 
     def __bytes__(self):
-        return encodeutf8(str(self))
+        return str(self).encode()
 
     def __str__(self):
         node = self.node()
@@ -815,7 +815,7 @@ class basefilectx:
     __bool__ = __nonzero__
 
     def __bytes__(self):
-        return encodeutf8(str(self))
+        return str(self).encode()
 
     def __str__(self):
         try:
@@ -1555,7 +1555,7 @@ class committablectx(basectx):
             self._extra = extra.copy()
 
     def __bytes__(self):
-        return encodeutf8(str(self))
+        return str(self).encode()
 
     def __str__(self):
         return str(self._parents[0]) + "+"

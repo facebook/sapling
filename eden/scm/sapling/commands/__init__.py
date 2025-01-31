@@ -531,7 +531,7 @@ def annotate(ui, repo, *pats, **opts):
         for f, p, l, a in zip(zip(*formats), zip(*pieces), lines, agebuckets):
             fm.startitem()
             fm.write(fields, "".join(f) + ": ", *p, label="blame.age." + a)
-            fm.write("line", "%s", pycompat.decodeutf8(l[1], errors="replace"))
+            fm.write("line", "%s", l[1].decode(errors="replace"))
 
         if not lines[-1][1].endswith(b"\n"):
             fm.plain("\n")
@@ -1911,7 +1911,7 @@ def editconfig(ui, repo, *values, **opts):
         targetpath = paths[0]
         os.makedirs(pathlib.Path(targetpath).parent.absolute(), exist_ok=True)
         fp = open(targetpath, "wb")
-        fp.write(pycompat.encodeutf8(util.tonativeeol(_(uimod.samplehgrcs[target]))))
+        fp.write(util.tonativeeol(_(uimod.samplehgrcs[target])).encode())
         fp.close()
 
     if not values:
@@ -2936,7 +2936,7 @@ def grep(ui, repo, pattern, *pats, **opts):
             cwd=reporoot,
         )
         out, err = p.communicate()
-        lines = pycompat.decodeutf8(out.rstrip()).split("\n")
+        lines = out.rstrip().decode().split("\n")
 
         revisionline = lines[0][1:]
 
@@ -3112,7 +3112,7 @@ def _rungrep(ui, cmd, files, match):
 
     with tempfile.NamedTemporaryFile("w+b", prefix="hg-grep") as ftmp:
         for f in files:
-            ftmp.write(pycompat.encodeutf8(match.rel(f) + "\0"))
+            ftmp.write((match.rel(f) + "\0").encode())
         ftmp.flush()
         ftmp.seek(0)
         # XXX: stderr is not redirected to ui.write_err properly.
@@ -3335,7 +3335,7 @@ def histgrep(ui, repo, pattern, *pats, **opts):
     getfile = util.lrucachefunc(repo.file)
 
     def matchlines(body):
-        body = pycompat.decodeutf8(body, errors="replace")
+        body = body.decode(errors="replace")
         begin = 0
         linenum = 0
         while begin < len(body):

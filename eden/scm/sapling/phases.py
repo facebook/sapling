@@ -408,7 +408,7 @@ class phasecache:
         assert not self._headbased
         for phase, roots in enumerate(self.phaseroots):
             for h in roots:
-                fp.write(encodeutf8("%i %s\n" % (phase, hex(h))))
+                fp.write(("%i %s\n" % (phase, hex(h))).encode())
         self.dirty = False
 
     def _updateroots(self, phase, newroots, tr):

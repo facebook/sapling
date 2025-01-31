@@ -1568,7 +1568,7 @@ class nodeinfoserializer:
     @staticmethod
     def serialize(value):
         p1, p2, linknode, copyfrom = value
-        copyfrom = pycompat.encodeutf8(copyfrom if copyfrom else "")
+        copyfrom = (copyfrom if copyfrom else "").encode()
         return struct.pack(NODEINFOFORMAT, p1, p2, linknode, len(copyfrom)) + copyfrom
 
     @staticmethod
@@ -1583,7 +1583,7 @@ class nodeinfoserializer:
             p1,
             p2,
             linknode,
-            pycompat.decodeutf8(raw[NODEINFOLEN : NODEINFOLEN + copyfromlen]),
+            raw[NODEINFOLEN : NODEINFOLEN + copyfromlen].decode(),
         )
 
 
@@ -1591,7 +1591,7 @@ class cachestoreserializer:
     """Simple serializer that attaches key and sha1 to the content"""
 
     def __init__(self, key):
-        self.key = pycompat.encodeutf8(key)
+        self.key = key.encode()
 
     def serialize(self, value):
         sha = hashlib.sha1(value).digest()

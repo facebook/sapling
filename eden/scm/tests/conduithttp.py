@@ -17,9 +17,6 @@ import urllib.parse as urlparse
 # no-check-code
 from optparse import OptionParser
 
-from sapling import pycompat
-
-
 try:
     from sapling.server import runservice
 except ImportError:
@@ -41,9 +38,7 @@ class RequestHandler(BaseHTTPServer.BaseHTTPRequestHandler):
         if next_error_message:
             self.send_response(500)
             self.end_headers()
-            self.wfile.write(
-                pycompat.encodeutf8(json.dumps({"error": next_error_message[0]}))
-            )
+            self.wfile.write(json.dumps({"error": next_error_message[0]}).encode())
             del next_error_message[0]
             return
 
@@ -62,15 +57,13 @@ class RequestHandler(BaseHTTPServer.BaseHTTPRequestHandler):
         else:
             response["data"] = {"query": {"rev_map": translated_revs}}
 
-        self.wfile.write(pycompat.encodeutf8(json.dumps(response)))
+        self.wfile.write(json.dumps(response).encode())
 
     def handle_log_request(self, param):
         if next_error_message:
             self.send_response(500)
             self.end_headers()
-            self.wfile.write(
-                pycompat.encodeutf8(json.dumps({"error": next_error_message[0]}))
-            )
+            self.wfile.write(json.dumps({"error": next_error_message[0]}).encode())
             del next_error_message[0]
             return
 
@@ -79,7 +72,7 @@ class RequestHandler(BaseHTTPServer.BaseHTTPRequestHandler):
             if answer == ["crash"]:
                 self.send_response(500)
                 self.end_headers()
-                self.wfile.write(pycompat.encodeutf8("crash"))
+                self.wfile.write("crash".encode())
                 return
             self.send_response(200)
             response = {"data": {"query": log_responses[param["rev"]]}}
@@ -87,7 +80,7 @@ class RequestHandler(BaseHTTPServer.BaseHTTPRequestHandler):
             self.send_response(500)
             response = {"error": "rev not found"}
         self.end_headers()
-        self.wfile.write(pycompat.encodeutf8(json.dumps(response)))
+        self.wfile.write(json.dumps(response).encode())
 
     def do_POST(self):
         content_len = int(self.headers.get("content-length", 0))
@@ -104,7 +97,7 @@ class RequestHandler(BaseHTTPServer.BaseHTTPRequestHandler):
                 return
         self.send_response(500)
         self.end_headers()
-        self.wfile.write(pycompat.encodeutf8(json.dumps({"error": "bad request"})))
+        self.wfile.write(json.dumps({"error": "bad request"}).encode())
 
     def get_path_comps(self):
         assert self.path.startswith("/")
@@ -157,7 +150,7 @@ class RequestHandler(BaseHTTPServer.BaseHTTPRequestHandler):
     def do_GET(self):
         self.send_response(200)
         self.end_headers()
-        self.wfile.write(pycompat.encodeutf8(known_translations))
+        self.wfile.write(known_translations.encode())
 
 
 class simplehttpservice:

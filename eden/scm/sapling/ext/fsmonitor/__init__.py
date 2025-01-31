@@ -241,7 +241,7 @@ def _isutf8(ui, name):
         # Passing it along to the rest of Mercurial can cause issues
         # since the Python-to-Rust boundary doesn't support
         # surrogate escaped strings.
-        name = pycompat.decodeutf8(pycompat.encodeutf8(name, errors="replace"))
+        name = name.encode(errors="replace").decode()
         ui.warn(_("skipping invalid utf-8 filename: '%s'\n") % name)
         return False
     return True

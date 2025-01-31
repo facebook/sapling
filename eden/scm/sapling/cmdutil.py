@@ -468,13 +468,13 @@ def dorecord(ui, repo, commitfunc, cmdsuggest, backupall, filterfn, *pats, **opt
                 patchtext = (
                     crecordmod.diffhelptext
                     + crecordmod.patchhelptext
-                    + pycompat.decodeutf8(fp.read())
+                    + fp.read().decode()
                 )
                 reviewedpatch = ui.edit(
                     patchtext, "", action="diff", repopath=repo.path
                 )
                 fp.truncate(0)
-                fp.write(pycompat.encodeutf8(reviewedpatch))
+                fp.write(reviewedpatch.encode())
                 fp.seek(0)
 
             [os.unlink(repo.wjoin(c)) for c in newlyaddedandmodifiedfiles]
@@ -987,11 +987,9 @@ def logmessage(repo, opts):
     if not message and logfile:
         try:
             if isstdiofilename(logfile):
-                message = pycompat.decodeutf8(ui.fin.read())
+                message = ui.fin.read().decode()
             else:
-                message = pycompat.decodeutf8(
-                    b"\n".join(util.readfile(logfile).splitlines())
-                )
+                message = b"\n".join(util.readfile(logfile).splitlines()).decode()
         except IOError as inst:
             raise error.Abort(
                 _("can't read commit message '%s': %s")
@@ -1827,7 +1825,7 @@ def _exportsingle(
     if writestr is None:
 
         def writestr(s):
-            write(pycompat.encodeutf8(s))
+            write(s.encode())
 
     node = scmutil.binnode(ctx)
     parents = [p.node() for p in ctx.parents() if p]
@@ -4343,7 +4341,7 @@ def buildcommittemplate(repo, ctx, ref, summaryfooter=""):
 
     ui.pushbuffer()
     t.show(ctx)
-    return pycompat.decodeutf8(ui.popbufferbytes(), errors="replace")
+    return ui.popbufferbytes().decode(errors="replace")
 
 
 def localcommittemplate(repo, ctx):

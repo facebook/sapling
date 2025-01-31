@@ -170,7 +170,7 @@ def run(args, fin, fout, ferr, rctx: rscontext, skipprehooks: bool):
             status = -1
     if hasattr(req.ui, "ferr"):
         if err is not None and err.errno != errno.EPIPE:
-            errormsg = pycompat.encodeutf8(err.strerror)
+            errormsg = err.strerror.encode()
             req.ui.ferr.write(b"abort: %s\n" % errormsg)
         req.ui.ferr.flush()
     sys.exit(status & 255)

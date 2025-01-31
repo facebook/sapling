@@ -106,7 +106,7 @@ def buildmetadata(ctx):
         fm.data(dirty=dirty)
     fm.end()
 
-    return pycompat.encodeutf8(out.getvalue())
+    return out.getvalue().encode()
 
 
 class tarit:
@@ -142,7 +142,7 @@ class tarit:
         if islink:
             i.type = tarfile.SYMTYPE
             i.mode = 0o777
-            i.linkname = pycompat.decodeutf8(data)
+            i.linkname = data.decode()
             data = None
             i.size = 0
         else:

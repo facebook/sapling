@@ -8,8 +8,8 @@ from __future__ import absolute_import
 import unittest
 
 import silenttestrunner
+
 from sapling import error, scmutil
-from sapling.pycompat import decodeutf8
 
 
 class mockfile:
@@ -38,7 +38,7 @@ class mockvfs:
         return mockfile(path, self).read()
 
     def readutf8(self, path):
-        return decodeutf8(mockfile(path, self).read())
+        return mockfile(path, self).read().decode()
 
     def readlines(self, path):
         # lines need to contain the trailing '\n' to mock the real readlines

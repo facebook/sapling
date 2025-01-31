@@ -104,16 +104,18 @@ def sync(repo, *args, **kwargs):
             if besteffort:
                 rc, synced = _sync(repo, *args, **kwargs)
             else:
-                with repo.wlock(), repo.lock(), repo.transaction(
-                    "cloudsync_metalog_global"
+                with (
+                    repo.wlock(),
+                    repo.lock(),
+                    repo.transaction("cloudsync_metalog_global"),
                 ):
                     rc, synced = _sync(repo, *args, **kwargs)
             if synced is not None:
                 with repo.svfs(_syncstatusfile, "w+") as fp:
-                    fp.write(encodeutf8("Success" if synced else "Failed"))
+                    fp.write(("Success" if synced else "Failed").encode())
         except BaseException as e:
             with repo.svfs(_syncstatusfile, "w+") as fp:
-                fp.write(encodeutf8("Exception:\n%s" % e))
+                fp.write(("Exception:\n%s" % e).encode())
             raise
         return rc
 
@@ -216,9 +218,13 @@ def _sync(
             clientinfo=service.makeclientinfo(repo, lastsyncstate),
         )
 
-    with repo.ui.configoverride(
-        {("treemanifest", "prefetchdraftparents"): False}, "cloudsync"
-    ), repo.wlock(), repo.lock():
+    with (
+        repo.ui.configoverride(
+            {("treemanifest", "prefetchdraftparents"): False}, "cloudsync"
+        ),
+        repo.wlock(),
+        repo.lock(),
+    ):
         synced = False
         attempt = 0
         while not synced:

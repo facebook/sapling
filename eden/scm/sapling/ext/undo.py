@@ -169,8 +169,10 @@ def _runcommandwrapper(orig, lui, repo, cmd, fullargs, *args):
     #  - merge.goto
     #  - merge.merge
     w = extensions.wrappedfunction
-    with w(merge, "goto", log), w(merge, "merge", log), w(
-        transaction.transaction, "__init__", log
+    with (
+        w(merge, "goto", log),
+        w(merge, "merge", log),
+        w(transaction.transaction, "__init__", log),
     ):
         try:
             result = orig(lui, repo, cmd, fullargs, *args)
@@ -316,7 +318,7 @@ def writelog(repo, tr, name, revstring, retry=False):
         raise error.ProgrammingError
     rlog = _getrevlog(repo, name)
     try:
-        node = rlog.addrevision(encodeutf8(revstring), tr, 1, nullid, nullid)
+        node = rlog.addrevision(revstring.encode(), tr, 1, nullid, nullid)
     except mpatch.mpatchError:
         if retry:
             # Only allow a single retry to avoid infinite recursion.
@@ -406,7 +408,7 @@ def _readindex(repo, reverseindex, prefetchedrevlog=None):
     index = _invertindex(rlog, reverseindex)
     if index < 0 or index > len(rlog) - 1:
         raise IndexError
-    chunk = decodeutf8(rlog.revision(index))
+    chunk = rlog.revision(index).decode()
     indexdict = {}
     for row in chunk.split("\n"):
         kvpair = row.split(" ", 1)
@@ -417,7 +419,7 @@ def _readindex(repo, reverseindex, prefetchedrevlog=None):
 
 def _readnode(repo, filename, hexnode):
     rlog = _getrevlog(repo, filename)
-    return decodeutf8(rlog.revision(bin(hexnode)))
+    return rlog.revision(bin(hexnode)).decode()
 
 
 def _logtoscuba(ui, message):
@@ -1180,9 +1182,9 @@ def _computerelative(repo, reverseindex, absolute=False, branch=""):
     if not absolute:
         try:  # attempt to get relative shift
             nodebranch = repo.localvfs.read("undolog/redonode").split(b"\0")
-            hexnode = pycompat.decodeutf8(nodebranch[0])
+            hexnode = nodebranch[0].decode()
             try:
-                oldbranch = pycompat.decodeutf8(nodebranch[1])
+                oldbranch = nodebranch[1].decode()
             except IndexError:
                 oldbranch = ""
             rlog = _getrevlog(repo, "index.i")

@@ -589,7 +589,7 @@ def _processpart(op, part):
     finally:
         if output is not None:
             output = b"".join(
-                buf if isinstance(buf, bytes) else pycompat.encodeutf8(buf)
+                buf if isinstance(buf, bytes) else buf.encode()
                 for buf in op.ui.popbufferlist()
             )
 
@@ -716,20 +716,18 @@ class bundle20:
     # methods used to generate the bundle2 stream
     def getchunks(self) -> "Iterable[bytes]":
         if self.ui.debugflag:
-            msg = [
-                'bundle2-output-bundle: "%s",' % pycompat.decodeutf8(self._magicstring)
-            ]
+            msg = ['bundle2-output-bundle: "%s",' % self._magicstring.decode()]
             if self._params:
                 msg.append(" (%i params)" % len(self._params))
             msg.append(" %i parts total\n" % len(self._parts))
             self.ui.debug("".join(msg))
         outdebug(
             self.ui,
-            "start emission of %s stream" % pycompat.decodeutf8(self._magicstring),
+            "start emission of %s stream" % self._magicstring.decode(),
         )
         yield self._magicstring
         param = self._paramchunk()
-        outdebug(self.ui, "bundle parameter: %s" % pycompat.decodeutf8(param))
+        outdebug(self.ui, "bundle parameter: %s" % param.decode())
         yield _pack(_fstreamparamsize, len(param))
         if param:
             yield param
@@ -747,7 +745,7 @@ class bundle20:
                 value = urllibcompat.quote(value)
                 par = "%s=%s" % (par, value)
             blocks.append(par)
-        return pycompat.encodeutf8(" ".join(blocks))
+        return " ".join(blocks).encode()
 
     def _getcorechunk(self) -> "Iterable[bytes]":
         """yield chunk for the core part of the bundle
@@ -804,7 +802,7 @@ class unpackermixin:
 def getunbundler(ui, fp, magicstring=None):
     """return a valid unbundler object for a given magicstring"""
     if magicstring is None:
-        magicstring = pycompat.decodeutf8(changegroup.readexactly(fp, 4))
+        magicstring = changegroup.readexactly(fp, 4).decode()
     magic, version = magicstring[0:2], magicstring[2:4]
     if magic != "HG":
         ui.debug(
@@ -864,7 +862,7 @@ class unbundle20(unpackermixin):
     def _processallparams(self, paramsblock: bytes) -> "Dict[str, Optional[str]]":
         """ """
         params = util.sortdict()
-        data = pycompat.decodeutf8(paramsblock)
+        data = paramsblock.decode()
         for param in data.split(" "):
             p = param.split("=", 1)
             p = [urllibcompat.unquote(i) for i in p]
@@ -1149,7 +1147,7 @@ class bundlepart:
         ## parttype
         header = [
             _pack(_fparttypesize, len(parttype)),
-            pycompat.encodeutf8(parttype),
+            parttype.encode(),
             _pack(_fpartid, self.id),
         ]
         ## parameters
@@ -1169,11 +1167,11 @@ class bundlepart:
         header.append(paramsizes)
         # key, value
         for key, value in manpar:
-            header.append(pycompat.encodeutf8(key))
-            header.append(pycompat.encodeutf8(value))
+            header.append(key.encode())
+            header.append(value.encode())
         for key, value in advpar:
-            header.append(pycompat.encodeutf8(key))
-            header.append(pycompat.encodeutf8(value))
+            header.append(key.encode())
+            header.append(value.encode())
         ## finalize header
         try:
             headerchunk = b"".join(header)
@@ -1406,7 +1404,7 @@ class unbundlepart(unpackermixin):
     def _readheader(self) -> None:
         """read the header and setup the object"""
         typesize = self._unpackheader(_fparttypesize)[0]
-        self.type = pycompat.decodeutf8(self._fromheader(typesize))
+        self.type = self._fromheader(typesize).decode()
         indebug(self.ui, 'part type: "%s"' % self.type)
         self.id = self._unpackheader(_fpartid)[0]
         indebug(self.ui, 'part id: "%s"' % pycompat.bytestr(self.id))
@@ -1428,13 +1426,13 @@ class unbundlepart(unpackermixin):
         # retrieve param value
         manparams = []
         for key, value in mansizes:
-            key = pycompat.decodeutf8(self._fromheader(key))
-            value = pycompat.decodeutf8(self._fromheader(value))
+            key = self._fromheader(key).decode()
+            value = self._fromheader(value).decode()
             manparams.append((key, value))
         advparams = []
         for key, value in advsizes:
-            key = pycompat.decodeutf8(self._fromheader(key))
-            value = pycompat.decodeutf8(self._fromheader(value))
+            key = self._fromheader(key).decode()
+            value = self._fromheader(value).decode()
             advparams.append((key, value))
         self._initparams(manparams, advparams)
         ## part payload
@@ -1989,7 +1987,7 @@ def handlecheckphases(op: "bundleoperation", inpart: "unbundlepart") -> None:
 def handleoutput(op: "bundleoperation", inpart: "unbundlepart") -> None:
     """forward output captured on the server to the client"""
     for line in inpart.read().splitlines():
-        op.ui.status(_("remote: %s\n") % pycompat.decodeutf8(line))
+        op.ui.status(_("remote: %s\n") % line.decode())
 
 
 @parthandler("replycaps")
@@ -1997,7 +1995,7 @@ def handlereplycaps(op: "bundleoperation", inpart: "unbundlepart") -> None:
     """Notify that a reply bundle should be created
 
     The payload contains the capabilities information for the reply"""
-    caps = decodecaps(pycompat.decodeutf8(inpart.read()))
+    caps = decodecaps(inpart.read().decode())
     if op.reply is None:
         op.reply = bundle20(op.ui, caps)
 

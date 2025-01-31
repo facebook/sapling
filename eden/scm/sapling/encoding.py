@@ -465,7 +465,7 @@ strio = pycompat.identity
 strmethod = pycompat.identity
 strtolocal = pycompat.identity
 tolocal = pycompat.identity
-tolocalstr = pycompat.decodeutf8  # Binary utf-8 to Python 3 str
+tolocalstr = bytes.decode
 unifromlocal = pycompat.identity
 unitolocal = pycompat.identity
 

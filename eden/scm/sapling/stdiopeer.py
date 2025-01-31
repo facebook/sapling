@@ -27,7 +27,7 @@ def _writestderror(ui: "Any", s: bytes) -> None:
                 prefix = ""
             else:
                 prefix = _("remote: ")
-            ui.write_err(prefix, decodeutf8(l, errors="replace"), "\n")
+            ui.write_err(prefix, l.decode(errors="replace"), "\n")
 
 
 class stdiopeer(wireproto.wirepeer):
@@ -99,7 +99,7 @@ class stdiopeer(wireproto.wirepeer):
     def _callstream(self, cmd, **args):
         args = args
         self.ui.debug("sending %s command\n" % cmd)
-        self._pipeo.write(encodeutf8("%s\n" % cmd))
+        self._pipeo.write(("%s\n" % cmd).encode())
         _func, names = wireproto.commands[cmd]
         keys = names.split()
         wireargs = {}
@@ -111,16 +111,16 @@ class stdiopeer(wireproto.wirepeer):
                 wireargs[k] = args[k]
                 del args[k]
         for k, v in sorted(wireargs.items()):
-            k = encodeutf8(k)
+            k = k.encode()
             if isinstance(v, str):
-                v = encodeutf8(v)
+                v = v.encode()
             self._pipeo.write(b"%s %d\n" % (k, len(v)))
             if isinstance(v, dict):
                 for dk, dv in v.items():
                     if isinstance(dk, str):
-                        dk = encodeutf8(dk)
+                        dk = dk.encode()
                     if isinstance(dv, str):
-                        dv = encodeutf8(dv)
+                        dv = dv.encode()
                     self._pipeo.write(b"%s %d\n" % (dk, len(dv)))
                     self._pipeo.write(dv)
             else:

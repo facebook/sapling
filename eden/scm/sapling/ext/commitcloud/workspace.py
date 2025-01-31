@@ -190,19 +190,23 @@ def disconnected(repo):
 
 def setworkspace(repo, workspace) -> None:
     """Sets the currently connected workspace."""
-    with repo.wlock(), repo.lock(), repo.svfs.open(
-        filename, "wb", atomictemp=True
-    ) as f:
+    with (
+        repo.wlock(),
+        repo.lock(),
+        repo.svfs.open(filename, "wb", atomictemp=True) as f,
+    ):
         locallyowned = workspace.startswith(userworkspaceprefix(repo.ui))
         f.write(
             b"[commitcloud]\ncurrent_workspace=%s\nlocally_owned=%s\n"
-            % (pycompat.encodeutf8(workspace), pycompat.encodeutf8(str(locallyowned)))
+            % (workspace.encode(), str(locallyowned).encode())
         )
 
 
 def clearworkspace(repo) -> None:
     """Clears the currently connected workspace."""
-    with repo.wlock(), repo.lock(), repo.svfs.open(
-        filename, "wb", atomictemp=True
-    ) as f:
+    with (
+        repo.wlock(),
+        repo.lock(),
+        repo.svfs.open(filename, "wb", atomictemp=True) as f,
+    ):
         f.write(b"[commitcloud]\nis_disconnected=true\n")

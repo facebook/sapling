@@ -115,7 +115,7 @@ def _peersetup(ui, peer) -> None:
         logargs = clienttelemetryvaluesfromconfig(ui)
         logargs.update({name: f(ui) for name, f in _clienttelemetryfuncs.items()})
         logargs.update(_clienttelemetrydata)
-        response = decodeutf8(peer._call("clienttelemetry", **logargs))
+        response = peer._call("clienttelemetry", **logargs).decode()
         responseitems = response.split()
         peername = responseitems[0] if responseitems else ""
         peer._realhostname = peername

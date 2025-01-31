@@ -514,7 +514,7 @@ def _tracksparseprofiles(lui: "uimod.ui", repo: "localrepo.localrepository") -> 
     # them. Only read the sparse file on the filesystem.
     if hasattr(repo, "getactiveprofiles"):
         profile = repo.localvfs.tryread("sparse")
-        lui.log("sparse_profiles", "", active_profiles=pycompat.decodeutf8(profile))
+        lui.log("sparse_profiles", "", active_profiles=profile.decode())
 
 
 def _trackdirstatesizes(lui: "uimod.ui", repo: "localrepo.localrepository") -> None:
@@ -1636,7 +1636,7 @@ def readsparseprofile(
 
 
 def getrawprofile(repo, profile, changeid):
-    return pycompat.decodeutf8(repo.filectx(profile, changeid=changeid).data())
+    return repo.filectx(profile, changeid=changeid).data().decode()
 
 
 def _getcachedprofileconfigs(repo):
@@ -3025,7 +3025,7 @@ def _import(ui, repo, files, opts, force: bool = False) -> None:
         for file in files:
             with util.posixfile(util.expandpath(file), "rb") as importfile:
                 irawconfig = readsparseconfig(
-                    repo, pycompat.decodeutf8(importfile.read()), filename=file
+                    repo, importfile.read().decode(), filename=file
                 )
                 iincludes, iexcludes = irawconfig.toincludeexclude()
                 iprofiles = irawconfig.profiles

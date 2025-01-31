@@ -46,7 +46,7 @@ Create an extension to test bundle2 API
   >     op.ui.write('The choir starts singing:\n')
   >     verses = 0
   >     for line in part.read().split(b'\n'):
-  >         op.ui.write('    %s\n' % pycompat.decodeutf8(line))
+  >         op.ui.write('    %s\n' % line.decode())
   >         verses += 1
   >     op.records.add('song', {'verses': verses})
   > 

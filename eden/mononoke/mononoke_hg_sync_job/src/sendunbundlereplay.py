@@ -15,7 +15,6 @@ import sys
 from edenscm.mercurial import error, hg, util
 from edenscm.mercurial.commands import command
 from edenscm.mercurial.i18n import _
-from edenscm.mercurial.pycompat import decodeutf8, encodeutf8
 
 
 def getcommitdates(ui, fname=None):
@@ -96,7 +95,7 @@ def runreplay(ui, remote, stream, commitdates, rebasedhead, ontobook, hgbonsaima
 
 
 def writereport(reportsfile, msg):
-    reportsfile.write(encodeutf8(msg))
+    reportsfile.write(msg.encode())
     reportsfile.flush()
     os.fsync(reportsfile.fileno())
 
@@ -172,7 +171,7 @@ def sendunbundlereplaybatch(ui, **opts):
                 rebasedhead,
                 logfile,
             ) = parts
-            ontobook = decodeutf8(base64.b64decode(ontobook))
+            ontobook = base64.b64decode(ontobook).decode()
 
             rebasedhead = None if rebasedhead == "DELETED" else rebasedhead
             commitdates = getcommitdates(ui, tsfname)

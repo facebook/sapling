@@ -41,20 +41,20 @@ class sshserver(wireproto.abstractserverproto):
         data = {}
         keys = args.split()
         for n in range(len(keys)):
-            argline = decodeutf8(self.fin.readline()[:-1])
+            argline = self.fin.readline()[:-1].decode()
             arg, l = argline.split()
             if arg not in keys:
                 raise error.Abort(_("unexpected parameter %r") % arg)
             if arg == "*":
                 star = {}
                 for k in range(int(l)):
-                    argline = decodeutf8(self.fin.readline()[:-1])
+                    argline = self.fin.readline()[:-1].decode()
                     arg, l = argline.split()
-                    val = decodeutf8(self.fin.read(int(l)))
+                    val = self.fin.read(int(l)).decode()
                     star[arg] = val
                 data["*"] = star
             else:
-                val = decodeutf8(self.fin.read(int(l)))
+                val = self.fin.read(int(l)).decode()
                 data[arg] = val
         return [data[k] for k in keys]
 
@@ -72,7 +72,7 @@ class sshserver(wireproto.abstractserverproto):
         pass
 
     def sendresponse(self, v):
-        self.sendbytesresponse(encodeutf8(v))
+        self.sendbytesresponse(v.encode())
 
     def sendbytesresponse(self, v):
         self.fout.write(b"%d\n" % len(v))
@@ -124,7 +124,7 @@ class sshserver(wireproto.abstractserverproto):
 
     def serve_one(self):
         cmd = self.fin.readline()[:-1]
-        cmd = decodeutf8(cmd)
+        cmd = cmd.decode()
         if cmd:
             if hasattr(util, "setprocname"):
                 client = encoding.environ.get("SSH_CLIENT", "").split(" ")[0]

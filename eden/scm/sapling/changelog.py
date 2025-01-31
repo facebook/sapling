@@ -195,7 +195,7 @@ class changelogrevision:
         if off[2] == off[3]:
             self._files = tuple()
         else:
-            self._files = tuple(decodeutf8(self._text[off[2] + 1 : off[3]]).split("\n"))
+            self._files = tuple(self._text[off[2] + 1 : off[3]].decode().split("\n"))
         return self._files
 
     @property
@@ -303,7 +303,7 @@ def hgcommittext(manifest, files, desc, user, date, extra, use_rust=True):
             extra = encodeextra(extra)
             parseddate = "%s %s" % (parseddate, extra)
         l = [hex(manifest), user, parseddate] + sorted(files) + ["", desc]
-        text = encodeutf8("\n".join(l), errors="surrogateescape")
+        text = "\n".join(l).encode(errors="surrogateescape")
     return text
 
 

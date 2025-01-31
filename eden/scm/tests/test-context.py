@@ -2,9 +2,8 @@ from __future__ import absolute_import, print_function
 
 import os
 
-from sapling import context, encoding, hg, pycompat, scmutil, ui as uimod
+from sapling import context, encoding, hg, scmutil, ui as uimod
 from sapling.node import hex
-
 
 u = uimod.ui.load()
 u.setconfig("devel", "segmented-changelog-rev-compat", "true")
@@ -66,7 +65,7 @@ print(ctxb.status(ctxa))
 # test performing a diff on a memctx
 
 for d in ctxb.diff(ctxa, git=True):
-    print(pycompat.decodeutf8(d), end="")
+    print(d.decode(), end="")
 
 # test safeness and correctness of "ctx.status()"
 print("= checking context.status():")
@@ -160,7 +159,7 @@ os.chdir("test2")
 # make some commits
 for i in ["1", "2", "3"]:
     with open(i, "wb") as f:
-        f.write(pycompat.encodeutf8(i))
+        f.write(i.encode())
     status = scmutil.status([], [i], [], [], [], [], [])
     ctx = context.workingcommitctx(
         repo, status, text=i, user="test@test.com", date=(0, 0)
@@ -171,7 +170,7 @@ for i in ["1", "2", "3"]:
 
     # read the file just committed
     try:
-        if pycompat.decodeutf8(repo[n][i].data()) != i:
+        if repo[n][i].data().decode() != i:
             print("data mismatch")
     except Exception as ex:
         print("cannot read data: %r" % ex)

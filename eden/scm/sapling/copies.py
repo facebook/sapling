@@ -484,8 +484,8 @@ def record_amend_copies(repo, amend_copies, old, amended_ctx):
         orig_encoded = json.loads(orig_data)
         orig_amend_copies = dict(
             (
-                pycompat.decodeutf8(codecs.decode(pycompat.encodeutf8(k), "base64")),
-                pycompat.decodeutf8(codecs.decode(pycompat.encodeutf8(v), "base64")),
+                codecs.decode(k.encode(), "base64").decode(),
+                codecs.decode(v.encode(), "base64").decode(),
             )
             for (k, v) in orig_encoded.items()
         )
@@ -511,8 +511,8 @@ def record_amend_copies(repo, amend_copies, old, amended_ctx):
         # Write out the entry for the new amend commit.
         encoded = dict(
             (
-                pycompat.decodeutf8(codecs.encode(pycompat.encodeutf8(k), "base64")),
-                pycompat.decodeutf8(codecs.encode(pycompat.encodeutf8(v), "base64")),
+                codecs.encode(k.encode(), "base64").decode(),
+                codecs.encode(v.encode(), "base64").decode(),
             )
             for (k, v) in amend_copies.items()
         )

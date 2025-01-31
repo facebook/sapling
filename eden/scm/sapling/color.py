@@ -278,10 +278,10 @@ def _mergeeffects(
     parts = []
     if usebytes:
         assert isinstance(text, bytes)
-        for t in text.split(encodeutf8(stop)):
+        for t in text.split(stop.encode()):
             if not t:
                 continue
-            parts.extend([encodeutf8(start), t, encodeutf8(stop)])
+            parts.extend([start.encode(), t, stop.encode()])
         return b"".join(parts)
     else:
         assert isinstance(text, str)
@@ -320,12 +320,12 @@ def colorlabel(ui, msg, label, usebytes: bool = False) -> Union[bytes, str]:
         if label and msg:
             if msg[-1] == "\n":
                 if usebytes:
-                    msg = b"[%s|%s]\n" % (encodeutf8(label), msg[:-1])
+                    msg = b"[%s|%s]\n" % (label.encode(), msg[:-1])
                 else:
                     msg = "[%s|%s]\n" % (label, msg[:-1])
             else:
                 if usebytes:
-                    msg = b"[%s|%s]" % (encodeutf8(label), msg)
+                    msg = b"[%s|%s]" % (label.encode(), msg)
                 else:
                     msg = "[%s|%s]" % (label, msg)
     elif ui._colormode is not None:
@@ -336,9 +336,9 @@ def colorlabel(ui, msg, label, usebytes: bool = False) -> Union[bytes, str]:
             style = " ".join(ui._styles.get(l, l) for l in label.split())
             if not usebytes:
                 # Roundtrip strings to clear out non-utf8 characters.
-                msg = encodeutf8(msg, errors="backslashreplace")
+                msg = msg.encode(errors="backslashreplace")
 
-            msg = decodeutf8(msg, errors="backslashreplace")
+            msg = msg.decode(errors="backslashreplace")
             styled = ui._styler.renderbytes(style, msg)
             if not usebytes:
                 styled = styled.decode()

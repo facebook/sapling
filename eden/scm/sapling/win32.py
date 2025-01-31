@@ -588,7 +588,7 @@ def getuser():
     buf = ctypes.create_string_buffer(size.value + 1)
     if not _advapi32.GetUserNameA(ctypes.byref(buf), ctypes.byref(size)):
         raise ctypes.WinError()
-    return pycompat.decodeutf8(buf.value)
+    return buf.value.decode()
 
 
 _signalhandler = []

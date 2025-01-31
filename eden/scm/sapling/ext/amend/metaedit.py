@@ -208,11 +208,9 @@ def metaedit(ui, repo, templ, *revs, **opts) -> Optional[int]:
                     if jsoninputfile:
                         try:
                             if cmdutil.isstdiofilename(jsoninputfile):
-                                inputjson = pycompat.decodeutf8(ui.fin.read())
+                                inputjson = ui.fin.read().decode()
                             else:
-                                inputjson = pycompat.decodeutf8(
-                                    util.readfile(jsoninputfile)
-                                )
+                                inputjson = util.readfile(jsoninputfile).decode()
                             msgusermap = json.loads(inputjson)
                         except IOError as inst:
                             raise error.Abort(

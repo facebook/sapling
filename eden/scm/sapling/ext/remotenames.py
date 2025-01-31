@@ -1090,7 +1090,7 @@ def _writetracking(repo, tracking):
         for book, track in tracking.items():
             data += "%s %s\n" % (book, track)
         vfs = repo.sharedvfs
-        vfs.write("bookmarks.tracking", pycompat.encodeutf8(data))
+        vfs.write("bookmarks.tracking", data.encode())
 
 
 def _removetracking(repo, bookmarks):
@@ -1439,7 +1439,7 @@ def writedistancecache(repo, distance):
         cachevfs = shareawarecachevfs(repo)
         f = cachevfs("distance", "w", atomictemp=True)
         for k, v in distance.items():
-            f.write(pycompat.encodeutf8("%s %d %d\n" % (k, v[0], v[1])))
+            f.write(("%s %d %d\n" % (k, v[0], v[1])).encode())
     except (IOError, OSError):
         pass
 

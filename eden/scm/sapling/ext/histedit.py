@@ -366,7 +366,7 @@ class histeditstate:
     def read(self):
         """Load histedit state from disk and set fields appropriately."""
         try:
-            state = pycompat.decodeutf8(self.repo.localvfs.read("histedit-state"))
+            state = self.repo.localvfs.read("histedit-state").decode()
         except IOError as err:
             if err.errno != errno.ENOENT:
                 raise
@@ -423,7 +423,7 @@ class histeditstate:
 
     def _load(self):
         fp = self.repo.localvfs("histedit-state", "r")
-        lines = [pycompat.decodeutf8(l[:-1]) for l in fp.readlines()]
+        lines = [l[:-1].decode() for l in fp.readlines()]
 
         index = 0
         lines[index]  # version number
@@ -604,7 +604,7 @@ class histeditaction:
 
 
 def writeutf8(fp, text):
-    fp.write(pycompat.encodeutf8(text))
+    fp.write(text.encode())
 
 
 def commitfuncfor(repo, src):
@@ -912,8 +912,10 @@ class fold(histeditaction):
 class base(histeditaction):
     def run(self):
         if self.repo["."].node() != self.node:
-            with self.repo.wlock(), self.repo.lock(), self.repo.transaction(
-                "histedit-base"
+            with (
+                self.repo.wlock(),
+                self.repo.lock(),
+                self.repo.transaction("histedit-base"),
             ):
                 mergemod.goto(self.repo, self.node, force=True)
         return self.continueclean()
@@ -1114,10 +1116,10 @@ def _getgoal(opts):
 def _readfile(ui, path):
     if path == "-":
         with ui.timeblockedsection("histedit"):
-            return pycompat.decodeutf8(ui.fin.read())
+            return ui.fin.read().decode()
     else:
         with open(path, "rb") as f:
-            return pycompat.decodeutf8(f.read())
+            return f.read().decode()
 
 
 def _validateargs(ui, repo, state, freeargs, opts, goal, rules, revs):

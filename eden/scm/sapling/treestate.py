@@ -53,11 +53,11 @@ def _packmetadata(dictobj):
         if "=" in k or "\0" in entry:
             raise error.ProgrammingError("illegal metadata entry: %r" % entry)
         result.append(entry)
-    return encodeutf8("\0".join(result))
+    return "\0".join(result).encode()
 
 
 def _unpackmetadata(data):
-    data = decodeutf8(data)
+    data = data.decode()
     return dict(entry.split("=", 1) for entry in data.split("\0") if "=" in entry)
 
 

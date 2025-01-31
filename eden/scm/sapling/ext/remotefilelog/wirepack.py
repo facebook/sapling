@@ -57,7 +57,7 @@ def sendpackpart(
                <delta len: 8 byte unsigned int>
                <delta>
     """
-    rawfilename = pycompat.encodeutf8(filename)
+    rawfilename = filename.encode()
     rawfilenamelen = struct.pack(constants.FILENAMESTRUCT, len(rawfilename))
     yield b"%s%s" % (rawfilenamelen, rawfilename)
 
@@ -65,7 +65,7 @@ def sendpackpart(
     historylen = struct.pack("!I", len(history))
     rawhistory = []
     for entry in history:
-        copyfrom = pycompat.encodeutf8(entry[4] or "")
+        copyfrom = (entry[4] or "").encode()
         copyfromlen = len(copyfrom)
         tup = entry[:-1] + (copyfromlen,)
         rawhistory.append(struct.pack("!20s20s20s20sH", *tup))
@@ -156,7 +156,7 @@ def readhistory(
     for i in range(count):
         entry = readunpack(fh, "!20s20s20s20sH")
         if entry[4] != 0:
-            copyfrom = pycompat.decodeutf8(readexactly(fh, entry[4]))
+            copyfrom = readexactly(fh, entry[4]).decode()
         else:
             copyfrom = ""
         entry = entry[:4] + (copyfrom,)

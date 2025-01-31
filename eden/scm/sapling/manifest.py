@@ -42,7 +42,7 @@ def _parse(data):
         if prev is not None and prev > l:
             raise ValueError("Manifest lines not in sorted order.")
         prev = l
-        f, n = pycompat.decodeutf8(l).split("\0")
+        f, n = l.decode().split("\0")
         if len(n) > 40:
             yield f, bin(n[:40]), n[40:]
         else:
@@ -62,7 +62,7 @@ def _text(it):
         lines.append("%s\0%s%s\n" % (f, _hex(n), fl))
 
     _checkforbidden(files)
-    return pycompat.encodeutf8("".join(lines))
+    return "".join(lines).encode()
 
 
 def unhexlify(data, extra, pos, length):
@@ -277,7 +277,7 @@ class manifestdict:
                 start, end = _msearch(addbuf, f, start)
                 if not todelete:
                     h, fl = self._lm[f]
-                    l = encodeutf8("%s\0%s%s\n" % (f, revlog.hex(h), fl))
+                    l = ("%s\0%s%s\n" % (f, revlog.hex(h), fl)).encode()
                 else:
                     if start == end:
                         # item we want to delete was not found, error out
@@ -327,7 +327,7 @@ def _msearch(m, s, lo=0, hi=None):
     s is str"""
     assert not isinstance(m, unicode)
     assert isinstance(s, str)
-    s = encodeutf8(s)
+    s = s.encode()
 
     def advance(i, c):
         while i < lenm and m[i : i + 1] != c:

@@ -673,11 +673,15 @@ def executewithsql(repo, action, sqllock: bool = False, *args, **kwargs):
         wlock = util.nullcontextmanager()
         lock = util.nullcontextmanager()
 
-    with wlock, lock, sqlcontext(
-        repo,
-        dbwritable=sqllock,
-        enforcepullfromdb=enforcepullfromdb,
-        syncfromreplica=syncfromreplica,
+    with (
+        wlock,
+        lock,
+        sqlcontext(
+            repo,
+            dbwritable=sqllock,
+            enforcepullfromdb=enforcepullfromdb,
+            syncfromreplica=syncfromreplica,
+        ),
     ):
         return action(*args, **kwargs)
 
@@ -917,7 +921,7 @@ def wraprepo(repo) -> None:
             for k, v in sorted(refs.items()):
                 if k != "tip":
                     v = hex(v)
-                sha = hashlib.sha1(encodeutf8("%s%s%s" % (sha, k, v))).hexdigest()
+                sha = hashlib.sha1(("%s%s%s" % (sha, k, v)).encode()).hexdigest()
             return sha
 
         def _sqlsynchash(self):
@@ -941,12 +945,12 @@ def wraprepo(repo) -> None:
             ]
             # is it a new repo with empty references?
             if sqlresults == [[]]:
-                return hashlib.sha1(encodeutf8("%s%s" % ("tip", -1))).hexdigest()
+                return hashlib.sha1(("%s%s" % ("tip", -1)).encode()).hexdigest()
             # sqlresults looks like [[('59237a7416a6a1764ea088f0bc1189ea58d5b592',)]]
             sqlsynchash = sqlresults[0][0][0]
             if len(sqlsynchash) != 40:
                 raise RuntimeError("malicious SHA1 returned by MySQL: %r" % sqlsynchash)
-            return decodeutf8(sqlsynchash)
+            return sqlsynchash.decode()
 
         def needsync(self):
             """Returns True if the local repo is not in sync with the database.
@@ -966,7 +970,7 @@ def wraprepo(repo) -> None:
                 if namespace == b"heads":
                     sqlheads.add(bin(value))
                 elif namespace == b"bookmarks":
-                    sqlbookmarks[decodeutf8(name)] = bin(value)
+                    sqlbookmarks[name.decode()] = bin(value)
                 elif namespace == b"tip":
                     tip = int(value)
 
@@ -1181,7 +1185,7 @@ def wraprepo(repo) -> None:
                         (self.sqlreponame,),
                     )
                     fetchedbookmarks = [
-                        (decodeutf8(name), node)
+                        (name.decode(), node)
                         for name, node in self.sqlcursor.fetchall()
                     ]
 
@@ -1211,7 +1215,7 @@ def wraprepo(repo) -> None:
             # that don't exist in the loaded changelog. So let's force loading
             # bookmarks now.
             bm = self._bookmarks
-            self.sharedvfs.write("lastsqlsync", encodeutf8(str(int(time.time()))))
+            self.sharedvfs.write("lastsqlsync", str(int(time.time())).encode())
 
         def fetchthread(self, queue, abort, fetchstart, fetchend):
             """Fetches every revision from fetchstart to fetchend (inclusive)
@@ -1236,7 +1240,7 @@ def wraprepo(repo) -> None:
                     # Put split chunks back together into a single revision
                     groupedrevdata = {}
                     for revdata in self.sqlcursor:
-                        revdata = (decodeutf8(revdata[0]),) + revdata[1:]
+                        revdata = (revdata[0].decode(),) + revdata[1:]
 
                         name = revdata[0]
                         chunk = revdata[1]
@@ -1315,7 +1319,7 @@ def wraprepo(repo) -> None:
             )
             headsindb = cursor.fetchall()
             for head in headsindb:
-                head = decodeutf8(head[0])
+                head = head[0].decode()
                 if head in newheads:
                     newheads.discard(head)
                 else:
@@ -1343,8 +1347,8 @@ def wraprepo(repo) -> None:
             )
             bookmarksindb = cursor.fetchall()
             for k, v in bookmarksindb:
-                k = decodeutf8(k)
-                v = decodeutf8(v)
+                k = k.decode()
+                v = v.decode()
                 if newbookmarks.get(k) == v:
                     del newbookmarks[k]
                 else:
@@ -1630,8 +1634,8 @@ def wraprepo(repo) -> None:
                 )
 
                 for path, rev, node in cursor:
-                    path = decodeutf8(path)
-                    node = decodeutf8(node)
+                    path = path.decode()
+                    node = node.decode()
                     rev = int(rev)
                     checkrevs.remove((path, rev))
                     rl = None

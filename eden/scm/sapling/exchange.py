@@ -185,7 +185,7 @@ def parsebundlespec(repo, spec, strict=True, externalnames=False):
 
 def readbundle(ui, fh, fname, vfs=None):
     rawheader = changegroup.readexactly(fh, 4)
-    header = pycompat.decodeutf8(rawheader, errors="replace")
+    header = rawheader.decode(errors="replace")
 
     alg = None
     if not fname:
@@ -203,7 +203,7 @@ def readbundle(ui, fh, fname, vfs=None):
         raise error.Abort(_("%s: not a @Product@ bundle") % fname)
     if version == "10":
         if alg is None:
-            alg = pycompat.decodeutf8(changegroup.readexactly(fh, 2))
+            alg = changegroup.readexactly(fh, 2).decode()
         return changegroup.cg1unpacker(fh, alg)
     elif version.startswith("2"):
         return bundle2.getunbundler(ui, fh, magicstring=magic + version)
@@ -503,7 +503,11 @@ def push(repo, remote, force=False, revs=None, bookmarks=(), opargs=None):
         msg = "cannot lock source repository: %s\n" % err
         pushop.ui.debug(msg)
 
-    with wlock or util.nullcontextmanager(), lock or util.nullcontextmanager(), pushop.trmanager or util.nullcontextmanager():
+    with (
+        wlock or util.nullcontextmanager(),
+        lock or util.nullcontextmanager(),
+        pushop.trmanager or util.nullcontextmanager(),
+    ):
         pushop.repo.checkpush(pushop)
         _pushdiscovery(pushop)
         pushop.repo.prepushoutgoinghooks(pushop)
@@ -1110,7 +1114,7 @@ def _pushbundle2(pushop):
     capsblob = bundle2.encodecaps(
         bundle2.getrepocaps(pushop.repo, allowpushback=pushback)
     )
-    bundler.newpart("replycaps", data=pycompat.encodeutf8(capsblob))
+    bundler.newpart("replycaps", data=capsblob.encode())
     replyhandlers = []
     for partgenname in b2partsgenorder:
         partgen = b2partsgenmapping[partgenname]
@@ -2233,7 +2237,7 @@ def unbundle(repo, cg, heads, source, url, replaydata=None, respondlightly=False
         lockmod.release(lockandtr[2], lockandtr[1], lockandtr[0])
         if recordout is not None:
             out = b"".join(
-                buf if isinstance(buf, bytes) else pycompat.encodeutf8(buf)
+                buf if isinstance(buf, bytes) else buf.encode()
                 for buf in repo.ui.popbufferlist()
             )
 

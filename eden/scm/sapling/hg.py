@@ -329,7 +329,7 @@ def postshare(sourcerepo, destrepo, bookmarks: bool = True, defaultpath=None) ->
     with destrepo.wlock():
         if bookmarks:
             fp = destrepo.localvfs("shared", "wb")
-            fp.write(pycompat.encodeutf8(sharedbookmarks + "\n"))
+            fp.write((sharedbookmarks + "\n").encode())
             fp.close()
 
 
@@ -655,14 +655,12 @@ def _writehgrc(repo, abspath, configfiles) -> None:
             u = util.url(abspath)
             u.passwd = None
             defaulturl = str(u)
-            fp.write(pycompat.encodeutf8(util.tonativeeol(template % defaulturl)))
+            fp.write(util.tonativeeol(template % defaulturl).encode())
 
             if configfiles:
-                fp.write(pycompat.encodeutf8(util.tonativeeol("\n")))
+                fp.write(util.tonativeeol("\n").encode())
                 for file in configfiles:
-                    fp.write(
-                        pycompat.encodeutf8(util.tonativeeol("%%include %s\n" % file))
-                    )
+                    fp.write(util.tonativeeol("%%include %s\n" % file).encode())
 
 
 def clonepreclose(

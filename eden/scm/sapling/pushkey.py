@@ -52,7 +52,7 @@ def list(repo, namespace):
 
 def encodekeys(keys):
     """encode the content of a pushkey namespace for exchange over the wire"""
-    return b"\n".join([b"%s\t%s" % (encodeutf8(k), encodeutf8(v)) for k, v in keys])
+    return b"\n".join([b"%s\t%s" % (k.encode(), v.encode()) for k, v in keys])
 
 
 def decodekeys(data):
@@ -63,5 +63,5 @@ def decodekeys(data):
     result = util.sortdict()
     for l in data.splitlines():
         k, v = l.split(b"\t")
-        result[decodeutf8(k)] = decodeutf8(v)
+        result[k.decode()] = v.decode()
     return result

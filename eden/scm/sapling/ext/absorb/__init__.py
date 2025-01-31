@@ -462,7 +462,7 @@ class filefixupstate:
             l = tuple(info[:2])
             editortext += "    %s : %s" % (
                 "".join([("y" if i in lineset[l] else " ") for i, _f in visiblefctxs]),
-                decodeutf8(self._getline(l)),
+                self._getline(l).decode(),
             )
         # run editor
         editedtext = self.ui.edit(editortext, "", action="absorb")
@@ -477,7 +477,7 @@ class filefixupstate:
                 continue
             if l[colonpos - 1 : colonpos + 2] != " : ":
                 raise error.Abort(_("malformed line: %s") % l)
-            linecontent = encodeutf8(l[colonpos + 2 :])
+            linecontent = l[colonpos + 2 :].encode()
             for i, ch in enumerate(l[leftpadpos : colonpos - 1]):
                 if ch == "y":
                     contents[visiblefctxs[i][0]] += linecontent

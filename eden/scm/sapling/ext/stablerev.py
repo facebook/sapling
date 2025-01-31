@@ -225,8 +225,8 @@ def _executescript(script, repo, extraenv=None):
     except subprocess.CalledProcessError as e:
         raise error.Abort(_("error executing script: %s") % e)
 
-    stdout = pycompat.decodeutf8(res[0])
-    stderr = pycompat.decodeutf8(res[1])
+    stdout = res[0].decode()
+    stderr = res[1].decode()
 
     ui.debug("script stdout:\n%s\n" % stdout)
     ui.write_err(stderr)

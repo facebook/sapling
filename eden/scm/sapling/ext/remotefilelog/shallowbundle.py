@@ -250,7 +250,7 @@ class shallowcg1packer(changegroup.cg1packer):
 
         pointer += "x-is-binary %d\n" % meta["isbinary"]
 
-        return pycompat.encodeutf8(pointer)
+        return pointer.encode()
 
     def nodechunk(self, flog, node, _prevnode, linknode):
         prefix = b""

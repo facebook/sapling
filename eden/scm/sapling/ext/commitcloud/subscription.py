@@ -23,7 +23,7 @@ def _uniquefilename(reporoot, reponame, workspacename):
             reporoot = "$TESTTMP/" + reporoot.removeprefix(testtmp).replace("\\", "/")
 
     hash = hashlib.sha256(
-        encodeutf8("\0".join([reporoot, reponame, workspacename]))
+        "\0".join([reporoot, reponame, workspacename]).encode()
     ).hexdigest()
     return hash[:32]
 
@@ -61,10 +61,10 @@ def check(repo):
                 "check: writing subscription %s\n" % filename, component="commitcloud"
             )
             configfile.write(
-                encodeutf8(
+                (
                     "[commitcloud]\nworkspace=%s\nrepo_name=%s\nrepo_root=%s\n"
                     % (workspacename, reponame, repo.sharedpath)
-                )
+                ).encode()
             )
             didsomething = True
 
@@ -137,10 +137,10 @@ def move(repo, workspace, new_workspace):
         vfs.tryunlink(oldsrc)
         with vfs.open(dst, "wb") as configfile:
             configfile.write(
-                encodeutf8(
+                (
                     "[commitcloud]\nworkspace=%s\nrepo_name=%s\nrepo_root=%s\n"
                     % (new_workspace, reponame, repo.sharedpath)
-                )
+                ).encode()
             )
         if olddst != dst and vfs.exists(olddst):
             repo.ui.debug(

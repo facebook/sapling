@@ -376,7 +376,7 @@ class jsonformatter(baseformatter):
         """do default text output while assigning data to item"""
         fieldkeys = fields.split()
         assert len(fieldkeys) == len(fielddata)
-        fielddata = list(pycompat.decodeutf8(d) for d in fielddata)
+        fielddata = list(d.decode() for d in fielddata)
         self._item.update(zip(fieldkeys, fielddata))
 
     def end(self):
@@ -465,7 +465,7 @@ class templateformatter(baseformatter):
         """do default text output while assigning data to item"""
         fieldkeys = fields.split()
         assert len(fieldkeys) == len(fielddata)
-        fielddata = list(pycompat.decodeutf8(d) for d in fielddata)
+        fielddata = list(d.decode() for d in fielddata)
         self._item.update(zip(fieldkeys, fielddata))
 
     def end(self):
@@ -521,7 +521,7 @@ def lookuptemplate(ui, topic, tmpl):
         if os.path.basename(tmpl).startswith("map-"):
             return templatespec(topic, None, os.path.realpath(tmpl))
         with util.posixfile(tmpl, "rb") as f:
-            tmpl = pycompat.decodeutf8(f.read())
+            tmpl = f.read().decode()
         return templatespec("", tmpl, None)
 
     # constant string?

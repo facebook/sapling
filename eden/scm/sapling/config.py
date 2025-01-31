@@ -203,7 +203,7 @@ class config:
         )
         self.parse(
             path,
-            pycompat.decodeutf8(fp.read()),
+            fp.read().decode(),
             sections=sections,
             remap=remap,
             include=self.read,

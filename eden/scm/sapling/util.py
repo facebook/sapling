@@ -1647,7 +1647,7 @@ class stringwriter:
         self.fp = fp
 
     def write(self, value: str) -> None:
-        self.fp.write(pycompat.encodeutf8(value))
+        self.fp.write(value.encode())
 
     def writebytes(self, value: bytes) -> None:
         self.fp.write(value)
@@ -2021,7 +2021,7 @@ class atomictempfile(BinaryIO):
         return self._fp.write(s)
 
     def writeutf8(self, s: str) -> None:
-        return self.write(encodeutf8(s))
+        return self.write(s.encode())
 
     def writelines(self, lines: "Iterable[bytes]") -> None:
         return self._fp.writelines(lines)
@@ -2084,7 +2084,7 @@ def readfile(path):
 
 
 def readfileutf8(path):
-    return decodeutf8(readfile(path))
+    return readfile(path).decode()
 
 
 def writefile(path, text):
@@ -2649,11 +2649,11 @@ else:
 def escapestr(s):
     # call underlying function of s.encode('string_escape') directly for
     # Python 3 compatibility
-    return decodeutf8(codecs.escape_encode(encodeutf8(s, errors="surrogateescape"))[0])
+    return codecs.escape_encode(s.encode(errors="surrogateescape"))[0].decode()
 
 
 def unescapestr(s):
-    return decodeutf8(codecs.escape_decode(s)[0], errors="surrogateescape")
+    return codecs.escape_decode(s)[0].decode(errors="surrogateescape")
 
 
 def forcebytestr(obj):
@@ -3434,9 +3434,9 @@ def debugstacktrace(msg="stacktrace", skip=0, f=stderr, otherf=stdout, depth=0):
     """
     if otherf:
         otherf.flush()
-    f.write(encodeutf8("%s at:\n" % msg.rstrip()))
+    f.write(("%s at:\n" % msg.rstrip()).encode())
     for line in getstackframes(skip + 1, depth=depth):
-        f.write(encodeutf8(line))
+        f.write(line.encode())
     f.flush()
 
 

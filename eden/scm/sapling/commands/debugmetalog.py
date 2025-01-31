@@ -70,12 +70,12 @@ def parsenodenames(meta) -> Set[Tuple[bytes, str]]:
     nodenames = set()
     for line in (meta.get("bookmarks") or b"").splitlines():
         hexnode, name = line.split(b" ", 1)
-        nodenames.add((bin(hexnode), pycompat.decodeutf8(name)))
+        nodenames.add((bin(hexnode), name.decode()))
 
     for line in (meta.get("remotenames") or b"").splitlines():
         hexnode, typename, name = line.split(b" ", 2)
         if typename == "bookmarks":
-            nodenames.add((bin(hexnode), pycompat.decodeutf8(name)))
+            nodenames.add((bin(hexnode), name.decode()))
 
     for hexnode in (meta.get("visibleheads") or b"").splitlines()[1:]:
         nodenames.add((bin(hexnode), "."))

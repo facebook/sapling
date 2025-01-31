@@ -228,7 +228,7 @@ def _summarizepathconflicts(self, path) -> Optional[Dict[str, Any]]:
 
 def _decodeutf8ornone(data):
     try:
-        return pycompat.decodeutf8(data)
+        return data.decode()
     except UnicodeDecodeError:
         return None
 

@@ -726,7 +726,7 @@ def diff(context, mapping, args):
     ctx = mapping["ctx"]
     chunks = ctx.diff(match=ctx.match([], getpatterns(0), getpatterns(1)))
 
-    return pycompat.decodeutf8(b"".join(chunks), errors="surrogateescape")
+    return b"".join(chunks).decode(errors="surrogateescape")
 
 
 @templatefunc("enabled(extname)", argspec="extname")
@@ -1626,13 +1626,13 @@ def _flatten(thing):
     """yield a single stream from a possibly nested set of iterators"""
     thing = templatekw.unwraphybrid(thing)
     if isinstance(thing, str):
-        yield pycompat.encodeutf8(thing, errors="surrogateescape")
+        yield thing.encode(errors="surrogateescape")
     elif isinstance(thing, bytes):
         yield thing
     elif thing is None:
         pass
     elif not hasattr(thing, "__iter__"):
-        yield pycompat.encodeutf8(str(thing))
+        yield str(thing).encode()
     else:
         for i in thing:
             for j in _flatten(i):
@@ -1836,7 +1836,7 @@ class templater:
         """Get the template for the given template name. Use a local cache."""
         if t not in self.cache:
             try:
-                self.cache[t] = pycompat.decodeutf8(util.readfile(self.map[t][1]))
+                self.cache[t] = util.readfile(self.map[t][1]).decode()
             except KeyError as inst:
                 raise TemplateNotFound(_('"%s" not in template map') % inst.args[0])
             except IOError as inst:

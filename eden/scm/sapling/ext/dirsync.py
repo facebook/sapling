@@ -151,7 +151,7 @@ def getconfigs(wctx) -> sortdict:
     # read from .hgdirsync in repo
     filename = ".hgdirsync"
     try:
-        content = pycompat.decodeutf8(wctx[filename].data())
+        content = wctx[filename].data().decode()
     except (error.ManifestLookupError, IOError, AttributeError, KeyError):
         content = ""
     cfg = bindings.configloader.config()

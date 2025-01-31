@@ -23,9 +23,7 @@ from __future__ import absolute_import
 import unittest
 
 from sapling import error, util
-from sapling.pycompat import decodeutf8
 from sapling.simplemerge import Merge3Text, render_minimized
-
 
 TestCase = unittest.TestCase
 
@@ -328,7 +326,7 @@ bbb
         m3 = Merge3(TZU, LAO, TAO)
         ml, conflictscount = render_minimized(m3, b"LAO", b"TAO")
         self.log("merge result:")
-        self.log(decodeutf8(b"".join(ml)))
+        self.log(b"".join(ml).decode())
         self.assertEqual(ml, MERGED_RESULT)
         self.assertEqual(conflictscount, 1)
 

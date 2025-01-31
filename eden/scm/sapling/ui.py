@@ -720,7 +720,7 @@ class ui:
 
     def _write(self, *msgs: str) -> None:
         try:
-            self.fout.write(encodeutf8("".join(msgs)))
+            self.fout.write("".join(msgs).encode())
         except IOError as err:
             raise error.StdioError(err)
 
@@ -764,7 +764,7 @@ class ui:
                 self.fout.flush()
             # Write all messages in a single operation as stderr may be
             # unbuffered.
-            self.ferr.write(encodeutf8("".join(msgs)))
+            self.ferr.write("".join(msgs).encode())
             # stderr may be buffered under win32 when redirected to files,
             # including stdout.
             if not getattr(self.ferr, "closed", False):
@@ -1046,7 +1046,7 @@ class ui:
             if usereadline:
                 line = pycompat.rawinput("")
             else:
-                line = pycompat.decodeutf8(self.fin.readline())
+                line = self.fin.readline().decode()
                 if not line:
                     raise EOFError
                 line = line.rstrip(pycompat.oslinesep)
@@ -1138,7 +1138,7 @@ class ui:
             # to interact with tty even if fin is not a tty.
             with self.timeblockedsection("stdio"):  # fin is not Rust IO
                 if self.configbool("ui", "nontty"):
-                    l = decodeutf8(self.fin.readline())
+                    l = self.fin.readline().decode()
                     if not l:
                         raise EOFError
                     return l.rstrip("\n")
@@ -1246,7 +1246,7 @@ class ui:
         )
         try:
             f = util.fdopen(fd, r"wb")
-            f.write(encodeutf8(util.tonativeeol(text)))
+            f.write(util.tonativeeol(text).encode())
             f.close()
 
             environ = {"HGUSER": user}
@@ -1288,7 +1288,7 @@ class ui:
                     )
 
             f = open(name, r"rb")
-            t = util.fromnativeeol(decodeutf8(f.read()))
+            t = util.fromnativeeol(f.read().decode())
             f.close()
         finally:
             if rdir is None:
@@ -1325,8 +1325,10 @@ class ui:
             suspend = progress.suspend
         else:
             suspend = util.nullcontextmanager
-        with self.timeblockedsection(blockedtag), suspend(), util.traced(
-            blockedtag, cat="blocked"
+        with (
+            self.timeblockedsection(blockedtag),
+            suspend(),
+            util.traced(blockedtag, cat="blocked"),
         ):
             rc = self._runsystem(cmd, environ=environ, cwd=cwd, out=out)
         if rc and onerr:

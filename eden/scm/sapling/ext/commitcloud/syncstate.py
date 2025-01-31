@@ -140,7 +140,7 @@ class SyncState:
         tr.addfilegenerator(
             self.v2filename,
             [self.v2filename],
-            lambda f, states=states: f.write(encodeutf8(json.dumps(states))),
+            lambda f, states=states: f.write(json.dumps(states).encode()),
         )
         self.prevstate = (self.version, self.heads, self.bookmarks)
         self.version = version

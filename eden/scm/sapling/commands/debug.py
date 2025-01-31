@@ -449,7 +449,7 @@ def debugbuilddag(
 
     if text is None:
         ui.status(_("reading DAG from stdin\n"))
-        text = decodeutf8(ui.fin.read())
+        text = ui.fin.read().decode()
 
     cl = repo.changelog
     if len(cl) > 0:
@@ -502,10 +502,10 @@ def debugbuilddag(
                             base, local, other = [x[fn].data() for x in (pa, p1, p2)]
                             m3 = simplemerge.Merge3Text(base, local, other)
                             merged_lines = simplemerge.render_minimized(m3)[0]
-                            ml = [pycompat.decodeutf8(l.strip()) for l in merged_lines]
+                            ml = [l.strip().decode() for l in merged_lines]
                             ml.append("")
                         elif at > 0:
-                            datastr = pycompat.decodeutf8(p1[fn].data())
+                            datastr = p1[fn].data().decode()
                             ml = datastr.split("\n")
                         else:
                             # pyre-fixme[61]: `initialmergedlines` is undefined, or
@@ -534,12 +534,12 @@ def debugbuilddag(
                             for fn in p2:
                                 if fn.startswith("nf"):
                                     files.append(fn)
-                                    filecontent[fn] = pycompat.decodeutf8(p2[fn].data())
+                                    filecontent[fn] = p2[fn].data().decode()
 
                     def fctxfn(repo, cx, path):
                         if path in filecontent:
                             return context.memfilectx(
-                                repo, cx, path, pycompat.encodeutf8(filecontent[path])
+                                repo, cx, path, filecontent[path].encode()
                             )
                         return None
 
@@ -1541,8 +1541,7 @@ def debugfilerevision(ui, repo, *pats, **opts) -> None:
                 # function is mainly used for tests, so let's just replace those
                 # bytes so the tests are consistent between py2 and py3.
                 ui.write(
-                    _x("  rawdata: %r\n")
-                    % pycompat.decodeutf8(fctx.rawdata(), errors="replace")
+                    _x("  rawdata: %r\n") % fctx.rawdata().decode(errors="replace")
                 )
 
 
@@ -3304,7 +3303,7 @@ def debugdrawdag(ui, repo, *args, **opts) -> None:
         data = b"".join(open(path, "rb").read() for path in args)
     else:
         data = ui.fin.read()
-    text = decodeutf8(data)
+    text = data.decode()
     return drawdag.drawdag(repo, text, **opts)
 
 
@@ -3748,12 +3747,15 @@ def debugruntest(ui, *paths, **opts) -> int:
         args = ["debugpython", "--"] + args
         return args
 
-    with extensions.wrappedfunction(
-        mputil,
-        "_args_from_interpreter_flags",
-        _args,
-        # pyre-fixme[6]: For 1st param expected `List[str]` but got `Tuple[Any, ...]`.
-    ), TestRunner(paths, jobs=jobs, exts=exts, isolate=isolate) as r:
+    with (
+        extensions.wrappedfunction(
+            mputil,
+            "_args_from_interpreter_flags",
+            _args,
+            # pyre-fixme[6]: For 1st param expected `List[str]` but got `Tuple[Any, ...]`.
+        ),
+        TestRunner(paths, jobs=jobs, exts=exts, isolate=isolate) as r,
+    ):
         for item in r:
             if isinstance(item, Mismatch):
                 mismatches.append(item)

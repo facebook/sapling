@@ -765,7 +765,7 @@ class localrepository:
                         if line not in lines:
                             toadd += line
                     with self.svfs.open("phaseroots", "ab") as f:
-                        f.write(pycompat.encodeutf8(toadd))
+                        f.write(toadd.encode())
                     self.storerequirements.remove("narrowheads")
                     self._writestorerequirements()
 
@@ -1105,9 +1105,13 @@ class localrepository:
                 git.pull(self, source, names=bookmarknames, nodes=headnodes)
             return
 
-        with self.conn(source) as conn, self.wlock(), self.lock(), self.transaction(
-            "pull"
-        ), self.ui.configoverride(configoverride):
+        with (
+            self.conn(source) as conn,
+            self.wlock(),
+            self.lock(),
+            self.transaction("pull"),
+            self.ui.configoverride(configoverride),
+        ):
             remote = conn.peer
             remotenamechanges = {}  # changes to remotenames, {name: hexnode}
             heads = set()
@@ -1758,7 +1762,7 @@ class localrepository:
 
     def wread(self, filename):
         if self.wvfs.islink(filename):
-            return pycompat.encodeutf8(self.wvfs.readlink(filename))
+            return self.wvfs.readlink(filename).encode()
         else:
             return self.wvfs.read(filename)
 
@@ -2107,7 +2111,7 @@ class localrepository:
     def _rollback(self, dryrun, force, dsguard):
         ui = self.ui
         try:
-            args = pycompat.decodeutf8(self.localvfs.read("undo.desc")).splitlines()
+            args = self.localvfs.read("undo.desc").decode().splitlines()
             (oldlen, desc, detail) = (int(args[0]), args[1], None)
             if len(args) >= 3:
                 detail = args[2]

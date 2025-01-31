@@ -101,7 +101,7 @@ class channeledsystem:
         self.out = out
 
     def _send_request(self, channel: bytes, args: "List[str]") -> None:
-        data = pycompat.encodeutf8("\0".join(args) + "\0")
+        data = ("\0".join(args) + "\0").encode()
         self.out.write(struct.pack(">cI", channel, len(data)))
         self.out.write(data)
         self.out.flush()
@@ -161,7 +161,7 @@ class channeledsystem:
 
         while True:
             bcmd = self.in_.readline()[:-1]
-            cmd = pycompat.decodeutf8(bcmd)
+            cmd = bcmd.decode()
             if not cmd:
                 break
             if cmd in cmdtable:
@@ -227,7 +227,7 @@ class chgcmdserver(commandserver.server):
         path = self._readstr()
         if not path:
             return
-        path = pycompat.decodeutf8(path)
+        path = path.decode()
         _log("chdir to %r\n" % path)
         os.chdir(path)
 
@@ -300,7 +300,7 @@ class chgcmdserver(commandserver.server):
             """Change process title"""
             name = self._readstr()
             _log("setprocname: %r\n" % name)
-            util.setprocname(pycompat.decodeutf8(name))
+            util.setprocname(name.decode())
 
         # pyre-fixme[16]: `chgcmdserver` has no attribute `setprocname`.
         capabilities["setprocname"] = setprocname

@@ -395,7 +395,7 @@ def stringify(thing):
     """
     thing = templatekw.unwraphybrid(thing)
     if isinstance(thing, bytes):
-        return pycompat.decodeutf8(thing)
+        return thing.decode()
     if hasattr(thing, "__iter__") and not isinstance(thing, str):
         return "".join([stringify(t) for t in thing if t is not None])
     if thing is None:
@@ -411,12 +411,12 @@ def byteify(thing):
     if isinstance(thing, bytes):
         return thing
     if isinstance(thing, str):
-        return pycompat.encodeutf8(thing)
+        return thing.encode()
     if hasattr(thing, "__iter__"):
         return b"".join([byteify(t) for t in thing if t is not None])
     if thing is None:
         return b""
-    return pycompat.encodeutf8(stringify(thing))
+    return stringify(thing).encode()
 
 
 @templatefilter("stripdir")

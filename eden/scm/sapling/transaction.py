@@ -291,7 +291,7 @@ class transaction(util.transactional):
         self.entries.append((file, offset, data))
         self.map[file] = len(self.entries) - 1
         # add enough data to the journal to do the truncate
-        self.file.write(b"%s\0%d\n" % (encodeutf8(file), offset))
+        self.file.write(b"%s\0%d\n" % (file.encode(), offset))
         self.file.flush()
 
     @active
@@ -332,7 +332,7 @@ class transaction(util.transactional):
         """register a new backup entry and write it to disk"""
         self._backupentries.append(entry)
         self._backupmap[entry[1]] = len(self._backupentries) - 1
-        self._backupsfile.write(encodeutf8("%s\0%s\0%s\0%d\n" % entry))
+        self._backupsfile.write(("%s\0%s\0%s\0%d\n" % entry).encode())
         self._backupsfile.flush()
 
     @active
@@ -427,7 +427,7 @@ class transaction(util.transactional):
             raise KeyError(file)
         index = self.map[file]
         self.entries[index] = (file, offset, data)
-        self.file.write(b"%s\0%d\n" % (encodeutf8(file), offset))
+        self.file.write(b"%s\0%d\n" % (file.encode(), offset))
         self.file.flush()
 
     @active
@@ -621,7 +621,7 @@ class transaction(util.transactional):
         if self.undoname is None:
             return
         undobackupfile = self.opener.open("%s.backupfiles" % self.undoname, "wb")
-        undobackupfile.write(encodeutf8("%d\n" % version))
+        undobackupfile.write(("%d\n" % version).encode())
         for l, f, b, c in self._backupentries:
             if not f:  # temporary file
                 continue
@@ -639,7 +639,7 @@ class transaction(util.transactional):
                 uname = name.replace(self.journal, self.undoname, 1)
                 u = vfs.reljoin(base, uname)
                 util.copyfile(vfs.join(b), vfs.join(u), hardlink=True)
-            undobackupfile.write(encodeutf8("%s\0%s\0%s\0%d\n" % (l, f, u, c)))
+            undobackupfile.write(("%s\0%s\0%s\0%d\n" % (l, f, u, c)).encode())
         undobackupfile.close()
 
     def _writemetalog(self):
@@ -650,9 +650,7 @@ class transaction(util.transactional):
         if metalog:
             # write down configs used by the repo for debugging purpose
             if self.uiconfig and self.uiconfig.configbool("metalog", "track-config"):
-                metalog.set(
-                    "config", pycompat.encodeutf8(self.uiconfig.configtostring())
-                )
+                metalog.set("config", self.uiconfig.configtostring().encode())
 
             command = encoding.unifromlocal(
                 " ".join(map(util.shellquote, pycompat.sysargv[1:]))
@@ -743,7 +741,7 @@ def rollback(opener, vfsmap, file, report, checkambigfiles=None) -> None:
     lines = fp.readlines()
     fp.close()
     for l in lines:
-        l = decodeutf8(l)
+        l = l.decode()
         try:
             f, o = l.split("\0")
             entries.append((f, int(o), None))
@@ -755,13 +753,13 @@ def rollback(opener, vfsmap, file, report, checkambigfiles=None) -> None:
         fp = opener.open(backupjournal, "rb")
         lines = fp.readlines()
         if lines:
-            ver = decodeutf8(lines[0][:-1])
+            ver = lines[0][:-1].decode()
             if ver == str(version):
                 for line in lines[1:]:
                     if line:
                         # Shave off the trailing newline
                         line = line[:-1]
-                        line = decodeutf8(line)
+                        line = line.decode()
                         try:
                             l, f, b, c = line.split("\0")
                         except ValueError:

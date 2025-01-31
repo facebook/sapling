@@ -46,7 +46,7 @@ def peersetup(ui, peer):
                 )
             f = wireproto.future()
             yield {"path": path}, f
-            heads = pycompat.decodeutf8(f.value).split("\n") if f.value else []
+            heads = f.value.decode().split("\n") if f.value else []
             yield heads
 
         def _updatecallstreamopts(self, command, opts):
@@ -92,7 +92,7 @@ class getpackclient:
         # Issue request
         pipeo = shallowutil.trygetattr(remote, ("_pipeo", "pipeo"))
         for filename, nodes in grouped.items():
-            filename = pycompat.encodeutf8(filename)
+            filename = filename.encode()
             filenamelen = struct.pack(constants.FILENAMESTRUCT, len(filename))
             countlen = struct.pack(constants.PACKREQUESTCOUNTSTRUCT, len(nodes))
             rawnodes = b"".join(n for n in nodes)

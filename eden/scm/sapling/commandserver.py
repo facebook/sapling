@@ -96,7 +96,7 @@ class channeledinput:
 
     @property
     def name(self) -> str:
-        return "<%c-channel>" % pycompat.decodeutf8(self.channel)
+        return "<%c-channel>" % self.channel.decode()
 
     def read(self, size: int = -1) -> bytes:
         if size < 0:
@@ -224,7 +224,7 @@ class server:
         """read a list of NULL separated strings from the channel"""
         s = self._readstr()
         if s:
-            s = pycompat.decodeutf8(s)
+            s = s.decode()
             return s.split("\0")
         else:
             return []
@@ -248,11 +248,11 @@ class server:
 
     def getencoding(self) -> None:
         """writes the current encoding to the result channel"""
-        self.cresult.write(pycompat.encodeutf8(encoding.encoding))
+        self.cresult.write(encoding.encoding.encode())
 
     def serveone(self) -> bool:
         cmd = self.client.readline()[:-1]
-        cmd = pycompat.decodeutf8(cmd)
+        cmd = cmd.decode()
         if cmd:
             handler = self.capabilities.get(cmd)
             if handler:
@@ -289,7 +289,7 @@ class server:
             pass
 
         # write the hello msg in -one- chunk
-        self.cout.write(pycompat.encodeutf8(hellomsg))
+        self.cout.write(hellomsg.encode())
 
         try:
             while self.serveone():
@@ -391,7 +391,7 @@ def _serverequest(ui, repo, conn, createcmdserver):
 
         # also write traceback to error channel. otherwise client cannot
         # see it because it is written to server's stderr by default.
-        output = pycompat.encodeutf8(output.getvalue())
+        output = output.getvalue().encode()
         if sv:
             sv.cerr.write(output)
         else:

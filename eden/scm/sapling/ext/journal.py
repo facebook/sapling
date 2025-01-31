@@ -363,7 +363,7 @@ class journalstorage:
                 f.seek(0, os.SEEK_SET)
                 # Read just enough bytes to get a version number (up to 2
                 # digits plus separator)
-                version = pycompat.decodeutf8(f.read(3).partition(b"\0")[0])
+                version = f.read(3).partition(b"\0")[0].decode()
                 if version and version != str(storageversion):
                     # different version of the storage. Exit early (and not
                     # write anything) if this is not a version we can handle or
@@ -373,7 +373,7 @@ class journalstorage:
                     return
                 if not version:
                     # empty file, write version first
-                    f.write(pycompat.encodeutf8(str(storageversion) + "\0"))
+                    f.write((str(storageversion) + "\0").encode())
                 f.seek(0, os.SEEK_END)
                 for entry in entries:
                     f.write(entry.serialize() + b"\0")
@@ -427,7 +427,7 @@ class journalstorage:
             raw = f.read()
 
         lines = raw.split(b"\0")
-        version = lines and pycompat.decodeutf8(lines[0])
+        version = lines and lines[0].decode()
         if version != str(storageversion):
             version = version or _("not available")
             raise error.Abort(_("unknown journal file version '%s'") % version)

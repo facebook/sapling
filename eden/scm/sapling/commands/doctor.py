@@ -259,7 +259,7 @@ def openchangelog(ui, svfs):
 
 def repairvisibleheads(ui, metalog, cl):
     """Attempt to fix visibleheads by removing invalid commit hashes"""
-    oldtext = decodeutf8(metalog.get("visibleheads") or b"")
+    oldtext = (metalog.get("visibleheads") or b"").decode()
     oldlines = oldtext.splitlines()
     nodemap = cl.nodemap
     newlines = ["v1"] + [
@@ -274,7 +274,7 @@ def repairvisibleheads(ui, metalog, cl):
         if hextip not in newlines:
             newlines.append(hextip)
         newtext = "".join(l + "\n" for l in newlines)
-        metalog.set("visibleheads", encodeutf8(newtext))
+        metalog.set("visibleheads", newtext.encode())
         metalog.commit("fix visibleheads")
         ui.write_err(_("visibleheads: removed %s heads, added tip\n") % removedcount)
 

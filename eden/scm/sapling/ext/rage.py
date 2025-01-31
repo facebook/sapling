@@ -56,8 +56,8 @@ BLACKBOX_PATTERN = """
 def shcmd(cmd, input=None, check: bool = True, keeperr: bool = True) -> str:
     _, _, _, p = util.popen4(cmd)
     out, err = p.communicate(input)
-    out = pycompat.decodeutf8(out, errors="replace")
-    err = pycompat.decodeutf8(err, errors="replace")
+    out = out.decode(errors="replace")
+    err = err.decode(errors="replace")
     if check and p.returncode:
         raise error.Abort(cmd + " error: " + err)
     elif keeperr:
@@ -276,9 +276,7 @@ def readsigtraces(repo) -> str:
         # can produce very long but boring traces. Skip them.
         if "serve" in name:
             continue
-        content = pycompat.decodeutf8(
-            vfs.tryread("sigtrace/%s" % name), errors="replace"
-        )
+        content = vfs.tryread("sigtrace/%s" % name).decode(errors="replace")
         result += "%s:\n%s\n\n" % (name, content.strip())
     return result
 
@@ -601,7 +599,7 @@ def rage(ui, repo, *pats, **opts) -> None:
                 stderr=subprocess.PIPE,
                 shell=pycompat.iswindows,
             )
-            out, err = p.communicate(input=pycompat.encodeutf8(msg + "\n"))
+            out, err = p.communicate(input=(msg + "\n").encode())
             ret = p.returncode
         except OSError:
             ui.write(_("Failed calling pastry. (is it in your PATH?)\n"))
@@ -629,7 +627,7 @@ def rage(ui, repo, *pats, **opts) -> None:
         )
         ui.write(
             # pyre-fixme[61]: `out` is undefined, or not always defined.
-            "  " + pycompat.decodeutf8(out, errors="replace") + "\n",
+            "  " + out.decode(errors="replace") + "\n",
             label="rage.link",
         )
     ui.write(ui.config("rage", "advice", "") + "\n")

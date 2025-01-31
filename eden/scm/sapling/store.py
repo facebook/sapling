@@ -140,9 +140,9 @@ def _buildencodefun():
 
     cmap = dict((x, x) for x in asciistr)
     for x in _reserved():
-        cmap[inttobyte(x)] = encodeutf8("~%02x" % x)
+        cmap[inttobyte(x)] = ("~%02x" % x).encode()
     for x in capitals + [ord(e)]:
-        cmap[inttobyte(x)] = encodeutf8(e + xchr(x).lower())
+        cmap[inttobyte(x)] = (e + xchr(x).lower()).encode()
 
     dmap = {}
     for k, v in cmap.items():
@@ -163,14 +163,14 @@ def _buildencodefun():
 
     def encodecomp(comp):
         assert isinstance(comp, str), "encodecomp accepts str paths"
-        comp = encodeutf8(comp)
+        comp = comp.encode()
         comp = [comp[i : i + 1] for i in range(len(comp))]
         encoded = b"".join(cmap[c] for c in comp)
         if len(encoded) > 255:
             encoded = b"".join(cmaplong[c] for c in comp)
         if len(encoded) > 255:
             encoded = b"".join(cmapverylong[c] for c in comp)
-        return decodeutf8(encoded)
+        return encoded.decode()
 
     def encodemaybelong(path):
         assert isinstance(path, str), "encodemaybelong accepts str paths"
@@ -192,7 +192,7 @@ def _buildencodefun():
 
     return (
         encodemaybelong,
-        lambda s: decodeutf8(b"".join(list(decode(encodeutf8(s))))),
+        lambda s: b"".join(list(decode(s.encode()))).decode(),
     )
 
 
@@ -315,7 +315,7 @@ class metavfs(util.proxy_wrapper, vfsmod.abstractvfs):
         metalog = self._rsrepo.metalog()
 
         # Keys that are previously tracked in metalog.
-        tracked = set(pycompat.decodeutf8((metalog.get("tracked") or b"")).split())
+        tracked = set((metalog.get("tracked") or b"").decode().split())
         # Keys that should be tracked (specified by config).
         desired = set(self.metapaths)
 

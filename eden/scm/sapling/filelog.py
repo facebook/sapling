@@ -31,7 +31,7 @@ def parsemeta(text):
     if bytes(text[:2]) != b"\1\n":
         return None, None
     s = _mdre.search(text, 2).start()
-    mtext = decodeutf8(text[2:s])
+    mtext = text[2:s].decode()
     meta = {}
     for l in mtext.splitlines():
         k, v = l.split(": ", 1)
@@ -41,7 +41,7 @@ def parsemeta(text):
 
 def packmeta(meta: "Dict[str, str]", text: bytes) -> bytes:
     keys = sorted(meta)
-    metatext = encodeutf8("".join("%s: %s\n" % (k, meta[k]) for k in keys))
+    metatext = "".join("%s: %s\n" % (k, meta[k]) for k in keys).encode()
     return b"".join((b"\1\n", metatext, b"\1\n", text))
 
 

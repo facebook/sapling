@@ -203,7 +203,7 @@ def wrapui(ui) -> None:
                     line = fmt % args
                     if not line.endswith("\n"):
                         line += "\n"
-                    fp.write(encodeutf8(line))
+                    fp.write(line.encode())
             except (IOError, OSError) as err:
                 self.debug("warning: cannot write to blackbox.log: %s\n" % err.strerror)
                 # do not restore _bbinlog intentionally to avoid failed

@@ -909,7 +909,7 @@ def _picklabels(overrides):
         raise error.Abort(_("can only specify three labels."))
     result = [None, None, None]
     for i, override in enumerate(overrides):
-        result[i] = pycompat.encodeutf8(override)
+        result[i] = override.encode()
     return result
 
 

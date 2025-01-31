@@ -66,7 +66,7 @@ def loadautobackupstate(repo):
 def saveautobackupstate(repo, state):
     repo.sharedvfs.makedirs("commitcloud")
     with repo.sharedvfs.open(_autobackupstatefile, "w", atomictemp=True) as f:
-        f.write(pycompat.encodeutf8(json.dumps(state)))
+        f.write(json.dumps(state).encode())
 
 
 def disableautobackup(repo, until):

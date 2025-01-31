@@ -206,7 +206,7 @@ class cg1unpacker:
         l = self._chunklength()
         if not l:
             return {}
-        fname = decodeutf8(readexactly(self._stream, l))
+        fname = readexactly(self._stream, l).decode()
         return {"filename": fname}
 
     def _deltaheader(
@@ -583,7 +583,7 @@ class cg1packer:
         return closechunk()
 
     def fileheader(self, fname):
-        fname = encodeutf8(fname)
+        fname = fname.encode()
         return chunkheader(len(fname)) + fname
 
     # Extracted both for clarity and for overriding in extensions.

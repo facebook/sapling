@@ -309,7 +309,7 @@ def unidiff(
         # pyre-fixme[16]: `diffopts` has no attribute `git`.
         # pyre-fixme[16]: `diffopts` has no attribute `nodates`.
         if not opts.git and not opts.nodates:
-            return b"\t%s" % encodeutf8(date)
+            return b"\t%s" % date.encode()
         if fn and " " in fn:
             return b"\t"
         return b""
@@ -338,11 +338,11 @@ def unidiff(
         # pyre-fixme[16]: `diffopts` has no attribute `hashbinary`.
         if opts.hashbinary and b:
             message = b"Binary file %s has changed to %s\n" % (
-                encodeutf8(fn1),
-                encodeutf8(sha1(b).hexdigest()),
+                fn1.encode(),
+                sha1(b).hexdigest().encode(),
             )
         else:
-            message = b"Binary file %s has changed\n" % encodeutf8(fn1)
+            message = b"Binary file %s has changed\n" % fn1.encode()
         hunks = iter([(None, [message])])
     elif not a:
         without_newline = b[-1:] != b"\n"
@@ -350,8 +350,8 @@ def unidiff(
         if a is None:
             l1 = b"--- /dev/null%s" % datetag(epoch)
         else:
-            l1 = b"--- %s%s%s" % (aprefix, encodeutf8(fn1), datetag(ad, fn1))
-        l2 = b"+++ %s%s" % (bprefix + encodeutf8(fn2), datetag(bd, fn2))
+            l1 = b"--- %s%s%s" % (aprefix, fn1.encode(), datetag(ad, fn1))
+        l2 = b"+++ %s%s" % (bprefix + fn2.encode(), datetag(bd, fn2))
         headerlines = [l1, l2]
         size = len(bl)
         hunkrange = (0, 0, 1, size)
@@ -365,11 +365,11 @@ def unidiff(
         without_newline = a[-1:] != b"\n"
         # pyre-fixme[6]: For 1st param expected `bytes` but got `Sized`.
         al = splitnewlines(a)
-        l1 = b"--- %s%s%s" % (aprefix, encodeutf8(fn1), datetag(ad, fn1))
+        l1 = b"--- %s%s%s" % (aprefix, fn1.encode(), datetag(ad, fn1))
         if b is None:
             l2 = b"+++ /dev/null%s" % datetag(epoch)
         else:
-            l2 = b"+++ %s%s%s" % (bprefix, encodeutf8(fn2), datetag(bd, fn2))
+            l2 = b"+++ %s%s%s" % (bprefix, fn2.encode(), datetag(bd, fn2))
         headerlines = [l1, l2]
         size = len(al)
         hunkrange = (1, size, 0, 0)
@@ -385,8 +385,8 @@ def unidiff(
             return sentinel
 
         headerlines = [
-            b"--- %s%s%s" % (aprefix, encodeutf8(fn1), datetag(ad, fn1)),
-            b"+++ %s%s%s" % (bprefix, encodeutf8(fn2), datetag(bd, fn2)),
+            b"--- %s%s%s" % (aprefix, fn1.encode(), datetag(ad, fn1)),
+            b"+++ %s%s%s" % (bprefix, fn2.encode(), datetag(bd, fn2)),
         ]
 
     return headerlines, hunks

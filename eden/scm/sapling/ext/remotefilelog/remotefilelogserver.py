@@ -388,7 +388,7 @@ def getpack(repo, proto, args, version=1):
 
         # Sort the files by name, so we provide deterministic results
         for filename, nodes in sorted(files.items()):
-            filename = pycompat.decodeutf8(filename)
+            filename = filename.decode()
             args.append([filename, [hex(n) for n in nodes]])
             fl = repo.file(filename)
 

@@ -248,7 +248,7 @@ def generatev1(repo):
             if debugflag:
                 repo.ui.debug("sending %s (%d bytes)\n" % (name, size))
             # partially encode name over the wire for backwards compat
-            yield b"%s\0%d\n" % (encodeutf8(store.encodedir(name)), size)
+            yield b"%s\0%d\n" % (store.encodedir(name).encode(), size)
 
             sentsize = 0
 
@@ -315,7 +315,7 @@ def generatebundlev1(
         raise ValueError("we do not support the compression argument yet")
 
     requirements = repo.requirements & repo.supportedformats
-    requires = encodeutf8(",".join(sorted(requirements)))
+    requires = ",".join(sorted(requirements)).encode()
 
     def gen():
         yield b"HGS1"
@@ -390,7 +390,7 @@ def consumev1(repo: "Any", fp: "Any", filecount: int, bytecount: int) -> None:
                                 "adding %s (%s)\n" % (name, util.bytecount(size))
                             )
                         # for backwards compat, name was partially encoded
-                        path = store.decodedir(decodeutf8(name))
+                        path = store.decodedir(name.decode())
                         with repo.svfs(path, "w", backgroundclose=True) as ofp:
                             fetchedsize = 0
                             for chunk in util.filechunkiter(fp, limit=size):
@@ -429,7 +429,7 @@ def readbundle1header(fp):
 
     filecount, bytecount = struct.unpack(">QQ", fp.read(16))
     requireslen = struct.unpack(">H", fp.read(2))[0]
-    requires = decodeutf8(fp.read(requireslen))
+    requires = fp.read(requireslen).decode()
 
     if not requires.endswith("\0"):
         raise error.Abort(

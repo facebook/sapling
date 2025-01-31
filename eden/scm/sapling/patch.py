@@ -280,15 +280,15 @@ def extract(ui, fileobj):
                         subject = None
                     elif hgpatchheader:
                         if line.startswith(b"# User "):
-                            data["user"] = pycompat.decodeutf8(line[7:])
+                            data["user"] = line[7:].decode()
                             ui.debug("From: %s\n" % data["user"])
                         elif line.startswith(b"# Parent "):
-                            parents.append(pycompat.decodeutf8(line[9:].lstrip()))
+                            parents.append(line[9:].lstrip().decode())
                         elif line.startswith(b"# "):
                             for header, key in patchheadermap:
                                 prefix = b"# %s " % header
                                 if line.startswith(prefix):
-                                    data[key] = pycompat.decodeutf8(line[len(prefix) :])
+                                    data[key] = line[len(prefix) :].decode()
                         else:
                             hgpatchheader = False
                     elif line == b"---":
@@ -308,7 +308,7 @@ def extract(ui, fileobj):
         os.unlink(tmpname)
         raise
 
-    message = pycompat.decodeutf8(message)
+    message = message.decode()
     if subject and not message.startswith(subject):
         message = "%s\n%s" % (subject, message)
     data["message"] = message
@@ -406,7 +406,7 @@ def readgitpatch(lr):
                 if gp:
                     gitpatches.append(gp)
                 dst = m.group(2)
-                gp = patchmeta(pycompat.decodeutf8(dst))
+                gp = patchmeta(dst.decode())
         elif gp:
             if line.startswith(b"--- "):
                 gitpatches.append(gp)
@@ -414,14 +414,14 @@ def readgitpatch(lr):
                 continue
             if line.startswith(b"rename from "):
                 gp.op = "RENAME"
-                gp.oldpath = pycompat.decodeutf8(line[12:])
+                gp.oldpath = line[12:].decode()
             elif line.startswith(b"rename to "):
-                gp.path = pycompat.decodeutf8(line[10:])
+                gp.path = line[10:].decode()
             elif line.startswith(b"copy from "):
                 gp.op = "COPY"
-                gp.oldpath = pycompat.decodeutf8(line[10:])
+                gp.oldpath = line[10:].decode()
             elif line.startswith(b"copy to "):
-                gp.path = pycompat.decodeutf8(line[8:])
+                gp.path = line[8:].decode()
             elif line.startswith(b"deleted file"):
                 gp.op = "DELETE"
             elif line.startswith(b"new file mode "):
@@ -507,7 +507,7 @@ class fsbackend(abstractbackend):
     def getfile(self, fname):
         if self.opener.islink(fname):
             name = self.opener.readlink(fname)
-            return (encodeutf8(name), (True, False))
+            return (name.encode(), (True, False))
 
         isexec = False
         try:
@@ -885,7 +885,7 @@ class patchfile:
         if not self.rej:
             return
         base = os.path.basename(self.fname)
-        lines = [encodeutf8("--- %s\n+++ %s\n" % (base, base))]
+        lines = [("--- %s\n+++ %s\n" % (base, base)).encode()]
         for x in self.rej:
             for l in x.hunk:
                 lines.append(l)
@@ -1045,15 +1045,12 @@ class header:
     def files(self):
         match = self.diffgit_re.match(self.header[0])
         if match:
-            fromfile, tofile = [pycompat.decodeutf8(f) for f in match.groups()]
+            fromfile, tofile = [f.decode() for f in match.groups()]
             if fromfile == tofile:
                 return [fromfile]
             return [fromfile, tofile]
         else:
-            return [
-                pycompat.decodeutf8(f)
-                for f in self.diff_re.match(self.header[0]).groups()
-            ]
+            return [f.decode() for f in self.diff_re.match(self.header[0]).groups()]
 
     def filename(self) -> str:
         return self.files()[-1]
@@ -1069,7 +1066,7 @@ class header:
         for h in self.header:
             matched = self.copyre.match(h)
             if matched:
-                return pycompat.decodeutf8(matched.group(1))
+                return matched.group(1).decode()
         return None
 
     def special(self):
@@ -1292,7 +1289,7 @@ all lines of the hunk are removed, then the edit is aborted and
 the hunk is left unchanged.
 """
                 )
-                phelp = pycompat.encodeutf8(phelp)
+                phelp = phelp.encode()
                 (patchfd, patchfn) = tempfile.mkstemp(
                     prefix="hg-editor-", suffix=".diff", text=True
                 )
@@ -1691,7 +1688,7 @@ class binhunk:
 
 def parsefilename(s):
     # --- filename \t|space stuff
-    s = pycompat.decodeutf8(s)[4:].rstrip("\r\n")
+    s = s.decode()[4:].rstrip("\r\n")
     i = s.find("\t")
     if i < 0:
         i = s.find(" ")
@@ -2128,8 +2125,8 @@ def iterhunks(fp):
                     [g.copy() for g in gitpatches if g.op in ("COPY", "RENAME")],
                 )
                 gitpatches.reverse()
-            afile = "a/" + pycompat.decodeutf8(m.group(1))
-            bfile = "b/" + pycompat.decodeutf8(m.group(2))
+            afile = "a/" + m.group(1).decode()
+            bfile = "b/" + m.group(2).decode()
             while gitpatches and not gitpatches[-1].ispatching(afile, bfile):
                 gp = gitpatches.pop()
                 file = gp.path
@@ -3065,7 +3062,7 @@ def trydiff(
         l = len(text)
         s = hashlib.sha1(b"blob %d\0" % l)
         s.update(text)
-        return encodeutf8(s.hexdigest())
+        return s.hexdigest().encode()
 
     if opts.noprefix:
         aprefix = bprefix = b""
@@ -3074,8 +3071,8 @@ def trydiff(
         bprefix = b"b/"
 
     def diffline(f, revs):
-        revinfo = b" ".join([b"-r %s" % encodeutf8(rev) for rev in revs])
-        return b"diff %s %s" % (revinfo, encodeutf8(f))
+        revinfo = b" ".join([b"-r %s" % rev.encode() for rev in revs])
+        return b"diff %s %s" % (revinfo, f.encode())
 
     def isempty(fctx):
         return fctx is None or fctx.size() == 0
@@ -3149,7 +3146,7 @@ def trydiff(
         if opts.git:
             header.append(
                 b"diff --git %s%s %s%s"
-                % (aprefix, encodeutf8(path1), bprefix, encodeutf8(path2))
+                % (aprefix, path1.encode(), bprefix, path2.encode())
             )
             if not fctx1:  # added
                 header.append(b"new file mode %s" % gitmode[flag2])
@@ -3165,8 +3162,8 @@ def trydiff(
                         threshold = repo.ui.configint("patch", "similarity", 1) / 100.0
                         sim = similar.score(ctx1[path1], ctx2[path2], threshold) * 100
                         header.append(b"similarity index %d%%" % sim)
-                    header.append(b"%s from %s" % (copyop, encodeutf8(path1)))
-                    header.append(b"%s to %s" % (copyop, encodeutf8(path2)))
+                    header.append(b"%s from %s" % (copyop, path1.encode()))
+                    header.append(b"%s to %s" % (copyop, path2.encode()))
         elif revs and not repo.ui.quiet:
             header.append(diffline(path1, revs))
 
@@ -3269,10 +3266,10 @@ def diffstatdata(lines):
             inheader = True
             adds, removes, isbinary = 0, 0, False
             if line.startswith(b"diff --git a/"):
-                filename = decodeutf8(gitre.search(line).group(2))
+                filename = gitre.search(line).group(2).decode()
             elif line.startswith(b"diff -r"):
                 # format: "diff -r ... -r ... filename"
-                filename = decodeutf8(diffre.search(line).group(1))
+                filename = diffre.search(line).group(1).decode()
         elif line.startswith(b"@@"):
             inheader = False
         elif line.startswith(b"+") and not inheader:

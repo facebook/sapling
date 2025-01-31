@@ -95,7 +95,7 @@ class abstractvfs(pycompat.ABC):
         return b""
 
     def tryreadutf8(self, path):
-        return decodeutf8(self.tryread(path))
+        return self.tryread(path).decode()
 
     def tryreadlines(self, path, mode="rb"):
         """gracefully return an empty array for missing files"""
@@ -123,7 +123,7 @@ class abstractvfs(pycompat.ABC):
             return fp.read()
 
     def readutf8(self, path: str) -> str:
-        return decodeutf8(self.read(path))
+        return self.read(path).decode()
 
     def readlines(self, path: str, mode: str = "rb") -> "List[bytes]":
         with self(path, mode=mode) as fp:
@@ -134,7 +134,7 @@ class abstractvfs(pycompat.ABC):
             return fp.write(data)
 
     def writeutf8(self, path: str, data: str) -> None:
-        self.write(path, encodeutf8(data))
+        self.write(path, data.encode())
 
     def writelines(
         self, path: str, data: "List[bytes]", mode: str = "wb", notindexed: bool = False
