@@ -434,8 +434,22 @@ def _do_normal_copy(repo, from_ctx, to_ctx, from_paths, to_paths, opts):
         file_count += len(fileids)
         if file_count > limit:
             support = ui.config("ui", "supportcontact")
-            hint = _("contact %s for help") % support if support else ""
-            raise error.Abort(_("subtree copy includes too many files"), hint=hint)
+            help_hint = _("contact %s for help") % support if support else None
+            override_hint = _(
+                "use '--config subtree.copy-max-file-count=N' cautiously to override"
+            )
+            hint = (
+                _("%s or %s") % (help_hint, override_hint)
+                if help_hint
+                else override_hint
+            )
+            raise error.Abort(
+                _(
+                    "subtree copy includes too many files (%d), exceeding configured limit (%d)"
+                )
+                % (file_count, limit),
+                hint=hint,
+            )
         path_to_fileids[path] = fileids
 
     new_files = []
