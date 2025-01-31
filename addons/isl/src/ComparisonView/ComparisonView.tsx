@@ -22,6 +22,7 @@ import {GeneratedStatus} from '../types';
 import {SplitDiffView} from './SplitDiffView';
 import {currentComparisonMode} from './atoms';
 import {parsePatchAndFilter, sortFilesByType} from './utils';
+import deepEqual from 'fast-deep-equal';
 import {Button} from 'isl-components/Button';
 import {Dropdown} from 'isl-components/Dropdown';
 import {ErrorBoundary, ErrorNotice} from 'isl-components/ErrorNotice';
@@ -52,9 +53,8 @@ function mapResult<T, U>(result: Result<T>, fn: (t: T) => U): Result<U> {
 const currentComparisonData = atomFamilyWeak((comparison: Comparison) =>
   atomLoadableWithRefresh<Result<Array<ParsedDiff>>>(async () => {
     serverAPI.postMessage({type: 'requestComparison', comparison});
-    const event = await serverAPI.nextMessageMatching(
-      'comparison',
-      event => comparison.type === event.comparison.type,
+    const event = await serverAPI.nextMessageMatching('comparison', event =>
+      deepEqual(comparison, event.comparison),
     );
     return mapResult(event.data.diff, parsePatchAndFilter);
   }),
