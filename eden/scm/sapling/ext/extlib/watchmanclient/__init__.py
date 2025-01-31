@@ -11,12 +11,11 @@ import ctypes
 import os
 import time
 
-from sapling import blackbox, encoding, json, progress, pycompat, util
+from sapling import blackbox, encoding, json, progress, util
 from sapling.i18n import _
 from sapling.node import hex
 
 from .. import pywatchman
-from ..pywatchman import compat
 
 
 def createclientforrepo(repo):
@@ -520,7 +519,7 @@ elif util.isdarwin:
                 raise OSError(ctypes.get_errno())
             # buf is a bytes buffer, so normalize it if necessary
             ret = buf.value
-            if isinstance(name, compat.UNICODE):
+            if isinstance(name, str):
                 ret = os.fsdecode(ret)
             return ret
         finally:

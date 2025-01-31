@@ -9,13 +9,7 @@ from __future__ import absolute_import, division, print_function
 import binascii
 import ctypes
 import struct
-
-from . import compat
-
-
-# pyre-fixme[11]: Annotation `abc` is not defined as a type.
-collections_abc = compat.collections_abc
-
+from collections.abc import abc as collections_abc
 
 BSER_ARRAY = b"\x00"
 BSER_OBJECT = b"\x01"
@@ -210,10 +204,7 @@ class _bser_buffer:
             else:
                 raise RuntimeError("Cannot represent this mapping value")
             self.wpos += needed
-            if compat.PYTHON3:
-                iteritems = val.items()
-            else:
-                iteritems = val.iteritems()  # noqa: B301 Checked version above
+            iteritems = val.items()
             for k, v in iteritems:
                 self.append_string(k)
                 self.append_recursive(v)
