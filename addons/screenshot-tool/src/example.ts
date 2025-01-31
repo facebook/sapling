@@ -10,6 +10,8 @@ import type {Context} from 'node:vm';
 
 import {TestBrowser} from './testBrowser';
 import {TestRepo} from './testRepo';
+import {getCacheDir} from './utils';
+import {join} from 'node:path';
 import * as repl from 'node:repl';
 
 /** Reexport for convenience. */
@@ -164,7 +166,7 @@ export const BASE_EXAMPLE: Example = {
     logger.info('Closing browser');
     browser.browser.close();
   },
-  repl(): Promise<void> {
+  async repl(): Promise<void> {
     // Start node REPL to play with Puppeteer internals.
     logger.info('REPL context:');
     const context: Context = {};
@@ -184,6 +186,8 @@ export const BASE_EXAMPLE: Example = {
 
     const replServer = repl.start('> ');
     Object.assign(replServer.context, context);
+
+    replServer.setupHistory(join(await getCacheDir('repl'), 'history'), () => {});
 
     // Wait for REPL exit.
     return new Promise<void>(resolve => {
