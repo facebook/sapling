@@ -46,19 +46,12 @@ def getdoc(obj):
     return doc
 
 
-unicode = str
 shlexsplit = shlex.split
 
 
 def ensurestr(s):
     if isinstance(s, bytes):
         s = s.decode("utf-8")
-    return s
-
-
-def ensureunicode(s, errors="strict"):
-    if not isinstance(s, str):
-        s = s.decode("utf-8", errors=errors)
     return s
 
 

@@ -365,28 +365,8 @@ if sysutil.isdarwin:
     normcasespec = encoding.normcasespecs.lower
 
     def normcasefallback(path):
-        try:
-            # unicodedata.normalize expects a unicode string, so don't use
-            # pycompat.decodeutf8() here because it would return bytes in py2.
-            u = pycompat.ensureunicode(path)
-        except UnicodeDecodeError:
-            # OS X percent-encodes any bytes that aren't valid utf-8
-            s = ""
-            pos = 0
-            l = len(path)
-            while pos < l:
-                try:
-                    c = encoding.getutf8char(path, pos)
-                    pos += len(c)
-                except ValueError:
-                    c = "%%%02X" % ord(path[pos : pos + 1])
-                    pos += 1
-                s += c
-
-            u = s.decode("utf-8")
-
         # Decompose then lowercase (HFS+ technote specifies lower)
-        enc = unicodedata.normalize(r"NFD", u).lower().encode("utf-8")
+        enc = unicodedata.normalize(r"NFD", path).lower().encode("utf-8")
         # drop HFS+ ignored characters
         return encoding.hfsignoreclean(enc)
 

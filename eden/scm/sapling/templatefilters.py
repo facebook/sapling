@@ -164,7 +164,7 @@ def fill(text, width, initindent="", hangindent=""):
         while True:
             m = para_re.search(text, start)
             if not m:
-                uctext = pycompat.ensureunicode(text[start:])
+                uctext = text[start:]
                 w = len(uctext)
                 while 0 < w and uctext[w - 1].isspace():
                     w -= 1
@@ -280,7 +280,6 @@ def obfuscate(text):
     """Any text. Returns the input text rendered as a sequence of
     XML entities.
     """
-    text = pycompat.ensureunicode(text, errors="replace")  # noqa
     return "".join(["&#%d;" % ord(c) for c in text])
 
 

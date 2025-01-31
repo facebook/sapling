@@ -60,7 +60,7 @@ def hfsignoreclean(s):
         if b"\xe2" in s or b"\xef" in s:
             for c in _ignore:
                 s = s.replace(c, b"")
-    elif isinstance(s, pycompat.unicode):
+    elif isinstance(s, str):
         # It's unfortunate that we encode every string, probably resulting in an
         # allocation, but it saves us from having to iterate over the string for
         # every ignored code point.

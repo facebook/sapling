@@ -67,7 +67,6 @@ from . import (
 )
 from .i18n import _, _x
 from .node import hex, nullid, nullrev, short
-from .pycompat import ensureunicode
 from .utils import subtreeutil
 
 if typing.TYPE_CHECKING:
@@ -3425,7 +3424,7 @@ def displaygraph(
         )
         # The Rust graph renderer works with unicode.
         msg = "".join(
-            ensureunicode(encoding.unifromlocal(s), errors="replace")
+            s if isinstance(s, str) else s.decode(errors="replace")
             for s in displayer.hunk.pop(rev)
         )
         nextrow = renderer.nextrow(rev, parents, char, msg)

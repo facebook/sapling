@@ -20,7 +20,6 @@ import bindings
 from . import error, mdiff, pycompat, revlog, util
 from .i18n import _
 from .node import bin
-from .pycompat import unicode
 
 parsers = bindings.cext.parsers
 
@@ -322,7 +321,7 @@ def _msearch(m, s, lo=0, hi=None):
 
     m should be a buffer, a memoryview or a byte string.
     s is str"""
-    assert not isinstance(m, unicode)
+    assert not isinstance(m, str)
     assert isinstance(s, str)
     s = s.encode()
 
