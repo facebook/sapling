@@ -232,8 +232,8 @@ impl ExpiringBool {
     }
 
     fn set(&self) {
-        let t = std::time::Instant::now().duration_since(self.origin);
-        self.inner.store(t.as_secs() as i64, Ordering::Relaxed);
+        self.inner
+            .store(self.origin.elapsed().as_secs() as i64, Ordering::Relaxed);
     }
 
     pub fn get(&self) -> bool {
@@ -342,7 +342,15 @@ impl Client {
             req.set_accept_encoding([encoding.clone()]);
         }
 
-        if let Some(mts) = &config.min_transfer_speed {
+        if let Some(mts) = config.handler_min_transfer_speeds.get(base_path) {
+            tracing::trace!(
+                ?mts,
+                path = base_path,
+                "using per-handler min transfer speed"
+            );
+            req.set_min_transfer_speed(*mts);
+        } else if let Some(mts) = &config.min_transfer_speed {
+            tracing::trace!(?mts, path = base_path, "using generic min transfer speed");
             req.set_min_transfer_speed(*mts);
         }
 
