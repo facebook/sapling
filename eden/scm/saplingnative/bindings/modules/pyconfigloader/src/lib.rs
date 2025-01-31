@@ -81,22 +81,22 @@ py_class!(pub class config |py| {
         Ok(errors_to_str_vec(errors))
     }
 
-    def get(&self, section: &str, name: &str) -> PyResult<Option<PyUnicode>> {
+    def get(&self, section: &str, name: &str) -> PyResult<Option<PyString>> {
         let cfg = self.cfg(py).borrow();
 
-        Ok(cfg.get(section, name).map(|v| PyUnicode::new(py, &v)))
+        Ok(cfg.get(section, name).map(|v| PyString::new(py, &v)))
     }
 
     def sources(
         &self, section: &str, name: &str
-    ) -> PyResult<Vec<(Option<PyUnicode>, Option<(PyPathBuf, usize, usize, usize)>, PyUnicode)>> {
+    ) -> PyResult<Vec<(Option<PyString>, Option<(PyPathBuf, usize, usize, usize)>, PyString)>> {
         // Return [(value, file_source, source)]
         // file_source is a tuple of (file_path, byte_start, byte_end, line)
         let cfg = self.cfg(py).borrow();
         let sources = cfg.get_sources(section, name);
         let mut result = Vec::with_capacity(sources.len());
         for source in sources.as_ref().iter() {
-            let value = source.value().as_ref().map(|v| PyUnicode::new(py, v));
+            let value = source.value().as_ref().map(|v| PyString::new(py, v));
             let file = source.location().map(|(path, range)| {
                 let line = source.line_number().unwrap_or_default();
 
@@ -108,7 +108,7 @@ py_class!(pub class config |py| {
                 };
                 (pypath, range.start, range.end, line)
             });
-            let source = PyUnicode::new(py, source.source());
+            let source = PyString::new(py, source.source());
             result.push((value, file, source));
         }
         Ok(result)
@@ -123,14 +123,14 @@ py_class!(pub class config |py| {
         Ok(PyNone)
     }
 
-    def sections(&self) -> PyResult<Vec<PyUnicode>> {
+    def sections(&self) -> PyResult<Vec<PyString>> {
         let cfg = self.cfg(py).borrow();
-        Ok(cfg.sections().iter().map(|s| PyUnicode::new(py, s)).collect())
+        Ok(cfg.sections().iter().map(|s| PyString::new(py, s)).collect())
     }
 
-    def names(&self, section: &str) -> PyResult<Vec<PyUnicode>> {
+    def names(&self, section: &str) -> PyResult<Vec<PyString>> {
         let cfg = self.cfg(py).borrow();
-        Ok(cfg.keys(section).iter().map(|s| PyUnicode::new(py, s)).collect())
+        Ok(cfg.keys(section).iter().map(|s| PyString::new(py, s)).collect())
     }
 
     def tostring(&self) -> PyResult<String> {
@@ -192,10 +192,10 @@ impl config {
     }
 }
 
-fn parselist(py: Python, value: String) -> PyResult<Vec<PyUnicode>> {
+fn parselist(py: Python, value: String) -> PyResult<Vec<PyString>> {
     Ok(parse_list(value)
         .iter()
-        .map(|v| PyUnicode::new(py, v))
+        .map(|v| PyString::new(py, v))
         .collect())
 }
 
