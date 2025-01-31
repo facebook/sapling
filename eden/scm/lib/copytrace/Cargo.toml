@@ -35,4 +35,4 @@ tracing = { version = "0.1.41", features = ["attributes", "valuable"] }
 [dev-dependencies]
 sapling-manifest-tree = { version = "0.1.0", path = "../manifest-tree", features = ["for-tests"] }
 tokio = { version = "1.41.0", features = ["full", "test-util", "tracing"] }
-tracing-test = "0.2.3"
+tracing-test = { version = "0.2.3", features = ["no-env-filter"] }
