@@ -13,8 +13,10 @@
 from __future__ import absolute_import
 
 import hashlib
+import os
 import posixpath
 import shutil
+import sys
 from collections import defaultdict
 
 from bindings import (
@@ -1366,7 +1368,7 @@ def batchremove(repo, wctx, actions):
     yields tuples for progress updates
     """
     verbose = repo.ui.verbose
-    cwd = pycompat.getcwdsafe()
+    cwd = util.getcwdsafe()
     i = 0
     for f, args, msg in actions:
         repo.ui.debug(" %s: %s -> r\n" % (f, msg))
@@ -1380,7 +1382,7 @@ def batchremove(repo, wctx, actions):
     if i > 0:
         yield i, 0, f
 
-    if cwd and not pycompat.getcwdsafe():
+    if cwd and not util.getcwdsafe():
         # cwd was removed in the course of removing files; print a helpful
         # warning.
         repo.ui.warn(
@@ -2470,7 +2472,7 @@ def _update(
             and not fsmonitorenabled
             and p1.node() == nullid
             and len(actions[ACTION_GET]) >= fsmonitorthreshold
-            and pycompat.sysplatform.startswith(("linux", "darwin"))
+            and sys.platform.startswith(("linux", "darwin"))
         ):
             repo.ui.warn(
                 _(
@@ -2641,7 +2643,7 @@ def donativecheckout(repo, p1, p2, force, wc):
         repo.localvfs.writeutf8("updatestate", p2.hex())
 
     fp1, fp2, xp1, xp2 = p2.node(), nullid, xp2, ""
-    cwd = pycompat.getcwdsafe()
+    cwd = util.getcwdsafe()
 
     repo.ui.debug("Applying to %s \n" % repo.wvfs.base)
     failed_removes = plan.apply(
@@ -2652,7 +2654,7 @@ def donativecheckout(repo, p1, p2, force, wc):
     repo.ui.debug("Apply done\n")
     stats = plan.stats()
 
-    if cwd and not pycompat.getcwdsafe():
+    if cwd and not util.getcwdsafe():
         # cwd was removed in the course of removing files; print a helpful
         # warning.
         repo.ui.warn(

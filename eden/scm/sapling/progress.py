@@ -485,7 +485,7 @@ def bar(ui, topic, unit="", total=None, start=0, formatfunc=None):
             path = util.splitpath(caller.filename)
             if len(path) > 2:
                 path = path[-2:]
-            detail = "(%s:%d)" % (pycompat.ossep.join(path), caller.lineno)
+            detail = "(%s:%d)" % (os.sep.join(path), caller.lineno)
 
     if ui.configbool("progress", "debug"):
         return debugbar(ui, topic, unit, total, start, formatfunc)

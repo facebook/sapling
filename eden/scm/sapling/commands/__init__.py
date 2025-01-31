@@ -67,7 +67,6 @@ from .. import (
     templatekw,
     ui as uimod,
     util,
-    visibility,
 )
 from ..i18n import _
 from ..node import bin, hex, nullid, short
@@ -3212,15 +3211,15 @@ def help_(ui, *names, **opts):
     name = " ".join(names) if names and names != (None,) else None
     keep = opts.get(r"system") or []
     if len(keep) == 0:
-        if pycompat.sysplatform.startswith("win"):
+        if sys.platform.startswith("win"):
             keep.append("windows")
-        elif pycompat.sysplatform == "OpenVMS":
+        elif sys.platform == "OpenVMS":
             keep.append("vms")
-        elif pycompat.sysplatform == "plan9":
+        elif sys.platform == "plan9":
             keep.append("plan9")
         else:
             keep.append("unix")
-            keep.append(pycompat.sysplatform.lower())
+            keep.append(sys.platform.lower())
     if ui.verbose:
         keep.append("verbose")
 

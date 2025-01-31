@@ -1048,11 +1048,11 @@ class ui:
                 line = self.fin.readline().decode()
                 if not line:
                     raise EOFError
-                line = line.rstrip(pycompat.oslinesep)
+                line = line.rstrip(os.linesep)
 
         # When stdin is in binary mode on Windows, it can cause
         # raw_input() to emit an extra trailing carriage return
-        if pycompat.oslinesep == "\r\n" and line and line[-1] == "\r":
+        if os.linesep == "\r\n" and line and line[-1] == "\r":
             line = line[:-1]
         return line
 
@@ -1408,12 +1408,12 @@ class ui:
 
     def geteditor(self):
         """return editor to use"""
-        if pycompat.sysplatform == "plan9":
+        if sys.platform == "plan9":
             # vi is the MIPS instruction simulator on Plan 9. We
             # instead default to E to plumb commit messages to
             # avoid confusion.
             defaulteditor = "E"
-        elif pycompat.sysplatform == "win32":
+        elif sys.platform == "win32":
             defaulteditor = "notepad.exe"
         else:
             defaulteditor = "vi"

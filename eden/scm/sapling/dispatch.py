@@ -824,7 +824,7 @@ def _getlocal(ui, rpath):
         lui = ui.copy()
     else:
         try:
-            wd = pycompat.getcwd()
+            wd = os.getcwd()
         except OSError as e:
             if e.errno == errno.ENOTCONN:
                 ui.warn(_("current working directory is not connected\n"))
@@ -1056,7 +1056,7 @@ def _dispatch(req):
                                     _(
                                         "'%s' is not inside a repository, but this command requires a repository"
                                     )
-                                    % pycompat.getcwd(),
+                                    % os.getcwd(),
                                     hint=_(
                                         "use 'cd' to go to a directory inside a repository and try again"
                                     ),

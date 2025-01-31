@@ -18,6 +18,7 @@ import hashlib
 import os
 import re
 import ssl
+import sys
 from typing import Any, Dict, Optional, Tuple
 
 from . import error, pycompat, util
@@ -732,9 +733,9 @@ def _plainapplepython():
       for using system certificate store CAs in addition to the provided
       cacerts file
     """
-    if not util.isdarwin or not pycompat.sysexecutable:
+    if not util.isdarwin or not sys.executable:
         return False
-    exe = os.path.realpath(pycompat.sysexecutable).lower()
+    exe = os.path.realpath(sys.executable).lower()
     return exe.startswith("/usr/bin/python") or exe.startswith(
         "/system/library/frameworks/python.framework/"
     )

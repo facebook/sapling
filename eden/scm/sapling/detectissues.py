@@ -11,7 +11,6 @@ from __future__ import absolute_import
 import os
 
 from .i18n import _
-from .pycompat import ossep
 
 
 class issue:
@@ -44,7 +43,7 @@ def computecachesize(repo):
                 skipped += 1
 
         relpath = os.path.relpath(root, cachepath)
-        segments = relpath.split(ossep)
+        segments = relpath.split(os.sep)
         if "manifests" in segments[1:]:
             manifestsize += dirsize
         else:

@@ -22,6 +22,7 @@ import re
 import resource
 import socket
 import stat
+import sys
 import tempfile
 import unicodedata
 
@@ -97,7 +98,7 @@ def nlinks(name):
 def parsepatchoutput(output_line):
     """parses the output produced by patch and returns the filename"""
     pf = output_line[14:]
-    if pycompat.sysplatform == "OpenVMS":
+    if sys.platform == "OpenVMS":
         if pf[0] == "`":
             pf = pf[1:-1]  # Remove the quotes
     else:
@@ -408,7 +409,7 @@ _needsshellquote = None
 
 
 def shellquote(s):
-    if pycompat.sysplatform == "OpenVMS":
+    if sys.platform == "OpenVMS":
         return '"%s"' % s
     global _needsshellquote
     if _needsshellquote is None:
@@ -426,7 +427,7 @@ def popen(command, mode="r"):
 
 def testpid(pid):
     """return False if pid dead, True if running or not sure"""
-    if pycompat.sysplatform == "OpenVMS":
+    if sys.platform == "OpenVMS":
         return True
     try:
         os.kill(pid, 0)
@@ -453,7 +454,7 @@ def findexe(command):
     If command is a basename then PATH is searched for command.
     PATH isn't searched if command is an absolute or relative path.
     If command isn't found None is returned."""
-    if pycompat.sysplatform == "OpenVMS":
+    if sys.platform == "OpenVMS":
         return command
 
     def findexisting(executable):
@@ -462,13 +463,13 @@ def findexe(command):
             return executable
         return None
 
-    if pycompat.ossep in command:
+    if os.sep in command:
         return findexisting(command)
 
-    if pycompat.sysplatform == "plan9":
+    if sys.platform == "plan9":
         return findexisting(os.path.join("/bin", command))
 
-    for path in encoding.environ.get("PATH", "").split(pycompat.ospathsep):
+    for path in encoding.environ.get("PATH", "").split(os.pathsep):
         executable = findexisting(os.path.join(path, command))
         if executable is not None:
             return executable

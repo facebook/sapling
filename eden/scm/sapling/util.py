@@ -1109,7 +1109,7 @@ def tempfilter(s, cmd):
         cmd = cmd.replace("INFILE", inname)
         cmd = cmd.replace("OUTFILE", outname)
         code = os.system(cmd)
-        if pycompat.sysplatform == "OpenVMS" and code & 1:
+        if sys.platform == "OpenVMS" and code & 1:
             code = 0
         if code:
             raise Abort(_("command '%s' failed: %s") % (cmd, explainexit(code)))
@@ -1211,7 +1211,7 @@ def pathto(root, n1, n2):
         a.pop()
         b.pop()
     b.reverse()
-    return pycompat.ossep.join(([".."] * len(a)) + b) or "."
+    return os.sep.join(([".."] * len(a)) + b) or "."
 
 
 if "HGDATAPATH" in os.environ:
@@ -1320,7 +1320,7 @@ def rawsystem(cmd, environ=None, cwd=None, out=None):
             out.write(line)
         proc.wait()
         rc = proc.returncode
-    if pycompat.sysplatform == "OpenVMS" and rc & 1:
+    if sys.platform == "OpenVMS" and rc & 1:
         rc = 0
     return rc
 
@@ -1561,9 +1561,9 @@ def fspath(name, root):
     def _makefspathcacheentry(dir):
         return dict((normcase(n), n) for n in os.listdir(dir))
 
-    seps = pycompat.ossep
-    if pycompat.osaltsep:
-        seps = seps + pycompat.osaltsep
+    seps = os.sep
+    if os.altsep:
+        seps = seps + os.altsep
     # Protect backslashes. This gets silly very quickly.
     seps.replace("\\", "\\\\")
     pattern = remod.compile(r"([^%s]+)|([%s]+)" % (seps, seps))
@@ -1647,11 +1647,7 @@ class stringwriter:
 
 def endswithsep(path):
     """Check path ends with os.sep or os.altsep."""
-    return (
-        path.endswith(pycompat.ossep)
-        or pycompat.osaltsep
-        and path.endswith(pycompat.osaltsep)
-    )
+    return path.endswith(os.sep) or os.altsep and path.endswith(os.altsep)
 
 
 def splitpath(path):
@@ -1660,7 +1656,7 @@ def splitpath(path):
     an alternative of simple "xxx.split(os.sep)".
     It is recommended to use os.path.normpath() before using this
     function if need."""
-    return path.split(pycompat.ossep)
+    return path.split(os.sep)
 
 
 def isvalidutf8(string):
@@ -2630,7 +2626,7 @@ def tocrlf(s):
     return _eolre.sub("\r\n", s)
 
 
-if pycompat.oslinesep == "\r\n":
+if os.linesep == "\r\n":
     tonativeeol = tocrlf
     fromnativeeol = tolf
 else:
@@ -2802,7 +2798,7 @@ def hgcmd():
     path = encoding.environ.get("HGEXECUTABLEPATH")
     if path:
         return [path]
-    return [pycompat.sysexecutable]
+    return [sys.executable]
 
 
 def rundetached(args, condfn):
@@ -5030,3 +5026,13 @@ class proxy_wrapper:
         if name.startswith("__") or name in self.__dict__:
             return super().__setattr__(name, value)
         return setattr(self.inner, name, value)
+
+
+def getcwdsafe():
+    """Returns the current working dir, or None if it has been deleted"""
+    try:
+        return os.getcwd()
+    except OSError as err:
+        if err.errno == errno.ENOENT:
+            return None
+        raise

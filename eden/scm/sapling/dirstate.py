@@ -213,7 +213,7 @@ class dirstate:
     def _slash(self) -> bool:
         return (
             self._ui.plain() or self._ui.configbool("ui", "slash")
-        ) and pycompat.ossep != "/"
+        ) and os.sep != "/"
 
     @util.propertycache
     def _checklink(self) -> bool:
@@ -282,7 +282,7 @@ class dirstate:
         forcecwd = self._ui.config("ui", "forcecwd")
         if forcecwd:
             return forcecwd
-        return pycompat.getcwd()
+        return os.getcwd()
 
     def getcwd(self) -> str:
         """Return the path from which a canonical path is calculated.
@@ -297,7 +297,7 @@ class dirstate:
         # self._root ends with a path separator if self._root is '/' or 'C:\'
         rootsep = self._root
         if not util.endswithsep(rootsep):
-            rootsep += pycompat.ossep
+            rootsep += os.sep
         if cwd.startswith(rootsep):
             return cwd[len(rootsep) :]
         else:

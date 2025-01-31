@@ -108,8 +108,8 @@ class pathauditor:
         # This means we won't accidentally traverse a symlink into some other
         # filesystem (which is potentially expensive to access).
         for i in range(len(parts)):
-            prefix = pycompat.ossep.join(parts[: i + 1])
-            normprefix = pycompat.ossep.join(normparts[: i + 1])
+            prefix = os.sep.join(parts[: i + 1])
+            normprefix = os.sep.join(normparts[: i + 1])
             if normprefix in self.auditeddir:
                 continue
             if self._realfs:
@@ -195,7 +195,7 @@ def canonpath(root, cwd, myname):
     if util.endswithsep(root):
         rootsep = root
     else:
-        rootsep = root + pycompat.ossep
+        rootsep = root + os.sep
     name = myname
     if not os.path.isabs(name):
         name = os.path.join(root, cwd, name)
@@ -266,7 +266,7 @@ def canonpath(root, cwd, myname):
             if cwd != root:
                 canonpath(root, root, myname)
                 relpath = util.pathto(root, cwd, "")
-                if relpath[-1] == pycompat.ossep:
+                if relpath[-1] == os.sep:
                     relpath = relpath[:-1]
                 hint = _("consider using '--cwd %s'") % relpath
         except error.Abort:
@@ -286,14 +286,14 @@ def normasprefix(path):
 
     See also issue3033 for detail about need of this function.
 
-    >>> normasprefix('/foo/bar').replace(pycompat.ossep, '/')
+    >>> normasprefix('/foo/bar').replace(os.sep, '/')
     '/foo/bar/'
-    >>> normasprefix('/').replace(pycompat.ossep, '/')
+    >>> normasprefix('/').replace(os.sep, '/')
     '/'
     """
     d, p = os.path.splitdrive(path)
-    if len(p) != len(pycompat.ossep):
-        return path + pycompat.ossep
+    if len(p) != len(os.sep):
+        return path + os.sep
     else:
         return path
 

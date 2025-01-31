@@ -142,7 +142,7 @@ def _exthook(ui, repo, htype, name, cmd, args, throw, background=False):
     if repo:
         cwd = repo.root
     else:
-        cwd = pycompat.getcwd()
+        cwd = os.getcwd()
 
     if background:
         full_env = util.shellenviron(env)

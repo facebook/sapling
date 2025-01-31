@@ -110,7 +110,7 @@ def appendsep(s):
     except UnicodeError:
         us = s
     if us and us[-1] not in ":/\\":
-        s += pycompat.ossep
+        s += os.sep
     return s
 
 
@@ -187,7 +187,7 @@ problematic_encodings = """big5 big5-tw csbig5 big5hkscs big5-hkscs
 
 def extsetup(ui) -> None:
     # TODO: decide use of config section for this extension
-    if (not os.path.supports_unicode_filenames) and (pycompat.sysplatform != "cygwin"):
+    if (not os.path.supports_unicode_filenames) and (sys.platform != "cygwin"):
         ui.warn(_("[win32mbcs] cannot activate on this platform.\n"))
         return
     # determine encoding for filename

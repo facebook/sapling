@@ -636,7 +636,7 @@ class dirnode:
             # Making sure we terse only when the status abbreviation is
             # passed as terse argument
             if onlyst in terseargs:
-                yield onlyst, self.path + pycompat.ossep
+                yield onlyst, self.path + os.sep
                 return
 
         # add the files to status list
@@ -715,7 +715,7 @@ def _conflictsmsg(repo):
     if unresolvedlist:
         mergeliststr = "\n".join(
             [
-                "    %s" % util.pathto(repo.root, pycompat.getcwd(), path)
+                "    %s" % util.pathto(repo.root, os.getcwd(), path)
                 for path in unresolvedlist
             ]
         )
@@ -1221,7 +1221,7 @@ def openrevlog(repo, cmd, file_, opts):
             raise error.CommandError(cmd, _("invalid arguments"))
         if not os.path.isfile(file_):
             raise error.Abort(_("revlog '%s' not found") % file_)
-        r = revlog.revlog(vfsmod.vfs(pycompat.getcwd(), audit=False), file_[:-2] + ".i")
+        r = revlog.revlog(vfsmod.vfs(os.getcwd(), audit=False), file_[:-2] + ".i")
     return r
 
 
@@ -1434,7 +1434,7 @@ def copy(ui, repo, pats, opts, rename=False):
             else:
                 striplen = len(abspfx)
             if striplen:
-                striplen += len(pycompat.ossep)
+                striplen += len(os.sep)
             res = lambda p: os.path.join(dest, util.localpath(p)[striplen:])
         elif destdirexists:
             res = lambda p: os.path.join(dest, os.path.basename(util.localpath(p)))
@@ -1466,12 +1466,12 @@ def copy(ui, repo, pats, opts, rename=False):
                 abspfx = util.localpath(abspfx)
                 striplen = len(abspfx)
                 if striplen:
-                    striplen += len(pycompat.ossep)
+                    striplen += len(os.sep)
                 if os.path.isdir(os.path.join(dest, os.path.split(abspfx)[1])):
                     score = evalpath(striplen)
                     striplen1 = len(os.path.split(abspfx)[0])
                     if striplen1:
-                        striplen1 += len(pycompat.ossep)
+                        striplen1 += len(os.sep)
                     if evalpath(striplen1) > score:
                         striplen = striplen1
                 res = lambda p: os.path.join(dest, util.localpath(p)[striplen:])
@@ -4278,7 +4278,7 @@ def commitforceeditor(
         committext = buildcommittext(repo, ctx, summaryfooter)
 
     # run editor in the repository root
-    olddir = pycompat.getcwd()
+    olddir = os.getcwd()
     os.chdir(repo.root)
 
     # make in-memory changes visible to external process

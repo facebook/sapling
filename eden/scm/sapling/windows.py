@@ -300,7 +300,7 @@ def setbinary(fd):
 
 
 def pconvert(path):
-    return path.replace(pycompat.ossep, "/")
+    return path.replace(os.sep, "/")
 
 
 def localpath(path):
@@ -394,7 +394,7 @@ def findexe(command):
     An extension from PATHEXT is found and added if not present.
     If command isn't found None is returned."""
     pathext = encoding.environ.get("PATHEXT", ".COM;.EXE;.BAT;.CMD")
-    pathexts = [ext for ext in pathext.lower().split(pycompat.ospathsep)]
+    pathexts = [ext for ext in pathext.lower().split(os.pathsep)]
     if os.path.splitext(command)[1].lower() in pathexts:
         pathexts = [""]
 
@@ -406,10 +406,10 @@ def findexe(command):
                 return executable
         return None
 
-    if pycompat.ossep in command:
+    if os.sep in command:
         return findexisting(command)
 
-    for path in encoding.environ.get("PATH", "").split(pycompat.ospathsep):
+    for path in encoding.environ.get("PATH", "").split(os.pathsep):
         executable = findexisting(os.path.join(path, command))
         if executable is not None:
             return executable

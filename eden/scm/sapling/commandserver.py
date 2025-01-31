@@ -168,7 +168,7 @@ class server:
     def __init__(
         self, ui: "Any", repo: "Any", fin: "BinaryIO", fout: "BinaryIO"
     ) -> None:
-        self.cwd = pycompat.getcwd()
+        self.cwd = os.getcwd()
 
         # developer config: cmdserver.log
         logpath = ui.config("cmdserver", "log")

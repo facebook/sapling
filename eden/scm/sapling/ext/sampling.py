@@ -18,8 +18,7 @@ import os
 import sys
 import weakref
 
-from sapling import encoding, localrepo, pycompat, registrar, util
-
+from sapling import encoding, localrepo, registrar, util
 
 configtable = {}
 configitem = registrar.configitem(configtable)
@@ -34,7 +33,7 @@ def getrelativecwd(repo):
     """Returns the current directory relative to the working copy root, or
     None if it's not in the working copy.
     """
-    cwd = pycompat.getcwdsafe()
+    cwd = util.getcwdsafe()
     if cwd.startswith(repo.root):
         return os.path.normpath(cwd[len(repo.root) + 1 :])
     else:
@@ -47,7 +46,7 @@ def gettopdir(repo):
     """
     reldir = getrelativecwd(repo)
     if reldir:
-        components = reldir.split(pycompat.ossep)
+        components = reldir.split(os.sep)
         if len(components) > 0 and components[0] != ".":
             return components[0]
     else:

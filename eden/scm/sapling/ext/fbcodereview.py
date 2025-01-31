@@ -29,6 +29,7 @@ Config::
     hide-landed-commits = true
 """
 
+import os
 import re
 import socket
 import ssl
@@ -259,7 +260,7 @@ def getdiffstatus(repo, *diffid):
     batchsize = repo.ui.configint("fbcodereview", "max-diff-count", 50)
 
     try:
-        client = graphql.Client(repodir=pycompat.getcwd(), repo=repo)
+        client = graphql.Client(repodir=os.getcwd(), repo=repo)
         statuses = {}
         # Limit how many we request at once to avoid timeouts.
         # Use itertools.batched once we are on Python 3.12.
@@ -991,7 +992,7 @@ def graphqlgetdiff(repo, diffid):
             }
     timeout = repo.ui.configint("ssl", "timeout", 10)
     try:
-        client = graphql.Client(repodir=pycompat.getcwd(), repo=repo)
+        client = graphql.Client(repodir=os.getcwd(), repo=repo)
         return client.getdifflatestversion(timeout, diffid)
     except Exception as e:
         raise error.Abort(

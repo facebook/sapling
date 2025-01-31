@@ -90,7 +90,7 @@ def debugancestor(ui, repo, *args) -> None:
     """find the ancestor revision of two revisions in a given index"""
     if len(args) == 3:
         index, rev1, rev2 = args
-        r = revlog.revlog(vfsmod.vfs(pycompat.getcwd(), audit=False), index)
+        r = revlog.revlog(vfsmod.vfs(os.getcwd(), audit=False), index)
         lookup = r.lookup
     elif len(args) == 2:
         if not repo:
@@ -1011,7 +1011,7 @@ def debugdag(ui, repo, file_=None, *revs, **opts):
     spaces = opts.get(r"spaces")
     dots = opts.get(r"dots")
     if file_:
-        rlog = revlog.revlog(vfsmod.vfs(pycompat.getcwd(), audit=False), file_)
+        rlog = revlog.revlog(vfsmod.vfs(os.getcwd(), audit=False), file_)
         revs = set((int(r) for r in revs))
 
         def events():
@@ -1780,9 +1780,7 @@ def debuginstall(ui, **opts) -> int:
     )
 
     # Python
-    fm.write(
-        "pythonexe", _("checking Python executable (%s)\n"), pycompat.sysexecutable
-    )
+    fm.write("pythonexe", _("checking Python executable (%s)\n"), sys.executable)
     fm.write(
         "pythonver",
         _("checking Python version (%s)\n"),
@@ -2441,23 +2439,23 @@ def debugpathcomplete(ui, repo, *specs, **opts) -> None:
         acceptable = "nmar"
     fullpaths = bool(opts[r"full"])
     cwd = repo.getcwd()
-    rootdir = repo.root + pycompat.ossep
-    fixpaths = pycompat.ossep != "/"
+    rootdir = repo.root + os.sep
+    fixpaths = os.sep != "/"
     matches = set()
     for spec in sorted(specs) or [""]:
-        spec = os.path.normpath(os.path.join(pycompat.getcwd(), spec))
+        spec = os.path.normpath(os.path.join(os.getcwd(), spec))
         if spec != repo.root and not spec.startswith(rootdir):
             continue
         if os.path.isdir(spec):
             spec += "/"
         spec = spec[len(rootdir) :]
         if fixpaths:
-            spec = spec.replace(pycompat.ossep, "/")
+            spec = spec.replace(os.sep, "/")
         complete(spec, acceptable, matches, fullpaths)
     for p in sorted(matches):
         p = repo.pathto(p, cwd).rstrip("/")
         if fixpaths:
-            p = p.replace("/", pycompat.ossep)
+            p = p.replace("/", os.sep)
         ui.write(p)
         ui.write("\n")
 

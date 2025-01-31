@@ -2129,7 +2129,7 @@ def sqlrecover(ui, *args, **opts) -> None:
 
     global initialsync
     initialsync = INITIAL_SYNC_DISABLE
-    repo = hg.repository(ui, pycompat.getcwd())
+    repo = hg.repository(ui, os.getcwd())
     repo.disablesync = True
 
     if repo.recover():
@@ -2378,7 +2378,7 @@ def sqlrefill(ui, startrev: int, **opts) -> None:
     if not opts.get("skip_initial_sync"):
         global initialsync
         initialsync = INITIAL_SYNC_DISABLE
-        repo = hg.repository(ui, pycompat.getcwd())
+        repo = hg.repository(ui, os.getcwd())
         repo.disablesync = True
 
     startrev = int(startrev)
@@ -2468,7 +2468,7 @@ def sqlstrip(ui, rev: int, *args, **opts) -> None:
 
     global initialsync
     initialsync = INITIAL_SYNC_DISABLE
-    repo = hg.repository(ui, pycompat.getcwd())
+    repo = hg.repository(ui, os.getcwd())
     repo.disablesync = True
 
     try:

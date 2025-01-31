@@ -152,7 +152,6 @@ from sapling.i18n import _
 from sapling.node import nullid, nullrev
 from sapling.thirdparty import attr
 
-
 cmdtable = {}
 command = registrar.command(cmdtable)
 configtable = {}
@@ -3124,10 +3123,10 @@ def _cwdlist(repo) -> None:
     # Get the root of the repo so that we remove the content of
     # the root from the current working directory
     root = repo.root
-    cwd = util.normpath(pycompat.getcwd())
+    cwd = util.normpath(os.getcwd())
     cwd = os.path.relpath(cwd, root)
-    cwd = "" if cwd == os.curdir else cwd + pycompat.ossep
-    if cwd.startswith(os.pardir + pycompat.ossep):
+    cwd = "" if cwd == os.curdir else cwd + os.sep
+    if cwd.startswith(os.pardir + os.sep):
         raise error.Abort(
             _("the current working directory should begin with the root %s") % root
         )
@@ -3141,7 +3140,7 @@ def _cwdlist(repo) -> None:
     cwdlength = len(cwd)
 
     for filepath in files:
-        entryname = filepath[cwdlength:].partition(pycompat.ossep)[0]
+        entryname = filepath[cwdlength:].partition(os.sep)[0]
 
         allentries.add(entryname)
         if sparsematch(filepath):

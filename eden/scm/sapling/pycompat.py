@@ -31,15 +31,6 @@ def identity(a):
 
 import io
 
-oslinesep = os.linesep
-osname = os.name
-ospathsep = os.pathsep
-ossep = os.sep
-osaltsep = os.altsep
-getcwd = os.getcwd
-sysplatform = sys.platform
-sysexecutable = sys.executable
-
 stringio = io.BytesIO
 stringutf8io = io.StringIO
 maplist = lambda *args: list(map(*args))
@@ -122,13 +113,3 @@ def getoptb(args, shortlist, namelist):
 
 def gnugetoptb(args, shortlist, namelist):
     return getopt.gnu_getopt(args, shortlist, namelist)
-
-
-def getcwdsafe():
-    """Returns the current working dir, or None if it has been deleted"""
-    try:
-        return getcwd()
-    except OSError as err:
-        if err.errno == errno.ENOENT:
-            return None
-        raise

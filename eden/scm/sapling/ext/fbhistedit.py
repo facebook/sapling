@@ -9,6 +9,8 @@
 Adds a s/stop verb to histedit to stop after a changeset was picked.
 """
 
+import os
+
 from sapling import (
     cmdutil,
     error,
@@ -19,12 +21,10 @@ from sapling import (
     merge as mergemod,
     mergeutil,
     node,
-    pycompat,
     registrar,
     scmutil,
 )
 from sapling.i18n import _
-
 
 cmdtable = {}
 command = registrar.command(cmdtable)
@@ -148,7 +148,7 @@ def defineactions():
     class executerelative(execute):
         def __init__(self, state, command):
             super(executerelative, self).__init__(state, command)
-            self.cwd = pycompat.getcwd()
+            self.cwd = os.getcwd()
 
     @histedit.action(["graft", "g"], _("graft a commit from elsewhere"))
     class graft(histedit.histeditaction):

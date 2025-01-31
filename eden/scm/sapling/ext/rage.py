@@ -67,7 +67,7 @@ def shcmd(cmd, input=None, check: bool = True, keeperr: bool = True) -> str:
 
 def which(name) -> Optional[str]:
     """ """
-    for p in encoding.environ.get("PATH", "/bin").split(pycompat.ospathsep):
+    for p in encoding.environ.get("PATH", "/bin").split(os.pathsep):
         path = os.path.join(p, name)
         if os.path.exists(path):
             return path
@@ -347,7 +347,7 @@ def _makerage(ui, repo, **opts) -> str:
         ("hostname", lambda: socket.gethostname()),
         ("repo location", lambda: repo.root),
         ("repo svfs location", lambda: repo.svfs.join("")),
-        ("cwd", lambda: pycompat.getcwd()),
+        ("cwd", lambda: os.getcwd()),
         ("fstype", lambda: util.getfstype(repo.root)),
         ("active bookmark", lambda: bookmarks._readactive(repo, repo._bookmarks)),
         (

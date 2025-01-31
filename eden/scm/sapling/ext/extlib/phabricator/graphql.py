@@ -47,7 +47,7 @@ class Client:
             raise error.ProgrammingError("either repo or ui needs to be provided")
 
         if not repodir:
-            repodir = pycompat.getcwd()
+            repodir = os.getcwd()
         self._mock = "HG_ARC_CONDUIT_MOCK" in encoding.environ
         if self._mock:
             with open(encoding.environ["HG_ARC_CONDUIT_MOCK"], "r") as f:
