@@ -89,7 +89,10 @@ impl MonitoringArgs {
                         )?;
                     }
                 }
-
+                #[cfg(not(fbcode_build))]
+                {
+                    _ = &handle;
+                }
                 Ok(())
             })
             .transpose()
