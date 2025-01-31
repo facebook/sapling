@@ -710,6 +710,10 @@ fn log_result<T: AddScubaResponse>(
     STATS::total_request_internal_failure_permille.add_value(internal_failure * 1000);
     STATS::total_request_invalid_permille.add_value(invalid_request * 1000);
     STATS::total_request_overloaded.add_value(overloaded);
+    STATS::method_completion_time_ms.add_value(
+        stats.completion_time.as_millis_unchecked() as i64,
+        (method.to_string(),),
+    );
 
     ctx.perf_counters().insert_perf_counters(&mut scuba);
 
@@ -818,6 +822,11 @@ fn log_stream_complete(
     STATS::total_request_internal_failure_permille.add_value(internal_failure * 1000);
     STATS::total_request_invalid_permille.add_value(invalid_request * 1000);
     STATS::total_request_overloaded.add_value(overloaded);
+    // Only accounts for the time to start the stream, not the overall time.
+    STATS::method_completion_time_ms.add_value(
+        initial_future_stats.completion_time.as_millis_unchecked() as i64,
+        (method.to_string(),),
+    );
 
     ctx.perf_counters().insert_perf_counters(&mut scuba);
 
@@ -1001,8 +1010,6 @@ macro_rules! impl_thrift_methods {
                             .on_cancel_with_data(|stats| log_cancelled(&ctx, stringify!($method_name), &stats, start_mem_stats.as_ref()))
                             .await;
                             log_result(ctx, "Request complete", stringify!($method_name), &stats, &res, start_mem_stats.as_ref());
-                            let method = stringify!($method_name).to_string();
-                            STATS::method_completion_time_ms.add_value(stats.completion_time.as_millis_unchecked() as i64, (method,));
                             res.map_err(Into::into)
                         }
                     };
@@ -1061,8 +1068,6 @@ macro_rules! impl_thrift_stream_methods {
                             else {
                                 log_result(ctx.clone(), "Request complete", stringify!($method_name), &stats, &res, start_mem_stats.as_ref());
                             }
-                            let method = stringify!($method_name).to_string();
-                            STATS::method_completion_time_ms.add_value(stats.completion_time.as_millis_unchecked() as i64, (method,));
                             let first_error = Arc::new(OnceLock::new());
                             let chunk_counter = AtomicU64::new(0);
                             res.map_err(Into::into).map(move |(res, stream)| {
