@@ -5,8 +5,11 @@
  * GNU General Public License version 2.
  */
 
+use std::sync::atomic::AtomicBool;
+use std::sync::atomic::Ordering;
 use std::sync::Arc;
 
+use anyhow::bail;
 use anyhow::format_err;
 use anyhow::Result;
 use blobstore::Loadable;
@@ -23,6 +26,7 @@ use commit_graph::CommitGraphRef;
 use context::CoreContext;
 use context::SessionContainer;
 use edenapi_types::AnyFileContentId;
+use futures::channel::oneshot;
 use futures::stream;
 use futures::StreamExt;
 use futures::TryStreamExt;
@@ -48,11 +52,16 @@ use repo_identity::RepoIdentityRef;
 use slog::info;
 use slog::Logger;
 use stats::prelude::*;
+use tokio::sync::mpsc;
 use url::Url;
 
 use crate::bul_util;
 use crate::sender::dummy::DummySender;
 use crate::sender::edenapi::EdenapiSender;
+use crate::sender::manager::ChangesetMessage;
+use crate::sender::manager::ContentMessage;
+use crate::sender::manager::FileOrTreeMessage;
+use crate::sender::manager::SendManager;
 use crate::sender::ModernSyncSender;
 use crate::ModernSyncArgs;
 use crate::Repo;
@@ -126,7 +135,9 @@ pub async fn sync(
                 )
             })?
     };
+
     let app_args = app.args::<ModernSyncArgs>()?;
+
     let sender: Arc<dyn ModernSyncSender + Send + Sync> = if dry_run {
         Arc::new(DummySender::new(logger.clone()))
     } else {
@@ -156,6 +167,10 @@ pub async fn sync(
             .await?,
         )
     };
+    info!(logger, "Established EdenAPI connection");
+
+    let send_manager = SendManager::new(sender.clone(), logger.clone());
+    info!(logger, "Initialized channels");
 
     let mut scuba_sample = ctx.scuba().clone();
     scuba_sample.add("repo", repo_name);
@@ -170,7 +185,7 @@ pub async fn sync(
         repo.bookmark_update_log_arc(),
     )
     .then(|entries| {
-        cloned!(repo, logger, sender);
+        cloned!(repo, logger, sender, mut send_manager);
         borrowed!(ctx);
         async move {
             match entries {
@@ -183,33 +198,81 @@ pub async fn sync(
                 }
                 Ok(entries) => {
                     for entry in entries {
-                        let from = entry.from_changeset_id.into_iter().collect();
-                        let to = entry.to_changeset_id.into_iter().collect();
+                        let to_cs = entry
+                            .to_changeset_id
+                            .expect("bookmark update log entry should have a destination");
+                        let from_vec = entry.from_changeset_id.into_iter().collect();
+                        let to_vec: Vec<ChangesetId> = vec![to_cs];
                         let bookmark_name = entry.bookmark_name.name().to_string();
 
+                        let (cs_tx, mut cs_rx) = mpsc::channel::<Result<()>>(1);
+
+                        // We need this in case all commits are synced so no need to wait.
+                        let wait_for_commit = Arc::new(AtomicBool::new(false));
+
+                        info!(logger, "Calculating segments for entry {}", entry.id);
                         let commits = repo
                             .commit_graph()
-                            .ancestors_difference_segment_slices(ctx, to, from, chunk_size)
+                            .ancestors_difference_segment_slices(ctx, to_vec, from_vec, chunk_size)
                             .await?;
 
                         commits
                             .try_for_each(|chunk| {
-                                cloned!(ctx, repo, logger, sender, bookmark_name);
+                                cloned!(
+                                    ctx,
+                                    repo,
+                                    logger,
+                                    sender,
+                                    mut send_manager,
+                                    bookmark_name,
+                                    to_cs,
+                                    cs_tx,
+                                    wait_for_commit
+                                );
+
                                 async move {
+                                    let chunk_size = chunk.len();
                                     let missing_changesets =
                                         sender.filter_existing_commits(chunk).await?;
+
+                                    info!(
+                                        logger,
+                                        "Skipping {} commits, starting sync of {} commits ",
+                                        chunk_size - missing_changesets.len(),
+                                        missing_changesets.len()
+                                    );
+
                                     stream::iter(missing_changesets.into_iter().map(Ok))
                                         .try_for_each(|cs_id| {
-                                            cloned!(ctx, repo, logger, sender, bookmark_name);
+                                            cloned!(
+                                                ctx,
+                                                repo,
+                                                logger,
+                                                mut send_manager,
+                                                bookmark_name,
+                                                to_cs,
+                                                cs_tx,
+                                                wait_for_commit
+                                            );
+
+                                            // We work under the assumption that if the final commit is synced all the parents ones are synced as well.
+                                            let channel = if to_cs == cs_id {
+                                                wait_for_commit.store(true, Ordering::SeqCst);
+                                                Some(cs_tx)
+                                            } else {
+                                                None
+                                            };
+
                                             async move {
                                                 process_one_changeset(
                                                     &cs_id,
                                                     &ctx,
                                                     repo,
                                                     &logger,
-                                                    sender,
+                                                    &mut send_manager,
                                                     app_args.log_to_ods,
                                                     bookmark_name.as_str(),
+                                                    channel,
                                                 )
                                                 .await
                                             }
@@ -221,6 +284,21 @@ pub async fn sync(
                             .await?;
 
                         if app_args.update_counters {
+                            // Wait for the last commit to be synced
+                            if wait_for_commit.load(Ordering::SeqCst) {
+                                let res = cs_rx.recv().await;
+                                match res {
+                                    Some(Err(e)) => {
+                                        bail!(
+                                            "Error while waiting for commit to be synced {:?}",
+                                            e
+                                        );
+                                    }
+                                    None => bail!("No commit synced"),
+                                    _ => (),
+                                }
+                            }
+
                             repo.mutable_counters()
                                 .set_counter(ctx, MODERN_SYNC_COUNTER_NAME, entry.id.0 as i64, None)
                                 .await?;
@@ -262,12 +340,11 @@ pub async fn process_one_changeset(
     ctx: &CoreContext,
     repo: Repo,
     logger: &Logger,
-    sender: Arc<dyn ModernSyncSender + Send + Sync>,
+    send_manager: &mut SendManager,
     log_to_ods: bool,
     bookmark_name: &str,
+    changeset_ready: Option<mpsc::Sender<Result<()>>>,
 ) -> Result<()> {
-    info!(logger, "Processing changeset {:?}", cs_id);
-
     let cs_info = repo
         .repo_derived_data()
         .derive::<ChangesetInfo>(ctx, cs_id.clone())
@@ -276,8 +353,7 @@ pub async fn process_one_changeset(
     let commit_time = bs_cs.author_date().timestamp_secs();
     let bs_fc: Vec<_> = bs_cs.file_changes().collect();
 
-    let mut contents = Vec::new();
-
+    // Upload contents
     for (_path, file_change) in bs_fc {
         let cid = match file_change {
             FileChange::Change(change) => Some(change.content_id()),
@@ -287,10 +363,20 @@ pub async fn process_one_changeset(
 
         if let Some(cid) = cid {
             let blob = cid.load(ctx, &repo.repo_blobstore()).await?;
-            contents.push((AnyFileContentId::ContentId(cid.into()), blob));
+            send_manager
+                .send_content(ContentMessage::Content((
+                    AnyFileContentId::ContentId(cid.into()),
+                    blob,
+                )))
+                .await?;
         }
     }
-    sender.upload_contents(contents).await?;
+
+    // Notify contents for this changeset are ready
+    let (content_tx, content_rx) = oneshot::channel();
+    send_manager
+        .send_content(ContentMessage::ContentDone(content_tx))
+        .await?;
 
     let mut mf_ids_p = vec![];
 
@@ -310,11 +396,43 @@ pub async fn process_one_changeset(
         sort_manifest_changes(ctx, repo.repo_blobstore(), hg_mf_id, mf_ids_p).await?;
     mf_ids.push(hg_mf_id);
 
-    sender.upload_trees(mf_ids).await?;
-    sender.upload_filenodes(file_ids).await?;
-    sender
-        .upload_identical_changeset(vec![(hg_cs, bs_cs)])
+    // Send files and trees
+    send_manager
+        .send_file_or_tree(FileOrTreeMessage::WaitForContents(content_rx))
         .await?;
+
+    for mf_id in mf_ids {
+        send_manager
+            .send_file_or_tree(FileOrTreeMessage::Tree(mf_id))
+            .await?;
+    }
+
+    for file_id in file_ids {
+        send_manager
+            .send_file_or_tree(FileOrTreeMessage::FileNode(file_id))
+            .await?;
+    }
+
+    // Notify files and trees for this changeset are ready
+    let (ft_tx, ft_rx) = oneshot::channel();
+    send_manager
+        .send_file_or_tree(FileOrTreeMessage::FilesAndTreesDone(ft_tx))
+        .await?;
+
+    // Upload changeset
+    send_manager
+        .send_changeset(ChangesetMessage::WaitForFilesAndTrees(ft_rx))
+        .await?;
+    send_manager
+        .send_changeset(ChangesetMessage::Changeset((hg_cs, bs_cs)))
+        .await?;
+
+    // Notify changeset for this changeset is ready if someone requested it
+    if let Some(changeset_ready) = changeset_ready {
+        send_manager
+            .send_changeset(ChangesetMessage::ChangesetDone(changeset_ready))
+            .await?;
+    }
 
     if log_to_ods {
         STATS::synced_commits.add_value(1, (repo.repo_identity().name().to_string(),));

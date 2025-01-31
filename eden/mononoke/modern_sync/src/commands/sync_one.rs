@@ -7,6 +7,7 @@
 
 use std::sync::Arc;
 
+use anyhow::bail;
 use anyhow::format_err;
 use anyhow::Result;
 use clap::Parser;
@@ -18,10 +19,12 @@ use mononoke_app::MononokeApp;
 use mononoke_types::ChangesetId;
 use repo_blobstore::RepoBlobstoreRef;
 use repo_identity::RepoIdentityRef;
+use tokio::sync::mpsc;
 use url::Url;
 
 use crate::sender::dummy::DummySender;
 use crate::sender::edenapi::EdenapiSender;
+use crate::sender::manager::SendManager;
 use crate::sender::ModernSyncSender;
 use crate::ModernSyncArgs;
 use crate::Repo;
@@ -97,7 +100,29 @@ pub async fn run(app: MononokeApp, args: CommandArgs) -> Result<()> {
         )
     };
 
-    crate::sync::process_one_changeset(&args.cs_id, &ctx, repo, &logger, sender, false, "").await?;
+    let mut send_manager = SendManager::new(sender.clone(), logger.clone());
+    let (cr_s, mut cr_r) = mpsc::channel::<Result<()>>(1);
+
+    crate::sync::process_one_changeset(
+        &args.cs_id,
+        &ctx,
+        repo,
+        &logger,
+        &mut send_manager,
+        false,
+        "",
+        Some(cr_s),
+    )
+    .await?;
+
+    let res = cr_r.recv().await;
+    match res {
+        Some(Err(e)) => {
+            bail!("Error while waiting for commit to be synced {:?}", e);
+        }
+        None => bail!("No commit synced"),
+        _ => (),
+    }
 
     Ok(())
 }

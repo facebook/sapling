@@ -46,7 +46,6 @@ use url::Url;
 
 mod util;
 
-use crate::sender::Entry;
 use crate::sender::ModernSyncSender;
 
 const MAX_BLOB_BYTES: u64 = 100 * 1024 * 1024; // 100 MB
@@ -105,11 +104,6 @@ impl EdenapiSender {
 
 #[async_trait]
 impl ModernSyncSender for EdenapiSender {
-    async fn enqueue_entry(&self, _entry: Entry) -> Result<()> {
-        // TODO: implement using mpsc channels
-        Ok(())
-    }
-
     async fn upload_contents(&self, contents: Vec<(AnyFileContentId, FileContents)>) -> Result<()> {
         // Batch contents by size
         let mut batches = Vec::new();
@@ -155,10 +149,6 @@ impl ModernSyncSender for EdenapiSender {
                 expected_responses,
                 actual_responses
             );
-            info!(
-                &self.logger,
-                "Uploaded {:?} contents successfully", actual_responses
-            )
         }
 
         Ok(())
@@ -184,10 +174,6 @@ impl ModernSyncSender for EdenapiSender {
             expected_responses,
             actual_responses,
         );
-        info!(
-            &self.logger,
-            "Uploaded {:?} trees successfully", actual_responses
-        );
         Ok(())
     }
 
@@ -211,10 +197,6 @@ impl ModernSyncSender for EdenapiSender {
             expected_responses,
             actual_responses
         );
-        info!(
-            &self.logger,
-            "Uploaded {:?} filenodes successfully", actual_responses
-        );
         Ok(())
     }
 
@@ -236,7 +218,7 @@ impl ModernSyncSender for EdenapiSender {
                 ]),
             )
             .await?;
-        info!(&self.logger, "Move bookmark response {:?}", res);
+        info!(&self.logger, "Moved bookmark with result {:?}", res);
         Ok(())
     }
 
@@ -252,10 +234,11 @@ impl ModernSyncSender for EdenapiSender {
         let res = self.client.upload_identical_changesets(entries).await?;
         let responses = res.entries.try_collect::<Vec<_>>().await?;
         ensure!(!responses.is_empty(), "Not all changesets were uploaded");
-        info!(
-            &self.logger,
-            "Upload hg changeset response: {:?}", responses
-        );
+        let ids = responses
+            .iter()
+            .map(|r| r.token.data.id)
+            .collect::<Vec<_>>();
+        info!(&self.logger, "Uploaded changesets: {:?}", ids);
 
         Ok(())
     }
@@ -265,13 +248,8 @@ impl ModernSyncSender for EdenapiSender {
             .iter()
             .map(|csid| AnyId::BonsaiChangesetId(csid.clone().into()))
             .collect::<Vec<_>>();
-        let all = ids.len();
         let res = self.client.lookup_batch(ids, None, None).await?;
         let missing = get_missing_in_order(res, csids);
-        let present = all - missing.len();
-        if present > 0 {
-            info!(&self.logger, "Skipping {} commits", present);
-        }
         Ok(missing)
     }
 }

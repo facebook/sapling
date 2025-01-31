@@ -18,7 +18,6 @@ use mononoke_types::FileContents;
 use slog::info;
 use slog::Logger;
 
-use crate::sender::Entry;
 use crate::sender::ModernSyncSender;
 
 #[derive(Clone)]
@@ -34,19 +33,6 @@ impl DummySender {
 
 #[async_trait]
 impl ModernSyncSender for DummySender {
-    async fn enqueue_entry(&self, entry: Entry) -> Result<()> {
-        match entry {
-            Entry::Content(content_id, blob) => {
-                self.upload_contents(vec![(content_id, blob)]).await
-            }
-            Entry::Tree(tree_id) => self.upload_trees(vec![tree_id]).await,
-            Entry::FileNode(filenode_id) => self.upload_filenodes(vec![filenode_id]).await,
-            Entry::HgChangeset(hg_cs, bcs) => {
-                self.upload_identical_changeset(vec![(hg_cs, bcs)]).await
-            }
-        }
-    }
-
     async fn upload_contents(&self, contents: Vec<(AnyFileContentId, FileContents)>) -> Result<()> {
         for (content_id, _blob) in contents {
             info!(&self.logger, "Uploading content with id: {:?}", content_id);
