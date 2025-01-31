@@ -60,6 +60,8 @@ use git_types::MappedGitCommitId;
 use git_types::RootGitDeltaManifestV2Id;
 use git_types::TreeHandle;
 use itertools::Itertools;
+#[cfg(fbcode_build)]
+use lazy_static::lazy_static;
 use lock_ext::RwLockExt;
 use mercurial_derivation::MappedHgChangesetId;
 use mercurial_derivation::RootHgAugmentedManifestId;
@@ -80,10 +82,22 @@ use stats::prelude::*;
 use tokio::sync::Notify;
 use tokio::task::JoinHandle;
 use unodes::RootUnodeManifestId;
+#[cfg(fbcode_build)]
+use MononokeWarmBookmarkCacheStats_ods3::Instrument_MononokeWarmBookmarkCacheStats;
+#[cfg(fbcode_build)]
+use MononokeWarmBookmarkCacheStats_ods3_types::MononokeWarmBookmarkCacheStats;
+#[cfg(fbcode_build)]
+use MononokeWarmBookmarkCacheStats_ods3_types::WarmBookmarkCacheEvent;
 
 mod warmers;
 pub use warmers::create_derived_data_warmer;
 pub use warmers::create_public_phase_warmer;
+
+#[cfg(fbcode_build)]
+lazy_static! {
+    static ref WBC_INSTRUMENT: Instrument_MononokeWarmBookmarkCacheStats =
+        Instrument_MononokeWarmBookmarkCacheStats::new();
+}
 
 define_stats! {
     prefix = "mononoke.warm_bookmarks_cache";
@@ -876,6 +890,11 @@ impl BookmarksCoordinator {
                         .await;
                         if let Err(ref err) = res {
                             STATS::bookmark_update_failures.add_value(1);
+                            #[cfg(fbcode_build)]
+                            WBC_INSTRUMENT.observe(MononokeWarmBookmarkCacheStats {
+                                event: Some(WarmBookmarkCacheEvent::UpdateFailure),
+                                ..Default::default()
+                            });
                             warn!(ctx.logger(), "update of {} failed: {:?}", book.key(), err);
                         };
 
@@ -915,6 +934,11 @@ impl BookmarksCoordinator {
 
                     if let Err(err) = res.as_ref() {
                         STATS::bookmark_discover_failures.add_value(1);
+                        #[cfg(fbcode_build)]
+                        WBC_INSTRUMENT.observe(MononokeWarmBookmarkCacheStats {
+                            event: Some(WarmBookmarkCacheEvent::DiscoverFailure),
+                            ..Default::default()
+                        });
                         warn!(ctx.logger(), "failed to update bookmarks {:?}", err);
                     }
 
@@ -1010,6 +1034,12 @@ fn report_delay_and_remove_finished_updaters(
     });
 
     STATS::max_staleness_secs.set_value(ctx.fb, max_staleness, (reponame.to_owned(),));
+    #[cfg(fbcode_build)]
+    WBC_INSTRUMENT.observe(MononokeWarmBookmarkCacheStats {
+        repo: Some(reponame.to_owned()),
+        max_staleness_secs: Some(max_staleness as f64),
+        ..Default::default()
+    });
 }
 
 #[derive(Clone)]
