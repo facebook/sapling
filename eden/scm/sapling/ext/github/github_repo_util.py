@@ -174,6 +174,7 @@ def parse_github_repo_from_github_url(url: str) -> Optional[GitHubRepo]:
     git@github.com:bolinfest/escoria-demo-game.git
     git+ssh://git@github.com:bolinfest/escoria-demo-game.git
     ssh://git@github.com/bolinfest/escoria-demo-game.git
+    ssh://org-1234567@github.com/bolinfest/escoria-demo-game.git
 
     and returns:
 
@@ -197,8 +198,10 @@ def parse_github_repo_from_github_url(url: str) -> Optional[GitHubRepo]:
     'https://foo.bar.com/bolinfest/escoria-demo-game'
     >>> parse_github_repo_from_github_url("git+ssh://git@foo.bar.com:bolinfest/escoria-demo-game.git").to_url()
     'https://foo.bar.com/bolinfest/escoria-demo-game'
+    >>> parse_github_repo_from_github_url("ssh://someorg@github.com/bolinfest/escoria-demo-game.git").to_url()
+    'https://github.com/bolinfest/escoria-demo-game'
     """
-    pattern = r"(?:https://([^/]+)|(?:git\+ssh://|ssh://)?git@([^:/]+))[:/]([^/]+)\/(.+?)(?:\.git)?$"
+    pattern = r"(?:https://([^/]+)|(?:git\+ssh://|ssh://)?[^@]+@([^:/]+))[:/]([^/]+)\/(.+?)(?:\.git)?$"
     match = re.match(pattern, url)
     if match:
         hostname1, hostname2, owner, repo = match.groups()
