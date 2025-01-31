@@ -16,7 +16,6 @@ use bytes::Bytes;
 use connection_security_checker::ConnectionSecurityChecker;
 use context::LoggingContainer;
 use context::SessionContainer;
-use context::SessionId;
 use fbinit::FacebookInit;
 use futures::channel::mpsc;
 use futures::future::TryFutureExt;
