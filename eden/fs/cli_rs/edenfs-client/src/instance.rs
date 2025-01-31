@@ -13,7 +13,6 @@ use std::collections::BTreeMap;
 use std::fs::remove_file;
 use std::path::Path;
 use std::path::PathBuf;
-use std::sync::Arc;
 use std::sync::OnceLock;
 use std::time::Duration;
 use std::time::Instant;
@@ -32,9 +31,11 @@ use edenfs_utils::strip_unc_prefix;
 #[cfg(fbcode_build)]
 use fbinit::expect_init;
 use fbthrift_socket::SocketTransport;
+use futures::stream::BoxStream;
 use futures::StreamExt;
 #[cfg(fbcode_build)]
 use thrift_streaming_clients::errors::StreamStartStatusError;
+use thrift_streaming_clients::errors::SubscribeStreamTemporaryError;
 #[cfg(fbcode_build)]
 use thrift_streaming_thriftclients::build_StreamingEdenService_client;
 #[cfg(fbcode_build)]
@@ -59,6 +60,8 @@ use tracing::event;
 use tracing::Level;
 use util::lock::PathLock;
 
+use crate::types::ChangesSinceV2Result;
+use crate::types::JournalPosition;
 use crate::utils::get_mount_point;
 use crate::EdenFsClient;
 #[cfg(fbcode_build)]
@@ -327,23 +330,43 @@ impl EdenFsInstance {
             .from_err()
     }
 
-    pub async fn subscribe(
+    pub async fn stream_journal_changed(
         &self,
-        mount_point: &Vec<u8>,
-        throttle_time_ms: u64,
-        guard_time_s: u64,
-        notify: Arc<tokio::sync::Notify>,
-    ) -> Result<(), anyhow::Error> {
+        mount_point: &Option<PathBuf>,
+    ) -> Result<
+        BoxStream<
+            'static,
+            Result<thrift_types::edenfs::JournalPosition, SubscribeStreamTemporaryError>,
+        >,
+        EdenFsError,
+    > {
+        let mount_point_vec = bytes_from_path(get_mount_point(mount_point)?)?;
         let stream_client = self
             .connect_streaming(None)
             .await
             .with_context(|| anyhow!("unable to establish Thrift connection to EdenFS server"))?;
 
-        // TODO: feels weird that this method accepts a `&Vec<u8>` instead of a `&[u8]`.
-        let mut subscription = stream_client.streamJournalChanged(mount_point).await?;
-        let mount_point_string =
-            String::from_utf8(mount_point.to_vec()).expect("Found invalid UTF-8");
-        tracing::info!(?mount_point_string, "subscription created");
+        stream_client
+            .streamJournalChanged(&mount_point_vec)
+            .await
+            .from_err()
+    }
+
+    pub async fn subscribe(
+        &self,
+        mount_point: &Option<PathBuf>,
+        throttle_time_ms: u64,
+        guard_time_s: u64,
+        position: Option<JournalPosition>,
+        include_vcs_roots: bool,
+        included_roots: &Option<Vec<PathBuf>>,
+        excluded_roots: &Option<Vec<PathBuf>>,
+        included_suffixes: &Option<Vec<String>>,
+        excluded_suffixes: &Option<Vec<String>>,
+        handle_results: impl Fn(&ChangesSinceV2Result) -> Result<(), EdenFsError>,
+    ) -> Result<(), anyhow::Error> {
+        let mut position = position.unwrap_or(self.get_journal_position(mount_point, None).await?);
+        let mut subscription = self.stream_journal_changed(mount_point).await?;
 
         let mut last = Instant::now();
         let throttle = Duration::from_millis(throttle_time_ms);
@@ -382,7 +405,27 @@ impl EdenFsInstance {
                 else => break,
             }
 
-            notify.notify_one();
+            let result = self
+                .get_changes_since(
+                    mount_point,
+                    &position,
+                    include_vcs_roots,
+                    included_roots,
+                    excluded_roots,
+                    included_suffixes,
+                    excluded_suffixes,
+                    None,
+                )
+                .await
+                .map_err(anyhow::Error::msg)?;
+
+            if !result.changes.is_empty() {
+                // Error in handle results will terminate the loop
+                handle_results(&result)?;
+            }
+
+            position = result.to_position;
+
             last = Instant::now();
         }
 

@@ -7,26 +7,19 @@
 
 //! edenfsctl debug subscribe
 
-#[cfg(unix)]
-use std::ffi::OsStr;
-#[cfg(unix)]
-use std::os::unix::ffi::OsStringExt;
-#[cfg(unix)]
-use std::path::Path;
 use std::path::PathBuf;
-use std::sync::Arc;
 
 use anyhow::Result;
 use async_trait::async_trait;
 use clap::Parser;
+use edenfs_client::types::ChangesSinceV2Result;
 use edenfs_client::types::JournalPosition;
 use edenfs_client::utils::get_mount_point;
 use edenfs_client::EdenFsInstance;
+use edenfs_error::EdenFsError;
 use hg_util::path::expand_path;
 use serde::Serialize;
-use thrift_types::edenfs as edenfs_thrift;
 use tokio::io::AsyncWriteExt;
-use tokio::sync::Notify;
 
 use crate::util::jsonrpc::ResponseBuilder;
 use crate::ExitCode;
@@ -36,6 +29,7 @@ mod fmt {
     use std::fmt;
     use std::fmt::Debug;
 
+    use edenfs_client::types::ChangesSinceV2Result;
     use thrift_types::edenfs as edenfs_thrift;
 
     /// Courtesy of https://users.rust-lang.org/t/reusing-an-fmt-formatter/8531/4
@@ -59,54 +53,32 @@ mod fmt {
         Fmt(move |f| write!(f, "{}", hex::encode(hash)))
     }
 
-    fn debug_position(position: &edenfs_thrift::JournalPosition) -> impl Debug + '_ {
+    fn debug_position(position: &edenfs_client::types::JournalPosition) -> impl Debug + '_ {
         Fmt(|f| {
             f.debug_struct("JournalPosition")
-                .field("mountGeneration", &position.mountGeneration)
-                .field("sequenceNumber", &position.sequenceNumber)
-                .field("snapshotHash", &debug_hash(&position.snapshotHash))
+                .field("mountGeneration", &position.mount_generation)
+                .field("sequenceNumber", &position.sequence_number)
+                .field("snapshotHash", &debug_hash(&position.snapshot_hash))
                 .finish()
         })
     }
 
-    fn debug_path(path: &edenfs_thrift::PathString) -> impl Debug + '_ {
-        Fmt(|f| write!(f, "{}", String::from_utf8_lossy(path)))
+    pub fn debug_change_notification(
+        notification: &edenfs_client::types::ChangeNotification,
+    ) -> impl Debug + '_ {
+        let notification_str = notification.to_string();
+        Fmt(move |f| write!(f, "{}", notification_str))
     }
 
-    pub fn debug_file_delta(delta: &edenfs_thrift::FileDelta) -> impl Debug + '_ {
+    pub fn debug_changes_since_result(result: &ChangesSinceV2Result) -> impl Debug + '_ {
         Fmt(|f| {
-            f.debug_struct("FileDelta")
-                .field("fromPosition", &debug_position(&delta.fromPosition))
-                .field("toPosition", &debug_position(&delta.toPosition))
+            f.debug_struct("ChangesSinceV2Result")
+                .field("toPosition", &debug_position(&result.to_position))
                 .field(
-                    "changedPaths",
+                    "changes",
                     &Fmt(|f| {
                         f.debug_list()
-                            .entries(delta.changedPaths.iter().map(debug_path))
-                            .finish()
-                    }),
-                )
-                .field(
-                    "createdPaths",
-                    &Fmt(|f| {
-                        f.debug_list()
-                            .entries(delta.createdPaths.iter().map(debug_path))
-                            .finish()
-                    }),
-                )
-                .field(
-                    "uncleanPaths",
-                    &Fmt(|f| {
-                        f.debug_list()
-                            .entries(delta.uncleanPaths.iter().map(debug_path))
-                            .finish()
-                    }),
-                )
-                .field(
-                    "snapshotTransitions",
-                    &Fmt(|f| {
-                        f.debug_list()
-                            .entries(delta.uncleanPaths.iter().map(debug_hash))
+                            .entries(result.changes.iter().map(debug_change_notification))
                             .finish()
                     }),
                 )
@@ -149,100 +121,28 @@ pub struct SubscribeCmd {
     guard: u64,
 }
 
-fn have_non_hg_changes(changes: &[edenfs_thrift::PathString]) -> bool {
-    changes.iter().any(|f| !f.starts_with(b".hg"))
-}
+fn handle_result(result: &ChangesSinceV2Result) -> Result<(), EdenFsError> {
+    tracing::debug!(changes = ?fmt::debug_changes_since_result(result));
 
-fn decide_should_notify(changes: edenfs_thrift::FileDelta) -> bool {
-    // If the commit hash has changed, report them
-    if changes.fromPosition.snapshotHash != changes.toPosition.snapshotHash {
-        return true;
-    }
-    // If we see any non-Mercurial changes, report them
-    if have_non_hg_changes(&changes.createdPaths) {
-        return true;
-    }
-    if have_non_hg_changes(&changes.removedPaths) {
-        return true;
-    }
-    if have_non_hg_changes(&changes.uncleanPaths) {
-        return true;
-    }
-    if have_non_hg_changes(&changes.changedPaths) {
-        return true;
-    }
-    // Otherwise, do not notify
-    false
-}
+    let response =
+        match serde_json::to_value(SubscribeResponse::from(result.to_position.clone())) {
+            Err(e) => ResponseBuilder::error(&format!(
+                "error while serializing subscription response: {e:?}",
+            )),
+            Ok(serialized) => ResponseBuilder::result(serialized),
+        }
+        .build();
 
-impl SubscribeCmd {
-    async fn _make_notify_event(
-        mount_point: &Vec<u8>,
-        mount_point_path: &Option<PathBuf>,
-        last_position: &mut Option<edenfs_client::types::JournalPosition>,
-    ) -> Option<ResponseBuilder> {
-        let instance = EdenFsInstance::global();
-
-        let journal = match instance.get_journal_position(mount_point_path, None).await {
-            Ok(journal) => journal,
-            Err(e) => {
-                return Some(ResponseBuilder::error(&format!(
-                    "error while getting current journal position: {e:?}",
-                )));
-            }
-        };
-
-        let client = match instance.connect(None).await {
-            Ok(client) => client,
-            Err(e) => {
-                return Some(ResponseBuilder::error(&format!(
-                    "error while establishing connection to EdenFS server {e:?}"
-                )));
-            }
-        };
-
-        let should_notify = if let Some(last_position) = last_position.replace(journal.clone()) {
-            if last_position.sequence_number == journal.sequence_number {
-                tracing::trace!(
-                    ?journal,
-                    ?last_position,
-                    "skipping this event since sequence number matches"
-                );
-                return None;
-            }
-
-            let changes = client
-                .getFilesChangedSince(mount_point, &last_position.into())
-                .await;
-
-            match changes {
-                Ok(changes) => {
-                    tracing::debug!(delta = ?fmt::debug_file_delta(&changes));
-                    decide_should_notify(changes)
-                }
-                Err(e) => {
-                    return Some(ResponseBuilder::error(&format!(
-                        "error while querying changed files {:?}",
-                        e
-                    )));
-                }
-            }
-        } else {
-            false
-        };
-
-        if should_notify {
-            let result = match serde_json::to_value(SubscribeResponse::from(journal)) {
-                Err(e) => ResponseBuilder::error(&format!(
-                    "error while serializing subscription response: {e:?}",
-                )),
-                Ok(serialized) => ResponseBuilder::result(serialized),
-            };
-            Some(result)
-        } else {
-            None
+    match serde_json::to_string(&response) {
+        Ok(string) => {
+            println!("{}", string);
+        }
+        Err(e) => {
+            tracing::error!(?e, ?response, "unable to seralize response to JSON");
         }
     }
+
+    Ok(())
 }
 
 #[async_trait]
@@ -258,72 +158,30 @@ impl crate::Subcommand for SubscribeCmd {
         let instance = EdenFsInstance::global();
 
         let mount_point_path = get_mount_point(&self.mount_point)?;
-        #[cfg(unix)]
-        let mount_point = <Path as AsRef<OsStr>>::as_ref(&mount_point_path)
-            .to_os_string()
-            .into_vec();
-        // SAFETY: paths on Windows are Unicode
-        #[cfg(windows)]
-        let mount_point = mount_point_path.to_string_lossy().into_owned().into_bytes();
 
-        let notify = Arc::new(Notify::new());
+        let mut stdout = tokio::io::stdout();
 
-        tokio::task::spawn({
-            let notify = notify.clone();
-            let mount_point = mount_point.clone();
-            let mount_point_path = mount_point_path.to_path_buf();
-
-            async move {
-                let mut stdout = tokio::io::stdout();
-
-                {
-                    let response = ResponseBuilder::result(serde_json::json!({
-                        "message": format!("subscribed to {}", mount_point_path.display())
-                    }))
-                    .build();
-                    let mut bytes = serde_json::to_vec(&response).unwrap();
-                    bytes.push(b'\n');
-                    stdout.write_all(&bytes).await.ok();
-                }
-
-                let mount_point_path_opt = Some(mount_point_path);
-
-                let mut last_position = match instance
-                    .get_journal_position(&mount_point_path_opt, None)
-                    .await
-                {
-                    Ok(journal) => Some(journal),
-                    Err(_) => None,
-                };
-
-                loop {
-                    notify.notified().await;
-                    let response = match Self::_make_notify_event(
-                        &mount_point,
-                        &mount_point_path_opt,
-                        &mut last_position,
-                    )
-                    .await
-                    {
-                        None => continue,
-                        Some(response) => response.build(),
-                    };
-
-                    match serde_json::to_vec(&response) {
-                        Ok(mut bytes) => {
-                            bytes.push(b'\n');
-                            stdout.write_all(&bytes).await.ok();
-                        }
-                        Err(e) => {
-                            tracing::error!(?e, ?response, "unable to seralize response to JSON");
-                        }
-                    }
-                }
-            }
-        });
+        let response = ResponseBuilder::result(serde_json::json!({
+            "message": format!("subscribed to {}", mount_point_path.display())
+        }))
+        .build();
+        let mut bytes = serde_json::to_vec(&response).unwrap();
+        bytes.push(b'\n');
+        stdout.write_all(&bytes).await.ok();
 
         instance
-            .subscribe(&mount_point, self.throttle, self.guard, notify)
+            .subscribe(
+                &self.mount_point,
+                self.throttle,
+                self.guard,
+                None,
+                false,
+                &None,
+                &None,
+                &None,
+                &None,
+                handle_result,
+            )
             .await?;
 
         Ok(0)
