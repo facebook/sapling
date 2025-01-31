@@ -69,7 +69,6 @@ stringutf8io = io.StringIO
 maplist = lambda *args: list(map(*args))
 ziplist = lambda *args: list(zip(*args))
 rawinput = input
-range = range
 
 stdin = sys.stdin.buffer
 stdout = sys.stdout.buffer

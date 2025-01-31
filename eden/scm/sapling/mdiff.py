@@ -23,7 +23,7 @@ import bindings
 
 from . import error, util
 from .i18n import _
-from .pycompat import encodeutf8, range
+from .pycompat import encodeutf8
 
 bdiff = bindings.cext.bdiff
 mpatch = bindings.cext.mpatch

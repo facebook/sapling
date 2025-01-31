@@ -56,13 +56,10 @@ Uses:
 from __future__ import absolute_import
 
 import base64
-
 from typing import List, Tuple
 
 from . import util
 from .node import nullrev
-from .pycompat import range
-
 
 _size = 448  # 70 chars b85-encoded
 _bytes: float = _size / 8

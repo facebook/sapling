@@ -24,7 +24,6 @@ from typing import (
 from sapling import perftrace, progress, pycompat
 from sapling.i18n import _
 from sapling.node import hex, nullid
-from sapling.pycompat import range
 
 from . import constants
 from .mutablestores import mutabledatastore, mutablehistorystore

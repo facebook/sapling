@@ -71,11 +71,6 @@ shelvefileextensions = ["hg", "patch", "oshelve"]
 # universal extension is present in all types of shelves
 patchextension = "patch"
 
-try:
-    range
-except NameError:
-    range = range
-
 
 class shelvedfile:
     """Helper for the file storing a single shelve

@@ -27,8 +27,6 @@ from . import (
     url,
     util,
 )
-from .pycompat import range
-
 
 urlerr = util.urlerr
 urlreq = util.urlreq

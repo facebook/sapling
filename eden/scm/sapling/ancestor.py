@@ -16,7 +16,6 @@ import collections
 import heapq
 
 from .node import nullrev
-from .pycompat import range
 
 
 def commonancestorsheads(pfunc, *nodes):

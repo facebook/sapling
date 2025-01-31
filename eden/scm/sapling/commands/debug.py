@@ -81,7 +81,7 @@ from .. import (
 )
 from ..i18n import _, _n, _x
 from ..node import bin, hex, nullid, nullrev, short
-from ..pycompat import decodeutf8, range
+from ..pycompat import decodeutf8
 from . import migratesymlinks
 from .cmdtable import command
 

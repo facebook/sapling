@@ -38,7 +38,7 @@ from . import (
 )
 from .i18n import _
 from .node import bbin, bin, hex, nullid
-from .pycompat import decodeutf8, range
+from .pycompat import decodeutf8
 
 urlerr = util.urlerr
 urlreq = util.urlreq

@@ -71,7 +71,7 @@ from .. import (
 )
 from ..i18n import _
 from ..node import bin, hex, nullid, short
-from ..pycompat import isint, range
+from ..pycompat import isint
 from ..utils import subtreeutil
 from . import cmdtable
 

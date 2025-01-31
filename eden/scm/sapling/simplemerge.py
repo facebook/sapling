@@ -33,7 +33,6 @@ from bindings import clientinfo
 
 from . import error, match, mdiff, pycompat, util
 from .i18n import _
-from .pycompat import range
 
 _DEFAULT_CACHE_SIZE = 10000
 _automerge_cache = util.lrucachedict(_DEFAULT_CACHE_SIZE)

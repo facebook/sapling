@@ -13,8 +13,6 @@ import time
 
 from sapling import pycompat, util
 from sapling.i18n import _
-from sapling.pycompat import range
-
 
 # The amount of time to wait between checking for new packs. This prevents an
 # exception when data is moved to a new pack after the process has already

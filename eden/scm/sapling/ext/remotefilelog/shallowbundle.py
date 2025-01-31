@@ -21,7 +21,6 @@ from sapling import (
 )
 from sapling.i18n import _
 from sapling.node import bin, hex, nullid
-from sapling.pycompat import range
 
 from . import remotefilelog, shallowutil
 

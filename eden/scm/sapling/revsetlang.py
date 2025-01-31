@@ -16,7 +16,6 @@ import string
 
 from . import error, node, parser, pycompat, util
 from .i18n import _
-from .pycompat import range
 
 elements = {
     # token-type: binding-strength, primary, prefix, infix, suffix

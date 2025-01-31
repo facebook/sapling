@@ -17,7 +17,7 @@ from typing import Any, Iterable, Optional, Set, Tuple
 
 from . import error, phases, progress, store, util
 from .i18n import _
-from .pycompat import decodeutf8, encodeutf8, range
+from .pycompat import decodeutf8, encodeutf8
 
 
 def canperformstreamclone(

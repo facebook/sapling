@@ -30,7 +30,6 @@ import sys
 
 from . import encoding, identity, url, util
 from .i18n import _
-from .pycompat import range
 
 
 def section(s):

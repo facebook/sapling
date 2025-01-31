@@ -70,8 +70,7 @@ from sapling import (
 )
 from sapling.i18n import _
 from sapling.node import bin, hex, nullid, nullrev
-from sapling.pycompat import decodeutf8, encodeutf8, queue, range
-
+from sapling.pycompat import decodeutf8, encodeutf8, queue
 
 wrapcommand = extensions.wrapcommand
 wrapfunction = extensions.wrapfunction

@@ -27,10 +27,8 @@ from sapling import (
 from sapling.extensions import wrapfunction
 from sapling.i18n import _
 from sapling.node import bin, hex, nullid
-from sapling.pycompat import range
 
 from . import constants, lz4wrapper, shallowrepo, shallowutil, wirepack
-
 
 try:
     from sapling import streamclone

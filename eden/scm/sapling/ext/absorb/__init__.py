@@ -27,7 +27,6 @@ amend modified chunks into the corresponding non-public changesets.
 from __future__ import absolute_import
 
 import bisect
-
 import collections
 
 import bindings
@@ -51,8 +50,7 @@ from sapling import (
     util,
 )
 from sapling.i18n import _, _n
-from sapling.pycompat import decodeutf8, encodeutf8, range
-
+from sapling.pycompat import decodeutf8, encodeutf8
 
 testedwith = "ships-with-fb-ext"
 

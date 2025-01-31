@@ -93,7 +93,6 @@ from sapling import (
 from sapling.commands import debug as debugcommands
 from sapling.i18n import _
 from sapling.node import bin, hex, nullid, short
-from sapling.pycompat import range
 
 from ..remotefilelog import (
     cmdtable as remotefilelogcmdtable,

@@ -17,7 +17,6 @@ import tempfile
 
 from . import chgserver, commandserver, error, pycompat, util
 from .i18n import _
-from .pycompat import range
 
 
 def runservice(

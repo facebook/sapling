@@ -31,7 +31,6 @@ from typing import List, Optional
 
 from sapling import cmdutil, destutil, error, node, registrar, scmutil, util
 from sapling.i18n import _
-from sapling.pycompat import range
 
 from . import histedit
 

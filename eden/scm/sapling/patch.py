@@ -14,7 +14,6 @@
 from __future__ import absolute_import, print_function
 
 import base64
-
 import collections
 import copy
 import email
@@ -45,8 +44,7 @@ from . import (
 )
 from .i18n import _
 from .node import hex, short
-from .pycompat import decodeutf8, encodeutf8, range
-
+from .pycompat import decodeutf8, encodeutf8
 
 stringio = util.stringio
 

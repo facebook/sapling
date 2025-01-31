@@ -21,8 +21,6 @@ import bindings
 
 from . import error, pycompat
 from .pure import charencode as charencodepure
-from .pycompat import range
-
 
 charencode = bindings.cext.parsers
 

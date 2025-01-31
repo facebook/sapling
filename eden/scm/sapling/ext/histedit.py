@@ -261,7 +261,6 @@ from sapling import (
     visibility,
 )
 from sapling.i18n import _
-from sapling.pycompat import range
 
 # pyre-fixme[11]: Annotation `pickle` is not defined as a type.
 pickle = util.pickle

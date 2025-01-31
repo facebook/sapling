@@ -116,8 +116,7 @@ from sapling.util import sortdict
 from . import error, perftrace, pycompat, smartset, txnutil, util, visibility
 from .i18n import _
 from .node import bbin, bin, hex, nullid, nullrev, short
-from .pycompat import encodeutf8, range
-
+from .pycompat import encodeutf8
 
 _fphasesentry = struct.Struct(">i20s")
 

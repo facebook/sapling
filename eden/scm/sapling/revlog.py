@@ -33,7 +33,6 @@ from .i18n import _
 
 # import stuff from node for others to import from revlog
 from .node import bbin, bhex, nullid, nullrev, wdirid, wdirrev
-from .pycompat import range
 
 parsers = bindings.cext.parsers
 

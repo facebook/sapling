@@ -15,8 +15,6 @@ from __future__ import absolute_import
 import heapq
 
 from . import error, mdiff, node, patch, smartset
-from .pycompat import range
-
 
 baseset = smartset.baseset
 generatorset = smartset.generatorset

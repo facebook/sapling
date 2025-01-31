@@ -66,7 +66,7 @@ from . import (
 )
 from .i18n import _, _x
 from .node import hex, nullid, nullrev, short
-from .pycompat import ensureunicode, range
+from .pycompat import ensureunicode
 from .utils import subtreeutil
 
 if typing.TYPE_CHECKING:

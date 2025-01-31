@@ -20,7 +20,6 @@ from bindings import vlq
 
 from . import error, pycompat, util
 from .i18n import _
-from .pycompat import range
 
 
 def parsedag(desc):

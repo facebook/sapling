@@ -54,7 +54,6 @@ from sapling import (
     util,
 )
 from sapling.i18n import _
-from sapling.pycompat import range
 
 if not pycompat.iswindows:
     from . import interactiveui

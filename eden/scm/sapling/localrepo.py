@@ -74,7 +74,6 @@ from . import (
 )
 from .i18n import _, _n
 from .node import bin, hex, nullhex, nullid
-from .pycompat import range
 from .utils import subtreeutil
 
 release = lockmod.release
