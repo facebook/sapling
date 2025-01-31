@@ -288,11 +288,10 @@ impl Client {
 
     /// Add configured values to a request.
     fn configure_request(&self, mut req: Request) -> Result<Request, SaplingRemoteApiError> {
-        // This method should probably not exist. Request
-        // configuration should flow through a shared config (i.e.
-        // http_client::Config) that is applied by the HttpClient.
-        // This way, every use of HttpClient does not its own http
-        // config and glue code to apply the config to the request.
+        // This method should probably not exist. Request configuration should flow
+        // through a shared config (i.e. http_client::Config) that is applied by the
+        // HttpClient. This way, every use of HttpClient does not need its own http config
+        // and glue code to apply the config to the request.
 
         let config = self.config();
 
@@ -652,8 +651,7 @@ impl Client {
             }
         }
 
-        let msg = format!("Requesting upload for {}", url);
-        tracing::info!("{}", &msg);
+        tracing::info!("Requesting upload for {url}");
 
         self.fetch_single::<UploadToken>({
             self.configure_request(self.inner.client.put(url.clone()))?
@@ -1755,11 +1753,10 @@ impl SaplingRemoteApi for Client {
             }
         }
 
-        let msg = format!(
+        tracing::info!(
             "Received {} token(s) from the lookup_batch request",
             uploaded_tokens.len()
         );
-        tracing::info!("{}", &msg);
 
         // Upload the rest of the contents in parallel
         let new_tokens = stream::iter(
@@ -1782,11 +1779,10 @@ impl SaplingRemoteApi for Client {
         .collect::<Vec<_>>()
         .await;
 
-        let msg = format!(
+        tracing::info!(
             "Received {} new token(s) from upload requests",
             new_tokens.iter().filter(|x| x.is_ok()).count()
         );
-        tracing::info!("{}", &msg);
 
         // Merge all the tokens together
         let all_tokens = new_tokens
