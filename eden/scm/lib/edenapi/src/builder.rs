@@ -138,6 +138,7 @@ pub struct HttpClientBuilder {
     min_batch_size: Option<usize>,
     timeout: Option<Duration>,
     connect_timeout: Option<Duration>,
+    handler_timeouts: HashMap<String, Duration>,
     debug: bool,
     http_version: Option<HttpVersion>,
     log_dir: Option<PathBuf>,
@@ -217,8 +218,21 @@ impl HttpClientBuilder {
         let max_commit_translate_id_per_batch =
             get_config(config, "edenapi", "maxcommittranslateid")?;
 
-        let timeout = get_config(config, "edenapi", "timeout")?.map(Duration::from_secs);
+        let timeout: Option<Duration> = get_config(config, "edenapi", "timeout")?;
         let connect_timeout: Option<Duration> = get_config(config, "edenapi", "connect-timeout")?;
+
+        let handler_timeouts: HashMap<String, Duration> = config
+            .keys_prefixed("edenapi", "timeout.")
+            .into_iter()
+            .filter_map(
+                |key| match get_config::<Duration>(config, "edenapi", &key) {
+                    Err(err) => Some(Err(err)),
+                    Ok(Some(value)) => Some(Ok((key.strip_prefix("timeout.")?.to_string(), value))),
+                    Ok(None) => None,
+                },
+            )
+            .collect::<Result<_, _>>()?;
+
         let debug = get_config(config, "edenapi", "debug")?.unwrap_or_default();
         let http_version =
             get_config(config, "edenapi", "http-version")?.unwrap_or_else(|| "2".to_string());
@@ -271,6 +285,7 @@ impl HttpClientBuilder {
             min_batch_size,
             timeout,
             connect_timeout,
+            handler_timeouts,
             debug,
             http_version,
             log_dir,
@@ -439,6 +454,7 @@ pub(crate) struct Config {
     pub(crate) min_batch_size: Option<usize>,
     pub(crate) connect_timeout: Option<Duration>,
     pub(crate) timeout: Option<Duration>,
+    pub(crate) handler_timeouts: HashMap<String, Duration>,
     #[allow(dead_code)]
     pub(crate) debug: bool,
     pub(crate) http_version: Option<HttpVersion>,
@@ -468,6 +484,7 @@ impl TryFrom<HttpClientBuilder> for Config {
             min_batch_size,
             connect_timeout,
             timeout,
+            handler_timeouts,
             debug,
             http_version,
             log_dir,
@@ -508,6 +525,7 @@ impl TryFrom<HttpClientBuilder> for Config {
             min_batch_size,
             connect_timeout,
             timeout,
+            handler_timeouts,
             debug,
             http_version,
             log_dir,

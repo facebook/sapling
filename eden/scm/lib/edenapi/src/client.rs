@@ -165,6 +165,7 @@ mod paths {
     pub const BLAME: &str = "blame";
     pub const BOOKMARKS: &str = "bookmarks";
     pub const BOOKMARKS2: &str = "bookmarks2";
+    pub const CAPABILITIES: &str = "capabilities";
     pub const CLOUD_HISTORICAL_VERSIONS: &str = "cloud/historical_versions";
     pub const CLOUD_REFERENCES: &str = "cloud/references";
     pub const CLOUD_RENAME_WORKSPACE: &str = "cloud/rename_workspace";
@@ -295,14 +296,18 @@ impl Client {
     {
         let url = self.build_url(path)?;
         let request = self
-            .configure_request(self.inner.client.post(url))?
+            .configure_request(path, self.inner.client.post(url))?
             .cbor(&data.to_wire())
             .map_err(SaplingRemoteApiError::RequestSerializationFailed)?;
         self.fetch_single(request).await
     }
 
     /// Add configured values to a request.
-    fn configure_request(&self, mut req: Request) -> Result<Request, SaplingRemoteApiError> {
+    fn configure_request(
+        &self,
+        base_path: &str,
+        mut req: Request,
+    ) -> Result<Request, SaplingRemoteApiError> {
         // This method should probably not exist. Request configuration should flow
         // through a shared config (i.e. http_client::Config) that is applied by the
         // HttpClient. This way, every use of HttpClient does not need its own http config
@@ -314,7 +319,14 @@ impl Client {
             req.set_header(k, v);
         }
 
-        if let Some(timeout) = config.timeout {
+        let base_path = base_path.trim_matches('/');
+
+        // Prefer per-handler timeout, falling back to generic timeout.
+        if let Some(timeout) = config.handler_timeouts.get(base_path) {
+            tracing::trace!(?timeout, path = base_path, "using per-handler timeout");
+            req.set_timeout(*timeout);
+        } else if let Some(timeout) = config.timeout {
+            tracing::trace!(?timeout, path = base_path, "using generic timeout");
             req.set_timeout(timeout);
         }
 
@@ -368,7 +380,7 @@ impl Client {
             .map(|keys| {
                 let url = mutate_url(&url, &keys);
                 let req = make_req(keys).to_wire();
-                self.configure_request(self.inner.client.post(url))?
+                self.configure_request(base_path, self.inner.client.post(url))?
                     .cbor(&req)
                     .map_err(SaplingRemoteApiError::RequestSerializationFailed)
             })
@@ -670,7 +682,7 @@ impl Client {
         tracing::info!("Requesting upload for {url}");
 
         self.fetch_single::<UploadToken>({
-            self.configure_request(self.inner.client.put(url.clone()))?
+            self.configure_request(paths::UPLOAD_FILE, self.inner.client.put(url.clone()))?
                 .body(raw_content.to_vec())
         })
         .await
@@ -701,7 +713,7 @@ impl Client {
         // Currently, server sends the "upload_changesets" response once it is fully completed,
         // disable min speed transfer check to avoid premature termination of requests.
         let request = self
-            .configure_request(self.inner.client.post(url))?
+            .configure_request(paths::UPLOAD_CHANGESETS, self.inner.client.post(url))?
             .min_transfer_speed(None)
             .cbor(&req)
             .map_err(SaplingRemoteApiError::RequestSerializationFailed)?;
@@ -729,7 +741,10 @@ impl Client {
         // Currently, server sends the "upload_changesets" response once it is fully completed,
         // disable min speed transfer check to avoid premature termination of requests.
         let request = self
-            .configure_request(self.inner.client.post(url))?
+            .configure_request(
+                paths::UPLOAD_IDENTICAL_CHANGESET,
+                self.inner.client.post(url),
+            )?
             .min_transfer_speed(None)
             .cbor(&req)
             .map_err(SaplingRemoteApiError::RequestSerializationFailed)?;
@@ -749,7 +764,7 @@ impl Client {
         self.log_request(&commit_revlog_data_req, "commit_revlog_data");
 
         let req = self
-            .configure_request(self.inner.client.post(url))?
+            .configure_request(paths::COMMIT_REVLOG_DATA, self.inner.client.post(url))?
             .cbor(&commit_revlog_data_req)
             .map_err(SaplingRemoteApiError::RequestSerializationFailed)?;
 
@@ -771,7 +786,10 @@ impl Client {
         let req = UploadBonsaiChangesetRequest { changeset }.to_wire();
 
         let request = self
-            .configure_request(self.inner.client.post(url.clone()))?
+            .configure_request(
+                paths::UPLOAD_BONSAI_CHANGESET,
+                self.inner.client.post(url.clone()),
+            )?
             .cbor(&req)
             .map_err(SaplingRemoteApiError::RequestSerializationFailed)?;
 
@@ -791,7 +809,7 @@ impl Client {
         }
         .to_wire();
         let request = self
-            .configure_request(self.inner.client.post(url))?
+            .configure_request(paths::EPHEMERAL_PREPARE, self.inner.client.post(url))?
             .cbor(&req)
             .map_err(SaplingRemoteApiError::RequestSerializationFailed)?;
 
@@ -810,7 +828,7 @@ impl Client {
         let url = self.build_url(paths::FETCH_SNAPSHOT)?;
         let req = request.to_wire();
         let request = self
-            .configure_request(self.inner.client.post(url))?
+            .configure_request(paths::FETCH_SNAPSHOT, self.inner.client.post(url))?
             .cbor(&req)
             .map_err(SaplingRemoteApiError::RequestSerializationFailed)?;
 
@@ -826,7 +844,7 @@ impl Client {
         let url = self.build_url(paths::ALTER_SNAPSHOT)?;
         let req = request.to_wire();
         let request = self
-            .configure_request(self.inner.client.post(url))?
+            .configure_request(paths::ALTER_SNAPSHOT, self.inner.client.post(url))?
             .cbor(&req)
             .map_err(SaplingRemoteApiError::RequestSerializationFailed)?;
 
@@ -927,7 +945,7 @@ impl Client {
         };
 
         let requests = self
-            .configure_request(self.inner.client.post(url))?
+            .configure_request(paths::SUFFIXQUERY, self.inner.client.post(url))?
             .cbor(&req.to_wire())
             .map_err(SaplingRemoteApiError::RequestSerializationFailed)?;
 
@@ -975,7 +993,7 @@ impl Client {
         let metadata = token.data.metadata.clone();
         let req = token.to_wire();
         let request = self
-            .configure_request(self.inner.client.post(url.clone()))?
+            .configure_request(paths::DOWNLOAD_FILE, self.inner.client.post(url.clone()))?
             .cbor(&req)
             .map_err(SaplingRemoteApiError::RequestSerializationFailed)?;
 
@@ -1016,7 +1034,7 @@ impl Client {
         };
         self.log_request(&set_bookmark_req, "set_bookmark");
         let req = self
-            .configure_request(self.inner.client.post(url))?
+            .configure_request(paths::SET_BOOKMARK, self.inner.client.post(url))?
             .min_transfer_speed(None)
             .cbor(&set_bookmark_req.to_wire())
             .map_err(SaplingRemoteApiError::RequestSerializationFailed)?;
@@ -1055,7 +1073,7 @@ impl Client {
         // Currently, server sends the land_stack response once it is fully completed,
         // disable min speed transfer check to avoid premature termination of requests.
         let req = self
-            .configure_request(self.inner.client.post(url))?
+            .configure_request(paths::LAND_STACK, self.inner.client.post(url))?
             .min_transfer_speed(None)
             .cbor(&land_stack_req.to_wire())
             .map_err(SaplingRemoteApiError::RequestSerializationFailed)?;
@@ -1288,7 +1306,8 @@ impl SaplingRemoteApi for Client {
 
                 tracing::info!("Sending health check request: {}", &url);
 
-                let req = client.configure_request(client.inner.client.get(url))?;
+                let req =
+                    client.configure_request(paths::HEALTH_CHECK, client.inner.client.get(url))?;
                 let res = raise_for_status(req.send_async().await?).await?;
 
                 Ok(ResponseMeta::from(&res))
@@ -1302,8 +1321,9 @@ impl SaplingRemoteApi for Client {
         self.with_retry(|client| {
             async {
                 tracing::info!("Requesting capabilities for repo {}", &client.repo_name());
-                let url = client.build_url("capabilities")?;
-                let req = client.configure_request(client.inner.client.get(url))?;
+                let url = client.build_url(paths::CAPABILITIES)?;
+                let req =
+                    client.configure_request(paths::CAPABILITIES, client.inner.client.get(url))?;
                 let res = raise_for_status(req.send_async().await?).await?;
                 let body: Vec<u8> = res.into_body().decoded().try_concat().await?;
                 let caps = serde_json::from_slice(&body)
@@ -1400,7 +1420,7 @@ impl SaplingRemoteApi for Client {
         self.log_request(&bookmark_req, "bookmarks");
         let bookmarks_wire = bookmark_req.to_wire();
         let req = self
-            .configure_request(self.inner.client.post(url))?
+            .configure_request(paths::BOOKMARKS, self.inner.client.post(url))?
             .cbor(&bookmarks_wire)
             .map_err(SaplingRemoteApiError::RequestSerializationFailed)?;
 
@@ -1432,7 +1452,7 @@ impl SaplingRemoteApi for Client {
         self.log_request(&bookmark_req, "bookmarks2");
         let bookmarks_wire = bookmark_req.to_wire();
         let req = self
-            .configure_request(self.inner.client.post(url))?
+            .configure_request(paths::BOOKMARKS2, self.inner.client.post(url))?
             .cbor(&bookmarks_wire)
             .map_err(SaplingRemoteApiError::RequestSerializationFailed)?;
 
@@ -1602,7 +1622,7 @@ impl SaplingRemoteApi for Client {
         // Since we have a special progress bar and response is small, let's disable compression of
         // response's body.
         let req = self
-            .configure_request(self.inner.client.post(url))?
+            .configure_request(paths::COMMIT_GRAPH_V2, self.inner.client.post(url))?
             .accept_encoding([Encoding::Identity])
             .min_transfer_speed(None)
             .cbor(&wire_graph_req)
@@ -1629,7 +1649,7 @@ impl SaplingRemoteApi for Client {
         let wire_graph_req = graph_req.to_wire();
 
         let req = self
-            .configure_request(self.inner.client.post(url))?
+            .configure_request(paths::COMMIT_GRAPH_SEGMENTS, self.inner.client.post(url))?
             .min_transfer_speed(None)
             .cbor(&wire_graph_req)
             .map_err(SaplingRemoteApiError::RequestSerializationFailed)?;
