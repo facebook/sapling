@@ -1,5 +1,16 @@
 # Changelog
 
+## 0.1.66
+
+### Jan 30 2025
+
+- Made Absorb feature enabled by default (not experimental)
+- New features and polish for Absorb
+  - syntax highlighting
+  - send changes to a specific commit
+  - visual changes
+- Fix loaded context lines in comparisons sometimes being misaligned
+
 ## 0.1.65
 
 ### Jan 16 2025
