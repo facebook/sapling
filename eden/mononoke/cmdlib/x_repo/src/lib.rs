@@ -11,21 +11,18 @@
 
 use std::sync::Arc;
 
-use anyhow::bail;
 use anyhow::Error;
 use anyhow::Result;
 use blobstore_factory::MetadataSqlFactory;
 use cmdlib::args;
 use cmdlib::args::MononokeMatches;
 use context::CoreContext;
-use cross_repo_sync::create_commit_syncers;
 use cross_repo_sync::get_all_submodule_deps_from_repo_pair;
 use cross_repo_sync::CommitSyncRepos;
 use cross_repo_sync::CommitSyncer;
 use cross_repo_sync::RepoProvider;
 use cross_repo_sync::Source;
 use cross_repo_sync::SubmoduleDeps;
-use cross_repo_sync::Syncers;
 use cross_repo_sync::Target;
 use futures_util::try_join;
 use live_commit_sync_config::CfgrLiveCommitSyncConfig;
@@ -40,55 +37,6 @@ use synced_commit_mapping::SqlSyncedCommitMappingBuilder;
 pub trait Repo = cross_repo_sync::Repo
     + SqlQueryConfigArc
     + for<'b> facet::AsyncBuildable<'b, repo_factory::RepoFactoryBuilder<'b>>;
-
-/// Instantiate the `Syncers` struct by parsing `matches`
-/// TODO(T213755338): delete this and use `create_commit_syncers_from_app` in
-/// cmdlib/cross_repo.
-pub async fn create_commit_syncers_from_matches<R: Repo>(
-    ctx: &CoreContext,
-    matches: &MononokeMatches<'_>,
-    repo_pair: Option<(RepositoryId, RepositoryId)>,
-) -> Result<Syncers<R>, Error> {
-    let (source_repo, target_repo, _mapping, live_commit_sync_config) =
-        get_things_from_matches::<R>(ctx, matches, repo_pair).await?;
-
-    let common_config =
-        live_commit_sync_config.get_common_config(source_repo.0.repo_identity().id())?;
-
-    let repo_provider = repo_provider_from_matches(ctx, matches);
-
-    let submodule_deps = get_all_submodule_deps_from_repo_pair(
-        ctx,
-        Arc::new(source_repo.0.clone()),
-        Arc::new(target_repo.0.clone()),
-        repo_provider,
-    )
-    .await?;
-
-    let large_repo_id = common_config.large_repo_id;
-    let source_repo_id = source_repo.0.repo_identity().id();
-    let target_repo_id = target_repo.0.repo_identity().id();
-    let (small_repo, large_repo) = if large_repo_id == source_repo_id {
-        (target_repo.0, source_repo.0)
-    } else if large_repo_id == target_repo_id {
-        (source_repo.0, target_repo.0)
-    } else {
-        bail!(
-            "Unexpectedly CommitSyncConfig {:?} has neither of {}, {} as a large repo",
-            common_config,
-            source_repo_id,
-            target_repo_id
-        );
-    };
-
-    create_commit_syncers(
-        ctx,
-        small_repo,
-        large_repo,
-        submodule_deps,
-        live_commit_sync_config,
-    )
-}
 
 /// Instantiate the source-target `CommitSyncer` struct by parsing `matches`
 pub async fn create_commit_syncer_from_matches<R: Repo>(
@@ -242,7 +190,7 @@ async fn create_commit_syncer<'a, R: Repo>(
         target_repo.0,
         submodule_deps,
     )?;
-    let commit_syncer = CommitSyncer::new(ctx, repos.into(), live_commit_sync_config);
+    let commit_syncer = CommitSyncer::new(ctx, repos, live_commit_sync_config);
     Ok(commit_syncer)
 }
 
