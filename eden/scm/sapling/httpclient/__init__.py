@@ -49,6 +49,7 @@ from __future__ import absolute_import
 import email
 import email.message
 import errno
+import http.client as httplib
 import inspect
 import logging
 import select
@@ -58,15 +59,6 @@ import sys
 
 from .. import util
 from . import _readers
-
-try:
-    # pyre-fixme[21]: Could not find `httplib`.
-    import httplib
-
-    httplib.HTTPException
-except ImportError:
-    import http.client as httplib
-
 
 logger = logging.getLogger(__name__)
 

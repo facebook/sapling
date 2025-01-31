@@ -24,11 +24,8 @@ import os
 import shlex
 import sys
 
-
 ispypy = r"__pypy__" in sys.builtin_module_names
 
-import http.client as httplib  # noqa: F401
-import http.cookiejar as cookielib  # noqa: F401
 import pickle  # noqa: F401
 import queue as _queue
 import socketserver  # noqa: F401

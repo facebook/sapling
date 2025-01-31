@@ -15,6 +15,8 @@
 from __future__ import absolute_import
 
 import base64
+import http.client as httplib
+import http.cookiejar as cookielib
 import os
 import socket
 
@@ -23,7 +25,6 @@ from . import (
     error,
     httpconnection as httpconnectionmod,
     keepalive,
-    pycompat,
     sslutil,
     urllibcompat,
     util,
@@ -31,7 +32,6 @@ from . import (
 from .i18n import _
 
 # pyre-fixme[11]: Annotation `client` is not defined as a type.
-httplib = util.httplib
 stringio = util.stringio
 urlerr = util.urlerr
 urlreq = util.urlreq
@@ -501,10 +501,10 @@ class cookiehandler(urlreq.basehandler):
 
         cookiefile = util.expandpath(cookiefile)
         try:
-            cookiejar = util.cookielib.MozillaCookieJar(cookiefile)
+            cookiejar = cookielib.MozillaCookieJar(cookiefile)
             cookiejar.load()
             self.cookiejar = cookiejar
-        except util.cookielib.LoadError as e:
+        except cookielib.LoadError as e:
             ui.warn(
                 _("(error loading cookie file %s: %s; continuing without cookies)\n")
                 % (cookiefile, str(e))

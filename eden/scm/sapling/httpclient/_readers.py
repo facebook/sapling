@@ -39,17 +39,8 @@ have any clients outside of httpplus.
 
 from __future__ import absolute_import
 
+import http.client as httplib
 import logging
-
-
-try:
-    # pyre-fixme[21]: Could not find `httplib`.
-    import httplib
-
-    httplib.HTTPException
-except ImportError:
-    import http.client as httplib
-
 
 logger: logging.Logger = logging.getLogger(__name__)
 
