@@ -57,7 +57,7 @@ pub enum Method {
 #[derive(Copy, Clone, Debug, PartialEq)]
 pub struct MinTransferSpeed {
     pub min_bytes_per_second: u32,
-    pub grace_period: Duration,
+    pub window: Duration,
 }
 
 impl fmt::Display for Method {
@@ -803,7 +803,7 @@ impl Request {
 
         if let Some(mts) = self.min_transfer_speed {
             easy.low_speed_limit(mts.min_bytes_per_second)?;
-            easy.low_speed_time(mts.grace_period)?;
+            easy.low_speed_time(mts.window)?;
         }
 
         // Tell libcurl to report progress to the handler.

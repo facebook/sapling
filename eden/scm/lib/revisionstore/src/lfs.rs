@@ -1076,7 +1076,7 @@ impl LfsRemote {
             let min_transfer_speed =
                 low_speed_min_bytes_per_second.map(|min_bytes_per_second| MinTransferSpeed {
                     min_bytes_per_second,
-                    grace_period: low_speed_grace_period,
+                    window: low_speed_grace_period,
                 });
 
             let download_chunk_size = config.get_opt::<u64>("lfs", "download-chunk-size")?;

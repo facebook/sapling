@@ -233,14 +233,18 @@ impl HttpClientBuilder {
         let log_dir = get_config(config, "edenapi", "logdir")?;
         let encoding =
             get_config::<String>(config, "edenapi", "encoding")?.map(|s| Encoding::from(&*s));
-        let low_speed_grace_period =
-            get_config::<u64>(config, "edenapi", "low-speed-grace-period-seconds")?
-                .unwrap_or_default();
+
+        let low_speed_window: Duration = match get_config(config, "edenapi", "low-speed-window")? {
+            Some(window) => window,
+            None => {
+                get_config(config, "edenapi", "low-speed-grace-period-seconds")?.unwrap_or_default()
+            }
+        };
         let min_transfer_speed =
             get_config::<u32>(config, "edenapi", "low-speed-min-bytes-per-second")?.map(
                 |min_bytes_per_second| MinTransferSpeed {
                     min_bytes_per_second,
-                    grace_period: Duration::from_secs(low_speed_grace_period),
+                    window: low_speed_window,
                 },
             );
         let max_retry_per_request =

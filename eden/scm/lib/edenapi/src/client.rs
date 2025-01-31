@@ -250,7 +250,7 @@ impl ExpiringBool {
 static LOG_SERVER_INFO_ONCE: Once = Once::new();
 
 impl Client {
-    /// Create an SaplingRemoteAPI client with the given configuration.
+    /// Create a SaplingRemoteAPI client with the given configuration.
     pub(crate) fn with_config(config: Config) -> Self {
         let client = http_client("edenapi", config.http_config.clone());
         let inner = Arc::new(ClientInner {
