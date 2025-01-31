@@ -408,7 +408,9 @@ def print_os_version(out: IOWithRedaction) -> None:
     if sys.platform == "linux":
         release_file_name = "/etc/os-release"
         if os.path.isfile(release_file_name):
-            with open(release_file_name) as release_info_file:
+            with open(
+                release_file_name, errors="backslashreplace"
+            ) as release_info_file:
                 release_info = {}
                 for line in release_info_file:
                     parsed_line = line.rstrip().split("=")
@@ -424,7 +426,9 @@ def print_os_version(out: IOWithRedaction) -> None:
         # system helper instead.
         try:
             sw_vers = subprocess.check_output(["/usr/bin/sw_vers", "-productVersion"])
-            version = "MacOS " + sw_vers.decode("utf-8").rstrip()
+            version = (
+                "MacOS " + sw_vers.decode("utf-8", errors="backslashreplace").rstrip()
+            )
         except Exception:
             version = (
                 "MacOS " + platform.mac_ver()[0] + " (platform.mac_ver() fallback)"
@@ -477,7 +481,7 @@ def print_log_file(
                 size = logfile.seek(0, io.SEEK_END)
                 logfile.seek(max(0, size - LOG_AMOUNT), io.SEEK_SET)
             for data in read_chunk(logfile):
-                out.write(data.decode("utf-8"))
+                out.write(data.decode("utf-8", errors="backslashreplace"))
     except Exception as e:
         out.write(f"Error reading the log file: {e}\n")
 
@@ -505,7 +509,7 @@ def paste_output(
         finally:
             sink.wrapped.close()
 
-            stdout = output.read().decode("utf-8")
+            stdout = output.read().decode("utf-8", errors="backslashreplace")
 
             output.close()
             proc.wait()
@@ -530,7 +534,7 @@ def print_tail_of_log_file(path: Path, out: IOWithRedaction) -> None:
     try:
         section_title("Most recent EdenFS logs:", out)
         LOG_AMOUNT = 20 * 1024
-        with path.open("r") as logfile:
+        with path.open("r", errors="backslashreplace") as logfile:
             size = logfile.seek(0, io.SEEK_END)
             logfile.seek(max(0, size - LOG_AMOUNT), io.SEEK_SET)
             data = logfile.read()
@@ -598,12 +602,12 @@ def print_edenfs_process_tree(pid: int, out: IOWithRedaction) -> None:
     try:
         section_title("EdenFS process tree:", out)
         output = subprocess.check_output(["ps", "-o", "sid=", "-p", str(pid)])
-        sid = output.decode("utf-8").strip()
+        sid = output.decode("utf-8", errors="backslashreplace").strip()
 
         output = subprocess.check_output(
             ["ps", "f", "-o", "pid,s,comm,start_time,etime,cputime,drs", "-s", sid]
         )
-        out.write(output.decode("utf-8"))
+        out.write(output.decode("utf-8", errors="backslashreplace"))
     except Exception as e:
         out.write(f"Error getting edenfs process tree: {e}\n")
 
@@ -651,7 +655,7 @@ def print_system_mount_table(out: IOWithRedaction) -> None:
     try:
         section_title("Mount table:", out)
         output = subprocess.check_output(["mount"])
-        out.write(output.decode("utf-8"))
+        out.write(output.decode("utf-8", errors="backslashreplace"))
     except Exception as e:
         out.write(f"Error printing system mount table: {e}\n")
 
@@ -701,14 +705,18 @@ def print_system_load(out: IOWithRedaction) -> None:
 
             # Limit to the first 16 lines of output because top on CentOS
             # doesn't seem to have a command-line flag for this.
-            output_lines = output.decode("utf-8").split(os.linesep)[:17] + [""]
+            output_lines = output.decode("utf-8", errors="backslashreplace").split(
+                os.linesep
+            )[:17] + [""]
         elif sys.platform == "darwin":
             output = subprocess.check_output(["top", "-l2", "-n10"])
 
             # On macOS the first iteration of `top` will have incorrect CPU
             # usage values for processes.  So here we wait for the second
             # iteration and strip the first from the output.
-            output_lines = output.decode("utf-8").split(os.linesep)
+            output_lines = output.decode("utf-8", errors="backslashreplace").split(
+                os.linesep
+            )
             output_lines = output_lines[len(output_lines) // 2 :]
 
         out.write(os.linesep.join(output_lines))
@@ -783,7 +791,9 @@ def print_prefetch_profiles_list(instance: EdenInstance, out: IOWithRedaction) -
             )
             if profiles:
                 out.write(f"{checkout.path}:\n")
-                output_lines = profiles.decode("utf-8").split(os.linesep)
+                output_lines = profiles.decode(
+                    "utf-8", errors="backslashreplace"
+                ).split(os.linesep)
                 # The first line of output is "NAMES"; skip that and only list profiles
                 for name in output_lines[1:]:
                     out.write(f"  - {name}\n")
@@ -974,6 +984,6 @@ def print_ulimits(out: IOWithRedaction) -> None:
     try:
         section_title("ulimit -a:", out)
         output = subprocess.check_output(["ulimit", "-a"])
-        out.write(output.decode("utf-8"))
+        out.write(output.decode("utf-8", errors="backslashreplace"))
     except Exception as e:
         out.write(f"Error retrieving ulimit values: {e}\n")
