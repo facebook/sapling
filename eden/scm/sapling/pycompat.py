@@ -80,22 +80,6 @@ unicode = str
 shlexsplit = shlex.split
 
 
-def iteritems(s):
-    return s.items()
-
-
-def listitems(s):
-    return list(s.items())
-
-
-def iterkeys(s):
-    return s.keys()
-
-
-def itervalues(s):
-    return s.values()
-
-
 def ensurestr(s):
     if isinstance(s, bytes):
         s = s.decode("utf-8")
