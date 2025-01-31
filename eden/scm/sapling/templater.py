@@ -29,7 +29,6 @@ from . import (
     node,
     parser,
     patch,
-    pycompat,
     registrar,
     revset as revsetmod,
     revsetlang,
@@ -40,7 +39,6 @@ from . import (
     util,
 )
 from .i18n import _
-
 
 # template parsing
 
@@ -999,7 +997,7 @@ def join(context, mapping, args):
     # abuses generator as a keyword that returns a list of dicts.
     joinset = evalrawexp(context, mapping, args[0])
     joinset = templatekw.unwrapvalue(joinset)
-    joinfmt = getattr(joinset, "joinfmt", pycompat.identity)
+    joinfmt = getattr(joinset, "joinfmt", util.identity)
     joiner = " "
     if len(args) > 1:
         joiner = evalstring(context, mapping, args[1])

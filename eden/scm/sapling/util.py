@@ -74,7 +74,7 @@ from . import (
     error,
     fscap,
     i18n,
-    identity,
+    identity as identitymod,
     pycompat,
     redact,
     sysutil,
@@ -228,7 +228,7 @@ def checklink(path: str) -> bool:
     # mktemp is not racy because symlink creation will fail if the
     # file already exists
     while True:
-        ident = identity.sniffdir(path) or identity.default()
+        ident = identitymod.sniffdir(path) or identity.default()
         cachedir = os.path.join(path, ident.dotdir(), "cache")
         checklink = os.path.join(cachedir, "checklink")
         # try fast path, read only
@@ -2624,12 +2624,16 @@ def tocrlf(s):
     return _eolre.sub("\r\n", s)
 
 
+def identity(a):
+    return a
+
+
 if os.linesep == "\r\n":
     tonativeeol = tocrlf
     fromnativeeol = tolf
 else:
-    tonativeeol = pycompat.identity
-    fromnativeeol = pycompat.identity
+    tonativeeol = identity
+    fromnativeeol = identity
 
 
 def escapestr(s):

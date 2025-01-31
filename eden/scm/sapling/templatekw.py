@@ -15,14 +15,12 @@ from __future__ import absolute_import
 from typing import Dict, Optional, Sized, Union
 
 from . import (
-    encoding,
     error,
     git,
     hbisect,
     i18n,
     mutation,
     patch,
-    pycompat,
     registrar,
     scmutil,
     templatenew as templatefixtures,
@@ -385,7 +383,7 @@ def showbookmarks(**args) -> _hybrid:
     active = repo._activebookmark
     makemap = lambda v: {"bookmark": v, "active": active, "current": active}
     f = _showlist("bookmark", bookmarks, args)
-    return _hybrid(f, bookmarks, makemap, pycompat.identity)
+    return _hybrid(f, bookmarks, makemap, util.identity)
 
 
 @templatekeyword("children")
@@ -703,7 +701,7 @@ def shownamespaces(**args) -> _hybrid:
     for k, ns in repo.names.items():
         names = ns.names(repo, ctx.node())
         f = _showlist("name", names, args)
-        namespaces[k] = _hybrid(f, names, makensmapfn(ns), pycompat.identity)
+        namespaces[k] = _hybrid(f, names, makensmapfn(ns), util.identity)
 
     f = _showlist("namespace", list(namespaces), args)
 
@@ -715,7 +713,7 @@ def shownamespaces(**args) -> _hybrid:
             "colorname": repo.names[ns].colorname,
         }
 
-    return _hybrid(f, namespaces, makemap, pycompat.identity)
+    return _hybrid(f, namespaces, makemap, util.identity)
 
 
 @templatekeyword("node")
@@ -811,7 +809,7 @@ def showsuccessorssets(repo, ctx, **args) -> Union[_hybrid, str]:
     def gen(data):
         yield "; ".join(render(d) for d in data)
 
-    return _hybrid(gen(data), data, lambda x: {"successorset": x}, pycompat.identity)
+    return _hybrid(gen(data), data, lambda x: {"successorset": x}, util.identity)
 
 
 @templatekeyword("mutations")
@@ -926,7 +924,7 @@ def showrevslist(name, revs, **args) -> _hybrid:
         None,
         revs,
         lambda x: {name: x, "ctx": repo[x], "revcache": {}},
-        pycompat.identity,
+        util.identity,
         keytype=int,
         fastlen=revs.fastlen(),
     )

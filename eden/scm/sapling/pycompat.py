@@ -16,7 +16,3 @@ This contains aliases to hide python version-specific details from the core.
 """
 
 from __future__ import absolute_import
-
-
-def identity(a):
-    return a
