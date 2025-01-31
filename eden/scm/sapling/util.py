@@ -63,6 +63,7 @@ from typing import (
 )
 
 import bindings
+
 from sapling import tracing
 
 from . import (
@@ -1195,39 +1196,6 @@ def always(fn):
 
 def never(fn):
     return False
-
-
-def _nogc(func):
-    """disable garbage collector
-
-    Python's garbage collector triggers a GC each time a certain number of
-    container objects (the number being defined by gc.get_threshold()) are
-    allocated even when marked not to be tracked by the collector. Tracking has
-    no effect on when GCs are triggered, only on what objects the GC looks
-    into. As a workaround, disable GC while building complex (huge)
-    containers.
-
-    This garbage collector issue have been fixed in 2.7. But it still affect
-    CPython's performance.
-    """
-
-    def wrapper(*args, **kwargs):
-        gcenabled = gc.isenabled()
-        gc.disable()
-        try:
-            return func(*args, **kwargs)
-        finally:
-            if gcenabled:
-                gc.enable()
-
-    return wrapper
-
-
-if pycompat.ispypy:
-    # PyPy runs slower with gc disabled
-    nogc = lambda x: x
-else:
-    nogc = _nogc
 
 
 def pathto(root, n1, n2):

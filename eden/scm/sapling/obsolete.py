@@ -180,7 +180,6 @@ def _readmarkerversion(data):
     return _unpack(">B", data[0:1])[0]
 
 
-@util.nogc
 def _readmarkers(data, off=None, stop=None):
     """Read and enumerate markers from raw data"""
     diskversion = _readmarkerversion(data)
