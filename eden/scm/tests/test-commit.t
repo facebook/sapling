@@ -649,8 +649,8 @@ verify pathauditor blocks evil filepaths
   $ cp -R . $TESTTMP/audit3
   $ cat > evil-commit.py <<EOF
   > from __future__ import absolute_import
-  > from sapling import context, hg, node, pycompat, ui as uimod
-  > notrc = pycompat.ensurestr(u".h\u200cg/hgrc")
+  > from sapling import context, hg, node, ui as uimod
+  > notrc = u".h\u200cg/hgrc"
   > u = uimod.ui.load()
   > r = hg.repository(u, '.')
   > def filectxfn(repo, memctx, path):

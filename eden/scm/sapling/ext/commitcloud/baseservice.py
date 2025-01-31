@@ -13,7 +13,6 @@ import bindings
 
 from sapling import node as nodemod
 from sapling.graphmod import CHANGESET, GRANDPARENT, PARENT
-from sapling.pycompat import ensurestr
 
 
 def _joinremotename(remote, name):
@@ -312,7 +311,7 @@ class BaseService(abc.ABC):
     def _makeworkspacesinfo(workspacesinfos):
         return [
             WorkspaceInfo(
-                name=ensurestr(workspacesinfo["name"]),
+                name=workspacesinfo["name"],
                 archived=bool(workspacesinfo["archived"]),
                 version=int(workspacesinfo["version"]),
             )
@@ -384,16 +383,16 @@ class BaseService(abc.ABC):
 def _makenodes(data):
     nodes = {}
     for nodeinfo in data["nodes"]:
-        node = nodemod.bin(ensurestr(nodeinfo["node"]))
-        parents = [nodemod.bin(ensurestr(p)) for p in nodeinfo["parents"]]
-        bookmarks = [ensurestr(b) for b in nodeinfo["bookmarks"]]
-        author = ensurestr(nodeinfo["author"])
+        node = nodemod.bin(nodeinfo["node"])
+        parents = [nodemod.bin(p) for p in nodeinfo["parents"]]
+        bookmarks = nodeinfo["bookmarks"]
+        author = nodeinfo["author"]
         date = int(nodeinfo["date"])
-        message = ensurestr(nodeinfo["message"])
-        phase = ensurestr(nodeinfo["phase"])
+        message = nodeinfo["message"]
+        phase = nodeinfo["phase"]
         if "remote_bookmarks" in nodeinfo:
             bookmarks.extend(
-                "%s/%s" % (ensurestr(bm["remote"]), ensurestr(bm["name"]))
+                "%s/%s" % (bm["remote"], bm["name"])
                 for bm in nodeinfo["remote_bookmarks"] or []
             )
         nodes[node] = NodeInfo(node, bookmarks, parents, author, date, message, phase)

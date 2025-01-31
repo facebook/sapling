@@ -10,9 +10,7 @@ import time
 from bindings import clientinfo as clientinfomod
 
 # Standard Library
-
 from sapling import error
-from sapling.pycompat import ensurestr
 
 from . import baseservice
 
@@ -263,7 +261,7 @@ class SaplingRemoteAPIService(baseservice.BaseService):
                 raise error.Abort(response["data"]["Err"]["message"])
 
         return baseservice.WorkspaceInfo(
-            name=ensurestr(response["name"]),
+            name=response["name"],
             archived=bool(response["archived"]),
             version=int(response["version"]),
         )

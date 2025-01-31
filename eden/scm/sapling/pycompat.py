@@ -20,9 +20,3 @@ from __future__ import absolute_import
 
 def identity(a):
     return a
-
-
-def ensurestr(s):
-    if isinstance(s, bytes):
-        s = s.decode("utf-8")
-    return s

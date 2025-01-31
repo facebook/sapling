@@ -168,7 +168,7 @@ def fill(text, width, initindent="", hangindent=""):
                 w = len(uctext)
                 while 0 < w and uctext[w - 1].isspace():
                     w -= 1
-                yield (pycompat.ensurestr(uctext[:w]), pycompat.ensurestr(uctext[w:]))
+                yield (uctext[:w], uctext[w:])
                 break
             yield text[start : m.start(0)], m.group(1)
             start = m.end(1)
