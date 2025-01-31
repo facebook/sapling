@@ -12,8 +12,11 @@ use std::path::PathBuf;
 use anyhow::Result;
 use async_trait::async_trait;
 use clap::Parser;
+use edenfs_client::types::ChangesSinceV2Result;
 use edenfs_client::types::JournalPosition;
 use edenfs_client::EdenFsInstance;
+use edenfs_error::EdenFsError;
+use edenfs_error::ResultExt;
 use hg_util::path::expand_path;
 
 use crate::ExitCode;
@@ -73,6 +76,21 @@ pub struct ChangesSinceCmd {
     json: bool,
 }
 
+impl ChangesSinceCmd {
+    fn print_result(&self, result: &ChangesSinceV2Result) -> Result<(), EdenFsError> {
+        println!(
+            "{}",
+            if self.json {
+                serde_json::to_string(&result).from_err()? + "\n"
+            } else {
+                result.to_string()
+            }
+        );
+
+        Ok(())
+    }
+}
+
 #[async_trait]
 impl crate::Subcommand for ChangesSinceCmd {
     #[cfg(not(fbcode_build))]
@@ -101,15 +119,8 @@ impl crate::Subcommand for ChangesSinceCmd {
                 None,
             )
             .await?;
-        println!(
-            "{}",
-            if self.json {
-                serde_json::to_string(&result)?
-            } else {
-                result.to_string()
-            }
-        );
 
+        self.print_result(&result)?;
         if self.subscribe {
             println!("Getting changes since {}", result.to_position);
         }
