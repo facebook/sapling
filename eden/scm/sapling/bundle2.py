@@ -467,7 +467,7 @@ class partiterator:
             # Re-raising from a variable loses the original stack. So only use
             # that form if we need to.
             if seekerror:
-                raise exc
+                raise exc.with_traceback(tb)
 
         self.repo.ui.debug("bundle2-input-bundle: %i parts total\n" % self.count)
 
@@ -1206,7 +1206,7 @@ class bundlepart:
             outdebug(ui, "closing payload chunk")
             # abort current part payload
             yield _pack(_fpayloadsize, 0)
-            exc.with_traceback(tb)
+            raise exc.with_traceback(tb)
         # end of payload
         outdebug(ui, "closing payload chunk")
         yield _pack(_fpayloadsize, 0)
