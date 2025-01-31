@@ -405,6 +405,8 @@ function strip_glog {
 
 function with_stripped_logs {
   "$@" 2>&1 | strip_glog
+  # propagate the exit status, otherwise the test will happily continue on failure
+  return "${PIPESTATUS[0]}"
 }
 
 function wait_for_json_record_count {

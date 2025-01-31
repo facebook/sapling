@@ -71,12 +71,13 @@
   plain
   output
 
-# with_stripped_logs doesn't propagate the exit code correctly
+# with_stripped_logs *will* propagate the exit code correctly
   $ with_stripped_logs mononoke_admin invalid
   error: unrecognized subcommand 'invalid'
   
   Usage: admin [OPTIONS] <--config-path <CONFIG_PATH>|--config-tier <CONFIG_TIER>|--prod|--git-config> <COMMAND>
   
   For more information, try '--help'.
+  [2]
 
 

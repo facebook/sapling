@@ -67,7 +67,7 @@
   inconsistent value of *, but 'meg-mon' bookmark points to None (glob)
   inconsistent value of *, but 'meg-mon' bookmark points to None (glob)
   Error: found 2 inconsistencies
- 
+  [1]
 
 -- use verify-bookmarks, but passing a regex.
   $ with_stripped_logs crossrepo_verify_bookmarks 2 0 --update-large-repo-bookmarks \
@@ -80,6 +80,7 @@
   > --no-bookmark-updates
   found 2 inconsistencies, trying to update them...
   Error: Missing outcome for * from small repo (glob)
+  [1]
 
 -- sync the missing commits
   $ with_stripped_logs mononoke_x_repo_sync 2 0 once --bookmark-regex ".+bookmark"
