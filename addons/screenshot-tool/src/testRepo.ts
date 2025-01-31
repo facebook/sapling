@@ -6,7 +6,7 @@
  */
 
 import {getCacheDir, sha1} from './utils';
-import {ejeca} from 'shared/ejeca';
+import {spawn} from 'node:child_process';
 import * as fs from 'node:fs/promises';
 import {join} from 'node:path';
 import {dirSync} from 'tmp';
@@ -87,16 +87,26 @@ export class TestRepo {
   }
 
   /** Runs command in the repo. Returns its stdout. */
-  async run(args: Array<string>, input = ''): Promise<string> {
+  run(args: Array<string>, input = ''): Promise<string> {
     const env = {...process.env, SL_AUTOMATION: '1', HGPLAIN: '1', NOSCMLOG: '1'};
     logger.info('Running', this.command, args.join(' '));
-    const child = await ejeca(this.command, args, {
+    const child = spawn(this.command, args, {
       cwd: this.repoPath,
-      input: Buffer.from(input),
+      stdio: ['pipe', 'pipe', 'inherit'],
+      shell: false,
+      windowsHide: true,
       env,
     });
-    logger.debug('Ran', this.command, args.join(' '), '. Exit code:', child.exitCode);
-    return child.stdout;
+    child.stdin?.write(Buffer.from(input));
+    child.stdin?.end();
+    const stdout: string[] = [];
+    child.stdout.on('data', data => stdout.push(data.toString()));
+    return new Promise((resolve, _reject) => {
+      child.on('close', (code, _signal) => {
+        logger.debug('Ran', this.command, args.join(' '), '. Exit code:', code);
+        resolve(stdout.join(''));
+      });
+    });
   }
 
   /**
