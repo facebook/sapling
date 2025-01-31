@@ -99,6 +99,22 @@ export function revsetForComparison(comparison: Comparison): string {
   }
 }
 
+/** Revset for an `sl cat` comparison, to get the content of the "before" side of this comparison. */
+export function beforeRevsetForComparison(comparison: Comparison): string {
+  switch (comparison.type) {
+    case ComparisonType.UncommittedChanges:
+      return '.'; // this is in the head commit, not in the wdir
+    case ComparisonType.HeadChanges:
+      return '.^'; // in the parent commit
+    case ComparisonType.StackChanges:
+      return 'ancestor(.,interestingmaster())'; // in the public base itself
+    case ComparisonType.Committed:
+      return comparison.hash + '^'; // before this commit
+    case ComparisonType.SinceLastCodeReviewSubmit:
+      return comparison.hash + '^';
+  }
+}
+
 /**
  * English description of comparison.
  * Note: non-localized. Don't forget to run this through `t()` for a given client.

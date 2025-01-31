@@ -39,7 +39,7 @@ import {parseExecJson} from './utils';
 import {serializeToString, deserializeFromString} from 'isl/src/serialize';
 import {Readable} from 'node:stream';
 import path from 'path';
-import {revsetForComparison} from 'shared/Comparison';
+import {beforeRevsetForComparison, revsetForComparison} from 'shared/Comparison';
 import {randomId, notEmpty, base64Decode} from 'shared/utils';
 
 export type IncomingMessage = ClientToServerMessage;
@@ -475,7 +475,9 @@ export default class ServerToClientAPI {
       case 'requestComparisonContextLines': {
         const {
           id: {path: relativePath, comparison},
+          // This is the line number in the "before" side of the comparison
           start,
+          // This is the number of context lines to fetch
           numLines,
         } = data;
 
@@ -488,7 +490,11 @@ export default class ServerToClientAPI {
         // we just need the caller to ask with "after" line numbers instead of "before".
         // Note: we would still need to fall back to cat for comparisons that do not involve
         // the working copy.
-        const cat: Promise<string> = repo.cat(ctx, absolutePath, revsetForComparison(comparison));
+        const cat: Promise<string> = repo.cat(
+          ctx,
+          absolutePath,
+          beforeRevsetForComparison(comparison),
+        );
 
         cat
           .then(content =>
