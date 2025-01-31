@@ -5,7 +5,6 @@
  * GNU General Public License version 2.
  */
 
-use std::num::NonZeroU64;
 use std::sync::Arc;
 
 use anyhow::bail;
@@ -64,11 +63,8 @@ use megarepolib::chunking::Chunker;
 use megarepolib::commit_sync_config_utils::diff_small_repo_commit_sync_configs;
 use megarepolib::common::create_and_save_bonsai;
 use megarepolib::common::delete_files_in_chunks;
-use megarepolib::common::StackPosition;
 use megarepolib::history_fixup_delete::create_history_fixup_deletes;
 use megarepolib::history_fixup_delete::HistoryFixupDeletes;
-use megarepolib::perform_move;
-use megarepolib::perform_stack_move;
 use megarepolib::pre_merge_delete::create_pre_merge_delete;
 use megarepolib::pre_merge_delete::PreMergeDelete;
 use megarepolib::working_copy::get_working_copy_paths_by_prefixes;
@@ -80,7 +76,6 @@ use mononoke_types::ChangesetId;
 use mononoke_types::FileChange;
 use mononoke_types::NonRootMPath;
 use mononoke_types::RepositoryId;
-use movers::get_small_to_large_mover;
 use movers::Mover;
 use mutable_counters::MutableCounters;
 use phases::Phases;
@@ -146,9 +141,6 @@ use crate::cli::LIMIT;
 use crate::cli::MANUAL_COMMIT_SYNC;
 use crate::cli::MAPPING_VERSION_NAME;
 use crate::cli::MARK_NOT_SYNCED_COMMAND;
-use crate::cli::MAX_NUM_OF_MOVES_IN_COMMIT;
-use crate::cli::MOVE;
-use crate::cli::ORIGIN_REPO;
 use crate::cli::OVERWRITE;
 use crate::cli::PARENTS;
 use crate::cli::PATH;
@@ -196,77 +188,6 @@ pub struct Repo(
     dyn Filenodes,
     SqlQueryConfig,
 );
-
-async fn run_move<'a>(
-    ctx: &CoreContext,
-    matches: &MononokeMatches<'a>,
-    sub_m: &ArgMatches<'a>,
-) -> Result<(), Error> {
-    let origin_repo =
-        RepositoryId::new(args::get_i32_opt(sub_m, ORIGIN_REPO).expect("Origin repo is missing"));
-    let resulting_changeset_args = cs_args_from_matches(sub_m)?;
-    let move_parent = sub_m.value_of(CHANGESET).unwrap().to_owned();
-
-    let mapping_version_name = sub_m
-        .value_of(MAPPING_VERSION_NAME)
-        .ok_or_else(|| format_err!("mapping-version-name is not specified"))?;
-    let mapping_version = CommitSyncConfigVersion(mapping_version_name.to_string());
-
-    let live_commit_sync_config =
-        get_live_commit_sync_config(ctx, ctx.fb, matches, matches.config_store(), origin_repo)
-            .await
-            .context("building live_commit_sync_config")?;
-
-    let commit_sync_config = live_commit_sync_config
-        .get_commit_sync_config_by_version(origin_repo, &mapping_version)
-        .await?;
-    let mover = get_small_to_large_mover(&commit_sync_config, origin_repo).unwrap();
-
-    let max_num_of_moves_in_commit: Option<NonZeroU64> =
-        args::get_and_parse_opt(sub_m, MAX_NUM_OF_MOVES_IN_COMMIT);
-
-    let repo = args::not_shardmanager_compatible::open_repo::<Repo>(
-        ctx.fb,
-        &ctx.logger().clone(),
-        matches,
-    )
-    .await?;
-
-    let parent_bcs_id = helpers::csid_resolve(ctx, &repo, move_parent).await?;
-
-    if let Some(max_num_of_moves_in_commit) = max_num_of_moves_in_commit {
-        let changesets = perform_stack_move(
-            ctx,
-            &repo,
-            parent_bcs_id,
-            mover.as_ref(),
-            max_num_of_moves_in_commit,
-            |num: StackPosition| {
-                let mut args = resulting_changeset_args.clone();
-                let message = args.message + &format!(" #{}", num.0);
-                args.message = message;
-                args
-            },
-        )
-        .await?;
-        info!(
-            ctx.logger(),
-            "created {} commits, with the last commit {:?}",
-            changesets.len(),
-            changesets.last()
-        );
-    } else {
-        perform_move(
-            ctx,
-            &repo,
-            parent_bcs_id,
-            mover.as_ref(),
-            resulting_changeset_args,
-        )
-        .await?;
-    }
-    Ok(())
-}
 
 async fn run_sync_diamond_merge<'a>(
     ctx: &CoreContext,
@@ -1402,7 +1323,6 @@ fn main(fb: FacebookInit) -> Result<()> {
             (MARK_NOT_SYNCED_COMMAND, Some(sub_m)) => {
                 run_mark_not_synced(ctx, &matches, sub_m).await
             }
-            (MOVE, Some(sub_m)) => run_move(ctx, &matches, sub_m).await,
             (RUN_MOVER, Some(sub_m)) => run_mover(ctx, &matches, sub_m).await,
             (SYNC_COMMIT_AND_ANCESTORS, Some(sub_m)) => {
                 run_sync_commit_and_ancestors(ctx, &matches, sub_m).await

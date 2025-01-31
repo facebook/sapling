@@ -70,6 +70,7 @@ gix-hash = "0.15.1"
 gix-object = "0.46.0"
 itertools = "0.14.0"
 justknobs = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
+live_commit_sync_config = { version = "0.1.0", path = "../../commit_rewriting/live_commit_sync_config" }
 manifest = { version = "0.1.0", path = "../../manifest" }
 maplit = "1.0"
 megarepo_error = { version = "0.1.0", path = "../../megarepo_api/megarepo_error" }
@@ -80,6 +81,7 @@ metaconfig_types = { version = "0.1.0", path = "../../metaconfig/types" }
 mononoke_api = { version = "0.1.0", path = "../../mononoke_api" }
 mononoke_app = { version = "0.1.0", path = "../../cmdlib/mononoke_app" }
 mononoke_types = { version = "0.1.0", path = "../../mononoke_types" }
+movers = { version = "0.1.0", path = "../../commit_rewriting/movers" }
 mutable_counters = { version = "0.1.0", path = "../../mutable_counters" }
 mutable_renames = { version = "0.1.0", path = "../../mutable_renames" }
 packfile = { version = "0.1.0", path = "../../git/packfile" }

@@ -59,14 +59,16 @@ blobimport hg servers repos into Mononoke repos
 
   $ export COMMIT_DATE="1985-09-04T00:00:00.00Z"
 move things in small repo with merge
-  $ megarepo_tool move 1 with_merge_master user "with merge move" --mark-public \
-  > --commit-date-rfc3339 "$COMMIT_DATE" --bookmark with_merge_move \
-  > --mapping-version-name TEST_VERSION_NAME &> /dev/null
+  $ quiet mononoke_admin megarepo move-commit --repo-id 0 --source-repo-id 1 \
+  > -B with_merge_master -a user -m "with merge move" --mark-public \
+  > --commit-date-rfc3339 "$COMMIT_DATE" --set-bookmark with_merge_move \
+  > --mapping-version-name TEST_VERSION_NAME
 
 move things in another small repo
-  $ megarepo_tool move 2 another_master user "another move" --mark-public \
-  > --commit-date-rfc3339 "$COMMIT_DATE" --bookmark another_move \
-  > --mapping-version-name TEST_VERSION_NAME &> /dev/null
+  $ quiet mononoke_admin megarepo move-commit --repo-id 0 --source-repo-id 2 \
+  > -B another_master -a user -m "another move" --mark-public \
+  > --commit-date-rfc3339 "$COMMIT_DATE" --set-bookmark another_move \
+  > --mapping-version-name TEST_VERSION_NAME
 
 merge things in both repos
   $ mononoke_admin megarepo merge --repo-id 0 -B with_merge_move -B another_move -a user \

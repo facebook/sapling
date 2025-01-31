@@ -54,9 +54,6 @@ pub const MANUAL_COMMIT_SYNC: &str = "manual-commit-sync";
 pub const MAPPING_VERSION_NAME: &str = "mapping-version-name";
 pub const MARK_NOT_SYNCED_COMMAND: &str = "mark-not-synced";
 pub const MARK_PUBLIC: &str = "mark-public";
-pub const MAX_NUM_OF_MOVES_IN_COMMIT: &str = "max-num-of-moves-in-commit";
-pub const MOVE: &str = "move";
-pub const ORIGIN_REPO: &str = "origin-repo";
 pub const OVERWRITE: &str = "overwrite";
 pub const PARENTS: &str = "parents";
 pub const PATH_REGEX: &str = "path-regex";
@@ -160,39 +157,6 @@ fn get_commit_factory<'a>(
     }))
 }
 
-fn add_resulting_commit_args<'a, 'b>(subcommand: App<'a, 'b>) -> App<'a, 'b> {
-    subcommand
-        .arg(
-            Arg::with_name(COMMIT_AUTHOR)
-                .help("commit author to use")
-                .takes_value(true)
-                .required(true),
-        )
-        .arg(
-            Arg::with_name(COMMIT_MESSAGE)
-                .help("commit message to use")
-                .takes_value(true)
-                .required(true),
-        )
-        .arg(
-            Arg::with_name(MARK_PUBLIC)
-                .help("add the resulting commit to the public phase")
-                .long(MARK_PUBLIC),
-        )
-        .arg(
-            Arg::with_name(COMMIT_DATE_RFC3339)
-                .help("commit date to use (default is now)")
-                .long(COMMIT_DATE_RFC3339)
-                .takes_value(true),
-        )
-        .arg(
-            Arg::with_name(COMMIT_BOOKMARK)
-                .help("bookmark to point to resulting commits (no sanity checks, will move existing bookmark, be careful)")
-                .long(COMMIT_BOOKMARK)
-                .takes_value(true)
-        )
-}
-
 fn add_light_resulting_commit_args<'a, 'b>(subcommand: App<'a, 'b>) -> App<'a, 'b> {
     subcommand
         .arg(
@@ -216,35 +180,6 @@ fn add_light_resulting_commit_args<'a, 'b>(subcommand: App<'a, 'b>) -> App<'a, '
 }
 
 pub fn setup_app<'a, 'b>() -> MononokeClapApp<'a, 'b> {
-    let move_subcommand = SubCommand::with_name(MOVE)
-        .about("create a move commit, using a provided spec")
-        .arg(
-            Arg::with_name(MAX_NUM_OF_MOVES_IN_COMMIT)
-                .long(MAX_NUM_OF_MOVES_IN_COMMIT)
-                .help("how many files a single commit moves (note - that might create a stack of move commits instead of just one)")
-                .takes_value(true)
-                .required(false),
-        )
-        .arg(
-            Arg::with_name(MAPPING_VERSION_NAME)
-                .long(MAPPING_VERSION_NAME)
-                .help("which mapping version to use when remapping from small to large repo")
-                .takes_value(true)
-                .required(true),
-        )
-        .arg(
-            Arg::with_name(ORIGIN_REPO)
-                .help("use predefined mover for part of megarepo, coming from this repo")
-                .takes_value(true)
-                .required(true),
-        )
-        .arg(
-            Arg::with_name(CHANGESET)
-                .help("a changeset hash or bookmark of move commit's parent")
-                .takes_value(true)
-                .required(true),
-        );
-
     let sync_diamond_subcommand = SubCommand::with_name(SYNC_DIAMOND_MERGE)
         .about("sync a diamond merge commit from a small repo into large repo")
         .arg(
@@ -697,7 +632,6 @@ pub fn setup_app<'a, 'b>() -> MononokeClapApp<'a, 'b> {
         .with_advanced_args_hidden()
         .with_source_and_target_repos()
         .build()
-        .subcommand(add_resulting_commit_args(move_subcommand))
         .subcommand(sync_diamond_subcommand)
         .subcommand(add_light_resulting_commit_args(pre_merge_delete_subcommand))
         .subcommand(history_fixup_delete_subcommand)
