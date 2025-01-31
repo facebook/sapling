@@ -176,7 +176,7 @@ def getdag(ui, repo, revs, masterstring, template):
                 if pctx.ispublic():
                     prev = results[i][0]
                     break
-            if prev:
+            if prev is not None:
                 reserved.append(prev)
 
     return results, reserved

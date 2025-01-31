@@ -404,3 +404,14 @@ Make sure public commits that are descendants of master are not drawn
   │
   ~
 
+Indent non-public when public rev is 0:
+
+  $ newrepo
+  $ echo 'A-B' | drawdag
+  $ sl debugmakepublic $A
+  $ sl dbsh -c "cl.inner.flush([bin('$A')])"  # reassign $A to "master group" so its rev is 0
+  $ sl smartlog -T '{rev} {desc} {phase}' --config smartlog.indentnonpublic=1
+    o  281474976710656 B draft
+  ╭─╯
+  o  0 A public
+
