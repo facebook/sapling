@@ -3783,19 +3783,6 @@ def cat(ui, repo, ctx, matcher, basefm, fntemplate, prefix, **opts):
             fm.writebytes("data", b"%s", data)
             fm.data(abspath=path, path=matcher.rel(path))
 
-    # Automation often uses hg cat on single files, so special case it
-    # for performance to avoid the cost of parsing the manifest.
-    if len(matcher.files()) == 1 and not matcher.anypats():
-        file = matcher.files()[0]
-        mfl = repo.manifestlog
-        mfnode = ctx.manifestnode()
-        try:
-            if mfnode and mfl[mfnode].find(file)[0]:
-                write(file)
-                return 0
-        except KeyError:
-            pass
-
     for abs in ctx.walk(matcher):
         write(abs)
         err = 0
