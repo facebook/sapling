@@ -74,6 +74,15 @@ pub struct ChangesSinceCmd {
 
     #[clap(long, help = "Print the output in JSON format")]
     json: bool,
+
+    #[clap(short, long, default_value = "0")]
+    /// [Unit: ms] number of milliseconds to wait between events
+    throttle: u64,
+
+    #[clap(short, long, default_value = "15")]
+    /// [Unit: seconds] number of seconds to trigger an arbitrary check of
+    /// current journal position in case of event missing.
+    guard: u64,
 }
 
 impl ChangesSinceCmd {
@@ -122,7 +131,20 @@ impl crate::Subcommand for ChangesSinceCmd {
 
         self.print_result(&result)?;
         if self.subscribe {
-            println!("Getting changes since {}", result.to_position);
+            instance
+                .subscribe(
+                    &self.mount_point,
+                    self.throttle,
+                    self.guard,
+                    Some(position),
+                    self.include_vcs_roots,
+                    &self.included_roots,
+                    &self.excluded_roots,
+                    &self.included_suffixes,
+                    &self.excluded_suffixes,
+                    |result| self.print_result(result),
+                )
+                .await?;
         }
         Ok(0)
     }
