@@ -104,6 +104,7 @@ define_stats! {
     bookmark_discover_failures: timeseries(Rate, Sum),
     bookmark_update_failures: timeseries(Rate, Sum),
     max_staleness_secs: dynamic_singleton_counter("{}.max_staleness_secs", (reponame: String)),
+    global_max_staleness_secs: singleton_counter(),
 }
 
 pub struct WarmBookmarksCache {
@@ -1034,6 +1035,7 @@ fn report_delay_and_remove_finished_updaters(
     });
 
     STATS::max_staleness_secs.set_value(ctx.fb, max_staleness, (reponame.to_owned(),));
+    STATS::global_max_staleness_secs.set_value(ctx.fb, max_staleness);
     #[cfg(fbcode_build)]
     WBC_INSTRUMENT.observe(MononokeWarmBookmarkCacheStats {
         repo: Some(reponame.to_owned()),
