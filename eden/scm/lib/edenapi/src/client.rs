@@ -200,7 +200,7 @@ mod paths {
     pub const UPLOAD_FILENODES: &str = "upload/filenodes";
     pub const UPLOAD_TREES: &str = "upload/trees";
     pub const UPLOAD_IDENTICAL_CHANGESET: &str = "upload/changesets/identical";
-    pub const UPLOAD: &str = "upload/";
+    pub const UPLOAD_FILE: &str = "upload/file/";
 }
 
 #[derive(Clone)]
@@ -630,8 +630,7 @@ impl Client {
         raw_content: Bytes,
         bubble_id: Option<NonZeroU64>,
     ) -> Result<UploadToken, SaplingRemoteApiError> {
-        let mut url = self.build_url(paths::UPLOAD)?;
-        url = url.join("file/")?;
+        let mut url = self.build_url(paths::UPLOAD_FILE)?;
         match item {
             AnyFileContentId::ContentId(id) => {
                 url = url.join("content_id/")?.join(&format!("{}", id))?;
