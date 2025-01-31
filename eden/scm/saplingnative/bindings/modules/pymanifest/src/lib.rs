@@ -540,10 +540,6 @@ py_class!(pub class treemanifest |py| {
         vec_to_iter(py, result)
     }
 
-    def iteritems(&self) -> PyResult<PyObject> {
-        self.items(py)
-    }
-
     def items(&self) -> PyResult<PyObject> {
         let mut result = Vec::new();
         let tree = self.underlying(py);

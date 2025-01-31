@@ -20,10 +20,8 @@ from . import (
     ui as ui_mod,
     util,
 )
-
 from .eden_dirstate_serializer import MERGE_STATE_BOTH_PARENTS, MERGE_STATE_OTHER_PARENT
 from .node import nullid
-
 
 propertycache = util.propertycache
 
@@ -61,14 +59,14 @@ class eden_dirstate(dirstate.dirstate):
         # This yield is load bearing - it makes us an iterator.
         yield
 
-    def iteritems(self):  # override
+    def items(self):  # override
         # This seems like the type of O(repo) operation that should not be
         # allowed. Or if it is, it should be through a separate, explicit
         # codepath.
         #
-        # We do provide pycompat.iteritems(ede) for users to iterate through only the
+        # We do provide edeniteritems() for users to iterate through only the
         # files explicitly tracked in the eden dirstate.
-        raise NotImplementedError("pycompat.iteritems(eden_dirstate)")
+        raise NotImplementedError("eden_dirstate.items()")
 
     def dirs(self):  # override
         raise NotImplementedError("eden_dirstate.dirs()")

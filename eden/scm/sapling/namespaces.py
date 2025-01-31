@@ -15,7 +15,6 @@ import contextlib
 from . import autopull, error, hintutil, pycompat, registrar, templatekw, util
 from .i18n import _
 
-
 namespacetable = util.sortdict()
 
 
@@ -195,8 +194,6 @@ class namespaces:
 
     def items(self):
         return self._names.items()
-
-    iteritems = items
 
     def _addnamespace(self, name, namespace):
         """register a namespace

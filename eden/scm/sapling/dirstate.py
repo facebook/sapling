@@ -334,8 +334,6 @@ class dirstate:
     def items(self) -> "Iterable[Tuple[str, dirstatetuple]]":
         return self._map.items()
 
-    iteritems: "Callable[[dirstate], Iterable[Tuple[str, dirstatetuple]]]" = items
-
     def parents(self) -> "List[bytes]":
         # (This always returns a list of length 2.  Perhaps we should change it to
         # return a tuple instead.)

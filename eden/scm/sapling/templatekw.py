@@ -83,7 +83,6 @@ class _hybrid:
         if name not in (
             "get",
             "items",
-            "iteritems",
             "iterkeys",
             "itervalues",
             "keys",

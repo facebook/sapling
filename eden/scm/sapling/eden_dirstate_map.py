@@ -127,10 +127,8 @@ class eden_dirstate_map(treestate.treestatemap):
         for k in self._keys():
             self._tree.remove(k)
 
-    def iteritems(self):
-        raise RuntimeError(
-            "Should not pycompat.iteritems(invoke) on eden_dirstate_map!"
-        )
+    def items(self):
+        raise RuntimeError("Should not iterate eden_dirstate_map!")
 
     def __len__(self):
         raise RuntimeError("Should not invoke __len__ on eden_dirstate_map!")

@@ -22,7 +22,6 @@ from .i18n import _
 from .node import bin
 from .pycompat import unicode
 
-
 parsers = bindings.cext.parsers
 
 propertycache = util.propertycache
@@ -246,8 +245,6 @@ class manifestdict:
 
     def items(self):
         return (x[:2] for x in self._lm.iterentries())
-
-    iteritems = items
 
     def iterentries(self):
         return self._lm.iterentries()

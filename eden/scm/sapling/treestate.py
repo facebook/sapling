@@ -145,10 +145,8 @@ class treestatemap:
         # use a new file
         self._rootid = self._tree.reset()
 
-    def iteritems(self):
+    def items(self):
         return ((k, self[k]) for k in self.keys())
-
-    items = iteritems
 
     def __iter__(self):
         return iter(self.keys())

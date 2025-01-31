@@ -97,7 +97,7 @@ class GitRevision(object):
     def remove_old_revs(cls):
         new_revisionmap = {}
         ignored = []
-        for hash, rev in cls.revisionmap.iteritems():
+        for hash, rev in cls.revisionmap.items():
             if rev.use_me:
                 new_revisionmap[hash] = rev
             else:
