@@ -33,6 +33,7 @@ import os
 import re
 import socket
 import ssl
+import sys
 from typing import Any, List, Optional, Pattern, Sized
 
 from sapling import (
@@ -45,8 +46,6 @@ from sapling import (
     mutation,
     namespaces,
     node,
-    phases,
-    pycompat,
     registrar,
     revset,
     scmutil,
@@ -1037,7 +1036,7 @@ def localgetdiff(repo, diffid):
     # plan to remove it at some point.
     repo.ui.log(
         "features",
-        fullargs=repr(pycompat.sysargv),
+        fullargs=repr(sys.argv),
         feature="phrevset-full-changelog-scan",
     )
     for rev in repo.changelog.revs(start=len(repo.changelog), stop=0):

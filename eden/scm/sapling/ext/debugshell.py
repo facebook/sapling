@@ -91,7 +91,7 @@ def debugshell(ui, repo, *args, **opts):
     env = globals()
     env["ui"] = ui
     _assignobjects(env, repo)
-    sys.argv = pycompat.sysargv = args
+    sys.argv = args
 
     if command:
         exec(command, env, env)

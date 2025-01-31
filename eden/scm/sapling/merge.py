@@ -1844,7 +1844,7 @@ def applyupdates(repo, actions, wctx, mctx, overwrite, labels=None, ancestors=No
                 ms.resolve(f, wctx)
                 files.append(f)
             reponame = repo.ui.config("fbscmquery", "reponame")
-            command = " ".join(util.shellquote(a) for a in pycompat.sysargv)
+            command = " ".join(util.shellquote(a) for a in sys.argv)
             repo.ui.log(
                 "manualmergefiles",
                 manual_merge_files=",".join(files),

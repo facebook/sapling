@@ -15,6 +15,7 @@ from __future__ import absolute_import
 import errno
 import string
 import struct
+import sys
 import typing
 
 import bindings
@@ -33,7 +34,6 @@ from . import (
 )
 from .i18n import _
 from .node import bin, hex, nullid, short, wdirid
-
 
 # label constants
 # until 3.5, bookmarks.current was the advertised name, not
@@ -1188,7 +1188,7 @@ class lazyremotenamedict(pycompat.Mapping):
                 if removednames:
                     repo.ui.log(
                         "features",
-                        fullargs=repr(pycompat.sysargv),
+                        fullargs=repr(sys.argv),
                         feature="auto-clean-remotenames",
                     )
                     entries = list(readremotenames(repo))

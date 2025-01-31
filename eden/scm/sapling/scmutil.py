@@ -17,6 +17,7 @@ import glob
 import os
 import re
 import socket
+import sys
 import tempfile
 import time
 
@@ -1480,7 +1481,7 @@ def trackrevnumfortests(repo, specs):
 
     for spec in specs:
         # 'spec' should be in sys.argv
-        if not any(spec in a for a in pycompat.sysargv):
+        if not any(spec in a for a in sys.argv):
             continue
         # Consider 'spec' as a revision number.
         rev = int(spec)

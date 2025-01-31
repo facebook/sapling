@@ -21,6 +21,7 @@ import selectors
 import signal
 import socket
 import struct
+import sys
 import traceback
 from typing import Any, BinaryIO, List, Tuple
 
@@ -233,10 +234,10 @@ class server:
         and writes the return code to the result channel"""
 
         args = self._readlist()
-        pycompat.sysargv[1:] = args
+        sys.argv[1:] = args
 
         ret = bindings.commands.run(
-            [pycompat.sysargv[0]] + args, self.cin, self.cout, self.cerr
+            [sys.argv[0]] + args, self.cin, self.cout, self.cerr
         )
 
         # restore old cwd

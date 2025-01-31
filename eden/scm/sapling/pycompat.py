@@ -35,8 +35,6 @@ maplist = lambda *args: list(map(*args))
 ziplist = lambda *args: list(zip(*args))
 rawinput = input
 
-sysargv = sys.argv
-
 bytestr = str
 
 

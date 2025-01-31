@@ -19,13 +19,13 @@
 from __future__ import absolute_import
 
 import errno
+import sys
 
 import bindings
 
 from . import encoding, error, json, pycompat, util
 from .i18n import _
 from .node import bin, hex
-
 
 version = 2
 
@@ -652,7 +652,7 @@ class transaction(util.transactional):
                 metalog.set("config", self.uiconfig.configtostring().encode())
 
             command = encoding.unifromlocal(
-                " ".join(map(util.shellquote, pycompat.sysargv[1:]))
+                " ".join(map(util.shellquote, sys.argv[1:]))
             )
             parent = "Parent: %s" % hex(metalog.root())
             trdesc = "Transaction: %s" % self.desc

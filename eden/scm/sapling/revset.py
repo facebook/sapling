@@ -13,6 +13,7 @@
 from __future__ import absolute_import
 
 import re
+import sys
 import time
 
 from . import (
@@ -28,7 +29,6 @@ from . import (
     node,
     pathutil,
     phases,
-    pycompat,
     registrar,
     revsetlang,
     scmutil,
@@ -179,7 +179,7 @@ def _warnrevnum(ui, x):
         # another table.
         ui.log(
             "features",
-            fullargs=repr(pycompat.sysargv),
+            fullargs=repr(sys.argv),
             feature="revnum",
             traceback=util.smarttraceback(),
         )

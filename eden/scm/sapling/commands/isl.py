@@ -141,7 +141,7 @@ def isl_cmd(ui, repo, **opts):
     browser = opts.get("browser")
     app = opts.get("app")
     if app is None:
-        app = "web" not in pycompat.sysargv
+        app = "web" not in sys.argv
     dev = opts.get("dev")
     session = opts.get("session")
 

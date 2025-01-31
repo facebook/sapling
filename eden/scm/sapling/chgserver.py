@@ -48,15 +48,16 @@ from __future__ import absolute_import
 import os
 import socket
 import struct
+import sys
 import time
 from typing import BinaryIO, Callable, Dict, List, Optional
 
 from bindings import commands, hgtime
+
 from sapling import prefork, tracing
 
 from . import commandserver, encoding, error, pycompat, ui as uimod, util
 from .i18n import _
-
 
 _log = commandserver.log
 
@@ -246,13 +247,13 @@ class chgcmdserver(commandserver.server):
 
         util._reloadenv()
         args = self._readlist()
-        pycompat.sysargv[1:] = args
+        sys.argv[1:] = args
         origui = uimod.ui
         # Use the class patched by _newchgui so 'system' and 'pager' requests
         # get forwarded to chg client
         uimod.ui = self.ui.__class__
         try:
-            ret = commands.run([pycompat.sysargv[0]] + args)
+            ret = commands.run([sys.argv[0]] + args)
             tracing.debug(target="command_info", chg="on")
             self.cresult.write(struct.pack(">i", int(ret & 255)))
         finally:

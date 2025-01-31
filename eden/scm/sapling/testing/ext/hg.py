@@ -269,7 +269,7 @@ def hg(stdin: BinaryIO, stdout: BinaryIO, stderr: BinaryIO, env: Env) -> int:
             util.stdin = stdin
             util.stdout = stdout
             util.stderr = stderr
-            pycompat.sysargv = env.args
+            sys.argv = env.args
             util._reloadenv()
             exitcode = bindings.commands.run(env.args, stdin, stdout, stderr)
             bindings.atexit.drop_queued()
