@@ -99,12 +99,21 @@ pub async fn get_mergebase(commit: &str, mergegase_with: &str) -> anyhow::Result
 
 // Get status between two revisions. If second is None, then it is the working copy.
 // Limit the number of results to limit_results. If the number of results is greater than
-// limit_results return TooManyResults.
-pub async fn get_status(
+// limit_results return TooManyResults. Apply root and suffix filters if provided.
+// TODO: replace with a method that returns an iterator over (SaplingStatus, String)
+pub async fn get_status<P, S>(
     first: &str,
     second: Option<&str>,
     limit_results: usize,
-) -> anyhow::Result<SaplingGetStatusResult> {
+    excluded_roots: Option<&[P]>,
+    included_roots: Option<&[P]>,
+    excluded_suffixes: Option<&[S]>,
+    included_suffixes: Option<&[S]>,
+) -> anyhow::Result<SaplingGetStatusResult>
+where
+    P: AsRef<Path>,
+    S: AsRef<str> + AsRef<Path>,
+{
     let mut args = vec!["status", "-mardu", "--rev", first];
     if let Some(second) = second {
         args.push("--rev");
@@ -127,10 +136,18 @@ pub async fn get_status(
     let mut lines = reader.lines();
     while let Some(line) = lines.next_line().await? {
         if let Some(status_line) = process_one_status_line(&line)? {
-            if status.len() >= limit_results {
-                return Ok(SaplingGetStatusResult::TooManyChanges);
+            if is_path_included(
+                &status_line.1,
+                &excluded_roots,
+                &included_roots,
+                &excluded_suffixes,
+                &included_suffixes,
+            ) {
+                if status.len() >= limit_results {
+                    return Ok(SaplingGetStatusResult::TooManyChanges);
+                }
+                status.push(status_line);
             }
-            status.push(status_line);
         }
     }
 
@@ -171,6 +188,50 @@ fn process_one_status_line(line: &str) -> anyhow::Result<Option<(SaplingStatus, 
     } else {
         Err(anyhow::anyhow!("Invalid status line: {line}"))
     }
+}
+
+fn is_path_included<P, S>(
+    path: &str,
+    excluded_roots: &Option<&[P]>,
+    included_roots: &Option<&[P]>,
+    excluded_suffixes: &Option<&[S]>,
+    included_suffixes: &Option<&[S]>,
+) -> bool
+where
+    P: AsRef<Path>,
+    S: AsRef<str> + AsRef<Path>,
+{
+    let path = Path::new(path);
+
+    if !included_roots.map_or(true, |roots| {
+        roots
+            .iter()
+            .any(|included_root| path.starts_with(included_root))
+    }) {
+        return false;
+    }
+
+    if !included_suffixes.map_or(true, |suffixes| {
+        suffixes.iter().any(|suffix| path.ends_with(suffix))
+    }) {
+        return false;
+    }
+
+    if excluded_roots.map_or(false, |roots| {
+        roots
+            .iter()
+            .any(|excluded_root| path.starts_with(excluded_root))
+    }) {
+        return false;
+    }
+
+    if excluded_suffixes.map_or(false, |suffixes| {
+        suffixes.iter().any(|suffix| path.ends_with(suffix))
+    }) {
+        return false;
+    }
+    // Path should be included
+    true
 }
 
 #[cfg(test)]
