@@ -10,10 +10,16 @@ use std::fs::OpenOptions;
 use std::io;
 use std::path::Path;
 
-#[cfg(unix)]
 use once_cell::sync::Lazy;
 
 use crate::errors::IOContext;
+
+static MAX_IO_RETRIES: Lazy<u32> = Lazy::new(|| {
+    std::env::var("SL_IO_RETRIES")
+        .unwrap_or("3".to_string())
+        .parse::<u32>()
+        .unwrap_or(3)
+});
 
 #[cfg(unix)]
 static UMASK: Lazy<u32> = Lazy::new(|| unsafe {
@@ -29,12 +35,20 @@ pub fn apply_umask(mode: u32) -> u32 {
 }
 
 pub fn atomic_write(path: &Path, op: impl FnOnce(&mut File) -> io::Result<()>) -> io::Result<File> {
+    // Can't implement retries on IO timeouts because op is FnOnce
     atomicfile::atomic_write(path, 0o644, false, op).path_context("error atomic writing file", path)
 }
 
 /// Open a path for atomic writing.
 pub fn atomic_open(path: &Path) -> io::Result<atomicfile::AtomicFile> {
-    atomicfile::AtomicFile::open(path, 0o644, false).path_context("error atomic opening file", path)
+    let mut open_fn = |p: &Path| -> io::Result<atomicfile::AtomicFile> {
+        atomicfile::AtomicFile::open(p, 0o644, false)
+    };
+
+    match with_retry(&mut open_fn, path) {
+        Ok(m) => Ok(m),
+        Err(err) => Err(err).path_context("error opening file", path),
+    }
 }
 
 pub fn open(path: impl AsRef<Path>, mode: &str) -> io::Result<File> {
@@ -58,40 +72,72 @@ pub fn open(path: impl AsRef<Path>, mode: &str) -> io::Result<File> {
             }
         };
     }
+    let mut open_fn = |p: &Path| -> io::Result<File> { opts.open(p) };
 
-    opts.open(path).path_context("error opening file", path)
+    match with_retry(&mut open_fn, path) {
+        Ok(m) => Ok(m),
+        Err(err) => Err(err).path_context("error opening file", path),
+    }
 }
 
 pub fn create(path: impl AsRef<Path>) -> io::Result<File> {
     open(path, "wct")
 }
 
+fn is_retryable(err: &io::Error) -> bool {
+    cfg!(target_os = "macos") && err.kind() == io::ErrorKind::TimedOut
+}
+
+fn with_retry<'a, F, T>(io_operation: &mut F, path: &'a Path) -> io::Result<T>
+where
+    F: FnMut(&'a Path) -> io::Result<T>,
+{
+    let mut retries: u32 = 0;
+    loop {
+        match io_operation(path) {
+            Ok(v) => return Ok(v),
+            Err(err) if is_retryable(&err) => {
+                if retries >= *MAX_IO_RETRIES {
+                    return Err(err);
+                }
+                retries += 1;
+            }
+            Err(err) => return Err(err),
+        }
+    }
+}
+
 pub fn exists(path: impl AsRef<Path>) -> io::Result<Option<std::fs::Metadata>> {
-    match std::fs::metadata(path.as_ref()) {
+    let path = path.as_ref();
+    match with_retry(&mut std::fs::metadata, path) {
         Ok(m) => Ok(Some(m)),
         Err(err) if err.kind() == io::ErrorKind::NotFound => Ok(None),
-        Err(err) => Err(err).path_context("error reading file", path.as_ref()),
+        Err(err) => Err(err).path_context("error reading file", path),
     }
 }
 
 pub fn unlink_if_exists(path: impl AsRef<Path>) -> io::Result<()> {
-    match std::fs::remove_file(path.as_ref()) {
+    let path = path.as_ref();
+    match with_retry(&mut std::fs::remove_file, path) {
         Ok(()) => Ok(()),
         Err(err) if err.kind() == io::ErrorKind::NotFound => Ok(()),
-        Err(err) => Err(err).path_context("error deleting file", path.as_ref()),
+        Err(err) => Err(err).path_context("error deleting file", path),
     }
 }
 
 pub fn read_to_string_if_exists(path: impl AsRef<Path>) -> io::Result<Option<String>> {
-    match std::fs::read_to_string(path.as_ref()) {
+    let path = path.as_ref();
+    match with_retry(&mut std::fs::read_to_string, path) {
         Ok(contents) => Ok(Some(contents)),
         Err(err) if err.kind() == io::ErrorKind::NotFound => Ok(None),
-        Err(err) => Err(err).path_context("error reading file", path.as_ref()),
+        Err(err) => Err(err).path_context("error reading file", path),
     }
 }
 
 #[cfg(test)]
 mod test {
+    use std::io::Read;
+
     use anyhow::Result;
     use tempfile::tempdir;
 
@@ -110,6 +156,53 @@ mod test {
         // And the original error.
         let orig_err = format!("{}", std::fs::File::open(&path).unwrap_err());
         assert!(err_str.contains(&orig_err));
+
+        Ok(())
+    }
+
+    #[test]
+    fn test_retry_io() -> Result<()> {
+        // NOTE: These test cases are run together because running them separately sometimes fails
+        // when testing with cargo. This is because the tests are run in parallel, and
+        // std::evn::var() can overwrite environment variable values for other running tests.
+        //
+        // To avoid this, we run the tests serially in a single test case.
+        let dir = tempdir()?;
+        let path = dir.path().join("test");
+        std::fs::write(&path, "test")?;
+        let mut retries = 0;
+
+        let mut open_fn = |p: &Path| -> io::Result<File> {
+            retries += 1;
+            if retries >= (*MAX_IO_RETRIES) {
+                std::fs::File::open(p)
+            } else {
+                Err(io::Error::new(io::ErrorKind::TimedOut, "timed out"))
+            }
+        };
+
+        let file = with_retry(&mut open_fn, &path);
+
+        if cfg!(target_os = "macos") {
+            let mut file = file?;
+            assert_eq!(retries, *MAX_IO_RETRIES);
+            let mut buf = String::new();
+            file.read_to_string(&mut buf)?;
+            assert_eq!(buf, "test");
+        } else {
+            file.as_ref().err();
+            assert_eq!(
+                file.err().map(|e| e.kind()).unwrap(),
+                io::ErrorKind::TimedOut
+            );
+            assert_eq!(retries, 1);
+        }
+
+        // Test error case
+        let dir = tempdir()?;
+        let path = dir.path().join("does_not_exist");
+        let res = read_to_string_if_exists(path)?;
+        assert_eq!(res, Option::None);
 
         Ok(())
     }
