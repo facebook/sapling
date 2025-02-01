@@ -8,7 +8,6 @@
 //! Path-related utilities.
 
 use std::borrow::Cow;
-use std::collections::HashSet;
 use std::env;
 use std::ffi::OsStr;
 use std::fs;
@@ -22,8 +21,6 @@ use std::path::Component;
 use std::path::Path;
 use std::path::PathBuf;
 
-use anyhow::bail;
-use anyhow::Context;
 use fn_error_context::context;
 
 use crate::errors::IOContext;
@@ -357,6 +354,8 @@ fn add_stat_context<T, E: Into<anyhow::Error>>(
 ) -> anyhow::Result<T, anyhow::Error> {
     use std::os::unix::fs::MetadataExt;
 
+    use anyhow::Context;
+
     let res = res.map_err(Into::into);
 
     if let Some(path) = path {
@@ -381,6 +380,10 @@ fn add_stat_context<T, E: Into<anyhow::Error>>(
 /// Propagates unexpected errors like permission errors.
 #[cfg(unix)]
 fn resolve_symlinks(path: &Path) -> anyhow::Result<PathBuf> {
+    use std::collections::HashSet;
+
+    use anyhow::bail;
+    use anyhow::Context;
     fn inner(path: PathBuf, seen: &mut HashSet<PathBuf>) -> anyhow::Result<PathBuf> {
         if seen.contains(&path) {
             bail!("symlink cycle containing {:?}", path);
@@ -420,6 +423,7 @@ fn resolve_symlinks(path: &Path) -> anyhow::Result<PathBuf> {
 #[context("creating dir {:?} with mode 0o{:o}", path, mode)]
 fn create_dir_with_mode(path: &Path, mode: u32) -> anyhow::Result<()> {
     use anyhow::anyhow;
+    use anyhow::Context;
 
     let path = resolve_symlinks(path)?;
 
