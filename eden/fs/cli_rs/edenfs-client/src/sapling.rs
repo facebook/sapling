@@ -202,7 +202,6 @@ where
     S: AsRef<str> + AsRef<Path>,
 {
     let path = Path::new(path);
-
     if !included_roots.map_or(true, |roots| {
         roots
             .iter()
@@ -230,7 +229,7 @@ where
     }) {
         return false;
     }
-    // Path should be included
+
     true
 }
 
