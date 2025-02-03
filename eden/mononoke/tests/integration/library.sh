@@ -1702,7 +1702,7 @@ function packer() {
 }
 
 function check_git_wc() {
-  "$MONONOKE_CHECK_GIT_WC" \
+  GLOG_minloglevel=5 "$MONONOKE_CHECK_GIT_WC" \
     "${CACHE_ARGS[@]}" \
     "${COMMON_ARGS[@]}" \
     --repo-id "$REPOID" \
