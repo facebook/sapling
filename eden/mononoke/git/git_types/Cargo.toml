@@ -32,6 +32,7 @@ lazy_static = "1.4"
 manifest = { version = "0.1.0", path = "../../manifest" }
 megarepo_error = { version = "0.1.0", path = "../../megarepo_api/megarepo_error" }
 metaconfig_types = { version = "0.1.0", path = "../../metaconfig/types" }
+mononoke_macros = { version = "0.1.0", path = "../../mononoke_macros" }
 mononoke_types = { version = "0.1.0", path = "../../mononoke_types" }
 mononoke_types_serialization = { version = "0.1.0", path = "../../mononoke_types/serialization" }
 packfile = { version = "0.1.0", path = "../packfile" }
@@ -57,7 +58,6 @@ git2 = "0.14"
 indoc = "2.0.2"
 maplit = "1.0"
 memblob = { version = "0.1.0", path = "../../blobstore/memblob" }
-mononoke_macros = { version = "0.1.0", path = "../../mononoke_macros" }
 rand_distr = "0.4"
 repo_blobstore = { version = "0.1.0", path = "../../blobrepo/repo_blobstore" }
 repo_identity = { version = "0.1.0", path = "../../repo_attributes/repo_identity" }

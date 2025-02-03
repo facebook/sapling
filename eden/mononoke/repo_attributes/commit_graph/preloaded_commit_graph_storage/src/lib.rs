@@ -24,6 +24,7 @@ use commit_graph_types::storage::FetchedChangesetEdges;
 use commit_graph_types::storage::Prefetch;
 use context::CoreContext;
 use fbthrift::compact_protocol;
+use mononoke_macros::mononoke;
 use mononoke_types::ChangesetId;
 use mononoke_types::ChangesetIdPrefix;
 use mononoke_types::ChangesetIdsResolvedFromPrefix;
@@ -249,7 +250,7 @@ pub fn deserialize_preloaded_edges(bytes: Bytes) -> Result<PreloadedEdges> {
 #[async_trait]
 impl Loader<PreloadedEdges> for PreloadedEdgesLoader {
     async fn load(&mut self) -> Result<Option<PreloadedEdges>> {
-        tokio::task::spawn({
+        mononoke::spawn_task({
             cloned!(self.ctx, self.blobstore_without_cache, self.blobstore_key);
             async move {
                 info!(ctx.logger(), "Started preloading commit graph");

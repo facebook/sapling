@@ -50,6 +50,7 @@ use mercurial_types::HgFileNodeId;
 use mercurial_types::HgManifestId;
 use metaconfig_types::CommitSyncConfigVersion;
 use metaconfig_types::CommitSyncDirection;
+use mononoke_macros::mononoke;
 use mononoke_types::ChangesetId;
 use mononoke_types::NonRootMPath;
 use mononoke_types::RepositoryId;
@@ -1425,7 +1426,7 @@ pub async fn validate_entry(
                     .await?;
 
                 let (stats, validation_result): (_, Result<Result<(), _>, tokio::task::JoinError>) =
-                    tokio::task::spawn({
+                    mononoke::spawn_task({
                         cloned!(ctx, small_cs_id, large_cs_id, large_repo, mapping);
                         async move {
                             validate_in_a_single_repo(

@@ -13,6 +13,7 @@ use futures::future::FutureExt;
 use futures::stream::Stream;
 use futures::stream::TryStreamExt;
 use maplit::hashmap;
+use mononoke_macros::mononoke;
 use pretty_assertions::assert_eq;
 use tokio::task::yield_now;
 
@@ -82,7 +83,7 @@ async fn test_bounded_traversal() -> Result<(), Error> {
         },
     )
     .boxed();
-    let handle = tokio::spawn(traverse);
+    let handle = mononoke::spawn_task(traverse);
 
     yield_now().await;
     assert_eq!(log, reference);
@@ -192,7 +193,7 @@ async fn test_bounded_traversal_dag() -> Result<(), Error> {
         },
     )
     .boxed();
-    let handle = tokio::spawn(traverse);
+    let handle = mononoke::spawn_task(traverse);
 
     yield_now().await;
     assert_eq!(log, reference);
@@ -303,7 +304,7 @@ async fn test_bounded_traversal_dag_with_cycle() -> Result<(), Error> {
         },
     )
     .boxed();
-    let handle = tokio::spawn(traverse);
+    let handle = mononoke::spawn_task(traverse);
 
     yield_now().await;
     assert_eq!(log, reference);
@@ -368,7 +369,7 @@ where
     let traverse = test_fn(tree, tick.clone(), log.clone())
         .try_collect::<BTreeSet<usize>>()
         .boxed();
-    let handle = tokio::spawn(traverse);
+    let handle = mononoke::spawn_task(traverse);
 
     yield_now().await;
     assert_eq!(log, reference);
@@ -409,7 +410,7 @@ where
     let traverse = test_fn(tree, tick.clone(), log.clone())
         .try_collect::<BTreeSet<usize>>()
         .boxed();
-    let handle = tokio::spawn(traverse);
+    let handle = mononoke::spawn_task(traverse);
 
     yield_now().await;
     assert_eq!(log, reference);
@@ -453,7 +454,7 @@ where
     let traverse = test_fn(tree, tick.clone(), log.clone())
         .try_collect::<BTreeSet<usize>>()
         .boxed();
-    let handle = tokio::spawn(traverse);
+    let handle = mononoke::spawn_task(traverse);
 
     yield_now().await;
     assert_eq!(log, reference);

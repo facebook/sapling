@@ -16,6 +16,7 @@ use governor::state::direct::DirectStateStore;
 use governor::state::direct::NotKeyed;
 use governor::state::direct::StreamRateLimitExt;
 use governor::RateLimiter;
+use mononoke_macros::mononoke;
 
 use crate::ErrorKind;
 
@@ -37,7 +38,7 @@ impl AsyncLimiter {
         let (dispatch, dispatch_recv) = mpsc::unbounded();
         let (cancel, cancel_recv) = mpsc::channel(1);
 
-        tokio::task::spawn(async move {
+        mononoke::spawn_task(async move {
             let worker = dispatch_recv
                 .zip(futures::stream::select(
                     cancel_recv,

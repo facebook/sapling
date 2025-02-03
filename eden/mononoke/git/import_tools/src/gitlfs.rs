@@ -32,6 +32,7 @@ use hyper::Body;
 use hyper::Client;
 use hyper::StatusCode;
 use hyper_openssl::HttpsConnector;
+use mononoke_macros::mononoke;
 use mononoke_types::hash;
 use openssl::ssl::SslConnector;
 use openssl::ssl::SslFiletype;
@@ -265,7 +266,7 @@ impl GitImportLfs {
         T: Send + Sync + 'static,
         Fut: Future<Output = Result<T, Error>> + Send,
     {
-        tokio::spawn(async move {
+        mononoke::spawn_task(async move {
             let inner = self.inner.as_ref().ok_or_else(|| {
                 format_err!("GitImportLfs::fetch_bytes_internal called on disabled GitImportLfs")
             })?;

@@ -17,6 +17,7 @@ use dashmap::DashMap;
 use futures::try_join;
 use futures::Stream;
 use mercurial_types::HgChangesetId;
+use mononoke_macros::mononoke;
 use slog::o;
 use slog::Logger;
 use tokio::sync::mpsc;
@@ -73,7 +74,7 @@ where
         // Start off with follow_limit + 1 because that's logically the previous follow_remaining.
         let visit_one = VisitOne::new(ctx.clone(), &inner, changeset_id, follow_limit, &mut sender);
         if let Some(visit_one) = visit_one {
-            tokio::spawn(visit_one.visit());
+            mononoke::spawn_task(visit_one.visit());
         }
     }
 
@@ -179,7 +180,7 @@ impl<R: Repo> VisitOne<R> {
                     };
                     // Avoid unbounded recursion by spawning separate futures for each parent
                     // directly on the executor.
-                    tokio::spawn(visit_one_fut);
+                    mononoke::spawn_task(visit_one_fut);
                 }
 
                 Ok(())

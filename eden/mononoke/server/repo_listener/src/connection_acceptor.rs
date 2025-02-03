@@ -45,6 +45,7 @@ use mononoke_api::Mononoke;
 use mononoke_api::Repo;
 use mononoke_app::monitoring::ReadyFlagService;
 use mononoke_configs::MononokeConfigs;
+use mononoke_macros::mononoke;
 use openssl::ssl::Ssl;
 use openssl::ssl::SslAcceptor;
 use permission_checker::AclProvider;
@@ -251,7 +252,7 @@ impl PendingConnection {
 
         OPEN_CONNECTIONS.fetch_add(1, Ordering::Relaxed);
 
-        tokio::task::spawn(async move {
+        mononoke::spawn_task(async move {
             let logger = &this.acceptor.logger;
             let res = task
                 .on_cancel(|| warn!(logger, "connection to {} was cancelled", this.addr))
@@ -500,10 +501,10 @@ impl ChannelConn {
                 futures::future::abortable(keep_alive_sender);
 
             // spawn a task for sending keepalive messages
-            tokio::spawn(keep_alive_sender);
+            mononoke::spawn_task(keep_alive_sender);
 
             // spawn a task for forwarding stdout/err into stream
-            let join_handle = tokio::spawn(fwd);
+            let join_handle = mononoke::spawn_task(fwd);
 
             // NOTE: This might seem useless, but it's not. When you spawn a task, Tokio puts it on
             // a "LIFO slot" associated with the current thread. While the task is in the LIFO
@@ -515,7 +516,7 @@ impl ChannelConn {
             // dummy taks here. This task will take `fwd`'s place in the LIFO slot, thus pushing
             // `fwd` onto a task queue where other runtime threads can claim it. This way, even if
             // this thread goes do some expensive CPU-bound work, we won't delay keepalives.
-            tokio::spawn(async {});
+            mononoke::spawn_task(async {});
 
             (otx, etx, keep_alive_abort, join_handle)
         };

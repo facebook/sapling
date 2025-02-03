@@ -43,6 +43,7 @@ mime = "0.3.14"
 mononoke_api = { version = "0.1.0", path = "../mononoke_api" }
 mononoke_api_hg = { version = "0.1.0", path = "../mononoke_api_hg" }
 mononoke_configs = { version = "0.1.0", path = "../mononoke_configs" }
+mononoke_macros = { version = "0.1.0", path = "../mononoke_macros" }
 mononoke_types = { version = "0.1.0", path = "../mononoke_types" }
 nonzero_ext = "0.2"
 once_cell = "1.12"
@@ -72,4 +73,3 @@ vec1 = { version = "1", features = ["serde"] }
 
 [dev-dependencies]
 fbinit-tokio = { version = "0.1.2", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
-mononoke_macros = { version = "0.1.0", path = "../mononoke_macros" }

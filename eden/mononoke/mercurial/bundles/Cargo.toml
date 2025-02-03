@@ -24,6 +24,7 @@ lazy_static = "1.4"
 maplit = "1.0"
 mercurial_mutation = { version = "0.1.0", path = "../mutation" }
 mercurial_types = { version = "0.1.0", path = "../types" }
+mononoke_macros = { version = "0.1.0", path = "../../mononoke_macros" }
 mononoke_types = { version = "0.1.0", path = "../../mononoke_types" }
 percent-encoding = "2.1"
 phases = { version = "0.1.0", path = "../../phases" }
@@ -42,6 +43,5 @@ assert_matches = "1.5"
 failure_ext = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 fbinit = { version = "0.2.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 mercurial_types-mocks = { version = "0.1.0", path = "../types/mocks" }
-mononoke_macros = { version = "0.1.0", path = "../../mononoke_macros" }
 partial-io = { version = "0.5.4", features = ["futures03", "quickcheck1", "tokio1"] }
 quickcheck_arbitrary_derive = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }

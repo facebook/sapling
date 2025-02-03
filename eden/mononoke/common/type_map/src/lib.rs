@@ -96,7 +96,7 @@ mod test {
         assert!(m.insert::<dyn Trait>(Arc::new(Type(42))).is_none());
 
         // ensure that it is Send + Sync
-        let handle = std::thread::spawn(move || m.get::<dyn Trait>().cloned());
+        let handle = mononoke::spawn_thread(move || m.get::<dyn Trait>().cloned());
         assert_eq!(handle.join().unwrap().unwrap().method(), 42)
     }
 }

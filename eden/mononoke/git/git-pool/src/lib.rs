@@ -14,6 +14,7 @@ use anyhow::anyhow;
 use anyhow::Error;
 use git2::Error as Git2Error;
 use git2::Repository;
+use mononoke_macros::mononoke;
 use r2d2::ManageConnection;
 use r2d2::Pool;
 use tokio::sync::Semaphore;
@@ -50,8 +51,8 @@ impl GitPool {
     {
         let sem = self.sem.clone();
         let pool = self.pool.clone();
-        // Note - this tokio::spawn() is an attempt to fix deadlock D31541432.
-        let ret = tokio::spawn(async move {
+        // Note - this mononoke::spawn_task() is an attempt to fix deadlock D31541432.
+        let ret = mononoke::spawn_task(async move {
             let permit = sem.acquire_owned().await?;
             let ret = tokio::task::spawn_blocking(move || {
                 let result_repo = pool.get()?;

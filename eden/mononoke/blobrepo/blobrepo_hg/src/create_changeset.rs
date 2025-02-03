@@ -35,6 +35,7 @@ use mercurial_types::HgFileNodeId;
 use mercurial_types::HgManifestId;
 use mercurial_types::HgNodeHash;
 use mercurial_types::RepoPath;
+use mononoke_macros::mononoke;
 use mononoke_types::BlobstoreValue;
 use mononoke_types::BonsaiChangeset;
 use mononoke_types::NonRootMPath;
@@ -329,7 +330,7 @@ impl CreateChangeset {
             .boxed()
             .try_shared();
 
-        let completion_future = tokio::spawn(changeset_complete_fut)
+        let completion_future = mononoke::spawn_task(changeset_complete_fut)
             .map(|result| result?)
             .boxed()
             .try_shared();

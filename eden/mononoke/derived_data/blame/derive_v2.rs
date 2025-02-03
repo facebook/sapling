@@ -21,6 +21,7 @@ use futures::StreamExt;
 use futures::TryFutureExt;
 use futures::TryStreamExt;
 use manifest::find_intersection_of_diffs;
+use mononoke_macros::mononoke;
 use mononoke_types::blame_v2::store_blame;
 use mononoke_types::blame_v2::BlameParent;
 use mononoke_types::blame_v2::BlameV2;
@@ -75,7 +76,7 @@ pub(crate) async fn derive_blame_v2(
         cloned!(ctx, blobstore, renames);
         async move {
             let (path, file_unode) = path_and_file_unode?;
-            tokio::spawn(async move {
+            mononoke::spawn_task(async move {
                 create_blame_v2(
                     &ctx,
                     &blobstore,

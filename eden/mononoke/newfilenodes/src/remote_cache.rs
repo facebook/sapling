@@ -20,6 +20,7 @@ use filenodes::FilenodeRange;
 use futures::future::try_join_all;
 use memcache::KeyGen;
 use memcache::MEMCACHE_VALUE_MAX_SIZE;
+use mononoke_macros::mononoke;
 use rand::random;
 use stats::prelude::*;
 use time_ext::DurationExt;
@@ -290,7 +291,7 @@ fn schedule_fill_filenode(
             let _ = memcache.set(key, serialized).await;
         };
 
-        tokio::spawn(fut);
+        mononoke::spawn_task(fut);
     }
 }
 
@@ -304,7 +305,7 @@ fn schedule_fill_history(
         let _ = fill_history(&memcache, &keygen, &key, filenodes).await;
     };
 
-    tokio::spawn(fut);
+    mononoke::spawn_task(fut);
 }
 
 fn serialize_history(filenodes: FilenodeRange) -> Bytes {

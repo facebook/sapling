@@ -38,6 +38,7 @@ use manifest::Diff;
 use manifest::Entry;
 use manifest::ManifestOps;
 use metaconfig_types::GitDeltaManifestV2Config;
+use mononoke_macros::mononoke;
 use mononoke_types::path::MPath;
 use mononoke_types::BlobstoreValue;
 use mononoke_types::BonsaiChangeset;
@@ -308,7 +309,7 @@ async fn create_delta_entry(
     )?;
 
     let raw_delta = if let Some(delta) =
-        tokio::task::spawn(compute_raw_delta(old_object, new_object)).await??
+        mononoke::spawn_task(compute_raw_delta(old_object, new_object)).await??
     {
         delta
     } else {
@@ -386,7 +387,7 @@ impl BonsaiDerivable for RootGitDeltaManifestV2Id {
             .map_ok(|bonsai| {
                 cloned!(ctx, derivation_ctx);
                 async move {
-                    let output = tokio::spawn(async move {
+                    let output = mononoke::spawn_task(async move {
                         let bonsai_id = bonsai.get_changeset_id();
                         let gdm_v2 = derive_single(&ctx, &derivation_ctx, bonsai).await?;
                         anyhow::Ok((bonsai_id, gdm_v2))

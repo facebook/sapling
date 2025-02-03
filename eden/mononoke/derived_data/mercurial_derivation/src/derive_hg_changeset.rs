@@ -40,6 +40,7 @@ use mercurial_types::HgChangesetId;
 use mercurial_types::HgFileNodeId;
 use mercurial_types::HgManifestId;
 use mercurial_types::HgParents;
+use mononoke_macros::mononoke;
 use mononoke_types::BonsaiChangeset;
 use mononoke_types::ChangesetId;
 use mononoke_types::FileChange;
@@ -287,7 +288,7 @@ pub async fn get_manifest_from_bonsai(
                     let p1 = p1s.get(&path).cloned();
                     let p2 = p2s.get(&path).cloned();
                     cloned!(ctx, blobstore);
-                    let spawned = tokio::spawn(async move {
+                    let spawned = mononoke::spawn_task(async move {
                         let entry = store_file_change(
                             ctx,
                             blobstore,

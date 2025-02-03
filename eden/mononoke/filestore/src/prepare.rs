@@ -21,6 +21,7 @@ use futures::stream::StreamExt;
 use futures::stream::TryStreamExt;
 use futures::stream::{self};
 use futures::task::Poll;
+use mononoke_macros::mononoke;
 use mononoke_types::content_chunk::new_blob_and_pointer;
 use mononoke_types::content_metadata_v2::ends_in_newline;
 use mononoke_types::content_metadata_v2::first_line;
@@ -163,7 +164,7 @@ where
                         }
                     };
 
-                    async move { tokio::task::spawn(fut).await? }
+                    async move { mononoke::spawn_task(fut).await? }
                 })
                 .buffered(concurrency)
                 .try_fold(vec![], |mut chunks, chunk| async move {

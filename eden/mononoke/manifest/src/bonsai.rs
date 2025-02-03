@@ -23,11 +23,11 @@ use futures::TryFutureExt;
 use futures::TryStreamExt;
 use maplit::hashmap;
 use maplit::hashset;
+use mononoke_macros::mononoke;
 use mononoke_types::content_manifest::ContentManifestFile;
 use mononoke_types::fsnode::FsnodeFile;
 use mononoke_types::FileType;
 use mononoke_types::NonRootMPath;
-use tokio::task;
 
 use crate::Entry;
 use crate::Manifest;
@@ -376,8 +376,10 @@ where
         bounded_traversal::bounded_traversal_stream(256, seed, move |(path, work)| {
             cloned!(ctx, store);
             async move {
-                task::spawn(async move { bonsai_diff_unfold(&ctx, &store, path, work).await })
-                    .await?
+                mononoke::spawn_task(
+                    async move { bonsai_diff_unfold(&ctx, &store, path, work).await },
+                )
+                .await?
             }
             .boxed()
         })

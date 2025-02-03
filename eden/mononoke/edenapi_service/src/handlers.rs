@@ -51,6 +51,7 @@ use hyper::Body;
 use hyper::Response;
 use mime::Mime;
 use mononoke_api::Repo;
+use mononoke_macros::mononoke;
 use serde::Deserialize;
 use serde::Serialize;
 use time_ext::DurationExt;
@@ -412,7 +413,7 @@ where
         }
     };
 
-    tokio::task::spawn(async move {
+    mononoke::spawn_task(async move {
         futures::pin_mut!(reporting_loop);
         let _ = futures::future::select(reporting_loop, receiver).await;
     });

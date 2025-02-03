@@ -27,6 +27,7 @@ use gix_object::Kind;
 use gix_object::ObjectRef;
 use gix_object::Tag;
 use gix_object::Tree;
+use mononoke_macros::mononoke;
 use tokio::io::AsyncBufReadExt;
 use tokio::io::AsyncReadExt;
 use tokio::io::AsyncWriteExt;
@@ -136,7 +137,7 @@ impl GitRepoReader {
 
         {
             let outstanding_requests = outstanding_requests.clone();
-            tokio::spawn(read_objects_task(
+            mononoke::spawn_task(read_objects_task(
                 outstanding_requests,
                 batch_cat_file
                     .stdout
@@ -153,7 +154,7 @@ impl GitRepoReader {
                 .stdin
                 .take()
                 .context("stdin not set up properly")?;
-            tokio::spawn(async move {
+            mononoke::spawn_task(async move {
                 while let Some(object) = recv_request.recv().await {
                     if cat_file_stdin
                         .write_all(format!("{}\n", object).as_bytes())

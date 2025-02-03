@@ -22,6 +22,7 @@ futures_stats = { version = "0.1.0", git = "https://github.com/facebookexperimen
 futures_watchdog = { version = "0.1.0", path = "../../../common/futures_watchdog" }
 itertools = "0.14.0"
 memwrites_commit_graph_storage = { version = "0.1.0", path = "../memwrites_commit_graph_storage" }
+mononoke_macros = { version = "0.1.0", path = "../../../mononoke_macros" }
 mononoke_types = { version = "0.1.0", path = "../../../mononoke_types" }
 scuba_ext = { version = "0.1.0", path = "../../../common/scuba_ext" }
 slog = { version = "2.7", features = ["max_level_trace", "nested-values"] }

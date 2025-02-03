@@ -23,6 +23,7 @@ use futures::TryStreamExt;
 use git2::Repository;
 use manifest::Entry;
 use manifest::Manifest;
+use mononoke_macros::mononoke;
 use mononoke_types::hash;
 use mononoke_types::hash::Sha256;
 use mononoke_types::path::MPath;
@@ -219,7 +220,7 @@ async fn check_receiver(
             Ok((node, subentries))
         })
         .map_ok(|(node, subentries)| check_node(node, subentries))
-        .try_for_each(|f| async move { tokio::spawn(f).await? })
+        .try_for_each(|f| async move { mononoke::spawn_task(f).await? })
         .await
 }
 

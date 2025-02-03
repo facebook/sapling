@@ -45,6 +45,7 @@ use mononoke_app::monitoring::AliveService;
 use mononoke_app::monitoring::MonitoringAppExtension;
 use mononoke_app::MononokeApp;
 use mononoke_app::MononokeAppBuilder;
+use mononoke_macros::mononoke;
 use repo_blobstore::RepoBlobstore;
 use repo_derived_data::RepoDerivedData;
 use repo_derived_data::RepoDerivedDataArc;
@@ -210,7 +211,7 @@ async fn async_main(app: MononokeApp) -> Result<(), Error> {
                     Result::<_, Error>::Ok(repo)
                 };
 
-                let handle = tokio::task::spawn(warmup);
+                let handle = mononoke::spawn_task(warmup);
                 let snapshot = Snapshot::build(filenodes_receiver).await;
 
                 // Make sure cache warmup has succeeded before committing this snapshot, and get

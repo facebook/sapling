@@ -345,7 +345,7 @@ mod test {
         outer.put(ctx, key.to_owned(), value.clone()).await?;
         assert!(inner.get(ctx, key).await?.is_none());
 
-        let persist = tokio::spawn({
+        let persist = mononoke::spawn_task({
             cloned!(ctx, outer);
             async move { outer.persist(&ctx).await }
         });

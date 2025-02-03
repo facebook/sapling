@@ -57,6 +57,7 @@ use mercurial_types::HgChangesetId;
 use mercurial_types::HgFileNodeId;
 use mercurial_types::HgManifestId;
 use mercurial_types::RepoPath;
+use mononoke_macros::mononoke;
 use mononoke_types::deleted_manifest_common::DeletedManifestCommon;
 use mononoke_types::fsnode::FsnodeEntry;
 use mononoke_types::path::MPath;
@@ -2026,7 +2027,7 @@ where
                         checker,
                     );
 
-                    let handle = tokio::task::spawn(next);
+                    let handle = mononoke::spawn_task(next);
                     handle.await?
                 }
                 .map(move |v| (target, shard_key, v))

@@ -42,6 +42,7 @@ use megarepo_api::MegarepoApi;
 use mononoke_api::Mononoke;
 use mononoke_api::MononokeRepo;
 use mononoke_api::Repo;
+use mononoke_macros::mononoke;
 use mononoke_types::Timestamp;
 use slog::debug;
 use slog::error;
@@ -136,7 +137,7 @@ impl RepoShardedProcessExecutor for AsyncMethodRequestWorker {
             let repo_ids = self.mononoke.known_repo_ids().clone();
             async move { stats_loop(&ctx, repo_ids, &queue).await }
         });
-        let _stats = tokio::spawn(stats);
+        let _stats = mononoke::spawn_task(stats);
 
         // Build stream that pools all the queues
         let request_stream = self
@@ -161,7 +162,8 @@ impl RepoShardedProcessExecutor for AsyncMethodRequestWorker {
                     let worker = self.clone();
                     let ctx = CoreContext::clone(&self.ctx);
                     if let Err(e) =
-                        tokio::spawn(worker.compute_and_mark_completed(ctx, req_id, params)).await
+                        mononoke::spawn_task(worker.compute_and_mark_completed(ctx, req_id, params))
+                            .await
                     {
                         warn!(self.ctx.logger(), "Error spawning request: {:?}", e);
                     }
@@ -311,7 +313,7 @@ impl AsyncMethodRequestWorker {
             async move { Self::keep_alive_loop(&ctx, &req_id, &queue).await }
         });
 
-        let keep_alive = tokio::spawn(keep_alive);
+        let keep_alive = mononoke::spawn_task(keep_alive);
 
         pin_mut!(work_fut);
         pin_mut!(keep_alive);
@@ -455,7 +457,7 @@ mod test {
             ABANDONED_REQUEST_THRESHOLD_SECS,
         );
 
-        let s = tokio::spawn(s.collect::<Vec<_>>());
+        let s = mononoke::spawn_task(s.collect::<Vec<_>>());
         tokio::time::sleep(Duration::from_secs(1)).await;
         will_exit.store(true, Ordering::Relaxed);
         let res = s.await?;
@@ -501,7 +503,7 @@ mod test {
             ABANDONED_REQUEST_THRESHOLD_SECS,
         );
 
-        let s = tokio::spawn(s.collect::<Vec<_>>());
+        let s = mononoke::spawn_task(s.collect::<Vec<_>>());
         tokio::time::sleep(Duration::from_secs(1)).await;
         will_exit.store(true, Ordering::Relaxed);
         let res = s.await?;
@@ -519,7 +521,7 @@ mod test {
             1, // 1 second
         );
 
-        let s = tokio::spawn(s.collect::<Vec<_>>());
+        let s = mononoke::spawn_task(s.collect::<Vec<_>>());
         tokio::time::sleep(Duration::from_secs(1)).await;
         will_exit.store(true, Ordering::Relaxed);
         let res = s.await?;

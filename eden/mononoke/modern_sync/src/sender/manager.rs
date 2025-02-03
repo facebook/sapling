@@ -13,6 +13,7 @@ use futures::channel::oneshot;
 use mercurial_types::blobs::HgBlobChangeset;
 use mercurial_types::HgFileNodeId;
 use mercurial_types::HgManifestId;
+use mononoke_macros::mononoke;
 use mononoke_types::BonsaiChangeset;
 use mononoke_types::FileContents;
 use slog::error;
@@ -101,7 +102,7 @@ impl SendManager {
         content_es: Arc<dyn ModernSyncSender + Send + Sync>,
         content_logger: Logger,
     ) {
-        tokio::spawn(async move {
+        mononoke::spawn_task(async move {
             let mut encountered_error: Option<anyhow::Error> = None;
             while let Some(msg) = content_recv.recv().await {
                 match msg {
@@ -135,7 +136,7 @@ impl SendManager {
         files_trees_es: Arc<dyn ModernSyncSender + Send + Sync>,
         files_trees_logger: Logger,
     ) {
-        tokio::spawn(async move {
+        mononoke::spawn_task(async move {
             let mut encountered_error: Option<anyhow::Error> = None;
             while let Some(msg) = files_and_trees_recv.recv().await {
                 match msg {
@@ -195,7 +196,7 @@ impl SendManager {
         changeset_es: Arc<dyn ModernSyncSender + Send + Sync>,
         changeset_logger: Logger,
     ) {
-        tokio::spawn(async move {
+        mononoke::spawn_task(async move {
             let mut encountered_error: Option<anyhow::Error> = None;
             while let Some(msg) = changeset_recv.recv().await {
                 match msg {

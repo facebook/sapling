@@ -14,6 +14,7 @@ use std::sync::Arc;
 use anyhow::Error;
 use futures_stats::TimedTryFutureExt;
 use mercurial_types::HgFileNodeId;
+use mononoke_macros::mononoke;
 use mononoke_types::RepoPath;
 use stats::prelude::*;
 use time_ext::DurationExt;
@@ -60,9 +61,9 @@ impl Shards {
         path.hash(&mut hasher);
         filenode_id.hash(&mut hasher);
         let index = (hasher.finish() % self.filenodes.len() as u64) as usize;
-        // We must task::spawn() the code that runs while the semaphore is acquired
+        // We must mononoke::spawn_task() the code that runs while the semaphore is acquired
         // in order to reduce the risk of deadlocks. See T102183795 for details.
-        tokio::spawn(async move {
+        mononoke::spawn_task(async move {
             let (stats, _permit) = self.filenodes[index].acquire().try_timed().await?;
             STATS::filenodes_shard_checkout_ms
                 .add_value(stats.completion_time.as_millis_unchecked() as i64);
@@ -83,9 +84,9 @@ impl Shards {
         let mut hasher = DefaultHasher::new();
         path.hash(&mut hasher);
         let index = (hasher.finish() % self.history.len() as u64) as usize;
-        // We must task::spawn() the code that runs while the semaphore is acquired
+        // We must mononoke::spawn_task() the code that runs while the semaphore is acquired
         // in order to reduce the risk of deadlocks. See T102183795 for details.
-        tokio::spawn(async move {
+        mononoke::spawn_task(async move {
             let (stats, _permit) = self.history[index].acquire().try_timed().await?;
             STATS::history_shard_checkout_ms
                 .add_value(stats.completion_time.as_millis_unchecked() as i64);

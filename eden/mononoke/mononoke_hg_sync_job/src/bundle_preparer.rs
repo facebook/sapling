@@ -31,6 +31,7 @@ use mercurial_types::HgChangesetId;
 use metaconfig_types::RepoConfigRef;
 use mononoke_hg_sync_job_helper_lib::save_bytes_to_temp_file;
 use mononoke_hg_sync_job_helper_lib::write_to_named_temp_file;
+use mononoke_macros::mononoke;
 use mononoke_types::datetime::Timestamp;
 use mononoke_types::ChangesetId;
 use mononoke_types::Generation;
@@ -136,7 +137,7 @@ impl BundlePreparer {
             .map(|(f, entries)| {
                 let ctx = ctx.clone();
                 async move {
-                    let f = tokio::spawn(f);
+                    let f = mononoke::spawn_task(f);
                     let res = f.map_err(Error::from).watched(ctx.logger()).await;
                     let res = match res {
                         Ok(Ok(res)) => Ok(res),

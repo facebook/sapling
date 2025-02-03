@@ -31,12 +31,12 @@ filestore = { version = "0.1.0", path = "../../filestore" }
 futures = { version = "0.3.30", features = ["async-await", "compat"] }
 manifest = { version = "0.1.0", path = "../../manifest" }
 mercurial_types = { version = "0.1.0", path = "../../mercurial/types" }
+mononoke_macros = { version = "0.1.0", path = "../../mononoke_macros" }
 mononoke_types = { version = "0.1.0", path = "../../mononoke_types" }
 repo_derived_data = { version = "0.1.0", path = "../../repo_attributes/repo_derived_data" }
 slog = { version = "2.7", features = ["max_level_trace", "nested-values"] }
 sorted_vector_map = { version = "0.2.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 stats = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
-tokio = { version = "1.41.0", features = ["full", "test-util", "tracing"] }
 
 [dev-dependencies]
 ascii = "1.0"
@@ -55,7 +55,6 @@ filenodes_derivation = { version = "0.1.0", path = "../filenodes_derivation" }
 fixtures = { version = "0.1.0", path = "../../tests/fixtures" }
 memblob = { version = "0.1.0", path = "../../blobstore/memblob" }
 mercurial_types-mocks = { version = "0.1.0", path = "../../mercurial/types/mocks" }
-mononoke_macros = { version = "0.1.0", path = "../../mononoke_macros" }
 rand = { version = "0.8", features = ["small_rng"] }
 rand_distr = "0.4"
 rand_xorshift = "0.3"
@@ -65,3 +64,4 @@ scuba_ext = { version = "0.1.0", path = "../../common/scuba_ext" }
 sql = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 test_repo_factory = { version = "0.1.0", path = "../../repo_factory/test_repo_factory" }
 tests_utils = { version = "0.1.0", path = "../../tests/utils" }
+tokio = { version = "1.41.0", features = ["full", "test-util", "tracing"] }

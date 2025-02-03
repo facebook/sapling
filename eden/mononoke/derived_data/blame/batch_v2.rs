@@ -23,6 +23,7 @@ use derived_data_manager::DerivationContext;
 use futures::stream::FuturesOrdered;
 use futures::stream::TryStreamExt;
 use lock_ext::LockExt;
+use mononoke_macros::mononoke;
 use mononoke_types::BonsaiChangeset;
 use mononoke_types::ChangesetId;
 use slog::debug;
@@ -97,7 +98,7 @@ pub async fn derive_blame_v2_in_batch(
                             })?;
                         Ok::<_, Error>(root_manifest)
                     };
-                    let derivation_handle = tokio::spawn(derivation_fut);
+                    let derivation_handle = mononoke::spawn_task(derivation_fut);
                     let root_manifest = derivation_handle.await??;
                     let derived = RootBlameV2 {
                         csid,

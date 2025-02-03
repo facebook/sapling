@@ -26,6 +26,7 @@ use futures::stream;
 use futures::stream::StreamExt;
 use futures::stream::TryStreamExt;
 use itertools::Either;
+use mononoke_macros::mononoke;
 use mononoke_types::path::MPath;
 use mononoke_types::prefix_tree::PrefixTree;
 use mononoke_types::MPathElement;
@@ -231,7 +232,7 @@ where
                 let create_tree = create_tree.clone();
                 let create_leaf = create_leaf.clone();
                 async move {
-                    tokio::spawn(async move {
+                    mononoke::spawn_task(async move {
                         match merge_result {
                             MergeResult::Reuse { name, entry } => Ok(Some((name, None, entry))),
                             MergeResult::Delete => Ok(None),

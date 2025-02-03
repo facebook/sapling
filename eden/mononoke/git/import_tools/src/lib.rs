@@ -49,6 +49,7 @@ use gix_object::Object;
 use linked_hash_map::LinkedHashMap;
 use manifest::bonsai_diff;
 use manifest::BonsaiDiffFileChange;
+use mononoke_macros::mononoke;
 use mononoke_types::ChangesetId;
 use mononoke_types::FileType;
 use mononoke_types::NonRootMPath;
@@ -60,7 +61,6 @@ use tokio::io::AsyncBufReadExt;
 use tokio::io::BufReader;
 use tokio::process::Command;
 use tokio::sync::mpsc;
-use tokio::task;
 
 pub use crate::bookmark::set_bookmark;
 pub use crate::bookmark::BookmarkOperation;
@@ -104,7 +104,7 @@ where
     changes
         .map_ok(|change| async {
             cloned!(ctx, reader, uploader, lfs);
-            task::spawn({
+            mononoke::spawn_task({
                 async move {
                     match change {
                         BonsaiDiffFileChange::Changed(path, (ty, GitLeaf(oid)))
@@ -291,7 +291,7 @@ pub async fn upload_git_tree_recursively<Uploader: GitUploader, Reader: GitReade
         .map_ok(|diff| {
             cloned!(ctx, uploader, reader);
             async move {
-                tokio::spawn(async move {
+                mononoke::spawn_task(async move {
                     use BonsaiDiffFileChange::*;
                     match diff {
                         Changed(_, (_, GitLeaf(oid))) | ChangedReusedId(_, (_, GitLeaf(oid))) => {
@@ -445,7 +445,7 @@ pub async fn import_commit_contents<Uploader: GitUploader, Reader: GitReader>(
     // and call finalize batch on them (for deriving data) without blocking the import of commits
     let (finalize_sender, mut finalize_receiver) = mpsc::channel(prefs.concurrency);
     // Spawn off an async consumer that would finalize batches of commits which have been imported into Mononoke
-    let batch_finalizer = tokio::spawn({
+    let batch_finalizer = mononoke::spawn_task({
         cloned!(
             backfill_derivation,
             ctx,
@@ -510,7 +510,7 @@ pub async fn import_commit_contents<Uploader: GitUploader, Reader: GitReader>(
     let (bonsai_sender, mut bonsai_receiver) = mpsc::channel(prefs.concurrency);
     // Spawn off an async consumer that would generate bonsai commits for Git commits that have had their Git data and file changes uploaded
     // to Mononoke
-    let bonsai_creator = tokio::spawn({
+    let bonsai_creator = mononoke::spawn_task({
         cloned!(ctx, uploader, acc, mut scuba);
         let concurrency = prefs.concurrency;
         async move {
@@ -577,7 +577,7 @@ pub async fn import_commit_contents<Uploader: GitUploader, Reader: GitReader>(
                 prefs.stream_for_changed_trees
             );
             async move {
-                task::spawn({
+                mononoke::spawn_task({
                     async move {
                         let extracted_commit = ExtractedCommit::new(&ctx, oid, &reader)
                             .await
@@ -607,7 +607,7 @@ pub async fn import_commit_contents<Uploader: GitUploader, Reader: GitReader>(
                             .map_ok(|entry| {
                                 cloned!(uploader, reader, ctx);
                                 async move {
-                                    tokio::spawn(async move {
+                                    mononoke::spawn_task(async move {
                                         upload_git_object(&ctx, uploader, reader, &entry.0).await?;
                                         anyhow::Ok(())
                                     })

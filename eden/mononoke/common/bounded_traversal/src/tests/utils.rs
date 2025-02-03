@@ -18,6 +18,7 @@ use futures::future;
 use futures::future::Future;
 use futures::future::FutureExt;
 use lock_ext::LockExt;
+use mononoke_macros::mononoke;
 use pretty_assertions::assert_eq;
 use tokio::task::yield_now;
 
@@ -144,7 +145,7 @@ async fn test_tick() -> Result<(), Error> {
     let mut reference = Vec::new();
     let tick = Tick::new();
 
-    let handle = tokio::spawn({
+    let handle = mononoke::spawn_task({
         let log = log.clone();
         let tick = tick.clone();
         async move {

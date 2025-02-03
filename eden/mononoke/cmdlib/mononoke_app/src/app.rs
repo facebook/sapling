@@ -45,6 +45,7 @@ use metaconfig_types::Redaction;
 use metaconfig_types::RepoConfig;
 use metaconfig_types::ShardedService;
 use mononoke_configs::MononokeConfigs;
+use mononoke_macros::mononoke;
 use mononoke_types::RepositoryId;
 use prefixblob::PrefixBlobstore;
 use redactedblobstore::RedactedBlobstore;
@@ -179,7 +180,7 @@ impl MononokeApp {
             self.env.runtime.block_on(async move {
                 let stats_aggregation = schedule_stats_aggregation_preview()
                     .map_err(|_| anyhow!("Failed to create stats aggregation worker"))?;
-                tokio::task::spawn(stats_aggregation);
+                mononoke::spawn_task(stats_aggregation);
                 anyhow::Ok(())
             })?;
         }
@@ -199,7 +200,7 @@ impl MononokeApp {
             .runtime
             .take()
             .ok_or_else(|| anyhow!("MononokeApp already started"))?;
-        runtime.block_on(async move { tokio::spawn(main(self)).await? })
+        runtime.block_on(async move { mononoke::spawn_task(main(self)).await? })
     }
 
     /// Execute a future on this app's runtime.

@@ -30,6 +30,7 @@ use futures::TryStreamExt;
 use futures_stats::TimedTryFutureExt;
 use itertools::sorted;
 use itertools::Itertools;
+use mononoke_macros::mononoke;
 use mononoke_types::ChangesetId;
 use mononoke_types::Generation;
 use mononoke_types::FIRST_GENERATION;
@@ -550,7 +551,7 @@ impl CommitGraph {
 
         let (tx, mut rx) = tokio::sync::mpsc::channel(100);
 
-        let segment_generation_handle = tokio::spawn({
+        let segment_generation_handle = mononoke::spawn_task({
             cloned!(self as graph, ctx);
             async move {
                 while let Some((generation, segments)) = heads_segment_frontier.segments.pop_last()
@@ -577,7 +578,7 @@ impl CommitGraph {
                                 vec![]
                             }
                         };
-                        tx.send(tokio::spawn({
+                        tx.send(mononoke::spawn_task({
                             cloned!(graph, ctx);
                             async move {
                                 graph

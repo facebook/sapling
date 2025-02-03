@@ -15,6 +15,7 @@ use anyhow::Result;
 use futures::future;
 use futures::future::Either;
 use futures::TryFutureExt;
+use mononoke_macros::mononoke;
 use slog::error;
 use slog::info;
 use slog::Logger;
@@ -71,7 +72,7 @@ where
     let signalled = future::select(terminate, interrupt);
 
     // Spawn the server onto its own task
-    let server_handle = tokio::task::spawn(server);
+    let server_handle = mononoke::spawn_task(server);
 
     // Now wait for the termination signal, or a server exit.
     let server_result_or_handle = match future::select(server_handle, signalled).await {

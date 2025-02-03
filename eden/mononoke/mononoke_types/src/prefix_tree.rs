@@ -124,7 +124,7 @@ impl<V: Default> PrefixTree<V> {
                     }
                 };
                 self.prefix = self.prefix[..lcp.len()].to_smallvec();
-                return self.value.get_or_insert(Default::default());
+                self.value.get_or_insert(Default::default())
             // The new key splits off from the prefix of the current node.
             // We need to split the prefix by creating a new node and create
             // a new child for the rest of the new key.
@@ -142,26 +142,24 @@ impl<V: Default> PrefixTree<V> {
                     }
                 };
                 self.prefix = self.prefix[..lcp.len()].to_smallvec();
-                return self
-                    .edges
+                self.edges
                     .get_mut(&key.as_ref()[lcp.len()])
                     .unwrap()
                     .value
-                    .get_or_insert(Default::default());
+                    .get_or_insert(Default::default())
             }
         } else {
             // The new key matches the current node's prefix.
             // Replace the current node's value with the new value.
             if lcp.len() == key.as_ref().len() {
-                return self.value.get_or_insert(Default::default());
+                self.value.get_or_insert(Default::default())
             } else {
                 // The new key extends past the current node's prefix.
                 // Insert the new key into the child prefix tree.
-                return self
-                    .edges
+                self.edges
                     .entry(key.as_ref()[lcp.len()])
                     .or_default()
-                    .get_or_insert_default(&key.as_ref()[lcp.len() + 1..]);
+                    .get_or_insert_default(&key.as_ref()[lcp.len() + 1..])
             }
         }
     }

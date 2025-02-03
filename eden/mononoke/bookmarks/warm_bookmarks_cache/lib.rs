@@ -65,6 +65,7 @@ use lazy_static::lazy_static;
 use lock_ext::RwLockExt;
 use mercurial_derivation::MappedHgChangesetId;
 use mercurial_derivation::RootHgAugmentedManifestId;
+use mononoke_macros::mononoke;
 use mononoke_types::ChangesetId;
 use mononoke_types::DerivableType;
 use mononoke_types::Timestamp;
@@ -870,7 +871,7 @@ impl BookmarksCoordinator {
                 );
                 self.updaters_handles.insert(
                     book.key().clone(),
-                    tokio::spawn(async move {
+                    mononoke::spawn_task(async move {
                         let res = single_bookmark_updater(
                             &ctx,
                             &repo,
@@ -991,7 +992,7 @@ impl BookmarksCoordinator {
         };
 
         // Fire and forget. This will terminate using the `terminate` receiver.
-        std::mem::drop(tokio::task::spawn(fut));
+        std::mem::drop(mononoke::spawn_task(fut));
     }
 }
 

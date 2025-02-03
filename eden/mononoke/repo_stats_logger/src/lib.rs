@@ -20,6 +20,7 @@ use fsnodes::RootFsnodeId;
 use futures::future::abortable;
 use futures::future::AbortHandle;
 use metaconfig_types::ArcRepoConfig;
+use mononoke_macros::mononoke;
 use mononoke_types::ChangesetId;
 use repo_blobstore::ArcRepoBlobstore;
 use repo_derived_data::ArcRepoDerivedData;
@@ -85,7 +86,7 @@ impl RepoStatsLogger {
         };
 
         let (fut, abort_handle) = abortable(fut);
-        tokio::spawn(fut);
+        mononoke::spawn_task(fut);
 
         Ok(Self { abort_handle })
     }

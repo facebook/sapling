@@ -21,6 +21,7 @@ use context::PerfCounterType;
 use futures_stats::futures03::TimedTryFutureExt;
 use hyper::client::HttpConnector;
 use hyper::StatusCode;
+use mononoke_macros::mononoke;
 use openssl::ssl::SslConnector;
 use openssl::ssl::SslMethod;
 use rusoto_core::HttpClient;
@@ -126,7 +127,7 @@ impl S3ClientWrapper {
         };
 
         // NOTE - this spawn is intentional! Removing it can cause a deadlock. See D27235628
-        tokio::spawn(f).await?
+        mononoke::spawn_task(f).await?
     }
 
     pub async fn is_present(
@@ -160,7 +161,7 @@ impl S3ClientWrapper {
         };
 
         // NOTE - this spawn is intentional! Removing it can cause a deadlock. See D27235628
-        tokio::spawn(f).await?
+        mononoke::spawn_task(f).await?
     }
 
     pub async fn put(
@@ -182,7 +183,7 @@ impl S3ClientWrapper {
         };
 
         // NOTE - this spawn is intentional! Removing it can cause a deadlock. See D27235628
-        tokio::spawn(f).await?
+        mononoke::spawn_task(f).await?
     }
 
     pub async fn unlink(
@@ -204,7 +205,7 @@ impl S3ClientWrapper {
         };
 
         // NOTE - this spawn is intentional! Removing it can cause a deadlock. See D27235628
-        tokio::spawn(f).await?
+        mononoke::spawn_task(f).await?
     }
 
     async fn get_permit(&self, ctx: &CoreContext) -> Result<Option<SemaphorePermit<'_>>, Error> {

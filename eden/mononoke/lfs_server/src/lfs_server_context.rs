@@ -47,6 +47,7 @@ use lfs_protocol::RequestObject;
 use lfs_protocol::ResponseBatch;
 use metaconfig_types::RepoConfigRef;
 use mononoke_app::args::TLSArgs;
+use mononoke_macros::mononoke;
 use mononoke_types::ContentId;
 use openssl::ssl::SslConnector;
 use openssl::ssl::SslFiletype;
@@ -384,7 +385,7 @@ impl RepositoryRequestContext {
             })
         };
 
-        tokio::spawn(fut).await?
+        mononoke::spawn_task(fut).await?
     }
 
     pub async fn upstream_batch(

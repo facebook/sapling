@@ -30,6 +30,7 @@ metaconfig_types = { version = "0.1.0", path = "../metaconfig/types" }
 metadata = { version = "0.1.0", path = "../server/metadata" }
 mime = "0.3.14"
 mononoke_configs = { version = "0.1.0", path = "../mononoke_configs" }
+mononoke_macros = { version = "0.1.0", path = "../mononoke_macros" }
 openssl = "0.10.63"
 percent-encoding = "2.1"
 permission_checker = { version = "0.1.0", path = "../permission_checker" }
@@ -47,6 +48,3 @@ tokio-openssl = "0.6"
 tokio-util = { version = "0.7.12", features = ["full"] }
 trust-dns-resolver = "0.20"
 yield_stream = { version = "0.1.0", path = "../common/yield_stream" }
-
-[dev-dependencies]
-mononoke_macros = { version = "0.1.0", path = "../mononoke_macros" }

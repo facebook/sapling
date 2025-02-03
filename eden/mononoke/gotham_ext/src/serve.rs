@@ -15,6 +15,7 @@ use connection_security_checker::ConnectionSecurityChecker;
 use futures::future::TryFutureExt;
 use gotham::handler::Handler;
 use hyper::server::conn::Http;
+use mononoke_macros::mononoke;
 use openssl::ssl::Ssl;
 use openssl::ssl::SslAcceptor;
 use quiet_stream::QuietShutdownStream;
@@ -84,7 +85,7 @@ where
             Result::<_, Error>::Ok(())
         };
 
-        tokio::spawn(task.map_err(move |e| {
+        mononoke::spawn_task(task.map_err(move |e| {
             warn!(&logger, "HTTPS Server error: {:?}", e);
         }));
     }
@@ -120,7 +121,7 @@ where
             Result::<_, Error>::Ok(())
         };
 
-        tokio::spawn(task.map_err(move |e| {
+        mononoke::spawn_task(task.map_err(move |e| {
             warn!(&logger, "HTTP Server error: {:?}", e);
         }));
     }

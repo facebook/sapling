@@ -41,11 +41,7 @@ pub fn get_stats() -> Result<MemoryStats, String> {
 }
 
 fn populate_stats(max_memory: usize, used_mem: usize) -> MemoryStats {
-    let free_mem = if used_mem > max_memory {
-        0
-    } else {
-        max_memory - used_mem
-    };
+    let free_mem = max_memory.saturating_sub(used_mem);
     MemoryStats {
         total_rss_bytes: max_memory,
         rss_free_bytes: free_mem,

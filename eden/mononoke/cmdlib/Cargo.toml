@@ -33,6 +33,7 @@ mercurial_types = { version = "0.1.0", path = "../mercurial/types" }
 metaconfig_parser = { version = "0.1.0", path = "../metaconfig/parser" }
 metaconfig_types = { version = "0.1.0", path = "../metaconfig/types" }
 mononoke_app = { version = "0.1.0", path = "mononoke_app" }
+mononoke_macros = { version = "0.1.0", path = "../mononoke_macros" }
 mononoke_types = { version = "0.1.0", path = "../mononoke_types" }
 observability = { version = "0.1.0", path = "../observability" }
 once_cell = "1.12"

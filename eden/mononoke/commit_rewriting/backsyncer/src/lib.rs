@@ -72,6 +72,7 @@ use futures::TryStreamExt;
 use futures_stats::TimedTryFutureExt;
 use metaconfig_types::RepoConfig;
 use metaconfig_types::RepoConfigRef;
+use mononoke_macros::mononoke;
 use mononoke_types::ChangesetId;
 use mononoke_types::Globalrev;
 use mononoke_types::RepositoryId;
@@ -363,7 +364,7 @@ where
         if let Some(to_cs_id) = entry.to_changeset_id {
             commit_only_backsync_future = Box::new({
                 cloned!(ctx, sync_context, to_cs_id, commit_syncer);
-                tokio::spawn(async move {
+                mononoke::spawn_task(async move {
                     commit_only_backsync_future.await;
                     let res = commit_syncer
                         .sync_commit(

@@ -17,6 +17,7 @@ use cloned::cloned;
 use context::CoreContext;
 use futures::future::FutureExt;
 use futures::stream::TryStreamExt;
+use mononoke_macros::mononoke;
 use mononoke_types::MPathElement;
 use sorted_vector_map::SortedVectorMap;
 
@@ -160,7 +161,7 @@ where
                 let create_tree = create_tree.clone();
                 let create_leaf = create_leaf.clone();
                 async move {
-                    tokio::spawn(async move {
+                    mononoke::spawn_task(async move {
                         match fold_node {
                             FoldNode::CreateTree {
                                 predecessor,

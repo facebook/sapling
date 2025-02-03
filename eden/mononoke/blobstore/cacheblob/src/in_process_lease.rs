@@ -18,6 +18,7 @@ use futures::channel::oneshot::Sender;
 use futures::future::BoxFuture;
 use futures::future::FutureExt;
 use futures::future::Shared;
+use mononoke_macros::mononoke;
 use tokio::sync::Mutex;
 
 use crate::LeaseOps;
@@ -61,7 +62,7 @@ impl LeaseOps for InProcessLease {
     fn renew_lease_until(&self, _ctx: CoreContext, key: &str, done: BoxFuture<'static, ()>) {
         let this = self.clone();
         let key = key.to_string();
-        tokio::spawn(async move {
+        mononoke::spawn_task(async move {
             done.await;
             this.release_lease(&key).await;
         });

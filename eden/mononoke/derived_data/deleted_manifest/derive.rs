@@ -34,6 +34,7 @@ use futures::stream::TryStreamExt;
 use manifest::Diff;
 use manifest::ManifestOps;
 use manifest::PathTree;
+use mononoke_macros::mononoke;
 use mononoke_types::deleted_manifest_common::DeletedManifestCommon;
 use mononoke_types::unode::ManifestUnode;
 use mononoke_types::unode::UnodeEntry;
@@ -288,7 +289,7 @@ impl<Manifest: DeletedManifestCommon> DeletedManifestDeriver<Manifest> {
             }
         };
 
-        let handle = tokio::spawn(f);
+        let handle = mononoke::spawn_task(f);
 
         receiver
             .buffered(1024)

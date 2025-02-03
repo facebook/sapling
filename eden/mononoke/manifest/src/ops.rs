@@ -23,6 +23,7 @@ use futures::StreamExt;
 use futures::TryFutureExt;
 use futures::TryStreamExt;
 use futures_watchdog::WatchdogExt;
+use mononoke_macros::mononoke;
 use mononoke_types::path::MPath;
 use mononoke_types::NonRootMPath;
 
@@ -78,7 +79,7 @@ where
                     let (select, subentries) = selector.deconstruct();
                     cloned!(ctx, store);
                     async move {
-                        tokio::spawn(async move {
+                        mononoke::spawn_task(async move {
                             let manifest = manifest_id.load(&ctx, &store).await?;
                             let mut output = Vec::new();
                             let mut recurse = Vec::new();
@@ -317,11 +318,11 @@ where
 
                     match input {
                         Diff::Changed(path, left, right) => {
-                            let l = tokio::spawn({
+                            let l = mononoke::spawn_task({
                                 cloned!(ctx, left, store);
                                 async move { left.load(&ctx, &store).watched(ctx.logger()).await }
                             });
-                            let r = tokio::spawn({
+                            let r = mononoke::spawn_task({
                                 cloned!(ctx, right, other_store);
                                 async move { right.load(&ctx, &other_store).watched(ctx.logger()).await }
                             });
@@ -514,7 +515,7 @@ where
 {
     match diff_against.first().cloned() {
         Some(parent) => async move {
-            tokio::spawn(async move {
+            mononoke::spawn_task(async move {
                 let mut new_entries = Vec::new();
                 let mut parent_diff = parent.diff(ctx.clone(), store.clone(), mf_id);
                 while let Some(diff_entry) = parent_diff.try_next().await? {

@@ -21,6 +21,7 @@ use futures::stream::BoxStream;
 use futures::stream::StreamExt;
 use futures::stream::TryStreamExt;
 use futures_watchdog::WatchdogExt;
+use mononoke_macros::mononoke;
 use mononoke_types::path::MPath;
 use mononoke_types::MPathElement;
 use nonzero_ext::nonzero;
@@ -356,11 +357,11 @@ where
 
                         match input {
                             Diff::Changed(path, left, right) => {
-                                let l = tokio::spawn({
+                                let l = mononoke::spawn_task({
                                     cloned!(ctx, left, store);
                                     async move { left.load(&ctx, &store).watched(ctx.logger()).await }
                                 });
-                                let r = tokio::spawn({
+                                let r = mononoke::spawn_task({
                                     cloned!(ctx, right, other_store);
                                     async move { right.load(&ctx, &other_store).watched(ctx.logger()).await }
                                 });

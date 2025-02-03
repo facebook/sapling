@@ -18,6 +18,7 @@ use context::CoreContext;
 use context::PerfCounterType;
 use futures::future::BoxFuture;
 use futures::future::FutureExt;
+use mononoke_macros::mononoke;
 use mononoke_types::BlobstoreBytes;
 use prefixblob::PrefixBlobstore;
 use redactedblobstore::config::GET_OPERATION;
@@ -207,7 +208,7 @@ where
             if let Some(ref blob) = blob {
                 let key = key.to_owned();
                 cloned!(self.cache, blob);
-                tokio::spawn(async move { cache.put(&key, blob).await });
+                mononoke::spawn_task(async move { cache.put(&key, blob).await });
             }
             Ok(blob)
         }
@@ -229,7 +230,7 @@ where
                 lease.release_lease(&key).await
             };
             if self.lazy_cache_put {
-                tokio::spawn(cache_put);
+                mononoke::spawn_task(cache_put);
             } else {
                 let _ = cache_put.await;
             }

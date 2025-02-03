@@ -6,11 +6,11 @@
  */
 
 use std::sync::Arc;
-use std::thread;
 
 use chrono::Local;
 use context::PerfCounterType;
 use context::PerfCounters;
+use mononoke_macros::mononoke;
 
 fn main() {
     let ctrs = Arc::new(PerfCounters::default());
@@ -24,7 +24,7 @@ fn main() {
     let n_ops = 100000;
 
     let threads = (0..n_threads).map(|_| {
-        thread::spawn({
+        mononoke::spawn_thread({
             let ctrs = ctrs.clone();
             move || {
                 for i in 0..n_ops {

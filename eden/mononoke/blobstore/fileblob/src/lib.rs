@@ -28,6 +28,7 @@ use blobstore::BlobstoreUnlinkOps;
 use blobstore::OverwriteStatus;
 use blobstore::PutBehaviour;
 use context::CoreContext;
+use mononoke_macros::mononoke;
 use mononoke_types::BlobstoreBytes;
 use percent_encoding::percent_encode;
 use percent_encoding::AsciiSet;
@@ -227,7 +228,7 @@ impl Blobstore for Fileblob {
         let src_path = self.path(old_key);
         let dst_path = self.path(&new_key);
         // hard_link will fail if dst_path exists. Race it in a task of its own
-        Ok(tokio::task::spawn(async move {
+        Ok(mononoke::spawn_task(async move {
             let _ = remove_file(&dst_path).await;
             hard_link(src_path, dst_path).await
         })

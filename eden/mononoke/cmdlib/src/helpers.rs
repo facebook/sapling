@@ -28,6 +28,7 @@ use futures::TryStreamExt;
 use mercurial_derivation::DeriveHgChangeset;
 use mercurial_types::HgChangesetId;
 use mercurial_types::HgManifestId;
+use mononoke_macros::mononoke;
 use mononoke_types::ChangesetId;
 use repo_blobstore::RepoBlobstoreRef;
 use repo_derived_data::RepoDerivedDataRef;
@@ -213,7 +214,7 @@ where
     let result = matches.runtime().block_on(async {
         let stats_agg = stats::schedule_stats_aggregation_preview()
             .map_err(|_| Error::msg("Failed to create stats aggregation worker"))?;
-        tokio::task::spawn(stats_agg);
+        mononoke::spawn_task(stats_agg);
 
         future.await
     });

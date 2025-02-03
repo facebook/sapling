@@ -21,8 +21,8 @@ use gotham::state::State;
 use gotham_derive::StateData;
 use hyper::body::Body;
 use hyper::Response;
+use mononoke_macros::mononoke;
 use permission_checker::MononokeIdentitySetExt;
-use tokio::task;
 use trust_dns_resolver::TokioAsyncResolver;
 
 use super::MetadataState;
@@ -107,7 +107,13 @@ impl<C: PostResponseConfig> Middleware for PostResponseMiddleware<C> {
         let stream_stats = PendingStreamStats::try_take_from(state);
 
         if let Some(callbacks) = state.try_take::<PostResponseCallbacks>() {
-            task::spawn(callbacks.run(config, start_time, meta, stream_stats, hostname_future));
+            mononoke::spawn_task(callbacks.run(
+                config,
+                start_time,
+                meta,
+                stream_stats,
+                hostname_future,
+            ));
         }
     }
 }

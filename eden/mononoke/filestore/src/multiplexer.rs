@@ -16,6 +16,7 @@ use futures::sink::SinkExt;
 use futures::stream::Stream;
 use futures::stream::StreamExt;
 use futures::stream::TryStreamExt;
+use mononoke_macros::mononoke;
 use tokio::task::JoinHandle;
 
 // NOTE: This buffer size is used by the Multiplexer to let the overall multiplexer make progress
@@ -93,7 +94,7 @@ impl<T: Send + Sync + Clone + 'static> Multiplexer<T> {
         // receiving channel we return here is not polled. This ensures that consumers can't
         // deadlock their Multiplexer.
         // TODO: Pass through an executor?
-        tokio::task::spawn(builder(receiver))
+        mononoke::spawn_task(builder(receiver))
     }
 
     /// Drain a Stream into the multiplexer.

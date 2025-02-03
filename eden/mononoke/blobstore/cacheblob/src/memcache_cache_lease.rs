@@ -24,6 +24,7 @@ use hostname::get_hostname;
 use memcache::KeyGen;
 use memcache::MemcacheClient;
 use memcache_lock_thrift::LockState;
+use mononoke_macros::mononoke;
 use slog::warn;
 use stats::prelude::*;
 
@@ -267,7 +268,7 @@ impl LeaseOps for MemcacheOps {
         cloned!(self.memcache);
 
         let this = self.clone();
-        tokio::spawn(async move {
+        mononoke::spawn_task(async move {
             loop {
                 let res = memcache
                     .set_with_ttl(mc_key.clone(), lockstate.clone(), lock_ttl)
@@ -363,6 +364,6 @@ impl LeaseOps for MemcacheOps {
         // We don't have to wait for the releasing to finish, it can be done in background
         // because leases have a timeout. So even if they haven't been released explicitly they
         // will be released after a timeout.
-        tokio::spawn(f);
+        mononoke::spawn_task(f);
     }
 }

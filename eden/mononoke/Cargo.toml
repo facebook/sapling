@@ -62,6 +62,7 @@ mercurial_revlog = { version = "0.1.0", path = "mercurial/revlog" }
 mercurial_types = { version = "0.1.0", path = "mercurial/types" }
 metaconfig_types = { version = "0.1.0", path = "metaconfig/types" }
 mononoke_app = { version = "0.1.0", path = "cmdlib/mononoke_app" }
+mononoke_macros = { version = "0.1.0", path = "mononoke_macros" }
 mononoke_types = { version = "0.1.0", path = "mononoke_types" }
 packblob = { version = "0.1.0", path = "blobstore/packblob" }
 rand = { version = "0.8", features = ["small_rng"] }
@@ -77,9 +78,6 @@ slog = { version = "2.7", features = ["max_level_trace", "nested-values"] }
 sqlblob = { version = "0.1.0", path = "blobstore/sqlblob" }
 tokio = { version = "1.41.0", features = ["full", "test-util", "tracing"] }
 toml = "0.8.4"
-
-[dev-dependencies]
-mononoke_macros = { version = "0.1.0", path = "mononoke_macros" }
 
 [patch.crates-io]
 abomonation = { git = "https://github.com/markbt/abomonation", rev = "0f43346d2afa2aedc64d61f3f4273e8d1e454642" }

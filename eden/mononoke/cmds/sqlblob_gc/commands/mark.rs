@@ -18,6 +18,7 @@ use futures::stream;
 use futures::stream::StreamExt;
 use futures::stream::TryStreamExt;
 use mononoke_app::MononokeApp;
+use mononoke_macros::mononoke;
 use retry::retry_always;
 use slog::info;
 use slog::Logger;
@@ -122,14 +123,14 @@ pub async fn run(app: MononokeApp, args: CommandArgs) -> Result<()> {
         let sqlblob = Arc::clone(&sqlblob);
         let logger = Arc::clone(&logger);
         let (tx, rx) = mpsc::channel(10);
-        let task = tokio::spawn(async move {
+        let task = mononoke::spawn_task(async move {
             rx.map(Ok)
                 .try_for_each_concurrent(max_parallelism, {
                     |key| {
                         let sqlblob = sqlblob.clone();
                         let logger = logger.clone();
                         async move {
-                            tokio::spawn(handle_one_key(
+                            mononoke::spawn_task(handle_one_key(
                                 key,
                                 sqlblob,
                                 inline_small_values,

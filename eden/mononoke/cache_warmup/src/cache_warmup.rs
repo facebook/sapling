@@ -33,6 +33,7 @@ use mercurial_types::HgFileNodeId;
 use mercurial_types::RepoPath;
 use metaconfig_types::CacheWarmupParams;
 use microwave::SnapshotLocation;
+use mononoke_macros::mononoke;
 use mononoke_types::ChangesetId;
 use repo_blobstore::RepoBlobstoreRef;
 use repo_derived_data::RepoDerivedDataRef;
@@ -40,7 +41,6 @@ use repo_identity::RepoIdentityRef;
 use slog::debug;
 use slog::info;
 use slog::warn;
-use tokio::task;
 
 pub trait Repo = RepoBlobstoreRef
     + RepoDerivedDataRef
@@ -222,7 +222,7 @@ async fn do_cache_warmup(
 
     let hg_cs_id = repo.derive_hg_changeset(&ctx, bcs_id).await?;
 
-    let blobstore_warmup = task::spawn({
+    let blobstore_warmup = mononoke::spawn_task({
         cloned!(ctx, repo);
         async move {
             if justknobs::eval(
@@ -242,7 +242,7 @@ async fn do_cache_warmup(
         }
     });
 
-    let commit_graph_segments_warmup = task::spawn({
+    let commit_graph_segments_warmup = mononoke::spawn_task({
         cloned!(ctx, repo);
         async move {
             commit_graph_segments_warmup(&ctx, &repo, bcs_id)

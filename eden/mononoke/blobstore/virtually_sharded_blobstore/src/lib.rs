@@ -42,6 +42,7 @@ use context::CoreContext;
 use context::PerfCounterType;
 use futures::future::WeakShared;
 use futures::FutureExt;
+use mononoke_macros::mononoke;
 use mononoke_types::BlobstoreBytes;
 use shard::SemaphoreAcquisition;
 use shard::Shards;
@@ -522,7 +523,7 @@ impl<T: Blobstore + 'static> Blobstore for VirtuallyShardedBlobstore<T> {
             Ok(res)
         };
 
-        tokio::spawn(fut).await?
+        mononoke::spawn_task(fut).await?
     }
 
     async fn put<'a>(
@@ -571,7 +572,7 @@ impl<T: Blobstore + 'static> Blobstore for VirtuallyShardedBlobstore<T> {
             Ok(res)
         };
 
-        tokio::spawn(fut).await?
+        mononoke::spawn_task(fut).await?
     }
 
     async fn is_present<'a>(
@@ -944,10 +945,11 @@ mod test {
             }
 
             // Spawn a bunch of reads
-            let futs = tokio::spawn(futures::future::try_join_all((0..10usize).map(|_| {
-                cloned!(blobstore, ctx);
-                async move { blobstore.get(&ctx, key).await }
-            })));
+            let futs =
+                mononoke::spawn_task(futures::future::try_join_all((0..10usize).map(|_| {
+                    cloned!(blobstore, ctx);
+                    async move { blobstore.get(&ctx, key).await }
+                })));
 
             tokio::time::timeout(Duration::from_millis(TIMEOUT_MS), async {
                 // Wait for the first request to arrive. It'll be alone, since at this point we don't
@@ -994,10 +996,11 @@ mod test {
                 // check the cache *before* acquiring the semaphore, and won't ever try to acquire it
                 // (whereas the other ones would have acquired it, and been released by the first task
                 // afterwards).
-                let futs = tokio::spawn(futures::future::try_join_all((0..10usize).map(|_| {
-                    cloned!(blobstore, ctx);
-                    async move { blobstore.get(&ctx, key).await }
-                })));
+                let futs =
+                    mononoke::spawn_task(futures::future::try_join_all((0..10usize).map(|_| {
+                        cloned!(blobstore, ctx);
+                        async move { blobstore.get(&ctx, key).await }
+                    })));
 
                 // Finally, wait for those requests to arrive.
                 loop {

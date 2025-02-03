@@ -25,6 +25,7 @@ use hyper::Body;
 use hyper::Response;
 use import_tools::GitImportLfs;
 use metaconfig_types::RepoConfigRef;
+use mononoke_macros::mononoke;
 use packetline::encode::flush_to_write;
 use packetline::encode::write_text_packetline;
 use protocol::pack_processor::parse_pack;
@@ -235,7 +236,7 @@ async fn non_atomic_refs_update(
                     ref_info.from.to_hex(),
                     ref_info.to.to_hex()
                 );
-                let output = tokio::spawn(async move {
+                let output = mononoke::spawn_task(async move {
                     set_ref(
                         request_context,
                         git_bonsai_mapping_store,

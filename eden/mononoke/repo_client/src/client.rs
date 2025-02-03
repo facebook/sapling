@@ -116,6 +116,7 @@ use mercurial_types::NULL_CSID;
 use mercurial_types::NULL_HASH;
 use metaconfig_types::RepoClientKnobs;
 use metaconfig_types::RepoConfigRef;
+use mononoke_macros::mononoke;
 use mononoke_types::hash::GitSha1;
 use mononoke_types::path::MPath;
 use mononoke_types::ChangesetId;
@@ -679,7 +680,7 @@ impl<R: Repo> RepoClient<R> {
                                     // NOTE: We don't otherwise await history_fut until we have the results
                                     // from blob_futs, so we need to spawn this to start fetching history
                                     // before we have resoved hg filenodes.
-                                    let history_fut = tokio::task::spawn(
+                                    let history_fut = mononoke::spawn_task(
                                         get_unordered_file_history_for_multiple_nodes(
                                             &ctx,
                                             &repo,

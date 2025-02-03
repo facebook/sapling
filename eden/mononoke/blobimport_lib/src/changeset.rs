@@ -63,6 +63,7 @@ use mercurial_types::HgNodeHash;
 use mercurial_types::RepoPath;
 use mercurial_types::Type;
 use mercurial_types::NULL_HASH;
+use mononoke_macros::mononoke;
 use mononoke_types::path::MPath;
 use mononoke_types::BonsaiChangeset;
 use mononoke_types::ContentMetadataV2;
@@ -258,7 +259,7 @@ fn upload_entry(
                         p2: p2.map(HgFileNodeId::new),
                     };
                     let upload_fut = upload.upload_as_entry(ctx, blobstore, path);
-                    tokio::task::spawn(upload_fut)
+                    mononoke::spawn_task(upload_fut)
                         .flatten_err()
                         .boxed()
                         .compat()
@@ -287,7 +288,7 @@ fn upload_entry(
                                 p2,
                             };
                             let upload_fut = upload.upload_as_entry(ctx, blobstore, path);
-                            tokio::task::spawn(upload_fut)
+                            mononoke::spawn_task(upload_fut)
                                 .flatten_err()
                                 .boxed()
                                 .compat()
@@ -501,7 +502,7 @@ impl<R: BlobimportRepoLike + Clone + 'static> UploadChangesets<R> {
 
                 // Uploading changeset and populate phases
                 // We know they are public.
-                tokio::task::spawn(async move {
+                mononoke::spawn_task(async move {
                     cshandle
                         .get_completed_changeset()
                         .await

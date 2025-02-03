@@ -30,11 +30,11 @@ use futures::StreamExt;
 use futures::TryStreamExt;
 use futures_stats::TimedTryFutureExt;
 use mononoke_app::args::DerivedDataArgs;
+use mononoke_macros::mononoke;
 use mononoke_types::DerivableType;
 use slog::debug;
 use tokio::fs::File;
 use tokio::io::AsyncReadExt;
-use tokio::task;
 
 use super::Repo;
 
@@ -124,7 +124,7 @@ async fn derive_boundaries(
         .try_for_each_concurrent(boundaries_concurrency, |csid| {
             cloned!(ctx, manager, completed, rederivation);
             async move {
-                task::spawn(async move {
+                mononoke::spawn_task(async move {
                     let (derive_boundary_stats, ()) = BulkDerivation::derive_from_predecessor(
                         &manager,
                         &ctx,
@@ -284,7 +284,7 @@ pub(super) async fn derive_slice(
                     cloned!(ctx, manager, completed);
                     let commit_graph = repo.commit_graph_arc();
                     async move {
-                        task::spawn(async move {
+                        mononoke::spawn_task(async move {
                             inner_derive_slice(
                                 &ctx,
                                 commit_graph,

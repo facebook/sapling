@@ -6,7 +6,7 @@
  */
 
 #![feature(let_chains)]
-
+use mononoke_macros::mononoke;
 pub mod bundle2;
 pub mod bundle2_encode;
 pub mod capabilities;
@@ -140,7 +140,7 @@ pub fn create_bundle_stream_new(
         bundle.add_part(part);
     }
 
-    tokio::spawn(async move {
+    mononoke::spawn_task(async move {
         match bundle.build().await {
             Ok(_) => {
                 // Bundle was successfully generated, so there is nothing add.

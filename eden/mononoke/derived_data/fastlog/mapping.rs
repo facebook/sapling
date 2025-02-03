@@ -22,6 +22,7 @@ use derived_data_service_if as thrift;
 use futures::stream::TryStreamExt;
 use manifest::find_intersection_of_diffs;
 use manifest::Entry;
+use mononoke_macros::mononoke;
 use mononoke_types::BonsaiChangeset;
 use mononoke_types::ChangesetId;
 use mononoke_types::FileUnodeId;
@@ -104,7 +105,7 @@ impl BonsaiDerivable for RootFastlog {
             .map_ok(move |(_, entry)| {
                 cloned!(blobstore, ctx);
                 async move {
-                    tokio::spawn(async move {
+                    mononoke::spawn_task(async move {
                         let parents = fetch_unode_parents(&ctx, &blobstore, entry).await?;
 
                         let fastlog_batch =

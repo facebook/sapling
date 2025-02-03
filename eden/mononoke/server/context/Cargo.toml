@@ -18,6 +18,7 @@ chrono = { version = "0.4", features = ["clock", "serde", "std"], default-featur
 fbinit = { version = "0.2.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 governor = "0.3.2"
 metadata = { version = "0.1.0", path = "../metadata" }
+mononoke_macros = { version = "0.1.0", path = "../../mononoke_macros" }
 permission_checker = { version = "0.1.0", path = "../../permission_checker" }
 rate_limiting = { version = "0.1.0", path = "../../rate_limiting" }
 sapling-clientinfo = { version = "0.1.0", path = "../../../scm/lib/clientinfo" }
@@ -26,6 +27,3 @@ scuba_ext = { version = "0.1.0", path = "../../common/scuba_ext" }
 session_id = { version = "0.1.0", path = "../session_id" }
 slog = { version = "2.7", features = ["max_level_trace", "nested-values"] }
 slog_glog_fmt = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
-
-[dev-dependencies]
-mononoke_macros = { version = "0.1.0", path = "../../mononoke_macros" }

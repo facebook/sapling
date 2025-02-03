@@ -19,6 +19,7 @@ use futures::future::FutureExt;
 use futures::future::Shared;
 use futures_ext::FbTryFutureExt;
 use futures_stats::TimedFutureExt;
+use mononoke_macros::mononoke;
 use shared_error::anyhow::IntoSharedError;
 use shared_error::anyhow::SharedError;
 use time_ext::DurationExt;
@@ -162,7 +163,7 @@ where
                             inner.stats.dispatch_batch_scheduled.add_value(1);
                         }
 
-                        let ret = tokio::task::spawn(async move {
+                        let ret = mononoke::spawn_task(async move {
                             let (keys, _, _) = inner
                                 .staging
                                 .lock()

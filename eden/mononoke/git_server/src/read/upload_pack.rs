@@ -30,6 +30,7 @@ use gotham_ext::response::StreamBody;
 use gotham_ext::response::TryIntoResponse;
 use hyper::Body;
 use hyper::Response;
+use mononoke_macros::mononoke;
 use mononoke_types::ChangesetId;
 use packetline::encode::delim_to_write;
 use packetline::encode::flush_to_write;
@@ -410,7 +411,7 @@ pub async fn fetch(
         yield Bytes::from(buf);
     })
     .end_on_err::<anyhow::Error>();
-    tokio::spawn({
+    mononoke::spawn_task({
         let request_context = request_context.clone();
         async move {
             let response_stream = fetch_response(

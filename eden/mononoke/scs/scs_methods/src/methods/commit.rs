@@ -46,6 +46,7 @@ use mononoke_api::UnifiedDiff;
 use mononoke_api::UnifiedDiffMode;
 use mononoke_api::XRepoLookupExactBehaviour;
 use mononoke_api::XRepoLookupSyncBehaviour;
+use mononoke_macros::mononoke;
 use mononoke_types::path::MPath;
 use scs_errors::ServiceErrorResultExt;
 use source_control as thrift;
@@ -1116,7 +1117,7 @@ impl SourceControlServiceImpl {
                 move |bookmark| {
                     let changeset = changeset.clone();
                     async move {
-                        tokio::task::spawn(filter_descendant(changeset, bookmark))
+                        mononoke::spawn_task(filter_descendant(changeset, bookmark))
                             .await
                             .map_err(anyhow::Error::from)?
                     }

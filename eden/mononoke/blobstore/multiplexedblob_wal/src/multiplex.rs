@@ -41,6 +41,7 @@ use futures::TryStreamExt;
 use futures_stats::TimedFutureExt;
 use metaconfig_types::BlobstoreId;
 use metaconfig_types::MultiplexId;
+use mononoke_macros::mononoke;
 use mononoke_types::BlobstoreBytes;
 use mononoke_types::Timestamp;
 use multiplexedblob::scuba;
@@ -310,7 +311,7 @@ impl WalMultiplexedBlobstore {
                             if put_errors.is_empty() {
                                 // Optimisation: It put fully succeeded on all blobstores, we can remove
                                 // it from queue and healer doesn't need to deal with it.
-                                tokio::spawn(async move {
+                                mononoke::spawn_task(async move {
                                     let (r1, r2) = futures::join!(main_puts, write_only_puts);
                                     r1??;
                                     r2??;
@@ -732,7 +733,7 @@ impl BlobstoreUnlinkOps for WalMultiplexedBlobstore {
 fn spawn_stream_completion<T>(
     s: impl Stream<Item = Result<T>> + Send + 'static,
 ) -> JoinHandle<Result<()>> {
-    tokio::spawn(s.try_for_each(|_| future::ok(())))
+    mononoke::spawn_task(s.try_for_each(|_| future::ok(())))
 }
 
 fn inner_multi_put(

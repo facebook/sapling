@@ -939,7 +939,7 @@ async fn backsync_and_verify_master_wc(
     let mut futs = vec![];
     // Run syncs in parallel
     for _ in 1..5 {
-        let f = tokio::task::spawn(backsync_latest(
+        let f = mononoke::spawn_task(backsync_latest(
             ctx.clone(),
             commit_syncer.clone(),
             small_repo_dbs.clone(),

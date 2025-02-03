@@ -21,9 +21,9 @@ derived_data_service_if = { version = "0.1.0", path = "../remote/if" }
 futures = { version = "0.3.30", features = ["async-await", "compat"] }
 manifest = { version = "0.1.0", path = "../../manifest" }
 maplit = "1.0"
+mononoke_macros = { version = "0.1.0", path = "../../mononoke_macros" }
 mononoke_types = { version = "0.1.0", path = "../../mononoke_types" }
 thiserror = "2"
-tokio = { version = "1.41.0", features = ["full", "test-util", "tracing"] }
 unodes = { version = "0.1.0", path = "../unodes" }
 
 [dev-dependencies]
@@ -39,7 +39,6 @@ filestore = { version = "0.1.0", path = "../../filestore" }
 fixtures = { version = "0.1.0", path = "../../tests/fixtures" }
 mercurial_derivation = { version = "0.1.0", path = "../mercurial_derivation" }
 mercurial_types = { version = "0.1.0", path = "../../mercurial/types" }
-mononoke_macros = { version = "0.1.0", path = "../../mononoke_macros" }
 mononoke_types-mocks = { version = "0.1.0", path = "../../mononoke_types/mocks" }
 pretty_assertions = { version = "1.2", features = ["alloc"], default-features = false }
 rand = { version = "0.8", features = ["small_rng"] }

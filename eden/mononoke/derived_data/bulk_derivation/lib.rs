@@ -37,6 +37,7 @@ use git_types::RootGitDeltaManifestV2Id;
 use git_types::TreeHandle;
 use mercurial_derivation::MappedHgChangesetId;
 use mercurial_derivation::RootHgAugmentedManifestId;
+use mononoke_macros::mononoke;
 use mononoke_types::ChangesetId;
 use skeleton_manifest::RootSkeletonManifestId;
 use skeleton_manifest_v2::RootSkeletonManifestV2Id;
@@ -362,7 +363,7 @@ impl BulkDerivation for DerivedDataManager {
                 let csids = csids.to_vec();
                 let manager = manager_for_type(self, *derived_data_type);
                 async move {
-                    tokio::spawn(async move {
+                    mononoke::spawn_task(async move {
                         manager
                             .derive_heads_with_visited(
                                 ctx,

@@ -30,6 +30,8 @@ use mononoke_types::BonsaiChangeset;
 use mononoke_types::ChangesetId;
 use mononoke_types::GitLfs;
 use mononoke_types::NonRootMPath;
+#[allow(unused_imports)]
+use tokio::runtime::Runtime;
 
 use crate::errors::MononokeGitError;
 use crate::fetch_non_blob_git_object;
@@ -370,7 +372,7 @@ mod test {
         ($test_name:ident, $fixture:ident) => {
             #[mononoke::fbinit_test]
             fn $test_name(fb: FacebookInit) -> Result<(), Error> {
-                let runtime = tokio::runtime::Runtime::new()?;
+                let runtime = Runtime::new()?;
                 runtime.block_on(async move {
                     let repo: Repo = fixtures::$fixture::get_repo(fb).await;
                     run_tree_derivation_for_fixture(fb, repo).await

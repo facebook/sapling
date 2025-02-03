@@ -13,6 +13,7 @@ use anyhow::Error;
 use futures::future::BoxFuture;
 use futures::future::FutureExt;
 use futures::stream::TryStreamExt;
+use mononoke_macros::mononoke;
 use pretty_assertions::assert_eq;
 use quickcheck::empty_shrinker;
 use quickcheck::Arbitrary;
@@ -196,7 +197,7 @@ async fn test_bounded_traversal_ordered_stream() -> Result<(), Error> {
         .try_collect::<Vec<usize>>()
         .boxed()
     };
-    let handle = tokio::spawn(traverse);
+    let handle = mononoke::spawn_task(traverse);
 
     yield_now().await;
     assert_eq!(log, reference);
@@ -296,7 +297,7 @@ async fn test_bounded_traversal_limited_ordered_stream() -> Result<(), Error> {
         .try_collect::<Vec<usize>>()
         .boxed()
     };
-    let handle = tokio::spawn(traverse);
+    let handle = mononoke::spawn_task(traverse);
 
     yield_now().await;
     assert_eq!(log, reference);
@@ -390,7 +391,7 @@ async fn test_bounded_traversal_limited_ordered_stream_partial() -> Result<(), E
         .try_collect::<Vec<usize>>()
         .boxed()
     };
-    let handle = tokio::spawn(traverse);
+    let handle = mononoke::spawn_task(traverse);
 
     yield_now().await;
     assert_eq!(log, reference);

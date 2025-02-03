@@ -47,6 +47,7 @@ metaconfig_types = { version = "0.1.0", path = "../metaconfig/types" }
 mime = "0.3.14"
 mononoke_api = { version = "0.1.0", path = "../mononoke_api" }
 mononoke_app = { version = "0.1.0", path = "../cmdlib/mononoke_app" }
+mononoke_macros = { version = "0.1.0", path = "../mononoke_macros" }
 mononoke_repos = { version = "0.1.0", path = "../mononoke_repos" }
 mononoke_types = { version = "0.1.0", path = "../mononoke_types" }
 packetline = { version = "0.1.0", path = "../git/packetline" }
@@ -71,6 +72,3 @@ tokio = { version = "1.41.0", features = ["full", "test-util", "tracing"] }
 tokio-stream = { version = "0.1.16", features = ["fs", "io-util", "net", "signal", "sync", "time"] }
 tokio-util = { version = "0.7.12", features = ["full"] }
 topo_sort = { version = "0.1.0", path = "../common/topo_sort" }
-
-[dev-dependencies]
-mononoke_macros = { version = "0.1.0", path = "../mononoke_macros" }

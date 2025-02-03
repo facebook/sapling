@@ -31,6 +31,7 @@ use futures::stream;
 use futures::stream::StreamExt;
 use futures::stream::TryStreamExt;
 use metaconfig_types::MultiplexId;
+use mononoke_macros::mononoke;
 use mononoke_types::Timestamp;
 use rand::Rng;
 use rendezvous::ConfigurableRendezVousController;
@@ -194,7 +195,7 @@ impl SqlBlobstoreWal {
                     }
                 },
             );
-            tokio::spawn(enqueued_writes);
+            mononoke::spawn_task(enqueued_writes);
         }
         .boxed()
         .shared();

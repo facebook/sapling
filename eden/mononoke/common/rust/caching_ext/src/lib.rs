@@ -30,6 +30,7 @@ use futures::stream::TryStreamExt;
 use itertools::Itertools;
 use memcache::KeyGen;
 use memcache::MEMCACHE_VALUE_MAX_SIZE;
+use mononoke_macros::mononoke;
 use stats::prelude::*;
 
 pub use crate::cachelib_utils::CachelibHandler;
@@ -487,7 +488,7 @@ async fn fill_multiple_memcache<'a, V>(
     let fut = stream::iter(futs).for_each_concurrent(MEMCACHE_CONCURRENCY, |fut| fut);
 
     if memcache.is_async() {
-        tokio::task::spawn(fut);
+        mononoke::spawn_task(fut);
     } else {
         fut.await;
     }
