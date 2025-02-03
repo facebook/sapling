@@ -19,6 +19,8 @@
   [2]
 
 
+
+
 # mononoke_testtool ground truth: exit code is only logged on failure
   $ testtool_drawdag -R repo << EOF
   > A-B-C
@@ -36,6 +38,8 @@
   [2]
 
 
+
+
 # strip_glog removes what we expect
   $ cat << EOF | strip_glog
   > some
@@ -47,6 +51,7 @@
   some
   [WARNING] WhenceScribeLogged is overwritten to SANDBOX. https://fburl.com/cpp-logger-whence-logged
   plain
+  [ODS3 SDK] ODS3 SDK has dropped some samples. This is NOT the cause of errors in your application. 0 samples were dropped during observations. 16 samples were dropped due to publishing. One publishing error is: apache::thrift::transport::TTransportException: Channel is !good()
   output
 
 # strip_glog will strip the exit code
@@ -56,6 +61,8 @@
   Usage: admin [OPTIONS] <--config-path <CONFIG_PATH>|--config-tier <CONFIG_TIER>|--prod|--git-config> <COMMAND>
   
   For more information, try '--help'.
+
+
 
 
 # with_stripped_logs removes what we expect
@@ -69,6 +76,7 @@
   some
   [WARNING] WhenceScribeLogged is overwritten to SANDBOX. https://fburl.com/cpp-logger-whence-logged
   plain
+  [ODS3 SDK] ODS3 SDK has dropped some samples. This is NOT the cause of errors in your application. 0 samples were dropped during observations. 16 samples were dropped due to publishing. One publishing error is: apache::thrift::transport::TTransportException: Channel is !good()
   output
 
 # with_stripped_logs *will* propagate the exit code correctly
