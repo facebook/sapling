@@ -114,6 +114,8 @@ use hook_manager::manager::ArcHookManager;
 use hook_manager::manager::HookManager;
 use hook_manager::HookRepo;
 use hooks::hook_loader::load_hooks;
+#[cfg(fbcode_build)]
+use lazy_static::lazy_static;
 use live_commit_sync_config::CfgrLiveCommitSyncConfig;
 use memcache::KeyGen;
 use memcache::MemcacheClient;
@@ -126,7 +128,6 @@ use metaconfig_types::BlobConfig;
 use metaconfig_types::CommonConfig;
 use metaconfig_types::MetadataDatabaseConfig;
 use metaconfig_types::Redaction;
-#[cfg(fbcode_build)]
 use metaconfig_types::RemoteDerivationConfig;
 use metaconfig_types::RepoConfig;
 use metaconfig_types::RepoReadOnly;
@@ -213,10 +214,19 @@ use zelos_queue::zelos_derivation_queues;
 use zeus_client::zeus_cpp_client::ZeusCppClient;
 #[cfg(fbcode_build)]
 use zeus_client::ZeusClient;
+#[cfg(fbcode_build)]
+use MononokeRepoFactoryStats_ods3::Instrument_MononokeRepoFactoryStats;
+#[cfg(fbcode_build)]
+use MononokeRepoFactoryStats_ods3_types::MononokeRepoFactoryStats;
 
 const DERIVED_DATA_LEASE: &str = "derived-data-lease";
-#[cfg(fbcode_build)]
 const ZEUS_CLIENT_ID: &str = "mononoke";
+
+#[cfg(fbcode_build)]
+lazy_static! {
+    static ref REPO_FACTORY_INSTRUMENT: Instrument_MononokeRepoFactoryStats =
+        Instrument_MononokeRepoFactoryStats::new();
+}
 
 define_stats! {
     prefix = "mononoke.repo_factory";
@@ -261,12 +271,24 @@ impl<K: Clone + Eq + Hash, V: Clone> RepoFactoryCache<K, V> {
                 Some(cell) => {
                     if let Some(value) = cell.get() {
                         STATS::cache_hit.increment_value(self.fb, 1, (self.name.clone(),));
+                        #[cfg(fbcode_build)]
+                        REPO_FACTORY_INSTRUMENT.observe(MononokeRepoFactoryStats {
+                            cache_name: Some(self.name.clone()),
+                            hits: Some(1.0),
+                            ..Default::default()
+                        });
                         return Ok(value.clone());
                     }
                     cell.clone()
                 }
                 None => {
                     STATS::cache_miss.increment_value(self.fb, 1, (self.name.clone(),));
+                    #[cfg(fbcode_build)]
+                    REPO_FACTORY_INSTRUMENT.observe(MononokeRepoFactoryStats {
+                        cache_name: Some(self.name.clone()),
+                        misses: Some(1.0),
+                        ..Default::default()
+                    });
                     let cell = Arc::new(AsyncOnceCell::new());
                     cache.insert(key.clone(), cell.clone());
                     cell
@@ -277,6 +299,12 @@ impl<K: Clone + Eq + Hash, V: Clone> RepoFactoryCache<K, V> {
             Ok(value) => Ok(value.clone()),
             Err(e) => {
                 STATS::cache_init_error.increment_value(self.fb, 1, (self.name.clone(),));
+                #[cfg(fbcode_build)]
+                REPO_FACTORY_INSTRUMENT.observe(MononokeRepoFactoryStats {
+                    cache_name: Some(self.name.clone()),
+                    init_errors: Some(1.0),
+                    ..Default::default()
+                });
                 Err(e)
             }
         }
@@ -1915,7 +1943,6 @@ fn build_scuba(
     Ok(scuba)
 }
 
-#[cfg(fbcode_build)]
 fn get_derivation_client(
     fb: FacebookInit,
     remote_derivation_options: RemoteDerivationOptions,
@@ -1924,6 +1951,7 @@ fn get_derivation_client(
 ) -> Result<Option<Arc<dyn DerivationClient>>> {
     let derivation_service_client: Option<Arc<dyn DerivationClient>> =
         if remote_derivation_options.derive_remotely {
+            #[cfg(fbcode_build)]
             {
                 match &repo_config.derived_data_config.remote_derivation_config {
                     Some(RemoteDerivationConfig::ShardManagerTier(shard_manager_tier)) => {
@@ -1942,18 +1970,13 @@ fn get_derivation_client(
                     None => None,
                 }
             }
+            #[cfg(not(fbcode_build))]
+            {
+                let _ = fb;
+                None
+            }
         } else {
             None
         };
     Ok(derivation_service_client)
-}
-
-#[cfg(not(fbcode_build))]
-fn get_derivation_client(
-    _fb: FacebookInit,
-    _remote_derivation_options: RemoteDerivationOptions,
-    _repo_config: &ArcRepoConfig,
-    _repo_name: &str,
-) -> Result<Option<Arc<dyn DerivationClient>>> {
-    Ok(None)
 }
