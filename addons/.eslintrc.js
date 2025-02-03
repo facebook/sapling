@@ -50,8 +50,8 @@ module.exports = {
     'isl/release.js',
     'isl/start.js',
     'isl-server/codegen.js',
-    // @fb-only
-    // @fb-only
+    // @fb-only: 
+    // @fb-only: 
     'node_modules/**',
   ],
   rules: {
