@@ -457,6 +457,12 @@ class EdenServiceHandler : virtual public StreamingEdenServiceSvIf,
    */
   OptionalProcessId getAndRegisterClientPid();
 
+  void startFileAccessMonitor(
+      StartFileAccessMonitorResult& result,
+      std::unique_ptr<StartFileAccessMonitorParams> params) override;
+
+  void stopFileAccessMonitor(StopFileAccessMonitorResult& result) override;
+
  private:
   EdenMountHandle lookupMount(const MountId& mountId);
   EdenMountHandle lookupMount(const std::unique_ptr<std::string>& mountId);

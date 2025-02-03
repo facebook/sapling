@@ -2531,6 +2531,18 @@ void EdenServiceHandler::sync_changesSinceV2(
   }
 }
 
+void EdenServiceHandler::startFileAccessMonitor(
+    StartFileAccessMonitorResult& result,
+    std::unique_ptr<StartFileAccessMonitorParams>) {
+  result.pid() = 123;
+  result.tmpOutputPath() = "/tmp/edenfs/fam/fam_fbsource_2025_01_27.json";
+}
+
+void EdenServiceHandler::stopFileAccessMonitor(
+    StopFileAccessMonitorResult& result) {
+  result.tmpOutputPath() = "/tmp/edenfs/fam/fam_fbsource_2025_01_27.json";
+}
+
 apache::thrift::ResponseAndServerStream<ChangesSinceResult, ChangedFileResult>
 EdenServiceHandler::streamSelectedChangesSince(
     std::unique_ptr<StreamSelectedChangesSinceParams> params) {
