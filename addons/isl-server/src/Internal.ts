@@ -5,7 +5,7 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-// @fb-only
+// @fb-only: 
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
@@ -14,15 +14,15 @@
 
 // prettier-ignore
 type InternalImportsType =
-  // @fb-only
-// @fb-only
+  // @fb-only: 
+// @fb-only: 
   {[key: string]: undefined | any}
-// @fb-only
+// @fb-only: 
 
 /**
  * API for accessing internal (non-OSS) features / functions.
  * In OSS builds, all properties will give `undefined`.
  */
 export const Internal: InternalImportsType = {
-  // @fb-only
+  // @fb-only: 
 };

@@ -5,7 +5,7 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-// @fb-only
+// @fb-only: 
 
 // Note: this file may be imported by the ISL server via `types.ts`, so it should not transitively import any tsx files,
 // which is why it's separate from `Internal.ts`.
@@ -17,7 +17,7 @@
  */
 // prettier-ignore
 export type InternalTypes =
- // @fb-only
-// @fb-only
+ // @fb-only: 
+// @fb-only: 
  Record<string, never>;
-// @fb-only
+// @fb-only: 

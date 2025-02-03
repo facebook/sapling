@@ -24,7 +24,7 @@ class metrics:
 
 def client(ui):
     """Returns the appropriate metrics module"""
-    # @fb-only
+    # @fb-only: 
 
-    # @fb-only
+    # @fb-only: 
     return metrics(ui) # @oss-only
