@@ -7,6 +7,7 @@
 
 include "fb303/thrift/fb303_core.thrift"
 include "thrift/annotation/thrift.thrift"
+include "thrift/annotation/rust.thrift"
 
 typedef binary ChangesetId
 /// The UTF-8 path of the file or directory.
@@ -23,6 +24,7 @@ enum BookmarkKindRestrictions {
   ONLY_PUBLISHING = 2,
 }
 
+@rust.Exhaustive
 struct LandChangesetRequest {
   /// The name of the bookmark to land to.
   1: string bookmark;
@@ -48,16 +50,18 @@ struct LandChangesetRequest {
 
   /// Service identity to use for this commit creation.
   8: optional string service_identity;
-} (rust.exhaustive)
+}
 
+@rust.Exhaustive
 struct BonsaiHashPairs {
   /// The old bonsai hash.
   1: ChangesetId old_id;
 
   /// The new bonsai hash.
   2: ChangesetId new_id;
-} (rust.exhaustive)
+}
 
+@rust.Exhaustive
 struct PushrebaseOutcome {
   /// The new changeset for the rebased head.
   1: ChangesetId head;
@@ -76,24 +80,28 @@ struct PushrebaseOutcome {
 
   /// The id for the entry in the bookmark update log where the bookmark was written
   6: optional i64 log_id;
-} (rust.exhaustive)
+}
 
+@rust.Exhaustive
 struct LandChangesetsResponse {
   1: PushrebaseOutcome pushrebase_outcome;
-} (rust.exhaustive)
+}
 
+@rust.Exhaustive
 struct PushrebaseConflicts {
   1: Path left;
   2: Path right;
-} (rust.exhaustive)
+}
 
+@rust.Exhaustive
 safe permanent client exception PushrebaseConflictsException {
   @thrift.ExceptionMessage
   1: string reason;
   /// Always non-empty
   2: list<PushrebaseConflicts> conflicts;
-} (rust.exhaustive)
+}
 
+@rust.Exhaustive
 struct HookRejection {
   /// The hook that rejected the output
   1: string hook_name;
@@ -101,29 +109,33 @@ struct HookRejection {
   2: ChangesetId cs_id;
   /// Why the hook rejected the changeset.
   3: HookOutcomeRejected reason;
-} (rust.exhaustive)
+}
 
+@rust.Exhaustive
 struct HookOutcomeRejected {
   /// A short description for summarizing this failure with similar failures
   1: string description;
   /// A full explanation of what went wrong, suitable for presenting to the user (should include guidance for fixing this failure, where possible)
   2: string long_description;
-} (rust.exhaustive)
+}
 
+@rust.Exhaustive
 safe stateful client exception HookRejectionsException {
   @thrift.ExceptionMessage
   1: string reason;
   /// Always non-empty
   2: list<HookRejection> rejections;
-} (rust.exhaustive)
+}
 
+@rust.Exhaustive
 safe client exception InternalError {
   @thrift.ExceptionMessage
   1: string reason;
   2: optional string backtrace;
   3: list<string> source_chain;
-} (rust.exhaustive)
+}
 
+@rust.RequestContext
 service LandService extends fb303_core.BaseService {
   /// Land a stack of commits via land_changesets.
   LandChangesetsResponse land_changesets(
@@ -133,4 +145,4 @@ service LandService extends fb303_core.BaseService {
     3: HookRejectionsException hook_rejections,
     4: InternalError internal_error,
   );
-} (rust.request_context)
+}
