@@ -138,7 +138,7 @@ pub async fn request_handler(
         let err: Error = ErrorKind::AuthorizationFailed.into();
         scuba.log_with_msg("Authorization failed", format!("{}", err));
         error!(logger, "Authorization failed: {}", err);
-        log_error_to_client(stderr, "Authoization failed:", &format!("{err}"));
+        log_error_to_client(stderr, "Authorization failed:", &format!("{err}"));
 
         return Err(err);
     }
