@@ -79,8 +79,8 @@ def _interestingfiles(repo, matcher, maxfiles):
 
     """
     stat = repo.status(match=matcher)
-    added = stat[1]
-    removed = stat[2]
+    added = stat.added
+    removed = stat.removed
 
     copy = copies.pathcopies(repo["."], repo[None], matcher)
     # remove the copy files for which we already have copy info
