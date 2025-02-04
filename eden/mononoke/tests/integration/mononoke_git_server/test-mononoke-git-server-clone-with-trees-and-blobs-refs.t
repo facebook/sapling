@@ -63,8 +63,7 @@
   cb2ef838eb24e4667fee3a8b89c930234ae6e4bb	refs/tags/tag_to_tree^{}
 
 # Clone the repo from Mononoke. Because we do not support refs to trees and blobs in Mononoke Git, the clone fails
-  $ git_client clone $MONONOKE_GIT_SERVICE_BASE_URL/$REPONAME.git  
-  Cloning into 'repo'...
+  $ quiet git_client clone $MONONOKE_GIT_SERVICE_BASE_URL/$REPONAME.git  
 
 # Verify that we get the same Git repo back that we started with
   $ cd $REPONAME  

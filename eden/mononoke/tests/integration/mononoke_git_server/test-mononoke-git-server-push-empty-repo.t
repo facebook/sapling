@@ -19,8 +19,7 @@
 # https://$(mononoke_git_service_address)/repos/git/ro
 
 # Setup git repository
-  $ git_client clone -q $MONONOKE_GIT_SERVICE_BASE_URL/$REPONAME.git "$GIT_REPO_ORIGIN"
-  warning: You appear to have cloned an empty repository.
+  $ quiet git_client clone -q $MONONOKE_GIT_SERVICE_BASE_URL/$REPONAME.git "$GIT_REPO_ORIGIN"
   $ cd "$GIT_REPO_ORIGIN"
   $ git init -q
   $ echo "this is file1" > file1

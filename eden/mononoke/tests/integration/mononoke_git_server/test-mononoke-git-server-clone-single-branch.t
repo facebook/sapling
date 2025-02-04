@@ -43,8 +43,7 @@ Go back to the master_bookmark branch
 # Start up the Mononoke Git Service
   $ mononoke_git_service
 # Clone the Git repo from Mononoke
-  $ git_client clone $MONONOKE_GIT_SERVICE_BASE_URL/$REPONAME.git --single-branch -b master_bookmark
-  Cloning into 'repo'...
+  $ quiet git_client clone $MONONOKE_GIT_SERVICE_BASE_URL/$REPONAME.git --single-branch -b master_bookmark  
   $ cd $REPONAME
 # Verify that we indeed did not fetch the tag
   $ git show-ref | grep detached_tag

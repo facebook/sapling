@@ -38,8 +38,7 @@
 # Start up the Mononoke Git Service
   $ mononoke_git_service
 # Clone the Git repo from Mononoke
-  $ git_client clone $MONONOKE_GIT_SERVICE_BASE_URL/$REPONAME.git
-  Cloning into 'repo'...
+  $ quiet git_client clone $MONONOKE_GIT_SERVICE_BASE_URL/$REPONAME.git
 
 # Add some new commits to the cloned repo and push it to remote
   $ cd repo
@@ -86,8 +85,7 @@
 
 # Cloning the repo in a new folder will not get the latest changes since we didn't really accept the push
   $ cd "$TESTTMP"
-  $ git_client clone $MONONOKE_GIT_SERVICE_BASE_URL/$REPONAME.git new_repo
-  Cloning into 'new_repo'...
+  $ quiet git_client clone $MONONOKE_GIT_SERVICE_BASE_URL/$REPONAME.git new_repo
   $ cd new_repo
 
 # List all the known refs. Ensure that the new branches and tags are present in the repo

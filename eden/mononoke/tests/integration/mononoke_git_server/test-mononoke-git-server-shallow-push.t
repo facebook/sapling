@@ -58,8 +58,7 @@
 
 # Perform Mononoke clone with the depth of 1
   $ cd "$TESTTMP"
-  $ git_client clone $MONONOKE_GIT_SERVICE_BASE_URL/$REPONAME.git --depth=1
-  Cloning into 'repo'...
+  $ quiet git_client clone $MONONOKE_GIT_SERVICE_BASE_URL/$REPONAME.git --depth=1
 # Push to Mononoke from shallow cloned repo
   $ cd $REPONAME
   $ current_head=$(git rev-parse HEAD)

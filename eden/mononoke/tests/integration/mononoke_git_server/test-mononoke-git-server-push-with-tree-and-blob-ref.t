@@ -40,8 +40,7 @@
 # Start up the Mononoke Git Service
   $ mononoke_git_service
 # Clone the Git repo from Mononoke
-  $ git_client clone $MONONOKE_GIT_SERVICE_BASE_URL/$REPONAME.git
-  Cloning into 'repo'...
+  $ quiet git_client clone $MONONOKE_GIT_SERVICE_BASE_URL/$REPONAME.git
 
 # Add some new commits to the cloned repo and create a branch and tag
 # pointing to non-commit/non-tag objects
@@ -69,8 +68,7 @@
 
 # Reclone the repo and validate that we get back all the expected objects
   $ cd $TESTTMP
-  $ git_client clone --mirror $MONONOKE_GIT_SERVICE_BASE_URL/$REPONAME.git new_repo
-  Cloning into bare repository 'new_repo'...
+  $ quiet git_client clone --mirror $MONONOKE_GIT_SERVICE_BASE_URL/$REPONAME.git new_repo
   $ cd new_repo
 # Verify that we get the same Git repo back that we started with
   $ git rev-list --objects --all | git cat-file --batch-check='%(objectname) %(objecttype) %(rest)' | sort > $TESTTMP/new_object_list

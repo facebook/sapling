@@ -74,17 +74,16 @@
   6
 
 # Perform a sparse checkout of the repo with blobless clone from Mononoke
-  $ git_client clone $MONONOKE_GIT_SERVICE_BASE_URL/$REPONAME.git --filter=blob:none --no-checkout
-  Cloning into 'repo'...
+  $ quiet git_client clone $MONONOKE_GIT_SERVICE_BASE_URL/$REPONAME.git --filter=blob:none --no-checkout
   $ cd $REPONAME
 # Inform git that we are interested only in the top level directory and files. This will download objects ondemand from server
   $ git sparse-checkout init --cone
-  $ git_client checkout -q master_bookmark
+  $ git_client checkout -q master_bookmark 2>/dev/null
 # Get the count of files which are materialized on disk as part of this checkout
   $ find . -path "./.git" -prune -o -type f | wc -l
   4
 # Expand the scope of the sparse checkout to include the client/android directory as well. This will download objects ondemand from server
-  $ git_client sparse-checkout set client/android
+  $ git_client sparse-checkout set client/android 2>/dev/null
 # Get the count of files with this expanded sparse checkout
   $ find . -path "./.git" -prune -o -type f | wc -l
   6

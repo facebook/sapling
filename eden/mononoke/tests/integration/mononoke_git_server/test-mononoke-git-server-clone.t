@@ -40,6 +40,14 @@
 # Clone the Git repo from Mononoke
   $ git_client clone $MONONOKE_GIT_SERVICE_BASE_URL/$REPONAME.git
   Cloning into 'repo'...
+  remote: Converting HAVE Git commits to Bonsais        
+  remote: Converting WANT Git commits to Bonsais        
+  remote: Collecting Bonsai commits to send to client        
+  remote: Couting number of objects to be sent in packfile        
+  remote: Generating trees and blobs stream        
+  remote: Generating commits stream        
+  remote: Generating tags stream        
+  remote: Sending packfile stream        
 # Verify that we get the same Git repo back that we started with
   $ cd $REPONAME  
   $ git rev-list --objects --all | git cat-file --batch-check='%(objectname) %(objecttype) %(rest)' | sort > $TESTTMP/new_object_list

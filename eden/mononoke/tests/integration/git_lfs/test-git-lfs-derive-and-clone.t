@@ -29,8 +29,7 @@
 
 # Clone the Git repo from Mononoke
   $ CLONE_URL="$MONONOKE_GIT_SERVICE_BASE_URL/repo.git"
-  $ git_client clone "$CLONE_URL"
-  Cloning into 'repo'...
+  $ quiet git_client clone "$CLONE_URL"
 
 # List all the objects in Git repo
   $ cd $REPONAME  

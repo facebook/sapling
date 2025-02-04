@@ -39,8 +39,7 @@
 # Start up the Mononoke Git Service
   $ mononoke_git_service
 # Clone the Git repo from Mononoke
-  $ git_client -c http.extraHeader="x-fb-product-log: git:123:pid1234_1234" clone $MONONOKE_GIT_SERVICE_BASE_URL/$REPONAME.git
-  Cloning into 'repo'...
+  $ quiet git_client -c http.extraHeader="x-fb-product-log: git:123:pid1234_1234" clone $MONONOKE_GIT_SERVICE_BASE_URL/$REPONAME.git
   $ cd repo
 
 # Add some new commits to the master_bookmark branch

@@ -85,6 +85,14 @@
 # Clone the repo from Mononoke. Because we do not support refs to trees and blobs in Mononoke Git, the clone fails
   $ git_client clone $MONONOKE_GIT_SERVICE_BASE_URL/$REPONAME.git  
   Cloning into 'repo'...
+  remote: Converting HAVE Git commits to Bonsais        
+  remote: Converting WANT Git commits to Bonsais        
+  remote: Collecting Bonsai commits to send to client        
+  remote: Couting number of objects to be sent in packfile        
+  remote: Generating trees and blobs stream        
+  remote: Generating commits stream        
+  remote: Generating tags stream        
+  remote: Sending packfile stream        
   fatal: did not receive expected object 5146666596d2520dfd1d3c2acdc4b1448745a349
   fatal: fetch-pack: invalid index-pack output
   [128]

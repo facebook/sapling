@@ -41,8 +41,8 @@
 # Start up the Mononoke Git Service
   $ mononoke_git_service
 # Clone the Git repo from Mononoke
-  $ git_client clone $MONONOKE_GIT_SERVICE_BASE_URL/$REPONAME.git
-  Cloning into 'repo'...
+  $ quiet git_client clone $MONONOKE_GIT_SERVICE_BASE_URL/$REPONAME.git
+
 # Verify that we get the same Git repo back that we started with
   $ cd $REPONAME  
   $ git rev-list --objects --all | git cat-file --batch-check='%(objectname) %(objecttype) %(rest)' | sort > $TESTTMP/new_object_list
@@ -72,7 +72,25 @@
   $ cd $REPONAME
 # Wait for the warm bookmark cache to catch up with the latest changes
   $ wait_for_git_bookmark_create refs/tags/last_tag
-  $ quiet git_client pull
+  $ git_client pull
+  remote: Converting HAVE Git commits to Bonsais        
+  remote: Converting WANT Git commits to Bonsais        
+  remote: Collecting Bonsai commits to send to client        
+  remote: Couting number of objects to be sent in packfile        
+  remote: Generating trees and blobs stream        
+  remote: Generating commits stream        
+  remote: Generating tags stream        
+  remote: Sending packfile stream        
+  From https://localhost:$LOCAL_PORT/repos/git/ro/repo
+     db39b4c..356883f  master_bookmark -> origin/master_bookmark
+   * [new tag]         last_tag        -> last_tag
+  Updating db39b4c..356883f
+  Fast-forward
+   fileC | 1 +
+   fileD | 1 +
+   2 files changed, 2 insertions(+)
+   create mode 100644 fileC
+   create mode 100644 fileD
 # Verify that we get the same Git repo back that we started with
   $ git rev-list --objects --all | git cat-file --batch-check='%(objectname) %(objecttype) %(rest)' | sort > $TESTTMP/new_object_list
   $ diff -w $TESTTMP/new_object_list $TESTTMP/object_list

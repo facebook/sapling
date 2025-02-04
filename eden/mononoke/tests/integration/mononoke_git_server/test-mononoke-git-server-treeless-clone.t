@@ -47,8 +47,7 @@
   in-pack: 13
 
 # Partial clone the repo from Mononoke and ensure we get the same number of objects
-  $ git_client clone $MONONOKE_GIT_SERVICE_BASE_URL/$REPONAME.git --filter=object:type=tree --no-checkout
-  Cloning into 'repo'...
+  $ quiet git_client clone $MONONOKE_GIT_SERVICE_BASE_URL/$REPONAME.git --filter=object:type=tree --no-checkout
 
 # Get the count of objects received as part of this clone. Use count-objects instead of rev-list to prevent Git from downloading missing objects
 # from remote since this is a partial clone
@@ -71,8 +70,7 @@
   in-pack: 5
 
 # Partial clone the repo from Mononoke and ensure we get the same number of objects
-  $ git_client clone --filter=tree:0 --no-checkout $MONONOKE_GIT_SERVICE_BASE_URL/$REPONAME.git
-  Cloning into 'repo'...
+  $ quiet git_client clone --filter=tree:0 --no-checkout $MONONOKE_GIT_SERVICE_BASE_URL/$REPONAME.git
 
 # Get the count of objects received as part of this clone. Use count-objects instead of rev-list to prevent Git from downloading missing objects
 # from remote since this is a partial clone
@@ -95,8 +93,7 @@
   in-pack: 14
 
 # Partial clone the repo from Mononoke and ensure we get the same number of objects
-  $ git_client clone --filter=tree:3 --no-checkout $MONONOKE_GIT_SERVICE_BASE_URL/$REPONAME.git
-  Cloning into 'repo'...
+  $ quiet git_client clone --filter=tree:3 --no-checkout $MONONOKE_GIT_SERVICE_BASE_URL/$REPONAME.git
 
 # Get the count of objects received as part of this clone. Use count-objects instead of rev-list to prevent Git from downloading missing objects
 # from remote since this is a partial clone
@@ -110,7 +107,7 @@
 
 # Do the same for the Mononoke Git repo
   $ cd $REPONAME  
-  $ git_client rev-list --objects --all | git cat-file --batch-check='%(objectname) %(objecttype) %(rest)' | sort > $TESTTMP/new_object_list
+  $ git_client rev-list --objects --all 2>/dev/null | git cat-file --batch-check='%(objectname) %(objecttype) %(rest)' | sort > $TESTTMP/new_object_list
 
 # Validate that after downloading all the required objects, we have the same state of repo in both cases
   $ diff -w $TESTTMP/new_object_list $TESTTMP/object_list  

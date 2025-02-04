@@ -16,8 +16,7 @@
   $ set_mononoke_as_source_of_truth_for_git
 
 # Setup git repository
-  $ git_client clone -q $MONONOKE_GIT_SERVICE_BASE_URL/$REPONAME.git "$GIT_REPO_ORIGIN"
-  warning: You appear to have cloned an empty repository.
+  $ quiet git_client clone -q $MONONOKE_GIT_SERVICE_BASE_URL/$REPONAME.git "$GIT_REPO_ORIGIN"
   $ cd "$GIT_REPO_ORIGIN"
   $ git init -q
 # File1 should be large enough that Git create a delta for it
@@ -51,7 +50,7 @@
 
 # Clone the repo from Mononoke and validate that the push worked
   $ cd $TESTTMP
-  $ git_client clone -q $MONONOKE_GIT_SERVICE_BASE_URL/$REPONAME.git check_repo
+  $ quiet git_client clone -q $MONONOKE_GIT_SERVICE_BASE_URL/$REPONAME.git check_repo
   $ cd check_repo
   $ git rev-list --objects --all | git cat-file --batch-check='%(objectname) %(objecttype) %(rest)' | sort > $TESTTMP/new_object_list
   $ diff -w $TESTTMP/new_object_list $TESTTMP/object_list

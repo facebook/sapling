@@ -100,8 +100,7 @@
 
 # Perform Mononoke clone with the depth of 3 and it should have the expected output
   $ cd "$TESTTMP"
-  $ git_client clone $MONONOKE_GIT_SERVICE_BASE_URL/$REPONAME.git --depth=3
-  Cloning into 'repo'...
+  $ quiet git_client clone $MONONOKE_GIT_SERVICE_BASE_URL/$REPONAME.git --depth=3
   $ cd $REPONAME
 # Validate that the list of commits returned match the expected output
   $ git rev-list --objects --all | git cat-file --batch-check='%(objectname) %(objecttype) %(rest)' | grep commit | sort
@@ -114,8 +113,7 @@
   $ rm -rf $REPONAME
 
 # Perform Mononoke clone with the depth of 1
-  $ git_client clone $MONONOKE_GIT_SERVICE_BASE_URL/$REPONAME.git --depth=1
-  Cloning into 'repo'...
+  $ quiet git_client clone $MONONOKE_GIT_SERVICE_BASE_URL/$REPONAME.git --depth=1
   $ cd $REPONAME
 # Validate that the list of commits returned match the expected output
   $ git rev-list --objects --all | git cat-file --batch-check='%(objectname) %(objecttype) %(rest)' | grep commit | sort

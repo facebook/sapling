@@ -99,8 +99,7 @@
 
 # Perform a similar shallow clone using Mononoke
   $ cd "$TESTTMP"
-  $ git_client clone $MONONOKE_GIT_SERVICE_BASE_URL/$REPONAME.git --depth=1
-  Cloning into 'repo'...
+  $ quiet git_client clone $MONONOKE_GIT_SERVICE_BASE_URL/$REPONAME.git --depth=1
   $ cd $REPONAME
   $ git rev-list --objects --all | git cat-file --batch-check='%(objectname) %(objecttype) %(rest)' | grep commit | sort
   18a6f40de35ce474e240faa7298ae2b5979751c8 commit 
@@ -117,7 +116,7 @@
 
 # Perform a shallow pull of the repo which deeper than the clone (i.e. depth = 3). This should result in
 # unshallowing of the repo at the client
-  $ git_client pull --depth=3
+  $ git_client pull --depth=3 2>/dev/null
   Already up to date.
 # Even though the above pull outputs `Already up to date`, we end up fetching additional commits based on depth
   $ git rev-list --objects --all | git cat-file --batch-check='%(objectname) %(objecttype) %(rest)' | grep commit

@@ -374,6 +374,7 @@ pub async fn fetch(
     args: FetchArgs,
 ) -> Result<impl TryIntoResponse, Error> {
     let (writer, reader) = mpsc::channel::<Bytes>(100_000_000);
+    let (progress_writer, mut progress_reader) = mpsc::channel::<String>(50);
     let sink_writer = SinkWriter::new(CopyToBytes::new(
         PollSender::new(writer).sink_map_err(|_| std::io::Error::from(ErrorKind::BrokenPipe)),
     ));
@@ -397,6 +398,11 @@ pub async fn fetch(
                 write_progress_channel(fetch_msg.as_ref(), &mut buf).await?;
                 yield Bytes::from(buf);
             }
+            while let Some(progress) = progress_reader.recv().await {
+                let mut buf = Vec::with_capacity(progress.len());
+                write_progress_channel(progress.as_ref(), &mut buf).await?;
+                yield Bytes::from(buf);
+            }
             while let Some(chunks) = pack_reader.next().await {
                 for chunk in chunks {
                     let mut buf = Vec::with_capacity(chunk.len());
@@ -418,6 +424,7 @@ pub async fn fetch(
                 request_context.ctx.clone(),
                 &request_context.repo,
                 args.into_request(concurrency(&request_context), shallow_response),
+                progress_writer,
             )
             .await?;
             let mut pack_writer = PackfileWriter::new(

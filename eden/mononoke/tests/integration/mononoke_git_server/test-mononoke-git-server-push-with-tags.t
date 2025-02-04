@@ -51,8 +51,7 @@
 # Start up the Mononoke Git Service
   $ mononoke_git_service
 # Clone the Git repo from Mononoke
-  $ git_client clone $MONONOKE_GIT_SERVICE_BASE_URL/$REPONAME.git
-  Cloning into 'repo'...
+  $ quiet git_client clone $MONONOKE_GIT_SERVICE_BASE_URL/$REPONAME.git
 # List all the known refs. Note that both tags are present and pointing to specific commits
   $ cd repo
   $ git show-ref | grep tags | sort
@@ -95,8 +94,7 @@
 
 # Clone the repo in a new folder
   $ cd "$TESTTMP"
-  $ git_client clone $MONONOKE_GIT_SERVICE_BASE_URL/$REPONAME.git new_repo
-  Cloning into 'new_repo'...
+  $ quiet git_client clone $MONONOKE_GIT_SERVICE_BASE_URL/$REPONAME.git new_repo
   $ cd new_repo
 
 # List all the known refs. Ensure that the deleted tag do not show up anymore and the updated tag

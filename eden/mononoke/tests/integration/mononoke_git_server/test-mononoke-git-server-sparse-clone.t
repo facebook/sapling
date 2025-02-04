@@ -79,8 +79,7 @@
 # Attempt to perform a sparse clone of the repo with server side sparse filtering in Mononoke
 # Since Mononoke doesn't support server-side sparse filtering, it will treat it as regular clone and return
 # full-clone objects
-  $ git_client clone $MONONOKE_GIT_SERVICE_BASE_URL/$REPONAME.git --filter=sparse:oid=master_bookmark:sparse_profile --no-checkout
-  Cloning into 'repo'...
+  $ quiet git_client clone $MONONOKE_GIT_SERVICE_BASE_URL/$REPONAME.git --filter=sparse:oid=master_bookmark:sparse_profile --no-checkout
   $ cd $REPONAME
 # Validate that we aren't missing any objects since the server gave us a full clone
   $ git rev-list --all --quiet --objects --missing=print | wc -l

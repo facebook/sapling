@@ -54,8 +54,7 @@
   $ mononoke_git_service
 
 # Clone the repo using Mononoke
-  $ git_client clone $MONONOKE_GIT_SERVICE_BASE_URL/$REPONAME.git
-  Cloning into 'repo'...
+  $ quiet git_client clone $MONONOKE_GIT_SERVICE_BASE_URL/$REPONAME.git
 
 # Add more changes to the origin repo
   $ cd "$GIT_REPO_ORIGIN"

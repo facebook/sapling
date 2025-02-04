@@ -57,8 +57,7 @@
 # Start up the Mononoke Git Service
   $ mononoke_git_service
 # Clone the Git repo from Mononoke
-  $ git_client clone $MONONOKE_GIT_SERVICE_BASE_URL/$REPONAME.git
-  Cloning into 'repo'...
+  $ quiet git_client clone $MONONOKE_GIT_SERVICE_BASE_URL/$REPONAME.git
 
 # Delete some branches and push to remote
   $ cd repo
@@ -69,8 +68,7 @@
 
 # Without waiting for the WBC, clone the repo and check its state
   $ cd "$TESTTMP"
-  $ git_client clone $MONONOKE_GIT_SERVICE_BASE_URL/$REPONAME.git new_repo
-  Cloning into 'new_repo'...
+  $ quiet git_client clone $MONONOKE_GIT_SERVICE_BASE_URL/$REPONAME.git new_repo
   $ cd new_repo
 
 # List all the known refs. Ensure that the deleted branches do not show up anymore
@@ -95,8 +93,7 @@
 # Without waiting for the WBC, clone the repo and check its state
   $ cd "$TESTTMP"
   $ rm -rf new_repo
-  $ git_client clone $MONONOKE_GIT_SERVICE_BASE_URL/$REPONAME.git new_repo
-  Cloning into 'new_repo'...
+  $ quiet git_client clone $MONONOKE_GIT_SERVICE_BASE_URL/$REPONAME.git new_repo
   $ cd new_repo
 
 # List all the known refs. Ensure that the newly created branch is present
@@ -130,8 +127,7 @@
 # Without waiting for the WBC, clone the repo and check its state
   $ cd "$TESTTMP"
   $ rm -rf new_repo
-  $ git_client clone $MONONOKE_GIT_SERVICE_BASE_URL/$REPONAME.git new_repo
-  Cloning into 'new_repo'...
+  $ quiet git_client clone $MONONOKE_GIT_SERVICE_BASE_URL/$REPONAME.git new_repo
   $ cd new_repo
 
 # List all the known refs. Ensure that the modified branches show their changes

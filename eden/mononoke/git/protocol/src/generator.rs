@@ -35,6 +35,7 @@ use mononoke_types::path::MPath;
 use mononoke_types::ChangesetId;
 use packfile::types::PackfileItem;
 use rustc_hash::FxHashSet;
+use tokio::sync::mpsc::Sender;
 
 use crate::bookmarks_provider::bookmarks;
 use crate::bookmarks_provider::list_tags;
@@ -775,6 +776,7 @@ pub async fn fetch_response<'a>(
     ctx: CoreContext,
     repo: &'a impl Repo,
     mut request: FetchRequest,
+    progress_writer: Sender<String>,
 ) -> Result<FetchResponse<'a>> {
     let delta_inclusion = DeltaInclusion::standard();
     let filter = Arc::new(request.filter.clone());
@@ -792,15 +794,24 @@ pub async fn fetch_response<'a>(
     )?;
     // Convert the base commits and head commits, which are represented as Git hashes, into Bonsai hashes
     // If the input contains tag object Ids, fetch the corresponding tag names
+    progress_writer
+        .send("Converting HAVE Git commits to Bonsais\n".to_string())
+        .await?;
     let translated_sha_bases = git_shas_to_bonsais(&ctx, repo, request.bases.iter())
         .await
         .context("Error converting base Git commits to Bonsai duing fetch")?;
+    progress_writer
+        .send("Converting WANT Git commits to Bonsais\n".to_string())
+        .await?;
     let translated_sha_heads = git_shas_to_bonsais(&ctx, repo, request.heads.iter())
         .await
         .context("Error converting head Git commits to Bonsai during fetch")?;
     // Get the stream of commits between the bases and heads
     // NOTE: Another Git magic. The filter spec includes an option that the client can use to exclude commit-type objects. But, even if the client
     // uses that filter, we just ignore it and send all the commits anyway :)
+    progress_writer
+        .send("Collecting Bonsai commits to send to client\n".to_string())
+        .await?;
     let mut target_commits = commits(
         &ctx,
         repo,
@@ -811,6 +822,9 @@ pub async fn fetch_response<'a>(
     .await?;
     // Reverse the list of commits so that we can prevent delta cycles from appearing in the packfile
     target_commits.reverse();
+    progress_writer
+        .send("Couting number of objects to be sent in packfile\n".to_string())
+        .await?;
     // Get the count of unique blob and tree objects to be included in the packfile
     let (trees_and_blobs_count, base_set) = trees_and_blobs_count(
         fetch_container.clone(),
@@ -821,6 +835,9 @@ pub async fn fetch_response<'a>(
     .context("Error while calculating object count during fetch")?;
     // Get the stream of blob and tree packfile items (with deltas where possible) to include in the pack/bundle. Note that
     // we have already counted these items as part of object count.
+    progress_writer
+        .send("Generating trees and blobs stream\n".to_string())
+        .await?;
     let tree_and_blob_stream = tree_and_blob_packfile_stream(
         fetch_container.clone(),
         target_commits.clone(),
@@ -831,11 +848,17 @@ pub async fn fetch_response<'a>(
     .context("Error while generating blob and tree packfile item stream during fetch")?;
     // Get the stream of commit packfile items to include in the pack/bundle. Note that we have already counted these items
     // as part of object count.
+    progress_writer
+        .send("Generating commits stream\n".to_string())
+        .await?;
     let (commit_stream, commits_count) =
         commit_packfile_stream(fetch_container.clone(), repo, target_commits.clone())
             .await
             .context("Error while generating commit packfile item stream during fetch")?;
     // Get the stream of all annotated tag items in the repo
+    progress_writer
+        .send("Generating tags stream\n".to_string())
+        .await?;
     let (tag_stream, tags_count) = tags_packfile_stream(
         fetch_container,
         repo,
@@ -852,6 +875,9 @@ pub async fn fetch_response<'a>(
         .chain(commit_stream)
         .chain(tree_and_blob_stream)
         .boxed();
+    progress_writer
+        .send("Sending packfile stream\n".to_string())
+        .await?;
     Ok(FetchResponse::new(packfile_stream, object_count))
 }
 

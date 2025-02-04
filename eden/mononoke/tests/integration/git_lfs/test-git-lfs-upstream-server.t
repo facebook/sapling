@@ -24,8 +24,7 @@
 
 # Clone the Git repo from Mononoke
   $ CLONE_URL="$MONONOKE_GIT_SERVICE_BASE_URL/repo.git"
-  $ git_client clone "$CLONE_URL"
-  Cloning into 'repo'...
+  $ quiet git_client clone "$CLONE_URL"
 
 # Push with legacy server configures to check if the LFS files end up in mononoke anyway
   $ cd $REPONAME  
