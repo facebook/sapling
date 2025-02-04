@@ -654,7 +654,7 @@ function blobimport {
   local revlog="$input/revlog-export"
   rm -rf "$revlog"
   hg --cwd "$input" debugexportrevlog revlog-export
-  $MONONOKE_BLOBIMPORT \
+  GLOG_minloglevel=5 $MONONOKE_BLOBIMPORT \
     "${CACHE_ARGS[@]}" \
     "${COMMON_ARGS[@]}" \
      --repo-id $REPOID \
@@ -1483,7 +1483,7 @@ function gitimport() {
     git_cmd="git"
   fi
 
-  "$MONONOKE_GITIMPORT" \
+  GLOG_minloglevel=5 "$MONONOKE_GITIMPORT" \
     "${CACHE_ARGS[@]}" \
     "${COMMON_ARGS[@]}" \
     --git-command-path $git_cmd\
