@@ -97,6 +97,8 @@ def _dropempty(fctxs):
 
 def findrenames(repo, added, removed, threshold):
     """find renamed files -- yields (before, after, score) tuples"""
+    if not added or not removed:
+        return
     wctx = repo[None]
     pctx = wctx.p1()
 
