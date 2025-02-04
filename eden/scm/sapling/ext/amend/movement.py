@@ -15,7 +15,6 @@ from sapling import (
     commands,
     error,
     hintutil,
-    phases,
     registrar,
     revsetlang,
     scmutil,

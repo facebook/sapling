@@ -13,7 +13,6 @@
 from __future__ import absolute_import
 
 import hashlib
-import os
 import posixpath
 import shutil
 import sys

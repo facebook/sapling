@@ -34,7 +34,7 @@ Root changesets cannot be dropped.
 
 """
 
-from sapling import cmdutil, error, extensions, phases, registrar, scmutil
+from sapling import cmdutil, error, extensions, registrar, scmutil
 from sapling.i18n import _
 
 

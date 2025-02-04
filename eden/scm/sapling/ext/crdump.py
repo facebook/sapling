@@ -13,7 +13,7 @@ import shutil
 import tempfile
 from os import path
 
-from sapling import encoding, error, extensions, registrar, scmutil
+from sapling import error, extensions, registrar, scmutil
 from sapling.i18n import _
 from sapling.node import hex
 

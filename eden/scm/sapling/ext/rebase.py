@@ -56,7 +56,7 @@ from sapling import (
     visibility,
 )
 from sapling.i18n import _
-from sapling.node import bin, hex, nullid, nullrev, short
+from sapling.node import hex, nullid, nullrev, short
 from sapling.utils import subtreeutil
 
 release = lock.release

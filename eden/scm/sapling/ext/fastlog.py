@@ -24,7 +24,7 @@ Config::
 import heapq
 from collections import deque
 
-from sapling import error, extensions, match as matchmod, phases, revset, smartset
+from sapling import error, extensions, match as matchmod, revset, smartset
 from sapling.i18n import _
 from sapling.node import bin, hex, nullrev
 

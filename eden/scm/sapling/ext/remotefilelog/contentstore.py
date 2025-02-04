@@ -5,7 +5,7 @@
 
 from __future__ import absolute_import
 
-from sapling import manifest, mdiff, util
+from sapling import mdiff
 from sapling.node import hex, nullid
 
 from . import constants, shallowutil

@@ -2,7 +2,7 @@ from __future__ import absolute_import, print_function
 
 import os
 
-from sapling import context, encoding, hg, scmutil, ui as uimod
+from sapling import context, hg, scmutil, ui as uimod
 from sapling.node import hex
 
 u = uimod.ui.load()

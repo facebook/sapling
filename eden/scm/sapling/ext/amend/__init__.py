@@ -61,7 +61,6 @@ from sapling import (
     hintutil,
     lock as lockmod,
     patch,
-    phases,
     registrar,
     scmutil,
 )

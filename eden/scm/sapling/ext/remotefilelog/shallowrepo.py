@@ -8,7 +8,6 @@ from __future__ import absolute_import
 
 from sapling import progress, util
 from sapling.i18n import _
-from sapling.node import nullid
 from sapling.scmutil import walkfiles
 
 from . import fileserverclient, remotefilectx, remotefilelog
