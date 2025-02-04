@@ -376,7 +376,7 @@ def wrapsocket(sock, keyfile, certfile, ui, serverhostname=None):
                 hint=_("restore missing file or fix references in @Product@ config"),
             )
 
-    settings = _hostsettings(ui, serverhostname)
+    settings = _hostsettings(ui, _ensurestr(serverhostname))
 
     # We can't use ssl.create_default_context() because it calls
     # load_default_certs() unless CA arguments are passed to it. We want to
@@ -961,3 +961,9 @@ def validatesocket(sock) -> None:
             )
             % (host, nicefingerprint),
         )
+
+
+def _ensurestr(s):
+    if isinstance(s, bytes):
+        s = s.decode("utf-8")
+    return s
