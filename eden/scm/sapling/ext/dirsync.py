@@ -207,7 +207,7 @@ def getmirrors(maps, filename):
             if checkpath.startswith(subdir):
                 return None, []
 
-    for key, mirrordirs in maps.items():
+    for mirrordirs in maps.values():
         for subdir in mirrordirs:
             if checkpath.startswith(subdir):
                 return subdir, mirrordirs
