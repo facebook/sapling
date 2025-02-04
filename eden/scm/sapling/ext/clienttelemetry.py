@@ -123,7 +123,7 @@ def _peersetup(ui, peer) -> None:
         peer._peerinfo = peerinfo
         blackbox.log({"clienttelemetry": {"peername": peername, "peerinfo": peerinfo}})
         util.info("client-telemetry", peername=peername, **peerinfo)
-        ann = ui.configbool("clienttelemetry", "announceremotehostname", None)
+        ann = ui.configbool("clienttelemetry", "announceremotehostname", False)
         if ann is None:
             ann = not ui.plain() and ui._isatty(ui.ferr)
         if ann and not ui.quiet:
