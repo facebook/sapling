@@ -382,6 +382,11 @@ pub async fn fetch(
         FetchResponseHeaders::from_request(request_context.clone(), args.clone()).await?;
     let include_pack = fetch_response_headers.include_pack();
     let shallow_response = fetch_response_headers.shallow_response.take();
+    let delta_form = if request_context.pushvars.use_only_offset_delta() {
+        DeltaForm::OnlyOffset
+    } else {
+        DeltaForm::RefAndOffset
+    };
 
     // Some repos might be configured to display a message to users when they
     // run `git pull`.
@@ -420,6 +425,11 @@ pub async fn fetch(
     mononoke::spawn_task({
         let request_context = request_context.clone();
         async move {
+            if delta_form == DeltaForm::OnlyOffset {
+                progress_writer
+                    .send("Packfile will be created using only offset deltas\n".to_string())
+                    .await?;
+            }
             let response_stream = fetch_response(
                 request_context.ctx.clone(),
                 &request_context.repo,
@@ -431,7 +441,7 @@ pub async fn fetch(
                 sink_writer,
                 response_stream.num_items as u32,
                 5000,
-                DeltaForm::RefAndOffset,
+                delta_form,
             );
             pack_writer.write(response_stream.items).await?;
             pack_writer.finish().await?;

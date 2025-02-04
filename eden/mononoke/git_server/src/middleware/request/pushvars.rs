@@ -30,7 +30,7 @@ impl Middleware for PushvarsParsingMiddleware {
             .filter_map(|(name, value)| {
                 let name = name.as_str().to_lowercase();
                 if name.starts_with(METAGIT_PUSHVAR_PREFIX) || name.starts_with(PUSHVAR_PREFIX) {
-                    return Some((name, Bytes::copy_from_slice(value.as_bytes())));
+                    Some((name, Bytes::copy_from_slice(value.as_bytes())))
                 } else {
                     None
                 }
