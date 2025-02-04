@@ -20,7 +20,6 @@ import bindings
 from . import encoding, util
 from .i18n import _
 
-
 curses = util.import_curses()
 
 # start and stop parameters for effects
@@ -125,6 +124,7 @@ _defaultstyles = {
     "shelve.newest": "green bold",
     "shelve.name": "blue bold",
     "status.added": "green bold",
+    "ui.hint": "yellow",
     "ui.metrics": "#777:color242:dim",
     "ui.prefix.component": "cyan",
     "ui.prefix.error": "brightred:red",

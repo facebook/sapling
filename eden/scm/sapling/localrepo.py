@@ -3124,7 +3124,7 @@ class localrepository:
         except errormod.HookAbort as exc:
             self.ui.write_err(_("pushkey-abort: %s\n") % exc)
             if exc.hint:
-                self.ui.write_err(_("(%s)\n") % exc.hint)
+                self.ui.write_err(_("(%s)\n") % exc.hint, label="ui.hint")
             return False
         self.ui.debug('pushing key for "%s:%s"\n' % (namespace, key))
         ret = pushkey.push(self, namespace, key, old, new)

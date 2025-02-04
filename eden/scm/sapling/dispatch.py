@@ -344,7 +344,7 @@ def dispatch(req):
     except error.ProgrammingError as inst:
         req.ui.warn(_("** ProgrammingError: %s\n") % inst)
         if inst.hint:
-            req.ui.warn(_("** (%s)\n") % inst.hint)
+            req.ui.warn(_("** (%s)\n") % inst.hint, label="ui.hint")
         raise
     except error.SignalInterrupt:
         # maybe pager would quit without consuming all the output, and
