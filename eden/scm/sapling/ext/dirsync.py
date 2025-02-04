@@ -323,6 +323,10 @@ def dirsyncctx(ctx, matcher=None):
     else:
         matcher = needsync
 
+    # skip dirsync if there is no files match the (needsync) matcher
+    if not any(matcher(p) for p in ctx.files()):
+        return resultctx, resultmirrored
+
     repo = ctx.repo()
     mctx, status = _mctxstatus(ctx, matcher)
 
