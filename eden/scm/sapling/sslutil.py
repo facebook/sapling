@@ -352,7 +352,7 @@ def protocolsettings(protocol: str) -> Tuple[ssl._SSLMethod, int, str]:
     return ssl.PROTOCOL_SSLv23, options, protocol
 
 
-def wrapsocket(sock, keyfile, certfile, ui, serverhostname=None):
+def wrapsocket(sock, keyfile, certfile, ui, serverhostname):
     """Add SSL/TLS to a socket.
 
     This is a glorified wrapper for ``ssl.wrap_socket()``. It makes sane
