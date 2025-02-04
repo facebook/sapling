@@ -213,7 +213,8 @@ def get_mount_pts_set(
 
 class LowDiskSpace(Problem):
     def __init__(self, message: str, severity: ProblemSeverity) -> None:
-        super().__init__(message, severity=severity)
+        remediation_msg = "Check your disk usage and free up space."
+        super().__init__(message, remediation=remediation_msg, severity=severity)
 
 
 class LowDiskSpaceMacOS(Problem):
@@ -226,12 +227,12 @@ class LowDiskSpaceMacOS(Problem):
     util_purge = "eden du --purgeable"
 
     def __init__(self, message: str, severity: ProblemSeverity) -> None:
-        addtl_msg = (
+        remediation_msg = (
             f"\nA significant portion of your disk may be used up by purgeable "
             f"space. You can check and clear purgeable space with: \n\n'{self.util_purge}'\n\n"
             f"See https://fburl.com/edenfs_purgeable for more info.\n"
         )
-        super().__init__(message + addtl_msg, severity=severity)
+        super().__init__(message, remediation=remediation_msg, severity=severity)
 
 
 def check_disk_usage(
