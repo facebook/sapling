@@ -56,3 +56,22 @@ Status update via add or remove commands
   M b
   A d
   R c
+
+Clean up (revert, purge)
+
+  $ sl revert --all -q --no-backup
+  $ sl purge --files
+  $ sl status
+  $ git status --porcelain
+
+Changed in the staging area, but not changed in the working copy
+
+  $ echo 3 >> b
+  $ git add b
+  $ sl revert b
+FIXME: 'b' should be clean
+  $ sl status
+  M b
+  $ sl diff
+  $ git status --porcelain
+  MM b
