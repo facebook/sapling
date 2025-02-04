@@ -69,9 +69,7 @@ Changed in the staging area, but not changed in the working copy
   $ echo 3 >> b
   $ git add b
   $ sl revert b
-FIXME: 'b' should be clean
   $ sl status
-  M b
   $ sl diff
   $ git status --porcelain
   MM b

@@ -5,6 +5,7 @@
  * LICENSE file in the root directory of this source tree.
  */
 
+use std::collections::HashSet;
 use std::path::Path;
 use std::path::PathBuf;
 use std::sync::Arc;
@@ -130,7 +131,11 @@ impl FileSystem for DotGitFileSystem {
         // !! FILE9          (with --ignored)
         // AD FILE10         (added to index, deleted on disk)
 
-        let changes: Vec<Result<PendingChange>> = out
+        // Some files might be "clean" compared to "." but not "index/staging area".
+        // sl should report those as "clean", while git might report "MM" (modified in index, and
+        // modified in working copy compared with index).
+        let mut need_double_check = Vec::<RepoPathBuf>::new();
+        let mut changes: Vec<Result<PendingChange>> = out
             .stdout
             .split(|&c| c == 0)
             .filter_map(|line| -> Option<Result<PendingChange>> {
@@ -145,16 +150,36 @@ impl FileSystem for DotGitFileSystem {
                     Ok(true) => {}
                     Err(e) => return Some(Err(e)),
                 }
-                // Prefer "working copy" state. Fallback to index.
-                let sign = if line[1] == b' ' { line[0] } else { line[1] };
-                let change = match sign {
-                    b'D' => PendingChange::Deleted(path),
-                    b'!' => PendingChange::Ignored(path),
-                    _ => PendingChange::Changed(path),
-                };
-                Some(Ok(change))
+                if &line[..2] == b"MM" {
+                    // "MM" files might be "clean"
+                    need_double_check.push(path);
+                    None
+                } else {
+                    // Prefer "working copy" state. Fallback to index.
+                    let sign = if line[1] == b' ' { line[0] } else { line[1] };
+                    let change = match sign {
+                        b'D' => PendingChange::Deleted(path),
+                        b'!' => PendingChange::Ignored(path),
+                        _ => PendingChange::Changed(path),
+                    };
+                    Some(Ok(change))
+                }
             })
             .collect();
+
+        if !need_double_check.is_empty() {
+            let args = ["--name-only", "HEAD"];
+            let out = self.git.call("diff", &args)?;
+            let changed = out
+                .stdout
+                .split(|&c| c == b'\n' || c == b'\r')
+                .collect::<HashSet<_>>();
+            for path in need_double_check {
+                if changed.contains(path.as_byte_slice()) {
+                    changes.push(Ok(PendingChange::Changed(path)));
+                }
+            }
+        }
 
         Ok(Box::new(changes.into_iter()))
     }
