@@ -8,9 +8,6 @@ from __future__ import absolute_import, division, print_function
 
 import sys
 
-from . import compat
-
-
 """Module to deal with filename encoding on the local system, as returned by
 Watchman."""
 
