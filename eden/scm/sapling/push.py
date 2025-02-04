@@ -181,6 +181,7 @@ def plain_push(repo, edenapi, bookmark, to_node, curr_bookmark_val, force, oparg
         if "Err" in result:
             hint = gen_hint(
                 repo.ui,
+                result["Err"]["message"],
                 edenapi,
                 bookmark,
                 curr_bookmark_val,
@@ -331,6 +332,7 @@ def create_remote_bookmark(
     if "Err" in result:
         hint = gen_hint(
             ui,
+            result["Err"]["message"],
             edenapi,
             bookmark,
             curr_bookmark_val,
@@ -454,13 +456,20 @@ def is_true(s: Optional[str]) -> bool:
     return s == "true" or s == "True"
 
 
-def gen_hint(ui, edenapi, bookmark, curr_bookmark_val, context_msg):
-    hint = ""
+def gen_hint(ui, err_msg, edenapi, bookmark, curr_bookmark_val, context_msg):
+    if "DraftOnlyIdentity" in err_msg:
+        return _(
+            ui.config(
+                "push",
+                "draft-only-identity-hint",
+                "your identity lacks permission to push to public bookmarks",
+            )
+        )
+
     if curr_bookmark_val.source == RemoteBookmarkValueSource.LOCAL:
         remote_node = get_remote_bookmark_node_from_server(ui, edenapi, bookmark)
         if remote_node != curr_bookmark_val.node:
-            hint = _("%s, run '@prog@ pull -B %s' or add '--force'") % (
+            return _("%s, run '@prog@ pull -B %s' or add '--force'") % (
                 context_msg,
                 bookmark,
             )
-    return hint
