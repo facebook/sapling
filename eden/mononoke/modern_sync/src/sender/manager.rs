@@ -245,6 +245,9 @@ impl SendManager {
                         }
                     }
                     ChangesetMessage::Log((reponame, lag)) => {
+                        if encountered_error.is_some() {
+                            return;
+                        }
                         STATS::synced_commits.add_value(1, (reponame.clone(),));
                         if let Some(lag) = lag {
                             STATS::sync_lag_seconds.add_value(lag, (reponame,));
