@@ -149,7 +149,14 @@ fn wrapper_main(telemetry_sample: &mut CliUsageSample) -> Result<i32> {
     if std::env::var("EDENFSCTL_ONLY_RUST").is_ok() {
         let cmd = edenfs_commands::MainCommand::try_parse();
         match cmd {
-            Ok(cmd) => rust_main(cmd),
+            Ok(cmd) => {
+                #[cfg(fbcode_build)]
+                {
+                    // mark the command is triggered as a Rust command
+                    telemetry_sample.set_rust_command(true);
+                }
+                rust_main(cmd)
+            }
             // We failed to parse the command. We should exit with the same
             // exit code that Python exits with for parse failures.
             Err(e) if e.kind() == clap::ErrorKind::UnknownArgument => {
@@ -167,6 +174,11 @@ fn wrapper_main(telemetry_sample: &mut CliUsageSample) -> Result<i32> {
             // for Rust or else fall back to Python.
             Ok(cmd) => {
                 if cmd.is_enabled() {
+                    #[cfg(fbcode_build)]
+                    {
+                        // mark the command is triggered as a Rust command
+                        telemetry_sample.set_rust_command(true);
+                    }
                     rust_main(cmd)
                 } else {
                     match fallback(None) {
@@ -180,6 +192,8 @@ fn wrapper_main(telemetry_sample: &mut CliUsageSample) -> Result<i32> {
                                 // We expected to use Python but we were forced
                                 // to fall back to Rust. Something is wrong.
                                 telemetry_sample.set_rust_fallback(true);
+                                // mark the command is triggered as a Rust command
+                                telemetry_sample.set_rust_command(true);
                             }
                             eprintln!(
                                 "Failed to find Python implementation; falling back to Rust."
@@ -190,6 +204,8 @@ fn wrapper_main(telemetry_sample: &mut CliUsageSample) -> Result<i32> {
                             #[cfg(fbcode_build)]
                             {
                                 telemetry_sample.set_rust_fallback(false);
+                                // mark the command is triggered as a Python command
+                                telemetry_sample.set_rust_command(false);
                             }
                             res
                         }
