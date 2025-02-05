@@ -48,7 +48,7 @@ module.exports = {
     'reviewstack.dev/build.js',
     'reviewstack.dev/release.js',
     'reviewstack.dev/start.js',
-    // @fb-only: 
+    // @fb-only
     'node_modules/**',
   ],
   rules: {

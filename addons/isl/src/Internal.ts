@@ -5,7 +5,7 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-// @fb-only: 
+// @fb-only
 
 // This file contains imports only used by non-OSS internal builds of ISL
 // This should be the only file using fb-only imports and prettier ignores.
@@ -14,10 +14,10 @@
 
 // prettier-ignore
 type InternalImportsType =
-  // @fb-only: 
-// @fb-only: 
+  // @fb-only
+// @fb-only
   {[key: string]: undefined | any}
-// @fb-only: 
+// @fb-only
  ;
 
 /**
@@ -25,5 +25,5 @@ type InternalImportsType =
  * In OSS builds, all properties will give `undefined`.
  */
 export const Internal: InternalImportsType = {
-  // @fb-only: 
+  // @fb-only
 };

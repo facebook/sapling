@@ -194,7 +194,7 @@ module.exports = function (options: any) {
 
 function getSaplingCLI(): string {
   let cli;
-  // @fb-only: 
+  // @fb-only
   if (!cli) {
     cli = 'sl';
   }
