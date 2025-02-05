@@ -63,6 +63,15 @@ Sync all bookmarks moves
   Initialized channels
   Calculating segments for entry 1
   Skipping 0 commits, starting sync of 1 commits 
+  Found error: Trees upload: Expected 1 responses, got 0, retrying attempt #0
+  Found error: Trees upload: Expected 1 responses, got 0, retrying attempt #1
+  Found error: Trees upload: Expected 1 responses, got 0, retrying attempt #2
+  Found error: Trees upload: Expected 1 responses, got 0, retrying attempt #0
+  Found error: Trees upload: Expected 1 responses, got 0, retrying attempt #1
+  Found error: Trees upload: Expected 1 responses, got 0, retrying attempt #2
+  Found error: Trees upload: Expected 1 responses, got 0, retrying attempt #0
+  Found error: Trees upload: Expected 1 responses, got 0, retrying attempt #1
+  Found error: Trees upload: Expected 1 responses, got 0, retrying attempt #2
   Error processing files/trees: Failed to upload trees: HgManifestId(HgNodeHash(Sha1(c1afe800646ee45232ab5e70c57247b78dbf3899)))
   
   Caused by:

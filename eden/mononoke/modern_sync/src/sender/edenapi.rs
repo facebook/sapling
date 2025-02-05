@@ -27,7 +27,9 @@ use edenapi_types::UploadToken;
 use edenapi_types::UploadTokenData;
 use filestore::stream_file_bytes;
 use filestore::Range;
+use futures::future::BoxFuture;
 use futures::stream;
+use futures::FutureExt;
 use futures::StreamExt;
 use futures::TryStreamExt;
 use mercurial_types::blobs::HgBlobChangeset;
@@ -40,12 +42,13 @@ use mononoke_types::ChangesetId;
 use mononoke_types::FileContents;
 use repo_blobstore::RepoBlobstore;
 use slog::info;
+use slog::warn;
 use slog::Logger;
 use url::Url;
-
 mod util;
 
 const MAX_BLOB_BYTES: u64 = 100 * 1024 * 1024; // 100 MB
+const MAX_RETRIES: usize = 3;
 
 pub struct EdenapiSender {
     client: Client,
@@ -102,6 +105,14 @@ impl EdenapiSender {
         &self,
         contents: Vec<(AnyFileContentId, FileContents)>,
     ) -> Result<()> {
+        self.with_retry(|this| this.upload_contents_attempt(contents.clone()).boxed())
+            .await
+    }
+
+    async fn upload_contents_attempt(
+        &self,
+        contents: Vec<(AnyFileContentId, FileContents)>,
+    ) -> Result<()> {
         // Batch contents by size
         let mut batches = Vec::new();
         let mut current_batch = Vec::new();
@@ -152,6 +163,11 @@ impl EdenapiSender {
     }
 
     pub async fn upload_trees(&self, trees: Vec<HgManifestId>) -> Result<()> {
+        self.with_retry(|this| this.upload_trees_attempt(trees.clone()).boxed())
+            .await
+    }
+
+    async fn upload_trees_attempt(&self, trees: Vec<HgManifestId>) -> Result<()> {
         let entries = stream::iter(trees)
             .map(|mf_id| {
                 let ctx = self.ctx.clone();
@@ -173,8 +189,12 @@ impl EdenapiSender {
         );
         Ok(())
     }
-
     pub async fn upload_filenodes(&self, fn_ids: Vec<HgFileNodeId>) -> Result<()> {
+        self.with_retry(|this| this.upload_filenodes_attempt(fn_ids.clone()).boxed())
+            .await
+    }
+
+    async fn upload_filenodes_attempt(&self, fn_ids: Vec<HgFileNodeId>) -> Result<()> {
         let filenodes = stream::iter(fn_ids)
             .map(|file_id| {
                 let ctx = self.ctx.clone();
@@ -223,6 +243,14 @@ impl EdenapiSender {
         &self,
         css: Vec<(HgBlobChangeset, BonsaiChangeset)>,
     ) -> Result<()> {
+        self.with_retry(|this| this.upload_identical_changeset_attempt(css.clone()).boxed())
+            .await
+    }
+
+    async fn upload_identical_changeset_attempt(
+        &self,
+        css: Vec<(HgBlobChangeset, BonsaiChangeset)>,
+    ) -> Result<()> {
         let entries = stream::iter(css)
             .map(util::to_identical_changeset)
             .try_collect::<Vec<_>>()
@@ -252,6 +280,39 @@ impl EdenapiSender {
         let res = self.client.lookup_batch(hgids, None, None).await?;
         let missing = get_missing_in_order(res, ids);
         Ok(missing)
+    }
+
+    async fn with_retry<'t, T>(
+        &'t self,
+        func: impl Fn(&'t Self) -> BoxFuture<'t, Result<T>>,
+    ) -> Result<T> {
+        let retry_count = MAX_RETRIES;
+        with_retry(retry_count, &self.logger, || func(self)).await
+    }
+}
+
+async fn with_retry<'t, T>(
+    max_retry_count: usize,
+    logger: &Logger,
+    func: impl Fn() -> BoxFuture<'t, Result<T>>,
+) -> Result<T> {
+    let mut attempt = 0usize;
+    loop {
+        let result = func().await;
+        if attempt >= max_retry_count {
+            return result;
+        }
+        match result {
+            Ok(result) => return Ok(result),
+            Err(e) => {
+                warn!(
+                    logger,
+                    "Found error: {:?}, retrying attempt #{}", e, attempt
+                );
+                tokio::time::sleep(Duration::from_secs(attempt as u64 + 1)).await;
+            }
+        }
+        attempt += 1;
     }
 }
 
