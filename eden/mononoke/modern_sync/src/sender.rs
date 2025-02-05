@@ -40,5 +40,8 @@ pub trait ModernSyncSender {
         to: Option<HgChangesetId>,
     ) -> Result<()>;
 
-    async fn filter_existing_commits(&self, csids: Vec<ChangesetId>) -> Result<Vec<ChangesetId>>;
+    async fn filter_existing_commits(
+        &self,
+        ids: Vec<(HgChangesetId, ChangesetId)>,
+    ) -> Result<Vec<ChangesetId>>;
 }

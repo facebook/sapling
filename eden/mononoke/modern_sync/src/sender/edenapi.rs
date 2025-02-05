@@ -243,20 +243,24 @@ impl ModernSyncSender for EdenapiSender {
         Ok(())
     }
 
-    async fn filter_existing_commits(&self, csids: Vec<ChangesetId>) -> Result<Vec<ChangesetId>> {
-        let ids = csids
+    async fn filter_existing_commits(
+        &self,
+        ids: Vec<(HgChangesetId, ChangesetId)>,
+    ) -> Result<Vec<ChangesetId>> {
+        let hgids = ids
+            .clone()
             .iter()
-            .map(|csid| AnyId::BonsaiChangesetId(csid.clone().into()))
+            .map(|(hgid, _)| AnyId::HgChangesetId(hgid.clone().into()))
             .collect::<Vec<_>>();
-        let res = self.client.lookup_batch(ids, None, None).await?;
-        let missing = get_missing_in_order(res, csids);
+        let res = self.client.lookup_batch(hgids, None, None).await?;
+        let missing = get_missing_in_order(res, ids);
         Ok(missing)
     }
 }
 
 fn get_missing_in_order(
     lookup_res: Vec<LookupResponse>,
-    ids: Vec<ChangesetId>,
+    ids: Vec<(HgChangesetId, ChangesetId)>,
 ) -> Vec<ChangesetId> {
     let present_ids: HashSet<_> = lookup_res
         .into_iter()
@@ -273,9 +277,11 @@ fn get_missing_in_order(
             _ => None,
         })
         .collect();
+
     let missing: Vec<_> = ids
         .into_iter()
-        .filter(|csid| !present_ids.contains(&AnyId::BonsaiChangesetId((*csid).into())))
+        .filter(|(hgid, _)| !present_ids.contains(&AnyId::HgChangesetId((*hgid).into())))
+        .map(|(_, csid)| csid)
         .collect();
     missing
 }
@@ -292,7 +298,10 @@ mod test {
     #[mononoke::test]
     fn test_mpath_element_size() {
         let cs_id1 = ChangesetId::from_bytes([0; 32]).unwrap();
+        let hg_id1 = HgChangesetId::from_bytes(&[1; 20]).unwrap();
+
         let cs_id2 = ChangesetId::from_bytes([1; 32]).unwrap();
+        let hg_id2 = HgChangesetId::from_bytes(&[2; 20]).unwrap();
 
         let response1 = LookupResponse {
             result: LookupResult::NotPresent(IndexableId {
@@ -312,7 +321,7 @@ mod test {
         let responses = vec![response2, response1];
 
         // This should preserve the ids order
-        let missing = get_missing_in_order(responses, vec![cs_id1, cs_id2]);
+        let missing = get_missing_in_order(responses, vec![(hg_id1, cs_id1), (hg_id2, cs_id2)]);
         assert_eq!(missing, vec![cs_id1, cs_id2]);
     }
 }

@@ -36,6 +36,7 @@ use manifest::Entry;
 use manifest::ManifestOps;
 use mercurial_derivation::derive_hg_changeset::DeriveHgChangeset;
 use mercurial_types::blobs::HgBlobManifest;
+use mercurial_types::HgChangesetId;
 use mercurial_types::HgFileNodeId;
 use mercurial_types::HgManifestId;
 use metadata::Metadata;
@@ -224,8 +225,28 @@ pub async fn sync(
 
                                 async move {
                                     let chunk_size = chunk.len();
-                                    let missing_changesets =
-                                        sender.filter_existing_commits(chunk).await?;
+
+
+                                    let hgids  = stream::iter(chunk)
+                                        .map(|cs_id|{
+                                            cloned!(repo, ctx);
+                                             async move {
+                                                let hgid = repo.derive_hg_changeset(&ctx, cs_id).await;
+                                             (hgid, cs_id)
+                                        }})
+                                        .buffered(100)
+                                        .collect::<Vec<(
+                                            Result<HgChangesetId, anyhow::Error>,
+                                            ChangesetId,
+                                        )>>()
+                                        .await;
+
+                                    let ids = hgids
+                                        .into_iter()
+                                        .map(|(hgid, csid)| Ok((hgid?, csid)))
+                                        .collect::<Result<Vec<(HgChangesetId, ChangesetId)>>>()?;
+
+                                    let missing_changesets = sender.filter_existing_commits(ids).await?;
 
                                     info!(
                                         logger,

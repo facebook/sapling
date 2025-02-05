@@ -83,10 +83,11 @@ impl ModernSyncSender for DummySender {
         Ok(())
     }
 
-    async fn filter_existing_commits(&self, csids: Vec<ChangesetId>) -> Result<Vec<ChangesetId>> {
-        for csid in csids.clone() {
-            info!(&self.logger, "Looking up hg changeset with hgid {}", csid);
-        }
-        Ok(csids)
+    async fn filter_existing_commits(
+        &self,
+        ids: Vec<(HgChangesetId, ChangesetId)>,
+    ) -> Result<Vec<ChangesetId>> {
+        info!(&self.logger, "Looking up hg changeset with ids {:?}", ids);
+        Ok(vec![])
     }
 }
