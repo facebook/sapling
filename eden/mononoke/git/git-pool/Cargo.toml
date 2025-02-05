@@ -9,7 +9,7 @@ license = "GPLv2+"
 
 [dependencies]
 anyhow = "1.0.95"
-git2 = "0.14"
+git2 = "0.20"
 mononoke_macros = { version = "0.1.0", path = "../../mononoke_macros" }
 num_cpus = "1.16"
 r2d2 = "0.8.8"
