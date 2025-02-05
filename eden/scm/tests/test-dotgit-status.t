@@ -68,7 +68,7 @@ Changed in the staging area, but not changed in the working copy
 
   $ echo 3 >> b
   $ git add b
-  $ sl revert b
+  $ sl revert b --no-backup
   $ sl status
   $ sl diff
   $ git status --porcelain
