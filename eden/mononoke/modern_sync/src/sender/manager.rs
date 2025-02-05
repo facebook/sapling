@@ -116,6 +116,7 @@ impl SendManager {
                     }
                     ContentMessage::ContentDone(sender) => {
                         if let Some(e) = encountered_error {
+                            error!(content_logger, "Error processing content: {:?}", e);
                             let _ = sender.send(Err(e));
                             return;
                         } else {
@@ -176,6 +177,7 @@ impl SendManager {
                     }
                     FileOrTreeMessage::FilesAndTreesDone(sender) => {
                         if let Some(e) = encountered_error {
+                            error!(files_trees_logger, "Error processing files/trees: {:?}", e);
                             let _ = sender.send(Err(e));
                             return;
                         } else {
@@ -246,6 +248,10 @@ impl SendManager {
                     }
                     ChangesetMessage::Log((reponame, lag)) => {
                         if encountered_error.is_some() {
+                            error!(
+                                changeset_logger,
+                                "Error processing changeset: {:?}", encountered_error
+                            );
                             return;
                         }
                         STATS::synced_commits.add_value(1, (reponame.clone(),));
