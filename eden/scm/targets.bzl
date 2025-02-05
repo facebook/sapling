@@ -3,6 +3,7 @@ load("@fbcode_macros//build_defs:rust_binary.bzl", "rust_binary")
 load("@fbcode_macros//build_defs:rust_library.bzl", "rust_library")
 load("@fbcode_macros//build_defs/lib:rust_oss.bzl", "rust_oss")
 load("@fbsource//tools/build_defs:buckconfig.bzl", "read_bool")
+load("@fbsource//tools/target_determinator/macros:ci_hint.bzl", "ci_hint")
 
 def rust_python_library(deps = None, include_python_sys = False, include_cpython = True, **kwargs):
     if "versions" not in kwargs:
@@ -111,4 +112,13 @@ def hg_binary(name, extra_deps = [], extra_features = [], **kwargs):
             "//common/rust/shed/fbinit:fbinit",
         ]),
         **kwargs
+    )
+
+    # Try to override target depth so //eden/scm/tests:hg_run_tests and other
+    # important test targets reliably pick up Python code changes despite target
+    # depth greater than 4.
+    ci_hint(
+        ci_deps = ["fbcode//eden/scm/lib/python-modules:python-modules"],
+        reason = "hg is very close to Python source files despite large target depth",
+        target = name,
     )
