@@ -5,6 +5,7 @@
  * GNU General Public License version 2.
  */
 
+use std::collections::HashMap;
 use std::time::Duration;
 
 use anyhow::format_err;
@@ -196,6 +197,9 @@ pub trait Repo = CommitGraphRef
 /// Preload a number of commits, allowing us to batch the
 /// lookups in the bonsai_git_mapping table, largely reducing
 /// the I/O load
+///
+/// Note that the order of oids must be maintained as they
+/// are topologically sorted during repo_import.
 pub async fn preload_uploaded_commits(
     repo: &impl Repo,
     ctx: &CoreContext,
@@ -205,21 +209,23 @@ pub async fn preload_uploaded_commits(
     if reupload_commits.reupload_commit() {
         return Ok(Vec::new());
     }
-    let oids = BonsaisOrGitShas::GitSha1(
+    let git_sha1s = BonsaisOrGitShas::GitSha1(
         oids.iter()
             .map(|oid| hash::GitSha1::from_bytes(oid.as_bytes()))
             .collect::<Result<Vec<_>, _>>()?,
     );
-    let result = repo.bonsai_git_mapping().get(ctx, oids).await?;
-    result
+    let result = repo.bonsai_git_mapping().get(ctx, git_sha1s).await?;
+    let map = result
         .into_iter()
         .map(|entry| {
-            entry
-                .git_sha1
-                .to_object_id()
-                .map(|git_sha1| (git_sha1, entry.bcs_id))
+            let oid = entry.git_sha1.to_object_id()?;
+            anyhow::Ok((oid, entry.bcs_id))
         })
-        .collect()
+        .collect::<Result<HashMap<_, _>, _>>()?;
+    Ok(oids
+        .iter()
+        .filter_map(|oid| Some((*oid, *map.get(oid)?)))
+        .collect())
 }
 
 /// Looks to see if we can elide importing a commit
