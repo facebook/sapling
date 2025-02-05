@@ -66,7 +66,7 @@ use mononoke_app::MononokeReposManager;
 use slog::info;
 use tokio::net::TcpListener;
 
-use crate::middleware::OdsMiddleware;
+use crate::middleware::Ods3Middleware;
 use crate::middleware::RequestContentEncodingMiddleware;
 use crate::middleware::ResponseContentTypeMiddleware;
 use crate::model::GitServerContext;
@@ -282,7 +282,7 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
                 .add(PostResponseMiddleware::default())
                 .add(LoadMiddleware::new_with_requests_counter(requests_counter))
                 .add(log_middleware)
-                .add(OdsMiddleware::new())
+                .add(Ods3Middleware::new())
                 .add(<ScubaMiddleware<MononokeGitScubaHandler>>::new(scuba))
                 .add(TimerMiddleware::new())
                 .add(ConfigInfoMiddleware::new(configs))

@@ -8,6 +8,6 @@
 pub mod content_type;
 #[cfg(fbcode_build)]
 mod facebook;
-pub mod ods;
+pub mod ods3;
 #[cfg(not(fbcode_build))]
 mod oss;

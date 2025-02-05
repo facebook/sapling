@@ -65,7 +65,6 @@ secure_utils = { version = "0.1.0", git = "https://github.com/facebookexperiment
 serde = { version = "1.0.185", features = ["derive", "rc"] }
 sharding_ext = { version = "0.1.0", path = "../cmdlib/sharding_ext" }
 slog = { version = "2.7", features = ["max_level_trace", "nested-values"] }
-stats = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 strum = { version = "0.26.2", features = ["derive"] }
 thiserror = "2"
 tokio = { version = "1.41.0", features = ["full", "test-util", "tracing"] }
