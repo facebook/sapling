@@ -94,7 +94,7 @@ pub async fn run(app: MononokeApp, args: CommandArgs) -> Result<()> {
         )
     };
 
-    let mut send_manager = SendManager::new(sender.clone(), logger.clone());
+    let mut send_manager = SendManager::new(sender.clone(), logger.clone(), repo_name.clone());
     let (cr_s, mut cr_r) = mpsc::channel::<Result<()>>(1);
 
     crate::sync::process_one_changeset(

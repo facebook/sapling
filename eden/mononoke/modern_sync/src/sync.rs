@@ -158,7 +158,7 @@ pub async fn sync(
     };
     info!(logger, "Established EdenAPI connection");
 
-    let send_manager = SendManager::new(sender.clone(), logger.clone());
+    let send_manager = SendManager::new(sender.clone(), logger.clone(), repo_name.clone());
     info!(logger, "Initialized channels");
 
     let mut scuba_sample = ctx.scuba().clone();

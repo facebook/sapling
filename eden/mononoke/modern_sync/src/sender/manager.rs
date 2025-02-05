@@ -26,8 +26,10 @@ use crate::sender::edenapi::EdenapiSender;
 
 define_stats! {
     prefix = "mononoke.modern_sync";
-    completion_duration_secs: timeseries(Average, Sum, Count),
-    synced_commits:  dynamic_timeseries("{}.commits_synced", (repo: String); Rate, Sum),
+    synced_commits:  dynamic_timeseries("{}.commits_synced", (repo: String); Sum),
+    synced_contents:  dynamic_timeseries("{}.synced_contents", (repo: String); Sum),
+    synced_trees:  dynamic_timeseries("{}.synced_trees", (repo: String); Sum),
+    synced_filenodes:  dynamic_timeseries("{}.synced_filenodes", (repo: String); Sum),
     sync_lag_seconds:  dynamic_timeseries("{}.sync_lag_seconds", (repo: String); Average),
 }
 
@@ -72,15 +74,21 @@ pub enum ChangesetMessage {
 }
 
 impl SendManager {
-    pub fn new(external_sender: Arc<EdenapiSender>, logger: Logger) -> Self {
+    pub fn new(external_sender: Arc<EdenapiSender>, logger: Logger, reponame: String) -> Self {
         // Create channel for receiving content
         let (content_sender, content_recv) = mpsc::channel(CONTENT_CHANNEL_SIZE);
-        Self::spawn_content_sender(content_recv, external_sender.clone(), logger.clone());
+        Self::spawn_content_sender(
+            reponame.clone(),
+            content_recv,
+            external_sender.clone(),
+            logger.clone(),
+        );
 
         // Create channel for receiving files and trees
         let (files_and_trees_sender, files_and_trees_recv) =
             mpsc::channel(FILES_AND_TREES_CHANNEL_SIZE);
         Self::spawn_files_and_trees_sender(
+            reponame.clone(),
             files_and_trees_recv,
             external_sender.clone(),
             logger.clone(),
@@ -98,6 +106,7 @@ impl SendManager {
     }
 
     fn spawn_content_sender(
+        reponame: String,
         mut content_recv: mpsc::Receiver<ContentMessage>,
         content_es: Arc<EdenapiSender>,
         content_logger: Logger,
@@ -112,6 +121,7 @@ impl SendManager {
                             encountered_error.get_or_insert(
                                 e.context(format!("Failed to upload content: {:?}", ct_id)),
                             );
+                            STATS::synced_contents.add_value(1, (reponame.clone(),));
                         }
                     }
                     ContentMessage::ContentDone(sender) => {
@@ -133,6 +143,7 @@ impl SendManager {
     }
 
     fn spawn_files_and_trees_sender(
+        reponame: String,
         mut files_and_trees_recv: mpsc::Receiver<FileOrTreeMessage>,
         files_trees_es: Arc<EdenapiSender>,
         files_trees_logger: Logger,
@@ -165,15 +176,16 @@ impl SendManager {
                                 e.context(format!("Failed to upload filenodes: {:?}", f)),
                             );
                         }
+                        STATS::synced_filenodes.add_value(1, (reponame.clone(),));
                     }
                     FileOrTreeMessage::Tree(t) => {
                         // Upload the trees through sender
-
                         if let Err(e) = files_trees_es.upload_trees(vec![t]).await {
                             encountered_error.get_or_insert(
                                 e.context(format!("Failed to upload trees: {:?}", t)),
                             );
                         }
+                        STATS::synced_trees.add_value(1, (reponame.clone(),));
                     }
                     FileOrTreeMessage::FilesAndTreesDone(sender) => {
                         if let Some(e) = encountered_error {
