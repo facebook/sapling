@@ -22,10 +22,8 @@ use repo_identity::RepoIdentityRef;
 use tokio::sync::mpsc;
 use url::Url;
 
-use crate::sender::dummy::DummySender;
 use crate::sender::edenapi::EdenapiSender;
 use crate::sender::manager::SendManager;
-use crate::sender::ModernSyncSender;
 use crate::ModernSyncArgs;
 use crate::Repo;
 
@@ -34,8 +32,6 @@ use crate::Repo;
 pub struct CommandArgs {
     #[clap(long, help = "Changeset to sync")]
     cs_id: ChangesetId,
-    #[clap(long, help = "Print sent items without actually syncing")]
-    dry_run: bool,
 }
 
 pub async fn run(app: MononokeApp, args: CommandArgs) -> Result<()> {
@@ -70,9 +66,7 @@ pub async fn run(app: MononokeApp, args: CommandArgs) -> Result<()> {
         .new_context(app.logger().clone(), scuba)
         .clone_with_repo_name(&repo_name.clone());
 
-    let sender: Arc<dyn ModernSyncSender + Send + Sync> = if args.dry_run {
-        Arc::new(DummySender::new(logger.clone()))
-    } else {
+    let sender = {
         let url = if let Some(socket) = app_args.dest_socket {
             // Only for integration tests
             format!("{}:{}/edenapi/", &config.url, socket)

@@ -11,7 +11,6 @@ use std::time::Duration;
 
 use anyhow::ensure;
 use anyhow::Result;
-use async_trait::async_trait;
 use clientinfo::ClientEntryPoint;
 use clientinfo::ClientInfo;
 use cloned::cloned;
@@ -45,8 +44,6 @@ use slog::Logger;
 use url::Url;
 
 mod util;
-
-use crate::sender::ModernSyncSender;
 
 const MAX_BLOB_BYTES: u64 = 100 * 1024 * 1024; // 100 MB
 
@@ -100,11 +97,11 @@ impl EdenapiSender {
             repo_blobstore,
         })
     }
-}
 
-#[async_trait]
-impl ModernSyncSender for EdenapiSender {
-    async fn upload_contents(&self, contents: Vec<(AnyFileContentId, FileContents)>) -> Result<()> {
+    pub async fn upload_contents(
+        &self,
+        contents: Vec<(AnyFileContentId, FileContents)>,
+    ) -> Result<()> {
         // Batch contents by size
         let mut batches = Vec::new();
         let mut current_batch = Vec::new();
@@ -154,7 +151,7 @@ impl ModernSyncSender for EdenapiSender {
         Ok(())
     }
 
-    async fn upload_trees(&self, trees: Vec<HgManifestId>) -> Result<()> {
+    pub async fn upload_trees(&self, trees: Vec<HgManifestId>) -> Result<()> {
         let entries = stream::iter(trees)
             .map(|mf_id| {
                 let ctx = self.ctx.clone();
@@ -177,7 +174,7 @@ impl ModernSyncSender for EdenapiSender {
         Ok(())
     }
 
-    async fn upload_filenodes(&self, fn_ids: Vec<HgFileNodeId>) -> Result<()> {
+    pub async fn upload_filenodes(&self, fn_ids: Vec<HgFileNodeId>) -> Result<()> {
         let filenodes = stream::iter(fn_ids)
             .map(|file_id| {
                 let ctx = self.ctx.clone();
@@ -200,7 +197,7 @@ impl ModernSyncSender for EdenapiSender {
         Ok(())
     }
 
-    async fn set_bookmark(
+    pub async fn set_bookmark(
         &self,
         bookmark: String,
         from: Option<HgChangesetId>,
@@ -222,7 +219,7 @@ impl ModernSyncSender for EdenapiSender {
         Ok(())
     }
 
-    async fn upload_identical_changeset(
+    pub async fn upload_identical_changeset(
         &self,
         css: Vec<(HgBlobChangeset, BonsaiChangeset)>,
     ) -> Result<()> {
@@ -243,7 +240,7 @@ impl ModernSyncSender for EdenapiSender {
         Ok(())
     }
 
-    async fn filter_existing_commits(
+    pub async fn filter_existing_commits(
         &self,
         ids: Vec<(HgChangesetId, ChangesetId)>,
     ) -> Result<Vec<ChangesetId>> {

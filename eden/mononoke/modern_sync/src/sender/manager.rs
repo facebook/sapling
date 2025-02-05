@@ -22,7 +22,7 @@ use stats::define_stats;
 use stats::prelude::*;
 use tokio::sync::mpsc;
 
-use crate::sender::ModernSyncSender;
+use crate::sender::edenapi::EdenapiSender;
 
 define_stats! {
     prefix = "mononoke.modern_sync";
@@ -72,7 +72,7 @@ pub enum ChangesetMessage {
 }
 
 impl SendManager {
-    pub fn new(external_sender: Arc<dyn ModernSyncSender + Send + Sync>, logger: Logger) -> Self {
+    pub fn new(external_sender: Arc<EdenapiSender>, logger: Logger) -> Self {
         // Create channel for receiving content
         let (content_sender, content_recv) = mpsc::channel(CONTENT_CHANNEL_SIZE);
         Self::spawn_content_sender(content_recv, external_sender.clone(), logger.clone());
@@ -99,7 +99,7 @@ impl SendManager {
 
     fn spawn_content_sender(
         mut content_recv: mpsc::Receiver<ContentMessage>,
-        content_es: Arc<dyn ModernSyncSender + Send + Sync>,
+        content_es: Arc<EdenapiSender>,
         content_logger: Logger,
     ) {
         mononoke::spawn_task(async move {
@@ -134,7 +134,7 @@ impl SendManager {
 
     fn spawn_files_and_trees_sender(
         mut files_and_trees_recv: mpsc::Receiver<FileOrTreeMessage>,
-        files_trees_es: Arc<dyn ModernSyncSender + Send + Sync>,
+        files_trees_es: Arc<EdenapiSender>,
         files_trees_logger: Logger,
     ) {
         mononoke::spawn_task(async move {
@@ -195,7 +195,7 @@ impl SendManager {
 
     fn spawn_changeset_sender(
         mut changeset_recv: mpsc::Receiver<ChangesetMessage>,
-        changeset_es: Arc<dyn ModernSyncSender + Send + Sync>,
+        changeset_es: Arc<EdenapiSender>,
         changeset_logger: Logger,
     ) {
         mononoke::spawn_task(async move {
