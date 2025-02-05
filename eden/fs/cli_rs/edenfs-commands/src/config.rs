@@ -136,8 +136,8 @@ impl crate::Subcommand for ReloadConfigCmd {
 
         #[cfg(target_os = "windows")]
         let mut cmd = {
-            let python = find_python().ok_or_else(|| anyhow!("Unable to find Python runtime"))?;
-            let mut cmd_builder = std::process::Command::new(python);
+            let parexec = r"c:\ProgramData\chocolatey\bin\parexec.exe";
+            let mut cmd_builder = std::process::Command::new(parexec);
             let edenfs_config_manager_cmd = r"c:\tools\eden\libexec\edenfs_config_manager.par";
             cmd_builder.arg(edenfs_config_manager_cmd);
             cmd_builder

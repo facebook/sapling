@@ -227,13 +227,12 @@ pub fn remove_symlink(path: &Path) -> Result<()> {
 
 #[cfg(windows)]
 const PYTHON_CANDIDATES: &[&str] = &[
-    // (T214121626) Temporarily disable python312 due to reloadconfig issues
-    // S487049
-    // r"c:\tools\fb-python\fb-python312",
+    r"c:\tools\fb-python\fb-python312",
     r"c:\tools\fb-python\fb-python310",
     r"c:\Python310",
 ];
 
+// T214515756
 #[cfg(windows)]
 pub fn find_python() -> Option<PathBuf> {
     for candidate in PYTHON_CANDIDATES.iter() {
