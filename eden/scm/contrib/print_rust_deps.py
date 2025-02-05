@@ -65,14 +65,14 @@ def read_path(path: str) -> str:
 
 
 def main():
-    rust_project_root = find_root("src", "TARGETS")
+    rust_project_root = find_root("src", "BUCK")
     rust_srcs = glob_r(rust_project_root, "src/**/*.rs")
     crate_names = scan_patterns(rust_srcs, crate_re)
 
     # Some deps are 3rd party. Some are 1st party. Figure that out by scanning
-    # through TARGETS in the Sapling project.
+    # through BUCK in the Sapling project.
     sapling_root = find_root("sapling", "saplingnative", "lib")
-    target_paths = glob_r(sapling_root, "lib/**/TARGETS", "saplingnative/**/TARGETS")
+    target_paths = glob_r(sapling_root, "lib/**/BUCK", "saplingnative/**/BUCK")
     name_to_target_paths = scan_patterns(target_paths, target_rust_library_re)
 
     fbsource_root = find_root("third-party/rust/BUCK")
