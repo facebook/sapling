@@ -39,6 +39,7 @@ pub struct DotGitFileSystem {
     #[allow(unused)]
     store: Arc<dyn FileStore>,
     git: Arc<RepoGit>,
+    is_automation: bool,
 }
 
 impl DotGitFileSystem {
@@ -51,12 +52,27 @@ impl DotGitFileSystem {
         let git = RepoGit::from_root_and_config(vfs.root().to_owned(), config);
         let treestate = create_treestate(&git, dot_dir, vfs.case_sensitive())?;
         let treestate = Arc::new(Mutex::new(treestate));
+        let is_automation = hgplain::is_plain(Some("dotgit-no-optional-locks"));
         Ok(DotGitFileSystem {
             treestate,
             vfs,
             store,
             git: Arc::new(git),
+            is_automation,
         })
+    }
+
+    fn prepare_git_args<'a>(&self, args: &[&'a str]) -> Vec<&'a str> {
+        let mut result = Vec::with_capacity(args.len());
+        if self.is_automation {
+            // If "git status" is run by automation (ex. ISL), likely in background, do not use
+            // "index.lock". Otherwise, other git commands run by the user (ex. "git add") could
+            // fail with "fatal: Unable to create '.../.git/index.lock': File exists." if the
+            // status command is running and holding the lock at the same time.
+            result.push("--no-optional-locks");
+        }
+        result.extend_from_slice(args);
+        result
     }
 }
 
@@ -99,8 +115,7 @@ impl FileSystem for DotGitFileSystem {
             "pending_changes (DotGitFileSystem)"
         );
         // Run "git status".
-        let args = [
-            "--no-optional-locks",
+        let args = self.prepare_git_args(&[
             "--porcelain=1",
             "--ignore-submodules=dirty",
             "--untracked-files=all",
@@ -111,7 +126,7 @@ impl FileSystem for DotGitFileSystem {
             } else {
                 "--ignored=no"
             },
-        ];
+        ]);
         let out = self.git.call("status", &args)?;
 
         // TODO: What to do with treestate?
@@ -168,7 +183,7 @@ impl FileSystem for DotGitFileSystem {
             .collect();
 
         if !need_double_check.is_empty() {
-            let args = ["--name-only", "HEAD"];
+            let args = self.prepare_git_args(&["--name-only", "HEAD"]);
             let out = self.git.call("diff", &args)?;
             let changed = out
                 .stdout

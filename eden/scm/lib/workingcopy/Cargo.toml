@@ -26,6 +26,7 @@ sapling-configset = { version = "0.1.0", path = "../config/set" }
 sapling-context = { version = "0.1.0", path = "../context" }
 sapling-edenfs-client = { version = "0.1.0", path = "../edenfs-client", optional = true }
 sapling-gitcompat = { version = "0.1.0", path = "../gitcompat" }
+sapling-hgplain = { version = "0.1.0", path = "../util/hgplain" }
 sapling-hgtime = { version = "0.1.0", path = "../hgtime" }
 sapling-identity = { version = "0.1.0", path = "../identity" }
 sapling-journal = { version = "0.1.0", path = "../journal" }
