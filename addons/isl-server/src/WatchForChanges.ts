@@ -124,7 +124,18 @@ export class WatchForChanges {
       this.logger.error(`skipping dirstate subscription since ${repoRoot} is not a repository`);
       return;
     }
-    const relativeDotdir = path.relative(repoRoot, dotdir);
+
+    // Resolve the repo dot dir in case it is a symlink. Watchman doesn't follow symlinks,
+    // so we must follow it and watch the target.
+    const realDotdir = await fs.realpath(dotdir);
+
+    if (realDotdir != dotdir) {
+      this.logger.info(`resolved dotdir ${dotdir} to ${realDotdir}`);
+
+      // Write out ".watchmanconfig" so realDotdir passes muster as a watchman "root dir"
+      // (otherwise watchman will refuse to watch it).
+      await fs.writeFile(path.join(realDotdir, '.watchmanconfig'), '{}');
+    }
 
     const DIRSTATE_WATCHMAN_SUBSCRIPTION = 'sapling-smartlog-dirstate-change';
     try {
@@ -135,19 +146,17 @@ export class WatchForChanges {
         // reset timer for polling
         this.lastFetch = new Date().valueOf();
       }, 100); // debounce so that multiple quick changes don't trigger multiple fetches for no reason
+
+      this.logger.info('setting up dirstate subscription', realDotdir);
+
       const dirstateSubscription = await this.watchman.watchDirectoryRecursive(
-        repoRoot,
+        realDotdir,
         DIRSTATE_WATCHMAN_SUBSCRIPTION,
         {
           fields: ['name'],
           expression: [
             'name',
-            [
-              `${relativeDotdir}/bookmarks.current`,
-              `${relativeDotdir}/bookmarks`,
-              `${relativeDotdir}/dirstate`,
-              `${relativeDotdir}/merge`,
-            ],
+            ['bookmarks.current', 'bookmarks', 'dirstate', 'merge'],
             'wholename',
           ],
           defer: [WatchForChanges.WATCHMAN_DEFER],
@@ -155,18 +164,18 @@ export class WatchForChanges {
         },
       );
       dirstateSubscription.emitter.on('change', changes => {
-        if (changes.includes(`${relativeDotdir}/merge`)) {
+        if (changes.includes('merge')) {
           this.changeCallback('merge conflicts');
         }
-        if (changes.includes(`${relativeDotdir}/dirstate`)) {
+        if (changes.includes('dirstate')) {
           handleRepositoryStateChange();
         }
       });
       dirstateSubscription.emitter.on('fresh-instance', handleRepositoryStateChange);
 
       this.dirstateDisposables.push(() => {
-        this.logger.log('unsubscribe dirstate watcher');
-        this.watchman.unwatch(repoRoot, DIRSTATE_WATCHMAN_SUBSCRIPTION);
+        this.logger.info('unsubscribe dirstate watcher');
+        this.watchman.unwatch(realDotdir, DIRSTATE_WATCHMAN_SUBSCRIPTION);
       });
     } catch (err) {
       this.logger.error('failed to setup dirstate subscriptions', err);
@@ -265,7 +274,7 @@ export class WatchForChanges {
       uncommittedChangesSubscription.emitter.on('fresh-instance', handleUncommittedChanges);
 
       this.watchmanDisposables.push(() => {
-        this.logger.log('unsubscribe watchman');
+        this.logger.info('unsubscribe watchman');
         this.watchman.unwatch(repoRoot, FILE_CHANGE_WATCHMAN_SUBSCRIPTION);
       });
     } catch (err) {

@@ -174,9 +174,13 @@ export class Watchman {
     }
 
     if (--subscription.subscriptionCount === 0) {
-      await this.unsubscribe(subscription.path, subscription.name);
+      await this.unsubscribe(subscription.path, subscription.name).catch(err => {
+        // Directory maybe doesn't exist anymore. Don't propagate error - we want to clean
+        // up subscription anyway so we don't get stuck reconnecting.
+        this.logger.error(`error unsubscribing watchman subscription ${subscriptionName}: ${err}`);
+      });
       this.deleteSubscription(subscriptionName);
-      this.logger.log('watchman subscription %s destroyed', subscriptionName);
+      this.logger.log(`watchman subscription destroyed: ${subscriptionName}`);
     }
   }
 
