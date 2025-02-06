@@ -75,7 +75,8 @@ hg parents c, single revision
   
 
   $ hg parents -r 'max(desc(b))' ../a
-  abort: ../a not under root '$TESTTMP/repo'
+  abort: cwd relative path '../a' is not under root '$TESTTMP/repo'
+  (hint: consider using --cwd to change working directory)
   [255]
 
 

@@ -226,9 +226,11 @@ where
                         .into_string()
                         .map_err(|s| Error::NonUtf8(s.to_string_lossy().to_string()))?,
                     None => {
+                        let show_hint = !cwd.starts_with(root);
                         return Err(Error::PathOutsideRoot(
                             pat.to_string(),
                             root.to_string_lossy().to_string(),
+                            show_hint,
                         )
                         .into());
                     }

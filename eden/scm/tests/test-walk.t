@@ -275,10 +275,12 @@
   f  mammals/Procyonidae/raccoon     mammals/Procyonidae/raccoon
   f  mammals/skunk                   mammals/skunk
   $ hg debugwalk ..
-  abort: .. not under root '$TESTTMP/t'
+  abort: cwd relative path '..' is not under root '$TESTTMP/t'
+  (hint: consider using --cwd to change working directory)
   [255]
   $ hg debugwalk beans/../..
-  abort: beans/../.. not under root '$TESTTMP/t'
+  abort: cwd relative path 'beans/../..' is not under root '$TESTTMP/t'
+  (hint: consider using --cwd to change working directory)
   [255]
   $ hg debugwalk .hg
   abort: path contains illegal component: .hg
@@ -306,7 +308,8 @@ Test absolute paths:
   f  beans/pinto     beans/pinto
   f  beans/turtle    beans/turtle
   $ hg debugwalk `pwd`/..
-  abort: $TESTTMP/t/.. not under root '$TESTTMP/t'
+  abort: cwd relative path '$TESTTMP/t/..' is not under root '$TESTTMP/t'
+  (hint: consider using --cwd to change working directory)
   [255]
 
 Test patterns:

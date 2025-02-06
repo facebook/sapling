@@ -7,15 +7,30 @@
 
 #[derive(Debug, thiserror::Error)]
 pub enum Error {
-    #[error("unsuppported pattern kind {0}")]
     UnsupportedPatternKind(String),
-
-    #[error("{0} not under root '{1}'")]
-    PathOutsideRoot(String, String),
-
-    #[error("non-utf8 path '{0}' when building pattern")]
+    PathOutsideRoot(String, String, bool),
     NonUtf8(String),
-
-    #[error("listfile:- may only be used once as a direct CLI argument")]
     StdinUnavailable,
+}
+
+impl std::fmt::Display for Error {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Error::UnsupportedPatternKind(s) => write!(f, "unsupported pattern kind {}", s),
+            Error::PathOutsideRoot(path, root, show_hint) => {
+                let message = format!("cwd relative path '{}' is not under root '{}'", path, root);
+                if *show_hint {
+                    let hint_message = "consider using --cwd to change working directory";
+                    write!(f, "{}\n(hint: {})", message, hint_message)
+                } else {
+                    write!(f, "{}", message)
+                }
+            }
+            Error::NonUtf8(s) => write!(f, "non-utf8 path '{}' when building pattern", s),
+            Error::StdinUnavailable => write!(
+                f,
+                "listfile:- may only be used once as a direct CLI argument"
+            ),
+        }
+    }
 }

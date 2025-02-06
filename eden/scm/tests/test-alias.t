@@ -148,7 +148,8 @@ no closing quotation
 "--" in alias definition should be preserved
 
   $ hg --config alias.dash='cat --' -R alias dash -r0
-  abort: -r0 not under root '$TESTTMP/alias'
+  abort: cwd relative path '-r0' is not under root '$TESTTMP/alias'
+  (hint: consider using --cwd to change working directory)
   [255]
 
 invalid options
