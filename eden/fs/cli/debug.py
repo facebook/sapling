@@ -828,6 +828,23 @@ class CompactLocalStorageCmd(Subcmd):
         return 0
 
 
+@debug_cmd("subscribe", "Subscribes to journal changes. Responses are in JSON format")
+class SubscribeCmd(Subcmd):
+    def setup_parser(self, parser: argparse.ArgumentParser) -> None:
+        parser.add_argument(
+            "mount_point",
+            nargs="?",
+            help="The path to an EdenFS mount point. Uses `pwd` by default.",
+        )
+        parser.add_argument(
+            "--throttle",
+            help="Number of milliseconds to wait between events.",
+        )
+
+    def run(self, args: argparse.Namespace) -> int:
+        raise NotImplementedError("Stub -- only implemented in Rust")
+
+
 @debug_cmd("hg_copy_map_get_all", "Copymap for dirstate")
 class HgCopyMapGetAllCmd(Subcmd):
     def setup_parser(self, parser: argparse.ArgumentParser) -> None:
