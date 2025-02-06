@@ -988,7 +988,9 @@ is case-sensitive. This is not recommended and is intended only for testing."""
                 re_use_case=args.re_use_case,
                 enable_windows_symlinks=enable_windows_symlinks,
                 off_mount_repo_dir=instance.get_config_bool(
-                    "clone.off-mount-repo-dir", False
+                    "clone.off-mount-repo-dir",
+                    # Enable by default in tests.
+                    any(v in os.environ for v in ("INTEGRATION_TEST", "TESTTMP")),
                 ),
             )
         except util.RepoError as ex:

@@ -271,10 +271,6 @@ watchman suffix generator uses edenAPI
       "files": [
           {
               "type": "f",
-              "name": ".hg/last-message.txt"
-          },
-          {
-              "type": "f",
               "name": "base/txt.txt"
           },
           {
@@ -313,10 +309,6 @@ watchman suffix expression does not use edenAPI because it resolves to ** and po
   {
       * (glob)
       "files": [
-          {
-              "type": "f",
-              "name": ".hg/last-message.txt"
-          },
           {
               "type": "f",
               "name": "base/txt.txt"
@@ -358,10 +350,6 @@ Deleting a file locally will hide it from display even if it's in the remote
   {
       * (glob)
       "files": [
-          {
-              "type": "f",
-              "name": ".hg/last-message.txt"
-          },
           {
               "type": "f",
               "name": "base/txt.txt"

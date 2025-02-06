@@ -16,7 +16,6 @@ import eden.dirstate
 
 from .config import EdenCheckout
 
-
 _DEFAULT_EXTRA_HGRC_CONTENTS: str = """\
 [extensions]
 eden =
@@ -26,15 +25,36 @@ share =
 portablefilenames = ignore
 """
 
+# Don't name ".hg" or ".sl" - we don't want the state dir to appear to be a repo itself.
+_OFF_MOUNT_REPO_DIR_NAME = "sl-repo-dir"
+
 
 def setup_hg_dir(
     checkout: EdenCheckout, commit_id: str, filter_path: Optional[str] = None
 ) -> None:
+    config = checkout.get_config()
+
     checkout_hg_dir = checkout.hg_dot_path
+    real_hg_dir = checkout_hg_dir
+    if config.off_mount_repo_dir:
+        real_hg_dir = checkout.state_dir / _OFF_MOUNT_REPO_DIR_NAME
+
     try:
-        checkout_hg_dir.mkdir()
+        real_hg_dir.mkdir()
     except FileExistsError:
-        raise Exception(f"{checkout_hg_dir} directory already exists")
+        raise Exception(f"{real_hg_dir} directory already exists")
+
+    if config.off_mount_repo_dir:
+        try:
+            os.symlink(
+                real_hg_dir,
+                checkout_hg_dir,
+                # Not strictly necessary since real_hg_dir should exist and be a directory,
+                # but just-in-case.
+                target_is_directory=True,
+            )
+        except FileExistsError:
+            raise Exception(f"{checkout_hg_dir} symlink already exists")
 
     # hgrc
     hgrc_data = get_hgrc_data(checkout)

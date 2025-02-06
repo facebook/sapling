@@ -24,6 +24,6 @@ class SymlinkTest(EdenHgTestCase):
         repo.commit("Initial commit.")
 
     def test_post_clone_permissions(self) -> None:
-        st = os.lstat(os.path.join(self.mount, ".hg"))
+        st = os.stat(os.path.join(self.mount, ".hg"))
         expected_mode = 0o777 if sys.platform == "win32" else 0o755
         self.assertEqual(st.st_mode & 0o777, expected_mode)
