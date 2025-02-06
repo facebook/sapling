@@ -209,7 +209,8 @@ Try to sync it automatically, it's expected to fail
 
 Now sync with the tool
   $ cd "$TESTTMP"
-  $ megarepo_tool_multirepo --source-repo-id 1 --target-repo-id 0 sync-diamond-merge with_merge_master --bookmark master_bookmark |& grep -v "using repo"
+
+  $ mononoke_admin megarepo sync-diamond-merge --bookmark with_merge_master --source-repo-id 1 --target-repo-id 0 --onto-bookmark master_bookmark |& grep -v "using repo"
   * changeset resolved as: ChangesetId(Blake2(46c0f70c6300f4168cb70321839ac0079c74b6d3295adb81eeb1932be4f80e9d)) (glob)
   * Preparing to sync a merge commit 46c0f70c6300f4168cb70321839ac0079c74b6d3295adb81eeb1932be4f80e9d... (glob)
   * 1 new commits are going to be merged in (glob)
@@ -296,7 +297,7 @@ Merge with preserved ancestors
 
 -- sync the merge
   $ cd "$TESTTMP"
-  $ megarepo_tool_multirepo --source-repo-id 1 --target-repo-id 0 sync-diamond-merge with_merge_master --bookmark master_bookmark
+  $ mononoke_admin megarepo sync-diamond-merge --bookmark with_merge_master --source-repo-id 1 --target-repo-id 0 --onto-bookmark master_bookmark
   * using repo "with_merge" repoid RepositoryId(1) (glob)
   * using repo "meg" repoid RepositoryId(0) (glob)
   * changeset resolved as: ChangesetId(Blake2(3f71f093fcfbebcc47c981c847cd80c7d0bf063c5022aba53fab95244e4c4f1c)) (glob)

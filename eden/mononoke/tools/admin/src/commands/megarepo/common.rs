@@ -65,7 +65,7 @@ impl TryInto<MegarepoNewChangesetArgs> for ResultingChangesetArgs {
 
 pub(crate) async fn get_live_commit_sync_config(
     _ctx: &CoreContext,
-    app: MononokeApp,
+    app: &MononokeApp,
     repo_args: RepoArgs,
 ) -> Result<Arc<CfgrLiveCommitSyncConfig>> {
     let config_store = app.environment().config_store.clone();

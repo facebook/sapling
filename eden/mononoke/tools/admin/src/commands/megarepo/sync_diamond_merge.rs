@@ -18,16 +18,19 @@ use std::sync::Arc;
 use anyhow::format_err;
 use anyhow::Context;
 use anyhow::Error;
+use anyhow::Result;
 use blobrepo_utils::convert_diff_result_into_file_change_for_diamond_merge;
 use blobstore::Loadable;
 use bookmarks::BookmarkKey;
 use bookmarks::BookmarkUpdateReason;
 use bookmarks::BookmarksRef;
 use cloned::cloned;
+use cmdlib_cross_repo::repo_provider_from_mononoke_app;
 use commit_graph::CommitGraphRef;
 use commit_transformation::upload_commits;
 use context::CoreContext;
 use cross_repo_sync::create_commit_syncers;
+use cross_repo_sync::get_all_submodule_deps_from_repo_pair;
 use cross_repo_sync::rewrite_commit;
 use cross_repo_sync::submodule_metadata_file_prefix_and_dangling_pointers;
 use cross_repo_sync::update_mapping_with_version;
@@ -39,6 +42,7 @@ use cross_repo_sync::InMemoryRepo;
 use cross_repo_sync::SubmoduleDeps;
 use cross_repo_sync::SubmoduleExpansionData;
 use cross_repo_sync::Syncers;
+use futures::future::try_join;
 use futures::stream;
 use futures::stream::futures_unordered::FuturesUnordered;
 use futures::stream::BoxStream;
@@ -53,6 +57,12 @@ use mercurial_derivation::DeriveHgChangeset;
 use mercurial_types::HgFileNodeId;
 use mercurial_types::HgManifestId;
 use metaconfig_types::CommitSyncConfigVersion;
+use mononoke_api::Repo;
+use mononoke_app::args::ChangesetArgs;
+use mononoke_app::args::RepoArgs;
+use mononoke_app::args::SourceRepoArgs;
+use mononoke_app::args::TargetRepoArgs;
+use mononoke_app::MononokeApp;
 use mononoke_types::BonsaiChangeset;
 use mononoke_types::ChangesetId;
 use mononoke_types::FileChange;
@@ -64,7 +74,89 @@ use slog::info;
 use slog::warn;
 use sorted_vector_map::SortedVectorMap;
 
-use crate::Repo;
+use crate::commands::megarepo::common::get_live_commit_sync_config;
+
+/// Sync a diamond merge commit from a small repo into large repo
+#[derive(Debug, clap::Args)]
+pub struct SyncDiamondMergeArgs {
+    /// Diamond merge commit from small repo to sync
+    #[clap(flatten)]
+    pub merge_commit_hash: ChangesetArgs,
+
+    /// Bookmark to point to resulting commits (no sanity checks, will move existing bookmark, be careful)
+    #[clap(long)]
+    pub onto_bookmark: Option<String>,
+
+    #[clap(flatten)]
+    source_repo: SourceRepoArgs,
+
+    #[clap(flatten)]
+    target_repo: TargetRepoArgs,
+}
+
+pub async fn run(ctx: &CoreContext, app: MononokeApp, args: SyncDiamondMergeArgs) -> Result<()> {
+    let target_repo_fut = app.open_repo(&args.target_repo);
+    let source_repo_fut = app.open_repo(&args.source_repo);
+
+    let (source_repo, target_repo): (Repo, Repo) =
+        try_join(source_repo_fut, target_repo_fut).await?;
+
+    let source_repo_id = source_repo.repo_identity().id();
+    info!(
+        ctx.logger(),
+        "using repo \"{}\" repoid {:?}",
+        source_repo.repo_identity().name(),
+        source_repo_id
+    );
+
+    info!(
+        ctx.logger(),
+        "using repo \"{}\" repoid {:?}",
+        target_repo.repo_identity().name(),
+        target_repo.repo_identity().id()
+    );
+    let maybe_bookmark = args.onto_bookmark.map(BookmarkKey::new).transpose()?;
+
+    let bookmark = maybe_bookmark.ok_or_else(|| Error::msg("bookmark must be specified"))?;
+
+    let source_merge_cs_id = args
+        .merge_commit_hash
+        .resolve_changeset(ctx, &source_repo)
+        .await?;
+    info!(
+        ctx.logger(),
+        "changeset resolved as: {:?}", source_merge_cs_id
+    );
+
+    let repo_provider = repo_provider_from_mononoke_app(&app);
+
+    let live_commit_sync_config =
+        get_live_commit_sync_config(ctx, &app, RepoArgs::from_repo_id(source_repo_id.id()))
+            .await
+            .context("building live_commit_sync_config")?;
+
+    let source_repo_arc = Arc::new(source_repo);
+    let target_repo_arc = Arc::new(target_repo);
+    let submodule_deps = get_all_submodule_deps_from_repo_pair(
+        ctx,
+        source_repo_arc.clone(),
+        target_repo_arc.clone(),
+        repo_provider,
+    )
+    .await?;
+
+    do_sync_diamond_merge(
+        ctx,
+        source_repo_arc.as_ref(),
+        target_repo_arc.as_ref(),
+        submodule_deps,
+        source_merge_cs_id,
+        bookmark,
+        live_commit_sync_config,
+    )
+    .await
+    .map(|_| ())
+}
 
 /// The function syncs merge commit M from a small repo into a large repo.
 /// It's designed to handle a case described below

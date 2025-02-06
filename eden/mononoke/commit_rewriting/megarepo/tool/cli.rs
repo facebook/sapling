@@ -66,7 +66,6 @@ pub const RUN_MOVER: &str = "run-mover";
 pub const SELECT_PARENTS_AUTOMATICALLY: &str = "select-parents-automatically";
 pub const SOURCE_CHANGESET: &str = "source-changeset";
 pub const SYNC_COMMIT_AND_ANCESTORS: &str = "sync-commit-and-ancestors";
-pub const SYNC_DIAMOND_MERGE: &str = "sync-diamond-merge";
 pub const TARGET_CHANGESET: &str = "target-changeset";
 pub const TO_MERGE_CS_ID: &str = "to-merge-cs-id";
 pub const VERSION: &str = "version";
@@ -180,21 +179,6 @@ fn add_light_resulting_commit_args<'a, 'b>(subcommand: App<'a, 'b>) -> App<'a, '
 }
 
 pub fn setup_app<'a, 'b>() -> MononokeClapApp<'a, 'b> {
-    let sync_diamond_subcommand = SubCommand::with_name(SYNC_DIAMOND_MERGE)
-        .about("sync a diamond merge commit from a small repo into large repo")
-        .arg(
-            Arg::with_name(COMMIT_HASH)
-                .help("diamond merge commit from small repo to sync")
-                .takes_value(true)
-                .required(true),
-        )
-        .arg(
-            Arg::with_name(COMMIT_BOOKMARK)
-                .help("bookmark to point to resulting commits (no sanity checks, will move existing bookmark, be careful)")
-                .long(COMMIT_BOOKMARK)
-                .takes_value(true)
-        );
-
     let pre_merge_delete_subcommand = SubCommand::with_name(PRE_MERGE_DELETE)
         .about("create a set of pre-merge delete commits (which remove all of the files in working copy)")
         .arg(
@@ -632,7 +616,6 @@ pub fn setup_app<'a, 'b>() -> MononokeClapApp<'a, 'b> {
         .with_advanced_args_hidden()
         .with_source_and_target_repos()
         .build()
-        .subcommand(sync_diamond_subcommand)
         .subcommand(add_light_resulting_commit_args(pre_merge_delete_subcommand))
         .subcommand(history_fixup_delete_subcommand)
         .subcommand(add_light_resulting_commit_args(bonsai_merge_subcommand))

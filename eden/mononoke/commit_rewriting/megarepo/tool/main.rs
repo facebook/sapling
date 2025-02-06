@@ -28,12 +28,10 @@ use cmdlib::args;
 use cmdlib::args::MononokeMatches;
 use cmdlib::helpers;
 use cmdlib_x_repo::create_commit_syncer_from_matches;
-use cmdlib_x_repo::repo_provider_from_matches;
 use commit_graph::CommitGraph;
 use commit_graph::CommitGraphWriter;
 use context::CoreContext;
 use cross_repo_sync::find_toposorted_unsynced_ancestors;
-use cross_repo_sync::get_all_submodule_deps_from_repo_pair;
 use cross_repo_sync::verify_working_copy_with_version;
 use cross_repo_sync::CandidateSelectionHint;
 use cross_repo_sync::CommitSyncContext;
@@ -153,7 +151,6 @@ use crate::cli::RUN_MOVER;
 use crate::cli::SELECT_PARENTS_AUTOMATICALLY;
 use crate::cli::SOURCE_CHANGESET;
 use crate::cli::SYNC_COMMIT_AND_ANCESTORS;
-use crate::cli::SYNC_DIAMOND_MERGE;
 use crate::cli::TARGET_CHANGESET;
 use crate::cli::TO_MERGE_CS_ID;
 use crate::cli::VERSION;
@@ -163,7 +160,6 @@ mod catchup;
 mod cli;
 mod gradual_merge;
 mod manual_commit_sync;
-mod sync_diamond_merge;
 
 #[derive(Clone)]
 #[facet::container]
@@ -188,68 +184,6 @@ pub struct Repo(
     dyn Filenodes,
     SqlQueryConfig,
 );
-
-async fn run_sync_diamond_merge<'a>(
-    ctx: &CoreContext,
-    matches: &MononokeMatches<'a>,
-    sub_m: &ArgMatches<'a>,
-) -> Result<(), Error> {
-    let config_store = matches.config_store();
-    let source_repo_id =
-        args::not_shardmanager_compatible::get_source_repo_id(config_store, matches)?;
-    let target_repo_id =
-        args::not_shardmanager_compatible::get_target_repo_id(config_store, matches)?;
-    let maybe_bookmark = sub_m
-        .value_of(cli::COMMIT_BOOKMARK)
-        .map(BookmarkKey::new)
-        .transpose()?;
-
-    let bookmark = maybe_bookmark.ok_or_else(|| Error::msg("bookmark must be specified"))?;
-
-    let source_repo = args::open_repo_with_repo_id(ctx.fb, ctx.logger(), source_repo_id, matches);
-    let target_repo = args::open_repo_with_repo_id(ctx.fb, ctx.logger(), target_repo_id, matches);
-
-    let merge_commit_hash = sub_m.value_of(COMMIT_HASH).unwrap().to_owned();
-    let (source_repo, target_repo): (Repo, Repo) = try_join(source_repo, target_repo).await?;
-
-    let source_merge_cs_id = helpers::csid_resolve(ctx, &source_repo, merge_commit_hash).await?;
-
-    let live_commit_sync_config = get_live_commit_sync_config(
-        ctx,
-        ctx.fb,
-        matches,
-        config_store,
-        source_repo.repo_identity().id(),
-    )
-    .await
-    .context("building live_commit_sync_config")?;
-
-    let live_commit_sync_config = Arc::new(live_commit_sync_config);
-
-    let repo_provider = repo_provider_from_matches(ctx, matches);
-
-    let source_repo_arc = Arc::new(source_repo);
-    let target_repo_arc = Arc::new(target_repo);
-    let submodule_deps = get_all_submodule_deps_from_repo_pair(
-        ctx,
-        source_repo_arc.clone(),
-        target_repo_arc.clone(),
-        repo_provider,
-    )
-    .await?;
-
-    sync_diamond_merge::do_sync_diamond_merge(
-        ctx,
-        source_repo_arc.as_ref(),
-        target_repo_arc.as_ref(),
-        submodule_deps,
-        source_merge_cs_id,
-        bookmark,
-        live_commit_sync_config,
-    )
-    .await
-    .map(|_| ())
-}
 
 async fn run_pre_merge_delete<'a>(
     ctx: &CoreContext,
@@ -1327,7 +1261,6 @@ fn main(fb: FacebookInit) -> Result<()> {
             (SYNC_COMMIT_AND_ANCESTORS, Some(sub_m)) => {
                 run_sync_commit_and_ancestors(ctx, &matches, sub_m).await
             }
-            (SYNC_DIAMOND_MERGE, Some(sub_m)) => run_sync_diamond_merge(ctx, &matches, sub_m).await,
 
             // All commands relevant to gradual merge
             (CATCHUP_DELETE_HEAD, Some(sub_m)) => {
