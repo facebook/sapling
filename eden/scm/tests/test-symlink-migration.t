@@ -51,7 +51,7 @@ Test migration for enabling symlinks
   x/file: 0120666 0 * EXIST_P1 EXIST_NEXT NEED_CHECK  (glob)
   $ cat x/file
   sup
-  $ ls x/dir
+  $ ls x/dir/
   c
   $ hg st
 

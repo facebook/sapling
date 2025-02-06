@@ -775,7 +775,10 @@ def ls(args: List[str], stdout: BinaryIO, stderr: BinaryIO, fs: ShellFS):
             raise NotImplementedError(f"ls with flag {arg}")
         else:
             paths_given = True
-            if fs.isdir(arg):
+            if fs.isdir(arg) and (
+                # Expand contents of dir if arg is not a symlink or arg ends with "/"
+                arg.endswith("/") or not stat.S_ISLNK(fs.lstat(arg).st_mode)
+            ):
                 entries += listdir(arg, listall=listall)
             elif fs.lexists(arg):
                 entries.append(arg)
