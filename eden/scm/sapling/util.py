@@ -172,7 +172,6 @@ pconvert = platform.pconvert
 popen = platform.popen
 posixfile = platform.posixfile
 removedirs = platform.removedirs
-rename = platform.rename
 samedevice = platform.samedevice
 samefile = platform.samefile
 samestat = platform.samestat
@@ -208,6 +207,22 @@ except AttributeError:
 # Python compatibility
 
 _notset = object()
+
+
+def rename(src, dst):
+    try:
+        platform.rename(src, dst)
+    except OSError as ex:
+        # If rename resulted in cross-device error, retry using shutil, which falls back
+        # to less efficient methods. This applies for both posix and windows, so it lives
+        # here.
+        if ex.errno != errno.EXDEV:
+            raise
+        shutil.move(src, dst)
+
+    # This is the return value of os.rename(). shutil.move() returns something different -
+    # ignore that.
+    return None
 
 
 def statislink(st):
