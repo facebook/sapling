@@ -169,7 +169,7 @@ impl SendManager {
                             _ => (),
                         }
                     }
-                    FileOrTreeMessage::FileNode(f) => {
+                    FileOrTreeMessage::FileNode(f) if encountered_error.is_none() => {
                         // Upload the file nodes through sender
                         if let Err(e) = files_trees_es.upload_filenodes(vec![(f)]).await {
                             encountered_error.get_or_insert(
@@ -178,7 +178,7 @@ impl SendManager {
                         }
                         STATS::synced_filenodes.add_value(1, (reponame.clone(),));
                     }
-                    FileOrTreeMessage::Tree(t) => {
+                    FileOrTreeMessage::Tree(t) if encountered_error.is_none() => {
                         // Upload the trees through sender
                         if let Err(e) = files_trees_es.upload_trees(vec![t]).await {
                             encountered_error.get_or_insert(
@@ -200,6 +200,7 @@ impl SendManager {
                             }
                         }
                     }
+                    FileOrTreeMessage::FileNode(_) | FileOrTreeMessage::Tree(_) => (),
                 }
             }
         });
@@ -231,7 +232,7 @@ impl SendManager {
                             _ => (),
                         }
                     }
-                    ChangesetMessage::Changeset((hg_cs, bcs)) => {
+                    ChangesetMessage::Changeset((hg_cs, bcs)) if encountered_error.is_none() => {
                         // If ther was an error don't even attempt to send the changeset
                         // cause it'll fail on missing parent
                         if encountered_error.is_none() {
@@ -271,6 +272,7 @@ impl SendManager {
                             STATS::sync_lag_seconds.add_value(lag, (reponame,));
                         }
                     }
+                    _ => (),
                 }
             }
         });
