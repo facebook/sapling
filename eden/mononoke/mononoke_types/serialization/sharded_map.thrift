@@ -17,6 +17,7 @@
 
 include "eden/mononoke/mononoke_types/serialization/data.thrift"
 include "eden/mononoke/mononoke_types/serialization/id.thrift"
+include "thrift/annotation/rust.thrift"
 
 /// Maximum size of a terminal node.
 const i32 MAP_SHARD_SIZE = 2000;
@@ -29,14 +30,16 @@ typedef data.LargeBinary MapValue
 // When the number of values in a subtree is at most MAP_SHARD_SIZE
 // We inline all of them on a single node. Notice we don't use prefix here for
 // simplicity.
+@rust.Exhaustive
 struct ShardedMapTerminalNode {
   // The key is the original map key minus the prefixes and edges from all
   // intermediate nodes in the path to this node.
   1: map_SmallBinary_MapValue_6340 values;
-} (rust.exhaustive)
+}
 
 // An intermediate node of the sharded map node tree, though it may have a
 // value itself.
+@rust.Exhaustive
 struct ShardedMapIntermediateNode {
   // Having this non-empty means this node was merged with its parents
   // since they had a single child only.
@@ -46,15 +49,16 @@ struct ShardedMapIntermediateNode {
   // Children of this node. We only store the first byte of the edge,
   // the remaining bytes are stored in the child node itself.
   3: map_byte_ShardedMapEdge_2565 edges;
-} (rust.exhaustive)
+}
 
 // An edge from a map node to another
+@rust.Exhaustive
 struct ShardedMapEdge {
   // Total count of values in this child's subtree, including the child.
   1: i64 size;
   // The actual child
   2: ShardedMapChild child;
-} (rust.exhaustive)
+}
 
 // This represents either an inlined sharded map node, or an id of
 // a node to be loaded from the blobstore.
@@ -104,12 +108,13 @@ union ShardedMapNode {
 typedef data.LargeBinary ShardedMapV2Value
 typedef data.LargeBinary ShardedMapV2RollupData
 
+@rust.Exhaustive
 struct ShardedMapV2StoredNode {
   1: id.ShardedMapV2NodeId id;
   2: i64 weight;
   3: i64 size;
   4: ShardedMapV2RollupData rollup_data;
-} (rust.exhaustive)
+}
 
 union LoadableShardedMapV2Node {
   1: ShardedMapV2Node inlined;
@@ -136,19 +141,20 @@ union LoadableShardedMapV2Node {
 // should avoid creating too many small blobs in most cases. In particular, subtrees that
 // would've have become a terminal node in ShardedMap will all be inlined in ShardedMapV2,
 // with the added upside that they could potentially be stored inlined in their parent.
+@rust.Exhaustive
 struct ShardedMapV2Node {
   1: data.SmallBinary prefix;
   2: optional ShardedMapV2Value value;
   3: map_byte_LoadableShardedMapV2Node_7012 children;
-} (rust.exhaustive)
+}
 
 // The following were automatically generated and may benefit from renaming.
-typedef map<data.SmallBinary, MapValue> (
-  rust.type = "sorted_vector_map::SortedVectorMap",
-) map_SmallBinary_MapValue_6340
-typedef map<byte, LoadableShardedMapV2Node> (
-  rust.type = "sorted_vector_map::SortedVectorMap",
-) map_byte_LoadableShardedMapV2Node_7012
-typedef map<byte, ShardedMapEdge> (
-  rust.type = "sorted_vector_map::SortedVectorMap",
-) map_byte_ShardedMapEdge_2565
+@rust.Type{name = "sorted_vector_map::SortedVectorMap"}
+typedef map<data.SmallBinary, MapValue> map_SmallBinary_MapValue_6340
+@rust.Type{name = "sorted_vector_map::SortedVectorMap"}
+typedef map<
+  byte,
+  LoadableShardedMapV2Node
+> map_byte_LoadableShardedMapV2Node_7012
+@rust.Type{name = "sorted_vector_map::SortedVectorMap"}
+typedef map<byte, ShardedMapEdge> map_byte_ShardedMapEdge_2565

@@ -26,6 +26,8 @@ eden/mononoke/mononoke_types/serialization/skeleton_manifest.thrift crate //eden
 eden/mononoke/mononoke_types/serialization/test_manifest.thrift crate //eden/mononoke/mononoke_types/serialization:mononoke_types_serialization-rust
 eden/mononoke/mononoke_types/serialization/time.thrift crate //eden/mononoke/mononoke_types/serialization:mononoke_types_serialization-rust
 eden/mononoke/mononoke_types/serialization/unodes.thrift crate //eden/mononoke/mononoke_types/serialization:mononoke_types_serialization-rust
+thrift/annotation/rust.thrift rust //thrift/annotation:rust-rust
+thrift/annotation/scope.thrift rust->scope //thrift/annotation:scope-rust
 ";
 #[rustfmt::skip]
 fn main() {

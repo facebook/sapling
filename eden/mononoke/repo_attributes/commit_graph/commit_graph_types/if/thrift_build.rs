@@ -27,6 +27,8 @@ eden/mononoke/mononoke_types/serialization/test_manifest.thrift mononoke_types_s
 eden/mononoke/mononoke_types/serialization/time.thrift mononoke_types_serialization //eden/mononoke/mononoke_types/serialization:mononoke_types_serialization-rust
 eden/mononoke/mononoke_types/serialization/unodes.thrift mononoke_types_serialization //eden/mononoke/mononoke_types/serialization:mononoke_types_serialization-rust
 eden/mononoke/repo_attributes/commit_graph/commit_graph_types/if/commit_graph.thrift crate //eden/mononoke/repo_attributes/commit_graph/commit_graph_types/if:commit_graph_thrift-rust
+thrift/annotation/rust.thrift mononoke_types_serialization->rust //thrift/annotation:rust-rust
+thrift/annotation/scope.thrift mononoke_types_serialization->rust->scope //thrift/annotation:scope-rust
 ";
 #[rustfmt::skip]
 fn main() {
