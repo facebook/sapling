@@ -10,6 +10,7 @@ use std::fs::OpenOptions;
 use std::io;
 use std::path::Path;
 
+use ::metrics::Counter;
 use once_cell::sync::Lazy;
 
 use crate::errors::IOContext;
@@ -20,6 +21,9 @@ static MAX_IO_RETRIES: Lazy<u32> = Lazy::new(|| {
         .parse::<u32>()
         .unwrap_or(3)
 });
+
+static FILE_UTIL_RETRY_SUCCESS: Counter = Counter::new_counter("util.file_retry_success");
+static FILE_UTIL_RETRY_FAILURE: Counter = Counter::new_counter("util.file_retry_failure");
 
 #[cfg(unix)]
 static UMASK: Lazy<u32> = Lazy::new(|| unsafe {
@@ -95,9 +99,17 @@ where
     let mut retries: u32 = 0;
     loop {
         match io_operation(path) {
-            Ok(v) => return Ok(v),
+            Ok(v) => {
+                if retries > 0 {
+                    FILE_UTIL_RETRY_SUCCESS.increment();
+                }
+                return Ok(v);
+            }
             Err(err) if is_retryable(&err) => {
                 if retries >= *MAX_IO_RETRIES {
+                    if retries > 0 {
+                        FILE_UTIL_RETRY_FAILURE.increment();
+                    }
                     return Err(err);
                 }
                 retries += 1;
@@ -189,6 +201,7 @@ mod test {
             let mut buf = String::new();
             file.read_to_string(&mut buf)?;
             assert_eq!(buf, "test");
+            assert_eq!(FILE_UTIL_RETRY_SUCCESS.value(), 1);
         } else {
             file.as_ref().err();
             assert_eq!(
@@ -196,6 +209,7 @@ mod test {
                 io::ErrorKind::TimedOut
             );
             assert_eq!(retries, 1);
+            assert_eq!(FILE_UTIL_RETRY_FAILURE.value(), 0);
         }
 
         // Test error case
