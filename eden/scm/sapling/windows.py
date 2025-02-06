@@ -484,18 +484,7 @@ def removedirs(name: str) -> None:
         head, tail = os.path.split(head)
 
 
-def rename(src: str, dst: str) -> None:
-    """Atomically rename file src to dst, replacing dst if it exists
-
-    Note that this is only really atomic for files (not dirs) on the
-    same volume"""
-    try:
-        win32.movefileex(src, dst)
-    except OSError as e:
-        if e.errno != errno.EEXIST and e.errno != errno.EACCES:
-            raise
-        unlink(dst)
-        os.rename(src, dst)
+rename = os.replace
 
 
 def syncfile(fp):

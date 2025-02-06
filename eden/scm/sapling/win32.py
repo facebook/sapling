@@ -376,9 +376,6 @@ _kernel32.PeekNamedPipe.argtypes = [
 ]
 _kernel32.PeekNamedPipe.restype = _BOOL
 
-_kernel32.MoveFileExW.argtypes = [_LPCWSTR, _LPCWSTR, _DWORD]
-_kernel32.MoveFileExW.restype = _BOOL
-
 _kernel32.GetOEMCP.argtypes = []
 _kernel32.GetOEMCP.restype = _UINT
 
@@ -412,18 +409,6 @@ def getfileinfo(name):
         return fi
     finally:
         _kernel32.CloseHandle(fh)
-
-
-def movefileex(src, dst):
-    """Atomically rename file, while replacing the existing one
-
-    Note that this is not a contractual atomicity, but it is atomic
-    in practice if the rename happens within a volume."""
-    MOVEFILE_REPLACE_EXISTING = 0x1
-    if not _kernel32.MoveFileExW(
-        pathtowin32W(src), pathtowin32W(dst), MOVEFILE_REPLACE_EXISTING
-    ):
-        _raiseoserror(dst)
 
 
 def getcurrentprocstarttime():
