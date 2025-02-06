@@ -23,10 +23,21 @@ import time
 import typing
 from io import BytesIO
 from pathlib import Path
-from typing import Any, Callable, Dict, List, Optional, TYPE_CHECKING, TypeVar
+from typing import (
+    Any,
+    Callable,
+    Dict,
+    Iterator,
+    List,
+    Optional,
+    TextIO,
+    TYPE_CHECKING,
+    TypeVar,
+)
 
 import thrift.transport
 from eden.thrift.legacy import EdenClient, EdenNotRunningError
+
 from facebook.eden.ttypes import TreeInodeDebugInfo
 from fb303_core.ttypes import fb303_status
 from thrift import Thrift
@@ -802,29 +813,32 @@ class Spinner:
 
     def __init__(self, header: str) -> None:
         self._header = header
-        # pyre-fixme[4]: Attribute must be annotated.
-        self._cursor = self.cursor()
+        self._cursor: Iterator[str] = self.cursor()
+        self._file: Optional[TextIO] = sys.stderr
+        if self._file and not self._file.isatty():
+            self._file = None
 
     @staticmethod
-    # pyre-fixme[3]: Return type must be annotated.
-    def cursor():
+    def cursor() -> Iterator[str]:
         while True:
             for cursor in "|/-\\":
                 yield cursor
 
     def spin(self, text: str = "") -> None:
-        sys.stdout.write("\r\033[K")
-        sys.stdout.write(f"{self._header} {text} ")
-        sys.stdout.write(f"{next(self._cursor)} ")
-        sys.stdout.flush()
+        if f := self._file:
+            f.write("\r\033[K")
+            f.write(f"{self._header} {text} ")
+            f.write(f"{next(self._cursor)} ")
+            f.flush()
 
     def __enter__(self) -> "Spinner":
         return self
 
     # pyre-fixme[2]: Parameter must be annotated.
     def __exit__(self, ex_type, ex_value, ex_traceback) -> bool:
-        sys.stdout.write("\n")
-        sys.stdout.flush()
+        if f := self._file:
+            f.write("\n")
+            f.flush()
         return False
 
 
