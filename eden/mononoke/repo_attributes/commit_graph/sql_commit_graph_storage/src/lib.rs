@@ -83,12 +83,8 @@ impl SqlConstruct for SqlCommitGraphStorageBuilder {
             mut write_connection,
         } = connections;
 
-        if justknobs::eval("scm/mononoke:commit_graph_use_read_committed", None, None)
-            .unwrap_or(false)
-        {
-            if let Connection::Mysql(conn) = &mut write_connection {
-                conn.set_isolation_level(Some(IsolationLevel::ReadCommitted));
-            }
+        if let Connection::Mysql(conn) = &mut write_connection {
+            conn.set_isolation_level(Some(IsolationLevel::ReadCommitted));
         }
 
         Self {
