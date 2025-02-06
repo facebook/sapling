@@ -23,11 +23,8 @@ rand = { version = "0.8", features = ["small_rng"] }
 sapling-atomicfile = { version = "0.1.0", path = "../atomicfile" }
 sapling-lazystr = { version = "0.1.0", path = "../lazystr" }
 sapling-rewrite-macros = { version = "0.1.0", path = "rewrite-macros" }
-shell-escape = "0.1.5"
 shellexpand = "2.1.2"
 thiserror = "2"
-tracing = { version = "0.1.41", features = ["attributes", "valuable"] }
-whoami = "1.5"
 
 [dev-dependencies]
 memmap2 = "0.5.10"

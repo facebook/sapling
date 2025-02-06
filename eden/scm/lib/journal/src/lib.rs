@@ -14,6 +14,8 @@ use anyhow::Context;
 use anyhow::Result;
 use hgtime::HgTime;
 use repolock::try_lock_with_contents;
+use sysutil::shell_escape;
+use sysutil::username;
 use types::HgId;
 
 const JOURNAL_FILENAME: &str = "namejournal";
@@ -138,10 +140,10 @@ impl Journal {
         old_hashes: &[HgId],
         new_hashes: &[HgId],
     ) -> Result<()> {
-        let command = util::sys::shell_escape(raw_args);
+        let command = shell_escape(raw_args);
         let timestamp = hgtime::HgTime::now()
             .context("unable to determine current time when writing to journal")?;
-        let user = util::sys::username()?;
+        let user = username()?;
         let command = if let Some((left, _)) = command.split_once('\n') {
             format!("{} ...", left)
         } else {

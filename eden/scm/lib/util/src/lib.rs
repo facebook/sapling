@@ -18,5 +18,4 @@ pub mod errors;
 pub mod file;
 pub mod lock;
 pub mod path;
-pub mod sys;
 pub mod utf8;

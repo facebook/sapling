@@ -12,6 +12,7 @@ use obc_lib::obc_client::OBCClientOptions;
 use obc_lib::AggValue;
 use obc_lib::OBCBumper as _;
 use once_cell::sync::OnceCell;
+use sysutil::hostname;
 
 struct OBCClientWrapper {
     client: Arc<OBCClient>,
@@ -20,7 +21,7 @@ struct OBCClientWrapper {
 
 impl OBCClientWrapper {
     fn new(client: Arc<OBCClient>) -> Self {
-        let hostname = util::sys::hostname().to_string();
+        let hostname = hostname().to_string();
         OBCClientWrapper { client, hostname }
     }
 

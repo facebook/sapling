@@ -30,6 +30,7 @@ sapling-io = { version = "0.1.0", path = "../io" }
 sapling-network-doctor = { version = "0.1.0", path = "../doctor/network" }
 sapling-repo = { version = "0.1.0", path = "../repo", features = ["wdir"] }
 sapling-sampling = { version = "0.1.0", path = "../sampling" }
+sapling-sysutil = { version = "0.1.0", path = "../util/sysutil" }
 sapling-termlogger = { version = "0.1.0", path = "../io/term/logger" }
 sapling-thrift-types = { version = "0.1.0", path = "../thrift-types", optional = true }
 sapling-types = { version = "0.1.0", path = "../types" }

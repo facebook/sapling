@@ -13,6 +13,7 @@ use anyhow::Result;
 use configmodel::Config;
 use configmodel::ConfigExt;
 use io::IO;
+use sysutil::shell_escape;
 
 use crate::command::CommandDefinition;
 use crate::fallback;
@@ -57,7 +58,7 @@ impl Hooks {
             return Ok(());
         }
 
-        let full_args = util::sys::shell_escape(full_args);
+        let full_args = shell_escape(full_args);
         let hook_args = HashMap::from([("args".to_string(), full_args)]);
         for hooks in &self.pre {
             hooks.run_shell_hooks(repo_root, true, &hook_args)?;
@@ -78,7 +79,7 @@ impl Hooks {
             return Ok(());
         }
 
-        let full_args = util::sys::shell_escape(full_args);
+        let full_args = shell_escape(full_args);
         let hook_args = HashMap::from([
             ("args".to_string(), full_args),
             ("result".to_string(), format!("{result}")),
@@ -97,7 +98,7 @@ impl Hooks {
             return Ok(());
         }
 
-        let full_args = util::sys::shell_escape(full_args);
+        let full_args = shell_escape(full_args);
         let hook_args = HashMap::from([("args".to_string(), full_args)]);
         for hooks in &self.fail {
             hooks.run_shell_hooks(repo_root, false, &hook_args)?;

@@ -28,6 +28,7 @@ use configmodel::ConfigExt;
 use fs2::FileExt;
 use parking_lot::Mutex;
 use progress_model::ProgressBar;
+use sysutil::hostname;
 use util::errors::IOContext;
 use util::lock::PathLock;
 
@@ -315,7 +316,7 @@ impl Drop for LockedPath {
 }
 
 fn lock_contents() -> Result<String, LockError> {
-    Ok(format!("{}:{}", util::sys::hostname(), std::process::id()))
+    Ok(format!("{}:{}", hostname(), std::process::id()))
 }
 
 /// lock loops until it can acquire the specified lock, subject to
@@ -694,7 +695,7 @@ mod tests {
             Err(LockError::Contended(LockContendedError { contents, .. })) => {
                 assert_eq!(
                     String::from_utf8(contents)?,
-                    format!("{}:{}", util::sys::hostname(), std::process::id())
+                    format!("{}:{}", hostname(), std::process::id())
                 );
             }
             _ => panic!("lock should be contended"),
