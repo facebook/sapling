@@ -157,6 +157,9 @@ struct Repository {
         deserialize_with = "deserialize_inode_catalog_type"
     )]
     inode_catalog_type: Option<InodeCatalogType>,
+
+    #[serde(rename = "off-mount-repo-dir", default)]
+    off_mount_repo_dir: bool,
 }
 
 fn default_enable_windows_symlinks() -> bool {

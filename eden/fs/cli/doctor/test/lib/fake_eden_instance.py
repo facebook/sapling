@@ -147,6 +147,7 @@ class FakeEdenInstance(AbstractEdenInstance):
             re_use_case="buck2-default",
             enable_windows_symlinks=False,
             inode_catalog_type=None,
+            off_mount_repo_dir=False,
         )
         checkout = FakeCheckout(state_dir=state_dir, config=config, snapshot=snapshot)
         self._checkouts_by_path[full_path] = checkout

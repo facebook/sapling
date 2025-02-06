@@ -40,6 +40,7 @@ from typing import (
 )
 
 import facebook.eden.ttypes as eden_ttypes
+
 import toml
 from eden.thrift import legacy
 from eden.thrift.legacy import EdenNotRunningError
@@ -212,6 +213,7 @@ class CheckoutConfig(typing.NamedTuple):
     re_use_case: str
     enable_windows_symlinks: bool
     inode_catalog_type: Optional[str]
+    off_mount_repo_dir: bool
 
 
 class ListMountInfo(typing.NamedTuple):
@@ -1371,6 +1373,7 @@ class EdenCheckout:
                 "use-write-back-cache": checkout_config.use_write_back_cache,
                 "enable-windows-symlinks": checkout_config.enable_windows_symlinks,
                 "inode-catalog-type": checkout_config.inode_catalog_type,
+                "off-mount-repo-dir": checkout_config.off_mount_repo_dir,
             },
             "redirections": redirections,
             "profiles": {
@@ -1544,6 +1547,10 @@ class EdenCheckout:
         if not isinstance(enable_windows_symlinks, bool):
             enable_windows_symlinks = False
 
+        off_mount_repo_dir = repository.get("off-mount-repo-dir")
+        if not isinstance(off_mount_repo_dir, bool):
+            off_mount_repo_dir = False
+
         inode_catalog_type = repository.get("inode-catalog-type")
         if inode_catalog_type is not None:
             if (
@@ -1587,6 +1594,7 @@ class EdenCheckout:
             re_use_case=re_use_case,
             enable_windows_symlinks=enable_windows_symlinks,
             inode_catalog_type=inode_catalog_type,
+            off_mount_repo_dir=off_mount_repo_dir,
         )
 
     def parse_snapshot_component(self, buf: bytes) -> Tuple[str, Optional[str]]:
@@ -2099,6 +2107,7 @@ def get_repo_info(
     backing_store_type: Optional[str] = None,
     re_use_case: Optional[str] = None,
     enable_windows_symlinks: bool = False,
+    off_mount_repo_dir: bool = False,
 ) -> Tuple[util.Repo, CheckoutConfig]:
     # Check to see if repo_arg points to an existing EdenFS mount
     checkout_config = instance.get_checkout_config_for_path(repo_arg)
@@ -2128,9 +2137,10 @@ def get_repo_info(
         nfs,
         case_sensitive,
         overlay_type,
-        backing_store_type,
-        re_use_case,
-        enable_windows_symlinks,
+        backing_store_type=backing_store_type,
+        re_use_case=re_use_case,
+        enable_windows_symlinks=enable_windows_symlinks,
+        off_mount_repo_dir=off_mount_repo_dir,
     )
 
     return repo, checkout_config
@@ -2145,6 +2155,7 @@ def create_checkout_config(
     backing_store_type: Optional[str] = None,
     re_use_case: Optional[str] = None,
     enable_windows_symlinks: bool = False,
+    off_mount_repo_dir: bool = False,
 ) -> CheckoutConfig:
     mount_protocol = util.get_protocol(nfs)
 
@@ -2195,6 +2206,7 @@ def create_checkout_config(
         re_use_case=re_use_case or "buck2-default",
         enable_windows_symlinks=enable_windows_symlinks,
         inode_catalog_type=overlay_type,
+        off_mount_repo_dir=off_mount_repo_dir,
     )
 
     return repo_config

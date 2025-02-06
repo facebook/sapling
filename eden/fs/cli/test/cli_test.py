@@ -93,6 +93,7 @@ class ListTest(unittest.TestCase):
                 re_use_case="buck2-default",
                 enable_windows_symlinks=False,
                 inode_catalog_type=None,
+                off_mount_repo_dir=False,
             )
         )
 
@@ -120,6 +121,7 @@ class ListTest(unittest.TestCase):
                 re_use_case="buck2-default",
                 enable_windows_symlinks=False,
                 inode_catalog_type=None,
+                off_mount_repo_dir=False,
             )
         )
 
@@ -147,6 +149,7 @@ class ListTest(unittest.TestCase):
                 re_use_case="buck2-default",
                 enable_windows_symlinks=False,
                 inode_catalog_type=None,
+                off_mount_repo_dir=False,
             )
         )
 
@@ -174,6 +177,7 @@ class ListTest(unittest.TestCase):
                 re_use_case="buck2-default",
                 enable_windows_symlinks=False,
                 inode_catalog_type=None,
+                off_mount_repo_dir=False,
             )
         )
 
@@ -201,6 +205,7 @@ class ListTest(unittest.TestCase):
                 re_use_case="buck2-default",
                 enable_windows_symlinks=False,
                 inode_catalog_type=None,
+                off_mount_repo_dir=False,
             )
         )
 
@@ -329,6 +334,7 @@ class ListTest(unittest.TestCase):
                 re_use_case="buck2-default",
                 enable_windows_symlinks=False,
                 inode_catalog_type=None,
+                off_mount_repo_dir=False,
             )
         )
 
@@ -356,6 +362,7 @@ class ListTest(unittest.TestCase):
                 re_use_case="buck2-default",
                 enable_windows_symlinks=False,
                 inode_catalog_type=None,
+                off_mount_repo_dir=False,
             )
         )
 
@@ -383,6 +390,7 @@ class ListTest(unittest.TestCase):
                 re_use_case="buck2-default",
                 enable_windows_symlinks=False,
                 inode_catalog_type=None,
+                off_mount_repo_dir=False,
             )
         )
 
@@ -502,6 +510,7 @@ class ListTest(unittest.TestCase):
                 re_use_case="buck2-default",
                 enable_windows_symlinks=False,
                 inode_catalog_type=None,
+                off_mount_repo_dir=False,
             )
         )
 
@@ -529,6 +538,7 @@ class ListTest(unittest.TestCase):
                 re_use_case="buck2-default",
                 enable_windows_symlinks=False,
                 inode_catalog_type=None,
+                off_mount_repo_dir=False,
             )
         )
 

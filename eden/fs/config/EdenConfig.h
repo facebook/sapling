@@ -1646,6 +1646,12 @@ class EdenConfig : private ConfigSettingManager {
       folly::kIsWindows ? MountProtocol::PRJFS : MountProtocol::FUSE,
       this};
 
+  /**
+   * Controls whether clone sets up the working copy's ".hg" repo dir as a
+   * symlink into the state dir ("off mount").
+   */
+  ConfigSetting<bool> offMountRepoDir{"clone:off-mount-repo-dir", false, this};
+
   // [fsck]
 
   /**

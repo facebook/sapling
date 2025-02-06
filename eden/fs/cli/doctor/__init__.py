@@ -36,7 +36,6 @@ from eden.fs.cli.doctor.util import (
 
 from facebook.eden.ttypes import MountState
 from fb303_core.ttypes import fb303_status
-
 from filelock import FileLock, Timeout
 
 from . import (
@@ -820,6 +819,9 @@ class EdenCheckoutConfigCorruption(FixableProblem):
             overlay_type=None,
             enable_windows_symlinks=self._checkout_info.instance.get_config_bool(
                 "experimental.windows-symlinks", False
+            ),
+            off_mount_repo_dir=self._checkout_info.instance.get_config_bool(
+                "clone.off-mount-repo-dir", False
             ),
         )
         checkout = config_mod.EdenCheckout(
