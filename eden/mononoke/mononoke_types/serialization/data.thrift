@@ -15,11 +15,13 @@
 //! IMPORTANT!!!
 //! ------------
 
+include "thrift/annotation/rust.thrift"
+
 /// Binary data that may be large, stored in `Bytes`.
-typedef binary (rust.type = "Bytes") LargeBinary
+@rust.Type{name = "Bytes"}
+typedef binary LargeBinary
 
 /// Binary data that is likely small, and stored inline using `SmallVec`.
-typedef binary SmallBinary (
-  rust.newtype,
-  rust.type = "smallvec::SmallVec<[u8; 24]>",
-)
+@rust.NewType
+@rust.Type{name = "smallvec::SmallVec<[u8; 24]>"}
+typedef binary SmallBinary

@@ -18,16 +18,19 @@
 include "eden/mononoke/mononoke_types/serialization/id.thrift"
 include "eden/mononoke/mononoke_types/serialization/bonsai.thrift"
 include "eden/mononoke/mononoke_types/serialization/sharded_map.thrift"
+include "thrift/annotation/rust.thrift"
 
+@rust.Exhaustive
 struct ContentManifestFile {
   1: id.ContentId content_id;
   2: bonsai.FileType file_type;
   3: i64 size;
-} (rust.exhaustive)
+}
 
+@rust.Exhaustive
 struct ContentManifestDirectory {
   1: id.ContentManifestId id;
-} (rust.exhaustive)
+}
 
 union ContentManifestEntry {
   1: ContentManifestFile file;
@@ -39,7 +42,8 @@ union ContentManifestEntry {
 // Content manifests form a manifest tree where the type and contents of files
 // and directories (but not their history) forms their identity.  Content
 // manifest identities change when any file content is changed.
+@rust.Exhaustive
 struct ContentManifest {
   // Map of MPathElement -> ContentManifestEntry
   1: sharded_map.ShardedMapV2Node subentries;
-} (rust.exhaustive)
+}

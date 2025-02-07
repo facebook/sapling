@@ -17,9 +17,11 @@
 
 include "eden/mononoke/mononoke_types/serialization/id.thrift"
 include "eden/mononoke/mononoke_types/serialization/sharded_map.thrift"
+include "thrift/annotation/rust.thrift"
 
+@rust.Exhaustive
 struct DeletedManifestV2 {
   1: optional id.ChangesetId linknode;
   // Map of MPathElement -> DeletedManifestV2Id
   2: sharded_map.ShardedMapNode subentries;
-} (rust.exhaustive)
+}
