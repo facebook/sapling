@@ -5,6 +5,7 @@
  * GNU General Public License version 2.
  */
 
+mod caching;
 mod sql;
 
 use std::fmt::Display;
