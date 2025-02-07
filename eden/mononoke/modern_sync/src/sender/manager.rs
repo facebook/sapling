@@ -33,6 +33,7 @@ define_stats! {
     sync_lag_seconds:  dynamic_timeseries("{}.sync_lag_seconds", (repo: String); Average),
     content_wait_time_s:  dynamic_timeseries("{}.content_wait_time_s", (repo: String); Average),
     trees_files_wait_time_s:  dynamic_timeseries("{}.trees_files_wait_time_s", (repo: String); Average),
+    changeset_upload_time_seconds:  dynamic_timeseries("{}.changeset_upload_time_seconds", (repo: String); Average),
 
 }
 
@@ -251,17 +252,20 @@ impl SendManager {
                     ChangesetMessage::Changeset((hg_cs, bcs)) if encountered_error.is_none() => {
                         // If ther was an error don't even attempt to send the changeset
                         // cause it'll fail on missing parent
-                        if encountered_error.is_none() {
-                            // Upload the changeset through sender
-                            if let Err(e) = changeset_es
-                                .upload_identical_changeset(vec![(hg_cs.clone(), bcs)])
-                                .await
-                            {
-                                encountered_error.get_or_insert(
-                                    e.context(format!("Failed to upload changeset: {:?}", hg_cs)),
-                                );
-                            }
+
+                        // Upload the changeset through sender
+                        let start = std::time::Instant::now();
+                        if let Err(e) = changeset_es
+                            .upload_identical_changeset(vec![(hg_cs.clone(), bcs)])
+                            .await
+                        {
+                            encountered_error.get_or_insert(
+                                e.context(format!("Failed to upload changeset: {:?}", hg_cs)),
+                            );
                         }
+                        let elapsed = start.elapsed().as_secs();
+                        STATS::changeset_upload_time_seconds
+                            .add_value(elapsed as i64, (reponame.clone(),));
                     }
                     ChangesetMessage::ChangesetDone(sender) => {
                         if let Some(e) = encountered_error {
