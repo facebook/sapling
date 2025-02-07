@@ -1490,7 +1490,7 @@ async fn check_megarepo_large_repo_import_requirements(
     live_commit_sync_config: &dyn LiveCommitSyncConfig,
     dest_bookmark: &BookmarkKey,
     dest_path_prefix: &NonRootMPath,
-    mark_not_synced_mapping: Option<&str>,
+    mb_mark_not_synced_mapping: Option<&str>,
 ) -> Result<(), Error> {
     let dest_cs_id = repo
         .bookmarks()
@@ -1544,16 +1544,35 @@ async fn check_megarepo_large_repo_import_requirements(
             }
         }
 
-        if mark_not_synced_mapping.is_none() {
-            // If we are importing into a large repo, we need to mark all the imported as
-            // "not-synced", which means we need the name of a mapping that contains only
-            // the large repo.
-            return Err(anyhow!(concat!(
+        // If we are importing into a large repo, we need to mark all the imported as
+        // "not-synced", which means we need the name of a mapping that contains only
+        // the large repo.
+        let mark_not_synced_mapping = mb_mark_not_synced_mapping.ok_or_else(|| {
+            anyhow!(concat!(
                 "You are importing into a large repo without a large-only mapping.  ",
                 "Please specify one with '--mark-not-synced-mapping'.",
-            )));
+            ))
+        })?;
+
+        // We also need to check if the provided mapping actually exists
+        let mark_not_synced_mapping = CommitSyncConfigVersion(mark_not_synced_mapping.to_string());
+        let mark_not_synced_mapping_config = live_commit_sync_config
+            .get_commit_sync_config_by_version_if_exists(
+                repo.repo_identity().id(),
+                &mark_not_synced_mapping,
+            )
+            .await?
+            .ok_or_else(|| {
+                anyhow!("Couldn't find commit sync config version {mark_not_synced_mapping}",)
+            })?;
+
+        // And that it's indeed a large-only mapping
+        if !mark_not_synced_mapping_config.small_repos.is_empty() {
+            return Err(anyhow!(
+                "The provided mapping {mark_not_synced_mapping} is not a large-only mapping"
+            ));
         }
-    } else if mark_not_synced_mapping.is_some() {
+    } else if mb_mark_not_synced_mapping.is_some() {
         return Err(anyhow!(concat!(
             "You specified '--mark-not-synced-mapping' but are not importing into a ",
             "large repo.  This is invalid.",
