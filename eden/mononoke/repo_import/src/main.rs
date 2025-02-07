@@ -194,6 +194,9 @@ pub struct RecoveryFields {
     /// ChangesetIds of the gitimported commits
     gitimport_bcs_ids: Option<Vec<ChangesetId>>,
     git_merge_bcs_id: Option<ChangesetId>,
+    /// Print the mapping of git commit id -> bonsai changeset id after importing
+    /// all git commits.
+    print_gitimport_map: bool,
 }
 
 async fn rewrite_file_paths(
@@ -1135,6 +1138,13 @@ async fn repo_import(
         let import_map =
             import_tools::gitimport(&ctx, path, Arc::new(uploader), &target, &prefs).await?;
         info!(ctx.logger(), "Added commits to Mononoke");
+
+        if recovery_fields.print_gitimport_map {
+            info!(
+                ctx.logger(),
+                "Gitimport Map (git commit id -> bonsai changeset id):\n{import_map:#?}"
+            );
+        }
 
         let git_merge_oid = {
             let mut child = process::Command::new(&prefs.git_command_path)

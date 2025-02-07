@@ -167,6 +167,7 @@ mod tests {
             shifted_bcs_ids: None,
             gitimport_bcs_ids: None,
             merged_cs_id: None,
+            print_gitimport_map: false,
         }
     }
 

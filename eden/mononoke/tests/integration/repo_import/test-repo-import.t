@@ -166,6 +166,7 @@
     "merged_cs_id": * (glob)
     "move_bookmark_commits_done": 4,
     "phab_check_disabled": true,
+    "print_gitimport_map": false,
     "recovery_file_path": "$TESTTMP/repo-git/recovery_file.json",
     "shifted_bcs_ids": [
       "4f830791a5ae7a2981d6c252d2be0bd7ebd3b1090080074b4b4bae6deb250b4a",
