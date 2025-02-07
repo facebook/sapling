@@ -102,10 +102,8 @@ lazy_static! {
 
 define_stats! {
     prefix = "mononoke.warm_bookmarks_cache";
-    bookmark_discover_failures: timeseries(Rate, Sum),
-    bookmark_update_failures: timeseries(Rate, Sum),
     max_staleness_secs: dynamic_singleton_counter("{}.max_staleness_secs", (reponame: String)),
-    global_max_staleness_secs: singleton_counter(),
+    global_max_staleness_secs: histogram(10, 0, 5000, Average; P 50; P 75; P 95; P 99),
 }
 
 pub struct WarmBookmarksCache {
@@ -891,7 +889,6 @@ impl BookmarksCoordinator {
                         )
                         .await;
                         if let Err(ref err) = res {
-                            STATS::bookmark_update_failures.add_value(1);
                             #[cfg(fbcode_build)]
                             WBC_INSTRUMENT.observe(MononokeWarmBookmarkCacheStats {
                                 event: Some(WarmBookmarkCacheEvent::UpdateFailure),
@@ -935,7 +932,6 @@ impl BookmarksCoordinator {
                     let res = self.update(&ctx).await;
 
                     if let Err(err) = res.as_ref() {
-                        STATS::bookmark_discover_failures.add_value(1);
                         #[cfg(fbcode_build)]
                         WBC_INSTRUMENT.observe(MononokeWarmBookmarkCacheStats {
                             event: Some(WarmBookmarkCacheEvent::DiscoverFailure),
@@ -1036,7 +1032,7 @@ fn report_delay_and_remove_finished_updaters(
     });
 
     STATS::max_staleness_secs.set_value(ctx.fb, max_staleness, (reponame.to_owned(),));
-    STATS::global_max_staleness_secs.set_value(ctx.fb, max_staleness);
+    STATS::global_max_staleness_secs.add_value(max_staleness);
     #[cfg(fbcode_build)]
     WBC_INSTRUMENT.observe(MononokeWarmBookmarkCacheStats {
         repo: Some(reponame.to_owned()),
