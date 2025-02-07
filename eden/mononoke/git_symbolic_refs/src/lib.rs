@@ -14,6 +14,7 @@ use anyhow::Result;
 use async_trait::async_trait;
 use mononoke_types::RepositoryId;
 
+pub use crate::caching::CachedGitSymbolicRefs;
 pub use crate::sql::SqlGitSymbolicRefs;
 pub use crate::sql::SqlGitSymbolicRefsBuilder;
 

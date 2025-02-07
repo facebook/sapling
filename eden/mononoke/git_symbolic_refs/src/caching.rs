@@ -21,14 +21,13 @@ use crate::RefType;
 /// avoid all calls to DB but will also mean that any symrefs added or deleted after the wrapper
 /// is created will not be reflected in the cache.
 #[derive(Clone)]
-struct CachedGitSymbolicRefs {
+pub struct CachedGitSymbolicRefs {
     git_symbolic_refs: Arc<dyn GitSymbolicRefs>,
     cached_entries: HashSet<GitSymbolicRefsEntry>,
 }
 
-#[allow(dead_code)]
 impl CachedGitSymbolicRefs {
-    async fn new(git_symbolic_refs: Arc<dyn GitSymbolicRefs>) -> Result<Self> {
+    pub async fn new(git_symbolic_refs: Arc<dyn GitSymbolicRefs>) -> Result<Self> {
         let cached_entries = git_symbolic_refs
             .list_all_symrefs()
             .await?

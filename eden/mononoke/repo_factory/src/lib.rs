@@ -109,6 +109,7 @@ use git_ref_content_mapping::SqlGitRefContentMappingBuilder;
 use git_source_of_truth::ArcGitSourceOfTruthConfig;
 use git_source_of_truth::SqlGitSourceOfTruthConfigBuilder;
 use git_symbolic_refs::ArcGitSymbolicRefs;
+use git_symbolic_refs::CachedGitSymbolicRefs;
 use git_symbolic_refs::SqlGitSymbolicRefsBuilder;
 use hook_manager::manager::ArcHookManager;
 use hook_manager::manager::HookManager;
@@ -1084,13 +1085,25 @@ impl RepoFactory {
         repo_config: &ArcRepoConfig,
         repo_identity: &ArcRepoIdentity,
     ) -> Result<ArcGitSymbolicRefs> {
+        let repo_name = repo_identity.name();
         let git_symbolic_refs = self
             .open_sql::<SqlGitSymbolicRefsBuilder>(repo_config)
             .await
             .context(RepoFactoryError::GitSymbolicRefs)?
             .build(repo_identity.id());
-        // Caching is not enabled for now, but can be added later if required.
-        Ok(Arc::new(git_symbolic_refs))
+        if justknobs::eval(
+            "scm/mononoke:disable_git_symbolic_refs_caching",
+            None,
+            Some(repo_name),
+        )
+        .unwrap_or(false)
+        {
+            Ok(Arc::new(git_symbolic_refs))
+        } else {
+            let cached_git_symbolic_refs =
+                CachedGitSymbolicRefs::new(Arc::new(git_symbolic_refs)).await?;
+            Ok(Arc::new(cached_git_symbolic_refs))
+        }
     }
 
     pub async fn repo_metadata_checkpoint(

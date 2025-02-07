@@ -570,13 +570,13 @@ async fn create_temp_repo(fb: FacebookInit, ctx: &CoreContext) -> Result<RepoCon
         }),
         ..Default::default()
     };
-
     let available_configs = hashmap! {
         "default".to_string() => derived_data_types_config.clone(),
     };
     let mut factory = TestRepoFactory::with_sqlite_connection(fb, metadata_conn, hg_mutation_conn)?;
     factory
         .with_blobstore(file_blobstore)
+        .with_cacheless_git_symbolic_refs()
         .with_core_context_that_does_not_override_logger(ctx.clone())
         .with_name(temp_repo_name)
         .with_config_override(|cfg| {

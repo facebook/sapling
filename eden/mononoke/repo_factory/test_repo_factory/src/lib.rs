@@ -51,6 +51,7 @@ use git_ref_content_mapping::SqlGitRefContentMappingBuilder;
 use git_source_of_truth::ArcGitSourceOfTruthConfig;
 use git_source_of_truth::SqlGitSourceOfTruthConfigBuilder;
 use git_symbolic_refs::ArcGitSymbolicRefs;
+use git_symbolic_refs::CachedGitSymbolicRefs;
 use git_symbolic_refs::SqlGitSymbolicRefsBuilder;
 use hook_manager::manager::ArcHookManager;
 use hook_manager::manager::HookManager;
@@ -151,6 +152,7 @@ pub struct TestRepoFactory {
     config: RepoConfig,
     blobstore: Arc<dyn Blobstore>,
     bookmarks_cache: Option<ArcBookmarksCache>,
+    git_symbolic_refs: Option<ArcGitSymbolicRefs>,
     live_commit_sync_config: Option<Arc<dyn LiveCommitSyncConfig>>,
     metadata_db: SqlConnections,
     hg_mutation_db: SqlConnections,
@@ -292,6 +294,7 @@ impl TestRepoFactory {
             filenodes_override: None,
             live_commit_sync_config: None,
             bookmarks_cache: None,
+            git_symbolic_refs: None,
         })
     }
 
@@ -369,6 +372,15 @@ impl TestRepoFactory {
         filenodes_override: impl Fn(ArcFilenodes) -> ArcFilenodes + Send + Sync + 'static,
     ) -> &mut Self {
         self.filenodes_override = Some(Box::new(filenodes_override));
+        self
+    }
+
+    /// Override git symbolic refs with a cache-less variant.
+    pub fn with_cacheless_git_symbolic_refs(&mut self) -> &mut Self {
+        let git_symbolic_refs =
+            SqlGitSymbolicRefsBuilder::from_sql_connections(self.metadata_db.clone())
+                .build(self.config.repoid);
+        self.git_symbolic_refs = Some(Arc::new(git_symbolic_refs));
         self
     }
 
@@ -518,11 +530,20 @@ impl TestRepoFactory {
 
     /// Construct Git Symbolic Refs using the in-memory metadata
     /// database.
-    pub fn git_symbolic_refs(&self, repo_identity: &ArcRepoIdentity) -> Result<ArcGitSymbolicRefs> {
-        Ok(Arc::new(
-            SqlGitSymbolicRefsBuilder::from_sql_connections(self.metadata_db.clone())
-                .build(repo_identity.id()),
-        ))
+    pub async fn git_symbolic_refs(
+        &self,
+        repo_identity: &ArcRepoIdentity,
+    ) -> Result<ArcGitSymbolicRefs> {
+        if let Some(git_symbolic_refs) = &self.git_symbolic_refs {
+            Ok(git_symbolic_refs.clone())
+        } else {
+            let git_symbolic_refs =
+                SqlGitSymbolicRefsBuilder::from_sql_connections(self.metadata_db.clone())
+                    .build(repo_identity.id());
+            let cached_symbolic_refs =
+                CachedGitSymbolicRefs::new(Arc::new(git_symbolic_refs)).await?;
+            Ok(Arc::new(cached_symbolic_refs))
+        }
     }
 
     /// Construct Git Push Redirect Config using the in-memory metadata
