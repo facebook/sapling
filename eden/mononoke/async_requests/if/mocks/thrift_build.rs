@@ -31,6 +31,7 @@ eden/mononoke/mononoke_types/serialization/time.thrift mononoke_types_serializat
 eden/mononoke/mononoke_types/serialization/unodes.thrift mononoke_types_serialization //eden/mononoke/mononoke_types/serialization:mononoke_types_serialization-rust
 eden/mononoke/scs/if/source_control.thrift source_control //eden/mononoke/scs/if:source_control-rust
 fb303/thrift/fb303_core.thrift source_control->fb303_core //fb303/thrift:fb303_core-rust
+thrift/annotation/cpp.thrift source_control->fb303_core->cpp //thrift/annotation:cpp-rust
 thrift/annotation/rust.thrift rust //thrift/annotation:rust-rust
 thrift/annotation/scope.thrift rust->scope //thrift/annotation:scope-rust
 thrift/annotation/thrift.thrift source_control->thrift //thrift/annotation:thrift-rust
