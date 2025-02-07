@@ -914,10 +914,17 @@ void EdenServer::startPeriodicTasks() {
   if (config->enableOBCOnEden.getValue()) {
     // Get the hostname without the ".facebook.com" suffix
     auto hostname = facebook::network::getLocalHost(/*stripFbDomain=*/true);
+    std::vector<std::string> entities;
+    auto reWorkerID = std::getenv("REMOTE_EXECUTION_WORKER");
+    if (reWorkerID == nullptr) {
+      entities = {hostname};
+    } else {
+      entities = {hostname, fmt::format("{}:{}", hostname, reWorkerID)};
+    }
     memory_vm_rss_bytes_ = monitoring::OBCAvg(
         monitoring::OdsCategoryId::ODS_EDEN,
         fmt::format("eden.{}", kMemoryVmRssBytes),
-        {hostname});
+        entities);
     // Report memory usage stats once every 60 seconds
     memoryStatsTask_.updateInterval(60s);
   }
