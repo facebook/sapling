@@ -12,22 +12,28 @@ include "eden/mononoke/mercurial/types/if/mercurial_thrift.thrift"
 include "eden/mononoke/mononoke_types/serialization/id.thrift"
 include "eden/mononoke/mononoke_types/serialization/changeset_info.thrift"
 include "eden/mononoke/mononoke_types/serialization/test_manifest.thrift"
+include "thrift/annotation/rust.thrift"
 
+@rust.Exhaustive
 struct DerivedDataType {
   1: string type_name;
-} (rust.exhaustive)
+}
 
+@rust.Ord
 union DerivationType {
   1: DeriveSingle derive_single;
   2: DeriveUnderived derive_underived;
   3: Rederivation rederive;
-} (rust.ord)
+}
 
-struct DeriveSingle {} (rust.exhaustive)
+@rust.Exhaustive
+struct DeriveSingle {}
 
-struct DeriveUnderived {} (rust.exhaustive)
+@rust.Exhaustive
+struct DeriveUnderived {}
 
-struct Rederivation {} (rust.exhaustive)
+@rust.Exhaustive
+struct Rederivation {}
 
 /// Represents status of derivation request
 enum RequestStatus {
@@ -39,6 +45,7 @@ enum RequestStatus {
   DOES_NOT_EXIST = 2,
 }
 
+@rust.Exhaustive
 struct DeriveRequest {
   1: string repo_name;
   2: DerivedDataType derived_data_type;
@@ -46,16 +53,18 @@ struct DeriveRequest {
   4: string config_name;
   5: DerivationType derivation_type;
   6: optional i64 bubble_id;
-} (rust.exhaustive)
+}
 
+@rust.Exhaustive
 struct DeriveResponse {
   1: optional DerivedData data;
   2: RequestStatus status;
-} (rust.exhaustive)
+}
 
+@rust.Exhaustive
 struct PollRequest {
   1: DeriveRequest original_request;
-} (rust.exhaustive)
+}
 
 union DerivedData {
   1: DerivedDataFsnode fsnode;
@@ -95,9 +104,10 @@ union DerivedDataFilenode {
   2: DisabledFilenodes filenode_disabled;
 }
 
+@rust.Exhaustive
 struct DerivedDataFilenodePresent {
   1: optional filenodes.FilenodeInfo root_filenode;
-} (rust.exhaustive)
+}
 
 union DerivedDataFastlog {
   1: id.ChangesetId root_fastlog_id;
@@ -108,10 +118,11 @@ union DerivedDataBlame {
   2: DerivedDataRootBlameV2 root_blame_v2;
 }
 
+@rust.Exhaustive
 struct DerivedDataRootBlameV2 {
   1: id.ChangesetId changeset_id;
   2: DerivedDataUnode unode;
-} (rust.exhaustive)
+}
 
 union DerivedDataHgChangeset {
   1: mercurial_thrift.HgNodeHash mapped_hgchangeset_id;
@@ -168,39 +179,47 @@ union DerivedDataContentManifest {
   1: id.ContentManifestId root_content_manifest_id;
 }
 
+@rust.Exhaustive
 struct DerivedDataTypeNotEnabled {
   1: string reason;
-} (rust.exhaustive)
+}
 
+@rust.Exhaustive
 struct CommitNotFound {
   1: string changeset_id;
   2: string repo_name;
-} (rust.exhaustive)
+}
 
+@rust.Exhaustive
 struct RepoNotFound {
   1: string reason;
-} (rust.exhaustive)
+}
 
+@rust.Exhaustive
 struct UnknownDerivedDataConfig {
   1: string reason;
-} (rust.exhaustive)
+}
 
+@rust.Exhaustive
 struct UnknownDerivationType {
   1: string reason;
-} (rust.exhaustive)
+}
 
+@rust.Exhaustive
 struct DisabledDerivation {
   1: string type_name;
   2: i32 repo_id;
   3: string repo_name;
-} (rust.exhaustive)
+}
 
+@rust.Exhaustive
 struct TypeDisabledForEphemeralBubbles {
   1: string type_name;
   2: i32 repo_id;
-} (rust.exhaustive)
+}
 
-struct DisabledFilenodes {} (rust.exhaustive)
+@rust.Exhaustive
+struct DisabledFilenodes {}
 
 union RequestErrorReason {
   1: DerivedDataTypeNotEnabled derived_data_type_not_enabled;
@@ -212,14 +231,17 @@ union RequestErrorReason {
   7: TypeDisabledForEphemeralBubbles type_disabled_for_ephemeral_bubbles;
 }
 
+@rust.Exhaustive
 safe permanent client exception RequestError {
   1: RequestErrorReason reason;
-} (rust.exhaustive)
+}
 
+@rust.Exhaustive
 safe permanent server exception InternalError {
   1: string reason;
-} (rust.exhaustive)
+}
 
+@rust.RequestContext
 service DerivedDataService extends fb303_core.BaseService {
   /// Request derivation for given commit. Service will find all underived commits
   /// and dependency for other derived data types
@@ -234,4 +256,4 @@ service DerivedDataService extends fb303_core.BaseService {
     1: RequestError request_error,
     2: InternalError internal_error,
   );
-} (rust.request_context)
+}
