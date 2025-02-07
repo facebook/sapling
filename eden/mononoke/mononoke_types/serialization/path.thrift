@@ -15,18 +15,21 @@
 //! IMPORTANT!!!
 //! ------------
 
+include "thrift/annotation/rust.thrift"
+
 /// A single path element.
-typedef binary MPathElement (
-  rust.newtype,
-  rust.type = "smallvec::SmallVec<[u8; 24]>",
-)
+@rust.NewType
+@rust.Type{name = "smallvec::SmallVec<[u8; 24]>"}
+typedef binary MPathElement
 
 /// A path.  Paths are stored as lists of elements so that the sort order of
 /// paths is the same as that of tree traversal.
-typedef list<MPathElement> MPath (rust.newtype)
+@rust.NewType
+typedef list<MPathElement> MPath
 
 /// A path that is known not to be the root.
-typedef MPath NonRootMPath (rust.newtype)
+@rust.NewType
+typedef MPath NonRootMPath
 
 /// A path this is known to be a file or directory (or the root).  This is used
 /// in Mercurial-based types where files and directories are treated

@@ -15,7 +15,10 @@
 //! IMPORTANT!!!
 //! ------------
 
+include "thrift/annotation/rust.thrift"
+
+@rust.Exhaustive
 struct RedactionKeyList {
   // List of keys to be redacted
   1: list<string> keys;
-} (rust.exhaustive)
+}

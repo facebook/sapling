@@ -15,49 +15,82 @@
 //! IMPORTANT!!!
 //! ------------
 
+include "thrift/annotation/rust.thrift"
+
 /// A blake2 hash.
-typedef binary Blake2 (rust.newtype, rust.type = "smallvec::SmallVec<[u8; 32]>")
+@rust.NewType
+@rust.Type{name = "smallvec::SmallVec<[u8; 32]>"}
+typedef binary Blake2
 
 /// A blake3 hash.
-typedef binary Blake3 (rust.newtype, rust.type = "smallvec::SmallVec<[u8; 32]>")
+@rust.NewType
+@rust.Type{name = "smallvec::SmallVec<[u8; 32]>"}
+typedef binary Blake3
 
 /// A sha1 hash.
-typedef binary Sha1 (rust.newtype, rust.type = "smallvec::SmallVec<[u8; 20]>")
+@rust.NewType
+@rust.Type{name = "smallvec::SmallVec<[u8; 20]>"}
+typedef binary Sha1
 
 /// A sha256 hash.
-typedef binary Sha256 (rust.newtype, rust.type = "smallvec::SmallVec<[u8; 32]>")
+@rust.NewType
+@rust.Type{name = "smallvec::SmallVec<[u8; 32]>"}
+typedef binary Sha256
 
 /// A Git sha-1 hash.
-typedef binary GitSha1 (
-  rust.newtype,
-  rust.type = "smallvec::SmallVec<[u8; 20]>",
-)
+@rust.NewType
+@rust.Type{name = "smallvec::SmallVec<[u8; 20]>"}
+typedef binary GitSha1
 
 /// An id.  Mononoke Ids are generally blake2 hashes, however we may change this in the future.
+@rust.Ord
 union Id {
   1: Blake2 Blake2;
-} (rust.ord)
+}
 
-typedef Id BasenameSuffixSkeletonManifestId (rust.newtype)
-typedef Id BssmV3DirectoryId (rust.newtype)
-typedef Id SkeletonManifestV2Id (rust.newtype)
-typedef Id CaseConflictSkeletonManifestId (rust.newtype)
-typedef Id ChangesetId (rust.newtype)
-typedef Id ContentChunkId (rust.newtype)
-typedef Id ContentId (rust.newtype)
-typedef Id ContentManifestId (rust.newtype)
-typedef Id ContentMetadataV2Id (rust.newtype)
-typedef Id DeletedManifestId (rust.newtype)
-typedef Id DeletedManifestV2Id (rust.newtype)
-typedef Id FastlogBatchId (rust.newtype)
-typedef Id FileUnodeId (rust.newtype)
-typedef Id FsnodeId (rust.newtype)
-typedef Id MPathHash (rust.newtype)
-typedef Id ManifestUnodeId (rust.newtype)
-typedef Id RawBundle2Id (rust.newtype)
-typedef Id RedactionKeyListId (rust.newtype)
-typedef Id ShardedMapNodeId (rust.newtype)
-typedef Id ShardedMapV2NodeId (rust.newtype)
-typedef Id SkeletonManifestId (rust.newtype)
-typedef Id TestManifestId (rust.newtype)
-typedef Id TestShardedManifestId (rust.newtype)
+@rust.NewType
+typedef Id BasenameSuffixSkeletonManifestId
+@rust.NewType
+typedef Id BssmV3DirectoryId
+@rust.NewType
+typedef Id SkeletonManifestV2Id
+@rust.NewType
+typedef Id CaseConflictSkeletonManifestId
+@rust.NewType
+typedef Id ChangesetId
+@rust.NewType
+typedef Id ContentChunkId
+@rust.NewType
+typedef Id ContentId
+@rust.NewType
+typedef Id ContentManifestId
+@rust.NewType
+typedef Id ContentMetadataV2Id
+@rust.NewType
+typedef Id DeletedManifestId
+@rust.NewType
+typedef Id DeletedManifestV2Id
+@rust.NewType
+typedef Id FastlogBatchId
+@rust.NewType
+typedef Id FileUnodeId
+@rust.NewType
+typedef Id FsnodeId
+@rust.NewType
+typedef Id MPathHash
+@rust.NewType
+typedef Id ManifestUnodeId
+@rust.NewType
+typedef Id RawBundle2Id
+@rust.NewType
+typedef Id RedactionKeyListId
+@rust.NewType
+typedef Id ShardedMapNodeId
+@rust.NewType
+typedef Id ShardedMapV2NodeId
+@rust.NewType
+typedef Id SkeletonManifestId
+@rust.NewType
+typedef Id TestManifestId
+@rust.NewType
+typedef Id TestShardedManifestId
