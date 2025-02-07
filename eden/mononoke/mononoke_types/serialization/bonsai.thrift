@@ -19,6 +19,7 @@ include "eden/mononoke/mononoke_types/serialization/data.thrift"
 include "eden/mononoke/mononoke_types/serialization/id.thrift"
 include "eden/mononoke/mononoke_types/serialization/path.thrift"
 include "eden/mononoke/mononoke_types/serialization/time.thrift"
+include "thrift/annotation/rust.thrift"
 
 // Bonsai Changeset is the fundamental commit object of Mononoke's internal
 // representation.
@@ -36,6 +37,7 @@ include "eden/mononoke/mononoke_types/serialization/time.thrift"
 // * Otherwise, path conflicts are not allowed (a change cannot be a prefix
 //   of a deletion or another change)
 
+@rust.Exhaustive
 struct BonsaiChangeset {
   1: list<id.ChangesetId> parents;
   2: string author;
@@ -61,7 +63,7 @@ struct BonsaiChangeset {
   // represents an annotated tag, then this field will have a value.
   // Otherwise, it would be absent.
   12: optional BonsaiAnnotatedTag git_annotated_tag;
-} (rust.exhaustive)
+}
 
 // Bonsai counterpart of a git annotated tag. This struct includes subset of
 // tag properties. Rest can be represented using the fields in BonsaiChangeset.
@@ -70,20 +72,22 @@ struct BonsaiChangeset {
 // respectively.
 // NOTE: This does not represent a lightweight tag, which is directly implemented as a
 // bookmark in Mononoke.
+@rust.Exhaustive
 struct BonsaiAnnotatedTag {
   1: BonsaiAnnotatedTagTarget target;
   2: optional data.LargeBinary pgp_signature;
-} (rust.exhaustive)
+}
 
 // Target of an annotated tag imported from Git into Bonsai format.
 union BonsaiAnnotatedTagTarget {
   1: id.ChangesetId Changeset; // Commmit, Tree or another Tag
   2: id.ContentId Content; // Blob
-} (rust.exhaustive)
+}
 
+@rust.Exhaustive
 struct SnapshotState {
 // Additional state for snapshots (if necessary)
-} (rust.exhaustive)
+}
 
 enum FileType {
   Regular = 0,
@@ -92,10 +96,10 @@ enum FileType {
   GitSubmodule = 3,
 }
 
-typedef map<path.NonRootMPath, FileChangeOpt> (
-  rust.type = "sorted_vector_map::SortedVectorMap",
-) FileChanges
+@rust.Type{name = "sorted_vector_map::SortedVectorMap"}
+typedef map<path.NonRootMPath, FileChangeOpt> FileChanges
 
+@rust.Exhaustive
 struct FileChangeOpt {
   // All values being absent here means that the file was marked as deleted.
   // At most one value can be present.
@@ -106,8 +110,9 @@ struct FileChangeOpt {
   2: optional UntrackedFileChange untracked_change;
   // This is a missing file in a snapshot commit.
   3: optional UntrackedDeletion untracked_deletion;
-} (rust.exhaustive)
+}
 
+@rust.Exhaustive
 struct FileChange {
   1: id.ContentId content_id;
   2: FileType file_type;
@@ -117,31 +122,32 @@ struct FileChange {
   // This structure present means this file should be represented
   // as Git LFS pointer when served via Git data formats.
   5: optional GitLfs git_lfs;
-} (rust.exhaustive)
+}
 
+@rust.Exhaustive
 struct UntrackedFileChange {
   1: id.ContentId content_id;
   2: FileType file_type;
   3: i64 size;
-} (rust.exhaustive)
+}
 
+@rust.Exhaustive
 struct UntrackedDeletion {
 // Additional state (if necessary)
-} (rust.exhaustive)
+}
 
+@rust.Exhaustive
 struct CopyInfo {
   1: path.NonRootMPath file;
   // cs_id must match one of the parents specified in BonsaiChangeset
   2: id.ChangesetId cs_id;
-} (rust.exhaustive)
+}
 
-typedef map<string, binary> (
-  rust.type = "sorted_vector_map::SortedVectorMap",
-) HgExtras
+@rust.Type{name = "sorted_vector_map::SortedVectorMap"}
+typedef map<string, binary> HgExtras
 
-typedef map<data.SmallBinary, data.LargeBinary> (
-  rust.type = "sorted_vector_map::SortedVectorMap",
-) GitExtraHeaders
+@rust.Type{name = "sorted_vector_map::SortedVectorMap"}
+typedef map<data.SmallBinary, data.LargeBinary> GitExtraHeaders
 
 // Git LFS
 // Just mere presence of this structure is enough to get the file changes

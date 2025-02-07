@@ -17,15 +17,19 @@
 
 include "eden/mononoke/mononoke_types/serialization/id.thrift"
 include "eden/mononoke/mononoke_types/serialization/path.thrift"
+include "thrift/annotation/rust.thrift"
 
-typedef i32 BlameChangeset (rust.newtype)
-typedef i32 BlamePath (rust.newtype)
+@rust.NewType
+typedef i32 BlameChangeset
+@rust.NewType
+typedef i32 BlamePath
 
 enum BlameRejected {
   TooBig = 0,
   Binary = 1,
 }
 
+@rust.Exhaustive
 struct BlameRangeV2 {
   // Length (in lines) of this range.  The offset of a range is implicit from
   // the sum of the lengths of the prior ranges.
@@ -108,8 +112,9 @@ struct BlameRangeV2 {
   // Note that this is an index into the list of parents in the bonsai
   // changeset, and *not* an index into csids.
   8: optional i32 parent_index;
-} (rust.exhaustive)
+}
 
+@rust.Exhaustive
 struct BlameDataV2 {
   // A list of ranges that describe when the lines of this file were
   // introduced.
@@ -139,7 +144,7 @@ struct BlameDataV2 {
   // for simplicity, this includes all paths the file has ever been located at,
   // even if they are no longer referenced by any of the ranges.
   4: list<path.NonRootMPath> paths;
-} (rust.exhaustive)
+}
 
 union BlameV2 {
   // This version of the file contains full blame information.
@@ -150,6 +155,5 @@ union BlameV2 {
 }
 
 // The following were automatically generated and may benefit from renaming.
-typedef map<i32, id.ChangesetId> (
-  rust.type = "sorted_vector_map::SortedVectorMap",
-) map_i32_ChangesetId_1681
+@rust.Type{name = "sorted_vector_map::SortedVectorMap"}
+typedef map<i32, id.ChangesetId> map_i32_ChangesetId_1681
