@@ -31,6 +31,9 @@ define_stats! {
     synced_trees:  dynamic_timeseries("{}.synced_trees", (repo: String); Sum),
     synced_filenodes:  dynamic_timeseries("{}.synced_filenodes", (repo: String); Sum),
     sync_lag_seconds:  dynamic_timeseries("{}.sync_lag_seconds", (repo: String); Average),
+    content_wait_time_s:  dynamic_timeseries("{}.content_wait_time_s", (repo: String); Average),
+    trees_files_wait_time_s:  dynamic_timeseries("{}.trees_files_wait_time_s", (repo: String); Average),
+
 }
 
 const CONTENT_CHANNEL_SIZE: usize = 1000;
@@ -96,7 +99,12 @@ impl SendManager {
 
         // Create channel for receiving changesets
         let (changeset_sender, changeset_recv) = mpsc::channel(CHANGESET_CHANNEL_SIZE);
-        Self::spawn_changeset_sender(changeset_recv, external_sender.clone(), logger.clone());
+        Self::spawn_changeset_sender(
+            reponame.clone(),
+            changeset_recv,
+            external_sender.clone(),
+            logger.clone(),
+        );
 
         Self {
             content_sender,
@@ -121,8 +129,8 @@ impl SendManager {
                             encountered_error.get_or_insert(
                                 e.context(format!("Failed to upload content: {:?}", ct_id)),
                             );
-                            STATS::synced_contents.add_value(1, (reponame.clone(),));
                         }
+                        STATS::synced_contents.add_value(1, (reponame.clone(),));
                     }
                     ContentMessage::ContentDone(sender) => {
                         if let Some(e) = encountered_error {
@@ -154,6 +162,7 @@ impl SendManager {
                 match msg {
                     FileOrTreeMessage::WaitForContents(receiver) => {
                         // Read outcome from content upload
+                        let start = std::time::Instant::now();
                         match receiver.await {
                             Ok(Err(e)) => {
                                 encountered_error.get_or_insert(e.context(
@@ -168,6 +177,8 @@ impl SendManager {
                             }
                             _ => (),
                         }
+                        let elapsed = start.elapsed().as_secs();
+                        STATS::content_wait_time_s.add_value(elapsed as i64, (reponame.clone(),));
                     }
                     FileOrTreeMessage::FileNode(f) if encountered_error.is_none() => {
                         // Upload the file nodes through sender
@@ -207,6 +218,7 @@ impl SendManager {
     }
 
     fn spawn_changeset_sender(
+        reponame: String,
         mut changeset_recv: mpsc::Receiver<ChangesetMessage>,
         changeset_es: Arc<EdenapiSender>,
         changeset_logger: Logger,
@@ -217,6 +229,7 @@ impl SendManager {
                 match msg {
                     ChangesetMessage::WaitForFilesAndTrees(receiver) => {
                         // Read outcome from files and trees upload
+                        let start = std::time::Instant::now();
                         match receiver.await {
                             Ok(Err(e)) => {
                                 encountered_error.get_or_insert(e.context(
@@ -231,6 +244,9 @@ impl SendManager {
                             }
                             _ => (),
                         }
+                        let elapsed = start.elapsed().as_secs();
+                        STATS::trees_files_wait_time_s
+                            .add_value(elapsed as i64, (reponame.clone(),));
                     }
                     ChangesetMessage::Changeset((hg_cs, bcs)) if encountered_error.is_none() => {
                         // If ther was an error don't even attempt to send the changeset
