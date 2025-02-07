@@ -22,10 +22,14 @@
 ///
 /// Note: DateTime fields do not have a reasonable default value.  They must
 /// always be present or qualified as optional.
+include "thrift/annotation/rust.thrift"
+
+@rust.Exhaustive
 struct DateTime {
   1: i64 timestamp_secs;
   2: i32 tz_offset_secs;
-} (rust.exhaustive)
+}
 
 /// Timestamp without timezone information.
-typedef i64 Timestamp (rust.newtype)
+@rust.NewType
+typedef i64 Timestamp

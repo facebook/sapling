@@ -18,27 +18,29 @@
 include "eden/mononoke/mononoke_types/serialization/id.thrift"
 include "eden/mononoke/mononoke_types/serialization/path.thrift"
 include "eden/mononoke/mononoke_types/serialization/bonsai.thrift"
+include "thrift/annotation/rust.thrift"
 
+@rust.Exhaustive
 struct FileUnode {
   1: list<id.FileUnodeId> parents;
   2: id.ContentId content_id;
   3: bonsai.FileType file_type;
   4: id.MPathHash path_hash;
   5: id.ChangesetId linknode;
-} (rust.exhaustive)
+}
 
 union UnodeEntry {
   1: id.FileUnodeId File;
   2: id.ManifestUnodeId Directory;
 }
 
+@rust.Exhaustive
 struct ManifestUnode {
   1: list<id.ManifestUnodeId> parents;
   2: map_MPathElement_UnodeEntry_3251 subentries;
   3: id.ChangesetId linknode;
-} (rust.exhaustive)
+}
 
 // The following were automatically generated and may benefit from renaming.
-typedef map<path.MPathElement, UnodeEntry> (
-  rust.type = "sorted_vector_map::SortedVectorMap",
-) map_MPathElement_UnodeEntry_3251
+@rust.Type{name = "sorted_vector_map::SortedVectorMap"}
+typedef map<path.MPathElement, UnodeEntry> map_MPathElement_UnodeEntry_3251
