@@ -5,7 +5,10 @@
  * GNU General Public License version 2.
  */
 
-typedef binary (rust.type = "Bytes") bytes
+include "thrift/annotation/rust.thrift"
+
+@rust.Type{name = "Bytes"}
+typedef binary bytes
 
 // Independent single data value.
 union SingleValue {
@@ -26,10 +29,11 @@ union SingleValue {
 //
 // The current implementation cannot fetch further packs to find
 // dict_key; this limitation may be lifted later.
+@rust.Exhaustive
 struct ZstdFromDictValue {
   1: string dict_key;
   2: bytes zstd;
-} (rust.exhaustive)
+}
 
 // Packed values might not take any advantage of delta compression, but its
 // there if the packer decides its most efficient for the blob
@@ -40,11 +44,13 @@ union PackedValue {
 
 // One packed entry,  the key being the blobstore key and the data being
 // the packed value.
+@rust.Exhaustive
 struct PackedEntry {
   1: string key;
   2: PackedValue data;
-} (rust.exhaustive)
+}
 
+@rust.Exhaustive
 struct PackedFormat {
   // The key the PackedFormat is stored under in underlying storage
   // Used for caching, and may not exist in the underlying storage
@@ -61,7 +67,7 @@ struct PackedFormat {
   // All but the first entry should be ZstdFromDict, to maximize compression.
   // We do not expect significant gains from fewer blobs in the underlying store.
   2: list<PackedEntry> entries;
-} (rust.exhaustive)
+}
 
 // Discriminated union with the variant forms, for now we handle single
 // independent values or a list of packed entries.
@@ -75,6 +81,7 @@ union StorageFormat {
 // At-rest form for mononoke blobs, top level struct for persistance.
 // Recommended that top level type is struct even though logically
 // the union would work.
+@rust.Exhaustive
 struct StorageEnvelope {
   1: StorageFormat storage;
-} (rust.exhaustive)
+}
