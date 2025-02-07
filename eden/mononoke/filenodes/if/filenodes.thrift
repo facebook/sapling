@@ -7,6 +7,7 @@
 
 include "eden/mononoke/mononoke_types/serialization/path.thrift"
 include "eden/mononoke/mercurial/types/if/mercurial_thrift.thrift"
+include "thrift/annotation/rust.thrift"
 
 /// Code version used in memcache keys.  This should be changed whenever
 /// the layout of memcache entries is changed in an incompatible way.
@@ -21,6 +22,7 @@ union FilenodeInfoList {
   3: byte TooBig;
 }
 
+@rust.Exhaustive
 struct FilenodeInfo {
   // 1: deleted
   2: mercurial_thrift.HgNodeHash filenode;
@@ -28,9 +30,10 @@ struct FilenodeInfo {
   4: optional mercurial_thrift.HgNodeHash p2;
   5: optional FilenodeCopyFrom copyfrom;
   6: mercurial_thrift.HgNodeHash linknode;
-} (rust.exhaustive)
+}
 
+@rust.Exhaustive
 struct FilenodeCopyFrom {
   1: path.RepoPath path;
   2: mercurial_thrift.HgNodeHash filenode;
-} (rust.exhaustive)
+}
