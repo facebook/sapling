@@ -463,6 +463,10 @@ class EdenServiceHandler : virtual public StreamingEdenServiceSvIf,
 
   void stopFileAccessMonitor(StopFileAccessMonitorResult& result) override;
 
+  void sendNotification(
+      SendNotificationResponse& response,
+      std::unique_ptr<SendNotificationRequest> request) override;
+
  private:
   EdenMountHandle lookupMount(const MountId& mountId);
   EdenMountHandle lookupMount(const std::unique_ptr<std::string>& mountId);

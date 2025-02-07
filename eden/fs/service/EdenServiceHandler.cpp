@@ -2543,6 +2543,12 @@ void EdenServiceHandler::stopFileAccessMonitor(
   result.tmpOutputPath() = "/tmp/edenfs/fam/fam_fbsource_2025_01_27.json";
 }
 
+void EdenServiceHandler::sendNotification(
+    [[maybe_unused]] SendNotificationResponse&,
+    [[maybe_unused]] std::unique_ptr<SendNotificationRequest>) {
+  NOT_IMPLEMENTED();
+}
+
 apache::thrift::ResponseAndServerStream<ChangesSinceResult, ChangedFileResult>
 EdenServiceHandler::streamSelectedChangesSince(
     std::unique_ptr<StreamSelectedChangesSinceParams> params) {
