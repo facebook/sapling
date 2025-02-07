@@ -57,4 +57,4 @@
 
 # Verify the push validation errors got recorded in scuba
   $ jq -S .normal "$SCUBA" | grep product | wc -l
-  36
+  43

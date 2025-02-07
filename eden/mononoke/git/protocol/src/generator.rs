@@ -21,6 +21,7 @@ use futures::stream::BoxStream;
 use futures::stream::FuturesOrdered;
 use futures::StreamExt as _;
 use futures::TryStreamExt;
+use futures_stats::TimedTryFutureExt;
 use git_types::fetch_git_delta_manifest;
 use git_types::mode;
 use git_types::DeltaObjectKind;
@@ -35,6 +36,7 @@ use mononoke_types::path::MPath;
 use mononoke_types::ChangesetId;
 use packfile::types::PackfileItem;
 use rustc_hash::FxHashSet;
+use scuba_ext::FutureStatsScubaExt;
 use tokio::sync::mpsc::Sender;
 
 use crate::bookmarks_provider::bookmarks;
@@ -782,6 +784,8 @@ pub async fn fetch_response<'a>(
     let filter = Arc::new(request.filter.clone());
     let packfile_item_inclusion = PackfileItemInclusion::FetchAndStore;
     let ctx = Arc::new(ctx);
+    let mut scuba = ctx.scuba().clone();
+    scuba.add("repo", repo.repo_identity().name());
     let shallow_info = Arc::new(request.shallow_info.take());
     let fetch_container = FetchContainer::new(
         ctx.clone(),
@@ -798,14 +802,18 @@ pub async fn fetch_response<'a>(
         .send("Converting HAVE Git commits to Bonsais\n".to_string())
         .await?;
     let translated_sha_bases = git_shas_to_bonsais(&ctx, repo, request.bases.iter())
+        .try_timed()
         .await
-        .context("Error converting base Git commits to Bonsai duing fetch")?;
+        .context("Error converting base Git commits to Bonsai duing fetch")?
+        .log_future_stats(scuba.clone(), "Converted HAVE Git commits to Bonsais", None);
     progress_writer
         .send("Converting WANT Git commits to Bonsais\n".to_string())
         .await?;
     let translated_sha_heads = git_shas_to_bonsais(&ctx, repo, request.heads.iter())
+        .try_timed()
         .await
-        .context("Error converting head Git commits to Bonsai during fetch")?;
+        .context("Error converting head Git commits to Bonsai during fetch")?
+        .log_future_stats(scuba.clone(), "Converted WANT Git commits to Bonsais", None);
     // Get the stream of commits between the bases and heads
     // NOTE: Another Git magic. The filter spec includes an option that the client can use to exclude commit-type objects. But, even if the client
     // uses that filter, we just ignore it and send all the commits anyway :)
@@ -819,7 +827,13 @@ pub async fn fetch_response<'a>(
         translated_sha_bases.bonsais.clone(),
         &shallow_info,
     )
-    .await?;
+    .try_timed()
+    .await?
+    .log_future_stats(
+        scuba.clone(),
+        "Collected Bonsai commits to send to client",
+        None,
+    );
     // Reverse the list of commits so that we can prevent delta cycles from appearing in the packfile
     target_commits.reverse();
     progress_writer
@@ -831,8 +845,14 @@ pub async fn fetch_response<'a>(
         to_commit_stream(target_commits.clone()),
         translated_sha_heads.non_tag_non_commit_oids.clone(),
     )
+    .try_timed()
     .await
-    .context("Error while calculating object count during fetch")?;
+    .context("Error while calculating object count during fetch")?
+    .log_future_stats(
+        scuba.clone(),
+        "Counted number of objects to be sent in packfile",
+        None,
+    );
     // Get the stream of blob and tree packfile items (with deltas where possible) to include in the pack/bundle. Note that
     // we have already counted these items as part of object count.
     progress_writer
@@ -844,8 +864,10 @@ pub async fn fetch_response<'a>(
         Arc::new(base_set),
         translated_sha_heads.non_tag_non_commit_oids,
     )
+    .try_timed()
     .await
-    .context("Error while generating blob and tree packfile item stream during fetch")?;
+    .context("Error while generating blob and tree packfile item stream during fetch")?
+    .log_future_stats(scuba.clone(), "Generated trees and blobs stream", None);
     // Get the stream of commit packfile items to include in the pack/bundle. Note that we have already counted these items
     // as part of object count.
     progress_writer
@@ -853,8 +875,10 @@ pub async fn fetch_response<'a>(
         .await?;
     let (commit_stream, commits_count) =
         commit_packfile_stream(fetch_container.clone(), repo, target_commits.clone())
+            .try_timed()
             .await
-            .context("Error while generating commit packfile item stream during fetch")?;
+            .context("Error while generating commit packfile item stream during fetch")?
+            .log_future_stats(scuba.clone(), "Generated commits stream", None);
     // Get the stream of all annotated tag items in the repo
     progress_writer
         .send("Generating tags stream\n".to_string())
@@ -865,8 +889,10 @@ pub async fn fetch_response<'a>(
         target_commits,
         translated_sha_heads.tag_names.clone(),
     )
+    .try_timed()
     .await
-    .context("Error while generating tag packfile item stream during fetch")?;
+    .context("Error while generating tag packfile item stream during fetch")?
+    .log_future_stats(scuba.clone(), "Generated tags stream", None);
     // Compute the overall object count by summing the trees, blobs, tags and commits count
     let object_count = commits_count + trees_and_blobs_count + tags_count;
     // Combine all streams together and return the response. The ordering of the streams in this case is irrelevant since the commit
