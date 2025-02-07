@@ -30,6 +30,7 @@ mod oss;
 pub use facebook::create_rate_limiter;
 #[cfg(not(fbcode_build))]
 pub use oss::create_rate_limiter;
+pub use rate_limiting_config::LoadSheddingMetric;
 pub use rate_limiting_config::RateLimitStatus;
 
 pub mod config;
@@ -186,9 +187,18 @@ impl LoadShedLimit {
             return LoadShedResult::Pass;
         }
 
+        // Fetch the counter
+        let value = match self.raw_config.load_shedding_metric.clone() {
+            LoadSheddingMetric::local_fb303_counter(metric) => {
+                let metric = metric.to_string();
+                STATS::load_shed_counter.get_value(fb, (metric.clone(),))
+            }
+            _ => None,
+        };
+
         let metric = self.raw_config.metric.to_string();
 
-        match STATS::load_shed_counter.get_value(fb, (metric.clone(),)) {
+        match value {
             Some(value) if value > self.raw_config.limit => {
                 log_or_enforce_status(self.raw_config.clone(), metric, value, scuba)
             }
