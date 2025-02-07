@@ -6,14 +6,17 @@
  */
 
 include "eden/mononoke/mononoke_types/serialization/id.thrift"
+include "thrift/annotation/rust.thrift"
 
 # If you change this, you need to bump CODEVAR in caching.rs
 
+@rust.Exhaustive
 struct PathHash {
   1: binary path;
   2: bool is_tree;
-} (rust.exhaustive)
+}
 
+@rust.Exhaustive
 struct MutableRenameEntry {
   1: id.ChangesetId dst_cs_id;
   2: PathHash dst_path_hash;
@@ -22,12 +25,14 @@ struct MutableRenameEntry {
   5: PathHash src_path_hash;
   6: id.Blake2 src_unode;
   7: byte is_tree;
-} (rust.exhaustive)
+}
 
+@rust.Exhaustive
 struct CachedMutableRenameEntry {
   1: optional MutableRenameEntry entry;
-} (rust.exhaustive)
+}
 
+@rust.Exhaustive
 struct ChangesetIdSet {
   1: list<id.ChangesetId> cs_ids;
-} (rust.exhaustive)
+}
