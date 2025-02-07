@@ -7,6 +7,7 @@
 
 include "eden/mononoke/mercurial/types/if/mercurial_thrift.thrift"
 include "eden/mononoke/mononoke_types/serialization/id.thrift"
+include "thrift/annotation/rust.thrift"
 
 /// Code version used in memcache keys.  This should be changed whenever
 /// the layout of memcache entries is changed in an incompatible way.
@@ -14,10 +15,12 @@ include "eden/mononoke/mononoke_types/serialization/id.thrift"
 /// in the JustKnob scm/mononoke_memcache_sitevers:bonsai_hg_mapping.
 const i32 MC_CODEVER = 0;
 
-typedef i32 RepoId (rust.newtype)
+@rust.NewType
+typedef i32 RepoId
 
+@rust.Exhaustive
 struct BonsaiHgMappingCacheEntry {
   1: RepoId repo_id;
   2: id.ChangesetId bcs_id;
   3: mercurial_thrift.HgNodeHash hg_cs_id;
-} (rust.exhaustive)
+}
