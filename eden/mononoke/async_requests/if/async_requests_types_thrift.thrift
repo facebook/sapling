@@ -12,28 +12,46 @@
 
 include "eden/mononoke/mononoke_types/serialization/id.thrift"
 include "eden/mononoke/scs/if/source_control.thrift"
+include "thrift/annotation/rust.thrift"
 
 // Id types for async service methods params and responses.
 // Param and response types themselves are defined in the source_control.trift
-typedef id.Id MegarepoAddTargetParamsId (rust.newtype)
-typedef id.Id MegarepoAddBranchingTargetParamsId (rust.newtype)
-typedef id.Id MegarepoChangeTargetConfigParamsId (rust.newtype)
-typedef id.Id MegarepoRemergeSourceParamsId (rust.newtype)
-typedef id.Id MegarepoSyncChangesetParamsId (rust.newtype)
-typedef id.Id AsyncPingParamsId (rust.newtype)
-typedef id.Id CommitSparseProfileSizeParamsId (rust.newtype)
-typedef id.Id CommitSparseProfileDeltaParamsId (rust.newtype)
+@rust.NewType
+typedef id.Id MegarepoAddTargetParamsId
+@rust.NewType
+typedef id.Id MegarepoAddBranchingTargetParamsId
+@rust.NewType
+typedef id.Id MegarepoChangeTargetConfigParamsId
+@rust.NewType
+typedef id.Id MegarepoRemergeSourceParamsId
+@rust.NewType
+typedef id.Id MegarepoSyncChangesetParamsId
+@rust.NewType
+typedef id.Id AsyncPingParamsId
+@rust.NewType
+typedef id.Id CommitSparseProfileSizeParamsId
+@rust.NewType
+typedef id.Id CommitSparseProfileDeltaParamsId
 
-typedef id.Id MegarepoSyncChangesetResultId (rust.newtype)
-typedef id.Id MegarepoAddTargetResultId (rust.newtype)
-typedef id.Id MegarepoAddBranchingTargetResultId (rust.newtype)
-typedef id.Id MegarepoRemergeSourceResultId (rust.newtype)
-typedef id.Id MegarepoChangeTargetConfigResultId (rust.newtype)
-typedef id.Id AsyncPingResultId (rust.newtype)
-typedef id.Id CommitSparseProfileSizeResultId (rust.newtype)
-typedef id.Id CommitSparseProfileDeltaResultId (rust.newtype)
+@rust.NewType
+typedef id.Id MegarepoSyncChangesetResultId
+@rust.NewType
+typedef id.Id MegarepoAddTargetResultId
+@rust.NewType
+typedef id.Id MegarepoAddBranchingTargetResultId
+@rust.NewType
+typedef id.Id MegarepoRemergeSourceResultId
+@rust.NewType
+typedef id.Id MegarepoChangeTargetConfigResultId
+@rust.NewType
+typedef id.Id AsyncPingResultId
+@rust.NewType
+typedef id.Id CommitSparseProfileSizeResultId
+@rust.NewType
+typedef id.Id CommitSparseProfileDeltaResultId
 
-typedef id.Id AsynchronousRequestResultId (rust.newtype)
+@rust.NewType
+typedef id.Id AsynchronousRequestResultId
 union AsynchronousRequestResult {
   1: source_control.MegarepoAddTargetResult megarepo_add_target_result;
   2: source_control.MegarepoChangeTargetConfigResult megarepo_change_target_result;
@@ -46,7 +64,8 @@ union AsynchronousRequestResult {
   9: source_control.CommitSparseProfileDeltaResponse commit_sparse_profile_delta_result;
 }
 
-typedef id.Id AsynchronousRequestParamsId (rust.newtype)
+@rust.NewType
+typedef id.Id AsynchronousRequestParamsId
 union AsynchronousRequestParams {
   1: source_control.MegarepoAddTargetParams megarepo_add_target_params;
   2: source_control.MegarepoChangeTargetConfigParams megarepo_change_target_params;
