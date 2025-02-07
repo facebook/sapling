@@ -10,37 +10,42 @@ include "eden/mononoke/mononoke_types/serialization/data.thrift"
 include "eden/mononoke/mononoke_types/serialization/id.thrift"
 include "eden/mononoke/mononoke_types/serialization/path.thrift"
 include "eden/mononoke/mononoke_types/serialization/sharded_map.thrift"
+include "thrift/annotation/rust.thrift"
 
+@rust.Exhaustive
 struct BlobHandle {
   1: id.GitSha1 oid;
   2: i64 size;
   3: bonsai.FileType file_type;
-} (rust.exhaustive)
+}
 
+@rust.Exhaustive
 struct TreeHandle {
   1: id.GitSha1 oid;
   2: i64 size;
-} (rust.exhaustive)
+}
 
+@rust.Exhaustive
 struct MappedGitCommitId {
   1: id.GitSha1 oid;
-} (rust.exhaustive)
+}
 
 union TreeMember {
   1: BlobHandle Blob;
   2: TreeHandle Tree;
 }
 
+@rust.Exhaustive
 struct Tree {
   1: TreeHandle handle;
   2: map<path.MPathElement, TreeMember> members;
-} (rust.exhaustive)
+}
 
 /// The kind of Git objects that are allowed as entries in GitDeltaManifestV2
 enum ObjectKind {
   Blob = 0,
   Tree = 1,
-} (rust.exhaustive)
+}
 
 /// Manifest that contains an entry for each Git object that was added or modified as part of
 /// a commit. The object needs to be different from all objects at the same path in all parents
@@ -52,7 +57,8 @@ struct GitDeltaManifestV2 {
 }
 
 /// Identifier for GitDeltaManifestV2 blob
-typedef id.Id GitDeltaManifestV2Id (rust.newtype)
+@rust.NewType
+typedef id.Id GitDeltaManifestV2Id
 
 /// An entry in the GitDeltaManifestV2 corresponding to a path
 struct GDMV2Entry {
@@ -97,7 +103,9 @@ union GDMV2InstructionBytes {
 }
 
 /// Identifier for a chunk of delta instructions in GitDeltaManifestV2
-typedef id.Id GDMV2InstructionsChunkId (rust.newtype)
+@rust.NewType
+typedef id.Id GDMV2InstructionsChunkId
 
 /// The byte content of an individual chunk of delta instructions in GitDeltaManifestV2
-typedef data.LargeBinary GDMV2InstructionsChunk (rust.newtype)
+@rust.NewType
+typedef data.LargeBinary GDMV2InstructionsChunk
