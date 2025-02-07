@@ -16,6 +16,7 @@
 //! ------------
 
 include "eden/mononoke/mononoke_types/serialization/sharded_map.thrift"
+include "thrift/annotation/rust.thrift"
 
 // Basename suffix manifest stores file trees in a way that allows fast filtering
 // based on suffix of basenames as well as directory prefix of root.
@@ -30,12 +31,14 @@ include "eden/mononoke/mononoke_types/serialization/sharded_map.thrift"
 // on the sharded map to decide which parts of the manifest should be inlined and
 // which should be stored in a separate blob. This avoids the large number of tiny
 // blobs that Bssm creates due to how unique basenames tend to be.
-struct BssmV3File {} (rust.exhaustive)
+@rust.Exhaustive
+struct BssmV3File {}
+@rust.Exhaustive
 struct BssmV3Directory {
   1: sharded_map.ShardedMapV2Node subentries;
-} (rust.exhaustive)
+}
 
 union BssmV3Entry {
   1: BssmV3File file;
   2: BssmV3Directory directory;
-} (rust.exhaustive)
+}

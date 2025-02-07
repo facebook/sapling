@@ -16,6 +16,7 @@
 //! ------------
 
 include "eden/mononoke/mononoke_types/serialization/sharded_map.thrift"
+include "thrift/annotation/rust.thrift"
 
 // Case conflict skeleton manifest stores a version of the file tree that's transformed in a way
 // that allows quickly finding case conflicts. The transformation works on file paths by adding
@@ -38,18 +39,21 @@ include "eden/mononoke/mononoke_types/serialization/sharded_map.thrift"
 // In this example Dir1/eden directory conflicts Dir1/Eden because they share dir1/Dir1/eden in
 // the transform tree and then diverge. Similarily Dir1/eden/MoNoNOKe and Dir1/eden/mononOKE
 // conflict because they share dir1/Dir1/eden/eden/mononoke and then diverge.
-struct CcsmFile {} (rust.exhaustive)
+@rust.Exhaustive
+struct CcsmFile {}
+@rust.Exhaustive
 struct CaseConflictSkeletonManifest {
   1: sharded_map.ShardedMapV2Node subentries;
-} (rust.exhaustive)
+}
 
 union CcsmEntry {
   1: CcsmFile file;
   2: CaseConflictSkeletonManifest directory;
-} (rust.exhaustive)
+}
 
+@rust.Exhaustive
 struct CcsmRollupCounts {
   1: i64 descendants_count;
   2: i64 odd_depth_conflicts;
   3: i64 even_depth_conflicts;
-} (rust.exhaustive)
+}
