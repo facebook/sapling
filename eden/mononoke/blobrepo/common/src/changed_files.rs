@@ -133,7 +133,7 @@ async fn compute_files_with_status(
 }
 
 fn mercurial_mpath_comparator(a: &NonRootMPath, b: &NonRootMPath) -> ::std::cmp::Ordering {
-    a.to_vec().cmp(&b.to_vec())
+    a.compare_bytes(b)
 }
 
 #[cfg(test)]
