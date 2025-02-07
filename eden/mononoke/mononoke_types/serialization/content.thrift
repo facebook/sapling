@@ -17,14 +17,17 @@
 
 include "eden/mononoke/mononoke_types/serialization/id.thrift"
 include "eden/mononoke/mononoke_types/serialization/data.thrift"
+include "thrift/annotation/rust.thrift"
 
+@rust.Exhaustive
 struct ContentChunkPointer {
   1: id.ContentChunkId chunk_id;
   2: i64 size;
-} (rust.exhaustive)
+}
 
 // When a file is chunked, we represent it as a list of its chunks, as well as
 // its ContentId.
+@rust.Exhaustive
 struct ChunkedFileContents {
   // The ContentId is here to ensure we can reproduce the ContentId from the
   // FileContents representation in Mononoke, which would normally require
@@ -32,7 +35,7 @@ struct ChunkedFileContents {
   // have the contents).
   1: id.ContentId content_id;
   2: list<ContentChunkPointer> chunks;
-} (rust.exhaustive)
+}
 
 union FileContents {
   // Plain uncompressed bytes - WYSIWYG.
@@ -56,6 +59,7 @@ union ContentAlias {
 // from its Filestore. They're marked optional so we can report errors if
 // they're absent at runtime (as opposed to letting Thrift give us a default
 // values).
+@rust.Exhaustive
 struct ContentMetadataV2 {
   // ContentId we're providing metadata for
   1: optional id.ContentId content_id;
@@ -90,4 +94,4 @@ struct ContentMetadataV2 {
   13: optional bool is_partially_generated;
   // Blake3 hash of the file seeded with the global thrift constant in fbcode/blake3.thrift
   14: optional id.Blake3 seeded_blake3;
-} (rust.exhaustive)
+}
