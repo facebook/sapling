@@ -69,7 +69,6 @@ use mononoke_app::monitoring::AliveService;
 use mononoke_app::monitoring::MonitoringAppExtension;
 use mononoke_app::MononokeApp;
 use mononoke_app::MononokeAppBuilder;
-use mononoke_hg_sync_job_helper_lib::wait_for_latest_log_id_to_be_synced;
 use mononoke_types::BonsaiChangeset;
 use mononoke_types::BonsaiChangesetMut;
 use mononoke_types::ChangesetId;
@@ -131,7 +130,6 @@ struct GraphqlInputVariables {
 struct CheckerFlags {
     phab_check_disabled: bool,
     x_repo_check_disabled: bool,
-    hg_sync_check_disabled: bool,
 }
 #[derive(Clone, Debug)]
 struct ChangesetArgs {
@@ -181,7 +179,6 @@ pub struct RecoveryFields {
     move_bookmark_commits_done: usize,
     phab_check_disabled: bool,
     x_repo_check_disabled: bool,
-    hg_sync_check_disabled: bool,
     sleep_time: Duration,
     dest_bookmark_name: String,
     commit_author: String,
@@ -475,15 +472,8 @@ async fn move_bookmark(
 
         let check_repo = async move {
             let hg_csid = repo.derive_hg_changeset(ctx, curr_csid.clone()).await?;
-            check_dependent_systems(
-                ctx,
-                repo,
-                checker_flags,
-                hg_csid,
-                sleep_time,
-                maybe_call_sign,
-            )
-            .await?;
+            check_dependent_systems(ctx, checker_flags, hg_csid, sleep_time, maybe_call_sign)
+                .await?;
             Result::<_, Error>::Ok(())
         };
 
@@ -525,7 +515,6 @@ async fn move_bookmark(
 
             check_dependent_systems(
                 ctx,
-                &small_repo_back_sync_vars.small_repo,
                 checker_flags,
                 small_repo_hg_csid,
                 sleep_time,
@@ -674,7 +663,6 @@ async fn get_leaf_entries(
 
 async fn check_dependent_systems(
     ctx: &CoreContext,
-    repo: &Repo,
     checker_flags: &CheckerFlags,
     hg_csid: HgChangesetId,
     sleep_time: Duration,
@@ -683,7 +671,6 @@ async fn check_dependent_systems(
     // if a check is disabled, we have already passed the check
     let mut passed_phab_check = checker_flags.phab_check_disabled;
     let mut _passed_x_repo_check = checker_flags.x_repo_check_disabled;
-    let passed_hg_sync_check = checker_flags.hg_sync_check_disabled;
 
     while !passed_phab_check {
         let call_sign = maybe_call_sign.as_ref().unwrap();
@@ -695,10 +682,6 @@ async fn check_dependent_systems(
             );
             time::sleep(sleep_time).await;
         }
-    }
-
-    if !passed_hg_sync_check {
-        wait_for_latest_log_id_to_be_synced(ctx, repo, sleep_time).await?;
     }
 
     Ok(())
@@ -1036,7 +1019,6 @@ async fn repo_import(
     let checker_flags = CheckerFlags {
         phab_check_disabled: recovery_fields.phab_check_disabled,
         x_repo_check_disabled: recovery_fields.x_repo_check_disabled,
-        hg_sync_check_disabled: recovery_fields.hg_sync_check_disabled,
     };
 
     let live_commit_sync_config =

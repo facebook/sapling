@@ -199,7 +199,6 @@
       "071d73e6b97823ffbde324c6147a785013f479157ade3f83c9b016c8f40c09de",
       "6f63fa96348a0854cd77a4b70f5b9b776e963735f92e283b67123161f1bc7bcd"
     ],
-    "hg_sync_check_disabled": true,
     "import_stage": "PushCommit",
     "imported_cs_id": "a1740c3d4a0f8e012b12c0c93f5a69cc902fe7398d8f334ef202f33c32fc247c",
     "mark_not_synced_mapping": null,

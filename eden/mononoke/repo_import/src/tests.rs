@@ -40,7 +40,6 @@ mod tests {
     use live_commit_sync_config::CONFIGERATOR_ALL_COMMIT_SYNC_CONFIGS;
     use maplit::hashmap;
     use mercurial_types::NonRootMPath;
-    use mercurial_types_mocks::nodehash::ONES_CSID as HG_CSID;
     use metaconfig_types::CommitSyncConfig;
     use metaconfig_types::CommitSyncConfigVersion;
     use metaconfig_types::CommonCommitSyncConfig;
@@ -50,7 +49,6 @@ mod tests {
     use metaconfig_types::RepoConfig;
     use metaconfig_types::SmallRepoCommitSyncConfig;
     use metaconfig_types::SmallRepoPermanentConfig;
-    use mononoke_hg_sync_job_helper_lib::LATEST_REPLAYED_REQUEST_KEY;
     use mononoke_macros::mononoke;
     use mononoke_types::globalrev::Globalrev;
     use mononoke_types::globalrev::START_COMMIT_GLOBALREV;
@@ -58,13 +56,10 @@ mod tests {
     use mononoke_types::ChangesetId;
     use mononoke_types::DateTime;
     use mononoke_types::RepositoryId;
-    use mononoke_types_mocks::changesetid::ONES_CSID as MON_CSID;
-    use mononoke_types_mocks::changesetid::TWOS_CSID;
     use movers::CrossRepoMover;
     use movers::DefaultAction;
     use movers::Mover;
     use movers::Movers;
-    use mutable_counters::MutableCountersRef;
     use pushredirect::PushRedirectionConfig;
     use pushredirect::TestPushRedirectionConfig;
     use repo_blobstore::RepoBlobstoreRef;
@@ -74,10 +69,8 @@ mod tests {
     use tests_utils::drawdag::create_from_dag;
     use tests_utils::list_working_copy_utf8;
     use tests_utils::CreateCommitContext;
-    use tokio::time;
 
     use crate::back_sync_commits_to_small_repo;
-    use crate::check_dependent_systems;
     use crate::derive_bonsais_single_repo;
     use crate::find_mapping_version;
     use crate::get_large_repo_config_if_pushredirected;
@@ -164,7 +157,6 @@ mod tests {
             move_bookmark_commits_done: 0,
             phab_check_disabled: true,
             x_repo_check_disabled: true,
-            hg_sync_check_disabled: true,
             sleep_time: Duration::from_secs(1),
             dest_bookmark_name: "dest_bookmark_name".to_string(),
             commit_author: "commit_author".to_string(),
@@ -187,7 +179,6 @@ mod tests {
         let checker_flags = CheckerFlags {
             phab_check_disabled: true,
             x_repo_check_disabled: true,
-            hg_sync_check_disabled: true,
         };
         let changesets = create_from_dag(
             &ctx,
@@ -246,7 +237,6 @@ mod tests {
         let checker_flags = CheckerFlags {
             phab_check_disabled: true,
             x_repo_check_disabled: true,
-            hg_sync_check_disabled: true,
         };
         let changesets = create_from_dag(
             &ctx,
@@ -301,75 +291,6 @@ mod tests {
                 (Some(changesets["A"]), BookmarkUpdateReason::ManualMove),
             ]
         );
-        Ok(())
-    }
-
-    /*
-                        largest_id      mutable_counters value   assert
-        No action       None            None                     Error
-        Move bookmark   1               None                     Error
-        Set counter     1               1                        Ok(())
-        Move bookmark   2               1                        inifite loop -> timeout
-        Set counter     2               2                        Ok(())
-    */
-    #[mononoke::fbinit_test]
-    async fn test_hg_sync_check(fb: FacebookInit) -> Result<()> {
-        let ctx = CoreContext::test_mock(fb);
-        let repo: Repo = test_repo_factory::build_empty(ctx.fb).await?;
-        let checker_flags = CheckerFlags {
-            phab_check_disabled: true,
-            x_repo_check_disabled: true,
-            hg_sync_check_disabled: false,
-        };
-        let call_sign = None;
-        let sleep_time = Duration::from_secs(1);
-        let bookmark = create_bookmark_name("book");
-
-        assert!(
-            check_dependent_systems(&ctx, &repo, &checker_flags, HG_CSID, sleep_time, &call_sign,)
-                .await
-                .is_err()
-        );
-
-        let mut txn = repo.bookmarks().create_transaction(ctx.clone());
-        txn.create(&bookmark, MON_CSID, BookmarkUpdateReason::TestMove)?;
-        txn.commit().await.unwrap();
-        assert!(
-            check_dependent_systems(&ctx, &repo, &checker_flags, HG_CSID, sleep_time, &call_sign,)
-                .await
-                .is_err()
-        );
-
-        repo.mutable_counters()
-            .set_counter(&ctx, LATEST_REPLAYED_REQUEST_KEY, 1, None)
-            .await?;
-
-        check_dependent_systems(&ctx, &repo, &checker_flags, HG_CSID, sleep_time, &call_sign)
-            .await?;
-
-        let mut txn = repo.bookmarks().create_transaction(ctx.clone());
-        txn.update(
-            &bookmark,
-            TWOS_CSID,
-            MON_CSID,
-            BookmarkUpdateReason::TestMove,
-        )?;
-        txn.commit().await.unwrap();
-
-        let timed_out = time::timeout(
-            Duration::from_millis(2000),
-            check_dependent_systems(&ctx, &repo, &checker_flags, HG_CSID, sleep_time, &call_sign),
-        )
-        .await
-        .is_err();
-        assert!(timed_out);
-
-        repo.mutable_counters()
-            .set_counter(&ctx, LATEST_REPLAYED_REQUEST_KEY, 2, None)
-            .await?;
-
-        check_dependent_systems(&ctx, &repo, &checker_flags, HG_CSID, sleep_time, &call_sign)
-            .await?;
         Ok(())
     }
 

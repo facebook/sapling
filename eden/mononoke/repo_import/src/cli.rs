@@ -124,7 +124,6 @@ pub fn setup_import_args(import_args: ImportArgs) -> RecoveryFields {
             .additional_setup_steps_args
             .disable_phabricator_check,
         x_repo_check_disabled: import_args.disable_x_repo_check,
-        hg_sync_check_disabled: import_args.disable_hg_sync_check,
         sleep_time: Duration::from_secs(import_args.sleep_time_secs),
         dest_bookmark_name: import_args.additional_setup_steps_args.dest_bookmark,
         commit_author: import_args.commit_author,
