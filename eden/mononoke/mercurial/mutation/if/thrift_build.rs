@@ -28,8 +28,8 @@ eden/mononoke/mononoke_types/serialization/skeleton_manifest.thrift mercurial_th
 eden/mononoke/mononoke_types/serialization/test_manifest.thrift mercurial_thrift->mononoke_types_serialization //eden/mononoke/mononoke_types/serialization:mononoke_types_serialization-rust
 eden/mononoke/mononoke_types/serialization/time.thrift mercurial_thrift->mononoke_types_serialization //eden/mononoke/mononoke_types/serialization:mononoke_types_serialization-rust
 eden/mononoke/mononoke_types/serialization/unodes.thrift mercurial_thrift->mononoke_types_serialization //eden/mononoke/mononoke_types/serialization:mononoke_types_serialization-rust
-thrift/annotation/rust.thrift mercurial_thrift->mononoke_types_serialization->rust //thrift/annotation:rust-rust
-thrift/annotation/scope.thrift mercurial_thrift->mononoke_types_serialization->rust->scope //thrift/annotation:scope-rust
+thrift/annotation/rust.thrift rust //thrift/annotation:rust-rust
+thrift/annotation/scope.thrift rust->scope //thrift/annotation:scope-rust
 ";
 #[rustfmt::skip]
 fn main() {

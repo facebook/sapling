@@ -6,14 +6,17 @@
  */
 
 include "eden/mononoke/mercurial/types/if/mercurial_thrift.thrift"
+include "thrift/annotation/rust.thrift"
 
 /// Additional property that can be associated with some data type.
+@rust.Exhaustive
 struct ExtraProperty {
   1: string key;
   2: string value;
-} (rust.exhaustive)
+}
 
 /// Record of a Mercurial mutation operation (e.g. amend or rebase).
+@rust.Exhaustive
 struct HgMutationEntry {
   /// The commit that resulted from the mutation operation.
   1: mercurial_thrift.HgNodeHash successor;
@@ -36,7 +39,7 @@ struct HgMutationEntry {
   7: i32 timezone;
   /// Extra information about this mutation operation.
   8: list<ExtraProperty> extra;
-} (rust.exhaustive)
+}
 
 /// Code version used in memcache keys.  This should be changed whenever
 /// the layout of memcache entries is changed in an incompatible way.
@@ -44,10 +47,12 @@ struct HgMutationEntry {
 /// in the JustKnob scm/mononoke_memcache_sitevers:hg_mutation_store.
 const i32 MC_CODEVER = 0;
 
-typedef i32 RepoId (rust.newtype)
+@rust.NewType
+typedef i32 RepoId
 
 /// Struct corresponding to a mutation records scoped to a repository and
 /// changeset ID
+@rust.Exhaustive
 struct HgMutationCacheEntry {
   /// The mutation entries that are part of this cache record
   1: list<HgMutationEntry> mutation_entries;
@@ -55,4 +60,4 @@ struct HgMutationCacheEntry {
   2: RepoId repo_id;
   /// The ID of the changeset corresponding to the mutation entries
   3: mercurial_thrift.HgNodeHash changeset_id;
-} (rust.exhaustive)
+}
