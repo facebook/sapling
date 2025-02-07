@@ -18,7 +18,9 @@
 include "eden/mononoke/mononoke_types/serialization/id.thrift"
 include "eden/mononoke/mononoke_types/serialization/path.thrift"
 include "eden/mononoke/mononoke_types/serialization/bonsai.thrift"
+include "thrift/annotation/rust.thrift"
 
+@rust.Exhaustive
 struct FsnodeFile {
   1: id.ContentId content_id;
   2: bonsai.FileType file_type;
@@ -26,13 +28,15 @@ struct FsnodeFile {
   3: i64 size;
   4: id.Sha1 content_sha1;
   5: id.Sha256 content_sha256;
-} (rust.exhaustive)
+}
 
+@rust.Exhaustive
 struct FsnodeDirectory {
   1: id.FsnodeId id;
   2: FsnodeSummary summary;
-} (rust.exhaustive)
+}
 
+@rust.Exhaustive
 struct FsnodeSummary {
   1: id.Sha1 simple_format_sha1;
   2: id.Sha256 simple_format_sha256;
@@ -42,7 +46,7 @@ struct FsnodeSummary {
   5: i64 child_dirs_count;
   6: i64 descendant_files_count;
   7: i64 descendant_files_total_size;
-} (rust.exhaustive)
+}
 
 union FsnodeEntry {
   1: FsnodeFile File;
@@ -59,12 +63,12 @@ union FsnodeEntry {
 // Fsnode metadata includes summary information about the content ID of
 // files and manifests, and the number of files and sub-directories within
 // directories.
+@rust.Exhaustive
 struct Fsnode {
   1: map_MPathElement_FsnodeEntry_7103 subentries;
   2: FsnodeSummary summary;
-} (rust.exhaustive)
+}
 
 // The following were automatically generated and may benefit from renaming.
-typedef map<path.MPathElement, FsnodeEntry> (
-  rust.type = "sorted_vector_map::SortedVectorMap",
-) map_MPathElement_FsnodeEntry_7103
+@rust.Type{name = "sorted_vector_map::SortedVectorMap"}
+typedef map<path.MPathElement, FsnodeEntry> map_MPathElement_FsnodeEntry_7103

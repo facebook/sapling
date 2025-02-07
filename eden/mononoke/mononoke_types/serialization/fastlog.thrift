@@ -16,6 +16,7 @@
 //! ------------
 
 include "eden/mononoke/mononoke_types/serialization/id.thrift"
+include "thrift/annotation/rust.thrift"
 
 // Structure that holds a commit graph, usually a history of a file
 // or a directory hence the name. Semantically it stores list of
@@ -54,15 +55,18 @@ include "eden/mononoke/mononoke_types/serialization/id.thrift"
 //
 // Note that offset might point to a commit in a next FastlogBatch or even
 // point to batch outside of all previous_batches.
+@rust.Exhaustive
 struct FastlogBatch {
   1: list<CompressedHashAndParents> latest;
   2: list<id.FastlogBatchId> previous_batches;
-} (rust.exhaustive)
+}
 
-typedef i32 ParentOffset (rust.newtype)
+@rust.NewType
+typedef i32 ParentOffset
 
+@rust.Exhaustive
 struct CompressedHashAndParents {
   1: id.ChangesetId cs_id;
   # Offsets can be negative!
   2: list<ParentOffset> parent_offsets;
-} (rust.exhaustive)
+}
