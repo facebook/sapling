@@ -6,14 +6,16 @@
  */
 
 include "eden/mononoke/mononoke_types/serialization/id.thrift"
+include "thrift/annotation/rust.thrift"
 
 # Memcache constants. Should be change when we want to invalidate memcache
 # entries
 const i32 MC_CODEVER = 0;
 const i32 MC_SITEVER = 0;
 
+@rust.Exhaustive
 struct BonsaiSvnrevMappingEntry {
   1: i32 repo_id;
   2: id.ChangesetId bcs_id;
   3: i64 svnrev;
-} (rust.exhaustive)
+}
