@@ -400,7 +400,7 @@ def main(args):
 
     command_list = DEFAULT_COMMAND_LIST
     if args.commands is not None:
-        command_list = args.commands.split(",")
+        command_list = args.commands
 
     extract_docs_from_sapling = True
     rst_to_md = True
