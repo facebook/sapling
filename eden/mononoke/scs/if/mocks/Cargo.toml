@@ -29,6 +29,9 @@ futures = { version = "0.3.30", features = ["async-await", "compat"] }
 megarepo_configs = { version = "0.1.0", path = "../../../megarepo_api/if/megarepo_configs" }
 megarepo_configs_clients = { version = "0.1.0", path = "../../../megarepo_api/if/megarepo_configs/clients" }
 megarepo_configs_mocks = { version = "0.1.0", path = "../../../megarepo_api/if/megarepo_configs/mocks" }
+rust = { version = "0.0.1+unstable", git = "https://github.com/facebook/fbthrift.git", branch = "main" }
+rust_clients = { version = "0.0.1+unstable", git = "https://github.com/facebook/fbthrift.git", branch = "main" }
+rust_mocks = { version = "0.0.1+unstable", git = "https://github.com/facebook/fbthrift.git", branch = "main" }
 source_control__clients = { package = "source_control_clients", version = "0.1.0", path = "../clients" }
 source_control__types = { package = "source_control", version = "0.1.0", path = ".." }
 thrift = { version = "0.0.1+unstable", git = "https://github.com/facebook/fbthrift.git", branch = "main" }

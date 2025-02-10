@@ -9,6 +9,7 @@ include "fb303/thrift/fb303_core.thrift"
 include "thrift/annotation/thrift.thrift"
 include "eden/mononoke/megarepo_api/if/megarepo_configs.thrift"
 include "eden/mononoke/derived_data/if/derived_data_type.thrift"
+include "thrift/annotation/rust.thrift"
 
 namespace cpp2 facebook.scm.service
 namespace php SourceControlService
@@ -16,11 +17,11 @@ namespace py scm.service.thrift.source_control
 namespace py3 scm.service.thrift
 namespace java.swift com.facebook.scm.service
 
-typedef binary (rust.type = "Bytes") binary_bytes
-typedef binary small_binary (
-  rust.newtype,
-  rust.type = "smallvec::SmallVec<[u8; 24]>",
-)
+@rust.Type{name = "Bytes"}
+typedef binary binary_bytes
+@rust.NewType
+@rust.Type{name = "smallvec::SmallVec<[u8; 24]>"}
+typedef binary small_binary
 typedef derived_data_type.DerivedDataType DerivedDataType
 
 struct DateTime {
@@ -34,10 +35,11 @@ struct DateTime {
 ///
 /// Specifiers are used in each call to identify entities within source control.
 
+@rust.Ord
 struct RepoSpecifier {
   /// The name of the repository.
   1: string name;
-} (rust.ord)
+}
 
 /// The schemes by which commits can be identified.
 enum CommitIdentityScheme {
@@ -81,6 +83,7 @@ struct EphemeralBonsai {
 ///    - In Rust: `faster_hex::hex_decode`
 ///    - In Python: `bytes.fromhex`
 ///    - In PHP/Hack: `Str::hex2bin`
+@rust.Ord
 union CommitId {
   /// Commit identified by the hash of Mononoke's bonsai changeset.
   1: binary bonsai;
@@ -99,15 +102,16 @@ union CommitId {
 
   /// Bonsai commit stored in an ephemeral bubble
   6: EphemeralBonsai ephemeral_bonsai;
-} (rust.ord)
+}
 
 /// Specified a commit within a repo.
+@rust.Ord
 struct CommitSpecifier {
   /// The repository that contains the commit.
   1: RepoSpecifier repo;
 
   2: CommitId id;
-} (rust.ord)
+}
 
 /// The UTF-8 path of the file or directory.
 typedef string Path
@@ -1619,6 +1623,7 @@ struct CreateReposParams {
 struct CreateReposToken {}
 
 /// Synchronization target
+@rust.Ord
 struct MegarepoTarget {
   /// Mononoke repository id, where the target is located
   /// At least one of repo/repo_id must be set in queries both are set in responses
@@ -1628,7 +1633,7 @@ struct MegarepoTarget {
   /// Repo
   /// At least one of repo/repo_id must be set in queries both are set in responses
   3: optional RepoSpecifier repo;
-} (rust.ord)
+}
 
 /// A single version of synchronization config for a target,
 /// bundling together all of the corresponding sources
@@ -2236,12 +2241,13 @@ struct CreateGitTagResponse {
 }
 
 /// Specifies a commit cloud workspace
+@rust.Ord
 struct WorkspaceSpecifier {
   /// The repository associated with the workspace.
   1: RepoSpecifier repo;
   /// Workspace name (user/<unixname>/<workspace_name>)
   2: string name;
-} (rust.ord)
+}
 
 /// Information about a commit cloud workspace
 struct WorkspaceInfo {
@@ -2451,6 +2457,10 @@ stateful client exception HookRejectionsException {
 
 /// Service Definition
 
+@rust.RequestContext
+@thrift.DeprecatedUnvalidatedAnnotations{
+  items = {"sr.service_name": "mononoke-scs-server"},
+}
 service SourceControlService extends fb303_core.BaseService {
   /// Global methods
   /// ==============
@@ -3217,4 +3227,4 @@ service SourceControlService extends fb303_core.BaseService {
     3: OverloadError overload_error,
     4: PollError poll_error,
   );
-} (rust.request_context, sr.service_name = "mononoke-scs-server")
+}
