@@ -6,7 +6,6 @@
  */
 
 use anyhow::bail;
-use anyhow::Context;
 use anyhow::Result;
 use async_trait::async_trait;
 use blobstore::Blobstore;
@@ -307,7 +306,6 @@ impl Loadable for GitTreeId {
     }
 }
 
-#[allow(dead_code)]
 pub async fn get_git_file_changes<B: Blobstore + Clone + 'static>(
     blobstore: &B,
     filestore_config: FilestoreConfig,
@@ -364,13 +362,11 @@ pub async fn get_git_file_changes<B: Blobstore + Clone + 'static>(
         .await
 }
 
-#[allow(dead_code)]
-async fn derive_git_tree<B: Blobstore + Clone + 'static>(
+pub(crate) async fn derive_git_tree<B: Blobstore + Clone + 'static>(
     ctx: &CoreContext,
     blobstore: B,
     parents: Vec<GitTreeId>,
     changes: Vec<(NonRootMPath, Option<GitLeaf>)>,
-    validate_stored_tree: bool,
 ) -> Result<GitTreeId> {
     let tree_id = derive_manifest(
         ctx.clone(),
@@ -388,28 +384,8 @@ async fn derive_git_tree<B: Blobstore + Clone + 'static>(
                     let tree: Tree = GitTree::new(members).into();
                     let (raw_tree_bytes, git_hash) =
                         git_object_bytes_with_hash(&Object::Tree(tree))?;
-                    if validate_stored_tree {
-                        // We don't need to store the raw git tree because it already exists. Validate that the existing tree
-                        // is present in the blobstore with the same hash as we computed. If not, then it means that we computed
-                        // a Git tree that is different than the stored raw tree. This could be due to a bug so we need to
-                        // fail before storing the tree
-                        fetch_non_blob_git_object(&ctx, &blobstore, git_hash.as_ref())
-                            .await
-                            .with_context(|| {
-                                format!(
-                                    "Raw Git tree with hash {} should have been present already",
-                                    git_hash.to_hex()
-                                )
-                            })?;
-                    } else {
-                        upload_non_blob_git_object(
-                            &ctx,
-                            &blobstore,
-                            git_hash.as_ref(),
-                            raw_tree_bytes,
-                        )
-                        .await?
-                    }
+                    upload_non_blob_git_object(&ctx, &blobstore, git_hash.as_ref(), raw_tree_bytes)
+                        .await?;
                     Ok(((), GitTreeId(git_hash)))
                 }
             }

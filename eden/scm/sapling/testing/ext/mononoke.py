@@ -925,7 +925,6 @@ scuba_table = "file://{}/derived_data_scuba.json"
             "fsnodes",
             "git_commits",
             "git_delta_manifests_v2",
-            "git_trees",
             "unodes",
             "hgchangesets",
             "hg_augmented_manifests",

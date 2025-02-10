@@ -48,7 +48,7 @@ use gix_hash::ObjectId;
 use gix_object::Kind;
 use gix_object::Object;
 use linked_hash_map::LinkedHashMap;
-use manifest::bonsai_diff;
+use manifest::find_intersection_of_diffs;
 use manifest::BonsaiDiffFileChange;
 use mononoke_macros::mononoke;
 use mononoke_types::ChangesetId;
@@ -288,21 +288,16 @@ pub async fn upload_git_tree_recursively<Uploader: GitUploader, Reader: GitReade
     upload_git_object(ctx, uploader.clone(), reader.clone(), tree_id).await?;
     let tree = GitTree::<true>(*tree_id);
     // Then upload all subtrees and blobs within it
-    bonsai_diff(ctx.clone(), reader.clone(), tree, HashSet::new())
-        .map_ok(|diff| {
-            cloned!(ctx, uploader, reader);
+    find_intersection_of_diffs(ctx.clone(), reader.clone(), tree, vec![])
+        .map_ok(|(_, entry)| {
+            cloned!(uploader, reader);
             async move {
-                mononoke::spawn_task(async move {
-                    use BonsaiDiffFileChange::*;
-                    match diff {
-                        Changed(_, (_, GitLeaf(oid))) | ChangedReusedId(_, (_, GitLeaf(oid))) => {
-                            upload_git_object(&ctx, uploader, reader, &oid).await
-                        }
-                        _ => Ok(()),
+                match entry {
+                    manifest::Entry::Tree(GitTree(oid))
+                    | manifest::Entry::Leaf((_, GitLeaf(oid))) => {
+                        upload_git_object(ctx, uploader, reader, &oid).await
                     }
-                })
-                .await??;
-                anyhow::Ok(())
+                }
             }
         })
         .try_buffer_unordered(100)
@@ -953,13 +948,32 @@ pub async fn import_tree_as_single_bonsai_changeset<Uploader: GitUploader>(
     extracted_commit.metadata.parents = Vec::new();
 
     let diff = extracted_commit.diff_root(ctx, &reader, prefs.submodules);
-    let file_changes = find_file_changes(ctx, &prefs.lfs, reader, uploader.clone(), diff).await?;
+    let file_changes =
+        find_file_changes(ctx, &prefs.lfs, reader.clone(), uploader.clone(), diff).await?;
 
-    // Before generating the corresponding changeset at Mononoke end, upload the raw git commit.
-    uploader
-        .upload_object(ctx, git_cs_id, extracted_commit.original_commit)
-        .await
-        .with_context(|| format_err!("Failed to upload raw git commit {}", git_cs_id))?;
+    // Before generating the corresponding changeset at Mononoke end, upload the raw git commit and raw git tree.
+    upload_git_object_by_content(
+        ctx,
+        uploader.clone(),
+        &git_cs_id,
+        extracted_commit.original_commit.clone(),
+    )
+    .await
+    .with_context(|| format_err!("Failed to upload raw git commit {}", git_cs_id))?;
+
+    upload_git_tree_recursively(
+        ctx,
+        uploader.clone(),
+        reader.clone(),
+        &extracted_commit.tree_oid,
+    )
+    .await
+    .with_context(|| {
+        format_err!(
+            "Failed to upload git trees corresponding to commit {}",
+            git_cs_id
+        )
+    })?;
 
     uploader
         .generate_intermediate_changeset_for_commit(

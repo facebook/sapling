@@ -5,8 +5,6 @@
  * GNU General Public License version 2.
  */
 
-use std::io::Write;
-
 use anyhow::anyhow;
 use anyhow::bail;
 use anyhow::format_err;
@@ -20,20 +18,27 @@ use derived_data_manager::BonsaiDerivable;
 use derived_data_manager::DerivableType;
 use derived_data_manager::DerivationContext;
 use derived_data_service_if as thrift;
-use filestore::hash_bytes;
-use filestore::Sha1IncrementalHasher;
+use futures::stream;
+use futures::StreamExt;
+use futures::TryStreamExt;
 use gix_actor::Signature;
+use gix_hash::ObjectId;
 use gix_object::Commit;
-use gix_object::WriteTo;
+use gix_object::Object;
+use mononoke_types::hash::GitSha1;
 use mononoke_types::BonsaiChangeset;
 use mononoke_types::ChangesetId;
 use mononoke_types::DateTime;
 #[allow(unused_imports)]
 use tokio::runtime::Runtime;
 
+use crate::fetch_non_blob_git_object;
+use crate::git_object_bytes_with_hash;
+use crate::tree::derive_git_tree;
+use crate::tree::get_git_file_changes;
 use crate::upload_non_blob_git_object;
+use crate::GitTreeId;
 use crate::MappedGitCommitId;
-use crate::TreeHandle;
 
 fn get_signature(id_str: &str, time: &DateTime) -> Result<Signature> {
     let (name, email) = get_name_and_email(id_str)?;
@@ -64,7 +69,7 @@ fn get_name_and_email<'a>(input: &'a str) -> Result<(&'a str, &'a str)> {
 impl BonsaiDerivable for MappedGitCommitId {
     const VARIANT: DerivableType = DerivableType::GitCommits;
 
-    type Dependencies = dependencies![TreeHandle];
+    type Dependencies = dependencies![];
     type PredecessorDependencies = dependencies![];
 
     /// Derives a Git commit for a given Bonsai changeset. The mapping is recorded in bonsai_git_mapping and as a result
@@ -79,29 +84,6 @@ impl BonsaiDerivable for MappedGitCommitId {
         if bonsai.is_snapshot() {
             bail!("Can't derive MappedGitCommitId for snapshot")
         }
-        let tree_handle = derivation_ctx
-            .fetch_dependency::<TreeHandle>(ctx, bonsai.get_changeset_id())
-            .await?;
-        let commit_tree_id = gix_hash::oid::try_from_bytes(tree_handle.oid().as_ref())
-            .with_context(|| {
-                format_err!(
-                    "Failure while converting Git hash {} into Git Object ID",
-                    tree_handle.oid()
-                )
-            })?;
-        let commit_parent_ids = parents
-            .into_iter()
-            .map(|c| {
-                gix_hash::oid::try_from_bytes(c.oid().as_ref())
-                    .with_context(|| {
-                        format_err!(
-                            "Failure while converting Git hash {} into Git Object ID",
-                            c.oid()
-                        )
-                    })
-                    .map(|oid| oid.into())
-            })
-            .collect::<Result<Vec<_>>>()?;
         let author = get_signature(bonsai.author(), bonsai.author_date())?;
         // Git always needs a committer whereas Mononoke may or may not have a separate committer. If the Mononoke
         // commit has no committer, then use an empty Git signature. This way converting the git commit back to
@@ -114,28 +96,63 @@ impl BonsaiDerivable for MappedGitCommitId {
         } else {
             Signature::default()
         };
+        let message = bonsai.message().into();
+        let commit_parent_ids = parents
+            .into_iter()
+            .map(|c| {
+                gix_hash::oid::try_from_bytes(c.oid().as_ref())
+                    .with_context(|| {
+                        format_err!(
+                            "Failure while converting Git hash {} into Git Object ID",
+                            c.oid()
+                        )
+                    })
+                    .map(|oid| oid.into())
+            })
+            .collect::<Result<Vec<ObjectId>>>()?;
+        let parent_tree_ids = stream::iter(commit_parent_ids.clone())
+            .map(anyhow::Ok)
+            .map_ok(|oid| {
+                let blobstore = derivation_ctx.blobstore().clone();
+                async move {
+                    let git_commit = fetch_non_blob_git_object(ctx, &blobstore, oid.as_ref())
+                        .await
+                        .with_context(|| {
+                            format!(
+                                "Git commit with hash {} should have been present already",
+                                oid.to_hex()
+                            )
+                        })?
+                        .try_into_commit()
+                        .map_err(|_| anyhow::anyhow!("Error converting commit into Git object"))?;
+                    Ok(GitTreeId(git_commit.tree))
+                }
+            })
+            .try_buffered(10)
+            .try_collect::<Vec<_>>()
+            .await?;
+        let blobstore = derivation_ctx.blobstore().clone();
+        let file_changes =
+            get_git_file_changes(&blobstore, derivation_ctx.filestore_config(), ctx, bonsai)
+                .await?;
+
+        let commit_tree_id = derive_git_tree(ctx, blobstore, parent_tree_ids, file_changes).await?;
+
         let git_commit = Commit {
-            tree: commit_tree_id.into(),
+            tree: commit_tree_id.0,
             parents: commit_parent_ids.into(),
             author,
             committer,
             encoding: None, // always UTF-8 from Mononoke
-            message: bonsai.message().into(),
+            message,
             extra_headers: Vec::new(), // These are git specific headers. Will be empty for converted commits
         };
         // Convert the commit into raw bytes
-        let mut raw_commit_bytes = git_commit.loose_header().into_vec();
-        git_commit.write_to(raw_commit_bytes.by_ref())?;
-        let git_hash = hash_bytes(Sha1IncrementalHasher::new(), raw_commit_bytes.as_slice());
-        let oid = gix_hash::oid::try_from_bytes(git_hash.as_ref()).with_context(|| {
-            format_err!(
-                "Failure while converting hash {} into Git Object Id",
-                git_hash
-            )
-        })?;
+        let (raw_commit_bytes, oid) = git_object_bytes_with_hash(&Object::Commit(git_commit))?;
         // Store the converted Git commit
-        upload_non_blob_git_object(ctx, &derivation_ctx.blobstore(), oid, raw_commit_bytes).await?;
-        Ok(Self::new(git_hash.into()))
+        upload_non_blob_git_object(ctx, &derivation_ctx.blobstore(), &oid, raw_commit_bytes)
+            .await?;
+        GitSha1::from_object_id(&oid).map(Self::new)
     }
 
     async fn store_mapping(

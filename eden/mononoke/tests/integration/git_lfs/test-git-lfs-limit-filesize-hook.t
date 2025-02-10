@@ -22,7 +22,7 @@
   A=aa53d24251ff3f54b1b2c29ae02826701b2abeb0079f1bb13b8434b54cd87675
   B=f8c75e41a0c4d29281df765f39de47bca1dcadfdc55ada4ccc2f6df567201658
   C=198d25da38c153f3feecddeee7e49fe3fa16d7e0085ea919c183372bf42a66d4
-  $ mononoke_admin derived-data -R repo derive -T git_trees -T git_commits -T git_delta_manifests_v2 -T unodes --all-bookmarks
+  $ mononoke_admin derived-data -R repo derive -T git_commits -T git_delta_manifests_v2 -T unodes --all-bookmarks
   $ mononoke_admin git-symref -R repo create --symref-name HEAD --ref-name master_bookmark --ref-type branch
   Symbolic ref HEAD pointing to branch master_bookmark has been added
 

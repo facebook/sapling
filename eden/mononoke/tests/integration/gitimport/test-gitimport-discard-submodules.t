@@ -138,18 +138,10 @@
   FileChanges:
   	 ADDED/MODIFIED: .gitmodules 2b6c6b2889a7b56e04e646b89d236f31552baf7271957b807b84cb0b77fa9e1d
   
-# Note: with the current git-bundle implementation, we cannot generate a bundle from this at the moment
+# Generate Git Bundle for the submodule discarded repo
   $ mononoke_admin git-bundle create from-repo -R repo --output-location "$BUNDLE_PATH"
-  Error: Error in generating pack item stream
-  
-  Caused by:
-      0: Error while calculating object count
-      *: a batch dependency has not been derived (glob) (?)
-      *: failed to derive batch dependencies (glob) (?)
-      1: Error in deriving RootGitDeltaManifestV2Id for changeset ChangesetId(Blake2(4cd77220f6dcf9154b8cd4dc0f33b72b19a765d73a770cce612ee094191e7d9e))
-      2: failed to derive dependent types
-      3: failed to derive dependent types
-      *: failed to derive git_trees batch (start:032cd4dce0406f1c1dd1362b6c3c9f9bdfa82f2fc5615e237a890be4fe08b044, end:4cd77220f6dcf9154b8cd4dc0f33b72b19a765d73a770cce612ee094191e7d9e) (glob)
-      *: Raw Git tree with hash fc59e10f3c37ad53e0af6882e382f0169eae51ac should have been present already (glob)
-      *: The object corresponding to object ID fc59e10f3c37ad53e0af6882e382f0169eae51ac or its packfile item does not exist in the data store (glob)
-  [1]
+
+# Clone the repo from the bundle
+  $ cd $TESTTMP
+  $ git clone "$BUNDLE_PATH" repo_from_bundle
+  Cloning into 'repo_from_bundle'...
