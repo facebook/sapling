@@ -552,6 +552,18 @@ impl From<EdenapiFileType> for FileType {
     }
 }
 
+impl From<FileType> for gix_object::tree::EntryKind {
+    fn from(ft: FileType) -> Self {
+        use gix_object::tree::EntryKind::*;
+        match ft {
+            FileType::Regular => Blob,
+            FileType::Executable => BlobExecutable,
+            FileType::Symlink => Link,
+            FileType::GitSubmodule => Commit,
+        }
+    }
+}
+
 impl fmt::Display for FileType {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         let s = match self {

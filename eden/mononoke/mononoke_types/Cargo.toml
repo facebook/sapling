@@ -34,6 +34,7 @@ futures = { version = "0.3.30", features = ["async-await", "compat"] }
 futures_watchdog = { version = "0.1.0", path = "../common/futures_watchdog" }
 gix-date = "0.9.2"
 gix-hash = "0.15.1"
+gix-object = "0.46.0"
 itertools = "0.14.0"
 lazy_static = "1.4"
 lfs_protocol = { version = "0.1.0", path = "../lfs_protocol" }

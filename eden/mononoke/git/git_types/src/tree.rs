@@ -12,9 +12,12 @@ use blobstore::Blobstore;
 use blobstore::Loadable;
 use blobstore::LoadableError;
 use context::CoreContext;
+use filestore::FetchKey;
+use filestore::FilestoreConfig;
 use futures::stream;
 use futures::stream::BoxStream;
 use futures::StreamExt;
+use futures::TryStreamExt;
 use futures_watchdog::WatchdogExt;
 use gix_hash::ObjectId;
 use gix_object::tree;
@@ -23,12 +26,20 @@ use gix_object::WriteTo;
 use manifest::Entry;
 use manifest::Manifest;
 use mononoke_types::hash::GitSha1;
+use mononoke_types::hash::RichGitSha1;
+use mononoke_types::BasicFileChange;
+use mononoke_types::BonsaiChangeset;
+use mononoke_types::ContentId;
 use mononoke_types::FileType;
+use mononoke_types::GitLfs;
 use mononoke_types::MPathElement;
+use mononoke_types::NonRootMPath;
 use mononoke_types::SortedVectorTrieMap;
 use sorted_vector_map::SortedVectorMap;
 
+use crate::errors::MononokeGitError;
 use crate::fetch_non_blob_git_object;
+use crate::git_lfs::generate_and_store_git_lfs_pointer;
 use crate::GitIdentifier;
 
 /// An id of a Git tree object.
@@ -48,6 +59,56 @@ impl GitTreeId {
 pub struct GitLeaf(pub ObjectId, pub tree::EntryMode);
 
 impl GitLeaf {
+    async fn oid_from_content_id<B: Blobstore>(
+        ctx: &CoreContext,
+        blobstore: &B,
+        content_id: ContentId,
+    ) -> Result<ObjectId> {
+        let key = FetchKey::Canonical(content_id);
+        let metadata = filestore::get_metadata(blobstore, ctx, &key)
+            .await?
+            .ok_or(MononokeGitError::ContentMissing(key))?;
+        metadata.git_sha1.to_object_id()
+    }
+
+    pub async fn new<B: Blobstore + Clone>(
+        ctx: &CoreContext,
+        blobstore: &B,
+        file_change: &BasicFileChange,
+    ) -> Result<Self> {
+        let file_type = file_change.file_type();
+
+        let oid = if file_type == FileType::GitSubmodule {
+            let bytes =
+                filestore::fetch_concat_exact(blobstore, ctx, file_change.content_id(), 20).await?;
+            gix_hash::oid::try_from_bytes(&bytes)?.to_owned()
+        } else {
+            Self::oid_from_content_id(ctx, blobstore, file_change.content_id()).await?
+        };
+        let entry_kind: tree::EntryKind = file_type.into();
+        Ok(Self(oid, entry_kind.into()))
+    }
+
+    pub fn from_oid_and_file_type(oid: RichGitSha1, file_type: FileType) -> Result<Self> {
+        let oid = oid.to_object_id()?;
+        let entry_kind: tree::EntryKind = file_type.into();
+        Ok(Self(oid, entry_kind.into()))
+    }
+
+    pub async fn from_content_id_and_file_type<B: Blobstore>(
+        ctx: &CoreContext,
+        blobstore: &B,
+        content_id: ContentId,
+        file_type: FileType,
+    ) -> Result<Self> {
+        if file_type == FileType::GitSubmodule {
+            anyhow::bail!("Non-canonical LFS pointer blob cannot be a submodule")
+        }
+        let oid = Self::oid_from_content_id(ctx, blobstore, content_id).await?;
+        let entry_kind: tree::EntryKind = file_type.into();
+        Ok(Self(oid, entry_kind.into()))
+    }
+
     pub fn oid(&self) -> ObjectId {
         self.0
     }
@@ -225,4 +286,61 @@ impl Loadable for GitTreeId {
             .try_into()
             .map_err(LoadableError::Error)
     }
+}
+
+#[allow(dead_code)]
+pub async fn get_git_file_changes<B: Blobstore + Clone + 'static>(
+    blobstore: &B,
+    filestore_config: FilestoreConfig,
+    ctx: &CoreContext,
+    bcs: BonsaiChangeset,
+) -> Result<Vec<(NonRootMPath, Option<GitLeaf>)>> {
+    let file_changes_stream = stream::iter(bcs.into_mut().file_changes).map(Ok);
+    file_changes_stream
+        .map_ok(|(mpath, file_change)| async move {
+            match file_change.simplify() {
+                Some(basic_file_change) => match basic_file_change.git_lfs() {
+                    // File is not LFS file
+                    GitLfs::FullContent => Ok((
+                        mpath,
+                        Some(GitLeaf::new(ctx, blobstore, basic_file_change).await?),
+                    )),
+                    // No pointer content provided: we're generatic spec conformant canonical
+                    // pointer
+                    GitLfs::GitLfsPointer {
+                        non_canonical_pointer: None,
+                    } => {
+                        let oid = generate_and_store_git_lfs_pointer(
+                            blobstore,
+                            filestore_config,
+                            ctx,
+                            basic_file_change,
+                        )
+                        .await?;
+                        let leaf =
+                            GitLeaf::from_oid_and_file_type(oid, basic_file_change.file_type())?;
+                        Ok((mpath, Some(leaf)))
+                    }
+                    // Non canonical LFS pointer provided - let's use it as is
+                    GitLfs::GitLfsPointer {
+                        non_canonical_pointer: Some(non_canonical_pointer),
+                    } => Ok((
+                        mpath,
+                        Some(
+                            GitLeaf::from_content_id_and_file_type(
+                                ctx,
+                                blobstore,
+                                non_canonical_pointer,
+                                basic_file_change.file_type(),
+                            )
+                            .await?,
+                        ),
+                    )),
+                },
+                None => Ok((mpath, None)),
+            }
+        })
+        .try_buffer_unordered(100)
+        .try_collect()
+        .await
 }
