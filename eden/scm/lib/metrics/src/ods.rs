@@ -16,22 +16,33 @@ use sysutil::hostname;
 
 struct OBCClientWrapper {
     client: Arc<OBCClient>,
-    hostname: String,
+    entity_keys: Vec<String>,
 }
 
 impl OBCClientWrapper {
     fn new(client: Arc<OBCClient>) -> Self {
         let hostname = hostname().to_string();
-        OBCClientWrapper { client, hostname }
+        let remote_execution_worker = std::env::var("REMOTE_EXECUTION_WORKER").ok();
+        let entity_keys = if let Some(worker) = remote_execution_worker {
+            vec![hostname.clone(), format!("{}:{}", hostname, worker)]
+        } else {
+            vec![hostname]
+        };
+        OBCClientWrapper {
+            client,
+            entity_keys,
+        }
     }
 
     fn bump_entity_key_agg(&self, name: &str, value: i64) {
-        let _ = self.client.bump_entity_key_agg(
-            &self.hostname,
-            name,
-            AggValue::Sum(value as f64),
-            None,
-        );
+        for entity_key in &self.entity_keys {
+            let _ = self.client.bump_entity_key_agg(
+                entity_key,
+                name,
+                AggValue::Sum(value as f64),
+                None,
+            );
+        }
     }
 }
 
