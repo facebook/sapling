@@ -30,7 +30,6 @@ use futures::stream::Stream;
 use futures::stream::StreamExt;
 use futures::stream::TryStreamExt;
 use futures::TryFutureExt;
-use mononoke_macros::mononoke;
 use scs_client_raw::thrift;
 use scs_client_raw::ScsClient;
 use source_control::FileChunk;
@@ -591,9 +590,7 @@ async fn archive_writer<'a, 'b>(
     // throwaway channel (so we don't need to use optional and overcomplicate code later)
     #[allow(unused_assignments)]
     let (mut tx, mut rx) = mpsc::channel(WRITER_CHUNK_BUFFER_SIZE);
-    let mut fut = Box::new(mononoke::spawn_task(
-        async move { std::io::Result::Ok(archive) },
-    ));
+    let mut fut = Box::new(tokio::spawn(async move { std::io::Result::Ok(archive) }));
 
     while let Some((file_metadata, chunk)) = receiver.recv().await {
         if last_path.as_ref() != Some(&file_metadata.path) {
@@ -620,7 +617,7 @@ async fn archive_writer<'a, 'b>(
                     }
                 }
 
-                fut = Box::new(mononoke::spawn_task(async move {
+                fut = Box::new(tokio::spawn(async move {
                     archive
                         .append_data(
                             &mut header,
@@ -656,12 +653,11 @@ async fn filesystem_writer<'a, 'b>(
 
     // channel with all pending file writes, once it's empty we finished all the writes
     let (file_writes_tx, file_writes_rx) = mpsc::channel(CONCURRENT_FILE_WRITES);
-    let file_writes: tokio::task::JoinHandle<std::result::Result<(), anyhow::Error>> =
-        mononoke::spawn_task(
-            ReceiverStream::new(file_writes_rx)
-                .map(Ok)
-                .try_for_each(|fut| async move { fut.await? }),
-        );
+    let file_writes: tokio::task::JoinHandle<std::result::Result<(), anyhow::Error>> = tokio::spawn(
+        ReceiverStream::new(file_writes_rx)
+            .map(Ok)
+            .try_for_each(|fut| async move { fut.await? }),
+    );
 
     while let Some((file_metadata, chunk)) = receiver.recv().await {
         if last_path.as_ref() != Some(&file_metadata.path) {
@@ -696,7 +692,7 @@ async fn filesystem_write_file<'a, 'b>(
     if file_metadata.entry_type == thrift::EntryType::LINK {
         use std::ffi::OsStr;
         use std::os::unix::ffi::OsStrExt;
-        let fut = Box::new(mononoke::spawn_task(async move {
+        let fut = Box::new(tokio::spawn(async move {
             let chunks: Vec<Vec<u8>> = ReceiverStream::new(chunks_rx).collect().await;
             let data = chunks.into_iter().flatten().collect::<Vec<u8>>();
             tokio::fs::symlink(OsStr::from_bytes(data.as_slice()), &file_metadata.path).await?;
@@ -709,7 +705,7 @@ async fn filesystem_write_file<'a, 'b>(
     let out_file = tokio::fs::File::create(&file_metadata.path).await?;
     // Create a buffered writer for the file
     let mut writer = BufWriter::new(out_file);
-    let fut = Box::new(mononoke::spawn_task(async move {
+    let fut = Box::new(tokio::spawn(async move {
         while let Some(chunk) = chunks_rx.recv().await {
             writer.write_all(&chunk).await?;
         }
@@ -815,8 +811,7 @@ pub(super) async fn run(app: ScscApp, args: CommandArgs) -> Result<()> {
 
     let (tx, rx) = mpsc::channel(READY_TO_DOWNLOAD_FILE_STREAM_BUFFER_SIZE);
     let (downloader_tx, downloader_rx) = mpsc::channel(DOWNLOADER_OUTPUT_CHUNK_BUFFER_SIZE);
-    let downloader =
-        mononoke::spawn_task(downloader(rx, downloader_tx, args.concurrent_file_fetches));
+    let downloader = tokio::spawn(downloader(rx, downloader_tx, args.concurrent_file_fetches));
 
     let (file_writer, create_dirs) = if args.tar {
         let archive =
@@ -825,7 +820,7 @@ pub(super) async fn run(app: ScscApp, args: CommandArgs) -> Result<()> {
         // the destination is the internal destination within tar archive
         destination = repo.name.clone().into();
         (
-            mononoke::spawn_task(archive_writer(
+            tokio::spawn(archive_writer(
                 downloader_rx,
                 archive,
                 bytes_written.clone(),
@@ -834,7 +829,7 @@ pub(super) async fn run(app: ScscApp, args: CommandArgs) -> Result<()> {
         )
     } else {
         (
-            mononoke::spawn_task(filesystem_writer(downloader_rx, bytes_written.clone())),
+            tokio::spawn(filesystem_writer(downloader_rx, bytes_written.clone())),
             CreateDirs::Yes,
         )
     };
