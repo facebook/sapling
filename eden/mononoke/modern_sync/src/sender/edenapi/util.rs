@@ -21,11 +21,13 @@ use edenapi_types::AnyFileContentId;
 use edenapi_types::AnyId;
 use edenapi_types::BonsaiFileChange;
 use edenapi_types::Extra;
+use edenapi_types::FileContentTokenMetadata;
 use edenapi_types::HgFilenodeData;
 use edenapi_types::IdenticalChangesetContent;
 use edenapi_types::Parents;
 use edenapi_types::RepoPathBuf;
 use edenapi_types::UploadToken;
+use edenapi_types::UploadTokenMetadata;
 use edenapi_types::UploadTreeEntry;
 use mercurial_types::blobs::HgBlobChangeset;
 use mercurial_types::fetch_manifest_envelope;
@@ -178,25 +180,30 @@ fn to_file_change(
             let bs_fc = match fc {
                 FileChange::Deletion => BonsaiFileChange::Deletion,
                 FileChange::UntrackedDeletion => BonsaiFileChange::UntrackedDeletion,
-                FileChange::Change(tc) => BonsaiFileChange::Change {
-                    upload_token: UploadToken::new_fake_token(
-                        AnyId::AnyFileContentId(AnyFileContentId::ContentId(
-                            tc.content_id().into(),
-                        )),
-                        None,
-                    ),
-                    file_type: tc.file_type().try_into()?,
-                    copy_info: match tc.copy_from() {
-                        Some((path, cs_id)) => {
-                            cloned!(mut parents);
-                            let index = parents
-                                .position(|parent| parent == *cs_id)
-                                .ok_or(anyhow::anyhow!("Copy from info doesn't match parents"))?;
-                            Some((to_hg_path(path)?, index))
-                        }
-                        None => None,
-                    },
-                },
+                FileChange::Change(tc) => {
+                    let size = tc.size();
+                    let token_metadata = FileContentTokenMetadata { content_size: size };
+                    BonsaiFileChange::Change {
+                        upload_token: UploadToken::new_fake_token_with_metadata(
+                            AnyId::AnyFileContentId(AnyFileContentId::ContentId(
+                                tc.content_id().into(),
+                            )),
+                            None,
+                            UploadTokenMetadata::FileContentTokenMetadata(token_metadata),
+                        ),
+                        file_type: tc.file_type().try_into()?,
+                        copy_info: match tc.copy_from() {
+                            Some((path, cs_id)) => {
+                                cloned!(mut parents);
+                                let index = parents.position(|parent| parent == *cs_id).ok_or(
+                                    anyhow::anyhow!("Copy from info doesn't match parents"),
+                                )?;
+                                Some((to_hg_path(path)?, index))
+                            }
+                            None => None,
+                        },
+                    }
+                }
                 FileChange::UntrackedChange(uc) => BonsaiFileChange::UntrackedChange {
                     upload_token: UploadToken::new_fake_token(
                         AnyId::AnyFileContentId(AnyFileContentId::ContentId(
