@@ -143,7 +143,7 @@ pub async fn sync(
             .clone()
             .ok_or_else(|| format_err!("TLS params not found for repo {}", repo_name))?;
 
-        let dest_repo = app_args.dest_repo_name.clone().unwrap_or(repo_name.clone());
+        let dest_repo = format!("{}_shadow", repo_name.clone());
 
         Arc::new(
             EdenapiSender::new(
