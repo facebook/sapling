@@ -13,11 +13,13 @@ async-stream = "0.3"
 async-trait = "0.1.71"
 base64 = "0.21"
 blobstore = { version = "0.1.0", path = "../blobstore" }
+bonsai_hg_mapping = { version = "0.1.0", path = "../bonsai_hg_mapping" }
 bookmarks = { version = "0.1.0", path = "../bookmarks" }
 bookmarks_movement = { version = "0.1.0", path = "../bookmarks/bookmarks_movement" }
 bytes = { version = "1.9.0", features = ["serde"] }
 cloned = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 commit_cloud_types = { version = "0.1.0", path = "../commit_cloud/types" }
+commit_graph = { version = "0.1.0", path = "../repo_attributes/commit_graph/commit_graph" }
 context = { version = "0.1.0", path = "../server/context" }
 ephemeral_blobstore = { version = "0.1.0", path = "../blobstore/ephemeral_blobstore" }
 fbinit = { version = "0.2.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
@@ -64,6 +66,7 @@ serde_cbor = "0.11"
 serde_json = { version = "1.0.132", features = ["float_roundtrip", "unbounded_depth"] }
 sha2 = "0.10.6"
 slog = { version = "2.7", features = ["max_level_trace", "nested-values"] }
+sorted_vector_map = { version = "0.2.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 stats = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 thiserror = "2"
 time_ext = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }

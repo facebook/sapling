@@ -62,7 +62,7 @@ use crate::repo::RepoContext;
 use crate::specifiers::ChangesetSpecifier;
 use crate::MononokeRepo;
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub struct CreateCopyInfo {
     path: MPath,
     parent_index: usize,
@@ -162,7 +162,7 @@ impl CreateCopyInfo {
 }
 
 /// Description of a change to make to a file.
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub enum CreateChange {
     /// The file is created or modified to contain new data.
     Tracked(CreateChangeFile, Option<CreateCopyInfo>),
@@ -177,7 +177,7 @@ pub enum CreateChange {
     Deletion,
 }
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub enum CreateChangeGitLfs {
     FullContent,
     GitLfsPointer {
@@ -206,7 +206,7 @@ fn try_into_git_lfs(
     Ok(git_lfs)
 }
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub struct CreateChangeFile {
     pub contents: CreateChangeFileContents,
     pub file_type: FileType,
@@ -214,7 +214,7 @@ pub struct CreateChangeFile {
     pub git_lfs: Option<CreateChangeGitLfs>,
 }
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub enum CreateChangeFileContents {
     // Upload content from bytes
     New {

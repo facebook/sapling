@@ -14,7 +14,10 @@ use anyhow::Context;
 use anyhow::Error;
 use async_stream::try_stream;
 use async_trait::async_trait;
+use blobstore::Blobstore;
 use blobstore::Loadable;
+use bonsai_hg_mapping::BonsaiHgMappingEntry;
+use commit_graph::CommitGraphWriterArc;
 use dag_types::Location;
 use edenapi_types::wire::WireCommitHashToLocationRequestBatch;
 use edenapi_types::AlterSnapshotRequest;
@@ -83,14 +86,19 @@ use mononoke_api::XRepoLookupSyncBehaviour;
 use mononoke_api_hg::HgRepoContext;
 use mononoke_types::hash::GitSha1;
 use mononoke_types::sha1_hash::Sha1;
+use mononoke_types::BlobstoreKey;
+use mononoke_types::BlobstoreValue;
+use mononoke_types::BonsaiChangesetMut;
 use mononoke_types::ChangesetId;
 use mononoke_types::DateTime;
 use mononoke_types::FileChange;
 use mononoke_types::Globalrev;
 use rate_limiting::Metric;
 use rate_limiting::RateLimitStatus;
+use repo_blobstore::RepoBlobstoreRef;
 use serde::Deserialize;
 use slog::debug;
+use sorted_vector_map::SortedVectorMap;
 use types::HgId;
 use types::Parents;
 
@@ -1182,26 +1190,86 @@ impl SaplingRemoteApiHandler for UploadIdenticalChangesetsHandler {
         request: Self::Request,
     ) -> HandlerResult<'async_trait, Self::Response> {
         let repo = ectx.repo();
-        let changesets = request.changesets;
-
         let ctx = repo.ctx().clone();
 
-        let mut changesets_data = Vec::new();
-        for changeset in changesets {
-            let bs_c = BonsaiChangesetContent::from(changeset.clone());
+        repo.repo_ctx()
+            .authorization_context()
+            .require_mirror_upload_operations(&ctx, repo.repo())
+            .await
+            .map_err(|err| MononokeError::AuthorizationError(err.to_string()))?;
 
+        let changesets = request.changesets;
+        let mut changesets_data = Vec::new();
+
+        for changeset in changesets {
             let parents = changeset
                 .bonsai_parents
                 .to_vec()
+                .iter()
+                .map(|p| (*p).into())
+                .collect::<Vec<ChangesetId>>();
+            let mut hg_extra = SortedVectorMap::new();
+            changeset.extras.iter().for_each(|bs_extra| {
+                hg_extra.insert(bs_extra.key.clone(), bs_extra.value.clone());
+            });
+
+            let file_changes = changeset
+                .bonsai_file_changes
+                .clone()
                 .into_iter()
-                .map(|p| p.into())
-                .collect();
-            let bcs_id = upload_bonsai_changeset(bs_c, &repo, None, parents).await?;
-            let blobstore = repo.repo_ctx().repo_blobstore();
-            let bcs = bcs_id
-                .load(&ctx, &blobstore)
+                .map(|(path, bfc)| {
+                    let create_change = to_create_change(bfc, None)
+                        .with_context(|| anyhow!("Parsing file changes for {}", path))?;
+                    eprintln!("create_change: {:?}", create_change);
+                    let create_change2 = create_change.into_file_change(&parents)?;
+
+                    let path = to_mpath(path)?
+                        .into_optional_non_root_path()
+                        .ok_or_else(|| {
+                            MononokeError::InvalidRequest(String::from(
+                                "Cannot create a file with an empty path",
+                            ))
+                        })?;
+                    Ok((path, create_change2))
+                })
+                .collect::<Result<_, MononokeError>>()?;
+
+            let bcs = BonsaiChangesetMut {
+                parents,
+                author: changeset.author.clone(),
+                author_date: DateTime::from_timestamp(changeset.time, changeset.tz)?,
+                committer: None,
+                committer_date: None,
+                message: changeset.message.clone(),
+                hg_extra,
+
+                file_changes,
+                git_extra_headers: None,
+                git_tree_hash: None,
+                is_snapshot: false,
+                git_annotated_tag: None,
+            }
+            .freeze()
+            .map_err(|e| {
+                MononokeError::InvalidRequest(format!(
+                    "Changes create invalid bonsai changeset: {}",
+                    e
+                ))
+            })?;
+
+            let bonsai_blob = bcs.clone().into_blob();
+            let bcs_id = bcs.get_changeset_id();
+            let blobstore_key = bcs_id.blobstore_key();
+            let blobstore = repo.repo().repo_blobstore();
+            blobstore
+                .put(&ctx, blobstore_key, bonsai_blob.into())
+                .await?;
+
+            let commit_graph_writer = repo.repo().commit_graph_writer_arc();
+            commit_graph_writer
+                .add(&ctx, bcs_id, bcs.parents().collect())
                 .await
-                .map_err(MononokeError::from)?;
+                .context("While inserting into changeset table")?;
 
             let item = (
                 HgChangesetId::new(HgNodeHash::from(changeset.hg_info.node_id)),
@@ -1211,20 +1279,33 @@ impl SaplingRemoteApiHandler for UploadIdenticalChangesetsHandler {
             changesets_data.push(item);
         }
 
-        let results = repo
-            .store_hg_changesets(changesets_data, vec![])
-            .await?
-            .into_iter()
-            .map(move |r| {
-                r.map(|(hg_cs_id, _bonsai_cs_id)| {
-                    let hgid = HgId::from(hg_cs_id.into_nodehash());
-                    UploadTokensResponse {
-                        token: UploadToken::new_fake_token(AnyId::HgChangesetId(hgid), None),
-                    }
-                })
-                .map_err(Error::from)
-            });
+        let changesets = repo.store_hg_changesets(changesets_data, vec![]).await?;
 
-        Ok(stream::iter(results).boxed())
+        for changeset in changesets.clone() {
+            let (hg_cs_id, bcs) = changeset?;
+            let bonsai_hg_entry = BonsaiHgMappingEntry {
+                hg_cs_id,
+                bcs_id: bcs.get_changeset_id(),
+            };
+
+            repo.repo()
+                .bonsai_hg_mapping
+                .add(&ctx, bonsai_hg_entry)
+                .await
+                .context("While inserting in bonsai-hg mapping")?;
+        }
+
+        let tokens = changesets.into_iter().map(move |r| {
+            r.map(|(hg_cs_id, _)| {
+                let hgid: types::hash::AbstractHashType<types::hgid::HgIdTypeInfo, 20> =
+                    HgId::from(hg_cs_id.into_nodehash());
+                UploadTokensResponse {
+                    token: UploadToken::new_fake_token(AnyId::HgChangesetId(hgid), None),
+                }
+            })
+            .map_err(Error::from)
+        });
+
+        Ok(stream::iter(tokens).boxed())
     }
 }

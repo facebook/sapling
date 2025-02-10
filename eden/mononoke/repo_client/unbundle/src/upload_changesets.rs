@@ -319,7 +319,7 @@ pub async fn upload_changeset(
         // XXX pass content blobs to CreateChangeset here
         cs_metadata,
         verify_origin_repo: maybe_backup_repo_source,
-        upload_to_blobstore_only: false,
+        upload_to_blobstore_only: bonsai.is_some(),
     };
     let scheduled_uploading = create_changeset.create(ctx, &repo, bonsai, scuba_logger);
 
