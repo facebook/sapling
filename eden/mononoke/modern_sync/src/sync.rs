@@ -63,6 +63,7 @@ use crate::sender::manager::FileOrTreeMessage;
 use crate::sender::manager::SendManager;
 use crate::ModernSyncArgs;
 use crate::Repo;
+
 const MODERN_SYNC_COUNTER_NAME: &str = "modern_sync";
 
 #[derive(Clone)]
@@ -162,7 +163,7 @@ pub async fn sync(
     info!(logger, "Initialized channels");
 
     let mut scuba_sample = ctx.scuba().clone();
-    scuba_sample.add("repo", repo_name);
+    scuba_sample.add("repo", repo_name.clone());
     scuba_sample.add("start_id", start_id);
     scuba_sample.add("dry_run", dry_run);
     scuba_sample.log();
@@ -174,7 +175,7 @@ pub async fn sync(
         repo.bookmark_update_log_arc(),
     )
     .then(|entries| {
-        cloned!(repo, logger, sender, mut send_manager);
+        cloned!(repo, logger, sender, mut send_manager, repo_name);
         borrowed!(ctx);
         async move {
             match entries {
@@ -311,6 +312,8 @@ pub async fn sync(
                             repo.mutable_counters()
                                 .set_counter(ctx, MODERN_SYNC_COUNTER_NAME, entry.id.0 as i64, None)
                                 .await?;
+
+                            bul_util::update_remaining_moves(entry.id, repo_name.clone(), ctx.clone(),  repo.bookmark_update_log_arc()).await?;
 
                             let from_changeset = if let Some(cs_id) = entry.from_changeset_id {
                                 Some(repo.derive_hg_changeset(ctx, cs_id).await?)

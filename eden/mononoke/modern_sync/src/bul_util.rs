@@ -19,8 +19,15 @@ use context::CoreContext;
 use futures::stream;
 use futures::stream::StreamExt;
 use futures::stream::TryStreamExt;
+use stats::define_stats;
+use stats::prelude::*;
 
 use crate::sync::ExecutionType;
+
+define_stats! {
+    prefix = "mononoke.modern_sync";
+    missing_bookmark_moves:  dynamic_timeseries("{}.missing_bookmark_moves", (repo: String); Sum),
+}
 
 const SINGLE_DB_QUERY_ENTRIES_LIMIT: u64 = 10;
 
@@ -71,4 +78,18 @@ pub async fn get_one_entry(
         .await;
 
     stream::iter(entries)
+}
+
+pub async fn update_remaining_moves(
+    current_id: BookmarkUpdateLogId,
+    repo_name: String,
+    ctx: CoreContext,
+    bookmark_update_log: Arc<dyn BookmarkUpdateLog>,
+) -> Result<()> {
+    let remaining_moves = bookmark_update_log
+        .count_further_bookmark_log_entries(ctx, current_id, None)
+        .await?;
+
+    STATS::missing_bookmark_moves.add_value(remaining_moves as i64, (repo_name.clone(),));
+    Ok(())
 }
