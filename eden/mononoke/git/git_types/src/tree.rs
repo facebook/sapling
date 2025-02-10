@@ -6,14 +6,17 @@
  */
 
 use anyhow::bail;
+use anyhow::Context;
 use anyhow::Result;
 use async_trait::async_trait;
 use blobstore::Blobstore;
 use blobstore::Loadable;
 use blobstore::LoadableError;
+use cloned::cloned;
 use context::CoreContext;
 use filestore::FetchKey;
 use filestore::FilestoreConfig;
+use futures::future::ready;
 use futures::stream;
 use futures::stream::BoxStream;
 use futures::StreamExt;
@@ -21,8 +24,11 @@ use futures::TryStreamExt;
 use futures_watchdog::WatchdogExt;
 use gix_hash::ObjectId;
 use gix_object::tree;
+use gix_object::Object;
 use gix_object::Tree;
 use gix_object::WriteTo;
+use manifest::derive_manifest;
+use manifest::flatten_subentries;
 use manifest::Entry;
 use manifest::Manifest;
 use mononoke_types::hash::GitSha1;
@@ -40,6 +46,8 @@ use sorted_vector_map::SortedVectorMap;
 use crate::errors::MononokeGitError;
 use crate::fetch_non_blob_git_object;
 use crate::git_lfs::generate_and_store_git_lfs_pointer;
+use crate::git_object_bytes_with_hash;
+use crate::upload_non_blob_git_object;
 use crate::GitIdentifier;
 
 /// An id of a Git tree object.
@@ -175,6 +183,17 @@ pub struct GitTree {
     /// order of entries in a Mononoke tree.  This is because Git trees are
     /// sorted by their own ordering which treats directories differently.
     entries: SortedVectorMap<MPathElement, Entry<GitTreeId, GitLeaf>>,
+}
+
+impl GitTree {
+    pub fn new<I>(entries: I) -> Self
+    where
+        I: IntoIterator<Item = (MPathElement, Entry<GitTreeId, GitLeaf>)>,
+    {
+        Self {
+            entries: entries.into_iter().collect(),
+        }
+    }
 }
 
 #[async_trait]
@@ -343,4 +362,79 @@ pub async fn get_git_file_changes<B: Blobstore + Clone + 'static>(
         .try_buffer_unordered(100)
         .try_collect()
         .await
+}
+
+#[allow(dead_code)]
+async fn derive_git_tree<B: Blobstore + Clone + 'static>(
+    ctx: &CoreContext,
+    blobstore: B,
+    parents: Vec<GitTreeId>,
+    changes: Vec<(NonRootMPath, Option<GitLeaf>)>,
+    validate_stored_tree: bool,
+) -> Result<GitTreeId> {
+    let tree_id = derive_manifest(
+        ctx.clone(),
+        blobstore.clone(),
+        parents,
+        changes,
+        {
+            cloned!(ctx, blobstore);
+            move |tree_info| {
+                cloned!(ctx, blobstore);
+                async move {
+                    let members = flatten_subentries(&ctx, &(), tree_info.subentries)
+                        .await?
+                        .map(|(p, (_, entry))| (p, entry));
+                    let tree: Tree = GitTree::new(members).into();
+                    let (raw_tree_bytes, git_hash) =
+                        git_object_bytes_with_hash(&Object::Tree(tree))?;
+                    if validate_stored_tree {
+                        // We don't need to store the raw git tree because it already exists. Validate that the existing tree
+                        // is present in the blobstore with the same hash as we computed. If not, then it means that we computed
+                        // a Git tree that is different than the stored raw tree. This could be due to a bug so we need to
+                        // fail before storing the tree
+                        fetch_non_blob_git_object(&ctx, &blobstore, git_hash.as_ref())
+                            .await
+                            .with_context(|| {
+                                format!(
+                                    "Raw Git tree with hash {} should have been present already",
+                                    git_hash.to_hex()
+                                )
+                            })?;
+                    } else {
+                        upload_non_blob_git_object(
+                            &ctx,
+                            &blobstore,
+                            git_hash.as_ref(),
+                            raw_tree_bytes,
+                        )
+                        .await?
+                    }
+                    Ok(((), GitTreeId(git_hash)))
+                }
+            }
+        },
+        {
+            // NOTE: A None leaf will happen in derive_manifest if the parents have conflicting
+            // leaves. However, since we're deriving from a Bonsai changeset and using our Git Tree
+            // manifest which has leaves that are equivalent derived to their Bonsai
+            // representation, that won't happen.
+            |leaf_info| {
+                let leaf = leaf_info
+                    .change
+                    .ok_or_else(|| MononokeGitError::TreeDerivationFailed.into())
+                    .map(|l| ((), l));
+                ready(leaf)
+            }
+        },
+    )
+    .await?;
+
+    match tree_id {
+        Some(tree_id) => Ok(tree_id),
+        None => {
+            // Essentially an empty tree. No need to store it, just create and return
+            Ok(GitTreeId(ObjectId::empty_tree(gix_hash::Kind::Sha1)))
+        }
+    }
 }
