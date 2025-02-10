@@ -176,8 +176,8 @@ impl CreateChangeset {
                 STATS::create_changeset_cf_count.add_value(files.len() as i64);
                 let hg_cs = make_new_changeset(parents, root_mf_id, cs_metadata, files)?;
 
-                let bonsai_cs = match bonsai {
-                    Some(bs) => bs,
+                let (bonsai_cs, bcs_fut) = match bonsai {
+                    Some(bonsai_cs) => (bonsai_cs, async move { Ok(()) }.boxed()),
                     None => {
                         let bonsai_cs = create_bonsai_changeset_object(
                             &ctx,
@@ -187,7 +187,8 @@ impl CreateChangeset {
                             &blobstore,
                         )
                         .await?;
-                        if let Some(origin_repo) = self.verify_origin_repo.as_ref() {
+                        let bonsai_cs = if let Some(origin_repo) = self.verify_origin_repo.as_ref()
+                        {
                             verify_bonsai_changeset_with_origin(
                                 &ctx,
                                 bonsai_cs,
@@ -197,13 +198,16 @@ impl CreateChangeset {
                             .await?
                         } else {
                             bonsai_cs
-                        }
+                        };
+
+                        (
+                            bonsai_cs.clone(),
+                            save_bonsai_changeset_object(&ctx, &blobstore, bonsai_cs).boxed(),
+                        )
                     }
                 };
-
                 let bonsai_blob = bonsai_cs.clone().into_blob();
                 let bcs_id = bonsai_blob.id().clone();
-
                 let cs_id = hg_cs.get_changeset_id().into_nodehash();
                 let manifest_id = hg_cs.manifestid();
 
@@ -239,7 +243,7 @@ impl CreateChangeset {
                     .send(Ok((bcs_id, cs_id, manifest_id)));
 
                 futures::try_join!(
-                    save_bonsai_changeset_object(&ctx, &blobstore, bonsai_cs.clone()),
+                    bcs_fut,
                     hg_cs.save(&ctx, &blobstore),
                     entry_processor
                         .finalize(&ctx, root_mf_id, parent_manifest_hashes)
