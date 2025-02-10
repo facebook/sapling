@@ -32,6 +32,7 @@ use anyhow::Result;
 use bytes::Bytes;
 use cloned::cloned;
 use context::CoreContext;
+use futures::future::try_join3;
 use futures::future::BoxFuture;
 use futures::stream;
 use futures::try_join;
@@ -584,10 +585,18 @@ pub async fn import_commit_contents<Uploader: GitUploader, Reader: GitReader>(
                             .with_context(|| format!("While extracting {}", oid))?;
 
                         let diff = extracted_commit.diff(&ctx, &reader, submodules);
-                        let file_changes =
-                            find_file_changes(&ctx, &lfs, reader.clone(), uploader.clone(), diff)
-                                .await
-                                .context("find_file_changes")?;
+                        let file_changes_uploader = uploader.clone();
+                        let file_changes_future = async {
+                            find_file_changes(
+                                &ctx,
+                                &lfs,
+                                reader.clone(),
+                                file_changes_uploader,
+                                diff,
+                            )
+                            .await
+                            .context("find_file_changes")
+                        };
                         let oid = extracted_commit.metadata.oid;
                         // Before generating the corresponding changeset at Mononoke end, upload the raw git commit
                         // and the git tree pointed to by the git commit.
@@ -603,28 +612,42 @@ pub async fn import_commit_contents<Uploader: GitUploader, Reader: GitReader>(
                         } else {
                             extracted_commit.changed_trees(&ctx, &reader).boxed()
                         };
-                        entries_stream
-                            .map_ok(|entry| {
-                                cloned!(uploader, reader, ctx);
-                                async move {
-                                    mononoke::spawn_task(async move {
-                                        upload_git_object(&ctx, uploader, reader, &entry.0).await?;
-                                        anyhow::Ok(())
-                                    })
-                                    .await?
-                                }
-                            })
-                            .try_buffer_unordered(100)
-                            .try_collect::<()>()
-                            .await?;
+                        let entries_uploader = uploader.clone();
+                        let entries_future = async {
+                            entries_stream
+                                .map_ok(|entry| {
+                                    cloned!(entries_uploader, reader, ctx);
+                                    async move {
+                                        mononoke::spawn_task(async move {
+                                            upload_git_object(
+                                                &ctx,
+                                                entries_uploader,
+                                                reader,
+                                                &entry.0,
+                                            )
+                                            .await?;
+                                            anyhow::Ok(())
+                                        })
+                                        .await?
+                                    }
+                                })
+                                .try_buffer_unordered(100)
+                                .try_collect::<()>()
+                                .await
+                        };
                         // Upload packfile base item for Git commit and the raw Git commit
-                        upload_git_object_by_content(
-                            &ctx,
-                            uploader,
-                            &oid,
-                            extracted_commit.original_commit.clone(),
-                        )
-                        .await?;
+                        let git_commit_future = async {
+                            upload_git_object_by_content(
+                                &ctx,
+                                uploader,
+                                &oid,
+                                extracted_commit.original_commit.clone(),
+                            )
+                            .await
+                        };
+                        let (file_changes, _, _) =
+                            try_join3(file_changes_future, entries_future, git_commit_future)
+                                .await?;
 
                         Result::<_, Error>::Ok((extracted_commit, file_changes))
                     }
