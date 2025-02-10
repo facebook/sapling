@@ -35,7 +35,7 @@ import {generatedFilesDetector} from './GeneratedFiles';
 import {Internal} from './Internal';
 import {Repository, absolutePathForFileInRepo} from './Repository';
 import {repositoryCache} from './RepositoryCache';
-import {parseExecJson} from './utils';
+import {firstOfIterable, parseExecJson} from './utils';
 import {serializeToString, deserializeFromString} from 'isl/src/serialize';
 import {Readable} from 'node:stream';
 import path from 'path';
@@ -575,10 +575,14 @@ export default class ServerToClientAPI {
         repo
           .lookupCommits(ctx, [data.revset])
           .then(commits => {
+            const commit = firstOfIterable(commits.values());
+            if (commit == null) {
+              throw new Error(`No commit found for revset ${data.revset}`);
+            }
             this.postMessage({
               type: 'fetchedLatestCommit',
               revset: data.revset,
-              info: {value: commits.values().next().value},
+              info: {value: commit},
             });
           })
           .catch(err => {
