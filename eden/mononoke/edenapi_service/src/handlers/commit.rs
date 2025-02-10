@@ -1185,9 +1185,6 @@ impl SaplingRemoteApiHandler for UploadIdenticalChangesetsHandler {
         let changesets = request.changesets;
 
         let ctx = repo.ctx().clone();
-        ratelimit_commit_creation(ctx.clone())
-            .await
-            .map_err(HttpError::e429)?;
 
         let mut changesets_data = Vec::new();
         for changeset in changesets {
