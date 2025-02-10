@@ -39,6 +39,8 @@ use gix_pack::data::input::Error as InputError;
 use gix_pack::data::File;
 use mononoke_types::hash::GitSha1;
 use packfile::types::BaseObject;
+use rayon::iter::IntoParallelIterator;
+use rayon::iter::ParallelIterator;
 use repo_blobstore::RepoBlobstore;
 use rustc_hash::FxHashMap;
 use scuba_ext::FutureStatsScubaExt;
@@ -212,7 +214,7 @@ pub async fn parse_pack(
 fn process_pack_entries(pack_file: &data::File, entries: PackEntries) -> Result<PackEntries> {
     let (pending_entries, prereq_objects) = entries.into_pending_and_processed();
     let output_entries = pending_entries
-        .into_iter()
+        .into_par_iter()
         .map(|entry| {
             let mut output = vec![];
             let err_context = format!("Error in decoding packfile entry: {:?}", &entry.header);
