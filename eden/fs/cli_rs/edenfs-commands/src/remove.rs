@@ -58,6 +58,9 @@ pub struct RemoveCmd {
 
     #[clap(long, hide = true)]
     preserve_mount_point: bool,
+
+    #[clap(long = "--no-force", hide = true)]
+    no_force: bool,
 }
 
 #[async_trait]
@@ -86,6 +89,7 @@ impl Subcommand for RemoveCmd {
                 canonicalized_path,
                 path_type,
                 self.preserve_mount_point,
+                self.no_force,
                 messenger.clone(),
             );
             remove_contexts.push(context);

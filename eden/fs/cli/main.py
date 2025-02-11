@@ -1817,6 +1817,12 @@ class RemoveCmd(Subcmd):
         parser.add_argument(
             "paths", nargs="+", metavar="path", help="The EdenFS checkout(s) to remove"
         )
+        parser.add_argument(
+            "--no-force",
+            default=False,
+            action="store_true",
+            help=argparse.SUPPRESS,
+        )
 
     def is_prjfs_path(self, path: str) -> bool:
         if platform.system() != "Windows":
@@ -2003,7 +2009,7 @@ Any uncommitted changes and shelves in this checkout will be lost forever."""
                     print(
                         f"Unmounting `{mount}`. Please be patient: this can take up to 1 minute!"
                     )
-                    instance.unmount(mount)
+                    instance.unmount(mount, use_force=not args.no_force)
                 except EdenNotRunningError:
                     # Its fine if we could not tell the daemon to unmount
                     # because the daemon is not running. There is just no
@@ -2070,6 +2076,9 @@ class UnmountCmd(Subcmd):
             metavar="path",
             help="Path where checkout should be unmounted from",
         )
+        parser.add_argument(
+            "--no-force", default=False, action="store_true", help=argparse.SUPPRESS
+        )
 
     def run(self, args: argparse.Namespace) -> int:
         if args.destroy:
@@ -2089,7 +2098,7 @@ class UnmountCmd(Subcmd):
 
             path = normalize_path_arg(path)
             try:
-                instance.unmount(path)
+                instance.unmount(path, use_force=not args.no_force)
                 if args.destroy:
                     instance.destroy_mount(path)
             except (EdenService.EdenError, EdenNotRunningError) as ex:

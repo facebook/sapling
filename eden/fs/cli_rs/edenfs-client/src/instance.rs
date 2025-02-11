@@ -564,7 +564,7 @@ impl EdenFsInstance {
         Ok(())
     }
 
-    pub async fn unmount(&self, path: &Path) -> Result<()> {
+    pub async fn unmount(&self, path: &Path, no_force: bool) -> Result<()> {
         let client = self.get_connected_thrift_client(None).await?;
 
         let encoded_path = bytes_from_path(path.to_path_buf())
@@ -575,6 +575,7 @@ impl EdenFsInstance {
                 mountPoint: encoded_path,
                 ..Default::default()
             },
+            useForce: !no_force,
             ..Default::default()
         };
         match client.unmountV2(&unmount_argument).await {

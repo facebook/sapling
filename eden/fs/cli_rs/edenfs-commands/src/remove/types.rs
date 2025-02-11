@@ -97,6 +97,7 @@ pub struct RemoveContext {
     pub canonical_path: PathBuf,
     pub path_type: PathType,
     pub preserve_mount_point: bool,
+    pub no_force: bool,
     pub io: Arc<Messenger>,
 }
 
@@ -106,6 +107,7 @@ impl RemoveContext {
         canonical_path: PathBuf,
         path_type: PathType,
         preserve_mount_point: bool,
+        no_force: bool,
         io: Arc<Messenger>,
     ) -> RemoveContext {
         RemoveContext {
@@ -113,6 +115,7 @@ impl RemoveContext {
             canonical_path,
             path_type,
             preserve_mount_point,
+            no_force,
             io,
         }
     }

@@ -83,7 +83,10 @@ pub async fn remove_active_eden_mount(context: &RemoveContext) -> Result<()> {
 
     let instance = EdenFsInstance::global();
 
-    match instance.unmount(&context.canonical_path).await {
+    match instance
+        .unmount(&context.canonical_path, context.no_force)
+        .await
+    {
         Ok(_) => {
             context.io.done();
             remove_inactive_eden_mount(context).await
