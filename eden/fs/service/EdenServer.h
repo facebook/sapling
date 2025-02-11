@@ -30,6 +30,7 @@
 #include "eden/fs/inodes/EdenMountHandle.h"
 #include "eden/fs/inodes/InodePtr.h"
 #include "eden/fs/inodes/overlay/OverlayChecker.h"
+#include "eden/fs/privhelper/PrivHelper.h"
 #include "eden/fs/service/EdenStateDir.h"
 #include "eden/fs/service/PeriodicTask.h"
 #include "eden/fs/service/gen-cpp2/eden_types.h"
@@ -276,7 +277,8 @@ class EdenServer : private TakeoverHandler {
    * Unmount an EdenMount.
    */
   FOLLY_NODISCARD folly::SemiFuture<folly::Unit> unmount(
-      AbsolutePathPiece mountPath);
+      AbsolutePathPiece mountPath,
+      UnmountOptions options);
 
   /**
    * Unmount all mount points maintained by this server, and wait for them to

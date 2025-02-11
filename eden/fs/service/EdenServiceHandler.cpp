@@ -831,9 +831,9 @@ folly::SemiFuture<folly::Unit> EdenServiceHandler::semifuture_unmount(
   auto helper = INSTRUMENT_THRIFT_CALL(INFO, *mountPoint);
   return wrapImmediateFuture(
              std::move(helper),
-             makeImmediateFutureWith([&] {
+             makeImmediateFutureWith([&]() mutable {
                auto mountPath = absolutePathFromThrift(*mountPoint);
-               return server_->unmount(mountPath);
+               return server_->unmount(mountPath, {});
              }).thenError([](const folly::exception_wrapper& ex) {
                throw newEdenError(ex);
              }))

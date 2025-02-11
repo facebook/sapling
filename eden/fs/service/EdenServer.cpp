@@ -1901,7 +1901,9 @@ ImmediateFuture<std::shared_ptr<EdenMount>> EdenServer::mount(
       });
 }
 
-folly::SemiFuture<Unit> EdenServer::unmount(AbsolutePathPiece mountPath) {
+folly::SemiFuture<Unit> EdenServer::unmount(
+    AbsolutePathPiece mountPath,
+    UnmountOptions /* options */) {
   return folly::makeSemiFutureWith([&] {
            auto future = Future<Unit>::makeEmpty();
            auto mount = std::shared_ptr<EdenMount>{};
