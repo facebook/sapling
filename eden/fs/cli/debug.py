@@ -1218,6 +1218,9 @@ def _print_inode_info(inode_info: TreeInodeDebugInfo, out: IO[bytes]) -> None:
     out.write(b"  Ref count:     %d\n" % inode_info.refcount)
     out.write(b"  Materialized?: %s\n" % str(inode_info.materialized).encode())
     out.write(b"  Object ID:     %s\n" % object_id_str(inode_info.treeHash).encode())
+    out.write(
+        b"\nEntries have the following columns: INODE_NUM FILE_TYPE PERMISSIONS_OCTAL LOADED? [OBJECT_ID] PATH\n"
+    )
     out.write(b"  Entries (%d total):\n" % len(inode_info.entries))
 
     max_object_id_len = max(
@@ -1230,6 +1233,7 @@ def _print_inode_info(inode_info: TreeInodeDebugInfo, out: IO[bytes]) -> None:
         else:
             loaded_flag = "-"
 
+        # Please update the column description string above if you change the format
         file_type_str, perms = _parse_mode(entry.mode)
         line = "    {:9} {} {:4o} {} {:<{}} {}\n".format(
             entry.inodeNumber,
