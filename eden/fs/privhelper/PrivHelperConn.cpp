@@ -208,9 +208,7 @@ NFSMountOptions deserializeNFSMountOptions(Cursor& cursor) {
   return options;
 }
 
-[[maybe_unused]] void serializeUnmountOptions(
-    Appender& a,
-    const UnmountOptions& options) {
+void serializeUnmountOptions(Appender& a, const UnmountOptions& options) {
   // TODO[T214491519] clean up UnmountOptions compatibility logic
   if (options.skip_serialize) {
     return;
@@ -222,14 +220,12 @@ NFSMountOptions deserializeNFSMountOptions(Cursor& cursor) {
   serializeUint32(a, bitset);
 }
 
-[[maybe_unused]] UnmountOptions deserializeUnmountOptions(Cursor& cursor) {
+void deserializeUnmountOptions(Cursor& cursor, UnmountOptions& options) {
   uint32_t bitset = deserializeUint32(cursor);
 
-  UnmountOptions options;
   options.force = (bitset & UnmountOptionBits::FORCE) != 0;
   options.detach = (bitset & UnmountOptionBits::DETACH) != 0;
   options.expire = (bitset & UnmountOptionBits::EXPIRE) != 0;
-  return options;
 }
 
 // Helper for setting close-on-exec.  Not needed on systems
@@ -371,16 +367,27 @@ void PrivHelperConn::parseMountNfsRequest(
 
 UnixSocket::Message PrivHelperConn::serializeUnmountRequest(
     uint32_t xid,
-    StringPiece mountPoint) {
+    StringPiece mountPoint,
+    UnmountOptions& options) {
   auto msg = serializeRequestPacket(xid, REQ_UNMOUNT_FUSE);
+
   Appender appender(&msg.data, kDefaultBufferSize);
 
   serializeString(appender, mountPoint);
+  serializeUnmountOptions(appender, options);
   return msg;
 }
 
-void PrivHelperConn::parseUnmountRequest(Cursor& cursor, string& mountPoint) {
+void PrivHelperConn::parseUnmountRequest(
+    Cursor& cursor,
+    string& mountPoint,
+    UnmountOptions& options) {
   mountPoint = deserializeString(cursor);
+
+  if (!cursor.isAtEnd()) {
+    deserializeUnmountOptions(cursor, options);
+  }
+
   checkAtEnd(cursor, "unmount request");
 }
 

@@ -446,14 +446,37 @@ Future<Unit> PrivHelperClientImpl::nfsMount(
 
 Future<Unit> PrivHelperClientImpl::fuseUnmount(
     StringPiece mountPath,
-    UnmountOptions /* options */) {
+    UnmountOptions options) {
   auto xid = getNextXid();
-  auto request = PrivHelperConn::serializeUnmountRequest(xid, mountPath);
+  auto request =
+      PrivHelperConn::serializeUnmountRequest(xid, mountPath, options);
+
   return sendAndRecv(xid, std::move(request))
-      .thenValue([](UnixSocket::Message&& response) {
-        PrivHelperConn::parseEmptyResponse(
-            PrivHelperConn::REQ_UNMOUNT_FUSE, response);
-      });
+      .thenValue(
+          [this, mountPath = mountPath.str(), options](
+              UnixSocket::Message&& response) mutable -> Future<Unit> {
+            try {
+              PrivHelperConn::parseEmptyResponse(
+                  PrivHelperConn::REQ_UNMOUNT_FUSE, response);
+              return folly::unit;
+            } catch (const PrivHelperError&) {
+              // If the unmount failed, it likely means we are communicating
+              // with a PrivHelper server that doesn't understand the new
+              // UnmountOptions fields.  Retry the unmount without serializing
+              // the new fields.
+              // TODO[T214491519] remove this after 1-2 months.
+              options.skip_serialize = true;
+              auto retryXid = getNextXid();
+              auto retryRequest = PrivHelperConn::serializeUnmountRequest(
+                  retryXid, mountPath, options);
+              return sendAndRecv(retryXid, std::move(retryRequest))
+                  .thenValue([](UnixSocket::Message&& retryResponse) {
+                    PrivHelperConn::parseEmptyResponse(
+                        PrivHelperConn::REQ_UNMOUNT_FUSE, retryResponse);
+                    return folly::unit;
+                  });
+            }
+          });
 }
 
 Future<Unit> PrivHelperClientImpl::nfsUnmount(StringPiece mountPath) {

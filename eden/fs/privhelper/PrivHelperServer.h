@@ -114,7 +114,7 @@ class PrivHelperServer : private UnixSocket::ReceiveCallback {
   virtual folly::File
   fuseMount(const char* mountPath, bool readOnly, const char* vfsType);
   virtual void nfsMount(std::string mountPath, NFSMountOptions options);
-  virtual void unmount(const char* mountPath);
+  virtual void unmount(const char* mountPath, UnmountOptions options);
   // Both clientPath and mountPath must be existing directories.
   virtual void bindMount(const char* clientPath, const char* mountPath);
   virtual void bindUnmount(const char* mountPath);

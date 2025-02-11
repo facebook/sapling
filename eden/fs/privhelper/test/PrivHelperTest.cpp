@@ -171,7 +171,7 @@ class PrivHelperThreadedTestServer : public PrivHelperServer {
     return std::move(future).get(1s);
   }
 
-  void unmount(const char* mountPath) override {
+  void unmount(const char* mountPath, UnmountOptions /* options */) override {
     auto future = getResultFuture(data_.wlock()->fuseUnmountResults, mountPath);
     std::move(future).get(1s);
 

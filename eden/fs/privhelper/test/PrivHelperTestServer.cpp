@@ -45,7 +45,9 @@ File PrivHelperTestServer::fuseMount(
   return f;
 }
 
-void PrivHelperTestServer::unmount(const char* mountPath) {
+void PrivHelperTestServer::unmount(
+    const char* mountPath,
+    UnmountOptions /* options */) {
   // Replace the file contents with "unmounted".
   folly::writeFile(
       StringPiece{"unmounted"}, getPathToMountMarker(mountPath).c_str());

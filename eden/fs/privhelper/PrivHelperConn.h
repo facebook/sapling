@@ -113,10 +113,12 @@ class PrivHelperConn {
 
   static UnixSocket::Message serializeUnmountRequest(
       uint32_t xid,
-      folly::StringPiece mountPoint);
+      folly::StringPiece mountPoint,
+      UnmountOptions& options);
   static void parseUnmountRequest(
       folly::io::Cursor& cursor,
-      std::string& mountPoint);
+      std::string& mountPoint,
+      UnmountOptions& options);
 
   static UnixSocket::Message serializeNfsUnmountRequest(
       uint32_t xid,
