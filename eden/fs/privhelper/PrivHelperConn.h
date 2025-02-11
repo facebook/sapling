@@ -51,6 +51,8 @@ class PrivHelperConn {
     REQ_MOUNT_NFS = 11,
     REQ_UNMOUNT_NFS = 12,
     REQ_GET_PID = 13,
+    REQ_START_FAM = 14,
+    REQ_STOP_FAM = 15,
   };
 
   // This structure should never change. If fields need to be added to the
@@ -279,6 +281,12 @@ struct formatter<facebook::eden::PrivHelperConn::MsgType>
         break;
       case facebook::eden::PrivHelperConn::REQ_GET_PID:
         name = "REQ_GET_PID";
+        break;
+      case facebook::eden::PrivHelperConn::REQ_START_FAM:
+        name = "REQ_START_FAM";
+        break;
+      case facebook::eden::PrivHelperConn::REQ_STOP_FAM:
+        name = "REQ_STOP_FAM";
         break;
       default:
         name = "Unknown PrivHelperConn::MsgType";

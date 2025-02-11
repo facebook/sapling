@@ -1373,6 +1373,8 @@ UnixSocket::Message PrivHelperServer::processMessage(
       return processSetUseEdenFs(cursor, request);
     case PrivHelperConn::REQ_GET_PID:
       return processGetPid();
+    case PrivHelperConn::REQ_START_FAM:
+    case PrivHelperConn::REQ_STOP_FAM:
     case PrivHelperConn::MSG_TYPE_NONE:
     case PrivHelperConn::RESP_ERROR:
       break;
