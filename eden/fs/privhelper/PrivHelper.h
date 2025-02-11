@@ -50,6 +50,22 @@ struct NFSMountOptions {
   std::optional<std::optional<bool>> dumbtimer;
 };
 
+/*
+ * Options for PrivHelper unmount requests.
+ */
+struct UnmountOptions {
+ public:
+  bool skip_serialize =
+      false; // when set, do not serialize the unmount options. This is used
+             // for handling the case when the privHelper server does not
+             // understand the unmount options
+  bool force = true; // default to force unmount
+  bool detach = true; // default to perform a lazy unmount
+
+  // future options
+  bool expire = false;
+};
+
 /**
  * A helper class for performing operations that require elevated privileges.
  *

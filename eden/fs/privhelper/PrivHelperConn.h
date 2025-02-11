@@ -217,6 +217,13 @@ class PrivHelperError : public std::exception {
   std::string message_;
 };
 
+/* These match the options of umount(2) */
+enum UnmountOptionBits : uint32_t {
+  FORCE = 1 << 0,
+  DETACH = 1 << 1,
+  EXPIRE = 1 << 2,
+};
+
 } // namespace facebook::eden
 
 namespace fmt {

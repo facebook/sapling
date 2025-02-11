@@ -208,6 +208,30 @@ NFSMountOptions deserializeNFSMountOptions(Cursor& cursor) {
   return options;
 }
 
+[[maybe_unused]] void serializeUnmountOptions(
+    Appender& a,
+    const UnmountOptions& options) {
+  // TODO[T214491519] clean up UnmountOptions compatibility logic
+  if (options.skip_serialize) {
+    return;
+  }
+  uint32_t bitset = 0;
+  bitset |= options.force ? UnmountOptionBits::FORCE : 0;
+  bitset |= options.detach ? UnmountOptionBits::DETACH : 0;
+  bitset |= options.expire ? UnmountOptionBits::EXPIRE : 0;
+  serializeUint32(a, bitset);
+}
+
+[[maybe_unused]] UnmountOptions deserializeUnmountOptions(Cursor& cursor) {
+  uint32_t bitset = deserializeUint32(cursor);
+
+  UnmountOptions options;
+  options.force = (bitset & UnmountOptionBits::FORCE) != 0;
+  options.detach = (bitset & UnmountOptionBits::DETACH) != 0;
+  options.expire = (bitset & UnmountOptionBits::EXPIRE) != 0;
+  return options;
+}
+
 // Helper for setting close-on-exec.  Not needed on systems
 // that can atomically do this in socketpair
 void setCloExecIfNoSockCloExec(int fd) {
