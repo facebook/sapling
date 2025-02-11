@@ -256,9 +256,13 @@ impl EdenapiSender {
             .try_collect::<Vec<_>>()
             .await?;
 
+        let expected_responses = entries.len();
         let res = self.client.upload_identical_changesets(entries).await?;
         let responses = res.entries.try_collect::<Vec<_>>().await?;
-        ensure!(!responses.is_empty(), "Not all changesets were uploaded");
+        ensure!(
+            expected_responses == responses.len(),
+            "Not all changesets were uploaded"
+        );
         let ids = responses
             .iter()
             .map(|r| r.token.data.id)

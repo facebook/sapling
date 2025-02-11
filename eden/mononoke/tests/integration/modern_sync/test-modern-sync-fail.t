@@ -70,7 +70,7 @@ Sync all bookmarks moves
   
   Caused by:
       Trees upload: Expected 1 responses, got 0
-  Execution error: Error while waiting for commit to be synced Files/trees error received. Winding down changeset sender.
+  Execution error: Error while waiting for commit to be synced Error processing changesets: Files/trees error received. Winding down changesets sender.
   
   Caused by:
       0: Failed to upload trees: HgManifestId(HgNodeHash(Sha1(c1afe800646ee45232ab5e70c57247b78dbf3899)))

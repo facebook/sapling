@@ -63,22 +63,7 @@
   $ hg log > $TESTTMP/hglog.out
 
 Sync all bookmarks moves
-  $ with_stripped_logs mononoke_modern_sync sync-once orig orig_shadow --start-id 0
-  Running sync-once loop
-  Connecting to https://localhost:$LOCAL_PORT/edenapi/
-  Established EdenAPI connection
-  Initialized channels
-  Calculating segments for entry 1
-  Skipping 0 commits, starting sync of 1 commits 
-  Uploaded changesets: [HgChangesetId(HgId("e20237022b1290d98c3f14049931a8f498c18c53"))]
-  Moved bookmark with result SetBookmarkResponse { data: Ok(()) }
-  Calculating segments for entry 2
-  Skipping 0 commits, starting sync of 4 commits 
-  Uploaded changesets: [HgChangesetId(HgId("5a95ef0f59a992dcb5385649217862599de05565"))]
-  Uploaded changesets: [HgChangesetId(HgId("fc03e5f3125836eb107f2fa5b070f841d0b62b85"))]
-  Uploaded changesets: [HgChangesetId(HgId("2571175c538cc794dc974c705fcb12bc848efab4"))]
-  Uploaded changesets: [HgChangesetId(HgId("8c3947e5d8bd4fe70259eca001b8885651c75850"))]
-  Moved bookmark with result SetBookmarkResponse { data: Ok(()) }
+  $ quiet mononoke_modern_sync sync-once orig dest --start-id 0 
 
   $ mononoke_admin mutable-counters --repo-name orig get modern_sync
   Some(2)

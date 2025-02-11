@@ -5,7 +5,9 @@
  * GNU General Public License version 2.
  */
 
+use std::collections::VecDeque;
 use std::sync::Arc;
+use std::time::Duration;
 
 use anyhow::Result;
 use edenapi_types::AnyFileContentId;
@@ -21,6 +23,8 @@ use slog::Logger;
 use stats::define_stats;
 use stats::prelude::*;
 use tokio::sync::mpsc;
+use tokio::sync::mpsc::Sender;
+use tokio::time::interval;
 
 use crate::sender::edenapi::EdenapiSender;
 
@@ -33,13 +37,16 @@ define_stats! {
     sync_lag_seconds:  dynamic_timeseries("{}.sync_lag_seconds", (repo: String); Average),
     content_wait_time_s:  dynamic_timeseries("{}.content_wait_time_s", (repo: String); Average),
     trees_files_wait_time_s:  dynamic_timeseries("{}.trees_files_wait_time_s", (repo: String); Average),
-    changeset_upload_time_seconds:  dynamic_timeseries("{}.changeset_upload_time_seconds", (repo: String); Average),
+    changeset_upload_time_s:  dynamic_timeseries("{}.changeset_upload_time_s", (repo: String); Average),
 
 }
 
 const CONTENT_CHANNEL_SIZE: usize = 1000;
 const FILES_AND_TREES_CHANNEL_SIZE: usize = 1000;
 const CHANGESET_CHANNEL_SIZE: usize = 1000;
+
+const FLUSH_INTERVAL: Duration = Duration::from_secs(5);
+const MAX_CHANGESET_BATCH_SIZE: usize = 5;
 
 #[derive(Clone)]
 pub struct SendManager {
@@ -226,75 +233,116 @@ impl SendManager {
     ) {
         mononoke::spawn_task(async move {
             let mut encountered_error: Option<anyhow::Error> = None;
-            while let Some(msg) = changeset_recv.recv().await {
-                match msg {
-                    ChangesetMessage::WaitForFilesAndTrees(receiver) => {
-                        // Read outcome from files and trees upload
-                        let start = std::time::Instant::now();
-                        match receiver.await {
-                            Ok(Err(e)) => {
-                                encountered_error.get_or_insert(e.context(
-                                    "Files/trees error received. Winding down changeset sender.",
-                                ));
-                            }
-                            Err(e) => {
-                                encountered_error.get_or_insert(anyhow::anyhow!(format!(
-                                    "Error waiting for files/trees: {:#}",
-                                    e
-                                )));
-                            }
-                            _ => (),
-                        }
-                        let elapsed = start.elapsed().as_secs();
-                        STATS::trees_files_wait_time_s
-                            .add_value(elapsed as i64, (reponame.clone(),));
-                    }
-                    ChangesetMessage::Changeset((hg_cs, bcs)) if encountered_error.is_none() => {
-                        // If ther was an error don't even attempt to send the changeset
-                        // cause it'll fail on missing parent
 
-                        // Upload the changeset through sender
-                        let start = std::time::Instant::now();
-                        if let Err(e) = changeset_es
-                            .upload_identical_changeset(vec![(hg_cs.clone(), bcs)])
-                            .await
-                        {
-                            encountered_error.get_or_insert(
-                                e.context(format!("Failed to upload changeset: {:?}", hg_cs)),
-                            );
-                        }
-                        let elapsed = start.elapsed().as_secs();
-                        STATS::changeset_upload_time_seconds
-                            .add_value(elapsed as i64, (reponame.clone(),));
-                    }
-                    ChangesetMessage::ChangesetDone(sender) => {
-                        if let Some(e) = encountered_error {
-                            let _ = sender.send(Err(e)).await;
-                            return;
-                        } else {
-                            let res = sender.send(Ok(())).await;
-                            if let Err(e) = res {
-                                error!(changeset_logger, "Error sending changeset ready:  {:?}", e);
-                                return;
+            let mut pending_messages = VecDeque::new();
+            let mut pending_log = VecDeque::new();
+
+            let mut current_batch = Vec::new();
+            let mut flush_timer = interval(FLUSH_INTERVAL);
+
+            loop {
+                tokio::select! {
+                    msg = changeset_recv.recv()=>{
+                        match msg {
+                            Some(ChangesetMessage::WaitForFilesAndTrees(receiver)) => {
+                                // Read outcome from files and trees upload
+                                let start = std::time::Instant::now();
+                                match receiver.await {
+                                    Ok(Err(e)) => {
+                                        encountered_error.get_or_insert(e.context(
+                                            "Files/trees error received. Winding down changesets sender.",
+                                        ));
+                                    }
+                                    Err(e) => {
+                                        encountered_error.get_or_insert(anyhow::anyhow!(
+                                            "Error waiting for files/trees error received {:#}", e)
+                                        );
+                                    }
+                                    _ => (),
+                                }
+                                let elapsed = start.elapsed().as_secs();
+                                STATS::trees_files_wait_time_s
+                                    .add_value(elapsed as i64, (reponame.clone(),));
                             }
+
+                            Some(ChangesetMessage::Changeset((hg_cs, bcs))) if encountered_error.is_none() => {
+                                current_batch.push((hg_cs, bcs));
+                            }
+
+                            Some(ChangesetMessage::ChangesetDone(sender)) if encountered_error.is_none() => {
+                                pending_messages.push_back(sender);
+                            }
+
+                            Some(ChangesetMessage::Log((_, lag))) if encountered_error.is_none() => {
+                                pending_log.push_back(lag);
+                            }
+
+                            Some(ChangesetMessage::ChangesetDone(sender)) =>{
+                                let e = encountered_error.unwrap();
+                                sender.send(Err(anyhow::anyhow!("Error processing changesets: {:?}", e))).await?;
+                                return Err(e);
+                            }
+
+                            Some(ChangesetMessage::Log((_, _))) | Some(ChangesetMessage::Changeset(_)) => {}
+
+                            None => break,
+                        }
+
+                        if current_batch.len() >= MAX_CHANGESET_BATCH_SIZE {
+                            if let Err(e) = flush_batch(&changeset_es, &mut current_batch, &mut pending_messages, &mut pending_log, &changeset_logger, reponame.clone()).await {
+                                return Err(anyhow::anyhow!("Error processing changesets: {:?}", e));
+                            }
+
                         }
                     }
-                    ChangesetMessage::Log((reponame, lag)) => {
-                        if encountered_error.is_some() {
-                            error!(
-                                changeset_logger,
-                                "Error processing changeset: {:?}", encountered_error
-                            );
-                            return;
-                        }
-                        STATS::synced_commits.add_value(1, (reponame.clone(),));
-                        if let Some(lag) = lag {
-                            STATS::sync_lag_seconds.add_value(lag, (reponame,));
-                        }
+                    _ = flush_timer.tick() => {
+                            if let Err(e) = flush_batch(&changeset_es, &mut current_batch, &mut pending_messages, &mut pending_log, &changeset_logger, reponame.clone()).await {
+                                return Err(anyhow::anyhow!("Error processing changesets: {:?}", e));
+                            }
+
+
                     }
-                    _ => (),
+
                 }
             }
+
+            async fn flush_batch(
+                changeset_es: &Arc<EdenapiSender>,
+                current_batch: &mut Vec<(HgBlobChangeset, BonsaiChangeset)>,
+                pending_messages: &mut VecDeque<Sender<Result<(), anyhow::Error>>>,
+                pending_log: &mut VecDeque<Option<i64>>,
+                changeset_logger: &Logger,
+                reponame: String,
+            ) -> Result<(), anyhow::Error> {
+                if !current_batch.is_empty() {
+                    let start = std::time::Instant::now();
+                    let batch_size = current_batch.len();
+                    if let Err(e) = changeset_es
+                        .upload_identical_changeset(std::mem::take(current_batch))
+                        .await
+                    {
+                        error!(changeset_logger, "Failed to upload changesets: {:?}", e);
+                        return Err(e);
+                    }
+                    let elapsed = start.elapsed().as_secs() / batch_size as u64;
+                    STATS::changeset_upload_time_s.add_value(elapsed as i64, (reponame.clone(),));
+                }
+
+                while let Some(Some(lag)) = pending_log.pop_front() {
+                    STATS::synced_commits.add_value(1, (reponame.clone(),));
+                    STATS::sync_lag_seconds.add_value(lag, (reponame.clone(),));
+                }
+
+                while let Some(sender) = pending_messages.pop_front() {
+                    let res = sender.send(Ok(()));
+                    if let Err(e) = res.await {
+                        return Err(anyhow::anyhow!("Error sending content ready: {:?}", e));
+                    }
+                }
+                Ok(())
+            }
+
+            Ok(())
         });
     }
 
