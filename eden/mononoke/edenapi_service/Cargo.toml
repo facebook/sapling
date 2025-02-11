@@ -53,6 +53,7 @@ permission_checker = { version = "0.1.0", path = "../permission_checker" }
 pin-project = "0.4.30"
 rand = { version = "0.8", features = ["small_rng"] }
 rate_limiting = { version = "0.1.0", path = "../rate_limiting" }
+rayon = "1.9.0"
 repo_blobstore = { version = "0.1.0", path = "../blobrepo/repo_blobstore" }
 repo_identity = { version = "0.1.0", path = "../repo_attributes/repo_identity" }
 sapling-clientinfo = { version = "0.1.0", path = "../../scm/lib/clientinfo" }
