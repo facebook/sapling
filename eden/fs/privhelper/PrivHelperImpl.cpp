@@ -111,7 +111,8 @@ class PrivHelperClientImpl : public PrivHelper,
       StringPiece vfsType) override;
   Future<Unit> nfsMount(folly::StringPiece mountPath, NFSMountOptions options)
       override;
-  Future<Unit> fuseUnmount(StringPiece mountPath) override;
+  Future<Unit> fuseUnmount(StringPiece mountPath, UnmountOptions options)
+      override;
   Future<Unit> nfsUnmount(StringPiece mountPath) override;
   Future<Unit> bindMount(StringPiece clientPath, StringPiece mountPath)
       override;
@@ -443,7 +444,9 @@ Future<Unit> PrivHelperClientImpl::nfsMount(
           });
 }
 
-Future<Unit> PrivHelperClientImpl::fuseUnmount(StringPiece mountPath) {
+Future<Unit> PrivHelperClientImpl::fuseUnmount(
+    StringPiece mountPath,
+    UnmountOptions /* options */) {
   auto xid = getNextXid();
   auto request = PrivHelperConn::serializeUnmountRequest(xid, mountPath);
   return sendAndRecv(xid, std::move(request))
@@ -793,7 +796,8 @@ class StubPrivHelper final : public PrivHelper {
   }
 
   folly::Future<folly::Unit> fuseUnmount(
-      folly::StringPiece mountPath) override {
+      folly::StringPiece mountPath,
+      UnmountOptions /* options */) override {
     (void)mountPath;
     NOT_IMPLEMENTED();
   }

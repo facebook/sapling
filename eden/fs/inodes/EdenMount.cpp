@@ -2337,7 +2337,7 @@ folly::Future<folly::Unit> EdenMount::fsChannelMount(bool readOnly) {
                           ->fsChannelUnmountStarted()) {
                     fuseDevice->close();
                     return serverState_->getPrivHelper()
-                        ->fuseUnmount(mountPath.view())
+                        ->fuseUnmount(mountPath.view(), {})
                         .thenError(
                             folly::tag<std::exception>,
                             [](std::exception&& unmountError) {

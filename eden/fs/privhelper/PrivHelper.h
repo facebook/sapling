@@ -117,7 +117,8 @@ class PrivHelper {
    * Ask the privileged helper process to perform a fuse unmount.
    */
   FOLLY_NODISCARD virtual folly::Future<folly::Unit> fuseUnmount(
-      folly::StringPiece mountPath) = 0;
+      folly::StringPiece mountPath,
+      UnmountOptions options) = 0;
 
   FOLLY_NODISCARD virtual folly::Future<folly::Unit> nfsUnmount(
       folly::StringPiece mountPath) = 0;

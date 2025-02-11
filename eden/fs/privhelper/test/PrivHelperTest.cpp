@@ -472,7 +472,7 @@ TEST_F(PrivHelperTest, bindMounts) {
   // This will finish even though somerepoBuckOutUnmountPromise is still
   // outstanding because the privhelper and the OS don't care about relative
   // ordering of these two operations.
-  auto unmountResult = client_->fuseUnmount(userPath + "/somerepo");
+  auto unmountResult = client_->fuseUnmount(userPath + "/somerepo", {});
   std::move(unmountResult).get(1s);
 
   // Clean up this promise: no one is waiting on its results, but we just
@@ -593,7 +593,7 @@ TEST_F(PrivHelperTest, takeoverStartup) {
   // Manually unmount /mnt/repo_x
   server_.setFuseUnmountResult(repoXPath).setValue();
   server_.setBindUnmountResult(repoXPath + "/y").setValue();
-  client_->fuseUnmount(repoXPath).get(1s);
+  client_->fuseUnmount(repoXPath, {}).get(1s);
   EXPECT_THAT(server_.getUnusedFuseUnmountResults(), UnorderedElementsAre());
   EXPECT_THAT(server_.getUnusedBindUnmountResults(), UnorderedElementsAre());
 
@@ -673,7 +673,7 @@ TEST_F(PrivHelperTest, detachEventBase) {
 
   // Perform another call with the clientIoThread_ EventBase
   auto unmountPromise = server_.setFuseUnmountResult(barPath);
-  auto unmountResult = client_->fuseUnmount(barPath);
+  auto unmountResult = client_->fuseUnmount(barPath, {});
   EXPECT_FALSE(unmountResult.isReady());
   unmountPromise.setValue();
   std::move(unmountResult).get(1s);
