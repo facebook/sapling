@@ -958,8 +958,9 @@ class InodeCmd(Subcmd):
         )
         parser.add_argument(
             "--recursive",
+            action="store_true",
             default=False,
-            help="Recursively walk the directory and report data on all of the subdirectories recursively.",
+            help="Report data on all subdirectories recursively.",
         )
 
     def run(self, args: argparse.Namespace) -> int:
