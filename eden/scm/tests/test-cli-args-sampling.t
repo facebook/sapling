@@ -24,17 +24,17 @@
   ...                 record_count += 1
   ...                 print("%s: %s" % (k, record["data"][k]))
   
-  positional_args: ['st']
   option_names: []
   option_values: []
-  
   positional_args: ['st']
+  
   option_names: ['modified', 'exclude']
   option_values: ['true', '**.go,**.rs']
-  
   positional_args: ['st']
+  
   option_names: ['root-relative', 'quiet', 'pager', 'include']
   option_values: ['false', 'true', 'never', '']
+  positional_args: ['st']
   
   option_names: ['print0', 'exclude']
   option_values: [True, ['abc', 'def']]

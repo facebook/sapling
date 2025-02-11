@@ -421,16 +421,18 @@ impl Dispatcher {
 
         // Logged directly to sampling since `tracing` doesn't support structured data.
         {
-            sampling::append_sample("command_info", "positional_args", parsed.args());
-
             let opt_names = parsed.specified_opts();
-            sampling::append_sample("command_info", "option_names", opt_names);
-
-            let opt_values: Vec<_> = opt_names
-                .iter()
-                .map(|n| opt_value_to_str(parsed.opts().get(n)))
-                .collect();
-            sampling::append_sample("command_info", "option_values", &opt_values);
+            let _ = sampling::log!(
+                target: "command_info",
+                positional_args=parsed.args(),
+                option_names=opt_names,
+                option_values={
+                    opt_names
+                        .iter()
+                        .map(|n| opt_value_to_str(parsed.opts().get(n)))
+                        .collect::<Vec<_>>()
+                }
+            );
         }
 
         tracing::debug!(target: "command_info", command=handler.legacy_alias().unwrap_or_else(|| handler.main_alias()));
