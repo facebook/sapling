@@ -54,6 +54,11 @@
   remote: Generating commits stream        
   remote: Generating tags stream        
   remote: Sending packfile stream        
+  remote: Failure in fetching Packfile Item from stream
+  
+  Caused by:
+      0: Error in fetching raw git object bytes for object Sha1(fb02ed046a1e75fe2abb8763f7c715496ae36353) while fetching-and-storing packfile item
+      1: The object corresponding to object ID fb02ed046a1e75fe2abb8763f7c715496ae36353 or its packfile item does not exist in the data store
   fatal: early EOF
   fatal: fetch-pack: invalid index-pack output
   [128]

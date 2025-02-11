@@ -33,6 +33,7 @@ use mononoke_macros::mononoke;
 use packetline::encode::delim_to_write;
 use packetline::encode::flush_to_write;
 use packetline::encode::write_data_channel;
+use packetline::encode::write_error_channel;
 use packetline::encode::write_progress_channel;
 use packetline::encode::write_text_packetline;
 use packetline::FLUSH_LINE;
@@ -356,6 +357,7 @@ pub async fn fetch(
 ) -> Result<impl TryIntoResponse, Error> {
     let (writer, reader) = mpsc::channel::<Bytes>(100_000_000);
     let (progress_writer, mut progress_reader) = mpsc::channel::<String>(50);
+    let (error_writer, mut err_reader) = mpsc::channel::<String>(50);
     let sink_writer = SinkWriter::new(CopyToBytes::new(
         PollSender::new(writer).sink_map_err(|_| std::io::Error::from(ErrorKind::BrokenPipe)),
     ));
@@ -397,6 +399,11 @@ pub async fn fetch(
                     yield Bytes::from(buf);
                 }
             }
+            while let Some(err_msg) = err_reader.recv().await {
+                let mut buf = Vec::with_capacity(err_msg.len());
+                write_error_channel(err_msg.as_ref(), &mut buf).await?;
+                yield Bytes::from(buf);
+            }
         }
         let mut buf = Vec::with_capacity(FLUSH_LINE.len());
         flush_to_write(&mut buf).await?;
@@ -406,27 +413,36 @@ pub async fn fetch(
     mononoke::spawn_task({
         let request_context = request_context.clone();
         async move {
-            if delta_form == DeltaForm::OnlyOffset {
-                progress_writer
-                    .send("Packfile will be created using only offset deltas\n".to_string())
-                    .await?;
+            let writer_future = async move {
+                if delta_form == DeltaForm::OnlyOffset {
+                    progress_writer
+                        .send("Packfile will be created using only offset deltas\n".to_string())
+                        .await?;
+                }
+                let response_stream = fetch_response(
+                    request_context.ctx.clone(),
+                    &request_context.repo,
+                    args.into_request(concurrency(&request_context), shallow_response),
+                    progress_writer,
+                )
+                .await?;
+                let mut pack_writer = PackfileWriter::new(
+                    sink_writer,
+                    response_stream.num_items as u32,
+                    5000,
+                    delta_form,
+                );
+                pack_writer.write(response_stream.items).await?;
+                pack_writer.finish().await?;
+                anyhow::Ok(())
+            };
+            match writer_future.await {
+                Ok(_) => anyhow::Ok(()),
+                Err(e) => {
+                    error_writer.send(format!("{:?}", e)).await?;
+                    Ok(())
+                }
             }
-            let response_stream = fetch_response(
-                request_context.ctx.clone(),
-                &request_context.repo,
-                args.into_request(concurrency(&request_context), shallow_response),
-                progress_writer,
-            )
-            .await?;
-            let mut pack_writer = PackfileWriter::new(
-                sink_writer,
-                response_stream.num_items as u32,
-                5000,
-                delta_form,
-            );
-            pack_writer.write(response_stream.items).await?;
-            pack_writer.finish().await?;
-            anyhow::Ok(())
         }
     });
 

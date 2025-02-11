@@ -109,6 +109,14 @@ pub async fn write_progress_channel(
     write_packetline(buf, true /* is_binary */, Some(Channel::Progress), out).await
 }
 
+/// Write text byte level data to `out` in Error channel with packetline format
+pub async fn write_error_channel(
+    buf: &[u8],
+    out: &mut (impl AsyncWrite + Unpin),
+) -> io::Result<usize> {
+    write_packetline(buf, true /* is_binary */, Some(Channel::Error), out).await
+}
+
 async fn write_packetline(
     mut buf: &[u8],
     is_binary: bool,
