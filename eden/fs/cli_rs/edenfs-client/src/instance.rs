@@ -46,6 +46,8 @@ use thrift_types::edenfs::GetCurrentSnapshotInfoRequest;
 use thrift_types::edenfs::GetScmStatusParams;
 use thrift_types::edenfs::GlobParams;
 use thrift_types::edenfs::MountId;
+use thrift_types::edenfs::UnmountArgument;
+use thrift_types::edenfs_clients::errors::UnmountV2Error;
 use thrift_types::edenfs_clients::EdenService;
 use thrift_types::fb303_core::fb303_status;
 use thrift_types::fbthrift::binary_protocol::BinaryProtocol;
@@ -568,11 +570,40 @@ impl EdenFsInstance {
         let encoded_path = bytes_from_path(path.to_path_buf())
             .with_context(|| format!("Failed to encode path {}", path.display()))?;
 
-        client
-            .unmount(&encoded_path)
-            .await
-            .with_context(|| format!("Failed to unmount {}", path.display()))?;
-        Ok(())
+        let unmount_argument = UnmountArgument {
+            mountId: MountId {
+                mountPoint: encoded_path,
+                ..Default::default()
+            },
+            ..Default::default()
+        };
+        match client.unmountV2(&unmount_argument).await {
+            Ok(_) => Ok(()),
+            Err(UnmountV2Error::ApplicationException(ref e)) => {
+                if e.type_ == ApplicationExceptionErrorCode::UnknownMethod {
+                    let encoded_path = bytes_from_path(path.to_path_buf())
+                        .with_context(|| format!("Failed to encode path {}", path.display()))?;
+                    client.unmount(&encoded_path).await.with_context(|| {
+                        format!(
+                            "Failed to unmount (legacy Thrift unmount endpoint) {}",
+                            path.display()
+                        )
+                    })?;
+                    Ok(())
+                } else {
+                    Err(EdenFsError::Other(anyhow!(
+                        "Failed to unmount (Thrift unmountV2 endpoint) {}: {}",
+                        path.display(),
+                        e
+                    )))
+                }
+            }
+            Err(e) => Err(EdenFsError::Other(anyhow!(
+                "Failed to unmount (Thrift unmountV2 endpoint) {}: {}",
+                path.display(),
+                e
+            ))),
+        }
     }
 
     pub async fn get_current_snapshot_info(

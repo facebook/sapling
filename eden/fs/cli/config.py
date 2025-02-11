@@ -46,6 +46,7 @@ from eden.thrift import legacy
 from eden.thrift.legacy import EdenNotRunningError
 from facebook.eden.ttypes import MountInfo as ThriftMountInfo, MountState
 from filelock import BaseFileLock, FileLock
+from thrift.Thrift import TApplicationException
 
 from . import configinterpolator, configutil, telemetry, util, version
 
@@ -902,7 +903,7 @@ Do you want to run `eden mount %s` instead?"""
 
         return 0
 
-    def unmount(self, path: str) -> None:
+    def unmount(self, path: str, use_force: bool = True) -> None:
         """Ask edenfs to unmount the specified checkout."""
         # In some cases edenfs can take a long time unmounting while it waits for
         # inodes to become unreferenced.  Ideally we should have edenfs timeout and
@@ -911,7 +912,22 @@ Do you want to run `eden mount %s` instead?"""
         # For now at least time out here so the CLI commands do not hang in this
         # case.
         with self.get_thrift_client_legacy(timeout=60) as client:
-            client.unmount(os.fsencode(path))
+            mountPoint = os.fsencode(path)
+            unmount_arg = eden_ttypes.UnmountArgument(
+                mountId=eden_ttypes.MountId(mountPoint=mountPoint),
+                useForce=use_force,
+            )
+
+            try:
+                client.unmountV2(unmount_arg)
+            except TApplicationException as e:
+                # Fallback to old unmount in the case that this is running
+                # against an older version of EdenFS in which unmountV2 is
+                # not known
+                if e.type == TApplicationException.UNKNOWN_METHOD:
+                    client.unmount(mountPoint)
+                else:
+                    raise e
 
     def destroy_mount(
         self, path: Union[Path, str], preserve_mount_point: bool = False
