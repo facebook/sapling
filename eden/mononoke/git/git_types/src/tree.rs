@@ -47,6 +47,7 @@ use crate::fetch_non_blob_git_object;
 use crate::git_lfs::generate_and_store_git_lfs_pointer;
 use crate::git_object_bytes_with_hash;
 use crate::upload_non_blob_git_object;
+use crate::DeltaObjectKind;
 use crate::GitIdentifier;
 
 /// An id of a Git tree object.
@@ -143,10 +144,13 @@ impl GitLeaf {
     }
 }
 
+#[allow(async_fn_in_trait)]
 pub trait GitEntry {
     fn oid(&self) -> ObjectId;
     fn identifier(&self) -> Result<GitIdentifier>;
     fn is_submodule(&self) -> bool;
+    fn kind(&self) -> DeltaObjectKind;
+    async fn size(&self, ctx: &CoreContext, blobstore: &impl Blobstore) -> Result<u64>;
 }
 
 impl GitEntry for Entry<GitTreeId, GitLeaf> {
@@ -170,6 +174,20 @@ impl GitEntry for Entry<GitTreeId, GitLeaf> {
         match self {
             Entry::Tree(_) => false,
             Entry::Leaf(leaf) => leaf.is_submodule(),
+        }
+    }
+
+    fn kind(&self) -> DeltaObjectKind {
+        match self {
+            Entry::Tree(_) => DeltaObjectKind::Tree,
+            Entry::Leaf(_) => DeltaObjectKind::Blob,
+        }
+    }
+
+    async fn size(&self, ctx: &CoreContext, blobstore: &impl Blobstore) -> Result<u64> {
+        match self {
+            Entry::Tree(tree_id) => tree_id.size(ctx, blobstore).await,
+            Entry::Leaf(leaf) => leaf.size(ctx, blobstore).await,
         }
     }
 }

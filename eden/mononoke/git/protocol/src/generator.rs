@@ -23,12 +23,11 @@ use futures::StreamExt as _;
 use futures::TryStreamExt;
 use futures_stats::TimedTryFutureExt;
 use git_types::fetch_git_delta_manifest;
-use git_types::mode;
-use git_types::DeltaObjectKind;
+use git_types::fetch_non_blob_git_object;
+use git_types::tree::GitEntry;
 use git_types::GitDeltaManifestEntryOps;
 use git_types::GitIdentifier;
-use git_types::TreeHandle;
-use git_types::TreeMember;
+use git_types::GitTreeId;
 use gix_hash::ObjectId;
 use manifest::ManifestOps;
 use mononoke_types::hash::GitSha1;
@@ -81,7 +80,6 @@ async fn boundary_trees_and_blobs(
 ) -> Result<FxHashSet<FullObjectEntry>> {
     let FetchContainer {
         ctx,
-        derived_data,
         blobstore,
         filter,
         concurrency,
@@ -89,54 +87,40 @@ async fn boundary_trees_and_blobs(
         ..
     } = fetch_container;
     let boundary_commits = match shallow_info.as_ref() {
-        Some(shallow_info) => shallow_info
-            .boundary_commits
-            .iter()
-            .map(|entry| entry.csid())
-            .collect(),
+        Some(shallow_info) => shallow_info.boundary_commits.clone(),
         None => Vec::new(),
     };
-    stream::iter(boundary_commits.into_iter().map(Ok))
-        .map_ok(|changeset_id| {
-            cloned!(ctx, derived_data, blobstore, filter);
+    stream::iter(boundary_commits.into_iter().map(|entry| Ok((entry.csid(), entry.oid()))))
+        .map_ok(|(changeset_id, git_commit_id)| {
+            cloned!(ctx, blobstore, filter);
             async move {
-                let root_tree = derived_data
-                    .derive::<TreeHandle>(&ctx, changeset_id)
+                let commit_object = fetch_non_blob_git_object(&ctx, &blobstore, &git_commit_id)
                     .await
-                    .with_context(|| {
-                        format!(
-                            "Error in deriving TreeHandle for changeset {:?}",
-                            changeset_id
-                        )
-                    })?;
-                let objects = root_tree
-                    .list_all_entries((*ctx).clone(), blobstore)
-                    .try_filter_map(|(path, entry)| {
-                        let filter = filter.clone();
-                        let tree_member = TreeMember::from(entry);
-                        let kind = if tree_member.oid().is_blob() {
-                            DeltaObjectKind::Blob
+                    .context("Error in fetching boundary commit")?
+                    .try_into_commit()
+                    .map_err(|_| anyhow::anyhow!("Git object {:?} is not a commit", git_commit_id))?;
+                let root_tree = GitTreeId(commit_object.tree);
+                let objects = root_tree.list_all_entries((*ctx).clone(), blobstore.clone()).try_filter_map(|(path, entry)|{
+                    cloned!(ctx, blobstore, filter);
+                    async move {
+                        let size = entry.size(&ctx, &blobstore).await?;
+                        let kind = entry.kind();
+                        let oid = entry.oid();
+                        // If the entry corresponds to a submodules (and shows up as a commit), then we ignore it
+                        // If the object is ignored by the filter, then we ignore it
+                        if !filter_object(filter, &path, kind, size) || entry.is_submodule() {
+                            Ok(None)
                         } else {
-                            DeltaObjectKind::Tree
-                        };
-                        async move {
-                            // If the entry corresponds to a submodules (and shows up as a commit), then we ignore it
-                            let is_submodule = tree_member.filemode() == mode::GIT_FILEMODE_COMMIT;
-                            // If the object is ignored by the filter, then we ignore it
-                            if !filter_object(filter, &path, kind, tree_member.oid().size()) || is_submodule {
-                                Ok(None)
-                            } else {
-                                Ok(Some(FullObjectEntry::new(changeset_id, path, *tree_member.oid())?))
-                            }
+                            Ok(Some(FullObjectEntry::new(changeset_id, path, oid, size, kind)))
                         }
-                    })
-                    .try_collect::<FxHashSet<_>>()
-                    .await
-                    .with_context(|| {
-                        format!(
-                            "Error while listing all entries from TreeHandle for changeset {changeset_id:?}",
-                        )
-                    })?;
+                    }
+                }).try_collect::<FxHashSet<_>>()
+                .await
+                .with_context(|| {
+                    format!(
+                        "Error while listing all entries from GitTree for changeset {changeset_id:?}",
+                    )
+                })?;
                 Ok(objects)
             }
         })

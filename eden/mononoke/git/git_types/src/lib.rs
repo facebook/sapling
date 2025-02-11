@@ -25,7 +25,7 @@ pub mod git_lfs;
 mod manifest;
 mod object;
 mod store;
-mod tree;
+pub mod tree;
 
 use std::io::Write;
 
