@@ -1,6 +1,6 @@
 """ build mode definitions for eden """
 
-load("@fbcode_macros//build_defs:create_build_mode.bzl", "create_build_mode")
+load("@fbcode_macros//build_defs:create_build_mode.bzl", "create_unified_build_mode")
 
 COMPILE_TIME_TRACING = False
 
@@ -46,20 +46,13 @@ _os_preprocessor_flags = [
     ]),
 ]
 
-_mode = create_build_mode(
+_mode = create_unified_build_mode(
     clang_flags = _extra_clang_flags,
     cxx_flags = _extra_cxxflags,
     gcc_flags = _extra_gcc_flags,
     os_preprocessor_flags = _os_preprocessor_flags,
 )
 
-_modes = {
-    "dbg": _mode,
-    "dbgo": _mode,
-    "dev": _mode,
-    "opt": _mode,
-}
-
 def get_modes():
     """ Return modes for this hierarchy """
-    return _modes
+    return _mode
