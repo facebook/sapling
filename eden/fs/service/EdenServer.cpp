@@ -780,7 +780,7 @@ folly::SemiFuture<Unit> EdenServer::unmountAll() {
       // is important to ensure that the EdenMount object cannot be destroyed
       // before EdenMount::unmount() completes.
       auto mount = info.edenMount;
-      auto future = mount->unmount().defer(
+      auto future = mount->unmount({}).defer(
           [mount, unmountFuture = info.unmountPromise.getFuture()](
               auto&& result) mutable {
             if (result.hasValue()) {
@@ -1903,7 +1903,7 @@ ImmediateFuture<std::shared_ptr<EdenMount>> EdenServer::mount(
 
 folly::SemiFuture<Unit> EdenServer::unmount(
     AbsolutePathPiece mountPath,
-    UnmountOptions /* options */) {
+    UnmountOptions options) {
   return folly::makeSemiFutureWith([&] {
            auto future = Future<Unit>::makeEmpty();
            auto mount = std::shared_ptr<EdenMount>{};
@@ -1920,7 +1920,7 @@ folly::SemiFuture<Unit> EdenServer::unmount(
 
            // We capture the mount shared_ptr in the lambda to keep the
            // EdenMount object alive during the call to unmount.
-           return mount->unmount().deferValue(
+           return mount->unmount(options).deferValue(
                [mount, f = std::move(future)](auto&&) mutable {
                  return std::move(f);
                });

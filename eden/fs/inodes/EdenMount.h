@@ -40,6 +40,7 @@
 #include "eden/fs/inodes/VirtualInode.h"
 #include "eden/fs/journal/JournalDelta.h"
 #include "eden/fs/model/RootId.h"
+#include "eden/fs/privhelper/PrivHelper.h"
 #include "eden/fs/service/gen-cpp2/eden_types.h"
 #include "eden/fs/store/BlobAccess.h"
 #include "eden/fs/store/ScmStatusCache.h"
@@ -429,7 +430,8 @@ class EdenMount : public std::enable_shared_from_this<EdenMount> {
    * function immediately returns a Future which will complete at the same time
    * the original call to unmount() completes.
    */
-  FOLLY_NODISCARD folly::SemiFuture<folly::Unit> unmount();
+  FOLLY_NODISCARD folly::SemiFuture<folly::Unit> unmount(
+      UnmountOptions options);
 
   /**
    * Get the current state of this mount.

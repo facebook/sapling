@@ -1035,7 +1035,8 @@ folly::SemiFuture<SerializedInodeMap> EdenMount::shutdownImpl(bool doTakeover) {
       });
 }
 
-folly::SemiFuture<folly::Unit> EdenMount::unmount() {
+folly::SemiFuture<folly::Unit> EdenMount::unmount(
+    UnmountOptions /* options */) {
   auto mountingUnmountingState = mountingUnmountingState_.wlock();
   if (mountingUnmountingState->fsChannelUnmountStarted()) {
     return mountingUnmountingState->fsChannelUnmountPromise->getFuture();
@@ -1065,6 +1066,7 @@ folly::SemiFuture<folly::Unit> EdenMount::unmount() {
         // TODO: Is it safe to call FsChannel::unmount if the FuseChannel
         // is in the process of starting? Or can we assume that
         // mountResult.hasException() above covers that case?
+
         return channel_->unmount();
       })
       .thenTry([this](Try<Unit>&& result) noexcept -> folly::Future<Unit> {

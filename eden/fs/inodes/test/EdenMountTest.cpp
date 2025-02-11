@@ -46,6 +46,7 @@ constexpr folly::Duration kTimeout =
     std::chrono::duration_cast<folly::Duration>(60s);
 constexpr folly::Duration kMicroTimeout =
     std::chrono::duration_cast<folly::Duration>(10ms);
+auto options = UnmountOptions{};
 
 template <class Func>
 void logAndSwallowExceptions(Func&&);
@@ -696,7 +697,7 @@ TEST(EdenMount, unmountSucceedsIfNeverMounted) {
   testMount.getPrivHelper()->registerMountDelegate(
       mount.getPath(), mountDelegate);
 
-  mount.unmount().get(kTimeout);
+  mount.unmount(options).get(kTimeout);
   EXPECT_FALSE(mountDelegate->wasFuseUnmountEverCalled())
       << "unmount should not call fuseUnmount";
 }
@@ -713,7 +714,7 @@ TEST(EdenMount, unmountDoesNothingIfPriorMountFailed) {
   ASSERT_THROW(
       { mount.startFsChannel(false).get(kTimeout); },
       MockMountDelegate::MountFailed);
-  EXPECT_NO_THROW({ mount.unmount().get(kTimeout); });
+  EXPECT_NO_THROW({ mount.unmount(options).get(kTimeout); });
   EXPECT_FALSE(mountDelegate->wasFuseUnmountEverCalled())
       << "unmount should not call fuseUnmount";
 }
@@ -740,8 +741,8 @@ TEST(EdenMount, unmountIsIdempotent) {
         testMount.getServerExecutor().get());
   };
 
-  mount.unmount().get(kTimeout);
-  mount.unmount().get(kTimeout);
+  mount.unmount(options).get(kTimeout);
+  mount.unmount(options).get(kTimeout);
   EXPECT_EQ(mountDelegate->getFuseUnmountCallCount(), 1)
       << "fuseUnmount should be called only once despite multiple calls to unmount";
 }
@@ -769,8 +770,8 @@ TEST(EdenMount, concurrentUnmountCallsWaitForExactlyOneFuseUnmount) {
         testMount.getServerExecutor().get());
   };
 
-  auto unmountFuture1 = mount.unmount();
-  auto unmountFuture2 = mount.unmount();
+  auto unmountFuture1 = mount.unmount(options);
+  auto unmountFuture2 = mount.unmount(options);
   EXPECT_FALSE(unmountFuture1.isReady())
       << "unmount should not finish before fuseUnmount returns";
   EXPECT_FALSE(unmountFuture2.isReady())
@@ -801,7 +802,7 @@ TEST(EdenMount, unmountUnmountsIfMounted) {
       .within(kTimeout)
       .getVia(testMount.getServerExecutor().get());
 
-  mount.unmount().get(kTimeout);
+  mount.unmount(options).get(kTimeout);
   SCOPE_EXIT {
     mount.getFsChannelCompletionFuture().within(kTimeout).getVia(
         testMount.getServerExecutor().get());
@@ -822,7 +823,7 @@ TEST(EdenMount, unmountUnmountsIfTookOver) {
 
   mount.takeoverFuse(FuseChannelData{fuse->start(), {}});
 
-  mount.unmount().get(kTimeout);
+  mount.unmount(options).get(kTimeout);
   SCOPE_EXIT {
     mount.getFsChannelCompletionFuture().within(kTimeout).getVia(
         testMount.getServerExecutor().get());
@@ -840,7 +841,7 @@ TEST(EdenMount, cancelledMountDoesNotUnmountIfMountingFails) {
       mount.getPath(), mountDelegate);
 
   auto startChannelFuture = mount.startFsChannel(false);
-  auto unmountFuture = mount.unmount();
+  auto unmountFuture = mount.unmount(options);
 
   auto unmountCallCountBeforeMountFails =
       mountDelegate->getFuseUnmountCallCount();
@@ -866,7 +867,7 @@ TEST(EdenMount, unmountCancelsInProgressMount) {
       mount.getPath(), mountDelegate);
 
   auto startChannelFuture = mount.startFsChannel(false);
-  auto unmountFuture = mount.unmount();
+  auto unmountFuture = mount.unmount(options);
   SCOPE_EXIT {
     std::move(unmountFuture).get(kTimeout);
   };
@@ -895,7 +896,7 @@ TEST(EdenMount, cancelledMountWaitsForUnmountBeforeCompleting) {
       mount.getPath(), mountDelegate);
 
   auto startChannelFuture = mount.startFsChannel(false);
-  auto unmountFuture = mount.unmount();
+  auto unmountFuture = mount.unmount(options);
   SCOPE_EXIT {
     std::move(unmountFuture).get(kTimeout);
   };
@@ -920,7 +921,7 @@ TEST(EdenMount, unmountWaitsForInProgressMountBeforeUnmounting) {
       mount.getPath(), mountDelegate);
 
   auto startChannelFuture = mount.startFsChannel(false);
-  auto unmountFuture = mount.unmount();
+  auto unmountFuture = mount.unmount(options);
 
   EXPECT_FALSE(mountDelegate->wasFuseUnmountEverCalled())
       << "unmount should not call fuseUnmount until fuseMount completes";
@@ -956,7 +957,7 @@ TEST(EdenMount, unmountingDuringFuseHandshakeCancelsStart) {
   ASSERT_FALSE(startChannelFuture.wait(kMicroTimeout).isReady())
       << "start should not finish before FUSE handshake";
 
-  auto unmountFuture = mount.unmount();
+  auto unmountFuture = mount.unmount(options);
   EXPECT_THROW(
       std::move(startChannelFuture).get(kTimeout),
       FuseDeviceUnmountedDuringInitialization)
@@ -974,7 +975,7 @@ TEST(EdenMount, startingFuseFailsImmediatelyIfUnmountWasEverCalled) {
   testMount.getPrivHelper()->registerMountDelegate(
       mount.getPath(), mountDelegate);
 
-  mount.unmount().within(kTimeout).get();
+  mount.unmount(options).within(kTimeout).get();
 
   EXPECT_THROW(mount.startFsChannel(false).get(kTimeout), EdenMountCancelled);
   EXPECT_FALSE(mountDelegate->wasFuseMountEverCalled())
@@ -988,7 +989,7 @@ TEST(EdenMount, takeoverFuseFailsIfUnmountWasEverCalled) {
   testMount.getPrivHelper()->registerMountDelegate(
       mount.getPath(), mountDelegate);
 
-  mount.unmount().within(kTimeout).get();
+  mount.unmount(options).within(kTimeout).get();
   auto fuse = std::make_shared<FakeFuse>();
   EXPECT_THROW(
       { mount.takeoverFuse(FuseChannelData{fuse->start(), {}}); },
