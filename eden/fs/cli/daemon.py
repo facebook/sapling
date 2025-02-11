@@ -374,4 +374,6 @@ def get_edenfs_environment() -> Dict[str, str]:
             # Drop any environment variable not matching the above cases
             pass
 
+    # Setup EdenFs service id
+    eden_env["FB_SERVICE_ID"] = "scm/edenfs"
     return eden_env
