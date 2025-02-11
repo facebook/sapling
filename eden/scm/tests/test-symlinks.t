@@ -1,5 +1,19 @@
 #require symlink no-eden
 
+#testcases fscap no-fscap
+
+#if no-fscap
+Test util.checklink non-fscap backup code.
+  $ cat > no-fscap.py <<EOF
+  > def uisetup(ui):
+  >   def _noop(*args):
+  >     return None
+  >   from sapling import fscap
+  >   fscap.getfscap = _noop
+  > EOF
+  $ setconfig extensions.no-fscap=$TESTTMP/no-fscap.py
+#endif
+
 == tests added in 0.7 ==
 
   $ newclientrepo test-symlinks-0.7

@@ -242,7 +242,7 @@ def checklink(path: str) -> bool:
     # mktemp is not racy because symlink creation will fail if the
     # file already exists
     while True:
-        ident = identitymod.sniffdir(path) or identity.default()
+        ident = identitymod.sniffdir(path) or identitymod.default()
         cachedir = os.path.join(path, ident.dotdir(), "cache")
         checklink = os.path.join(cachedir, "checklink")
         # try fast path, read only
