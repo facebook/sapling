@@ -8,6 +8,7 @@
 #pragma once
 
 #include "eden/common/utils/ImmediateFuture.h"
+#include "eden/fs/privhelper/PrivHelper.h"
 #include "eden/fs/utils/FsChannelTypes.h"
 
 namespace facebook::eden {
@@ -75,7 +76,8 @@ class FsChannel {
   /**
    * Ask this FsChannel to remove itself from the filesystem.
    */
-  FOLLY_NODISCARD virtual folly::SemiFuture<folly::Unit> unmount() = 0;
+  FOLLY_NODISCARD virtual folly::SemiFuture<folly::Unit> unmount(
+      UnmountOptions options) = 0;
 
   /**
    * Ask this FsChannel to stop for a takeover request.

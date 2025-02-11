@@ -980,7 +980,8 @@ FuseChannel::StopFuture FuseChannel::initializeFromTakeover(
   return sessionCompletePromise_.getFuture();
 }
 
-folly::SemiFuture<folly::Unit> FuseChannel::unmount() {
+folly::SemiFuture<folly::Unit> FuseChannel::unmount(
+    UnmountOptions /* options */) {
   // TODO: This does not handle the situation where the mount has been moved by,
   // for example, renaming a parent directory, or `mount --move`.
   return privHelper_->fuseUnmount(mountPath_.view());

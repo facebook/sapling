@@ -163,7 +163,8 @@ class Nfsd3 final : public FsChannel {
    * shuts down the Nfsd3. The future returned by initialize() will be fulfilled
    * with a non-takeover StopData.
    */
-  FOLLY_NODISCARD folly::SemiFuture<folly::Unit> unmount() override;
+  FOLLY_NODISCARD folly::SemiFuture<folly::Unit> unmount(
+      UnmountOptions /* options */) override;
 
   /**
    * Trigger an invalidation for the given path.

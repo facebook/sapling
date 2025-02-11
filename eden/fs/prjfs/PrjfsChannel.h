@@ -570,7 +570,7 @@ class PrjfsChannel : public FsChannel {
    * PrjfsChannel must not be destructed until the returned future is
    * fulfilled.
    */
-  folly::SemiFuture<folly::Unit> unmount() override;
+  folly::SemiFuture<folly::Unit> unmount(UnmountOptions options) override;
 
   bool takeoverStop() override {
     // ProjFS does not support takeover.

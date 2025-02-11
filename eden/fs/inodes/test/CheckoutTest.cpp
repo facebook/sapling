@@ -1966,7 +1966,7 @@ TEST(Checkout, concurrent_crawl_during_checkout) {
   auto result = std::move(fut).get(0ms);
   EXPECT_THAT(result.conflicts, UnorderedElementsAre());
 
-  mount.getEdenMount()->getPrjfsChannel()->unmount().get();
+  mount.getEdenMount()->getPrjfsChannel()->unmount({}).get();
 }
 
 TEST(Checkout, concurrent_file_to_directory_during_checkout) {
@@ -2021,7 +2021,7 @@ TEST(Checkout, concurrent_file_to_directory_during_checkout) {
       UnorderedElementsAre(
           makeConflict(ConflictType::MODIFIED_REMOVED, "b.txt")));
 
-  mount.getEdenMount()->getPrjfsChannel()->unmount().get();
+  mount.getEdenMount()->getPrjfsChannel()->unmount({}).get();
 }
 
 TEST(Checkout, concurrent_new_file_during_checkout) {
@@ -2077,7 +2077,7 @@ TEST(Checkout, concurrent_new_file_during_checkout) {
       UnorderedElementsAre(
           makeConflict(ConflictType::UNTRACKED_ADDED, "a/2.txt")));
 
-  mount.getEdenMount()->getPrjfsChannel()->unmount().get();
+  mount.getEdenMount()->getPrjfsChannel()->unmount({}).get();
 }
 
 TEST(Checkout, concurrent_recreation_during_checkout) {
@@ -2136,7 +2136,7 @@ TEST(Checkout, concurrent_recreation_during_checkout) {
           makeConflict(ConflictType::REMOVED_MODIFIED, "a/1.txt"),
           makeConflict(ConflictType::MODIFIED_MODIFIED, "a/1.txt")));
 
-  mount.getEdenMount()->getPrjfsChannel()->unmount().get();
+  mount.getEdenMount()->getPrjfsChannel()->unmount({}).get();
 }
 
 #endif

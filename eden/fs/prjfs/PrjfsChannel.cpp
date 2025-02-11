@@ -1759,7 +1759,8 @@ FsChannelInfo PrjfsChannel::StopData::extractTakeoverInfo() {
   return ProjFsChannelData{};
 }
 
-folly::SemiFuture<folly::Unit> PrjfsChannel::unmount() {
+folly::SemiFuture<folly::Unit> PrjfsChannel::unmount(
+    UnmountOptions /* options */) {
   XLOG(INFO) << "Stopping PrjfsChannel for: " << mountPath_;
   XCHECK(!stopPromise_.isFulfilled());
 

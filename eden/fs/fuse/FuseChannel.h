@@ -390,7 +390,8 @@ class FuseChannel final : public FsChannel {
    * FuseChannel. The future returned by initialize() will be fulfilled with a
    * non-takeover StopData.
    */
-  FOLLY_NODISCARD folly::SemiFuture<folly::Unit> unmount() override;
+  FOLLY_NODISCARD folly::SemiFuture<folly::Unit> unmount(
+      UnmountOptions options) override;
 
   /**
    * Request that the FuseChannel stop processing new requests, and prepare

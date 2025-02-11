@@ -1035,8 +1035,7 @@ folly::SemiFuture<SerializedInodeMap> EdenMount::shutdownImpl(bool doTakeover) {
       });
 }
 
-folly::SemiFuture<folly::Unit> EdenMount::unmount(
-    UnmountOptions /* options */) {
+folly::SemiFuture<folly::Unit> EdenMount::unmount(UnmountOptions options) {
   auto mountingUnmountingState = mountingUnmountingState_.wlock();
   if (mountingUnmountingState->fsChannelUnmountStarted()) {
     return mountingUnmountingState->fsChannelUnmountPromise->getFuture();
@@ -1050,7 +1049,7 @@ folly::SemiFuture<folly::Unit> EdenMount::unmount(
   mountingUnmountingState.unlock();
 
   return std::move(mountFuture)
-      .thenTry([this](Try<Unit>&& mountResult) {
+      .thenTry([this, options](Try<Unit>&& mountResult) {
         if (mountResult.hasException()) {
           return folly::makeSemiFuture();
         }
@@ -1067,7 +1066,7 @@ folly::SemiFuture<folly::Unit> EdenMount::unmount(
         // is in the process of starting? Or can we assume that
         // mountResult.hasException() above covers that case?
 
-        return channel_->unmount();
+        return channel_->unmount(options);
       })
       .thenTry([this](Try<Unit>&& result) noexcept -> folly::Future<Unit> {
         auto mountingUnmountingState = mountingUnmountingState_.wlock();
