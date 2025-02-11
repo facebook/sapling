@@ -275,6 +275,8 @@ pub struct RepoConfig {
     pub git_configs: GitConfigs,
     /// Configuration for the modern sync job
     pub modern_sync_config: Option<ModernSyncConfig>,
+    /// Expose continuous stats about repo contents, this is for when mononoke server is the receiving end of a sync
+    pub log_repo_stats: bool,
 }
 
 /// Config determining if the repo is deep sharded in the context of a service.

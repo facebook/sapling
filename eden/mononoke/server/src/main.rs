@@ -29,6 +29,7 @@ use executor_lib::RepoShardedProcess;
 use executor_lib::RepoShardedProcessExecutor;
 use fbinit::FacebookInit;
 use futures::channel::oneshot;
+use futures::future::abortable;
 use futures::stream;
 use futures::stream::StreamExt;
 use futures::stream::TryStreamExt;
@@ -48,6 +49,7 @@ use mononoke_app::monitoring::ReadyFlagService;
 use mononoke_app::MononokeApp;
 use mononoke_app::MononokeAppBuilder;
 use mononoke_app::MononokeReposManager;
+use mononoke_macros::mononoke;
 use openssl::ssl::AlpnError;
 use repo_identity::RepoIdentityRef;
 use scuba_ext::MononokeScubaSampleBuilder;
@@ -57,6 +59,8 @@ use slog::info;
 use slog::o;
 use slog::warn;
 use slog::Logger;
+
+mod stats;
 
 const SM_CLEANUP_TIMEOUT_SECS: u64 = 120;
 
@@ -158,10 +162,10 @@ impl MononokeServerProcess {
 #[async_trait]
 impl RepoShardedProcess for MononokeServerProcess {
     async fn setup(&self, repo: &RepoShard) -> anyhow::Result<Arc<dyn RepoShardedProcessExecutor>> {
-        let repo_name = repo.repo_name.as_str();
-        let logger = self.repos_mgr.repo_logger(repo_name);
+        let repo_name = repo.repo_name.clone();
+        let logger = self.repos_mgr.repo_logger(&repo_name);
         info!(&logger, "Setting up repo {} in Mononoke service", repo_name);
-        self.add_repo(repo_name, &logger, &self.scuba)
+        self.add_repo(&repo_name, &logger, &self.scuba.clone())
             .await
             .with_context(|| {
                 format!(
@@ -169,8 +173,39 @@ impl RepoShardedProcess for MononokeServerProcess {
                     repo_name
                 )
             })?;
+
+        let config = self.repos_mgr.repo_config(&repo_name)?;
+        if config.log_repo_stats {
+            let repos = self.repos_mgr.repos().get_by_name(&repo_name);
+            match repos {
+                Some(repo) => {
+                    let (stats, stats_abort_handle) = abortable({
+                        cloned!(repo, repo_name);
+                        let ctx = CoreContext::new_with_logger(self.fb, logger);
+                        async move {
+                            stats::stats_loop(
+                                ctx,
+                                repo_name.to_owned(),
+                                repo.repo_identity.id(),
+                                repo,
+                            )
+                            .await
+                        }
+                    });
+                    let _stats = mononoke::spawn_task(stats);
+                    self.repos_mgr
+                        .add_stats_handle_for_repo(&repo_name, stats_abort_handle);
+                }
+                None => slog::warn!(
+                    logger,
+                    "Requested to log stats of unopened repo {}",
+                    repo_name
+                ),
+            }
+        }
+
         Ok(Arc::new(MononokeServerProcessExecutor {
-            repo_name: repo_name.to_string(),
+            repo_name,
             repos_mgr: self.repos_mgr.clone(),
         }))
     }
@@ -191,6 +226,7 @@ impl MononokeServerProcessExecutor {
                 repo_name
             )
         })?;
+        self.repos_mgr.remove_stats_handle_for_repo(repo_name);
         // Check if the current repo is a deep-sharded or shallow-sharded repo. If the
         // repo is deep-sharded, then remove it since SM wants some other host to serve it.
         // If repo is shallow-sharded, then keep it since regardless of SM sharding, shallow
@@ -199,6 +235,7 @@ impl MononokeServerProcessExecutor {
             .deep_sharding_config
             .and_then(|c| c.status.get(&ShardedService::SaplingRemoteApi).copied())
             .unwrap_or(false);
+
         if is_deep_sharded {
             self.repos_mgr.remove_repo(repo_name);
             info!(
@@ -223,6 +260,7 @@ impl RepoShardedProcessExecutor for MononokeServerProcessExecutor {
             self.repos_mgr.logger(),
             "Serving repo {} in Mononoke service", &self.repo_name,
         );
+
         Ok(())
     }
 

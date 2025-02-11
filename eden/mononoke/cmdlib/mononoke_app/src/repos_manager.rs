@@ -14,6 +14,7 @@ use anyhow::Result;
 use async_trait::async_trait;
 use facet::AsyncBuildable;
 use futures::stream;
+use futures::stream::AbortHandle;
 use futures::stream::StreamExt;
 use itertools::Itertools;
 use metaconfig_parser::RepoConfigs;
@@ -233,6 +234,14 @@ impl<Repo> MononokeReposManager<Repo> {
             .collect::<Result<Vec<_>>>()?;
         self.repos.populate(repos_input);
         Ok(())
+    }
+
+    pub fn add_stats_handle_for_repo(&self, repo_name: &str, handle: AbortHandle) {
+        self.repos.add_stats_handle_for_repo(repo_name, handle)
+    }
+
+    pub fn remove_stats_handle_for_repo(&self, repo_name: &str) {
+        self.repos.remove_stats_handle_for_repo(repo_name)
     }
 }
 

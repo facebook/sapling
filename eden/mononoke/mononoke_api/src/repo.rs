@@ -139,6 +139,7 @@ use repo_sparse_profiles::RepoSparseProfilesArc;
 use repo_stats_logger::RepoStatsLogger;
 use slog::debug;
 use slog::error;
+use sql_commit_graph_storage::CommitGraphBulkFetcher;
 use sql_query_config::SqlQueryConfig;
 use stats::prelude::*;
 use streaming_clone::StreamingClone;
@@ -314,6 +315,9 @@ pub struct Repo {
 
     #[facet]
     pub repo_stats_logger: RepoStatsLogger,
+
+    #[facet]
+    pub commit_graph_bulk_fetcher: CommitGraphBulkFetcher,
 }
 
 pub trait MononokeRepo = RepoLike + RepoWithBubble + Clone + 'static;
