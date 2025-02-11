@@ -113,6 +113,9 @@ class EdenServiceHandler : virtual public StreamingEdenServiceSvIf,
   folly::SemiFuture<folly::Unit> semifuture_unmount(
       std::unique_ptr<std::string> mountPoint) override;
 
+  folly::SemiFuture<folly::Unit> semifuture_unmountV2(
+      std::unique_ptr<UnmountArgument> unmountArg) override;
+
   void listMounts(std::vector<MountInfo>& results) override;
 
   folly::SemiFuture<std::unique_ptr<std::vector<CheckoutConflict>>>
