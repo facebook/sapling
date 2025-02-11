@@ -44,6 +44,7 @@ use crate::bookmarks_provider::list_tags;
 use crate::mapping::bonsai_git_mappings_by_bonsai;
 use crate::mapping::git_shas_to_bonsais;
 use crate::mapping::include_symrefs;
+use crate::mapping::ordered_bonsai_git_mappings_by_bonsai;
 use crate::mapping::refs_to_include;
 use crate::store::base_packfile_item;
 use crate::store::changeset_delta_manifest_entries;
@@ -88,7 +89,11 @@ async fn boundary_trees_and_blobs(
         ..
     } = fetch_container;
     let boundary_commits = match shallow_info.as_ref() {
-        Some(shallow_info) => shallow_info.boundary_commits.clone(),
+        Some(shallow_info) => shallow_info
+            .boundary_commits
+            .iter()
+            .map(|entry| entry.csid())
+            .collect(),
         None => Vec::new(),
     };
     stream::iter(boundary_commits.into_iter().map(Ok))
@@ -458,7 +463,11 @@ async fn commit_packfile_stream<'a>(
         ..
     } = fetch_container;
     let shallow_commits = match shallow_info.as_ref() {
-        Some(shallow_info) => shallow_info.boundary_commits.clone(),
+        Some(shallow_info) => shallow_info
+            .boundary_commits
+            .iter()
+            .map(|entry| entry.csid())
+            .collect(),
         None => Vec::new(),
     };
     commit_count += shallow_commits.len();
@@ -922,7 +931,13 @@ pub async fn shallow_info(
     let translated_shallow_commits = git_shas_to_bonsais(&ctx, repo, request.shallow.iter())
         .await
         .context("Error converting shallow Git commits to Bonsai during shallow-info")?;
-    let shallow_bonsais = translated_shallow_commits.bonsais.clone();
+    let shallow_commits = ordered_bonsai_git_mappings_by_bonsai(
+        &ctx,
+        repo,
+        translated_shallow_commits.bonsais.clone(),
+    )
+    .await
+    .context("Error fetching Git mappings for shallow bonsais")?;
     let ancestors_within_distance = match &request.variant {
         ShallowVariant::FromServerWithDepth(depth) => repo
             .commit_graph()
@@ -937,9 +952,17 @@ pub async fn shallow_info(
         ShallowVariant::None => AncestorsWithinDistance::default(),
         variant => anyhow::bail!("Shallow variant {:?} is not supported yet", variant),
     };
+    let boundary_commits =
+        ordered_bonsai_git_mappings_by_bonsai(&ctx, repo, ancestors_within_distance.boundaries)
+            .await
+            .context("Error fetching Git mappings for boundary bonsais")?;
+    let target_commits =
+        ordered_bonsai_git_mappings_by_bonsai(&ctx, repo, ancestors_within_distance.ancestors)
+            .await
+            .context("Error fetching Git mappings for target bonsais")?;
     Ok(ShallowInfoResponse::new(
-        ancestors_within_distance.ancestors,
-        ancestors_within_distance.boundaries,
-        shallow_bonsais,
+        target_commits,
+        boundary_commits,
+        shallow_commits,
     ))
 }

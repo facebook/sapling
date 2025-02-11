@@ -16,7 +16,6 @@ mod gitlfs;
 
 use std::collections::BTreeMap;
 use std::collections::HashMap;
-use std::collections::HashSet;
 use std::path::Path;
 use std::process::Stdio;
 use std::str;

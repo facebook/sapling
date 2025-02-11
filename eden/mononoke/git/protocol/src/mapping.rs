@@ -23,6 +23,7 @@ use rustc_hash::FxHashSet;
 
 use crate::bookmarks_provider::bookmarks;
 use crate::bookmarks_provider::list_tags;
+use crate::types::BonsaiAndGitCommit;
 use crate::types::CommitTagMappings;
 use crate::types::GitBookmarks;
 use crate::types::RefTarget;
@@ -130,6 +131,24 @@ async fn git_to_bonsai(
         .map(|entry| Ok((entry.bcs_id, entry.git_sha1.to_object_id()?)))
         .collect::<Result<FxHashMap<_, _>>>()
         .context("Error while converting Git Sha1 to Git Object Id during fetch")
+}
+
+/// Fetch the Bonsai Git Mappings for the given bonsais in the order they were passed in
+pub async fn ordered_bonsai_git_mappings_by_bonsai(
+    ctx: &CoreContext,
+    repo: &impl Repo,
+    cs_ids: Vec<ChangesetId>,
+) -> Result<Vec<BonsaiAndGitCommit>> {
+    let mappings = bonsai_git_mappings_by_bonsai(ctx, repo, cs_ids.clone()).await?;
+    let final_mappings = cs_ids
+        .into_iter()
+        .filter_map(|cs_id| {
+            mappings
+                .get(&cs_id)
+                .map(|git_sha1| (cs_id, git_sha1.clone()).into())
+        })
+        .collect();
+    Ok(final_mappings)
 }
 
 /// Fetch the Bonsai Git Mappings for the given bonsais

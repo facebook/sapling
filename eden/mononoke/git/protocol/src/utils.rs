@@ -152,7 +152,11 @@ pub(crate) async fn commits(
     shallow_info: &Option<ShallowInfoResponse>,
 ) -> Result<Vec<ChangesetId>> {
     match shallow_info {
-        Some(shallow_info) => Ok(shallow_info.commits.clone()),
+        Some(shallow_info) => Ok(shallow_info
+            .commits
+            .iter()
+            .map(|entry| entry.csid())
+            .collect()),
         None => {
             repo.commit_graph()
                 .ancestors_difference_stream(ctx, heads, bases)

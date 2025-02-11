@@ -534,23 +534,50 @@ impl ShallowInfoRequest {
     }
 }
 
+/// Pair representing a ChangesetId and an ObjectId which are used to represent a
+/// commit in Mononoke and Git respectively
+#[derive(Debug, Clone, Eq, PartialEq, Hash)]
+pub struct BonsaiAndGitCommit {
+    csid: ChangesetId,
+    oid: ObjectId,
+}
+
+impl BonsaiAndGitCommit {
+    pub fn csid(&self) -> ChangesetId {
+        self.csid
+    }
+
+    pub fn oid(&self) -> ObjectId {
+        self.oid
+    }
+}
+
+impl From<(ChangesetId, ObjectId)> for BonsaiAndGitCommit {
+    fn from(value: (ChangesetId, ObjectId)) -> Self {
+        Self {
+            csid: value.0,
+            oid: value.1,
+        }
+    }
+}
+
 /// Struct representing the response for shallow info section in Git fetch response
 #[derive(Debug, Clone)]
 pub struct ShallowInfoResponse {
     /// The set of commits that need to be returned as part of the shallow clone/fetch
-    pub commits: Vec<ChangesetId>,
+    pub commits: Vec<BonsaiAndGitCommit>,
     /// The set of commits that are returned as part of the shallow clone/fetch but also
     /// form the boundary of the shallow history sent by the server
-    pub boundary_commits: Vec<ChangesetId>,
+    pub boundary_commits: Vec<BonsaiAndGitCommit>,
     /// The set of commits that are considered as shallow at the client
-    pub client_shallow: Vec<ChangesetId>,
+    pub client_shallow: Vec<BonsaiAndGitCommit>,
 }
 
 impl ShallowInfoResponse {
     pub fn new(
-        commits: Vec<ChangesetId>,
-        boundary_commits: Vec<ChangesetId>,
-        client_shallow: Vec<ChangesetId>,
+        commits: Vec<BonsaiAndGitCommit>,
+        boundary_commits: Vec<BonsaiAndGitCommit>,
+        client_shallow: Vec<BonsaiAndGitCommit>,
     ) -> Self {
         Self {
             commits,
@@ -564,8 +591,13 @@ impl ShallowInfoResponse {
     pub fn client_unshallow_commits(&self) -> Vec<ChangesetId> {
         self.client_shallow
             .iter()
-            .filter(|shallow_commit| self.commits.contains(shallow_commit))
-            .copied()
+            .filter_map(|entry| {
+                if self.commits.contains(entry) {
+                    Some(entry.csid())
+                } else {
+                    None
+                }
+            })
             .collect()
     }
 }

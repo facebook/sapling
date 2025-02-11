@@ -17,7 +17,6 @@ use bytes::Bytes;
 use futures::future::try_join4;
 use futures::SinkExt;
 use futures::StreamExt;
-use gix_hash::ObjectId;
 use gotham::mime;
 use gotham::state::FromState;
 use gotham::state::State;
@@ -31,7 +30,6 @@ use gotham_ext::response::TryIntoResponse;
 use hyper::Body;
 use hyper::Response;
 use mononoke_macros::mononoke;
-use mononoke_types::ChangesetId;
 use packetline::encode::delim_to_write;
 use packetline::encode::flush_to_write;
 use packetline::encode::write_data_channel;
@@ -43,7 +41,6 @@ use packfile::pack::PackfileWriter;
 use protocol::generator::fetch_response;
 use protocol::generator::ls_refs_response;
 use protocol::generator::shallow_info as fetch_shallow_info;
-use protocol::mapping::bonsai_git_mappings_by_bonsai;
 use protocol::mapping::ref_oid_mapping;
 use protocol::types::PackfileConcurrency;
 use protocol::types::ShallowInfoResponse;
@@ -147,22 +144,6 @@ async fn acknowledgements(
     }
     Ok((Some(Bytes::from(output_buffer)), None))
 }
-
-async fn git_commits(
-    context: Arc<RepositoryRequestContext>,
-    bonsais: Vec<ChangesetId>,
-) -> Result<impl Iterator<Item = ObjectId>, Error> {
-    bonsai_git_mappings_by_bonsai(&context.ctx, &context.repo, bonsais)
-        .await
-        .map(|entries| entries.into_values())
-        .with_context(|| {
-            format!(
-                "Failed to fetch bonsai_git_mapping for repo {}",
-                context.repo.repo_identity().name()
-            )
-        })
-}
-
 async fn shallow_info(
     context: Arc<RepositoryRequestContext>,
     args: Arc<FetchArgs>,
@@ -180,17 +161,17 @@ async fn shallow_info(
         args.into_shallow_request(),
     )
     .await?;
-    let boundary_git_commits =
-        git_commits(context.clone(), response.boundary_commits.clone()).await?;
-    for boundary_commit in boundary_git_commits {
+    for boundary_commit in response.boundary_commits.iter() {
         write_text_packetline(
-            format!("shallow {}", boundary_commit.to_hex()).as_bytes(),
+            format!("shallow {}", boundary_commit.oid().to_hex()).as_bytes(),
             &mut output_buffer,
         )
         .await?;
     }
-    let git_commits = git_commits(context.clone(), response.commits.clone())
-        .await?
+    let git_commits = response
+        .commits
+        .iter()
+        .map(|entry| entry.oid())
         .collect::<FxHashSet<_>>();
     for client_shallow_commit in request.shallow {
         if git_commits.contains(&client_shallow_commit) {
