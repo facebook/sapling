@@ -28,6 +28,8 @@ from enum import Enum
 from pathlib import Path
 from typing import Dict, List, Optional, Set, Tuple, Type
 
+from eden.fs.cli.doctor.check_filesystems import check_disk_usage
+
 from eden.fs.cli.util import get_chef_log_path
 
 # Constants
@@ -1241,6 +1243,7 @@ class HealthReportCmd(Subcmd):
         INVALID_CERTS = 3
         NO_REPO_MOUNT_FOUND = 4
         CHEF_NOT_RUNNING = 5
+        LOW_DISK_SPACE = 6
 
         def description(self) -> str:
             descriptions = {
@@ -1249,6 +1252,7 @@ class HealthReportCmd(Subcmd):
                 self.INVALID_CERTS: "EdenFS couldn't find a valid user certificate.",
                 self.NO_REPO_MOUNT_FOUND: "One or more checkouts are identified as unmounted.",
                 self.CHEF_NOT_RUNNING: "Chef doesn't seem to be running on your machine.",
+                self.LOW_DISK_SPACE: "Your machine is running low on disk space.",
             }
             return descriptions[self]
 
@@ -1388,6 +1392,24 @@ class HealthReportCmd(Subcmd):
             )
             return False
 
+    def has_enough_disk_space(self, instance: EdenInstance, mounts: List[str]) -> bool:
+        try:
+            mount_paths = mounts or instance.get_mount_paths()
+            disk_space_issues = check_disk_usage(
+                None, mount_paths, instance, fs_mod.new()
+            )
+            if disk_space_issues is not None:
+                self.error_codes[HealthReportCmd.ErrorCode.LOW_DISK_SPACE] = (
+                    disk_space_issues
+                )
+                return False
+        except Exception as e:
+            self.error_codes[HealthReportCmd.ErrorCode.LOW_DISK_SPACE] = (
+                "Failed to check disk space usage: " + str(e.args[0])
+            )
+            return False
+        return True
+
     @staticmethod
     def print_and_notify_errors(
         instance: EdenInstance, out: ui.Output, notify: bool
@@ -1457,6 +1479,7 @@ class HealthReportCmd(Subcmd):
                         self.is_chef_running,
                     ]
                 )
+                or not self.has_enough_disk_space(instance, mounts)
             ):
                 exit_code = 1
 

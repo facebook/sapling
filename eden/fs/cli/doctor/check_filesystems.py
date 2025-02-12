@@ -114,13 +114,14 @@ class UnreadableSharedpath(Problem):
         super().__init__(f"Failed to read .hg/sharedpath: {e}")
 
 
-def read_shared_path(tracker: ProblemTracker, shared_path: Path) -> str:
+def read_shared_path(tracker: ProblemTracker | None, shared_path: Path) -> str:
     try:
         return shared_path.read_text()
     except (FileNotFoundError, IsADirectoryError):
         raise
     except Exception as e:
-        tracker.add_problem(UnreadableSharedpath(e))
+        if tracker:
+            tracker.add_problem(UnreadableSharedpath(e))
         raise
 
 
@@ -177,7 +178,7 @@ def get_mountpt(path: str) -> str:
 
 
 def get_mount_pts_set(
-    tracker: ProblemTracker, mount_paths: List[str], instance: EdenInstance
+    tracker: ProblemTracker | None, mount_paths: List[str], instance: EdenInstance
 ) -> Set[str]:
     eden_locations = [str(instance.state_dir), tempfile.gettempdir()]
     for mount_path in mount_paths:
@@ -236,11 +237,11 @@ class LowDiskSpaceMacOS(Problem):
 
 
 def check_disk_usage(
-    tracker: ProblemTracker,
+    tracker: ProblemTracker | None,
     mount_paths: List[str],
     instance: EdenInstance,
     fs_util: FsUtil,
-) -> None:
+) -> Optional[str]:
     def get_low_disk_space_problem_for_detected_os(
         message: str,
         severity: ProblemSeverity,
@@ -258,6 +259,7 @@ def check_disk_usage(
 
     prob_advice_space_used_ratio_threshold = 0.90
     prob_error_absolute_space_used_threshold = 1024 * 1024 * 1024  # 1GB
+    low_disk_issues_identified = []
 
     eden_mount_pts_set = get_mount_pts_set(tracker, mount_paths, instance)
 
@@ -272,7 +274,6 @@ def check_disk_usage(
             avail = disk_usage.free
             used = disk_usage.used
             used_percent = float(used) / size
-
             message = (
                 "EdenFS lazily loads your files and needs enough disk space to "
                 "store these files when loaded."
@@ -291,7 +292,10 @@ def check_disk_usage(
                     few_bytes_available_message,
                     severity=ProblemSeverity.ERROR,
                 )
-                tracker.add_problem(problem)
+                if tracker:
+                    tracker.add_problem(problem)
+                low_disk_issues_identified.append(few_bytes_available_message)
+
             elif used_percent >= prob_advice_space_used_ratio_threshold:
                 high_percent_used_disk_space_message = str(
                     f"{eden_mount_pt} is {used_percent:.2%} full. {message}",
@@ -300,7 +304,13 @@ def check_disk_usage(
                     high_percent_used_disk_space_message,
                     severity=ProblemSeverity.ADVICE,
                 )
-                tracker.add_problem(problem)
+                if tracker:
+                    tracker.add_problem(problem)
+                low_disk_issues_identified.append(high_percent_used_disk_space_message)
+
+    if len(low_disk_issues_identified) > 0:
+        return "\n".join(low_disk_issues_identified)
+    return None
 
 
 class PathsProblem(Problem):
