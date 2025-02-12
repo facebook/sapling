@@ -9,7 +9,7 @@ from dataclasses import dataclass
 from enum import Enum
 from typing import List
 
-from .. import error, node, pathutil, util
+from .. import error, match as matchmod, node, pathutil, util
 from ..i18n import _
 
 # this config is for testing purpose only
@@ -356,6 +356,21 @@ def validate_path_depth(ui, paths):
         if p.count("/") < (min_depth - 1):
             raise error.Abort(
                 _("path should be at least %d levels deep: '%s'") % (min_depth, p)
+            )
+
+
+def validate_file_count(repo, ctx, paths):
+    max_file_count = repo.ui.configint("subtree", "max-file-count")
+    if max_file_count is None:
+        return
+    mf = ctx.manifest()
+    for p in paths:
+        matcher = matchmod.match(repo.root, "", [f"path:{p}"])
+        count = mf.count(matcher)
+        if count > max_file_count:
+            raise error.Abort(
+                _("subtree path '%s' includes too many files: %d (max: %d)")
+                % (p, count, max_file_count)
             )
 
 
