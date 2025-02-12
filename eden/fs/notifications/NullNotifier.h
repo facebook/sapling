@@ -29,6 +29,13 @@ class NullNotifier : public Notifier {
 
   void showNetworkNotification(const std::exception& /*err*/) override {}
 
+  /**
+   * Show a health-report notification to the user.
+   */
+  void showHealthReportNotification(
+      [[maybe_unused]] std::string_view,
+      [[maybe_unused]] std::string_view) override {}
+
   void signalCheckout(size_t /*numActive*/) override {}
 
   void registerInodePopulationReportCallback(

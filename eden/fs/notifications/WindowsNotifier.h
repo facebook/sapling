@@ -71,6 +71,13 @@ class WindowsNotifier : public Notifier {
    */
   virtual void showNetworkNotification(const std::exception& err) override;
 
+  /**
+   * Show a health-report notification to the user.
+   */
+  virtual void showHealthReportNotification(
+      std::string_view notifTitle,
+      std::string_view notifBody) override;
+
   /*
    * Get the guid associated with the notification icon
    */

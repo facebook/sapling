@@ -52,6 +52,13 @@ class Notifier {
   virtual void showNetworkNotification(const std::exception& err) = 0;
 
   /**
+   * Show health report notification to the user.
+   */
+  virtual void showHealthReportNotification(
+      std::string_view notifTitle,
+      std::string_view notifBody) = 0;
+
+  /**
    * Signal to the notifier that the count of live checkout operations has
    * changed.
    */

@@ -61,6 +61,9 @@
 #include "eden/fs/model/TreeEntry.h"
 #include "eden/fs/model/git/TopLevelIgnores.h"
 #include "eden/fs/nfs/Nfsd3.h"
+#ifdef _WIN32
+#include "eden/fs/notifications/Notifier.h"
+#endif
 #include "eden/fs/privhelper/PrivHelper.h"
 #include "eden/fs/prjfs/PrjfsChannel.h"
 #include "eden/fs/service/EdenServer.h"
@@ -2563,8 +2566,14 @@ void EdenServiceHandler::stopFileAccessMonitor(
 
 void EdenServiceHandler::sendNotification(
     [[maybe_unused]] SendNotificationResponse&,
-    [[maybe_unused]] std::unique_ptr<SendNotificationRequest>) {
+    [[maybe_unused]] std::unique_ptr<SendNotificationRequest> request) {
+#ifdef _WIN32
+  server_->getServerState()->getNotifier()->showHealthReportNotification(
+      request->title().value(), request->description().value());
+#else
+  (void)request;
   NOT_IMPLEMENTED();
+#endif
 }
 
 apache::thrift::ResponseAndServerStream<ChangesSinceResult, ChangedFileResult>

@@ -931,6 +931,12 @@ void WindowsNotifier::showNetworkNotification(const std::exception& /*err*/) {
   showNotification(title, body);
 }
 
+void WindowsNotifier::showHealthReportNotification(
+    std::string_view notifTitle,
+    std::string_view notifBody) {
+  showNotification(notifTitle, notifBody);
+}
+
 bool WindowsNotifier::debugIsEnabled() {
   return config_->getEdenConfig()->enableEdenDebugMenu.getValue();
 }
