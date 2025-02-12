@@ -324,6 +324,7 @@ pub async fn upload_objects(
     object_store: Arc<GitObjectStore>,
     ref_updates: &[RefUpdate],
     lfs: GitImportLfs,
+    concurrency: usize,
 ) -> Result<(RefMap, Vec<RefUpdate>)> {
     let repo_name = repo.repo_identity().name().to_string();
     let uploader = Arc::new(DirectUploader::with_arc(
@@ -334,7 +335,7 @@ pub async fn upload_objects(
         backfill_derivation: BackfillDerivation::OnlySpecificTypes(vec![
             DerivableType::GitDeltaManifestsV2,
         ]),
-        concurrency: 100,
+        concurrency,
         lfs,
         ..Default::default()
     };

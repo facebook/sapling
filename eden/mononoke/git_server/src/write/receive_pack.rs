@@ -126,6 +126,7 @@ async fn push<'a>(
             object_store.clone(),
             &push_args.ref_updates,
             lfs,
+            request_context.pushvars.concurrency(),
         )
         .try_timed()
         .await?
