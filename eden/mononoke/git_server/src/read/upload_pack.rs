@@ -62,6 +62,8 @@ use crate::model::RepositoryParams;
 use crate::model::RepositoryRequestContext;
 use crate::model::ResponseType;
 use crate::model::Service;
+use crate::scuba::MononokeGitScubaHandler;
+use crate::scuba::MononokeGitScubaKey;
 use crate::util::empty_body;
 use crate::util::get_body;
 
@@ -323,7 +325,8 @@ pub async fn upload_pack(state: &mut State) -> Result<Response<Body>, HttpError>
             output.map_err(HttpError::e500)
         }
         Command::Fetch(fetch_args) => {
-            let output = fetch(&request_context, fetch_args).await;
+            let scuba_handler = MononokeGitScubaHandler::from_state(state);
+            let output = fetch(&request_context, fetch_args, scuba_handler).await;
             let output = output.map_err(HttpError::e500)?.try_into_response(state);
             output.map_err(HttpError::e500)
         }
@@ -354,6 +357,7 @@ pub async fn ls_refs(
 pub async fn fetch(
     request_context: &RepositoryRequestContext,
     args: FetchArgs,
+    scuba_handler: MononokeGitScubaHandler,
 ) -> Result<impl TryIntoResponse, Error> {
     let (writer, reader) = mpsc::channel::<Bytes>(100_000_000);
     let (progress_writer, mut progress_reader) = mpsc::channel::<String>(50);
@@ -413,6 +417,7 @@ pub async fn fetch(
     mononoke::spawn_task({
         let request_context = request_context.clone();
         async move {
+            let mut scuba = request_context.ctx.scuba().clone();
             let writer_future = async move {
                 if delta_form == DeltaForm::OnlyOffset {
                     progress_writer
@@ -439,6 +444,8 @@ pub async fn fetch(
             match writer_future.await {
                 Ok(_) => anyhow::Ok(()),
                 Err(e) => {
+                    scuba.add(MononokeGitScubaKey::PackfileReadError, format!("{:?}", e));
+                    scuba_handler.log(scuba);
                     error_writer.send(format!("{:?}", e)).await?;
                     Ok(())
                 }

@@ -9,6 +9,7 @@
   $ setup_common_config $REPOTYPE
   $ GIT_REPO_ORIGIN="${TESTTMP}/origin/repo-git"
   $ GIT_REPO="${TESTTMP}/repo-git"
+  $ SCUBA="$TESTTMP/scuba.json"
 
 # Setup git repository
   $ mkdir -p "$GIT_REPO_ORIGIN"
@@ -62,3 +63,7 @@
   fatal: early EOF
   fatal: fetch-pack: invalid index-pack output
   [128]
+
+# Verify that the packfile error shows up in scuba logs
+  $ jq .normal "$SCUBA" | grep -e "packfile_read_error" | sort
+    "packfile_read_error": "Failure in fetching Packfile Item from stream\n\nCaused by:\n    0: Error in fetching raw git object bytes for object Sha1(fb02ed046a1e75fe2abb8763f7c715496ae36353) while fetching-and-storing packfile item\n    1: The object corresponding to object ID fb02ed046a1e75fe2abb8763f7c715496ae36353 or its packfile item does not exist in the data store",
