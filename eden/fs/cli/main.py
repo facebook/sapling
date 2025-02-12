@@ -1245,6 +1245,28 @@ class HealthReportCmd(Subcmd):
         CHEF_NOT_RUNNING = 5
         LOW_DISK_SPACE = 6
 
+        def summary(self) -> str:
+            summary = {
+                self.EDEN_NOT_RUNNING: "Eden not running properly",
+                self.STALE_EDEN_VERSION: "Stale Eden version running",
+                self.INVALID_CERTS: "Invalid/Expired user certs detected",
+                self.NO_REPO_MOUNT_FOUND: "Eden checkouts not mounted properly",
+                self.CHEF_NOT_RUNNING: "Chef doesn't seem to be running properly",
+                self.LOW_DISK_SPACE: "Low disk space for EdenFS checkouts",
+            }
+            return summary[self]
+
+        def remediation(self) -> str:
+            remediation = {
+                self.EDEN_NOT_RUNNING: "Please run `Restart EdenFS` from E-menu",
+                self.STALE_EDEN_VERSION: "Please run `Restart EdenFS` from E-menu",
+                self.INVALID_CERTS: "Please `Renew SKS-Backed Certificates` from F-menu",
+                self.NO_REPO_MOUNT_FOUND: "Please run `Eden Doctor` from E-menu -> Diagnostics",
+                self.CHEF_NOT_RUNNING: "Please run `Fix My Server/Mac/Windows` from F-menu",
+                self.LOW_DISK_SPACE: "Please run `Clean EdenFs Disk (du --clean)` from E-menu -> Diagnostics",
+            }
+            return remediation[self]
+
     running_version: str = ""
     version_info: VersionInfo = VersionInfo()
     error_codes: Dict[ErrorCode, str] = {}
@@ -1421,14 +1443,18 @@ class HealthReportCmd(Subcmd):
             for error_code, error_additional_info in HealthReportCmd.error_codes.items()
         ]
 
+        # Print JSON data
+        json_str = json.dumps(data, indent=2)
+        out.writeln(json_str)
+
         # Send notifications if enabled and on Windows platform
         if notify and sys.platform == "win32":
-            for error_data in data:
+            for error_code in HealthReportCmd.error_codes.keys():
                 try:
                     with instance.get_thrift_client_legacy() as client:
                         request = SendNotificationRequest(
-                            title=error_data["error"],
-                            description=error_data["description"],
+                            title=error_code.summary(),
+                            description=error_code.remediation(),
                         )
                         client.sendNotification(request)
                 except thrift.transport.TTransport.TTransportException as e:
@@ -1440,9 +1466,6 @@ class HealthReportCmd(Subcmd):
                     print_stderr("error: edenfs is not running")
                 except Exception as e:
                     print_stderr(f"error: {e}")
-        # Print JSON data
-        json_str = json.dumps(data, indent=2)
-        out.writeln(json_str)
 
     def run(self, args: argparse.Namespace) -> int:
         instance = get_eden_instance(args)
