@@ -277,7 +277,7 @@ impl MononokeApp {
         let server = async move { server(self).await };
         runtime.block_on(run_until_terminated(
             server,
-            &logger,
+            logger,
             quiesce,
             shutdown_grace_period,
             shutdown,
