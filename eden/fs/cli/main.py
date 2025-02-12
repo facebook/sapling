@@ -71,7 +71,11 @@ from eden.fs.cli.util import (
 from eden.thrift.legacy import EdenClient, EdenNotRunningError
 
 from facebook.eden import EdenService
-from facebook.eden.ttypes import ChangeOwnershipRequest, MountState
+from facebook.eden.ttypes import (
+    ChangeOwnershipRequest,
+    MountState,
+    SendNotificationRequest,
+)
 from fb303_core.ttypes import fb303_status
 
 from . import (
@@ -1260,6 +1264,13 @@ class HealthReportCmd(Subcmd):
             help="path of the mount points",
             dest="mounts",
         )
+        parser.add_argument(
+            "--notify",
+            default=False,
+            action="store_true",
+            dest="notify",
+            help="If set, this command will ask the server to notify the user of errors encountered during health-check. This is currently only available on Windows",
+        )
 
     def is_eden_running(self, instance: EdenInstance) -> bool:
         health_info = instance.check_health()
@@ -1378,16 +1389,18 @@ class HealthReportCmd(Subcmd):
             return False
 
     @staticmethod
-    def print_error_codes_json(out: ui.Output) -> None:
+    def print_and_notify_errors(
+        instance: EdenInstance, out: ui.Output, notify: bool
+    ) -> None:
         """
-        Serialize and print error codes in JSON format.
+        Serialize and print error codes in JSON format. Optionally send notifications.
         Args:
+            instance (EdenInstance): The instance to use for sending notifications.
             out (ui.Output): Output stream to write the JSON data to.
-        Notes:
-            This method takes the set of error codes stored in `self.error_codes` and
-            converts them into a JSON string. The resulting JSON object has error code
-            names as keys and their corresponding descriptions as values.
+            notify (bool): Whether to send notifications.
         """
+
+        # Serialize error codes
         data = [
             {
                 "error": error_code.name,
@@ -1397,6 +1410,27 @@ class HealthReportCmd(Subcmd):
             }
             for error_code, error_additional_info in HealthReportCmd.error_codes.items()
         ]
+
+        # Send notifications if enabled and on Windows platform
+        if notify and sys.platform == "win32":
+            for error_data in data:
+                try:
+                    with instance.get_thrift_client_legacy() as client:
+                        request = SendNotificationRequest(
+                            title=error_data["error"],
+                            description=error_data["description"],
+                        )
+                        client.sendNotification(request)
+                except thrift.transport.TTransport.TTransportException as e:
+                    # Ignore TTransportException if it is a UNKNOWN_METHOD error, this can
+                    # happen if the running version predates this endpoint
+                    if e.type != thrift.Thrift.TApplicationException.UNKNOWN_METHOD:
+                        print_stderr(f"warning: edenfs daemon is not responding: {e}")
+                except EdenNotRunningError:
+                    print_stderr("error: edenfs is not running")
+                except Exception as e:
+                    print_stderr(f"error: {e}")
+        # Print JSON data
         json_str = json.dumps(data, indent=2)
         out.writeln(json_str)
 
@@ -1426,7 +1460,7 @@ class HealthReportCmd(Subcmd):
             ):
                 exit_code = 1
 
-            self.print_error_codes_json(out)
+            self.print_and_notify_errors(instance, out, args.notify)
         except Exception as ex:
             print(f"Failed to run health report: {str(ex)}", file=sys.stderr)
             exit_code = 255

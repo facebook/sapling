@@ -89,6 +89,7 @@ class HealthReportTest(unittest.TestCase, TemporaryDirectoryMixin):
                 "/data/users/vinigupta/fbsource_test",
                 "/data/users/vinigupta/opsfiles_test",
             ],
+            notify=False,
         )
         mock_argument_parser = MagicMock(spec=argparse.ArgumentParser)
 
