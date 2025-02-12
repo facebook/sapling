@@ -1245,17 +1245,6 @@ class HealthReportCmd(Subcmd):
         CHEF_NOT_RUNNING = 5
         LOW_DISK_SPACE = 6
 
-        def description(self) -> str:
-            descriptions = {
-                self.EDEN_NOT_RUNNING: "The EdenFS daemon doesn't seem to be running.",
-                self.STALE_EDEN_VERSION: "The running EdenFS daemon is over 30 days out-of-date.",
-                self.INVALID_CERTS: "EdenFS couldn't find a valid user certificate.",
-                self.NO_REPO_MOUNT_FOUND: "One or more checkouts are identified as unmounted.",
-                self.CHEF_NOT_RUNNING: "Chef doesn't seem to be running on your machine.",
-                self.LOW_DISK_SPACE: "Your machine is running low on disk space.",
-            }
-            return descriptions[self]
-
     running_version: str = ""
     version_info: VersionInfo = VersionInfo()
     error_codes: Dict[ErrorCode, str] = {}
@@ -1280,7 +1269,7 @@ class HealthReportCmd(Subcmd):
         health_info = instance.check_health()
         if not health_info.is_healthy():
             self.error_codes[HealthReportCmd.ErrorCode.EDEN_NOT_RUNNING] = (
-                "Failed to find EdenFS daemon pid"
+                "Failed to find EdenFS daemon pid."
             )
             return False
 
@@ -1288,14 +1277,14 @@ class HealthReportCmd(Subcmd):
             self.running_version = instance.get_running_version()
         except EdenNotRunningError:
             self.error_codes[HealthReportCmd.ErrorCode.EDEN_NOT_RUNNING] = (
-                "Failed to retrieve EdenFS running version"
+                "Failed to retrieve EdenFS running version."
             )
             return False
 
         self.version_info = version_mod.get_version_info(self.running_version)
         if not self.version_info.is_eden_running:
             self.error_codes[HealthReportCmd.ErrorCode.EDEN_NOT_RUNNING] = (
-                "Failed to retrieve EdenFS running version"
+                "Failed to retrieve EdenFS running version."
             )
             return False
         return True
@@ -1310,6 +1299,7 @@ class HealthReportCmd(Subcmd):
                 + (self.version_info.running_version or "")
                 + ", installed EdenFS version: "
                 + (self.version_info.installed_version or "")
+                + ". The running EdenFS daemon is over 30 days out-of-date."
             )
             return False
         return True
@@ -1322,7 +1312,7 @@ class HealthReportCmd(Subcmd):
             return True
         # cert error!
         self.error_codes[HealthReportCmd.ErrorCode.INVALID_CERTS] = (
-            "Failed to validate x509 certificates"
+            "Failed to validate x509 certificates."
         )
         return False
 
@@ -1337,7 +1327,7 @@ class HealthReportCmd(Subcmd):
 
             if unmounted_repos:
                 self.error_codes[HealthReportCmd.ErrorCode.NO_REPO_MOUNT_FOUND] = (
-                    ", ".join(unmounted_repos) + " not mounted correctly"
+                    ", ".join(unmounted_repos) + " not mounted correctly."
                 )
                 return False
 
@@ -1365,7 +1355,9 @@ class HealthReportCmd(Subcmd):
 
                 if not isinstance(last_chef_run_sec, (int, float)):
                     self.error_codes[HealthReportCmd.ErrorCode.CHEF_NOT_RUNNING] = (
-                        "Invalid/missing timestamp in " + CHEF_LOG_TIMESTAMP_KEY
+                        "Invalid/missing timestamp in "
+                        + CHEF_LOG_TIMESTAMP_KEY
+                        + ". Chef doesn't seem to be running on your machine."
                     )
                     return False
 
@@ -1379,7 +1371,8 @@ class HealthReportCmd(Subcmd):
                     self.error_codes[HealthReportCmd.ErrorCode.CHEF_NOT_RUNNING] = (
                         "Last run was "
                         + str((ms_since_last_run / 3600000))
-                        + " hours ago"
+                        + " hours ago."
+                        + " Chef doesn't seem to be running on your machine."
                     )
                     return False
                 return True
@@ -1424,12 +1417,7 @@ class HealthReportCmd(Subcmd):
 
         # Serialize error codes
         data = [
-            {
-                "error": error_code.name,
-                "description": error_additional_info
-                + ". Possible causes: "
-                + error_code.description(),
-            }
+            {"error": error_code.name, "description": error_additional_info}
             for error_code, error_additional_info in HealthReportCmd.error_codes.items()
         ]
 

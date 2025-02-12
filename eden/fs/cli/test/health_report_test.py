@@ -190,7 +190,7 @@ class HealthReportTest(unittest.TestCase, TemporaryDirectoryMixin):
         self.assertEqual(
             HealthReportCmd.error_codes,
             {
-                HealthReportCmd.ErrorCode.EDEN_NOT_RUNNING: "Failed to find EdenFS daemon pid",
+                HealthReportCmd.ErrorCode.EDEN_NOT_RUNNING: "Failed to find EdenFS daemon pid.",
             },
         )
 
@@ -231,7 +231,7 @@ class HealthReportTest(unittest.TestCase, TemporaryDirectoryMixin):
         self.assertEqual(
             HealthReportCmd.error_codes,
             {
-                HealthReportCmd.ErrorCode.STALE_EDEN_VERSION: "Running EdenFS version: 20240928-144752, installed EdenFS version: 20241030-165642"
+                HealthReportCmd.ErrorCode.STALE_EDEN_VERSION: "Running EdenFS version: 20240928-144752, installed EdenFS version: 20241030-165642. The running EdenFS daemon is over 30 days out-of-date."
             },
         )
         self.assertEqual(result, 1)
@@ -303,7 +303,7 @@ class HealthReportTest(unittest.TestCase, TemporaryDirectoryMixin):
         self.assertEqual(
             HealthReportCmd.error_codes,
             {
-                HealthReportCmd.ErrorCode.INVALID_CERTS: "Failed to validate x509 certificates"
+                HealthReportCmd.ErrorCode.INVALID_CERTS: "Failed to validate x509 certificates."
             },
         )
 
