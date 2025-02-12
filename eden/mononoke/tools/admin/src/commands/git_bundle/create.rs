@@ -332,6 +332,21 @@ async fn get_refs(refs_path: PathBuf) -> Result<HashMap<String, ObjectId>> {
             let ref_content = tokio::fs::read(path.as_path())
                 .await
                 .with_context(|| format!("Error in opening ref file {}", path.display()))?;
+
+            // Ignore symrefs
+            if ref_content.starts_with("ref: refs/".as_bytes()) {
+                return anyhow::Ok(None);
+            }
+
+            // refs can have an endline so we allow 41 too
+            if !(ref_content.len() == 40 || ref_content.len() == 41) {
+                anyhow::bail!(
+                    "The ref content {:?} at path {:} is not 40 bytes (or 41 including the newline) long",
+                    ref_content.as_slice(),
+                    path.display()
+                );
+            }
+
             // Parse the ref content into an Object ID
             let commit_id = ObjectId::from_hex(&ref_content[..40]).with_context(|| {
                 format!(
@@ -354,10 +369,17 @@ async fn get_refs(refs_path: PathBuf) -> Result<HashMap<String, ObjectId>> {
                     )
                 })?
                 .to_string();
-            anyhow::Ok((refs_header, commit_id))
+            anyhow::Ok(Some((refs_header, commit_id)))
         }
     }))
     .buffer_unordered(100)
+    .try_filter_map(|x| async move {
+        if x.is_some() {
+            Ok(x)
+        } else {
+            Ok(None)
+        }
+    })
     .try_collect::<HashMap<String, ObjectId>>()
     .await
 }
