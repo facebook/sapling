@@ -158,14 +158,14 @@ py_class!(pub class treemanifest |py| {
     }
 
     /// Count the number of files that match the predicate passed to the function.
-    def count(&self, pymatcher: PyObject) -> PyResult<u64> {
-        // PERF: the `tree.files()` can be optimized to avoid file path construction.
+    def countfiles(&self, pymatcher: PyObject) -> PyResult<u64> {
         let tree = self.underlying(py);
         let matcher = extract_matcher(py, pymatcher)?.0;
-        let count = py.allow_threads(move || -> u64 {
+        let result = py.allow_threads(move || -> Result<u64> {
             let tree = tree.read();
-            tree.files(matcher).fold(0, |acc, _f| acc + 1)
+            tree.count_files(matcher)
         });
+        let count = result.map_pyerr(py)?;
         Ok(count)
     }
 

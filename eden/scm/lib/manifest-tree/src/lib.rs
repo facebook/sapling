@@ -336,6 +336,19 @@ impl Manifest for TreeManifest {
         Box::new(files)
     }
 
+    #[tracing::instrument(skip_all)]
+    fn count_files<'a, M: 'static + Matcher + Sync + Send>(&'a self, matcher: M) -> Result<u64> {
+        // PERF: the `bfs_iter()` can be optimized to avoid file path construction.
+        bfs_iter(self.store.clone(), &[&self.root], matcher).try_fold(0, |acc, result| {
+            let (_, metadata) = result?;
+            if let FsNodeMetadata::File(_) = metadata {
+                Ok(acc + 1)
+            } else {
+                Ok(acc)
+            }
+        })
+    }
+
     /// Returns an iterator over all the directories that are present in the
     /// tree.
     ///

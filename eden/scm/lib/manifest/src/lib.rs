@@ -89,6 +89,14 @@ pub trait Manifest {
         matcher: M,
     ) -> Box<dyn Iterator<Item = Result<File>> + 'a>;
 
+    /// Returns the number of files in the Manifest that satisfy the given Matcher.
+    fn count_files<'a, M: 'static + Matcher + Sync + Send>(&'a self, matcher: M) -> Result<u64> {
+        self.files(matcher).try_fold(0, |acc, result| {
+            let _ = result?;
+            Ok(acc + 1)
+        })
+    }
+
     /// Returns an iterator over all directories found in the paths of the files in the Manifest
     /// that satisfy the given Matcher.
     // TODO: add default implementation

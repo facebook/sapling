@@ -366,7 +366,7 @@ def validate_file_count(repo, ctx, paths):
     mf = ctx.manifest()
     for p in paths:
         matcher = matchmod.match(repo.root, "", [f"path:{p}"])
-        count = mf.count(matcher)
+        count = mf.countfiles(matcher)
         if count > max_file_count:
             raise error.Abort(
                 _("subtree path '%s' includes too many files: %d (max: %d)")
