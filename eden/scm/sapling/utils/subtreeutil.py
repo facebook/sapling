@@ -346,6 +346,19 @@ def validate_path_exist(ui, ctx, paths, abort_on_missing=False):
                 ui.status(msg + "\n")
 
 
+def validate_path_depth(ui, paths):
+    """Validate that the given path is at least the given depth."""
+    min_depth = ui.configint("subtree", "min-path-depth")
+    if min_depth is None:
+        return
+    for p in paths:
+        p = util.pconvert(p)
+        if p.count("/") < (min_depth - 1):
+            raise error.Abort(
+                _("path should be at least %d levels deep: '%s'") % (min_depth, p)
+            )
+
+
 def validate_path_size(from_paths, to_paths, abort_on_empty=False):
     if len(from_paths) != len(to_paths):
         raise error.Abort(_("must provide same number of --from-path and --to-path"))

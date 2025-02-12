@@ -1,6 +1,7 @@
   $ setconfig diff.git=True
   $ setconfig subtree.cheap-copy=False
   $ setconfig subtree.allow-any-source-commit=True
+  $ setconfig subtree.min-path-depth=1
 
 setup backing repo
 

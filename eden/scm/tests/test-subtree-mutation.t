@@ -1,6 +1,7 @@
   $ setconfig diff.git=True
   $ setconfig subtree.copy-reuse-tree=False
   $ setconfig subtree.allow-any-source-commit=True
+  $ setconfig subtree.min-path-depth=1
 
 test amend subtree copy commit and keep the subtree copy metadata
   $ newclientrepo

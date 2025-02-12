@@ -89,6 +89,9 @@ disable=true
 [remotenames]
 rename.default=remote
 hoist=remote
+
+[subtree]
+min-path-depth=2
 """
     if use_watchman:
         content += """
