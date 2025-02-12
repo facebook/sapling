@@ -6,7 +6,7 @@
  */
 
 import type {CommitInfo, SmartlogCommits} from 'isl/src/types';
-import type {EjecaError, EjecaReturn, EjecaChildProcess} from 'shared/ejeca';
+import type {EjecaChildProcess, EjecaError, EjecaReturn} from 'shared/ejeca';
 
 import os from 'node:os';
 import {truncate} from 'shared/utils';

@@ -5,8 +5,8 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-import type {Disposable, Hash} from './types';
 import type {ViteHotContext} from 'vite/types/hot';
+import type {Disposable, Hash} from './types';
 
 export function firstOfIterable<T>(it: IterableIterator<T>): T | undefined {
   return it.next().value;

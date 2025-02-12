@@ -5,10 +5,14 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-import type {RepoRelativePath} from './types';
 import type {Hash, RepoPath} from 'shared/types/common';
 import type {ExportFile, ImportCommit} from 'shared/types/stack';
+import type {RepoRelativePath} from './types';
 
+import Immutable from 'immutable';
+import {atom, useAtom, useAtomValue} from 'jotai';
+import {RateLimiter} from 'shared/RateLimiter';
+import {SelfUpdate} from 'shared/immutableExt';
 import clientToServerAPI from './ClientToServerAPI';
 import {t} from './i18n';
 import {dagWithPreviews, uncommittedChangesWithPreviews} from './previews';
@@ -16,10 +20,6 @@ import {atomResetOnCwdChange} from './repositoryData';
 import {latestUncommittedChangesTimestamp} from './serverAPIState';
 import {ChunkSelectState} from './stackEdit/chunkSelectState';
 import {assert} from './utils';
-import Immutable from 'immutable';
-import {atom, useAtom, useAtomValue} from 'jotai';
-import {RateLimiter} from 'shared/RateLimiter';
-import {SelfUpdate} from 'shared/immutableExt';
 
 type SingleFileSelection =
   | false /* not selected */

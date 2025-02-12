@@ -5,20 +5,20 @@
  * LICENSE file in the root directory of this source tree.
  */
 
+import {act, fireEvent, render, screen} from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import App from '../App';
 import {CommitInfoTestUtils} from '../testQueries';
 import {
-  resetTestMessages,
-  expectMessageSentToServer,
-  simulateCommits,
   closeCommitInfoSidebar,
-  TEST_COMMIT_HISTORY,
   expectMessageNOTSentToServer,
+  expectMessageSentToServer,
   openCommitInfoSidebar,
+  resetTestMessages,
+  simulateCommits,
+  TEST_COMMIT_HISTORY,
 } from '../testUtils';
 import {CommandRunner} from '../types';
-import {fireEvent, render, screen, act} from '@testing-library/react';
-import userEvent from '@testing-library/user-event';
 
 /*eslint-disable @typescript-eslint/no-non-null-assertion */
 

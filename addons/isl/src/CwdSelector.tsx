@@ -7,17 +7,6 @@
 
 import type {AbsolutePath, CwdInfo} from './types';
 
-import serverAPI from './ClientToServerAPI';
-import {Row} from './ComponentUtils';
-import {DropdownField, DropdownFields} from './DropdownFields';
-import {useCommandEvent} from './ISLShortcuts';
-import {codeReviewProvider} from './codeReview/CodeReviewInfo';
-import {T, t} from './i18n';
-import {writeAtom} from './jotaiUtils';
-import platform from './platform';
-import {serverCwd} from './repositoryData';
-import {repositoryInfo} from './serverAPIState';
-import {registerCleanup, registerDisposable} from './utils';
 import {Badge} from 'isl-components/Badge';
 import {Button} from 'isl-components/Button';
 import {ButtonDropdown} from 'isl-components/ButtonDropdown';
@@ -31,6 +20,17 @@ import {Tooltip} from 'isl-components/Tooltip';
 import {atom, useAtomValue} from 'jotai';
 import {Suspense} from 'react';
 import {basename} from 'shared/utils';
+import serverAPI from './ClientToServerAPI';
+import {Row} from './ComponentUtils';
+import {DropdownField, DropdownFields} from './DropdownFields';
+import {useCommandEvent} from './ISLShortcuts';
+import {codeReviewProvider} from './codeReview/CodeReviewInfo';
+import {T, t} from './i18n';
+import {writeAtom} from './jotaiUtils';
+import platform from './platform';
+import {serverCwd} from './repositoryData';
+import {repositoryInfo} from './serverAPIState';
+import {registerCleanup, registerDisposable} from './utils';
 
 /**
  * Give the relative path to `path` from `root`

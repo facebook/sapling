@@ -5,7 +5,6 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-import type {VSCodeReposList} from '../VSCodeRepo';
 import type {Repository} from 'isl-server/src/Repository';
 import type {RepositoryContext} from 'isl-server/src/serverTypes';
 import type {CommitInfo, Result} from 'isl/src/types';
@@ -17,16 +16,17 @@ import type {
   TextEditor,
   TextEditorSelectionChangeEvent,
 } from 'vscode';
+import type {VSCodeReposList} from '../VSCodeRepo';
 
-import {Internal} from '../Internal';
-import {getDiffBlameHoverMarkup} from './blameHover';
-import {getRealignedBlameInfo, shortenAuthorName} from './blameUtils';
 import {getUsername} from 'isl-server/src/analytics/environment';
 import {relativeDate} from 'isl/src/relativeDate';
 import {LRU} from 'shared/LRU';
 import {debounce} from 'shared/debounce';
 import {nullthrows} from 'shared/utils';
 import {DecorationRangeBehavior, MarkdownString, Position, Range, window, workspace} from 'vscode';
+import {Internal} from '../Internal';
+import {getDiffBlameHoverMarkup} from './blameHover';
+import {getRealignedBlameInfo, shortenAuthorName} from './blameUtils';
 
 function areYouTheAuthor(author: string) {
   const you = getUsername();

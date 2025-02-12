@@ -5,14 +5,14 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-import type {Repository} from './Repository';
-import type {RepositoryContext} from './serverTypes';
 import type {
   AbsolutePath,
   PlatformSpecificClientToServerMessages,
   RepoRelativePath,
   ServerToClientMessage,
 } from 'isl/src/types';
+import type {Repository} from './Repository';
+import type {RepositoryContext} from './serverTypes';
 
 import {spawn} from 'node:child_process';
 import pathModule from 'node:path';

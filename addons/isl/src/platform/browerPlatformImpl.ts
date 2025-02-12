@@ -5,9 +5,9 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-import type {Platform} from '../platform';
-import type {RepoRelativePath, OneIndexedLineNumber, PlatformName} from '../types';
 import type {Json} from 'shared/typeUtils';
+import type {Platform} from '../platform';
+import type {OneIndexedLineNumber, PlatformName, RepoRelativePath} from '../types';
 
 import {LocalWebSocketEventBus} from '../LocalWebSocketEventBus';
 import {computeInitialParams} from '../urlParams';

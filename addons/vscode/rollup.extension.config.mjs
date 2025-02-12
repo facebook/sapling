@@ -11,8 +11,8 @@ import importJson from '@rollup/plugin-json';
 import nodeResolve from '@rollup/plugin-node-resolve';
 import replace from '@rollup/plugin-replace';
 import path from 'node:path';
-import esbuild from 'rollup-plugin-esbuild';
 import {fileURLToPath} from 'node:url';
+import esbuild from 'rollup-plugin-esbuild';
 
 // eslint-disable-next-line no-undef
 const isProduction = process.env.NODE_ENV === 'production';

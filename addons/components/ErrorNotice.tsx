@@ -7,9 +7,9 @@
 
 import type {ReactNode} from 'react';
 
+import React, {Component, useState} from 'react';
 import {Icon} from './Icon';
 import {Tooltip} from './Tooltip';
-import React, {useState, Component} from 'react';
 
 import './error-notice.css';
 

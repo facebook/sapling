@@ -5,6 +5,7 @@
  * LICENSE file in the root directory of this source tree.
  */
 
+import type {ImportAmendCommit, ImportStack} from 'shared/types/stack';
 import type {AmendRestackBehavior} from '../RestackBehavior';
 import type {PartialSelection} from '../partialSelection';
 import type {
@@ -13,7 +14,6 @@ import type {
   UncommittedChangesPreviewContext,
 } from '../previews';
 import type {CommandArg, Hash, RepoRelativePath, UncommittedChanges} from '../types';
-import type {ImportAmendCommit, ImportStack} from 'shared/types/stack';
 
 import {restackBehaviorAtom} from '../RestackBehavior';
 import {t} from '../i18n';

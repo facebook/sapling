@@ -7,11 +7,11 @@
 
 import type {ExecFileOptions} from 'node:child_process';
 
-import AbstractLanguageExtension from './AbstractLanguageExtension.js';
 import child_process, {execFile} from 'node:child_process';
 import {promises as fs} from 'node:fs';
 import osMod from 'node:os';
 import pathMod from 'node:path';
+import AbstractLanguageExtension from './AbstractLanguageExtension.js';
 
 type ConstructorArgs = {
   /** GitHub organization for repo. */

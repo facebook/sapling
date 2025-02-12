@@ -7,6 +7,12 @@
 
 import type {RenderResult} from '@testing-library/react';
 
+import {act, cleanup, fireEvent, render, screen, waitFor, within} from '@testing-library/react';
+import fs from 'node:fs';
+import path from 'node:path';
+import {ComparisonType} from 'shared/Comparison';
+import {nextTick} from 'shared/testUtils';
+import {nullthrows} from 'shared/utils';
 import App from '../App';
 import {cancelAllHighlightingTasks} from '../ComparisonView/SplitDiffView/syntaxHighlighting';
 import {parsePatchAndFilter, sortFilesByType} from '../ComparisonView/utils';
@@ -21,12 +27,6 @@ import {
   waitForWithTick,
 } from '../testUtils';
 import {GeneratedStatus} from '../types';
-import {act, screen, render, waitFor, fireEvent, cleanup, within} from '@testing-library/react';
-import fs from 'node:fs';
-import path from 'node:path';
-import {ComparisonType} from 'shared/Comparison';
-import {nextTick} from 'shared/testUtils';
-import {nullthrows} from 'shared/utils';
 
 afterEach(cleanup);
 

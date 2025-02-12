@@ -17,14 +17,14 @@ import type {
 } from 'isl/src/types';
 import type {Json} from 'shared/typeUtils';
 
-import {executeVSCodeCommand} from './commands';
-import {PERSISTED_STORAGE_KEY_PREFIX} from './config';
-import {t} from './i18n';
-import openFile from './openFile';
 import {Repository} from 'isl-server/src/Repository';
 import {arraysEqual} from 'isl/src/utils';
 import * as pathModule from 'node:path';
 import * as vscode from 'vscode';
+import {executeVSCodeCommand} from './commands';
+import {PERSISTED_STORAGE_KEY_PREFIX} from './config';
+import {t} from './i18n';
+import openFile from './openFile';
 
 export type VSCodeServerPlatform = ServerPlatform & {
   panelOrView: undefined | vscode.WebviewPanel | vscode.WebviewView;

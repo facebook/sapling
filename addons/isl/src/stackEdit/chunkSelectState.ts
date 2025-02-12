@@ -5,13 +5,13 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-import type {FlattenLine, LineIdx} from '../linelog';
 import type {RecordOf} from 'immutable';
+import type {FlattenLine, LineIdx} from '../linelog';
 
-import {FileStackState} from './fileStackState';
-import {List, Record, Set as ImSet} from 'immutable';
+import {Set as ImSet, List, Record} from 'immutable';
 import {LRU, cachedMethod} from 'shared/LRU';
 import {SelfUpdate} from 'shared/immutableExt';
+import {FileStackState} from './fileStackState';
 
 /**
  * Represents selections of changes between 2 texts (`a` and `b`), optionally

@@ -5,9 +5,15 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-import type {RepoRelativePath} from './types';
 import type {ContextMenuItem} from 'shared/ContextMenu';
+import type {RepoRelativePath} from './types';
 
+import {Button} from 'isl-components/Button';
+import {Icon} from 'isl-components/Icon';
+import {Subtle} from 'isl-components/Subtle';
+import {atom, useAtomValue} from 'jotai';
+import {useContextMenu} from 'shared/ContextMenu';
+import {minimalDisambiguousPaths} from 'shared/minimalDisambiguousPaths';
 import serverAPI from './ClientToServerAPI';
 import {Column, Row} from './ComponentUtils';
 import {availableCwds} from './CwdSelector';
@@ -16,12 +22,6 @@ import {readAtom, writeAtom} from './jotaiUtils';
 import platform from './platform';
 import {showModal} from './useModal';
 import {registerCleanup, registerDisposable} from './utils';
-import {Button} from 'isl-components/Button';
-import {Icon} from 'isl-components/Icon';
-import {Subtle} from 'isl-components/Subtle';
-import {atom, useAtomValue} from 'jotai';
-import {useContextMenu} from 'shared/ContextMenu';
-import {minimalDisambiguousPaths} from 'shared/minimalDisambiguousPaths';
 
 /**
  * A list of files for this repo that are unsaved in the IDE.

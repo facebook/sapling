@@ -5,19 +5,19 @@
  * LICENSE file in the root directory of this source tree.
  */
 
+import {act, fireEvent, render, screen} from '@testing-library/react';
 import App from '../App';
 import {mostRecentSubscriptionIds} from '../serverAPIState';
 import {
-  resetTestMessages,
-  expectMessageSentToServer,
-  simulateCommits,
-  COMMIT,
-  simulateUncommittedChangedFiles,
   closeCommitInfoSidebar,
+  COMMIT,
+  expectMessageSentToServer,
+  resetTestMessages,
+  simulateCommits,
   simulateMessageFromServer,
+  simulateUncommittedChangedFiles,
 } from '../testUtils';
 import {ConflictType} from '../types';
-import {fireEvent, render, screen, act} from '@testing-library/react';
 
 describe('CommitTreeList', () => {
   beforeEach(() => {

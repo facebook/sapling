@@ -10,16 +10,16 @@ import type {ServerPlatform} from 'isl-server/src/serverPlatform';
 import type {RepositoryContext} from 'isl-server/src/serverTypes';
 import type {CommitInfo} from 'isl/src/types';
 
-import {
-  decodeSaplingDiffUri,
-  encodeSaplingDiffUri,
-  SaplingDiffContentProvider,
-} from '../DiffContentProvider';
 import {makeServerSideTracker} from 'isl-server/src/analytics/serverSideTracker';
 import {ComparisonType} from 'shared/Comparison';
 import {mockLogger} from 'shared/testUtils';
 import {nullthrows} from 'shared/utils';
 import * as vscode from 'vscode';
+import {
+  decodeSaplingDiffUri,
+  encodeSaplingDiffUri,
+  SaplingDiffContentProvider,
+} from '../DiffContentProvider';
 
 const mockCancelToken = {} as vscode.CancellationToken;
 

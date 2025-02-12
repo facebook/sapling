@@ -5,6 +5,7 @@
  * LICENSE file in the root directory of this source tree.
  */
 
+import type {ReactNode} from 'react';
 import type {Operation} from '../../operations/Operation';
 import type {
   CodeReviewSystem,
@@ -15,17 +16,16 @@ import type {
 } from '../../types';
 import type {UICodeReviewProvider} from '../UICodeReviewProvider';
 import type {SyncStatus} from '../syncStatus';
-import type {ReactNode} from 'react';
 
+import {Icon} from 'isl-components/Icon';
+import {Tooltip} from 'isl-components/Tooltip';
+import {PullRequestReviewDecision, PullRequestState} from 'isl-server/src/github/generated/graphql';
+import {MS_PER_DAY} from 'shared/constants';
 import {OSSCommitMessageFieldSchema} from '../../CommitInfoView/OSSCommitMessageFieldsSchema';
 import {Internal} from '../../Internal';
 import {t, T} from '../../i18n';
 import {GhStackSubmitOperation} from '../../operations/GhStackSubmitOperation';
 import {PrSubmitOperation} from '../../operations/PrSubmitOperation';
-import {Icon} from 'isl-components/Icon';
-import {Tooltip} from 'isl-components/Tooltip';
-import {PullRequestReviewDecision, PullRequestState} from 'isl-server/src/github/generated/graphql';
-import {MS_PER_DAY} from 'shared/constants';
 
 import './GitHubPRBadge.css';
 

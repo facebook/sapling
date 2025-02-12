@@ -5,16 +5,16 @@
  * LICENSE file in the root directory of this source tree.
  */
 
+import {atom, useSetAtom} from 'jotai';
+import {useEffect, useRef} from 'react';
 import {useCommand} from './ISLShortcuts';
 import {
+  atomWithOnChange,
   configBackedAtom,
   localStorageBackedAtom,
-  atomWithOnChange,
   readAtom,
   writeAtom,
 } from './jotaiUtils';
-import {atom, useSetAtom} from 'jotai';
-import {useRef, useEffect} from 'react';
 
 export const mainContentWidthState = atom(500);
 

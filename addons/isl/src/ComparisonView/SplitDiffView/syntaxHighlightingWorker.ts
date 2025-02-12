@@ -5,6 +5,7 @@
  * LICENSE file in the root directory of this source tree.
  */
 
+import type {IGrammar} from 'vscode-textmate';
 import type {ThemeColor} from '../../theme';
 import type {
   SyntaxWorkerRequest,
@@ -12,14 +13,13 @@ import type {
   TokenizedDiffHunks,
   TokenizedHunk,
 } from './syntaxHighlightingTypes';
-import type {IGrammar} from 'vscode-textmate';
 
-import {grammars, languages} from '../../generated/textmate/TextMateGrammarManifest';
-import {getGrammerStore, getGrammar} from './grammar';
 import {CancellationToken} from 'shared/CancellationToken';
 import FilepathClassifier from 'shared/textmate-lib/FilepathClassifier';
 import {tokenizeLines} from 'shared/textmate-lib/tokenize';
 import {loadWASM} from 'vscode-oniguruma';
+import {grammars, languages} from '../../generated/textmate/TextMateGrammarManifest';
+import {getGrammar, getGrammerStore} from './grammar';
 
 const URL_TO_ONIG_WASM = './generated/textmate/onig.wasm';
 

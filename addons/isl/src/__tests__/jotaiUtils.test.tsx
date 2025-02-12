@@ -5,27 +5,27 @@
  * LICENSE file in the root directory of this source tree.
  */
 
+import type {Atom} from 'jotai';
 import type {AtomFamilyWeak} from '../jotaiUtils';
 import type {Platform} from '../platform';
 import type {LocalStorageName} from '../types';
-import type {Atom} from 'jotai';
 
-import {
-  atomFamilyWeak,
-  lazyAtom,
-  readAtom,
-  writeAtom,
-  useAtomGet,
-  useAtomHas,
-  atomResetOnDepChange,
-  localStorageBackedAtomFamily,
-} from '../jotaiUtils';
-import {render, act} from '@testing-library/react';
+import {act, render} from '@testing-library/react';
 import {List} from 'immutable';
 import {Provider, atom, createStore, useAtomValue} from 'jotai';
 import {StrictMode} from 'react';
 import {SelfUpdate} from 'shared/immutableExt';
 import {gc, nextTick} from 'shared/testUtils';
+import {
+  atomFamilyWeak,
+  atomResetOnDepChange,
+  lazyAtom,
+  localStorageBackedAtomFamily,
+  readAtom,
+  useAtomGet,
+  useAtomHas,
+  writeAtom,
+} from '../jotaiUtils';
 
 class Foo extends SelfUpdate<List<number>> {}
 

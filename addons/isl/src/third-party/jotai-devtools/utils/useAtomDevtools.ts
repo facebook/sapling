@@ -1,6 +1,6 @@
-import { useEffect, useRef } from 'react';
 import { useAtom } from 'jotai/react';
 import type { Atom, WritableAtom } from 'jotai/vanilla';
+import { useEffect, useRef } from 'react';
 import {
   Connection,
   createReduxConnection,

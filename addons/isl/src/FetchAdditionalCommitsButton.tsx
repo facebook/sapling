@@ -5,6 +5,11 @@
  * LICENSE file in the root directory of this source tree.
  */
 
+import {Button} from 'isl-components/Button';
+import {Icon} from 'isl-components/Icon';
+import {DOCUMENTATION_DELAY, Tooltip} from 'isl-components/Tooltip';
+import {atom, useAtomValue} from 'jotai';
+import {Suspense} from 'react';
 import serverAPI from './ClientToServerAPI';
 import {commitCloudEnabledAtom} from './CommitCloud';
 import {t, T} from './i18n';
@@ -13,11 +18,6 @@ import {CommitCloudSyncOperation} from './operations/CommitCloudSyncOperation';
 import {useRunOperation} from './operationsState';
 import {useIsOperationRunningOrQueued} from './previews';
 import {commitsShownRange, isFetchingAdditionalCommits} from './serverAPIState';
-import {Button} from 'isl-components/Button';
-import {Icon} from 'isl-components/Icon';
-import {DOCUMENTATION_DELAY, Tooltip} from 'isl-components/Tooltip';
-import {atom, useAtomValue} from 'jotai';
-import {Suspense} from 'react';
 
 export function FetchingAdditionalCommitsRow() {
   return (

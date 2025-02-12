@@ -7,9 +7,9 @@
 
 import type {LRUWithStats} from '../LRU';
 
-import {cached, LRU, clearTrackedCache, cachedMethod} from '../LRU';
-import {SelfUpdate} from '../immutableExt';
 import {List, Record} from 'immutable';
+import {cached, cachedMethod, clearTrackedCache, LRU} from '../LRU';
+import {SelfUpdate} from '../immutableExt';
 
 describe('LRU', () => {
   it('evicts oldest items after reaching the max', () => {

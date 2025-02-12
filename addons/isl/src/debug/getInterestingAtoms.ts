@@ -5,10 +5,11 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-import type {AtomFamilyWeak} from '../jotaiUtils';
 import type {Atom} from 'jotai';
 import type {Json} from 'shared/typeUtils';
+import type {AtomFamilyWeak} from '../jotaiUtils';
 
+import {SelfUpdate} from 'shared/immutableExt';
 import {editedCommitMessages} from '../CommitInfoView/CommitInfoState';
 import {latestSuccessorsMapAtom} from '../SuccessionTracker';
 import {allDiffSummaries, codeReviewProvider} from '../codeReview/CodeReviewInfo';
@@ -18,12 +19,11 @@ import {uncommittedSelection} from '../partialSelection';
 import {dagWithPreviews} from '../previews';
 import {selectedCommits} from '../selection';
 import {
-  repositoryData,
   latestCommitsData,
   latestUncommittedChangesData,
   mergeConflicts,
+  repositoryData,
 } from '../serverAPIState';
-import {SelfUpdate} from 'shared/immutableExt';
 
 export type UIStateSnapshot = {[key: string]: Json};
 export type AtomsState = {[key: string]: unknown};

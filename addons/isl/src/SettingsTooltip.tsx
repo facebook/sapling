@@ -8,6 +8,17 @@
 import type {ThemeColor} from './theme';
 import type {PreferredSubmitCommand} from './types';
 
+import {Button} from 'isl-components/Button';
+import {Checkbox} from 'isl-components/Checkbox';
+import {Dropdown} from 'isl-components/Dropdown';
+import {Icon} from 'isl-components/Icon';
+import {Kbd} from 'isl-components/Kbd';
+import {KeyCode, Modifier} from 'isl-components/KeyboardShortcuts';
+import {Subtle} from 'isl-components/Subtle';
+import {Tooltip} from 'isl-components/Tooltip';
+import {useAtom, useAtomValue} from 'jotai';
+import {Suspense} from 'react';
+import {nullthrows, tryJsonParse} from 'shared/utils';
 import {rebaseOffWarmWarningEnabled} from './Commit';
 import {condenseObsoleteStacks} from './CommitTreeList';
 import {Column, Row} from './ComponentUtils';
@@ -40,18 +51,7 @@ import platform from './platform';
 import {irrelevantCwdDeemphasisEnabled} from './repositoryData';
 import {renderCompactAtom, useZoomShortcut, zoomUISettingAtom} from './responsive';
 import {repositoryInfo} from './serverAPIState';
-import {useThemeShortcut, themeState} from './theme';
-import {Button} from 'isl-components/Button';
-import {Checkbox} from 'isl-components/Checkbox';
-import {Dropdown} from 'isl-components/Dropdown';
-import {Icon} from 'isl-components/Icon';
-import {Kbd} from 'isl-components/Kbd';
-import {KeyCode, Modifier} from 'isl-components/KeyboardShortcuts';
-import {Subtle} from 'isl-components/Subtle';
-import {Tooltip} from 'isl-components/Tooltip';
-import {useAtom, useAtomValue} from 'jotai';
-import {Suspense} from 'react';
-import {tryJsonParse, nullthrows} from 'shared/utils';
+import {themeState, useThemeShortcut} from './theme';
 
 import './SettingsTooltip.css';
 

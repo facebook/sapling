@@ -5,11 +5,25 @@
  * LICENSE file in the root directory of this source tree.
  */
 
+import type {Comparison} from 'shared/Comparison';
 import type {CommitMessageFields} from './CommitInfoView/types';
 import type {UseUncommittedSelection} from './partialSelection';
 import type {ChangedFile, ChangedFileType, MergeConflicts, RepoRelativePath} from './types';
-import type {Comparison} from 'shared/Comparison';
 
+import * as stylex from '@stylexjs/stylex';
+import {Badge} from 'isl-components/Badge';
+import {Banner, BannerKind} from 'isl-components/Banner';
+import {Button} from 'isl-components/Button';
+import {ErrorNotice} from 'isl-components/ErrorNotice';
+import {HorizontallyGrowingTextField} from 'isl-components/HorizontallyGrowingTextField';
+import {Icon} from 'isl-components/Icon';
+import {DOCUMENTATION_DELAY, Tooltip} from 'isl-components/Tooltip';
+import {useAtom, useAtomValue} from 'jotai';
+import React, {useCallback, useEffect, useMemo, useRef, useState} from 'react';
+import {ComparisonType} from 'shared/Comparison';
+import {useDeepMemo} from 'shared/hooks';
+import {minimalDisambiguousPaths} from 'shared/minimalDisambiguousPaths';
+import {group, notEmpty, partition} from 'shared/utils';
 import {Avatar} from './Avatar';
 import {File} from './ChangedFile';
 import {
@@ -47,9 +61,9 @@ import {DownwardArrow} from './icons/DownwardIcon';
 import {localStorageBackedAtom, readAtom, useAtomGet, writeAtom} from './jotaiUtils';
 import {
   AutoResolveSettingCheckbox,
+  PartialAbortSettingCheckbox,
   shouldAutoResolveAllBeforeContinue,
   shouldPartialAbort,
-  PartialAbortSettingCheckbox,
 } from './mergeConflicts/state';
 import {AbortMergeOperation} from './operations/AbortMergeOperation';
 import {AddRemoveOperation} from './operations/AddRemoveOperation';
@@ -75,20 +89,6 @@ import {
 import {selectedCommits} from './selection';
 import {latestHeadCommit, uncommittedChangesFetchError} from './serverAPIState';
 import {GeneratedStatus} from './types';
-import * as stylex from '@stylexjs/stylex';
-import {Badge} from 'isl-components/Badge';
-import {Banner, BannerKind} from 'isl-components/Banner';
-import {Button} from 'isl-components/Button';
-import {ErrorNotice} from 'isl-components/ErrorNotice';
-import {HorizontallyGrowingTextField} from 'isl-components/HorizontallyGrowingTextField';
-import {Icon} from 'isl-components/Icon';
-import {DOCUMENTATION_DELAY, Tooltip} from 'isl-components/Tooltip';
-import {useAtom, useAtomValue} from 'jotai';
-import React, {useCallback, useMemo, useEffect, useRef, useState} from 'react';
-import {ComparisonType} from 'shared/Comparison';
-import {useDeepMemo} from 'shared/hooks';
-import {minimalDisambiguousPaths} from 'shared/minimalDisambiguousPaths';
-import {group, notEmpty, partition} from 'shared/utils';
 
 import './UncommittedChanges.css';
 

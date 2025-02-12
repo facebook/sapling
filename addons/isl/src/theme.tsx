@@ -5,14 +5,14 @@
  * LICENSE file in the root directory of this source tree.
  */
 
+import {atom} from 'jotai';
 import {useCommand} from './ISLShortcuts';
 import {localStorageBackedAtom, writeAtom} from './jotaiUtils';
 import platform from './platform';
 import {registerDisposable} from './utils';
-import {atom} from 'jotai';
 
-import 'isl-components/theme/themeLight.css';
 import 'isl-components/theme/themeDark.css';
+import 'isl-components/theme/themeLight.css';
 
 const THEME_LOCAL_STORAGE_KEY = 'isl-color-theme';
 

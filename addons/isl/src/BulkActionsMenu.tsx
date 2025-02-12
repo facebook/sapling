@@ -5,17 +5,17 @@
  * LICENSE file in the root directory of this source tree.
  */
 
+import {Button} from 'isl-components/Button';
+import {Icon} from 'isl-components/Icon';
+import {Kbd} from 'isl-components/Kbd';
+import {KeyCode, Modifier} from 'isl-components/KeyboardShortcuts';
+import {Tooltip} from 'isl-components/Tooltip';
 import {CleanupAllButton} from './Cleanup';
 import {DropdownFields} from './DropdownFields';
 import {useCommandEvent} from './ISLShortcuts';
 import {SelectAllButton} from './SelectAllCommits';
 import {SuggestedRebaseButton} from './SuggestedRebase';
 import {T} from './i18n';
-import {Button} from 'isl-components/Button';
-import {Icon} from 'isl-components/Icon';
-import {Kbd} from 'isl-components/Kbd';
-import {KeyCode, Modifier} from 'isl-components/KeyboardShortcuts';
-import {Tooltip} from 'isl-components/Tooltip';
 
 import './BulkActionsMenu.css';
 

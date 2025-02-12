@@ -6,11 +6,11 @@
  */
 
 import type {MessageBus} from './MessageBus';
-import type {ServerToClientMessage, ClientToServerMessage, Disposable} from './types';
+import type {ClientToServerMessage, Disposable, ServerToClientMessage} from './types';
 
+import {defer} from 'shared/utils';
 import platform from './platform';
 import {deserializeFromString, serializeToString} from './serialize';
-import {defer} from 'shared/utils';
 
 export type IncomingMessage = ServerToClientMessage;
 export type OutgoingMessage = ClientToServerMessage;

@@ -7,13 +7,13 @@
 
 import type {ComparisonMode} from './atoms';
 
-import {useCommand} from '../ISLShortcuts';
-import {Modal} from '../Modal';
-import {currentComparisonMode, dismissComparison, showComparison} from './atoms';
 import {Icon} from 'isl-components/Icon';
 import {useAtomValue} from 'jotai';
 import {lazy, Suspense} from 'react';
 import {ComparisonType} from 'shared/Comparison';
+import {useCommand} from '../ISLShortcuts';
+import {Modal} from '../Modal';
+import {currentComparisonMode, dismissComparison, showComparison} from './atoms';
 
 import './ComparisonView.css';
 

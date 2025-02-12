@@ -7,9 +7,9 @@
 
 import type {DiffId} from './types';
 
+import {atom} from 'jotai';
 import serverAPI from './ClientToServerAPI';
 import {codeReviewProvider} from './codeReview/CodeReviewInfo';
-import {atom} from 'jotai';
 
 /**
  * In some cases, we need to explicitly disable message syncing after a failure.

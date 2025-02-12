@@ -5,19 +5,19 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-import type {EnabledSCMApiFeature} from '../types';
 import type {Repository} from 'isl-server/src/Repository';
 import type {ServerPlatform} from 'isl-server/src/serverPlatform';
 import type {RepositoryContext} from 'isl-server/src/serverTypes';
 import type {RepoInfo, ValidatedRepoInfo} from 'isl/src/types';
+import type {EnabledSCMApiFeature} from '../types';
 
-import {VSCodeReposList} from '../VSCodeRepo';
 import {repositoryCache} from 'isl-server/src/RepositoryCache';
 import {makeServerSideTracker} from 'isl-server/src/analytics/serverSideTracker';
 import {Logger} from 'isl-server/src/logger';
 import {TypedEventEmitter} from 'shared/TypedEventEmitter';
 import {nextTick} from 'shared/testUtils';
 import * as vscode from 'vscode';
+import {VSCodeReposList} from '../VSCodeRepo';
 
 export class MockLogger extends Logger {
   write() {

@@ -5,10 +5,18 @@
  * LICENSE file in the root directory of this source tree.
  */
 
+import type {ReactNode} from 'react';
 import type {Operation} from './operations/Operation';
 import type {ValidatedRepoInfo} from './types';
-import type {ReactNode} from 'react';
 
+import {Banner, BannerKind} from 'isl-components/Banner';
+import {Button} from 'isl-components/Button';
+import {Column, Row} from 'isl-components/Flex';
+import {Icon} from 'isl-components/Icon';
+import {Subtle} from 'isl-components/Subtle';
+import {Tooltip} from 'isl-components/Tooltip';
+import {atom, useAtom, useAtomValue} from 'jotai';
+import {notEmpty, truncate} from 'shared/utils';
 import {Delayed} from './Delayed';
 import {LogRenderExposures} from './analytics/LogRenderExposures';
 import {codeReviewProvider} from './codeReview/CodeReviewInfo';
@@ -24,14 +32,6 @@ import {repositoryInfo} from './serverAPIState';
 import {processTerminalLines} from './terminalOutput';
 import {CommandRunner} from './types';
 import {short} from './utils';
-import {Banner, BannerKind} from 'isl-components/Banner';
-import {Button} from 'isl-components/Button';
-import {Column, Row} from 'isl-components/Flex';
-import {Icon} from 'isl-components/Icon';
-import {Subtle} from 'isl-components/Subtle';
-import {Tooltip} from 'isl-components/Tooltip';
-import {atom, useAtom, useAtomValue} from 'jotai';
-import {notEmpty, truncate} from 'shared/utils';
 
 import './CommandHistoryAndProgress.css';
 

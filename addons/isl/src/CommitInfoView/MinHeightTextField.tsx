@@ -7,11 +7,11 @@
 
 import type {TextAreaProps} from 'isl-components/TextArea';
 
-import {assert} from '../utils';
 import * as stylex from '@stylexjs/stylex';
 import {TextArea} from 'isl-components/TextArea';
-import {forwardRef, type ForwardedRef, useEffect} from 'react';
+import {forwardRef, useEffect, type ForwardedRef} from 'react';
 import {notEmpty} from 'shared/utils';
+import {assert} from '../utils';
 
 const styles = stylex.create({
   minHeight: {

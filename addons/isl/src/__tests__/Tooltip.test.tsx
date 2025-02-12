@@ -7,18 +7,18 @@
 
 import type {ReactNode} from 'react';
 
-import App from '../App';
-import {
-  resetTestMessages,
-  expectMessageSentToServer,
-  simulateCommits,
-  COMMIT,
-  closeCommitInfoSidebar,
-} from '../testUtils';
-import {fireEvent, render, screen, within, act} from '@testing-library/react';
+import {act, fireEvent, render, screen, within} from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import {Tooltip} from 'isl-components/Tooltip';
 import {ViewportOverlayRoot} from 'isl-components/ViewportOverlay';
+import App from '../App';
+import {
+  COMMIT,
+  closeCommitInfoSidebar,
+  expectMessageSentToServer,
+  resetTestMessages,
+  simulateCommits,
+} from '../testUtils';
 
 /* eslint-disable @typescript-eslint/no-non-null-assertion */
 

@@ -7,8 +7,8 @@
 
 import type {CommitRev} from './commitStackState';
 
-import {CommitStackState} from './commitStackState';
 import {List, Record} from 'immutable';
+import {CommitStackState} from './commitStackState';
 
 type ReorderResult = {
   /** Offset of the move. Positive: move up. Negative: move down. */

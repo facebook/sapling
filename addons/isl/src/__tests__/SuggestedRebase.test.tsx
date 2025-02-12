@@ -5,17 +5,17 @@
  * LICENSE file in the root directory of this source tree.
  */
 
+import {act, fireEvent, render, screen, within} from '@testing-library/react';
 import App from '../App';
 import {
-  resetTestMessages,
-  expectMessageSentToServer,
-  simulateCommits,
   COMMIT,
   closeCommitInfoSidebar,
+  expectMessageSentToServer,
+  resetTestMessages,
+  simulateCommits,
   simulateRepoConnected,
 } from '../testUtils';
 import {succeedableRevset} from '../types';
-import {fireEvent, render, screen, within, act} from '@testing-library/react';
 
 describe('Suggested Rebase button', () => {
   beforeEach(() => {

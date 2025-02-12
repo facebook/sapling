@@ -5,20 +5,20 @@
  * LICENSE file in the root directory of this source tree.
  */
 
+import {act, fireEvent, render, screen, within} from '@testing-library/react';
+import {nextTick} from 'shared/testUtils';
 import App from '../../App';
 import platform from '../../platform';
 import {CommitInfoTestUtils, CommitTreeListTestUtils, ignoreRTL} from '../../testQueries';
 import {
-  resetTestMessages,
-  expectMessageSentToServer,
-  simulateCommits,
   COMMIT,
-  simulateUncommittedChangedFiles,
   expectMessageNOTSentToServer,
+  expectMessageSentToServer,
+  resetTestMessages,
+  simulateCommits,
+  simulateUncommittedChangedFiles,
 } from '../../testUtils';
 import {CommandRunner} from '../../types';
-import {fireEvent, render, screen, within, act} from '@testing-library/react';
-import {nextTick} from 'shared/testUtils';
 
 /* eslint-disable require-await */
 

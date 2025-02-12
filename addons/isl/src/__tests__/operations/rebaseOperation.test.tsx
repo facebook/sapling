@@ -7,27 +7,27 @@
 
 import type {Hash} from '../../types';
 
+import {act, fireEvent, render, screen, waitFor, within} from '@testing-library/react';
 import App from '../../App';
 import {Dag, DagCommitInfo} from '../../dag/dag';
 import {RebaseOperation} from '../../operations/RebaseOperation';
 import {CommitPreview} from '../../previews';
 import {ignoreRTL} from '../../testQueries';
 import {
-  resetTestMessages,
-  expectMessageSentToServer,
-  simulateCommits,
-  expectMessageNOTSentToServer,
   closeCommitInfoSidebar,
-  TEST_COMMIT_HISTORY,
-  dragAndDropCommits,
-  simulateUncommittedChangedFiles,
   COMMIT,
-  scanForkedBranchHashes,
+  dragAndDropCommits,
   dragCommits,
   dropCommits,
+  expectMessageNOTSentToServer,
+  expectMessageSentToServer,
+  resetTestMessages,
+  scanForkedBranchHashes,
+  simulateCommits,
+  simulateUncommittedChangedFiles,
+  TEST_COMMIT_HISTORY,
 } from '../../testUtils';
 import {CommandRunner, succeedableRevset} from '../../types';
-import {fireEvent, render, screen, waitFor, within, act} from '@testing-library/react';
 
 /*eslint-disable @typescript-eslint/no-non-null-assertion */
 

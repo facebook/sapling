@@ -5,16 +5,16 @@
  * LICENSE file in the root directory of this source tree.
  */
 
+import {act, render, screen} from '@testing-library/react';
 import App from '../App';
 import platform from '../platform';
 import {CommitInfoTestUtils} from '../testQueries';
 import {
+  COMMIT,
   expectMessageSentToServer,
   simulateCommits,
-  COMMIT,
   simulateRepoConnected,
 } from '../testUtils';
-import {render, screen, act} from '@testing-library/react';
 
 describe('persistAtomToLocalStorageEffect', () => {
   const getTemporary = jest.fn();

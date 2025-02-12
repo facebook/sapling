@@ -7,6 +7,8 @@
 
 import type {StyleXVar} from '@stylexjs/stylex/lib/StyleXTypes';
 
+import * as stylex from '@stylexjs/stylex';
+import {useState, type ReactNode} from 'react';
 import {Badge} from '../Badge';
 import {Banner, BannerKind} from '../Banner';
 import {Button} from '../Button';
@@ -30,8 +32,6 @@ import {Tooltip} from '../Tooltip';
 import {Typeahead} from '../Typeahead';
 import {layout} from '../theme/layout';
 import {colors, font, radius, spacing} from '../theme/tokens.stylex';
-import * as stylex from '@stylexjs/stylex';
-import {useState, type ReactNode} from 'react';
 
 /* eslint-disable no-console */
 

@@ -8,7 +8,7 @@
 import type {ApplicationInfo} from './types';
 
 import os from 'node:os';
-import {randomId, nullthrows} from 'shared/utils';
+import {nullthrows, randomId} from 'shared/utils';
 
 export function getUsername(): string {
   try {

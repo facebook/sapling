@@ -7,12 +7,12 @@
 
 import type react from 'react';
 
+import * as stylex from '@stylexjs/stylex';
+import {useId} from 'react';
 import {Column} from './Flex';
 import {Tooltip} from './Tooltip';
 import {layout} from './theme/layout';
 import {spacing} from './theme/tokens.stylex';
-import * as stylex from '@stylexjs/stylex';
-import {useId} from 'react';
 
 // stylex doesn't support :checked and :before simultaneously very well
 import './Radio.css';

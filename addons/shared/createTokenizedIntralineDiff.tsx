@@ -7,8 +7,8 @@
 
 import type {HighlightedToken} from './textmate-lib/tokenize';
 
-import {CSS_CLASS_PREFIX} from './textmate-lib/textmateStyles';
 import {diffWordsWithSpace} from 'diff';
+import {CSS_CLASS_PREFIX} from './textmate-lib/textmateStyles';
 
 /** Type of Chunk: Added, Removed, Unmodified. */
 type ChunkType = 'A' | 'R' | 'U';

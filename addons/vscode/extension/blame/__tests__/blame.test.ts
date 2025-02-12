@@ -8,10 +8,10 @@
 import type {Repository} from 'isl-server/src/Repository';
 import type {CommitInfo} from 'isl/src/types';
 
-import {getDiffBlameHoverMarkup} from '../blameHover';
-import {getRealignedBlameInfo, shortenAuthorName} from '../blameUtils';
 import {GitHubCodeReviewProvider} from 'isl-server/src/github/githubCodeReviewProvider';
 import {mockLogger} from 'shared/testUtils';
+import {getDiffBlameHoverMarkup} from '../blameHover';
+import {getRealignedBlameInfo, shortenAuthorName} from '../blameUtils';
 
 describe('blame', () => {
   describe('getRealignedBlameInfo', () => {

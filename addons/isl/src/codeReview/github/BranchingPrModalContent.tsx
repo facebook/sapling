@@ -9,13 +9,6 @@ import type {Operation} from '../../operations/Operation';
 import type {CommitInfo} from '../../types';
 import type {GithubUICodeReviewProvider} from './github';
 
-import {Avatar} from '../../Avatar';
-import {Commit} from '../../Commit';
-import {Column, FlexSpacer, Row} from '../../ComponentUtils';
-import {T} from '../../i18n';
-import {PushOperation} from '../../operations/PushOperation';
-import {CommitPreview, dagWithPreviews} from '../../previews';
-import {latestSuccessorUnlessExplicitlyObsolete} from '../../successionUtils';
 import * as stylex from '@stylexjs/stylex';
 import {Badge} from 'isl-components/Badge';
 import {Button} from 'isl-components/Button';
@@ -24,6 +17,13 @@ import {Dropdown} from 'isl-components/Dropdown';
 import {HorizontallyGrowingTextField} from 'isl-components/HorizontallyGrowingTextField';
 import {useAtomValue} from 'jotai';
 import {useState} from 'react';
+import {Avatar} from '../../Avatar';
+import {Commit} from '../../Commit';
+import {Column, FlexSpacer, Row} from '../../ComponentUtils';
+import {T} from '../../i18n';
+import {PushOperation} from '../../operations/PushOperation';
+import {CommitPreview, dagWithPreviews} from '../../previews';
+import {latestSuccessorUnlessExplicitlyObsolete} from '../../successionUtils';
 
 const styles = stylex.create({
   sectionTitle: {

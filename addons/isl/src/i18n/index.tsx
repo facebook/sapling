@@ -7,9 +7,9 @@
 
 import type {ReactNode} from 'react';
 
-import * as en from './en/common.json';
 import React, {createContext, useContext, useEffect, useState} from 'react';
 import {TypedEventEmitter} from 'shared/TypedEventEmitter';
+import * as en from './en/common.json';
 
 /**
  * ISO 639-3 language code used to control which translation we use

@@ -5,6 +5,7 @@
  * LICENSE file in the root directory of this source tree.
  */
 
+import type {List, RecordOf} from 'immutable';
 import type {CommitPreview, WithPreviewType} from '../previews';
 import type {CommitRev} from '../stackEdit/commitStackState';
 import type {
@@ -15,7 +16,6 @@ import type {
   StableCommitMetadata,
   SuccessorInfo,
 } from '../types';
-import type {RecordOf, List} from 'immutable';
 
 import {Record} from 'immutable';
 import {SelfUpdate} from 'shared/immutableExt';

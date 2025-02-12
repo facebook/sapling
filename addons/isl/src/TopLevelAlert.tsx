@@ -5,9 +5,16 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-import type {Alert, AlertSeverity} from './types';
 import type {ReactNode} from 'react';
+import type {Alert, AlertSeverity} from './types';
 
+import * as stylex from '@stylexjs/stylex';
+import {Banner, BannerKind} from 'isl-components/Banner';
+import {Button} from 'isl-components/Button';
+import {Icon} from 'isl-components/Icon';
+import {Subtle} from 'isl-components/Subtle';
+import {atom, useAtom, useAtomValue} from 'jotai';
+import {useEffect} from 'react';
 import {colors, font, radius, spacing} from '../../components/theme/tokens.stylex';
 import serverAPI from './ClientToServerAPI';
 import {Link} from './Link';
@@ -16,13 +23,6 @@ import {T} from './i18n';
 import {localStorageBackedAtom, writeAtom} from './jotaiUtils';
 import {applicationinfo} from './serverAPIState';
 import {layout} from './stylexUtils';
-import * as stylex from '@stylexjs/stylex';
-import {Banner, BannerKind} from 'isl-components/Banner';
-import {Button} from 'isl-components/Button';
-import {Icon} from 'isl-components/Icon';
-import {Subtle} from 'isl-components/Subtle';
-import {atom, useAtom, useAtomValue} from 'jotai';
-import {useEffect} from 'react';
 
 const dismissedAlerts = localStorageBackedAtom<{[key: string]: boolean}>(
   'isl.dismissed-alerts',

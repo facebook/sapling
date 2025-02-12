@@ -7,9 +7,9 @@
 
 import type {ValueObject} from 'immutable';
 
-import {isPromise} from './utils';
 import deepEqual from 'fast-deep-equal';
-import {isValueObject, is, List} from 'immutable';
+import {is, isValueObject, List} from 'immutable';
+import {isPromise} from './utils';
 
 type LRUKey = LRUHashKey | ValueObject;
 type LRUHashKey = string | number | boolean | null | undefined | object;

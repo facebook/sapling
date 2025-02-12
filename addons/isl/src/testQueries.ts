@@ -7,6 +7,8 @@
 
 import type {Hash} from './types';
 
+import {act, fireEvent, screen, waitFor, within} from '@testing-library/react';
+import {nullthrows} from 'shared/utils';
 import {commitMessageFieldsSchema} from './CommitInfoView/CommitMessageFields';
 import {OSSCommitMessageFieldSchema} from './CommitInfoView/OSSCommitMessageFieldsSchema';
 import {convertFieldNameToKey} from './CommitInfoView/utils';
@@ -14,8 +16,6 @@ import {readAtom} from './jotaiUtils';
 import {individualToggleKey} from './selection';
 import {expectMessageSentToServer} from './testUtils';
 import {assert} from './utils';
-import {screen, within, fireEvent, waitFor, act} from '@testing-library/react';
-import {nullthrows} from 'shared/utils';
 
 export const CommitTreeListTestUtils = {
   withinCommitTree() {

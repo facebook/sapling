@@ -5,21 +5,21 @@
  * LICENSE file in the root directory of this source tree.
  */
 
+import {act, fireEvent, render, screen, waitFor, within} from '@testing-library/react';
 import App from '../App';
 import {CommitInfoTestUtils, ignoreRTL} from '../testQueries';
 import {
-  resetTestMessages,
-  expectMessageSentToServer,
-  simulateCommits,
-  COMMIT,
-  simulateUncommittedChangedFiles,
   closeCommitInfoSidebar,
-  simulateRepoConnected,
+  COMMIT,
   commitInfoIsOpen,
+  expectMessageSentToServer,
   openCommitInfoSidebar,
+  resetTestMessages,
+  simulateCommits,
+  simulateRepoConnected,
+  simulateUncommittedChangedFiles,
 } from '../testUtils';
 import {CommandRunner} from '../types';
-import {fireEvent, render, screen, waitFor, within, act} from '@testing-library/react';
 
 describe('CommitTreeList', () => {
   beforeEach(() => {

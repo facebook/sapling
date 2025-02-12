@@ -7,6 +7,10 @@
 
 import type {ReactNode} from 'react';
 
+import {Icon} from 'isl-components/Icon';
+import {atom, useAtomValue} from 'jotai';
+import {loadable} from 'jotai/utils';
+import {tryJsonParse} from 'shared/utils';
 import serverAPI from '../ClientToServerAPI';
 import {tracker} from '../analytics';
 import {codeReviewProvider} from '../codeReview/CodeReviewInfo';
@@ -15,10 +19,6 @@ import {atomFamilyWeak} from '../jotaiUtils';
 import {uncommittedChangesWithPreviews} from '../previews';
 import {commitByHash} from '../serverAPIState';
 import {commitInfoViewCurrentCommits, commitMode} from './CommitInfoState';
-import {Icon} from 'isl-components/Icon';
-import {atom, useAtomValue} from 'jotai';
-import {loadable} from 'jotai/utils';
-import {tryJsonParse} from 'shared/utils';
 
 import './SuggestedReviewers.css';
 

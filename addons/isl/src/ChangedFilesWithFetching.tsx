@@ -5,16 +5,16 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-import type {Hash, Result, CommitInfo, FilesSample, ChangedFile} from './types';
+import type {ChangedFile, CommitInfo, FilesSample, Hash, Result} from './types';
 
+import {Button} from 'isl-components/Button';
+import {Tooltip} from 'isl-components/Tooltip';
+import {useEffect, useState} from 'react';
+import {ComparisonType} from 'shared/Comparison';
+import {LRU} from 'shared/LRU';
 import serverAPI from './ClientToServerAPI';
 import {ChangedFiles} from './UncommittedChanges';
 import {t, T} from './i18n';
-import {Button} from 'isl-components/Button';
-import {Tooltip} from 'isl-components/Tooltip';
-import {useState, useEffect} from 'react';
-import {ComparisonType} from 'shared/Comparison';
-import {LRU} from 'shared/LRU';
 
 // Cache fetches in progress so we don't double fetch
 const commitFilesCache = new LRU<Hash, Promise<Result<FilesSample>>>(10);

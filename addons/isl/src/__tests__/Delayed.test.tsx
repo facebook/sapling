@@ -7,8 +7,8 @@
 
 import type {RenderResult} from '@testing-library/react';
 
-import {Delayed} from '../Delayed';
 import {act, render, screen} from '@testing-library/react';
+import {Delayed} from '../Delayed';
 
 describe('<Delayed />', () => {
   let rendered: RenderResult | null = null;

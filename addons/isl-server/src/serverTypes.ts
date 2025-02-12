@@ -5,9 +5,9 @@
  * LICENSE file in the root directory of this source tree.
  */
 
+import type {ConfigName} from 'isl/src/types';
 import type {ServerSideTracker} from './analytics/serverSideTracker';
 import type {Logger} from './logger';
-import type {ConfigName} from 'isl/src/types';
 
 /**
  * Per-connection context with which to access a repository.

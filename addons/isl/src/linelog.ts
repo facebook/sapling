@@ -32,12 +32,12 @@ SOFTWARE.
 import type {RecordOf, ValueObject} from 'immutable';
 import type {LRUWithStats} from 'shared/LRU';
 
-import {assert} from './utils';
-import {hash, List, Record, Set as ImSet} from 'immutable';
+import {hash, Set as ImSet, List, Record} from 'immutable';
 import {cached, cachedMethod, LRU} from 'shared/LRU';
 import {diffLines, splitLines} from 'shared/diff';
 import {SelfUpdate} from 'shared/immutableExt';
 import {nullthrows} from 'shared/utils';
+import {assert} from './utils';
 
 /** Operation code. */
 enum Op {
@@ -1160,5 +1160,5 @@ function describeInst(inst: Inst): string {
   }
 }
 
-export {LineLog, FlattenLine};
-export type {Rev, LineIdx, LineInfo};
+export {FlattenLine, LineLog};
+export type {LineIdx, LineInfo, Rev};

@@ -5,19 +5,19 @@
  * LICENSE file in the root directory of this source tree.
  */
 
+import type {Atom, Getter, WritableAtom} from 'jotai';
+import type {Json} from 'shared/typeUtils';
 import type {Platform} from './platform';
 import type {ConfigName, LocalStorageName, SettableConfigName} from './types';
-import type {WritableAtom, Atom, Getter} from 'jotai';
-import type {Json} from 'shared/typeUtils';
 
-import serverAPI from './ClientToServerAPI';
-import platform from './platform';
-import {assert} from './utils';
 import {atom, getDefaultStore, useAtomValue} from 'jotai';
 import {loadable} from 'jotai/utils';
 import {useMemo} from 'react';
 import {RateLimiter} from 'shared/RateLimiter';
 import {isPromise} from 'shared/utils';
+import serverAPI from './ClientToServerAPI';
+import platform from './platform';
+import {assert} from './utils';
 
 /** A mutable atom that stores type `T`. */
 export type MutAtom<T> = WritableAtom<T, [T | ((prev: T) => T)], void>;

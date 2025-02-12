@@ -10,6 +10,10 @@ import type {DagCommitInfo} from './dag/dag';
 import type {ExtendedGraphRow} from './dag/render';
 import type {Hash} from './types';
 
+import {Button} from 'isl-components/Button';
+import {ErrorNotice} from 'isl-components/ErrorNotice';
+import {ErrorShortMessages} from 'isl-server/src/constants';
+import {atom, useAtomValue} from 'jotai';
 import {Commit, InlineProgressSpan} from './Commit';
 import {Center, LargeSpinner} from './ComponentUtils';
 import {FetchingAdditionalCommitsRow} from './FetchAdditionalCommitsButton';
@@ -27,15 +31,11 @@ import {
   selectedCommits,
   useArrowKeysToChangeSelection,
   useBackspaceToHideSelected,
-  useShortcutToRebaseSelected,
   useCommitCallbacks,
+  useShortcutToRebaseSelected,
 } from './selection';
 import {commitFetchError, latestUncommittedChangesData} from './serverAPIState';
 import {MaybeEditStackModal} from './stackEdit/ui/EditStackModal';
-import {Button} from 'isl-components/Button';
-import {ErrorNotice} from 'isl-components/ErrorNotice';
-import {ErrorShortMessages} from 'isl-server/src/constants';
-import {atom, useAtomValue} from 'jotai';
 
 import './CommitTreeList.css';
 

@@ -5,9 +5,9 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-import clientToServerAPI from './ClientToServerAPI';
 import {useEffect, useState} from 'react';
 import {randomId} from 'shared/utils';
+import clientToServerAPI from './ClientToServerAPI';
 
 export type Heartbeat =
   | {

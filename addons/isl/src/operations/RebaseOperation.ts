@@ -9,11 +9,11 @@ import type {DagCommitInfo} from '../dag/dagCommitInfo';
 import type {Dag} from '../previews';
 import type {ExactRevset, Hash, OptimisticRevset, SucceedableRevset} from '../types';
 
+import deepEqual from 'fast-deep-equal';
 import {t} from '../i18n';
 import {CommitPreview} from '../previews';
 import {latestSuccessor} from '../successionUtils';
 import {Operation} from './Operation';
-import deepEqual from 'fast-deep-equal';
 
 export class RebaseOperation extends Operation {
   constructor(

@@ -5,14 +5,14 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-import type {Hash, RepoRelativePath} from './types';
 import type {Comparison} from 'shared/Comparison';
+import type {Hash, RepoRelativePath} from './types';
 
+import {revsetForComparison} from 'shared/Comparison';
 import serverAPI from './ClientToServerAPI';
 import {configBackedAtom} from './jotaiUtils';
 import platform from './platform';
 import {copyAndShowToast, showToast} from './toast';
-import {revsetForComparison} from 'shared/Comparison';
 
 export const supportsBrowseUrlForHash = configBackedAtom(
   'fbcodereview.code-browser-url',

@@ -5,6 +5,12 @@
  * LICENSE file in the root directory of this source tree.
  */
 
+import {Button} from 'isl-components/Button';
+import {FlexSpacer} from 'isl-components/Flex';
+import {Icon} from 'isl-components/Icon';
+import {DOCUMENTATION_DELAY, Tooltip} from 'isl-components/Tooltip';
+import {useAtomValue} from 'jotai';
+import {clearTrackedCache} from 'shared/LRU';
 import {BookmarksManagerMenu} from './BookmarksManager';
 import {BugButton} from './BugButton';
 import {BulkActionsMenu} from './BulkActionsMenu';
@@ -21,12 +27,6 @@ import {DebugToolsButton} from './debug/DebugToolsButton';
 import {t} from './i18n';
 import {maybeRemoveForgottenOperation, useClearAllOptimisticState} from './operationsState';
 import {haveCommitsLoadedYet, haveRemotePath, isFetchingCommits} from './serverAPIState';
-import {Button} from 'isl-components/Button';
-import {FlexSpacer} from 'isl-components/Flex';
-import {Icon} from 'isl-components/Icon';
-import {DOCUMENTATION_DELAY, Tooltip} from 'isl-components/Tooltip';
-import {useAtomValue} from 'jotai';
-import {clearTrackedCache} from 'shared/LRU';
 
 import './TopBar.css';
 

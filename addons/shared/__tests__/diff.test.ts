@@ -7,7 +7,7 @@
 
 import type {Block} from '../diff';
 
-import {diffBlocks, splitLines, collapseContextBlocks, mergeBlocks} from '../diff';
+import {collapseContextBlocks, diffBlocks, mergeBlocks, splitLines} from '../diff';
 
 describe('diffBlocks', () => {
   it('returns a "=" block for unchanged content', () => {

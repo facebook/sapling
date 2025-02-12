@@ -5,11 +5,11 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-import {t, T} from './i18n';
-import {localStorageBackedAtom} from './jotaiUtils';
 import {Dropdown} from 'isl-components/Dropdown';
 import {Tooltip} from 'isl-components/Tooltip';
 import {useAtom} from 'jotai';
+import {t, T} from './i18n';
+import {localStorageBackedAtom} from './jotaiUtils';
 
 export enum AmendRestackBehavior {
   ALWAYS = 'always',

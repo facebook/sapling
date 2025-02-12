@@ -5,16 +5,16 @@
  * LICENSE file in the root directory of this source tree.
  */
 
+import type {AbsolutePath, RepoRelativePath} from 'isl/src/types';
 import type {Repository} from './Repository';
 import type {RepositoryContext} from './serverTypes';
-import type {AbsolutePath, RepoRelativePath} from 'isl/src/types';
 
-import {Internal} from './Internal';
 import {GeneratedStatus} from 'isl/src/types';
 import {promises as fs} from 'node:fs';
 import pathMod from 'node:path';
 import {LRU} from 'shared/LRU';
 import {group} from 'shared/utils';
+import {Internal} from './Internal';
 
 export const GENERATED_TAG = '@' + 'generated';
 export const PARTIALLY_GENERATED_TAG = '@' + 'partially-generated';

@@ -5,8 +5,8 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-import {SelfUpdate} from '../immutableExt';
 import Immutable, {List} from 'immutable';
+import {SelfUpdate} from '../immutableExt';
 
 describe('SelfUpdate', () => {
   it('is needed because of immutable.js deepEquals', () => {

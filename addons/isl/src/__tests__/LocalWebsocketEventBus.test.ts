@@ -9,9 +9,9 @@
 /* eslint-disable @typescript-eslint/no-unused-vars */
 /* eslint-disable @typescript-eslint/no-this-alias */
 
+import type {Writable} from 'shared/typeUtils';
 import type {LocalWebSocketEventBus as LocalWebSocketEventBusType} from '../LocalWebSocketEventBus';
 import type {PlatformName} from '../types';
-import type {Writable} from 'shared/typeUtils';
 
 const LocalWebSocketEventBus =
   // eslint-disable-next-line @typescript-eslint/consistent-type-imports

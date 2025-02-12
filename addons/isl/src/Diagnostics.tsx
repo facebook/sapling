@@ -5,10 +5,18 @@
  * LICENSE file in the root directory of this source tree.
  */
 
+import type {Tracker} from 'isl-server/src/analytics/tracker';
 import type {UseUncommittedSelection} from './partialSelection';
 import type {CommitInfo, Diagnostic, DiagnosticAllowlist} from './types';
-import type {Tracker} from 'isl-server/src/analytics/tracker';
 
+import * as stylex from '@stylexjs/stylex';
+import {Checkbox} from 'isl-components/Checkbox';
+import {Column, Row} from 'isl-components/Flex';
+import {Icon} from 'isl-components/Icon';
+import {Subtle} from 'isl-components/Subtle';
+import {Tooltip} from 'isl-components/Tooltip';
+import {useAtom} from 'jotai';
+import {basename} from 'shared/utils';
 import {spacing} from '../../components/theme/tokens.stylex';
 import serverAPI from './ClientToServerAPI';
 import {Collapsable} from './Collapsable';
@@ -20,14 +28,6 @@ import {localStorageBackedAtom, readAtom} from './jotaiUtils';
 import platform from './platform';
 import {uncommittedChangesWithPreviews} from './previews';
 import {showModal} from './useModal';
-import * as stylex from '@stylexjs/stylex';
-import {Checkbox} from 'isl-components/Checkbox';
-import {Column, Row} from 'isl-components/Flex';
-import {Icon} from 'isl-components/Icon';
-import {Subtle} from 'isl-components/Subtle';
-import {Tooltip} from 'isl-components/Tooltip';
-import {useAtom} from 'jotai';
-import {basename} from 'shared/utils';
 
 export const shouldWarnAboutDiagnosticsAtom = localStorageBackedAtom<boolean>(
   'isl.warn-about-diagnostics',

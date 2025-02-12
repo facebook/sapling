@@ -7,6 +7,11 @@
 
 import type {Hash} from '../../types';
 
+import {Button} from 'isl-components/Button';
+import {Icon} from 'isl-components/Icon';
+import {DOCUMENTATION_DELAY, Tooltip} from 'isl-components/Tooltip';
+import {useAtom, useAtomValue} from 'jotai';
+import {useCallback} from 'react';
 import {
   editedCommitMessages,
   getDefaultEditedCommitMessage,
@@ -25,11 +30,6 @@ import {
   sendStackEditMetrics,
   useStackEditState,
 } from './stackEditState';
-import {Button} from 'isl-components/Button';
-import {Icon} from 'isl-components/Icon';
-import {Tooltip, DOCUMENTATION_DELAY} from 'isl-components/Tooltip';
-import {useAtom, useAtomValue} from 'jotai';
-import {useCallback} from 'react';
 
 export function StackEditConfirmButtons(): React.ReactElement {
   const [[stackIntention], setStackIntentionHashes] = useAtom(editingStackIntentionHashes);

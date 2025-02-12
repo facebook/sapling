@@ -5,9 +5,9 @@
  * LICENSE file in the root directory of this source tree.
  */
 
+import type {Comparison} from 'shared/Comparison';
 import type {ThemeColor} from '../../theme';
 import type {Result} from '../../types';
-import type {Comparison} from 'shared/Comparison';
 
 type ContextId = {path: string; comparison: Comparison};
 

@@ -5,8 +5,8 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-import {I18nSupport, t, T} from '../i18n';
 import {render, screen} from '@testing-library/react';
+import {I18nSupport, t, T} from '../i18n';
 import '../i18n/en/common.json';
 
 jest.mock(

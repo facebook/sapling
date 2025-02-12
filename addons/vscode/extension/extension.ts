@@ -5,11 +5,15 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-import type {EnabledSCMApiFeature} from './types';
 import type {Level} from 'isl-server/src/logger';
 import type {ServerPlatform} from 'isl-server/src/serverPlatform';
 import type {RepositoryContext} from 'isl-server/src/serverTypes';
+import type {EnabledSCMApiFeature} from './types';
 
+import {makeServerSideTracker} from 'isl-server/src/analytics/serverSideTracker';
+import {Logger} from 'isl-server/src/logger';
+import * as util from 'node:util';
+import * as vscode from 'vscode';
 import {DeletedFileContentProvider} from './DeletedFileContentProvider';
 import {registerSaplingDiffContentProvider} from './DiffContentProvider';
 import {Internal} from './Internal';
@@ -21,10 +25,6 @@ import {ensureTranslationsLoaded} from './i18n';
 import {registerISLCommands} from './islWebviewPanel';
 import {extensionVersion} from './utils';
 import {getVSCodePlatform} from './vscodePlatform';
-import {makeServerSideTracker} from 'isl-server/src/analytics/serverSideTracker';
-import {Logger} from 'isl-server/src/logger';
-import * as util from 'node:util';
-import * as vscode from 'vscode';
 
 export async function activate(context: vscode.ExtensionContext) {
   const start = Date.now();

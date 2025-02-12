@@ -7,8 +7,8 @@
 
 import type {TrackDataWithEventName} from 'isl-server/src/analytics/types';
 
-import {Internal} from '../Internal';
 import {Tracker} from 'isl-server/src/analytics/tracker';
+import {Internal} from '../Internal';
 
 /** Client-side global analytics tracker */
 export const tracker = new Tracker(sendDataToServer, {});

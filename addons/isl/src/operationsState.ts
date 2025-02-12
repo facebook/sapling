@@ -5,18 +5,18 @@
  * LICENSE file in the root directory of this source tree.
  */
 
+import type {EnsureAssignedTogether} from 'shared/EnsureAssignedTogether';
 import type {Operation} from './operations/Operation';
 import type {Disposable, Hash, ProgressStep, ServerToClientMessage} from './types';
-import type {EnsureAssignedTogether} from 'shared/EnsureAssignedTogether';
 
+import {atom} from 'jotai';
+import {useCallback} from 'react';
+import {defer} from 'shared/utils';
 import serverAPI from './ClientToServerAPI';
 import {atomFamilyWeak, readAtom, writeAtom} from './jotaiUtils';
 import {atomResetOnCwdChange} from './repositoryData';
 import {Timer} from './timer';
 import {registerCleanup, registerDisposable, short} from './utils';
-import {atom} from 'jotai';
-import {useCallback} from 'react';
-import {defer} from 'shared/utils';
 
 export type OperationInfo = {
   operation: Operation;

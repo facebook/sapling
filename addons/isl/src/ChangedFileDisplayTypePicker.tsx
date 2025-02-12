@@ -5,15 +5,15 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-import {Row} from './ComponentUtils';
-import {t, T} from './i18n';
-import {configBackedAtom} from './jotaiUtils';
 import {Button} from 'isl-components/Button';
 import {Icon} from 'isl-components/Icon';
 import {isMac} from 'isl-components/OperatingSystem';
 import {Tooltip} from 'isl-components/Tooltip';
 import {useAtom} from 'jotai';
 import {useContextMenu} from 'shared/ContextMenu';
+import {Row} from './ComponentUtils';
+import {t, T} from './i18n';
+import {configBackedAtom} from './jotaiUtils';
 
 export type ChangedFilesDisplayType = 'short' | 'fullPaths' | 'tree' | 'fish';
 

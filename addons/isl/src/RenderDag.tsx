@@ -5,16 +5,16 @@
  * LICENSE file in the root directory of this source tree.
  */
 
+import type {ReactNode} from 'react';
 import type {Dag, DagCommitInfo} from './dag/dag';
 import type {ExtendedGraphRow} from './dag/render';
 import type {HashSet} from './dag/set';
-import type {ReactNode} from 'react';
 
+import React from 'react';
 import {AnimatedReorderGroup} from './AnimatedReorderGroup';
 import {AvatarPattern} from './Avatar';
 import {YouAreHereLabel} from './YouAreHereLabel';
 import {LinkLine, NodeLine, PadLine} from './dag/render';
-import React from 'react';
 
 import './RenderDag.css';
 

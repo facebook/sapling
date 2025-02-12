@@ -8,9 +8,9 @@
  */
 
 import '@testing-library/jest-dom';
-import {ContextMenus, useContextMenu} from '../ContextMenu';
-import {fireEvent, render, screen, act} from '@testing-library/react';
+import {act, fireEvent, render, screen} from '@testing-library/react';
 import {Provider} from 'jotai';
+import {ContextMenus, useContextMenu} from '../ContextMenu';
 
 const onClick1 = jest.fn();
 const onClick2 = jest.fn();

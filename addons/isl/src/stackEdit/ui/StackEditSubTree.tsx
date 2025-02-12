@@ -6,9 +6,15 @@
  */
 
 import type {DragHandler} from '../../DragHandle';
-import type {CommitState, CommitRev} from '../commitStackState';
+import type {CommitRev, CommitState} from '../commitStackState';
 import type {StackEditOpDescription, UseStackEditState} from './stackEditState';
 
+import {is} from 'immutable';
+import {Button} from 'isl-components/Button';
+import {Icon} from 'isl-components/Icon';
+import {Tooltip} from 'isl-components/Tooltip';
+import {useRef, useState} from 'react';
+import {nullthrows} from 'shared/utils';
 import {AnimatedReorderGroup} from '../../AnimatedReorderGroup';
 import {CommitTitle as StandaloneCommitTitle} from '../../CommitTitle';
 import {Row} from '../../ComponentUtils';
@@ -19,12 +25,6 @@ import {SplitCommitIcon} from '../../icons/SplitCommitIcon';
 import {reorderedRevs} from '../commitStackState';
 import {ReorderState} from '../reorderState';
 import {bumpStackEditMetric, useStackEditState, WDIR_NODE} from './stackEditState';
-import {is} from 'immutable';
-import {Button} from 'isl-components/Button';
-import {Icon} from 'isl-components/Icon';
-import {Tooltip} from 'isl-components/Tooltip';
-import {useRef, useState} from 'react';
-import {nullthrows} from 'shared/utils';
 
 import './StackEditSubTree.css';
 

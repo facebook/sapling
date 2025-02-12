@@ -8,10 +8,10 @@
 import type {Dag} from '../previews';
 import type {CommitInfo} from '../types';
 
+import {firstLine} from 'shared/utils';
 import {CommitPreview} from '../previews';
 import {exactRevset} from '../types';
 import {Operation} from './Operation';
-import {firstLine} from 'shared/utils';
 
 /**
  * Returns [bottom, top] of an array.

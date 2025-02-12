@@ -5,15 +5,12 @@
  * LICENSE file in the root directory of this source tree.
  */
 
+import type {ReactNode} from 'react';
+import type {Hunk, ParsedDiff} from 'shared/patch/parse';
 import type {Result} from '../../types';
 import type {TokenizedDiffHunk, TokenizedHunk} from './syntaxHighlightingTypes';
 import type {Context, OneIndexedLineNumber} from './types';
-import type {ReactNode} from 'react';
-import type {Hunk, ParsedDiff} from 'shared/patch/parse';
 
-import SplitDiffRow, {BlankLineNumber} from './SplitDiffRow';
-import {useTableColumnSelection} from './copyFromSelectedColumn';
-import {useTokenizedContents, useTokenizedHunks} from './syntaxHighlighting';
 import {diffChars} from 'diff';
 import {ErrorNotice} from 'isl-components/ErrorNotice';
 import {Icon} from 'isl-components/Icon';
@@ -24,6 +21,9 @@ import {
   applyTokenizationToLine,
   createTokenizedIntralineDiff,
 } from 'shared/createTokenizedIntralineDiff';
+import SplitDiffRow, {BlankLineNumber} from './SplitDiffRow';
+import {useTableColumnSelection} from './copyFromSelectedColumn';
+import {useTokenizedContents, useTokenizedHunks} from './syntaxHighlighting';
 
 const MAX_INPUT_LENGTH_FOR_INTRALINE_DIFF = 300;
 

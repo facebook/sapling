@@ -5,9 +5,9 @@
  * LICENSE file in the root directory of this source tree.
  */
 
+import {atom} from 'jotai';
 import {writeAtom} from '../jotaiUtils';
 import {registerCleanup} from '../utils';
-import {atom} from 'jotai';
 
 /** Subset of KeyboardEvent. */
 export type KeyPress = {

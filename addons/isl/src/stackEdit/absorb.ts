@@ -5,17 +5,17 @@
  * LICENSE file in the root directory of this source tree.
  */
 
+import type {RecordOf} from 'immutable';
 import type {LineInfo} from '../linelog';
 import type {FileStackIndex} from './commitStackState';
-import type {FileStackState, FileRev} from './fileStackState';
-import type {RecordOf} from 'immutable';
+import type {FileRev, FileStackState} from './fileStackState';
 
+import {Map as ImMap, List, Record} from 'immutable';
+import {diffLines, splitLines} from 'shared/diff';
+import {dedup, nullthrows} from 'shared/utils';
 import {t} from '../i18n';
 import {assert} from '../utils';
 import {max, prev} from './revMath';
-import {List, Record, Map as ImMap} from 'immutable';
-import {diffLines, splitLines} from 'shared/diff';
-import {dedup, nullthrows} from 'shared/utils';
 
 /** A diff chunk analyzed by `analyseFileStack`. */
 export type AbsorbEditProps = {

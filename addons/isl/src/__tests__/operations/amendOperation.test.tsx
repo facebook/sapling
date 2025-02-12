@@ -5,20 +5,20 @@
  * LICENSE file in the root directory of this source tree.
  */
 
+import {act, render, waitFor} from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
+import * as utils from 'shared/utils';
 import App from '../../App';
 import {CommitInfoTestUtils} from '../../testQueries';
 import {
-  resetTestMessages,
-  expectMessageSentToServer,
-  simulateCommits,
   COMMIT,
-  simulateUncommittedChangedFiles,
-  simulateMessageFromServer,
+  expectMessageSentToServer,
   openCommitInfoSidebar,
+  resetTestMessages,
+  simulateCommits,
+  simulateMessageFromServer,
+  simulateUncommittedChangedFiles,
 } from '../../testUtils';
-import {render, waitFor, act} from '@testing-library/react';
-import userEvent from '@testing-library/user-event';
-import * as utils from 'shared/utils';
 
 describe('AmendOperation', () => {
   beforeEach(() => {

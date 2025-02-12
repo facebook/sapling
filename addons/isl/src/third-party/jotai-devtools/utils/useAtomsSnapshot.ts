@@ -1,5 +1,5 @@
-import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { useStore } from 'jotai/react';
+import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import type {
   AtomsDependents,
   AtomsSnapshot,

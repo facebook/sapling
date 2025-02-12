@@ -7,9 +7,9 @@
 
 import type {Hash} from '../types';
 
+import {atom} from 'jotai';
 import {latestCommits} from '../serverAPIState';
 import {allDiffSummaries, codeReviewProvider} from './CodeReviewInfo';
-import {atom} from 'jotai';
 
 export enum SyncStatus {
   InSync = 'inSync',

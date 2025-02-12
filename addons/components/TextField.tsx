@@ -5,12 +5,12 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-import type {ReactProps} from './utils';
 import type {ForwardedRef, ReactNode} from 'react';
+import type {ReactProps} from './utils';
 
-import {Column} from './Flex';
 import * as stylex from '@stylexjs/stylex';
 import {forwardRef, useId} from 'react';
+import {Column} from './Flex';
 
 export const textFieldStyles = stylex.create({
   root: {

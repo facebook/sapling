@@ -7,14 +7,14 @@
 
 import type {RepoRelativePath} from './types';
 
+import {atom, useAtomValue} from 'jotai';
+import {useMemo} from 'react';
+import {LRU} from 'shared/LRU';
 import serverAPI from './ClientToServerAPI';
 import {t} from './i18n';
 import {writeAtom} from './jotaiUtils';
 import {GeneratedStatus} from './types';
 import {registerDisposable} from './utils';
-import {atom, useAtomValue} from 'jotai';
-import {useMemo} from 'react';
-import {LRU} from 'shared/LRU';
 
 export const genereatedFileCache = new LRU<RepoRelativePath, GeneratedStatus>(1500);
 

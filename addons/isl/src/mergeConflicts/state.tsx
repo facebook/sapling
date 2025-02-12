@@ -5,13 +5,13 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-import {Internal} from '../Internal';
-import {T, t} from '../i18n';
-import {localStorageBackedAtom} from '../jotaiUtils';
 import {Checkbox} from 'isl-components/Checkbox';
 import {Subtle} from 'isl-components/Subtle';
 import {Tooltip} from 'isl-components/Tooltip';
 import {useAtom} from 'jotai';
+import {Internal} from '../Internal';
+import {T, t} from '../i18n';
+import {localStorageBackedAtom} from '../jotaiUtils';
 
 export const shouldAutoResolveAllBeforeContinue = localStorageBackedAtom<boolean>(
   'isl.auto-resolve-before-continue',

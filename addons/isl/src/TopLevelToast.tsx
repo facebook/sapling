@@ -5,12 +5,12 @@
  * LICENSE file in the root directory of this source tree.
  */
 
+import {useAtomValue} from 'jotai';
 import {AnimatedReorderGroup} from './AnimatedReorderGroup';
 import {hideToast, toastQueueAtom} from './toast';
-import {useAtomValue} from 'jotai';
 
-import './TopLevelToast.css';
 import 'isl-components/Tooltip.css';
+import './TopLevelToast.css';
 
 export function TopLevelToast() {
   const toastQueue = useAtomValue(toastQueueAtom);

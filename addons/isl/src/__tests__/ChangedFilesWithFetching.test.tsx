@@ -7,19 +7,19 @@
 
 import type {ChangedFile, ChangedFileType, RepoRelativePath} from '../types';
 
+import {act, fireEvent, render, screen, waitFor} from '@testing-library/react';
 import App from '../App';
-import {ignoreRTL, CommitInfoTestUtils} from '../testQueries';
+import {CommitInfoTestUtils, ignoreRTL} from '../testQueries';
 import {
-  expectMessageSentToServer,
-  simulateCommits,
   COMMIT,
-  simulateRepoConnected,
-  resetTestMessages,
-  simulateMessageFromServer,
   expectMessageNOTSentToServer,
+  expectMessageSentToServer,
+  resetTestMessages,
+  simulateCommits,
+  simulateMessageFromServer,
+  simulateRepoConnected,
 } from '../testUtils';
 import {leftPad} from '../utils';
-import {fireEvent, render, screen, waitFor, act} from '@testing-library/react';
 
 function makeFiles(n: number): Array<RepoRelativePath> {
   return new Array(n).fill(null).map((_, i) => `file${leftPad(i, 3, '0')}.txt`);

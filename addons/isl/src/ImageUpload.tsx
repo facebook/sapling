@@ -7,18 +7,18 @@
 
 import type {RefObject} from 'react';
 
-import clientToServerAPI from './ClientToServerAPI';
-import {T, t} from './i18n';
-import {atomFamilyWeak, readAtom, writeAtom} from './jotaiUtils';
-import platform from './platform';
-import {replaceInTextArea, insertAtCursor} from './textareaUtils';
 import {Button} from 'isl-components/Button';
 import {InlineErrorBadge} from 'isl-components/ErrorNotice';
 import {Icon} from 'isl-components/Icon';
 import {Tooltip} from 'isl-components/Tooltip';
 import {atom, useAtomValue} from 'jotai';
-import {useState, type ReactNode, useId} from 'react';
+import {useId, useState, type ReactNode} from 'react';
 import {randomId} from 'shared/utils';
+import clientToServerAPI from './ClientToServerAPI';
+import {T, t} from './i18n';
+import {atomFamilyWeak, readAtom, writeAtom} from './jotaiUtils';
+import platform from './platform';
+import {insertAtCursor, replaceInTextArea} from './textareaUtils';
 
 export type ImageUploadStatus = {id: number; field: string} & (
   | {status: 'pending'}

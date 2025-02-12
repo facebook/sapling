@@ -7,16 +7,16 @@
 
 import type {CommitInfo} from '../types';
 
-import {Row} from '../ComponentUtils';
-import {T, t} from '../i18n';
-import {
-  useFetchSignificantLinesOfCode,
-  useFetchPendingSignificantLinesOfCode,
-} from '../sloc/useFetchSignificantLinesOfCode';
 import * as stylex from '@stylexjs/stylex';
 import {ErrorBoundary} from 'isl-components/ErrorNotice';
 import {Icon} from 'isl-components/Icon';
 import {Tooltip} from 'isl-components/Tooltip';
+import {Row} from '../ComponentUtils';
+import {T, t} from '../i18n';
+import {
+  useFetchPendingSignificantLinesOfCode,
+  useFetchSignificantLinesOfCode,
+} from '../sloc/useFetchSignificantLinesOfCode';
 
 type Props = {commit: CommitInfo};
 const styles = stylex.create({

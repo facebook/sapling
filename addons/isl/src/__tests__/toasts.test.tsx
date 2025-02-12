@@ -5,6 +5,7 @@
  * LICENSE file in the root directory of this source tree.
  */
 
+import {act, fireEvent, render, screen} from '@testing-library/react';
 import App from '../App';
 import platform from '../platform';
 import {
@@ -13,7 +14,6 @@ import {
   resetTestMessages,
   simulateCommits,
 } from '../testUtils';
-import {screen, act, fireEvent, render} from '@testing-library/react';
 
 describe('toasts', () => {
   beforeEach(() => {

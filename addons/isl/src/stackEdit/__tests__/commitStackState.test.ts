@@ -5,9 +5,11 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-import type {FileRev, CommitRev} from '../commitStackState';
 import type {ExportCommit, ExportStack} from 'shared/types/stack';
+import type {CommitRev, FileRev} from '../commitStackState';
 
+import {Map as ImMap, Set as ImSet, List} from 'immutable';
+import {nullthrows} from 'shared/utils';
 import {WDIR_NODE} from '../../dag/virtualCommit';
 import {
   ABSENT_FILE,
@@ -19,8 +21,6 @@ import {
 } from '../commitStackState';
 import {FileStackState} from '../fileStackState';
 import {describeAbsorbIdChunkMap} from './absorb.test';
-import {List, Set as ImSet, Map as ImMap} from 'immutable';
-import {nullthrows} from 'shared/utils';
 
 const exportCommitDefault: ExportCommit = {
   requested: true,

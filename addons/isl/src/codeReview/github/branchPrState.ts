@@ -5,8 +5,8 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-import {codeReviewProvider} from '../CodeReviewInfo';
 import {atom} from 'jotai';
+import {codeReviewProvider} from '../CodeReviewInfo';
 
 /** Experimental backdoor setting to get around disabled submit modes. Useful for testing. */
 export const overrideDisabledSubmitModes = atom(process.env.NODE_ENV === 'development');

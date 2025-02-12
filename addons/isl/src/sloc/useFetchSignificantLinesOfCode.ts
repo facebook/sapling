@@ -5,10 +5,13 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-import type {CommitInfo, RepoRelativePath, SlocInfo} from '../types';
 import type {Atom, Getter} from 'jotai';
 import type {Loadable} from 'jotai/vanilla/utils/loadable';
+import type {CommitInfo, RepoRelativePath, SlocInfo} from '../types';
 
+import {atom, useAtomValue} from 'jotai';
+import {loadable} from 'jotai/utils';
+import {useRef} from 'react';
 import serverAPI from '../ClientToServerAPI';
 import {commitInfoViewCurrentCommits} from '../CommitInfoView/CommitInfoState';
 import {getGeneratedFilesFrom} from '../GeneratedFile';
@@ -19,9 +22,6 @@ import {uncommittedChangesWithPreviews} from '../previews';
 import {commitByHash} from '../serverAPIState';
 import {GeneratedStatus} from '../types';
 import {MAX_FILES_ALLOWED_FOR_DIFF_STAT} from './diffStatConstants';
-import {atom, useAtomValue} from 'jotai';
-import {loadable} from 'jotai/utils';
-import {useRef} from 'react';
 
 const getGeneratedFiles = (files: ReadonlyArray<RepoRelativePath>): Array<RepoRelativePath> => {
   const generatedStatuses = getGeneratedFilesFrom(files);

@@ -5,11 +5,11 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-import {T} from '../i18n';
-import {useModal} from '../useModal';
 import {Button} from 'isl-components/Button';
 import {Icon} from 'isl-components/Icon';
 import {Suspense, lazy} from 'react';
+import {T} from '../i18n';
+import {useModal} from '../useModal';
 
 const ComponentExplorer = lazy(() => import('isl-components/explorer/ComponentExplorer'));
 

@@ -7,9 +7,9 @@
 
 import type {Level} from './logger';
 
-import {Logger} from './logger';
 import fs from 'node:fs';
 import util from 'node:util';
+import {Logger} from './logger';
 
 /** Logger that outputs to a given filename.
  * Typically used for browser ISL's server. */

@@ -7,9 +7,9 @@
 
 import type {CommitInfo, Hash} from './types';
 
-import {atomFamilyWeak} from './jotaiUtils';
 import {atom, useSetAtom} from 'jotai';
 import {useEffect, useState} from 'react';
+import {atomFamilyWeak} from './jotaiUtils';
 
 export const highlightedCommits = atom<Set<Hash>>(new Set<Hash>());
 

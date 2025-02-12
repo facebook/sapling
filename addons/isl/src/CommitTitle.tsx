@@ -7,8 +7,8 @@
 
 import type {Placement} from 'isl-components/Tooltip';
 
-import {t} from './i18n';
 import {Tooltip} from 'isl-components/Tooltip';
+import {t} from './i18n';
 
 type CommitTitleProps = React.HTMLAttributes<HTMLDivElement> & {
   commitMessage: string;

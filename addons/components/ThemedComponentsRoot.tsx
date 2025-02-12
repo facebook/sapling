@@ -7,8 +7,8 @@
 
 import type {ReactNode} from 'react';
 
-import {light} from './theme/tokens.stylex';
 import * as stylex from '@stylexjs/stylex';
+import {light} from './theme/tokens.stylex';
 
 type Writable<T> = {-readonly [P in keyof T]: T[P]};
 export function ThemedComponentsRoot({

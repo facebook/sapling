@@ -7,8 +7,8 @@
 
 import type {ReactNode} from 'react';
 
-import {Tooltip} from './Tooltip';
 import * as stylex from '@stylexjs/stylex';
+import {Tooltip} from './Tooltip';
 
 import './Banner.css';
 

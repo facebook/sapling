@@ -5,6 +5,11 @@
  * LICENSE file in the root directory of this source tree.
  */
 
+import type {Map as ImMap} from 'immutable';
+import type {ReactNode} from 'react';
+import type {Comparison} from 'shared/Comparison';
+import type {ContextMenuItem} from 'shared/ContextMenu';
+import type {ParsedDiff} from 'shared/patch/parse';
 import type {Context} from '../../ComparisonView/SplitDiffView/types';
 import type {DragHandler} from '../../DragHandle';
 import type {RenderGlyphResult} from '../../RenderDag';
@@ -12,13 +17,20 @@ import type {Dag} from '../../dag/dag';
 import type {DagCommitInfo} from '../../dag/dagCommitInfo';
 import type {HashSet} from '../../dag/set';
 import type {AbsorbEdit, AbsorbEditId} from '../absorb';
-import type {CommitStackState, FileRev, FileStackIndex, CommitRev} from '../commitStackState';
-import type {Map as ImMap} from 'immutable';
-import type {ReactNode} from 'react';
-import type {Comparison} from 'shared/Comparison';
-import type {ContextMenuItem} from 'shared/ContextMenu';
-import type {ParsedDiff} from 'shared/patch/parse';
+import type {CommitRev, CommitStackState, FileRev, FileStackIndex} from '../commitStackState';
 
+import * as stylex from '@stylexjs/stylex';
+import {Banner, BannerKind} from 'isl-components/Banner';
+import {Button} from 'isl-components/Button';
+import {Column, Row} from 'isl-components/Flex';
+import {Icon} from 'isl-components/Icon';
+import {Tooltip} from 'isl-components/Tooltip';
+import {stylexPropsWithClassName} from 'isl-components/utils';
+import {atom, useAtomValue} from 'jotai';
+import React, {useEffect, useMemo, useRef} from 'react';
+import {ComparisonType} from 'shared/Comparison';
+import {useContextMenu} from 'shared/ContextMenu';
+import {firstLine, nullthrows} from 'shared/utils';
 import {FileHeader, IconType} from '../../ComparisonView/SplitDiffView/SplitDiffFileHeader';
 import {SplitDiffTable} from '../../ComparisonView/SplitDiffView/SplitDiffHunk';
 import {ScrollY} from '../../ComponentUtils';
@@ -32,18 +44,6 @@ import {themeState} from '../../theme';
 import {prev} from '../revMath';
 import {calculateDagFromStack} from '../stackDag';
 import {stackEditStack, useStackEditState} from './stackEditState';
-import * as stylex from '@stylexjs/stylex';
-import {Banner, BannerKind} from 'isl-components/Banner';
-import {Button} from 'isl-components/Button';
-import {Column, Row} from 'isl-components/Flex';
-import {Icon} from 'isl-components/Icon';
-import {Tooltip} from 'isl-components/Tooltip';
-import {stylexPropsWithClassName} from 'isl-components/utils';
-import {atom, useAtomValue} from 'jotai';
-import React, {useEffect, useMemo, useRef} from 'react';
-import {ComparisonType} from 'shared/Comparison';
-import {useContextMenu} from 'shared/ContextMenu';
-import {firstLine, nullthrows} from 'shared/utils';
 
 const styles = stylex.create({
   container: {

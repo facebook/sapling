@@ -5,9 +5,9 @@
  * LICENSE file in the root directory of this source tree.
  */
 
+import {ejeca} from 'shared/ejeca';
 import {Internal} from '../Internal';
 import {isEjecaError, isEjecaSpawnError} from '../utils';
-import {ejeca} from 'shared/ejeca';
 
 export default async function queryGraphQL<TData, TVariables>(
   query: string,

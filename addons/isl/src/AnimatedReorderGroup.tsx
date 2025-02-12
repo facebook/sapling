@@ -5,9 +5,9 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-import {prefersReducedMotion} from './mediaQuery';
 import deepEqual from 'fast-deep-equal';
-import React, {useRef, useLayoutEffect} from 'react';
+import React, {useLayoutEffect, useRef} from 'react';
+import {prefersReducedMotion} from './mediaQuery';
 
 type ReorderGroupProps = React.HTMLAttributes<HTMLDivElement> & {
   children: React.ReactElement[];

@@ -10,12 +10,12 @@ import type {FullTrackData} from '../analytics/types';
 import type {ServerPlatform} from '../serverPlatform';
 import type {RepositoryContext} from '../serverTypes';
 
-import {Repository} from '../Repository';
-import {makeServerSideTracker} from '../analytics/serverSideTracker';
-import {setConfigOverrideForTests} from '../commands';
 import * as ejeca from 'shared/ejeca';
 import {mockLogger} from 'shared/testUtils';
 import {defer} from 'shared/utils';
+import {Repository} from '../Repository';
+import {makeServerSideTracker} from '../analytics/serverSideTracker';
+import {setConfigOverrideForTests} from '../commands';
 
 /** Matches any non-empty string */
 const anyActualString = expect.stringMatching(/.+/);

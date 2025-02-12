@@ -5,13 +5,13 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-import type {RepositoryContext} from './serverTypes';
 import type {EjecaOptions, EjecaReturn} from 'shared/ejeca';
+import type {RepositoryContext} from './serverTypes';
 
-import {isEjecaError} from './utils';
 import {ConflictType, type AbsolutePath, type MergeConflicts} from 'isl/src/types';
 import os from 'node:os';
 import {ejeca} from 'shared/ejeca';
+import {isEjecaError} from './utils';
 
 export const MAX_FETCHED_FILES_PER_COMMIT = 25;
 export const MAX_SIMULTANEOUS_CAT_CALLS = 4;

@@ -5,9 +5,9 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-import {debounce} from './debounce';
 import deepEqual from 'fast-deep-equal';
 import {useCallback, useEffect, useMemo, useRef} from 'react';
+import {debounce} from './debounce';
 
 /**
  * Like useEffect, but throttles calls to the effect callback.

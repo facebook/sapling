@@ -7,10 +7,10 @@
  * @jest-environment jsdom
  */
 
-import {useDeepMemo, usePrevious, useThrottledEffect} from '../hooks';
-import {fireEvent, render, screen, act} from '@testing-library/react';
 import '@testing-library/jest-dom';
+import {act, fireEvent, render, screen} from '@testing-library/react';
 import {useState} from 'react';
+import {useDeepMemo, usePrevious, useThrottledEffect} from '../hooks';
 
 describe('useThrottledEffect', () => {
   afterEach(() => {

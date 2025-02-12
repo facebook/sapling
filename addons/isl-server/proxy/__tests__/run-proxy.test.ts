@@ -5,11 +5,11 @@
  * LICENSE file in the root directory of this source tree.
  */
 
+import * as util from 'node:util';
 import {readExistingServerFile} from '../existingServerStateFiles';
 import * as startServer from '../server';
 import * as lifecycle from '../serverLifecycle';
-import {runProxyMain, parseArgs} from '../startServer';
-import * as util from 'node:util';
+import {parseArgs, runProxyMain} from '../startServer';
 
 /* eslint-disable require-await */
 

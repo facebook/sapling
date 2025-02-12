@@ -5,8 +5,8 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-import type {Hash} from '../types';
 import type {List, Seq} from 'immutable';
+import type {Hash} from '../types';
 
 import {OrderedSet as ImSet} from 'immutable';
 import {SelfUpdate} from 'shared/immutableExt';

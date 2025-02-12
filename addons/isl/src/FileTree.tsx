@@ -5,19 +5,19 @@
  * LICENSE file in the root directory of this source tree.
  */
 
+import type {Comparison} from 'shared/Comparison';
 import type {ChangedFilesDisplayType} from './ChangedFileDisplayTypePicker';
 import type {Place, UIChangedFile} from './UncommittedChanges';
 import type {UseUncommittedSelection} from './partialSelection';
 import type {PathTree} from './pathTree';
-import type {Comparison} from 'shared/Comparison';
 
-import {File} from './ChangedFile';
-import {buildPathTree, calculateTreeSelectionStates} from './pathTree';
 import {Button} from 'isl-components/Button';
 import {Checkbox} from 'isl-components/Checkbox';
 import {Icon} from 'isl-components/Icon';
 import {useMemo, useState} from 'react';
 import {mapIterable} from 'shared/utils';
+import {File} from './ChangedFile';
+import {buildPathTree, calculateTreeSelectionStates} from './pathTree';
 
 export function FileTreeFolderHeader({
   isCollapsed,

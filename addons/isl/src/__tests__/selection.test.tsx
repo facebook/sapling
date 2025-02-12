@@ -5,23 +5,23 @@
  * LICENSE file in the root directory of this source tree.
  */
 
+import {act, fireEvent, render, screen} from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import App from '../App';
 import {readAtom} from '../jotaiUtils';
 import {individualToggleKey, selectedCommits} from '../selection';
 import {mostRecentSubscriptionIds} from '../serverAPIState';
-import {CommitTreeListTestUtils, CommitInfoTestUtils} from '../testQueries';
+import {CommitInfoTestUtils, CommitTreeListTestUtils} from '../testQueries';
 import {
-  resetTestMessages,
+  closeCommitInfoSidebar,
+  COMMIT,
+  commitInfoIsOpen,
   expectMessageSentToServer,
+  resetTestMessages,
   simulateCommits,
   simulateRepoConnected,
   TEST_COMMIT_HISTORY,
-  COMMIT,
-  closeCommitInfoSidebar,
-  commitInfoIsOpen,
 } from '../testUtils';
-import {fireEvent, render, screen, act} from '@testing-library/react';
-import userEvent from '@testing-library/user-event';
 
 describe('selection', () => {
   beforeEach(() => {

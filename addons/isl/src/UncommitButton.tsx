@@ -5,6 +5,10 @@
  * LICENSE file in the root directory of this source tree.
  */
 
+import {Button} from 'isl-components/Button';
+import {Icon} from 'isl-components/Icon';
+import {DOCUMENTATION_DELAY, Tooltip} from 'isl-components/Tooltip';
+import {useAtomValue} from 'jotai';
 import {getChangedFilesForHash} from './ChangedFilesWithFetching';
 import {codeReviewProvider, diffSummary} from './codeReview/CodeReviewInfo';
 import {t, T} from './i18n';
@@ -12,10 +16,6 @@ import {UncommitOperation} from './operations/Uncommit';
 import {useRunOperation} from './operationsState';
 import platform from './platform';
 import {dagWithPreviews} from './previews';
-import {Button} from 'isl-components/Button';
-import {Icon} from 'isl-components/Icon';
-import {DOCUMENTATION_DELAY, Tooltip} from 'isl-components/Tooltip';
-import {useAtomValue} from 'jotai';
 
 export function UncommitButton() {
   const dag = useAtomValue(dagWithPreviews);

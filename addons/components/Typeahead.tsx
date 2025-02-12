@@ -8,11 +8,11 @@
 import type {TypeaheadResult} from './Types';
 import type {ReactProps} from './utils';
 
+import {useEffect, useRef, useState} from 'react';
 import {Icon} from './Icon';
 import {Subtle} from './Subtle';
 import {TextField} from './TextField';
 import {extractTokens, TokensList, tokensToString} from './Tokens';
-import {useRef, useEffect, useState} from 'react';
 
 export function Typeahead({
   tokenString,

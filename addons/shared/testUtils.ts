@@ -5,11 +5,11 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-import type {Json} from './typeUtils';
 import type {MeasureMemoryOptions} from 'node:vm';
+import type {Json} from './typeUtils';
 
-import {Logger} from '../isl-server/src/logger';
 import {measureMemory} from 'node:vm';
+import {Logger} from '../isl-server/src/logger';
 
 export class MockLogger extends Logger {
   write() {

@@ -7,11 +7,11 @@
 
 import type {ReactNode} from 'react';
 
+import {List} from 'immutable';
+import {atom} from 'jotai';
 import {t} from './i18n';
 import {atomWithOnChange, writeAtom} from './jotaiUtils';
 import platform from './platform';
-import {List} from 'immutable';
-import {atom} from 'jotai';
 
 /**
  * Push a toast. It will be displayed immediately and auto hides after a timeout.

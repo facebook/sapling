@@ -5,20 +5,20 @@
  * LICENSE file in the root directory of this source tree.
  */
 
+import type {ParsedDiff} from 'shared/patch/parse';
 import type {
   SyntaxWorkerRequest,
   SyntaxWorkerResponse,
+  ThemeColor,
   TokenizedDiffHunks,
   TokenizedHunk,
-  ThemeColor,
 } from './syntaxHighlightingTypes';
-import type {ParsedDiff} from 'shared/patch/parse';
 
-import {isVscode} from '../../environment';
-import {SynchronousWorker, WorkerApi} from './workerApi';
 import {useEffect, useState} from 'react';
 import {CancellationToken} from 'shared/CancellationToken';
 import {updateTextMateGrammarCSS} from 'shared/textmate-lib/textmateStyles';
+import {isVscode} from '../../environment';
+import {SynchronousWorker, WorkerApi} from './workerApi';
 
 // Syntax highlighting is done in a WebWorker. This file contains APIs
 // to be called from the main thread, which are delegated to the worker.

@@ -5,8 +5,8 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-import {IconStack} from './IconStack';
 import {Icon} from 'isl-components/Icon';
+import {IconStack} from './IconStack';
 
 export const IrrelevantCwdIcon = () => (
   <IconStack>

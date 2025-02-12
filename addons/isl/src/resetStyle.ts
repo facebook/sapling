@@ -5,7 +5,7 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-import {isWindows, isMac} from 'isl-components/OperatingSystem';
+import {isMac, isWindows} from 'isl-components/OperatingSystem';
 
 // https://github.com/microsoft/vscode/blob/c90951b/src/vs/workbench/browser/style.ts#L72
 const fontFamily = isWindows

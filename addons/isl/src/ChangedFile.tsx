@@ -5,15 +5,26 @@
  * LICENSE file in the root directory of this source tree.
  */
 
+import type {ReactNode} from 'react';
+import type {Comparison} from 'shared/Comparison';
 import type {Place, UIChangedFile, VisualChangedFileType} from './UncommittedChanges';
 import type {UseUncommittedSelection} from './partialSelection';
 import type {ChangedFileType, GeneratedStatus} from './types';
-import type {ReactNode} from 'react';
-import type {Comparison} from 'shared/Comparison';
 
+import {Button} from 'isl-components/Button';
+import {Checkbox} from 'isl-components/Checkbox';
+import {Icon} from 'isl-components/Icon';
+import {isMac} from 'isl-components/OperatingSystem';
+import {Subtle} from 'isl-components/Subtle';
+import {Tooltip} from 'isl-components/Tooltip';
+import {useAtomValue} from 'jotai';
+import React from 'react';
+import {ComparisonType, labelForComparison, revsetForComparison} from 'shared/Comparison';
+import {useContextMenu} from 'shared/ContextMenu';
+import {basename, notEmpty} from 'shared/utils';
 import {copyUrlForFile, supportsBrowseUrlForHash} from './BrowseRepo';
 import {type ChangedFilesDisplayType} from './ChangedFileDisplayTypePicker';
-import {generatedStatusToLabel, generatedStatusDescription} from './GeneratedFile';
+import {generatedStatusDescription, generatedStatusToLabel} from './GeneratedFile';
 import {PartialFileSelectionWithMode} from './PartialFileSelection';
 import {SuspenseBoundary} from './SuspenseBoundary';
 import {holdingAltAtom, holdingCtrlAtom} from './atoms/keyboardAtoms';
@@ -35,17 +46,6 @@ import {optimisticMergeConflicts} from './previews';
 import {copyAndShowToast} from './toast';
 import {ConflictType, succeedableRevset} from './types';
 import {usePromise} from './usePromise';
-import {Button} from 'isl-components/Button';
-import {Checkbox} from 'isl-components/Checkbox';
-import {Icon} from 'isl-components/Icon';
-import {isMac} from 'isl-components/OperatingSystem';
-import {Subtle} from 'isl-components/Subtle';
-import {Tooltip} from 'isl-components/Tooltip';
-import {useAtomValue} from 'jotai';
-import React from 'react';
-import {labelForComparison, revsetForComparison, ComparisonType} from 'shared/Comparison';
-import {useContextMenu} from 'shared/ContextMenu';
-import {basename, notEmpty} from 'shared/utils';
 
 /**
  * Is the alt key currently held down, used to show full file paths.

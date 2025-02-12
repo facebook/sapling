@@ -7,13 +7,13 @@
 
 import type {CommitInfo} from './types';
 
+import * as stylex from '@stylexjs/stylex';
+import {useAtom, useAtomValue} from 'jotai';
+import {useRef} from 'react';
 import {diffUpdateMessagesState} from './CommitInfoView/CommitInfoState';
 import {MinHeightTextField} from './CommitInfoView/MinHeightTextField';
 import {codeReviewProvider} from './codeReview/CodeReviewInfo';
 import {T} from './i18n';
-import * as stylex from '@stylexjs/stylex';
-import {useAtom, useAtomValue} from 'jotai';
-import {useRef} from 'react';
 
 const styles = stylex.create({
   full: {

@@ -5,8 +5,8 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-import platform from './platform';
 import * as stylex from '@stylexjs/stylex';
+import platform from './platform';
 
 const styles = stylex.create({
   a: {

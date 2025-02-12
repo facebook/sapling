@@ -5,17 +5,17 @@
  * LICENSE file in the root directory of this source tree.
  */
 
+import type {ReactNode} from 'react';
 import type {CommitInfo} from '../types';
 import type {CommitMessageFields, FieldConfig, FieldsBeingEdited} from './types';
-import type {ReactNode} from 'react';
 
+import {Subtle} from 'isl-components/Subtle';
+import {Tooltip} from 'isl-components/Tooltip';
 import {InlineBadge} from '../InlineBadge';
 import {YouAreHereLabel} from '../YouAreHereLabel';
 import {t, T} from '../i18n';
 import platform from '../platform';
 import {RelativeDate} from '../relativeDate';
-import {Subtle} from 'isl-components/Subtle';
-import {Tooltip} from 'isl-components/Tooltip';
 
 export function CommitTitleByline({commit}: {commit: CommitInfo}) {
   const createdByInfo = (

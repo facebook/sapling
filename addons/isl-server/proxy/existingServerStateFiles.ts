@@ -5,11 +5,11 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-import rmtree from './rmtree';
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import {nullthrows} from 'shared/utils';
+import rmtree from './rmtree';
 
 export type ExistingServerInfo = {
   sensitiveToken: string;

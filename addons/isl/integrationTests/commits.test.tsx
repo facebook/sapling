@@ -5,8 +5,8 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-import {initRepo} from './setup';
 import {act, screen, waitFor, within} from '@testing-library/react';
+import {initRepo} from './setup';
 
 describe('commits integration test', () => {
   it('shows commits', async () => {

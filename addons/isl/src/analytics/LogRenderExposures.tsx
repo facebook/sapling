@@ -9,8 +9,8 @@ import type {TrackEventName} from 'isl-server/src/analytics/eventNames';
 import type {TrackData} from 'isl-server/src/analytics/types';
 import type {ReactNode} from 'react';
 
-import {tracker} from './index';
 import {useThrottledEffect} from 'shared/hooks';
+import {tracker} from './index';
 
 /**
  * Log an analytics event when a component renders the first time.

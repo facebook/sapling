@@ -8,16 +8,16 @@
 import type {TypeaheadResult} from 'isl-components/Types';
 import type {TypeaheadKind} from 'isl/src/CommitInfoView/types';
 import type {
+  ClientToServerMessage,
+  CodeReviewProviderSpecificClientToServerMessages,
+  DiffComment,
   DiffId,
   DiffSummary,
   Disposable,
-  Result,
-  OperationCommandProgressReporter,
-  LandInfo,
   LandConfirmationInfo,
-  CodeReviewProviderSpecificClientToServerMessages,
-  ClientToServerMessage,
-  DiffComment,
+  LandInfo,
+  OperationCommandProgressReporter,
+  Result,
   ServerToClientMessage,
 } from 'isl/src/types';
 

@@ -7,8 +7,8 @@
 
 import type {ReactProps} from './utils';
 
-import {spacing} from './theme/tokens.stylex';
 import * as stylex from '@stylexjs/stylex';
+import {spacing} from './theme/tokens.stylex';
 
 type ContainerProps = ReactProps<HTMLDivElement> & {xstyle?: stylex.StyleXStyles};
 

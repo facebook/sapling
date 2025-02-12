@@ -5,11 +5,11 @@
  * LICENSE file in the root directory of this source tree.
  */
 
+import 'react';
+import ReactDOM from 'react-dom/client';
 import {ThemedComponentsRoot} from '../ThemedComponentsRoot';
 import {ViewportOverlayRoot} from '../ViewportOverlay';
 import ComponentExplorer from './ComponentExplorer';
-import 'react';
-import ReactDOM from 'react-dom/client';
 
 import './index.css';
 

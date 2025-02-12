@@ -7,14 +7,6 @@
 
 import type {CommitInfo} from './types';
 
-import {Commit} from './Commit';
-import {FlexSpacer} from './ComponentUtils';
-import {codeReviewProvider} from './codeReview/CodeReviewInfo';
-import {submitAsDraft, SubmitAsDraftCheckbox} from './codeReview/DraftCheckbox';
-import {t, T} from './i18n';
-import {configBackedAtom, readAtom} from './jotaiUtils';
-import {CommitPreview} from './previews';
-import {useModal} from './useModal';
 import {Button} from 'isl-components/Button';
 import {Checkbox} from 'isl-components/Checkbox';
 import {Divider} from 'isl-components/Divider';
@@ -24,6 +16,14 @@ import {useAtom, useAtomValue} from 'jotai';
 import {useState} from 'react';
 import {useAutofocusRef} from 'shared/hooks';
 import {nullthrows} from 'shared/utils';
+import {Commit} from './Commit';
+import {FlexSpacer} from './ComponentUtils';
+import {codeReviewProvider} from './codeReview/CodeReviewInfo';
+import {submitAsDraft, SubmitAsDraftCheckbox} from './codeReview/DraftCheckbox';
+import {t, T} from './i18n';
+import {configBackedAtom, readAtom} from './jotaiUtils';
+import {CommitPreview} from './previews';
+import {useModal} from './useModal';
 
 import './ConfirmSubmitStack.css';
 

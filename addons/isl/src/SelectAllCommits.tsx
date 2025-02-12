@@ -5,18 +5,18 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-import {useCommand} from './ISLShortcuts';
-import {islDrawerState} from './drawerState';
-import {t, T} from './i18n';
-import {readAtom, writeAtom} from './jotaiUtils';
-import {dagWithPreviews} from './previews';
-import {selectedCommits} from './selection';
 import {Button} from 'isl-components/Button';
 import {Icon} from 'isl-components/Icon';
 import {Kbd} from 'isl-components/Kbd';
 import {KeyCode, Modifier} from 'isl-components/KeyboardShortcuts';
 import {Tooltip} from 'isl-components/Tooltip';
 import {useCallback} from 'react';
+import {useCommand} from './ISLShortcuts';
+import {islDrawerState} from './drawerState';
+import {t, T} from './i18n';
+import {readAtom, writeAtom} from './jotaiUtils';
+import {dagWithPreviews} from './previews';
+import {selectedCommits} from './selection';
 
 /** By default, "select all" selects draft, non-obsoleted commits. */
 function getSelectAllCommitHashSet(): Set<string> {

@@ -5,10 +5,10 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-import serverAPI from '../../isl/src/ClientToServerAPI';
 import {readAtom, writeAtom} from 'isl/src/jotaiUtils';
 import {registerDisposable} from 'isl/src/utils';
 import {atom} from 'jotai';
+import serverAPI from '../../isl/src/ClientToServerAPI';
 
 /** Should match the sapling.comparisonPanelMode enum in package.json */
 export enum ComparisonPanelMode {

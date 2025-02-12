@@ -5,19 +5,24 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-import type {AbsorbEdit, AbsorbEditId} from './absorb';
-import type {FileRev} from './fileStackState';
 import type {RecordOf} from 'immutable';
 import type {Author, Hash, RepoPath} from 'shared/types/common';
 import type {
-  ExportStack,
   ExportFile,
-  ImportStack,
-  ImportCommit,
-  Mark,
+  ExportStack,
   ImportAction,
+  ImportCommit,
+  ImportStack,
+  Mark,
 } from 'shared/types/stack';
+import type {AbsorbEdit, AbsorbEditId} from './absorb';
+import type {FileRev} from './fileStackState';
 
+import deepEqual from 'fast-deep-equal';
+import {Map as ImMap, Set as ImSet, List, Record, Seq, is} from 'immutable';
+import {LRU, cachedMethod} from 'shared/LRU';
+import {SelfUpdate} from 'shared/immutableExt';
+import {firstLine, generatorContains, nullthrows, zip} from 'shared/utils';
 import {
   commitMessageFieldsSchema,
   commitMessageFieldsToString,
@@ -36,11 +41,6 @@ import {
 } from './absorb';
 import {FileStackState} from './fileStackState';
 import {max, next, prev} from './revMath';
-import deepEqual from 'fast-deep-equal';
-import {Seq, List, Map as ImMap, Set as ImSet, Record, is} from 'immutable';
-import {LRU, cachedMethod} from 'shared/LRU';
-import {SelfUpdate} from 'shared/immutableExt';
-import {firstLine, generatorContains, nullthrows, zip} from 'shared/utils';
 
 type CommitStackProps = {
   /**

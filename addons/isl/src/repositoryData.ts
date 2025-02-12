@@ -7,9 +7,9 @@
 
 import type {CommitInfo, RepoInfo, RepoRelativePath} from './types';
 
+import {atom, useAtomValue} from 'jotai';
 import {atomResetOnDepChange, localStorageBackedAtom} from './jotaiUtils';
 import platform from './platform';
-import {atom, useAtomValue} from 'jotai';
 
 export const repositoryData = atom<{info?: RepoInfo; cwd?: string}>({});
 

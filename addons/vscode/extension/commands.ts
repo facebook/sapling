@@ -11,10 +11,6 @@ import type {Operation} from 'isl/src/operations/Operation';
 import type {RepoRelativePath} from 'isl/src/types';
 import type {Comparison} from 'shared/Comparison';
 
-import {encodeDeletedFileUri} from './DeletedFileContentProvider';
-import {encodeSaplingDiffUri} from './DiffContentProvider';
-import {shouldOpenBeside} from './config';
-import {t} from './i18n';
 import {repoRelativePathForAbsolutePath} from 'isl-server/src/Repository';
 import {repositoryCache} from 'isl-server/src/RepositoryCache';
 import {findPublicAncestor} from 'isl-server/src/utils';
@@ -23,6 +19,10 @@ import fs from 'node:fs';
 import path from 'node:path';
 import {ComparisonType, labelForComparison} from 'shared/Comparison';
 import * as vscode from 'vscode';
+import {encodeDeletedFileUri} from './DeletedFileContentProvider';
+import {encodeSaplingDiffUri} from './DiffContentProvider';
+import {shouldOpenBeside} from './config';
+import {t} from './i18n';
 
 /**
  * VS Code Commands registered by the Sapling extension.

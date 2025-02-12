@@ -5,8 +5,8 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-import type {Grammar, TextMateGrammar} from './types';
 import type {IRawGrammar, IRawTheme} from 'vscode-textmate';
+import type {Grammar, TextMateGrammar} from './types';
 
 import {createOnigScanner, createOnigString} from 'vscode-oniguruma';
 import {Registry, parseRawGrammar} from 'vscode-textmate';

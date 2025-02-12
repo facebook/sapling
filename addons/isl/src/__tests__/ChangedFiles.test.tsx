@@ -7,22 +7,22 @@
 
 import type {ChangedFileType, RepoRelativePath, UncommittedChanges} from '../types';
 
+import {act, fireEvent, render, screen} from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import App from '../App';
 import {defaultChangedFilesDisplayType} from '../ChangedFileDisplayTypePicker';
-import {ignoreRTL, CommitInfoTestUtils} from '../testQueries';
+import {CommitInfoTestUtils, ignoreRTL} from '../testQueries';
 import {
-  expectMessageSentToServer,
-  simulateCommits,
-  COMMIT,
-  simulateUncommittedChangedFiles,
   closeCommitInfoSidebar,
-  simulateRepoConnected,
+  COMMIT,
+  expectMessageSentToServer,
   resetTestMessages,
+  simulateCommits,
   simulateMessageFromServer,
+  simulateRepoConnected,
+  simulateUncommittedChangedFiles,
 } from '../testUtils';
 import {leftPad} from '../utils';
-import {fireEvent, render, screen, act} from '@testing-library/react';
-import userEvent from '@testing-library/user-event';
 
 jest.mock('isl-components/OperatingSystem', () => ({
   isMac: true,

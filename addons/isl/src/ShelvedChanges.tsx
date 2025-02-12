@@ -5,6 +5,16 @@
  * LICENSE file in the root directory of this source tree.
  */
 
+import {Button} from 'isl-components/Button';
+import {ErrorNotice} from 'isl-components/ErrorNotice';
+import {Icon} from 'isl-components/Icon';
+import {Kbd} from 'isl-components/Kbd';
+import {KeyCode, Modifier} from 'isl-components/KeyboardShortcuts';
+import {Subtle} from 'isl-components/Subtle';
+import {Tooltip} from 'isl-components/Tooltip';
+import {useAtom} from 'jotai';
+import {useEffect} from 'react';
+import {ComparisonType} from 'shared/Comparison';
 import serverAPI from './ClientToServerAPI';
 import {OpenComparisonViewButton} from './ComparisonView/OpenComparisonViewButton';
 import {FlexSpacer, Row} from './ComponentUtils';
@@ -18,16 +28,6 @@ import {atomLoadableWithRefresh} from './jotaiUtils';
 import {DeleteShelveOperation} from './operations/DeleteShelveOperation';
 import {UnshelveOperation} from './operations/UnshelveOperation';
 import {RelativeDate} from './relativeDate';
-import {Button} from 'isl-components/Button';
-import {ErrorNotice} from 'isl-components/ErrorNotice';
-import {Icon} from 'isl-components/Icon';
-import {Kbd} from 'isl-components/Kbd';
-import {KeyCode, Modifier} from 'isl-components/KeyboardShortcuts';
-import {Subtle} from 'isl-components/Subtle';
-import {Tooltip} from 'isl-components/Tooltip';
-import {useAtom} from 'jotai';
-import {useEffect} from 'react';
-import {ComparisonType} from 'shared/Comparison';
 
 import './ShelvedChanges.css';
 

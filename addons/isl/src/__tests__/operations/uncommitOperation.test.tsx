@@ -7,19 +7,19 @@
 
 import type {ChangedFile} from '../../types';
 
+import {act, fireEvent, render, screen, waitFor} from '@testing-library/react';
 import App from '../../App';
 import platform from '../../platform';
 import {CommitTreeListTestUtils, ignoreRTL} from '../../testQueries';
 import {
-  resetTestMessages,
-  expectMessageSentToServer,
-  simulateCommits,
   COMMIT,
   closeCommitInfoSidebar,
+  expectMessageSentToServer,
+  resetTestMessages,
+  simulateCommits,
   simulateMessageFromServer,
 } from '../../testUtils';
 import {CommandRunner} from '../../types';
-import {act, fireEvent, render, screen, waitFor} from '@testing-library/react';
 
 const {withinCommitTree} = CommitTreeListTestUtils;
 

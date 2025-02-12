@@ -5,7 +5,6 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-import {Internal} from 'isl-server/src/Internal';
 import os from 'node:os';
 import * as vscode from 'vscode';
 

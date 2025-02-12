@@ -7,6 +7,10 @@
 
 import type {CodeReviewSystem} from '../types';
 
+import {act, fireEvent, render, screen, waitFor} from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
+import {nextTick} from 'shared/testUtils';
+import * as utils from 'shared/utils';
 import App from '../App';
 import {CommitInfoTestUtils} from '../testQueries';
 import {
@@ -19,10 +23,6 @@ import {
   simulateMessageFromServer,
   simulateUncommittedChangedFiles,
 } from '../testUtils';
-import {fireEvent, render, waitFor, screen, act} from '@testing-library/react';
-import userEvent from '@testing-library/user-event';
-import {nextTick} from 'shared/testUtils';
-import * as utils from 'shared/utils';
 
 describe('Image upload inside TextArea ', () => {
   beforeEach(() => {

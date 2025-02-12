@@ -5,10 +5,21 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-import type {Heartbeat} from '../heartbeat';
 import type {ReactNode} from 'react';
 import type {ExclusiveOr} from 'shared/typeUtils';
+import type {Heartbeat} from '../heartbeat';
 
+import * as stylex from '@stylexjs/stylex';
+import {Badge} from 'isl-components/Badge';
+import {Banner, BannerKind} from 'isl-components/Banner';
+import {Button} from 'isl-components/Button';
+import {Checkbox} from 'isl-components/Checkbox';
+import {InlineErrorBadge} from 'isl-components/ErrorNotice';
+import {Icon} from 'isl-components/Icon';
+import {Subtle} from 'isl-components/Subtle';
+import {Tooltip} from 'isl-components/Tooltip';
+import {atom, useAtom, useAtomValue} from 'jotai';
+import {useCallback, useEffect, useState} from 'react';
 import {colors} from '../../../components/theme/tokens.stylex';
 import serverApi, {debugLogMessageTraffic} from '../ClientToServerAPI';
 import {Column, Row} from '../ComponentUtils';
@@ -34,17 +45,6 @@ import {showToast} from '../toast';
 import {isDev} from '../utils';
 import {ComponentExplorerButton} from './ComponentExplorer';
 import {readInterestingAtoms, serializeAtomsState} from './getInterestingAtoms';
-import * as stylex from '@stylexjs/stylex';
-import {Badge} from 'isl-components/Badge';
-import {Banner, BannerKind} from 'isl-components/Banner';
-import {Button} from 'isl-components/Button';
-import {Checkbox} from 'isl-components/Checkbox';
-import {InlineErrorBadge} from 'isl-components/ErrorNotice';
-import {Icon} from 'isl-components/Icon';
-import {Subtle} from 'isl-components/Subtle';
-import {Tooltip} from 'isl-components/Tooltip';
-import {atom, useAtom, useAtomValue} from 'jotai';
-import {useState, useCallback, useEffect} from 'react';
 
 import './DebugToolsMenu.css';
 

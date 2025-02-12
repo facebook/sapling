@@ -7,20 +7,20 @@
 
 import type {Hash} from '../../types';
 
+import {act, fireEvent, render, screen} from '@testing-library/react';
+import {nextTick} from 'shared/testUtils';
 import App from '../../App';
 import platform from '../../platform';
 import {
-  resetTestMessages,
-  expectMessageSentToServer,
-  simulateCommits,
   COMMIT,
   closeCommitInfoSidebar,
-  expectYouAreHerePointAt,
   expectMessageNOTSentToServer,
+  expectMessageSentToServer,
+  expectYouAreHerePointAt,
+  resetTestMessages,
+  simulateCommits,
 } from '../../testUtils';
 import {CommandRunner, succeedableRevset} from '../../types';
-import {fireEvent, render, screen, act} from '@testing-library/react';
-import {nextTick} from 'shared/testUtils';
 
 describe('GotoOperation', () => {
   beforeEach(() => {

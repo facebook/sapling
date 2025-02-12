@@ -5,9 +5,9 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-import App from './App';
 import 'react';
 import ReactDOM from 'react-dom/client';
+import App from './App';
 
 // Include CSS variables we use, originally from vscode-webview-ui-toolkit
 import 'isl-components/theme/themeDarkVariables.css';

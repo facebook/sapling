@@ -7,6 +7,8 @@
 
 import type {CommitInfo} from './types';
 
+import {Tooltip} from 'isl-components/Tooltip';
+import {useCallback, useEffect, useState} from 'react';
 import {t} from './i18n';
 import {readAtom, writeAtom} from './jotaiUtils';
 import {REBASE_PREVIEW_HASH_PREFIX, RebaseOperation} from './operations/RebaseOperation';
@@ -15,8 +17,6 @@ import {CommitPreview, dagWithPreviews, uncommittedChangesWithPreviews} from './
 import {latestDag} from './serverAPIState';
 import {latestSuccessorUnlessExplicitlyObsolete} from './successionUtils';
 import {succeedableRevset} from './types';
-import {Tooltip} from 'isl-components/Tooltip';
-import {useState, useCallback, useEffect} from 'react';
 
 function isDraggablePreview(previewType?: CommitPreview): boolean {
   switch (previewType) {

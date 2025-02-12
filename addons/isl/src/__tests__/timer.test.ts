@@ -5,8 +5,8 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-import {Timer} from '../timer';
 import {gc} from 'shared/testUtils';
+import {Timer} from '../timer';
 
 describe('Timer', () => {
   beforeEach(() => {

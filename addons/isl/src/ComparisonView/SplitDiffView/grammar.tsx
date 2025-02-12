@@ -5,15 +5,15 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-import type {ThemeColor} from '../../theme';
 import type {TextMateGrammar} from 'shared/textmate-lib/types';
 import type {IGrammar, Registry} from 'vscode-textmate';
+import type {ThemeColor} from '../../theme';
 
+import createTextMateRegistry from 'shared/textmate-lib/createTextMateRegistry';
+import {nullthrows} from 'shared/utils';
 import {grammars} from '../../generated/textmate/TextMateGrammarManifest';
 import VSCodeDarkPlusTheme from './VSCodeDarkPlusTheme';
 import VSCodeLightPlusTheme from './VSCodeLightPlusTheme';
-import createTextMateRegistry from 'shared/textmate-lib/createTextMateRegistry';
-import {nullthrows} from 'shared/utils';
 
 const grammarCache: Map<string, Promise<IGrammar | null>> = new Map();
 export function getGrammar(store: Registry, scopeName: string): Promise<IGrammar | null> {

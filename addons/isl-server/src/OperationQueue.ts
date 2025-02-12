@@ -5,14 +5,14 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-import type {ServerSideTracker} from './analytics/serverSideTracker';
-import type {RepositoryContext} from './serverTypes';
 import type {
   OperationCommandProgressReporter,
   OperationProgress,
   RunnableOperation,
 } from 'isl/src/types';
 import type {Deferred} from 'shared/utils';
+import type {ServerSideTracker} from './analytics/serverSideTracker';
+import type {RepositoryContext} from './serverTypes';
 
 import {clearTrackedCache} from 'shared/LRU';
 import {newAbortController} from 'shared/compat';

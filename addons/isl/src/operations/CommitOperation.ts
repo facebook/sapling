@@ -5,6 +5,7 @@
  * LICENSE file in the root directory of this source tree.
  */
 
+import type {ImportStack} from 'shared/types/stack';
 import type {PartialSelection} from '../partialSelection';
 import type {
   ApplyUncommittedChangesPreviewsFuncType,
@@ -12,7 +13,6 @@ import type {
   UncommittedChangesPreviewContext,
 } from '../previews';
 import type {ChangedFile, CommandArg, Hash, RepoRelativePath, UncommittedChanges} from '../types';
-import type {ImportStack} from 'shared/types/stack';
 
 import {DagCommitInfo} from '../dag/dagCommitInfo';
 import {t} from '../i18n';

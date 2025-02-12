@@ -7,8 +7,8 @@
 
 import type {ReactNode} from 'react';
 
-import {colors, font} from './theme/tokens.stylex';
 import * as stylex from '@stylexjs/stylex';
+import {colors, font} from './theme/tokens.stylex';
 
 const styles = stylex.create({
   linkButton: {

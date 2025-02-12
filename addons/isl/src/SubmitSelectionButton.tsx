@@ -7,6 +7,8 @@
 
 import type {CommitInfo} from './types';
 
+import {Tooltip} from 'isl-components/Tooltip';
+import {atom, useAtomValue} from 'jotai';
 import {HighlightCommitsWhileHovering} from './HighlightedCommits';
 import {OperationDisabledButton} from './OperationDisabledButton';
 import {multiSubmitUpdateMessage} from './SubmitUpdateMessageInput';
@@ -16,8 +18,6 @@ import {t, T} from './i18n';
 import {readAtom, writeAtom} from './jotaiUtils';
 import {dagWithPreviews} from './previews';
 import {selectedCommits} from './selection';
-import {Tooltip} from 'isl-components/Tooltip';
-import {atom, useAtomValue} from 'jotai';
 
 /**
  * If the selected commits are submittable by the review provider,

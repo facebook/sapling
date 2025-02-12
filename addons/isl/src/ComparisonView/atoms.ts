@@ -7,10 +7,10 @@
 
 import type {Comparison} from 'shared/Comparison';
 
-import {writeAtom} from '../jotaiUtils';
-import platform from '../platform';
 import {atom} from 'jotai';
 import {ComparisonType} from 'shared/Comparison';
+import {writeAtom} from '../jotaiUtils';
+import platform from '../platform';
 
 export type ComparisonMode = {comparison: Comparison; visible: boolean};
 export const currentComparisonMode = atom<ComparisonMode>(

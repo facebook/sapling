@@ -5,11 +5,28 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-import type {Result} from '../types';
-import type {Context} from './SplitDiffView/types';
 import type {Comparison} from 'shared/Comparison';
 import type {ParsedDiff} from 'shared/patch/parse';
+import type {Result} from '../types';
+import type {Context} from './SplitDiffView/types';
 
+import deepEqual from 'fast-deep-equal';
+import {Button} from 'isl-components/Button';
+import {Dropdown} from 'isl-components/Dropdown';
+import {ErrorBoundary, ErrorNotice} from 'isl-components/ErrorNotice';
+import {Icon} from 'isl-components/Icon';
+import {RadioGroup} from 'isl-components/Radio';
+import {Subtle} from 'isl-components/Subtle';
+import {Tooltip} from 'isl-components/Tooltip';
+import {useAtom, useAtomValue, useSetAtom} from 'jotai';
+import {useEffect, useMemo, useState} from 'react';
+import {
+  ComparisonType,
+  comparisonIsAgainstHead,
+  comparisonStringKey,
+  labelForComparison,
+} from 'shared/Comparison';
+import {group, notEmpty} from 'shared/utils';
 import serverAPI from '../ClientToServerAPI';
 import {EmptyState} from '../EmptyState';
 import {useGeneratedFileStatuses} from '../GeneratedFile';
@@ -22,23 +39,6 @@ import {GeneratedStatus} from '../types';
 import {SplitDiffView} from './SplitDiffView';
 import {currentComparisonMode} from './atoms';
 import {parsePatchAndFilter, sortFilesByType} from './utils';
-import deepEqual from 'fast-deep-equal';
-import {Button} from 'isl-components/Button';
-import {Dropdown} from 'isl-components/Dropdown';
-import {ErrorBoundary, ErrorNotice} from 'isl-components/ErrorNotice';
-import {Icon} from 'isl-components/Icon';
-import {RadioGroup} from 'isl-components/Radio';
-import {Subtle} from 'isl-components/Subtle';
-import {Tooltip} from 'isl-components/Tooltip';
-import {useAtom, useAtomValue, useSetAtom} from 'jotai';
-import {useEffect, useMemo, useState} from 'react';
-import {
-  comparisonIsAgainstHead,
-  labelForComparison,
-  ComparisonType,
-  comparisonStringKey,
-} from 'shared/Comparison';
-import {group, notEmpty} from 'shared/utils';
 
 import './ComparisonView.css';
 

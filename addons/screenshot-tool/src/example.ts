@@ -5,14 +5,14 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-import type {OpenISLOptions, PageOptions} from './testBrowser';
 import type {Context} from 'node:vm';
+import type {OpenISLOptions, PageOptions} from './testBrowser';
 
+import {join} from 'node:path';
+import * as repl from 'node:repl';
 import {TestBrowser} from './testBrowser';
 import {TestRepo} from './testRepo';
 import {getCacheDir} from './utils';
-import {join} from 'node:path';
-import * as repl from 'node:repl';
 
 /** Reexport for convenience. */
 export type {TestBrowser, TestRepo};

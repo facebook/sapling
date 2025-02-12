@@ -5,25 +5,25 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-import type {EnabledSCMApiFeature} from './types';
 import type {RepositoryReference} from 'isl-server/src/RepositoryCache';
 import type {ServerSideTracker} from 'isl-server/src/analytics/serverSideTracker';
 import type {Logger} from 'isl-server/src/logger';
 import type {ChangedFile} from 'isl/src/types';
 import type {Comparison} from 'shared/Comparison';
 import type {Writable} from 'shared/typeUtils';
+import type {EnabledSCMApiFeature} from './types';
 
-import {encodeSaplingDiffUri} from './DiffContentProvider';
-import SaplingFileDecorationProvider from './SaplingFileDecorationProvider';
-import {executeVSCodeCommand} from './commands';
-import {getCLICommand} from './config';
-import {t} from './i18n';
 import {Repository} from 'isl-server/src/Repository';
 import {repositoryCache} from 'isl-server/src/RepositoryCache';
 import {ResolveOperation, ResolveTool} from 'isl/src/operations/ResolveOperation';
 import * as path from 'path';
 import {ComparisonType} from 'shared/Comparison';
 import * as vscode from 'vscode';
+import {encodeSaplingDiffUri} from './DiffContentProvider';
+import SaplingFileDecorationProvider from './SaplingFileDecorationProvider';
+import {executeVSCodeCommand} from './commands';
+import {getCLICommand} from './config';
+import {t} from './i18n';
 
 const mergeConflictStartRegex = new RegExp('<{7}|>{7}|={7}|[|]{7}');
 

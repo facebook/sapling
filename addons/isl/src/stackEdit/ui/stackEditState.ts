@@ -5,11 +5,14 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-import type {Hash} from '../../types';
-import type {CommitState} from '../commitStackState';
 import type {RecordOf} from 'immutable';
 import type {ExportStack} from 'shared/types/stack';
+import type {Hash} from '../../types';
+import type {CommitState} from '../commitStackState';
 
+import {List, Record} from 'immutable';
+import {atom, useAtom} from 'jotai';
+import {nullthrows} from 'shared/utils';
 import clientToServerAPI from '../../ClientToServerAPI';
 import {latestCommitMessageFieldsWithEdits} from '../../CommitInfoView/CommitInfoState';
 import {
@@ -24,9 +27,6 @@ import {waitForNothingRunning} from '../../operationsState';
 import {uncommittedSelection} from '../../partialSelection';
 import {CommitStackState} from '../../stackEdit/commitStackState';
 import {assert, registerDisposable} from '../../utils';
-import {List, Record} from 'immutable';
-import {atom, useAtom} from 'jotai';
-import {nullthrows} from 'shared/utils';
 
 /**
  * The "edit stack" dialog state that works with undo/redo in the dialog.

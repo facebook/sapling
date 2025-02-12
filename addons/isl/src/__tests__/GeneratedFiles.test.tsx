@@ -5,6 +5,7 @@
  * LICENSE file in the root directory of this source tree.
  */
 
+import {act, fireEvent, render, screen, waitFor} from '@testing-library/react';
 import App from '../App';
 import {genereatedFileCache} from '../GeneratedFile';
 import {__TEST__} from '../UncommittedChanges';
@@ -12,18 +13,17 @@ import {readAtom, writeAtom} from '../jotaiUtils';
 import platform from '../platform';
 import {ignoreRTL} from '../testQueries';
 import {
-  expectMessageSentToServer,
-  simulateCommits,
-  COMMIT,
-  simulateUncommittedChangedFiles,
   closeCommitInfoSidebar,
-  simulateRepoConnected,
-  resetTestMessages,
-  simulateMessageFromServer,
+  COMMIT,
+  expectMessageSentToServer,
   openCommitInfoSidebar,
+  resetTestMessages,
+  simulateCommits,
+  simulateMessageFromServer,
+  simulateRepoConnected,
+  simulateUncommittedChangedFiles,
 } from '../testUtils';
 import {GeneratedStatus} from '../types';
-import {fireEvent, render, screen, waitFor, act} from '@testing-library/react';
 
 /** Generated `num` files, in the repeating pattern: genereated, partially generated, manual */
 async function simulateGeneratedFiles(num: number) {

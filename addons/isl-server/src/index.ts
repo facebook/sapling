@@ -5,9 +5,9 @@
  * LICENSE file in the root directory of this source tree.
  */
 
+import type {AppMode} from 'isl/src/types';
 import type {Logger} from './logger';
 import type {ServerPlatform} from './serverPlatform';
-import type {AppMode} from 'isl/src/types';
 
 import {FileLogger} from './FileLogger';
 import {Internal} from './Internal';

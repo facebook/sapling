@@ -8,13 +8,13 @@
 import type {EditedMessage} from './CommitInfoState';
 import type {CommitMessageFields, FieldConfig, FieldsBeingEdited} from './types';
 
+import {atom} from 'jotai';
+import {notEmpty} from 'shared/utils';
 import {temporaryCommitTitle} from '../CommitTitle';
 import {Internal} from '../Internal';
 import {codeReviewProvider} from '../codeReview/CodeReviewInfo';
 import {arraysEqual} from '../utils';
 import {OSSCommitMessageFieldSchema} from './OSSCommitMessageFieldsSchema';
-import {atom} from 'jotai';
-import {notEmpty} from 'shared/utils';
 
 export function emptyCommitMessageFields(schema: Array<FieldConfig>): CommitMessageFields {
   return Object.fromEntries(schema.map(config => [config.key, config.type === 'field' ? [] : '']));

@@ -5,11 +5,11 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-import {getCacheDir, sha1} from './utils';
 import {spawn} from 'node:child_process';
 import * as fs from 'node:fs/promises';
 import {join} from 'node:path';
 import {dirSync} from 'tmp';
+import {getCacheDir, sha1} from './utils';
 
 const logger = console;
 const keepTmp = process.env.KEEP != null;

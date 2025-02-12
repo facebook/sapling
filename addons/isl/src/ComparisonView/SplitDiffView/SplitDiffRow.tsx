@@ -5,8 +5,8 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-import type {OneIndexedLineNumber} from './types';
 import type {ExclusiveOr} from 'shared/typeUtils';
+import type {OneIndexedLineNumber} from './types';
 
 type Props = {
   beforeLineNumber: number | null;

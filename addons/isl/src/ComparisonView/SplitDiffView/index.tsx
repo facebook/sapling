@@ -7,19 +7,19 @@
 
 import './SplitDiffHunk.css';
 
-import type {Context} from './types';
 import type {ParsedDiff} from 'shared/patch/parse';
+import type {Context} from './types';
 
+import {Button} from 'isl-components/Button';
+import {Icon} from 'isl-components/Icon';
+import {Tooltip} from 'isl-components/Tooltip';
+import {useState} from 'react';
 import {generatedStatusDescription} from '../../GeneratedFile';
 import {T, t} from '../../i18n';
 import platform from '../../platform';
 import {GeneratedStatus} from '../../types';
 import {FileHeader, diffTypeToIconType} from './SplitDiffFileHeader';
 import {SplitDiffTable} from './SplitDiffHunk';
-import {Button} from 'isl-components/Button';
-import {Icon} from 'isl-components/Icon';
-import {Tooltip} from 'isl-components/Tooltip';
-import {useState} from 'react';
 
 export function SplitDiffView({
   ctx,

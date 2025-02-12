@@ -5,18 +5,9 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-import type {CommitInfo} from './types';
 import type {ContextMenuItem} from 'shared/ContextMenu';
+import type {CommitInfo} from './types';
 
-import {bookmarksDataStorage} from './BookmarksData';
-import {Row} from './ComponentUtils';
-import {tracker} from './analytics';
-import {T, t} from './i18n';
-import {BookmarkCreateOperation} from './operations/BookmarkCreateOperation';
-import {BookmarkDeleteOperation} from './operations/BookmarkDeleteOperation';
-import {useRunOperation} from './operationsState';
-import {latestSuccessorUnlessExplicitlyObsolete} from './successionUtils';
-import {showModal} from './useModal';
 import * as stylex from '@stylexjs/stylex';
 import {Button} from 'isl-components/Button';
 import {Column} from 'isl-components/Flex';
@@ -26,6 +17,15 @@ import {Tooltip} from 'isl-components/Tooltip';
 import {useAtomValue} from 'jotai';
 import {useState} from 'react';
 import {useContextMenu} from 'shared/ContextMenu';
+import {bookmarksDataStorage} from './BookmarksData';
+import {Row} from './ComponentUtils';
+import {tracker} from './analytics';
+import {T, t} from './i18n';
+import {BookmarkCreateOperation} from './operations/BookmarkCreateOperation';
+import {BookmarkDeleteOperation} from './operations/BookmarkDeleteOperation';
+import {useRunOperation} from './operationsState';
+import {latestSuccessorUnlessExplicitlyObsolete} from './successionUtils';
+import {showModal} from './useModal';
 
 const styles = stylex.create({
   stable: {

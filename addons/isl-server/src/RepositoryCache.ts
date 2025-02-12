@@ -5,12 +5,12 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-import type {RepositoryContext} from './serverTypes';
 import type {AbsolutePath, RepositoryError, ValidatedRepoInfo} from 'isl/src/types';
+import type {RepositoryContext} from './serverTypes';
 
-import {Repository} from './Repository';
 import {TypedEventEmitter} from 'shared/TypedEventEmitter';
 import {ensureTrailingPathSep} from 'shared/pathUtils';
+import {Repository} from './Repository';
 
 /**
  * Reference-counting access to a {@link Repository}, via a Promise.

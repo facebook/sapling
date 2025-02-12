@@ -5,7 +5,13 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-import {Row, FlexSpacer, ScrollY, Center} from '../../ComponentUtils';
+import * as stylex from '@stylexjs/stylex';
+import {ErrorNotice} from 'isl-components/ErrorNotice';
+import {Icon} from 'isl-components/Icon';
+import {Panels} from 'isl-components/Panels';
+import {useAtom, useAtomValue} from 'jotai';
+import {useState} from 'react';
+import {Center, FlexSpacer, Row, ScrollY} from '../../ComponentUtils';
 import {Modal} from '../../Modal';
 import {tracker} from '../../analytics';
 import {t} from '../../i18n';
@@ -13,13 +19,7 @@ import {AbsorbStackEditPanel} from './AbsorbStackEditPanel';
 import {SplitStackEditPanel, SplitStackToolbar} from './SplitStackEditPanel';
 import {StackEditConfirmButtons} from './StackEditConfirmButtons';
 import {StackEditSubTree} from './StackEditSubTree';
-import {loadingStackState, editingStackIntentionHashes} from './stackEditState';
-import * as stylex from '@stylexjs/stylex';
-import {ErrorNotice} from 'isl-components/ErrorNotice';
-import {Icon} from 'isl-components/Icon';
-import {Panels} from 'isl-components/Panels';
-import {useAtom, useAtomValue} from 'jotai';
-import {useState} from 'react';
+import {editingStackIntentionHashes, loadingStackState} from './stackEditState';
 
 const styles = stylex.create({
   container: {

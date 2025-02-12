@@ -5,23 +5,23 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-import type {FileStackState, FileRev} from '../fileStackState';
+import type {Block, LineIdx} from 'shared/diff';
+import type {FileRev, FileStackState} from '../fileStackState';
 import type {Mode} from './FileStackEditorLines';
 import type {RangeInfo} from './TextEditable';
-import type {Block, LineIdx} from 'shared/diff';
 
+import deepEqual from 'fast-deep-equal';
+import {Set as ImSet, List, Range} from 'immutable';
+import {Checkbox} from 'isl-components/Checkbox';
+import React, {useEffect, useLayoutEffect, useRef, useState} from 'react';
+import {collapseContextBlocks, diffBlocks, mergeBlocks, splitLines} from 'shared/diff';
+import {nullthrows} from 'shared/utils';
 import {CommitTitle} from '../../CommitTitle';
 import {Row, ScrollX, ScrollY} from '../../ComponentUtils';
 import {FlattenLine} from '../../linelog';
 import {max, next, prev} from '../revMath';
 import {computeLinesForFileStackEditor} from './FileStackEditorLines';
 import {TextEditable} from './TextEditable';
-import deepEqual from 'fast-deep-equal';
-import {Set as ImSet, Range, List} from 'immutable';
-import {Checkbox} from 'isl-components/Checkbox';
-import React, {useState, useRef, useEffect, useLayoutEffect} from 'react';
-import {mergeBlocks, collapseContextBlocks, diffBlocks, splitLines} from 'shared/diff';
-import {nullthrows} from 'shared/utils';
 
 import './FileStackEditor.css';
 

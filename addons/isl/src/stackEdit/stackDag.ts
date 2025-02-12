@@ -7,10 +7,10 @@
 
 import type {CommitStackState} from './commitStackState';
 
-import {Dag, DagCommitInfo} from '../dag/dag';
-import {YOU_ARE_HERE_VIRTUAL_COMMIT, WDIR_NODE} from '../dag/virtualCommit';
 import {cached} from 'shared/LRU';
 import {firstLine, nullthrows} from 'shared/utils';
+import {Dag, DagCommitInfo} from '../dag/dag';
+import {WDIR_NODE, YOU_ARE_HERE_VIRTUAL_COMMIT} from '../dag/virtualCommit';
 
 /**
  * Calculate a virtual "Dag" purely from "stack".

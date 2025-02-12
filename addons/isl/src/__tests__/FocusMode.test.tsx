@@ -5,15 +5,15 @@
  * LICENSE file in the root directory of this source tree.
  */
 
+import {act, fireEvent, render, screen} from '@testing-library/react';
 import App from '../App';
 import {
-  resetTestMessages,
   closeCommitInfoSidebar,
-  simulateCommits,
   COMMIT,
   dragAndDropCommits,
+  resetTestMessages,
+  simulateCommits,
 } from '../testUtils';
-import {screen, act, render, fireEvent} from '@testing-library/react';
 
 describe('focus mode', () => {
   const COMMITS = [

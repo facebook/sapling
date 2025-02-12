@@ -7,18 +7,18 @@
 
 import type {CommandArg} from '../types';
 
+import {act, fireEvent, render, screen, waitFor} from '@testing-library/react';
 import App from '../App';
 import {ignoreRTL} from '../testQueries';
 import {
-  resetTestMessages,
-  expectMessageSentToServer,
-  simulateCommits,
-  COMMIT,
-  simulateUncommittedChangedFiles,
   closeCommitInfoSidebar,
+  COMMIT,
+  expectMessageSentToServer,
+  resetTestMessages,
+  simulateCommits,
   simulateRepoConnected,
+  simulateUncommittedChangedFiles,
 } from '../testUtils';
-import {fireEvent, render, screen, act, waitFor} from '@testing-library/react';
 
 describe('CopyRenameFiles', () => {
   beforeEach(() => {

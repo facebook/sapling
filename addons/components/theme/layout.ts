@@ -5,8 +5,8 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-import {spacing} from './tokens.stylex';
 import * as stylex from '@stylexjs/stylex';
+import {spacing} from './tokens.stylex';
 
 export const layout = stylex.create({
   flexRow: {

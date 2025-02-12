@@ -5,15 +5,15 @@
  * LICENSE file in the root directory of this source tree.
  */
 
+import type {RecordOf} from 'immutable';
 import type {Hash} from '../types';
 import type {SetLike} from './set';
-import type {RecordOf} from 'immutable';
 
-import {HashSet} from './set';
-import {Map as ImMap, Record, List} from 'immutable';
+import {Map as ImMap, List, Record} from 'immutable';
 import {LRU, cachedMethod} from 'shared/LRU';
 import {SelfUpdate} from 'shared/immutableExt';
 import {nullthrows} from 'shared/utils';
+import {HashSet} from './set';
 
 /**
  * Hash-map like container with graph related queries.

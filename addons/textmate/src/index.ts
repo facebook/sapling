@@ -5,23 +5,23 @@
  * LICENSE file in the root directory of this source tree.
  */
 
+import type AbstractLanguageExtension from './AbstractLanguageExtension.js';
 import type {
   ExtensionManifest,
   GrammarContribution,
   GrammarSource,
   NormalizedLanguageExtensionPoint,
 } from './AbstractLanguageExtension.js';
-import type AbstractLanguageExtension from './AbstractLanguageExtension.js';
 import type {LanguageExtensionAmendment} from './languageExtensionAmendments.js';
 
-import LanguageExtensionOnDisk from './LanguageExtensionOnDisk.js';
-import builtInExtensions from './extensions.js';
-import languageExtensionAmendments from './languageExtensionAmendments.js';
 import minimist from 'minimist';
 import assert from 'node:assert';
 import {promises as fs} from 'node:fs';
 import pathMod from 'node:path';
 import prettier from 'prettier';
+import LanguageExtensionOnDisk from './LanguageExtensionOnDisk.js';
+import builtInExtensions from './extensions.js';
+import languageExtensionAmendments from './languageExtensionAmendments.js';
 
 const GENERATED_SIGIL = '\x40generated';
 

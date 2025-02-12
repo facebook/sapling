@@ -8,7 +8,7 @@
 import type {Hash} from '../types';
 import type {Ancestor} from './render';
 
-import {PadLine, LinkLine, NodeLine, Renderer} from './render';
+import {LinkLine, NodeLine, PadLine, Renderer} from './render';
 
 /* eslint no-bitwise: 0 */
 /* Translated from fbcode/eden/scm/lib/renderdag/src/box_drawing.rs */

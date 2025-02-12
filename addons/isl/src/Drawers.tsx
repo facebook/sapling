@@ -8,10 +8,10 @@
 import type {ComponentClass} from 'react';
 import type {EnsureAssignedTogether} from 'shared/EnsureAssignedTogether';
 
-import {islDrawerState} from './drawerState';
 import {useAtom} from 'jotai';
 import {createElement, useCallback, useRef} from 'react';
 import {debounce} from 'shared/debounce';
+import {islDrawerState} from './drawerState';
 
 import './Drawers.css';
 

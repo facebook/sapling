@@ -7,8 +7,8 @@
 
 import type {Disposable, MessageBusStatus, PlatformName} from './types';
 
-import {logger} from './logger';
 import {CLOSED_AND_SHOULD_NOT_RECONNECT_CODE} from 'isl-server/src/constants';
+import {logger} from './logger';
 
 export class LocalWebSocketEventBus {
   static MAX_RECONNECT_CHECK_TIME_MS = 60000;

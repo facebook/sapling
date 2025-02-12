@@ -5,15 +5,15 @@
  * LICENSE file in the root directory of this source tree.
  */
 
+import type {OperationCommandProgressReporter} from 'isl/src/types';
 import type {ServerPlatform} from '../serverPlatform';
 import type {RepositoryContext} from '../serverTypes';
-import type {OperationCommandProgressReporter} from 'isl/src/types';
 
-import {OperationQueue} from '../OperationQueue';
-import {makeServerSideTracker} from '../analytics/serverSideTracker';
 import {CommandRunner} from 'isl/src/types';
 import {mockLogger} from 'shared/testUtils';
 import {defer} from 'shared/utils';
+import {OperationQueue} from '../OperationQueue';
+import {makeServerSideTracker} from '../analytics/serverSideTracker';
 
 const mockTracker = makeServerSideTracker(
   mockLogger,

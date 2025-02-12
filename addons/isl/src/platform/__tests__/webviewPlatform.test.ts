@@ -5,8 +5,8 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-import {webviewPlatform} from '../webviewPlatform';
 import {nullthrows} from 'shared/utils';
+import {webviewPlatform} from '../webviewPlatform';
 
 (window.external as unknown as Record<string, unknown>).invoke = jest.fn();
 

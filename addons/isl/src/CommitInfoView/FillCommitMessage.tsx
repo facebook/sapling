@@ -9,6 +9,13 @@ import type {CommitInfo} from '../types';
 import type {CommitInfoMode} from './CommitInfoState';
 import type {CommitMessageFields, FieldConfig} from './types';
 
+import * as stylex from '@stylexjs/stylex';
+import {Button} from 'isl-components/Button';
+import {Icon} from 'isl-components/Icon';
+import {LinkButton} from 'isl-components/LinkButton';
+import {DOCUMENTATION_DELAY, Tooltip} from 'isl-components/Tooltip';
+import {useCallback} from 'react';
+import {useContextMenu} from 'shared/ContextMenu';
 import {font, spacing} from '../../../components/theme/tokens.stylex';
 import {FlexSpacer} from '../ComponentUtils';
 import {Internal} from '../Internal';
@@ -20,25 +27,18 @@ import {dagWithPreviews} from '../previews';
 import {layout} from '../stylexUtils';
 import {useModal} from '../useModal';
 import {
-  getDefaultEditedCommitMessage,
   commitMessageTemplate,
   editedCommitMessages,
+  getDefaultEditedCommitMessage,
 } from './CommitInfoState';
 import {
-  parseCommitMessageFields,
   commitMessageFieldsSchema,
-  mergeCommitMessageFields,
   findConflictingFieldsWhenMerging,
+  mergeCommitMessageFields,
   mergeOnlyEmptyMessageFields,
+  parseCommitMessageFields,
 } from './CommitMessageFields';
 import {SmallCapsTitle} from './utils';
-import * as stylex from '@stylexjs/stylex';
-import {Button} from 'isl-components/Button';
-import {Icon} from 'isl-components/Icon';
-import {LinkButton} from 'isl-components/LinkButton';
-import {DOCUMENTATION_DELAY, Tooltip} from 'isl-components/Tooltip';
-import {useCallback} from 'react';
-import {useContextMenu} from 'shared/ContextMenu';
 
 /**
  * The last entry in a tokenized field value is used as the value being typed in the editor.

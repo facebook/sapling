@@ -5,14 +5,14 @@
  * LICENSE file in the root directory of this source tree.
  */
 
+import type {ForwardedRef} from 'react';
 import type {ExclusiveOr} from './Types';
 import type {ReactProps} from './utils';
-import type {ForwardedRef} from 'react';
 
-import {layout} from './theme/layout';
-import {colors} from './theme/tokens.stylex';
 import * as stylex from '@stylexjs/stylex';
 import {forwardRef, type ReactNode} from 'react';
+import {layout} from './theme/layout';
+import {colors} from './theme/tokens.stylex';
 
 /**
  * StyleX tries to evaluate CSS variables and store them separately.

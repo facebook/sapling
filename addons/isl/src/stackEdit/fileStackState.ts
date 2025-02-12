@@ -5,13 +5,13 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-import type {FlattenLine, LineIdx} from '../linelog';
 import type {RecordOf} from 'immutable';
+import type {FlattenLine, LineIdx} from '../linelog';
 
+import {List, Record} from 'immutable';
+import {SelfUpdate} from 'shared/immutableExt';
 import {LineLog} from '../linelog';
 import {next} from './revMath';
-import {Record, List} from 'immutable';
-import {SelfUpdate} from 'shared/immutableExt';
 
 /**
  * A stack of file contents with stack editing features.

@@ -8,10 +8,10 @@
 import type {Dag} from './dag/dag';
 import type {SmartlogCommits} from './types';
 
+import {atom} from 'jotai';
 import {MutationDag} from './dag/mutation_dag';
 import {writeAtom} from './jotaiUtils';
 import {registerCleanup} from './utils';
-import {atom} from 'jotai';
 
 type Successions = Array<[oldHash: string, newHash: string]>;
 type SuccessionCallback = (successions: Successions) => unknown;

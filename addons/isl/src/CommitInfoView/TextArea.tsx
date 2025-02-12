@@ -5,14 +5,17 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-import type {FieldConfig} from './types';
 import type {ReactNode, RefObject} from 'react';
+import type {FieldConfig} from './types';
 
+import {TextArea} from 'isl-components/TextArea';
+import {useEffect, useRef} from 'react';
+import {InternalFieldName} from 'shared/constants';
 import {
-  useUploadFilesCallback,
-  ImageDropZone,
   FilePicker,
+  ImageDropZone,
   PendingImageUploads,
+  useUploadFilesCallback,
 } from '../ImageUpload';
 import {Internal} from '../Internal';
 import {useFeatureFlagSync} from '../featureFlags';
@@ -20,9 +23,6 @@ import {insertAtCursor} from '../textareaUtils';
 import {GenerateAIButton} from './GenerateWithAI';
 import {MinHeightTextField} from './MinHeightTextField';
 import {convertFieldNameToKey} from './utils';
-import {TextArea} from 'isl-components/TextArea';
-import {useRef, useEffect} from 'react';
-import {InternalFieldName} from 'shared/constants';
 
 function moveCursorToEnd(element: HTMLTextAreaElement) {
   element.setSelectionRange(element.value.length, element.value.length);

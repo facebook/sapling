@@ -5,11 +5,11 @@
  * LICENSE file in the root directory of this source tree.
  */
 
+import {useAtomValue} from 'jotai';
+import {cached} from 'shared/LRU';
 import clientToServerAPI from '../ClientToServerAPI';
 import {codeReviewProvider} from '../codeReview/CodeReviewInfo';
 import {atomFamilyWeak, lazyAtom} from '../jotaiUtils';
-import {useAtomValue} from 'jotai';
-import {cached} from 'shared/LRU';
 
 import './RenderedMarkup.css';
 

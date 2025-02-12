@@ -5,20 +5,20 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-import type {FileStackState, FileRev} from '../fileStackState';
+import type {FileRev, FileStackState} from '../fileStackState';
 import type {Mode} from './FileStackEditorLines';
 
-import {Row} from '../../ComponentUtils';
-import {EmptyState} from '../../EmptyState';
-import {t, T} from '../../i18n';
-import {FileStackEditorRow} from './FileStackEditor';
-import {bumpStackEditMetric, useStackEditState} from './stackEditState';
 import {Checkbox} from 'isl-components/Checkbox';
 import {Dropdown} from 'isl-components/Dropdown';
 import {RadioGroup} from 'isl-components/Radio';
 import {atom, useAtom} from 'jotai';
 import {useState} from 'react';
 import {nullthrows} from 'shared/utils';
+import {Row} from '../../ComponentUtils';
+import {EmptyState} from '../../EmptyState';
+import {t, T} from '../../i18n';
+import {FileStackEditorRow} from './FileStackEditor';
+import {bumpStackEditMetric, useStackEditState} from './stackEditState';
 
 const editModeAtom = atom<Mode>('unified-diff');
 

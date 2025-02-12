@@ -5,7 +5,6 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-import type {Logger} from './logger';
 import type {
   ChangedFile,
   CommitInfo,
@@ -18,11 +17,12 @@ import type {
   StableInfo,
   SuccessorInfo,
 } from 'isl/src/types';
+import type {Logger} from './logger';
 
+import path from 'path';
 import {Internal} from './Internal';
 import {MAX_FETCHED_FILES_PER_COMMIT} from './commands';
 import {fromEntries} from './utils';
-import path from 'path';
 
 export const COMMIT_END_MARK = '<<COMMIT_END_MARK>>';
 export const NULL_CHAR = '\0';

@@ -5,12 +5,12 @@
  * LICENSE file in the root directory of this source tree.
  */
 
+import type {ReactNode} from 'react';
 import type {FieldConfig} from '../CommitInfoView/types';
 import type {Operation} from '../operations/Operation';
 import type {Dag} from '../previews';
 import type {CodeReviewSystem, CommitInfo, DiffId, DiffSummary, Hash} from '../types';
 import type {SyncStatus} from './syncStatus';
-import type {ReactNode} from 'react';
 
 /**
  * API to interact with Code Review for Repositories, e.g. GitHub and Phabricator.

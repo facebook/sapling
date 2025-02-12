@@ -5,8 +5,8 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-import {initRepo} from './setup';
 import {act, screen, waitFor, within} from '@testing-library/react';
+import {initRepo} from './setup';
 
 describe('merge conflicts integration test', () => {
   it('shows conflicts, supports resolving, and continuing the operation', async () => {

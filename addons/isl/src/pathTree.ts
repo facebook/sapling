@@ -5,8 +5,8 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-import type {UseUncommittedSelection} from './partialSelection';
 import type {RepoPath} from 'shared/types/common';
+import type {UseUncommittedSelection} from './partialSelection';
 
 export type PathTree<T> = Map<string, PathTree<T> | T>;
 /**

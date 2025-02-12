@@ -5,12 +5,24 @@
  * LICENSE file in the root directory of this source tree.
  */
 
+import type {ReactNode} from 'react';
+import type {ContextMenuItem} from 'shared/ContextMenu';
 import type {UICodeReviewProvider} from './codeReview/UICodeReviewProvider';
 import type {DagCommitInfo} from './dag/dag';
 import type {CommitInfo, SuccessorInfo} from './types';
-import type {ReactNode} from 'react';
-import type {ContextMenuItem} from 'shared/ContextMenu';
 
+import * as stylex from '@stylexjs/stylex';
+import {Button} from 'isl-components/Button';
+import {Icon} from 'isl-components/Icon';
+import {Subtle} from 'isl-components/Subtle';
+import {Tooltip} from 'isl-components/Tooltip';
+import {atom, useAtomValue, useSetAtom} from 'jotai';
+import React, {memo} from 'react';
+import {ComparisonType} from 'shared/Comparison';
+import {useContextMenu} from 'shared/ContextMenu';
+import {MS_PER_DAY} from 'shared/constants';
+import {useAutofocusRef} from 'shared/hooks';
+import {notEmpty, nullthrows} from 'shared/utils';
 import {spacing} from '../../components/theme/tokens.stylex';
 import {AllBookmarksTruncated, Bookmark, Bookmarks, createBookmarkAtCommit} from './Bookmark';
 import {openBrowseUrlForHash, supportsBrowseUrlForHash} from './BrowseRepo';
@@ -46,10 +58,10 @@ import {getAmendToOperation, isAmendToAllowedForCommit} from './operationUtils';
 import {GotoOperation} from './operations/GotoOperation';
 import {HideOperation} from './operations/HideOperation';
 import {
+  inlineProgressByHash,
   operationBeingPreviewed,
   useRunOperation,
   useRunPreviewedOperation,
-  inlineProgressByHash,
 } from './operationsState';
 import platform from './platform';
 import {CommitPreview, dagWithPreviews, uncommittedChangesWithPreviews} from './previews';
@@ -66,18 +78,6 @@ import {copyAndShowToast} from './toast';
 import {succeedableRevset} from './types';
 import {showModal} from './useModal';
 import {short} from './utils';
-import * as stylex from '@stylexjs/stylex';
-import {Button} from 'isl-components/Button';
-import {Icon} from 'isl-components/Icon';
-import {Subtle} from 'isl-components/Subtle';
-import {Tooltip} from 'isl-components/Tooltip';
-import {atom, useAtomValue, useSetAtom} from 'jotai';
-import React, {memo} from 'react';
-import {ComparisonType} from 'shared/Comparison';
-import {useContextMenu} from 'shared/ContextMenu';
-import {MS_PER_DAY} from 'shared/constants';
-import {useAutofocusRef} from 'shared/hooks';
-import {notEmpty, nullthrows} from 'shared/utils';
 
 export const rebaseOffWarmWarningEnabled = localStorageBackedAtom<boolean>(
   'isl.rebase-off-warm-warning-enabled',

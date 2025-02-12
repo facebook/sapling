@@ -8,13 +8,18 @@
 import type {DagCommitInfo} from './dag/dag';
 import type {Hash} from './types';
 
+import {Button} from 'isl-components/Button';
+import {Icon} from 'isl-components/Icon';
+import {DOCUMENTATION_DELAY, Tooltip} from 'isl-components/Tooltip';
+import {useAtom, useAtomValue} from 'jotai';
+import {type ContextMenuItem, useContextMenu} from 'shared/ContextMenu';
 import {CleanupButton, isStackEligibleForCleanup} from './Cleanup';
 import {Row} from './ComponentUtils';
 import {shouldShowSubmitStackConfirmation, useShowConfirmSubmitStack} from './ConfirmSubmitStack';
 import {HighlightCommitsWhileHovering} from './HighlightedCommits';
 import {OperationDisabledButton} from './OperationDisabledButton';
 import {showSuggestedRebaseForStack, SuggestedRebaseButton} from './SuggestedRebase';
-import {codeReviewProvider, allDiffSummaries} from './codeReview/CodeReviewInfo';
+import {allDiffSummaries, codeReviewProvider} from './codeReview/CodeReviewInfo';
 import {SyncStatus, syncStatusAtom} from './codeReview/syncStatus';
 import {T, t} from './i18n';
 import {IconStack} from './icons/IconStack';
@@ -26,11 +31,6 @@ import {useConfirmUnsavedEditsBeforeSplit} from './stackEdit/ui/ConfirmUnsavedEd
 import {StackEditIcon} from './stackEdit/ui/StackEditIcon';
 import {editingStackIntentionHashes, loadingStackState} from './stackEdit/ui/stackEditState';
 import {succeedableRevset} from './types';
-import {Button} from 'isl-components/Button';
-import {Icon} from 'isl-components/Icon';
-import {Tooltip, DOCUMENTATION_DELAY} from 'isl-components/Tooltip';
-import {useAtom, useAtomValue} from 'jotai';
-import {type ContextMenuItem, useContextMenu} from 'shared/ContextMenu';
 
 import './StackActions.css';
 

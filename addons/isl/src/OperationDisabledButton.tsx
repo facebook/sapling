@@ -5,17 +5,17 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-import type {Operation} from './operations/Operation';
 import type {PrimitiveAtom} from 'jotai';
 import type {ComponentProps} from 'react';
+import type {Operation} from './operations/Operation';
 
-import {atomFamilyWeak} from './jotaiUtils';
-import {useRunOperation} from './operationsState';
-import {useMostRecentPendingOperation} from './previews';
 import {Button} from 'isl-components/Button';
 import {Icon} from 'isl-components/Icon';
 import {atom, useAtom} from 'jotai';
 import {isPromise} from 'shared/utils';
+import {atomFamilyWeak} from './jotaiUtils';
+import {useRunOperation} from './operationsState';
+import {useMostRecentPendingOperation} from './previews';
 
 /**
  * Wrapper around VSCodeButton intended for buttons which runOperations.

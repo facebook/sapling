@@ -5,12 +5,12 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-import serverAPI from '../../isl/src/ClientToServerAPI';
-import {Internal} from './Internal';
 import App from 'isl/src/App';
 import {getLastestOperationInfo, onOperationExited} from 'isl/src/operationsState';
 import {registerDisposable} from 'isl/src/utils';
 import ReactDOM from 'react-dom/client';
+import serverAPI from '../../isl/src/ClientToServerAPI';
+import {Internal} from './Internal';
 
 // start state side effect fetches
 import './state';

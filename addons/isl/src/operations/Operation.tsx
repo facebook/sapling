@@ -5,6 +5,7 @@
  * LICENSE file in the root directory of this source tree.
  */
 
+import type {TrackEventName} from 'isl-server/src/analytics/eventNames';
 import type {
   ApplyMergeConflictsPreviewsFuncType,
   ApplyUncommittedChangesPreviewsFuncType,
@@ -13,10 +14,9 @@ import type {
   UncommittedChangesPreviewContext,
 } from '../previews';
 import type {CommandArg, RunnableOperation} from '../types';
-import type {TrackEventName} from 'isl-server/src/analytics/eventNames';
 
-import {CommandRunner} from '../types';
 import {randomId} from 'shared/utils';
+import {CommandRunner} from '../types';
 
 /**
  * Operations represent commands that mutate the repository, such as rebasing, committing, etc.

@@ -5,16 +5,16 @@
  * LICENSE file in the root directory of this source tree.
  */
 
+import type {RepoInfo, RepositoryError} from 'isl/src/types';
 import type {Repository} from '../Repository';
 import type {Logger} from '../logger';
 import type {ServerPlatform} from '../serverPlatform';
 import type {RepositoryContext} from '../serverTypes';
-import type {RepoInfo, RepositoryError} from 'isl/src/types';
 
-import {__TEST__} from '../RepositoryCache';
-import {makeServerSideTracker} from '../analytics/serverSideTracker';
 import {mockLogger} from 'shared/testUtils';
 import {defer} from 'shared/utils';
+import {__TEST__} from '../RepositoryCache';
+import {makeServerSideTracker} from '../analytics/serverSideTracker';
 
 const {RepositoryCache} = __TEST__;
 

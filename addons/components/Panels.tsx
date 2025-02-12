@@ -5,12 +5,12 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-import type {ColumnAlignmentProps} from './Flex';
 import type {ReactNode} from 'react';
+import type {ColumnAlignmentProps} from './Flex';
 
+import * as stylex from '@stylexjs/stylex';
 import {Column, Row} from './Flex';
 import {spacing} from './theme/tokens.stylex';
-import * as stylex from '@stylexjs/stylex';
 
 const styles = stylex.create({
   tabList: {

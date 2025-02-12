@@ -5,13 +5,13 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-import type {ReactProps} from './utils';
 import type react from 'react';
+import type {ReactProps} from './utils';
 
-import {layout} from './theme/layout';
-import {spacing} from './theme/tokens.stylex';
 import * as stylex from '@stylexjs/stylex';
 import {useEffect, useId, useRef} from 'react';
+import {layout} from './theme/layout';
+import {spacing} from './theme/tokens.stylex';
 
 const cssVarFocusWithinBorder = '--checkbox-focus-within-color';
 const styles = stylex.create({

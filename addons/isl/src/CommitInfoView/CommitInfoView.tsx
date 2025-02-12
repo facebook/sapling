@@ -10,6 +10,24 @@ import type {CommitInfo, DiffId} from '../types';
 import type {CommitInfoMode, EditedMessage} from './CommitInfoState';
 import type {CommitMessageFields, FieldConfig, FieldsBeingEdited} from './types';
 
+import deepEqual from 'fast-deep-equal';
+import {Badge} from 'isl-components/Badge';
+import {Banner, BannerKind, BannerTooltip} from 'isl-components/Banner';
+import {Button} from 'isl-components/Button';
+import {Divider} from 'isl-components/Divider';
+import {ErrorNotice} from 'isl-components/ErrorNotice';
+import {Column} from 'isl-components/Flex';
+import {Icon} from 'isl-components/Icon';
+import {RadioGroup} from 'isl-components/Radio';
+import {Subtle} from 'isl-components/Subtle';
+import {Tooltip} from 'isl-components/Tooltip';
+import {atom, useAtom, useAtomValue} from 'jotai';
+import {useAtomCallback} from 'jotai/utils';
+import {useCallback, useEffect, useMemo} from 'react';
+import {ComparisonType} from 'shared/Comparison';
+import {useContextMenu} from 'shared/ContextMenu';
+import {usePrevious} from 'shared/hooks';
+import {firstLine, notEmpty, nullthrows} from 'shared/utils';
 import {ChangedFilesWithFetching} from '../ChangedFilesWithFetching';
 import serverAPI from '../ClientToServerAPI';
 import {Commit} from '../Commit';
@@ -65,45 +83,27 @@ import {useModal} from '../useModal';
 import {firstOfIterable} from '../utils';
 import {CommitInfoField} from './CommitInfoField';
 import {
-  forceNextCommitToEditAllFields,
-  unsavedFieldsBeingEdited,
-  diffUpdateMessagesState,
   commitInfoViewCurrentCommits,
   commitMode,
+  diffUpdateMessagesState,
   editedCommitMessages,
+  forceNextCommitToEditAllFields,
   hasUnsavedEditedCommitMessage,
+  unsavedFieldsBeingEdited,
 } from './CommitInfoState';
 import {
-  commitMessageFieldsToString,
-  commitMessageFieldsSchema,
-  parseCommitMessageFields,
-  findFieldsBeingEdited,
-  findEditedDiffNumber,
   applyEditedFields,
+  commitMessageFieldsSchema,
+  commitMessageFieldsToString,
   editedMessageSubset,
+  findEditedDiffNumber,
+  findFieldsBeingEdited,
+  parseCommitMessageFields,
   removeNoopEdits,
 } from './CommitMessageFields';
 import {DiffStats, PendingDiffStats} from './DiffStats';
 import {FillCommitMessage} from './FillCommitMessage';
 import {CommitTitleByline, getFieldToAutofocus, Section, SmallCapsTitle} from './utils';
-import deepEqual from 'fast-deep-equal';
-import {Badge} from 'isl-components/Badge';
-import {Banner, BannerKind, BannerTooltip} from 'isl-components/Banner';
-import {Button} from 'isl-components/Button';
-import {Divider} from 'isl-components/Divider';
-import {ErrorNotice} from 'isl-components/ErrorNotice';
-import {Column} from 'isl-components/Flex';
-import {Icon} from 'isl-components/Icon';
-import {RadioGroup} from 'isl-components/Radio';
-import {Subtle} from 'isl-components/Subtle';
-import {Tooltip} from 'isl-components/Tooltip';
-import {atom, useAtom, useAtomValue} from 'jotai';
-import {useAtomCallback} from 'jotai/utils';
-import {useCallback, useEffect, useMemo} from 'react';
-import {ComparisonType} from 'shared/Comparison';
-import {useContextMenu} from 'shared/ContextMenu';
-import {usePrevious} from 'shared/hooks';
-import {firstLine, notEmpty, nullthrows} from 'shared/utils';
 
 import './CommitInfoView.css';
 

@@ -7,10 +7,10 @@
 
 import type {ReactNode} from 'react';
 
+import * as stylex from '@stylexjs/stylex';
 import {Button, buttonStyles} from './Button';
 import {Icon} from './Icon';
 import {colors, spacing} from './theme/tokens.stylex';
-import * as stylex from '@stylexjs/stylex';
 
 const styles = stylex.create({
   container: {

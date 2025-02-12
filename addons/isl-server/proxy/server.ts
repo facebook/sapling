@@ -5,20 +5,20 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-import type {ServerPlatform} from '../src/serverPlatform';
 import type {PlatformName} from 'isl/src/types';
 import type {AddressInfo} from 'node:net';
+import type {ServerPlatform} from '../src/serverPlatform';
 
-import {repositoryCache} from '../src/RepositoryCache';
-import {CLOSED_AND_SHOULD_NOT_RECONNECT_CODE} from '../src/constants';
-import {onClientConnection} from '../src/index';
-import {areTokensEqual} from './proxyUtils';
 import {grammars} from 'isl/src/generated/textmate/TextMateGrammarManifest';
 import fs from 'node:fs';
 import http from 'node:http';
 import path from 'node:path';
 import urlModule from 'node:url';
 import WebSocket from 'ws';
+import {repositoryCache} from '../src/RepositoryCache';
+import {CLOSED_AND_SHOULD_NOT_RECONNECT_CODE} from '../src/constants';
+import {onClientConnection} from '../src/index';
+import {areTokensEqual} from './proxyUtils';
 
 const ossSmartlogDir = path.join(__dirname, '../../isl');
 

@@ -5,6 +5,9 @@
  * LICENSE file in the root directory of this source tree.
  */
 
+import type {LazyExoticComponent} from 'react';
+import type {Comparison} from 'shared/Comparison';
+import type {Json} from 'shared/typeUtils';
 import type {MessageBus} from './MessageBus';
 import type {ThemeColor} from './theme';
 import type {
@@ -14,9 +17,6 @@ import type {
   RepoRelativePath,
   ServerToClientMessage,
 } from './types';
-import type {LazyExoticComponent} from 'react';
-import type {Comparison} from 'shared/Comparison';
-import type {Json} from 'shared/typeUtils';
 
 import {browserPlatform} from './BrowserPlatform';
 

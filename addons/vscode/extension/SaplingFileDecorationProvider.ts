@@ -5,17 +5,17 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-import type {SaplingResourceGroup, VSCodeRepo} from './VSCodeRepo';
 import type {Logger} from 'isl-server/src/logger';
 import type {Disposable, Event} from 'vscode';
+import type {SaplingResourceGroup, VSCodeRepo} from './VSCodeRepo';
 
 import {
   EventEmitter,
+  ThemeIcon,
   Uri,
+  window,
   type FileDecoration,
   type FileDecorationProvider,
-  window,
-  ThemeIcon,
 } from 'vscode';
 
 export default class SaplingFileDecorationProvider implements FileDecorationProvider {

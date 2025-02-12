@@ -5,16 +5,16 @@
  * LICENSE file in the root directory of this source tree.
  */
 
+import type {PageVisibility, RepoInfo} from 'isl/src/types';
 import type {PageFocusTracker} from './PageFocusTracker';
 import type {Logger} from './logger';
-import type {PageVisibility, RepoInfo} from 'isl/src/types';
 
-import {stagedThrottler} from './StagedThrottler';
-import {ONE_MINUTE_MS} from './constants';
-import {Watchman} from './watchman';
 import fs from 'node:fs/promises';
 import path from 'node:path';
 import {debounce} from 'shared/debounce';
+import {stagedThrottler} from './StagedThrottler';
+import {ONE_MINUTE_MS} from './constants';
+import {Watchman} from './watchman';
 
 const DEFAULT_POLL_INTERVAL = 5 * ONE_MINUTE_MS;
 // When the page is hidden, aggressively reduce polling.

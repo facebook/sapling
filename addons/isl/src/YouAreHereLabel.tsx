@@ -5,9 +5,9 @@
  * LICENSE file in the root directory of this source tree.
  */
 
+import React from 'react';
 import {InlineBadge} from './InlineBadge';
 import {t} from './i18n';
-import React from 'react';
 
 /** The "(You are here)" blue label. Supports customized styles and children. */
 export function YouAreHereLabel(props: {title?: string} & React.HTMLAttributes<HTMLDivElement>) {

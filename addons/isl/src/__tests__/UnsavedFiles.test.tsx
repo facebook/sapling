@@ -5,20 +5,20 @@
  * LICENSE file in the root directory of this source tree.
  */
 
+import {act, fireEvent, render, screen, waitFor} from '@testing-library/react';
+import {nextTick} from 'shared/testUtils';
 import App from '../App';
 import {
-  resetTestMessages,
-  expectMessageSentToServer,
-  simulateCommits,
-  COMMIT,
-  simulateUncommittedChangedFiles,
   closeCommitInfoSidebar,
-  simulateRepoConnected,
-  simulateMessageFromServer,
+  COMMIT,
   expectMessageNOTSentToServer,
+  expectMessageSentToServer,
+  resetTestMessages,
+  simulateCommits,
+  simulateMessageFromServer,
+  simulateRepoConnected,
+  simulateUncommittedChangedFiles,
 } from '../testUtils';
-import {fireEvent, render, screen, act, waitFor} from '@testing-library/react';
-import {nextTick} from 'shared/testUtils';
 
 describe('UnsavedFiles', () => {
   beforeEach(() => {

@@ -8,6 +8,10 @@
 import type {DiffId, DiffSummary, Hash, PageVisibility, RepoInfo, Result} from '../types';
 import type {UICodeReviewProvider} from './UICodeReviewProvider';
 
+import {atom} from 'jotai';
+import {clearTrackedCache} from 'shared/LRU';
+import {debounce} from 'shared/debounce';
+import {firstLine, nullthrows} from 'shared/utils';
 import serverAPI from '../ClientToServerAPI';
 import {commitMessageTemplate} from '../CommitInfoView/CommitInfoState';
 import {
@@ -24,10 +28,6 @@ import {dagWithPreviews} from '../previews';
 import {commitByHash, repositoryInfo} from '../serverAPIState';
 import {registerCleanup, registerDisposable} from '../utils';
 import {GithubUICodeReviewProvider} from './github/github';
-import {atom} from 'jotai';
-import {clearTrackedCache} from 'shared/LRU';
-import {debounce} from 'shared/debounce';
-import {firstLine, nullthrows} from 'shared/utils';
 
 export const codeReviewProvider = atom<UICodeReviewProvider | null>(get => {
   const repoInfo = get(repositoryInfo);

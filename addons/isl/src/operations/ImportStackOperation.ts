@@ -5,9 +5,9 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-import type {Dag} from '../previews';
 import type {Hash} from 'shared/types/common';
 import type {ExportStack, ImportCommit, ImportStack, Mark} from 'shared/types/stack';
+import type {Dag} from '../previews';
 
 import {DagCommitInfo} from '../dag/dagCommitInfo';
 import {HashSet} from '../dag/set';

@@ -7,8 +7,6 @@
 
 import type {Json} from 'shared/typeUtils';
 
-import serverAPI from '../../isl/src/ClientToServerAPI';
-import {ComparisonPanelMode, comparisonPanelMode, setComparisonPanelMode} from './state';
 import {Checkbox} from 'isl-components/Checkbox';
 import {Dropdown} from 'isl-components/Dropdown';
 import {Column} from 'isl-components/Flex';
@@ -18,6 +16,8 @@ import {Setting} from 'isl/src/Setting';
 import {T, t} from 'isl/src/i18n';
 import {writeAtom} from 'isl/src/jotaiUtils';
 import {atom, useAtom, useAtomValue} from 'jotai';
+import serverAPI from '../../isl/src/ClientToServerAPI';
+import {ComparisonPanelMode, comparisonPanelMode, setComparisonPanelMode} from './state';
 
 export default function VSCodeSettings() {
   const panelMode = useAtomValue(comparisonPanelMode);

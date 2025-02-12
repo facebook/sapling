@@ -7,8 +7,8 @@
 
 import type {Hunk} from 'diff';
 
-import organizeLinesIntoGroups from '../../SplitDiffView/organizeLinesIntoGroups';
 import {structuredPatch} from 'diff';
+import organizeLinesIntoGroups from '../../SplitDiffView/organizeLinesIntoGroups';
 
 test('file with only one line that is changed (no context)', () => {
   const hunks = diffIntoHunks(['lowerCamelCase'], ['UpperCamelCase']);

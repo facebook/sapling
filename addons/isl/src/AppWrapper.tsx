@@ -7,6 +7,12 @@
 
 import type {ReactNode} from 'react';
 
+import {ErrorBoundary} from 'isl-components/ErrorNotice';
+import {ThemedComponentsRoot} from 'isl-components/ThemedComponentsRoot';
+import {ViewportOverlayRoot} from 'isl-components/ViewportOverlay';
+import {Provider, useAtomValue, useStore} from 'jotai';
+import React from 'react';
+import {ContextMenus} from 'shared/ContextMenu';
 import {ISLCommandContext} from './ISLShortcuts';
 import {SuspenseBoundary} from './SuspenseBoundary';
 import {TopLevelToast} from './TopLevelToast';
@@ -20,12 +26,6 @@ import {themeState} from './theme';
 import {ModalContainer} from './useModal';
 import {usePromise} from './usePromise';
 import {isDev, isTest} from './utils';
-import {ErrorBoundary} from 'isl-components/ErrorNotice';
-import {ThemedComponentsRoot} from 'isl-components/ThemedComponentsRoot';
-import {ViewportOverlayRoot} from 'isl-components/ViewportOverlay';
-import {Provider, useAtomValue, useStore} from 'jotai';
-import React from 'react';
-import {ContextMenus} from 'shared/ContextMenu';
 
 export function AllProviders({children}: {children: ReactNode}) {
   return (

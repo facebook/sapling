@@ -11,25 +11,25 @@ import type {Operation} from './operations/Operation';
 import type {OperationInfo, OperationList} from './operationsState';
 import type {ChangedFile, CommitInfo, Hash, MergeConflicts, UncommittedChanges} from './types';
 
+import {atom, useAtom, useAtomValue} from 'jotai';
+import {useEffect} from 'react';
+import {notEmpty, nullthrows} from 'shared/utils';
 import {latestSuccessorsMapAtom} from './SuccessionTracker';
 import {getTracker} from './analytics/globalTracker';
 import {focusMode} from './atoms/FocusModeState';
 import {YOU_ARE_HERE_VIRTUAL_COMMIT} from './dag/virtualCommit';
 import {getCommitTree, walkTreePostorder} from './getCommitTree';
 import {getOpName} from './operations/Operation';
-import {operationBeingPreviewed, queuedOperations, operationList} from './operationsState';
+import {operationBeingPreviewed, operationList, queuedOperations} from './operationsState';
 import {
-  latestUncommittedChanges,
   latestCommits,
+  latestCommitsData,
   latestDag,
   latestHeadCommit,
-  mergeConflicts,
+  latestUncommittedChanges,
   latestUncommittedChangesData,
-  latestCommitsData,
+  mergeConflicts,
 } from './serverAPIState';
-import {atom, useAtom, useAtomValue} from 'jotai';
-import {useEffect} from 'react';
-import {notEmpty, nullthrows} from 'shared/utils';
 
 export enum CommitPreview {
   REBASE_ROOT = 'rebase-root',

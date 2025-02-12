@@ -5,6 +5,17 @@
  * LICENSE file in the root directory of this source tree.
  */
 
+import {Button} from 'isl-components/Button';
+import {Checkbox} from 'isl-components/Checkbox';
+import {Divider} from 'isl-components/Divider';
+import {Icon} from 'isl-components/Icon';
+import {Kbd} from 'isl-components/Kbd';
+import {KeyCode, Modifier} from 'isl-components/KeyboardShortcuts';
+import {TextField} from 'isl-components/TextField';
+import {Tooltip} from 'isl-components/Tooltip';
+import {useAtom} from 'jotai';
+import {useEffect, useRef, useState} from 'react';
+import {nullthrows} from 'shared/utils';
 import {CommitCloudInfo} from './CommitCloud';
 import {DropdownFields} from './DropdownFields';
 import {useCommandEvent} from './ISLShortcuts';
@@ -20,18 +31,7 @@ import {RebaseOperation} from './operations/RebaseOperation';
 import {useRunOperation} from './operationsState';
 import {dagWithPreviews} from './previews';
 import {forceFetchCommit} from './serverAPIState';
-import {succeedableRevset, exactRevset} from './types';
-import {Button} from 'isl-components/Button';
-import {Checkbox} from 'isl-components/Checkbox';
-import {Divider} from 'isl-components/Divider';
-import {Icon} from 'isl-components/Icon';
-import {Kbd} from 'isl-components/Kbd';
-import {KeyCode, Modifier} from 'isl-components/KeyboardShortcuts';
-import {TextField} from 'isl-components/TextField';
-import {Tooltip} from 'isl-components/Tooltip';
-import {useAtom} from 'jotai';
-import {useEffect, useRef, useState} from 'react';
-import {nullthrows} from 'shared/utils';
+import {exactRevset, succeedableRevset} from './types';
 
 import './DownloadCommitsMenu.css';
 

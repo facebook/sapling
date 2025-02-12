@@ -5,10 +5,11 @@
  * LICENSE file in the root directory of this source tree.
  */
 
+import type {Map as ImMap} from 'immutable';
 import type {AbsorbEdit, AbsorbEditId} from '../absorb';
 import type {FileRev} from '../fileStackState';
-import type {Map as ImMap} from 'immutable';
 
+import {splitLines} from 'shared/diff';
 import {
   analyseFileStack,
   applyFileStackEditsWithAbsorbId,
@@ -18,7 +19,6 @@ import {
   revWithAbsorb,
 } from '../absorb';
 import {FileStackState} from '../fileStackState';
-import {splitLines} from 'shared/diff';
 
 // See also [test-fb-ext-absorb-filefixupstate.py](https://github.com/facebook/sapling/blob/eb3d35d/eden/scm/tests/test-fb-ext-absorb-filefixupstate.py#L75)
 describe('analyseFileStack', () => {

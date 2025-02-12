@@ -5,13 +5,13 @@
  * LICENSE file in the root directory of this source tree.
  */
 
+import type {ImportStack} from 'shared/types/stack';
 import type {PartialSelection} from '../partialSelection';
 import type {
   ApplyUncommittedChangesPreviewsFuncType,
   UncommittedChangesPreviewContext,
 } from '../previews';
 import type {RepoRelativePath, UncommittedChanges} from '../types';
-import type {ImportStack} from 'shared/types/stack';
 
 import {t} from '../i18n';
 import {Operation} from './Operation';

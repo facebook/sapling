@@ -5,18 +5,18 @@
  * LICENSE file in the root directory of this source tree.
  */
 
+import {act, fireEvent, render, screen, waitFor} from '@testing-library/react';
+import * as utils from 'shared/utils';
 import App from '../App';
 import {
-  expectMessageSentToServer,
-  simulateCommits,
   COMMIT,
   closeCommitInfoSidebar,
-  simulateRepoConnected,
+  expectMessageSentToServer,
+  simulateCommits,
   simulateMessageFromServer,
+  simulateRepoConnected,
 } from '../testUtils';
 import {CommandRunner} from '../types';
-import {fireEvent, render, screen, act, waitFor} from '@testing-library/react';
-import * as utils from 'shared/utils';
 
 const allCommits = [
   COMMIT('1', 'some public base', '0', {phase: 'public'}),

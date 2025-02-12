@@ -5,11 +5,26 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-import type {BookmarkKind} from './Bookmark';
-import type {Result, StableInfo} from './types';
 import type {TypeaheadResult} from 'isl-components/Types';
 import type {ReactNode} from 'react';
+import type {BookmarkKind} from './Bookmark';
+import type {Result, StableInfo} from './types';
 
+import * as stylex from '@stylexjs/stylex';
+import {Banner, BannerKind} from 'isl-components/Banner';
+import {Button} from 'isl-components/Button';
+import {Checkbox} from 'isl-components/Checkbox';
+import {InlineErrorBadge} from 'isl-components/ErrorNotice';
+import {Icon} from 'isl-components/Icon';
+import {Kbd} from 'isl-components/Kbd';
+import {KeyCode, Modifier} from 'isl-components/KeyboardShortcuts';
+import {Subtle} from 'isl-components/Subtle';
+import {extractTokens} from 'isl-components/Tokens';
+import {Tooltip} from 'isl-components/Tooltip';
+import {Typeahead} from 'isl-components/Typeahead';
+import {atom, useAtom, useAtomValue} from 'jotai';
+import React, {useState} from 'react';
+import {firstLine, notEmpty} from 'shared/utils';
 import {spacing} from '../../components/theme/tokens.stylex';
 import {Bookmark} from './Bookmark';
 import {
@@ -27,21 +42,6 @@ import {Internal} from './Internal';
 import {T, t} from './i18n';
 import {readAtom} from './jotaiUtils';
 import {latestDag} from './serverAPIState';
-import * as stylex from '@stylexjs/stylex';
-import {Banner, BannerKind} from 'isl-components/Banner';
-import {Button} from 'isl-components/Button';
-import {Checkbox} from 'isl-components/Checkbox';
-import {InlineErrorBadge} from 'isl-components/ErrorNotice';
-import {Icon} from 'isl-components/Icon';
-import {Kbd} from 'isl-components/Kbd';
-import {KeyCode, Modifier} from 'isl-components/KeyboardShortcuts';
-import {Subtle} from 'isl-components/Subtle';
-import {extractTokens} from 'isl-components/Tokens';
-import {Tooltip} from 'isl-components/Tooltip';
-import {Typeahead} from 'isl-components/Typeahead';
-import {atom, useAtom, useAtomValue} from 'jotai';
-import React, {useState} from 'react';
-import {firstLine, notEmpty} from 'shared/utils';
 
 const styles = stylex.create({
   container: {

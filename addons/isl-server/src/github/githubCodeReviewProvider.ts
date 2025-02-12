@@ -5,6 +5,15 @@
  * LICENSE file in the root directory of this source tree.
  */
 
+import type {
+  CodeReviewSystem,
+  DiffComment,
+  DiffId,
+  DiffSignalSummary,
+  Disposable,
+  Hash,
+  Result,
+} from 'isl/src/types';
 import type {CodeReviewProvider} from '../CodeReviewProvider';
 import type {Logger} from '../logger';
 import type {
@@ -20,16 +29,10 @@ import type {
   YourPullRequestsWithoutMergeQueueQueryData,
   YourPullRequestsWithoutMergeQueueQueryVariables,
 } from './generated/graphql';
-import type {
-  CodeReviewSystem,
-  DiffSignalSummary,
-  DiffId,
-  Disposable,
-  Result,
-  DiffComment,
-  Hash,
-} from 'isl/src/types';
 
+import {TypedEventEmitter} from 'shared/TypedEventEmitter';
+import {debounce} from 'shared/debounce';
+import {notEmpty} from 'shared/utils';
 import {
   MergeQueueSupportQuery,
   PullRequestCommentsQuery,
@@ -39,9 +42,6 @@ import {
   YourPullRequestsWithoutMergeQueueQuery,
 } from './generated/graphql';
 import queryGraphQL from './queryGraphQL';
-import {TypedEventEmitter} from 'shared/TypedEventEmitter';
-import {debounce} from 'shared/debounce';
-import {notEmpty} from 'shared/utils';
 
 export type GitHubDiffSummary = {
   type: 'github';

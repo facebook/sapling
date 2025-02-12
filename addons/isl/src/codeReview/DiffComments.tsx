@@ -5,9 +5,18 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-import type {DiffId, DiffComment, DiffCommentReaction} from '../types';
 import type {ParsedDiff} from 'shared/patch/parse';
+import type {DiffComment, DiffCommentReaction, DiffId} from '../types';
 
+import * as stylex from '@stylexjs/stylex';
+import {ErrorNotice} from 'isl-components/ErrorNotice';
+import {Icon} from 'isl-components/Icon';
+import {Subtle} from 'isl-components/Subtle';
+import {Tooltip} from 'isl-components/Tooltip';
+import {useAtom, useAtomValue} from 'jotai';
+import {useEffect} from 'react';
+import {ComparisonType} from 'shared/Comparison';
+import {group} from 'shared/utils';
 import {colors, font, radius, spacing} from '../../../components/theme/tokens.stylex';
 import {AvatarImg} from '../Avatar';
 import serverAPI from '../ClientToServerAPI';
@@ -20,15 +29,6 @@ import platform from '../platform';
 import {RelativeDate} from '../relativeDate';
 import {layout} from '../stylexUtils';
 import {themeState} from '../theme';
-import * as stylex from '@stylexjs/stylex';
-import {ErrorNotice} from 'isl-components/ErrorNotice';
-import {Icon} from 'isl-components/Icon';
-import {Subtle} from 'isl-components/Subtle';
-import {Tooltip} from 'isl-components/Tooltip';
-import {useAtom, useAtomValue} from 'jotai';
-import {useEffect} from 'react';
-import {ComparisonType} from 'shared/Comparison';
-import {group} from 'shared/utils';
 
 const diffCommentData = atomFamilyWeak((diffId: DiffId) =>
   atomLoadableWithRefresh(async () => {

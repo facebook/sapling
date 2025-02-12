@@ -5,15 +5,15 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-import type {FieldConfig, TypeaheadKind} from './types';
 import type {TypeaheadResult} from 'isl-components/Types';
+import type {FieldConfig, TypeaheadKind} from './types';
 
-import serverApi from '../ClientToServerAPI';
-import {recentReviewers, SuggestedReviewers} from './SuggestedReviewers';
-import {convertFieldNameToKey, getOnClickToken} from './utils';
 import {extractTokens} from 'isl-components/Tokens';
 import {Typeahead} from 'isl-components/Typeahead';
 import {randomId} from 'shared/utils';
+import serverApi from '../ClientToServerAPI';
+import {recentReviewers, SuggestedReviewers} from './SuggestedReviewers';
+import {convertFieldNameToKey, getOnClickToken} from './utils';
 
 export function CommitInfoTextField({
   field,

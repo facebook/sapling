@@ -5,16 +5,16 @@
  * LICENSE file in the root directory of this source tree.
  */
 
+import {act, fireEvent, render, screen} from '@testing-library/react';
 import App from '../App';
 import {
   closeCommitInfoSidebar,
+  COMMIT,
   expectMessageSentToServer,
   simulateCommits,
-  COMMIT,
   simulateMessageFromServer,
   simulateRepoConnected,
 } from '../testUtils';
-import {render, screen, fireEvent, act} from '@testing-library/react';
 
 describe('cwd', () => {
   beforeEach(() => {

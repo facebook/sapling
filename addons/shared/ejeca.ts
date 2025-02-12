@@ -5,14 +5,14 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-import type {ChildProcess, IOType, SpawnOptions, Serializable} from 'node:child_process';
+import type {ChildProcess, IOType, Serializable, SpawnOptions} from 'node:child_process';
 import type {Stream} from 'node:stream';
 
-import {truncate} from './utils';
 import getStream from 'get-stream';
 import {spawn} from 'node:child_process';
 import {Readable} from 'node:stream';
 import os from 'os';
+import {truncate} from './utils';
 
 const LF = '\n';
 const LF_BINARY = LF.codePointAt(0);

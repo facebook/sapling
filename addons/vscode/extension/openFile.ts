@@ -8,9 +8,9 @@
 import type {Repository} from 'isl-server/src/Repository';
 import type {AbsolutePath} from 'isl/src/types';
 
-import {shouldOpenBeside} from './config';
 import * as pathModule from 'node:path';
 import * as vscode from 'vscode';
+import {shouldOpenBeside} from './config';
 
 const IMAGE_EXTENSIONS = new Set(['.bmp', '.gif', '.ico', '.jpeg', '.jpg', '.png', '.webp']);
 function looksLikeImageUri(uri: vscode.Uri): boolean {

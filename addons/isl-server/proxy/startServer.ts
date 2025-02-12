@@ -5,22 +5,22 @@
  * LICENSE file in the root directory of this source tree.
  */
 
+import type {PlatformName} from 'isl/src/types';
+import type {IOType} from 'node:child_process';
 import type {ChildProcessResponse} from './child';
 import type {StartServerArgs, StartServerResult} from './server';
-import type {IOType} from 'node:child_process';
-import type {PlatformName} from 'isl/src/types';
 
-import {
-  ensureExistingServerFolder,
-  deleteExistingServerFile,
-  writeExistingServerFile,
-} from './existingServerStateFiles';
-import * as lifecycle from './serverLifecycle';
 import child_process from 'node:child_process';
 import crypto from 'node:crypto';
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
+import {
+  deleteExistingServerFile,
+  ensureExistingServerFolder,
+  writeExistingServerFile,
+} from './existingServerStateFiles';
+import * as lifecycle from './serverLifecycle';
 
 const DEFAULT_PORT = '3001';
 

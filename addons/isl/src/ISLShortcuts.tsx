@@ -5,13 +5,13 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-import {t} from './i18n';
-import {useModal} from './useModal';
 import {Kbd} from 'isl-components/Kbd';
-import {makeCommandDispatcher, KeyCode, Modifier} from 'isl-components/KeyboardShortcuts';
+import {KeyCode, makeCommandDispatcher, Modifier} from 'isl-components/KeyboardShortcuts';
 import {isMac} from 'isl-components/OperatingSystem';
 import {useMemo} from 'react';
 import {TypedEventEmitter} from 'shared/TypedEventEmitter';
+import {t} from './i18n';
+import {useModal} from './useModal';
 
 import './ISLShortcuts.css';
 

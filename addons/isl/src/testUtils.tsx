@@ -5,6 +5,7 @@
  * LICENSE file in the root directory of this source tree.
  */
 
+import type {Writable} from 'shared/typeUtils';
 import type {TestingEventBus} from './TestingMessageBus';
 import type {
   ClientToServerMessage,
@@ -15,13 +16,12 @@ import type {
   SmartlogCommits,
   UncommittedChanges,
 } from './types';
-import type {Writable} from 'shared/typeUtils';
 
+import {act, screen, waitFor, within} from '@testing-library/react';
+import {nextTick} from 'shared/testUtils';
 import platform from './platform';
 import {deserializeFromString, serializeToString} from './serialize';
 import {mostRecentSubscriptionIds} from './serverAPIState';
-import {screen, act, within, waitFor} from '@testing-library/react';
-import {nextTick} from 'shared/testUtils';
 
 const testMessageBus = platform.messageBus as TestingEventBus;
 

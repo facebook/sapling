@@ -9,13 +9,13 @@ import type {Operation} from '../../operations/Operation';
 import type {CommitInfo} from '../../types';
 import type {GithubUICodeReviewProvider} from './github';
 
-import {T} from '../../i18n';
-import {showModal} from '../../useModal';
-import {codeReviewProvider} from '../CodeReviewInfo';
 import {ErrorNotice} from 'isl-components/ErrorNotice';
 import {Icon} from 'isl-components/Icon';
 import {useAtomValue} from 'jotai';
 import {lazy, Suspense} from 'react';
+import {T} from '../../i18n';
+import {showModal} from '../../useModal';
+import {codeReviewProvider} from '../CodeReviewInfo';
 
 const BranchingPrModalContent = lazy(() => import('./BranchingPrModalContent'));
 

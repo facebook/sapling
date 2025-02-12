@@ -5,11 +5,15 @@
  * LICENSE file in the root directory of this source tree.
  */
 
+import type {RecordOf} from 'immutable';
 import type {Hash} from '../types';
 import type {ExtendedGraphRow} from './render';
 import type {SetLike} from './set';
-import type {RecordOf} from 'immutable';
 
+import {Map as ImMap, Set as ImSet, List, Record} from 'immutable';
+import {cachedMethod, LRU} from 'shared/LRU';
+import {SelfUpdate} from 'shared/immutableExt';
+import {group, notEmpty, nullthrows, splitOnce} from 'shared/utils';
 import {CommitPreview} from '../previews';
 import {BaseDag, type SortProps} from './base_dag';
 import {DagCommitInfo} from './dagCommitInfo';
@@ -17,10 +21,6 @@ import {MutationDag} from './mutation_dag';
 import {Ancestor, AncestorType, Renderer} from './render';
 import {TextRenderer} from './renderText';
 import {arrayFromHashes, HashSet} from './set';
-import {List, Record, Map as ImMap, Set as ImSet} from 'immutable';
-import {LRU, cachedMethod} from 'shared/LRU';
-import {SelfUpdate} from 'shared/immutableExt';
-import {group, notEmpty, splitOnce, nullthrows} from 'shared/utils';
 
 /**
  * Main commit graph type used for preview calculation and queries.

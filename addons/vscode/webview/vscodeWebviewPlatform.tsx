@@ -5,18 +5,18 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-import type {VSCodeAPI} from './vscodeApi';
 import type {Platform} from 'isl/src/platform';
 import type {ThemeColor} from 'isl/src/theme';
 import type {MessageBusStatus, RepoRelativePath} from 'isl/src/types';
 import type {Comparison} from 'shared/Comparison';
 import type {Json} from 'shared/typeUtils';
+import type {VSCodeAPI} from './vscodeApi';
 
-import {Internal} from './Internal';
-import {vscodeApi} from './vscodeApi';
 import {browserClipboardCopy} from 'isl/src/platform/browerPlatformImpl';
 import {registerCleanup} from 'isl/src/utils';
 import {lazy} from 'react';
+import {Internal} from './Internal';
+import {vscodeApi} from './vscodeApi';
 
 const VSCodeSettings = lazy(() => import('./VSCodeSettings'));
 const AddMoreCwdsHint = lazy(() => import('./AddMoreCwdsHint'));

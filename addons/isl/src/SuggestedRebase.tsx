@@ -8,7 +8,15 @@
 import type {Operation} from './operations/Operation';
 import type {CommitInfo, ExactRevset, Hash, OptimisticRevset, SucceedableRevset} from './types';
 
+import {Button} from 'isl-components/Button';
+import {Icon} from 'isl-components/Icon';
+import {Kbd} from 'isl-components/Kbd';
+import {Subtle} from 'isl-components/Subtle';
+import {atom} from 'jotai';
+import React from 'react';
+import {useContextMenu} from 'shared/ContextMenu';
 import {allCommands} from './ISLShortcuts';
+import './SuggestedRebase.css';
 import {tracker} from './analytics';
 import {findPublicBaseAncestor} from './getCommitTree';
 import {T} from './i18n';
@@ -21,14 +29,6 @@ import {dagWithPreviews} from './previews';
 import {RelativeDate} from './relativeDate';
 import {commitsShownRange, latestDag} from './serverAPIState';
 import {succeedableRevset} from './types';
-import {Button} from 'isl-components/Button';
-import {Icon} from 'isl-components/Icon';
-import {Kbd} from 'isl-components/Kbd';
-import {Subtle} from 'isl-components/Subtle';
-import {atom} from 'jotai';
-import React from 'react';
-import {useContextMenu} from 'shared/ContextMenu';
-import './SuggestedRebase.css';
 
 /**
  * Whether a given stack (from its base hash) is eligible for currently suggested rebase.

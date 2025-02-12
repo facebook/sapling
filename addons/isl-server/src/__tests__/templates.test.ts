@@ -5,9 +5,9 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-import {COMMIT_END_MARK, findMaxCommonPathPrefix, parseCommitInfoOutput} from '../templates';
 import path from 'path';
 import {mockLogger} from 'shared/testUtils';
+import {COMMIT_END_MARK, findMaxCommonPathPrefix, parseCommitInfoOutput} from '../templates';
 
 describe('template parsing', () => {
   it('parses normal commits', () => {

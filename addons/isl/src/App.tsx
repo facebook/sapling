@@ -7,12 +7,18 @@
 
 import type {AppMode, RepositoryError} from './types';
 
+import {Button} from 'isl-components/Button';
+import {ErrorBoundary, ErrorNotice} from 'isl-components/ErrorNotice';
+import {Icon} from 'isl-components/Icon';
+import {atom, useAtomValue, useSetAtom} from 'jotai';
+import {Suspense, useMemo} from 'react';
+import {useThrottledEffect} from 'shared/hooks';
 import {AllProviders} from './AppWrapper';
 import {CommandHistoryAndProgress} from './CommandHistoryAndProgress';
 import {CommitInfoSidebar} from './CommitInfoView/CommitInfoView';
 import {CommitTreeList} from './CommitTreeList';
 import {ComparisonViewApp, ComparisonViewModal} from './ComparisonView/ComparisonViewModal';
-import {CwdSelections, availableCwds} from './CwdSelector';
+import {availableCwds, CwdSelections} from './CwdSelector';
 import {Drawers} from './Drawers';
 import {EmptyState} from './EmptyState';
 import {useCommand} from './ISLShortcuts';
@@ -26,12 +32,6 @@ import {t, T} from './i18n';
 import platform from './platform';
 import {useMainContentWidth} from './responsive';
 import {repositoryInfo} from './serverAPIState';
-import {Button} from 'isl-components/Button';
-import {ErrorBoundary, ErrorNotice} from 'isl-components/ErrorNotice';
-import {Icon} from 'isl-components/Icon';
-import {atom, useAtomValue, useSetAtom} from 'jotai';
-import {Suspense, useMemo} from 'react';
-import {useThrottledEffect} from 'shared/hooks';
 
 import './index.css';
 

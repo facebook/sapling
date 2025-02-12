@@ -7,11 +7,11 @@
 
 import type {EjecaChildProcess} from 'shared/ejeca';
 
-import {Internal} from './Internal';
 import chalk from 'chalk';
 import path from 'path';
 import {ejeca} from 'shared/ejeca';
 import {defer} from 'shared/utils';
+import {Internal} from './Internal';
 
 function usage() {
   process.stdout.write(`

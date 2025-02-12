@@ -1,5 +1,7 @@
 import { isDev as __DEV__ } from '../../../utils';
 
+import { useStore } from 'jotai/react';
+import type { Atom } from 'jotai/vanilla';
 import {
   useDebugValue,
   useEffect,
@@ -7,8 +9,6 @@ import {
   useRef,
   useState,
 } from 'react';
-import { useStore } from 'jotai/react';
-import type { Atom } from 'jotai/vanilla';
 
 type Store = ReturnType<typeof useStore>;
 type AtomState = NonNullable<

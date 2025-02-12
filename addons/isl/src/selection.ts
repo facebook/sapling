@@ -5,9 +5,12 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-import type {ISLCommandName} from './ISLShortcuts';
 import type React from 'react';
+import type {ISLCommandName} from './ISLShortcuts';
 
+import {isMac} from 'isl-components/OperatingSystem';
+import {atom} from 'jotai';
+import {useCallback} from 'react';
 import {commitMode} from './CommitInfoView/CommitInfoState';
 import {useCommand} from './ISLShortcuts';
 import {useSelectAllCommitsShortcut} from './SelectAllCommits';
@@ -27,9 +30,6 @@ import {latestDag} from './serverAPIState';
 import {latestSuccessorUnlessExplicitlyObsolete} from './successionUtils';
 import {exactRevset, type CommitInfo, type Hash} from './types';
 import {firstOfIterable, registerCleanup} from './utils';
-import {isMac} from 'isl-components/OperatingSystem';
-import {atom} from 'jotai';
-import {useCallback} from 'react';
 
 /**
  * The name of the key to toggle individual selection.

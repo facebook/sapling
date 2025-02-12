@@ -7,11 +7,11 @@
 
 import type {StableLocationData} from './types';
 
+import {atom} from 'jotai';
 import serverAPI from './ClientToServerAPI';
 import {localStorageBackedAtom, readAtom, writeAtom} from './jotaiUtils';
 import {latestCommits} from './serverAPIState';
 import {registerDisposable} from './utils';
-import {atom} from 'jotai';
 
 type BookmarksData = {
   /** These bookmarks should be hidden from the automatic set of remote bookmarks */

@@ -5,11 +5,22 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-import type {InternalCommitMessageFields, Result} from '../types';
-import type {FieldNameAndHashKey, HashKey} from './types';
 import type {RefObject} from 'react';
 import type {Comparison} from 'shared/Comparison';
+import type {InternalCommitMessageFields, Result} from '../types';
+import type {FieldNameAndHashKey, HashKey} from './types';
 
+import {Button} from 'isl-components/Button';
+import {ErrorNotice} from 'isl-components/ErrorNotice';
+import {Icon} from 'isl-components/Icon';
+import {TextArea} from 'isl-components/TextArea';
+import {Tooltip} from 'isl-components/Tooltip';
+import {atom, useAtom, useAtomValue, useSetAtom} from 'jotai';
+import {useCallback} from 'react';
+import {ComparisonType} from 'shared/Comparison';
+import {InternalFieldName} from 'shared/constants';
+import {useThrottledEffect} from 'shared/hooks';
+import {nullthrows, randomId} from 'shared/utils';
 import {Internal} from '../Internal';
 import {tracker} from '../analytics';
 import {useFeatureFlagSync} from '../featureFlags';
@@ -23,17 +34,6 @@ import {
   latestCommitMessageFieldsWithEdits,
 } from './CommitInfoState';
 import {convertFieldNameToKey} from './utils';
-import {Button} from 'isl-components/Button';
-import {ErrorNotice} from 'isl-components/ErrorNotice';
-import {Icon} from 'isl-components/Icon';
-import {TextArea} from 'isl-components/TextArea';
-import {Tooltip} from 'isl-components/Tooltip';
-import {atom, useAtom, useAtomValue, useSetAtom} from 'jotai';
-import {useCallback} from 'react';
-import {ComparisonType} from 'shared/Comparison';
-import {InternalFieldName} from 'shared/constants';
-import {useThrottledEffect} from 'shared/hooks';
-import {randomId, nullthrows} from 'shared/utils';
 
 import './GenerateWithAI.css';
 

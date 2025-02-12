@@ -7,15 +7,15 @@
 
 import type {TokenizedHunk} from '../../ComparisonView/SplitDiffView/syntaxHighlightingTypes';
 import type {FlattenLine} from '../../linelog';
-import type {FileStackState, FileRev} from '../fileStackState';
+import type {FileRev, FileStackState} from '../fileStackState';
 import type {RangeInfo} from './TextEditable';
 
-import {t} from '../../i18n';
-import {prev} from '../revMath';
-import {bumpStackEditMetric} from './stackEditState';
 import {Set as ImSet, Range} from 'immutable';
 import {applyTokenizationToLine} from 'shared/createTokenizedIntralineDiff';
 import {type Block, collapseContextBlocks, type LineIdx} from 'shared/diff';
+import {t} from '../../i18n';
+import {prev} from '../revMath';
+import {bumpStackEditMetric} from './stackEditState';
 
 export type ComputedFileStackLines = {
   leftGutter: JSX.Element[];

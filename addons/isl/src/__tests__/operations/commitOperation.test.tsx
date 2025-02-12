@@ -5,21 +5,21 @@
  * LICENSE file in the root directory of this source tree.
  */
 
+import {act, fireEvent, render, screen, waitFor, within} from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
+import * as utils from 'shared/utils';
 import App from '../../App';
 import {CommitInfoTestUtils} from '../../testQueries';
 import {
-  resetTestMessages,
-  expectMessageSentToServer,
-  simulateCommits,
   COMMIT,
-  simulateUncommittedChangedFiles,
-  simulateMessageFromServer,
+  expectMessageSentToServer,
   openCommitInfoSidebar,
+  resetTestMessages,
+  simulateCommits,
+  simulateMessageFromServer,
+  simulateUncommittedChangedFiles,
 } from '../../testUtils';
 import {CommandRunner} from '../../types';
-import {fireEvent, render, screen, waitFor, within, act} from '@testing-library/react';
-import userEvent from '@testing-library/user-event';
-import * as utils from 'shared/utils';
 
 describe('CommitOperation', () => {
   beforeEach(() => {

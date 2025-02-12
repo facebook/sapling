@@ -7,6 +7,16 @@
 
 import type {CommitCloudSyncState, Hash, Result} from './types';
 
+import {Button} from 'isl-components/Button';
+import {Dropdown} from 'isl-components/Dropdown';
+import {ErrorNotice, InlineErrorBadge} from 'isl-components/ErrorNotice';
+import {Icon} from 'isl-components/Icon';
+import {Subtle} from 'isl-components/Subtle';
+import {TextField} from 'isl-components/TextField';
+import {Tooltip} from 'isl-components/Tooltip';
+import {atom, useAtom, useAtomValue} from 'jotai';
+import {useCallback, useEffect, useRef, useState} from 'react';
+import {notEmpty} from 'shared/utils';
 import serverAPI from './ClientToServerAPI';
 import {Commit} from './Commit';
 import {FlexSpacer} from './ComponentUtils';
@@ -22,16 +32,6 @@ import {RelativeDate} from './relativeDate';
 import {repoRootAndCwd} from './repositoryData';
 import {CommitCloudBackupStatus} from './types';
 import {registerDisposable} from './utils';
-import {Button} from 'isl-components/Button';
-import {Dropdown} from 'isl-components/Dropdown';
-import {ErrorNotice, InlineErrorBadge} from 'isl-components/ErrorNotice';
-import {Icon} from 'isl-components/Icon';
-import {Subtle} from 'isl-components/Subtle';
-import {TextField} from 'isl-components/TextField';
-import {Tooltip} from 'isl-components/Tooltip';
-import {atom, useAtom, useAtomValue} from 'jotai';
-import {useCallback, useEffect, useRef, useState} from 'react';
-import {notEmpty} from 'shared/utils';
 
 import './CommitCloud.css';
 

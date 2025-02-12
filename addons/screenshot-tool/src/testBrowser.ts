@@ -7,15 +7,15 @@
 
 /* eslint-disable no-await-in-loop */
 
-import type * as testRepo from './testRepo';
 import type {Browser, Page} from 'puppeteer-core';
 import type * as Rrweb from 'rrweb';
+import type * as testRepo from './testRepo';
 
-import {getCacheDir, sha1} from './utils';
 import fs from 'node:fs';
 import {dirname, join} from 'node:path';
 import {fileURLToPath} from 'node:url';
 import puppeteer from 'puppeteer-core';
+import {getCacheDir, sha1} from './utils';
 
 export type PageOptions = {
   width?: number;

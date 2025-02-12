@@ -5,13 +5,26 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-import type {CommitMessageFields} from '../../CommitInfoView/types';
-import type {CommitStackState, FileMetadata, FileStackIndex, CommitRev} from '../commitStackState';
-import type {FileStackState, FileRev} from '../fileStackState';
-import type {UseStackEditState} from './stackEditState';
 import type {EnsureAssignedTogether} from 'shared/EnsureAssignedTogether';
 import type {RepoPath} from 'shared/types/common';
+import type {CommitMessageFields} from '../../CommitInfoView/types';
+import type {CommitRev, CommitStackState, FileMetadata, FileStackIndex} from '../commitStackState';
+import type {FileRev, FileStackState} from '../fileStackState';
+import type {UseStackEditState} from './stackEditState';
 
+import * as stylex from '@stylexjs/stylex';
+import {Set as ImSet, type List, Range} from 'immutable';
+import {Button} from 'isl-components/Button';
+import {Icon} from 'isl-components/Icon';
+import {Subtle} from 'isl-components/Subtle';
+import {TextField} from 'isl-components/TextField';
+import {Tooltip} from 'isl-components/Tooltip';
+import {useAtomValue} from 'jotai';
+import {useEffect, useMemo, useRef, useState} from 'react';
+import {useContextMenu} from 'shared/ContextMenu';
+import {diffBlocks, type LineIdx, splitLines} from 'shared/diff';
+import {useThrottledEffect} from 'shared/hooks';
+import {firstLine, nullthrows} from 'shared/utils';
 import {BranchIndicator} from '../../BranchIndicator';
 import {commitMessageTemplate} from '../../CommitInfoView/CommitInfoState';
 import {
@@ -32,19 +45,6 @@ import {isAbsent} from '../commitStackState';
 import {max, next, prev} from '../revMath';
 import {computeLinesForFileStackEditor} from './FileStackEditorLines';
 import {bumpStackEditMetric, SplitRangeRecord, useStackEditState} from './stackEditState';
-import * as stylex from '@stylexjs/stylex';
-import {Set as ImSet, type List, Range} from 'immutable';
-import {Button} from 'isl-components/Button';
-import {Icon} from 'isl-components/Icon';
-import {Subtle} from 'isl-components/Subtle';
-import {TextField} from 'isl-components/TextField';
-import {Tooltip} from 'isl-components/Tooltip';
-import {useAtomValue} from 'jotai';
-import {useRef, useState, useEffect, useMemo} from 'react';
-import {useContextMenu} from 'shared/ContextMenu';
-import {type LineIdx, splitLines, diffBlocks} from 'shared/diff';
-import {useThrottledEffect} from 'shared/hooks';
-import {firstLine, nullthrows} from 'shared/utils';
 
 import './SplitStackEditPanel.css';
 

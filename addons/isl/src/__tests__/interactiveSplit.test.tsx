@@ -5,22 +5,22 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-import type {CodeReviewSystem} from '../types';
 import type {DateTuple} from 'shared/types/common';
+import type {CodeReviewSystem} from '../types';
 
+import {act, fireEvent, render, screen, waitFor, within} from '@testing-library/react';
+import * as utils from 'shared/utils';
 import App from '../App';
 import {
-  resetTestMessages,
-  expectMessageSentToServer,
-  simulateCommits,
   closeCommitInfoSidebar,
-  TEST_COMMIT_HISTORY,
-  simulateMessageFromServer,
   expectMessageNOTSentToServer,
+  expectMessageSentToServer,
+  resetTestMessages,
+  simulateCommits,
+  simulateMessageFromServer,
+  TEST_COMMIT_HISTORY,
 } from '../testUtils';
 import {CommandRunner} from '../types';
-import {fireEvent, render, screen, act, waitFor, within} from '@testing-library/react';
-import * as utils from 'shared/utils';
 
 const EXPORT_STACK_DATA = [
   {

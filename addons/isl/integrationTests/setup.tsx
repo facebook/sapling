@@ -5,16 +5,14 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-import type {MessageBusStatus} from '../src/MessageBus';
-import type {Disposable, RepoRelativePath} from '../src/types';
 import type {Level} from 'isl-server/src/logger';
 import type {ServerPlatform} from 'isl-server/src/serverPlatform';
 import type {RepositoryContext} from 'isl-server/src/serverTypes';
 import type {TypedEventEmitter} from 'shared/TypedEventEmitter';
 import type {EjecaOptions} from 'shared/ejeca';
+import type {MessageBusStatus} from '../src/MessageBus';
+import type {Disposable, RepoRelativePath} from '../src/types';
 
-import {onClientConnection} from '../../isl-server/src/index';
-import platform from '../src/platform';
 import {fireEvent, render, screen} from '@testing-library/react';
 import {makeServerSideTracker} from 'isl-server/src/analytics/serverSideTracker';
 import {runCommand} from 'isl-server/src/commands';
@@ -22,6 +20,8 @@ import {StdoutLogger} from 'isl-server/src/logger';
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
+import {onClientConnection} from '../../isl-server/src/index';
+import platform from '../src/platform';
 
 const IS_CI = !!process.env.SANDCASTLE || !!process.env.GITHUB_ACTIONS;
 

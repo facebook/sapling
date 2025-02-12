@@ -5,13 +5,13 @@
  * LICENSE file in the root directory of this source tree.
  */
 
+import {act, render} from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import App from '../App';
 import {__TEST__} from '../CommitInfoView/CommitInfoState';
 import {successionTracker} from '../SuccessionTracker';
 import {CommitInfoTestUtils} from '../testQueries';
-import {resetTestMessages, expectMessageSentToServer, simulateCommits, COMMIT} from '../testUtils';
-import {render, act} from '@testing-library/react';
-import userEvent from '@testing-library/user-event';
+import {COMMIT, expectMessageSentToServer, resetTestMessages, simulateCommits} from '../testUtils';
 
 describe('succession', () => {
   beforeEach(() => {

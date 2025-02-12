@@ -5,19 +5,19 @@
  * LICENSE file in the root directory of this source tree.
  */
 
+import {act, fireEvent, render, screen, within} from '@testing-library/react';
 import App from '../App';
 import {__TEST__} from '../repositoryData';
 import {CommitTreeListTestUtils} from '../testQueries';
 import {
   closeCommitInfoSidebar,
-  expectMessageSentToServer,
-  simulateCommits,
   COMMIT,
-  simulateMessageFromServer,
+  expectMessageSentToServer,
   resetTestMessages,
+  simulateCommits,
+  simulateMessageFromServer,
   simulateRepoConnected,
 } from '../testUtils';
-import {fireEvent, render, screen, within, act} from '@testing-library/react';
 const {isIrrelevantToCwd} = __TEST__;
 
 const {clickGoto} = CommitTreeListTestUtils;

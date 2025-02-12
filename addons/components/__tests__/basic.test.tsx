@@ -5,11 +5,10 @@
  * LICENSE file in the root directory of this source tree.
  */
 
+import {render, screen} from '@testing-library/react';
 import {ThemedComponentsRoot} from '../ThemedComponentsRoot';
 import {ViewportOverlayRoot} from '../ViewportOverlay';
 import ComponentExplorer from '../explorer/ComponentExplorer';
-import {render, screen} from '@testing-library/react';
-import React from 'react';
 
 describe('component library', () => {
   it('renders component explorer', () => {

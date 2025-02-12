@@ -5,22 +5,22 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-import App from '../App';
-import {ignoreRTL} from '../testQueries';
-import {
-  resetTestMessages,
-  expectMessageSentToServer,
-  simulateCommits,
-  COMMIT,
-  simulateUncommittedChangedFiles,
-  closeCommitInfoSidebar,
-  simulateRepoConnected,
-  simulateMessageFromServer,
-} from '../testUtils';
-import {fireEvent, render, screen, waitFor, within, act} from '@testing-library/react';
+import {act, fireEvent, render, screen, waitFor, within} from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import {ComparisonType} from 'shared/Comparison';
 import {nullthrows} from 'shared/utils';
+import App from '../App';
+import {ignoreRTL} from '../testQueries';
+import {
+  closeCommitInfoSidebar,
+  COMMIT,
+  expectMessageSentToServer,
+  resetTestMessages,
+  simulateCommits,
+  simulateMessageFromServer,
+  simulateRepoConnected,
+  simulateUncommittedChangedFiles,
+} from '../testUtils';
 
 describe('Shelve', () => {
   beforeEach(() => {

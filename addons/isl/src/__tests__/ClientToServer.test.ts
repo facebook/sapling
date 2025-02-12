@@ -5,9 +5,9 @@
  * LICENSE file in the root directory of this source tree.
  */
 
+import {nextTick} from 'shared/testUtils';
 import clientToServerAPI from '../ClientToServerAPI';
 import {resetTestMessages, simulateMessageFromServer} from '../testUtils';
-import {nextTick} from 'shared/testUtils';
 
 describe('ClientToServer', () => {
   beforeEach(() => {

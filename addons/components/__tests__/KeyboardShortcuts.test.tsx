@@ -7,11 +7,11 @@
  * @jest-environment jsdom
  */
 
-import {makeCommandDispatcher, KeyCode, Modifier} from '../KeyboardShortcuts';
-import {render, screen, act} from '@testing-library/react';
 import '@testing-library/jest-dom';
+import {act, render, screen} from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import {useCallback, useState} from 'react';
+import {KeyCode, makeCommandDispatcher, Modifier} from '../KeyboardShortcuts';
 
 /* eslint-disable no-bitwise */
 

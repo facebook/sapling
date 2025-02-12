@@ -7,19 +7,19 @@
 
 import type {DiffId, DiffSummary} from '../types';
 
+import {act, fireEvent, render, screen, within} from '@testing-library/react';
 import {PullRequestState} from '../../../isl-server/src/github/generated/graphql';
 import App from '../App';
 import platform from '../platform';
 import {
-  resetTestMessages,
-  expectMessageSentToServer,
-  simulateCommits,
   COMMIT,
   closeCommitInfoSidebar,
+  expectMessageSentToServer,
+  resetTestMessages,
+  simulateCommits,
   simulateMessageFromServer,
   suppressReactErrorBoundaryErrorMessages,
 } from '../testUtils';
-import {fireEvent, render, screen, within, act} from '@testing-library/react';
 
 describe('GitHubPRBadge', () => {
   beforeEach(() => {

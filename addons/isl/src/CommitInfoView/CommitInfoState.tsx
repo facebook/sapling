@@ -8,6 +8,8 @@
 import type {Hash} from '../types';
 import type {CommitMessageFields} from './types';
 
+import {atom} from 'jotai';
+import {firstLine} from 'shared/utils';
 import serverAPI from '../ClientToServerAPI';
 import {successionTracker} from '../SuccessionTracker';
 import {tracker} from '../analytics';
@@ -22,15 +24,13 @@ import {selectedCommitInfos, selectedCommits} from '../selection';
 import {latestHeadCommit} from '../serverAPIState';
 import {registerCleanup, registerDisposable} from '../utils';
 import {
-  parseCommitMessageFields,
   allFieldsBeingEdited,
   anyEditsMade,
   applyEditedFields,
   commitMessageFieldsSchema,
   mergeCommitMessageFields,
+  parseCommitMessageFields,
 } from './CommitMessageFields';
-import {atom} from 'jotai';
-import {firstLine} from 'shared/utils';
 
 export type EditedMessage = Partial<CommitMessageFields>;
 

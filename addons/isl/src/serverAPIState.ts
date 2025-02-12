@@ -18,6 +18,10 @@ import type {
   UncommittedChanges,
 } from './types';
 
+import {DEFAULT_DAYS_OF_COMMITS_TO_LOAD} from 'isl-server/src/constants';
+import {atom} from 'jotai';
+import {reuseEqualObjects} from 'shared/deepEqualExt';
+import {randomId} from 'shared/utils';
 import {hiddenRemoteBookmarksAtom} from './BookmarksData';
 import serverAPI from './ClientToServerAPI';
 import {latestSuccessorsMapAtom, successionTracker} from './SuccessionTracker';
@@ -27,10 +31,6 @@ import {atomFamilyWeak, configBackedAtom, readAtom, writeAtom} from './jotaiUtil
 import platform from './platform';
 import {atomResetOnCwdChange, repositoryData} from './repositoryData';
 import {registerCleanup, registerDisposable} from './utils';
-import {DEFAULT_DAYS_OF_COMMITS_TO_LOAD} from 'isl-server/src/constants';
-import {atom} from 'jotai';
-import {reuseEqualObjects} from 'shared/deepEqualExt';
-import {randomId} from 'shared/utils';
 
 export {repositoryData};
 

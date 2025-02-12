@@ -5,17 +5,17 @@
  * LICENSE file in the root directory of this source tree.
  */
 
+import type {PathLike} from 'node:fs';
+import type {FileHandle} from 'node:fs/promises';
 import type {Repository} from '../Repository';
 import type {ServerPlatform} from '../serverPlatform';
 import type {RepositoryContext} from '../serverTypes';
-import type {PathLike} from 'node:fs';
-import type {FileHandle} from 'node:fs/promises';
 
-import {GeneratedFilesDetector} from '../GeneratedFiles';
-import {makeServerSideTracker} from '../analytics/serverSideTracker';
 import {GeneratedStatus} from 'isl/src/types';
 import {promises} from 'node:fs';
 import {mockLogger} from 'shared/testUtils';
+import {GeneratedFilesDetector} from '../GeneratedFiles';
+import {makeServerSideTracker} from '../analytics/serverSideTracker';
 
 /* eslint-disable require-await */
 

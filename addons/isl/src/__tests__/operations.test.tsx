@@ -5,6 +5,8 @@
  * LICENSE file in the root directory of this source tree.
  */
 
+import {act, fireEvent, render, screen, within} from '@testing-library/react';
+import * as utils from 'shared/utils';
 import App from '../App';
 import {Internal} from '../Internal';
 import {tracker} from '../analytics';
@@ -13,19 +15,17 @@ import {operationList} from '../operationsState';
 import {mostRecentSubscriptionIds} from '../serverAPIState';
 import {CommitTreeListTestUtils} from '../testQueries';
 import {
-  resetTestMessages,
-  expectMessageSentToServer,
-  simulateCommits,
   closeCommitInfoSidebar,
-  simulateMessageFromServer,
-  TEST_COMMIT_HISTORY,
-  simulateRepoConnected,
-  dragAndDropCommits,
   COMMIT,
+  dragAndDropCommits,
+  expectMessageSentToServer,
   expectYouAreHerePointAt,
+  resetTestMessages,
+  simulateCommits,
+  simulateMessageFromServer,
+  simulateRepoConnected,
+  TEST_COMMIT_HISTORY,
 } from '../testUtils';
-import {fireEvent, render, screen, within, act} from '@testing-library/react';
-import * as utils from 'shared/utils';
 
 const {clickGoto} = CommitTreeListTestUtils;
 

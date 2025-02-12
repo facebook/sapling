@@ -34,7 +34,7 @@ module.exports = {
     '@typescript-eslint',
     // enforce rules of hooks and hook dependencies
     'react-hooks',
-    // Sorting imports is hard...
+    // Sorting imports is maintained by prettier-plugin-organize-imports
     'import',
     // Allow locally defined custom rules
     'rulesdir',
@@ -63,17 +63,8 @@ module.exports = {
     curly: 'error',
     'dot-notation': 'error',
     'import/no-duplicates': 'error',
-    'import/order': [
-      'error',
-      {
-        groups: ['type'],
-        'newlines-between': 'always',
-        alphabetize: {
-          order: 'asc',
-          caseInsensitive: false,
-        },
-      },
-    ],
+    // Sorting imports is maintained by prettier-plugin-organize-imports
+    'import/order': 'off',
     'no-await-in-loop': 'error',
     'no-bitwise': 'error',
     'no-caller': 'error',

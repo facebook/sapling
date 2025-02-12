@@ -5,10 +5,16 @@
  * LICENSE file in the root directory of this source tree.
  */
 
+import type {ReactNode} from 'react';
 import type {CommitInfo, DiffId, DiffSummary} from '../types';
 import type {UICodeReviewProvider} from './UICodeReviewProvider';
-import type {ReactNode} from 'react';
 
+import * as stylex from '@stylexjs/stylex';
+import {Button} from 'isl-components/Button';
+import {Icon} from 'isl-components/Icon';
+import {Tooltip} from 'isl-components/Tooltip';
+import {useAtomValue} from 'jotai';
+import {Component, lazy, Suspense, useState} from 'react';
 import {useShowConfirmSubmitStack} from '../ConfirmSubmitStack';
 import {Internal} from '../Internal';
 import {Link} from '../Link';
@@ -24,12 +30,6 @@ import {exactRevset} from '../types';
 import {codeReviewProvider, diffSummary} from './CodeReviewInfo';
 import {openerUrlForDiffUrl} from './github/GitHubUrlOpener';
 import {SyncStatus, syncStatusAtom} from './syncStatus';
-import * as stylex from '@stylexjs/stylex';
-import {Button} from 'isl-components/Button';
-import {Icon} from 'isl-components/Icon';
-import {Tooltip} from 'isl-components/Tooltip';
-import {useAtomValue} from 'jotai';
-import {Component, lazy, Suspense, useState} from 'react';
 
 import './DiffBadge.css';
 

@@ -7,9 +7,9 @@
 
 import type {ServerChallengeResponse} from './server';
 
+import * as http from 'node:http';
 import {type ExistingServerInfo, readExistingServerFile} from './existingServerStateFiles';
 import {areTokensEqual} from './proxyUtils';
-import * as http from 'node:http';
 
 /**
  * If it looks like something is serving on `localhost` on the same port,

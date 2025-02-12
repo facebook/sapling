@@ -5,43 +5,59 @@
  * LICENSE file in the root directory of this source tree.
  */
 
+import type {
+  AbsolutePath,
+  Alert,
+  ChangedFile,
+  CodeReviewSystem,
+  CommitCloudSyncState,
+  CommitInfo,
+  ConfigName,
+  CwdInfo,
+  DiffId,
+  Disposable,
+  FetchedCommits,
+  FetchedUncommittedChanges,
+  Hash,
+  MergeConflicts,
+  OperationCommandProgressReporter,
+  OperationProgress,
+  PageVisibility,
+  PreferredSubmitCommand,
+  RepoInfo,
+  RepoRelativePath,
+  Revset,
+  RunnableOperation,
+  SettableConfigName,
+  ShelvedChange,
+  StableInfo,
+  UncommittedChanges,
+  ValidatedRepoInfo,
+} from 'isl/src/types';
+import type {Comparison} from 'shared/Comparison';
+import type {EjecaChildProcess, EjecaError, EjecaOptions} from 'shared/ejeca';
 import type {CodeReviewProvider} from './CodeReviewProvider';
 import type {KindOfChange, PollKind} from './WatchForChanges';
 import type {TrackEventName} from './analytics/eventNames';
 import type {ConfigLevel, ResolveCommandConflictOutput} from './commands';
 import type {RepositoryContext} from './serverTypes';
-import type {
-  CommitInfo,
-  Disposable,
-  UncommittedChanges,
-  ChangedFile,
-  RepoInfo,
-  OperationCommandProgressReporter,
-  AbsolutePath,
-  RunnableOperation,
-  OperationProgress,
-  DiffId,
-  PageVisibility,
-  MergeConflicts,
-  ValidatedRepoInfo,
-  CodeReviewSystem,
-  Revset,
-  PreferredSubmitCommand,
-  FetchedUncommittedChanges,
-  FetchedCommits,
-  ShelvedChange,
-  CommitCloudSyncState,
-  Hash,
-  ConfigName,
-  Alert,
-  RepoRelativePath,
-  SettableConfigName,
-  StableInfo,
-  CwdInfo,
-} from 'isl/src/types';
-import type {Comparison} from 'shared/Comparison';
-import type {EjecaChildProcess, EjecaOptions, EjecaError} from 'shared/ejeca';
 
+import {
+  CommandRunner,
+  CommitCloudBackupStatus,
+  allConfigNames,
+  settableConfigNames,
+} from 'isl/src/types';
+import fs from 'node:fs';
+import path from 'node:path';
+import {revsetArgsForComparison} from 'shared/Comparison';
+import {LRU} from 'shared/LRU';
+import {RateLimiter} from 'shared/RateLimiter';
+import {TypedEventEmitter} from 'shared/TypedEventEmitter';
+import {ejeca} from 'shared/ejeca';
+import {exists} from 'shared/fs';
+import {removeLeadingPathSep} from 'shared/pathUtils';
+import {notEmpty, nullthrows, randomId} from 'shared/utils';
 import {Internal} from './Internal';
 import {OperationQueue} from './OperationQueue';
 import {PageFocusTracker} from './PageFocusTracker';
@@ -79,22 +95,6 @@ import {
   isEjecaError,
   serializeAsyncCall,
 } from './utils';
-import {
-  settableConfigNames,
-  allConfigNames,
-  CommitCloudBackupStatus,
-  CommandRunner,
-} from 'isl/src/types';
-import fs from 'node:fs';
-import path from 'node:path';
-import {revsetArgsForComparison} from 'shared/Comparison';
-import {LRU} from 'shared/LRU';
-import {RateLimiter} from 'shared/RateLimiter';
-import {TypedEventEmitter} from 'shared/TypedEventEmitter';
-import {ejeca} from 'shared/ejeca';
-import {exists} from 'shared/fs';
-import {removeLeadingPathSep} from 'shared/pathUtils';
-import {notEmpty, randomId, nullthrows} from 'shared/utils';
 
 /**
  * This class is responsible for providing information about the working copy

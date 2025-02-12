@@ -7,9 +7,9 @@
 
 import type {Example, TestRepo} from '../example';
 
-import {BASE_EXAMPLE} from '../example';
 import {dirname, join} from 'node:path';
 import {fileURLToPath} from 'node:url';
+import {BASE_EXAMPLE} from '../example';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 

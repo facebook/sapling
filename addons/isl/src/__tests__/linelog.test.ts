@@ -31,10 +31,10 @@ SOFTWARE.
 
 import type {LineIdx, Rev} from '../linelog';
 
-import {LineLog, executeCache} from '../linelog';
-import {describe, it, expect} from '@jest/globals';
+import {describe, expect, it} from '@jest/globals';
 import * as Immutable from 'immutable';
 import {splitLines} from 'shared/diff';
+import {LineLog, executeCache} from '../linelog';
 
 describe('LineLog', () => {
   it('can be empty', () => {

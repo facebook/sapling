@@ -5,22 +5,22 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-import type {VSCodeServerPlatform} from './vscodePlatform';
 import type {Logger} from 'isl-server/src/logger';
 import type {ServerPlatform} from 'isl-server/src/serverPlatform';
 import type {AppMode, ClientToServerMessage, ServerToClientMessage} from 'isl/src/types';
 import type {Comparison} from 'shared/Comparison';
+import type {VSCodeServerPlatform} from './vscodePlatform';
 
-import {executeVSCodeCommand} from './commands';
-import {getCLICommand, PERSISTED_STORAGE_KEY_PREFIX, shouldOpenBeside} from './config';
-import {getWebviewOptions, htmlForWebview} from './htmlForWebview';
-import {locale, t} from './i18n';
-import {extensionVersion} from './utils';
 import {onClientConnection} from 'isl-server/src';
 import {deserializeFromString, serializeToString} from 'isl/src/serialize';
 import {ComparisonType, isComparison, labelForComparison} from 'shared/Comparison';
 import {nullthrows} from 'shared/utils';
 import * as vscode from 'vscode';
+import {executeVSCodeCommand} from './commands';
+import {getCLICommand, PERSISTED_STORAGE_KEY_PREFIX, shouldOpenBeside} from './config';
+import {getWebviewOptions, htmlForWebview} from './htmlForWebview';
+import {locale, t} from './i18n';
+import {extensionVersion} from './utils';
 
 let islPanelOrView: vscode.WebviewPanel | vscode.WebviewView | undefined = undefined;
 let hasOpenedISLWebviewBeforeState = false;

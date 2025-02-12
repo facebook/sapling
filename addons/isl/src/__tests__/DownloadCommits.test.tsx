@@ -5,6 +5,9 @@
  * LICENSE file in the root directory of this source tree.
  */
 
+import {act, fireEvent, render, screen, waitFor} from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
+import * as utils from 'shared/utils';
 import App from '../App';
 import {
   closeCommitInfoSidebar,
@@ -16,9 +19,6 @@ import {
   TEST_COMMIT_HISTORY,
 } from '../testUtils';
 import {CommandRunner} from '../types';
-import {screen, act, render, fireEvent, waitFor} from '@testing-library/react';
-import userEvent from '@testing-library/user-event';
-import * as utils from 'shared/utils';
 
 describe('Download Commits', () => {
   beforeEach(() => {

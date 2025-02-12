@@ -5,9 +5,12 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-import type {FieldConfig} from './types';
 import type {ReactNode} from 'react';
+import type {FieldConfig} from './types';
 
+import {Icon} from 'isl-components/Icon';
+import {extractTokens, TokensList} from 'isl-components/Tokens';
+import {Fragment} from 'react';
 import {Copyable} from '../Copyable';
 import {T} from '../i18n';
 import {RenderMarkup} from './RenderMarkup';
@@ -15,9 +18,6 @@ import {SeeMoreContainer} from './SeeMoreContainer';
 import {CommitInfoTextArea} from './TextArea';
 import {CommitInfoTextField} from './TextField';
 import {convertFieldNameToKey, getOnClickToken, Section, SmallCapsTitle} from './utils';
-import {Icon} from 'isl-components/Icon';
-import {extractTokens, TokensList} from 'isl-components/Tokens';
-import {Fragment} from 'react';
 
 export function CommitInfoField({
   field,

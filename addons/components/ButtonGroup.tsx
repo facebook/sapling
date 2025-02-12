@@ -5,9 +5,9 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-import {colors} from './theme/tokens.stylex';
 import * as stylex from '@stylexjs/stylex';
 import React from 'react';
+import {colors} from './theme/tokens.stylex';
 
 const styles = stylex.create({
   group: {

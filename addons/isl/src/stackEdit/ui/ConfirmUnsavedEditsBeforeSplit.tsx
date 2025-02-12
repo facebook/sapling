@@ -5,10 +5,16 @@
  * LICENSE file in the root directory of this source tree.
  */
 
+import type {MutableRefObject} from 'react';
 import type {FieldsBeingEdited} from '../../CommitInfoView/types';
 import type {CommitInfo} from '../../types';
-import type {MutableRefObject} from 'react';
 
+import {Button} from 'isl-components/Button';
+import {Divider} from 'isl-components/Divider';
+import {Icon} from 'isl-components/Icon';
+import {useAtomValue} from 'jotai';
+import {useCallback} from 'react';
+import {useAutofocusRef} from 'shared/hooks';
 import {Commit} from '../../Commit';
 import {
   editedCommitMessages,
@@ -21,12 +27,6 @@ import {T, t} from '../../i18n';
 import {readAtom, writeAtom} from '../../jotaiUtils';
 import {CommitPreview} from '../../previews';
 import {useModal} from '../../useModal';
-import {Button} from 'isl-components/Button';
-import {Divider} from 'isl-components/Divider';
-import {Icon} from 'isl-components/Icon';
-import {useAtomValue} from 'jotai';
-import {useCallback} from 'react';
-import {useAutofocusRef} from 'shared/hooks';
 
 import './ConfirmUnsavedEditsBeforeSplit.css';
 

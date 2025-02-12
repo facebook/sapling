@@ -5,20 +5,20 @@
  * LICENSE file in the root directory of this source tree.
  */
 
+import {act, fireEvent, render, screen, waitFor} from '@testing-library/react';
 import App from '../App';
 import platform from '../platform';
 import {ignoreRTL} from '../testQueries';
 import {
   closeCommitInfoSidebar,
-  expectMessageSentToServer,
-  simulateCommits,
   COMMIT,
-  simulateRepoConnected,
-  simulateMessageFromServer,
-  simulateUncommittedChangedFiles,
+  expectMessageSentToServer,
   openCommitInfoSidebar,
+  simulateCommits,
+  simulateMessageFromServer,
+  simulateRepoConnected,
+  simulateUncommittedChangedFiles,
 } from '../testUtils';
-import {render, screen, fireEvent, act, waitFor} from '@testing-library/react';
 
 describe('Browse repo url', () => {
   beforeEach(() => {
