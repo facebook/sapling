@@ -212,6 +212,17 @@ impl WarmBookmarksCacheBuilder {
         Ok(())
     }
 
+    pub fn add_specific_types_warmers(
+        &mut self,
+        repo_derived_data: &ArcRepoDerivedData,
+        types: &[DerivableType],
+        phases: &ArcPhases,
+    ) -> Result<(), Error> {
+        self.add_derived_data_warmers(types, repo_derived_data)?;
+        self.add_public_phase_warmer(phases);
+        Ok(())
+    }
+
     fn add_derived_data_warmers<'a>(
         &mut self,
         types: impl IntoIterator<Item = &'a DerivableType>,

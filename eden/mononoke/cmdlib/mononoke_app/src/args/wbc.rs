@@ -54,7 +54,7 @@ impl AppExtension for WarmBookmarksCacheExtension {
                 .as_ref()
                 .map(|smc_tier| BookmarkCacheAddress::SmcTier(smc_tier.to_string()))
         };
-        if let Some(derived_data) = args.enable_wbc_with {
+        if let Some(derived_data) = args.enable_wbc_with.clone() {
             // Enable_wbc_with enables local cache by default
             if env.bookmark_cache_options.cache_kind == BookmarkCacheKind::Disabled {
                 env.bookmark_cache_options.cache_kind = BookmarkCacheKind::Local;

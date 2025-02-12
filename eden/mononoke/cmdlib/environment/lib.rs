@@ -18,6 +18,7 @@ use commit_graph_types::environment::CommitGraphOptions;
 use derived_data_remote::RemoteDerivationOptions;
 use fbinit::FacebookInit;
 use megarepo_config::MononokeMegarepoConfigsOptions;
+use mononoke_types::DerivableType;
 use observability::ObservabilityContext;
 use permission_checker::AclProvider;
 use rendezvous::RendezVousOptions;
@@ -45,16 +46,7 @@ pub enum Caching {
     Disabled,
 }
 
-#[derive(
-    Copy,
-    Clone,
-    Debug,
-    ValueEnum,
-    EnumString,
-    strum::Display,
-    PartialEq,
-    Eq
-)]
+#[derive(Clone, Debug, ValueEnum, EnumString, strum::Display, PartialEq, Eq)]
 
 /// Which derived data types should the cache wait for before
 /// exposing the bookmark move to the users.
@@ -65,6 +57,9 @@ pub enum BookmarkCacheDerivedData {
     GitOnly,
     /// Wait for all derived data types - mainly used by Mononoke SCS Server.
     AllKinds,
+    /// Wait for specific derived data types.
+    #[value(skip)]
+    SpecificTypes(Vec<DerivableType>),
     /// Don't wait for any derived data - advance bookmarks as they move.
     NoDerivation,
 }

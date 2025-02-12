@@ -1675,6 +1675,13 @@ impl RepoFactory {
                     BookmarkCacheDerivedData::AllKinds => {
                         wbc_builder.add_all_warmers(repo_derived_data, phases)?;
                     }
+                    BookmarkCacheDerivedData::SpecificTypes(ref types) => {
+                        wbc_builder.add_specific_types_warmers(
+                            repo_derived_data,
+                            types.as_slice(),
+                            phases,
+                        )?;
+                    }
                     BookmarkCacheDerivedData::NoDerivation => {}
                 }
 
