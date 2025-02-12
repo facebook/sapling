@@ -1403,6 +1403,11 @@ class HealthReportCmd(Subcmd):
     def run(self, args: argparse.Namespace) -> int:
         instance = get_eden_instance(args)
         mounts = args.mounts or []
+
+        # don't run health-report if there are no eden mounts
+        if not instance.get_mount_paths():
+            return 0
+
         out = ui.get_output()
         exit_code = 0
 

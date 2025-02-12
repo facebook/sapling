@@ -118,6 +118,7 @@ class HealthReportTest(unittest.TestCase, TemporaryDirectoryMixin):
 
         return (mock_argument_parser, args, file_path)
 
+    @patch("eden.fs.cli.config.EdenInstance.get_mount_paths")
     @patch("eden.fs.cli.util.get_chef_log_path")
     @patch("eden.fs.cli.doctor.facebook.check_x509.find_x509_path")
     @patch("eden.fs.cli.doctor.facebook.check_x509.validate_x509")
@@ -132,8 +133,14 @@ class HealthReportTest(unittest.TestCase, TemporaryDirectoryMixin):
         mock_validate_x509: MagicMock,
         mock_find_x509_path: MagicMock,
         mock_get_chef_log_path: MagicMock,
+        mock_get_mount_paths: MagicMock,
     ) -> None:
         mock_argument_parser, args, file_path = self.setup()
+        mock_get_mount_paths.return_value = [
+            "/data/users/vinigupta/configerator_test",
+            "/data/users/vinigupta/fbsource_test",
+            "/data/users/vinigupta/opsfiles_test",
+        ]
         mock_get_chef_log_path.return_value = file_path
         mock_get_running_version.return_value = latest_version
         mock_get_version_info.return_value = latest_running_version_info
@@ -145,12 +152,36 @@ class HealthReportTest(unittest.TestCase, TemporaryDirectoryMixin):
         result = test_health_report_cmd.run(args)
         self.assertIsNotNone(result)
 
+    @patch("eden.fs.cli.config.EdenInstance.get_mount_paths")
+    def test_health_report_run_when_no_mount_paths_found(
+        self,
+        mock_get_mount_paths: MagicMock,
+    ) -> None:
+        mock_argument_parser, args, file = self.setup()
+        mock_get_mount_paths.return_value = []
+
+        test_health_report_cmd = HealthReportCmd(mock_argument_parser)
+        result = test_health_report_cmd.run(args)
+        self.assertEqual(
+            HealthReportCmd.error_codes,
+            {},
+        )
+
+        self.assertEqual(result, 0)
+
+    @patch("eden.fs.cli.config.EdenInstance.get_mount_paths")
     @patch("eden.fs.cli.util.HealthStatus.is_healthy")
     def test_health_report_notify_eden_not_running(
         self,
         mock_is_healthy: MagicMock,
+        mock_get_mount_paths: MagicMock,
     ) -> None:
         mock_argument_parser, args, file_path = self.setup()
+        mock_get_mount_paths.return_value = [
+            "/data/users/vinigupta/configerator_test",
+            "/data/users/vinigupta/fbsource_test",
+            "/data/users/vinigupta/opsfiles_test",
+        ]
         mock_is_healthy.return_value = False
 
         test_health_report_cmd = HealthReportCmd(mock_argument_parser)
@@ -164,6 +195,7 @@ class HealthReportTest(unittest.TestCase, TemporaryDirectoryMixin):
 
         self.assertEqual(result, 1)
 
+    @patch("eden.fs.cli.config.EdenInstance.get_mount_paths")
     @patch("eden.fs.cli.util.get_chef_log_path")
     @patch("eden.fs.cli.doctor.facebook.check_x509.find_x509_path")
     @patch("eden.fs.cli.doctor.facebook.check_x509.validate_x509")
@@ -178,8 +210,14 @@ class HealthReportTest(unittest.TestCase, TemporaryDirectoryMixin):
         mock_validate_x509: MagicMock,
         mock_find_x509_path: MagicMock,
         mock_get_chef_log_path: MagicMock,
+        mock_get_mount_paths: MagicMock,
     ) -> None:
         mock_argument_parser, args, file_path = self.setup()
+        mock_get_mount_paths.return_value = [
+            "/data/users/vinigupta/configerator_test",
+            "/data/users/vinigupta/fbsource_test",
+            "/data/users/vinigupta/opsfiles_test",
+        ]
         mock_get_chef_log_path.return_value = file_path
         mock_get_running_version.return_value = stale_version
         mock_get_version_info.return_value = stale_running_version_info
@@ -197,6 +235,7 @@ class HealthReportTest(unittest.TestCase, TemporaryDirectoryMixin):
         )
         self.assertEqual(result, 1)
 
+    @patch("eden.fs.cli.config.EdenInstance.get_mount_paths")
     @patch("eden.fs.cli.util.get_chef_log_path")
     @patch("eden.fs.cli.doctor.facebook.check_x509.find_x509_path")
     @patch("eden.fs.cli.doctor.facebook.check_x509.validate_x509")
@@ -211,8 +250,10 @@ class HealthReportTest(unittest.TestCase, TemporaryDirectoryMixin):
         mock_validate_x509: MagicMock,
         mock_find_x509_path: MagicMock,
         mock_get_chef_log_path: MagicMock,
+        mock_get_mount_paths: MagicMock,
     ) -> None:
         mock_argument_parser, args, file_path = self.setup()
+        mock_get_mount_paths.return_value = ["/data/users/vinigupta/fbsource_test"]
         mock_get_chef_log_path.return_value = file_path
         mock_get_running_version.return_value = acceptable_version
         mock_get_version_info.return_value = acceptable_running_version_info
@@ -224,6 +265,7 @@ class HealthReportTest(unittest.TestCase, TemporaryDirectoryMixin):
         result = test_health_report_cmd.run(args)
         self.assertIsNotNone(result)
 
+    @patch("eden.fs.cli.config.EdenInstance.get_mount_paths")
     @patch("eden.fs.cli.util.is_sandcastle")
     @patch("eden.fs.cli.util.x2p_enabled")
     @patch("eden.fs.cli.util.get_chef_log_path")
@@ -242,8 +284,10 @@ class HealthReportTest(unittest.TestCase, TemporaryDirectoryMixin):
         mock_get_chef_log_path: MagicMock,
         mock_x2p_enabled: MagicMock,
         mock_is_sandcastle: MagicMock,
+        mock_get_mount_paths: MagicMock,
     ) -> None:
         mock_argument_parser, args, file_path = self.setup()
+        mock_get_mount_paths.return_value = ["/data/users/vinigupta/fbsource_test"]
         mock_get_chef_log_path.return_value = file_path
         mock_find_x509_path.return_value = ("some_cert_path",)
         mock_validate_x509.return_value = False
@@ -264,6 +308,7 @@ class HealthReportTest(unittest.TestCase, TemporaryDirectoryMixin):
 
         self.assertEqual(result, 1)
 
+    @patch("eden.fs.cli.config.EdenInstance.get_mount_paths")
     @patch("eden.fs.cli.util.is_sandcastle")
     @patch("eden.fs.cli.util.x2p_enabled")
     @patch("eden.fs.cli.util.get_chef_log_path")
@@ -278,8 +323,10 @@ class HealthReportTest(unittest.TestCase, TemporaryDirectoryMixin):
         mock_get_chef_log_path: MagicMock,
         mock_x2p_enabled: MagicMock,
         mock_is_sandcastle: MagicMock,
+        mock_get_mount_paths: MagicMock,
     ) -> None:
         mock_argument_parser, args, file_path = self.setup()
+        mock_get_mount_paths.return_value = ["/data/users/vinigupta/fbsource_test"]
         mock_get_chef_log_path.return_value = file_path
         mock_get_running_version.return_value = acceptable_version
         mock_get_version_info.return_value = acceptable_running_version_info
