@@ -125,6 +125,7 @@ def _tail(
 
 
 defaulttimeout = 60
+extralongtimeout = 600
 
 rageopts: List[Tuple[str, str, Optional[int], str]] = [
     ("p", "preview", None, _("print diagnostic information without uploading paste")),
@@ -450,7 +451,7 @@ def _makerage(ui, repo, **opts) -> str:
         ("debugstatus", lambda: hgcmd("debugstatus")),
         ("debugtree", lambda: hgcmd("debugtree")),
         ("hg config (all)", lambda: "\n".join(allconfig(ui))),
-        ("eden rage", _edenfs_rage),
+        ("eden rage", _edenfs_rage, extralongtimeout),
         (
             "environment variables",
             lambda: "\n".join(
@@ -527,10 +528,16 @@ def _makerage(ui, repo, **opts) -> str:
     for name, gen in basic:
         msg.append("%s: %s\n\n" % (name, _failsafe(gen)))
     profile.append((time.time() - allstart, "basic info", None))
-    for name, gen in detailed:
+    for item in detailed:
+        name, gen, *args = item
+        if args:
+            item_timeout = args[0]
+        else:
+            item_timeout = timeout
+
         start = time.time()
         with progress.spinner(ui, name):
-            value = _failsafe(gen)
+            value = _failsafe(gen, timeout=item_timeout)
         finish = time.time()
         msg.append(
             "%s: (%.2f s)\n---------------------------\n%s\n\n"
