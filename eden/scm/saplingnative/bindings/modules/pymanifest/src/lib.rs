@@ -93,7 +93,7 @@ py_class!(pub class treemanifest |py| {
         treemanifest::create_instance(py, Arc::new(RwLock::new(underlying)), RefCell::new(HashSet::new()))
     }
 
-    // Returns a new instance of treemanifest that contains the same data as the base.
+    /// Returns a new instance of treemanifest that contains the same data as the base.
     def copy(&self) -> PyResult<treemanifest> {
         treemanifest::create_instance(
             py,
@@ -102,8 +102,8 @@ py_class!(pub class treemanifest |py| {
         )
     }
 
-    // Returns (node, flag) for a given `path` in the manifest.
-    // When the `path` does not exist, it return a KeyError.
+    /// Returns (node, flag) for a given `path` in the manifest.
+    /// When the `path` does not exist, it return a KeyError.
     def find(&self, path: PyPathBuf) -> PyResult<(PyBytes, String)> {
         // Some code... probably sparse profile related is asking find to grab
         // random invalid paths.
@@ -157,7 +157,7 @@ py_class!(pub class treemanifest |py| {
         Ok(result)
     }
 
-    // Count the number of files that match the predicate passed to the function.
+    /// Count the number of files that match the predicate passed to the function.
     def count(&self, pymatcher: PyObject) -> PyResult<u64> {
         // PERF: the `tree.files()` can be optimized to avoid file path construction.
         let tree = self.underlying(py);
@@ -169,7 +169,7 @@ py_class!(pub class treemanifest |py| {
         Ok(count)
     }
 
-    // Returns a list<path> for all files that match the predicate passed to the function.
+    /// Returns a list<path> for all files that match the predicate passed to the function.
     def walk(&self, pymatcher: PyObject) -> PyResult<Vec<PyPathBuf>> {
         let mut result = Vec::new();
         let tree = self.underlying(py);
