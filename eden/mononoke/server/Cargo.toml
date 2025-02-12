@@ -23,7 +23,7 @@ metaconfig_types = { version = "0.1.0", path = "../metaconfig/types" }
 mononoke_api = { version = "0.1.0", path = "../mononoke_api" }
 mononoke_app = { version = "0.1.0", path = "../cmdlib/mononoke_app" }
 mononoke_macros = { version = "0.1.0", path = "../mononoke_macros" }
-openssl = "0.10.63"
+openssl = "0.10.70"
 phases = { version = "0.1.0", path = "../phases" }
 pushrebase_client = { version = "0.1.0", path = "../pushrebase/client" }
 repo_identity = { version = "0.1.0", path = "../repo_attributes/repo_identity" }

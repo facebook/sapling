@@ -41,7 +41,7 @@ manifest = { version = "0.1.0", path = "../../manifest" }
 mononoke_api = { version = "0.1.0", path = "../../mononoke_api" }
 mononoke_macros = { version = "0.1.0", path = "../../mononoke_macros" }
 mononoke_types = { version = "0.1.0", path = "../../mononoke_types" }
-openssl = "0.10.63"
+openssl = "0.10.70"
 rand = { version = "0.8", features = ["small_rng"] }
 repo_blobstore = { version = "0.1.0", path = "../../blobrepo/repo_blobstore" }
 repo_derived_data = { version = "0.1.0", path = "../../repo_attributes/repo_derived_data" }

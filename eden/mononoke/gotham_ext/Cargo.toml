@@ -31,7 +31,7 @@ metadata = { version = "0.1.0", path = "../server/metadata" }
 mime = "0.3.14"
 mononoke_configs = { version = "0.1.0", path = "../mononoke_configs" }
 mononoke_macros = { version = "0.1.0", path = "../mononoke_macros" }
-openssl = "0.10.63"
+openssl = "0.10.70"
 percent-encoding = "2.1"
 permission_checker = { version = "0.1.0", path = "../permission_checker" }
 pin-project = "0.4.30"
