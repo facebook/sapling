@@ -41,7 +41,7 @@ use tokio::time;
 /// and an error is returned.
 pub async fn run_until_terminated<Server, QuiesceFn, ShutdownFut>(
     server: Server,
-    logger: Logger,
+    logger: impl Into<Logger>,
     quiesce: QuiesceFn,
     shutdown_grace_period: Duration,
     shutdown: ShutdownFut,
@@ -53,6 +53,8 @@ where
     QuiesceFn: FnOnce(),
     ShutdownFut: Future<Output = ()>,
 {
+    let logger = logger.into();
+
     // We want to prevent Folly's signal handlers overriding our
     // intended action with a termination signal. Mononoke server,
     // in particular, depends on this - otherwise our attempts to

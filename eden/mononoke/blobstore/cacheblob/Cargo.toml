@@ -28,7 +28,7 @@ mononoke_macros = { version = "0.1.0", path = "../../mononoke_macros" }
 mononoke_types = { version = "0.1.0", path = "../../mononoke_types" }
 prefixblob = { version = "0.1.0", path = "../prefixblob" }
 redactedblobstore = { version = "0.1.0", path = "../redactedblobstore" }
-slog = { version = "2.7", features = ["max_level_trace", "nested-values"] }
+slog = { package = "tracing_slog_compat", version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 stats = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 tokio = { version = "1.41.0", features = ["full", "test-util", "tracing"] }
 

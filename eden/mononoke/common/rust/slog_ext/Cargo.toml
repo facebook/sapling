@@ -9,5 +9,5 @@ license = "GPLv2+"
 
 [dependencies]
 anyhow = "1.0.95"
-slog = { version = "2.7", features = ["max_level_trace", "nested-values"] }
+slog = { package = "tracing_slog_compat", version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 slog-term = "2.8"

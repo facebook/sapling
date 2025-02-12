@@ -243,8 +243,8 @@ fn subcommand_round_trip(
                                 warn!(logger, "INVALID");
                                 info!(
                                     logger, "manifest hash differs";
-                                    "expected manifest ID" => difference.expected_mf_id,
-                                    "roundtrip ID" => difference.roundtrip_mf_id,
+                                    "expected manifest ID" => difference.expected_mf_id.to_string(),
+                                    "roundtrip ID" => difference.roundtrip_mf_id.to_string(),
                                 );
                                 invalid.fetch_add(1, Ordering::Relaxed);
                                 if print_changes {

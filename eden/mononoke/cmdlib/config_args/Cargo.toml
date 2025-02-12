@@ -13,5 +13,5 @@ cached_config = { version = "0.1.0", git = "https://github.com/facebookexperimen
 clap = { version = "4.5.20", features = ["derive", "env", "string", "unicode", "wrap_help"] }
 fbinit = { version = "0.2.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 mononoke_configs = { version = "0.1.0", path = "../../mononoke_configs" }
-slog = { version = "2.7", features = ["max_level_trace", "nested-values"] }
+slog = { package = "tracing_slog_compat", version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 tokio = { version = "1.41.0", features = ["full", "test-util", "tracing"] }

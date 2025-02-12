@@ -14,7 +14,7 @@ observability_config = { version = "0.1.0", path = "../../../configerator/struct
 regex = "1.9.2"
 scuba = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 serde = { version = "1.0.185", features = ["derive", "rc"] }
-slog = { version = "2.7", features = ["max_level_trace", "nested-values"] }
+slog = { package = "tracing_slog_compat", version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 
 [dev-dependencies]
 mononoke_macros = { version = "0.1.0", path = "../mononoke_macros" }

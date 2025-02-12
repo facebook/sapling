@@ -39,9 +39,9 @@ impl CoreContext {
         }
     }
 
-    pub fn new_with_logger(fb: FacebookInit, logger: Logger) -> Self {
+    pub fn new_with_logger(fb: FacebookInit, logger: impl Into<Logger>) -> Self {
         let session = SessionContainer::new_with_defaults(fb);
-        session.new_context(logger, MononokeScubaSampleBuilder::with_discard())
+        session.new_context(logger.into(), MononokeScubaSampleBuilder::with_discard())
     }
 
     pub fn new_with_logger_and_client_info(
@@ -81,7 +81,7 @@ impl CoreContext {
     }
 
     pub fn test_mock_session(session: SessionContainer) -> Self {
-        let logger = logger_that_can_work_in_tests().unwrap();
+        let logger = logger_that_can_work_in_tests().unwrap().into();
         session.new_context(logger, MononokeScubaSampleBuilder::with_discard())
     }
 

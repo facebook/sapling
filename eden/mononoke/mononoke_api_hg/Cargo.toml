@@ -41,7 +41,7 @@ repo_update_logger = { version = "0.1.0", path = "../features/repo_update_logger
 sapling-dag-types = { version = "0.1.0", path = "../../scm/lib/dag/dag-types" }
 sapling-edenapi_types = { version = "0.1.0", path = "../../scm/lib/edenapi/types" }
 sapling-revisionstore_types = { version = "0.1.0", path = "../../scm/lib/revisionstore/types" }
-slog = { version = "2.7", features = ["max_level_trace", "nested-values"] }
+slog = { package = "tracing_slog_compat", version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 unbundle = { version = "0.1.0", path = "../repo_client/unbundle" }
 
 [dev-dependencies]

@@ -79,7 +79,6 @@ use sha1::Digest;
 use sha1::Sha1;
 use slog::debug;
 use slog::info;
-use slog::o;
 
 use crate::errors::ErrorKind;
 
@@ -334,7 +333,7 @@ fn warn_expensive_getbundle(ctx: &CoreContext) {
         ctx.logger(),
         "your repository is out of date and pulling new commits might take a long time. \
         Please consider recloning your repository since it might be much faster."
-        ; o!("remote" => "true")
+        ; "remote" => "true"
     );
 }
 

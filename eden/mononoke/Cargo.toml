@@ -74,7 +74,7 @@ retry = { version = "0.1.0", path = "common/retry" }
 scuba_ext = { version = "0.1.0", path = "common/scuba_ext" }
 serde = { version = "1.0.185", features = ["derive", "rc"] }
 serde_derive = "1.0.185"
-slog = { version = "2.7", features = ["max_level_trace", "nested-values"] }
+slog = { package = "tracing_slog_compat", version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 sqlblob = { version = "0.1.0", path = "blobstore/sqlblob" }
 tokio = { version = "1.41.0", features = ["full", "test-util", "tracing"] }
 toml = "0.8.4"

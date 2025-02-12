@@ -41,7 +41,7 @@ use test_utils::GitExportTestRepoOptions;
 #[mononoke::fbinit_test]
 async fn test_partial_commit_graph_for_single_export_path(fb: FacebookInit) -> Result<()> {
     let ctx = CoreContext::test_mock(fb);
-    let logger = logger_that_can_work_in_tests().unwrap();
+    let logger = logger_that_can_work_in_tests().unwrap().into();
 
     let test_data = build_test_repo(fb, &ctx, GitExportTestRepoOptions::default()).await?;
     let source_repo_ctx = test_data.repo_ctx;
@@ -97,7 +97,7 @@ async fn test_partial_commit_graph_for_single_export_path(fb: FacebookInit) -> R
 #[mononoke::fbinit_test]
 async fn test_directories_with_merge_commits_fail_hard(fb: FacebookInit) -> Result<()> {
     let ctx = CoreContext::test_mock(fb);
-    let logger = logger_that_can_work_in_tests().unwrap();
+    let logger = logger_that_can_work_in_tests().unwrap().into();
 
     let test_repo_opts = GitExportTestRepoOptions {
         add_branch_commit: true,
@@ -146,7 +146,7 @@ async fn test_directories_with_merge_commits_fail_hard(fb: FacebookInit) -> Resu
 #[mononoke::fbinit_test]
 async fn test_partial_commit_graph_for_multiple_export_paths(fb: FacebookInit) -> Result<()> {
     let ctx = CoreContext::test_mock(fb);
-    let logger = logger_that_can_work_in_tests().unwrap();
+    let logger = logger_that_can_work_in_tests().unwrap().into();
 
     let test_repo_opts = GitExportTestRepoOptions {
         add_branch_commit: false,
@@ -217,7 +217,7 @@ async fn test_partial_commit_graph_for_multiple_export_paths(fb: FacebookInit) -
 #[mononoke::fbinit_test]
 async fn test_oldest_commit_ts_option(fb: FacebookInit) -> Result<()> {
     let ctx = CoreContext::test_mock(fb);
-    let logger = logger_that_can_work_in_tests().unwrap();
+    let logger = logger_that_can_work_in_tests().unwrap().into();
 
     let test_repo_opts = GitExportTestRepoOptions {
         add_branch_commit: false,
@@ -308,7 +308,7 @@ async fn test_renamed_export_paths_are_followed<R: MononokeRepo>(
     expected_relevant_changesets: Vec<&str>,
     expected_parent_map: HashMap<&str, Vec<&str>>,
 ) -> Result<()> {
-    let logger = logger_that_can_work_in_tests().unwrap();
+    let logger = logger_that_can_work_in_tests().unwrap().into();
 
     info!(
         logger,

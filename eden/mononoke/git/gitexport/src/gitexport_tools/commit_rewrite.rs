@@ -61,7 +61,6 @@ use slog::debug;
 use slog::info;
 use slog::trace;
 use slog::warn;
-use slog::Drain;
 use slog::Logger;
 use sql::rusqlite::Connection as SqliteConnection;
 use test_repo_factory::TestRepoFactory;

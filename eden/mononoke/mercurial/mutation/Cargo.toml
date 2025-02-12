@@ -33,7 +33,7 @@ mononoke_types = { version = "0.1.0", path = "../../mononoke_types" }
 sapling-edenapi_types = { version = "0.1.0", path = "../../../scm/lib/edenapi/types" }
 sapling-types = { version = "0.1.0", path = "../../../scm/lib/types" }
 serde_json = { version = "1.0.132", features = ["float_roundtrip", "unbounded_depth"] }
-slog = { version = "2.7", features = ["max_level_trace", "nested-values"] }
+slog = { package = "tracing_slog_compat", version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 sql = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 sql_construct = { version = "0.1.0", path = "../../common/sql_construct" }
 sql_ext = { version = "0.1.0", path = "../../common/rust/sql_ext" }

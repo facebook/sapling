@@ -18,7 +18,6 @@ use slog::error;
 use slog::info;
 use slog::trace;
 use slog::warn;
-use slog::Drain;
 
 const SCUBA_TABLE: &str = "mononoke_x_repo_mapping";
 

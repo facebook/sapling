@@ -56,7 +56,7 @@ repo_factory = { version = "0.1.0", path = "../../repo_factory" }
 scuba_ext = { version = "0.1.0", path = "../../common/scuba_ext" }
 serde = { version = "1.0.185", features = ["derive", "rc"] }
 serde_json = { version = "1.0.132", features = ["float_roundtrip", "unbounded_depth"] }
-slog = { version = "2.7", features = ["max_level_trace", "nested-values"] }
+slog = { package = "tracing_slog_compat", version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 sql = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 test_repo_factory = { version = "0.1.0", path = "../../repo_factory/test_repo_factory" }
 tokio = { version = "1.41.0", features = ["full", "test-util", "tracing"] }

@@ -114,7 +114,7 @@ serde = { version = "1.0.185", features = ["derive", "rc"] }
 serde_json = { version = "1.0.132", features = ["float_roundtrip", "unbounded_depth"] }
 skeleton_manifest = { version = "0.1.0", path = "../../derived_data/skeleton_manifest" }
 skeleton_manifest_v2 = { version = "0.1.0", path = "../../derived_data/skeleton_manifest_v2" }
-slog = { version = "2.7", features = ["max_level_trace", "nested-values"] }
+slog = { package = "tracing_slog_compat", version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 sorted_vector_map = { version = "0.2.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 source_control = { version = "0.1.0", path = "../../scs/if" }
 sql_commit_graph_storage = { version = "0.1.0", path = "../../repo_attributes/commit_graph/sql_commit_graph_storage" }
