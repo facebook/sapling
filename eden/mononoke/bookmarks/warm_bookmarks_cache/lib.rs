@@ -58,7 +58,6 @@ use futures_stats::TimedFutureExt;
 use futures_watchdog::WatchdogExt;
 use git_types::MappedGitCommitId;
 use git_types::RootGitDeltaManifestV2Id;
-use git_types::TreeHandle;
 use itertools::Itertools;
 #[cfg(fbcode_build)]
 use lazy_static::lazy_static;
@@ -205,7 +204,6 @@ impl WarmBookmarksCacheBuilder {
         self.add_derived_data_warmers(
             &[
                 MappedGitCommitId::VARIANT,
-                TreeHandle::VARIANT,
                 RootGitDeltaManifestV2Id::VARIANT,
             ],
             repo_derived_data,
@@ -294,10 +292,6 @@ impl WarmBookmarksCacheBuilder {
                 &self.ctx,
                 repo_derived_data.clone(),
             )),
-            DerivableType::GitTrees => Some(create_derived_data_warmer::<TreeHandle>(
-                &self.ctx,
-                repo_derived_data.clone(),
-            )),
             DerivableType::GitDeltaManifestsV2 => Some(create_derived_data_warmer::<
                 RootGitDeltaManifestV2Id,
             >(
@@ -313,6 +307,7 @@ impl WarmBookmarksCacheBuilder {
             )),
             DerivableType::TestManifests => None,
             DerivableType::TestShardedManifests => None,
+            DerivableType::GitTrees => None,
         }
     }
 
