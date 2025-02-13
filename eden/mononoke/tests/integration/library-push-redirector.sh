@@ -627,6 +627,7 @@ function backsync_large_to_small() {
     "${COMMON_ARGS[@]}" --debug --source-repo-id "$REPOIDLARGE" \
     --mononoke-config-path "$TESTTMP/mononoke-config" \
     --scribe-logging-directory "$TESTTMP/scribe_logs" \
+    --scuba-log-file "$TESTTMP/scuba_backsyncer.json" \
     --target-repo-id "$REPOIDSMALL" \
     backsync-all
 }

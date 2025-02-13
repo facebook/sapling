@@ -17,10 +17,10 @@ async-trait = "0.1.71"
 backsyncer = { version = "0.1.0", path = ".." }
 blobrepo_hg = { version = "0.1.0", path = "../../../blobrepo/blobrepo_hg" }
 bookmarks = { version = "0.1.0", path = "../../../bookmarks" }
-clap = "2.34.0"
+clap = { version = "4.5.20", features = ["derive", "env", "string", "unicode", "wrap_help"] }
 cloned = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
-cmdlib = { version = "0.1.0", path = "../../../cmdlib" }
-cmdlib_x_repo = { version = "0.1.0", path = "../../../cmdlib/x_repo" }
+cmdlib_cross_repo = { version = "0.1.0", path = "../../../cmdlib/cross_repo" }
+cmdlib_logging = { version = "0.1.0", path = "../../../cmdlib/log" }
 context = { version = "0.1.0", path = "../../../server/context" }
 cross_repo_sync = { version = "0.1.0", path = "../../cross_repo_sync" }
 executor_lib = { version = "0.1.0", path = "../../../cmdlib/sharding" }
@@ -30,10 +30,10 @@ live_commit_sync_config = { version = "0.1.0", path = "../../live_commit_sync_co
 mercurial_derivation = { version = "0.1.0", path = "../../../derived_data/mercurial_derivation" }
 mercurial_types = { version = "0.1.0", path = "../../../mercurial/types" }
 metadata = { version = "0.1.0", path = "../../../server/metadata" }
+mononoke_app = { version = "0.1.0", path = "../../../cmdlib/mononoke_app" }
 mononoke_types = { version = "0.1.0", path = "../../../mononoke_types" }
 repo_identity = { version = "0.1.0", path = "../../../repo_attributes/repo_identity" }
 sapling-clientinfo = { version = "0.1.0", path = "../../../../scm/lib/clientinfo" }
-scuba_ext = { version = "0.1.0", path = "../../../common/scuba_ext" }
 sharding_ext = { version = "0.1.0", path = "../../../cmdlib/sharding_ext" }
 slog = { package = "tracing_slog_compat", version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 stats = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }

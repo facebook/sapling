@@ -5,88 +5,94 @@
  * GNU General Public License version 2.
  */
 
+mod cli;
 mod run;
 mod sharding;
 
 use std::sync::atomic::AtomicBool;
 use std::sync::Arc;
-use std::sync::OnceLock;
 
+use anyhow::Context;
 use anyhow::Error;
-use cmdlib::args;
-use cmdlib::helpers;
-use executor_lib::ShardedProcessExecutor;
+use anyhow::Result;
+use clientinfo::ClientEntryPoint;
+use clientinfo::ClientInfo;
+use context::CoreContext;
+use context::SessionContainer;
+use cross_repo_sync::Repo as CrossRepo;
+use executor_lib::RepoShardedProcessExecutor;
 use fbinit::FacebookInit;
+use metadata::Metadata;
+use mononoke_app::monitoring::AliveService;
+use mononoke_app::monitoring::MonitoringAppExtension;
+use mononoke_app::MononokeApp;
+use mononoke_app::MononokeAppBuilder;
+use slog::info;
 
-use crate::run::run_backsyncer;
+use crate::cli::BacksyncerArgs;
+use crate::cli::SCUBA_TABLE;
 use crate::sharding::BacksyncProcess;
+use crate::sharding::BacksyncProcessExecutor;
 use crate::sharding::APP_NAME;
-use crate::sharding::DEFAULT_SHARDED_SCOPE_NAME;
 use crate::sharding::SM_CLEANUP_TIMEOUT_SECS;
+
+async fn async_main(ctx: CoreContext, app: MononokeApp) -> Result<(), Error> {
+    let args: BacksyncerArgs = app.args()?;
+    let ctx = Arc::new(ctx);
+    let app = Arc::new(app);
+    let repo_args = args.repo_args.clone();
+    let runtime = app.runtime().clone();
+
+    if let Some(mut executor) = args.sharded_executor_args.clone().build_executor(
+        app.fb,
+        runtime.clone(),
+        ctx.logger(),
+        || Arc::new(BacksyncProcess::new(ctx.clone(), app.clone())),
+        true, // enable shard (repo) level healing
+        SM_CLEANUP_TIMEOUT_SECS,
+    )? {
+        executor
+            .block_and_execute(ctx.logger(), Arc::new(AtomicBool::new(false)))
+            .await
+    } else {
+        let repo_args = repo_args
+            .into_source_and_target_args()
+            .context("Source and Target repos must be provided when running in non-sharded mode")?;
+        let process_executor = BacksyncProcessExecutor::new(ctx.clone(), app, repo_args).await?;
+        process_executor.execute().await
+    }
+}
 
 #[fbinit::main]
 fn main(fb: FacebookInit) -> Result<(), Error> {
-    let process = BacksyncProcess::new(fb)?;
-    match process.matches.value_of(cmdlib::args::SHARDED_SERVICE_NAME) {
-        Some(service_name) => {
-            // Don't fail if the scope name is missing, but use global. This allows us to be
-            // backward compatible with the old tw setup.
-            // TODO (Pierre): Once the tw jobs have been updated, we can be less lenient here.
-            let scope_name = process
-                .matches
-                .value_of(cmdlib::args::SHARDED_SCOPE_NAME)
-                .unwrap_or(DEFAULT_SHARDED_SCOPE_NAME);
-            // The service name needs to be 'static to satisfy SM contract
-            static SM_SERVICE_NAME: OnceLock<String> = OnceLock::new();
-            static SM_SERVICE_SCOPE_NAME: OnceLock<String> = OnceLock::new();
-            let logger = process.matches.logger().clone();
-            let matches = Arc::clone(&process.matches);
-            let mut executor = ShardedProcessExecutor::new(
-                process.fb,
-                process.matches.runtime().clone(),
-                &logger,
-                SM_SERVICE_NAME.get_or_init(|| service_name.to_string()),
-                SM_SERVICE_SCOPE_NAME.get_or_init(|| scope_name.to_string()),
-                SM_CLEANUP_TIMEOUT_SECS,
-                Arc::new(process),
-                true, // enable shard (repo) level healing
-            )?;
-            helpers::block_execute(
-                executor.block_and_execute(&logger, Arc::new(AtomicBool::new(false))),
-                fb,
-                &std::env::var("TW_JOB_NAME").unwrap_or_else(|_| APP_NAME.to_string()),
-                matches.logger(),
-                &matches,
-                cmdlib::monitoring::AliveService,
-            )
-        }
-        None => {
-            let logger = process.matches.logger().clone();
-            let matches = process.matches.clone();
-            let config_store = matches.config_store();
-            let source_repo_id =
-                args::not_shardmanager_compatible::get_source_repo_id(config_store, &matches)?;
-            let target_repo_id =
-                args::not_shardmanager_compatible::get_target_repo_id(config_store, &matches)?;
-            let (source_repo_name, _) =
-                args::get_config_by_repoid(config_store, &matches, source_repo_id)?;
-            let (target_repo_name, _) =
-                args::get_config_by_repoid(config_store, &matches, target_repo_id)?;
-            let fut = run_backsyncer(
-                fb,
-                matches.clone(),
-                source_repo_name,
-                target_repo_name,
-                Arc::new(AtomicBool::new(false)),
-            );
-            helpers::block_execute(
-                fut,
-                fb,
-                APP_NAME,
-                &logger,
-                &matches,
-                cmdlib::monitoring::AliveService,
-            )
-        }
-    }
+    let app: MononokeApp = MononokeAppBuilder::new(fb)
+        .with_app_extension(MonitoringAppExtension {})
+        .with_default_scuba_dataset(SCUBA_TABLE)
+        .build::<BacksyncerArgs>()?;
+    let args: BacksyncerArgs = app.args()?;
+
+    let mut metadata = Metadata::default();
+    metadata.add_client_info(ClientInfo::default_with_entry_point(
+        ClientEntryPoint::MegarepoBacksyncer,
+    ));
+
+    let scribe = args.scribe_logging_args.get_scribe(fb)?;
+
+    let mut scuba = app.environment().scuba_sample_builder.clone();
+    scuba.add_metadata(&metadata);
+    scuba.add_common_server_data();
+
+    let session_container = SessionContainer::builder(fb)
+        .metadata(Arc::new(metadata))
+        .build();
+
+    let ctx = session_container.new_context_with_scribe(app.logger().clone(), scuba, scribe);
+
+    info!(
+        ctx.logger(),
+        "Starting session with id {}",
+        ctx.metadata().session_id(),
+    );
+
+    app.run_with_monitoring_and_logging(|app| async_main(ctx.clone(), app), APP_NAME, AliveService)
 }
