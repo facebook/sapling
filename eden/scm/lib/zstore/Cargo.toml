@@ -13,7 +13,7 @@ license = "MIT"
 name = "zstore"
 
 [dependencies]
-lazy_static = "1.4"
+lazy_static = "1.5"
 lru-cache = "0.1.2"
 parking_lot = { version = "0.12.1", features = ["send_guard"] }
 sapling-indexedlog = { version = "0.1.0", path = "../indexedlog" }
@@ -27,4 +27,4 @@ tracing = { version = "0.1.41", features = ["attributes", "valuable"] }
 
 [dev-dependencies]
 quickcheck = "1.0"
-tempfile = "3.8"
+tempfile = "3.15"

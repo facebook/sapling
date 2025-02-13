@@ -20,7 +20,7 @@ justknobs = { version = "0.1.0", git = "https://github.com/facebookexperimental/
 maplit = "1.0"
 mononoke_types = { version = "0.1.0", path = "../../../mononoke_types" }
 sapling-drawdag = { version = "0.1.0", path = "../../../../scm/lib/drawdag" }
-smallvec = { version = "1.6.1", features = ["serde", "specialization", "union"] }
+smallvec = { version = "1.13.2", features = ["serde", "specialization", "union"] }
 vec1 = { version = "1", features = ["serde"] }
 
 [dev-dependencies]

@@ -15,23 +15,23 @@ name = "streampager"
 
 [dependencies]
 bit-set = "0.5"
-dirs = "2.0"
+dirs = "6.0"
 enum_dispatch = "0.3.13"
 indexmap = "2.2.6"
-lazy_static = "1.4"
-lru = "0.12.3"
+lazy_static = "1.5"
+lru = { version = "=0.12.4", default-features = false }
 memmap2 = "0.5.10"
 notify = { version = "5", optional = true }
-regex = "1.9.2"
+regex = "1.11.1"
 scopeguard = "1.2.0"
 serde = { version = "1.0.185", features = ["derive"] }
-smallvec = { version = "1.6.1", default-features = false }
-tempfile = "3.8"
+smallvec = { version = "1.13.2", default-features = false }
+tempfile = "3.15"
 terminfo = "0.8"
 termwiz = "0.22"
 thiserror = "2"
-toml = "0.8.4"
-unicode-segmentation = "1.6.0"
+toml = "0.8.19"
+unicode-segmentation = "1.12.0"
 unicode-width = "=0.1.12"
 vec_map = "0.8"
 

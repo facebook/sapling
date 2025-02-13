@@ -39,7 +39,7 @@ sapling-atomicfile = { version = "0.1.0", path = "../atomicfile" }
 sapling-configmodel = { version = "0.1.0", path = "../config/model", optional = true }
 sapling-minibytes = { version = "0.1.0", path = "../minibytes" }
 sapling-vlqencoding = { version = "0.1.0", path = "../vlqencoding" }
-tempfile = "3.8"
+tempfile = "3.15"
 tracing = { version = "0.1.41", features = ["attributes", "valuable"] }
 twox-hash = "1.6.1"
 
@@ -54,14 +54,14 @@ hex = "0.4.3"
 libc = "0.2.139"
 
 [target.'cfg(target_os = "linux")'.dev-dependencies]
-tempfile = "3.8"
+tempfile = "3.15"
 
 [target.'cfg(target_os = "macos")'.dependencies]
 hex = "0.4.3"
 libc = "0.2.139"
 
 [target.'cfg(target_os = "macos")'.dev-dependencies]
-tempfile = "3.8"
+tempfile = "3.15"
 
 [target.'cfg(target_os = "windows")'.dependencies]
 winapi = { version = "0.3", features = ["everything", "std"] }

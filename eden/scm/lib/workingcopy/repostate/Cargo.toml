@@ -23,4 +23,4 @@ serde = { version = "1.0.185", features = ["derive", "rc"] }
 
 [dev-dependencies]
 sapling-repolock = { version = "0.1.0", path = "../../repolock" }
-tempfile = "3.8"
+tempfile = "3.15"

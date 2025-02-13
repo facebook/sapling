@@ -17,7 +17,7 @@ anyhow = "1.0.95"
 futures = { version = "0.3.30", features = ["async-await", "compat"], optional = true }
 globset = { version = "0.4.13", features = ["serde1"] }
 once_cell = "1.12"
-regex = "1.9.2"
+regex = "1.11.1"
 sapling-pathmatcher = { version = "0.1.0", path = "../pathmatcher" }
 sapling-rewrite-macros = { version = "0.1.0", path = "../util/rewrite-macros" }
 sapling-types = { version = "0.1.0", path = "../types" }

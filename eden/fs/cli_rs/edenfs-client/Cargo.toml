@@ -11,7 +11,7 @@ license = "GPLv2+"
 anyhow = "1.0.95"
 async-recursion = "1.1.1"
 byteorder = "1.3"
-dirs = "2.0"
+dirs = "6.0"
 dunce = "1.0.2"
 edenfs-config = { version = "0.1.0", path = "../edenfs-config" }
 edenfs-error = { version = "0.1.0", path = "../edenfs-error" }
@@ -22,7 +22,7 @@ futures = { version = "0.3.30", features = ["async-await", "compat"] }
 hex = "0.4.3"
 hg_util = { package = "sapling-util", version = "0.1.0", path = "../../../scm/lib/util" }
 pathdiff = "0.2"
-regex = "1.9.2"
+regex = "1.11.1"
 sapling-atomicfile = { version = "0.1.0", path = "../../../scm/lib/atomicfile" }
 sapling-thrift-types = { version = "0.1.0", path = "../../../scm/lib/thrift-types" }
 sapling-util = { version = "0.1.0", path = "../../../scm/lib/util" }
@@ -36,7 +36,7 @@ thrift_streaming = { version = "0.1.0", path = "../../service/thrift_streaming" 
 thrift_streaming_clients = { version = "0.1.0", path = "../../service/thrift_streaming/clients" }
 tokio = { version = "1.41.0", features = ["full", "test-util", "tracing"] }
 tokio-uds-compat = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
-toml = "0.8.4"
+toml = "0.8.19"
 tracing = { version = "0.1.41", features = ["attributes", "valuable"] }
 uuid = { version = "1.2", features = ["serde", "v4", "v5", "v6", "v7", "v8"] }
 
@@ -44,7 +44,7 @@ uuid = { version = "1.2", features = ["serde", "v4", "v5", "v6", "v7", "v8"] }
 fbinit-tokio = { version = "0.1.2", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 rand = { version = "0.8", features = ["small_rng"] }
 serde_test = "1.0.167"
-tempfile = "3.8"
+tempfile = "3.15"
 
 [target.'cfg(target_os = "macos")'.dependencies]
 psutil = "3.2.2"

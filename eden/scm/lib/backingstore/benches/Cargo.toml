@@ -13,7 +13,7 @@ sapling-minibench = { version = "0.1.0", path = "../../minibench" }
 sapling-procinfo = { version = "0.1.0", path = "../../procinfo" }
 sapling-repo = { version = "0.1.0", path = "../../repo" }
 sapling-types = { version = "0.1.0", path = "../../types" }
-tempfile = "3.8"
+tempfile = "3.15"
 
 [features]
 fb = ["sapling-configloader/fb"]

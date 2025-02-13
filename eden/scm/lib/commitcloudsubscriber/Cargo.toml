@@ -29,11 +29,11 @@ anyhow = "1.0.95"
 base64 = "0.21"
 filetime = "0.2.9"
 hostcaps = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
-lazy_static = "1.4"
+lazy_static = "1.5"
 log = { version = "0.4.22", features = ["kv_unstable"] }
 mime = "0.3.14"
 parking_lot = { version = "0.12.1", features = ["send_guard"] }
-regex = "1.9.2"
+regex = "1.11.1"
 reqwest = { version = "0.11.18", features = ["blocking", "cookies", "gzip", "json", "multipart", "native-tls", "rustls-tls", "rustls-tls-native-roots", "socks", "stream"] }
 sapling-configset = { version = "0.1.0", path = "../config/set" }
 sapling-identity = { version = "0.1.0", path = "../identity" }
@@ -43,4 +43,4 @@ thiserror = "2"
 tokio = { version = "1.41.0", features = ["full", "test-util", "tracing"] }
 
 [dev-dependencies]
-tempfile = "3.8"
+tempfile = "3.15"

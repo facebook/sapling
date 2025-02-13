@@ -25,4 +25,4 @@ tracing = { version = "0.1.41", features = ["attributes", "valuable"] }
 
 [dev-dependencies]
 anyhow = "1.0.95"
-tempfile = "3.8"
+tempfile = "3.15"

@@ -56,7 +56,7 @@ metaconfig_types = { version = "0.1.0", path = "../metaconfig/types" }
 mononoke_macros = { version = "0.1.0", path = "../mononoke_macros" }
 mononoke_types = { version = "0.1.0", path = "../mononoke_types" }
 mutable_counters = { version = "0.1.0", path = "../mutable_counters" }
-regex = "1.9.2"
+regex = "1.11.1"
 repo_blobstore = { version = "0.1.0", path = "../blobrepo/repo_blobstore" }
 repo_derived_data = { version = "0.1.0", path = "../repo_attributes/repo_derived_data" }
 repo_identity = { version = "0.1.0", path = "../repo_attributes/repo_identity" }
@@ -70,7 +70,7 @@ slog = { package = "tracing_slog_compat", version = "0.1.0", git = "https://gith
 sql = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 sql_construct = { version = "0.1.0", path = "../common/sql_construct" }
 sql_ext = { version = "0.1.0", path = "../common/rust/sql_ext" }
-tempfile = "3.8"
+tempfile = "3.15"
 thiserror = "2"
 tokio = { version = "1.41.0", features = ["full", "test-util", "tracing"] }
 tokio-stream = { version = "0.1.16", features = ["fs", "io-util", "net", "signal", "sync", "time"] }

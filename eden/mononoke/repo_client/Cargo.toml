@@ -38,7 +38,7 @@ hostname = { version = "0.1.0", git = "https://github.com/facebookexperimental/r
 iterhelpers = { version = "0.1.0", path = "../common/iterhelpers" }
 itertools = "0.14.0"
 justknobs = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
-lazy_static = "1.4"
+lazy_static = "1.5"
 manifest = { version = "0.1.0", path = "../manifest" }
 maplit = "1.0"
 mercurial_bundles = { version = "0.1.0", path = "../mercurial/bundles" }

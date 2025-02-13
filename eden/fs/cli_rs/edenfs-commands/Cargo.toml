@@ -34,11 +34,11 @@ sysinfo = "0.30.11"
 tabular = "0.2.0"
 termwiz = { version = "0.22", features = ["widgets"] }
 tokio = { version = "1.41.0", features = ["full", "test-util", "tracing"] }
-toml = "0.8.4"
+toml = "0.8.19"
 tracing = { version = "0.1.41", features = ["attributes", "valuable"] }
 
 [dev-dependencies]
-tempfile = "3.8"
+tempfile = "3.15"
 
 [target.'cfg(target_os = "linux")'.dependencies]
 shlex = "1.3"

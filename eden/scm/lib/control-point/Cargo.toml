@@ -14,11 +14,11 @@ name = "control_point"
 
 [dependencies]
 anyhow = "1.0.95"
-lazy_static = "1.4"
+lazy_static = "1.5"
 parking_lot = { version = "0.12.1", features = ["send_guard"] }
 sapling-util = { version = "0.1.0", path = "../util" }
 serde_json = { version = "1.0.132", features = ["float_roundtrip", "unbounded_depth"] }
 tracing = { version = "0.1.41", features = ["attributes", "valuable"] }
 
 [dev-dependencies]
-tempfile = "3.8"
+tempfile = "3.15"

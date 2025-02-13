@@ -18,7 +18,7 @@ derive_more = { version = "1.0.0", features = ["full"] }
 facet = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 mononoke_types = { version = "0.1.0", path = "../../mononoke_types" }
 mysql_common = { version = "0.29.0", features = ["chrono", "default"] }
-regex = "1.9.2"
+regex = "1.11.1"
 rusoto_core = "0.48.0"
 scuba = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 serde = { version = "1.0.185", features = ["derive", "rc"] }

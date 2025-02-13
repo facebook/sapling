@@ -7,7 +7,7 @@ edition = "2021"
 
 [dependencies]
 cpython = { version = "0.7.2", default-features = false }
-lazy_static = "1.4"
+lazy_static = "1.5"
 parking_lot = { version = "0.12.1", features = ["send_guard"] }
 python3-sys = "0.7.2"
 sapling-cpython-ext = { version = "0.1.0", path = "../../../../lib/cpython-ext" }

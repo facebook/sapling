@@ -15,7 +15,7 @@ sysinfo = "0.30.11"
 tracing = { version = "0.1.41", features = ["attributes", "valuable"] }
 
 [dev-dependencies]
-lazy_static = "1.4"
+lazy_static = "1.5"
 
 [target.'cfg(target_os = "linux")'.dependencies]
 nix = { version = "0.29.0", features = ["dir", "event", "hostname", "inotify", "ioctl", "mman", "mount", "net", "poll", "ptrace", "reboot", "resource", "sched", "signal", "term", "time", "user", "zerocopy"] }

@@ -20,4 +20,4 @@ sapling-identity = { version = "0.1.0", path = "../../identity" }
 sapling-util = { version = "0.1.0", path = "../../util" }
 
 [dev-dependencies]
-tempfile = "3.8"
+tempfile = "3.15"

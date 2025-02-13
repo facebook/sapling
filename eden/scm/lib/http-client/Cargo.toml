@@ -32,7 +32,7 @@ openssl = "0.10.70"
 parking_lot = { version = "0.12.1", features = ["send_guard"] }
 paste = "1.0.14"
 pin-project = "0.4.30"
-regex = "1.9.2"
+regex = "1.11.1"
 sapling-async-runtime = { version = "0.1.0", path = "../async-runtime" }
 sapling-clientinfo = { version = "0.1.0", path = "../clientinfo" }
 serde = { version = "1.0.185", features = ["derive", "rc"] }

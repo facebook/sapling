@@ -22,7 +22,7 @@ futures = { version = "0.3.30", features = ["async-await", "compat"] }
 mononoke_types_serialization = { version = "0.1.0", path = "../../../mononoke_types/serialization" }
 ref-cast = "1.0.18"
 rust = { version = "0.0.1+unstable", git = "https://github.com/facebook/fbthrift.git", branch = "main" }
-smallvec = { version = "1.6.1", features = ["serde", "specialization", "union"] }
+smallvec = { version = "1.13.2", features = ["serde", "specialization", "union"] }
 thiserror = "2"
 
 [build-dependencies]

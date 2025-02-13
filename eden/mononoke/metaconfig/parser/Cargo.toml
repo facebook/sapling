@@ -17,7 +17,7 @@ itertools = "0.14.0"
 metaconfig_types = { version = "0.1.0", path = "../types" }
 mononoke_types = { version = "0.1.0", path = "../../mononoke_types" }
 nonzero_ext = "0.2"
-regex = "1.9.2"
+regex = "1.11.1"
 repos = { version = "0.1.0", path = "../../../../configerator/structs/scm/mononoke/repos/repos" }
 rusoto_core = "0.48.0"
 sapling-repourl = { version = "0.1.0", path = "../../../scm/lib/repo/url" }
@@ -25,11 +25,11 @@ serde = { version = "1.0.185", features = ["derive", "rc"] }
 serde_ignored = "0.1.10"
 serde_json = { version = "1.0.132", features = ["float_roundtrip", "unbounded_depth"] }
 thiserror = "2"
-toml = "0.8.4"
+toml = "0.8.19"
 
 [dev-dependencies]
 maplit = "1.0"
 mononoke_macros = { version = "0.1.0", path = "../../mononoke_macros" }
 mononoke_types-mocks = { version = "0.1.0", path = "../../mononoke_types/mocks" }
 pretty_assertions = { version = "1.2", features = ["alloc"], default-features = false }
-tempfile = "3.8"
+tempfile = "3.15"

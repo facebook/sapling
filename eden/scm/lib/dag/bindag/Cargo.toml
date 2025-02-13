@@ -17,4 +17,4 @@ sapling-dag = { version = "0.1.0", path = ".." }
 sapling-drawdag = { version = "0.1.0", path = "../../drawdag" }
 sapling-nonblocking = { version = "0.1.0", path = "../../nonblocking" }
 sapling-vlqencoding = { version = "0.1.0", path = "../../vlqencoding" }
-tempfile = "3.8"
+tempfile = "3.15"

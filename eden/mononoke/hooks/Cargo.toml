@@ -26,14 +26,14 @@ hyper-tls = "0.5"
 ipnetwork = "0.20.0"
 itertools = "0.14.0"
 justknobs = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
-lazy_static = "1.4"
+lazy_static = "1.5"
 manifest = { version = "0.1.0", path = "../manifest" }
 maplit = "1.0"
 mercurial_types = { version = "0.1.0", path = "../mercurial/types" }
 metaconfig_types = { version = "0.1.0", path = "../metaconfig/types" }
 mononoke_types = { version = "0.1.0", path = "../mononoke_types" }
 permission_checker = { version = "0.1.0", path = "../permission_checker" }
-regex = "1.9.2"
+regex = "1.11.1"
 sapling-clientinfo = { version = "0.1.0", path = "../../scm/lib/clientinfo" }
 scuba_ext = { version = "0.1.0", path = "../common/scuba_ext" }
 serde = { version = "1.0.185", features = ["derive", "rc"] }

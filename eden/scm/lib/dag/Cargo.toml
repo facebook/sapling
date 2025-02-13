@@ -32,7 +32,7 @@ sapling-nonblocking = { version = "0.1.0", path = "../nonblocking" }
 sapling-renderdag = { version = "0.1.0", path = "../renderdag", optional = true }
 sapling-vlqencoding = { version = "0.1.0", path = "../vlqencoding" }
 serde = { version = "1.0.185", features = ["derive", "rc"] }
-tempfile = { version = "3.8", optional = true }
+tempfile = { version = "3.15", optional = true }
 thiserror = "2"
 tracing = { version = "0.1.41", features = ["attributes", "valuable"] }
 
@@ -44,7 +44,7 @@ sapling-dag-types = { version = "0.1.0", path = "dag-types" }
 sapling-dev-logger = { version = "0.1.0", path = "../dev-logger" }
 sapling-indexedlog = { version = "0.1.0", path = "../indexedlog" }
 sapling-renderdag = { version = "0.1.0", path = "../renderdag" }
-tempfile = "3.8"
+tempfile = "3.15"
 tokio = { version = "1.41.0", features = ["full", "test-util", "tracing"] }
 
 [features]

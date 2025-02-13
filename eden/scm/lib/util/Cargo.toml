@@ -15,7 +15,7 @@ name = "util"
 
 [dependencies]
 anyhow = "1.0.95"
-dirs = "2.0"
+dirs = "6.0"
 fn-error-context = "0.2"
 fs2 = "0.4"
 once_cell = "1.12"
@@ -29,19 +29,19 @@ thiserror = "2"
 
 [dev-dependencies]
 memmap2 = "0.5.10"
-tempfile = "3.8"
+tempfile = "3.15"
 
 [target.'cfg(target_os = "linux")'.dependencies]
 libc = "0.2.139"
-tempfile = "3.8"
+tempfile = "3.15"
 
 [target.'cfg(target_os = "macos")'.dependencies]
 libc = "0.2.139"
-tempfile = "3.8"
+tempfile = "3.15"
 
 [target.'cfg(target_os = "windows")'.dependencies]
 widestring = "1.0.2"
 winapi = { version = "0.3", features = ["fileapi", "handleapi", "winbase", "winnt"] }
 
 [target.'cfg(target_os = "windows")'.dev-dependencies]
-tempfile = "3.8"
+tempfile = "3.15"

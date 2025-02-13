@@ -66,7 +66,7 @@ mononoke_macros = { version = "0.1.0", path = "mononoke_macros" }
 mononoke_types = { version = "0.1.0", path = "mononoke_types" }
 packblob = { version = "0.1.0", path = "blobstore/packblob" }
 rand = { version = "0.8", features = ["small_rng"] }
-regex = "1.9.2"
+regex = "1.11.1"
 repo_blobstore = { version = "0.1.0", path = "blobrepo/repo_blobstore" }
 repo_derived_data = { version = "0.1.0", path = "repo_attributes/repo_derived_data" }
 repo_identity = { version = "0.1.0", path = "repo_attributes/repo_identity" }
@@ -77,7 +77,7 @@ serde_derive = "1.0.185"
 slog = { package = "tracing_slog_compat", version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 sqlblob = { version = "0.1.0", path = "blobstore/sqlblob" }
 tokio = { version = "1.41.0", features = ["full", "test-util", "tracing"] }
-toml = "0.8.4"
+toml = "0.8.19"
 
 [patch.crates-io]
 abomonation = { git = "https://github.com/markbt/abomonation", rev = "0f43346d2afa2aedc64d61f3f4273e8d1e454642" }

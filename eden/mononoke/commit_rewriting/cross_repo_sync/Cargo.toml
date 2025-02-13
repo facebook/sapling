@@ -61,7 +61,7 @@ pushrebase_mutation_mapping = { version = "0.1.0", path = "../../pushrebase_muta
 rand = { version = "0.8", features = ["small_rng"] }
 readonlyblob = { version = "0.1.0", path = "../../blobstore/readonlyblob" }
 ref-cast = "1.0.18"
-regex = "1.9.2"
+regex = "1.11.1"
 repo_blobstore = { version = "0.1.0", path = "../../blobrepo/repo_blobstore" }
 repo_bookmark_attrs = { version = "0.1.0", path = "../../repo_attributes/repo_bookmark_attrs" }
 repo_cross_repo = { version = "0.1.0", path = "../../repo_attributes/repo_cross_repo" }

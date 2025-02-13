@@ -22,4 +22,4 @@ tracing = { version = "0.1.41", features = ["attributes", "valuable"] }
 memmap2 = "0.5.10"
 quickcheck = "1.0"
 sapling-minibytes = { version = "0.1.0", path = "../../../../lib/minibytes" }
-tempfile = "3.8"
+tempfile = "3.15"

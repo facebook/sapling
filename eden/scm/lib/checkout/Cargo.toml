@@ -43,7 +43,7 @@ sapling-vfs = { version = "0.1.0", path = "../vfs" }
 sapling-workingcopy = { version = "0.1.0", path = "../workingcopy" }
 serde = { version = "1.0.185", features = ["derive", "rc"] }
 thiserror = "2"
-toml = { version = "0.8.4", optional = true }
+toml = { version = "0.8.19", optional = true }
 tracing = { version = "0.1.41", features = ["attributes", "valuable"] }
 watchman_client = { version = "0.9.0", git = "https://github.com/facebook/watchman.git", branch = "main" }
 
@@ -52,7 +52,7 @@ async-trait = "0.1.71"
 fs-err = { version = "2.6.0", features = ["tokio"] }
 quickcheck = "1.0"
 sapling-manifest-tree = { version = "0.1.0", path = "../manifest-tree", features = ["for-tests"] }
-tempfile = "3.8"
+tempfile = "3.15"
 walkdir = "2.3"
 
 [target.'cfg(target_os = "windows")'.dependencies]

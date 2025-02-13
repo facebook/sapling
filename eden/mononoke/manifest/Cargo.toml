@@ -26,7 +26,7 @@ mononoke_types = { version = "0.1.0", path = "../mononoke_types" }
 nonzero_ext = "0.2"
 serde = { version = "1.0.185", features = ["derive", "rc"] }
 serde_derive = "1.0.185"
-smallvec = { version = "1.6.1", features = ["serde", "specialization", "union"] }
+smallvec = { version = "1.13.2", features = ["serde", "specialization", "union"] }
 sorted_vector_map = { version = "0.2.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 tokio = { version = "1.41.0", features = ["full", "test-util", "tracing"] }
 

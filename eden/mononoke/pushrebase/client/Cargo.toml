@@ -24,7 +24,7 @@ justknobs = { version = "0.1.0", git = "https://github.com/facebookexperimental/
 metaconfig_types = { version = "0.1.0", path = "../../metaconfig/types" }
 mononoke_types = { version = "0.1.0", path = "../../mononoke_types" }
 pushrebase = { version = "0.1.0", path = ".." }
-regex = "1.9.2"
+regex = "1.11.1"
 repo_authorization = { version = "0.1.0", path = "../../repo_authorization" }
 repo_identity = { version = "0.1.0", path = "../../repo_attributes/repo_identity" }
 scuba_ext = { version = "0.1.0", path = "../../common/scuba_ext" }

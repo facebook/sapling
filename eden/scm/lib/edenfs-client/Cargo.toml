@@ -24,7 +24,7 @@ sapling-thrift-types = { version = "0.1.0", path = "../thrift-types" }
 sapling-types = { version = "0.1.0", path = "../types" }
 serde = { version = "1.0.185", features = ["derive", "rc"] }
 tokio-uds-compat = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
-toml = "0.8.4"
+toml = "0.8.19"
 tracing = { version = "0.1.41", features = ["attributes", "valuable"] }
 
 [features]
