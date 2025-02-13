@@ -93,6 +93,8 @@ export type TrackEventName =
   | 'PhabricatorCommentUnresolve'
   | 'PhabricatorCommentsHideInEditor'
   | 'PhabricatorCommentsShowInEditor'
+  | 'PhabricatorCommentsInsetHide'
+  | 'PhabricatorCommentsInsetShow'
   | 'PrSubmitOperation'
   | 'PullOperation'
   | 'PullRevOperation'
