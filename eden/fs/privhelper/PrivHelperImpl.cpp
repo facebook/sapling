@@ -126,6 +126,12 @@ class PrivHelperClientImpl : public PrivHelper,
       std::chrono::nanoseconds duration) override;
   Future<folly::Unit> setUseEdenFs(bool useEdenFs) override;
   Future<pid_t> getServerPid() override;
+  Future<pid_t> startFam(
+      const std::vector<std::string>& paths,
+      const std::string& tmpOutputPath,
+      const std::string& specifiedOutputPath,
+      const bool shouldUpload) override;
+  Future<StopFileAccessMonitorResponse> stopFam() override;
   int stop() override;
   int getRawClientFd() const override {
     auto state = state_.rlock();
@@ -588,6 +594,37 @@ Future<pid_t> PrivHelperClientImpl::getServerPid() {
       });
 }
 
+Future<pid_t> PrivHelperClientImpl::startFam(
+    const std::vector<std::string>& paths,
+    const std::string& tmpOutputPath,
+    const std::string& specifiedOutputPath,
+    const bool shouldUpload) {
+  auto xid = getNextXid();
+  auto request = PrivHelperConn::serializeStartFamRequest(
+      xid, paths, tmpOutputPath, specifiedOutputPath, shouldUpload);
+
+  return sendAndRecv(xid, std::move(request))
+      .thenValue([](UnixSocket::Message&& response) {
+        return PrivHelperConn::parseStartFamResponse(response);
+      });
+}
+
+Future<StopFileAccessMonitorResponse> PrivHelperClientImpl::stopFam() {
+  auto xid = getNextXid();
+  auto request = PrivHelperConn::serializeStopFamRequest(xid);
+
+  return sendAndRecv(xid, std::move(request))
+      .thenValue([&](UnixSocket::Message&& response) {
+        StopFileAccessMonitorResponse stopResponse{};
+        PrivHelperConn::parseStopFamResponse(
+            response,
+            stopResponse.tmpOutputPath,
+            stopResponse.specifiedOutputPath,
+            stopResponse.shouldUpload);
+        return stopResponse;
+      });
+}
+
 int PrivHelperClientImpl::stop() {
   const auto result = cleanup();
   if (result.hasError()) {
@@ -878,6 +915,18 @@ class StubPrivHelper final : public PrivHelper {
 
   folly::Future<pid_t> getServerPid() override {
     return -1;
+  }
+
+  folly::Future<pid_t> startFam(
+      const std::vector<std::string>& paths,
+      const std::string& tmpOutputPath,
+      const std::string& specifiedOutputPath,
+      const bool shouldUpload) override {
+    NOT_IMPLEMENTED();
+  }
+
+  folly::Future<StopFileAccessMonitorResponse> stopFam() override {
+    NOT_IMPLEMENTED();
   }
 
   int stop() override {

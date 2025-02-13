@@ -177,4 +177,18 @@ folly::Future<pid_t> FakePrivHelper::getServerPid() {
   return -1;
 }
 
+folly::Future<pid_t> FakePrivHelper::startFam(
+    const std::vector<std::string>& /* paths */,
+    const std::string& /* tmpOutputPath */,
+    const std::string& /* specifiedOutputPath */,
+    const bool /* shouldUpload */) {
+  return makeFuture<pid_t>(
+      runtime_error("FakePrivHelper::startFam() not implemented"));
+}
+
+folly::Future<StopFileAccessMonitorResponse> FakePrivHelper::stopFam() {
+  return makeFuture<StopFileAccessMonitorResponse>(
+      runtime_error("FakePrivHelper::stopFam() not implemented"));
+}
+
 } // namespace facebook::eden

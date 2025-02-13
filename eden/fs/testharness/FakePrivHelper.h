@@ -74,6 +74,12 @@ class FakePrivHelper final : public PrivHelper {
       std::chrono::nanoseconds duration) override;
   folly::Future<folly::Unit> setUseEdenFs(bool useEdenFs) override;
   folly::Future<pid_t> getServerPid() override;
+  folly::Future<pid_t> startFam(
+      const std::vector<std::string>& paths,
+      const std::string& tmpOutputPath,
+      const std::string& specifiedOutputPath,
+      const bool shouldUpload) override;
+  folly::Future<StopFileAccessMonitorResponse> stopFam() override;
   int stop() override;
   int getRawClientFd() const override {
     return -1;

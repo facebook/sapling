@@ -188,6 +188,25 @@ class PrivHelper {
   FOLLY_NODISCARD virtual folly::Future<pid_t> getServerPid() = 0;
 
   /**
+   * Start File Access Monitor(FAM).
+   *
+   * @param paths A list of paths to be monitored by FAM.
+   * @param outputPath The path to the output file.
+   * @return pid of the started FAM process
+   */
+  FOLLY_NODISCARD virtual folly::Future<pid_t> startFam(
+      const std::vector<std::string>& paths,
+      const std::string& tmpOutputPath,
+      const std::string& specifiedOutputPath,
+      const bool shouldUpload) = 0;
+
+  /**
+   * Stop File Access Monitor(FAM).
+   */
+  FOLLY_NODISCARD virtual folly::Future<StopFileAccessMonitorResponse>
+  stopFam() = 0;
+
+  /**
    * setLogFileBlocking() is a wrapper around setLogFile() that blocks until
    * the call has completed.
    *
