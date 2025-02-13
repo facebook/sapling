@@ -98,6 +98,8 @@ class PrivHelperServer : private UnixSocket::ReceiveCallback {
       folly::io::Cursor& cursor,
       UnixSocket::Message& request);
   UnixSocket::Message processGetPid();
+  UnixSocket::Message processStartFam(folly::io::Cursor& cursor);
+  UnixSocket::Message processStopFam();
 
   void unmountStaleMount(const std::string& mountPoint);
 

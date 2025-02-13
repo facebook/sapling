@@ -1180,6 +1180,45 @@ UnixSocket::Message PrivHelperServer::processGetPid() {
   return response;
 }
 
+UnixSocket::Message PrivHelperServer::processStartFam(
+    folly::io::Cursor& cursor) {
+  std::vector<std::string> paths;
+  string tmpOutputPath;
+  string specifiedOutputPath;
+  bool shouldUpload;
+
+  PrivHelperConn::parseStartFamRequest(
+      cursor, paths, tmpOutputPath, specifiedOutputPath, shouldUpload);
+  for (const auto& path : paths) {
+    XLOGF(DBG3, "FAM monitoring path with prefix \"{}\"", path);
+  }
+  XLOGF(DBG3, "FAM logging events to \"{}\"", tmpOutputPath);
+  XLOGF(DBG3, "FAM output file will be moved to \"{}\"", specifiedOutputPath);
+
+  // TODO[lxw]: Actually spawn the process and return the pid
+  pid_t pid = 999;
+
+  auto response = makeResponse();
+  response.data.unshare();
+  folly::io::Appender cursorResp{&response.data, 0};
+  cursorResp.writeBE<pid_t>(pid);
+  return response;
+}
+
+UnixSocket::Message PrivHelperServer::processStopFam() {
+  // TODO[lxw]: kill the process and retrieve the stored fields
+  string tmpOutputPath = "/tmp/edenfs/fam/fam_fbsource_2025_01_27.json";
+  string specifiedOutputPath = "/home/myUser/dump.json";
+  bool shouldUpload = true;
+
+  auto response = makeResponse();
+  response.data.unshare();
+  folly::io::Appender cursor{&response.data, 0};
+  PrivHelperConn::serializeStopFamResponse(
+      cursor, tmpOutputPath, specifiedOutputPath, shouldUpload);
+  return response;
+}
+
 namespace {
 /// Get the file system ID, or an errno value on error
 folly::Expected<unsigned long, int> getFSID(const char* path) {
@@ -1374,7 +1413,9 @@ UnixSocket::Message PrivHelperServer::processMessage(
     case PrivHelperConn::REQ_GET_PID:
       return processGetPid();
     case PrivHelperConn::REQ_START_FAM:
+      return processStartFam(cursor);
     case PrivHelperConn::REQ_STOP_FAM:
+      return processStopFam();
     case PrivHelperConn::MSG_TYPE_NONE:
     case PrivHelperConn::RESP_ERROR:
       break;
