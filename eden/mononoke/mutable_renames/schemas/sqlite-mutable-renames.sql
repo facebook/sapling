@@ -17,6 +17,8 @@ CREATE TABLE IF NOT EXISTS `mutable_renames`(
    UNIQUE (`repo_id`, `dst_path_hash`, `dst_cs_id`)
 );
 
+CREATE INDEX IF NOT EXISTS `dst_cs_id` ON `mutable_renames` (`repo_id`, `dst_cs_id`);
+
 CREATE TABLE IF NOT EXISTS `mutable_renames_paths`(
    `id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
    `path_hash` VARBINARY(32) NOT NULL,

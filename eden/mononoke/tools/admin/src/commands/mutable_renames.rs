@@ -9,6 +9,7 @@ mod add;
 mod check_commit;
 mod copy_immutable;
 mod get;
+mod list;
 
 use add::AddArgs;
 use anyhow::Context;
@@ -23,6 +24,7 @@ use clap::Subcommand;
 use commit_graph::CommitGraph;
 use copy_immutable::CopyImmutableArgs;
 use get::GetArgs;
+use list::ListArgs;
 use mononoke_app::args::RepoArgs;
 use mononoke_app::MononokeApp;
 use mutable_renames::MutableRenames;
@@ -72,6 +74,8 @@ pub enum MutableRenamesSubcommand {
     CheckCommit(CheckCommitArgs),
     /// Get mutable rename information for a given commit, path pair
     Get(GetArgs),
+    /// List mutable renames for a given commit
+    List(ListArgs),
     /// Add new mutable renames to your repo
     Add(AddArgs),
     /// Copy immutable renames to mutable renames
@@ -91,6 +95,7 @@ pub async fn run(app: MononokeApp, args: CommandArgs) -> Result<()> {
             check_commit::check_commit(&ctx, &repo, args).await?
         }
         MutableRenamesSubcommand::Get(args) => get::get(&ctx, &repo, args).await?,
+        MutableRenamesSubcommand::List(args) => list::list(&ctx, &repo, args).await?,
         MutableRenamesSubcommand::Add(args) => add::add(&ctx, &repo, args).await?,
         MutableRenamesSubcommand::CopyImmutable(args) => {
             copy_immutable::copy_immutable(&ctx, &repo, args).await?

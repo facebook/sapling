@@ -392,6 +392,38 @@ impl MutableRenames {
             }
         }
     }
+
+    pub async fn list_renames_by_dst_cs_uncached(
+        &self,
+        ctx: &CoreContext,
+        dst_cs_id: ChangesetId,
+    ) -> Result<Vec<MutableRenameEntry>, Error> {
+        let rows = ListRenamesByDstChangeset::maybe_traced_query(
+            &self.store.read_connection,
+            ctx.client_request_info(),
+            &self.repo_id,
+            &dst_cs_id,
+        )
+        .await?;
+
+        Ok(rows
+            .into_iter()
+            .map(
+                |(src_cs_id, dst_path_bytes, src_path_bytes, src_unode, is_tree)| {
+                    let dst_path = MPath::new(dst_path_bytes)?;
+                    let src_path = MPath::new(src_path_bytes)?;
+                    let src_unode = if is_tree == 1 {
+                        Entry::Tree(ManifestUnodeId::new(src_unode))
+                    } else {
+                        Entry::Leaf(FileUnodeId::new(src_unode))
+                    };
+
+                    MutableRenameEntry::new(dst_cs_id, dst_path, src_cs_id, src_path, src_unode)
+                },
+            )
+            .filter_map(|r| r.ok())
+            .collect())
+    }
 }
 
 mononoke_queries! {
@@ -442,6 +474,31 @@ mononoke_queries! {
            AND  mutable_renames.dst_path_hash = {dst_path_hash}
         "
     }
+
+    read ListRenamesByDstChangeset(repo_id: RepositoryId, dst_cs_id: ChangesetId) -> (
+        ChangesetId,
+        Vec<u8>,
+        Vec<u8>,
+        Blake2,
+        i8
+     ) {
+        "
+        SELECT
+            m.src_cs_id,
+            dst_p.path as dst_path,
+            src_p.path as src_path,
+            m.src_unode_id,
+            m.is_tree
+        FROM mutable_renames AS m
+        JOIN mutable_renames_paths AS dst_p
+            ON m.dst_path_hash = dst_p.path_hash
+        JOIN mutable_renames_paths AS src_p
+            ON m.src_path_hash = src_p.path_hash
+        WHERE 
+            m.repo_id = {repo_id}
+            AND m.dst_cs_id = {dst_cs_id}
+        "
+     }
 
     read HasRenameCheck(repo_id: RepositoryId, dst_cs_id: ChangesetId) -> (ChangesetId) {
         "
