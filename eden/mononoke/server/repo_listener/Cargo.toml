@@ -37,6 +37,7 @@ mononoke_app = { version = "0.1.0", path = "../../cmdlib/mononoke_app" }
 mononoke_configs = { version = "0.1.0", path = "../../mononoke_configs" }
 mononoke_macros = { version = "0.1.0", path = "../../mononoke_macros" }
 mononoke_types = { version = "0.1.0", path = "../../mononoke_types" }
+ods_counters = { version = "0.1.0", path = "../../common/ods_counters" }
 openssl = "0.10.70"
 percent-encoding = "2.1"
 permission_checker = { version = "0.1.0", path = "../../permission_checker" }

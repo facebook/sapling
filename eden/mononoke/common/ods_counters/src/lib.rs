@@ -16,6 +16,11 @@ mod facebook;
 #[cfg(not(fbcode_build))]
 mod oss;
 
+#[cfg(fbcode_build)]
+pub use facebook::OdsCounterManager;
+#[cfg(not(fbcode_build))]
+pub use oss::OdsCounterManager;
+
 #[async_trait]
 pub trait CounterManager {
     async fn add_counter(&mut self, entity: String, key: String);

@@ -15,6 +15,9 @@ use anyhow::Error;
 use async_trait::async_trait;
 use cached_config::ConfigHandle;
 use fbinit::FacebookInit;
+use mononoke_macros::mononoke;
+use ods_counters::CounterManager;
+use ods_counters::OdsCounterManager;
 use permission_checker::MononokeIdentitySet;
 use permission_checker::MononokeIdentitySetExt;
 use scuba_ext::MononokeScubaSampleBuilder;
@@ -81,6 +84,7 @@ pub struct RateLimitEnvironment {
     fb: FacebookInit,
     category: String,
     config: ConfigHandle<MononokeRateLimitConfig>,
+    counter_manager: OdsCounterManager,
 }
 
 impl RateLimitEnvironment {
@@ -88,16 +92,36 @@ impl RateLimitEnvironment {
         fb: FacebookInit,
         category: String,
         config: ConfigHandle<MononokeRateLimitConfig>,
+        counter_manager: OdsCounterManager,
     ) -> Self {
         Self {
             fb,
             category,
             config,
+            counter_manager,
         }
     }
 
-    pub fn get_rate_limiter(&self) -> BoxRateLimiter {
+    pub async fn get_rate_limiter(&mut self) -> BoxRateLimiter {
         let config = self.config.get();
+        for limit in &config.load_shed_limits {
+            match &limit.raw_config.load_shedding_metric {
+                LoadSheddingMetric::external_ods_counter(counter) => {
+                    self.counter_manager
+                        .add_counter(counter.entity.clone(), counter.key.clone())
+                        .await;
+                }
+                _ => {}
+            };
+        }
+
+        let mut counter_manager_clone = self.counter_manager.clone();
+
+        mononoke::spawn_task(async move {
+            counter_manager_clone
+                .run_periodic_fetch(Duration::from_secs(1))
+                .await;
+        });
 
         create_rate_limiter(self.fb, self.category.clone(), config)
     }
