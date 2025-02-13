@@ -183,6 +183,35 @@ class PrivHelperConn {
   static UnixSocket::Message serializeGetPidRequest(uint32_t xid);
   static pid_t parseGetPidResponse(const UnixSocket::Message& msg);
 
+  static UnixSocket::Message serializeStartFamRequest(
+      uint32_t xid,
+      const std::vector<std::string>& paths,
+      const std::string& tmpOutputPath,
+      const std::string& specifiedOutputPath,
+      const bool shouldUpload);
+
+  static void parseStartFamRequest(
+      folly::io::Cursor& cursor,
+      std::vector<std::string>& paths,
+      std::string& tmpOutputPath,
+      std::string& specifiedOutputPath,
+      bool& shouldUpload);
+
+  static pid_t parseStartFamResponse(const UnixSocket::Message& msg);
+  static void parseStopFamResponse(
+      const UnixSocket::Message& msg,
+      std::string& tmpOutputPath,
+      std::string& specifiedOutputPath,
+      bool& shouldUpload);
+
+  static UnixSocket::Message serializeStopFamRequest(uint32_t xid);
+
+  static void serializeStopFamResponse(
+      folly::io::Appender& appender,
+      const std::string& tmpOutputPath,
+      const std::string& specifiedOutputPath,
+      const bool shouldUpload);
+
   /**
    * Parse a response that is expected to be empty.
    *

@@ -555,6 +555,105 @@ UnixSocket::Message PrivHelperConn::serializeGetPidRequest(uint32_t xid) {
   return serializeRequestPacket(xid, REQ_GET_PID);
 }
 
+UnixSocket::Message PrivHelperConn::serializeStartFamRequest(
+    uint32_t xid,
+    const std::vector<std::string>& paths,
+    const std::string& tmpOutputPath,
+    const std::string& specifiedOutputPath,
+    const bool shouldUpload) {
+  auto msg = serializeRequestPacket(xid, REQ_START_FAM);
+  Appender appender(&msg.data, kDefaultBufferSize);
+
+  appender.write<uint32_t>(paths.size());
+  for (const auto& path : paths) {
+    serializeString(appender, path);
+  }
+  serializeString(appender, tmpOutputPath);
+  serializeString(appender, specifiedOutputPath);
+  serializeBool(appender, shouldUpload);
+  return msg;
+}
+
+void PrivHelperConn::parseStartFamRequest(
+    folly::io::Cursor& cursor,
+    std::vector<std::string>& paths,
+    std::string& tmpOutputPath,
+    std::string& specifiedOutputPath,
+    bool& shouldUpload) {
+  auto n = cursor.read<uint32_t>();
+  while (n-- != 0) {
+    paths.push_back(deserializeString(cursor));
+  }
+  tmpOutputPath = deserializeString(cursor);
+  specifiedOutputPath = deserializeString(cursor);
+  shouldUpload = deserializeBool(cursor);
+  checkAtEnd(cursor, "start fam");
+}
+
+void PrivHelperConn::serializeStopFamResponse(
+    Appender& appender,
+    const std::string& tmpOutputPath,
+    const std::string& specifiedOutputPath,
+    const bool shouldUpload) {
+  serializeString(appender, tmpOutputPath);
+  serializeString(appender, specifiedOutputPath);
+  serializeBool(appender, shouldUpload);
+}
+
+pid_t PrivHelperConn::parseStartFamResponse(const UnixSocket::Message& msg) {
+  Cursor cursor(&msg.data);
+  PrivHelperPacket packet = parsePacket(cursor);
+  if (packet.metadata.msg_type == RESP_ERROR) {
+    rethrowErrorResponse(cursor);
+  } else if (packet.metadata.msg_type != REQ_START_FAM) {
+    throwf<std::runtime_error>(
+        "unexpected response type {} for request {} of type {} for version v{}",
+        packet.metadata.msg_type,
+        packet.metadata.transaction_id,
+        REQ_START_FAM,
+        packet.header.version);
+  }
+
+  pid_t pid;
+  bool valid = cursor.tryReadBE<pid_t>(pid);
+
+  if (!valid) {
+    throwf<std::runtime_error>(
+        "Failed to read pid from privhelper server for request {} for version v{}",
+        packet.metadata.transaction_id,
+        packet.header.version);
+  }
+
+  return pid;
+}
+
+void PrivHelperConn::parseStopFamResponse(
+    const UnixSocket::Message& msg,
+    std::string& tmpOutputPath,
+    std::string& specifiedOutputPath,
+    bool& shouldUpload) {
+  Cursor cursor(&msg.data);
+  PrivHelperPacket packet = parsePacket(cursor);
+  if (packet.metadata.msg_type == RESP_ERROR) {
+    rethrowErrorResponse(cursor);
+  } else if (packet.metadata.msg_type != REQ_STOP_FAM) {
+    throwf<std::runtime_error>(
+        "unexpected response type {} for request {} of type {} for version v{}",
+        packet.metadata.msg_type,
+        packet.metadata.transaction_id,
+        REQ_START_FAM,
+        packet.header.version);
+  }
+
+  tmpOutputPath = deserializeString(cursor);
+  specifiedOutputPath = deserializeString(cursor);
+  shouldUpload = deserializeBool(cursor);
+}
+
+UnixSocket::Message PrivHelperConn::serializeStopFamRequest(uint32_t xid) {
+  return serializeRequestPacket(xid, REQ_STOP_FAM);
+}
+
 UnixSocket::Message PrivHelperConn::serializeBindUnMountRequest(
     uint32_t xid,
     folly::StringPiece mountPath) {
