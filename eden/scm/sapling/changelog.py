@@ -386,6 +386,10 @@ def gitcommittext(
 
     author_time, author_tz = util.parsedate(authordate)
 
+    # Drop existing gpg signature to recalculate the signature properly.
+    if extra:
+        extra.pop("gpgsig", None)
+
     # see Rust format-util GitCommitFields for available fields
     fields = {
         "tree": tree,

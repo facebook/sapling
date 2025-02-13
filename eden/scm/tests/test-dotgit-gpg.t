@@ -32,10 +32,8 @@ Edit commit message:
   $ sl metaedit -m init2
 
 Verify signature after metaedit:
-FIXME: signature is bad
 
   $ git verify-commit $(sl log -r. -T '{node}')
   ...
-  gpg: BAD signature from "Test User <test@example.com>" [ultimate]
-  [1]
+  gpg: Good signature from "Test User <test@example.com>" [ultimate]
 
