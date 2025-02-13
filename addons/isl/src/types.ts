@@ -113,11 +113,6 @@ export enum ArchivedReasonType {
   STALE_FILE_CHANGED = 'STALE_FILE_CHANGED',
 }
 
-export type PhabricatorVersion = {
-  versionAbbr?: string;
-  isLatestVersion?: boolean;
-};
-
 export type CodeChange = {
   oldContent?: string;
   newContent?: string;
@@ -151,7 +146,6 @@ export type DiffComment = {
   html: string;
   content?: string;
   created: Date;
-  versionInfo?: PhabricatorVersion;
   commitHash?: string;
   /** If it's an inline comment, this is the file path with the comment */
   filename?: string;
