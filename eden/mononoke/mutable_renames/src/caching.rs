@@ -41,7 +41,7 @@ use crate::MutableRenames;
 /// the layout of memcache entries is changed in an incompatible way.
 /// The corresponding sitever, which can be used to flush memcache, is
 /// in the JustKnob scm/mononoke_memcache_sitevers:mutable_renames.
-pub const MC_CODEVER: u32 = 0;
+pub const MC_CODEVER: u32 = 1;
 
 #[derive(Clone)]
 pub struct CacheHandlers {
@@ -221,6 +221,7 @@ pub struct CachedMutableRenameEntry(pub Option<CacheableMutableRenameEntry>);
 #[derive(Abomonation, Clone)]
 pub struct CacheableMutableRenameEntry {
     dst_cs_id: ChangesetId,
+    dst_path: Vec<u8>,
     dst_path_hash: PathHash,
     src_cs_id: ChangesetId,
     src_path: Vec<u8>,
@@ -234,6 +235,7 @@ impl TryFrom<CacheableMutableRenameEntry> for MutableRenameEntry {
     fn try_from(entry: CacheableMutableRenameEntry) -> Result<Self, Error> {
         let CacheableMutableRenameEntry {
             dst_cs_id,
+            dst_path,
             dst_path_hash,
             src_cs_id,
             src_path,
@@ -241,10 +243,12 @@ impl TryFrom<CacheableMutableRenameEntry> for MutableRenameEntry {
             src_unode,
             is_tree,
         } = entry;
+        let dst_path = MPath::new(dst_path)?;
         let src_path = MPath::new(src_path)?;
 
         Ok(Self {
             dst_cs_id,
+            dst_path,
             dst_path_hash,
             src_cs_id,
             src_path,
@@ -258,6 +262,7 @@ impl From<MutableRenameEntry> for CacheableMutableRenameEntry {
     fn from(entry: MutableRenameEntry) -> Self {
         let MutableRenameEntry {
             dst_cs_id,
+            dst_path,
             dst_path_hash,
             src_cs_id,
             src_path,
@@ -265,10 +270,12 @@ impl From<MutableRenameEntry> for CacheableMutableRenameEntry {
             src_unode,
             is_tree,
         } = entry;
+        let dst_path = dst_path.to_vec();
         let src_path = src_path.to_vec();
 
         Self {
             dst_cs_id,
+            dst_path,
             dst_path_hash,
             src_cs_id,
             src_path,
@@ -298,6 +305,7 @@ impl MemcacheEntity for CachedMutableRenameEntry {
             None => thrift::CachedMutableRenameEntry { entry: None },
             Some(CacheableMutableRenameEntry {
                 dst_cs_id,
+                dst_path,
                 dst_path_hash,
                 src_cs_id,
                 src_path,
@@ -306,6 +314,7 @@ impl MemcacheEntity for CachedMutableRenameEntry {
                 is_tree,
             }) => {
                 let dst_cs_id = dst_cs_id.into_thrift();
+                let dst_path = dst_path.clone();
                 let dst_path_hash = path_hash_to_thrift(dst_path_hash);
                 let src_cs_id = src_cs_id.into_thrift();
                 let src_path = src_path.clone();
@@ -320,6 +329,7 @@ impl MemcacheEntity for CachedMutableRenameEntry {
                     src_path_hash,
                     src_unode,
                     is_tree,
+                    dst_path,
                 });
                 thrift::CachedMutableRenameEntry { entry }
             }
@@ -337,6 +347,7 @@ impl MemcacheEntity for CachedMutableRenameEntry {
                     src_path_hash,
                     src_unode,
                     is_tree,
+                    dst_path,
                 }),
         } = compact_protocol::deserialize(bytes).map_err(|_| McErrorKind::Deserialization)?
         {
@@ -352,6 +363,7 @@ impl MemcacheEntity for CachedMutableRenameEntry {
                 Blake2::from_thrift(src_unode).map_err(|_| McErrorKind::Deserialization)?;
             let entry = CacheableMutableRenameEntry {
                 dst_cs_id,
+                dst_path,
                 dst_path_hash,
                 src_cs_id,
                 src_path,

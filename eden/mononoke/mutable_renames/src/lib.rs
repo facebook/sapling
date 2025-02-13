@@ -62,6 +62,7 @@ impl SqlConstructFromMetadataDatabaseConfig for SqlMutableRenamesStore {}
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct MutableRenameEntry {
     dst_cs_id: ChangesetId,
+    dst_path: MPath,
     dst_path_hash: PathHash,
     src_cs_id: ChangesetId,
     src_path: MPath,
@@ -93,6 +94,7 @@ impl MutableRenameEntry {
 
         Ok(Self {
             dst_cs_id,
+            dst_path,
             dst_path_hash,
             src_cs_id,
             src_path,
@@ -100,6 +102,12 @@ impl MutableRenameEntry {
             src_unode,
             is_tree,
         })
+    }
+
+    /// Get the destination path for this entry, or None if the destination
+    /// is the repo root
+    pub fn dst_path(&self) -> &MPath {
+        &self.dst_path
     }
 
     fn dst_path_hash(&self) -> &PathHash {
