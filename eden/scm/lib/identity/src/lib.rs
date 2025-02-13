@@ -215,6 +215,13 @@ impl Identity {
                 let config_dir = if cfg!(windows) {
                     std::env::var("APPDATA")
                         .map_or_else(|_| dirs::config_dir(), |x| Some(PathBuf::from(x)))
+                } else if cfg!(target_os = "macos") {
+                    // Argh! The `dirs` crate changed `config_dir()` on mac from "Preferences" to
+                    // "Application Support". See https://github.com/dirs-dev/directories-rs/issues/62
+                    // for discussion. I think Preferences is still a more suitable place for our
+                    // user config, even if we aren't using Apple's preferences API to write out the
+                    // file.
+                    dirs::preference_dir()
                 } else {
                     dirs::config_dir()
                 };
