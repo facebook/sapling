@@ -1515,7 +1515,7 @@ function git() {
   GIT_AUTHOR_DATE="${GIT_AUTHOR_DATE:-$date}" \
   GIT_AUTHOR_NAME="$name" \
   GIT_AUTHOR_EMAIL="$email" \
-  command git -c init.defaultBranch=master_bookmark -c protocol.file.allow=always "$@"
+  command git -c transfer.bundleURI=false -c init.defaultBranch=master_bookmark -c protocol.file.allow=always "$@"
 }
 
 function git_set_only_author() {
