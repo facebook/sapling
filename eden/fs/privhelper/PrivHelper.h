@@ -66,6 +66,12 @@ struct UnmountOptions {
   bool expire = false;
 };
 
+struct StopFileAccessMonitorResponse {
+  std::string tmpOutputPath;
+  std::string specifiedOutputPath;
+  bool shouldUpload;
+};
+
 /**
  * A helper class for performing operations that require elevated privileges.
  *
