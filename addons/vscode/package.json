@@ -205,6 +205,12 @@
         "key": "alt-shift-g",
         "mac": "alt-shift-g",
         "when": "isl.inlineCommentSidePanelEnabled && activeWebviewPanelId != 'sapling.comments'"
+      },
+      {
+        "command": "sapling.toggle-inline-comments",
+        "key": "alt-shift-t",
+        "mac": "alt-shift-t",
+        "when": "isl.inlineCommentSidePanelEnabled"
       }
     ],
     "menus": {
