@@ -5,6 +5,7 @@
  * GNU General Public License version 2.
  */
 
+use std::ffi::OsStr;
 use std::fs::read_to_string;
 use std::path::Path;
 use std::process::Stdio;
@@ -112,7 +113,7 @@ pub async fn get_status<P, S>(
 ) -> anyhow::Result<SaplingGetStatusResult>
 where
     P: AsRef<Path>,
-    S: AsRef<str> + AsRef<Path>,
+    S: AsRef<str> + AsRef<Path> + AsRef<OsStr>,
 {
     let mut args = vec!["status", "-mardu", "--rev", first];
     if let Some(second) = second {
@@ -199,7 +200,7 @@ fn is_path_included<P, S>(
 ) -> bool
 where
     P: AsRef<Path>,
-    S: AsRef<str> + AsRef<Path>,
+    S: AsRef<str> + AsRef<Path> + AsRef<OsStr>,
 {
     let path = Path::new(path);
     if !included_roots.map_or(true, |roots| {
@@ -211,7 +212,9 @@ where
     }
 
     if !included_suffixes.map_or(true, |suffixes| {
-        suffixes.iter().any(|suffix| path.ends_with(suffix))
+        suffixes
+            .iter()
+            .any(|suffix| path.extension().unwrap_or_default() == OsStr::new(suffix))
     }) {
         return false;
     }
@@ -225,7 +228,9 @@ where
     }
 
     if excluded_suffixes.map_or(false, |suffixes| {
-        suffixes.iter().any(|suffix| path.ends_with(suffix))
+        suffixes
+            .iter()
+            .any(|suffix| path.extension().unwrap_or_default() == OsStr::new(suffix))
     }) {
         return false;
     }
