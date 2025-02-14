@@ -148,6 +148,7 @@ class PrivHelperServer : private UnixSocket::ReceiveCallback {
   gid_t gid_{std::numeric_limits<gid_t>::max()};
   std::chrono::nanoseconds fuseTimeout_{std::chrono::seconds(60)};
   bool useDevEdenFs_{false};
+  std::unique_ptr<FileAccessMonitorProcess> famProcess_;
 
   // The privhelper server only has a single thread,
   // so we don't need to lock the following state

@@ -62,6 +62,10 @@ using std::string;
 
 namespace facebook::eden {
 
+// Constants
+static constexpr folly::StringPiece kFamBinaryPath{
+    "/usr/local/libexec/eden/edenfs_fam"};
+
 PrivHelperServer::PrivHelperServer() = default;
 
 PrivHelperServer::~PrivHelperServer() = default;
@@ -1189,14 +1193,42 @@ UnixSocket::Message PrivHelperServer::processStartFam(
 
   PrivHelperConn::parseStartFamRequest(
       cursor, paths, tmpOutputPath, specifiedOutputPath, shouldUpload);
+
+  // sanity check to make sure we have at least one path
+  if (paths.empty()) {
+    XLOG(ERR)
+        << "Empty list of paths: At least one path should be provided to start FAM";
+    throwf<std::runtime_error>("expected at least one path to start FAM");
+  }
+
   for (const auto& path : paths) {
     XLOGF(DBG3, "FAM monitoring path with prefix \"{}\"", path);
   }
   XLOGF(DBG3, "FAM logging events to \"{}\"", tmpOutputPath);
   XLOGF(DBG3, "FAM output file will be moved to \"{}\"", specifiedOutputPath);
 
-  // TODO[lxw]: Actually spawn the process and return the pid
-  pid_t pid = 999;
+  auto opts = SpawnedProcess::Options();
+  opts.open(
+      STDOUT_FILENO,
+      canonicalPath(tmpOutputPath),
+      OpenFileHandleOptions::writeFile()); // TODO[lxw]: This can fail if the
+                                           // folder doesn't exist
+  opts.executablePath(canonicalPath(kFamBinaryPath));
+  std::vector<std::string> argv = {
+      "FileMonitor",
+      "-filter",
+      paths[0],
+      "-skipApple",
+      "-pretty",
+  };
+
+  famProcess_ = std::make_unique<FileAccessMonitorProcess>(
+      SpawnedProcess(argv, std::move(opts)),
+      std::move(tmpOutputPath),
+      std::move(specifiedOutputPath),
+      shouldUpload);
+
+  pid_t pid = famProcess_->proc.pid();
 
   auto response = makeResponse();
   response.data.unshare();
@@ -1206,10 +1238,25 @@ UnixSocket::Message PrivHelperServer::processStartFam(
 }
 
 UnixSocket::Message PrivHelperServer::processStopFam() {
-  // TODO[lxw]: kill the process and retrieve the stored fields
-  string tmpOutputPath = "/tmp/edenfs/fam/fam_fbsource_2025_01_27.json";
-  string specifiedOutputPath = "/home/myUser/dump.json";
-  bool shouldUpload = true;
+  string tmpOutputPath = std::move(famProcess_->tmpOutputPath);
+  string specifiedOutputPath = std::move(famProcess_->specifiedOutputPath);
+  bool shouldUpload = famProcess_->shouldUpload;
+
+  pid_t pid = famProcess_->proc.pid();
+  // SIGTERM should be enough to terminate the process immediately, but we'll
+  // also try to kill it if it doesn't exit after a short time, e.g. 500ms.
+  auto status =
+      famProcess_->proc.terminateOrKill(std::chrono::milliseconds(500));
+  if (famProcess_->proc.terminated()) {
+    XLOG(DBG3) << "FAM process pid: " << pid << " terminated";
+  } else {
+    XLOG(ERR) << "Failed to terminate FAM pid: {} " << pid;
+    XLOG(ERR) << "FAM process status: " << status.str();
+
+    throwf<std::runtime_error>("Failed to terminate FAM pid: {}", pid);
+  }
+
+  famProcess_.reset();
 
   auto response = makeResponse();
   response.data.unshare();
