@@ -28,6 +28,7 @@ members = [
   "cli_rs/edenfs-commands",
   "cli_rs/edenfs-config",
   "cli_rs/edenfs-error",
+  "cli_rs/edenfs-saved-state",
   "cli_rs/edenfs-utils",
   "cli_rs/edenfsctl",
   "cli_rs/stack-config",
