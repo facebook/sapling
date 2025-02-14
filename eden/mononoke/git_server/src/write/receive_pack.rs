@@ -93,8 +93,9 @@ async fn push<'a>(
             request_context.repo.repo_blobstore_arc().clone(),
         );
         let scuba = scuba_from_state(ctx, state);
+        let concurrency = request_context.pushvars.concurrency();
         // Parse the packfile provided as part of the push and verify that its valid
-        let parsed_objects = parse_pack(push_args.pack_file, ctx, blobstore.clone())
+        let parsed_objects = parse_pack(push_args.pack_file, ctx, blobstore.clone(), concurrency)
             .try_timed()
             .await?
             .log_future_stats(
@@ -131,7 +132,7 @@ async fn push<'a>(
             object_store.clone(),
             &push_args.ref_updates,
             lfs,
-            request_context.pushvars.concurrency(),
+            concurrency,
         )
         .try_timed()
         .await?
