@@ -74,7 +74,7 @@ class diffopts:
     defaults = {
         "context": 3,
         "text": False,
-        "showfunc": False,
+        "showfunc": True,
         "git": False,
         "nodates": False,
         "nobinary": False,
