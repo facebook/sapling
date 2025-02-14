@@ -5,9 +5,16 @@
  * GNU General Public License version 2.
  */
 
+use std::path::PathBuf;
+
 use anyhow::Result;
 use async_trait::async_trait;
 use clap::Parser;
+use edenfs_client::EdenFsInstance;
+use edenfs_utils::path_from_bytes;
+use hg_util::path::expand_path;
+use io::IO;
+use termlogger::TermLogger;
 
 use crate::ExitCode;
 use crate::Subcommand;
@@ -66,8 +73,50 @@ struct StartCmd {
 impl crate::Subcommand for StartCmd {
     async fn run(&self) -> Result<ExitCode> {
         println!("Starting File Access Monitor");
-        Ok(0)
+
+        let mut monitor_paths: Vec<PathBuf> = Vec::new();
+
+        for path in &self.paths {
+            monitor_paths.push(expand_path(path));
+        }
+
+        let output_path = self.output.as_ref().map(expand_path);
+
+        let start_result = EdenFsInstance::global()
+            .start_file_access_monitor(&monitor_paths, output_path, self.upload)
+            .await?;
+
+        println!("File Access Monitor started [pid {}]", start_result.pid);
+        println!(
+            "Temp output file path: {}",
+            path_from_bytes(&start_result.tmpOutputPath)?.display()
+        );
+
+        if self.background {
+            println!("File Access Monitor is running in the background");
+            return Ok(0);
+        }
+
+        // TODO[lxw]: handle timeout
+
+        stop_fam().await
     }
+}
+
+async fn stop_fam() -> Result<ExitCode> {
+    let stop_result = EdenFsInstance::global().stop_file_access_monitor().await?;
+    println!("File Access Monitor stopped");
+    // TODO: handle the case when the output file is specified
+    let output_path = path_from_bytes(&stop_result.specifiedOutputPath)?;
+
+    println!("Output file saved to {}", output_path.display());
+
+    if stop_result.shouldUpload {
+        // TODO[lxw]: handle uploading outputfile
+        println!("Upload not implemented yet");
+        return Ok(1);
+    }
+    Ok(0)
 }
 
 #[derive(Parser, Debug)]
@@ -77,8 +126,7 @@ struct StopCmd {}
 #[async_trait]
 impl crate::Subcommand for StopCmd {
     async fn run(&self) -> Result<ExitCode> {
-        println!("File Access Monitor stopped");
-        Ok(0)
+        stop_fam().await
     }
 }
 
