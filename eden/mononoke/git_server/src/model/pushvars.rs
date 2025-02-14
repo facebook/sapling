@@ -51,6 +51,7 @@ impl Pushvars {
             .get(PUSH_CONCURRENCY)
             .and_then(|v| String::from_utf8_lossy(v).parse().ok())
             .unwrap_or(100)
+            .clamp(10, 500)
     }
 }
 
