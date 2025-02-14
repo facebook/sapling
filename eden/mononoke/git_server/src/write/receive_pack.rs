@@ -41,6 +41,7 @@ use crate::model::GitServerContext;
 use crate::model::PushValidationErrors;
 use crate::model::RepositoryParams;
 use crate::model::RepositoryRequestContext;
+use crate::scuba::scuba_from_state;
 use crate::service::set_ref;
 use crate::service::set_refs;
 use crate::service::upload_objects;
@@ -91,12 +92,16 @@ async fn push<'a>(
             &request_context.ctx.clone_with_repo_name(&repo_name),
             request_context.repo.repo_blobstore_arc().clone(),
         );
-        let scuba = ctx.scuba().clone();
+        let scuba = scuba_from_state(ctx, state);
         // Parse the packfile provided as part of the push and verify that its valid
         let parsed_objects = parse_pack(push_args.pack_file, ctx, blobstore.clone())
             .try_timed()
             .await?
-            .log_future_stats(scuba.clone(), "Parsed complete Packfile", None);
+            .log_future_stats(
+                scuba.clone(),
+                "Parsed complete Packfile",
+                "Push".to_string(),
+            );
         // Generate the GitObjectStore using the parsed objects
         let object_store = Arc::new(GitObjectStore::new(parsed_objects, ctx, blobstore.clone()));
         // Instantiate the LFS configuration
@@ -133,14 +138,14 @@ async fn push<'a>(
         .log_future_stats(
             scuba.clone(),
             "GitImport, Derivation and Bonsai creation completed",
-            None,
+            "Push".to_string(),
         );
 
         // We were successful in parsing the pack and uploading the objects to underlying store. Indicate this to the client
         write_text_packetline(PACK_OK, &mut output)
             .try_timed()
             .await?
-            .log_future_stats(scuba.clone(), "Sent Packfile OK", None);
+            .log_future_stats(scuba.clone(), "Sent Packfile OK", "Push".to_string());
         // Create bonsai_git_mapping store to enable mapping lookup during bookmark movement
         let git_bonsai_mapping_store = Arc::new(GitMappingsStore::new(
             ctx,
@@ -157,7 +162,11 @@ async fn push<'a>(
         )
         .try_timed()
         .await?
-        .log_future_stats(scuba.clone(), "Bookmark movement completed", None);
+        .log_future_stats(
+            scuba.clone(),
+            "Bookmark movement completed",
+            "Push".to_string(),
+        );
 
         let mut validation_errors = PushValidationErrors::default();
         // For each ref, update the status as ok or ng based on the result of the bookmark set operation

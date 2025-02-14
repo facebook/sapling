@@ -414,7 +414,7 @@ pub async fn import_commit_contents<Uploader: GitUploader, Reader: GitReader>(
         .log_future_stats(
             scuba.clone(),
             "Prefetched existing BonsaiGit Mappings",
-            None,
+            "Import".to_string(),
         )
         .into_iter()
         .flatten()
@@ -475,7 +475,7 @@ pub async fn import_commit_contents<Uploader: GitUploader, Reader: GitReader>(
                         }
                         Ok((stats, chunk)) => {
                             scuba.add_future_stats(&stats);
-                            scuba.log_with_msg("Completed Finalize Batch", None);
+                            scuba.log_with_msg("Completed Finalize Batch", "Import".to_string());
                             chunk
                         }
                     };
@@ -532,7 +532,10 @@ pub async fn import_commit_contents<Uploader: GitUploader, Reader: GitReader>(
                     }
                     Ok((stats, int_cs)) => {
                         scuba.add_future_stats(&stats);
-                        scuba.log_with_msg("Created Bonsai Changeset for Git Commit", None);
+                        scuba.log_with_msg(
+                            "Created Bonsai Changeset for Git Commit",
+                            "Import".to_string(),
+                        );
                         int_cs
                     }
                 };
@@ -658,7 +661,7 @@ pub async fn import_commit_contents<Uploader: GitUploader, Reader: GitReader>(
             .log_future_stats(
                 scuba.clone(),
                 "Uploaded Content Blob, Git Blob, Commits and Trees",
-                None,
+                "Import".to_string(),
             )
         {
             bonsai_sender
@@ -673,7 +676,7 @@ pub async fn import_commit_contents<Uploader: GitUploader, Reader: GitReader>(
     .log_future_stats(
         scuba.clone(),
         "Uploaded Content Blob, Git Blob, Commits and Trees for all commits",
-        None,
+        "Import".to_string(),
     );
     // Drop the sender since we finished sending all the commits to the bonsai creator
     drop(bonsai_sender);
@@ -685,7 +688,7 @@ pub async fn import_commit_contents<Uploader: GitUploader, Reader: GitReader>(
         .log_future_stats(
             scuba.clone(),
             "Completed Bonsai Changeset creation for all commits",
-            None,
+            "Import".to_string(),
         )
         .context("Panic while running bonsai_creator for commits")?;
     // Ensure that the batch finalization has completed before we exit
@@ -696,7 +699,7 @@ pub async fn import_commit_contents<Uploader: GitUploader, Reader: GitReader>(
         .log_future_stats(
             scuba.clone(),
             "Completed Finalize Batch for all commits",
-            None,
+            "Import".to_string(),
         )
         .context("Panic while running finalize_batch for commits")?;
 

@@ -277,13 +277,21 @@ async fn parse_stored_pack(
     })
     .try_timed()
     .await?
-    .log_future_stats(ctx.scuba().clone(), "Verified Packfile Checksum", None)?;
+    .log_future_stats(
+        ctx.scuba().clone(),
+        "Verified Packfile Checksum",
+        "Push".to_string(),
+    )?;
 
     // Load all the prerequisite objects
     let prereq_objects = fetch_prereq_objects(&pack_file, ctx, blobstore.clone())
         .try_timed()
         .await?
-        .log_future_stats(ctx.scuba().clone(), "Fetched Prerequisite Objects", None);
+        .log_future_stats(
+            ctx.scuba().clone(),
+            "Fetched Prerequisite Objects",
+            "Push".to_string(),
+        );
     // Fetch all the entries that need to be processed
     let pending_entries = pack_file
         .streaming_iter()
@@ -311,5 +319,9 @@ async fn parse_stored_pack(
     })
     .try_timed()
     .await?
-    .log_future_stats(ctx.scuba().clone(), "Decoded objects from Packfile", None)
+    .log_future_stats(
+        ctx.scuba().clone(),
+        "Decoded objects from Packfile",
+        "Push".to_string(),
+    )
 }

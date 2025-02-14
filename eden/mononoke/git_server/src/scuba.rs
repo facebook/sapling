@@ -5,6 +5,7 @@
  * GNU General Public License version 2.
  */
 
+use context::CoreContext;
 use gotham::state::State;
 use gotham_ext::middleware::request_context::RequestContext;
 use gotham_ext::middleware::MetadataState;
@@ -55,6 +56,28 @@ pub struct MononokeGitScubaHandler {
     method_info: Option<GitMethodInfo>,
     push_validation_errors: Option<PushValidationErrors>,
     client_username: Option<String>,
+}
+
+pub(crate) fn scuba_from_state(ctx: &CoreContext, state: &State) -> MononokeScubaSampleBuilder {
+    let mut scuba = ctx.scuba().clone();
+    let user = state
+        .try_borrow::<MetadataState>()
+        .and_then(|metadata_state| metadata_state.metadata().identities().username())
+        .map(ToString::to_string);
+    scuba.add_opt(MononokeGitScubaKey::User, user);
+    if let Some(info) = state.try_borrow::<GitMethodInfo>().cloned() {
+        scuba.add(MononokeGitScubaKey::Repo, info.repo.clone());
+        scuba.add(MononokeGitScubaKey::Method, info.method.to_string());
+        scuba.add(
+            MononokeGitScubaKey::MethodVariants,
+            info.variants_to_string(),
+        );
+        scuba.add(
+            MononokeGitScubaKey::MethodVariants,
+            info.variants_to_string_vector(),
+        );
+    }
+    scuba
 }
 
 impl MononokeGitScubaHandler {
