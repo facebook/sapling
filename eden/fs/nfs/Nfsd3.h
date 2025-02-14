@@ -197,7 +197,7 @@ class Nfsd3 final : public FsChannel {
    *
    * Note that the chmod(2) call runs asynchronously in a background thread as
    * both the kernel and EdenFS are holding locks that would otherwise cause
-   * EdenFS to deadlock. The flushInvalidations method below should be called
+   * EdenFS to deadlock. The completeInvalidations method below should be called
    * with all the locks released to wait for all the invalidation to complete.
    */
   void invalidate(AbsolutePath path, mode_t mode);
@@ -212,7 +212,7 @@ class Nfsd3 final : public FsChannel {
    * Request that the kernel invalidate its cached data for the specified
    * paths+modes.
    *
-   * This operation is performed asynchronously.  flushInvalidations() can be
+   * This operation is performed asynchronously.  completeInvalidations() can be
    * called if you need to determine when this operation has completed.
    *
    * @param pathsAndModes a vector of each inodes path and mode to invalidate.

@@ -406,7 +406,7 @@ class FuseChannel final : public FsChannel {
    * Request that the kernel invalidate its cached data for the specified
    * inode.
    *
-   * This operation is performed asynchronously.  flushInvalidations() can be
+   * This operation is performed asynchronously.  completeInvalidations() can be
    * called if you need to determine when this operation has completed.
    *
    * @param ino the inode number
@@ -420,7 +420,7 @@ class FuseChannel final : public FsChannel {
    * Request that the kernel invalidate its cached data for the specified
    * directory entry.
    *
-   * This operation is performed asynchronously.  flushInvalidations() can be
+   * This operation is performed asynchronously.  completeInvalidations() can be
    * called if you need to determine when this operation has completed.
    *
    * @param parent inode number
@@ -432,7 +432,7 @@ class FuseChannel final : public FsChannel {
    * Request that the kernel invalidate its cached data for the specified
    * inodes.
    *
-   * This operation is performed asynchronously.  flushInvalidations() can be
+   * This operation is performed asynchronously.  completeInvalidations() can be
    * called if you need to determine when this operation has completed.
    *
    * @param range a range of inodes
