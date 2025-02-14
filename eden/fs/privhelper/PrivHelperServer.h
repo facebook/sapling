@@ -7,6 +7,7 @@
 
 #pragma once
 
+#include <eden/common/utils/SpawnedProcess.h>
 #include <sys/types.h>
 #include <limits>
 #include <set>
@@ -25,6 +26,24 @@ class Cursor;
 } // namespace folly
 
 namespace facebook::eden {
+
+struct FileAccessMonitorProcess {
+  SpawnedProcess proc;
+
+  std::string tmpOutputPath;
+  std::string specifiedOutputPath;
+  bool shouldUpload;
+
+  FileAccessMonitorProcess(
+      SpawnedProcess p,
+      std::string tmpOutputPath,
+      std::string specifiedOutputPath,
+      bool shouldUpload)
+      : proc(std::move(p)),
+        tmpOutputPath(std::move(tmpOutputPath)),
+        specifiedOutputPath(std::move(specifiedOutputPath)),
+        shouldUpload(shouldUpload) {}
+};
 
 /*
  * PrivHelperServer runs the main loop for the privhelper server process.
