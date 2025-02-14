@@ -460,11 +460,12 @@ class EdenServiceHandler : virtual public StreamingEdenServiceSvIf,
    */
   OptionalProcessId getAndRegisterClientPid();
 
-  void startFileAccessMonitor(
-      StartFileAccessMonitorResult& result,
+  folly::SemiFuture<std::unique_ptr<StartFileAccessMonitorResult>>
+  semifuture_startFileAccessMonitor(
       std::unique_ptr<StartFileAccessMonitorParams> params) override;
 
-  void stopFileAccessMonitor(StopFileAccessMonitorResult& result) override;
+  folly::SemiFuture<std::unique_ptr<StopFileAccessMonitorResult>>
+  semifuture_stopFileAccessMonitor() override;
 
   void sendNotification(
       SendNotificationResponse& response,

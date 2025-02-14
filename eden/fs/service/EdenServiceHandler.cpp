@@ -2552,16 +2552,48 @@ void EdenServiceHandler::sync_changesSinceV2(
   }
 }
 
-void EdenServiceHandler::startFileAccessMonitor(
-    StartFileAccessMonitorResult& result,
-    std::unique_ptr<StartFileAccessMonitorParams>) {
-  result.pid() = 123;
-  result.tmpOutputPath() = "/tmp/edenfs/fam/fam_fbsource_2025_01_27.json";
+folly::SemiFuture<std::unique_ptr<StartFileAccessMonitorResult>>
+EdenServiceHandler::semifuture_startFileAccessMonitor(
+    std::unique_ptr<StartFileAccessMonitorParams> params) {
+  auto helper = INSTRUMENT_THRIFT_CALL(DBG1, *params->paths_ref());
+
+  // TODO: generate path to tmp file
+  std::string tmpPath = "/tmp/edenfs/fam/fam_fbsource_2025_01_27.json";
+
+  auto fut = ImmediateFuture<pid_t>(
+      server_->getServerState()->getPrivHelper()->startFam(
+          *params->paths(),
+          tmpPath,
+          params->specifiedOutputPath().value_or(tmpPath),
+          *params->shouldUpload_ref()));
+  return wrapImmediateFuture(
+             std::move(helper),
+             std::move(fut).thenValue(
+                 [tmpPath = std::move(tmpPath)](pid_t pid) mutable {
+                   auto out = std::make_unique<StartFileAccessMonitorResult>();
+                   out->pid() = pid;
+                   out->tmpOutputPath() = std::move(tmpPath);
+                   return out;
+                 }))
+      .semi();
 }
 
-void EdenServiceHandler::stopFileAccessMonitor(
-    StopFileAccessMonitorResult& result) {
-  result.tmpOutputPath() = "/tmp/edenfs/fam/fam_fbsource_2025_01_27.json";
+folly::SemiFuture<std::unique_ptr<StopFileAccessMonitorResult>>
+EdenServiceHandler::semifuture_stopFileAccessMonitor() {
+  auto helper = INSTRUMENT_THRIFT_CALL(DBG1);
+
+  auto fut = ImmediateFuture<StopFileAccessMonitorResponse>(
+      server_->getServerState()->getPrivHelper()->stopFam());
+
+  return wrapImmediateFuture(
+             std::move(helper), std::move(fut).thenValue([&](auto&& response) {
+               auto out = std::make_unique<StopFileAccessMonitorResult>();
+               out->tmpOutputPath() = response.tmpOutputPath;
+               out->specifiedOutputPath() = response.specifiedOutputPath;
+               out->shouldUpload() = response.shouldUpload;
+               return out;
+             }))
+      .semi();
 }
 
 void EdenServiceHandler::sendNotification(
