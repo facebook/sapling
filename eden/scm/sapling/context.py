@@ -197,7 +197,7 @@ class basectx:
         for fn, (left, right) in d.items():
             if left and right and left[0] and right[0] and left[1] == right[1]:
                 for side in (left, right):
-                    if side[0] != modifiednodeid:
+                    if side[0] not in wdirnodes:
                         prefetch.append((fn, side[0]))
 
         # Prefetch file contents and file parents to avoid serial fetches in below
