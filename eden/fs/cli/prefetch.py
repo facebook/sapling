@@ -265,7 +265,7 @@ class PrefetchCmd(Subcmd):
         )
         parser.add_argument(
             "--directories-only",
-            help="Do not prefetch files; only prefetch directores",
+            help="Do not prefetch files; only prefetch directories",
             default=False,
             action="store_true",
         )
