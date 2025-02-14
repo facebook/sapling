@@ -16,5 +16,5 @@ name = "termstyle"
 sapling-configmodel = { version = "0.1.0", path = "../../../config/model" }
 sapling-hgplain = { version = "0.1.0", path = "../../../util/hgplain" }
 sapling-io = { version = "0.1.0", path = "../.." }
-termwiz = { version = "0.22", features = ["widgets"] }
+termwiz = { version = "0.23", features = ["widgets"] }
 tracing = { version = "0.1.41", features = ["attributes", "valuable"] }

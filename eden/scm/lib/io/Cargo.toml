@@ -22,7 +22,7 @@ sapling-spawn-ext = { version = "0.1.0", path = "../spawn-ext" }
 sapling-streampager = { version = "0.10.3", path = "../third-party/streampager" }
 sapling-time-interval = { version = "0.1.0", path = "../util/time-interval" }
 terminal_size = "0.3"
-termwiz = { version = "0.22", features = ["widgets"] }
+termwiz = { version = "0.23", features = ["widgets"] }
 
 [target.'cfg(target_os = "linux")'.dependencies]
 termios = "0.3"

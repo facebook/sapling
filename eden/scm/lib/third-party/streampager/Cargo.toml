@@ -27,8 +27,8 @@ scopeguard = "1.2.0"
 serde = { version = "1.0.185", features = ["derive"] }
 smallvec = { version = "1.13.2", default-features = false }
 tempfile = "3.15"
-terminfo = "0.8"
-termwiz = "0.22"
+terminfo = "0.9"
+termwiz = "0.23"
 thiserror = "2"
 toml = "0.8.19"
 unicode-segmentation = "1.12.0"

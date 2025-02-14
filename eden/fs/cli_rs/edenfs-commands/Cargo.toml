@@ -32,7 +32,7 @@ serde_json = { version = "1.0.132", features = ["float_roundtrip", "unbounded_de
 subprocess = "0.2.9"
 sysinfo = "0.30.11"
 tabular = "0.2.0"
-termwiz = { version = "0.22", features = ["widgets"] }
+termwiz = { version = "0.23", features = ["widgets"] }
 tokio = { version = "1.41.0", features = ["full", "test-util", "tracing"] }
 toml = "0.8.19"
 tracing = { version = "0.1.41", features = ["attributes", "valuable"] }
