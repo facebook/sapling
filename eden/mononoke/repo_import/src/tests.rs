@@ -33,7 +33,6 @@ mod tests {
     use futures::stream::TryStreamExt;
     use git_types::MappedGitCommitId;
     use git_types::RootGitDeltaManifestV2Id;
-    use git_types::TreeHandle;
     use live_commit_sync_config::CfgrLiveCommitSyncConfig;
     use live_commit_sync_config::LiveCommitSyncConfig;
     use live_commit_sync_config::TestLiveCommitSyncConfig;
@@ -104,7 +103,6 @@ mod tests {
                     .get_active_config_mut()
                     .expect("No enabled derived data types config");
                 // Repo import has no need of these derived data types
-                config.types.remove(&TreeHandle::VARIANT);
                 config.types.remove(&MappedGitCommitId::VARIANT);
                 config.types.remove(&RootGitDeltaManifestV2Id::VARIANT);
             })
@@ -126,7 +124,6 @@ mod tests {
                     .get_active_config_mut()
                     .expect("No enabled derived data types config");
                 // Repo import has no need of these derived data types
-                config.types.remove(&TreeHandle::VARIANT);
                 config.types.remove(&MappedGitCommitId::VARIANT);
                 config.types.remove(&RootGitDeltaManifestV2Id::VARIANT);
             })

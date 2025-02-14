@@ -318,7 +318,6 @@ impl WarmBookmarksCacheBuilder {
             )),
             DerivableType::TestManifests => None,
             DerivableType::TestShardedManifests => None,
-            DerivableType::GitTrees => None,
         }
     }
 

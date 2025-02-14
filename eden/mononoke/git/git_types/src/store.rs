@@ -9,7 +9,6 @@ use std::io::Write;
 use std::sync::Arc;
 
 use anyhow::Result;
-use blobstore::impl_loadable_storable;
 use blobstore::Blobstore;
 use bytes::Bytes;
 use context::CoreContext;
@@ -17,7 +16,6 @@ use filestore::fetch_with_size;
 use filestore::hash_bytes;
 use filestore::Sha1IncrementalHasher;
 use futures::TryStreamExt;
-use futures_watchdog::WatchdogExt;
 use gix_hash::ObjectId;
 use gix_object::WriteTo;
 use mononoke_types::hash::GitSha1;
@@ -27,17 +25,6 @@ use packfile::types::BaseObject;
 use packfile::types::GitPackfileBaseItem;
 
 use crate::errors::GitError;
-use crate::thrift::Tree as ThriftTree;
-use crate::thrift::TreeHandle as ThriftTreeHandle;
-use crate::Tree;
-use crate::TreeHandle;
-
-impl_loadable_storable! {
-    handle_type => TreeHandle,
-    handle_thrift_type => ThriftTreeHandle,
-    value_type => Tree,
-    value_thrift_type => ThriftTree,
-}
 
 const GIT_OBJECT_PREFIX: &str = "git_object";
 const GIT_PACKFILE_BASE_ITEM_PREFIX: &str = "git_packfile_base_item";

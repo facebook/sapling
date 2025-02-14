@@ -24,7 +24,6 @@ use context::CoreContext;
 use futures::TryStreamExt;
 use git_types::GDMV2Entry;
 use git_types::GitDeltaManifestV2;
-use git_types::Tree as GitTree;
 use mercurial_types::HgAugmentedManifestEntry;
 use mercurial_types::HgAugmentedManifestEnvelope;
 use mercurial_types::HgChangesetEnvelope;
@@ -94,7 +93,6 @@ pub enum DecodeAs {
     HgAugmentedManifest,
     ShardedHgAugmentedManifestMapNode,
     ShardedHgAugmentedManifest,
-    GitTree,
     GitDeltaManifestV2MapNode,
     GitDeltaManifestV2,
     SkeletonManifest,
@@ -139,7 +137,6 @@ impl DecodeAs {
                     DecodeAs::ShardedHgAugmentedManifestMapNode,
                 ),
                 ("hgaugmentedmanifest.", DecodeAs::HgAugmentedManifest),
-                ("git.tree.", DecodeAs::GitTree),
                 ("gdm2.map2node.", DecodeAs::GitDeltaManifestV2MapNode),
                 ("gdm2.", DecodeAs::GitDeltaManifestV2),
                 ("skeletonmanifest.", DecodeAs::SkeletonManifest),
@@ -259,7 +256,6 @@ async fn decode(
                 Err(e) => Decoded::Fail(e.to_string()),
             }
         }
-        DecodeAs::GitTree => Decoded::try_display(GitTree::try_from(data)),
         DecodeAs::GitDeltaManifestV2 => {
             Decoded::try_debug(GitDeltaManifestV2::from_bytes(&data.into_raw_bytes()))
         }

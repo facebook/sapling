@@ -45,7 +45,6 @@ use mononoke_types::ThriftConvert;
 use crate::thrift;
 use crate::GitLeaf;
 use crate::GitTreeId;
-use crate::TreeMember;
 
 /// A manifest that contains an entry for each Git object that was added or modified as part of
 /// a commit. The object needs to be different from all objects at the same path in all parents
@@ -152,28 +151,6 @@ pub struct GDMV2ObjectEntry {
 }
 
 impl GDMV2ObjectEntry {
-    pub fn from_tree_member(member: &TreeMember, inlined_bytes: Option<Bytes>) -> Result<Self> {
-        let oid = ObjectId::from_hex(member.oid().to_hex().as_bytes()).with_context(|| {
-            format!(
-                "Error while converting hash {:?} to ObjectId",
-                member.oid().to_hex()
-            )
-        })?;
-        let size = member.oid().size();
-        let kind = match member.kind() {
-            crate::ObjectKind::Blob => crate::DeltaObjectKind::Blob,
-            crate::ObjectKind::Tree => crate::DeltaObjectKind::Tree,
-            kind => anyhow::bail!("Unexpected object kind {:?} for DeltaObjectEntry", kind),
-        };
-
-        Ok(GDMV2ObjectEntry {
-            oid,
-            size,
-            kind,
-            inlined_bytes,
-        })
-    }
-
     pub async fn from_tree_entry(
         ctx: &CoreContext,
         blobstore: &impl Blobstore,

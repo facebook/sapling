@@ -15,8 +15,6 @@ pub enum MononokeGitError {
     ContentMissing(FetchKey),
     #[error("Tree Derivation Failed")]
     TreeDerivationFailed,
-    #[error("Invalid Thrift")]
-    InvalidThrift,
 }
 
 #[derive(Clone, Debug, Error)]

@@ -33,7 +33,6 @@ use futures::StreamExt;
 use futures_stats::TimedTryFutureExt;
 use git_types::MappedGitCommitId;
 use git_types::RootGitDeltaManifestV2Id;
-use git_types::TreeHandle;
 use indicatif::ProgressBar;
 use indicatif::ProgressStyle;
 use maplit::hashmap;
@@ -558,7 +557,6 @@ async fn create_temp_repo(fb: FacebookInit, ctx: &CoreContext) -> Result<RepoCon
         types: hashset! {
             ChangesetInfo::VARIANT,
             MappedGitCommitId::VARIANT,
-            TreeHandle::VARIANT,
             RootGitDeltaManifestV2Id::VARIANT,
             RootUnodeManifestId::VARIANT,
         },

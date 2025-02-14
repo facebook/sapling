@@ -8,7 +8,6 @@
 #![feature(error_generic_member_access)]
 #![feature(iterator_try_reduce)]
 
-pub mod handles;
 pub mod mode;
 
 mod thrift {
@@ -22,7 +21,6 @@ mod derive_commit;
 mod derive_delta_manifest_v2;
 mod errors;
 pub mod git_lfs;
-mod manifest;
 mod object;
 mod store;
 pub mod tree;
@@ -51,12 +49,6 @@ pub use crate::delta_manifest_v2::GDMV2ObjectEntry;
 pub use crate::delta_manifest_v2::GitDeltaManifestV2;
 pub use crate::derive_delta_manifest_v2::RootGitDeltaManifestV2Id;
 pub use crate::errors::GitError;
-pub use crate::handles::blob::BlobHandle;
-pub use crate::handles::tree::Tree;
-pub use crate::handles::tree::TreeBuilder;
-pub use crate::handles::tree::TreeHandle;
-pub use crate::handles::tree::TreeMember;
-pub use crate::handles::tree::Treeish;
 pub use crate::store::fetch_git_object;
 pub use crate::store::fetch_git_object_bytes;
 pub use crate::store::fetch_non_blob_git_object;

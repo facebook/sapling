@@ -1194,7 +1194,6 @@ mod tests {
         // list, otherwise it won't get scrubbed and thus you would be unaware of different representation
         // in different stores
         let grandfathered: HashSet<DerivableType> = HashSet::from_iter(vec![
-            DerivableType::GitTrees,
             DerivableType::GitCommits,
             DerivableType::GitDeltaManifestsV2,
             DerivableType::TestManifests,
