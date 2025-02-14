@@ -2554,7 +2554,8 @@ void EdenServiceHandler::sync_changesSinceV2(
 
 folly::SemiFuture<std::unique_ptr<StartFileAccessMonitorResult>>
 EdenServiceHandler::semifuture_startFileAccessMonitor(
-    std::unique_ptr<StartFileAccessMonitorParams> params) {
+    [[maybe_unused]] std::unique_ptr<StartFileAccessMonitorParams> params) {
+#ifdef __APPLE__
   auto helper = INSTRUMENT_THRIFT_CALL(DBG1, *params->paths_ref());
 
   // TODO: generate path to tmp file
@@ -2576,10 +2577,14 @@ EdenServiceHandler::semifuture_startFileAccessMonitor(
                    return out;
                  }))
       .semi();
+#else // !__APPLE__
+  NOT_IMPLEMENTED();
+#endif
 }
 
 folly::SemiFuture<std::unique_ptr<StopFileAccessMonitorResult>>
 EdenServiceHandler::semifuture_stopFileAccessMonitor() {
+#ifdef __APPLE__
   auto helper = INSTRUMENT_THRIFT_CALL(DBG1);
 
   auto fut = ImmediateFuture<StopFileAccessMonitorResponse>(
@@ -2594,6 +2599,9 @@ EdenServiceHandler::semifuture_stopFileAccessMonitor() {
                return out;
              }))
       .semi();
+#else // !__APPLE__
+  NOT_IMPLEMENTED();
+#endif
 }
 
 void EdenServiceHandler::sendNotification(
