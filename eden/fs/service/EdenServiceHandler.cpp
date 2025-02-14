@@ -2559,9 +2559,22 @@ EdenServiceHandler::semifuture_startFileAccessMonitor(
   auto helper = INSTRUMENT_THRIFT_CALL(DBG1, *params->paths_ref());
 
   constexpr std::string_view FAM_TMP_OUTPUT_DIR = "/tmp/edenfs/fam/";
-  // TODO: generate path to tmp file
+
+  // Get the current time
+  std::time_t nowTime =
+      std::chrono::system_clock::to_time_t(std::chrono::system_clock::now());
+
+  // Create a character string to format the date and time
+  char datetimeString[20];
+  std::strftime(
+      datetimeString,
+      sizeof(datetimeString),
+      "%Y%m%d_%H%M%S",
+      std::localtime(&nowTime));
+
+  // form the path to tmp file
   std::string tmpPath =
-      fmt::format("{}fam_2025_01_27.json", FAM_TMP_OUTPUT_DIR);
+      fmt::format("{}fam_{}.out", FAM_TMP_OUTPUT_DIR, datetimeString);
 
   auto fut = ImmediateFuture<pid_t>(
       server_->getServerState()->getPrivHelper()->startFam(
