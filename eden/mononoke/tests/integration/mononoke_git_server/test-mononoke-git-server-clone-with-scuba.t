@@ -62,7 +62,28 @@
     "poll_time_us": *, (glob)
 
 # Verify the method variants in scuba as a normvector
-  $ jq .normvector.method_variants "$SCUBA" | grep -v null
+  $ jq .normvector.method_variants "$SCUBA" | grep -v null 
+  [
+    "standard"
+  ]
+  [
+    "standard"
+  ]
+  [
+    "standard"
+  ]
+  [
+    "standard"
+  ]
+  [
+    "standard"
+  ]
+  [
+    "standard"
+  ]
+  [
+    "standard"
+  ]
   [
     "standard"
   ]
@@ -73,8 +94,8 @@
     "standard"
   ]
 
-# Verify the timed futures logged with log tags show up in scuba logs
-  $ jq .normal "$SCUBA" | grep -e "Converted" -e "Counted" -e "Generated" -e "Collected" | sort
+# Verify the timed futures logged with log tags and msgs show up in scuba logs
+  $ jq .normal "$SCUBA" | grep -e "Converted" -e "Counted" -e "Generated" -e "Collected" -e "Read" | sort
     "log_tag": "Collected Bonsai commits to send to client",
     "log_tag": "Converted HAVE Git commits to Bonsais",
     "log_tag": "Converted WANT Git commits to Bonsais",
@@ -82,3 +103,10 @@
     "log_tag": "Generated commits stream",
     "log_tag": "Generated tags stream",
     "log_tag": "Generated trees and blobs stream",
+    "msg": "Read",
+    "msg": "Read",
+    "msg": "Read",
+    "msg": "Read",
+    "msg": "Read",
+    "msg": "Read",
+    "msg": "Read",

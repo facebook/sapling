@@ -59,13 +59,21 @@ pub struct MononokeGitScubaHandler {
 }
 
 pub(crate) fn scuba_from_state(ctx: &CoreContext, state: &State) -> MononokeScubaSampleBuilder {
-    let mut scuba = ctx.scuba().clone();
+    let scuba = ctx.scuba().clone();
     let user = state
         .try_borrow::<MetadataState>()
         .and_then(|metadata_state| metadata_state.metadata().identities().username())
         .map(ToString::to_string);
+    scuba_with_basic_info(user, state.try_borrow::<GitMethodInfo>().cloned(), scuba)
+}
+
+fn scuba_with_basic_info(
+    user: Option<String>,
+    info: Option<GitMethodInfo>,
+    mut scuba: MononokeScubaSampleBuilder,
+) -> MononokeScubaSampleBuilder {
     scuba.add_opt(MononokeGitScubaKey::User, user);
-    if let Some(info) = state.try_borrow::<GitMethodInfo>().cloned() {
+    if let Some(info) = info {
         scuba.add(MononokeGitScubaKey::Repo, info.repo.clone());
         scuba.add(MononokeGitScubaKey::Method, info.method.to_string());
         scuba.add(
@@ -93,22 +101,17 @@ impl MononokeGitScubaHandler {
         }
     }
 
-    pub fn log(self, mut scuba: MononokeScubaSampleBuilder) {
-        scuba.add_opt(MononokeGitScubaKey::User, self.client_username);
+    pub(crate) fn to_scuba(&self, ctx: &CoreContext) -> MononokeScubaSampleBuilder {
+        let scuba = ctx.scuba().clone();
+        scuba_with_basic_info(
+            self.client_username.clone(),
+            self.method_info.clone(),
+            scuba,
+        )
+    }
 
-        if let Some(info) = self.method_info {
-            scuba.add(MononokeGitScubaKey::Repo, info.repo.clone());
-            scuba.add(MononokeGitScubaKey::Method, info.method.to_string());
-            scuba.add(
-                MononokeGitScubaKey::MethodVariants,
-                info.variants_to_string(),
-            );
-            scuba.add(
-                MononokeGitScubaKey::MethodVariants,
-                info.variants_to_string_vector(),
-            );
-        }
-
+    fn log_processed(self, info: &PostResponseInfo, mut scuba: MononokeScubaSampleBuilder) {
+        scuba = scuba_with_basic_info(self.client_username, self.method_info, scuba);
         if let Some(ctx) = self.request_context {
             ctx.ctx.perf_counters().insert_perf_counters(&mut scuba);
         }
@@ -119,16 +122,12 @@ impl MononokeGitScubaHandler {
                 push_validation_errors.to_string(),
             );
         }
-        scuba.log();
-    }
-
-    fn log_processed(self, info: &PostResponseInfo, mut scuba: MononokeScubaSampleBuilder) {
         if let Some(err) = info.first_error() {
             scuba.add(MononokeGitScubaKey::Error, format!("{:?}", err));
         }
         scuba.add(MononokeGitScubaKey::ErrorCount, info.error_count());
         scuba.add("log_tag", "MononokeGit Request Processed");
-        self.log(scuba);
+        scuba.log();
     }
 
     fn log_cancelled(mut scuba: MononokeScubaSampleBuilder) {

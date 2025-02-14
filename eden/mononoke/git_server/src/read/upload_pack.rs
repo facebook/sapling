@@ -14,6 +14,7 @@ use async_stream::try_stream;
 use bonsai_git_mapping::BonsaiGitMappingRef;
 use bonsai_git_mapping::BonsaisOrGitShas;
 use bytes::Bytes;
+use cloned::cloned;
 use futures::future::try_join4;
 use futures::SinkExt;
 use futures::StreamExt;
@@ -417,7 +418,8 @@ pub async fn fetch(
     mononoke::spawn_task({
         let request_context = request_context.clone();
         async move {
-            let mut scuba = request_context.ctx.scuba().clone();
+            let mut scuba = scuba_handler.to_scuba(&request_context.ctx);
+            cloned!(scuba as perf_scuba);
             let writer_future = async move {
                 if delta_form == DeltaForm::OnlyOffset {
                     progress_writer
@@ -429,6 +431,7 @@ pub async fn fetch(
                     &request_context.repo,
                     args.into_request(concurrency(&request_context), shallow_response),
                     progress_writer,
+                    perf_scuba,
                 )
                 .await?;
                 let mut pack_writer = PackfileWriter::new(
@@ -445,7 +448,7 @@ pub async fn fetch(
                 Ok(_) => anyhow::Ok(()),
                 Err(e) => {
                     scuba.add(MononokeGitScubaKey::PackfileReadError, format!("{:?}", e));
-                    scuba_handler.log(scuba);
+                    scuba.log();
                     error_writer.send(format!("{:?}", e)).await?;
                     Ok(())
                 }
