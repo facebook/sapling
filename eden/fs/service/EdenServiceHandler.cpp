@@ -2558,8 +2558,10 @@ EdenServiceHandler::semifuture_startFileAccessMonitor(
 #ifdef __APPLE__
   auto helper = INSTRUMENT_THRIFT_CALL(DBG1, *params->paths_ref());
 
+  constexpr std::string_view FAM_TMP_OUTPUT_DIR = "/tmp/edenfs/fam/";
   // TODO: generate path to tmp file
-  std::string tmpPath = "/tmp/edenfs/fam/fam_fbsource_2025_01_27.json";
+  std::string tmpPath =
+      fmt::format("{}fam_2025_01_27.json", FAM_TMP_OUTPUT_DIR);
 
   auto fut = ImmediateFuture<pid_t>(
       server_->getServerState()->getPrivHelper()->startFam(
