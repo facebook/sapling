@@ -335,14 +335,14 @@ class SaplingRemoteAPIService(baseservice.BaseService):
     def cleanupworkspace(self, reponame, workspace):
         """Cleanup unnecessary remote bookmarks from the given workspace"""
         raise error.Abort(
-            "Unsupored oeration"
+            "Unsupported operation"
         )  # TODO(lmvasquezg): Implement this or fully deprecate
 
     def updatecheckoutlocations(
         self, reponame, workspace, hostname, commit, checkoutpath, sharedpath, unixname
     ):
         raise error.Abort(
-            "Unsupored oeration"
+            "Unsupported operation"
         )  # TODO(lmvasquezg): Implement this or fully deprecate
 
     def _castreferences(self, refs):
