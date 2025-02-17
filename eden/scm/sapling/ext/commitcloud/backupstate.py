@@ -44,7 +44,7 @@ class BackupState:
                 if len(lines) < 1 or lines[0].strip() != FORMAT_VERSION:
                     version = lines[0].strip() if len(lines) > 0 else "<empty>"
                     repo.ui.debug(
-                        "unrecognised backedupheads version '%s', ignoring\n" % version
+                        "unrecognized backedupheads version '%s', ignoring\n" % version
                     )
                     self.initfromserver()
                     return

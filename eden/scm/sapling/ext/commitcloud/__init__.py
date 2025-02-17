@@ -80,7 +80,7 @@ Configs::
     # Sync remote bookmarks via commitcloud
     remotebookmarkssync = True
 
-    # List of remote bookmarks to exclude from age check when cleaning up unnessesary remote bookmarks
+    # List of remote bookmarks to exclude from age check when cleaning up unnecessary remote bookmarks
     expensive_bookmarks = bookmark1, bookmark2, bookmark3
 
     [infinitepushbackup]

@@ -61,7 +61,7 @@ def getreponame(repo):
 
 
 def getnullableremotepath(ui):
-    """Select an appopriate remote repository to connect to for commit cloud operations."""
+    """Select an appropriate remote repository to connect to for commit cloud operations."""
     if "default" not in ui.paths:
         return None
     path = ui.paths.getpath("default")

@@ -391,7 +391,7 @@ class SaplingRemoteAPIService(baseservice.BaseService):
             else:
                 raise error.Abort(response["data"]["Err"]["message"])
 
-        raise error.Abort("No data revceived from server")
+        raise error.Abort("No data received from server")
 
     def _map_legacy_flags(self, strings):
         mapping = {

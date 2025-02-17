@@ -395,7 +395,7 @@ Check that `hg cloud sync` command can self recover from corrupted local backed 
   $ echo "trash" > .hg/commitcloud/backedupheads*
   $ EDENSCM_LOG="edenapi::client=info" hg cloud sync --debug
   commitcloud: synchronizing 'repo' with 'user/test/default'
-  unrecognised backedupheads version 'trash', ignoring
+  unrecognized backedupheads version 'trash', ignoring
    INFO edenapi::client: Requesting lookup for 4 item(s)
   commitcloud: nothing to upload
   commitcloud local service: get_references for current version 5

@@ -81,20 +81,20 @@ switchopt = [
 
 @command("cloud", [], "SUBCOMMAND ...")
 def cloud(ui, repo, **opts):
-    """backup your commits and synchronise them via commit cloud
+    """backup your commits and synchronise them via Commit Cloud
 
     Commit Cloud is the modern infrastructure for backing up your draft commits and bookmarks.
 
-    Commit Cloud introduces a new abstraction: the commit cloud workspace.
+    Commit Cloud introduces a new abstraction: the Commit Cloud workspace.
     A workspace holds a set of draft commits and bookmarks.
     You can think of it as a backup of the contents of your smartlog in the cloud.
     You can have multiple workspaces (and so multiple smartlogs) and switch between them.
 
-    Commit cloud lets you synchronize commits and bookmarks between
-    different copies of the same repository if they are connected to the same commit cloud workspace.
+    Commit Cloud lets you synchronize commits and bookmarks between
+    different copies of the same repository if they are connected to the same Commit Cloud workspace.
     This may be useful, for example, to keep your laptop and desktop computers in sync.
 
-    Use '@prog@ cloud join' to connect your repository to the default commit cloud workspace and get started.
+    Use '@prog@ cloud join' to connect your repository to the default Commit Cloud workspace and get started.
 
     Use '@prog@ cloud sync' to trigger a new backup and synchronization. Backups and synchronizations
     also happen automatically in the background as you create and modify commits.
@@ -112,22 +112,22 @@ def cloud(ui, repo, **opts):
 subcmd = cloud.subcommand(
     categories=[
         (
-            "Connect to a cloud workspace",
+            "Connect to a Cloud workspace",
             ["authenticate", "join", "switch", "leave"],
         ),
-        ("Synchronize with the connected cloud workspace", ["sync"]),
+        ("Synchronize with the connected Cloud workspace", ["sync"]),
         (
-            "Manage cloud workspaces",
+            "Manage Cloud workspaces",
             ["delete", "undelete", "list", "rename", "reclaim"],
         ),
-        ("View the smartlog for a cloud workspace", ["sl", "ssl"]),
-        ("View commits for a cloud workspace", ["log"]),
+        ("View the smartlog for a Cloud workspace", ["sl", "ssl"]),
+        ("View commits for a Cloud workspace", ["log"]),
         (
             "Back up commits",
             ["upload", "check"],
         ),
         ("Manage automatic backup or sync", ["disable", "enable"]),
-        ("Enable sharing for a cloud workspace", ["share"]),
+        ("Enable sharing for a Cloud workspace", ["share"]),
         (
             "Manage commits and bookmarks in workspaces",
             ["move", "copy", "hide"],
@@ -152,11 +152,11 @@ subcmd = cloud.subcommand(
     + switchopt,
 )
 def cloudjoin(ui, repo, **opts):
-    """connect the local repository to a commit cloud workspace ('default' workspace with no arguments)
+    """connect the local repository to a Commit Cloud workspace ('default' workspace with no arguments)
 
-    Local commits and bookmarks will be backed up to the commit cloud and
+    Local commits and bookmarks will be backed up to the Commit Cloud and
     synchronized between all repositories that have been connected
-    to the same commit cloud workspace
+    to the same Commit Cloud workspace
 
     Use `@prog@ cloud sync` to trigger a new backup and synchronization.
     """
@@ -252,7 +252,7 @@ def cloudjoin(ui, repo, **opts):
                 repo.wlock(),
                 repo.lock(),
                 repo.transaction(
-                    "commit cloud switch workspace clean up transaction"
+                    "Commit Cloud switch workspace clean up transaction"
                 ) as tr,
             ):
                 # check that the current location is a public commit
@@ -355,21 +355,21 @@ def cloudjoin(ui, repo, **opts):
     [] + createopts + workspace.workspaceopts + pullopts + switchopt,
 )
 def switchworkspace(ui, repo, **opts):
-    """switch the local repository to a different commit cloud workspace"""
+    """switch the local repository to a different Commit Cloud workspace"""
     opts.update({"switch": True})
     cloudjoin(ui, repo, **opts)
 
 
 @subcmd("rejoin|reconnect", [] + workspace.workspaceopts + pullopts)
 def cloudrejoin(ui, repo, **opts):
-    """reconnect the local repository to commit cloud
+    """reconnect the local repository to Commit Cloud
 
-    If the local repository is not connected to commit cloud, attempt to connect
+    If the local repository is not connected to Commit Cloud, attempt to connect
     it.  If the repository cannot be connected, then display a message
-    describing how to connect to commit cloud.
+    describing how to connect to Commit Cloud.
 
     If connection is successful, then commits and bookmarks will be synchronized
-    between all repositories that have been connected to the same commit cloud workspace.
+    between all repositories that have been connected to the same Commit Cloud workspace.
 
     Use `@prog@ cloud sync` to trigger a new synchronization.
     """
@@ -424,7 +424,7 @@ def cloudrejoin(ui, repo, **opts):
 
 @subcmd("leave|disconnect")
 def cloudleave(ui, repo, **opts):
-    """disconnect the local repository from commit cloud
+    """disconnect the local repository from Commit Cloud
 
     Commits and bookmarks will no longer be synchronized with your Commit Cloud Workspace.
     """
@@ -535,7 +535,7 @@ def cloudlog(ui, repo, **opts):
         @prog@ cloud log -d "may 2022 to jul 2022"
         @prog@ cloud log -d "2022-11-29"
 
-    See '@prog@ help dates to learn more about date formats and date ranges.
+    See '@prog@ help dates' to learn more about date formats and date ranges.
     """
 
     date = opts.get("date")
@@ -909,7 +909,7 @@ def cloudrollback(ui, repo, *revs, **opts):
         ("a", "all", None, _("list all workspaces, including archived")),
     ],
 )
-def cloudlistworspaces(ui, repo, **opts):
+def cloudlistworkspaces(ui, repo, **opts):
     """list Commit Cloud workspaces that are available on the server for the user"""
 
     user = opts.get("user")
@@ -1664,9 +1664,9 @@ def pushbackup(ui, repo, *revs, **opts):
 
 @subcmd("tidyup", workspace.workspaceopts)
 def cloudtidyup(ui, repo, **opts):
-    """tidy up commit cloud workspace
+    """tidy up Commit Cloud workspace
 
-    At the moment, this command only cleans up unnessesary remote bookmarks if they are old or expensive to fetch.
+    At the moment, this command only cleans up unnecessary remote bookmarks if they are old or expensive to fetch.
     """
     reponame = ccutil.getreponame(repo)
     workspacename = workspace.parseworkspaceordefault(ui, repo, opts)
@@ -1674,7 +1674,7 @@ def cloudtidyup(ui, repo, **opts):
         raise ccerror.WorkspaceError(ui, _("undefined workspace"))
     serv = service.get(ui, repo)
     ui.status(
-        _("cleanup unnessesary remote bookmarks from the workspace %s for repo %s\n")
+        _("cleanup unnecessary remote bookmarks from the workspace %s for repo %s\n")
         % (workspacename, reponame),
         component="commitcloud",
     )
@@ -1689,7 +1689,7 @@ def cloudtidyup(ui, repo, **opts):
             "",
             "source-repo",
             "",
-            _("repo associated with the workspace to improt from"),
+            _("repo associated with the workspace to import from"),
         ),
         (
             "",

@@ -243,7 +243,7 @@ class BaseService(abc.ABC):
 
     @abstractmethod
     def getworkspace(self, reponame, workspacename):
-        """Gets the workspace information if it exists for the given full workspacename name.
+        """Gets the workspace information if it exists for the given full workspace name.
 
         Return type is Optional[WorkspaceInfo]
         """

@@ -55,7 +55,7 @@ def _isremotebookmarkssyncenabled(ui):
 def _getheads(repo):
     if visibility.enabled(repo):
         # Visible heads can contain public heads in some cases due to a known issue.
-        # TODO (liubovd): remove the filer once the issue is fixed.
+        # TODO (liubovd): remove the filter once the issue is fixed.
         return [nodemod.hex(n) for n in visibility.heads(repo) if repo[n].mutable()]
     else:
         # Select the commits to sync.  To match previous behaviour, this is
