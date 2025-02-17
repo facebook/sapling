@@ -34,6 +34,7 @@ use hooks::PushAuthoredBy;
 use mononoke_types::BonsaiChangeset;
 use mononoke_types::ChangesetId;
 use repo_authorization::AuthorizationContext;
+use repo_update_logger::CommitInfo;
 use skeleton_manifest::RootSkeletonManifestId;
 
 use crate::hook_running::run_bookmark_hooks;
@@ -139,7 +140,7 @@ impl AffectedChangesets {
                 async move {
                     Ok(repo
                         .phases()
-                        .get_cached_public(ctx, vec![csid])
+                        .get_public(ctx, vec![csid], false)
                         .await?
                         .contains(&csid))
                 }
@@ -148,7 +149,6 @@ impl AffectedChangesets {
             .into_iter()
             .chain(base.into_iter())
             .collect();
-
         Ok(repo
             .commit_graph()
             .ancestors_difference_stream(ctx, vec![head], public_frontier)
@@ -202,7 +202,8 @@ impl AffectedChangesets {
         .boxed())
     }
 
-    /// Check all applicable restrictions on the affected changesets.
+    /// Check all applicable restrictions on the affected changesets and return the changesets
+    /// which need to be logged.
     pub(crate) async fn check_restrictions(
         &mut self,
         ctx: &CoreContext,
@@ -215,7 +216,7 @@ impl AffectedChangesets {
         kind: BookmarkKind,
         additional_changesets: AdditionalChangesets,
         cross_repo_push_source: CrossRepoPushSource,
-    ) -> Result<(), BookmarkMovementError> {
+    ) -> Result<Vec<CommitInfo>, BookmarkMovementError> {
         let needs_extras_check = Self::needs_extras_check(repo, kind);
         let needs_case_conflicts_check = Self::needs_case_conflicts_check(repo, kind);
         let needs_hooks_check =
@@ -261,49 +262,44 @@ impl AffectedChangesets {
             }
         }
 
-        self.already_checked_changesets = changesets_stream
+        let validated_commits = changesets_stream
             .chunks(N_CHANGESETS_TO_LOAD_AT_ONCE)
             // Aggregate any error loading changesets on a per-chunk basis
             .map(|chunk| chunk.into_iter().collect::<Result<Vec<_>, _>>())
-            .try_fold(HashSet::new(), |mut checked_changesets, chunk| {
-                async move {
-                    if needs_extras_check {
-                        Self::check_extras(&chunk).await?;
-                    }
-
-                    if needs_case_conflicts_check {
-                        Self::check_case_conflicts(&chunk, ctx, repo).await?;
-                    }
-                    if needs_hooks_check {
-                        Self::check_changeset_hooks(
-                            &chunk,
-                            ctx,
-                            authz,
-                            hook_manager,
-                            bookmark,
-                            pushvars,
-                            cross_repo_push_source,
-                        )
-                        .await?;
-                    }
-
-                    if needs_path_permissions_check {
-                        Self::check_path_permissions(&chunk, ctx, authz, repo).await?;
-                    }
-                    // No check failed. We can record this chunk of changesets as having passed the
-                    // checks and avoid loading them again next time.
-                    checked_changesets.extend(
-                        chunk
-                            .iter()
-                            .map(|bcs| bcs.get_changeset_id())
-                            .collect::<Vec<_>>(),
-                    );
-                    Ok(checked_changesets)
+            .try_fold(HashSet::new(), |mut checked_commits, chunk| async move {
+                if needs_extras_check {
+                    Self::check_extras(&chunk).await?;
                 }
+
+                if needs_case_conflicts_check {
+                    Self::check_case_conflicts(&chunk, ctx, repo).await?;
+                }
+                if needs_hooks_check {
+                    Self::check_changeset_hooks(
+                        &chunk,
+                        ctx,
+                        authz,
+                        hook_manager,
+                        bookmark,
+                        pushvars,
+                        cross_repo_push_source,
+                    )
+                    .await?;
+                }
+
+                if needs_path_permissions_check {
+                    Self::check_path_permissions(&chunk, ctx, authz, repo).await?;
+                }
+
+                checked_commits.extend(chunk.iter().map(|bcs| CommitInfo::new(bcs, None)));
+                Ok(checked_commits)
             })
             .await?;
-
-        Ok(())
+        self.already_checked_changesets = validated_commits
+            .iter()
+            .map(|commit_info| commit_info.changeset_id())
+            .collect();
+        Ok(validated_commits.into_iter().collect())
     }
 
     fn needs_extras_check(repo: &impl Repo, kind: BookmarkKind) -> bool {

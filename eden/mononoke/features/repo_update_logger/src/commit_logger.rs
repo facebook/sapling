@@ -44,7 +44,7 @@ use serde_derive::Serialize;
 #[cfg(fbcode_build)]
 use whence_logged::WhenceScribeLogged;
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub struct CommitInfo {
     changeset_id: ChangesetId,
     bubble_id: Option<NonZeroU64>,
@@ -80,6 +80,10 @@ impl CommitInfo {
         self.changeset_id = new_changeset_id;
         Ok(())
     }
+
+    pub fn changeset_id(&self) -> ChangesetId {
+        self.changeset_id
+    }
 }
 
 fn extract_differential_revision(message: &str) -> Option<&str> {
@@ -91,7 +95,7 @@ fn extract_differential_revision(message: &str) -> Option<&str> {
     Some(RE.captures(message)?.get(1)?.as_str())
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub struct ChangedFilesInfo {
     changed_files_count: u64,
     changed_files_size: u64,
