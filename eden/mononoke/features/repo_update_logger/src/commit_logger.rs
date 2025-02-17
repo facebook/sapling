@@ -44,7 +44,7 @@ use serde_derive::Serialize;
 #[cfg(fbcode_build)]
 use whence_logged::WhenceScribeLogged;
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct CommitInfo {
     changeset_id: ChangesetId,
     bubble_id: Option<NonZeroU64>,
@@ -91,7 +91,7 @@ fn extract_differential_revision(message: &str) -> Option<&str> {
     Some(RE.captures(message)?.get(1)?.as_str())
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct ChangedFilesInfo {
     changed_files_count: u64,
     changed_files_size: u64,
@@ -320,25 +320,6 @@ pub async fn log_new_commits(
             Some(err.to_string()),
         );
     }
-}
-
-pub async fn log_new_bonsai_changesets(
-    ctx: &CoreContext,
-    repo: &(impl RepoIdentityRef + BonsaiGlobalrevMappingRef + CommitGraphRef + RepoConfigRef),
-    bookmark: &BookmarkKey,
-    kind: BookmarkKind,
-    commits_to_log: Vec<BonsaiChangeset>,
-) {
-    log_new_commits(
-        ctx,
-        repo,
-        Some((bookmark, kind)),
-        commits_to_log
-            .iter()
-            .map(|bcs| CommitInfo::new(bcs, None))
-            .collect(),
-    )
-    .await;
 }
 
 /// Helper function for finding all the newly public commit that should be logged after

@@ -25,6 +25,7 @@ use repo_authorization::RepoWriteOperation;
 use repo_update_logger::find_draft_ancestors;
 use repo_update_logger::BookmarkInfo;
 use repo_update_logger::BookmarkOperation;
+use repo_update_logger::CommitInfo;
 
 use crate::affected_changesets::AdditionalChangesets;
 use crate::affected_changesets::AffectedChangesets;
@@ -266,7 +267,7 @@ impl<'op> UpdateBookmarkOp<'op> {
                     if self.log_new_public_commits_to_scribe {
                         let res = find_draft_ancestors(ctx, repo, self.targets.new).await;
                         match res {
-                            Ok(bcss) => bcss,
+                            Ok(bcss) => bcss.iter().map(|bcs| CommitInfo::new(bcs, None)).collect(),
                             Err(err) => {
                                 ctx.scuba().clone().log_with_msg(
                                     "Failed to find draft ancestors",

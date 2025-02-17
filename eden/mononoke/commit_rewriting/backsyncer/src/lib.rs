@@ -89,7 +89,8 @@ use repo_derived_data::RepoDerivedData;
 use repo_identity::RepoIdentity;
 use repo_identity::RepoIdentityRef;
 use repo_update_logger::find_draft_ancestors;
-use repo_update_logger::log_new_bonsai_changesets;
+use repo_update_logger::log_new_commits;
+use repo_update_logger::CommitInfo;
 use scuba_ext::MononokeScubaSampleBuilder;
 use slog::debug;
 use slog::error;
@@ -639,7 +640,7 @@ where
                     Some(to_cs_id) => {
                         let res = find_draft_ancestors(&ctx, target_repo, to_cs_id).await;
                         match res {
-                            Ok(bcss) => bcss,
+                            Ok(bcss) => bcss.iter().map(|bcs| CommitInfo::new(bcs, None)).collect(),
                             Err(err) => {
                                 ctx.scuba().clone().log_with_msg(
                                     "Failed to find draft ancestors for logging",
@@ -731,11 +732,10 @@ where
                 .commit_with_hooks(vec![txn_hook])
                 .await?
                 .map(|x| x.into());
-            log_new_bonsai_changesets(
+            log_new_commits(
                 &ctx,
                 target_repo,
-                &bookmark,
-                BookmarkKind::Publishing,
+                Some((&bookmark, BookmarkKind::Publishing)),
                 commits_to_log,
             )
             .await;

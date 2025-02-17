@@ -23,7 +23,6 @@ use commit_graph::CommitGraphWriterRef;
 use context::CoreContext;
 use itertools::Itertools;
 use metaconfig_types::RepoConfigRef;
-use mononoke_types::BonsaiChangeset;
 use mononoke_types::ChangesetId;
 use mononoke_types::NonRootMPath;
 use phases::PhasesRef;
@@ -38,8 +37,9 @@ use repo_derived_data::RepoDerivedDataRef;
 use repo_identity::RepoIdentityRef;
 use repo_permission_checker::RepoPermissionCheckerRef;
 use repo_update_logger::log_bookmark_operation;
-use repo_update_logger::log_new_bonsai_changesets;
+use repo_update_logger::log_new_commits;
 use repo_update_logger::BookmarkInfo;
+use repo_update_logger::CommitInfo;
 use thiserror::Error;
 
 pub mod affected_changesets;
@@ -192,14 +192,14 @@ pub fn describe_hook_rejections(rejections: &[HookRejection]) -> String {
 pub struct BookmarkInfoData {
     bookmark_info: BookmarkInfo,
     log_new_public_commits_to_scribe: bool,
-    commits: Vec<BonsaiChangeset>,
+    commits: Vec<CommitInfo>,
 }
 
 impl BookmarkInfoData {
     pub fn new(
         bookmark_info: BookmarkInfo,
         log_new_public_commits_to_scribe: bool,
-        commits: Vec<BonsaiChangeset>,
+        commits: Vec<CommitInfo>,
     ) -> Self {
         Self {
             bookmark_info,
@@ -221,11 +221,13 @@ impl BookmarkInfoData {
          ),
     ) {
         if self.log_new_public_commits_to_scribe {
-            log_new_bonsai_changesets(
+            log_new_commits(
                 ctx,
                 repo,
-                &self.bookmark_info.bookmark_name,
-                self.bookmark_info.bookmark_kind,
+                Some((
+                    &self.bookmark_info.bookmark_name,
+                    self.bookmark_info.bookmark_kind,
+                )),
                 self.commits,
             )
             .await;
