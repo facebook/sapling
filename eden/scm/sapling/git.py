@@ -371,6 +371,9 @@ def openstore(repo):
     gitdir = readgitdir(repo)
     if gitdir:
         if DOTGIT_REQUIREMENT not in repo.storerequirements:
+            # The libgit2 we use has issues with the multi-pack-index.
+            # Disable it for now, until we upgrade or replace libgit2.
+            util.tryunlink(gitdir + "/objects/pack/multi-pack-index")
             write_maintained_git_config(repo)
         return bindings.gitstore.gitstore(gitdir, repo.ui._rcfg)
 
@@ -402,13 +405,16 @@ def readconfig(repo):
 #
 # `repack.writeBitmaps` is incompatible with `repack --filter...` and
 # might cause issues. Therefore disable it.
+#
+# The multi-pack-index (incremental-repack) is incompatible with the libgit2
+# we're using, unfortunately...
 MAINTAINED_GIT_CONFIG = """
 [maintenance "gc"]
   enabled = false
 [maintenance "loose-objects"]
   enabled = true
 [maintenance "incremental-repack"]
-  enabled = true
+  enabled = false
 [repack]
   writeBitmaps = false
 """
