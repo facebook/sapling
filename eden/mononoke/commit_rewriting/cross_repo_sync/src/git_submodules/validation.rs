@@ -466,6 +466,7 @@ async fn get_submodule_expansion_fsnode_id<'a, R: Repo>(
         // the bonsai needs to be cloned.
         bonsai.clone(),
         parent_root_fsnodes,
+        None,
     )
     .timed()
     .await

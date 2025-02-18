@@ -41,6 +41,7 @@ impl BonsaiDerivable for ChangesetInfo {
         _derivation_ctx: &DerivationContext,
         bonsai: BonsaiChangeset,
         _parents: Vec<Self>,
+        _known: Option<&HashMap<ChangesetId, Self>>,
     ) -> Result<Self, Error> {
         Ok(ChangesetInfo::new(bonsai.get_changeset_id(), bonsai))
     }

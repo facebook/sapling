@@ -87,6 +87,7 @@ impl BonsaiDerivable for RootDeletedManifestV2Id {
         derivation_ctx: &DerivationContext,
         bonsai: BonsaiChangeset,
         parents: Vec<Self>,
+        _known: Option<&HashMap<ChangesetId, Self>>,
     ) -> Result<Self, Error> {
         RootDeletedManifestDeriver::derive_single(ctx, derivation_ctx, bonsai, parents).await
     }

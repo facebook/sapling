@@ -96,6 +96,7 @@ impl BonsaiDerivable for RootUnodeManifestId {
         derivation_ctx: &DerivationContext,
         bonsai: BonsaiChangeset,
         parents: Vec<Self>,
+        _known: Option<&HashMap<ChangesetId, Self>>,
     ) -> Result<Self> {
         let csid = bonsai.get_changeset_id();
         derive_unode_manifest_with_subtree_changes(

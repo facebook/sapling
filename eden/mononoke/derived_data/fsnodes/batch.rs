@@ -124,7 +124,14 @@ pub async fn new_batch_derivation(
             let parents = derivation_ctx
                 .fetch_unknown_parents(ctx, Some(already_derived), &bonsai)
                 .await?;
-            let derived = RootFsnodeId::derive_single(ctx, derivation_ctx, bonsai, parents).await?;
+            let derived = RootFsnodeId::derive_single(
+                ctx,
+                derivation_ctx,
+                bonsai,
+                parents,
+                Some(already_derived),
+            )
+            .await?;
             already_derived.insert(item.cs_id, derived);
         }
     } else {

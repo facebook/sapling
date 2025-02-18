@@ -5,6 +5,8 @@
  * GNU General Public License version 2.
  */
 
+use std::collections::HashMap;
+
 use anyhow::anyhow;
 use anyhow::bail;
 use anyhow::Error;
@@ -80,6 +82,7 @@ impl BonsaiDerivable for RootBssmV3DirectoryId {
         derivation_ctx: &DerivationContext,
         bonsai: BonsaiChangeset,
         parents: Vec<Self>,
+        _known: Option<&HashMap<ChangesetId, Self>>,
     ) -> Result<Self> {
         if bonsai.has_subtree_changes() {
             bail!("Subtree changes are not supported for bssm v3");

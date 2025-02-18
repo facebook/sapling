@@ -61,6 +61,7 @@ impl BonsaiDerivable for RootBlameV2 {
         derivation_ctx: &DerivationContext,
         bonsai: BonsaiChangeset,
         _parents: Vec<Self>,
+        _known: Option<&HashMap<ChangesetId, Self>>,
     ) -> Result<Self, Error> {
         let csid = bonsai.get_changeset_id();
         let root_manifest = derivation_ctx

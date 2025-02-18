@@ -5,6 +5,8 @@
  * GNU General Public License version 2.
  */
 
+use std::collections::HashMap;
+
 use anyhow::anyhow;
 use anyhow::bail;
 use anyhow::format_err;
@@ -80,6 +82,7 @@ impl BonsaiDerivable for MappedGitCommitId {
         derivation_ctx: &DerivationContext,
         bonsai: BonsaiChangeset,
         parents: Vec<Self>,
+        _known: Option<&HashMap<ChangesetId, Self>>,
     ) -> Result<Self> {
         if bonsai.is_snapshot() {
             bail!("Can't derive MappedGitCommitId for snapshot")

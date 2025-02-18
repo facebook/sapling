@@ -84,6 +84,7 @@ impl BonsaiDerivable for RootFsnodeId {
         derivation_ctx: &DerivationContext,
         bonsai: BonsaiChangeset,
         parents: Vec<Self>,
+        _known: Option<&HashMap<ChangesetId, Self>>,
     ) -> Result<Self, Error> {
         if bonsai.has_subtree_changes() {
             bail!("Subtree changes are not supported for fsnodes");

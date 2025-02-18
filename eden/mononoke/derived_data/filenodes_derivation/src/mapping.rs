@@ -118,6 +118,7 @@ impl BonsaiDerivable for FilenodesOnlyPublic {
         derivation_ctx: &DerivationContext,
         bonsai: BonsaiChangeset,
         _parents: Vec<Self>,
+        _known: Option<&HashMap<ChangesetId, Self>>,
     ) -> Result<Self> {
         derive_filenodes(ctx, derivation_ctx, bonsai).await
     }

@@ -5,6 +5,7 @@
  * GNU General Public License version 2.
  */
 
+use std::collections::HashMap;
 use std::sync::Arc;
 
 use anyhow::Context;
@@ -30,6 +31,7 @@ use mononoke_types::skeleton_manifest_v2::SkeletonManifestV2;
 use mononoke_types::skeleton_manifest_v2::SkeletonManifestV2Entry;
 use mononoke_types::BlobstoreValue;
 use mononoke_types::BonsaiChangeset;
+use mononoke_types::ChangesetId;
 use mononoke_types::NonRootMPath;
 use mononoke_types::SkeletonManifestV2Id;
 use mononoke_types::TrieMap;
@@ -129,6 +131,7 @@ pub(crate) async fn derive_single(
     derivation_ctx: &DerivationContext,
     bonsai: BonsaiChangeset,
     parents: Vec<RootSkeletonManifestV2Id>,
+    _known: Option<&HashMap<ChangesetId, RootSkeletonManifestV2Id>>,
 ) -> Result<RootSkeletonManifestV2Id> {
     let blobstore = derivation_ctx.blobstore();
     let changes = get_file_changes(&bonsai);

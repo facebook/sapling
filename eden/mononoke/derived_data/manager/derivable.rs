@@ -80,6 +80,7 @@ pub trait BonsaiDerivable: Sized + Send + Sync + Clone + Debug + 'static {
         derivation_ctx: &DerivationContext,
         bonsai: BonsaiChangeset,
         parents: Vec<Self>,
+        known: Option<&HashMap<ChangesetId, Self>>,
     ) -> Result<Self>;
 
     /// Derive data for a batch of changesets.
@@ -116,7 +117,8 @@ pub trait BonsaiDerivable: Sized + Send + Sync + Clone + Debug + 'static {
             let parents = derivation_ctx
                 .fetch_unknown_parents(ctx, Some(&res), &bonsai)
                 .await?;
-            let derived = Self::derive_single(ctx, derivation_ctx, bonsai, parents).await?;
+            let derived =
+                Self::derive_single(ctx, derivation_ctx, bonsai, parents, Some(&res)).await?;
             res.insert(csid, derived);
         }
         Ok(res)

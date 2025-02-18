@@ -75,6 +75,7 @@ impl BonsaiDerivable for MappedHgChangesetId {
         derivation_ctx: &DerivationContext,
         bonsai: BonsaiChangeset,
         parents: Vec<Self>,
+        _known: Option<&HashMap<ChangesetId, Self>>,
     ) -> Result<Self> {
         if bonsai.is_snapshot() {
             bail!("Can't derive Hg changeset for snapshot")
@@ -348,6 +349,7 @@ impl BonsaiDerivable for RootHgAugmentedManifestId {
         derivation_ctx: &DerivationContext,
         bonsai: BonsaiChangeset,
         parents: Vec<Self>,
+        _known: Option<&HashMap<ChangesetId, Self>>,
     ) -> Result<Self> {
         let blobstore = derivation_ctx.blobstore();
 
