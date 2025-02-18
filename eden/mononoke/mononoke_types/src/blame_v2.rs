@@ -338,10 +338,11 @@ pub struct BlameParentData<C: AsRef<[u8]>> {
     blame: BlameData,
 }
 
+/// Blame data for a version of a file.
 #[derive(Debug, Clone, Eq, PartialEq, Hash)]
 pub struct BlameData {
     /// Sequence of index-based blame ranges for this file.
-    ranges: Vec<BlameRangeIndexes>,
+    ranges: Vec<BlameRangeIndex>,
 
     /// A map of changeset_id index to changeset ID.  The keys of this map
     /// are stable for the p1-parent history of a changeset.  A `VecMap`
@@ -370,7 +371,7 @@ impl BlameData {
         if let Some(hunk) = diff_hunks(&b""[..], content.as_ref()).first() {
             let length = (hunk.add.end - hunk.add.start) as u32;
             debug_assert!(length > 0);
-            ranges.push(BlameRangeIndexes {
+            ranges.push(BlameRangeIndex {
                 offset: 0,
                 length,
                 csid_index: 0,
@@ -448,7 +449,7 @@ impl BlameData {
         for hunk in diff_hunks(blame_parent.content.as_ref(), content.as_ref()) {
             // Add unaffected ranges
             let (unaffected, remaining) =
-                BlameRangeIndexes::split_multiple_at(parent_ranges, hunk.remove.start as u32);
+                BlameRangeIndex::split_multiple_at(parent_ranges, hunk.remove.start as u32);
             parent_ranges = remaining;
             for range in unaffected {
                 new_ranges.append(range);
@@ -457,14 +458,14 @@ impl BlameData {
             // Skip the removed ranges
             if hunk.remove.end > hunk.remove.start {
                 let (_removed_ranges, remaining) =
-                    BlameRangeIndexes::split_multiple_at(parent_ranges, hunk.remove.end as u32);
+                    BlameRangeIndex::split_multiple_at(parent_ranges, hunk.remove.end as u32);
                 parent_ranges = remaining;
             }
 
             // Add a new range
             if hunk.add.end > hunk.add.start {
                 let length = (hunk.add.end - hunk.add.start) as u32;
-                let parent = Some(BlameParentIndexes {
+                let parent = Some(BlameRangeParentIndex {
                     parent_index: blame_parent.parent_index,
                     offset: hunk.remove.start as u32,
                     length: (hunk.remove.end - hunk.remove.start) as u32,
@@ -483,7 +484,7 @@ impl BlameData {
         // origin offsets.  We must check that origin offsets match so that
         // when lines are deleted from the middle of a range, the ranges
         // either side still refer to the correct original lines.
-        let mut ranges: Vec<BlameRangeIndexes> = Vec::with_capacity(new_ranges.len());
+        let mut ranges: Vec<BlameRangeIndex> = Vec::with_capacity(new_ranges.len());
         for range in new_ranges.take() {
             match ranges.last_mut() {
                 None if range.offset != 0 => {
@@ -598,7 +599,7 @@ impl BlameData {
         // We must check that origin offsets match so that when lines are
         // deleted from the middle of a range, the ranges either side still
         // refer to the correct original lines.
-        let mut merged_ranges: Vec<BlameRangeIndexes> = Vec::new();
+        let mut merged_ranges: Vec<BlameRangeIndex> = Vec::new();
         for blame_line in self.merge_lines(merge_csid, others) {
             let path_index = path_indexes[blame_line.path];
             let csid_index = csid_indexes[blame_line.changeset_id];
@@ -627,7 +628,7 @@ impl BlameData {
                     last.length += 1;
                 }
                 _ => {
-                    merged_ranges.push(BlameRangeIndexes {
+                    merged_ranges.push(BlameRangeIndex {
                         offset: blame_line.offset,
                         length: 1,
                         csid_index,
@@ -690,7 +691,7 @@ impl BlameData {
             let parent = if let (Some(parent_offset), Some(parent_length)) =
                 (range.parent_offset, range.parent_length)
             {
-                Some(BlameParentIndexes {
+                Some(BlameRangeParentIndex {
                     offset: parent_offset as u32,
                     length: parent_length as u32,
                     parent_index: range.parent_index.unwrap_or(0) as u32,
@@ -699,7 +700,7 @@ impl BlameData {
             } else {
                 None
             };
-            ranges.push(BlameRangeIndexes {
+            ranges.push(BlameRangeIndex {
                 offset,
                 length,
                 csid_index,
@@ -761,7 +762,7 @@ impl BlameData {
         }
     }
 
-    pub fn ranges(&self) -> &[BlameRangeIndexes] {
+    pub fn ranges(&self) -> &[BlameRangeIndex] {
         &self.ranges
     }
 
@@ -901,7 +902,7 @@ impl BlameData {
                 .map(|(index, path)| (path, index as u32))
                 .collect();
 
-            let line_follows_range = |line: &BlameLine<'_>, range: &BlameRangeIndexes| -> bool {
+            let line_follows_range = |line: &BlameLine<'_>, range: &BlameRangeIndex| -> bool {
                 let range_path_index: usize = range.path_index as usize;
                 let maybe_range_path: Option<&NonRootMPath> = new_paths.get(range_path_index);
                 Some(line.changeset_id) == new_csids.get(range.csid_index as usize)
@@ -970,7 +971,7 @@ impl BlameData {
                                         })
                                         .transpose()?
                                         .copied();
-                                    anyhow::Ok(BlameParentIndexes {
+                                    anyhow::Ok(BlameRangeParentIndex {
                                         parent_index,
                                         offset,
                                         length,
@@ -980,7 +981,7 @@ impl BlameData {
                             )
                             .transpose()?;
 
-                        let range = BlameRangeIndexes {
+                        let range = BlameRangeIndex {
                             offset,
                             length: 1,
                             csid_index,
@@ -1008,26 +1009,27 @@ impl BlameData {
     }
 }
 
-/// Blame range with range information stored as indexes into the associated
-/// look-up tables.
+/// Blame data for a range of lines.
+///
+/// This uses indexes into tables stored in the main blame data.
 #[derive(Debug, Clone, Eq, PartialEq, Hash)]
-pub struct BlameRangeIndexes {
+pub struct BlameRangeIndex {
     pub offset: u32,
     pub length: u32,
     pub csid_index: u32,
     pub path_index: u32,
     pub origin_offset: u32,
-    pub parent: Option<BlameParentIndexes>,
+    pub parent: Option<BlameRangeParentIndex>,
 }
 
-impl BlameRangeIndexes {
-    fn split_at(self, offset: u32) -> (Option<BlameRangeIndexes>, Option<BlameRangeIndexes>) {
+impl BlameRangeIndex {
+    fn split_at(self, offset: u32) -> (Option<BlameRangeIndex>, Option<BlameRangeIndex>) {
         if offset <= self.offset {
             (None, Some(self))
         } else if offset >= self.offset + self.length {
             (Some(self), None)
         } else {
-            let left = BlameRangeIndexes {
+            let left = BlameRangeIndex {
                 offset: self.offset,
                 length: offset - self.offset,
                 csid_index: self.csid_index,
@@ -1035,7 +1037,7 @@ impl BlameRangeIndexes {
                 origin_offset: self.origin_offset,
                 parent: self.parent.clone(),
             };
-            let right = BlameRangeIndexes {
+            let right = BlameRangeIndex {
                 offset,
                 length: self.length - left.length,
                 csid_index: self.csid_index,
@@ -1049,9 +1051,9 @@ impl BlameRangeIndexes {
 
     /// Split a sequence of ranges at a given offset.
     fn split_multiple_at(
-        mut ranges: VecDeque<BlameRangeIndexes>,
+        mut ranges: VecDeque<BlameRangeIndex>,
         offset: u32,
-    ) -> (VecDeque<BlameRangeIndexes>, VecDeque<BlameRangeIndexes>) {
+    ) -> (VecDeque<BlameRangeIndex>, VecDeque<BlameRangeIndex>) {
         let mut left = VecDeque::new();
 
         while let Some(range) = ranges.pop_front() {
@@ -1071,9 +1073,13 @@ impl BlameRangeIndexes {
     }
 }
 
-/// Parent of a blame range - the range that was replaced.
+/// Blame parent data for a range of lines.
+///
+/// This is the range in the parent commit that was replaced when this line was added.
+///
+/// This uses indexes into tables stored in the main blame data.
 #[derive(Debug, Clone, Eq, PartialEq, Hash)]
-pub struct BlameParentIndexes {
+pub struct BlameRangeParentIndex {
     /// Index of the parent in the bonsai changeset.
     pub parent_index: u32,
 
@@ -1090,7 +1096,7 @@ pub struct BlameParentIndexes {
 /// Struct to collect a new set of blame ranges while maintaining
 /// the offsets correctly.
 struct BlameRangesCollector {
-    ranges: Vec<BlameRangeIndexes>,
+    ranges: Vec<BlameRangeIndex>,
     offset: u32,
 }
 
@@ -1104,7 +1110,7 @@ impl BlameRangesCollector {
 
     /// Append an existing range to the set of ranges.  The range offset is
     /// updated.
-    fn append(&mut self, mut range: BlameRangeIndexes) {
+    fn append(&mut self, mut range: BlameRangeIndex) {
         range.offset = self.offset;
         self.offset += range.length;
         self.ranges.push(range);
@@ -1117,9 +1123,9 @@ impl BlameRangesCollector {
         csid_index: u32,
         path_index: u32,
         length: u32,
-        parent: Option<BlameParentIndexes>,
+        parent: Option<BlameRangeParentIndex>,
     ) {
-        self.ranges.push(BlameRangeIndexes {
+        self.ranges.push(BlameRangeIndex {
             offset: self.offset,
             length,
             csid_index,
@@ -1134,12 +1140,12 @@ impl BlameRangesCollector {
         self.ranges.len()
     }
 
-    fn take(self) -> Vec<BlameRangeIndexes> {
+    fn take(self) -> Vec<BlameRangeIndex> {
         self.ranges
     }
 }
 
-/// Blame range produced by iteration.
+/// Blame data for a range of lines.
 #[derive(PartialEq)]
 pub struct BlameRange<'a> {
     pub offset: u32,
@@ -1199,6 +1205,9 @@ impl<'a> BlameLines<'a> {
     }
 }
 
+/// Blame parent data for a single line.
+///
+/// This is the range in the parent commit that was replaced when this line was added.
 #[derive(Copy, Clone)]
 pub struct BlameLineParent<'a> {
     pub parent_index: u32,
@@ -1207,7 +1216,7 @@ pub struct BlameLineParent<'a> {
     pub renamed_from_path: Option<&'a NonRootMPath>,
 }
 
-/// Blame line produced by iteration.
+/// Blame data for a single line.
 pub struct BlameLine<'a> {
     pub offset: u32,
     pub changeset_index: u32,
@@ -1219,7 +1228,7 @@ pub struct BlameLine<'a> {
 }
 
 impl<'a> BlameLine<'a> {
-    fn new(data: &'a BlameData, range: &BlameRangeIndexes, range_offset: u32) -> Self {
+    fn new(data: &'a BlameData, range: &BlameRangeIndex, range_offset: u32) -> Self {
         let parent = range.parent.as_ref().map(|parent| BlameLineParent {
             parent_index: parent.parent_index,
             offset: parent.offset,
@@ -1239,13 +1248,15 @@ impl<'a> BlameLine<'a> {
         }
     }
 
-    fn parent(&self, path_indexes: &HashMap<NonRootMPath, u32>) -> Option<BlameParentIndexes> {
-        self.parent.as_ref().map(|parent| BlameParentIndexes {
-            parent_index: parent.parent_index,
-            offset: parent.offset,
-            length: parent.length,
-            renamed_from_path_index: parent.renamed_from_path.map(|p| path_indexes[p]),
-        })
+    fn parent(&self, path_indexes: &HashMap<NonRootMPath, u32>) -> Option<BlameRangeParentIndex> {
+        self.parent
+            .as_ref()
+            .map(|parent_range| BlameRangeParentIndex {
+                parent_index: parent_range.parent_index,
+                offset: parent_range.offset,
+                length: parent_range.length,
+                renamed_from_path_index: parent_range.renamed_from_path.map(|p| path_indexes[p]),
+            })
     }
 }
 
@@ -1376,7 +1387,7 @@ mod test {
 
         let blame = BlameV2::Blame(BlameData {
             ranges: vec![
-                BlameRangeIndexes {
+                BlameRangeIndex {
                     offset: 0,
                     length: 1,
                     csid_index: 1,
@@ -1384,7 +1395,7 @@ mod test {
                     origin_offset: 5,
                     parent: None,
                 },
-                BlameRangeIndexes {
+                BlameRangeIndex {
                     offset: 1,
                     length: 1,
                     csid_index: 4,
@@ -1392,7 +1403,7 @@ mod test {
                     origin_offset: 31,
                     parent: None,
                 },
-                BlameRangeIndexes {
+                BlameRangeIndex {
                     offset: 2,
                     length: 1,
                     csid_index: 0,
@@ -1400,7 +1411,7 @@ mod test {
                     origin_offset: 127,
                     parent: None,
                 },
-                BlameRangeIndexes {
+                BlameRangeIndex {
                     offset: 3,
                     length: 2,
                     csid_index: 3,
@@ -1408,7 +1419,7 @@ mod test {
                     origin_offset: 15,
                     parent: None,
                 },
-                BlameRangeIndexes {
+                BlameRangeIndex {
                     offset: 5,
                     length: 1,
                     csid_index: 4,
@@ -1438,7 +1449,7 @@ mod test {
 
         let blame = BlameV2::Blame(BlameData {
             ranges: vec![
-                BlameRangeIndexes {
+                BlameRangeIndex {
                     offset: 0,
                     length: 1,
                     csid_index: 1,
@@ -1446,7 +1457,7 @@ mod test {
                     origin_offset: 5,
                     parent: None,
                 },
-                BlameRangeIndexes {
+                BlameRangeIndex {
                     offset: 1,
                     length: 1,
                     csid_index: 3,
@@ -1454,7 +1465,7 @@ mod test {
                     origin_offset: 2,
                     parent: None,
                 },
-                BlameRangeIndexes {
+                BlameRangeIndex {
                     offset: 2,
                     length: 2,
                     csid_index: 4,
@@ -1462,7 +1473,7 @@ mod test {
                     origin_offset: 1,
                     parent: None,
                 },
-                BlameRangeIndexes {
+                BlameRangeIndex {
                     offset: 3,
                     length: 1,
                     csid_index: 0,
@@ -1530,7 +1541,7 @@ mod test {
         assert_eq!(
             b1,
             BlameV2::Blame(BlameData {
-                ranges: vec![BlameRangeIndexes {
+                ranges: vec![BlameRangeIndex {
                     offset: 0,
                     length: 4,
                     csid_index: 0,
@@ -1550,7 +1561,7 @@ mod test {
             b2,
             BlameV2::Blame(BlameData {
                 ranges: vec![
-                    BlameRangeIndexes {
+                    BlameRangeIndex {
                         offset: 0,
                         length: 1,
                         csid_index: 0,
@@ -1558,20 +1569,20 @@ mod test {
                         origin_offset: 0,
                         parent: None,
                     },
-                    BlameRangeIndexes {
+                    BlameRangeIndex {
                         offset: 1,
                         length: 2,
                         csid_index: 1,
                         path_index: 0,
                         origin_offset: 1,
-                        parent: Some(BlameParentIndexes {
+                        parent: Some(BlameRangeParentIndex {
                             parent_index: 0,
                             offset: 1,
                             length: 2,
                             renamed_from_path_index: None,
                         }),
                     },
-                    BlameRangeIndexes {
+                    BlameRangeIndex {
                         offset: 3,
                         length: 1,
                         csid_index: 0,
@@ -1593,20 +1604,20 @@ mod test {
             b3,
             BlameV2::Blame(BlameData {
                 ranges: vec![
-                    BlameRangeIndexes {
+                    BlameRangeIndex {
                         offset: 0,
                         length: 1,
                         csid_index: 2,
                         path_index: 0,
                         origin_offset: 0,
-                        parent: Some(BlameParentIndexes {
+                        parent: Some(BlameRangeParentIndex {
                             parent_index: 0,
                             offset: 0,
                             length: 0,
                             renamed_from_path_index: None,
                         }),
                     },
-                    BlameRangeIndexes {
+                    BlameRangeIndex {
                         offset: 1,
                         length: 1,
                         csid_index: 0,
@@ -1614,33 +1625,33 @@ mod test {
                         origin_offset: 0,
                         parent: None,
                     },
-                    BlameRangeIndexes {
+                    BlameRangeIndex {
                         offset: 2,
                         length: 1,
                         csid_index: 1,
                         path_index: 0,
                         origin_offset: 2,
-                        parent: Some(BlameParentIndexes {
+                        parent: Some(BlameRangeParentIndex {
                             parent_index: 0,
                             offset: 1,
                             length: 2,
                             renamed_from_path_index: None,
                         }),
                     },
-                    BlameRangeIndexes {
+                    BlameRangeIndex {
                         offset: 3,
                         length: 1,
                         csid_index: 2,
                         path_index: 0,
                         origin_offset: 3,
-                        parent: Some(BlameParentIndexes {
+                        parent: Some(BlameRangeParentIndex {
                             parent_index: 0,
                             offset: 3,
                             length: 0,
                             renamed_from_path_index: None,
                         }),
                     },
-                    BlameRangeIndexes {
+                    BlameRangeIndex {
                         offset: 4,
                         length: 1,
                         csid_index: 0,
@@ -1663,20 +1674,20 @@ mod test {
             b4,
             BlameV2::Blame(BlameData {
                 ranges: vec![
-                    BlameRangeIndexes {
+                    BlameRangeIndex {
                         offset: 0,
                         length: 1,
                         csid_index: 2,
                         path_index: 0,
                         origin_offset: 0,
-                        parent: Some(BlameParentIndexes {
+                        parent: Some(BlameRangeParentIndex {
                             parent_index: 0,
                             offset: 0,
                             length: 0,
                             renamed_from_path_index: None,
                         }),
                     },
-                    BlameRangeIndexes {
+                    BlameRangeIndex {
                         offset: 1,
                         length: 1,
                         csid_index: 0,
@@ -1684,33 +1695,33 @@ mod test {
                         origin_offset: 0,
                         parent: None,
                     },
-                    BlameRangeIndexes {
+                    BlameRangeIndex {
                         offset: 2,
                         length: 2,
                         csid_index: 3,
                         path_index: 1,
                         origin_offset: 2,
-                        parent: Some(BlameParentIndexes {
+                        parent: Some(BlameRangeParentIndex {
                             parent_index: 0,
                             offset: 2,
                             length: 1,
                             renamed_from_path_index: Some(0),
                         }),
                     },
-                    BlameRangeIndexes {
+                    BlameRangeIndex {
                         offset: 4,
                         length: 1,
                         csid_index: 2,
                         path_index: 0,
                         origin_offset: 3,
-                        parent: Some(BlameParentIndexes {
+                        parent: Some(BlameRangeParentIndex {
                             parent_index: 0,
                             offset: 3,
                             length: 0,
                             renamed_from_path_index: None,
                         }),
                     },
-                    BlameRangeIndexes {
+                    BlameRangeIndex {
                         offset: 5,
                         length: 1,
                         csid_index: 0,
@@ -1732,7 +1743,7 @@ mod test {
         assert_eq!(
             b5,
             BlameV2::Blame(BlameData {
-                ranges: vec![BlameRangeIndexes {
+                ranges: vec![BlameRangeIndex {
                     offset: 0,
                     length: 1,
                     csid_index: 0,
@@ -1788,7 +1799,7 @@ mod test {
             b4,
             BlameV2::Blame(BlameData {
                 ranges: vec![
-                    BlameRangeIndexes {
+                    BlameRangeIndex {
                         offset: 0,
                         length: 1,
                         csid_index: 0,
@@ -1796,20 +1807,20 @@ mod test {
                         origin_offset: 0,
                         parent: None,
                     },
-                    BlameRangeIndexes {
+                    BlameRangeIndex {
                         offset: 1,
                         length: 2,
                         csid_index: 1,
                         path_index: 0,
                         origin_offset: 1,
-                        parent: Some(BlameParentIndexes {
+                        parent: Some(BlameRangeParentIndex {
                             parent_index: 0,
                             offset: 1,
                             length: 1,
                             renamed_from_path_index: None,
                         }),
                     },
-                    BlameRangeIndexes {
+                    BlameRangeIndex {
                         offset: 3,
                         length: 2,
                         csid_index: 2,
@@ -1817,20 +1828,20 @@ mod test {
                         origin_offset: 0,
                         parent: None,
                     },
-                    BlameRangeIndexes {
+                    BlameRangeIndex {
                         offset: 5,
                         length: 1,
                         csid_index: 1,
                         path_index: 0,
                         origin_offset: 4,
-                        parent: Some(BlameParentIndexes {
+                        parent: Some(BlameRangeParentIndex {
                             parent_index: 0,
                             offset: 3,
                             length: 0,
                             renamed_from_path_index: None,
                         }),
                     },
-                    BlameRangeIndexes {
+                    BlameRangeIndex {
                         offset: 6,
                         length: 1,
                         csid_index: 2,
@@ -1895,7 +1906,7 @@ mod test {
             b4,
             BlameV2::Blame(BlameData {
                 ranges: vec![
-                    BlameRangeIndexes {
+                    BlameRangeIndex {
                         offset: 0,
                         length: 1,
                         csid_index: 0,
@@ -1903,78 +1914,78 @@ mod test {
                         origin_offset: 0,
                         parent: None,
                     },
-                    BlameRangeIndexes {
+                    BlameRangeIndex {
                         offset: 1,
                         length: 1,
                         csid_index: 1,
                         path_index: 0,
                         origin_offset: 1,
-                        parent: Some(BlameParentIndexes {
+                        parent: Some(BlameRangeParentIndex {
                             parent_index: 0,
                             offset: 1,
                             length: 1,
                             renamed_from_path_index: None,
                         }),
                     },
-                    BlameRangeIndexes {
+                    BlameRangeIndex {
                         offset: 2,
                         length: 1,
                         csid_index: 3,
                         path_index: 0,
                         origin_offset: 2,
-                        parent: Some(BlameParentIndexes {
+                        parent: Some(BlameRangeParentIndex {
                             parent_index: 0,
                             offset: 2,
                             length: 0,
                             renamed_from_path_index: None,
                         }),
                     },
-                    BlameRangeIndexes {
+                    BlameRangeIndex {
                         offset: 3,
                         length: 1,
                         csid_index: 1,
                         path_index: 0,
                         origin_offset: 2,
-                        parent: Some(BlameParentIndexes {
+                        parent: Some(BlameRangeParentIndex {
                             parent_index: 0,
                             offset: 1,
                             length: 1,
                             renamed_from_path_index: None,
                         }),
                     },
-                    BlameRangeIndexes {
+                    BlameRangeIndex {
                         offset: 4,
                         length: 2,
                         csid_index: 2,
                         path_index: 0,
                         origin_offset: 2,
-                        parent: Some(BlameParentIndexes {
+                        parent: Some(BlameRangeParentIndex {
                             parent_index: 0,
                             offset: 1,
                             length: 2,
                             renamed_from_path_index: None,
                         }),
                     },
-                    BlameRangeIndexes {
+                    BlameRangeIndex {
                         offset: 6,
                         length: 1,
                         csid_index: 1,
                         path_index: 0,
                         origin_offset: 4,
-                        parent: Some(BlameParentIndexes {
+                        parent: Some(BlameRangeParentIndex {
                             parent_index: 0,
                             offset: 3,
                             length: 0,
                             renamed_from_path_index: None,
                         }),
                     },
-                    BlameRangeIndexes {
+                    BlameRangeIndex {
                         offset: 7,
                         length: 1,
                         csid_index: 2,
                         path_index: 0,
                         origin_offset: 4,
-                        parent: Some(BlameParentIndexes {
+                        parent: Some(BlameRangeParentIndex {
                             parent_index: 0,
                             offset: 1,
                             length: 2,
@@ -2044,7 +2055,7 @@ mod test {
             b4,
             BlameV2::Blame(BlameData {
                 ranges: vec![
-                    BlameRangeIndexes {
+                    BlameRangeIndex {
                         offset: 0,
                         length: 1,
                         csid_index: 0,
@@ -2052,39 +2063,39 @@ mod test {
                         origin_offset: 0,
                         parent: None,
                     },
-                    BlameRangeIndexes {
+                    BlameRangeIndex {
                         offset: 1,
                         length: 1,
                         csid_index: 2,
                         path_index: 0,
                         origin_offset: 2,
-                        parent: Some(BlameParentIndexes {
+                        parent: Some(BlameRangeParentIndex {
                             parent_index: 0,
                             offset: 1,
                             length: 2,
                             renamed_from_path_index: None,
                         }),
                     },
-                    BlameRangeIndexes {
+                    BlameRangeIndex {
                         offset: 2,
                         length: 2,
                         csid_index: 2,
                         path_index: 0,
                         origin_offset: 4,
-                        parent: Some(BlameParentIndexes {
+                        parent: Some(BlameRangeParentIndex {
                             parent_index: 0,
                             offset: 1,
                             length: 2,
                             renamed_from_path_index: None,
                         }),
                     },
-                    BlameRangeIndexes {
+                    BlameRangeIndex {
                         offset: 4,
                         length: 1,
                         csid_index: 1,
                         path_index: 0,
                         origin_offset: 3,
-                        parent: Some(BlameParentIndexes {
+                        parent: Some(BlameRangeParentIndex {
                             parent_index: 0,
                             offset: 3,
                             length: 0,
@@ -2142,7 +2153,7 @@ mod test {
         assert_eq!(
             b2,
             BlameV2::Blame(BlameData {
-                ranges: vec![BlameRangeIndexes {
+                ranges: vec![BlameRangeIndex {
                     offset: 0,
                     length: 2,
                     csid_index: 0,
@@ -2162,7 +2173,7 @@ mod test {
             b4,
             BlameV2::Blame(BlameData {
                 ranges: vec![
-                    BlameRangeIndexes {
+                    BlameRangeIndex {
                         offset: 0,
                         length: 2,
                         csid_index: 0,
@@ -2170,13 +2181,13 @@ mod test {
                         origin_offset: 0,
                         parent: None,
                     },
-                    BlameRangeIndexes {
+                    BlameRangeIndex {
                         offset: 2,
                         length: 2,
                         csid_index: 1,
                         path_index: 0,
                         origin_offset: 2,
-                        parent: Some(BlameParentIndexes {
+                        parent: Some(BlameRangeParentIndex {
                             parent_index: 0,
                             offset: 2,
                             length: 0,
@@ -2226,7 +2237,7 @@ mod test {
             b4,
             BlameV2::Blame(BlameData {
                 ranges: vec![
-                    BlameRangeIndexes {
+                    BlameRangeIndex {
                         offset: 0,
                         length: 2,
                         csid_index: 0,
@@ -2234,7 +2245,7 @@ mod test {
                         origin_offset: 1,
                         parent: None,
                     },
-                    BlameRangeIndexes {
+                    BlameRangeIndex {
                         offset: 2,
                         length: 2,
                         csid_index: 1,
@@ -2242,7 +2253,7 @@ mod test {
                         origin_offset: 1,
                         parent: None,
                     },
-                    BlameRangeIndexes {
+                    BlameRangeIndex {
                         offset: 4,
                         length: 1,
                         csid_index: 2,
@@ -2250,20 +2261,20 @@ mod test {
                         origin_offset: 1,
                         parent: None,
                     },
-                    BlameRangeIndexes {
+                    BlameRangeIndex {
                         offset: 5,
                         length: 2,
                         csid_index: 3,
                         path_index: 0,
                         origin_offset: 5,
-                        parent: Some(BlameParentIndexes {
+                        parent: Some(BlameRangeParentIndex {
                             parent_index: 0,
                             offset: 3,
                             length: 0,
                             renamed_from_path_index: None,
                         }),
                     },
-                    BlameRangeIndexes {
+                    BlameRangeIndex {
                         offset: 7,
                         length: 1,
                         csid_index: 2,
@@ -2328,13 +2339,13 @@ mod test {
         assert_eq!(
             b2,
             BlameV2::Blame(BlameData {
-                ranges: vec![BlameRangeIndexes {
+                ranges: vec![BlameRangeIndex {
                     offset: 0,
                     length: 1,
                     csid_index: 1,
                     path_index: 0,
                     origin_offset: 0,
-                    parent: Some(BlameParentIndexes {
+                    parent: Some(BlameRangeParentIndex {
                         parent_index: 0,
                         offset: 0,
                         length: 0,
@@ -2360,13 +2371,13 @@ mod test {
         assert_eq!(
             b4,
             BlameV2::Blame(BlameData {
-                ranges: vec![BlameRangeIndexes {
+                ranges: vec![BlameRangeIndex {
                     offset: 0,
                     length: 1,
                     csid_index: 3,
                     path_index: 0,
                     origin_offset: 0,
-                    parent: Some(BlameParentIndexes {
+                    parent: Some(BlameRangeParentIndex {
                         parent_index: 0,
                         offset: 0,
                         length: 0,
@@ -2451,13 +2462,13 @@ mod test {
             b6,
             BlameV2::Blame(BlameData {
                 ranges: vec![
-                    BlameRangeIndexes {
+                    BlameRangeIndex {
                         offset: 0,
                         length: 1,
                         csid_index: 2,
                         path_index: 0,
                         origin_offset: 0,
-                        parent: Some(BlameParentIndexes {
+                        parent: Some(BlameRangeParentIndex {
                             parent_index: 0,
                             offset: 0,
                             length: 0,
@@ -2466,13 +2477,13 @@ mod test {
                         // Skip past this change goes to p1 of commit 3
                         // (commit 1), inserting before line 0.
                     },
-                    BlameRangeIndexes {
+                    BlameRangeIndex {
                         offset: 1,
                         length: 1,
                         csid_index: 4,
                         path_index: 2,
                         origin_offset: 1,
-                        parent: Some(BlameParentIndexes {
+                        parent: Some(BlameRangeParentIndex {
                             parent_index: 0,
                             offset: 0,
                             length: 1,
@@ -2482,13 +2493,13 @@ mod test {
                         // (commit 2), replacing line 0 ("one" -> "zero, half").
                         // The file was renamed from path2.
                     },
-                    BlameRangeIndexes {
+                    BlameRangeIndex {
                         offset: 2,
                         length: 1,
                         csid_index: 1,
                         path_index: 1,
                         origin_offset: 1,
-                        parent: Some(BlameParentIndexes {
+                        parent: Some(BlameRangeParentIndex {
                             parent_index: 0,
                             offset: 1,
                             length: 0,
@@ -2498,13 +2509,13 @@ mod test {
                         // (commit 2), inserting before line 1.  The file
                         // was renamed from path1.
                     },
-                    BlameRangeIndexes {
+                    BlameRangeIndex {
                         offset: 3,
                         length: 3,
                         csid_index: 5,
                         path_index: 2,
                         origin_offset: 3,
-                        parent: Some(BlameParentIndexes {
+                        parent: Some(BlameRangeParentIndex {
                             parent_index: 0,
                             offset: 3,
                             length: 0,
@@ -2513,13 +2524,13 @@ mod test {
                         // Skip past this change goes to p1 of commit 6
                         // (commit 5), inserting before line 3.
                     },
-                    BlameRangeIndexes {
+                    BlameRangeIndex {
                         offset: 6,
                         length: 2,
                         csid_index: 3,
                         path_index: 1,
                         origin_offset: 2,
-                        parent: Some(BlameParentIndexes {
+                        parent: Some(BlameRangeParentIndex {
                             parent_index: 1,
                             offset: 2,
                             length: 3,
