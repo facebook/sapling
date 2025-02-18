@@ -413,6 +413,13 @@ impl BonsaiChangeset {
         !self.subtree_changes().is_empty()
     }
 
+    /// Returns true if this changeset has subtree changes that alter the manifest.
+    pub fn has_manifest_altering_subtree_changes(&self) -> bool {
+        self.subtree_changes()
+            .values()
+            .any(|change| change.alters_manifest())
+    }
+
     /// Allow mutating this instance of `BonsaiChangeset`.
     pub fn into_mut(self) -> BonsaiChangesetMut {
         self.inner

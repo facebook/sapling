@@ -47,11 +47,12 @@ where
     <Self as StoreLoadable<Store>>::Value: Manifest<Store, TreeId = Self> + Send + Sync,
     <<Self as StoreLoadable<Store>>::Value as Manifest<Store>>::Leaf: Clone + Send + Eq + Unpin,
 {
-    fn find_entries<I, P>(
+    fn find_entries_filtered<I, P, F>(
         &self,
         ctx: CoreContext,
         store: Store,
         paths_or_prefixes: I,
+        filter: F,
     ) -> BoxStream<
         'static,
         Result<
@@ -65,20 +66,24 @@ where
     where
         I: IntoIterator<Item = P>,
         PathOrPrefix: From<P>,
+        F: Fn(&MPath, Self) -> bool + Clone + Send + Sync + 'static,
     {
         let selector = select_path_tree(paths_or_prefixes);
 
         let init = Some((self.clone(), selector, MPath::ROOT, false));
         (async_stream::stream! {
             let store = &store;
-            borrowed!(ctx, store);
+            borrowed!(ctx, store, filter);
             let s = bounded_traversal::bounded_traversal_stream(
                 256,
                 init,
                 move |(manifest_id, selector, path, recursive)| {
                     let (select, subentries) = selector.deconstruct();
-                    cloned!(ctx, store);
+                    cloned!(ctx, store, filter);
                     async move {
+                        if !filter(&path, manifest_id.clone()) {
+                            return Ok((Vec::new(), Vec::new()));
+                        }
                         mononoke::spawn_task(async move {
                             let manifest = manifest_id.load(&ctx, &store).await?;
                             let mut output = Vec::new();
@@ -132,6 +137,28 @@ where
             }
         })
         .boxed()
+    }
+
+    fn find_entries<I, P>(
+        &self,
+        ctx: CoreContext,
+        store: Store,
+        paths_or_prefixes: I,
+    ) -> BoxStream<
+        'static,
+        Result<
+            (
+                MPath,
+                Entry<Self, <<Self as StoreLoadable<Store>>::Value as Manifest<Store>>::Leaf>,
+            ),
+            Error,
+        >,
+    >
+    where
+        I: IntoIterator<Item = P>,
+        PathOrPrefix: From<P>,
+    {
+        self.find_entries_filtered(ctx, store, paths_or_prefixes, |_, _| true)
     }
 
     fn find_entry(

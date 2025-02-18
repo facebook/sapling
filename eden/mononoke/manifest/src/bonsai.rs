@@ -28,6 +28,7 @@ use mononoke_macros::mononoke;
 use mononoke_types::content_manifest::ContentManifestFile;
 use mononoke_types::fsnode::FsnodeFile;
 use mononoke_types::FileType;
+use mononoke_types::FileUnodeId;
 use mononoke_types::MPath;
 use mononoke_types::MPathElement;
 use mononoke_types::NonRootMPath;
@@ -507,6 +508,12 @@ impl ManifestLeaf for FsnodeFile {
 impl ManifestLeaf for ContentManifestFile {
     fn reuses(&self, other: &Self) -> bool {
         self.content_id == other.content_id
+    }
+}
+
+impl ManifestLeaf for FileUnodeId {
+    fn reuses(&self, other: &Self) -> bool {
+        self == other
     }
 }
 

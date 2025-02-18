@@ -67,6 +67,15 @@ impl SubtreeChange {
         }
     }
 
+    /// Returns true if this subtree change has an altering affect on the
+    /// manifest.
+    pub fn alters_manifest(&self) -> bool {
+        match self {
+            Self::SubtreeCopy(_) => true,
+            _ => false,
+        }
+    }
+
     pub fn replace_source_changeset_id(&mut self, new_cs_id: ChangesetId) {
         match self {
             Self::SubtreeCopy(copy) => copy.from_cs_id = new_cs_id,

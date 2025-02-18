@@ -31,6 +31,8 @@ use futures::future::FutureExt;
 use futures::stream;
 use futures::stream::StreamExt;
 use futures::stream::TryStreamExt;
+use manifest::bonsai_diff;
+use manifest::BonsaiDiffFileChange;
 use manifest::Diff;
 use manifest::ManifestOps;
 use manifest::PathTree;
@@ -140,12 +142,37 @@ struct DeletedManifestUnfoldNode<Manifest: DeletedManifestCommon> {
     current_unode: Option<UnodeEntry>,
 }
 
-pub(crate) fn get_changes_bonsai(bonsai: &BonsaiChangeset) -> Result<PathTree<()>, Error> {
-    Ok(PathTree::from_iter(
-        bonsai
-            .file_changes()
-            .map(|(path, _change)| (path.clone(), ())),
-    ))
+async fn get_changes_bonsai(
+    ctx: &CoreContext,
+    blobstore: &Arc<dyn Blobstore>,
+    bonsai: &BonsaiChangeset,
+    unode: ManifestUnodeId,
+    parents: impl Iterator<Item = ManifestUnodeId>,
+) -> Result<PathTree<()>, Error> {
+    if bonsai.has_manifest_altering_subtree_changes() {
+        // This bonsai includes subtree operations that alter the manifest.
+        // Recompute the bonsai changes ignoring the subtree operations.
+        Ok(PathTree::from_iter(
+            bonsai_diff(ctx.clone(), blobstore.clone(), unode, parents.collect())
+                .map_ok(|diff| async move {
+                    match diff {
+                        BonsaiDiffFileChange::Changed(path, _) => Ok((path, ())),
+                        BonsaiDiffFileChange::ChangedReusedId(path, _) => Ok((path, ())),
+                        BonsaiDiffFileChange::Deleted(path) => Ok((path, ())),
+                    }
+                })
+                .try_buffered(100)
+                .try_collect::<Vec<_>>()
+                .await?
+                .into_iter(),
+        ))
+    } else {
+        Ok(PathTree::from_iter(
+            bonsai
+                .file_changes()
+                .map(|(path, _change)| (path.clone(), ())),
+        ))
+    }
 }
 
 impl<Manifest: DeletedManifestCommon> DeletedManifestDeriver<Manifest> {
@@ -157,7 +184,14 @@ impl<Manifest: DeletedManifestCommon> DeletedManifestDeriver<Manifest> {
         parents: Vec<(ChangesetId, Manifest::Id, ManifestUnodeId)>,
         current_unode: ManifestUnodeId,
     ) -> Result<Manifest::Id, Error> {
-        let changes: PathTree<()> = get_changes_bonsai(&bonsai)?;
+        let changes: PathTree<()> = get_changes_bonsai(
+            ctx,
+            blobstore,
+            &bonsai,
+            current_unode,
+            parents.iter().map(|(_, _, unode)| *unode),
+        )
+        .await?;
 
         // Stream is used to batch writes to blobstore
         let (sender, receiver) = mpsc::unbounded();
@@ -787,10 +821,9 @@ impl<Root: RootDeletedManifestIdCommon> RootDeletedManifestDeriver<Root> {
         parents: Vec<Root::Id>,
         derived: &mut HashMap<ChangesetId, Root>,
     ) -> Result<(), Error> {
-        if parents.len() > 1 {
-            // We can't derive stack for merge commits. Let's derive normally.
-            // split_bonsais_in_linear_stacks promises us merges go in their own batch
-            assert_eq!(stack.len(), 1);
+        if stack.len() == 1 {
+            // We can't derive stacks for merge commits or commits with subtree changes.
+            // Let's derive normally.
             Self::derive_serially(ctx, derivation_ctx, stack, derived).await?;
         } else {
             let ids: Vec<_> = stack

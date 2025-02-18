@@ -10,6 +10,7 @@ use std::collections::HashMap;
 use std::sync::Arc;
 
 use anyhow::format_err;
+use anyhow::Context;
 use anyhow::Error;
 use blobstore::Blobstore;
 use blobstore::Loadable;
@@ -23,14 +24,20 @@ use futures::future::try_join_all;
 use futures::future::BoxFuture;
 use futures::future::FutureExt;
 use futures::future::TryFutureExt;
+use futures::stream::TryStreamExt;
 use manifest::derive_manifest_with_io_sender;
 use manifest::derive_manifests_for_simple_stack_of_commits;
 use manifest::flatten_subentries;
 use manifest::Entry;
 use manifest::LeafInfo;
 use manifest::ManifestChanges;
+use manifest::ManifestOps;
+use manifest::ManifestParentReplacement;
+use manifest::PathOrPrefix;
+use manifest::PathTree;
 use manifest::TreeInfo;
 use mononoke_types::path::MPath;
+use mononoke_types::subtree_change::SubtreeChange;
 use mononoke_types::unode::FileUnode;
 use mononoke_types::unode::ManifestUnode;
 use mononoke_types::unode::UnodeEntry;
@@ -48,6 +55,7 @@ use mononoke_types::SortedVectorTrieMap;
 use sorted_vector_map::SortedVectorMap;
 
 use crate::ErrorKind;
+use crate::RootUnodeManifestId;
 
 pub(crate) async fn derive_unode_manifest_stack(
     ctx: &CoreContext,
@@ -95,22 +103,160 @@ pub(crate) async fn derive_unode_manifest_stack(
 /// Note that `derive_manifest()` does a lot of the heavy lifting for us, and this crate has to
 /// provide only functions to create a single unode file or single unode tree (
 /// `create_unode_manifest` and `create_unode_file`).
-pub(crate) async fn derive_unode_manifest(
+pub(crate) async fn derive_unode_manifest_with_subtree_changes(
     ctx: &CoreContext,
     derivation_ctx: &DerivationContext,
+    known: Option<&HashMap<ChangesetId, RootUnodeManifestId>>,
     cs_id: ChangesetId,
     parents: Vec<ManifestUnodeId>,
-    changes: Vec<(NonRootMPath, Option<(ContentId, FileType)>)>,
+    mut changes: Vec<(NonRootMPath, Option<(ContentId, FileType)>)>,
+    subtree_changes: &SortedVectorMap<MPath, SubtreeChange>,
 ) -> Result<ManifestUnodeId, Error> {
     let parents: Vec<_> = parents.into_iter().collect();
     let blobstore = derivation_ctx.blobstore();
+
+    let mut manifest_replacements = Vec::new();
+    let mut additional_changes = Vec::new();
+    for (to_path, subtree_change) in subtree_changes.iter() {
+        if let Some((from_cs_id, from_path)) = subtree_change.copy_source() {
+            // This commit has a subtree copy.  This means the file changes
+            // must be applied based on the subtree copy source, rather than
+            // the parent.
+            //
+            // For unodes, we cannot re-use the unode manifest from
+            // the copy source, as unodes are (by design) unique to
+            // each commit.  We need to build new unodes for the copied
+            // files.  This effectively turns this into an O(N) copy.
+            //
+            // This isn't ideal, but until we implement a history manifest
+            // derived data type that understands subtree operations, it
+            // will have to do.
+            //
+            // To construct the new unodes, we will synthesize bonsai changes
+            // for each of the files that are copied from the copy source.
+            // We exclude:
+            // - The contents of any nested subtree copies
+            // - Any files that are changed or deleted in the current commit
+            // - Any files that are deleted by virtue of a parent directory
+            //   being replaced by a file in the current commit.
+            let from_unode = derivation_ctx
+                .fetch_unknown_dependency::<RootUnodeManifestId>(ctx, known, from_cs_id)
+                .await?
+                .manifest_unode_id()
+                .find_entry(ctx.clone(), blobstore.clone(), from_path.clone())
+                .await
+                .with_context(|| {
+                    format!("Failed to fetch subtree copy source {from_cs_id}:{from_path}")
+                })?
+                .ok_or_else(|| format_err!("No subtree copy source {from_cs_id}:{from_path}"))?;
+            // Replace the parent manifest at this path with an empty set
+            // of parents.  This removes all items that were previously at
+            // that location.
+            manifest_replacements.push(ManifestParentReplacement {
+                path: to_path.clone(),
+                replacements: Vec::new(),
+            });
+
+            match from_unode {
+                Entry::Tree(from_unode) => {
+                    // The copy source is a directory.  Find all changes on top of the source
+                    // in this commit.
+                    let mut changed_paths = changes
+                        .iter()
+                        .filter_map(|(change_path, _change)| {
+                            if to_path.is_prefix_of(change_path) {
+                                Some((
+                                    MPath::from(change_path.remove_prefix_component(to_path)),
+                                    true,
+                                ))
+                            } else {
+                                None
+                            }
+                        })
+                        .collect::<PathTree<_>>();
+                    // Find all nested subtree copies.
+                    for (other_to_path, other_subtree_change) in subtree_changes.iter() {
+                        if other_to_path != to_path && other_subtree_change.copy_source().is_some()
+                        {
+                            if to_path.is_prefix_of(other_to_path) {
+                                let subpath = other_to_path.remove_prefix_component(to_path);
+                                changed_paths.insert(subpath, true);
+                            }
+                        }
+                    }
+                    // Find all paths from the source, but filter out any paths that are
+                    // covered by either of those two cases.
+                    let changed_paths = Arc::new(changed_paths);
+                    let filter_changed_paths =
+                        move |path: &MPath| changed_paths.get(path).map_or(true, |x| !x);
+                    from_unode
+                        .find_entries_filtered(
+                            ctx.clone(),
+                            blobstore.clone(),
+                            Some(PathOrPrefix::Prefix(MPath::ROOT)),
+                            {
+                                cloned!(filter_changed_paths);
+                                move |path, _mf_id| filter_changed_paths(path)
+                            },
+                        )
+                        .map_ok(|(path, entry)| {
+                            let include = filter_changed_paths(&path);
+                            async move {
+                                match entry {
+                                    Entry::Leaf(file_unode) if include => {
+                                        let file_unode = file_unode.load(ctx, blobstore).await?;
+                                        Ok(Some((
+                                            to_path.join(&path),
+                                            Some((
+                                                *file_unode.content_id(),
+                                                *file_unode.file_type(),
+                                            )),
+                                        )))
+                                    }
+                                    _ => Ok(None),
+                                }
+                            }
+                        })
+                        .try_buffered(100)
+                        .try_for_each(|change| {
+                            if let Some((path, change)) = change {
+                                if let Some(path) = path.into_optional_non_root_path() {
+                                    additional_changes.push((path, change));
+                                }
+                            }
+                            future::ready(Ok(()))
+                        })
+                        .await?;
+                }
+                Entry::Leaf(from_unode) => {
+                    // The copy source is a file.  The additional change should add that file.
+                    if !changes
+                        .iter()
+                        .any(|(change_path, _change)| to_path == <&MPath>::from(change_path))
+                    {
+                        let from_unode = from_unode.load(ctx, blobstore).await?;
+                        additional_changes.push((
+                            to_path
+                                .clone()
+                                .into_optional_non_root_path()
+                                .ok_or_else(|| {
+                                    format_err!("Subtree copy for root cannot copy from a file")
+                                })?,
+                            Some((*from_unode.content_id(), *from_unode.file_type())),
+                        ));
+                    }
+                }
+            }
+        }
+    }
+    changes.append(&mut additional_changes);
 
     let maybe_tree_id = derive_manifest_with_io_sender(
         ctx.clone(),
         blobstore.clone(),
         parents.clone(),
         changes,
-        None,
+        manifest_replacements,
         {
             cloned!(ctx, blobstore);
             move |tree_info, sender| {
@@ -484,6 +630,25 @@ mod tests {
     use crate::mapping::get_file_changes;
     use crate::mapping::RootUnodeManifestId;
     use crate::tests::TestRepo;
+
+    async fn derive_unode_manifest(
+        ctx: &CoreContext,
+        derivation_ctx: &DerivationContext,
+        cs_id: ChangesetId,
+        parents: Vec<ManifestUnodeId>,
+        changes: Vec<(NonRootMPath, Option<(ContentId, FileType)>)>,
+    ) -> Result<ManifestUnodeId, Error> {
+        derive_unode_manifest_with_subtree_changes(
+            ctx,
+            derivation_ctx,
+            None,
+            cs_id,
+            parents,
+            changes,
+            &SortedVectorMap::new(),
+        )
+        .await
+    }
 
     #[mononoke::fbinit_test]
     async fn linear_test(fb: FacebookInit) -> Result<(), Error> {
