@@ -198,6 +198,10 @@ impl MultiMover for MoverMultiMover {
     fn multi_move_path(&self, path: &NonRootMPath) -> Result<Vec<NonRootMPath>> {
         Ok(self.0.move_path(path)?.into_iter().collect())
     }
+
+    fn conflicts_with(&self, path: &NonRootMPath) -> Result<bool> {
+        self.0.conflicts_with(path)
+    }
 }
 
 /// Mover moves a path to at most a single path, while MultiMover can move a

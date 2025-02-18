@@ -54,8 +54,13 @@ use sorted_vector_map::SortedVectorMap;
 use thiserror::Error;
 
 pub trait MultiMover: Send + Sync {
-    // Move a path, to potentially multiple locations.
+    /// Move a path, to potentially multiple locations.
     fn multi_move_path(&self, path: &NonRootMPath) -> Result<Vec<NonRootMPath>>;
+
+    /// Returns true if the path conflicts with any of the paths
+    /// the mover will move.  Paths conflict if either one of them
+    /// is a path prefix of the other.
+    fn conflicts_with(&self, path: &NonRootMPath) -> Result<bool>;
 }
 
 pub type DirectoryMultiMover =
@@ -165,6 +170,26 @@ impl MultiMover for MegarepoMultiMover {
             NonRootMPath::join_opt(self.prefix.as_ref(), path)
                 .ok_or_else(|| anyhow!("unexpected empty path"))?,
         ])
+    }
+
+    fn conflicts_with(&self, path: &NonRootMPath) -> Result<bool> {
+        match &self.prefix {
+            Some(prefix) => {
+                if prefix.is_related_to(path) {
+                    return Ok(true);
+                }
+            }
+            None => return Ok(true),
+        }
+
+        for (override_prefix_src, _) in &self.overrides {
+            let override_prefix_src = NonRootMPath::new(override_prefix_src)?;
+            if override_prefix_src.is_related_to(path) {
+                return Ok(true);
+            }
+        }
+
+        Ok(false)
     }
 }
 
@@ -574,9 +599,28 @@ pub fn rewrite_commit_with_implicit_deletes<'a>(
     renamed_implicit_deletes: Vec<Vec<NonRootMPath>>,
     rewrite_opts: RewriteOpts,
 ) -> Result<Option<BonsaiChangesetMut>, Error> {
-    if !cs.subtree_changes.is_empty() {
-        bail!("Subtree changes are not supported in commit transformation");
+    for (path, change) in cs.subtree_changes.iter() {
+        if change.alters_manifest() {
+            match path.clone().into_optional_non_root_path() {
+                None => {
+                    bail!(
+                        "Subtree changes for the root are not supported in commit transformation"
+                    );
+                }
+                Some(dst_path) => {
+                    if mover.conflicts_with(&dst_path)? {
+                        bail!("Subtree change for {path:?} overlaps with commit transformation");
+                    }
+                }
+            }
+        }
     }
+    if !cs.subtree_changes.is_empty() || cs.hg_extra.contains_key("subtree") {
+        cs.subtree_changes.clear();
+        cs.hg_extra.remove("subtree");
+        mark_as_created_by_lossy_conversion(logger, &mut cs, LossyConversionReason::SubtreeChanges);
+    }
+
     let empty_commit = cs.file_changes.is_empty();
     if !empty_commit
         || rewrite_opts.empty_commit_from_large_repo == EmptyCommitFromLargeRepo::Discard
@@ -808,6 +852,7 @@ pub fn rewrite_commit_with_implicit_deletes<'a>(
 enum LossyConversionReason {
     FileChanges,
     ImplicitFileChanges,
+    SubtreeChanges,
 }
 
 fn mark_as_created_by_lossy_conversion(
@@ -821,6 +866,9 @@ fn mark_as_created_by_lossy_conversion(
         }
         LossyConversionReason::ImplicitFileChanges => {
             "implicit file changes from the source changeset don't all have an equivalent implicit file change in the target changeset"
+        }
+        LossyConversionReason::SubtreeChanges => {
+            "the source changeset has subtree changes that have been removed in the target changeset"
         }
     };
     debug!(
@@ -1519,6 +1567,10 @@ mod test {
         impl MultiMover for IdentityMultiMover {
             fn multi_move_path(&self, path: &NonRootMPath) -> Result<Vec<NonRootMPath>, Error> {
                 Ok(vec![path.clone()])
+            }
+
+            fn conflicts_with(&self, _path: &NonRootMPath) -> Result<bool> {
+                Ok(true)
             }
         }
 

@@ -523,6 +523,10 @@ impl<'a> MultiMover for GitExportMultiMover<'a> {
         trace!(self.logger, "Path {:#?} will be exported.", &source_path);
         Ok(vec![source_path.clone()])
     }
+
+    fn conflicts_with(&self, path: &NonRootMPath) -> Result<bool> {
+        Ok(self.export_paths.iter().any(|p| p.is_related_to(path)))
+    }
 }
 
 /// Create a temporary repository to store the changesets that affect the export

@@ -50,6 +50,11 @@ pub trait Mover: Send + Sync + 'static {
     /// NOTE: The return type is `Option<NonRootMPath>`, but `None` means do
     /// not sync, rather than the root path.
     fn move_path(&self, source_path: &NonRootMPath) -> Result<Option<NonRootMPath>>;
+
+    /// Returns true if the path conflicts with any of the paths
+    /// the mover will move.  Paths conflict if either one of them
+    /// is a path prefix of the other.
+    fn conflicts_with(&self, path: &NonRootMPath) -> Result<bool>;
 }
 
 /// A struct to contain forward and reverse `Mover`
@@ -250,6 +255,33 @@ impl Mover for CrossRepoMover {
             }
         };
         Ok(mapped_path)
+    }
+
+    fn conflicts_with(&self, path: &NonRootMPath) -> Result<bool> {
+        match &self.default_action {
+            DefaultAction::PrependPrefix(prefix) => {
+                if prefix.is_related_to(path) {
+                    return Ok(true);
+                }
+            }
+            DefaultAction::Preserve => {
+                return Ok(true);
+            }
+            DefaultAction::DoNotSync => {}
+        }
+
+        for (prefix, action) in &self.prefix_map {
+            if prefix.is_related_to(path) {
+                match action {
+                    PrefixAction::Change(_) | PrefixAction::RemovePrefix => {
+                        return Ok(true);
+                    }
+                    PrefixAction::DoNotSync => {}
+                }
+            }
+        }
+
+        Ok(false)
     }
 }
 

@@ -758,6 +758,12 @@ impl NonRootMPath {
         self.0.common_components(other)
     }
 
+    /// Whether this path is related to the given path. A path P1 is related to path P2 iff
+    /// P1 is prefix of P2 or vice versa.
+    pub fn is_related_to(&self, other: &NonRootMPath) -> bool {
+        self.0.is_related_to(&other.0)
+    }
+
     /// Whether this path is a path prefix of the given path.
     /// `foo` is a prefix of `foo/bar`, but not of `foo1`.
     #[inline]

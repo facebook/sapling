@@ -974,6 +974,21 @@ impl Mover for CombinedMover {
         }
         Ok(Some(path))
     }
+
+    fn conflicts_with(&self, path: &NonRootMPath) -> Result<bool, Error> {
+        let mut path = path.clone();
+        for mover in &self.movers {
+            if mover.conflicts_with(&path)? {
+                return Ok(true);
+            }
+            let maybe_path = mover.move_path(&path)?;
+            path = match maybe_path {
+                Some(moved_path) => moved_path,
+                None => return Ok(false),
+            };
+        }
+        Ok(false)
+    }
 }
 
 async fn repo_import(
@@ -1642,6 +1657,12 @@ pub(crate) struct InvalidReverseMover;
 
 impl Mover for InvalidReverseMover {
     fn move_path(&self, _source_path: &NonRootMPath) -> Result<Option<NonRootMPath>, Error> {
+        Err(anyhow!(
+            "Reverse mover should never be called for repo_import tool"
+        ))
+    }
+
+    fn conflicts_with(&self, _path: &NonRootMPath) -> Result<bool, Error> {
         Err(anyhow!(
             "Reverse mover should never be called for repo_import tool"
         ))

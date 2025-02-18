@@ -316,6 +316,10 @@ mod test {
         fn move_path(&self, p: &NonRootMPath) -> Result<Option<NonRootMPath>> {
             (self.0)(p)
         }
+
+        fn conflicts_with(&self, _path: &NonRootMPath) -> Result<bool> {
+            unimplemented!()
+        }
     }
 
     fn identity_mover(p: &NonRootMPath) -> Result<Option<NonRootMPath>> {
