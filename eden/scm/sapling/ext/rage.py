@@ -404,7 +404,6 @@ def _makerage(ui, repo, **opts) -> str:
                 hgcmd("blackbox", pattern=BLACKBOX_PATTERN).splitlines()[-500:]
             ),
         ),
-        ("hg summary", lambda: hgcmd("summary")),
         ("hg cloud status", lambda: hgcmd("cloud status")),
         ("hg debugprocesstree", lambda: hgcmd("debugprocesstree")),
         ("hg debugrunlog", lambda: hgcmd("debugrunlog")),
