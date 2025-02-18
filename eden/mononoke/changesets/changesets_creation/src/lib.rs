@@ -40,6 +40,19 @@ pub async fn save_changesets(
     let commit_graph = repo.commit_graph();
     let blobstore = repo.repo_blobstore();
 
+    if bonsai_changesets
+        .iter()
+        .any(|bcs| !bcs.subtree_changes().is_empty())
+        && !justknobs::eval(
+            "scm/mononoke:enable_subtree_changes",
+            None,
+            Some(repo.repo_identity().name()),
+        )
+        .unwrap_or(false)
+    {
+        return Err(anyhow!("Subtree changes are disabled"));
+    }
+
     let mut parents_to_check: HashSet<ChangesetId> = HashSet::new();
     for bcs in &bonsai_changesets {
         parents_to_check.extend(bcs.parents());

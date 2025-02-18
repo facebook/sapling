@@ -8,6 +8,7 @@
 use std::collections::HashMap;
 
 use anyhow::anyhow;
+use anyhow::bail;
 use anyhow::Error;
 use anyhow::Result;
 use async_trait::async_trait;
@@ -84,6 +85,9 @@ impl BonsaiDerivable for RootFsnodeId {
         bonsai: BonsaiChangeset,
         parents: Vec<Self>,
     ) -> Result<Self, Error> {
+        if bonsai.has_subtree_changes() {
+            bail!("Subtree changes are not supported for fsnodes");
+        }
         let fsnode_id = derive_fsnode(
             ctx,
             derivation_ctx,
@@ -102,6 +106,9 @@ impl BonsaiDerivable for RootFsnodeId {
         derivation_ctx: &DerivationContext,
         bonsais: Vec<BonsaiChangeset>,
     ) -> Result<HashMap<ChangesetId, Self>> {
+        if bonsais.iter().any(|bcs| bcs.has_subtree_changes()) {
+            bail!("Subtree changes are not supported for fsnodes");
+        }
         derive_fsnode_in_batch(
             ctx,
             derivation_ctx,

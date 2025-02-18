@@ -1026,6 +1026,7 @@ impl<R: MononokeRepo> RepoContext<R> {
                 file_changes,
                 is_snapshot: bubble.is_some(),
                 git_annotated_tag: None,
+                subtree_changes: SortedVectorMap::new(),
             }
             .freeze()
             .map_err(|e| {

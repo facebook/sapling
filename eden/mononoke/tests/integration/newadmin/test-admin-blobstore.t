@@ -95,6 +95,7 @@ Examine some of the data
           is_snapshot: false,
           git_tree_hash: None,
           git_annotated_tag: None,
+          subtree_changes: {},
       },
       id: ChangesetId(
           Blake2(f9d662054cf779809fd1a55314f760dc7577eac63f1057162c1b8e56aa0f02a1),

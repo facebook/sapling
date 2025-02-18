@@ -41,6 +41,7 @@ pub mod skeleton_manifest;
 pub mod skeleton_manifest_v2;
 pub mod sorted_vector_trie_map;
 pub mod sql_types;
+pub mod subtree_change;
 pub mod svnrev;
 pub mod test_manifest;
 pub mod test_sharded_manifest;

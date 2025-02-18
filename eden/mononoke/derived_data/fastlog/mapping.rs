@@ -6,6 +6,7 @@
  */
 
 use anyhow::anyhow;
+use anyhow::bail;
 use anyhow::Error;
 use anyhow::Result;
 use async_trait::async_trait;
@@ -86,6 +87,9 @@ impl BonsaiDerivable for RootFastlog {
         bonsai: BonsaiChangeset,
         _parents: Vec<Self>,
     ) -> Result<Self, Error> {
+        if bonsai.has_subtree_changes() {
+            bail!("Subtree changes are not supported for fastlog");
+        }
         let bcs_id = bonsai.get_changeset_id();
         let unode_mf_id = derivation_ctx
             .fetch_dependency::<RootUnodeManifestId>(ctx, bonsai.get_changeset_id())

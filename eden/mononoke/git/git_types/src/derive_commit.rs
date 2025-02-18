@@ -84,6 +84,9 @@ impl BonsaiDerivable for MappedGitCommitId {
         if bonsai.is_snapshot() {
             bail!("Can't derive MappedGitCommitId for snapshot")
         }
+        if bonsai.has_subtree_changes() {
+            bail!("Subtree changes are not supported for git commits");
+        }
         let author = get_signature(bonsai.author(), bonsai.author_date())?;
         // Git always needs a committer whereas Mononoke may or may not have a separate committer. If the Mononoke
         // commit has no committer, then use an empty Git signature. This way converting the git commit back to

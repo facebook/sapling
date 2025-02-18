@@ -372,6 +372,9 @@ impl BonsaiDerivable for RootGitDeltaManifestV2Id {
         bonsai: BonsaiChangeset,
         _parents: Vec<Self>,
     ) -> Result<Self> {
+        if bonsai.has_subtree_changes() {
+            bail!("Subtree changes are not supported in GitDeltaManifestV2");
+        }
         derive_single(ctx, derivation_ctx, bonsai).await
     }
 
@@ -407,6 +410,9 @@ impl BonsaiDerivable for RootGitDeltaManifestV2Id {
         derivation_ctx: &DerivationContext,
         bonsai: BonsaiChangeset,
     ) -> Result<Self> {
+        if bonsai.has_subtree_changes() {
+            bail!("Subtree changes are not supported in GitDeltaManifestV2");
+        }
         derive_single(ctx, derivation_ctx, bonsai).await
     }
 

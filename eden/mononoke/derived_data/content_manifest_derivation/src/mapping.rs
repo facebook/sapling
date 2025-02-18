@@ -6,6 +6,7 @@
  */
 
 use anyhow::anyhow;
+use anyhow::bail;
 use anyhow::Error;
 use anyhow::Result;
 use async_trait::async_trait;
@@ -76,6 +77,9 @@ impl BonsaiDerivable for RootContentManifestId {
         bonsai: BonsaiChangeset,
         parents: Vec<Self>,
     ) -> Result<Self> {
+        if bonsai.has_subtree_changes() {
+            bail!("Subtree changes are not supported in Content Manifests");
+        }
         let content_manifest_id = derive_content_manifest(
             ctx,
             derivation_ctx,

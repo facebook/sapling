@@ -6,6 +6,7 @@
  */
 
 use anyhow::anyhow;
+use anyhow::bail;
 use anyhow::Error;
 use anyhow::Result;
 use async_trait::async_trait;
@@ -75,6 +76,9 @@ impl BonsaiDerivable for RootTestShardedManifestDirectory {
         bonsai: BonsaiChangeset,
         parents: Vec<Self>,
     ) -> Result<Self> {
+        if bonsai.has_subtree_changes() {
+            bail!("Subtree changes are not supported for test sharded manifests");
+        }
         derive_single(ctx, derivation_ctx, bonsai, parents).await
     }
 
@@ -83,6 +87,9 @@ impl BonsaiDerivable for RootTestShardedManifestDirectory {
         derivation_ctx: &DerivationContext,
         bonsai: BonsaiChangeset,
     ) -> Result<Self> {
+        if bonsai.has_subtree_changes() {
+            bail!("Subtree changes are not supported for test sharded manifests");
+        }
         let csid = bonsai.get_changeset_id();
         let test_manifest = derivation_ctx
             .fetch_dependency::<RootTestManifestDirectory>(ctx, csid)

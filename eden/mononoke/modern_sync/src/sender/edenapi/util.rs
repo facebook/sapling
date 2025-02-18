@@ -112,6 +112,7 @@ pub fn to_identical_changeset(
         is_snapshot,
         git_tree_hash,
         git_annotated_tag,
+        subtree_changes,
     } = bcs.clone().into_mut();
 
     let hg_info = HgInfo {
@@ -141,6 +142,10 @@ pub fn to_identical_changeset(
     ensure!(
         git_extra_headers.is_none(),
         "Unexpected git extra headers found"
+    );
+    ensure!(
+        subtree_changes.is_empty(),
+        "Subtree changes are not supported in modern sync"
     );
 
     Ok(IdenticalChangesetContent {

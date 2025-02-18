@@ -8,6 +8,7 @@
 use std::collections::HashMap;
 
 use anyhow::anyhow;
+use anyhow::bail;
 use anyhow::Error;
 use anyhow::Result;
 use async_trait::async_trait;
@@ -88,6 +89,9 @@ impl BonsaiDerivable for RootDeletedManifestV2Id {
         bonsai: BonsaiChangeset,
         parents: Vec<Self>,
     ) -> Result<Self, Error> {
+        if bonsai.has_subtree_changes() {
+            bail!("Subtree changes are not supported for deleted manifest v2");
+        }
         RootDeletedManifestDeriver::derive_single(ctx, derivation_ctx, bonsai, parents).await
     }
 
@@ -113,6 +117,9 @@ impl BonsaiDerivable for RootDeletedManifestV2Id {
         derivation_ctx: &DerivationContext,
         bonsais: Vec<BonsaiChangeset>,
     ) -> Result<HashMap<ChangesetId, Self>> {
+        if bonsais.iter().any(|bcs| bcs.has_subtree_changes()) {
+            bail!("Subtree changes are not supported for deleted manifest v2");
+        }
         RootDeletedManifestDeriver::derive_batch(ctx, derivation_ctx, bonsais).await
     }
 

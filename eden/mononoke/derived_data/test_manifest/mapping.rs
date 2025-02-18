@@ -6,6 +6,7 @@
  */
 
 use anyhow::anyhow;
+use anyhow::bail;
 use anyhow::Error;
 use anyhow::Result;
 use async_trait::async_trait;
@@ -72,6 +73,9 @@ impl BonsaiDerivable for RootTestManifestDirectory {
         bonsai: BonsaiChangeset,
         parents: Vec<Self>,
     ) -> Result<Self> {
+        if bonsai.has_subtree_changes() {
+            bail!("Subtree changes are not supported for test manifests");
+        }
         derive_single(ctx, derivation_ctx, bonsai, parents).await
     }
 

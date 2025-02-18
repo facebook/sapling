@@ -8,6 +8,7 @@
 use std::collections::HashMap;
 
 use anyhow::anyhow;
+use anyhow::bail;
 use anyhow::Context;
 use anyhow::Error;
 use anyhow::Result;
@@ -97,6 +98,9 @@ impl BonsaiDerivable for RootUnodeManifestId {
         bonsai: BonsaiChangeset,
         parents: Vec<Self>,
     ) -> Result<Self> {
+        if bonsai.has_subtree_changes() {
+            bail!("Subtree changes are not supported for unodes");
+        }
         let csid = bonsai.get_changeset_id();
         derive_unode_manifest(
             ctx,
@@ -117,6 +121,9 @@ impl BonsaiDerivable for RootUnodeManifestId {
         derivation_ctx: &DerivationContext,
         bonsais: Vec<BonsaiChangeset>,
     ) -> Result<HashMap<ChangesetId, Self>> {
+        if bonsais.iter().any(|bcs| bcs.has_subtree_changes()) {
+            bail!("Subtree changes are not supported for unodes");
+        }
         if bonsais.is_empty() {
             return Ok(HashMap::new());
         }

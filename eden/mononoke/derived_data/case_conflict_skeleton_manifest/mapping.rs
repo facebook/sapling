@@ -6,6 +6,7 @@
  */
 
 use anyhow::anyhow;
+use anyhow::bail;
 use anyhow::Error;
 use anyhow::Result;
 use async_trait::async_trait;
@@ -78,6 +79,9 @@ impl BonsaiDerivable for RootCaseConflictSkeletonManifestId {
         bonsai: BonsaiChangeset,
         parents: Vec<Self>,
     ) -> Result<Self> {
+        if bonsai.has_subtree_changes() {
+            bail!("Subtree changes are not supported for case conflict skeleton manifest");
+        }
         derive_single(ctx, derivation_ctx, bonsai, parents).await
     }
 
@@ -86,6 +90,9 @@ impl BonsaiDerivable for RootCaseConflictSkeletonManifestId {
         derivation_ctx: &DerivationContext,
         bonsai: BonsaiChangeset,
     ) -> Result<Self> {
+        if bonsai.has_subtree_changes() {
+            bail!("Subtree changes are not supported for case conflict skeleton manifest");
+        }
         let csid = bonsai.get_changeset_id();
         let skeleton_manifest = derivation_ctx
             .fetch_dependency::<RootSkeletonManifestId>(ctx, csid)

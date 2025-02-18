@@ -8,6 +8,7 @@
 use std::collections::HashMap;
 
 use anyhow::anyhow;
+use anyhow::bail;
 use anyhow::Error;
 use anyhow::Result;
 use async_trait::async_trait;
@@ -86,6 +87,9 @@ impl BonsaiDerivable for RootSkeletonManifestId {
         bonsai: BonsaiChangeset,
         parents: Vec<Self>,
     ) -> Result<Self, Error> {
+        if bonsai.has_subtree_changes() {
+            bail!("Subtree changes are not supported for skeleton manifests");
+        }
         let id = derive_skeleton_manifest(
             ctx,
             derivation_ctx,
@@ -104,6 +108,9 @@ impl BonsaiDerivable for RootSkeletonManifestId {
         derivation_ctx: &DerivationContext,
         bonsais: Vec<BonsaiChangeset>,
     ) -> Result<HashMap<ChangesetId, Self>> {
+        if bonsais.iter().any(|b| b.has_subtree_changes()) {
+            bail!("Subtree changes are not supported for skeleton manifests");
+        }
         derive_skeleton_manifests_in_batch(
             ctx,
             derivation_ctx,

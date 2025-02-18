@@ -259,6 +259,9 @@ pub async fn do_pushrebase_bonsai(
     pushed: &HashSet<BonsaiChangeset>,
     prepushrebase_hooks: &[Box<dyn PushrebaseHook>],
 ) -> Result<PushrebaseOutcome, PushrebaseError> {
+    if pushed.iter().any(|b| b.has_subtree_changes()) {
+        return Err(format_err!("Pushrebase of subtree changes is not supported").into());
+    }
     let head = find_only_head_or_fail(pushed)?;
     let roots = find_roots(pushed);
 

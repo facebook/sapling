@@ -6,6 +6,7 @@
  */
 
 use anyhow::anyhow;
+use anyhow::bail;
 use anyhow::Error;
 use anyhow::Result;
 use async_trait::async_trait;
@@ -80,6 +81,9 @@ impl BonsaiDerivable for RootBssmV3DirectoryId {
         bonsai: BonsaiChangeset,
         parents: Vec<Self>,
     ) -> Result<Self> {
+        if bonsai.has_subtree_changes() {
+            bail!("Subtree changes are not supported for bssm v3");
+        }
         let parent_skeleton_manifests = stream::iter(bonsai.parents())
             .map(|parent| derivation_ctx.fetch_dependency::<RootSkeletonManifestId>(ctx, parent))
             .buffered(100)
@@ -101,6 +105,9 @@ impl BonsaiDerivable for RootBssmV3DirectoryId {
         derivation_ctx: &DerivationContext,
         bonsai: BonsaiChangeset,
     ) -> Result<Self> {
+        if bonsai.has_subtree_changes() {
+            bail!("Subtree changes are not supported for bssm v3");
+        }
         let csid = bonsai.get_changeset_id();
         let skeleton_manifest = derivation_ctx
             .fetch_dependency::<RootSkeletonManifestId>(ctx, csid)

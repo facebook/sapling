@@ -79,6 +79,9 @@ impl BonsaiDerivable for MappedHgChangesetId {
         if bonsai.is_snapshot() {
             bail!("Can't derive Hg changeset for snapshot")
         }
+        if bonsai.has_subtree_changes() {
+            bail!("Subtree changes are not supported for hg changesets");
+        }
         let derivation_opts = get_hg_changeset_derivation_options(derivation_ctx);
         crate::derive_hg_changeset::derive_from_parents(
             ctx,
@@ -97,6 +100,9 @@ impl BonsaiDerivable for MappedHgChangesetId {
     ) -> Result<HashMap<ChangesetId, Self>> {
         if bonsais.is_empty() {
             return Ok(HashMap::new());
+        }
+        if bonsais.iter().any(|bonsai| bonsai.has_subtree_changes()) {
+            bail!("Subtree changes are not supported for hg changesets");
         }
 
         STATS::new_parallel.add_value(1);

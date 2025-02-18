@@ -1251,12 +1251,12 @@ impl SaplingRemoteApiHandler for UploadIdenticalChangesetsHandler {
                         committer_date: None,
                         message: ics.message.clone(),
                         hg_extra,
-
                         file_changes,
                         git_extra_headers: None,
                         git_tree_hash: None,
                         is_snapshot: false,
                         git_annotated_tag: None,
+                        subtree_changes: Default::default(),
                     }
                     .freeze()?;
 

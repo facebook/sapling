@@ -574,6 +574,9 @@ pub fn rewrite_commit_with_implicit_deletes<'a>(
     renamed_implicit_deletes: Vec<Vec<NonRootMPath>>,
     rewrite_opts: RewriteOpts,
 ) -> Result<Option<BonsaiChangesetMut>, Error> {
+    if !cs.subtree_changes.is_empty() {
+        bail!("Subtree changes are not supported in commit transformation");
+    }
     let empty_commit = cs.file_changes.is_empty();
     if !empty_commit
         || rewrite_opts.empty_commit_from_large_repo == EmptyCommitFromLargeRepo::Discard

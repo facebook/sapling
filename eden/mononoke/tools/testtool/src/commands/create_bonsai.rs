@@ -153,6 +153,7 @@ impl DeserializableBonsaiChangeset {
             is_snapshot: false,
             git_annotated_tag: None,
             git_tree_hash,
+            subtree_changes: Default::default(),
         })
     }
 }

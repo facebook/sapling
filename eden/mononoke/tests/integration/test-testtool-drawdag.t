@@ -112,6 +112,7 @@ The tool will print the commit hash of each commit.
           is_snapshot: false,
           git_tree_hash: None,
           git_annotated_tag: None,
+          subtree_changes: {},
       },
       id: ChangesetId(
           Blake2(fc81a9a2f936daba3d461f8a3ee00c542903197bf9964c05dcbdc1e7f62e98db),
