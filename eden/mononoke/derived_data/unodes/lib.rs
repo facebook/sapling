@@ -17,9 +17,12 @@ use futures::future;
 use futures::TryFutureExt;
 use futures::TryStreamExt;
 use manifest::ManifestOps;
+use manifest::PathTree;
+use mononoke_types::subtree_change::SubtreeChange;
 use mononoke_types::BonsaiChangeset;
 use mononoke_types::ChangesetId;
 use mononoke_types::FileUnodeId;
+use mononoke_types::MPath;
 use mononoke_types::NonRootMPath;
 use thiserror::Error;
 
@@ -35,9 +38,9 @@ pub enum ErrorKind {
     InvalidBonsai(String),
 }
 
-/// A rename source for a file that is renamed.
+/// A rename source for a file that was copied by commit copy-info.
 #[derive(Debug, Clone)]
-pub struct UnodeRenameSource {
+pub struct CopyInfoSource {
     /// Index of the parent changeset in the list of parents in the bonsai
     /// changeset.
     pub parent_index: usize,
@@ -48,6 +51,88 @@ pub struct UnodeRenameSource {
 
     /// Unode ID of the file in the parent changeset.
     pub unode_id: FileUnodeId,
+}
+
+/// A rename souce for a file that was copied by a subtree operation.
+#[derive(Debug, Clone)]
+pub struct SubtreeCopySource {
+    /// The parent changeset that the file was copied from.
+    pub parent: ChangesetId,
+
+    /// The path of the file in the parent changeset (i.e., the path it was
+    /// renamed from).
+    pub from_path: MPath,
+}
+
+/// A rename souce for a file that was copied by a subtree operation.
+#[derive(Debug, Clone)]
+pub struct SubtreeMergeSource {
+    /// The parent changeset that the file was merged from.
+    pub parent: ChangesetId,
+
+    /// The path of the file in the parent changeset (i.e., the path it was
+    /// merged from).
+    pub from_path: MPath,
+}
+
+pub enum SubtreeOpSource {
+    Copy(SubtreeCopySource),
+    Merge(SubtreeMergeSource),
+}
+
+impl SubtreeOpSource {
+    fn to_unode_rename_source(&self, suffix: &MPath) -> UnodeRenameSource {
+        match self {
+            SubtreeOpSource::Copy(source) => {
+                let from_path = source.from_path.join(suffix);
+                UnodeRenameSource::SubtreeCopy(SubtreeCopySource {
+                    parent: source.parent,
+                    from_path,
+                })
+            }
+            SubtreeOpSource::Merge(source) => {
+                let from_path = source.from_path.join(suffix);
+                UnodeRenameSource::SubtreeMerge(SubtreeMergeSource {
+                    parent: source.parent,
+                    from_path,
+                })
+            }
+        }
+    }
+}
+
+/// A rename source for a file that is renamed.
+#[derive(Debug, Clone)]
+pub enum UnodeRenameSource {
+    CopyInfo(CopyInfoSource),
+    SubtreeCopy(SubtreeCopySource),
+    SubtreeMerge(SubtreeMergeSource),
+}
+
+pub struct UnodeRenameSources {
+    copy_info: HashMap<NonRootMPath, CopyInfoSource>,
+    subtree_ops: PathTree<Option<SubtreeOpSource>>,
+}
+
+impl UnodeRenameSources {
+    pub fn get(&self, path: &NonRootMPath) -> Option<UnodeRenameSource> {
+        if let Some((source_to_path, Some(source))) = self
+            .subtree_ops
+            .get_nearest_parent(path.into(), Option::is_some)
+        {
+            let path: &MPath = path.into();
+            let suffix = path.remove_prefix_component(&source_to_path);
+            Some(source.to_unode_rename_source(&suffix))
+        } else {
+            self.copy_info.get(path).map(|source| {
+                UnodeRenameSource::CopyInfo(CopyInfoSource {
+                    parent_index: source.parent_index,
+                    from_path: source.from_path.clone(),
+                    unode_id: source.unode_id,
+                })
+            })
+        }
+    }
 }
 
 /// Given a bonsai changeset, find sources for all of the renames that
@@ -61,7 +146,7 @@ pub async fn find_unode_rename_sources(
     ctx: &CoreContext,
     derivation_ctx: &DerivationContext,
     bonsai: &BonsaiChangeset,
-) -> Result<HashMap<NonRootMPath, UnodeRenameSource>, Error> {
+) -> Result<UnodeRenameSources, Error> {
     // Collect together a map of (source_path -> [dest_paths]) for each parent
     // changeset.
     let mut references: HashMap<ChangesetId, HashMap<&NonRootMPath, Vec<&NonRootMPath>>> =
@@ -107,7 +192,7 @@ pub async fn find_unode_rename_sources(
                         for to_path in to_paths {
                             sources.push((
                                 to_path.clone(),
-                                UnodeRenameSource {
+                                CopyInfoSource {
                                     parent_index,
                                     from_path: from_path.clone(),
                                     unode_id,
@@ -117,13 +202,44 @@ pub async fn find_unode_rename_sources(
                     }
                 }
             }
-            Ok(sources)
+            anyhow::Ok(sources)
         }
     });
 
-    future::try_join_all(sources_futs)
+    let copy_info = future::try_join_all(sources_futs)
         .map_ok(|unodes| unodes.into_iter().flatten().collect())
-        .await
+        .await?;
+
+    let subtree_ops = PathTree::from_iter(bonsai.subtree_changes().iter().map(
+        |(to_path, change)| match change {
+            SubtreeChange::SubtreeCopy(copy) => (
+                to_path.clone(),
+                Some(SubtreeOpSource::Copy(SubtreeCopySource {
+                    parent: copy.from_cs_id,
+                    from_path: copy.from_path.clone(),
+                })),
+            ),
+            SubtreeChange::SubtreeDeepCopy(copy) => (
+                to_path.clone(),
+                Some(SubtreeOpSource::Copy(SubtreeCopySource {
+                    parent: copy.from_cs_id,
+                    from_path: copy.from_path.clone(),
+                })),
+            ),
+            SubtreeChange::SubtreeMerge(merge) => (
+                to_path.clone(),
+                Some(SubtreeOpSource::Merge(SubtreeMergeSource {
+                    parent: merge.from_cs_id,
+                    from_path: merge.from_path.clone(),
+                })),
+            ),
+        },
+    ));
+
+    Ok(UnodeRenameSources {
+        copy_info,
+        subtree_ops,
+    })
 }
 
 #[cfg(test)]
@@ -148,6 +264,7 @@ mod tests {
     use tests_utils::CreateCommitContext;
 
     use crate::RootUnodeManifestId;
+    use crate::UnodeRenameSource;
 
     #[derive(Clone)]
     #[facet::container]
@@ -209,12 +326,20 @@ mod tests {
             .await?;
         let renames = crate::find_unode_rename_sources(ctx, &derivation_ctx, &bonsai).await?;
 
-        let check = |path: &str, parent_index: usize, from_path: &str| {
+        let check = |path: &str, expected_parent_index: usize, expected_from_path: &str| {
             let source = renames
                 .get(&NonRootMPath::new(path).unwrap())
                 .expect("path should exist");
-            assert_eq!(source.parent_index, parent_index);
-            assert_eq!(source.from_path, NonRootMPath::new(from_path).unwrap());
+            match source {
+                UnodeRenameSource::CopyInfo(copy) => {
+                    assert_eq!(copy.parent_index, expected_parent_index);
+                    assert_eq!(
+                        copy.from_path,
+                        NonRootMPath::new(expected_from_path).unwrap()
+                    );
+                }
+                _ => panic!("expected rename"),
+            }
         };
 
         check("file1a", 0, "file1");
@@ -223,7 +348,15 @@ mod tests {
         check("file3a", 1, "file3");
         check("file3b", 1, "file3");
 
-        assert_eq!(renames.len(), 5);
+        assert_eq!(renames.copy_info.len(), 5);
+        assert_eq!(
+            renames
+                .subtree_ops
+                .into_iter()
+                .filter(|(_path, source)| source.is_some())
+                .count(),
+            0
+        );
 
         Ok(())
     }

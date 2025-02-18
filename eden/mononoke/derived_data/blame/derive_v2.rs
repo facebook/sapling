@@ -5,7 +5,6 @@
  * GNU General Public License version 2.
  */
 
-use std::collections::HashMap;
 use std::sync::Arc;
 
 use anyhow::Error;
@@ -33,6 +32,7 @@ use mononoke_types::NonRootMPath;
 use unodes::find_unode_rename_sources;
 use unodes::RootUnodeManifestId;
 use unodes::UnodeRenameSource;
+use unodes::UnodeRenameSources;
 
 use crate::fetch::fetch_content_for_blame_with_limit;
 use crate::fetch::FetchOutcome;
@@ -101,7 +101,7 @@ pub(crate) async fn derive_blame_v2(
 async fn create_blame_v2(
     ctx: &CoreContext,
     blobstore: &Arc<dyn Blobstore>,
-    renames: Arc<HashMap<NonRootMPath, UnodeRenameSource>>,
+    renames: Arc<UnodeRenameSources>,
     csid: ChangesetId,
     path: NonRootMPath,
     file_unode_id: FileUnodeId,
@@ -115,14 +115,21 @@ async fn create_blame_v2(
         // contents in the parents, even if it existed there, and just use the
         // copy-from source as a parent.  This matches the Mercurial blame
         // implementation.
-        blame_parents.push(fetch_blame_parent(
-            ctx,
-            blobstore,
-            source.parent_index,
-            source.from_path.clone(),
-            source.unode_id,
-            filesize_limit,
-        ));
+        match source {
+            UnodeRenameSource::CopyInfo(source) => {
+                blame_parents.push(fetch_blame_parent(
+                    ctx,
+                    blobstore,
+                    source.parent_index,
+                    source.from_path.clone(),
+                    source.unode_id,
+                    filesize_limit,
+                ));
+            }
+            _ => {
+                // TODO: Support subtree copy sources
+            }
+        }
     } else {
         for (parent_index, unode_id) in file_unode.parents().iter().enumerate() {
             blame_parents.push(fetch_blame_parent(
