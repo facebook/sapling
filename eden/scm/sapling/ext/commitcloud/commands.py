@@ -1797,3 +1797,72 @@ def cloudimport(ui, repo, **opts):
 
     elapsed = util.timer() - start
     ui.status_err(_("finished in %0.2f sec\n") % elapsed)
+
+
+@subcmd(
+    "purge",
+    [
+        (
+            "d",
+            "date",
+            "",
+            _(
+                "remove any heads older than the specified date (YYYY-MM-DD) or number of days (e.g. 30d)"
+            ),
+            _("DATE"),
+        )
+    ],
+)
+def cloudpurge(ui, repo, **opts):
+    """purge commit cloud workspace
+
+    At the moment, this command only cleans up indicated old heads from the workspace. For bookmarks use 'sl cloud tidyup'.
+    """
+    date = opts.get("date")
+    if date == "":
+        raise ccerror.WorkspaceError(ui, _("no date specified"))
+
+    datematcher = util.matchdate("<" + date)
+
+    reponame = ccutil.getreponame(repo)
+    workspacename = workspace.currentworkspace(repo)
+
+    if workspacename is None:
+        raise ccerror.WorkspaceError(ui, _("undefined workspace"))
+
+    serv = service.get(ui, repo)
+    destcloudrefs = serv.getreferences(reponame, workspacename, 0)
+
+    heads = destcloudrefs.headdates if destcloudrefs.headdates else []
+
+    if len(heads) == 0:
+        ui.status(_("no heads found, nothing to purge\n"), component="commitcloud")
+        return
+
+    heads_to_remove = [h for h, d in heads.items() if datematcher(d)]
+
+    if len(heads_to_remove) == 0:
+        ui.status(
+            _("no heads found in date range provided, nothing to purge\n"),
+            component="commitcloud",
+        )
+        return
+
+    prompt_msg = _(
+        "remove %s heads from before %s from your workspace?  (y/n)? $$ &Yes $$ &No\n"
+    ) % (str(len(heads_to_remove)), date)
+
+    if ui.promptchoice(prompt_msg, default=1) != 0:
+        ui.status(_("purge aborted by user\n"), component="commitcloud")
+        return
+
+    move.moveorhide(
+        repo,
+        workspacename,
+        heads_to_remove,
+        [],
+        [],
+        dry_run=False,
+    )
+
+    ui.status(_("purge completed\n"), component="commitcloud")
