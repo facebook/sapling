@@ -173,6 +173,91 @@ pub struct SqlCommitGraphStorage {
     read_master_connection: RendezVousConnection,
 }
 
+// Utility macro for defining a query that fetches commit graph edges.
+//
+// The first part of the query should create a common table named `csp`
+// which has `id` and `origin_cs_id` fields for the edges that are
+// requested.
+macro_rules! fetch_commit_graph_edges {
+    ($query:literal) => {
+        concat!(
+            $query,
+            "SELECT
+                cs0.cs_id AS cs_id,
+                csp.origin_cs_id AS origin_cs_id,
+                NULL AS gen,
+                NULL AS skip_tree_depth,
+                NULL AS p1_linear_depth,
+                NULL AS parent_count,
+                NULL AS merge_ancestor,
+                NULL AS merge_ancestor_gen,
+                NULL AS merge_ancestor_skip_tree_depth,
+                NULL AS merge_ancestor_p1_linear_depth,
+                NULL AS skip_tree_parent,
+                NULL AS skip_tree_parent_gen,
+                NULL AS skip_tree_parent_skip_tree_depth,
+                NULL AS skip_tree_parent_p1_linear_depth,
+                NULL AS skip_tree_skew_ancestor,
+                NULL AS skip_tree_skew_ancestor_gen,
+                NULL AS skip_tree_skew_ancestor_skip_tree_depth,
+                NULL AS skip_tree_skew_ancestor_p1_linear_depth,
+                NULL AS p1_linear_skew_ancestor,
+                NULL AS p1_linear_skew_ancestor_gen,
+                NULL AS p1_linear_skew_ancestor_skip_tree_depth,
+                NULL AS p1_linear_skew_ancestor_p1_linear_depth,
+                cgmp.parent_num AS parent_num,
+                cs1.cs_id AS parent,
+                cs1.gen AS parent_gen,
+                cs1.skip_tree_depth AS parent_skip_tree_depth,
+                cs1.p1_linear_depth AS parent_p1_linear_depth
+            FROM csp
+            INNER JOIN commit_graph_merge_parents cgmp ON csp.id = cgmp.id
+            INNER JOIN commit_graph_edges cs0 ON cs0.id = cgmp.id
+            INNER JOIN commit_graph_edges cs1 ON cs1.id = cgmp.parent
+            WHERE cs0.parent_count >= 2
+
+            UNION
+
+            SELECT
+                cs0.cs_id AS cs_id,
+                csp.origin_cs_id AS origin_cs_id,
+                cs0.gen AS gen,
+                cs0.skip_tree_depth AS skip_tree_depth,
+                cs0.p1_linear_depth AS p1_linear_depth,
+                cs0.parent_count AS parent_count,
+                cs_merge_ancestor.cs_id AS merge_ancestor,
+                cs_merge_ancestor.gen AS merge_ancestor_gen,
+                cs_merge_ancestor.skip_tree_depth AS merge_ancestor_skip_tree_depth,
+                cs_merge_ancestor.p1_linear_depth AS merge_ancestor_p1_linear_depth,
+                cs_skip_tree_parent.cs_id AS skip_tree_parent,
+                cs_skip_tree_parent.gen AS skip_tree_parent_gen,
+                cs_skip_tree_parent.skip_tree_depth AS skip_tree_parent_skip_tree_depth,
+                cs_skip_tree_parent.p1_linear_depth AS skip_tree_parent_p1_linear_depth,
+                cs_skip_tree_skew_ancestor.cs_id AS skip_tree_skew_ancestor,
+                cs_skip_tree_skew_ancestor.gen AS skip_tree_skew_ancestor_gen,
+                cs_skip_tree_skew_ancestor.skip_tree_depth AS skip_tree_skew_ancestor_skip_tree_depth,
+                cs_skip_tree_skew_ancestor.p1_linear_depth AS skip_tree_skew_ancestor_p1_linear_depth,
+                cs_p1_linear_skew_ancestor.cs_id AS p1_linear_skew_ancestor,
+                cs_p1_linear_skew_ancestor.gen AS p1_linear_skew_ancestor_gen,
+                cs_p1_linear_skew_ancestor.skip_tree_depth AS p1_linear_skew_ancestor_skip_tree_depth,
+                cs_p1_linear_skew_ancestor.p1_linear_depth AS p1_linear_skew_ancestor_p1_linear_depth,
+                0 AS parent_num,
+                cs_p1_parent.cs_id AS parent,
+                cs_p1_parent.gen AS parent_gen,
+                cs_p1_parent.skip_tree_depth AS parent_skip_tree_depth,
+                cs_p1_parent.p1_linear_depth AS parent_p1_linear_depth
+            FROM csp
+            INNER JOIN commit_graph_edges cs0 ON csp.id = cs0.id
+            LEFT JOIN commit_graph_edges cs_p1_parent ON cs_p1_parent.id = cs0.p1_parent
+            LEFT JOIN commit_graph_edges cs_merge_ancestor ON cs_merge_ancestor.id = cs0.merge_ancestor
+            LEFT JOIN commit_graph_edges cs_skip_tree_parent ON cs_skip_tree_parent.id = cs0.skip_tree_parent
+            LEFT JOIN commit_graph_edges cs_skip_tree_skew_ancestor ON cs_skip_tree_skew_ancestor.id = cs0.skip_tree_skew_ancestor
+            LEFT JOIN commit_graph_edges cs_p1_linear_skew_ancestor ON cs_p1_linear_skew_ancestor.id = cs0.p1_linear_skew_ancestor
+            ORDER BY parent_num ASC"
+        )
+    }
+}
+
 mononoke_queries! {
     write InsertChangeset(
         repo_id: RepositoryId,
@@ -315,80 +400,13 @@ mononoke_queries! {
         Option<u64>, // parent_skip_tree_depth
         Option<u64>, // parent_p1_linear_depth
     ) {
-        "
-        SELECT
-            cs0.cs_id AS cs_id,
-            NULL AS origin_cs_id,
-            NULL AS gen,
-            NULL AS skip_tree_depth,
-            NULL AS p1_linear_depth,
-            NULL AS parent_count,
-            NULL AS merge_ancestor,
-            NULL AS merge_ancestor_gen,
-            NULL AS merge_ancestor_skip_tree_depth,
-            NULL AS merge_ancestor_p1_linear_depth,
-            NULL AS skip_tree_parent,
-            NULL AS skip_tree_parent_gen,
-            NULL AS skip_tree_parent_skip_tree_depth,
-            NULL AS skip_tree_parent_p1_linear_depth,
-            NULL AS skip_tree_skew_ancestor,
-            NULL AS skip_tree_skew_ancestor_gen,
-            NULL AS skip_tree_skew_ancestor_skip_tree_depth,
-            NULL AS skip_tree_skew_ancestor_p1_linear_depth,
-            NULL AS p1_linear_skew_ancestor,
-            NULL AS p1_linear_skew_ancestor_gen,
-            NULL AS p1_linear_skew_ancestor_skip_tree_depth,
-            NULL AS p1_linear_skew_ancestor_p1_linear_depth,
-            commit_graph_merge_parents.parent_num AS parent_num,
-            cs1.cs_id AS parent,
-            cs1.gen AS parent_gen,
-            cs1.skip_tree_depth AS parent_skip_tree_depth,
-            cs1.p1_linear_depth AS parent_p1_linear_depth
-        FROM commit_graph_merge_parents
-        INNER JOIN commit_graph_edges cs0 ON cs0.id = commit_graph_merge_parents.id
-        INNER JOIN commit_graph_edges cs1 ON cs1.id = commit_graph_merge_parents.parent
-        WHERE cs0.repo_id = {repo_id} AND cs0.cs_id IN {cs_ids} AND cs1.repo_id = {repo_id} AND cs0.parent_count >= 2
-
-        UNION
-
-        SELECT
-            cs0.cs_id AS cs_id,
-            NULL AS origin_cs_id,
-            cs0.gen AS gen,
-            cs0.skip_tree_depth AS skip_tree_depth,
-            cs0.p1_linear_depth AS p1_linear_depth,
-            cs0.parent_count AS parent_count,
-            cs_merge_ancestor.cs_id AS merge_ancestor,
-            cs_merge_ancestor.gen AS merge_ancestor_gen,
-            cs_merge_ancestor.skip_tree_depth AS merge_ancestor_skip_tree_depth,
-            cs_merge_ancestor.p1_linear_depth AS merge_ancestor_p1_linear_depth,
-            cs_skip_tree_parent.cs_id AS skip_tree_parent,
-            cs_skip_tree_parent.gen AS skip_tree_parent_gen,
-            cs_skip_tree_parent.skip_tree_depth AS skip_tree_parent_skip_tree_depth,
-            cs_skip_tree_parent.p1_linear_depth AS skip_tree_parent_p1_linear_depth,
-            cs_skip_tree_skew_ancestor.cs_id AS skip_tree_skew_ancestor,
-            cs_skip_tree_skew_ancestor.gen AS skip_tree_skew_ancestor_gen,
-            cs_skip_tree_skew_ancestor.skip_tree_depth AS skip_tree_skew_ancestor_skip_tree_depth,
-            cs_skip_tree_skew_ancestor.p1_linear_depth AS skip_tree_skew_ancestor_p1_linear_depth,
-            cs_p1_linear_skew_ancestor.cs_id AS p1_linear_skew_ancestor,
-            cs_p1_linear_skew_ancestor.gen AS p1_linear_skew_ancestor_gen,
-            cs_p1_linear_skew_ancestor.skip_tree_depth AS p1_linear_skew_ancestor_skip_tree_depth,
-            cs_p1_linear_skew_ancestor.p1_linear_depth AS p1_linear_skew_ancestor_p1_linear_depth,
-            0 AS parent_num,
-            cs_p1_parent.cs_id AS parent,
-            cs_p1_parent.gen AS parent_gen,
-            cs_p1_parent.skip_tree_depth AS parent_skip_tree_depth,
-            cs_p1_parent.p1_linear_depth AS parent_p1_linear_depth
-        FROM commit_graph_edges cs0
-        LEFT JOIN commit_graph_edges cs_p1_parent ON cs_p1_parent.id = cs0.p1_parent
-        LEFT JOIN commit_graph_edges cs_merge_ancestor ON cs_merge_ancestor.id = cs0.merge_ancestor
-        LEFT JOIN commit_graph_edges cs_skip_tree_parent ON cs_skip_tree_parent.id = cs0.skip_tree_parent
-        LEFT JOIN commit_graph_edges cs_skip_tree_skew_ancestor ON cs_skip_tree_skew_ancestor.id = cs0.skip_tree_skew_ancestor
-        LEFT JOIN commit_graph_edges cs_p1_linear_skew_ancestor ON cs_p1_linear_skew_ancestor.id = cs0.p1_linear_skew_ancestor
-        WHERE cs0.repo_id = {repo_id} and cs0.cs_id IN {cs_ids}
-
-        ORDER BY parent_num ASC
-        "
+        fetch_commit_graph_edges!(
+            "WITH csp AS (
+                SELECT cge.id, cge.cs_id AS origin_cs_id
+                FROM commit_graph_edges cge
+                WHERE cge.repo_id = {repo_id} AND cge.cs_id IN {cs_ids}
+            )"
+        )
     }
 
     read SelectManyChangesetsWithFirstParentPrefetch(repo_id: RepositoryId, step_limit: u64, prefetch_gen: u64, >list cs_ids: ChangesetId) -> (
@@ -420,93 +438,19 @@ mononoke_queries! {
         Option<u64>, // parent_skip_tree_depth
         Option<u64>, // parent_p1_linear_depth
     ) {
-        "
-        WITH RECURSIVE csp AS (
-            SELECT
-                cs.id, cs.cs_id AS origin_cs_id, 1 AS step, cs.p1_parent AS next
-            FROM commit_graph_edges cs
-            WHERE cs.repo_id = {repo_id} AND cs.cs_id IN {cs_ids}
-            UNION ALL
-            SELECT
-                cs.id, csp.origin_cs_id AS origin_cs_id, csp.step + 1, cs.p1_parent AS next
-            FROM csp
-            INNER JOIN commit_graph_edges cs ON cs.id = csp.next
-            WHERE csp.step < {step_limit} AND cs.gen >= {prefetch_gen}
-        )
-
-        SELECT
-            cs0.cs_id AS cs_id,
-            csp.origin_cs_id AS origin_cs_id,
-            NULL AS gen,
-            NULL AS skip_tree_depth,
-            NULL AS p1_linear_depth,
-            NULL AS parent_count,
-            NULL AS merge_ancestor,
-            NULL AS merge_ancestor_gen,
-            NULL AS merge_ancestor_skip_tree_depth,
-            NULL AS merge_ancestor_p1_linear_depth,
-            NULL AS skip_tree_parent,
-            NULL AS skip_tree_parent_gen,
-            NULL AS skip_tree_parent_skip_tree_depth,
-            NULL AS skip_tree_parent_p1_linear_depth,
-            NULL AS skip_tree_skew_ancestor,
-            NULL AS skip_tree_skew_ancestor_gen,
-            NULL AS skip_tree_skew_ancestor_skip_tree_depth,
-            NULL AS skip_tree_skew_ancestor_p1_linear_depth,
-            NULL AS p1_linear_skew_ancestor,
-            NULL AS p1_linear_skew_ancestor_gen,
-            NULL AS p1_linear_skew_ancestor_skip_tree_depth,
-            NULL AS p1_linear_skew_ancestor_p1_linear_depth,
-            cgmp.parent_num AS parent_num,
-            cs1.cs_id AS parent,
-            cs1.gen AS parent_gen,
-            cs1.skip_tree_depth AS parent_skip_tree_depth,
-            cs1.p1_linear_depth AS parent_p1_linear_depth
-        FROM csp
-        INNER JOIN commit_graph_merge_parents cgmp ON csp.id = cgmp.id
-        INNER JOIN commit_graph_edges cs0 ON cs0.id = cgmp.id
-        INNER JOIN commit_graph_edges cs1 ON cs1.id = cgmp.parent
-        WHERE cs0.parent_count >= 2
-
-        UNION
-
-        SELECT
-            cs0.cs_id AS cs_id,
-            csp.origin_cs_id AS origin_cs_id,
-            cs0.gen AS gen,
-            cs0.skip_tree_depth AS skip_tree_depth,
-            cs0.p1_linear_depth AS p1_linear_depth,
-            cs0.parent_count AS parent_count,
-            cs_merge_ancestor.cs_id AS merge_ancestor,
-            cs_merge_ancestor.gen AS merge_ancestor_gen,
-            cs_merge_ancestor.skip_tree_depth AS merge_ancestor_skip_tree_depth,
-            cs_merge_ancestor.p1_linear_depth AS merge_ancestor_p1_linear_depth,
-            cs_skip_tree_parent.cs_id AS skip_tree_parent,
-            cs_skip_tree_parent.gen AS skip_tree_parent_gen,
-            cs_skip_tree_parent.skip_tree_depth AS skip_tree_parent_skip_tree_depth,
-            cs_skip_tree_parent.p1_linear_depth AS skip_tree_parent_p1_linear_depth,
-            cs_skip_tree_skew_ancestor.cs_id AS skip_tree_skew_ancestor,
-            cs_skip_tree_skew_ancestor.gen AS skip_tree_skew_ancestor_gen,
-            cs_skip_tree_skew_ancestor.skip_tree_depth AS skip_tree_skew_ancestor_skip_tree_depth,
-            cs_skip_tree_skew_ancestor.p1_linear_depth AS skip_tree_skew_ancestor_p1_linear_depth,
-            cs_p1_linear_skew_ancestor.cs_id AS p1_linear_skew_ancestor,
-            cs_p1_linear_skew_ancestor.gen AS p1_linear_skew_ancestor_gen,
-            cs_p1_linear_skew_ancestor.skip_tree_depth AS p1_linear_skew_ancestor_skip_tree_depth,
-            cs_p1_linear_skew_ancestor.p1_linear_depth AS p1_linear_skew_ancestor_p1_linear_depth,
-            0 AS parent_num,
-            cs_p1_parent.cs_id AS parent,
-            cs_p1_parent.gen AS parent_gen,
-            cs_p1_parent.skip_tree_depth AS parent_skip_tree_depth,
-            cs_p1_parent.p1_linear_depth AS parent_p1_linear_depth
-        FROM csp
-        INNER JOIN commit_graph_edges cs0 ON csp.id = cs0.id
-        LEFT JOIN commit_graph_edges cs_p1_parent ON cs_p1_parent.id = cs0.p1_parent
-        LEFT JOIN commit_graph_edges cs_merge_ancestor ON cs_merge_ancestor.id = cs0.merge_ancestor
-        LEFT JOIN commit_graph_edges cs_skip_tree_parent ON cs_skip_tree_parent.id = cs0.skip_tree_parent
-        LEFT JOIN commit_graph_edges cs_skip_tree_skew_ancestor ON cs_skip_tree_skew_ancestor.id = cs0.skip_tree_skew_ancestor
-        LEFT JOIN commit_graph_edges cs_p1_linear_skew_ancestor ON cs_p1_linear_skew_ancestor.id = cs0.p1_linear_skew_ancestor
-        ORDER BY parent_num ASC
-        "
+        fetch_commit_graph_edges!(
+            "WITH RECURSIVE csp AS (
+                SELECT
+                    cs.id, cs.cs_id AS origin_cs_id, 1 AS step, cs.p1_parent AS next
+                FROM commit_graph_edges cs
+                WHERE cs.repo_id = {repo_id} AND cs.cs_id IN {cs_ids}
+                UNION ALL
+                SELECT
+                    cs.id, csp.origin_cs_id AS origin_cs_id, csp.step + 1, cs.p1_parent AS next
+                FROM csp
+                INNER JOIN commit_graph_edges cs ON cs.id = csp.next
+                WHERE csp.step < {step_limit} AND cs.gen >= {prefetch_gen}
+            )")
     }
 
     read SelectManyChangesetsWithExactSkipTreeAncestorPrefetch(repo_id: RepositoryId, prefetch_gen: u64, >list cs_ids: ChangesetId) -> (
@@ -538,104 +482,31 @@ mononoke_queries! {
         Option<u64>, // parent_skip_tree_depth
         Option<u64>, // parent_p1_linear_depth
     ) {
-        "
-        WITH RECURSIVE csp AS (
-            SELECT
-                cs.cs_id as origin_cs_id, cs.id, cs.skip_tree_parent, cs.skip_tree_skew_ancestor
-            FROM commit_graph_edges cs
-            WHERE cs.repo_id = {repo_id} AND cs.cs_id IN {cs_ids}
+        fetch_commit_graph_edges!(
+            "WITH RECURSIVE csp AS (
+                SELECT
+                    cs.cs_id as origin_cs_id, cs.id, cs.skip_tree_parent, cs.skip_tree_skew_ancestor
+                FROM commit_graph_edges cs
+                WHERE cs.repo_id = {repo_id} AND cs.cs_id IN {cs_ids}
 
-            UNION ALL
-            
-            SELECT
-                csp.origin_cs_id, skip_tree_parent.id, skip_tree_parent.skip_tree_parent, skip_tree_parent.skip_tree_skew_ancestor
-            FROM csp
-            INNER JOIN commit_graph_edges skip_tree_parent ON skip_tree_parent.id = csp.skip_tree_parent
-            INNER JOIN commit_graph_edges skip_tree_skew_ancestor ON skip_tree_skew_ancestor.id = csp.skip_tree_skew_ancestor
-            WHERE skip_tree_parent.gen >= {prefetch_gen} and skip_tree_skew_ancestor.gen < {prefetch_gen}
+                UNION ALL
+                
+                SELECT
+                    csp.origin_cs_id, skip_tree_parent.id, skip_tree_parent.skip_tree_parent, skip_tree_parent.skip_tree_skew_ancestor
+                FROM csp
+                INNER JOIN commit_graph_edges skip_tree_parent ON skip_tree_parent.id = csp.skip_tree_parent
+                INNER JOIN commit_graph_edges skip_tree_skew_ancestor ON skip_tree_skew_ancestor.id = csp.skip_tree_skew_ancestor
+                WHERE skip_tree_parent.gen >= {prefetch_gen} and skip_tree_skew_ancestor.gen < {prefetch_gen}
 
-            UNION ALL
+                UNION ALL
 
-            SELECT
-                csp.origin_cs_id, skip_tree_skew_ancestor.id, skip_tree_skew_ancestor.skip_tree_parent, skip_tree_skew_ancestor.skip_tree_skew_ancestor
-            FROM csp
-            INNER JOIN commit_graph_edges skip_tree_skew_ancestor ON skip_tree_skew_ancestor.id = csp.skip_tree_skew_ancestor
-            WHERE skip_tree_skew_ancestor.gen >= {prefetch_gen}
+                SELECT
+                    csp.origin_cs_id, skip_tree_skew_ancestor.id, skip_tree_skew_ancestor.skip_tree_parent, skip_tree_skew_ancestor.skip_tree_skew_ancestor
+                FROM csp
+                INNER JOIN commit_graph_edges skip_tree_skew_ancestor ON skip_tree_skew_ancestor.id = csp.skip_tree_skew_ancestor
+                WHERE skip_tree_skew_ancestor.gen >= {prefetch_gen}
+            )"
         )
-
-        SELECT
-            cs0.cs_id AS cs_id,
-            csp.origin_cs_id AS origin_cs_id,
-            NULL AS gen,
-            NULL AS skip_tree_depth,
-            NULL AS p1_linear_depth,
-            NULL AS parent_count,
-            NULL AS merge_ancestor,
-            NULL AS merge_ancestor_gen,
-            NULL AS merge_ancestor_skip_tree_depth,
-            NULL AS merge_ancestor_p1_linear_depth,
-            NULL AS skip_tree_parent,
-            NULL AS skip_tree_parent_gen,
-            NULL AS skip_tree_parent_skip_tree_depth,
-            NULL AS skip_tree_parent_p1_linear_depth,
-            NULL AS skip_tree_skew_ancestor,
-            NULL AS skip_tree_skew_ancestor_gen,
-            NULL AS skip_tree_skew_ancestor_skip_tree_depth,
-            NULL AS skip_tree_skew_ancestor_p1_linear_depth,
-            NULL AS p1_linear_skew_ancestor,
-            NULL AS p1_linear_skew_ancestor_gen,
-            NULL AS p1_linear_skew_ancestor_skip_tree_depth,
-            NULL AS p1_linear_skew_ancestor_p1_linear_depth,
-            cgmp.parent_num AS parent_num,
-            cs1.cs_id AS parent,
-            cs1.gen AS parent_gen,
-            cs1.skip_tree_depth AS parent_skip_tree_depth,
-            cs1.p1_linear_depth AS parent_p1_linear_depth
-        FROM csp
-        INNER JOIN commit_graph_merge_parents cgmp ON csp.id = cgmp.id
-        INNER JOIN commit_graph_edges cs0 ON cs0.id = cgmp.id
-        INNER JOIN commit_graph_edges cs1 ON cs1.id = cgmp.parent
-        WHERE cs0.parent_count >= 2
-
-        UNION
-
-        SELECT
-            cs0.cs_id AS cs_id,
-            csp.origin_cs_id AS origin_cs_id,
-            cs0.gen AS gen,
-            cs0.skip_tree_depth AS skip_tree_depth,
-            cs0.p1_linear_depth AS p1_linear_depth,
-            cs0.parent_count AS parent_count,
-            cs_merge_ancestor.cs_id AS merge_ancestor,
-            cs_merge_ancestor.gen AS merge_ancestor_gen,
-            cs_merge_ancestor.skip_tree_depth AS merge_ancestor_skip_tree_depth,
-            cs_merge_ancestor.p1_linear_depth AS merge_ancestor_p1_linear_depth,
-            cs_skip_tree_parent.cs_id AS skip_tree_parent,
-            cs_skip_tree_parent.gen AS skip_tree_parent_gen,
-            cs_skip_tree_parent.skip_tree_depth AS skip_tree_parent_skip_tree_depth,
-            cs_skip_tree_parent.p1_linear_depth AS skip_tree_parent_p1_linear_depth,
-            cs_skip_tree_skew_ancestor.cs_id AS skip_tree_skew_ancestor,
-            cs_skip_tree_skew_ancestor.gen AS skip_tree_skew_ancestor_gen,
-            cs_skip_tree_skew_ancestor.skip_tree_depth AS skip_tree_skew_ancestor_skip_tree_depth,
-            cs_skip_tree_skew_ancestor.p1_linear_depth AS skip_tree_skew_ancestor_p1_linear_depth,
-            cs_p1_linear_skew_ancestor.cs_id AS p1_linear_skew_ancestor,
-            cs_p1_linear_skew_ancestor.gen AS p1_linear_skew_ancestor_gen,
-            cs_p1_linear_skew_ancestor.skip_tree_depth AS p1_linear_skew_ancestor_skip_tree_depth,
-            cs_p1_linear_skew_ancestor.p1_linear_depth AS p1_linear_skew_ancestor_p1_linear_depth,
-            0 AS parent_num,
-            cs_p1_parent.cs_id AS parent,
-            cs_p1_parent.gen AS parent_gen,
-            cs_p1_parent.skip_tree_depth AS parent_skip_tree_depth,
-            cs_p1_parent.p1_linear_depth AS parent_p1_linear_depth
-        FROM csp
-        INNER JOIN commit_graph_edges cs0 ON csp.id = cs0.id
-        LEFT JOIN commit_graph_edges cs_p1_parent ON cs_p1_parent.id = cs0.p1_parent
-        LEFT JOIN commit_graph_edges cs_merge_ancestor ON cs_merge_ancestor.id = cs0.merge_ancestor
-        LEFT JOIN commit_graph_edges cs_skip_tree_parent ON cs_skip_tree_parent.id = cs0.skip_tree_parent
-        LEFT JOIN commit_graph_edges cs_skip_tree_skew_ancestor ON cs_skip_tree_skew_ancestor.id = cs0.skip_tree_skew_ancestor
-        LEFT JOIN commit_graph_edges cs_p1_linear_skew_ancestor ON cs_p1_linear_skew_ancestor.id = cs0.p1_linear_skew_ancestor
-        ORDER BY parent_num ASC
-        "
     }
 
     // The only difference between mysql and sqlite is the FORCE INDEX
@@ -668,166 +539,24 @@ mononoke_queries! {
         Option<u64>, // parent_skip_tree_depth
         Option<u64>, // parent_p1_linear_depth
     ) {
-        mysql("WITH csp AS (
-            SELECT cs.id
-            FROM commit_graph_edges cs FORCE INDEX(repo_id_id)
-            WHERE cs.repo_id = {repo_id} AND cs.id >= {start_id} AND cs.id <= {end_id}
-            ORDER BY cs.id ASC
-            LIMIT {limit}
-        )
-
-        SELECT
-            cs0.cs_id AS cs_id,
-            NULL AS origin_cs_id,
-            NULL AS gen,
-            NULL AS skip_tree_depth,
-            NULL AS p1_linear_depth,
-            NULL AS parent_count,
-            NULL AS merge_ancestor,
-            NULL AS merge_ancestor_gen,
-            NULL AS merge_ancestor_skip_tree_depth,
-            NULL AS merge_ancestor_p1_linear_depth,
-            NULL AS skip_tree_parent,
-            NULL AS skip_tree_parent_gen,
-            NULL AS skip_tree_parent_skip_tree_depth,
-            NULL AS skip_tree_parent_p1_linear_depth,
-            NULL AS skip_tree_skew_ancestor,
-            NULL AS skip_tree_skew_ancestor_gen,
-            NULL AS skip_tree_skew_ancestor_skip_tree_depth,
-            NULL AS skip_tree_skew_ancestor_p1_linear_depth,
-            NULL AS p1_linear_skew_ancestor,
-            NULL AS p1_linear_skew_ancestor_gen,
-            NULL AS p1_linear_skew_ancestor_skip_tree_depth,
-            NULL AS p1_linear_skew_ancestor_p1_linear_depth,
-            cgmp.parent_num AS parent_num,
-            cs1.cs_id AS parent,
-            cs1.gen AS parent_gen,
-            cs1.skip_tree_depth AS parent_skip_tree_depth,
-            cs1.p1_linear_depth AS parent_p1_linear_depth
-        FROM csp
-        INNER JOIN commit_graph_merge_parents cgmp ON csp.id = cgmp.id
-        INNER JOIN commit_graph_edges cs0 ON cs0.id = cgmp.id
-        INNER JOIN commit_graph_edges cs1 ON cs1.id = cgmp.parent
-        WHERE cs0.parent_count >= 2
-
-        UNION
-
-        SELECT
-            cs0.cs_id AS cs_id,
-            NULL AS origin_cs_id,
-            cs0.gen AS gen,
-            cs0.skip_tree_depth AS skip_tree_depth,
-            cs0.p1_linear_depth AS p1_linear_depth,
-            cs0.parent_count AS parent_count,
-            cs_merge_ancestor.cs_id AS merge_ancestor,
-            cs_merge_ancestor.gen AS merge_ancestor_gen,
-            cs_merge_ancestor.skip_tree_depth AS merge_ancestor_skip_tree_depth,
-            cs_merge_ancestor.p1_linear_depth AS merge_ancestor_p1_linear_depth,
-            cs_skip_tree_parent.cs_id AS skip_tree_parent,
-            cs_skip_tree_parent.gen AS skip_tree_parent_gen,
-            cs_skip_tree_parent.skip_tree_depth AS skip_tree_parent_skip_tree_depth,
-            cs_skip_tree_parent.p1_linear_depth AS skip_tree_parent_p1_linear_depth,
-            cs_skip_tree_skew_ancestor.cs_id AS skip_tree_skew_ancestor,
-            cs_skip_tree_skew_ancestor.gen AS skip_tree_skew_ancestor_gen,
-            cs_skip_tree_skew_ancestor.skip_tree_depth AS skip_tree_skew_ancestor_skip_tree_depth,
-            cs_skip_tree_skew_ancestor.p1_linear_depth AS skip_tree_skew_ancestor_p1_linear_depth,
-            cs_p1_linear_skew_ancestor.cs_id AS p1_linear_skew_ancestor,
-            cs_p1_linear_skew_ancestor.gen AS p1_linear_skew_ancestor_gen,
-            cs_p1_linear_skew_ancestor.skip_tree_depth AS p1_linear_skew_ancestor_skip_tree_depth,
-            cs_p1_linear_skew_ancestor.p1_linear_depth AS p1_linear_skew_ancestor_p1_linear_depth,
-            0 AS parent_num,
-            cs_p1_parent.cs_id AS parent,
-            cs_p1_parent.gen AS parent_gen,
-            cs_p1_parent.skip_tree_depth AS parent_skip_tree_depth,
-            cs_p1_parent.p1_linear_depth AS parent_p1_linear_depth
-        FROM csp
-        INNER JOIN commit_graph_edges cs0 ON csp.id = cs0.id
-        LEFT JOIN commit_graph_edges cs_p1_parent ON cs_p1_parent.id = cs0.p1_parent
-        LEFT JOIN commit_graph_edges cs_merge_ancestor ON cs_merge_ancestor.id = cs0.merge_ancestor
-        LEFT JOIN commit_graph_edges cs_skip_tree_parent ON cs_skip_tree_parent.id = cs0.skip_tree_parent
-        LEFT JOIN commit_graph_edges cs_skip_tree_skew_ancestor ON cs_skip_tree_skew_ancestor.id = cs0.skip_tree_skew_ancestor
-        LEFT JOIN commit_graph_edges cs_p1_linear_skew_ancestor ON cs_p1_linear_skew_ancestor.id = cs0.p1_linear_skew_ancestor
-        ORDER BY parent_num ASC")
-        sqlite("WITH csp AS (
-            SELECT cs.id
-            FROM commit_graph_edges cs
-            WHERE cs.repo_id = {repo_id} AND cs.id >= {start_id} AND cs.id <= {end_id}
-            ORDER BY cs.id ASC
-            LIMIT {limit}
-        )
-
-        SELECT
-            cs0.cs_id AS cs_id,
-            NULL AS origin_cs_id,
-            NULL AS gen,
-            NULL AS skip_tree_depth,
-            NULL AS p1_linear_depth,
-            NULL AS parent_count,
-            NULL AS merge_ancestor,
-            NULL AS merge_ancestor_gen,
-            NULL AS merge_ancestor_skip_tree_depth,
-            NULL AS merge_ancestor_p1_linear_depth,
-            NULL AS skip_tree_parent,
-            NULL AS skip_tree_parent_gen,
-            NULL AS skip_tree_parent_skip_tree_depth,
-            NULL AS skip_tree_parent_p1_linear_depth,
-            NULL AS skip_tree_skew_ancestor,
-            NULL AS skip_tree_skew_ancestor_gen,
-            NULL AS skip_tree_skew_ancestor_skip_tree_depth,
-            NULL AS skip_tree_skew_ancestor_p1_linear_depth,
-            NULL AS p1_linear_skew_ancestor,
-            NULL AS p1_linear_skew_ancestor_gen,
-            NULL AS p1_linear_skew_ancestor_skip_tree_depth,
-            NULL AS p1_linear_skew_ancestor_p1_linear_depth,
-            cgmp.parent_num AS parent_num,
-            cs1.cs_id AS parent,
-            cs1.gen AS parent_gen,
-            cs1.skip_tree_depth AS parent_skip_tree_depth,
-            cs1.p1_linear_depth AS parent_p1_linear_depth
-        FROM csp
-        INNER JOIN commit_graph_merge_parents cgmp ON csp.id = cgmp.id
-        INNER JOIN commit_graph_edges cs0 ON cs0.id = cgmp.id
-        INNER JOIN commit_graph_edges cs1 ON cs1.id = cgmp.parent
-        WHERE cs0.parent_count >= 2
-
-        UNION
-
-        SELECT
-            cs0.cs_id AS cs_id,
-            NULL AS origin_cs_id,
-            cs0.gen AS gen,
-            cs0.skip_tree_depth AS skip_tree_depth,
-            cs0.p1_linear_depth AS p1_linear_depth,
-            cs0.parent_count AS parent_count,
-            cs_merge_ancestor.cs_id AS merge_ancestor,
-            cs_merge_ancestor.gen AS merge_ancestor_gen,
-            cs_merge_ancestor.skip_tree_depth AS merge_ancestor_skip_tree_depth,
-            cs_merge_ancestor.p1_linear_depth AS merge_ancestor_p1_linear_depth,
-            cs_skip_tree_parent.cs_id AS skip_tree_parent,
-            cs_skip_tree_parent.gen AS skip_tree_parent_gen,
-            cs_skip_tree_parent.skip_tree_depth AS skip_tree_parent_skip_tree_depth,
-            cs_skip_tree_parent.p1_linear_depth AS skip_tree_parent_p1_linear_depth,
-            cs_skip_tree_skew_ancestor.cs_id AS skip_tree_skew_ancestor,
-            cs_skip_tree_skew_ancestor.gen AS skip_tree_skew_ancestor_gen,
-            cs_skip_tree_skew_ancestor.skip_tree_depth AS skip_tree_skew_ancestor_skip_tree_depth,
-            cs_skip_tree_skew_ancestor.p1_linear_depth AS skip_tree_skew_ancestor_p1_linear_depth,
-            cs_p1_linear_skew_ancestor.cs_id AS p1_linear_skew_ancestor,
-            cs_p1_linear_skew_ancestor.gen AS p1_linear_skew_ancestor_gen,
-            cs_p1_linear_skew_ancestor.skip_tree_depth AS p1_linear_skew_ancestor_skip_tree_depth,
-            cs_p1_linear_skew_ancestor.p1_linear_depth AS p1_linear_skew_ancestor_p1_linear_depth,
-            0 AS parent_num,
-            cs_p1_parent.cs_id AS parent,
-            cs_p1_parent.gen AS parent_gen,
-            cs_p1_parent.skip_tree_depth AS parent_skip_tree_depth,
-            cs_p1_parent.p1_linear_depth AS parent_p1_linear_depth
-        FROM csp
-        INNER JOIN commit_graph_edges cs0 ON csp.id = cs0.id
-        LEFT JOIN commit_graph_edges cs_p1_parent ON cs_p1_parent.id = cs0.p1_parent
-        LEFT JOIN commit_graph_edges cs_merge_ancestor ON cs_merge_ancestor.id = cs0.merge_ancestor
-        LEFT JOIN commit_graph_edges cs_skip_tree_parent ON cs_skip_tree_parent.id = cs0.skip_tree_parent
-        LEFT JOIN commit_graph_edges cs_skip_tree_skew_ancestor ON cs_skip_tree_skew_ancestor.id = cs0.skip_tree_skew_ancestor
-        LEFT JOIN commit_graph_edges cs_p1_linear_skew_ancestor ON cs_p1_linear_skew_ancestor.id = cs0.p1_linear_skew_ancestor
-        ORDER BY parent_num ASC")
+        mysql(fetch_commit_graph_edges!(
+            "WITH csp AS (
+                SELECT cs.id, NULL AS origin_cs_id
+                FROM commit_graph_edges cs FORCE INDEX(repo_id_id)
+                WHERE cs.repo_id = {repo_id} AND cs.id >= {start_id} AND cs.id <= {end_id}
+                ORDER BY cs.id ASC
+                LIMIT {limit}
+            )"
+        ))
+        sqlite(fetch_commit_graph_edges!(
+            "WITH csp AS (
+                SELECT cs.id, NULL AS origin_cs_id
+                FROM commit_graph_edges cs
+                WHERE cs.repo_id = {repo_id} AND cs.id >= {start_id} AND cs.id <= {end_id}
+                ORDER BY cs.id ASC
+                LIMIT {limit}
+            )"
+        ))
     }
 
     // The only difference between mysql and sqlite is the FORCE INDEX
