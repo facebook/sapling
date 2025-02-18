@@ -91,7 +91,7 @@ async fn fetch_mutable_blame(
 
         // And reblame directly against the parent mutable renames gave us.
         let blame_parent = BlameParent::new(
-            BlameParentId::ChangesetParent(0), // Note: this is wrong.
+            BlameParentId::ReplacementParent(src_csid),
             src_path,
             src_content,
             src_blame,
