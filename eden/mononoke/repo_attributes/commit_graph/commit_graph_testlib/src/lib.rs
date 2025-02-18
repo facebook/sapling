@@ -827,7 +827,7 @@ pub async fn test_add_recursive(
             .add_recursive(
                 &ctx,
                 reference_graph.clone(),
-                vec1![(name_cs_id("I"), smallvec![name_cs_id("H")])],
+                vec1![(name_cs_id("I"), smallvec![name_cs_id("H")], vec![])],
             )
             .await?,
         9
@@ -837,7 +837,7 @@ pub async fn test_add_recursive(
             .add_recursive(
                 &ctx,
                 reference_graph,
-                vec1![(name_cs_id("J"), smallvec![name_cs_id("F")])]
+                vec1![(name_cs_id("J"), smallvec![name_cs_id("F")], vec![])]
             )
             .await?,
         1
@@ -906,10 +906,10 @@ pub async fn test_add_recursive_many_changesets(
                 &ctx,
                 reference_graph.clone(),
                 vec1![
-                    (name_cs_id("I"), smallvec![name_cs_id("H")]),
-                    (name_cs_id("K"), smallvec![name_cs_id("I")]),
-                    (name_cs_id("L"), smallvec![name_cs_id("K")]),
-                    (name_cs_id("M"), smallvec![name_cs_id("J")]),
+                    (name_cs_id("I"), smallvec![name_cs_id("H")], vec![]),
+                    (name_cs_id("K"), smallvec![name_cs_id("I")], vec![]),
+                    (name_cs_id("L"), smallvec![name_cs_id("K")], vec![]),
+                    (name_cs_id("M"), smallvec![name_cs_id("J")], vec![]),
                 ],
             )
             .await?,
@@ -945,8 +945,12 @@ pub async fn test_add_recursive_many_changesets(
                 &ctx,
                 reference_graph.clone(),
                 vec1![
-                    (name_cs_id("N"), smallvec![name_cs_id("M")]),
-                    (name_cs_id("O"), smallvec![name_cs_id("K"), name_cs_id("N")]),
+                    (name_cs_id("N"), smallvec![name_cs_id("M")], vec![]),
+                    (
+                        name_cs_id("O"),
+                        smallvec![name_cs_id("K"), name_cs_id("N")],
+                        vec![]
+                    ),
                 ],
             )
             .await?,
@@ -974,10 +978,10 @@ pub async fn test_add_many_changesets(
             .add_many(
                 &ctx,
                 vec1![
-                    (name_cs_id("A"), smallvec![]),
-                    (name_cs_id("B"), smallvec![name_cs_id("A")]),
-                    (name_cs_id("E"), smallvec![name_cs_id("A")]),
-                    (name_cs_id("C"), smallvec![name_cs_id("B")]),
+                    (name_cs_id("A"), smallvec![], vec![]),
+                    (name_cs_id("B"), smallvec![name_cs_id("A")], vec![]),
+                    (name_cs_id("E"), smallvec![name_cs_id("A")], vec![]),
+                    (name_cs_id("C"), smallvec![name_cs_id("B")], vec![]),
                 ],
             )
             .await?,
@@ -1022,9 +1026,13 @@ pub async fn test_add_many_changesets(
             .add_many(
                 &ctx,
                 vec1![
-                    (name_cs_id("G"), smallvec![name_cs_id("D"), name_cs_id("F")]),
-                    (name_cs_id("D"), smallvec![name_cs_id("C")]),
-                    (name_cs_id("F"), smallvec![name_cs_id("E")]),
+                    (
+                        name_cs_id("G"),
+                        smallvec![name_cs_id("D"), name_cs_id("F")],
+                        vec![]
+                    ),
+                    (name_cs_id("D"), smallvec![name_cs_id("C")], vec![]),
+                    (name_cs_id("F"), smallvec![name_cs_id("E")], vec![]),
                 ],
             )
             .await
@@ -1036,9 +1044,13 @@ pub async fn test_add_many_changesets(
             .add_many(
                 &ctx,
                 vec1![
-                    (name_cs_id("D"), smallvec![name_cs_id("C")]),
-                    (name_cs_id("F"), smallvec![name_cs_id("E")]),
-                    (name_cs_id("G"), smallvec![name_cs_id("D"), name_cs_id("F")]),
+                    (name_cs_id("D"), smallvec![name_cs_id("C")], vec![]),
+                    (name_cs_id("F"), smallvec![name_cs_id("E")], vec![]),
+                    (
+                        name_cs_id("G"),
+                        smallvec![name_cs_id("D"), name_cs_id("F")],
+                        vec![]
+                    ),
                 ],
             )
             .await?,
@@ -1073,9 +1085,13 @@ pub async fn test_add_many_changesets(
         .add_many(
             &ctx,
             vec1![
-                (name_cs_id("D"), smallvec![name_cs_id("C")]),
-                (name_cs_id("F"), smallvec![name_cs_id("E")]),
-                (name_cs_id("G"), smallvec![name_cs_id("D"), name_cs_id("F")]),
+                (name_cs_id("D"), smallvec![name_cs_id("C")], vec![]),
+                (name_cs_id("F"), smallvec![name_cs_id("E")], vec![]),
+                (
+                    name_cs_id("G"),
+                    smallvec![name_cs_id("D"), name_cs_id("F")],
+                    vec![]
+                ),
             ],
         )
         .await?;
@@ -1108,9 +1124,9 @@ pub async fn test_add_many_changesets(
             .add_many(
                 &ctx,
                 vec1![
-                    (name_cs_id("H"), smallvec![name_cs_id("G")]),
-                    (name_cs_id("J"), smallvec![name_cs_id("F")]),
-                    (name_cs_id("I"), smallvec![name_cs_id("H")]),
+                    (name_cs_id("H"), smallvec![name_cs_id("G")], vec![]),
+                    (name_cs_id("J"), smallvec![name_cs_id("F")], vec![]),
+                    (name_cs_id("I"), smallvec![name_cs_id("H")], vec![]),
                 ],
             )
             .await?,

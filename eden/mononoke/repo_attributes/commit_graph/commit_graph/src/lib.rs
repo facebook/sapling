@@ -23,6 +23,7 @@ use buffered_commit_graph_storage::BufferedCommitGraphStorage;
 use commit_graph_types::edges::ChangesetEdges;
 use commit_graph_types::edges::ChangesetNode;
 pub use commit_graph_types::edges::ChangesetParents;
+pub use commit_graph_types::edges::ChangesetSubtreeSources;
 use commit_graph_types::frontier::AncestorsWithinDistance;
 use commit_graph_types::frontier::ChangesetFrontierWithinDistance;
 use commit_graph_types::segments::BoundaryChangesets;
@@ -112,19 +113,34 @@ impl CommitGraph {
         ctx: &CoreContext,
         cs_id: ChangesetId,
         parents: ChangesetParents,
+        subtree_sources: ChangesetSubtreeSources,
     ) -> Result<bool> {
-        let parent_edges = self
-            .storage
-            .fetch_many_edges(ctx, &parents, Prefetch::None)
-            .await?
-            .into_iter()
-            .map(|(k, v)| (k, v.into()))
-            .collect();
+        let parent_edges = if subtree_sources.is_empty() {
+            self.storage
+                .fetch_many_edges(ctx, &parents, Prefetch::None)
+                .await?
+                .into_iter()
+                .map(|(k, v)| (k, v.into()))
+                .collect()
+        } else {
+            let parents_and_sources = parents
+                .iter()
+                .chain(subtree_sources.iter())
+                .copied()
+                .collect::<Vec<_>>();
+            self.storage
+                .fetch_many_edges(ctx, &parents_and_sources, Prefetch::None)
+                .await?
+                .into_iter()
+                .map(|(k, v)| (k, v.into()))
+                .collect()
+        };
 
         self.storage
             .add(
                 ctx,
-                self.build_edges(ctx, cs_id, parents, &parent_edges).await?,
+                self.build_edges(ctx, cs_id, parents, subtree_sources, &parent_edges)
+                    .await?,
             )
             .await
     }
@@ -136,15 +152,18 @@ impl CommitGraph {
     pub(crate) async fn add_many(
         &self,
         ctx: &CoreContext,
-        changesets: Vec1<(ChangesetId, ChangesetParents)>,
+        changesets: Vec1<(ChangesetId, ChangesetParents, ChangesetSubtreeSources)>,
     ) -> Result<usize> {
         // Find all parents that should already exist in the commit graph
         // and fetch their edges.
-        let changesets_set: HashSet<ChangesetId> =
-            changesets.iter().map(|(cs_id, _)| cs_id).cloned().collect();
+        let changesets_set: HashSet<ChangesetId> = changesets
+            .iter()
+            .map(|(cs_id, _, _)| cs_id)
+            .copied()
+            .collect();
         let parents_to_fetch = changesets
             .iter()
-            .flat_map(|(_, parents)| parents)
+            .flat_map(|(_, parents, subtree_sources)| parents.iter().chain(subtree_sources.iter()))
             .filter(|cs_id| !changesets_set.contains(cs_id))
             .copied()
             .collect::<Vec<_>>();
@@ -162,8 +181,10 @@ impl CommitGraph {
         let buffered_storage =
             Arc::new(BufferedCommitGraphStorage::new(self.storage.clone(), 10000));
         let graph = CommitGraph::new(buffered_storage.clone());
-        for (cs_id, parents) in changesets {
-            let edges = graph.build_edges(ctx, cs_id, parents, &edges_map).await?;
+        for (cs_id, parents, subtree_sources) in changesets {
+            let edges = graph
+                .build_edges(ctx, cs_id, parents, subtree_sources, &edges_map)
+                .await?;
             edges_map.insert(cs_id, edges.clone());
             buffered_storage.add(ctx, edges).await?;
         }
@@ -223,6 +244,20 @@ impl CommitGraph {
                         .collect(),
                 )
             })
+            .collect())
+    }
+
+    /// Returns the subtree sources of a single changeset.
+    pub async fn changeset_subtree_sources(
+        &self,
+        ctx: &CoreContext,
+        cs_id: ChangesetId,
+    ) -> Result<ChangesetSubtreeSources> {
+        let edges = self.storage.fetch_edges(ctx, cs_id).await?;
+        Ok(edges
+            .subtree_sources
+            .into_iter()
+            .map(|parent| parent.cs_id)
             .collect())
     }
 

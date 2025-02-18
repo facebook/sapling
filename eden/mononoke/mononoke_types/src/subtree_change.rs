@@ -50,6 +50,14 @@ impl SubtreeChange {
         })
     }
 
+    pub fn source(&self) -> Option<ChangesetId> {
+        match self {
+            Self::SubtreeCopy(copy) => Some(copy.from_cs_id),
+            Self::SubtreeDeepCopy(copy) => Some(copy.from_cs_id),
+            Self::SubtreeMerge(merge) => Some(merge.from_cs_id),
+        }
+    }
+
     /// Source of this subtree change, for all types that originate within this repo.
     pub fn change_source(&self) -> Option<(ChangesetId, &MPath)> {
         match self {

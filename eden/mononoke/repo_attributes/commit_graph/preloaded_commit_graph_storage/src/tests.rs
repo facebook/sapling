@@ -140,7 +140,7 @@ async fn test_preloaded_commit_graph_storage(fb: FacebookInit) -> Result<()> {
     let graph_writer = BaseCommitGraphWriter::new(graph.clone());
 
     graph_writer
-        .add(&ctx, name_cs_id("J"), [name_cs_id("I")].into())
+        .add(&ctx, name_cs_id("J"), [name_cs_id("I")].into(), vec![])
         .await?;
 
     // Test that fetching from the preloaded storage is equivalent

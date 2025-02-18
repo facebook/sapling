@@ -70,8 +70,10 @@ pub fn name_cs_node(
     ChangesetNode {
         cs_id,
         generation,
+        subtree_source_generation: generation,
         skip_tree_depth,
         p1_linear_depth,
+        subtree_source_depth: skip_tree_depth,
     }
 }
 
@@ -103,7 +105,9 @@ pub async fn from_dag(
             let parent_ids = parents.iter().map(|parent| added[parent].clone()).collect();
 
             let cs_id = name_cs_id(name);
-            graph_writer.add(ctx, cs_id, parent_ids).await?;
+            graph_writer
+                .add(ctx, cs_id, parent_ids, Default::default())
+                .await?;
             added.insert(name.clone(), cs_id);
             made_progress = true;
         }

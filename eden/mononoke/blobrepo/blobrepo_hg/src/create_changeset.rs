@@ -314,6 +314,7 @@ impl CreateChangeset {
                         &ctx,
                         bonsai_cs.get_changeset_id(),
                         bonsai_cs.parents().collect(),
+                        bonsai_cs.subtree_sources().collect(),
                     )
                     .await
                     .context("While inserting into changeset table")?;

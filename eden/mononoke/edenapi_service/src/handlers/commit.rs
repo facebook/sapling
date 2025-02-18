@@ -1283,7 +1283,7 @@ impl SaplingRemoteApiHandler for UploadIdenticalChangesetsHandler {
                     .await?;
 
                 commit_graph_writer
-                    .add(&bs_ctx, bcs_id, bcs.parents().collect())
+                    .add(&bs_ctx, bcs_id, bcs.parents().collect(), Vec::new())
                     .await
                     .context("While inserting into changeset table")?;
             }

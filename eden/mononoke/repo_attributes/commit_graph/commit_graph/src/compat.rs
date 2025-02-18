@@ -15,6 +15,7 @@ use async_trait::async_trait;
 use buffered_commit_graph_storage::BufferedCommitGraphStorage;
 use commit_graph_types::edges::ChangesetEdges;
 use commit_graph_types::edges::ChangesetParents;
+use commit_graph_types::edges::ChangesetSubtreeSources;
 use commit_graph_types::storage::CommitGraphStorage;
 use commit_graph_types::storage::Prefetch;
 use context::CoreContext;
@@ -34,15 +35,20 @@ impl CommitGraph {
         &self,
         ctx: &CoreContext,
         parents_fetcher: Arc<dyn ParentsFetcher>,
-        changesets: Vec1<(ChangesetId, ChangesetParents)>,
+        changesets: Vec1<(ChangesetId, ChangesetParents, ChangesetSubtreeSources)>,
     ) -> Result<usize> {
         let mut edges_map: HashMap<ChangesetId, ChangesetEdges> = Default::default();
-        let changesets_set: HashSet<ChangesetId> =
-            changesets.iter().map(|(cs_id, _)| cs_id).cloned().collect();
-        let mut search_stack: Vec<(ChangesetId, ChangesetParents)> = changesets.into();
-        let mut to_add_stack: Vec<(ChangesetId, ChangesetParents)> = Default::default();
+        let changesets_set: HashSet<ChangesetId> = changesets
+            .iter()
+            .map(|(cs_id, _, _)| cs_id)
+            .cloned()
+            .collect();
+        let mut search_stack: Vec<(ChangesetId, ChangesetParents, ChangesetSubtreeSources)> =
+            changesets.into();
+        let mut to_add_stack: Vec<(ChangesetId, ChangesetParents, ChangesetSubtreeSources)> =
+            Default::default();
 
-        while let Some((cs_id, parents)) = search_stack.pop() {
+        while let Some((cs_id, parents, subtree_sources)) = search_stack.pop() {
             // If edges map already has the key there's no need to process it (this may happen if
             // initial vector had duplicates or if we descent into the same parrents via two
             // different paths)
@@ -50,13 +56,14 @@ impl CommitGraph {
                 continue;
             }
 
-            to_add_stack.push((cs_id, parents.clone()));
+            to_add_stack.push((cs_id, parents.clone(), subtree_sources.clone()));
 
             // We don't need to look up:
             //  * changesets we already have in edges_map
             //  * changesets that are part of changesets set (as they'll be inserted anyway)
             let parents_to_fetch: SmallVec<[ChangesetId; 1]> = parents
                 .into_iter()
+                .chain(subtree_sources)
                 .filter(|cs_id| !edges_map.contains_key(cs_id) && !changesets_set.contains(cs_id))
                 .collect();
 
@@ -83,6 +90,12 @@ impl CommitGraph {
                             .await
                             .with_context(|| "during commit_graph::add_recursive (get_parents)")?
                             .to_smallvec(),
+                        parents_fetcher
+                            .fetch_subtree_sources(ctx, parent)
+                            .await
+                            .with_context(
+                                || "during commit_graph::add_recursive (get_subtree_sources)",
+                            )?,
                     ));
                 }
             }
@@ -93,8 +106,10 @@ impl CommitGraph {
         let buffered_storage =
             Arc::new(BufferedCommitGraphStorage::new(self.storage.clone(), 10000));
         let graph = CommitGraph::new(buffered_storage.clone());
-        while let Some((cs_id, parents)) = to_add_stack.pop() {
-            let edges = graph.build_edges(ctx, cs_id, parents, &edges_map).await?;
+        while let Some((cs_id, parents, subtree_sources)) = to_add_stack.pop() {
+            let edges = graph
+                .build_edges(ctx, cs_id, parents, subtree_sources, &edges_map)
+                .await?;
             edges_map.insert(cs_id, edges.clone());
             buffered_storage.add(ctx, edges).await?;
         }
@@ -105,6 +120,12 @@ impl CommitGraph {
 #[async_trait]
 pub trait ParentsFetcher: Send + Sync {
     async fn fetch_parents(
+        &self,
+        ctx: &CoreContext,
+        cs_id: ChangesetId,
+    ) -> Result<Vec<ChangesetId>>;
+
+    async fn fetch_subtree_sources(
         &self,
         ctx: &CoreContext,
         cs_id: ChangesetId,
@@ -120,6 +141,14 @@ impl ParentsFetcher for CommitGraph {
     ) -> Result<Vec<ChangesetId>> {
         Ok(self.changeset_parents(ctx, cs_id).await?.into_vec())
     }
+
+    async fn fetch_subtree_sources(
+        &self,
+        ctx: &CoreContext,
+        cs_id: ChangesetId,
+    ) -> Result<Vec<ChangesetId>> {
+        Ok(self.changeset_subtree_sources(ctx, cs_id).await?)
+    }
 }
 
 #[async_trait]
@@ -130,5 +159,13 @@ impl<T: ParentsFetcher> ParentsFetcher for Arc<T> {
         cs_id: ChangesetId,
     ) -> Result<Vec<ChangesetId>> {
         T::fetch_parents(self.as_ref(), ctx, cs_id).await
+    }
+
+    async fn fetch_subtree_sources(
+        &self,
+        ctx: &CoreContext,
+        cs_id: ChangesetId,
+    ) -> Result<Vec<ChangesetId>> {
+        T::fetch_subtree_sources(self.as_ref(), ctx, cs_id).await
     }
 }

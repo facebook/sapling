@@ -26,10 +26,10 @@ async fn setup_commit_graph(ctx: &CoreContext) -> Result<CommitGraph, Error> {
     let commit_graph_writer = BaseCommitGraphWriter::new(commit_graph.clone());
 
     commit_graph_writer
-        .add(ctx, ONES_CSID, vec![].into())
+        .add(ctx, ONES_CSID, vec![].into(), vec![])
         .await?;
     commit_graph_writer
-        .add(ctx, TWOS_CSID, vec![ONES_CSID].into())
+        .add(ctx, TWOS_CSID, vec![ONES_CSID].into(), vec![])
         .await?;
 
     Ok(commit_graph)

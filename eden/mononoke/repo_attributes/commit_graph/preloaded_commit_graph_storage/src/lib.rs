@@ -118,8 +118,10 @@ impl PreloadedEdges {
         Ok(ChangesetNode {
             cs_id,
             generation: Generation::new(edges.generation as u64),
+            subtree_source_generation: Generation::new(edges.subtree_source_generation as u64),
             skip_tree_depth: edges.skip_tree_depth as u64,
             p1_linear_depth: edges.p1_linear_depth as u64,
+            subtree_source_depth: edges.subtree_source_depth as u64,
         })
     }
 
@@ -133,13 +135,22 @@ impl PreloadedEdges {
             node: ChangesetNode {
                 cs_id: *cs_id,
                 generation: Generation::new(compact_edges.generation as u64),
+                subtree_source_generation: Generation::new(
+                    compact_edges.subtree_source_generation as u64,
+                ),
                 skip_tree_depth: compact_edges.skip_tree_depth as u64,
                 p1_linear_depth: compact_edges.p1_linear_depth as u64,
+                subtree_source_depth: compact_edges.subtree_source_depth as u64,
             },
             parents: compact_edges
                 .parents
                 .iter()
                 .map(|parent_id| self.get_node(*parent_id))
+                .collect::<Result<_>>()?,
+            subtree_sources: compact_edges
+                .subtree_sources
+                .iter()
+                .map(|subtree_source_id| self.get_node(*subtree_source_id))
                 .collect::<Result<_>>()?,
             merge_ancestor: compact_edges
                 .merge_ancestor
@@ -156,6 +167,18 @@ impl PreloadedEdges {
             p1_linear_skew_ancestor: compact_edges
                 .p1_linear_skew_ancestor
                 .map(|p1_linear_skew_ancestor| self.get_node(p1_linear_skew_ancestor))
+                .transpose()?,
+            subtree_or_merge_ancestor: compact_edges
+                .subtree_or_merge_ancestor
+                .map(|subtree_or_merge_ancestor| self.get_node(subtree_or_merge_ancestor))
+                .transpose()?,
+            subtree_source_parent: compact_edges
+                .subtree_source_parent
+                .map(|subtree_source_parent| self.get_node(subtree_source_parent))
+                .transpose()?,
+            subtree_source_skew_ancestor: compact_edges
+                .subtree_source_skew_ancestor
+                .map(|subtree_source_skew_ancestor| self.get_node(subtree_source_skew_ancestor))
                 .transpose()?,
         }))
     }
@@ -205,6 +228,11 @@ impl ExtendablePreloadedEdges {
             .iter()
             .map(|parent| self.unique_id(parent.cs_id))
             .collect();
+        let subtree_sources = edges
+            .subtree_sources
+            .iter()
+            .map(|subtree_source| self.unique_id(subtree_source.cs_id))
+            .collect();
         let merge_ancestor = edges
             .merge_ancestor
             .map(|merge_ancestor| self.unique_id(merge_ancestor.cs_id));
@@ -217,18 +245,33 @@ impl ExtendablePreloadedEdges {
         let p1_linear_skew_ancestor = edges
             .p1_linear_skew_ancestor
             .map(|p1_linear_skew_ancestor| self.unique_id(p1_linear_skew_ancestor.cs_id));
+        let subtree_or_merge_ancestor = edges
+            .subtree_or_merge_ancestor
+            .map(|subtree_or_merge_ancestor| self.unique_id(subtree_or_merge_ancestor.cs_id));
+        let subtree_source_parent = edges
+            .subtree_source_parent
+            .map(|subtree_source_parent| self.unique_id(subtree_source_parent.cs_id));
+        let subtree_source_skew_ancestor = edges
+            .subtree_source_skew_ancestor
+            .map(|subtree_source_skew_ancestor| self.unique_id(subtree_source_skew_ancestor.cs_id));
 
         match self.preloaded_edges.cs_id_to_edges.insert(
             edges.node.cs_id,
             Box::new(CompactChangesetEdges {
                 generation: edges.node.generation.value() as u32,
+                subtree_source_generation: edges.node.subtree_source_generation.value() as u32,
                 skip_tree_depth: edges.node.skip_tree_depth as u32,
                 p1_linear_depth: edges.node.p1_linear_depth as u32,
+                subtree_source_depth: edges.node.subtree_source_depth as u32,
                 parents,
+                subtree_sources,
                 merge_ancestor,
                 skip_tree_parent,
                 skip_tree_skew_ancestor,
                 p1_linear_skew_ancestor,
+                subtree_or_merge_ancestor,
+                subtree_source_parent,
+                subtree_source_skew_ancestor,
             }),
         ) {
             Some(old_edges) => Err(anyhow!("Duplicate changeset edges found: {:?}", old_edges)),

@@ -12,7 +12,9 @@ use anyhow::Result;
 use commit_graph_types::edges::ChangesetEdges;
 use commit_graph_types::edges::ChangesetNode;
 use commit_graph_types::edges::ChangesetNodeParents;
+use commit_graph_types::edges::ChangesetNodeSubtreeSources;
 use commit_graph_types::edges::ChangesetParents;
+use commit_graph_types::edges::ChangesetSubtreeSources;
 use context::CoreContext;
 use mononoke_types::ChangesetId;
 use mononoke_types::Generation;
@@ -25,14 +27,18 @@ impl CommitGraph {
         ctx: &CoreContext,
         cs_id: ChangesetId,
         parents: ChangesetParents,
+        subtree_sources: ChangesetSubtreeSources,
         edges_map: &HashMap<ChangesetId, ChangesetEdges>,
     ) -> Result<ChangesetEdges> {
         let mut max_parent_gen = 0;
+        let mut max_subtree_source_gen = 0;
         let mut edge_parents = ChangesetNodeParents::new();
         let mut merge_ancestor = None;
+        let mut subtree_or_merge_ancestor = None;
 
         let mut skip_tree_parent = None;
         let mut first_parent = true;
+        let mut first_subtree_source_or_parent = true;
 
         let mut p1_linear_depth = 0;
 
@@ -41,9 +47,18 @@ impl CommitGraph {
                 .get(parent)
                 .ok_or_else(|| anyhow!("Missing parent: {}", parent))?;
             max_parent_gen = max_parent_gen.max(parent_edge.node.generation.value());
+            max_subtree_source_gen =
+                max_subtree_source_gen.max(parent_edge.node.subtree_source_generation.value());
             edge_parents.push(parent_edge.node);
             if parents.len() == 1 {
                 merge_ancestor = Some(parent_edge.merge_ancestor.unwrap_or(parent_edge.node));
+                if subtree_sources.is_empty() {
+                    subtree_or_merge_ancestor = Some(
+                        parent_edge
+                            .subtree_or_merge_ancestor
+                            .unwrap_or(parent_edge.node),
+                    );
+                }
             }
 
             // skip_tree_parent is the skip tree lowest common ancestor of all parents
@@ -66,16 +81,55 @@ impl CommitGraph {
             }
         }
 
+        let mut edge_subtree_sources = ChangesetNodeSubtreeSources::new();
+
+        for source in &subtree_sources {
+            let source_edge = edges_map
+                .get(source)
+                .ok_or_else(|| anyhow!("Missing subtree source: {}", source))?;
+
+            max_subtree_source_gen =
+                max_subtree_source_gen.max(source_edge.node.subtree_source_generation.value());
+            edge_subtree_sources.push(source_edge.node);
+        }
+
+        let mut subtree_source_parent = None;
+
+        for node in edge_parents.iter().chain(edge_subtree_sources.iter()) {
+            if first_subtree_source_or_parent {
+                first_subtree_source_or_parent = false;
+                subtree_source_parent = Some(node.clone());
+            } else if let Some(previous_source) = subtree_source_parent {
+                subtree_source_parent = self
+                    .lowest_common_ancestor(
+                        ctx,
+                        previous_source.cs_id,
+                        node.cs_id,
+                        |edges| edges.subtree_source_parent,
+                        |edges| edges.subtree_source_skew_ancestor,
+                        |node| node.subtree_source_depth,
+                    )
+                    .await?;
+            }
+        }
+
         let generation = Generation::new(max_parent_gen + 1);
+        let subtree_source_generation = Generation::new(max_subtree_source_gen + 1);
         let skip_tree_depth = match skip_tree_parent {
             Some(node) => node.skip_tree_depth + 1,
+            None => 0,
+        };
+        let subtree_source_depth = match subtree_source_parent {
+            Some(node) => node.subtree_source_depth + 1,
             None => 0,
         };
         let node = ChangesetNode {
             cs_id,
             generation,
+            subtree_source_generation,
             skip_tree_depth,
             p1_linear_depth,
+            subtree_source_depth,
         };
 
         let p1_parent = edge_parents.first().copied();
@@ -83,6 +137,7 @@ impl CommitGraph {
         Ok(ChangesetEdges {
             node,
             parents: edge_parents,
+            subtree_sources: edge_subtree_sources,
             merge_ancestor,
             skip_tree_parent,
             skip_tree_skew_ancestor: self
@@ -99,6 +154,16 @@ impl CommitGraph {
                     p1_parent,
                     |edges| edges.p1_linear_skew_ancestor,
                     |node| node.p1_linear_depth,
+                )
+                .await?,
+            subtree_or_merge_ancestor,
+            subtree_source_parent,
+            subtree_source_skew_ancestor: self
+                .calc_skew_ancestor(
+                    ctx,
+                    subtree_source_parent,
+                    |edges| edges.subtree_source_skew_ancestor,
+                    |node| node.subtree_source_depth,
                 )
                 .await?,
         })

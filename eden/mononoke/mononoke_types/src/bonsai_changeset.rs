@@ -6,6 +6,7 @@
  */
 
 use std::collections::BTreeMap;
+use std::collections::HashSet;
 
 use anyhow::bail;
 use anyhow::Context;
@@ -311,6 +312,16 @@ impl BonsaiChangeset {
     /// Get the parents for this changeset. The order of parents is significant.
     pub fn parents<'a>(&'a self) -> impl Iterator<Item = ChangesetId> + 'a {
         self.inner.parents.iter().cloned()
+    }
+
+    /// Get the subtree sources for this changeset that are not also parents.
+    pub fn subtree_sources<'a>(&'a self) -> impl Iterator<Item = ChangesetId> + 'a {
+        let mut known = self.inner.parents.iter().cloned().collect::<HashSet<_>>();
+        self.inner
+            .subtree_changes
+            .iter()
+            .flat_map(|(_, change)| change.source())
+            .filter(move |source| known.insert(*source))
     }
 
     #[inline]

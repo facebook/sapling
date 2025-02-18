@@ -24,6 +24,7 @@ use async_trait::async_trait;
 use commit_graph_types::edges::ChangesetEdges;
 use commit_graph_types::edges::ChangesetNode;
 use commit_graph_types::edges::ChangesetNodeParents;
+use commit_graph_types::edges::ChangesetNodeSubtreeSources;
 use commit_graph_types::edges::ChangesetParents;
 use commit_graph_types::storage::CommitGraphStorage;
 use commit_graph_types::storage::FetchedChangesetEdges;
@@ -186,30 +187,62 @@ macro_rules! fetch_commit_graph_edges {
                 cs0.cs_id AS cs_id,
                 csp.origin_cs_id AS origin_cs_id,
                 NULL AS gen,
+                NULL AS subtree_source_gen,
                 NULL AS skip_tree_depth,
                 NULL AS p1_linear_depth,
+                NULL AS subtree_source_depth,
                 NULL AS parent_count,
+                NULL AS subtree_source_count,
                 NULL AS merge_ancestor,
                 NULL AS merge_ancestor_gen,
+                NULL AS merge_ancestor_subtree_source_gen, 
                 NULL AS merge_ancestor_skip_tree_depth,
                 NULL AS merge_ancestor_p1_linear_depth,
+                NULL AS merge_ancestor_subtree_source_depth,
                 NULL AS skip_tree_parent,
                 NULL AS skip_tree_parent_gen,
+                NULL AS skip_tree_parent_subtree_source_gen,
                 NULL AS skip_tree_parent_skip_tree_depth,
                 NULL AS skip_tree_parent_p1_linear_depth,
+                NULL AS skip_tree_parent_subtree_source_depth,
                 NULL AS skip_tree_skew_ancestor,
                 NULL AS skip_tree_skew_ancestor_gen,
+                NULL AS skip_tree_skew_ancestor_subtree_source_gen,
                 NULL AS skip_tree_skew_ancestor_skip_tree_depth,
                 NULL AS skip_tree_skew_ancestor_p1_linear_depth,
+                NULL AS skip_tree_skew_ancestor_subtree_source_depth,
                 NULL AS p1_linear_skew_ancestor,
                 NULL AS p1_linear_skew_ancestor_gen,
+                NULL AS p1_linear_skew_ancestor_subtree_source_gen,
                 NULL AS p1_linear_skew_ancestor_skip_tree_depth,
                 NULL AS p1_linear_skew_ancestor_p1_linear_depth,
+                NULL AS p1_linear_skew_ancestor_subtree_source_depth,
+                NULL AS subtree_or_merge_ancestor,
+                NULL AS subtree_or_merge_ancestor_gen,
+                NULL AS subtree_or_merge_ancestor_subtree_source_gen,
+                NULL AS subtree_or_merge_ancestor_skip_tree_depth,
+                NULL AS subtree_or_merge_ancestor_p1_linear_depth,
+                NULL AS subtree_or_merge_ancestor_subtree_source_depth,
+                NULL AS subtree_source_parent,
+                NULL AS subtree_source_parent_gen,
+                NULL AS subtree_source_parent_subtree_source_gen,
+                NULL AS subtree_source_parent_skip_tree_depth,
+                NULL AS subtree_source_parent_p1_linear_depth,
+                NULL AS subtree_source_parent_subtree_source_depth,
+                NULL AS subtree_source_skew_ancestor,
+                NULL AS subtree_source_skew_ancestor_gen,
+                NULL AS subtree_source_skew_ancestor_subtree_source_gen,
+                NULL AS subtree_source_skew_ancestor_skip_tree_depth,
+                NULL AS subtree_source_skew_ancestor_p1_linear_depth,
+                NULL AS subtree_source_skew_ancestor_subtree_source_depth,
                 cgmp.parent_num AS parent_num,
+                NULL AS subtree_source_num,
                 cs1.cs_id AS parent,
                 cs1.gen AS parent_gen,
+                cs1.subtree_source_gen AS parent_subtree_source_gen,
                 cs1.skip_tree_depth AS parent_skip_tree_depth,
-                cs1.p1_linear_depth AS parent_p1_linear_depth
+                cs1.p1_linear_depth AS parent_p1_linear_depth,
+                cs1.subtree_source_depth AS parent_subtree_source_depth
             FROM csp
             INNER JOIN commit_graph_merge_parents cgmp ON csp.id = cgmp.id
             INNER JOIN commit_graph_edges cs0 ON cs0.id = cgmp.id
@@ -221,31 +254,131 @@ macro_rules! fetch_commit_graph_edges {
             SELECT
                 cs0.cs_id AS cs_id,
                 csp.origin_cs_id AS origin_cs_id,
+                NULL AS gen,
+                NULL as subtree_source_gen,
+                NULL AS skip_tree_depth,
+                NULL AS p1_linear_depth,
+                NULL AS subtree_source_depth,
+                NULL AS parent_count,
+                NULL as subtree_source_count,
+                NULL AS merge_ancestor,
+                NULL AS merge_ancestor_gen,
+                NULL AS merge_ancestor_subtree_source_gen, 
+                NULL AS merge_ancestor_skip_tree_depth,
+                NULL AS merge_ancestor_p1_linear_depth,
+                NULL AS merge_ancestor_subtree_source_depth,
+                NULL AS skip_tree_parent,
+                NULL AS skip_tree_parent_gen,
+                NULL AS skip_tree_parent_subtree_source_gen,
+                NULL AS skip_tree_parent_skip_tree_depth,
+                NULL AS skip_tree_parent_p1_linear_depth,
+                NULL AS skip_tree_parent_subtree_source_depth,
+                NULL AS skip_tree_skew_ancestor,
+                NULL AS skip_tree_skew_ancestor_gen,
+                NULL AS skip_tree_skew_ancestor_subtree_source_gen,
+                NULL AS skip_tree_skew_ancestor_skip_tree_depth,
+                NULL AS skip_tree_skew_ancestor_p1_linear_depth,
+                NULL AS skip_tree_skew_ancestor_subtree_source_depth,
+                NULL AS p1_linear_skew_ancestor,
+                NULL AS p1_linear_skew_ancestor_gen,
+                NULL AS p1_linear_skew_ancestor_subtree_source_gen,
+                NULL AS p1_linear_skew_ancestor_skip_tree_depth,
+                NULL AS p1_linear_skew_ancestor_p1_linear_depth,
+                NULL AS p1_linear_skew_ancestor_subtree_source_depth,
+                NULL AS subtree_or_merge_ancestor,
+                NULL AS subtree_or_merge_ancestor_gen,
+                NULL AS subtree_or_merge_ancestor_subtree_source_gen,
+                NULL AS subtree_or_merge_ancestor_skip_tree_depth,
+                NULL AS subtree_or_merge_ancestor_p1_linear_depth,
+                NULL AS subtree_or_merge_ancestor_subtree_source_depth,
+                NULL AS subtree_source_parent,
+                NULL AS subtree_source_parent_gen,
+                NULL AS subtree_source_parent_subtree_source_gen,
+                NULL AS subtree_source_parent_skip_tree_depth,
+                NULL AS subtree_source_parent_p1_linear_depth,
+                NULL AS subtree_source_parent_subtree_source_depth,
+                NULL AS subtree_source_skew_ancestor,
+                NULL AS subtree_source_skew_ancestor_gen,
+                NULL AS subtree_source_skew_ancestor_subtree_source_gen,
+                NULL AS subtree_source_skew_ancestor_skip_tree_depth,
+                NULL AS subtree_source_skew_ancestor_p1_linear_depth,
+                NULL AS subtree_source_skew_ancestor_subtree_source_depth,
+                NULL AS parent_num,
+                cgss.subtree_source_num AS subtree_source_num,
+                cs1.cs_id AS parent,
+                cs1.gen AS parent_gen,
+                cs1.subtree_source_gen AS parent_subtree_source_gen,
+                cs1.skip_tree_depth AS parent_skip_tree_depth,
+                cs1.p1_linear_depth AS parent_p1_linear_depth,
+                cs1.subtree_source_depth AS parent_subtree_source_depth
+            FROM csp
+            INNER JOIN commit_graph_subtree_sources cgss ON csp.id = cgss.id
+            INNER JOIN commit_graph_edges cs0 ON cs0.id = cgss.id
+            INNER JOIN commit_graph_edges cs1 ON cs1.id = cgss.subtree_source
+            WHERE cs0.subtree_source_count >= 1
+
+            UNION
+
+            SELECT
+                cs0.cs_id AS cs_id,
+                csp.origin_cs_id AS origin_cs_id,
                 cs0.gen AS gen,
+                cs0.subtree_source_gen AS subtree_source_gen,
                 cs0.skip_tree_depth AS skip_tree_depth,
                 cs0.p1_linear_depth AS p1_linear_depth,
+                cs0.subtree_source_depth AS subtree_source_depth,
                 cs0.parent_count AS parent_count,
+                cs0.subtree_source_count AS subtree_source_count,
                 cs_merge_ancestor.cs_id AS merge_ancestor,
                 cs_merge_ancestor.gen AS merge_ancestor_gen,
+                cs_merge_ancestor.subtree_source_gen AS merge_ancestor_subtree_source_gen, 
                 cs_merge_ancestor.skip_tree_depth AS merge_ancestor_skip_tree_depth,
                 cs_merge_ancestor.p1_linear_depth AS merge_ancestor_p1_linear_depth,
+                cs_merge_ancestor.subtree_source_depth AS merge_ancestor_subtree_source_depth,
                 cs_skip_tree_parent.cs_id AS skip_tree_parent,
                 cs_skip_tree_parent.gen AS skip_tree_parent_gen,
+                cs_skip_tree_parent.subtree_source_gen AS skip_tree_parent_subtree_source_gen,
                 cs_skip_tree_parent.skip_tree_depth AS skip_tree_parent_skip_tree_depth,
                 cs_skip_tree_parent.p1_linear_depth AS skip_tree_parent_p1_linear_depth,
+                cs_skip_tree_parent.subtree_source_depth AS skip_tree_parent_subtree_source_depth,
                 cs_skip_tree_skew_ancestor.cs_id AS skip_tree_skew_ancestor,
                 cs_skip_tree_skew_ancestor.gen AS skip_tree_skew_ancestor_gen,
+                cs_skip_tree_skew_ancestor.subtree_source_gen AS skip_tree_skew_ancestor_subtree_source_gen,
                 cs_skip_tree_skew_ancestor.skip_tree_depth AS skip_tree_skew_ancestor_skip_tree_depth,
                 cs_skip_tree_skew_ancestor.p1_linear_depth AS skip_tree_skew_ancestor_p1_linear_depth,
+                cs_skip_tree_skew_ancestor.subtree_source_depth AS skip_tree_skew_ancestor_subtree_source_depth,
                 cs_p1_linear_skew_ancestor.cs_id AS p1_linear_skew_ancestor,
                 cs_p1_linear_skew_ancestor.gen AS p1_linear_skew_ancestor_gen,
+                cs_p1_linear_skew_ancestor.subtree_source_gen AS p1_linear_skew_ancestor_subtree_source_gen,
                 cs_p1_linear_skew_ancestor.skip_tree_depth AS p1_linear_skew_ancestor_skip_tree_depth,
                 cs_p1_linear_skew_ancestor.p1_linear_depth AS p1_linear_skew_ancestor_p1_linear_depth,
+                cs_p1_linear_skew_ancestor.subtree_source_depth AS p1_linear_skew_ancestor_subtree_source_depth,
+                cs_subtree_or_merge_ancestor.cs_id AS subtree_or_merge_ancestor,
+                cs_subtree_or_merge_ancestor.gen AS subtree_or_merge_ancestor_gen,
+                cs_subtree_or_merge_ancestor.subtree_source_gen AS subtree_or_merge_ancestor_subtree_source_gen,
+                cs_subtree_or_merge_ancestor.skip_tree_depth AS subtree_or_merge_ancestor_skip_tree_depth,
+                cs_subtree_or_merge_ancestor.p1_linear_depth AS subtree_or_merge_ancestor_p1_linear_depth,
+                cs_subtree_or_merge_ancestor.subtree_source_depth AS subtree_or_merge_ancestor_subtree_source_depth,
+                cs_subtree_source_parent.cs_id AS subtree_source_parent,
+                cs_subtree_source_parent.gen AS subtree_source_parent_gen,
+                cs_subtree_source_parent.subtree_source_gen AS subtree_source_parent_subtree_source_gen,
+                cs_subtree_source_parent.skip_tree_depth AS subtree_source_parent_skip_tree_depth,
+                cs_subtree_source_parent.p1_linear_depth AS subtree_source_parent_p1_linear_depth,
+                cs_subtree_source_parent.subtree_source_depth AS subtree_source_parent_subtree_source_depth,
+                cs_subtree_source_skew_ancestor.cs_id AS subtree_source_skew_ancestor,
+                cs_subtree_source_skew_ancestor.gen AS subtree_source_skew_ancestor_gen,
+                cs_subtree_source_skew_ancestor.subtree_source_gen AS subtree_source_skew_ancestor_subtree_source_gen,
+                cs_subtree_source_skew_ancestor.skip_tree_depth AS subtree_source_skew_ancestor_skip_tree_depth,
+                cs_subtree_source_skew_ancestor.p1_linear_depth AS subtree_source_skew_ancestor_p1_linear_depth,
+                cs_subtree_source_skew_ancestor.subtree_source_depth AS subtree_source_skew_ancestor_subtree_source_depth,
                 0 AS parent_num,
+                NULL AS subtree_source_num,
                 cs_p1_parent.cs_id AS parent,
                 cs_p1_parent.gen AS parent_gen,
+                cs_p1_parent.subtree_source_gen AS parent_subtree_source_gen,
                 cs_p1_parent.skip_tree_depth AS parent_skip_tree_depth,
-                cs_p1_parent.p1_linear_depth AS parent_p1_linear_depth
+                cs_p1_parent.p1_linear_depth AS parent_p1_linear_depth,
+                cs_p1_parent.subtree_source_depth AS parent_subtree_source_depth
             FROM csp
             INNER JOIN commit_graph_edges cs0 ON csp.id = cs0.id
             LEFT JOIN commit_graph_edges cs_p1_parent ON cs_p1_parent.id = cs0.p1_parent
@@ -253,7 +386,11 @@ macro_rules! fetch_commit_graph_edges {
             LEFT JOIN commit_graph_edges cs_skip_tree_parent ON cs_skip_tree_parent.id = cs0.skip_tree_parent
             LEFT JOIN commit_graph_edges cs_skip_tree_skew_ancestor ON cs_skip_tree_skew_ancestor.id = cs0.skip_tree_skew_ancestor
             LEFT JOIN commit_graph_edges cs_p1_linear_skew_ancestor ON cs_p1_linear_skew_ancestor.id = cs0.p1_linear_skew_ancestor
-            ORDER BY parent_num ASC"
+            LEFT JOIN commit_graph_edges cs_subtree_or_merge_ancestor ON cs_subtree_or_merge_ancestor.id = cs0.subtree_or_merge_ancestor
+            LEFT JOIN commit_graph_edges cs_subtree_source_parent ON cs_subtree_source_parent.id = cs0.subtree_source_parent
+            LEFT JOIN commit_graph_edges cs_subtree_source_skew_ancestor ON cs_subtree_source_skew_ancestor.id = cs0.subtree_source_skew_ancestor
+            ORDER BY subtree_source_num, parent_num ASC
+            "
         )
     }
 }
@@ -263,14 +400,20 @@ mononoke_queries! {
         repo_id: RepositoryId,
         cs_id: ChangesetId,
         gen: u64,
+        subtree_source_gen: Option<u64>,
         skip_tree_depth: u64,
         p1_linear_depth: u64,
+        subtree_source_depth: Option<u64>,
         parent_count: usize,
+        subtree_source_count: usize,
         p1_parent: Option<ChangesetId>,
         merge_ancestor: Option<ChangesetId>,
         skip_tree_parent: Option<ChangesetId>,
         skip_tree_skew_ancestor: Option<ChangesetId>,
-        p1_linear_skew_ancestor: Option<ChangesetId>
+        p1_linear_skew_ancestor: Option<ChangesetId>,
+        subtree_or_merge_ancestor: Option<ChangesetId>,
+        subtree_source_parent: Option<ChangesetId>,
+        subtree_source_skew_ancestor: Option<ChangesetId>,
     ) {
         insert_or_ignore,
         "
@@ -278,26 +421,38 @@ mononoke_queries! {
             repo_id,
             cs_id,
             gen,
+            subtree_source_gen,
             skip_tree_depth,
             p1_linear_depth,
+            subtree_source_depth,
             parent_count,
+            subtree_source_count,
             p1_parent,
             merge_ancestor,
             skip_tree_parent,
             skip_tree_skew_ancestor,
-            p1_linear_skew_ancestor
+            p1_linear_skew_ancestor,
+            subtree_or_merge_ancestor,
+            subtree_source_parent,
+            subtree_source_skew_ancestor
         ) VALUES (
             {repo_id},
             {cs_id},
             {gen},
+            {subtree_source_gen},
             {skip_tree_depth},
             {p1_linear_depth},
+            {subtree_source_depth},
             {parent_count},
+            {subtree_source_count},
             (SELECT cs.id FROM commit_graph_edges cs WHERE cs.repo_id = {repo_id} AND cs.cs_id = {p1_parent}),
             (SELECT cs.id FROM commit_graph_edges cs WHERE cs.repo_id = {repo_id} AND cs.cs_id = {merge_ancestor}),
             (SELECT cs.id FROM commit_graph_edges cs WHERE cs.repo_id = {repo_id} AND cs.cs_id = {skip_tree_parent}),
             (SELECT cs.id FROM commit_graph_edges cs WHERE cs.repo_id = {repo_id} AND cs.cs_id = {skip_tree_skew_ancestor}),
-            (SELECT cs.id FROM commit_graph_edges cs WHERE cs.repo_id = {repo_id} AND cs.cs_id = {p1_linear_skew_ancestor})
+            (SELECT cs.id FROM commit_graph_edges cs WHERE cs.repo_id = {repo_id} AND cs.cs_id = {p1_linear_skew_ancestor}),
+            (SELECT cs.id FROM commit_graph_edges cs WHERE cs.repo_id = {repo_id} AND cs.cs_id = {subtree_or_merge_ancestor}),
+            (SELECT cs.id FROM commit_graph_edges cs WHERE cs.repo_id = {repo_id} AND cs.cs_id = {subtree_source_parent}),
+            (SELECT cs.id FROM commit_graph_edges cs WHERE cs.repo_id = {repo_id} AND cs.cs_id = {subtree_source_skew_ancestor})
         )
         "
     }
@@ -306,9 +461,12 @@ mononoke_queries! {
         repo_id: RepositoryId,
         cs_id: ChangesetId,
         gen: u64,
+        subtree_source_gen: Option<u64>,
         skip_tree_depth: u64,
         p1_linear_depth: u64,
+        subtree_source_depth: Option<u64>,
         parent_count: usize,
+        subtree_source_count: usize,
     )) {
         insert_or_ignore,
         "
@@ -316,9 +474,12 @@ mononoke_queries! {
             repo_id,
             cs_id,
             gen,
+            subtree_source_gen,
             skip_tree_depth,
             p1_linear_depth,
-            parent_count
+            subtree_source_depth,
+            parent_count,
+            subtree_source_count
         ) VALUES {values}
         "
     }
@@ -330,36 +491,50 @@ mononoke_queries! {
         // We need the depths otherwise we get an error on sqlite. Though this won't be used because we
         // always replace the edges only.
         gen: u64,
+        subtree_source_gen: Option<u64>,
         skip_tree_depth: u64,
         p1_linear_depth: u64,
+        subtree_source_depth: Option<u64>,
         parent_count: usize,
+        subtree_source_count: usize,
         p1_parent: Option<u64>,
         merge_ancestor: Option<u64>,
         skip_tree_parent: Option<u64>,
         skip_tree_skew_ancestor: Option<u64>,
-        p1_linear_skew_ancestor: Option<u64>
+        p1_linear_skew_ancestor: Option<u64>,
+        subtree_or_merge_ancestor: Option<u64>,
+        subtree_source_parent: Option<u64>,
+        subtree_source_skew_ancestor: Option<u64>,
     )) {
         none,
         mysql("INSERT INTO commit_graph_edges
-            (repo_id, cs_id, gen, skip_tree_depth, p1_linear_depth, parent_count,
-                p1_parent, merge_ancestor, skip_tree_parent, skip_tree_skew_ancestor, p1_linear_skew_ancestor)
+            (repo_id, cs_id, gen, subtree_source_gen, skip_tree_depth, p1_linear_depth, subtree_source_depth, parent_count, subtree_source_count,
+                p1_parent, merge_ancestor, skip_tree_parent, skip_tree_skew_ancestor, p1_linear_skew_ancestor,
+                subtree_or_merge_ancestor, subtree_source_parent, subtree_source_skew_ancestor)
         VALUES {values}
         ON DUPLICATE KEY UPDATE
             p1_parent = VALUES(p1_parent),
             merge_ancestor = VALUES(merge_ancestor),
             skip_tree_parent = VALUES(skip_tree_parent),
             skip_tree_skew_ancestor = VALUES(skip_tree_skew_ancestor),
-            p1_linear_skew_ancestor = VALUES(p1_linear_skew_ancestor)")
+            p1_linear_skew_ancestor = VALUES(p1_linear_skew_ancestor),
+            subtree_or_merge_ancestor = VALUES(subtree_or_merge_ancestor),
+            subtree_source_parent = VALUES(subtree_source_parent),
+            subtree_source_skew_ancestor = VALUES(subtree_source_skew_ancestor)")
         sqlite("INSERT INTO commit_graph_edges
-            (repo_id, cs_id, gen, skip_tree_depth, p1_linear_depth, parent_count,
-                p1_parent, merge_ancestor, skip_tree_parent, skip_tree_skew_ancestor, p1_linear_skew_ancestor)
+            (repo_id, cs_id, gen, subtree_source_gen, skip_tree_depth, p1_linear_depth, subtree_source_depth, parent_count, subtree_source_count,
+                p1_parent, merge_ancestor, skip_tree_parent, skip_tree_skew_ancestor, p1_linear_skew_ancestor,
+                subtree_or_merge_ancestor, subtree_source_parent, subtree_source_skew_ancestor)
         VALUES {values}
         ON CONFLICT(repo_id, cs_id) DO UPDATE SET
             p1_parent = excluded.p1_parent,
             merge_ancestor = excluded.merge_ancestor,
             skip_tree_parent = excluded.skip_tree_parent,
             skip_tree_skew_ancestor = excluded.skip_tree_skew_ancestor,
-            p1_linear_skew_ancestor = excluded.p1_linear_skew_ancestor")
+            p1_linear_skew_ancestor = excluded.p1_linear_skew_ancestor,
+            subtree_or_merge_ancestor = excluded.subtree_or_merge_ancestor,
+            subtree_source_parent = excluded.subtree_source_parent,
+            subtree_source_skew_ancestor = excluded.subtree_source_skew_ancestor")
     }
 
     read SelectManyIds(repo_id: RepositoryId, >list cs_ids: ChangesetId) -> (ChangesetId, u64) {
@@ -371,38 +546,75 @@ mononoke_queries! {
         "{insert_or_ignore} INTO commit_graph_merge_parents (id, parent_num, parent) VALUES {values}"
     }
 
+    write InsertSubtreeSources(values: (id: u64, subtree_source_num: usize, subtree_source: u64)) {
+        insert_or_ignore,
+        "{insert_or_ignore} INTO commit_graph_subtree_sources (id, subtree_source_num, subtree_source) VALUES {values}"
+    }
+
     read SelectManyChangesets(repo_id: RepositoryId, >list cs_ids: ChangesetId) -> (
         ChangesetId, // cs_id
         Option<ChangesetId>, // origin_cs_id
         Option<u64>, // gen
+        Option<u64>, // subtree_source_gen
         Option<u64>, // skip_tree_depth
         Option<u64>, // p1_linear_depth
+        Option<u64>, // subtree_source_depth
         Option<usize>, // parent_count
+        Option<usize>, // subtree_source_count
         Option<ChangesetId>, // merge_ancestor
         Option<u64>, // merge_ancestor_gen
+        Option<u64>, // merge_ancestor_subtree_source_gen
         Option<u64>, // merge_ancestor_skip_tree_depth
         Option<u64>, // merge_ancestor_p1_linear_depth
+        Option<u64>, // merge_ancestor_subtree_source_depth
         Option<ChangesetId>, // skip_tree_parent
         Option<u64>, // skip_tree_parent_gen
+        Option<u64>, // skip_tree_parent_subtree_source_gen
         Option<u64>, // skip_tree_parent_skip_tree_depth
         Option<u64>, // skip_tree_parent_p1_linear_depth
+        Option<u64>, // skip_tree_parent_subtree_source_depth
         Option<ChangesetId>, // skip_tree_skew_ancestor
         Option<u64>, // skip_tree_skew_ancestor_gen
+        Option<u64>, // skip_tree_skew_ancestor_subtree_source_gen
         Option<u64>, // skip_tree_skew_ancestor_skip_tree_depth
         Option<u64>, // skip_tree_skew_ancestor_p1_linear_depth
+        Option<u64>, // skip_tree_skew_ancestor_subtree_source_depth
         Option<ChangesetId>, // p1_linear_skew_ancestor
         Option<u64>, // p1_linear_skew_ancestor_gen
+        Option<u64>, // p1_linear_skew_ancestor_subtree_source_gen
         Option<u64>, // p1_linear_skew_ancestor_skip_tree_depth
         Option<u64>, // p1_linear_skew_ancestor_p1_linear_depth
-        usize, // parent_num
+        Option<u64>, // p1_linear_skew_ancestor_subtree_source_depth
+        Option<ChangesetId>, // subtree_or_merge_ancestor
+        Option<u64>, // subtree_or_merge_ancestor_gen
+        Option<u64>, // subtree_or_merge_ancestor_subtree_source_gen
+        Option<u64>, // subtree_or_merge_ancestor_skip_tree_depth
+        Option<u64>, // subtree_or_merge_ancestor_p1_linear_depth
+        Option<u64>, // subtree_or_merge_ancestor_subtree_source_depth
+        Option<ChangesetId>, // subtree_source_parent
+        Option<u64>, // subtree_source_parent_gen
+        Option<u64>, // subtree_source_parent_subtree_source_gen
+        Option<u64>, // subtree_source_parent_skip_tree_depth
+        Option<u64>, // subtree_source_parent_p1_linear_depth
+        Option<u64>, // subtree_source_parent_subtree_source_depth
+        Option<ChangesetId>, // subtree_source_skew_ancestor
+        Option<u64>, // subtree_source_skew_ancestor_gen
+        Option<u64>, // subtree_source_skew_ancestor_subtree_source_gen
+        Option<u64>, // subtree_source_skew_ancestor_skip_tree_depth
+        Option<u64>, // subtree_source_skew_ancestor_p1_linear_depth
+        Option<u64>, // subtree_source_skew_ancestor_subtree_source_depth
+        Option<usize>, // parent_num
+        Option<usize>, // subtree_source_num
         Option<ChangesetId>, // parent
         Option<u64>, // parent_gen
+        Option<u64>, // parent_subtree_source_gen
         Option<u64>, // parent_skip_tree_depth
         Option<u64>, // parent_p1_linear_depth
+        Option<u64>, // parent_subtree_source_depth
     ) {
         fetch_commit_graph_edges!(
             "WITH csp AS (
-                SELECT cge.id, cge.cs_id AS origin_cs_id
+                SELECT cge.id, NULL AS origin_cs_id
                 FROM commit_graph_edges cge
                 WHERE cge.repo_id = {repo_id} AND cge.cs_id IN {cs_ids}
             )"
@@ -413,30 +625,62 @@ mononoke_queries! {
         ChangesetId, // cs_id
         Option<ChangesetId>, // origin_cs_id
         Option<u64>, // gen
+        Option<u64>, // subtree_source_gen
         Option<u64>, // skip_tree_depth
         Option<u64>, // p1_linear_depth
+        Option<u64>, // subtree_source_depth
         Option<usize>, // parent_count
+        Option<usize>, // subtree_source_count
         Option<ChangesetId>, // merge_ancestor
         Option<u64>, // merge_ancestor_gen
+        Option<u64>, // merge_ancestor_subtree_source_gen
         Option<u64>, // merge_ancestor_skip_tree_depth
         Option<u64>, // merge_ancestor_p1_linear_depth
+        Option<u64>, // merge_ancestor_subtree_source_depth
         Option<ChangesetId>, // skip_tree_parent
         Option<u64>, // skip_tree_parent_gen
+        Option<u64>, // skip_tree_parent_subtree_source_gen
         Option<u64>, // skip_tree_parent_skip_tree_depth
         Option<u64>, // skip_tree_parent_p1_linear_depth
+        Option<u64>, // skip_tree_parent_subtree_source_depth
         Option<ChangesetId>, // skip_tree_skew_ancestor
         Option<u64>, // skip_tree_skew_ancestor_gen
+        Option<u64>, // skip_tree_skew_ancestor_subtree_source_gen
         Option<u64>, // skip_tree_skew_ancestor_skip_tree_depth
         Option<u64>, // skip_tree_skew_ancestor_p1_linear_depth
+        Option<u64>, // skip_tree_skew_ancestor_subtree_source_depth
         Option<ChangesetId>, // p1_linear_skew_ancestor
         Option<u64>, // p1_linear_skew_ancestor_gen
+        Option<u64>, // p1_linear_skew_ancestor_subtree_source_gen
         Option<u64>, // p1_linear_skew_ancestor_skip_tree_depth
         Option<u64>, // p1_linear_skew_ancestor_p1_linear_depth
-        usize, // parent_num
+        Option<u64>, // p1_linear_skew_ancestor_subtree_source_depth
+        Option<ChangesetId>, // subtree_or_merge_ancestor
+        Option<u64>, // subtree_or_merge_ancestor_gen
+        Option<u64>, // subtree_or_merge_ancestor_subtree_source_gen
+        Option<u64>, // subtree_or_merge_ancestor_skip_tree_depth
+        Option<u64>, // subtree_or_merge_ancestor_p1_linear_depth
+        Option<u64>, // subtree_or_merge_ancestor_subtree_source_depth
+        Option<ChangesetId>, // subtree_source_parent
+        Option<u64>, // subtree_source_parent_gen
+        Option<u64>, // subtree_source_parent_subtree_source_gen
+        Option<u64>, // subtree_source_parent_skip_tree_depth
+        Option<u64>, // subtree_source_parent_p1_linear_depth
+        Option<u64>, // subtree_source_parent_subtree_source_depth
+        Option<ChangesetId>, // subtree_source_skew_ancestor
+        Option<u64>, // subtree_source_skew_ancestor_gen
+        Option<u64>, // subtree_source_skew_ancestor_subtree_source_gen
+        Option<u64>, // subtree_source_skew_ancestor_skip_tree_depth
+        Option<u64>, // subtree_source_skew_ancestor_p1_linear_depth
+        Option<u64>, // subtree_source_skew_ancestor_subtree_source_depth
+        Option<usize>, // parent_num
+        Option<usize>, // subtree_source_num
         Option<ChangesetId>, // parent
         Option<u64>, // parent_gen
+        Option<u64>, // parent_subtree_source_gen
         Option<u64>, // parent_skip_tree_depth
         Option<u64>, // parent_p1_linear_depth
+        Option<u64>, // parent_subtree_source_depth
     ) {
         fetch_commit_graph_edges!(
             "WITH RECURSIVE csp AS (
@@ -450,37 +694,70 @@ mononoke_queries! {
                 FROM csp
                 INNER JOIN commit_graph_edges cs ON cs.id = csp.next
                 WHERE csp.step < {step_limit} AND cs.gen >= {prefetch_gen}
-            )")
+            )"
+        )
     }
 
     read SelectManyChangesetsWithExactSkipTreeAncestorPrefetch(repo_id: RepositoryId, prefetch_gen: u64, >list cs_ids: ChangesetId) -> (
         ChangesetId, // cs_id
         Option<ChangesetId>, // origin_cs_id
         Option<u64>, // gen
+        Option<u64>, // subtree_source_gen
         Option<u64>, // skip_tree_depth
         Option<u64>, // p1_linear_depth
+        Option<u64>, // subtree_source_depth
         Option<usize>, // parent_count
+        Option<usize>, // subtree_source_count
         Option<ChangesetId>, // merge_ancestor
         Option<u64>, // merge_ancestor_gen
+        Option<u64>, // merge_ancestor_subtree_source_gen
         Option<u64>, // merge_ancestor_skip_tree_depth
         Option<u64>, // merge_ancestor_p1_linear_depth
+        Option<u64>, // merge_ancestor_subtree_source_depth
         Option<ChangesetId>, // skip_tree_parent
         Option<u64>, // skip_tree_parent_gen
+        Option<u64>, // skip_tree_parent_subtree_source_gen
         Option<u64>, // skip_tree_parent_skip_tree_depth
         Option<u64>, // skip_tree_parent_p1_linear_depth
+        Option<u64>, // skip_tree_parent_subtree_source_depth
         Option<ChangesetId>, // skip_tree_skew_ancestor
         Option<u64>, // skip_tree_skew_ancestor_gen
+        Option<u64>, // skip_tree_skew_ancestor_subtree_source_gen
         Option<u64>, // skip_tree_skew_ancestor_skip_tree_depth
         Option<u64>, // skip_tree_skew_ancestor_p1_linear_depth
+        Option<u64>, // skip_tree_skew_ancestor_subtree_source_depth
         Option<ChangesetId>, // p1_linear_skew_ancestor
         Option<u64>, // p1_linear_skew_ancestor_gen
+        Option<u64>, // p1_linear_skew_ancestor_subtree_source_gen
         Option<u64>, // p1_linear_skew_ancestor_skip_tree_depth
         Option<u64>, // p1_linear_skew_ancestor_p1_linear_depth
-        usize, // parent_num
+        Option<u64>, // p1_linear_skew_ancestor_subtree_source_depth
+        Option<ChangesetId>, // subtree_or_merge_ancestor
+        Option<u64>, // subtree_or_merge_ancestor_gen
+        Option<u64>, // subtree_or_merge_ancestor_subtree_source_gen
+        Option<u64>, // subtree_or_merge_ancestor_skip_tree_depth
+        Option<u64>, // subtree_or_merge_ancestor_p1_linear_depth
+        Option<u64>, // subtree_or_merge_ancestor_subtree_source_depth
+        Option<ChangesetId>, // subtree_source_parent
+        Option<u64>, // subtree_source_parent_gen
+        Option<u64>, // subtree_source_parent_subtree_source_gen
+        Option<u64>, // subtree_source_parent_skip_tree_depth
+        Option<u64>, // subtree_source_parent_p1_linear_depth
+        Option<u64>, // subtree_source_parent_subtree_source_depth
+        Option<ChangesetId>, // subtree_source_skew_ancestor
+        Option<u64>, // subtree_source_skew_ancestor_gen
+        Option<u64>, // subtree_source_skew_ancestor_subtree_source_gen
+        Option<u64>, // subtree_source_skew_ancestor_skip_tree_depth
+        Option<u64>, // subtree_source_skew_ancestor_p1_linear_depth
+        Option<u64>, // subtree_source_skew_ancestor_subtree_source_depth
+        Option<usize>, // parent_num
+        Option<usize>, // subtree_source_num
         Option<ChangesetId>, // parent
         Option<u64>, // parent_gen
+        Option<u64>, // parent_subtree_source_gen
         Option<u64>, // parent_skip_tree_depth
         Option<u64>, // parent_p1_linear_depth
+        Option<u64>, // parent_subtree_source_depth
     ) {
         fetch_commit_graph_edges!(
             "WITH RECURSIVE csp AS (
@@ -490,7 +767,7 @@ mononoke_queries! {
                 WHERE cs.repo_id = {repo_id} AND cs.cs_id IN {cs_ids}
 
                 UNION ALL
-                
+
                 SELECT
                     csp.origin_cs_id, skip_tree_parent.id, skip_tree_parent.skip_tree_parent, skip_tree_parent.skip_tree_skew_ancestor
                 FROM csp
@@ -514,30 +791,62 @@ mononoke_queries! {
         ChangesetId, // cs_id
         Option<ChangesetId>, // origin_cs_id
         Option<u64>, // gen
+        Option<u64>, // subtree_source_gen
         Option<u64>, // skip_tree_depth
         Option<u64>, // p1_linear_depth
+        Option<u64>, // subtree_source_depth
         Option<usize>, // parent_count
+        Option<usize>, // subtree_source_count
         Option<ChangesetId>, // merge_ancestor
         Option<u64>, // merge_ancestor_gen
+        Option<u64>, // merge_ancestor_subtree_source_gen
         Option<u64>, // merge_ancestor_skip_tree_depth
         Option<u64>, // merge_ancestor_p1_linear_depth
+        Option<u64>, // merge_ancestor_subtree_source_depth
         Option<ChangesetId>, // skip_tree_parent
         Option<u64>, // skip_tree_parent_gen
+        Option<u64>, // skip_tree_parent_subtree_source_gen
         Option<u64>, // skip_tree_parent_skip_tree_depth
         Option<u64>, // skip_tree_parent_p1_linear_depth
+        Option<u64>, // skip_tree_parent_subtree_source_depth
         Option<ChangesetId>, // skip_tree_skew_ancestor
         Option<u64>, // skip_tree_skew_ancestor_gen
+        Option<u64>, // skip_tree_skew_ancestor_subtree_source_gen
         Option<u64>, // skip_tree_skew_ancestor_skip_tree_depth
         Option<u64>, // skip_tree_skew_ancestor_p1_linear_depth
+        Option<u64>, // skip_tree_skew_ancestor_subtree_source_depth
         Option<ChangesetId>, // p1_linear_skew_ancestor
         Option<u64>, // p1_linear_skew_ancestor_gen
+        Option<u64>, // p1_linear_skew_ancestor_subtree_source_gen
         Option<u64>, // p1_linear_skew_ancestor_skip_tree_depth
         Option<u64>, // p1_linear_skew_ancestor_p1_linear_depth
-        usize, // parent_num
+        Option<u64>, // p1_linear_skew_ancestor_subtree_source_depth
+        Option<ChangesetId>, // subtree_or_merge_ancestor
+        Option<u64>, // subtree_or_merge_ancestor_gen
+        Option<u64>, // subtree_or_merge_ancestor_subtree_source_gen
+        Option<u64>, // subtree_or_merge_ancestor_skip_tree_depth
+        Option<u64>, // subtree_or_merge_ancestor_p1_linear_depth
+        Option<u64>, // subtree_or_merge_ancestor_subtree_source_depth
+        Option<ChangesetId>, // subtree_source_parent
+        Option<u64>, // subtree_source_parent_gen
+        Option<u64>, // subtree_source_parent_subtree_source_gen
+        Option<u64>, // subtree_source_parent_skip_tree_depth
+        Option<u64>, // subtree_source_parent_p1_linear_depth
+        Option<u64>, // subtree_source_parent_subtree_source_depth
+        Option<ChangesetId>, // subtree_source_skew_ancestor
+        Option<u64>, // subtree_source_skew_ancestor_gen
+        Option<u64>, // subtree_source_skew_ancestor_subtree_source_gen
+        Option<u64>, // subtree_source_skew_ancestor_skip_tree_depth
+        Option<u64>, // subtree_source_skew_ancestor_p1_linear_depth
+        Option<u64>, // subtree_source_skew_ancestor_subtree_source_depth
+        Option<usize>, // parent_num
+        Option<usize>, // subtree_source_num
         Option<ChangesetId>, // parent
         Option<u64>, // parent_gen
+        Option<u64>, // parent_subtree_source_gen
         Option<u64>, // parent_skip_tree_depth
         Option<u64>, // parent_p1_linear_depth
+        Option<u64>, // parent_subtree_source_depth
     ) {
         mysql(fetch_commit_graph_edges!(
             "WITH csp AS (
@@ -691,30 +1000,62 @@ type FetchedEdgesRow = (
     ChangesetId,         // cs_id
     Option<ChangesetId>, // origin_cs_id
     Option<u64>,         // gen
+    Option<u64>,         // subtree_source_gen
     Option<u64>,         // skip_tree_depth
     Option<u64>,         // p1_linear_depth
+    Option<u64>,         // subtree_source_depth
     Option<usize>,       // parent_count
+    Option<usize>,       // subtree_source_count
     Option<ChangesetId>, // merge_ancestor
     Option<u64>,         // merge_ancestor_gen
+    Option<u64>,         // merge_ancestor_subtree_source_gen
     Option<u64>,         // merge_ancestor_skip_tree_depth
     Option<u64>,         // merge_ancestor_p1_linear_depth
+    Option<u64>,         // merge_ancestor_subtree_source_depth
     Option<ChangesetId>, // skip_tree_parent
     Option<u64>,         // skip_tree_parent_gen
+    Option<u64>,         // skip_tree_parent_subtree_source_gen
     Option<u64>,         // skip_tree_parent_skip_tree_depth
     Option<u64>,         // skip_tree_parent_p1_linear_depth
+    Option<u64>,         // skip_tree_parent_subtree_source_depth
     Option<ChangesetId>, // skip_tree_skew_ancestor
     Option<u64>,         // skip_tree_skew_ancestor_gen
+    Option<u64>,         // skip_tree_skew_ancestor_subtree_source_gen
     Option<u64>,         // skip_tree_skew_ancestor_skip_tree_depth
     Option<u64>,         // skip_tree_skew_ancestor_p1_linear_depth
+    Option<u64>,         // skip_tree_skew_ancestor_subtree_source_depth
     Option<ChangesetId>, // p1_linear_skew_ancestor
     Option<u64>,         // p1_linear_skew_ancestor_gen
+    Option<u64>,         // p1_linear_skew_ancestor_subtree_source_gen
     Option<u64>,         // p1_linear_skew_ancestor_skip_tree_depth
     Option<u64>,         // p1_linear_skew_ancestor_p1_linear_depth
-    usize,               // parent_num
+    Option<u64>,         // p1_linear_skew_ancestor_subtree_source_depth
+    Option<ChangesetId>, // subtree_or_merge_ancestor
+    Option<u64>,         // subtree_or_merge_ancestor_gen
+    Option<u64>,         // subtree_or_merge_ancestor_subtree_source_gen
+    Option<u64>,         // subtree_or_merge_ancestor_skip_tree_depth
+    Option<u64>,         // subtree_or_merge_ancestor_p1_linear_depth
+    Option<u64>,         // subtree_or_merge_ancestor_subtree_source_depth
+    Option<ChangesetId>, // subtree_source_parent
+    Option<u64>,         // subtree_source_parent_gen
+    Option<u64>,         // subtree_source_parent_subtree_source_gen
+    Option<u64>,         // subtree_source_parent_skip_tree_depth
+    Option<u64>,         // subtree_source_parent_p1_linear_depth
+    Option<u64>,         // subtree_source_parent_subtree_source_depth
+    Option<ChangesetId>, // subtree_source_skew_ancestor
+    Option<u64>,         // subtree_source_skew_ancestor_gen
+    Option<u64>,         // subtree_source_skew_ancestor_subtree_source_gen
+    Option<u64>,         // subtree_source_skew_ancestor_skip_tree_depth
+    Option<u64>,         // subtree_source_skew_ancestor_p1_linear_depth
+    Option<u64>,         // subtree_source_skew_ancestor_subtree_source_depth
+    Option<usize>,       // parent_num
+    Option<usize>,       // subtree_source_num
     Option<ChangesetId>, // parent
     Option<u64>,         // parent_gen
+    Option<u64>,         // parent_subtree_source_gen
     Option<u64>,         // parent_skip_tree_depth
     Option<u64>,         // parent_p1_linear_depth
+    Option<u64>,         // parent_subtree_source_depth
 );
 
 impl SqlCommitGraphStorage {
@@ -722,18 +1063,27 @@ impl SqlCommitGraphStorage {
         fetched_rows: &[FetchedEdgesRow],
     ) -> HashMap<(ChangesetId, Option<ChangesetId>), FetchedChangesetEdges> {
         let option_fields_to_option_node =
-            |cs_id, generation, skip_tree_depth, p1_linear_depth| match (
+            |cs_id,
+             gen,
+             subtree_source_gen: Option<u64>,
+             skip_tree_depth,
+             p1_linear_depth,
+             subtree_source_depth: Option<u64>| match (
                 cs_id,
-                generation,
+                gen,
                 skip_tree_depth,
                 p1_linear_depth,
             ) {
-                (Some(cs_id), Some(generation), Some(skip_tree_depth), Some(p1_linear_depth)) => {
+                (Some(cs_id), Some(gen), Some(skip_tree_depth), Some(p1_linear_depth)) => {
+                    let subtree_source_depth = subtree_source_depth.unwrap_or(skip_tree_depth);
+                    let subtree_source_gen = subtree_source_gen.unwrap_or(gen);
                     Some(ChangesetNode {
                         cs_id,
-                        generation: Generation::new(generation),
+                        generation: Generation::new(gen),
+                        subtree_source_generation: Generation::new(subtree_source_gen),
                         skip_tree_depth,
                         p1_linear_depth,
+                        subtree_source_depth,
                     })
                 }
                 _ => None,
@@ -745,27 +1095,123 @@ impl SqlCommitGraphStorage {
                     cs_id,
                     origin_cs_id,
                     Some(gen),
+                    subtree_source_gen,
                     Some(skip_tree_depth),
                     Some(p1_linear_depth),
+                    subtree_source_depth,
                     Some(parent_count),
+                    Some(subtree_source_count),
                     merge_ancestor,
                     merge_ancestor_gen,
+                    merge_ancestor_subtree_source_gen,
                     merge_ancestor_skip_tree_depth,
                     merge_ancestor_p1_linear_depth,
+                    merge_ancestor_subtree_source_depth,
                     skip_tree_parent,
                     skip_tree_parent_gen,
+                    skip_tree_parent_subtree_source_gen,
                     skip_tree_parent_skip_tree_depth,
                     skip_tree_parent_p1_linear_depth,
+                    skip_tree_parent_subtree_source_depth,
                     skip_tree_skew_ancestor,
                     skip_tree_skew_ancestor_gen,
+                    skip_tree_skew_ancestor_subtree_source_gen,
                     skip_tree_skew_ancestor_skip_tree_depth,
                     skip_tree_skew_ancestor_p1_linear_depth,
+                    skip_tree_skew_ancestor_subtree_source_depth,
                     p1_linear_skew_ancestor,
                     p1_linear_skew_ancestor_gen,
+                    p1_linear_skew_ancestor_subtree_source_gen,
                     p1_linear_skew_ancestor_skip_tree_depth,
                     p1_linear_skew_ancestor_p1_linear_depth,
+                    p1_linear_skew_ancestor_subtree_source_depth,
+                    subtree_or_merge_ancestor,
+                    subtree_or_merge_ancestor_gen,
+                    subtree_or_merge_ancestor_subtree_source_gen,
+                    subtree_or_merge_ancestor_skip_tree_depth,
+                    subtree_or_merge_ancestor_p1_linear_depth,
+                    subtree_or_merge_ancestor_subtree_source_depth,
+                    subtree_source_parent,
+                    subtree_source_parent_gen,
+                    subtree_source_parent_subtree_source_gen,
+                    subtree_source_parent_skip_tree_depth,
+                    subtree_source_parent_p1_linear_depth,
+                    subtree_source_parent_subtree_source_depth,
+                    subtree_source_skew_ancestor,
+                    subtree_source_skew_ancestor_gen,
+                    subtree_source_skew_ancestor_subtree_source_gen,
+                    subtree_source_skew_ancestor_skip_tree_depth,
+                    subtree_source_skew_ancestor_p1_linear_depth,
+                    subtree_source_skew_ancestor_subtree_source_depth,
                     ..,
                 ) => {
+                    let subtree_source_depth = subtree_source_depth.unwrap_or(skip_tree_depth);
+                    let merge_ancestor = option_fields_to_option_node(
+                        merge_ancestor,
+                        merge_ancestor_gen,
+                        merge_ancestor_subtree_source_gen,
+                        merge_ancestor_skip_tree_depth,
+                        merge_ancestor_p1_linear_depth,
+                        merge_ancestor_subtree_source_depth,
+                    );
+                    let skip_tree_parent = option_fields_to_option_node(
+                        skip_tree_parent,
+                        skip_tree_parent_gen,
+                        skip_tree_parent_subtree_source_gen,
+                        skip_tree_parent_skip_tree_depth,
+                        skip_tree_parent_p1_linear_depth,
+                        skip_tree_parent_subtree_source_depth,
+                    );
+                    let skip_tree_skew_ancestor = option_fields_to_option_node(
+                        skip_tree_skew_ancestor,
+                        skip_tree_skew_ancestor_gen,
+                        skip_tree_skew_ancestor_subtree_source_gen,
+                        skip_tree_skew_ancestor_skip_tree_depth,
+                        skip_tree_skew_ancestor_p1_linear_depth,
+                        skip_tree_skew_ancestor_subtree_source_depth,
+                    );
+                    let p1_linear_skew_ancestor = option_fields_to_option_node(
+                        p1_linear_skew_ancestor,
+                        p1_linear_skew_ancestor_gen,
+                        p1_linear_skew_ancestor_subtree_source_gen,
+                        p1_linear_skew_ancestor_skip_tree_depth,
+                        p1_linear_skew_ancestor_p1_linear_depth,
+                        p1_linear_skew_ancestor_subtree_source_depth,
+                    );
+                    let subtree_or_merge_ancestor = option_fields_to_option_node(
+                        subtree_or_merge_ancestor,
+                        subtree_or_merge_ancestor_gen,
+                        subtree_or_merge_ancestor_subtree_source_gen,
+                        subtree_or_merge_ancestor_skip_tree_depth,
+                        subtree_or_merge_ancestor_p1_linear_depth,
+                        subtree_or_merge_ancestor_subtree_source_depth,
+                    )
+                    .or_else(|| {
+                        if subtree_source_count == 0 {
+                            merge_ancestor.clone()
+                        } else {
+                            None
+                        }
+                    });
+                    let subtree_source_parent = option_fields_to_option_node(
+                        subtree_source_parent,
+                        subtree_source_parent_gen,
+                        subtree_source_parent_subtree_source_gen,
+                        subtree_source_parent_skip_tree_depth,
+                        subtree_source_parent_p1_linear_depth,
+                        subtree_source_parent_subtree_source_depth,
+                    )
+                    .or_else(|| skip_tree_parent.clone());
+                    let subtree_source_skew_ancestor = option_fields_to_option_node(
+                        subtree_source_skew_ancestor,
+                        subtree_source_skew_ancestor_gen,
+                        subtree_source_skew_ancestor_subtree_source_gen,
+                        subtree_source_skew_ancestor_skip_tree_depth,
+                        subtree_source_skew_ancestor_p1_linear_depth,
+                        subtree_source_skew_ancestor_subtree_source_depth,
+                    )
+                    .or_else(|| skip_tree_skew_ancestor.clone());
+
                     cs_id_and_origin_to_edges.insert(
                         (cs_id, origin_cs_id),
                         FetchedChangesetEdges::new(
@@ -774,34 +1220,22 @@ impl SqlCommitGraphStorage {
                                 node: ChangesetNode {
                                     cs_id,
                                     generation: Generation::new(gen),
+                                    subtree_source_generation: Generation::new(
+                                        subtree_source_gen.unwrap_or(gen),
+                                    ),
                                     skip_tree_depth,
                                     p1_linear_depth,
+                                    subtree_source_depth,
                                 },
                                 parents: ChangesetNodeParents::new(),
-                                merge_ancestor: option_fields_to_option_node(
-                                    merge_ancestor,
-                                    merge_ancestor_gen,
-                                    merge_ancestor_skip_tree_depth,
-                                    merge_ancestor_p1_linear_depth,
-                                ),
-                                skip_tree_parent: option_fields_to_option_node(
-                                    skip_tree_parent,
-                                    skip_tree_parent_gen,
-                                    skip_tree_parent_skip_tree_depth,
-                                    skip_tree_parent_p1_linear_depth,
-                                ),
-                                skip_tree_skew_ancestor: option_fields_to_option_node(
-                                    skip_tree_skew_ancestor,
-                                    skip_tree_skew_ancestor_gen,
-                                    skip_tree_skew_ancestor_skip_tree_depth,
-                                    skip_tree_skew_ancestor_p1_linear_depth,
-                                ),
-                                p1_linear_skew_ancestor: option_fields_to_option_node(
-                                    p1_linear_skew_ancestor,
-                                    p1_linear_skew_ancestor_gen,
-                                    p1_linear_skew_ancestor_skip_tree_depth,
-                                    p1_linear_skew_ancestor_p1_linear_depth,
-                                ),
+                                subtree_sources: ChangesetNodeSubtreeSources::new(),
+                                merge_ancestor,
+                                skip_tree_parent,
+                                skip_tree_skew_ancestor,
+                                p1_linear_skew_ancestor,
+                                subtree_or_merge_ancestor,
+                                subtree_source_parent,
+                                subtree_source_skew_ancestor,
                             },
                         ),
                     );
@@ -816,18 +1250,53 @@ impl SqlCommitGraphStorage {
                     cs_id,
                     origin_cs_id,
                     ..,
-                    parent_num,
+                    Some(parent_num),
+                    None,
                     Some(parent),
                     Some(parent_gen),
+                    parent_subtree_source_gen,
                     Some(parent_skip_tree_depth),
                     Some(parent_p1_linear_depth),
+                    parent_subtree_source_depth,
                 ) => {
                     if let Some(edges) = cs_id_and_origin_to_edges.get_mut(&(cs_id, origin_cs_id)) {
                         edges.parents.push(ChangesetNode {
                             cs_id: parent,
                             generation: Generation::new(parent_gen),
+                            subtree_source_generation: Generation::new(
+                                parent_subtree_source_gen.unwrap_or(parent_gen),
+                            ),
                             skip_tree_depth: parent_skip_tree_depth,
                             p1_linear_depth: parent_p1_linear_depth,
+                            subtree_source_depth: parent_subtree_source_depth
+                                .unwrap_or(parent_skip_tree_depth),
+                        })
+                    }
+                }
+                (
+                    cs_id,
+                    origin_cs_id,
+                    ..,
+                    None,
+                    Some(subtree_source_num),
+                    Some(subtree_source),
+                    Some(subtree_source_gen),
+                    subtree_source_subtree_source_gen,
+                    Some(subtree_source_skip_tree_depth),
+                    Some(subtree_source_p1_linear_depth),
+                    subtree_source_subtree_source_depth,
+                ) => {
+                    if let Some(edges) = cs_id_and_origin_to_edges.get_mut(&(cs_id, origin_cs_id)) {
+                        edges.subtree_sources.push(ChangesetNode {
+                            cs_id: subtree_source,
+                            generation: Generation::new(subtree_source_gen),
+                            subtree_source_generation: Generation::new(
+                                subtree_source_subtree_source_gen.unwrap_or(subtree_source_gen),
+                            ),
+                            skip_tree_depth: subtree_source_skip_tree_depth,
+                            p1_linear_depth: subtree_source_p1_linear_depth,
+                            subtree_source_depth: subtree_source_subtree_source_depth
+                                .unwrap_or(subtree_source_skip_tree_depth),
                         })
                     }
                 }
@@ -1152,9 +1621,14 @@ impl SqlCommitGraphStorage {
                     self.repo_id,
                     e.node.cs_id,
                     e.node.generation.value(),
+                    Some(e.node.subtree_source_generation.value())
+                        .filter(|gen| *gen != e.node.generation.value()),
                     e.node.skip_tree_depth,
                     e.node.p1_linear_depth,
+                    Some(e.node.subtree_source_depth)
+                        .filter(|depth| *depth != e.node.skip_tree_depth),
                     e.parents.len(),
+                    e.subtree_sources.len(),
                 )
             })
             .collect::<Vec<_>>();
@@ -1165,7 +1639,7 @@ impl SqlCommitGraphStorage {
             #[allow(clippy::map_identity)]
             cs_no_edges
                 .iter()
-                .map(|(a, b, c, d, e, f)| (a, b, c, d, e, f))
+                .map(|(a, b, c, d, e, f, g, h, i)| (a, b, c, d, e, f, g, h, i))
                 .collect::<Vec<_>>()
                 .as_slice(),
         )
@@ -1180,18 +1654,9 @@ impl SqlCommitGraphStorage {
         // using the same transaction
         let mut need_ids = HashSet::new();
         for edges in many_edges {
-            need_ids.insert(edges.node.cs_id);
-            edges.merge_ancestor.map(|u| need_ids.insert(u.cs_id));
-            edges.skip_tree_parent.map(|u| need_ids.insert(u.cs_id));
-            edges
-                .skip_tree_skew_ancestor
-                .map(|u| need_ids.insert(u.cs_id));
-            edges
-                .p1_linear_skew_ancestor
-                .map(|u| need_ids.insert(u.cs_id));
-            for u in &edges.parents {
-                need_ids.insert(u.cs_id);
-            }
+            edges.for_all_ids(|cs_id| {
+                need_ids.insert(cs_id);
+            });
         }
         let (transaction, cs_to_ids) = if !need_ids.is_empty() {
             // Use the same transaction to make sure we see the new values
@@ -1221,14 +1686,34 @@ impl SqlCommitGraphStorage {
                     self.repo_id,
                     e.node.cs_id,
                     e.node.generation.value(),
+                    Some(e.node.subtree_source_generation.value())
+                        .filter(|gen| *gen != e.node.generation.value()),
                     e.node.skip_tree_depth,
                     e.node.p1_linear_depth,
+                    Some(e.node.subtree_source_depth)
+                        .filter(|depth| depth != &e.node.skip_tree_depth),
                     e.parents.len(),
+                    e.subtree_sources.len(),
                     maybe_get_id(e.parents.first())?,
                     maybe_get_id(e.merge_ancestor.as_ref())?,
                     maybe_get_id(e.skip_tree_parent.as_ref())?,
                     maybe_get_id(e.skip_tree_skew_ancestor.as_ref())?,
                     maybe_get_id(e.p1_linear_skew_ancestor.as_ref())?,
+                    maybe_get_id(
+                        e.subtree_or_merge_ancestor
+                            .as_ref()
+                            .filter(|node| Some(*node) != e.merge_ancestor.as_ref()),
+                    )?,
+                    maybe_get_id(
+                        e.subtree_source_parent
+                            .as_ref()
+                            .filter(|node| Some(*node) != e.skip_tree_parent.as_ref()),
+                    )?,
+                    maybe_get_id(
+                        e.subtree_source_skew_ancestor
+                            .as_ref()
+                            .filter(|node| Some(*node) != e.skip_tree_skew_ancestor.as_ref()),
+                    )?,
                 ))
             })
             .collect::<Result<Vec<_>>>()
@@ -1246,7 +1731,9 @@ impl SqlCommitGraphStorage {
             // This pattern is used to convert a ref to tuple into a tuple of refs.
             #[allow(clippy::map_identity)]
             rows.iter()
-                .map(|(a, b, c, d, e, f, g, h, i, j, k)| (a, b, c, d, e, f, g, h, i, j, k))
+                .map(|(a, b, c, d, e, f, g, h, i, j, k, l, m, n, o, p, q)| {
+                    (a, b, c, d, e, f, g, h, i, j, k, l, m, n, o, p, q)
+                })
                 .collect::<Vec<_>>()
                 .as_slice(),
         )
@@ -1331,6 +1818,27 @@ impl CommitGraphStorage for SqlCommitGraphStorage {
             Default::default()
         };
 
+        let subtree_source_cs_id_to_id: HashMap<ChangesetId, u64> =
+            if edges.subtree_sources.is_empty() {
+                Default::default()
+            } else {
+                ctx.perf_counters()
+                    .increment_counter(PerfCounterType::SqlReadsReplica);
+                SelectManyIds::maybe_traced_query(
+                    &self.read_connection.conn,
+                    cri,
+                    &self.repo_id,
+                    &edges
+                        .subtree_sources
+                        .iter()
+                        .map(|node| node.cs_id)
+                        .collect::<Vec<_>>(),
+                )
+                .await?
+                .into_iter()
+                .collect()
+            };
+
         let transaction = self.write_connection.start_transaction().await?;
 
         let (transaction, result) = InsertChangeset::maybe_traced_query_with_transaction(
@@ -1339,14 +1847,31 @@ impl CommitGraphStorage for SqlCommitGraphStorage {
             &self.repo_id,
             &edges.node.cs_id,
             &edges.node.generation.value(),
+            &Some(edges.node.subtree_source_generation.value())
+                .filter(|gen| *gen != edges.node.generation.value()),
             &edges.node.skip_tree_depth,
             &edges.node.p1_linear_depth,
+            &Some(edges.node.subtree_source_depth)
+                .filter(|depth| *depth != edges.node.skip_tree_depth),
             &edges.parents.len(),
+            &edges.subtree_sources.len(),
             &edges.parents.first().map(|node| node.cs_id),
             &edges.merge_ancestor.map(|node| node.cs_id),
             &edges.skip_tree_parent.map(|node| node.cs_id),
             &edges.skip_tree_skew_ancestor.map(|node| node.cs_id),
             &edges.p1_linear_skew_ancestor.map(|node| node.cs_id),
+            &edges
+                .subtree_or_merge_ancestor
+                .filter(|node| edges.merge_ancestor.as_ref() != Some(node))
+                .map(|node| node.cs_id),
+            &edges
+                .subtree_source_parent
+                .filter(|node| edges.skip_tree_parent.as_ref() != Some(node))
+                .map(|node| node.cs_id),
+            &edges
+                .subtree_source_skew_ancestor
+                .filter(|node| edges.skip_tree_skew_ancestor.as_ref() != Some(node))
+                .map(|node| node.cs_id),
         )
         .await?;
 
@@ -1375,6 +1900,35 @@ impl CommitGraphStorage for SqlCommitGraphStorage {
                         // This pattern is used to convert a ref to tuple into a tuple of refs.
                         #[allow(clippy::map_identity)]
                         merge_parent_rows
+                            .iter()
+                            .map(|(a, b, c)| (a, b, c))
+                            .collect::<Vec<_>>()
+                            .as_slice(),
+                    )
+                    .await?;
+
+                let subtree_source_rows = edges
+                    .subtree_sources
+                    .iter()
+                    .enumerate()
+                    .map(|(subtree_source_num, node)| {
+                        Ok((
+                            last_insert_id,
+                            subtree_source_num,
+                            *subtree_source_cs_id_to_id
+                                .get(&node.cs_id)
+                                .ok_or_else(|| anyhow!("Failed to fetch id for {}", node.cs_id))?,
+                        ))
+                    })
+                    .collect::<Result<Vec<_>>>()?;
+
+                let (transaction, result) =
+                    InsertSubtreeSources::maybe_traced_query_with_transaction(
+                        transaction,
+                        cri,
+                        // This pattern is used to convert a ref to tuple into a tuple of refs.
+                        #[allow(clippy::map_identity)]
+                        subtree_source_rows
                             .iter()
                             .map(|(a, b, c)| (a, b, c))
                             .collect::<Vec<_>>()

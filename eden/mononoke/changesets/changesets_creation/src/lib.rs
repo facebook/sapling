@@ -12,6 +12,8 @@ use anyhow::anyhow;
 use anyhow::Result;
 use blobstore::Blobstore;
 use cloned::cloned;
+use commit_graph::ChangesetParents;
+use commit_graph::ChangesetSubtreeSources;
 use commit_graph::CommitGraphRef;
 use commit_graph::CommitGraphWriterRef;
 use context::CoreContext;
@@ -24,7 +26,6 @@ use mononoke_types::BonsaiChangeset;
 use mononoke_types::ChangesetId;
 use repo_blobstore::RepoBlobstoreRef;
 use repo_identity::RepoIdentityRef;
-use smallvec::ToSmallVec;
 use topo_sort::sort_topological;
 use vec1::Vec1;
 
@@ -84,10 +85,18 @@ pub async fn save_changesets(
 
     // Order of inserting entries in changeset table matters though, so we first need to
     // topologically sort commits.
-    let mut bcs_parents = HashMap::new();
+    let mut bcs_deps = HashMap::new();
+    let mut bcs_parents_and_subtree_sources = HashMap::new();
     for bcs in bonsai_changesets.values() {
-        let parents: Vec<_> = bcs.parents().collect();
-        bcs_parents.insert(bcs.get_changeset_id(), parents);
+        let parents = bcs.parents().collect::<ChangesetParents>();
+        let subtree_sources = bcs.subtree_sources().collect::<ChangesetSubtreeSources>();
+        let deps = parents
+            .iter()
+            .chain(subtree_sources.iter())
+            .copied()
+            .collect::<Vec<_>>();
+        bcs_deps.insert(bcs.get_changeset_id(), deps);
+        bcs_parents_and_subtree_sources.insert(bcs.get_changeset_id(), (parents, subtree_sources));
     }
 
     // Order of inserting bonsai changesets objects doesn't matter, so we can join them
@@ -112,13 +121,13 @@ pub async fn save_changesets(
 
     try_join(bonsai_objects, parents_to_check).await?;
 
-    let topo_sorted_commits = sort_topological(&bcs_parents).expect("loop in commit chain!");
+    let topo_sorted_commits = sort_topological(&bcs_deps).expect("loop in commit chain!");
     let entries = topo_sorted_commits
         .into_iter()
         .filter_map(|bcs_id| {
-            bcs_parents
-                .get(&bcs_id)
-                .map(|parents| (bcs_id, parents.to_smallvec()))
+            bcs_parents_and_subtree_sources
+                .remove(&bcs_id)
+                .map(|(parents, subtree_sources)| (bcs_id, parents, subtree_sources))
         })
         .collect::<Vec<_>>();
     if let Ok(entries) = Vec1::try_from(entries) {

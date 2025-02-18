@@ -238,6 +238,24 @@ impl ParentsFetcher for EphemeralOnlyChangesetStorage {
             })?;
         Ok(cs.parents().collect())
     }
+
+    async fn fetch_subtree_sources(
+        &self,
+        ctx: &CoreContext,
+        cs_id: ChangesetId,
+    ) -> Result<Vec<ChangesetId>> {
+        let cs = cs_id.load(ctx, &self.repo_blobstore).await?;
+        let parents = cs.parents().collect::<HashSet<_>>();
+        Ok(cs
+            .subtree_changes()
+            .values()
+            .filter_map(|change| {
+                change
+                    .change_source()
+                    .and_then(|(cs_id, _)| (!parents.contains(&cs_id)).then_some(cs_id))
+            })
+            .collect())
+    }
 }
 
 #[async_trait]
@@ -255,6 +273,11 @@ impl CommitGraphStorage for EphemeralCommitGraphStorage {
                 vec1![(
                     edges.node.cs_id,
                     edges.parents.into_iter().map(|node| node.cs_id).collect(),
+                    edges
+                        .subtree_sources
+                        .into_iter()
+                        .map(|node| node.cs_id)
+                        .collect(),
                 )],
             )
             .await?;
@@ -348,11 +371,15 @@ impl CommitGraphStorage for EphemeralCommitGraphStorage {
                     .ephemeral_only_storage
                     .fetch_parents(ctx, cs_id)
                     .await?;
+                let subtree_sources = self
+                    .ephemeral_only_storage
+                    .fetch_subtree_sources(ctx, cs_id)
+                    .await?;
                 self.mem_writes_commit_graph_writer
                     .add_recursive(
                         ctx,
                         self.ephemeral_only_storage.clone(),
-                        vec1![(cs_id, parents.to_smallvec(),)],
+                        vec1![(cs_id, parents.to_smallvec(), subtree_sources)],
                     )
                     .await?;
                 fetched_edges.insert(

@@ -18,6 +18,5 @@ justknobs = { version = "0.1.0", git = "https://github.com/facebookexperimental/
 mononoke_types = { version = "0.1.0", path = "../../mononoke_types" }
 repo_blobstore = { version = "0.1.0", path = "../../blobrepo/repo_blobstore" }
 repo_identity = { version = "0.1.0", path = "../../repo_attributes/repo_identity" }
-smallvec = { version = "1.13.2", features = ["serde", "specialization", "union"] }
 topo_sort = { version = "0.1.0", path = "../../common/topo_sort" }
 vec1 = { version = "1", features = ["serde"] }

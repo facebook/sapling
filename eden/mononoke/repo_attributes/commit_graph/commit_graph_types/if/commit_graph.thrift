@@ -10,7 +10,7 @@ include "thrift/annotation/rust.thrift"
 
 # Memcache constants. Should be changed when we want to invalidate memcache
 # entries
-const i32 MC_CODEVER = 1;
+const i32 MC_CODEVER = 2;
 const i32 MC_SITEVER = 0;
 
 @rust.NewType
@@ -22,6 +22,8 @@ struct ChangesetNode {
   2: Generation generation;
   3: i64 skip_tree_depth;
   4: i64 p1_linear_depth;
+  5: optional Generation subtree_source_generation; // omitted if the same as generation
+  6: optional i64 subtree_source_depth; // omitted if the same as skip_tree_depth
 }
 
 @rust.Exhaustive
@@ -32,6 +34,10 @@ struct ChangesetEdges {
   4: optional ChangesetNode skip_tree_parent;
   5: optional ChangesetNode skip_tree_skew_ancestor;
   6: optional ChangesetNode p1_linear_skew_ancestor;
+  7: optional list<ChangesetNode> subtree_sources;
+  8: optional ChangesetNode subtree_or_merge_ancestor; // omitted if the same as merge_ancestor
+  9: optional ChangesetNode subtree_source_parent; // omitted if the same as skip_tree_parent
+  10: optional ChangesetNode subtree_source_skew_ancestor; // omitted if the same as skip_tree_skew_ancestor
 }
 
 @rust.Exhaustive
@@ -58,4 +64,10 @@ struct CompactChangesetEdges {
   8: optional i32 skip_tree_parent;
   9: optional i32 skip_tree_skew_ancestor;
   10: optional i32 p1_linear_skew_ancestor;
+  11: optional i32 subtree_source_generation; // omitted if the same as generation
+  12: optional i32 subtree_source_depth; // omitted if the same as skip_tree_depth
+  13: optional list<i32> subtree_sources; // omitted if empty
+  14: optional i32 subtree_or_merge_ancestor; // omitted if the same as merge_ancestor
+  15: optional i32 subtree_source_parent; // omitted if the same as skip_tree_parent
+  16: optional i32 subtree_source_skew_ancestor; // omitted if the same as skip_tree_skew_ancestor
 }

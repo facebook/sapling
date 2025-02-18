@@ -11,6 +11,7 @@ use anyhow::Context;
 use anyhow::Result;
 use async_trait::async_trait;
 use commit_graph_types::edges::ChangesetParents;
+use commit_graph_types::edges::ChangesetSubtreeSources;
 use context::CoreContext;
 use futures_stats::TimedTryFutureExt;
 use mononoke_types::ChangesetId;
@@ -33,6 +34,7 @@ pub trait CommitGraphWriter {
         ctx: &CoreContext,
         cs_id: ChangesetId,
         parents: ChangesetParents,
+        subtree_sources: ChangesetSubtreeSources,
     ) -> Result<bool>;
 
     /// Add many new changesets to the commit graph. Changesets should
@@ -42,7 +44,7 @@ pub trait CommitGraphWriter {
     async fn add_many(
         &self,
         ctx: &CoreContext,
-        changesets: Vec1<(ChangesetId, ChangesetParents)>,
+        changesets: Vec1<(ChangesetId, ChangesetParents, ChangesetSubtreeSources)>,
     ) -> Result<usize>;
 
     /// Same as add but fetches parent edges using the changeset fetcher
@@ -53,7 +55,7 @@ pub trait CommitGraphWriter {
         &self,
         ctx: &CoreContext,
         parents_fetcher: Arc<dyn ParentsFetcher>,
-        changesets: Vec1<(ChangesetId, ChangesetParents)>,
+        changesets: Vec1<(ChangesetId, ChangesetParents, ChangesetSubtreeSources)>,
     ) -> Result<usize>;
 }
 
@@ -75,9 +77,10 @@ impl CommitGraphWriter for BaseCommitGraphWriter {
         ctx: &CoreContext,
         cs_id: ChangesetId,
         parents: ChangesetParents,
+        subtree_sources: ChangesetSubtreeSources,
     ) -> Result<bool> {
         self.commit_graph
-            .add(ctx, cs_id, parents)
+            .add(ctx, cs_id, parents, subtree_sources)
             .await
             .with_context(|| "during BaseCommitGraphWriter::add")
     }
@@ -85,7 +88,7 @@ impl CommitGraphWriter for BaseCommitGraphWriter {
     async fn add_many(
         &self,
         ctx: &CoreContext,
-        changesets: Vec1<(ChangesetId, ChangesetParents)>,
+        changesets: Vec1<(ChangesetId, ChangesetParents, ChangesetSubtreeSources)>,
     ) -> Result<usize> {
         self.commit_graph
             .add_many(ctx, changesets)
@@ -97,7 +100,7 @@ impl CommitGraphWriter for BaseCommitGraphWriter {
         &self,
         ctx: &CoreContext,
         parents_fetcher: Arc<dyn ParentsFetcher>,
-        changesets: Vec1<(ChangesetId, ChangesetParents)>,
+        changesets: Vec1<(ChangesetId, ChangesetParents, ChangesetSubtreeSources)>,
     ) -> Result<usize> {
         self.commit_graph
             .add_recursive(ctx, parents_fetcher, changesets)
@@ -134,6 +137,7 @@ impl CommitGraphWriter for LoggingCommitGraphWriter {
         ctx: &CoreContext,
         cs_id: ChangesetId,
         parents: ChangesetParents,
+        subtree_sources: ChangesetSubtreeSources,
     ) -> Result<bool> {
         let mut scuba = self.scuba.clone();
 
@@ -145,7 +149,12 @@ impl CommitGraphWriter for LoggingCommitGraphWriter {
         scuba.add("changeset_count", 1);
         scuba.add("repo_name", self.repo_name.as_str());
 
-        match self.inner_writer.add(ctx, cs_id, parents).try_timed().await {
+        match self
+            .inner_writer
+            .add(ctx, cs_id, parents, subtree_sources)
+            .try_timed()
+            .await
+        {
             Err(err) => {
                 scuba.add("error", format!("{:#}", err));
                 scuba.log_with_msg("Insertion failed", None);
@@ -170,7 +179,7 @@ impl CommitGraphWriter for LoggingCommitGraphWriter {
     async fn add_many(
         &self,
         ctx: &CoreContext,
-        changesets: Vec1<(ChangesetId, ChangesetParents)>,
+        changesets: Vec1<(ChangesetId, ChangesetParents, ChangesetSubtreeSources)>,
     ) -> Result<usize> {
         let mut scuba = self.scuba.clone();
 
@@ -214,7 +223,7 @@ impl CommitGraphWriter for LoggingCommitGraphWriter {
         &self,
         ctx: &CoreContext,
         parents_fetcher: Arc<dyn ParentsFetcher>,
-        changesets: Vec1<(ChangesetId, ChangesetParents)>,
+        changesets: Vec1<(ChangesetId, ChangesetParents, ChangesetSubtreeSources)>,
     ) -> Result<usize> {
         let mut scuba = self.scuba.clone();
 
