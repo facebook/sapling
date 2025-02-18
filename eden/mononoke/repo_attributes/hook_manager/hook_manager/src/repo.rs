@@ -42,6 +42,7 @@ use mononoke_types::MPath;
 use mononoke_types::ManifestUnodeId;
 use mononoke_types::NonRootMPath;
 use repo_blobstore::RepoBlobstore;
+use repo_cross_repo::RepoCrossRepo;
 use repo_derived_data::RepoDerivedData;
 use repo_identity::RepoIdentity;
 use skeleton_manifest::RootSkeletonManifestId;
@@ -76,6 +77,9 @@ pub struct HookRepo {
 
     #[facet]
     pub bonsai_tag_mapping: dyn BonsaiTagMapping,
+
+    #[facet]
+    pub repo_cross_repo: RepoCrossRepo,
 }
 
 impl HookRepo {

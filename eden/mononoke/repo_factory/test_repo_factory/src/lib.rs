@@ -769,6 +769,7 @@ impl TestRepoFactory {
         bookmarks: &ArcBookmarks,
         bonsai_tag_mapping: &ArcBonsaiTagMapping,
         bonsai_git_mapping: &ArcBonsaiGitMapping,
+        repo_cross_repo: &ArcRepoCrossRepo,
     ) -> ArcHookManager {
         let hook_repo = HookRepo {
             repo_identity: repo_identity.clone(),
@@ -778,6 +779,7 @@ impl TestRepoFactory {
             repo_derived_data: repo_derived_data.clone(),
             bonsai_git_mapping: bonsai_git_mapping.clone(),
             bonsai_tag_mapping: bonsai_tag_mapping.clone(),
+            repo_cross_repo: repo_cross_repo.clone(),
         };
 
         Arc::new(HookManager::new_test(

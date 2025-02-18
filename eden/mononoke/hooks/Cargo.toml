@@ -34,6 +34,8 @@ metaconfig_types = { version = "0.1.0", path = "../metaconfig/types" }
 mononoke_types = { version = "0.1.0", path = "../mononoke_types" }
 permission_checker = { version = "0.1.0", path = "../permission_checker" }
 regex = "1.11.1"
+repo_cross_repo = { version = "0.1.0", path = "../repo_attributes/repo_cross_repo" }
+repo_identity = { version = "0.1.0", path = "../repo_attributes/repo_identity" }
 sapling-clientinfo = { version = "0.1.0", path = "../../scm/lib/clientinfo" }
 scuba_ext = { version = "0.1.0", path = "../common/scuba_ext" }
 serde = { version = "1.0.185", features = ["derive", "rc"] }

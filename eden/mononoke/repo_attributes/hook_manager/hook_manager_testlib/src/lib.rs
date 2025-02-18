@@ -14,6 +14,7 @@ use commit_graph::CommitGraphWriter;
 use filestore::FilestoreConfig;
 use metaconfig_types::RepoConfig;
 use repo_blobstore::RepoBlobstore;
+use repo_cross_repo::RepoCrossRepo;
 use repo_derived_data::RepoDerivedData;
 use repo_identity::RepoIdentity;
 
@@ -52,4 +53,7 @@ pub struct HookTestRepo {
 
     #[facet]
     pub bonsai_tag_mapping: dyn BonsaiTagMapping,
+
+    #[facet]
+    pub repo_cross_repo: RepoCrossRepo,
 }

@@ -1516,6 +1516,7 @@ impl RepoFactory {
         bonsai_tag_mapping: &ArcBonsaiTagMapping,
         bonsai_git_mapping: &ArcBonsaiGitMapping,
         permission_checker: &ArcRepoPermissionChecker,
+        repo_cross_repo: &ArcRepoCrossRepo,
     ) -> Result<ArcHookManager> {
         let name = repo_identity.name();
 
@@ -1548,6 +1549,7 @@ impl RepoFactory {
                 bookmarks: bookmarks.clone(),
                 bonsai_tag_mapping: bonsai_tag_mapping.clone(),
                 bonsai_git_mapping: bonsai_git_mapping.clone(),
+                repo_cross_repo: repo_cross_repo.clone(),
             };
 
             let mut hook_manager = HookManager::new(

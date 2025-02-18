@@ -36,6 +36,7 @@ mononoke_types = { version = "0.1.0", path = "../../../mononoke_types" }
 permission_checker = { version = "0.1.0", path = "../../../permission_checker" }
 regex = "1.11.1"
 repo_blobstore = { version = "0.1.0", path = "../../../blobrepo/repo_blobstore" }
+repo_cross_repo = { version = "0.1.0", path = "../../repo_cross_repo" }
 repo_derived_data = { version = "0.1.0", path = "../../repo_derived_data" }
 repo_identity = { version = "0.1.0", path = "../../repo_identity" }
 repo_permission_checker = { version = "0.1.0", path = "../../repo_permission_checker" }
