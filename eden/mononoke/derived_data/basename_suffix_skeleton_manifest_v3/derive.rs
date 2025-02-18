@@ -19,8 +19,10 @@ use futures::stream;
 use futures::StreamExt;
 use futures::TryStreamExt;
 use itertools::Either;
+use manifest::bonsai_diff;
 use manifest::derive_manifest;
 use manifest::get_implicit_deletes;
+use manifest::BonsaiDiffFileChange;
 use manifest::Entry;
 use manifest::LeafInfo;
 use manifest::TreeInfo;
@@ -48,12 +50,38 @@ async fn get_bssm_path_changes(
     ctx: &CoreContext,
     blobstore: Arc<dyn Blobstore>,
     bcs: &BonsaiChangeset,
+    skeleton_manifest: SkeletonManifestId,
     parent_skeleton_manifests: Vec<SkeletonManifestId>,
 ) -> Result<Vec<(NonRootMPath, Option<()>)>> {
-    let changes = get_file_changes(bcs)
-        .into_iter()
-        .map(|(path, content)| (path, content.map(|_| ())))
-        .collect::<Vec<_>>();
+    let changes = if bcs.has_manifest_altering_subtree_changes() {
+        // Subtree changes must be flattened before doing the bssm
+        // transformation.  This is because subtree operations affect many
+        // different basenames at once (essentially *all* the basenames in
+        // that subtree are affected), so we cannot efficiently apply
+        // the subtree change directly.
+        //
+        // To flatten subtree changes, we compare the skeleton manifests
+        // and recompute the bonsai changes as if the subtree change was
+        // not in place.
+        bonsai_diff(
+            ctx.clone(),
+            blobstore.clone(),
+            skeleton_manifest,
+            parent_skeleton_manifests.iter().cloned().collect(),
+        )
+        .map_ok(|diff| match diff {
+            BonsaiDiffFileChange::Changed(path, _)
+            | BonsaiDiffFileChange::ChangedReusedId(path, _) => (path, Some(())),
+            BonsaiDiffFileChange::Deleted(path) => (path, None),
+        })
+        .try_collect::<Vec<_>>()
+        .await?
+    } else {
+        get_file_changes(bcs)
+            .into_iter()
+            .map(|(path, content)| (path, content.map(|_| ())))
+            .collect::<Vec<_>>()
+    };
 
     // Implicit deletes must be expanded before doing the bssm transform on the changes.
     // This is because paths that were prefixes of each other before the transform can
@@ -136,12 +164,14 @@ pub(crate) async fn inner_derive(
     type TreeId = BssmV3Directory;
     type Ctx = ();
 
+    // We already flattened any subtree changes out into normal changes, so no
+    // need to apply subtree changes here.
     derive_manifest(
         ctx.clone(),
         blobstore.clone(),
         parents,
         changes,
-        None, // TODO(mbthomas): support subtree changes
+        None,
         {
             cloned!(ctx, blobstore);
             move |info: TreeInfo<TreeId, Leaf, Ctx, LoadableShardedMapV2Node<BssmV3Entry>>| {
@@ -163,16 +193,24 @@ pub(crate) async fn derive_single(
     derivation_ctx: &DerivationContext,
     bonsai: BonsaiChangeset,
     parents: Vec<RootBssmV3DirectoryId>,
+    skeleton_manifest: RootSkeletonManifestId,
     parent_skeleton_manifests: Vec<RootSkeletonManifestId>,
 ) -> Result<RootBssmV3DirectoryId> {
+    let skeleton_manifest = skeleton_manifest.into_skeleton_manifest_id();
     let parent_skeleton_manifests = parent_skeleton_manifests
         .into_iter()
         .map(|parent_skeleton_manifest| parent_skeleton_manifest.into_skeleton_manifest_id())
         .collect::<Vec<_>>();
 
     let blobstore = derivation_ctx.blobstore();
-    let changes =
-        get_bssm_path_changes(ctx, blobstore.clone(), &bonsai, parent_skeleton_manifests).await?;
+    let changes = get_bssm_path_changes(
+        ctx,
+        blobstore.clone(),
+        &bonsai,
+        skeleton_manifest,
+        parent_skeleton_manifests,
+    )
+    .await?;
 
     let parents = stream::iter(parents)
         .map(|parent| async move { parent.0.load(ctx, blobstore).await })

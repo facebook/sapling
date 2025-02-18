@@ -517,6 +517,12 @@ impl ManifestLeaf for FileUnodeId {
     }
 }
 
+impl ManifestLeaf for () {
+    fn reuses(&self, _other: &Self) -> bool {
+        false
+    }
+}
+
 /// Parent replacement for implementation of subtree operations.
 ///
 /// When diffing a manifest taking into account subtree operations, we
