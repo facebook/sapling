@@ -376,6 +376,9 @@ where
         &self.live_commit_sync_config
     }
 
+    // -- Getters
+    // ------------------------------------------------------------------------
+
     // TODO(T182311609): unify commit sync outcome methods
     pub async fn get_plural_commit_sync_outcome<'a>(
         &'a self,
@@ -467,19 +470,6 @@ where
         get_reverse_mover(
             Arc::clone(&self.live_commit_sync_config),
             version,
-            source_repo.repo_identity().id(),
-            target_repo.repo_identity().id(),
-        )
-        .boxed()
-        .await
-    }
-
-    // TODO(T182311609): delete this. It shouldn't be used by CommitSyncer clients.
-    pub async fn get_bookmark_renamer(&self) -> Result<BookmarkRenamer, Error> {
-        let (source_repo, target_repo) = self.get_source_target();
-
-        get_bookmark_renamer(
-            Arc::clone(&self.live_commit_sync_config),
             source_repo.repo_identity().id(),
             target_repo.repo_identity().id(),
         )
@@ -1153,5 +1143,17 @@ where
             CommitSyncDirection::Backwards => (large_repo, small_repo),
             CommitSyncDirection::Forward => (small_repo, large_repo),
         }
+    }
+
+    async fn get_bookmark_renamer(&self) -> Result<BookmarkRenamer, Error> {
+        let (source_repo, target_repo) = self.get_source_target();
+
+        get_bookmark_renamer(
+            Arc::clone(&self.live_commit_sync_config),
+            source_repo.repo_identity().id(),
+            target_repo.repo_identity().id(),
+        )
+        .boxed()
+        .await
     }
 }

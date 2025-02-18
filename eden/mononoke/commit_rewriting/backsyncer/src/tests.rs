@@ -1052,7 +1052,6 @@ async fn verify_bookmarks(
 ) -> Result<(), Error> {
     let large_repo = commit_syncer.get_source_repo();
     let small_repo = commit_syncer.get_target_repo();
-    let bookmark_renamer = commit_syncer.get_bookmark_renamer().await?;
 
     let bookmarks: Vec<_> = large_repo
         .get_publishing_bookmarks_maybe_stale_hg(ctx.clone())
@@ -1062,7 +1061,7 @@ async fn verify_bookmarks(
     // Check that bookmark point to corresponding working copies
     for (bookmark, source_hg_cs_id) in bookmarks {
         println!("checking bookmark: {}", bookmark.key());
-        match bookmark_renamer(bookmark.key()) {
+        match commit_syncer.rename_bookmark(bookmark.key()).await? {
             Some(renamed_book) => {
                 if &renamed_book != bookmark.key() {
                     assert!(

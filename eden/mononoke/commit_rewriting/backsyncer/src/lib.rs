@@ -345,7 +345,11 @@ where
     }
     debug!(ctx.logger(), "backsyncing {} ...", entry_id);
 
-    if commit_syncer.get_bookmark_renamer().await?(&entry.bookmark_name).is_none() {
+    if commit_syncer
+        .rename_bookmark(&entry.bookmark_name)
+        .await?
+        .is_none()
+    {
         // For the bookmarks that don't remap to small repos we can skip. But it's
         // still valuable to have commit mapping ready for them. That's why we spawn
         // a commit backsync future that we don't wait for here. Each of such futures
@@ -547,7 +551,9 @@ where
     debug!(ctx.logger(), "preparing to backsync {:?}", log_entry);
 
     let new_counter = log_entry.id;
-    let bookmark = commit_syncer.get_bookmark_renamer().await?(&log_entry.bookmark_name);
+    let bookmark = commit_syncer
+        .rename_bookmark(&log_entry.bookmark_name)
+        .await?;
     debug!(ctx.logger(), "bookmark was renamed into {:?}", bookmark);
     let from_cs_id = log_entry.from_changeset_id;
     let to_cs_id = log_entry.to_changeset_id;

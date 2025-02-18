@@ -1376,11 +1376,10 @@ async fn rename_and_remap_bookmarks<R: Repo>(
     ),
     Error,
 > {
-    let bookmark_renamer = commit_syncer.get_bookmark_renamer().await?;
-
     let mut renamed_and_remapped_bookmarks = vec![];
     for (bookmark, cs_id) in bookmarks {
-        if let Some(renamed_bookmark) = bookmark_renamer(&bookmark) {
+        let mb_renamed_bookmark = commit_syncer.rename_bookmark(&bookmark).await?;
+        if let Some(renamed_bookmark) = mb_renamed_bookmark {
             let maybe_sync_outcome = commit_syncer
                 .get_commit_sync_outcome(&ctx, cs_id)
                 .map(move |maybe_sync_outcome| {
@@ -1529,10 +1528,10 @@ pub enum UpdateLargeRepoBookmarksMode {
     DryRun,
 }
 
-pub async fn update_large_repo_bookmarks<R: Repo>(
+pub async fn update_large_repo_bookmarks<'a, R: Repo>(
     ctx: &CoreContext,
-    diff: &[BookmarkDiff],
-    syncers: &Syncers<R>,
+    diff: &'a [BookmarkDiff],
+    syncers: &'a Syncers<R>,
     update_mode: UpdateLargeRepoBookmarksMode,
     limit: Option<usize>,
 ) -> Result<(), Error> {
@@ -1544,7 +1543,8 @@ pub async fn update_large_repo_bookmarks<R: Repo>(
 
     let mut book_txn = large_repo.bookmarks().create_transaction(ctx.clone());
 
-    let bookmark_renamer = syncers.small_to_large.get_bookmark_renamer().await?;
+    let bookmark_renamer =
+        move |bookmark: &'a BookmarkKey| syncers.small_to_large.rename_bookmark(bookmark);
 
     let diff: Box<dyn Iterator<Item = &BookmarkDiff> + Send> = match limit {
         Some(limit) => {
@@ -1630,9 +1630,10 @@ pub async fn update_large_repo_bookmarks<R: Repo>(
                         .derive_bulk(ctx, &[large_cs_id], None, &derived_data_types, None)
                         .await?;
                     let reason = BookmarkUpdateReason::XRepoSync;
-                    let large_bookmark = bookmark_renamer(target_bookmark).ok_or_else(|| {
-                        format_err!("small bookmark {} remaps to nothing", target_bookmark)
-                    })?;
+                    let large_bookmark =
+                        bookmark_renamer(target_bookmark).await?.ok_or_else(|| {
+                            format_err!("small bookmark {} remaps to nothing", target_bookmark)
+                        })?;
 
                     info!(ctx.logger(), "setting {} {}", large_bookmark, large_cs_id);
                     if update_mode == UpdateLargeRepoBookmarksMode::Real {
@@ -1647,7 +1648,7 @@ pub async fn update_large_repo_bookmarks<R: Repo>(
                     ctx.logger(),
                     "large repo bookmark (renames to {}) not found in small repo", target_bookmark,
                 );
-                let large_bookmark = bookmark_renamer(target_bookmark).ok_or_else(|| {
+                let large_bookmark = bookmark_renamer(target_bookmark).await?.ok_or_else(|| {
                     format_err!("small bookmark {} remaps to nothing", target_bookmark)
                 })?;
                 let reason = BookmarkUpdateReason::XRepoSync;

@@ -97,7 +97,9 @@ where
     log_info(ctx, format!("processing log entry #{}", entry.id));
     let source_bookmark = Source(entry.bookmark_name);
     let target_bookmark = Target(
-        commit_syncer.get_bookmark_renamer().boxed().await?(&source_bookmark)
+        commit_syncer
+            .rename_bookmark(&source_bookmark)
+            .await?
             .ok_or_else(|| format_err!("unexpected empty bookmark rename"))?,
     );
     scuba_sample

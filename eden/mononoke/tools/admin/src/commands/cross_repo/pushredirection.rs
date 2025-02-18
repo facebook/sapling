@@ -222,7 +222,9 @@ async fn pushredirection_change_mapping_version(
         .transpose()?;
 
     let large_bookmark = BookmarkKey::new(args.large_repo_bookmark)?;
-    let small_bookmark = commit_syncer.get_bookmark_renamer().await?(&large_bookmark)
+    let small_bookmark = commit_syncer
+        .rename_bookmark(&large_bookmark)
+        .await?
         .ok_or_else(|| anyhow!("{} bookmark doesn't remap to small repo", large_bookmark))?;
 
     let large_bookmark_value = get_bookmark_value(ctx, large_repo, &large_bookmark).await?;
