@@ -1,0 +1,269 @@
+/*
+ * Copyright (c) Meta Platforms, Inc. and affiliates.
+ *
+ * This software may be used and distributed according to the terms of the
+ * GNU General Public License version 2.
+ */
+
+use anyhow::Context;
+use anyhow::Result;
+use mononoke_types::MPath;
+use serde_derive::Deserialize;
+use serde_derive::Serialize;
+
+use crate::HgChangesetId;
+
+/// Mercurial-encoded subtree changes.  This contains subtree changes as defined
+/// in the `subtree` extra field of a commit.
+#[derive(Debug, Clone, Default, PartialEq, Eq)]
+pub struct HgSubtreeChanges {
+    pub copies: Vec<HgSubtreeCopy>,
+    pub deep_copies: Vec<HgSubtreeDeepCopy>,
+    pub merges: Vec<HgSubtreeMerge>,
+}
+
+impl HgSubtreeChanges {
+    /// Convert from JSON (as defined in sapling/utils/subtreeutils.py).
+    pub fn from_json(json: &[u8]) -> Result<Self> {
+        let all_changes: Vec<HgSubtreeChangesVersion> =
+            serde_json::from_slice(json).context("Failed to parse subtree branch info")?;
+        let mut copies = Vec::new();
+        let mut deep_copies = Vec::new();
+        let mut merges = Vec::new();
+        for changes in all_changes {
+            copies.extend(changes.copies);
+            deep_copies.extend(changes.deep_copies);
+            merges.extend(changes.merges);
+        }
+        Ok(HgSubtreeChanges {
+            copies,
+            deep_copies,
+            merges,
+        })
+    }
+
+    fn is_empty(&self) -> bool {
+        self.copies.is_empty() && self.deep_copies.is_empty() && self.merges.is_empty()
+    }
+
+    /// Convert to JSON (as defined in sapling/utils/subtreeutils.py).
+    pub fn to_json(&self) -> Result<String> {
+        if self.is_empty() {
+            return Ok("[]".to_string());
+        }
+        // Currently we only support version 1.
+        let all_changes = vec![HgSubtreeChangesVersion {
+            copies: self.copies.clone(),
+            deep_copies: self.deep_copies.clone(),
+            merges: self.merges.clone(),
+            version: 1,
+        }];
+        let json = serde_json::to_string(&all_changes).context("Failed to serialize changes")?;
+        Ok(json)
+    }
+}
+
+#[derive(Serialize, Deserialize, Debug)]
+pub struct HgSubtreeChangesVersion {
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    copies: Vec<HgSubtreeCopy>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    deep_copies: Vec<HgSubtreeDeepCopy>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    merges: Vec<HgSubtreeMerge>,
+    #[serde(rename = "v", with = "version")]
+    #[allow(unused)]
+    version: u64,
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq)]
+pub struct HgSubtreeCopy {
+    #[serde(with = "hg_changeset_id")]
+    pub from_commit: HgChangesetId,
+    #[serde(with = "mpath")]
+    pub from_path: MPath,
+    #[serde(with = "mpath")]
+    pub to_path: MPath,
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq)]
+pub struct HgSubtreeDeepCopy {
+    #[serde(with = "hg_changeset_id")]
+    pub from_commit: HgChangesetId,
+    #[serde(with = "mpath")]
+    pub from_path: MPath,
+    #[serde(with = "mpath")]
+    pub to_path: MPath,
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq)]
+pub struct HgSubtreeMerge {
+    #[serde(with = "hg_changeset_id")]
+    pub from_commit: HgChangesetId,
+    #[serde(with = "mpath")]
+    pub from_path: MPath,
+    #[serde(with = "mpath")]
+    pub to_path: MPath,
+}
+
+mod version {
+    use serde::de::Error;
+    use serde::Deserialize;
+
+    pub fn deserialize<'de, D>(deserializer: D) -> Result<u64, D::Error>
+    where
+        D: serde::Deserializer<'de>,
+    {
+        let version = u64::deserialize(deserializer)?;
+        if version != 1 {
+            return Err(D::Error::custom(format!(
+                "Unsupported version of subtree changes: {}",
+                version
+            )));
+        }
+        Ok(version)
+    }
+
+    pub fn serialize<S>(version: &u64, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: serde::Serializer,
+    {
+        serializer.serialize_u64(*version)
+    }
+}
+
+mod mpath {
+    use mononoke_types::MPath;
+    use serde::de::Error;
+    use serde::Deserialize;
+
+    pub fn deserialize<'de, D>(deserializer: D) -> Result<MPath, D::Error>
+    where
+        D: serde::Deserializer<'de>,
+    {
+        let path = String::deserialize(deserializer)?;
+        MPath::new(path.as_bytes())
+            .map_err(|e| D::Error::custom(format!("Invalid path: {path}: {e}")))
+    }
+
+    pub fn serialize<S>(path: &MPath, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: serde::Serializer,
+    {
+        let path = path.to_string();
+        serializer.serialize_str(&path)
+    }
+}
+
+mod hg_changeset_id {
+    use std::str::FromStr;
+
+    use serde::de::Error;
+    use serde::Deserialize;
+
+    use crate::HgChangesetId;
+
+    pub fn deserialize<'de, D>(deserializer: D) -> Result<HgChangesetId, D::Error>
+    where
+        D: serde::Deserializer<'de>,
+    {
+        let id = String::deserialize(deserializer)?;
+        HgChangesetId::from_str(&id)
+            .map_err(|e| D::Error::custom(format!("Invalid changset id: {id}: {e}")))
+    }
+
+    pub fn serialize<S>(id: &HgChangesetId, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: serde::Serializer,
+    {
+        let id = id.to_string();
+        serializer.serialize_str(&id)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use std::str::FromStr;
+
+    use mononoke_macros::mononoke;
+    use mononoke_types::MPath;
+
+    use super::*;
+
+    fn compare(changes: HgSubtreeChanges, expected: &str) {
+        let json = changes.to_json().unwrap();
+        assert_eq!(json, expected);
+        let parsed = HgSubtreeChanges::from_json(json.as_bytes()).unwrap();
+        assert_eq!(changes, parsed);
+    }
+
+    #[mononoke::test]
+    fn test_roundtrip() {
+        compare(HgSubtreeChanges::default(), "[]");
+        compare(
+            HgSubtreeChanges {
+                copies: vec![HgSubtreeCopy {
+                    from_path: MPath::new("a").unwrap(),
+                    to_path: MPath::new("b").unwrap(),
+                    from_commit: HgChangesetId::from_str(
+                        "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+                    )
+                    .unwrap(),
+                }],
+                ..Default::default()
+            },
+            r##"[{"copies":[{"from_commit":"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa","from_path":"a","to_path":"b"}],"v":1}]"##,
+        );
+        compare(
+            HgSubtreeChanges {
+                copies: vec![
+                    HgSubtreeCopy {
+                        from_path: MPath::new("a").unwrap(),
+                        to_path: MPath::new("b").unwrap(),
+                        from_commit: HgChangesetId::from_str(
+                            "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+                        )
+                        .unwrap(),
+                    },
+                    HgSubtreeCopy {
+                        from_path: MPath::new("c").unwrap(),
+                        to_path: MPath::new("d").unwrap(),
+                        from_commit: HgChangesetId::from_str(
+                            "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+                        )
+                        .unwrap(),
+                    },
+                ],
+                deep_copies: vec![HgSubtreeDeepCopy {
+                    from_path: MPath::new("e").unwrap(),
+                    to_path: MPath::new("f").unwrap(),
+                    from_commit: HgChangesetId::from_str(
+                        "cccccccccccccccccccccccccccccccccccccccc",
+                    )
+                    .unwrap(),
+                }],
+                merges: vec![HgSubtreeMerge {
+                    from_path: MPath::new("g").unwrap(),
+                    to_path: MPath::new("h").unwrap(),
+                    from_commit: HgChangesetId::from_str(
+                        "dddddddddddddddddddddddddddddddddddddddd",
+                    )
+                    .unwrap(),
+                }],
+            },
+            concat!(
+                r##"[{"copies":[{"from_commit":"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa","from_path":"a","to_path":"b"},"##,
+                r##"{"from_commit":"bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb","from_path":"c","to_path":"d"}],"##,
+                r##""deep_copies":[{"from_commit":"cccccccccccccccccccccccccccccccccccccccc","from_path":"e","to_path":"f"}],"##,
+                r##""merges":[{"from_commit":"dddddddddddddddddddddddddddddddddddddddd","from_path":"g","to_path":"h"}],"v":1}]"##
+            ),
+        );
+    }
+
+    #[mononoke::test]
+    fn test_unsupported_version() {
+        let json = r##"[{"copies":[{"from_commit":"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa","from_path":"a","to_path":"b"}],"v":2}]"##;
+        let changes = HgSubtreeChanges::from_json(json.as_bytes());
+        assert!(changes.is_err());
+    }
+}

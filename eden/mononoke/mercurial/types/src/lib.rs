@@ -61,6 +61,7 @@ pub mod preloaded_augmented_manifest;
 pub mod remotefilelog;
 pub mod sharded_augmented_manifest;
 pub mod sql_types;
+pub mod subtree;
 pub mod utils;
 
 // Re-exports from mononoke_types. Eventually these should go away and everything should depend
