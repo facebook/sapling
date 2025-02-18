@@ -38,6 +38,7 @@ use crate::fetch_non_blob_git_object;
 use crate::git_object_bytes_with_hash;
 use crate::tree::derive_git_tree;
 use crate::tree::get_git_file_changes;
+use crate::tree::get_git_subtree_changes;
 use crate::upload_non_blob_git_object;
 use crate::GitTreeId;
 use crate::MappedGitCommitId;
@@ -82,13 +83,10 @@ impl BonsaiDerivable for MappedGitCommitId {
         derivation_ctx: &DerivationContext,
         bonsai: BonsaiChangeset,
         parents: Vec<Self>,
-        _known: Option<&HashMap<ChangesetId, Self>>,
+        known: Option<&HashMap<ChangesetId, Self>>,
     ) -> Result<Self> {
         if bonsai.is_snapshot() {
             bail!("Can't derive MappedGitCommitId for snapshot")
-        }
-        if bonsai.has_subtree_changes() {
-            bail!("Subtree changes are not supported for git commits");
         }
         let author = get_signature(bonsai.author(), bonsai.author_date())?;
         // Git always needs a committer whereas Mononoke may or may not have a separate committer. If the Mononoke
@@ -139,10 +137,18 @@ impl BonsaiDerivable for MappedGitCommitId {
             .await?;
         let blobstore = derivation_ctx.blobstore().clone();
         let file_changes =
-            get_git_file_changes(&blobstore, derivation_ctx.filestore_config(), ctx, bonsai)
+            get_git_file_changes(&blobstore, derivation_ctx.filestore_config(), ctx, &bonsai)
                 .await?;
+        let subtree_changes = get_git_subtree_changes(ctx, derivation_ctx, known, &bonsai).await?;
 
-        let commit_tree_id = derive_git_tree(ctx, blobstore, parent_tree_ids, file_changes).await?;
+        let commit_tree_id = derive_git_tree(
+            ctx,
+            blobstore,
+            parent_tree_ids,
+            file_changes,
+            subtree_changes,
+        )
+        .await?;
 
         let git_commit = Commit {
             tree: commit_tree_id.0,

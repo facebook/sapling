@@ -5,6 +5,8 @@
  * GNU General Public License version 2.
  */
 
+use std::collections::HashMap;
+
 use anyhow::bail;
 use anyhow::Result;
 use async_trait::async_trait;
@@ -13,11 +15,13 @@ use blobstore::Loadable;
 use blobstore::LoadableError;
 use cloned::cloned;
 use context::CoreContext;
+use derived_data_manager::DerivationContext;
 use filestore::FetchKey;
 use filestore::FilestoreConfig;
 use futures::future::ready;
 use futures::stream;
 use futures::stream::BoxStream;
+use futures::FutureExt;
 use futures::StreamExt;
 use futures::TryStreamExt;
 use futures_watchdog::WatchdogExt;
@@ -30,10 +34,13 @@ use manifest::derive_manifest;
 use manifest::flatten_subentries;
 use manifest::Entry;
 use manifest::Manifest;
+use manifest::ManifestOps;
+use manifest::ManifestParentReplacement;
 use mononoke_types::hash::GitSha1;
 use mononoke_types::hash::RichGitSha1;
 use mononoke_types::BasicFileChange;
 use mononoke_types::BonsaiChangeset;
+use mononoke_types::ChangesetId;
 use mononoke_types::ContentId;
 use mononoke_types::FileType;
 use mononoke_types::GitLfs;
@@ -49,6 +56,7 @@ use crate::git_object_bytes_with_hash;
 use crate::upload_non_blob_git_object;
 use crate::DeltaObjectKind;
 use crate::GitIdentifier;
+use crate::MappedGitCommitId;
 
 /// An id of a Git tree object.
 #[derive(Copy, Clone, Debug, Eq, PartialEq, Hash)]
@@ -324,20 +332,20 @@ impl Loadable for GitTreeId {
     }
 }
 
-pub async fn get_git_file_changes<B: Blobstore + Clone + 'static>(
+pub(crate) async fn get_git_file_changes<B: Blobstore + Clone + 'static>(
     blobstore: &B,
     filestore_config: FilestoreConfig,
     ctx: &CoreContext,
-    bcs: BonsaiChangeset,
+    bcs: &BonsaiChangeset,
 ) -> Result<Vec<(NonRootMPath, Option<GitLeaf>)>> {
-    let file_changes_stream = stream::iter(bcs.into_mut().file_changes).map(Ok);
+    let file_changes_stream = stream::iter(bcs.file_changes()).map(Ok);
     file_changes_stream
         .map_ok(|(mpath, file_change)| async move {
             match file_change.simplify() {
                 Some(basic_file_change) => match basic_file_change.git_lfs() {
                     // File is not LFS file
                     GitLfs::FullContent => Ok((
-                        mpath,
+                        mpath.clone(),
                         Some(GitLeaf::new(ctx, blobstore, basic_file_change).await?),
                     )),
                     // No pointer content provided: we're generatic spec conformant canonical
@@ -354,13 +362,13 @@ pub async fn get_git_file_changes<B: Blobstore + Clone + 'static>(
                         .await?;
                         let leaf =
                             GitLeaf::from_oid_and_file_type(oid, basic_file_change.file_type())?;
-                        Ok((mpath, Some(leaf)))
+                        Ok((mpath.clone(), Some(leaf)))
                     }
                     // Non canonical LFS pointer provided - let's use it as is
                     GitLfs::GitLfsPointer {
                         non_canonical_pointer: Some(non_canonical_pointer),
                     } => Ok((
-                        mpath,
+                        mpath.clone(),
                         Some(
                             GitLeaf::from_content_id_and_file_type(
                                 ctx,
@@ -372,11 +380,55 @@ pub async fn get_git_file_changes<B: Blobstore + Clone + 'static>(
                         ),
                     )),
                 },
-                None => Ok((mpath, None)),
+                None => Ok((mpath.clone(), None)),
             }
         })
         .try_buffer_unordered(100)
         .try_collect()
+        .boxed()
+        .await
+}
+
+pub(crate) async fn get_git_subtree_changes(
+    ctx: &CoreContext,
+    derivation_ctx: &DerivationContext,
+    known: Option<&HashMap<ChangesetId, MappedGitCommitId>>,
+    bcs: &BonsaiChangeset,
+) -> Result<Vec<ManifestParentReplacement<GitTreeId, GitLeaf>>> {
+    let copy_sources = bcs.subtree_changes().iter().filter_map(|(path, change)| {
+        let (from_cs_id, from_path) = change.copy_source()?;
+        Some((path, from_cs_id, from_path))
+    });
+    stream::iter(copy_sources)
+        .map(|(path, from_cs_id, from_path)| {
+            cloned!(ctx);
+            let blobstore = derivation_ctx.blobstore().clone();
+            async move {
+                let root_oid = derivation_ctx
+                    .fetch_unknown_dependency::<MappedGitCommitId>(&ctx, known, from_cs_id)
+                    .await?
+                    .fetch_commit(&ctx, &blobstore)
+                    .await?
+                    .tree;
+                let entry = GitTreeId(root_oid)
+                    .find_entry(ctx, blobstore, from_path.clone())
+                    .await?
+                    .ok_or_else(|| {
+                        anyhow::anyhow!(
+                            "Subtree copy source {} does not exist in {}",
+                            from_path,
+                            from_cs_id
+                        )
+                    })?;
+                Ok(ManifestParentReplacement {
+                    path: path.clone(),
+                    replacements: vec![entry],
+                })
+            }
+        })
+        .buffered(100)
+        .try_collect()
+        .boxed()
         .await
 }
 
@@ -385,13 +437,14 @@ pub(crate) async fn derive_git_tree<B: Blobstore + Clone + 'static>(
     blobstore: B,
     parents: Vec<GitTreeId>,
     changes: Vec<(NonRootMPath, Option<GitLeaf>)>,
+    subtree_changes: Vec<ManifestParentReplacement<GitTreeId, GitLeaf>>,
 ) -> Result<GitTreeId> {
     let tree_id = derive_manifest(
         ctx.clone(),
         blobstore.clone(),
         parents,
         changes,
-        None,
+        subtree_changes,
         {
             cloned!(ctx, blobstore);
             move |tree_info| {
