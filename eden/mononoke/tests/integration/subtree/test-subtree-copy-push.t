@@ -15,50 +15,64 @@ Override subtree key to enable non-test subtree extra
   $ setconfig extensions.subtreetestoverride=$TESTTMP/subtree.py
   $ setconfig push.edenapi=true
   $ setconfig subtree.copy-reuse-tree=true subtree.min-path-depth=1
+  $ enable amend
   $ setup_common_config
 
   $ testtool_drawdag -R repo --derive-all --no-default-files << EOF
   > A-B-C
   > # modify: A foo/file1 "aaa\n"
+  > # modify: A foo/file3 "xxx\n"
   > # copy: B foo/file2 "bbb\n" A foo/file1
   > # delete: B foo/file1
   > # modify: C foo/file2 "ccc\n"
   > # bookmark: C master_bookmark
   > EOF
-  A=942068675aae3ea79427f460688d1776ab3e8e1696ea7373b0378f57d5de7700
-  B=df2a0eaaf041a902fd13e2bb769356b05ff422199f65c076a2c905beb06c5e4f
-  C=076c2409fdb896e34b7e70dbf43ad20861772bdcbb7f94fdd3f8a5b00c4fa2ec
+  A=bad79679db57d8ca7bdcb80d082d1508f33ca2989652922e2e01b55fb3c27f6a
+  B=170dbba760afb7ec239d859e2412a827dd7229cdbdfcd549b7138b2451afad37
+  C=e611f471e1f2bd488fee752800983cdbfd38d50247e5d81222e0d620fd2a6120
 
   $ start_and_wait_for_mononoke_server
   $ hg clone -q mono:repo repo
   $ cd repo 
 
   $ hg subtree copy -r .^ --from-path foo --to-path bar
-  1 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  2 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ ls bar
   file2
+  file3
   $ cat bar/file2
   bbb
-  $ hg log -r . -T '{extras % "{extra}\n"}'
-  branch=default
-  subtree=[{"copies":[{"from_commit":"8aeb486cc22e0905ea4f23cf8b129c7546de26ac","from_path":"foo","to_path":"bar"}],"v":1}]
 
-  $ hg log -G -T '{node|short} {desc|firstline} {remotebookmarks}\n'
-  @  8feb31bbd259 Subtree copy from 8aeb486cc22e0905ea4f23cf8b129c7546de26ac
-  │
-  o  d55124608f34 C remote/master_bookmark
-  │
-  o  8aeb486cc22e B
-  │
-  o  13445855d10c A
-  
   $ hg push -r . --to master_bookmark
-  pushing rev 8feb31bbd259 to destination https://localhost:$LOCAL_PORT/edenapi/ bookmark master_bookmark
+  pushing rev 42666076b5aa to destination https://localhost:$LOCAL_PORT/edenapi/ bookmark master_bookmark
   edenapi: queue 1 commit for upload
   edenapi: queue 0 files for upload
   edenapi: queue 2 trees for upload
   edenapi: uploaded 2 trees
   edenapi: uploaded 1 changeset
-  pushrebasing stack (d55124608f34, 8feb31bbd259] (1 commit) to remote bookmark master_bookmark
+  pushrebasing stack (3527857ec5dd, 42666076b5aa] (1 commit) to remote bookmark master_bookmark
   0 files updated, 0 files merged, 0 files removed, 0 files unresolved
-  updated remote bookmark master_bookmark to 8feb31bbd259
+  updated remote bookmark master_bookmark to 42666076b5aa
+
+  $ hg subtree copy -r . --from-path foo --to-path baz
+  2 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  $ echo yyy >> baz/file3
+  $ hg amend
+  $ ls baz
+  file2
+  file3
+  $ hg push -r . --to master_bookmark
+  pushing rev 134f9464a317 to destination https://localhost:$LOCAL_PORT/edenapi/ bookmark master_bookmark
+  edenapi: queue 1 commit for upload
+  edenapi: queue 2 files for upload
+  edenapi: uploaded 2 files
+  edenapi: queue 2 trees for upload
+  edenapi: uploaded 2 trees
+  edenapi: uploaded 1 changeset
+  pushrebasing stack (42666076b5aa, 134f9464a317] (1 commit) to remote bookmark master_bookmark
+  0 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  updated remote bookmark master_bookmark to 134f9464a317
+  $ ls
+  bar
+  baz
+  foo
