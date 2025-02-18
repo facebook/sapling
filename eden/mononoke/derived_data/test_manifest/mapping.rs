@@ -8,7 +8,6 @@
 use std::collections::HashMap;
 
 use anyhow::anyhow;
-use anyhow::bail;
 use anyhow::Error;
 use anyhow::Result;
 use async_trait::async_trait;
@@ -74,12 +73,9 @@ impl BonsaiDerivable for RootTestManifestDirectory {
         derivation_ctx: &DerivationContext,
         bonsai: BonsaiChangeset,
         parents: Vec<Self>,
-        _known: Option<&HashMap<ChangesetId, Self>>,
+        known: Option<&HashMap<ChangesetId, Self>>,
     ) -> Result<Self> {
-        if bonsai.has_subtree_changes() {
-            bail!("Subtree changes are not supported for test manifests");
-        }
-        derive_single(ctx, derivation_ctx, bonsai, parents).await
+        derive_single(ctx, derivation_ctx, bonsai, parents, known).await
     }
 
     async fn store_mapping(
