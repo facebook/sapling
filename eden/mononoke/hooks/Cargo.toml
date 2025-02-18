@@ -52,6 +52,7 @@ blobstore = { version = "0.1.0", path = "../blobstore" }
 borrowed = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 fbinit-tokio = { version = "0.1.2", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 fixtures = { version = "0.1.0", path = "../tests/fixtures" }
+hook_manager_testlib = { version = "0.1.0", path = "../repo_attributes/hook_manager/hook_manager_testlib" }
 mononoke_macros = { version = "0.1.0", path = "../mononoke_macros" }
 mononoke_types-mocks = { version = "0.1.0", path = "../mononoke_types/mocks" }
 pretty_assertions = { version = "1.2", features = ["alloc"], default-features = false }

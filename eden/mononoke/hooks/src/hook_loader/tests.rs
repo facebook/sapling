@@ -12,6 +12,7 @@ use context::CoreContext;
 use fbinit::FacebookInit;
 use fixtures::TestRepoFixture;
 use hook_manager::HookRepo;
+use hook_manager_testlib::HookTestRepo;
 use maplit::hashset;
 use metaconfig_types::BookmarkParams;
 use metaconfig_types::HookManagerParams;
@@ -21,13 +22,12 @@ use mononoke_macros::mononoke;
 use permission_checker::InternalAclProvider;
 use repo_permission_checker::NeverAllowRepoPermissionChecker;
 use scuba_ext::MononokeScubaSampleBuilder;
-use tests_utils::BasicTestRepo;
 
 use crate::errors::ErrorKind;
 use crate::hook_loader::load_hooks;
 use crate::HookManager;
 
-async fn hook_manager_repo(fb: FacebookInit, repo: &BasicTestRepo) -> HookManager {
+async fn hook_manager_repo(fb: FacebookInit, repo: &HookTestRepo) -> HookManager {
     let ctx = CoreContext::test_mock(fb);
 
     let hook_repo = HookRepo::build_from(&repo);
@@ -48,7 +48,7 @@ async fn hook_manager_repo(fb: FacebookInit, repo: &BasicTestRepo) -> HookManage
 }
 
 async fn hook_manager_many_files_dirs_repo(fb: FacebookInit) -> HookManager {
-    hook_manager_repo(fb, &fixtures::ManyFilesDirs::get_test_repo(fb).await).await
+    hook_manager_repo(fb, &fixtures::ManyFilesDirs::get_repo(fb).await).await
 }
 
 #[mononoke::fbinit_test]

@@ -127,11 +127,11 @@ mod test {
     use blobstore::Loadable;
     use borrowed::borrowed;
     use fbinit::FacebookInit;
+    use hook_manager_testlib::HookTestRepo;
     use maplit::hashmap;
     use maplit::hashset;
     use mononoke_macros::mononoke;
     use mononoke_types::BonsaiChangeset;
-    use tests_utils::BasicTestRepo;
     use tests_utils::CreateCommitContext;
 
     use super::*;
@@ -153,12 +153,12 @@ mod test {
         fb: FacebookInit,
     ) -> (
         CoreContext,
-        BasicTestRepo,
+        HookTestRepo,
         HookRepo,
         NoExecutableBinariesHook,
     ) {
         let ctx = CoreContext::test_mock(fb);
-        let repo: BasicTestRepo = test_repo_factory::build_empty(ctx.fb)
+        let repo: HookTestRepo = test_repo_factory::build_empty(ctx.fb)
             .await
             .expect("Failed to create test repo");
         let hook_repo = HookRepo::build_from(&repo);

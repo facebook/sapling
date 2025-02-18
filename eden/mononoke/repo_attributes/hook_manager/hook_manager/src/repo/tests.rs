@@ -18,6 +18,7 @@ use bytes::Bytes;
 use context::CoreContext;
 use fbinit::FacebookInit;
 use futures::TryFutureExt;
+use hook_manager_testlib::HookTestRepo;
 use maplit::hashmap;
 use metaconfig_types::HookManagerParams;
 use mononoke_macros::mononoke;
@@ -39,7 +40,6 @@ use repo_permission_checker::AlwaysAllowRepoPermissionChecker;
 use scuba_ext::MononokeScubaSampleBuilder;
 use sorted_vector_map::sorted_vector_map;
 use tests_utils::bookmark;
-use tests_utils::BasicTestRepo;
 use tests_utils::CreateCommitContext;
 
 use crate::ChangesetHook;
@@ -172,7 +172,7 @@ impl ChangesetHook for LatestChangesChangesetHook {
 #[mononoke::fbinit_test]
 async fn test_cs_find_content_hook_with_blob_store(fb: FacebookInit) -> Result<(), Error> {
     let ctx = CoreContext::test_mock(fb);
-    let repo: BasicTestRepo = test_repo_factory::build_empty(ctx.fb).await?;
+    let repo: HookTestRepo = test_repo_factory::build_empty(ctx.fb).await?;
     let root_id = CreateCommitContext::new_root(&ctx, &repo)
         .add_file("dir/file", "dir/file")
         .add_file("dir-2/file", "dir-2/file")
@@ -261,7 +261,7 @@ async fn test_cs_find_content_hook_with_blob_store(fb: FacebookInit) -> Result<(
 #[mononoke::fbinit_test]
 async fn test_cs_file_changes_hook_with_blob_store(fb: FacebookInit) -> Result<(), Error> {
     let ctx = CoreContext::test_mock(fb);
-    let repo: BasicTestRepo = test_repo_factory::build_empty(ctx.fb).await?;
+    let repo: HookTestRepo = test_repo_factory::build_empty(ctx.fb).await?;
     let root_id = CreateCommitContext::new_root(&ctx, &repo)
         .add_file("file", "file")
         .add_file("dir/file", "dir/file")
@@ -317,7 +317,7 @@ async fn test_cs_file_changes_hook_with_blob_store(fb: FacebookInit) -> Result<(
 #[mononoke::fbinit_test]
 async fn test_cs_latest_changes_hook_with_blob_store(fb: FacebookInit) -> Result<(), Error> {
     let ctx = CoreContext::test_mock(fb);
-    let repo: BasicTestRepo = test_repo_factory::build_empty(ctx.fb).await?;
+    let repo: HookTestRepo = test_repo_factory::build_empty(ctx.fb).await?;
     let root_id = CreateCommitContext::new_root(&ctx, &repo)
         .add_file("file", "file")
         .commit()
@@ -356,7 +356,7 @@ async fn test_cs_latest_changes_hook_with_blob_store(fb: FacebookInit) -> Result
 
 async fn run_changeset_hooks_with_mgr(
     ctx: CoreContext,
-    repo: &BasicTestRepo,
+    repo: &HookTestRepo,
     changeset: Option<BonsaiChangeset>,
     bookmark_name: &str,
     hooks: HashMap<String, Box<dyn ChangesetHook>>,
@@ -390,7 +390,7 @@ async fn run_changeset_hooks_with_mgr(
 
 async fn setup_hook_manager(
     fb: FacebookInit,
-    repo: &BasicTestRepo,
+    repo: &HookTestRepo,
     bookmarks: HashMap<String, Vec<String>>,
     regexes: HashMap<String, Vec<String>>,
 ) -> HookManager {
@@ -419,7 +419,7 @@ fn default_changeset() -> BonsaiChangeset {
     }.freeze().expect("Created changeset")
 }
 
-async fn hook_manager_repo(fb: FacebookInit, repo: &BasicTestRepo) -> HookManager {
+async fn hook_manager_repo(fb: FacebookInit, repo: &HookTestRepo) -> HookManager {
     let ctx = CoreContext::test_mock(fb);
 
     let repo = HookRepo::build_from(repo);
@@ -446,7 +446,7 @@ fn to_mpath(string: &str) -> NonRootMPath {
 #[mononoke::fbinit_test]
 async fn test_hook_file_content_provider_limit_file_size(fb: FacebookInit) -> Result<(), Error> {
     let ctx = CoreContext::test_mock(fb);
-    let repo: BasicTestRepo = test_repo_factory::TestRepoFactory::new(fb)?
+    let repo: HookTestRepo = test_repo_factory::TestRepoFactory::new(fb)?
         .with_config_override(|config| {
             config.hook_max_file_size = 10;
         })
