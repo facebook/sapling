@@ -260,19 +260,18 @@ pub async fn do_pushrebase_bonsai(
     pushed: &HashSet<BonsaiChangeset>,
     prepushrebase_hooks: &[Box<dyn PushrebaseHook>],
 ) -> Result<PushrebaseOutcome, PushrebaseError> {
-    if pushed.iter().any(|b| b.has_subtree_changes()) {
-        return Err(format_err!("Pushrebase of subtree changes is not supported").into());
-    }
     let head = find_only_head_or_fail(pushed)?;
     let roots = find_roots(pushed);
 
     let root = find_closest_root(ctx, repo, config, onto_bookmark, &roots).await?;
 
-    let (client_cf, client_bcs) = try_join(
+    let (mut client_cf, client_bcs) = try_join(
         find_changed_files(ctx, repo, root, head),
         fetch_bonsai_range_ancestor_not_included(ctx, repo, root, head),
     )
     .await?;
+
+    client_cf.extend(find_subtree_changes(&client_bcs)?);
 
     // Normally filenodes (and all other types of derived data) are generated on the first
     // read. However if too many commits are pushed (e.g. when a new repo is merged-in) then
@@ -382,7 +381,7 @@ async fn rebase_in_loop(
             }
         }
 
-        let server_cf = find_changed_files(
+        let mut server_cf = find_changed_files(
             ctx,
             repo,
             latest_rebase_attempt,
@@ -390,7 +389,8 @@ async fn rebase_in_loop(
         )
         .await?;
 
-        // TODO: Avoid this clone
+        server_cf.extend(find_subtree_changes(&server_bcs)?);
+
         intersect_changed_files(server_cf, client_cf.clone())?;
 
         let rebase_outcome = do_rebase(
@@ -820,6 +820,30 @@ fn extract_conflict_files_from_bonsai_changeset(bcs: BonsaiChangeset) -> Vec<MPa
         .collect::<Vec<MPath>>()
 }
 
+fn find_subtree_changes(changesets: &[BonsaiChangeset]) -> Result<Vec<MPath>, PushrebaseError> {
+    let cs_ids = changesets
+        .iter()
+        .map(|bcs| bcs.get_changeset_id())
+        .collect::<HashSet<_>>();
+
+    let mut paths = Vec::new();
+    for bcs in changesets {
+        for (path, change) in bcs.subtree_changes() {
+            paths.push(path.clone());
+            if let Some((from_csid, from_path)) = change.change_source() {
+                if cs_ids.contains(&from_csid) {
+                    // This change is copying from the rebase set, so its
+                    // origin will be updated as part of the pushrebase.
+                    // This means we must make the source has not changed
+                    // since the root.
+                    paths.push(from_path.clone());
+                }
+            }
+        }
+    }
+    Ok(paths)
+}
+
 /// `left` and `right` are considerered to be conflit free, if none of the element from `left`
 /// is prefix of element from `right`, and vice versa.
 fn intersect_changed_files(left: Vec<MPath>, right: Vec<MPath>) -> Result<(), PushrebaseError> {
@@ -1003,6 +1027,17 @@ async fn rebase_changeset(
             FileChange::Deletion
             | FileChange::UntrackedDeletion
             | FileChange::UntrackedChange(_) => {}
+        }
+    }
+
+    // Subtree changes might be sourced from the rebase set, in which case they must be updated.
+    for (_path, change) in bcs.subtree_changes.iter_mut() {
+        if let Some((from_csid, _from_path)) = change.change_source() {
+            if rebased_set.contains(&from_csid) {
+                if let Some((new_from_csid, _)) = remapping.get(&from_csid) {
+                    change.replace_source_changeset_id(*new_from_csid);
+                }
+            }
         }
     }
 

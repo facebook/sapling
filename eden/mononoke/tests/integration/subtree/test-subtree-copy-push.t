@@ -60,5 +60,5 @@ Override subtree key to enable non-test subtree extra
   edenapi: uploaded 2 trees
   edenapi: uploaded 1 changeset
   pushrebasing stack (d55124608f34, 8feb31bbd259] (1 commit) to remote bookmark master_bookmark
-  abort: Server error: invalid request: Pushrebase failed: Pushrebase of subtree changes is not supported
-  [255]
+  0 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  updated remote bookmark master_bookmark to 8feb31bbd259

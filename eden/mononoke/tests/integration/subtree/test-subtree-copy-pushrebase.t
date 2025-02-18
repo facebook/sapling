@@ -62,5 +62,10 @@ Override subtree key to enable non-test subtree extra
   edenapi: uploaded 1 tree
   edenapi: uploaded 1 changeset
   pushrebasing stack (8aeb486cc22e, a925cd481025] (1 commit) to remote bookmark master_bookmark
-  abort: Server error: invalid request: Pushrebase failed: Pushrebase of subtree changes is not supported
+  abort: Server error: internal error: failed to derive hgchangesets batch (start:230217c31830e3f2eda3e863550f745bd1538416cbdc06687825f5d126795898, end:230217c31830e3f2eda3e863550f745bd1538416cbdc06687825f5d126795898)
+  
+  Caused by:
+      0: failed to derive hgchangesets batch (start:230217c31830e3f2eda3e863550f745bd1538416cbdc06687825f5d126795898, end:230217c31830e3f2eda3e863550f745bd1538416cbdc06687825f5d126795898)
+      1: failed to derive hgchangesets batch (start:230217c31830e3f2eda3e863550f745bd1538416cbdc06687825f5d126795898, end:230217c31830e3f2eda3e863550f745bd1538416cbdc06687825f5d126795898)
+      2: Subtree changes are not supported for hg changesets
   [255]

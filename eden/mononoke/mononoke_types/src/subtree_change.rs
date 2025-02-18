@@ -50,10 +50,28 @@ impl SubtreeChange {
         })
     }
 
+    /// Source of this subtree change, for all types that originate within this repo.
+    pub fn change_source(&self) -> Option<(ChangesetId, &MPath)> {
+        match self {
+            Self::SubtreeCopy(copy) => Some((copy.from_cs_id, &copy.from_path)),
+            Self::SubtreeDeepCopy(copy) => Some((copy.from_cs_id, &copy.from_path)),
+            Self::SubtreeMerge(merge) => Some((merge.from_cs_id, &merge.from_path)),
+        }
+    }
+
+    /// Source of this subtree change, for copy operations only.
     pub fn copy_source(&self) -> Option<(ChangesetId, &MPath)> {
         match self {
             Self::SubtreeCopy(copy) => Some((copy.from_cs_id, &copy.from_path)),
             _ => None,
+        }
+    }
+
+    pub fn replace_source_changeset_id(&mut self, new_cs_id: ChangesetId) {
+        match self {
+            Self::SubtreeCopy(copy) => copy.from_cs_id = new_cs_id,
+            Self::SubtreeDeepCopy(copy) => copy.from_cs_id = new_cs_id,
+            Self::SubtreeMerge(merge) => merge.from_cs_id = new_cs_id,
         }
     }
 }
