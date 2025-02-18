@@ -15,7 +15,6 @@ use context::CoreContext;
 use derived_data::batch::split_batch_in_linear_stacks;
 use derived_data::batch::FileConflicts;
 use derived_data::batch::StackItem;
-use derived_data_manager::BonsaiDerivable;
 use derived_data_manager::DerivationContext;
 use futures::stream::FuturesOrdered;
 use futures::stream::TryStreamExt;
@@ -23,6 +22,9 @@ use mononoke_types::ChangesetId;
 use stats::prelude::*;
 
 use crate::derive::derive_skeleton_manifest_stack;
+use crate::derive::derive_skeleton_manifest_with_subtree_changes;
+use crate::mapping::get_file_changes;
+use crate::mapping::get_skeleton_manifest_subtree_changes;
 use crate::RootSkeletonManifestId;
 use crate::SkeletonManifestId;
 
@@ -94,23 +96,33 @@ pub async fn new_batch_derivation(
     file_changes: Vec<StackItem>,
     already_derived: &mut HashMap<ChangesetId, RootSkeletonManifestId>,
 ) -> Result<(), Error> {
-    if parent_skeleton_manifests.len() > 1 {
-        // we can't derive stack for a merge commit,
-        // so let's derive it without batching
+    if file_changes.len() == 1 || parent_skeleton_manifests.len() > 1 {
+        // we can't derive stack for a merge commit or commits with subtree changes,
+        // so derive without batching
         for item in file_changes {
             let bonsai = item.cs_id.load(ctx, derivation_ctx.blobstore()).await?;
             let parents = derivation_ctx
                 .fetch_unknown_parents(ctx, Some(already_derived), &bonsai)
                 .await?;
-            let derived = RootSkeletonManifestId::derive_single(
+            let subtree_changes = get_skeleton_manifest_subtree_changes(
                 ctx,
                 derivation_ctx,
-                bonsai,
-                parents,
                 Some(already_derived),
+                &bonsai,
             )
             .await?;
-            already_derived.insert(item.cs_id, derived);
+            let derived = derive_skeleton_manifest_with_subtree_changes(
+                ctx,
+                derivation_ctx,
+                parents
+                    .into_iter()
+                    .map(RootSkeletonManifestId::into_skeleton_manifest_id)
+                    .collect(),
+                get_file_changes(&bonsai),
+                subtree_changes,
+            )
+            .await?;
+            already_derived.insert(item.cs_id, RootSkeletonManifestId(derived));
         }
     } else {
         let first = file_changes.first().map(|item| item.cs_id);

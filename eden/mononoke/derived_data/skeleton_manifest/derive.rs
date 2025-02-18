@@ -31,6 +31,7 @@ use manifest::derive_manifests_for_simple_stack_of_commits;
 use manifest::flatten_subentries;
 use manifest::Entry;
 use manifest::ManifestChanges;
+use manifest::ManifestParentReplacement;
 use manifest::TreeInfo;
 use mononoke_types::path::MPath;
 use mononoke_types::skeleton_manifest::SkeletonManifest;
@@ -88,15 +89,12 @@ pub(crate) async fn derive_skeleton_manifest_stack(
     Ok(res.into_iter().collect())
 }
 
-/// Derives skeleton manifests for bonsai_changeset `cs_id` given parent
-/// skeleton manifests. Note that `derive_manifest()` does a lot of the heavy
-/// lifting for us, and this crate has to provide only functions to create a
-/// single fsnode, and check that the leaf entries are valid during merges.
-pub(crate) async fn derive_skeleton_manifest(
+pub(crate) async fn derive_skeleton_manifest_with_subtree_changes(
     ctx: &CoreContext,
     derivation_ctx: &DerivationContext,
     parents: Vec<SkeletonManifestId>,
     changes: Vec<(NonRootMPath, Option<(ContentId, FileType)>)>,
+    subtree_changes: Vec<ManifestParentReplacement<SkeletonManifestId, ()>>,
 ) -> Result<SkeletonManifestId> {
     let blobstore = derivation_ctx.blobstore();
 
@@ -108,7 +106,7 @@ pub(crate) async fn derive_skeleton_manifest(
             blobstore.clone(),
             parents.clone(),
             changes,
-            None,
+            subtree_changes,
             {
                 cloned!(blobstore, ctx);
                 move |tree_info, sender| {
@@ -360,6 +358,22 @@ mod test {
 
     use super::*;
     use crate::mapping::get_file_changes;
+
+    async fn derive_skeleton_manifest(
+        ctx: &CoreContext,
+        derivation_ctx: &DerivationContext,
+        parents: Vec<SkeletonManifestId>,
+        changes: Vec<(NonRootMPath, Option<(ContentId, FileType)>)>,
+    ) -> Result<SkeletonManifestId> {
+        derive_skeleton_manifest_with_subtree_changes(
+            ctx,
+            derivation_ctx,
+            parents,
+            changes,
+            Vec::new(),
+        )
+        .await
+    }
 
     #[facet::container]
     struct TestRepo(

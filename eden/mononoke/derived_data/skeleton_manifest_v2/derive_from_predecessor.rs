@@ -40,10 +40,15 @@ pub(crate) async fn inner_derive_from_predecessor(
             |skeleton_manifest_v2, paths| {
                 cloned!(ctx, blobstore);
                 async move {
-                    let new_skeleton_manifest_v2 =
-                        inner_derive(&ctx, &blobstore, vec![skeleton_manifest_v2], paths)
-                            .await?
-                            .unwrap_or_else(SkeletonManifestV2::empty);
+                    let new_skeleton_manifest_v2 = inner_derive(
+                        &ctx,
+                        &blobstore,
+                        vec![skeleton_manifest_v2],
+                        paths,
+                        Vec::new(),
+                    )
+                    .await?
+                    .unwrap_or_else(SkeletonManifestV2::empty);
                     Ok(new_skeleton_manifest_v2)
                 }
             },
