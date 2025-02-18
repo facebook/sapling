@@ -157,8 +157,8 @@ def bisectmsg(repo, ui):
 
     if len(state["good"]) > 0 and len(state["bad"]) > 0:
         try:
-            nodes, commitsremaining, badtogood, rightnode, leftnode = hbisect.bisect(
-                repo, state
+            nodes, _untested, commitsremaining, badtogood, rightnode, leftnode = (
+                hbisect.bisect(repo, state)
             )
 
             searchesremaining = (

@@ -27,7 +27,13 @@
   Testing changeset 9bc730a19041 (13 changesets remaining, ~3 tests)
   5 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ hg bisect -b
-  Due to skipped revisions, the first bad revision could be any of:
+  The first bad revision is:
+  commit:      9bc730a19041
+  user:        test
+  date:        Thu Jan 01 00:00:00 1970 +0000
+  summary:     E
+  
+  Revisions omitted due to the skip option:
   commit:      112478962961
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
@@ -42,8 +48,3 @@
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     D
-  
-  commit:      9bc730a19041
-  user:        test
-  date:        Thu Jan 01 00:00:00 1970 +0000
-  summary:     E

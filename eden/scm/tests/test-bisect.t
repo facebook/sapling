@@ -312,7 +312,13 @@
   Testing changeset b53bea5e2fcb (4 changesets remaining, ~2 tests)
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ hg bisect -s
-  Due to skipped revisions, the first bad revision could be any of:
+  The first bad revision is:
+  commit:      9b2ba8336a65
+  user:        test
+  date:        Thu Jan 01 00:00:04 1970 +0000
+  summary:     msg 4
+  
+  Revisions omitted due to the skip option:
   commit:      5cd978ea5149
   user:        test
   date:        Thu Jan 01 00:00:01 1970 +0000
@@ -327,11 +333,6 @@
   user:        test
   date:        Thu Jan 01 00:00:03 1970 +0000
   summary:     msg 3
-  
-  commit:      9b2ba8336a65
-  user:        test
-  date:        Thu Jan 01 00:00:04 1970 +0000
-  summary:     msg 4
 
 # reproduce non converging bisect, issue1182
 
@@ -341,16 +342,17 @@
   Testing changeset 5cd978ea5149 (2 changesets remaining, ~1 tests)
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ hg bisect -s
-  Due to skipped revisions, the first bad revision could be any of:
-  commit:      5cd978ea5149
-  user:        test
-  date:        Thu Jan 01 00:00:01 1970 +0000
-  summary:     msg 1
-  
+  The first bad revision is:
   commit:      db07c04beaca
   user:        test
   date:        Thu Jan 01 00:00:02 1970 +0000
   summary:     msg 2
+  
+  Revisions omitted due to the skip option:
+  commit:      5cd978ea5149
+  user:        test
+  date:        Thu Jan 01 00:00:01 1970 +0000
+  summary:     msg 1
 
 # test no action
 

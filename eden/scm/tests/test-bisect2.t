@@ -432,7 +432,13 @@ first bad rev is 15
   3 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ hg log -q -r 'bisect(ignored)'
   $ hg bisect -b
-  Due to skipped revisions, the first bad revision could be any of:
+  The first bad revision is:
+  commit:      857b178a7cf3
+  user:        test
+  date:        Thu Jan 01 00:00:15 1970 +0000
+  summary:     merge 10,13
+  
+  Revisions omitted due to the skip option:
   commit:      3c77083deb4a
   user:        test
   date:        Thu Jan 01 00:00:09 1970 +0000
@@ -447,12 +453,6 @@ first bad rev is 15
   user:        test
   date:        Thu Jan 01 00:00:13 1970 +0000
   summary:     13
-  
-  commit:      857b178a7cf3
-  user:        test
-  date:        Thu Jan 01 00:00:15 1970 +0000
-  summary:     merge 10,13
-  
   $ hg log -q -r 'bisect(range)'
   4ca5088da217
   051e12f87bf1
@@ -521,7 +521,13 @@ first good revision is 17
   857b178a7cf3
   228c06deef46
   $ hg bisect -s
-  Due to skipped revisions, the first good revision could be any of:
+  The first good revision is:
+  commit:      228c06deef46
+  user:        test
+  date:        Thu Jan 01 00:00:17 1970 +0000
+  summary:     17
+  
+  Revisions omitted due to the skip option:
   commit:      857b178a7cf3
   user:        test
   date:        Thu Jan 01 00:00:15 1970 +0000
@@ -531,12 +537,6 @@ first good revision is 17
   user:        test
   date:        Thu Jan 01 00:00:16 1970 +0000
   summary:     16
-  
-  commit:      228c06deef46
-  user:        test
-  date:        Thu Jan 01 00:00:17 1970 +0000
-  summary:     17
-  
   $ hg log -q -r 'bisect(range)'
   dab8161ac8fc
   3c77083deb4a

@@ -280,10 +280,12 @@ def _runbisect(repo, range, bad, skip, node_to_infos=None):
 
     # matches the main "bisect" command implementation, but works in a loop
     for i in itertools.count(1):
-        nodes, candidate_count, isgood, badnode, goodnode = hbisect.bisect(repo, state)
+        nodes, untested, candidate_count, isgood, badnode, goodnode = hbisect.bisect(
+            repo, state
+        )
 
         if candidate_count == 0:
-            yield i, "done", state, nodes, candidate_count, isgood
+            yield i, "done", state, nodes, untested, candidate_count, isgood
             break
 
         assert len(nodes) == 1  # only a single node can be tested next
@@ -301,7 +303,7 @@ def _runbisect(repo, range, bad, skip, node_to_infos=None):
         state[action].append(node)
         if node_to_infos is not None:
             node_to_infos[node].append(f"#{i} {action}")
-        yield i, action, state, nodes, candidate_count, isgood
+        yield i, action, state, nodes, untested, candidate_count, isgood
 
 
 @command(
@@ -328,11 +330,11 @@ def debugbisect(ui, repo, **opts):
 
     # matches the main "bisect" command implementation, but works in a loop
     ui.pushbuffer()
-    for i, action, state, nodes, candidate_count, isgood in _runbisect(
+    for i, action, state, nodes, untested, candidate_count, isgood in _runbisect(
         repo, range, bad, skip, node_to_infos
     ):
         if action == "done":
-            hbisect.printresult(ui, repo, state, displayer, nodes, isgood)
+            hbisect.printresult(ui, repo, state, displayer, nodes, untested, isgood)
         else:
             assert len(nodes) == 1
             node = nodes[0]

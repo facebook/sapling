@@ -1039,7 +1039,9 @@ the sparse profile from the known %s changeset %s\n"
 
             state[nodestate].append(node)
 
-            nodes, changesets, bgood, badnode, goodnode = hbisect.bisect(repo, state)
+            nodes, _untested, changesets, bgood, badnode, goodnode = hbisect.bisect(
+                repo, state
+            )
             node = nodes[0]
 
             # update state
@@ -1099,7 +1101,7 @@ the sparse profile from the known %s changeset %s\n"
                 ui.status(_("changeset %s: %s\n") % (ctx, transition))
                 hbisect.checkstate(state)
                 # bisect
-                nodes, changesets, bgood, badnode, goodnode = hbisect.bisect(
+                nodes, untested, changesets, bgood, badnode, goodnode = hbisect.bisect(
                     repo, state
                 )
                 node = nodes[0]
@@ -1117,13 +1119,13 @@ the sparse profile from the known %s changeset %s\n"
         finally:
             state["current"] = [node]
             hbisect.save_state(repo, state)
-        hbisect.printresult(ui, repo, state, displayer, nodes, bgood)
+        hbisect.printresult(ui, repo, state, displayer, nodes, untested, bgood)
         return
 
     hbisect.checkstate(state)
 
     # actually bisect
-    nodes, changesets, good, badnode, goodnode = hbisect.bisect(repo, state)
+    nodes, untested, changesets, good, badnode, goodnode = hbisect.bisect(repo, state)
 
     # update to next check
     if extend:
@@ -1142,7 +1144,7 @@ the sparse profile from the known %s changeset %s\n"
                     if node != extnode:
                         if changesets == 0:
                             hbisect.printresult(
-                                ui, repo, state, displayer, [node], good
+                                ui, repo, state, displayer, [node], [], good
                             )
                             return
                         showtestingnext(repo.changelog.rev(node), node, changesets)
@@ -1152,7 +1154,7 @@ the sparse profile from the known %s changeset %s\n"
         raise error.Abort(_("nothing to extend"))
 
     if changesets == 0:
-        hbisect.printresult(ui, repo, state, displayer, nodes, good)
+        hbisect.printresult(ui, repo, state, displayer, nodes, untested, good)
     else:
         assert len(nodes) == 1  # only a single node can be tested next
         node = nodes[0]
@@ -1165,7 +1167,7 @@ the sparse profile from the known %s changeset %s\n"
                 node, changesets, good, badnode, goodnode
             )
             if changesets == 0:
-                hbisect.printresult(ui, repo, state, displayer, [node], good)
+                hbisect.printresult(ui, repo, state, displayer, [node], [], good)
                 return
 
         rev = repo.changelog.rev(node)

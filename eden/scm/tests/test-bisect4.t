@@ -86,12 +86,13 @@ Linear:
     #4  choose A07,  9 remaining, marked as bad
     #5  choose A03,  6 remaining, marked as skip
     #6  choose A02,  6 remaining, marked as good
-    Due to skipped revisions, the first bad revision could be any of:
+    The first bad revision is:
+    A07
+    Revisions omitted due to the skip option:
     A03
     A04
     A05
     A06
-    A07
 
 - Distribution
   $ sl debugbisectall -r $A01::$A20

@@ -29,13 +29,14 @@ if TYPE_CHECKING:
 
 def bisect(repo, state):
     """find the next node (if any) for testing during a bisect search.
-    returns a (nodes, number, good, badnode, goodnode) tuple, where badnode and
-    goodnode - borders of the range.
+    returns a (nodes, untested, number, good, badnode, goodnode) tuple,
+    where badnode and goodnode are the borders of the range.
 
-    'nodes' is the final result of the bisect if 'number' is 0.
+    - 'nodes' is the final result of the bisect if 'number' is 0.
     Otherwise 'number' indicates the remaining possible candidates for
     the search and 'nodes' contains the next bisect target.
-    'good' is True if bisect is searching for a first good changeset, False
+    - 'untested' is usually empty, or a subset of 'skip'.
+    - 'good' is True if bisect is searching for a first good changeset, False
     if searching for a first bad one.
     """
     # States:
@@ -78,7 +79,8 @@ def bisect(repo, state):
                 )
 
         return (
-            list((first_heads + untested).iterrev()),
+            list(first_heads.iterrev()),
+            list(untested.iterrev()),
             0,
             badtogood,
             headnode,
@@ -114,14 +116,17 @@ def bisect(repo, state):
         else:
             # everything is skipped
             return (
-                list((first_heads + untested).iterrev()),
+                list(first_heads.iterrev()),
+                list(untested.iterrev()),
                 0,
                 badtogood,
                 headnode,
                 rootnode,
             )
 
-    return ([bestnode], total, badtogood, headnode, rootnode)
+    # overwrite untested with empty list , since we don't need it anymore
+    untested = []
+    return ([bestnode], untested, total, badtogood, headnode, rootnode)
 
 
 def checksparsebisectskip(repo, candidatenode, badnode, goodnode) -> str:
@@ -359,7 +364,7 @@ def shortlabel(label):
     return None
 
 
-def printresult(ui, repo, state, displayer, nodes: Sized, good) -> None:
+def printresult(ui, repo, state, displayer, nodes: Sized, untested, good) -> None:
     if len(nodes) == 1:
         # narrowed it down to a single revision
         if good:
@@ -378,23 +383,8 @@ def printresult(ui, repo, state, displayer, nodes: Sized, good) -> None:
                 )
                 % extendnode
             )
-    else:
-        # multiple possible revisions
-        if good:
-            ui.write(
-                _(
-                    "Due to skipped revisions, the first "
-                    "good revision could be any of:\n"
-                )
-            )
-        else:
-            ui.write(
-                _(
-                    "Due to skipped revisions, the first "
-                    "bad revision could be any of:\n"
-                )
-            )
-        # pyre-fixme[16]: `Sized` has no attribute `__iter__`.
-        for n in nodes:
+    if untested:
+        ui.write(_("Revisions omitted due to the skip option:\n"))
+        for n in untested:
             displayer.show(repo[n])
     displayer.close()
