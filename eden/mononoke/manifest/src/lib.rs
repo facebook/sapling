@@ -9,6 +9,7 @@ pub use blobstore::StoreLoadable;
 
 pub use crate::bonsai::bonsai_diff;
 pub use crate::bonsai::BonsaiDiffFileChange;
+pub use crate::bonsai::ManifestParentReplacement;
 pub use crate::combined::Combined;
 pub use crate::combined::CombinedId;
 pub use crate::comparison::compare_manifest;

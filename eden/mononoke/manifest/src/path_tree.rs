@@ -10,7 +10,7 @@ use mononoke_types::prefix_tree::PrefixTree;
 use mononoke_types::MPathElement;
 use mononoke_types::NonRootMPath;
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Eq, PartialEq)]
 pub struct PathTree<V> {
     pub value: V,
     pub subentries: PrefixTree<Self>,
