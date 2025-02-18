@@ -35,6 +35,7 @@ use manifest::flatten_subentries;
 use manifest::Entry;
 use manifest::LeafInfo;
 use manifest::ManifestChanges;
+use manifest::ManifestParentReplacement;
 use manifest::TreeInfo;
 use mononoke_types::fsnode::Fsnode;
 use mononoke_types::fsnode::FsnodeDirectory;
@@ -123,6 +124,7 @@ pub(crate) async fn derive_fsnode(
     derivation_ctx: &DerivationContext,
     parents: Vec<FsnodeId>,
     changes: Vec<(NonRootMPath, Option<(ContentId, FileType)>)>,
+    subtree_changes: Vec<ManifestParentReplacement<FsnodeId, FsnodeFile>>,
 ) -> Result<FsnodeId> {
     let blobstore = derivation_ctx.blobstore();
     let content_ids = changes
@@ -142,7 +144,7 @@ pub(crate) async fn derive_fsnode(
         blobstore.clone(),
         parents.clone(),
         changes,
-        None,
+        subtree_changes,
         {
             cloned!(blobstore, ctx);
             move |tree_info, sender| {
@@ -478,7 +480,13 @@ mod test {
                 .block_on(bonsai_changeset_from_hg(&ctx, &repo, parent_hg_cs))
                 .unwrap();
 
-            let f = derive_fsnode(&ctx, &derivation_ctx, vec![], get_file_changes(&bcs));
+            let f = derive_fsnode(
+                &ctx,
+                &derivation_ctx,
+                vec![],
+                get_file_changes(&bcs),
+                Vec::new(),
+            );
 
             let root_fsnode_id = runtime.block_on(f).unwrap();
 
@@ -534,6 +542,7 @@ mod test {
                 &derivation_ctx,
                 vec![parent_fsnode_id.clone()],
                 get_file_changes(&bcs),
+                Vec::new(),
             );
 
             let root_fsnode_id = runtime.block_on(f).unwrap();
@@ -594,7 +603,13 @@ mod test {
             let (_bcs_id, bcs) = runtime
                 .block_on(bonsai_changeset_from_hg(&ctx, &repo, parent_hg_cs))
                 .unwrap();
-            let f = derive_fsnode(&ctx, &derivation_ctx, vec![], get_file_changes(&bcs));
+            let f = derive_fsnode(
+                &ctx,
+                &derivation_ctx,
+                vec![],
+                get_file_changes(&bcs),
+                Vec::new(),
+            );
             runtime.block_on(f).unwrap()
         };
 
@@ -608,6 +623,7 @@ mod test {
                 &derivation_ctx,
                 vec![parent_fsnode_id.clone()],
                 get_file_changes(&bcs),
+                Vec::new(),
             );
             runtime.block_on(f).unwrap()
         };
@@ -623,6 +639,7 @@ mod test {
                 &derivation_ctx,
                 vec![parent_fsnode_id.clone()],
                 get_file_changes(&bcs),
+                Vec::new(),
             );
 
             let root_fsnode_id = runtime.block_on(f).unwrap();
@@ -808,6 +825,7 @@ mod test {
                 &derivation_ctx,
                 vec![parent_fsnode_id.clone()],
                 get_file_changes(&bcs),
+                Vec::new(),
             );
 
             let root_fsnode_id = runtime.block_on(f).unwrap();
