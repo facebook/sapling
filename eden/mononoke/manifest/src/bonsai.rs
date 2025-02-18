@@ -521,6 +521,26 @@ pub struct ManifestParentReplacement<ManifestId, Leaf> {
     pub replacements: Vec<Entry<ManifestId, Leaf>>,
 }
 
+impl<ManifestId, Leaf> ManifestParentReplacement<ManifestId, Leaf> {
+    pub fn map<NewManifestId, NewLeaf>(
+        self,
+        mut mf_fn: impl FnMut(ManifestId) -> NewManifestId,
+        mut leaf_fn: impl FnMut(Leaf) -> NewLeaf,
+    ) -> ManifestParentReplacement<NewManifestId, NewLeaf> {
+        ManifestParentReplacement {
+            path: self.path,
+            replacements: self
+                .replacements
+                .into_iter()
+                .map(|entry| match entry {
+                    Entry::Tree(id) => Entry::Tree(mf_fn(id)),
+                    Entry::Leaf(leaf) => Entry::Leaf(leaf_fn(leaf)),
+                })
+                .collect(),
+        }
+    }
+}
+
 #[cfg(test)]
 mod test {
     use std::sync::Arc;

@@ -334,6 +334,7 @@ pub fn derive_manifest_with_io_sender<LeafChange, TreeId, Leaf, T, TFut, L, LFut
     store: Store,
     parents: impl IntoIterator<Item = TreeId>,
     changes: impl IntoIterator<Item = (NonRootMPath, Option<LeafChange>)>,
+    subtree_changes: impl IntoIterator<Item = ManifestParentReplacement<TreeId, Leaf>>,
     create_tree_with_sender: T,
     create_leaf_with_sender: L,
 ) -> impl Future<Output = Result<Option<TreeId>>>
@@ -367,7 +368,7 @@ where
         store,
         parents,
         changes,
-        None,
+        subtree_changes,
         {
             cloned!(sender);
             move |tree_info| create_tree_with_sender(tree_info, sender.clone())

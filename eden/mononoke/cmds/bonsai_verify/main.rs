@@ -16,6 +16,7 @@ use std::sync::Arc;
 use std::sync::Mutex;
 use std::time::Instant;
 
+use anyhow::ensure;
 use anyhow::format_err;
 use anyhow::Error;
 use anyhow::Result;
@@ -405,11 +406,17 @@ fn subcommmand_hg_manifest_verify(
 
                         let start = Instant::now();
 
+                        ensure!(
+                            !bonsai.has_subtree_changes(),
+                            "Subtree changes are not supported"
+                        );
+
                         get_manifest_from_bonsai(
                             ctx.clone(),
                             repo.repo_blobstore_arc(),
                             bonsai.clone(),
                             parents,
+                            None,
                         )
                         .map_ok(move |result| {
                             if result != expected {

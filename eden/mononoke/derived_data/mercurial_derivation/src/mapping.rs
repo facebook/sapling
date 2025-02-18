@@ -79,15 +79,15 @@ impl BonsaiDerivable for MappedHgChangesetId {
         if bonsai.is_snapshot() {
             bail!("Can't derive Hg changeset for snapshot")
         }
-        if bonsai.has_subtree_changes() {
-            bail!("Subtree changes are not supported for hg changesets");
-        }
+        let subtree_change_sources =
+            get_subtree_change_sources(ctx, derivation_ctx, &bonsai, &HashMap::new()).await?;
         let derivation_opts = get_hg_changeset_derivation_options(derivation_ctx);
         crate::derive_hg_changeset::derive_from_parents(
             ctx,
             derivation_ctx.blobstore(),
             bonsai,
             parents,
+            subtree_change_sources,
             &derivation_opts,
         )
         .await
@@ -101,8 +101,8 @@ impl BonsaiDerivable for MappedHgChangesetId {
         if bonsais.is_empty() {
             return Ok(HashMap::new());
         }
-        if bonsais.iter().any(|bonsai| bonsai.has_subtree_changes()) {
-            bail!("Subtree changes are not supported for hg changesets");
+        if bonsais.iter().any(|bonsai| bonsai.is_snapshot()) {
+            bail!("Can't derive Hg changeset for snapshot");
         }
 
         STATS::new_parallel.add_value(1);
@@ -144,13 +144,24 @@ impl BonsaiDerivable for MappedHgChangesetId {
             let left_bonsais = bonsais.split_off(stack.stack_items.len());
             if derived_parents.len() > 1 || bonsais.len() == 1 {
                 // we can't derive stack for a merge commit or for a commit that contains renames,
-                // so let's derive it without batching
+                // or subtree changes so let's derive it without batching
                 for bonsai in bonsais {
                     let parents = derivation_ctx
                         .fetch_unknown_parents(ctx, Some(&res), &bonsai)
                         .await?;
                     let cs_id = bonsai.get_changeset_id();
-                    let derived = Self::derive_single(ctx, derivation_ctx, bonsai, parents).await?;
+                    let subtree_change_sources =
+                        get_subtree_change_sources(ctx, derivation_ctx, &bonsai, &res).await?;
+                    let derivation_opts = get_hg_changeset_derivation_options(derivation_ctx);
+                    let derived = crate::derive_hg_changeset::derive_from_parents(
+                        ctx,
+                        derivation_ctx.blobstore(),
+                        bonsai,
+                        parents,
+                        subtree_change_sources,
+                        &derivation_opts,
+                    )
+                    .await?;
                     res.insert(cs_id, derived);
                 }
             } else {
@@ -251,6 +262,39 @@ fn get_hg_changeset_derivation_options(
     HgChangesetDeriveOptions {
         set_committer_field: derivation_ctx.config().hg_set_committer_extra,
     }
+}
+
+async fn get_subtree_change_sources(
+    ctx: &CoreContext,
+    derivation_ctx: &DerivationContext,
+    bonsai: &BonsaiChangeset,
+    mapping: &HashMap<ChangesetId, MappedHgChangesetId>,
+) -> Result<HashMap<ChangesetId, HgChangesetId>> {
+    let subtree_change_sources = bonsai
+        .subtree_changes()
+        .iter()
+        .flat_map(|(_path, change)| change.change_source().map(|(csid, _)| csid))
+        .collect::<HashSet<_>>();
+    let mut sources = HashMap::new();
+    let mut other = Vec::new();
+    for source in subtree_change_sources {
+        if let Some(hg_cs_id) = mapping.get(&source) {
+            sources.insert(source, hg_cs_id.hg_changeset_id());
+        } else {
+            other.push(source);
+        }
+    }
+    if !other.is_empty() {
+        sources.extend(
+            derivation_ctx
+                .bonsai_hg_mapping()?
+                .get(ctx, other.into())
+                .await?
+                .into_iter()
+                .map(|entry| (entry.bcs_id, entry.hg_cs_id)),
+        )
+    };
+    Ok(sources)
 }
 
 #[derive(Debug, Clone, Eq, PartialEq, Hash)]

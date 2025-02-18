@@ -36,6 +36,7 @@ use mercurial_types::blobs::UploadHgFileEntry;
 use mercurial_types::blobs::UploadHgNodeHash;
 use mercurial_types::blobs::UploadHgTreeEntry;
 use mercurial_types::manifest::Type as HgManifestType;
+use mercurial_types::subtree::HgSubtreeChanges;
 use mercurial_types::HgFileNodeId;
 use mercurial_types::HgManifestId;
 use mononoke_types::path::MPath;
@@ -139,6 +140,7 @@ pub async fn derive_hg_manifest(
     blobstore: Arc<dyn Blobstore>,
     parents: impl IntoIterator<Item = HgManifestId>,
     changes: impl IntoIterator<Item = (NonRootMPath, Option<(FileType, HgFileNodeId)>)> + 'static,
+    subtree_changes: Option<&HgSubtreeChanges>,
 ) -> Result<HgManifestId, Error> {
     let parents: Vec<_> = parents
         .into_iter()
@@ -146,11 +148,22 @@ pub async fn derive_hg_manifest(
         .map(|(i, m)| Traced::assign(ParentIndex(i), m))
         .collect();
 
+    let subtree_changes = match subtree_changes {
+        Some(changes) => changes
+            .to_manifest_replacements(&ctx, &blobstore)
+            .await?
+            .into_iter()
+            .map(|r| r.map(Traced::generate, Traced::generate))
+            .collect(),
+        None => Vec::new(),
+    };
+
     let tree_id = derive_manifest_with_io_sender(
         ctx.clone(),
         blobstore.clone(),
         parents.clone(),
         changes,
+        subtree_changes,
         {
             cloned!(ctx, blobstore);
             move |tree_info, sender| {

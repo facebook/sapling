@@ -119,6 +119,7 @@ async fn derive_hg(
             repo.repo_blobstore_arc(),
             bcs.clone(),
             parent_manifests,
+            None,
         )
         .await?;
 

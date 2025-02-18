@@ -27,6 +27,7 @@ use super::revlog::Extra;
 use super::revlog::RevlogChangeset;
 use crate::nodehash::HgChangesetId;
 use crate::nodehash::HgManifestId;
+use crate::subtree::HgSubtreeChanges;
 use crate::HgBlobNode;
 use crate::HgChangesetEnvelopeMut;
 use crate::HgNodeHash;
@@ -35,6 +36,7 @@ use crate::NonRootMPath;
 
 const STEP_PARENTS_METADATA_KEY: &[u8] = b"stepparents";
 const COMMITTER_METADATA_KEY: &[u8] = b"committer";
+const SUBTREE_METADATA_KEY: &[u8] = b"subtree";
 
 pub struct ChangesetMetadata {
     pub user: String,
@@ -82,6 +84,16 @@ impl ChangesetMetadata {
         self.extra
             .insert(COMMITTER_METADATA_KEY.into(), value.into());
 
+        Ok(())
+    }
+
+    pub fn record_subtree_changes(
+        &mut self,
+        subtree_changes: HgSubtreeChanges,
+    ) -> Result<(), Error> {
+        let json = subtree_changes.to_json()?;
+        self.extra
+            .insert(SUBTREE_METADATA_KEY.into(), Bytes::from(json));
         Ok(())
     }
 }

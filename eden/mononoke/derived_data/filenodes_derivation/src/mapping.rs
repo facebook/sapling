@@ -119,9 +119,6 @@ impl BonsaiDerivable for FilenodesOnlyPublic {
         bonsai: BonsaiChangeset,
         _parents: Vec<Self>,
     ) -> Result<Self> {
-        if bonsai.has_subtree_changes() {
-            bail!("Subtree changes are not supported for filenodes");
-        }
         derive_filenodes(ctx, derivation_ctx, bonsai).await
     }
 
@@ -130,9 +127,6 @@ impl BonsaiDerivable for FilenodesOnlyPublic {
         derivation_ctx: &DerivationContext,
         bonsais: Vec<BonsaiChangeset>,
     ) -> Result<HashMap<ChangesetId, Self>> {
-        if bonsais.iter().any(|bcs| bcs.has_subtree_changes()) {
-            bail!("Subtree changes are not supported for filenodes");
-        }
         let filenodes = derivation_ctx.filenodes()?;
         let prepared = derive_filenodes_in_batch(ctx, derivation_ctx, bonsais).await?;
         let mut res = HashMap::with_capacity(prepared.len());

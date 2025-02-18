@@ -79,20 +79,20 @@ impl SubtreeChange {
 #[derive(ThriftConvert, Arbitrary, Debug, Clone, Eq, PartialEq, Hash)]
 #[thrift(thrift::bonsai::SubtreeCopy)]
 pub struct SubtreeCopy {
-    from_path: MPath,
-    from_cs_id: ChangesetId,
+    pub from_path: MPath,
+    pub from_cs_id: ChangesetId,
 }
 
 #[derive(ThriftConvert, Arbitrary, Debug, Clone, Eq, PartialEq, Hash)]
 #[thrift(thrift::bonsai::SubtreeDeepCopy)]
 pub struct SubtreeDeepCopy {
-    from_path: MPath,
-    from_cs_id: ChangesetId,
+    pub from_path: MPath,
+    pub from_cs_id: ChangesetId,
 }
 
 #[derive(ThriftConvert, Arbitrary, Debug, Clone, Eq, PartialEq, Hash)]
 #[thrift(thrift::bonsai::SubtreeMerge)]
 pub struct SubtreeMerge {
-    from_path: MPath,
-    from_cs_id: ChangesetId,
+    pub from_path: MPath,
+    pub from_cs_id: ChangesetId,
 }

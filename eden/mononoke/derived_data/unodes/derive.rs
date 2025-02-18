@@ -110,6 +110,7 @@ pub(crate) async fn derive_unode_manifest(
         blobstore.clone(),
         parents.clone(),
         changes,
+        None,
         {
             cloned!(ctx, blobstore);
             move |tree_info, sender| {

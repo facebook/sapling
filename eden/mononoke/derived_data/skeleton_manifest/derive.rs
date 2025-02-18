@@ -108,6 +108,7 @@ pub(crate) async fn derive_skeleton_manifest(
             blobstore.clone(),
             parents.clone(),
             changes,
+            None,
             {
                 cloned!(blobstore, ctx);
                 move |tree_info, sender| {

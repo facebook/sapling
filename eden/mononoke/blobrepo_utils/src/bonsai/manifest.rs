@@ -338,6 +338,6 @@ async fn apply_diff(
         .map(|result| (result.path().clone(), result.into_leaf()))
         .collect();
     let manifest_id =
-        derive_hg_manifest(ctx, repo.repo_blobstore_arc(), manifestids, changes).await?;
+        derive_hg_manifest(ctx, repo.repo_blobstore_arc(), manifestids, changes, None).await?;
     Ok(manifest_id.into_nodehash())
 }

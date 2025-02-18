@@ -5,6 +5,7 @@
  * GNU General Public License version 2.
  */
 
+use std::collections::HashMap;
 use std::collections::HashSet;
 use std::sync::Arc;
 
@@ -20,10 +21,16 @@ use futures::stream::TryStreamExt;
 use manifest::ManifestOps;
 use manifest::ManifestParentReplacement;
 use manifest::StoreLoadable;
+use mononoke_types::subtree_change::SubtreeChange;
+use mononoke_types::subtree_change::SubtreeCopy;
+use mononoke_types::subtree_change::SubtreeDeepCopy;
+use mononoke_types::subtree_change::SubtreeMerge;
+use mononoke_types::ChangesetId;
 use mononoke_types::FileType;
 use mononoke_types::MPath;
 use serde_derive::Deserialize;
 use serde_derive::Serialize;
+use sorted_vector_map::SortedVectorMap;
 
 use crate::HgChangesetId;
 use crate::HgFileNodeId;
@@ -98,6 +105,66 @@ impl HgSubtreeChanges {
             .try_collect::<Vec<_>>()
             .boxed()
             .await
+    }
+
+    pub fn from_bonsai_subtree_changes(
+        subtree_changes: &SortedVectorMap<MPath, SubtreeChange>,
+        subtree_change_sources: HashMap<ChangesetId, HgChangesetId>,
+    ) -> Result<Option<Self>> {
+        if subtree_changes.is_empty() {
+            return Ok(None);
+        }
+        let mut copies = Vec::new();
+        let mut deep_copies = Vec::new();
+        let mut merges = Vec::new();
+        for (path, change) in subtree_changes.iter() {
+            match change {
+                SubtreeChange::SubtreeCopy(SubtreeCopy {
+                    from_path,
+                    from_cs_id,
+                }) => {
+                    copies.push(HgSubtreeCopy {
+                        from_path: from_path.clone(),
+                        to_path: path.clone(),
+                        from_commit: subtree_change_sources
+                            .get(from_cs_id)
+                            .ok_or_else(|| anyhow!("Subtree copy source {} not found", from_cs_id))?
+                            .clone(),
+                    });
+                }
+                SubtreeChange::SubtreeDeepCopy(SubtreeDeepCopy {
+                    from_path,
+                    from_cs_id,
+                }) => {
+                    deep_copies.push(HgSubtreeDeepCopy {
+                        from_path: from_path.clone(),
+                        to_path: path.clone(),
+                        from_commit: subtree_change_sources
+                            .get(from_cs_id)
+                            .ok_or_else(|| anyhow!("Subtree copy source {} not found", from_cs_id))?
+                            .clone(),
+                    });
+                }
+                SubtreeChange::SubtreeMerge(SubtreeMerge {
+                    from_path,
+                    from_cs_id,
+                }) => {
+                    merges.push(HgSubtreeMerge {
+                        from_path: from_path.clone(),
+                        to_path: path.clone(),
+                        from_commit: subtree_change_sources
+                            .get(from_cs_id)
+                            .ok_or_else(|| anyhow!("Subtree copy source {} not found", from_cs_id))?
+                            .clone(),
+                    });
+                }
+            }
+        }
+        Ok(Some(HgSubtreeChanges {
+            copies,
+            deep_copies,
+            merges,
+        }))
     }
 }
 

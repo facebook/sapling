@@ -72,7 +72,7 @@ pub async fn split_batch_in_linear_stacks(
 }
 
 /// We follow a few rules when splitting a batch in the stacks:
-/// 1) Merges go to a separate batch
+/// 1) Merges and commits with subtree changes go to a separate batch
 /// 2) If two commits have two files where one is a prefix of another, then they
 ///    go to a separate stacks (because of the way bonsai interprets these files)
 /// 3) If there are file conflicts (see SplitOptions for details) then a commit go to a
@@ -161,6 +161,11 @@ impl LinearStack {
     ) -> bool {
         // Each merge should go in a separate stack
         if prev.is_merge() || next.is_merge() {
+            return false;
+        }
+
+        // Subtree changes go in a separate stack
+        if prev.has_subtree_changes() || next.has_subtree_changes() {
             return false;
         }
 

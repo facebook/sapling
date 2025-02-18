@@ -801,6 +801,7 @@ async fn test_get_manifest_from_bonsai(fb: FacebookInit) {
             repo.repo_blobstore_arc(),
             make_bonsai_changeset(None, None, vec![]),
             vec![ms1, ms2],
+            None,
         ))
         .await;
         assert!(
@@ -818,6 +819,7 @@ async fn test_get_manifest_from_bonsai(fb: FacebookInit) {
             repo.repo_blobstore_arc(),
             make_bonsai_changeset(None, None, vec![("base", FileChange::Deletion)]),
             vec![ms1, ms2],
+            None,
         ))
         .await
         .expect("merge should have succeeded");
@@ -851,10 +853,15 @@ async fn test_get_manifest_from_bonsai(fb: FacebookInit) {
             None,
             vec![("base", FileChange::Deletion), ("new", fc)],
         );
-        let ms_hash =
-            (get_manifest_from_bonsai(ctx.clone(), repo.repo_blobstore_arc(), bcs, vec![ms1, ms2]))
-                .await
-                .expect("adding new file should not produce coflict");
+        let ms_hash = (get_manifest_from_bonsai(
+            ctx.clone(),
+            repo.repo_blobstore_arc(),
+            bcs,
+            vec![ms1, ms2],
+            None,
+        ))
+        .await
+        .expect("adding new file should not produce coflict");
         let entries = get_entries(ms_hash).await.unwrap();
         let new = entries.get("new").expect("new file should be in entries");
         let bytes = entry_content(&ctx, &repo, new).await.unwrap();

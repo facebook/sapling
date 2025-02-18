@@ -142,6 +142,7 @@ pub(crate) async fn derive_fsnode(
         blobstore.clone(),
         parents.clone(),
         changes,
+        None,
         {
             cloned!(blobstore, ctx);
             move |tree_info, sender| {

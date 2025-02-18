@@ -11,6 +11,7 @@ use std::time::Instant;
 
 use anyhow::anyhow;
 use anyhow::bail;
+use anyhow::ensure;
 use anyhow::Error;
 use async_trait::async_trait;
 use blobrepo_common::changed_files::compute_changed_files;
@@ -36,6 +37,7 @@ use mercurial_types::blobs::HgChangesetContent;
 use mercurial_types::blobs::UploadHgFileContents;
 use mercurial_types::blobs::UploadHgFileEntry;
 use mercurial_types::blobs::UploadHgNodeHash;
+use mercurial_types::subtree::HgSubtreeChanges;
 use mercurial_types::HgChangesetId;
 use mercurial_types::HgFileNodeId;
 use mercurial_types::HgManifestId;
@@ -202,6 +204,7 @@ pub async fn get_manifest_from_bonsai(
     blobstore: Arc<dyn Blobstore>,
     bcs: BonsaiChangeset,
     parent_manifests: Vec<HgManifestId>,
+    subtree_changes: Option<&HgSubtreeChanges>,
 ) -> Result<HgManifestId, Error> {
     // NOTE: We ignore further parents beyond p1 and p2 for the purposed of tracking copy info
     // or filenode parents. This is because hg supports just 2 parents at most, so we track
@@ -309,7 +312,14 @@ pub async fn get_manifest_from_bonsai(
         .try_collect()
         .await?;
 
-    let manifest_id = derive_hg_manifest(ctx.clone(), blobstore, parent_manifests, changes).await?;
+    let manifest_id = derive_hg_manifest(
+        ctx.clone(),
+        blobstore,
+        parent_manifests,
+        changes,
+        subtree_changes,
+    )
+    .await?;
 
     Ok(manifest_id)
 }
@@ -319,6 +329,7 @@ pub(crate) async fn derive_from_parents(
     blobstore: &Arc<dyn Blobstore>,
     bonsai: BonsaiChangeset,
     parents: Vec<MappedHgChangesetId>,
+    subtree_change_sources: HashMap<ChangesetId, HgChangesetId>,
     options: &HgChangesetDeriveOptions,
 ) -> Result<MappedHgChangesetId, Error> {
     let parents = {
@@ -331,17 +342,31 @@ pub(crate) async fn derive_from_parents(
         .await?
     };
 
+    let subtree_changes = HgSubtreeChanges::from_bonsai_subtree_changes(
+        bonsai.subtree_changes(),
+        subtree_change_sources,
+    )?;
+
     let parent_manifests = parents.iter().map(|p| p.manifestid()).collect();
     let manifest_id = get_manifest_from_bonsai(
         ctx.clone(),
         blobstore.clone(),
         bonsai.clone(),
         parent_manifests,
+        subtree_changes.as_ref(),
     )
     .await?;
 
-    let (hg_cs_id, _) =
-        generate_hg_changeset(ctx, blobstore, bonsai, manifest_id, parents, options).await?;
+    let (hg_cs_id, _) = generate_hg_changeset(
+        ctx,
+        blobstore,
+        bonsai,
+        manifest_id,
+        parents,
+        subtree_changes,
+        options,
+    )
+    .await?;
     Ok(MappedHgChangesetId::new(hg_cs_id))
 }
 
@@ -356,10 +381,13 @@ pub async fn derive_simple_hg_changeset_stack_without_copy_info(
         Some(parent) => Some(parent.hg_changeset_id().load(ctx, blobstore).await?),
         None => None,
     };
-
     let file_changes = bonsais
         .iter()
         .map(|bonsai| {
+            ensure!(
+                !bonsai.has_subtree_changes(),
+                "simple derivation doesn't support subtree changes"
+            );
             let per_commit_file_changes: Result<Vec<_>, Error> = bonsai
                 .file_changes()
                 .map(|(path, fc)| {
@@ -408,7 +436,7 @@ pub async fn derive_simple_hg_changeset_stack_without_copy_info(
             )
         })?;
         let (hg_changeset_id, hg_cs) =
-            generate_hg_changeset(ctx, blobstore, bonsai, *mf_id, parents, options).await?;
+            generate_hg_changeset(ctx, blobstore, bonsai, *mf_id, parents, None, options).await?;
         res.insert(cs_id, MappedHgChangesetId::new(hg_changeset_id));
         parents = vec![hg_cs];
     }
@@ -422,6 +450,7 @@ async fn generate_hg_changeset(
     bcs: BonsaiChangeset,
     manifest_id: HgManifestId,
     parents: Vec<HgBlobChangeset>,
+    subtree_changes: Option<HgSubtreeChanges>,
     options: &HgChangesetDeriveOptions,
 ) -> Result<(HgChangesetId, HgBlobChangeset), Error> {
     let start_timestamp = Instant::now();
@@ -449,14 +478,22 @@ async fn generate_hg_changeset(
     // Keep a record of any parents for now (i.e. > 2 parents). We'll store those in extras.
     let step_parents = parents;
 
-    let files = compute_changed_files(
-        ctx.clone(),
-        blobstore.clone(),
-        manifest_id.clone(),
-        mf_p1,
-        mf_p2,
-    )
-    .await?;
+    let files = if subtree_changes
+        .as_ref()
+        .map_or(true, |s| s.copies.is_empty())
+    {
+        compute_changed_files(
+            ctx.clone(),
+            blobstore.clone(),
+            manifest_id.clone(),
+            mf_p1,
+            mf_p2,
+        )
+        .await?
+    } else {
+        // Presence of a subtree copy means we keep the file list in the commit text empty.
+        Vec::new()
+    };
 
     let mut metadata = ChangesetMetadata {
         user: bcs.author().to_string(),
@@ -486,6 +523,9 @@ async fn generate_hg_changeset(
                 bail!("invalid committer/committer date in bonsai changeset");
             }
         };
+    }
+    if let Some(subtree_changes) = subtree_changes {
+        metadata.record_subtree_changes(subtree_changes)?;
     }
 
     let content = HgChangesetContent::new_from_parts(hg_parents, manifest_id, metadata, files);

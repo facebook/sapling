@@ -139,6 +139,7 @@ pub(crate) async fn derive_content_manifest(
         blobstore.clone(),
         parents.clone(),
         changes,
+        None,
         {
             cloned!(blobstore, ctx);
             move |tree_info, sender| {
