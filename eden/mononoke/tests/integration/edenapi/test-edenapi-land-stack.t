@@ -81,4 +81,4 @@ Inspect results
 Test land stack failure - expose server error to client
   $ hg debugapi -e landstack -i "'master_bookmark'" -i "'$C'" -i "'$B'"
   {"data": {"Err": {"code": 0,
-                    "message": "Conflicts while pushrebasing: [PushrebaseConflict { left: NonRootMPath(\"C\"), right: NonRootMPath(\"C\") }]"}}}
+                    "message": "Conflicts while pushrebasing: [PushrebaseConflict { left: MPath(\"C\"), right: MPath(\"C\") }]"}}}

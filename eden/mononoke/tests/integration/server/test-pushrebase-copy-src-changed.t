@@ -71,5 +71,5 @@ Create a copy on a client and push it
   edenapi: uploaded 1 tree
   edenapi: uploaded 1 changeset
   pushrebasing stack (26805aba1e60, 726a45528732] (1 commit) to remote bookmark master_bookmark
-  abort: Server error: Conflicts while pushrebasing: [PushrebaseConflict { left: NonRootMPath("A"), right: NonRootMPath("A") }]
+  abort: Server error: Conflicts while pushrebasing: [PushrebaseConflict { left: MPath("A"), right: MPath("A") }]
   [255]

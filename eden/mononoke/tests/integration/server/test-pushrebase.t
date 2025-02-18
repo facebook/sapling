@@ -73,7 +73,7 @@ Push rebase fails with conflict in the bottom of the stack
   edenapi: uploaded 1 tree
   edenapi: uploaded 1 changeset
   pushrebasing stack (20ca2a4749a4, 8b01ec816b8a] (2 commits) to remote bookmark master_bookmark
-  abort: Server error: Conflicts while pushrebasing: [PushrebaseConflict { left: NonRootMPath("1"), right: NonRootMPath("1") }]
+  abort: Server error: Conflicts while pushrebasing: [PushrebaseConflict { left: MPath("1"), right: MPath("1") }]
   [255]
   $ hg hide -r ".^ + ." -q
 
@@ -90,7 +90,7 @@ Push rebase fails with conflict in the top of the stack
   edenapi: uploaded 2 trees
   edenapi: uploaded 2 changesets
   pushrebasing stack (20ca2a4749a4, be73549636d1] (2 commits) to remote bookmark master_bookmark
-  abort: Server error: Conflicts while pushrebasing: [PushrebaseConflict { left: NonRootMPath("1"), right: NonRootMPath("1") }]
+  abort: Server error: Conflicts while pushrebasing: [PushrebaseConflict { left: MPath("1"), right: MPath("1") }]
   [255]
   $ hg hide -r ".^ + ." -q
 
