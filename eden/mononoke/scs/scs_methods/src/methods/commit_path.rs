@@ -25,6 +25,7 @@ use maplit::btreeset;
 use mononoke_api::ChangesetPathHistoryOptions;
 use mononoke_api::MononokeError;
 use mononoke_api::PathEntry;
+use mononoke_types::blame_v2::BlameParentIndex;
 use mononoke_types::path::MPath;
 use source_control as thrift;
 
@@ -287,6 +288,25 @@ impl SourceControlServiceImpl {
             }
         }
 
+        let replacement_parents = blame
+            .replacement_parents()
+            .map_err(|e| MononokeError::InvalidRequest(e.to_string()))?
+            .collect::<HashMap<_, _>>();
+        let replacement_parent_csids = replacement_parents.keys().copied().collect::<Vec<_>>();
+        let mut mapped_replacement_parents =
+            map_commit_identities(repo, replacement_parent_csids, &params.identity_schemes).await?;
+        let replacement_parent_commit_ids = Some(
+            replacement_parents
+                .iter()
+                .flat_map(|(csid, num)| {
+                    mapped_replacement_parents
+                        .remove(csid)
+                        .map(|ids| (*num as i32, ids))
+                })
+                .collect::<BTreeMap<_, _>>(),
+        )
+        .filter(|ids| !ids.is_empty());
+
         // Collect author and date fields from the commit info.
         let info: HashMap<_, _> = future::try_join_all(csids.iter().map(move |csid| async move {
             let changeset = repo.changeset_from_existing_id(*csid);
@@ -401,7 +421,14 @@ impl SourceControlServiceImpl {
                 }
                 if option_include_parent {
                     if let Some(parent) = &blame_line.parent {
-                        thrift_blame_line.parent_index = Some(parent.parent_index as i32);
+                        match parent.parent.indexed(&replacement_parents) {
+                            BlameParentIndex::ChangesetParent(index) => {
+                                thrift_blame_line.parent_index = Some(index as i32);
+                            }
+                            BlameParentIndex::ReplacementParent(index) => {
+                                thrift_blame_line.replacement_parent_index = Some(index as i32);
+                            }
+                        }
                         thrift_blame_line.parent_start_line = Some((parent.offset + 1) as i32);
                         thrift_blame_line.parent_range_length = Some(parent.length as i32);
                         thrift_blame_line.parent_path_index = parent
@@ -449,6 +476,7 @@ impl SourceControlServiceImpl {
             commit_numbers,
             approx_commit_count,
             distinct_range_count,
+            replacement_parent_commit_ids,
             ..Default::default()
         };
 

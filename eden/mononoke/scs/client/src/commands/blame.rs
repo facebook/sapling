@@ -138,7 +138,11 @@ impl Render for BlameOut {
                     .map(|l| {
                         let parent_index_width = l
                             .parent_index
-                            .map_or(0, |i| if i > 0 { number_width(i) + 2 } else { 0 });
+                            .map_or(0, |i| if i > 0 { number_width(i + 1) + 3 } else { 0 });
+                        let replacement_parent_width = l.replacement_parent_index.map_or(0, |_| {
+                            // TODO: compute the correct length of the rendered changeset ids
+                            42
+                        });
                         let parent_path_width = l
                             .parent_path_index
                             .map_or(0, |p| blame.paths[p as usize].width() + 2);
@@ -150,7 +154,10 @@ impl Render for BlameOut {
                             }
                             _ => 0,
                         };
-                        parent_index_width + parent_path_width + parent_range_width
+                        parent_index_width
+                            + replacement_parent_width
+                            + parent_path_width
+                            + parent_range_width
                     })
                     .max()
                     .unwrap_or(0);
@@ -227,7 +234,26 @@ impl Render for BlameOut {
                         let mut plr = String::with_capacity(max_parent_line_range_width);
                         if let Some(parent_index) = line.parent_index {
                             if parent_index != 0 {
-                                write!(plr, "({})", parent_index)?;
+                                write!(plr, "(^{})", parent_index + 1)?;
+                            }
+                        } else if let Some(replacement_parent_index) = line.replacement_parent_index
+                        {
+                            if let Some(replacement_parent_commit_ids) =
+                                &blame.replacement_parent_commit_ids
+                            {
+                                let mut buf = Vec::new();
+                                render_commit_id(
+                                    None,
+                                    " ",
+                                    "replacement parent",
+                                    &map_commit_ids(
+                                        replacement_parent_commit_ids[&replacement_parent_index]
+                                            .values(),
+                                    ),
+                                    &schemes,
+                                    &mut buf,
+                                )?;
+                                write!(plr, "({})", String::from_utf8(buf)?)?;
                             }
                         }
                         if let Some(path_index) = line.parent_path_index {
@@ -347,6 +373,18 @@ impl Render for BlameOut {
                             insert(
                                 "parent",
                                 json!(map_commit_ids(parents[parent_index as usize].values())),
+                            );
+                        }
+                    } else if let Some(replacement_parent_index) = line.replacement_parent_index {
+                        if let Some(replacement_parent_commit_ids) =
+                            &blame.replacement_parent_commit_ids
+                        {
+                            insert(
+                                "parent",
+                                json!(map_commit_ids(
+                                    replacement_parent_commit_ids[&replacement_parent_index]
+                                        .values()
+                                )),
                             );
                         }
                     }

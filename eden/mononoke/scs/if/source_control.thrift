@@ -610,6 +610,14 @@ struct BlameCompact {
 
   /// Number of distinct ranges in the blame.
   11: optional i32 distinct_range_count;
+
+  /// The parent commit ids for replacement parents (if any commit parent
+  /// was replaced by a mutable rename or subtree copy).  Only present if
+  /// `INCLUDE_PARENT` was requested.
+  12: optional map<
+    i32,
+    map<CommitIdentityScheme, CommitId>
+  > replacement_parent_commit_ids;
 }
 
 struct BlameCompactLine {
@@ -672,6 +680,13 @@ struct BlameCompactLine {
   /// file in the parent.  This is only provided if `format_options` included
   /// `INCLUDE_PARENT` in the request.
   13: optional i32 parent_path_index;
+
+  /// May be set as an alternative to `parent_index` if the parent is a
+  /// replacement parent (e.g. due to mutable rename or subtree copy).  In
+  /// this case, it will be the index in the map of `replacement_parents`.
+  /// This is only provided if `format_options` included `INCLUDE_PARENT` in
+  /// the request.
+  14: optional i32 replacement_parent_index;
 }
 
 enum HistoryFormat {

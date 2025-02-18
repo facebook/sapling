@@ -21,6 +21,7 @@ use futures::try_join;
 use futures_stats::TimedFutureExt;
 use manifest::ManifestOps;
 use mononoke_types::blame_v2::BlameParent;
+use mononoke_types::blame_v2::BlameParentId;
 use mononoke_types::blame_v2::BlameV2;
 use mononoke_types::path::MPath;
 use mononoke_types::ChangesetId;
@@ -69,8 +70,9 @@ async fn fetch_mutable_blame(
             .as_ref()
             .ok_or_else(|| anyhow!("Mutable rename points file to root directory"))?
             .clone();
+        let src_csid = rename.src_cs_id();
         let (src_blame, src_content) =
-            blame_with_content(ctx, repo, rename.src_cs_id(), rename.src_path(), true).await?;
+            blame_with_content(ctx, repo, src_csid, rename.src_path(), true).await?;
 
         let blobstore = repo.repo_blobstore_arc();
         let unode = repo
@@ -88,7 +90,12 @@ async fn fetch_mutable_blame(
             .into_bytes()?;
 
         // And reblame directly against the parent mutable renames gave us.
-        let blame_parent = BlameParent::new(0, src_path, src_content, src_blame);
+        let blame_parent = BlameParent::new(
+            BlameParentId::ChangesetParent(0), // Note: this is wrong.
+            src_path,
+            src_content,
+            src_blame,
+        );
         let blame = BlameV2::new(my_csid, path.clone(), my_content, vec![blame_parent])?;
         return Ok((blame, unode));
     }

@@ -24,6 +24,7 @@ use futures::FutureExt;
 use manifest::ManifestOps;
 use mononoke_app::args::ChangesetArgs;
 use mononoke_types::blame_v2::BlameParent;
+use mononoke_types::blame_v2::BlameParentId;
 use mononoke_types::blame_v2::BlameRejected;
 use mononoke_types::blame_v2::BlameV2;
 use mononoke_types::ChangesetId;
@@ -138,9 +139,14 @@ pub(super) async fn compute(ctx: &CoreContext, repo: &Arc<Repo>, args: ComputeAr
                             let parents = parents
                                 .into_iter()
                                 .filter_map(|parent| match parent {
-                                    Ok((Some(parent_index), parent_path, content, blame)) => Some(
-                                        BlameParent::new(parent_index, parent_path, content, blame),
-                                    ),
+                                    Ok((Some(parent_index), parent_path, content, blame)) => {
+                                        Some(BlameParent::new(
+                                            BlameParentId::ChangesetParent(parent_index),
+                                            parent_path,
+                                            content,
+                                            blame,
+                                        ))
+                                    }
                                     _ => None,
                                 })
                                 .collect();

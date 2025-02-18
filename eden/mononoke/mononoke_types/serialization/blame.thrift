@@ -23,6 +23,8 @@ include "thrift/annotation/rust.thrift"
 typedef i32 BlameChangeset
 @rust.NewType
 typedef i32 BlamePath
+@rust.NewType
+typedef i32 BlameReplacementParent
 
 enum BlameRejected {
   TooBig = 0,
@@ -73,13 +75,18 @@ struct BlameRangeV2 {
   // of parents in the bonsai changeset) of the first parent that does contain
   // the file.
   //
+  // If a subtree copy caused the parent to be replaced, then the index of the
+  // parent in `replacement_parents` will be sotred in `replacement_parent_index`.
+  //
   // Thus, the algorithm for finding the destination for "skip past this change"
   // is:
   //
-  //  1. Look up `csid_index` in `csids` to find the blamed changeset, and load
-  //     its BonsaiChangeset.
-  //  2. Find the parent at `parent_index` in the list of parents, or the first
-  //     parent if `parent_index` is not present.  This is the target changeset.
+  //  1. If `replacement_parent_index` is present look this up in the list of
+  //     `replacement_parents` in the blame data.  This is the target changeset.
+  //  2. If not, look up `csid_index` in `csids` to find the blamed changeset,
+  //     and load its BonsaiChangeset. Find the parent at `parent_index` in the
+  //     list of parents, or the first parent if `parent_index` is not present.
+  //     This is the target changeset.
   //  3. Look up the path at `renamed_from_path_index` in `paths`, or
   //     `path_index` if `renamed_from_path_index` is not present.  This is the
   //     target path.
@@ -112,6 +119,10 @@ struct BlameRangeV2 {
   // Note that this is an index into the list of parents in the bonsai
   // changeset, and *not* an index into csids.
   8: optional i32 parent_index;
+
+  // If this range's parent blames to a replacement parent (e.g. through
+  // subtree operation) then this is the index of that replacement parent.
+  9: optional BlameReplacementParent replacement_parent_index;
 }
 
 @rust.Exhaustive
@@ -131,7 +142,7 @@ struct BlameDataV2 {
   // Changesets are removed from this map when all lines that were added in the
   // changeset are moved and none of the ranges reference it.  This means there
   // are gaps in this mapping, and so a map is used.
-  2: map_i32_ChangesetId_1681 csids;
+  2: IndexedChangesetIds csids;
 
   // The maximum index that is assigned to a changeset id.  This is also the
   // index that would be assigned to the current changeset, as long as the
@@ -144,6 +155,14 @@ struct BlameDataV2 {
   // for simplicity, this includes all paths the file has ever been located at,
   // even if they are no longer referenced by any of the ranges.
   4: list<path.NonRootMPath> paths;
+
+  // Index of changeset ids that have been used as replacement parents.
+  // Replacement parents are removed from this map when none of the ranges
+  // reference them, so there may be gaps.
+  5: optional IndexedChangesetIds replacement_parents;
+
+  // If present, then the maximum index that is assigned to a replacement parent.
+  6: optional BlameReplacementParent max_replacement_parent_index;
 }
 
 union BlameV2 {
@@ -154,6 +173,6 @@ union BlameV2 {
   2: BlameRejected rejected;
 }
 
-// The following were automatically generated and may benefit from renaming.
+// A mapping from changeset id index (an integer) to the changeset id.
 @rust.Type{name = "sorted_vector_map::SortedVectorMap"}
-typedef map<i32, id.ChangesetId> map_i32_ChangesetId_1681
+typedef map<i32, id.ChangesetId> IndexedChangesetIds
