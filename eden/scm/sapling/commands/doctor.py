@@ -133,12 +133,11 @@ def doctor(ui, **opts) -> typing.Optional[int]:
         runedenfsdoctor(ui)
 
 
-def repairsvfs(ui, svfs, name: str, fixobj) -> None:
+def repairsvfs(ui, svfs, name: str, fixobj):
     """Attempt to repair path in repo.svfs"""
     path = svfs.join(name)
     repair(ui, name, path, fixobj.repair)
     if callable(fixobj):
-        # pyre-fixme[7]: Expected `None` but got `object`.
         return fixobj(path)
 
 
