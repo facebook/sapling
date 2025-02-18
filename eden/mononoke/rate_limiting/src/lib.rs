@@ -384,6 +384,7 @@ fn in_throttled_slice(
 
 #[cfg(test)]
 mod test {
+    #[cfg(fbcode_build)]
     use std::sync::Arc;
 
     use mononoke_macros::mononoke;

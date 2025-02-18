@@ -149,7 +149,7 @@ async fn address_from_land_service<'a>(
     }
     #[cfg(not(fbcode_build))]
     {
-        let _ = (address, ctx, repo);
+        let _ = (address, ctx, repo, authz);
         unreachable!()
     }
 }

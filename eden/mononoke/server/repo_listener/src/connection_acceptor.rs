@@ -236,6 +236,7 @@ pub struct PendingConnection {
 pub struct AcceptedConnection {
     pub pending: PendingConnection,
     pub is_trusted: bool,
+    #[allow(dead_code)]
     pub mtls_disabled: bool,
     pub identities: Arc<MononokeIdentitySet>,
 }

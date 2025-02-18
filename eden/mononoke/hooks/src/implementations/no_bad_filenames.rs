@@ -37,6 +37,7 @@ pub struct NoBadFilenamesConfig {
     illegal_filename_message: String,
 }
 
+#[cfg(fbcode_build)]
 impl NoBadFilenamesConfig {
     pub fn new(
         allowlist_regex: Option<&str>,

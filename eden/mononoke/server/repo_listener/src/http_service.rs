@@ -26,6 +26,7 @@ use clientinfo::CLIENT_INFO_HEADER;
 use futures::future::BoxFuture;
 use futures::future::FutureExt;
 use gotham_ext::handler::SlapiCommitIdentityScheme;
+#[cfg(fbcode_build)]
 use gotham_ext::middleware::metadata::ingress_request_identities_from_headers;
 use gotham_ext::socket_data::TlsSocketData;
 use http::HeaderMap;

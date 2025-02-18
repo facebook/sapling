@@ -16,6 +16,7 @@ use commit_cloud_helpers::make_workspace_acl_name;
 #[cfg(fbcode_build)]
 use commit_cloud_intern_utils::acl_check::infer_workspace_identity;
 use context::CoreContext;
+#[cfg(fbcode_build)]
 use futures_stats::futures03::TimedFutureExt;
 use metaconfig_types::RepoConfigRef;
 use mononoke_types::path::MPath;

@@ -37,6 +37,7 @@ use commit_cloud_types::WorkspaceData;
 use commit_cloud_types::WorkspaceSharingData;
 use context::CoreContext;
 use facet::facet;
+#[cfg(fbcode_build)]
 use futures_stats::futures03::TimedFutureExt;
 use mercurial_types::HgChangesetId;
 use metaconfig_types::CommitCloudConfig;

@@ -129,6 +129,7 @@ use metaconfig_types::BlobConfig;
 use metaconfig_types::CommonConfig;
 use metaconfig_types::MetadataDatabaseConfig;
 use metaconfig_types::Redaction;
+#[cfg(fbcode_build)]
 use metaconfig_types::RemoteDerivationConfig;
 use metaconfig_types::RepoConfig;
 use metaconfig_types::RepoReadOnly;
@@ -221,6 +222,7 @@ use MononokeRepoFactoryStats_ods3::Instrument_MononokeRepoFactoryStats;
 use MononokeRepoFactoryStats_ods3_types::MononokeRepoFactoryStats;
 
 const DERIVED_DATA_LEASE: &str = "derived-data-lease";
+#[cfg(fbcode_build)]
 const ZEUS_CLIENT_ID: &str = "mononoke";
 
 #[cfg(fbcode_build)]
@@ -1992,7 +1994,7 @@ fn get_derivation_client(
             }
             #[cfg(not(fbcode_build))]
             {
-                let _ = fb;
+                let _ = (fb, repo_name, repo_config);
                 None
             }
         } else {

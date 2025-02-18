@@ -5,6 +5,7 @@
  * GNU General Public License version 2.
  */
 
+#[cfg(fbcode_build)]
 use std::collections::BTreeMap;
 use std::sync::Arc;
 
@@ -19,7 +20,9 @@ use crate::LoadCost;
 use crate::LoadShedResult;
 use crate::Metric;
 use crate::MononokeRateLimitConfig;
+#[cfg(fbcode_build)]
 use crate::RateLimit;
+#[cfg(fbcode_build)]
 use crate::RateLimitBody;
 use crate::RateLimitResult;
 use crate::RateLimiter;
@@ -67,9 +70,9 @@ impl RateLimiter for FakeLimiter {
 
     fn find_rate_limit(
         &self,
-        metric: Metric,
-        identities: Option<MononokeIdentitySet>,
-        main_id: Option<&str>,
+        _metric: Metric,
+        _identities: Option<MononokeIdentitySet>,
+        _main_id: Option<&str>,
     ) -> Option<crate::RateLimit> {
         None
     }

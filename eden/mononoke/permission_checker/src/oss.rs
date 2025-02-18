@@ -5,24 +5,16 @@
  * GNU General Public License version 2.
  */
 
-use std::sync::Arc;
-
 use anyhow::bail;
 use anyhow::Result;
+#[cfg(fbcode_build)]
 use async_trait::async_trait;
-use fbinit::FacebookInit;
 use itertools::Itertools;
 use openssl::x509::X509;
 
-use crate::checker::AlwaysAllow;
-use crate::checker::BoxPermissionChecker;
 use crate::identity::MononokeIdentity;
 use crate::identity::MononokeIdentitySet;
 use crate::identity::MononokeIdentitySetExt;
-use crate::membership::AlwaysMember;
-use crate::membership::BoxMembershipChecker;
-use crate::membership::NeverMember;
-use crate::provider::AclProvider;
 
 impl MononokeIdentity {
     pub fn reviewer_identities(_username: &str) -> MononokeIdentitySet {
@@ -82,7 +74,7 @@ impl MononokeIdentitySetExt for MononokeIdentitySet {
         None
     }
 
-    fn main_client_identity(&self, sandcastle_alias: Option<&str>) -> String {
+    fn main_client_identity(&self, _sandcastle_alias: Option<&str>) -> String {
         String::from("PLACEHOLDER_CLIENT_IDENTITY")
     }
 
