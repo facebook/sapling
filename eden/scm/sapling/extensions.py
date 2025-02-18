@@ -129,6 +129,7 @@ def isenabled(ui, name):
         # specified.
         if conf is None and name in DEFAULT_EXTENSIONS:
             return True
+    return False
 
 
 def extensions(ui=None):
