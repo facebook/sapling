@@ -13,7 +13,7 @@ use sorted_vector_map::SortedVectorMap;
 
 /// SortedVectorTrieMap is a wrapper around a SortedVectorMap with a smallvec key which can be used as a TrieMap wherever TrieMapOps are required.
 /// This tracks the common prefix and subset of the map using pointers, so it is more efficient than converting the map to a trie map.
-#[derive(Clone)]
+#[derive(Clone, Default)]
 pub struct SortedVectorTrieMap<V> {
     /// The underlying entries of the full map.  These are shared between triemap instances for the same original map.
     pub entries: Arc<Vec<(SmallVec<[u8; 24]>, V)>>,

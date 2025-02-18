@@ -173,6 +173,7 @@ pub fn create_changeset_no_parents(
         expected_files: None,
         p1: None,
         p2: None,
+        subtree_changes: None,
         root_manifest,
         sub_entries: other_nodes
             .into_iter()
@@ -210,6 +211,7 @@ pub fn create_changeset_one_parent(
         expected_files: None,
         p1: Some(p1),
         p2: None,
+        subtree_changes: None,
         root_manifest: root_manifest.boxed(),
         sub_entries: other_nodes
             .into_iter()

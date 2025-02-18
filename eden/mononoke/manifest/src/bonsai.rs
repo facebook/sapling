@@ -515,7 +515,7 @@ impl ManifestLeaf for ContentManifestFile {
 /// When diffing a manifest taking into account subtree operations, we
 /// replace the manifest parents at the point in the tree where the
 /// subtree operation is applied.
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct ManifestParentReplacement<ManifestId, Leaf> {
     pub path: MPath,
     pub replacements: Vec<Entry<ManifestId, Leaf>>,

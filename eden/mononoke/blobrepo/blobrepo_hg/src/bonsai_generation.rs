@@ -15,9 +15,10 @@ use context::CoreContext;
 use futures::stream;
 use futures::stream::StreamExt;
 use futures::stream::TryStreamExt;
-use manifest::bonsai_diff;
+use manifest::bonsai_diff_with_subtree_changes;
 use manifest::BonsaiDiffFileChange;
 use manifest::ManifestOps;
+use manifest::ManifestParentReplacement;
 use mercurial_types::blobs::HgBlobChangeset;
 use mercurial_types::blobs::HgBlobEnvelope;
 use mercurial_types::HgFileEnvelope;
@@ -25,13 +26,16 @@ use mercurial_types::HgFileNodeId;
 use mercurial_types::HgManifestId;
 use mercurial_types::NonRootMPath;
 use mercurial_types::RepoPath;
+use mononoke_types::subtree_change::SubtreeChange;
 use mononoke_types::BlobstoreKey;
 use mononoke_types::BlobstoreValue;
 use mononoke_types::BonsaiChangeset;
 use mononoke_types::BonsaiChangesetMut;
 use mononoke_types::ChangesetId;
 use mononoke_types::FileChange;
+use mononoke_types::FileType;
 use mononoke_types::GitLfs;
+use mononoke_types::MPath;
 use repo_blobstore::RepoBlobstore;
 use sorted_vector_map::SortedVectorMap;
 
@@ -43,6 +47,8 @@ pub async fn create_bonsai_changeset_object(
     cs: HgBlobChangeset,
     parent_manifests: Vec<HgManifestId>,
     bonsai_parents: Vec<ChangesetId>,
+    subtree_replacements: Vec<ManifestParentReplacement<HgManifestId, (FileType, HgFileNodeId)>>,
+    subtree_changes: SortedVectorMap<MPath, SubtreeChange>,
     blobstore: &RepoBlobstore,
 ) -> Result<BonsaiChangeset, Error> {
     let file_changes = find_file_changes(
@@ -51,6 +57,7 @@ pub async fn create_bonsai_changeset_object(
         parent_manifests,
         blobstore,
         bonsai_parents.clone(),
+        subtree_replacements,
     )
     .await?;
 
@@ -77,6 +84,7 @@ pub async fn create_bonsai_changeset_object(
         message,
         hg_extra: extra.into_iter().map(|(k, v)| (k, v.into())).collect(),
         file_changes,
+        subtree_changes,
         ..Default::default()
     }
     .freeze()
@@ -101,12 +109,14 @@ async fn find_file_changes(
     parent_manifests: Vec<HgManifestId>,
     blobstore: &RepoBlobstore,
     bonsai_parents: Vec<ChangesetId>,
+    subtree_replacements: Vec<ManifestParentReplacement<HgManifestId, (FileType, HgFileNodeId)>>,
 ) -> Result<SortedVectorMap<NonRootMPath, FileChange>, Error> {
-    let diff: Result<_, Error> = bonsai_diff(
+    let diff: Result<_, Error> = bonsai_diff_with_subtree_changes(
         ctx.clone(),
         blobstore.clone(),
         cs.manifestid(),
         parent_manifests.iter().cloned().collect(),
+        subtree_replacements,
     )
     .map_ok(|diff| {
         cloned!(parent_manifests, bonsai_parents);

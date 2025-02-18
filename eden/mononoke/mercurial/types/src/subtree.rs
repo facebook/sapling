@@ -5,13 +5,29 @@
  * GNU General Public License version 2.
  */
 
+use std::collections::HashSet;
+use std::sync::Arc;
+
+use anyhow::anyhow;
 use anyhow::Context;
 use anyhow::Result;
+use blobstore::Blobstore;
+use context::CoreContext;
+use futures::future::FutureExt;
+use futures::stream;
+use futures::stream::StreamExt;
+use futures::stream::TryStreamExt;
+use manifest::ManifestOps;
+use manifest::ManifestParentReplacement;
+use manifest::StoreLoadable;
+use mononoke_types::FileType;
 use mononoke_types::MPath;
 use serde_derive::Deserialize;
 use serde_derive::Serialize;
 
 use crate::HgChangesetId;
+use crate::HgFileNodeId;
+use crate::HgManifestId;
 
 /// Mercurial-encoded subtree changes.  This contains subtree changes as defined
 /// in the `subtree` extra field of a commit.
@@ -42,8 +58,16 @@ impl HgSubtreeChanges {
         })
     }
 
-    fn is_empty(&self) -> bool {
+    pub fn is_empty(&self) -> bool {
         self.copies.is_empty() && self.deep_copies.is_empty() && self.merges.is_empty()
+    }
+
+    pub fn source_changeset_ids(&self) -> HashSet<HgChangesetId> {
+        let mut ids = HashSet::new();
+        ids.extend(self.copies.iter().map(|copy| copy.from_commit));
+        ids.extend(self.deep_copies.iter().map(|copy| copy.from_commit));
+        ids.extend(self.merges.iter().map(|merge| merge.from_commit));
+        ids
     }
 
     /// Convert to JSON (as defined in sapling/utils/subtreeutils.py).
@@ -60,6 +84,20 @@ impl HgSubtreeChanges {
         }];
         let json = serde_json::to_string(&all_changes).context("Failed to serialize changes")?;
         Ok(json)
+    }
+
+    pub async fn to_manifest_replacements(
+        &self,
+        ctx: &CoreContext,
+        blobstore: &Arc<dyn Blobstore>,
+    ) -> Result<Vec<ManifestParentReplacement<HgManifestId, (FileType, HgFileNodeId)>>> {
+        // Deep copies and merges do not modify the parents: they just adjust history.
+        stream::iter(self.copies.iter())
+            .map(|copy| Ok(async move { copy.to_manifest_replacement(ctx, blobstore).await }))
+            .try_buffered(10)
+            .try_collect::<Vec<_>>()
+            .boxed()
+            .await
     }
 }
 
@@ -84,6 +122,33 @@ pub struct HgSubtreeCopy {
     pub from_path: MPath,
     #[serde(with = "mpath")]
     pub to_path: MPath,
+}
+
+impl HgSubtreeCopy {
+    pub async fn to_manifest_replacement(
+        &self,
+        ctx: &CoreContext,
+        blobstore: &Arc<dyn Blobstore>,
+    ) -> Result<ManifestParentReplacement<HgManifestId, (FileType, HgFileNodeId)>> {
+        let entry = self
+            .from_commit
+            .load(ctx, blobstore)
+            .await?
+            .manifestid()
+            .find_entry(ctx.clone(), blobstore.clone(), self.from_path.clone())
+            .await?
+            .ok_or_else(|| {
+                anyhow!(
+                    "Subtree copy source {}:{} not found",
+                    self.from_commit,
+                    self.from_path
+                )
+            })?;
+        Ok(ManifestParentReplacement {
+            path: self.to_path.clone(),
+            replacements: vec![entry],
+        })
+    }
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq)]

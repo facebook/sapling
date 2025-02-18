@@ -42,6 +42,7 @@ use mercurial_types::blobs::HgBlobEnvelope;
 use mercurial_types::blobs::HgChangesetContent;
 use mercurial_types::nodehash::HgFileNodeId;
 use mercurial_types::nodehash::HgManifestId;
+use mercurial_types::subtree::HgSubtreeChanges;
 use mercurial_types::HgChangesetId;
 use mercurial_types::HgNodeHash;
 use mercurial_types::HgParents;
@@ -148,6 +149,12 @@ impl ChangesetHandle {
             can_be_parent,
             completion_future,
         }
+    }
+
+    pub async fn get_changeset_ids(
+        &self,
+    ) -> Result<(ChangesetId, HgNodeHash, HgManifestId), Error> {
+        Ok(self.can_be_parent.clone().await?)
     }
 
     pub fn get_completed_changeset(
@@ -453,6 +460,7 @@ pub async fn process_entries<'a>(
 pub fn extract_parents_complete(
     p1: &Option<ChangesetHandle>,
     p2: &Option<ChangesetHandle>,
+    subtree_changes: &Option<(HgSubtreeChanges, HashMap<HgChangesetId, ChangesetHandle>)>,
 ) -> BoxFuture<'static, Result<(), Error>> {
     // DO NOT replace and_then() with join() or futures_ordered()!
     // It may result in a combinatoral explosion in mergy repos, like the following:
@@ -475,12 +483,23 @@ pub fn extract_parents_complete(
     //
     let p1 = p1.as_ref().map(|p1| p1.completion_future.clone());
     let p2 = p2.as_ref().map(|p2| p2.completion_future.clone());
+    let subtree_sources = subtree_changes.as_ref().map(|(_, sources)| {
+        sources
+            .values()
+            .map(|p| p.completion_future.clone())
+            .collect::<Vec<_>>()
+    });
     async move {
         if let Some(p1) = p1 {
             p1.await?;
         }
         if let Some(p2) = p2 {
             p2.await?;
+        }
+        if let Some(subtree_sources) = subtree_sources {
+            for source in subtree_sources {
+                source.await?;
+            }
         }
         Ok::<(), Error>(())
     }

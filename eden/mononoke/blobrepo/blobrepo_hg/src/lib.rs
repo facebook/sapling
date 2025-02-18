@@ -9,7 +9,6 @@ mod bonsai_generation;
 mod create_changeset;
 pub mod repo_commit;
 
-pub use crate::bonsai_generation::create_bonsai_changeset_object;
 pub use crate::bonsai_generation::save_bonsai_changeset_object;
 // TODO: This is exported for testing - is this the right place for it?
 pub use crate::repo_commit::compute_changed_files;

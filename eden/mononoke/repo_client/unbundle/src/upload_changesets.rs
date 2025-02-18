@@ -28,6 +28,7 @@ use mercurial_revlog::changeset::RevlogChangeset;
 use mercurial_revlog::manifest::Details;
 use mercurial_revlog::manifest::ManifestContent;
 use mercurial_types::blobs::ChangesetMetadata;
+use mercurial_types::subtree::HgSubtreeChanges;
 use mercurial_types::HgChangesetId;
 use mercurial_types::HgFileNodeId;
 use mercurial_types::HgManifestId;
@@ -309,11 +310,32 @@ pub async fn upload_changeset(
     let p1 = get_parent(ctx.clone(), &repo, &uploaded_changesets, revlog_cs.p1);
     let p2 = get_parent(ctx.clone(), &repo, &uploaded_changesets, revlog_cs.p2);
 
+    let subtree_changes = if let Some(subtree) = cs_metadata.extra.get(b"subtree".as_slice()) {
+        let subtree_changes = HgSubtreeChanges::from_json(subtree)?;
+        let hg_cs_ids = subtree_changes.source_changeset_ids();
+        let sources = hg_cs_ids
+            .into_iter()
+            .filter_map(|id| {
+                get_parent(
+                    ctx.clone(),
+                    &repo,
+                    &uploaded_changesets,
+                    Some(id.into_nodehash()),
+                )
+                .map(|cs| (id, cs))
+            })
+            .collect();
+        Some((subtree_changes, sources))
+    } else {
+        None
+    };
+
     let create_changeset = CreateChangeset {
         expected_nodeid: Some(node.into_nodehash()),
         expected_files: Some(Vec::from(revlog_cs.files())),
         p1,
         p2,
+        subtree_changes,
         root_manifest,
         sub_entries,
         // XXX pass content blobs to CreateChangeset here

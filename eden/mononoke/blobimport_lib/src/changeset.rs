@@ -487,6 +487,7 @@ impl<R: BlobimportRepoLike + Clone + 'static> UploadChangesets<R> {
                     expected_files: Some(Vec::from(cs.files())),
                     p1: p1handle,
                     p2: p2handle,
+                    subtree_changes: None,
                     root_manifest: rootmf.compat().boxed(),
                     sub_entries: entries.compat().boxed(),
                     cs_metadata,
