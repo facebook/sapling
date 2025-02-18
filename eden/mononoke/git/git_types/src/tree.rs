@@ -391,6 +391,7 @@ pub(crate) async fn derive_git_tree<B: Blobstore + Clone + 'static>(
         blobstore.clone(),
         parents,
         changes,
+        None,
         {
             cloned!(ctx, blobstore);
             move |tree_info| {

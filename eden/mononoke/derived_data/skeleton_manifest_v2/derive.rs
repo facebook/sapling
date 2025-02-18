@@ -102,6 +102,7 @@ pub(crate) async fn inner_derive(
         blobstore.clone(),
         parents,
         changes,
+        None, // TODO(mbthomas): support subtree changes
         {
             cloned!(ctx, blobstore);
             move |info: TreeInfo<

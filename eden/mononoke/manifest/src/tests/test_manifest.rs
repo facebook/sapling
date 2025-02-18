@@ -254,6 +254,7 @@ pub(crate) async fn derive_test_manifest(
         blobstore.clone(),
         parents,
         changes,
+        None,
         {
             cloned!(ctx, blobstore);
             move |TreeInfo { subentries, .. }| {

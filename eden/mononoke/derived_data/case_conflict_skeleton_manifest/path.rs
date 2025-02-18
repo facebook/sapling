@@ -7,6 +7,7 @@
 
 #[cfg(test)]
 use itertools::Itertools;
+use mononoke_types::MPath;
 use mononoke_types::MPathElement;
 use mononoke_types::NonRootMPath;
 
@@ -32,6 +33,10 @@ impl CcsmPath {
             )
             .ok()?,
         ))
+    }
+
+    pub fn transform_mpath(path: MPath) -> Option<Self> {
+        Self::transform(path.into_optional_non_root_path()?)
     }
 
     #[cfg(test)]

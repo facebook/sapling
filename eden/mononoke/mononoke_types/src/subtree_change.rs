@@ -49,6 +49,13 @@ impl SubtreeChange {
             from_cs_id,
         })
     }
+
+    pub fn copy_source(&self) -> Option<(ChangesetId, &MPath)> {
+        match self {
+            Self::SubtreeCopy(copy) => Some((copy.from_cs_id, &copy.from_path)),
+            _ => None,
+        }
+    }
 }
 
 #[derive(ThriftConvert, Arbitrary, Debug, Clone, Eq, PartialEq, Hash)]

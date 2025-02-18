@@ -41,7 +41,7 @@ pub(crate) async fn inner_derive_from_predecessor(
         .try_fold(CaseConflictSkeletonManifest::empty(), |ccsm, paths| {
             cloned!(ctx, blobstore);
             async move {
-                let new_ccsm = inner_derive(&ctx, &blobstore, vec![ccsm], paths)
+                let new_ccsm = inner_derive(&ctx, &blobstore, vec![ccsm], paths, Vec::new())
                     .await?
                     .unwrap_or_else(CaseConflictSkeletonManifest::empty);
                 Ok(new_ccsm)

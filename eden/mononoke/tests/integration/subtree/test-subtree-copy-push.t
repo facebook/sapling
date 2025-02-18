@@ -60,10 +60,5 @@ Override subtree key to enable non-test subtree extra
   edenapi: uploaded 2 trees
   edenapi: uploaded 1 changeset
   pushrebasing stack (d55124608f34, 8feb31bbd259] (1 commit) to remote bookmark master_bookmark
-  abort: Server error: internal error: failed to derive ccsm batch (start:ffd68538540bdd427951b6ba38d342e5ced46fe794a8704ca5d963e494dec6cf, end:ffd68538540bdd427951b6ba38d342e5ced46fe794a8704ca5d963e494dec6cf)
-  
-  Caused by:
-      0: failed to derive ccsm batch (start:ffd68538540bdd427951b6ba38d342e5ced46fe794a8704ca5d963e494dec6cf, end:ffd68538540bdd427951b6ba38d342e5ced46fe794a8704ca5d963e494dec6cf)
-      1: failed to derive ccsm batch (start:ffd68538540bdd427951b6ba38d342e5ced46fe794a8704ca5d963e494dec6cf, end:ffd68538540bdd427951b6ba38d342e5ced46fe794a8704ca5d963e494dec6cf)
-      2: Subtree changes are not supported for case conflict skeleton manifest
+  abort: Server error: invalid request: Pushrebase failed: Pushrebase of subtree changes is not supported
   [255]
