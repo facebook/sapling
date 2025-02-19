@@ -193,7 +193,6 @@ members = [
   "cas_client/changesets_uploader",
   "cas_client/client",
   "cas_client/scm_client",
-  "cas_new_commit_tailer",
   "cats",
   "changesets/changesets_creation",
   "cmdlib",
