@@ -19,7 +19,7 @@ import {tracker} from './analytics';
 import {allDiffSummaries} from './codeReview/CodeReviewInfo';
 import {t, T} from './i18n';
 import platform from './platform';
-import {reconnectingStatus, repositoryInfo} from './serverAPIState';
+import {reconnectingStatus, repositoryInfoOrError} from './serverAPIState';
 
 type TopLevelErrorInfo = {
   title: ReactNode;
@@ -111,7 +111,7 @@ function computeTopLevelError(
 
 export function TopLevelErrors() {
   const reconnectStatus = useAtomValue(reconnectingStatus);
-  const repoInfo = useAtomValue(repositoryInfo);
+  const repoInfo = useAtomValue(repositoryInfoOrError);
   const diffFetchError = useAtomValue(allDiffSummaries).error;
 
   const info = computeTopLevelError(repoInfo, reconnectStatus, diffFetchError);

@@ -31,7 +31,7 @@ import {islDrawerState} from './drawerState';
 import {t, T} from './i18n';
 import platform from './platform';
 import {useMainContentWidth} from './responsive';
-import {repositoryInfo} from './serverAPIState';
+import {repositoryInfoOrError} from './serverAPIState';
 
 import './index.css';
 
@@ -70,7 +70,7 @@ function ComparisonApp() {
 }
 
 function NullStateOrDrawers() {
-  const repoInfo = useAtomValue(repositoryInfo);
+  const repoInfo = useAtomValue(repositoryInfoOrError);
   if (repoInfo != null && repoInfo.type !== 'success') {
     return <ISLNullState repoError={repoInfo} />;
   }

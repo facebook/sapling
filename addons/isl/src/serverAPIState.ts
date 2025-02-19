@@ -16,6 +16,7 @@ import type {
   SubscriptionKind,
   SubscriptionResultsData,
   UncommittedChanges,
+  ValidatedRepoInfo,
 } from './types';
 
 import {DEFAULT_DAYS_OF_COMMITS_TO_LOAD} from 'isl-server/src/constants';
@@ -51,7 +52,7 @@ registerCleanup(
   import.meta.hot,
 );
 
-export const repositoryInfo = atom(
+export const repositoryInfoOrError = atom(
   get => {
     const data = get(repositoryData);
     return data?.info;
@@ -62,6 +63,31 @@ export const repositoryInfo = atom(
     update: RepoInfo | undefined | ((_prev: RepoInfo | undefined) => RepoInfo | undefined),
   ) => {
     const value = typeof update === 'function' ? update(get(repositoryData)?.info) : update;
+    set(repositoryData, last => ({
+      ...last,
+      info: value,
+    }));
+  },
+);
+
+/** ValidatedRepoInfo, or undefined on error. */
+export const repositoryInfo = atom(
+  get => {
+    const info = get(repositoryInfoOrError);
+    if (info?.type === 'success') {
+      return info;
+    }
+    return undefined;
+  },
+  (
+    get,
+    set,
+    update:
+      | ValidatedRepoInfo
+      | undefined
+      | ((_prev: ValidatedRepoInfo | undefined) => ValidatedRepoInfo | undefined),
+  ) => {
+    const value = typeof update === 'function' ? update(get(repositoryInfo)) : update;
     set(repositoryData, last => ({
       ...last,
       info: value,
