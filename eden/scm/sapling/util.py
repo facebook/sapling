@@ -5079,3 +5079,36 @@ def parse_email(fp):
         return ep.parse(fp)
     finally:
         fp.detach()
+
+
+def debugger(locals=None, orig_home=os.getenv("HOME")):
+    """Start interactive debugging.
+    If run inside `sl .t`, re-open stdio to escape stdio capturing.
+    """
+    old_stdio = sys.stdin, sys.stdout, sys.stderr
+    old_home = os.getenv("HOME")
+    if istest():
+        # In tests, the input and output are often captured.
+        # Try to escape the capturing by opening the console.
+        tty_path = iswindows and "CON:" or "/dev/tty"
+        sys.stdin = open(tty_path, "r")
+        sys.stdout = open(tty_path, "w")
+        sys.stderr = open(tty_path, "w")
+        # Try to escape HOME=TESTTMP environment, so IPython installed inside
+        # the user's site-packages can be imported.
+        if orig_home:
+            os.environ["HOME"] = orig_home
+    frame = sys._getframe(1)
+    sys.stderr.write(
+        "util.debugger() at %s:%s\n" % (frame.f_code.co_filename, frame.f_lineno)
+    )
+    try:
+        from sapling.ext import debugshell
+
+        debugshell.start_ipython(frame.f_locals)
+    finally:
+        sys.stdin, sys.stdout, sys.stderr = old_stdio
+        if old_home:
+            os.environ["HOME"] = old_home
+        else:
+            del os.environ["HOME"]
