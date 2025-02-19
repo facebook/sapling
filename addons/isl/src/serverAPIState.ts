@@ -95,6 +95,12 @@ export const repositoryInfo = atom(
   },
 );
 
+/** Main command name, like 'sl'. */
+export const mainCommandName = atom(get => {
+  const info = get(repositoryInfo);
+  return info?.command ?? 'sl';
+});
+
 export const applicationinfo = atom<ApplicationInfo | undefined>(undefined);
 registerDisposable(
   applicationinfo,

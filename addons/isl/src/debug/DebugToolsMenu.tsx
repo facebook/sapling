@@ -38,8 +38,8 @@ import {RelativeDate} from '../relativeDate';
 import {
   latestCommitsData,
   latestUncommittedChangesData,
+  mainCommandName,
   mergeConflicts,
-  repositoryInfo,
 } from '../serverAPIState';
 import {showToast} from '../toast';
 import {isDev} from '../utils';
@@ -275,8 +275,7 @@ function DebugPerfInfo() {
   const latestLog = useAtomValue(latestCommitsData);
   const latestConflicts = useAtomValue(mergeConflicts);
   const heartbeat = useHeartbeat();
-  const repoInfo = useAtomValue(repositoryInfo);
-  const commandName = repoInfo?.command ?? 'sl';
+  const commandName = useAtomValue(mainCommandName);
   return (
     <div>
       {heartbeat.type === 'timeout' ? (
