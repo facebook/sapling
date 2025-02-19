@@ -170,9 +170,9 @@ typedef map<data.SmallBinary, data.LargeBinary> GitExtraHeaders
 // see: https://github.com/git-lfs/git-lfs/blob/main/docs/spec.md
 struct GitLfs {
   1: optional id.ContentId non_canonical_pointer_content_id;
-// If there's any version of Git LFS format beyond v1 then we should
-// have an enum here to indicate the version number. Right now there's just
-// one version: v1.
+  // If there's any version of Git LFS format beyond v1 then we should
+  // have an enum here to indicate the version number. Right now there's just
+  // one version: v1.
 }
 
 // A subtree copy marks an entire subtree as *copied* from a path in a
