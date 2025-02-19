@@ -9,6 +9,7 @@ pub(crate) mod common;
 mod merge;
 mod move_commit;
 mod pushredirection;
+mod run_mover;
 mod sync_diamond_merge;
 
 use anyhow::Result;
@@ -19,6 +20,7 @@ use mononoke_app::MononokeApp;
 use self::merge::MergeArgs;
 use self::move_commit::MoveArgs;
 use self::pushredirection::PushRedirectionArgs;
+use self::run_mover::RunMoverArgs;
 use self::sync_diamond_merge::SyncDiamondMergeArgs;
 
 /// Manage megarepo
@@ -34,6 +36,7 @@ enum MegarepoSubcommand {
     PushRedirection(PushRedirectionArgs),
     Merge(MergeArgs),
     MoveCommit(MoveArgs),
+    RunMover(RunMoverArgs),
     SyncDiamondMerge(SyncDiamondMergeArgs),
 }
 
@@ -44,6 +47,7 @@ pub async fn run(app: MononokeApp, args: CommandArgs) -> Result<()> {
         MegarepoSubcommand::PushRedirection(args) => pushredirection::run(&ctx, app, args).await?,
         MegarepoSubcommand::Merge(args) => merge::run(&ctx, app, args).await?,
         MegarepoSubcommand::MoveCommit(args) => move_commit::run(&ctx, app, args).await?,
+        MegarepoSubcommand::RunMover(args) => run_mover::run(&ctx, app, args).await?,
         MegarepoSubcommand::SyncDiamondMerge(args) => {
             sync_diamond_merge::run(&ctx, app, args).await?
         }

@@ -147,7 +147,6 @@ use crate::cli::PATH_PREFIX;
 use crate::cli::PATH_REGEX;
 use crate::cli::PRE_DELETION_COMMIT;
 use crate::cli::PRE_MERGE_DELETE;
-use crate::cli::RUN_MOVER;
 use crate::cli::SELECT_PARENTS_AUTOMATICALLY;
 use crate::cli::SOURCE_CHANGESET;
 use crate::cli::SYNC_COMMIT_AND_ANCESTORS;
@@ -677,22 +676,6 @@ async fn run_catchup_delete_head<'a>(
     Ok(())
 }
 
-async fn run_mover<'a>(
-    ctx: &CoreContext,
-    matches: &MononokeMatches<'a>,
-    sub_m: &ArgMatches<'a>,
-) -> Result<(), Error> {
-    let commit_syncer = create_commit_syncer_from_matches::<CrossRepo>(ctx, matches, None).await?;
-    let version = get_version(sub_m)?;
-    let movers = commit_syncer.get_movers_by_version(&version).await?;
-    let path = sub_m
-        .value_of(PATH)
-        .ok_or_else(|| format_err!("{} not set", PATH))?;
-    let path = NonRootMPath::new(path)?;
-    println!("{:?}", movers.mover.move_path(&path));
-    Ok(())
-}
-
 async fn run_catchup_validate<'a>(
     ctx: &CoreContext,
     matches: &MononokeMatches<'a>,
@@ -1104,15 +1087,6 @@ async fn run_sync_commit_and_ancestors<'a>(
     Ok(())
 }
 
-fn get_version(matches: &ArgMatches<'_>) -> Result<CommitSyncConfigVersion> {
-    Ok(CommitSyncConfigVersion(
-        matches
-            .value_of(VERSION)
-            .ok_or_else(|| format_err!("{} not set", VERSION))?
-            .to_string(),
-    ))
-}
-
 async fn run_delete_no_longer_bound_files_from_large_repo<'a>(
     ctx: &CoreContext,
     matches: &MononokeMatches<'a>,
@@ -1257,7 +1231,6 @@ fn main(fb: FacebookInit) -> Result<()> {
             (MARK_NOT_SYNCED_COMMAND, Some(sub_m)) => {
                 run_mark_not_synced(ctx, &matches, sub_m).await
             }
-            (RUN_MOVER, Some(sub_m)) => run_mover(ctx, &matches, sub_m).await,
             (SYNC_COMMIT_AND_ANCESTORS, Some(sub_m)) => {
                 run_sync_commit_and_ancestors(ctx, &matches, sub_m).await
             }

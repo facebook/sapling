@@ -165,3 +165,17 @@ test pre-merge deletes functionality
   32d2e80ff176b65df5cdeadec6dc52fdf8b66264965b001b91fab99dfb7aad75
   8807f350542a43aa815abc0c250c4a79ba35fd5bb68594e3ce6555e6630d81c2
   090a140adb3da3f4a629014cd9625055d8bd992a967ad7fc7e4e4d74892c4b71
+
+run mover
+  $ mononoke_admin megarepo run-mover \
+  > --source-repo-id 0 --target-repo-id 1 \
+  > --version TEST_VERSION_NAME --path foo/bar
+  Ok(Some(NonRootMPath("foo/bar")))
+  $ mononoke_admin megarepo run-mover \
+  > --source-repo-id 0 --target-repo-id 2 \
+  > --version TEST_VERSION_NAME --path arvr-legacy/foo
+  Ok(Some(NonRootMPath("foo")))
+  $ mononoke_admin megarepo run-mover \
+  > --source-repo-id 2 --target-repo-id 0 \
+  > --version TEST_VERSION_NAME --path foo/bar
+  Ok(Some(NonRootMPath("arvr-legacy/foo/bar")))

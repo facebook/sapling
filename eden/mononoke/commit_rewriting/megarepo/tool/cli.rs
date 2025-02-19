@@ -62,7 +62,6 @@ pub const PATH_PREFIX: &str = "path-prefix";
 pub const PATHS_FILE: &str = "paths-file";
 pub const PRE_DELETION_COMMIT: &str = "pre-deletion-commit";
 pub const PRE_MERGE_DELETE: &str = "pre-merge-delete";
-pub const RUN_MOVER: &str = "run-mover";
 pub const SELECT_PARENTS_AUTOMATICALLY: &str = "select-parents-automatically";
 pub const SOURCE_CHANGESET: &str = "source-changeset";
 pub const SYNC_COMMIT_AND_ANCESTORS: &str = "sync-commit-and-ancestors";
@@ -519,21 +518,6 @@ pub fn setup_app<'a, 'b>() -> MononokeClapApp<'a, 'b> {
                 .required(true),
         );
 
-    let run_mover_subcommand = SubCommand::with_name(RUN_MOVER)
-        .about("run mover of a given version to remap paths between source and target repos")
-        .arg(
-            Arg::with_name(VERSION)
-                .help("a version to use")
-                .takes_value(true)
-                .required(true),
-        )
-        .arg(
-            Arg::with_name(PATH)
-                .help("a path to remap")
-                .takes_value(true)
-                .required(true),
-        );
-
     let backfill_noop_mapping = SubCommand::with_name(BACKFILL_NOOP_MAPPING)
         .about(
             "
@@ -629,7 +613,6 @@ pub fn setup_app<'a, 'b>() -> MononokeClapApp<'a, 'b> {
         .subcommand(catchup_validate_subcommand)
         .subcommand(mark_not_synced_candidate)
         .subcommand(check_push_redirection_prereqs_subcommand)
-        .subcommand(run_mover_subcommand)
         .subcommand(backfill_noop_mapping)
         .subcommand(sync_commit_and_ancestors)
         .subcommand(diff_mapping_versions)
