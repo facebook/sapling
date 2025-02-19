@@ -16,6 +16,8 @@ import type {
 import type {CommandArg, RunnableOperation} from '../types';
 
 import {randomId} from 'shared/utils';
+import {enableSaplingDebugFlag, enableSaplingVerboseFlag} from '../atoms/debugToolAtoms';
+import {readAtom} from '../jotaiUtils';
 import {CommandRunner} from '../types';
 
 /**
@@ -73,12 +75,26 @@ export abstract class Operation {
 
   getRunnableOperation(): RunnableOperation {
     return {
-      args: this.getArgs(),
+      args: [...this.getExtraArgs(), ...this.getArgs()],
       id: this.id,
       stdin: this.getStdin(),
       runner: this.runner,
       trackEventName: this.trackEventName,
     };
+  }
+
+  /** Extra global args, like --debug, --verbose. */
+  getExtraArgs(): Array<CommandArg> {
+    const args: Array<CommandArg> = [];
+    if (this.runner === CommandRunner.Sapling) {
+      if (readAtom(enableSaplingVerboseFlag)) {
+        args.push('--verbose');
+      }
+      if (readAtom(enableSaplingDebugFlag)) {
+        args.push('--debug');
+      }
+    }
+    return args;
   }
 }
 
