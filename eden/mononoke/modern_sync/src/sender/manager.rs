@@ -55,6 +55,12 @@ pub struct SendManager {
     changeset_sender: mpsc::Sender<ChangesetMessage>,
 }
 
+pub struct Messages {
+    pub content_messages: Vec<ContentMessage>,
+    pub files_and_trees_messages: Vec<FileOrTreeMessage>,
+    pub changeset_messages: Vec<ChangesetMessage>,
+}
+
 pub enum ContentMessage {
     // Send the content to remote end
     Content((AnyFileContentId, FileContents)),

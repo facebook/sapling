@@ -9,6 +9,7 @@ license = "GPLv2+"
 
 [dependencies]
 anyhow = "1.0.95"
+assembly_line = { version = "0.1.0", path = "../common/assembly_line" }
 async-trait = "0.1.71"
 blobstore = { version = "0.1.0", path = "../blobstore" }
 bookmarks = { version = "0.1.0", path = "../bookmarks" }
