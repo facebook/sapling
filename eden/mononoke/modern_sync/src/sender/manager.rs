@@ -41,8 +41,8 @@ define_stats! {
 
 }
 
-const CONTENT_CHANNEL_SIZE: usize = 5000;
-const FILES_AND_TREES_CHANNEL_SIZE: usize = 5000;
+const CONTENT_CHANNEL_SIZE: usize = 8000;
+const FILES_AND_TREES_CHANNEL_SIZE: usize = 10000;
 const CHANGESET_CHANNEL_SIZE: usize = 5000;
 
 const FLUSH_INTERVAL: Duration = Duration::from_secs(5);
