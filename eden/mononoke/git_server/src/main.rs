@@ -8,6 +8,7 @@
 #![recursion_limit = "256"]
 #![feature(never_type)]
 #![feature(let_chains)]
+#![feature(cursor_split)]
 
 use std::fs::File;
 use std::io::Write;

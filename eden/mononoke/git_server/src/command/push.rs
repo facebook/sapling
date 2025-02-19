@@ -10,6 +10,7 @@ use std::str::from_utf8;
 use anyhow::bail;
 use anyhow::Context;
 use anyhow::Result;
+use bytes::Bytes;
 use gix_hash::ObjectId;
 use gix_packetline::PacketLineRef;
 use gix_packetline::StreamingPeekableIter;
@@ -164,20 +165,21 @@ impl Default for PushSettings {
 
 /// Arguments for `ls-refs` command
 #[derive(Clone, Debug, Default)]
-pub struct PushArgs<'a> {
+pub struct PushArgs {
     /// The settings that would be utilized during the push
     pub settings: PushSettings,
     /// The bytes of the packfile to be pushed
-    pub pack_file: &'a [u8],
+    pub pack_file: std::io::Cursor<Bytes>,
     /// List of ref moves/updates that are part of the user push
     pub ref_updates: Vec<RefUpdate>,
     /// List of shallow commits that are part of the user push
     pub shallow: Vec<ObjectId>,
 }
 
-impl<'a> PushArgs<'a> {
-    pub fn parse_from_packetline(args: &'a [u8]) -> Result<Self> {
+impl PushArgs {
+    pub fn parse_from_packetline(args: Bytes) -> Result<Self> {
         let mut push_args = Self::default();
+        let args = std::io::Cursor::new(args);
         let mut tokens = StreamingPeekableIter::new(args, &[PacketLineRef::Flush], true);
         while let Some(token) = tokens.read_line() {
             let token =

@@ -34,6 +34,7 @@ use scuba_ext::FutureStatsScubaExt;
 use slog::info;
 
 use crate::command::Command;
+use crate::command::PushArgs;
 use crate::command::RefUpdate;
 use crate::command::RequestCommand;
 use crate::model::GitMethodInfo;
@@ -66,13 +67,13 @@ pub async fn receive_pack(state: &mut State) -> Result<Response<Body>, HttpError
         return empty_body(state);
     }
     let request_command =
-        RequestCommand::parse_from_packetline(&body_bytes).map_err(HttpError::e400)?;
+        RequestCommand::parse_from_packetline(body_bytes).map_err(HttpError::e400)?;
     push(state, request_command).await.map_err(HttpError::e500)
 }
 
-async fn push<'a>(
+async fn push(
     state: &mut State,
-    request_command: RequestCommand<'a>,
+    request_command: RequestCommand,
 ) -> anyhow::Result<Response<Body>> {
     let repo_name = RepositoryParams::borrow_from(state).repo_name();
     let request_context = Arc::new(
@@ -84,9 +85,15 @@ async fn push<'a>(
     );
     let mut output = vec![];
     if let Command::Push(push_args) = request_command.command {
+        let PushArgs {
+            settings,
+            pack_file,
+            ref_updates,
+            shallow: _,
+        } = push_args;
         // If Mononoke is not the source of truth for this repo, then we need to prevent the push
         if !mononoke_source_of_truth(&request_context.ctx, request_context.repo.clone()).await? {
-            return reject_push(repo_name.as_str(), state, &push_args.ref_updates).await;
+            return reject_push(repo_name.as_str(), state, &ref_updates).await;
         }
         let (ctx, blobstore) = (
             &request_context.ctx.clone_with_repo_name(&repo_name),
@@ -94,8 +101,9 @@ async fn push<'a>(
         );
         let scuba = scuba_from_state(ctx, state);
         let concurrency = request_context.pushvars.concurrency();
+
         // Parse the packfile provided as part of the push and verify that its valid
-        let parsed_objects = parse_pack(push_args.pack_file, ctx, blobstore.clone(), concurrency)
+        let parsed_objects = parse_pack(pack_file.split().1, ctx, blobstore.clone(), concurrency)
             .try_timed()
             .await?
             .log_future_stats(
@@ -103,6 +111,8 @@ async fn push<'a>(
                 "Parsed complete Packfile",
                 "Push".to_string(),
             );
+        drop(pack_file);
+
         // Generate the GitObjectStore using the parsed objects
         let object_store = Arc::new(GitObjectStore::new(parsed_objects, ctx, blobstore.clone()));
         // Instantiate the LFS configuration
@@ -130,7 +140,7 @@ async fn push<'a>(
             ctx,
             request_context.repo.clone(),
             object_store.clone(),
-            &push_args.ref_updates,
+            &ref_updates,
             lfs,
             concurrency,
         )
@@ -159,7 +169,7 @@ async fn push<'a>(
             request_context.clone(),
             git_bonsai_mapping_store.clone(),
             object_store.clone(),
-            push_args.settings.atomic,
+            settings.atomic,
         )
         .try_timed()
         .await?

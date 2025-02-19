@@ -6,6 +6,7 @@
  */
 
 use anyhow::Context;
+use bytes::Bytes;
 use gix_packetline::PacketLineRef;
 use gix_packetline::StreamingPeekableIter;
 use gix_transport::bstr::BString;
@@ -27,31 +28,31 @@ const PUSH_COMMAND: &[u8] = b"push";
 const PUSH_MARKER: u8 = b'\0';
 
 #[derive(Debug, Clone)]
-pub enum Command<'a> {
+pub enum Command {
     LsRefs(LsRefsArgs),
     Fetch(FetchArgs),
-    Push(PushArgs<'a>),
+    Push(PushArgs),
 }
 
 #[derive(Debug, Clone)]
-pub struct RequestCommand<'a> {
-    pub command: Command<'a>,
+pub struct RequestCommand {
+    pub command: Command,
     #[allow(dead_code)]
     pub capability_list: Vec<BString>,
 }
 
-impl<'a> RequestCommand<'a> {
-    pub fn parse_from_packetline(args: &'a [u8]) -> anyhow::Result<Self> {
+impl RequestCommand {
+    pub fn parse_from_packetline(args: Bytes) -> anyhow::Result<Self> {
         Self::parse_from_packetline_with_delimiters(args, &[PacketLineRef::Delimiter])
     }
 
     pub fn parse_from_packetline_with_delimiters(
-        args: &'a [u8],
+        args: Bytes,
         delimiters: &'static [PacketLineRef<'static>],
     ) -> anyhow::Result<Self> {
         let mut command_token = vec![];
         let mut capability_list = vec![];
-        let mut tokens = StreamingPeekableIter::new(args, delimiters, true);
+        let mut tokens = StreamingPeekableIter::new(args.as_ref(), delimiters, true);
         if args.contains(&PUSH_MARKER) {
             command_token = PUSH_COMMAND.to_vec();
         } else {
@@ -72,7 +73,7 @@ impl<'a> RequestCommand<'a> {
         let command = match command_token.as_slice() {
             LS_REFS_COMMAND => Command::LsRefs(LsRefsArgs::parse_from_packetline(remaining)?),
             FETCH_COMMAND => Command::Fetch(FetchArgs::parse_from_packetline(remaining)?),
-            PUSH_COMMAND => Command::Push(PushArgs::parse_from_packetline(args)?),
+            PUSH_COMMAND => Command::Push(PushArgs::parse_from_packetline(args)?), // we went over
             unknown_command => {
                 anyhow::bail!("Unknown git protocol V2 command {:?}", unknown_command)
             }

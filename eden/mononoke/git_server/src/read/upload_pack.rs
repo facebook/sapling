@@ -311,7 +311,7 @@ pub async fn upload_pack(state: &mut State) -> Result<Response<Body>, HttpError>
         return empty_body(state);
     }
     let request_command =
-        RequestCommand::parse_from_packetline(&body_bytes).map_err(HttpError::e400)?;
+        RequestCommand::parse_from_packetline(body_bytes).map_err(HttpError::e400)?;
     let request_context = RepositoryRequestContext::instantiate(
         state,
         GitMethodInfo::from_command(&request_command.command, repo_name),
