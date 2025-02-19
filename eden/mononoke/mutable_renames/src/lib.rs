@@ -424,6 +424,37 @@ impl MutableRenames {
             .filter_map(|r| r.ok())
             .collect())
     }
+
+    pub async fn delete_renames(
+        &self,
+        ctx: &CoreContext,
+        renames: Vec<MutableRenameEntry>,
+    ) -> Result<u64, Error> {
+        // Delete renames
+        let mut rows = vec![];
+        for rename in &renames {
+            rows.push((
+                &self.repo_id,
+                &rename.dst_cs_id,
+                &rename.dst_path_hash().hash.0,
+            ));
+        }
+        let result = DeleteRenames::maybe_traced_query(
+            &self.store.write_connection,
+            ctx.client_request_info(),
+            &rows[..],
+        )
+        .await?;
+
+        // TODO(lyang): Delete entries from paths table if they are no longer
+        // used by anything else.
+
+        // Cache invalidation is intentionally left out as the use cases of
+        // mutable renames can tolerate a few hours of inconsistency, e.g.
+        // https://fburl.com/code/rvfdjcn7
+
+        Ok(result.affected_rows())
+    }
 }
 
 mononoke_queries! {
@@ -453,6 +484,15 @@ mononoke_queries! {
     )) {
         insert_or_ignore,
         "{insert_or_ignore} INTO mutable_renames_paths (path_hash, path) VALUES {values}"
+    }
+
+    write DeleteRenames(values: (
+        repo_id: RepositoryId,
+        dst_cs_id: ChangesetId,
+        dst_path_hash: Vec<u8>,
+    )) {
+        none,
+        "DELETE FROM mutable_renames WHERE (repo_id, dst_cs_id, dst_path_hash) IN (VALUES {values})"
     }
 
     read GetRename(repo_id: RepositoryId, dst_cs_id: ChangesetId, dst_path_hash: Vec<u8>) -> (

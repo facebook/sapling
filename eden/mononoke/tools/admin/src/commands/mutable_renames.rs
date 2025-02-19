@@ -8,6 +8,7 @@
 mod add;
 mod check_commit;
 mod copy_immutable;
+mod delete;
 mod get;
 mod list;
 
@@ -23,6 +24,7 @@ use clap::Parser;
 use clap::Subcommand;
 use commit_graph::CommitGraph;
 use copy_immutable::CopyImmutableArgs;
+use delete::DeleteArgs;
 use get::GetArgs;
 use list::ListArgs;
 use mononoke_app::args::RepoArgs;
@@ -80,6 +82,8 @@ pub enum MutableRenamesSubcommand {
     Add(AddArgs),
     /// Copy immutable renames to mutable renames
     CopyImmutable(CopyImmutableArgs),
+    /// Delete mutable renames
+    Delete(DeleteArgs),
 }
 
 pub async fn run(app: MononokeApp, args: CommandArgs) -> Result<()> {
@@ -100,6 +104,7 @@ pub async fn run(app: MononokeApp, args: CommandArgs) -> Result<()> {
         MutableRenamesSubcommand::CopyImmutable(args) => {
             copy_immutable::copy_immutable(&ctx, &repo, args).await?
         }
+        MutableRenamesSubcommand::Delete(args) => delete::delete(&ctx, &repo, args).await?,
     }
 
     Ok(())
