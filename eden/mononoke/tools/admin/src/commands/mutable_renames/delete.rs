@@ -77,8 +77,12 @@ pub async fn delete(ctx: &CoreContext, repo: &Repo, delete_args: DeleteArgs) -> 
     if delete_args.dry_run {
         println!("Remove --dry-run to execute the deletion");
     } else {
-        let num_deleted_rows = repo.mutable_renames().delete_renames(ctx, renames).await?;
-        println!("Deleted {} mutable renames", num_deleted_rows);
+        let (num_deleted_renames, num_deleted_paths) =
+            repo.mutable_renames().delete_renames(ctx, renames).await?;
+        println!(
+            "Deleted {} mutable renames, {} paths",
+            num_deleted_renames, num_deleted_paths
+        );
     }
 
     Ok(())

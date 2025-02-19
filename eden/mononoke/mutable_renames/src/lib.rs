@@ -429,31 +429,59 @@ impl MutableRenames {
         &self,
         ctx: &CoreContext,
         renames: Vec<MutableRenameEntry>,
-    ) -> Result<u64, Error> {
-        // Delete renames
+    ) -> Result<(u64, u64), Error> {
         let mut rows = vec![];
+        let mut path_hashes = HashSet::new();
         for rename in &renames {
             rows.push((
                 &self.repo_id,
                 &rename.dst_cs_id,
                 &rename.dst_path_hash().hash.0,
             ));
+            path_hashes.insert(&rename.dst_path_hash().hash.0);
+            path_hashes.insert(&rename.src_path_hash().hash.0);
         }
-        let result = DeleteRenames::maybe_traced_query(
-            &self.store.write_connection,
+
+        let txn = self.store.write_connection.start_transaction().await?;
+
+        // Delete renames
+        let (txn, delete_renames_result) = DeleteRenames::maybe_traced_query_with_transaction(
+            txn,
             ctx.client_request_info(),
             &rows[..],
         )
         .await?;
 
-        // TODO(lyang): Delete entries from paths table if they are no longer
-        // used by anything else.
+        // Compute orphan paths
+        let (txn, used_path_hashes) = FindUsedPathHashes::maybe_traced_query_with_transaction(
+            txn,
+            ctx.client_request_info(),
+            &path_hashes.clone().into_iter().collect::<Vec<_>>()[..],
+        )
+        .await?;
+        for (dst_path_hash, src_path_hash) in used_path_hashes {
+            path_hashes.remove(&dst_path_hash);
+            path_hashes.remove(&src_path_hash);
+        }
+
+        // Delete orphan paths
+        let (txn, delete_paths_result) = DeletePaths::maybe_traced_query_with_transaction(
+            txn,
+            ctx.client_request_info(),
+            &path_hashes.into_iter().collect::<Vec<_>>()[..],
+        )
+        .await?;
+
+        txn.commit().await?;
 
         // Cache invalidation is intentionally left out as the use cases of
         // mutable renames can tolerate a few hours of inconsistency, e.g.
         // https://fburl.com/code/rvfdjcn7
 
-        Ok(result.affected_rows())
+        Ok((
+            delete_renames_result.affected_rows(),
+            delete_paths_result.affected_rows(),
+        ))
     }
 }
 
@@ -493,6 +521,11 @@ mononoke_queries! {
     )) {
         none,
         "DELETE FROM mutable_renames WHERE (repo_id, dst_cs_id, dst_path_hash) IN (VALUES {values})"
+    }
+
+    write DeletePaths(>list path_hashes: &Vec<u8>) {
+        none,
+        "DELETE FROM mutable_renames_paths WHERE path_hash IN {path_hashes}"
     }
 
     read GetRename(repo_id: RepositoryId, dst_cs_id: ChangesetId, dst_path_hash: Vec<u8>) -> (
@@ -560,6 +593,18 @@ mononoke_queries! {
         WHERE
             mutable_renames.repo_id = {repo_id}
             AND mutable_renames.dst_path_hash = {dst_path_hash}
+        "
+    }
+
+    read FindUsedPathHashes(>list path_hashes: &Vec<u8>) -> (Vec<u8>, Vec<u8>) {
+        "
+        SELECT
+            dst_path_hash,
+            src_path_hash
+        FROM mutable_renames
+        WHERE 
+            dst_path_hash IN {path_hashes}
+            OR src_path_hash IN {path_hashes}
         "
     }
 }

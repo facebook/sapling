@@ -116,7 +116,7 @@ Delete all renames on E
   The following 2 mutable renames will be deleted:
   	Destination path MPath("d_prime"), destination bonsai CS f0249abfb89eb2db2b4ffd4ad0334c25d2b6d96183823127f79688852e6194af, source path MPath("c_prime"), source bonsai CS 37567336930d36d383a4ed0058077657e4a5b4bea1c6f7cb98ce41aa21eaa13d, source unode Leaf(FileUnodeId(Blake2(f6fc8af942343b8de8fbea05804113bfc45e34670a84cfa2272fc5ef606598ae)))
   	Destination path MPath("a_file"), destination bonsai CS f0249abfb89eb2db2b4ffd4ad0334c25d2b6d96183823127f79688852e6194af, source path MPath("a_file"), source bonsai CS 25d57e3947ea0f29fd5899a4afe4f17460a2ba65d9307f07349ab188068e6d36, source unode Leaf(FileUnodeId(Blake2(2c50f7bb2096b424b82e1c7ebfad7d2361dddf3c1d09ce2dba20e2baa3d388f2)))
-  Deleted 2 mutable renames
+  Deleted 2 mutable renames, 1 paths
 
 List renames on E
   $ mononoke_admin mutable-renames -R repo list $E
@@ -126,7 +126,7 @@ Delete a rename on G with dst path g_file
   $ mononoke_admin mutable-renames -R repo delete $G --path g_file
   The following 1 mutable renames will be deleted:
   	Destination path MPath("g_file"), destination bonsai CS 074c10beddc42f9e0e41f1adea1dbecf76e01dbe015a5b656205b1245ac7b7fc, source path MPath("a_file"), source bonsai CS 1a21e175bd7b7537dee83095eeccf66dea393e734eeb35f93bea530c9dc7e528, source unode Leaf(FileUnodeId(Blake2(2c50f7bb2096b424b82e1c7ebfad7d2361dddf3c1d09ce2dba20e2baa3d388f2)))
-  Deleted 1 mutable renames
+  Deleted 1 mutable renames, 2 paths
 
 List renames on G
   $ mononoke_admin mutable-renames -R repo list $G
@@ -135,3 +135,7 @@ List renames on G
 Delete on G which no longer has any renames
   $ mononoke_admin mutable-renames -R repo delete $G
   No mutable renames to delete
+
+Make sure we can stil list D (paths are still retrievable)
+  $ mononoke_admin mutable-renames -R repo list $D
+  Destination path MPath("c_prime"), destination bonsai CS 37567336930d36d383a4ed0058077657e4a5b4bea1c6f7cb98ce41aa21eaa13d, source path MPath("c_file"), source bonsai CS 74a33dfc64c14f4fc8ca6150b8bc565431403302b99c2a1dc14fc83eeb7a8938, source unode Leaf(FileUnodeId(Blake2(48f83239679afb0c0207fc2bf510bc61b5e39db53f9eba1dc795a79c3422085a)))
