@@ -174,7 +174,12 @@ export function CommandHistoryAndProgress() {
     showLastLineOfOutput = true;
   }
 
-  const processedLines = processTerminalLines(progress.commandOutput ?? []);
+  let processedLines = processTerminalLines(progress.commandOutput ?? []);
+  if (desc?.tooltip != null) {
+    // Output might contain a JSON string not suitable for human reading.
+    // Filter the line out.
+    processedLines = processedLines.filter(line => !line.startsWith('{'));
+  }
 
   return (
     <div className="progress-container" data-testid="progress-container">
@@ -247,21 +252,21 @@ export function CommandHistoryAndProgress() {
                   <strong>Command: </strong>
                   <OperationDescription info={info} operation={progress.operation} long />
                 </div>
-                <br />
-                <b>Command output:</b>
-                <br />
-                {processedLines.length === 0 ? (
-                  <Subtle>
-                    <T>No output</T>
-                  </Subtle>
-                ) : (
-                  <pre>
-                    {processedLines.map((line, i) => (
-                      <div key={i}>{line}</div>
-                    ))}
-                  </pre>
-                )}
               </>
+            )}
+            <br />
+            <b>Command output:</b>
+            <br />
+            {processedLines.length === 0 ? (
+              <Subtle>
+                <T>No output</T>
+              </Subtle>
+            ) : (
+              <pre>
+                {processedLines.map((line, i) => (
+                  <div key={i}>{line}</div>
+                ))}
+              </pre>
             )}
           </div>
         )}>

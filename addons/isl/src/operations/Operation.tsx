@@ -108,6 +108,10 @@ export type OperationDescription = {
   /** If set, this replaces the default command arguments. */
   description?: string;
 
-  /** If set, this replaces the default command + output tooltip. */
+  /**
+   * If set, this replaces the default command in the output tooltip.
+   * It also indicates that the output lines might contain a JSON string
+   * that is not suitable for human reading.
+   */
   tooltip?: string;
 };
