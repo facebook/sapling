@@ -571,6 +571,11 @@ def _reset(repo, node):
 
 
 def _filectxfn(repo, mctx, path, files_dict):
+    if path not in files_dict:
+        # This file might exist in the parent commit.
+        parents = mctx.parents()
+        if parents:
+            return parents[0][path]
     file_info = files_dict[path]
     if file_info is None:
         return None

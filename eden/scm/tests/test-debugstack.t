@@ -462,7 +462,6 @@ Import stack:
         content
 
       # Work with dirsync.
-      # FIXME: not yet working
 
         $ newrepo
         $ enable dirsync
@@ -477,15 +476,15 @@ Import stack:
         >   "files": {"dir1/A": {"data": "A"}}}],
         >  ["goto", {"mark": ":1"}]]
         > EOS
-        dirsync: skipped because dirsync config is empty
+        mirrored adding 'dir1/A' to 'dir2/A'
         committing files:
         dir1/A
+        dir2/A
         committing manifest
         committing changelog
-        {":1": "18fa8a7d38fecf7aeab19d8d2470170198b152b4"}
+        {":1": "c2a84efd1be66cfa14cf13516061f7e7eee15183"}
         $ cat dir2/A
-        cat: dir2/A: $ENOENT$
-        [1]
+        A (no-eol)
 
       # Error cases.
 
