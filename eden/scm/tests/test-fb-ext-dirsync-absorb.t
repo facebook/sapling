@@ -280,6 +280,8 @@ There is no "rewrite mirrored dir2/A" message:
   > EOF
   $ LOG='sapling::ext::dirsync=debug' HGEDITOR='cat editortext >' hg absorb --edit-lines -a dir1/A
   mirrored adding 'dir1/A' to 'dir2/A'
+  DEBUG sapling::ext::dirsync: dirsync: no files are mirrored
+  DEBUG sapling::ext::dirsync: dirsync: no files are mirrored
   1 of 1 chunk applied
 
 and status is clean
