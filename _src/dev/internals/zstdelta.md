@@ -1,6 +1,6 @@
 # ZstDelta
 
-ZstDelta uses [zstd](https://www.zstd.net) dictionary compression to calculate
+ZstDelta uses [zstd](http://www.zstd.net) dictionary compression to calculate
 a compressed delta between two inputs.
 
 ## ZstDelta
