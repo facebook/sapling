@@ -950,7 +950,7 @@ pub async fn shallow_info(
             .context("Error in getting ancestors within distance from heads commits during shallow-info")?,
         ShallowVariant::FromClientWithDepth(depth) => repo
             .commit_graph()
-            .ancestors_within_distance(&ctx, translated_shallow_commits.bonsais, (*depth - 1) as u64)
+            .ancestors_within_distance(&ctx, translated_shallow_commits.bonsais, *depth as u64)
             .await
             .context("Error in getting ancestors within distance from shallow commits during shallow-info")?,
         ShallowVariant::None => AncestorsWithinDistance::default(),

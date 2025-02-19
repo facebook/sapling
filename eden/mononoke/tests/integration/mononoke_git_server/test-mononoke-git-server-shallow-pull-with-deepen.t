@@ -144,20 +144,20 @@
 # Pull from Mononoke with deepen = 2, which is shallow with depth from the client side instead of server side
   $ cd $TESTTMP/$REPONAME
   $ quiet git_client pull --deepen=2
-# Visualize the graph to verify its the right shape. From the output below, its clear that Mononoke does NOT return commit 99f1ee9 as the shallow
-# boundary, instead incorrectly assumes 6e43a74 to be the shallow boundary
+# Visualize the graph to verify its the right shape
   $ git log --all --decorate --oneline --graph
   * 8ca6d2a (HEAD -> master_bookmark, origin/master_bookmark, origin/HEAD) Adding fileJ
   * 7eda99f Adding fileI
-  * 6e43a74 (grafted) Adding fileH
-  * 47156f5 (origin/R1) Adding fileA and fileB
-  | *   18a6f40 (origin/R2) Merge branch 'R3' into R2
-  | |\  
-  | | * 619f44e (origin/R3) Adding fileE
-  | | * a9ff5f9 Adding fileC and fileD
+  * 6e43a74 Adding fileH
+  * 99f1ee9 (grafted) Adding fileG
+  *   18a6f40 (origin/R2) Merge branch 'R3' into R2
+  |\  
+  | * 619f44e (origin/R3) Adding fileE
+  * | 9089a8c Adding fileF
+  * |   12a34ee Merge branch 'R1' into R2
+  |\ \  
   | |/  
   |/|   
-  * | 83ef99f initial commit
-   /  
-  * 9089a8c Adding fileF
-  * 12a34ee (grafted) Merge branch 'R1' into R2
+  | * 47156f5 (grafted, origin/R1) Adding fileA and fileB
+  * a9ff5f9 Adding fileC and fileD
+  * 83ef99f initial commit
