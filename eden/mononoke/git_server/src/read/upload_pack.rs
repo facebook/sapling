@@ -15,6 +15,7 @@ use bonsai_git_mapping::BonsaiGitMappingRef;
 use bonsai_git_mapping::BonsaisOrGitShas;
 use bytes::Bytes;
 use cloned::cloned;
+use either::Either;
 use futures::future::try_join4;
 use futures::SinkExt;
 use futures::StreamExt;
@@ -327,9 +328,11 @@ pub async fn upload_pack(state: &mut State) -> Result<Response<Body>, HttpError>
         }
         Command::Fetch(fetch_args) => {
             let scuba_handler = MononokeGitScubaHandler::from_state(state);
-            let output = fetch(&request_context, fetch_args, scuba_handler).await;
-            let output = output.map_err(HttpError::e500)?.try_into_response(state);
-            output.map_err(HttpError::e500)
+            let output = match fetch(&request_context, fetch_args, scuba_handler).await {
+                Ok(output) => Either::Right(output),
+                Err(e) => Either::Left(git_error_message(&e).await?),
+            };
+            output.try_into_response(state).map_err(HttpError::e500)
         }
         Command::Push(_) => Err(HttpError::e500(anyhow::anyhow!(
             "Push command directed to incorrect upload-pack handler"
@@ -413,6 +416,7 @@ pub async fn fetch(
         let mut buf = Vec::with_capacity(FLUSH_LINE.len());
         flush_to_write(&mut buf).await?;
         yield Bytes::from(buf);
+        return;
     })
     .end_on_err::<anyhow::Error>();
     mononoke::spawn_task({
@@ -477,4 +481,14 @@ async fn git_fetch_message(request_context: &RepositoryRequestContext) -> Result
     } else {
         Ok(None)
     }
+}
+
+/// Generate packline encoded error response that Git client understands
+async fn git_error_message(error: &anyhow::Error) -> Result<impl TryIntoResponse, HttpError> {
+    let error_message = format!("{:?}", error);
+    let mut buf = Vec::with_capacity(error_message.len());
+    write_error_channel(error_message.as_ref(), &mut buf)
+        .await
+        .map_err(HttpError::e500)?;
+    Ok(BytesBody::new(Bytes::from(buf), mime::TEXT_PLAIN))
 }

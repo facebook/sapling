@@ -65,8 +65,10 @@
   $ cd "$TESTTMP"
   $ quiet git_client clone $MONONOKE_GIT_SERVICE_BASE_URL/$REPONAME.git --shallow-since='02/01/0000 00:01 +0000'
   Cloning into 'repo'...
-  error: RPC failed; HTTP 500 curl 22 The requested URL returned error: 500
-  fatal: expected 'packfile'
+  fatal: expected 'packfile', received '?Failed to generate shallow info
+  
+  Caused by:
+      Shallow variant 'shallow-since' is not yet supported'
   [128]
 #  $ cd $REPONAME
 # Validate that the list of commits returned match the expected output

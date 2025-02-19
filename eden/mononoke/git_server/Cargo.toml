@@ -20,6 +20,7 @@ cloned = { version = "0.1.0", git = "https://github.com/facebookexperimental/rus
 cmdlib_caching = { version = "0.1.0", path = "../cmdlib/caching" }
 connection_security_checker = { version = "0.1.0", path = "../common/connection_security_checker" }
 context = { version = "0.1.0", path = "../server/context" }
+either = "1.5"
 environment = { version = "0.1.0", path = "../cmdlib/environment" }
 executor_lib = { version = "0.1.0", path = "../cmdlib/sharding" }
 fbinit = { version = "0.2.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }

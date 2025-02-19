@@ -954,6 +954,7 @@ pub async fn shallow_info(
             .await
             .context("Error in getting ancestors within distance from shallow commits during shallow-info")?,
         ShallowVariant::None => AncestorsWithinDistance::default(),
+        ShallowVariant::FromServerWithTime(_) => anyhow::bail!("Shallow variant 'shallow-since' is not yet supported"),
         variant => anyhow::bail!("Shallow variant {:?} is not supported yet", variant),
     };
     let boundary_commits =

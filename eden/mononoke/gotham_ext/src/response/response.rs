@@ -8,6 +8,7 @@
 use anyhow::Context;
 use anyhow::Error;
 use bytes::Bytes;
+use either::Either;
 use futures::channel::oneshot;
 use futures::stream::Stream;
 use futures::stream::StreamExt;
@@ -36,6 +37,19 @@ use crate::error::HttpError;
 
 pub trait TryIntoResponse {
     fn try_into_response(self, state: &mut State) -> Result<Response<Body>, Error>;
+}
+
+impl<L, R> TryIntoResponse for Either<L, R>
+where
+    L: TryIntoResponse,
+    R: TryIntoResponse,
+{
+    fn try_into_response(self, state: &mut State) -> Result<Response<Body>, Error> {
+        match self {
+            Either::Left(l) => l.try_into_response(state),
+            Either::Right(r) => r.try_into_response(state),
+        }
+    }
 }
 
 pub fn build_response<IR: TryIntoResponse, F: ErrorFormatter>(
