@@ -15,7 +15,9 @@ use async_recursion::async_recursion;
 use blobstore::Blobstore;
 use blobstore::Loadable;
 use bonsai_hg_mapping::BonsaiHgMapping;
+use bookmarks::BookmarkKey;
 use bookmarks::Bookmarks;
+use bookmarks::BookmarksRef;
 use commit_graph::CommitGraph;
 use commit_graph::CommitGraphRef;
 use commit_graph::CommitGraphWriter;
@@ -108,49 +110,66 @@ async fn test_for_fixture<F: TestRepoFixture + Send>(fb: FacebookInit) -> Result
         ChangesetIdsResolvedFromPrefix::Multiple(all_commits) => all_commits,
         other => anyhow::bail!("Unexpected number of commits: {:?}", other),
     };
-    let visited = &RwLock::new(HashSet::new());
-    stream::iter(all_commits.into_iter().map(anyhow::Ok))
-        .try_for_each_concurrent(None, |cs_id| async move {
-            let test_manifest = derived_data
-                .derive::<RootTestManifestDirectory>(ctx, cs_id)
-                .await?
-                .into_inner();
-            validate(visited, ctx, blobstore, test_manifest.clone()).await?;
-
-            let skeleton_manifest = derived_data
-                .derive::<RootSkeletonManifestId>(ctx, cs_id)
-                .await?
-                .into_skeleton_manifest_id();
-
-            let test_manifest_leaf_entries = test_manifest
-                .list_leaf_entries(ctx.clone(), blobstore.clone())
-                .try_collect::<Vec<_>>()
-                .await?;
-            let skeleton_manifest_leaf_entries = skeleton_manifest
-                .list_leaf_entries(ctx.clone(), blobstore.clone())
-                .try_collect::<Vec<_>>()
-                .await?;
-            assert_eq!(test_manifest_leaf_entries, skeleton_manifest_leaf_entries);
-
-            Ok(())
-        })
+    if let Some(master_cs_id) = repo
+        .bookmarks()
+        .get(ctx.clone(), &BookmarkKey::new("master").unwrap())
+        .await?
+    {
+        futures::future::try_join(
+            derived_data.derive::<RootTestManifestDirectory>(ctx, master_cs_id),
+            derived_data.derive::<RootSkeletonManifestId>(ctx, master_cs_id),
+        )
         .await?;
+    }
+    let visited = &RwLock::new(HashSet::new());
+    for cs_id in all_commits {
+        let test_manifest = derived_data
+            .derive::<RootTestManifestDirectory>(ctx, cs_id)
+            .await?
+            .into_inner();
+        validate(visited, ctx, blobstore, test_manifest.clone()).await?;
+
+        let skeleton_manifest = derived_data
+            .derive::<RootSkeletonManifestId>(ctx, cs_id)
+            .await?
+            .into_skeleton_manifest_id();
+
+        let test_manifest_leaf_entries = test_manifest
+            .list_leaf_entries(ctx.clone(), blobstore.clone())
+            .try_collect::<Vec<_>>()
+            .await?;
+        let skeleton_manifest_leaf_entries = skeleton_manifest
+            .list_leaf_entries(ctx.clone(), blobstore.clone())
+            .try_collect::<Vec<_>>()
+            .await?;
+        assert_eq!(test_manifest_leaf_entries, skeleton_manifest_leaf_entries);
+    }
+
     Ok(())
 }
 
-#[mononoke::fbinit_test]
-async fn test_manifest_on_repo_fixtures(fb: FacebookInit) {
-    futures::try_join!(
-        test_for_fixture::<fixtures::Linear>(fb),
-        test_for_fixture::<fixtures::BranchEven>(fb),
-        test_for_fixture::<fixtures::BranchUneven>(fb),
-        test_for_fixture::<fixtures::BranchWide>(fb),
-        test_for_fixture::<fixtures::MergeEven>(fb),
-        test_for_fixture::<fixtures::ManyFilesDirs>(fb),
-        test_for_fixture::<fixtures::MergeUneven>(fb),
-        test_for_fixture::<fixtures::UnsharedMergeEven>(fb),
-        test_for_fixture::<fixtures::UnsharedMergeUneven>(fb),
-        test_for_fixture::<fixtures::ManyDiamonds>(fb),
-    )
-    .unwrap();
+macro_rules! define_test {
+    ( $test_name:ident, $fixture_name:ty ) => {
+        #[mononoke::fbinit_test]
+        async fn $test_name(fb: FacebookInit) {
+            test_for_fixture::<$fixture_name>(fb).await.unwrap()
+        }
+    };
 }
+
+define_test!(test_manifest_on_linear, fixtures::Linear);
+define_test!(test_manifest_on_branch_even, fixtures::BranchEven);
+define_test!(test_manifest_on_branch_uneven, fixtures::BranchUneven);
+define_test!(test_manifest_on_branch_wide, fixtures::BranchWide);
+define_test!(test_manifest_on_merge_even, fixtures::MergeEven);
+define_test!(test_manifest_on_many_files_dirs, fixtures::ManyFilesDirs);
+define_test!(test_manifest_on_merge_uneven, fixtures::MergeUneven);
+define_test!(
+    test_manifest_on_unshared_merge_even,
+    fixtures::UnsharedMergeEven
+);
+define_test!(
+    test_manifest_on_unshared_merge_uneven,
+    fixtures::UnsharedMergeUneven
+);
+define_test!(test_manifest_on_many_diamonds, fixtures::ManyDiamonds);
