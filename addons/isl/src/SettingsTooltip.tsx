@@ -50,10 +50,11 @@ import {useRunOperation} from './operationsState';
 import platform from './platform';
 import {irrelevantCwdDeemphasisEnabled} from './repositoryData';
 import {renderCompactAtom, useZoomShortcut, zoomUISettingAtom} from './responsive';
-import {repositoryInfo} from './serverAPIState';
+import {mainCommandName, repositoryInfo} from './serverAPIState';
 import {themeState, useThemeShortcut} from './theme';
 
 import './SettingsTooltip.css';
+import {enableSaplingDebugFlag, enableSaplingVerboseFlag} from './atoms/debugToolAtoms';
 
 export function SettingsGearButton() {
   useThemeShortcut();
@@ -456,7 +457,10 @@ function ZoomUISetting() {
 function DebugToolsField() {
   const [isDebug, setIsDebug] = useAtom(debugToolsEnabledState);
   const [overrideDisabledSubmit, setOverrideDisabledSubmit] = useAtom(overrideDisabledSubmitModes);
+  const [debugFlag, setDebugFlag] = useAtom(enableSaplingDebugFlag);
+  const [verboseFlag, setVerboseFlag] = useAtom(enableSaplingVerboseFlag);
   const provider = useAtomValue(codeReviewProvider);
+  const commandName = useAtomValue(mainCommandName);
 
   const [branchPrsEnabled, setBranchPrsEnabled] = useAtom(experimentalBranchPRsEnabled);
 
@@ -488,6 +492,24 @@ function DebugToolsField() {
             <T>Enable Experimental Branching PRs for GitHub</T>
           </Checkbox>
         )}
+        <Row>
+          <T
+            replace={{
+              $sl: <code>{commandName}</code>,
+              $verbose: (
+                <Checkbox checked={verboseFlag} onChange={setVerboseFlag}>
+                  <code>--verbose</code>
+                </Checkbox>
+              ),
+              $debug: (
+                <Checkbox checked={debugFlag} onChange={setDebugFlag}>
+                  <code>--debug</code>
+                </Checkbox>
+              ),
+            }}>
+            Pass extra flags to $sl: $verbose $debug
+          </T>
+        </Row>
       </Column>
     </DropdownField>
   );
