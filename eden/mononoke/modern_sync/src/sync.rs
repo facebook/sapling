@@ -52,6 +52,8 @@ use repo_derived_data::RepoDerivedDataRef;
 use repo_identity::RepoIdentityRef;
 use slog::info;
 use slog::Logger;
+use stats::define_stats;
+use stats::prelude::*;
 use tokio::sync::mpsc;
 use url::Url;
 
@@ -65,6 +67,13 @@ use crate::ModernSyncArgs;
 use crate::Repo;
 
 const MODERN_SYNC_COUNTER_NAME: &str = "modern_sync";
+
+define_stats! {
+    prefix = "mononoke.modern_sync";
+    changeset_procesing_time_s:  dynamic_timeseries("{}.changeset_procesing_time", (repo: String); Average),
+    changeset_procesed:  dynamic_timeseries("{}.changeset_procesed", (repo: String); Sum),
+
+}
 
 #[derive(Clone)]
 pub enum ExecutionType {
@@ -357,6 +366,8 @@ pub async fn process_one_changeset(
     bookmark_name: &str,
     changeset_ready: Option<mpsc::Sender<Result<()>>>,
 ) -> Result<()> {
+    let now = std::time::Instant::now();
+
     let cs_info = repo
         .repo_derived_data()
         .derive::<ChangesetInfo>(ctx, cs_id.clone())
@@ -468,6 +479,13 @@ pub async fn process_one_changeset(
             )))
             .await?;
     }
+
+    let elapsed = now.elapsed();
+    STATS::changeset_procesing_time_s.add_value(
+        elapsed.as_secs() as i64,
+        (repo.repo_identity().name().to_string(),),
+    );
+    STATS::changeset_procesed.add_value(1, (repo.repo_identity().name().to_string(),));
 
     Ok(())
 }
