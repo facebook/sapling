@@ -398,6 +398,8 @@ impl MutableRenames {
         ctx: &CoreContext,
         dst_cs_id: ChangesetId,
     ) -> Result<Vec<MutableRenameEntry>, Error> {
+        ctx.perf_counters()
+            .increment_counter(PerfCounterType::SqlReadsReplica);
         let rows = ListRenamesByDstChangeset::maybe_traced_query(
             &self.store.read_connection,
             ctx.client_request_info(),
@@ -473,6 +475,8 @@ impl MutableRenames {
         .await?;
 
         txn.commit().await?;
+        ctx.perf_counters()
+            .increment_counter(PerfCounterType::SqlWrites);
 
         // Cache invalidation is intentionally left out as the use cases of
         // mutable renames can tolerate a few hours of inconsistency, e.g.
