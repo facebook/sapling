@@ -1721,7 +1721,7 @@ pub trait IdDagAlgorithm: IdDagStore {
         // low::low = implicit good.
         let connected_low = self.range(low.clone(), low.clone())?;
 
-        // Ignore interesting parts - see above for why this is only for "high".
+        // Ignore uninteresting parts - see above for why this is only for "high".
         let high = self.roots(self.range(high.clone(), high.clone())?)?;
 
         // The bisect range.

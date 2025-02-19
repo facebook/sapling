@@ -198,7 +198,7 @@ pub trait DagAlgorithm: Send + Sync {
     /// - `(roots, heads)` are either `(good, bad)` or `(bad, good)`.
     /// - `skip` should be non-lazy.
     ///
-    /// Return `(vertex_to_bisect_next, untested_set, roots(high::))`.
+    /// Return `(vertex_to_bisect_next, untested_set, roots(heads::))`.
     ///
     /// If `vertex_to_bisect_next` is `None`, the bisect is completed. At this
     /// time, `roots(heads::)` is the "first good/bad" set. `untested_set`
