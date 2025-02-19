@@ -461,6 +461,32 @@ Import stack:
         $ hg cat -r . b.txt
         content
 
+      # Work with dirsync.
+      # FIXME: not yet working
+
+        $ newrepo
+        $ enable dirsync
+        $ cat > .hgdirsync << EOF
+        > [dirsync]
+        > sync1.1=dir1/
+        > sync1.2=dir2/
+        > EOF
+        $ sl commit -A .hgdirsync -m 'Add dirsync config'
+        $ sl debugimportstack --debug --verbose << EOS
+        > [["commit", {"author": "test1", "date": [0, 0], "text": "Add dir1/A", "mark": ":1", "parents": ["."],
+        >   "files": {"dir1/A": {"data": "A"}}}],
+        >  ["goto", {"mark": ":1"}]]
+        > EOS
+        dirsync: skipped because dirsync config is empty
+        committing files:
+        dir1/A
+        committing manifest
+        committing changelog
+        {":1": "18fa8a7d38fecf7aeab19d8d2470170198b152b4"}
+        $ cat dir2/A
+        cat: dir2/A: $ENOENT$
+        [1]
+
       # Error cases.
 
         $ hg debugimportstack << EOS
