@@ -110,7 +110,7 @@ export function CommandHistoryAndProgress() {
   const [errorCollapsed, setErrorCollapsed] = useAtom(queueErrorCollapsedAtom);
 
   const info = useAtomValue(repositoryInfo);
-  if (info?.type !== 'success') {
+  if (!info) {
     return null;
   }
 

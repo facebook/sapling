@@ -276,10 +276,7 @@ function DebugPerfInfo() {
   const latestConflicts = useAtomValue(mergeConflicts);
   const heartbeat = useHeartbeat();
   const repoInfo = useAtomValue(repositoryInfo);
-  let commandName = 'sl';
-  if (repoInfo?.type === 'success') {
-    commandName = repoInfo.command;
-  }
+  const commandName = repoInfo?.command ?? 'sl';
   return (
     <div>
       {heartbeat.type === 'timeout' ? (

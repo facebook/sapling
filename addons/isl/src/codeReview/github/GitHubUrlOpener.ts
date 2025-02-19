@@ -14,7 +14,7 @@ import {repositoryInfo} from '../../serverAPIState';
  */
 export const pullRequestDomain = atom<string | undefined>(get => {
   const info = get(repositoryInfo);
-  return info?.type !== 'success' ? undefined : info.pullRequestDomain;
+  return info?.pullRequestDomain;
 });
 
 export const openerUrlForDiffUrl = atomFamilyWeak((url?: string) => {

@@ -862,8 +862,7 @@ function SubmitButton({
   const [updateMessage, setUpdateMessage] = useAtom(diffUpdateMessagesState(commit.hash));
   const provider = useAtomValue(codeReviewProvider);
 
-  const codeReviewProviderType =
-    repoInfo?.type === 'success' ? repoInfo.codeReviewSystem.type : 'unknown';
+  const codeReviewProviderType = repoInfo?.codeReviewSystem.type ?? 'unknown';
   const canSubmitWithCodeReviewProvider =
     codeReviewProviderType !== 'none' && codeReviewProviderType !== 'unknown';
   const submittable =
@@ -881,9 +880,7 @@ function SubmitButton({
   const selection = useUncommittedSelection();
 
   const isBranchingPREnabled =
-    repoInfo?.type === 'success' &&
-    repoInfo.codeReviewSystem.type === 'github' &&
-    repoInfo.preferredSubmitCommand === 'push';
+    codeReviewProviderType === 'github' && repoInfo?.preferredSubmitCommand === 'push';
 
   const disabledReason = areImageUploadsOngoing
     ? t('Image uploads are still pending')

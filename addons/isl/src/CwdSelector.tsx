@@ -87,7 +87,7 @@ export function CwdSelector() {
   const additionalToggles = useCommandEvent('ToggleCwdDropdown');
   const allOptions = useCwdOptions();
   const options = allOptions.filter(opt => opt.valid);
-  if (info?.type !== 'success') {
+  if (info == null) {
     return null;
   }
   const repoLabel = getRepoLabel(info.repoRoot, currentCwd);
@@ -137,7 +137,7 @@ export function CwdSelector() {
 
 function CwdDetails({dismiss}: {dismiss: () => unknown}) {
   const info = useAtomValue(repositoryInfo);
-  const repoRoot = info?.type === 'success' ? info.repoRoot : null;
+  const repoRoot = info?.repoRoot ?? null;
   const provider = useAtomValue(codeReviewProvider);
   const cwd = useAtomValue(serverCwd);
   const AddMoreCwdsHint = platform.AddMoreCwdsHint;

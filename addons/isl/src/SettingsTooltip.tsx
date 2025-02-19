@@ -143,9 +143,9 @@ function SettingsDropdown({
         description={<T>Locale for translations used in the UI. Currently only en supported.</T>}>
         <Dropdown value="en" options=['en'] />
       </Setting> */}
-      {repoInfo?.type !== 'success' ? (
+      {repoInfo == null ? (
         <Icon icon="loading" />
-      ) : repoInfo?.codeReviewSystem.type === 'github' ? (
+      ) : repoInfo.codeReviewSystem.type === 'github' ? (
         <Setting
           title={<T>Preferred Code Review Submit Method</T>}
           description={
