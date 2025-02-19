@@ -222,9 +222,11 @@ def _checkenvironment():
     _checkedenvironment = True
 
     mod = sys.modules.get("sapling.dispatch")
-    assert (
-        mod is None or mod.ischgserver
-    ), "testing should not be run under regular sapling environment"
+    if not (mod is None or mod.ischgserver):
+        sys.stderr.write(
+            "testing should not be run under regular sapling environment\n"
+            "(ignore the above warning if you use `.t --direct` to run tests)\n"
+        )
 
 
 def hg(stdin: BinaryIO, stdout: BinaryIO, stderr: BinaryIO, env: Env) -> int:
