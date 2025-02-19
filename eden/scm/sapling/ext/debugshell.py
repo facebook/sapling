@@ -108,28 +108,40 @@ def debugshell(ui, repo, *args, **opts):
         exec(command, env, env)
         return 0
 
+    start_ipython(env, ui, repo)
+
+
+def start_ipython(env=None, ui=None, repo=None) -> None:
+    """Launch a Python shell (IPython or code.interactive())
+    env defines the variables available in the shell.
+    ui and repo enable more features.
+    """
+    # Local environment variables
+    env = env or sys._getframe(1).f_locals
     # IPython is incompatible with demandimport.
     with hgdemandimport.deactivated():
-        _startipython(ui, repo, env)
+        _start_ipython(env, ui, repo)
 
 
-def _startipython(ui, repo, env) -> None:
+def _start_ipython(env, ui, repo) -> None:
     # IPython requires time.clock. It is missing on Windows. Polyfill it.
     # pyre-fixme[16]: Module `time` has no attribute `clock`.
     if getattr(time, "clock", None) is None:
         time.clock = time.time
 
-    bannermsg = "loaded repo:  %s\nusing source: %s" % (
-        repo and repo.root or "(none)",
-        sapling.__path__ and sapling.__path__[0],
-    ) + (
-        "\n\nAvailable variables:\n"
-        " s:  sapling\n"
-        " x:  sapling.ext\n"
-        " b:  bindings\n"
-        " ui: the ui object\n"
-        " c:  run command and take output\n"
-    )
+    bannermsg = ""
+    if ui:
+        bannermsg += "loaded repo:  %s\nusing source: %s" % (
+            repo and repo.root or "(none)",
+            sapling.__path__ and sapling.__path__[0],
+        ) + (
+            "\n\nAvailable variables:\n"
+            " s:  sapling\n"
+            " x:  sapling.ext\n"
+            " b:  bindings\n"
+            " ui: the ui object\n"
+            " c:  run command and take output\n"
+        )
     if repo:
         bannermsg += (
             " repo: the repo object\n"
@@ -156,7 +168,8 @@ def _startipython(ui, repo, env) -> None:
         from IPython.terminal.embed import InteractiveShellEmbed
         from IPython.terminal.ipapp import load_default_config
 
-        bannermsg += """
+        if ui:
+            bannermsg += """
 Available IPython magics (auto magic is on, `%` is optional):
  time:   measure time
  timeit: benchmark
@@ -202,7 +215,8 @@ Available IPython magics (auto magic is on, `%` is optional):
     shell = InteractiveShellEmbed.instance(
         config=config, user_ns=globals(), user_module=sys.modules[__name__]
     )
-    _configipython(ui, shell)
+    if ui:
+        _configipython(ui, shell)
     shell()
 
 
