@@ -41,6 +41,10 @@
     fileA = Path("dirA/fileA")
     original_content = fileA.read_text()
 
+    def print(message):
+        with open(f'{TESTTMP}/out', 'a', newline='\n') as f:
+            f.write(message + '\n')
+
     for (initial, amend) in actions:
         print(f"Initial Action: {initial}, Amend Action: {amend}")
 
@@ -112,3 +116,25 @@
 
         # Reset the working copy
         $ hg hide -q .
+
+  $ cat ~/out
+  Initial Action: add, Amend Action: modify
+  file: dirA/newfile, other_file: dirB/newfile, status: {'dirA/newfile': 'A', 'dirB/newfile': 'A'}
+  Initial Action: add, Amend Action: remove
+  file: dirA/newfile, other_file: dirB/newfile, status: {}
+  Initial Action: add, Amend Action: revert
+  file: dirA/newfile, other_file: dirB/newfile, status: {}
+  Initial Action: modify, Amend Action: modify
+  file: dirA/fileA, other_file: dirB/fileA, status: {'dirA/fileA': 'M', 'dirB/fileA': 'M'}
+  Initial Action: modify, Amend Action: remove
+  file: dirA/fileA, other_file: dirB/fileA, status: {'dirA/fileA': 'R', 'dirB/fileA': 'R'}
+  Initial Action: modify, Amend Action: revert
+  file: dirA/fileA, other_file: dirB/fileA, status: {}
+  Initial Action: remove, Amend Action: modify
+  file: dirA/fileA, other_file: dirB/fileA, status: {'dirA/fileA': 'M', 'dirB/fileA': 'M'}
+  Initial Action: remove, Amend Action: revert
+  file: dirA/fileA, other_file: dirB/fileA, status: {}
+  Initial Action: revert, Amend Action: add
+  Initial Action: revert, Amend Action: modify
+  Initial Action: revert, Amend Action: remove
+  Initial Action: revert, Amend Action: revert
