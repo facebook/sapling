@@ -51,28 +51,28 @@ ignorerevnumincompatiblelist = """
     test-eol-hook.t
     test-eol-update.t
     test-export.t
-    test-fb-ext-copytrace-errormsg.t
-    test-fb-ext-drop.t
-    test-fb-ext-fastlog.t
-    test-fb-ext-fbhistedit-rebase-interactive.t
-    test-fb-ext-morestatus.t
-    test-fb-ext-phrevset.t
-    test-fb-ext-pushrebase-remotenames.t
-    test-fb-ext-remotefilelog-prefetch.t
-    test-fb-ext-remotefilelog-sparse.t
-    test-fb-ext-remotefilelog-wireproto.t
-    test-fb-ext-reset-remotenames.t
-    test-fb-ext-reset.t
-    test-fb-ext-smartlog-inhibit.t
-    test-fb-ext-smartlog-remotenames.t
-    test-fb-ext-treemanifest-noflat.t
-    test-fb-ext-treemanifest-prefetch.t
-    test-fb-ext-treemanifest.t
-    test-fb-ext-tweakdefaults-ordering.t
-    test-fb-ext-tweakdefaults-pullrebaseremotenames.t
-    test-fb-ext-tweakdefaults-remotenames.t
-    test-fb-ext-tweakdefaults.t
-    test-fb-ext-tweakdefaults-update.t
+    test-copytrace-errormsg.t
+    test-drop.t
+    test-fastlog.t
+    test-fbhistedit-rebase-interactive.t
+    test-morestatus.t
+    test-phrevset.t
+    test-pushrebase-remotenames.t
+    test-remotefilelog-prefetch.t
+    test-remotefilelog-sparse.t
+    test-remotefilelog-wireproto.t
+    test-reset-remotenames.t
+    test-reset.t
+    test-smartlog-inhibit.t
+    test-smartlog-remotenames.t
+    test-treemanifest-noflat.t
+    test-treemanifest-prefetch.t
+    test-treemanifest.t
+    test-tweakdefaults-ordering.t
+    test-tweakdefaults-pullrebaseremotenames.t
+    test-tweakdefaults-remotenames.t
+    test-tweakdefaults.t
+    test-tweakdefaults-update.t
     test-fileset.t
     test-git-export.t
     test-glog-topological.t
