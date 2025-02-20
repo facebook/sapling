@@ -89,7 +89,9 @@ pub fn create(path: impl AsRef<Path>) -> io::Result<File> {
 }
 
 fn is_retryable(err: &io::Error) -> bool {
-    cfg!(target_os = "macos") && err.kind() == io::ErrorKind::TimedOut
+    cfg!(target_os = "macos")
+        && (err.kind() == io::ErrorKind::TimedOut
+            || err.kind() == io::ErrorKind::StaleNetworkFileHandle)
 }
 
 fn with_retry<'a, F, T>(io_operation: &mut F, path: &'a Path) -> io::Result<T>
@@ -221,6 +223,14 @@ mod test {
         test_cases.insert(
             get_test_path("test_timeout", &tempdir),
             (ErrorKind::TimedOut, expected_attempts, should_succeed),
+        );
+        test_cases.insert(
+            get_test_path("test_stale", &tempdir),
+            (
+                ErrorKind::StaleNetworkFileHandle,
+                expected_attempts,
+                should_succeed,
+            ),
         );
 
         // These test cases should behave the same on all platforms
