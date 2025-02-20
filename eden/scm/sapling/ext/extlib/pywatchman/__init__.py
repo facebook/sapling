@@ -1028,7 +1028,7 @@ class client:
 
         cmd = [self.binpath, "--output-encoding=bser", "get-sockname"]
         try:
-            args = dict(stdout=subprocess.PIPE, stderr=subprocess.PIPE)  # noqa: C408
+            args = dict(stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True)  # noqa: C408
 
             if os.name == "nt":
                 # if invoked via an application with graphical user interface,
