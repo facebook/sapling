@@ -148,7 +148,7 @@ pub fn read_to_string_if_exists(path: impl AsRef<Path>) -> io::Result<Option<Str
 
 #[cfg(test)]
 mod test {
-    use std::io::Read;
+    use std::collections::HashMap;
 
     use anyhow::Result;
     use tempfile::tempdir;
@@ -172,49 +172,73 @@ mod test {
         Ok(())
     }
 
-    #[test]
-    fn test_retry_io() -> Result<()> {
-        // NOTE: These test cases are run together because running them separately sometimes fails
-        // when testing with cargo. This is because the tests are run in parallel, and
-        // std::evn::var() can overwrite environment variable values for other running tests.
-        //
-        // To avoid this, we run the tests serially in a single test case.
-        let dir = tempdir()?;
-        let path = dir.path().join("test");
-        std::fs::write(&path, "test")?;
-        let mut retries = 0;
+    static TEST_FILE_CONTENT: &str = "test";
 
+    fn check_io_with_retry(
+        path: &Path,
+        error_kind: std::io::ErrorKind,
+        expected_attempts: u32,
+        should_succeed: bool,
+    ) {
+        let mut attempts: u32 = 0;
         let mut open_fn = |p: &Path| -> io::Result<File> {
-            retries += 1;
-            if retries >= (*MAX_IO_RETRIES) {
+            attempts += 1;
+            if attempts >= *MAX_IO_RETRIES {
                 std::fs::File::open(p)
             } else {
-                Err(io::Error::new(io::ErrorKind::TimedOut, "timed out"))
+                Err(io::Error::new(error_kind, error_kind.to_string()))
             }
         };
+        let io_result = with_retry(&mut open_fn, path);
 
-        let file = with_retry(&mut open_fn, &path);
-
-        if cfg!(target_os = "macos") {
-            let mut file = file?;
-            assert_eq!(retries, *MAX_IO_RETRIES);
+        if should_succeed {
+            let mut file = io_result.unwrap();
+            assert_eq!(attempts, expected_attempts);
             let mut buf = String::new();
-            file.read_to_string(&mut buf)?;
-            assert_eq!(buf, "test");
-            assert_eq!(FILE_UTIL_RETRY_SUCCESS.value(), 1);
+            io::Read::read_to_string(&mut file, &mut buf).unwrap();
+            assert_eq!(buf, TEST_FILE_CONTENT);
         } else {
-            file.as_ref().err();
-            assert_eq!(
-                file.err().map(|e| e.kind()).unwrap(),
-                io::ErrorKind::TimedOut
-            );
-            assert_eq!(retries, 1);
-            assert_eq!(FILE_UTIL_RETRY_FAILURE.value(), 0);
+            assert_eq!(io_result.err().map(|e| e.kind()).unwrap(), error_kind);
+            assert_eq!(attempts, expected_attempts);
+        }
+    }
+
+    fn get_test_path(name: &str, tempdir: &tempfile::TempDir) -> std::path::PathBuf {
+        let path = tempdir.path().join(name);
+        std::fs::write(&path, TEST_FILE_CONTENT).unwrap();
+        path
+    }
+
+    #[test]
+    fn test_retry_io() -> Result<()> {
+        use std::io::ErrorKind;
+
+        let tempdir = tempfile::tempdir().unwrap();
+        let mut test_cases = HashMap::new();
+        // The behavior of these test cases varies by platform
+        let should_succeed = cfg!(target_os = "macos");
+        let expected_attempts = if should_succeed { *MAX_IO_RETRIES } else { 1 };
+        test_cases.insert(
+            get_test_path("test_timeout", &tempdir),
+            (ErrorKind::TimedOut, expected_attempts, should_succeed),
+        );
+
+        // These test cases should behave the same on all platforms
+        test_cases.insert(
+            get_test_path("test_too_many_args", &tempdir),
+            (ErrorKind::ArgumentListTooLong, 1, false),
+        );
+        test_cases.insert(
+            get_test_path("test_permission_denied", &tempdir),
+            (ErrorKind::PermissionDenied, 1, false),
+        );
+
+        for (test_path, results) in test_cases {
+            check_io_with_retry(&test_path, results.0, results.1, results.2);
         }
 
-        // Test error case
-        let dir = tempdir()?;
-        let path = dir.path().join("does_not_exist");
+        // .*_if_exists() functions should still return None if the file doesn't exist
+        let path = tempdir.path().join("does_not_exist");
         let res = read_to_string_if_exists(path)?;
         assert_eq!(res, Option::None);
 
