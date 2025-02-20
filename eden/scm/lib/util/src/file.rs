@@ -96,23 +96,23 @@ fn with_retry<'a, F, T>(io_operation: &mut F, path: &'a Path) -> io::Result<T>
 where
     F: FnMut(&'a Path) -> io::Result<T>,
 {
-    let mut retries: u32 = 0;
+    let mut attempts: u32 = 0;
     loop {
         match io_operation(path) {
             Ok(v) => {
-                if retries > 0 {
+                if attempts > 0 {
                     FILE_UTIL_RETRY_SUCCESS.increment();
                 }
                 return Ok(v);
             }
             Err(err) if is_retryable(&err) => {
-                if retries >= *MAX_IO_RETRIES {
-                    if retries > 0 {
+                if attempts >= *MAX_IO_RETRIES {
+                    if attempts > 0 {
                         FILE_UTIL_RETRY_FAILURE.increment();
                     }
                     return Err(err);
                 }
-                retries += 1;
+                attempts += 1;
             }
             Err(err) => return Err(err),
         }
