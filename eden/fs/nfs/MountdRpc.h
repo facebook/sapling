@@ -11,7 +11,7 @@
 #include "eden/fs/nfs/rpc/Rpc.h"
 
 /*
- * Mountd prococol described in the Appendix I of RFC1813:
+ * Mountd protocol described in the Appendix I of RFC1813:
  * https://tools.ietf.org/html/rfc1813#page-106
  */
 

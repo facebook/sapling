@@ -149,7 +149,7 @@ struct specdata3 {
 EDEN_XDR_SERDE_DECL(specdata3, specdata1, specdata2);
 
 /**
- * The NFS spec specify this struct as being opaque from the client
+ * The NFS spec specifies this struct as being opaque from the client
  * perspective, and thus we are free to use what is needed to uniquely identify
  * a file. In EdenFS, this is perfectly represented by an InodeNumber.
  *

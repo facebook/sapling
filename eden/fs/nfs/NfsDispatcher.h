@@ -321,7 +321,7 @@ class NfsDispatcher {
    * directory referenced by toIno. The file/directory fromName will be renamed
    * onto toName.
    *
-   * Fro the pre and post dir stat, refer to the documentation of the create
+   * For the pre and post dir stat, refer to the documentation of the create
    * method above.
    */
   virtual ImmediateFuture<RenameRes> rename(

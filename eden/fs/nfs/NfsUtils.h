@@ -198,7 +198,7 @@ inline post_op_attr statToPostOpAttr(const folly::Try<struct stat>& stat) {
 
 /**
  * Determine which of the `desiredAccess`'s a client should be granted for a
- * certain file or directory based on the the `stat` of that file or directory.
+ * certain file or directory based on the `stat` of that file or directory.
  * This result is an advisory result for the access call. Clients use this call
  * to block IO that user's do not have access for, but procedures are still
  * welcome to refuse to perform an action due to access restrictions. Thus
