@@ -56,7 +56,7 @@ impl SavedStateClient {
         let commit_id = if saved_state_info.hash.is_empty() {
             return Err(anyhow::anyhow!("No saved state commit id found"));
         } else if is_commit_in_repo(&saved_state_info.hash).await? {
-            saved_state_info.hash
+            saved_state_info.hash.clone()
         } else if !saved_state_info.synced_hash.is_empty()
             && is_commit_in_repo(&saved_state_info.synced_hash).await?
         {
@@ -67,7 +67,9 @@ impl SavedStateClient {
             ));
         };
 
-        let manifold_path = self.get_manifold_path(&commit_id, &saved_state_info.project_metadata);
+        // NOTE: always use the saved state hash, even if it's not in the repo.
+        let manifold_path =
+            self.get_manifold_path(&saved_state_info.hash, &saved_state_info.project_metadata);
         Ok(SavedState {
             commit_id,
             manifold_bucket: saved_state_info.manifold_bucket,
