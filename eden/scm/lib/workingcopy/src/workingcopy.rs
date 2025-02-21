@@ -409,7 +409,8 @@ impl WorkingCopy {
             let git_modules_path = self.vfs.join(".gitmodules".try_into()?);
             if git_modules_path.exists() {
                 ignore_dirs.extend(
-                    parse_gitmodules(&fs_err::read(&git_modules_path)?)
+                    // No need to access "url" here. So no need for a real "origin_url".
+                    parse_gitmodules(&fs_err::read(&git_modules_path)?, None)
                         .into_iter()
                         .map(|s| PathBuf::from(s.path)),
                 );

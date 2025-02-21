@@ -30,7 +30,8 @@ fn config_value<'a>(line: &'a str, key: &str) -> Option<&'a str> {
 }
 
 /// Parse the `.gitmodules` file.
-pub fn parse_gitmodules(data: &[u8]) -> Vec<Submodule> {
+/// If `origin_url` is provided, relative urls will be expanded based on it.
+pub fn parse_gitmodules(data: &[u8], origin_url: Option<&str>) -> Vec<Submodule> {
     let mut submodules = Vec::with_capacity(data.iter().filter(|&&b| b == b'[').count());
     let mut current = Submodule::default();
     for line in String::from_utf8_lossy(data).lines() {
@@ -49,7 +50,12 @@ pub fn parse_gitmodules(data: &[u8]) -> Vec<Submodule> {
         } else if let Some(value) = config_value(line, "path") {
             current.path = value.to_owned();
         } else if let Some(value) = config_value(line, "url") {
-            current.url = value.to_owned();
+            let url = if let Some(base_url) = origin_url {
+                join_url(base_url, value)
+            } else {
+                value.to_owned()
+            };
+            current.url = url;
         }
     }
 
@@ -58,4 +64,52 @@ pub fn parse_gitmodules(data: &[u8]) -> Vec<Submodule> {
     }
 
     submodules
+}
+
+pub(crate) fn join_url(mut base_url: &str, mut maybe_relative_url: &str) -> String {
+    if !maybe_relative_url.starts_with(".") {
+        // Probably an absolute URL
+        return maybe_relative_url.to_owned();
+    }
+
+    loop {
+        if let Some(rest) = maybe_relative_url.strip_prefix("../") {
+            match base_url.rsplit_once('/') {
+                Some((parent_base_url, _)) => {
+                    base_url = parent_base_url;
+                    maybe_relative_url = rest;
+                }
+                None => break,
+            }
+        } else if let Some(rest) = maybe_relative_url.strip_prefix("./") {
+            maybe_relative_url = rest;
+        } else {
+            break;
+        }
+    }
+
+    format!("{}/{}", base_url, maybe_relative_url)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_join_url() {
+        // No change for absolute URL.
+        assert_eq!(
+            join_url("https://a.com/b", "https://b.com/c"),
+            "https://b.com/c"
+        );
+
+        // Relative to the origin url.
+        assert_eq!(join_url("https://a.com/b", "./c/d"), "https://a.com/b/c/d");
+
+        // Parent of the original url.
+        assert_eq!(
+            join_url("https://a.com/b/c", "../../d/e"),
+            "https://a.com/d/e"
+        );
+    }
 }

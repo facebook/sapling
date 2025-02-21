@@ -18,12 +18,19 @@ pub fn init_module(py: Python, package: &str) -> PyResult<PyModule> {
     m.add(
         py,
         "parse_gitmodules",
-        py_fn!(py, parse_gitmodules(data: &PyBytes)),
+        py_fn!(py, parse_gitmodules(data: &PyBytes, origin_url: Option<&str> = None)),
     )?;
 
     Ok(m)
 }
 
-fn parse_gitmodules(py: Python, data: &PyBytes) -> PyResult<Serde<Vec<Submodule>>> {
-    Ok(Serde(submodule::parse_gitmodules(data.data(py))))
+fn parse_gitmodules(
+    py: Python,
+    data: &PyBytes,
+    origin_url: Option<&str>,
+) -> PyResult<Serde<Vec<Submodule>>> {
+    Ok(Serde(submodule::parse_gitmodules(
+        data.data(py),
+        origin_url,
+    )))
 }
