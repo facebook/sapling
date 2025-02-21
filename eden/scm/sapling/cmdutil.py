@@ -994,6 +994,65 @@ def logmessage(repo, opts):
     return message
 
 
+def _update_commit_message_fields(
+    message: str, configured_fields: List[str], opts
+) -> str:
+    """Update fields in message based on opts["message_fields"].
+
+    >>> _update_commit_message_fields("title\\nSummary: summary.", ["Summary"], {})
+    'title\\nSummary: summary.'
+
+    >>> _update_commit_message_fields("title\\nSummary: summary.", ["Summary"], {"message_field": ["Summary=\\nnew summary."]})
+    'title\\nSummary:\\nnew summary.'
+
+    >>> _update_commit_message_fields("old title\\nSummary:\\nOld summary.\\nReviewer: foo", ["Summary", "Test Plan", "Reviewer"], {"message_field": ["Title=new title", "Test Plan=new test plan"]})
+    'new title\\nSummary:\\nOld summary.\\nTest Plan: new test plan\\nReviewer: foo'
+    """
+    fields = opts.get("message_field") or []
+    if not fields:
+        return message
+
+    fields_to_update = {}
+    for field in fields:
+        parts = field.split("=", 1)
+        if len(parts) == 1:
+            raise error.Abort(_("--message-field format is name=value"))
+        name, value = parts
+        if name != "Title":
+            if value and value[0] != "\n":
+                value = " " + value
+            # Format value to include the section name. This is consistent with what
+            # _parse_commit_message() returns.
+            value = f"{name}:{value}"
+        fields_to_update[name] = value
+
+    parsed_message = _parse_commit_message(message.split("\n"), set(configured_fields))
+
+    # Pretend like title has a field name of "Title" so it is addressable by user.
+    if parsed_message and parsed_message[0][0] is None:
+        parsed_message[0] = ("Title", parsed_message[0][1])
+
+    updated_lines = []
+    for field in ["Title"] + configured_fields:
+        if parsed_message and parsed_message[0][0] == field:
+            parsed_value = parsed_message.pop(0)[1]
+            # If user is not updating this field, carry over old value.
+            if field not in fields_to_update:
+                updated_lines.extend(parsed_value)
+
+        # User is updating (or insterting) this value - stick in the new value.
+        if field in fields_to_update:
+            updated_lines.extend(fields_to_update.pop(field).split("\n"))
+
+    for unused in fields_to_update:
+        raise error.Abort(
+            _("field name %r not configured in committemplate.commit-message-fields")
+            % unused
+        )
+
+    return "\n".join(updated_lines)
+
+
 def mergeeditform(ctxorbool, baseformname):
     """return appropriate editform name (referencing a committemplate)
 
