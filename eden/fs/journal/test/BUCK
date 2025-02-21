@@ -1,0 +1,14 @@
+load("@fbcode_macros//build_defs:cpp_unittest.bzl", "cpp_unittest")
+
+oncall("scm_client_infra")
+
+cpp_unittest(
+    name = "test",
+    srcs = glob(["*Test.cpp"]),
+    supports_static_listing = False,
+    deps = [
+        "fbsource//third-party/googletest:gmock",
+        "//eden/fs/journal:journal",
+        "//eden/fs/model:model",
+    ],
+)

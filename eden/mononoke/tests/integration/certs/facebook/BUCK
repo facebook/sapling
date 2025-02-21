@@ -1,0 +1,12 @@
+load("@fbcode_macros//build_defs:native_rules.bzl", "buck_filegroup")
+
+oncall("scm_server_infra")
+
+buck_filegroup(
+    name = "test_certs",
+    srcs = glob([
+        "*.crt",
+        "*.key",
+        "server.pem.seeds",
+    ]),
+)

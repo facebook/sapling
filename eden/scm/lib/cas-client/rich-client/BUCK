@@ -1,0 +1,29 @@
+load("@fbcode_macros//build_defs:rust_library.bzl", "rust_library")
+
+oncall("sapling")
+
+rust_library(
+    name = "rich-cas-client",
+    srcs = glob(["src/**/*.rs"]),
+    autocargo = {"cargo_toml_config": {
+        "lib": {"name": "rich-cas-client"},
+        "package": {
+            "authors": ["Meta Source Control Team <sourcecontrol-dev@meta.com>"],
+            "homepage": "https://sapling-scm.com/",
+            "license": "MIT",
+            "name": "sapling-rich-cas-client",
+            "repository": "https://github.com/facebook/sapling",
+        },
+    }},
+    deps = [
+        "fbsource//third-party/rust:anyhow",
+        "fbsource//third-party/rust:futures",
+        "fbsource//third-party/rust:tracing",
+        "//common/rust/shed/fbinit:fbinit",
+        "//eden/scm/lib/cas-client:cas-client",
+        "//eden/scm/lib/cas-client/re-cas-common:re-cas-common",
+        "//eden/scm/lib/config/model:configmodel",
+        "//eden/scm/lib/util/factory:factory",
+        "//remote_execution/client_lib/wrappers/rust:re_client_lib",
+    ],
+)

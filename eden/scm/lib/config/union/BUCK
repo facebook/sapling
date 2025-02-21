@@ -1,0 +1,26 @@
+load("@fbcode_macros//build_defs:rust_library.bzl", "rust_library")
+
+oncall("sapling")
+
+rust_library(
+    name = "unionconfig",
+    srcs = glob(["src/**/*.rs"]),
+    autocargo = {"cargo_toml_config": {
+        "lib": {"name": "unionconfig"},
+        "package": {
+            "authors": ["Meta Source Control Team <sourcecontrol-dev@meta.com>"],
+            "homepage": "https://sapling-scm.com/",
+            "license": "MIT",
+            "name": "sapling-unionconfig",
+            "repository": "https://github.com/facebook/sapling",
+        },
+    }},
+    crate_root = "src/lib.rs",
+    test_deps = [
+        "//eden/scm/lib/config/static:staticconfig",
+    ],
+    deps = [
+        "fbsource//third-party/rust:indexmap",
+        "//eden/scm/lib/config/model:configmodel",
+    ],
+)

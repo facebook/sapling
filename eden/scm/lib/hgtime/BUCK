@@ -1,0 +1,33 @@
+load("@fbcode_macros//build_defs:rust_library.bzl", "rust_library")
+
+oncall("sapling")
+
+rust_library(
+    name = "hgtime",
+    srcs = glob(["src/**/*.rs"]),
+    autocargo = {"cargo_toml_config": {
+        "features": {
+            "default": ["serde"],
+            "serde": ["dep:serde"],
+        },
+        "lib": {"name": "hgtime"},
+        "package": {
+            "authors": ["Meta Source Control Team <sourcecontrol-dev@meta.com>"],
+            "description": "Parse time from strings.",
+            "homepage": "https://sapling-scm.com/",
+            "license": "MIT",
+            "name": "sapling-hgtime",
+            "repository": "https://github.com/facebook/sapling",
+        },
+    }},
+    crate_root = "src/lib.rs",
+    features = ["serde"],
+    test_deps = [
+        "fbsource//third-party/rust:serde_cbor",
+    ],
+    deps = [
+        "fbsource//third-party/rust:chrono",
+        "fbsource//third-party/rust:humantime",
+        "fbsource//third-party/rust:serde",
+    ],
+)

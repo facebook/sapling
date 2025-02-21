@@ -1,0 +1,25 @@
+load("@fbcode_macros//build_defs:rust_library.bzl", "rust_library")
+
+oncall("sapling")
+
+rust_library(
+    name = "tracing-reload",
+    srcs = glob(["src/**/*.rs"]),
+    autocargo = {"cargo_toml_config": {
+        "lib": {"name": "tracing-reload"},
+        "package": {
+            "authors": ["Meta Source Control Team <sourcecontrol-dev@meta.com>"],
+            "homepage": "https://sapling-scm.com/",
+            "license": "MIT",
+            "name": "sapling-tracing-reload",
+            "repository": "https://github.com/facebook/sapling",
+        },
+    }},
+    crate_root = "src/lib.rs",
+    deps = [
+        "fbsource//third-party/rust:anyhow",
+        "fbsource//third-party/rust:once_cell",
+        "fbsource//third-party/rust:tracing",
+        "fbsource//third-party/rust:tracing-subscriber",
+    ],
+)

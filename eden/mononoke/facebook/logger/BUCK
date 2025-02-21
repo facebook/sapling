@@ -1,0 +1,33 @@
+load("@fbcode_macros//build_defs:cpp_library.bzl", "cpp_library")
+load("@fbcode_macros//build_defs:rust_library.bzl", "rust_library")
+
+oncall("scm_server_infra")
+
+rust_library(
+    name = "mononoke_new_commit",
+    srcs = [
+        "src/lib.rs",
+    ],
+    cpp_deps = [":parser"],
+    cxx_bridge = "src/lib.rs",
+    deps = [
+        "fbsource//third-party/rust:cxx",
+    ],
+)
+
+cpp_library(
+    name = "parser",
+    srcs = ["parser.cpp"],
+    headers = ["parser.h"],
+    undefined_symbols = True,
+    visibility = [],
+    deps = [
+        "//dsi/reader/schema/mononoke_new_commit:reader",
+        "//folly:base64",
+        "//folly:range",
+    ],
+    exported_deps = [
+        ":mononoke_new_commit@header",
+        "//dsi/reader/schema/mononoke_new_commit:reader",
+    ],
+)

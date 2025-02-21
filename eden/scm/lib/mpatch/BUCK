@@ -1,0 +1,23 @@
+load("@fbcode_macros//build_defs:rust_library.bzl", "rust_library")
+
+oncall("sapling")
+
+rust_library(
+    name = "mpatch",
+    srcs = glob(["src/**/*.rs"]),
+    autocargo = {"cargo_toml_config": {
+        "lib": {"name": "mpatch"},
+        "package": {
+            "authors": ["Meta Source Control Team <sourcecontrol-dev@meta.com>"],
+            "homepage": "https://sapling-scm.com/",
+            "license": "MIT",
+            "name": "sapling-mpatch",
+            "repository": "https://github.com/facebook/sapling",
+        },
+    }},
+    crate_root = "src/lib.rs",
+    deps = [
+        "fbsource//third-party/rust:libc",
+        "//eden/scm/lib/mpatch-sys:mpatch-sys",
+    ],
+)

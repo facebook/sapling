@@ -1,0 +1,42 @@
+load("@fbcode_macros//build_defs:rust_library.bzl", "rust_library")
+
+oncall("sapling")
+
+rust_library(
+    name = "rewrite-macros",
+    srcs = glob(["src/**/*.rs"]),
+    autocargo = {"cargo_toml_config": {
+        "extra_buck_dependencies": {"dev-dependencies": [
+            "fbsource//third-party/rust:once_cell",
+            "fbsource//third-party/rust:parking_lot",
+            "fbsource//third-party/rust:tempfile",
+            "fbsource//third-party/rust:tracing",
+        ]},
+        "lib": {"name": "rewrite-macros"},
+        "package": {
+            "authors": ["Meta Source Control Team <sourcecontrol-dev@meta.com>"],
+            "description": "Proc macros to rewrite code used by Sapling.",
+            "homepage": "https://sapling-scm.com/",
+            "license": "MIT",
+            "name": "sapling-rewrite-macros",
+            "repository": "https://github.com/facebook/sapling",
+        },
+    }},
+    crate_root = "src/lib.rs",
+    doc_deps = [
+        "fbsource//third-party/rust:once_cell",
+        "fbsource//third-party/rust:parking_lot",
+        "fbsource//third-party/rust:tempfile",
+        "fbsource//third-party/rust:tracing",
+    ],
+    proc_macro = True,
+    rustc_flags = [
+        "--crate-type",
+        "proc-macro",
+    ],
+    deps = [
+        "fbsource//third-party/rust:proc-macro2",
+        "fbsource//third-party/rust:quote",
+        "//eden/scm/lib/util/rewrite-macros/tree-pattern-match:tree-pattern-match",
+    ],
+)

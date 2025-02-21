@@ -1,0 +1,17 @@
+load("@fbcode_macros//build_defs:rust_library.bzl", "rust_library")
+
+oncall("scm_server_infra")
+
+rust_library(
+    name = "scs_errors",
+    srcs = glob(["src/**/*.rs"]),
+    deps = [
+        "//eden/mononoke/async_requests:async_requests",
+        "//eden/mononoke/derived_data:derived_data_manager",
+        "//eden/mononoke/git/git_types:git_types",
+        "//eden/mononoke/megarepo_api:megarepo_error",
+        "//eden/mononoke/mononoke_api:mononoke_api",
+        "//eden/mononoke/scs/if:source_control-rust",
+        "//eden/mononoke/scs/if:source_control-rust-services",
+    ],
+)

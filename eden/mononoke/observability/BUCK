@@ -1,0 +1,18 @@
+load("@fbcode_macros//build_defs:rust_library.bzl", "rust_library")
+
+oncall("scm_server_infra")
+
+rust_library(
+    name = "observability",
+    srcs = glob(["src/**/*.rs"]),
+    named_deps = {"slog": "//common/rust/shed/tracing_slog_compat:tracing_slog_compat"},
+    test_deps = ["//eden/mononoke/mononoke_macros:mononoke_macros"],
+    deps = [
+        "fbsource//third-party/rust:anyhow",
+        "fbsource//third-party/rust:regex",
+        "fbsource//third-party/rust:serde",
+        "//common/rust/shed/cached_config:cached_config",
+        "//common/rust/shed/scuba_stub:scuba",
+        "//configerator/structs/scm/mononoke/observability:observability_config-rust",
+    ],
+)

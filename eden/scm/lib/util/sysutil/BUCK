@@ -1,0 +1,26 @@
+load("@fbcode_macros//build_defs:rust_library.bzl", "rust_library")
+
+oncall("sapling")
+
+rust_library(
+    name = "sysutil",
+    srcs = glob(["src/**/*.rs"]),
+    autocargo = {"cargo_toml_config": {
+        "lib": {"name": "sysutil"},
+        "package": {
+            "authors": ["Meta Source Control Team <sourcecontrol-dev@meta.com>"],
+            "description": "System utilities used by Sapling.",
+            "homepage": "https://sapling-scm.com/",
+            "license": "MIT",
+            "name": "sapling-sysutil",
+            "repository": "https://github.com/facebook/sapling",
+        },
+    }},
+    crate_root = "src/lib.rs",
+    deps = [
+        "fbsource//third-party/rust:anyhow",
+        "fbsource//third-party/rust:shell-escape",
+        "fbsource//third-party/rust:tracing",
+        "fbsource//third-party/rust:whoami",
+    ],
+)

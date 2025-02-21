@@ -1,0 +1,29 @@
+load("@fbcode_macros//build_defs:rust_library.bzl", "rust_library")
+
+oncall("scm_server_infra")
+
+rust_library(
+    name = "poller",
+    srcs = glob(["src/**/*.rs"]),
+    named_deps = {"slog": "//common/rust/shed/tracing_slog_compat:tracing_slog_compat"},
+    deps = [
+        "fbsource//third-party/rust:anyhow",
+        "fbsource//third-party/rust:clap",
+        "fbsource//third-party/rust:futures",
+        "fbsource//third-party/rust:rand",
+        "fbsource//third-party/rust:tokio",
+        "//common/rust/logging:logging",
+        "//common/rust/mysql:mysql_client",
+        "//common/rust/scuba:scuba",
+        "//common/rust/shed/fbinit:fbinit",
+        "//common/rust/shed/stats:stats",
+        "//configerator/structs/fi/common:context-rust",
+        "//eden/mononoke/common/sql_construct:sql_construct",
+        "//eden/mononoke/facebook/git_server/push_poller/lib/ephemeral_shard:ephemeral_shard",
+        "//eden/mononoke/facebook/git_server/push_poller/lib/repository:repository",
+        "//eden/mononoke/facebook/git_server/push_poller/lib/storage:storage",
+        "//eden/mononoke/git_source_of_truth:git_source_of_truth",
+        "//eden/mononoke/mononoke_macros:mononoke_macros",
+        "//eden/mononoke/server/context:context",
+    ],
+)

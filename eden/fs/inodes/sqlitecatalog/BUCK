@@ -1,0 +1,106 @@
+load("@fbcode_macros//build_defs:cpp_binary.bzl", "cpp_binary")
+load("@fbcode_macros//build_defs:cpp_library.bzl", "cpp_library")
+
+oncall("scm_client_infra")
+
+cpp_library(
+    name = "sqlitetreestore",
+    srcs = ["SqliteTreeStore.cpp"],
+    headers = ["SqliteTreeStore.h"],
+    deps = [
+        "//eden/common/telemetry:structured_logger",
+        "//eden/common/utils:utils",
+        "//eden/fs/inodes:inode_number",
+        "//eden/fs/inodes/overlay:serialization-cpp2-types",
+        "//eden/fs/telemetry:log_info",
+        "//folly:range",
+        "//folly:stop_watch",
+    ],
+    exported_deps = [
+        "fbsource//third-party/fmt:fmt",
+        "fbsource//third-party/googletest:gtest_headers",
+        "//eden/common/utils:path",
+        "//eden/fs/sqlite:sqlite",
+    ],
+)
+
+cpp_library(
+    name = "sqliteinodecatalog",
+    srcs = [
+        "SqliteInodeCatalog.cpp",
+        "WindowsFsck.cpp",
+    ],
+    headers = [
+        "SqliteInodeCatalog.h",
+        "WindowsFsck.h",
+    ],
+    deps = [
+        "//eden/common/utils:bug",
+        "//eden/common/utils:case_sensitivity",
+        "//eden/common/utils:file_utils",
+        "//eden/common/utils:utils",
+        "//eden/common/utils:win_error",
+        "//eden/fs/inodes:inode_number",
+        "//eden/fs/inodes/overlay:serialization-cpp2-types",
+        "//eden/fs/prjfs:disk_state",
+        "//eden/fs/utils:projfs_util",
+        "//folly:file",
+        "//folly/executors:serial_executor",
+        "//folly/portability:windows",
+    ],
+    exported_deps = [
+        ":sqlitetreestore",
+        "//eden/common/utils:immediate_future",
+        "//eden/common/utils:path",
+        "//eden/fs/config:config",
+        "//eden/fs/inodes:inode_catalog",
+        "//eden/fs/inodes/overlay:overlay_checker",
+        "//eden/fs/model:model",
+        "//folly:range",
+    ],
+)
+
+cpp_library(
+    name = "bufferedsqliteinodecatalog",
+    srcs = [
+        "BufferedSqliteInodeCatalog.cpp",
+    ],
+    headers = [
+        "BufferedSqliteInodeCatalog.h",
+    ],
+    deps = [
+        "//eden/fs/config:config",
+        "//eden/fs/inodes:inode_number",
+        "//folly/futures:core",
+        "//folly/logging:logging",
+        "//folly/system:thread_name",
+        "//thrift/lib/cpp2/protocol:protocol",
+    ],
+    exported_deps = [
+        "fbsource//third-party/googletest:gtest_headers",
+        ":sqliteinodecatalog",
+        "//eden/fs/inodes/overlay:serialization-cpp2-types",
+        "//folly:function",
+        "//folly:synchronized",
+        "//folly/synchronization:lifo_sem",
+    ],
+)
+
+cpp_binary(
+    name = "windows_overlay_scanner",
+    srcs = ["WindowsOverlayScanner.cpp"],
+    deps = [
+        ":sqliteinodecatalog",
+        "//eden/common/telemetry:structured_logger",
+        "//eden/common/utils:path",
+        "//eden/fs/config:config",
+        "//eden/fs/inodes/overlay:overlay_checker",
+        "//eden/fs/utils:win_stacktrace",
+        "//folly/init:init",
+        "//folly/logging:init",
+        "//folly/logging:logging",
+    ],
+    external_deps = [
+        "gflags",
+    ],
+)

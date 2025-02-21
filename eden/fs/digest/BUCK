@@ -1,0 +1,17 @@
+load("@fbcode_macros//build_defs:cpp_library.bzl", "cpp_library")
+
+oncall("scm_client_infra")
+
+cpp_library(
+    name = "blake3_hash",
+    srcs = [
+        "Blake3.cpp",
+    ],
+    headers = [
+        "Blake3.h",
+    ],
+    exported_deps = [
+        "fbsource//third-party/blake3:blake3",
+        "//folly:range",
+    ],
+)

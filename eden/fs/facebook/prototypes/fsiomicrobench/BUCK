@@ -1,0 +1,34 @@
+load("@fbcode_macros//build_defs:rust_binary.bzl", "rust_binary")
+
+oncall("source_control")
+
+rust_binary(
+    name = "main",
+    srcs = ["main.rs"],
+    crate_root = "main.rs",
+    visibility = [],
+    deps = [
+        "fbsource//third-party/rust:anyhow",
+        "fbsource//third-party/rust:blake3",
+        "fbsource//third-party/rust:clap",
+        "fbsource//third-party/rust:rand",
+        "//cli/rust/cli:cli",
+        "//common/rust/lmdb:lmdb",
+        "//common/rust/rocksdb:rocksdb",
+        "//common/rust/shed/fbinit:fbinit",
+    ],
+)
+
+rust_binary(
+    name = "concurrent_read",
+    srcs = ["concurrent_read.rs"],
+    crate_root = "concurrent_read.rs",
+    visibility = [],
+    deps = [
+        "fbsource//third-party/rust:anyhow",
+        "fbsource//third-party/rust:clap",
+        "fbsource//third-party/rust:num_cpus",
+        "//cli/rust/cli:cli",
+        "//common/rust/shed/fbinit:fbinit",
+    ],
+)

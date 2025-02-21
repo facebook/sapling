@@ -1,0 +1,28 @@
+load("@fbcode_macros//build_defs:rust_library.bzl", "rust_library")
+load("@fbcode_macros//build_defs/lib:rust_oss.bzl", "rust_oss")
+
+oncall("scm_server_infra")
+
+rust_library(
+    name = "ods_counters",
+    srcs = glob(["src/**/*.rs"]),
+    test_deps = ([
+    ] + ([] if rust_oss.is_oss_build() else [
+        "fbsource//third-party/rust:anyhow",
+        "//common/rust/shed/fbinit:fbinit-tokio",
+        "//configerator/structs/rapido:if-rust-mocks",
+        "//eden/mononoke/mononoke_macros:mononoke_macros",
+    ])),
+    deps = ([
+        "fbsource//third-party/rust:async-trait",
+        "fbsource//third-party/rust:tokio",
+        "//common/rust/shed/fbinit:fbinit",
+    ] + ([] if rust_oss.is_oss_build() else [
+        "fbsource//third-party/rust:chrono",
+        "fbsource//third-party/rust:maplit",
+        "fbsource//third-party/rust:thiserror",
+        "//configerator/structs/rapido:if-rust-clients",
+        "//configerator/structs/rapido:if-rust-srclients",
+        "//configerator/structs/rapido:if_source-rust",
+    ])),
+)

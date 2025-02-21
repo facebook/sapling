@@ -1,0 +1,18 @@
+load(
+    "//eden/mononoke/tests/integration/facebook:fb_manifest_deps.bzl",
+    "dott_test",
+)
+
+oncall("scm_server_infra")
+
+dott_test(
+    name = "import",
+    dott_files = glob([
+        "*.t",
+    ]),
+    deps = [
+        "//eden/mononoke:blobimport",
+        "//eden/mononoke/tools/import:import",
+        "//eden/mononoke/tools/testtool:testtool",
+    ],
+)

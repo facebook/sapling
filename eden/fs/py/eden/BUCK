@@ -1,0 +1,19 @@
+load("@fbcode_macros//build_defs:python_library.bzl", "python_library")
+
+oncall("scm_client_infra")
+
+python_library(
+    name = "dirstate",
+    srcs = [
+        "dirstate.py",
+    ],
+    base_module = "eden",
+)
+
+python_library(
+    name = "config",
+    srcs = [
+        "config.py",
+    ],
+    base_module = "eden",
+)

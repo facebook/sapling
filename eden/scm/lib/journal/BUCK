@@ -1,0 +1,27 @@
+load("@fbcode_macros//build_defs:rust_library.bzl", "rust_library")
+
+oncall("sapling")
+
+rust_library(
+    name = "journal",
+    srcs = glob(["src/**/*.rs"]),
+    autocargo = {"cargo_toml_config": {
+        "lib": {"name": "journal"},
+        "package": {
+            "authors": ["Meta Source Control Team <sourcecontrol-dev@meta.com>"],
+            "homepage": "https://sapling-scm.com/",
+            "license": "MIT",
+            "name": "sapling-journal",
+            "repository": "https://github.com/facebook/sapling",
+        },
+    }},
+    crate_root = "src/lib.rs",
+    deps = [
+        "fbsource//third-party/rust:anyhow",
+        "//eden/scm/lib/hgtime:hgtime",
+        "//eden/scm/lib/repolock:repolock",
+        "//eden/scm/lib/types:types",
+        "//eden/scm/lib/util:util",
+        "//eden/scm/lib/util/sysutil:sysutil",
+    ],
+)

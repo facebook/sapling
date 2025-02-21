@@ -1,0 +1,25 @@
+load("@fbcode_macros//build_defs:rust_library.bzl", "rust_library")
+
+oncall("scm_server_infra")
+
+rust_library(
+    name = "reloader",
+    srcs = glob(["src/**/*.rs"]),
+    named_deps = {"slog": "//common/rust/shed/tracing_slog_compat:tracing_slog_compat"},
+    test_deps = [
+        "//common/rust/shed/fbinit:fbinit",
+        "//common/rust/shed/fbinit:fbinit-tokio",
+        "//eden/mononoke/mononoke_macros:mononoke_macros",
+    ],
+    deps = [
+        "fbsource//third-party/rust:anyhow",
+        "fbsource//third-party/rust:arc-swap",
+        "fbsource//third-party/rust:async-trait",
+        "fbsource//third-party/rust:futures",
+        "fbsource//third-party/rust:rand",
+        "fbsource//third-party/rust:tokio",
+        "//common/rust/shed/cloned:cloned",
+        "//common/rust/shed/futures_ext:futures_ext",
+        "//eden/mononoke/server/context:context",
+    ],
+)

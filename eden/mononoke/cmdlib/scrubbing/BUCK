@@ -1,0 +1,15 @@
+load("@fbcode_macros//build_defs:rust_library.bzl", "rust_library")
+
+oncall("scm_server_infra")
+
+rust_library(
+    name = "cmdlib_scrubbing",
+    srcs = glob(["src/**/*.rs"]),
+    deps = [
+        "fbsource//third-party/rust:anyhow",
+        "fbsource//third-party/rust:clap",
+        "//eden/mononoke/blobstore:blobstore_factory",
+        "//eden/mononoke/cmdlib:environment",
+        "//eden/mononoke/cmdlib/mononoke_app:mononoke_app",
+    ],
+)

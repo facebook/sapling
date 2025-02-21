@@ -1,0 +1,26 @@
+load("@fbcode_macros//build_defs:rust_binary.bzl", "rust_binary")
+
+oncall("scm_server_infra")
+
+rust_binary(
+    name = "mononoke_cas_new_commit_tailer",
+    srcs = glob([
+        "src/**/*.rs",
+    ]),
+    deps = [
+        "fbsource//third-party/rust:anyhow",
+        "fbsource//third-party/rust:bytes",
+        "fbsource//third-party/rust:clap",
+        "fbsource//third-party/rust:futures",
+        "fbsource//third-party/rust:once_cell",
+        "fbsource//third-party/rust:tokio",
+        "fbsource//third-party/rust:tokio-stream",
+        "//common/rust/folly:iobuf",
+        "//common/rust/logging:logging",
+        "//common/rust/shed/fbinit:fbinit",
+        "//eden/mononoke/cmdlib/mononoke_app:mononoke_app",
+        "//eden/mononoke/facebook/logger:mononoke_new_commit",
+        "//stylus/tailerswift/annotation_helper/if:data_lineage-rust",
+        "//thrift/lib/rust:fbthrift",
+    ],
+)

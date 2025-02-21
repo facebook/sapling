@@ -1,0 +1,22 @@
+load("@fbcode_macros//build_defs:thrift_library.bzl", "thrift_library")
+load("//common/automock:automock.bzl", "thrift_plugin_automock")
+
+oncall("fboss_agent_push")
+
+thrift_library(
+    name = "fb303",
+    languages = ["cpp2"],
+    no_plugin_deps = [
+        "//thrift/annotation:cpp",
+        "//thrift/annotation:go",
+        "//thrift/annotation:hack",
+        "//thrift/annotation:java",
+        "//thrift/annotation:python",
+        "//thrift/annotation:thrift",
+        "//thrift/facebook/erlang:annotations",
+    ],
+    plugins = [thrift_plugin_automock],
+    thrift_srcs = {
+        "fb303.thrift": ["FacebookService"],
+    },
+)

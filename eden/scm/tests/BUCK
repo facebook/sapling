@@ -1,0 +1,146 @@
+load("@fbcode_macros//build_defs:native_rules.bzl", "buck_command_alias", "buck_filegroup", "buck_genrule")
+load("@fbcode_macros//build_defs:python_binary.bzl", "python_binary")
+load("//antlir/fbpkg/fetch:defs.bzl", "fbpkg_fetch")
+load("//eden:defs.bzl", "get_integration_test_env_and_deps")
+load("//eden/scm/tests:targets.bzl", "generate_trinity_smoketests", "get_hg_edenfs_watchman_run_tests_included", "get_hg_watchman_run_tests_excluded", "run_tests_target")
+
+oncall("sapling")
+
+OTHER_FILES = [
+    "unittestify.py",
+    "TARGETS",
+]
+
+RUN_TEST_PY_FILES = [
+    "run-tests.py",
+    "features.py",
+    "watchman.py",
+    "killdaemons.py",
+    "default_hgrc.py",
+]
+
+TEST_FILES = [f for f in glob(["**/*"]) if f not in RUN_TEST_PY_FILES and f not in OTHER_FILES]
+
+buck_filegroup(
+    name = "test_files",
+    srcs = TEST_FILES,
+)
+
+python_binary(
+    name = "run_tests_py",
+    srcs = RUN_TEST_PY_FILES,
+    main_function = "eden.scm.tests.run-tests.main",
+    # The line below is necessary as we have some extensions (e.g., autodiff.py) in the tests directory
+    # which include modules like sapling.*, and that makes the linter confused about it
+    tags = ["noautodeps"],
+)
+
+python_binary(
+    name = "unittestify",
+    main_src = "unittestify.py",
+    tags = ["noautodeps"],
+)
+
+python_binary(
+    name = "run_tests_py_eden",
+    srcs = RUN_TEST_PY_FILES + ["edenfs.py"],
+    main_function = "eden.scm.tests.run-tests.main",
+    # The line below is necessary as we have some extensions (e.g., autodiff.py) in the tests directory
+    # which include modules like sapling.*, and that makes the linter confused about it
+    tags = ["noautodeps"],
+    deps = [
+        "//eden/integration/lib:lib",
+    ],
+)
+
+# Test targets created with run_tests_target are named like `hg_run_tests`,
+# `hg_edenfs_run_tests`, etc. A pre-set up version of run-tests.py is also
+# available through the `cli` version of it. For instance,
+# `hg_mononoke_run_tests` also has `hg_mononoke_run_tests_cli`. The `cli`
+# target is particularly useful for using run-tests.py specific features like
+# autofix through the `-i` flag.
+
+run_tests_target()
+
+run_tests_target(
+    excluded = get_hg_watchman_run_tests_excluded(),
+    watchman = True,
+)
+
+run_tests_target(eden = True)
+
+run_tests_target(
+    eden = True,
+    included = get_hg_edenfs_watchman_run_tests_included(),
+    watchman = True,
+)
+
+run_tests_target(
+    included = "test_(fb_ext_remotefilelog_(log|getpackv2|worker|rust_lfs|ruststores_lfs_duplicated)|edenapi.*)_t",
+    mononoke = True,
+)
+
+TRINITY_TEST_LIST = "test_(e2e_clone|eden_glob)_t"
+
+run_tests_target(
+    name = "trinity_tests",
+    compatible_with = [
+        "ovr_config//os:linux",
+    ],
+    eden = True,
+    included = TRINITY_TEST_LIST,
+    mononoke = True,
+    watchman = True,
+)
+
+generate_trinity_smoketests(
+    compatible_with = [
+        "ovr_config//os:linux",
+    ],
+    included = TRINITY_TEST_LIST,
+)
+
+# Useful for using autofix on EdenFS .t tests
+buck_command_alias(
+    name = "run_tests_py_eden_cli",
+    env = get_integration_test_env_and_deps()["env"],
+    exe = ":run_tests_py_eden",
+)
+
+buck_genrule(
+    name = "mononoke_stable",
+    out = "mononoke",
+    bash = "$(exe fbsource//third-party/squashfs-tools-4.5.1:unsquashfs) -dest $OUT $(location " + fbpkg_fetch.fetched_with_nondeterministic_fs_metadata("mononoke.server", "stable") + ") -extract file mononoke",
+    compatible_with = [
+        "ovr_config//os:linux",
+    ],
+    exec_compatible_with = [
+        "ovr_config//os:linux",
+    ],
+)
+
+buck_filegroup(
+    name = "test_runner",
+    srcs = [
+        "default_hgrc.py",
+        "dummyssh",
+        "heredoctest.py",
+        "hghave",
+        "hghave.py",
+        "hgsql/library.sh",
+        "hgsql/schema.innodb.sql",
+        "hgsql/schema.rocksdb.sql",
+        "infinitepush/library.sh",
+        "killdaemons.py",
+        "run-tests.py",
+        "setconfig.py",
+        "tinit.sh",
+        "watchman.py",
+    ],
+)
+
+python_binary(
+    name = "dummyssh3",
+    srcs = ["dummyssh3.py"],
+    main_module = "eden.scm.tests.dummyssh3",
+)

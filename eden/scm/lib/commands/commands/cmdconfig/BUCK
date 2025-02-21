@@ -1,0 +1,29 @@
+load("@fbcode_macros//build_defs:rust_library.bzl", "rust_library")
+
+oncall("sapling")
+
+rust_library(
+    name = "cmdconfig",
+    srcs = glob(["src/**/*.rs"]),
+    autocargo = {"cargo_toml_config": {
+        "lib": {"name": "cmdconfig"},
+        "package": {
+            "authors": ["Meta Source Control Team <sourcecontrol-dev@meta.com>"],
+            "homepage": "https://sapling-scm.com/",
+            "license": "GPL-2.0-only",
+            "name": "cmdconfig",
+            "repository": "https://github.com/facebook/sapling",
+        },
+    }},
+    crate_root = "src/lib.rs",
+    deps = [
+        "fbsource//third-party/rust:anyhow",
+        "fbsource//third-party/rust:serde",
+        "//eden/scm/lib/clidispatch:clidispatch",
+        "//eden/scm/lib/commands/cmdutil:cmdutil",
+        "//eden/scm/lib/config/loader:configloader",
+        "//eden/scm/lib/config/model:configmodel",
+        "//eden/scm/lib/formatter:formatter",
+        "//eden/scm/lib/minibytes:minibytes",
+    ],
+)

@@ -1,0 +1,34 @@
+load("@fbcode_macros//build_defs:rust_library.bzl", "rust_library")
+
+oncall("sapling")
+
+rust_library(
+    name = "gitcompat",
+    srcs = glob(["src/**/*.rs"]),
+    autocargo = {"cargo_toml_config": {
+        "lib": {"name": "gitcompat"},
+        "package": {
+            "authors": ["Meta Source Control Team <sourcecontrol-dev@meta.com>"],
+            "homepage": "https://sapling-scm.com/",
+            "license": "MIT",
+            "name": "sapling-gitcompat",
+            "repository": "https://github.com/facebook/sapling",
+        },
+    }},
+    crate_root = "src/lib.rs",
+    test_deps = [
+        "fbsource//third-party/rust:tempfile",
+    ],
+    deps = [
+        "fbsource//third-party/rust:anyhow",
+        "fbsource//third-party/rust:filetime",
+        "fbsource//third-party/rust:fs-err",
+        "fbsource//third-party/rust:tracing",
+        "//eden/scm/lib/config/model:configmodel",
+        "//eden/scm/lib/identity:identity",
+        "//eden/scm/lib/pathmatcher/types:pathmatcher-types",
+        "//eden/scm/lib/spawn-ext:spawn-ext",
+        "//eden/scm/lib/treestate:treestate",
+        "//eden/scm/lib/types:types",
+    ],
+)

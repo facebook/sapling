@@ -1,0 +1,24 @@
+load("@fbcode_macros//build_defs:cpp_unittest.bzl", "cpp_unittest")
+
+oncall("scm_client_infra")
+
+cpp_unittest(
+    name = "test",
+    srcs = glob(["*Test.cpp"]),
+    compatible_with = [
+        "ovr_config//os:linux",
+    ],
+    deps = [
+        "//eden/common/telemetry:structured_logger",
+        "//eden/common/utils:case_sensitivity",
+        "//eden/common/utils:enum",
+        "//eden/common/utils:process_info_cache",
+        "//eden/fs/fuse:fuse",
+        "//eden/fs/telemetry:stats",
+        "//eden/fs/testharness:fake_fuse",
+        "//eden/fs/testharness:test_dispatcher",
+        "//folly:random",
+        "//folly/executors:global_executor",
+        "//folly/test:test_utils",
+    ],
+)

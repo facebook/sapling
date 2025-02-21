@@ -1,0 +1,93 @@
+load("@fbcode_macros//build_defs:rust_library.bzl", "rust_library")
+
+oncall("scm_server_infra")
+
+rust_library(
+    name = "async_requests",
+    srcs = glob(["lib/src/**/*.rs"]),
+    autocargo = {"cargo_toml_dir": "lib"},
+    test_deps = [
+        "fbsource//third-party/rust:serde_json",
+        "//common/rust/shed/fbinit:fbinit",
+        "//common/rust/shed/fbinit:fbinit-tokio",
+        "//eden/mononoke/mononoke_macros:mononoke_macros",
+        "//eden/mononoke/repo_attributes/repo_identity:repo_identity",
+        "//eden/mononoke/repo_factory:test_repo_factory",
+    ],
+    deps = [
+        "fbsource//third-party/rust:anyhow",
+        "fbsource//third-party/rust:async-trait",
+        "fbsource//third-party/rust:futures",
+        "fbsource//third-party/rust:rand",
+        "fbsource//third-party/rust:thiserror",
+        "fbsource//third-party/rust:tokio",
+        ":requests_table",
+        "//common/rust/shed/stats:stats",
+        "//eden/mononoke/async_requests/if:async_requests_types-thrift-rust",
+        "//eden/mononoke/blobstore:blobstore",
+        "//eden/mononoke/blobstore:memblob",
+        "//eden/mononoke/common/futures_watchdog:futures_watchdog",
+        "//eden/mononoke/common/sql_construct:sql_construct",
+        "//eden/mononoke/megarepo_api:megarepo_config",
+        "//eden/mononoke/megarepo_api:megarepo_error",
+        "//eden/mononoke/mononoke_api:mononoke_api",
+        "//eden/mononoke/mononoke_types:mononoke_types",
+        "//eden/mononoke/mononoke_types/serialization:mononoke_types_serialization-rust",
+        "//eden/mononoke/scs/if:source_control-rust",
+        "//eden/mononoke/server/context:context",
+        "//thrift/lib/rust:fbthrift",
+    ],
+)
+
+rust_library(
+    name = "async_requests_client",
+    srcs = glob(["async_requests_client/src/**/*.rs"]),
+    autocargo = {"cargo_toml_dir": "async_requests_client"},
+    named_deps = {"slog": "//common/rust/shed/tracing_slog_compat:tracing_slog_compat"},
+    deps = [
+        "fbsource//third-party/rust:anyhow",
+        ":async_requests",
+        ":requests_table",
+        "//common/rust/shed/fbinit:fbinit",
+        "//eden/mononoke/blobstore:blobstore",
+        "//eden/mononoke/blobstore:blobstore_factory",
+        "//eden/mononoke/cmdlib/mononoke_app:mononoke_app",
+        "//eden/mononoke/common/rust/sql_ext:sql_ext",
+        "//eden/mononoke/common/sql_construct:sql_construct",
+        "//eden/mononoke/metaconfig:metaconfig_types",
+        "//eden/mononoke/mononoke_api:mononoke_api",
+    ],
+)
+
+rust_library(
+    name = "requests_table",
+    srcs = glob([
+        "requests_table/src/**/*.rs",
+        "requests_table/schemas/**/*.sql",
+    ]),
+    autocargo = {"cargo_toml_dir": "requests_table"},
+    test_deps = [
+        "fbsource//third-party/rust:tokio",
+        "//common/rust/shed/fbinit:fbinit",
+        "//common/rust/shed/fbinit:fbinit-tokio",
+        "//eden/mononoke/mononoke_macros:mononoke_macros",
+    ],
+    # This crate contains internal implementation details that should not be
+    # visible outside of this directory.
+    visibility = [
+        ":async_requests",
+        ":client",
+        "//eden/mononoke/async_requests/worker:worker",
+        "//eden/mononoke/async_requests/worker:worker-unittest",
+    ],
+    deps = [
+        "fbsource//third-party/rust:anyhow",
+        "fbsource//third-party/rust:async-trait",
+        "//common/rust/shed/facet:facet",
+        "//common/rust/shed/sql:sql",
+        "//eden/mononoke/common/rust/sql_ext:sql_ext",
+        "//eden/mononoke/common/sql_construct:sql_construct",
+        "//eden/mononoke/mononoke_types:mononoke_types",
+        "//eden/mononoke/server/context:context",
+    ],
+)

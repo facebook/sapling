@@ -1,0 +1,17 @@
+load("@fbcode_macros//build_defs:thrift_library.bzl", "thrift_library")
+
+oncall("scm_server_infra")
+
+thrift_library(
+    name = "commit_graph_thrift",
+    languages = [
+        "rust",
+    ],
+    thrift_srcs = {
+        "commit_graph.thrift": [],
+    },
+    deps = [
+        "//eden/mononoke/mononoke_types/serialization:mononoke_types_serialization",
+        "//thrift/annotation:rust",
+    ],
+)

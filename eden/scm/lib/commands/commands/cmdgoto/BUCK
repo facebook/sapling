@@ -1,0 +1,38 @@
+load("@fbcode_macros//build_defs:rust_library.bzl", "rust_library")
+
+oncall("sapling")
+
+rust_library(
+    name = "cmdgoto",
+    srcs = glob(["src/**/*.rs"]),
+    autocargo = {"cargo_toml_config": {
+        "dependencies_override": {"dependencies": {"sapling-repo": {"features": ["wdir"]}}},
+        "features": {
+            "default": [],
+            "eden": ["sapling-checkout/eden"],
+        },
+        "lib": {"name": "cmdgoto"},
+        "package": {
+            "authors": ["Meta Source Control Team <sourcecontrol-dev@meta.com>"],
+            "homepage": "https://sapling-scm.com/",
+            "license": "GPL-2.0-only",
+            "name": "cmdgoto",
+            "repository": "https://github.com/facebook/sapling",
+        },
+    }},
+    crate_root = "src/lib.rs",
+    deps = [
+        "fbsource//third-party/rust:anyhow",
+        "fbsource//third-party/rust:fs-err",
+        "fbsource//third-party/rust:tracing",
+        "//eden/scm/lib/checkout:checkout",
+        "//eden/scm/lib/clidispatch:clidispatch",
+        "//eden/scm/lib/cliparser:cliparser",
+        "//eden/scm/lib/commands/cmdutil:cmdutil",
+        "//eden/scm/lib/config/model:configmodel",
+        "//eden/scm/lib/repo:repo",
+        "//eden/scm/lib/util:util",
+        "//eden/scm/lib/workingcopy:workingcopy",
+        "//eden/scm/lib/workingcopy/repostate:repostate",
+    ],
+)

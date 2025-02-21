@@ -1,0 +1,82 @@
+load("@fbcode_macros//build_defs:rust_library.bzl", "rust_library")
+
+oncall("sapling")
+
+rust_library(
+    name = "sparse",
+    srcs = glob(["src/**/*.rs"]),
+    autocargo = {"cargo_toml_config": {
+        "extra_buck_dependencies": {
+            "dependencies": [
+                "fbsource//third-party/rust:futures",
+                "fbsource//third-party/rust:tokio",
+            ],
+            "dev-dependencies": [
+                "fbsource//third-party/rust:tokio",
+            ],
+        },
+        "features": {
+            "async": [
+                "futures",
+                "tokio",
+            ],
+            "default": [],
+        },
+        "lib": {"name": "sparse"},
+        "package": {
+            "authors": ["Meta Source Control Team <sourcecontrol-dev@meta.com>"],
+            "homepage": "https://sapling-scm.com/",
+            "license": "MIT",
+            "name": "sapling-sparse",
+            "repository": "https://github.com/facebook/sapling",
+        },
+    }},
+    crate_root = "src/lib.rs",
+    deps = [
+        "fbsource//third-party/rust:anyhow",
+        "fbsource//third-party/rust:globset",
+        "fbsource//third-party/rust:once_cell",
+        "fbsource//third-party/rust:regex",
+        "fbsource//third-party/rust:thiserror",
+        "fbsource//third-party/rust:tracing",
+        "//eden/scm/lib/pathmatcher:pathmatcher",
+        "//eden/scm/lib/types:types",
+        "//eden/scm/lib/util/rewrite-macros:rewrite-macros",
+    ],
+)
+
+rust_library(
+    name = "sparse-async",
+    srcs = glob(["src/**/*.rs"]),
+    autocargo = {
+        "cargo_toml_config": {
+            "lib": {"name": "sparse"},
+            "package": {
+                "authors": ["Meta Source Control Team <sourcecontrol-dev@meta.com>"],
+                "homepage": "https://sapling-scm.com/",
+                "license": "MIT",
+                "name": "sapling-sparse",
+                "repository": "https://github.com/facebook/sapling",
+            },
+        },
+        "ignore_rule": True,
+    },
+    crate = "sparse",
+    crate_root = "src/lib.rs",
+    features = ["async"],
+    test_deps = [
+        "fbsource//third-party/rust:tokio",
+    ],
+    deps = [
+        "fbsource//third-party/rust:anyhow",
+        "fbsource//third-party/rust:futures",
+        "fbsource//third-party/rust:globset",
+        "fbsource//third-party/rust:once_cell",
+        "fbsource//third-party/rust:regex",
+        "fbsource//third-party/rust:thiserror",
+        "fbsource//third-party/rust:tokio",
+        "fbsource//third-party/rust:tracing",
+        "//eden/scm/lib/pathmatcher:pathmatcher",
+        "//eden/scm/lib/types:types",
+    ],
+)

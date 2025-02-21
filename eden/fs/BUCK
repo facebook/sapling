@@ -1,0 +1,11 @@
+load("@fbcode_macros//build_defs:cpp_library.bzl", "cpp_library")
+
+oncall("scm_client_infra")
+
+cpp_library(
+    name = "config",
+    headers = ["eden-config.h"],
+    exported_deps = [
+        "//common/base:build_info_values",
+    ],
+)

@@ -1,0 +1,56 @@
+load("@fbcode_macros//build_defs:thrift_library.bzl", "thrift_library")
+
+oncall("scm_server_infra")
+
+thrift_library(
+    name = "mononoke_types_serialization",
+    languages = [
+        "rust",
+        "cpp2",
+    ],
+    rust_deps = [
+        "fbsource//third-party/rust:bytes",
+        "fbsource//third-party/rust:smallvec",
+        "//common/rust/shed/sorted_vector_map:sorted_vector_map",
+    ],
+    thrift_srcs = {
+        thrift_file: []
+        for thrift_file in glob(["*.thrift"])
+    },
+    # The Thrift definitions are private and only used for serialization and for mononoke-internal
+    # thrift services -- do not allow other code to use them, except for other private Thrift code.
+    # THIS IS NOT A PUBLIC SOURCE CONTROL API AND THERE IS NO GUARANTEE OF BACKWARDS COMPATIBLITY.
+    visibility = [
+        "//eden/mononoke/async_requests:",
+        "//eden/mononoke/async_requests/if:",
+        "//eden/mononoke/bonsai_git_mapping/if:",
+        "//eden/mononoke/bonsai_globalrev_mapping/if:",
+        "//eden/mononoke/bonsai_hg_mapping/if:",
+        "//eden/mononoke/bonsai_svnrev_mapping/if:",
+        "//eden/mononoke/changesets/if:",
+        "//eden/mononoke/commit_rewriting/synced_commit_mapping/if:",
+        "//eden/mononoke/derived_data:changeset_info",
+        "//eden/mononoke/derived_data:changeset_info-unittest",
+        "//eden/mononoke/derived_data/remote/if:",
+        "//eden/mononoke/facebook/bookmark_service/if:",
+        "//eden/mononoke/facebook/get_bundle:bundle_store_lib",
+        "//eden/mononoke/filenodes/if:",
+        "//eden/mononoke/git/git_types:",
+        "//eden/mononoke/git/git_types/if:",
+        "//eden/mononoke/git_symbolic_refs/if:",
+        "//eden/mononoke/megarepo_api:",
+        "//eden/mononoke/megarepo_api/if:",
+        "//eden/mononoke/mercurial:mercurial_types",
+        "//eden/mononoke/mercurial:mercurial_types-unittest",
+        "//eden/mononoke/mercurial/types/if:",
+        "//eden/mononoke/microwave/if:",
+        "//eden/mononoke/mononoke_types:",
+        "//eden/mononoke/mononoke_types/if:",
+        "//eden/mononoke/mutable_renames/if:",
+        "//eden/mononoke/repo_attributes/commit_graph/commit_graph_types/if:",
+        "//eden/mononoke/repo_attributes/repo_derivation_queues/if:",
+    ],
+    deps = [
+        "//thrift/annotation:rust",
+    ],
+)

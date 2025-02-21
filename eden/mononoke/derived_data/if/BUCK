@@ -1,0 +1,36 @@
+load("@fbcode_macros//build_defs:thrift_library.bzl", "thrift_library")
+load("//common/automock:automock.bzl", "thrift_plugin_automock")
+
+oncall("scm_server_infra")
+
+thrift_library(
+    name = "derived_data_type_if",
+    java_versions = [
+        "21",
+    ],
+    languages = [
+        "hs2",
+        "rust",
+        "py3",
+        "cpp2",
+        "java-swift",
+        "py-deprecated",
+    ],
+    plugins = [
+        thrift_plugin_automock,
+    ],
+    py3_namespace = "scm.derived_data.thrift",
+    py_base_module = "scm.derived_data.thrift",
+    py_remote_service_router = True,
+    thrift_cpp2_options = [
+        "reflection",
+    ],
+    thrift_py_options = "utf8strings",
+    thrift_rust_options = [
+        "deprecated_default_enum_min_i32",
+        "serde",
+    ],
+    thrift_srcs = {
+        "derived_data_type.thrift": [],
+    },
+)
