@@ -699,6 +699,7 @@ pub fn replace_slash_with_backslash(path: &Path) -> PathBuf {
 #[cfg(test)]
 mod tests {
     use std::fs::create_dir_all;
+    use std::fs::remove_dir_all;
     use std::fs::File;
 
     use anyhow::Result;
@@ -1122,5 +1123,26 @@ mod tests {
         assert!(root_relative_path(&root, &root, &parent.join("rootbeer"))?.is_none());
 
         Ok(())
+    }
+
+    #[test]
+    #[should_panic]
+    fn test_create_dir_with_mode_race() {
+        let tempdir = TempDir::new().unwrap();
+
+        let dir = tempdir.path().join("dir");
+
+        // Make sure we don't have race conditions between threads creating the same dir.
+        std::thread::scope(|s| {
+            for _ in 0..10 {
+                s.spawn(|| {
+                    for _ in 0..100 {
+                        create_dir_with_mode(&dir, 0o755).unwrap();
+                        let _ = std::fs::write(dir.join("file"), "contents");
+                        let _ = remove_dir_all(&dir);
+                    }
+                });
+            }
+        });
     }
 }
