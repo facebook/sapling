@@ -1506,6 +1506,16 @@ class EdenConfig : private ConfigSettingManager {
       true,
       this};
 
+  /**
+   * Whether health report notifications should be shown via Windows
+   * notifications. This is only used in the CLI, it is included here to
+   * get rid of warnings.
+   */
+  ConfigSetting<bool> notifyHealthReportIssues{
+      "notifications:notify-health-report-issues",
+      false,
+      this};
+
   // [log]
 
   ConfigSetting<uint64_t> maxLogFileSize{"log:max-file-size", 50000000, this};

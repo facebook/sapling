@@ -1453,8 +1453,11 @@ class HealthReportCmd(Subcmd):
         json_str = json.dumps(data, indent=2)
         out.writeln(json_str)
 
+        config_notify_health_report = instance.get_config_bool(
+            "notifications.notify-health-report-issues", False
+        )
         # Send notifications if enabled and on Windows platform
-        if notify and sys.platform == "win32":
+        if notify and config_notify_health_report and sys.platform == "win32":
             for error_code in HealthReportCmd.error_codes.keys():
                 try:
                     with instance.get_thrift_client_legacy() as client:
