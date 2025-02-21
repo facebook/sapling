@@ -1646,7 +1646,8 @@ def clone(ui, source, dest=None, **opts):
     ]
     + walkopts
     + commitopts
-    + commitopts2,
+    + commitopts2
+    + cmdutil.messagefieldopts,
     _("[OPTION]... [FILE]..."),
     inferrepo=True,
     legacyaliases=["com", "comm", "commi"],

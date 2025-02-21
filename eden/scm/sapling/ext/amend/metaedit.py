@@ -93,6 +93,7 @@ def editmessages(repo, revs):
     ]
     + commands.commitopts
     + commands.commitopts2
+    + cmdutil.messagefieldopts
     + cmdutil.formatteropts,
     _("[OPTION]... [-r] [REV]"),
     cmdtemplate=True,

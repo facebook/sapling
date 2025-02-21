@@ -111,6 +111,18 @@ commitopts2 = [
     ("u", "user", "", _("record the specified user as committer"), _("USER")),
 ]
 
+messagefieldopts = [
+    (
+        "",
+        "message-field",
+        [],
+        _(
+            "rewrite fields of commit message (e.g. --message-field=Summary='New Summary') (EXPERIMENTAL)"
+        ),
+        _("fieldname=fieldvalue"),
+    ),
+]
+
 # hidden for now
 formatteropts = _typedflags(
     [("T", "template", "", _("display with template (EXPERIMENTAL)"), _("TEMPLATE"))]
@@ -991,6 +1003,13 @@ def logmessage(repo, opts):
             raise error.Abort(
                 _("can't read commit message '%s': %s") % (logfile, inst.strerror)
             )
+
+    message = _update_commit_message_fields(
+        message,
+        ui.configlist("committemplate", "commit-message-fields"),
+        opts,
+    )
+
     return message
 
 

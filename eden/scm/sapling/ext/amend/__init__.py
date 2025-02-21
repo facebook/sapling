@@ -52,6 +52,7 @@ from __future__ import absolute_import
 import io
 
 from bindings import checkout as nativecheckout
+
 from sapling import (
     cmdutil,
     commands,
@@ -69,7 +70,6 @@ from sapling.node import short
 
 from .. import rebase as rebasemod
 from . import common, fold, hide, metaedit, movement, restack, revsets, split, unamend
-
 
 revsetpredicate = revsets.revsetpredicate
 hint = registrar.hint()
@@ -192,7 +192,8 @@ def uisetup(ui):
         + amendopts
         + commands.walkopts
         + commands.commitopts
-        + commands.commitopts2,
+        + commands.commitopts2
+        + cmdutil.messagefieldopts,
         _("@prog@ amend [OPTION]... [FILE]..."),
         legacyaliases=["ame", "amen", "ramen"],
     )(amend)
@@ -328,6 +329,7 @@ def amend(ui, repo, *pats, **opts):
         "addremove",
         "edit",
         "message",
+        "message_field",
         "logfile",
         "date",
         "user",
@@ -361,13 +363,17 @@ def amend(ui, repo, *pats, **opts):
 
     haschildren = bool(repo.revs("children(.)"))
 
+    if (
+        not opts.get("noeditmessage")
+        and not opts.get("message")
+        and not opts.get("logfile")
+    ):
+        opts["message"] = old.description()
+
     opts["message"] = cmdutil.logmessage(repo, opts)
     # Avoid further processing of any logfile. If such a file existed, its
     # contents have been copied into opts['message'] by logmessage
     opts["logfile"] = ""
-
-    if not opts.get("noeditmessage") and not opts.get("message"):
-        opts["message"] = old.description()
 
     oldbookmarks = old.bookmarks()
     with repo.wlock(), repo.lock():
