@@ -21,6 +21,10 @@ The Resource Manager is responsible for managing resources required by RE action
 The Resource Manager ensures that these resources are properly set up, made available to the action, and cleaned up after execution. The RE agent is responsible for orchestrating the Resource Managers.
 The agent acts as a coordinator that sets up and communicates with an individual Resource Manager for every worker.
 
+## Execution Flow
+
+![](px/6CJnR)
+
 
 ## SCM Repo Manager Thrift Service
 The SCM Repo Manager Thrift Service is used as an implementation of the Resource Manager APIs. This service provides access to the repository's EdenFs mounts.
