@@ -8,9 +8,10 @@
 | CASC Wiki Page                       | [CASC Wiki Page](https://www.internalfb.com/wiki/Source_Control/Engineering/CASC/content_addressed_source_control)|
 | SCM Agent Tw Spec                    | [Tw Spec](https://www.internalfb.com/code/fbsource/fbcode/tupperware/config/remote_execution/agent/agent_scm.tw)|
 | SCM Agent Conveyor                   | [Conveyor](https://www.internalfb.com/svc/services/remote_execution/scm_agent/conveyor/remote_execution/scm_agent/releases)|
-| SCM Repo Manager Scuba               | [Scm Repo Manager Scuba](https://fburl.com/scuba/scm_repo_manager/z6xti5z7)|
-| Sapling Telemetry for SCM Repo Manager| [Dev Command Timers Scuba](https://fburl.com/scuba/dev_command_timers/002gtzd6)|
-| Eden Telemetry for SCM Repo Manager  | [Eden Cli Usage Scuba](https://fburl.com/scuba/edenfs_cli_usage/447jykbc)|
+|RE Telemetry For `scm-repo-support` platform |[Remote Execution Action Scuba](https://fburl.com/scuba/remote_execution_action/0haobmup)|
+| SCM Repo Manager Scuba               | [Scm Repo Manager Scuba](https://fburl.com/scuba/scm_repo_manager/zmxdu5nt)|
+| Sapling Telemetry for SCM Repo Manager| [Dev Command Timers Scuba](https://fburl.com/scuba/dev_command_timers/do7g2idx)|
+| Eden Telemetry for SCM Repo Manager  | [Eden Cli Usage Scuba](https://fburl.com/scuba/edenfs_cli_usage/tchqig4d)|
 | SCM Repo Manager Code                | [Scm Repo Manager Code](https://www.internalfb.com/code/fbsource/fbcode/one_world/resource_managers/scm_manager/)|
 | Sapling Configuration  `tiers("remote_execution")` | [Sapling Dynamic Config](https://www.internalfb.com/code/configerator/source/scm/hg/hgclientconf/hgclient.cinc)|
 | EdenFs Configuration  `remote_execution`  | [EdenFs Dynamic Config](https://www.internalfb.com/code/configerator/source/scm/eden/config/edenfs_config.cconf)|
