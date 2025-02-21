@@ -452,7 +452,9 @@ pub fn edenfs_redirect_fixup(
         .get_nonempty("edenfs", "redirect-fixup")
         .unwrap_or("redirect fixup".into());
     let mut cmd0 = Command::new(arg0.as_ref());
-    let cmd = cmd0.args(args_raw.split_whitespace());
+    let cmd = cmd0
+        .args(args_raw.split_whitespace())
+        .current_dir(wc.vfs().root());
     if is_okay {
         cmd.spawn_detached()?;
     } else {
