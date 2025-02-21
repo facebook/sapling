@@ -1,6 +1,6 @@
 # Repo Support on Remote Execution
 
-Remote Execution is the compute platform in Meta designed for rapid and parallel execution of small, stateless actions as outlined in the [DevInfra Compute Offerings Guideline](https://www.internalfb.com/wiki/DevInfra_Compute_offerings/What_execution_platform_to_use/).
+[Remote Execution](https://www.internalfb.com/wiki/Remote_Execution/) is the compute platform in Meta designed for rapid and parallel execution of small, stateless actions as outlined in the [DevInfra Compute Offerings Guideline](https://www.internalfb.com/wiki/DevInfra_Compute_offerings/What_execution_platform_to_use/).
 The feature of Repo Support on Remote Execution facilitates the distributed and efficient execution of small granular actions on the Source Code, initially only enabled for the `fbsource` repo.
 This optimization not only improves performance but also maximizes concurrency and minimizes setup overhead, thereby enhancing overall productivity and efficiency in handling small computes on a repositiry.
 
