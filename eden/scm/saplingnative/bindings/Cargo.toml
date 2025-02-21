@@ -65,6 +65,7 @@ pyrevlogindex = { version = "0.1.0", path = "modules/pyrevlogindex" }
 pysptui = { version = "0.1.0", path = "modules/pysptui" }
 pystatus = { version = "0.1.0", path = "modules/pystatus" }
 pystoremodel = { version = "0.1.0", path = "modules/pystoremodel" }
+pysubmodule = { version = "0.1.0", path = "modules/pysubmodule" }
 pythreading = { version = "0.1.0", path = "modules/pythreading" }
 pytoml = { version = "0.1.0", path = "modules/pytoml" }
 pytracing = { version = "0.1.0", path = "modules/pytracing" }

@@ -258,6 +258,7 @@ members = [
   "saplingnative/bindings/modules/pysptui",
   "saplingnative/bindings/modules/pystatus",
   "saplingnative/bindings/modules/pystoremodel",
+  "saplingnative/bindings/modules/pysubmodule",
   "saplingnative/bindings/modules/pythreading",
   "saplingnative/bindings/modules/pytoml",
   "saplingnative/bindings/modules/pytracing",

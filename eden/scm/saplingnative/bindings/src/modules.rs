@@ -94,6 +94,7 @@ pub(crate) fn populate_module(py: Python<'_>, module: &PyModule) -> PyResult<PyN
             sptui,
             status,
             storemodel,
+            submodule,
             threading,
             toml,
             tracing,
