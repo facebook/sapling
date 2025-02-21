@@ -22,7 +22,6 @@ parking_lot = { version = "0.12.1", features = ["send_guard"] }
 regex = "1.11.1"
 sapling-async-runtime = { version = "0.1.0", path = "../async-runtime" }
 sapling-configmodel = { version = "0.1.0", path = "../config/model" }
-sapling-configset = { version = "0.1.0", path = "../config/set" }
 sapling-context = { version = "0.1.0", path = "../context" }
 sapling-edenfs-client = { version = "0.1.0", path = "../edenfs-client", optional = true }
 sapling-gitcompat = { version = "0.1.0", path = "../gitcompat" }
@@ -39,6 +38,7 @@ sapling-repostate = { version = "0.1.0", path = "repostate" }
 sapling-sparse = { version = "0.1.0", path = "../sparse" }
 sapling-status = { version = "0.1.0", path = "../status" }
 sapling-storemodel = { version = "0.1.0", path = "../storemodel" }
+sapling-submodule = { version = "0.1.0", path = "../submodule" }
 sapling-termlogger = { version = "0.1.0", path = "../io/term/logger" }
 sapling-treestate = { version = "0.1.0", path = "../treestate" }
 sapling-types = { version = "0.1.0", path = "../types" }
