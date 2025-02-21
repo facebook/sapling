@@ -809,7 +809,11 @@ def parsesubmodules(ctx):
 
     data = ctx[".gitmodules"].data()
     submodules = []
-    for s in bindings.submodule.parse_gitmodules(data):
+    try:
+        origin_url = repo.ui.paths["default"].loc or None
+    except KeyError:
+        origin_url = None
+    for s in bindings.submodule.parse_gitmodules(data, origin_url):
         submodules.append(
             Submodule(s["name"], s["url"], s["path"], weakref.proxy(repo)),
         )
