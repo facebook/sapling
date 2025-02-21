@@ -193,6 +193,31 @@ impl EdenFsInstance {
         }
     }
 
+    fn socketfile(&self) -> PathBuf {
+        self.config_dir.join("socket")
+    }
+
+    /// Returns the path to the EdenFS socket file. If check is true, it will check if the socket
+    /// file exists or not. If it doesn't exist, it will return an error.
+    pub fn get_socket_path(&self, check: bool) -> Result<PathBuf, anyhow::Error> {
+        let socketfile = self.socketfile();
+
+        if check {
+            if !std::fs::exists(&socketfile).with_context(|| {
+                format!(
+                    "Failed to check existence of socket file {}",
+                    socketfile.display()
+                )
+            })? {
+                return Err(anyhow!(
+                    "EdenFS socket file {} doesn't exist on this machine",
+                    socketfile.display()
+                ));
+            }
+        }
+        Ok(socketfile.to_owned())
+    }
+
     #[cfg(windows)]
     fn pidfile(&self) -> PathBuf {
         self.config_dir.join("pid")

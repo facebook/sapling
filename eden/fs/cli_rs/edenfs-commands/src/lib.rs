@@ -35,6 +35,7 @@ mod pid;
 mod prefetch_profile;
 mod redirect;
 mod remove;
+mod socket;
 mod status;
 mod top;
 mod uptime;
@@ -112,6 +113,8 @@ pub enum TopLevelSubcommand {
     #[cfg(target_os = "windows")]
     Handles(crate::handles::HandlesCmd),
     Reloadconfig(crate::config::ReloadConfigCmd),
+    #[clap(alias = "sock")]
+    Socket(crate::socket::SocketCmd),
     #[clap(alias = "health")]
     Status(crate::status::StatusCmd),
     // Top(crate::top::TopCmd),
@@ -140,6 +143,7 @@ impl TopLevelSubcommand {
             Remove(cmd) => cmd,
             #[cfg(target_os = "windows")]
             Handles(cmd) => cmd,
+            Socket(cmd) => cmd,
             Status(cmd) => cmd,
             // Top(cmd) => cmd,
             Uptime(cmd) => cmd,
@@ -167,6 +171,7 @@ impl TopLevelSubcommand {
             TopLevelSubcommand::Redirect(_) => "redirect",
             TopLevelSubcommand::Remove(_) => "remove",
             TopLevelSubcommand::Reloadconfig(_) => "reloadconfig",
+            TopLevelSubcommand::Socket(_) => "socket",
             TopLevelSubcommand::Status(_) => "status",
             //TopLevelSubcommand::Top(_) => "top",
             TopLevelSubcommand::Uptime(_) => "uptime",

@@ -718,6 +718,12 @@ class PidCmd(Subcmd):
         return 1
 
 
+@subcmd("socket", "Print the daemon's socket path if it exists")
+class SocketCmd(Subcmd):
+    def run(self, args: argparse.Namespace) -> int:
+        raise NotImplementedError("Stub -- only implemented in Rust")
+
+
 @subcmd("status", "Check the health of the EdenFS service", aliases=["health"])
 class StatusCmd(Subcmd):
     def setup_parser(self, parser: argparse.ArgumentParser) -> None:
