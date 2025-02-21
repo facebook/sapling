@@ -8,6 +8,11 @@ This optimization not only improves performance but also maximizes concurrency a
 The repository is accessible by default at `/fbsource` within the action, with the option to configure a different location if required. Global Revs and [Snapshots](https://www.internalfb.com/wiki/Source_Control/Admin/Snapshots/) are also supported.
 Snapshots provide a means to save and share uncommitted changes without altering the working copy, and often used by automation.
 
+The remote execution **action cache** is optionally available, providing caching for action runs that occur on the same revision.
+
+**Capacity:** Although customers are responsible for funding capacity, the platform has demonstrated exceptional efficiency due to its ability to handle high concurrency. This approach is consistent with remote execution practices, where customers typically bear the costs of capacity while benefiting from optimized resource utilization.
+For example, in the case of Tupperware specs compilation, our setup utilizes a worker-to-machine ratio of **25 workers per T10 machine**, showcasing an efficient allocation of resources for this specific use case.
+
 **Repo Support on RE** is implemented using the [SCM Repo Manager Thrift Service](https://www.internalfb.com/wiki/Source_Control/Engineering/Repo_Support_On_Remote_Execution/scm_repo_manager) as an implementation of the Resource Manager APIs, allowing running RE actions alongside the resource.
 
 ## What is the Resource Manager?
