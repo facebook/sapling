@@ -751,3 +751,41 @@ Graft supports non-root relative paths
   +aa
    b
    cc
+
+Can use --message-field to update parts of commit message.
+  $ newclientrepo
+  $ touch foo
+  $ hg commit -Aqm "title
+  > 
+  > Summary:
+  > summary
+  > 
+  > Test Plan:
+  > test plan"
+  $ hg whereami
+  2d2e42cdf85511ef5011a5cf09d60e5c319d9e9b
+  $ hg go -q null
+  $ hg subtree graft -r 2d2e42cdf --from-path foo --to-path bar --message-field="Summary=
+  > new summary
+  > "
+  grafting 2d2e42cdf855 "title"
+  $ hg show
+  commit:      7c6b9629d53a
+  user:        test
+  date:        Thu Jan 01 00:00:00 1970 +0000
+  files:       bar
+  description:
+  title
+  
+  Summary:
+  new summary
+  
+  Grafted from 2d2e42cdf85511ef5011a5cf09d60e5c319d9e9b
+  - Grafted path foo to bar
+  
+  Test Plan:
+  test plan
+  
+  
+  diff --git a/bar b/bar
+  new file mode 100644

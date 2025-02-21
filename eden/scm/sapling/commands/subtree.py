@@ -43,7 +43,6 @@ from ..utils.subtreeutil import (
 )
 from .cmdtable import command
 
-
 MAX_SUBTREE_COPY_FILE_COUNT = 10_000
 MERGE_BASE_TIMEOUT_SECS = 120
 
@@ -132,6 +131,7 @@ def subtree_copy(ui, repo, *args, **opts):
     ]
     + commitopts
     + commitopts2
+    + cmdutil.messagefieldopts
     + mergetoolopts
     + dryrunopts
     + subtree_path_opts,

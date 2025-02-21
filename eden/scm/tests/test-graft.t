@@ -1066,3 +1066,57 @@
   grafting c9302879a6a3 "xx"
 
   $ cd ..
+
+
+Can use --message-field to update parts of commit message.
+  $ newclientrepo
+  $ touch foo
+  $ hg commit -Aqm "title
+  > 
+  > Summary:
+  > summary
+  > 
+  > Test Plan:
+  > test plan"
+  $ hg whereami
+  2d2e42cdf85511ef5011a5cf09d60e5c319d9e9b
+  $ hg go -q null
+  $ touch bar
+  $ hg commit -Aqm bar
+  $ hg graft -r 2d2e42cdf --message-field="Summary=
+  > new summary
+  > "
+  grafting 2d2e42cdf855 "title"
+  $ hg show
+  commit:      c05be0f0fd33
+  user:        test
+  date:        Thu Jan 01 00:00:00 1970 +0000
+  files:       foo
+  description:
+  title
+  
+  Summary:
+  new summary
+  
+  Test Plan:
+  test plan
+  $ hg go -q .^
+  $ hg graft -r 2d2e42cdf --log --message-field="Summary=
+  > new summary
+  > "
+  grafting 2d2e42cdf855 "title"
+  $ hg show
+  commit:      46a7e5630e37
+  user:        test
+  date:        Thu Jan 01 00:00:00 1970 +0000
+  files:       foo
+  description:
+  title
+  
+  Summary:
+  new summary
+  
+  (grafted from 2d2e42cdf85511ef5011a5cf09d60e5c319d9e9b)
+  
+  Test Plan:
+  test plan

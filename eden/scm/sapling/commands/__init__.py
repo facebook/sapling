@@ -2480,6 +2480,7 @@ def forget(ui, repo, *pats, **opts):
         ),
     ]
     + commitopts2
+    + cmdutil.messagefieldopts
     + mergetoolopts
     + dryrunopts,
     _("[OPTION]... REV..."),
@@ -2722,10 +2723,13 @@ def _dograft(ui, repo, *revs, **opts):
 
 
 def _makegraftmessage(repo, ctx, opts):
-    if logmessage := cmdutil.logmessage(repo, opts):
-        description, is_from_user = logmessage, True
-    else:
-        description, is_from_user = ctx.description(), False
+    opts = dict(opts)
+
+    if not opts.get("logfile") and not opts.get("message"):
+        opts["message"] = ctx.description()
+
+    description = cmdutil.logmessage(repo, opts)
+    is_from_user = description != ctx.description()
 
     message = []
     if opts.get("from_path"):
