@@ -5,4 +5,4 @@
 # GNU General Public License version 2.
 
 # use 'python3 pip.pyz install --user cogapp' to install cog
-${PYTHON:-python3} -m cogapp -r TARGETS src/modules.rs
+${PYTHON:-python3} -m cogapp -r BUCK src/modules.rs
