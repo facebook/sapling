@@ -39,6 +39,7 @@ use serde::Serialize;
 use toml::value::Value;
 use util::path::absolute;
 
+use crate::checkout::find_checkout;
 use crate::checkout::CheckoutConfig;
 use crate::checkout::EdenFsCheckout;
 use crate::fsutil::forcefully_remove_dir_all;
@@ -1166,6 +1167,27 @@ fn is_symlink_correct(redir: &Redirection, checkout: &EdenFsCheckout) -> Result<
     } else {
         Ok(false)
     }
+}
+
+// Returns the complete set of effective redirections for a given mount path,
+// and expands redirection target paths. Useful for listing redirections.
+pub fn get_effective_redirs_for_mount(mount: PathBuf) -> Result<BTreeMap<PathBuf, Redirection>> {
+    let instance = EdenFsInstance::global();
+    let checkout = find_checkout(instance, &mount)?;
+    let mut redirections = get_effective_redirections(&checkout).with_context(|| {
+        anyhow!(
+            "Unable to retrieve redirections for checkout '{}'",
+            mount.display()
+        )
+    })?;
+
+    redirections
+        .values_mut()
+        .map(|v| v.update_target_abspath(&checkout))
+        .collect::<Result<Vec<()>, _>>()
+        .with_context(|| anyhow!("failed to expand redirection target path"))?;
+
+    Ok(redirections)
 }
 
 /// Computes the complete set of redirections that are currently in effect.

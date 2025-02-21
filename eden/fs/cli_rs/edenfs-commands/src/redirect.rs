@@ -29,6 +29,7 @@ use edenfs_client::checkout::find_checkout;
 use edenfs_client::checkout::CheckoutConfig;
 use edenfs_client::redirect::get_configured_redirections;
 use edenfs_client::redirect::get_effective_redirections;
+use edenfs_client::redirect::get_effective_redirs_for_mount;
 use edenfs_client::redirect::try_add_redirection;
 use edenfs_client::redirect::Redirection;
 use edenfs_client::redirect::RedirectionState;
@@ -172,26 +173,14 @@ impl RedirectCmd {
     }
 
     async fn list(&self, mount: Option<PathBuf>, json: bool) -> Result<ExitCode> {
-        let instance = EdenFsInstance::global();
         let mount = match mount {
             Some(provided) => provided,
             None => expand_path_or_cwd("").with_context(|| {
                 anyhow!("could not infer mount: could not determine current working directory")
             })?,
         };
-        let checkout = find_checkout(instance, &mount)?;
-        let mut redirections = get_effective_redirections(&checkout).with_context(|| {
-            anyhow!(
-                "Unable to retrieve redirections for checkout '{}'",
-                mount.display()
-            )
-        })?;
-
-        redirections
-            .values_mut()
-            .map(|v| v.update_target_abspath(&checkout))
-            .collect::<Result<Vec<()>, _>>()
-            .with_context(|| anyhow!("failed to expand redirection target path"))?;
+        let redirections = get_effective_redirs_for_mount(mount)
+            .with_context(|| anyhow!("Failed to get redirections for mount"))?;
 
         if json {
             self.print_redirection_json(redirections)
