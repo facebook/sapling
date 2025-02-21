@@ -162,6 +162,7 @@ members = [
   "lib/status",
   "lib/storemodel",
   "lib/streams",
+  "lib/submodule",
   "lib/third-party/conch-parser",
   "lib/third-party/streampager",
   "lib/third-party/webview-sys",
