@@ -29,7 +29,6 @@ rust_binary(
         "//eden/mononoke/cmdlib/mononoke_app:mononoke_app",
         "//eden/mononoke/cmdlib/sharding:executor_lib",
         "//eden/mononoke/cmdlib/sharding_ext:sharding_ext",
-        "//eden/mononoke/common/assembly_line:assembly_line",
         "//eden/mononoke/derived_data:changeset_info",
         "//eden/mononoke/derived_data/mercurial_derivation:mercurial_derivation",
         "//eden/mononoke/edenapi_service:edenapi_service",

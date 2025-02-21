@@ -97,10 +97,17 @@ pub async fn run(app: MononokeApp, args: CommandArgs) -> Result<()> {
     let mut send_manager = SendManager::new(sender.clone(), logger.clone(), repo_name.clone());
     let (cr_s, mut cr_r) = mpsc::channel::<Result<()>>(1);
 
-    let messages =
-        crate::sync::process_one_changeset(&args.cs_id, &ctx, repo, &logger, false, "", Some(cr_s))
-            .await?;
-    crate::sync::send_messages_in_order(messages, &mut send_manager).await?;
+    crate::sync::process_one_changeset(
+        &args.cs_id,
+        &ctx,
+        repo,
+        &logger,
+        &mut send_manager,
+        false,
+        "",
+        Some(cr_s),
+    )
+    .await?;
 
     let res = cr_r.recv().await;
     match res {
