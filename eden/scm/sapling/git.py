@@ -809,9 +809,9 @@ def parsesubmodules(ctx):
 
     data = ctx[".gitmodules"].data()
     submodules = []
-    for name, url, path in bindings.workingcopy.parsegitsubmodules(data):
+    for s in bindings.submodule.parse_gitmodules(data):
         submodules.append(
-            Submodule(name, url, path, weakref.proxy(repo)),
+            Submodule(s["name"], s["url"], s["path"], weakref.proxy(repo)),
         )
 
     return submodules
@@ -836,8 +836,8 @@ def maybe_cleanup_submodule_in_treestate(repo):
         return
 
     remove = repo.dirstate._map._tree.remove
-    for _name, _url, path in bindings.workingcopy.parsegitsubmodules(data):
-        remove(path)
+    for s in bindings.submodule.parse_gitmodules(data):
+        remove(s["path"])
 
 
 def submodulecheckout(ctx, match=None, force=False, mctx=None):

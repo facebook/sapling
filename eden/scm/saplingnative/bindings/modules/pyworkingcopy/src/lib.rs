@@ -45,12 +45,6 @@ pub fn init_module(py: Python, package: &str) -> PyResult<PyModule> {
     m.add_class::<walker>(py)?;
     m.add_class::<workingcopy>(py)?;
 
-    m.add(
-        py,
-        "parsegitsubmodules",
-        py_fn!(py, parse_git_submodules(data: &PyBytes)),
-    )?;
-
     impl_into::register(py);
 
     Ok(m)
@@ -346,12 +340,4 @@ impl workingcopy {
     pub fn get_wc(&self, py: Python) -> Arc<RwLock<WorkingCopy>> {
         self.inner(py).clone()
     }
-}
-
-fn parse_git_submodules(py: Python, data: &PyBytes) -> PyResult<Vec<(String, String, String)>> {
-    Ok(rsworkingcopy::git::parse_submodules(data.data(py))
-        .map_pyerr(py)?
-        .into_iter()
-        .map(|sm| (sm.name, sm.url, sm.path))
-        .collect())
 }
