@@ -1996,6 +1996,7 @@ async fn preserve_premerge_commit(
             CandidateSelectionHint::Only,
             CommitSyncContext::Tests,
             Some(CommitSyncConfigVersion("noop".to_string())),
+            false,
         )
         .await?;
 

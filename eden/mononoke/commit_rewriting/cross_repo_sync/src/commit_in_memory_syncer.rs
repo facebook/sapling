@@ -27,6 +27,7 @@ use mononoke_types::BonsaiChangesetMut;
 use mononoke_types::ChangesetId;
 use mononoke_types::RepositoryId;
 use movers::Movers;
+use sorted_vector_map::SortedVectorMap;
 
 use crate::commit_sync_config_utils::get_git_submodule_action_by_version;
 use crate::commit_sync_outcome::CommitSyncOutcome;
@@ -141,6 +142,9 @@ pub(crate) struct CommitInMemorySyncer<'a, R: Repo> {
     pub large_repo: InMemoryRepo,
     pub strip_commit_extras: StripCommitExtras,
     pub should_set_committer_info_to_author_info_if_empty: bool,
+    /// Add the name of the commit sync mapping version used to sync the commit
+    /// to the rewritten commit's hg extra.
+    pub add_mapping_to_hg_extra: bool,
 }
 
 impl<'a, R: Repo> CommitInMemorySyncer<'a, R> {
@@ -196,12 +200,24 @@ impl<'a, R: Repo> CommitInMemorySyncer<'a, R> {
             EmptyCommitFromLargeRepo::Keep
         };
 
+        let add_hg_extras = if self.add_mapping_to_hg_extra {
+            SortedVectorMap::from_iter(vec![(
+                "sync_mapping_version".to_string(),
+                expected_version
+                    .as_ref()
+                    .map_or(vec![], |cfg_version| cfg_version.0.clone().into_bytes()),
+            )])
+        } else {
+            Default::default()
+        };
+
         let rewrite_opts = RewriteOpts {
             commit_rewritten_to_empty,
             empty_commit_from_large_repo,
             strip_commit_extras: self.strip_commit_extras,
             should_set_committer_info_to_author_info_if_empty: self
                 .should_set_committer_info_to_author_info_if_empty,
+            add_hg_extras,
         };
         let parent_count = cs.parents().count();
         if parent_count == 0 {

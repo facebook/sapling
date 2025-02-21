@@ -193,6 +193,7 @@ async fn run_in_initial_import_mode_for_single_head(
     disable_progress_bar: bool,
     no_automatic_derivation: bool,
     derivation_batch_size: usize,
+    add_mapping_to_hg_extra: bool,
 ) -> Result<()> {
     log_info(
         ctx,
@@ -219,6 +220,7 @@ async fn run_in_initial_import_mode_for_single_head(
         disable_progress_bar,
         no_automatic_derivation,
         derivation_batch_size,
+        add_mapping_to_hg_extra,
     )
     .await;
 
@@ -243,6 +245,7 @@ async fn run_in_initial_import_mode(
     disable_progress_bar: bool,
     no_automatic_derivation: bool,
     derivation_batch_size: usize,
+    add_mapping_to_hg_extra: bool,
 ) -> Result<()> {
     for bcs_id in bcs_ids {
         run_in_initial_import_mode_for_single_head(
@@ -254,6 +257,7 @@ async fn run_in_initial_import_mode(
             disable_progress_bar,
             no_automatic_derivation,
             derivation_batch_size,
+            add_mapping_to_hg_extra,
         )
         .await?;
     }

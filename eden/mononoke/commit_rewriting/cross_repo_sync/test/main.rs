@@ -1109,6 +1109,7 @@ async fn test_sync_parent_has_multiple_mappings(fb: FacebookInit) -> Result<(), 
             CandidateSelectionHint::Only,
             CommitSyncContext::Tests,
             None,
+            false, // add_mapping_to_hg_extra
         )
         .await
         .expect_err("sync should have failed");
@@ -1123,6 +1124,7 @@ async fn test_sync_parent_has_multiple_mappings(fb: FacebookInit) -> Result<(), 
             CandidateSelectionHint::AncestorOfBookmark(book, Target(megarepo.clone())),
             CommitSyncContext::Tests,
             None,
+            false, // add_mapping_to_hg_extra
         )
         .await
         .expect("sync should have succeeded");
@@ -2148,6 +2150,7 @@ async fn test_no_accidental_preserved_roots(
             CandidateSelectionHint::Only,
             CommitSyncContext::Tests,
             Some(CommitSyncConfigVersion("TEST_VERSION_NAME".to_string())),
+            false, // add_mapping_to_hg_extra
         )
         .await?;
     let outcome = commit_syncer

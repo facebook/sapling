@@ -263,6 +263,7 @@ pub async fn do_sync_diamond_merge(
                 CandidateSelectionHint::Only,
                 CommitSyncContext::SyncDiamondMerge,
                 None,
+                false, // add_mapping_to_hg_extra
             )
             .await?;
     }

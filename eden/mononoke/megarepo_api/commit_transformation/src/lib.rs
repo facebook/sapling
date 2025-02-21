@@ -347,7 +347,7 @@ pub enum StripCommitExtras {
     Git,
 }
 
-#[derive(PartialEq, Debug, Copy, Clone, Default)]
+#[derive(PartialEq, Debug, Clone, Default)]
 pub struct RewriteOpts {
     pub commit_rewritten_to_empty: CommitRewrittenToEmpty,
     pub empty_commit_from_large_repo: EmptyCommitFromLargeRepo,
@@ -359,6 +359,9 @@ pub struct RewriteOpts {
     /// This setting determines if, in Hg->Git sync, the committer and committer
     /// date fields should be set to the author and date fields if empty.
     pub should_set_committer_info_to_author_info_if_empty: bool,
+
+    /// Any extra data that should be added to hg_extra during rewrite.
+    pub add_hg_extras: SortedVectorMap<String, Vec<u8>>,
 }
 
 /// Create a version of `cs` with `Mover` applied to all changes
@@ -817,6 +820,8 @@ pub fn rewrite_commit_with_implicit_deletes<'a>(
             StripCommitExtras::None => {}
         };
     }
+
+    cs.hg_extra.extend(rewrite_opts.add_hg_extras);
 
     let enable_should_set_committer_info_to_author_info_if_empty = justknobs::eval(
         "scm/mononoke:should_set_committer_info_to_author_info_if_empty",

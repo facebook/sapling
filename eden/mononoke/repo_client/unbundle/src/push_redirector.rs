@@ -911,6 +911,7 @@ impl<R: Repo> PushRedirector<R> {
                     candidate_selection_hint.clone(),
                     CommitSyncContext::PushRedirector,
                     None,
+                    false, // add_mapping_to_hg_extra
                 )
                 .await?
                 .ok_or_else(|| {

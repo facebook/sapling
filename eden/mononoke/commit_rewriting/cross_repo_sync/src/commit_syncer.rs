@@ -208,6 +208,10 @@ where
         // will be rewritten with this version, and for commits with no parents
         // this expected version will be used for rewriting.
         expected_version: Option<CommitSyncConfigVersion>,
+        // TODO(T182311609): extract options into a struct with reasonable defaults.
+        // Add the name of the commit sync mapping version used to sync the commit
+        // to the rewritten commit's hg extra.
+        add_mapping_to_hg_extra: bool,
     ) -> Result<Option<ChangesetId>, Error> {
         let before = Instant::now();
         let res = self
@@ -217,6 +221,7 @@ where
                 parent_mapping_selection_hint,
                 commit_sync_context,
                 expected_version,
+                add_mapping_to_hg_extra,
             )
             .boxed()
             .await;
@@ -718,6 +723,7 @@ where
                     ancestor_selection_hint.clone(),
                     commit_sync_context,
                     expected_version,
+                    false, // add_mapping_to_hg_extra
                 )
                 .await?;
                 Ok(())
@@ -751,6 +757,7 @@ where
         mut parent_mapping_selection_hint: CandidateSelectionHint<R>,
         commit_sync_context: CommitSyncContext,
         expected_version: Option<CommitSyncConfigVersion>,
+        add_mapping_to_hg_extra: bool,
     ) -> Result<Option<ChangesetId>, Error> {
         let ctx =
             &set_scuba_logger_fields(ctx, [("sync_context", commit_sync_context.to_string())]);
@@ -804,6 +811,7 @@ where
             large_repo: large_in_memory_repo,
             strip_commit_extras,
             should_set_committer_info_to_author_info_if_empty,
+            add_mapping_to_hg_extra,
         }
         .unsafe_sync_commit_in_memory(ctx, cs, commit_sync_context, expected_version)
         .await?

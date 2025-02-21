@@ -38,6 +38,11 @@ pub struct InitialImportCommandArgs {
     /// Size of the bulk derivation batch during the initial import
     #[clap(long, default_value_t = 100)]
     pub derivation_batch_size: usize,
+
+    /// Add the name of the commit sync mapping version used to sync the commit
+    /// to the rewritten commit's hg extra.
+    #[clap(long)]
+    pub add_mapping_to_hg_extra: bool,
 }
 
 #[derive(Debug, Args)]

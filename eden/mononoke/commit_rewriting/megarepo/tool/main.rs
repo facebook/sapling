@@ -1074,6 +1074,7 @@ async fn run_sync_commit_and_ancestors<'a>(
                 CandidateSelectionHint::Only,
                 CommitSyncContext::AdminChangeMapping,
                 None,
+                false, // add_mapping_to_hg_extra
             )
             .await?;
     }

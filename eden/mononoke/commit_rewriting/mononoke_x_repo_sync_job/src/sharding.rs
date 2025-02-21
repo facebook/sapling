@@ -202,6 +202,7 @@ impl XRepoSyncProcessExecutor {
                     initial_import_args.no_progress_bar,
                     initial_import_args.no_automatic_derivation,
                     initial_import_args.derivation_batch_size,
+                    initial_import_args.add_mapping_to_hg_extra,
                 )
                 .await
             }

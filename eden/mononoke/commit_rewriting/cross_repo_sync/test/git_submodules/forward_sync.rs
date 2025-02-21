@@ -1965,6 +1965,7 @@ async fn test_submodule_expansion_and_deletion_on_merge_commits(fb: FacebookInit
             CandidateSelectionHint::Only,
             CommitSyncContext::XRepoSyncJob,
             Some(base_commit_sync_version_name()),
+            false, // add_mapping_to_hg_extra
         )
         .await
         .context("Failed to sync standalone parent commit")?;
@@ -1976,6 +1977,7 @@ async fn test_submodule_expansion_and_deletion_on_merge_commits(fb: FacebookInit
             CandidateSelectionHint::Only,
             CommitSyncContext::XRepoSyncJob,
             Some(base_commit_sync_version_name()),
+            false, // add_mapping_to_hg_extra
         )
         .await
         .context("Failed to sync standalone parent commit")?;

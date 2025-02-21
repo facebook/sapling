@@ -30,7 +30,7 @@ Create small repo commits
 
 
   $ with_stripped_logs mononoke_x_repo_sync "$SUBMODULE_REPO_ID"  "$LARGE_REPO_ID" \
-  > initial-import --no-progress-bar -i "$C" \
+  > initial-import --no-progress-bar -i "$C" --add-mapping-to-hg-extra \
   > --version-name "$LATEST_CONFIG_VERSION_NAME" | tee $TESTTMP/initial_import.out
   Starting session with id * (glob)
   Starting up X Repo Sync from small repo small_repo to large repo large_repo
@@ -38,22 +38,22 @@ Create small repo commits
   Syncing 738630e43445144e9f5ddbe1869730cfbaf8ff6bf95b25b8410cb35ca92f25c7 for inital import
   Source repo: small_repo / Target repo: large_repo
   Found 3 unsynced ancestors
-  changeset 738630e43445144e9f5ddbe1869730cfbaf8ff6bf95b25b8410cb35ca92f25c7 synced as ca175120dfe7fb7fcb0d872e26ce331cb24c7d9ec457d599a40684527c65d63a in * (glob)
+  changeset 738630e43445144e9f5ddbe1869730cfbaf8ff6bf95b25b8410cb35ca92f25c7 synced as 5018d85a3db49803d93474fec07b26a65f527ba14a320de37e8f48fb98086e7a in * (glob)
   successful sync of head 738630e43445144e9f5ddbe1869730cfbaf8ff6bf95b25b8410cb35ca92f25c7
   X Repo Sync execution finished from small repo small_repo to large repo large_repo
 
   $ SYNCED_HEAD=$(rg ".+synced as (\w+) .+" -or '$1' "$TESTTMP/initial_import.out")
   $ clone_and_log_large_repo "$SYNCED_HEAD"
-  o  cbb9c8a988b5 C
+  o  46cfaa628eaf C
   │   smallrepofolder1/foo/b.txt |  1 +
   │   1 files changed, 1 insertions(+), 0 deletions(-)
   │
-  o  5e3f6798b6a3 B
+  o  03e3cfe82f43 B
   │   smallrepofolder1/bar/c.txt |  1 +
   │   smallrepofolder1/foo/d     |  1 +
   │   2 files changed, 2 insertions(+), 0 deletions(-)
   │
-  o  e462fc947f26 A
+  o  31d9be73e63c A
       smallrepofolder1/bar/b.txt |  1 +
       smallrepofolder1/foo/a.txt |  1 +
       2 files changed, 2 insertions(+), 0 deletions(-)
@@ -69,3 +69,87 @@ Create small repo commits
   RewrittenAs([(ChangesetId(Blake2(738630e43445144e9f5ddbe1869730cfbaf8ff6bf95b25b8410cb35ca92f25c7)), CommitSyncConfigVersion("INITIAL_IMPORT_SYNC_CONFIG"))])
   
   Deriving all the enabled derived data types
+
+# Check that commit sync mapping is in hg extra
+# $ MASTER_HASH=$(mononoke_admin bookmarks -R $LARGE_REPO_NAME get master_bookmark)
+  $ mononoke_admin blobstore -R $LARGE_REPO_NAME fetch changeset.blake2.$SYNCED_HEAD
+  Key: changeset.blake2.5018d85a3db49803d93474fec07b26a65f527ba14a320de37e8f48fb98086e7a
+  Ctime: * (glob)
+  Size: 247
+  
+  BonsaiChangeset {
+      inner: BonsaiChangesetMut {
+          parents: [
+              ChangesetId(
+                  Blake2(2eb103a039e10690ad71c9e784a0dd41b31e8a6ca3b6c840792bd7723237a748),
+              ),
+          ],
+          author: "author",
+          author_date: DateTime(
+              1970-01-01T00:00:00+00:00,
+          ),
+          committer: None,
+          committer_date: None,
+          message: "C",
+          hg_extra: {
+              "sync_mapping_version": [
+                  73,
+                  78,
+                  73,
+                  84,
+                  73,
+                  65,
+                  76,
+                  95,
+                  73,
+                  77,
+                  80,
+                  79,
+                  82,
+                  84,
+                  95,
+                  83,
+                  89,
+                  78,
+                  67,
+                  95,
+                  67,
+                  79,
+                  78,
+                  70,
+                  73,
+                  71,
+              ],
+          },
+          git_extra_headers: None,
+          file_changes: {
+              NonRootMPath("smallrepofolder1/foo/b.txt"): Change(
+                  TrackedFileChange {
+                      inner: BasicFileChange {
+                          content_id: ContentId(
+                              Blake2(e7bb73a12f705640aacb03fe42d56ad6884a5e74df826b08fa7fa58203d9e407),
+                          ),
+                          file_type: Regular,
+                          size: 30,
+                          git_lfs: FullContent,
+                      },
+                      copy_from: Some(
+                          (
+                              NonRootMPath("smallrepofolder1/bar/b.txt"),
+                              ChangesetId(
+                                  Blake2(2eb103a039e10690ad71c9e784a0dd41b31e8a6ca3b6c840792bd7723237a748),
+                              ),
+                          ),
+                      ),
+                  },
+              ),
+          },
+          is_snapshot: false,
+          git_tree_hash: None,
+          git_annotated_tag: None,
+          subtree_changes: {},
+      },
+      id: ChangesetId(
+          Blake2(5018d85a3db49803d93474fec07b26a65f527ba14a320de37e8f48fb98086e7a),
+      ),
+  }

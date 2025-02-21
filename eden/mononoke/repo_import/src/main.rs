@@ -310,6 +310,7 @@ async fn back_sync_commits_to_small_repo(
                     CandidateSelectionHint::Only,
                     CommitSyncContext::RepoImport,
                     Some(version.clone()),
+                    false, // add_mapping_to_hg_extra
                 )
                 .await?;
 
