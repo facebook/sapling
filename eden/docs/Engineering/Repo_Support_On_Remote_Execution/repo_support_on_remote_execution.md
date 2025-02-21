@@ -38,3 +38,5 @@ In such cases, the pipeline would cycle through `cleanup` and then `setup`.
 ![](px/6CDjx)
 
 *More details provided in the [SCM Repo Manager](https://www.internalfb.com/wiki/Source_Control/Engineering/Repo_Support_On_Remote_Execution/scm_repo_manager) design overview.*
+
+Check out our [resources](https://www.internalfb.com/wiki/Source_Control/Engineering/Repo_Support_On_Remote_Execution/resources/") for helpful links.

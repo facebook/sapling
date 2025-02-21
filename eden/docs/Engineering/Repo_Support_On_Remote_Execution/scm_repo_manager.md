@@ -43,3 +43,5 @@ Scm Repo Manager is a Thrift Service implementing Resource Manager APIs written 
 ## Additional Resources
 * [Separate Dashboard](https://www.internalfb.com/intern/unidash/dashboard/scmunidash/scm_repo_manager_scm_on_re/)
 * [Defined SLOs](https://www.internalfb.com/slick?service=scm%2Fscm_repo_manager&aggregation=DAY&heat_map_period=WEEK)
+
+Check out our [resources](https://www.internalfb.com/wiki/Source_Control/Engineering/Repo_Support_On_Remote_Execution/resources/") for helpful links.
