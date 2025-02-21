@@ -60,7 +60,34 @@ Now we can start a local Remote Execution worker that will spin up SCM Repo Mana
 
 ## Cogwheel Tests
 
+An E2E cogwheel test is defined at `remote_execution/cogwheel/platforms/scm-repo-support/scm_test.py`.
 
+This Python class extends the basic Remote Execution action tests which verify that the Remote Execution worker can execute standard actions (e.g. read configs, enforce command timeouts, download basic files from CAS etc.)
+and adds new test cases which are [specific for the SCM platform](https://fburl.com/code/lenlzyv6) such as executing Sapling command on the repository.
 
+This test runs as part of the conveyor pipeline to validate pushes and uses [a separate capacity entitlement](https://fburl.com/capacity_portal/ytnyyqvo).
+
+All fbpkgs are built as part of the test (SCM resource manager, SCM image, RE agent, RE CASd), so be careful when rolling out changes with dependencies between services.
 
 ## Actions Replay
+
+Remote Execution provides a tool called `re_replay` for executing previous actions onto a set of workers.
+
+The tool has 2 modes:
+- `record`: read actions from scuba and write them to stdout/a target file
+- `replay`: send actions to running workers
+
+The tool will **only select previously successful actions**.
+
+The following command illustates a basic example of how to use the tool locally.
+
+The first part will read 100 actions from scuba and write them to a file:
+```
+[ioanbudea@devvm33012.lla0 ~]$ re_replay record -o out.file -l 100 filter --platform scm-repo-support
+```
+Now, we are ready to replay those actions onto a testing instance:
+```
+[ioanbudea@devvm33012.lla0 ~]$ re_replay replay -i out.file --engine re-engine-prod.internal.tfbnw.net:443 --override-capabilities platform=scm-repo-support,testing=my_new_worker
+```
+For more details about the available filters, please consult the tool CLI and help instructions.
+This can also be automated into [replay tests for push safety](https://www.internalfb.com/wiki/Remote_Execution/engineering/compute/push_safety_with_replay/).
