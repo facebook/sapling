@@ -18,8 +18,8 @@ Scm Repo Manager is a Thrift Service implementing Resource Manager APIs written 
 |----------------------------------|-----------------------------------------|------------------------------------------|-------------------------------|
 | **getResourceConfig** | Retrieves a worker ID. | None | No |
 | **setup** | Initializes Source Control support by starting the EdenFS dynamic config updater, the EdenFS daemon, and cloning the Sapling backing repo. | Prepares the mount for the first lease by triggering `eden clone`. | No |
-| **beforeLease** | Symlinks the latest prepared mount, checking out the revision or snapshot, and initializing the EdenFS Action Wrapper serving to collect perf counter and monitor EdenFS daemon's memory. | Prepares a new mount for the next lease by triggering another `eden clone`. | Yes  |
-| **afterLease** | Cleans up resources by removing the symlink, logging the perf counters, and EdenFS daemon's memory stats obtained via the the action wrapper. | Removes the mount by triggering an `eden rm` operation. | Yes |
+| **beforeLease** | **Symlinks** the latest prepared mount, checks out the revision or snapshot, and initializes the [EdenFS Action Wrapper](https://www.internalfb.com/code/fbsource/fbcode/one_world/resource_managers/scm_manager/rust/edenfs_thrift_client/src/eden_fs_action_wrapper.rs) serving to collect perf counter per action and monitor EdenFS daemon's memory. | Prepares a new mount for the next lease by triggering another `eden clone`. | Yes  |
+| **afterLease** | Removes the **Symlinks**, logs the perf counters, and EdenFS daemon's memory stats obtained via the [EdenFS Action Wrapper](https://www.internalfb.com/code/fbsource/fbcode/one_world/resource_managers/scm_manager/rust/edenfs_thrift_client/src/eden_fs_action_wrapper.rs). | Removes the mount by triggering an `eden rm` operation. | Yes |
 | **cleanup** | Terminates background tasks, removes remaining mounts, stops the EdenFS daemon, cleans up the EdenFS state (`.eden`) and removes the Sapling backing repo. | None | No |
 | **Unexpected shutdown/ Signal handler** | Terminates the EdenFS daemon (`SIGKILL`), cleans up the EdenFS state (`.eden`), and removes the Sapling backing repo. | None | No |
 
@@ -34,6 +34,18 @@ Scm Repo Manager is a Thrift Service implementing Resource Manager APIs written 
 * **CASC** Enabled by Default: CASC is enabled by default, utilizing local CASd caches. EdenFS and Sapling rely on the Wdb CASd running on a physical host outside the Tupperware container, ensuring data persistence across container restarts.
 * **Performance Counters**: Relevant EdenFS performance counters are collected on a per-action basis by snapshotting them before and after action execution.
 * **Memory Watchdog**: A memory watchdog monitors peak RSS memory during action execution (for the lifetime of the mount in SCM Repo Manager).
+
+## Health Checks and Pipeline
+
+The next lease can be served in two ways: either by calling the `beforeLease` again or by going through a combination of `cleanup`, `setup`, and `beforeLease` sequence. 
+This decision is influenced by multiple factors, including exceptions in `setup` and `beforeLease` and **explicit cleanup request** as part of the  [afterLease response](https://www.internalfb.com/code/fbsource/[f380e55a14e8ef68381312af3b5d696d05f209da]/fbcode/one_world/resource_managers/scm_manager/manager.py?lines=208).
+
+There are several scenarios where the explicit cleanup may be requested:
+* If the EdenFS daemon's health check via a thrift call fails
+* If too many `eden rm` calls are fail
+* If EdenFS exceeds the configured memory limit after an action has been completed (which is considered idle)
+
+
 
 ## Limitations
 
