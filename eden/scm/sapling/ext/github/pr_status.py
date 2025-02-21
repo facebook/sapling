@@ -8,6 +8,7 @@ from typing import List, Optional
 from ghstack.github import get_github_endpoint
 
 from sapling import smartset, util
+from sapling.i18n import _
 
 from . import graphql
 from .github_repo_util import is_github_repo
@@ -53,7 +54,13 @@ def _prefetch(repo, ctx_iter):
                     "prefetch GitHub PR status for %r\n"
                     % sorted([pr.number for pr in pr_list])
                 )
-            _get_pull_request_data_list(repo, *pr_list)
+            try:
+                _get_pull_request_data_list(repo, *pr_list)
+            except Exception as err:
+                ui.note_err(
+                    _("failed to prefetch PR status for %r: %s\n")
+                    % (sorted([pr.number for pr in pr_list]), err)
+                )
 
         # this is needed by smartset's iterctx method
         for ctx in batch:
