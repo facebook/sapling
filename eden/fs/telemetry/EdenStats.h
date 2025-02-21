@@ -354,6 +354,41 @@ struct NfsStats : StatsGroup<NfsStats> {
   Duration nfsCommit{"nfs.commit_us"};
   Counter nfsCommitSuccessful{"nfs.commit_successful"};
   Counter nfsCommitFailure{"nfs.commit_failure"};
+
+  // NFS error counters
+  Counter nfsErrorPerm{"nfs.error.perm"};
+  Counter nfsErrorNoEnt{"nfs.error.noent"};
+  Counter nfsErrorIO{"nfs.error.io"};
+  Counter nfsErrorNXIO{"nfs.error.nxio"};
+  Counter nfsErrorAcces{"nfs.error.acces"};
+  Counter nfsErrorExist{"nfs.error.exist"};
+  Counter nfsErrorXDev{"nfs.error.xdev"};
+  Counter nfsErrorNoDev{"nfs.error.nodev"};
+  Counter nfsErrorNotDir{"nfs.error.notdir"};
+  Counter nfsErrorIsDir{"nfs.error.isdir"};
+  Counter nfsErrorInval{"nfs.error.inval"};
+  Counter nfsErrorFBig{"nfs.error.fbig"};
+  Counter nfsErrorROFS{"nfs.error.rofs"};
+  Counter nfsErrorMLink{"nfs.error.mlink"};
+  Counter nfsErrorNameTooLong{"nfs.error.nametoolong"};
+  Counter nfsErrorNotEmpty{"nfs.error.notempty"};
+  Counter nfsErrorDQuot{"nfs.error.dquot"};
+  Counter nfsErrorStale{"nfs.error.stale"};
+  Counter nfsErrorNotSupp{"nfs.error.notsupp"};
+
+  // Jukebox and ServerFault errors can stem from multiple sources, so log
+  // subtypes of generic top level errors.
+  Counter nfsErrorJukeboxTimedOut{"nfs.error.jukebox.timedout"};
+  Counter nfsErrorJukeboxAgain{"nfs.error.jukebox.again"};
+  Counter nfsErrorJukeboxNoMem{"nfs.error.jukebox.nomem"};
+  Counter nfsErrorJukeboxFollyFut{"nfs.error.jukebox.follyfut"};
+
+  // ServerFault errors can also stem from multiple sources
+  Counter nfsErrorServerFaultNoErrno{"nfs.error.serverfault.no_errno"};
+  Counter nfsErrorServerFaultEnfile{"nfs.error.serverfault.enfile"};
+  Counter nfsErrorServerFaultDefaultErrno{
+      "nfs.error.serverfault.default_errno"};
+  Counter nfsErrorServerFaultDefaultEx{"nfs.error.serverfault.default_ex"};
 };
 
 struct PrjfsStats : StatsGroup<PrjfsStats> {
