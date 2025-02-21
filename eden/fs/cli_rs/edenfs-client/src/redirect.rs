@@ -202,7 +202,7 @@ impl fmt::Display for RepoPathDisposition {
     }
 }
 
-#[derive(Debug, Serialize, PartialEq)]
+#[derive(Debug, Serialize, PartialEq, Clone)]
 pub enum RedirectionState {
     #[serde(rename = "ok")]
     /// Matches the expectations of our configuration as far as we can tell

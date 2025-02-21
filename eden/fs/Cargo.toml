@@ -41,6 +41,7 @@ members = [
   "inodes/overlay/clients",
   "inodes/overlay/mocks",
   "inodes/overlay/services",
+  "rust/redirect_ffi",
   "service",
   "service/clients",
   "service/mocks",

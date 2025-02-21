@@ -1,0 +1,31 @@
+load("@fbcode_macros//build_defs:cpp_library.bzl", "cpp_library")
+load("@fbcode_macros//build_defs:rust_library.bzl", "rust_library")
+
+oncall("source_control")
+
+rust_library(
+    name = "redirect-ffi",
+    srcs = glob(["src/**/*.rs"]),
+    cpp_deps = [":redirect-ffi-cpp-wrapper"],
+    crate_root = "src/lib.rs",
+    cxx_bridge = "src/lib.rs",
+    deps = [
+        "fbsource//third-party/rust:anyhow",
+        "fbsource//third-party/rust:cxx",
+        "//eden/fs/cli_rs/edenfs-client:edenfs-client",
+    ],
+)
+
+cpp_library(
+    name = "redirect-ffi-cpp-wrapper",
+    srcs = [],
+    headers = [],
+    preferred_linkage = "static",
+    undefined_symbols = True,
+    deps = [
+        ":redirect-ffi@header",
+    ],
+    exported_deps = [
+        "fbsource//third-party/rust:cxx-core",
+    ],
+)
