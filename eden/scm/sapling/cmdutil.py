@@ -117,7 +117,7 @@ messagefieldopts = [
         "message-field",
         [],
         _(
-            "rewrite fields of commit message (e.g. --message-field=Summary='New Summary') (EXPERIMENTAL)"
+            "rewrite fields of commit message (e.g. --message-field=Summary='New Summary' to update or --message-field=-Summary to remove) (EXPERIMENTAL)"
         ),
         _("fieldname=fieldvalue"),
     ),
@@ -1026,6 +1026,9 @@ def _update_commit_message_fields(
 
     >>> _update_commit_message_fields("old title\\nSummary:\\nOld summary.\\nReviewer: foo", ["Summary", "Test Plan", "Reviewer"], {"message_field": ["Title=new title", "Test Plan=new test plan"]})
     'new title\\nSummary:\\nOld summary.\\nTest Plan: new test plan\\nReviewer: foo'
+
+    >>> _update_commit_message_fields("old title\\nSummary:\\nOld summary.\\nReviewer: foo", ["Summary", "Test Plan", "Reviewer"], {"message_field": ["-Summary"]})
+    'old title\\nReviewer: foo'
     """
     fields = opts.get("message_field") or []
     if not fields:
@@ -1033,9 +1036,21 @@ def _update_commit_message_fields(
 
     fields_to_update = {}
     for field in fields:
+        remove = False
+        if field and field[0] == "-":
+            remove = True
+            field = field[1:]
+
         parts = field.split("=", 1)
-        if len(parts) == 1:
-            raise error.Abort(_("--message-field format is name=value"))
+        if len(parts) == 1 != remove:
+            raise error.Abort(
+                _("--message-field format is name=value or -name to remove")
+            )
+
+        if remove:
+            fields_to_update[field] = None
+            continue
+
         name, value = parts
         if name != "Title":
             if value and value[0] != "\n":
@@ -1061,7 +1076,9 @@ def _update_commit_message_fields(
 
         # User is updating (or insterting) this value - stick in the new value.
         if field in fields_to_update:
-            updated_lines.extend(fields_to_update.pop(field).split("\n"))
+            value = fields_to_update.pop(field)
+            if value is not None:
+                updated_lines.extend(value.split("\n"))
 
     for unused in fields_to_update:
         raise error.Abort(

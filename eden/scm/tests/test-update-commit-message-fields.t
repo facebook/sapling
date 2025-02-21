@@ -61,8 +61,17 @@ Test error cases
   abort: field name 'Oopsie' not configured in committemplate.commit-message-fields
   [255]
   $ sl metaedit -r . --message-field=Bad-Format
-  abort: --message-field format is name=value
+  abort: --message-field format is name=value or -name to remove
   [255]
   $ sl metaedit -r . --message-field=
-  abort: --message-field format is name=value
+  abort: --message-field format is name=value or -name to remove
   [255]
+
+Can remove fields
+  $ sl amend -q --message-field="-Test Plan"
+  $ sl log -T '{desc}\n' -r .
+  new title
+  
+  Summary: new summary
+  
+  Reviewers: otherperson
