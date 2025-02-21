@@ -478,9 +478,15 @@ fn create_dir_with_mode(path: &Path, mode: u32) -> anyhow::Result<()> {
         // platform we are on.
         // Similarly, when the destinated directory is a file, we get `ENOTDIR` instead of `EEXIST`.
         match e.raw_os_error() {
-            Some(libc::ENOTEMPTY) | Some(libc::ENOTDIR) => {
-                Err(io::Error::from(ErrorKind::AlreadyExists).into())
+            Some(libc::ENOTEMPTY) => {
+                // Target directory exists now - we probably raced with someone else to create it.
+
+                // Best effort to fix permissions.
+                let _ = fs::set_permissions(path, fs::Permissions::from_mode(mode));
+
+                Ok(())
             }
+            Some(libc::ENOTDIR) => Err(io::Error::from(ErrorKind::AlreadyExists).into()),
             _ => Err::<(), anyhow::Error>(e.into())
                 .context(format!("renaming temp dir {:?} to {:?}", temp, &path)),
         }
@@ -1126,7 +1132,9 @@ mod tests {
     }
 
     #[test]
-    #[should_panic]
+    // Windows doesn't suffer from the issue being tested, but has a different, less
+    // important issue.
+    #[cfg_attr(windows, ignore)]
     fn test_create_dir_with_mode_race() {
         let tempdir = TempDir::new().unwrap();
 
