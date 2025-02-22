@@ -19,8 +19,11 @@ pub enum SaplingStatus {
     Modified,
     Added,
     Removed,
+    Clean,
     Missing,
     NotTracked,
+    Ignored,
+    Copied,
 }
 
 pub enum SaplingGetStatusResult {
@@ -157,13 +160,9 @@ where
 
 //
 // Single line looks like:
-//    M fbcode/buck2/app/buck2_file_watcher/src/edenfs/sapling.rs
-//    A fbcode/buck2/app/buck2_file_watcher/src/edenfs/sapling.rs
-//    R fbcode/buck2/app/buck2_file_watcher/src/edenfs/sapling.rs
-//    ! fbcode/buck2/app/buck2_file_watcher/src/edenfs/sapling.rs
-//    ? fbcode/buck2/app/buck2_file_watcher/src/edenfs/sapling.rs
+//    <status> <path>
 //
-// Where:
+// Where status is one of:
 //   M = modified
 //   A = added
 //   R = removed
@@ -176,19 +175,30 @@ where
 //   Paths can have spaces, but are not quoted.
 fn process_one_status_line(line: &str) -> anyhow::Result<Option<(SaplingStatus, String)>> {
     // Must include a status and at least one char path.
-    let mut parts = line.split_whitespace();
-    if let (Some(change), Some(path), None) = (parts.next(), parts.next(), parts.next()) {
-        Ok(match change {
-            "M" => Some((SaplingStatus::Modified, path.to_owned())),
-            "A" => Some((SaplingStatus::Added, path.to_owned())),
-            "R" => Some((SaplingStatus::Removed, path.to_owned())),
-            "!" => Some((SaplingStatus::Missing, path.to_owned())),
-            "?" => Some((SaplingStatus::NotTracked, path.to_owned())),
-            _ => None, // Skip all others
-        })
-    } else {
-        Err(anyhow::anyhow!("Invalid status line: {line}"))
+    let mut chars = line.chars();
+    let status = chars
+        .next()
+        .ok_or_else(|| anyhow::anyhow!("Invalid status line: {line}"))?;
+    let space = chars
+        .next()
+        .ok_or_else(|| anyhow::anyhow!("Invalid status line: {line}"))?;
+    if space != ' ' {
+        return Err(anyhow::anyhow!("Invalid status line: {line}"));
     }
+    let path = line.chars().skip(1).collect::<String>().trim().to_owned();
+    let result = match status {
+        'M' => Some((SaplingStatus::Modified, path)),
+        'A' => Some((SaplingStatus::Added, path)),
+        'R' => Some((SaplingStatus::Removed, path)),
+        'C' => Some((SaplingStatus::Clean, path)),
+        '!' => Some((SaplingStatus::Missing, path)),
+        '?' => Some((SaplingStatus::NotTracked, path)),
+        'I' => Some((SaplingStatus::Ignored, path)),
+        ' ' => Some((SaplingStatus::Copied, path)),
+        _ => None, // Skip all others
+    };
+
+    Ok(result)
 }
 
 fn is_path_included<P, S>(
@@ -332,19 +342,53 @@ mod tests {
             ))
         );
 
-        // Invalid status - C is valid, but we ignore it.
         assert_eq!(
             process_one_status_line("C buck2/app/buck2_file_watcher/src/edenfs/sapling.rs")?,
-            None
+            Some((
+                SaplingStatus::Clean,
+                "buck2/app/buck2_file_watcher/src/edenfs/sapling.rs".to_owned()
+            ))
         );
 
-        // Invalid status - ignore
-        assert_eq!(process_one_status_line("Invalid status")?, None);
+        assert_eq!(
+            process_one_status_line("I buck2/app/buck2_file_watcher/src/edenfs/sapling.rs")?,
+            Some((
+                SaplingStatus::Ignored,
+                "buck2/app/buck2_file_watcher/src/edenfs/sapling.rs".to_owned()
+            ))
+        );
 
-        // Malformed status (single string)
-        assert!(process_one_status_line("MalformedStatus").is_err());
+        assert_eq!(
+            process_one_status_line("  buck2/app/buck2_file_watcher/src/edenfs/sapling.rs")?,
+            Some((
+                SaplingStatus::Copied,
+                "buck2/app/buck2_file_watcher/src/edenfs/sapling.rs".to_owned()
+            ))
+        );
+
+        // Space in path
+        assert_eq!(
+            process_one_status_line("M ovrsource-legacy/unity/socialvr/modules/wb_unity_asset_bundles/Assets/MetaHorizonUnityAssetBundle/Editor/Unity Dependencies/ABDataSource.cs")?,
+            Some((
+                SaplingStatus::Modified,
+                "ovrsource-legacy/unity/socialvr/modules/wb_unity_asset_bundles/Assets/MetaHorizonUnityAssetBundle/Editor/Unity Dependencies/ABDataSource.cs".to_owned()
+            ))
+        );
+
+        // Invalid status
+        assert!(process_one_status_line("Invalid status").is_err());
+
+        // Invalid status (missing status), but valid path with space in it
+        assert!(
+            process_one_status_line(" ovrsource-legacy/unity/socialvr/modules/wb_unity_asset_bundles/Assets/MetaHorizonUnityAssetBundle/Editor/Unity Dependencies/ABDataSource.cs")
+            .is_err());
 
         // Malformed status (no space)
+        assert!(
+            process_one_status_line("Mbuck2/app/buck2_file_watcher/src/edenfs/sapling.rs").is_err()
+        );
+
+        // Malformed status (colon instead of space)
         assert!(
             process_one_status_line("M:buck2/app/buck2_file_watcher/src/edenfs/sapling.rs")
                 .is_err()
