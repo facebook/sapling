@@ -40,3 +40,18 @@ In such cases, the pipeline would cycle through `cleanup` and then `setup`.
 *More details provided in the [SCM Repo Manager](https://www.internalfb.com/wiki/Source_Control/Engineering/Repo_Support_On_Remote_Execution/scm_repo_manager) design overview.*
 
 Check out our [resources](https://www.internalfb.com/wiki/Source_Control/Engineering/Repo_Support_On_Remote_Execution/resources) for helpful links.
+
+
+# Onboarding
+
+If you're interested in using our platform, please make a post in the [Source Control & Remote Execution XFN Group](https://fb.workplace.com/groups/538958065679523) to get started, providing detailed information about your use case, and we will normally respond within 1 business day.
+
+**There are important considerations to take into account:**
+
+* The platform focuses on compute capabilities and does not support use cases requiring just retrieving of Source Control data.
+* Please, read carefully: [What execution platform to use?](https://www.internalfb.com/wiki/DevInfra_Compute_offerings/What_execution_platform_to_use/)
+* Please, consider leveraging [SCMQuery](https://www.internalfb.com/wiki/ScmqueryGuide/) or the Source Control Service `shardmanager:mononoke.scs`, a thrift interface that provides answers to queries about Source Control, for Source Control access. While this can be effective for small-scale file access, refrain from using it to retrieve extensive file content data (measured in GB), as these services are not optimized for high-volume data transfer.
+* Limitations:
+    * Shelling out buck commands is not supported due to its high memory requirements and incompatibility with RE's execution model. Please, consider using Sandcastle.
+    * Hack scripts are not currently supported as actions, but this feature may be added in the future.
+
