@@ -18,4 +18,6 @@
 | Sapling Configuration  `tiers("remote_execution")` | [Sapling Dynamic Config](https://www.internalfb.com/code/configerator/source/scm/hg/hgclientconf/hgclient.cinc)|
 | EdenFs Configuration  `remote_execution`  | [EdenFs Dynamic Config](https://www.internalfb.com/code/configerator/source/scm/eden/config/edenfs_config.cconf)|
 | Remote Execution Dashboard (SyX use case) | [Remote Execution Dashboard](https://www.internalfb.com/remote_execution/use_case/view/syx_spec_compilation?tab=Workers)|
-| Source Control - Remote Execution XFN Group|[Source Control & Remote Execution XFN](https://fb.workplace.com/groups/538958065679523)| 
+| Source Control - Remote Execution XFN Group|[Source Control & Remote Execution XFN](https://fb.workplace.com/groups/538958065679523)|
+| **Source Control User Support**| [Source Control @ Meta](https://fb.workplace.com/groups/scm) |
+| **Remote Execution User Support**| [Remote Execution Feedback/Support](https://fb.workplace.com/groups/1042353022615812)|
