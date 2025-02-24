@@ -1347,7 +1347,10 @@ impl SaplingRemoteApi for Client {
         &self,
         reqs: Vec<FileSpec>,
     ) -> Result<Response<FileResponse>, SaplingRemoteApiError> {
-        let prog = self.inner.file_progress.create_or_extend(reqs.len() as u64);
+        let prog = self
+            .inner
+            .file_progress
+            .create_or_extend_detached(reqs.len() as u64);
 
         RetryableFileAttrs::new(reqs)
             .perform_with_retries(self.clone())
@@ -1375,7 +1378,10 @@ impl SaplingRemoteApi for Client {
         attributes: Option<TreeAttributes>,
     ) -> Result<Response<Result<TreeEntry, SaplingRemoteApiServerError>>, SaplingRemoteApiError>
     {
-        let prog = self.inner.tree_progress.create_or_extend(keys.len() as u64);
+        let prog = self
+            .inner
+            .tree_progress
+            .create_or_extend_detached(keys.len() as u64);
 
         RetryableTrees::new(keys, attributes)
             .perform_with_retries(self.clone())

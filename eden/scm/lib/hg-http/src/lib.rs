@@ -143,13 +143,13 @@ static PROGRESS_REPORTING_STATE: Lazy<Box<dyn Send + Sync>> = Lazy::new(|| {
         let mut url = req.ctx_mut().url().to_string();
         let mut is_single_bar = false;
         let bar = if url.ends_with("/trees") {
-            trees_bar.create_or_extend(0)
+            trees_bar.create_or_extend_detached(0)
         } else if url.ends_with("/files") || url.ends_with("/files2") {
-            files_bar.create_or_extend(0)
+            files_bar.create_or_extend_detached(0)
         } else if let Some((prefix, _)) = url.split_once("/download/") {
             // Strip out the fetch key after /download/.
             url = format!("{}/download/... (LFS)", prefix);
-            lfs_bar.create_or_extend(0)
+            lfs_bar.create_or_extend_detached(0)
         } else {
             is_single_bar = true;
             ProgressBar::new("downloading", 0, "bytes")

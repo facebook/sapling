@@ -980,7 +980,9 @@ impl FetchState {
 
         debug!("Fetching LFS - Count = {count}", count = pending.len());
 
-        let prog = self.lfs_progress.create_or_extend(pending.len() as u64);
+        let prog = self
+            .lfs_progress
+            .create_or_extend_detached(pending.len() as u64);
 
         let mut keyed_errors = Vec::<(Key, anyhow::Error)>::new();
         let mut other_errors = vec![];

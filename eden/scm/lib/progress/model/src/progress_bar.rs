@@ -428,10 +428,10 @@ impl AggregatingProgressBar {
         })
     }
 
-    /// If progress bar exists, increase its total, otherwise create a
-    /// new progress bar. You should avoid calling set_position or
-    /// set_total on the returned ProgressBar.
-    pub fn create_or_extend(&self, additional_total: u64) -> Arc<ProgressBar> {
+    /// If progress bar exists, increase its total, otherwise create a new "detcahed"
+    /// progress bar. You should avoid calling set_position or set_total on the returned
+    /// ProgressBar.
+    pub fn create_or_extend_detached(&self, additional_total: u64) -> Arc<ProgressBar> {
         let mut bar = self.bar.lock();
 
         match bar.upgrade() {
@@ -450,6 +450,31 @@ impl AggregatingProgressBar {
             }
         }
     }
+
+    /// If progress bar exists, increase its total, otherwise create a new progress bar
+    /// inheriting thread local parent. You should avoid calling set_position or set_total
+    /// on the returned ProgressBar.
+    pub fn create_or_extend_local(&self, additional_total: u64) -> Arc<ProgressBar> {
+        let mut bar = self.bar.lock();
+
+        match bar.upgrade() {
+            Some(bar) => {
+                bar.increase_total(additional_total);
+                bar
+            }
+            None => {
+                let new_bar = Builder::new()
+                    .topic(self.topic.clone())
+                    .unit(self.unit.clone())
+                    .total(additional_total)
+                    .thread_local_parent()
+                    .shared(true)
+                    .pending();
+                *bar = Arc::downgrade(&new_bar);
+                new_bar
+            }
+        }
+    }
 }
 
 #[cfg(test)]
@@ -461,22 +486,22 @@ mod tests {
         let agg = AggregatingProgressBar::new("eat", "apples");
 
         {
-            let bar1 = agg.create_or_extend(10);
+            let bar1 = agg.create_or_extend_detached(10);
             bar1.increase_position(5);
-            assert_eq!((5, 10), agg.create_or_extend(0).position_total());
+            assert_eq!((5, 10), agg.create_or_extend_detached(0).position_total());
 
             {
-                let bar2 = agg.create_or_extend(5);
+                let bar2 = agg.create_or_extend_detached(5);
                 bar2.increase_position(5);
-                assert_eq!((10, 15), agg.create_or_extend(0).position_total());
+                assert_eq!((10, 15), agg.create_or_extend_detached(0).position_total());
             }
 
-            assert_eq!((10, 15), agg.create_or_extend(0).position_total());
+            assert_eq!((10, 15), agg.create_or_extend_detached(0).position_total());
         }
 
         Registry::main().remove_orphan_progress_bar();
 
-        assert_eq!((0, 0), agg.create_or_extend(0).position_total());
+        assert_eq!((0, 0), agg.create_or_extend_detached(0).position_total());
     }
 
     #[test]
