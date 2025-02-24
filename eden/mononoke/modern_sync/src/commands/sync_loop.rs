@@ -54,7 +54,35 @@ impl RepoShardedProcess for ModernSyncProcess {
         &self,
         _repo: &RepoShard,
     ) -> anyhow::Result<Arc<dyn RepoShardedProcessExecutor>> {
-        bail!("we cannot run sharded sync yet")
+        let logger = self.app.logger().clone();
+
+        let source_repo_name = repo.repo_name.clone();
+        let target_repo_name = match repo.target_repo_name.clone() {
+            Some(repo_name) => repo_name,
+            None => {
+                let details = format!(
+                    "Only source repo name {} provided, target repo name missing in {}",
+                    source_repo_name, repo
+                );
+                bail!("{}", details)
+            }
+        };
+
+        info!(
+            logger,
+            "Setting up sharded sync from repo {} to repo {}", source_repo_name, target_repo_name,
+        );
+
+        let repo_args = SourceAndTargetRepoArgs::with_source_and_target_repo_name(
+            source_repo_name.clone(),
+            target_repo_name.clone(),
+        );
+
+        Ok(Arc::new(ModernSyncProcessExecutor {
+            app: self.app.clone(),
+            sync_args: self.sync_args.clone(),
+            repo_args,
+        }))
     }
 }
 
