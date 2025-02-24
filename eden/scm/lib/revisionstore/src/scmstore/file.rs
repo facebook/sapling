@@ -25,7 +25,7 @@ use anyhow::Result;
 use cas_client::CasClient;
 use clientinfo::get_client_request_info_thread_local;
 use clientinfo::set_client_request_info_thread_local;
-use crossbeam::channel::unbounded;
+use crossbeam::channel::bounded;
 use indexedlog::log::AUTO_SYNC_COUNT;
 use indexedlog::log::SYNC_COUNT;
 use indexedlog::rotate::ROTATE_COUNT;
@@ -163,7 +163,15 @@ impl FileStore {
             return FetchResults::new(Box::new(std::iter::empty()));
         }
 
-        let (found_tx, found_rx) = unbounded();
+        // Unscientifically picked to be small enough to not use "all" the memory with a
+        // full queue of files of decent size, but still generous enough to keep the
+        // pipeline full of work for downstream consumers. The important thing is it is
+        // less than infinity.
+        const RESULT_QUEUE_SIZE: usize = 10_000;
+
+        // Bound channel size so we don't use unlimited memory queueing up file content
+        // when the consumer is consumer slower than we are fetching.
+        let (found_tx, found_rx) = bounded(RESULT_QUEUE_SIZE);
         let mut state = FetchState::new(
             keys,
             attrs,
