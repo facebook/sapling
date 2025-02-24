@@ -13,6 +13,7 @@ use std::sync::Arc;
 
 use anyhow::anyhow;
 use anyhow::Result;
+use crossbeam::channel::bounded;
 use crossbeam::channel::unbounded;
 use crossbeam::channel::Receiver;
 use crossbeam::channel::Sender;
@@ -111,7 +112,16 @@ pub fn diff(
         return Box::new(std::iter::empty());
     }
 
-    let (result_send, result_recv) = unbounded();
+    // Pick a large number since trees are typically small and I don't want to impact perf.
+    // The important thing is it is less than infinity.
+    const RESULT_QUEUE_SIZE: usize = 100_000;
+
+    // Bound this channel so we don't use up unlimited memory if we are diffing faster
+    // than caller is reading results.
+    let (result_send, result_recv) = bounded(RESULT_QUEUE_SIZE);
+
+    // Use unbounded channel to avoid deadlocks. Memory use should be bounded in practice
+    // since workers will block sending results to caller.
     let (work_send, work_recv) = unbounded();
 
     let store = left.store.clone();

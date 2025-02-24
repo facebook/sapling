@@ -83,6 +83,7 @@ impl ActionMap {
         Ok(Self { map })
     }
 
+    #[instrument(skip_all)]
     pub fn with_sparse_profile_change<
         M1: 'static + Matcher + Send + Sync,
         M2: 'static + Matcher + Send + Sync,
