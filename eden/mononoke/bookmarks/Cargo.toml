@@ -9,7 +9,7 @@ license = "GPLv2+"
 
 [dependencies]
 anyhow = "1.0.95"
-async-trait = "0.1.71"
+async-trait = "0.1.86"
 bookmarks_types = { version = "0.1.0", path = "bookmarks_types" }
 clap = { version = "4.5.20", features = ["derive", "env", "string", "unicode", "wrap_help"] }
 context = { version = "0.1.0", path = "../server/context" }

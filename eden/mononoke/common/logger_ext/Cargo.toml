@@ -9,7 +9,7 @@ license = "GPLv2+"
 
 [dependencies]
 anyhow = "1.0.95"
-async-trait = "0.1.71"
+async-trait = "0.1.86"
 context = { version = "0.1.0", path = "../../server/context" }
 metaconfig_types = { version = "0.1.0", path = "../../metaconfig/types" }
 serde = { version = "1.0.185", features = ["derive", "rc"] }

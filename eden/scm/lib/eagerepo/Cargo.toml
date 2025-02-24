@@ -14,7 +14,7 @@ name = "eagerepo"
 
 [dependencies]
 anyhow = "1.0.95"
-async-trait = "0.1.71"
+async-trait = "0.1.86"
 fail = { version = "0.4", features = ["failpoints"] }
 futures = { version = "0.3.30", features = ["async-await", "compat"] }
 http = "0.2"

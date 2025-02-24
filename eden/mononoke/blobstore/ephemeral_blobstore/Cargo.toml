@@ -12,7 +12,7 @@ abomonation = { version = "0.7", features = ["smallvec"] }
 abomonation_derive = "0.5"
 anyhow = "1.0.95"
 async-stream = "0.3"
-async-trait = "0.1.71"
+async-trait = "0.1.86"
 blobstore = { version = "0.1.0", path = ".." }
 bonsai_globalrev_mapping = { version = "0.1.0", path = "../../bonsai_globalrev_mapping" }
 chrono = { version = "0.4", features = ["clock", "serde", "std"], default-features = false }

@@ -10,7 +10,7 @@ license = "GPLv2+"
 [dependencies]
 anyhow = "1.0.95"
 arg_extensions = { version = "0.1.0", path = "../extensions" }
-async-trait = "0.1.71"
+async-trait = "0.1.86"
 base_app = { version = "0.1.0", path = "../base_app" }
 blobstore = { version = "0.1.0", path = "../../blobstore" }
 blobstore_factory = { version = "0.1.0", path = "../../blobstore/factory" }

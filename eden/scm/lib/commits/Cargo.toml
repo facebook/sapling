@@ -14,7 +14,7 @@ name = "commits"
 
 [dependencies]
 anyhow = "1.0.95"
-async-trait = "0.1.71"
+async-trait = "0.1.86"
 fs-err = { version = "2.6.0", features = ["tokio"] }
 futures = { version = "0.3.30", features = ["async-await", "compat"] }
 parking_lot = { version = "0.12.1", features = ["send_guard"] }

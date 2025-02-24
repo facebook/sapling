@@ -10,7 +10,7 @@ license = "GPLv2+"
 [dependencies]
 anyhow = "1.0.95"
 async-recursion = "1.1.1"
-async-trait = "0.1.71"
+async-trait = "0.1.86"
 blame = { version = "0.1.0", path = "../../derived_data/blame" }
 blobstore = { version = "0.1.0", path = "../../blobstore" }
 bytes = { version = "1.9.0", features = ["serde"] }

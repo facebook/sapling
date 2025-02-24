@@ -13,7 +13,7 @@ path = "main.rs"
 
 [dependencies]
 anyhow = "1.0.95"
-async-trait = "0.1.71"
+async-trait = "0.1.86"
 backsyncer = { version = "0.1.0", path = ".." }
 blobrepo_hg = { version = "0.1.0", path = "../../../blobrepo/blobrepo_hg" }
 bookmarks = { version = "0.1.0", path = "../../../bookmarks" }

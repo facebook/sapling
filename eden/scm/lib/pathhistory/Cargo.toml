@@ -22,7 +22,7 @@ sapling-types = { version = "0.1.0", path = "../types" }
 tracing = { version = "0.1.41", features = ["attributes", "valuable"] }
 
 [dev-dependencies]
-async-trait = "0.1.71"
+async-trait = "0.1.86"
 sapling-dev-logger = { version = "0.1.0", path = "../dev-logger" }
 sapling-manifest = { version = "0.1.0", path = "../manifest" }
 sha1 = "0.10.5"

@@ -13,7 +13,7 @@ license = "MIT"
 name = "streams"
 
 [dependencies]
-async-trait = "0.1.71"
+async-trait = "0.1.86"
 futures = { version = "0.3.30", features = ["async-await", "compat"] }
 pin-project = "0.4.30"
 

@@ -48,7 +48,7 @@ tracing = { version = "0.1.41", features = ["attributes", "valuable"] }
 watchman_client = { version = "0.9.0", git = "https://github.com/facebook/watchman.git", branch = "main" }
 
 [dev-dependencies]
-async-trait = "0.1.71"
+async-trait = "0.1.86"
 fs-err = { version = "2.6.0", features = ["tokio"] }
 quickcheck = "1.0"
 sapling-manifest-tree = { version = "0.1.0", path = "../manifest-tree", features = ["for-tests"] }

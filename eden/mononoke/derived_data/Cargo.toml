@@ -9,7 +9,7 @@ license = "GPLv2+"
 
 [dependencies]
 anyhow = "1.0.95"
-async-trait = "0.1.71"
+async-trait = "0.1.86"
 blobstore = { version = "0.1.0", path = "../blobstore" }
 context = { version = "0.1.0", path = "../server/context" }
 derived_data_manager = { version = "0.1.0", path = "manager" }

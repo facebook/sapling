@@ -10,7 +10,7 @@ license = "GPLv2+"
 [dependencies]
 anyhow = "1.0.95"
 async-stream = "0.3"
-async-trait = "0.1.71"
+async-trait = "0.1.86"
 base64 = "0.21"
 blobstore = { version = "0.1.0", path = "../blobstore" }
 bonsai_hg_mapping = { version = "0.1.0", path = "../bonsai_hg_mapping" }

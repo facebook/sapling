@@ -9,7 +9,7 @@ license = "GPLv2+"
 
 [dependencies]
 anyhow = "1.0.95"
-async-trait = "0.1.71"
+async-trait = "0.1.86"
 async_requests_types_thrift = { version = "0.1.0", path = "../if" }
 blobstore = { version = "0.1.0", path = "../../blobstore" }
 context = { version = "0.1.0", path = "../../server/context" }
