@@ -1096,6 +1096,7 @@ function mononoke_git_service {
   local bound_addr_file log
   bound_addr_file="$TESTTMP/mononoke_git_service_addr.txt"
   log="${TESTTMP}/mononoke_git_service.out"
+  max_request_size="${MAX_REQUEST_SIZE:-10737418240}"
   rm -f "$bound_addr_file"
   GLOG_minloglevel=5 "$MONONOKE_GIT_SERVER" "$@" \
     --tls-ca "$TEST_CERTDIR/root-ca.crt" \
@@ -1107,6 +1108,7 @@ function mononoke_git_service {
     --log-level DEBUG \
     --mononoke-config-path "$TESTTMP/mononoke-config" \
     --bound-address-file "$TESTTMP/mononoke_git_service_addr.txt" \
+    --max-request-size "$max_request_size" \
     "${CACHE_ARGS[@]}" \
     "${COMMON_ARGS[@]}" >> "$log" 2>&1 &
   export MONONOKE_GIT_SERVICE_PID=$!

@@ -59,6 +59,7 @@ impl RepositoryRequestContext {
 pub struct GitServerContextInner {
     repos: GitRepos,
     enforce_auth: bool,
+    max_request_size: usize,
     // Upstream LFS server to fetch missing LFS objects from
     upstream_lfs_server: Option<String>,
     // Used for communicating with upstream LFS server
@@ -73,6 +74,7 @@ impl GitServerContextInner {
         _logger: Logger,
         upstream_lfs_server: Option<String>,
         tls_args: Option<TLSArgs>,
+        max_request_size: usize,
     ) -> Self {
         Self {
             repos,
@@ -80,6 +82,7 @@ impl GitServerContextInner {
             _logger,
             upstream_lfs_server,
             tls_args,
+            max_request_size,
         }
     }
 }
@@ -96,6 +99,7 @@ impl GitServerContext {
         _logger: Logger,
         upstream_lfs_server: Option<String>,
         tls_args: Option<TLSArgs>,
+        max_request_size: usize,
     ) -> Self {
         let inner = Arc::new(RwLock::new(GitServerContextInner::new(
             repos,
@@ -103,6 +107,7 @@ impl GitServerContext {
             _logger,
             upstream_lfs_server,
             tls_args,
+            max_request_size,
         )));
         Self { inner }
     }
@@ -156,6 +161,14 @@ impl GitServerContext {
             .read()
             .expect("poisoned lock in git server context");
         Ok(inner.tls_args.clone())
+    }
+
+    pub fn max_request_size(&self) -> Result<usize> {
+        let inner = self
+            .inner
+            .read()
+            .expect("poisoned lock in git server context");
+        Ok(inner.max_request_size)
     }
 }
 

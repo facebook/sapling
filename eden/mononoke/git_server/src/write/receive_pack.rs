@@ -93,7 +93,18 @@ async fn push(
         } = push_args;
         // If Mononoke is not the source of truth for this repo, then we need to prevent the push
         if !mononoke_source_of_truth(&request_context.ctx, request_context.repo.clone()).await? {
-            return reject_push(repo_name.as_str(), state, &ref_updates).await;
+            return reject_non_sot_push(repo_name.as_str(), state, &ref_updates).await;
+        }
+        // If the pushed packfile is too large, then we need to prevent the push
+        if let Ok(max_request_size) = GitServerContext::borrow_from(state).max_request_size() {
+            println!(
+                "max_request_size: {}, packfile size: {}",
+                max_request_size,
+                pack_file.get_ref().len()
+            );
+            if pack_file.get_ref().len() > max_request_size {
+                return reject_too_large_push(repo_name.as_str(), state, &ref_updates).await;
+            }
         }
         let (ctx, blobstore) = (
             &request_context.ctx.clone_with_repo_name(&repo_name),
@@ -314,14 +325,31 @@ async fn atomic_refs_update(
     }
 }
 
-async fn reject_push(
+async fn reject_non_sot_push(
     repo_name: &str,
     state: &mut State,
     ref_updates: &[RefUpdate],
 ) -> anyhow::Result<Response<Body>> {
-    let mut output = vec![];
     let error_message =
         format!("Push rejected: Mononoke is not the source of truth for repo {repo_name}");
+    reject_push_with_message(state, ref_updates, error_message).await
+}
+
+async fn reject_too_large_push(
+    repo_name: &str,
+    state: &mut State,
+    ref_updates: &[RefUpdate],
+) -> anyhow::Result<Response<Body>> {
+    let error_message = format!("Push rejected: Pushed packfile is too large for repo {repo_name}");
+    reject_push_with_message(state, ref_updates, error_message).await
+}
+
+async fn reject_push_with_message(
+    state: &mut State,
+    ref_updates: &[RefUpdate],
+    error_message: String,
+) -> anyhow::Result<Response<Body>> {
+    let mut output = vec![];
     write_text_packetline(error_message.as_bytes(), &mut output).await?;
     for ref_update in ref_updates {
         write_text_packetline(
