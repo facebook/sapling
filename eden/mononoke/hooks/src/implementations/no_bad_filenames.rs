@@ -128,6 +128,8 @@ mod test {
     // but only if they appear at the beginning or end of a file name or right before a dot
     // (e.g. right before the file extension).
     static BAD_FILENAMES_REGEX: &str = r"[`|:]|(^|/)~|~($|[/.])";
+    // Regex for Mac resource forks
+    static RESOURCE_FORKS_REGEX: &str = r"(^|\/)\._[^\/]*$";
 
     /// Create default test config that each test can customize.
     fn make_test_config() -> NoBadFilenamesConfig {
@@ -273,6 +275,83 @@ mod test {
         let mut config = make_test_config();
         config.illegal_regex = Regex::new(BAD_FILENAMES_REGEX).unwrap();
         config.allowlist_regex = Some(Regex::new("foo/bar.*").unwrap());
+        let hook = NoBadFilenamesHook::with_config(config);
+        for (path, change) in bcs.file_changes() {
+            let hook_execution = hook
+                .run(
+                    ctx,
+                    &hook_repo,
+                    change.simplify(),
+                    path,
+                    CrossRepoPushSource::NativeToThisRepo,
+                    PushAuthoredBy::User,
+                )
+                .await?;
+            assert_eq!(hook_execution, HookExecution::Accepted);
+        }
+        Ok(())
+    }
+
+    #[mononoke::fbinit_test]
+    async fn test_no_resource_forks_hook_illegal_filenames(fb: FacebookInit) -> Result<(), Error> {
+        let ctx = CoreContext::test_mock(fb);
+        let repo: HookTestRepo = test_repo_factory::build_empty(ctx.fb).await?;
+        borrowed!(ctx, repo);
+        let hook_repo = HookRepo::build_from(&repo);
+        // Illegal file names
+        let cs_id = CreateCommitContext::new_root(ctx, repo)
+            .add_file("._abc", "a")
+            .add_file("a/._bc", "b")
+            .add_file("a/._/._bc", "c")
+            .commit()
+            .await?;
+        let bcs = cs_id.load(ctx, &repo.repo_blobstore).await?;
+        let mut config = make_test_config();
+        config.illegal_regex = Regex::new(RESOURCE_FORKS_REGEX).unwrap();
+        let hook = NoBadFilenamesHook::with_config(config);
+        for (path, change) in bcs.file_changes() {
+            let hook_execution = hook
+                .run(
+                    ctx,
+                    &hook_repo,
+                    change.simplify(),
+                    path,
+                    CrossRepoPushSource::NativeToThisRepo,
+                    PushAuthoredBy::User,
+                )
+                .await?;
+            match hook_execution {
+                HookExecution::Accepted => return Err(anyhow!("should be rejected")),
+                HookExecution::Rejected(info) => {
+                    assert_eq!(
+                        info.long_description,
+                        "Filename: '${filename}' and Pattern '${illegal_pattern}'."
+                            .replace("${filename}", path.to_string().as_str())
+                            .replace("${illegal_pattern}", RESOURCE_FORKS_REGEX)
+                    )
+                }
+            }
+        }
+        Ok(())
+    }
+
+    #[mononoke::fbinit_test]
+    async fn test_no_resource_forks_hook_legal_filenames(fb: FacebookInit) -> Result<(), Error> {
+        let ctx = CoreContext::test_mock(fb);
+        let repo: HookTestRepo = test_repo_factory::build_empty(ctx.fb).await?;
+        borrowed!(ctx, repo);
+        let hook_repo = HookRepo::build_from(&repo);
+        // Legal file names
+        let cs_id = CreateCommitContext::new_root(ctx, repo)
+            .add_file("a/b/c", "a")
+            .add_file("ab._cd", "b")
+            .add_file("a/._/b/c", "c")
+            .add_file("a/._b/c", "c")
+            .commit()
+            .await?;
+        let bcs = cs_id.load(ctx, &repo.repo_blobstore).await?;
+        let mut config = make_test_config();
+        config.illegal_regex = Regex::new(RESOURCE_FORKS_REGEX).unwrap();
         let hook = NoBadFilenamesHook::with_config(config);
         for (path, change) in bcs.file_changes() {
             let hook_execution = hook
