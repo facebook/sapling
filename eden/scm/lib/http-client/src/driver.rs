@@ -105,10 +105,9 @@ impl<'a> MultiDriver<'a> {
     where
         F: FnMut(Result<Easy2H, (Easy2H, curl::Error)>) -> Result<(), Abort>,
     {
-        let total = self.num_transfers();
+        let mut total = self.num_transfers();
         let mut in_progress = total;
-
-        tracing::debug!("Performing {} transfer(s)", total);
+        tracing::debug!("Performing {total} transfer(s)");
 
         let start = Instant::now();
 
@@ -143,6 +142,16 @@ impl<'a> MultiDriver<'a> {
                 let token = c.token;
                 callback(c.into_result())?;
                 tracing::trace!("Successfully handled transfer: {}", token);
+
+                // Notice if the callback added new handles and adjust `in_progress`
+                // accordingly so we continue looping.
+                let num_transfers = self.num_transfers();
+                if num_transfers > total {
+                    let added = num_transfers - total;
+                    tracing::trace!("Perform callback added {added} new handles");
+                    in_progress += added;
+                    total += added;
+                }
             }
 
             // If any tranfers reported progress, notify the user.
