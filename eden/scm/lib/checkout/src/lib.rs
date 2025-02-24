@@ -271,7 +271,12 @@ impl CheckoutPlan {
         let fetch_data_iter = store.get_content_iter(keys, FetchMode::AllowRemote)?;
 
         let stats = thread::scope(|s| -> Result<CheckoutStats> {
-            let (tx, rx) = channel::unbounded::<Work>();
+            const WORK_QUEUE_SIZE: usize = 10_000;
+
+            // Use bounded queue so we don't slurp all file contents into memory waiting
+            // to write stuff out to disk.
+            let (tx, rx) = channel::bounded::<Work>(WORK_QUEUE_SIZE);
+
             let (err_tx, err_rx) = channel::unbounded();
             let (progress_tx, progress_rx) = channel::unbounded();
 
