@@ -21,10 +21,8 @@ use mononoke_types::BonsaiChangeset;
 use mononoke_types::ChangesetId;
 use repo_authorization::AuthorizationContext;
 use repo_authorization::RepoWriteOperation;
-use repo_update_logger::find_draft_ancestors;
 use repo_update_logger::BookmarkInfo;
 use repo_update_logger::BookmarkOperation;
-use repo_update_logger::CommitInfo;
 
 use crate::affected_changesets::AdditionalChangesets;
 use crate::affected_changesets::AffectedChangesets;
@@ -201,49 +199,21 @@ impl<'op> CreateBookmarkOp<'op> {
                 )
                 .await?;
 
-                let txn_hook_fut = crate::git_mapping::populate_git_mapping_txn_hook(
+                let txn_hook = crate::git_mapping::populate_git_mapping_txn_hook(
                     ctx,
                     repo,
                     self.target,
                     self.affected_changesets.new_changesets(),
-                );
-
-                let to_log = async {
-                    if self.log_new_public_commits_to_scribe {
-                        let repo_name = repo.repo_identity().name().to_string();
-                        let disable_prefetched_commits_for_logging = justknobs::eval(
-                            "scm/mononoke:disable_prefetched_commits_for_logging",
-                            None,
-                            Some(repo_name.as_str()),
-                        )
-                        .unwrap_or(false);
-                        if disable_prefetched_commits_for_logging {
-                            let res = find_draft_ancestors(ctx, repo, self.target).await;
-                            match res {
-                                Ok(bcss) => {
-                                    bcss.iter().map(|bcs| CommitInfo::new(bcs, None)).collect()
-                                }
-                                Err(err) => {
-                                    ctx.scuba().clone().log_with_msg(
-                                        "Failed to find draft ancestors",
-                                        Some(format!("{}", err)),
-                                    );
-                                    vec![]
-                                }
-                            }
-                        } else {
-                            validated_changesets
-                        }
-                    } else {
-                        vec![]
-                    }
-                };
-
-                let (txn_hook_res, to_log) = futures::join!(txn_hook_fut, to_log);
-                if let Some(txn_hook) = txn_hook_res? {
+                )
+                .await?;
+                if let Some(txn_hook) = txn_hook {
                     txn_hooks.push(txn_hook);
                 }
-
+                let to_log = if self.log_new_public_commits_to_scribe {
+                    validated_changesets
+                } else {
+                    vec![]
+                };
                 ctx.scuba()
                     .clone()
                     .add("bookmark", self.bookmark.to_string())
