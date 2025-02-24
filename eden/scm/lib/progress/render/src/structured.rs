@@ -77,8 +77,14 @@ fn render_progress_bars(
         }
     }
 
-    // Note that we "lose" some topic length as bars nest since they get shorter.
     topic_length = topic_length.min(MAX_TOPIC_LENGTH);
+
+    // Max budget for the elapsed time (which appears next to topic).
+    const MAX_ELAPSED_TIME_LENGTH: usize = 6;
+
+    // Add in space for elapsed time as necessary so the elapsed time's length doesn't
+    // count against MAX_TOPIC_LENGTH.
+    topic_length += (topic_length + MAX_ELAPSED_TIME_LENGTH).saturating_sub(MAX_TOPIC_LENGTH);
 
     let mut renderer = Renderer {
         changes,
@@ -147,12 +153,17 @@ impl Renderer<'_> {
             self.changes
                 .add(bar_prefix(depth, is_last, is_first, pop_out));
 
-            // Trim off topic length based on depth. The left side of bar is
-            // indented, but we keep the right side of bars aligned (causing
-            // nested bars to get shorter).
-            let topic_length = self.topic_length - 2 * depth;
+            // Format the elapsed time. Include space prefix to guarantee separation from
+            // the topic text.
+            let since_start = format!(
+                "  {}",
+                bar.since_start().map(human_duration).unwrap_or_default()
+            );
 
-            let since_start = bar.since_start().map(human_duration).unwrap_or_default();
+            // Trim off topic length based on depth. The left side of bar is indented, but
+            // we keep the right side of bars aligned (causing nested bars to get
+            // shorter).
+            let topic_length = self.topic_length - 2 * depth;
 
             let (pos, total) = bar.position_total();
             if total > 0 {
@@ -189,7 +200,7 @@ impl Renderer<'_> {
             } else {
                 // We are a spinner with no real progress.
                 self.changes.add(format!(
-                    "{:length$}",
+                    "{:length$.length$}",
                     bar.topic(),
                     length = topic_length - since_start.len()
                 ));
@@ -567,5 +578,57 @@ mod test {
                 .ends_with("─ really longreally longreally longreally l…"),
             "{got}"
         );
+    }
+
+    #[test]
+    fn test_long_topic() {
+        // test both spinner and non-spinner case
+        for spinner in [true, false] {
+            let registry = Registry::default();
+
+            let _parent = ProgressBarBuilder::new()
+                .topic("A".repeat(MAX_TOPIC_LENGTH))
+                .registry(&registry)
+                .adhoc(false)
+                .total(if spinner { 0 } else { 1 })
+                .active();
+
+            let _child = ProgressBarBuilder::new()
+                .topic("B".repeat(MAX_TOPIC_LENGTH))
+                .registry(&registry)
+                .adhoc(false)
+                .total(if spinner { 0 } else { 1 })
+                .active();
+
+            let mut changes = ChangeSequence::new(26, 80);
+            render_progress_bars(
+                &mut changes,
+                &registry.list_progress_bar(),
+                &RenderingConfig::default(),
+            );
+
+            let mut renderer =
+                TerminfoRenderer::new(Capabilities::new_with_hints(Default::default()).unwrap());
+            let mut buf = Vec::new();
+            renderer
+                .render_to(&changes.consume(), &mut DumbTty { w: &mut buf })
+                .unwrap();
+
+            let got = String::from_utf8(buf)
+                .unwrap()
+                .chars()
+                .filter(|c| !c.is_ascii_control())
+                .collect::<String>();
+
+            // Has two spaces separating topic and elapsed time.
+            assert!(
+                got.contains("╭ AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA[0m[2m  0.0s"),
+                "{got}"
+            );
+            assert!(
+                got.contains("╰── BBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBB[0m[2m  0.0s"),
+                "{got}"
+            );
+        }
     }
 }
