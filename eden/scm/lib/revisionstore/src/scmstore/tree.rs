@@ -35,6 +35,9 @@ use edenapi_types::TreeChildEntry;
 use fetch::FetchState;
 use minibytes::Bytes;
 use once_cell::sync::OnceCell;
+use progress_model::AggregatingProgressBar;
+use progress_model::ProgressBar;
+use progress_model::Registry;
 use storemodel::BoxIterator;
 use storemodel::InsertOpts;
 use storemodel::KeyStore;
@@ -120,6 +123,10 @@ pub struct TreeStore {
     pub fetch_tree_aux_data: bool,
 
     pub format: SerializationFormat,
+
+    // This bar "aggregates" across concurrent uses of this TreeStore from different
+    // threads (so that only a single progress bar shows up to the user).
+    pub(crate) progress_bar: Arc<AggregatingProgressBar>,
 }
 
 impl Drop for TreeStore {
@@ -148,12 +155,14 @@ impl TreeStore {
         // infinity.
         const RESULT_QUEUE_SIZE: usize = 100_000;
 
+        let bar = self.progress_bar.create_or_extend_local(0);
+
         // Bound channel size so we don't use unlimited memory queueing up tree content
         // when the consumer is consumer slower than we are fetching.
         let (found_tx, found_rx) = bounded(RESULT_QUEUE_SIZE);
 
         let found_tx2 = found_tx.clone();
-        let mut state = FetchState::new(reqs, attrs, found_tx, fetch_mode);
+        let mut state = FetchState::new(reqs, attrs, found_tx, fetch_mode, bar.clone());
 
         if tracing::enabled!(target: "tree_fetches", tracing::Level::TRACE) {
             let attrs = [
@@ -176,6 +185,8 @@ impl TreeStore {
         }
 
         let keys_len = state.common.pending_len();
+
+        bar.increase_total(keys_len as u64);
 
         let indexedlog_cache = self.indexedlog_cache.clone();
         let indexedlog_local = self.indexedlog_local.clone();
@@ -211,6 +222,10 @@ impl TreeStore {
         );
 
         let process_func = move || -> Result<()> {
+            // We might be in a different thread than when `bar` was created - set bar as
+            // active here as well.
+            let _bar = ProgressBar::push_active(bar, Registry::main());
+
             // Handle queries for null tree id (with null content response). scmstore is
             // the end of the line, so if we consistently handle null id then callers at
             // any level can confidently assume null tree ids are handled.
@@ -283,6 +298,8 @@ impl TreeStore {
                         .map(|(key, _attrs)| key.clone())
                         .collect();
 
+                    let bar = ProgressBar::new_adhoc("IndexedLog", pending.len() as u64, "trees");
+
                     let store_metrics = state.metrics.indexedlog.store(location);
                     let fetch_count = pending.len();
 
@@ -295,6 +312,7 @@ impl TreeStore {
                             state.common.found(key, LazyTree::IndexedLog(entry).into());
                             found_count += 1;
                         }
+                        bar.increase_position(1);
                     }
 
                     store_metrics.hit(found_count);
@@ -407,7 +425,11 @@ impl TreeStore {
         // Only kick off a thread if there's a substantial amount of work.
         if keys_len > 1000 {
             let cri = get_client_request_info_thread_local();
+            let active_bar = Registry::main().get_active_progress_bar();
             std::thread::spawn(move || {
+                // Propagate parent progress bar into the thread so things nest well.
+                Registry::main().set_active_progress_bar(active_bar);
+
                 if let Some(cri) = cri {
                     set_client_request_info_thread_local(cri);
                 }
@@ -445,6 +467,7 @@ impl TreeStore {
             fetch_tree_aux_data: false,
             prefetch_tree_parents: false,
             format: SerializationFormat::Hg,
+            progress_bar: AggregatingProgressBar::new("", ""),
         }
     }
 
@@ -507,6 +530,7 @@ impl TreeStore {
             fetch_tree_aux_data: false,
             prefetch_tree_parents: false,
             format: self.format(),
+            progress_bar: self.progress_bar.clone(),
         }
     }
 

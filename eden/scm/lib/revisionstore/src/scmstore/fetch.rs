@@ -7,11 +7,13 @@
 
 use std::collections::HashMap;
 use std::fmt;
+use std::sync::Arc;
 
 use anyhow::anyhow;
 use anyhow::Error;
 use anyhow::Result;
 use crossbeam::channel::Sender;
+use progress_model::ProgressBar;
 use types::errors::KeyedError;
 use types::fetch_mode::FetchMode;
 use types::Key;
@@ -29,6 +31,8 @@ pub(crate) struct CommonFetchState<T: StoreValue> {
     pub found_tx: Sender<Result<(Key, T), KeyFetchError>>,
 
     pub mode: FetchMode,
+
+    bar: Arc<ProgressBar>,
 }
 
 impl<T: StoreValue + std::fmt::Debug> CommonFetchState<T> {
@@ -37,12 +41,14 @@ impl<T: StoreValue + std::fmt::Debug> CommonFetchState<T> {
         attrs: T::Attrs,
         found_tx: Sender<Result<(Key, T), KeyFetchError>>,
         mode: FetchMode,
+        bar: Arc<ProgressBar>,
     ) -> Self {
         Self {
             pending: keys.into_iter().map(|key| (key, T::default())).collect(),
             request_attrs: attrs,
             found_tx,
             mode,
+            bar,
         }
     }
 
@@ -122,6 +128,7 @@ impl<T: StoreValue + std::fmt::Debug> CommonFetchState<T> {
                 if !self.mode.ignore_result() {
                     let new = new.mask(self.request_attrs);
                     let _ = self.found_tx.send(Ok((key, new)));
+                    self.bar.increase_position(1);
                 }
 
                 return true;

@@ -412,11 +412,12 @@ impl<'a> FileStoreBuilder<'a> {
 
             aux_cache,
 
-            lfs_progress: AggregatingProgressBar::new("fetching", "LFS"),
             flush_on_drop: true,
             format,
 
             cas_cache_threshold_bytes,
+
+            progress_bar: AggregatingProgressBar::new("fetching from ScmStore", "files"),
         })
     }
 }
@@ -743,6 +744,7 @@ impl<'a> TreeStoreBuilder<'a> {
             fetch_tree_aux_data,
             flush_on_drop: true,
             format,
+            progress_bar: AggregatingProgressBar::new("fetching from ScmStore", "trees"),
         })
     }
 }

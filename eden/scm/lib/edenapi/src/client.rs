@@ -128,7 +128,6 @@ use minibytes::Bytes as RawBytes;
 use minibytes::Bytes;
 use once_cell::sync::Lazy;
 use parking_lot::Once;
-use progress_model::AggregatingProgressBar;
 use progress_model::ProgressBar;
 use repourl::encode_repo_name;
 use serde::de::DeserializeOwned;
@@ -212,8 +211,6 @@ pub struct Client {
 pub struct ClientInner {
     config: Config,
     client: HttpClient,
-    tree_progress: Arc<AggregatingProgressBar>,
-    file_progress: Arc<AggregatingProgressBar>,
 }
 
 pub struct ExpiringBool {
@@ -254,12 +251,7 @@ impl Client {
     /// Create a SaplingRemoteAPI client with the given configuration.
     pub(crate) fn with_config(config: Config) -> Self {
         let client = http_client("edenapi", config.http_config.clone());
-        let inner = Arc::new(ClientInner {
-            config,
-            client,
-            tree_progress: AggregatingProgressBar::new("fetching", "trees"),
-            file_progress: AggregatingProgressBar::new("fetching", "files"),
-        });
+        let inner = Arc::new(ClientInner { config, client });
         Self { inner }
     }
 
@@ -1347,19 +1339,9 @@ impl SaplingRemoteApi for Client {
         &self,
         reqs: Vec<FileSpec>,
     ) -> Result<Response<FileResponse>, SaplingRemoteApiError> {
-        let prog = self
-            .inner
-            .file_progress
-            .create_or_extend_detached(reqs.len() as u64);
-
         RetryableFileAttrs::new(reqs)
             .perform_with_retries(self.clone())
-            .and_then(|r| async {
-                Ok(r.then(move |r| {
-                    prog.increase_position(1);
-                    ready(r)
-                }))
-            })
+            .and_then(|r| async { Ok(r.then(move |r| ready(r))) })
             .await
     }
 
@@ -1378,19 +1360,9 @@ impl SaplingRemoteApi for Client {
         attributes: Option<TreeAttributes>,
     ) -> Result<Response<Result<TreeEntry, SaplingRemoteApiServerError>>, SaplingRemoteApiError>
     {
-        let prog = self
-            .inner
-            .tree_progress
-            .create_or_extend_detached(keys.len() as u64);
-
         RetryableTrees::new(keys, attributes)
             .perform_with_retries(self.clone())
-            .and_then(|r| async {
-                Ok(r.then(move |r| {
-                    prog.increase_position(1);
-                    ready(r)
-                }))
-            })
+            .and_then(|r| async { Ok(r.then(move |r| ready(r))) })
             .await
     }
 

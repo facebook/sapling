@@ -7,6 +7,7 @@
 
 use std::collections::HashMap;
 use std::future;
+use std::sync::Arc;
 use std::time::Instant;
 
 use anyhow::Result;
@@ -14,6 +15,7 @@ use async_runtime::block_on;
 use cas_client::CasClient;
 use crossbeam::channel::Sender;
 use futures::StreamExt;
+use progress_model::ProgressBar;
 use tracing::field;
 use types::fetch_mode::FetchMode;
 use types::hgid::NULL_ID;
@@ -57,9 +59,10 @@ impl FetchState {
         attrs: TreeAttributes,
         found_tx: Sender<Result<(Key, StoreTree), KeyFetchError>>,
         fetch_mode: FetchMode,
+        bar: Arc<ProgressBar>,
     ) -> Self {
         FetchState {
-            common: CommonFetchState::new(keys, attrs, found_tx, fetch_mode),
+            common: CommonFetchState::new(keys, attrs, found_tx, fetch_mode, bar),
             errors: FetchErrors::new(),
             metrics: &TREE_STORE_FETCH_METRICS,
         }
@@ -107,10 +110,14 @@ impl FetchState {
             edenapi.url()
         );
 
+        let bar = ProgressBar::new_adhoc("SLAPI", pending.len() as u64, "trees");
+
         let response = edenapi
             .trees_blocking(pending, Some(attributes))
             .map_err(|e| e.tag_network())?;
         for entry in response.entries {
+            bar.increase_position(1);
+
             let entry = entry?;
             let key = entry.key.clone();
             let entry = LazyTree::SaplingRemoteApi(entry);
@@ -188,10 +195,14 @@ impl FetchState {
         );
         let _enter = span.enter();
 
+        let bar = ProgressBar::new_adhoc("CAS", 0, "digests");
+
         let digest_with_keys: Vec<(CasDigest, Key)> = self
             .common
             .pending(TreeAttributes::CONTENT | TreeAttributes::PARENTS, false)
             .filter_map(|(key, store_tree)| {
+                bar.increase_position(1);
+
                 let aux_data = match store_tree.aux_data.as_ref() {
                     Some(aux_data) => {
                         tracing::trace!(target: "cas", ?key, ?aux_data, "found aux data for tree digest");
@@ -212,6 +223,8 @@ impl FetchState {
                 ))
             })
             .collect();
+
+        drop(bar);
 
         // Include the duplicates in the count.
         let keys_fetch_count = digest_with_keys.len();
@@ -237,9 +250,14 @@ impl FetchState {
         let start_time = Instant::now();
         let mut total_stats = CasFetchedStats::default();
 
+        let bar = ProgressBar::new_adhoc("CAS", digests.len() as u64, "trees");
+
         async_runtime::block_in_place(|| {
             block_on(async {
-                cas_client.fetch(&digests, CasDigestType::Tree).await.for_each(|results| match results {
+                cas_client.fetch(&digests, CasDigestType::Tree).await.for_each(|results| {
+                    bar.increase_position(1);
+
+                    match results {
                     Ok((stats, results)) => {
                         reqs += 1;
                         total_stats.add(&stats);
@@ -323,7 +341,7 @@ impl FetchState {
                         error += 1;
                         future::ready(())
                     }
-                }).await;
+                }}).await;
             })
         });
 

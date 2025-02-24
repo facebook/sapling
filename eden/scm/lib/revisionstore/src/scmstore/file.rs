@@ -34,6 +34,8 @@ use minibytes::Bytes;
 use parking_lot::Mutex;
 use parking_lot::RwLock;
 use progress_model::AggregatingProgressBar;
+use progress_model::ProgressBar;
+use progress_model::Registry;
 use rand::Rng;
 use storemodel::SerializationFormat;
 use tracing::debug;
@@ -107,8 +109,6 @@ pub struct FileStore {
     pub(crate) activity_logger: Option<Arc<Mutex<ActivityLogger>>>,
     pub(crate) metrics: Arc<RwLock<FileStoreMetrics>>,
 
-    pub(crate) lfs_progress: Arc<AggregatingProgressBar>,
-
     // Don't flush on drop when we're using FileStore in a "disposable" context, like backingstore
     pub flush_on_drop: bool,
 
@@ -117,6 +117,10 @@ pub struct FileStore {
 
     // The threshold for using CAS cache
     pub(crate) cas_cache_threshold_bytes: Option<u64>,
+
+    // This bar "aggregates" across concurrent uses of this FileStore from different
+    // threads (so that only a single progress bar shows up to the user).
+    pub(crate) progress_bar: Arc<AggregatingProgressBar>,
 }
 
 impl Drop for FileStore {
@@ -169,6 +173,8 @@ impl FileStore {
         // less than infinity.
         const RESULT_QUEUE_SIZE: usize = 10_000;
 
+        let bar = self.progress_bar.create_or_extend_local(0);
+
         // Bound channel size so we don't use unlimited memory queueing up file content
         // when the consumer is consumer slower than we are fetching.
         let (found_tx, found_rx) = bounded(RESULT_QUEUE_SIZE);
@@ -180,7 +186,13 @@ impl FileStore {
             self.lfs_threshold_bytes.is_some(),
             fetch_mode,
             self.cas_cache_threshold_bytes,
+            bar.clone(),
         );
+
+        // When ignoring results, we won't advance the progress bar, so udpate the "total".
+        if !fetch_mode.ignore_result() {
+            bar.increase_total(state.pending_len() as u64);
+        }
 
         if tracing::enabled!(target: "file_fetches", tracing::Level::TRACE) {
             let attrs = [
@@ -223,6 +235,10 @@ impl FileStore {
         let fetch_remote = fetch_mode.contains(FetchMode::REMOTE);
 
         let process_func = move || {
+            // Set bar as this thread's active bar. We don't do it when we create the bar
+            // since we might be in a different thread now.
+            let _bar = ProgressBar::push_active(bar, Registry::main());
+
             let start_instant = Instant::now();
 
             // Only copy keys for activity logger if we have an activity logger;
@@ -354,7 +370,11 @@ impl FileStore {
         // Only kick off a thread if there's a substantial amount of work.
         if keys_len > 1000 {
             let cri = get_client_request_info_thread_local();
+            let active_bar = Registry::main().get_active_progress_bar();
             std::thread::spawn(move || {
+                // Propagate parent progress bar into the thread so things nest well.
+                Registry::main().set_active_progress_bar(active_bar);
+
                 if let Some(cri) = cri {
                     set_client_request_info_thread_local(cri);
                 }
@@ -523,11 +543,12 @@ impl FileStore {
 
             aux_cache: None,
 
-            lfs_progress: AggregatingProgressBar::new("fetching", "LFS"),
             flush_on_drop: true,
             format: SerializationFormat::Hg,
 
             cas_cache_threshold_bytes: None,
+
+            progress_bar: AggregatingProgressBar::new("", ""),
         }
     }
 
@@ -572,13 +593,13 @@ impl FileStore {
 
             aux_cache: None,
 
-            lfs_progress: self.lfs_progress.clone(),
-
             // Conservatively flushing on drop here, didn't see perf problems and might be needed by Python
             flush_on_drop: true,
             format: self.format(),
 
             cas_cache_threshold_bytes: self.cas_cache_threshold_bytes.clone(),
+
+            progress_bar: self.progress_bar.clone(),
         }
     }
 
