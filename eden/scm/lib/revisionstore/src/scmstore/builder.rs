@@ -364,13 +364,6 @@ impl<'a> FileStoreBuilder<'a> {
                 None
             };
 
-        // We want to prefetch lots of files, but prefetching millions of files causes us
-        // to tie up memory for longer and make larger allocations. Let's limit fetch size
-        // to try to cut down on memory usage.
-        let max_prefetch_size = self
-            .config
-            .get_or("scmstore", "max-prefetch-size", || 100_000)?;
-
         let cas_client = if self.config.get_or_default("scmstore", "fetch-from-cas")?
             || self
                 .config
@@ -395,7 +388,6 @@ impl<'a> FileStoreBuilder<'a> {
 
             prefetch_aux_data,
             compute_aux_data,
-            max_prefetch_size,
 
             indexedlog_local,
             lfs_local,
