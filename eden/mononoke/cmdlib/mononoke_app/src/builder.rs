@@ -46,10 +46,7 @@ use permission_checker::AclProvider;
 use permission_checker::DefaultAclProvider;
 use permission_checker::InternalAclProvider;
 use rendezvous::RendezVousArgs;
-use slog::o;
 use slog::Logger;
-use slog::Never;
-use slog::SendSyncRefUnwindSafeDrain;
 use sql_ext::facebook::MysqlOptions;
 use sql_ext::facebook::PoolConfig;
 use sql_ext::facebook::ReadConnectionType;
@@ -298,24 +295,15 @@ impl MononokeAppBuilder {
 
         gflags_args.propagate(self.fb)?;
 
-        let log_level = logging_args.create_log_level();
-        #[cfg(fbcode_build)]
-        cmdlib_logging::glog::set_glog_log_level(self.fb, log_level)?;
-        let root_log_drain = Arc::new(
-            logging_args
-                .create_root_log_drain(self.fb, log_level)
-                .context("Failed to create root log drain")?,
-        ) as Arc<dyn SendSyncRefUnwindSafeDrain<Ok = (), Err = Never>>;
+        let logger = logging_args.setup_logging(self.fb)?;
 
         let config_store = config_args
-            .create_config_store(self.fb, Logger::root(root_log_drain.clone(), o![]))
+            .create_config_store(self.fb, logger.clone())
             .context("Failed to create config store")?;
 
         let observability_context = logging_args
             .create_observability_context(&config_store)
             .context("Failed to initialize observability context")?;
-
-        let logger = logging_args.create_logger(root_log_drain)?;
 
         let scuba_sample_builder = scuba_logging_args
             .create_scuba_sample_builder(

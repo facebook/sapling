@@ -8,8 +8,8 @@
 use std::str::FromStr;
 use std::sync::Arc;
 
-#[cfg(fbcode_build)]
-use anyhow::format_err;
+use anyhow::anyhow;
+use anyhow::bail;
 use anyhow::Context;
 use anyhow::Result;
 use cached_config::ConfigStore;
@@ -33,6 +33,8 @@ use slog_glog_fmt::kv_defaults::FacebookKV;
 use slog_glog_fmt::GlogFormat;
 use slog_term::TermDecorator;
 
+const LOG_LEVEL_NAMES: [&str; 6] = ["OFF", "ERROR", "WARN", "INFO", "DEBUG", "TRACE"];
+
 /// Command line arguments for spawning slog Logger
 #[derive(Args, Debug)]
 pub struct LoggingArgs {
@@ -43,7 +45,7 @@ pub struct LoggingArgs {
     pub debug: bool,
 
     /// Log level to use
-    #[clap(long, conflicts_with = "debug", value_parser = PossibleValuesParser::new(&slog::LOG_LEVEL_NAMES))]
+    #[clap(long, conflicts_with = "debug", value_parser = PossibleValuesParser::new(&LOG_LEVEL_NAMES))]
     pub log_level: Option<String>,
 
     /// Include only log messages with these slog::Record::tags() or
@@ -92,24 +94,7 @@ pub enum PanicFate {
 }
 
 impl LoggingArgs {
-    pub fn create_log_level(&self) -> Level {
-        if self.debug {
-            Level::Debug
-        } else {
-            match &self.log_level {
-                Some(log_level_str) => Level::from_str(log_level_str)
-                    .unwrap_or_else(|_| panic!("Unknown log level: {}", log_level_str)),
-                None => Level::Info,
-            }
-        }
-    }
-
-    // Logic copied from: https://fburl.com/code/ygj4muxz
-    pub fn create_root_log_drain(
-        &self,
-        fb: FacebookInit,
-        log_level: Level,
-    ) -> Result<impl Drain<Ok = (), Err = Never> + Clone> {
+    fn setup_panic_handler(&self) {
         // Set the panic handler up here. Not really relevent to logger other than it emits output
         // when things go wrong. This writes directly to stderr as coredumper expects.
         // TODO: separate the panic handler out from logging
@@ -122,8 +107,37 @@ impl LoggingArgs {
         if let Some(fate) = fate {
             panichandler::set_panichandler(fate);
         }
+    }
+
+    // Logic copied from: https://fburl.com/code/ygj4muxz
+    fn create_root_log_drain(
+        &self,
+        fb: FacebookInit,
+    ) -> Result<impl Drain<Ok = (), Err = Never> + Clone> {
+        self.setup_panic_handler();
 
         let stdlog_env = "RUST_LOG";
+
+        let log_level = if self.debug {
+            Level::Debug
+        } else if let Some(log_level_str) = &self.log_level {
+            match log_level_str.as_str() {
+                "OFF" => Level::Critical,
+                "ERROR" => Level::Error,
+                "WARN" => Level::Warning,
+                "INFO" => Level::Info,
+                "DEBUG" => Level::Debug,
+                "TRACE" => Level::Trace,
+                _ => {
+                    bail!("Unknown log level: {}", log_level_str);
+                }
+            }
+        } else {
+            Level::Info
+        };
+
+        #[cfg(fbcode_build)]
+        crate::glog::set_glog_log_level(fb, log_level.into())?;
 
         let glog_drain = make_tag_filter_drain(
             glog_drain(),
@@ -132,43 +146,42 @@ impl LoggingArgs {
             true, // Log messages which have no tags
         )?;
 
-        let root_log_drain: Arc<dyn SendSyncRefUnwindSafeDrain<Ok = (), Err = Never>> = match &self
-            .logview_category
-        {
-            Some(category) => {
-                #[cfg(fbcode_build)]
-                {
-                    // Sometimes scribe writes can fail due to backpressure - it's OK to drop these
-                    // since logview is sampled anyway.
-                    let logview_drain =
-                        ::slog_logview::LogViewDrain::new(fb, category).ignore_res();
-                    match &self.logview_additional_level_filter {
-                        Some(log_level_str) => {
-                            let logview_level = Level::from_str(log_level_str)
-                                .map_err(|_| format_err!("Unknown log level: {}", log_level_str))?;
+        let root_log_drain: Arc<dyn SendSyncRefUnwindSafeDrain<Ok = (), Err = Never>> =
+            match &self.logview_category {
+                Some(category) => {
+                    #[cfg(fbcode_build)]
+                    {
+                        // Sometimes scribe writes can fail due to backpressure - it's OK to drop these
+                        // since logview is sampled anyway.
+                        let logview_drain =
+                            ::slog_logview::LogViewDrain::new(fb, category).ignore_res();
+                        match &self.logview_additional_level_filter {
+                            Some(log_level_str) => {
+                                let logview_level = Level::from_str(log_level_str)
+                                    .map_err(|_| anyhow!("Unknown log level: {}", log_level_str))?;
 
-                            let drain = slog::Duplicate::new(
-                                glog_drain,
-                                logview_drain.filter_level(logview_level).ignore_res(),
-                            );
-                            Arc::new(drain.ignore_res())
-                        }
-                        None => {
-                            let drain = slog::Duplicate::new(glog_drain, logview_drain);
-                            Arc::new(drain.ignore_res())
+                                let drain = slog::Duplicate::new(
+                                    glog_drain,
+                                    logview_drain.filter_level(logview_level).ignore_res(),
+                                );
+                                Arc::new(drain.ignore_res())
+                            }
+                            None => {
+                                let drain = slog::Duplicate::new(glog_drain, logview_drain);
+                                Arc::new(drain.ignore_res())
+                            }
                         }
                     }
+                    #[cfg(not(fbcode_build))]
+                    {
+                        let _ = (fb, category);
+                        unimplemented!(
+                            "Passed --logview-category, but it is supported only for fbcode builds",
+                        )
+                    }
                 }
-                #[cfg(not(fbcode_build))]
-                {
-                    let _ = (fb, category);
-                    unimplemented!(
-                        "Passed --logview-category, but it is supported only for fbcode builds",
-                    )
-                }
-            }
-            None => Arc::new(glog_drain),
-        };
+                None => Arc::new(glog_drain),
+            };
 
         // NOTE: We pass an unfiltered Logger to init_stdlog_once. That's because we do the filtering
         // at the stdlog level there.
@@ -187,7 +200,7 @@ impl LoggingArgs {
         Ok(root_log_drain)
     }
 
-    pub fn create_logger(
+    fn create_logger(
         &self,
         root_log_drain: Arc<dyn SendSyncRefUnwindSafeDrain<Ok = (), Err = Never>>,
     ) -> Result<Logger> {
@@ -204,6 +217,11 @@ impl LoggingArgs {
         } else {
             Ok(ObservabilityContext::new_static())
         }
+    }
+
+    pub fn setup_logging(&self, fb: FacebookInit) -> Result<Logger> {
+        let root_log_drain = Arc::new(self.create_root_log_drain(fb)?);
+        self.create_logger(root_log_drain)
     }
 }
 
