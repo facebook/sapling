@@ -38,6 +38,7 @@
 
 #![allow(dead_code)]
 
+mod claimer;
 mod client;
 mod driver;
 mod errors;
