@@ -11,7 +11,6 @@ use std::sync::Mutex;
 use anyhow::Error;
 use cached_config::ConfigHandle;
 use cached_config::ConfigStore;
-use slog::Level;
 
 use crate::config::ObservabilityConfig;
 use crate::config::ScubaVerbosityLevel;
@@ -45,17 +44,11 @@ impl CfgrObservabilityContextInner {
 
 /// A modifiable struct to be used in
 /// the unit tests
-pub struct TestObservabilityContextInner {
-    level: Level,
-}
+pub struct TestObservabilityContextInner;
 
 impl TestObservabilityContextInner {
-    pub fn new(level: Level) -> Arc<Mutex<Self>> {
-        Arc::new(Mutex::new(Self { level }))
-    }
-
-    pub fn set_logging_level(&mut self, level: Level) {
-        self.level = level;
+    pub fn new() -> Arc<Mutex<Self>> {
+        Arc::new(Mutex::new(Self))
     }
 
     fn should_log_scuba_sample(
@@ -71,13 +64,11 @@ impl TestObservabilityContextInner {
 /// traditional behavior with predefined log levels
 #[derive(Debug, Clone)]
 #[allow(unused)]
-pub struct StaticObservabilityContextInner {
-    level: Level,
-}
+pub struct StaticObservabilityContextInner;
 
 impl StaticObservabilityContextInner {
-    fn new(level: Level) -> Self {
-        Self { level }
+    fn new() -> Self {
+        Self
     }
 
     fn should_log_scuba_sample(
@@ -103,8 +94,8 @@ impl ObservabilityContextInner {
         )?)))
     }
 
-    fn new_static(level: Level) -> Self {
-        Self::Static(StaticObservabilityContextInner::new(level))
+    fn new_static() -> Self {
+        Self::Static(StaticObservabilityContextInner::new())
     }
 
     fn new_test(inner: Arc<Mutex<TestObservabilityContextInner>>) -> Self {
@@ -149,9 +140,9 @@ impl ObservabilityContext {
         }
     }
 
-    pub fn new_static(level: Level) -> Self {
+    pub fn new_static() -> Self {
         Self {
-            inner: ObservabilityContextInner::new_static(level),
+            inner: ObservabilityContextInner::new_static(),
         }
     }
 

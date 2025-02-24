@@ -170,9 +170,8 @@ impl<'a> MononokeMatches<'a> {
             create_config_store(fb, Logger::root(root_log_drain.clone(), o![]), &matches)
                 .context("Failed to create config store")?;
 
-        let observability_context =
-            create_observability_context(&matches, &config_store, log_level)
-                .context("Faled to initialize observability context")?;
+        let observability_context = create_observability_context(&matches, &config_store)
+            .context("Faled to initialize observability context")?;
 
         let logger = create_logger(root_log_drain).context("Failed to create logger")?;
         let scuba_sample_builder =
@@ -938,11 +937,10 @@ fn init_runtime(matches: &ArgMatches<'_>) -> Result<Runtime> {
 fn create_observability_context<'a>(
     matches: &'a ArgMatches<'a>,
     config_store: &'a ConfigStore,
-    log_level: Level,
 ) -> Result<ObservabilityContext, Error> {
     match matches.value_of(WITH_DYNAMIC_OBSERVABILITY) {
         Some("true") => Ok(ObservabilityContext::new(config_store)?),
-        Some("false") | None => Ok(ObservabilityContext::new_static(log_level)),
+        Some("false") | None => Ok(ObservabilityContext::new_static()),
         Some(other) => panic!(
             "Unexpected --{} value: {}",
             WITH_DYNAMIC_OBSERVABILITY, other

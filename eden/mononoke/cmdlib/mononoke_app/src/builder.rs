@@ -312,7 +312,7 @@ impl MononokeAppBuilder {
             .context("Failed to create config store")?;
 
         let observability_context = logging_args
-            .create_observability_context(&config_store, log_level)
+            .create_observability_context(&config_store)
             .context("Failed to initialize observability context")?;
 
         let logger = logging_args.create_logger(root_log_drain)?;

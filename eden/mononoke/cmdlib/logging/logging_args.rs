@@ -198,12 +198,11 @@ impl LoggingArgs {
     pub fn create_observability_context(
         &self,
         config_store: &ConfigStore,
-        log_level: slog::Level,
     ) -> Result<ObservabilityContext> {
         if self.with_dynamic_observability {
             Ok(ObservabilityContext::new(config_store)?)
         } else {
-            Ok(ObservabilityContext::new_static(log_level))
+            Ok(ObservabilityContext::new_static())
         }
     }
 }
