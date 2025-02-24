@@ -284,6 +284,7 @@ impl TryFrom<&str> for ClientEntryPoint {
             "mononoke_git_server" => Ok(ClientEntryPoint::MononokeGitServer),
             "git" => Ok(ClientEntryPoint::Git),
             "scm_repo_manager" => Ok(ClientEntryPoint::ScmRepoManager),
+            "mononoke_cas_new_commit_tailer" => Ok(ClientEntryPoint::MononokeCasNewCommitTailer),
             _ => Err(anyhow!("Invalid client entry point")),
         }
     }
