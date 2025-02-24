@@ -21,7 +21,8 @@ pub use channel::ResponseStreams;
 #[auto_impl::auto_impl(Box)]
 pub trait Receiver: Send + 'static {
     /// Handle received chunk of the response body.
-    fn chunk(&mut self, chunk: Vec<u8>) -> Result<()>;
+    /// Return true to pause the transfer.
+    fn chunk(&mut self, chunk: Vec<u8>) -> Result<bool>;
 
     /// Handle a received header.
     fn header(&mut self, header: Header) -> Result<()>;
@@ -39,6 +40,11 @@ pub trait Receiver: Send + 'static {
     /// transfers will be aborted and the operation will return early.
     fn done(&mut self, _res: Result<(), HttpClientError>) -> Result<(), Abort> {
         Ok(())
+    }
+
+    /// Report whether this receiver was previously paused and now can handle writes.
+    fn needs_unpause(&mut self) -> bool {
+        false
     }
 }
 
@@ -94,9 +100,9 @@ pub(crate) mod testutil {
     }
 
     impl Receiver for TestReceiver {
-        fn chunk(&mut self, chunk: Vec<u8>) -> Result<()> {
+        fn chunk(&mut self, chunk: Vec<u8>) -> Result<bool> {
             self.inner.lock().unwrap().chunks.push(chunk);
-            Ok(())
+            Ok(false)
         }
 
         fn header(&mut self, header: Header) -> Result<()> {
@@ -122,8 +128,8 @@ pub(crate) mod testutil {
     pub struct NullReceiver;
 
     impl Receiver for NullReceiver {
-        fn chunk(&mut self, _chunk: Vec<u8>) -> Result<()> {
-            Ok(())
+        fn chunk(&mut self, _chunk: Vec<u8>) -> Result<bool> {
+            Ok(false)
         }
         fn header(&mut self, _header: Header) -> Result<()> {
             Ok(())

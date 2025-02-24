@@ -163,6 +163,10 @@ impl HandlerExt for Streaming {
     fn as_any_mut(&mut self) -> &mut dyn std::any::Any {
         self
     }
+
+    fn needs_unpause(&mut self) -> bool {
+        self.receiver.as_mut().is_some_and(|r| r.needs_unpause())
+    }
 }
 
 #[cfg(test)]

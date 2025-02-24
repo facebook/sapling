@@ -40,6 +40,10 @@ pub(crate) trait HandlerExt: Handler {
     }
 
     fn as_any_mut(&mut self) -> &mut dyn Any;
+
+    fn needs_unpause(&mut self) -> bool {
+        false
+    }
 }
 
 impl Handler for Box<dyn HandlerExt> {

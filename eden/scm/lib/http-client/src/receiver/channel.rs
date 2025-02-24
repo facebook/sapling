@@ -55,8 +55,11 @@ impl ChannelReceiver {
 }
 
 impl Receiver for ChannelReceiver {
-    fn chunk(&mut self, chunk: Vec<u8>) -> Result<()> {
-        self.body_tx.unbounded_send(chunk).map_err(|e| e.into())
+    fn chunk(&mut self, chunk: Vec<u8>) -> Result<bool> {
+        self.body_tx
+            .unbounded_send(chunk)
+            .map_err(anyhow::Error::from)?;
+        Ok(false)
     }
 
     fn header(&mut self, header: Header) -> Result<()> {
