@@ -218,7 +218,7 @@ impl HttpClient {
 
         for req in requests {
             let request_info = req.ctx().info().clone();
-            let (receiver, streams) = ChannelReceiver::new();
+            let (receiver, streams) = ChannelReceiver::new(self.config.limit_response_buffering);
 
             // Create a blocking streaming HTTP request to be dispatched on a
             // separate IO task.

@@ -61,14 +61,29 @@ impl Handler for Streaming {
         self.request_context
             .event_listeners
             .trigger_download_bytes(self.request_context(), data.len());
-        if let Some(ref mut receiver) = self.receiver {
-            if receiver.chunk(data.into()).is_err() {
-                // WriteError can only return "Pause", so instead we need to return an incorrect
-                // number of bytes written, which will trigger curl to end the request.
-                return Ok(0);
+
+        match self.receiver {
+            Some(ref mut receiver) => {
+                match receiver.chunk(data.into()) {
+                    // Normal case - receiver handled all the bytes.
+                    Ok(false) => Ok(data.len()),
+                    // Receiver wants us to pause the transfer.
+                    Ok(true) => {
+                        tracing::trace!("receiver.chunk() wants to pause");
+                        tracing::trace!(target: "curl_pause", "pausing write");
+                        Err(WriteError::Pause)
+                    }
+                    // WriteError can only return "Pause", so instead we need to return an incorrect
+                    // number of bytes written, which will trigger curl to end the request.
+                    Err(err) => {
+                        tracing::trace!(?err, "receiver.chunk() return error");
+                        Ok(0)
+                    }
+                }
             }
+            // No receiver - indicate everything is okay (why??)
+            None => Ok(data.len()),
         }
-        Ok(data.len())
     }
 
     fn read(&mut self, data: &mut [u8]) -> Result<usize, ReadError> {

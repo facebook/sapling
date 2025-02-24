@@ -616,7 +616,11 @@ impl Request {
     /// Execute this request asynchronously.
     pub async fn send_async(self) -> Result<AsyncResponse, HttpClientError> {
         let request_info = self.ctx().info().clone();
-        let (receiver, streams) = ChannelReceiver::new();
+
+        // Don't limit response buffering - we don't have a good way to unpause the
+        // transfer for this single request flow.
+        let (receiver, streams) = ChannelReceiver::new(false);
+
         let request = self.into_streaming(Box::new(receiver));
 
         // Spawn the request as another task, which will block
