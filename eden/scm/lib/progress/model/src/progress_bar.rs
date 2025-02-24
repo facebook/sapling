@@ -54,16 +54,23 @@ pub struct ProgressBar {
     // intended to be a planned "phase" that is displayed to the user
     // before it starts and after it finishes. Only impacts rendering.
     adhoc: bool,
+
+    // Whether this bar is intended to be shared across threads as the "active" bar.
+    // Causes bar to not finish when being popped as active bar.
+    shared: bool,
 }
 
 pub struct Builder {
+    // Registry to (optionally) register the bar with.
     registry: Registry,
+    // Whether to register the bar. Bars must be registered to be rendered.
     register: bool,
     topic: Cow<'static, str>,
     total: u64,
     unit: Cow<'static, str>,
     parent: Option<Arc<ProgressBar>>,
     adhoc: bool,
+    shared: bool,
 }
 
 impl Builder {
@@ -76,6 +83,7 @@ impl Builder {
             unit: "".into(),
             parent: None,
             adhoc: true,
+            shared: false,
         }
     }
 
@@ -114,6 +122,11 @@ impl Builder {
         self
     }
 
+    pub fn shared(mut self, s: bool) -> Self {
+        self.shared = s;
+        self
+    }
+
     pub fn active(self) -> ActiveProgressBar {
         let registry = self.registry.clone();
         let bar = self.thread_local_parent().register(true).pending();
@@ -133,6 +146,7 @@ impl Builder {
             finished_at: Default::default(),
             parent: self.parent,
             adhoc: self.adhoc,
+            shared: self.shared,
         });
         if self.register {
             self.registry.register_progress_bar(&bar);
@@ -222,7 +236,11 @@ impl ProgressBar {
     /// Mark `bar` as finished and unset it as the active progress bar. This is
     /// exposed for Python use - you probably don't want to call it directly.
     pub fn pop_active(bar: &Arc<Self>, registry: &Registry) {
-        bar.finish();
+        // Shared bars are used as "active" bars in multiple threads - don't assume the
+        // bar is done after first pop.
+        if !bar.shared {
+            bar.finish();
+        }
 
         if let Some(active) = registry.get_active_progress_bar() {
             // Only update things if we are the active bar.
@@ -616,5 +634,29 @@ mod tests {
         drop(bar1);
 
         assert!(reg.get_active_progress_bar().is_none());
+    }
+
+    #[test]
+    fn test_reusing_active_bar() {
+        let reg = Registry::default();
+
+        let bar = Builder::new()
+            .registry(&reg)
+            .thread_local_parent()
+            .shared(true)
+            .pending();
+
+        std::thread::scope(|s| {
+            s.spawn(|| {
+                let _active = ProgressBar::push_active(bar.clone(), &reg);
+            });
+
+            s.spawn(|| {
+                let _active = ProgressBar::push_active(bar.clone(), &reg);
+            });
+        });
+
+        // Bar is still running.
+        assert_eq!(bar.state(), BarState::Running);
     }
 }
