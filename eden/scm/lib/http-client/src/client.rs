@@ -412,21 +412,22 @@ mod tests {
 
         let server_url = Url::parse(&server.url())?;
 
+        let client = HttpClient::new();
+
         let url1 = server_url.join("test1")?;
-        let req1 = Request::get(url1);
+        let req1 = client.get(url1);
 
         let url2 = server_url.join("test2")?;
-        let req2 = Request::get(url2);
+        let req2 = client.get(url2);
 
         let url3 = server_url.join("test3")?;
-        let req3 = Request::get(url3);
+        let req3 = client.get(url3);
 
         let mut not_received = HashSet::new();
         not_received.insert(body1.to_vec());
         not_received.insert(body2.to_vec());
         not_received.insert(body3.to_vec());
 
-        let client = HttpClient::new();
         let stats = client.send(vec![req1, req2, req3], |res| {
             let res = res.unwrap();
             assert_eq!(res.head.status, StatusCode::CREATED);
@@ -472,19 +473,20 @@ mod tests {
 
         let server_url = Url::parse(&server.url())?;
 
+        let client = HttpClient::new();
+
         let url1 = server_url.join("test1")?;
         let rcv1 = TestReceiver::new();
-        let req1 = Request::get(url1).into_streaming(Box::new(rcv1.clone()));
+        let req1 = client.get(url1).into_streaming(Box::new(rcv1.clone()));
 
         let url2 = server_url.join("test2")?;
         let rcv2 = TestReceiver::new();
-        let req2 = Request::get(url2).into_streaming(Box::new(rcv2.clone()));
+        let req2 = client.get(url2).into_streaming(Box::new(rcv2.clone()));
 
         let url3 = server_url.join("test3")?;
         let rcv3 = TestReceiver::new();
-        let req3 = Request::get(url3).into_streaming(Box::new(rcv3.clone()));
+        let req3 = client.get(url3).into_streaming(Box::new(rcv3.clone()));
 
-        let client = HttpClient::new();
         let stats = client.stream(vec![req1, req2, req3])?;
 
         mock1.assert();
@@ -535,16 +537,17 @@ mod tests {
 
         let server_url = Url::parse(&server.url())?;
 
+        let client = HttpClient::new();
+
         let url1 = server_url.join("test1")?;
-        let req1 = Request::get(url1);
+        let req1 = client.get(url1);
 
         let url2 = server_url.join("test2")?;
-        let req2 = Request::get(url2);
+        let req2 = client.get(url2);
 
         let url3 = server_url.join("test3")?;
-        let req3 = Request::get(url3);
+        let req3 = client.get(url3);
 
-        let client = HttpClient::new();
         let (futures, stats) = client.send_async(vec![req1, req2, req3])?;
 
         let mut responses = Vec::new();
@@ -589,7 +592,6 @@ mod tests {
             .create();
 
         let url = server_url.join("test1")?;
-        let request = Request::get(url);
 
         let (tx, rx) = crossbeam::channel::unbounded();
         let (msg_tx, msg_rx) = crossbeam::channel::unbounded();
@@ -658,6 +660,8 @@ mod tests {
             assert_eq!(msg_rx.recv().unwrap(), "on_download_bytes");
             assert_eq!(msg_rx.recv().unwrap(), "on_succeeded_request");
         };
+
+        let request = client.get(url);
 
         let stats = client.send(vec![request.clone()], |_| Ok(()))?;
         assert_eq!(stats, rx.recv()?);

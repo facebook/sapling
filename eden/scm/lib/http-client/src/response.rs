@@ -357,7 +357,7 @@ mod tests {
     use url::Url;
 
     use crate::request::Encoding;
-    use crate::request::Request;
+    use crate::HttpClient;
 
     #[tokio::test]
     async fn test_decompression() -> Result<()> {
@@ -373,8 +373,11 @@ mod tests {
             .with_body(compressed)
             .create();
 
+        let client = HttpClient::new();
+
         let url = Url::parse(&server.url())?.join("test")?;
-        let res = Request::get(url)
+        let res = client
+            .get(url)
             .accept_encoding(Encoding::all())
             .send_async()
             .await?;

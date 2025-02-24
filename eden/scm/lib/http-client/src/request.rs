@@ -255,7 +255,7 @@ impl RequestContext {
 }
 
 impl Request {
-    pub fn new(url: Url, method: Method) -> Self {
+    pub(crate) fn new(url: Url, method: Method) -> Self {
         let ctx = RequestContext::new(url, method);
         Self {
             ctx,
@@ -299,26 +299,6 @@ impl Request {
     /// Get a mutable reference to this request's context.
     pub fn ctx_mut(&mut self) -> &mut RequestContext {
         &mut self.ctx
-    }
-
-    /// Create a GET request.
-    pub(crate) fn get(url: Url) -> Self {
-        Self::new(url, Method::Get)
-    }
-
-    /// Create a HEAD request.
-    pub(crate) fn head(url: Url) -> Self {
-        Self::new(url, Method::Head)
-    }
-
-    /// Create a POST request.
-    pub(crate) fn post(url: Url) -> Self {
-        Self::new(url, Method::Post)
-    }
-
-    /// Create a PUT request.
-    pub(crate) fn put(url: Url) -> Self {
-        Self::new(url, Method::Put)
     }
 
     /// Set the data to be uploaded in the request body.
@@ -970,8 +950,10 @@ mod tests {
             .with_body("Hello, world!")
             .create();
 
+        let client = HttpClient::new();
+
         let url = Url::parse(&server.url())?.join("test")?;
-        let res = Request::get(url).header("X-Api-Key", "1234").send()?;
+        let res = client.get(url).header("X-Api-Key", "1234").send()?;
 
         mock.assert();
 
@@ -1004,8 +986,11 @@ mod tests {
             .with_body("Hello, world!")
             .create();
 
+        let client = HttpClient::new();
+
         let url = Url::parse(&server.url())?.join("test")?;
-        let res = Request::get(url)
+        let res = client
+            .get(url)
             .header("X-Api-Key", "1234")
             .send_async()
             .await?;
@@ -1042,8 +1027,10 @@ mod tests {
             .with_header("X-Served-By", "mock")
             .create();
 
+        let client = HttpClient::new();
+
         let url = Url::parse(&server.url())?.join("test")?;
-        let res = Request::head(url).header("X-Api-Key", "1234").send()?;
+        let res = client.head(url).header("X-Api-Key", "1234").send()?;
 
         mock.assert();
 
@@ -1076,8 +1063,10 @@ mod tests {
             .match_body(Matcher::Exact(body.into()))
             .create();
 
+        let client = HttpClient::new();
+
         let url = Url::parse(&server.url())?.join("test")?;
-        let res = Request::post(url).body(body.as_bytes()).send()?;
+        let res = client.post(url).body(body.as_bytes()).send()?;
 
         mock.assert();
         assert_eq!(res.head.status, StatusCode::CREATED);
@@ -1098,8 +1087,10 @@ mod tests {
             .match_body(Matcher::Exact(body.into()))
             .create();
 
+        let client = HttpClient::new();
+
         let url = Url::parse(&server.url())?.join("test")?;
-        let res = Request::post(url).body(body_bytes).send()?;
+        let res = client.post(url).body(body_bytes).send()?;
 
         mock.assert();
         assert_eq!(res.head.status, StatusCode::CREATED);
@@ -1119,8 +1110,11 @@ mod tests {
             .match_body(Matcher::Exact(body.into()))
             .create();
 
+        let client = HttpClient::new();
+
         let url = Url::parse(&server.url())?.join("test")?;
-        let res = Request::put(url)
+        let res = client
+            .put(url)
             .header("Content-Type", "text/plain")
             .body(body.as_bytes())
             .send()?;
@@ -1146,8 +1140,10 @@ mod tests {
             .match_body(Matcher::Json(body.clone()))
             .create();
 
+        let client = HttpClient::new();
+
         let url = Url::parse(&server.url())?.join("test")?;
-        let res = Request::post(url).json(&body)?.send()?;
+        let res = client.post(url).json(&body)?.send()?;
 
         mock.assert();
         assert_eq!(res.head.status, StatusCode::CREATED);
@@ -1176,8 +1172,10 @@ mod tests {
             .match_body(serde_cbor::to_vec(&body)?)
             .create();
 
+        let client = HttpClient::new();
+
         let url = Url::parse(&server.url())?.join("test")?;
-        let res = Request::post(url).cbor(&body)?.send()?;
+        let res = client.post(url).cbor(&body)?.send()?;
 
         mock.assert();
         assert_eq!(res.head.status, StatusCode::CREATED);
@@ -1200,8 +1198,10 @@ mod tests {
             Encoding::Other("foobar".into()),
         ];
 
+        let client = HttpClient::new();
+
         let url = Url::parse(&server.url())?.join("test")?;
-        let _ = Request::get(url).accept_encoding(encodings).send()?;
+        let _ = client.get(url).accept_encoding(encodings).send()?;
 
         mock.assert();
         Ok(())
@@ -1246,8 +1246,11 @@ mod tests {
             .mock("HEAD", "/test_callback")
             .with_status(200)
             .create();
+
+        let client = HttpClient::new();
+
         let url = Url::parse(&server.url())?.join("test_callback")?;
-        let _res = Request::head(url).send()?;
+        let _res = client.head(url).send()?;
 
         mock.assert();
         assert_eq!(called.load(Acquire), 1);
