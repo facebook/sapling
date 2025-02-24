@@ -63,17 +63,11 @@ Sync all bookmarks moves
   Initialized channels
   Calculating segments for entry 1
   Skipping 0 commits, starting sync of 1 commits 
-  Found error: Trees upload: Expected 1 responses, got 0, retrying attempt #0
-  Found error: Trees upload: Expected 1 responses, got 0, retrying attempt #1
-  Found error: Trees upload: Expected 1 responses, got 0, retrying attempt #2
-  Error processing files/trees: Failed to upload trees: HgManifestId(HgNodeHash(Sha1(c1afe800646ee45232ab5e70c57247b78dbf3899)))
-  
-  Caused by:
-      Trees upload: Expected 1 responses, got 0
-  Error processing files/trees: Ok(()) Err(Failed to upload trees: HgManifestId(HgNodeHash(Sha1(c1afe800646ee45232ab5e70c57247b78dbf3899)))
-  
-  Caused by:
-      Trees upload: Expected 1 responses, got 0)
-  Execution error: Error while waiting for commit to be synced Error processing changesets: Files/trees error received. Winding down changesets sender.
+  Found error: Trees upload: Expected 3 responses, got 0, retrying attempt #0
+  Found error: Trees upload: Expected 3 responses, got 0, retrying attempt #1
+  Found error: Trees upload: Expected 3 responses, got 0, retrying attempt #2
+  Failed to upload trees: Trees upload: Expected 3 responses, got 0
+  Trees flush failed: Trees upload: Expected 3 responses, got 0
+  Execution error: Error while waiting for commit to be synced Error processing changesets: Error waiting for files/trees error received oneshot canceled
   Error: Execution failed
   [1]

@@ -46,8 +46,10 @@ const FILES_CHANNEL_SIZE: usize = 10000;
 const TREES_CHANNEL_SIZE: usize = 10000;
 const CHANGESET_CHANNEL_SIZE: usize = 5000;
 
-const FLUSH_INTERVAL: Duration = Duration::from_secs(5);
+const CHANGESETS_FLUSH_INTERVAL: Duration = Duration::from_secs(5);
+const TREES_FLUSH_INTERVAL: Duration = Duration::from_secs(3);
 const MAX_CHANGESET_BATCH_SIZE: usize = 10;
+const MAX_TREES_BATCH_SIZE: usize = 20;
 
 #[derive(Clone)]
 pub struct SendManager {
@@ -247,53 +249,93 @@ impl SendManager {
     ) {
         mononoke::spawn_task(async move {
             let mut encountered_error: Option<anyhow::Error> = None;
-            while let Some(msg) = trees_recv.recv().await {
-                match msg {
-                    TreeMessage::WaitForContents(receiver) => {
-                        // Read outcome from content upload
-                        let start = std::time::Instant::now();
-                        match receiver.await {
-                            Ok(Err(e)) => {
-                                encountered_error.get_or_insert(e.context(
-                                    "Contents error received. Winding down trees sender.",
-                                ));
+            let mut batch_trees = Vec::new();
+            let mut batch_done_senders = VecDeque::new();
+            let mut timer = interval(TREES_FLUSH_INTERVAL);
+            loop {
+                tokio::select! {
+                    msg = trees_recv.recv() => {
+                        match msg {
+                            Some(TreeMessage::WaitForContents(receiver)) => {
+                                // Read outcome from content upload
+                                let start = std::time::Instant::now();
+                                match receiver.await {
+                                    Ok(Err(e)) => {
+                                        encountered_error.get_or_insert(e.context(
+                                            "Contents error received. Winding down trees sender.",
+                                        ));
+                                    }
+                                    Err(e) => {
+                                        encountered_error.get_or_insert(anyhow::anyhow!(format!(
+                                            "Error waiting for contents: {:#}",
+                                            e
+                                        )));
+                                    }
+                                    _ => (),
+                                }
+                                let elapsed = start.elapsed().as_secs();
+                                STATS::content_wait_time_s.add_value(elapsed as i64, (reponame.clone(),));
                             }
-                            Err(e) => {
-                                encountered_error.get_or_insert(anyhow::anyhow!(format!(
-                                    "Error waiting for contents: {:#}",
-                                    e
-                                )));
+                            Some(TreeMessage::Tree(t)) if encountered_error.is_none() => {
+                                batch_trees.push(t);
                             }
-                            _ => (),
+                            Some(TreeMessage::TreesDone(sender)) => {
+                                batch_done_senders.push_back(sender);
+                            }
+                            Some(TreeMessage::Tree(_)) => (),
+                            None => break,
                         }
-                        let elapsed = start.elapsed().as_secs();
-                        STATS::content_wait_time_s.add_value(elapsed as i64, (reponame.clone(),));
-                    }
-                    TreeMessage::Tree(t) if encountered_error.is_none() => {
-                        // Upload the trees through sender
-                        if let Err(e) = trees_es.upload_trees(vec![t]).await {
-                            encountered_error.get_or_insert(
-                                e.context(format!("Failed to upload trees: {:?}", t)),
-                            );
-                        } else {
-                            STATS::synced_trees.add_value(1, (reponame.clone(),));
-                        }
-                    }
-                    TreeMessage::TreesDone(sender) => {
-                        if let Some(e) = encountered_error {
-                            error!(trees_logger, "Error processing files/trees: {:?}", e);
-                            let _ = sender.send(Err(e));
-                            return;
-                        } else {
-                            let res = sender.send(Ok(()));
-                            if let Err(e) = res {
-                                error!(trees_logger, "Error sending content ready: {:?}", e);
+                        if batch_trees.len() >= MAX_TREES_BATCH_SIZE {
+                            if let Err(e) = flush_trees(&trees_es, &mut batch_trees, &mut batch_done_senders, &mut encountered_error, &reponame,  &trees_logger).await {
+                                error!(trees_logger, "Trees flush failed: {:?}", e);
                                 return;
                             }
                         }
                     }
-                    TreeMessage::Tree(_) => (),
+                    _ = timer.tick() => {
+                        if let Err(e) = flush_trees(&trees_es, &mut batch_trees, &mut batch_done_senders, &mut encountered_error, &reponame, &trees_logger).await {
+                            error!(trees_logger, "Trees flush failed: {:?}", e);
+                            return;
+                        }
+                    }
                 }
+            }
+            async fn flush_trees(
+                trees_es: &Arc<EdenapiSender>,
+                batch_trees: &mut Vec<HgManifestId>,
+                batch_done_senders: &mut VecDeque<oneshot::Sender<Result<()>>>,
+                encountered_error: &mut Option<anyhow::Error>,
+                reponame: &str,
+                trees_logger: &Logger,
+            ) -> Result<(), anyhow::Error> {
+                if !batch_trees.is_empty() || !batch_done_senders.is_empty() {
+                    if let Some(e) = encountered_error {
+                        let msg = format!("Error processing trees: {:?}", e);
+                        while let Some(sender) = batch_done_senders.pop_front() {
+                            let _ = sender.send(Err(anyhow::anyhow!(msg.clone())));
+                        }
+                        error!(trees_logger, "Error processing files/trees: {:?}", e);
+                        return Err(anyhow::anyhow!(msg.clone()));
+                    }
+
+                    if let Err(e) = trees_es.upload_trees(std::mem::take(batch_trees)).await {
+                        error!(trees_logger, "Failed to upload trees: {:?}", e);
+                        return Err(e);
+                    } else {
+                        STATS::synced_trees
+                            .add_value(batch_trees.len() as i64, (reponame.to_owned(),));
+                    }
+
+                    while let Some(sender) = batch_done_senders.pop_front() {
+                        let res = sender.send(Ok(()));
+                        if let Err(e) = res {
+                            let msg = format!("Error sending content ready: {:?}", e);
+                            error!(trees_logger, "{}", msg);
+                            return Err(anyhow::anyhow!(msg));
+                        }
+                    }
+                }
+                Ok(())
             }
         });
     }
@@ -311,7 +353,7 @@ impl SendManager {
             let mut pending_log = VecDeque::new();
 
             let mut current_batch = Vec::new();
-            let mut flush_timer = interval(FLUSH_INTERVAL);
+            let mut flush_timer = interval(CHANGESETS_FLUSH_INTERVAL);
 
             loop {
                 tokio::select! {
