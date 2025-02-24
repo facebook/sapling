@@ -39,9 +39,6 @@ In such cases, the pipeline would cycle through `cleanup` and then `setup`.
 
 *More details provided in the [SCM Repo Manager](https://www.internalfb.com/wiki/Source_Control/Engineering/Repo_Support_On_Remote_Execution/scm_repo_manager) design overview.*
 
-Check out our [resources](https://www.internalfb.com/wiki/Source_Control/Engineering/Repo_Support_On_Remote_Execution/resources) for helpful links.
-
-
 # Onboarding
 
 If you're interested in using our platform, please make a post in the [Source Control & Remote Execution XFN Group](https://fb.workplace.com/groups/538958065679523) to get started, providing detailed information about your use case, and we will normally respond within 1 business day.
@@ -54,4 +51,11 @@ If you're interested in using our platform, please make a post in the [Source Co
 * Limitations:
     * Shelling out buck commands is not supported due to its high memory requirements and incompatibility with RE's execution model. Please, consider using Sandcastle.
     * Hack scripts are not currently supported as actions, but this feature may be added in the future.
+
+
+# Further Reading:
+* [SCM Repo Manager](https://www.internalfb.com/wiki/Source_Control/Engineering/Repo_Support_On_Remote_Execution/scm_repo_manager)
+* [Monitoring and Alerts](https://www.internalfb.com/wiki/Source_Control/Engineering/Repo_Support_On_Remote_Execution/monitoring_and_alerts)
+* [Hacking on SCM Repository Manager](https://www.internalfb.com/wiki/Source_Control/Engineering/Repo_Support_On_Remote_Execution/development)
+* Check out our [resources](https://www.internalfb.com/wiki/Source_Control/Engineering/Repo_Support_On_Remote_Execution/resources) for helpful links
 
