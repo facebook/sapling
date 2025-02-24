@@ -8,10 +8,13 @@
 use std::collections::HashSet;
 use std::path::PathBuf;
 use std::pin::Pin;
+use std::time::Duration;
+use std::vec::IntoIter;
 
 use futures::prelude::*;
 use url::Url;
 
+use crate::claimer::RequestClaimer;
 use crate::driver::MultiDriver;
 use crate::errors::Abort;
 use crate::errors::HttpClientError;
@@ -46,6 +49,7 @@ pub struct HttpClient {
     pool: Pool,
     event_listeners: HttpClientEventListeners,
     config: Config,
+    claimer: RequestClaimer,
 }
 
 #[derive(Clone, Debug)]
@@ -104,8 +108,11 @@ impl HttpClient {
     }
 
     pub fn from_config(config: Config) -> Self {
+        let claimer = RequestClaimer::new(config.limit_requests, config.max_concurrent_requests);
+
         Self {
             config,
+            claimer,
             pool: Pool::new(),
             event_listeners: Default::default(),
         }
@@ -118,6 +125,7 @@ impl HttpClient {
 
     pub fn max_concurrent_requests(mut self, max: Option<usize>) -> Self {
         self.config.max_concurrent_requests = max;
+        self.claimer = self.claimer.with_limit(max);
         self
     }
 
@@ -129,9 +137,12 @@ impl HttpClient {
     ///
     /// The closure returns a boolean. If false, this function will
     /// return early and all other pending transfers will be aborted.
-    pub fn send<I, F>(&self, requests: I, mut response_cb: F) -> Result<Stats, HttpClientError>
+    pub fn send<F>(
+        &self,
+        requests: Vec<Request>,
+        mut response_cb: F,
+    ) -> Result<Stats, HttpClientError>
     where
-        I: IntoIterator<Item = Request>,
         F: FnMut(Result<Response, HttpClientError>) -> Result<(), Abort>,
     {
         let mut multi = self.pool.multi();
@@ -230,46 +241,84 @@ impl HttpClient {
     /// Note that this function is not asynchronous; it WILL BLOCK
     /// until all of the transfers are complete, and will return
     /// the total stats across all transfers when complete.
-    pub fn stream<I>(&self, requests: I) -> Result<Stats, HttpClientError>
-    where
-        I: IntoIterator<Item = StreamRequest>,
-    {
-        let mut multi = self.pool.multi();
-        multi
-            .get_mut()
-            .set_max_total_connections(self.config.max_concurrent_requests.unwrap_or(0))?;
-        let driver = MultiDriver::new(multi.get(), self.config.verbose_stats);
-        for mut request in requests {
-            self.event_listeners
-                .trigger_new_request(request.request.ctx_mut());
-            let handle: Easy2H = request.try_into()?;
-            driver.add(handle)?;
-        }
+    pub fn stream(&self, requests: Vec<StreamRequest>) -> Result<Stats, HttpClientError> {
+        // Add as many of remaining requests to the handle as we can, limited by the claimer.
+        let try_add =
+            |h: &MultiDriver, reqs: &mut IntoIter<StreamRequest>| -> Result<(), HttpClientError> {
+                for claim in self.claimer.try_claim_requests(reqs.len()) {
+                    let mut request = match reqs.next() {
+                        Some(request) => request,
+                        // Shouldn't happen, but just in case.
+                        None => break,
+                    };
 
-        let mut tls_error = false;
-        let result = driver
-            .perform(|res| {
-                if let Err((_, e)) = &res {
-                    let e: HttpClientError = e.clone().into();
-                    if let HttpClientError::Tls(_) = e {
-                        tls_error = true;
-                    }
+                    self.event_listeners
+                        .trigger_new_request(request.request.ctx_mut());
+                    h.add(request.into_easy(claim)?)?;
                 }
-                self.report_result_and_drop_receiver(res)
-            })
-            .inspect(|stats| {
-                self.event_listeners.trigger_stats(stats);
-            });
 
-        drop(driver);
+                Ok(())
+            };
 
-        // Don't reuse the connection if we've hit auth issues. We've seen cases where we reuse
-        // expired credentials.
-        if tls_error {
-            multi.discard();
+        let mut requests = requests.into_iter();
+        let mut stats = Stats::default();
+
+        while requests.len() > 0 {
+            let mut multi = self.pool.multi();
+            multi
+                .get_mut()
+                // TODO: don't conflate connections with requests
+                .set_max_total_connections(self.config.max_concurrent_requests.unwrap_or(0))?;
+
+            let driver = MultiDriver::new(multi.get(), self.config.verbose_stats);
+
+            // Add requests to the driver. This can add anywhere from zero to all the requests.
+            try_add(&driver, &mut requests)?;
+
+            let mut tls_error = false;
+            let result = driver
+                .perform(|res| {
+                    if let Err((_, e)) = &res {
+                        let e: HttpClientError = e.clone().into();
+                        if let HttpClientError::Tls(_) = e {
+                            tls_error = true;
+                        }
+                    }
+
+                    self.report_result_and_drop_receiver(res)?;
+
+                    // A request finished - let's see if there are pending requests we can now add
+                    // to this multi. This allows pending requests to proceed without needing to
+                    // wait for _all_ in-progress requests to finish. Note that there may be other
+                    // curl multis active bound by the same request limit, so it is still possible
+                    // for our pending requests to wait longer than they need to (i.e. when a
+                    // request finishes on a different multi, our loop here will still wait for one
+                    // of our requests to finish before trying to enqueue new requests).
+                    try_add(&driver, &mut requests).map_err(|err| Abort::WithReason(err.into()))
+                })
+                .inspect(|stats| {
+                    self.event_listeners.trigger_stats(stats);
+                });
+
+            drop(driver);
+
+            // Don't reuse the connection if we've hit auth issues. We've seen cases where we reuse
+            // expired credentials.
+            if tls_error {
+                multi.discard();
+            }
+
+            stats += result?;
+
+            if requests.len() > 0 {
+                // We still have pending requests. This likely mean requests on a
+                // different multi are using up all the request slots. Add a small sleep
+                // to avoid spinning CPU while we wait for requests slots.
+                std::thread::sleep(Duration::from_millis(1));
+            }
         }
 
-        result
+        Ok(stats)
     }
 
     /// Obtain the `HttpClientEventListeners` to register callbacks.
@@ -324,7 +373,11 @@ impl HttpClient {
 
     /// Create a request with this client's config applied.
     pub fn new_request(&self, url: Url, method: Method) -> Request {
-        self.configure_request(Request::new(url, method))
+        self.configure_request(Request::new(
+            url,
+            method,
+            self.claimer.with_limit(self.config.max_concurrent_requests),
+        ))
     }
 
     /// Create a GET request with this client's config applied.

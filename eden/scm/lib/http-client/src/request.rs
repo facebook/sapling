@@ -34,6 +34,8 @@ use parking_lot::RwLock;
 use serde::Serialize;
 use url::Url;
 
+use crate::claimer::RequestClaim;
+use crate::claimer::RequestClaimer;
 use crate::errors::HttpClientError;
 use crate::event_listeners::RequestCreationEventListeners;
 use crate::event_listeners::RequestEventListeners;
@@ -172,6 +174,7 @@ pub struct RequestId(usize);
 #[derive(Clone, Debug)]
 pub struct Request {
     ctx: RequestContext,
+    claimer: RequestClaimer,
     headers: HashMap<String, String>,
     cert: Option<PathBuf>,
     key: Option<PathBuf>,
@@ -255,10 +258,11 @@ impl RequestContext {
 }
 
 impl Request {
-    pub(crate) fn new(url: Url, method: Method) -> Self {
+    pub(crate) fn new(url: Url, method: Method, claimer: RequestClaimer) -> Self {
         let ctx = RequestContext::new(url, method);
         Self {
             ctx,
+            claimer,
             // Always set Expect so we can disable curl automatically expecting "100-continue".
             // That would require two response reads, which breaks the http_client model.
             headers: hashmap! {
@@ -827,8 +831,9 @@ pub struct StreamRequest {
 }
 
 impl StreamRequest {
-    pub fn send(self) -> Result<(), HttpClientError> {
-        let mut easy: Easy2H = self.try_into()?;
+    pub(crate) fn send(self) -> Result<(), HttpClientError> {
+        let claim = self.request.claimer.claim_request();
+        let mut easy: Easy2H = self.into_easy(claim)?;
         let res = easy.perform().map_err(Into::into);
         let _ = easy
             .get_mut()
@@ -837,14 +842,10 @@ impl StreamRequest {
             .done(res);
         Ok(())
     }
-}
 
-impl TryFrom<StreamRequest> for Easy2H {
-    type Error = HttpClientError;
-
-    fn try_from(req: StreamRequest) -> Result<Self, Self::Error> {
-        let StreamRequest { request, receiver } = req;
-        request.into_handle(|ctx| Box::new(Streaming::new(receiver, ctx)))
+    pub(crate) fn into_easy(self, claim: RequestClaim) -> Result<Easy2H, HttpClientError> {
+        let StreamRequest { request, receiver } = self;
+        request.into_handle(|ctx| Box::new(Streaming::new(receiver, ctx, claim)))
     }
 }
 

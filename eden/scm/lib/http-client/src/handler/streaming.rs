@@ -14,6 +14,7 @@ use curl::easy::SeekResult;
 use curl::easy::WriteError;
 
 use super::HandlerExt;
+use crate::claimer::RequestClaim;
 use crate::header::Header;
 use crate::progress::Progress;
 use crate::receiver::Receiver;
@@ -24,15 +25,21 @@ pub struct Streaming {
     bytes_sent: usize,
     request_context: RequestContext,
     is_active: bool,
+    claim: RequestClaim,
 }
 
 impl Streaming {
-    pub(crate) fn new(receiver: Box<dyn Receiver>, request_context: RequestContext) -> Self {
+    pub(crate) fn new(
+        receiver: Box<dyn Receiver>,
+        request_context: RequestContext,
+        claim: RequestClaim,
+    ) -> Self {
         Self {
             receiver: Some(receiver),
             bytes_sent: 0,
             request_context,
             is_active: false,
+            claim,
         }
     }
 
@@ -178,8 +185,11 @@ mod tests {
         let mut buf2 = [0xFF; 3];
         let mut buf3 = [0xFF; 4];
 
-        let mut handler =
-            Streaming::new(Box::new(NullReceiver), RequestContext::dummy().body(data));
+        let mut handler = Streaming::new(
+            Box::new(NullReceiver),
+            RequestContext::dummy().body(data),
+            RequestClaim::default(),
+        );
 
         assert_eq!(handler.read(&mut buf1[..]).unwrap(), 5);
         assert_eq!(handler.read(&mut buf2[..]).unwrap(), 3);
@@ -193,7 +203,11 @@ mod tests {
     #[test]
     fn test_write() {
         let receiver = TestReceiver::new();
-        let mut handler = Streaming::new(Box::new(receiver.clone()), RequestContext::dummy());
+        let mut handler = Streaming::new(
+            Box::new(receiver.clone()),
+            RequestContext::dummy(),
+            RequestClaim::default(),
+        );
 
         let chunks = vec![vec![1, 2, 3], vec![5, 6], vec![7, 8, 9, 0]];
 
@@ -207,8 +221,11 @@ mod tests {
     #[test]
     fn test_seek() {
         let data = [1, 2, 3, 4, 5, 6, 7, 8, 9, 0];
-        let mut handler =
-            Streaming::new(Box::new(NullReceiver), RequestContext::dummy().body(data));
+        let mut handler = Streaming::new(
+            Box::new(NullReceiver),
+            RequestContext::dummy().body(data),
+            RequestClaim::default(),
+        );
 
         assert_matches!(handler.seek(SeekFrom::Start(3)), SeekResult::Ok);
         assert_eq!(handler.bytes_sent, 3);
@@ -235,7 +252,11 @@ mod tests {
     #[test]
     fn test_headers() {
         let receiver = TestReceiver::new();
-        let mut handler = Streaming::new(Box::new(receiver.clone()), RequestContext::dummy());
+        let mut handler = Streaming::new(
+            Box::new(receiver.clone()),
+            RequestContext::dummy(),
+            RequestClaim::default(),
+        );
 
         assert!(handler.header(&b"Content-Length: 1234\r\n"[..]));
         assert!(handler.header(&[1, 2, 58, 3, 4][..])); // Valid UTF-8 but not alphanumeric.
@@ -256,7 +277,11 @@ mod tests {
     #[test]
     fn test_progress() {
         let receiver = TestReceiver::new();
-        let mut handler = Streaming::new(Box::new(receiver.clone()), RequestContext::dummy());
+        let mut handler = Streaming::new(
+            Box::new(receiver.clone()),
+            RequestContext::dummy(),
+            RequestClaim::default(),
+        );
 
         let reporter = ProgressReporter::default();
         handler

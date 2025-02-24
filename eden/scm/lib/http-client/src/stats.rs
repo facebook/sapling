@@ -7,6 +7,7 @@
 
 use std::fmt;
 use std::mem;
+use std::ops::AddAssign;
 use std::time::Duration;
 
 #[derive(Clone, Debug, Default, Eq, PartialEq)]
@@ -43,6 +44,16 @@ impl fmt::Display for Stats {
             latency = self.latency,
             latency_prec = if self.latency.as_secs() == 0 { 0 } else { 2 },
         )
+    }
+}
+
+impl AddAssign for Stats {
+    fn add_assign(&mut self, rhs: Self) {
+        self.downloaded += rhs.downloaded;
+        self.uploaded += rhs.uploaded;
+        self.requests += rhs.requests;
+        self.time += rhs.time;
+        self.latency += rhs.latency;
     }
 }
 
