@@ -71,15 +71,8 @@ impl EdenapiSender {
             cert_path: Some(tls_args.tls_certificate.into()),
             key_path: Some(tls_args.tls_private_key.into()),
             ca_path: Some(tls_args.tls_ca.into()),
-            convert_cert: false,
-
             client_info: Some(ci),
-            disable_tls_verification: false,
-            max_concurrent_requests: None,
-            unix_socket_domains: HashSet::new(),
-            unix_socket_path: None,
-            verbose: false,
-            verbose_stats: false,
+            ..Default::default()
         };
 
         info!(logger, "Connecting to {}", url.to_string());

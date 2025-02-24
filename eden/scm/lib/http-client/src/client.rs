@@ -57,7 +57,12 @@ pub struct Config {
 
     pub client_info: Option<String>,
     pub disable_tls_verification: bool,
+    // This sets curl's max connection limit, and (if `limit_requests==true`) causes this
+    // library to limit the number of in-flight requests separately, _before_ the
+    // requests are given to curl.
     pub max_concurrent_requests: Option<usize>,
+    // Escape hatch to turn off our request limiting.
+    pub limit_requests: bool,
     pub unix_socket_domains: HashSet<String>,
     pub unix_socket_path: Option<String>,
     pub verbose: bool,
@@ -84,6 +89,7 @@ impl Default for Config {
             client_info: None,
             disable_tls_verification: false,
             max_concurrent_requests: None, // No limit by default
+            limit_requests: true,
             unix_socket_domains: HashSet::new(),
             unix_socket_path: None,
             verbose: false,

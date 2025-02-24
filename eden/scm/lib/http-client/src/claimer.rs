@@ -13,13 +13,16 @@ use std::time::Duration;
 /// A glorified atomic counter to limit the number of in-flight requests.
 #[derive(Default, Clone, Debug)]
 pub(crate) struct RequestClaimer {
+    // Separate escape hatch to disable limiting.
+    enable_limiting: bool,
     in_flight_limit: Option<usize>,
     in_flight_count: Arc<AtomicUsize>,
 }
 
 impl RequestClaimer {
-    pub(crate) fn new(limit: Option<usize>) -> Self {
+    pub(crate) fn new(enable_limiting: bool, limit: Option<usize>) -> Self {
         Self {
+            enable_limiting,
             in_flight_limit: limit,
             in_flight_count: Default::default(),
         }
@@ -28,7 +31,12 @@ impl RequestClaimer {
     /// Claim up to `want` request spots, returning claims which free the spot on drop.
     /// Can return zero claims if `want` is zero, or if there are no request slots available.
     pub(crate) fn try_claim_requests(&self, want: usize) -> Vec<RequestClaim> {
-        let max_requests = self.in_flight_limit;
+        let max_requests = if self.enable_limiting {
+            self.in_flight_limit
+        } else {
+            None
+        };
+
         let mut available_requests = 0;
         self.in_flight_count
             .fetch_update(Ordering::AcqRel, Ordering::Acquire, |in_flight| {
@@ -60,6 +68,7 @@ impl RequestClaimer {
 
     pub(crate) fn with_limit(&self, limit: Option<usize>) -> Self {
         Self {
+            enable_limiting: self.enable_limiting,
             in_flight_limit: limit,
             in_flight_count: self.in_flight_count.clone(),
         }
@@ -67,6 +76,7 @@ impl RequestClaimer {
 }
 
 /// Represents a claim of a single request spot. Releases claim on drop.
+#[derive(Default)]
 pub(crate) struct RequestClaim {
     in_flight_count: Arc<AtomicUsize>,
 }
@@ -83,7 +93,7 @@ mod test {
 
     #[test]
     fn test_no_limit_claimer() {
-        let claimer = RequestClaimer::new(None);
+        let claimer = RequestClaimer::new(true, None);
 
         // works
         claimer.claim_request();
@@ -93,7 +103,7 @@ mod test {
 
     #[test]
     fn test_limit_claimer() {
-        let claimer = RequestClaimer::new(Some(5));
+        let claimer = RequestClaimer::new(true, Some(5));
 
         // We ask for 10, but only 5 are available.
         let mut claims = claimer.try_claim_requests(10);

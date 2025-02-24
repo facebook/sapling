@@ -88,6 +88,10 @@ pub fn http_config(
         hc.convert_cert = convert;
     }
 
+    if let Some(limit) = config.get_opt("http", "limit-requests").unwrap_or_default() {
+        hc.limit_requests = limit;
+    }
+
     let using_auth_proxy = hc.unix_socket_path.is_some()
         && url_for_auth
             .domain()
