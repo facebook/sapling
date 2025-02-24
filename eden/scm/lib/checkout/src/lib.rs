@@ -42,7 +42,6 @@ use pathmatcher::DynMatcher;
 use pathmatcher::Matcher;
 use pathmatcher::UnionMatcher;
 use progress_model::ProgressBar;
-use progress_model::Registry;
 use redacted::redact_if_needed;
 use repo::repo::Repo;
 use serde::Deserialize;
@@ -255,8 +254,8 @@ impl CheckoutPlan {
         debug!(skipped_count, "skipped files based on progress");
 
         let total = self.filtered_update_content.len() + self.remove.len() + self.update_meta.len();
-        let bar = &ProgressBar::new("Updating", total as u64, "files");
-        Registry::main().register_progress_bar(bar);
+        let bar = ProgressBar::new_adhoc("Updating", total as u64, "files");
+        let bar = &bar.bar();
 
         // Checkout result.
         let mut stats = CheckoutStats::default();
