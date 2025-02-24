@@ -74,6 +74,21 @@ impl From<slog::Level> for GlogLevel {
     }
 }
 
+impl From<tracing_subscriber::filter::LevelFilter> for GlogLevel {
+    fn from(log_level: tracing_subscriber::filter::LevelFilter) -> GlogLevel {
+        use tracing_subscriber::filter::LevelFilter;
+        match log_level {
+            LevelFilter::OFF => GlogLevel::Fatal,
+            LevelFilter::ERROR => GlogLevel::Error,
+            LevelFilter::WARN => GlogLevel::Warning,
+            // Reduce log spew in dependencies by limiting to warning at info level
+            LevelFilter::INFO => GlogLevel::Warning,
+            // Reduce log spew in dependencies by limiting to info at debug and trace level
+            LevelFilter::DEBUG | LevelFilter::TRACE => GlogLevel::Info,
+        }
+    }
+}
+
 /// Sets the log level used by the glog and C++ logging libraries to match the level use we use.
 /// It can be overridden by setting the GLOG_minloglevel env variable.
 pub fn set_glog_log_level(fb: FacebookInit, level: GlogLevel) -> Result<()> {

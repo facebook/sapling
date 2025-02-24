@@ -32,12 +32,21 @@ use slog_glog_fmt::kv_categorizer::FacebookCategorizer;
 use slog_glog_fmt::kv_defaults::FacebookKV;
 use slog_glog_fmt::GlogFormat;
 use slog_term::TermDecorator;
+use tracing_glog::Glog;
+use tracing_glog::GlogFields;
+use tracing_subscriber::filter;
+use tracing_subscriber::layer::SubscriberExt;
+use tracing_subscriber::Layer;
 
 const LOG_LEVEL_NAMES: [&str; 6] = ["OFF", "ERROR", "WARN", "INFO", "DEBUG", "TRACE"];
 
 /// Command line arguments for spawning slog Logger
 #[derive(Args, Debug)]
 pub struct LoggingArgs {
+    /// Use tracing instead of slog
+    #[clap(long)]
+    pub tracing: bool,
+
     /// Print debug output
     ///
     /// Equivalent to --log-level=DEBUG.
@@ -107,6 +116,48 @@ impl LoggingArgs {
         if let Some(fate) = fate {
             panichandler::set_panichandler(fate);
         }
+    }
+
+    fn setup_tracing(&self, fb: FacebookInit) -> Result<()> {
+        self.setup_panic_handler();
+
+        let default_level = if self.debug {
+            filter::LevelFilter::DEBUG
+        } else {
+            match &self.log_level {
+                Some(log_level_str) => filter::LevelFilter::from_str(log_level_str)?,
+                None => filter::LevelFilter::INFO,
+            }
+        };
+
+        #[cfg(fbcode_build)]
+        crate::glog::set_glog_log_level(fb, default_level.into())?;
+
+        let default_filter = filter::Targets::new()
+            .with_default(default_level)
+            // Make sure noisy dependencies don't pollute the logs
+            .with_target("fb303_core::server", tracing::Level::WARN)
+            .with_target("overload_protection::capacity", tracing::Level::WARN)
+            .with_target("hyper::proto", tracing::Level::WARN)
+            .with_target("runtime", tracing::Level::WARN)
+            .with_target("tokio", tracing::Level::WARN);
+
+        let event_format = Glog::default()
+            .with_timer(tracing_glog::LocalTime::default())
+            .with_span_names(false)
+            .with_target(true);
+
+        let log_layer = tracing_subscriber::fmt::layer()
+            .event_format(event_format)
+            .fmt_fields(GlogFields::default())
+            .with_writer(std::io::stderr)
+            .with_filter(default_filter.clone());
+
+        let subscriber = tracing_subscriber::registry().with(log_layer);
+
+        tracing::subscriber::set_global_default(subscriber)?;
+
+        Ok(())
     }
 
     // Logic copied from: https://fburl.com/code/ygj4muxz
@@ -220,8 +271,13 @@ impl LoggingArgs {
     }
 
     pub fn setup_logging(&self, fb: FacebookInit) -> Result<Logger> {
-        let root_log_drain = Arc::new(self.create_root_log_drain(fb)?);
-        self.create_logger(root_log_drain)
+        if self.tracing {
+            self.setup_tracing(fb)?;
+            Ok(Logger::Tracing)
+        } else {
+            let root_log_drain = Arc::new(self.create_root_log_drain(fb)?);
+            self.create_logger(root_log_drain)
+        }
     }
 }
 
