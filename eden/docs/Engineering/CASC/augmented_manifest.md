@@ -1,0 +1,1 @@
+# Augmented Manifest
