@@ -16,7 +16,7 @@
   >         "bypass_readonly": ["$CLIENT0_ID_TYPE:$CLIENT0_ID_DATA", "X509_SUBJECT_NAME:CN=localhost,O=Mononoke,C=US,ST=CA", "X509_SUBJECT_NAME:CN=client0,O=Mononoke,C=US,ST=CA"]
   >       }
   >     },
-  >     "orig_shadow": {
+  >     "dest": {
   >       "actions": {
   >         "read": ["$CLIENT0_ID_TYPE:$CLIENT0_ID_DATA","SERVICE_IDENTITY:server", "X509_SUBJECT_NAME:CN=localhost,O=Mononoke,C=US,ST=CA", "X509_SUBJECT_NAME:CN=client0,O=Mononoke,C=US,ST=CA"],
   >         "write": ["$CLIENT0_ID_TYPE:$CLIENT0_ID_DATA","SERVICE_IDENTITY:server", "X509_SUBJECT_NAME:CN=localhost,O=Mononoke,C=US,ST=CA", "X509_SUBJECT_NAME:CN=client0,O=Mononoke,C=US,ST=CA"],
@@ -27,8 +27,8 @@
   > }
   > ACLS
 
-  $ REPOID=0 REPONAME=orig ACL_NAME=orig setup_common_config
-  $ REPOID=1 REPONAME=orig_shadow ACL_NAME=orig_shadow setup_common_config
+  $ REPOID=0 REPONAME=orig ACL_NAME=orig setup_common_config 
+  $ REPOID=1 REPONAME=dest ACL_NAME=dest setup_common_config 
 
   $ start_and_wait_for_mononoke_server
 
@@ -56,7 +56,7 @@
   $ hg log > $TESTTMP/hglog.out
 
 Sync all bookmarks moves
-  $ with_stripped_logs mononoke_modern_sync sync-once orig orig_shadow --start-id 0
+  $ with_stripped_logs mononoke_modern_sync sync-once orig dest --start-id 0 
   Running sync-once loop
   Connecting to https://localhost:$LOCAL_PORT/edenapi/
   Established EdenAPI connection

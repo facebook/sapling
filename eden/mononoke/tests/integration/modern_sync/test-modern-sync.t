@@ -16,7 +16,7 @@
   >         "bypass_readonly": ["$CLIENT0_ID_TYPE:$CLIENT0_ID_DATA", "X509_SUBJECT_NAME:CN=localhost,O=Mononoke,C=US,ST=CA", "X509_SUBJECT_NAME:CN=client0,O=Mononoke,C=US,ST=CA"]
   >       }
   >     },
-  >     "orig_shadow": {
+  >     "dest": {
   >       "actions": {
   >         "read": ["$CLIENT0_ID_TYPE:$CLIENT0_ID_DATA","SERVICE_IDENTITY:server", "X509_SUBJECT_NAME:CN=localhost,O=Mononoke,C=US,ST=CA", "X509_SUBJECT_NAME:CN=client0,O=Mononoke,C=US,ST=CA"],
   >         "write": ["$CLIENT0_ID_TYPE:$CLIENT0_ID_DATA","SERVICE_IDENTITY:server", "X509_SUBJECT_NAME:CN=localhost,O=Mononoke,C=US,ST=CA", "X509_SUBJECT_NAME:CN=client0,O=Mononoke,C=US,ST=CA"],
@@ -30,12 +30,12 @@
   >         "mirror_upload": ["$CLIENT0_ID_TYPE:$CLIENT0_ID_DATA","SERVICE_IDENTITY:server", "X509_SUBJECT_NAME:CN=localhost,O=Mononoke,C=US,ST=CA", "X509_SUBJECT_NAME:CN=client0,O=Mononoke,C=US,ST=CA"]
   >       }
   >     }
-  >   }
+  >   }  
   > }
   > ACLS
 
-  $ REPOID=0 REPONAME=orig ACL_NAME=orig setup_common_config
-  $ REPOID=1 REPONAME=orig_shadow ACL_NAME=orig_shadow setup_common_config
+  $ REPOID=0 REPONAME=orig ACL_NAME=orig setup_common_config 
+  $ REPOID=1 REPONAME=dest ACL_NAME=dest setup_common_config 
 
   $ start_and_wait_for_mononoke_server
 
@@ -74,13 +74,13 @@ Sync all bookmarks moves
 
   $ cd ..
 
-  $ hg clone -q mono:orig_shadow orig_shadow --noupdate
-  $ cd orig_shadow
-  $ hg pull
-  pulling from mono:orig_shadow
+  $ hg clone -q mono:dest dest --noupdate
+  $ cd dest
+  $ hg pull 
+  pulling from mono:dest
 
   $ hg log > $TESTTMP/hglog2.out
-  $ hg up master_bookmark
+  $ hg up master_bookmark 
   10 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ ls dir1/dir2
   fifth
@@ -89,16 +89,16 @@ Sync all bookmarks moves
   second
   third
 
-  $ diff  $TESTTMP/hglog.out  $TESTTMP/hglog2.out
+  $ diff  $TESTTMP/hglog.out  $TESTTMP/hglog2.out 
 
-  $ mononoke_admin repo-info  --repo-name orig_shadow --show-commit-count
-  Repo: orig_shadow
+  $ mononoke_admin repo-info  --repo-name dest --show-commit-count
+  Repo: dest
   Repo-Id: 1
   Main-Bookmark: master (not set)
   Commits: 5 (Public: 0, Draft: 5)
 
 // Try to re-sync and hit error cause bookmark can't be re-written
-  $ with_stripped_logs mononoke_modern_sync sync-once orig orig_shadow --start-id 0
+  $ with_stripped_logs mononoke_modern_sync sync-once orig dest --start-id 0
   Running sync-once loop
   Connecting to https://localhost:$LOCAL_PORT/edenapi/
   Established EdenAPI connection
