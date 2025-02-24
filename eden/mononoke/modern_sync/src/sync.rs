@@ -40,7 +40,7 @@ use mercurial_types::HgChangesetId;
 use mercurial_types::HgFileNodeId;
 use mercurial_types::HgManifestId;
 use metadata::Metadata;
-use mononoke_app::args::RepoArg;
+use mononoke_app::args::SourceAndTargetRepoArgs;
 use mononoke_app::MononokeApp;
 use mononoke_types::ChangesetId;
 use mononoke_types::FileChange;
@@ -84,14 +84,16 @@ pub enum ExecutionType {
 pub async fn sync(
     app: Arc<MononokeApp>,
     start_id_arg: Option<u64>,
-    repo_arg: RepoArg,
+    repo_args: SourceAndTargetRepoArgs,
     exec_type: ExecutionType,
     dry_run: bool,
     chunk_size: u64,
 ) -> Result<()> {
-    let repo: Repo = app.open_repo(&repo_arg).await?;
+    let repo: Repo = app.open_repo(&repo_args.source_repo).await?;
     let _repo_id = repo.repo_identity().id();
     let repo_name = repo.repo_identity().name().to_string();
+
+    let dest_repo: Repo = app.open_repo(&repo_args.target_repo).await?;
 
     let config = repo
         .repo_config
@@ -152,12 +154,10 @@ pub async fn sync(
             .clone()
             .ok_or_else(|| format_err!("TLS params not found for repo {}", repo_name))?;
 
-        let dest_repo = app_args.dest_repo_name.clone().unwrap_or(repo_name.clone());
-
         Arc::new(
             EdenapiSender::new(
                 Url::parse(&url)?,
-                dest_repo,
+                dest_repo.repo_identity().name().to_string(),
                 logger.clone(),
                 tls_args,
                 ctx.clone(),
@@ -570,4 +570,21 @@ fn classify_entries(
             }
         }
     }
+}
+
+pub(crate) async fn get_unsharded_repo_args(
+    app: Arc<MononokeApp>,
+    app_args: &ModernSyncArgs,
+) -> Result<SourceAndTargetRepoArgs> {
+    let source_repo: Repo = app.open_repo(&app_args.repo).await?;
+    let source_repo_name = source_repo.repo_identity.name().to_string();
+    let target_repo_name = app_args
+        .dest_repo_name
+        .clone()
+        .unwrap_or(source_repo_name.clone());
+
+    Ok(SourceAndTargetRepoArgs::with_source_and_target_repo_name(
+        source_repo_name.clone(),
+        target_repo_name.clone(),
+    ))
 }

@@ -9,11 +9,11 @@ use std::sync::Arc;
 
 use anyhow::Result;
 use clap::Parser;
-use mononoke_app::args::AsRepoArg;
 use mononoke_app::MononokeApp;
 use slog::info;
 
 use crate::commands::sync_loop::CHUNK_SIZE_DEFAULT;
+use crate::sync::get_unsharded_repo_args;
 use crate::sync::ExecutionType;
 use crate::ModernSyncArgs;
 
@@ -29,13 +29,15 @@ pub struct CommandArgs {
 }
 
 pub async fn run(app: MononokeApp, args: CommandArgs) -> Result<()> {
+    let app = Arc::new(app);
     let app_args = &app.args::<ModernSyncArgs>()?;
+    let repo_args = get_unsharded_repo_args(app.clone(), app_args).await?;
 
     info!(app.logger(), "Running sync-once loop");
     crate::sync::sync(
-        Arc::new(app),
+        app,
         args.start_id.clone(),
-        app_args.repo.as_repo_arg().clone(),
+        repo_args,
         ExecutionType::SyncOnce,
         args.dry_run,
         args.chunk_size.clone().unwrap_or(CHUNK_SIZE_DEFAULT),

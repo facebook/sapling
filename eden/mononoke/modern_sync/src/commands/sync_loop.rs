@@ -8,19 +8,20 @@
 use std::sync::atomic::AtomicBool;
 use std::sync::Arc;
 
+use anyhow::bail;
 use anyhow::Result;
 use async_trait::async_trait;
 use clap::Parser;
 use executor_lib::RepoShardedProcess;
 use executor_lib::RepoShardedProcessExecutor;
-use mononoke_app::args::AsRepoArg;
-use mononoke_app::args::RepoArg;
+use mononoke_app::args::SourceAndTargetRepoArgs;
 use mononoke_app::MononokeApp;
 use sharding_ext::RepoShard;
 use slog::info;
 
 use crate::sync::ExecutionType;
 use crate::ModernSyncArgs;
+use crate::Repo;
 
 const SM_CLEANUP_TIMEOUT_SECS: u64 = 120;
 pub const CHUNK_SIZE_DEFAULT: u64 = 1000;
@@ -49,19 +50,18 @@ impl ModernSyncProcess {
 
 #[async_trait]
 impl RepoShardedProcess for ModernSyncProcess {
-    async fn setup(&self, repo: &RepoShard) -> anyhow::Result<Arc<dyn RepoShardedProcessExecutor>> {
-        Ok(Arc::new(ModernSyncProcessExecutor {
-            app: self.app.clone(),
-            sync_args: self.sync_args.clone(),
-            repo_arg: RepoArg::Name(repo.repo_name.clone()),
-        }))
+    async fn setup(
+        &self,
+        _repo: &RepoShard,
+    ) -> anyhow::Result<Arc<dyn RepoShardedProcessExecutor>> {
+        bail!("we cannot run sharded sync yet")
     }
 }
 
 pub struct ModernSyncProcessExecutor {
     app: Arc<MononokeApp>,
     sync_args: Arc<CommandArgs>,
-    repo_arg: RepoArg,
+    repo_args: SourceAndTargetRepoArgs,
 }
 
 #[async_trait]
@@ -70,7 +70,7 @@ impl RepoShardedProcessExecutor for ModernSyncProcessExecutor {
         crate::sync::sync(
             self.app.clone(),
             self.sync_args.start_id,
-            self.repo_arg.clone(),
+            self.repo_args.clone(),
             ExecutionType::Tail,
             self.sync_args.dry_run,
             self.sync_args.chunk_size.unwrap_or(CHUNK_SIZE_DEFAULT),
@@ -104,10 +104,29 @@ pub async fn run(app: MononokeApp, args: CommandArgs) -> Result<()> {
             .await?;
     } else {
         info!(logger, "Running unsharded sync loop");
+
+        let source_repo: Repo = process.app.clone().open_repo(&app_args.repo).await?;
+        let source_repo_name = source_repo.repo_identity.name().to_string();
+        let target_repo_name = app_args
+            .dest_repo_name
+            .clone()
+            .unwrap_or(source_repo_name.clone());
+        let repo_args = SourceAndTargetRepoArgs::with_source_and_target_repo_name(
+            source_repo_name.clone(),
+            target_repo_name.clone(),
+        );
+
+        info!(
+            logger,
+            "Setting up unsharded sync from repo {:?} to repo {:?}",
+            source_repo_name,
+            target_repo_name,
+        );
+
         crate::sync::sync(
             process.app.clone(),
             process.sync_args.start_id.clone(),
-            app_args.repo.as_repo_arg().clone(),
+            repo_args,
             ExecutionType::Tail,
             process.sync_args.dry_run.clone(),
             process
