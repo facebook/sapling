@@ -61,8 +61,9 @@ use crate::bul_util;
 use crate::sender::edenapi::EdenapiSender;
 use crate::sender::manager::ChangesetMessage;
 use crate::sender::manager::ContentMessage;
-use crate::sender::manager::FileOrTreeMessage;
+use crate::sender::manager::FileMessage;
 use crate::sender::manager::SendManager;
+use crate::sender::manager::TreeMessage;
 use crate::ModernSyncArgs;
 use crate::Repo;
 
@@ -267,7 +268,7 @@ pub async fn sync(
                                                 ctx,
                                                 repo,
                                                 logger,
-                                                mut send_manager,
+                                                send_manager,
                                                 bookmark_name,
                                                 to_cs,
                                                 cs_tx,
@@ -288,7 +289,7 @@ pub async fn sync(
                                                     &ctx,
                                                     repo,
                                                     &logger,
-                                                    &mut send_manager,
+                                                    &send_manager,
                                                     app_args.log_to_ods,
                                                     bookmark_name.as_str(),
                                                     channel,
@@ -361,7 +362,7 @@ pub async fn process_one_changeset(
     ctx: &CoreContext,
     repo: Repo,
     logger: &Logger,
-    send_manager: &mut SendManager,
+    send_manager: &SendManager,
     log_to_ods: bool,
     bookmark_name: &str,
     changeset_ready: Option<mpsc::Sender<Result<()>>>,
@@ -396,9 +397,13 @@ pub async fn process_one_changeset(
     }
 
     // Notify contents for this changeset are ready
-    let (content_tx, content_rx) = oneshot::channel();
+    let (content_files_tx, content_files_rx) = oneshot::channel();
+    let (content_trees_tx, content_trees_rx) = oneshot::channel();
     send_manager
-        .send_content(ContentMessage::ContentDone(content_tx))
+        .send_content(ContentMessage::ContentDone(
+            content_files_tx,
+            content_trees_tx,
+        ))
         .await?;
 
     let mut mf_ids_p = vec![];
@@ -421,30 +426,40 @@ pub async fn process_one_changeset(
 
     // Send files and trees
     send_manager
-        .send_file_or_tree(FileOrTreeMessage::WaitForContents(content_rx))
+        .send_file(FileMessage::WaitForContents(content_files_rx))
         .await?;
 
-    for mf_id in mf_ids {
-        send_manager
-            .send_file_or_tree(FileOrTreeMessage::Tree(mf_id))
-            .await?;
-    }
-
-    for file_id in file_ids {
-        send_manager
-            .send_file_or_tree(FileOrTreeMessage::FileNode(file_id))
-            .await?;
-    }
+    send_manager
+        .send_tree(TreeMessage::WaitForContents(content_trees_rx))
+        .await?;
 
     // Notify files and trees for this changeset are ready
-    let (ft_tx, ft_rx) = oneshot::channel();
-    send_manager
-        .send_file_or_tree(FileOrTreeMessage::FilesAndTreesDone(ft_tx))
-        .await?;
+    let (f_tx, f_rx) = oneshot::channel();
+    let (t_tx, t_rx) = oneshot::channel();
+
+    let (_, _) = tokio::try_join!(
+        async {
+            for mf_id in mf_ids {
+                send_manager.send_tree(TreeMessage::Tree(mf_id)).await?;
+            }
+            send_manager.send_tree(TreeMessage::TreesDone(t_tx)).await?;
+            anyhow::Ok(())
+        },
+        async {
+            cloned!(send_manager);
+            for file_id in file_ids {
+                send_manager
+                    .send_file(FileMessage::FileNode(file_id))
+                    .await?;
+            }
+            send_manager.send_file(FileMessage::FilesDone(f_tx)).await?;
+            anyhow::Ok(())
+        }
+    )?;
 
     // Upload changeset
     send_manager
-        .send_changeset(ChangesetMessage::WaitForFilesAndTrees(ft_rx))
+        .send_changeset(ChangesetMessage::WaitForFilesAndTrees(f_rx, t_rx))
         .await?;
     send_manager
         .send_changeset(ChangesetMessage::Changeset((hg_cs, bs_cs)))

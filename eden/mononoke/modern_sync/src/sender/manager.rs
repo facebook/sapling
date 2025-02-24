@@ -42,7 +42,8 @@ define_stats! {
 }
 
 const CONTENT_CHANNEL_SIZE: usize = 8000;
-const FILES_AND_TREES_CHANNEL_SIZE: usize = 10000;
+const FILES_CHANNEL_SIZE: usize = 10000;
+const TREES_CHANNEL_SIZE: usize = 10000;
 const CHANGESET_CHANNEL_SIZE: usize = 5000;
 
 const FLUSH_INTERVAL: Duration = Duration::from_secs(5);
@@ -51,7 +52,8 @@ const MAX_CHANGESET_BATCH_SIZE: usize = 10;
 #[derive(Clone)]
 pub struct SendManager {
     content_sender: mpsc::Sender<ContentMessage>,
-    files_and_trees_sender: mpsc::Sender<FileOrTreeMessage>,
+    files_sender: mpsc::Sender<FileMessage>,
+    trees_sender: mpsc::Sender<TreeMessage>,
     changeset_sender: mpsc::Sender<ChangesetMessage>,
 }
 
@@ -59,23 +61,30 @@ pub enum ContentMessage {
     // Send the content to remote end
     Content((AnyFileContentId, FileContents)),
     // Finished sending content of a changeset. Go ahead with files and trees
-    ContentDone(oneshot::Sender<Result<()>>),
+    ContentDone(oneshot::Sender<Result<()>>, oneshot::Sender<Result<()>>),
 }
 
-pub enum FileOrTreeMessage {
-    // Wait for contents to be sent before sending files and trees
+pub enum TreeMessage {
+    // Wait for contents to be sent before sending trees
+    WaitForContents(oneshot::Receiver<Result<()>>),
+    // Send the tree to remote end
+    Tree(HgManifestId),
+    // Finished sending trees. Go ahead with changesets
+    TreesDone(oneshot::Sender<Result<()>>),
+}
+
+pub enum FileMessage {
+    // Wait for contents to be sent before sending files
     WaitForContents(oneshot::Receiver<Result<()>>),
     // Send the file node to remote end
     FileNode(HgFileNodeId),
-    // Send the tree to remote end
-    Tree(HgManifestId),
-    // Finished sending files and trees. Go ahead with changesets
-    FilesAndTreesDone(oneshot::Sender<Result<()>>),
+    // Finished sending files. Go ahead with changesets
+    FilesDone(oneshot::Sender<Result<()>>),
 }
 
 pub enum ChangesetMessage {
     // Wait for files and trees to be sent before sending changesets
-    WaitForFilesAndTrees(oneshot::Receiver<Result<()>>),
+    WaitForFilesAndTrees(oneshot::Receiver<Result<()>>, oneshot::Receiver<Result<()>>),
     // Send the changeset to remote end
     Changeset((HgBlobChangeset, BonsaiChangeset)),
     // Notify changeset sending is done
@@ -95,12 +104,20 @@ impl SendManager {
             logger.clone(),
         );
 
-        // Create channel for receiving files and trees
-        let (files_and_trees_sender, files_and_trees_recv) =
-            mpsc::channel(FILES_AND_TREES_CHANNEL_SIZE);
-        Self::spawn_files_and_trees_sender(
+        // Create channel for receiving files
+        let (files_sender, files_recv) = mpsc::channel(FILES_CHANNEL_SIZE);
+        Self::spawn_files_sender(
             reponame.clone(),
-            files_and_trees_recv,
+            files_recv,
+            external_sender.clone(),
+            logger.clone(),
+        );
+
+        // Create channel for receiving trees
+        let (trees_sender, trees_recv) = mpsc::channel(TREES_CHANNEL_SIZE);
+        Self::spawn_trees_sender(
+            reponame.clone(),
+            trees_recv,
             external_sender.clone(),
             logger.clone(),
         );
@@ -116,7 +133,8 @@ impl SendManager {
 
         Self {
             content_sender,
-            files_and_trees_sender,
+            files_sender,
+            trees_sender,
             changeset_sender,
         }
     }
@@ -141,13 +159,16 @@ impl SendManager {
                             STATS::synced_contents.add_value(1, (reponame.clone(),));
                         }
                     }
-                    ContentMessage::ContentDone(sender) => {
+                    ContentMessage::ContentDone(files_sender, tree_sender) => {
                         if let Some(e) = encountered_error {
-                            error!(content_logger, "Error processing content: {:?}", e);
-                            let _ = sender.send(Err(e));
+                            let msg = format!("Error processing content: {:?}", e);
+                            error!(content_logger, "{}", msg);
+                            let _ = files_sender.send(Err(anyhow::anyhow!(msg.clone())));
+                            let _ = tree_sender.send(Err(anyhow::anyhow!(msg)));
                             return;
                         } else {
-                            let res = sender.send(Ok(()));
+                            let res = files_sender.send(Ok(()));
+                            let _ = tree_sender.send(Ok(()));
                             if let Err(e) = res {
                                 error!(content_logger, "Error sending content ready: {:?}", e);
                                 return;
@@ -159,23 +180,23 @@ impl SendManager {
         });
     }
 
-    fn spawn_files_and_trees_sender(
+    fn spawn_files_sender(
         reponame: String,
-        mut files_and_trees_recv: mpsc::Receiver<FileOrTreeMessage>,
-        files_trees_es: Arc<EdenapiSender>,
-        files_trees_logger: Logger,
+        mut files_recv: mpsc::Receiver<FileMessage>,
+        files_es: Arc<EdenapiSender>,
+        files_logger: Logger,
     ) {
         mononoke::spawn_task(async move {
             let mut encountered_error: Option<anyhow::Error> = None;
-            while let Some(msg) = files_and_trees_recv.recv().await {
+            while let Some(msg) = files_recv.recv().await {
                 match msg {
-                    FileOrTreeMessage::WaitForContents(receiver) => {
+                    FileMessage::WaitForContents(receiver) => {
                         // Read outcome from content upload
                         let start = std::time::Instant::now();
                         match receiver.await {
                             Ok(Err(e)) => {
                                 encountered_error.get_or_insert(e.context(
-                                    "Contents error received. Winding down files/trees sender.",
+                                    "Contents error received. Winding down files sender.",
                                 ));
                             }
                             Err(e) => {
@@ -189,9 +210,9 @@ impl SendManager {
                         let elapsed = start.elapsed().as_secs();
                         STATS::content_wait_time_s.add_value(elapsed as i64, (reponame.clone(),));
                     }
-                    FileOrTreeMessage::FileNode(f) if encountered_error.is_none() => {
+                    FileMessage::FileNode(f) if encountered_error.is_none() => {
                         // Upload the file nodes through sender
-                        if let Err(e) = files_trees_es.upload_filenodes(vec![(f)]).await {
+                        if let Err(e) = files_es.upload_filenodes(vec![(f)]).await {
                             encountered_error.get_or_insert(
                                 e.context(format!("Failed to upload filenodes: {:?}", f)),
                             );
@@ -199,9 +220,58 @@ impl SendManager {
                             STATS::synced_filenodes.add_value(1, (reponame.clone(),));
                         }
                     }
-                    FileOrTreeMessage::Tree(t) if encountered_error.is_none() => {
+                    FileMessage::FilesDone(sender) => {
+                        if let Some(e) = encountered_error {
+                            error!(files_logger, "Error processing files/trees: {:?}", e);
+                            let _ = sender.send(Err(e));
+                            return;
+                        } else {
+                            let res = sender.send(Ok(()));
+                            if let Err(e) = res {
+                                error!(files_logger, "Error sending content ready: {:?}", e);
+                                return;
+                            }
+                        }
+                    }
+                    FileMessage::FileNode(_) => (),
+                }
+            }
+        });
+    }
+
+    fn spawn_trees_sender(
+        reponame: String,
+        mut trees_recv: mpsc::Receiver<TreeMessage>,
+        trees_es: Arc<EdenapiSender>,
+        trees_logger: Logger,
+    ) {
+        mononoke::spawn_task(async move {
+            let mut encountered_error: Option<anyhow::Error> = None;
+            while let Some(msg) = trees_recv.recv().await {
+                match msg {
+                    TreeMessage::WaitForContents(receiver) => {
+                        // Read outcome from content upload
+                        let start = std::time::Instant::now();
+                        match receiver.await {
+                            Ok(Err(e)) => {
+                                encountered_error.get_or_insert(e.context(
+                                    "Contents error received. Winding down trees sender.",
+                                ));
+                            }
+                            Err(e) => {
+                                encountered_error.get_or_insert(anyhow::anyhow!(format!(
+                                    "Error waiting for contents: {:#}",
+                                    e
+                                )));
+                            }
+                            _ => (),
+                        }
+                        let elapsed = start.elapsed().as_secs();
+                        STATS::content_wait_time_s.add_value(elapsed as i64, (reponame.clone(),));
+                    }
+                    TreeMessage::Tree(t) if encountered_error.is_none() => {
                         // Upload the trees through sender
-                        if let Err(e) = files_trees_es.upload_trees(vec![t]).await {
+                        if let Err(e) = trees_es.upload_trees(vec![t]).await {
                             encountered_error.get_or_insert(
                                 e.context(format!("Failed to upload trees: {:?}", t)),
                             );
@@ -209,20 +279,20 @@ impl SendManager {
                             STATS::synced_trees.add_value(1, (reponame.clone(),));
                         }
                     }
-                    FileOrTreeMessage::FilesAndTreesDone(sender) => {
+                    TreeMessage::TreesDone(sender) => {
                         if let Some(e) = encountered_error {
-                            error!(files_trees_logger, "Error processing files/trees: {:?}", e);
+                            error!(trees_logger, "Error processing files/trees: {:?}", e);
                             let _ = sender.send(Err(e));
                             return;
                         } else {
                             let res = sender.send(Ok(()));
                             if let Err(e) = res {
-                                error!(files_trees_logger, "Error sending content ready: {:?}", e);
+                                error!(trees_logger, "Error sending content ready: {:?}", e);
                                 return;
                             }
                         }
                     }
-                    FileOrTreeMessage::FileNode(_) | FileOrTreeMessage::Tree(_) => (),
+                    TreeMessage::Tree(_) => (),
                 }
             }
         });
@@ -247,25 +317,25 @@ impl SendManager {
                 tokio::select! {
                     msg = changeset_recv.recv() => {
                         match msg {
-                            Some(ChangesetMessage::WaitForFilesAndTrees(receiver)) => {
+                            Some(ChangesetMessage::WaitForFilesAndTrees(files_receiver, trees_receiver)) => {
                                 // Read outcome from files and trees upload
                                 let start = std::time::Instant::now();
-                                match receiver.await {
-                                    Ok(Err(e)) => {
-                                        encountered_error.get_or_insert(e.context(
-                                            "Files/trees error received. Winding down changesets sender.",
-                                        ));
+                                match tokio::try_join!(files_receiver, trees_receiver)  {
+                                    Ok((res_files, res_trees))=> {
+                                        if res_files.is_err() || res_trees.is_err() {
+                                            error!(changeset_logger, "Error processing files/trees: {:?} {:?}", res_files, res_trees);
+                                            encountered_error.get_or_insert(anyhow::anyhow!(
+                                                "Files/trees error received. Winding down changesets sender.",
+                                            ));
+                                        }
+                                        let elapsed = start.elapsed().as_secs();
+                                        STATS::trees_files_wait_time_s.add_value(elapsed as i64, (reponame.clone(),));
                                     }
                                     Err(e) => {
                                         encountered_error.get_or_insert(anyhow::anyhow!(
                                             "Error waiting for files/trees error received {:#}",
                                             e
                                         ));
-                                    }
-                                    _ => {
-                                        let elapsed = start.elapsed().as_secs();
-                                        STATS::trees_files_wait_time_s
-                                            .add_value(elapsed as i64, (reponame.clone(),));
                                     }
                                 }
                             }
@@ -382,21 +452,28 @@ impl SendManager {
         });
     }
 
-    pub async fn send_content(&mut self, content_msg: ContentMessage) -> Result<()> {
+    pub async fn send_content(&self, content_msg: ContentMessage) -> Result<()> {
         self.content_sender
             .send(content_msg)
             .await
             .map_err(|err| err.into())
     }
 
-    pub async fn send_file_or_tree(&mut self, ft_msg: FileOrTreeMessage) -> Result<()> {
-        self.files_and_trees_sender
+    pub async fn send_file(&self, ft_msg: FileMessage) -> Result<()> {
+        self.files_sender
             .send(ft_msg)
             .await
             .map_err(|err| err.into())
     }
 
-    pub async fn send_changeset(&mut self, cs_msg: ChangesetMessage) -> Result<()> {
+    pub async fn send_tree(&self, ft_msg: TreeMessage) -> Result<()> {
+        self.trees_sender
+            .send(ft_msg)
+            .await
+            .map_err(|err| err.into())
+    }
+
+    pub async fn send_changeset(&self, cs_msg: ChangesetMessage) -> Result<()> {
         self.changeset_sender
             .send(cs_msg)
             .await
