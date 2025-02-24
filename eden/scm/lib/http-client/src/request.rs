@@ -189,6 +189,7 @@ pub struct Request {
     verbose: bool,
     convert_cert: bool,
     auth_proxy_socket_path: Option<String>,
+    limit_response_buffering: bool,
 }
 
 static REQUEST_CREATION_LISTENERS: Lazy<RwLock<RequestCreationEventListeners>> =
@@ -281,6 +282,7 @@ impl Request {
             verbose: false,
             convert_cert: false,
             auth_proxy_socket_path: None,
+            limit_response_buffering: false,
         }
     }
 
@@ -532,6 +534,14 @@ impl Request {
     /// to debug low-level protocol issues.
     pub fn verbose(mut self, verbose: bool) -> Self {
         self.set_verbose(verbose);
+        self
+    }
+
+    /// Configure whether the response body processing should use a limited or
+    /// unlimited queue. This should always be enabled except when something is
+    /// wrong with the limiting itself.
+    pub fn set_limit_response_buffering(&mut self, limit: bool) -> &mut Self {
+        self.limit_response_buffering = limit;
         self
     }
 

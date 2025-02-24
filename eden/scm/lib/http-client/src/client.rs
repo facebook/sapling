@@ -67,6 +67,8 @@ pub struct Config {
     pub max_concurrent_requests: Option<usize>,
     // Escape hatch to turn off our request limiting.
     pub limit_requests: bool,
+    // Escape hatch to turn off our response body limiting.
+    pub limit_response_buffering: bool,
     pub unix_socket_domains: HashSet<String>,
     pub unix_socket_path: Option<String>,
     pub verbose: bool,
@@ -94,6 +96,7 @@ impl Default for Config {
             disable_tls_verification: false,
             max_concurrent_requests: None, // No limit by default
             limit_requests: true,
+            limit_response_buffering: true,
             unix_socket_domains: HashSet::new(),
             unix_socket_path: None,
             verbose: false,
@@ -425,6 +428,8 @@ impl HttpClient {
 
         req.set_verify_tls_cert(!self.config.disable_tls_verification);
         req.set_verify_tls_host(!self.config.disable_tls_verification);
+
+        req.set_limit_response_buffering(self.config.limit_response_buffering);
 
         req
     }

@@ -92,6 +92,13 @@ pub fn http_config(
         hc.limit_requests = limit;
     }
 
+    if let Some(limit) = config
+        .get_opt("http", "limit-response-buffering")
+        .unwrap_or_default()
+    {
+        hc.limit_response_buffering = limit;
+    }
+
     let using_auth_proxy = hc.unix_socket_path.is_some()
         && url_for_auth
             .domain()
