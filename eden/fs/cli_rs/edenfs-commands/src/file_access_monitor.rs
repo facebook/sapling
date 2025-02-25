@@ -151,6 +151,14 @@ struct ReadCmd {
         required = false
     )]
     verbose: bool,
+
+    #[clap(
+        help = "Specify the maximum number of PIDs to be displayed in the output. If set to 0, all PIDs will be displayed.",
+        short = 'k',
+        required = false,
+        default_value = "10"
+    )]
+    count: usize,
 }
 
 #[derive(Serialize, Deserialize, Debug)]
