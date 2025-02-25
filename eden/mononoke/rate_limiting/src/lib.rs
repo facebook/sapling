@@ -212,19 +212,20 @@ impl LoadShedLimit {
         }
 
         // Fetch the counter
-        let value = match self.raw_config.load_shedding_metric.clone() {
+        let (metric_string, value) = match self.raw_config.load_shedding_metric.clone() {
             LoadSheddingMetric::local_fb303_counter(metric) => {
                 let metric = metric.to_string();
-                STATS::load_shed_counter.get_value(fb, (metric.clone(),))
+                (
+                    metric.clone(),
+                    STATS::load_shed_counter.get_value(fb, (metric,)),
+                )
             }
-            _ => None,
+            _ => ("".to_string(), None),
         };
-
-        let metric = self.raw_config.metric.to_string();
 
         match value {
             Some(value) if value > self.raw_config.limit => {
-                log_or_enforce_status(self.raw_config.clone(), metric, value, scuba)
+                log_or_enforce_status(self.raw_config.clone(), metric_string, value, scuba)
             }
             _ => LoadShedResult::Pass,
         }
