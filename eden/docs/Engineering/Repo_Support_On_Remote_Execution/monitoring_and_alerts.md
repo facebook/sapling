@@ -4,7 +4,7 @@ The ownership of the Source Control Management (SCM) on Remote Execution (RE) is
 
 * **The Source Control Team** is responsible for the [SCM Repo Manager Thrift Service](https://www.internalfb.com/wiki/Source_Control/Engineering/Repo_Support_On_Remote_Execution/scm_repo_manager)
 and the underlying "scm resources": EdenFS, Sapling, Watchman, Source Control configuration, and dependencies such as CASC or Mononoke.
-* **The Remote Execution Team** is responsible for the `scm-repo-support` platform.
+* **The Remote Execution Team** is responsible for the `scm-repo-support` platform. It maintains the fleet of agents running the workers attached to the repo managers. It also receives the alerts for queues and exceptions. [Conveyor](https://www.internalfb.com/svc/services/remote_execution/scm_agent/conveyor/remote_execution/scm_agent/releases) should regularly push stable versions of the RE fbpkgs alongside newly built SCM fbpkgs.
 
 ## Source Control
 
@@ -16,6 +16,13 @@ We are using the SLICK helpers to define the alerts (like `create_slo_burn_rate_
 
 ## Remote Execution
 
+Remote Execution [Platform SLO page](https://www.internalfb.com/slick?service=remote_execution%2Fremote_execution&tab=Details&aggregation=DAY&heat_map_period=WEEK&bucket=Global&sli=scm-repo-support%20reliability)
+
+Remote Execution [Platform Health Unidash](https://fburl.com/unidash/lje68er5)
+
+Remote Execution [Platform UI](https://fburl.com/remote_execution/shnouevp): `bunnylol replatform scm-repo-support`
+
+Remote Execution Use Case UI: `bunnylol reusecase <NAME>` (e.g. https://fburl.com/remote_execution/k80b45ie)
 
 **Oncall Rotation**: [remote_execution](https://www.internalfb.com/omh/view/remote_execution)
 
