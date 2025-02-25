@@ -50,10 +50,7 @@ impl ModernSyncProcess {
 
 #[async_trait]
 impl RepoShardedProcess for ModernSyncProcess {
-    async fn setup(
-        &self,
-        _repo: &RepoShard,
-    ) -> anyhow::Result<Arc<dyn RepoShardedProcessExecutor>> {
+    async fn setup(&self, repo: &RepoShard) -> anyhow::Result<Arc<dyn RepoShardedProcessExecutor>> {
         let logger = self.app.logger().clone();
 
         let source_repo_name = repo.repo_name.clone();
