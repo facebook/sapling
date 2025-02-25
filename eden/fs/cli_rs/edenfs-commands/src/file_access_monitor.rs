@@ -142,6 +142,26 @@ struct ReadCmd {
     path: String,
 }
 
+struct File {
+    path: String,
+}
+
+struct Process {
+    pid: u64,
+    ppid: u64,
+    uid: u64,
+    ancestors: Vec<u64>,
+    args: Vec<String>,
+    command: String,
+}
+
+struct Event {
+    event_type: String,
+    file: File,
+    process: Process,
+    event_timestamp: u64,
+}
+
 #[async_trait]
 impl crate::Subcommand for ReadCmd {
     async fn run(&self) -> Result<ExitCode> {
