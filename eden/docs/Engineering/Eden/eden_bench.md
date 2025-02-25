@@ -17,12 +17,12 @@ We offer three distinct modes for benchmark runs:
 This mode simulates a scenario where all caches are empty, allowing us to measure the impact of remote storage latencies and write I/O on crawling performance.
 <br>
 <br>
-2. **Sapling Prefetch** (`sl`)
+2. **Sapling Prefetch** (`sl_prefetch`)
 In this mode, we prefetch the entire directory into the local Sapling Backing Store level cache (either Sapling Cache or Local CASd cache if CASC configured) before running the crawl.
 This approach helps isolate the benchmarking to scenarios where the Sapling Backing Store level caches are warm.
 <br>
 <br>
-3. **Eden Prefetch** (`eden`)
+3. **Eden Prefetch** (`eden_prefetch`)
 Here, we prefetch the entire directory into all layers of the EdenFS caches before crawling, while cleaning up kernel/page caches to ensure an accurate measurement. This mode is ideal for evaluating the overall caching performance in EdenFS.
 
 
