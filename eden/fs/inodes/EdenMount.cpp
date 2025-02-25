@@ -1634,6 +1634,7 @@ ImmediateFuture<CheckoutResult> EdenMount::checkout(
       .thenTry([this, ctx, stopWatch, oldParent, snapshotHash, checkoutMode](
                    Try<CheckoutResult>&& result) {
         auto fetchStats = ctx->getStatsContext().computeStatistics();
+        auto inodeCounts = getInodeMap()->getInodeCounts();
 
         XLOG(DBG1) << (result.hasValue() ? "" : "failed ") << "checkout for "
                    << this->getPath() << " from " << oldParent << " to "
@@ -1682,7 +1683,11 @@ ImmediateFuture<CheckoutResult> EdenMount::checkout(
             fetchStats.tree.accessCount,
             fetchStats.blob.accessCount,
             fetchStats.blobAuxData.accessCount,
-            numConflicts});
+            numConflicts,
+            inodeCounts.treeCount + inodeCounts.fileCount,
+            inodeCounts.unloadedInodeCount,
+            inodeCounts.periodicLinkedUnloadInodeCount,
+            inodeCounts.periodicUnlinkedUnloadInodeCount});
         return std::move(result);
       });
 }

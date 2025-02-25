@@ -221,6 +221,10 @@ struct FinishedCheckout : public EdenFSEvent {
   uint64_t accessedBlobs = 0;
   uint64_t accessedBlobsAuxData = 0;
   uint64_t numConflicts = 0;
+  uint64_t numLoadedInodes = 0;
+  uint64_t numUnloadedInodes = 0;
+  uint64_t numPeriodicLinkedUnloadedInodes = 0;
+  uint64_t numPeriodicUnlinkedUnloadedInodes = 0;
 
   FinishedCheckout(
       std::string mode,
@@ -232,7 +236,11 @@ struct FinishedCheckout : public EdenFSEvent {
       uint64_t accessedTrees,
       uint64_t accessedBlobs,
       uint64_t accessedBlobsAuxData,
-      uint64_t numConflicts)
+      uint64_t numConflicts,
+      uint64_t numLoadedInodes,
+      uint64_t numUnloadedInodes,
+      uint64_t numPeriodicLinkedUnloadedInodes,
+      uint64_t numPeriodicUnlinkedUnloadedInodes)
       : mode(std::move(mode)),
         duration(duration),
         success(success),
@@ -242,7 +250,11 @@ struct FinishedCheckout : public EdenFSEvent {
         accessedTrees(accessedTrees),
         accessedBlobs(accessedBlobs),
         accessedBlobsAuxData(accessedBlobsAuxData),
-        numConflicts(numConflicts) {}
+        numConflicts(numConflicts),
+        numLoadedInodes(numLoadedInodes),
+        numUnloadedInodes(numUnloadedInodes),
+        numPeriodicLinkedUnloadedInodes(numPeriodicLinkedUnloadedInodes),
+        numPeriodicUnlinkedUnloadedInodes(numPeriodicUnlinkedUnloadedInodes) {}
 
   void populate(DynamicEvent& event) const override {
     event.addString("mode", mode);
@@ -255,6 +267,10 @@ struct FinishedCheckout : public EdenFSEvent {
     event.addInt("accessed_blobs", accessedBlobs);
     event.addInt("accessed_blobs_metadata", accessedBlobsAuxData);
     event.addInt("num_conflicts", numConflicts);
+    event.addInt("loaded_inodes", numLoadedInodes);
+    event.addInt("unloaded_inodes", numUnloadedInodes);
+    event.addInt("linked_unloaded_inodes", numPeriodicLinkedUnloadedInodes);
+    event.addInt("unlinked_unloaded_inodes", numPeriodicUnlinkedUnloadedInodes);
   }
 
   const char* getType() const override {
