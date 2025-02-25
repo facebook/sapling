@@ -461,6 +461,12 @@ fn decode_message(
     // remove single quotes so that "'utf8'" will be accepted
     encoding_or_utf8.retain(|c| *c != 39);
 
+    // This is a quick hack to support the label: "cp949" which is actually equivalent to the
+    // "windows-949" encoding without fixing it [upstream](https://github.com/hsivonen/encoding_rs/blob/main/src/lib.rs#L2349)
+    if *encoding_or_utf8 == b"cp949" {
+        encoding_or_utf8 = BString::from("windows-949");
+    }
+
     let encoding = Encoding::for_label(&encoding_or_utf8).ok_or_else(|| {
         anyhow!(
             "Failed to parse git commit encoding: {encoding:?} {}",
