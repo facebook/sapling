@@ -2254,35 +2254,6 @@ ImmediateFuture<CheckoutResult> EdenServer::checkOutRevision(
             return std::move(result);
           });
 
-  if (config_->getEdenConfig()->runCheckoutOnEdenCPUThreadpool.getValue()) {
-    // This is a temporary workaround for S399431: The checkoutFuture is
-    // scheduled on the EdenServer's EdenCPUThreadPool threadpool. This is a
-    // UnboundedQueueExecutor, which is guaranteed to never block. nor throw
-    // (except OOM), nor execute inline from `add()`. At the time of writing, it
-    // has a default threadpool size of 12.
-    //
-    // Thrift documentation states that "it is almost never a good idea to send
-    // work off Thrift’s CPU worker". However, it also notes that "user code may
-    // delegate the rest of the work to other thread pools, thus shifting load
-    // off Thrift’s CPU Workers thread and letting the thread pick up new
-    // incoming work" but warns that "if there is work offloaded to other thread
-    // pools, there should be backpressure mechanism that would block Thrift CPU
-    // Workers thread when those internal thread pools are overloaded."
-    //
-    // Without backpressure, EdenFS would see an increase in memory pressure.
-    // potential slowdowns, and/or OOMS. EdenFS only allows one checkout at a
-    // time (https://fburl.com/code/a6eoy8wu), which acts as the aformentioned
-    // backpressure mechanism.
-    //
-    // Futher investigation is needed to understand the underlying performance
-    // issues that are causing S399431, likely due to Overlay slowness and
-    // contention of the contents_ lock that is held while doing Overlay IO in
-    // TreeInode::childMaterialized (https://fburl.com/code/gxpaifv3).
-    checkoutFuture = std::move(checkoutFuture)
-                         .semi()
-                         .via(getServerState()->getThreadPool().get());
-  }
-
   return std::move(checkoutFuture).ensure([mountHandle] {});
 }
 

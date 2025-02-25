@@ -1387,17 +1387,6 @@ class EdenConfig : private ConfigSettingManager {
       this};
 
   /**
-   * Controls if EdenFS runs a checkout operation on EdenServer's
-   * EdenCPUThreadPool or using the Thrift CPU workers.
-   *
-   * This is a temporary option to help us mitigate and understand S399431.
-   */
-  ConfigSetting<bool> runCheckoutOnEdenCPUThreadpool{
-      "experimental:run-checkout-on-eden-threadpool",
-      false,
-      this};
-
-  /**
    * Controls if EdenFS runs a prefetch operation serially or not.
    *
    * This is a temporary option to help us mitigate and understand S399431.
