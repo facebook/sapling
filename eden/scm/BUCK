@@ -8,7 +8,7 @@ load("@fbcode_macros//build_defs:cpp_binary.bzl", "cpp_binary")
 load("@fbcode_macros//build_defs:cpp_library.bzl", "cpp_library")
 load("@fbcode_macros//build_defs:export_files.bzl", "export_file")
 load("@fbcode_macros//build_defs:link_group_registry.bzl", "EVICT_FBCODE_DEFAULT_DEV_GROUP_MAP", "PYTHON_EXTREME_LINK_GROUP_THRESHOLD")
-load("@fbcode_macros//build_defs:native_rules.bzl", "buck_command_alias", "buck_filegroup", "buck_sh_binary")
+load("@fbcode_macros//build_defs:native_rules.bzl", "buck_command_alias", "buck_filegroup", "buck_genrule", "buck_sh_binary")
 load("@fbcode_macros//build_defs:python_binary.bzl", "python_binary")
 load("@fbcode_macros//build_defs:python_library.bzl", "python_library")
 load("@fbcode_macros//build_defs:rust_universal_binary.bzl", "rust_universal_binary")
@@ -224,6 +224,33 @@ buck_command_alias(
 buck_sh_binary(
     name = "scm_prompt",
     main = "contrib/scm-prompt.sh",
+)
+
+buck_sh_binary(
+    name = "zsh_completion",
+    main = "contrib/zsh_completion",
+)
+
+buck_genrule(
+    name = "paths.d_mercurial",
+    out = "mercurial",
+    bypass_restricted_cmd = True,
+    cmd = "echo '/opt/facebook/hg/bin' > $OUT",
+    compatible_with = [
+        "ovr_config//os:linux",
+        "ovr_config//os:macos",
+    ],
+)
+
+buck_genrule(
+    name = "system.rc",
+    out = "system.rc",
+    bypass_restricted_cmd = True,
+    cmd = 'echo "%include include_for_rpm.rc" > $OUT',
+    compatible_with = [
+        "ovr_config//os:linux",
+        "ovr_config//os:macos",
+    ],
 )
 
 cpp_binary(
