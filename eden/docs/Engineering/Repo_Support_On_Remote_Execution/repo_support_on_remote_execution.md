@@ -52,6 +52,59 @@ If you're interested in using our platform, please make a post in the [Source Co
     * Shelling out buck commands is not supported due to its high memory requirements and incompatibility with RE's execution model. Please, consider using Sandcastle.
     * Hack scripts are not currently supported as actions, but this feature may be added in the future.
 
+# Demo
+
+This demonstration showcases the execution of the `ls` command within a repository using frecli at the current revision of your repo checkout.
+The SCM overhead is comprised of the `Before action` and `After action`.
+
+```
+ liuba ⛅️  ~/fbsource
+ [🍊] → frecli --platform scm-repo-support -r "$(hg whereami)" exec command -- ls /fbsource
+-------------------------------------Action-------------------------------------
+RE Session ID        : reSessionID-b73a7fe8-4dfb-4c3b-a1e6-1af1c4e4effd
+Action digest        : 01a2df1f57273856572f7d5d6555bd2341e967f151633d5653baf67108c5ccfd:195
+Action result digest : e249dbc087874fd6def5325955ae27bc45b15300672f16ae664f29fb63a2b276:815
+Action status        : success with exit code 0
+-------------------------------------stdout-------------------------------------
+arvr
+buck-out
+fbandroid
+fbcode
+fbobjc
+genai
+opsfiles
+ovrsource-legacy
+PACKAGE
+rocket
+third-party
+tools
+whatsapp
+www
+xplat
+
+-----------------------------------NO stderr------------------------------------
+
+----------------------------------Output files----------------------------------
+
+------------------------------Output file digests-------------------------------
+
+--------------------------------Output symlinks---------------------------------
+
+-----------------------Output directories (tree digests)------------------------
+
+------------------------------------Metadata------------------------------------
+Worker               : tsp_cco/remote_execution/scm_agent.prod/1/23
+Cached               : false
+Execution Dir        : /mnt/remote_execution/execution/23/e5043c4aaeeb413bb49cfd7ae8a6d048
+Queue                : 274.115893ms
+Total time           : 1.110580071s
+  Input fetch        : 2.199974ms
+  Before action      : 966.563128ms
+  Execution          : 130.832861ms
+  After action       : 8.520264ms
+  Output upload      : 1.674673ms
+```
+
 
 # Further Reading:
 * [SCM Repo Manager](https://www.internalfb.com/wiki/Source_Control/Engineering/Repo_Support_On_Remote_Execution/scm_repo_manager)
