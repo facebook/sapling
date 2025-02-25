@@ -57,5 +57,6 @@ If you're interested in using our platform, please make a post in the [Source Co
 * [SCM Repo Manager](https://www.internalfb.com/wiki/Source_Control/Engineering/Repo_Support_On_Remote_Execution/scm_repo_manager)
 * [Monitoring and Alerts](https://www.internalfb.com/wiki/Source_Control/Engineering/Repo_Support_On_Remote_Execution/monitoring_and_alerts)
 * [Hacking on SCM Repository Manager](https://www.internalfb.com/wiki/Source_Control/Engineering/Repo_Support_On_Remote_Execution/development)
+* [Client Success Story](https://fb.workplace.com/groups/1604648659652094/permalink/9258085384308345/)
 * Check out our [resources](https://www.internalfb.com/wiki/Source_Control/Engineering/Repo_Support_On_Remote_Execution/resources) for helpful links
 
