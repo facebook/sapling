@@ -5,6 +5,9 @@
  * GNU General Public License version 2.
  */
 
+use std::sync::Arc;
+use std::sync::RwLock;
+
 use async_trait::async_trait;
 use fbinit::FacebookInit;
 use tokio::time::Duration;
@@ -15,18 +18,22 @@ use crate::CounterManager;
 pub struct OdsCounterManager {}
 
 impl OdsCounterManager {
-    pub fn new(_fb: FacebookInit) -> Self {
-        Self {}
+    pub fn new(_fb: FacebookInit) -> Arc<RwLock<Self>> {
+        Arc::new(RwLock::new(Self {}))
     }
 }
 
 #[async_trait]
 impl CounterManager for OdsCounterManager {
-    async fn add_counter(&mut self, _entity: String, _key: String) {}
+    fn add_counter(&mut self, _entity: String, _key: String) {}
 
-    async fn run_periodic_fetch(&mut self, _interval_duration: Duration) {}
-
-    async fn get_counter_value(&self, _entity: &str, _key: &str) -> Option<f64> {
+    fn get_counter_value(&self, _entity: &str, _key: &str) -> Option<f64> {
         None
     }
+}
+
+pub async fn periodic_fetch_counter(
+    manager: Arc<RwLock<OdsCounterManager>>,
+    interval_duration: Duration,
+) {
 }

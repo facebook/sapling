@@ -32,32 +32,27 @@ const ODS_QUERY_INTERVAL: Duration = Duration::from_secs(5 * 60);
 #[derive(Clone)]
 pub struct OdsCounterManager {
     fb: FacebookInit,
-    counters: Arc<RwLock<HashMap<(String, String), (DateTime<Utc>, Option<f64>)>>>,
+    pub counters: HashMap<(String, String), (DateTime<Utc>, Option<f64>)>,
 }
 
 impl OdsCounterManager {
-    pub fn new(fb: FacebookInit) -> Self {
-        let counters = Arc::new(RwLock::new(HashMap::new()));
-        OdsCounterManager { fb, counters }
+    pub fn new(fb: FacebookInit) -> Arc<RwLock<Self>> {
+        Arc::new(RwLock::new(OdsCounterManager {
+            fb,
+            counters: HashMap::new(),
+        }))
     }
 
-    async fn fetch_counter(&mut self, entity: &str, key: &str) {
-        let client = make_Rapido_srclient!(self.fb).unwrap();
-        let query = OdsQuery::new(entity.to_string(), key.to_string());
-        let start_time = (Utc::now() - ODS_QUERY_INTERVAL).timestamp();
-        let end_time = Utc::now().timestamp();
-        let query_detail = query.query_detail(start_time, end_time, None, None);
-        let result = OdsQuery::query_latest_value(&client, query_detail).await;
+    fn set_counter(&mut self, entity: &str, key: &str, value: Option<f64>) {
+        let counters = &mut self.counters;
 
-        let mut counters = self.counters.write().unwrap();
-
-        match result {
-            Ok(value) => {
+        match value {
+            Some(value) => {
                 if let Some(counter) = counters.get_mut(&(entity.to_string(), key.to_string())) {
                     *counter = (Utc::now(), Some(value));
                 }
             }
-            Err(_) => {
+            None => {
                 if let Some(counter) = counters.get_mut(&(entity.to_string(), key.to_string())) {
                     let (last_fetched, value) = *counter;
                     if Utc::now().signed_duration_since(last_fetched) > ODS_STALENESS_THRESHOLD {
@@ -73,32 +68,62 @@ impl OdsCounterManager {
 
 #[async_trait]
 impl CounterManager for OdsCounterManager {
-    async fn add_counter(&mut self, entity: String, key: String) {
-        let mut counters = self.counters.write().unwrap();
-        counters.insert((entity.clone(), key.clone()), (Utc::now(), None));
+    fn add_counter(&mut self, entity: String, key: String) {
+        self.counters
+            .insert((entity.clone(), key.clone()), (Utc::now(), None));
     }
 
-    async fn run_periodic_fetch(&mut self, interval_duration: Duration) {
-        let mut interval = interval(interval_duration);
-        loop {
-            interval.tick().await;
-            let keys: Vec<(String, String)> =
-                self.counters.read().unwrap().keys().cloned().collect();
-            for (entity, key) in keys {
-                self.fetch_counter(&entity, &key).await;
-            }
-        }
-    }
-
-    async fn get_counter_value(&self, entity: &str, key: &str) -> Option<f64> {
-        match self
-            .counters
-            .read()
-            .unwrap()
+    fn get_counter_value(&self, entity: &str, key: &str) -> Option<f64> {
+        self.counters
             .get(&(entity.to_string(), key.to_string()))
+            .and_then(|(_, value)| *value)
+    }
+}
+
+async fn fetch_counter(fb: FacebookInit, entity: &str, key: &str) -> Option<f64> {
+    let client = make_Rapido_srclient!(fb).unwrap();
+    let query = OdsQuery::new(entity.to_string(), key.to_string());
+    let start_time = (Utc::now() - ODS_QUERY_INTERVAL).timestamp();
+    let end_time = Utc::now().timestamp();
+    let query_detail = query.query_detail(start_time, end_time, None, None);
+    OdsQuery::query_latest_value(&client, query_detail)
+        .await
+        .ok()
+}
+
+pub async fn periodic_fetch_counter(
+    manager: Arc<RwLock<OdsCounterManager>>,
+    interval_duration: Duration,
+) {
+    let mut interval = interval(interval_duration);
+
+    loop {
+        interval.tick().await;
+
+        // Acquire the read guard once to get the keys
+        let (fb, keys) = {
+            let manager = manager.read().unwrap();
+            (
+                manager.fb,
+                manager.counters.keys().cloned().collect::<Vec<_>>(),
+            )
+        };
+
+        // Prepare a vector to store the fetched values
+        let mut fetched_values = Vec::new();
+
+        // Fetch the counter values asynchronously
+        for (entity, key) in &keys {
+            let value = fetch_counter(fb, entity, key).await;
+            fetched_values.push((entity.clone(), key.clone(), value));
+        }
+
+        // Acquire the write guard once to set the counter values
         {
-            Some((_, value)) => *value,
-            None => None,
+            let mut manager = manager.write().unwrap();
+            for (entity, key, value) in fetched_values {
+                manager.set_counter(&entity, &key, value);
+            }
         }
     }
 }
@@ -302,32 +327,25 @@ mod test {
 
     #[mononoke::fbinit_test]
     async fn test_ods_counter_manager(fb: FacebookInit) {
-        let counters = Arc::new(RwLock::new(HashMap::new()));
-        let mut manager = OdsCounterManager {
+        let manager = Arc::new(RwLock::new(OdsCounterManager {
             fb,
-            counters: counters.clone(),
-        };
-
-        let mut clone_counter_manager = manager.clone();
-        mononoke::spawn_task(async move {
-            clone_counter_manager
-                .run_periodic_fetch(Duration::from_secs(1))
-                .await;
-        });
+            counters: HashMap::new(),
+        }));
 
         // Add a new counter
         manager
-            .add_counter("entity".to_string(), "key".to_string())
-            .await;
+            .write()
+            .unwrap()
+            .add_counter("entity".to_string(), "key".to_string());
 
         // Check the counter value
-        let value = manager.get_counter_value("entity", "key").await;
+        let value = manager.read().unwrap().get_counter_value("entity", "key");
+
         assert_eq!(value, None);
 
         // Give it a value
         {
-            let mut counters_lock = counters.write().unwrap();
-            counters_lock.insert(
+            manager.write().unwrap().counters.insert(
                 ("entity".to_string(), "key".to_string()),
                 (Utc::now(), Some(5.0)),
             );
@@ -335,21 +353,31 @@ mod test {
 
         // Check the value of the new counter in counters
         let timestamp = {
-            let read_counters = counters.read().unwrap();
-            let values = read_counters.get(&("entity".to_string(), "key".to_string()));
-
+            let manager_lock = manager.read().unwrap();
+            let values = manager_lock
+                .counters
+                .get(&("entity".to_string(), "key".to_string()))
+                .clone();
             let (timestamp, value) = values.unwrap();
             assert!(timestamp.timestamp() > 0);
             assert_eq!(*value, Some(5.0));
             timestamp.clone()
         };
+
+        let clone = manager.clone();
+
+        mononoke::spawn_task(periodic_fetch_counter(clone, Duration::from_secs(1)));
+
         // Wait for the counter to be fetched
         tokio::time::sleep(Duration::from_secs(2)).await;
 
-        // Check that the timestamp has not been updated, since we havne't been able to fetch a new value
+        // Check that the timestamp has not been updated, since we haven't been able to fetch a new value
         {
-            let read_counters = counters.read().unwrap();
-            let values = read_counters.get(&("entity".to_string(), "key".to_string()));
+            let manager_lock = manager.read().unwrap();
+            let values = manager_lock
+                .counters
+                .get(&("entity".to_string(), "key".to_string()))
+                .clone();
 
             let (second_timestamp, value) = values.unwrap();
             assert_eq!(second_timestamp.timestamp(), timestamp.timestamp());
