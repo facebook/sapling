@@ -5502,6 +5502,12 @@ EdenServiceHandler::semifuture_debugInvalidateNonMaterialized(
   }
 }
 
+folly::SemiFuture<std::unique_ptr<ListRedirectionsResponse>>
+EdenServiceHandler::semifuture_listRedirections(
+    std::unique_ptr<ListRedirectionsRequest>) {
+  NOT_IMPLEMENTED();
+}
+
 void EdenServiceHandler::getStatInfo(
     InternalStats& result,
     std::unique_ptr<GetStatInfoParams> params) {
