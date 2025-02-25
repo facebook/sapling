@@ -191,13 +191,11 @@ install-getdeps:
 # test-clone-resume.t: fails on CI, passes locally on ubuntu-22.04
 # test-commitcloud-sync.t: flaky Last Sync Version on line 812, flips beteen 17 and 16
 # test-config-precedence.t:  output mismatch: DEBUG configloader::hg: spawn ["false"] because * (glob)
+# test-copytrace-amend.t: flaky on github CI, intermittent core dump
 # test-copytrace-heuristics.t:  flaky on github CI, intermittent core dump
 # test-dynamicconfig-unicode.t: output mismatch: cat: .hg/hgrc.dynamic: $ENOENT$
 # test-debugrefreshconfig.t: assumes an internal config location
-# test-fb-ext-copytrace-amend.t: flaky on github CI, intermittent core dump
-# test-fb-ext-fastlog.t: timesout, maybe due to internal endpoint assumptions
-# test-fb-ext-sampling.t: timeout
-# test-fb-ext-smartlog.t: output mismatch
+# test-fastlog.t: timesout, maybe due to internal endpoint assumptions
 # test-help.t: help is different vs internal build
 # test-histedit-fold.t: flaky on github CI, intermittent core dump
 # test-include-fail.t: fails on CI, passes locally on ubuntu-22.04
@@ -205,6 +203,8 @@ install-getdeps:
 # test-matcher-lots-of-globs.t: fails on CI, passes locally on ubuntu-22.04 (needs ~40GiB RAM)
 # test-network-doctor.t: times out
 # test-rust-checkout.t: fails on CI, passes locally on ubuntu-22.04
+# test-sampling.t: timeout
+# test-smartlog.t: output mismatch
 # test-smartlog-interactive.t: smartlog format is different causing output mismatch
 # test-smartlog-interactive-highlighting.t: smartlog format is different causing output mismatch
 GETDEPS_TEST_EXCLUSION_LIST := test-casecollision.t \
@@ -214,13 +214,11 @@ GETDEPS_TEST_EXCLUSION_LIST := test-casecollision.t \
 	test-clone-resume.t \
 	test-commitcloud-sync.t \
 	test-config-precedence.t \
+	test-copytrace-amend.t \
 	test-copytrace-heuristics.t \
 	test-dynamicconfig-unicode.t \
 	test-debugrefreshconfig.t \
-	test-fb-ext-copytrace-amend.t \
-	test-fb-ext-fastlog.t \
-	test-fb-ext-sampling.t \
-	test-fb-ext-smartlog.t \
+	test-fastlog.t \
 	test-help.t \
 	test-histedit-fold.t \
 	test-include-fail.t \
@@ -228,6 +226,8 @@ GETDEPS_TEST_EXCLUSION_LIST := test-casecollision.t \
 	test-matcher-lots-of-globs.t \
 	test-network-doctor.t \
 	test-rust-checkout.t \
+	test-sampling.t \
+	test-smartlog.t \
 	test-smartlog-interactive.t \
 	test-smartlog-interactive-highlighting.t
 
