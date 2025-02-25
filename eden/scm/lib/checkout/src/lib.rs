@@ -106,8 +106,11 @@ pub struct CheckoutPlan {
     /// Files to be removed.
     remove: Vec<RepoPathBuf>,
     /// Files that needs their content updated.
-    update_content: HashMap<RepoPathBuf, UpdateContentAction>,
-    filtered_update_content: HashMap<RepoPathBuf, UpdateContentAction>,
+    /// `None` means the file was already written in a previous, interrupted checkout.
+    update_content: HashMap<RepoPathBuf, Option<UpdateContentAction>>,
+    /// Count of items in update_content we are skipping due to progress (i.e. count of
+    /// `None` values in `update_content`).
+    skipped_updates: usize,
     /// Files that only need X flag updated.
     update_meta: Vec<UpdateMetaAction>,
     progress: Option<Arc<Mutex<CheckoutProgress>>>,
@@ -204,18 +207,17 @@ impl CheckoutPlan {
                     update_meta.push(UpdateMetaAction { path, set_x_flag })
                 }
                 Action::Update(up) => {
-                    update_content.insert(path, UpdateContentAction::new(up));
+                    update_content.insert(path, Some(UpdateContentAction::new(up)));
                 }
             }
         }
-        let filtered_update_content = update_content.clone();
         Self {
             remove,
             update_content,
-            filtered_update_content,
             update_meta,
             progress: None,
             checkout,
+            skipped_updates: 0,
         }
     }
 
@@ -233,7 +235,7 @@ impl CheckoutPlan {
         } else {
             CheckoutProgress::new(path, vfs.clone())?
         };
-        self.filtered_update_content = progress.filter_already_written(&self.update_content);
+        self.skipped_updates = progress.filter_already_written(&mut self.update_content);
         self.progress = Some(Arc::new(Mutex::new(progress)));
         Ok(())
     }
@@ -250,10 +252,14 @@ impl CheckoutPlan {
     pub fn apply_store(&self, store: &dyn FileStore) -> Result<CheckoutStats> {
         let vfs = &self.checkout.vfs;
 
-        let skipped_count = self.update_content.len() - self.filtered_update_content.len();
-        debug!(skipped_count, "skipped files based on progress");
+        debug!(
+            skipped_count = self.skipped_updates,
+            "skipped files based on progress"
+        );
 
-        let total = self.filtered_update_content.len() + self.remove.len() + self.update_meta.len();
+        let total = (self.update_content.len() - self.skipped_updates)
+            + self.remove.len()
+            + self.update_meta.len();
         let bar = ProgressBar::new_adhoc("Updating", total as u64, "files");
         let bar = &bar.bar();
 
@@ -262,9 +268,12 @@ impl CheckoutPlan {
 
         // Task to write file contents using threads.
         let actions: HashMap<_, _> = self
-            .filtered_update_content
+            .update_content
             .iter()
-            .map(|(p, u)| (Key::new(p.clone(), u.content_hgid.clone()), u.clone()))
+            .filter_map(|(p, u)| {
+                u.as_ref()
+                    .map(|u| (Key::new(p.clone(), u.content_hgid.clone()), u.clone()))
+            })
             .collect();
         let keys: Vec<_> = actions.keys().cloned().collect();
         let fetch_data_iter = store.get_content_iter(keys, FetchMode::AllowRemote)?;
@@ -433,10 +442,10 @@ impl CheckoutPlan {
         {
             if vfs.supports_symlinks() {
                 let symlinks = self
-                    .filtered_update_content
+                    .update_content
                     .iter()
                     .filter_map(|(p, a)| {
-                        if a.file_type == FileType::Symlink {
+                        if a.as_ref().is_some_and(|a| a.file_type == FileType::Symlink) {
                             Some(p.as_ref())
                         } else {
                             None
@@ -466,10 +475,10 @@ impl CheckoutPlan {
     }
 
     pub fn apply_store_dry_run(&self, store: &dyn FileStore) -> Result<(usize, u64)> {
-        let keys = self
-            .filtered_update_content
-            .iter()
-            .map(|(p, u)| Key::new(p.clone(), u.content_hgid.clone()));
+        let keys = self.update_content.iter().filter_map(|(p, u)| {
+            u.as_ref()
+                .map(|u| Key::new(p.clone(), u.content_hgid.clone()))
+        });
         let keys: Vec<_> = keys.collect();
         let (mut count, mut size) = (0, 0);
         let iter = store.get_content_iter(keys, FetchMode::AllowRemote)?;
@@ -529,7 +538,7 @@ impl CheckoutPlan {
         let mut update_content_lower_case = HashMap::new();
         if !case_sensitive {
             update_content_lower_case = self
-                .filtered_update_content
+                .update_content
                 .keys()
                 .map(|p| (p.to_lower_case(), p))
                 .collect::<HashMap<_, _>>();
@@ -544,7 +553,7 @@ impl CheckoutPlan {
             bar.set_message(file.to_string());
 
             let (going_to_overwrite, file) = if case_sensitive {
-                (self.filtered_update_content.contains_key(file), file)
+                (self.update_content.contains_key(file), file)
             } else {
                 match update_content_lower_case.get(&file.to_lower_case()) {
                     Some(file) => (true, *file),
@@ -663,7 +672,7 @@ impl CheckoutPlan {
         Self {
             remove: vec![],
             update_content: HashMap::new(),
-            filtered_update_content: HashMap::new(),
+            skipped_updates: 0,
             update_meta: vec![],
             progress: None,
             checkout: Checkout::default_config(vfs),
@@ -877,41 +886,50 @@ impl CheckoutProgress {
         }
     }
 
+    // Set values in `actions` to `None` if `self.state` indicates the file has already been checked out.
     fn filter_already_written(
         &self,
-        actions: &HashMap<RepoPathBuf, UpdateContentAction>,
-    ) -> HashMap<RepoPathBuf, UpdateContentAction> {
+        actions: &mut HashMap<RepoPathBuf, Option<UpdateContentAction>>,
+    ) -> usize {
+        let mut skipped_count = 0;
+
         // TODO: This should be done in parallel. Maybe with the new vfs async batch APIs?
-        let bar = ProgressBar::new_adhoc("Filtering existing", actions.len() as u64, "files");
-        actions
-            .iter()
-            .filter(move |(path, action)| {
-                if let Some((hgid, time, size)) = &self.state.get(*path) {
-                    if *hgid != action.content_hgid {
-                        return true;
-                    }
+        let bar = ProgressBar::new_adhoc("filtering existing", self.state.len() as u64, "files");
+        for (path, (hgid, time, size)) in self.state.iter() {
+            bar.increase_position(1);
+            bar.set_message(path.to_string());
 
-                    bar.increase_position(1);
-                    bar.set_message(path.to_string());
+            let action = match actions.get_mut(path) {
+                Some(action) => action,
+                None => continue,
+            };
 
-                    if let Ok(stat) = self.vfs.metadata(path) {
-                        let time_matches = stat
-                            .modified()
-                            .map(|t| {
-                                t.duration_since(SystemTime::UNIX_EPOCH)
-                                    .map(|d| d.as_millis() == *time)
-                                    .unwrap_or(false)
-                            })
-                            .unwrap_or(false);
-                        if time_matches && &stat.len() == size {
-                            return false;
-                        }
-                    }
+            if action
+                .as_ref()
+                .is_none_or(|action| *hgid != action.content_hgid)
+            {
+                // hgid doesn't match - leave it alone so we check it out again
+                continue;
+            }
+
+            if let Ok(stat) = self.vfs.metadata(path) {
+                let time_matches = stat
+                    .modified()
+                    .map(|t| {
+                        t.duration_since(SystemTime::UNIX_EPOCH)
+                            .map(|d| d.as_millis() == *time)
+                            .unwrap_or(false)
+                    })
+                    .unwrap_or(false);
+                if time_matches && &stat.len() == size {
+                    // Everything matches - clear out action indicating we don't need to check out the file.
+                    *action = None;
+                    skipped_count += 1;
                 }
-                true
-            })
-            .map(|(p, u)| (p.clone(), u.clone()))
-            .collect()
+            }
+        }
+
+        skipped_count
     }
 }
 
@@ -958,13 +976,18 @@ impl fmt::Display for CheckoutPlan {
             writeln!(f, "rm {}", r)?;
         }
         for (p, u) in &self.update_content {
-            let ft = match u.file_type {
-                FileType::Executable => "(x)",
-                FileType::Symlink => "(s)",
-                FileType::Regular => "",
-                FileType::GitSubmodule => continue,
-            };
-            writeln!(f, "up {}=>{}{}", p, u.content_hgid, ft)?;
+            match u {
+                None => writeln!(f, "skipped {p}")?,
+                Some(u) => {
+                    let ft = match u.file_type {
+                        FileType::Executable => "(x)",
+                        FileType::Symlink => "(s)",
+                        FileType::Regular => "",
+                        FileType::GitSubmodule => continue,
+                    };
+                    writeln!(f, "up {}=>{}{}", p, u.content_hgid, ft)?;
+                }
+            }
         }
         for u in &self.update_meta {
             let ch = if u.set_x_flag { "+x" } else { "-x" };
