@@ -334,7 +334,27 @@ mononoke_queries! {
         Option<u8>,
         Option<Timestamp>,
     ) {
-        "SELECT id,
+       mysql( "SELECT id,
+            request_type,
+            repo_id,
+            args_blobstore_key,
+            result_blobstore_key,
+            created_at,
+            started_processing_at,
+            inprogress_last_updated_at,
+            ready_at,
+            polled_at,
+            status,
+            claimed_by,
+            num_retries,
+            failed_at
+        FROM long_running_request_queue
+        FORCE INDEX (list_requests_any)
+        WHERE (
+            inprogress_last_updated_at > {last_update_newer_than} OR
+            (status = 'new' AND created_at > {last_update_newer_than})
+        )")
+        sqlite( "SELECT id,
             request_type,
             repo_id,
             args_blobstore_key,
@@ -352,7 +372,7 @@ mononoke_queries! {
         WHERE (
             inprogress_last_updated_at > {last_update_newer_than} OR
             (status = 'new' AND created_at > {last_update_newer_than})
-        )"
+        )")
     }
 
     read ListRequestsForRepos(last_update_newer_than: Timestamp, >list repo_ids: RepositoryId) -> (
@@ -371,7 +391,27 @@ mononoke_queries! {
         Option<u8>,
         Option<Timestamp>,
     ) {
-        "SELECT id,
+        mysql("SELECT id,
+            request_type,
+            repo_id,
+            args_blobstore_key,
+            result_blobstore_key,
+            created_at,
+            started_processing_at,
+            inprogress_last_updated_at,
+            ready_at,
+            polled_at,
+            status,
+            claimed_by,
+            num_retries,
+            failed_at
+        FROM long_running_request_queue
+        FORCE INDEX (list_requests)
+        WHERE repo_id IN {repo_ids} AND (
+            inprogress_last_updated_at > {last_update_newer_than} OR
+            (status = 'new' AND created_at > {last_update_newer_than})
+        )")
+        sqlite("SELECT id,
             request_type,
             repo_id,
             args_blobstore_key,
@@ -389,7 +429,7 @@ mononoke_queries! {
         WHERE repo_id IN {repo_ids} AND (
             inprogress_last_updated_at > {last_update_newer_than} OR
             (status = 'new' AND created_at > {last_update_newer_than})
-        )"
+        )")
     }
 
     read GetQueueLengthForRepos(>list repo_ids: RepositoryId) -> (

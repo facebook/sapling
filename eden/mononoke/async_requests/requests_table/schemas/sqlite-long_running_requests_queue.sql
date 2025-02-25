@@ -28,3 +28,5 @@ CREATE INDEX IF NOT EXISTS `long_running_request_queue_request_creation` ON `lon
 CREATE INDEX IF NOT EXISTS `long_running_request_queue_request_dequeue` ON `long_running_request_queue` (`status`, `repo_id`, `created_at`);
 CREATE INDEX IF NOT EXISTS `long_running_request_queue_abandoned_request_index` ON `long_running_request_queue` (`repo_id`, `status`, `inprogress_last_updated_at`);
 CREATE INDEX IF NOT EXISTS `long_running_request_queue_abandoned_request_index_any` ON `long_running_request_queue` (`status`, `inprogress_last_updated_at`);
+CREATE INDEX IF NOT EXISTS `long_running_request_queue_list_requests` ON `long_running_request_queue` (`status`, `repo_id`, `inprogress_last_updated_at`, `created_at`);
+CREATE INDEX IF NOT EXISTS `long_running_request_queue_list_requests_any` ON `long_running_request_queue` (`status`, `inprogress_last_updated_at`, `created_at`);
