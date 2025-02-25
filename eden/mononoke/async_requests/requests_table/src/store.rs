@@ -114,7 +114,7 @@ mononoke_queries! {
         Option<u8>,
         Option<Timestamp>,
     ) {
-        "SELECT id,
+        mysql("SELECT id,
             request_type,
             repo_id,
             args_blobstore_key,
@@ -132,7 +132,26 @@ mononoke_queries! {
         WHERE status = 'new' AND repo_id IS NULL
         ORDER BY created_at ASC
         LIMIT 1
-        "
+        ")
+        sqlite("SELECT id,
+            request_type,
+            repo_id,
+            args_blobstore_key,
+            result_blobstore_key,
+            created_at,
+            started_processing_at,
+            inprogress_last_updated_at,
+            ready_at,
+            polled_at,
+            status,
+            claimed_by,
+            num_retries,
+            failed_at
+        FROM long_running_request_queue
+        WHERE status = 'new' AND repo_id IS NULL
+        ORDER BY created_at ASC
+        LIMIT 1
+        ")
     }
 
     read GetOneNewRequestForRepos(>list supported_repo_ids: RepositoryId) -> (
@@ -166,7 +185,6 @@ mononoke_queries! {
             num_retries,
             failed_at
         FROM long_running_request_queue
-        FORCE INDEX (request_dequeue)
         WHERE status = 'new' AND repo_id IN {supported_repo_ids}
         ORDER BY created_at ASC
         LIMIT 1
