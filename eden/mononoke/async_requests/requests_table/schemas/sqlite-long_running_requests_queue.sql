@@ -17,8 +17,10 @@
   `inprogress_last_updated_at` BIGINT(20) DEFAULT NULL,
   `ready_at` BIGINT(20) DEFAULT NULL,
   `polled_at` BIGINT(20) DEFAULT NULL,
-  `status` VARCHAR(32) NOT NULL, -- enum('new','inprogress','ready','polled') NOT NULL DEFAULT 'new',
-  `claimed_by` VARCHAR(255) NULL
+  `status` VARCHAR(32) NOT NULL, -- enum('new','inprogress','ready','polled','failed') NOT NULL DEFAULT 'new',
+  `claimed_by` VARCHAR(255) NULL,
+  `num_retries` TINYINT UNSIGNED DEFAULT NULL,
+  `failed_at` BIGINT(20) DEFAULT NULL
 );
 
 CREATE INDEX IF NOT EXISTS `long_running_request_queue_request_status` ON `long_running_request_queue` (`status`, `request_type`);

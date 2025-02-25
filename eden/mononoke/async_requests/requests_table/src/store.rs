@@ -43,6 +43,8 @@ mononoke_queries! {
         Option<Timestamp>,
         RequestStatus,
         Option<ClaimedBy>,
+        Option<u8>,
+        Option<Timestamp>,
     ) {
         "SELECT id,
             request_type,
@@ -55,7 +57,9 @@ mononoke_queries! {
             ready_at,
             polled_at,
             status,
-            claimed_by
+            claimed_by,
+            num_retries,
+            failed_at
         FROM long_running_request_queue
         WHERE id = {id}"
     }
@@ -73,6 +77,8 @@ mononoke_queries! {
         Option<Timestamp>,
         RequestStatus,
         Option<ClaimedBy>,
+        Option<u8>,
+        Option<Timestamp>,
     ) {
         "SELECT id,
             request_type,
@@ -85,7 +91,9 @@ mononoke_queries! {
             ready_at,
             polled_at,
             status,
-            claimed_by
+            claimed_by,
+            num_retries,
+            failed_at
         FROM long_running_request_queue
         WHERE id = {id} AND request_type = {request_type}"
     }
@@ -103,6 +111,8 @@ mononoke_queries! {
         Option<Timestamp>,
         RequestStatus,
         Option<ClaimedBy>,
+        Option<u8>,
+        Option<Timestamp>,
     ) {
         "SELECT id,
             request_type,
@@ -115,7 +125,9 @@ mononoke_queries! {
             ready_at,
             polled_at,
             status,
-            claimed_by
+            claimed_by,
+            num_retries,
+            failed_at
         FROM long_running_request_queue
         WHERE status = 'new' AND repo_id IS NULL
         ORDER BY created_at ASC
@@ -136,6 +148,8 @@ mononoke_queries! {
         Option<Timestamp>,
         RequestStatus,
         Option<ClaimedBy>,
+        Option<u8>,
+        Option<Timestamp>,
     ) {
         mysql("SELECT id,
             request_type,
@@ -148,7 +162,9 @@ mononoke_queries! {
             ready_at,
             polled_at,
             status,
-            claimed_by
+            claimed_by,
+            num_retries,
+            failed_at
         FROM long_running_request_queue
         FORCE INDEX (request_dequeue)
         WHERE status = 'new' AND repo_id IN {supported_repo_ids}
@@ -166,7 +182,9 @@ mononoke_queries! {
             ready_at,
             polled_at,
             status,
-            claimed_by
+            claimed_by,
+            num_retries,
+            failed_at
         FROM long_running_request_queue
         WHERE status = 'new' AND repo_id IN {supported_repo_ids}
         ORDER BY created_at ASC
@@ -295,6 +313,8 @@ mononoke_queries! {
         Option<Timestamp>,
         RequestStatus,
         Option<ClaimedBy>,
+        Option<u8>,
+        Option<Timestamp>,
     ) {
         "SELECT id,
             request_type,
@@ -307,7 +327,9 @@ mononoke_queries! {
             ready_at,
             polled_at,
             status,
-            claimed_by
+            claimed_by,
+            num_retries,
+            failed_at
         FROM long_running_request_queue
         WHERE (
             inprogress_last_updated_at > {last_update_newer_than} OR
@@ -328,6 +350,8 @@ mononoke_queries! {
         Option<Timestamp>,
         RequestStatus,
         Option<ClaimedBy>,
+        Option<u8>,
+        Option<Timestamp>,
     ) {
         "SELECT id,
             request_type,
@@ -340,7 +364,9 @@ mononoke_queries! {
             ready_at,
             polled_at,
             status,
-            claimed_by
+            claimed_by,
+            num_retries,
+            failed_at
         FROM long_running_request_queue
         WHERE repo_id IN {repo_ids} AND (
             inprogress_last_updated_at > {last_update_newer_than} OR
@@ -377,7 +403,7 @@ mononoke_queries! {
     ) {
         "SELECT status, min(created_at), min(inprogress_last_updated_at), min(ready_at)
         FROM long_running_request_queue
-        WHERE repo_id IN {repo_ids} AND status != 'polled'
+        WHERE repo_id IN {repo_ids} AND status NOT IN ('polled', 'failed')
         GROUP BY status
         "
     }
@@ -387,7 +413,7 @@ mononoke_queries! {
     ) {
         "SELECT repo_id, status, min(created_at), min(inprogress_last_updated_at), min(ready_at)
         FROM long_running_request_queue
-        WHERE repo_id IN {repo_ids} AND status != 'polled'
+        WHERE repo_id IN {repo_ids} AND status NOT IN ('polled', 'failed')
         GROUP BY repo_id, status
         "
     }
@@ -397,7 +423,7 @@ mononoke_queries! {
     ) {
         "SELECT status, min(created_at), min(inprogress_last_updated_at), min(ready_at)
         FROM long_running_request_queue
-        WHERE status != 'polled'
+        WHERE status NOT IN ('polled', 'failed')
         GROUP BY status
         "
     }
@@ -407,7 +433,7 @@ mononoke_queries! {
     ) {
         "SELECT repo_id, status, min(created_at), min(inprogress_last_updated_at), min(ready_at)
         FROM long_running_request_queue
-        WHERE status != 'polled'
+        WHERE status NOT IN ('polled', 'failed')
         GROUP BY repo_id, status
         "
     }
@@ -427,6 +453,8 @@ fn row_to_entry(
         Option<Timestamp>,
         RequestStatus,
         Option<ClaimedBy>,
+        Option<u8>,
+        Option<Timestamp>,
     ),
 ) -> LongRunningRequestEntry {
     let (
@@ -442,6 +470,8 @@ fn row_to_entry(
         polled_at,
         status,
         claimed_by,
+        num_retries,
+        failed_at,
     ) = row;
     LongRunningRequestEntry {
         id,
@@ -456,6 +486,8 @@ fn row_to_entry(
         polled_at,
         status,
         claimed_by,
+        num_retries,
+        failed_at,
     }
 }
 
@@ -805,7 +837,7 @@ async fn get_queue_age(
                 RequestStatus::New => (status, created_at),
                 RequestStatus::InProgress => (status, inprogress_last_updated_at.unwrap_or(0)),
                 RequestStatus::Ready => (status, ready_at.unwrap_or(0)),
-                RequestStatus::Polled => (status, 0), // should not happen, but if it does we'll ignore
+                RequestStatus::Polled | RequestStatus::Failed => (status, 0), // should not happen, but if it does we'll ignore
             }
         },
     )
@@ -831,7 +863,7 @@ async fn get_queue_age_by_repo(
                     (repo_id, status, inprogress_last_updated_at.unwrap_or(0))
                 }
                 RequestStatus::Ready => (repo_id, status, ready_at.unwrap_or(0)),
-                RequestStatus::Polled => (repo_id, status, 0), // should not happen, but if it does we'll ignore
+                RequestStatus::Polled | RequestStatus::Failed => (repo_id, status, 0), // should not happen, but if it does we'll ignore
             }
         },
     )

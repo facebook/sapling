@@ -101,6 +101,7 @@ pub enum RequestStatus {
     InProgress,
     Ready,
     Polled,
+    Failed,
 }
 
 #[derive(Clone, Debug, Eq, PartialEq)]
@@ -117,6 +118,8 @@ pub struct LongRunningRequestEntry {
     pub polled_at: Option<Timestamp>,
     pub status: RequestStatus,
     pub claimed_by: Option<ClaimedBy>,
+    pub num_retries: Option<u8>,
+    pub failed_at: Option<Timestamp>,
 }
 
 impl std::fmt::Display for RequestStatus {
@@ -128,6 +131,7 @@ impl std::fmt::Display for RequestStatus {
             InProgress => "inprogress",
             Ready => "ready",
             Polled => "polled",
+            Failed => "failed",
         };
         write!(f, "{}", s)
     }
@@ -142,6 +146,7 @@ impl ConvIr<RequestStatus> for RequestStatus {
             Value::Bytes(ref b) if b == b"inprogress" => Ok(InProgress),
             Value::Bytes(ref b) if b == b"ready" => Ok(Ready),
             Value::Bytes(ref b) if b == b"polled" => Ok(Polled),
+            Value::Bytes(ref b) if b == b"failed" => Ok(Failed),
             v => Err(FromValueError(v)),
         }
     }
@@ -168,6 +173,7 @@ impl From<RequestStatus> for Value {
             InProgress => Value::Bytes(b"inprogress".to_vec()),
             Ready => Value::Bytes(b"ready".to_vec()),
             Polled => Value::Bytes(b"polled".to_vec()),
+            Failed => Value::Bytes(b"failed".to_vec()),
         }
     }
 }
