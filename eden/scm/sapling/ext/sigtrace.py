@@ -115,7 +115,6 @@ _runningpid = None
 
 
 def reposetup(ui, repo) -> None:
-    # Do not track known long-running commands.
     interval = ui.configint("sigtrace", "interval")
     if not interval or interval <= 0:
         return
@@ -138,6 +137,8 @@ def reposetup(ui, repo) -> None:
                 # Keep 10 minutes of sigtraces.
                 util.gcdir(dir, 60 * 10)
 
+                # Only track known long-running commands when the "force"
+                # file exists.
                 if knownlongruning:
                     forcefile = "force_sigtrace_%s" % (mypid,)
                     if repo.localvfs.exists(forcefile):
