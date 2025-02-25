@@ -17,7 +17,7 @@ async-trait = "0.1.86"
 backsyncer = { version = "0.1.0", path = ".." }
 blobrepo_hg = { version = "0.1.0", path = "../../../blobrepo/blobrepo_hg" }
 bookmarks = { version = "0.1.0", path = "../../../bookmarks" }
-clap = { version = "4.5.20", features = ["derive", "env", "string", "unicode", "wrap_help"] }
+clap = { version = "4.5.30", features = ["derive", "env", "string", "unicode", "wrap_help"] }
 cloned = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 cmdlib_cross_repo = { version = "0.1.0", path = "../../../cmdlib/cross_repo" }
 cmdlib_logging = { version = "0.1.0", path = "../../../cmdlib/log" }
