@@ -26,7 +26,7 @@ pub use oss::OdsCounterManager;
 
 #[async_trait]
 pub trait CounterManager {
-    fn add_counter(&mut self, entity: String, key: String);
+    fn add_counter(&mut self, entity: String, key: String, reduce: Option<String>);
 
-    fn get_counter_value(&self, entity: &str, key: &str) -> Option<f64>;
+    fn get_counter_value(&self, entity: &str, key: &str, reduce: Option<&str>) -> Option<f64>;
 }

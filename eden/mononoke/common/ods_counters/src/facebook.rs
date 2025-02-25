@@ -32,7 +32,7 @@ const ODS_QUERY_INTERVAL: Duration = Duration::from_secs(5 * 60);
 #[derive(Clone)]
 pub struct OdsCounterManager {
     fb: FacebookInit,
-    pub counters: HashMap<(String, String), (DateTime<Utc>, Option<f64>)>,
+    pub counters: HashMap<(String, String, Option<String>), (DateTime<Utc>, Option<f64>)>,
 }
 
 impl OdsCounterManager {
@@ -43,17 +43,25 @@ impl OdsCounterManager {
         }))
     }
 
-    fn set_counter(&mut self, entity: &str, key: &str, value: Option<f64>) {
+    fn set_counter(&mut self, entity: &str, key: &str, reduce: Option<&str>, value: Option<f64>) {
         let counters = &mut self.counters;
 
         match value {
             Some(value) => {
-                if let Some(counter) = counters.get_mut(&(entity.to_string(), key.to_string())) {
+                if let Some(counter) = counters.get_mut(&(
+                    entity.to_string(),
+                    key.to_string(),
+                    reduce.map(|s| s.to_string()),
+                )) {
                     *counter = (Utc::now(), Some(value));
                 }
             }
             None => {
-                if let Some(counter) = counters.get_mut(&(entity.to_string(), key.to_string())) {
+                if let Some(counter) = counters.get_mut(&(
+                    entity.to_string(),
+                    key.to_string(),
+                    reduce.map(|s| s.to_string()),
+                )) {
                     let (last_fetched, value) = *counter;
                     if Utc::now().signed_duration_since(last_fetched) > ODS_STALENESS_THRESHOLD {
                         *counter = (Utc::now(), None);
@@ -68,24 +76,35 @@ impl OdsCounterManager {
 
 #[async_trait]
 impl CounterManager for OdsCounterManager {
-    fn add_counter(&mut self, entity: String, key: String) {
-        self.counters
-            .insert((entity.clone(), key.clone()), (Utc::now(), None));
+    fn add_counter(&mut self, entity: String, key: String, reduce: Option<String>) {
+        self.counters.insert(
+            (entity.clone(), key.clone(), reduce.clone()),
+            (Utc::now(), None),
+        );
     }
 
-    fn get_counter_value(&self, entity: &str, key: &str) -> Option<f64> {
+    fn get_counter_value(&self, entity: &str, key: &str, reduce: Option<&str>) -> Option<f64> {
         self.counters
-            .get(&(entity.to_string(), key.to_string()))
+            .get(&(
+                entity.to_string(),
+                key.to_string(),
+                reduce.map(|s| s.to_string()),
+            ))
             .and_then(|(_, value)| *value)
     }
 }
 
-async fn fetch_counter(fb: FacebookInit, entity: &str, key: &str) -> Option<f64> {
+async fn fetch_counter(
+    fb: FacebookInit,
+    entity: &str,
+    key: &str,
+    reduce: Option<String>,
+) -> Option<f64> {
     let client = make_Rapido_srclient!(fb).unwrap();
     let query = OdsQuery::new(entity.to_string(), key.to_string());
     let start_time = (Utc::now() - ODS_QUERY_INTERVAL).timestamp();
     let end_time = Utc::now().timestamp();
-    let query_detail = query.query_detail(start_time, end_time, None, None);
+    let query_detail = query.query_detail(start_time, end_time, None, reduce.clone());
     OdsQuery::query_latest_value(&client, query_detail)
         .await
         .ok()
@@ -113,16 +132,16 @@ pub async fn periodic_fetch_counter(
         let mut fetched_values = Vec::new();
 
         // Fetch the counter values asynchronously
-        for (entity, key) in &keys {
-            let value = fetch_counter(fb, entity, key).await;
-            fetched_values.push((entity.clone(), key.clone(), value));
+        for (entity, key, reduce) in &keys {
+            let value = fetch_counter(fb, entity, key, reduce.clone()).await;
+            fetched_values.push((entity.clone(), key.clone(), reduce.clone(), value));
         }
 
         // Acquire the write guard once to set the counter values
         {
             let mut manager = manager.write().unwrap();
-            for (entity, key, value) in fetched_values {
-                manager.set_counter(&entity, &key, value);
+            for (entity, key, reduce, value) in fetched_values {
+                manager.set_counter(&entity, &key, reduce.as_deref(), value);
             }
         }
     }
@@ -336,17 +355,20 @@ mod test {
         manager
             .write()
             .unwrap()
-            .add_counter("entity".to_string(), "key".to_string());
+            .add_counter("entity".to_string(), "key".to_string(), None);
 
         // Check the counter value
-        let value = manager.read().unwrap().get_counter_value("entity", "key");
+        let value = manager
+            .read()
+            .unwrap()
+            .get_counter_value("entity", "key", None);
 
         assert_eq!(value, None);
 
         // Give it a value
         {
             manager.write().unwrap().counters.insert(
-                ("entity".to_string(), "key".to_string()),
+                ("entity".to_string(), "key".to_string(), None),
                 (Utc::now(), Some(5.0)),
             );
         }
@@ -356,7 +378,7 @@ mod test {
             let manager_lock = manager.read().unwrap();
             let values = manager_lock
                 .counters
-                .get(&("entity".to_string(), "key".to_string()))
+                .get(&("entity".to_string(), "key".to_string(), None))
                 .clone();
             let (timestamp, value) = values.unwrap();
             assert!(timestamp.timestamp() > 0);
@@ -376,7 +398,7 @@ mod test {
             let manager_lock = manager.read().unwrap();
             let values = manager_lock
                 .counters
-                .get(&("entity".to_string(), "key".to_string()))
+                .get(&("entity".to_string(), "key".to_string(), None))
                 .clone();
 
             let (second_timestamp, value) = values.unwrap();
