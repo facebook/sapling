@@ -73,16 +73,10 @@ impl Middleware for RequestContextMiddleware {
             Metadata::default()
         };
 
-        let rate_limiter = if let Some(mut r) = self.rate_limiter.clone() {
-            Some(r.get_rate_limiter().await)
-        } else {
-            None
-        };
-
         let session = SessionContainer::builder(self.fb)
             .metadata(Arc::new(metadata))
             .readonly(self.readonly)
-            .rate_limiter(rate_limiter)
+            .rate_limiter(self.rate_limiter.as_ref().map(|r| r.get_rate_limiter()))
             .build();
 
         let request_id = state.short_request_id();

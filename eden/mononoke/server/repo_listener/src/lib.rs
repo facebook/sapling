@@ -31,7 +31,6 @@ use mononoke_api::Mononoke;
 use mononoke_api::Repo;
 use mononoke_app::monitoring::ReadyFlagService;
 use mononoke_configs::MononokeConfigs;
-use ods_counters::OdsCounterManager;
 use openssl::ssl::SslAcceptor;
 use permission_checker::AclProvider;
 use rate_limiting::RateLimitEnvironment;
@@ -70,12 +69,11 @@ pub async fn create_repo_listeners<'a>(
             .get_config_handle_DEPRECATED(CONFIGERATOR_RATE_LIMITING_CONFIG.to_string())
             .ok();
 
-        let ods_counter_manager = OdsCounterManager::new(fb);
-
         handle.and_then(|handle| {
-            common_config.loadlimiter_category.clone().map(|category| {
-                RateLimitEnvironment::new(fb, category, handle, ods_counter_manager)
-            })
+            common_config
+                .loadlimiter_category
+                .clone()
+                .map(|category| RateLimitEnvironment::new(fb, category, handle))
         })
     };
 

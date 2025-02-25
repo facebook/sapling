@@ -104,12 +104,7 @@ pub async fn request_handler(
     scuba.add_metadata(&metadata);
     scuba.sample_for_identities(metadata.identities());
 
-    let rate_limiter: Option<_> = if let Some(mut r) = rate_limiter.clone() {
-        Some(r.get_rate_limiter().await)
-    } else {
-        None
-    };
-
+    let rate_limiter = rate_limiter.map(|r| r.get_rate_limiter());
     if let Some(ref rate_limiter) = rate_limiter {
         if let LoadShedResult::Fail(err) = {
             let main_client_id = metadata
