@@ -1391,6 +1391,7 @@ mod tests {
     use crate::checkout::MOUNT_CONFIG;
     use crate::checkout::REPO_SOURCE;
     use crate::redirect::Redirection;
+    use crate::redirect::RedirectionState;
 
     // path and type are required... /tmp/ is probably the safest place to use as the path
     const DEFAULT_CHECKOUT_CONFIG: &str = r#"
@@ -1486,7 +1487,7 @@ mod tests {
             redir_type: RedirectionType::Symlink,
             target: None,
             source: "NotARepoSource".into(),
-            state: None,
+            state: RedirectionState::UnknownMount,
         };
         assert!(update_and_test_redirection(redir1, config_dir, true).is_ok());
 
@@ -1496,7 +1497,7 @@ mod tests {
             redir_type: RedirectionType::Symlink,
             target: None,
             source: REPO_SOURCE.into(),
-            state: None,
+            state: RedirectionState::UnknownMount,
         };
         assert!(update_and_test_redirection(redir2, config_dir, false).is_ok());
 
@@ -1506,7 +1507,7 @@ mod tests {
             redir_type: RedirectionType::Bind,
             target: None,
             source: "NotARepoSource".into(),
-            state: None,
+            state: RedirectionState::UnknownMount,
         };
         assert!(update_and_test_redirection(redir3, config_dir, true).is_ok());
 
@@ -1516,7 +1517,7 @@ mod tests {
             redir_type: RedirectionType::Bind,
             target: None,
             source: REPO_SOURCE.into(),
-            state: None,
+            state: RedirectionState::UnknownMount,
         };
         assert!(update_and_test_redirection(redir4, config_dir, false).is_ok());
     }

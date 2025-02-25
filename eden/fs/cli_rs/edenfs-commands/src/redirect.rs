@@ -155,7 +155,7 @@ impl RedirectCmd {
                     .map(|x| x.display().to_string())
                     .unwrap_or_default(),
                 redir.source,
-                redir.state.unwrap_or(RedirectionState::UnknownMount),
+                redir.state,
             ));
         }
         println!("{}", table);
@@ -280,11 +280,7 @@ impl RedirectCmd {
         })?;
 
         for redir in recomputed_redirs.values() {
-            if !redir
-                .state
-                .as_ref()
-                .map_or(true, |v| RedirectionState::MatchesConfiguration != *v)
-            {
+            if redir.state == RedirectionState::MatchesConfiguration {
                 eprintln!("error: at least one redirection does not match its configuration");
                 return Ok(1);
             }
@@ -396,7 +392,7 @@ impl RedirectCmd {
         })?;
 
         for redir in redirs.values() {
-            if redir.state == Some(RedirectionState::MatchesConfiguration)
+            if redir.state == RedirectionState::MatchesConfiguration
                 && !(force_remount_bind_mounts && redir.redir_type == RedirectionType::Bind)
             {
                 tracing::debug!(
@@ -438,13 +434,11 @@ impl RedirectCmd {
             )
         })?;
         for redir in effective_redirs.values() {
-            if let Some(state) = &redir.state {
-                if *state != RedirectionState::MatchesConfiguration {
-                    // When --only-repo-source is passed, we may fail to fixup some redirections.
-                    // This scenario is ok and should not be considered a failure.
-                    if !only_repo_source || redir.source == REPO_SOURCE {
-                        return Ok(1);
-                    }
+            if redir.state != RedirectionState::MatchesConfiguration {
+                // When --only-repo-source is passed, we may fail to fixup some redirections.
+                // This scenario is ok and should not be considered a failure.
+                if !only_repo_source || redir.source == REPO_SOURCE {
+                    return Ok(1);
                 }
             }
         }

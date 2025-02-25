@@ -243,7 +243,7 @@ pub struct Redirection {
     #[serde(rename = "type")]
     pub redir_type: RedirectionType,
     pub source: String,
-    pub state: Option<RedirectionState>,
+    pub state: RedirectionState,
     /// This field is lazily calculated and it is only populated after
     /// [`Redirection::update_target_abspath`] is called.
     pub target: Option<PathBuf>,
@@ -1110,7 +1110,7 @@ pub fn get_configured_redirections(
                     redir_type,
                     target: None,
                     source: REPO_SOURCE.to_string(),
-                    state: Some(RedirectionState::MatchesConfiguration),
+                    state: RedirectionState::MatchesConfiguration,
                 },
             );
         }
@@ -1130,7 +1130,7 @@ pub fn get_configured_redirections(
                     redir_type: *redir_type,
                     target: target.cloned(),
                     source: USER_REDIRECTION_SOURCE.to_string(),
-                    state: Some(RedirectionState::MatchesConfiguration),
+                    state: RedirectionState::MatchesConfiguration,
                 },
             );
         }
@@ -1231,7 +1231,7 @@ pub fn get_effective_redirections(
                         redir_type: RedirectionType::Unknown,
                         target: None,
                         source: "mount".to_string(),
-                        state: Some(RedirectionState::UnknownMount),
+                        state: RedirectionState::UnknownMount,
                     },
                 );
             }
@@ -1250,7 +1250,7 @@ pub fn get_effective_redirections(
             // The configured redirection entries take precedence over the mount table entries.
             // We overwrite them in the `redirs` map.
             if redir.redir_type != RedirectionType::Bind {
-                redir.state = Some(RedirectionState::UnknownMount);
+                redir.state = RedirectionState::UnknownMount;
             }
             // else: we expected them to be in the mount table and they were.
             // we don't know enough to tell whether the mount points where
@@ -1260,11 +1260,11 @@ pub fn get_effective_redirections(
             // We expected both of these types to be visible in the
             // mount table, but they were not, so we consider them to
             // be in the NOT_MOUNTED state.
-            redir.state = Some(RedirectionState::NotMounted);
+            redir.state = RedirectionState::NotMounted;
         } else if redir.redir_type == RedirectionType::Symlink || cfg!(windows) {
             if let Ok(is_correct) = is_symlink_correct(&redir, checkout) {
                 if !is_correct {
-                    redir.state = Some(RedirectionState::SymlinkIncorrect);
+                    redir.state = RedirectionState::SymlinkIncorrect;
                 }
             } else {
                 // We're considering a variety of errors that might
@@ -1272,7 +1272,7 @@ pub fn get_effective_redirections(
                 // that the symlink is effectively missing, even if it
                 // isn't literally missing.  eg: EPERM means we can't
                 // resolve it, so it is effectively no good.
-                redir.state = Some(RedirectionState::SymlinkMissing)
+                redir.state = RedirectionState::SymlinkMissing
             }
         }
         redirs.insert(rel_path, redir);
@@ -1458,23 +1458,22 @@ pub async fn try_add_redirection(
         redir_type,
         target: None,
         source: USER_REDIRECTION_SOURCE.to_string(),
-        state: Some(RedirectionState::MatchesConfiguration),
+        state: RedirectionState::MatchesConfiguration,
     };
 
     if let Some(existing_redir) = effective_redirs.get(&resolved_repo_path) {
-        if let Some(existing_redir_state) = &existing_redir.state {
-            if existing_redir.repo_path == redir.repo_path
-                && !force_remount_bind_mounts
-                && *existing_redir_state != RedirectionState::NotMounted
-            {
-                eprintln!(
-                    "Skipping {}; it is already configured. (use \
+        let existing_redir_state = &existing_redir.state;
+        if existing_redir.repo_path == redir.repo_path
+            && !force_remount_bind_mounts
+            && *existing_redir_state != RedirectionState::NotMounted
+        {
+            eprintln!(
+                "Skipping {}; it is already configured. (use \
                     --force-remount-bind-mounts to force reconfiguring this \
                     redirection.",
-                    resolved_repo_path.display(),
-                );
-                return Ok(0);
-            }
+                resolved_repo_path.display(),
+            );
+            return Ok(0);
         }
     }
     // We should prevent users from accidentally overwriting existing
@@ -1939,6 +1938,7 @@ mod tests {
     use tempfile::tempdir;
 
     use crate::redirect::Redirection;
+    use crate::redirect::RedirectionState;
     use crate::redirect::RedirectionType;
     use crate::redirect::RepoPathDisposition;
     use crate::redirect::REPO_SOURCE;
@@ -1957,7 +1957,7 @@ mod tests {
             redir_type: RedirectionType::Symlink,
             target: None,
             source: REPO_SOURCE.into(),
-            state: None,
+            state: RedirectionState::UnknownMount,
         };
         let fake_checkout = tempdir().expect("failed to create fake checkout");
         let fake_checkout_path = fake_checkout.path();
@@ -1984,7 +1984,7 @@ mod tests {
             redir_type: RedirectionType::Symlink,
             target: None,
             source: REPO_SOURCE.into(),
-            state: None,
+            state: RedirectionState::UnknownMount,
         };
         let fake_checkout = tempdir().expect("failed to create fake checkout");
         let fake_checkout_path = fake_checkout.path();
@@ -2108,7 +2108,7 @@ mod tests {
                 repo_path: "/mnt/foo".into(),
                 redir_type: RedirectionType::Bind,
                 source: "test".to_string(),
-                state: None,
+                state: RedirectionState::UnknownMount,
                 target: None,
             },
             &[
@@ -2126,7 +2126,10 @@ mod tests {
                 Token::Str("source"),
                 Token::Str("test"),
                 Token::Str("state"),
-                Token::None,
+                Token::UnitVariant {
+                    name: "RedirectionState",
+                    variant: "unknown-mount",
+                },
                 Token::Str("target"),
                 Token::None,
                 Token::StructEnd,
@@ -2138,7 +2141,7 @@ mod tests {
                 repo_path: "/mnt/foo".into(),
                 redir_type: RedirectionType::Bind,
                 source: "test".to_string(),
-                state: None,
+                state: RedirectionState::UnknownMount,
                 target: Some("/mnt/target".into()),
             },
             &[
@@ -2156,7 +2159,10 @@ mod tests {
                 Token::Str("source"),
                 Token::Str("test"),
                 Token::Str("state"),
-                Token::None,
+                Token::UnitVariant {
+                    name: "RedirectionState",
+                    variant: "unknown-mount",
+                },
                 Token::Str("target"),
                 Token::Some,
                 Token::Str("/mnt/target"),
