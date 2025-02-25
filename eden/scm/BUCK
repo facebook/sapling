@@ -104,13 +104,6 @@ python_library(
     ],
 )
 
-buck_filegroup(
-    name = "etc_mercurial",
-    srcs = glob([
-        "fb/staticfiles/etc/mercurial/**",
-    ]),
-)
-
 # Similar to "hg".
 # The main executable uses argv[0] to decide to run as a Python interpreter.
 gen_hgpython(hg_target = "fbcode//eden/scm:hg")

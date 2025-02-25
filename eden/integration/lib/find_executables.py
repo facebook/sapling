@@ -215,7 +215,7 @@ class FindExeClass:
     @cached_property
     def HG_RC_DIR(self) -> str:
         return self._find_src_asset(
-            "HG_ETC_MERCURIAL", "eden/scm", "fb/staticfiles/etc/mercurial"
+            "HG_ETC_MERCURIAL", "eden/scm/fb/staticfiles", "etc/mercurial"
         )
 
     def _find_hg(self) -> str:
