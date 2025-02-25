@@ -103,5 +103,19 @@ To adjust the concurrency of ripgrep crawling, utilize the following option:
 export BENCHMARK_CONCURRENCY_RG=32
 ```
 
+## CASC configuration
+
+By default, the benchmarking script employs the configuration of the host where it is executed. 
+As a result, our ongoing CASC rollout may impact the results significantly. 
+To address this, we provide helpers that allow you to manually turn CASC on or off.
+```
+export BENCHMARK_ENABLE_CAS=1
+```
+```
+export BENCHMARK_ENABLE_CAS=0
+```
+
+<br>
+
 Please, check out more options available here: [source](https://www.internalfb.com/code/fbsource/[16dae41e91d3704edd3993bbc8db372c2fac7993]/fbcode/eden/fs/scripts/facebook/eden_bench.sh?lines=143-184)
 
