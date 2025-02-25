@@ -235,7 +235,7 @@ preferuncompressed=True
 uncompressed=True
 
 [sigtrace]
-interval=60
+interval=30
 
 [templatealias]
 # NOTE: There's a very specific spacing scheme at play:
