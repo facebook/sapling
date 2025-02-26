@@ -1228,7 +1228,7 @@ impl SaplingRemoteApiHandler for UploadIdenticalChangesetsHandler {
                         .map(|(path, bfc)| {
                             let create_change = to_create_change(bfc, None)
                                 .with_context(|| anyhow!("Parsing file changes for {}", path))?;
-                            eprintln!("create_change: {:?}", create_change);
+
                             let create_change2 = create_change.into_file_change(&parents)?;
 
                             let path =
