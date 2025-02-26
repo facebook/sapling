@@ -2,13 +2,20 @@
 
 [Remote Execution](https://www.internalfb.com/wiki/Remote_Execution/) is the compute platform in Meta designed for rapid and parallel execution of small, stateless actions as outlined in the [DevInfra Compute Offerings Guideline](https://www.internalfb.com/wiki/DevInfra_Compute_offerings/What_execution_platform_to_use/).
 The feature of Repo Support on Remote Execution facilitates the distributed and efficient execution of small granular actions on the Source Code, initially only enabled for the `fbsource` repo.
-This optimization not only improves performance but also maximizes concurrency and minimizes setup overhead, thereby enhancing overall productivity and efficiency in handling small computes on a repositiry.
+This offering not only improves performance but also maximizes concurrency and minimizes setup overhead, thereby enhancing overall productivity and efficiency in handling small computes on a repository.
 
 **Repo Support on RE offers a key advantage:** customers can include a revision in an action's inputs, granting access to the repository at that exact revision during the action.
 The repository is accessible by default at `/fbsource` within the action, with the option to configure a different location if required. Global Revs and [Snapshots](https://www.internalfb.com/wiki/Source_Control/Admin/Snapshots/) are also supported.
 Snapshots provide a means to save and share uncommitted changes without altering the working copy, and often used by automation.
 
 The remote execution **action cache** is optionally available, providing caching for action runs that occur on the same revision.
+
+**Efficiency:**
+The `scm-repo-support` platform boasts high efficiency, thanks to several key features:
+* Dynamic container sizing based on historical data allows for high concurrency
+* Source Control Preps are excluded from action duration, except for "checkout revision"
+* RE scheduling employs a push model, resulting in good affinities and a high local cache hit rate for EdenFS
+* The RE is built using Rust/C++ (for CAS), minimizing overhead
 
 **Capacity:** Although customers are responsible for funding capacity, the platform has demonstrated exceptional efficiency due to its ability to handle high concurrency. This approach is consistent with remote execution practices, where customers typically bear the costs of capacity while benefiting from optimized resource utilization.
 For example, in the case of Tupperware specs compilation, our setup utilizes a worker-to-machine ratio of **25 workers per T10 machine**, showcasing an efficient allocation of resources for this specific use case.
