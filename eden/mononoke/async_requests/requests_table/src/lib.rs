@@ -144,4 +144,15 @@ pub trait LongRunningRequestsQueue: Send + Sync {
         ctx: &CoreContext,
         repo_ids: Option<&[RepositoryId]>,
     ) -> Result<QueueStats>;
+
+    /// Query how many times the request has been retried.
+    /// If it's within the retry allowance, bump the retry count,
+    /// set the status to `new` and return true,
+    /// otherwise, set the status to `failed` and return false.
+    async fn update_for_retry_or_fail(
+        &self,
+        ctx: &CoreContext,
+        req_id: &RequestId,
+        max_retry_allowed: u8,
+    ) -> Result<bool>;
 }

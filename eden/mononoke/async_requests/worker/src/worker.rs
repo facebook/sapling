@@ -346,18 +346,39 @@ impl AsyncMethodRequestWorker {
                             Err(err) => {
                                 error!(
                                     ctx.logger(),
-                                    "[{}] failed to save result: {:?}", &req_id.0, err
+                                    "[{}] failed to save success result: {:?}", &req_id.0, err
                                 );
                             }
                         };
                     }
                     Err(err) => {
-                        info!(
-                            ctx.logger(),
-                            "[{}] worker failed to process request, will retry: {:?}",
-                            &req_id.0,
-                            err
-                        );
+                        let err_result = self.queue.retry(&ctx, &req_id).await;
+                        match err_result {
+                            Ok(will_retry) => {
+                                if will_retry {
+                                    info!(
+                                        ctx.logger(),
+                                        "[{}] worker failed to process request, will retry: {:?}",
+                                        &req_id.0,
+                                        err
+                                    );
+                                } else {
+                                    info!(
+                                        ctx.logger(),
+                                        "[{}] worker failed to process request, maximum retry attempts reached, will fail the request: {:?}",
+                                        &req_id.0,
+                                        err
+                                    );
+                                }
+                            }
+                            Err(err) => {
+                                error!(
+                                    ctx.logger(),
+                                    "[{}] failed to process retry attempt: {:?}", &req_id.0, err
+                                );
+                            }
+                        }
+
                         log_retriable_error(ctx.clone(), &stats, err);
                     }
                 }

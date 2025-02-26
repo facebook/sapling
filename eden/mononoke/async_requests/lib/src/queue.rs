@@ -46,12 +46,17 @@ use crate::AsyncRequestsError;
 
 const INITIAL_POLL_DELAY_MS: u64 = 1000;
 const MAX_POLL_DURATION: Duration = Duration::from_secs(60);
+const JK_RETRY_LIMIT: &str = "scm/mononoke:async_requests_retry_limit";
 
 define_stats! {
     prefix = "async_requests.queue";
     complete_called: timeseries("complete.called"; Count),
     complete_error: timeseries("complete.error"; Count),
     complete_success: timeseries("complete.success"; Count),
+    retry_called: timeseries("retry.called"; Count),
+    retry_error: timeseries("retry.error"; Count),
+    retry_success: timeseries("retry.success"; Count),
+    retry_exceeded: timeseries("retry.exceeded"; Count),
     dequeue_called: timeseries("dequeue.called"; Count),
     dequeue_error: timeseries("dequeue.error"; Count),
     dequeue_success: timeseries("dequeue.success"; Count),
@@ -215,6 +220,25 @@ impl AsyncMethodRequestQueue {
         let result_object_id = result.store(ctx, &self.blobstore).await?;
         let blobstore_key = BlobstoreKey(result_object_id.blobstore_key());
         self.table.mark_ready(ctx, req_id, blobstore_key).await
+    }
+
+    pub async fn retry(&self, ctx: &CoreContext, req_id: &RequestId) -> Result<bool, Error> {
+        STATS::retry_called.add_value(1);
+        let max_retry_allowed = justknobs::get_as::<u8>(JK_RETRY_LIMIT, Some(&req_id.1.0))?;
+
+        self.table
+            .update_for_retry_or_fail(ctx, req_id, max_retry_allowed)
+            .await
+            .inspect(|will_retry| {
+                if *will_retry {
+                    STATS::retry_success.add_value(1);
+                } else {
+                    STATS::retry_exceeded.add_value(1);
+                }
+            })
+            .inspect_err(|_err| {
+                STATS::retry_error.add_value(1);
+            })
     }
 
     async fn poll_once<R: Request>(
@@ -436,6 +460,11 @@ impl AsyncMethodRequestQueue {
 mod tests {
     use context::CoreContext;
     use fbinit::FacebookInit;
+    use futures::FutureExt;
+    use justknobs::test_helpers::with_just_knobs_async;
+    use justknobs::test_helpers::JustKnobsInMemory;
+    use justknobs::test_helpers::KnobVal;
+    use maplit::hashmap;
     use mononoke_api::Repo;
     use mononoke_macros::mononoke;
     use repo_identity::RepoIdentityRef;
@@ -489,7 +518,7 @@ mod tests {
                     .table
                     .test_get_request_entry_by_id(&ctx, &row_id)
                     .await?
-                    .expect("Request is mising in the DB");
+                    .expect("Request is missing in the DB");
                 assert_eq!(entry.status, RequestStatus::New);
                 assert_eq!(entry.started_processing_at, None);
                 assert_eq!(entry.ready_at, None);
@@ -629,5 +658,84 @@ mod tests {
         },
         MegarepoRemergeSourceResult,
         "megarepo_remerge_source",
+    }
+
+    #[mononoke::fbinit_test]
+    async fn test_retry(fb: FacebookInit) -> Result<(), Error> {
+        let ctx = CoreContext::test_mock(fb);
+        with_just_knobs_async(
+            JustKnobsInMemory::new(hashmap! {
+                JK_RETRY_LIMIT.to_string() => KnobVal::Int(3),
+            }),
+            test_retry_impl(&ctx).boxed(),
+        )
+        .await?;
+        Ok(())
+    }
+
+    async fn test_retry_impl(ctx: &CoreContext) -> Result<(), Error> {
+        let repo: Repo = test_repo_factory::build_empty(ctx.fb).await?;
+        let repo_id = repo.repo_identity().id();
+        let q = AsyncMethodRequestQueue::new_test_in_memory(Some(vec![repo_id])).unwrap();
+        let claimed_by = ClaimedBy("tests".to_string());
+
+        // Enqueue a request
+        let params = ThriftMegarepoRemergeSourceParams {
+            target: ThriftMegarepoTarget {
+                bookmark: "oculus".to_string(),
+                repo_id: Some(0),
+                ..Default::default()
+            },
+            ..Default::default()
+        };
+        let token = q.enqueue(ctx, Some(&repo_id), params.clone()).await?;
+
+        // Get the request from the queue
+        let row_id = token.to_db_id()?;
+        let entry = q
+            .table
+            .test_get_request_entry_by_id(ctx, &row_id)
+            .await?
+            .expect("Request is missing in the DB");
+        let req_id = RequestId(row_id, entry.request_type);
+        assert_eq!(entry.status, RequestStatus::New);
+        assert_eq!(entry.num_retries, None);
+
+        // Try "retry" before request is in progress, it should error
+        let res = q.retry(ctx, &req_id).await;
+        assert!(res.is_err());
+
+        let max_retry_allowed = justknobs::get_as::<u8>(JK_RETRY_LIMIT, Some(&req_id.1.0))?;
+        for i in 0..max_retry_allowed {
+            // Mark the request as in progress to test retry
+            q.table.mark_in_progress(ctx, &req_id, &claimed_by).await?;
+
+            // Retry and verify request metadata values
+            let will_retry = q.retry(ctx, &req_id).await?;
+            assert!(will_retry);
+            let entry = q
+                .table
+                .test_get_request_entry_by_id(ctx, &row_id)
+                .await?
+                .expect("Request is missing in the DB");
+            assert_eq!(entry.status, RequestStatus::New);
+            assert_eq!(entry.num_retries, Some(i + 1));
+        }
+
+        // Mark the request as in progress to test retry
+        q.table.mark_in_progress(ctx, &req_id, &claimed_by).await?;
+
+        // Now we've used all the retry allowance, next attempt won't be allowed
+        let will_retry = q.retry(ctx, &req_id).await?;
+        assert!(!will_retry);
+        let entry = q
+            .table
+            .test_get_request_entry_by_id(ctx, &row_id)
+            .await?
+            .expect("Request is missing in the DB");
+        assert_eq!(entry.status, RequestStatus::Failed);
+        assert_ne!(entry.failed_at, None);
+
+        Ok(())
     }
 }

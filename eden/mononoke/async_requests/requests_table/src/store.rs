@@ -310,6 +310,24 @@ mononoke_queries! {
         "
     }
 
+    write MarkRequestFailed(id: RowId, request_type: RequestType, failed_at: Timestamp) {
+        none,
+        "
+        UPDATE long_running_request_queue
+        SET status = 'failed', failed_at = {failed_at}
+        WHERE id = {id} AND request_type = {request_type} AND status = 'inprogress'
+        "
+    }
+
+    write MarkRequestAsNewForRetry(id: RowId, request_type: RequestType, num_retries: u8) {
+        none,
+        "
+        UPDATE long_running_request_queue
+        SET status = 'new', claimed_by = NULL, inprogress_last_updated_at = NULL, num_retries = {num_retries}
+        WHERE id = {id} AND request_type = {request_type} AND status = 'inprogress'
+        "
+    }
+
     write TestMark(id: RowId, status: RequestStatus) {
         none,
         "UPDATE long_running_request_queue
@@ -849,6 +867,60 @@ impl LongRunningRequestsQueue for SqlLongRunningRequestsQueue {
             )
             .await?,
         })
+    }
+
+    async fn update_for_retry_or_fail(
+        &self,
+        _ctx: &CoreContext,
+        req_id: &RequestId,
+        max_retry_allowed: u8,
+    ) -> Result<bool> {
+        let txn = self
+            .connections
+            .write_connection
+            .start_transaction()
+            .await?;
+
+        let (mut txn, rows) = GetRequest::query_with_transaction(txn, &req_id.0, &req_id.1).await?;
+        let will_retry = match rows.into_iter().next() {
+            None => bail!("Failed to get request: {:?}", req_id),
+            Some(row) => {
+                let entry = row_to_entry(row);
+                match &entry.status {
+                    RequestStatus::InProgress => {
+                        let next_retry = entry.num_retries.unwrap_or(0) + 1;
+                        if next_retry > max_retry_allowed {
+                            txn = MarkRequestFailed::query_with_transaction(
+                                txn,
+                                &req_id.0,
+                                &req_id.1,
+                                &Timestamp::now(),
+                            )
+                            .await?
+                            .0;
+                            Ok(false)
+                        } else {
+                            txn = MarkRequestAsNewForRetry::query_with_transaction(
+                                txn,
+                                &req_id.0,
+                                &req_id.1,
+                                &next_retry,
+                            )
+                            .await?
+                            .0;
+                            Ok(true)
+                        }
+                    }
+                    _ => bail!(
+                        "Request {:?} is not in progress, it can't be retried",
+                        req_id
+                    ),
+                }
+            }
+        };
+        txn.commit().await?;
+
+        will_retry
     }
 }
 
