@@ -110,19 +110,23 @@ def _call_watchman(args: List[str]) -> Dict:
     return _check_json_output(full_args)
 
 
-def _check_json_output(args: List[str]) -> Dict[str, Any]:
+def _check_json_output(args: List[str], timeout: float = 30) -> Dict[str, Any]:
     """Calls subprocess.check_output() and returns the output parsed as JSON.
     If the call fails, it will write the error to stderr and return a dict with
     a single property named "error".
     """
     try:
-        output = subprocess.check_output(args)
+        output = subprocess.check_output(args, timeout=timeout)
         # pyre-fixme[33]: Given annotation cannot contain `Any`.
         return typing.cast(Dict[str, Any], json.loads(output))
     except FileNotFoundError as e:
         # Same as below, but we don't need to emit a warning if they don't have
         # nuclide-connections installed.
         errstr = getattr(e, "strerror", str(e))
+        return {"error": str(e)}
+    except subprocess.TimeoutExpired as e:
+        errstr = getattr(e, "strerror", str(e))
+        log.warning(f'Command `{" ".join(args)}` timed out after {timeout} seconds')
         return {"error": str(e)}
     except Exception as e:
         # FileNotFoundError if the command is not found.
