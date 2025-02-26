@@ -5,6 +5,8 @@
  * GNU General Public License version 2.
  */
 
+use std::cmp::Reverse;
+use std::collections::HashMap;
 use std::fmt::Debug;
 use std::fs::File as FsFile;
 use std::io::BufRead;
@@ -195,6 +197,24 @@ fn parse_events<R: BufRead>(reader: R) -> Result<Vec<Event>> {
     Ok(objects)
 }
 
+fn sort_pids(events: &[Event]) -> Vec<(u64, u64, u64)> {
+    // Count the number of events with the same PID
+    let mut pid_counts: HashMap<u64, (u64, u64)> = HashMap::new(); // pid -> (counter, ppid)
+    for event in events {
+        let process = &event.process;
+        let count = pid_counts.entry(process.pid).or_insert((0, process.ppid));
+        count.0 += 1;
+    }
+
+    // Sort the results so we can find the top k
+    let mut sorted_pids: Vec<(u64, u64, u64)> = pid_counts
+        .into_iter()
+        .map(|(pid, (count, ppid))| (pid, count, ppid))
+        .collect();
+    sorted_pids.sort_by_key(|(_, count, _)| Reverse(*count));
+    sorted_pids
+}
+
 #[async_trait]
 impl crate::Subcommand for ReadCmd {
     async fn run(&self) -> Result<ExitCode> {
@@ -203,13 +223,26 @@ impl crate::Subcommand for ReadCmd {
         let file = FsFile::open(path)?;
         let reader = BufReader::new(file);
 
-        let objects = parse_events(reader)?;
+        let events = parse_events(reader)?;
 
         if self.verbose {
-            println!("Parsed {} objects", objects.len());
-            println!("{:#?}", objects);
+            println!("Parsed {} objects", events.len());
+            println!("{:#?}", events);
         }
 
+        let sorted_pids = sort_pids(&events);
+
+        let slice = if self.count == 0 {
+            &sorted_pids
+        } else {
+            &sorted_pids[..self.count.min(sorted_pids.len())]
+        };
+
+        // Print the top results
+        println!("{:<6} | {:<7} | {}", "PID", "PPID", "Counts");
+        for (pid, count, ppid) in slice {
+            println!("{:<6} | {:<7} | {}", pid, ppid, count);
+        }
         Ok(0)
     }
 }
@@ -336,5 +369,46 @@ mod tests {
         let parsed = parse_events(BufReader::new(Cursor::new(event)));
         assert!(parsed.is_ok());
         assert_eq!(parsed.unwrap().len(), 1);
+    }
+
+    #[test]
+    fn test_sort_pids() {
+        fn make_event(pid: u64, ppid: u64) -> Event {
+            Event {
+                event_type: "NOTIFY_OPEN".to_string(),
+                file: File {
+                    path: "what".to_string(),
+                },
+                process: Process {
+                    ancestors: vec![],
+                    args: vec![],
+                    command: "what".to_string(),
+                    pid,
+                    ppid,
+                    uid: 67890,
+                },
+                event_timestamp: 1740024705,
+            }
+        }
+
+        let events = vec![
+            make_event(66778, 22309),
+            make_event(980066, 11759),
+            make_event(1, 2),
+            make_event(1, 2),
+            make_event(980066, 11759),
+            make_event(980066, 11759),
+            make_event(66778, 22309),
+            make_event(980066, 11759),
+            make_event(1, 2),
+            make_event(980066, 11759),
+            make_event(1, 2),
+        ];
+
+        let sorted_pids = sort_pids(&events);
+        assert_eq!(sorted_pids.len(), 3);
+        assert_eq!(sorted_pids[0].0, 980066);
+        assert_eq!(sorted_pids[1].0, 1);
+        assert_eq!(sorted_pids[2].0, 66778);
     }
 }
