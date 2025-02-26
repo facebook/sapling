@@ -12,12 +12,14 @@ use anyhow::Result;
 use async_requests::types::AsynchronousRequestResult;
 use async_requests::types::RowId;
 use async_requests::types::ThriftAsynchronousRequestParams;
+use async_requests::types::ThriftAsynchronousRequestResult;
 use async_requests::AsyncMethodRequestQueue;
 use clap::Args;
 use context::CoreContext;
 use megarepo_error::MegarepoError;
 use mononoke_api::MononokeRepo;
 use source_control as thrift;
+use source_control::AsyncRequestError;
 
 #[derive(Args)]
 /// Changes the request status to ready and put error as result.
@@ -41,24 +43,42 @@ pub async fn abort_request(
         .context("retrieving the request")?
     {
         if maybe_result.is_none() {
-            let err = MegarepoError::InternalError(anyhow!("aborted from CLI!").into());
+            let megarepo_err = MegarepoError::InternalError(anyhow!("aborted from CLI!").into());
+            let default_err =
+                AsynchronousRequestResult::from_thrift(ThriftAsynchronousRequestResult::error(
+                    AsyncRequestError::internal_error(thrift::InternalErrorStruct {
+                        reason: String::from("aborted from CLI!"),
+                        backtrace: None,
+                        source_chain: vec![],
+                        ..Default::default()
+                    }),
+                ));
             let result: AsynchronousRequestResult = match params.thrift() {
                 ThriftAsynchronousRequestParams::megarepo_sync_changeset_params(_) => {
-                    thrift::MegarepoSyncChangesetResult::error(err.into()).into()
+                    thrift::MegarepoSyncChangesetResult::error(megarepo_err.into()).into()
                 }
                 ThriftAsynchronousRequestParams::megarepo_add_target_params(_) => {
-                    thrift::MegarepoAddTargetResult::error(err.into()).into()
+                    thrift::MegarepoAddTargetResult::error(megarepo_err.into()).into()
                 }
                 ThriftAsynchronousRequestParams::megarepo_change_target_params(_) => {
-                    thrift::MegarepoChangeTargetConfigResult::error(err.into()).into()
+                    thrift::MegarepoChangeTargetConfigResult::error(megarepo_err.into()).into()
                 }
                 ThriftAsynchronousRequestParams::megarepo_remerge_source_params(_) => {
-                    thrift::MegarepoRemergeSourceResult::error(err.into()).into()
+                    thrift::MegarepoRemergeSourceResult::error(megarepo_err.into()).into()
                 }
                 ThriftAsynchronousRequestParams::megarepo_add_branching_target_params(_) => {
-                    thrift::MegarepoAddBranchingTargetResult::error(err.into()).into()
+                    thrift::MegarepoAddBranchingTargetResult::error(megarepo_err.into()).into()
                 }
-                _ => return Err(anyhow!("unknown request type!")),
+                ThriftAsynchronousRequestParams::commit_sparse_profile_size_params(_) => {
+                    default_err
+                }
+                ThriftAsynchronousRequestParams::commit_sparse_profile_delta_params(_) => {
+                    default_err
+                }
+                ThriftAsynchronousRequestParams::async_ping_params(_) => default_err,
+                ThriftAsynchronousRequestParams::UnknownField(_) => {
+                    return Err(anyhow!("unknown request type!"));
+                }
             };
             queue
                 .complete(&ctx, &request_id, result)
