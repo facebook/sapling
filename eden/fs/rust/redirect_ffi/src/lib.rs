@@ -13,6 +13,7 @@ use edenfs_client::redirect::get_effective_redirs_for_mount;
 use edenfs_client::redirect::Redirection;
 use edenfs_client::redirect::RedirectionState;
 use edenfs_client::redirect::RedirectionType;
+use edenfs_client::EdenFsInstance;
 
 #[cxx::bridge]
 mod ffi {
@@ -52,13 +53,22 @@ mod ffi {
     #[namespace = "facebook::eden"]
     extern "Rust" {
 
-        fn list_redirections(mount: String) -> Result<Vec<RedirectionFFI>>;
+        fn list_redirections(
+            mount: String,
+            config_dir: String,
+            etc_eden_dir: String,
+        ) -> Result<Vec<RedirectionFFI>>;
 
     }
 }
 
-pub fn list_redirections(mount: String) -> Result<Vec<ffi::RedirectionFFI>, anyhow::Error> {
-    let redirs = get_effective_redirs_for_mount(mount.into())?;
+pub fn list_redirections(
+    mount: String,
+    config_dir: String,
+    etc_eden_dir: String,
+) -> Result<Vec<ffi::RedirectionFFI>, anyhow::Error> {
+    let instance = EdenFsInstance::new(config_dir.into(), etc_eden_dir.into(), None);
+    let redirs = get_effective_redirs_for_mount(&instance, mount.into())?;
     let redirs_ffi = redirs
         .values()
         .map(ffi::RedirectionFFI::try_from)

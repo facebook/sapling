@@ -179,7 +179,8 @@ impl RedirectCmd {
                 anyhow!("could not infer mount: could not determine current working directory")
             })?,
         };
-        let redirections = get_effective_redirs_for_mount(mount)
+        let instance = EdenFsInstance::global();
+        let redirections = get_effective_redirs_for_mount(instance, mount)
             .with_context(|| anyhow!("Failed to get redirections for mount"))?;
 
         if json {

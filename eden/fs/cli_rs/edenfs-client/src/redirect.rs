@@ -1171,8 +1171,10 @@ fn is_symlink_correct(redir: &Redirection, checkout: &EdenFsCheckout) -> Result<
 
 // Returns the complete set of effective redirections for a given mount path,
 // and expands redirection target paths. Useful for listing redirections.
-pub fn get_effective_redirs_for_mount(mount: PathBuf) -> Result<BTreeMap<PathBuf, Redirection>> {
-    let instance = EdenFsInstance::global();
+pub fn get_effective_redirs_for_mount(
+    instance: &EdenFsInstance,
+    mount: PathBuf,
+) -> Result<BTreeMap<PathBuf, Redirection>> {
     let checkout = find_checkout(instance, &mount)?;
     let mut redirections = get_effective_redirections(&checkout).with_context(|| {
         anyhow!(
