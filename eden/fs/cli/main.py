@@ -1295,7 +1295,17 @@ class HealthReportCmd(Subcmd):
 
     def is_eden_running(self, instance: EdenInstance) -> bool:
         health_info = instance.check_health()
-        if not health_info.is_healthy():
+        if health_info.is_starting():
+            print("EdenFS daemon is still starting. Waiting for EdenFS to start ...")
+            try:
+                wait_for_instance_healthy(instance, 600)
+            except Exception as error:
+                self.error_codes[HealthReportCmd.ErrorCode.EDEN_NOT_RUNNING] = (
+                    "EdenFS start error: " + error.args[0]
+                )
+                return False
+
+        elif not health_info.is_healthy():
             self.error_codes[HealthReportCmd.ErrorCode.EDEN_NOT_RUNNING] = (
                 "Failed to find EdenFS daemon pid."
             )
