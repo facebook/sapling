@@ -343,6 +343,17 @@ std::shared_ptr<folly::Executor> makeFsChannelThreads(
   return fsChannelThreads;
 }
 
+std::shared_ptr<folly::Executor> makeCheckoutRevisionThreads(
+    bool useCheckoutExecutor,
+    std::shared_ptr<const EdenConfig>& edenConfig) {
+  if (useCheckoutExecutor) {
+    return std::make_shared<UnboundedQueueExecutor>(
+        edenConfig->numCheckoutThreads.getValue(),
+        "CheckoutRevisionThreadPool");
+  }
+  return nullptr;
+}
+
 } // namespace
 
 namespace facebook::eden {
@@ -486,6 +497,10 @@ EdenServer::EdenServer(
       thriftUseResourcePools_{edenConfig->thriftUseResourcePools.getValue()},
       thriftUseSerialExecution_{
           edenConfig->thriftUseSerialExecution.getValue()},
+      thriftUseCheckoutExecutor_{
+          edenConfig->thriftUseCheckoutExecutor.getValue()},
+      checkoutRevisionExecutor_{
+          makeCheckoutRevisionThreads(thriftUseCheckoutExecutor_, edenConfig)},
       progressManager_{
           std::make_unique<folly::Synchronized<EdenServer::ProgressManager>>()},
       startupStatusChannel_{std::move(startupStatusChannel)} {
@@ -2253,6 +2268,26 @@ ImmediateFuture<CheckoutResult> EdenServer::checkOutRevision(
 
             return std::move(result);
           });
+
+  if (thriftUseCheckoutExecutor_) {
+    // This is an UnboundedQueueExecutor, which is guaranteed to never block
+    // nor throw (except OOM), nor execute inline from `add()`.
+    //
+    // Thrift documentation states that "it is almost never a good idea to send
+    // work off Thrift’s CPU worker". However, it also notes that "user code may
+    // delegate the rest of the work to other thread pools, thus shifting load
+    // off Thrift’s CPU Workers thread and letting the thread pick up new
+    // incoming work" but warns that "if there is work offloaded to other thread
+    // pools, there should be backpressure mechanism that would block Thrift CPU
+    // Workers thread when those internal thread pools are overloaded."
+    //
+    // Without backpressure, EdenFS would see an increase in memory pressure.
+    // potential slowdowns, and/or OOMS. EdenFS only allows one checkout at a
+    // time (https://fburl.com/code/a6eoy8wu), which acts as the aformentioned
+    // backpressure mechanism.
+    checkoutFuture =
+        std::move(checkoutFuture).semi().via(checkoutRevisionExecutor_.get());
+  }
 
   return std::move(checkoutFuture).ensure([mountHandle] {});
 }

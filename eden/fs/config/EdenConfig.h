@@ -329,6 +329,27 @@ class EdenConfig : private ConfigSettingManager {
       this};
 
   /**
+   * Whether Eden should use a dedicated executor for checkout requests. This is
+   * meant to help with checkoutRevision performance while using serial
+   * execution for other Thrift requests. This feature can be used even if not
+   * using serial execution for other Thrift requests, but if serial execution
+   * is being used, its a good idea to turn on this config as well.
+   */
+  ConfigSetting<bool> thriftUseCheckoutExecutor{
+      "thrift:use-checkout-executor",
+      false,
+      this};
+
+  /**
+   * Number of threads that will service the checkoutRevision Thrift endpoint
+   * when using its own executor.
+   */
+  ConfigSetting<uint64_t> numCheckoutThreads{
+      "thrift:checkout-revision-num-servicing-threads",
+      std::thread::hardware_concurrency(),
+      this};
+
+  /**
    * How often to collect Thrift server metrics. The default value mirrors the
    * value from facebook::fb303::TServerCounters::kDefaultSampleRate
    */

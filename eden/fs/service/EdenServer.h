@@ -800,6 +800,19 @@ class EdenServer : private TakeoverHandler {
   bool thriftUseSerialExecution_;
 
   /**
+   * If the Thrift Server created at startup is configured to use a dedicated
+   * executor for the checkoutRevision endpoint.
+   */
+  bool thriftUseCheckoutExecutor_;
+
+  /**
+   * Dedicated executor for checkoutRevision Thrift endpoint. This will be null
+   * if the config to use a dedicated executor is not set at daemon startup, if
+   * thriftUseCheckoutExecutor_ is false.
+   */
+  std::shared_ptr<folly::Executor> checkoutRevisionExecutor_;
+
+  /**
    * Remounting progress state.
    */
   struct ProgressState {
