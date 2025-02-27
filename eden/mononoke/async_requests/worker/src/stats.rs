@@ -43,8 +43,8 @@ pub(crate) async fn stats_loop(
     queue: &AsyncMethodRequestQueue,
 ) {
     loop {
-        let now = Timestamp::now();
         let res = queue.get_queue_stats(ctx).await;
+        let now = Timestamp::now();
         match res {
             Ok(res) => {
                 process_queue_length_by_status(ctx, &res);
@@ -122,7 +122,7 @@ fn process_queue_age_by_status(
     let stats = &res.queue_age_by_status;
     for (status, ts) in stats {
         seen.mark(None, *status);
-        let diff = now.timestamp_seconds() - ts.timestamp_seconds();
+        let diff = std::cmp::max(now.timestamp_seconds() - ts.timestamp_seconds(), 0);
         STATS::queue_age_by_status.set_value(ctx.fb, diff, (status.to_string(),));
     }
 
@@ -172,7 +172,7 @@ fn process_queue_age_by_repo_and_status(
     let stats = &res.queue_age_by_repo_and_status;
     for (entry, ts) in stats {
         seen.mark(entry.repo_id, entry.status);
-        let diff = now.timestamp_seconds() - ts.timestamp_seconds();
+        let diff = std::cmp::max(now.timestamp_seconds() - ts.timestamp_seconds(), 0);
         STATS::queue_age_by_repo_and_status.set_value(
             ctx.fb,
             diff,
