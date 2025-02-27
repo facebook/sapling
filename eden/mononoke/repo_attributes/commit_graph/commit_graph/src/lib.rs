@@ -965,4 +965,32 @@ impl CommitGraph {
 
         Ok(descendants)
     }
+
+    /// Returns the collection of changesets from the input changesets collection that do not have their parents in the input collection.
+    pub async fn find_boundary(
+        &self,
+        ctx: &CoreContext,
+        cs_ids: Vec<ChangesetId>,
+    ) -> Result<Vec<ChangesetId>> {
+        // Find all the parents of the input changesets.
+        let changesets_with_parents = self
+            .storage
+            .fetch_many_edges(ctx, cs_ids.as_slice(), Prefetch::None)
+            .await?
+            .into_iter()
+            .map(|(cs_id, edges)| (cs_id, edges.edges().parents.to_vec()))
+            .collect::<HashMap<_, _>>();
+        let boundary = cs_ids
+            .into_iter()
+            .filter(|cs_id| {
+                // If a changeset has a parent that is not in the input collection, then its part of the boundary
+                changesets_with_parents.get(cs_id).map_or(false, |parents| {
+                    parents
+                        .iter()
+                        .any(|parent| !changesets_with_parents.contains_key(&parent.cs_id))
+                })
+            })
+            .collect();
+        Ok(boundary)
+    }
 }

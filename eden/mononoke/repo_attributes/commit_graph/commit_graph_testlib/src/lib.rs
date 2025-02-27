@@ -66,6 +66,7 @@ macro_rules! impl_commit_graph_tests {
             test_range_stream,
             test_common_base,
             test_slice_ancestors,
+            test_find_boundary,
             test_segmented_slice_ancestors,
             test_children,
             test_descendants,
@@ -2032,6 +2033,45 @@ pub async fn test_ancestors_within_distance(
     .await?;
     assert_ancestors_within_distance(&ctx, &graph, vec![], 100, vec![]).await?;
 
+    Ok(())
+}
+
+pub async fn test_find_boundary(
+    ctx: CoreContext,
+    storage: Arc<dyn CommitGraphStorageTest>,
+) -> Result<()> {
+    let graph = from_dag(
+        &ctx,
+        r"
+        A-B-C-D-E-L------N
+           \       \    /
+            F-G-H   M  /
+             \     /  /
+              I-J-K--/
+        ",
+        storage.clone(),
+    )
+    .await?;
+    storage.flush();
+
+    assert_find_boundary(&ctx, &graph, vec!["N"], vec!["N"]).await?;
+    assert_find_boundary(&ctx, &graph, vec!["N", "L", "K", "J", "I"], vec!["L", "I"]).await?;
+    assert_find_boundary(
+        &ctx,
+        &graph,
+        vec![
+            "A", "B", "C", "D", "E", "F", "G", "H", "I", "J", "K", "L", "M", "N",
+        ],
+        vec![],
+    )
+    .await?;
+    assert_find_boundary(
+        &ctx,
+        &graph,
+        vec!["I", "F", "G", "M", "L", "E"],
+        vec!["F", "M", "E"],
+    )
+    .await?;
     Ok(())
 }
 

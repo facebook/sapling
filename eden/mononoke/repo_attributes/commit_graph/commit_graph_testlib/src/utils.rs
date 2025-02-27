@@ -759,6 +759,29 @@ pub async fn assert_ancestors_within_distance(
     Ok(())
 }
 
+pub async fn assert_find_boundary(
+    ctx: &CoreContext,
+    graph: &CommitGraph,
+    cs_ids: Vec<&str>,
+    expected_boundary: Vec<&str>,
+) -> Result<()> {
+    let cs_ids: Vec<_> = cs_ids.into_iter().map(name_cs_id).collect();
+    let boundary = graph
+        .find_boundary(ctx, cs_ids.clone())
+        .await?
+        .into_iter()
+        .map(cs_id_name)
+        .collect::<HashSet<_>>();
+
+    let expected_boundary: HashSet<_> = expected_boundary
+        .into_iter()
+        .map(|cs_name| cs_name.to_string())
+        .collect();
+
+    assert_eq!(boundary, expected_boundary);
+    Ok(())
+}
+
 pub async fn assert_linear_ancestors_stream(
     ctx: &CoreContext,
     graph: &CommitGraph,
