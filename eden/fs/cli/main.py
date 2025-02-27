@@ -1452,7 +1452,12 @@ class HealthReportCmd(Subcmd):
             out (ui.Output): Output stream to write the JSON data to.
             notify (bool): Whether to send notifications.
         """
-
+        instance.log_sample(
+            "health-report",
+            num_detected_issues=len(HealthReportCmd.error_codes),
+            detected_issues=set(HealthReportCmd.error_codes.keys()),
+            detected_issues_descriptions=set(HealthReportCmd.error_codes.values()),
+        )
         # Serialize error codes
         data = [
             {"error": error_code.name, "description": error_additional_info}
