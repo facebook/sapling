@@ -1526,6 +1526,15 @@ class EdenConfig : private ConfigSettingManager {
       false,
       this};
 
+  /**
+   * Whether EdenFS ready status should be shown via Windows
+   * notifications
+   */
+  ConfigSetting<bool> notifyEdenReady{
+      "notifications:notify-eden-ready",
+      false,
+      this};
+
   // [log]
 
   ConfigSetting<uint64_t> maxLogFileSize{"log:max-file-size", 50000000, this};

@@ -278,6 +278,9 @@ void showWinNotification(HWND hwnd, const WindowsNotification& notif) {
   // respect quiet time since this balloon did not come from a direct user
   // TODO(@cuev): maybe we should force notifications for more critical issues
   iconData.dwInfoFlags = NIIF_WARNING | NIIF_RESPECT_QUIET_TIME;
+  if (notif.title.compare("EdenFS ready for use") == 0) {
+    iconData.dwInfoFlags = NIIF_INFO;
+  }
   std::wstring title = multibyteToWideString(notif.title);
   StringCchPrintfW(
       iconData.szInfoTitle,

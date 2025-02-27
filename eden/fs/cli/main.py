@@ -2226,7 +2226,6 @@ class StartCmd(Subcmd):
             action="store_true",
             help="Run edenfs in the foreground, rather than daemonizing",
         )
-
         if sys.platform != "win32":
             parser.add_argument(
                 "--takeover",
@@ -2315,7 +2314,56 @@ class StartCmd(Subcmd):
             config_mod._do_nfs_migration(instance, get_migration_success_message)
         if config_mod.should_migrate_inode_catalog_to_in_memory(instance):
             config_mod._do_in_memory_inode_catalog_migration(instance)
-        return daemon.start_edenfs_service(instance, daemon_binary, args.edenfs_args)
+        result = daemon.start_edenfs_service(instance, daemon_binary, args.edenfs_args)
+
+        # show Eden ready notification only if there are any active eden mounts
+        if instance.get_mount_paths():
+            should_notify_eden_ready_status = instance.get_config_bool(
+                "notifications.notify-eden-ready", False
+            )
+            if sys.platform == "win32" and should_notify_eden_ready_status:
+                self.send_edenfs_notification(instance, result)
+        return result
+
+    def send_edenfs_notification(self, instance: EdenInstance, result: int):
+        """Send notification for EdenFS health status."""
+        health_info = instance.check_health()
+        try:
+            with instance.get_thrift_client_legacy() as client:
+                if result == 1 or not health_info.is_healthy():
+                    request = SendNotificationRequest(
+                        title="EdenFS not healthy",
+                        description="EdenFS failed to start properly.",
+                    )
+                elif health_info.is_starting():
+                    updated_health_info = wait_for_instance_healthy(
+                        instance, timeout=600
+                    )
+                    if updated_health_info.is_healthy():
+                        edenfs_pid = updated_health_info.pid
+                        request = SendNotificationRequest(
+                            title="EdenFS ready for use",
+                            description=f"EdenFS started with pid: {edenfs_pid}",
+                        )
+                    else:
+                        request = SendNotificationRequest(
+                            title="EdenFS not healthy",
+                            description="EdenFS failed to start properly.",
+                        )
+                else:
+                    edenfs_pid = health_info.pid
+                    request = SendNotificationRequest(
+                        title="EdenFS ready for use",
+                        description=f"EdenFS started with pid: {edenfs_pid}",
+                    )
+                client.sendNotification(request)
+        except (
+            thrift.transport.TTransport.TTransportException,
+            EdenNotRunningError,
+        ) as e:
+            print_stderr(f"EdenFS not running: {e}")
+        except Exception as e:
+            print_stderr(f"unexpected error: {e}")
 
     def start_in_foreground(
         self, instance: EdenInstance, daemon_binary: str, args: argparse.Namespace
