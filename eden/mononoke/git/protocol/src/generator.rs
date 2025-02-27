@@ -957,8 +957,8 @@ pub async fn shallow_info(
         ShallowVariant::FromServerWithTime(time) => ancestors_after_time(&ctx, repo, translated_sha_heads.bonsais, *time)
             .await
             .context("Error in getting ancestors after time during shallow-info")?,
+        ShallowVariant::FromServerExcludingRefs(_) => anyhow::bail!("Shallow variant `shallow-exclude` is not yet supported"),
         ShallowVariant::None => AncestorsWithinDistance::default(),
-        variant => anyhow::bail!("Shallow variant {:?} is not supported yet", variant),
     };
     let boundary_commits =
         ordered_bonsai_git_mappings_by_bonsai(&ctx, repo, ancestors_within_distance.boundaries)

@@ -112,18 +112,24 @@
 # Clone the repo using Mononoke excluding commits reachable from heads/R3
   $ quiet git_client clone --shallow-exclude heads/R3 $MONONOKE_GIT_SERVICE_BASE_URL/$REPONAME.git
   Cloning into 'repo'...
-  error: RPC failed; HTTP 400 curl 22 The requested URL returned error: 400
-  fatal: expected 'packfile'
+  fatal: expected 'packfile', received '?Failed to generate shallow info
+  
+  Caused by:
+      Shallow variant `shallow-exclude` is not yet supported'
   [128]
 # Clone the repo using Mononoke excluding commits reachable from heads/R2
   $ quiet git_client clone --shallow-exclude heads/R2 $MONONOKE_GIT_SERVICE_BASE_URL/$REPONAME.git
   Cloning into 'repo'...
-  error: RPC failed; HTTP 400 curl 22 The requested URL returned error: 400
-  fatal: expected 'packfile'
+  fatal: expected 'packfile', received '?Failed to generate shallow info
+  
+  Caused by:
+      Shallow variant `shallow-exclude` is not yet supported'
   [128]
 # Clone the repo using Mononoke excluding commits reachable from heads/master_bookmark
   $ quiet git_client clone --shallow-exclude heads/master_bookmark $MONONOKE_GIT_SERVICE_BASE_URL/$REPONAME.git
   Cloning into 'repo'...
-  error: RPC failed; HTTP 400 curl 22 The requested URL returned error: 400
-  fatal: expected 'packfile'
+  fatal: expected 'packfile', received '?Failed to generate shallow info
+  
+  Caused by:
+      Shallow variant `shallow-exclude` is not yet supported'
   [128]

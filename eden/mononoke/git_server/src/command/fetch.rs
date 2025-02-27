@@ -85,7 +85,7 @@ pub struct FetchArgs {
     /// Requests that the shallow clone/fetch should be cut at a specific revision
     /// instead of a depth, i.e. the specified oid becomes the boundary at which the
     /// fetch or clone should stop at
-    pub deepen_not: Option<ObjectId>,
+    pub deepen_not: Vec<String>,
     /// Request that various objects from the packfile be omitted using
     /// one of several filtering techniques
     pub filter: Option<FilterArgs>,
@@ -239,7 +239,7 @@ impl FetchArgs {
         !self.shallow.is_empty()
             || self.deepen.is_some()
             || self.deepen_since.is_some()
-            || self.deepen_not.is_some()
+            || !self.deepen_not.is_empty()
     }
 
     /// Method determining if the fetch request is a filter fetch request
@@ -252,7 +252,7 @@ impl FetchArgs {
             bail!(
                 "deepen and deepen-since arguments cannot be provided at the same time for fetch command"
             )
-        } else if self.deepen.is_some() && self.deepen_not.is_some() {
+        } else if self.deepen.is_some() && !self.deepen_not.is_empty() {
             bail!(
                 "deepen and deepen-not arguments cannot be provided at the same time for fetch command"
             )
@@ -289,8 +289,10 @@ impl FetchArgs {
                     let parsed_time = time_depth.as_str().parse::<usize>()
                         .with_context(|| format!("Invalid time {:?} received for deepen since during fetch command args parsing", time_depth))?;
                     fetch_args.deepen_since = Some(parsed_time);
-                } else if let Some(oid_depth) = data.strip_prefix(DEEPEN_NOT_PREFIX) {
-                    fetch_args.deepen_not = Some(parse_oid(oid_depth, DEEPEN_NOT_PREFIX)?);
+                } else if let Some(deepen_not_ref) = data.strip_prefix(DEEPEN_NOT_PREFIX) {
+                    let deepen_not_ref =
+                        bytes_to_str(deepen_not_ref, "deepen-not", "shallow")?.to_owned();
+                    fetch_args.deepen_not.push(deepen_not_ref);
                 } else if let Some(filter) = data.strip_prefix(FILTER_PREFIX) {
                     let filter_spec = bytes_to_str(filter, "filter_spec", "filter")?.to_owned();
                     fetch_args.filter = Some(FilterArgs::parse_from_spec(filter_spec)?);
@@ -354,8 +356,8 @@ impl FetchArgs {
     pub fn into_shallow_request(&self) -> ShallowInfoRequest {
         let variant = if let Some(timestamp) = self.deepen_since.as_ref() {
             ShallowVariant::FromServerWithTime(timestamp.clone())
-        } else if let Some(oid) = self.deepen_not.as_ref() {
-            ShallowVariant::FromServerWithOid(oid.clone())
+        } else if !self.deepen_not.is_empty() {
+            ShallowVariant::FromServerExcludingRefs(self.deepen_not.clone())
         } else if let Some(depth) = self.deepen {
             if self.deepen_relative {
                 ShallowVariant::FromClientWithDepth(depth)
@@ -440,7 +442,7 @@ mod tests {
         let inner_writer = Vec::new();
         let mut packetline_writer = Writer::new(inner_writer);
         packetline_writer.write_all(b"deepen 1\n")?;
-        packetline_writer.write_all(b"deepen-not 1000000000000000000000000000000000000001\n")?;
+        packetline_writer.write_all(b"deepen-not heads/master\n")?;
         let mut inner_writer = packetline_writer.into_inner();
         flush_to_write(&mut inner_writer)?;
 
