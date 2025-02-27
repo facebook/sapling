@@ -602,11 +602,11 @@ make_rule_compatible_with(
     compatible_with = [
         "ovr_config//os:linux",
     ],
+    labels = ["noautodeps"],
     languages = [
         "javadeprecated",
     ],
     rule = thrift_library,
-    tags = ["noautodeps"],
     thrift_srcs = {
         "eden.thrift": ["EdenService"],
     },
