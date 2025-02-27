@@ -19,6 +19,7 @@ use mononoke_macros::mononoke;
 use mononoke_types::BonsaiChangeset;
 use mononoke_types::FileContents;
 use slog::error;
+use slog::info;
 use slog::Logger;
 use stats::define_stats;
 use stats::prelude::*;
@@ -38,6 +39,7 @@ define_stats! {
     content_wait_time_s:  dynamic_timeseries("{}.content_wait_time_s", (repo: String); Average),
     trees_files_wait_time_s:  dynamic_timeseries("{}.trees_files_wait_time_s", (repo: String); Average),
     changeset_upload_time_s:  dynamic_timeseries("{}.changeset_upload_time_s", (repo: String); Average),
+    content_upload_time_s:  dynamic_timeseries("{}.content_upload_time_ms", (repo: String); Average),
 
 }
 
@@ -202,15 +204,20 @@ impl SendManager {
                 reponame: String,
             ) -> Result<(), anyhow::Error> {
                 let current_batch_len = current_batch.len() as i64;
-
-                if let Err(e) = content_es
-                    .upload_contents(std::mem::take(current_batch))
-                    .await
-                {
-                    error!(content_logger, "Error processing content: {:?}", e);
-                    return Err(e);
-                } else {
-                    STATS::synced_contents.add_value(current_batch_len, (reponame.clone(),));
+                let start = std::time::Instant::now();
+                if current_batch_len > 0 {
+                    info!(content_logger, "Uploading {} contents", current_batch_len);
+                    if let Err(e) = content_es
+                        .upload_contents(std::mem::take(current_batch))
+                        .await
+                    {
+                        error!(content_logger, "Error processing content: {:?}", e);
+                        return Err(e);
+                    } else {
+                        let elapsed = start.elapsed().as_secs() / current_batch_len as u64;
+                        STATS::content_upload_time_s.add_value(elapsed as i64, (reponame.clone(),));
+                        STATS::synced_contents.add_value(current_batch_len, (reponame.clone(),));
+                    }
                 }
 
                 while let Some(sender) = pending_messages.pop_front() {
