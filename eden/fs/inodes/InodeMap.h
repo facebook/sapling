@@ -106,7 +106,8 @@ class InodeMap {
   explicit InodeMap(
       EdenMount* mount,
       std::shared_ptr<ReloadableConfig> config,
-      EdenStatsPtr stats);
+      EdenStatsPtr stats,
+      std::shared_ptr<StructuredLogger> logger);
   virtual ~InodeMap();
 
   InodeMap(InodeMap&&) = delete;
@@ -732,6 +733,7 @@ class InodeMap {
 
   std::shared_ptr<ReloadableConfig> config_;
   EdenStatsPtr stats_;
+  std::shared_ptr<StructuredLogger> structuredLogger_;
 
   /**
    * The root inode.

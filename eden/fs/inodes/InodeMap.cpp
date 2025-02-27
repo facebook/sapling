@@ -24,6 +24,7 @@
 #include "eden/fs/inodes/ParentInodeInfo.h"
 #include "eden/fs/inodes/TreeInode.h"
 #include "eden/fs/telemetry/EdenStats.h"
+#include "eden/fs/telemetry/LogEvent.h"
 #include "eden/fs/utils/NotImplemented.h"
 
 using folly::Future;
@@ -103,8 +104,12 @@ InodeType InodeMap::UnloadedInode::getInodeType() const {
 InodeMap::InodeMap(
     EdenMount* mount,
     std::shared_ptr<ReloadableConfig> config,
-    EdenStatsPtr stats)
-    : mount_{mount}, config_{std::move(config)}, stats_{std::move(stats)} {}
+    EdenStatsPtr stats,
+    std::shared_ptr<StructuredLogger> logger)
+    : mount_{mount},
+      config_{std::move(config)},
+      stats_{std::move(stats)},
+      structuredLogger_{std::move(logger)} {}
 
 InodeMap::~InodeMap() {
   // TODO: We need to clean up the EdenMount / InodeMap destruction process a
@@ -290,6 +295,7 @@ ImmediateFuture<InodePtr> InodeMap::lookupInode(InodeNumber number) {
       // windows does not have ESTALE. We need some other error to turn into the
       // nfs stale error. For now let's just let it throw.
 #ifndef _WIN32
+      structuredLogger_->logEvent(NFSStaleError{number.getRawValue()});
       return ImmediateFuture<InodePtr>{folly::Try<InodePtr>{
           std::system_error{std::error_code{ESTALE, std::system_category()}}}};
 #endif

@@ -295,6 +295,20 @@ struct StaleContents : public EdenFSEvent {
   }
 };
 
+struct NFSStaleError : public EdenFSEvent {
+  uint64_t ino;
+
+  explicit NFSStaleError(uint64_t ino) : ino(ino) {}
+
+  void populate(DynamicEvent& event) const override {
+    event.addInt("ino", ino);
+  }
+
+  const char* getType() const override {
+    return "nfs_stale_error";
+  }
+};
+
 struct FinishedMount : public EdenFSEvent {
   std::string backing_store_type;
   std::string repo_type;

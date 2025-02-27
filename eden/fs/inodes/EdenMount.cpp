@@ -264,7 +264,8 @@ EdenMount::EdenMount(
       inodeMap_{new InodeMap(
           this,
           serverState_->getReloadableConfig(),
-          stats.copy())},
+          stats.copy(),
+          serverState_->getStructuredLogger())},
       objectStore_{std::move(objectStore)},
       blobCache_{std::move(blobCache)},
       blobAccess_{objectStore_, blobCache_},
