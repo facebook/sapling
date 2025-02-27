@@ -118,7 +118,7 @@ pub async fn try_sync<'a>(
             repo,
             &bcs_id,
             UploadPolicy::All,
-            PriorLookupPolicy::BlobsOnly,
+            PriorLookupPolicy::None,
         )
         .await?;
     Ok(stats)
