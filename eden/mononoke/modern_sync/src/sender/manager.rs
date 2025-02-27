@@ -19,7 +19,6 @@ use mononoke_macros::mononoke;
 use mononoke_types::BonsaiChangeset;
 use mononoke_types::FileContents;
 use slog::error;
-use slog::info;
 use slog::Logger;
 use stats::define_stats;
 use stats::prelude::*;
@@ -206,7 +205,6 @@ impl SendManager {
                 let current_batch_len = current_batch.len() as i64;
                 let start = std::time::Instant::now();
                 if current_batch_len > 0 {
-                    info!(content_logger, "Uploading {} contents", current_batch_len);
                     if let Err(e) = content_es
                         .upload_contents(std::mem::take(current_batch))
                         .await
