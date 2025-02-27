@@ -29,7 +29,6 @@ use executor_lib::RepoShardedProcess;
 use executor_lib::RepoShardedProcessExecutor;
 use fbinit::FacebookInit;
 use futures::channel::oneshot;
-use futures::future::abortable;
 use futures::stream;
 use futures::stream::StreamExt;
 use futures::stream::TryStreamExt;
@@ -49,7 +48,6 @@ use mononoke_app::monitoring::ReadyFlagService;
 use mononoke_app::MononokeApp;
 use mononoke_app::MononokeAppBuilder;
 use mononoke_app::MononokeReposManager;
-use mononoke_macros::mononoke;
 use openssl::ssl::AlpnError;
 use repo_identity::RepoIdentityRef;
 use scuba_ext::MononokeScubaSampleBuilder;
@@ -112,10 +110,9 @@ pub struct MononokeServerProcess {
 impl MononokeServerProcess {
     fn new(
         fb: FacebookInit,
-        repos_mgr: MononokeReposManager<Repo>,
+        repos_mgr: Arc<MononokeReposManager<Repo>>,
         scuba: MononokeScubaSampleBuilder,
     ) -> Self {
-        let repos_mgr = Arc::new(repos_mgr);
         Self {
             fb,
             repos_mgr,
@@ -129,6 +126,7 @@ impl MononokeServerProcess {
         logger: &Logger,
         scuba: &MononokeScubaSampleBuilder,
     ) -> Result<()> {
+        assert!(repo_name.is_empty());
         // Check if the input repo is already initialized. This can happen if the repo is a
         // shallow-sharded repo, in which case it would already be initialized during service startup.
         if self.repos_mgr.repos().get_by_name(repo_name).is_none() {
@@ -179,22 +177,14 @@ impl RepoShardedProcess for MononokeServerProcess {
             let repos = self.repos_mgr.repos().get_by_name(&repo_name);
             match repos {
                 Some(repo) => {
-                    let (stats, stats_abort_handle) = abortable({
-                        cloned!(repo, repo_name);
-                        let ctx = CoreContext::new_with_logger(self.fb, logger);
-                        async move {
-                            stats::stats_loop(
-                                ctx,
-                                repo_name.to_owned(),
-                                repo.repo_identity.id(),
-                                repo,
-                            )
-                            .await
-                        }
-                    });
-                    let _stats = mononoke::spawn_task(stats);
-                    self.repos_mgr
-                        .add_stats_handle_for_repo(&repo_name, stats_abort_handle);
+                    let ctx = CoreContext::new_with_logger(self.fb, logger);
+                    stats::init_stats_loop(
+                        &ctx,
+                        self.repos_mgr.clone(),
+                        repo_name.clone(),
+                        repo.clone(),
+                    )
+                    .await;
                 }
                 None => slog::warn!(
                     logger,
@@ -389,11 +379,18 @@ fn main(fb: FacebookInit) -> Result<()> {
                 .try_collect::<()>()
                 .await?;
             info!(&root_log, "Cache warmup completed");
+            let repos_mgr = Arc::new(repos_mgr);
             if let Some(mut executor) = args.sharded_executor_args.build_executor(
                 app.fb,
                 runtime.clone(),
                 app.logger(),
-                || Arc::new(MononokeServerProcess::new(app.fb, repos_mgr, scuba.clone())),
+                || {
+                    Arc::new(MononokeServerProcess::new(
+                        app.fb,
+                        repos_mgr.clone(),
+                        scuba.clone(),
+                    ))
+                },
                 false, // disable shard (repo) level healing
                 SM_CLEANUP_TIMEOUT_SECS,
             )? {
@@ -406,6 +403,22 @@ fn main(fb: FacebookInit) -> Result<()> {
                         async move { executor.block_and_execute(&logger, will_exit).await }
                     }
                 });
+            } else {
+                let logger = app.logger().clone();
+                let ctx = CoreContext::new_with_logger(fb, logger);
+                for repo in repos_mgr.clone().repos().iter() {
+                    if repo.repo_config().log_repo_stats {
+                        let repo_name = repo.repo_identity().name().to_string();
+                        info!(ctx.logger(), "Enabling stats loop for {}", repo_name);
+                        stats::init_stats_loop(
+                            &ctx,
+                            repos_mgr.clone(),
+                            repo_name.clone(),
+                            repo.clone(),
+                        )
+                        .await;
+                    }
+                }
             }
             repo_listener::create_repo_listeners(
                 fb,

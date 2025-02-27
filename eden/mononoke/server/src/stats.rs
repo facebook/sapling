@@ -8,9 +8,13 @@
 use std::sync::Arc;
 use std::time::Duration;
 
+use cloned::cloned;
 use context::CoreContext;
+use futures::future::abortable;
 use mononoke_api::Repo;
 use mononoke_api::RepositoryId;
+use mononoke_app::MononokeReposManager;
+use mononoke_macros::mononoke;
 use phases::PhasesRef;
 use sql_commit_graph_storage::CommitGraphBulkFetcherRef;
 use stats::define_stats;
@@ -23,6 +27,20 @@ define_stats! {
     all_commit_count: dynamic_singleton_counter("all_commit_count.{}", (repo: String)),
     public_commit_count: dynamic_singleton_counter("public_commit_count.{}", (repo: String)),
     draft_commit_count: dynamic_singleton_counter("draft_commit_count.{}", (repo: String)),
+}
+
+pub(crate) async fn init_stats_loop(
+    ctx: &CoreContext,
+    repos_mgr: Arc<MononokeReposManager<Repo>>,
+    repo_name: String,
+    repo: Arc<Repo>,
+) {
+    let (stats, stats_abort_handle) = abortable({
+        cloned!(ctx, repo, repo_name);
+        async move { stats_loop(ctx, repo_name.to_owned(), repo.repo_identity.id(), repo).await }
+    });
+    let _stats = mononoke::spawn_task(stats);
+    repos_mgr.add_stats_handle_for_repo(&repo_name, stats_abort_handle);
 }
 
 pub(crate) async fn stats_loop(
