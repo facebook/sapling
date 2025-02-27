@@ -63,6 +63,7 @@ Sync all bookmarks moves
   Initialized channels
   Calculating segments for entry 1
   Skipping 0 commits, starting sync of 1 commits 
+  Uploaded 2 contents
   Found error: Trees upload: Expected 3 responses, got 0, retrying attempt #0
   Found error: Trees upload: Expected 3 responses, got 0, retrying attempt #1
   Found error: Trees upload: Expected 3 responses, got 0, retrying attempt #2

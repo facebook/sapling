@@ -47,7 +47,6 @@ use slog::Logger;
 use url::Url;
 mod util;
 
-const MAX_BLOB_BYTES: u64 = 100 * 1024 * 1024; // 100 MB
 const MAX_RETRIES: usize = 3;
 
 pub struct EdenapiSender {
@@ -106,51 +105,34 @@ impl EdenapiSender {
         &self,
         contents: Vec<(AnyFileContentId, FileContents)>,
     ) -> Result<()> {
-        // Batch contents by size
-        let mut batches = Vec::new();
-        let mut current_batch = Vec::new();
-        let mut current_size = 0;
-        for (id, blob) in contents {
-            let size = blob.size();
-            if current_size + size > MAX_BLOB_BYTES {
-                let batch = std::mem::take(&mut current_batch);
-                batches.push(batch);
-                current_size = 0;
-            }
-            current_batch.push((id, blob));
-            current_size += size;
-        }
-        if !current_batch.is_empty() {
-            batches.push(current_batch);
-        }
-
         let repo_blobstore = self.repo_blobstore.clone();
         let ctx = self.ctx.clone();
-        for batch in batches {
-            let mut full_items = Vec::new();
 
-            for (id, blob) in batch {
-                cloned!(ctx, repo_blobstore);
-                let stream = stream_file_bytes(&repo_blobstore, &ctx, blob, Range::all())?;
-                let bytes = util::concatenate_bytes(stream.try_collect::<Vec<_>>().await?);
-                full_items.push((id, bytes.into()));
-            }
+        let mut full_items = Vec::new();
 
-            let expected_responses = full_items.len();
-            let response = self
-                .client
-                .process_files_upload(full_items, None, None)
-                .await?;
-
-            let actual_responses = response.entries.try_collect::<Vec<_>>().await?.len();
-
-            ensure!(
-                expected_responses == actual_responses,
-                "Content upload: Expected {} responses, got {}",
-                expected_responses,
-                actual_responses
-            );
+        for (id, blob) in contents {
+            cloned!(ctx, repo_blobstore);
+            let stream = stream_file_bytes(&repo_blobstore, &ctx, blob, Range::all())?;
+            let bytes = util::concatenate_bytes(stream.try_collect::<Vec<_>>().await?);
+            full_items.push((id, bytes.into()));
         }
+
+        let expected_responses = full_items.len();
+        let response = self
+            .client
+            .process_files_upload(full_items, None, None)
+            .await?;
+
+        let actual_responses = response.entries.try_collect::<Vec<_>>().await?.len();
+
+        ensure!(
+            expected_responses == actual_responses,
+            "Content upload: Expected {} responses, got {}",
+            expected_responses,
+            actual_responses
+        );
+
+        info!(self.logger, "Uploaded {} contents", actual_responses);
 
         Ok(())
     }

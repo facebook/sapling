@@ -48,8 +48,13 @@ const CHANGESET_CHANNEL_SIZE: usize = 5000;
 
 const CHANGESETS_FLUSH_INTERVAL: Duration = Duration::from_secs(5);
 const TREES_FLUSH_INTERVAL: Duration = Duration::from_secs(3);
+const CONTENTS_FLUSH_INTERVAL: Duration = Duration::from_secs(3);
+
 const MAX_CHANGESET_BATCH_SIZE: usize = 10;
 const MAX_TREES_BATCH_SIZE: usize = 20;
+
+const MAX_CONTENT_BATCH_SIZE: usize = 30;
+const MAX_BLOB_BYTES: u64 = 10 * 1024 * 1024; // 10 MB
 
 #[derive(Clone)]
 pub struct SendManager {
@@ -148,36 +153,73 @@ impl SendManager {
         content_logger: Logger,
     ) {
         mononoke::spawn_task(async move {
-            let mut encountered_error: Option<anyhow::Error> = None;
-            while let Some(msg) = content_recv.recv().await {
-                match msg {
-                    ContentMessage::Content((ct_id, fcs)) => {
-                        // Upload the content through sender
-                        if let Err(e) = content_es.upload_contents(vec![(ct_id, fcs)]).await {
-                            encountered_error.get_or_insert(
-                                e.context(format!("Failed to upload content: {:?}", ct_id)),
-                            );
-                        } else {
-                            STATS::synced_contents.add_value(1, (reponame.clone(),));
+            let mut pending_messages = VecDeque::new();
+            let mut current_batch = Vec::new();
+            let mut current_batch_size = 0;
+            let mut flush_timer = interval(CONTENTS_FLUSH_INTERVAL);
+
+            loop {
+                tokio::select! {
+                    msg = content_recv.recv() => {
+                        match msg {
+                            Some(ContentMessage::Content((ct_id, fcs))) => {
+                                let size = fcs.size();
+                                current_batch_size += size;
+                                current_batch.push((ct_id, fcs));
+                            }
+                            Some(ContentMessage::ContentDone(files_sender, tree_sender)) => {
+                                pending_messages.push_back(files_sender);
+                                pending_messages.push_back(tree_sender);
+                            }
+                            None => break,
                         }
-                    }
-                    ContentMessage::ContentDone(files_sender, tree_sender) => {
-                        if let Some(e) = encountered_error {
-                            let msg = format!("Error processing content: {:?}", e);
-                            error!(content_logger, "{}", msg);
-                            let _ = files_sender.send(Err(anyhow::anyhow!(msg.clone())));
-                            let _ = tree_sender.send(Err(anyhow::anyhow!(msg)));
-                            return;
-                        } else {
-                            let res = files_sender.send(Ok(()));
-                            let _ = tree_sender.send(Ok(()));
-                            if let Err(e) = res {
-                                error!(content_logger, "Error sending content ready: {:?}", e);
+
+                        if current_batch_size >= MAX_BLOB_BYTES || current_batch.len() >= MAX_CONTENT_BATCH_SIZE {
+                            if let Err(e) = flush_batch(&content_es, &mut current_batch, &mut pending_messages, &content_logger, reponame.clone()).await {
+                                error!(content_logger, "Error processing content: {:?}", e);
                                 return;
                             }
+                            current_batch_size = 0;
+                        }
+                    }
+                    _ = flush_timer.tick() => {
+                        if current_batch_size > 0 || !pending_messages.is_empty() {
+                            if let Err(e) = flush_batch(&content_es, &mut current_batch, &mut pending_messages, &content_logger, reponame.clone()).await {
+                                error!(content_logger, "Error processing content: {:?}", e);
+                                return;
+                            }
+                            current_batch_size = 0;
                         }
                     }
                 }
+            }
+
+            async fn flush_batch(
+                content_es: &Arc<EdenapiSender>,
+                current_batch: &mut Vec<(AnyFileContentId, FileContents)>,
+                pending_messages: &mut VecDeque<oneshot::Sender<Result<(), anyhow::Error>>>,
+                content_logger: &Logger,
+                reponame: String,
+            ) -> Result<(), anyhow::Error> {
+                let current_batch_len = current_batch.len() as i64;
+
+                if let Err(e) = content_es
+                    .upload_contents(std::mem::take(current_batch))
+                    .await
+                {
+                    error!(content_logger, "Error processing content: {:?}", e);
+                    return Err(e);
+                } else {
+                    STATS::synced_contents.add_value(current_batch_len, (reponame.clone(),));
+                }
+
+                while let Some(sender) = pending_messages.pop_front() {
+                    let res = sender.send(Ok(()));
+                    if let Err(e) = res {
+                        return Err(anyhow::anyhow!("Error sending content ready: {:?}", e));
+                    }
+                }
+                Ok(())
             }
         });
     }

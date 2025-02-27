@@ -61,9 +61,7 @@
   $ hg push -r . --to master_bookmark -q
 
 
-  $ with_stripped_logs mononoke_modern_sync sync-one orig dest --cs-id 53b034a90fe3002a707a7da9cdf6eac3dea460ad72f7c6969dfb88fd0e69f856
-  Connecting to https://localhost:$LOCAL_PORT/edenapi/
-  Uploaded changesets: [HgChangesetId(HgId("e20237022b1290d98c3f14049931a8f498c18c53"))]
+  $ quiet with_stripped_logs mononoke_modern_sync sync-one orig dest --cs-id 53b034a90fe3002a707a7da9cdf6eac3dea460ad72f7c6969dfb88fd0e69f856
 
 Compare content
   $ diff <(mononoke_admin filestore -R orig fetch --content-id eb56488e97bb4cf5eb17f05357b80108a4a71f6c3bab52dfcaec07161d105ec9) <(mononoke_admin filestore -R dest fetch --content-id eb56488e97bb4cf5eb17f05357b80108a4a71f6c3bab52dfcaec07161d105ec9)
