@@ -81,7 +81,7 @@ pub struct FetchArgs {
     /// Requests that the shallow clone/fetch should be cut at a specific time,
     /// instead of depth. The timestamp provided should be in the same format
     /// as is expected for git rev-list --max-age <timestamp>
-    pub deepen_since: Option<gix_date::Time>,
+    pub deepen_since: Option<usize>,
     /// Requests that the shallow clone/fetch should be cut at a specific revision
     /// instead of a depth, i.e. the specified oid becomes the boundary at which the
     /// fetch or clone should stop at
@@ -286,7 +286,7 @@ impl FetchArgs {
                     })?);
                 } else if let Some(time_depth) = data.strip_prefix(DEEPEN_SINCE_PREFIX) {
                     let time_depth = bytes_to_str(time_depth, "depth", "deepen since")?.to_owned();
-                    let parsed_time = gix_date::parse(time_depth.as_str(), Some(std::time::SystemTime::now()))
+                    let parsed_time = time_depth.as_str().parse::<usize>()
                         .with_context(|| format!("Invalid time {:?} received for deepen since during fetch command args parsing", time_depth))?;
                     fetch_args.deepen_since = Some(parsed_time);
                 } else if let Some(oid_depth) = data.strip_prefix(DEEPEN_NOT_PREFIX) {
@@ -452,7 +452,7 @@ mod tests {
     fn test_fetch_command_args_time_parsing() -> Result<()> {
         let inner_writer = Vec::new();
         let mut packetline_writer = Writer::new(inner_writer);
-        packetline_writer.write_all(b"deepen-since 1979-02-26 18:30:00\n")?;
+        packetline_writer.write_all(b"deepen-since 1740503859\n")?;
         let mut inner_writer = packetline_writer.into_inner();
         flush_to_write(&mut inner_writer)?;
 
@@ -460,7 +460,7 @@ mod tests {
 
         let inner_writer = Vec::new();
         let mut packetline_writer = Writer::new(inner_writer);
-        packetline_writer.write_all(b"deepen-since 10 weeks ago\n")?;
+        packetline_writer.write_all(b"deepen-since 949363260\n")?;
         let mut inner_writer = packetline_writer.into_inner();
         flush_to_write(&mut inner_writer)?;
 

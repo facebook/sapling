@@ -49,11 +49,6 @@
   * fc69d5f (HEAD -> master_bookmark, origin/master_bookmark, origin/HEAD) Adding fileF
   * 5c4d2c0 (grafted) Adding fileE
 
-# Even though the clone returns a single commit, validate that it contains the entire working copy
-  $ git rev-list --objects --all | git cat-file --batch-check='%(objectname) %(objecttype) %(rest)' | sort > $TESTTMP/object_list
-  $ cd "$TESTTMP"
-  $ rm -rf $GIT_REPO
-
 # Import the repo into Mononoke
   $ cd "$TESTTMP"
   $ quiet gitimport "$GIT_REPO_ORIGIN" --derive-hg --generate-bookmarks full-repo
@@ -64,12 +59,30 @@
 # Perform Mononoke clone with the depth of 3 and it should have the expected output
   $ cd "$TESTTMP"
   $ quiet git_client clone $MONONOKE_GIT_SERVICE_BASE_URL/$REPONAME.git --shallow-since='02/01/0000 00:01 +0000'
-  Cloning into 'repo'...
-  fatal: expected 'packfile', received '?Failed to generate shallow info
-  
-  Caused by:
-      Shallow variant 'shallow-since' is not yet supported'
-  [128]
-#  $ cd $REPONAME
-# Validate that the list of commits returned match the expected output
-#  $ git rev-list --objects --all | git cat-file --batch-check='%(objectname) %(objecttype) %(rest)' | grep commit | sort
+  $ cd $REPONAME
+# Visualize the graph to verify its the right shape
+  $ git log --all --decorate --oneline --graph
+  * fc69d5f (HEAD -> master_bookmark, origin/master_bookmark, origin/HEAD) Adding fileF
+  * 5c4d2c0 (grafted) Adding fileE
+# Delete both clone and reclone with different shallow constraint
+  $ cd "$TESTTMP"
+  $ rm -rf $REPONAME
+  $ rm -rf $GIT_REPO
+
+# Perform a shallow clone of the repo with commits created only after 03/01/0000 00:01. NOTE: git looks at the committer date NOT the author date
+  $ cd "$TESTTMP"
+  $ git clone --shallow-since='03/01/0000 00:00 +0000' file://"$GIT_REPO_ORIGIN"
+  Cloning into 'repo-git'...
+  $ cd $GIT_REPO
+# Visualize the graph to verify its the right shape
+  $ git log --all --decorate --oneline --graph 
+  * fc69d5f (HEAD -> master_bookmark, origin/master_bookmark, origin/HEAD) Adding fileF
+  * 5c4d2c0 (grafted) Adding fileE
+# Perform Mononoke clone with the depth of 3 and it should have the expected output
+  $ cd "$TESTTMP"
+  $ quiet git_client clone $MONONOKE_GIT_SERVICE_BASE_URL/$REPONAME.git --shallow-since='02/01/0000 00:01 +0000'
+  $ cd $REPONAME
+# Visualize the graph to verify its the right shape
+  $ git log --all --decorate --oneline --graph
+  * fc69d5f (HEAD -> master_bookmark, origin/master_bookmark, origin/HEAD) Adding fileF
+  * 5c4d2c0 (grafted) Adding fileE

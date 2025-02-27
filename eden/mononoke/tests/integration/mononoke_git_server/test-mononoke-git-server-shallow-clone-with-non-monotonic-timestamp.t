@@ -63,7 +63,7 @@
   fatal: the remote end hung up unexpectedly
   [128]
 
-# Perform a shallow clone of the repo with commit created only after 03/01/0000 00:01
+# Perform a shallow clone of the repo with commit created only after 01/01/0000 00:01
   $ cd "$TESTTMP"
   $ rm -rf $GIT_REPO
   $ git clone --shallow-since='01/01/0000 00:01 +0000' file://"$GIT_REPO_ORIGIN"
@@ -84,19 +84,30 @@
 # Perform Mononoke clone of the repo with commits created only after 02/01/0000 00:01
   $ cd "$TESTTMP"
   $ quiet git_client clone $MONONOKE_GIT_SERVICE_BASE_URL/$REPONAME.git --shallow-since='02/01/0000 00:01 +0000'
-  Cloning into 'repo'...
-  fatal: expected 'packfile', received '?Failed to generate shallow info
-  
-  Caused by:
-      Shallow variant 'shallow-since' is not yet supported'
-  [128]
+  $ cd $REPONAME
+  $ git log --all --decorate --oneline --graph 
+  * 99e0298 (grafted, HEAD -> master_bookmark, origin/master_bookmark, origin/HEAD) Adding fileG
+
+# Perform a Mononoke shallow clone of the repo with commit created only after 01/01/0000 00:01
+  $ cd "$TESTTMP"
+  $ rm -rf $REPONAME
+  $ quiet git_client clone $MONONOKE_GIT_SERVICE_BASE_URL/$REPONAME.git --shallow-since='01/01/0000 00:01 +0000'
+  $ cd $REPONAME
+  $ git log --all --decorate --oneline --graph
+  * 99e0298 (HEAD -> master_bookmark, origin/master_bookmark, origin/HEAD) Adding fileG
+  * 5ca22c0 Adding fileF
+  * 287dd20 (grafted) Adding fileE
+
 # Perform Mononoke clone of the repo with commits created only after 03/01/0000 00:01
+  $ cd "$TESTTMP"
+  $ rm -rf $REPONAME
   $ quiet git_client clone $MONONOKE_GIT_SERVICE_BASE_URL/$REPONAME.git --shallow-since='03/01/0000 00:01 +0000'
   Cloning into 'repo'...
   fatal: expected 'packfile', received '?Failed to generate shallow info
   
   Caused by:
-      Shallow variant 'shallow-since' is not yet supported'
+      0: Error in getting ancestors after time during shallow-info
+      1: No commits selected for shallow requests with committer time greater than 951868860'
   [128]
 
 #  $ cd $REPONAME

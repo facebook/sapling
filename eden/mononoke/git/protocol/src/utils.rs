@@ -9,8 +9,11 @@ use std::sync::Arc;
 
 use anyhow::Context;
 use anyhow::Result;
+use blobstore::Loadable;
 use bonsai_tag_mapping::BonsaiTagMappingEntry;
 use cloned::cloned;
+use commit_graph::AncestorsStreamBuilder;
+use commit_graph_types::frontier::AncestorsWithinDistance;
 use context::CoreContext;
 use futures::stream;
 use futures::stream::BoxStream;
@@ -207,4 +210,52 @@ pub(crate) async fn tag_entries_to_hashes(
             },
         )
         .await
+}
+
+/// Function responsible for fetching the ancestors of the input heads that have creation time greater than the input
+/// time
+pub(crate) async fn ancestors_after_time(
+    ctx: &CoreContext,
+    repo: &impl Repo,
+    heads: Vec<ChangesetId>,
+    time: usize,
+) -> Result<AncestorsWithinDistance> {
+    let commit_graph = Arc::new(repo.commit_graph().clone());
+    let blobstore = repo.repo_blobstore().clone();
+    let inner_ctx = ctx.clone();
+    let ancestors = AncestorsStreamBuilder::new(commit_graph, ctx.clone(), heads.clone())
+        .with(move |csid| {
+            cloned!(inner_ctx as ctx, time, blobstore);
+            async move {
+                let changeset = csid.load(&ctx, &blobstore).await?;
+                let to_include = changeset
+                    .committer_date()
+                    .map_or(false, |date| date.timestamp_secs() > time as i64);
+                Ok(to_include)
+            }
+        })
+        .build()
+        .await?
+        .try_collect::<Vec<_>>()
+        .await?;
+    // From the list of ancestors, get the boundary of commits that Git will mark as shallow for the client
+    let boundaries = repo
+        .commit_graph()
+        .find_boundary(ctx, ancestors.clone())
+        .await?;
+    // Ancestor commits cannot include boundary commits, so filter them out
+    let ancestors = ancestors
+        .into_iter()
+        .filter(|csid| !boundaries.contains(csid))
+        .collect::<Vec<_>>();
+    if ancestors.is_empty() && boundaries.is_empty() {
+        return Err(anyhow::anyhow!(
+            "No commits selected for shallow requests with committer time greater than {}",
+            time
+        ));
+    }
+    Ok(AncestorsWithinDistance {
+        ancestors,
+        boundaries,
+    })
 }

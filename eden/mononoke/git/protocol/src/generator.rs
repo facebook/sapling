@@ -65,6 +65,7 @@ use crate::types::RefsSource;
 use crate::types::ShallowInfoRequest;
 use crate::types::ShallowInfoResponse;
 use crate::types::ShallowVariant;
+use crate::utils::ancestors_after_time;
 use crate::utils::commits;
 use crate::utils::delta_base;
 use crate::utils::entry_weight;
@@ -953,8 +954,10 @@ pub async fn shallow_info(
             .ancestors_within_distance(&ctx, translated_shallow_commits.bonsais, *depth as u64)
             .await
             .context("Error in getting ancestors within distance from shallow commits during shallow-info")?,
+        ShallowVariant::FromServerWithTime(time) => ancestors_after_time(&ctx, repo, translated_sha_heads.bonsais, *time)
+            .await
+            .context("Error in getting ancestors after time during shallow-info")?,
         ShallowVariant::None => AncestorsWithinDistance::default(),
-        ShallowVariant::FromServerWithTime(_) => anyhow::bail!("Shallow variant 'shallow-since' is not yet supported"),
         variant => anyhow::bail!("Shallow variant {:?} is not supported yet", variant),
     };
     let boundary_commits =
