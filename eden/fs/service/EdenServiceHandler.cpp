@@ -1988,7 +1988,7 @@ void publishFile(
 }
 
 /**
- * This method computes all uncommitted changes and save the result to publisher
+ * This method computes all uncommited changes and save the result to publisher
  */
 void sumUncommitedChanges(
     const JournalDeltaRange& range,
@@ -3775,7 +3775,7 @@ EdenServiceHandler::semifuture_ensureMaterialized(
   // The background mode is not fully running on background, instead, it will
   // start to load inodes in a blocking way, and then collect unready
   // materialization process then throws to the background. This is most
-  // efficient way for the local execution of virtualized buck-out as avoid
+  // effecient way for the local execution of virtualized buck-out as avoid
   // cache exchange by materializing smaller random reads, and not prevent
   // execution starting by read large files on the background.
   bool background = *params->background();
@@ -4207,7 +4207,7 @@ EdenServiceHandler::semifuture_globFiles(std::unique_ptr<GlobParams> params) {
                             globEntry.originHash);
                       }
                       XLOG(DBG5)
-                          << "Glob successfully created, returning SaplingRemoteAPI results";
+                          << "Glob successfuly created, returning SaplingRemoteAPI results";
                       return glob;
                     });
               })

@@ -130,7 +130,7 @@ Test auto prefetch during pull
 
 - Prefetch everything
   $ echo a >> a
-  $ hg commit -Aqm 'draft commit that shouldn't affect prefetch'
+  $ hg commit -Aqm 'draft commit that shouldnt affect prefetch'
   $ rm -rf $CACHEDIR/master
   $ hg pull --config treemanifest.pullprefetchcount=10 --traceback
   pulling from ssh://user@dummy/master
