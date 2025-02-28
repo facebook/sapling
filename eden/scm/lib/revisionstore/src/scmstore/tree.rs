@@ -28,7 +28,7 @@ use anyhow::Result;
 use cas_client::CasClient;
 use clientinfo::get_client_request_info_thread_local;
 use clientinfo::set_client_request_info_thread_local;
-use crossbeam::channel::bounded;
+use crossbeam::channel::unbounded;
 use edenapi_types::FileAuxData;
 use edenapi_types::TreeAuxData;
 use edenapi_types::TreeChildEntry;
@@ -149,17 +149,9 @@ impl TreeStore {
             return FetchResults::new(Box::new(std::iter::empty()));
         }
 
-        // Unscientifically picked to be small enough to not use "all" the memory with a
-        // full queue of (small) trees, but still generous enough to keep the pipeline
-        // full of work for downstream consumers. The important thing is it is less than
-        // infinity.
-        const RESULT_QUEUE_SIZE: usize = 100_000;
-
         let bar = self.progress_bar.create_or_extend_local(0);
 
-        // Bound channel size so we don't use unlimited memory queueing up tree content
-        // when the consumer is consumer slower than we are fetching.
-        let (found_tx, found_rx) = bounded(RESULT_QUEUE_SIZE);
+        let (found_tx, found_rx) = unbounded();
 
         let found_tx2 = found_tx.clone();
         let mut state = FetchState::new(reqs, attrs, found_tx, fetch_mode, bar.clone());
