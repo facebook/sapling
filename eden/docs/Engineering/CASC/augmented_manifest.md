@@ -4,9 +4,11 @@ The manifest entry in Source Control is the data blob that describes the content
 
 **Augmented Manifest** is the key part of the content-addressed data model in Source Control
 
-## What is the difference from the Sapling Manifest:
+## What is the difference from the Sapling Manifest?
 
-* A Sapling manifest entry is limited to a path and sha1 hash, referencing either a filenode or another Sapling manifest entry.
+🌲🌲🌲🌲🌲🌲🌲🌲 **Sapling Manifest** 🌲🌲🌲🌲🌲🌲🌲🌲
+
+* A Sapling Manifest entry is limited to a path and sha1 hash, referencing either a filenode or another Sapling manifest entry.
 Notably, file metadata (content blake3, content sha1, copy info, and blob size) is not included in the manifest itself, but rather provided separately.
 
 
@@ -22,6 +24,7 @@ foo.txt -> 2a3b4c5d6e7f8g9h0i1j2k3l4m5n6o, file type
 bar.txt -> 8c7d6e5f4g3h2i1j0k9l8m7n6o5p, file type
 ```
 
+🌳🌳🌳🌳🌳🌳🌳🌳 **Augmented Manifest** 🌳🌳🌳🌳🌳🌳🌳🌳
 * An Augmented Manifest is uniquely identified by its **content-addressed blake3 hash**.
 It employs a double-pointer tree structure to efficiently represent the directory hierarchy (content-addressed blake3 hash and Sapling manifest id (sha1) required to reconstruct Sapling manifests).
 Unlike traditional Sapling manifests, file metadata (content blake3, content sha1, copy info header, and the blob size) is an integral part of each manifest entry.
