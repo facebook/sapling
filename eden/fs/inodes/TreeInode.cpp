@@ -3940,7 +3940,7 @@ folly::Try<folly::Unit> TreeInode::invalidateChannelEntryCache(
 #ifndef _WIN32
   if (auto* fuseChannel = getMount()->getFuseChannel()) {
     fuseChannel->invalidateEntry(getNodeId(), name);
-  } else if (auto* nfsdChannel = getMount()->getNfsdChannel()) {
+  } else if (getMount()->getNfsdChannel()) {
     // For NFS, the entry cache is flushed when the directory mtime is changed.
     // Directly invalidating an entry is not possible. We do want to record
     // which files have changed during checkout. We use this to monitor that our
