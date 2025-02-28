@@ -414,6 +414,7 @@ python_unittest(
     runtime_deps = artifacts["deps"],
     deps = [
         "//eden/fs/cli:lib",
+        "//eden/fs/service:thrift-py-deprecated",
         "//eden/integration/lib:lib",
     ],
 )

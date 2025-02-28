@@ -14,8 +14,15 @@ from pathlib import Path
 
 from eden.fs.cli.util import mkscratch_bin
 
-from .lib import testcase
+from facebook.eden.ttypes import (
+    ListRedirectionsRequest,
+    MountId,
+    Redirection,
+    RedirectionState,
+    RedirectionType,
+)
 
+from .lib import testcase
 
 if sys.platform == "win32":
     from eden.fs.cli.util import remove_unc_prefix
@@ -115,20 +122,30 @@ via-profile = "bind"
                     msg="Can't mount outside the repo via relative path",
                 )
 
-    def test_list(self) -> None:
-        repo_path = os.path.join("a", "new-one")
-        profile_path = scratch_path(
-            self.mount, os.path.join("edenfs", "redirections", "via-profile")
+    def test_list_with_cli(self) -> None:
+        # Redirection via profile
+        profile_repo_path = "via-profile"
+        profile_target_path = scratch_path(
+            self.mount, os.path.join("edenfs", "redirections", profile_repo_path)
         )
+        profile_source = ".eden-redirections"
+        # New redirection to be added later
+        repo_path = os.path.join("a", "new-one")
+        source = ".eden/client/config.toml:redirections"
+        target_path = scratch_path(
+            self.mount,
+            os.path.join("edenfs", "redirections", "a", "new-one"),
+        )
+
         output = self.eden.run_cmd("redirect", "list", "--json", "--mount", self.mount)
         self.assertEqual(
             json.loads(output),
             [
                 {
-                    "repo_path": "via-profile",
+                    "repo_path": profile_repo_path,
                     "type": "bind",
-                    "target": profile_path,
-                    "source": ".eden-redirections",
+                    "target": profile_target_path,
+                    "source": profile_source,
                     "state": "ok",
                 }
             ],
@@ -143,10 +160,6 @@ via-profile = "bind"
         list_output = self.eden.run_cmd(
             "redirect", "list", "--json", "--mount", self.mount
         )
-        target_path = scratch_path(
-            self.mount,
-            os.path.join("edenfs", "redirections", "a", "new-one"),
-        )
         self.assertEqual(
             json.loads(list_output),
             [
@@ -154,14 +167,14 @@ via-profile = "bind"
                     "repo_path": repo_path,
                     "type": "bind",
                     "target": target_path,
-                    "source": ".eden/client/config.toml:redirections",
+                    "source": source,
                     "state": "ok",
                 },
                 {
-                    "repo_path": "via-profile",
+                    "repo_path": profile_repo_path,
                     "type": "bind",
-                    "target": profile_path,
-                    "source": ".eden-redirections",
+                    "target": profile_target_path,
+                    "source": profile_source,
                     "state": "ok",
                 },
             ],
@@ -205,10 +218,6 @@ via-profile = "bind"
         )
         self.assertEqual(output, "", msg="we believe we switched to a symlink")
 
-        target_path = scratch_path(
-            self.mount,
-            os.path.join("edenfs", "redirections", "a", "new-one"),
-        )
         list_output = self.eden.run_cmd(
             "redirect", "list", "--json", "--mount", self.mount
         )
@@ -219,14 +228,14 @@ via-profile = "bind"
                     "repo_path": repo_path,
                     "type": "symlink",
                     "target": target_path,
-                    "source": ".eden/client/config.toml:redirections",
+                    "source": source,
                     "state": "ok",
                 },
                 {
-                    "repo_path": "via-profile",
+                    "repo_path": profile_repo_path,
                     "type": "bind",
-                    "target": profile_path,
-                    "source": ".eden-redirections",
+                    "target": profile_target_path,
+                    "source": profile_source,
                     "state": "ok",
                 },
             ],
@@ -255,10 +264,10 @@ via-profile = "bind"
             json.loads(list_output),
             [
                 {
-                    "repo_path": "via-profile",
+                    "repo_path": profile_repo_path,
                     "type": "bind",
-                    "target": profile_path,
-                    "source": ".eden-redirections",
+                    "target": profile_target_path,
+                    "source": profile_source,
                     "state": "ok",
                 }
             ],
@@ -269,6 +278,130 @@ via-profile = "bind"
             os.path.exists(os.path.join(self.mount, "a", "new-one")),
             msg="symlink is gone",
         )
+
+    def test_list_with_thrift(self) -> None:
+        # Redirection via profile
+        profile_repo_path = "via-profile"
+        profile_target_path = scratch_path(
+            self.mount, os.path.join("edenfs", "redirections", profile_repo_path)
+        )
+        profile_source = ".eden-redirections"
+        # New redirection to be added later
+        repo_path = os.path.join("a", "new-one")
+        source = ".eden/client/config.toml:redirections"
+        target_path = scratch_path(
+            self.mount,
+            os.path.join("edenfs", "redirections", "a", "new-one"),
+        )
+        # Thrift request
+        thrift_mount = MountId(self.mount.encode("utf-8"))
+        thrift_req = ListRedirectionsRequest(thrift_mount)
+
+        # List via thrift
+        with self.get_thrift_client_legacy() as client:
+            thrift_output = client.listRedirections(thrift_req)
+            self.assertListEqual(
+                thrift_output.redirections,
+                [
+                    Redirection(
+                        repoPath=profile_repo_path.encode("utf-8"),
+                        redirType=RedirectionType.BIND,
+                        source=profile_source.encode("utf-8"),
+                        state=RedirectionState.MATCHES_CONFIGURATION,
+                        target=profile_target_path.encode("utf-8"),
+                    )
+                ],
+            )
+
+        # Add a new bind redirection
+        output = self.eden.run_cmd(
+            "redirect", "add", "--mount", self.mount, repo_path, "bind"
+        )
+        self.assertEqual(output, "", msg="we believe we set up a new bind mount")
+
+        # List via thrift
+        with self.get_thrift_client_legacy() as client:
+            thrift_output = client.listRedirections(thrift_req)
+            self.assertListEqual(
+                thrift_output.redirections,
+                [
+                    Redirection(
+                        repoPath=repo_path.encode("utf-8"),
+                        redirType=RedirectionType.BIND,
+                        source=source.encode("utf-8"),
+                        state=RedirectionState.MATCHES_CONFIGURATION,
+                        target=target_path.encode("utf-8"),
+                    ),
+                    Redirection(
+                        repoPath=profile_repo_path.encode("utf-8"),
+                        redirType=RedirectionType.BIND,
+                        source=profile_source.encode("utf-8"),
+                        state=RedirectionState.MATCHES_CONFIGURATION,
+                        target=profile_target_path.encode("utf-8"),
+                    ),
+                ],
+                msg="saved config agrees with last output via thrift endpoint",
+            )
+
+        # Remove the bind redirection
+        output = self.eden.run_cmd(
+            "redirect",
+            "del",
+            "--mount",
+            self.mount,
+            repo_path,
+        )
+        self.assertEqual(output, "", msg="we believe we removed the bind mount")
+        # Add a new symlink redirection
+        output = self.eden.run_cmd(
+            "redirect", "add", "--mount", self.mount, repo_path, "symlink"
+        )
+        self.assertEqual(output, "", msg="we believe we switched to a symlink")
+
+        # List via thrift
+        with self.get_thrift_client_legacy() as client:
+            thrift_output = client.listRedirections(thrift_req)
+            self.assertListEqual(
+                thrift_output.redirections,
+                [
+                    Redirection(
+                        repoPath=repo_path.encode("utf-8"),
+                        redirType=RedirectionType.SYMLINK,
+                        source=source.encode("utf-8"),
+                        state=RedirectionState.MATCHES_CONFIGURATION,
+                        target=target_path.encode("utf-8"),
+                    ),
+                    Redirection(
+                        repoPath=profile_repo_path.encode("utf-8"),
+                        redirType=RedirectionType.BIND,
+                        source=profile_source.encode("utf-8"),
+                        state=RedirectionState.MATCHES_CONFIGURATION,
+                        target=profile_target_path.encode("utf-8"),
+                    ),
+                ],
+                msg="saved config agrees with last output via thrift endpoint",
+            )
+
+        # Remove the symlink redirection
+        output = self.eden.run_cmd("redirect", "del", "--mount", self.mount, repo_path)
+        self.assertEqual(output, "", msg="we believe we removed the symlink")
+
+        # List via thrift
+        with self.get_thrift_client_legacy() as client:
+            thrift_output = client.listRedirections(thrift_req)
+            self.assertListEqual(
+                thrift_output.redirections,
+                [
+                    Redirection(
+                        repoPath=profile_repo_path.encode("utf-8"),
+                        redirType=RedirectionType.BIND,
+                        source=profile_source.encode("utf-8"),
+                        state=RedirectionState.MATCHES_CONFIGURATION,
+                        target=profile_target_path.encode("utf-8"),
+                    ),
+                ],
+                msg="saved config agrees with last output via thrift endpoint",
+            )
 
     def test_fixup_mounts_things(self) -> None:
         profile_path = scratch_path(

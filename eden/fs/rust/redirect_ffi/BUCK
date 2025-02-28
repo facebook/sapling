@@ -18,14 +18,15 @@ rust_library(
 
 cpp_library(
     name = "redirect-ffi-cpp-wrapper",
-    srcs = [],
-    headers = [],
+    srcs = ["src/ffi.cpp"],
+    headers = ["include/ffi.h"],
     preferred_linkage = "static",
     undefined_symbols = True,
     deps = [
-        ":redirect-ffi@header",
+        "//eden/common/utils:throw",
     ],
     exported_deps = [
-        "fbsource//third-party/rust:cxx-core",
+        ":redirect-ffi@header",
+        "//eden/fs/service:thrift-cpp2-types",
     ],
 )
