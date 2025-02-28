@@ -646,9 +646,14 @@ pub fn must_sniff_dir(path: &Path) -> Result<Identity> {
 }
 
 /// Recursively sniff path and its ancestors for the first directory
-///  containing a ".hg" or ".sl" directory. The ancestor directory and
-///  corresponding Identity are returned, if any. Only permission
-///  errors are propagated.
+/// containing a ".hg" or ".sl" directory. The ancestor directory and
+/// corresponding Identity are returned, if any. Only permission
+/// errors are propagated.
+///
+/// This function does not write to the filesystem. It does not auto create
+/// `.git/sl`, despite still returns `SL_GIT` identity for `.git`. `clidispatch`
+/// calls `gitcompat::init::maybe_init_inside_dotgit` to create `.git/sl` on
+/// repo constrution.
 pub fn sniff_root(path: &Path) -> Result<Option<(PathBuf, Identity)>> {
     tracing::debug!(start=%path.display(), "sniffing for repo root");
 
