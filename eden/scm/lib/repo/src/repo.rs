@@ -677,12 +677,12 @@ impl Repo {
 
         tracing::trace!(target: "repo::workingcopy", "creating tree resolver");
         let tree_resolver = self.tree_resolver()?;
-        let has_requirement = |s: &str| self.requirements.contains(s);
+        let has_requirement =
+            |s: &str| self.requirements.contains(s) || self.store_requirements.contains(s);
 
         let wc = WorkingCopy::new(
             &self.path,
             &self.config,
-            self.storage_format(),
             tree_resolver,
             file_store,
             self.locker.clone(),

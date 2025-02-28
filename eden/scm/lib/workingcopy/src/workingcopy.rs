@@ -42,11 +42,11 @@ use status::Status;
 use status::StatusBuilder;
 use storemodel::FileStore;
 use submodule::parse_gitmodules;
+use submodule::Submodule;
 use tracing::debug;
 use treestate::filestate::StateFlags;
 use treestate::treestate::TreeState;
 use types::hgid::NULL_ID;
-use types::repo::StorageFormat;
 use types::HgId;
 use types::RepoPathBuf;
 use util::file::atomic_write;
@@ -87,7 +87,6 @@ pub struct WorkingCopy {
     vfs: VFS,
     config: Arc<dyn Config>,
     ident: Identity,
-    format: StorageFormat,
     treestate: Arc<Mutex<TreeState>>,
     tree_resolver: ArcReadTreeManifest,
     filestore: ArcFileStore,
@@ -98,6 +97,7 @@ pub struct WorkingCopy {
     pub journal: Journal,
     watchman_client: Arc<DeferredWatchmanClient>,
     notify_parents_change_func: Option<Box<dyn Fn(&[HgId]) -> Result<()> + Send + Sync>>,
+    support_submodules: bool,
 }
 
 const ACTIVE_BOOKMARK_FILE: &str = "bookmarks.current";
@@ -106,7 +106,6 @@ impl WorkingCopy {
     pub fn new(
         path: &Path,
         config: &Arc<dyn Config>,
-        format: StorageFormat,
         tree_resolver: ArcReadTreeManifest,
         filestore: ArcFileStore,
         locker: Arc<RepoLocker>,
@@ -118,6 +117,9 @@ impl WorkingCopy {
         let vfs = VFS::new(path.to_path_buf())?;
 
         let is_eden = has_requirement("eden");
+
+        let support_submodules =
+            has_requirement("git") && config.get_or("git", "submodules", || true)?;
 
         // In case the "requires" file gets corrupted, check `.eden` directory
         // and prevent treating edenfs as non-edenfs.
@@ -188,7 +190,6 @@ impl WorkingCopy {
         Ok(WorkingCopy {
             vfs,
             config: config.clone(),
-            format,
             ident,
             treestate,
             tree_resolver,
@@ -200,6 +201,7 @@ impl WorkingCopy {
             journal,
             watchman_client,
             notify_parents_change_func: None,
+            support_submodules,
         })
     }
 
@@ -403,18 +405,15 @@ impl WorkingCopy {
         }
 
         let mut ignore_dirs = vec![PathBuf::from(self.ident.dot_dir())];
-        if self.format.is_git() {
-            // Ignore file within submodules. Python has some additional logic layered on
-            // top to add submodule info into status results.
-            let git_modules_path = self.vfs.join(".gitmodules".try_into()?);
-            if git_modules_path.exists() {
-                ignore_dirs.extend(
-                    // No need to access "url" here. So no need for a real "origin_url".
-                    parse_gitmodules(&fs_err::read(&git_modules_path)?, None)
-                        .into_iter()
-                        .map(|s| PathBuf::from(s.path)),
-                );
-            }
+        // Ignore file within submodules. Python has some additional logic layered on
+        // top to add submodule info into status results.
+        let submodules = self.parse_submodule_config()?;
+        if !submodules.is_empty() {
+            ignore_dirs.extend(
+                submodules
+                    .iter()
+                    .map(move |s| PathBuf::from(s.path.clone())),
+            );
         }
 
         let pending_changes = self
@@ -524,6 +523,30 @@ impl WorkingCopy {
         }
 
         Ok(status_builder)
+    }
+
+    /// Parse the `.gitmodules` config from the working copy.
+    ///
+    /// Respect submodule related configs. If git.submodules=false, or the repo
+    /// does not use git format, return an empty list.
+    fn parse_submodule_config(&self) -> Result<Vec<Submodule>> {
+        if !self.support_submodules {
+            tracing::debug!(target: "workingcopy::submodule", "submodules are disabled");
+            return Ok(Vec::new());
+        }
+
+        let git_modules_path = self.vfs.join(".gitmodules".try_into()?);
+        let parsed = if git_modules_path.exists() {
+            let origin_url = self.config.get("paths", "default");
+            let parsed = parse_gitmodules(&fs_err::read(&git_modules_path)?, origin_url.as_deref());
+            tracing::debug!(target: "workingcopy::submodule", "parsed {} submodules", parsed.len());
+            parsed
+        } else {
+            tracing::debug!(target: "workingcopy::submodule", ".gitmodules does not exist");
+            Vec::new()
+        };
+
+        Ok(parsed)
     }
 
     pub fn copymap(&self, matcher: DynMatcher) -> Result<Vec<(RepoPathBuf, RepoPathBuf)>> {
