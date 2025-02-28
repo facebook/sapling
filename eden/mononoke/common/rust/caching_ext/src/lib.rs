@@ -18,7 +18,7 @@ use std::collections::HashSet;
 use std::hash::Hash;
 use std::time::Duration;
 
-use abomination::Abomination;
+use abomonation::Abomonation;
 use anyhow::Context as _;
 use anyhow::Error;
 use async_trait::async_trait;
