@@ -12,6 +12,9 @@ function print_help {
     echo "The default build mode is ${mode}."
     echo "--oss    change build mode to fbcode//mode/dev-rust-oss"
     echo "--flagfile FLAGFILE change build mode to specified one"
+    echo
+    echo "All arguments following the test file will be passed through to the runner."
+    echo "See README.md for more info on how to run tests"
     exit 1
 }
 
@@ -39,6 +42,9 @@ while [[ $# -gt 0 ]]; do
     "--flagfile")
       mode="$1"
       shift
+      ;;
+    "--dev")
+      mode="fbcode//mode/dev"
       ;;
     "--oss")
       mode="fbcode//mode/dev-rust-oss"

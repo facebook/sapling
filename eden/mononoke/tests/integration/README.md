@@ -1,27 +1,39 @@
 # Mononoke Integration Tests
 
-Mononoke's integration tests run using Mercurial's run-tests test framework,
-which is orchestrated using a wrapper to make it more friendly to TestPilot and
-provide some added functionality, such as wiring up dependencies and / or
-setting up an ephemeral MySQL shard.
+Mononoke's integration tests run using a fork of [Mercurial's run-tests test
+framework](https://wiki.mercurial-scm.org/WritingTests), which is orchestrated
+using a wrapper to make it more friendly to TestPilot and provide some added
+functionality, such as wiring up dependencies and / or setting up an ephemeral
+MySQL shard.
 
 Integration tests are grouped into small targets so that a minimal set of
 dependencies are built for each test.
 
-## TL;DR: Running one test
+## TL;DR: Running one test with run-test.sh
 
 First, find the target responsible for the test you want to run by checking in
 the TARGETS file.
 
-Use:
+To quickly run a single test use
+[run-test.sh](https://www.internalfb.com/code/fbsource/fbcode/eden/mononoke/tests/integration/run-test.sh)
+helper script:
 
 ```sh
-buck2 run //eden/mononoke/tests/integration/facebook:some_target -- TEST
+./run-test.sh TEST.t
 ```
 
-Use `--interactive` when running your tests this way in order to accept (or reject)
+Which behind the scenes identifies the right buck target responsible for the
+test and runs: ```buck2 run TARGET -- TEST.t```.
+
+### Interactive mode
+
+Use `--interactive` / `-i` when running your tests this way in order to accept (or reject)
 changes to your `.t` files, or `--keep-tmpdir` to be able to see the files edited
 by your test after it runs.
+
+```sh
+./run-test.sh TEST.t -i
+```
 
 But! Keep reading: there are faster ways to run the tests if you're going to be
 iterating on something. You might as well read on while you wait for that build
@@ -30,8 +42,9 @@ to complete.
 
 ## Running Tests Incrementally: a better way
 
-To run tests locally, a better way is to our incremental helper scripts.
-This allows you to skip most build steps, and rebuild only what you need to
+If your code changes trigger rebuild of multiple Mononoke binaries there is a way
+to avoid unnnecessary rebuilds: our incremental helper scripts.
+Using them allows you to skip most build steps, and rebuild only what you need to
 re-run your test (e.g. if you're iterating on Mononoke server, then you won't
 need to rebuild blobimport more than once).
 
