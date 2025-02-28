@@ -25,6 +25,7 @@ use eagerepo::EagerRepoStore;
 use edenapi::Builder;
 use edenapi::SaplingRemoteApi;
 use edenapi::SaplingRemoteApiError;
+use identity::Identity;
 use manifest_tree::ReadTreeManifest;
 use metalog::MetaLog;
 use once_cell::sync::OnceCell;
@@ -264,6 +265,11 @@ impl Repo {
 
     pub fn config_path(&self) -> PathBuf {
         self.dot_hg_path.join(self.ident.config_repo_file())
+    }
+
+    /// Identity used by the working copy.
+    pub fn ident(&self) -> Identity {
+        self.ident
     }
 
     #[cached_field]
