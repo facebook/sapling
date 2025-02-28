@@ -31,30 +31,26 @@ const CAS_STORE_DIR: &str = "cas_store";
 /// <CAS_STORE_PATH>/<repo_name>/cas_store or
 /// <provided_path>/<repo_name>/cas_store
 /// This is useful for testing, and also allow to isolate cas storage per test.
-pub struct DummyCasClient<'a> {
-    ctx: &'a CoreContext,
-    repo: &'a str,
+pub struct DummyCasClient {
+    ctx: CoreContext,
+    repo: String,
     file_blobstore: Fileblob,
 }
 
-impl<'a> DummyCasClient<'a> {
-    pub fn new(ctx: &'a CoreContext, repo: &'a str) -> Result<Self, Error> {
+impl DummyCasClient {
+    pub fn new(ctx: CoreContext, repo: &str) -> Result<Self, Error> {
         let storage_cas = std::env::var(CAS_STORE_ENV).map(PathBuf::from)?;
         let blobstore_path = storage_cas.join(repo).join(CAS_STORE_DIR);
         let put_behaviour = PutBehaviour::IfAbsent;
         let file_blobstore = Fileblob::create(blobstore_path, put_behaviour)?;
         Ok(Self {
             ctx,
-            repo,
+            repo: repo.to_owned(),
             file_blobstore,
         })
     }
 
-    pub fn new_with_storage_path<P>(
-        ctx: &'a CoreContext,
-        repo: &'a str,
-        path: P,
-    ) -> Result<Self, Error>
+    pub fn new_with_storage_path<P>(ctx: CoreContext, repo: &str, path: P) -> Result<Self, Error>
     where
         P: Into<PathBuf>,
     {
@@ -63,7 +59,7 @@ impl<'a> DummyCasClient<'a> {
             Fileblob::create(path.into().join(repo).join(CAS_STORE_DIR), put_behaviour)?;
         Ok(Self {
             ctx,
-            repo,
+            repo: repo.to_owned(),
             file_blobstore,
         })
     }
@@ -71,7 +67,7 @@ impl<'a> DummyCasClient<'a> {
 
 /// A CasClient that does nothing. All operations are using an on-disk blobstore.
 #[async_trait::async_trait]
-impl<'a> CasClient for DummyCasClient<'a> {
+impl CasClient for DummyCasClient {
     async fn streaming_upload_blob(
         &self,
         digest: &MononokeDigest,
@@ -81,14 +77,14 @@ impl<'a> CasClient for DummyCasClient<'a> {
         let bytes_to_upload =
             BlobstoreBytes::from_bytes(bytes_stream.try_collect::<BytesMut>().await?);
         self.file_blobstore
-            .put(self.ctx, key, bytes_to_upload)
+            .put(&self.ctx, key, bytes_to_upload)
             .await
     }
 
     async fn upload_blob(&self, digest: &MononokeDigest, bytes: Bytes) -> Result<(), Error> {
         let key = digest.to_string();
         self.file_blobstore
-            .put(self.ctx, key, BlobstoreBytes::from_bytes(bytes))
+            .put(&self.ctx, key, BlobstoreBytes::from_bytes(bytes))
             .await
     }
 
@@ -105,7 +101,7 @@ impl<'a> CasClient for DummyCasClient<'a> {
 
     async fn lookup_blob(&self, digest: &MononokeDigest) -> Result<bool, Error> {
         let key = digest.to_string();
-        match self.file_blobstore.is_present(self.ctx, &key).await? {
+        match self.file_blobstore.is_present(&self.ctx, &key).await? {
             BlobstoreIsPresent::Present => Ok(true),
             BlobstoreIsPresent::Absent => Ok(false),
             BlobstoreIsPresent::ProbablyNotPresent(error) => Err(error),
@@ -126,6 +122,6 @@ impl<'a> CasClient for DummyCasClient<'a> {
     }
 
     fn repo_name(&self) -> &str {
-        self.repo
+        &self.repo
     }
 }

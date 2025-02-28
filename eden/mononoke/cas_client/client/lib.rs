@@ -47,13 +47,13 @@ pub trait CasClient: Sync + Send {
 
 pub fn build_mononoke_cas_client<'a>(
     fb: FacebookInit,
-    ctx: &'a CoreContext,
-    repo: &'a str,
+    ctx: CoreContext,
+    repo: &str,
     verbose: bool,
 ) -> Result<impl CasClient + 'a, Error> {
     #[cfg(fbcode_build)]
     {
-        RemoteExecutionCasdClient::new(fb, ctx, repo, verbose)
+        RemoteExecutionCasdClient::new(fb, ctx, repo.to_owned(), verbose)
     }
     #[cfg(not(fbcode_build))]
     {

@@ -670,8 +670,12 @@ async fn run<'a>(
     repo_name: String,
     cancellation_requested: Arc<AtomicBool>,
 ) -> Result<(), Error> {
-    let re_cas_client =
-        CasChangesetsUploader::new(build_mononoke_cas_client(fb, ctx, &repo_name, false)?);
+    let re_cas_client = CasChangesetsUploader::new(build_mononoke_cas_client(
+        fb,
+        ctx.clone(),
+        &repo_name,
+        false,
+    )?);
     let resolved_repo = args::resolve_repo_by_name(matches.config_store(), matches, &repo_name)
         .with_context(|| format!("Invalid repo name provided: {}", &repo_name))?;
 

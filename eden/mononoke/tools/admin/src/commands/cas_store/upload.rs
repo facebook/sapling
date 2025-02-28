@@ -62,7 +62,7 @@ pub async fn cas_store_upload(
 ) -> Result<()> {
     let cas_changesets_uploader = CasChangesetsUploader::new(build_mononoke_cas_client(
         ctx.fb,
-        ctx,
+        ctx.clone(),
         repo.repo_identity.name(),
         args.verbose,
     )?);
