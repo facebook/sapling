@@ -234,6 +234,13 @@ mononoke_fbpkg(
     },
 )
 
+mononoke_fbpkg(
+    name = "mononoke.load_limiter",
+    path_actions = {
+        "load_limiter": "//eden/mononoke/facebook/load_limiter:load_limiter",
+    },
+)
+
 tw.container(
     name = "tw.mononoke.git_server",
     features = [
