@@ -14,10 +14,5 @@ namespace facebook::eden {
 
 Redirection redirectionFromFFI(RedirectionFFI&& redirFFI);
 
-RedirectionType redirectionTypeFromFFI(const RedirectionTypeFFI& redirTypeFFI);
-
-RedirectionState redirectionStateFromFFI(
-    const RedirectionStateFFI& redirStateFFI);
-
 std::optional<std::string> redirectionTargetFromFFI(rust::String&& targetFFI);
 } // namespace facebook::eden

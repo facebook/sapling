@@ -20,34 +20,48 @@ mod ffi {
 
     // Original enum: RedirectionType
     // Mapping is ensured at compile-time by `match` in the From impl
-    pub enum RedirectionTypeFFI {
-        Bind,
-        Symlink,
-        Unknown,
+    #[namespace = "facebook::eden"]
+    #[repr(u32)]
+    pub enum RedirectionType {
+        BIND,
+        SYMLINK,
+        UNKNOWN,
     }
 
     // Original enum: RedirectionState
     // Mapping is ensured at compile-time by `match` in the From impl
-    pub enum RedirectionStateFFI {
-        MatchesConfiguration,
-        UnknownMount,
-        NotMounted,
-        SymlinkMissing,
-        SymlinkIncorrect,
+    #[namespace = "facebook::eden"]
+    #[repr(u32)]
+    pub enum RedirectionState {
+        MATCHES_CONFIGURATION,
+        UNKNOWN_MOUNT,
+        NOT_MOUNTED,
+        SYMLINK_MISSING,
+        SYMLINK_INCORRECT,
     }
 
     // Original struct: Redirection
+    #[namespace = "facebook::eden"]
     pub struct RedirectionFFI {
         // Original type: PathBuf
         pub repo_path: String,
         // Original type: RedirectionType
-        pub redir_type: RedirectionTypeFFI,
+        pub redir_type: RedirectionType,
         // Original type: PathBuf
         pub source: String,
-        // Original type: Option<RedirectionState>
-        pub state: RedirectionStateFFI,
+        // Original type: RedirectionState
+        pub state: RedirectionState,
         // Original type: Option<PathBuf>
         pub target: String,
+    }
+
+    #[namespace = "facebook::eden"]
+    unsafe extern "C++" {
+        // Declare enums to let cxx assert
+        // they match thrift enums generated in C++
+        include!("eden/fs/service/gen-cpp2/eden_types.h");
+        type RedirectionType;
+        type RedirectionState;
     }
 
     #[namespace = "facebook::eden"]
@@ -95,36 +109,34 @@ impl TryFrom<&Redirection> for ffi::RedirectionFFI {
     }
 }
 
-impl From<RedirectionType> for ffi::RedirectionTypeFFI {
+impl From<RedirectionType> for ffi::RedirectionType {
     fn from(redir_type: RedirectionType) -> Self {
         match redir_type {
-            RedirectionType::Bind => ffi::RedirectionTypeFFI::Bind,
-            RedirectionType::Symlink => ffi::RedirectionTypeFFI::Symlink,
-            RedirectionType::Unknown => ffi::RedirectionTypeFFI::Unknown,
+            RedirectionType::Bind => ffi::RedirectionType::BIND,
+            RedirectionType::Symlink => ffi::RedirectionType::SYMLINK,
+            RedirectionType::Unknown => ffi::RedirectionType::UNKNOWN,
         }
     }
 }
 
-impl From<RedirectionState> for ffi::RedirectionStateFFI {
+impl From<RedirectionState> for ffi::RedirectionState {
     fn from(redir_state: RedirectionState) -> Self {
         match redir_state {
-            RedirectionState::MatchesConfiguration => {
-                ffi::RedirectionStateFFI::MatchesConfiguration
-            }
-            RedirectionState::UnknownMount => ffi::RedirectionStateFFI::UnknownMount,
-            RedirectionState::NotMounted => ffi::RedirectionStateFFI::NotMounted,
-            RedirectionState::SymlinkMissing => ffi::RedirectionStateFFI::SymlinkMissing,
-            RedirectionState::SymlinkIncorrect => ffi::RedirectionStateFFI::SymlinkIncorrect,
+            RedirectionState::MatchesConfiguration => ffi::RedirectionState::MATCHES_CONFIGURATION,
+            RedirectionState::UnknownMount => ffi::RedirectionState::UNKNOWN_MOUNT,
+            RedirectionState::NotMounted => ffi::RedirectionState::NOT_MOUNTED,
+            RedirectionState::SymlinkMissing => ffi::RedirectionState::SYMLINK_MISSING,
+            RedirectionState::SymlinkIncorrect => ffi::RedirectionState::SYMLINK_INCORRECT,
         }
     }
 }
 
-impl From<ffi::RedirectionTypeFFI> for RedirectionType {
-    fn from(redir: ffi::RedirectionTypeFFI) -> Self {
+impl From<ffi::RedirectionType> for RedirectionType {
+    fn from(redir: ffi::RedirectionType) -> Self {
         match redir {
-            ffi::RedirectionTypeFFI::Bind => RedirectionType::Bind,
-            ffi::RedirectionTypeFFI::Symlink => RedirectionType::Symlink,
-            ffi::RedirectionTypeFFI::Unknown => RedirectionType::Unknown,
+            ffi::RedirectionType::BIND => RedirectionType::Bind,
+            ffi::RedirectionType::SYMLINK => RedirectionType::Symlink,
+            ffi::RedirectionType::UNKNOWN => RedirectionType::Unknown,
             // All the explicitly defined values are mapped above, but shared enums
             // in cxx::bridge need default handling for `match` to be exhaustive
             _ => RedirectionType::Unknown,
@@ -132,16 +144,14 @@ impl From<ffi::RedirectionTypeFFI> for RedirectionType {
     }
 }
 
-impl From<ffi::RedirectionStateFFI> for RedirectionState {
-    fn from(redir_state: ffi::RedirectionStateFFI) -> RedirectionState {
+impl From<ffi::RedirectionState> for RedirectionState {
+    fn from(redir_state: ffi::RedirectionState) -> RedirectionState {
         match redir_state {
-            ffi::RedirectionStateFFI::MatchesConfiguration => {
-                RedirectionState::MatchesConfiguration
-            }
-            ffi::RedirectionStateFFI::UnknownMount => RedirectionState::UnknownMount,
-            ffi::RedirectionStateFFI::NotMounted => RedirectionState::NotMounted,
-            ffi::RedirectionStateFFI::SymlinkMissing => RedirectionState::SymlinkMissing,
-            ffi::RedirectionStateFFI::SymlinkIncorrect => RedirectionState::SymlinkIncorrect,
+            ffi::RedirectionState::MATCHES_CONFIGURATION => RedirectionState::MatchesConfiguration,
+            ffi::RedirectionState::UNKNOWN_MOUNT => RedirectionState::UnknownMount,
+            ffi::RedirectionState::NOT_MOUNTED => RedirectionState::NotMounted,
+            ffi::RedirectionState::SYMLINK_MISSING => RedirectionState::SymlinkMissing,
+            ffi::RedirectionState::SYMLINK_INCORRECT => RedirectionState::SymlinkIncorrect,
             // All the explicitly defined values are mapped above, but shared enums
             // in cxx::bridge need default handling for `match` to be exhaustive
             _ => RedirectionState::UnknownMount,
