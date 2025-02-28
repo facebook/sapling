@@ -153,8 +153,9 @@ fn initialize_hgtime(config: &dyn Config) -> Result<()> {
     Ok(())
 }
 
-fn initialize_indexedlog(config: &dyn Config) -> Result<()> {
+fn initialize_libraries(config: &dyn Config) -> Result<()> {
     indexedlog::config::configure(config)?;
+    gitcompat::GlobalGit::set_default_config(config);
     Ok(())
 }
 
@@ -300,7 +301,7 @@ impl Dispatcher {
             env::set_current_dir(&self.early_global_opts.cwd)?;
         }
 
-        initialize_indexedlog(config)?;
+        initialize_libraries(config)?;
         initialize_hgtime(config)?;
 
         // Prepare alias handling.
