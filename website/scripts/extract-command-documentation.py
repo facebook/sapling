@@ -32,7 +32,7 @@ in the mapping. The information about the command is a json object containing:
 - an `aliases` mapping that contains the list of all the names for
   this command.
 - a `doc` mapping that contains the rst (reStructuredText) blob of the
-  descrition of the command.
+  description of the command.
 - an `args` mapping which is a list of json objects for each argument to
   the command. Each argument object contains the `shortname` or single
   character that can be used for the argument. The `fullname` or long name of
@@ -115,7 +115,7 @@ def main():
     # this is better than cutting off an error message.
 
 
-# Takes a command table maping of `alias` and `raw_info` and converts it
+# Takes a command table mapping of `alias` and `raw_info` and converts it
 # into a json object to represent the serialized version of that object.
 def serialize_command_info_as_json(name: str, alias: str, raw_info) -> Dict:
     # skip hidden aliases, see D51380742 for more info

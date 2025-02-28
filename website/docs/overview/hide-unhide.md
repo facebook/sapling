@@ -11,7 +11,7 @@ doing so is safe, easy to understand, and easy to undo.
 
 
 While commits can be hidden manually, they can also become hidden
-when they are superceded by changes to the commit, whether by
+when they are superseded by changes to the commit, whether by
 amends, rebases, or other operations. But the key concept is that
 they are still stored permanently in your repository, even after
 they are no longer visible in your `smartlog` output. If you ever

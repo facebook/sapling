@@ -16,7 +16,7 @@ changed the currently checked out commit, that modified the contents of
 local commits, or that changed local bookmarks. Examples of local commands
 include `sl goto`, `sl commit`, `sl amend`, and `sl rebase`.
 
-You cannot use `sl undo` to undo uncommited changes in the working copy,
+You cannot use `sl undo` to undo uncommitted changes in the working copy,
 or changes to remote bookmarks.
 
 You can run `sl undo` multiple times to undo a series of local commands.
