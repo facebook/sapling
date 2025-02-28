@@ -179,7 +179,7 @@ Make sure we do not obscure unknown requires file entries (issue2649)
   $ echo fake >> .hg/requires
   $ hg commit -m bla
   abort: repository requires unknown features: fake
-  (see https://mercurial-scm.org/wiki/MissingRequirement for more information)
+  (consider upgrading Sapling)
   [255]
 
   $ cd ..

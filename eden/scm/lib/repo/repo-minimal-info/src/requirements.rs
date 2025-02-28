@@ -45,7 +45,7 @@ impl Requirements {
         if !unsupported_vec.is_empty() {
             unsupported_vec.sort_unstable();
             anyhow::bail!(
-                "repository requires unknown features: {}\n(see https://mercurial-scm.org/wiki/MissingRequirement for more information)",
+                "repository requires unknown features: {}\n(consider upgrading Sapling)",
                 unsupported_vec.join(", ")
             );
         }
@@ -152,8 +152,7 @@ mod tests {
         let err = Requirements::open(&path, &allowed).err().unwrap();
         assert_eq!(
             err.to_string(),
-            r#"repository requires unknown features: bar, foo
-(see https://mercurial-scm.org/wiki/MissingRequirement for more information)"#
+            "repository requires unknown features: bar, foo\n(consider upgrading Sapling)"
         );
     }
 }

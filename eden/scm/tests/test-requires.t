@@ -21,11 +21,11 @@
   $ echo indoor-pool > .hg/requires
   $ hg tip
   abort: repository requires unknown features: indoor-pool
-  (see https://mercurial-scm.org/wiki/MissingRequirement for more information)
+  (consider upgrading Sapling)
   [255]
   $ echo outdoor-pool >> .hg/requires
   $ hg tip
   abort: repository requires unknown features: indoor-pool, outdoor-pool
-  (see https://mercurial-scm.org/wiki/MissingRequirement for more information)
+  (consider upgrading Sapling)
   [255]
   $ cd ..
