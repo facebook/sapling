@@ -5,6 +5,7 @@
  * GNU General Public License version 2.
  */
 
+use std::collections::HashSet;
 use std::sync::Arc;
 
 use anyhow::Context;
@@ -29,13 +30,19 @@ use mononoke_types::MPath;
 use repo_blobstore::ArcRepoBlobstore;
 use rustc_hash::FxHashSet;
 
+use crate::bookmarks_provider::bookmarks;
 use crate::store::fetch_nested_tags;
 use crate::types::DeltaInclusion;
 use crate::types::FetchFilter;
 use crate::types::RefTarget;
+use crate::types::RefsSource;
+use crate::types::RequestedRefs;
 use crate::types::ShallowInfoResponse;
 use crate::types::SymrefFormat;
 use crate::Repo;
+use crate::HEADS_PREFIX;
+use crate::REF_PREFIX;
+use crate::TAGS_PREFIX;
 
 /// Function determining if the current object entry at the given path should be
 /// filtered in the resultant packfile
@@ -238,6 +245,72 @@ pub(crate) async fn ancestors_after_time(
         .await?
         .try_collect::<Vec<_>>()
         .await?;
+    let ancestors_with_boundaries = ancestors_with_boundaries(ctx, repo, ancestors).await?;
+    if ancestors_with_boundaries.is_empty() {
+        return Err(anyhow::anyhow!(
+            "No commits selected for shallow requests with committer time greater than {}",
+            time
+        ));
+    }
+    Ok(ancestors_with_boundaries)
+}
+
+/// Function responsible for fetching the ancestors of the input heads that are not also the
+/// ancestors of input excluded_heads
+pub(crate) async fn ancestors_excluding(
+    ctx: &CoreContext,
+    repo: &impl Repo,
+    heads: Vec<ChangesetId>,
+    excluded_refs: Vec<String>,
+) -> Result<AncestorsWithinDistance> {
+    // Sanitize the vec of excluded refs
+    let excluded_refs = excluded_refs
+        .into_iter()
+        .map(|head| match head.strip_prefix(REF_PREFIX) {
+            Some(stripped) => stripped.to_string(),
+            None => head,
+        })
+        .collect::<HashSet<_>>();
+    if excluded_refs.iter().any(|excluded_ref| {
+        !excluded_ref.starts_with(TAGS_PREFIX) && !excluded_ref.starts_with(HEADS_PREFIX)
+    }) {
+        anyhow::bail!(
+            "Refs for `shallow-exclude` should be provided with tags/ or heads/ prefix as appropriate"
+        )
+    }
+    // Convert the refs into changesets to be used with commit graph
+    let excluded_heads = bookmarks(
+        ctx,
+        repo,
+        &RequestedRefs::Included(excluded_refs),
+        RefsSource::WarmBookmarksCache,
+    )
+    .await?
+    .entries
+    .values()
+    .cloned()
+    .collect::<Vec<_>>();
+
+    // Find the ancestors that need to be returned
+    let ancestors = repo
+        .commit_graph()
+        .ancestors_difference(ctx, heads, excluded_heads)
+        .await
+        .context("Error in getting stream of commits between heads and bases during fetch")?;
+    let ancestors_with_boundaries = ancestors_with_boundaries(ctx, repo, ancestors).await?;
+    if ancestors_with_boundaries.is_empty() {
+        return Err(anyhow::anyhow!(
+            "No commits selected for shallow requests with shallow-exclude"
+        ));
+    }
+    Ok(ancestors_with_boundaries)
+}
+
+async fn ancestors_with_boundaries(
+    ctx: &CoreContext,
+    repo: &impl Repo,
+    ancestors: Vec<ChangesetId>,
+) -> Result<AncestorsWithinDistance> {
     // From the list of ancestors, get the boundary of commits that Git will mark as shallow for the client
     let boundaries = repo
         .commit_graph()
@@ -248,12 +321,6 @@ pub(crate) async fn ancestors_after_time(
         .into_iter()
         .filter(|csid| !boundaries.contains(csid))
         .collect::<Vec<_>>();
-    if ancestors.is_empty() && boundaries.is_empty() {
-        return Err(anyhow::anyhow!(
-            "No commits selected for shallow requests with committer time greater than {}",
-            time
-        ));
-    }
     Ok(AncestorsWithinDistance {
         ancestors,
         boundaries,

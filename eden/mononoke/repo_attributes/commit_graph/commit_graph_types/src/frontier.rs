@@ -142,6 +142,12 @@ pub struct AncestorsWithinDistance {
     pub boundaries: Vec<ChangesetId>,
 }
 
+impl AncestorsWithinDistance {
+    pub fn is_empty(&self) -> bool {
+        self.ancestors.is_empty() && self.boundaries.is_empty()
+    }
+}
+
 impl ChangesetFrontierWithinDistance {
     pub fn new() -> Self {
         Self(Default::default())

@@ -66,6 +66,7 @@ use crate::types::ShallowInfoRequest;
 use crate::types::ShallowInfoResponse;
 use crate::types::ShallowVariant;
 use crate::utils::ancestors_after_time;
+use crate::utils::ancestors_excluding;
 use crate::utils::commits;
 use crate::utils::delta_base;
 use crate::utils::entry_weight;
@@ -957,7 +958,9 @@ pub async fn shallow_info(
         ShallowVariant::FromServerWithTime(time) => ancestors_after_time(&ctx, repo, translated_sha_heads.bonsais, *time)
             .await
             .context("Error in getting ancestors after time during shallow-info")?,
-        ShallowVariant::FromServerExcludingRefs(_) => anyhow::bail!("Shallow variant `shallow-exclude` is not yet supported"),
+        ShallowVariant::FromServerExcludingRefs(excluded_refs) => ancestors_excluding(&ctx, repo, translated_sha_heads.bonsais, excluded_refs.clone())
+            .await
+            .context("Error in getting ancestors excluding refs during shallow-info")?,
         ShallowVariant::None => AncestorsWithinDistance::default(),
     };
     let boundary_commits =

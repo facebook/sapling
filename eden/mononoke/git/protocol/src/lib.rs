@@ -32,6 +32,8 @@ pub mod utils;
 
 const HEAD_REF: &str = "HEAD";
 const REF_PREFIX: &str = "refs/";
+const TAGS_PREFIX: &str = "tags/";
+const HEADS_PREFIX: &str = "heads/";
 const PACKFILE_SUFFIX: &str = ".pack";
 
 pub trait Repo = RepoIdentityRef

@@ -60,9 +60,11 @@
   $ echo "File J.File J.File J.File J.File J.File J.File J.File J.File J.File J.File J.File J.File J.File J.File J.File J." > fileJ
   $ git add .
   $ git commit -qam "Adding fileJ"
+  $ git checkout -q R2
+
 # Visualize the graph to verify its the right shape
   $ git log --all --decorate --oneline --graph
-  *   18a6f40 (R2) Merge branch 'R3' into R2
+  *   18a6f40 (HEAD -> R2) Merge branch 'R3' into R2
   |\  
   | * 619f44e (R3) Adding fileE
   * | 9089a8c Adding fileF
@@ -73,7 +75,7 @@
   | * 47156f5 (R1) Adding fileA and fileB
   * | a9ff5f9 Adding fileC and fileD
   |/  
-  | * 8ca6d2a (HEAD -> master_bookmark) Adding fileJ
+  | * 8ca6d2a (master_bookmark) Adding fileJ
   | * 7eda99f Adding fileI
   | * 6e43a74 Adding fileH
   | * 99f1ee9 Adding fileG
@@ -82,54 +84,54 @@
 # Git's support for shallow-exclude seems to be broken. Based on documentation (https://fburl.com/ox4tabpi), the below should be the output of shallow-exclude
 # clones for each of the respective branches. But that doesn't seem to be the case (P1741348601), so I am including the direct rev-list output to serve as comparision basis
 # for Mononoke Git
-  $ git rev-list --all --not heads/R3
-  47156f5aa75771131c092593377d7e74d0c38baa
+  $ git rev-list heads/R2 --not heads/R3
   18a6f40de35ce474e240faa7298ae2b5979751c8
-  8ca6d2a6ecf58dcea7a6e8220129c5eadd6394a3
   9089a8c5d6429a5dfa430d1abefd73234894c4df
-  7eda99f71613b2e9e6363352fa34a71179046daf
   12a34ee8026e5118cf6a2123c94057d1c8f9c5bb
-  6e43a74b3ff15a5e490d4344d8a0b9d666b40ed1
-  99f1ee9044043eddd159b361561ed07231fe8a68
-  $ git rev-list --all --not heads/R2
-  8ca6d2a6ecf58dcea7a6e8220129c5eadd6394a3
-  7eda99f71613b2e9e6363352fa34a71179046daf
-  6e43a74b3ff15a5e490d4344d8a0b9d666b40ed1
-  99f1ee9044043eddd159b361561ed07231fe8a68
-  $ git rev-list --all --not heads/master_bookmark
   47156f5aa75771131c092593377d7e74d0c38baa
+  $ git rev-list heads/R2 --not heads/R1
   18a6f40de35ce474e240faa7298ae2b5979751c8
+  9089a8c5d6429a5dfa430d1abefd73234894c4df
   619f44e4b1883ec6cafa608967d2f314f2224792
-  9089a8c5d6429a5dfa430d1abefd73234894c4df
-  a9ff5f932c4a81f710d754b02e20dcbb8236cc23
   12a34ee8026e5118cf6a2123c94057d1c8f9c5bb
+  a9ff5f932c4a81f710d754b02e20dcbb8236cc23
+  $ git rev-list heads/R2 --not heads/master_bookmark
+  18a6f40de35ce474e240faa7298ae2b5979751c8
+  9089a8c5d6429a5dfa430d1abefd73234894c4df
+  619f44e4b1883ec6cafa608967d2f314f2224792
+  12a34ee8026e5118cf6a2123c94057d1c8f9c5bb
+  a9ff5f932c4a81f710d754b02e20dcbb8236cc23
+  47156f5aa75771131c092593377d7e74d0c38baa
 # Import the repo into Mononoke
   $ cd "$TESTTMP"
   $ quiet gitimport "$GIT_REPO_ORIGIN" --derive-hg --generate-bookmarks full-repo
 # Start up the Mononoke Git Service
   $ mononoke_git_service
-
-# Clone the repo using Mononoke excluding commits reachable from heads/R3
-  $ quiet git_client clone --shallow-exclude heads/R3 $MONONOKE_GIT_SERVICE_BASE_URL/$REPONAME.git
-  Cloning into 'repo'...
-  fatal: expected 'packfile', received '?Failed to generate shallow info
-  
-  Caused by:
-      Shallow variant `shallow-exclude` is not yet supported'
-  [128]
-# Clone the repo using Mononoke excluding commits reachable from heads/R2
-  $ quiet git_client clone --shallow-exclude heads/R2 $MONONOKE_GIT_SERVICE_BASE_URL/$REPONAME.git
-  Cloning into 'repo'...
-  fatal: expected 'packfile', received '?Failed to generate shallow info
-  
-  Caused by:
-      Shallow variant `shallow-exclude` is not yet supported'
-  [128]
+# Clone the repo using Mononoke excluding commits reachable from heads/R3 and reachable from heads/R2
+  $ quiet git_client clone --shallow-exclude heads/R3 $MONONOKE_GIT_SERVICE_BASE_URL/$REPONAME.git  
+  $ cd repo
+  $ git rev-list --all
+  18a6f40de35ce474e240faa7298ae2b5979751c8
+# Clone the repo using Mononoke excluding commits reachable from heads/R1
+  $ cd "$TESTTMP"
+  $ rm -rf repo
+  $ quiet git_client clone --shallow-exclude heads/R1 $MONONOKE_GIT_SERVICE_BASE_URL/$REPONAME.git
+  $ cd repo
+  $ git rev-list --all
+  18a6f40de35ce474e240faa7298ae2b5979751c8
+  9089a8c5d6429a5dfa430d1abefd73234894c4df
+  619f44e4b1883ec6cafa608967d2f314f2224792
+  12a34ee8026e5118cf6a2123c94057d1c8f9c5bb
+  a9ff5f932c4a81f710d754b02e20dcbb8236cc23
 # Clone the repo using Mononoke excluding commits reachable from heads/master_bookmark
+  $ cd "$TESTTMP"
+  $ rm -rf repo
   $ quiet git_client clone --shallow-exclude heads/master_bookmark $MONONOKE_GIT_SERVICE_BASE_URL/$REPONAME.git
-  Cloning into 'repo'...
-  fatal: expected 'packfile', received '?Failed to generate shallow info
-  
-  Caused by:
-      Shallow variant `shallow-exclude` is not yet supported'
-  [128]
+  $ cd repo
+  $ git rev-list --all
+  18a6f40de35ce474e240faa7298ae2b5979751c8
+  9089a8c5d6429a5dfa430d1abefd73234894c4df
+  619f44e4b1883ec6cafa608967d2f314f2224792
+  12a34ee8026e5118cf6a2123c94057d1c8f9c5bb
+  a9ff5f932c4a81f710d754b02e20dcbb8236cc23
+  47156f5aa75771131c092593377d7e74d0c38baa
