@@ -155,7 +155,7 @@ struct PrjfsLiveRequest {
     // This path can be the empty string L"" if the operation is in the repo
     // root directory, such as `dir %REPO_ROOT%`. In these cases,
     // destinationFileName is nullptr, either pass explicitly in this codebase,
-    // or given to the ::notification() function (which is implmentation of
+    // or given to the ::notification() function (which is implementation of
     // PRJ_NOTIFICATION_CB).
     //
     // Some operations have both a src and destination path, like *RENAME or
@@ -375,7 +375,7 @@ HRESULT notification(
       // TODO(zeyi): Something modified the working copy while it is being
       // unmounted. At this point, we have no way to deal with this properly
       // and the next time this repository is mounted, there will be a
-      // discrepency between what EdenFS thinks the state of the working copy
+      // discrepancy between what EdenFS thinks the state of the working copy
       // should be and what it actually is. To solve this, we will need to
       // scan the working copy at mount time to find these files and fixup
       // EdenFS inodes. Once the above is done, refactor this code to use

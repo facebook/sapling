@@ -206,7 +206,7 @@ impl FilenodeDiff {
 /// by running `ManifestOps::Diff`
 type FullManifestDiff = HashSet<FilenodeDiff>;
 
-/// An auxillary struct, containing helper methods for sync
+/// An auxiliary struct, containing helper methods for sync
 /// validation between a large repo and a single small repo
 #[derive(Clone)]
 struct ValidationHelper {
@@ -488,7 +488,7 @@ impl ValidationHelper {
     }
 }
 
-/// An auxillary struct, containing helper methods for sync
+/// An auxiliary struct, containing helper methods for sync
 /// validation a large repo and potentially multiple small repos
 #[derive(Clone)]
 pub struct ValidationHelpers {
@@ -755,7 +755,7 @@ pub async fn unfold_bookmarks_update_log_entry(
             // commits since LCA(to_cs_id, master)
 
             if is_master_entry {
-                // A bizzare case, when a master bookmark is either created
+                // A bizarre case, when a master bookmark is either created
                 // or blobiported. I do not think we will ever observe this in
                 // practice, but for completeness sake, let's just make sure
                 // we verify `to_cs_id` itself. If we decided to just use

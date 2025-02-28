@@ -629,7 +629,7 @@ class InodeBase {
    * - Either the InodeMap lock or the parent TreeInode's contents lock is
    *   always held when incrementing the refcount from 0 to 1.
    *
-   *   Only two operations can inrement the refcount from 0 to 1:
+   *   Only two operations can increment the refcount from 0 to 1:
    *   - InodeMap::lookupInode().
    *     This acquires the InodeMap lock
    *   - TreeInode::getOrLoadChild()

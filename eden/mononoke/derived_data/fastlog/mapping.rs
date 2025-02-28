@@ -378,7 +378,7 @@ mod tests {
         let repo: TestRepo = Linear::get_repo(fb).await;
         let ctx = CoreContext::test_mock(fb);
 
-        let mut rng = XorShiftRng::seed_from_u64(0); // reproducable Rng
+        let mut rng = XorShiftRng::seed_from_u64(0); // reproducible Rng
         let (latest, _) =
             tests_utils::random::create_random_stack(&ctx, &repo, &mut rng, None, [10; 200])
                 .await

@@ -337,7 +337,7 @@ async fn async_main(app: MononokeApp) -> Result<()> {
     }
     .map_err({
         move |err: anyhow::Error| {
-            // NOTE: We log the error immediatley, then provide another one for main's
+            // NOTE: We log the error immediately, then provide another one for main's
             // Result (which will set our exit code).
             error!(ctx.logger(), "error while blobimporting"; "error" => ?err);
             Error::msg("blobimport exited with a failure")

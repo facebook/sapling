@@ -253,7 +253,7 @@ async fn watch_and_update(
 }
 
 /// Trait defining methods related to config update notification. A struct implementing
-/// this trait can be configured to receive the most updated config value everytime the
+/// this trait can be configured to receive the most updated config value every time the
 /// underlying config changes.
 #[async_trait]
 pub trait ConfigUpdateReceiver: Send + Sync {
@@ -401,7 +401,7 @@ mod test {
         assert_eq!(results.len(), 1);
     }
 
-    // The smallest fixture that did *not* demostrate non-deterministic behavior
+    // The smallest fixture that did *not* demonstrate non-deterministic behavior
     // with the old implementation.
     #[mononoke::test]
     fn test_build_config_info_minimal() {
@@ -427,7 +427,7 @@ mod test {
         assert_eq!(results.len(), 1);
     }
 
-    // The smallest fixture that *did* demostrate non-deterministic behavior
+    // The smallest fixture that *did* demonstrate non-deterministic behavior
     // with the old implementation.
     #[mononoke::test]
     fn test_build_config_info_small() {

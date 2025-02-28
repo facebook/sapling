@@ -87,7 +87,7 @@ impl SqlSyncedCommitMappingBuilder {
 
 #[derive(Clone)]
 struct RendezVousConnection {
-    // For fetching synced commit mappings, we create a separate rendezvous instace per (source_repo_id, target_repo_id) pair
+    // For fetching synced commit mappings, we create a separate rendezvous instance per (source_repo_id, target_repo_id) pair
     fetch_synced_commit_mappings:
         DashMap<(RepositoryId, RepositoryId), RendezVous<ChangesetId, Vec<FetchedMappingEntry>>>,
     opts: RendezVousOptions,

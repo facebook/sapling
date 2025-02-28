@@ -95,7 +95,7 @@ pub fn set_glog_log_level(fb: FacebookInit, level: GlogLevel) -> Result<()> {
     match std::env::var("GLOG_minloglevel") {
         Ok(level) => {
             if let Ok(level_glog_num) = level.parse::<u32>() {
-                // set the flag again, some libraries we use might have overriden it.
+                // set the flag again, some libraries we use might have overridden it.
                 gflags::set_gflag_value(
                     fb,
                     "minloglevel",

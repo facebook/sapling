@@ -2038,7 +2038,7 @@ ImmediateFuture<folly::Unit> SaplingBackingStore::importManifestForRoot(
   // When the local store is populated with aux data for newly-created
   // manifests then we can update this so that is true when appropriate.
   /**
-   * Import the root manifest for the specied revision using mercurial
+   * Import the root manifest for the specified revision using mercurial
    * treemanifest data.  This is called when the root manifest is provided
    * to EdenFS directly by the hg client.
    */

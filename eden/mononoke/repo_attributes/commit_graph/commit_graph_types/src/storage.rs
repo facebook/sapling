@@ -48,7 +48,7 @@ pub enum PrefetchTarget {
 /// Indication for additional changesets to be fetched for subsequent
 /// traversals.
 ///
-/// If efficient to do so, implementors should use this hint to fetch
+/// If efficient to do so, implementers should use this hint to fetch
 /// additional edges that will be useful for skew-binary traversal
 /// to the target generation.
 #[derive(Copy, Clone, Debug)]

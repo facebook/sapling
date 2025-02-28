@@ -153,11 +153,11 @@ void benchmarkOverlayDirSerialization(
       makeRefPtr<EdenStats>(),
       true,
       *EdenConfig::createTestEdenConfig());
-  printf("Initalizing Overlay...\n");
+  printf("Initializing Overlay...\n");
 
   overlay->initialize({EdenConfig::createTestEdenConfig()}).get();
 
-  printf("Overlay initalized. Writing overlay data...\n");
+  printf("Overlay initialized. Writing overlay data...\n");
 
   std::vector<char> chars{'0', '1', '2', '3', '4', '5', '6', '7', '8',
                           '9', 'a', 'b', 'c', 'd', 'e', 'f', 'g', 'h',

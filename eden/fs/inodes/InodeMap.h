@@ -171,7 +171,7 @@ class InodeMap {
    * If the InodeBase object is not currently loaded it will be loaded and a
    * new InodeBase object returned.
    *
-   * Loading an Inode requires retreiving data about it from the ObjectStore,
+   * Loading an Inode requires retrieving data about it from the ObjectStore,
    * which may take some time.  Therefore lookupInode() returns a Future, which
    * will be fulfilled when the loaded Inode is ready.  The Future may be
    * invoked immediately in the calling thread (if the Inode is already
@@ -198,7 +198,7 @@ class InodeMap {
   ImmediateFuture<FileInodePtr> lookupFileInode(InodeNumber number);
 
   /**
-   * Lookup an Inode object by inode number, if it alread exists.
+   * Lookup an Inode object by inode number, if it already exists.
    *
    * This returns an existing InodeBase object if one is currently loaded,
    * but nullptr if one is not loaded.
@@ -206,7 +206,7 @@ class InodeMap {
   InodePtr lookupLoadedInode(InodeNumber number);
 
   /**
-   * Lookup a loaded TreeInode object by inode number, if it alread exists.
+   * Lookup a loaded TreeInode object by inode number, if it already exists.
    *
    * Returns nullptr if this inode object is not currently loaded.
    * Throws ENOTDIR if this inode is loaded but does not refer to a directory.
@@ -214,7 +214,7 @@ class InodeMap {
   TreeInodePtr lookupLoadedTree(InodeNumber number);
 
   /**
-   * Lookup a loaded FileInode object by inode number, if it alread exists.
+   * Lookup a loaded FileInode object by inode number, if it already exists.
    *
    * Returns nullptr if this inode object is not currently loaded.
    * Throws EISDIR if this inode is loaded but refers to a directory.
@@ -303,7 +303,7 @@ class InodeMap {
    * Acquire the InodeMap lock while performing Inode unloading.
    *
    * This method is called by TreeInode when scanning its children for
-   * unloading.  It should only be called *after* acquring the TreeInode
+   * unloading.  It should only be called *after* acquiring the TreeInode
    * contents lock.
    *
    * This is an internal API that should not be used by most callers.
@@ -432,7 +432,7 @@ class InodeMap {
      * hash (which gets set to a default empty string) may not be accurate for
      * unmaterialized inodes. Also, the mode, which is based off of the
      * initial_mode retrieved from a Directory Entry, should have correct
-     * file/directory bits. However, it may not have fully accurate permision
+     * file/directory bits. However, it may not have fully accurate permission
      * bits as these might have changed from the Directory Entry's initial_mode.
      */
     UnloadedInode(

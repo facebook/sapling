@@ -167,7 +167,7 @@ impl BookmarksSubscription for SqlBookmarksSubscription {
 
             max_log_id = std::cmp::max(max_log_id, Some(log_id));
 
-            // NOTE: We get the updates in DESC-ending order, so we'll always find the curent
+            // NOTE: We get the updates in DESC-ending order, so we'll always find the current
             // bookmark state first.
             updates.entry(bookmark).or_insert(value);
         }

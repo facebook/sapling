@@ -27,7 +27,7 @@ class ReloadableConfig;
  * The intent of the minimum entry count is to avoid having to reload
  * frequently-accessed large trees when they are larger than the maximum cache
  * size. Note that if you want trees larger than the maximum size in bytes to
- * be cachable your minimum entry count must be atleast 1, otherwise insert may
+ * be cacheable your minimum entry count must be at least 1, otherwise insert may
  * not actually insert the tree into the cache.
  *
  * It is safe to use this object from arbitrary threads.

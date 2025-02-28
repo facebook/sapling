@@ -94,7 +94,7 @@ impl CreateCopyInfo {
                 }
                 Some(CreateChangeType::Deletion) => {
                     return Err(MononokeError::InvalidRequest(String::from(
-                        "Copy-from path references a file deleted earler in the stack",
+                        "Copy-from path references a file deleted earlier in the stack",
                     )));
                 }
             }
@@ -102,7 +102,7 @@ impl CreateCopyInfo {
             for prefix in MononokePathPrefixes::new(&self.path) {
                 if stack_changes.get(&prefix) == Some(&CreateChangeType::Change) {
                     return Err(MononokeError::InvalidRequest(String::from(
-                        "Copy-from path references a file in a directory deleted earler in the stack",
+                        "Copy-from path references a file in a directory deleted earlier in the stack",
                     )));
                 }
             }

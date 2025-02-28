@@ -317,7 +317,7 @@ mod test {
 
     #[tokio::test]
     async fn test_empty_stream() {
-        // If we give ChunkStream an empty stream, it should retun an empty stream.
+        // If we give ChunkStream an empty stream, it should return an empty stream.
 
         let in_stream = stream::iter(vec![]).map(Result::<_, ()>::Ok);
         let mut stream = ChunkStream::new(in_stream, 1);

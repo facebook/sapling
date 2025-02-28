@@ -78,7 +78,7 @@ union StorageFormat {
   2: PackedFormat Packed;
 }
 
-// At-rest form for mononoke blobs, top level struct for persistance.
+// At-rest form for mononoke blobs, top level struct for persistence.
 // Recommended that top level type is struct even though logically
 // the union would work.
 @rust.Exhaustive

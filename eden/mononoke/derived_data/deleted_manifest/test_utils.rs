@@ -79,7 +79,7 @@ pub(crate) struct TestRepo {
 }
 
 /// Defines all common DM tests.
-// Why a macro and not a function? So we get different tests that are paralellised
+// Why a macro and not a function? So we get different tests that are parallelised
 // and have separate signal, instead of a single catch-all test.
 macro_rules! impl_deleted_manifest_tests {
     ($manifest:ty) => {

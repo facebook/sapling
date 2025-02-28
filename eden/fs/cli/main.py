@@ -695,7 +695,7 @@ Legacy bind mount dirs listed above are unused and can be removed!
             elif clean:
                 self.writeln_ui(
                     f"""
-A filesytem check recovered data and stored it at:
+A filesystem check recovered data and stored it at:
 {fsck_dir}
 If you have recovered all that you need from it, you can remove that
 directory to reclaim the disk space.
@@ -860,7 +860,7 @@ class CloneCmd(Subcmd):
 
         parser.add_argument(
             "--re-use-case",
-            help="The Remote Execuation use-case to use when --backing-store=recas",
+            help="The Remote Execution use-case to use when --backing-store=recas",
         )
 
         parser.add_argument(
@@ -1009,7 +1009,7 @@ is case-sensitive. This is not recommended and is intended only for testing."""
             print_stderr("error: {}", ex)
             return 1
 
-        # If it's source control respository
+        # If it's source control repository
         if not args.backing_store or args.backing_store in HG_REPO_TYPES:
             # Find the commit to check out
             if args.rev is not None:
@@ -1162,7 +1162,7 @@ class ReloadConfigCmd(Subcmd):
         parser.add_argument(
             "--raw-out",
             metavar="PATH",
-            help="Read and write location of the raw config which will be used if Configerator sends back an `edenfs_uptodate` repsonse",
+            help="Read and write location of the raw config which will be used if Configerator sends back an `edenfs_uptodate` response",
         )
         parser.add_argument(
             "-t",
@@ -2623,7 +2623,7 @@ class RestartCmd(Subcmd):
             # and continue with a force restart
             pass
 
-        print("Recovery unsucessful, forcing a full restart by sending SIGTERM")
+        print("Recovery unsuccessful, forcing a full restart by sending SIGTERM")
         try:
             os.kill(edenfs_pid, signal.SIGTERM)
             self._wait_for_stop(instance, edenfs_pid, timeout=5)

@@ -337,7 +337,7 @@ struct ParentCommitState {
  *
  * This contains:
  * - The MountPoint object which manages our FUSE interactions with the kernel.
- * - The ObjectStore object used for retreiving/storing object data.
+ * - The ObjectStore object used for retrieving/storing object data.
  * - The Overlay object used for storing local changes (that have not been
  *   committed/snapshotted yet).
  */
@@ -990,7 +990,7 @@ class EdenMount : public std::enable_shared_from_this<EdenMount> {
    *
    * Note: subscribers will acquire the InodeMap's data_ and an InodeBase's
    * location_ lock to calculate paths for inodes. However, we must ensure
-   * subscribers NEVER aquire EdenMount's Rename or a TreeInode's contents_
+   * subscribers NEVER acquire EdenMount's Rename or a TreeInode's contents_
    * lock since inode events can still be published to the inode tracebus
    * holding those locks.
    */
@@ -1095,7 +1095,7 @@ class EdenMount : public std::enable_shared_from_this<EdenMount> {
    * include conflicts if any.
    *
    * CheckoutMode is similar to checkout:
-   * 1. In NORMAL mode, new tree or blob will be increamentally added to an Eden
+   * 1. In NORMAL mode, new tree or blob will be incrementally added to an Eden
    * mount. The operation will not continue if any conflicts were found.
    * 2. In FORCE mode, only new tree will exist after the operation and any
    * other contents will disappear
@@ -1111,7 +1111,7 @@ class EdenMount : public std::enable_shared_from_this<EdenMount> {
    * Should only be called before the EdenMount transitions to the INITIALIZING
    * state.
    * We decide wether this mount should use nfs before initialization time and
-   * do not change the decision. This is so that we can consitently determine if
+   * do not change the decision. This is so that we can consistently determine if
    * we are determining if we are using an nfs mount without checking if the
    * channel is an NFS mount. Needed because we need to know the type of mount
    * earlier than channel object creation. This is for responding to stale
@@ -1127,7 +1127,7 @@ class EdenMount : public std::enable_shared_from_this<EdenMount> {
    * measure as GETATTR calls do not update atime. We might want to use a
    * "referenced" time instead that we update on every inode access.
    *
-   * "recently" means 10s by default and is controled by
+   * "recently" means 10s by default and is controlled by
    * postCheckoutDelayToUnloadInodes.
    */
   void forgetStaleInodes();
@@ -1443,7 +1443,7 @@ class EdenMount : public std::enable_shared_from_this<EdenMount> {
   std::atomic<bool> workingCopyGCInProgress_{false};
 
   /**
-   * Fixed sized buffer containing recent inode events that have occured within
+   * Fixed sized buffer containing recent inode events that have occurred within
    * EdenFS. Used in the retroactive version of the eden inode trace command.
    *
    * The initialization of this buffer depends on serverState_ being

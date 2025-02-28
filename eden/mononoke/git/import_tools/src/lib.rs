@@ -911,7 +911,7 @@ pub async fn read_git_refs(
                         if git_ref.metadata.maybe_tag_id.is_none() {
                             git_ref.metadata.maybe_tag_id = Some(oid);
                         } else {
-                            // We have already captured the tag id, which means this is atleast the
+                            // We have already captured the tag id, which means this is at least the
                             // second tag in the chain. We want to mark this as a nested tag.
                             git_ref.metadata.nested_tag = true;
                         }

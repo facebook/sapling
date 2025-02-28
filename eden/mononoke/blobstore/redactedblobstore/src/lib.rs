@@ -401,7 +401,7 @@ mod test {
             Ok(ErrorKind::Censored(_, ref task)) if *task == redacted_task
         );
 
-        // Test accessing a key which exists and is accesible
+        // Test accessing a key which exists and is accessible
         let res = blob.get(ctx, unredacted_key).await;
         assert!(res.is_ok(), "the key should be found and available");
     }

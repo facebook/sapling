@@ -124,7 +124,7 @@ pub enum ErrorKind {
     #[error("Remapped commit {0} expected in target repo, but not present")]
     MissingRemappedCommit(ChangesetId),
     #[error(
-        "Can't reoder changesets parents to put {0} first because it's not a changeset's parent."
+        "Can't reorder changesets parents to put {0} first because it's not a changeset's parent."
     )]
     MissingForcedParent(ChangesetId),
 }
@@ -1157,7 +1157,7 @@ mod test {
             vec![("a/b", None), ("a/c", None), ("a", Some(()))],
             btreemap! { "a" => Some(()) },
         );
-        // files, replaced with a directy at a longer path are not
+        // files, replaced with a directly at a longer path are not
         // deleted implicitly, so they aren't minimized away
         verify_minimized(
             vec![("a", None), ("a/b", Some(()))],
@@ -1313,7 +1313,7 @@ mod test {
             .commit()
             .await?;
         let second = CreateCommitContext::new(&ctx, &repo, vec![first])
-            .add_file("a/b/c", "new c") // This creates a file at `a/b/c`, implicitely deleting the directory
+            .add_file("a/b/c", "new c") // This creates a file at `a/b/c`, implicitly deleting the directory
             // at `a/b/c` and all the files it contains (`d`, `e`, `f/g` and `f/h`)
             .add_file("a/b/i", "new i")
             .commit()
@@ -1356,7 +1356,7 @@ mod test {
         assert_changeset_is_not_marked_lossy(&ctx, &repo, first_rewritten_bcs_id).await?;
         // When we rewrite the second commit with the full_multi_mover.
         // This is not lossy:
-        // All file changes have a mapping and all implicitely deleted files have a mapping.
+        // All file changes have a mapping and all implicitly deleted files have a mapping.
         let full_second_rewritten_bcs_id = test_rewrite_commit_cs_id(
             &ctx,
             &repo,
@@ -1371,7 +1371,7 @@ mod test {
         assert_changeset_is_not_marked_lossy(&ctx, &repo, full_second_rewritten_bcs_id).await?;
         // When we rewrite the second commit with the partial_multi_mover.
         // This **is** lossy:
-        // All file changes have a mapping but some implicitely deleted files don't have a mapping
+        // All file changes have a mapping but some implicitly deleted files don't have a mapping
         // (namely, `a/b/c/f/g` and `a/b/c/f/h`).
         let partial_second_rewritten_bcs_id = test_rewrite_commit_cs_id(
             &ctx,
@@ -1555,7 +1555,7 @@ mod test {
             .commit()
             .await?;
 
-        // Create files at `foo/bar/b` and `foo/bar/c`, implicitely deleting all
+        // Create files at `foo/bar/b` and `foo/bar/c`, implicitly deleting all
         // files under those directories.
         let second = CreateCommitContext::new(&ctx, &repo, vec![first])
             // Implicitly deletes `foo/bar/b/d` and `foo/bar/b/e`.

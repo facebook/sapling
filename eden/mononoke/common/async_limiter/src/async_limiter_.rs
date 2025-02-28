@@ -60,7 +60,7 @@ impl AsyncLimiter {
     /// was called). If a caller doesnot await the future returned by access to completion, then
     /// the rate limiter's internal state will be updated nonetheless. Memory usage is proportional
     /// to the number of pending accesses. Note that this isn't an async fn so as to not capture a
-    /// refernce to &self in the future returned by this method, which makes it more suitable for
+    /// reference to &self in the future returned by this method, which makes it more suitable for
     /// use in e.g. a futures 0.1 context.
     pub fn access(&self) -> impl Future<Output = Result<(), Error>> + 'static + Send + Sync {
         let (send, recv) = oneshot::channel();

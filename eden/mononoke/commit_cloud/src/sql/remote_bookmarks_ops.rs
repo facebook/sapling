@@ -32,7 +32,7 @@ mononoke_queries! {
         mysql("SELECT `remote`, `name`, `node` FROM `remotebookmarks` WHERE `reponame`={reponame} AND `workspace`={workspace}")
         sqlite("SELECT `remote`, `name`, `commit` FROM `remotebookmarks` WHERE `reponame`={reponame} AND `workspace`={workspace}")
     }
-    //TODO: Handle changesets as bytes (migth require an entirely different query)
+    //TODO: Handle changesets as bytes (might require an entirely different query)
     write DeleteRemoteBookmark(reponame: String, workspace: String,  >list removed_bookmarks: String) {
         none,
         mysql("DELETE FROM `remotebookmarks` WHERE `reponame`={reponame} AND `workspace`={workspace} AND CONCAT(`remote`, '/', `name`) IN {removed_bookmarks}")

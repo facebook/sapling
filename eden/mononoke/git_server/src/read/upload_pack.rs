@@ -197,7 +197,7 @@ async fn wanted_refs(
     context: Arc<RepositoryRequestContext>,
     args: Arc<FetchArgs>,
 ) -> Result<Option<Bytes>, Error> {
-    // If there are no refs explictly requested, then we can return early
+    // If there are no refs explicitly requested, then we can return early
     if args.want_refs.is_empty() {
         return Ok(None);
     }

@@ -27,9 +27,9 @@ use slog::info;
 /// Enum determining the nature of error reporting for bookmark operations
 #[derive(Debug, Clone, PartialEq, Eq, Copy)]
 pub enum BookmarkOperationErrorReporting {
-    /// Report the errors occuring during bookmark operation as-is
+    /// Report the errors occurring during bookmark operation as-is
     Plain,
-    /// Report the errors occuring during bookmark operation with added context
+    /// Report the errors occurring during bookmark operation with added context
     /// highlighting which specific operation failed
     WithContext,
 }

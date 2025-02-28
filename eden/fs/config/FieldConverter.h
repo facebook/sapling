@@ -133,7 +133,7 @@ class FieldConverter<std::vector<T>> {
         }
       } else {
         return folly::Unexpected<std::string>(
-            "eden currenly only supports lists of strings for config values");
+            "eden currently only supports lists of strings for config values");
       }
     }
     return deserializedElements;

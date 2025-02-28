@@ -743,7 +743,7 @@ mod test {
             vec![
                 merge_parent_2_source,
                 merge_parent_3_source,
-                // Commit parent comming from the target last to ensure that
+                // Commit parent coming from the target last to ensure that
                 // parent reordering works as expected.
                 merge_parent_1_source,
             ],

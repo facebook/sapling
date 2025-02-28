@@ -17,7 +17,7 @@ namespace facebook::eden {
  * A fake directory entry for use inside VirtualInode.
  *
  * The VirtualInode class allows callers to see a "mixed" view of the eden
- * mount, which respresents both on-disk (inode) state, and in-backing-store
+ * mount, which represents both on-disk (inode) state, and in-backing-store
  * (source control) state. When a DirEntry represents a ObjectStore object that
  * doesn't exist on disk (isn't loaded, isn't materialized), some of the
  * contents of DirEntry must be returned to represent the object (particularly

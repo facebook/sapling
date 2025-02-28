@@ -37,7 +37,7 @@ include "thrift/annotation/rust.thrift"
 //                                -- scm -- SCM
 //
 // In this example Dir1/eden directory conflicts Dir1/Eden because they share dir1/Dir1/eden in
-// the transform tree and then diverge. Similarily Dir1/eden/MoNoNOKe and Dir1/eden/mononOKE
+// the transform tree and then diverge. Similarly Dir1/eden/MoNoNOKe and Dir1/eden/mononOKE
 // conflict because they share dir1/Dir1/eden/eden/mononoke and then diverge.
 @rust.Exhaustive
 struct CcsmFile {}

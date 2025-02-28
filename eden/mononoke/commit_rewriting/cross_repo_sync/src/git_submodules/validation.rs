@@ -807,7 +807,7 @@ struct EntriesToValidate<R: Repo> {
 }
 
 /// Stores all the data for an iteration of the validation fold.
-/// The data consits of the files and directories from expansion or submodule
+/// The data consists of the files and directories from expansion or submodule
 /// manifest that haven't been matched yet and the recursive validation calls
 /// that have to be made.
 struct EntryValidationData<R: Repo> {

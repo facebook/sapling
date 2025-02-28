@@ -173,7 +173,7 @@ class CheckoutConfig {
 
   /**
    * Get the inode catalog type that this mount's overlay should be using. The
-   * type defaults to `std::nullopt` when not specified, inidcating the
+   * type defaults to `std::nullopt` when not specified, indicating the
    * behavior should be to use the default inode catalog type behavior. On Linux
    * and MacOS this is the `InodeCatalogType::Legacy` and on Windows this is
    * some variant of `InodeCatalogType::Sqlite` where additional `EdenConfig`

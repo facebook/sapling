@@ -659,7 +659,7 @@ class StatusTest(EdenHgTestCase):
                 self.touch("peace.txt")
                 thread_expect_two_entries = Thread(
                     target=thread_worker,
-                    # no matter where is the previous thread bloked, this thread
+                    # no matter where is the previous thread blocked, this thread
                     # should always see the latest status
                     args=(self, {"world.txt": "?", "peace.txt": "?"}, exceptions),
                 )

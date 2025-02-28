@@ -31,11 +31,11 @@ Duration of recursively removing an Overlay directory
 
 8. `Duration hasOverlayDir{"overlay.has_overlay_dir_us"}` :
 
-Duration of checking an Overlay directory's existance
+Duration of checking an Overlay directory's existence
 
 9. `Duration hasOverlayFile{"overlay.has_overlay_file_us"}` :
 
-Duration of checking an Overlay file's existance
+Duration of checking an Overlay file's existence
 
 10. `Duration addChild{"overlay.add_child_us"}` :
 

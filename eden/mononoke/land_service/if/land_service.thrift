@@ -66,7 +66,7 @@ struct PushrebaseOutcome {
   /// The new changeset for the rebased head.
   1: ChangesetId head;
 
-  /// A list of bonsai hash (changeset) pairs represeting old and new ids.
+  /// A list of bonsai hash (changeset) pairs representing old and new ids.
   2: list<BonsaiHashPairs> rebased_changesets;
 
   /// How far away was the commit rebased.

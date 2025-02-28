@@ -65,7 +65,7 @@ pub trait BonsaiTagMapping: Send + Sync {
         changeset_id: Vec<ChangesetId>,
     ) -> Result<Vec<BonsaiTagMappingEntry>>;
 
-    /// Fetch the tag mapping entry correponding to the tag name in the
+    /// Fetch the tag mapping entry corresponding to the tag name in the
     /// given repo, if one exists
     async fn get_entry_by_tag_name(
         &self,

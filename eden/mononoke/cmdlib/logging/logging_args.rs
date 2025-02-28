@@ -104,7 +104,7 @@ pub enum PanicFate {
 
 impl LoggingArgs {
     fn setup_panic_handler(&self) {
-        // Set the panic handler up here. Not really relevent to logger other than it emits output
+        // Set the panic handler up here. Not really relevant to logger other than it emits output
         // when things go wrong. This writes directly to stderr as coredumper expects.
         // TODO: separate the panic handler out from logging
         let fate = match self.panic_fate {

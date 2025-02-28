@@ -10,7 +10,7 @@
 //! While our derived data types crates are enough to serve immutable history for serving
 //! the mutable one we need to combine data from multiple sources in more complex algorithm.
 //!
-//! This crate procides all the primitives useful for serving log and blame data (mutable and immutable).
+//! This crate provides all the primitives useful for serving log and blame data (mutable and immutable).
 
 #![feature(trait_alias)]
 

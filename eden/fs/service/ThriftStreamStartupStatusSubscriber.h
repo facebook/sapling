@@ -30,7 +30,7 @@ class ThriftStreamStartupStatusSubscriber : public StartupStatusSubscriber {
 
   /**
    * publishes a startup status update to a Thrift stream as long as the stream
-   * has not yet been cancled. Publishing to the Thrift stream is done inline,
+   * has not yet been canceled. Publishing to the Thrift stream is done inline,
    * so this will block if there is back pressure from thrift.
    */
   void publish(std::string_view data) override;

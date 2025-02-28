@@ -66,7 +66,7 @@ pub struct BlobstoreArgs {
     #[clap(long, requires = "blobstore_put_stddev_delay_secs")]
     pub blobstore_put_mean_delay_secs: Option<f64>,
 
-    /// Standard devation of additional delay for blobstore put calls.
+    /// Standard deviation of additional delay for blobstore put calls.
     #[clap(long, requires = "blobstore_put_mean_delay_secs")]
     pub blobstore_put_stddev_delay_secs: Option<f64>,
 

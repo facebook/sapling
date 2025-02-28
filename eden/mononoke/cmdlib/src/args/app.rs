@@ -175,7 +175,7 @@ const DEFAULT_ARG_TYPES: &[ArgType] = &[
 pub enum RepoRequirement {
     // The command will execute for exactly one repo at a time.
     ExactlyOne,
-    // The command requires atleast one repo.
+    // The command requires at least one repo.
     AtLeastOne,
 }
 

@@ -205,7 +205,7 @@ where
 #[derive(Clone, Debug)]
 pub struct GitimportPreferences {
     pub dry_run: bool,
-    /// Only for logging purpuses,
+    /// Only for logging purposes,
     /// useful when several repos are imported simultainously.
     pub gitrepo_name: Option<String>,
     pub concurrency: usize,

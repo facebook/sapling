@@ -76,7 +76,7 @@ pub trait ThriftParams: Sized + Send + Sync + Into<AsynchronousRequestParams> + 
 
     /// Every *Params argument referes to some Target
     /// This method is needed to extract it from the
-    /// implementor of this trait
+    /// implementer of this trait
     fn target(&self) -> String;
 }
 pub trait ThriftResult:
@@ -101,7 +101,7 @@ pub trait Token: Clone + Sized + Send + Sync + Debug {
 /// which can be stored/retrieved from the blobstore.
 /// Such types are usually represented as value/handle pairs.
 /// Since we need to implement (potentially foreign) traits
-/// on these types, we also define corrensponding Rust types
+/// on these types, we also define corresponding Rust types
 /// Some of the defined types (like context or thrift_type_newtype)
 /// are not used from outside of the macro, but we still need
 /// to pass identifiers for them from the outside, because
@@ -355,8 +355,8 @@ macro_rules! impl_async_svc_method_types_result {
 /// these types, and their Request-related frients.
 /// An underlying idea is to define as much behavior and relationships
 /// as possible in the type system, so that we
-/// (a) minimize a chance of using incorrent pair of types somewhere
-/// (b) can write generic enqueing/polling functions
+/// (a) minimize a chance of using incorrect pair of types somewhere
+/// (b) can write generic enqueuing/polling functions
 ///
 /// The arguments are as follows:
 /// * method_name:              the Thrift method name

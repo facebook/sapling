@@ -70,7 +70,7 @@ impl ChangesetMetadata {
         committer_time: &DateTime,
     ) -> Result<(), Error> {
         if self.extra.contains_key(COMMITTER_METADATA_KEY) {
-            bail!("commiter extra is already set, can't insert another one!");
+            bail!("committer extra is already set, can't insert another one!");
         }
 
         // Use the same format as hggit extension - https://fburl.com/diffusion/3ckf76fd

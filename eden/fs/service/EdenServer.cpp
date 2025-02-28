@@ -421,7 +421,7 @@ class EdenServer::ThriftServerEventHandler
 
   /**
    * Return a Future that will be fulfilled once the thrift server is bound to
-   * its socket and is ready to accept conenctions.
+   * its socket and is ready to accept connections.
    */
   folly::SemiFuture<Unit> getThriftRunningFuture() {
     return runningPromise_.getSemiFuture();
@@ -726,7 +726,7 @@ void EdenServer::ProgressManager::printProgresses(
   }
   prepare += cursor_helper::clear_to_bottom();
 
-  // we intentially don't include the lines here in totalLinesPrinted so that
+  // we intentionally don't include the lines here in totalLinesPrinted so that
   // they won't be erased next time.
   if (errorMessage.has_value()) {
     content += errorMessage.value();
@@ -2114,7 +2114,7 @@ ImmediateFuture<CheckoutResult> EdenServer::checkOutRevision(
               // the eventbase is destroyed and the eventbase is destroyed
               // before the mountPoints, this function can only be called before
               // the mount points are destroyed during normal destruction.
-              // However, the mount pont might have been unmounted before this
+              // However, the mount point might have been unmounted before this
               // function is run outside of shutdown.
               auto delay = serverState_->getReloadableConfig()
                                ->getEdenConfig()
@@ -2283,7 +2283,7 @@ ImmediateFuture<CheckoutResult> EdenServer::checkOutRevision(
     //
     // Without backpressure, EdenFS would see an increase in memory pressure.
     // potential slowdowns, and/or OOMS. EdenFS only allows one checkout at a
-    // time (https://fburl.com/code/a6eoy8wu), which acts as the aformentioned
+    // time (https://fburl.com/code/a6eoy8wu), which acts as the aforementioned
     // backpressure mechanism.
     checkoutFuture =
         std::move(checkoutFuture).semi().via(checkoutRevisionExecutor_.get());
@@ -2406,7 +2406,7 @@ folly::SemiFuture<Unit> EdenServer::createThriftServer() {
   server_->setAllowCheckUnimplementedExtraInterfaces(false);
 
   // Setting this allows us to to only do stopListening() on the stop() call
-  // and delay thread-pool join (stop cpu workers + stop workers) untill
+  // and delay thread-pool join (stop cpu workers + stop workers) until
   // server object destruction. This specifically matters in the takeover
   // shutdown code path.
   server_->setStopWorkersOnStopListening(false);

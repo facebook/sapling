@@ -472,7 +472,7 @@ impl Sqlblob {
                 // Value was small, so lets inline it
                 let small_value = self.get_impl(key).await?;
                 if let Some(small_value) = small_value {
-                    // Double check length incase it changed since setting generation
+                    // Double check length in case it changed since setting generation
                     let value_len: u64 = small_value.as_bytes().len().try_into()?;
                     if value_len <= MAX_INLINE_LEN {
                         if let Some(old_ctime) = small_value.as_meta().ctime() {
@@ -484,7 +484,7 @@ impl Sqlblob {
                                     }
                                 }
                             }?;
-                            // Optimisitic update to convert to the inline form. This only updates for actually old ctimes
+                            // Optimistic update to convert to the inline form. This only updates for actually old ctimes
                             // (one day or more), so that we don't attempt to inline any new data from e.g. a packer write
                             if ctime - old_ctime >= self.ctime_inline_grace {
                                 let small_value = encode_small_value(&small_value.into_raw_bytes());

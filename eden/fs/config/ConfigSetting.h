@@ -104,7 +104,7 @@ class ConfigSettingBase {
   }
 
   /**
-   * Mapping of ConfigSourceType to the corresponding precedence. A higer value
+   * Mapping of ConfigSourceType to the corresponding precedence. A higher value
    * means higher precedence.
    */
   static size_t getIdx(ConfigSourceType cs) {

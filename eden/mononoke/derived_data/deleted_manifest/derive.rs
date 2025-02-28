@@ -58,7 +58,7 @@ use crate::mapping::RootDeletedManifestIdCommon;
 /// constructed for each parent of the given changeset.
 ///
 /// Deleted manifest is a recursive data structure that starts with a root manifest and
-/// points to the other manifests. Each node may represent either deleted directoty or deleted file.
+/// points to the other manifests. Each node may represent either deleted directory or deleted file.
 /// Both directory's and file's manifest can have subentries, if a file has subentries it means
 /// that this path was a directory earlier, then was deleted and reincarnated as a file.
 ///
@@ -69,7 +69,7 @@ use crate::mapping::RootDeletedManifestIdCommon;
 ///
 /// The derivation is done as a bounded traversal that traverses (in lockstep)
 /// any changes included in bonsai's file_changes. It also keeps track of traversed
-/// paths parents deleleted manifest and unodes and based on their contents it may
+/// paths parents deleted manifest and unodes and based on their contents it may
 /// recurse into more entries.
 ///
 /// We attempt to avoid traversing entire manifest so we don't descend into
@@ -129,7 +129,7 @@ struct DeletedManifestChange<Manifest: DeletedManifestCommon> {
     /// Which change happened.
     change_type: DeletedManifestChangeType,
     /// Parent to base on. Result should be equivalent to copying the subentries
-    /// of the parent and then applying the remanining modifications.
+    /// of the parent and then applying the remaining modifications.
     copy_subentries_from: Option<Manifest>,
 }
 

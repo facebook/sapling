@@ -419,7 +419,7 @@ class ObjectStore : public IObjectStore,
    * so this means we go to RocksDB for each tree read. To avoid needing to hit
    * RocksDB, keep a bounded in-memory cache of the trees we've seen.
    * This cache will also be read from the first time we load a tree inode.
-   * This cache is shared accross all object stores, and has a fixed memory
+   * This cache is shared across all object stores, and has a fixed memory
    * size. (The one size limit violation is if there are very large trees,
    * the cache is allowed to retain a small fixed number of these in cache, and
    * violate the fixed size. This generally, should be rare as no trees should

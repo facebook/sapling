@@ -131,7 +131,7 @@ impl Display for RefTarget {
 pub enum RequestedSymrefs {
     /// Only include the HEAD symref in the pack/bundle
     IncludeHead(SymrefFormat),
-    /// Incldue all known symrefs in the pack/bundle
+    /// Include all known symrefs in the pack/bundle
     IncludeAll(SymrefFormat),
     /// Exclude all known symrefs from the pack/bundle
     ExcludeAll,

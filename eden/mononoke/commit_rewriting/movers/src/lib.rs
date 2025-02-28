@@ -598,7 +598,7 @@ mod test {
         let mover = get_small_to_large_mover(&large_sync_config, RepositoryId::new(1)).unwrap();
 
         // `preserved2` is a directory, preserved from repo2, so changes to
-        // it in repo1 it have tbe shifted
+        // it in repo1 it have the shifted
         let f = mp("preserved2/f");
         assert_eq!(
             mover.move_path(&f).unwrap(),
@@ -702,7 +702,7 @@ mod test {
 
         // There no correct way to behave when the file has the same
         // name as a prependable prefix. Generally we will prevent
-        // introducting files like this in the first place, but let's
+        // introducing files like this in the first place, but let's
         // make sure the code does the right thing. Note that commit
         // containing changes to such file will succeed syncing to
         // a repo, which does not use this prefix. We may want to
@@ -826,7 +826,7 @@ mod test {
 
         // There no correct way to behave when the file has the same
         // name as a prependable prefix. Generally we will prevent
-        // introducting files like this in the first place, but let's
+        // introducing files like this in the first place, but let's
         // make sure the code does the right thing. Note that commit
         // containing changes to such file will succeed syncing to
         // a repo, which does not use this prefix. We may want to

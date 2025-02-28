@@ -83,8 +83,8 @@ use crate::Syncers;
 /// the repository verifies OK the verification is very fast.
 ///
 /// NOTE: The implementation is a bit hacky due to the path mover functions
-/// being orignally designed with moving file paths not, directory paths. The
-/// hack is mostly contained to wrap_mover_result functiton.
+/// being originally designed with moving file paths not, directory paths. The
+/// hack is mostly contained to wrap_mover_result function.
 pub async fn verify_working_copy<'a, R: Repo>(
     ctx: &'a CoreContext,
     commit_syncer: &'a CommitSyncer<R>,
@@ -258,7 +258,7 @@ impl RewriteMismatchElement {
         match self {
             RewriteMismatchElement::File(_) => "a file",
             RewriteMismatchElement::Directory => "a directory",
-            RewriteMismatchElement::Nothing => "nonexistant",
+            RewriteMismatchElement::Nothing => "nonexistent",
         }
     }
 }
@@ -401,7 +401,7 @@ async fn verify_working_copy_inner<'a>(
 // properly rather than error.
 //
 // This function returns:
-//  * None when the path shouln't be present after rewrite
+//  * None when the path shouldn't be present after rewrite
 //  * Some(None) when the dir should be rewritten into repo root
 //  * Some(Some(path)) when the dir should be rewritten into path
 //
@@ -450,7 +450,7 @@ async fn verify_git_submodule_expansion_small_to_large<'a>(
     // STEP 1: Assert that the submodule expansion data is available
     let sm_exp_data = sm_exp_data
         .as_ref()
-        .ok_or(anyhow!("submodule expansion data neded for validation"))?;
+        .ok_or(anyhow!("submodule expansion data needed for validation"))?;
     // STEP 2: Compute the expansion path and find is fsnode in the large repo
     let expansion_path = mover
         .move_path(&submodule_path)?
@@ -579,7 +579,7 @@ async fn verify_git_submodule_expansion_large_to_small<'a>(
     // STEP 1: Assert that the submodule expansion data is available
     let sm_exp_data = sm_exp_data
         .as_ref()
-        .ok_or(anyhow!("submodule expansion data neded for validation"))?;
+        .ok_or(anyhow!("submodule expansion data needed for validation"))?;
 
     // STEP 2: Compute the submodule path and find is fsnode in the small repo
     let submodule_path = if let Some(submodule_path) = mover.move_path(&expansion_path)? {
@@ -675,7 +675,7 @@ async fn verify_git_submodule_expansion_large_to_small<'a>(
 }
 
 /// Datastructure that allows quick identification of submodule expansion paths
-/// in the large repo and finding their corresponding metatdata.
+/// in the large repo and finding their corresponding metadata.
 #[derive(Default, Debug)]
 struct ExpansionAndMetadataPaths {
     expansion_path_to_metadata: SortedVectorMap<NonRootMPath, NonRootMPath>,
@@ -694,7 +694,7 @@ fn list_possible_expansion_and_metadata_paths<'a>(
         GitSubmodulesChangesAction::Expand => {
             let sm_exp_data = sm_exp_data
                 .as_ref()
-                .ok_or(anyhow!("submodule expansion data neded for validation"))?;
+                .ok_or(anyhow!("submodule expansion data needed for validation"))?;
             let mut expansion_to_metadata = Vec::new();
             let mut metadata_to_expansion = Vec::new();
 
@@ -837,7 +837,7 @@ async fn verify_and_filter_out_submodule_changes<'a>(
     let mut verification_futures = vec![];
     match direction {
         // large to small: find all expansions and their metadata files and call the
-        // appropiate validation function
+        // appropriate validation function
         CommitSyncDirection::Backwards => {
             match submodules_action {
                 // in case of keep and strip there should be nothing in the large repo
@@ -1149,7 +1149,7 @@ async fn get_large_repo_prefixes_to_visit<'a, R: Repo>(
     })?;
 
     // Gets a list of large repo paths that small repo paths can map to.
-    // All other large repo paths don't need visiting. Except for `Preserve` aciton.
+    // All other large repo paths don't need visiting. Except for `Preserve` action.
     let mut prefixes_to_visit = small_repo_config
         .map
         .values()

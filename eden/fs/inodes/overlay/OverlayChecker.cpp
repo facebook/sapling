@@ -178,7 +178,7 @@ class OverlayChecker::RepairState {
         auto entries = parentDir.entries();
         if (entries.is_set()) {
           // TODO: this copy can be avoided if we have overlay.thrift specify a
-          // map with heterogenous lookup for entries.
+          // map with heterogeneous lookup for entries.
           auto result = entries->find(childName.asString());
           if (result != entries->end()) {
             overlay::OverlayEntry& entry = result->second;

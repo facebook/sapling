@@ -319,7 +319,7 @@ impl<R: MononokeRepo> MegarepoApi<R> {
         res
     }
 
-    /// Adds new sync target. Returs the commit hash of newly created target's head.
+    /// Adds new sync target. Returns the commit hash of newly created target's head.
     pub async fn add_sync_target(
         &self,
         ctx: &CoreContext,
@@ -389,7 +389,7 @@ impl<R: MononokeRepo> MegarepoApi<R> {
             .await
     }
 
-    /// Adds new sync target. Returs the commit hash of newly created target's head.
+    /// Adds new sync target. Returns the commit hash of newly created target's head.
     pub async fn change_target_config(
         &self,
         ctx: &CoreContext,

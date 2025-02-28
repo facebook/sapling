@@ -177,7 +177,7 @@ impl<Repo> MononokeReposManager<Repo> {
         self.repos.add(repo_name, repo_id, repo);
         self.repos
             .get_by_name(repo_name)
-            .ok_or_else(|| anyhow!("Couldn't retrive added repo {}", repo_name))
+            .ok_or_else(|| anyhow!("Couldn't retrieve added repo {}", repo_name))
     }
 
     /// Remove a repo from the managed repo collection.

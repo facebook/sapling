@@ -47,7 +47,7 @@ class ConfigTest(testcase.EdenTestCase):
 
             # The edenDirectory property is currently always recorded as being set from
             # the command line, regardless of how it was actually determined.
-            # (This is to ensure it cannot later be overwitten by a config file change
+            # (This is to ensure it cannot later be overwritten by a config file change
             # once edenfs has started.)
             self.assert_config(
                 config,

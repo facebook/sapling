@@ -5,7 +5,7 @@ The configuration parameters for Eden are stored in INI files. The default
 and inside files `edenfs.rc` and `edenfs_dynamic.rc`. The files in `/etc/eden`
 generally should not be edited by hand. Instead, these system configs can be
 overridden by the user in the `~/.edenrc` user configuration file. If the
-`~/.edenrc` file doesn't exist on the machine, user can create it manualy. The
+`~/.edenrc` file doesn't exist on the machine, user can create it manually. The
 contents must be valid TOML.
 
 As of February 2024, the different system configs locations have the following
@@ -73,7 +73,7 @@ locations
 - `mount:readdir-prefetch = "trees" # ~/.edenrc, doesn't exist in any /etc/eden files`
 
 Running `edenfsctl fsconfig` will provide an annotated view of EdenFS' configs,
-similiar to the example above.
+similar to the example above.
 
 Please note that empty sections with only a header entry are not currently
 supported.

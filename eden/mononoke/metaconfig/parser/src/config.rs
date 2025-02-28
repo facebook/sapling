@@ -53,7 +53,7 @@ pub fn load_common_config(
     parse_common_config(common, &storage)
 }
 
-/// Holds configuration for repostories.
+/// Holds configuration for repositories.
 #[derive(Clone, Debug, PartialEq)]
 pub struct RepoConfigs {
     /// Configs for all repositories

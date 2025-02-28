@@ -739,7 +739,7 @@ mod tests {
                         .with_context(|| format!("while get backup filenode for cs {:?}", cs))?;
                     match (prod, backup) {
                         (FilenodeResult::Present(prod), FilenodeResult::Present(backup)) => {
-                            assert!(prod == backup, "Differernt filenode for cs {} with path {:?}\nfilenode in prod repo {:?}\nfilenode in backup repo {:?}", cs, path, prod, backup);
+                            assert!(prod == backup, "Different filenode for cs {} with path {:?}\nfilenode in prod repo {:?}\nfilenode in backup repo {:?}", cs, path, prod, backup);
                             Ok(())
                         }
                         (FilenodeResult::Disabled, FilenodeResult::Disabled) => Ok(()),

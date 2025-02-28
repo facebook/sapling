@@ -40,7 +40,7 @@ struct GlobResult {
          originHash < other.originHash);
   }
 
-  // originHash should never become a dangling refernece because the caller
+  // originHash should never become a dangling reference because the caller
   // of Globresult::evaluate ensures that the hashes have a lifetime that
   // exceeds that of the GlobResults returned.
   GlobResult(RelativePathPiece name, dtype_t dtype, const RootId& originHash)

@@ -301,7 +301,7 @@ mod hg_changeset_id {
     {
         let id = String::deserialize(deserializer)?;
         HgChangesetId::from_str(&id)
-            .map_err(|e| D::Error::custom(format!("Invalid changset id: {id}: {e}")))
+            .map_err(|e| D::Error::custom(format!("Invalid changeset id: {id}: {e}")))
     }
 
     pub fn serialize<S>(id: &HgChangesetId, serializer: S) -> Result<S::Ok, S::Error>

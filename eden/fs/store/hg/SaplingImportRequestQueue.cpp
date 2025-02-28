@@ -67,7 +67,7 @@ ImmediateFuture<std::shared_ptr<const T>> SaplingImportRequestQueue::enqueue(
       // Since the new request has a higher priority than the already present
       // one, we need to re-order the heap.
       //
-      // TODO(xavierd): this has a O(n) complexity, and enqueing tons of
+      // TODO(xavierd): this has a O(n) complexity, and enqueuing tons of
       // duplicated requests will thus lead to a quadratic complexity.
       std::make_heap(
           requestQueue->begin(),

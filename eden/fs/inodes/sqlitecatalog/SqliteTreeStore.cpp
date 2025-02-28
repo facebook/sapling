@@ -34,7 +34,7 @@ constexpr PathComponentPiece kTreeStorePath =
 // Initial Inode ID is root ID + 1
 constexpr auto kInitialNodeId = kRootNodeId.getRawValue() + 1;
 
-// Schema version of the SQLite database, everytime we changes the schema we
+// Schema version of the SQLite database, every time we changes the schema we
 // must bump this number.
 constexpr uint32_t kSchemaVersion = 1;
 

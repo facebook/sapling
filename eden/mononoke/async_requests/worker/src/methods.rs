@@ -239,7 +239,7 @@ pub async fn commit_sparse_profile_delta(
 }
 
 /// Given the request params dispatches the request to the right processing
-/// function and returns the computation result. Both successfull computation
+/// function and returns the computation result. Both successful computation
 /// and error are part of the `AsynchronousRequestResult` structure. We only
 /// return `Err` for transient errors, to indicate we should retry.
 pub(crate) async fn megarepo_async_request_compute<R: MononokeRepo>(

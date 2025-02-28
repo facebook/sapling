@@ -669,7 +669,7 @@ impl TestRepoFactory {
         )))
     }
 
-    /// The commit mapping bettween repos for synced commits.
+    /// The commit mapping between repos for synced commits.
     pub fn synced_commit_mapping(&self) -> Result<ArcSyncedCommitMapping> {
         Ok(Arc::new(
             SqlSyncedCommitMappingBuilder::from_sql_connections(self.metadata_db.clone())

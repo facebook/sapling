@@ -129,7 +129,7 @@ impl<T: fmt::Debug + Send + Sync> ThrottledBlob<T> {
 
 #[async_trait]
 impl<T: Blobstore> Blobstore for ThrottledBlob<T> {
-    // Thottling for get() bytes/s is approximate as we only know the size after the blob has been read
+    // Throttling for get() bytes/s is approximate as we only know the size after the blob has been read
     async fn get<'a>(
         &'a self,
         ctx: &'a CoreContext,

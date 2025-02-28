@@ -11,7 +11,7 @@ pub struct ErrorMeta<E> {
     /// Errors that were captured
     pub errors: Vec<E>,
 
-    /// Extra erorrs that were observed but not captured.
+    /// Extra errors that were observed but not captured.
     pub extra_error_count: u64,
 }
 

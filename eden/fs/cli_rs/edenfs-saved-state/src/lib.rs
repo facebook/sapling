@@ -148,7 +148,7 @@ mod tests {
     #[fbinit::test]
     pub async fn test_get_saved_state_info() -> anyhow::Result<()> {
         // Using current time should ensure we always get a saved state, even though our
-        // commit ID is arbitrary and not likley to match any saved state.
+        // commit ID is arbitrary and not likely to match any saved state.
         let timestamp = SystemTime::now().duration_since(UNIX_EPOCH)?.as_secs();
         let saved_state = SavedStateClient::new(PROJECT_NAME)?;
         let saved_state_info = saved_state

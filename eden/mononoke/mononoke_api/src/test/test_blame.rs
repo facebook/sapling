@@ -310,7 +310,7 @@ async fn test_merge_commit_mutable_blame(fb: FacebookInit) -> Result<()> {
     let (repo, changesets) = init_repo(&ctx).await?;
 
     // Add a mutable rename sending b3 to a2, and one sending a3 to b2
-    // This makes the commit tree (with : for immutable changes overriden by
+    // This makes the commit tree (with : for immutable changes overridden by
     // mutable renames) look like:
     //     m1
     //    /\

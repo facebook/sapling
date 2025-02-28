@@ -127,7 +127,7 @@ static const std::unordered_map<FetchedSource, const char*> kFetchedSource = {
 /**
  * Represents an active HgRequest that has been queued and possibly started but
  * not finished. Note queue events must be optional since tracing could begin
- * between queue and start events and also becaue queue events are not present
+ * between queue and start events and also because queue events are not present
  * in the ActivityBuffer for retroactive tracing. Note: Like `eden strace`, it
  * would be nice to print the active set of requests (that are currently in
  * progress when streaming starts) before streaming the events in trace_hg.
@@ -732,7 +732,7 @@ void print_inode_event(InodeEvent& event, size_t inode_width) {
   }
   char formattedTime[30];
   if (!strftime(formattedTime, 30, "%Y-%m-%d %H:%M:%S", &time_buffer)) {
-    // strftime doesn't set errno! Thus we throw a runtime_error intead of
+    // strftime doesn't set errno! Thus we throw a runtime_error instead of
     // calling folly:throwSystemError
     throw std::runtime_error(
         "strftime failed. Formatted string exceeds size of buffer");

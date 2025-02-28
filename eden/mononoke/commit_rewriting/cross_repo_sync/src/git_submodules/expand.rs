@@ -354,7 +354,7 @@ async fn expand_git_submodule_file_change<'a, R: Repo>(
 async fn expand_git_submodule<'a, R>(
     ctx: &'a CoreContext,
     small_repo: &'a R,
-    // Parents from the **source repo commmit** being rewritten.
+    // Parents from the **source repo commit** being rewritten.
     // This is needed to get the hash of the previous commit of the submodule
     // being expanded.
     parents: &'a [ChangesetId],
@@ -636,7 +636,7 @@ async fn process_recursive_submodule_file_change<'a, R: Repo>(
 /// we should generate the differences between commit X and Z, instead of
 /// copying the entire working copy in commit Z (which is a lot of unnecessary work).
 ///
-/// Using the example from above, the output of this funciton would be `[X]`.
+/// Using the example from above, the output of this function would be `[X]`.
 async fn get_previous_submodule_commits<'a, R: Repo>(
     ctx: &'a CoreContext,
     // Parents of the changeset being synced from the source repo. We get the

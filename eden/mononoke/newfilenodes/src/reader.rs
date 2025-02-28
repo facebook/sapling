@@ -60,7 +60,7 @@ define_stats! {
     too_big_history: timeseries(Sum),
 }
 
-// Both of these are pretty convervative, and collected experimentally. They're here to ensure one
+// Both of these are pretty conservative, and collected experimentally. They're here to ensure one
 // bad query doesn't lock down an entire shard for an extended period of time.
 const REMOTE_CACHE_TIMEOUT_MILLIS: u64 = 100;
 const SQL_TIMEOUT_MILLIS: u64 = 5_000;

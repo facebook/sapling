@@ -72,7 +72,7 @@ class EdenHgTestCase(testcase.EdenTestCase, metaclass=abc.ABCMeta):
     - self.backing_repo:
       This is the underlying mercurial repository that provides the data for
       the eden mount point.  This has to be populated with an initial commit
-      before the eden client is configured, but after initalization most of the
+      before the eden client is configured, but after initialization most of the
       test interaction will generally be with self.repo instead.
 
     - self.repo
@@ -184,7 +184,7 @@ class EdenHgTestCase(testcase.EdenTestCase, metaclass=abc.ABCMeta):
         backing_repo: hgrepo.HgRepository,
         client_name: str = "repository",
     ) -> hgrepo.HgRepository:
-        """Creates another Hg Repository using `hg clone`. This excercises a
+        """Creates another Hg Repository using `hg clone`. This exercises a
         different code path than setup_eden_test(). This function returns two
         HgRepository objects. The first corresponds to the new Eden mount. The
         second corresponds to the backing repo (backed by a new eager repo)."""
@@ -448,7 +448,7 @@ class EdenHgTestCase(testcase.EdenTestCase, metaclass=abc.ABCMeta):
         """
         Check that the journal contents match an expected state.
 
-        Acceptes a series of JournalEntry arguments, in order from oldest to
+        Accepts a series of JournalEntry arguments, in order from oldest to
         newest expected journal entry.
         """
         data = self.repo.journal()

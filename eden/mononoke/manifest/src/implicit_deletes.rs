@@ -42,8 +42,8 @@ use crate::ManifestOps;
 /// p1/
 ///   p2    <- f file
 /// ```
-/// Dir `/p1/p2` was implicitly delted (meaning files `/p1/p2/p3` and
-/// `/p1/p2/p4` were implicitly delted)
+/// Dir `/p1/p2` was implicitly deleted (meaning files `/p1/p2/p3` and
+/// `/p1/p2/p4` were implicitly deleted)
 fn get_implicit_deletes_single_parent<ManifestId, Store, I, L>(
     ctx: CoreContext,
     store: Store,

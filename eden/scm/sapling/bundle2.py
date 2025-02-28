@@ -356,7 +356,7 @@ class bundleoperation:
         transaction = self._gettransaction()
 
         if self.hookargs:
-            # the ones added to the transaction supercede those added
+            # the ones added to the transaction supersede those added
             # to the operation.
             self.hookargs.update(transaction.hookargs)
             transaction.hookargs = self.hookargs

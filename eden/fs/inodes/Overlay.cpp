@@ -233,7 +233,7 @@ void Overlay::close() {
 
   // Make sure everything is shut down in reverse of construction order.
   // Cleanup is not necessary if tree overlay was not initialized and either
-  // there is no file content store or the it was not initalized
+  // there is no file content store or the it was not initialized
   if (!inodeCatalog_->initialized() &&
       (!fileContentStore_ ||
        (fileContentStore_ && !fileContentStore_->initialized()))) {

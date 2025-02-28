@@ -55,7 +55,7 @@ class PathErrorBase : public std::system_error {
  * A subclass of PathErrorBase referring to a specific path by string.
  *
  * Users should prefer InodeError to avoid copying and storing a string
- * unecesarily, but an inode isn't always available where PathErrorBase errors
+ * unnecessarily, but an inode isn't always available where PathErrorBase errors
  * are needed.
  */
 class PathError : public PathErrorBase {

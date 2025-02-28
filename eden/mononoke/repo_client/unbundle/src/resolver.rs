@@ -720,7 +720,7 @@ enum AllBookmarkPushes<T: Copy> {
     Inifinitepush(InfiniteBookmarkPush<T>),
 }
 
-/// Represets a single non-infinitepush bookmark push
+/// Represents a single non-infinitepush bookmark push
 /// This can be a result of a normal push or a pushrebase
 #[derive(Debug, Clone)]
 pub struct PlainBookmarkPush<T: Copy> {
@@ -767,7 +767,7 @@ enum Pushkey {
     Phases,
 }
 
-/// Holds repo and logger for convienience access from it's methods
+/// Holds repo and logger for convenience access from it's methods
 #[derive(Clone)]
 struct Bundle2Resolver<'r, R: Repo> {
     ctx: &'r CoreContext,
@@ -1254,7 +1254,7 @@ impl<'r, R: Repo> Bundle2Resolver<'r, R> {
     }
 
     /// A method that can use any of the above maybe_resolve_* methods to return
-    /// a Vec of (potentailly multiple) Part rather than an Option of Part.
+    /// a Vec of (potentially multiple) Part rather than an Option of Part.
     /// The original use case is to parse multiple pushkey Parts since bundle2 gets
     /// one pushkey part per bookmark.
     async fn resolve_multiple_parts<'a, T, Func, Fut>(

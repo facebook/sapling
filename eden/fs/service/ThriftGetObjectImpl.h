@@ -109,11 +109,11 @@ folly::Try<BlobAuxData> transformToTryAuxData(
       edenMount->getObjectStore()->renderObjectId(id))};
 }
 
-// [[maybe_unused]]: This specialization is used and nessecary, but clang's
+// [[maybe_unused]]: This specialization is used and necessary, but clang's
 // maybe unused thing thinks that the templated transformToTryAuxData above
 // will over shadow this specialization. So clang will think this is unused.
-// Apparently, clang does not bother trying to instantate a templated thing.
-// So its prone to false positive "unused" warnings with tempated stuff.
+// Apparently, clang does not bother trying to instantiate a templated thing.
+// So its prone to false positive "unused" warnings with templated stuff.
 // (source:
 // https://stackoverflow.com/questions/66986718/c-clang-emit-warning-about-unused-template-variable)
 // Maybe concepts in C++20 will clear this up, but we aren't there yet.

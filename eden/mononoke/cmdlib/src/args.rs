@@ -863,7 +863,7 @@ pub fn parse_disabled_hooks_no_repo_prefix<'a>(
     disabled_hooks
 }
 
-/// Fxed macro from clap2 so it refers to clap_old
+/// Fixed macro from clap2 so it refers to clap_old
 #[macro_export]
 macro_rules! value_t {
     ($m:ident, $v:expr, $t:ty) => {

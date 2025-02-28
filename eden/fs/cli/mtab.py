@@ -83,13 +83,13 @@ class MountTable(abc.ABC):
         if proc.is_alive():
             # timeout, ask the lstat to terminate nicely, this is expected to succeed.
             proc.terminate()
-            # note we need a timeout here incase the process is miss
+            # note we need a timeout here in case the process is miss
             # behaving and refuses to exit
             proc.join(timeout=kMountStaleSecondsTimeout)
             # if terminate didn't work then we fallback to killing the process
             if proc.is_alive():
                 proc.kill()
-                # note we need a timeout here incase the process blocked on
+                # note we need a timeout here in case the process blocked on
                 # an uniteruptable syscall and refuses to exit (should not
                 # be the case, but ya know ... caution)
                 proc.join(timeout=kMountStaleSecondsTimeout)

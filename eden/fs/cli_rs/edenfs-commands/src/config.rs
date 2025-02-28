@@ -43,7 +43,7 @@ impl crate::Subcommand for CliConfigCmd {
                 Ok(0)
             }
             Err(e) => {
-                eprintln!("Error when seralizing configurations: {:?}", e);
+                eprintln!("Error when serializing configurations: {:?}", e);
                 Ok(1)
             }
         }
@@ -72,7 +72,7 @@ pub struct ReloadConfigCmd {
     #[clap(
         long,
         parse(from_str = expand_path),
-        help = "Read and write location of the raw config which will be used if Configerator sends back an `edenfs_uptodate` repsonse"
+        help = "Read and write location of the raw config which will be used if Configerator sends back an `edenfs_uptodate` response"
     )]
     raw_out: Option<PathBuf>,
 
@@ -115,7 +115,7 @@ pub struct ReloadConfigCmd {
         value_parser,
         // num_args = 1.., TODO(helsel): use num_args instead of value_delimiter once using clap 4
         value_delimiter = ',',
-        help = "If the script is ran as root, user to use when making requests to Configerator. If given more than one value, defaults to using the first user as the Configerator requestor, but will log all users to Scuba for rollout tracking (defaults to SUDO_USER, $LOGUSER, os.getlogin, or \"unknown\" in that order)"
+        help = "If the script is ran as root, user to use when making requests to Configerator. If given more than one value, defaults to using the first user as the Configerator requester, but will log all users to Scuba for rollout tracking (defaults to SUDO_USER, $LOGUSER, os.getlogin, or \"unknown\" in that order)"
     )]
     users: Option<Vec<String>>,
 

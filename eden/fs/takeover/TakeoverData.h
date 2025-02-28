@@ -170,7 +170,7 @@ class TakeoverData {
 
     // This should be the last version. This version matches capabilities with
     // the takeover server and client. This ends needing to create any more
-    // versions because you can just introduce new cababilities.
+    // versions because you can just introduce new capabilities.
     kTakeoverProtocolVersionSeven = 7
     // there should be no more versions after this.
   };
@@ -266,7 +266,7 @@ class TakeoverData {
    * <variable length serialized state that we need to send for takeover>
    * The version, header size, and capabilities are considered the "header".
    * - the version at this point is included for legacy reasons. We use to
-   * version our protocol everytime we made a change. but that led to a bunch
+   * version our protocol every time we made a change. but that led to a bunch
    * of confusing version checks in the code. So we moved to capabilities.
    * - the size of the header is the size of the header in bytes excluding the
    * version and the size value itself. For now the capabilities are the only

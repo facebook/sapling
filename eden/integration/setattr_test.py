@@ -171,7 +171,7 @@ class SetAttrTest(testcase.EdenRepoTest):
         st = os.lstat(filename)
 
         # Subtract by an epsilon of 1 second since time.time() on has a worst
-        # case senario of one second precision
+        # case scenario of one second precision
         self.assertGreaterEqual(st.st_atime, now - 1)
         self.assertGreaterEqual(st.st_mtime, now - 1)
 
@@ -239,7 +239,7 @@ class SetAttrTest(testcase.EdenRepoTest):
         self.assertEqual(new_st.st_ctime, st.st_ctime)
         self.assertEqual(new_st.st_mtime, st.st_mtime)
 
-    # Changing permisssions of directory should change
+    # Changing permissions of directory should change
     # only ctime of the directory, but not mtime and atime.
     def test_dir_change_perm(self) -> None:
         dirname = os.path.join(self.mount, "test_dir")

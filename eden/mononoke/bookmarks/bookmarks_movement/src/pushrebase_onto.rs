@@ -173,7 +173,7 @@ impl<'op> PushrebaseOntoBookmarkOp<'op> {
         // For pushrebase, we check the repo lock once at the beginning of the
         // pushrebase operation, and then once more as part of the pushrebase
         // bookmark update transaction, to check if the repo got locked while
-        // we were peforming the pushrebase.
+        // we were performing the pushrebase.
         check_repo_lock(
             repo,
             kind,

@@ -464,7 +464,7 @@ void verifyTreeState(
 
     // TODO: the code below is equivalent to EXPECT_INODE_OR(), perhaps it
     // should be broken out so test failures appear within the line#/function
-    // they are occuring in?
+    // they are occurring in?
     auto virtualInodeFut = mount.getEdenMount()
                                ->getVirtualInode(
                                    RelativePathPiece{expected.path},

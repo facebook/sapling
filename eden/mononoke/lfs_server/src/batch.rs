@@ -431,7 +431,7 @@ async fn batch_upload(
     })
 }
 
-/// This method peforms the routing logic for a given object being requested, given what's
+/// This method performs the routing logic for a given object being requested, given what's
 /// available in upstream and downstream.
 fn route_download_for_object<'a>(
     upstream: &'a Result<UpstreamObjects, Error>,
@@ -444,7 +444,7 @@ fn route_download_for_object<'a>(
     }
 
     match upstream {
-        // If our upstream succeded, then we try to get the object from there.
+        // If our upstream succeeded, then we try to get the object from there.
         Ok(ref upstream) => {
             if let Some((obj, action)) = upstream.download_action(oid) {
                 return Ok(Some((Source::Upstream, obj, action)));

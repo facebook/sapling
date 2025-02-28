@@ -283,7 +283,7 @@ impl Cache {
             })
             .unwrap_or(false);
 
-        // NOTE: If a transient error occured while setting in cache, then we might store
+        // NOTE: If a transient error occurred while setting in cache, then we might store
         // NOT_STORABLE, even if the key is in fact storable. That's OK: it just means the next
         // gets will bypass the semaphore, but if the key does turn out to be cacheable, then it'll
         // get cached on the next read.

@@ -31,7 +31,7 @@ class EdenConfig;
  *
  * - Full: this state refers to entries originally created by users, and users
  *   are able to modify their content freely when EdenFS is not running. It is
- *   impossible to have entires in state other than Full under a Full
+ *   impossible to have entries in state other than Full under a Full
  *   directory.
  * - DirtyPlaceholder: this state can only be seen in directories. This
  *   indicates the directory was originally served from EdenFS but got modified

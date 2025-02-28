@@ -14,7 +14,7 @@ import typing
 from eden.test_support.temporary_directory import cleanup_tmp_dir
 
 
-# TODO(strager): Merge create_tmp_dir with
+# TODO(stranger): Merge create_tmp_dir with
 # eden.test_support.temporary_directory.TemporaryDirectoryMixin.make_temporary_directory.
 
 

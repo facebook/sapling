@@ -257,7 +257,7 @@ $ realpath adir/bdir/cdir
      https://www.wireshark.org/download.html (Katie installed 64 bit one on
      Windows DoD).
   2. start wire shark
-  3. point wire shark at your loopback adress. "Adapter for loopback traffic
+  3. point wire shark at your loopback address. "Adapter for loopback traffic
      capture".
   4. type nfs in the filter bar at the top. hit the blue right arrow.
   5. ls and stuff in your NFS repo, requests should start showing up.
@@ -469,7 +469,7 @@ RpcConnectionHandler becomes the Write callback too.
 3. Setting the promise in the second to last step above in the
    Nfsd3ServerProcessor triggers mount to be unregistered from the Mountd. That
    simply removes the mount from the Mountd's list of mount points.
-4. Another promise get's set in the EdenMount code which triggers the EdenMount
+4. Another promise gets set in the EdenMount code which triggers the EdenMount
    to get torn down. This shuts down the InodeMap and overlay.
 5. Once everything is shutdown the EdenMount object is deleted which triggers
    the FS Channel (i.e. nfsd3) to be destroyed. Which finally cleans up

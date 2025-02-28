@@ -756,7 +756,7 @@ bool isEexist(const folly::exception_wrapper& ex) {
 }
 
 /**
- * Convert a set_mode3 into a useable mode_t. When unset, the returned mode
+ * Convert a set_mode3 into a usable mode_t. When unset, the returned mode
  * will be writable by the owner, readable by the group and other. This is
  * consistent with creating a file with a default umask of 022.
  */
@@ -2308,7 +2308,7 @@ bool Nfsd3::takeoverStop() {
   //     .thenTry([this](auto&&) {
   //         ...
   //         // the following line happens inside of stopMountsForTakeover() by
-  //         // calling fschannel->takeover() (aka this funcion!)
+  //         // calling fschannel->takeover() (aka this function!)
   //         folly::futures::detachOn(
   //             server_->getEventBase(),
   //             server_->takeoverStop()

@@ -267,7 +267,7 @@ class ChangesTestCommon(testBase):
         # Tests that when the journal has been truncated, we get a lost changes notification
         # We expect the following
         # Changes before the truncation are reported normally when there is no truncation
-        # When there is a truncation in between the start position and the current poistion,
+        # When there is a truncation in between the start position and the current position,
         #   we only report that there has been a truncated journal. Neither changes before and
         #   within the window are reported.
         # Changes after the truncation are reported when the start position is after the truncation
@@ -655,7 +655,7 @@ class ChangesTestWin(WindowsJournalTestBase):
         ]
         self.assertTrue(self.check_changes(changes.changes, expected_changes))
 
-    # Renaming uncomitted folders with a file
+    # Renaming uncommitted folders with a file
     def test_rename_folder_uncommitted_file(self):
         self.mkdir("test_folder")
         self.repo_write_file("test_folder/test_file", "contents", add=True)

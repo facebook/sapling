@@ -1068,7 +1068,7 @@ async fn get_multiple_master_mapping_setup(
     // into two different commits in the large repo
     check_rewritten_multiple(&ctx, &small_to_large_syncer, small_repo_master_cs_id, 2).await?;
 
-    // Re-query megarepo master bookmark, as its localtion has changed due
+    // Re-query megarepo master bookmark, as its location has changed due
     // to a cross-repo sync
     let megarepo_master_cs_id = get_bookmark(&ctx, &megarepo, "master").await;
     Ok((

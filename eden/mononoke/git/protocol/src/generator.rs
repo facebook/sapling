@@ -536,7 +536,7 @@ async fn tag_packfile_stream<'a>(
                     .await
                     .with_context(|| {
                         format!(
-                            "Error in gettting bonsai_tag_mapping entry for tag name {}",
+                            "Error in getting bonsai_tag_mapping entry for tag name {}",
                             tag_name
                         )
                     })
@@ -839,7 +839,7 @@ pub async fn fetch_response<'a>(
     // Reverse the list of commits so that we can prevent delta cycles from appearing in the packfile
     target_commits.reverse();
     progress_writer
-        .send("Couting number of objects to be sent in packfile\n".to_string())
+        .send("Counting number of objects to be sent in packfile\n".to_string())
         .await?;
     // Get the count of unique blob and tree objects to be included in the packfile
     let (trees_and_blobs_count, base_set) = trees_and_blobs_count(

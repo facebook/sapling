@@ -73,7 +73,7 @@ const std::vector<rocksdb::ColumnFamilyDescriptor> columnFamilies(
   auto options = makeColumnOptions(64);
   auto blobOptions = makeColumnOptions(8);
 
-  // We have to open all column families that currenly exists in our RocksDb.
+  // We have to open all column families that currently exists in our RocksDb.
   // Else we will get "Invalid argument: You have to open all column
   // families." when we try to open the DB. This tracks if there are any
   // pre-existing column families that we don't open (may be the cause if we

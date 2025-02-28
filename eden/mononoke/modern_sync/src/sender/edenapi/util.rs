@@ -71,7 +71,7 @@ pub async fn from_id_to_filenode(
 ) -> Result<HgFilenodeData> {
     let file_node = file_id.load(ctx, repo_blobstore).await?;
 
-    // These tokens are mostly implemented to make sure client sends content before uplaoding filenodes
+    // These tokens are mostly implemented to make sure client sends content before uploading filenodes
     // but they're not really verified, given we're indeed sending the content, let's use a placeholder
     let content_id = file_node.content_id();
     let token = UploadToken::new_fake_token(

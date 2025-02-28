@@ -182,7 +182,7 @@ async fn create_commit(
 
 // We expect that after creating a commit only derived a single specific derived data
 // type is derived for a parent changeset, and none derived for the newly created changeset.
-// This function validates it's actualy the case
+// This function validates it's actually the case
 async fn validate_unnecessary_derived_data_is_not_derived<R: MononokeRepo>(
     ctx: &CoreContext,
     repo: &RepoContext<R>,

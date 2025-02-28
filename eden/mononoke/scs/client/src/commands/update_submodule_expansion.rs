@@ -131,7 +131,7 @@ pub(super) async fn run(app: ScscApp, args: CommandArgs) -> Result<()> {
 
     if response.is_err() {
         println!(
-            "Failed to update submodule expansion. Please reach out for help in the Source Control Server Suppport group: https://fburl.com/workplace/1a1eqj4z"
+            "Failed to update submodule expansion. Please reach out for help in the Source Control Server Support group: https://fburl.com/workplace/1a1eqj4z"
         );
     }
 

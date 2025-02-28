@@ -1,7 +1,7 @@
 # EdenFS stats Counters and Duration
 
 There are EdenFS stats all over eden layers. You can check the stats value with
-any of the followings way:
+any of the following way:
 
 - You can see the list of all the EdenFS counters and their current values by
   running

@@ -1517,7 +1517,7 @@ async fn check_megarepo_large_repo_import_requirements(
         for (small_repo_id, small_repo_config) in commit_sync_config.small_repos.iter() {
             match &small_repo_config.default_action {
                 DefaultSmallToLargeCommitSyncPathAction::Preserve => {
-                    // This small repo is overlayed with the large repo
+                    // This small repo is overlaid with the large repo
                     // without a prefix.  We can't handle this case.
                     return Err(anyhow!(
                         "Not possible to import to a large repo with an unprefixed small repo"

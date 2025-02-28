@@ -777,7 +777,7 @@ ImmediateFuture<SetPathObjectIdResultAndTimes> EdenMount::setPathsToObjectIds(
   for (auto& object : objects) {
     /*
      * In theory, an exclusive wlock should be issued, but
-     * this is not efficent if many calls to this method ran in parallel.
+     * this is not efficient if many calls to this method ran in parallel.
      * So we use read lock instead assuming the contents of loaded rootId
      * objects are not weaving too much
      */
@@ -2554,7 +2554,7 @@ void EdenMount::subscribeInodeActivityBuffer() {
             // to never publish to tracebus holding the data_ or a location_
             // lock. However, we do still publish holding the EdenMount's
             // Rename and TreeInode's contents_ locks, so we must make sure to
-            // NEVER aquire those locks in this subscriber.
+            // NEVER acquire those locks in this subscriber.
             auto relativePath = inodeMap_->getPathForInode(event.ino);
             if (relativePath.has_value()) {
               InodeTraceEvent newTraceEvent = event;

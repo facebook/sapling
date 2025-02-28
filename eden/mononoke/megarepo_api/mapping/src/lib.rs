@@ -433,7 +433,7 @@ impl MegarepoMapping {
         )
         .await?;
         if res.affected_rows() == 0 {
-            // Becase we insert to mapping before moving bookmark (which is fallible)
+            // Because we insert to mapping before moving bookmark (which is fallible)
             // the mapping might be already inserted at that point. If it's the same
             // as what we wanted to insert we can ignore the failure to insert.
             if let Ok(Some(entry)) = self.get_mapping_entry(ctx, target, target_cs_id).await {

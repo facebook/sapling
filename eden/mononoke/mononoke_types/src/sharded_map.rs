@@ -720,7 +720,7 @@ impl<Value: MapValue> ShardedMapNode<Value> {
                         // Case 4.3.1: Compress node into terminal node.
                         // For simplicity, reuse into_entries.
                         // In practice, all children will be terminal nodes, so nothing extra
-                        // will be unecessarily persisted into the blobstore.
+                        // will be unnecessarily persisted into the blobstore.
                         for (byte, node) in new_children {
                             debug_assert!(matches!(node, Self::Terminal { .. }));
                             let previous = edges.insert(

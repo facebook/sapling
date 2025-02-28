@@ -159,7 +159,7 @@ mod test {
         let five = NonRootMPath::new("5").unwrap();
         let six = NonRootMPath::new("6").unwrap();
 
-        // Arrage everything into [[1], [...], [10]]
+        // Arrange everything into [[1], [...], [10]]
         let chunker = Box::new({
             cloned!(one);
             move |mpaths| {

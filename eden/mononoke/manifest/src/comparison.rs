@@ -28,7 +28,7 @@ use crate::Manifest;
 use crate::TrieMapOps;
 
 /// Result of a multi-way comparison between a manifest tree and the merge of
-/// a number of base manifest treees.
+/// a number of base manifest trees.
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub enum Comparison<TrieMapType, V> {
     /// The entry at this path is new.

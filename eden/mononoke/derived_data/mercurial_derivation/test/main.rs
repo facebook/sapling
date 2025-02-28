@@ -861,7 +861,7 @@ async fn test_get_manifest_from_bonsai(fb: FacebookInit) {
             None,
         ))
         .await
-        .expect("adding new file should not produce coflict");
+        .expect("adding new file should not produce conflict");
         let entries = get_entries(ms_hash).await.unwrap();
         let new = entries.get("new").expect("new file should be in entries");
         let bytes = entry_content(&ctx, &repo, new).await.unwrap();

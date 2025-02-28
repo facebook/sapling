@@ -157,7 +157,7 @@ class ObjectFetchContext : public RefCounted {
   /**
    * Support deprioritizing in sub-classes.
    * Note: Normally, each ObjectFetchContext is designed to be used for only one
-   * import (with NullObjectFetchContext being the only exception currenly).
+   * import (with NullObjectFetchContext being the only exception currently).
    * Therefore, this method should only be called once on each
    * ObjectFetchContext object (when it is related to a process doing too much
    * fetches). However, implementations of this method should write the priority

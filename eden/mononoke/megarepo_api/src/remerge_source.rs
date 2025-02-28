@@ -65,7 +65,7 @@ impl<'a, R: MononokeRepo> RemergeSource<'a, R> {
             find_target_bookmark_and_value(ctx, &target_repo, target).await?;
 
         // target doesn't point to the commit we expect - check
-        // if this method has already succeded and just immediately return the
+        // if this method has already succeeded and just immediately return the
         // result if so.
         if actual_target_location != target_location {
             return self
