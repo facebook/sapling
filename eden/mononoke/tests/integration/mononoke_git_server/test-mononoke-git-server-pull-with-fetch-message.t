@@ -82,6 +82,7 @@
   $ cd $REPONAME
 # Wait for the warm bookmark cache to catch up with the latest changes
   $ wait_for_git_bookmark_move HEAD $current_head
+  $ wait_for_git_bookmark_create refs/tags/last_tag
 
 # Pulling from git server returns the extra message  
   $ git_client pull
