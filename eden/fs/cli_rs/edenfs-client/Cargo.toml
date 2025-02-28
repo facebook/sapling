@@ -17,7 +17,6 @@ edenfs-config = { version = "0.1.0", path = "../edenfs-config" }
 edenfs-error = { version = "0.1.0", path = "../edenfs-error" }
 edenfs-utils = { version = "0.1.0", path = "../edenfs-utils" }
 fbinit = { version = "0.2.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
-fbthrift_socket = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 futures = { version = "0.3.30", features = ["async-await", "compat"] }
 hex = "0.4.3"
 hg_util = { package = "sapling-util", version = "0.1.0", path = "../../../scm/lib/util" }
@@ -35,7 +34,6 @@ sysinfo = "0.30.11"
 thrift_streaming = { version = "0.1.0", path = "../../service/thrift_streaming" }
 thrift_streaming_clients = { version = "0.1.0", path = "../../service/thrift_streaming/clients" }
 tokio = { version = "1.41.0", features = ["full", "test-util", "tracing"] }
-tokio-uds-compat = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 toml = "0.8.19"
 tracing = { version = "0.1.41", features = ["attributes", "valuable"] }
 uuid = { version = "1.2", features = ["serde", "v4", "v5", "v6", "v7", "v8"] }

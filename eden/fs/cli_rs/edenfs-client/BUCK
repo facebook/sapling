@@ -49,8 +49,6 @@ rust_library(
         "fbsource//third-party/rust:tracing",
         "fbsource//third-party/rust:uuid",
         "//common/rust/shed/fbinit:fbinit",
-        "//common/rust/shed/fbthrift_ext:socket",
-        "//common/rust/shed/tokio-uds-compat:tokio-uds-compat",
         "//common/rust/thrift/bareclient:thriftclient",
         "//eden/fs/cli_rs/edenfs-config:edenfs-config",
         "//eden/fs/cli_rs/edenfs-error:edenfs-error",

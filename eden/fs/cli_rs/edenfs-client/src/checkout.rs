@@ -1232,7 +1232,12 @@ pub async fn get_mounts(instance: &EdenFsInstance) -> Result<BTreeMap<PathBuf, E
     // Get active mounted checkouts info from eden daemon
     let client = instance.connect(Some(Duration::from_secs(3))).await;
     let mounted_checkouts = match client {
-        Ok(client) => Some(client.listMounts().await.from_err()?),
+        Ok(client) => {
+            match client.listMounts().await {
+                Ok(result) => Some(result),
+                Err(_) => None, // eden daemon is not running or not healthy
+            }
+        }
         Err(_) => None, // eden daemon not running
     };
 
