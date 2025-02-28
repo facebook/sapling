@@ -552,6 +552,29 @@ struct InodeMetadataMismatch : public EdenFSEvent {
   }
 };
 
+struct InodeLoadingFailed : public EdenFSEvent {
+  std::string error;
+  uint64_t ino;
+  bool causedByX2P = false;
+
+  explicit InodeLoadingFailed(std::string error, uint64_t ino)
+      : error(std::move(error)), ino(ino) {
+    if (error.find("x-x2pagentd-error")) {
+      causedByX2P = true;
+    }
+  }
+
+  void populate(DynamicEvent& event) const override {
+    event.addString("load_error", error);
+    event.addInt("ino", ino);
+    event.addBool("caused_by_x2p", causedByX2P);
+  }
+
+  const char* getType() const override {
+    return "inode_loading_failed";
+  }
+};
+
 struct EMenuStartupFailure : public EdenFSEvent {
   std::string reason;
 
