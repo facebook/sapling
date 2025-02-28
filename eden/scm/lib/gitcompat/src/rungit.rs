@@ -13,6 +13,7 @@ use std::path::PathBuf;
 use std::process::Command;
 use std::process::ExitStatus;
 use std::process::Output;
+use std::sync::RwLock;
 
 use configmodel::Config;
 use configmodel::ConfigExt;
@@ -60,6 +61,11 @@ struct RunGitConfig {
 
 impl Default for RunGitConfig {
     fn default() -> Self {
+        if let Ok(config) = DEFAULT_CONFIG.read() {
+            if let Some(config) = config.as_ref() {
+                return config.clone();
+            }
+        }
         Self {
             git_binary: GIT.to_owned(),
             verbose: false,
@@ -85,6 +91,8 @@ impl RunGitConfig {
     }
 }
 
+static DEFAULT_CONFIG: RwLock<Option<RunGitConfig>> = RwLock::new(None);
+
 impl GlobalGit {
     /// Construct from config.
     pub fn from_config(config: &dyn Config) -> Self {
@@ -108,6 +116,11 @@ impl GlobalGit {
         let git_dir = root.join(".git");
         self.with_bare(git_dir).with_working_copy(root)
     }
+
+    /// Set default config. Affects constructors without `config` like `GlobalGit::default`.
+    pub fn set_default_config(config: &dyn Config) {
+        *DEFAULT_CONFIG.write().unwrap() = Some(RunGitConfig::from_config(config));
+    }
 }
 
 impl BareGit {
@@ -116,6 +129,14 @@ impl BareGit {
         Self {
             git_dir: follow_dotgit_path(git_dir),
             parent: GlobalGit::from_config(config),
+        }
+    }
+
+    /// Construct from git_dir (".git" path) and default config.
+    pub fn from_git_dir(git_dir: PathBuf) -> Self {
+        Self {
+            git_dir: follow_dotgit_path(git_dir),
+            parent: GlobalGit::default(),
         }
     }
 
@@ -137,6 +158,15 @@ impl RepoGit {
         Self {
             root,
             parent: BareGit::from_git_dir_and_config(git_dir, config),
+        }
+    }
+
+    /// Construct from root (parent of ".git") and default config.
+    pub fn from_root(root: PathBuf) -> Self {
+        let git_dir = root.join(".git");
+        Self {
+            root,
+            parent: BareGit::from_git_dir(git_dir),
         }
     }
 
