@@ -62,7 +62,9 @@ UBloksCarbonFollowersTabControllerTypedRequest.php1699560a592d8f9f0f6dac9cc19fc9
 ## Storage in Mononoke
 
 * In Mononoke, Augmented Manifests are stored in a binary format, [specifically serialized thrift](https://www.internalfb.com/code/fbsource/[95f0848f732fb330970d48c0c350557f1f3f7472]/fbcode/eden/mononoke/mercurial/types/if/mercurial_thrift.thrift?lines=90), and are addressed using sapling manifest ids.
-* To optimize storage and cache efficiency, Mononoke's Augmented Manifests employ a [sharded manifest](https://fb.workplace.com/groups/scm.mononoke/permalink/2371492546546640/) approach.
+* To optimize storage and cache efficiency, Mononoke's Augmented Manifests employ the "sharded maps" data structure for sharding large manifest entries into smaller cacheable pieces.
+
+[Sharded maps](https://www.internalfb.com/wiki/Source_Control/Mononoke/Design/Mononoke_Types/sharded_map/) is an optimized approach for storing manifest blobs in smaller pieces, which enables better caching for Mononoke and more efficient reads.
 
 ## Fetching Augmented Manifests
 
