@@ -179,12 +179,12 @@ def indentation(pe):
     ...     msgid ='    indented text',
     ...     msgstr='  narrowed indentation')
     >>> for e in indentation(pe): print(e)
-    initial indentation width differs betweeen msgid and msgstr
+    initial indentation width differs between msgid and msgstr
     """
     idindent = len(pe.msgid) - len(pe.msgid.lstrip())
     strindent = len(pe.msgstr) - len(pe.msgstr.lstrip())
     if idindent != strindent:
-        yield "initial indentation width differs betweeen msgid and msgstr"
+        yield "initial indentation width differs between msgid and msgstr"
 
 
 ####################

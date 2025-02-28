@@ -8022,7 +8022,7 @@ index 00000000000..ca04c9be661
 +   KEY_MOUSE return from getch(). If found, it would call
 +   request_mouse_pos() to get the current mouse status.
 +
-+   mouse_set(), mouse_on() and mouse_off() are analagous to
++   mouse_set(), mouse_on() and mouse_off() are analogous to
 +   attrset(), attron() and attroff().  These functions set the
 +   mouse button events to trap.  The button masks used in these
 +   functions are defined in curses.h and can be or'ed together.
@@ -8100,7 +8100,7 @@ index 00000000000..ca04c9be661
 +   avoid conflict with PDCurses' getmouse(). But if you define
 +   NCURSES_MOUSE_VERSION (preferably as 2) before including
 +   curses.h, it defines getmouse() to nc_getmouse(), along with a
-+   few other redefintions needed for compatibility with ncurses
++   few other redefinitions needed for compatibility with ncurses
 +   code. nc_getmouse() calls request_mouse_pos(), which (not
 +   getmouse()) is the classic equivalent.
 +
@@ -11021,7 +11021,7 @@ index 00000000000..a80f3751e0a
 +### Description
 +
 +   scroll() causes the window to scroll up one line.  This involves
-+   moving the lines in the window data strcture.
++   moving the lines in the window data structure.
 +
 +   With a positive n, scrl() and wscrl() scroll the window up n
 +   lines (line i + n becomes i); otherwise they scroll the window
@@ -11150,7 +11150,7 @@ index 00000000000..6dc3d527e30
 +   These functions manipulate a window that contain Soft Label Keys
 +   (SLK). To use the SLK functions, a call to slk_init() must be
 +   made BEFORE initscr() or newterm(). slk_init() removes 1 or 2
-+   lines from the useable screen, depending on the format selected.
++   lines from the usable screen, depending on the format selected.
 +
 +   The line(s) removed from the screen are used as a separate
 +   window, in which SLKs are displayed.
@@ -14970,7 +14970,7 @@ index 00000000000..093f95881fa
 +    SetConsoleCtrlHandler(_ctrl_break, FALSE);
 +}
 +
-+/* open the physical screen -- allocate SP, miscellaneous intialization,
++/* open the physical screen -- allocate SP, miscellaneous initialization,
 +   and may save the existing screen for later restoration */
 +
 +int PDC_scr_open(int argc, char **argv)
@@ -15097,7 +15097,7 @@ index 00000000000..093f95881fa
 +}
 +
 + /* Calls SetConsoleWindowInfo with the given parameters, but fits them
-+    if a scoll bar shrinks the maximum possible value. The rectangle
++    if a scroll bar shrinks the maximum possible value. The rectangle
 +    must at least fit in a half-sized window. */
 +
 +static BOOL _fit_console_window(HANDLE con_out, CONST SMALL_RECT *rect)

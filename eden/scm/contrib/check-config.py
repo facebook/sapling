@@ -21,7 +21,7 @@ foundopts = {}
 documented = {}
 allowinconsistent = set()
 
-configre = re.compile(
+configure = re.compile(
     r"""
     # Function call
     ui\.config(?P<ctype>|int|bool|list)\(
@@ -115,7 +115,7 @@ def main(args):
 
             # look for code-like bits
             line = carryover + l
-            m = configre.search(line) or configwithre.search(line)
+            m = configure.search(line) or configwithre.search(line)
             if m:
                 ctype = m.group("ctype")
                 if not ctype:

@@ -208,7 +208,7 @@ can refer to the implicit named branch or the clone source path. Since
 remotenames uses the peer's path name, it is common to see remotenames prefixed
 with ``default/``. This can be confusing since branches also often have that
 name. Therefore, remotenames allows you to rename a path to something else.
-One common choice is to rename ``default`` to ``remote``. Thsi would result in
+One common choice is to rename ``default`` to ``remote``. This would result in
 remote names from this repository showing up as ``remote/bookmark`` instead of
 ``default/bookmark``. Push and pull to this name will also work.
 
@@ -218,7 +218,7 @@ Finally, there is an ``alias.default`` setting:
   alias.default = True
 
 Setting this will drop the remotebranch name ``smf/default`` into just ``smf``.
-It is another way to reduce the nubmer of times that ``default`` shows up in
+It is another way to reduce the number of times that ``default`` shows up in
 the UI.
 
 ------------------
@@ -319,7 +319,7 @@ For example, the following is in my bash prompt::
 
 This tells me how many commits I'm ahead or behind in my prompt.
 
-By default, the distance is caclulated after each write operation and cached for
+By default, the distance is calculated after each write operation and cached for
 quick lookup. However, in repositories with high commit rates, the distance
 calculation can take a long time, so you can disable it using the following
 configuration bits:

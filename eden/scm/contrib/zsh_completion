@@ -493,7 +493,7 @@ _hg_cmd_backout() {
     '--merge[merge with old dirstate parent after backout]' \
     '(--date -d)'{-d+,--date=}'[record datecode as commit date]:date code:' \
     '--parent[parent to choose when backing out merge]' \
-    '(--user -u)'{-u+,--user=}'[record user as commiter]:user:' \
+    '(--user -u)'{-u+,--user=}'[record user as committer]:user:' \
     '(--rev -r)'{-r+,--rev=}'[revision]:revision:_hg_labels' \
     '(--message -m)'{-m+,--message=}'[use <text> as commit message]:text:' \
     '(--logfile -l)'{-l+,--logfile=}'[read commit message from <file>]:log file:_files'
@@ -565,7 +565,7 @@ _hg_cmd_commit() {
   '(--message -m)'{-m+,--message=}'[use <text> as commit message]:text:' \
   '(--logfile -l)'{-l+,--logfile=}'[read commit message from <file>]:log file:_files' \
   '(--date -d)'{-d+,--date=}'[record datecode as commit date]:date code:' \
-  '(--user -u)'{-u+,--user=}'[record user as commiter]:user:' \
+  '(--user -u)'{-u+,--user=}'[record user as committer]:user:' \
   '--amend[amend the parent of the working dir]' \
   '--close-branch[mark a branch as closed]' \
   '*:file:_hg_files'
@@ -694,7 +694,7 @@ _hg_cmd_import() {
   '--exact[apply patch to the nodes from which it was generated]' \
   '--import-branch[use any branch information in patch (implied by --exact)]' \
   '(--date -d)'{-d+,--date=}'[record datecode as commit date]:date code:' \
-  '(--user -u)'{-u+,--user=}'[record user as commiter]:user:' \
+  '(--user -u)'{-u+,--user=}'[record user as committer]:user:' \
   '(--similarity -s)'{-s+,--similarity=}'[guess renamed files by similarity (0<=s<=100)]:' \
   '*:patch:_files'
 }
@@ -923,7 +923,7 @@ _hg_cmd_tag() {
   '(--local -l)'{-l,--local}'[make the tag local]' \
   '(--message -m)'{-m+,--message=}'[message for tag commit log entry]:message:' \
   '(--date -d)'{-d+,--date=}'[record datecode as commit date]:date code:' \
-  '(--user -u)'{-u+,--user=}'[record user as commiter]:user:' \
+  '(--user -u)'{-u+,--user=}'[record user as committer]:user:' \
   '(--rev -r)'{-r+,--rev=}'[revision to tag]:revision:_hg_labels' \
   '(--force -f)'{-f,--force}'[force tag]' \
   '--remove[remove a tag]' \

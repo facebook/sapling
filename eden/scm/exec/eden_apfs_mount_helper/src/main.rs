@@ -6,7 +6,7 @@
  */
 
 //! This is a little macOS specific utility that is intended to be installed setuid root
-//! so that it can mount scratch volumes into a portion of the filesytem
+//! so that it can mount scratch volumes into a portion of the filesystem
 //! owned by a non-privileged user.
 //! It is intended to be used together with edenfs, but may also be
 //! useful for non-virtualized repos as a way to move IO out of a recursive

@@ -17,7 +17,7 @@ constant in a few places, thus artificially limiting the length of
 paths it understands. The `osdefs.h` looks like just the place where
 Python introduces its own `MAXPATHLEN` to deal with things like this.
 It does not quite go far enough, so `posixmodule` (which guess what -
-is also resposible for `import nt`) does not use it. Let's fix it
+is also responsible for `import nt`) does not use it. Let's fix it
 and start using newly increased `MAXPATHLEN` all over the place.
 
 What can go wrong?

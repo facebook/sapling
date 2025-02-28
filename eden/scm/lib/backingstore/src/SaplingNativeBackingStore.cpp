@@ -133,7 +133,7 @@ void SaplingNativeBackingStore::getTreeAuxDataBatch(
   auto resolver = std::make_shared<GetTreeAuxBatchResolver>(std::move(resolve));
   auto count = requests.size();
 
-  XLOGF(DBG7, "Import tree aux datas with size: {}", count);
+  XLOGF(DBG7, "Import tree aux data with size: {}", count);
 
   std::vector<Request> raw_requests;
   raw_requests.reserve(count);
@@ -231,7 +231,7 @@ void SaplingNativeBackingStore::getBlobAuxDataBatch(
   auto resolver = std::make_shared<GetFileAuxBatchResolver>(std::move(resolve));
   auto count = requests.size();
 
-  XLOGF(DBG7, "Import blob aux datas with size: {}", count);
+  XLOGF(DBG7, "Import blob aux data with size: {}", count);
 
   std::vector<Request> raw_requests;
   raw_requests.reserve(count);
