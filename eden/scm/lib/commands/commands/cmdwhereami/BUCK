@@ -17,11 +17,10 @@ rust_library(
     }},
     crate_root = "src/lib.rs",
     deps = [
-        "fbsource//third-party/rust:anyhow",
         "//eden/scm/lib/clidispatch:clidispatch",
         "//eden/scm/lib/commands/cmdutil:cmdutil",
         "//eden/scm/lib/repo:repo",
-        "//eden/scm/lib/treestate:treestate",
         "//eden/scm/lib/types:types",
+        "//eden/scm/lib/workingcopy:workingcopy",
     ],
 )

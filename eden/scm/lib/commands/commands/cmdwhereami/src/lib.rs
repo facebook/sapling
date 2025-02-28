@@ -5,40 +5,23 @@
  * GNU General Public License version 2.
  */
 
-use std::fs::File;
 use std::io::Write;
 
-use anyhow::Context;
 use clidispatch::ReqCtx;
 use cmdutil::NoOpts;
 use cmdutil::Result;
 use repo::repo::Repo;
-use treestate::serialization::Serializable;
-use types::HgId;
+use types::hgid::NULL_ID;
 
 pub fn run(ctx: ReqCtx<NoOpts>, repo: &Repo) -> Result<u8> {
+    let parents = workingcopy::sniff_wdir_parents(repo.path(), Some(repo.ident()))?;
+    let p1 = parents.p1().copied().unwrap_or(NULL_ID);
+
     let mut stdout = ctx.io().output();
+    write!(stdout, "{}\n", p1.to_hex())?;
 
-    let dirstate_path = repo.dot_hg_path().join("dirstate");
-    let mut dirstate_file = match File::open(&dirstate_path) {
-        Ok(f) => f,
-        Err(err) if err.kind() == std::io::ErrorKind::NotFound => {
-            // Show zeros to indicate lack of parent.
-            write!(stdout, "{}\n", HgId::null_id().to_hex())?;
-            return Ok(0);
-        }
-        Err(err) => {
-            return Err(err).with_context(|| {
-                format!("error opening dirstate file {}", dirstate_path.display())
-            });
-        }
-    };
-
-    let dirstate = treestate::dirstate::Dirstate::deserialize(&mut dirstate_file)?;
-
-    write!(stdout, "{}\n", dirstate.p1.to_hex())?;
-    if !dirstate.p2.is_null() {
-        write!(stdout, "{}\n", dirstate.p2.to_hex())?;
+    if let Some(p2) = parents.p2() {
+        write!(stdout, "{}\n", p2.to_hex())?;
     }
 
     Ok(0)
