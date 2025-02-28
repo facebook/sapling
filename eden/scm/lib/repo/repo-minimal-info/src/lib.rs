@@ -13,8 +13,6 @@ use std::path::PathBuf;
 
 use anyhow::bail;
 use anyhow::Result;
-use constants::SUPPORTED_DEFAULT_REQUIREMENTS;
-use constants::SUPPORTED_STORE_REQUIREMENTS;
 use fs_err as fs;
 use identity::dotgit::follow_dotgit_path;
 pub use requirements::Requirements;
@@ -69,12 +67,8 @@ impl RepoMinimalInfo {
             };
         let store_path = shared_dot_hg_path.join("store");
 
-        let requirements = Requirements::open(
-            &dot_hg_path.join("requires"),
-            &SUPPORTED_DEFAULT_REQUIREMENTS,
-        )?;
-        let store_requirements =
-            Requirements::open(&store_path.join("requires"), &SUPPORTED_STORE_REQUIREMENTS)?;
+        let requirements = Requirements::load_repo_requirements(&dot_hg_path)?;
+        let store_requirements = Requirements::load_store_requirements(&store_path)?;
 
         let info = Self {
             path,

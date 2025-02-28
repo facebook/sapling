@@ -7,7 +7,7 @@
 
 use phf::phf_set;
 
-pub static SUPPORTED_DEFAULT_REQUIREMENTS: phf::Set<&str> = phf_set! {
+pub(crate) static SUPPORTED_DEFAULT_REQUIREMENTS: phf::Set<&str> = phf_set! {
     "eden",
     "revlogv1",
     "generaldelta",
@@ -29,7 +29,7 @@ pub static SUPPORTED_DEFAULT_REQUIREMENTS: phf::Set<&str> = phf_set! {
     // repo is also a .git/ repo
     "dotgit",
 };
-pub static SUPPORTED_STORE_REQUIREMENTS: phf::Set<&str> = phf_set! {
+pub(crate) static SUPPORTED_STORE_REQUIREMENTS: phf::Set<&str> = phf_set! {
     "visibleheads",
     "narrowheads",
     "zstorecommitdata",

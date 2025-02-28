@@ -14,6 +14,8 @@ use std::path::PathBuf;
 use anyhow::Result;
 use fs_err as fs;
 
+use crate::constants;
+
 /// `Requirements` contains a set of strings, tracks features/capabilities that
 /// are *required* for clients to interface with the repository.
 ///
@@ -31,7 +33,7 @@ impl Requirements {
     /// Load requirements from the given path.
     ///
     /// If the given path does not exist, it is treated as an empty file.
-    pub fn open(path: &Path, supported: &phf::Set<&'static str>) -> Result<Self> {
+    fn open(path: &Path, supported: &phf::Set<&'static str>) -> Result<Self> {
         let requirements: HashSet<String> = match fs::read_to_string(path) {
             Ok(s) => s.split_whitespace().map(|s| s.to_string()).collect(),
             Err(e) if e.kind() == io::ErrorKind::NotFound => Default::default(),
@@ -56,6 +58,22 @@ impl Requirements {
             requirements,
             dirty,
         })
+    }
+
+    /// Load store requirements.
+    pub fn load_store_requirements(dot_dir: &Path) -> Result<Self> {
+        Self::open(
+            &dot_dir.join("requires"),
+            &constants::SUPPORTED_STORE_REQUIREMENTS,
+        )
+    }
+
+    /// Load repo (working copy) requirements.
+    pub fn load_repo_requirements(store_dir: &Path) -> Result<Self> {
+        Self::open(
+            &store_dir.join("requires"),
+            &constants::SUPPORTED_DEFAULT_REQUIREMENTS,
+        )
     }
 
     /// Returns true if the given feature is enabled.
