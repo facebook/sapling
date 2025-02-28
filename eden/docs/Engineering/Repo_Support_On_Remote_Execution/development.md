@@ -7,7 +7,7 @@ The most effective way to verify changes in the SCM Repo Manager is by launching
 
 The local Remote Execution worker will use the SCM Repo Manager built from the codebase. The script calls `buck build` under the hood.
 
-*Notes: for the time being it is recomended to disable the Mononoke dogfooding tier and use prod.*
+*Notes: for the time being it is recommended to disable the Mononoke dogfooding tier and use prod.*
 
 *Everything will be running as `root` including the SCM Repo Manager and the EdenFS daemon*
 
