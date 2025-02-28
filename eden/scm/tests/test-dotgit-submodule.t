@@ -30,9 +30,7 @@ Status and diff can include submodule:
   $ git checkout -q 'HEAD^'
   $ cd ..
 
-FIXME: sub should only appear once
   $ sl status
-  M sub
   M sub
   ? b
 

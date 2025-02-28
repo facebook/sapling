@@ -22,6 +22,7 @@ use edenfs_client::EdenFsClient;
 use identity::Identity;
 use journal::Journal;
 use manifest::FileType;
+use manifest::FsNodeMetadata;
 use manifest::Manifest;
 use manifest_tree::ReadTreeManifest;
 use manifest_tree::TreeManifest;
@@ -48,6 +49,7 @@ use treestate::filestate::StateFlags;
 use treestate::treestate::TreeState;
 use types::hgid::NULL_ID;
 use types::HgId;
+use types::RepoPath;
 use types::RepoPathBuf;
 use util::file::atomic_write;
 use util::file::read_to_string_if_exists;
@@ -66,6 +68,7 @@ use crate::filesystem::PhysicalFileSystem;
 use crate::filesystem::WatchmanFileSystem;
 use crate::status::compute_status;
 use crate::util::added_files;
+use crate::util::sniff_wdir_parents;
 use crate::util::walk_treestate;
 use crate::watchman_client::DeferredWatchmanClient;
 
@@ -477,6 +480,47 @@ impl WorkingCopy {
         {
             status_builder =
                 self.filter_accidential_symlink_changes(status_builder, p1_manifest)?;
+        }
+
+        // Calculate submodule status.
+        if !submodules.is_empty() {
+            if let Some(tree) =
+                Self::current_manifests(&self.treestate.lock(), &self.tree_resolver)?
+                    .into_iter()
+                    .next()
+            {
+                for subm in submodules.iter() {
+                    let path = RepoPath::from_str(&subm.path)?;
+                    // The submodule path is treated as a file.
+                    // See https://sapling-scm.com/docs/git/submodule.
+                    if !matcher.matches_file(path)? {
+                        continue;
+                    }
+                    let subm_path = self.vfs.root().join(&subm.path);
+                    // PERF: This does not do batch fetching properly.
+                    let tree_node = tree.get(path)?.and_then(|m| match m {
+                        FsNodeMetadata::File(f) => match f.file_type {
+                            FileType::GitSubmodule => Some(f.hgid),
+                            _ => None,
+                        },
+                        FsNodeMetadata::Directory(_) => None,
+                    });
+                    // NOTE: The workingcopy ident does not always match the submodule ident. Why?
+                    let file_node = sniff_wdir_parents(&subm_path, None)?.p1().copied();
+                    if file_node == tree_node {
+                        status_builder.forget(path);
+                        continue;
+                    } else {
+                        let paths = vec![path.to_owned()];
+                        status_builder = match (tree_node, file_node) {
+                            (None, Some(_)) => status_builder.added(paths),
+                            (Some(_), None) => status_builder.removed(paths),
+                            (None, None) => status_builder,
+                            (Some(_), Some(_)) => status_builder.modified(paths),
+                        };
+                    }
+                }
+            }
         }
 
         let status = status_builder.build();
