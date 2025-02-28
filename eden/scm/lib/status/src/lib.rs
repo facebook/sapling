@@ -84,6 +84,11 @@ impl StatusBuilder {
         self.0.iter()
     }
 
+    /// Forget about a path if it was previously marked.
+    pub fn forget(&mut self, path: &RepoPath) {
+        self.0.all.remove(path);
+    }
+
     // This fn has to take 'deconstructed' self, because you can't borrow &mut self and &self.xxx at the same time
     fn index(
         all: &mut HashMap<RepoPathBuf, FileStatus>,
