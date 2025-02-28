@@ -90,3 +90,10 @@ v1 ae83739b00f5169285a45554d643cd088f9fca39 - 81cf736cab03fa524ac04d36c25f6c6ef1
 MeerkatBkSettingsPrivacyYouthDefaultSettingsAudienceSelectorAutogen.phpd71db74337ef07b0c3dc3bdb1b53bfc7faf5e7edr 0f2d131b59bb0bb8d5a49eda3b81c09a13463369d120614017f57e6cf4858840 767 7a97e79cb73fa4fb06c303b98a716f391313e6a4 AQpjb3B5OiB3d3cvZmxpYi9fX2dlbmVyYXRlZF9fL0Jsb2tzRGVyaXZlZEVsZW1lbnRBdXRvZ2VuTWVlcmthdFN0ZXAvc2luZ2xlX3NvdXJjZS94aHBfYmtfX3NldHRpbmdzX19wcml2YWN5X195b3V0aF9kZWZhdWx0X3NldHRpbmdzX19hdWRpZW5jZV9zZWxlY3Rvci9CbG9rc0Rlcml2ZWRFbGVtZW50QXV0b2dlbkFydGlmYWN0L01lZXJrYXRCa1NldHRpbmdzUHJpdmFjeVlvdXRoRGVmYXVsdFNldHRpbmdzQXVkaWVuY2VTZWxlY3RvckF1dG9nZW4ucGhwCmNvcHlyZXY6IDRkMzMwYTU1ODY3ZDk3YzI1ZWRkNDM3OTkxNzhiM2RkMmZjZDA1OTQKAQo=
 ```
 
+## What is the difference from CAS TDirectory?
+
+CAS uses its [own format](https://www.internalfb.com/code/fbsource/[12909a0b74fed2c846835c1a34022ae3556f3e4f]/fbcode/remote_execution/lib/if/common.thrift?lines=479) to represent the contents of a directory. The format is different and due to recursive hashing, it's not possible to directly convert an Augmented Manifest entry into a TDirectory, even if stored in CAS.
+
+However, in the future, it will be possible to materialise a directory in CAS from an augmented manifest digest. 
+
+
