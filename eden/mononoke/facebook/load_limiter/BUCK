@@ -25,5 +25,6 @@ rust_binary(
         "//sandcastle/jupiter/if:JupiterExternalDependencyService-metadata-sys",
         "//sandcastle/jupiter/if:external_dependency-rust",
         "//sandcastle/jupiter/if:external_dependency-rust-services",
+        "//thrift/lib/rust:fbthrift",
     ],
 )
