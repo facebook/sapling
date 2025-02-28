@@ -1,0 +1,12 @@
+load("@fbcode_macros//build_defs:python_library.bzl", "python_library")
+
+oncall("source_control")
+
+python_library(
+    name = "usc",
+    srcs = ["usc.py"],
+    deps = [
+        "fbsource//third-party/pypi/pandas:pandas",
+        "//pvc2:pvc2",
+    ],
+)
