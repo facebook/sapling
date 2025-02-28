@@ -18,4 +18,5 @@ pub mod walker;
 mod watchman_client;
 pub mod workingcopy;
 
+pub use util::sniff_wdir_parents;
 pub use workingcopy::WorkingCopy;

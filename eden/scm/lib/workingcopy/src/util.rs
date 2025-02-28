@@ -9,6 +9,9 @@ use std::path::Path;
 
 use anyhow::Result;
 use configmodel::Config;
+use fs_err as fs;
+use gitcompat::BareGit;
+use identity::Identity;
 use pathmatcher::DirectoryMatch;
 use pathmatcher::DynMatcher;
 use pathmatcher::Matcher;
@@ -16,10 +19,12 @@ use repolock::RepoLocker;
 use treestate::dirstate;
 use treestate::filestate::FileStateV2;
 use treestate::filestate::StateFlags;
+use treestate::serialization::Serializable as _;
 use treestate::tree::VisitorResult;
 use treestate::treestate::TreeState;
 use treestate::ErrorKind;
 use types::path::ParseError;
+use types::Parents;
 use types::RepoPath;
 use types::RepoPathBuf;
 
@@ -173,4 +178,37 @@ pub(crate) fn added_files(ts: &mut TreeState) -> Result<Vec<RepoPathBuf>> {
     )?;
     tracing::trace!(?added_files);
     Ok(added_files)
+}
+
+/// Returns the first parent of a working copy, without constructing the working copy.
+/// `path` is the working copy root without the dot dir.
+/// `ident` is a hint of the working copy identity. If set, skip sniffing the identity.
+///
+/// This function does not consider locking, pending changes and other special cases.
+pub fn sniff_wdir_parents(path: &Path, ident: Option<Identity>) -> Result<Parents> {
+    let ident = match ident {
+        None => match identity::sniff_dir(path)? {
+            None => return Ok(Parents::None),
+            Some(id) => id,
+        },
+        Some(id) => id,
+    };
+    if ident.dot_dir().starts_with(".git") {
+        // dotgit mode. Use gitcompat to resolve HEAD.
+        let repo = BareGit::from_git_dir(path.join(".git"));
+        let head = repo.resolve_head()?;
+        Ok(Parents::One(head))
+    } else {
+        // dotsl mode. Use "dirstate" to answer the question.
+        let dirstate_path = ident.resolve_full_dot_dir(path).join("dirstate");
+        let mut dirstate_file = match fs::File::open(&dirstate_path) {
+            Ok(f) => f,
+            Err(err) if err.kind() == std::io::ErrorKind::NotFound => {
+                return Ok(Parents::None);
+            }
+            Err(err) => return Err(err.into()),
+        };
+        let parsed = treestate::dirstate::Dirstate::deserialize(&mut dirstate_file)?;
+        Ok(Parents::new(parsed.p1, parsed.p2))
+    }
 }
