@@ -1455,7 +1455,9 @@ class HealthReportCmd(Subcmd):
         instance.log_sample(
             "health-report",
             num_detected_issues=len(HealthReportCmd.error_codes),
-            detected_issues=set(HealthReportCmd.error_codes.keys()),
+            detected_issues=[
+                str(error_code) for error_code in HealthReportCmd.error_codes.keys()
+            ],
             detected_issues_descriptions=set(HealthReportCmd.error_codes.values()),
         )
         # Serialize error codes
@@ -2325,7 +2327,7 @@ class StartCmd(Subcmd):
                 self.send_edenfs_notification(instance, result)
         return result
 
-    def send_edenfs_notification(self, instance: EdenInstance, result: int):
+    def send_edenfs_notification(self, instance: EdenInstance, result: int) -> None:
         """Send notification for EdenFS health status."""
         health_info = instance.check_health()
         try:
