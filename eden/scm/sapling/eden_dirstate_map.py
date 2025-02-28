@@ -34,6 +34,7 @@ modefromflag: Dict[str, int] = {
     "x": stat.S_IFREG | 0o755,
     "l": (stat.S_IFREG if util.iswindows else stat.S_IFLNK) | 0o755,
     "t": stat.S_IFDIR | 0o755,
+    "m": 0o160000,
 }
 
 

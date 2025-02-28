@@ -59,3 +59,28 @@ Checking out from submodule:
   $ sl prev
   update complete
   [7e03c5] Add a
+
+  $ sl status
+
+Committing from parent repo:
+
+  $ cd ~/parent
+  $ sl status sub
+  M sub
+
+  $ sl commit -m 'Modify submodule'
+
+  $ sl status sub
+
+  $ sl log -r . -p
+  commit:      d59fa9b13e55
+  user:        test <>
+  date:        Thu Jan 01 00:00:00 1970 +0000
+  summary:     Modify submodule
+  
+  diff --git a/sub b/sub
+  --- a/sub
+  +++ b/sub
+  @@ -1,1 +1,1 @@
+  -Subproject commit 838d36ce8147047ed2fb694a88ea81cdfa5041b0
+  +Subproject commit 7e03c5d593048a97b91470d7c33dc07e007aa5a4
