@@ -182,35 +182,6 @@ TreePtr fromRawTree(
       std::move(entries), edenTreeId);
 }
 
-std::unique_ptr<folly::Executor> makeRetryThreadPool(
-    AbsolutePathPiece repository,
-    const EdenStatsPtr& stats,
-    std::shared_ptr<StructuredLogger> structuredLogger,
-    uint8_t num_threads) {
-  std::unique_ptr<folly::CPUThreadPoolExecutor> retryThreadPool =
-      std::make_unique<folly::CPUThreadPoolExecutor>(
-          num_threads,
-          /* Eden performance will degrade when, for example, a status operation
-           * causes a large number of import requests to be scheduled before a
-           * lightweight operation needs to check the RocksDB cache. In that
-           * case, the RocksDB threads can end up all busy inserting work into
-           * the retry queue, preventing future requests that would hit cache
-           * from succeeding.
-           *
-           * Thus, make the retry queue unbounded.
-           *
-           * In the long term, we'll want a more comprehensive approach to
-           * bounding the parallelism of scheduled work.
-           */
-          folly::CPUThreadPoolExecutor::makeDefaultQueue(),
-          std::make_shared<SaplingRetryThreadFactory>(
-              repository, stats.copy(), structuredLogger));
-#ifdef EDEN_HAVE_SERVER_OBSERVER
-  facebook::fb303::installThreadPoolExecutorCounters("", *retryThreadPool);
-#endif
-  return retryThreadPool;
-}
-
 } // namespace
 
 HgImportTraceEvent::HgImportTraceEvent(
@@ -250,11 +221,6 @@ SaplingBackingStore::SaplingBackingStore(
     FaultInjector* FOLLY_NONNULL faultInjector)
     : localStore_(std::move(localStore)),
       stats_(stats.copy()),
-      retryThreadPool_(makeRetryThreadPool(
-          repository,
-          stats,
-          structuredLogger,
-          config->getEdenConfig()->hgNumRetryThreads.getValue())),
       config_(config),
       serverThreadPool_(serverThreadPool),
       queue_(std::move(config)),
@@ -300,6 +266,7 @@ SaplingBackingStore::SaplingBackingStore(
     AbsolutePathPiece repository,
     std::shared_ptr<LocalStore> localStore,
     EdenStatsPtr stats,
+    folly::InlineExecutor* inlineExecutor,
     std::shared_ptr<ReloadableConfig> config,
     std::unique_ptr<SaplingBackingStoreOptions> runtimeOptions,
     std::shared_ptr<StructuredLogger> structuredLogger,
@@ -307,9 +274,8 @@ SaplingBackingStore::SaplingBackingStore(
     FaultInjector* FOLLY_NONNULL faultInjector)
     : localStore_(std::move(localStore)),
       stats_(std::move(stats)),
-      retryThreadPool_{std::make_unique<folly::InlineExecutor>()},
       config_(config),
-      serverThreadPool_(retryThreadPool_.get()),
+      serverThreadPool_(inlineExecutor),
       queue_(std::move(config)),
       structuredLogger_{std::move(structuredLogger)},
       logger_(std::move(logger)),

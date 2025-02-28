@@ -142,11 +142,14 @@ struct SaplingFilteredBackingStoreTest : TestRepo, ::testing::Test {
   std::unique_ptr<SaplingBackingStoreOptions> runtimeOptions =
       std::make_unique<SaplingBackingStoreOptions>();
 
+  folly::InlineExecutor executor_ = folly::InlineExecutor::instance();
+
   std::shared_ptr<SaplingBackingStore> wrappedStore_{
       std::make_shared<SaplingBackingStore>(
           repo.path(),
           localStore,
           stats.copy(),
+          &executor_,
           edenConfig,
           std::move(runtimeOptions),
           std::make_shared<NullStructuredLogger>(),

@@ -179,6 +179,7 @@ class SaplingBackingStore final : public BackingStore {
       AbsolutePathPiece repository,
       std::shared_ptr<LocalStore> localStore,
       EdenStatsPtr stats,
+      folly::InlineExecutor* inlineExecutor,
       std::shared_ptr<ReloadableConfig> config,
       std::unique_ptr<SaplingBackingStoreOptions> runtimeOptions,
       std::shared_ptr<StructuredLogger> structuredLogger,
@@ -633,9 +634,6 @@ class SaplingBackingStore final : public BackingStore {
   monitoring::OBCPxx getBlobPerRepoLatencies_; // calculates p10, p50, p95, p99
   monitoring::OBCPxx getTreePerRepoLatencies_; // calculates p10, p50, p95, p99
   void initializeOBCCounters();
-
-  // A set of threads processing Sapling retry requests.
-  std::unique_ptr<folly::Executor> retryThreadPool_;
 
   /**
    * Reference to the eden config, may be a null pointer in unit tests.

@@ -77,12 +77,14 @@ struct SaplingBackingStoreTestBase : TestRepo, ::testing::Test {
 
 struct SaplingBackingStoreNoFaultInjectorTest : SaplingBackingStoreTestBase {
   FaultInjector faultInjector{/*enabled=*/false};
+  folly::InlineExecutor executor = folly::InlineExecutor::instance();
 
   std::unique_ptr<SaplingBackingStore> queuedBackingStore =
       std::make_unique<SaplingBackingStore>(
           repo.path(),
           localStore,
           stats.copy(),
+          &executor,
           edenConfig,
           std::make_unique<SaplingBackingStoreOptions>(),
           std::make_shared<NullStructuredLogger>(),
@@ -94,12 +96,14 @@ struct SaplingBackingStoreWithFaultInjectorTest : SaplingBackingStoreTestBase {
   std::shared_ptr<TestConfigSource> testConfigSource{
       std::make_shared<TestConfigSource>(ConfigSourceType::SystemConfig)};
   FaultInjector faultInjector{/*enabled=*/true};
+  folly::InlineExecutor executor = folly::InlineExecutor::instance();
 
   std::unique_ptr<SaplingBackingStore> queuedBackingStore =
       std::make_unique<SaplingBackingStore>(
           repo.path(),
           localStore,
           stats.copy(),
+          &executor,
           edenConfig,
           std::make_unique<SaplingBackingStoreOptions>(),
           std::make_shared<NullStructuredLogger>(),
@@ -112,12 +116,14 @@ struct SaplingBackingStoreWithFaultInjectorIgnoreConfigTest
   std::shared_ptr<TestConfigSource> testConfigSource{
       std::make_shared<TestConfigSource>(ConfigSourceType::SystemConfig)};
   FaultInjector faultInjector{/*enabled=*/true};
+  folly::InlineExecutor executor = folly::InlineExecutor::instance();
 
   std::unique_ptr<SaplingBackingStore> queuedBackingStore =
       std::make_unique<SaplingBackingStore>(
           repo.path(),
           localStore,
           stats.copy(),
+          &executor,
           edenConfig,
           std::make_unique<SaplingBackingStoreOptions>(),
           std::make_shared<NullStructuredLogger>(),
