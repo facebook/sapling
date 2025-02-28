@@ -21,7 +21,7 @@
 //! link issues with edenfs.
 
 // There are 2 modes to support Git:
-// 1. Compatiblity at the exchange protocol layer.
+// 1. Compatibility at the exchange protocol layer.
 //    Dot directory: `.sl/`.
 //    Incompatible with `git` commands.
 //    Possible to integrate with most scalability features including edenfs.

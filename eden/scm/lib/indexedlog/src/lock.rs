@@ -465,7 +465,7 @@ mod tests {
         buf2.as_ref().read_exact(&mut v2).unwrap();
         assert_eq!(v1, v2);
 
-        // Buffer content is presisted on filesystem after dropping both lock and mmap states.
+        // Buffer content is persisted on filesystem after dropping both lock and mmap states.
         drop((buf1, buf2));
         let l3 = ScopedDirLock::new_with_options(path, &opts).unwrap();
         let buf3 = l3.shared_mmap_mut(v1.len()).unwrap();

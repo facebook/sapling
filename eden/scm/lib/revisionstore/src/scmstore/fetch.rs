@@ -119,7 +119,7 @@ impl<T: StoreValue + std::fmt::Debug> CommonFetchState<T> {
     pub(crate) fn found(&mut self, key: Key, value: T) -> bool {
         if let Some(available) = self.pending.get_mut(&key) {
             // Combine the existing and newly-found attributes, overwriting existing attributes with the new ones
-            // if applicable (so that we can re-use this function to replace in-memory files with mmap-ed files)
+            // if applicable (so that we can reuse this function to replace in-memory files with mmap-ed files)
             let new = value | std::mem::take(available);
 
             if new.attrs().has(self.request_attrs) {

@@ -65,7 +65,7 @@ pub trait IdDagStore: Send + Sync + 'static {
     /// Remove or truncate a flat segment.
     /// - If `new_high` is None, remove the flat segment. The segment cannot
     ///   have descendants.
-    /// - If `new_high` is set, trucnate the flat segment by resetting `high` to
+    /// - If `new_high` is set, truncate the flat segment by resetting `high` to
     ///   the given value. If `new_high` is smaller than `high`, then
     ///   `descendants(new_high+1:high)` must be empty.
     fn resize_flat_segment(&mut self, segment: &Segment, new_high: Option<Id>) -> Result<()> {

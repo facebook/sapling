@@ -26,7 +26,7 @@ rust_python_library(
     ],
     # A test inside this target is using #[should_panic], setting the backtrace
     # to false here, otherwise the test binary will try to extract the backtrace
-    # and the test will fail with leak sanatizer.
+    # and the test will fail with leak sanitizer.
     test_env = {"RUST_BACKTRACE": "0"},
     test_labels = ["tpx-rust-no-backtrace-workaround"],
     deps = [

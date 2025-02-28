@@ -58,7 +58,7 @@ fn map3<T>(
 }
 
 /// Application-specific metalog conflict resolution.
-/// `this` should be the one with a more recent timestamp (practially, the metalog to write).
+/// `this` should be the one with a more recent timestamp (practically, the metalog to write).
 pub(crate) fn try_resolve_metalog_conflict(
     key: &str,
     this: Bytes,

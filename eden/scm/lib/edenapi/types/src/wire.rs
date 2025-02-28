@@ -18,7 +18,7 @@
 //! and requirements for all types defined inside this module:
 //!
 //! 1. Every field should be renamed to a unique natural number using
-//!    `#[serde(rename = "0")]`. New fields should never re-use a field identifier
+//!    `#[serde(rename = "0")]`. New fields should never reuse a field identifier
 //!    that has been used before. If a field changes semantically, it should be
 //!    considered a new field, and be given a new identifier.
 //!

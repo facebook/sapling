@@ -18,7 +18,7 @@ pub struct RepoNotFound(pub String);
 pub struct InvalidSharedPath(pub String);
 
 #[derive(Debug, Error)]
-#[error("remotenames key is not initalized in metalog")]
+#[error("remotenames key is not initialized in metalog")]
 pub struct RemotenamesMetalogKeyError;
 
 #[derive(Debug, Error)]

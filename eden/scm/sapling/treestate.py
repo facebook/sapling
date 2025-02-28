@@ -253,7 +253,7 @@ class treestatemap:
             return self._tree.remove(f)
         else:
             # If watchman is used, treestate tracks "untracked" files before
-            # watchman clock. So only remove EXIST_* bits and copy infomation
+            # watchman clock. So only remove EXIST_* bits and copy information
             # from the file. fsmonitor will do a stat check and drop(real=True)
             # later.
             #
@@ -506,7 +506,7 @@ class treestatemap:
         """Calculate nonnormalset with a directory filter applied to unknown
         (untracked, "?") files.
 
-        The directory fitler is usually the ignore filter. Since treestate only
+        The directory filter is usually the ignore filter. Since treestate only
         tracks "?" files with fsmonitor, dirfilter makes less sense for
         non-fsmonitor usecases.
         """

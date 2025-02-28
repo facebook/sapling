@@ -46,7 +46,7 @@ pub fn walk_treestate(
                         (callback)(path, state)?
                     }
                 }
-                // Ingore but record bad paths. The caller can handle as desired.
+                // Ignore but record bad paths. The caller can handle as desired.
                 Err(parse_err) => path_errors.push(parse_err),
             };
             Ok(treestate::tree::VisitorResult::NotChanged)

@@ -20,7 +20,7 @@ through this `testing` module:
 
     run-tests.py test-foo.t test-bar.t ...
 
-Differnce between `hg debugruntest` and `run-tests.py`:
+Difference between `hg debugruntest` and `run-tests.py`:
 - `run-tests.py` supports tests that require a real `bash`. Those tests
   might use `#require bash` so they can be skipped by `debugruntest`.
   See "Compatibility" below.
@@ -53,7 +53,7 @@ Tests passing with `run-tests.py` and a real `bash` can fail with
 
 - External binaries.
   The shell emulation avoids implicit dependencies on external binaries by
-  reseting `PATH` to not contain common paths like `/bin`. External binaries
+  resetting `PATH` to not contain common paths like `/bin`. External binaries
   need to be explicitly `#require`-ed so they become available in both shell
   emulation and `PATH`.
 
@@ -100,7 +100,7 @@ Extended .t syntax
 Internals
 =========
 
-Moudles
+Modules
 -------
 
 `testing` has a few modules:
@@ -135,7 +135,7 @@ There are multiple steps to run a `.t` test:
   The translated result is written to `__pycache__/ttest/<name>.py` for easier
   debugging.
 - Setup test environment. This is done by `runtime.TestTmp`. See its docstring
-  for how to add new shell functions or affect the shell environemnts.
+  for how to add new shell functions or affect the shell environments.
 - Extends `TestTmp` for optional features. See "Extensions" below.
 - Compare output. Output cannot be compared directly. For example, the test
   path is substituted to `$TESTTMP`, and Certain text like `(glob)`, `(?)`,

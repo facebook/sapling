@@ -552,7 +552,7 @@ def extsetup(ui):
 
     def afterload(loaded):
         if loaded:
-            raise ValueError("nonexistant extension should not be loaded")
+            raise ValueError("nonexistent extension should not be loaded")
 
         for cmd, newopt in newopts:
             # avoid adding duplicate optionms
@@ -563,7 +563,7 @@ def extsetup(ui):
             if not skip:
                 cmd[1].append(newopt)
 
-    extensions.afterloaded("nonexistant", afterload)
+    extensions.afterloaded("nonexistent", afterload)
 
 
 def exlog(orig, ui, repo, *args, **opts):
@@ -1141,7 +1141,7 @@ def exbookmarks(orig, ui, repo, *args, **opts):
 
     if delete or rename or (args and not remote) or inactive:
         if delete and track:
-            msg = _("do not specifiy --track and --delete at the same time")
+            msg = _("do not specify --track and --delete at the same time")
             raise error.Abort(msg)
 
         ret = orig(ui, repo, *args, **opts)
@@ -1490,7 +1490,7 @@ def invalidatedistancecache(repo):
 
 def precachedistance(repo):
     """
-    Caclulate and cache the distance between bookmarks and what they
+    Calculate and cache the distance between bookmarks and what they
     track, plus the distance from the tipmost head on current topological
     branch. This can be an expensive operation especially in repositories
     with a high commit rate, so it can be turned off in your hgrc:

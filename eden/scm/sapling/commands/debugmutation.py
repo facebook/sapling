@@ -3,7 +3,7 @@
 # This software may be used and distributed according to the terms of the
 # GNU General Public License version 2.
 
-# debugmutation.py - command processing for debug commands for mutation and visbility
+# debugmutation.py - command processing for debug commands for mutation and visibility
 
 from __future__ import absolute_import
 

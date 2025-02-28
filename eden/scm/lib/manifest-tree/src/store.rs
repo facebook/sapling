@@ -112,7 +112,7 @@ impl Deref for InnerStore {
 pub struct Entry(pub minibytes::Bytes, pub SerializationFormat);
 
 /// The `Element` is a parsed element of a directory. Directory elements are either files either
-/// direcotries. The type of element is signaled by `Flag`.
+/// directories. The type of element is signaled by `Flag`.
 #[derive(Clone, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
 pub struct Element {
     pub component: PathComponentBuf,
@@ -313,9 +313,9 @@ impl Elements {
                 }
                 Ordering::Greater => {
                     // Directory names are tricky. See the `namecmp` module.
-                    // Here we don't borther figuring out whehter it's a
+                    // Here we don't borther figuring out whether it's a
                     // directory or not, just keep looking for a few more
-                    // entires.
+                    // entries.
                     let len = candidate.len().min(name.len());
                     if candidate[..len] > name[..len] {
                         break;

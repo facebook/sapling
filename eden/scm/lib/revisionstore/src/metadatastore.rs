@@ -50,7 +50,7 @@ impl MetadataStore {
 
     /// Attempt to repair the underlying stores that the `MetadataStore` is comprised of.
     ///
-    /// As this may violate some of the stores asumptions, care must be taken to call this only
+    /// As this may violate some of the stores assumptions, care must be taken to call this only
     /// when no other `MetadataStore` have been created for the `shared_path`.
     pub fn repair(
         shared_path: impl AsRef<Path>,

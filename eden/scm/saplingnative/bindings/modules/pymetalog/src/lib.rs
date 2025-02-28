@@ -124,7 +124,7 @@ py_class!(pub class metalog |py| {
         Ok(Bytes::from(id.as_ref().to_vec()))
     }
 
-    /// Export to a git respository
+    /// Export to a git repository
     def exportgit(&self, path: String) -> PyResult<PyNone> {
         let log = self.log(py).read();
         log.export_git(Path::new(&path)).map_pyerr(py)?;

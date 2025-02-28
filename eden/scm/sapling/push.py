@@ -370,7 +370,7 @@ def delete_remote_bookmark(repo, edenapi, bookmark, force, pushvars_strs) -> Non
             if remote_node is None:
                 # the bookmark is already deleted on the server, nothing needed
                 # from the user. In very rare cases, the remote_node can be stale data
-                # and the boomark may still exists on the server (this only happens in
+                # and the bookmark may still exists on the server (this only happens in
                 # integration tests so far).
                 return
             if remote_node != curr_bookmark_val.node:

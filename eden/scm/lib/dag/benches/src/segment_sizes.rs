@@ -48,7 +48,7 @@ pub fn main() {
     ))
     .unwrap();
 
-    // Test the size, and generation speed, and ancestor calcuation speed
+    // Test the size, and generation speed, and ancestor calculation speed
     // with some different segment sizes.
     for segment_size in [4, 8, 10, 12, 14, 16, 18, 20, 22, 24, 32, 64, 128] {
         let dag_dir = tempdir().unwrap();
@@ -66,7 +66,7 @@ pub fn main() {
         eprintln!("segments: {}  log len: {}", segment_len, log_len);
 
         bench(
-            format!("ancestor calcuation segment_size={}", segment_size),
+            format!("ancestor calculation segment_size={}", segment_size),
             || {
                 let dag = IdDag::open(dag_dir.path()).unwrap();
                 elapsed(|| {

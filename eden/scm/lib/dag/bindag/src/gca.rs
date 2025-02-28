@@ -17,7 +17,7 @@
 /// The C implementation is quite competitive among linear algorithms on
 /// performance. It is cache-efficient, has fast paths to exit early, and
 /// takes up to 62 (if bitmask is u64) revs at once. Other implementations
-/// might just take 2 revs at most. For example, the older implemenation
+/// might just take 2 revs at most. For example, the older implementation
 /// by Olivia Mackall in 2006 [3] takes 2 revs explicitly.
 ///
 /// Changes in this Rust implementation:

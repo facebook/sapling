@@ -96,7 +96,7 @@ _checkfeaturecache = {}
 def checkfeatures(features):
     result = {"error": [], "missing": [], "skipped": []}
 
-    logger.debug("avaible features: %s", list(checks.keys()))
+    logger.debug("available features: %s", list(checks.keys()))
     for feature in features:
         if feature.startswith("/"):
             # feature is a path to a binary on POSIX

@@ -683,7 +683,7 @@ pub(crate) mod tests {
                 "<diff <or <spans [A:B+0:1] +> <spans [D+3] +> (order=Zip)> <spans [A:D+0:3] +>>"
             );
 
-            // Union drops order (by flattening) aggresively on both sides.
+            // Union drops order (by flattening) aggressively on both sides.
             assert_eq!(dbg(abcd.union(&unordered)), "<spans [A:D+0:3] +>");
 
             // Union (preserving order) cannot flatten sets for fast paths.

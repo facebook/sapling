@@ -124,14 +124,14 @@ pub fn find_command_name(
 /// ```
 ///
 /// In case there are `$1`, `$2` etc. in `alias_args`, those parts of
-/// `alias_args` will be replaced by corrosponding parts of `command_args`, and
+/// `alias_args` will be replaced by corresponding parts of `command_args`, and
 /// the result looks like:
 ///
 /// ```plain,ignore
 /// alias_name + alias_args (with $x replaced) + command_args[n+1:]
 /// ```
 ///
-/// where `n` is the maximum number occured in `$x`.
+/// where `n` is the maximum number occurred in `$x`.
 fn expand_alias_args(command_args: &[String], alias_args: Vec<String>) -> Vec<String> {
     let mut n = 0;
     let mut args: Vec<String> = alias_args
@@ -162,7 +162,7 @@ fn expand_alias_args(command_args: &[String], alias_args: Vec<String>) -> Vec<St
 /// Expand a single shell alias.
 ///
 /// This is similar to `expand_alias_args`, but the "shell alias" is not split,
-/// and the rest of `command_args` is not appeneded to the expanded result
+/// and the rest of `command_args` is not appended to the expanded result
 /// automatically.
 ///
 /// In theory, this is incorrect in corner cases. Unfortunately it is the only

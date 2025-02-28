@@ -451,7 +451,7 @@ impl<'a> TreeStoreBuilder<'a> {
         self
     }
 
-    // TODO(meyer): Can we remove this since we have seprate builders for files and trees?
+    // TODO(meyer): Can we remove this since we have separate builders for files and trees?
     // Is this configurable somewhere we can directly check from Config instead of having the
     // caller pass in, or is it just hardcoded elsewhere and we should hardcode it here?
     /// Cache path suffix for the associated indexedlog. For files, this will not be given.

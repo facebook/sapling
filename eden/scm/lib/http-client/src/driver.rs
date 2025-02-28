@@ -156,7 +156,7 @@ impl<'a> MultiDriver<'a> {
                 }
             }
 
-            // If any tranfers reported progress, notify the user.
+            // If any transfers reported progress, notify the user.
             self.progress.report_if_updated();
 
             if in_progress == 0 {

@@ -629,7 +629,7 @@ def formatmd(blocks):
 
     # We generally ignore indents because markdown does not like them, however
     # we do want to preserve the indentation of lists. The first bullet point
-    # in a list will be translated to a 0 indent, and we will adust each
+    # in a list will be translated to a 0 indent, and we will adjust each
     # subsequent indent relative to this first one.
     # We keep a stack of the translated indentation levels for lists here.
     indentation_translation = []

@@ -11,7 +11,7 @@ Our endpoints support both CATs and OAUTH tokens.
 
 Publishing is done from the Source Control Service whenever `update_references` request has been accepted and the version of a Commit Cloud Workspace has been bumped.
 
-Scm Daemon is responsible for subscribing (implemented as polling at a small specified interval giving us the ability to have a 'real-time' effect and syncronise Commit Cloud workspaces fast). Scm Daemon would trigger `hg cloud sync` command in the repos subscribed once a new version notification arrives.
+Scm Daemon is responsible for subscribing (implemented as polling at a small specified interval giving us the ability to have a 'real-time' effect and synchronise Commit Cloud workspaces fast). Scm Daemon would trigger `hg cloud sync` command in the repos subscribed once a new version notification arrives.
 
 #### How Scm Daemon knows list of Commit Cloud Workspaces to subscribe to?
 
@@ -47,9 +47,9 @@ To trigger a notification simply amend any commit in a repo or run hg pull.
 
 
 
-#### How to interract with the endpoints directly?
+#### How to interact with the endpoints directly?
 
-It is absolutely possible to interract with the endpoints directly, that can be useful if you need to change them.
+It is absolutely possible to interact with the endpoints directly, that can be useful if you need to change them.
 
 
 The commands are:

@@ -309,7 +309,7 @@ fn test_fmt_debug() -> crate::Result<()> {
 0000001c: 69 64 65 73 20 61 6e 20 69 6e 74 65 67 72 69 74  ides an integrit
 0000002c: 79 2d 63 68 65 63 6b 65 64 2c 20 61 70 70 65 6e  y-checked, appen
 0000003c: 64 2d 6f 6e 6c 79 20 73 74 6f 72 61 67 65 20 77  d-only storage w
-0000004c: 69 74 68 20 69 6e 64 65 78 20 73 75 70 70 6f 72  ith index suppor
+0000004c: 69 74 68 20 69 6e 64 65 78 20 73 75 70 70 6f 72  ith index support
 0000005c: 74 2e                                            t.
 
 # Entry 2:
@@ -405,7 +405,7 @@ fn test_index_reorder() {
     );
 }
 
-// This test rewrites mmaped files which is unsupoorted by Windows.
+// This test rewrites mapped files which is unsupoorted by Windows.
 #[cfg(not(windows))]
 #[test]
 fn test_index_mark_corrupt() {

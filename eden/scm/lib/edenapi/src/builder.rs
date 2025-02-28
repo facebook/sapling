@@ -164,7 +164,7 @@ impl HttpClientBuilder {
         server_url: Url,
     ) -> Result<Self, SaplingRemoteApiError> {
         // XXX: Ideally, the repo name would be a required field, obtained from a `Repo` object from
-        // the `clidispatch` crate. Unforunately, not all callsites presently have access to a
+        // the `clidispatch` crate. Unfortunately, not all callsites presently have access to a
         // populated `Repo` object, and it isn't trivial to just initialize one (requires a path to
         // the on-disk repo) or to plumb one through (which might not be possible for usage outside
         // of a Mercurial process, such as by EdenFS). For now, let's just allow setting the

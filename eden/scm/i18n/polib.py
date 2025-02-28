@@ -234,7 +234,7 @@ def unescape(st):
 class _BaseFile(list):
     """
     Common base class for the :class:`~polib.POFile` and :class:`~polib.MOFile`
-    classes. This class should **not** be instanciated directly.
+    classes. This class should **not** be instantiated directly.
     """
 
     def __init__(self, *args, **kwargs):
@@ -299,7 +299,7 @@ class _BaseFile(list):
 
     def __contains__(self, entry):
         """
-        Overriden ``list`` method to implement the membership test (in and
+        Overridden ``list`` method to implement the membership test (in and
         not in).
         The method considers that an entry is in the file if it finds an entry
         that has the same msgid (the test is **case sensitive**).
@@ -316,7 +316,7 @@ class _BaseFile(list):
 
     def append(self, entry):
         """
-        Overriden method to check for duplicates entries, if a user tries to
+        Overridden method to check for duplicates entries, if a user tries to
         add an entry that is already in the file, the method will raise a
         ``ValueError`` exception.
 
@@ -331,7 +331,7 @@ class _BaseFile(list):
 
     def insert(self, index, entry):
         """
-        Overriden method to check for duplicates entries, if a user tries to
+        Overridden method to check for duplicates entries, if a user tries to
         add an entry that is already in the file, the method will raise a
         ``ValueError`` exception.
 
@@ -747,7 +747,7 @@ class MOFile(_BaseFile):
 class _BaseEntry:
     """
     Base class for :class:`~polib.POEntry` and :class:`~polib.MOEntry` classes.
-    This class should **not** be instanciated directly.
+    This class should **not** be instantiated directly.
     """
 
     def __init__(self, *args, **kwargs):
@@ -1144,7 +1144,7 @@ class _POFileParser:
         #     * HE: Header
         #     * TC: a translation comment
         #     * GC: a generated comment
-        #     * OC: a file/line occurence
+        #     * OC: a file/line occurrence
         #     * FL: a flags line
         #     * CT: a message context
         #     * PC: a previous msgctxt
@@ -1392,7 +1392,7 @@ class _POFileParser:
         return True
 
     def handle_oc(self):
-        """Handle a file:num occurence."""
+        """Handle a file:num occurrence."""
         if self.current_state in ["MC", "MS", "MX"]:
             self.instance.append(self.current_entry)
             self.current_entry = POEntry()

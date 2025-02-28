@@ -4943,7 +4943,7 @@ def import_curses():
 
 
 def no_recursion(func):
-    """Funtion decorator to avoid recursion of a free function.
+    """Function decorator to avoid recursion of a free function.
     If recursion happens, return None.
 
     >>> @no_recursion

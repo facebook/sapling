@@ -465,8 +465,8 @@ def amend(ui, repo, *pats, **opts):
 
 
 def fixupamend(ui, repo, noconflict=None, noconflictmsg=None):
-    """rebases any children found on the preamend changset and strips the
-    preamend changset
+    """rebases any children found on the preamend changeset and strips the
+    preamend changeset
     """
     wlock = None
     lock = None

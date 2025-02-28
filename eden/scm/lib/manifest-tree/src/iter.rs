@@ -189,7 +189,7 @@ impl BfsWorker {
     }
 }
 
-/// The cursor is a utility for iterating over [`Link`]s. This structure is inteded to be an
+/// The cursor is a utility for iterating over [`Link`]s. This structure is intended to be an
 /// implementation detail of other iterating structures. That is why it has some rought edges
 /// and a particular use pattern.
 /// Because this structure intends to back iterators, it is designed so that `step()` is called on

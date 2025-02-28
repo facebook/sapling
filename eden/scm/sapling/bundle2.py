@@ -315,7 +315,7 @@ class bundleoperation:
     The latter is built form the `replycaps` bundle2 part and in case of
     `unbundlereplay` we don't construct the bundle2, but rather just replay
     the saved one, so we can't change this part. Thus the need for another
-    way of indicating the need to mininize response.
+    way of indicating the need to minimize response.
     """
 
     def __init__(

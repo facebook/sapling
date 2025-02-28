@@ -384,7 +384,7 @@ where
 ///
 /// `emit` callback is called many times as the parts of diff are generated
 ///
-/// Hopefuly we'll be able to refactor this API to use (currently unstable) Rust generators.
+/// Hopefully we'll be able to refactor this API to use (currently unstable) Rust generators.
 /// The only available public API now is `diff_unified_headerless` which just returns a `vec<u8>`.
 fn gen_diff_unified_headerless<T, F, S>(
     old_text: &T,
@@ -490,7 +490,7 @@ where
 ///
 /// `emit` callback is called many times as the parts of diff are generated
 ///
-/// Hopefuly we'll be able to refactor this API to use (currently unstable) Rust generators.
+/// Hopefully we'll be able to refactor this API to use (currently unstable) Rust generators.
 /// The only available public API now is `diff_unified` which just returns a `vec<u8>`.
 fn gen_diff_unified_headerless_entire_file<T, F, S>(prefix: u8, text: &T, seed: S, reduce: F) -> S
 where
@@ -705,7 +705,7 @@ where
     }
 
     // If the file is changed to or from a git submodule, this always
-    // shows up as a delete folled by an add.
+    // shows up as a delete followed by an add.
     if let (Some(old), Some(new)) = (&old_file, &new_file) {
         if (old.file_type == FileType::GitSubmodule) != (new.file_type == FileType::GitSubmodule) {
             let seed = gen_diff_unified(old_file, None, diff_opts.clone(), seed, reduce.clone());

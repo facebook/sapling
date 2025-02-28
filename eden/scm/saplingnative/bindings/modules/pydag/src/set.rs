@@ -332,7 +332,7 @@ impl ToPyObject for Names {
 }
 
 impl nameset {
-    /// Convets to native Rust `Set`.
+    /// Converts to native Rust `Set`.
     pub(crate) fn to_native_set(&self, py: Python) -> Set {
         self.inner(py).clone()
     }

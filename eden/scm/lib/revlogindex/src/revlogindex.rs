@@ -173,7 +173,7 @@ impl RevlogIndex {
     /// The C implementation is quite competitive among linear algorithms on
     /// performance. It is cache-efficient, has fast paths to exit early, and
     /// takes up to 62 (if bitmask is u64) revs at once. Other implementations
-    /// might just take 2 revs at most. For example, the older implemenation
+    /// might just take 2 revs at most. For example, the older implementation
     /// by Olivia Mackall in 2006 [3] takes 2 revs explicitly.
     ///
     /// Changes in this Rust implementation:
@@ -515,7 +515,7 @@ impl RevlogIndex {
                 // nodemap_path should be a symlink. Older repos might have the non-symlink
                 // file. Attempt to delete it.
                 // This is useful on Windows to prevent atomic_write_symlink failures when
-                // the nodemap file was non-symlink and mmaped.
+                // the nodemap file was non-symlink and mapped.
                 if let Ok(meta) = nodemap_path.symlink_metadata() {
                     if !meta.file_type().is_symlink() {
                         remove_file(nodemap_path)?;

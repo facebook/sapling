@@ -9,7 +9,7 @@
 # GNU General Public License version 2 or any later version.
 
 # If you want to change PREFIX, do not just edit it below. The changed
-# value wont get passed on to recursive make calls. You should instead
+# value won't get passed on to recursive make calls. You should instead
 # override the variable on the command like:
 #
 # % make PREFIX=/opt/ install
@@ -189,7 +189,7 @@ install-getdeps:
 # test-check-execute.t: fails on CI, passes locally on ubuntu-22.04
 # test-clone-per-repo-config.t: fails in oss, looks like depends on fb hgrc.dynamic
 # test-clone-resume.t: fails on CI, passes locally on ubuntu-22.04
-# test-commitcloud-sync.t: flaky Last Sync Version on line 812, flips beteen 17 and 16
+# test-commitcloud-sync.t: flaky Last Sync Version on line 812, flips between 17 and 16
 # test-config-precedence.t:  output mismatch: DEBUG configloader::hg: spawn ["false"] because * (glob)
 # test-copytrace-amend.t: flaky on github CI, intermittent core dump
 # test-copytrace-heuristics.t:  flaky on github CI, intermittent core dump

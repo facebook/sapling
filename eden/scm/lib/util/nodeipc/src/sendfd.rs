@@ -386,7 +386,7 @@ pub struct SendFdPayload {
     pub pid: u32,
 
     /// Raw handles or fds. Normalized as u64 for serialization.
-    /// On Winodws, `null` is a placeholder indicating an absent handle.
+    /// On Windows, `null` is a placeholder indicating an absent handle.
     #[serde(with = "serde_raw_fds")]
     pub raw_fds: Vec<RawFileDescriptor>,
 }

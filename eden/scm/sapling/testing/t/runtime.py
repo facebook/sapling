@@ -137,7 +137,7 @@ def checkoutput(
 
 
 class TestTmp:
-    r"""TestTmp is a context manager that provides temporary test environemnts
+    r"""TestTmp is a context manager that provides temporary test environments
 
     Example:
 
@@ -183,7 +183,7 @@ class TestTmp:
         ...     s = 'for i in 2 1 4; do echo $i; done | syssort a -'
         ...     if os.path.exists("/bin/sort"):
         ...         t.requireexe("syssort", "/bin/sort")
-        ...         # syssort is avalaible as a function known by sheval
+        ...         # syssort is available as a function known by sheval
         ...         t.sheval(s)
         ...     else:
         ...         '1\n2\n3\n4\n5\n'  # skip the test

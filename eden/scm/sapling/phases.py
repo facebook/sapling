@@ -188,7 +188,7 @@ def binarydecode(stream):
 
 
 def _trackphasechange(data, rev, old, new) -> None:
-    """add a phase move the <data> dictionnary
+    """add a phase move the <data> dictionary
 
     If data is None, nothing happens.
     """
@@ -237,7 +237,7 @@ class phasecache:
             if revs is None:
                 revs = repo.changelog.torevset([])
 
-            # XXX: 'secret' is treated as an ampty set.
+            # XXX: 'secret' is treated as an empty set.
             if subset is not None:
                 revs = subset & revs
             return revs
@@ -422,7 +422,7 @@ class phasecache:
     def registernew(self, repo, tr, targetphase, nodes):
         if self._headbased:
             # head-based phases do not need to track phase of new commits
-            # explcitly. visible heads and remotenames track them implicitly.
+            # explicitly. visible heads and remotenames track them implicitly.
             return
         self._retractboundary(repo, tr, targetphase, nodes)
         if tr is not None and "phases" in tr.changes:

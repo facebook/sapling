@@ -408,7 +408,7 @@ class cg1unpacker:
 
                     # Those changesets have been pushed from the
                     # outside, their phases are going to be pushed
-                    # alongside. Therefor `targetphase` is
+                    # alongside. Therefore `targetphase` is
                     # ignored.
                     targetphase = phaseall = phases.draft
             if added:

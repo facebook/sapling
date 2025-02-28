@@ -87,14 +87,14 @@ fn find_chrome_like() -> anyhow::Result<String> {
             }
         }
     } else {
-        let candiates = [
+        let candidates = [
             "/usr/bin/chromium",
             "/usr/bin/google-chrome",
             "/usr/bin/microsoft-edge",
             #[cfg(target_os = "macos")]
             "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome",
         ];
-        for path in candiates {
+        for path in candidates {
             if Path::new(path).exists() {
                 return Ok(path.to_string());
             }

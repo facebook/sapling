@@ -69,7 +69,7 @@ def interp(tree: dict, env: Env) -> InterpResult:
 
 
 def interpvec(trees, env: Env, onerror=OnError.RAISE) -> InterpResult:
-    """Interprete a list of ASTs and chain their result together"""
+    """Interpret a list of ASTs and chain their result together"""
     res = InterpResult()
     for tree in trees:
         try:
@@ -266,7 +266,7 @@ def interppipe(v, env: Env) -> InterpResult:
             allocatedstderr = True
     for i, tree in enumerate(trees):
         if i > 0:
-            # stdout of previous comamnd is stdin for the next command
+            # stdout of previous command is stdin for the next command
             stdin = env.stdout
             # pyre-fixme[16]: `Optional` has no attribute `seek`.
             stdin.seek(0)

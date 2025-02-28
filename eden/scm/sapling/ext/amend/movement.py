@@ -63,7 +63,7 @@ moveopts = [
     ]
     + moveopts,
     _("[OPTIONS]... [STEPS]"),
-    legacyaliases=["previ", "previo", "previou"],
+    legacyaliases=["previ", "previo", "previous"],
 )
 def previous(ui, repo, *args, **opts):
     """check out an ancestor commit
@@ -413,7 +413,7 @@ def _findnexttarget(
                     ui, repo, nodes=children, indices=ui.interactive()
                 )
             ]
-            # if theres only one nonobsolete we're guessing it's the one
+            # if there's only one nonobsolete we're guessing it's the one
             nonobschildren = list(filter(lambda c: not repo[c].obsolete(), children))
             draftchildren = list(filter(lambda c: repo[c].mutable(), children))
             if len(nonobschildren) == 1:

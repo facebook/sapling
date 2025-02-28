@@ -11,7 +11,7 @@ use memmap2::MmapMut;
 
 /// Fillable buffer
 ///
-/// This struct enapsulates a memory-mapped buffer that can be simulataneously written to and read
+/// This struct enapsulates a memory-mapped buffer that can be simultaneously written to and read
 /// from.  Writes can only be appends, and reads can only happen to the portion that has already
 /// been written.
 pub(crate) struct Buffer {

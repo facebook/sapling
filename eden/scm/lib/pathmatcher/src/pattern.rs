@@ -400,7 +400,7 @@ fn exact_file(kind: PatternKind, mut pat: &str) -> Result<Option<RepoPathBuf>> {
 /// is a path separated by `/`.
 fn normalize_path_pattern(pattern: &str) -> String {
     let pattern = util::path::normalize(pattern.as_ref());
-    // SAFTEY: In Rust, values of type String are always valid UTF-8.
+    // SAFETY: In Rust, values of type String are always valid UTF-8.
     // Our input pattern is a &str, and we don't add invalid chars in
     // out `util::path::normalize` function, so it should be safe here.
     let pattern = pattern.into_os_string().into_string().unwrap();

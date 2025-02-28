@@ -36,7 +36,7 @@ class _InstanceOfValidator:
 def instance_of(type) -> _InstanceOfValidator:
     """
     A validator that raises a :exc:`TypeError` if the initializer is called
-    with a wrong type for this particular attribute (checks are perfomed using
+    with a wrong type for this particular attribute (checks are performed using
     :func:`isinstance` therefore it's also valid to pass a tuple of types).
 
     :param type: The type to check for.

@@ -124,7 +124,7 @@ impl TryClone for IdDag<IndexedLogStore> {
 
 impl IdDag<MemStore> {
     /// Instantiate an [`IdDag`] that stores all it's data in process. Useful for scenarios that
-    /// do not require data persistance.
+    /// do not require data persistence.
     pub fn new_in_memory() -> Self {
         let store = MemStore::new();
         Self {
@@ -339,7 +339,7 @@ impl<Store: IdDagStore> IdDag<Store> {
         //   missing:                     [     ]            []           [     ]
         //   need_consider:               [     ]                         [     ]
         //                                                    ^
-        //                   no need to consdier because it does not have [N]
+        //                   no need to consider because it does not have [N]
 
         let missing = self
             .all_ids_in_segment_level(level - 1)?
@@ -1905,7 +1905,7 @@ impl<Store: IdDagStore> IdDag<Store> {
         // There are only 2 flags: HAS_ROOT, and ONLY_HEAD.
         // - HAS_ROOT flag can be preserved. It's based on `parents.is_empty()`
         //   which is not changed by resizing.
-        // - ONLY_HEAD flag can be perserved. Suppose the current flat segment
+        // - ONLY_HEAD flag can be preserved. Suppose the current flat segment
         //   has ONLY_HEAD set (i.e. heads(0:high) = [high]) and is being truncated
         //   from low..=high to low..=mid:
         //
@@ -1926,7 +1926,7 @@ impl<Store: IdDagStore> IdDag<Store> {
         //              X--...----           (X:: are to be removed)
         //
         //   The problem is that Y, min(X::high & mid::high), is a merge. It
-        //   contradicts flat segment defination that only "low" can be a merge.
+        //   contradicts flat segment definition that only "low" can be a merge.
         //
         //   Therefore X (to be removed) must be > mid. Nothing in 0:mid is removed.
         //   Because low..=high is a flat segment, removing `(mid+1):high`

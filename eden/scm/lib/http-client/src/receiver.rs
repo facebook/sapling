@@ -34,7 +34,7 @@ pub trait Receiver: Send + 'static {
 
     /// Called when the transfer has completed (successfully or not).
     ///
-    /// If a fatal error occured while performing the transfer, the error
+    /// If a fatal error occurred while performing the transfer, the error
     /// will be passed to this method so that the `Receiver` can decide how
     /// to proceed. If the `Receiver` returns an `Abort`, all other ongoing
     /// transfers will be aborted and the operation will return early.

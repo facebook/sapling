@@ -21,7 +21,7 @@ working copy) as JSON. The user will then resolve the conflicts at their leisure
 and run `hg resolve --mark`.
 
 It also supports `:merge3` style contents in the output, except for some
-sepcial cases. For instance, merge tools don't support symlinks, delete/update
+special cases. For instance, merge tools don't support symlinks, delete/update
 conflicts.
 """
 
@@ -85,7 +85,7 @@ CONFLICTSTATES = [
     ],
     # updatestate should be after all other commands, but before mergestate,
     # since some of the above commands run updates which concievably could be
-    # interrupted. See coment for mergestate.
+    # interrupted. See comment for mergestate.
     [
         "updatestate",
         {"cmd": "update", "to_continue": "update", "to_abort": "goto --clean"},

@@ -325,7 +325,7 @@ impl TreeStore {
 
             if fetch_cas {
                 // When fetching from CAS, first fetch from local repo to avoid network
-                // request for data that is only available locally (e.g. localy
+                // request for data that is only available locally (e.g. locally
                 // committed).
                 if fetch_local {
                     process_local(&mut state, &indexedlog_local, StoreLocation::Local)?;

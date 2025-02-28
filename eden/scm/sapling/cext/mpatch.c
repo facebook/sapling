@@ -157,7 +157,7 @@ static PyObject* patchedsize(PyObject* self, PyObject* args) {
 
 static PyMethodDef methods[] = {
     {"patches", patches, METH_VARARGS, "apply a series of patches\n"},
-    {"patchedsize", patchedsize, METH_VARARGS, "calculed patched size\n"},
+    {"patchedsize", patchedsize, METH_VARARGS, "calculated patched size\n"},
     {NULL, NULL}};
 
 static const int version = 1;

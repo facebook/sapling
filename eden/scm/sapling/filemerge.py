@@ -565,7 +565,7 @@ def _ifail(repo, mynode, orig, fcd, fco, fca, toolconf, labels=None):
 def _underlyingfctxifabsent(filectx):
     """Sometimes when resolving, our fcd is actually an absentfilectx, but
     we want to write to it (to do the resolve). This helper returns the
-    underyling workingfilectx in that case.
+    underlying workingfilectx in that case.
     """
     if filectx.isabsent():
         return filectx.changectx()[filectx.path()]

@@ -24,7 +24,7 @@ Extending existing profiles
 
 `%include <absolute path>` directives (one per line) let you extend as
 an existing profile file, adding more include and exclude rules. Although
-this directive can appear anywere in the file, it is recommended you
+this directive can appear anywhere in the file, it is recommended you
 keep these at the top of the file.
 
 Metadata
@@ -1106,7 +1106,7 @@ def _wraprepo(ui, repo) -> None:
                 # Expected format:
                 #   include.someid1.path/to/sparse/profile
                 #   exclude.someid2.path/to/sparse/profile
-                # id is unsued, but allows multiple keys to contribute to the
+                # id is unused, but allows multiple keys to contribute to the
                 # same sparse profile. This is useful when rolling out several
                 # separate waves of includes/excludes simultaneously.
                 split = key.split(".", 2)
@@ -1169,7 +1169,7 @@ def _wraprepo(ui, repo) -> None:
             be the global value
             """
             # The pending file should exist in all cases when this code path is
-            # hit. But if it does't this will throw an exception. That's
+            # hit. But if it doesn't this will throw an exception. That's
             # probably fine though, since that indicates something went very
             # wrong.
             pendingfile = _pendingprofileconfigname()

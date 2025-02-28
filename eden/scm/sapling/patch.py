@@ -2639,7 +2639,7 @@ def diff(
             # If the file has been removed, fctx2 is None; but this should
             # not occur here since we catch removed files early in
             # cmdutil.getloglinerangerevs() for 'hg log -L'.
-            assert fctx2 is not None, "fctx2 unexpectly None in diff hunks filtering"
+            assert fctx2 is not None, "fctx2 unexpectedly None in diff hunks filtering"
             hunks = hunksfilterfn(fctx2, hunks)
         text = b"".join(l for hrange, hlines in hunks for l in hlines)
         if hdr and (text or len(hdr) > 1):

@@ -626,7 +626,7 @@ where
 
                 SimpleWordKind::Subst(s) => {
                     // Force a move out of the boxed substitution. For some reason doing
-                    // the deref in the match statment gives a strange borrow failure
+                    // the deref in the match statement gives a strange borrow failure
                     let s = *s;
                     let subst = match s {
                         Len(p) => ParameterSubstitution::Len(map_param(p)),

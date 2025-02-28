@@ -8,7 +8,7 @@ integration with a native debugger like lldb
 
 Check https://lldb.llvm.org/python_api.html for APIs.
 
-This file runs standalone by lldb's Python interperter. It does not have access
+This file runs standalone by lldb's Python interpreter. It does not have access
 to `bindings` or other Sapling modules. Do not import Sapling modules here.
 
 There are 2 ways to use this feature,

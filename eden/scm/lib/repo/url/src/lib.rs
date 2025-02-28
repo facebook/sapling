@@ -243,7 +243,7 @@ fn repo_name_from_resolved_url(config: &dyn Config, url: &Url) -> Option<String>
     None
 }
 
-/// All non-alphanumeric characters (except hypens, underscores, and periods)
+/// All non-alphanumeric characters (except hyphens, underscores, and periods)
 /// found in the repo's name will be percent-encoded before being used in URLs.
 /// Characters allowed in a repo name (like `+` and `/`) since they are reserved
 /// characters according to RFC 3986 section 2.2 Reserved Characters (January 2005)

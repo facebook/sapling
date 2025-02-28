@@ -44,7 +44,7 @@ decodeheads = bindings.refencode.decodevisibleheads
 
 
 class visibleheads:
-    """tracks visible non-public heads in the repostory
+    """tracks visible non-public heads in the repository
 
     Track visibility of non-public commits through a set of heads.  This only
     covers non-public (draft and secret) commits - public commits are always
@@ -305,7 +305,7 @@ def phaseadjust(repo, tr, newdraft=None, newpublic=None) -> None:
     """adjust the phase of visible nodes
 
     Visibility tracking only cares about non public commits.  If a commit
-    transisitions between draft and public, this function must be called to
+    transitions between draft and public, this function must be called to
     update the accounting.
 
     Nodes that were draft and are now public must be provided in the

@@ -191,4 +191,4 @@ Adding support for a new Python version
 
 In practise, `Modules\_cursesmodule.c` from newer Python 3 versions is likely to be compatible with older Python 3 versions too. The Python 3.6 and 3.7 wheels are currently built from identical `_cursesmodule.c` files (but not the Python 3.8 or 3.9 wheels).
 
-For Python 3.10 and 3.11 it is necessary to adapt `_cursesmodule.c` and `clinic\_cursesmodule.c.h` files to new Python API (decribed more here https://devguide.python.org/c-api). It demands removing two headers files as described in [this commit]().
+For Python 3.10 and 3.11 it is necessary to adapt `_cursesmodule.c` and `clinic\_cursesmodule.c.h` files to new Python API (described more here https://devguide.python.org/c-api). It demands removing two headers files as described in [this commit]().

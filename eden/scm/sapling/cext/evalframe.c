@@ -11,8 +11,8 @@ Python stacks. The "pass thorugh" function keeps the frame state in its stack
 frame, so a native debugger may use it to read the Python stack, without
 waiting for the GIL, or python-debuginfo to parse inline information.
 
-The code is written in C instead of Rust becase:
-- Related APIs are offically defined in `Python.h` and rapidly changing.
+The code is written in C instead of Rust because:
+- Related APIs are officially defined in `Python.h` and rapidly changing.
 - `NO_OPT` does not seem to have a Rust equvilent.
 
 To check if this compiles with multiple versions of Python, try:

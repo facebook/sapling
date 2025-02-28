@@ -234,7 +234,7 @@ def _subtree_merge_base(repo, to_ctx, to_path, from_ctx, from_path):
     1. merge a dev branch (original copy-to directory) to main branch
     2. merge a main branch to release branch (original copy-to directory)
 
-    High level idea of the aglorithm:
+    High level idea of the algorithm:
     1. try to find the last subtree merge point
     2. try to find the original subtree copy info
     3. otherwise, fallback to the parent commit of the creation commit
@@ -351,7 +351,7 @@ def _subtree_merge_base(repo, to_ctx, to_path, from_ctx, from_path):
 def _docopy(ui, repo, *args, **opts):
     cmdutil.bailifchanged(repo)
 
-    # if 'rev' is not specificed, copy from the working copy parent
+    # if 'rev' is not specified, copy from the working copy parent
     from_rev = opts.get("rev") or "."
     from_ctx = scmutil.revsingle(repo, from_rev)
     to_ctx = repo["."]

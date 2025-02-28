@@ -138,7 +138,7 @@ impl Config for ConfigSet {
     /// Get detailed sources of a given config, including overrides, and source information.
     /// The last item in the returned vector is the latest value that is considered effective.
     ///
-    /// Return an emtpy vector if the config does not exist.
+    /// Return an empty vector if the config does not exist.
     fn get_sources(&self, section: &str, name: &str) -> Cow<[ValueSource]> {
         let pinned_sources = self
             .pinned

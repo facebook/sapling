@@ -71,8 +71,8 @@ if os.name != "nt":
                 message = message % missing
             ui.warn(message + "\n")
         _overrideconfigs(ui)
-        # re-used by reposetup. groups information is immutable for a process,
-        # so we can re-use the "missing" calculation result safely.
+        # reused by reposetup. groups information is immutable for a process,
+        # so we can reuse the "missing" calculation result safely.
         global _missinggroup
         _missinggroup = missing
 

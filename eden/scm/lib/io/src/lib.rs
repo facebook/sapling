@@ -666,7 +666,7 @@ impl IO {
         // Configure the pager.
         // The Hybrid mode is similar to "-FX" from "less".
         let mut interface_mode = InterfaceMode::Hybrid;
-        // Similar to "less" behavior - lines are wrapped and copy-paste preserves long ines.
+        // Similar to "less" behavior - lines are wrapped and copy-paste preserves long lines.
         let mut wrapping_mode = WrappingMode::GraphemeBoundary;
         if let Some(mode_str) = config.get("pager", "interface") {
             let mode = InterfaceMode::from(mode_str.as_ref());

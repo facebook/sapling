@@ -178,7 +178,7 @@ Defining The Arguments
 There are a possible total of 4 arguments being passed into command handlers:
 
 ``Opts``: This argument is the most similar to the ``opts`` and ``args``
-arguments in the Python codebase. It is mostly likely crated by the
+arguments in the Python codebase. It is mostly likely created by the
 ``define_flags!`` macro.
 
 ``&mut IO``: IO is most similar to the ``UI`` object from Python, without the

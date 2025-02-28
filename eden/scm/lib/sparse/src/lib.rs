@@ -319,7 +319,7 @@ impl Profile {
             let line = line?;
             let trimmed = line.trim();
 
-            // Ingore comments and emtpy lines.
+            // Ignore comments and empty lines.
             let mut chars = trimmed.chars();
             match chars.next() {
                 None => continue,

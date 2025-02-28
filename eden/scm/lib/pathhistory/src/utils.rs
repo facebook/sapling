@@ -15,7 +15,7 @@ pub(crate) fn pick_mid(left: u64, right: u64) -> Option<u64> {
     if left + 1 >= right {
         return None;
     }
-    // Only keep the higest 2 bits of `delta`. Drop other bits
+    // Only keep the highest 2 bits of `delta`. Drop other bits
     // (set them to 0). This makes `right - delta` more stable
     // with different `left`s.
     let delta = (right - left + 1) / 2;

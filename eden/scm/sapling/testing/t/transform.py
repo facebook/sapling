@@ -181,7 +181,7 @@ class LineInfo:
         )
 
     def isfollowoutput(self, info: LineInfo) -> bool:
-        """test if self belongs to multi-line ouptut matching 'info'"""
+        """test if self belongs to multi-line output matching 'info'"""
         return info.indent <= self.indent and (
             self.indent != info.indent or self.prompt not in ("$", ">>>")
         )
@@ -196,7 +196,7 @@ def rewriteblocks(
 ) -> str:
     r"""rewrite "obvious" blocks (ex. '$', '>>>') to python code
 
-    prefix is the Python code that resovles to an object with the following
+    prefix is the Python code that resolves to an object with the following
     attributes: require, checkoutput, sheval, pydoceval.
 
     shell block ($) and python block (>>>) are rewritten:

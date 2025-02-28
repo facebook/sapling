@@ -57,7 +57,7 @@ pub(crate) fn new_counter(name: &'static str) -> Counter {
 pub fn initialize_obc_client() -> anyhow::Result<()> {
     if !fbinit::was_performed() {
         return Err(anyhow::anyhow!(
-            "Failed to initilize obc client for logging to ods"
+            "Failed to initialize obc client for logging to ods"
         ));
     }
     OBC_CLIENT.get_or_try_init(|| -> anyhow::Result<OBCClientWrapper> {

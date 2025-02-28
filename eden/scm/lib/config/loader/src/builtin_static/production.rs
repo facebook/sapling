@@ -282,7 +282,7 @@ github_sl_diffsignal="{case(github_pull_request_status_check_rollup, 'SUCCESS', 
 github_sl_diffsignallabel="{case(github_pull_request_status_check_rollup, 'SUCCESS', 'ssl.signal_okay', 'PENDING', 'ssl.signal_in_progress', 'FAILURE', 'ssl.signal_failed')}"
 phab_sl_diffsignal="{case(phabsignalstatus, 'Okay', sl_signal_okay, 'In Progress', sl_signal_in_progress, 'Warning', sl_signal_warning, 'Failed', sl_signal_failed)}"
 phab_sl_diffsignallabel="{case(phabsignalstatus, 'Okay', 'ssl.signal_okay', 'In Progress', 'ssl.signal_in_progress', 'Warning', 'ssl.signal_warning', 'Failed', 'ssl.signal_failed')}"
-# sl_diffsignal is a glpyh while sl_diffsignallabel is the style.
+# sl_diffsignal is a glyph while sl_diffsignallabel is the style.
 sl_diffsignal="{if(github_repo, github_sl_diffsignal, phab_sl_diffsignal)}"
 sl_diffsignallabel="{if(github_repo, github_sl_diffsignallabel, phab_sl_diffsignallabel)}"
 

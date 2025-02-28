@@ -232,7 +232,7 @@ impl WorkingCopy {
         self.treestate.lock().parents().collect()
     }
 
-    /// Return the first working copy parent, or the null commmit if there are no parents.
+    /// Return the first working copy parent, or the null commit if there are no parents.
     pub fn first_parent(&self) -> Result<HgId> {
         Ok(self.parents()?.into_iter().next().unwrap_or(NULL_ID))
     }

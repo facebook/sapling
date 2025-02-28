@@ -132,8 +132,8 @@ static void webview_window_will_close(id self, SEL cmd, id notification) {
   id app = ((id(*)(id, SEL))objc_msgSend)((id)objc_getClass("NSApplication"),
                         sel_registerName("sharedApplication"));
   /***
-  With a custom event crated and a pointer to the sharedApplication
-  we can now send the event. We need to make sure it get's queued as
+  With a custom event created and a pointer to the sharedApplication
+  we can now send the event. We need to make sure it gets queued as
   early as possible, so we will set the argument atStart to
   the NSDate distantPast constructor. This will trigger a noop
   event on the application allowing the `webview_loop` to continue

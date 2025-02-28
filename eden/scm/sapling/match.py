@@ -234,7 +234,7 @@ class basematcher:
             return False
 
         if self.isexact():
-            # Only exacty files - no patterns.
+            # Only exactly files - no patterns.
             return False
 
         if self.prefix():

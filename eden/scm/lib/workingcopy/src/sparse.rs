@@ -169,7 +169,7 @@ pub fn config_overrides(config: impl Config) -> HashMap<String, String> {
 
 pub fn disk_overrides(dot_path: &Path) -> anyhow::Result<HashMap<String, String>> {
     // Pick up cached overrides written out by sparse.py during checkout.
-    // The ".<pid>" file contains uncommited overrides for an in-progress checkout.
+    // The ".<pid>" file contains uncommitted overrides for an in-progress checkout.
     for loc in [
         format!("{}.{}", CONFIG_OVERRIDE_CACHE, std::process::id()),
         CONFIG_OVERRIDE_CACHE.to_string(),

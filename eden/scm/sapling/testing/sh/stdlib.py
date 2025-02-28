@@ -897,7 +897,7 @@ def grep(args: List[str], arg0: str, stdin: BinaryIO, fs: ShellFS, stdout: Binar
             raise RuntimeError(f"{flag} requires an argument")
         except ValueError:
             raise NotImplementedError(
-                f"{flag} requires an integer arugment, but got: {args[0]}"
+                f"{flag} requires an integer argument, but got: {args[0]}"
             )
         # consume the argument
         args.pop(0)

@@ -1039,7 +1039,7 @@ mod tests {
         for value in &values {
             let b1 = rotate.slice_to_bytes(value);
             let b2 = rotate.slice_to_bytes(value);
-            // Dirty entires cannot be zero-copied.
+            // Dirty entries cannot be zero-copied.
             if rotate
                 .iter_dirty()
                 .any(|i| i.unwrap().as_ptr() == value.as_ptr())

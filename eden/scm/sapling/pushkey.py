@@ -57,7 +57,7 @@ def encodekeys(keys):
 def decodekeys(data):
     """decode the content of a pushkey namespace from exchange over the wire"""
     # Note that the order is required in some cases. E.g. pullbackup needs to
-    # retrieve commits in the same order of creation to mantain the order of
+    # retrieve commits in the same order of creation to maintain the order of
     # revision codes. See T24417531
     result = util.sortdict()
     for l in data.splitlines():

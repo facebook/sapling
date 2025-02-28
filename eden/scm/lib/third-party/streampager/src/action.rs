@@ -26,7 +26,7 @@ pub enum Action {
     /// Switch to the next file.
     NextFile,
 
-    /// Toggle visiblity of the ruler.
+    /// Toggle visibility of the ruler.
     ToggleRuler,
 
     /// Scroll up *n* lines.

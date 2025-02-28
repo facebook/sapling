@@ -727,7 +727,7 @@ mod tests {
 
     #[test]
     fn test_diff_does_not_evaluate_durable_on_hgid_equality() {
-        // Leaving the store empty intentionaly so that we get a panic if anything is read from it.
+        // Leaving the store empty intentionally so that we get a panic if anything is read from it.
         let left = TreeManifest::durable(Arc::new(TestStore::new()), hgid("10"));
         let right = TreeManifest::durable(Arc::new(TestStore::new()), hgid("10"));
         assert!(

@@ -12,7 +12,7 @@ from . import constants, shallowutil
 
 
 class ChainIndicies:
-    """A static class for easy reference to the delta chain indicies."""
+    """A static class for easy reference to the delta chain indices."""
 
     # The filename of this revision delta
     NAME = 0

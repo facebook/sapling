@@ -18,7 +18,7 @@ use pathmatcher::Matcher;
 use types::RepoPath;
 use types::RepoPathBuf;
 
-/// Content similarity threhold for rename detection. The definition of "similarity"
+/// Content similarity threshold for rename detection. The definition of "similarity"
 /// between file a and file b is: (len(a.lines()) - edit_cost(a, b)) / len(a.lines())
 ///   * 1.0 means exact match
 ///   * 0.0 means not match at all
@@ -33,9 +33,9 @@ const DEFAULT_MAX_EDIT_COST: u64 = 1000;
 ///
 /// The score will be in range [0.0, 1.0]. Higher number means more similar.
 /// The algorithm here is a simple diff algorithm to calculate the similarity
-/// bettween two file paths, which should cover below cases, and it will have
+/// between two file paths, which should cover below cases, and it will have
 /// better result for common files like 'lib.rs', '__init__.py', etc.
-///   - moving from one directory to antoher (same basename)
+///   - moving from one directory to another (same basename)
 ///   - moving inside a directory (same directory name)
 pub(crate) fn file_path_similarity(p1: &RepoPath, p2: &RepoPath) -> f64 {
     let p1_chars: Vec<char> = p1.as_str().chars().collect();
@@ -109,7 +109,7 @@ pub fn content_similarity(
         Ok((true, score))
     } else {
         // For cost > max_edit_cost, we treat it as not similar and we don't care about
-        // the acutal similarity score.
+        // the actual similarity score.
         Ok((false, 0.0))
     }
 }

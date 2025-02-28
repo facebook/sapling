@@ -260,7 +260,7 @@ impl LockedPath {
     }
 
     /// Return ref count for this lock handle. Ref count of 1 means lock will be
-    /// relased when this handle is dropped.
+    /// released when this handle is dropped.
     pub fn count(&self) -> u64 {
         let locker = self.locker.lock();
         if self.store {
