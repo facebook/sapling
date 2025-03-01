@@ -617,7 +617,7 @@ def print_eden_redirections(instance: EdenInstance, out: IOWithRedaction) -> Non
         section_title("EdenFS redirections:", out)
         checkouts = instance.get_checkouts()
         for checkout in checkouts:
-            out.write("checkout.path\n")
+            out.write(f"{checkout.path}\n")
             output = redirect_mod.prepare_redirection_list(checkout, instance)
             # append a tab at the beginning of every new line to indent
             output = output.replace("\n", "\n\t")
