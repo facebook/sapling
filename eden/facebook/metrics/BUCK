@@ -14,13 +14,42 @@ python_library(
 
 bento_test_kernel(
     kernel_name = "eden",
-    notebooks = [
-        "notebooks/usc_probability_distribution.py",
-        "notebooks/usc_deep_dive.py",
-        "notebooks/usc_top_commands.py",
-        "notebooks/usc_top_commands_by_os.py",
-        "notebooks/usc_aggregates.py",
-        "notebooks/usc_by_command.py",
-        "notebooks/usc_by_os.py",
-    ],
+    notebooks = ["notebooks/usc_probability_distribution.py"],
+    target_name = "usc_probability_distribution",
+)
+
+bento_test_kernel(
+    kernel_name = "eden",
+    notebooks = ["notebooks/usc_deep_dive.py"],
+    target_name = "usc_deep_dive",
+)
+
+bento_test_kernel(
+    kernel_name = "eden",
+    notebooks = ["notebooks/usc_top_commands.py"],
+    target_name = "usc_top_commands",
+)
+
+bento_test_kernel(
+    kernel_name = "eden",
+    notebooks = ["notebooks/usc_top_commands_by_os.py"],
+    target_name = "usc_top_commands_by_os",
+)
+
+bento_test_kernel(
+    kernel_name = "eden",
+    notebooks = ["notebooks/usc_aggregates.py"],
+    target_name = "usc_aggregates",
+)
+
+bento_test_kernel(
+    kernel_name = "eden",
+    notebooks = ["notebooks/usc_by_command.py"],
+    target_name = "usc_by_command",
+)
+
+bento_test_kernel(
+    kernel_name = "eden",
+    notebooks = ["notebooks/usc_by_os.py"],
+    target_name = "usc_by_os",
 )
