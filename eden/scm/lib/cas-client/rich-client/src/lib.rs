@@ -25,6 +25,7 @@ use re_client_lib::RemoteExecutionMetadata;
 use re_client_lib::RemoteFetchPolicy;
 
 pub const CAS_SOCKET_PATH: &str = "/run/casd/casd.socket";
+pub const CAS_SESSION_TTL: i64 = 600; // 10 minutes
 
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
 pub enum CasCacheModeLocalFetch {
@@ -185,6 +186,7 @@ impl RichCasClient {
 
         let builder = REClientBuilder::new(fbinit::expect_init())
             .with_config(re_config)
+            .with_session_ttl(CAS_SESSION_TTL)
             .with_rich_client(true);
 
         builder.build()
