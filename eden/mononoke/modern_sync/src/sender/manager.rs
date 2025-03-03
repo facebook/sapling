@@ -54,9 +54,8 @@ const TREES_FLUSH_INTERVAL: Duration = Duration::from_secs(3);
 const CONTENTS_FLUSH_INTERVAL: Duration = Duration::from_secs(3);
 
 const MAX_CHANGESET_BATCH_SIZE: usize = 10;
-const MAX_TREES_BATCH_SIZE: usize = 20;
-
-const MAX_CONTENT_BATCH_SIZE: usize = 30;
+const MAX_TREES_BATCH_SIZE: usize = 300;
+const MAX_CONTENT_BATCH_SIZE: usize = 100;
 const MAX_BLOB_BYTES: u64 = 10 * 10 * 1024 * 1024; // 100 MB
 
 #[derive(Clone)]
