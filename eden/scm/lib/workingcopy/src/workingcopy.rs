@@ -505,8 +505,10 @@ impl WorkingCopy {
                         },
                         FsNodeMetadata::Directory(_) => None,
                     });
-                    // NOTE: The workingcopy ident does not always match the submodule ident. Why?
-                    let file_node = sniff_wdir_parents(&subm_path, None)?.p1().copied();
+                    // The submodule working copy should use the same dotdir.
+                    let file_node = sniff_wdir_parents(&subm_path, Some(self.ident))?
+                        .p1()
+                        .copied();
                     if file_node == tree_node {
                         status_builder.forget(path);
                         continue;
