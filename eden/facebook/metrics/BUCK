@@ -17,5 +17,6 @@ bento_test_kernel(
     notebooks = [
         "notebooks/usc_probability_distribution.py",
         "notebooks/usc_deep_dive.py",
+        "notebooks/usc_top_commands.py",
     ],
 )
