@@ -18,6 +18,7 @@ use re_client_lib::create_default_config;
 use re_client_lib::ExternalCASDaemonAddress;
 use re_client_lib::REClient;
 use re_client_lib::REClientBuilder;
+use re_client_lib::RESessionID;
 use re_client_lib::RemoteExecutionMetadata;
 
 pub struct ThinCasClient {
@@ -92,6 +93,7 @@ impl ThinCasClient {
         }
 
         let default_fetch_limit = ByteCount::try_from_str("200MB")?;
+        let cri = clientinfo::get_client_request_info();
 
         Ok(Some(Self {
             client: Default::default(),
@@ -101,6 +103,10 @@ impl ThinCasClient {
             verbose,
             metadata: RemoteExecutionMetadata {
                 use_case_id: use_case,
+                re_session_id: Some(RESessionID {
+                    id: format!("{}_{}", cri.entry_point, cri.correlator),
+                    ..Default::default()
+                }),
                 ..Default::default()
             },
             log_dir,

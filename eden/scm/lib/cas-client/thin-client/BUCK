@@ -22,6 +22,7 @@ rust_library(
         "//common/rust/shed/fbinit:fbinit",
         "//eden/scm/lib/cas-client:cas-client",
         "//eden/scm/lib/cas-client/re-cas-common:re-cas-common",
+        "//eden/scm/lib/clientinfo:clientinfo",
         "//eden/scm/lib/config/model:configmodel",
         "//eden/scm/lib/util/factory:factory",
         "//remote_execution/client_lib/wrappers/rust/casd_only_client:re_client_lib",

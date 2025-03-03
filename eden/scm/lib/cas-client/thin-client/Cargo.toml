@@ -17,6 +17,7 @@ anyhow = "1.0.95"
 fbinit = { version = "0.2.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 futures = { version = "0.3.30", features = ["async-await", "compat"] }
 sapling-cas-client = { version = "0.1.0", path = ".." }
+sapling-clientinfo = { version = "0.1.0", path = "../../clientinfo" }
 sapling-configmodel = { version = "0.1.0", path = "../../config/model" }
 sapling-factory = { version = "0.1.0", path = "../../util/factory" }
 sapling-re-cas-common = { version = "0.1.0", path = "../re-cas-common" }
