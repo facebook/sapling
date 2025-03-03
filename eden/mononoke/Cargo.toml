@@ -475,6 +475,7 @@ members = [
   "tools/example",
   "tools/executor",
   "tools/import",
+  "tools/tail-to-cloudwatch",
   "tools/testtool",
   "walker",
   "wireproto_handler",

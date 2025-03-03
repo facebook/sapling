@@ -1,0 +1,21 @@
+load("@fbcode_macros//build_defs:rust_binary.bzl", "rust_binary")
+
+oncall("source_control")
+
+rust_binary(
+    name = "tail-to-cloudwatch",
+    srcs = ["src/main.rs"],
+    test_deps = [
+        "fbsource//third-party/rust:assert_approx_eq",
+        "//eden/mononoke/mononoke_macros:mononoke_macros",
+    ],
+    deps = [
+        "fbsource//third-party/rust:anyhow",
+        "fbsource//third-party/rust:aws-config",
+        "fbsource//third-party/rust:aws-sdk-cloudwatchlogs",
+        "fbsource//third-party/rust:clap",
+        "fbsource//third-party/rust:serde",
+        "fbsource//third-party/rust:serde_json",
+        "fbsource//third-party/rust:tokio",
+    ],
+)
