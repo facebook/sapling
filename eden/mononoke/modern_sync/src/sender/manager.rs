@@ -57,7 +57,7 @@ const MAX_CHANGESET_BATCH_SIZE: usize = 10;
 const MAX_TREES_BATCH_SIZE: usize = 20;
 
 const MAX_CONTENT_BATCH_SIZE: usize = 30;
-const MAX_BLOB_BYTES: u64 = 10 * 1024 * 1024; // 10 MB
+const MAX_BLOB_BYTES: u64 = 10 * 10 * 1024 * 1024; // 100 MB
 
 #[derive(Clone)]
 pub struct SendManager {
