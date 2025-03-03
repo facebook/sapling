@@ -4,10 +4,12 @@
 # GNU General Public License version 2.
 
 import importlib
-import sys
+import importlib.abc
+import importlib.util
+import types
 
 
-class MercurialImporter:
+class MercurialImporter(importlib.abc.Loader, importlib.abc.MetaPathFinder):
     """
     Intercept legacy imports using "edenscm", "mercurial", or "edenscm.mercurial" and
     resolve with import of sapling$1.
@@ -19,28 +21,26 @@ class MercurialImporter:
         ["edenscm.mercurial", "mercurial", "edenscm"], key=len, reverse=True
     )
     legacy_names_set = set(legacy_names)
-    legacy_prefixes = [ln + "." for ln in legacy_names]
+    legacy_prefixes = tuple(ln + "." for ln in legacy_names)
 
-    # This implements the "Finder" interface.
-    def find_module(self, fullname, _path):
-        if fullname in self.legacy_names_set or any(
-            fullname.startswith(lp) for lp in self.legacy_prefixes
+    def find_spec(
+        self, fullname: str, path=None, target=None
+    ) -> importlib.machinery.ModuleSpec | None:
+        if fullname in self.legacy_names_set or fullname.startswith(
+            self.legacy_prefixes
         ):
-            return self
-
+            return importlib.util.spec_from_loader(fullname, self)
         return None
 
-    # This implements the "Loader" interface.
-    def load_module(self, fullname):
+    def create_module(self, spec: importlib.machinery.ModuleSpec) -> types.ModuleType:
+        name = spec.name
         for ln in self.legacy_names:
-            if fullname.startswith(ln):
-                realname = "sapling" + fullname[len(ln) :]
-                break
-        else:
-            raise ImportError(
-                "MercurialImporter.load_module used for non-legacy module %s" % fullname
-            )
+            suffix = name.removeprefix(ln)
+            if suffix != name:
+                return importlib.import_module("sapling" + suffix)
 
-        mod = importlib.import_module(realname)
-        sys.modules[fullname] = mod
-        return mod
+        raise ImportError(f"MercurialImporter used for non-legacy module {name}")
+
+    def exec_module(self, module):
+        # These modules are already executed. This is a no-op.
+        pass
