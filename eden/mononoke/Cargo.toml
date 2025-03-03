@@ -310,6 +310,7 @@ members = [
   "filenodes/if/mocks",
   "filenodes/if/services",
   "filestore",
+  "git/bundle_uri",
   "git/check_git_wc",
   "git/git-pool",
   "git/git_types",

@@ -94,6 +94,12 @@ impl FromStr for RepositoryId {
     }
 }
 
+impl From<i32> for RepositoryId {
+    fn from(id: i32) -> RepositoryId {
+        RepositoryId::new(id)
+    }
+}
+
 #[cfg(test)]
 mod test {
     use mononoke_macros::mononoke;
