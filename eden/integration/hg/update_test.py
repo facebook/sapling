@@ -1522,13 +1522,11 @@ class UpdateDedicatedExecutorTest(EdenHgTestCase):
         """Test that checkout can be completed on a dedicated executor."""
         self.assert_status_empty()
 
-        self.chmod("hello.txt", 0o755)
+        self.write_file("hello.txt", "saluton")
         self.assert_status({"hello.txt": "M"})
-        commit4 = self.repo.commit("Update hello.txt mode")
 
-        self.repo.update(self.commit1)
-        self.repo.update(commit4)
-        self.touch("hello.txt")
-        self.repo.update(self.commit1)
-        self.repo.update(commit4)
+        self.repo.update(".", clean=True)
+        self.assertEqual("hola", self.read_file("hello.txt"))
         self.assert_status_empty()
+        self.write_file("goodbye.txt", "cya")
+        self.assert_status({"goodbye.txt": "?"})
