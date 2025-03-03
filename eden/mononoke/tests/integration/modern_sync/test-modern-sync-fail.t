@@ -63,12 +63,12 @@ Sync all bookmarks moves
   Initialized channels
   Calculating segments for entry 1
   Skipping 0 commits, starting sync of 1 commits 
-  Uploaded 2 contents
-  Found error: Trees upload: Expected 3 responses, got 0, retrying attempt #0
-  Found error: Trees upload: Expected 3 responses, got 0, retrying attempt #1
-  Found error: Trees upload: Expected 3 responses, got 0, retrying attempt #2
-  Failed to upload trees: Trees upload: Expected 3 responses, got 0
-  Trees flush failed: Trees upload: Expected 3 responses, got 0
+  Uploaded 2 contents with size 5 B in 0s
+  Found error: Trees upload: Expected 2 responses, got 0, retrying attempt #0
+  Found error: Trees upload: Expected 2 responses, got 0, retrying attempt #1
+  Found error: Trees upload: Expected 2 responses, got 0, retrying attempt #2
+  Failed to upload trees: Trees upload: Expected 2 responses, got 0
+  Trees flush failed: Trees upload: Expected 2 responses, got 0
   Execution error: Error while waiting for commit to be synced Error processing changesets: Error waiting for files/trees error received oneshot canceled
   Error: Execution failed
   [1]

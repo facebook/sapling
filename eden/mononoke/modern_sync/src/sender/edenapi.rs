@@ -132,8 +132,6 @@ impl EdenapiSender {
             actual_responses
         );
 
-        info!(self.logger, "Uploaded {} contents", actual_responses);
-
         Ok(())
     }
 

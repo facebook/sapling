@@ -10,6 +10,7 @@ use std::sync::Arc;
 use std::time::Duration;
 
 use anyhow::Result;
+use bytesize::ByteSize;
 use edenapi_types::AnyFileContentId;
 use futures::channel::oneshot;
 use mercurial_types::blobs::HgBlobChangeset;
@@ -19,6 +20,7 @@ use mononoke_macros::mononoke;
 use mononoke_types::BonsaiChangeset;
 use mononoke_types::FileContents;
 use slog::error;
+use slog::info;
 use slog::Logger;
 use stats::define_stats;
 use stats::prelude::*;
@@ -176,7 +178,7 @@ impl SendManager {
                         }
 
                         if current_batch_size >= MAX_BLOB_BYTES || current_batch.len() >= MAX_CONTENT_BATCH_SIZE {
-                            if let Err(e) = flush_batch(&content_es, &mut current_batch, &mut pending_messages, &content_logger, reponame.clone()).await {
+                            if let Err(e) = flush_batch(&content_es, &mut current_batch, current_batch_size, &mut pending_messages, &content_logger, reponame.clone()).await {
                                 error!(content_logger, "Error processing content: {:?}", e);
                                 return;
                             }
@@ -185,7 +187,7 @@ impl SendManager {
                     }
                     _ = flush_timer.tick() => {
                         if current_batch_size > 0 || !pending_messages.is_empty() {
-                            if let Err(e) = flush_batch(&content_es, &mut current_batch, &mut pending_messages, &content_logger, reponame.clone()).await {
+                            if let Err(e) = flush_batch(&content_es, &mut current_batch,current_batch_size,  &mut pending_messages, &content_logger, reponame.clone()).await {
                                 error!(content_logger, "Error processing content: {:?}", e);
                                 return;
                             }
@@ -198,6 +200,7 @@ impl SendManager {
             async fn flush_batch(
                 content_es: &Arc<EdenapiSender>,
                 current_batch: &mut Vec<(AnyFileContentId, FileContents)>,
+                current_batch_size: u64,
                 pending_messages: &mut VecDeque<oneshot::Sender<Result<(), anyhow::Error>>>,
                 content_logger: &Logger,
                 reponame: String,
@@ -213,8 +216,16 @@ impl SendManager {
                         return Err(e);
                     } else {
                         let elapsed = start.elapsed().as_secs() / current_batch_len as u64;
+
                         STATS::content_upload_time_s.add_value(elapsed as i64, (reponame.clone(),));
                         STATS::synced_contents.add_value(current_batch_len, (reponame.clone(),));
+                        info!(
+                            content_logger,
+                            "Uploaded {} contents with size {} in {}s",
+                            current_batch_len,
+                            ByteSize::b(current_batch_size).to_string(),
+                            elapsed
+                        );
                     }
                 }
 
