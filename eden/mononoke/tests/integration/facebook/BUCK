@@ -258,6 +258,7 @@ dott_test(
         "//eden/mononoke/scs/scs_server:scs_server",
         "//eden/mononoke/tools/admin:admin",
         "//eden/mononoke/tools/testtool:testtool",
+        "//metalos/facebook/fb303-status:fb303-status",
     ],
 )
 
