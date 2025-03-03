@@ -14,5 +14,8 @@ python_library(
 
 bento_test_kernel(
     kernel_name = "eden",
-    notebooks = ["notebooks/usc_probability_distribution.py"],
+    notebooks = [
+        "notebooks/usc_probability_distribution.py",
+        "notebooks/usc_deep_dive.py",
+    ],
 )
