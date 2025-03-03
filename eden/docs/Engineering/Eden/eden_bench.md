@@ -70,6 +70,23 @@ Example:
 BENCHMARK_ENABLE_ON_DISK_RG=1 /usr/local/libexec/eden/eden_bench.sh 5808178a971157999fb581af1c59ade724d66f8e sl_prefetch
 ```
 
+## Check Configuration
+
+If your host is enrolled to use the Mononoke dogfooding tier, it is recommended to disable it as it may impact performance.
+
+```
+$ hg config | grep edenapi.url
+```
+
+`https://mononoke-dogfooding.internal.tfbnw.net/edenapi/` is the Mononoke dogfooding tier
+
+Add these lines to your `~/.hgrc`
+
+```
+[edenapi]
+url=https://mononoke.internal.tfbnw.net/edenapi/
+```
+
 ## Results for Automation
 
 The results in json and cvs formats are available here:
