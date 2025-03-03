@@ -126,7 +126,6 @@ impl MononokeServerProcess {
         logger: &Logger,
         scuba: &MononokeScubaSampleBuilder,
     ) -> Result<()> {
-        assert!(repo_name.is_empty());
         // Check if the input repo is already initialized. This can happen if the repo is a
         // shallow-sharded repo, in which case it would already be initialized during service startup.
         if self.repos_mgr.repos().get_by_name(repo_name).is_none() {
