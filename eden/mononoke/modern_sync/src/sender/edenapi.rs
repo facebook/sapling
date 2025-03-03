@@ -32,6 +32,7 @@ use futures::stream;
 use futures::FutureExt;
 use futures::StreamExt;
 use futures::TryStreamExt;
+use http_client::HttpVersion;
 use mercurial_types::blobs::HgBlobChangeset;
 use mercurial_types::HgChangesetId;
 use mercurial_types::HgFileNodeId;
@@ -80,6 +81,7 @@ impl EdenapiSender {
             .repo_name(&reponame)
             .server_url(url)
             .http_config(http_config)
+            .http_version(HttpVersion::V11)
             .timeout(Duration::from_secs(300))
             .build()?;
 
