@@ -132,6 +132,16 @@ export BENCHMARK_ENABLE_CAS=1
 export BENCHMARK_ENABLE_CAS=0
 ```
 
+## ❤️‍🩹 Recovering from a Bad State:
+
+Eden bench script uses a **separate** EdenFS daemon, Sapling backing repo and `fbsource` repo checkout.
+Your current `fbsource` repo checkout remains intact while running benchmarks and your work is not disrupted.
+
+If your benchmarking repository has become corrupted or EdenFS is stuck:
+1. kill the corresponding EdenFS daemon if running (`ps ax | grep /usr/local/libexec/eden/edenfs | grep benchmarking`)
+2. force umount the repo (`sudo umount -lf  /data/users/$USER/benchmarking/__test_fbsource_prod/` or dev)
+3. remove the entire directory (`/data/users/$USER/benchmarking/`)
+
 <br>
 
 Please, check out more options available here: [source](https://www.internalfb.com/code/fbsource/[16dae41e91d3704edd3993bbc8db372c2fac7993]/fbcode/eden/fs/scripts/facebook/eden_bench.sh?lines=143-184)
