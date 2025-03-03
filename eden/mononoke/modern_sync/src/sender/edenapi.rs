@@ -15,6 +15,7 @@ use clientinfo::ClientEntryPoint;
 use clientinfo::ClientInfo;
 use cloned::cloned;
 use context::CoreContext;
+use edenapi::paths;
 use edenapi::Client;
 use edenapi::HttpClientBuilder;
 use edenapi::HttpClientConfig;
@@ -125,6 +126,12 @@ impl EdenapiSender {
             .process_files_upload(full_items, None, None)
             .await?;
 
+        util::log_stats_to_scuba(
+            ctx.scuba().clone(),
+            &response.stats.await?,
+            paths::UPLOAD_FILE,
+        );
+
         let actual_responses = response.entries.try_collect::<Vec<_>>().await?.len();
 
         ensure!(
@@ -156,6 +163,13 @@ impl EdenapiSender {
         let expected_responses = entries.len();
         let res = self.client.upload_trees_batch(entries).await?;
         let actual_responses = res.entries.try_collect::<Vec<_>>().await?.len();
+
+        util::log_stats_to_scuba(
+            self.ctx.scuba().clone(),
+            &res.stats.await?,
+            paths::UPLOAD_TREES,
+        );
+
         ensure!(
             expected_responses == actual_responses,
             "Trees upload: Expected {} responses, got {}",
@@ -183,6 +197,13 @@ impl EdenapiSender {
         let expected_responses = filenodes.len();
         let res = self.client.upload_filenodes_batch(filenodes).await?;
         let actual_responses = res.entries.try_collect::<Vec<_>>().await?.len();
+
+        util::log_stats_to_scuba(
+            self.ctx.scuba().clone(),
+            &res.stats.await?,
+            paths::UPLOAD_FILENODES,
+        );
+
         ensure!(
             expected_responses == actual_responses,
             "Filenodes upload: Expected {} responses, got {}",
@@ -233,6 +254,12 @@ impl EdenapiSender {
 
         let expected_responses = entries.len();
         let res = self.client.upload_identical_changesets(entries).await?;
+        util::log_stats_to_scuba(
+            self.ctx.scuba().clone(),
+            &res.stats.await?,
+            paths::UPLOAD_IDENTICAL_CHANGESET,
+        );
+
         let responses = res.entries.try_collect::<Vec<_>>().await?;
         ensure!(
             expected_responses == responses.len(),

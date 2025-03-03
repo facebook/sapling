@@ -159,7 +159,7 @@ static FILES_ATTRS_INFLIGHT: Counter = Counter::new_counter("edenapi.files_attrs
 pub static RECENT_DOGFOODING_REQUESTS: Lazy<ExpiringBool> =
     Lazy::new(|| ExpiringBool::new(Duration::from_secs(5)));
 
-mod paths {
+pub mod paths {
     pub const ALTER_SNAPSHOT: &str = "snapshot/alter";
     pub const BLAME: &str = "blame";
     pub const BOOKMARKS: &str = "bookmarks";
