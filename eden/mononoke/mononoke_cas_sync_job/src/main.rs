@@ -33,6 +33,7 @@ use bookmarks::BookmarkUpdateLogId;
 use bookmarks::Freshness;
 use borrowed::borrowed;
 use cas_client::build_mononoke_cas_client;
+use cas_client::get_prod_usecase_from_reponame;
 use cas_client::CasClient;
 use changesets_uploader::CasChangesetsUploader;
 use clap_old::Arg;
@@ -675,6 +676,7 @@ async fn run<'a>(
         ctx.clone(),
         &repo_name,
         false,
+        &get_prod_usecase_from_reponame(ctx, &repo_name),
     )?);
     let resolved_repo = args::resolve_repo_by_name(matches.config_store(), matches, &repo_name)
         .with_context(|| format!("Invalid repo name provided: {}", &repo_name))?;
