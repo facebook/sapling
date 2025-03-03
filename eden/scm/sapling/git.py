@@ -996,8 +996,13 @@ class Submodule:
                 " creating submodule workingcopy at %s with backing repo %s\n"
                 % (repopath, backingrepo.root)
             )
+            # Prefer parentrepo's dotdir.
+            share_ui = backingrepo.ui
+            if share_ui.identity.dotdir() != ui.identity.dotdir():
+                share_ui = share_ui.copy()
+                share_ui.identity = ui.identity
             repo = hg.share(
-                backingrepo.ui,
+                share_ui,
                 backingrepo.root,
                 repopath,
                 update=False,
