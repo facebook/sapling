@@ -241,6 +241,13 @@ mononoke_fbpkg(
     },
 )
 
+mononoke_fbpkg(
+    name = "mononoke.tail_to_cloudwatch",
+    path_actions = {
+        "tail_to_cloudwatch": "//eden/mononoke/tools/tail-to-cloudwatch:tail-to-cloudwatch",
+    },
+)
+
 tw.container(
     name = "tw.mononoke.git_server",
     features = [
