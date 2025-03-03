@@ -59,6 +59,19 @@ UBloksCarbonFollowersTabControllerTypedRequest.php1699560a592d8f9f0f6dac9cc19fc9
 * Augmented manifests entries can be converted to Sapling manifests entries with separate file/tree metadata.
 * The text format enables bisecting for efficient searching and debugging
 
+## Content-Addressed File Blobs
+In the Sapling data model, files are identified by a filenodeid, which is a SHA1 hash of a file blob combined with filenode metadata prefix.
+This metadata includes sapling copy info header and p1/p2 pointing to parents filenodes.
+In contrast, the CASC data model differs in its approach. File blobs are now stored raw and addressed using a Blake3 hash and size of their content. The p1/p2 information is retrieved separately through the history Sapling Remote API endpoint when necessary, while the copy info header is stored within augmented trees.
+
+The CASC data model facilitates an exact match between files and their cached blobs.
+
+Two separate small Sapling Caches are utilized to store distinct mappings:
+* The `/var/cache/hgcache/<repo>/indexedlogdatastore_aux cache` (auxiliary file metadata cache) stores the relationship between a filenode id and its corresponding blake3/size information (a digest).
+* The `<backing repo>/.hg/store/manifests/treeaux cache` (auxiliary tree metadata cache) maintains the mapping between a Sapling tree id and an augmented manifest digest.
+
+
+
 ## Storage in Mononoke
 
 * In Mononoke, Augmented Manifests are stored in a binary format, [specifically serialized thrift](https://www.internalfb.com/code/fbsource/[95f0848f732fb330970d48c0c350557f1f3f7472]/fbcode/eden/mononoke/mercurial/types/if/mercurial_thrift.thrift?lines=90), and are addressed using sapling manifest ids.
