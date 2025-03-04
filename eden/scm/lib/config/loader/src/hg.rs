@@ -995,7 +995,7 @@ fn load_dynamic(
                     Some(io_error) if io_error.kind() == ErrorKind::PermissionDenied => true,
                     _ => false,
                 });
-            if !is_perm_error {
+            if !is_perm_error || !dynamic_path.exists() {
                 return Err(e);
             }
         }

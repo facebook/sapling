@@ -247,7 +247,7 @@ hgrc.dynamic write errors.
   $ rm -f .hg/hgrc.dynamic
   $ chmod u-w .hg/
   $ hg log -r tip
-  hg: parse errors: required config not found at $TESTTMP/client2/.hg/hgrc.dynamic
+  hg: parse errors: no write access to "$TESTTMP/client2/.hg" (Os { code: 13, kind: PermissionDenied, message: "Permission denied" })
   
   [255]
 #endif
