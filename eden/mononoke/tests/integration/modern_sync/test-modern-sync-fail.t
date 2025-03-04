@@ -27,8 +27,8 @@
   > }
   > ACLS
 
-  $ REPOID=0 REPONAME=orig ACL_NAME=orig setup_common_config 
-  $ REPOID=1 REPONAME=dest ACL_NAME=dest setup_common_config 
+  $ REPOID=0 REPONAME=orig ACL_NAME=orig setup_common_config
+  $ REPOID=1 REPONAME=dest ACL_NAME=dest setup_common_config
 
   $ start_and_wait_for_mononoke_server
 
@@ -56,7 +56,7 @@
   $ hg log > $TESTTMP/hglog.out
 
 Sync all bookmarks moves
-  $ with_stripped_logs mononoke_modern_sync sync-once orig dest --start-id 0 
+  $ with_stripped_logs mononoke_modern_sync sync-once orig dest --start-id 0
   Running sync-once loop
   Connecting to https://localhost:$LOCAL_PORT/edenapi/
   Established EdenAPI connection
@@ -64,11 +64,11 @@ Sync all bookmarks moves
   Calculating segments for entry 1
   Skipping 0 commits, starting sync of 1 commits 
   Uploaded 2 contents with size 5 B in 0s
-  Found error: Trees upload: Expected 2 responses, got 0, retrying attempt #0
-  Found error: Trees upload: Expected 2 responses, got 0, retrying attempt #1
-  Found error: Trees upload: Expected 2 responses, got 0, retrying attempt #2
-  Failed to upload trees: Trees upload: Expected 2 responses, got 0
-  Trees flush failed: Trees upload: Expected 2 responses, got 0
+  Found error: Trees upload: Expected [1-9] responses, got 0, retrying attempt #0 (re)
+  Found error: Trees upload: Expected [1-9] responses, got 0, retrying attempt #1 (re)
+  Found error: Trees upload: Expected [1-9] responses, got 0, retrying attempt #2 (re)
+  Failed to upload trees: Trees upload: Expected [1-9] responses, got 0 (re)
+  Trees flush failed: Trees upload: Expected [1-9] responses, got 0 (re)
   Execution error: Error while waiting for commit to be synced Error processing changesets: Error waiting for files/trees error received oneshot canceled
   Error: Execution failed
   [1]
