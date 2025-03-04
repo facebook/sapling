@@ -15,12 +15,10 @@ use std::hash::Hash;
 ///
 /// NOTE: This is not a general purpose map implementation. It is designed
 /// specifically for cases where each key always maps to the same value.
-#[allow(dead_code)]
 pub struct CountedMap<K, V> {
     inner: HashMap<K, (V, usize)>,
 }
 
-#[allow(dead_code)]
 impl<K, V> CountedMap<K, V>
 where
     K: Eq + Hash,
@@ -35,6 +33,7 @@ where
     }
 
     /// Returns a reference to the value corresponding to the key.
+    #[allow(dead_code)]
     pub fn get(&self, key: &K) -> Option<&V> {
         self.inner.get(key).map(|(v, _)| v)
     }

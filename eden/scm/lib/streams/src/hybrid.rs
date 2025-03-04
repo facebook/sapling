@@ -5,7 +5,6 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-use std::collections::HashMap;
 use std::collections::VecDeque;
 use std::fmt::Debug;
 use std::hash::Hash;
@@ -17,6 +16,8 @@ use futures::stream::StreamExt;
 use futures::task::Context;
 use futures::task::Poll;
 use futures::Stream;
+
+use crate::countedmap::CountedMap;
 
 /// Resolve a stream of `I`s (inputs) into a stream of `O`s (outputs).
 ///
@@ -41,7 +42,7 @@ struct HybridStreamState<I, O, E> {
     request: Option<BoxStream<'static, Result<(I, O), E>>>,
 
     /// Result from consumed `request` stream.
-    response: HashMap<I, O>,
+    response: CountedMap<I, O>,
 
     /// Defines how to resolve I to O.
     resolver: Box<dyn HybridResolver<I, O, E> + Send + Sync + 'static>,
@@ -77,7 +78,7 @@ enum ResolveState<I, O> {
 impl<I, O, E> HybridStream<I, O, E>
 where
     I: Eq + Hash + Clone + Send + Sync + Debug + 'static,
-    O: Send + Sync + Debug + 'static,
+    O: Send + Sync + Debug + Clone + 'static,
     E: 'static,
 {
     /// Create a new `HybridStream`.
@@ -108,7 +109,7 @@ where
 impl<I, O, E> Stream for HybridStream<I, O, E>
 where
     I: Eq + Hash + Clone + Send + Sync + Debug + 'static,
-    O: Send + Sync + Debug + 'static,
+    O: Send + Sync + Debug + Clone + 'static,
     E: 'static,
 {
     type Item = Result<(I, O), E>;
@@ -121,7 +122,7 @@ where
 impl<I, O, E> HybridStreamState<I, O, E>
 where
     I: Eq + Hash + Clone + Debug,
-    O: Debug,
+    O: Debug + Clone,
 {
     /// A future to produce one `next` item.
     async fn next_item(&mut self) -> Result<Option<(I, O)>, E> {
@@ -234,6 +235,7 @@ where
 
 #[cfg(test)]
 mod tests {
+    use std::collections::HashMap;
     use std::sync::Arc;
     use std::sync::Mutex;
 
@@ -386,10 +388,8 @@ mod tests {
         assert_eq!(u(stream.next().await), (3, "3".to_string()));
         assert_eq!(u(stream.next().await), (5, "5".to_string()));
         assert_eq!(u(stream.next().await), (10, "10".to_string()));
-        // tofix: the duplicate element 10 should not cause an error.
-        assert_eq!(
-            stream.next().await.unwrap().unwrap_err().to_string(),
-            "give up after 1 attempts for input [10]"
-        );
+        // the duplicate element 10 should not cause an error.
+        assert_eq!(u(stream.next().await), (10, "10".to_string()));
+        assert!(stream.next().await.is_none());
     }
 }
