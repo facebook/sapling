@@ -25,7 +25,7 @@ use cloned::cloned;
 use commit_graph::CommitGraphRef;
 use context::CoreContext;
 use context::SessionContainer;
-use edenapi_types::AnyFileContentId;
+use filestore::FetchKey;
 use futures::channel::oneshot;
 use futures::stream;
 use futures::StreamExt;
@@ -425,12 +425,13 @@ pub async fn process_one_changeset(
         };
 
         if let Some(cid) = cid {
-            let blob = cid.load(ctx, &repo.repo_blobstore()).await?;
+            let metadata =
+                filestore::get_metadata(repo.repo_blobstore(), ctx, &FetchKey::Canonical(cid))
+                    .await?
+                    .expect("blob not found");
+
             send_manager
-                .send_content(ContentMessage::Content((
-                    AnyFileContentId::ContentId(cid.into()),
-                    blob,
-                )))
+                .send_content(ContentMessage::Content(cid, metadata.total_size))
                 .await?;
         }
     }

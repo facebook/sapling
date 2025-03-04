@@ -11,6 +11,7 @@ use std::time::Duration;
 
 use anyhow::ensure;
 use anyhow::Result;
+use blobstore::Loadable;
 use clientinfo::ClientEntryPoint;
 use clientinfo::ClientInfo;
 use cloned::cloned;
@@ -41,7 +42,7 @@ use mercurial_types::HgManifestId;
 use mononoke_app::args::TLSArgs;
 use mononoke_types::BonsaiChangeset;
 use mononoke_types::ChangesetId;
-use mononoke_types::FileContents;
+use mononoke_types::ContentId;
 use repo_blobstore::RepoBlobstore;
 use slog::info;
 use slog::warn;
@@ -96,28 +97,23 @@ impl EdenapiSender {
         })
     }
 
-    pub async fn upload_contents(
-        &self,
-        contents: Vec<(AnyFileContentId, FileContents)>,
-    ) -> Result<()> {
+    pub async fn upload_contents(&self, contents: Vec<ContentId>) -> Result<()> {
         self.with_retry(|this| this.upload_contents_attempt(contents.clone()).boxed())
             .await
     }
 
-    async fn upload_contents_attempt(
-        &self,
-        contents: Vec<(AnyFileContentId, FileContents)>,
-    ) -> Result<()> {
+    async fn upload_contents_attempt(&self, contents: Vec<ContentId>) -> Result<()> {
         let repo_blobstore = self.repo_blobstore.clone();
         let ctx = self.ctx.clone();
 
         let mut full_items = Vec::new();
 
-        for (id, blob) in contents {
+        for id in contents {
             cloned!(ctx, repo_blobstore);
+            let blob = id.load(&ctx, &self.repo_blobstore).await?;
             let stream = stream_file_bytes(&repo_blobstore, &ctx, blob, Range::all())?;
             let bytes = util::concatenate_bytes(stream.try_collect::<Vec<_>>().await?);
-            full_items.push((id, bytes.into()));
+            full_items.push((AnyFileContentId::ContentId(id.into()), bytes.into()));
         }
 
         let expected_responses = full_items.len();

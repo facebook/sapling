@@ -12,14 +12,13 @@ use std::time::Duration;
 use anyhow::Result;
 use bytesize::ByteSize;
 use context::CoreContext;
-use edenapi_types::AnyFileContentId;
 use futures::channel::oneshot;
 use mercurial_types::blobs::HgBlobChangeset;
 use mercurial_types::HgFileNodeId;
 use mercurial_types::HgManifestId;
 use mononoke_macros::mononoke;
 use mononoke_types::BonsaiChangeset;
-use mononoke_types::FileContents;
+use mononoke_types::ContentId;
 use mutable_counters::MutableCounters;
 use slog::debug;
 use slog::error;
@@ -82,7 +81,7 @@ pub struct SendManager {
 
 pub enum ContentMessage {
     // Send the content to remote end
-    Content((AnyFileContentId, FileContents)),
+    Content(ContentId, u64),
     // Finished sending content of a changeset. Go ahead with files and trees
     ContentDone(oneshot::Sender<Result<()>>, oneshot::Sender<Result<()>>),
 }
@@ -184,10 +183,9 @@ impl SendManager {
                         debug!(content_logger, "Content channel capacity: {} max capacity: {} in queue: {}", content_recv.capacity(), CONTENT_CHANNEL_SIZE,  content_recv.len());
                         STATS::contents_queue_len.add_value(content_recv.len() as i64, (reponame.clone(),));
                         match msg {
-                            Some(ContentMessage::Content((ct_id, fcs))) => {
-                                let size = fcs.size();
+                            Some(ContentMessage::Content(ct_id, size)) => {
                                 current_batch_size += size;
-                                current_batch.push((ct_id, fcs));
+                                current_batch.push(ct_id);
                             }
                             Some(ContentMessage::ContentDone(files_sender, tree_sender)) => {
                                 pending_messages.push_back(files_sender);
@@ -218,7 +216,7 @@ impl SendManager {
 
             async fn flush_batch(
                 content_es: &Arc<EdenapiSender>,
-                current_batch: &mut Vec<(AnyFileContentId, FileContents)>,
+                current_batch: &mut Vec<ContentId>,
                 current_batch_size: u64,
                 pending_messages: &mut VecDeque<oneshot::Sender<Result<(), anyhow::Error>>>,
                 content_logger: &Logger,
