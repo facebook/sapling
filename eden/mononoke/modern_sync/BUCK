@@ -50,5 +50,6 @@ rust_binary(
         "//eden/scm/lib/edenapi:edenapi",
         "//eden/scm/lib/edenapi/types:edenapi_types",
         "//eden/scm/lib/http-client:http-client",
+        "//eden/scm/lib/minibytes:minibytes",
     ],
 )

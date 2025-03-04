@@ -10,6 +10,7 @@ use std::collections::HashSet;
 use std::time::Duration;
 
 use anyhow::ensure;
+use anyhow::Error;
 use anyhow::Result;
 use blobstore::Loadable;
 use clientinfo::ClientEntryPoint;
@@ -105,16 +106,20 @@ impl EdenapiSender {
     async fn upload_contents_attempt(&self, contents: Vec<ContentId>) -> Result<()> {
         let repo_blobstore = self.repo_blobstore.clone();
         let ctx = self.ctx.clone();
-
-        let mut full_items = Vec::new();
-
-        for id in contents {
-            cloned!(ctx, repo_blobstore);
-            let blob = id.load(&ctx, &self.repo_blobstore).await?;
-            let stream = stream_file_bytes(&repo_blobstore, &ctx, blob, Range::all())?;
-            let bytes = util::concatenate_bytes(stream.try_collect::<Vec<_>>().await?);
-            full_items.push((AnyFileContentId::ContentId(id.into()), bytes.into()));
-        }
+        let len = contents.len();
+        let full_items = stream::iter(contents)
+            .map(|id| {
+                cloned!(ctx, repo_blobstore);
+                async move {
+                    let blob = id.load(&ctx, &repo_blobstore).await?;
+                    let stream = stream_file_bytes(&repo_blobstore, &ctx, blob, Range::all())?;
+                    let bytes = util::concatenate_bytes(stream.try_collect::<Vec<_>>().await?);
+                    Ok::<_, Error>((AnyFileContentId::ContentId(id.into()), bytes.into()))
+                }
+            })
+            .buffer_unordered(len)
+            .try_collect::<Vec<(AnyFileContentId, minibytes::Bytes)>>()
+            .await?;
 
         let expected_responses = full_items.len();
         let response = self
