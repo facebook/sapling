@@ -157,13 +157,16 @@ impl EdenapiSender {
     }
 
     async fn upload_trees_attempt(&self, trees: Vec<HgManifestId>) -> Result<()> {
+        let batch_len = trees.len();
         let entries = stream::iter(trees.clone())
             .map(|mf_id| {
                 let ctx = self.ctx.clone();
                 let repo_blobstore = self.repo_blobstore.clone();
                 async move { util::from_tree_to_entry(mf_id, &ctx, &repo_blobstore).await }
             })
-            .buffer_unordered(10)
+            // Modern sync controls the size of the dequeue batch, so we
+            // can read all the tree blobs concurrently.
+            .buffer_unordered(batch_len)
             .try_collect::<Vec<_>>()
             .await?;
 
@@ -198,13 +201,16 @@ impl EdenapiSender {
     }
 
     async fn upload_filenodes_attempt(&self, fn_ids: Vec<HgFileNodeId>) -> Result<()> {
+        let batch_len = fn_ids.len();
         let filenodes = stream::iter(fn_ids)
             .map(|file_id| {
                 let ctx = self.ctx.clone();
                 let repo_blobstore = self.repo_blobstore.clone();
                 async move { util::from_id_to_filenode(file_id, &ctx, &repo_blobstore).await }
             })
-            .buffer_unordered(10)
+            // Modern sync controls the size of the dequeue batch,
+            // so we can read all the filenode blobs concurrently.
+            .buffer_unordered(batch_len)
             .try_collect::<Vec<_>>()
             .await?;
 
