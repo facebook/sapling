@@ -267,20 +267,17 @@ mod tests {
             // Exercise ".await" in this function.
             sleep(Duration::from_millis(1)).await;
             // Return nothing for 404.
-            let output_iter = input
-                .to_vec()
-                .into_iter()
-                .filter(|&i| i != 404)
-                .map(move |i| {
-                    let o = i.to_string();
-                    cached.lock().unwrap().insert(i, o.clone());
-                    // Return an error for 500.
-                    if i == 500 {
-                        Err(error("cannot resolve 500"))
-                    } else {
-                        Ok((i, o))
-                    }
-                });
+            let input = input.to_vec();
+            let output_iter = input.into_iter().filter(|&i| i != 404).map(move |i| {
+                let o = i.to_string();
+                cached.lock().unwrap().insert(i, o.clone());
+                // Return an error for 500.
+                if i == 500 {
+                    Err(error("cannot resolve 500"))
+                } else {
+                    Ok((i, o))
+                }
+            });
             Ok(Box::pin(stream::iter(output_iter)))
         }
 
