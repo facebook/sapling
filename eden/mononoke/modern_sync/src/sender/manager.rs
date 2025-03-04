@@ -49,18 +49,23 @@ define_stats! {
     changesets_queue_len: dynamic_histogram("{}.changesets.queue_len", (repo: String); 10, 0, crate::sender::manager::CHANGESET_CHANNEL_SIZE as u32, Average; P 50; P 75; P 95; P 99),
 }
 
+// Channel sizes
 const CONTENT_CHANNEL_SIZE: usize = 8000;
 const FILES_CHANNEL_SIZE: usize = 10000;
 const TREES_CHANNEL_SIZE: usize = 10000;
 const CHANGESET_CHANNEL_SIZE: usize = 5000;
 
+// Flush intervals
 const CHANGESETS_FLUSH_INTERVAL: Duration = Duration::from_secs(5);
 const TREES_FLUSH_INTERVAL: Duration = Duration::from_secs(3);
+const FILENODES_FLUSH_INTERVAL: Duration = Duration::from_secs(3);
 const CONTENTS_FLUSH_INTERVAL: Duration = Duration::from_secs(3);
 
+// Batch sizes and limits
 const MAX_CHANGESET_BATCH_SIZE: usize = 10;
 const MAX_TREES_BATCH_SIZE: usize = 300;
 const MAX_CONTENT_BATCH_SIZE: usize = 100;
+const MAX_FILENODES_BATCH_SIZE: usize = 300;
 const MAX_BLOB_BYTES: u64 = 10 * 10 * 1024 * 1024; // 100 MB
 
 #[derive(Clone)]
@@ -120,7 +125,7 @@ impl SendManager {
 
         // Create channel for receiving files
         let (files_sender, files_recv) = mpsc::channel(FILES_CHANNEL_SIZE);
-        Self::spawn_files_sender(
+        Self::spawn_filenodes_sender(
             reponame.clone(),
             files_recv,
             external_sender.clone(),
@@ -246,61 +251,101 @@ impl SendManager {
         });
     }
 
-    fn spawn_files_sender(
+    fn spawn_filenodes_sender(
         reponame: String,
-        mut files_recv: mpsc::Receiver<FileMessage>,
-        files_es: Arc<EdenapiSender>,
-        files_logger: Logger,
+        mut filenodes_recv: mpsc::Receiver<FileMessage>,
+        filenodes_es: Arc<EdenapiSender>,
+        filenodes_logger: Logger,
     ) {
         mononoke::spawn_task(async move {
             let mut encountered_error: Option<anyhow::Error> = None;
-            while let Some(msg) = files_recv.recv().await {
-                match msg {
-                    FileMessage::WaitForContents(receiver) => {
-                        // Read outcome from content upload
-                        let start = std::time::Instant::now();
-                        match receiver.await {
-                            Ok(Err(e)) => {
-                                encountered_error.get_or_insert(e.context(
-                                    "Contents error received. Winding down files sender.",
-                                ));
+            let mut batch_filenodes = Vec::new();
+            let mut batch_done_senders = VecDeque::new();
+            let mut timer = interval(FILENODES_FLUSH_INTERVAL);
+
+            loop {
+                tokio::select! {
+                    msg = filenodes_recv.recv() => {
+                        match msg {
+                            Some(FileMessage::WaitForContents(receiver)) => {
+                                let start = std::time::Instant::now();
+                                match receiver.await {
+                                    Ok(Err(e)) => {
+                                        encountered_error.get_or_insert(e.context(
+                                            "Contents error received. Winding down files sender."
+                                        ));
+                                    }
+                                    _ => (),
+                                }
+                                let elapsed = start.elapsed().as_secs();
+                                STATS::content_wait_time_s.add_value(elapsed as i64, (reponame.clone(),));
                             }
-                            Err(e) => {
-                                encountered_error.get_or_insert(anyhow::anyhow!(format!(
-                                    "Error waiting for contents: {:#}",
-                                    e
-                                )));
+                            Some(FileMessage::FileNode(f)) if encountered_error.is_none() => {
+                                batch_filenodes.push(f);
                             }
-                            _ => (),
+                            Some(FileMessage::FilesDone(sender)) => {
+                                batch_done_senders.push_back(sender);
+                            }
+                            Some(FileMessage::FileNode(_)) => (),
+                            None => break,
                         }
-                        let elapsed = start.elapsed().as_secs();
-                        STATS::content_wait_time_s.add_value(elapsed as i64, (reponame.clone(),));
-                    }
-                    FileMessage::FileNode(f) if encountered_error.is_none() => {
-                        // Upload the file nodes through sender
-                        if let Err(e) = files_es.upload_filenodes(vec![(f)]).await {
-                            encountered_error.get_or_insert(
-                                e.context(format!("Failed to upload filenodes: {:?}", f)),
-                            );
-                        } else {
-                            STATS::synced_filenodes.add_value(1, (reponame.clone(),));
-                        }
-                    }
-                    FileMessage::FilesDone(sender) => {
-                        if let Some(e) = encountered_error {
-                            error!(files_logger, "Error processing files/trees: {:?}", e);
-                            let _ = sender.send(Err(e));
-                            return;
-                        } else {
-                            let res = sender.send(Ok(()));
-                            if let Err(e) = res {
-                                error!(files_logger, "Error sending content ready: {:?}", e);
+                        if batch_filenodes.len() >= MAX_FILENODES_BATCH_SIZE {
+                            if let Err(e) = flush_filenodes(&filenodes_es, &mut batch_filenodes, &mut batch_done_senders, &mut encountered_error, &reponame, &filenodes_logger).await {
+                                error!(filenodes_logger, "Filenodes flush failed: {:?}", e);
                                 return;
                             }
                         }
                     }
-                    FileMessage::FileNode(_) => (),
+                    _ = timer.tick() => {
+                        if let Err(e) = flush_filenodes(&filenodes_es, &mut batch_filenodes, &mut batch_done_senders, &mut encountered_error, &reponame, &filenodes_logger).await {
+                            error!(filenodes_logger, "Filenodes flush failed: {:?}", e);
+                            return;
+                        }
+                    }
                 }
+            }
+
+            async fn flush_filenodes(
+                filenodes_es: &Arc<EdenapiSender>,
+                batch_filenodes: &mut Vec<HgFileNodeId>,
+                batch_done_senders: &mut VecDeque<oneshot::Sender<Result<()>>>,
+                encountered_error: &mut Option<anyhow::Error>,
+                reponame: &str,
+                filenodes_logger: &Logger,
+            ) -> Result<(), anyhow::Error> {
+                if !batch_filenodes.is_empty() || !batch_done_senders.is_empty() {
+                    let batch_size = batch_filenodes.len() as i64;
+                    if let Some(e) = encountered_error {
+                        let msg = format!("Error processing filenodes: {:?}", e);
+                        while let Some(sender) = batch_done_senders.pop_front() {
+                            let _ = sender.send(Err(anyhow::anyhow!(msg.clone())));
+                        }
+                        error!(filenodes_logger, "Error processing filenodes: {:?}", e);
+                        return Err(anyhow::anyhow!(msg.clone()));
+                    }
+
+                    if let Err(e) = filenodes_es
+                        .upload_filenodes(std::mem::take(batch_filenodes))
+                        .await
+                    {
+                        error!(filenodes_logger, "Failed to upload filenodes: {:?}", e);
+                        return Err(e);
+                    } else {
+                        STATS::synced_filenodes
+                            .add_value(batch_filenodes.len() as i64, (reponame.to_owned(),));
+                        info!(filenodes_logger, "Uploaded {} filenodes", batch_size,);
+                    }
+
+                    while let Some(sender) = batch_done_senders.pop_front() {
+                        let res = sender.send(Ok(()));
+                        if let Err(e) = res {
+                            let msg = format!("Error sending filenodes ready: {:?}", e);
+                            error!(filenodes_logger, "{}", msg);
+                            return Err(anyhow::anyhow!(msg));
+                        }
+                    }
+                }
+                Ok(())
             }
         });
     }
@@ -375,6 +420,7 @@ impl SendManager {
                 trees_logger: &Logger,
             ) -> Result<(), anyhow::Error> {
                 if !batch_trees.is_empty() || !batch_done_senders.is_empty() {
+                    let batch_size = batch_trees.len() as i64;
                     if let Some(e) = encountered_error {
                         let msg = format!("Error processing trees: {:?}", e);
                         while let Some(sender) = batch_done_senders.pop_front() {
@@ -388,8 +434,8 @@ impl SendManager {
                         error!(trees_logger, "Failed to upload trees: {:?}", e);
                         return Err(e);
                     } else {
-                        STATS::synced_trees
-                            .add_value(batch_trees.len() as i64, (reponame.to_owned(),));
+                        STATS::synced_trees.add_value(batch_size, (reponame.to_owned(),));
+                        info!(trees_logger, "Uploaded {} trees", batch_size,);
                     }
 
                     while let Some(sender) = batch_done_senders.pop_front() {
