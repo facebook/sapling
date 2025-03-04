@@ -164,9 +164,17 @@ struct ReadCmd {
 }
 
 #[derive(Serialize, Deserialize, Debug)]
-struct File {
+struct FileItem {
     path: String,
+    truncated: bool,
 }
+
+#[derive(Serialize, Deserialize, Debug)]
+struct File {
+    source: Option<FileItem>,
+    target: Option<FileItem>,
+}
+
 #[derive(Serialize, Deserialize, Debug)]
 struct Process {
     pid: u64,
@@ -176,6 +184,7 @@ struct Process {
     args: Vec<String>,
     command: String,
 }
+
 #[derive(Serialize, Deserialize, Debug)]
 struct Event {
     event_type: String,
@@ -186,12 +195,12 @@ struct Event {
 
 fn parse_events<R: BufRead>(reader: R) -> Result<Vec<Event>> {
     let mut objects: Vec<Event> = Vec::new();
-    let mut newObject = String::new();
+    let mut new_object = String::new();
     for line in reader.lines().map_while(Result::ok) {
-        newObject.push_str(&line);
+        new_object.push_str(&line);
         if line == "}" {
-            objects.push(serde_json::from_str(&newObject)?);
-            newObject.clear();
+            objects.push(serde_json::from_str(&new_object)?);
+            new_object.clear();
         }
     }
     Ok(objects)
@@ -279,7 +288,10 @@ mod tests {
 {
   "event_type": "NOTIFY_OPEN",
   "file": {
-    "path": "what"
+    "target": {
+      "path": "/tmp/test_dir/test_file_open",
+      "truncated": false
+    }
   },
   "process": {
     "ancestors": [],
@@ -303,7 +315,10 @@ mod tests {
 {
   "event_type": "NOTIFY_OPEN",
   "file": {
-    "path": "what"
+    "target": {
+      "path": "/tmp/test_dir/test_file_open",
+      "truncated": false
+    }
   },
   "process": {
     "ancestors": [],
@@ -319,7 +334,10 @@ mod tests {
 {
   "event_type": "NOTIFY_OPEN",
   "file": {
-    "path": "what"
+    "target": {
+      "path": "/tmp/test_dir/test_file_open",
+      "truncated": false
+    }
   },
   "process": {
     "ancestors": [],
@@ -343,7 +361,10 @@ mod tests {
 {
   "event_type": "NOTIFY_OPEN",
   "file": {
-    "path": "what"
+    "target": {
+      "path": "/tmp/test_dir/test_file_open",
+      "truncated": false
+    }
   },
   "process": {
     "ancestors": [],
@@ -359,7 +380,10 @@ mod tests {
 {
   "event_type": "NOTIFY_OPEN",
   "file": {
-    "path": "what"
+    "target": {
+      "path": "/tmp/test_dir/test_file_open",
+      "truncated": false
+    }
   },
   "process": {
     "ancestors": [],
@@ -377,7 +401,11 @@ mod tests {
             Event {
                 event_type: "NOTIFY_OPEN".to_string(),
                 file: File {
-                    path: "what".to_string(),
+                    source: None,
+                    target: Some(FileItem {
+                        path: "what".to_string(),
+                        truncated: false,
+                    }),
                 },
                 process: Process {
                     ancestors: vec![],

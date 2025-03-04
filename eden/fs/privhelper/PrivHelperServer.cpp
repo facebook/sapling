@@ -64,7 +64,7 @@ namespace facebook::eden {
 
 // Constants
 static constexpr folly::StringPiece kFamBinaryPath{
-    "/usr/local/libexec/eden/edenfs_fam"};
+    "/usr/local/libexec/eden/edenfs_fam/SCMFileAccessMonitor.app/Contents/MacOS/SCMFileAccessMonitor"};
 
 PrivHelperServer::PrivHelperServer() = default;
 
@@ -1215,11 +1215,12 @@ UnixSocket::Message PrivHelperServer::processStartFam(
                                            // folder doesn't exist
   opts.executablePath(canonicalPath(kFamBinaryPath));
   std::vector<std::string> argv = {
-      "FileMonitor",
-      "-filter",
+      "SCMFileAccessMonitor",
+      "--path-prefix",
       paths[0],
-      "-skipApple",
-      "-pretty",
+      "--events",
+      "NOTIFY_OPEN",
+      "NOTIFY_CLOSE",
   };
 
   famProcess_ = std::make_unique<FileAccessMonitorProcess>(
