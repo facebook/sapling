@@ -12,9 +12,11 @@ lru-disk-cache = { git = "https://github.com/mozilla/sccache", rev = "fdbf843d17
 perf-event = { version = "0.4", git = "https://github.com/krallin/perf-event.git", rev = "86224a9bc025d5d19f719542f27c8c629a08b167" }
 perf-event-open-sys = { version = "4.0", git = "https://github.com/krallin/perf-event.git", rev = "86224a9bc025d5d19f719542f27c8c629a08b167" }
 profiling = { version = "1.0.16", git = "https://github.com/aclysma/profiling.git", rev = "1b3e20c8e59eddbb6ae0d64fff849d07a903dd0c" }
+protobuf-build = { git = "https://github.com/fbsource/protobuf-build", rev = "ee1de946ce2fd7d06a7a4fab7141e02c49f0981f" }
 pyo3-build-config = { package = "pyo3-build-config", version = "0.21.2", git = "https://github.com/fbsource/pyo3", rev = "ff94a09031cc29d88d57ae3c846e5b871497aeb9" }
 pyo3-python-tracing-subscriber = { version = "0.1.0", git = "https://github.com/guswynn/pyo3-python-tracing-subscriber", rev = "2f67354200fe50c9a2438187c1e4e2e25abe8683" }
 quickcheck = { git = "https://github.com/jakoschiko/quickcheck", rev = "6ecdf5bb4b0132ce66670b4d46453aa022ea892c" }
+tonic = { git = "https://github.com/fbsource/tonic", rev = "47b145533ec8f26e6bd9adb84855ae05efb631b1" }
 tree-sitter-bash = { git = "https://github.com/cfsmp3/tree-sitter-bash", rev = "4e9968457cd1ee5a51f8ab875cc2fcaaf7294e94" }
 tree-sitter-c = { git = "https://github.com/cfsmp3/tree-sitter-c", rev = "d01f584b67e581e9888b4b8e71e7150fd3867e38" }
 uefisettings = { git = "https://github.com/linuxboot/uefisettings", rev = "f16daed1d2bd1216204fd24e876c6477d03aebb3" }
