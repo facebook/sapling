@@ -14,6 +14,7 @@
 //!   preventing deadlocks when one stream is waiting on another to be dropped
 //!   to complete.
 
+pub(crate) mod countedmap;
 mod hybrid;
 mod select_drop;
 
