@@ -45,3 +45,19 @@ The Local Cache Hit Rate is anticipated to surpass that of the Sapling Cache on 
 ## Requirements:
 
 * To fulfill content-addressed data requirement for the CAS storage, a new data model was developed for EdenFS and Sapling, with Augmented Manifests playing a crucial role. For more information, please refer to the dedicated page: https://www.internalfb.com/wiki/Source_Control/Engineering/CASC/augmented_manifest
+
+
+## Persistent Local Caches for On Demand:
+
+Why **Persistent Caches** on On Demand are important?
+
+The lifetime of a repository on On Demand is comprised of the preparation cycle and user session, which cannot exceed **18 hours**. 
+This duration also applies to the Sapling Cache COW mount data lifetime, EdenFS daemon lifetime and the repo checkout lifetime. 
+In the absence of prefetched Sapling Cache and with the use of resource-intensive tools like meerkat, it implies that most of the repository's data (such as www) is refetched at least daily on every host from scratch. 
+Consequently, this would result in an unsustainable load on Mononoke, our Source Control backend.
+
+Persistent Caches, of CASC, would allow to deprecate the expensive full (www) repo prefetching and significanly simplify repo cloning mechanisms for Developer Environments.
+
+
+![](px/6HWvs)
+
