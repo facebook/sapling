@@ -8,10 +8,12 @@
 #[cfg(fbcode_build)]
 use std::collections::BTreeMap;
 use std::sync::Arc;
+use std::sync::RwLock;
 
 use anyhow::Error;
 use async_trait::async_trait;
 use fbinit::FacebookInit;
+use ods_counters::OdsCounterManager;
 use permission_checker::MononokeIdentitySet;
 use scuba_ext::MononokeScubaSampleBuilder;
 
@@ -32,6 +34,7 @@ pub fn create_rate_limiter(
     _fb: FacebookInit,
     category: String,
     _config: Arc<MononokeRateLimitConfig>,
+    _counter_manager: Arc<RwLock<OdsCounterManager>>,
 ) -> BoxRateLimiter {
     Box::new(FakeLimiter { category })
 }

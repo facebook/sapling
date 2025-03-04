@@ -38,6 +38,7 @@ rust_library(
         "//eden/mononoke/cats:cats",
         "//eden/mononoke/cmdlib/mononoke_app:mononoke_app",
         "//eden/mononoke/common/connection_security_checker:connection_security_checker",
+        "//eden/mononoke/common/ods_counters:ods_counters",
         "//eden/mononoke/common/scribe_ext:scribe_ext",
         "//eden/mononoke/common/scuba_ext:scuba_ext",
         "//eden/mononoke/edenapi_service:edenapi_service",

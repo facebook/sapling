@@ -19,6 +19,7 @@ use gotham_ext::error::HttpError;
 use gotham_ext::middleware::MetadataState;
 use gotham_ext::response::build_error_response;
 use hyper::Uri;
+use ods_counters::OdsCounterManager;
 use rate_limiting::LoadShedResult;
 use scuba_ext::MononokeScubaSampleBuilder;
 
@@ -75,6 +76,7 @@ impl Middleware for ThrottleMiddleware {
                 identities,
                 main_client_id.as_deref(),
                 &mut self.scuba,
+                OdsCounterManager::new(self.fb),
             ) {
                 let err = HttpError::e429(err);
 

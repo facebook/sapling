@@ -6,11 +6,13 @@
  */
 
 use std::sync::Arc;
+use std::sync::RwLock;
 
 use anyhow::Error;
 use async_trait::async_trait;
 use fbinit::FacebookInit;
 use fbwhoami::FbWhoAmI;
+use ods_counters::OdsCounterManager;
 use permission_checker::MononokeIdentitySet;
 use rate_limiting_config::RateLimitStatus;
 use ratelim::loadlimiter;
@@ -33,12 +35,14 @@ pub fn create_rate_limiter(
     fb: FacebookInit,
     category: String,
     config: Arc<MononokeRateLimitConfig>,
+    ods_counters: Arc<RwLock<OdsCounterManager>>,
 ) -> BoxRateLimiter {
     Box::new(MononokeRateLimits {
         config,
         fb,
         category: category.clone(),
         load_limits: Arc::new(LoadLimitsInner::new(category)),
+        ods_counters,
     })
 }
 
@@ -115,9 +119,13 @@ impl RateLimiter for MononokeRateLimits {
         scuba: &mut MononokeScubaSampleBuilder,
     ) -> LoadShedResult {
         for limit in &self.config.load_shed_limits {
-            if let LoadShedResult::Fail(reason) =
-                limit.should_load_shed(self.fb, Some(identities), main_id, scuba)
-            {
+            if let LoadShedResult::Fail(reason) = limit.should_load_shed(
+                self.fb,
+                Some(identities),
+                main_id,
+                scuba,
+                self.ods_counters.clone(),
+            ) {
                 return LoadShedResult::Fail(reason);
             }
         }
@@ -195,6 +203,7 @@ pub struct MononokeRateLimits {
     fb: FacebookInit,
     category: String,
     load_limits: Arc<LoadLimitsInner>,
+    ods_counters: Arc<RwLock<OdsCounterManager>>,
 }
 
 impl std::fmt::Debug for MononokeRateLimits {
