@@ -142,6 +142,25 @@ If your benchmarking repository has become corrupted or EdenFS is stuck:
 2. force umount the repo (`sudo umount -lf  /data/users/$USER/benchmarking/__test_fbsource_prod/` or dev)
 3. remove the entire directory (`/data/users/$USER/benchmarking/`)
 
+
+## EdenFS configuration of the CAS client (former RE client)
+
+Sapling's configuration settings reflect most of the CAS client options, enabling EdenFS to support various fetching modes.
+Use config section `[cas]` to override the configs when required (we would recommend to put them to `~/.hgrc.fbsource.override`).
+
+Note that although these settings are configured through Sapling configs, they exclusively impact EdenFS and do not influence Sapling's behavior (`sl`).
+Sapling uses the thin client (also known as external client), that performs all the fetches/prefetches via Wdb CASd (`download_digests_into_cache` or `download` APIs are used).
+
+| Config | CAS | Description | RO CACHE|
+|----------|----------|----------|----------|
+|`shared_cache.local.small_files=true`|`remote_cache_config.small_files = RemoteFetchPolicy::LOCAL_FETCH_WITH_SYNC`| *This is the default mode for the dogfooding clients.* Small files are fetched directly and synced to Wdb CASd via WAL files. Large files are fetched through Wdb CASd| Used|
+|`shared_cache.local.all_files=true`|`remote_cache_config.small_files = RemoteFetchPolicy::LOCAL_FETCH_WITH_SYNC;` `remote_cache_config.large_files = RemoteFetchPolicy::LOCAL_FETCH_WITH_SYNC;`|ALL files are fetched directly and synced to Wdb CASd via WAL files| Used|
+|`shared_cache.local.small_files=false` and `shared_cache.local.all_files=false`|`remote_cache_config.small_files = RemoteFetchPolicy::REMOTE_FETCH;` `remote_cache_config.large_files = RemoteFetchPolicy::REMOTE_FETCH;`|All files are fetched via Wdb CASd|Used|
+|`use-shared-cache=false`|`RemoteCacheConfig` is not enabled|Enables the Rich Client mode, where the shared cache is not used| Not used|
+
+
+
+
 <br>
 
 Please, check out more options available here: [source](https://www.internalfb.com/code/fbsource/[16dae41e91d3704edd3993bbc8db372c2fac7993]/fbcode/eden/fs/scripts/facebook/eden_bench.sh?lines=143-184)
