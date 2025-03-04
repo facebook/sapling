@@ -289,6 +289,42 @@ mod tests {
         }
     }
 
+    #[derive(Default)]
+    struct UnorderedResolver {
+        cached: Arc<Mutex<HashMap<usize, String>>>,
+    }
+
+    #[async_trait]
+    impl HybridResolver<I, O, E> for UnorderedResolver {
+        fn resolve_local(&mut self, input: &I) -> Result<Option<O>, E> {
+            Ok(self.cached.lock().unwrap().get(input).cloned())
+        }
+
+        async fn resolve_remote(
+            &self,
+            input: &[I],
+        ) -> Result<BoxStream<'static, Result<(I, O), E>>, E> {
+            let cached = self.cached.clone();
+            // Exercise ".await" in this function.
+            sleep(Duration::from_millis(1)).await;
+            // Reverse the order of the input.
+            let input = input.to_vec();
+            let output_iter = input.into_iter().rev().map(move |i| {
+                let o = i.to_string();
+                cached.lock().unwrap().insert(i.clone(), o.clone());
+                Ok((i, o))
+            });
+            Ok(Box::pin(stream::iter(output_iter)))
+        }
+
+        fn retry_error(&self, attempt: usize, input: &[I]) -> E {
+            error(format!(
+                "give up after {} attempts for input {:?}",
+                attempt, input
+            ))
+        }
+    }
+
     fn error(msg: impl ToString) -> std::io::Error {
         std::io::Error::new(std::io::ErrorKind::Other, msg.to_string())
     }
@@ -337,6 +373,23 @@ mod tests {
         assert_eq!(
             stream.next().await.unwrap().unwrap_err().to_string(),
             "cannot resolve 500",
+        );
+    }
+
+    #[tokio::test]
+    async fn test_unordered_stream_with_duplicate_elements() {
+        let input = stream::iter(vec![0, 1, 3, 5, 10, 10].into_iter().map(Ok));
+        let resolver = UnorderedResolver::default();
+        let mut stream = HybridStream::new(Box::pin(input), resolver, 10, 0);
+        assert_eq!(u(stream.next().await), (0, "0".to_string()));
+        assert_eq!(u(stream.next().await), (1, "1".to_string()));
+        assert_eq!(u(stream.next().await), (3, "3".to_string()));
+        assert_eq!(u(stream.next().await), (5, "5".to_string()));
+        assert_eq!(u(stream.next().await), (10, "10".to_string()));
+        // tofix: the duplicate element 10 should not cause an error.
+        assert_eq!(
+            stream.next().await.unwrap().unwrap_err().to_string(),
+            "give up after 1 attempts for input [10]"
         );
     }
 }
