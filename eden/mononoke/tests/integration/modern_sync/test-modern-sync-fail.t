@@ -56,14 +56,16 @@
   $ hg log > $TESTTMP/hglog.out
 
 Sync all bookmarks moves
-  $ with_stripped_logs mononoke_modern_sync sync-once orig dest --start-id 0
+  $ with_stripped_logs mononoke_modern_sync sync-once orig dest --start-id 0 | grep -v "Uploaded" 
   Running sync-once loop
   Connecting to https://localhost:$LOCAL_PORT/edenapi/
   Established EdenAPI connection
   Initialized channels
   Calculating segments for entry 1
-  Skipping 0 commits, starting sync of 1 commits 
-  Uploaded 2 contents with size 5 B in 0s
+  Resuming from latest entry checkpoint 0
+  Skipping 0 batches from entry 1
+  Skipping 0 commits within batch
+  Found 1 missing commits
   Found error: Trees upload: Expected [1-9] responses, got 0, retrying attempt #0 (re)
   Found error: Trees upload: Expected [1-9] responses, got 0, retrying attempt #1 (re)
   Found error: Trees upload: Expected [1-9] responses, got 0, retrying attempt #2 (re)
@@ -71,4 +73,3 @@ Sync all bookmarks moves
   Trees flush failed: Trees upload: Expected [1-9] responses, got 0 (re)
   Execution error: Error while waiting for commit to be synced Error processing changesets: Error waiting for files/trees error received oneshot canceled
   Error: Execution failed
-  [1]
