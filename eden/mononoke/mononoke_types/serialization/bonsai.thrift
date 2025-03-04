@@ -255,6 +255,5 @@ union SubtreeChange {
   3: SubtreeMerge subtree_merge;
 }
 
-typedef map<path.MPath, SubtreeChange> (
-  rust.type = "sorted_vector_map::SortedVectorMap",
-) SubtreeChanges
+@rust.Type{name = "sorted_vector_map::SortedVectorMap"}
+typedef map<path.MPath, SubtreeChange> SubtreeChanges
