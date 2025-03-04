@@ -126,19 +126,26 @@ impl EdenapiSender {
             .process_files_upload(full_items, None, None)
             .await?;
 
+        let ids = response
+            .entries
+            .try_collect::<Vec<_>>()
+            .await?
+            .iter()
+            .map(|e| e.data.id)
+            .collect::<Vec<_>>();
+
         util::log_stats_to_scuba(
             ctx.scuba().clone(),
             &response.stats.await?,
             paths::UPLOAD_FILE,
+            &format!("{:?}", ids),
         );
 
-        let actual_responses = response.entries.try_collect::<Vec<_>>().await?.len();
-
         ensure!(
-            expected_responses == actual_responses,
+            expected_responses == ids.len(),
             "Content upload: Expected {} responses, got {}",
             expected_responses,
-            actual_responses
+            ids.len()
         );
 
         Ok(())
@@ -150,7 +157,7 @@ impl EdenapiSender {
     }
 
     async fn upload_trees_attempt(&self, trees: Vec<HgManifestId>) -> Result<()> {
-        let entries = stream::iter(trees)
+        let entries = stream::iter(trees.clone())
             .map(|mf_id| {
                 let ctx = self.ctx.clone();
                 let repo_blobstore = self.repo_blobstore.clone();
@@ -162,19 +169,26 @@ impl EdenapiSender {
 
         let expected_responses = entries.len();
         let res = self.client.upload_trees_batch(entries).await?;
-        let actual_responses = res.entries.try_collect::<Vec<_>>().await?.len();
+        let ids = res
+            .entries
+            .try_collect::<Vec<_>>()
+            .await?
+            .iter()
+            .map(|e| e.token.data.id)
+            .collect::<Vec<_>>();
 
         util::log_stats_to_scuba(
             self.ctx.scuba().clone(),
             &res.stats.await?,
             paths::UPLOAD_TREES,
+            &format!("{:?}", ids),
         );
 
         ensure!(
-            expected_responses == actual_responses,
+            expected_responses == ids.len(),
             "Trees upload: Expected {} responses, got {}",
             expected_responses,
-            actual_responses,
+            ids.len(),
         );
         Ok(())
     }
@@ -196,19 +210,26 @@ impl EdenapiSender {
 
         let expected_responses = filenodes.len();
         let res = self.client.upload_filenodes_batch(filenodes).await?;
-        let actual_responses = res.entries.try_collect::<Vec<_>>().await?.len();
+        let ids = res
+            .entries
+            .try_collect::<Vec<_>>()
+            .await?
+            .iter()
+            .map(|e| e.token.data.id)
+            .collect::<Vec<_>>();
 
         util::log_stats_to_scuba(
             self.ctx.scuba().clone(),
             &res.stats.await?,
             paths::UPLOAD_FILENODES,
+            &format!("{:?}", ids),
         );
 
         ensure!(
-            expected_responses == actual_responses,
+            expected_responses == ids.len(),
             "Filenodes upload: Expected {} responses, got {}",
             expected_responses,
-            actual_responses
+            ids.len()
         );
         Ok(())
     }
@@ -254,11 +275,6 @@ impl EdenapiSender {
 
         let expected_responses = entries.len();
         let res = self.client.upload_identical_changesets(entries).await?;
-        util::log_stats_to_scuba(
-            self.ctx.scuba().clone(),
-            &res.stats.await?,
-            paths::UPLOAD_IDENTICAL_CHANGESET,
-        );
 
         let responses = res.entries.try_collect::<Vec<_>>().await?;
         ensure!(
@@ -269,6 +285,14 @@ impl EdenapiSender {
             .iter()
             .map(|r| r.token.data.id)
             .collect::<Vec<_>>();
+
+        util::log_stats_to_scuba(
+            self.ctx.scuba().clone(),
+            &res.stats.await?,
+            paths::UPLOAD_IDENTICAL_CHANGESET,
+            &format!("{:?}", ids),
+        );
+
         info!(&self.logger, "Uploaded changesets: {:?}", ids);
 
         Ok(())

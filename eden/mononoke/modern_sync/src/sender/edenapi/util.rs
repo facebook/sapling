@@ -231,7 +231,9 @@ pub(crate) fn log_stats_to_scuba(
     mut scuba: MononokeScubaSampleBuilder,
     stats: &Stats,
     endpoint: &str,
+    contents: &str,
 ) {
+    scuba.add("contents", contents);
     scuba.add("endpoint", endpoint);
     scuba.add("requests", stats.requests);
     // Bytes
