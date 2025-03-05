@@ -47,6 +47,10 @@ The Local Cache Hit Rate is anticipated to surpass that of the Sapling Cache on 
 
 * To fulfill content-addressed data requirement for the CAS storage, a new data model was developed for EdenFS and Sapling, with Augmented Manifests playing a crucial role. For more information, please refer to the dedicated page: https://www.internalfb.com/wiki/Source_Control/Engineering/CASC/augmented_manifest
 
+## EdenFS Caching Flow:
+
+To learn more about the caching flow for CASC and prior to CASC, please visit the [EdenFS Caching Flow](https://www.internalfb.com/wiki/Source_Control/Engineering/CASC/eden_caching_flow) page.
+
 
 ## Persistent Local Caches for On Demand:
 
