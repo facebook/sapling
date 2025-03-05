@@ -32,28 +32,6 @@ def testsetup(t: TestTmp):
 
     # consider run-tests.py --watchman
     use_watchman = os.getenv("HGFSMONITOR_TESTS") == "1"
-    # similar to the one above, but considerably uglier
-    if os.getenv("HGTEST_USE_EDEN") == "1":
-        import re
-
-        edenpath = str(t.path / "bin" / "eden")
-        t.setenv("HGTEST_USE_EDEN", "1")
-        t.requireexe("eden")
-        t.registerfallbackmatch(
-            lambda a, b: (
-                b == "update complete"
-                or re.match(
-                    r"[0-9]+ files merged, [0-9]+ files unresolved",
-                    b,
-                )
-            )
-            and re.match(
-                r"[0-9]+ files updated, [0-9]+ files merged, [0-9]+ files removed, [0-9]+ files unresolved",
-                a,
-            )
-        )
-    else:
-        edenpath = None
 
     # extra hgrc fixup via $TESTDIR/features.py
     testfile = t.getenv("TESTFILE")
@@ -69,7 +47,7 @@ def testsetup(t: TestTmp):
         if "#modern-config-incompatible" in content:
             modernconfigs = False
 
-    hgrc = _get_hgrc(testdir, use_watchman, str(t.path), edenpath, modernconfigs)
+    hgrc = _get_hgrc(testdir, use_watchman, str(t.path), modernconfigs)
 
     hgrcpath = t.path / "hgrc"
     hgrcpath.write_bytes(hgrc.encode())
@@ -346,7 +324,6 @@ def _get_hgrc(
     testdir: str,
     use_watchman: bool,
     testtmp: str,
-    edenpath: Optional[str],
     modernconfigs: bool,
 ) -> str:
     fpath = os.path.join(testdir, "default_hgrc.py")
@@ -354,7 +331,6 @@ def _get_hgrc(
     if os.path.exists(fpath):
         result = _execpython(fpath).get("get_content")(
             use_watchman,
-            edenpath=edenpath,
             modernconfig=modernconfigs,
             testdir=testdir,
             testtmp=testtmp,

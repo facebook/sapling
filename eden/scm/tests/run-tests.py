@@ -2369,6 +2369,9 @@ class DebugRunTestTest(Test):
             "-o",
             self.errpath,
         ]
+        # Note: we need to make sure that the Mononoke extension starts after the EdenFS one
+        if use_edenfs:
+            cmdargs += ["--ext", "sapling.testing.ext.edenfs"]
         if env.get("USE_MONONOKE"):
             cmdargs += ["--ext", "sapling.testing.ext.mononoke"]
         vlog("# Running", shlex.join(cmdargs))

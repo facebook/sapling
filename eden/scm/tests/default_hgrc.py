@@ -17,7 +17,6 @@ from typing import Optional
 def get_content(
     use_watchman: bool = False,
     use_ipv6: bool = False,
-    edenpath: Optional[str] = None,
     modernconfig: bool = False,
     testdir: Optional[str] = None,
     testtmp: Optional[str] = None,
@@ -100,16 +99,6 @@ fsmonitor=
 
 [fsmonitor]
 fallback-on-watchman-exception=false
-"""
-
-    if edenpath:
-        content += f"""
-[edenfs]
-command={edenpath + ('.bat' if os.name == "nt" else '')}
-backing-repos-dir=$TESTTMP/.eden-backing-repos
-
-[clone]
-use-eden=True
 """
 
     if modernconfig:
