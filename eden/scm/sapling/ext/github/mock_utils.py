@@ -7,7 +7,6 @@ import hashlib
 from abc import abstractmethod
 from typing import Any, Callable, Dict, List, Optional, Union
 
-import ghstack.query
 from sapling import error
 
 from sapling.ext.github.consts import query
@@ -215,7 +214,7 @@ class MockGitHubServer:
     ) -> None:
         self.expect_request(
             params={
-                "query": ghstack.query.GRAPHQL_PR_TO_REF,
+                "query": query.GRAPHQL_PR_TO_REF,
                 "owner": owner,
                 "name": name,
                 "number": pr_number,
@@ -240,7 +239,7 @@ class MockGitHubServer:
     ) -> None:
         self.expect_request(
             params={
-                "query": ghstack.query.GRAPHQL_REF_TO_COMMIT_AND_TREE,
+                "query": query.GRAPHQL_REF_TO_COMMIT_AND_TREE,
                 "repo_id": repo_id,
                 "ref": ref,
             },
