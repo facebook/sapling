@@ -25,6 +25,11 @@ use serde::Serialize;
 use crate::ExitCode;
 use crate::Subcommand;
 
+// This path should be the same as the path defined in
+// EdenServiceHandler.cpp::semifuture_startFileAccessMonitor
+// Change this with caution since FAM is running privileged.
+const TMP_FAM_OUTPUT_DIR_PATH: &str = "/tmp/edenfs/fam/";
+
 #[cfg(target_os = "macos")]
 #[derive(Parser, Debug)]
 #[clap(
@@ -56,9 +61,10 @@ struct StartCmd {
     output: Option<String>,
 
     #[clap(
-        help = "When set, the command returns immediately, leaving FAM running in the background.\nTo stop it, run 'eden fam stop'.",
+        help = "When set, the command returns immediately, leaving FAM running in the background.\nTo stop it, run 'eden fam stop'.\nThis is required since Ctrl-C is not killing FAM and timeout is not supported for now.",
         short = 'b',
-        long = "background"
+        long = "background",
+        required = true
     )]
     background: bool,
 
@@ -78,6 +84,12 @@ struct StartCmd {
 #[async_trait]
 impl crate::Subcommand for StartCmd {
     async fn run(&self) -> Result<ExitCode> {
+        // Check the temporary folder exists, otherwise create it
+        let tmp_dir_path = PathBuf::from(TMP_FAM_OUTPUT_DIR_PATH);
+        if !tmp_dir_path.exists() {
+            std::fs::create_dir_all(tmp_dir_path)?;
+        }
+
         println!("Starting File Access Monitor");
 
         let mut monitor_paths: Vec<PathBuf> = Vec::new();
@@ -99,7 +111,9 @@ impl crate::Subcommand for StartCmd {
         );
 
         if self.background {
-            println!("File Access Monitor is running in the background");
+            println!(
+                "File Access Monitor is running in the background.\nTo stop, run 'eden fam stop'."
+            );
             return Ok(0);
         }
 
