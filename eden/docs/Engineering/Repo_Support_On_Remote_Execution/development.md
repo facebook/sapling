@@ -21,7 +21,7 @@ The engine is the key argument here, otherwise the action will be executed on th
 
 ```
  liuba ⛅️  ~/fbsource
- [🍇] → time frecli --engine $HOSTNAME:5000 --engine-rpc grpc --platform scm-repo-support -r "$(sl whereami)" exec command -- ls /fbsource/fbcode/eden
+ [🍇] → time frecli --engine $HOSTNAME:5000 --platform scm-repo-support -r "$(sl whereami)" exec command -- ls /fbsource/fbcode/eden
 ```
 
 EdenFS daemon's logs will be located in the worker's home directory (a temporary directory in dev).
