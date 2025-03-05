@@ -40,3 +40,8 @@ backing-repos-dir=$TESTTMP/.eden-backing-repos
 [clone]
 use-eden=True
 """)
+    # Like $TESTTMP, but for the $EDENFS directory. See comments on
+    # `tests/edenfs.py` to see why $EDENFS is not inside $TESTTMP
+    edenfstmp = os.getenv("EDENFSTMP")
+    t.setenv("EDENFSTMP", edenfstmp)
+    t.substitutions.append((re.escape(edenfstmp), "$EDENFSTMP"))

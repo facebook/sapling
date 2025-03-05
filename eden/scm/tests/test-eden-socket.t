@@ -15,4 +15,4 @@ Print the path of an existing socket file
   >>> assert socket_cmd_output.endswith(expected_tail)
   >>> assert not socket_cmd_output.startswith("Error finding socket file")
   >>> import os
-  >>> assert os.path.exists(socket_cmd_output[:-9])
+  >>> assert os.path.exists(os.path.expandvars(socket_cmd_output[:-9]))

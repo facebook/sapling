@@ -2356,6 +2356,7 @@ class DebugRunTestTest(Test):
     def _run(self, env):
         if use_edenfs:
             self._edenfsmanager.start(env)
+            env["EDENFSTMP"] = str(self._edenfsmanager.edenfs_dir)
 
         cmd = env.get("HGTEST_DEBUGRUNTEST_HG", self._hgcommand)
 

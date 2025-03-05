@@ -75,8 +75,8 @@ class EdenFsManager:
 
         os.makedirs(self.test_dir)
 
-        edenfs_dir = self.test_dir / "eden_test_config"
-        os.mkdir(edenfs_dir)
+        self.edenfs_dir = self.test_dir / "eden_test_config"
+        os.mkdir(self.edenfs_dir)
 
         scratch_config = self.test_dir / "eden_scratch_config"
         with open(scratch_config, "w+") as f:
@@ -108,7 +108,7 @@ overrides = "{{}}"
             try:
                 # pyre-fixme[16]: `EdenFsManager` has no attribute `eden`.
                 self.eden = edenclient.EdenFS(
-                    base_dir=edenfs_dir,
+                    base_dir=self.edenfs_dir,
                     storage_engine="memory",
                 )
 
