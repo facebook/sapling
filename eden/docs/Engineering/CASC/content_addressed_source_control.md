@@ -16,7 +16,7 @@ CASC stands for **Content-Addressed-Source-Control**, the project aimimg to util
 Integrating with CAS enables us to shift our focus towards other Source Control challenges.
 
 * **Mononoke Overloads:**
-    * Mononoke is not well optimised to act as a fetching service, currently serving up to [4M blobs per second](https://fburl.com/scuba/mononoke_test_perf/mexgp363), trees and files combined (using **781 T1** machines).
+    * Mononoke is not well optimised to act as a fetching service, currently serving up to [8M blobs per second](https://fburl.com/scuba/mononoke_test_perf/abljhymr), trees and files combined (using **781 T1** machines).
 In reality, its optimal performance relies on the assumption that fetches are not well-batched (by utilizing consistent routing on proxygen only for very small batches, accounted for [~50% of all fetched blobs](https://fburl.com/scuba/mononoke_test_perf/poq04cux)). This is often true for traffic originating from EdenFS fuse but not applicable to EdenFS Thrift traffic (**Eden allows to fetch data via thrift over UDS bypassing file system**) or Eden prefetch.
 However, `eden prefetch` has been gaining popularity as a solution to mitigate the issue of accumulating remote fetch latencies resulting from sequential fuse fetches, that causes poor performance for the tools, especially hack-based, and longer TTS (*time to signal*) for user's DIFFs.
 Any spike in the amount of well-batched traffic, coming typically from prefetching, is a common cause of Mononoke SEVs.
