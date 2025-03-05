@@ -61,3 +61,19 @@ Persistent Caches, of CASC, would allow to deprecate the expensive full (www) re
 
 ![](px/6HWvs)
 
+## Persistent Local Caches on Sandcastle:
+
+Why **Persistent Caches** on On Sandcastle are important?
+
+Local caching in Sandcastle reduces the load on backend services by handling a significant amount of traffic, thereby enhancing job durations.
+However, in Sandcastle, the hgcache is [read/write mounted by the TW agent](https://www.internalfb.com/code/fbsource/[a5a02891b754be45b7a85155ce16e4c5fada622b]/fbcode/tupperware/config/sandcastle/common.cinc?lines=456-470) and subsequently read/write mounted into a job container.
+This setup effectively grants write access to the hg cache on the physical host for every job, and the cache is not cleaned up for the entire lifespan of the host.
+The Sapling Cache lacks the necessary integrity checks to prevent potential corruption by malicious users, who could alter the cache to modify generated builds.
+
+Unlike the Sapling Cache, the CASd local cache performs hash validation checks and restricts write access exclusively to the cas-daemon process on a physical host. However, it allows direct read-only access to all clients of the cache.
+Implemented the LRU (Least Recently Used) eviction strategy also ensures that unused blobs are removed in a timely manner.
+
+As worker types tend to be sticky and affinities are being improved in the future, the persistent local caches are expected to serve the majority of EdenFS fetches required for build operations (buck/meerkat).
+
+![](px/6J88B)
+
