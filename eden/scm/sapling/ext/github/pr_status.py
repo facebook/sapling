@@ -5,12 +5,12 @@
 
 from typing import List, Optional
 
-from ghstack.github import get_github_endpoint
-
 from sapling import smartset, util
 from sapling.i18n import _
 
 from . import graphql
+
+from .github_endpoint import get_github_endpoint
 from .github_repo_util import is_github_repo
 from .pr_parser import get_pull_request_for_context
 from .pullrequest import GraphQLPullRequest, PullRequestId

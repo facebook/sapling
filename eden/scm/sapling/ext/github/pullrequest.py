@@ -6,7 +6,7 @@
 from dataclasses import dataclass
 from typing import Any, Dict, Optional, TypedDict
 
-from ghstack.github_cli_endpoint import GitHubCLIEndpoint
+from .github_cli_endpoint import GitHubCLIEndpoint
 
 
 class PullRequestIdDict(TypedDict):

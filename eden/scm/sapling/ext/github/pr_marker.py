@@ -10,8 +10,6 @@ mark commits as "Landed" on pull
 import typing as t
 from collections import defaultdict
 
-from ghstack.github_cli_endpoint import GitHubCLIEndpoint
-
 from sapling import mutation, util, visibility
 from sapling.ext.github.github_repo_util import find_github_repo
 from sapling.ext.github.pr_parser import get_pull_request_for_context
@@ -19,6 +17,8 @@ from sapling.ext.github.pullrequest import get_pr_state, PullRequestId
 from sapling.ext.github.pullrequeststore import PullRequestStore
 from sapling.i18n import _, _n
 from sapling.node import bin
+
+from .github_cli_endpoint import GitHubCLIEndpoint
 
 
 Node = bytes
