@@ -233,6 +233,12 @@
       },
       {
         "shortname": "",
+        "fullname": "message-field",
+        "default": [],
+        "description": "rewrite fields of commit message (e.g. --message-field=Summary='New Summary' to update or --message-field=-Summary to remove) (EXPERIMENTAL)"
+      },
+      {
+        "shortname": "",
         "fullname": "no-move-detection",
         "default": null,
         "description": "disable automatic file move detection"
@@ -501,12 +507,6 @@
         "description": "display with template (EXPERIMENTAL)"
       },
       {
-        "shortname": "",
-        "fullname": "list-remote",
-        "default": null,
-        "description": "list remote bookmarks. Positional arguments are interpreted as wildcard patterns. Only allowed wildcard is '*' in the end of the pattern. If no positional arguments are specified then it will list the most \"important\" remote bookmarks. Otherwise it will list remote bookmarks that match at least one pattern "
-      },
-      {
         "shortname": "t",
         "fullname": "track",
         "default": "",
@@ -517,6 +517,12 @@
         "fullname": "untrack",
         "default": null,
         "description": "remove tracking for this bookmark"
+      },
+      {
+        "shortname": "",
+        "fullname": "list-remote",
+        "default": null,
+        "description": "list remote bookmarks. Positional arguments are interpreted as wildcard patterns. Only allowed wildcard is '*' in the end of the pattern. If no positional arguments are specified then it will list the most \"important\" remote bookmarks. Otherwise it will list remote bookmarks that match at least one pattern "
       },
       {
         "shortname": "a",
@@ -799,6 +805,12 @@
         "fullname": "user",
         "default": "",
         "description": "record the specified user as committer"
+      },
+      {
+        "shortname": "",
+        "fullname": "message-field",
+        "default": [],
+        "description": "rewrite fields of commit message (e.g. --message-field=Summary='New Summary' to update or --message-field=-Summary to remove) (EXPERIMENTAL)"
       },
       {
         "shortname": "",
@@ -1152,95 +1164,6 @@
     ],
     "subcommands": null
   },
-  "ghstack": {
-    "name": "ghstack",
-    "aliases": [
-      "ghstack"
-    ],
-    "doc": "submits a stack of commits to GitHub as individual pull requests using ghstack\n\n    Uses the scheme employed by ghstack (https://github.com/ezyang/ghstack) to\n    submit a stack of commits to GitHub as individual pull requests. Pull\n    requests managed by ghstack are never force-pushed.\n\n    Currently, you must configure ghstack by creating a ~/.ghstackrc file as\n    explained on https://github.com/ezyang/ghstack. Ultimately, we will likely\n    replace this use of the GitHub CLI to manage API requests to GitHub.\n\n    Note that you must have *write* access to the GitHub repository in order to\n    use ghstack. If you do not have write access, consider using the `pr`\n    subcommand instead.\n    ",
-    "args": [],
-    "subcommands": [
-      {
-        "name": "submit",
-        "aliases": [],
-        "doc": "submit stack of commits to GitHub",
-        "args": [
-          {
-            "shortname": "m",
-            "fullname": "message",
-            "default": "Update",
-            "description": "message describing changes to updated commits"
-          },
-          {
-            "shortname": "u",
-            "fullname": "update-fields",
-            "default": false,
-            "description": "update GitHub pull request summary from the local commit"
-          },
-          {
-            "shortname": "",
-            "fullname": "short",
-            "default": false,
-            "description": "print only the URL of the latest opened PR to stdout"
-          },
-          {
-            "shortname": "",
-            "fullname": "force",
-            "default": false,
-            "description": "force push the branch even if your local branch is stale"
-          },
-          {
-            "shortname": "",
-            "fullname": "skip",
-            "default": false,
-            "description": "never skip pushing commits, even if the contents didn't change (use this if you've only updated the commit message)."
-          },
-          {
-            "shortname": "",
-            "fullname": "draft",
-            "default": false,
-            "description": "create the pull request in draft mode (only if it has not already been created)"
-          }
-        ],
-        "subcommands": null
-      },
-      {
-        "name": "unlink",
-        "aliases": [],
-        "doc": "remove the association of a commit with a pull request",
-        "args": [],
-        "subcommands": null
-      },
-      {
-        "name": "land",
-        "aliases": [],
-        "doc": "lands the stack for the specified pull request URL",
-        "args": [],
-        "subcommands": null
-      },
-      {
-        "name": "checkout",
-        "aliases": [],
-        "doc": "goto the stack for the specified pull request URL",
-        "args": [],
-        "subcommands": null
-      },
-      {
-        "name": "action",
-        "aliases": [],
-        "doc": "goto the stack for the specified pull request URL",
-        "args": [
-          {
-            "shortname": "",
-            "fullname": "close",
-            "default": false,
-            "description": "close the specified pull request"
-          }
-        ],
-        "subcommands": null
-      }
-    ]
-  },
   "githelp": {
     "name": "githelp",
     "aliases": [
@@ -1382,6 +1305,12 @@
         "fullname": "user",
         "default": "",
         "description": "record the specified user as committer"
+      },
+      {
+        "shortname": "",
+        "fullname": "message-field",
+        "default": [],
+        "description": "rewrite fields of commit message (e.g. --message-field=Summary='New Summary' to update or --message-field=-Summary to remove) (EXPERIMENTAL)"
       },
       {
         "shortname": "t",
@@ -1821,6 +1750,12 @@
         "fullname": "user",
         "default": "",
         "description": "record the specified user as committer"
+      },
+      {
+        "shortname": "",
+        "fullname": "message-field",
+        "default": [],
+        "description": "rewrite fields of commit message (e.g. --message-field=Summary='New Summary' to update or --message-field=-Summary to remove) (EXPERIMENTAL)"
       },
       {
         "shortname": "T",

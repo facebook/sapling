@@ -1,10 +1,10 @@
 ---
-sidebar_position: 34
+sidebar_position: 33
 ---
 
 ## restack
 <!--
-  @generated SignedSource<<5dc5e20c918b52b4a4a3a5565aed6ba0>>
+  @generated SignedSource<<5fe12a286e8997ccfd050ceb6144fe58>>
   Run `./scripts/generate-command-markdown.py` to regenerate.
 -->
 
