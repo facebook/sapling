@@ -56,7 +56,7 @@ The following are configs to tune the behavior of copy tracing algorithm:
     # threshold, we will not treat them as a rename no matter what the content similarity is.
     max-edit-cost = 1000
 
-    # Content similarity threhold for rename detection. The definition of "similarity"
+    # Content similarity threshold for rename detection. The definition of "similarity"
     # between file `a` and file `b` is: (len(a.lines()) - edit_cost(a, b)) / len(a.lines())
     #   * 1.0 means exact match
     #   * 0.0 means not match at all

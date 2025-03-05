@@ -231,7 +231,7 @@ py_class!(pub class commits |py| {
 
     /// import_external_reference(metalog, names: List[str])
     ///
-    /// Import a single external reference to metalog. Optinally build up DAG
+    /// Import a single external reference to metalog. Optionally build up DAG
     /// indexes. For Git, `name` is a full reference name, like
     /// "refs/remotes/origin/foo".
     def import_external_references(&self, metalog: PyMetaLog, names: Vec<String>) -> PyResult<PyNone> {
@@ -246,7 +246,7 @@ py_class!(pub class commits |py| {
     /// Load full Dag from src directory, migrate a subset of dag to dst directory.
     ///
     /// If heads is empty, then only the master group and IdMap that are essential
-    /// are migrated. If heads is not empty, specified vertexes and their ancestors
+    /// are migrated. If heads is not empty, specified vertices and their ancestors
     /// are also migrated.
     ///
     /// This can be used to create a commit backend with lazy commit hashes

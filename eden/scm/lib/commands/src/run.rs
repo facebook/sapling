@@ -291,7 +291,7 @@ fn dispatch_command(
                     }
                 }
 
-                // Init interpreter with unmodifed args. This is so `sys.argv` in Python
+                // Init interpreter with unmodified args. This is so `sys.argv` in Python
                 // reflects what the user actually typed (we muck with the args in Rust
                 // dispatch).
                 let mut interp = HgPython::new(dispatcher.orig_args());
@@ -712,7 +712,7 @@ fn log_start(args: Vec<String>, now: StartTime) -> tracing::Span {
         let mut ppid = procinfo::parent_pid(0);
         // In theory, the OS should not report a cyclic process graph (ex. pid 1
         // has parent pid = 1). Practically `parent_pids` takes snapshots
-        // everytime on Windows (unnecessarily) and is subject to races. Be
+        // every time on Windows (unnecessarily) and is subject to races. Be
         // extra careful here so the loop wouldn't be infinite.
         while ppid != 0 && parent_pids.len() < 16 && !parent_pids.contains(&ppid) {
             let name = procinfo::exe_name(ppid);

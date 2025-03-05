@@ -240,7 +240,7 @@ subtree_path_opts = [
     ),
 ]
 
-# special string such that everything below this line will be ingored in the
+# special string such that everything below this line will be ignored in the
 # editor text
 _linebelow = (
     f"^{identity.tmplprefix()}: ------------------------ >8 ------------------------$"
@@ -1074,7 +1074,7 @@ def _update_commit_message_fields(
             if field not in fields_to_update:
                 updated_lines.extend(parsed_value)
 
-        # User is updating (or insterting) this value - stick in the new value.
+        # User is updating (or inserting) this value - stick in the new value.
         if field in fields_to_update:
             value = fields_to_update.pop(field)
             if value is not None:

@@ -390,7 +390,7 @@ mod tests {
 
     #[mononoke::test]
     fn decode_independent_zstd_test() -> Result<()> {
-        // Highly compressable!
+        // Highly compressible!
         let bytes_in = vec![7u8; 65535];
 
         // Prepare a compressed blob
@@ -411,7 +411,7 @@ mod tests {
 
     #[mononoke::test]
     fn decode_zstd_from_dict_test() -> Result<()> {
-        let mut rng = XorShiftRng::seed_from_u64(0); // reproducable Rng
+        let mut rng = XorShiftRng::seed_from_u64(0); // reproducible Rng
 
         // Some partially incompressible data as base version
         let mut base_version = vec![7u8; 65535];
@@ -454,7 +454,7 @@ mod tests {
 
     #[mononoke::test]
     fn pack_zstd_from_dict_chain_test() -> Result<()> {
-        let mut rng = XorShiftRng::seed_from_u64(0); // reproducable Rng
+        let mut rng = XorShiftRng::seed_from_u64(0); // reproducible Rng
 
         let mut raw_data = vec![];
         let pack = EmptyPack::new(0);
@@ -525,7 +525,7 @@ mod tests {
 
     #[mononoke::test]
     fn pack_zstd_from_dict_unchained_test() -> Result<()> {
-        let mut rng = XorShiftRng::seed_from_u64(0); // reproducable Rng
+        let mut rng = XorShiftRng::seed_from_u64(0); // reproducible Rng
 
         let mut raw_data = vec![];
         let pack = EmptyPack::new(0);
@@ -596,7 +596,7 @@ mod tests {
 
     #[mononoke::test]
     fn pack_size_test() -> Result<()> {
-        let mut rng = XorShiftRng::seed_from_u64(0); // reproducable Rng
+        let mut rng = XorShiftRng::seed_from_u64(0); // reproducible Rng
 
         let mut raw_data = vec![];
         let pack = EmptyPack::new(19);

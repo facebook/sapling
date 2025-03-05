@@ -583,7 +583,7 @@ mod tests {
         match result {
             Ok(_) => assert!(
                 correct_order,
-                "Successfuly converted even though order was incorrect"
+                "Successfully converted even though order was incorrect"
             ),
             Err(_) => assert!(
                 !correct_order,

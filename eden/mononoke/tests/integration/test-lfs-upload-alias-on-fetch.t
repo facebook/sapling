@@ -28,7 +28,7 @@
 
 # 2. Blobimport hg nolfs to mononoke (blob_files).
 #   2.a Motivation: Blobimport for now does not support import of lfs hg repos. (Error with RevlogRepo parsing).
-#       So we need to blobimport hg repo without lsf extention.
+#       So we need to blobimport hg repo without lsf extension.
 #   2.b Motivation: For blob_files storage, is because we need to run Mononoke and Mononoke API server.
 #       We cannot have 2 processes for 1 RocksDB repo, as RocksDb does not allows us to do that.
 #   2.c Still Mononoke config is blobimported to Rocks DB. As Api server and Mononoke server are using them separately.

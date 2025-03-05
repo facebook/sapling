@@ -224,8 +224,8 @@ class RpcConnectionHandler : public folly::DelayedDestruction,
 
   /**
    * This is a logger for error events. Inside a Meta environment, these events
-   * are exported off the machine this EdenFS instace is running on. This is
-   * where you log anomalous things that you want to monitor accross the fleet.
+   * are exported off the machine this EdenFS instance is running on. This is
+   * where you log anomalous things that you want to monitor across the fleet.
    */
   std::shared_ptr<StructuredLogger> errorLogger_;
 

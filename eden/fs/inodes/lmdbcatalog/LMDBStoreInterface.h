@@ -135,7 +135,7 @@ class LMDBStoreInterface {
    */
   bool hasTree(InodeNumber inode);
 
-  // The following funtions are provided to emulate the behavior of the
+  // The following functions are provided to emulate the behavior of the
   // corresponding system calls. These are expected for use in the OverlayFile
   // class
 

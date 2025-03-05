@@ -720,7 +720,7 @@ class ui:
     def writebytes(self, *args, **opts):
         """Like `write` but taking bytes instead of str as arguments.
 
-        Can be used only when we're outputing the file contents to stdout,
+        Can be used only when we're outputting the file contents to stdout,
         for example in diff, cat, or blame commands.
         """
         if self._outputui is not None and not opts.get(r"prompt", False):

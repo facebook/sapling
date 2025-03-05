@@ -53,7 +53,7 @@ pub struct CopyInfoSource {
     pub unode_id: FileUnodeId,
 }
 
-/// A rename souce for a file that was copied by a subtree operation.
+/// A rename source for a file that was copied by a subtree operation.
 #[derive(Debug, Clone)]
 pub struct SubtreeCopySource {
     /// The parent changeset that the file was copied from.
@@ -64,7 +64,7 @@ pub struct SubtreeCopySource {
     pub from_path: MPath,
 }
 
-/// A rename souce for a file that was copied by a subtree operation.
+/// A rename source for a file that was copied by a subtree operation.
 #[derive(Debug, Clone)]
 pub struct SubtreeMergeSource {
     /// The parent changeset that the file was merged from.

@@ -37,7 +37,7 @@
   blob-repo0000.alias.sha256.6b23c0d5f35d1b11f9b683f0b0a617355deb11277d91ae091d399c655b87940d
   blob-repo0000.alias.sha256.df7e70e5021544f4834bbee64a9e3789febc4be81470df629cad6ddb03320a5c
 
-#Alias verfification with Sha256 alias
+#Alias verification with Sha256 alias
   $ aliasverify verify sha256 2>&1 | grep "Alias Verification"
   * Alias Verification continues: 0 errors found, repo: repo (glob)
   * Alias Verification finished: 0 errors found, repo: repo (glob)

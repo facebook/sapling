@@ -151,7 +151,7 @@ fn cert_is_valid_at(cert: &[u8], time: DateTime<Utc>) -> Result<(), X509ErrorKin
 fn parse_valid_date_range(cert: &[u8]) -> Result<(DateTime<Utc>, DateTime<Utc>), X509ErrorKind> {
     let asn1 = simple_asn1::from_der(cert).map_err(|e| X509ErrorKind::Malformed(e.into()))?;
 
-    // XXX: Due to some technical issues with vendoring 3rd party depenencies,
+    // XXX: Due to some technical issues with vendoring 3rd party dependencies,
     // we presently can't use the `x509-parser` crate that would make this much
     // nicer. Instead, we have to parse the DER-encoded ASN.1 object manually.
     // The field indexes that are hardcoded here correspond to the field order

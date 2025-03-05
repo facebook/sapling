@@ -287,7 +287,7 @@ Future<Unit> TakeoverServer::ConnHandler::sendTakeoverData(
         if (sendResult.hasException()) {
           promise.setException(sendResult.exception());
         } else {
-          // Set an uninitalized optional here to avoid an attempted recovery
+          // Set an uninitialized optional here to avoid an attempted recovery
           promise.setValue(std::nullopt);
         }
       });

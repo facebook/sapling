@@ -119,7 +119,7 @@ impl Hash for NewEntry {
 ///                      each parent, then puts /// one parent in a HashSet and performs the
 ///                      intersection.
 ///                      A better approach would be to traverse the manifest tree of root and both
-///                      parents simultaniously and produce the intersection result while
+///                      parents simultaneously and produce the intersection result while
 ///                      traversing
 pub fn new_entry_intersection_stream(
     root: &RevlogManifest,

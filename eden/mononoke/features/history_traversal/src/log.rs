@@ -425,10 +425,10 @@ pub trait Visitor: Send + 'static {
         cs_and_paths: Vec<CsAndPath>,
     ) -> Result<Vec<CsAndPath>, Error>;
 
-    /// May be called before visiting node so the visitor can prefetch neccesary
+    /// May be called before visiting node so the visitor can prefetch necessary
     /// data to make the visit faster.
     ///
-    /// This funtion is not guaranteed to be called before each visit() call.
+    /// This function is not guaranteed to be called before each visit() call.
     //  The visit() is not guaranteed to be called later -  the traversal may terminat earlier.
     async fn preprocess(
         &mut self,
@@ -741,7 +741,7 @@ pub(crate) async fn find_possible_mutable_ancestors<'a>(
 }
 
 // Fetched the list of changeset with mutable renames for for path.
-// Results are sorted by genration number.
+// Results are sorted by generation number.
 pub(crate) async fn _find_possible_mutable_ancestors(
     ctx: &CoreContext,
     repo: &impl Repo,

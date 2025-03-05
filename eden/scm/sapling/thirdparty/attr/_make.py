@@ -266,7 +266,7 @@ def attributes(
         to automatically detect that.  Therefore it's possible to set the
         namespace explicitly for a more meaningful ``repr`` output.
     :param bool repr: Create a ``__repr__`` method with a human readable
-        represantation of ``attrs`` attributes..
+        representation of ``attrs`` attributes..
     :param bool str: Create a ``__str__`` method that is identical to
         ``__repr__``.  This is usually not necessary except for
         :class:`Exception`\ s.
@@ -294,7 +294,7 @@ def attributes(
         and the `GitHub issue that led to the default behavior \
         <https://github.com/python-attrs/attrs/issues/136>`_ for more details.
     :type hash: ``bool`` or ``None``
-    :param bool init: Create a ``__init__`` method that initialiazes the
+    :param bool init: Create a ``__init__`` method that initializes the
         ``attrs`` attributes.  Leading underscores are stripped for the
         argument name.  If a ``__attrs_post_init__`` method exists on the
         class, it will be called after the class is fully initialized.
@@ -349,7 +349,7 @@ def attributes(
                 ca_list = list(these.keys())
         _transform_attrs(cls, these)
 
-        # Can't just re-use frozen name because Python's scoping. :(
+        # Can't just reuse frozen name because Python's scoping. :(
         # Can't compare function objects because Python 2 is terrible. :(
         effectively_frozen = _has_frozen_superclass(cls) or frozen
         if repr is True:
@@ -619,7 +619,7 @@ def fields(cls):
     :raise attr.exceptions.NotAnAttrsClassError: If *cls* is not an ``attrs``
         class.
 
-    :rtype: tuple (with name accesors) of :class:`attr.Attribute`
+    :rtype: tuple (with name accessors) of :class:`attr.Attribute`
 
     ..  versionchanged:: 16.2.0 Returned tuple allows accessing the fields
         by name.
@@ -1079,7 +1079,7 @@ def make_class(name, attrs, bases=(object,), **attributes_arguments):
     return attributes(**attributes_arguments)(type(name, bases, cls_dict))
 
 
-# These are required by whithin this module so we define them here and merely
+# These are required by within this module so we define them here and merely
 # import into .validators.
 
 

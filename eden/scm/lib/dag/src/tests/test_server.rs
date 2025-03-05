@@ -5,7 +5,7 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-//! Tests cases that are more relavant for server use-cases.
+//! Tests cases that are more relevant for server use-cases.
 //!
 //! The server use-cases are different from the client in a few ways:
 //! - The server has a non-lazy `IdMap`.

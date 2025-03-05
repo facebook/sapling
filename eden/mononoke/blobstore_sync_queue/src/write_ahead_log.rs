@@ -516,7 +516,7 @@ mononoke_queries! {
     // (because each blobstore key can have multiple appearances with the same and
     // with different operation keys).
     // The healer can just read all the entries older than the timestamp and they will
-    // represent a set of different put opertions by design.
+    // represent a set of different put operations by design.
     read WalReadEntries(multiplex_id: MultiplexId, older_than: Timestamp, limit: usize) -> (
         String,
         MultiplexId,

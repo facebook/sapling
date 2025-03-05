@@ -392,7 +392,7 @@ coreconfigitem("progress", "refresh", default=0.1)
 coreconfigitem("progress", "renderer", default="classic")
 coreconfigitem("progress", "width", default=dynamicdefault)
 coreconfigitem("pull", "automigrate", default=True)
-# Practically, 100k commit data takes about 200MB memroy (or 400MB if
+# Practically, 100k commit data takes about 200MB memory (or 400MB if
 # duplicated in Python / Rust).
 coreconfigitem(
     "pull", "buffer-commit-count", default=lambda: util.istest() and 5 or 100000

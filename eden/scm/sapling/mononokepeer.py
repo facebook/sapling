@@ -208,7 +208,7 @@ def maybestripsquarebrackets(hostname: str):
     addressed wrapped in square braces. This function allows us to support urls
     like mononoke://[::1]/repo
 
-    util.url doesn't do it for us beacause it's not part of
+    util.url doesn't do it for us because it's not part of
     http://www.ietf.org/rfc/rfc2396.txt
     """
     bracketed_ipv6 = remod.compile(r"^\[(.*)\]$")

@@ -57,7 +57,7 @@
   remote: HELLO USERConverting HAVE Git commits to Bonsais        
   remote: Converting WANT Git commits to Bonsais        
   remote: Collecting Bonsai commits to send to client        
-  remote: Couting number of objects to be sent in packfile        
+  remote: Counting number of objects to be sent in packfile        
   remote: Generating trees and blobs stream        
   remote: Generating commits stream        
   remote: Generating tags stream        
@@ -89,7 +89,7 @@
   remote: HELLO USERConverting HAVE Git commits to Bonsais        
   remote: Converting WANT Git commits to Bonsais        
   remote: Collecting Bonsai commits to send to client        
-  remote: Couting number of objects to be sent in packfile        
+  remote: Counting number of objects to be sent in packfile        
   remote: Generating trees and blobs stream        
   remote: Generating commits stream        
   remote: Generating tags stream        

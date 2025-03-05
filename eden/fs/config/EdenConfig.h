@@ -765,7 +765,7 @@ class EdenConfig : private ConfigSettingManager {
 
   /**
    * Wether we should validate that files on disk match their inode state after
-   * checkout. We wont validate all of the loaded files or even the ones
+   * checkout. We won't validate all of the loaded files or even the ones
    * changed by checkout, but just a handful of the files that were loaded and
    * changed by checkout. The next few configs control how many files and how
    * we select them.
@@ -1292,13 +1292,13 @@ class EdenConfig : private ConfigSettingManager {
   // [experimental]
 
   /**
-   * Controls whether EdenFS detects proceses that crawl an NFS checkout. Only
+   * Controls whether EdenFS detects processes that crawl an NFS checkout. Only
    * affects EdenFS if experimental:enable-nfs-server is also true. When NFS
    * crawl detection is enabled, EdenFS will perioically check
    * (experimental:nfs-crawl-interval) whether NFS read or readdir counters
    * exceed the configured thresholds (experimental:nfs-crawl-read-threshold and
    * experimental:nfs-crawl-readdir-threshold, respectively). If they do exceed,
-   * EdenFS will determine which processes appear to be preforming the crawl and
+   * EdenFS will determine which processes appear to be performing the crawl and
    * record their information to the log file and structured logging. Currently,
    * this information is expected to be useful in diagnosing slowness when using
    * NFS. Future, work in this area may provided more immediate feedback to
@@ -1319,7 +1319,7 @@ class EdenConfig : private ConfigSettingManager {
 
   /**
    * Sets the read threshold at which EdenFS determines NFS crawling is
-   * occuring.
+   * occurring.
    */
   ConfigSetting<uint32_t> nfsCrawlReadThreshold{
       "experimental:nfs-crawl-read-threshold",
@@ -1328,7 +1328,7 @@ class EdenConfig : private ConfigSettingManager {
 
   /**
    * Sets the readdir threshold at which EdenFS determines NFS crawling is
-   * occuring.
+   * occurring.
    */
   ConfigSetting<uint32_t> nfsCrawlReadDirThreshold{
       "experimental:nfs-crawl-readdir-threshold",
@@ -1364,7 +1364,7 @@ class EdenConfig : private ConfigSettingManager {
       this};
 
   /**
-   *  The interval for backgroung periodic unloading of inodes from inodeMap.
+   *  The interval for background periodic unloading of inodes from inodeMap.
    * The value is in minutes.
    */
   ConfigSetting<uint32_t> periodicUnloadIntervalMinutes{
@@ -1547,7 +1547,7 @@ class EdenConfig : private ConfigSettingManager {
       this};
 
   /**
-   * Used to control file access logging for predicitve prefetch
+   * Used to control file access logging for predictive prefetch
    * profiles.
    */
   ConfigSetting<bool> logFileAccesses{

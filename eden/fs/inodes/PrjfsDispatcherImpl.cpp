@@ -1373,7 +1373,7 @@ ImmediateFuture<folly::Unit> PrjfsDispatcherImpl::preDirDelete(
 ImmediateFuture<folly::Unit> PrjfsDispatcherImpl::preFileConvertedToFull(
     RelativePath path,
     const ObjectFetchContextPtr& context) {
-  // this is an asynchonous notification, so we have to treat this just like
+  // this is an asynchronous notification, so we have to treat this just like
   // all the other write notifications.
   return fileNotification(*mount_, std::move(path), context);
 }

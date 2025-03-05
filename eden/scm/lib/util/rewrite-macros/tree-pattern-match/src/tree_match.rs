@@ -148,7 +148,7 @@ pub struct Match<T> {
 }
 type Captures<T> = HashMap<String, Vec<Item<T>>>;
 
-// T does not ened to implement `Default`.
+// T does not need to implement `Default`.
 impl<T> Default for Match<T> {
     fn default() -> Self {
         Self {

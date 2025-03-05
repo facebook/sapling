@@ -18,7 +18,7 @@ pub enum ErrorKind {
     ClientCancelled,
     #[error("An error occurred forwarding the request to upstream")]
     UpstreamDidNotRespond,
-    #[error("An error ocurred receiving a response from upstream ({0}): {1}")]
+    #[error("An error occurred receiving a response from upstream ({0}): {1}")]
     UpstreamError(StatusCode, String),
     #[error("Could not serialize")]
     SerializationFailed(#[source] anyhow::Error),

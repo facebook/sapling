@@ -892,7 +892,7 @@ def resolveprefetchopts(ui, opts):
 def prefetch(ui, repo, *pats, **opts):
     """prefetch file revisions from the server
 
-    Prefetchs file revisions for the specified revs and stores them in the
+    Prefetches file revisions for the specified revs and stores them in the
     local remotefilelog cache.  If no rev is specified, the default rev is
     used which is the union of dot, draft, and pullprefetch.
     File names or patterns can be used to limit which files are downloaded.

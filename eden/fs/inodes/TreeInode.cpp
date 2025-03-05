@@ -1691,7 +1691,7 @@ ImmediateFuture<folly::Unit> TreeInode::removeImpl(
         "inode was removed/renamed after remove started");
   }
 
-  // Note that we intentially create childFuture() in a separate
+  // Note that we intentionally create childFuture() in a separate
   // statement before calling thenValue() on it, since we std::move()
   // the name into the lambda capture for thenValue().
   //
@@ -4818,7 +4818,7 @@ ImmediateFuture<struct stat> TreeInode::setattr(
   return result;
 #else
   (void)desired;
-  // Inode metatdata table is not on Windows
+  // Inode metadata table is not on Windows
   return makeImmediateFutureWith([]() -> struct stat { NOT_IMPLEMENTED(); });
 #endif
 }

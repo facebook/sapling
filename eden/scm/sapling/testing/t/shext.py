@@ -82,10 +82,10 @@ def updateosenv(environ: Dict[str, str]):
         if oldvalue == newvalue:
             continue
         if newvalue is None:
-            # calls native funtion unsetenv
+            # calls native function unsetenv
             del os.environ[name]
         else:
-            # calls native funtion putenv
+            # calls native function putenv
             os.environ[name] = newvalue
 
 

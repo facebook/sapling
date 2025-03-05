@@ -20,7 +20,7 @@
 using namespace facebook::eden;
 
 /*
- * This is a samll helper program for manually testing the
+ * This is a small helper program for manually testing the
  * UserInfo::dropPrivileges() functionality.
  *
  * If run as a setuid binary or under sudo it prints out the desired user

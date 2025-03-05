@@ -38,7 +38,7 @@ def _walkrevtree(
     'pfunc(rev)' should return the parent/child revisions of the given 'rev'
     if 'reverse' is True/False respectively.
 
-    Scan ends at the stopdepth (exlusive) if specified. Revisions found
+    Scan ends at the stopdepth (exclusive) if specified. Revisions found
     earlier than the startdepth are omitted.
     """
     if startdepth is None:
@@ -200,7 +200,7 @@ def revancestors(
     r"""Like revlog.ancestors(), but supports additional options, includes
     the given revs themselves, and returns a smartset
 
-    Scan ends at the stopdepth (exlusive) if specified. Revisions found
+    Scan ends at the stopdepth (exclusive) if specified. Revisions found
     earlier than the startdepth are omitted.
 
     If cutfunc is provided, it will be used to cut the traversal of the DAG.
@@ -286,7 +286,7 @@ def revdescendants(repo, revs, followfirst, startdepth=None, stopdepth=None):
     """Like revlog.descendants() but supports additional options, includes
     the given revs themselves, and returns a smartset
 
-    Scan ends at the stopdepth (exlusive) if specified. Revisions found
+    Scan ends at the stopdepth (exclusive) if specified. Revisions found
     earlier than the startdepth are omitted.
     """
     if startdepth is None and stopdepth is None:
@@ -416,7 +416,7 @@ def blockancestors(fctx, fromline, toline, followfirst=False):
             inrange = inrange or inrangep
             if linerange1[0] == linerange1[1]:
                 # Parent's linerange is empty, meaning that the block got
-                # introduced in this revision; no need to go futher in this
+                # introduced in this revision; no need to go further in this
                 # branch.
                 continue
             # Set _descendantrev with 'c' (a known descendant) so that, when
@@ -458,7 +458,7 @@ def blockdescendants(fctx, fromline, toline):
             inrange = inrange or inrangep
             # If revision 'i' has been seen (it's a merge) and the line range
             # previously computed differs from the one we just got, we take the
-            # surrounding interval. This is conservative but avoids loosing
+            # surrounding interval. This is conservative but avoids losing
             # information.
             if i in seen and seen[i][1] != linerange1:
                 lbs, ubs = zip(linerange1, seen[i][1])

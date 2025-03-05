@@ -213,7 +213,7 @@ async fn test_change_target_config_invalid_config_linkfile(fb: FacebookInit) -> 
         .build_source()?
         .source_builder(third_source_name.clone())
         .set_prefix_bookmark_to_source_name()
-        // NOTE - intentially overwrite existing linkfiles to make sure the request fails
+        // NOTE - intentionally overwrite existing linkfiles to make sure the request fails
         .linkfile("third", "linkfiles/first")
         .build_source()?
         .build(&mut test.configs_storage);
@@ -270,7 +270,7 @@ async fn test_change_target_config_invalid_config_normal_file(
         .linkfile("first", "linkfiles/first")
         .build_source()?
         .source_builder(third_source_name.clone())
-        // NOTE - intentially overwrite existing paths to make sure the request fails
+        // NOTE - intentionally overwrite existing paths to make sure the request fails
         .default_prefix("source_1")
         .bookmark("source_3")
         .build_source()?

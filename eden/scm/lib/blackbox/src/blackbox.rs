@@ -525,7 +525,7 @@ fn time_to_u64(time: &SystemTime) -> u64 {
 //    (for analysis over time).
 // 2. Related to timestamp. So Scuba might be able to delta-compress them.
 //
-// At the time of writing, millisecond percision seems already enough to
+// At the time of writing, millisecond precision seems already enough to
 // distinguish sessions across machines. To make it more "future proof", take
 // some bits from the pid.
 //

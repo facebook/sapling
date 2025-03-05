@@ -25,9 +25,9 @@ use crate::Repo;
 /// |\
 /// d e
 /// where we are b, this will tell you if the path history for this specific
-/// path was overriden at c, d or e.
+/// path was overridden at c, d or e.
 ///
-/// Returs vector of (generation_number, changeset_id) for changesets sorted by
+/// Returns vector of (generation_number, changeset_id) for changesets sorted by
 /// generation number.
 pub(crate) async fn find_possible_mutable_ancestors(
     ctx: &CoreContext,

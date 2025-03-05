@@ -102,7 +102,7 @@ pub enum InsertErrorCause {
 }
 
 impl TreeManifest {
-    /// Instantiates a tree manifest that was stored with the specificed `HgId`
+    /// Instantiates a tree manifest that was stored with the specified `HgId`
     pub fn durable(store: Arc<dyn TreeStore>, hgid: HgId) -> Self {
         TreeManifest {
             store: InnerStore::new(store),

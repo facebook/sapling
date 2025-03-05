@@ -209,7 +209,7 @@ impl OdsQuery {
         }
     }
 
-    /// Regualr ODS query
+    /// Regular ODS query
     pub async fn query(
         client: &RapidoClient,
         query_detail: RapidoDataQuery,

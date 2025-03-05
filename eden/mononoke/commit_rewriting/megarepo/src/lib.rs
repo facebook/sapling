@@ -105,7 +105,7 @@ fn get_all_file_moves<'a>(
 
                     // Note: it is always safe to unwrap here, since
                     // `HgFileEnvelope::get_size()` always returns `Some()`
-                    // The return type is `Option` to acommodate `HgManifestEnvelope`
+                    // The return type is `Option` to accommodate `HgManifestEnvelope`
                     // which returns `None`.
                     let file_size = file_envelope.get_size().unwrap();
 

@@ -68,7 +68,7 @@ use crate::UploadedBonsais;
 pub trait Repo =
     crate::processing::Repo + backsyncer::RepoLike + HookManagerRef + Clone + Send + Sync + 'static;
 
-/// An auxillary struct, which contains nearly
+/// An auxiliary struct, which contains nearly
 /// everything needed to create a full `PushRedirector`
 /// This is intended to be used to create a new
 /// `PushRedirector` at the start of every `unbundle`
@@ -287,7 +287,7 @@ impl<R: Repo> PushRedirector<R> {
         // Note: the `maybe_raw_bundle2_id` field here contains a bundle, which
         // was uploaded in the small repo (and is stored in the small repo's blobstore).
         // However, once the `bookmarks_update_log` transaction is successful, we
-        // will mention this bundle id in the table entry. In essense, the table
+        // will mention this bundle id in the table entry. In essence, the table
         // entry for the large repo will point to a blobstore key, which does not
         // exist in that large repo.
         let PostResolvePush {
@@ -340,7 +340,7 @@ impl<R: Repo> PushRedirector<R> {
         // Note: the `maybe_raw_bundle2_id` field here contains a bundle, which
         // was uploaded in the small repo (and is stored in the small repo's blobstore).
         // However, once the `bookmarks_update_log` transaction is successful, we
-        // will mention this bundle id in the table entry. In essense, the table
+        // will mention this bundle id in the table entry. In essence, the table
         // entry for the large repo will point to a blobstore key, which does not
         // exist in that large repo.
         let PostResolvePushRebase {

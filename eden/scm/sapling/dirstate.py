@@ -814,7 +814,7 @@ class dirstate:
             #   4. "status" needs to list "foo" as modified even though mtime matches treestate.
             #
             # _lastnormaltime is set during step 2. We used to pass _lastnormaltime
-            # directly to workingcopy().status(), but now we re-use the invalidatemtime()
+            # directly to workingcopy().status(), but now we reuse the invalidatemtime()
             # mechanism to mark "foo" as NEED_CHECK.
             self._map._tree.invalidatemtime(self._lastnormaltime)
 

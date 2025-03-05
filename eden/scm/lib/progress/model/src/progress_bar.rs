@@ -392,7 +392,7 @@ pub struct ActiveProgressBar {
 }
 
 impl ActiveProgressBar {
-    // Get the underlying progres bar. This is useful to pass to other threads when you
+    // Get the underlying progress bar. This is useful to pass to other threads when you
     // fan out work. You should not use the returned bar as a thread-local "active" bar
     // since it is already the active bar in the starting thread.
     pub fn bar(&self) -> Arc<ProgressBar> {

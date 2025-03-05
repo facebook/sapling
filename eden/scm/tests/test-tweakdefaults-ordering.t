@@ -6,7 +6,7 @@
 # This software may be used and distributed according to the terms of the
 # GNU General Public License version 2.
 
-# TODO: Make this test compatibile with obsstore enabled.
+# TODO: Make this test compatible with obsstore enabled.
 
   $ eagerepo
   $ setconfig 'experimental.evolution='

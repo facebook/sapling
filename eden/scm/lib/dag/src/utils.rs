@@ -77,7 +77,7 @@ where
 /// Given a `set` (sub-graph) and a filter function that selects "known"
 /// subset of its input, apply filter to `set`.
 ///
-/// The filter funtion must have following properties:
+/// The filter function must have following properties:
 /// - filter(xs) + filter(ys) = filter(xs + ys)
 /// - If its input contains both X and Y and X is an ancestor of Y in the
 ///   sub-graph, and its output contains Y, then its output must also

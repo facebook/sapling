@@ -229,8 +229,8 @@ def uploadhgchangesets(repo, revs, force=False, skipknowncheck=False):
     The upload process is split into several stages:
 
         * Check and skip commits that have been already uploaded building ``uploadcommitqueue``.
-        * Check and skip hg filenodes that have been already uploaded buiding ``uploadblobqueue``.
-        * Check and skip hg trees that have been already uploaded buiding ``uploadtreesqueue``.
+        * Check and skip hg filenodes that have been already uploaded building ``uploadblobqueue``.
+        * Check and skip hg trees that have been already uploaded building ``uploadtreesqueue``.
         * Calculate ContentIds hashes and upload all file contents for the ``uploadblobqueue``
           but skipping already uploaded content ids first (this step also deduplicates content ids
           if they are the same for some filenodes). See edenapi.uploadfiles.

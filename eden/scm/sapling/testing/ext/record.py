@@ -95,7 +95,7 @@ def save_state(metalog, env, cwd: str, root: str):
 
 
 def restore_state_script(metalog) -> str:
-    """Attempt to restore the testing environemnt: files, env, cwd.
+    """Attempt to restore the testing environment: files, env, cwd.
     The env and cwd cannot be restored to the current shell. So a shell script
     is written to set the env and cwd. Returns a path to the script.
     """

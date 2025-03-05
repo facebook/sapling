@@ -424,7 +424,7 @@ int runEdenMain(EdenMain&& main, int argc, char** argv) {
             // pre-mount startup errors. Admittedly this will leave hung mounts
             // during graceful restarts:
             // TODO(T164077169): attempt to cleanup mounts left behind by a
-            // graceful restart when EdenFS fails to startup after recieving
+            // graceful restart when EdenFS fails to startup after receiving
             // takeover data.
             startupLogger->exitUnsuccessfully(
                 kExitCodeError,

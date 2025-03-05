@@ -403,7 +403,7 @@ where
     Ok(res)
 }
 
-/// Diff a manfest against its parents to produce a stream of bonsai changes.
+/// Diff a manifest against its parents to produce a stream of bonsai changes.
 pub fn bonsai_diff<ManifestId, Store, Leaf>(
     ctx: CoreContext,
     store: Store,
@@ -420,7 +420,7 @@ where
     bonsai_diff_with_subtree_changes(ctx, store, node, parents, vec![])
 }
 
-/// Diff a manfest against its parents to produce a stream of bonsai changes, taking into account
+/// Diff a manifest against its parents to produce a stream of bonsai changes, taking into account
 /// subtree operations.
 pub fn bonsai_diff_with_subtree_changes<ManifestId, Store, Leaf>(
     ctx: CoreContext,

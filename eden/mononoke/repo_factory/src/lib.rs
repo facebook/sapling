@@ -1440,7 +1440,7 @@ impl RepoFactory {
         }
     }
 
-    /// The commit mapping bettween repos for synced commits.
+    /// The commit mapping between repos for synced commits.
     pub async fn synced_commit_mapping(
         &self,
         repo_config: &ArcRepoConfig,

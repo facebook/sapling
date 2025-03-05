@@ -60,7 +60,7 @@ where
 /// containing only commits that are ancestors of the changeset and have
 /// modified at least one of the paths.
 /// The commit graph is returned as a topologically sorted list of changesets
-/// and a hashmap of changset id to their parents' ids.
+/// and a hashmap of changeset id to their parents' ids.
 pub async fn build_partial_commit_graph_for_export<R: MononokeRepo>(
     ctx: &CoreContext,
     logger: &Logger,
@@ -89,7 +89,7 @@ pub async fn build_partial_commit_graph_for_export<R: MononokeRepo>(
 
     info!(
         logger,
-        "Number of changsets to export: {0:?}",
+        "Number of changesets to export: {0:?}",
         sorted_changesets.len()
     );
 

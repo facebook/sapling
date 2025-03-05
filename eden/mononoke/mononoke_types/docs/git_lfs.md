@@ -1,6 +1,6 @@
 # Git LFS representation
 
-This docs covers the internal data representaion for Git LFS files in Mononoke.
+This docs covers the internal data representation for Git LFS files in Mononoke.
 
 ## Why bother?
 
@@ -14,13 +14,13 @@ follow the suit and still be a Git-compatible server. But this approach has some
  * Mononoke's internal data integrity checks wouldn't cover LFS file contents.
  * All Cross-Repo syncs would be syncing pointers rather than files: in case of syncing from Git to
    Sapling that would mean swapping the file for not-so-useful pointer content. In case of syncing
-   to other Git repo that wouldn't gurantee the other repo being LFS-enabled and actual file contents
+   to other Git repo that wouldn't guarantee the other repo being LFS-enabled and actual file contents
    being replicated.
 
 ## It's optional
 
 If the above downsides are not a problem for you, or if you're using some external LFS server rather
-than Mononoke internal one you don't need to worry: this feature is entirely optional and if diabled
+than Mononoke internal one you don't need to worry: this feature is entirely optional and if disabled
 LFS pointers are treated just like any other files.
 
 ## Definitions
@@ -74,7 +74,7 @@ If the Git LFS pointer interpretatin is disabled we just store the pointer and s
 
 In some cases a single repo can have some pointers interpreted and some stored without resolving to
 full contents. This is useful in cases where for some parts of the repo history the original
-contents are lost (they're stored on external server so that's a possiblity) and for new contents we
+contents are lost (they're stored on external server so that's a possibility) and for new contents we
 want to leverage the pointer interpretation repo.
 
 ## Conclusion

@@ -106,10 +106,10 @@ impl CommitGraph {
     }
 
     /// Pops the highest generation changesets of a frontier, returning any that
-    /// satisify a property and lowering the rest of them to either their immediate
+    /// satisfy a property and lowering the rest of them to either their immediate
     /// parents or their lowest skip tree edge that doesn't satisfy the property.
     /// Repeatedly calling this function and concatenating the output will result
-    /// in the frontier of changesets satisifying the property.
+    /// in the frontier of changesets satisfying the property.
     ///
     /// Returns None if the frontier is empty.
     pub(crate) async fn lower_frontier_step<Property, Out>(

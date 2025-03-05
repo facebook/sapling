@@ -357,7 +357,7 @@ impl<'a> Multipeek<'a> {
 #[must_use = "iterator adaptors are lazy and do nothing unless consumed"]
 #[derive(Debug)]
 pub enum TokenIterWrapper<I> {
-    /// A `TokenIter` which holds an aribtrary `Iterator` over `Token`s.
+    /// A `TokenIter` which holds an arbitrary `Iterator` over `Token`s.
     Regular(TokenIter<I>),
     /// A `TokenIter` which has all `Token`s buffered in memory, and thus
     /// has no underlying iterator.
@@ -446,7 +446,7 @@ pub struct Balanced<I> {
     escaped: Option<(Token, SourcePos)>,
     /// A stack of pending unmatched tokens we still must encounter.
     stack: Vec<(Token, SourcePos)>,
-    /// Indicates if we should yield the final, outermost delimeter.
+    /// Indicates if we should yield the final, outermost delimiter.
     skip_last_delimeter: bool,
     /// Makes the iterator *fused* by yielding None forever after we are done.
     done: bool,
@@ -457,13 +457,13 @@ pub struct Balanced<I> {
 impl<I: PositionIterator> Balanced<I> {
     /// Constructs a new balanced iterator.
     ///
-    /// If no delimeter is given, a single token will be yielded, unless the
+    /// If no delimiter is given, a single token will be yielded, unless the
     /// first found token is an opening one (e.g. "), making the iterator yield
-    /// tokens until its matching delimeter is found (the matching delimeter *will*
+    /// tokens until its matching delimiter is found (the matching delimiter *will*
     /// be consumed).
     ///
-    /// If a delimeter (and its position) is specified, tokens are yielded *up to*
-    /// the delimeter, but the delimeter will be silently consumed.
+    /// If a delimiter (and its position) is specified, tokens are yielded *up to*
+    /// the delimiter, but the delimiter will be silently consumed.
     pub fn new(iter: I, delim: Option<(Token, SourcePos)>) -> Self {
         Balanced {
             escaped: None,
@@ -573,7 +573,7 @@ impl<I: PeekablePositionIterator<Item = Token>> Iterator for Balanced<I> {
             }
 
             Some(t) => {
-                // If we aren't looking for any more delimeters we should only
+                // If we aren't looking for any more delimiters we should only
                 // consume a single token (since its balanced by nature)
                 self.done |= self.stack.is_empty();
                 Some(Ok(t))

@@ -55,7 +55,7 @@
 #  * SHOW_DIRTY_STATE : Show dirty state of the working directory of a
 #    repo with a star *. In addition, for hg, show untracked files with ?.
 #    For git, show staged change with +.  When SHOW_DIRTY_STATE is set,
-#    you can opt out invidivual repo by setting shell.showDirtyState to false
+#    you can opt out individual repo by setting shell.showDirtyState to false
 #    in .hg/hgrc or .git/config.
 #
 # Notes to developers:
@@ -229,7 +229,7 @@ _git_prompt() {
 
 _scm_prompt() {
   local dir fmt br
-  # Default to be compatable with __git_ps1. In particular:
+  # Default to be compatible with __git_ps1. In particular:
   # - provide a space for the user so that they don't have to have
   #   random extra spaces in their prompt when not in a repo
   # - provide parens so it's differentiated from other crap in their prompt

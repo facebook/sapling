@@ -449,13 +449,13 @@ mod tests {
         assert_eq!(
             r(map.vertexes_by_hex_prefix(b"6a", 3)).unwrap(),
             [
-                // Virutal "jkl3" requires full hex match so not here.
+                // Virtual "jkl3" requires full hex match so not here.
                 Vertex::from(&b"jkl"[..]),
                 Vertex::from(&b"jkl2"[..]),
             ]
         );
         assert_eq!(
-            // Virutal "jkl3" matches when the hex is full.
+            // Virtual "jkl3" matches when the hex is full.
             r(map.vertexes_by_hex_prefix(b"6a6b6c33", 3)).unwrap(),
             [Vertex::from(&b"jkl3"[..])]
         );
@@ -465,19 +465,19 @@ mod tests {
         );
         assert!(r(map.vertexes_by_hex_prefix(b"6b", 1)).unwrap().is_empty());
 
-        // 'xy' and 'xyz' are virutal, requires full hex to match
+        // 'xy' and 'xyz' are virtual, requires full hex to match
         assert_eq!(0x78, b'x');
         assert_eq!(
             r(map.vertexes_by_hex_prefix(b"78", 3)).unwrap(),
             &[] as &[Vertex],
         );
         assert_eq!(
-            // Virutal "xy" matches when the hex is full.
+            // Virtual "xy" matches when the hex is full.
             r(map.vertexes_by_hex_prefix(b"7879", 3)).unwrap(),
             [Vertex::from(&b"xy"[..])]
         );
         assert_eq!(
-            // Virutal "xyz" matches when the hex is full.
+            // Virtual "xyz" matches when the hex is full.
             r(map.vertexes_by_hex_prefix(b"78797a", 3)).unwrap(),
             [Vertex::from(&b"xyz"[..])]
         );

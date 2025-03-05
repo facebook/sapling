@@ -73,7 +73,7 @@ pub(crate) fn normalize_email_user(name: &str, format: SerializationFormat) -> R
 }
 
 /// Write multi-line `message` to `out`. Each line is prefixed by `line_prefix`.
-/// `message` is normalized (trimed trailing spaces, and leading,
+/// `message` is normalized (trimmed trailing spaces, and leading,
 /// trailing empty lines, `\r\n` becomes `\n`).
 ///
 /// The last `\n` is not written. The callsite can choose to write it or not.

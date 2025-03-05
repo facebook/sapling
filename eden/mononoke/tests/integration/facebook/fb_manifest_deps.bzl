@@ -203,7 +203,7 @@ def _dott_test(name, dott_files, deps, use_mysql = False, disable_all_network_ac
         dott_deps = dott_deps | DOTT_ASYNC_WORKER
 
     for d in deps:
-        # test runner takes sybolic names not targets, map from targets to the placeholder names
+        # test runner takes symbolic names not targets, map from targets to the placeholder names
         if d in dott_deps:
             env_name = dott_deps[d]
             targets[env_name] = d

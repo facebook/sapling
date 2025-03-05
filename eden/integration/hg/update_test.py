@@ -1348,7 +1348,7 @@ class PrjFSStressTornReads(EdenHgTestCase):
         read_thread.join()
         self.assertIsNotNone(read_contents)
         # This is not correct behavior, we want the contents to be either
-        # the contents from the first or second commit, not this inconsitent
+        # the contents from the first or second commit, not this inconsistent
         # mashup. This test is for not documenting the behavior of torn reads.
         # This case requires a larger fix.
         # TODO(kmancini): fix torn reads.
@@ -1468,7 +1468,7 @@ class PrjFSStressTornReads(EdenHgTestCase):
                 keyValueRegex="file",
             )
         finally:
-            # we can't let shutdown be on going when the test trys to
+            # we can't let shutdown be on going when the test tries to
             # clean up or we might hide the actual error.
             # throws if eden exits uncleanly - which it does if there is some
             # sort of crash.

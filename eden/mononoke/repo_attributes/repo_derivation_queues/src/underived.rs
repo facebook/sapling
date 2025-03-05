@@ -151,7 +151,7 @@ pub async fn build_underived_batched_graph<'a>(
                                 None
                             }
                             Err(InternalError::ItemExists(existing)) => {
-                                // Item already in DAG, another reqeust for derivation trigger that
+                                // Item already in DAG, another request for derivation trigger that
                                 // we need to return watch for this existing item.
                                 let existing_item_id = item.id().clone();
                                 if *existing == item {

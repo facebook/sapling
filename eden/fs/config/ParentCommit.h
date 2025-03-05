@@ -40,7 +40,7 @@ class ParentCommit {
   std::optional<pid_t> getInProgressPid() const;
 
   /**
-   * Since the parent commit might contain multiple RootId, allows chosing
+   * Since the parent commit might contain multiple RootId, allows choosing
    * which one should be preferred.
    *
    * In all the cases, when no checkout are ongoing, the current stable RootId

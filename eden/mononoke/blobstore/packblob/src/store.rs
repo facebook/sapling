@@ -306,7 +306,7 @@ mod tests {
         let innerblob = Arc::new(Memblob::default());
         let packblob = PackBlob::new(innerblob.clone(), PackFormat::ZstdIndividual(0));
 
-        let mut rng = XorShiftRng::seed_from_u64(0); // reproducable Rng
+        let mut rng = XorShiftRng::seed_from_u64(0); // reproducible Rng
         let mut bytes_in = vec![7u8; 65535];
         rng.fill_bytes(&mut bytes_in);
         let bytes_in = Bytes::from(bytes_in);

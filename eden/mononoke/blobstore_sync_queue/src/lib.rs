@@ -17,7 +17,7 @@ pub use write_ahead_log::BlobstoreWal;
 pub use write_ahead_log::BlobstoreWalEntry;
 pub use write_ahead_log::SqlBlobstoreWal;
 
-// Identifier for given blobstore operation to faciliate correlating same operation
+// Identifier for given blobstore operation to facilitate correlating same operation
 // across multiple blobstores.
 #[derive(Clone, Debug, Eq, PartialEq, Hash, mysql::OptTryFromRowField)]
 pub struct OperationKey(pub Uuid);

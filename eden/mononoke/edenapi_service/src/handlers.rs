@@ -186,7 +186,7 @@ impl fmt::Display for SaplingRemoteApiMethod {
 /// Information about the handler that served the request.
 ///
 /// This should be inserted into the request's `State` by each handler. It will
-/// typically be used by middlware for request logging and stats reporting.
+/// typically be used by middleware for request logging and stats reporting.
 #[derive(Default, StateData, Clone)]
 pub struct HandlerInfo {
     pub repo: Option<String>,
@@ -236,7 +236,7 @@ impl ErrorFormatter for JsonErrorFomatter {
 /// async fn handler(state: &mut State) -> Result<impl TryIntoResponse, HttpError>
 /// ```
 ///
-/// The resulting wrapped function will have the signaure:
+/// The resulting wrapped function will have the signature:
 /// ```rust,ignore
 /// fn wrapped(mut state: State) -> Pin<Box<HandlerFuture>>
 /// ```

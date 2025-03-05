@@ -105,7 +105,7 @@ impl SourceControlServiceImpl {
     /// Resolve a bookmark to a changeset.
     ///
     /// Returns whether the bookmark exists, and the IDs of the changeset in
-    /// the requested indentity schemes.
+    /// the requested identity schemes.
     pub(crate) async fn repo_resolve_bookmark(
         &self,
         ctx: CoreContext,

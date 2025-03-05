@@ -227,7 +227,7 @@ pub fn normalize(path: &Path) -> PathBuf {
 }
 
 /// Given cwd, return `path` relative to `root`, or None if `path` is not under `root`.
-/// This is analagous to pathutil.canonpath() in Python.
+/// This is analogous to pathutil.canonpath() in Python.
 pub fn root_relative_path(root: &Path, cwd: &Path, path: &Path) -> io::Result<Option<PathBuf>> {
     // Make `path` absolute. I'm not sure why `root` is included.
     // Maybe in case `cwd` is empty? Or to allow root-relative `cwd`?

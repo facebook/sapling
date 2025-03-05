@@ -133,7 +133,7 @@ fn handle_result(result: &ChangesSinceV2Result) -> Result<(), EdenFsError> {
             println!("{}", string);
         }
         Err(e) => {
-            tracing::error!(?e, ?response, "unable to seralize response to JSON");
+            tracing::error!(?e, ?response, "unable to serialize response to JSON");
         }
     }
 

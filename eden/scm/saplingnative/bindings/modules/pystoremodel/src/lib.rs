@@ -121,7 +121,7 @@ py_class!(pub class KeyStore |py| {
 py_class!(pub class FileStore |py| {
     data inner: Arc<dyn NativeFileStore>;
 
-    /// get_rename_iter(keys) -> Iteratable[Tuple[Key, Key]]
+    /// get_rename_iter(keys) -> Iterable[Tuple[Key, Key]]
     def get_rename_iter(&self, keys: Serde<Vec<CompactKey>>) -> PyResult<PyIter> {
         let inner = self.inner(py);
         let iter = inner.get_rename_iter(keys.0.into_keys()).map_pyerr(py)?;

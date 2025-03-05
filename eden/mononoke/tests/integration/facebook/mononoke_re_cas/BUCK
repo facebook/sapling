@@ -28,7 +28,7 @@ dott_test(
     ],
 )
 
-# This adds some artificial direct dependecies to CI graph to make it look like deps are closer
+# This adds some artificial direct dependencies to CI graph to make it look like deps are closer
 ci_hint(
     ci_deps = [
         "fbcode//remote_execution/client_lib/wrappers/rust:re_client_lib",

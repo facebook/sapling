@@ -135,7 +135,7 @@ fn fetch_all_trees<R: MononokeRepo>(
 }
 
 // Sapling wants to use trees the same way for Hg and Git, so shaping somehow
-// the git object to fit within the defiend TreeEntry structure.
+// the git object to fit within the defined TreeEntry structure.
 async fn fetch_git_object_as_tree<R: MononokeRepo>(
     key: Key,
     repo: HgRepoContext<R>,

@@ -43,7 +43,7 @@ EdenThriftResult = TypeVar(
 
 @testcase.eden_repo_test
 class ThriftTest(testcase.EdenRepoTest):
-    # The following members are initilaized in populate_repo()
+    # The following members are initialized in populate_repo()
     commit1: str = ""
     commit2: str = ""
     commit3: str = ""

@@ -19,7 +19,7 @@ use serde_json::Value;
 /// use blackbox::match_pattern;
 /// use serde_json::json;
 ///
-/// // Value matches if they are equal. No magic convertion between types.
+/// // Value matches if they are equal. No magic conversion between types.
 /// assert!(match_pattern(&json!(true), &json!(true)));
 /// assert!(match_pattern(&json!(42), &json!(42)));
 /// assert!(!match_pattern(&json!(true), &json!("true")));

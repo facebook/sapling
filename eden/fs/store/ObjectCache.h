@@ -290,7 +290,7 @@ class ObjectCache : public std::enable_shared_from_this<
         : id{std::move(id)}, object{std::move(b)} {}
 
     // The folly::SafeIntrusiveListHook needs special handling to be
-    // copied/moved, removing the move/copy constructor and assignement to
+    // copied/moved, removing the move/copy constructor and assignment to
     // avoid unexpected copies/moves.
     CacheItem(CacheItem&&) = default;
     CacheItem(const CacheItem&) = delete;

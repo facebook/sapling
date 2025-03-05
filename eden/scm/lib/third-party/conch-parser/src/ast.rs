@@ -57,7 +57,7 @@ pub enum ParameterSubstitution<P, W, C, A> {
     Command(Vec<C>),
     /// Returns the length of the value of a parameter, e.g. `${#param}`
     Len(P),
-    /// Returns the resulting value of an arithmetic subsitution, e.g. `$(( x++ ))`
+    /// Returns the resulting value of an arithmetic substitution, e.g. `$(( x++ ))`
     Arith(Option<A>),
     /// Use a provided value if the parameter is null or unset, e.g.
     /// `${param:-[word]}`.
@@ -90,7 +90,7 @@ pub enum ParameterSubstitution<P, W, C, A> {
     RemoveLargestPrefix(P, Option<W>),
 }
 
-/// A type alias for the default hiearchy for representing shell words.
+/// A type alias for the default hierarchy for representing shell words.
 pub type ShellWord<T, W, C> = ComplexWord<
     Word<
         T,
@@ -242,7 +242,7 @@ pub type CommandList<T, W, C> = AndOrList<ListableCommand<ShellPipeableCommand<T
 pub type AtomicCommandList<T, W, C> =
     AndOrList<ListableCommand<AtomicShellPipeableCommand<T, W, C>>>;
 
-/// A type alias for the default hiearchy to represent pipeable commands,
+/// A type alias for the default hierarchy to represent pipeable commands,
 /// using `Rc` wrappers around function declarations.
 pub type ShellPipeableCommand<T, W, C> = PipeableCommand<
     T,
@@ -251,7 +251,7 @@ pub type ShellPipeableCommand<T, W, C> = PipeableCommand<
     Rc<ShellCompoundCommand<T, W, C>>,
 >;
 
-/// A type alias for the default hiearchy to represent pipeable commands,
+/// A type alias for the default hierarchy to represent pipeable commands,
 /// using `Arc` wrappers around function declarations.
 pub type AtomicShellPipeableCommand<T, W, C> = PipeableCommand<
     T,
@@ -323,7 +323,7 @@ pub enum PipeableCommand<N, S, C, F> {
     FunctionDef(N, F),
 }
 
-/// A type alias for the default hiearchy for representing compound shell commands.
+/// A type alias for the default hierarchy for representing compound shell commands.
 pub type ShellCompoundCommand<T, W, C> = CompoundCommand<CompoundCommandKind<T, W, C>, Redirect<W>>;
 
 /// Type alias for the default `CompoundCommandKind` representation.
@@ -378,7 +378,7 @@ pub enum CompoundCommandKind<V, W, C> {
         /// The body to run with the variable binding.
         body: Vec<C>,
     },
-    /// A command that behaves much like a `match` statment in Rust, running
+    /// A command that behaves much like a `match` statement in Rust, running
     /// a branch of commands if a specified word matches another literal or
     /// glob pattern.
     Case {
@@ -433,14 +433,14 @@ pub struct SimpleCommand<V, W, R> {
     /// Redirections or environment variables that occur before any command
     /// in the order they were parsed.
     pub redirects_or_env_vars: Vec<RedirectOrEnvVar<R, V, W>>,
-    /// Redirections or command name/argumetns in the order they were parsed.
+    /// Redirections or command name/arguments in the order they were parsed.
     pub redirects_or_cmd_words: Vec<RedirectOrCmdWord<R, W>>,
 }
 
 /// Type alias for the default `Arithmetic` representation.
 pub type DefaultArithmetic = Arithmetic<String>;
 
-/// Represents an expression within an arithmetic subsitution.
+/// Represents an expression within an arithmetic substitution.
 ///
 /// Generic over the representation of a variable name.
 #[derive(Debug, PartialEq, Eq, Clone, Serialize)]

@@ -27,8 +27,8 @@ is all time zero for Blob.
    :
 
 Duration of get{xxx} (blobmetadata, tree) from LocalStore(OnDiskCache).
-**Note:** TreeMetadata is not stored in the local store, and local strore is
-disabled for Blob, so the tree_metadata and blob local strore duration doesn't
+**Note:** TreeMetadata is not stored in the local store, and local store is
+disabled for Blob, so the tree_metadata and blob local store duration doesn't
 exist.
 
 6. `Counter get{xxx}FromBackingStore{"object_store.get_{xxx}.backing_store"}` :

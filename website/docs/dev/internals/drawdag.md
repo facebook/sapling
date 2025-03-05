@@ -59,9 +59,9 @@ characters:
 - Connect characters: `-`,  `\`, and `/`.
 - Name characters: alpha, numeric, and some other characters.
 
-Names define vertexes in the graph. Connect characters define edges in the graph.
+Names define vertices in the graph. Connect characters define edges in the graph.
 
-If two vertexes are directly connected, the one to the left becomes a parent of
+If two vertices are directly connected, the one to the left becomes a parent of
 the other vertex. For a commit graph, this behaves like making commits from
 left to right.
 
@@ -86,7 +86,7 @@ merges.
 
 ### Range generation
 
-You can use `..` (or more dots) to generate a range of vertexes and connect
+You can use `..` (or more dots) to generate a range of vertices and connect
 them. This works for simple alphabet names like `A..Z` or numbers like
 `A01..A99`:
 
@@ -153,7 +153,7 @@ Check `test-drawdag.t` for more examples.
 
 ### Rust unit tests
 
-You can use the `drawdag` crate to parse DrawDag code into graph vertexes and
+You can use the `drawdag` crate to parse DrawDag code into graph vertices and
 edges.
 
 The `dag` crate might also be useful to run complex queries on a graph, and

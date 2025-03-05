@@ -16,7 +16,7 @@ namespace facebook::eden {
  * Splits FilteredRootIds into two parts: a FilterID and the original underlying
  * RootId. This util function is mainly for use in the FilteredBackingStore.
  * Some other parts of the codebase need this logic (and don't have access to a
- * FilteredBackingStore), so we put it in a util funciton for wider use.
+ * FilteredBackingStore), so we put it in a util function for wider use.
  */
 std::tuple<RootId, std::string> parseFilterIdFromRootId(const RootId& rootId);
 } // namespace facebook::eden

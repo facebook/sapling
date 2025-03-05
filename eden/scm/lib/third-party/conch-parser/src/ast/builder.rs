@@ -22,7 +22,7 @@ pub use self::empty_builder::EmptyBuilder;
 pub enum SeparatorKind {
     /// A semicolon appears between commands, normally indicating a sequence.
     Semi,
-    /// An ampersand appears between commands, normally indicating an asyncronous job.
+    /// An ampersand appears between commands, normally indicating an asynchronous job.
     Amp,
     /// A newline (and possibly a comment) appears at the end of a command before the next.
     Newline,
@@ -206,7 +206,7 @@ pub enum ParameterSubstitutionKind<W, C> {
     Command(CommandGroup<C>),
     /// Returns the length of the value of a parameter, e.g. ${#param}
     Len(DefaultParameter),
-    /// Returns the resulting value of an arithmetic subsitution, e.g. `$(( x++ ))`
+    /// Returns the resulting value of an arithmetic substitution, e.g. `$(( x++ ))`
     Arith(Option<DefaultArithmetic>),
     /// Use a provided value if the parameter is null or unset, e.g.
     /// `${param:-[word]}`.
@@ -238,7 +238,7 @@ pub enum ParameterSubstitutionKind<W, C> {
     RemoveLargestPrefix(DefaultParameter, Option<W>),
 }
 
-/// Represents a parsed newline, more specifically, the presense of a comment
+/// Represents a parsed newline, more specifically, the presence of a comment
 /// immediately preceeding the newline.
 ///
 /// Since shell comments are usually treated as a newline, they can be present

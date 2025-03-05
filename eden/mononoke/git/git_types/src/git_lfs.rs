@@ -28,7 +28,7 @@ fn format_lfs_pointer(sha256: Sha256, size: u64) -> String {
     )
 }
 
-/// Given a file change generates a Git LFS pointer that points to acctual file contents
+/// Given a file change generates a Git LFS pointer that points to actual file contents
 /// and stores it in the blobstore. Returns oid of the LFS pointer.
 pub async fn generate_and_store_git_lfs_pointer<B: Blobstore + Clone + 'static>(
     blobstore: &B,

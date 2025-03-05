@@ -27,7 +27,7 @@ use crate::client::WorkingCopyClient;
 pub enum PendingChange {
     Changed(RepoPathBuf),
     Deleted(RepoPathBuf),
-    // Ingored doesn't make sense as a pending change, but in general we don't
+    // Ignored doesn't make sense as a pending change, but in general we don't
     // store info about ignored files, and it is more efficient for the
     // filesystem abstraction to tell us about ignored files as it computes
     // status.

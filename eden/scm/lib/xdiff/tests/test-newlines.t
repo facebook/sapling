@@ -7,7 +7,7 @@ Setup
   $ . "$TESTDIR/setup.sh"
 
 
-test behaviour arround handling newlines
+test behaviour around handling newlines
 
   $ cat << EOF > a
   > #[something]

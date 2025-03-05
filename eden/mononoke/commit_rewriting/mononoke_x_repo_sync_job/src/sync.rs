@@ -519,7 +519,7 @@ where
         // XXXX: With current "hinting" infra we can pull of this trick reliably only when there's
         // one common pushrebase bookmark. That's fine, we don't have more in production and maybe
         // we shouldn't even allow more than one.
-        // For now let's give privilige to the first one.
+        // For now let's give privilege to the first one.
         let parent_mapping_selection_hint: CandidateSelectionHint<R> =
             if let Some(bookmark) = common_pushrebase_bookmarks.iter().next() {
                 CandidateSelectionHint::AncestorOfBookmark(
@@ -575,7 +575,7 @@ pub async fn sync_commits_for_initial_import<R>(
 where
     R: Repo,
 {
-    log_info(ctx, format!("Syncing {cs_id} for inital import"));
+    log_info(ctx, format!("Syncing {cs_id} for initial import"));
     log_info(
         ctx,
         format!(

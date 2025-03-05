@@ -211,7 +211,7 @@ class sshpeer(stdiopeer.stdiopeer):
         # while self._subprocess isn't used, having it allows the subprocess to
         # to clean up correctly later
         if util.istest():
-            # spwan 'hg serve' directly, avoid depending on /bin/sh or python
+            # spawn 'hg serve' directly, avoid depending on /bin/sh or python
             # to run dummyssh
             sub = _popen4testhgserve(self._path, env=sshenv)
         else:

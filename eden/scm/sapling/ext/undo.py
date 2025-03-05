@@ -230,7 +230,7 @@ def safelog(repo, command):
 
 def lighttransaction(repo):
     # full fledged transactions have two serious issues:
-    # 1. they may cause infite loops through hooks
+    # 1. they may cause infinite loops through hooks
     #    that run commands
     # 2. they are really expensive performance wise
     #
@@ -561,7 +561,7 @@ def _debugundoindex(ui, repo, reverseindex):
 
 def _getolddrafts(repo, reverseindex):
     # convert reverseindex to node
-    # this makes cacheing guaranteed correct
+    # this makes caching guaranteed correct
     # bc immutable history
     nodedict = _readindex(repo, reverseindex)
     return _cachedgetolddrafts(repo, nodedict)
@@ -621,7 +621,7 @@ def _localbranch(repo, subset, x):
     localbranch changesets
 
     Returns all commits within the same localbranch as the changeset(s). A local
-    branch is all draft changesets that are connected, uninterupted by public
+    branch is all draft changesets that are connected, uninterrupted by public
     changesets.  Any draft commit within a branch, or a public commit at the
     base of the branch, can be used to identify localbranches.
     """
@@ -641,7 +641,7 @@ def _localbranch(repo, subset, x):
 
 def _getoldworkingcopyparent(repo, reverseindex):
     # convert reverseindex to node
-    # this makes cacheing guaranteed correct
+    # this makes caching guaranteed correct
     # bc immutable history
     nodedict = _readindex(repo, reverseindex)
     return _cachedgetoldworkingcopyparent(repo, nodedict["workingparent"])
@@ -670,7 +670,7 @@ def _oldworkingcopyparent(repo, subset, x):
     """
     args = revset.getargsdict(x, "oldoworkingcopyrevset", "reverseindex")
     reverseindex = revsetlang.getinteger(
-        args.get("reverseindex"), _("index must be a positive interger"), 1
+        args.get("reverseindex"), _("index must be a positive integer"), 1
     )
     revs = _getoldworkingcopyparent(repo, reverseindex)
     return subset & smartset.baseset(revs, repo=repo)
@@ -823,7 +823,7 @@ def undo(ui, repo, **opts):
     local commits, or that changed local bookmarks. Examples of local commands
     include :prog:`goto`, :prog:`commit`, :prog:`amend`, and :prog:`rebase`.
 
-    You cannot use :prog:`undo` to undo uncommited changes in the working copy,
+    You cannot use :prog:`undo` to undo uncommitted changes in the working copy,
     or changes to remote bookmarks.
 
     You can run :prog:`undo` multiple times to undo a series of local commands.

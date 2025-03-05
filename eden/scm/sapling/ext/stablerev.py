@@ -131,7 +131,7 @@ def getstablerev(repo, subset, x):
             script = scripts/get_stable_rev.py
 
         The revset takes an optional "target" argument that is passed to the
-        script (as `--target $TARGET`). This argumement can be made `optional`,
+        script (as `--target $TARGET`). This argument can be made `optional`,
         `required`, or `forbidden`::
 
             [stablerev]

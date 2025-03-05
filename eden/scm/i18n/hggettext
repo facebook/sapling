@@ -75,7 +75,7 @@ def offset(src, doc, name, default):
     if end == -1:
         # This can happen if the docstring contains unnecessary escape
         # sequences such as \" in a triple-quoted string. The problem
-        # is that \" is turned into " and so doc wont appear in src.
+        # is that \" is turned into " and so doc won't appear in src.
         sys.stderr.write(
             "warning: unknown offset in %s, assuming %d lines\n" % (name, default)
         )

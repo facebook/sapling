@@ -932,7 +932,7 @@ Since we cannot proceed, ghstack will abort now.
         In this case, the `tree` argument is ignored.
 
         In Git, we use `git commit-tree` to create a new commit object
-        programatically that is outside of the user's working branch, so its
+        programmatically that is outside of the user's working branch, so its
         ancestors are unaffected and no surgery needs to be done on `self.stack`.
         In this case, the `stack_index` argument is ignored.
         """

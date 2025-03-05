@@ -119,7 +119,7 @@ Before config change
   Starting session with id * (glob)
   Starting up X Repo Sync from small repo imported_repo to large repo large-mon
   Checking if 65f0b76c034d87adf7dac6f0b5a5442ab3f62edda21adb8e8ec57d1a99fb5905 is already synced 2->0
-  Syncing 65f0b76c034d87adf7dac6f0b5a5442ab3f62edda21adb8e8ec57d1a99fb5905 for inital import
+  Syncing 65f0b76c034d87adf7dac6f0b5a5442ab3f62edda21adb8e8ec57d1a99fb5905 for initial import
   Source repo: imported_repo / Target repo: large-mon
   Found 3 unsynced ancestors
   changeset 65f0b76c034d87adf7dac6f0b5a5442ab3f62edda21adb8e8ec57d1a99fb5905 synced as ecc8ec74d00988653ae64ebf206a9ed42898449125b91f59ecd1d8a0a93f4a97 in *ms (glob)
@@ -304,7 +304,7 @@ Before config change
   Starting session with id * (glob)
   Starting up X Repo Sync from small repo another_repo to large repo large-mon
   Checking if 156943c35cda314d72b0177b06d5edf3c92dc9c9505d7b3171b9230f7c1768bb is already synced 3->0
-  Syncing 156943c35cda314d72b0177b06d5edf3c92dc9c9505d7b3171b9230f7c1768bb for inital import
+  Syncing 156943c35cda314d72b0177b06d5edf3c92dc9c9505d7b3171b9230f7c1768bb for initial import
   Source repo: another_repo / Target repo: large-mon
   Found 3 unsynced ancestors
   changeset 156943c35cda314d72b0177b06d5edf3c92dc9c9505d7b3171b9230f7c1768bb synced as 0a9797a0fa6b3284b9d73ec43357f06a9b00d6fa402122d1bbfbeac16e3a2c39 in *ms (glob)

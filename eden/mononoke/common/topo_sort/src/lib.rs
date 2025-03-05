@@ -76,7 +76,7 @@ where
 ///
 /// There are many valid topological orders for non-linear DAGs. When there
 /// are merges the starting point for the traversal matters a lot. If we
-/// start from one of the heads the merge branches would be continous parts
+/// start from one of the heads the merge branches would be continuous parts
 /// of the sorted list.  If we start from the leaves we might end up
 /// interleaving merges which matters for some consumer of this sorted order.
 pub fn sort_topological_starting_with_heads<T, M, V>(dag: M, heads: &[T]) -> Option<Vec<T>>

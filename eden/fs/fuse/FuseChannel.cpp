@@ -989,7 +989,7 @@ folly::SemiFuture<folly::Unit> FuseChannel::unmount(UnmountOptions options) {
 void FuseChannel::startWorkerThreads() {
   auto state = state_.wlock();
 
-  // After aquiring the state_ lock check to see if we have been asked to shut
+  // After acquiring the state_ lock check to see if we have been asked to shut
   // down.  If so just return without doing anything.
   //
   // This can happen if the FuseChannel is destroyed very shortly after we
@@ -1755,7 +1755,7 @@ void FuseChannel::processSession() {
 
     // Sanity check to ensure that the request wasn't from ourself.
     //
-    // We should never make requests to ourself via normal filesytem
+    // We should never make requests to ourself via normal filesystem
     // operations going through the kernel.  Otherwise we risk deadlocks if the
     // kernel calls us while holding an inode lock, and we then end up making a
     // filesystem call that need the same inode lock.  We will then not be able

@@ -248,7 +248,7 @@ async fn fetch_git_object_as_file<R: MononokeRepo>(
     })
 }
 
-/// Generate an upload token for alredy uploaded content
+/// Generate an upload token for already uploaded content
 async fn generate_upload_token<R>(
     _repo: HgRepoContext<R>,
     id: AnyFileContentId,

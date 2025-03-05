@@ -70,7 +70,7 @@ mononoke_queries! {
 }
 
 /// A commit graph storage that allows fetching snapshot changesets, as well
-/// as presistent changesets.
+/// as persistent changesets.
 /// Since initially there will be a single snapshot per bubble, there's no
 /// need to optimise anything on this struct. As the need arises, we can tweak
 /// this, for example by having an extra table that stores parent information

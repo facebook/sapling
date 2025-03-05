@@ -314,7 +314,7 @@ void executeShellCommand(
     auto cwdStr = multibyteToWideString(cwd);
     SetCurrentDirectoryW(cwdStr.c_str());
   }
-  auto errStr = fmt::format("Failed to excute command: {} {}", cmd, params);
+  auto errStr = fmt::format("Failed to execute command: {} {}", cmd, params);
   checkNonZero(ShellExecuteExW(&pExecInfo), errStr);
 }
 

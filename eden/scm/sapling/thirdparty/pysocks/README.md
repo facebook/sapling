@@ -149,7 +149,7 @@ Generally, it is best to initialize the `socksocket` object with no parameters
     >>> s = socks.socksocket()
     >>>
 
-The `socksocket` object has an interface which is very similiar to socket's (in fact
+The `socksocket` object has an interface which is very similar to socket's (in fact
 the `socksocket` class is derived from socket) with a few extra methods.
 To select the proxy server you would like to use, use the `set_proxy` method, whose
 syntax is:

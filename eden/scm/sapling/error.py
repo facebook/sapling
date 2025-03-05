@@ -157,7 +157,7 @@ class DeprecatedError(Abort):
 
 
 class UncommitedChangesAbort(Abort):
-    """Raised if there are uncommited changs and the command requires a clean
+    """Raised if there are uncommitted changs and the command requires a clean
     working copy
     """
 

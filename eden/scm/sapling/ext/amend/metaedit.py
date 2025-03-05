@@ -251,7 +251,7 @@ def metaedit(ui, repo, templ, *revs, **opts) -> Optional[int]:
                 replacemap = {}
                 # adding commitopts to the revisions to metaedit
                 allctxopt = [{"ctx": ctx, "commitopts": commitopts} for ctx in allctx]
-                # all descendats that can be safely rewritten
+                # all descendants that can be safely rewritten
                 newunstable = common.newunstable(repo, revs)
                 newunstableopt = [
                     {"ctx": ctx} for ctx in [repo[r] for r in newunstable]

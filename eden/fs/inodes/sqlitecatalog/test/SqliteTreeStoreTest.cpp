@@ -255,7 +255,7 @@ TEST_F(SqliteTreeStoreTest, testRenameChild) {
   overlay::OverlayDir anotherDir;
   auto anotherInode = InodeNumber{store_->nextInodeNumber()};
   store_->saveTree(anotherInode, overlay::OverlayDir{anotherDir});
-  // No entires in the new directory yet
+  // No entries in the new directory yet
   EXPECT_EQ(store_->loadTree(anotherInode).entries_ref()->size(), 0);
 
   // mv world ../newdir/newplace

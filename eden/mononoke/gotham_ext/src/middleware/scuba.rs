@@ -42,7 +42,7 @@ const X_FB_PRODUCT_LOG_INFO_HEADER: &str = "x-fb-product-log-info";
 const X_FB_GIT_WRAPPER: &str = "x-fb-git-wrapper";
 const X_FB_NETWORK_TYPE: &str = "x-fb-validated-x2pauth-advice-subject-network-type";
 
-/// Common HTTP-related Scuba columns that the middlware will set automatically.
+/// Common HTTP-related Scuba columns that the middleware will set automatically.
 /// Applications using the middleware are encouraged to follow a similar pattern
 /// when adding application-specific columns to the `ScubaMiddlewareState`.
 #[derive(Copy, Clone, Debug)]

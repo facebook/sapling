@@ -152,7 +152,7 @@ pub trait BookmarkUpdateLog: Send + Sync + 'static {
 }
 
 /// Describes why a bookmark was moved
-/// NOTE: If you wanna add a new reason you need to update the schema of the table aswell
+/// NOTE: If you wanna add a new reason you need to update the schema of the table as well
 #[derive(
     Clone,
     Copy,

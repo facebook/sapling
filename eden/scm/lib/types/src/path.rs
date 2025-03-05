@@ -65,7 +65,7 @@ pub struct RepoPathBuf(String);
 ///    * `..`, double dot, unix parent directory
 ///      
 /// TODO: There is more validation that could be done here. Windows has a broad list of illegal
-/// characters and reseved words.
+/// characters and reserved words.
 ///
 /// It should be noted that `RepoPathBuf` and `RepoPath` implement `AsRef<RepoPath>`.
 #[derive(Debug, Eq, PartialEq, Hash, RefCastCustom, Serialize)]
@@ -390,7 +390,7 @@ impl RepoPath {
     /// `""`, `"foo"` and `"foo/bar"`.
     ///
     /// If you don't want to handle the empty path, then you can use `parents().skip(1)`.
-    /// It is possible to get iterate over parents with elements in paralel using:
+    /// It is possible to get iterate over parents with elements in parallel using:
     /// `path.parents().zip(path.components())`.
     pub fn parents(&'_ self) -> Parents<'_> {
         Parents::new(self)

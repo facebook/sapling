@@ -56,7 +56,7 @@ TEST_F(ScmStatusCacheTest, insert_sequence_status_pair) {
   EXPECT_EQ(initialStatus, statusRes);
 
   // because the sequence number is smaller the
-  // orignal value should stay in the cache
+  // original value should stay in the cache
   cache->insert(key, seqSmall, secondStatus);
   EXPECT_TRUE(cache->contains(key));
   EXPECT_EQ(1, cache->getObjectCount());
@@ -181,7 +181,7 @@ TEST_F(ScmStatusCacheTest, drop_cached_promise) {
   auto getResult_2 = cache->get(key, 1);
   EXPECT_FALSE(std::holds_alternative<StatusResultFuture>(getResult_2));
 
-  // droping a promise with sequence smaller should be noop
+  // dropping a promise with sequence smaller should be noop
   cache->dropPromise(key, 0);
   auto getResult_3 = cache->get(key, 1);
   EXPECT_TRUE(std::holds_alternative<StatusResultFuture>(getResult_3));

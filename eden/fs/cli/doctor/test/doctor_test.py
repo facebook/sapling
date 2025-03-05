@@ -1982,7 +1982,7 @@ Fixing files present on disk but not known to EdenFS in {Path(mount)}...<green>f
                 r"""<yellow>- Found problem:<reset>
 Misconfigured redirection at .*
 Fixing redirection at .*...<red>error<reset>
-Failed to fix or verify fix for problem MisconfiguredRedirection: RemediationError: Error occured when trying to create symlink: \[WinError 1314\] Test error: 'a' -> 'b'.
+Failed to fix or verify fix for problem MisconfiguredRedirection: RemediationError: Error occurred when trying to create symlink: \[WinError 1314\] Test error: 'a' -> 'b'.
 User is missing permissions to create symlinks.
 Check that the Developer Mode has been enabled in Windows, or that the user is allowed to create symlinks in the Local Security Policy.
 Running chef may fix this.*""",
@@ -2560,7 +2560,7 @@ Attempted and failed to fix problem CheckoutNotMounted
 
         check_running_mount(
             fixer,
-            # pyre-fixme[6]: For 2rd param expected `EdenInstance` but got
+            # pyre-fixme[6]: For 2nd param expected `EdenInstance` but got
             # `FakeEdenInstance`.
             instance,
             checkout_info,
@@ -2622,7 +2622,7 @@ Reinitialize checkout config.......<green>fixed<reset>
 
         check_running_mount(
             fixer,
-            # pyre-fixme[6]: For 2rd param expected `EdenInstance` but got
+            # pyre-fixme[6]: For 2nd param expected `EdenInstance` but got
             # `FakeEdenInstance`.
             instance,
             checkout_info,
@@ -2682,7 +2682,7 @@ Reinitialize checkout config.......<green>fixed<reset>
 
         check_running_mount(
             fixer,
-            # pyre-fixme[6]: For 2rd param expected `EdenInstance` but got
+            # pyre-fixme[6]: For 2nd param expected `EdenInstance` but got
             # `FakeEdenInstance`.
             instance,
             checkout_info,
@@ -2754,7 +2754,7 @@ To reclone the corrupted repo, run: `fbclone $REPO --reclone --eden`"""
 
         check_running_mount(
             fixer,
-            # pyre-fixme[6]: For 2rd param expected `EdenInstance` but got
+            # pyre-fixme[6]: For 2nd param expected `EdenInstance` but got
             # `FakeEdenInstance`.
             instance,
             checkout_info,
@@ -2816,7 +2816,7 @@ To remove the corrupted repo, run: `eden rm {checkout.path}`
 
         check_running_mount(
             fixer,
-            # pyre-fixme[6]: For 2rd param expected `EdenInstance` but got
+            # pyre-fixme[6]: For 2nd param expected `EdenInstance` but got
             # `FakeEdenInstance`.
             instance,
             checkout_info,

@@ -361,7 +361,7 @@ mod test {
             message: "Tag pointing to a tree".into(),
             pgp_signature: None,
         }))?);
-        // Create the base object using the Git bytes. This will be used later for comparision
+        // Create the base object using the Git bytes. This will be used later for comparison
         let base_object = BaseObject::new(tag_bytes.clone())?;
         // Get the hash of the created Git object
         let tag_hash = base_object.hash().to_owned();

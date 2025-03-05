@@ -407,7 +407,7 @@ impl SqlBookmarksTransactionPayload {
             if new_cs_id == old_cs_id && log_id.is_none() {
                 // This is a no-op update.  Check if the bookmark already points to the correct
                 // commit.  If it doesn't, abort the transaction. We need to make this a select
-                // query instead of an update, since affected_rows() woud otherwise return 0.
+                // query instead of an update, since affected_rows() would otherwise return 0.
                 let (txn_, result) = SelectBookmark::maybe_traced_query_with_transaction(
                     txn,
                     ctx.client_request_info(),

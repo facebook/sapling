@@ -23,7 +23,7 @@ pub struct Pager {
     /// The Terminal.
     term: SystemTerminal,
 
-    /// The Terminal's capabilites.
+    /// The Terminal's capabilities.
     caps: Capabilities,
 
     /// Event Stream to process.

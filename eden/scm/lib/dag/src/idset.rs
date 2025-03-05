@@ -331,7 +331,7 @@ impl IdSet {
         self.spans.is_empty()
     }
 
-    /// Validate the spans are in the expected order and there are no mergable
+    /// Validate the spans are in the expected order and there are no mergeable
     /// adjacent spans.
     #[cfg(debug_assertions)]
     fn validate(&self) {
@@ -340,7 +340,7 @@ impl IdSet {
             if i > 0 {
                 assert!(
                     span.high + 1 < self.spans[i - 1].low,
-                    "{:?} is not in DESC order or has mergable adjacent spans (around #{})",
+                    "{:?} is not in DESC order or has mergeable adjacent spans (around #{})",
                     &self.spans,
                     i
                 );

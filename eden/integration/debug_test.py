@@ -146,7 +146,7 @@ class DebugBlobHgTest(testcase.HgRepoTestMixin, testcase.EdenRepoTest):
                 # Blobs aren't cached to the LocalStore.
                 # DataFetchOrigin.DISK_CACHE,
                 DataFetchOrigin.LOCAL_BACKING_STORE,
-                # reading a blob is actually insuffient to put it in
+                # reading a blob is actually insufficient to put it in
                 # DataFetchFromWhere.MEMORY_CACHE,
             ]:
                 print(fromWhere)

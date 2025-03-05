@@ -76,7 +76,7 @@ struct StopFileAccessMonitorResponse {
  * A helper class for performing operations that require elevated privileges.
  *
  * This sends the requests to a separate helper process that has the privileges
- * required to peform these operations.
+ * required to perform these operations.
  */
 class PrivHelper {
  public:

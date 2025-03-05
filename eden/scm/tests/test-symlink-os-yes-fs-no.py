@@ -28,7 +28,7 @@ hg.clone(u, {}, BUNDLEPATH, "test0")
 
 repo = hg.repository(u, "test0")
 
-# wait a bit, or the status call wont update the dirstate
+# wait a bit, or the status call won't update the dirstate
 time.sleep(1)
 commands.status(u, repo)
 

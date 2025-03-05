@@ -66,7 +66,7 @@ class MisconfiguredRedirection(FixableProblem):
                 # Missing permissions - this usually means that
                 # the user cannot create symlinks
                 msg = (
-                    f"Error occured when trying to create symlink: {err}.\n"
+                    f"Error occurred when trying to create symlink: {err}.\n"
                     "User is missing permissions to create symlinks.\n"
                     "Check that the Developer Mode has been enabled in Windows, "
                     "or that the user is allowed to create symlinks in the Local Security Policy.\n"

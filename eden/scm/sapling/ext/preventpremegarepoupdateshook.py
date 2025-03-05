@@ -34,7 +34,7 @@ def reposetup(ui, repo):
 
 def preventpremegarepoupdates(ui, repo, **kwargs):
     """
-    Prevents checkouts of commits comits from before the unified megarepo history.
+    Prevents checkouts of commits commits from before the unified megarepo history.
     Those commits might be confusing as they reflect only single subrepo.
     """
 

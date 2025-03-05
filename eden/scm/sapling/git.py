@@ -37,7 +37,7 @@ GIT_STORE_REQUIREMENT = "git-store"
 # Should be set if git-store is set.
 GIT_FORMAT_REQUIREMENT = "git"
 
-# Whether to be compatibile with `.git/`.
+# Whether to be compatible with `.git/`.
 DOTGIT_REQUIREMENT = "dotgit"
 
 
@@ -121,7 +121,7 @@ def clone(ui, url, destpath=None, update=True, pullnames=None, submodule=None):
     """Clone a git repo, then create a repo at dest backed by the git repo.
     update can be False, or True, or a node to update to.
     - False: do not update, leave an empty working copy.
-    - True: upate to git HEAD.
+    - True: update to git HEAD.
     - other: update to `other` (node, or name).
     pullnames decides what to pull.
     - None: use default refspecs set by configs.
@@ -550,7 +550,7 @@ def revparse(repo, revspec):
 def pull(repo, source, names=(), nodes=()):
     """Pull specified revisions and names.
 
-    names will be normalized to remote heads or tags, if starts wtih 'tags/'.
+    names will be normalized to remote heads or tags, if starts with 'tags/'.
     missing names will be removed.
     nodes, if pulled, will be written to "visibleheads".
     """
@@ -946,7 +946,7 @@ class Submodule:
     def backingrepo(self):
         """submodule backing repo created on demand
 
-        The repo will be crated at:
+        The repo will be created at:
         <parent repo>/.hg/store/gitmodules/<escaped submodule name>
         """
         urldigest = hashlib.sha1(self.url.encode("utf-8")).hexdigest()
@@ -971,7 +971,7 @@ class Submodule:
     def workingcopyrepo(self):
         """submodule working repo created on demand
 
-        The repo will be crated in the parent repo's working copy, and share
+        The repo will be created in the parent repo's working copy, and share
         the backing repo.
         """
         if "eden" in self.parentrepo.requirements:
@@ -1188,7 +1188,7 @@ def rungitnorepo(ui, args, gitdir=None, configs=None):
     cmd += cmdargs
     cmd = " ".join(util.shellquote(c) for c in cmd)
     tracing.debug("running %s\n" % cmd)
-    # use ui.system, which is compatibile with chg, but goes through shell
+    # use ui.system, which is compatible with chg, but goes through shell
     return ui.system(cmd)
 
 

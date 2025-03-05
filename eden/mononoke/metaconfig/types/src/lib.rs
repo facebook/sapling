@@ -785,7 +785,7 @@ impl Default for PushrebaseFlags {
     fn default() -> Self {
         PushrebaseFlags {
             rewritedates: true,
-            recursion_limit: Some(16384), // this number is fairly arbirary
+            recursion_limit: Some(16384), // this number is fairly arbitrary
             forbid_p2_root_rebases: true,
             casefolding_check: true,
             casefolding_check_excluded_paths: PrefixTrie::new(),
@@ -1705,7 +1705,7 @@ pub struct AclRegion {
     pub roots: Vec<ChangesetId>,
 
     /// List of heads that end this region.  Any commit that is a descendant of
-    /// any head, includin the head itself, will NOT be included in the region.
+    /// any head, including the head itself, will NOT be included in the region.
     /// If this list is empty then all commits that are descendants of the roots
     /// are included.
     pub heads: Vec<ChangesetId>,

@@ -256,7 +256,7 @@ ProcessList readProcessIdsForPath([[maybe_unused]] const AbsolutePath& path) {
   // known OS call to obtain it. However, calling proc_listpidspath with less
   // storage than required does not result in a buffer overflow or an error -
   // rather it truncates the results to fit within the buffer provided. This is
-  // acceptable in most use cases as this is expected to be a rare occurance.
+  // acceptable in most use cases as this is expected to be a rare occurrence.
   if (pids_size > 0) {
     // Resize buffer and fetch pids.
     pids.resize(pids_size / sizeof(pid_t));

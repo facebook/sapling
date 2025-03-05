@@ -28,7 +28,7 @@ use tempfile::NamedTempFile;
 /// not automatically umasked.
 ///
 /// The renamed file is returned. Any further data written to the file
-/// will not be atomic since the file is already visibile to readers.
+/// will not be atomic since the file is already visible to readers.
 ///
 /// Note that the rename operation will fail on windows if the
 /// destination file exists and is open.

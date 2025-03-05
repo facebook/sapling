@@ -31,7 +31,7 @@ use crate::CommitGraph;
 ///
 /// - excluding ancestors of a set of changesets (common).
 ///
-/// - excluding changesets that satisify a given property (if this property holds
+/// - excluding changesets that satisfy a given property (if this property holds
 ///   for one changeset then it has to hold for all its parents).
 ///
 /// - including only changesets that satisfy a given property (if this property doesn't

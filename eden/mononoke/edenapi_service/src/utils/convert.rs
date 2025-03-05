@@ -16,7 +16,7 @@
 //! are used to represent the same data on the client and server
 //! respectively, so any conversion failure should be considered
 //! a bug. Nonetheless, since these types often differ substantially
-//! in implentation, it is possible that conversion failures may occur
+//! in implementation, it is possible that conversion failures may occur
 //! in practice.
 
 use std::collections::BTreeMap;

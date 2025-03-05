@@ -203,7 +203,7 @@ pub async fn download_files(
         let write_paths = incorrect_paths
             .into_iter()
             // We're zipping and using repeat_n to avoid cloning the
-            // whole content unecessarily. One file should be the most
+            // whole content unnecessarily. One file should be the most
             // common case.
             .zip(itertools::repeat_n(content, len))
             .map(|((path, file_type), content)| {

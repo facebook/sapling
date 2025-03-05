@@ -51,7 +51,7 @@ impl HgParents {
 
 impl Arbitrary for HgParents {
     fn arbitrary(g: &mut Gen) -> Self {
-        // We make single-parent a litle more common because it's a) little simpler b) a little
+        // We make single-parent a little more common because it's a) little simpler b) a little
         // more common anyway.
         if bool::arbitrary(g) {
             Self::new(Some(HgNodeHash::arbitrary(g)), None)

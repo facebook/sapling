@@ -5,7 +5,7 @@
  * GNU General Public License version 2.
  */
 
-//! TypeMap is a heterogeneous collection (i.e can store object of an aribitrary type).
+//! TypeMap is a heterogeneous collection (i.e can store object of an arbitrary type).
 //!
 //! `TypeMap` can store single instance of an object per type. Any object of `Arc<T>` type
 //! can be stored inside `TypeMap` as long as `T` implements `std::any::Any` trait.

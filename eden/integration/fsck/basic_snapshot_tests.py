@@ -373,7 +373,7 @@ class Basic20210712Test(SnapshotTestBase):
     ) -> None:
         if auto_fsck:
             # Remove the next-inode-number file so that edenfs will
-            # automatically peform an fsck run when mounting this checkout.
+            # automatically perform an fsck run when mounting this checkout.
             next_inode_path = self._overlay_path() / "next-inode-number"
             next_inode_path.unlink()
 

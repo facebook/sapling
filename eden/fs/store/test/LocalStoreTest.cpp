@@ -48,7 +48,7 @@ void openLocalStore(std::shared_ptr<LocalStore> store) {
     store->open();
   } catch (std::runtime_error&) {
     // sometimes the close might have happened before the open. so the open will
-    // fail. thats alright.
+    // fail. that's alright.
   }
 }
 

@@ -26,7 +26,7 @@ use types::RepoPathBuf;
 /// Manifest describes a mapping between file path ([`String`]) and file metadata ([`FileMetadata`]).
 /// Fundamentally it is just a Map<file_path, file_metadata>.
 ///
-/// It can be assumed that Manifest interacts with an underlying store for persistance. These
+/// It can be assumed that Manifest interacts with an underlying store for persistence. These
 /// interactions may fail due to a variety of reasons. Such failures will be propagated up as Error
 /// return statuses.
 ///
@@ -40,7 +40,7 @@ use types::RepoPathBuf;
 pub trait Manifest {
     /// Inspects the manifest for the given path. Returns available metadata.
     /// If the path is pointing to an file then Some(FsNodeMetadata::File) is returned with the
-    /// file_metadata associated with the file. If the path is poitning to a directory then
+    /// file_metadata associated with the file. If the path is pointing to a directory then
     /// Some(FsNodeMetadata::Directory) is returned. If the path is not found then None is
     /// returned.
     // TODO: add default implementation
@@ -105,7 +105,7 @@ pub trait Manifest {
         matcher: M,
     ) -> Box<dyn Iterator<Item = Result<Directory>> + 'a>;
 
-    /// Retuns an iterator of all the differences in files between two Manifest instances of the
+    /// Returns an iterator of all the differences in files between two Manifest instances of the
     /// same type.
     // TODO: add default implementation
     fn diff<'a, M: 'static + Matcher + Sync + Send>(

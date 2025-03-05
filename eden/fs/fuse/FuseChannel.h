@@ -256,19 +256,15 @@ class FuseChannel final : public FsChannel {
    * straceLogger -
    *      a logger to use for logging strace/syscall like events.
    * processInfoCache -
-   *      a cache of client process infomation (pid, command line, parent, etc).
-   * fsEventLogger -
-   *      legacy telemetry on filesystem access.
+   *      a cache of client process information (pid, command line, parent,
+   * etc). fsEventLogger - legacy telemetry on filesystem access.
    * structuredLogger -
    *      This is a logger for error events. Inside a Meta environment, these
-   *      events are exported off the machine this EdenFS instace is running on.
-   *      This is where you log anomalous things that you want to monitor
-   *      accross the fleet.
-   * requestTimeout -
-   *      internal timeout for how long the FuseChannel will give the lower
-   *      levels of EdenFS to process an event. ETIMEDOUT will be returned to
-   *      the kernel if a request exceeds this amount of time.
-   * notifier -
+   *      events are exported off the machine this EdenFS instance is running
+   * on. This is where you log anomalous things that you want to monitor across
+   * the fleet. requestTimeout - internal timeout for how long the FuseChannel
+   * will give the lower levels of EdenFS to process an event. ETIMEDOUT will be
+   * returned to the kernel if a request exceeds this amount of time. notifier -
    *      used to flag abnormal EdenFS behavior to users.
    * caseSensitive -
    *      whether or not the mount is case sensitive.

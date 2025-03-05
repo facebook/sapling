@@ -34,7 +34,7 @@ Create commit that modifies git submodule in small repo
   Starting session with id * (glob)
   Starting up X Repo Sync from small repo small_repo to large repo large_repo
   Checking if 6473a332b6f2c52543365108144f9b1cff6b4874bc3ade72a8268f50226f86f4 is already synced 11->10
-  Syncing 6473a332b6f2c52543365108144f9b1cff6b4874bc3ade72a8268f50226f86f4 for inital import
+  Syncing 6473a332b6f2c52543365108144f9b1cff6b4874bc3ade72a8268f50226f86f4 for initial import
   Source repo: small_repo / Target repo: large_repo
   Found 3 unsynced ancestors
   changeset 6473a332b6f2c52543365108144f9b1cff6b4874bc3ade72a8268f50226f86f4 synced as 5cac851d3a164f682613d6901e17a03e18afe8576145d4f5ff9dd0a51a82437f in * (glob)

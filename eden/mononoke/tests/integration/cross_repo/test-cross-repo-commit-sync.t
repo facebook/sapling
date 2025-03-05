@@ -198,7 +198,7 @@ and tried again
   setting ovrsource/forgotten_bookmark 5ec36a79a341b4235da29af79ff591881a994b44c94acaa10c3f583bdef4f2fb
   skipping master_bookmark because it's a common bookmark
 
-now the verfication shouldn't return that error
+now the verification shouldn't return that error
   $ crossrepo_verify_bookmarks 0 2
   * 'ovr-mon' has a bookmark master_bookmark but it points to a commit that has no equivalent in 'meg-mon'. If it's a shared bookmark (e.g. master) that might mean that it points to a commit from another repository (glob)
   * found 1 inconsistencies (glob)

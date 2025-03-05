@@ -25,7 +25,7 @@ ImmediateFuture<struct stat> statHelper(
     const InodePtr& inode,
     const ObjectFetchContextPtr& context) {
   // TODO: stat is not safe to call on windows because it's gonna try to stat
-  // the working copy. On NFS thats going to cause infinite recursion, and if I
+  // the working copy. On NFS that's going to cause infinite recursion, and if I
   // had to bet probably blue screens. Needs to be fixed before we can call
   // stat.
 #ifndef _WIN32

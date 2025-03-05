@@ -41,7 +41,7 @@ void ThriftStreamStartupStatusSubscriber::publish(std::string_view data) {
 apache::thrift::ServerStream<std::string>
 ThriftStreamStartupStatusSubscriber::createStartupStatusThriftStream(
     std::shared_ptr<StartupStatusChannel>& startupStatusChannel) {
-  // this value will be shared between the complete/cancle callback
+  // this value will be shared between the complete/cancel callback
   // and the ThriftStreamStartupStatusSubscriber. This value being set renders
   // the ThriftStreamStartupStatusSubscriber operations into no-ops.
   folly::CancellationSource cancellationSource{};
@@ -62,7 +62,7 @@ ThriftStreamStartupStatusSubscriber::createStartupStatusThriftStream(
             // this. When you are thinking long and hard, make sure you
             // consider these two points:
             //
-            // Note the first thing we are not doing here: deleteing the
+            // Note the first thing we are not doing here: deleting the
             // apache::thrift::ServerStreamPublisher. In the complete case,
             // startup has finished, so the caller will cleanup the memory for
             // the publisher momentarily. In the cancel case, the memory is

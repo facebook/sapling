@@ -864,7 +864,7 @@ mod tests {
         std::mem::drop(spawn_query("c", ttl, &rt));
         let requests = assert_no_pending_requests(requests, &rt, 100);
 
-        // successfull transaction should redirect further requests to master
+        // successful transaction should redirect further requests to master
         let transaction = create_dirty_transaction(&bookmarks, ctx.clone());
         rt.block_on(with_cache_ttl(ttl, transaction.commit()))
             .unwrap();

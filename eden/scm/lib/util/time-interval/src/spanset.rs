@@ -87,7 +87,7 @@ impl SpanSet {
         result
     }
 
-    /// Validate the spans are in the expected order and there are no mergable
+    /// Validate the spans are in the expected order and there are no mergeable
     /// adjacent spans.
     #[cfg(debug_assertions)]
     fn validate(&self) {
@@ -96,7 +96,7 @@ impl SpanSet {
             if i > 0 {
                 assert!(
                     span.high + 1 < self.spans[i - 1].low,
-                    "spans are not in DESC order or has mergable adjacent spans (around #{})",
+                    "spans are not in DESC order or has mergeable adjacent spans (around #{})",
                     i
                 );
             }

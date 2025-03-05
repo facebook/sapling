@@ -728,7 +728,7 @@ async fn test_add_sync_target_repeat_same_request(fb: FacebookInit) -> Result<()
         )
         .await?;
 
-    // Now repeat the same request again (as if client retries a reqeust that has already
+    // Now repeat the same request again (as if client retries a request that has already
     // succeeded). We should get the same result as the first time.
     let add_sync_target = AddSyncTarget::new(&configs_storage, &test.mononoke);
     let second_result = add_sync_target

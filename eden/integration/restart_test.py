@@ -46,7 +46,7 @@ class RestartTestBase(ServiceTestCaseBase):
         )
         restart_cmd.extend(args)
 
-        print("Retarting EdenFS: %r" % (restart_cmd,))
+        print("Restarting EdenFS: %r" % (restart_cmd,))
         return pexpect_spawn(
             restart_cmd[0],
             restart_cmd[1:],

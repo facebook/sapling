@@ -59,7 +59,7 @@ pub struct GitExportTestRepoOptions {
     pub add_branch_commit: bool,
 }
 
-/// Store all relevant data about a test case to avoid harcoding and duplication
+/// Store all relevant data about a test case to avoid hardcoding and duplication
 pub struct GitExportTestData<R> {
     /// Repo created for the test case
     pub repo_ctx: RepoContext<R>,

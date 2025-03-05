@@ -26,7 +26,7 @@
 //! * Arithmetic substitutions
 //!  * Common arithmetic operations required by the POSIX standard
 //!  * Variable expansion
-//!  * **Not yet implemented**: Other inner abitrary parameter/substitution expansion
+//!  * **Not yet implemented**: Other inner arbitrary parameter/substitution expansion
 
 #![doc(html_root_url = "https://docs.rs/conch-parser/0.1")]
 #![cfg_attr(not(test), deny(clippy::print_stdout))]

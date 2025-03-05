@@ -194,7 +194,7 @@ struct ExternalKeyBuffer {
     //    is no way to get a clone of ExternalKeyBuffer without also
     //    cloning its owner (Index).
     // 2. If the Index owning ExternalKeyBuffer is alive, then the Log
-    //    owning the Index is alive. Similarily, Index is private to Log,
+    //    owning the Index is alive. Similarly, Index is private to Log,
     //    and there is no way to just clone the Index without cloning
     //    its owner (Log).
     // 3. If Log is alive, then Log.mem_buf is alive.
@@ -211,7 +211,7 @@ struct ExternalKeyBuffer {
     //   `&Log -> &MutexGuard -> &[u8]`, which means unsafe Rust is
     //   needed, or it has to take the mutex lock. Neither desirable.
     //
-    // Here is why normal liftime is not fesiable:
+    // Here is why normal lifetime is not fesiable:
     // - A normal lifetime will enforce the `mem_buf` to be read-only.
     //   But Log needs to write to it.
     //
@@ -517,7 +517,7 @@ impl Log {
                     // This behavior makes Log more friendly for cases where an
                     // external process does a `rm -rf` and the current process
                     // does a `sync()` just for loading new data. Not erroring
-                    // out and pretend that nothing happended.
+                    // out and pretend that nothing happened.
                 }
                 self.update_change_detector_to_match_meta();
                 return Ok(self.meta.primary_len);

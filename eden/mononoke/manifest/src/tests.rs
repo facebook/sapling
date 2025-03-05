@@ -141,7 +141,7 @@ async fn test_derive_manifest(fb: FacebookInit) -> Result<()> {
         )
         .await?;
 
-        // make sure conflict is dectected
+        // make sure conflict is detected
         assert!(
             derive(vec![mf0, mf1], btreemap! {},).await.is_err(),
             "should contain file-file conflict"
@@ -215,7 +215,7 @@ async fn test_derive_manifest(fb: FacebookInit) -> Result<()> {
         )
         .await?;
 
-        // make sure conflict is dectected
+        // make sure conflict is detected
         assert!(
             derive(vec![mf0, mf1], btreemap! {}).await.is_err(),
             "should contain file-file conflict"

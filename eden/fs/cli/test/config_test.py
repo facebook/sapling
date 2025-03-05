@@ -539,7 +539,7 @@ class EdenInstanceConstructionTest(unittest.TestCase):
     @patch("eden.fs.cli.config.EdenInstance.read_configs")
     def test_sparse_cmd_line(self, config: Mock) -> None:
         # We need to mock out the config
-        # Otherwise it will priorize using the user's config on disk
+        # Otherwise it will prioritize using the user's config on disk
         config.return_value = configutil.EdenConfigParser(
             interpolation=configinterpolator.EdenConfigInterpolator({})
         )

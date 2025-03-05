@@ -21,7 +21,7 @@ pub struct ScubaLoggingDecisionFields<'a> {
 }
 
 fn is_verbose(maybe_value: Option<&ScubaValue>, verbose_values: &[String]) -> bool {
-    // Note: assymptotically speaking having `verbose_values` to be a `HashSet` would
+    // Note: asymptotically speaking having `verbose_values` to be a `HashSet` would
     //       provide better big-O complexity, but I expect the lengths of these lists
     //       to be so small, that O(n) search would provide sufficient perf.
     if let Some(ScubaValue::Normal(this_value)) = maybe_value {

@@ -334,7 +334,7 @@ impl DerivedDataManager {
             .into_iter()
             .map(|segment| segment.length)
             .sum();
-        // The limit is somewhat ficticious. Since underived_count is cheap to calculate, we don't
+        // The limit is somewhat fictitious. Since underived_count is cheap to calculate, we don't
         // actually need to do magic to only partially evaluate the sum
         if let Some(limit) = limit {
             if underived_count > limit {

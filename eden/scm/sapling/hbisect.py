@@ -43,7 +43,7 @@ def bisect(repo, state):
     # - skip: user provided "skip" nodes. Not lazy.
     # - skip_revs: user provided "skip" revset. Might be expensive/lazy.
     # - good: marked as good nodes
-    # - bad: marked as bad ndoes
+    # - bad: marked as bad nodes
     # - badtogood: True if bad is root, good is head; False if bad is head
     # - roots, heads: defines the bisect range based on bad and good
     # - rootnode, headnode: current (small) bisect range, for display only

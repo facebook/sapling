@@ -17,7 +17,7 @@ RE_PR_URL = re.compile(
 
 
 def parse_pull_request_arg(arg: str, repo=None) -> Optional[PullRequestId]:
-    """Uses various heuristics to determine the pull request identifed by the
+    """Uses various heuristics to determine the pull request identified by the
     user-supplied arg.
     """
     pr = _parse_pull_request_arg_as_url(arg)

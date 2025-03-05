@@ -361,7 +361,7 @@ fn create_root_log_drain(
     log_level: Level,
     log_filter_fn: Option<fn(&Record) -> bool>,
 ) -> Result<impl Drain + Clone> {
-    // Set the panic handler up here. Not really relevent to logger other than it emits output
+    // Set the panic handler up here. Not really relevant to logger other than it emits output
     // when things go wrong. This writes directly to stderr as coredumper expects.
     let fate = match matches
         .value_of("panic-fate")

@@ -2099,7 +2099,7 @@ def goto(
     if not force:
         # TODO: remove the default once all callers that pass force=False pass
         # a value for updatecheck. We may want to allow updatecheck='abort' to
-        # better suppport some of these callers.
+        # better support some of these callers.
         if updatecheck is None:
             updatecheck = "none"
         assert updatecheck in ("none", "noconflict")

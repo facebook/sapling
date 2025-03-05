@@ -70,7 +70,7 @@ def filedata(data: filectx_or_bytes) -> bytes:
         return data.data()
 
 
-# Get a "detach" friendly bytes, prefering to keep lazy. If `data` is
+# Get a "detach" friendly bytes, preferring to keep lazy. If `data` is
 # a filectx, we "detach" the data from the context so the data will
 # not be affected if the associated path in the parent changectx is
 # later mutated.

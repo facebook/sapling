@@ -35,7 +35,7 @@ Create small repo commits
   Starting session with id * (glob)
   Starting up X Repo Sync from small repo small_repo to large repo large_repo
   Checking if 738630e43445144e9f5ddbe1869730cfbaf8ff6bf95b25b8410cb35ca92f25c7 is already synced 11->10
-  Syncing 738630e43445144e9f5ddbe1869730cfbaf8ff6bf95b25b8410cb35ca92f25c7 for inital import
+  Syncing 738630e43445144e9f5ddbe1869730cfbaf8ff6bf95b25b8410cb35ca92f25c7 for initial import
   Source repo: small_repo / Target repo: large_repo
   Found 3 unsynced ancestors
   changeset 738630e43445144e9f5ddbe1869730cfbaf8ff6bf95b25b8410cb35ca92f25c7 synced as 5018d85a3db49803d93474fec07b26a65f527ba14a320de37e8f48fb98086e7a in * (glob)

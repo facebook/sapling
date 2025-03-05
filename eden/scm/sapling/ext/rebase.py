@@ -2465,7 +2465,7 @@ def _computeobsoletenotrebased(repo, rebaseobsrevs, destmap):
                     break
             else:
                 # If 'srcrev' has a successor in rebase set but none in
-                # destination (which would be catched above), we shall skip it
+                # destination (which would be caught above), we shall skip it
                 # and its descendants to avoid divergence.
                 # allsuccessors can include nodes that aren't present
                 # in changelog nodemap.

@@ -106,7 +106,7 @@ impl Shards {
         drop(permit);
         let ticket = ticket.finish().await?;
 
-        // Check our determinator again. This isn't stricly speaking necessary, but it makes it
+        // Check our determinator again. This isn't strictly speaking necessary, but it makes it
         // easier to implement callsites so that they don't have to bother with where exactly we
         // chose to cancel.
 

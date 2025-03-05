@@ -581,7 +581,7 @@ def safesend(self, str):
             # the case where we haven't written the amount of data that the
             # server is expecting. Earlier in the stack we set the Content-Length
             # to the length of 'str'. It's possible a server could wait indefenitely
-            # in some cases where less data has been written then expected, therefor
+            # in some cases where less data has been written then expected, therefore
             # always ensure we have actually written what we are expecting.
             if expectedlen != totalwritten:
                 raise urlerr.urlerror(

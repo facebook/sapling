@@ -26,7 +26,7 @@ use types::Key;
 ///
 /// Conversions to `gotham_ext::error::HttpError` are intentionally not
 /// provided so that HTTP handlers are forced to specify an appropriate
-/// status code for the specific situation in which the error occured.
+/// status code for the specific situation in which the error occurred.
 ///
 /// In situations where a failure will always result in the same status
 /// code (e.g., a permission check failure resulting in a 403), the code

@@ -187,7 +187,7 @@ void PrivHelperServer::sanityCheckMountPoint(
 
   // Sometimes stat will not return this error even if the mount is
   // hanging because the stat'd path is cached by the kernel. We check for this
-  // by attempting to stat a non-existent file under a non-existent foler.
+  // by attempting to stat a non-existent file under a non-existent folder.
   if (!isNfs && !is_hanging) {
     // Check in case the mount point is cached in the kernel.
     std::string test_path =

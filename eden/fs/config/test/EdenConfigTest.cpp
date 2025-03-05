@@ -541,7 +541,7 @@ TEST_F(EdenConfigTest, missing_config_files_never_change) {
 }
 
 TEST_F(EdenConfigTest, clientCertIsFirstAvailable) {
-  // cert1 and cert2 are both be avialable, so they could be returned from
+  // cert1 and cert2 are both be available, so they could be returned from
   // getConfig. However, cert3 is not available, so it can not be.
   AbsolutePath clientCertificate1 = rootTestDir_ + "cert1"_pc;
   writeFile(clientCertificate1, folly::StringPiece{"test"}).value();

@@ -43,7 +43,7 @@ use metaconfig_types::RepoConfigRef;
 
 use crate::Repo;
 
-// We'd like to give user a consistent view of thier bookmarks for the duration of the
+// We'd like to give user a consistent view of their bookmarks for the duration of the
 // whole Mononoke session. SessionBookmarkCache is used for that.
 pub struct SessionBookmarkCache<R> {
     cached_publishing_bookmarks_maybe_stale: Arc<Mutex<Option<HashMap<Bookmark, HgChangesetId>>>>,

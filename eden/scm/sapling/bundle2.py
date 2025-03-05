@@ -315,7 +315,7 @@ class bundleoperation:
     The latter is built form the `replycaps` bundle2 part and in case of
     `unbundlereplay` we don't construct the bundle2, but rather just replay
     the saved one, so we can't change this part. Thus the need for another
-    way of indicating the need to mininize response.
+    way of indicating the need to minimize response.
     """
 
     def __init__(
@@ -356,7 +356,7 @@ class bundleoperation:
         transaction = self._gettransaction()
 
         if self.hookargs:
-            # the ones added to the transaction supercede those added
+            # the ones added to the transaction supersede those added
             # to the operation.
             self.hookargs.update(transaction.hookargs)
             transaction.hookargs = self.hookargs

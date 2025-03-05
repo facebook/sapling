@@ -1199,7 +1199,7 @@ ImmediateFuture<folly::Unit> FileInode::ensureMaterialized(
               }
 
               // It is possible joinAndNormalize return expected errors, such as
-              // symlinking to an aboslute or a path out of current mount. Those
+              // symlinking to an absolute or a path out of current mount. Those
               // are fine.
               // joinAndNormalize may throw (i.e. non-UTF-8 path) which would
               // bubble the exception to the caller.

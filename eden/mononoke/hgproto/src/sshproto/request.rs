@@ -195,7 +195,7 @@ fn params_ref(inp: &[u8], count: usize) -> IResult<&[u8], HashMap<&[u8], &[u8]>>
 
 fn params(inp: &[u8], count: usize) -> IResult<&[u8], HashMap<Vec<u8>, Vec<u8>>> {
     // Parsing of params is down first by extracting references, then converting them to owned
-    // Vecs, if sucessful. This ensures that validating inputs (i.e. making sure we have all the
+    // Vecs, if successful. This ensures that validating inputs (i.e. making sure we have all the
     // data we need) is not dependent on the length of the arguments, and instead is only dependent
     // on the complexity of what is being parsed (i.e. the count of arguments). This is important
     // because this is hooked into a Tokio decoder, so it'll get called in a loop every time new

@@ -82,7 +82,7 @@ impl ShardedMapV2Value for SkeletonManifestV2Entry {
 
     const WEIGHT_LIMIT: usize = 500;
 
-    // The weight function is overriden because the sharded map is stored
+    // The weight function is overridden because the sharded map is stored
     // inlined in SkeletonManifestV2. So the weight of the sharded map
     // should be propagated to make sure each sharded map blob stays
     // within the weight limit.

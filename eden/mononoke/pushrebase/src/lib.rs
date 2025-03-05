@@ -558,7 +558,7 @@ fn find_only_head_or_fail(
     }
 }
 
-/// Reperesents index of current child with regards to its parent
+/// Represents index of current child with regards to its parent
 #[derive(Clone, Copy, PartialEq, Eq)]
 struct ChildIndex(usize);
 
@@ -844,7 +844,7 @@ fn find_subtree_changes(changesets: &[BonsaiChangeset]) -> Result<Vec<MPath>, Pu
     Ok(paths)
 }
 
-/// `left` and `right` are considerered to be conflit free, if none of the element from `left`
+/// `left` and `right` are considerered to be conflict free, if none of the element from `left`
 /// is prefix of element from `right`, and vice versa.
 fn intersect_changed_files(left: Vec<MPath>, right: Vec<MPath>) -> Result<(), PushrebaseError> {
     let mut left = {
@@ -1388,7 +1388,7 @@ mod tests {
                 let bcs = bcs_id
                     .load(ctx, repo.repo_blobstore())
                     .await
-                    .context("While intitial bonsai changesets fetching")?;
+                    .context("While initial bonsai changesets fetching")?;
 
                 Result::<_, Error>::Ok(bcs)
             }
@@ -1842,7 +1842,7 @@ mod tests {
                 vec![bcs2.get_changeset_id()]
             );
 
-            // bcs2 parents cotains old bcs1 and old master bookmark
+            // bcs2 parents contains old bcs1 and old master bookmark
             assert_eq!(
                 bcs2.parents().collect::<HashSet<_>>(),
                 hashset! { bcs_id_1, bcs_id_master },

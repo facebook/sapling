@@ -57,7 +57,7 @@ pub struct GitImportLfsInner {
     lfs_server: String,
     /// How to deal with the case when the file does not exist on the LFS server.
     /// allow_not_found=false
-    ///   A non existing LFS file considerd unrecoverable error and bail out
+    ///   A non existing LFS file considered unrecoverable error and bail out
     /// allow_not_found=true
     ///   put the content of the LFS-metafile in its place, and print a warning.
     allow_not_found: bool,
@@ -230,7 +230,7 @@ impl GitImportLfs {
                     }
 
                     attempt += 1;
-                    // Sleep on avarage time_ms_between_attempts between attempts.
+                    // Sleep on average time_ms_between_attempts between attempts.
                     let sleep_time_ms =
                         thread_rng().gen_range(0..inner.time_ms_between_attempts * 2);
                     error!(

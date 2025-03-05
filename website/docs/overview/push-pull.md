@@ -59,7 +59,7 @@ o  59125794a  20 seconds ago  remote/main
 
 ### Push
 
-Use the push command to push local commits to remote. Specify the `--to` to specify the remote branch/bookmark to push commits to. Specify `-r` to specify local commit you want pushed. If `-r` is ommitted, the currently checked out commit is pushed.
+Use the push command to push local commits to remote. Specify the `--to` to specify the remote branch/bookmark to push commits to. Specify `-r` to specify local commit you want pushed. If `-r` is omitted, the currently checked out commit is pushed.
 
 ```sl-shell-example
 # Push current commit stack to the remote main bookmark.

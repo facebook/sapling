@@ -86,7 +86,7 @@ struct BonsaiAnnotatedTag {
 
 // Target of an annotated tag imported from Git into Bonsai format.
 union BonsaiAnnotatedTagTarget {
-  1: id.ChangesetId Changeset; // Commmit, Tree or another Tag
+  1: id.ChangesetId Changeset; // Commit, Tree or another Tag
   2: id.ContentId Content; // Blob
 }
 
@@ -180,7 +180,7 @@ struct GitLfs {
 // down the history of the source commit.
 //
 // The copy is a "shallow" copy, which means the manifest from the copy
-// source should be re-used, and only additional changes are listed in
+// source should be reused, and only additional changes are listed in
 // the file_changes.
 struct SubtreeCopy {
   // Path in the source commit the subtree is copied form.
@@ -234,7 +234,7 @@ union SubtreeChange {
   //
   // This change is history modifying: history should be diverted to the copy source.
   //
-  // This change is manifest altering: the source subtree should be re-used instead
+  // This change is manifest altering: the source subtree should be reused instead
   // of any subtree that is already there.  That is, this copy implicitly deletes
   // all files at the destination and replaces them with all files located at the
   // source.

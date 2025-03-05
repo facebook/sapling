@@ -1739,7 +1739,7 @@ impl HgIdRemoteStore for LfsClient {
 /// Move a blob contained in `from` to the store `to`.
 ///
 /// After this succeeds, the blob's lifetime will be similar to any shared blob, it is the caller's
-/// responsability to ensure that the blob can be fetched from the LFS server.
+/// responsibility to ensure that the blob can be fetched from the LFS server.
 fn move_blob(hash: &Sha256, size: u64, from: &LfsStore, to: &LfsStore) -> Result<()> {
     (|| {
         let blob = from

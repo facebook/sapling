@@ -482,7 +482,7 @@ void PrivHelperConn::parseEmptyResponse(
   Cursor cursor(&msg.data);
   PrivHelperPacket packet = parsePacket(cursor);
 
-  // In the future, we may parse empty repsonses differently depending on the
+  // In the future, we may parse empty responses differently depending on the
   // the version we get back from the parsed packet. For now, we'll parse all
   // empty responses in the same way.
   if (packet.metadata.msg_type == RESP_ERROR) {

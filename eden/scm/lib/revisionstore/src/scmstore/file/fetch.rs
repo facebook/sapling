@@ -712,7 +712,7 @@ impl FetchState {
         }
 
         // We subtract any lfs pointers that were found -- these requests were
-        // fulfiled by LFS, not SaplingRemoteAPI
+        // fulfilled by LFS, not SaplingRemoteAPI
         self.metrics.edenapi.fetch(count - found_pointers);
         self.metrics.edenapi.err(errors);
         self.metrics.edenapi.hit(found);

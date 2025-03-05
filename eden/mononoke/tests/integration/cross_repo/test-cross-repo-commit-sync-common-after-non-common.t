@@ -57,7 +57,7 @@
 
 -- Sync after both bookmark moves happened
 -- The first bookmark move of other_bookmark to S_C is replicated correctly
--- The second bookmark move of master_bookmark to S_D also suceeds and thanks to the fact that there were no competing pushrebases
+-- The second bookmark move of master_bookmark to S_D also succeeds and thanks to the fact that there were no competing pushrebases
 -- and the date wasn't rewritten there's no divergence between S_C and S_D.
   $ mononoke_admin mutable-counters -R large-mon set xreposync_from_1 0
   Value of xreposync_from_1 in repo large-mon(Id: 0) set to 0

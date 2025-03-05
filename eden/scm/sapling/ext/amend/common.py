@@ -33,7 +33,7 @@ def restackonce(
     maxpredecessordepth=None,
 ):
     """Rebase all descendants of precursors of rev onto rev, thereby
-    stabilzing any non-obsolete descendants of those precursors.
+    stabilizing any non-obsolete descendants of those precursors.
     Takes in an optional dict of options for the rebase command.
     If childrenonly is True, only rebases direct children of precursors
     of rev rather than all descendants of those precursors.

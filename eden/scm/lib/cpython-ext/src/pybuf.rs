@@ -86,7 +86,7 @@ impl<T: Copy> SimplePyBuf<T> {
         // The code here wants to access the buffer without taking Python GIL.
         // Therefore `obj` should be a read-only object. That is true for Python
         // bytes or buffer(some_other_immutable_obj). For now, explicitly
-        // allow those two types. Beware that `PyBuffer_Check` won't guarnatee
+        // allow those two types. Beware that `PyBuffer_Check` won't guarantee
         // its inner object is also immutable.
         unsafe {
             if !is_safe_type(obj) {

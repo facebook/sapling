@@ -584,7 +584,7 @@ where
         && parent_replacements_subentries.is_empty()
     {
         // All elements of this merge tree have been deleted.
-        // Nothing left to do apart from inidicating that this node needs to be removed
+        // Nothing left to do apart from indicating that this node needs to be removed
         // from its parent.
         return Ok((MergeResult::Delete, Vec::new()));
     }

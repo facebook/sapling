@@ -409,7 +409,7 @@ impl EdenFsInstance {
                 // Wait on the following cases
                 // 1. The we get a notification from the subscription
                 // 2. The pending updates timer expires
-                // 3. Another signal is recieved
+                // 3. Another signal is received
                 result = subscription.next() => {
                     match result {
                         // if the stream is ended somehow, we terminate as well

@@ -233,7 +233,7 @@ def _runbisect(repo, range, bad, skip, node_to_infos=None):
     action: 'good' | 'bad' | 'skip' | 'done'
     state: hbisect state
     nodes: candidates picked by hbisect.bisect
-    candidate_count: count of remaining candiates
+    candidate_count: count of remaining candidates
     isgood: returned by hbisect.bisect
 
     node_to_infos: optional defaultdict(list), node -> bisect info
@@ -1437,7 +1437,7 @@ def debugextensions(ui, **opts) -> None:
     fm = ui.formatter("debugextensions", opts)
 
     def isdefault(name):
-        # An extension is considered default-on if it's not overidden (or
+        # An extension is considered default-on if it's not overridden (or
         # specified) by config.
         return name in extensions.DEFAULT_EXTENSIONS and not ui.config(
             "extensions", name

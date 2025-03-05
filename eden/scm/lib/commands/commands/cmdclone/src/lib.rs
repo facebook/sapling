@@ -498,7 +498,7 @@ fn clone_metadata(
         .push_str(format!("[paths]\ndefault = {}\n", source.clean_str()).as_str());
 
     // Some config values are inherent to the repo and should be persisted if passed to clone.
-    // This is analagous to persisting the --configfile args above.
+    // This is analogous to persisting the --configfile args above.
     for (section, name) in &[("remotenames", "selectivepulldefault")] {
         if let Some(&ValueSource {
             ref source,

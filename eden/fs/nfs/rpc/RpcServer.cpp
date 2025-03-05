@@ -250,7 +250,7 @@ void RpcConnectionHandler::tryConsumeReadBuffer() noexcept {
     {
       // state isn't actually locked, this scoping is just for show.
       // we skipped the lock since it's only ever accessed by one thread so a
-      // lock is unnessecary.
+      // lock is unnecessary.
       auto& state = state_.get();
       state.pendingRequests += 1;
 

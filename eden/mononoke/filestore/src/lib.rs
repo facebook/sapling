@@ -366,7 +366,7 @@ async fn fetch_concat_impl<B: Blobstore>(
 }
 
 /// Fetch the contents of a blob concatenated together. This bad for buffering, and you shouldn't
-/// add new callsites. This is only for compatibility with existin callsites.
+/// add new callsites. This is only for compatibility with existing callsites.
 pub async fn fetch_concat_opt<B: Blobstore>(
     blobstore: &B,
     ctx: &CoreContext,
@@ -402,7 +402,7 @@ pub async fn fetch_concat_exact<'a, B: Blobstore>(
 
 /// Fetch content associated with the key as a stream
 ///
-/// Moslty behaves as the `fetch`, except it is pushing missing content error into stream if
+/// Mostly behaves as the `fetch`, except it is pushing missing content error into stream if
 /// data associated with the key was not found.
 pub fn fetch_stream<'a, B: Blobstore + Clone + 'a>(
     blobstore: B,

@@ -326,7 +326,7 @@ impl RevlogChangeset {
             // List of files followed by the message. The file list is one entry
             // per line, with a blank line delimiting the end. The message is a single
             // binary blob with no internal structure, but we've already split it on '\n'
-            // bounaries, so we can glue it back together to re-create the original content.
+            // boundaries, so we can glue it back together to re-create the original content.
             //
             // XXX: We assume the comment is utf-8. Is this a good assumption?
             let mut dofiles = true;

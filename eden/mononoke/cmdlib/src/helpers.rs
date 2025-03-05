@@ -79,7 +79,7 @@ pub fn setup_repo_dir<P: AsRef<Path>>(data_dir: P, create: CreateStorage) -> Res
     Ok(())
 }
 
-/// Resolve changeset id by either bookmark name, hg hash, or changset id hash
+/// Resolve changeset id by either bookmark name, hg hash, or changeset id hash
 pub async fn csid_resolve(
     ctx: &CoreContext,
     container: &(impl RepoIdentityRef + BonsaiHgMappingRef + BookmarksRef),
@@ -113,7 +113,7 @@ pub async fn csids_resolve_from_file(
         .await
 }
 
-/// Resolve changeset id by either bookmark name, hg hash, or changset id hash
+/// Resolve changeset id by either bookmark name, hg hash, or changeset id hash
 async fn csid_resolve_impl<C>(
     ctx: &CoreContext,
     container: &C,

@@ -177,7 +177,7 @@ impl FileStore {
             bar.clone(),
         );
 
-        // When ignoring results, we won't advance the progress bar, so udpate the "total".
+        // When ignoring results, we won't advance the progress bar, so update the "total".
         if !fetch_mode.ignore_result() {
             bar.increase_total(state.pending_len() as u64);
         }
@@ -257,7 +257,7 @@ impl FileStore {
 
             if fetch_from_cas {
                 // When fetching from CAS, first fetch from local repo to avoid network
-                // request for data that is only available locally (e.g. localy
+                // request for data that is only available locally (e.g. locally
                 // committed).
                 if fetch_local {
                     if let Some(ref indexedlog_local) = indexedlog_local {

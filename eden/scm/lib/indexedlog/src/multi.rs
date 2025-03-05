@@ -853,7 +853,7 @@ mod tests {
         let mut mlog = opts.open(path).unwrap();
         let mut logs = mlog.detach_logs();
 
-        // Create 10 "multimeta"s. Each MultiMeta contains N entires for each log.
+        // Create 10 "multimeta"s. Each MultiMeta contains N entries for each log.
         const N: usize = 12;
         for i in 0..10u32 {
             let lock = mlog.lock().unwrap();

@@ -57,7 +57,7 @@ pub fn mmap_bytes(file: &File, len: Option<u64>) -> io::Result<Bytes> {
 /// Similar to [`mmap_bytes`], but accepts a [`Path`] directly so the
 /// callsite does not need to open a [`File`].
 ///
-/// Return [`crate::Result`], whcih makes it easier to use for error handling.
+/// Return [`crate::Result`], which makes it easier to use for error handling.
 pub fn mmap_path(path: &Path, len: u64) -> crate::Result<Bytes> {
     if len == 0 {
         Ok(Bytes::new())

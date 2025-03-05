@@ -565,7 +565,7 @@ async fn test_deleting_submodule_but_keeping_directory(fb: FacebookInit) -> Resu
     )
     .await?;
 
-    const DELETE_METADATA_FILE_MSG: &str = "Delete repo_b submodule and keept its static copy";
+    const DELETE_METADATA_FILE_MSG: &str = "Delete repo_b submodule and kept its static copy";
 
     let del_md_file_cs_id =
         CreateCommitContext::new(&ctx, &small_repo, vec![small_repo_cs_map["A_C"]])

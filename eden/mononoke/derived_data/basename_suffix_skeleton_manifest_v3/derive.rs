@@ -86,7 +86,7 @@ async fn get_bssm_path_changes(
     // Implicit deletes must be expanded before doing the bssm transform on the changes.
     // This is because paths that were prefixes of each other before the transform can
     // become independent afterwards, and the only implicit deletes after the transform
-    // that are perserved are those that share the same basename. For example:
+    // that are preserved are those that share the same basename. For example:
     //
     // Before bssm transform:
     // - Parent manifest has one file: a/b/c

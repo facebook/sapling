@@ -103,7 +103,7 @@ index 461f9fc5451..96bff350820 100644
 -   Returns NULL, or a pointer that should be freed.
 -
 -   XXX - this code is pretty strange, as it used to also
--   work on Win16, where the buffer sizes werent available
+-   work on Win16, where the buffer sizes weren't available
 -   in advance.  It could be simplied now Win16/Win32s is dead!
 -*/
 -
@@ -297,7 +297,7 @@ index 461f9fc5451..96bff350820 100644
 -    machinepath = getpythonregpath(HKEY_LOCAL_MACHINE, skiphome);
 -    userpath = getpythonregpath(HKEY_CURRENT_USER, skiphome);
 -#endif
--    /* We only use the default relative PYTHONPATH if we havent
+-    /* We only use the default relative PYTHONPATH if we haven't
 -       anything better to use! */
 -    skipdefault = envpath!=NULL || pythonhome!=NULL || \
 -                  machinepath!=NULL || userpath!=NULL;

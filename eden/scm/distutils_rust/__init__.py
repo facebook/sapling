@@ -384,7 +384,7 @@ replace-with = "vendored-sources"
             # This only makes sense on Windows
             log.info(
                 "skipping set_long_paths_manifest call for %s "
-                "as the plaform in not Windows",
+                "as the platform in not Windows",
                 fname,
             )
             return

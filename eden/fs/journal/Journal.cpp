@@ -363,7 +363,7 @@ size_t getPaddingAmount(const std::deque<T>& deltaDeque) {
 
 size_t Journal::estimateMemoryUsage(const DeltaState& deltaState) const {
   size_t memoryUsage = folly::goodMallocSize(sizeof(Journal));
-  // Account for overhead of deques which have a maximum buffer size of 512.
+  // Account for overhead of dequeues which have a maximum buffer size of 512.
   memoryUsage += getPaddingAmount(deltaState.fileChangeDeltas);
   memoryUsage += getPaddingAmount(deltaState.hashUpdateDeltas);
 

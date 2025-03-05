@@ -469,7 +469,7 @@ fn test_valid_curdir() {
 /// If the scratch root path does not exist then successfully returns.
 /// If the file exists then successfully returns.
 /// If README.txt exists but it is not a file then returns an error.
-/// If README.txt does not exist then attemts to create it and reports the status.
+/// If README.txt does not exist then attempts to create it and reports the status.
 fn readme_in_scratch_path(scratch_root_path: &Path) -> Result<()> {
     if !scratch_root_path.exists() {
         return Ok(());

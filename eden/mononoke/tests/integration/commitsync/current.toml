@@ -15,7 +15,7 @@
 #
 # Note: config is written from the "bottom-up" perspective, e.g.
 #       it contains mappings, needed to sync small repos into a
-#       a large repo. This mapping needs to be reversable
+#       a large repo. This mapping needs to be reversible
 #       (and is reversed when the sync happens in a large-to-small
 #       direction)
 

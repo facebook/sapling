@@ -71,7 +71,7 @@ def _megareponamespace(_repo) -> namespace:
 def _xrepopull(repo, name, rewritepullrev=False) -> Optional[pullattempt]:
     """Autopull a commit from another repo.
 
-    First the xrepo commit is translated to the coresponding commit of
+    First the xrepo commit is translated to the corresponding commit of
     the local repo. Then the local commit is pulled.
 
     We defer our autopull work so we can avoid all xrepo queries in

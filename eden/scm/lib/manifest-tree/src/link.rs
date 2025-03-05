@@ -147,7 +147,7 @@ impl Link {
     pub fn as_mut_ref(&mut self) -> Result<&mut LinkData> {
         // This introduces an unsual mutability pattern where we allow mutations as long as there
         // is only one copy of the Link's Arc. That one copy will always be the parent directory.
-        // In normal treemanifest operations, these Links are never shared beween trees (and in
+        // In normal treemanifest operations, these Links are never shared between trees (and in
         // fact the only way to copy the Arc is through the thread_copy function) so it will always
         // be the case that there is only one copy.
         //

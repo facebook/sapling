@@ -60,7 +60,7 @@ class InodeAccessLogger {
 
   folly::Synchronized<State> state_;
   // We use a LifoSem here due to the fact that it is faster than a std::mutex
-  // condition vairable combination. It in general should be used in a case
+  // condition variable combination. It in general should be used in a case
   // in which performance is more important than fairness, and since this is
   // a single threaded worker, we don't care about fairness. See the header
   // file for this object for more information about its performance benefits.

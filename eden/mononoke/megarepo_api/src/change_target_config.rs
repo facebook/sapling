@@ -184,7 +184,7 @@ impl<'a, R: MononokeRepo> ChangeTargetConfig<'a, R> {
             find_target_bookmark_and_value(ctx, &target_repo, target).await?;
 
         // target doesn't point to the commit we expect - check
-        // if this method has already succeded and just immediately return the
+        // if this method has already succeeded and just immediately return the
         // result if so.
         if actual_target_location != target_location {
             return self
@@ -216,7 +216,7 @@ impl<'a, R: MononokeRepo> ChangeTargetConfig<'a, R> {
         let repo = self.find_repo_by_id(ctx, target.repo_id).await?;
         let repo_config = repo.repo().repo_config_arc();
 
-        // Contruct the new config structure and the remapping state
+        // Construct the new config structure and the remapping state
         let new_config = self
             .megarepo_configs
             .get_config_by_version(
@@ -256,7 +256,7 @@ impl<'a, R: MononokeRepo> ChangeTargetConfig<'a, R> {
         let additions_merge = if let Some(additions_merge_cs_id) = additions_merge_cs_id {
             let mut scuba = ctx.scuba().clone();
             scuba.log_with_msg(
-                "Created change target config merge commit for addtions",
+                "Created change target config merge commit for additions",
                 Some(format!("{}", &additions_merge_cs_id)),
             );
             target_repo
@@ -283,11 +283,11 @@ impl<'a, R: MononokeRepo> ChangeTargetConfig<'a, R> {
             .await?;
         let mut scuba = ctx.scuba().clone();
         scuba.log_with_msg(
-            "Created change target config merge commit connecting addtions to removals",
+            "Created change target config merge commit connecting additions to removals",
             Some(format!("{}", &final_merge)),
         );
 
-        // Derrive all the necessary data before moving the bookmark
+        // Derive all the necessary data before moving the bookmark
         derive_all_types(ctx, target_repo.repo(), final_merge).await?;
 
         // Move bookmark

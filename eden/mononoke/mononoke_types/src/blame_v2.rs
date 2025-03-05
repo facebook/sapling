@@ -101,7 +101,7 @@ impl Loadable for BlameV2Id {
 
 /// Store blame object as associated blame to provided FileUnodeId
 ///
-/// NOTE: `Blame` is not a `Storable` object and can only be assoicated with
+/// NOTE: `Blame` is not a `Storable` object and can only be associated with
 ///       some file unode id.
 pub async fn store_blame<'a, B: Blobstore>(
     ctx: &'a CoreContext,
@@ -1024,7 +1024,7 @@ impl BlameData {
                 // Copy the list from the mutant blame - that's our deep history
                 let mut new_csids = mutated_blame.csids.clone();
                 let mut new_max_csid_index = mutated_blame.max_csid_index as usize;
-                // Add anything that hasn't disappered from our original history
+                // Add anything that hasn't disappeared from our original history
                 // This will be merge cases, where we've kept the old index, but have
                 // blamed to a commit *after* the mutation point
                 let mut known_so_far: HashSet<_> = new_csids.values().copied().collect();

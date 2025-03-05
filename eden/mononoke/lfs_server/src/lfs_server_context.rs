@@ -390,7 +390,7 @@ impl RepositoryRequestContext {
 
         // NOTE: We spawn the request on an executor because we'd like to read the response even if
         // we drop the future returned here. The reason for that is that if we don't read a
-        // response, Hyper will not reuse the conneciton for its pool (which makes sense for the
+        // response, Hyper will not reuse the connection for its pool (which makes sense for the
         // general case: if your server is sending you 5GB of data and you drop the future, you
         // don't want to read all that later just to reuse a connection).
         let fut = async move {

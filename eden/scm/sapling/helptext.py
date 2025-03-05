@@ -4485,7 +4485,7 @@ Rotation
 
 When a log file crosses the size threshold, it is rotated into the next
 position. Log files beyond max-log-count are deleted. Note that there are no LRU
-sematics.
+semantics.
 
 """
 
@@ -4544,7 +4544,7 @@ Merge Algorithms
 
 subset-changes
     If the changes of one side is the subset of the other side, then the conflict will
-    be resolved and the other side changes are kept. Currently, we limit this to addtions
+    be resolved and the other side changes are kept. Currently, we limit this to additions
     on both sides.
 
     Here is an example of the conflict::

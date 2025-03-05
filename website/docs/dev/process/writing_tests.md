@@ -129,7 +129,7 @@ $ buck2 test '@fbcode//mode/opt' :hg_watchman_run_tests -- test_rust_checkout_t
 $ buck2 test '@fbcode//mode/opt' :hg_edenfs_run_tests -- test_rust_checkout_t
 ```
 
-On EdenFS tests the EdenFS CLI is available throug the `eden` command; it's
+On EdenFS tests the EdenFS CLI is available through the `eden` command; it's
 recommended for new repos (cloned or newly created) to be created through
 `newclientrepo`. See the previous section for an example on how to do this.
 

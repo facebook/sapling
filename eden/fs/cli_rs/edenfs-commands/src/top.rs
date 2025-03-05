@@ -62,7 +62,7 @@ enum Pages {
 // a non zero width and height in the _last_ rendering cycle. This is because
 // the size of a widget is determined by its declared size in the last rendering
 // cycle, and it will cause errors to render anything to a widget of zero size.
-// Disclaimer: this is a hack. Ideally termwiz would manage visable and hidden
+// Disclaimer: this is a hack. Ideally termwiz would manage visible and hidden
 // widgets.
 static OBSERVED_ACTIVE_PAGE: Lazy<RwLock<Pages>> = Lazy::new(|| RwLock::new(Pages::MainPage));
 
@@ -90,7 +90,7 @@ impl Widget for EdenTopHeader {
     }
 }
 
-// This indicates whether the help page delcared itself to have non zero width
+// This indicates whether the help page declared itself to have non zero width
 // and height in the last cycle. The Help page is allowed to render itself if it
 // declared itself to have non zero height.
 // Disclaimer: this is a super hack. This could be a member variable of
@@ -139,7 +139,7 @@ impl Widget for HelpPage {
     }
 }
 
-// This indicates whether the main page delcared itself to have non zero width
+// This indicates whether the main page declared itself to have non zero width
 // and height in the last cycle. The Main page and its nested widgets are
 // allowed to render themselves if the main page widgets declared themselves to
 // have non zero height. They all should either declare 0 size or non zero size.

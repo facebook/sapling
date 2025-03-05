@@ -130,7 +130,7 @@ class BaseSnapshot(metaclass=abc.ABCMeta):
         """
         with self.edenfs() as eden:
             eden.start()
-            print("Verifing snapshot data:")
+            print("Verifying snapshot data:")
             print("=" * 60)
             self.verify_snapshot_data(verifier, eden)
             print("=" * 60)

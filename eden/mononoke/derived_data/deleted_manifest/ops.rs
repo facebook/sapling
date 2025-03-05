@@ -57,7 +57,7 @@ pub trait DeletedManifestOps: RootDeletedManifestIdCommon {
     /// Given a changeset and a path returns:
     ///  * if the paths exists in the commit: the unode corresponding to the path
     ///  * if it doesn't the unodes and changeset where the path last existed (there might be more than
-    ///    one if deletion happened in separe merge branches)
+    ///    one if deletion happened in separate merge branches)
     ///  * if the path never existed returns None
     ///
     /// Returns None for deleted files if deleted file manifests are not enabled in a given repo.

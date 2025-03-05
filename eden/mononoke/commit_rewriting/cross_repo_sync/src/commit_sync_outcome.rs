@@ -246,7 +246,7 @@ pub async fn get_plural_commit_sync_outcome<'a, M: SyncedCommitMapping>(
 
 /// Check if commit has been synced (or at least considered to be synced)
 /// between repos
-/// The confusing sentense above means that existing
+/// The confusing sentence above means that existing
 /// `EquivalentWorkingCopyAncestor` or `NotSyncCandidate` outcomes
 /// cause this fn to return true
 pub async fn commit_sync_outcome_exists<'a, M: SyncedCommitMapping>(
@@ -493,7 +493,7 @@ impl<R: Repo> DesiredRelationship<R> {
         }
     }
 
-    /// Check if a `target_cs_id` is in this ralationship
+    /// Check if a `target_cs_id` is in this relationship
     async fn holds_for<'a>(
         &'a self,
         ctx: &'a CoreContext,
@@ -522,7 +522,7 @@ impl<R: Repo> DesiredRelationship<R> {
 }
 
 /// Get a `CandidateSelector` which produces:
-/// - the only cadidate
+/// - the only candidate
 /// - or if there are multiple, the only one in the desired topological relationship
 fn get_only_or_in_desired_relationship_selector<'a, R: Repo>(
     ctx: &'a CoreContext,

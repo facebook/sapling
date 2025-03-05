@@ -204,7 +204,7 @@ class abstractsmartset:
         return addset(self, other)
 
     def __sub__(self, other):
-        """Returns a new object with the substraction of the two collections.
+        """Returns a new object with the subtraction of the two collections.
 
         This is part of the mandatory API for smartset."""
         c = other.__contains__

@@ -98,7 +98,8 @@ ImmediateFuture<std::unique_ptr<LocalFiles>> computeLocalFiles(
           XLOG(DBG4) << "Creating glob matcher for glob: " << glob;
           auto expectGlobMatcher = GlobMatcher::create("**/*" + glob, options);
           if (expectGlobMatcher.hasValue()) {
-            XLOG(DBG4) << "Successfuly created glob matcher for glob: " << glob;
+            XLOG(DBG4) << "Successfully created glob matcher for glob: "
+                       << glob;
             globMatchers.push_back(expectGlobMatcher.value());
           } else {
             XLOG(ERR) << "Invalid glob: " << glob;
@@ -183,7 +184,7 @@ ImmediateFuture<std::unique_ptr<Glob>> ThriftGlobImpl::glob(
 
   if (!rootHashes_.empty()) {
     // Note that we MUST reserve here, otherwise while emplacing we might
-    // invalidate the earlier commitHash refrences
+    // invalidate the earlier commitHash references
     globFutures.reserve(rootHashes_.size());
     originRootIds->reserve(rootHashes_.size());
     globTree = std::make_shared<GlobTree>(

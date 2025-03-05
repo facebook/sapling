@@ -8,7 +8,7 @@ testui = uimod.ui.load()
 # disable the configuration registration warning
 #
 # the purpose of this test is to check the old behavior, not to validate the
-# behavior from registered item. so we silent warning related to unregisted
+# behavior from registered item. so we silent warning related to unregistered
 # config.
 testui.setconfig("devel", "warn-config-unknown", False, "test")
 testui.setconfig("devel", "all-warnings", False, "test")

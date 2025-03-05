@@ -312,7 +312,7 @@ async fn test_renamed_export_paths_are_followed<R: MononokeRepo>(
 
     info!(
         logger,
-        "Testing renamed export paths witht the following paths {0:#?}", export_paths
+        "Testing renamed export paths with the following paths {0:#?}", export_paths
     );
 
     let expected_cs_ids: Vec<ChangesetId> = expected_relevant_changesets

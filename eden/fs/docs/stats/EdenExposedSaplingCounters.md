@@ -15,7 +15,7 @@ request.
 `cache` is the hgcache which is the remote server's cache. The objects in cache
 can be deleted anytime, because it is cache!
 
-`local` are the files that are modified localy. The objects in local are
+`local` are the files that are modified locally. The objects in local are
 permanent, and cannot be deleted like cache.
 
 - {zzz} = `keys` : `scmstore.file.fetch.{xxx}.{yyy}.keys`

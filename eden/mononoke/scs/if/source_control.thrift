@@ -501,7 +501,7 @@ struct MetadataDiffLinesCount {
   /// Number of deleted lines.
   2: i64 deleted_lines_count;
 
-  /// Number of signifcant (not generated) lines.
+  /// Number of significant (not generated) lines.
   3: i64 significant_added_lines_count;
 
   /// Number of significant (not generated) lines.
@@ -841,7 +841,7 @@ struct RepoStackInfoParams {
   /// List of heads to generate stack for.
   2: list<CommitId> heads;
 
-  /// Limits the number of draft changesets in the reponse, can be set up to
+  /// Limits the number of draft changesets in the response, can be set up to
   /// REPO_STACK_INFO_MAX_LIMIT.
   3: i64 limit;
 }
@@ -2151,7 +2151,7 @@ struct FileDiffResponse {
 }
 
 struct CreateReposResponse {
-/// Indicates successfull repo creation.
+/// Indicates successful repo creation.
 }
 
 struct CreateReposPollResponse {
@@ -2167,7 +2167,7 @@ struct MegarepoReadConfigResponse {
 
 struct MegarepoAddTargetResponse {
   /// A new position of the target bookmark
-  /// after the "sync changeset" operaton finished
+  /// after the "sync changeset" operation finished
   1: megarepo_configs.ChangesetId cs_id;
 }
 
@@ -2198,7 +2198,7 @@ struct MegarepoAddBranchingTargetPollResponse {
 
 struct MegarepoChangeTargetConfigResponse {
   /// A new position of the target bookmark
-  /// after the "change config" operaton finished
+  /// after the "change config" operation finished
   1: megarepo_configs.ChangesetId cs_id;
 }
 
@@ -2214,7 +2214,7 @@ struct MegarepoChangeTargetConfigPollResponse {
 
 struct MegarepoSyncChangesetResponse {
   /// A new position of the target bookmark
-  /// after the "sync changeset" operaton finished
+  /// after the "sync changeset" operation finished
   1: megarepo_configs.ChangesetId cs_id;
 }
 
@@ -2230,7 +2230,7 @@ struct MegarepoSyncChangesetPollResponse {
 
 struct MegarepoRemergeSourceResponse {
   /// A new position of the target bookmark
-  /// after the "remerge source" operaton finished
+  /// after the "remerge source" operation finished
   1: megarepo_configs.ChangesetId cs_id;
 }
 

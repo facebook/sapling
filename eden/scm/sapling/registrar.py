@@ -101,7 +101,7 @@ class _funcregistrarbase:
         return self._docformat % (decl, doc)
 
     def _extrasetup(self, name, func):
-        """Execute exra setup for registered function, if needed"""
+        """Execute extra setup for registered function, if needed"""
 
 
 class command(_funcregistrarbase):

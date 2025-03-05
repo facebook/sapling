@@ -28,11 +28,11 @@ pub fn run(ctx: ReqCtx<DebugArgsOpts>) -> Result<u8> {
         if let Ok(meta) = indexedlog::log::LogMetadata::read_file(path) {
             write!(ferr, "Metadata File {:?}\n{:?}\n", path, meta)?;
         } else if path.is_dir() {
-            // Treate it as Log.
+            // Treat it as Log.
             let log = indexedlog::log::Log::open(path, Vec::new())?;
             write!(ferr, "Log Directory {:?}:\n{:#?}\n", path, log)?;
         } else if path.is_file() {
-            // Treate it as Index.
+            // Treat it as Index.
             let idx = indexedlog::index::OpenOptions::new().open(path)?;
             write!(ferr, "Index File {:?}\n{:?}\n", path, idx)?;
         } else {

@@ -121,7 +121,7 @@ This has been known to cause deadlocks in the past. This includes:
 ### Implicit `folly::Future` execution in the background
 
 Futures attached to executors will continue running even though they are dropped
-(implicitely or explicitely). This is leveraged by the inode loading code to
+(implicitly or explicitly). This is leveraged by the inode loading code to
 ensure that even in the case of error the future will still execute and update
 the loading state machine.
 

@@ -139,7 +139,7 @@ stored path is small enough that the SSO kicks-in.
 # Length Limitations
 
 - Each PathComponent is limited to 255 characters. This restriction is
-  self-imposed in an attempt to maintain compatability with other filesystems.
+  self-imposed in an attempt to maintain compatibility with other filesystems.
 - The total path length is not enforced by EdenFS, but operating systems on
   which EdenFS runs may impose their own limits. As of November 2024, the
   following limits are known.

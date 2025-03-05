@@ -410,7 +410,7 @@ impl DiskUsageCmd {
                 println!(
                             "\n{}",
                             format!(
-                                "A filesytem check recovered data and stored it at:
+                                "A filesystem check recovered data and stored it at:
 - {}
 
 If you have recovered all that you need from these locations, you can remove that directory to reclaim the disk space.
@@ -480,7 +480,7 @@ fn get_checkouts(mounts: &[PathBuf], instance: &EdenFsInstance) -> Result<Vec<Ed
         .collect::<Result<_, anyhow::Error>>()
 }
 
-/// Get all the fsck directories for the pssed in checkouts.
+/// Get all the fsck directories for the passed in checkouts.
 ///
 /// Some checkouts do not have a fsck directory, the returned Vec will not included them.
 fn get_fsck_dirs(checkouts: &[EdenFsCheckout]) -> Vec<PathBuf> {
@@ -635,7 +635,7 @@ fn clear_purgeable_space(purgeable_space: String) -> Result<()> {
     Ok(())
 }
 
-// Calulate the real storage used in each redirect directory.
+// Calculate the real storage used in each redirect directory.
 fn get_redirect_usage_count(
     redirections: BTreeSet<(PathBuf, PathBuf)>,
 ) -> Result<RedirectUsageCounts> {

@@ -428,7 +428,7 @@ async fn create_bonsai_for_new_repo<'a, R: MononokeRepo>(
     // This shouldn't happen because every changeset provided is modifying
     // at least one of the exported files.
     .ok_or(Error::msg(
-        "Commit wasn't rewritten because it had no signficant changes",
+        "Commit wasn't rewritten because it had no significant changes",
     ))?;
 
     let rewritten_bcs = rewritten_bcs_mut.freeze()?;

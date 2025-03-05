@@ -136,7 +136,7 @@ pub(crate) async fn derive_skeleton_manifest_with_subtree_changes(
     }
 }
 
-/// Collect all the subentries for a new skeleton manifest, re-using entries
+/// Collect all the subentries for a new skeleton manifest, reusing entries
 /// from the parent skeleton manifests to avoid fetching too much.
 async fn collect_skeleton_subentries(
     ctx: &CoreContext,

@@ -405,7 +405,7 @@ fn test_index_reorder() {
     );
 }
 
-// This test rewrites mmaped files which is unsupoorted by Windows.
+// This test rewrites mapped files which is unsupoorted by Windows.
 #[cfg(not(windows))]
 #[test]
 fn test_index_mark_corrupt() {

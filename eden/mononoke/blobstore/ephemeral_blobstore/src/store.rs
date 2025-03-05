@@ -388,7 +388,7 @@ impl RepoEphemeralStoreInner {
     }
 
     /// Gets the vector of bubbles that are past their expiry period
-    /// by atleast a duration of expiry_offset + bubble_expiration_grace
+    /// by at least a duration of expiry_offset + bubble_expiration_grace
     async fn get_expired_bubbles(
         &self,
         ctx: &CoreContext,
@@ -658,7 +658,7 @@ impl RepoEphemeralStore {
     }
 
     /// Gets the vector of bubbles that are past their expiry period
-    /// by atleast a duration of expiry_offset + bubble_expiration_grace
+    /// by at least a duration of expiry_offset + bubble_expiration_grace
     pub async fn get_expired_bubbles(
         &self,
         ctx: &CoreContext,
@@ -1601,7 +1601,7 @@ mod test {
             .get_expired_bubbles(&ctx, Duration::from_secs(1000), 10)
             .await?;
         // No items should be returned since there aren't any bubbles
-        // that have been expired for atleast the past 1000 seconds
+        // that have been expired for at least the past 1000 seconds
         assert_eq!(res.len(), 0);
         Ok(())
     }

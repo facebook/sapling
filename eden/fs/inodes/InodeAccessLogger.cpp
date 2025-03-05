@@ -101,7 +101,7 @@ void InodeAccessLogger::processInodeAccessEvents() {
     // will process all entries at once, rather than waking repeatedly, consume
     // the rest.
     if (!work.empty()) {
-      // The - 1 here is to account for the inital semaphore wait. For example,
+      // The - 1 here is to account for the initial semaphore wait. For example,
       // if only one event was added to the queue and the wait() was fulfilled,
       // work.size() would be 1, and we would not wait to try any extra waits,
       // so the -1 brings this to 0.

@@ -47,11 +47,11 @@ void benchmarkOverlayTreeWrites(
       makeRefPtr<EdenStats>(),
       true,
       *EdenConfig::createTestEdenConfig());
-  printf("Initalizing Overlay...\n");
+  printf("Initializing Overlay...\n");
 
   overlay->initialize(EdenConfig::createTestEdenConfig()).get();
 
-  printf("Overlay initalized. Starting benchmark...\n");
+  printf("Overlay initialized. Starting benchmark...\n");
 
   ObjectId hash1{folly::ByteRange{"abcdabcdabcdabcdabcd"_sp}};
   ObjectId hash2{folly::ByteRange{"01234012340123401234"_sp}};

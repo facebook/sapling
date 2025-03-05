@@ -17,7 +17,7 @@ from .lib.histedit_command import HisteditCommand
 
 
 class _Hidden:
-    # This _Hidden class exists soley to hide the abstract StorageEngineTest class from
+    # This _Hidden class exists solely to hide the abstract StorageEngineTest class from
     # the unittest framework, so it does not find it during test discovery.  The
     # unittest code is unfortunately not smart enough to skip abstract classes.
 

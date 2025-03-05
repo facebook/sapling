@@ -260,7 +260,7 @@ where
 /// if there are multiple matches, or `prefix` is empty. Return `Ok(None)` if there
 /// are no matches.
 ///
-/// Return `Ok(key_id)` if there is a unique match. The `key_id` is guarnateed
+/// Return `Ok(key_id)` if there is a unique match. The `key_id` is guaranteed
 /// that once resolved and converted to base16 sequence, has a prefix matching
 /// the given `prefix`.
 #[rustfmt::skip]

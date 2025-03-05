@@ -317,7 +317,7 @@ IOBuf TakeoverData::serialize(uint64_t protocolCapabilities) {
   XCHECK(protocolCapabilities & TakeoverCapabilities::THRIFT_SERIALIZATION)
       << fmt::format(
              "Asked to serialize takeover data in unsupported format. "
-             "Cababilities: {}",
+             "Capabilities: {}",
              protocolCapabilities);
   return serializeThrift(protocolCapabilities);
 }
@@ -330,7 +330,7 @@ folly::IOBuf TakeoverData::serializeError(
       protocolCapabilities == 0)
       << fmt::format(
              "Asked to serialize takeover data in unsupported format. "
-             "Cababilities: {}",
+             "Capabilities: {}",
              protocolCapabilities);
   // We allow NeverSupported in the error case so that we don't
   // end up erroring out in the version mismatch error
@@ -472,7 +472,7 @@ TakeoverData TakeoverData::deserialize(
       protocolCapabilities == 0)
       << fmt::format(
              "Asked to serialize takeover data in unsupported format. "
-             "Cababilities: {}",
+             "Capabilities: {}",
              protocolCapabilities);
 
   return deserializeThrift(protocolCapabilities, buf);

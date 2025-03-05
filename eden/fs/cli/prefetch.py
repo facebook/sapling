@@ -100,7 +100,7 @@ class CheckoutAndPatterns(NamedTuple):
 
 
 # \ is a path separator on Windows. On Linux, we allow special characters in the
-# paterns, which use \. It's much more common to use \ as a path separator
+# patterns, which use \. It's much more common to use \ as a path separator
 # instead of a special character on Windows. Many Windows tools will return the
 # path with \, so it would be nicer if we could be compatible with this.
 # Sould a user need to use special charters on windows we could have them escape

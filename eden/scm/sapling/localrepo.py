@@ -1427,7 +1427,7 @@ class localrepository:
         )
 
         try:
-            # If the dirstate was successfuly loaded, let's check if it's pointed at
+            # If the dirstate was successfully loaded, let's check if it's pointed at
             # the nullid to warn the user that a clone may not have succeeded.
             if (
                 self.localvfs.exists("updatestate")

@@ -8,7 +8,7 @@ this file:
 - `Duration` : These stats record duration of the events with `addDuration()`
   method. The duration names should ends with `_us` to highlight that the value
   is in microseconds.
-  > ## Note: These stats get turned into a histogram, and EdenFS reports the followings for them
+  > ## Note: These stats get turned into a histogram, and EdenFS reports the following for them
   >
   > - Export Types
   >   - count(the number of times that `increment()` or `addDuration()` get
