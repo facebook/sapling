@@ -51,7 +51,6 @@ DEFAULT_COMMAND_LIST = [
     "diff",
     "fold",
     "forget",
-    "ghstack",
     "githelp",
     "goto",
     "graft",
