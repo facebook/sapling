@@ -53,3 +53,9 @@ bento_test_kernel(
     notebooks = ["notebooks/usc_by_os.py"],
     target_name = "usc_by_os",
 )
+
+bento_test_kernel(
+    kernel_name = "eden",
+    notebooks = ["notebooks/usc_okr_reviews.py"],
+    target_name = "usc_okr_reviews",
+)
