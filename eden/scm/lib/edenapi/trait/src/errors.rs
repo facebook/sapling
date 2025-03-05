@@ -83,7 +83,9 @@ impl SaplingRemoteApiError {
         use SaplingRemoteApiError::*;
         match self {
             Http(client_error) => match client_error {
-                Tls(TlsError { kind, .. }) => kind == &TlsErrorKind::RecvError,
+                Tls(TlsError { kind, .. }) => {
+                    matches!(kind, TlsErrorKind::RecvError | TlsErrorKind::ConnectError)
+                }
                 _ => true,
             },
             HttpError { status, .. } => {
