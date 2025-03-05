@@ -970,6 +970,14 @@ impl FetchState {
         self.metrics
             .cas_backend
             .local_cache_misses_bytes(total_stats.misses_bytes_local_cache);
+
+        self.metrics
+            .cas_backend
+            .local_lmdb_cache_hits_blobs(total_stats.hits_blobs_local_lmdb_cache);
+
+        self.metrics
+            .cas_backend
+            .local_lmdb_cache_hits_bytes(total_stats.hits_bytes_local_lmdb_cache);
     }
 
     pub(crate) fn fetch_lfs_remote(

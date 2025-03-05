@@ -276,6 +276,12 @@ pub struct CasBackendMetrics {
 
     /// Total number of bytes not found in the CAS Local Cache
     pub(crate) local_cache_misses_bytes: &'static Counter,
+
+    /// Total number of blobs fetched from the CAS Lmdb Local Cache
+    pub(crate) local_lmdb_cache_hits_blobs: &'static Counter,
+
+    /// Total number of bytes fetched from the CAS Lmdb Local Cache
+    pub(crate) local_lmdb_cache_hits_bytes: &'static Counter,
 }
 
 macro_rules! static_cas_backend_metrics {
@@ -294,6 +300,8 @@ macro_rules! static_cas_backend_metrics {
                 pub static LOCAL_CACHE_HITS_BYTES: ::metrics::Counter = ::metrics::Counter::new_counter(concat!($prefix, ".local_cache.hits.bytes"));
                 pub static LOCAL_CACHE_MISSES_FILES: ::metrics::Counter = ::metrics::Counter::new_counter(concat!($prefix, ".local_cache.misses.files"));
                 pub static LOCAL_CACHE_MISSES_BYTES: ::metrics::Counter = ::metrics::Counter::new_counter(concat!($prefix, ".local_cache.misses.bytes"));
+                pub static LOCAL_LMDB_CACHE_HITS_BLOBS: ::metrics::Counter = ::metrics::Counter::new_counter(concat!($prefix, ".local_lmdb_cache.hits.blobs"));
+                pub static LOCAL_LMDB_CACHE_HITS_BYTES: ::metrics::Counter = ::metrics::Counter::new_counter(concat!($prefix, ".local_lmdb_cache.hits.bytes"));
             }
 
             static $name: $crate::scmstore::metrics::CasBackendMetrics = $crate::scmstore::metrics::CasBackendMetrics {
@@ -309,6 +317,8 @@ macro_rules! static_cas_backend_metrics {
                 local_cache_hits_bytes: &[<cas_metrics_ $name:lower>]::LOCAL_CACHE_HITS_BYTES,
                 local_cache_misses_files: &[<cas_metrics_ $name:lower>]::LOCAL_CACHE_MISSES_FILES,
                 local_cache_misses_bytes: &[<cas_metrics_ $name:lower>]::LOCAL_CACHE_MISSES_BYTES,
+                local_lmdb_cache_hits_blobs: &[<cas_metrics_ $name:lower>]::LOCAL_LMDB_CACHE_HITS_BLOBS,
+                local_lmdb_cache_hits_bytes: &[<cas_metrics_ $name:lower>]::LOCAL_LMDB_CACHE_HITS_BYTES,
             };
         }
     };
@@ -352,5 +362,11 @@ impl CasBackendMetrics {
     }
     pub(crate) fn local_cache_misses_bytes(&self, bytes: u64) {
         self.local_cache_misses_bytes.add(bytes as usize);
+    }
+    pub(crate) fn local_lmdb_cache_hits_blobs(&self, blobs: u64) {
+        self.local_lmdb_cache_hits_blobs.add(blobs as usize);
+    }
+    pub(crate) fn local_lmdb_cache_hits_bytes(&self, bytes: u64) {
+        self.local_lmdb_cache_hits_bytes.add(bytes as usize);
     }
 }
