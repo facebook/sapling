@@ -3,7 +3,10 @@
 # This software may be used and distributed according to the terms of the
 # GNU General Public License version 2.
 
-"""ghstack for Sapling (EXPERIMENTAL)"""
+"""ghstack for Sapling (EXPERIMENTAL)
+
+.. trigger-hint:: ghstack-deprecation
+"""
 
 import logging
 
@@ -59,6 +62,8 @@ def ghstack_command(ui, repo, *args, **opts) -> None:
     Note that you must have *write* access to the GitHub repository in order to
     use ghstack. If you do not have write access, consider using the `pr`
     subcommand instead.
+
+    .. trigger-hint:: ghstack-deprecation
     """
     hintutil.triggershow(ui, "ghstack-deprecation")
     return submit_cmd(ui, repo, *args, **opts)
@@ -112,7 +117,10 @@ subcmd = ghstack_command.subcommand(
     ],
 )
 def submit_cmd(ui, repo, *args, **opts) -> None:
-    """submit stack of commits to GitHub"""
+    """submit stack of commits to GitHub
+
+    .. trigger-hint:: ghstack-deprecation
+    """
     hintutil.triggershow(ui, "ghstack-deprecation")
     conf, sh, github = _create_ghstack_context(ui, repo)
     ghstack.submit.main(
@@ -136,7 +144,10 @@ def submit_cmd(ui, repo, *args, **opts) -> None:
     _("COMMITS..."),
 )
 def unlink_cmd(ui, repo, *args, **opts) -> None:
-    """remove the association of a commit with a pull request"""
+    """remove the association of a commit with a pull request
+
+    .. trigger-hint:: ghstack-deprecation
+    """
     hintutil.triggershow(ui, "ghstack-deprecation")
     conf, sh, github = _create_ghstack_context(ui, repo)
     commits = list(args)
@@ -177,7 +188,10 @@ def land_cmd(ui, repo, *args, **opts) -> None:
     _("PR"),
 )
 def checkout_cmd(ui, repo, *args, **opts) -> None:
-    """goto the stack for the specified pull request URL"""
+    """goto the stack for the specified pull request URL
+
+    .. trigger-hint:: ghstack-deprecation
+    """
     conf, sh, github = _create_ghstack_context(ui, repo)
     if len(args) != 1:
         raise error.Abort(_("must specify a URL for a pull request"))
@@ -204,7 +218,10 @@ def checkout_cmd(ui, repo, *args, **opts) -> None:
     _("PR"),
 )
 def action_cmd(ui, repo, *args, **opts) -> None:
-    """goto the stack for the specified pull request URL"""
+    """goto the stack for the specified pull request URL
+
+    .. trigger-hint:: ghstack-deprecation
+    """
     hintutil.triggershow(ui, "ghstack-deprecation")
     conf, sh, github = _create_ghstack_context(ui, repo)
     if len(args) != 1:
