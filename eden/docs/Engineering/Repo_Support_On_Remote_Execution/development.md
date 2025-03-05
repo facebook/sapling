@@ -24,7 +24,7 @@ The engine is the key argument here, otherwise the action will be executed on th
  [🍇] → time frecli --engine $HOSTNAME:5000 --engine-rpc grpc --platform scm-repo-support -r "$(sl whereami)" exec command -- ls /fbsource/fbcode/eden
 ```
 
-EdenFS daemon's logs will be located in the worker's home directory (a temporary directory in dev). 
+EdenFS daemon's logs will be located in the worker's home directory (a temporary directory in dev).
 
 Please, use this command to locate the logs:
 ```
@@ -87,7 +87,7 @@ The first part will read 100 actions from scuba and write them to a file:
 ```
 Now, we are ready to replay those actions onto a testing instance:
 ```
-[ioanbudea@devvm33012.lla0 ~]$ re_replay replay -i out.file --engine re-engine-prod.internal.tfbnw.net:443 --override-capabilities platform=scm-repo-support,testing=my_new_worker
+[ioanbudea@devvm33012.lla0 ~]$ re_replay replay -i out.file --override-capabilities platform=scm-repo-support,testing=my_new_worker
 ```
 For more details about the available filters, please consult the tool CLI and help instructions.
 This can also be automated into [replay tests for push safety](https://www.internalfb.com/wiki/Remote_Execution/engineering/compute/push_safety_with_replay/).
