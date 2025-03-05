@@ -16,4 +16,7 @@ thrift_library(
         "//eden/mononoke/git_symbolic_refs:git_symbolic_refs",
         "//eden/mononoke/git_symbolic_refs:git_symbolic_refs-unittest",
     ],
+    deps = [
+        "//thrift/annotation:rust",
+    ],
 )

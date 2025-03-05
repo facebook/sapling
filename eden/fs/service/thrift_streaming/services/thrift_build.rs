@@ -6,14 +6,14 @@ use std::path::Path;
 use thrift_compiler::Config;
 use thrift_compiler::GenContext;
 const CRATEMAP: &str = "\
-eden/fs/config/eden_config.thrift thrift->config_thrift //eden/fs/config:config_thrift-rust
-eden/fs/service/eden.thrift thrift //eden/fs/service:thrift-rust
+eden/fs/config/eden_config.thrift thrift__0->config_thrift //eden/fs/config:config_thrift-rust
+eden/fs/service/eden.thrift thrift__0 //eden/fs/service:thrift-rust
 eden/fs/service/streamingeden.thrift crate //eden/fs/service:thrift-streaming-rust
-fb303/thrift/fb303_core.thrift thrift->fb303_core //fb303/thrift:fb303_core-rust
-thrift/annotation/cpp.thrift thrift->cpp //thrift/annotation:cpp-rust
-thrift/annotation/rust.thrift thrift->rust //thrift/annotation:rust-rust
-thrift/annotation/scope.thrift thrift->cpp->scope //thrift/annotation:scope-rust
-thrift/annotation/thrift.thrift thrift->thrift //thrift/annotation:thrift-rust
+fb303/thrift/fb303_core.thrift thrift__0->fb303_core //fb303/thrift:fb303_core-rust
+thrift/annotation/cpp.thrift thrift__0->cpp //thrift/annotation:cpp-rust
+thrift/annotation/rust.thrift thrift__0->rust //thrift/annotation:rust-rust
+thrift/annotation/scope.thrift thrift__1->scope //thrift/annotation:scope-rust
+thrift/annotation/thrift.thrift thrift__1 //thrift/annotation:thrift-rust
 ";
 #[rustfmt::skip]
 fn main() {

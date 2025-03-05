@@ -517,6 +517,7 @@ thrift_library(
     },
     deps = [
         ":thrift",
+        "//thrift/annotation:thrift",
     ],
 )
 

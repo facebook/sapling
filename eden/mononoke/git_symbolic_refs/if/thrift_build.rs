@@ -7,6 +7,8 @@ use thrift_compiler::Config;
 use thrift_compiler::GenContext;
 const CRATEMAP: &str = "\
 eden/mononoke/git_symbolic_refs/if/git_symbolic_refs.thrift crate //eden/mononoke/git_symbolic_refs/if:git_symbolic_refs_entry_thrift-rust
+thrift/annotation/rust.thrift rust //thrift/annotation:rust-rust
+thrift/annotation/scope.thrift rust->scope //thrift/annotation:scope-rust
 ";
 #[rustfmt::skip]
 fn main() {
