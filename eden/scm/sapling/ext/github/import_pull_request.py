@@ -6,12 +6,12 @@
 import asyncio
 from typing import Optional
 
-from ghstack.stackheader import STACK_HEADER_PREFIX as GHSTACK_HEADER_PREFIX
-
 from sapling import error
 from sapling.hg import updatetotally
 from sapling.i18n import _
 from sapling.node import bin
+
+from .consts.stackheader import STACK_HEADER_PREFIX as GHSTACK_HEADER_PREFIX
 
 from .gh_submit import get_pull_request_details
 from .pull_request_arg import parse_pull_request_arg
