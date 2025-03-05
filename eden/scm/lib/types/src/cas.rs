@@ -43,10 +43,14 @@ pub struct CasFetchedStats {
     pub queries_zgw: u64,
     pub queries_manifold: u64,
     pub queries_hedwig: u64,
+    // The combined cache (lmdb + on disk)
     pub hits_files_local_cache: u64,
     pub hits_bytes_local_cache: u64,
     pub misses_files_local_cache: u64,
     pub misses_bytes_local_cache: u64,
+    // Specific to the lmdb (in-memory) cache
+    pub hits_blobs_local_lmdb_cache: u64,
+    pub hits_bytes_local_lmdb_cache: u64,
 }
 
 impl CasFetchedStats {
@@ -63,6 +67,8 @@ impl CasFetchedStats {
         self.hits_bytes_local_cache += other.hits_bytes_local_cache;
         self.misses_files_local_cache += other.misses_files_local_cache;
         self.misses_bytes_local_cache += other.misses_bytes_local_cache;
+        self.hits_blobs_local_lmdb_cache += other.hits_blobs_local_lmdb_cache;
+        self.hits_bytes_local_lmdb_cache += other.hits_bytes_local_lmdb_cache;
     }
 }
 

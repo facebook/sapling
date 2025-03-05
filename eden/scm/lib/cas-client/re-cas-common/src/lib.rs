@@ -76,6 +76,8 @@ macro_rules! re_client {
             stats.hits_bytes_local_cache = local_cache_stats.hits_bytes as u64;
             stats.misses_files_local_cache = local_cache_stats.misses_files as u64;
             stats.misses_bytes_local_cache = local_cache_stats.misses_bytes as u64;
+            stats.hits_blobs_local_lmdb_cache = local_cache_stats.hits_count_lmdb as u64;
+            stats.hits_blobs_local_lmdb_cache = local_cache_stats.hits_bytes_lmdb as u64;
             stats
         }
 
