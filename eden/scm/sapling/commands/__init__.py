@@ -4752,7 +4752,7 @@ def pull(ui, repo, source="default", **opts):
 
           @prog@ pull
 
-      - pull a bookmark named my-branch from source my-fork:
+      - pull a bookmark named my-branch from source my-fork::
 
           @prog@ pull my-fork --bookmark my-branch
 
