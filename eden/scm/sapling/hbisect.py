@@ -148,6 +148,10 @@ def checksparsebisectskip(repo, candidatenode, badnode, goodnode) -> str:
     rev = repo.changelog.rev(candidatenode)
     sparsematch = repo.sparsematch(rev)
 
+    if sparsematch.always():
+        # No sparse filtering going on - avoid diff operation.
+        return "check"
+
     badmanifest = repo[badnode].manifest()
     bestmanifest = repo[candidatenode].manifest()
     goodmanifest = repo[goodnode].manifest()
