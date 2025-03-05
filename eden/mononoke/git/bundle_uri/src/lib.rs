@@ -17,6 +17,34 @@ use fbinit::FacebookInit;
 use mononoke_macros::mononoke;
 use mononoke_types::RepositoryId;
 
+#[cfg(fbcode_build)]
+mod facebook;
+
+#[cfg(fbcode_build)]
+pub use facebook::cdn;
+#[cfg(fbcode_build)]
+pub use facebook::sql;
+
+#[cfg(fbcode_build)]
+pub async fn create_bundle_uri(
+    fb: FacebookInit,
+    manifold_api_key: &str,
+    manifold_bucket_name: &str,
+    connections: sql_ext::SqlConnections,
+    update_cadence: Duration,
+    tracked_repos: TrackedRepos,
+) -> Result<BundleUri<sql::SqlGitBundleMetadataStorage, cdn::CdnManifoldBundleUrlGenerator>> {
+    let url_gen = cdn::CdnManifoldBundleUrlGenerator::new(
+        fb,
+        manifold_api_key.to_string(),
+        manifold_bucket_name.to_string(),
+    );
+    let storage = sql::SqlGitBundleMetadataStorage::new(connections);
+    BundleUri::new(update_cadence, storage, url_gen, tracked_repos).await
+}
+
+#[cfg(not(fbcode_build))]
+
 pub async fn create_bundle_uri(
     _fb: FacebookInit,
     _manifold_api_key: &str,
