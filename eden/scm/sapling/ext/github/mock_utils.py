@@ -8,8 +8,6 @@ from abc import abstractmethod
 from typing import Any, Callable, Dict, List, Optional, Union
 
 import ghstack.query
-
-from ghstack.github_gh_cli import JsonDict
 from sapling import error
 
 from sapling.ext.github.consts import query
@@ -18,6 +16,8 @@ from sapling.ext.github.pull_request_body import title_and_body
 from sapling.result import Ok, Result
 
 from .consts import GITHUB_HOSTNAME
+
+from .github_gh_cli import JsonDict
 
 """utils for mocking GitHub requests.
 

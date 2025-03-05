@@ -3,9 +3,8 @@
 # This software may be used and distributed according to the terms of the
 # GNU General Public License version 2.
 
-from ghstack import github_gh_cli
 from sapling import extensions
-from sapling.ext.github import submit
+from sapling.ext.github import github_gh_cli, submit
 from sapling.ext.github.gh_submit import PullRequestState
 from sapling.ext.github.mock_utils import mock_run_git_command, MockGitHubServer
 

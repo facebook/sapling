@@ -14,13 +14,13 @@ import enum
 from dataclasses import dataclass
 from typing import Dict, Optional, Tuple, Union
 
-from ghstack import github_gh_cli as gh_cli
-from ghstack.github_gh_cli import JsonDict
-
 from sapling.i18n import _
 from sapling.result import Err, Ok, Result
 
+from . import github_gh_cli as gh_cli
+
 from .consts import query
+from .github_gh_cli import JsonDict
 from .pullrequest import PullRequestId
 
 _Params = Union[str, int, bool]

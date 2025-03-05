@@ -11,13 +11,13 @@ from dataclasses import dataclass
 from functools import lru_cache
 from typing import Iterable, List, Optional, Pattern
 
-from ghstack import github_gh_cli as gh_cli
-
 from sapling import error, git, util
 from sapling.ext.github.consts import query
 from sapling.i18n import _
 from sapling.node import bin
 from sapling.result import Err, Ok, Result
+
+from . import github_gh_cli as gh_cli
 
 from .pullrequeststore import PullRequestStore
 
