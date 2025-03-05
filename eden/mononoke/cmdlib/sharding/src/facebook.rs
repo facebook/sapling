@@ -40,6 +40,8 @@ use crate::RepoShardedProcessExecutor;
 use crate::RepoState::*;
 
 const SLEEP_SECS: u64 = 10;
+const MAX_SM_CLIENT_INIT_RETRIES: i32 = 10;
+const SM_CLIENT_INIT_RETRY_SECS: i32 = 10;
 
 define_stats! {
     prefix = "mononoke.shardmanager";
@@ -1065,6 +1067,8 @@ impl ShardedProcessExecutor {
             // health feedback enables restarting of the specific shard/repo
             // without affecting the remaining repos on the server.
             .enable_shard_health_feedback(shard_healing)
+            .max_sm_client_init_retries(MAX_SM_CLIENT_INIT_RETRIES)
+            .sm_client_init_retry_interval_secs(SM_CLIENT_INIT_RETRY_SECS)
             .build()
             .map_err(|x| anyhow!("Error while building SM AppServerConfig: {}", x))?;
         let handler = Arc::new(ShardedProcessHandler::new(
