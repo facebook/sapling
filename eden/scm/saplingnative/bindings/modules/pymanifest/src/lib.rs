@@ -355,6 +355,16 @@ py_class!(pub class treemanifest |py| {
         Ok(result)
     }
 
+    /// Report whether two manifests (filtered by matcher) are identical.
+    def identical(&self, other: &treemanifest, matcher: PyObject) -> PyResult<bool> {
+        let matcher: Arc<dyn Matcher + Sync + Send> = extract_matcher(py, matcher)?.0;
+        let this_tree = self.underlying(py);
+        let other_tree = other.underlying(py);
+        py.allow_threads(move || -> Result<_> {
+            Ok(this_tree.read().diff(&other_tree.read(), matcher)?.next().is_none())
+        }).map_pyerr(py)
+    }
+
     /// Insert `other[other_path]` into `self[path]`.
     ///
     /// See more details in `TreeManifest::graft`.

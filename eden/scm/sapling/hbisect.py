@@ -156,8 +156,8 @@ def checksparsebisectskip(repo, candidatenode, badnode, goodnode) -> str:
     bestmanifest = repo[candidatenode].manifest()
     goodmanifest = repo[goodnode].manifest()
 
-    baddiff = badmanifest.diff(bestmanifest, sparsematch)
-    gooddiff = bestmanifest.diff(goodmanifest, sparsematch)
+    baddiff = not badmanifest.identical(bestmanifest, sparsematch)
+    gooddiff = not bestmanifest.identical(goodmanifest, sparsematch)
     if baddiff and not gooddiff:
         return "good"
     if not baddiff and gooddiff:
