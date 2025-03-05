@@ -38,8 +38,7 @@ def testsetup(t: TestTmp):
 
         edenpath = str(t.path / "bin" / "eden")
         t.setenv("HGTEST_USE_EDEN", "1")
-        if "eden" not in t.shenv.cmdtable:
-            t.requireexe("eden")
+        t.requireexe("eden")
         t.registerfallbackmatch(
             lambda a, b: (
                 b == "update complete"
