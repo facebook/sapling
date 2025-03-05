@@ -3212,6 +3212,10 @@ def help_(ui, *names, **opts):
 
     Returns 0 if successful.
     """
+    # The "help" command bypasses the usual "dispatch" logic including the hint
+    # handling. To show hints (ex. ".. hint:: hint_name" in docstring),
+    # explicitly call related functions.
+    hintutil.loadhintconfig(ui)
 
     name = " ".join(names) if names and names != (None,) else None
     keep = opts.get(r"system") or []
@@ -3232,6 +3236,7 @@ def help_(ui, *names, **opts):
     formatted = help.formattedhelp(ui, commands, name, keep=keep, **opts)
     ui.pager("help")
     ui.write(formatted)
+    hintutil.show(ui)
 
 
 @command(

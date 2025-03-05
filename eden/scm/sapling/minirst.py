@@ -527,6 +527,7 @@ _admonitiontitles = {
     "note": _("Note:"),
     "tip": _("Tip:"),
     "warning": _("Warning!"),
+    "trigger-hint": "",
 }
 
 
@@ -548,7 +549,14 @@ def formatblock(block, width):
         width = 78
     indent = " " * block["indent"]
     if block["type"] == "admonition":
-        admonition = _admonitiontitles[block["admonitiontitle"]]
+        admonitiontitle = block["admonitiontitle"]
+        admonition = _admonitiontitles[admonitiontitle]
+        if admonitiontitle == "trigger-hint":
+            hintname = block["lines"][0].strip()
+            from . import hintutil
+
+            hintutil.trigger(hintname)
+            return ""
         if not block["lines"]:
             return indent + admonition + "\n"
         hang = len(block["lines"][-1]) - len(block["lines"][-1].lstrip())
