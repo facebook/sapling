@@ -374,15 +374,6 @@ def regenerate_pages(command_list, commands_json, output_dir: Path):
         ["yarn", "run", "signsource"] + markdown_files, cwd=subprocess_cwd
     )
 
-    with open(output_dir / "_category_.json", "w") as f:
-        category = {
-            "label": "Commands",
-            "position": 4.5,
-            "link": {"type": "generated-index"},
-        }
-        json.dump(category, f, indent=2)
-        f.write("\n")
-
 
 def _combine_commands_and_builtin_alias(command_list, commands_json, alias_dict):
     command_list = sorted(command_list + list(alias_dict.keys()))
