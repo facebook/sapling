@@ -1,10 +1,10 @@
 ---
-sidebar_position: 30
+sidebar_position: 29
 ---
 
 ## push
 <!--
-  @generated SignedSource<<4567f4e3c47f1c1ad43f81cbafe3307b>>
+  @generated SignedSource<<b20ff74f4539b716c0b405ee188fcf33>>
   Run `./scripts/generate-command-markdown.py` to regenerate.
 -->
 

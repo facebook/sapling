@@ -1,10 +1,10 @@
 ---
-sidebar_position: 47
+sidebar_position: 46
 ---
 
 ## unshelve
 <!--
-  @generated SignedSource<<0b7b4f2c52cdbf5f669b724f1d3c3d5a>>
+  @generated SignedSource<<eb96d08a45c3c2969b324dc9160eb5fe>>
   Run `./scripts/generate-command-markdown.py` to regenerate.
 -->
 

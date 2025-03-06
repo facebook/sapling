@@ -73,7 +73,7 @@ class Repo:
         self._foo = None
 
     def foo(self):
-        # Fragile: Requries extra effort to ensure repo._foo is always synced
+        # Fragile: Requires extra effort to ensure repo._foo is always synced
         # with source of truth.
         if self._foo is None:
             self._foo = decode_foo(self.metalog()['foo'])

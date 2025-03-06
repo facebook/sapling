@@ -1,10 +1,10 @@
 ---
-sidebar_position: 37
+sidebar_position: 36
 ---
 
 ## shelve
 <!--
-  @generated SignedSource<<c1727ac7aefb980dfd780c65df2a4225>>
+  @generated SignedSource<<bda930f1fc937d7dc0afa4693def344b>>
   Run `./scripts/generate-command-markdown.py` to regenerate.
 -->
 

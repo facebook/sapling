@@ -1,10 +1,10 @@
 ---
-sidebar_position: 21
+sidebar_position: 20
 ---
 
 ## histedit
 <!--
-  @generated SignedSource<<4b495fa94bfb3b54f9e082f69ebcf453>>
+  @generated SignedSource<<c9c2d2008043d96fdbdb69b42c8d0c14>>
   Run `./scripts/generate-command-markdown.py` to regenerate.
 -->
 
