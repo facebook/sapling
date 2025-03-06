@@ -144,7 +144,7 @@ impl EdenapiSender {
             ctx.scuba().clone(),
             &response.stats.await?,
             paths::UPLOAD_FILE,
-            &format!("{:?}", ids),
+            ids.clone(),
         );
 
         ensure!(
@@ -190,7 +190,7 @@ impl EdenapiSender {
             self.ctx.scuba().clone(),
             &res.stats.await?,
             paths::UPLOAD_TREES,
-            &format!("{:?}", ids),
+            ids.clone(),
         );
 
         ensure!(
@@ -234,7 +234,7 @@ impl EdenapiSender {
             self.ctx.scuba().clone(),
             &res.stats.await?,
             paths::UPLOAD_FILENODES,
-            &format!("{:?}", ids),
+            ids.clone(),
         );
 
         ensure!(
@@ -302,7 +302,7 @@ impl EdenapiSender {
             self.ctx.scuba().clone(),
             &res.stats.await?,
             paths::UPLOAD_IDENTICAL_CHANGESET,
-            &format!("{:?}", ids),
+            ids.clone(),
         );
 
         info!(&self.logger, "Uploaded changesets: {:?}", ids);

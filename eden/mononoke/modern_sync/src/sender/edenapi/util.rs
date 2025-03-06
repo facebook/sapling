@@ -231,8 +231,13 @@ pub(crate) fn log_stats_to_scuba(
     mut scuba: MononokeScubaSampleBuilder,
     stats: &Stats,
     endpoint: &str,
-    contents: &str,
+    contents: Vec<AnyId>,
 ) {
+    let contents = contents
+        .iter()
+        .map(|id| format!("{:?}", id))
+        .collect::<Vec<_>>();
+
     scuba.add("contents", contents);
     scuba.add("endpoint", endpoint);
     scuba.add("requests", stats.requests);
