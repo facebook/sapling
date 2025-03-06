@@ -25,7 +25,6 @@ use std::time::Instant;
 
 use configmodel::Config;
 use configmodel::ConfigExt;
-use fs2::FileExt;
 use parking_lot::Mutex;
 use progress_model::ProgressBar;
 use sysutil::hostname;
@@ -438,8 +437,8 @@ pub fn try_lock(dir: &Path, name: &str, contents: &[u8]) -> Result<LockHandle, L
     #[cfg(unix)]
     let _ = lock_file.set_permissions(Permissions::from_mode(0o666));
 
-    match lock_file.try_lock_exclusive() {
-        Ok(_) => {}
+    match fs2::FileExt::try_lock_exclusive(&lock_file) {
+        Ok(()) => {}
         Err(err) if err.kind() == fs2::lock_contended_error().kind() => {
             let contents = fs_err::read(&lock_paths.data)?;
             return Err(LockContendedError {
@@ -493,9 +492,7 @@ pub struct LockHandle {
 impl LockHandle {
     pub fn unlock(&mut self) -> io::Result<()> {
         self.unlink_legacy();
-        self.lock
-            .unlock()
-            .path_context("error unlocking lock file", &self.path)
+        fs2::FileExt::unlock(&self.lock).path_context("error unlocking lock file", &self.path)
     }
 
     fn unlink_legacy(&mut self) {

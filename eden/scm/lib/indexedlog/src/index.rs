@@ -89,7 +89,7 @@ use byteorder::ByteOrder;
 use byteorder::LittleEndian;
 use byteorder::ReadBytesExt;
 use byteorder::WriteBytesExt;
-use fs2::FileExt;
+use fs2::FileExt as _;
 use minibytes::Bytes;
 use tracing::debug_span;
 use twox_hash::XxHash;

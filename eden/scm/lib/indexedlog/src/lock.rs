@@ -11,7 +11,6 @@ use std::io;
 use std::path::Path;
 use std::path::PathBuf;
 
-use fs2::FileExt;
 use memmap2::MmapMut;
 use memmap2::MmapOptions;
 
@@ -27,9 +26,9 @@ pub struct ScopedFileLock<'a> {
 impl<'a> ScopedFileLock<'a> {
     pub fn new(file: &'a mut File, exclusive: bool) -> io::Result<Self> {
         if exclusive {
-            file.lock_exclusive()?;
+            fs2::FileExt::lock_exclusive(file)?;
         } else {
-            file.lock_shared()?;
+            fs2::FileExt::lock_shared(file)?;
         }
         Ok(ScopedFileLock { file })
     }
@@ -49,7 +48,7 @@ impl<'a> AsMut<File> for ScopedFileLock<'a> {
 
 impl<'a> Drop for ScopedFileLock<'a> {
     fn drop(&mut self) {
-        self.file.unlock().expect("unlock");
+        fs2::FileExt::unlock(self.file).expect("unlock");
     }
 }
 
@@ -241,10 +240,10 @@ fn lock_file(file: &File, exclusive: bool, non_blocking: bool) -> io::Result<()>
     }
     #[cfg(not(windows))]
     match (exclusive, non_blocking) {
-        (true, false) => file.lock_exclusive()?,
-        (true, true) => file.try_lock_exclusive()?,
-        (false, false) => file.lock_shared()?,
-        (false, true) => file.try_lock_shared()?,
+        (true, false) => fs2::FileExt::lock_exclusive(file)?,
+        (true, true) => fs2::FileExt::try_lock_exclusive(file)?,
+        (false, false) => fs2::FileExt::lock_shared(file)?,
+        (false, true) => fs2::FileExt::try_lock_shared(file)?,
     }
     Ok(())
 }
@@ -264,7 +263,7 @@ fn unlock_file(file: &File) -> io::Result<()> {
     }
     #[cfg(not(windows))]
     {
-        file.unlock()?;
+        fs2::FileExt::unlock(file)?;
     }
     Ok(())
 }

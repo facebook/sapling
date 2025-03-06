@@ -106,7 +106,7 @@ impl OpenOptions {
                     Ok(meta) => {
                         // If metadata can be read, trust it.
                         if meta.primary_len > primary_len {
-                            use fs2::FileExt;
+                            use fs2::FileExt as _;
                             // Log was truncated for some reason...
                             // (This should be relatively rare)
                             // Fill Log with 0s.

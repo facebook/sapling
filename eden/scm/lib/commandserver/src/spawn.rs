@@ -10,7 +10,6 @@ use std::io;
 use std::process::Child;
 use std::process::Command;
 
-use fs2::FileExt;
 use spawn_ext::CommandExt;
 
 use crate::util;
@@ -24,7 +23,7 @@ pub fn spawn_pool(pool_size: usize) -> anyhow::Result<()> {
         .create(true)
         .write(true)
         .open(dir.join("spawn.lock"))?;
-    spawn_lock.lock_exclusive()?;
+    fs2::FileExt::lock_exclusive(&spawn_lock)?;
 
     let existing = udsipc::pool::list_uds_paths(&dir, prefix)
         .take(pool_size)

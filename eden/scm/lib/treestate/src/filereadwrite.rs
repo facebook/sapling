@@ -15,8 +15,6 @@ use std::io::SeekFrom;
 use std::io::Write;
 use std::path::Path;
 
-use fs2::FileExt; // fs2 requires StdFile
-
 pub trait FileSync {
     fn sync_all(&mut self) -> io::Result<()>;
 }
@@ -111,8 +109,8 @@ impl FileLock for FileReaderWriter {
     fn lock_exclusive(&mut self) -> io::Result<()> {
         if self.locked == 0 {
             match self.lock_file.as_mut() {
-                Some(file) => file.lock_exclusive()?,
-                None => self.writer.get_mut().lock_exclusive()?,
+                Some(file) => fs2::FileExt::lock_exclusive(file)?,
+                None => fs2::FileExt::lock_exclusive(self.writer.get_mut())?,
             }
         }
         self.locked += 1;
@@ -122,8 +120,8 @@ impl FileLock for FileReaderWriter {
     fn unlock(&mut self) -> io::Result<()> {
         if self.locked == 1 {
             match self.lock_file.as_mut() {
-                Some(file) => file.unlock()?,
-                None => self.writer.get_mut().unlock()?,
+                Some(file) => fs2::FileExt::unlock(file)?,
+                None => fs2::FileExt::unlock(self.writer.get_mut())?,
             }
         }
         if self.locked > 0 {
@@ -195,7 +193,7 @@ impl FileSync for MemReaderWriter {
 impl FileLock for MemReaderWriter {
     fn lock_exclusive(&mut self) -> io::Result<()> {
         if self.locked == 0 {
-            self.lock_file.lock_exclusive()?;
+            fs2::FileExt::lock_exclusive(&self.lock_file)?;
         }
         self.locked += 1;
         Ok(())
@@ -203,7 +201,7 @@ impl FileLock for MemReaderWriter {
 
     fn unlock(&mut self) -> io::Result<()> {
         if self.locked == 1 {
-            self.lock_file.unlock()?;
+            fs2::FileExt::unlock(&self.lock_file)?;
         }
         if self.locked > 0 {
             self.locked -= 1;

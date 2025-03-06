@@ -13,7 +13,6 @@ use std::path::PathBuf;
 
 use byteorder::BigEndian;
 use byteorder::ReadBytesExt;
-use fs2::FileExt;
 use indexedlog::log;
 use vlqencoding::VLQDecode;
 use vlqencoding::VLQEncode;
@@ -520,7 +519,7 @@ impl Persist for IdMap {
                 .create(true)
                 .open(&path)?
         };
-        lock_file.lock_exclusive()?;
+        fs2::FileExt::lock_exclusive(&lock_file)?;
         Ok(lock_file)
     }
 

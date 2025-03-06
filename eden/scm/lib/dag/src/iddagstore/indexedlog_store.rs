@@ -21,7 +21,6 @@ use std::sync::Mutex;
 use byteorder::BigEndian;
 use byteorder::ReadBytesExt;
 use byteorder::WriteBytesExt;
-use fs2::FileExt;
 use indexedlog::log;
 use indexedlog::log::Fold;
 use minibytes::Bytes;
@@ -500,7 +499,7 @@ impl Persist for IndexedLogStore {
                 .create(true)
                 .open(&path)?
         };
-        lock_file.lock_exclusive()?;
+        fs2::FileExt::lock_exclusive(&lock_file)?;
         Ok(lock_file)
     }
 
