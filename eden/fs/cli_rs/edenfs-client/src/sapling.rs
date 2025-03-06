@@ -5,7 +5,6 @@
  * GNU General Public License version 2.
  */
 
-use std::ffi::OsStr;
 use std::fs::read_to_string;
 use std::path::Path;
 use std::path::PathBuf;
@@ -109,6 +108,7 @@ pub async fn get_status_with_includes(
     first: &str,
     second: Option<&str>,
     limit_results: usize,
+    case_insensitive_suffix_compares: bool,
     root: &Option<PathBuf>,
     included_roots: Vec<PathBuf>,
     included_suffixes: Vec<String>,
@@ -117,6 +117,7 @@ pub async fn get_status_with_includes(
         first,
         second,
         limit_results,
+        case_insensitive_suffix_compares,
         root,
         &Some(included_roots),
         &Some(included_suffixes),
@@ -134,6 +135,7 @@ pub async fn get_status(
     first: &str,
     second: Option<&str>,
     limit_results: usize,
+    case_insensitive_suffix_compares: bool,
     root: &Option<PathBuf>,
     included_roots: &Option<Vec<PathBuf>>,
     included_suffixes: &Option<Vec<String>>,
@@ -142,7 +144,35 @@ pub async fn get_status(
 ) -> anyhow::Result<SaplingGetStatusResult> {
     let included_roots =
         prefix_paths(root, included_roots, |p| p).or_else(|| root.clone().map(|r| vec![r]));
+    let included_suffixes = included_suffixes.clone().map(|is| {
+        is.into_iter()
+            .map(|s| {
+                format!(
+                    ".{}",
+                    if case_insensitive_suffix_compares {
+                        s.to_ascii_lowercase()
+                    } else {
+                        s
+                    }
+                )
+            })
+            .collect::<Vec<String>>()
+    });
     let excluded_roots = prefix_paths(root, excluded_roots, |p| p);
+    let excluded_suffixes = excluded_suffixes.clone().map(|is| {
+        is.into_iter()
+            .map(|s| {
+                format!(
+                    ".{}",
+                    if case_insensitive_suffix_compares {
+                        s.to_ascii_lowercase()
+                    } else {
+                        s
+                    }
+                )
+            })
+            .collect::<Vec<String>>()
+    });
 
     let mut args = vec!["status", "-mardu", "--rev", first];
     if let Some(second) = second {
@@ -167,11 +197,12 @@ pub async fn get_status(
     while let Some(line) = lines.next_line().await? {
         if let Some(mut status_line) = process_one_status_line(&line)? {
             if is_path_included(
+                case_insensitive_suffix_compares,
                 &status_line.1,
                 &included_roots,
-                included_suffixes,
+                &included_suffixes,
                 &excluded_roots,
-                excluded_suffixes,
+                &excluded_suffixes,
             ) {
                 if status.len() >= limit_results {
                     return Ok(SaplingGetStatusResult::TooManyChanges);
@@ -229,14 +260,15 @@ fn process_one_status_line(line: &str) -> anyhow::Result<Option<(SaplingStatus, 
 }
 
 fn is_path_included(
+    case_insensitive_suffix_compares: bool,
     path: &str,
     included_roots: &Option<Vec<PathBuf>>,
     included_suffixes: &Option<Vec<String>>,
     excluded_roots: &Option<Vec<PathBuf>>,
     excluded_suffixes: &Option<Vec<String>>,
 ) -> bool {
-    let path = Path::new(path);
     if !included_roots.as_ref().map_or(true, |roots| {
+        let path = Path::new(path);
         roots
             .iter()
             .any(|included_root| path.starts_with(included_root))
@@ -245,14 +277,19 @@ fn is_path_included(
     }
 
     if !included_suffixes.as_ref().map_or(true, |suffixes| {
-        suffixes
-            .iter()
-            .any(|suffix| path.extension().unwrap_or_default() == OsStr::new(suffix))
+        suffixes.iter().any(|suffix| {
+            if case_insensitive_suffix_compares {
+                path.to_ascii_lowercase().ends_with(suffix)
+            } else {
+                path.ends_with(suffix)
+            }
+        })
     }) {
         return false;
     }
 
     if excluded_roots.as_ref().map_or(false, |roots| {
+        let path = Path::new(path);
         roots
             .iter()
             .any(|excluded_root| path.starts_with(excluded_root))
@@ -261,9 +298,13 @@ fn is_path_included(
     }
 
     if excluded_suffixes.as_ref().map_or(false, |suffixes| {
-        suffixes
-            .iter()
-            .any(|suffix| path.extension().unwrap_or_default() == OsStr::new(suffix))
+        suffixes.iter().any(|suffix| {
+            if case_insensitive_suffix_compares {
+                path.to_ascii_lowercase().ends_with(suffix)
+            } else {
+                path.ends_with(suffix)
+            }
+        })
     }) {
         return false;
     }
