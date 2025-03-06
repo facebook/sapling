@@ -77,7 +77,7 @@ impl From<JournalPosition> for thrift_types::edenfs::JournalPosition {
     }
 }
 
-#[derive(PartialEq, Serialize)]
+#[derive(Debug, PartialEq, Serialize)]
 pub struct Dtype(pub i32);
 
 impl Dtype {
@@ -128,7 +128,7 @@ impl fmt::Display for Dtype {
     }
 }
 
-#[derive(Serialize)]
+#[derive(Debug, Serialize)]
 pub struct Added {
     pub file_type: Dtype,
     pub path: Vec<u8>,
@@ -156,7 +156,7 @@ impl From<thrift_types::edenfs::Added> for Added {
     }
 }
 
-#[derive(Serialize)]
+#[derive(Debug, Serialize)]
 pub struct Modified {
     pub file_type: Dtype,
     pub path: Vec<u8>,
@@ -184,7 +184,7 @@ impl From<thrift_types::edenfs::Modified> for Modified {
     }
 }
 
-#[derive(Serialize)]
+#[derive(Debug, Serialize)]
 pub struct Renamed {
     pub file_type: Dtype,
     pub from: Vec<u8>,
@@ -217,7 +217,7 @@ impl From<thrift_types::edenfs::Renamed> for Renamed {
     }
 }
 
-#[derive(Serialize)]
+#[derive(Debug, Serialize)]
 pub struct Replaced {
     pub file_type: Dtype,
     pub from: Vec<u8>,
@@ -250,7 +250,7 @@ impl From<thrift_types::edenfs::Replaced> for Replaced {
     }
 }
 
-#[derive(Serialize)]
+#[derive(Debug, Serialize)]
 pub struct Removed {
     pub file_type: Dtype,
     pub path: Vec<u8>,
@@ -278,7 +278,7 @@ impl From<thrift_types::edenfs::Removed> for Removed {
     }
 }
 
-#[derive(Serialize)]
+#[derive(Debug, Serialize)]
 pub enum SmallChangeNotification {
     Added(Added),
     Modified(Modified),
@@ -322,7 +322,7 @@ impl From<thrift_types::edenfs::SmallChangeNotification> for SmallChangeNotifica
     }
 }
 
-#[derive(Serialize)]
+#[derive(Debug, Serialize)]
 pub struct DirectoryRenamed {
     pub from: Vec<u8>,
     pub to: Vec<u8>,
@@ -352,7 +352,7 @@ impl From<thrift_types::edenfs::DirectoryRenamed> for DirectoryRenamed {
     }
 }
 
-#[derive(Serialize)]
+#[derive(Debug, Serialize)]
 pub struct CommitTransition {
     pub from: Vec<u8>,
     pub to: Vec<u8>,
@@ -378,7 +378,7 @@ impl From<thrift_types::edenfs::CommitTransition> for CommitTransition {
     }
 }
 
-#[derive(PartialEq, Serialize)]
+#[derive(Debug, PartialEq, Serialize)]
 pub struct LostChangesReason(pub i32);
 
 impl LostChangesReason {
@@ -419,7 +419,7 @@ impl fmt::Display for LostChangesReason {
     }
 }
 
-#[derive(Serialize)]
+#[derive(Debug, Serialize)]
 pub struct LostChanges {
     pub reason: LostChangesReason,
 }
@@ -438,7 +438,7 @@ impl From<thrift_types::edenfs::LostChanges> for LostChanges {
     }
 }
 
-#[derive(Serialize)]
+#[derive(Debug, Serialize)]
 pub enum LargeChangeNotification {
     DirectoryRenamed(DirectoryRenamed),
     CommitTransition(CommitTransition),
@@ -478,7 +478,7 @@ impl From<thrift_types::edenfs::LargeChangeNotification> for LargeChangeNotifica
     }
 }
 
-#[derive(Serialize)]
+#[derive(Debug, Serialize)]
 pub enum ChangeNotification {
     SmallChange(SmallChangeNotification),
     LargeChange(LargeChangeNotification),
@@ -511,7 +511,7 @@ impl From<thrift_types::edenfs::ChangeNotification> for ChangeNotification {
     }
 }
 
-#[derive(Serialize)]
+#[derive(Debug, Serialize)]
 pub struct ChangesSinceV2Result {
     pub to_position: JournalPosition,
     pub changes: Vec<ChangeNotification>,

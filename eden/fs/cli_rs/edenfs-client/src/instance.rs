@@ -62,9 +62,14 @@ use tracing::event;
 use tracing::Level;
 use util::lock::PathLock;
 
+use crate::types::ChangeNotification;
 use crate::types::ChangesSinceV2Result;
 use crate::types::JournalPosition;
+use crate::types::LargeChangeNotification;
+use crate::types::SmallChangeNotification;
 use crate::utils::get_mount_point;
+use crate::utils::prefix_paths;
+use crate::utils::strip_prefix_from_bytes;
 use crate::EdenFsClient;
 #[cfg(fbcode_build)]
 use crate::StartStatusStream;
@@ -350,7 +355,7 @@ impl EdenFsInstance {
         &self,
         mount_point: &Option<PathBuf>,
         from_position: &JournalPosition,
-        _root: &Option<PathBuf>,
+        root: &Option<PathBuf>,
         included_roots: &Option<Vec<PathBuf>>,
         included_suffixes: &Option<Vec<String>>,
         excluded_roots: &Option<Vec<PathBuf>>,
@@ -359,29 +364,63 @@ impl EdenFsInstance {
         timeout: Option<Duration>,
     ) -> Result<ChangesSinceV2Result> {
         let client = self.get_connected_thrift_client(timeout).await?;
+        // Temporary code to prefix from roots - will be removed when implemented in daemon
+        let included_roots = prefix_paths(root, included_roots, |p| {
+            bytes_from_path(p).expect("Failed to convert path to bytes")
+        })
+        .or_else(|| {
+            root.clone()
+                .map(|r| vec![bytes_from_path(r).expect("Failed to convert path to bytes")])
+        });
+        let excluded_roots = prefix_paths(root, excluded_roots, |p| {
+            bytes_from_path(p).expect("Failed to convert path to bytes")
+        });
+
         let params = ChangesSinceV2Params {
             mountPoint: bytes_from_path(get_mount_point(mount_point)?)?,
             fromPosition: from_position.clone().into(),
             includeVCSRoots: Some(include_vcs_roots),
-            includedRoots: included_roots.as_ref().map(|irs| {
-                irs.iter()
-                    .map(|ir| bytes_from_path(ir.to_path_buf()).expect("Invalid included_roots"))
-                    .collect::<Vec<_>>()
-            }),
-            excludedRoots: excluded_roots.as_ref().map(|ers| {
-                ers.iter()
-                    .map(|er| bytes_from_path(er.to_path_buf()).expect("Invalid excluded_roots"))
-                    .collect::<Vec<_>>()
-            }),
+            includedRoots: included_roots,
             includedSuffixes: included_suffixes.clone(),
+            excludedRoots: excluded_roots,
             excludedSuffixes: excluded_suffixes.clone(),
             ..Default::default()
         };
-        client
+        let mut result: ChangesSinceV2Result = client
             .changesSinceV2(&params)
             .await
             .map(|r| r.into())
-            .from_err()
+            .from_err()?;
+        // Temporary code to strip prefix from paths - will be removed when implemented in daemon
+        if root.is_some() {
+            result.changes.iter_mut().for_each(|c| match c {
+                ChangeNotification::LargeChange(LargeChangeNotification::DirectoryRenamed(
+                    ref mut d,
+                )) => {
+                    d.from = strip_prefix_from_bytes(root, &d.from);
+                    d.to = strip_prefix_from_bytes(root, &d.to);
+                }
+                ChangeNotification::SmallChange(SmallChangeNotification::Added(a)) => {
+                    a.path = strip_prefix_from_bytes(root, &a.path);
+                }
+                ChangeNotification::SmallChange(SmallChangeNotification::Modified(m)) => {
+                    m.path = strip_prefix_from_bytes(root, &m.path);
+                }
+                ChangeNotification::SmallChange(SmallChangeNotification::Removed(r)) => {
+                    r.path = strip_prefix_from_bytes(root, &r.path);
+                }
+                ChangeNotification::SmallChange(SmallChangeNotification::Renamed(r)) => {
+                    r.from = strip_prefix_from_bytes(root, &r.from);
+                    r.to = strip_prefix_from_bytes(root, &r.to);
+                }
+                ChangeNotification::SmallChange(SmallChangeNotification::Replaced(r)) => {
+                    r.from = strip_prefix_from_bytes(root, &r.from);
+                    r.to = strip_prefix_from_bytes(root, &r.to);
+                }
+                _ => {}
+            });
+        }
+        Ok(result)
     }
 
     pub async fn stream_journal_changed(

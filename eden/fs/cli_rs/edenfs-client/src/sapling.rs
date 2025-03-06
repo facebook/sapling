@@ -8,11 +8,15 @@
 use std::ffi::OsStr;
 use std::fs::read_to_string;
 use std::path::Path;
+use std::path::PathBuf;
 use std::process::Stdio;
 
 use tokio::io::AsyncBufReadExt;
 use tokio::io::BufReader;
 use tokio::process::Command;
+
+use crate::utils::prefix_paths;
+use crate::utils::strip_prefix_from_string;
 
 #[derive(Debug, PartialEq)]
 pub enum SaplingStatus {
@@ -101,27 +105,23 @@ pub async fn get_mergebase(commit: &str, mergegase_with: &str) -> anyhow::Result
     }
 }
 
-pub async fn get_status_with_includes<R, S>(
+pub async fn get_status_with_includes(
     first: &str,
     second: Option<&str>,
     limit_results: usize,
-    root: Option<R>,
-    included_roots: &[R],
-    included_suffixes: &[S],
-) -> anyhow::Result<SaplingGetStatusResult>
-where
-    R: AsRef<Path>,
-    S: AsRef<str> + AsRef<Path> + AsRef<OsStr>,
-{
+    root: &Option<PathBuf>,
+    included_roots: Vec<PathBuf>,
+    included_suffixes: Vec<String>,
+) -> anyhow::Result<SaplingGetStatusResult> {
     get_status(
         first,
         second,
         limit_results,
         root,
-        Some(included_roots),
-        Some(included_suffixes),
-        None,
-        None,
+        &Some(included_roots),
+        &Some(included_suffixes),
+        &None,
+        &None,
     )
     .await
 }
@@ -130,20 +130,20 @@ where
 // Limit the number of results to limit_results. If the number of results is greater than
 // limit_results return TooManyResults. Apply root and suffix filters if provided.
 // TODO: replace with a method that returns an iterator over (SaplingStatus, String)
-pub async fn get_status<R, S>(
+pub async fn get_status(
     first: &str,
     second: Option<&str>,
     limit_results: usize,
-    _root: Option<R>,
-    included_roots: Option<&[R]>,
-    included_suffixes: Option<&[S]>,
-    excluded_roots: Option<&[R]>,
-    excluded_suffixes: Option<&[S]>,
-) -> anyhow::Result<SaplingGetStatusResult>
-where
-    R: AsRef<Path>,
-    S: AsRef<str> + AsRef<Path> + AsRef<OsStr>,
-{
+    root: &Option<PathBuf>,
+    included_roots: &Option<Vec<PathBuf>>,
+    included_suffixes: &Option<Vec<String>>,
+    excluded_roots: &Option<Vec<PathBuf>>,
+    excluded_suffixes: &Option<Vec<String>>,
+) -> anyhow::Result<SaplingGetStatusResult> {
+    let included_roots =
+        prefix_paths(root, included_roots, |p| p).or_else(|| root.clone().map(|r| vec![r]));
+    let excluded_roots = prefix_paths(root, excluded_roots, |p| p);
+
     let mut args = vec!["status", "-mardu", "--rev", first];
     if let Some(second) = second {
         args.push("--rev");
@@ -165,17 +165,18 @@ where
     let mut status = vec![];
     let mut lines = reader.lines();
     while let Some(line) = lines.next_line().await? {
-        if let Some(status_line) = process_one_status_line(&line)? {
+        if let Some(mut status_line) = process_one_status_line(&line)? {
             if is_path_included(
                 &status_line.1,
                 &included_roots,
-                &included_suffixes,
+                included_suffixes,
                 &excluded_roots,
-                &excluded_suffixes,
+                excluded_suffixes,
             ) {
                 if status.len() >= limit_results {
                     return Ok(SaplingGetStatusResult::TooManyChanges);
                 }
+                status_line.1 = strip_prefix_from_string(root, status_line.1);
                 status.push(status_line);
             }
         }
@@ -227,19 +228,15 @@ fn process_one_status_line(line: &str) -> anyhow::Result<Option<(SaplingStatus, 
     Ok(result)
 }
 
-fn is_path_included<P, S>(
+fn is_path_included(
     path: &str,
-    included_roots: &Option<&[P]>,
-    included_suffixes: &Option<&[S]>,
-    excluded_roots: &Option<&[P]>,
-    excluded_suffixes: &Option<&[S]>,
-) -> bool
-where
-    P: AsRef<Path>,
-    S: AsRef<str> + AsRef<Path> + AsRef<OsStr>,
-{
+    included_roots: &Option<Vec<PathBuf>>,
+    included_suffixes: &Option<Vec<String>>,
+    excluded_roots: &Option<Vec<PathBuf>>,
+    excluded_suffixes: &Option<Vec<String>>,
+) -> bool {
     let path = Path::new(path);
-    if !included_roots.map_or(true, |roots| {
+    if !included_roots.as_ref().map_or(true, |roots| {
         roots
             .iter()
             .any(|included_root| path.starts_with(included_root))
@@ -247,7 +244,7 @@ where
         return false;
     }
 
-    if !included_suffixes.map_or(true, |suffixes| {
+    if !included_suffixes.as_ref().map_or(true, |suffixes| {
         suffixes
             .iter()
             .any(|suffix| path.extension().unwrap_or_default() == OsStr::new(suffix))
@@ -255,7 +252,7 @@ where
         return false;
     }
 
-    if excluded_roots.map_or(false, |roots| {
+    if excluded_roots.as_ref().map_or(false, |roots| {
         roots
             .iter()
             .any(|excluded_root| path.starts_with(excluded_root))
@@ -263,7 +260,7 @@ where
         return false;
     }
 
-    if excluded_suffixes.map_or(false, |suffixes| {
+    if excluded_suffixes.as_ref().map_or(false, |suffixes| {
         suffixes
             .iter()
             .any(|suffix| path.extension().unwrap_or_default() == OsStr::new(suffix))
