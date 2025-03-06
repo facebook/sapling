@@ -14,7 +14,10 @@ use thrift_streaming::EdenStartStatusUpdate;
 use thrift_streaming_clients::errors::StreamStartStatusStreamError;
 #[cfg(fbcode_build)]
 use thrift_streaming_clients::StreamingEdenService;
-use thrift_types::edenfs_clients::EdenService;
+#[cfg(fbcode_build)]
+use thrift_types::edenfs_clients::EdenServiceExt;
+#[cfg(fbcode_build)]
+use thriftclient::ThriftChannel;
 
 pub mod checkout;
 pub mod fsutil;
@@ -28,7 +31,7 @@ pub mod utils;
 pub use instance::DaemonHealthy;
 pub use instance::EdenFsInstance;
 
-pub type EdenFsClient = Arc<dyn EdenService + Sync>;
+pub type EdenFsClient = Arc<dyn EdenServiceExt<ThriftChannel> + Send + Sync + 'static>;
 
 #[cfg(fbcode_build)]
 pub type StreamingEdenFsClient = Arc<dyn StreamingEdenService + Sync>;

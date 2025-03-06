@@ -38,6 +38,8 @@ use thrift_streaming_clients::errors::SubscribeStreamTemporaryError;
 #[cfg(fbcode_build)]
 use thrift_streaming_thriftclients::build_StreamingEdenService_client;
 #[cfg(fbcode_build)]
+use thrift_thriftclients::make_EdenServiceExt_thriftclient;
+#[cfg(fbcode_build)]
 use thrift_types::edenfs::ChangesSinceV2Params;
 use thrift_types::edenfs::DaemonInfo;
 use thrift_types::edenfs::GetConfigParams;
@@ -49,8 +51,6 @@ use thrift_types::edenfs::MountId;
 use thrift_types::edenfs::StartFileAccessMonitorParams;
 use thrift_types::edenfs::UnmountArgument;
 use thrift_types::edenfs_clients::errors::UnmountV2Error;
-#[cfg(fbcode_build)]
-use thrift_types::edenfs_clients::make_EdenService;
 use thrift_types::fb303_core::fb303_status;
 use thrift_types::fbthrift::ApplicationExceptionErrorCode;
 #[cfg(fbcode_build)]
@@ -143,11 +143,14 @@ impl EdenFsInstance {
 
     async fn _connect(&self, socket_path: &PathBuf) -> Result<EdenFsClient> {
         const THRIFT_TIMEOUT_MS: u32 = 120_000;
-        let client = ThriftChannelBuilder::from_path(expect_init(), socket_path)?
-            .with_conn_timeout(THRIFT_TIMEOUT_MS)
-            .with_recv_timeout(THRIFT_TIMEOUT_MS)
-            .with_secure(false)
-            .build_client(make_EdenService)?;
+        let client = make_EdenServiceExt_thriftclient!(
+            expect_init(),
+            protocol = CompactProtocol,
+            from_path = socket_path,
+            with_conn_timeout = THRIFT_TIMEOUT_MS,
+            with_recv_timeout = THRIFT_TIMEOUT_MS,
+            with_secure = false,
+        )?;
         Ok(client)
     }
 
