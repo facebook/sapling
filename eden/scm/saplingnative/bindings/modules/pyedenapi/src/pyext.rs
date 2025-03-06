@@ -25,6 +25,7 @@ use edenapi::Response;
 use edenapi::SaplingRemoteApi;
 use edenapi::SaplingRemoteApiError;
 use edenapi::Stats;
+use edenapi::UploadLookupPolicy;
 use edenapi_ext::calc_contentid;
 use edenapi_types::cloud::SmartlogDataResponse;
 use edenapi_types::AlterSnapshotRequest;
@@ -537,7 +538,7 @@ pub trait SaplingRemoteApiPyExt: SaplingRemoteApi {
                     let downcast_error = "incorrect upload token, failed to downcast 'token.data.id' to 'AnyId::AnyFileContentId::ContentId' type";
                     // upload file contents first, receiving upload tokens
                     let file_content_tokens = self
-                        .process_files_upload(upload_data, None, None)
+                        .process_files_upload(upload_data, None, None, UploadLookupPolicy::PerformLookup)
                         .await?
                         .entries
                         .try_collect::<Vec<_>>()

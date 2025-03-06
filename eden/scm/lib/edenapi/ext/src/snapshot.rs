@@ -15,6 +15,7 @@ use anyhow::format_err;
 use anyhow::Context;
 use anyhow::Result;
 use edenapi::api::SaplingRemoteApi;
+use edenapi::UploadLookupPolicy;
 use edenapi_types::AnyFileContentId;
 use edenapi_types::AnyId;
 use edenapi_types::BonsaiChangesetContent;
@@ -134,20 +135,25 @@ pub async fn upload_snapshot(
     let file_content_tokens = {
         let downcast_error = "incorrect upload token, failed to downcast 'token.data.id' to 'AnyId::AnyFileContentId::ContentId' type";
         // upload file contents first, receiving upload tokens
-        api.process_files_upload(upload_data, Some(bubble_id), copy_from_bubble_id)
-            .await?
-            .entries
-            .try_collect::<Vec<_>>()
-            .await?
-            .into_iter()
-            .map(|token| {
-                let content_id = match token.data.id {
-                    AnyId::AnyFileContentId(AnyFileContentId::ContentId(id)) => id,
-                    _ => bail!(downcast_error),
-                };
-                Ok((content_id, token))
-            })
-            .collect::<Result<BTreeMap<_, _>, _>>()?
+        api.process_files_upload(
+            upload_data,
+            Some(bubble_id),
+            copy_from_bubble_id,
+            UploadLookupPolicy::PerformLookup,
+        )
+        .await?
+        .entries
+        .try_collect::<Vec<_>>()
+        .await?
+        .into_iter()
+        .map(|token| {
+            let content_id = match token.data.id {
+                AnyId::AnyFileContentId(AnyFileContentId::ContentId(id)) => id,
+                _ => bail!(downcast_error),
+            };
+            Ok((content_id, token))
+        })
+        .collect::<Result<BTreeMap<_, _>, _>>()?
     };
     let changeset_response = api
         .upload_bonsai_changeset(

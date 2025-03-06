@@ -18,6 +18,7 @@ use clientinfo::ClientEntryPoint;
 use clientinfo::ClientInfo;
 use cloned::cloned;
 use context::CoreContext;
+use edenapi::api::UploadLookupPolicy;
 use edenapi::paths;
 use edenapi::Client;
 use edenapi::HttpClientBuilder;
@@ -128,7 +129,7 @@ impl EdenapiSender {
         let expected_responses = full_items.len();
         let response = self
             .client
-            .process_files_upload(full_items, None, None)
+            .process_files_upload(full_items, None, None, UploadLookupPolicy::SkipLookup)
             .await?;
 
         let ids = response

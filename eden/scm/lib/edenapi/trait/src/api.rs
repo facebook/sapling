@@ -77,6 +77,12 @@ use crate::errors::SaplingRemoteApiError;
 use crate::response::Response;
 use crate::response::ResponseMeta;
 
+#[derive(Clone, Copy, Debug, PartialEq)]
+pub enum UploadLookupPolicy {
+    PerformLookup,
+    SkipLookup,
+}
+
 #[async_trait]
 pub trait SaplingRemoteApi: Send + Sync + 'static {
     /// Returns the URL to describe the SaplingRemoteApi. The URL is intended
@@ -270,8 +276,9 @@ pub trait SaplingRemoteApi: Send + Sync + 'static {
         data: Vec<(AnyFileContentId, Bytes)>,
         bubble_id: Option<NonZeroU64>,
         copy_from_bubble_id: Option<NonZeroU64>,
+        lookup_policy: UploadLookupPolicy,
     ) -> Result<Response<UploadToken>, SaplingRemoteApiError> {
-        let _ = (data, bubble_id, copy_from_bubble_id);
+        let _ = (data, bubble_id, copy_from_bubble_id, lookup_policy);
         Err(SaplingRemoteApiError::NotSupported)
     }
 

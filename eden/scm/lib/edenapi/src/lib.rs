@@ -22,6 +22,7 @@ pub use http_client::Config as HttpClientConfig;
 pub use http_client::Stats;
 
 pub use crate::api::SaplingRemoteApi;
+pub use crate::api::UploadLookupPolicy;
 pub use crate::builder::Builder;
 pub use crate::builder::HttpClientBuilder;
 pub use crate::client::paths;

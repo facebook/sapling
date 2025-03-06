@@ -23,6 +23,7 @@ use dag::protocol::RemoteIdConvertProtocol;
 use dag::Location;
 use dag::Set;
 use dag::Vertex;
+use edenapi::api::UploadLookupPolicy;
 use edenapi::configmodel;
 use edenapi::types::make_hash_lookup_request;
 use edenapi::types::AnyFileContentId;
@@ -759,6 +760,7 @@ impl SaplingRemoteApi for EagerRepo {
         data: Vec<(AnyFileContentId, Bytes)>,
         bubble_id: Option<NonZeroU64>,
         copy_from_bubble_id: Option<NonZeroU64>,
+        _lookup_policy: UploadLookupPolicy,
     ) -> Result<Response<UploadToken>, SaplingRemoteApiError> {
         debug!(?data, "process_files_upload");
 

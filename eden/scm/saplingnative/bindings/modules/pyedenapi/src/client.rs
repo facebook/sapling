@@ -21,6 +21,7 @@ use cpython_ext::PyPathBuf;
 use cpython_ext::ResultPyErrExt;
 use edenapi::Builder;
 use edenapi::SaplingRemoteApi;
+use edenapi::UploadLookupPolicy;
 use edenapi_ext::check_files;
 use edenapi_ext::download_files;
 use edenapi_ext::upload_snapshot;
@@ -510,7 +511,7 @@ py_class!(pub class client |py| {
         let api = self.inner(py).as_ref();
         let bubble_id = bubbleid.and_then(NonZeroU64::new);
         let entries = py
-            .allow_threads(|| block_unless_interrupted(api.process_files_upload(data.0, bubble_id, None)))
+            .allow_threads(|| block_unless_interrupted(api.process_files_upload(data.0, bubble_id, None, UploadLookupPolicy::PerformLookup)))
             .map_pyerr(py)?
             .map_pyerr(py)?
             .entries;

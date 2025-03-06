@@ -137,6 +137,7 @@ use types::Key;
 use url::Url;
 
 use crate::api::SaplingRemoteApi;
+use crate::api::UploadLookupPolicy;
 use crate::builder::Config;
 use crate::errors::SaplingRemoteApiError;
 use crate::response::Response;
@@ -1682,6 +1683,7 @@ impl SaplingRemoteApi for Client {
         data: Vec<(AnyFileContentId, Bytes)>,
         bubble_id: Option<NonZeroU64>,
         copy_from_bubble_id: Option<NonZeroU64>,
+        lookup_policy: UploadLookupPolicy,
     ) -> Result<Response<UploadToken>, SaplingRemoteApiError> {
         if data.is_empty() {
             return Ok(Response::empty());
@@ -1696,20 +1698,22 @@ impl SaplingRemoteApi for Client {
             .map(|(id, _data)| AnyId::AnyFileContentId(id.clone()))
             .collect();
 
-        let entries = self
-            .lookup_batch(anyids.clone(), bubble_id, copy_from_bubble_id)
-            .await?;
-        for entry in entries {
-            if let LookupResult::Present(token) = entry.result {
-                uploaded_ids.insert(token.indexable_id());
-                uploaded_tokens.push(token);
+        if lookup_policy == UploadLookupPolicy::PerformLookup {
+            let entries = self
+                .lookup_batch(anyids.clone(), bubble_id, copy_from_bubble_id)
+                .await?;
+            for entry in entries {
+                if let LookupResult::Present(token) = entry.result {
+                    uploaded_ids.insert(token.indexable_id());
+                    uploaded_tokens.push(token);
+                }
             }
-        }
 
-        tracing::info!(
-            "Received {} token(s) from the lookup_batch request",
-            uploaded_tokens.len()
-        );
+            tracing::info!(
+                "Received {} token(s) from the lookup_batch request",
+                uploaded_tokens.len()
+            );
+        }
 
         // Upload the rest of the contents in parallel
         let new_tokens = stream::iter(
