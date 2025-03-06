@@ -45,7 +45,6 @@ use mononoke_app::MononokeApp;
 use mononoke_types::ChangesetId;
 use mononoke_types::FileChange;
 use mononoke_types::MPath;
-use mutable_counters::MutableCountersArc;
 use mutable_counters::MutableCountersRef;
 use repo_blobstore::RepoBlobstore;
 use repo_blobstore::RepoBlobstoreRef;
@@ -56,7 +55,6 @@ use slog::Logger;
 use stats::define_stats;
 use stats::prelude::*;
 use tokio::sync::mpsc;
-use tokio::sync::Mutex;
 use url::Url;
 
 use crate::bul_util;
@@ -70,7 +68,6 @@ use crate::ModernSyncArgs;
 use crate::Repo;
 
 const MODERN_SYNC_COUNTER_NAME: &str = "modern_sync";
-pub const MODERN_SYNC_BATCH_CHECKPOINT_NAME: &str = "modern_sync_batch_checkpoint";
 
 define_stats! {
     prefix = "mononoke.modern_sync";
@@ -171,13 +168,7 @@ pub async fn sync(
     };
     info!(logger, "Established EdenAPI connection");
 
-    let send_manager = SendManager::new(
-        ctx.clone(),
-        sender.clone(),
-        logger.clone(),
-        repo_name.clone(),
-        repo.mutable_counters_arc(),
-    );
+    let send_manager = SendManager::new(sender.clone(), logger.clone(), repo_name.clone());
     info!(logger, "Initialized channels");
 
     let mut scuba_sample = ctx.scuba().clone();
@@ -224,28 +215,7 @@ pub async fn sync(
                             .ancestors_difference_segment_slices(ctx, to_vec, from_vec, chunk_size)
                             .await?;
 
-                        let latest_checkpoint =  repo.mutable_counters()
-                        .get_counter(ctx, MODERN_SYNC_BATCH_CHECKPOINT_NAME)
-                        .await?.unwrap_or(0);
-
-                        info!(
-                            logger,
-                            "Resuming from latest entry checkpoint {}",
-                            latest_checkpoint
-                        );
-
-                        let skip_batch = (latest_checkpoint as u64) / chunk_size;
-                        let mut skip_commits = (latest_checkpoint as u64) % chunk_size;
-
-                        info!(
-                            logger,
-                            "Skipping {} batches from entry {}",
-                            skip_batch, entry.id
-                        );
-
-                        let current_position = Arc::new(Mutex::new(latest_checkpoint as u64));
                         commits
-                            .skip(skip_batch as usize)
                             .try_for_each(|chunk| {
                                 cloned!(
                                     ctx,
@@ -256,14 +226,14 @@ pub async fn sync(
                                     bookmark_name,
                                     to_cs,
                                     cs_tx,
-                                    wait_for_commit,
-                                    current_position
+                                    wait_for_commit
                                 );
-                                info!(logger, "Skipping {} commits within batch", skip_commits);
-                                let skip = std::mem::replace(&mut skip_commits, 0);
 
                                 async move {
-                                    let hgids  = stream::iter(chunk).skip( skip as usize)
+                                    let chunk_size = chunk.len();
+
+
+                                    let hgids  = stream::iter(chunk)
                                         .map(|cs_id|{
                                             cloned!(repo, ctx);
                                              async move {
@@ -276,7 +246,6 @@ pub async fn sync(
                                             ChangesetId,
                                         )>>()
                                         .await;
-                                    let hgids_len = hgids.len();
 
                                     let ids = hgids
                                         .into_iter()
@@ -284,10 +253,13 @@ pub async fn sync(
                                         .collect::<Result<Vec<(HgChangesetId, ChangesetId)>>>()?;
 
                                     let missing_changesets = sender.filter_existing_commits(ids).await?;
-                                    let existing_changesets = hgids_len   - missing_changesets.len();
-                                    *current_position.lock().await += existing_changesets as u64;
 
-                                    info!(logger, "Found {} missing commits", missing_changesets.len() );
+                                    info!(
+                                        logger,
+                                        "Skipping {} commits, starting sync of {} commits ",
+                                        chunk_size - missing_changesets.len(),
+                                        missing_changesets.len()
+                                    );
 
                                     stream::iter(missing_changesets.into_iter().map(Ok))
                                         .try_for_each(|cs_id| {
@@ -299,8 +271,7 @@ pub async fn sync(
                                                 bookmark_name,
                                                 to_cs,
                                                 cs_tx,
-                                                wait_for_commit,
-                                                current_position
+                                                wait_for_commit
                                             );
 
                                             // We work under the assumption that if the final commit is synced all the parents ones are synced as well.
@@ -312,9 +283,7 @@ pub async fn sync(
                                             };
 
                                             async move {
-
-                                                *current_position.lock().await += 1;
-                                               process_one_changeset(
+                                                process_one_changeset(
                                                     &cs_id,
                                                     &ctx,
                                                     repo,
@@ -323,7 +292,6 @@ pub async fn sync(
                                                     app_args.log_to_ods,
                                                     bookmark_name.as_str(),
                                                     channel,
-                                                    Some(current_position.lock().await.clone()),
                                                 )
                                                 .await
                                             }
@@ -331,7 +299,6 @@ pub async fn sync(
                                         .await?;
                                     Ok(())
                                 }
-
                             })
                             .await?;
 
@@ -354,12 +321,6 @@ pub async fn sync(
                             repo.mutable_counters()
                                 .set_counter(ctx, MODERN_SYNC_COUNTER_NAME, entry.id.0 as i64, None)
                                 .await?;
-
-                            repo.mutable_counters()
-                            .set_counter(ctx, MODERN_SYNC_BATCH_CHECKPOINT_NAME, 0, None)
-                            .await?;
-
-                            info!(logger, "Finished entry. Setting entry counter to {} and in-entry checkpoint to 0", entry.id);
 
                             bul_util::update_remaining_moves(entry.id, repo_name.clone(), ctx.clone(),  repo.bookmark_update_log_arc()).await?;
 
@@ -404,7 +365,6 @@ pub async fn process_one_changeset(
     log_to_ods: bool,
     bookmark_name: &str,
     changeset_ready: Option<mpsc::Sender<Result<()>>>,
-    position: Option<u64>,
 ) -> Result<()> {
     let now = std::time::Instant::now();
 
@@ -506,10 +466,11 @@ pub async fn process_one_changeset(
         .await?;
 
     // Notify changeset for this changeset is ready if someone requested it
-
-    send_manager
-        .send_changeset(ChangesetMessage::ChangesetDone(changeset_ready, position))
-        .await?;
+    if let Some(changeset_ready) = changeset_ready {
+        send_manager
+            .send_changeset(ChangesetMessage::ChangesetDone(changeset_ready))
+            .await?;
+    }
 
     if log_to_ods {
         let lag = if let Some(cs_id) = repo

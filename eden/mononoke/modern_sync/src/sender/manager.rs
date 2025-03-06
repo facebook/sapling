@@ -11,7 +11,6 @@ use std::time::Duration;
 
 use anyhow::Result;
 use bytesize::ByteSize;
-use context::CoreContext;
 use futures::channel::oneshot;
 use mercurial_types::blobs::HgBlobChangeset;
 use mercurial_types::HgFileNodeId;
@@ -19,11 +18,9 @@ use mercurial_types::HgManifestId;
 use mononoke_macros::mononoke;
 use mononoke_types::BonsaiChangeset;
 use mononoke_types::ContentId;
-use mutable_counters::MutableCounters;
 use slog::debug;
 use slog::error;
 use slog::info;
-use slog::warn;
 use slog::Logger;
 use stats::define_stats;
 use stats::prelude::*;
@@ -32,7 +29,6 @@ use tokio::sync::mpsc::Sender;
 use tokio::time::interval;
 
 use crate::sender::edenapi::EdenapiSender;
-use crate::sync::MODERN_SYNC_BATCH_CHECKPOINT_NAME;
 
 define_stats! {
     prefix = "mononoke.modern_sync";
@@ -110,22 +106,13 @@ pub enum ChangesetMessage {
     // Send the changeset to remote end
     Changeset((HgBlobChangeset, BonsaiChangeset)),
     // Notify changeset sending is done
-    ChangesetDone(
-        Option<mpsc::Sender<Result<()>>>, // Channel to notify entry completion
-        Option<u64>, // Changeset position within entry (assuming topological order)
-    ),
+    ChangesetDone(mpsc::Sender<Result<()>>),
     // Log changeset completion
     Log((String, Option<i64>)),
 }
 
 impl SendManager {
-    pub fn new(
-        ctx: CoreContext,
-        external_sender: Arc<EdenapiSender>,
-        logger: Logger,
-        reponame: String,
-        mc: Arc<dyn MutableCounters + Send + Sync>,
-    ) -> Self {
+    pub fn new(external_sender: Arc<EdenapiSender>, logger: Logger, reponame: String) -> Self {
         // Create channel for receiving content
         let (content_sender, content_recv) = mpsc::channel(CONTENT_CHANNEL_SIZE);
         Self::spawn_content_sender(
@@ -155,7 +142,12 @@ impl SendManager {
 
         // Create channel for receiving changesets
         let (changeset_sender, changeset_recv) = mpsc::channel(CHANGESET_CHANNEL_SIZE);
-        Self::spawn_changeset_sender(ctx, reponame, changeset_recv, external_sender, logger, mc);
+        Self::spawn_changeset_sender(
+            reponame.clone(),
+            changeset_recv,
+            external_sender.clone(),
+            logger.clone(),
+        );
 
         Self {
             content_sender,
@@ -471,19 +463,16 @@ impl SendManager {
     }
 
     fn spawn_changeset_sender(
-        ctx: CoreContext,
         reponame: String,
         mut changeset_recv: mpsc::Receiver<ChangesetMessage>,
         changeset_es: Arc<EdenapiSender>,
         changeset_logger: Logger,
-        mc: Arc<dyn MutableCounters + Send + Sync>,
     ) {
         mononoke::spawn_task(async move {
             let mut encountered_error: Option<anyhow::Error> = None;
 
             let mut pending_messages = VecDeque::new();
             let mut pending_log = VecDeque::new();
-            let mut pending_checkpoint = VecDeque::new();
 
             let mut current_batch = Vec::new();
             let mut flush_timer = interval(CHANGESETS_FLUSH_INTERVAL);
@@ -494,28 +483,19 @@ impl SendManager {
                         debug!(changeset_logger, "Changeset channel capacity: {} max capacity: {} in queue: {}", changeset_recv.capacity(), CHANGESET_CHANNEL_SIZE,  changeset_recv.len());
                         STATS::changesets_queue_len.add_value(changeset_recv.len() as i64, (reponame.clone(),));
                         match msg {
-                            Some(ChangesetMessage::WaitForFilesAndTrees(
-                                files_receiver,
-                                trees_receiver,
-                            )) => {
+                            Some(ChangesetMessage::WaitForFilesAndTrees(files_receiver, trees_receiver)) => {
                                 // Read outcome from files and trees upload
                                 let start = std::time::Instant::now();
-                                match tokio::try_join!(files_receiver, trees_receiver) {
-                                    Ok((res_files, res_trees)) => {
+                                match tokio::try_join!(files_receiver, trees_receiver)  {
+                                    Ok((res_files, res_trees))=> {
                                         if res_files.is_err() || res_trees.is_err() {
-                                            error!(
-                                                changeset_logger,
-                                                "Error processing files/trees: {:?} {:?}",
-                                                res_files,
-                                                res_trees
-                                            );
+                                            error!(changeset_logger, "Error processing files/trees: {:?} {:?}", res_files, res_trees);
                                             encountered_error.get_or_insert(anyhow::anyhow!(
                                                 "Files/trees error received. Winding down changesets sender.",
                                             ));
                                         }
                                         let elapsed = start.elapsed().as_secs();
-                                        STATS::trees_files_wait_time_s
-                                            .add_value(elapsed as i64, (reponame.clone(),));
+                                        STATS::trees_files_wait_time_s.add_value(elapsed as i64, (reponame.clone(),));
                                     }
                                     Err(e) => {
                                         encountered_error.get_or_insert(anyhow::anyhow!(
@@ -532,13 +512,10 @@ impl SendManager {
                                 current_batch.push((hg_cs, bcs));
                             }
 
-                            Some(ChangesetMessage::ChangesetDone(sender, position))
+                            Some(ChangesetMessage::ChangesetDone(sender))
                                 if encountered_error.is_none() =>
                             {
-                                if let Some(sender) = sender {
-                                    pending_messages.push_back(sender);
-                                }
-                                pending_checkpoint.push_back(position);
+                                pending_messages.push_back(sender);
                             }
 
                             Some(ChangesetMessage::Log((_, lag)))
@@ -547,7 +524,7 @@ impl SendManager {
                                 pending_log.push_back(lag);
                             }
 
-                            Some(ChangesetMessage::ChangesetDone(Some(sender), _)) => {
+                            Some(ChangesetMessage::ChangesetDone(sender)) => {
                                 let e = encountered_error.unwrap();
                                 sender
                                     .send(Err(anyhow::anyhow!(
@@ -559,23 +536,19 @@ impl SendManager {
                             }
 
                             Some(ChangesetMessage::Log((_, _)))
-                            | Some(ChangesetMessage::Changeset(_))
-                            | Some(ChangesetMessage::ChangesetDone(_, _)) => {}
+                            | Some(ChangesetMessage::Changeset(_)) => {}
 
                             None => break,
                         }
 
                         if current_batch.len() >= MAX_CHANGESET_BATCH_SIZE {
                             if let Err(e) = flush_batch(
-                                &ctx,
                                 &changeset_es,
                                 &mut current_batch,
                                 &mut pending_messages,
                                 &mut pending_log,
                                 &changeset_logger,
                                 reponame.clone(),
-                                &mut pending_checkpoint,
-                                mc.clone(),
                             )
                             .await
                             {
@@ -586,18 +559,14 @@ impl SendManager {
                             }
                         }
                     }
-                    _ = flush_timer.tick() =>
-                    {
+                    _ = flush_timer.tick() => {
                         if let Err(e) = flush_batch(
-                            &ctx,
                             &changeset_es,
                             &mut current_batch,
                             &mut pending_messages,
                             &mut pending_log,
                             &changeset_logger,
                             reponame.clone(),
-                            &mut pending_checkpoint,
-                            mc.clone(),
                         )
                         .await
                         {
@@ -608,15 +577,12 @@ impl SendManager {
             }
 
             async fn flush_batch(
-                ctx: &CoreContext,
                 changeset_es: &Arc<EdenapiSender>,
                 current_batch: &mut Vec<(HgBlobChangeset, BonsaiChangeset)>,
                 pending_messages: &mut VecDeque<Sender<Result<(), anyhow::Error>>>,
                 pending_log: &mut VecDeque<Option<i64>>,
                 changeset_logger: &Logger,
                 reponame: String,
-                pending_checkpoint: &mut VecDeque<Option<u64>>,
-                mc: Arc<dyn MutableCounters + Send + Sync>,
             ) -> Result<(), anyhow::Error> {
                 if !current_batch.is_empty() {
                     let start = std::time::Instant::now();
@@ -639,31 +605,12 @@ impl SendManager {
                     STATS::sync_lag_seconds.add_value(lag, (reponame.clone(),));
                 }
 
-                let position = pending_checkpoint.pop_back();
-                if let Some(Some(position)) = position {
-                    info!(changeset_logger, "Setting checkpoint to {}", position);
-                    let res = mc
-                        .set_counter(
-                            ctx,
-                            MODERN_SYNC_BATCH_CHECKPOINT_NAME,
-                            position.try_into().unwrap(),
-                            None,
-                        )
-                        .await?;
-
-                    if !res {
-                        warn!(changeset_logger, "Failed to set checkpoint: {:?}", res);
-                    }
-                }
-                pending_checkpoint.drain(..);
-
                 while let Some(sender) = pending_messages.pop_front() {
                     let res = sender.send(Ok(()));
                     if let Err(e) = res.await {
                         return Err(anyhow::anyhow!("Error sending content ready: {:?}", e));
                     }
                 }
-
                 Ok(())
             }
 

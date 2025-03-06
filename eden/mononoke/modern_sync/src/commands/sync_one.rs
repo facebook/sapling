@@ -17,7 +17,6 @@ use context::SessionContainer;
 use metadata::Metadata;
 use mononoke_app::MononokeApp;
 use mononoke_types::ChangesetId;
-use mutable_counters::MutableCountersArc;
 use repo_blobstore::RepoBlobstoreRef;
 use repo_identity::RepoIdentityRef;
 use tokio::sync::mpsc;
@@ -95,13 +94,7 @@ pub async fn run(app: MononokeApp, args: CommandArgs) -> Result<()> {
         )
     };
 
-    let send_manager = SendManager::new(
-        ctx.clone(),
-        sender.clone(),
-        logger.clone(),
-        repo_name.clone(),
-        repo.mutable_counters_arc(),
-    );
+    let send_manager = SendManager::new(sender.clone(), logger.clone(), repo_name.clone());
     let (cr_s, mut cr_r) = mpsc::channel::<Result<()>>(1);
 
     crate::sync::process_one_changeset(
@@ -113,7 +106,6 @@ pub async fn run(app: MononokeApp, args: CommandArgs) -> Result<()> {
         false,
         "",
         Some(cr_s),
-        None,
     )
     .await?;
 
