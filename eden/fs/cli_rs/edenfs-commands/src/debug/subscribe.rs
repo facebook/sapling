@@ -169,11 +169,12 @@ impl crate::Subcommand for SubscribeCmd {
                 &self.mount_point,
                 self.throttle,
                 None,
+                &None,
+                &None,
+                &None,
+                &None,
+                &None,
                 false,
-                &None,
-                &None,
-                &None,
-                &None,
                 handle_result,
             )
             .await?;

@@ -115,11 +115,12 @@ impl crate::Subcommand for ChangesSinceCmd {
             .get_changes_since(
                 &self.mount_point,
                 &position,
-                self.include_vcs_roots,
+                &None,
                 &self.included_roots,
-                &self.excluded_roots,
                 &self.included_suffixes,
+                &self.excluded_roots,
                 &self.excluded_suffixes,
+                self.include_vcs_roots,
                 None,
             )
             .await?;
@@ -131,11 +132,12 @@ impl crate::Subcommand for ChangesSinceCmd {
                     &self.mount_point,
                     self.throttle,
                     Some(position),
-                    self.include_vcs_roots,
+                    &None,
                     &self.included_roots,
-                    &self.excluded_roots,
                     &self.included_suffixes,
+                    &self.excluded_roots,
                     &self.excluded_suffixes,
+                    self.include_vcs_roots,
                     |result| self.print_result(result),
                 )
                 .await?;

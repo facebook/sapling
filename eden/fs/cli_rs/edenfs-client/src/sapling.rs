@@ -101,21 +101,47 @@ pub async fn get_mergebase(commit: &str, mergegase_with: &str) -> anyhow::Result
     }
 }
 
+pub async fn get_status_with_includes<R, S>(
+    first: &str,
+    second: Option<&str>,
+    limit_results: usize,
+    root: Option<R>,
+    included_roots: &[R],
+    included_suffixes: &[S],
+) -> anyhow::Result<SaplingGetStatusResult>
+where
+    R: AsRef<Path>,
+    S: AsRef<str> + AsRef<Path> + AsRef<OsStr>,
+{
+    get_status(
+        first,
+        second,
+        limit_results,
+        root,
+        Some(included_roots),
+        Some(included_suffixes),
+        None,
+        None,
+    )
+    .await
+}
+
 // Get status between two revisions. If second is None, then it is the working copy.
 // Limit the number of results to limit_results. If the number of results is greater than
 // limit_results return TooManyResults. Apply root and suffix filters if provided.
 // TODO: replace with a method that returns an iterator over (SaplingStatus, String)
-pub async fn get_status<P, S>(
+pub async fn get_status<R, S>(
     first: &str,
     second: Option<&str>,
     limit_results: usize,
-    excluded_roots: Option<&[P]>,
-    included_roots: Option<&[P]>,
-    excluded_suffixes: Option<&[S]>,
+    _root: Option<R>,
+    included_roots: Option<&[R]>,
     included_suffixes: Option<&[S]>,
+    excluded_roots: Option<&[R]>,
+    excluded_suffixes: Option<&[S]>,
 ) -> anyhow::Result<SaplingGetStatusResult>
 where
-    P: AsRef<Path>,
+    R: AsRef<Path>,
     S: AsRef<str> + AsRef<Path> + AsRef<OsStr>,
 {
     let mut args = vec!["status", "-mardu", "--rev", first];
@@ -142,10 +168,10 @@ where
         if let Some(status_line) = process_one_status_line(&line)? {
             if is_path_included(
                 &status_line.1,
-                &excluded_roots,
                 &included_roots,
-                &excluded_suffixes,
                 &included_suffixes,
+                &excluded_roots,
+                &excluded_suffixes,
             ) {
                 if status.len() >= limit_results {
                     return Ok(SaplingGetStatusResult::TooManyChanges);
@@ -203,10 +229,10 @@ fn process_one_status_line(line: &str) -> anyhow::Result<Option<(SaplingStatus, 
 
 fn is_path_included<P, S>(
     path: &str,
-    excluded_roots: &Option<&[P]>,
     included_roots: &Option<&[P]>,
-    excluded_suffixes: &Option<&[S]>,
     included_suffixes: &Option<&[S]>,
+    excluded_roots: &Option<&[P]>,
+    excluded_suffixes: &Option<&[S]>,
 ) -> bool
 where
     P: AsRef<Path>,

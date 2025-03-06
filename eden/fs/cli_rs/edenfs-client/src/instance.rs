@@ -323,17 +323,41 @@ impl EdenFsInstance {
     }
 
     #[cfg(fbcode_build)]
+    pub async fn get_changes_since_with_includes(
+        &self,
+        mount_point: &Option<PathBuf>,
+        from_position: &JournalPosition,
+        root: &Option<PathBuf>,
+        included_roots: &Option<Vec<PathBuf>>,
+        included_suffixes: &Option<Vec<String>>,
+    ) -> Result<ChangesSinceV2Result> {
+        self.get_changes_since(
+            mount_point,
+            from_position,
+            root,
+            included_roots,
+            included_suffixes,
+            &None,
+            &None,
+            false,
+            None,
+        )
+        .await
+    }
+
+    #[cfg(fbcode_build)]
     pub async fn get_changes_since(
         &self,
         mount_point: &Option<PathBuf>,
-        from_position: &crate::types::JournalPosition,
-        include_vcs_roots: bool,
+        from_position: &JournalPosition,
+        _root: &Option<PathBuf>,
         included_roots: &Option<Vec<PathBuf>>,
-        excluded_roots: &Option<Vec<PathBuf>>,
         included_suffixes: &Option<Vec<String>>,
+        excluded_roots: &Option<Vec<PathBuf>>,
         excluded_suffixes: &Option<Vec<String>>,
+        include_vcs_roots: bool,
         timeout: Option<Duration>,
-    ) -> Result<crate::types::ChangesSinceV2Result> {
+    ) -> Result<ChangesSinceV2Result> {
         let client = self.get_connected_thrift_client(timeout).await?;
         let params = ChangesSinceV2Params {
             mountPoint: bytes_from_path(get_mount_point(mount_point)?)?,
@@ -387,11 +411,12 @@ impl EdenFsInstance {
         mount_point: &Option<PathBuf>,
         throttle_time_ms: u64,
         position: Option<JournalPosition>,
-        include_vcs_roots: bool,
+        root: &Option<PathBuf>,
         included_roots: &Option<Vec<PathBuf>>,
-        excluded_roots: &Option<Vec<PathBuf>>,
         included_suffixes: &Option<Vec<String>>,
+        excluded_roots: &Option<Vec<PathBuf>>,
         excluded_suffixes: &Option<Vec<String>>,
+        include_vcs_roots: bool,
         handle_results: impl Fn(&ChangesSinceV2Result) -> Result<(), EdenFsError>,
     ) -> Result<(), anyhow::Error> {
         let mut position = position.unwrap_or(self.get_journal_position(mount_point, None).await?);
@@ -452,11 +477,12 @@ impl EdenFsInstance {
                 .get_changes_since(
                     mount_point,
                     &position,
-                    include_vcs_roots,
+                    root,
                     included_roots,
-                    excluded_roots,
                     included_suffixes,
+                    excluded_roots,
                     excluded_suffixes,
+                    include_vcs_roots,
                     None,
                 )
                 .await
