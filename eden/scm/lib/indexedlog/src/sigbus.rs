@@ -35,6 +35,7 @@ pub fn register_sigbus_handler() {
     tracing::debug!("registering SIGBUS handler");
     unsafe {
         ORIG_HANDLER = Some(mem::zeroed());
+        #[expect(static_mut_refs)]
         if let Some(old_handler_mut) = ORIG_HANDLER.as_mut() {
             libc::sigaction(libc::SIGBUS, &new_action, old_handler_mut);
         }
@@ -62,6 +63,7 @@ unsafe extern "C" fn signal_handler(
     // This can happen when (but not limited to):
     // - The address in question is not tracked by indexedlog's (file-backed) mmap buffers.
     // - Already tried fixing the same page before, to prevent infinite loop.
+    #[expect(static_mut_refs)]
     if let Some(old_handler_mut) = ORIG_HANDLER.as_mut() {
         libc::sigaction(sig, old_handler_mut, std::ptr::null_mut());
         // Retry as a way to re-raise.
