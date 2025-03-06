@@ -9,10 +9,11 @@ use std::collections::HashMap;
 use std::collections::HashSet;
 use std::time::Duration;
 
+use anyhow::anyhow;
 use anyhow::ensure;
 use anyhow::Error;
 use anyhow::Result;
-use blobstore::Loadable;
+use bytes::BytesMut;
 use clientinfo::ClientEntryPoint;
 use clientinfo::ClientInfo;
 use cloned::cloned;
@@ -28,8 +29,6 @@ use edenapi_types::LookupResponse;
 use edenapi_types::LookupResult;
 use edenapi_types::UploadToken;
 use edenapi_types::UploadTokenData;
-use filestore::stream_file_bytes;
-use filestore::Range;
 use futures::future::BoxFuture;
 use futures::stream;
 use futures::FutureExt;
@@ -111,10 +110,15 @@ impl EdenapiSender {
             .map(|id| {
                 cloned!(ctx, repo_blobstore);
                 async move {
-                    let blob = id.load(&ctx, &repo_blobstore).await?;
-                    let stream = stream_file_bytes(&repo_blobstore, &ctx, blob, Range::all())?;
-                    let bytes = util::concatenate_bytes(stream.try_collect::<Vec<_>>().await?);
-                    Ok::<_, Error>((AnyFileContentId::ContentId(id.into()), bytes.into()))
+                    let bytes = filestore::fetch(repo_blobstore, ctx, &id.into())
+                        .await?
+                        .ok_or(anyhow!("Content is not found (which should never happen"))?
+                        .try_collect::<BytesMut>()
+                        .await?;
+                    Ok::<_, Error>((
+                        AnyFileContentId::ContentId(id.into()),
+                        bytes.freeze().into(),
+                    ))
                 }
             })
             .buffer_unordered(len)
