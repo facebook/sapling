@@ -18,6 +18,7 @@ rust_binary(
         "fbsource//third-party/rust:futures",
         "fbsource//third-party/rust:tokio",
         "fbsource//third-party/rust:url",
+        "fbsource//third-party/rust:uuid",
         "//common/rust/shed/borrowed:borrowed",
         "//common/rust/shed/cloned:cloned",
         "//common/rust/shed/facet:facet",

@@ -58,6 +58,7 @@ use tokio::sync::mpsc;
 use url::Url;
 
 use crate::bul_util;
+use crate::scuba;
 use crate::sender::edenapi::EdenapiSender;
 use crate::sender::manager::ChangesetMessage;
 use crate::sender::manager::ContentMessage;
@@ -111,9 +112,7 @@ pub async fn sync(
         ClientEntryPoint::ModernSync,
     ));
 
-    let mut scuba = app.environment().scuba_sample_builder.clone();
-    scuba.add_metadata(&metadata);
-
+    let scuba = scuba::new(app.clone(), &metadata, &repo_name, dry_run)?;
     let session_container = SessionContainer::builder(app.fb)
         .metadata(Arc::new(metadata))
         .build();
@@ -171,11 +170,7 @@ pub async fn sync(
     let send_manager = SendManager::new(sender.clone(), logger.clone(), repo_name.clone());
     info!(logger, "Initialized channels");
 
-    let mut scuba_sample = ctx.scuba().clone();
-    scuba_sample.add("repo", repo_name.clone());
-    scuba_sample.add("start_id", start_id);
-    scuba_sample.add("dry_run", dry_run);
-    scuba_sample.log();
+    scuba::log_sync_start(ctx, start_id)?;
 
     bul_util::read_bookmark_update_log(
         ctx,

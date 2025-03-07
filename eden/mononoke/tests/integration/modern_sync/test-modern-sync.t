@@ -30,12 +30,12 @@
   >         "mirror_upload": ["$CLIENT0_ID_TYPE:$CLIENT0_ID_DATA","SERVICE_IDENTITY:server", "X509_SUBJECT_NAME:CN=localhost,O=Mononoke,C=US,ST=CA", "X509_SUBJECT_NAME:CN=client0,O=Mononoke,C=US,ST=CA"]
   >       }
   >     }
-  >   }  
+  >   }
   > }
   > ACLS
 
-  $ REPOID=0 REPONAME=orig ACL_NAME=orig setup_common_config 
-  $ REPOID=1 REPONAME=dest ACL_NAME=dest setup_common_config 
+  $ REPOID=0 REPONAME=orig ACL_NAME=orig setup_common_config
+  $ REPOID=1 REPONAME=dest ACL_NAME=dest setup_common_config
 
   $ start_and_wait_for_mononoke_server
 
@@ -63,24 +63,27 @@
   $ hg log > $TESTTMP/hglog.out
 
 Sync all bookmarks moves
-  $ quiet mononoke_modern_sync sync-once orig dest --start-id 0 
+  $ quiet mononoke_modern_sync sync-once orig dest --start-id 0
 
   $ mononoke_admin mutable-counters --repo-name orig get modern_sync
   Some(2)
-  $ cat  $TESTTMP/modern_sync_scuba_logs | jq | rg "start_id|dry_run|repo"
-      "start_id": 0,
-      "dry_run": "false",
-      "repo": "orig"* (glob)
+  $ cat  $TESTTMP/modern_sync_scuba_logs | summarize_scuba_json 'Start sync process' .normal.log_tag .normal.repo .normal.run_id .int.start_id 2>&1 | grep -v 'null (null) cannot be matched'
+  {
+    "log_tag": "Start sync process",
+    "repo": "orig",
+    "run_id": *, (glob)
+    "start_id": 0
+  }
 
   $ cd ..
 
   $ hg clone -q mono:dest dest --noupdate
   $ cd dest
-  $ hg pull 
+  $ hg pull
   pulling from mono:dest
 
   $ hg log > $TESTTMP/hglog2.out
-  $ hg up master_bookmark 
+  $ hg up master_bookmark
   10 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ ls dir1/dir2
   fifth
@@ -89,7 +92,7 @@ Sync all bookmarks moves
   second
   third
 
-  $ diff  $TESTTMP/hglog.out  $TESTTMP/hglog2.out 
+  $ diff  $TESTTMP/hglog.out  $TESTTMP/hglog2.out
 
   $ mononoke_admin repo-info  --repo-name dest --show-commit-count
   Repo: dest

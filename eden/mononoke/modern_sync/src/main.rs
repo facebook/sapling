@@ -28,8 +28,8 @@ use repo_derived_data::RepoDerivedData;
 use repo_identity::RepoIdentity;
 
 mod bul_util;
-
 mod commands;
+mod scuba;
 mod sender;
 mod sync;
 
