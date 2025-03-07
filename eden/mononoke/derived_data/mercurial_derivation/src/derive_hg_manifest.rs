@@ -9,6 +9,7 @@ use std::collections::BTreeMap;
 use std::collections::HashMap;
 use std::sync::Arc;
 
+use anyhow::bail;
 use anyhow::format_err;
 use anyhow::Error;
 use blobrepo_errors::ErrorKind;
@@ -260,6 +261,11 @@ async fn create_hg_manifest(
 
     let mut contents = Vec::new();
     for (name, (_context, subentry)) in subentries {
+        if name.contains(b'\n') || name.contains(b'\x01') {
+            bail!(
+                "Cannot derive Hg Manifest for a path containing '\n' or '\x01' as such paths cannot be represented by Hg"
+            );
+        }
         contents.extend(name.as_ref());
         let subentry: Entry<_, _> = subentry.into();
         let (tag, hash) = match subentry {

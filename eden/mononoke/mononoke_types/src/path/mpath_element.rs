@@ -203,6 +203,10 @@ impl MPathElement {
     pub fn reverse(&mut self) {
         self.0.reverse()
     }
+
+    pub fn contains(&self, byte: u8) -> bool {
+        self.0.contains(&byte)
+    }
 }
 
 lazy_static! {
