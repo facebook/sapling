@@ -39,14 +39,32 @@ pub enum CasCacheModeLocalFetch {
 
 pub struct RichCasClient {
     client: re_cas_common::OnceCell<REClient>,
+    /// Verbose logging will disable quiet mode in REClient.
     verbose: bool,
+    /// Contains the use case id information.
     metadata: RemoteExecutionMetadata,
+    /// Whether to use the shared cache or not (CASd daemon).
+    /// Normally the WDB Casd daemon is used, but it can also be local for testing/benchmarking.
     use_casd_cache: bool,
+    /// The socket path to connect to the shared cache (CASd daemon).
+    /// Normally the WDB Casd daemon is used, but it can also be local for testing/benchmarking.
+    casd_cache_socket_path: String,
+    /// The mode to use for local fetching (aka rich client direct fetch from the backends).
+    /// Could be all files, small files, or not enabled at all, so all the fetches are done via CASd daemon.
+    /// The fetched blobs will be synced to the local cache asyncronously (if enabled).
     cas_cache_mode_local_fetch: Option<CasCacheModeLocalFetch>,
+    /// The maximum number of bytes to fetch in a single batch combined.
     fetch_limit: ByteCount,
+    /// The maximum number of concurrent batches to fetch.
+    /// fetch_limit * fetch_concurrency is the maximum number of bytes to fetch in parallel, so memory usage is bounded.
     fetch_concurrency: usize,
+    /// Whether to use streaming downloads or not for very large files (hundreds of MBs).
     use_streaming_dowloads: bool,
+    /// The path to the private cache (local cache).
+    /// This mode is used for testing/benchmarking, and it is not used in production.
+    /// This mode would define Rich client mode with its own local cache, the shared cache (CASd daemon) is not used.
     private_cache_path: Option<String>,
+    /// The size of the private cache (local cache).
     private_cache_size: ByteCount,
 }
 
@@ -82,6 +100,8 @@ impl RichCasClient {
         };
 
         let use_casd_cache = config.get_or("cas", "use-shared-cache", || true)?;
+        let casd_cache_socket_path =
+            config.get_or("cas", "uds-path", || CAS_SOCKET_PATH.to_string())?;
 
         let mut cas_cache_mode_local_fetch = None;
 
@@ -117,6 +137,7 @@ impl RichCasClient {
                 ..Default::default()
             },
             use_casd_cache,
+            casd_cache_socket_path,
             cas_cache_mode_local_fetch,
             fetch_limit: config
                 .get_or::<ByteCount>("cas", "max-batch-bytes", || default_fetch_limit)?,
@@ -140,7 +161,7 @@ impl RichCasClient {
         };
         if self.use_casd_cache {
             let mut remote_cache_config = RemoteCacheConfig {
-                address: RemoteCASdAddress::uds_path(CAS_SOCKET_PATH.to_string()),
+                address: RemoteCASdAddress::uds_path(self.casd_cache_socket_path.clone()),
                 ..Default::default()
             };
             if let Some(cas_cache_mode_local_fetch) = self.cas_cache_mode_local_fetch {
