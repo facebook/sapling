@@ -15,6 +15,7 @@ use anyhow::Result;
 use blobstore::Loadable;
 use bookmarks::BookmarkKey;
 use bookmarks::BookmarkUpdateLogArc;
+use bookmarks::BookmarkUpdateLogEntry;
 use bookmarks::BookmarkUpdateLogId;
 use bookmarks::BookmarksRef;
 use borrowed::borrowed;
@@ -179,7 +180,7 @@ pub async fn sync(
         repo.bookmark_update_log_arc(),
     )
     .then(|entries| {
-        cloned!(repo, logger, sender, mut send_manager, repo_name);
+        cloned!(repo, logger, sender, mut send_manager);
         borrowed!(ctx);
         async move {
             match entries {
@@ -193,161 +194,19 @@ pub async fn sync(
                 Ok(entries) => {
                     for entry in entries {
                         let now = std::time::Instant::now();
-                        let to_cs = entry
-                            .to_changeset_id
-                            .expect("bookmark update log entry should have a destination");
-                        let from_vec: Vec<_> = entry.from_changeset_id.into_iter().collect();
-                        let to_vec: Vec<ChangesetId> = vec![to_cs];
-                        let bookmark_name = entry.bookmark_name.name().to_string();
 
-                        let (cs_tx, mut cs_rx) = mpsc::channel::<Result<()>>(1);
-
-                        // We need this in case all commits are synced so no need to wait.
-                        let wait_for_commit = Arc::new(AtomicBool::new(false));
-
-                        info!(logger, "Calculating segments for entry {}", entry.id);
-                        {
-                            let commits = repo
-                                .commit_graph()
-                                .ancestors_difference_segment_slices(ctx, to_vec.clone(), from_vec.clone(), chunk_size)
-                                .await?;
-                            scuba::log_bookmark_update_entry_start(ctx, &entry, commits.count().await)?;
-                        }
-
-                        let commits = repo
-                            .commit_graph()
-                            .ancestors_difference_segment_slices(ctx, to_vec, from_vec, chunk_size)
-                            .await?;
-
-                        commits
-                            .try_for_each(|chunk| {
-                                cloned!(
-                                    ctx,
-                                    repo,
-                                    logger,
-                                    sender,
-                                    mut send_manager,
-                                    bookmark_name,
-                                    to_cs,
-                                    cs_tx,
-                                    wait_for_commit
-                                );
-
-                                async move {
-                                    let chunk_size = chunk.len();
-
-
-                                    let hgids  = stream::iter(chunk)
-                                        .map(|cs_id|{
-                                            cloned!(repo, ctx);
-                                             async move {
-                                                let hgid = repo.derive_hg_changeset(&ctx, cs_id).await;
-                                             (hgid, cs_id)
-                                        }})
-                                        .buffered(100)
-                                        .collect::<Vec<(
-                                            Result<HgChangesetId, anyhow::Error>,
-                                            ChangesetId,
-                                        )>>()
-                                        .await;
-
-                                    let ids = hgids
-                                        .into_iter()
-                                        .map(|(hgid, csid)| Ok((hgid?, csid)))
-                                        .collect::<Result<Vec<(HgChangesetId, ChangesetId)>>>()?;
-
-                                    let missing_changesets = sender.filter_existing_commits(ids).await?;
-
-                                    info!(
-                                        logger,
-                                        "Skipping {} commits, starting sync of {} commits ",
-                                        chunk_size - missing_changesets.len(),
-                                        missing_changesets.len()
-                                    );
-
-                                    stream::iter(missing_changesets.into_iter().map(Ok))
-                                        .try_for_each(|cs_id| {
-                                            cloned!(
-                                                ctx,
-                                                repo,
-                                                logger,
-                                                send_manager,
-                                                bookmark_name,
-                                                to_cs,
-                                                cs_tx,
-                                                wait_for_commit
-                                            );
-
-                                            // We work under the assumption that if the final commit is synced all the parents ones are synced as well.
-                                            let channel = if to_cs == cs_id {
-                                                wait_for_commit.store(true, Ordering::SeqCst);
-                                                Some(cs_tx)
-                                            } else {
-                                                None
-                                            };
-
-                                            async move {
-                                                process_one_changeset(
-                                                    &cs_id,
-                                                    &ctx,
-                                                    repo,
-                                                    &logger,
-                                                    &send_manager,
-                                                    app_args.log_to_ods,
-                                                    bookmark_name.as_str(),
-                                                    channel,
-                                                )
-                                                .await
-                                            }
-                                        })
-                                        .await?;
-                                    Ok(())
-                                }
-                            })
-                            .await?;
-
-                        if app_args.update_counters {
-                            // Wait for the last commit to be synced
-                            if wait_for_commit.load(Ordering::SeqCst) {
-                                let res = cs_rx.recv().await;
-                                match res {
-                                    Some(Err(e)) => {
-                                        bail!(
-                                            "Error while waiting for commit to be synced {:?}",
-                                            e
-                                        );
-                                    }
-                                    None => bail!("No commit synced"),
-                                    _ => (),
-                                }
-                            }
-
-                            repo.mutable_counters()
-                                .set_counter(ctx, MODERN_SYNC_COUNTER_NAME, entry.id.0 as i64, None)
-                                .await?;
-
-                            bul_util::update_remaining_moves(entry.id, repo_name.clone(), ctx.clone(),  repo.bookmark_update_log_arc()).await?;
-
-                            let from_changeset = if let Some(cs_id) = entry.from_changeset_id {
-                                Some(repo.derive_hg_changeset(ctx, cs_id).await?)
-                            } else {
-                                None
-                            };
-
-                            let to_changeset = if let Some(cs_id) = entry.to_changeset_id {
-                                Some(repo.derive_hg_changeset(ctx, cs_id).await?)
-                            } else {
-                                None
-                            };
-
-                            sender
-                                .set_bookmark(
-                                    entry.bookmark_name.name().to_string(),
-                                    from_changeset,
-                                    to_changeset,
-                                )
-                                .await?;
-                        }
+                        process_bookmark_update_log_entry(
+                            ctx,
+                            &repo,
+                            &entry,
+                            &send_manager,
+                            sender.clone(),
+                            chunk_size,
+                            app_args.log_to_ods,
+                            app_args.update_counters,
+                            &logger,
+                        )
+                        .await?;
 
                         scuba::log_bookmark_update_entry_done(ctx, &entry, now.elapsed())?;
                     }
@@ -358,6 +217,179 @@ pub async fn sync(
     })
     .try_collect::<()>()
     .await?;
+
+    Ok(())
+}
+
+pub async fn process_bookmark_update_log_entry(
+    ctx: &CoreContext,
+    repo: &Repo,
+    entry: &BookmarkUpdateLogEntry,
+    send_manager: &SendManager,
+    sender: Arc<EdenapiSender>,
+    chunk_size: u64,
+    log_to_ods: bool,
+    update_counters: bool,
+    logger: &Logger,
+) -> Result<()> {
+    let repo_name = repo.repo_identity().name().to_string();
+
+    let to_cs = entry
+        .to_changeset_id
+        .expect("bookmark update log entry should have a destination");
+    let from_vec: Vec<_> = entry.from_changeset_id.into_iter().collect();
+    let to_vec: Vec<ChangesetId> = vec![to_cs];
+    let bookmark_name = entry.bookmark_name.name().to_string();
+
+    let (cs_tx, mut cs_rx) = mpsc::channel::<Result<()>>(1);
+
+    // We need this in case all commits are synced so no need to wait.
+    let wait_for_commit = Arc::new(AtomicBool::new(false));
+
+    info!(logger, "Calculating segments for entry {}", entry.id);
+
+    {
+        let commits = repo
+            .commit_graph()
+            .ancestors_difference_segment_slices(ctx, to_vec.clone(), from_vec.clone(), chunk_size)
+            .await?;
+        scuba::log_bookmark_update_entry_start(ctx, entry, commits.count().await)?;
+    }
+
+    let commits = repo
+        .commit_graph()
+        .ancestors_difference_segment_slices(ctx, to_vec, from_vec, chunk_size)
+        .await?;
+
+    commits
+        .try_for_each(|chunk| {
+            cloned!(
+                ctx,
+                repo,
+                logger,
+                sender,
+                mut send_manager,
+                bookmark_name,
+                to_cs,
+                cs_tx,
+                wait_for_commit
+            );
+
+            async move {
+                let chunk_size = chunk.len();
+
+                let hgids = stream::iter(chunk)
+                    .map(|cs_id| {
+                        cloned!(repo, ctx);
+                        async move {
+                            let hgid = repo.derive_hg_changeset(&ctx, cs_id).await;
+                            (hgid, cs_id)
+                        }
+                    })
+                    .buffered(100)
+                    .collect::<Vec<(Result<HgChangesetId, anyhow::Error>, ChangesetId)>>()
+                    .await;
+
+                let ids = hgids
+                    .into_iter()
+                    .map(|(hgid, csid)| Ok((hgid?, csid)))
+                    .collect::<Result<Vec<(HgChangesetId, ChangesetId)>>>()?;
+
+                let missing_changesets = sender.filter_existing_commits(ids).await?;
+
+                info!(
+                    logger,
+                    "Skipping {} commits, starting sync of {} commits ",
+                    chunk_size - missing_changesets.len(),
+                    missing_changesets.len()
+                );
+
+                stream::iter(missing_changesets.into_iter().map(Ok))
+                    .try_for_each(|cs_id| {
+                        cloned!(
+                            ctx,
+                            repo,
+                            logger,
+                            send_manager,
+                            bookmark_name,
+                            to_cs,
+                            cs_tx,
+                            wait_for_commit
+                        );
+
+                        // We work under the assumption that if the final commit is synced all the parents ones are synced as well.
+                        let channel = if to_cs == cs_id {
+                            wait_for_commit.store(true, Ordering::SeqCst);
+                            Some(cs_tx)
+                        } else {
+                            None
+                        };
+
+                        async move {
+                            process_one_changeset(
+                                &cs_id,
+                                &ctx,
+                                repo,
+                                &logger,
+                                &send_manager,
+                                log_to_ods,
+                                &bookmark_name,
+                                channel,
+                            )
+                            .await
+                        }
+                    })
+                    .await?;
+                Ok(())
+            }
+        })
+        .await?;
+
+    if update_counters {
+        // Wait for the last commit to be synced
+        if wait_for_commit.load(Ordering::SeqCst) {
+            let res = cs_rx.recv().await;
+            match res {
+                Some(Err(e)) => {
+                    bail!("Error while waiting for commit to be synced {:?}", e);
+                }
+                None => bail!("No commit synced"),
+                _ => (),
+            }
+        }
+
+        repo.mutable_counters()
+            .set_counter(ctx, MODERN_SYNC_COUNTER_NAME, entry.id.0 as i64, None)
+            .await?;
+
+        bul_util::update_remaining_moves(
+            entry.id,
+            repo_name.clone(),
+            ctx.clone(),
+            repo.bookmark_update_log_arc(),
+        )
+        .await?;
+
+        let from_changeset = if let Some(cs_id) = entry.from_changeset_id {
+            Some(repo.derive_hg_changeset(ctx, cs_id).await?)
+        } else {
+            None
+        };
+
+        let to_changeset = if let Some(cs_id) = entry.to_changeset_id {
+            Some(repo.derive_hg_changeset(ctx, cs_id).await?)
+        } else {
+            None
+        };
+
+        sender
+            .set_bookmark(
+                entry.bookmark_name.name().to_string(),
+                from_changeset,
+                to_changeset,
+            )
+            .await?;
+    }
 
     Ok(())
 }
