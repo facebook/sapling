@@ -74,6 +74,57 @@ Sync all bookmarks moves
     "run_id": *, (glob)
     "start_id": 0
   }
+  $ cat  $TESTTMP/modern_sync_scuba_logs | summarize_scuba_json '(Start|Done) processing bookmark update entry' \
+  > .normal.log_tag .normal.repo .normal.run_id \
+  > .normal.bookmark_entry_bookmark_name .normal.bookmark_entry_from_changeset_id .normal.bookmark_entry_to_changeset_id .normal.bookmark_entry_reason \
+  > .int.bookmark_entry_id .int.bookmark_entry_timestamp .int.bookmark_entry_commits_count .int.elapsed \
+  > 2>&1 | grep -v 'null (null) cannot be matched'
+  {
+    "bookmark_entry_bookmark_name": "master_bookmark",
+    "bookmark_entry_commits_count": 1,
+    "bookmark_entry_id": 1,
+    "bookmark_entry_reason": "push",
+    "bookmark_entry_timestamp": *, (glob)
+    "bookmark_entry_to_changeset_id": "53b034a90fe3002a707a7da9cdf6eac3dea460ad72f7c6969dfb88fd0e69f856",
+    "log_tag": "Start processing bookmark update entry",
+    "repo": "orig",
+    "run_id": * (glob)
+  }
+  {
+    "bookmark_entry_bookmark_name": "master_bookmark",
+    "bookmark_entry_id": 1,
+    "bookmark_entry_reason": "push",
+    "bookmark_entry_timestamp": *, (glob)
+    "bookmark_entry_to_changeset_id": "53b034a90fe3002a707a7da9cdf6eac3dea460ad72f7c6969dfb88fd0e69f856",
+    "elapsed": *, (glob)
+    "log_tag": "Done processing bookmark update entry",
+    "repo": "orig",
+    "run_id": * (glob)
+  }
+  {
+    "bookmark_entry_bookmark_name": "master_bookmark",
+    "bookmark_entry_commits_count": 1,
+    "bookmark_entry_from_changeset_id": "53b034a90fe3002a707a7da9cdf6eac3dea460ad72f7c6969dfb88fd0e69f856",
+    "bookmark_entry_id": 2,
+    "bookmark_entry_reason": "push",
+    "bookmark_entry_timestamp": *, (glob)
+    "bookmark_entry_to_changeset_id": "5b1c7130dde8e54b4285b9153d8e56d69fbf4ae685eaf9e9766cc409861995f8",
+    "log_tag": "Start processing bookmark update entry",
+    "repo": "orig",
+    "run_id": * (glob)
+  }
+  {
+    "bookmark_entry_bookmark_name": "master_bookmark",
+    "bookmark_entry_from_changeset_id": "53b034a90fe3002a707a7da9cdf6eac3dea460ad72f7c6969dfb88fd0e69f856",
+    "bookmark_entry_id": 2,
+    "bookmark_entry_reason": "push",
+    "bookmark_entry_timestamp": *, (glob)
+    "bookmark_entry_to_changeset_id": "5b1c7130dde8e54b4285b9153d8e56d69fbf4ae685eaf9e9766cc409861995f8",
+    "elapsed": *, (glob)
+    "log_tag": "Done processing bookmark update entry",
+    "repo": "orig",
+    "run_id": * (glob)
+  }
 
   $ cd ..
 

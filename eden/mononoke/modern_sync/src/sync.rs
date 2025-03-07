@@ -192,10 +192,11 @@ pub async fn sync(
                 }
                 Ok(entries) => {
                     for entry in entries {
+                        let now = std::time::Instant::now();
                         let to_cs = entry
                             .to_changeset_id
                             .expect("bookmark update log entry should have a destination");
-                        let from_vec = entry.from_changeset_id.into_iter().collect();
+                        let from_vec: Vec<_> = entry.from_changeset_id.into_iter().collect();
                         let to_vec: Vec<ChangesetId> = vec![to_cs];
                         let bookmark_name = entry.bookmark_name.name().to_string();
 
@@ -205,6 +206,14 @@ pub async fn sync(
                         let wait_for_commit = Arc::new(AtomicBool::new(false));
 
                         info!(logger, "Calculating segments for entry {}", entry.id);
+                        {
+                            let commits = repo
+                                .commit_graph()
+                                .ancestors_difference_segment_slices(ctx, to_vec.clone(), from_vec.clone(), chunk_size)
+                                .await?;
+                            scuba::log_bookmark_update_entry_start(ctx, &entry, commits.count().await)?;
+                        }
+
                         let commits = repo
                             .commit_graph()
                             .ancestors_difference_segment_slices(ctx, to_vec, from_vec, chunk_size)
@@ -339,6 +348,8 @@ pub async fn sync(
                                 )
                                 .await?;
                         }
+
+                        scuba::log_bookmark_update_entry_done(ctx, &entry, now.elapsed())?;
                     }
                     Ok(())
                 }
