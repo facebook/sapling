@@ -39,7 +39,7 @@ It is possible to run several benchmarks at ones.
 
 ```
 # run all repo content crawling benchmarks
-/usr/local/libexec/eden/eden_bench.sh 5808178a971157999fb581af1c59ade724d66f8e all_ripgrep
+/usr/local/libexec/eden/eden_bench.sh 5808178a971157999fb581af1c59ade724d66f8e all_content_crawling
 ```
 
 For the Repo Metadata Crawling, it is recommended to use a large directory like the entire `www`
@@ -50,7 +50,7 @@ export BENCHMARK_REPO_PATH=www
 
 ```
 # run all repo metadata crawling benchmarks
-/usr/local/libexec/eden/eden_bench.sh 5808178a971157999fb581af1c59ade724d66f8e all_readdir
+/usr/local/libexec/eden/eden_bench.sh 5808178a971157999fb581af1c59ade724d66f8e all_metadata_crawling
 ```
 
 To customize the number of runs for averaging results, please utilize the following option:
