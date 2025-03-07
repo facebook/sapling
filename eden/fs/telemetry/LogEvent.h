@@ -557,8 +557,8 @@ struct InodeLoadingFailed : public EdenFSEvent {
   uint64_t ino;
   bool causedByX2P = false;
 
-  explicit InodeLoadingFailed(std::string error, uint64_t ino)
-      : error(std::move(error)), ino(ino) {
+  explicit InodeLoadingFailed(std::string err, uint64_t ino)
+      : error(std::move(err)), ino(ino) {
     if (error.find("x-x2pagentd-error")) {
       causedByX2P = true;
     }
