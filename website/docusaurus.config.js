@@ -55,7 +55,7 @@ const config = {
             external: 'https://github.com/facebook/sapling/tree/main/website',
           }),
           remarkPlugins: [
-            [require('remark-github'), {repository: 'facebook/sapling'}],
+            [require('remark-github').default, {repository: 'facebook/sapling'}],
             require('sapling-output-plugin'),
           ],
         },
