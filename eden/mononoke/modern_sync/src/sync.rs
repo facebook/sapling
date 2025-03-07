@@ -381,7 +381,7 @@ pub async fn process_one_changeset(
         let cid = match file_change {
             FileChange::Change(change) => Some(change.content_id()),
             FileChange::UntrackedChange(change) => Some(change.content_id()),
-            _ => None,
+            FileChange::Deletion | FileChange::UntrackedDeletion => None,
         };
 
         if let Some(cid) = cid {
