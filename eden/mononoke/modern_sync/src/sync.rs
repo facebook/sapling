@@ -206,9 +206,19 @@ pub async fn sync(
                             app_args.update_counters,
                             &logger,
                         )
-                        .await?;
-
-                        scuba::log_bookmark_update_entry_done(ctx, &entry, now.elapsed())?;
+                        .await
+                        .inspect(|_| {
+                            let _ =
+                                scuba::log_bookmark_update_entry_done(ctx, &entry, now.elapsed());
+                        })
+                        .inspect_err(|e| {
+                            let _ = scuba::log_bookmark_update_entry_error(
+                                ctx,
+                                &entry,
+                                e,
+                                now.elapsed(),
+                            );
+                        })?;
                     }
                     Ok(())
                 }

@@ -82,3 +82,19 @@ fn add_bookmark_entry(
     scuba_sample.add("bookmark_entry_reason", format!("{}", entry.reason));
     scuba_sample.add("bookmark_entry_timestamp", entry.timestamp.since_seconds());
 }
+
+pub(crate) fn log_bookmark_update_entry_error(
+    ctx: &CoreContext,
+    entry: &BookmarkUpdateLogEntry,
+    error: &anyhow::Error,
+    elapsed: std::time::Duration,
+) -> Result<bool> {
+    let mut scuba_sample = ctx.scuba().clone();
+
+    scuba_sample.add("log_tag", "Error processing bookmark");
+    add_bookmark_entry(&mut scuba_sample, entry);
+    scuba_sample.add("error", format!("{:?}", error));
+    scuba_sample.add("elapsed", elapsed.as_secs());
+
+    Ok(scuba_sample.log())
+}
