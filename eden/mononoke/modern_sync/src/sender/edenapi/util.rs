@@ -9,8 +9,6 @@ use anyhow::ensure;
 use anyhow::Error;
 use anyhow::Result;
 use blobstore::Loadable;
-use bytes::Bytes;
-use bytes::BytesMut;
 use cloned::cloned;
 use context::CoreContext;
 use edenapi_service::utils::to_hg_path;
@@ -87,14 +85,6 @@ pub async fn from_id_to_filenode(
         metadata: file_node.metadata().clone().to_vec(),
         file_content_upload_token: token,
     })
-}
-
-pub fn concatenate_bytes(vec_of_bytes: Vec<Bytes>) -> Bytes {
-    let mut bytes_mut = BytesMut::new();
-    for b in vec_of_bytes {
-        bytes_mut.extend_from_slice(&b);
-    }
-    bytes_mut.freeze()
 }
 
 pub fn to_identical_changeset(
