@@ -27,6 +27,10 @@ DynamicEvent EdenStructuredLogger::populateDefaultFields(
     event.addString("ces_id", sessionInfo_.crossEnvSessionId);
   }
 
+  if (!sessionInfo_.systemFingerprint.empty()) {
+    event.addString("system_fingerprint", sessionInfo_.systemFingerprint);
+  }
+
   return event;
 }
 
