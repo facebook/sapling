@@ -1949,7 +1949,7 @@ class RemoveCmd(Subcmd):
             traceback.print_exception(ex)
         else:
             print_stderr(
-                "Rerun with --debug to see full traceback (required to report issues; please do so if the error is unexpected or ambiguous)"
+                "Rerun 'eden remove' with --debug to see full traceback (required to report issues; please do so if the error is unexpected or ambiguous)"
             )
 
     def delete_file_with_confirmation(self, path: str) -> int:
