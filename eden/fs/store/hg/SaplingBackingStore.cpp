@@ -74,24 +74,6 @@ ObjectId hashFromRootId(const RootId& root) {
   return ObjectId::fromHex(root.value());
 }
 
-/**
- * Thread factory that sets thread name and initializes a thread local
- * Sapling retry state.
- */
-class SaplingRetryThreadFactory : public folly::InitThreadFactory {
- public:
-  SaplingRetryThreadFactory(
-      AbsolutePathPiece repository,
-      EdenStatsPtr stats,
-      std::shared_ptr<StructuredLogger> logger)
-      : folly::InitThreadFactory(
-            std::make_shared<folly::NamedThreadFactory>("SaplingRetry"),
-            [repository = AbsolutePath{repository},
-             stats = std::move(stats),
-             logger] {},
-            [] {}) {}
-};
-
 sapling::SaplingNativeBackingStoreOptions computeSaplingOptions() {
   sapling::SaplingNativeBackingStoreOptions options{};
   options.allow_retries = false;
