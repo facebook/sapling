@@ -255,13 +255,13 @@ impl FetchState {
         async_runtime::block_in_place(|| {
             block_on(async {
                 cas_client.fetch(&digests, CasDigestType::Tree).await.for_each(|results| {
-                    bar.increase_position(1);
-
                     match results {
                     Ok((stats, results)) => {
                         reqs += 1;
                         total_stats.add(&stats);
                         for (digest, data) in results {
+                            bar.increase_position(1);
+
                             let Some(mut keys) = digest_to_key.remove(&digest) else {
                                 tracing::error!("got CAS result for unrequested digest {:?}", digest);
                                 continue;

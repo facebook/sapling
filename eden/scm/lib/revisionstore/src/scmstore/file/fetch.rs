@@ -817,7 +817,6 @@ impl FetchState {
             // Prefetching files, so we don't need the data, just to ensure digests are in the CAS local Cache.
             block_on(async {
                 cas_client.prefetch(&digests, CasDigestType::File).await.for_each(|results| {
-                    bar.increase_position(1);
                     match results {
                     Ok((stats, digests_prefetched, digests_not_found)) => {
                         reqs += 1;
@@ -826,6 +825,8 @@ impl FetchState {
                             tracing::trace!(target: "cas", "{} digests are missing in CAS", digests_not_found.len());
                         }
                         for digest in digests_prefetched {
+                            bar.increase_position(1);
+
                             let Some(keys) = digest_to_key.remove(&digest) else {
                                 tracing::error!("got CAS result for unrequested digest {:?}", digest);
                                 continue;
@@ -858,13 +859,13 @@ impl FetchState {
             // Fetching files, we need the data.
             block_on(async {
                 cas_client.fetch(&digests, CasDigestType::File).await.for_each(|results|{
-                    bar.increase_position(1);
-
                     match results {
                     Ok((stats, results)) => {
                         reqs += 1;
                         total_stats.add(&stats);
                         for (digest, data) in results {
+                            bar.increase_position(1);
+
                             let Some(mut keys) = digest_to_key.remove(&digest) else {
                                 tracing::error!("got CAS result for unrequested digest {:?}", digest);
                                 continue;
