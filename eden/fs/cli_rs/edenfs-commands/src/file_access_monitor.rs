@@ -175,6 +175,13 @@ struct ReadCmd {
         default_value = "10"
     )]
     count: usize,
+
+    #[clap(
+        help = "Sort the PIDs by the number of file access events they have generated.",
+        required = false,
+        default_value = "true"
+    )]
+    sort_process: bool,
 }
 
 #[derive(Serialize, Deserialize, Debug)]
@@ -220,22 +227,59 @@ fn parse_events<R: BufRead>(reader: R) -> Result<Vec<Event>> {
     Ok(objects)
 }
 
-fn sort_pids(events: &[Event]) -> Vec<(u64, u64, u64)> {
-    // Count the number of events with the same PID
-    let mut pid_counts: HashMap<u64, (u64, u64)> = HashMap::new(); // pid -> (counter, ppid)
+#[derive(Clone)]
+struct ProcessInfo {
+    pid: u64,
+    ppid: u64,
+    command: String,
+    counter: u64,
+}
+
+fn sort_process_info(events: &[Event], k: usize) -> Vec<ProcessInfo> {
+    let mut process_info: HashMap<u64, ProcessInfo> = HashMap::new();
     for event in events {
         let process = &event.process;
-        let count = pid_counts.entry(process.pid).or_insert((0, process.ppid));
-        count.0 += 1;
+        let count = process_info.entry(process.pid).or_insert(ProcessInfo {
+            pid: process.pid,
+            ppid: process.ppid,
+            command: process.command.clone(),
+            counter: 0,
+        });
+        count.counter += 1;
     }
 
-    // Sort the results so we can find the top k
-    let mut sorted_pids: Vec<(u64, u64, u64)> = pid_counts
-        .into_iter()
-        .map(|(pid, (count, ppid))| (pid, count, ppid))
-        .collect();
-    sorted_pids.sort_by_key(|(_, count, _)| Reverse(*count));
-    sorted_pids
+    let mut sorted_info: Vec<ProcessInfo> = process_info.into_values().collect();
+    sorted_info.sort_by_key(|p| Reverse(p.counter));
+
+    if k == 0 {
+        sorted_info
+    } else {
+        sorted_info[..k.min(sorted_info.len())].to_vec()
+    }
+}
+
+fn print_sorted_process_info(sorted_process_info_slice: &[ProcessInfo]) {
+    // Print the top results
+    println!("{:<6} | {:<7} | {:<7} | Command", "PID", "PPID", "Counts");
+    println!(
+        "{:<6}-|-{:<7}-|-{:<7}-|-{}",
+        "-".repeat(6),
+        "-".repeat(7),
+        "-".repeat(7),
+        "-".repeat(10)
+    );
+
+    for p in sorted_process_info_slice {
+        println!(
+            "{:<6} | {:<7} | {:<7} | {}",
+            p.pid, p.ppid, p.counter, p.command
+        );
+    }
+}
+
+fn print_process_info(events: &[Event], k: usize) {
+    let sorted_process_info = sort_process_info(events, k);
+    print_sorted_process_info(&sorted_process_info);
 }
 
 #[async_trait]
@@ -253,18 +297,8 @@ impl crate::Subcommand for ReadCmd {
             println!("{:#?}", events);
         }
 
-        let sorted_pids = sort_pids(&events);
-
-        let slice = if self.count == 0 {
-            &sorted_pids
-        } else {
-            &sorted_pids[..self.count.min(sorted_pids.len())]
-        };
-
-        // Print the top results
-        println!("{:<6} | {:<7} | {}", "PID", "PPID", "Counts");
-        for (pid, count, ppid) in slice {
-            println!("{:<6} | {:<7} | {}", pid, ppid, count);
+        if self.sort_process {
+            print_process_info(&events, self.count);
         }
         Ok(0)
     }
@@ -447,10 +481,10 @@ mod tests {
             make_event(1, 2),
         ];
 
-        let sorted_pids = sort_pids(&events);
+        let sorted_pids = sort_process_info(&events, 0);
         assert_eq!(sorted_pids.len(), 3);
-        assert_eq!(sorted_pids[0].0, 980066);
-        assert_eq!(sorted_pids[1].0, 1);
-        assert_eq!(sorted_pids[2].0, 66778);
+        assert_eq!(sorted_pids[0].pid, 980066);
+        assert_eq!(sorted_pids[1].pid, 1);
+        assert_eq!(sorted_pids[2].pid, 66778);
     }
 }
