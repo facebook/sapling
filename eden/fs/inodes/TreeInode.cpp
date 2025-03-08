@@ -4391,13 +4391,13 @@ ImmediateFuture<uint64_t> TreeInode::invalidateChildrenNotMaterialized(
               continue;
             }
 
-#ifdef _WIN32
             // If we're attempting to invalidate everything, don't bother
             // checking the disk.
             if (cutoff != std::chrono::system_clock::time_point::max()) {
               // Let's focus only on files as directories will get their atime
               // updated when we query the atime of the files contained in it.
               if (!entry.second.isDirectory()) {
+#ifdef _WIN32
                 auto entryPath = selfPath + entry.first;
                 auto wEntryPath = entryPath.wide();
                 struct __stat64 buf;
@@ -4411,17 +4411,19 @@ ImmediateFuture<uint64_t> TreeInode::invalidateChildrenNotMaterialized(
 
                 auto atime =
                     std::chrono::system_clock::from_time_t(buf.st_atime);
+#else
+                auto atime = std::chrono::system_clock::from_time_t(
+                    entry.second.getInode()
+                        ->getMetadata()
+                        .timestamps.atime.toTimespec()
+                        .tv_sec);
+#endif
                 if (atime > cutoff) {
                   // That file has been touched too recently, continue.
                   continue;
                 }
               }
             }
-#else
-            (void)cutoff;
-
-        // TODO(xavierd): read the atime from the InodeMetadata table.
-#endif
 
             // TODO: In the case where the file becomes materialized on disk
             // now, invalidateChannelEntryCache will happily remove it, leading
