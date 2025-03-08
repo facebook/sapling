@@ -7,7 +7,6 @@
 
 use std::sync::Arc;
 
-use anyhow::Result;
 use bookmarks::BookmarkUpdateLogEntry;
 use context::CoreContext;
 use metadata::Metadata;
@@ -20,7 +19,7 @@ pub(crate) fn new(
     metadata: &Metadata,
     repo_name: &str,
     dry_run: bool,
-) -> Result<MononokeScubaSampleBuilder> {
+) -> MononokeScubaSampleBuilder {
     let uuid = uuid::Uuid::new_v4();
     let mut scuba_sample = app.environment().scuba_sample_builder.clone();
     scuba_sample.add_metadata(metadata);
@@ -28,44 +27,44 @@ pub(crate) fn new(
     scuba_sample.add("repo", repo_name);
     scuba_sample.add("dry_run", dry_run);
 
-    Ok(scuba_sample)
+    scuba_sample
 }
 
-pub(crate) fn log_sync_start(ctx: &CoreContext, start_id: u64) -> Result<bool> {
+pub(crate) fn log_sync_start(ctx: &CoreContext, start_id: u64) -> bool {
     let mut scuba_sample = ctx.scuba().clone();
 
     scuba_sample.add("log_tag", "Start sync process");
     scuba_sample.add("start_id", start_id);
 
-    Ok(scuba_sample.log())
+    scuba_sample.log()
 }
 
 pub(crate) fn log_bookmark_update_entry_start(
     ctx: &CoreContext,
     entry: &BookmarkUpdateLogEntry,
     commits_count: usize,
-) -> Result<bool> {
+) -> bool {
     let mut scuba_sample = ctx.scuba().clone();
 
     scuba_sample.add("log_tag", "Start processing bookmark update entry");
     scuba_sample.add("bookmark_entry_commits_count", commits_count);
     add_bookmark_entry(&mut scuba_sample, entry);
 
-    Ok(scuba_sample.log())
+    scuba_sample.log()
 }
 
 pub(crate) fn log_bookmark_update_entry_done(
     ctx: &CoreContext,
     entry: &BookmarkUpdateLogEntry,
     elapsed: std::time::Duration,
-) -> Result<bool> {
+) -> bool {
     let mut scuba_sample = ctx.scuba().clone();
 
     scuba_sample.add("log_tag", "Done processing bookmark update entry");
     add_bookmark_entry(&mut scuba_sample, entry);
     scuba_sample.add("elapsed", elapsed.as_millis());
 
-    Ok(scuba_sample.log())
+    scuba_sample.log()
 }
 
 fn add_bookmark_entry(
@@ -89,7 +88,7 @@ pub(crate) fn log_bookmark_update_entry_error(
     entry: &BookmarkUpdateLogEntry,
     error: &anyhow::Error,
     elapsed: std::time::Duration,
-) -> Result<bool> {
+) -> bool {
     let mut scuba_sample = ctx.scuba().clone();
 
     scuba_sample.add("log_tag", "Error processing bookmark");
@@ -97,20 +96,20 @@ pub(crate) fn log_bookmark_update_entry_error(
     scuba_sample.add("error", format!("{:?}", error));
     scuba_sample.add("elapsed", elapsed.as_millis());
 
-    Ok(scuba_sample.log())
+    scuba_sample.log()
 }
 
 pub(crate) fn log_changeset_start(
     ctx: &CoreContext,
     bookmark_name: &str,
     changeset_id: &ChangesetId,
-) -> Result<bool> {
+) -> bool {
     let mut scuba_sample = ctx.scuba().clone();
 
     scuba_sample.add("log_tag", "Start processing changeset");
     add_changeset(&mut scuba_sample, bookmark_name, changeset_id);
 
-    Ok(scuba_sample.log())
+    scuba_sample.log()
 }
 
 pub(crate) fn log_changeset_done(
@@ -118,14 +117,14 @@ pub(crate) fn log_changeset_done(
     bookmark_name: &str,
     changeset_id: &ChangesetId,
     elapsed: std::time::Duration,
-) -> Result<bool> {
+) -> bool {
     let mut scuba_sample = ctx.scuba().clone();
 
     scuba_sample.add("log_tag", "Done processing changeset");
     add_changeset(&mut scuba_sample, bookmark_name, changeset_id);
     scuba_sample.add("elapsed", elapsed.as_millis());
 
-    Ok(scuba_sample.log())
+    scuba_sample.log()
 }
 
 pub(crate) fn log_changeset_error(
@@ -134,7 +133,7 @@ pub(crate) fn log_changeset_error(
     changeset_id: &ChangesetId,
     error: &anyhow::Error,
     elapsed: std::time::Duration,
-) -> Result<bool> {
+) -> bool {
     let mut scuba_sample = ctx.scuba().clone();
 
     scuba_sample.add("log_tag", "Error processing changeset");
@@ -142,7 +141,7 @@ pub(crate) fn log_changeset_error(
     scuba_sample.add("error", format!("{:?}", error));
     scuba_sample.add("elapsed", elapsed.as_millis());
 
-    Ok(scuba_sample.log())
+    scuba_sample.log()
 }
 
 fn add_changeset(

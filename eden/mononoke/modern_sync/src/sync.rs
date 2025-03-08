@@ -113,7 +113,7 @@ pub async fn sync(
         ClientEntryPoint::ModernSync,
     ));
 
-    let scuba = scuba::new(app.clone(), &metadata, &repo_name, dry_run)?;
+    let scuba = scuba::new(app.clone(), &metadata, &repo_name, dry_run);
     let session_container = SessionContainer::builder(app.fb)
         .metadata(Arc::new(metadata))
         .build();
@@ -171,7 +171,7 @@ pub async fn sync(
     let send_manager = SendManager::new(sender.clone(), logger.clone(), repo_name.clone());
     info!(logger, "Initialized channels");
 
-    scuba::log_sync_start(ctx, start_id)?;
+    scuba::log_sync_start(ctx, start_id);
 
     bul_util::read_bookmark_update_log(
         ctx,
@@ -208,16 +208,10 @@ pub async fn sync(
                         )
                         .await
                         .inspect(|_| {
-                            let _ =
-                                scuba::log_bookmark_update_entry_done(ctx, &entry, now.elapsed());
+                            scuba::log_bookmark_update_entry_done(ctx, &entry, now.elapsed());
                         })
                         .inspect_err(|e| {
-                            let _ = scuba::log_bookmark_update_entry_error(
-                                ctx,
-                                &entry,
-                                e,
-                                now.elapsed(),
-                            );
+                            scuba::log_bookmark_update_entry_error(ctx, &entry, e, now.elapsed());
                         })?;
                     }
                     Ok(())
@@ -263,7 +257,7 @@ pub async fn process_bookmark_update_log_entry(
             .commit_graph()
             .ancestors_difference_segment_slices(ctx, to_vec.clone(), from_vec.clone(), chunk_size)
             .await?;
-        scuba::log_bookmark_update_entry_start(ctx, entry, commits.count().await)?;
+        scuba::log_bookmark_update_entry_start(ctx, entry, commits.count().await);
     }
 
     let commits = repo
@@ -351,7 +345,7 @@ pub async fn process_bookmark_update_log_entry(
                             .await
                             {
                                 Ok(res) => {
-                                    let _ = scuba::log_changeset_done(
+                                    scuba::log_changeset_done(
                                         &ctx,
                                         bookmark_name.as_str(),
                                         &cs_id,
@@ -360,7 +354,7 @@ pub async fn process_bookmark_update_log_entry(
                                     Ok(res)
                                 }
                                 Err(e) => {
-                                    let _ = scuba::log_changeset_error(
+                                    scuba::log_changeset_error(
                                         &ctx,
                                         bookmark_name.as_str(),
                                         &cs_id,
@@ -437,7 +431,7 @@ pub async fn process_one_changeset(
     bookmark_name: &str,
     changeset_ready: Option<mpsc::Sender<Result<()>>>,
 ) -> Result<()> {
-    scuba::log_changeset_start(ctx, bookmark_name, cs_id)?;
+    scuba::log_changeset_start(ctx, bookmark_name, cs_id);
 
     let now = std::time::Instant::now();
 
