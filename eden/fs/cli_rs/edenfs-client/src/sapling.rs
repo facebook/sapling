@@ -288,7 +288,7 @@ fn is_path_included(
         return false;
     }
 
-    if excluded_roots.as_ref().map_or(false, |roots| {
+    if excluded_roots.as_ref().is_some_and(|roots| {
         let path = Path::new(path);
         roots
             .iter()
@@ -297,7 +297,7 @@ fn is_path_included(
         return false;
     }
 
-    if excluded_suffixes.as_ref().map_or(false, |suffixes| {
+    if excluded_suffixes.as_ref().is_some_and(|suffixes| {
         suffixes.iter().any(|suffix| {
             if case_insensitive_suffix_compares {
                 path.to_ascii_lowercase().ends_with(suffix)

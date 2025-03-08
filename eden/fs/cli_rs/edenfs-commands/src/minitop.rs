@@ -481,10 +481,10 @@ impl crate::Subcommand for MinitopCmd {
             // Render pending trees/blobs
             for import_type in IMPORT_OBJECT_TYPES {
                 let pending_counts = pending_imports
-                    .get(&import_type.to_string())
+                    .get(*import_type)
                     .ok_or_else(|| anyhow!("Did not fetch pending {} info", import_type))?;
                 let live_counts = live_imports
-                    .get(&import_type.to_string())
+                    .get(*import_type)
                     .ok_or_else(|| anyhow!("Did not fetch live {} info", import_type))?;
                 let pending_string = format!(
                     "total pending {}: {} ({:.3}s)",
