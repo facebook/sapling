@@ -30,8 +30,6 @@ use edenfs_utils::get_executable;
 use edenfs_utils::strip_unc_prefix;
 use futures::stream::BoxStream;
 use futures::StreamExt;
-#[cfg(fbcode_build)]
-use thrift_streaming_clients::errors::StreamStartStatusError;
 use thrift_streaming_clients::errors::SubscribeStreamTemporaryError;
 #[cfg(fbcode_build)]
 use thrift_types::edenfs::DaemonInfo;
@@ -57,8 +55,6 @@ use crate::client::StreamingEdenFsClient;
 use crate::journal_position::JournalPosition;
 use crate::utils::get_mount_point;
 use crate::EdenFsThriftClient;
-#[cfg(fbcode_build)]
-use crate::StartStatusStream;
 
 // We should create a single EdenFsInstance when parsing EdenFs commands and utilize
 // EdenFsInstance::global() whenever we need to access it. This way we can avoid passing an
@@ -222,39 +218,6 @@ impl EdenFsInstance {
             ))
         } else {
             Err(anyhow!("EdenFS is not running"))
-        }
-    }
-
-    pub async fn get_health(&self, timeout: Option<Duration>) -> Result<DaemonInfo> {
-        let client = self
-            .get_client(timeout.or_else(|| Some(Duration::from_secs(3))))
-            .await
-            .context("Unable to connect to EdenFS daemon")?;
-        let client = client.get_thrift_client();
-
-        event!(Level::DEBUG, "connected to EdenFS daemon");
-        client.getDaemonInfo().await.from_err()
-    }
-
-    #[cfg(fbcode_build)]
-    pub async fn get_health_with_startup_updates_included(
-        &self,
-        timeout: Duration,
-    ) -> Result<(DaemonInfo, StartStatusStream)> {
-        let client = self
-            .get_streaming_client(Some(timeout))
-            .await
-            .context("Unable to connect to EdenFS daemon")?;
-        let client = client.get_thrift_client();
-
-        let result = client.streamStartStatus().await;
-        match result {
-            Err(StreamStartStatusError::ApplicationException(e))
-                if e.type_ == ApplicationExceptionErrorCode::UnknownMethod =>
-            {
-                Err(EdenFsError::UnknownMethod(e.message))
-            }
-            r => r.from_err(),
         }
     }
 
