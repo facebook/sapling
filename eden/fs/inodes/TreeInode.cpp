@@ -2436,6 +2436,10 @@ InodeMap* TreeInode::getInodeMap() const {
   return getMount()->getInodeMap();
 }
 
+std::weak_ptr<InodeMap> TreeInode::getInodeMapWeak() const {
+  return getMount()->getInodeMapWeak();
+}
+
 /*
 On each level of the level order traversal, we search for a gitignore file, and
 if it exists, we load it. This gitignore file is owned by a `std::<unique_ptr>`
@@ -3926,6 +3930,35 @@ bool needDecFsRefcount(InodeMap& inodeMap, InodeNumber ino) {
 } // namespace
 #endif
 
+#ifdef __APPLE__
+folly::Try<folly::Unit> TreeInode::nfsInvalidateCacheEntryForGC(
+    TreeInodeState& state,
+    PathComponentPiece name,
+    std::optional<InodeNumber> ino) {
+  if (auto* nfsdChannel = getMount()->getNfsdChannel()) {
+    const auto path = getPath();
+    if (path.has_value()) {
+      // The contents lock is held by nfsInvalidateCacheEntryForGC
+      auto mode = getMetadataLocked(state.entries).mode;
+      nfsdChannel->invalidate(
+          getMount()->getPath() + *path + name,
+          mode,
+          [inodeMapWeak = getInodeMapWeak(), ino]() {
+            // Code to run after successful invalidation
+            if (auto inodeMap = inodeMapWeak.lock()) {
+              if (ino && inodeMap->isInodeLoadedOrRemembered(ino.value())) {
+                inodeMap->decFsRefcount(ino.value());
+              }
+            } else {
+              XLOG(WARN) << "InodeMap is killed before GC completes";
+            }
+          });
+    }
+  }
+  return folly::Try<folly::Unit>{folly::unit};
+}
+#endif
+
 folly::Try<folly::Unit> TreeInode::invalidateChannelEntryCache(
     TreeInodeState&,
     PathComponentPiece name,
@@ -4425,20 +4458,25 @@ ImmediateFuture<uint64_t> TreeInode::invalidateChildrenNotMaterialized(
               }
             }
 
-            // TODO: In the case where the file becomes materialized on disk
-            // now, invalidateChannelEntryCache will happily remove it, leading
-            // to a potential loss of user data. To avoid this, we could try
-            // not passing PRJ_UPDATE_ALLOW_DIRTY_DATA and dealing with the
-            // side effects to close that race.
+        // TODO: In the case where the file becomes materialized on disk
+        // now, invalidateChannelEntryCache will happily remove it, leading
+        // to a potential loss of user data. To avoid this, we could try
+        // not passing PRJ_UPDATE_ALLOW_DIRTY_DATA and dealing with the
+        // side effects to close that race.
 
-            // Here, we rely on invalidateChannelEntryCache failing for
-            // non-empty directories to guarantee that we're not losing user
-            // data in the case where a user writes a file in a directory that
-            // we're attempting to invalidate. For directories with not
-            // invalidated childrens due to being read too recently, we also
-            // rely on invalidateChannelEntryCache failing.
+        // Here, we rely on invalidateChannelEntryCache failing for
+        // non-empty directories to guarantee that we're not losing user
+        // data in the case where a user writes a file in a directory that
+        // we're attempting to invalidate. For directories with not
+        // invalidated childrens due to being read too recently, we also
+        // rely on invalidateChannelEntryCache failing.
+#ifdef __APPLE__
+            auto invalidateResult = self->nfsInvalidateCacheEntryForGC(
+                *contents, entry.first, inodeNumber);
+#else
             auto invalidateResult = self->invalidateChannelEntryCache(
                 *contents, entry.first, inodeNumber, nullptr);
+#endif
             if (invalidateResult.hasException()) {
               XLOG(DBG5) << "Couldn't invalidate: " << self->getLogPath() << "/"
                          << entry.first << ": " << invalidateResult.exception();
@@ -4449,7 +4487,24 @@ ImmediateFuture<uint64_t> TreeInode::invalidateChildrenNotMaterialized(
         }
 
         return numInvalidated;
-      });
+      })
+
+#ifdef __APPLE__
+      .thenTry(
+          [this](folly::Try<uint64_t>&& result) -> ImmediateFuture<uint64_t> {
+            auto* nfsdChannel = getMount()->getNfsdChannel();
+            if (nfsdChannel &&
+                getMount()->getEdenConfig()->enableGc.getValue()) {
+              return nfsdChannel->completeInvalidations().thenTry(
+                  [result = std::move(result)](auto&&) mutable {
+                    return std::move(result);
+                  });
+            } else {
+              return std::move(result);
+            }
+          })
+#endif
+      ;
 }
 
 void TreeInode::updateAtime() {

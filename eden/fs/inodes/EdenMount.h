@@ -599,6 +599,13 @@ class EdenMount : public std::enable_shared_from_this<EdenMount> {
   }
 
   /**
+   * Return a waek pointer InodeMap for this mount.
+   */
+  std::weak_ptr<InodeMap> getInodeMapWeak() const {
+    return inodeMap_;
+  }
+
+  /**
    * Return the Overlay for this mount.
    */
   Overlay* getOverlay() const {
@@ -1313,7 +1320,7 @@ class EdenMount : public std::enable_shared_from_this<EdenMount> {
    */
   std::optional<bool> shouldUseNFSMount_{std::nullopt};
 
-  std::unique_ptr<InodeMap> inodeMap_;
+  std::shared_ptr<InodeMap> inodeMap_;
 
   std::shared_ptr<ObjectStore> objectStore_;
   std::shared_ptr<BlobCache> blobCache_;

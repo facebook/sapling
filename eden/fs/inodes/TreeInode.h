@@ -553,6 +553,7 @@ class TreeInode final : public InodeBaseMetadata<DirContents> {
    * the TreeInode object.
    */
   InodeMap* getInodeMap() const;
+  std::weak_ptr<InodeMap> getInodeMapWeak() const;
 
   void registerInodeLoadComplete(
       folly::Future<std::unique_ptr<InodeBase>>& future,
@@ -876,6 +877,20 @@ class TreeInode final : public InodeBaseMetadata<DirContents> {
       PathComponentPiece name,
       std::optional<InodeNumber> ino,
       CheckoutContext* FOLLY_NULLABLE ctx);
+
+#ifdef __APPLE__
+  /**
+   * Sends a request to the kernel to invalidate its cache for the specified
+   * child and then deletes the inode. In NFS, this function is distinct from
+   * `invalidateChannelEntryCache` and is used exclusively for
+   * garbage collection because inodes need to be deleted after invalidation
+   * during NFS garbage collection.
+   */
+  FOLLY_NODISCARD folly::Try<folly::Unit> nfsInvalidateCacheEntryForGC(
+      TreeInodeState& state,
+      PathComponentPiece name,
+      std::optional<InodeNumber> ino);
+#endif
 
   /**
    * Attempts to find the child inode or other identifying information about
