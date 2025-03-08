@@ -15,7 +15,7 @@ cpp_library(
         "//folly/coro:task",
         "//folly/io/async:event_base_manager",
         "//folly/json:dynamic",
-        "//proxygen/facebook/lib/experimental/coro/client:http_client_lib",
+        "//proxygen/facebook/lib/coro/client:http_client_lib",
     ],
     exported_deps = [
         "//eden/fs/store:backing_store_interface",
