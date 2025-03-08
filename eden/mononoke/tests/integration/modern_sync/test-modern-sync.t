@@ -194,6 +194,24 @@ Sync all bookmarks moves
     "repo": "orig"
   }
 
+# We can't make strict assertions because batching is timing-dependent. We can't at least check that we have at least one
+# and that it has the fields we expect.
+  $ cat  $TESTTMP/modern_sync_scuba_logs | summarize_scuba_json 'EdenAPI stats' \
+  > .normal.log_tag .normal.repo \
+  > .normal.endpoint \
+  > .int.requests .int.downloaded_bytes .int.uploaded_bytes .int.elapsed .int.latency .int.download_speed .int.upload_speed \
+  > | jq 'select(.endpoint == "upload/changesets/identical")' | head
+  {
+    "downloaded_bytes": \d+, (re)
+    "elapsed": \d+, (re)
+    "endpoint": "upload/changesets/identical",
+    "latency": \d+, (re)
+    "log_tag": "EdenAPI stats",
+    "repo": "orig",
+    "requests": 1,
+    "uploaded_bytes": \d+ (re)
+  }
+
   $ cd ..
 
   $ hg clone -q mono:dest dest --noupdate
