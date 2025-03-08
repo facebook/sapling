@@ -5437,18 +5437,9 @@ EdenServiceHandler::semifuture_debugInvalidateNonMaterialized(
   auto mountHandle = lookupMount(params->mount()->mountPoint());
   auto& fetchContext = helper->getFetchContext();
 
-  if (!folly::kIsWindows) {
-    if (!(params->age()->seconds() == 0 && params->age()->nanoSeconds() == 0)) {
-      throw newEdenError(
-          EINVAL,
-          EdenErrorType::ARGUMENT_ERROR,
-          "Non-zero age is not supported on non-Windows platforms");
-    }
-  } else {
-    // TODO: We may need to restrict 0s age on Windows as that can lead to
-    // weird behavior where files are invalidated while being read causing the
-    // read to fail.
-  }
+  // TODO: We may need to restrict 0s age as that can lead to
+  // weird behavior where files are invalidated while being read causing the
+  // read to fail.
 
   auto cutoff = std::chrono::system_clock::time_point::max();
   if (*params->age()->seconds() != 0) {

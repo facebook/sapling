@@ -1929,6 +1929,11 @@ class GCInodesCmd(Subcmd):
             default="",
         )
         parser.add_argument(
+            "--age",
+            help="Minimum age of the inodes to be deleted in seconds",
+            default=0,
+        )
+        parser.add_argument(
             "--background",
             action="store_true",
             help="Run invalidation in the background",
@@ -1944,6 +1949,8 @@ class GCInodesCmd(Subcmd):
             seconds = 3600
         else:
             seconds = 0
+        if int(args.age) > 0:
+            seconds = int(args.age)
         with instance.get_thrift_client_legacy() as client:
             try:
                 result = client.debugInvalidateNonMaterialized(
