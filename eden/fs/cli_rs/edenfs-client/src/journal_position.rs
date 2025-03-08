@@ -8,7 +8,6 @@
 use std::fmt;
 use std::path::PathBuf;
 use std::str::FromStr;
-use std::time::Duration;
 
 use anyhow::anyhow;
 use edenfs_error::EdenFsError;
@@ -17,7 +16,7 @@ use edenfs_error::ResultExt;
 use edenfs_utils::bytes_from_path;
 use serde::Serialize;
 
-use crate::instance::EdenFsInstance;
+use crate::client::EdenFsClient;
 use crate::utils::get_mount_point;
 
 #[derive(Clone, Debug, PartialEq, Serialize)]
@@ -82,16 +81,14 @@ impl From<JournalPosition> for thrift_types::edenfs::JournalPosition {
     }
 }
 
-impl EdenFsInstance {
+impl EdenFsClient {
     pub async fn get_journal_position(
         &self,
         mount_point: &Option<PathBuf>,
-        timeout: Option<Duration>,
     ) -> Result<JournalPosition> {
-        let client = self.get_connected_thrift_client(timeout).await?;
         let mount_point_path = get_mount_point(mount_point)?;
         let mount_point = bytes_from_path(mount_point_path)?;
-        client
+        self.client
             .getCurrentJournalPosition(&mount_point)
             .await
             .map(|p| p.into())

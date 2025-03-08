@@ -20,6 +20,7 @@ use thrift_types::edenfs_clients::EdenServiceExt;
 use thriftclient::ThriftChannel;
 
 pub mod checkout;
+pub mod client;
 pub mod fsutil;
 pub mod instance;
 pub mod journal_position;
@@ -32,10 +33,10 @@ pub mod utils;
 pub use instance::DaemonHealthy;
 pub use instance::EdenFsInstance;
 
-pub type EdenFsClient = Arc<dyn EdenServiceExt<ThriftChannel> + Send + Sync + 'static>;
+pub type EdenFsThriftClient = Arc<dyn EdenServiceExt<ThriftChannel> + Send + Sync + 'static>;
 
 #[cfg(fbcode_build)]
-pub type StreamingEdenFsClient = Arc<dyn StreamingEdenService + Sync>;
+pub type StreamingEdenFsThriftClient = Arc<dyn StreamingEdenService + Sync>;
 #[cfg(fbcode_build)]
 pub type StartStatusStream =
     BoxStream<'static, Result<EdenStartStatusUpdate, StreamStartStatusStreamError>>;

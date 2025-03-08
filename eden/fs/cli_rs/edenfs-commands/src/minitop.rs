@@ -31,8 +31,8 @@ use crossterm::event::KeyModifiers;
 use crossterm::queue;
 use crossterm::style;
 use crossterm::terminal;
-use edenfs_client::EdenFsClient;
 use edenfs_client::EdenFsInstance;
+use edenfs_client::EdenFsThriftClient;
 use edenfs_utils::humantime::HumanTime;
 use edenfs_utils::humantime::TimeUnit;
 use edenfs_utils::path_from_bytes;
@@ -259,7 +259,9 @@ struct ImportStat {
     max_duration_us: i64,
 }
 
-async fn get_pending_import_counts(client: &EdenFsClient) -> Result<BTreeMap<String, ImportStat>> {
+async fn get_pending_import_counts(
+    client: &EdenFsThriftClient,
+) -> Result<BTreeMap<String, ImportStat>> {
     let mut imports = BTreeMap::<String, ImportStat>::new();
 
     let counters = EdenFsInstance::global()
@@ -286,7 +288,9 @@ async fn get_pending_import_counts(client: &EdenFsClient) -> Result<BTreeMap<Str
     Ok(imports)
 }
 
-async fn get_live_import_counts(client: &EdenFsClient) -> Result<BTreeMap<String, ImportStat>> {
+async fn get_live_import_counts(
+    client: &EdenFsThriftClient,
+) -> Result<BTreeMap<String, ImportStat>> {
     let mut imports = BTreeMap::<String, ImportStat>::new();
     let counters = EdenFsInstance::global()
         .get_regex_counters(LIVE_COUNTER_REGEX, Some(client))

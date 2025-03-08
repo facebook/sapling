@@ -39,9 +39,8 @@ impl crate::Subcommand for GetPositionCmd {
     #[cfg(fbcode_build)]
     async fn run(&self) -> Result<ExitCode> {
         let instance = EdenFsInstance::global();
-        let position = instance
-            .get_journal_position(&self.mount_point, None)
-            .await?;
+        let client = instance.get_client(None).await?;
+        let position = client.get_journal_position(&self.mount_point).await?;
         println!(
             "{}",
             if self.json {

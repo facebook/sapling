@@ -6,7 +6,7 @@
  */
 
 //! EdenFsInstance - manages EdenFS resources besides Thrift connection (managed by
-//! [`EdenFsClient`]).
+//! [`EdenFsThriftClient`]).
 
 use std::collections::BTreeMap;
 #[cfg(windows)]
@@ -62,6 +62,8 @@ use tracing::event;
 use tracing::Level;
 use util::lock::PathLock;
 
+use crate::client::EdenFsClient;
+use crate::client::StreamingEdenFsClient;
 use crate::journal_position::JournalPosition;
 use crate::types::ChangeNotification;
 use crate::types::ChangesSinceV2Result;
@@ -70,11 +72,11 @@ use crate::types::SmallChangeNotification;
 use crate::utils::get_mount_point;
 use crate::utils::prefix_paths;
 use crate::utils::strip_prefix_from_bytes;
-use crate::EdenFsClient;
+use crate::EdenFsThriftClient;
 #[cfg(fbcode_build)]
 use crate::StartStatusStream;
 #[cfg(fbcode_build)]
-use crate::StreamingEdenFsClient;
+use crate::StreamingEdenFsThriftClient;
 
 // We should create a single EdenFsInstance when parsing EdenFs commands and utilize
 // EdenFsInstance::global() whenever we need to access it. This way we can avoid passing an
@@ -146,7 +148,18 @@ impl EdenFsInstance {
         self.home_dir.as_ref()
     }
 
-    async fn _connect(&self, socket_path: &PathBuf) -> Result<EdenFsClient> {
+    pub async fn get_client(&self, timeout: Option<Duration>) -> Result<EdenFsClient> {
+        EdenFsClient::new(self, timeout).await
+    }
+
+    pub async fn get_streaming_client(
+        &self,
+        timeout: Option<Duration>,
+    ) -> Result<StreamingEdenFsClient> {
+        StreamingEdenFsClient::new(self, timeout).await
+    }
+
+    async fn _connect(&self, socket_path: &PathBuf) -> Result<EdenFsThriftClient> {
         const THRIFT_TIMEOUT_MS: u32 = 120_000;
         let client = make_EdenServiceExt_thriftclient!(
             expect_init(),
@@ -159,7 +172,7 @@ impl EdenFsInstance {
         Ok(client)
     }
 
-    pub async fn connect(&self, timeout: Option<Duration>) -> Result<EdenFsClient> {
+    pub async fn connect(&self, timeout: Option<Duration>) -> Result<EdenFsThriftClient> {
         let socket_path = self.config_dir.join("socket");
 
         let connect = self._connect(&socket_path);
@@ -173,7 +186,10 @@ impl EdenFsInstance {
     }
 
     #[cfg(fbcode_build)]
-    pub async fn _connect_streaming(&self, socket_path: &PathBuf) -> Result<StreamingEdenFsClient> {
+    pub async fn _connect_streaming(
+        &self,
+        socket_path: &PathBuf,
+    ) -> Result<StreamingEdenFsThriftClient> {
         let client = build_StreamingEdenService_client(
             ThriftChannelBuilder::from_path(expect_init(), socket_path)?
                 .with_transport_type(TransportType::Rocket)
@@ -186,7 +202,7 @@ impl EdenFsInstance {
     pub async fn connect_streaming(
         &self,
         timeout: Option<Duration>,
-    ) -> Result<StreamingEdenFsClient> {
+    ) -> Result<StreamingEdenFsThriftClient> {
         let socket_path = self.config_dir.join("socket");
         let client = self._connect_streaming(&socket_path);
 
@@ -443,7 +459,8 @@ impl EdenFsInstance {
         include_vcs_roots: bool,
         handle_results: impl Fn(&ChangesSinceV2Result) -> Result<(), EdenFsError>,
     ) -> Result<(), anyhow::Error> {
-        let mut position = position.unwrap_or(self.get_journal_position(mount_point, None).await?);
+        let client = self.get_client(None).await?;
+        let mut position = position.unwrap_or(client.get_journal_position(mount_point).await?);
         let mut subscription = self.stream_journal_changed(mount_point).await?;
 
         let mut last = Instant::now();
@@ -865,7 +882,7 @@ impl EdenFsInstance {
             .map_err(|_| EdenFsError::Other(anyhow!("failed to call clearAndCompactLocalStore")))
     }
 
-    pub async fn flush_stats_now(&self, client: Option<&EdenFsClient>) -> Result<()> {
+    pub async fn flush_stats_now(&self, client: Option<&EdenFsThriftClient>) -> Result<()> {
         let client = match client {
             Some(client) => client,
             None => &self.get_connected_thrift_client(None).await?,
@@ -879,7 +896,7 @@ impl EdenFsInstance {
     pub async fn get_regex_counters(
         &self,
         arg_regex: &str,
-        client: Option<&EdenFsClient>,
+        client: Option<&EdenFsThriftClient>,
     ) -> Result<BTreeMap<String, i64>> {
         let client = match client {
             Some(client) => client,
@@ -933,7 +950,7 @@ impl EdenFsInstance {
     pub async fn get_connected_thrift_client(
         &self,
         timeout: Option<Duration>,
-    ) -> Result<EdenFsClient> {
+    ) -> Result<EdenFsThriftClient> {
         let connected_client = self
             .connect(timeout)
             .await
