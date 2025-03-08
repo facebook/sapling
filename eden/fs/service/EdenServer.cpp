@@ -325,24 +325,6 @@ size_t getNumberPendingFuseRequests(const EdenMount* mount) {
 }
 #endif // __linux__
 
-std::shared_ptr<folly::Executor> makeFsChannelThreads(
-    std::shared_ptr<const EdenConfig>& edenConfig) {
-  if (edenConfig->unboundedFsChannel.getValue()) {
-    return std::make_shared<UnboundedQueueExecutor>(
-        edenConfig->numFsChannelThreads.getValue(), "FsChannelThreadPool");
-  }
-  std::shared_ptr<folly::CPUThreadPoolExecutor> fsChannelThreads =
-      std::make_shared<folly::CPUThreadPoolExecutor>(
-          edenConfig->numFsChannelThreads.getValue(),
-          std::make_unique<EdenTaskQueue>(
-              edenConfig->maxFsChannelInflightRequests.getValue()),
-          std::make_unique<folly::NamedThreadFactory>("FsChannelThreadPool"));
-#ifdef EDEN_HAVE_SERVER_OBSERVER
-  facebook::fb303::installThreadPoolExecutorCounters("", *fsChannelThreads);
-#endif
-  return fsChannelThreads;
-}
-
 std::shared_ptr<folly::Executor> makeCheckoutRevisionThreads(
     bool useCheckoutExecutor,
     std::shared_ptr<const EdenConfig>& edenConfig) {
@@ -477,7 +459,9 @@ EdenServer::EdenServer(
           std::move(privHelper),
           std::make_shared<EdenCPUThreadPool>(
               edenConfig->edenCpuPoolNumThreads.getValue()),
-          makeFsChannelThreads(edenConfig),
+          std::make_shared<UnboundedQueueExecutor>(
+              edenConfig->numFsChannelThreads.getValue(),
+              "FsChannelThreadPool"),
           std::make_shared<UnixClock>(),
           std::make_shared<ProcessInfoCache>(),
           structuredLogger_,

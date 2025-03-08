@@ -5,11 +5,11 @@
 This thread pool is used by a variety of FsChannel implementations. The main
 uses will be described below. There are `fschannel:num-servicing-threads`
 (defaults to `ncores` number of threads) for handling any request put on the
-FsChannel thread pool. This thread pool is unbounded (as of May 2024), but can
-be bounded using the `fschannel:unbounded-task-queue` config option. The thread
-pool was unbounded to mitigate deadlocks caused by FsChannelThreads being
-blocked trying to add to a full queue which can only be emptied by
-FsChannelThreads.
+FsChannel thread pool. This thread pool is unbounded due to deadlocks caused by
+FsChannelThreads being blocked trying to add to a full queue which can only be
+emptied by FsChannelThreads when using a bounded thread pool. As of February
+2025, there is no limit on the number of inflight requests that can be active at
+once, but there is work in progress to add a rate limiter to this layer.
 
 ## FUSE
 

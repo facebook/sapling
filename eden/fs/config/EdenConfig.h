@@ -971,11 +971,6 @@ class EdenConfig : private ConfigSettingManager {
       1000,
       this};
 
-  ConfigSetting<bool> unboundedFsChannel{
-      "fschannel:unbounded-task-queue",
-      true,
-      this};
-
   ConfigSetting<std::chrono::nanoseconds> highFsRequestsLogInterval{
       "fschannel:high-fs-requests-log-interval",
       std::chrono::minutes{30},
