@@ -977,7 +977,9 @@ impl EdenFsCheckout {
             }
         }
 
-        let client = instance.connect(None).await?;
+        let client = instance.get_client(None).await?;
+        let client = client.get_thrift_client();
+
         let mnt_pt = self
             .path
             .to_str()
@@ -1230,9 +1232,10 @@ pub async fn get_mounts(instance: &EdenFsInstance) -> Result<BTreeMap<PathBuf, E
     }
 
     // Get active mounted checkouts info from eden daemon
-    let client = instance.connect(Some(Duration::from_secs(3))).await;
+    let client = instance.get_client(Some(Duration::from_secs(3))).await;
     let mounted_checkouts = match client {
         Ok(client) => {
+            let client = client.get_thrift_client();
             match client.listMounts().await {
                 Ok(result) => Some(result),
                 Err(_) => None, // eden daemon is not running or not healthy

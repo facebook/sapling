@@ -28,17 +28,11 @@ use edenfs_utils::bytes_from_path;
 use edenfs_utils::get_executable;
 #[cfg(windows)]
 use edenfs_utils::strip_unc_prefix;
-#[cfg(fbcode_build)]
-use fbinit::expect_init;
 use futures::stream::BoxStream;
 use futures::StreamExt;
 #[cfg(fbcode_build)]
 use thrift_streaming_clients::errors::StreamStartStatusError;
 use thrift_streaming_clients::errors::SubscribeStreamTemporaryError;
-#[cfg(fbcode_build)]
-use thrift_streaming_thriftclients::build_StreamingEdenService_client;
-#[cfg(fbcode_build)]
-use thrift_thriftclients::make_EdenServiceExt_thriftclient;
 #[cfg(fbcode_build)]
 use thrift_types::edenfs::DaemonInfo;
 use thrift_types::edenfs::GetConfigParams;
@@ -52,10 +46,6 @@ use thrift_types::edenfs::UnmountArgument;
 use thrift_types::edenfs_clients::errors::UnmountV2Error;
 use thrift_types::fb303_core::fb303_status;
 use thrift_types::fbthrift::ApplicationExceptionErrorCode;
-#[cfg(fbcode_build)]
-use thriftclient::ThriftChannelBuilder;
-#[cfg(fbcode_build)]
-use thriftclient::TransportType;
 use tokio::time;
 use tracing::event;
 use tracing::Level;
@@ -69,8 +59,6 @@ use crate::utils::get_mount_point;
 use crate::EdenFsThriftClient;
 #[cfg(fbcode_build)]
 use crate::StartStatusStream;
-#[cfg(fbcode_build)]
-use crate::StreamingEdenFsThriftClient;
 
 // We should create a single EdenFsInstance when parsing EdenFs commands and utilize
 // EdenFsInstance::global() whenever we need to access it. This way we can avoid passing an
@@ -153,64 +141,7 @@ impl EdenFsInstance {
         StreamingEdenFsClient::new(self, timeout).await
     }
 
-    async fn _connect(&self, socket_path: &PathBuf) -> Result<EdenFsThriftClient> {
-        const THRIFT_TIMEOUT_MS: u32 = 120_000;
-        let client = make_EdenServiceExt_thriftclient!(
-            expect_init(),
-            protocol = CompactProtocol,
-            from_path = socket_path,
-            with_conn_timeout = THRIFT_TIMEOUT_MS,
-            with_recv_timeout = THRIFT_TIMEOUT_MS,
-            with_secure = false,
-        )?;
-        Ok(client)
-    }
-
-    pub async fn connect(&self, timeout: Option<Duration>) -> Result<EdenFsThriftClient> {
-        let socket_path = self.config_dir.join("socket");
-
-        let connect = self._connect(&socket_path);
-        if let Some(timeout) = timeout {
-            tokio::time::timeout(timeout, connect)
-                .await
-                .with_context(|| "Unable to connect to EdenFS daemon")
-                .map_err(|_| EdenFsError::ThriftConnectionTimeout(socket_path))?
-        } else {
-            connect.await.map_err(|err| EdenFsError::Other(err.into()))
-        }
-    }
-
-    #[cfg(fbcode_build)]
-    pub async fn _connect_streaming(
-        &self,
-        socket_path: &PathBuf,
-    ) -> Result<StreamingEdenFsThriftClient> {
-        let client = build_StreamingEdenService_client(
-            ThriftChannelBuilder::from_path(expect_init(), socket_path)?
-                .with_transport_type(TransportType::Rocket)
-                .with_secure(false),
-        )?;
-        Ok(client)
-    }
-
-    #[cfg(fbcode_build)]
-    pub async fn connect_streaming(
-        &self,
-        timeout: Option<Duration>,
-    ) -> Result<StreamingEdenFsThriftClient> {
-        let socket_path = self.config_dir.join("socket");
-        let client = self._connect_streaming(&socket_path);
-
-        if let Some(timeout) = timeout {
-            tokio::time::timeout(timeout, client)
-                .await
-                .map_err(|_| EdenFsError::ThriftConnectionTimeout(socket_path))?
-        } else {
-            client.await
-        }
-    }
-
-    fn socketfile(&self) -> PathBuf {
+    pub(crate) fn socketfile(&self) -> PathBuf {
         self.config_dir.join("socket")
     }
 
@@ -296,9 +227,11 @@ impl EdenFsInstance {
 
     pub async fn get_health(&self, timeout: Option<Duration>) -> Result<DaemonInfo> {
         let client = self
-            .connect(timeout.or_else(|| Some(Duration::from_secs(3))))
+            .get_client(timeout.or_else(|| Some(Duration::from_secs(3))))
             .await
             .context("Unable to connect to EdenFS daemon")?;
+        let client = client.get_thrift_client();
+
         event!(Level::DEBUG, "connected to EdenFS daemon");
         client.getDaemonInfo().await.from_err()
     }
@@ -309,9 +242,11 @@ impl EdenFsInstance {
         timeout: Duration,
     ) -> Result<(DaemonInfo, StartStatusStream)> {
         let client = self
-            .connect_streaming(Some(timeout))
+            .get_streaming_client(Some(timeout))
             .await
             .context("Unable to connect to EdenFS daemon")?;
+        let client = client.get_thrift_client();
+
         let result = client.streamStartStatus().await;
         match result {
             Err(StreamStartStatusError::ApplicationException(e))
@@ -335,9 +270,10 @@ impl EdenFsInstance {
     > {
         let mount_point_vec = bytes_from_path(get_mount_point(mount_point)?)?;
         let stream_client = self
-            .connect_streaming(None)
+            .get_streaming_client(None)
             .await
             .with_context(|| anyhow!("unable to establish Thrift connection to EdenFS server"))?;
+        let stream_client = stream_client.get_thrift_client();
 
         stream_client
             .streamJournalChanged(&mount_point_vec)
@@ -559,7 +495,8 @@ impl EdenFsInstance {
     }
 
     pub async fn unmount(&self, path: &Path, no_force: bool) -> Result<()> {
-        let client = self.connect(None).await?;
+        let client = self.get_client(None).await?;
+        let client = client.get_thrift_client();
 
         let encoded_path = bytes_from_path(path.to_path_buf())
             .with_context(|| format!("Failed to encode path {}", path.display()))?;
@@ -605,7 +542,8 @@ impl EdenFsInstance {
         &self,
         mount_point: PathBuf,
     ) -> Result<thrift_types::edenfs::GetCurrentSnapshotInfoResponse> {
-        let client = self.connect(None).await?;
+        let client = self.get_client(None).await?;
+        let client = client.get_thrift_client();
         let mount_point = bytes_from_path(mount_point)?;
         let snapshot_info_params = GetCurrentSnapshotInfoRequest {
             mountId: MountId {
@@ -629,7 +567,9 @@ impl EdenFsInstance {
         list_ignored: bool,
         root_id_options: Option<thrift_types::edenfs::RootIdOptions>,
     ) -> Result<thrift_types::edenfs::GetScmStatusResult> {
-        let client = self.connect(None).await?;
+        let client = self.get_client(None).await?;
+        let client = client.get_thrift_client();
+
         client
             .getScmStatusV2(&GetScmStatusParams {
                 mountPoint: bytes_from_path(mount_point)?,
@@ -654,7 +594,9 @@ impl EdenFsInstance {
         background: bool,
         list_only_files: bool,
     ) -> Result<thrift_types::edenfs::Glob> {
-        let client = self.connect(None).await?;
+        let client = self.get_client(None).await?;
+        let client = client.get_thrift_client();
+
         client
             .globFiles(&GlobParams {
                 mountPoint: bytes_from_path(mount_point.as_ref().to_path_buf())?,
@@ -693,7 +635,9 @@ impl EdenFsInstance {
         let target_path = bytes_from_path(target_path.to_path_buf())
             .with_context(|| format!("Failed to get target '{}' as str", target_path.display()))?;
 
-        let client = self.connect(None).await?;
+        let client = self.get_client(None).await?;
+        let client = client.get_thrift_client();
+
         client
             .addBindMount(&mount_path, &repo_path, &target_path)
             .await
@@ -715,7 +659,9 @@ impl EdenFsInstance {
             format!("Failed to get repo point '{}' as str", repo_path.display())
         })?;
 
-        let client = self.connect(None).await?;
+        let client = self.get_client(None).await?;
+        let client = client.get_thrift_client();
+
         client
             .removeBindMount(&mount_path, &repo_path)
             .await
@@ -726,9 +672,10 @@ impl EdenFsInstance {
 
     pub async fn get_config_default(&self) -> Result<thrift_types::edenfs_config::EdenConfigData> {
         let client = self
-            .connect(None)
+            .get_client(None)
             .await
             .with_context(|| "Unable to connect to EdenFS daemon")?;
+        let client = client.get_thrift_client();
 
         let params: GetConfigParams = Default::default();
         client
@@ -740,7 +687,9 @@ impl EdenFsInstance {
     pub async fn stop_recording_backing_store_fetch(
         &self,
     ) -> Result<thrift_types::edenfs::GetFetchedFilesResult> {
-        let client = self.connect(None).await?;
+        let client = self.get_client(None).await?;
+        let client = client.get_thrift_client();
+
         let files = client
             .stopRecordingBackingStoreFetch()
             .await
@@ -749,7 +698,9 @@ impl EdenFsInstance {
     }
 
     pub async fn start_recording_backing_store_fetch(&self) -> Result<()> {
-        let client = self.connect(None).await?;
+        let client = self.get_client(None).await?;
+        let client = client.get_thrift_client();
+
         client
             .startRecordingBackingStoreFetch()
             .await
@@ -758,7 +709,9 @@ impl EdenFsInstance {
     }
 
     pub async fn debug_clear_local_store_caches(&self) -> Result<()> {
-        let client = self.connect(None).await?;
+        let client = self.get_client(None).await?;
+        let client = client.get_thrift_client();
+
         client
             .debugClearLocalStoreCaches()
             .await
@@ -766,7 +719,9 @@ impl EdenFsInstance {
     }
 
     pub async fn debug_compact_local_storage(&self) -> Result<()> {
-        let client = self.connect(None).await?;
+        let client = self.get_client(None).await?;
+        let client = client.get_thrift_client();
+
         client
             .debugCompactLocalStorage()
             .await
@@ -774,18 +729,16 @@ impl EdenFsInstance {
     }
 
     pub async fn clear_and_compact_local_store(&self) -> Result<()> {
-        let client = self.connect(None).await?;
+        let client = self.get_client(None).await?;
+        let client = client.get_thrift_client();
+
         client
             .clearAndCompactLocalStore()
             .await
             .map_err(|_| EdenFsError::Other(anyhow!("failed to call clearAndCompactLocalStore")))
     }
 
-    pub async fn flush_stats_now(&self, client: Option<&EdenFsThriftClient>) -> Result<()> {
-        let client = match client {
-            Some(client) => client,
-            None => &self.connect(None).await?,
-        };
+    pub async fn flush_stats_now(&self, client: &EdenFsThriftClient) -> Result<()> {
         client
             .flushStatsNow()
             .await
@@ -795,13 +748,8 @@ impl EdenFsInstance {
     pub async fn get_regex_counters(
         &self,
         arg_regex: &str,
-        client: Option<&EdenFsThriftClient>,
+        client: &EdenFsThriftClient,
     ) -> Result<BTreeMap<String, i64>> {
-        let client = match client {
-            Some(client) => client,
-            None => &self.connect(None).await?,
-        };
-
         client
             .getRegexCounters(arg_regex)
             .await
@@ -815,7 +763,9 @@ impl EdenFsInstance {
         specified_output_file: Option<PathBuf>,
         should_upload: bool,
     ) -> Result<thrift_types::edenfs::StartFileAccessMonitorResult> {
-        let client = self.connect(None).await?;
+        let client = self.get_client(None).await?;
+        let client = client.get_thrift_client();
+
         let mut paths = Vec::new();
         for path in path_prefix {
             let path = bytes_from_path(path.to_path_buf())?;
@@ -839,7 +789,9 @@ impl EdenFsInstance {
     pub async fn stop_file_access_monitor(
         &self,
     ) -> Result<thrift_types::edenfs::StopFileAccessMonitorResult> {
-        let client = self.connect(None).await?;
+        let client = self.get_client(None).await?;
+        let client = client.get_thrift_client();
+
         client
             .stopFileAccessMonitor()
             .await

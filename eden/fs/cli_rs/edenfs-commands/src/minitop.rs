@@ -265,7 +265,7 @@ async fn get_pending_import_counts(
     let mut imports = BTreeMap::<String, ImportStat>::new();
 
     let counters = EdenFsInstance::global()
-        .get_regex_counters(PENDING_COUNTER_REGEX, Some(client))
+        .get_regex_counters(PENDING_COUNTER_REGEX, client)
         .await?;
     for import_type in IMPORT_OBJECT_TYPES {
         let counter_prefix = format!("store.sapling.pending_import.{}", import_type);
@@ -293,7 +293,7 @@ async fn get_live_import_counts(
 ) -> Result<BTreeMap<String, ImportStat>> {
     let mut imports = BTreeMap::<String, ImportStat>::new();
     let counters = EdenFsInstance::global()
-        .get_regex_counters(LIVE_COUNTER_REGEX, Some(client))
+        .get_regex_counters(LIVE_COUNTER_REGEX, client)
         .await?;
     for import_type in IMPORT_OBJECT_TYPES {
         let single_prefix = format!("store.sapling.live_import.{}", import_type);
@@ -420,7 +420,8 @@ impl Cursor {
 #[async_trait]
 impl crate::Subcommand for MinitopCmd {
     async fn run(&self) -> Result<ExitCode> {
-        let client = EdenFsInstance::global().connect(None).await?;
+        let client = EdenFsInstance::global().get_client(None).await?;
+        let client = client.get_thrift_client();
         let mut tracked_processes = TrackedProcesses::new();
 
         let mut system = System::new();
@@ -442,16 +443,14 @@ impl crate::Subcommand for MinitopCmd {
             if self.interactive {
                 queue!(stdout, terminal::Clear(terminal::ClearType::All))?;
             }
-            EdenFsInstance::global()
-                .flush_stats_now(Some(&client))
-                .await?;
+            EdenFsInstance::global().flush_stats_now(client).await?;
             system.refresh_processes();
             cursor.refresh_terminal_size()?;
 
             // Update pending imports summary stats
             let (pending_imports, live_imports) = tokio::try_join!(
-                get_pending_import_counts(&client),
-                get_live_import_counts(&client)
+                get_pending_import_counts(client),
+                get_live_import_counts(client)
             )?;
 
             // Update currently tracked processes (and add new ones if they haven't been tracked yet)

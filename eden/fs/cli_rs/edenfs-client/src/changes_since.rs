@@ -515,7 +515,7 @@ impl EdenFsClient {
         excluded_roots: &Option<Vec<PathBuf>>,
         excluded_suffixes: &Option<Vec<String>>,
         include_vcs_roots: bool,
-        timeout: Option<Duration>,
+        _timeout: Option<Duration>,
     ) -> Result<ChangesSinceV2Result> {
         // Temporary code to prefix from roots - will be removed when implemented in daemon
         let included_roots = prefix_paths(root, included_roots, |p| {
