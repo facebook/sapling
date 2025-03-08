@@ -62,9 +62,9 @@ use tracing::event;
 use tracing::Level;
 use util::lock::PathLock;
 
+use crate::journal_position::JournalPosition;
 use crate::types::ChangeNotification;
 use crate::types::ChangesSinceV2Result;
-use crate::types::JournalPosition;
 use crate::types::LargeChangeNotification;
 use crate::types::SmallChangeNotification;
 use crate::utils::get_mount_point;
@@ -310,21 +310,6 @@ impl EdenFsInstance {
             }
             r => r.from_err(),
         }
-    }
-
-    pub async fn get_journal_position(
-        &self,
-        mount_point: &Option<PathBuf>,
-        timeout: Option<Duration>,
-    ) -> Result<crate::types::JournalPosition> {
-        let client = self.get_connected_thrift_client(timeout).await?;
-        let mount_point_path = get_mount_point(mount_point)?;
-        let mount_point = bytes_from_path(mount_point_path)?;
-        client
-            .getCurrentJournalPosition(&mount_point)
-            .await
-            .map(|p| p.into())
-            .from_err()
     }
 
     #[cfg(fbcode_build)]

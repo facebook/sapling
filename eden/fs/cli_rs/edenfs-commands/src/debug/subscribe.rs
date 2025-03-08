@@ -12,8 +12,8 @@ use std::path::PathBuf;
 use anyhow::Result;
 use async_trait::async_trait;
 use clap::Parser;
+use edenfs_client::journal_position::JournalPosition;
 use edenfs_client::types::ChangesSinceV2Result;
-use edenfs_client::types::JournalPosition;
 use edenfs_client::utils::get_mount_point;
 use edenfs_client::EdenFsInstance;
 use edenfs_error::EdenFsError;
@@ -29,6 +29,7 @@ mod fmt {
     use std::fmt;
     use std::fmt::Debug;
 
+    use edenfs_client::journal_position::JournalPosition;
     use edenfs_client::types::ChangesSinceV2Result;
     use thrift_types::edenfs as edenfs_thrift;
 
@@ -53,7 +54,7 @@ mod fmt {
         Fmt(move |f| write!(f, "{}", hex::encode(hash)))
     }
 
-    fn debug_position(position: &edenfs_client::types::JournalPosition) -> impl Debug + '_ {
+    fn debug_position(position: &JournalPosition) -> impl Debug + '_ {
         Fmt(|f| {
             f.debug_struct("JournalPosition")
                 .field("mountGeneration", &position.mount_generation)

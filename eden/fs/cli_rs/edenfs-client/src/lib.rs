@@ -22,6 +22,7 @@ use thriftclient::ThriftChannel;
 pub mod checkout;
 pub mod fsutil;
 pub mod instance;
+pub mod journal_position;
 mod mounttable;
 pub mod redirect;
 pub mod sapling;
