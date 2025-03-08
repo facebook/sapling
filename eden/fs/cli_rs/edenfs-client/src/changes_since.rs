@@ -6,11 +6,21 @@
  */
 
 use std::fmt;
+use std::path::PathBuf;
+use std::time::Duration;
 
+use edenfs_error::Result;
+use edenfs_error::ResultExt;
+use edenfs_utils::bytes_from_path;
 use edenfs_utils::path_from_bytes;
 use serde::Serialize;
+use thrift_types::edenfs::ChangesSinceV2Params;
 
+use crate::client::EdenFsClient;
 use crate::journal_position::JournalPosition;
+use crate::utils::get_mount_point;
+use crate::utils::prefix_paths;
+use crate::utils::strip_prefix_from_bytes;
 
 #[derive(Debug, PartialEq, Serialize)]
 pub struct Dtype(pub i32);
@@ -467,5 +477,103 @@ impl From<thrift_types::edenfs::ChangesSinceV2Result> for ChangesSinceV2Result {
             to_position: from.toPosition.into(),
             changes: from.changes.into_iter().map(|c| c.into()).collect(),
         }
+    }
+}
+
+impl EdenFsClient {
+    #[cfg(fbcode_build)]
+    pub async fn get_changes_since_with_includes(
+        &self,
+        mount_point: &Option<PathBuf>,
+        from_position: &JournalPosition,
+        root: &Option<PathBuf>,
+        included_roots: &Option<Vec<PathBuf>>,
+        included_suffixes: &Option<Vec<String>>,
+    ) -> Result<ChangesSinceV2Result> {
+        self.get_changes_since(
+            mount_point,
+            from_position,
+            root,
+            included_roots,
+            included_suffixes,
+            &None,
+            &None,
+            false,
+            None,
+        )
+        .await
+    }
+
+    #[cfg(fbcode_build)]
+    pub async fn get_changes_since(
+        &self,
+        mount_point: &Option<PathBuf>,
+        from_position: &JournalPosition,
+        root: &Option<PathBuf>,
+        included_roots: &Option<Vec<PathBuf>>,
+        included_suffixes: &Option<Vec<String>>,
+        excluded_roots: &Option<Vec<PathBuf>>,
+        excluded_suffixes: &Option<Vec<String>>,
+        include_vcs_roots: bool,
+        timeout: Option<Duration>,
+    ) -> Result<ChangesSinceV2Result> {
+        // Temporary code to prefix from roots - will be removed when implemented in daemon
+        let included_roots = prefix_paths(root, included_roots, |p| {
+            bytes_from_path(p).expect("Failed to convert path to bytes")
+        })
+        .or_else(|| {
+            root.clone()
+                .map(|r| vec![bytes_from_path(r).expect("Failed to convert path to bytes")])
+        });
+        let excluded_roots = prefix_paths(root, excluded_roots, |p| {
+            bytes_from_path(p).expect("Failed to convert path to bytes")
+        });
+
+        let params = ChangesSinceV2Params {
+            mountPoint: bytes_from_path(get_mount_point(mount_point)?)?,
+            fromPosition: from_position.clone().into(),
+            includeVCSRoots: Some(include_vcs_roots),
+            includedRoots: included_roots,
+            includedSuffixes: included_suffixes.clone(),
+            excludedRoots: excluded_roots,
+            excludedSuffixes: excluded_suffixes.clone(),
+            ..Default::default()
+        };
+        let mut result: ChangesSinceV2Result = self
+            .client
+            .changesSinceV2(&params)
+            .await
+            .map(|r| r.into())
+            .from_err()?;
+        // Temporary code to strip prefix from paths - will be removed when implemented in daemon
+        if root.is_some() {
+            result.changes.iter_mut().for_each(|c| match c {
+                ChangeNotification::LargeChange(LargeChangeNotification::DirectoryRenamed(
+                    ref mut d,
+                )) => {
+                    d.from = strip_prefix_from_bytes(root, &d.from);
+                    d.to = strip_prefix_from_bytes(root, &d.to);
+                }
+                ChangeNotification::SmallChange(SmallChangeNotification::Added(a)) => {
+                    a.path = strip_prefix_from_bytes(root, &a.path);
+                }
+                ChangeNotification::SmallChange(SmallChangeNotification::Modified(m)) => {
+                    m.path = strip_prefix_from_bytes(root, &m.path);
+                }
+                ChangeNotification::SmallChange(SmallChangeNotification::Removed(r)) => {
+                    r.path = strip_prefix_from_bytes(root, &r.path);
+                }
+                ChangeNotification::SmallChange(SmallChangeNotification::Renamed(r)) => {
+                    r.from = strip_prefix_from_bytes(root, &r.from);
+                    r.to = strip_prefix_from_bytes(root, &r.to);
+                }
+                ChangeNotification::SmallChange(SmallChangeNotification::Replaced(r)) => {
+                    r.from = strip_prefix_from_bytes(root, &r.from);
+                    r.to = strip_prefix_from_bytes(root, &r.to);
+                }
+                _ => {}
+            });
+        }
+        Ok(result)
     }
 }

@@ -12,8 +12,8 @@ use std::path::PathBuf;
 use anyhow::Result;
 use async_trait::async_trait;
 use clap::Parser;
+use edenfs_client::changes_since::ChangesSinceV2Result;
 use edenfs_client::journal_position::JournalPosition;
-use edenfs_client::types::ChangesSinceV2Result;
 use edenfs_client::utils::get_mount_point;
 use edenfs_client::EdenFsInstance;
 use edenfs_error::EdenFsError;
@@ -29,8 +29,9 @@ mod fmt {
     use std::fmt;
     use std::fmt::Debug;
 
+    use edenfs_client::changes_since::ChangeNotification;
+    use edenfs_client::changes_since::ChangesSinceV2Result;
     use edenfs_client::journal_position::JournalPosition;
-    use edenfs_client::types::ChangesSinceV2Result;
     use thrift_types::edenfs as edenfs_thrift;
 
     /// Courtesy of https://users.rust-lang.org/t/reusing-an-fmt-formatter/8531/4
@@ -64,9 +65,7 @@ mod fmt {
         })
     }
 
-    pub fn debug_change_notification(
-        notification: &edenfs_client::types::ChangeNotification,
-    ) -> impl Debug + '_ {
+    pub fn debug_change_notification(notification: &ChangeNotification) -> impl Debug + '_ {
         let notification_str = notification.to_string();
         Fmt(move |f| write!(f, "{}", notification_str))
     }

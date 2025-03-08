@@ -12,8 +12,8 @@ use std::path::PathBuf;
 use anyhow::Result;
 use async_trait::async_trait;
 use clap::Parser;
+use edenfs_client::changes_since::ChangesSinceV2Result;
 use edenfs_client::journal_position::JournalPosition;
-use edenfs_client::types::ChangesSinceV2Result;
 use edenfs_client::EdenFsInstance;
 use edenfs_error::EdenFsError;
 use edenfs_error::ResultExt;
@@ -111,7 +111,7 @@ impl crate::Subcommand for ChangesSinceCmd {
             .position
             .clone()
             .unwrap_or(client.get_journal_position(&self.mount_point).await?);
-        let result = instance
+        let result = client
             .get_changes_since(
                 &self.mount_point,
                 &position,
