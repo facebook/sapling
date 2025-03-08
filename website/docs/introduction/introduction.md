@@ -23,7 +23,7 @@ The easiest way to understand the basic usage of Sapling is to see it in action.
 ```sl-shell-example
 # Clones the repository into the sapling directory.
 # For git support, it uses git under the hood for clone/push/pull.
-$ sl clone --git https://github.com/facebookexperimental/sapling
+$ sl clone --git https://github.com/facebook/sapling
 remote: Enumerating objects: 639488, done.
 ...
 $ cd sapling
