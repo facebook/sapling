@@ -88,9 +88,12 @@ class InodeBase {
    * This is generally intended for use by FUSE APIs that return an inode
    * number to the kernel: lookup(), create(), mkdir(), symlink(), link(), or
    * by ProjectedFS APIs that write a placeholder to disk.
+   * On Windows and macOS, we treat the fs refcount as a flag to be 0 or 1.
+   * We should revisit this behavior on macOS if we migrate to a FSChannel
+   * implementation that sends us FORGET calls
    */
   void incFsRefcount(uint32_t count = 1) {
-    if (!folly::kIsWindows) {
+    if (folly::kIsLinux) {
       numFsReferences_.fetch_add(count, std::memory_order_acq_rel);
     } else {
       XDCHECK_EQ(count, 1u);
@@ -104,9 +107,12 @@ class InodeBase {
    * This should be used to release inode number references obtained via
    * incFsRefcount().  The primary use case is for FUSE forget() calls, or
    * when a ProjectedFS placeholder is manually invalidated.
+   * On Windows and macOS, we treat the fs refcount as a flag to be 0 or 1.
+   * We should revisit this behavior on macOS if we migrate to a FSChannel
+   * implementation that sends us FORGET calls
    */
   void decFsRefcount(uint32_t count = 1) {
-    if (!folly::kIsWindows) {
+    if (folly::kIsLinux) {
       auto prevValue =
           numFsReferences_.fetch_sub(count, std::memory_order_acq_rel);
       XDCHECK_GE(prevValue, count);
