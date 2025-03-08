@@ -51,6 +51,8 @@ use slog::Logger;
 use url::Url;
 mod util;
 
+use crate::scuba;
+
 const MAX_RETRIES: usize = 3;
 
 pub struct EdenapiSender {
@@ -140,7 +142,7 @@ impl EdenapiSender {
             .map(|e| e.data.id)
             .collect::<Vec<_>>();
 
-        util::log_stats_to_scuba(
+        scuba::log_edenapi_stats(
             ctx.scuba().clone(),
             &response.stats.await?,
             paths::UPLOAD_FILE,
@@ -186,7 +188,7 @@ impl EdenapiSender {
             .map(|e| e.token.data.id)
             .collect::<Vec<_>>();
 
-        util::log_stats_to_scuba(
+        scuba::log_edenapi_stats(
             self.ctx.scuba().clone(),
             &res.stats.await?,
             paths::UPLOAD_TREES,
@@ -230,7 +232,7 @@ impl EdenapiSender {
             .map(|e| e.token.data.id)
             .collect::<Vec<_>>();
 
-        util::log_stats_to_scuba(
+        scuba::log_edenapi_stats(
             self.ctx.scuba().clone(),
             &res.stats.await?,
             paths::UPLOAD_FILENODES,
@@ -298,7 +300,7 @@ impl EdenapiSender {
             .map(|r| r.token.data.id)
             .collect::<Vec<_>>();
 
-        util::log_stats_to_scuba(
+        scuba::log_edenapi_stats(
             self.ctx.scuba().clone(),
             &res.stats.await?,
             paths::UPLOAD_IDENTICAL_CHANGESET,

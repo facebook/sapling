@@ -9,6 +9,8 @@ use std::sync::Arc;
 
 use bookmarks::BookmarkUpdateLogEntry;
 use context::CoreContext;
+use edenapi_types::AnyId;
+use http_client::Stats;
 use metadata::Metadata;
 use mononoke_app::MononokeApp;
 use mononoke_types::ChangesetId;
@@ -151,4 +153,42 @@ fn add_changeset(
 ) {
     scuba_sample.add("bookmark_name", bookmark_name);
     scuba_sample.add("changeset_id", format!("{}", changeset_id.to_hex()));
+}
+
+pub(crate) fn log_edenapi_stats(
+    mut scuba: MononokeScubaSampleBuilder,
+    stats: &Stats,
+    endpoint: &str,
+    contents: Vec<AnyId>,
+) {
+    let mut contents = contents
+        .iter()
+        .map(|id| format!("{:?}", id))
+        .collect::<Vec<_>>();
+    contents.sort();
+
+    scuba.add("log_tag", "EdenAPI stats");
+    scuba.add("contents", contents);
+    scuba.add("endpoint", endpoint);
+    scuba.add("requests", stats.requests);
+    // Bytes
+    scuba.add("downloaded_bytes", stats.downloaded);
+    scuba.add("uploaded_bytes", stats.uploaded);
+    // Milliseconds
+    scuba.add(
+        "elapsed",
+        u64::try_from(stats.time.as_millis()).unwrap_or(u64::MAX),
+    );
+    // Milliseconds
+    scuba.add(
+        "latency",
+        u64::try_from(stats.latency.as_millis()).unwrap_or(u64::MAX),
+    );
+    // Compute the speed in MB/s
+    let time = stats.time.as_millis() as f64 / 1000.0;
+    let size = stats.downloaded as f64 / 1024.0 / 1024.0;
+    scuba.add("download_speed", format!("{:.2}", size / time).as_str());
+    let size = stats.uploaded as f64 / 1024.0 / 1024.0;
+    scuba.add("upload_speed", format!("{:.2}", size / time).as_str());
+    scuba.log();
 }

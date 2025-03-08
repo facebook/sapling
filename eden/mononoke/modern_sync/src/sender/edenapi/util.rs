@@ -27,7 +27,6 @@ use edenapi_types::RepoPathBuf;
 use edenapi_types::UploadToken;
 use edenapi_types::UploadTokenMetadata;
 use edenapi_types::UploadTreeEntry;
-use http_client::Stats;
 use mercurial_types::blobs::HgBlobChangeset;
 use mercurial_types::fetch_manifest_envelope;
 use mercurial_types::HgFileNodeId;
@@ -38,7 +37,6 @@ use mononoke_types::ChangesetId;
 use mononoke_types::FileChange;
 use mononoke_types::NonRootMPath;
 use repo_blobstore::RepoBlobstore;
-use scuba_ext::MononokeScubaSampleBuilder;
 use sorted_vector_map::SortedVectorMap;
 
 pub async fn from_tree_to_entry(
@@ -215,40 +213,4 @@ fn to_file_change(
         })
         .collect::<Result<Vec<(RepoPathBuf, BonsaiFileChange)>, Error>>()?;
     Ok(res)
-}
-
-pub(crate) fn log_stats_to_scuba(
-    mut scuba: MononokeScubaSampleBuilder,
-    stats: &Stats,
-    endpoint: &str,
-    contents: Vec<AnyId>,
-) {
-    let contents = contents
-        .iter()
-        .map(|id| format!("{:?}", id))
-        .collect::<Vec<_>>();
-
-    scuba.add("contents", contents);
-    scuba.add("endpoint", endpoint);
-    scuba.add("requests", stats.requests);
-    // Bytes
-    scuba.add("downloaded_bytes", stats.downloaded);
-    scuba.add("uploaded_bytes", stats.uploaded);
-    // Milliseconds
-    scuba.add(
-        "time",
-        u64::try_from(stats.time.as_millis()).unwrap_or(u64::MAX),
-    );
-    // Milliseconds
-    scuba.add(
-        "latency",
-        u64::try_from(stats.latency.as_millis()).unwrap_or(u64::MAX),
-    );
-    // Compute the speed in MB/s
-    let time = stats.time.as_millis() as f64 / 1000.0;
-    let size = stats.downloaded as f64 / 1024.0 / 1024.0;
-    scuba.add("download_speed", format!("{:.2}", size / time).as_str());
-    let size = stats.uploaded as f64 / 1024.0 / 1024.0;
-    scuba.add("upload_speed", format!("{:.2}", size / time).as_str());
-    scuba.log();
 }

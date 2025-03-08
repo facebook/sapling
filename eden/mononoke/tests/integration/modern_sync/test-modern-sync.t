@@ -67,7 +67,7 @@ Sync all bookmarks moves
 
   $ mononoke_admin mutable-counters --repo-name orig get modern_sync
   Some(2)
-  $ cat  $TESTTMP/modern_sync_scuba_logs | summarize_scuba_json 'Start sync process' .normal.log_tag .normal.repo .normal.run_id .int.start_id 2>&1 | grep -v 'null (null) cannot be matched'
+  $ cat  $TESTTMP/modern_sync_scuba_logs | summarize_scuba_json 'Start sync process' .normal.log_tag .normal.repo .normal.run_id .int.start_id
   {
     "log_tag": "Start sync process",
     "repo": "orig",
@@ -77,8 +77,7 @@ Sync all bookmarks moves
   $ cat  $TESTTMP/modern_sync_scuba_logs | summarize_scuba_json '(Start|Done|Error) processing bookmark update entry' \
   > .normal.log_tag .normal.repo .normal.run_id \
   > .normal.bookmark_entry_bookmark_name .normal.bookmark_entry_from_changeset_id .normal.bookmark_entry_to_changeset_id .normal.bookmark_entry_reason \
-  > .int.bookmark_entry_id .int.bookmark_entry_timestamp .int.bookmark_entry_commits_count .int.elapsed \
-  > 2>&1 | grep -v 'null (null) cannot be matched'
+  > .int.bookmark_entry_id .int.bookmark_entry_timestamp .int.bookmark_entry_commits_count .int.elapsed
   {
     "bookmark_entry_bookmark_name": "master_bookmark",
     "bookmark_entry_commits_count": 1,
@@ -128,8 +127,7 @@ Sync all bookmarks moves
   $ cat  $TESTTMP/modern_sync_scuba_logs | summarize_scuba_json '(Start|Done|Error) processing changeset' \
   > .normal.log_tag .normal.repo \
   > .normal.bookmark_name .normal.changeset_id \
-  > .int.elapsed \
-  > 2>&1 | grep -v 'null (null) cannot be matched'
+  > .int.elapsed
   {
     "bookmark_name": "master_bookmark",
     "changeset_id": "53b034a90fe3002a707a7da9cdf6eac3dea460ad72f7c6969dfb88fd0e69f856",
