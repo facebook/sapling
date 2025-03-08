@@ -336,7 +336,9 @@ pub async fn process_bookmark_update_log_entry(
                         };
 
                         async move {
-                            process_one_changeset(
+                            let now = std::time::Instant::now();
+
+                            match process_one_changeset(
                                 &cs_id,
                                 &ctx,
                                 repo,
@@ -347,6 +349,27 @@ pub async fn process_bookmark_update_log_entry(
                                 channel,
                             )
                             .await
+                            {
+                                Ok(res) => {
+                                    let _ = scuba::log_changeset_done(
+                                        &ctx,
+                                        bookmark_name.as_str(),
+                                        &cs_id,
+                                        now.elapsed(),
+                                    );
+                                    Ok(res)
+                                }
+                                Err(e) => {
+                                    let _ = scuba::log_changeset_error(
+                                        &ctx,
+                                        bookmark_name.as_str(),
+                                        &cs_id,
+                                        &e,
+                                        now.elapsed(),
+                                    );
+                                    Err(e)
+                                }
+                            }
                         }
                     })
                     .await?;
@@ -414,6 +437,8 @@ pub async fn process_one_changeset(
     bookmark_name: &str,
     changeset_ready: Option<mpsc::Sender<Result<()>>>,
 ) -> Result<()> {
+    scuba::log_changeset_start(ctx, bookmark_name, cs_id)?;
+
     let now = std::time::Instant::now();
 
     let cs_info = repo
