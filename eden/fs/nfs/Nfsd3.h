@@ -199,8 +199,16 @@ class Nfsd3 final : public FsChannel {
    * both the kernel and EdenFS are holding locks that would otherwise cause
    * EdenFS to deadlock. The completeInvalidations method below should be called
    * with all the locks released to wait for all the invalidation to complete.
+   *
+   * @param path the path to invalidate
+   * @param mode the mode to set. Use the previous mode to only invalidate.
+   * @param onSuccess a callback to run when the invalidation successfully
+   * completes
    */
-  void invalidate(AbsolutePath path, mode_t mode);
+  void invalidate(
+      AbsolutePath path,
+      mode_t mode,
+      std::function<void()> onSuccess = nullptr);
 
   bool takeoverStop() override;
 

@@ -2195,24 +2195,31 @@ folly::SemiFuture<folly::Unit> Nfsd3::unmount(UnmountOptions /* options */) {
   return privHelper_->nfsUnmount(mountPath_.view());
 }
 
-void Nfsd3::invalidate(AbsolutePath path, mode_t mode) {
-  invalidationExecutor_->add([path = std::move(path), mode]() {
-    XLOG(DBG9) << "Invalidating: " << path.c_str() << " mode: " << mode;
-    if (chmod(path.c_str(), mode) == 0) {
-      XLOG(DBG9) << "Finished invalidating: " << path.c_str();
-    } else if (errno == ENOENT) {
-      // ENOENT is expected after removing files.
-      XLOG(DBG9) << "Finished invalidating (no longer exists): "
-                 << path.c_str();
-    } else {
-      XLOGF(
-          DFATAL,
-          "Error invalidating path {} to mode {} using chmod: {}",
-          path,
-          mode,
-          folly::errnoStr(errno));
-    }
-  });
+void Nfsd3::invalidate(
+    AbsolutePath path,
+    mode_t mode,
+    std::function<void()> onSuccess) {
+  invalidationExecutor_->add(
+      [path = std::move(path), mode, onSuccess = std::move(onSuccess)]() {
+        XLOG(DBG9) << "Invalidating: " << path.c_str() << " mode: " << mode;
+        if (chmod(path.c_str(), mode) == 0) {
+          XLOG(DBG9) << "Finished invalidating: " << path.c_str();
+          if (onSuccess) {
+            onSuccess();
+          }
+        } else if (errno == ENOENT) {
+          // ENOENT is expected after removing files.
+          XLOG(DBG9) << "Finished invalidating (no longer exists): "
+                     << path.c_str();
+        } else {
+          XLOGF(
+              DFATAL,
+              "Error invalidating path {} to mode {} using chmod: {}",
+              path,
+              mode,
+              folly::errnoStr(errno));
+        }
+      });
 }
 
 uint32_t Nfsd3::getProgramNumber() {
