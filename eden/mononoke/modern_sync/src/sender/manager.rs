@@ -54,16 +54,16 @@ define_stats! {
 }
 
 // Channel sizes
-const CONTENT_CHANNEL_SIZE: usize = 8000;
-const FILES_CHANNEL_SIZE: usize = 10000;
-const TREES_CHANNEL_SIZE: usize = 10000;
-const CHANGESET_CHANNEL_SIZE: usize = 5000;
+const CONTENT_CHANNEL_SIZE: usize = 30000;
+const FILES_CHANNEL_SIZE: usize = 40000;
+const TREES_CHANNEL_SIZE: usize = 40000;
+const CHANGESET_CHANNEL_SIZE: usize = 15000;
 
 // Flush intervals
-const CHANGESETS_FLUSH_INTERVAL: Duration = Duration::from_secs(5);
-const TREES_FLUSH_INTERVAL: Duration = Duration::from_secs(3);
-const FILENODES_FLUSH_INTERVAL: Duration = Duration::from_secs(3);
-const CONTENTS_FLUSH_INTERVAL: Duration = Duration::from_secs(3);
+const CHANGESETS_FLUSH_INTERVAL: Duration = Duration::from_secs(3);
+const TREES_FLUSH_INTERVAL: Duration = Duration::from_secs(1);
+const FILENODES_FLUSH_INTERVAL: Duration = Duration::from_secs(1);
+const CONTENTS_FLUSH_INTERVAL: Duration = Duration::from_secs(1);
 
 // Batch sizes and limits
 const MAX_CHANGESET_BATCH_SIZE: usize = 10;
