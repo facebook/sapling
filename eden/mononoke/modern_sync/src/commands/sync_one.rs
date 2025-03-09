@@ -5,6 +5,7 @@
  * GNU General Public License version 2.
  */
 
+use std::path::PathBuf;
 use std::sync::Arc;
 
 use anyhow::bail;
@@ -94,7 +95,12 @@ pub async fn run(app: MononokeApp, args: CommandArgs) -> Result<()> {
         )
     };
 
-    let send_manager = SendManager::new(sender.clone(), logger.clone(), repo_name.clone());
+    let send_manager = SendManager::new(
+        sender.clone(),
+        logger.clone(),
+        repo_name.clone(),
+        PathBuf::from(""),
+    );
     let (cr_s, mut cr_r) = mpsc::channel::<Result<()>>(1);
 
     crate::sync::process_one_changeset(

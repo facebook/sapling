@@ -5,6 +5,7 @@
  * GNU General Public License version 2.
  */
 
+use std::path::PathBuf;
 use std::sync::Arc;
 
 use anyhow::Result;
@@ -42,6 +43,7 @@ pub async fn run(app: MononokeApp, args: CommandArgs) -> Result<()> {
         ExecutionType::SyncOnce,
         args.dry_run,
         args.chunk_size.clone().unwrap_or(CHUNK_SIZE_DEFAULT),
+        PathBuf::from(""),
     )
     .await?;
 

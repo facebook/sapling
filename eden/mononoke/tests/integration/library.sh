@@ -350,6 +350,7 @@ function mononoke_modern_sync {
     "${COMMON_ARGS[@]}" \
     --repo-name "$ORIG_REPO" \
     --dest-repo-name "$DEST_REPO" \
+    --exit-file "\exit_file" \
     --update-counters \
     --mononoke-config-path "$TESTTMP/mononoke-config" \
     --dest-socket $MONONOKE_SOCKET \

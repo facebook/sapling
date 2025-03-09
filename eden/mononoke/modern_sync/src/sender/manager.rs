@@ -6,6 +6,10 @@
  */
 
 use std::collections::VecDeque;
+use std::fs;
+use std::path::PathBuf;
+use std::sync::atomic::AtomicBool;
+use std::sync::atomic::Ordering;
 use std::sync::Arc;
 use std::time::Duration;
 
@@ -21,6 +25,7 @@ use mononoke_types::ContentId;
 use slog::debug;
 use slog::error;
 use slog::info;
+use slog::warn;
 use slog::Logger;
 use stats::define_stats;
 use stats::prelude::*;
@@ -112,7 +117,14 @@ pub enum ChangesetMessage {
 }
 
 impl SendManager {
-    pub fn new(external_sender: Arc<EdenapiSender>, logger: Logger, reponame: String) -> Self {
+    pub fn new(
+        external_sender: Arc<EdenapiSender>,
+        logger: Logger,
+        reponame: String,
+        exit_file: PathBuf,
+    ) -> Self {
+        let cancellation_requested = Arc::new(AtomicBool::new(false));
+
         // Create channel for receiving content
         let (content_sender, content_recv) = mpsc::channel(CONTENT_CHANNEL_SIZE);
         Self::spawn_content_sender(
@@ -120,6 +132,7 @@ impl SendManager {
             content_recv,
             external_sender.clone(),
             logger.clone(),
+            cancellation_requested.clone(),
         );
 
         // Create channel for receiving files
@@ -129,6 +142,7 @@ impl SendManager {
             files_recv,
             external_sender.clone(),
             logger.clone(),
+            cancellation_requested.clone(),
         );
 
         // Create channel for receiving trees
@@ -138,16 +152,30 @@ impl SendManager {
             trees_recv,
             external_sender.clone(),
             logger.clone(),
+            cancellation_requested.clone(),
         );
 
         // Create channel for receiving changesets
         let (changeset_sender, changeset_recv) = mpsc::channel(CHANGESET_CHANNEL_SIZE);
         Self::spawn_changeset_sender(
-            reponame.clone(),
+            reponame,
             changeset_recv,
-            external_sender.clone(),
+            external_sender,
             logger.clone(),
+            cancellation_requested.clone(),
         );
+
+        mononoke::spawn_task(async move {
+            let mut interval = tokio::time::interval(Duration::from_secs(5));
+            loop {
+                interval.tick().await;
+                if fs::metadata(exit_file.clone()).is_ok() {
+                    warn!(logger, "Exit file detected, stopping sync");
+                    cancellation_requested.store(true, Ordering::Relaxed);
+                    break;
+                }
+            }
+        });
 
         Self {
             content_sender,
@@ -162,6 +190,7 @@ impl SendManager {
         mut content_recv: mpsc::Receiver<ContentMessage>,
         content_es: Arc<EdenapiSender>,
         content_logger: Logger,
+        cancellation_requested: Arc<AtomicBool>,
     ) {
         mononoke::spawn_task(async move {
             let mut pending_messages = VecDeque::new();
@@ -169,7 +198,7 @@ impl SendManager {
             let mut current_batch_size = 0;
             let mut flush_timer = interval(CONTENTS_FLUSH_INTERVAL);
 
-            loop {
+            while !cancellation_requested.load(Ordering::Relaxed) {
                 tokio::select! {
                     msg = content_recv.recv() => {
                         debug!(content_logger, "Content channel capacity: {} max capacity: {} in queue: {}", content_recv.capacity(), CONTENT_CHANNEL_SIZE,  content_recv.len());
@@ -254,6 +283,7 @@ impl SendManager {
         mut filenodes_recv: mpsc::Receiver<FileMessage>,
         filenodes_es: Arc<EdenapiSender>,
         filenodes_logger: Logger,
+        cancellation_requested: Arc<AtomicBool>,
     ) {
         mononoke::spawn_task(async move {
             let mut encountered_error: Option<anyhow::Error> = None;
@@ -261,7 +291,7 @@ impl SendManager {
             let mut batch_done_senders = VecDeque::new();
             let mut timer = interval(FILENODES_FLUSH_INTERVAL);
 
-            loop {
+            while !cancellation_requested.load(Ordering::Relaxed) {
                 tokio::select! {
                     msg = filenodes_recv.recv() => {
                         match msg {
@@ -359,13 +389,14 @@ impl SendManager {
         mut trees_recv: mpsc::Receiver<TreeMessage>,
         trees_es: Arc<EdenapiSender>,
         trees_logger: Logger,
+        cancellation_requested: Arc<AtomicBool>,
     ) {
         mononoke::spawn_task(async move {
             let mut encountered_error: Option<anyhow::Error> = None;
             let mut batch_trees = Vec::new();
             let mut batch_done_senders = VecDeque::new();
             let mut timer = interval(TREES_FLUSH_INTERVAL);
-            loop {
+            while !cancellation_requested.load(Ordering::Relaxed) {
                 tokio::select! {
                     msg = trees_recv.recv() => {
                         debug!(trees_logger, "Trees channel capacity: {} max capacity: {} in queue: {}", trees_recv.capacity(), TREES_CHANNEL_SIZE,  trees_recv.len());
@@ -467,6 +498,7 @@ impl SendManager {
         mut changeset_recv: mpsc::Receiver<ChangesetMessage>,
         changeset_es: Arc<EdenapiSender>,
         changeset_logger: Logger,
+        cancellation_requested: Arc<AtomicBool>,
     ) {
         mononoke::spawn_task(async move {
             let mut encountered_error: Option<anyhow::Error> = None;
@@ -477,7 +509,7 @@ impl SendManager {
             let mut current_batch = Vec::new();
             let mut flush_timer = interval(CHANGESETS_FLUSH_INTERVAL);
 
-            loop {
+            while !cancellation_requested.load(Ordering::Relaxed) {
                 tokio::select! {
                     msg = changeset_recv.recv() => {
                         debug!(changeset_logger, "Changeset channel capacity: {} max capacity: {} in queue: {}", changeset_recv.capacity(), CHANGESET_CHANNEL_SIZE,  changeset_recv.len());

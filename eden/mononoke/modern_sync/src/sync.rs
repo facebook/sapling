@@ -5,6 +5,7 @@
  * GNU General Public License version 2.
  */
 
+use std::path::PathBuf;
 use std::sync::atomic::AtomicBool;
 use std::sync::atomic::Ordering;
 use std::sync::Arc;
@@ -92,6 +93,7 @@ pub async fn sync(
     exec_type: ExecutionType,
     dry_run: bool,
     chunk_size: u64,
+    exit_file: PathBuf,
 ) -> Result<()> {
     let repo: Repo = app.open_repo(&source_repo_arg).await?;
     let _repo_id = repo.repo_identity().id();
@@ -168,7 +170,8 @@ pub async fn sync(
     };
     info!(logger, "Established EdenAPI connection");
 
-    let send_manager = SendManager::new(sender.clone(), logger.clone(), repo_name.clone());
+    let send_manager =
+        SendManager::new(sender.clone(), logger.clone(), repo_name.clone(), exit_file);
     info!(logger, "Initialized channels");
 
     scuba::log_sync_start(ctx, start_id);

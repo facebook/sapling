@@ -7,6 +7,8 @@
 
 #![feature(async_closure)]
 
+use std::path::PathBuf;
+
 use anyhow::Result;
 use bookmarks::BookmarkUpdateLog;
 use bookmarks::Bookmarks;
@@ -59,6 +61,10 @@ struct ModernSyncArgs {
     #[clap(long)]
     /// Update ODS counters
     log_to_ods: bool,
+
+    #[clap(long)]
+    /// Path to file to check for in order to exit
+    exit_file: PathBuf,
 }
 
 #[facet::container]

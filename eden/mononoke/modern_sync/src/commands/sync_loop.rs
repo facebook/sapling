@@ -99,6 +99,7 @@ impl RepoShardedProcessExecutor for ModernSyncProcessExecutor {
             ExecutionType::Tail,
             self.sync_args.dry_run,
             self.sync_args.chunk_size.unwrap_or(CHUNK_SIZE_DEFAULT),
+            self.app.args::<ModernSyncArgs>()?.exit_file.clone(),
         )
         .await?;
         Ok(())
@@ -114,6 +115,8 @@ pub async fn run(app: MononokeApp, args: CommandArgs) -> Result<()> {
 
     let process = Arc::new(ModernSyncProcess::new(Arc::new(app), Arc::new(args)));
     let logger = process.app.logger().clone();
+
+    let exit_file = app_args.exit_file.clone();
 
     if let Some(mut executor) = app_args.sharded_executor_args.clone().build_executor(
         process.app.fb,
@@ -158,6 +161,7 @@ pub async fn run(app: MononokeApp, args: CommandArgs) -> Result<()> {
                 .chunk_size
                 .clone()
                 .unwrap_or(CHUNK_SIZE_DEFAULT),
+            exit_file.clone(),
         )
         .await?;
     }
