@@ -352,22 +352,24 @@ impl SendManager {
                         return Err(anyhow::anyhow!(msg.clone()));
                     }
 
-                    let start = std::time::Instant::now();
-                    if let Err(e) = filenodes_es
-                        .upload_filenodes(std::mem::take(batch_filenodes))
-                        .await
-                    {
-                        error!(filenodes_logger, "Failed to upload filenodes: {:?}", e);
-                        return Err(e);
-                    } else {
-                        info!(
-                            filenodes_logger,
-                            "Uploaded {} filenodes in {}ms",
-                            batch_size,
-                            start.elapsed().as_millis(),
-                        );
-                        STATS::synced_filenodes
-                            .add_value(batch_filenodes.len() as i64, (reponame.to_owned(),));
+                    if !batch_filenodes.is_empty() {
+                        let start = std::time::Instant::now();
+                        if let Err(e) = filenodes_es
+                            .upload_filenodes(std::mem::take(batch_filenodes))
+                            .await
+                        {
+                            error!(filenodes_logger, "Failed to upload filenodes: {:?}", e);
+                            return Err(e);
+                        } else {
+                            info!(
+                                filenodes_logger,
+                                "Uploaded {} filenodes in {}ms",
+                                batch_size,
+                                start.elapsed().as_millis(),
+                            );
+                            STATS::synced_filenodes
+                                .add_value(batch_filenodes.len() as i64, (reponame.to_owned(),));
+                        }
                     }
 
                     while let Some(sender) = batch_done_senders.pop_front() {
@@ -465,18 +467,20 @@ impl SendManager {
                         return Err(anyhow::anyhow!(msg.clone()));
                     }
 
-                    let start = std::time::Instant::now();
-                    if let Err(e) = trees_es.upload_trees(std::mem::take(batch_trees)).await {
-                        error!(trees_logger, "Failed to upload trees: {:?}", e);
-                        return Err(e);
-                    } else {
-                        info!(
-                            trees_logger,
-                            "Uploaded {} trees in {}ms",
-                            batch_size,
-                            start.elapsed().as_millis(),
-                        );
-                        STATS::synced_trees.add_value(batch_size, (reponame.to_owned(),));
+                    if !batch_trees.is_empty() {
+                        let start = std::time::Instant::now();
+                        if let Err(e) = trees_es.upload_trees(std::mem::take(batch_trees)).await {
+                            error!(trees_logger, "Failed to upload trees: {:?}", e);
+                            return Err(e);
+                        } else {
+                            info!(
+                                trees_logger,
+                                "Uploaded {} trees in {}ms",
+                                batch_size,
+                                start.elapsed().as_millis(),
+                            );
+                            STATS::synced_trees.add_value(batch_size, (reponame.to_owned(),));
+                        }
                     }
 
                     while let Some(sender) = batch_done_senders.pop_front() {
