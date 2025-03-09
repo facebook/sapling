@@ -45,14 +45,19 @@ pub(crate) fn log_bookmark_update_entry_start(
     ctx: &CoreContext,
     entry: &BookmarkUpdateLogEntry,
     commits_count: usize,
-) -> bool {
+) -> (bool, CoreContext) {
     let mut scuba_sample = ctx.scuba().clone();
+    let ctx = ctx.with_mutated_scuba(|mut scuba| {
+        scuba.add("bookmark_name", entry.bookmark_name.as_str());
+        scuba
+    });
 
     scuba_sample.add("log_tag", "Start processing bookmark update entry");
     scuba_sample.add("bookmark_entry_commits_count", commits_count);
-    add_bookmark_entry(&mut scuba_sample, entry);
+    add_bookmark_entry_info(&mut scuba_sample, entry);
 
-    scuba_sample.log()
+    let res = scuba_sample.log();
+    (res, ctx)
 }
 
 pub(crate) fn log_bookmark_update_entry_done(
@@ -63,13 +68,13 @@ pub(crate) fn log_bookmark_update_entry_done(
     let mut scuba_sample = ctx.scuba().clone();
 
     scuba_sample.add("log_tag", "Done processing bookmark update entry");
-    add_bookmark_entry(&mut scuba_sample, entry);
+    add_bookmark_entry_info(&mut scuba_sample, entry);
     scuba_sample.add("elapsed", elapsed.as_millis());
 
     scuba_sample.log()
 }
 
-fn add_bookmark_entry(
+pub(crate) fn add_bookmark_entry_info(
     scuba_sample: &mut MononokeScubaSampleBuilder,
     entry: &BookmarkUpdateLogEntry,
 ) {
@@ -94,36 +99,31 @@ pub(crate) fn log_bookmark_update_entry_error(
     let mut scuba_sample = ctx.scuba().clone();
 
     scuba_sample.add("log_tag", "Error processing bookmark");
-    add_bookmark_entry(&mut scuba_sample, entry);
+    add_bookmark_entry_info(&mut scuba_sample, entry);
     scuba_sample.add("error", format!("{:?}", error));
     scuba_sample.add("elapsed", elapsed.as_millis());
 
     scuba_sample.log()
 }
 
-pub(crate) fn log_changeset_start(
-    ctx: &CoreContext,
-    bookmark_name: &str,
-    changeset_id: &ChangesetId,
-) -> bool {
+pub(crate) fn log_changeset_start(ctx: &CoreContext, changeset_id: &ChangesetId) -> bool {
     let mut scuba_sample = ctx.scuba().clone();
 
     scuba_sample.add("log_tag", "Start processing changeset");
-    add_changeset(&mut scuba_sample, bookmark_name, changeset_id);
+    add_changeset_info(&mut scuba_sample, changeset_id);
 
     scuba_sample.log()
 }
 
 pub(crate) fn log_changeset_done(
     ctx: &CoreContext,
-    bookmark_name: &str,
     changeset_id: &ChangesetId,
     elapsed: std::time::Duration,
 ) -> bool {
     let mut scuba_sample = ctx.scuba().clone();
 
     scuba_sample.add("log_tag", "Done processing changeset");
-    add_changeset(&mut scuba_sample, bookmark_name, changeset_id);
+    add_changeset_info(&mut scuba_sample, changeset_id);
     scuba_sample.add("elapsed", elapsed.as_millis());
 
     scuba_sample.log()
@@ -131,7 +131,6 @@ pub(crate) fn log_changeset_done(
 
 pub(crate) fn log_changeset_error(
     ctx: &CoreContext,
-    bookmark_name: &str,
     changeset_id: &ChangesetId,
     error: &anyhow::Error,
     elapsed: std::time::Duration,
@@ -139,19 +138,14 @@ pub(crate) fn log_changeset_error(
     let mut scuba_sample = ctx.scuba().clone();
 
     scuba_sample.add("log_tag", "Error processing changeset");
-    add_changeset(&mut scuba_sample, bookmark_name, changeset_id);
+    add_changeset_info(&mut scuba_sample, changeset_id);
     scuba_sample.add("error", format!("{:?}", error));
     scuba_sample.add("elapsed", elapsed.as_millis());
 
     scuba_sample.log()
 }
 
-fn add_changeset(
-    scuba_sample: &mut MononokeScubaSampleBuilder,
-    bookmark_name: &str,
-    changeset_id: &ChangesetId,
-) {
-    scuba_sample.add("bookmark_name", bookmark_name);
+fn add_changeset_info(scuba_sample: &mut MononokeScubaSampleBuilder, changeset_id: &ChangesetId) {
     scuba_sample.add("changeset_id", format!("{}", changeset_id.to_hex()));
 }
 

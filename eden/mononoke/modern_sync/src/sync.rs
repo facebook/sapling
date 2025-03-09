@@ -252,17 +252,17 @@ pub async fn process_bookmark_update_log_entry(
 
     info!(logger, "Calculating segments for entry {}", entry.id);
 
-    {
+    let (_, ctx) = {
         let commits = repo
             .commit_graph()
             .ancestors_difference_segment_slices(ctx, to_vec.clone(), from_vec.clone(), chunk_size)
             .await?;
-        scuba::log_bookmark_update_entry_start(ctx, entry, commits.count().await);
-    }
+        scuba::log_bookmark_update_entry_start(ctx, entry, commits.count().await)
+    };
 
     let commits = repo
         .commit_graph()
-        .ancestors_difference_segment_slices(ctx, to_vec, from_vec, chunk_size)
+        .ancestors_difference_segment_slices(&ctx, to_vec, from_vec, chunk_size)
         .await?;
 
     commits
@@ -345,22 +345,11 @@ pub async fn process_bookmark_update_log_entry(
                             .await
                             {
                                 Ok(res) => {
-                                    scuba::log_changeset_done(
-                                        &ctx,
-                                        bookmark_name.as_str(),
-                                        &cs_id,
-                                        now.elapsed(),
-                                    );
+                                    scuba::log_changeset_done(&ctx, &cs_id, now.elapsed());
                                     Ok(res)
                                 }
                                 Err(e) => {
-                                    scuba::log_changeset_error(
-                                        &ctx,
-                                        bookmark_name.as_str(),
-                                        &cs_id,
-                                        &e,
-                                        now.elapsed(),
-                                    );
+                                    scuba::log_changeset_error(&ctx, &cs_id, &e, now.elapsed());
                                     Err(e)
                                 }
                             }
@@ -386,7 +375,7 @@ pub async fn process_bookmark_update_log_entry(
         }
 
         repo.mutable_counters()
-            .set_counter(ctx, MODERN_SYNC_COUNTER_NAME, entry.id.0 as i64, None)
+            .set_counter(&ctx, MODERN_SYNC_COUNTER_NAME, entry.id.0 as i64, None)
             .await?;
 
         bul_util::update_remaining_moves(
@@ -398,13 +387,13 @@ pub async fn process_bookmark_update_log_entry(
         .await?;
 
         let from_changeset = if let Some(cs_id) = entry.from_changeset_id {
-            Some(repo.derive_hg_changeset(ctx, cs_id).await?)
+            Some(repo.derive_hg_changeset(&ctx, cs_id).await?)
         } else {
             None
         };
 
         let to_changeset = if let Some(cs_id) = entry.to_changeset_id {
-            Some(repo.derive_hg_changeset(ctx, cs_id).await?)
+            Some(repo.derive_hg_changeset(&ctx, cs_id).await?)
         } else {
             None
         };
@@ -431,7 +420,7 @@ pub async fn process_one_changeset(
     bookmark_name: &str,
     changeset_ready: Option<mpsc::Sender<Result<()>>>,
 ) -> Result<()> {
-    scuba::log_changeset_start(ctx, bookmark_name, cs_id);
+    scuba::log_changeset_start(ctx, cs_id);
 
     let now = std::time::Instant::now();
 
