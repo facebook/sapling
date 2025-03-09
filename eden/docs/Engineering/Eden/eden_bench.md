@@ -104,6 +104,15 @@ Easily collect benchmarking results with EdenFS built from local code by using t
 export BENCHMARK_ENABLE_LOCAL_DEV_EDEN=1
 ```
 
+## Locally Built Sapling and CASd
+
+Apart from EdenFS, it is also possible to build Sapling/CASd locally, or even all the binaries.
+```
+export BENCHMARK_ENABLE_LOCAL_DEV_SAPLING=1 # Sapling
+export BENCHMARK_BUILD_CASD_FROM_SOURCE=1   # CASd
+export BENCHMARK_ENABLE_ALL_LOCAL_BUILDS=1  # all binaries: Sapling, CASd and EdenFS
+```
+
 
 ## EdenFS Profiling
 
