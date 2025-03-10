@@ -214,7 +214,16 @@ pub async fn preload_uploaded_commits(
             .map(|oid| hash::GitSha1::from_bytes(oid.as_bytes()))
             .collect::<Result<Vec<_>, _>>()?,
     );
-    let result = repo.bonsai_git_mapping().get(ctx, git_sha1s).await?;
+    let (result, _) = retry_always(
+        ctx.logger(),
+        |_| {
+            cloned!(ctx, git_sha1s);
+            async move { repo.bonsai_git_mapping().get(&ctx, git_sha1s).await }
+        },
+        BASE_RETRY_DELAY,
+        RETRY_ATTEMPTS,
+    )
+    .await?;
     let map = result
         .into_iter()
         .map(|entry| {
