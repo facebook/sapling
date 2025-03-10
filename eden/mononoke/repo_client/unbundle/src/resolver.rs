@@ -943,17 +943,12 @@ impl<'r, R: Repo> Bundle2Resolver<'r, R> {
                         .await?;
 
                 if let Some(commit_limit) = self.unbundle_commit_limit {
-                    // Ignore commit limit if hg sync job is pushing. Hg sync job is used
-                    // to mirror one repository into another, and we can't discard a push
-                    // even if it's too big
-                    if !self.ctx.session().is_hg_sync_job() {
-                        if changesets.len() as u64 > commit_limit {
-                            bail!(
-                                "Trying to push too many commits! Limit is {}, tried to push {}",
-                                commit_limit,
-                                changesets.len()
-                            );
-                        }
+                    if changesets.len() as u64 > commit_limit {
+                        bail!(
+                            "Trying to push too many commits! Limit is {}, tried to push {}",
+                            commit_limit,
+                            changesets.len()
+                        );
                     }
                 }
 

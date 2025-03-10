@@ -54,10 +54,6 @@ impl MononokeIdentitySetExt for MononokeIdentitySet {
         false
     }
 
-    fn is_hg_sync_job(&self) -> bool {
-        false
-    }
-
     fn is_proxygen_test_identity(&self) -> bool {
         false
     }

@@ -88,8 +88,6 @@ impl<'de> Deserialize<'de> for MononokeIdentity {
 pub trait MononokeIdentitySetExt {
     fn is_quicksand(&self) -> bool;
 
-    fn is_hg_sync_job(&self) -> bool;
-
     fn is_proxygen_test_identity(&self) -> bool;
 
     fn hostprefix(&self) -> Option<&str>;
