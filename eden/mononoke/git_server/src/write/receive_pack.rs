@@ -43,6 +43,7 @@ use crate::model::PushValidationErrors;
 use crate::model::RepositoryParams;
 use crate::model::RepositoryRequestContext;
 use crate::scuba::scuba_from_state;
+use crate::scuba::MononokeGitScubaKey;
 use crate::service::set_ref;
 use crate::service::set_refs;
 use crate::service::upload_objects;
@@ -91,6 +92,12 @@ async fn push(
             ref_updates,
             shallow: _,
         } = push_args;
+        let (ctx, blobstore) = (
+            &request_context.ctx.clone_with_repo_name(&repo_name),
+            request_context.repo.repo_blobstore_arc().clone(),
+        );
+        let mut scuba = scuba_from_state(ctx, state);
+        scuba.add(MononokeGitScubaKey::PackfileSize, pack_file.get_ref().len());
         // If Mononoke is not the source of truth for this repo, then we need to prevent the push
         if !mononoke_source_of_truth(&request_context.ctx, request_context.repo.clone()).await? {
             return reject_non_sot_push(repo_name.as_str(), state, &ref_updates).await;
@@ -101,11 +108,6 @@ async fn push(
                 return reject_too_large_push(repo_name.as_str(), state, &ref_updates).await;
             }
         }
-        let (ctx, blobstore) = (
-            &request_context.ctx.clone_with_repo_name(&repo_name),
-            request_context.repo.repo_blobstore_arc().clone(),
-        );
-        let scuba = scuba_from_state(ctx, state);
         let concurrency = request_context.pushvars.concurrency();
 
         // Parse the packfile provided as part of the push and verify that its valid

@@ -70,11 +70,17 @@
    * [new tag]         push_tag -> push_tag
 
 # Wait for the warm bookmark cache to catch up with the latest changes
-# Wait for the warm bookmark cache to catch up with the latest changes
   $ wait_for_git_bookmark_move HEAD $current_head
   $ wait_for_git_bookmark_create refs/heads/new_branch
   $ wait_for_git_bookmark_create refs/tags/push_tag
   $ wait_for_git_bookmark_create refs/tags/past_tag
+
+# Verify that we log the size of the packfile used in push
+  $ jq -S .int "$SCUBA" | grep -e "packfile_size"
+    "packfile_size": 1173,
+    "packfile_size": 1173,
+    "packfile_size": 1173,
+    "packfile_size": 1173,
 
 # Verify the timed futures logged with log tags show up in scuba logs
   $ jq .normal "$SCUBA" | grep -e "Packfile" -e "GitImport" -e "Bookmark movement" -e "Prerequisite" -e "Objects" -e "Prefetched" -e "Content Blob" -e "Bonsai Changeset" -e "Finalize Batch" -e "Push" -e "Import" | sort

@@ -27,6 +27,7 @@ pub enum MononokeGitScubaKey {
     ErrorCount,
     PushValidationErrors,
     PackfileReadError,
+    PackfileSize,
 }
 
 impl AsRef<str> for MononokeGitScubaKey {
@@ -40,6 +41,7 @@ impl AsRef<str> for MononokeGitScubaKey {
             Self::ErrorCount => "error_count",
             Self::PushValidationErrors => "push_validation_errors",
             Self::PackfileReadError => "packfile_read_error",
+            Self::PackfileSize => "packfile_size",
         }
     }
 }
