@@ -72,9 +72,9 @@ def fold(ui, repo, *revs, **opts):
 
          @prog@ fold --from e254371c1::be57079e4
 
-     - Fold commits e254371c1 and be57079e4:
+     - Fold commits e254371c1 and be57079e4::
 
-        @prog@ fold "e254371c1 + be57079e4" --exact
+         @prog@ fold "e254371c1 + be57079e4" --exact
 
      - Only fold commits linearly between foo and .::
 
