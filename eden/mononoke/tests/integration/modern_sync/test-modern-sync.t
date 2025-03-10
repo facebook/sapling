@@ -244,8 +244,16 @@ Sync all bookmarks moves
   Established EdenAPI connection
   Initialized channels
   Calculating segments for entry 1
-  Skipping 1 commits, starting sync of 0 commits 
+  Resuming from latest entry checkpoint 0
+  Skipping 0 batches from entry 1
+  Skipping 0 commits within batch
+  Found 0 missing commits
+  Finished entry. Setting entry counter to 1 and in-entry checkpoint to 0
   Moved bookmark with result SetBookmarkResponse { data: Ok(()) }
   Calculating segments for entry 2
-  Skipping 4 commits, starting sync of 0 commits 
+  Resuming from latest entry checkpoint 0
+  Skipping 0 batches from entry 2
+  Skipping 0 commits within batch
+  Found 0 missing commits
+  Finished entry. Setting entry counter to 2 and in-entry checkpoint to 0
   Moved bookmark with result SetBookmarkResponse { data: Ok(()) }
