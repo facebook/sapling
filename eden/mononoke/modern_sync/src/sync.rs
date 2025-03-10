@@ -372,7 +372,7 @@ pub async fn process_bookmark_update_log_entry(
                                 &cs_id,
                                 &ctx,
                                 repo,
-                                &logger,
+                                logger,
                                 &send_manager,
                                 log_to_ods,
                                 &bookmark_name,
@@ -460,7 +460,7 @@ pub async fn process_one_changeset(
     cs_id: &ChangesetId,
     ctx: &CoreContext,
     repo: Repo,
-    logger: &Logger,
+    logger: Logger,
     send_manager: &SendManager,
     log_to_ods: bool,
     bookmark_name: &str,
@@ -475,29 +475,37 @@ pub async fn process_one_changeset(
         .repo_derived_data()
         .derive::<ChangesetInfo>(ctx, cs_id.clone())
         .await?;
+
     let bs_cs = cs_id.load(ctx, repo.repo_blobstore()).await?;
     let commit_time = bs_cs.author_date().timestamp_secs();
-    let bs_fc: Vec<_> = bs_cs.file_changes().collect();
-
-    // Upload contents
-    for (_path, file_change) in bs_fc {
-        let cid = match file_change {
+    let cids: Vec<_> = bs_cs
+        .file_changes()
+        .filter_map(|(_path, file_change)| match file_change {
             FileChange::Change(change) => Some(change.content_id()),
             FileChange::UntrackedChange(change) => Some(change.content_id()),
             FileChange::Deletion | FileChange::UntrackedDeletion => None,
-        };
+        })
+        .collect();
 
-        if let Some(cid) = cid {
-            let metadata =
-                filestore::get_metadata(repo.repo_blobstore(), ctx, &FetchKey::Canonical(cid))
-                    .await?
-                    .expect("blob not found");
-
-            send_manager
-                .send_content(ContentMessage::Content(cid, metadata.total_size))
-                .await?;
-        }
-    }
+    // Read the sizes of the contents concurrently (by reading the metadata blobs from blobstore)
+    // Larger commits/older not cached commits would benefit from this concurrency.
+    stream::iter(cids)
+        .map(|cid| {
+            cloned!(ctx, repo, send_manager);
+            async move {
+                let metadata =
+                    filestore::get_metadata(repo.repo_blobstore(), &ctx, &FetchKey::Canonical(cid))
+                        .await?
+                        .expect("blob not found");
+                send_manager
+                    .send_content(ContentMessage::Content(cid, metadata.total_size))
+                    .await?;
+                anyhow::Ok(())
+            }
+        })
+        .buffered(100)
+        .try_collect::<Vec<_>>()
+        .await?;
 
     // Notify contents for this changeset are ready
     let (content_files_tx, content_files_rx) = oneshot::channel();

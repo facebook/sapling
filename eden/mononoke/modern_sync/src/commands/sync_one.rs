@@ -110,7 +110,7 @@ pub async fn run(app: MononokeApp, args: CommandArgs) -> Result<()> {
         &args.cs_id,
         &ctx,
         repo,
-        &logger,
+        logger,
         &send_manager,
         false,
         "",
