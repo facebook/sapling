@@ -29,8 +29,7 @@ const MPATH_ELEMENT_MAX_LENGTH: usize = 255;
 ///
 /// This is a mapping from the invalid byte to the representation that should be shown
 /// in error messages.
-const MPATH_ELEMENT_INVALID_BYTES: &[(u8, &str)] =
-    &[(0, "\\0"), (1, "\\x01"), (b'\n', "\\n"), (b'/', "/")];
+const MPATH_ELEMENT_INVALID_BYTES: &[(u8, &str)] = &[(0, "\\0"), (b'/', "/")];
 
 /// An element of a path or filename within Mercurial.
 ///
