@@ -22,12 +22,17 @@ impl GlobalGit {
                 &["--show-scope", "--get-regexp", "^(remote|user)\\."],
             )
             .output()?;
-        let out = String::from_utf8(out.stdout)?;
-        Ok(translate_git_config_output(&out))
+        let config = String::from_utf8(out.stdout)?;
+        let remotes_out = self
+            .git_cmd(
+                "ls-remote", &["--symref", ".", "HEAD"])
+                .output()?;
+        let remotes = String::from_utf8(remotes_out.stdout)?;
+        Ok(translate_git_config_output(&config, &remotes))
     }
 }
 
-fn translate_git_config_output(out: &str) -> (String, String) {
+fn translate_git_config_output(out: &str, remotes: &str) -> (String, String) {
     // Example output:
     //  global  user.name Foo Bar
     //  global  user.email foo@example.com
@@ -94,6 +99,16 @@ fn translate_git_config_output(out: &str) -> (String, String) {
         ));
     }
 
+    let default_publicheads = "origin/master,origin/main";
+    if let Some(default_branch) = parse_symref_head(remotes) {
+        repo_config.push_str(&format!(
+            "\n[remotenames]\n# from git ls-remote\npublicheads=origin/{},{}\n",
+            default_branch,
+            default_publicheads,
+        ));
+    }
+
+
     (user_config, repo_config)
 }
 
@@ -135,6 +150,18 @@ fn parse_git_config_output_line(line: &str) -> Option<(&str, &str, &str)> {
     Some((scope, name, value))
 }
 
+fn parse_symref_head(lines: &str) -> Option<String> {
+    for line in lines.lines() {
+        // example: "ref: refs/heads/defaultbranch	HEAD"
+        let prefix = "ref: refs/heads/";
+        let suffix = "\tHEAD";
+        if line.starts_with(prefix) && line.match_indices(suffix).count() ==1 {
+            return Some(line[prefix.len()..line.len()-suffix.len()].to_string());
+        }
+    }
+    return None
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -148,7 +175,13 @@ local	remote.origin.pushurl git@example.com:foo/repo
 local	remote.upstream.url https://example.com/upstream/repo
 local	user.email foo@bar.net
         "#;
-        let (user, repo) = translate_git_config_output(out);
+        let remotes = r#"
+ref: refs/heads/defaultbranch	HEAD
+4661e74b5ebe8727d1b0f8c29b1697f1f42daf70	HEAD
+ref: refs/remotes/origin/defaultbranch	refs/remotes/origin/HEAD
+4661e74b5ebe8727d1b0f8c29b1697f1f42daf70	refs/remotes/origin/HEAD
+                "#;
+        let (user, repo) = translate_git_config_output(out, remotes);
         assert_eq!(
             user,
             r#"[ui]
@@ -156,8 +189,8 @@ local	user.email foo@bar.net
 username = Foo Bar <foorbar@example.com>
 "#
         );
-        assert_eq!(
-            repo,
+        let got = repo;
+        let want = 
             r#"[paths]
 # from git config: remote.origin.url
 default = https://example.com/foo/repo
@@ -169,8 +202,12 @@ upstream = https://example.com/upstream/repo
 [ui]
 # from git config: user.name and user.email
 username = Foo Bar <foo@bar.net>
-"#
-        );
+
+[remotenames]
+# from git ls-remote
+publicheads=origin/defaultbranch,origin/master,origin/main
+"#;
+        assert_eq!(got, want, "\n expanded left: {got}\n------------\nexpanded right: {want}\n");
     }
 
     #[test]
