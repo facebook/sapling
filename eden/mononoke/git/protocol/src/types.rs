@@ -476,13 +476,31 @@ impl LsRefsResponse {
 pub struct FetchResponse<'a> {
     /// The stream of packfile items that were generated for the fetch request command
     pub items: BoxStream<'a, Result<PackfileItem>>,
-    /// The number of packfile items that were generated for the fetch request command
-    pub num_items: usize,
+    // The number of commits that are included in the generated packfile
+    pub num_commits: usize,
+    // The number of trees and blobs that are included in the generated packfile
+    pub num_trees_and_blobs: usize,
+    // The number of tags that are included in the generated packfile
+    pub num_tags: usize,
 }
 
 impl<'a> FetchResponse<'a> {
-    pub fn new(items: BoxStream<'a, Result<PackfileItem>>, num_items: usize) -> Self {
-        Self { items, num_items }
+    pub fn new(
+        items: BoxStream<'a, Result<PackfileItem>>,
+        num_commits: usize,
+        num_trees_and_blobs: usize,
+        num_tags: usize,
+    ) -> Self {
+        Self {
+            items,
+            num_commits,
+            num_trees_and_blobs,
+            num_tags,
+        }
+    }
+
+    pub fn num_objects(&self) -> usize {
+        self.num_commits + self.num_trees_and_blobs + self.num_tags
     }
 }
 

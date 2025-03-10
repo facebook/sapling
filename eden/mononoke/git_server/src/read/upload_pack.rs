@@ -14,7 +14,6 @@ use async_stream::try_stream;
 use bonsai_git_mapping::BonsaiGitMappingRef;
 use bonsai_git_mapping::BonsaisOrGitShas;
 use bytes::Bytes;
-use cloned::cloned;
 use either::Either;
 use futures::future::try_join4;
 use futures::SinkExt;
@@ -45,10 +44,12 @@ use protocol::generator::fetch_response;
 use protocol::generator::ls_refs_response;
 use protocol::generator::shallow_info as fetch_shallow_info;
 use protocol::mapping::ref_oid_mapping;
+use protocol::types::FetchResponse;
 use protocol::types::PackfileConcurrency;
 use protocol::types::ShallowInfoResponse;
 use repo_identity::RepoIdentityRef;
 use rustc_hash::FxHashSet;
+use scuba_ext::MononokeScubaSampleBuilder;
 use tokio::io::ErrorKind;
 use tokio::sync::mpsc;
 use tokio_util::io::CopyToBytes;
@@ -423,7 +424,7 @@ pub async fn fetch(
         let request_context = request_context.clone();
         async move {
             let mut scuba = scuba_handler.to_scuba(&request_context.ctx);
-            cloned!(scuba as perf_scuba);
+            let mut perf_scuba = scuba.clone();
             let writer_future = async move {
                 if delta_form == DeltaForm::OnlyOffset {
                     progress_writer
@@ -435,12 +436,13 @@ pub async fn fetch(
                     &request_context.repo,
                     args.into_request(concurrency(&request_context), shallow_response),
                     progress_writer,
-                    perf_scuba,
+                    perf_scuba.clone(),
                 )
                 .await?;
+                packfile_count_to_scuba(&response_stream, &mut perf_scuba);
                 let mut pack_writer = PackfileWriter::new(
                     sink_writer,
-                    response_stream.num_items as u32,
+                    response_stream.num_objects() as u32,
                     5000,
                     delta_form,
                 );
@@ -491,4 +493,17 @@ async fn git_error_message(error: &anyhow::Error) -> Result<impl TryIntoResponse
         .await
         .map_err(HttpError::e500)?;
     Ok(BytesBody::new(Bytes::from(buf), mime::TEXT_PLAIN))
+}
+
+fn packfile_count_to_scuba(response: &FetchResponse<'_>, scuba: &mut MononokeScubaSampleBuilder) {
+    scuba.add(
+        MononokeGitScubaKey::PackfileCommitCount,
+        response.num_commits,
+    );
+    scuba.add(
+        MononokeGitScubaKey::PackfileTreeAndBlobCount,
+        response.num_trees_and_blobs,
+    );
+    scuba.add(MononokeGitScubaKey::PackfileTagCount, response.num_tags);
+    scuba.log();
 }

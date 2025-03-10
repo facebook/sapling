@@ -908,8 +908,6 @@ pub async fn fetch_response<'a>(
         "Generated tags stream",
         "Read".to_string(),
     );
-    // Compute the overall object count by summing the trees, blobs, tags and commits count
-    let object_count = commits_count + trees_and_blobs_count + tags_count;
     // Combine all streams together and return the response. The ordering of the streams in this case is irrelevant since the commit
     // and tag stream include full objects and the tree_and_blob_stream has deltas in the correct order
     let packfile_stream = tag_stream
@@ -919,7 +917,12 @@ pub async fn fetch_response<'a>(
     progress_writer
         .send("Sending packfile stream\n".to_string())
         .await?;
-    Ok(FetchResponse::new(packfile_stream, object_count))
+    Ok(FetchResponse::new(
+        packfile_stream,
+        commits_count,
+        trees_and_blobs_count,
+        tags_count,
+    ))
 }
 
 /// Based on the input request parameters, generate the information for shallow info section

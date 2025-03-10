@@ -61,8 +61,17 @@
     "poll_count": *, (glob)
     "poll_time_us": *, (glob)
 
+# Verify the packfile item counts are recorded in scuba
+  $ jq -S .int "$SCUBA" | grep "packfile_"
+    "packfile_commit_count": 2,
+    "packfile_tag_count": 2,
+    "packfile_tree_and_blob_count": 4,
+
 # Verify the method variants in scuba as a normvector
   $ jq .normvector.method_variants "$SCUBA" | grep -v null 
+  [
+    "standard"
+  ]
   [
     "standard"
   ]
