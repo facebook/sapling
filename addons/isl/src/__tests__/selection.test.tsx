@@ -178,7 +178,7 @@ describe('selection', () => {
     ).not.toBeInTheDocument();
   });
 
-  it('selecting a commit thats no longer available does not render', () => {
+  it("selecting a commit that's no longer available does not render", () => {
     // add a new commit F, then select it
     act(() => simulateCommits({value: [COMMIT('f', 'Commit F', 'e'), ...TEST_COMMIT_HISTORY]}));
     act(() => void fireEvent.click(screen.getByText('Commit F')));

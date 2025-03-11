@@ -826,7 +826,7 @@ describe('CommitInfoView', () => {
           });
         });
 
-        it('disables commit button if theres no changed files', () => {
+        it("disables commit button if there's no changed files", () => {
           clickCommitMode();
 
           const commitButton = within(screen.getByTestId('commit-info-actions-bar')).queryByText(
