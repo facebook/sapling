@@ -21,6 +21,7 @@ use crate::EdenFsThriftClient;
 use crate::StreamingEdenFsThriftClient;
 
 pub struct EdenFsClient<'a> {
+    #[allow(dead_code)]
     pub(crate) instance: &'a EdenFsInstance,
     pub(crate) client: EdenFsThriftClient,
     pub(crate) streaming_client: StreamingEdenFsThriftClient,

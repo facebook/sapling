@@ -27,8 +27,6 @@ use edenfs_utils::bytes_from_path;
 use edenfs_utils::get_executable;
 #[cfg(windows)]
 use edenfs_utils::strip_unc_prefix;
-use futures::stream::BoxStream;
-use thrift_streaming_clients::errors::SubscribeStreamTemporaryError;
 #[cfg(fbcode_build)]
 use thrift_types::edenfs::DaemonInfo;
 use thrift_types::edenfs::GetConfigParams;
@@ -47,7 +45,6 @@ use tracing::Level;
 use util::lock::PathLock;
 
 use crate::client::EdenFsClient;
-use crate::utils::get_mount_point;
 use crate::EdenFsThriftClient;
 
 // We should create a single EdenFsInstance when parsing EdenFs commands and utilize
@@ -206,29 +203,6 @@ impl EdenFsInstance {
         } else {
             Err(anyhow!("EdenFS is not running"))
         }
-    }
-
-    pub async fn stream_journal_changed(
-        &self,
-        mount_point: &Option<PathBuf>,
-    ) -> Result<
-        BoxStream<
-            'static,
-            Result<thrift_types::edenfs::JournalPosition, SubscribeStreamTemporaryError>,
-        >,
-        EdenFsError,
-    > {
-        let mount_point_vec = bytes_from_path(get_mount_point(mount_point)?)?;
-        let stream_client = self
-            .get_client(None)
-            .await
-            .with_context(|| anyhow!("unable to establish Thrift connection to EdenFS server"))?;
-        let stream_client = stream_client.get_streaming_thrift_client();
-
-        stream_client
-            .streamJournalChanged(&mount_point_vec)
-            .await
-            .from_err()
     }
 
     /// Returns a map of mount paths to mount names

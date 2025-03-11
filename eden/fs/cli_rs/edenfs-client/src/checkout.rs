@@ -56,11 +56,11 @@ use thrift_types::fbthrift::ApplicationExceptionErrorCode;
 use toml::value::Value;
 use uuid::Uuid;
 
+use crate::instance::EdenFsInstance;
 use crate::redirect::deserialize_redirections;
 use crate::redirect::Redirection;
 use crate::redirect::RedirectionType;
 use crate::redirect::REPO_SOURCE;
-use crate::EdenFsInstance;
 
 // files in the client directory (aka data_dir aka state_dir)
 const MOUNT_CONFIG: &str = "config.toml";

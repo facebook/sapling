@@ -22,7 +22,7 @@ use thrift_types::edenfs::ChangesSinceV2Params;
 use tokio::time;
 
 use crate::client::EdenFsClient;
-use crate::journal_position::JournalPosition;
+use crate::journal::JournalPosition;
 use crate::utils::get_mount_point;
 
 #[derive(Debug, PartialEq, Serialize)]
@@ -592,7 +592,7 @@ impl<'a> EdenFsClient<'a> {
         handle_results: impl Fn(&ChangesSinceV2Result) -> Result<(), EdenFsError>,
     ) -> Result<(), anyhow::Error> {
         let mut position = position.unwrap_or(self.get_journal_position(mount_point).await?);
-        let mut subscription = self.instance.stream_journal_changed(mount_point).await?;
+        let mut subscription = self.stream_journal_changed(mount_point).await?;
 
         let mut last = Instant::now();
         let throttle = Duration::from_millis(throttle_time_ms);

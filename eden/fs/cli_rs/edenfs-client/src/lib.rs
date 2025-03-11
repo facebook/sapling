@@ -25,7 +25,7 @@ pub mod client;
 pub mod daemon_info;
 pub mod fsutil;
 pub mod instance;
-pub mod journal_position;
+pub mod journal;
 mod mounttable;
 pub mod redirect;
 pub mod sapling;
