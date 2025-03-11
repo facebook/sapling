@@ -248,7 +248,7 @@ describe('mergeBlocks', () => {
     ]);
   });
 
-  it('should perserve empty ranges', () => {
+  it('should preserve empty ranges', () => {
     const abBlocks: Array<Block> = [
       ['=', [0, 1, 0, 1]],
       ['!', [1, 2, 1, 1]],

@@ -36,7 +36,7 @@ const nodeModulesDir = join(__dirname, '..', 'node_modules');
 
 /**
  * Controls a test browser via Puppeteer.
- * Add convinent methods to interact with the browser here.
+ * Add convenient methods to interact with the browser here.
  */
 export class TestBrowser {
   /**

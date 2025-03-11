@@ -20,7 +20,7 @@ import {nullthrows} from 'shared/utils';
 export function stagedThrottler<P extends Array<unknown>>(
   stages: Array<{
     throttleMs: number;
-    /** number of input events needed to advance to the enxt stage.
+    /** number of input events needed to advance to the next stage.
      * Note: it doesn't matter if it was throttled or not. Every input adds to the advancement. */
     numToNextStage?: number;
     resetAfterMs: number;

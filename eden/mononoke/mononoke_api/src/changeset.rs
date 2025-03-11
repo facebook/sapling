@@ -371,7 +371,7 @@ impl<R: MononokeRepo> ChangesetContext<R> {
         ChangesetPathContentContext::new(self.clone(), None).await
     }
 
-    /// Query a path within the respository. This could be a file or a
+    /// Query a path within the repository. This could be a file or a
     /// directory.
     ///
     /// Returns a path content context, which is a context suitable for
@@ -392,7 +392,7 @@ impl<R: MononokeRepo> ChangesetContext<R> {
         .await
     }
 
-    /// Query a path within the respository. This could be a file or a
+    /// Query a path within the repository. This could be a file or a
     /// directory.
     ///
     /// Returns a path history context, which is a context suitable for
@@ -413,7 +413,7 @@ impl<R: MononokeRepo> ChangesetContext<R> {
         .await
     }
 
-    /// Query a path within the respository. This could be a file or a
+    /// Query a path within the repository. This could be a file or a
     /// directory.
     ///
     /// Returns a path context, which is a context that is only suitable for
@@ -957,7 +957,7 @@ impl<R: MononokeRepo> ChangesetContext<R> {
 
         let diff = match ordering {
             ChangesetFileOrdering::Unordered => {
-                // We start from "other" as manfest.diff() is backwards
+                // We start from "other" as manifest.diff() is backwards
                 other_manifest_root
                     .fsnode_id()
                     .filtered_diff(
@@ -971,7 +971,7 @@ impl<R: MononokeRepo> ChangesetContext<R> {
                     .left_stream()
             }
             ChangesetFileOrdering::Ordered { after } => {
-                // We start from "other" as manfest.diff() is backwards
+                // We start from "other" as manifest.diff() is backwards
                 other_manifest_root
                     .fsnode_id()
                     .filtered_diff_ordered(
@@ -1147,7 +1147,7 @@ impl<R: MononokeRepo> ChangesetContext<R> {
                                 ))
                             }
                         }
-                        // We've already covered all practical possiblities as there are no "changed"
+                        // We've already covered all practical possibilities as there are no "changed"
                         // between from trees and files as such are represented as removal+addition
                         _ => None,
                     };

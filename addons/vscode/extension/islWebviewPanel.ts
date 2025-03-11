@@ -34,7 +34,7 @@ function createOrFocusISLWebview(
   logger: Logger,
   column?: vscode.ViewColumn,
 ): vscode.WebviewPanel | vscode.WebviewView {
-  // Try to re-use existing ISL panel/view
+  // Try to reuse existing ISL panel/view
   if (islPanelOrView) {
     isPanel(islPanelOrView) ? islPanelOrView.reveal() : islPanelOrView.show();
     return islPanelOrView;

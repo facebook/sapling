@@ -152,7 +152,7 @@ impl RepoSetupProcess {
 
     /// Method that yields the RepoExecutionProcess generated on the completion
     /// of setup in an async setting. This method consumes self since post executor
-    /// generation, the RepoSetupProcess should not be re-used. This method can be
+    /// generation, the RepoSetupProcess should not be reused. This method can be
     /// called regardless of the completion status of the setup process.
     async fn execution_process(self, runtime_handle: &Handle) -> Result<RepoExecutionProcess> {
         let executor = self

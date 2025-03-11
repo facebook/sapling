@@ -575,14 +575,14 @@ ${content}
       expect(inComparisonView().getByText('normal_contents')).toBeInTheDocument();
       expect(inComparisonView().getByText('partial_contents')).toBeInTheDocument();
       await waitFor(() => {
-        // genereated starts collapsed
+        // generated starts collapsed
         expect(inComparisonView().queryByText('generated_contents')).not.toBeInTheDocument();
       });
 
       expect(inComparisonView().getByText('Show anyway')).toBeInTheDocument();
       fireEvent.click(inComparisonView().getByText('Show anyway'));
       await waitFor(() => {
-        // genereated now expands
+        // generated now expands
         expect(inComparisonView().getByText('generated_contents')).toBeInTheDocument();
       });
       unmountNow();

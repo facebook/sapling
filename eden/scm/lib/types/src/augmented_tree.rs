@@ -758,7 +758,7 @@ mod tests {
             augmented_tree: augmented_tree_entry,
         };
 
-        // Serialize and deserialize, check the stucts are identical.
+        // Serialize and deserialize, check the structs are identical.
         let mut buf: Vec<u8> = Vec::with_capacity(1024);
         augmented_tree_with_digest
             .try_serialize(&mut buf)

@@ -157,7 +157,7 @@ describe('run-proxy', () => {
     );
   });
 
-  it('can output json for a re-used server', async () => {
+  it('can output json for a reused server', async () => {
     jest
       .spyOn(startServer, 'startServer')
       .mockImplementationOnce(() => Promise.resolve({type: 'success', port: 3011, pid: 1000}))

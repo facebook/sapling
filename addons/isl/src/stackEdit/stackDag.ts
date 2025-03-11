@@ -14,7 +14,7 @@ import {WDIR_NODE, YOU_ARE_HERE_VIRTUAL_COMMIT} from '../dag/virtualCommit';
 
 /**
  * Calculate a virtual "Dag" purely from "stack".
- * The virutal "Dag" does not have to be a subset of the main dag being displayed.
+ * The virtual "Dag" does not have to be a subset of the main dag being displayed.
  * This avoids race conditions and various issues when the "stack" does not
  * match the main dag.
  * The nodes (commit hashes) of the returned dag is the "key" of commits in

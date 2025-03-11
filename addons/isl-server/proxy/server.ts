@@ -130,7 +130,7 @@ export function startServer({
           res.end(contents);
           return;
         } else if (pathname === '/challenge_authenticity') {
-          // requests to /challenge_authenticity?token=... allow using the sensistive token to ask
+          // requests to /challenge_authenticity?token=... allow using the sensitive token to ask
           // for the secondary challenge token.
           const requestToken = getSearchParams(req.url).get('token');
           if (requestToken && areTokensEqual(requestToken, sensitiveToken)) {
@@ -229,7 +229,7 @@ export function startServer({
 
         // After disposing, we may not have anymore servers alive anymore.
         // We can proactively clean up the server so you get the latest version next time you try.
-        // This way, we only re-use servers if you keep the tab open.
+        // This way, we only reuse servers if you keep the tab open.
         // Note: since we trigger this cleanup on dispose, if you start a server with `--no-open`,
         // it won't clean itself up until you connect at least once.
         if (!foreground) {
@@ -248,7 +248,7 @@ export function startServer({
 
     server.on('error', onError);
 
-    // return succesful result when the server is successfully listening
+    // return successful result when the server is successfully listening
     server.on('listening', () => {
       // Chdir to drive root so the "cwd" directory can be deleted on Windows.
       if (process.platform === 'win32') {

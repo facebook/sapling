@@ -275,7 +275,7 @@ function GenerateAIModal({
               GeneratedMessageTrackEventName.RetryClick,
               fieldName,
             );
-            cachedSuggestions.delete(fieldNameAndHashKey); // make sure we don't re-use cached value
+            cachedSuggestions.delete(fieldNameAndHashKey); // make sure we don't reuse cached value
             setHasAccepted(false);
             FunnelTracker.restartFunnel(fieldNameAndHashKey);
             refetch();

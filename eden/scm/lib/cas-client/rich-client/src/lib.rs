@@ -51,7 +51,7 @@ pub struct RichCasClient {
     casd_cache_socket_path: String,
     /// The mode to use for local fetching (aka rich client direct fetch from the backends).
     /// Could be all files, small files, or not enabled at all, so all the fetches are done via CASd daemon.
-    /// The fetched blobs will be synced to the local cache asyncronously (if enabled).
+    /// The fetched blobs will be synced to the local cache asynchronously (if enabled).
     cas_cache_mode_local_fetch: Option<CasCacheModeLocalFetch>,
     /// The maximum number of bytes to fetch in a single batch combined.
     fetch_limit: ByteCount,

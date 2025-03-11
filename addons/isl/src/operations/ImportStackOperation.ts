@@ -77,7 +77,7 @@ export class ImportStackOperation extends Operation {
     const originalHashes = this.originalStack.map(c => c.node);
     // Replace the old stack with the new stack, followed by a rebase.
     // Note the rebase is actually not what the operation does, but we always
-    // follow up with a rebase opeation if needed.
+    // follow up with a rebase operation if needed.
     const toRebase = dag.descendants(dag.children(originalHashes.at(-1)));
     let toRemove = HashSet.fromHashes(originalHashes).subtract(dag.ancestors(this.firstParent));
     // If the "toRemove" part of the original stack is gone, consider as completed.

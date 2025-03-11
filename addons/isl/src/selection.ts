@@ -196,7 +196,7 @@ export function useCommitCallbacks(commit: CommitInfo): {
     // Select the commit if it was deselected.
     if (!isSelected) {
       if (commit.hash === YOU_ARE_HERE_VIRTUAL_COMMIT.hash) {
-        // don't select virutal commit, replace selection instead
+        // don't select virtual commit, replace selection instead
         overrideSelection([]);
       } else {
         overrideSelection([commit.hash]);
@@ -314,7 +314,7 @@ export function useArrowKeysToChangeSelection() {
 
 export function useBackspaceToHideSelected(): void {
   const cb = useCallback(() => {
-    // Though you can select multiple commits, our preview system doens't handle that very well.
+    // Though you can select multiple commits, our preview system doesn't handle that very well.
     // Just preview hiding the most recently selected commit.
     // Another sensible behavior would be to inspect the tree of commits selected
     // and find if there's a single common ancestor to hide. That won't work in all cases though.

@@ -473,7 +473,7 @@ m
 
         let fields = GitCommitLazyFields::new(text.into());
         assert!(fields.root_tree().unwrap().is_null());
-        // The field does not have `pub` but is implicitly accessiable via serde.
+        // The field does not have `pub` but is implicitly accessible via serde.
         assert!(fields.fields().unwrap().tree.is_null());
         // Test root_tree() after "fields" being calculated.
         assert!(fields.root_tree().unwrap().is_null());

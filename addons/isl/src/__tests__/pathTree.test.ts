@@ -144,7 +144,7 @@ describe('pathTree', () => {
 });
 
 type Data = Array<[string, Data | FakeData]>;
-// make testing slightly easier so we don't need to constuct maps in expected result
+// make testing slightly easier so we don't need to construct maps in expected result
 function testTree(data: Data): PathTree<FakeData> {
   return new Map(
     data.map(([k, v]): [string, FakeData | PathTree<FakeData>] =>

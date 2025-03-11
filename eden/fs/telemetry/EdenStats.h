@@ -360,7 +360,7 @@ struct NfsStats : StatsGroup<NfsStats> {
   Counter nfsErrorNoEnt{"nfs.error.noent"};
   Counter nfsErrorIO{"nfs.error.io"};
   Counter nfsErrorNXIO{"nfs.error.nxio"};
-  Counter nfsErrorAcces{"nfs.error.acces"};
+  Counter nfsErrorAcces{"nfs.error.access"};
   Counter nfsErrorExist{"nfs.error.exist"};
   Counter nfsErrorXDev{"nfs.error.xdev"};
   Counter nfsErrorNoDev{"nfs.error.nodev"};

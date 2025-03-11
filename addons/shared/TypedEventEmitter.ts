@@ -15,7 +15,7 @@ type TypedListenerParam<T> = ((data: T) => void) | ((err: Error) => void);
 
 /**
  * Like {@link EventEmitter} / {@link EventTarget}, but with type checking for one particular subscription type,
- * plus errors. usees EventTarget so it works in browser and node.
+ * plus errors. uses EventTarget so it works in browser and node.
  * ```
  * const myEmitter = new TypedEventEmitter<'data', number>();
  * myEmitter.on('data', (data: number) => ...); // typechecks 'data' param and callback

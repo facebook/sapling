@@ -123,7 +123,7 @@ pub(crate) async fn derive_unode_manifest_with_subtree_changes(
             // must be applied based on the subtree copy source, rather than
             // the parent.
             //
-            // For unodes, we cannot re-use the unode manifest from
+            // For unodes, we cannot reuse the unode manifest from
             // the copy source, as unodes are (by design) unique to
             // each commit.  We need to build new unodes for the copied
             // files.  This effectively turns this into an O(N) copy.

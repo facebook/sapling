@@ -89,7 +89,7 @@ export function handleAbortSignalOnProcess(child: EjecaChildProcess, signal: Abo
       // If the process is stopped (ex. Ctrl+Z, kill -STOP), make it
       // continue first so it can respond to signals including SIGKILL.
       child.kill('SIGCONT');
-      // A good citizen process should exit soon after recieving SIGTERM.
+      // A good citizen process should exit soon after receiving SIGTERM.
       // In case it doesn't, send SIGKILL after 5 seconds.
       child.kill('SIGTERM', {forceKillAfterTimeout: 5000});
     }

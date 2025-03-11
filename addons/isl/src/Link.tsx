@@ -34,7 +34,7 @@ export function Link({
   const handleClick = (
     event: React.MouseEvent<HTMLAnchorElement> | React.KeyboardEvent<HTMLAnchorElement>,
   ) => {
-    // allow pressing Enter when focused to simulate clicking for accessability
+    // allow pressing Enter when focused to simulate clicking for accessibility
     if (event.type === 'keyup') {
       if ((event as React.KeyboardEvent<HTMLAnchorElement>).key !== 'Enter') {
         return;

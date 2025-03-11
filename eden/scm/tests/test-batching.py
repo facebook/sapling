@@ -98,7 +98,7 @@ print()
 print("== Local")
 use(mylocal)
 
-# demo remoting; mimicks what wireproto and HTTP/SSH do
+# demo remoting; mimics what wireproto and HTTP/SSH do
 
 # shared
 

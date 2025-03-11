@@ -69,7 +69,7 @@ type surveyMetaData = {
   diffId: string | undefined;
 };
 
-/** Type definitions for built-in or third-party VS Code commands we want to execute programatically. */
+/** Type definitions for built-in or third-party VS Code commands we want to execute programmatically. */
 type ExternalVSCodeCommands = {
   'vscode.diff': (
     left: vscode.Uri,
@@ -100,7 +100,7 @@ export type VSCodeCommand = typeof vscodeCommands & ExternalVSCodeCommands;
 
 /**
  * Type-safe programmatic execution of VS Code commands (via `vscode.commands.executeCommand`).
- * Sapling-provided commands are defiend in vscodeCommands.
+ * Sapling-provided commands are defined in vscodeCommands.
  * Built-in or third-party commands may also be typed through this function,
  * just define them in ExternalVSCodeCommands.
  */

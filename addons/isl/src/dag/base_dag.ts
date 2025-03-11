@@ -208,7 +208,7 @@ export class BaseDag<C extends HashWithParents> extends SelfUpdate<BaseDagRecord
    * Topologically sort hashes from roots to heads.
    *
    * When there are multiple children (or roots), 'compare' breaks ties.
-   * Attempt to avoid interleved branches by outputting a branch continously
+   * Attempt to avoid interleved branches by outputting a branch continuously
    * until completing the branch or hitting a merge.
    *
    * With `gap` set to `true`, there could be "gap" in `set`. For example,

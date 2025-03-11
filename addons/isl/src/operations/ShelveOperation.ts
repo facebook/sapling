@@ -33,7 +33,7 @@ export class ShelveOperation extends Operation {
     if (this.filesPathsToCommit) {
       args.push(
         ...this.filesPathsToCommit.map(file =>
-          // tag file arguments specialy so the remote repo can convert them to the proper cwd-relative format.
+          // tag file arguments specially so the remote repo can convert them to the proper cwd-relative format.
           ({
             type: 'repo-relative-file' as const,
             path: file,

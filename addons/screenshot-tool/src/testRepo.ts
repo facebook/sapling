@@ -15,8 +15,8 @@ const logger = console;
 const keepTmp = process.env.KEEP != null;
 
 /**
- * Maintains the lifecyle of a test repo.
- * Add convinent methods to modify the repo here.
+ * Maintains the lifecycle of a test repo.
+ * Add convenient methods to modify the repo here.
  */
 export class TestRepo {
   /**

@@ -503,7 +503,7 @@ function TileInner(props: TileProps) {
     const dashArray = flag & EdgeFlag.Dash ? strokeDashArray : undefined;
     let d;
     if (flag & EdgeFlag.IntersectGap) {
-      // This vertical line intercects with a horizonal line visually but it does not mean
+      // This vertical line intercects with a horizontal line visually but it does not mean
       // they connect. Leave a small gap in the middle.
       d = `M ${x1 + fx1} ${y1 * sY + fy1} L 0 -2 M 0 2 L ${x2 + fx2} ${y2 * sY + fy2}`;
     } else if (y1 === y2 || x1 === x2) {
@@ -540,7 +540,7 @@ function NodeTile(
     isHead: boolean;
     isRoot: boolean;
     glyph: JSX.Element;
-    /** For NodeLine.Node, the color of the vertial edge above the circle. */
+    /** For NodeLine.Node, the color of the vertical edge above the circle. */
     aboveNodeColor?: string;
   } & TileProps,
 ) {

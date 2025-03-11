@@ -35,7 +35,7 @@ impl PythonSysConfig {
         let lines: Vec<&str> = out_str.lines().collect();
         if lines.len() < 3 {
             println!(
-                "cargo:warning=Python sysconfig output is imcomplete: {:?} Python: {:?}",
+                "cargo:warning=Python sysconfig output is incomplete: {:?} Python: {:?}",
                 out_str, python
             );
         }

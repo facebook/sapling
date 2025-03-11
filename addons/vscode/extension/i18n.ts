@@ -57,7 +57,7 @@ export async function ensureTranslationsLoaded(
  * Internationalize (i18n-ize) a string from a given key.
  * This implementation is specifically for the vscode extension.
  * The webview has its own i18n system which can hook into the
- * VS Code configured langauge.
+ * VS Code configured language.
  * This function is used for UI-visible text from the extension host.
  * The translations live in package.nls.*.json files,
  * which includes translations for values within package.json,

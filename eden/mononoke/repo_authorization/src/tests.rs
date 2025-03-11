@@ -286,7 +286,7 @@ async fn test_user_no_draft_no_write_access(fb: FacebookInit) -> Result<()> {
             );
 
             // TODO(mitrandir): This seems fishy: why would bookmark_modify succeed when
-            // the user has no write acceess!? Even if that's intended this API might be
+            // the user has no write access!? Even if that's intended this API might be
             // easily misused. We need to audit this.
             authz
                 .require_bookmark_modify(&ctx, &repo, &BookmarkKey::new("main")?)

@@ -168,7 +168,7 @@ fn split_key_exact<'a>(key: KeyRef<'a>) -> (KeyRef<'a>, Option<KeyRef<'a>>) {
     (key, None)
 }
 
-/// Compatiblity layer - difference between `FileState` and `FileStateV2`
+/// Compatibility layer - difference between `FileState` and `FileStateV2`
 pub trait CompatExt<T> {
     /// Load extra fields. Extends `load`.
     fn load_ext(&self, data: &mut dyn Read) -> Result<()>;
@@ -676,7 +676,7 @@ where
     /// subdirectories are updated to remove the file.
     ///
     /// Returns a pair of booleans (file_removed, now_empty) indicating whether the file
-    /// was removed, and whether the diectory is now empty.
+    /// was removed, and whether the directory is now empty.
     fn remove(&mut self, store: &dyn StoreView, name: KeyRef) -> Result<(bool, bool)> {
         let (file_removed, remove_entry) = match self.path_recurse(store, name)? {
             PathRecurse::Directory(dir, path, node) => {

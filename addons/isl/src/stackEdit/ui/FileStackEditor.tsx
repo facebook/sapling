@@ -53,7 +53,7 @@ type EditorRowProps = {
   /** Diff mode. */
   mode: Mode;
 
-  /** Whehter to enable text editing. This will disable conflicting features. */
+  /** Whether to enable text editing. This will disable conflicting features. */
   textEdit: boolean;
 };
 
@@ -679,7 +679,7 @@ function Ribbon(props: {
       };
     };
 
-    // Calcualte position now.
+    // Calculate position now.
     const containers = repositionAndGetContainers();
 
     if (containers == null) {

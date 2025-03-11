@@ -124,7 +124,7 @@ function collapseModifiersToNumber(mods: Modifiers): number {
  *
  * Commands are defined by mapping string command names to a key plus a set of modifiers.
  * CommandNames are statically known so that `useCommand` is type-safe.
- * Modifiers are a bitwise-OR union of {@link Modifier}, like `Modifier.CTRL | Modfier.CMD`
+ * Modifiers are a bitwise-OR union of {@link Modifier}, like `Modifier.CTRL | Modifier.CMD`
  *
  * Commands are not dispatched when the target is an input element, to ensure we don't affect typing.
  */

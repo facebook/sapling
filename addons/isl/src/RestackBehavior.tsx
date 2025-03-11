@@ -18,7 +18,7 @@ export enum AmendRestackBehavior {
 }
 const DEFAULT_AMEND_RESTACK_BEHAVIOR = AmendRestackBehavior.ALWAYS;
 
-/** This is controleld by the underlying Sapling config for this feature.
+/** This is controlled by the underlying Sapling config for this feature.
  * This way, we don't pass any additional data to sl to run amend,
  * and this one setting controls this behavior everywhere.
  * We merely give the setting a UI since it's common to customize.

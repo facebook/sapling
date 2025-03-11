@@ -10,7 +10,7 @@ import type {IGrammar} from 'vscode-textmate';
 import {INITIAL} from 'vscode-textmate';
 
 // The following values come from the MetadataConsts enum in vscode-textmate.
-// Although they are decalred in the main.d.ts file, our TypeScript/Webpack
+// Although they are declared in the main.d.ts file, our TypeScript/Webpack
 // setup does not appear to be able to inline them properly.
 const FOREGROUND_MASK = 8372224;
 const FOREGROUND_OFFSET = 14;

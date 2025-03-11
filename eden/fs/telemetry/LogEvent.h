@@ -868,7 +868,7 @@ struct AutoEdenDoctorRunEvent : public EdenFSEvent {
       event.addString("run_status", std::to_string(run_status));
     }
 
-    // Re-using existing column
+    // Reusing existing column
     event.addString("reason", failure_reason);
   }
 

@@ -881,7 +881,7 @@ mod test {
         assert_eq!(mover.move_path(&f)?, Some(mp("sub1/f")));
 
         // This is an subtree of sub1, but this subtree is preserved. Make
-        // sure path doesnt' change
+        // sure path doesn't change
         let f = mp("sub1/preserved");
         assert_eq!(mover.move_path(&f)?, Some(mp("sub1/preserved")));
 

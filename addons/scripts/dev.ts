@@ -226,7 +226,7 @@ class MultiRunner {
           : handle.exitCode == null
           ? status ?? chalk.gray('Running...')
           : handle.exitCode === 0
-          ? chalk.green(`Suceeded${durationStr}`)
+          ? chalk.green(`Succeeded${durationStr}`)
           : chalk.red(`Exited ${handle.exitCode}`);
 
       const output = [];

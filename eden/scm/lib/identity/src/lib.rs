@@ -653,7 +653,7 @@ pub fn must_sniff_dir(path: &Path) -> Result<Identity> {
 /// This function does not write to the filesystem. It does not auto create
 /// `.git/sl`, despite still returns `SL_GIT` identity for `.git`. `clidispatch`
 /// calls `gitcompat::init::maybe_init_inside_dotgit` to create `.git/sl` on
-/// repo constrution.
+/// repo construction.
 pub fn sniff_root(path: &Path) -> Result<Option<(PathBuf, Identity)>> {
     tracing::debug!(start=%path.display(), "sniffing for repo root");
 

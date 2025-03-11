@@ -828,7 +828,7 @@ def try_increase_open_file_limit():
             f" new(soft_limit={new_soft}, hard_limit={new_hard}),"
         )
     except Exception:
-        # `resource` module only avaible on unix-like platforms (Linux, Mac)
+        # `resource` module only available on unix-like platforms (Linux, Mac)
         # Windows does not have the open file descriptors limit issue.
         pass
 
@@ -2278,7 +2278,7 @@ class TTest(Test):
     def parse_optional_directive(self, el):
         """Determine whether el is optional, and strip the optional marker if so."""
         if not el:
-            # The function is sometimes pasesd None for some reason, so we have to early
+            # The function is sometimes passed None for some reason, so we have to early
             return el, False
         if el.endswith(b" (?)\n"):
             return el[:-5] + b"\n", True
@@ -2435,7 +2435,7 @@ class Progress:
         if moveup > 0:
             content += "\033[%dA" % moveup
         if lines:
-            # Disable line wrapping while outputing the progress entries
+            # Disable line wrapping while outputting the progress entries
             content += "\x1b[?7l"
             content += "\n".join("\r\033[K%s" % line.rstrip() for line in lines)
             content += "\x1b[?7h"

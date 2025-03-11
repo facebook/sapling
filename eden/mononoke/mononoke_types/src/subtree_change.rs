@@ -16,7 +16,7 @@ use crate::ChangesetId;
 #[thrift(thrift::bonsai::SubtreeChange)]
 pub enum SubtreeChange {
     /// Copy a subtree from another commit and path.  The copy is shallow, so
-    /// the Mercurial trees are re-used where there are no additional changes.
+    /// the Mercurial trees are reused where there are no additional changes.
     #[thrift(thrift::bonsai::SubtreeCopy)]
     SubtreeCopy(SubtreeCopy),
     /// Copy the history of a subtree from another commit and path.  The copy is

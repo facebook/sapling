@@ -39,7 +39,7 @@ declare global {
   interface Window {
     /**
      * AppMode that determines what feature the App is rendering.
-     * This is set at creation time (e.g. in HTML), and is not dymanic.
+     * This is set at creation time (e.g. in HTML), and is not dynamic.
      */
     islAppMode?: AppMode;
   }

@@ -100,7 +100,7 @@ pub fn generate_repo_paths(count: usize, qc_gen: &mut Gen) -> Vec<RepoPathBuf> {
                 self.current_component_length += 1;
 
                 // Decide if this is a directory. As we nest more and more directories, the
-                // probabilty of having directories decreses.
+                // probability of having directories decreses.
                 let u = self.current_component_length as u32;
                 if i < self.min_files_per_dir
                     || ((u64::arbitrary(self.qc_gen) % ((u + 2) as u64)) as u32) < u + 1

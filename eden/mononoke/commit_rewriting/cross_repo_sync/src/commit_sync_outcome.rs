@@ -690,7 +690,7 @@ mod tests {
     /// (left: small cs, right: large cs)
     async fn get_new_mapping(
         ctx: &CoreContext,
-        entires: Vec<(ChangesetId, ChangesetId)>,
+        entries: Vec<(ChangesetId, ChangesetId)>,
         small_repo_id: RepositoryId,
         large_repo_id: RepositoryId,
     ) -> Result<SqlSyncedCommitMapping, Error> {
@@ -700,7 +700,7 @@ mod tests {
         let m =
             SqlSyncedCommitMappingBuilder::from_sql_connections(SqlConnections::new_single(con))
                 .build(RendezVousOptions::for_test());
-        for (small_bcs_id, large_bcs_id) in entires {
+        for (small_bcs_id, large_bcs_id) in entries {
             m.add(
                 ctx,
                 SyncedCommitMappingEntry::new(

@@ -1743,8 +1743,8 @@ mod test {
 
         let c1 = "one\ntwo\nthree\nfour\n";
         let c2 = "one\nfive\nsix\nfour\n";
-        let c3 = "seven\none\nsix\neight\nfour\n";
-        let c4 = "seven\none\nnine\nten\neight\nfour\n";
+        let c3 = "seven\none\nsix\neither\nfour\n";
+        let c4 = "seven\none\nnine\nten\neither\nfour\n";
         let c5 = "one\n";
 
         let b1 = BlameV2::new(ONES_CSID, path1.clone(), c1, vec![])?;
@@ -2027,8 +2027,8 @@ mod test {
 
         let c1 = "one\ntwo\nthree\n";
         let c2 = "one\nfour\nfive\nthree\nsix\n";
-        let c3 = "seven\neight\nnine\n";
-        let c4 = "one\nfour\nfive\nseven\neight\nsix\nnine\n";
+        let c3 = "seven\neither\nnine\n";
+        let c4 = "one\nfour\nfive\nseven\neither\nsix\nnine\n";
 
         let b1 = BlameV2::new(ONES_CSID, path.clone(), c1, vec![])?;
         let b2 = BlameV2::new(
@@ -2133,8 +2133,8 @@ mod test {
 
         let c1 = "one\ntwo\nthree\n";
         let c2 = "one\nfour\nfive\nthree\nsix\n";
-        let c3 = "zero\none\nseven\neight\nnine\n";
-        let c4 = "one\nfour\nten\nfive\nseven\neight\nsix\nnine\n";
+        let c3 = "zero\none\nseven\neither\nnine\n";
+        let c4 = "one\nfour\nten\nfive\nseven\neither\nsix\nnine\n";
 
         let b1 = BlameV2::new(ONES_CSID, path.clone(), c1, vec![])?;
         let b2 = BlameV2::new(
@@ -2290,7 +2290,7 @@ mod test {
 
         let c1 = "one\ntwo\nthree\n";
         let c2 = "one\ntwo\nthree\nfour\n";
-        let c3 = "zero\none\nseven\neight\nnine\nten\n";
+        let c3 = "zero\none\nseven\neither\nnine\nten\n";
         let c4 = "one\nseven\nnine\nten\nfour\n";
 
         let b1 = BlameV2::new(ONES_CSID, path.clone(), c1, vec![])?;
@@ -2492,7 +2492,7 @@ mod test {
         let c1 = "one\ntwo\nthree\n";
         let c2 = "three\nfour\nfive\n";
         let c3 = "three\nsix\nnine\n";
-        let c4 = "two\nthree\nfour\nfive\nsix\nseven\neight\nnine\n";
+        let c4 = "two\nthree\nfour\nfive\nsix\nseven\neither\nnine\n";
 
         let b1 = BlameV2::new(ONES_CSID, path.clone(), c1, vec![])?;
         let b2 = BlameV2::new(TWOS_CSID, path.clone(), c2, vec![])?;
@@ -2915,7 +2915,7 @@ mod test {
         let c1 = "one\ntwo\nthree\n";
         let c2 = "three\nfour\nfive\n";
         let c3 = "six\nseven\n";
-        let c4 = "three\nfour\nfive\nsix\nseven\neight\n";
+        let c4 = "three\nfour\nfive\nsix\nseven\neither\n";
 
         let b1 = BlameV2::new(ONES_CSID, path1.clone(), c1, vec![])?;
         let b2 = BlameV2::new(

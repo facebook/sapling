@@ -1088,10 +1088,10 @@ mod test {
 
     #[tokio::test]
     async fn too_long_without_newline_first_line_test() {
-        let text = "This text is bascially a very long single line without any newline characters. First line is supposed to return the part till the first newline character or the first 64 bytes.";
+        let text = "This text is basically a very long single line without any newline characters. First line is supposed to return the part till the first newline character or the first 64 bytes.";
         let bytes_stream = stream::once(future::ready(Bytes::from(text)));
         assert_eq!(
-            Some("This text is bascially a very long single line without any newli".to_string()),
+            Some("This text is basically a very long single line without any newli".to_string()),
             first_line(bytes_stream).await
         );
     }
@@ -1108,10 +1108,10 @@ mod test {
 
     #[tokio::test]
     async fn too_long_with_newline_first_line_test() {
-        let text = "This text is bascially a very\n long single line, first line is supposed to return the part till the first newline character or the first 64 bytes.";
+        let text = "This text is basically a very\n long single line, first line is supposed to return the part till the first newline character or the first 64 bytes.";
         let bytes_stream = stream::once(future::ready(Bytes::from(text)));
         assert_eq!(
-            Some("This text is bascially a very".to_string()),
+            Some("This text is basically a very".to_string()),
             first_line(bytes_stream).await
         );
     }

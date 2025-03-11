@@ -536,7 +536,7 @@ export async function runProxyMain(args: Args) {
     process.exit(0);
   } else if (result.type === 'success') {
     // The server successfully started on this port
-    // Save the server information for re-use and print the URL for use
+    // Save the server information for reuse and print the URL for use
 
     try {
       await ensureExistingServerFolder();
@@ -550,8 +550,8 @@ export async function runProxyMain(args: Args) {
       });
     } catch (error) {
       info(
-        'failed to save server information re-use. ' +
-          'This server will remain, but future invocations on this port will not be able to re-use this instance.',
+        'failed to save server information reuse. ' +
+          'This server will remain, but future invocations on this port will not be able to reuse this instance.',
         error,
       );
     }

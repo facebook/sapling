@@ -200,7 +200,7 @@ pub async fn setup_common(
             }
         }
         // NOTE: error_as_data_node_types is an argument that can be specified for
-        // individual repos but the walker just assumes one univeral value for it even
+        // individual repos but the walker just assumes one universal value for it even
         // when executing for multiple repos. For sharded execution, having per-repo and
         // all-repo value for error_as_data_node_types will behave the same since the entire
         // setup is done once-per-repo in sharded setting. In CLI, this behavior is enforced

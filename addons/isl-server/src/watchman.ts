@@ -303,7 +303,7 @@ export class Watchman {
       // Ending the client will trigger a reconnect.
       this.client.end();
     } else {
-      // Only log state transisions once per watchmanClient, since otherwise we'll just get 8x of this message spammed
+      // Only log state transitions once per watchmanClient, since otherwise we'll just get 8x of this message spammed
       if (firstOfIterable(this.subscriptions.values()) === subscription) {
         // TODO(most): use state messages to decide on when to send updates.
         const stateEnter = response['state-enter'];

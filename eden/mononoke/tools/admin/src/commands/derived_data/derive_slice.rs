@@ -41,7 +41,7 @@ use super::Repo;
 #[derive(Args)]
 pub(super) struct DeriveSliceArgs {
     /// JSON file containing either deserialized `Vec<SegmentedSliceDescription>` or `BoundaryChangesets`
-    /// dependeing on `mode` arg.
+    /// depending on `mode` arg.
     #[clap(long, short = 'f', value_name = "FILE")]
     input_file: PathBuf,
 

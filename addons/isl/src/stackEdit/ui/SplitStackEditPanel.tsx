@@ -677,7 +677,7 @@ function EditableCommitTitle(props: MaybeEditableCommitTitleProps) {
 
         const previous = stackEdit.undoOperationDescription();
         if (previous != null && previous.name == 'metaedit' && previous.commit.rev === commit.rev) {
-          // the last operation was also editing this same message, let's re-use the history instead of growing it
+          // the last operation was also editing this same message, let's reuse the history instead of growing it
           stackEdit.replaceTopOperation(newCommitStack, {name: 'metaedit', commit});
         } else {
           stackEdit.push(newCommitStack, {name: 'metaedit', commit});

@@ -91,7 +91,7 @@ export default class FilepathClassifier {
 
   /**
    * Makes a best-effort to map the specified language id (like `fsharp`) to a
-   * name that is more familiar to the user (like `F#`). Also supports alises
+   * name that is more familiar to the user (like `F#`). Also supports aliases
    * so that both `py` and `python` are mapped to `Python`.
    */
   getDisplayNameForLanguageId(languageIdOrAlias: string): string {

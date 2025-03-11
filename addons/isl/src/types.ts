@@ -162,7 +162,7 @@ export type DiffComment = {
 /**
  * Summary of CI test results for a Diff.
  * 'pass' if ALL signals succeed and not still running.
- * 'failed' if ANY signal doesn't suceed, even if some are still running.
+ * 'failed' if ANY signal doesn't succeed, even if some are still running.
  */
 export type DiffSignalSummary = 'running' | 'pass' | 'failed' | 'warning' | 'no-signal';
 
@@ -465,7 +465,7 @@ export type Subscribe<K extends string> =
   | {type: `subscribe${K}`; subscriptionID: string}
   | {type: `unsubscribe${K}`; subscriptionID: string};
 
-/** Reponses to subscriptions, including data and the time duration the fetch lasted */
+/** Responses to subscriptions, including data and the time duration the fetch lasted */
 export type Fetched<K extends string, V> = {
   type: `fetched${K}`;
   subscriptionID: string;

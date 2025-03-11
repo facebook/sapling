@@ -877,7 +877,7 @@ class LineLog extends SelfUpdate<LineLogRecord> {
    * [1]: Malformed cases are when nested blocks (insertions or deletions)
    *      might be skipped incorrectly. The outer block says "skip" and the
    *      inner block does not want to "skip" but is still skipped since it
-   *      is skipped altogher with the outer block. See also section 0.4
+   *      is skipped altogether with the outer block. See also section 0.4
    *      and 0.5 in D3628440.
    */
   public calculateDepMap = cachedMethod(this.calculateDepMapImpl, {cache: calculateDepCache});

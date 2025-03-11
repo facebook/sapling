@@ -574,7 +574,7 @@ async fn test_offline_commit() {
     }
 
     {
-        // Comparsion. What will happen without prefetching children on checkout.
+        // Comparison. What will happen without prefetching children on checkout.
         let mut client = server.client_cloned_data().await;
 
         // Prefetch only B. Emulate checking out B without prefetching its children.

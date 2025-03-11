@@ -39,7 +39,7 @@ export const MAX_INPUT_LENGTH_FOR_INTRALINE_DIFF = 300;
 
 /**
  * Normalized version of a `diff.Change` returned by `diffWords()` that is
- * easier to work with when interleaving with syntax higlight information.
+ * easier to work with when interleaving with syntax highlight information.
  */
 type Chunk = {
   type: ChunkType;

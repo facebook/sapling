@@ -243,7 +243,7 @@ impl CompiledPaths {
             tree.should_output = true;
         }
 
-        // Step 2: BFS the tree and genearte `ops`.
+        // Step 2: BFS the tree and generate `ops`.
         let mut ops = Vec::new();
         // Trees to visit (within a same depth).
         let mut to_visit = vec![&root];

@@ -141,7 +141,7 @@ function Scroll(props: ScrollProps) {
   delete mergedProps.hideBar;
   delete mergedProps.direction;
 
-  // The outter <div> seems to avoid issues where
+  // The outer <div> seems to avoid issues where
   // the other direction of scrollbar gets used.
   // See https://pxl.cl/3bvWh for the difference.
   // I don't fully understand how this works exactly.

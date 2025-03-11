@@ -109,7 +109,7 @@ export class ReorderState extends Record({
     return this.draggingRev >= 0;
   }
 
-  /** Returns true if the reoder does nothing. */
+  /** Returns true if the reorder does nothing. */
   isNoop(): boolean {
     return this.offset === 0;
   }
@@ -126,7 +126,7 @@ export class ReorderState extends Record({
       this.commitStack.calculateDepMap(),
     );
 
-    // Force match depdency requirements of `rev` by moving dependencies.
+    // Force match dependency requirements of `rev` by moving dependencies.
     return this.merge({
       reorderRevs: List(reordered.order),
       draggingRevs: List(reordered.deps),

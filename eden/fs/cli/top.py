@@ -307,7 +307,7 @@ class Window:
             self.write_lines(rows[row_name])
 
     # splits the string lines into lines of length at most max_width without
-    # spreading words accross lines
+    # spreading words across lines
     # each line will be indented at the `current_x_offset`
     def write_lines(
         self, lines: str, max_width: int = -1, attr: Optional[int] = None
@@ -358,7 +358,7 @@ class Window:
     # By default the scrollable section will take up the rest of the vertical
     # space on the screen. Set scrollable_section_height to change this.
     #
-    # note: scollable sections must be started on new lines, if the current
+    # note: scrollable sections must be started on new lines, if the current
     # cursor is not on a new line, then will move to a new line
     def start_scrollable_section(self, scrollable_section_height: int = -1) -> None:
         if self.scrollable:
@@ -378,7 +378,7 @@ class Window:
 
     # The rest of the writes are not included in the scrollable section
     #
-    # note: scollable sections must be ended on new lines, if the current
+    # note: scrollable sections must be ended on new lines, if the current
     # cursor is not on a new line, then will move to a new line
     def end_scrollable_section(self) -> None:
         if self.current_x_offset != 0:
@@ -388,16 +388,16 @@ class Window:
         )
         self.scrollable = False
 
-    # first line number to be written in the scollable section
+    # first line number to be written in the scrollable section
     def get_scrollable_top_line(self) -> int:
         return self.scrollable_section_window_start + self.scrollable_offset
 
-    # last line to be writen in the scollable section
+    # last line to be written in the scrollable section
     def get_scrollable_bottom_line(self) -> int:
         return self.get_scrollable_top_line() + self.scrollable_section_window_size - 1
 
     # does the yth line fall with in the part of the scrollable section that is
-    # visable on the screen
+    # visible on the screen
     def in_scrollable_section(self, y: int) -> bool:
         return (
             y >= self.get_scrollable_top_line()
@@ -861,7 +861,7 @@ class Top:
         window.end_scrollable_section()
 
         instruction_line = (
-            "use up and down arrow keys to scoll, press ESC to return to the "
+            "use up and down arrow keys to scroll, press ESC to return to the "
             "main page"
         )
         window.write_line(instruction_line)

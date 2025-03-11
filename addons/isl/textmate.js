@@ -13,7 +13,7 @@
  *   TypeScript source file that is used directly by other TypeScript code in
  *   `isl/src`
  * - A folder of static resources written to `isl/public/generated/textmate`,
- *   which allows ISL to fetch grammers at runtime.
+ *   which allows ISL to fetch grammars at runtime.
  *
  * This script is expected to be run from the isl/ folder.
  */

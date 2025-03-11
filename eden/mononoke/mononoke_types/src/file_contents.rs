@@ -81,7 +81,7 @@ impl FileContents {
 
     pub fn size(&self) -> u64 {
         match self {
-            // NOTE: This unwrap() will panic iif we have a Bytes in memory that's larger than a
+            // NOTE: This unwrap() will panic if we have a Bytes in memory that's larger than a
             // u64. That's not going to happen.
             FileContents::Bytes(bytes) => bytes.len().try_into().unwrap(),
             FileContents::Chunked(chunked) => chunked.size(),

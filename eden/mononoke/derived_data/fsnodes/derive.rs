@@ -175,7 +175,7 @@ pub(crate) async fn derive_fsnode(
     }
 }
 
-/// Collect all the subentries for a new fsnode, re-using entries the parent
+/// Collect all the subentries for a new fsnode, reusing entries the parent
 /// fsnodes to avoid fetching too much.
 async fn collect_fsnode_subentries(
     ctx: &CoreContext,

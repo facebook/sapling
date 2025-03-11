@@ -1415,7 +1415,7 @@ def updateone(repo, fctxfunc, wctx, f, f2, flags, backup=False, backgroundclose=
     wctx[f].write(fctx, flags, backgroundclose=backgroundclose)
 
     if wctx.isinmemory():
-        # The "size" return value is only used for logging "Disk Writes" - not imporant
+        # The "size" return value is only used for logging "Disk Writes" - not important
         # for in-memory work.
         return 0
 

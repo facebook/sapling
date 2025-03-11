@@ -370,7 +370,7 @@ type GraphRow = {
    */
   termLine?: Array<boolean>;
   /**
-   * Lines to represent "ancestory" relationship.
+   * Lines to represent "ancestry" relationship.
    * "|" for direct parent, ":" for indirect ancestor.
    * Can be repeated. Can be skipped if there are no indirect ancestors.
    * Practically, CLI repeats this line. ISL "repeats" preNode and postNode lines.

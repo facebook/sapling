@@ -77,7 +77,7 @@ def editconfig(ui, path, section, name, value):
     else:
         if value is not None:
             # Name doesn't already exist. If section already exists, we want to
-            # re-use it, so find the end of the final pre-existing config value as
+            # reuse it, so find the end of the final pre-existing config value as
             # our insert position.
             insertpos = None
             for othername in cfg.names(section):

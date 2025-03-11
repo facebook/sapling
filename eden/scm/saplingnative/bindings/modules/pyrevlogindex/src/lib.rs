@@ -18,7 +18,7 @@ use pydag::Spans;
 
 // XXX: The revlogindex is a temporary solution before migrating to
 // segmented changelog. It is here to experiment breaking changes with
-// revlog, incluing:
+// revlog, including:
 //
 // - Redefine "head()" to only return remotenames and tracked draft heads.
 // - Get rid of "filtered revs" and "repo view" layer entirely.

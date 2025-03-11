@@ -466,7 +466,7 @@ impl TestLiveCommitSyncConfigSource {
     }
 }
 
-/// A unit-test freindly implementor of `LiveCommitSyncConfig`
+/// A unit-test friendly implementor of `LiveCommitSyncConfig`
 /// As this struct is meant to be held behind a type-erasing
 /// `dyn LiveCommitSyncConfig`, anything beyond the interface
 /// of `LiveCommitSyncConfig` won't be visible to the users.

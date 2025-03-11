@@ -12,11 +12,11 @@ describe('SelfUpdate', () => {
   it('is needed because of immutable.js deepEquals', () => {
     const list1 = nestedList(10);
     const list2 = nestedList(10);
-    // Immutable.is performs deepEqual repeatitively.
+    // Immutable.is performs deepEqual repetitively.
     expect(immutableIsCallCounts(list1, list2)).toMatchObject([11, 11, 11]);
   });
 
-  it('avoids repeatitive deepEquals', () => {
+  it('avoids repetitive deepEquals', () => {
     const list1 = new SelfUpdate(nestedList(10));
     const list2 = new SelfUpdate(nestedList(10));
     expect(immutableIsCallCounts(list1, list2)).toMatchObject([11, 1, 1]);

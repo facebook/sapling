@@ -489,7 +489,7 @@ where
 
 /// Trait for manifest leaves.
 pub trait ManifestLeaf: Hash + Eq {
-    /// Return true if this leaf can re-use a parent leaf's id.
+    /// Return true if this leaf can reuse a parent leaf's id.
     fn reuses(&self, other: &Self) -> bool;
 }
 

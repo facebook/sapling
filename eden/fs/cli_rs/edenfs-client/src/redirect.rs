@@ -628,8 +628,8 @@ impl Redirection {
 
     #[cfg(target_os = "linux")]
     async fn _bind_unmount_linux(&self, checkout: &EdenFsCheckout) -> Result<()> {
-        let instnace = EdenFsInstance::global();
-        let client = instnace.get_client(None).await?;
+        let instance = EdenFsInstance::global();
+        let client = instance.get_client(None).await?;
 
         client
             .remove_bind_mount(&checkout.path(), &self.repo_path)

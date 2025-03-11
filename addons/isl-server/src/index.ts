@@ -29,7 +29,7 @@ export interface ClientConnection {
    * Designed to match
    * https://code.visualstudio.com/api/references/vscode-api#Webview.onDidReceiveMessage
    */
-  onDidReceiveMessage(hander: (event: Buffer, isBinary: boolean) => void | Promise<void>): {
+  onDidReceiveMessage(handler: (event: Buffer, isBinary: boolean) => void | Promise<void>): {
     dispose(): void;
   };
 

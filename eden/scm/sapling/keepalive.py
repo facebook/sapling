@@ -264,7 +264,7 @@ class KeepAliveHandler:
         return r
 
     def _reuse_connection(self, h, req, host):
-        """start the transaction with a re-used connection
+        """start the transaction with a reused connection
         return a response object (r) upon success or None on failure.
         This DOES not close or remove bad connections in cases where
         it returns.  However, if an unexpected exception occurs, it
@@ -303,11 +303,11 @@ class KeepAliveHandler:
             # the socket has been closed by the server since we
             # last used the connection.
             if DEBUG:
-                DEBUG.info("failed to re-use connection to %s (%d)", host, id(h))
+                DEBUG.info("failed to reuse connection to %s (%d)", host, id(h))
             r = None
         else:
             if DEBUG:
-                DEBUG.info("re-using connection to %s (%d)", host, id(h))
+                DEBUG.info("reusing connection to %s (%d)", host, id(h))
 
         return r
 

@@ -114,7 +114,7 @@ export function T({
   opaque?: ReactNode;
   replace?: {[key: string]: string | ReactNode};
 }): JSX.Element {
-  // trigger re-render if the langauge is changed
+  // trigger re-render if the language is changed
   useContext(I18nContext);
 
   return <>{translate(children, {count, replace})}</>;

@@ -89,7 +89,7 @@ impl<'s> FromPyObject<'s> for FlagDef {
     fn extract(py: Python, obj: &'s PyObject) -> PyResult<Self> {
         let tuple: PyTuple = obj.extract(py)?;
         if tuple.len(py) < 3 {
-            let msg = "flag defintion requires at least 3 items".to_string();
+            let msg = "flag definition requires at least 3 items".to_string();
             return Err(PyErr::new::<exc::ValueError, _>(py, msg));
         }
         let short: String = tuple.get_item(py, 0).extract(py)?;

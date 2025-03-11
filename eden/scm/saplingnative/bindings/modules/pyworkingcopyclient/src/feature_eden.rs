@@ -16,7 +16,7 @@ pub(crate) fn populate_module(py: Python, m: &PyModule) -> PyResult<()> {
 }
 
 fn eden_error_handler(py: Python, mut e: &cpython_ext::error::Error) -> Option<PyErr> {
-    // Remove anyhow contex.
+    // Remove anyhow context.
     while let Some(inner) = e.downcast_ref::<cpython_ext::error::Error>() {
         e = inner;
     }

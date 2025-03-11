@@ -128,10 +128,10 @@ class BdiffTests(unittest.TestCase):
             (b"", b"", 1),
             (b"", b"", 0),
         ]
-        for a, b, allws in cases:
-            c = mdiff.fixws(a, allws)
+        for a, b, allows in cases:
+            c = mdiff.fixws(a, allows)
             self.assertEqual(
-                c, b, "fixws(%r) want %r got %r (allws=%r)" % (a, b, c, allws)
+                c, b, "fixws(%r) want %r got %r (allows=%r)" % (a, b, c, allows)
             )
 
     def test_nice_diff_for_trivial_change(self):

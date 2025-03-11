@@ -163,7 +163,7 @@ type DecoratorFunc = (target: unknown, propertyKey: string, descriptor: Property
  * This is similar to calling `cached` on the function, with
  * an auto-generated `opts.getExtraKeys` function that turns
  * `this` into extra cache keys. Immutable `this` is used
- * as the extra cache key directly. Otherwise, cachable
+ * as the extra cache key directly. Otherwise, cacheable
  * properties of `this` are used as extra cache keys.
  */
 export function cached<T>(opts?: CacheOpts<T>): DecoratorFunc;
@@ -177,12 +177,12 @@ export function cached<T>(opts?: CacheOpts<T>): DecoratorFunc;
  *
  * The cache can be accessed via `returnedFunction.cache`.
  *
- * Cache is used only when all parameters are cachable [1].
+ * Cache is used only when all parameters are cacheable [1].
  * For example, if a parameter is a function or `null`,
  * then cache is only used when that parameter is `null`,
- * since functions are not cachable.
+ * since functions are not cacheable.
  *
- * [1]: See `isCachable` for cachable types.
+ * [1]: See `isCachable` for cacheable types.
  */
 export function cached<T, F extends AnyFunction<T>>(func: F, opts?: CacheOpts<T>): F & WithCache;
 
@@ -276,7 +276,7 @@ function cacheDecorator<T>(opts?: CacheOpts<T>) {
       if (isValueObject(this)) {
         return [this];
       }
-      // Scan through cachable properties.
+      // Scan through cacheable properties.
       if (this != null && typeof this === 'object') {
         return Object.values(this).filter(isCachable);
       }
@@ -298,7 +298,7 @@ export function cachedMethod<T, F extends AnyFunction<T>>(originalFunc: F, opts?
       if (isValueObject(this)) {
         return [this];
       }
-      // Scan through cachable properties.
+      // Scan through cacheable properties.
       if (this != null && typeof this === 'object') {
         return Object.values(this).filter(isCachable);
       }

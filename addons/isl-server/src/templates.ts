@@ -80,7 +80,7 @@ export function parseCommitInfoOutput(
       }
       const files = lines[FIELD_INDEX.files].split(NULL_CHAR).filter(e => e.length > 0);
 
-      // Find if the commit is entirely within the cwd and therefore mroe relevant to the user.
+      // Find if the commit is entirely within the cwd and therefore more relevant to the user.
       // Note: this must be done on the server using the full list of files, not just the sample that the client gets.
       // TODO: should we cache this by commit hash to avoid iterating all files on the same commits every time?
       const maxCommonPathPrefix = findMaxCommonPathPrefix(files);

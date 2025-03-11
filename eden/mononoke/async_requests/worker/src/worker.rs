@@ -510,8 +510,8 @@ mod test {
         q.enqueue(&ctx, Some(&repo_id), params).await?;
 
         // Grab it from the queue...
-        let dequed = q.dequeue(&ctx, &ClaimedBy("name".to_string())).await?;
-        assert!(dequed.is_some());
+        let dequeued = q.dequeue(&ctx, &ClaimedBy("name".to_string())).await?;
+        assert!(dequeued.is_some());
 
         // ... and check that the queue is empty now...
         let will_exit = Arc::new(AtomicBool::new(false));

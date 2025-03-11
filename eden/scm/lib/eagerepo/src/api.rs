@@ -936,7 +936,7 @@ impl SaplingRemoteApi for EagerRepo {
             let text = match changeset_to_text(cs) {
                 Ok(text) => text,
                 Err(err) => {
-                    res.push(Err(err.context("creating changset text").into()));
+                    res.push(Err(err.context("creating changeset text").into()));
                     continue;
                 }
             };
@@ -1324,7 +1324,7 @@ impl SaplingRemoteApi for EagerRepo {
             Ok(new_commit)
         }
 
-        /// `left` and `right` are considerered to be conflit free, if none of the element
+        /// `left` and `right` are considerered to be conflict free, if none of the element
         /// from `left` is prefix of element from `right`, and vice versa.
         fn pushrebase_conflicts(
             mbase: &TreeManifest,

@@ -12,7 +12,7 @@ type Id = number;
 /**
  * Rate limits requests to run an arbitrary task.
  * Up to `maxSimultaneousRunning` tasks can run at once,
- * futher requests will be queued and run when a running task finishes.
+ * further requests will be queued and run when a running task finishes.
  *
  * Usage:
  * ```

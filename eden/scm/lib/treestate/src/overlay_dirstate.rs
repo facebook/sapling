@@ -31,7 +31,7 @@ use crate::filestate::StateFlags;
 ///
 /// An _overlay_ contains entries for changes on top of an existing "status" source of truth such
 /// as edenfs or "git status". For example, if the "git status" already reports "a.txt" as
-/// "modified", then it's unncessary for this overlay to duplicate the "M a.txt" state. The overlay
+/// "modified", then it's unnecessary for this overlay to duplicate the "M a.txt" state. The overlay
 /// can be used, for example, to overwrite "? b.txt" to "A b.txt".
 ///
 /// Right now this is just a simple serialization format that is rewritten in full every time. It

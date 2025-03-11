@@ -35,7 +35,7 @@ def run_stress_test(n, binary, kill_median, kill_half_width):
         "for %i times and kill each run after unform(%f..%f) s"
         % (n, min_sleep, max_sleep)
     )
-    print("Will check the existense of %s after each run\n" % filename)
+    print("Will check the existence of %s after each run\n" % filename)
     try:
         # let's create a file upfront
         with open(filename, "w"):
@@ -66,7 +66,7 @@ if __name__ == "__main__":
         + "This script runs N iterations of hg binary, asking it to "
         + "atomically create a file with some content. It kills each "
         + "process after a random period of time. After the process is"
-        + "killed, the script checks the existense of the file and "
+        + "killed, the script checks the existence of the file and "
         + "reports if it is missing."
     )
     parser = argparse.ArgumentParser(

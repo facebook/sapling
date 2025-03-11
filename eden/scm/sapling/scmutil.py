@@ -1112,7 +1112,7 @@ def readrequires(opener, supported=None):
     If supported is None, read all features without checking.
     """
     requirements = set(opener.readutf8("requires").splitlines())
-    missings = []
+    missing = []
     if supported:
         for r in requirements:
             if r not in supported:
@@ -1120,12 +1120,12 @@ def readrequires(opener, supported=None):
                     raise error.RequirementError(
                         _("%s file is corrupt") % opener.join("requires")
                     )
-                missings.append(r)
-    missings.sort()
-    if missings:
+                missing.append(r)
+    missing.sort()
+    if missing:
         raise error.RequirementError(
             _("repository requires features unknown to this @Product@: %s")
-            % " ".join(missings),
+            % " ".join(missing),
             hint=_(
                 "see https://mercurial-scm.org/wiki/MissingRequirement"
                 " for more information"

@@ -125,10 +125,10 @@ class ProxyWrapper(unittest.TestCase):
         # Only exists in wrapper
         self.assertEqual(w.wrapper_only(), "wrapper inner")
 
-        # Base method that calls a method overidden in wrapper
+        # Base method that calls a method overridden in wrapper
         self.assertEqual(w.neither_overrides(), "wrapper")
 
-        # Inner method that calls a method overidden in wrapper
+        # Inner method that calls a method overridden in wrapper
         self.assertEqual(w.middle_overrides(), "middle")
 
         # Delegate class attributes to inner object.

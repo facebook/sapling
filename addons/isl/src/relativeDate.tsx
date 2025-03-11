@@ -94,8 +94,8 @@ const units = {
 
 /**
  * Format date into relative string format.
- * If currentLanguage is 'en', uses hard-coded time abbrviations for maximum shortness.
- * Other langauges use currently Intl.RelativeTimeFormat if available.
+ * If currentLanguage is 'en', uses hard-coded time abbreviations for maximum shortness.
+ * Other languages use currently Intl.RelativeTimeFormat if available.
  * if currentLanguage is 'en':
  * ```
  * relativeDate(new Date()) -> 'just now'
@@ -186,7 +186,7 @@ export function RelativeDate({
   return <>{relativeDate(date, {reference, useShortVariant, useNumbersOnly, useRelativeForm})}</>;
 }
 
-/** Get "now" for relativeDate use-case. Can be overriden by "?now=unixtime" in ISL browser environments. */
+/** Get "now" for relativeDate use-case. Can be overridden by "?now=unixtime" in ISL browser environments. */
 function now(): number {
   const forceNowStr =
     typeof window === 'undefined'

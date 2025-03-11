@@ -556,7 +556,7 @@ function ShowingRemoteMessageBanner({
           'Message syncing with $provider has been temporarily disabled due to a failed sync.\n\n' +
             'Your local commit message is shown instead.\n' +
             "Changes you make won't be automatically synced.\n\n" +
-            'Make sure to manually sync your message with $provider, then reenable or restart ISL to start syncing again.',
+            'Make sure to manually sync your message with $provider, then re-enable or restart ISL to start syncing again.',
           {replace: {$provider: provider.label}},
         )}>
         <Banner

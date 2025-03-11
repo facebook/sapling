@@ -41,7 +41,7 @@ typedef struct {
   unsigned int flag;
 } cappair_t;
 
-static const cappair_t captable[] = {
+static const cappair_t capable[] = {
     {"getencoding", CAP_GETENCODING},
     {"runcommand", CAP_RUNCOMMAND},
     {"attachio", CAP_ATTACHIO},
@@ -315,7 +315,7 @@ static unsigned int parsecapabilities(const char* s, const char* e) {
     if (!t || t > e)
       t = e;
     const cappair_t* cap;
-    for (cap = captable; cap->flag; ++cap) {
+    for (cap = capable; cap->flag; ++cap) {
       size_t n = t - s;
       if (strncmp(s, cap->name, n) == 0 && strlen(cap->name) == n) {
         flags |= cap->flag;

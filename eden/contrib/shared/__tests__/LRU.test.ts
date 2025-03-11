@@ -126,7 +126,7 @@ describe('LRU', () => {
     expect(lru.get(6)).toBe(undefined);
   });
 
-  it('works with SelfUpdate keys to avoid repeatitive deepEquals', () => {
+  it('works with SelfUpdate keys to avoid repetitive deepEquals', () => {
     const ListEqualsMock = jest.spyOn(List.prototype, 'equals');
 
     type NestedList = List<number | NestedList>;
@@ -250,10 +250,10 @@ describe('cached()', () => {
         return pickA ? a : b;
       });
       const stats = (max.cache.stats = {});
-      // number is cachable.
+      // number is cacheable.
       expect(max(1, 2) + max(1, 2)).toBe(4);
       expect(stats).toMatchObject({hit: 1, miss: 1});
-      // function is not cachable.
+      // function is not cacheable.
       expect(max(1, 2, v => 3 - v) + max(1, 2, v => 3 - v)).toBe(2);
       expect(max(1, 2, v => v)).toBe(2);
       expect(stats).toMatchObject({skip: 3});

@@ -13,7 +13,7 @@ def testsetup(t: TestTmp):
     t.requireexe("eden")
     # Make other parts of the tests aware of the fact the test is using EdenFS
     t.setenv("HGTEST_USE_EDEN", "1")
-    # This fallback is there increasing the compatiblity of the `goto` command.
+    # This fallback is there increasing the compatibility of the `goto` command.
     # EdenFS does not report the number of files that were updated, while the
     # rest of DotSL modes do.
     t.registerfallbackmatch(

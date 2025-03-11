@@ -197,7 +197,7 @@ async fn backsync_without_submodule_expansion_support<'a, R: Repo>(
             .collect::<Vec<_>>(),
     );
 
-    let rewriten = rewrite_commit(
+    let rewritten = rewrite_commit(
         ctx,
         bonsai_mut,
         remapped_parents,
@@ -209,5 +209,5 @@ async fn backsync_without_submodule_expansion_support<'a, R: Repo>(
     .await
     .context("Failed to create small repo bonsai")?;
 
-    Ok(CommitRewriteResult::new(rewriten, HashMap::new()))
+    Ok(CommitRewriteResult::new(rewritten, HashMap::new()))
 }

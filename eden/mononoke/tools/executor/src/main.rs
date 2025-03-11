@@ -62,7 +62,7 @@ impl RepoShardedProcess for TestProcess {
     }
 }
 
-/// Struct representing the execution of the Backgroung Process over
+/// Struct representing the execution of the Background Process over
 /// a particular repo. This struct can contain state that is specific
 /// to an individual repo's execution. It can also include signalling
 /// mechanism to indicate that the execution of a particular repo needs
@@ -219,7 +219,7 @@ async fn run(app: MononokeApp) -> Result<()> {
     // indicates that the job needs to run in sharded mode.
     match &app.args::<TestArgs>()?.sharded_service_name {
         // If sharded execution is not desired, the repo passed to on-repo-
-        // load shoud be derived through CLI args or some other source.
+        // load should be derived through CLI args or some other source.
         None => run_unsharded(app).await,
         Some(service_name) => run_sharded(app, service_name.to_string()).await,
     }

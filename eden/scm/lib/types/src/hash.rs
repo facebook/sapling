@@ -41,7 +41,7 @@ pub struct HexError(Vec<u8>, usize);
 // It's unfortunate that I and N are separate parameters. But that's
 // limitation by rustc: array length cannot refer to generic types
 // (https://github.com/rust-lang/rust/issues/43408), and `&str` cannot
-// be used as a const genric, as of rust 1.54.
+// be used as a const generic, as of rust 1.54.
 
 impl<'de, I, const N: usize> Deserialize<'de> for AbstractHashType<I, N> {
     fn deserialize<D: Deserializer<'de>>(deserializer: D) -> Result<Self, D::Error> {

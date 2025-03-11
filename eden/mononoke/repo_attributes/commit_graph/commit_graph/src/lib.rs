@@ -856,7 +856,7 @@ impl CommitGraph {
     ///
     /// Note: local topological order here means that all parents of a changeset that are
     /// contained in the input `cs_ids` are processed before itself, but if two changesets
-    /// are ancestors of each other and some of the changesets in the path betwen them are
+    /// are ancestors of each other and some of the changesets in the path between them are
     /// not given in `cs_ids`, they are not guaranteed to be processed in topological order.
     pub async fn process_topologically<Process, Fut>(
         &self,

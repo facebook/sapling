@@ -150,7 +150,7 @@ pub struct PathTrackingRoute<P: WrappedPathLike> {
     // The path we reached this by
     pub path: Option<P>,
     /// When did this route see this path was updated.
-    /// Taken from the last bonsai or hg changset stepped through.
+    /// Taken from the last bonsai or hg changeset stepped through.
     pub mtime: Option<DateTime>,
 }
 

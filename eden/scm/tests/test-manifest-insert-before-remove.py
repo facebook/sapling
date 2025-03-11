@@ -58,7 +58,7 @@ class TestStore:
             return None
 
     def insert(self, path, node, value):
-        # it's funny that the apis are asymetrical
+        # it's funny that the apis are asymmetrical
         if not path in self.underlying:
             self.underlying[path] = {}
         self.underlying[path][node] = value

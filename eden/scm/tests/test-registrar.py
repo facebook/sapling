@@ -25,7 +25,7 @@ command._table["commandstring"] = "Rust commands are actually registered as stri
 
 class TestRegistrar(unittest.TestCase):
     def testnohelptext(self):
-        # Redifining commands should not be an issue as long as they
+        # Redefining commands should not be an issue as long as they
         # do not have any documentation
         @command("notacommand")
         def thisalreadyexisted(_ui, **opts):

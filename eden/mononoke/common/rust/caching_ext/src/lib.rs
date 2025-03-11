@@ -115,7 +115,7 @@ pub trait MemcacheEntity: Sized {
     fn deserialize(bytes: Bytes) -> McResult<Self>;
 }
 
-/// Implement this trait to indicate that you can cache values retrived through you
+/// Implement this trait to indicate that you can cache values retrieved through you
 pub trait EntityStore<V> {
     /// Get the cachelib handler. This can be created with `.into()` on a `VolatileLruCachePool`
     fn cachelib(&self) -> &CachelibHandler<V>;

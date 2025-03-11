@@ -62,7 +62,7 @@ pub enum ErrorKind {
     BatchRequestFailed(StatusCode),
     #[error("Reading the response for a batch request failed")]
     BatchRequestReadFailed,
-    #[error("An error ocurred receiving a response from upstream ({0}): {1}")]
+    #[error("An error occurred receiving a response from upstream ({0}): {1}")]
     UpstreamError(StatusCode, String),
 }
 

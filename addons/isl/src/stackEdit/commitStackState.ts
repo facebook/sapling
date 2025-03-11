@@ -210,14 +210,14 @@ export class CommitStackState extends SelfUpdate<CommitStackRecord> {
     return [...this.stack.keys()] as CommitRev[];
   }
 
-  /** Find the first "Rev" that satisify the condition. */
+  /** Find the first "Rev" that satisfy the condition. */
   findRev(predicate: (commit: CommitState, rev: CommitRev) => boolean): CommitRev | undefined {
     return this.stack.findIndex(predicate as (commit: CommitState, rev: number) => boolean) as
       | CommitRev
       | undefined;
   }
 
-  /** Find the last "Rev" that satisify the condition. */
+  /** Find the last "Rev" that satisfy the condition. */
   findLastRev(predicate: (commit: CommitState, rev: CommitRev) => boolean): CommitRev | undefined {
     return this.stack.findLastIndex(predicate as (commit: CommitState, rev: number) => boolean) as
       | CommitRev
@@ -711,7 +711,7 @@ export class CommitStackState extends SelfUpdate<CommitStackRecord> {
    *
    * Throws if the edit cannot be fulfilled, for example, the `commitRev` is
    * before the commit introducing the change (conflict), or if the `commitRev`
-   * does not touch the file being edited (current limiation, might be lifted).
+   * does not touch the file being edited (current limitation, might be lifted).
    */
   setAbsorbEditDestination(
     fileIdx: number,
@@ -1120,7 +1120,7 @@ export class CommitStackState extends SelfUpdate<CommitStackRecord> {
     return this.stack.size;
   }
 
-  // Histedit-related opeations.
+  // Histedit-related operations.
 
   /**
    * Calculate the dependencies of revisions.
@@ -1874,7 +1874,7 @@ function convertExportFileToFileState(file: ExportFile | null): FileState {
 function getCommitStatesFromExportStack(stack: Readonly<ExportStack>): List<CommitState> {
   checkStackParents(stack);
 
-  // Prepare nodeToRev convertion.
+  // Prepare nodeToRev conversion.
   const revs: CommitRev[] = [...stack.keys()] as CommitRev[];
   const nodeToRevMap: Map<Hash, CommitRev> = new Map(revs.map(rev => [stack[rev].node, rev]));
   const nodeToRev = (node: Hash): CommitRev => {

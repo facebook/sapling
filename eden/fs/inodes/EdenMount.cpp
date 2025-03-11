@@ -1732,7 +1732,7 @@ ImmediateFuture<folly::Unit> EdenMount::chown(uid_t uid, gid_t gid) {
   // 3) Modify all uids/gids of files stored in the overlay
   auto metadataTable = getInodeMetadataTable();
   XDCHECK(metadataTable) << "Unexpected null Metadata Table";
-  metadataTable->forEachModify([&](auto& /* unusued */, auto& record) {
+  metadataTable->forEachModify([&](auto& /* unused */, auto& record) {
     record.uid = uid;
     record.gid = gid;
   });

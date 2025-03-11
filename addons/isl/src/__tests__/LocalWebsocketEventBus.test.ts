@@ -356,7 +356,7 @@ describe('LocalWebsocketEventBus', () => {
 
       globalMockWs.simulateServerConnected();
 
-      // simulate a bunch of unsucessful reconnects over time
+      // simulate a bunch of unsuccessful reconnects over time
       for (let i = 0; i < 100; i++) {
         globalMockWs.simulateServerDisconnected();
         jest.advanceTimersByTime(LocalWebSocketEventBus.MAX_RECONNECT_CHECK_TIME_MS);

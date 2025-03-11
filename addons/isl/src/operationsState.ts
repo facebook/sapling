@@ -29,7 +29,7 @@ export type OperationInfo = {
   aborting?: boolean;
   /** if true, the operation process has exited AND there's no more optimistic commit state to show */
   hasCompletedOptimisticState?: boolean;
-  /** if true, the operation process has exited AND there's no more optimistic changes to uncommited changes to show */
+  /** if true, the operation process has exited AND there's no more optimistic changes to uncommitted changes to show */
   hasCompletedUncommittedChangesOptimisticState?: boolean;
   /** if true, the operation process has exited AND there's no more optimistic changes to merge conflicts to show */
   hasCompletedMergeConflictsOptimisticState?: boolean;
@@ -439,9 +439,9 @@ function runOperationImpl(operation: Operation): Promise<undefined | Error> {
     type: 'runOperation',
     operation: operation.getRunnableOperation(),
   });
-  const defered = defer<undefined | Error>();
+  const deferred = defer<undefined | Error>();
   operationCompletionCallbacks.set(operation.id, (err?: Error) => {
-    defered.resolve(err);
+    deferred.resolve(err);
   });
 
   operationsById.set(operation.id, operation);
@@ -460,7 +460,7 @@ function runOperationImpl(operation: Operation): Promise<undefined | Error> {
   // This timer will auto disable when currentOperation becomes null.
   currentOperationHeartbeatTimer.enabled = true;
 
-  return defered.promise;
+  return deferred.promise;
 }
 
 const currentOperationHeartbeatTimer = new Timer(() => {

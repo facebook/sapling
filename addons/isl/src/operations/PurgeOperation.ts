@@ -27,7 +27,7 @@ export class PurgeOperation extends Operation {
   getArgs() {
     const args: Array<CommandArg> = ['purge', '--files'];
     if (this.files.length > 0) {
-      // Tag file arguments specialy so the remote repo can convert them to the proper cwd-relative format.
+      // Tag file arguments specially so the remote repo can convert them to the proper cwd-relative format.
       args.push({
         type: 'repo-relative-file-list' as const,
         paths: this.files,

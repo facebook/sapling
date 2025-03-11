@@ -325,7 +325,7 @@ export class Dag extends SelfUpdate<CommitDagRecord> {
   cleanup(startHeads?: SetLike): Dag {
     // ancestors(".") are not obsoleted.
     const obsolete = this.obsolete().subtract(this.ancestors(this.resolve('.')?.hash));
-    // Don't trust `startHeads` as obsoleted draft heads, so we calcualte it anyway.
+    // Don't trust `startHeads` as obsoleted draft heads, so we calculate it anyway.
     let heads = this.heads(this.draft()).intersect(obsolete);
     if (startHeads !== undefined) {
       heads = heads.intersect(HashSet.fromHashes(startHeads));
@@ -412,7 +412,7 @@ export class Dag extends SelfUpdate<CommitDagRecord> {
    *
    * This is "incorrect" but we don't get the info from `sl log` yet.
    *
-   * Useful to reason about ancestory relations. For example, to filter
+   * Useful to reason about ancestry relations. For example, to filter
    * out rebase destinations (ex. remote/stable) that are backwards,
    * we want ancestors(rebase_src) to include public commits like
    * remote/stable.
@@ -460,7 +460,7 @@ export class Dag extends SelfUpdate<CommitDagRecord> {
    *   is also in this `dag` will be returned, the hash itself will be
    *   excluded from the result.
    * - If `set` contains a hash that gets split into multiple successors
-   *   that heads(succesors) on the mutation graph still contains multiple
+   *   that heads(successors) on the mutation graph still contains multiple
    *   commits, then heads(ancestors(successors)) on the main graph will
    *   be attempted to pick the "stack top".
    *
@@ -491,7 +491,7 @@ export class Dag extends SelfUpdate<CommitDagRecord> {
     // namespaces.py for priorities. Basically (in this order):
     // - hex full hash (40 bytes); '.' (working parent)
     // - nameMap (see infoToNameMapEntries)
-    // - partial match (unambigious partial prefix match)
+    // - partial match (unambiguous partial prefix match)
 
     // Full commit hash?
     const info = this.get(name);
@@ -513,7 +513,7 @@ export class Dag extends SelfUpdate<CommitDagRecord> {
       }
     }
 
-    // Unambigious prefix match.
+    // Unambiguous prefix match.
     if (shouldPrefixMatch(name)) {
       let matched: undefined | Hash = undefined;
       for (const hash of this) {
@@ -521,7 +521,7 @@ export class Dag extends SelfUpdate<CommitDagRecord> {
           if (matched === undefined) {
             matched = hash;
           } else {
-            // Ambigious prefix.
+            // Ambiguous prefix.
             return undefined;
           }
         }
@@ -645,7 +645,7 @@ export class Dag extends SelfUpdate<CommitDagRecord> {
     return renderedRows.join('').trimEnd();
   }
 
-  /** Provided extra fileds for debugging use-case. For now, this includes an ASCII graph. */
+  /** Provided extra fields for debugging use-case. For now, this includes an ASCII graph. */
   getDebugState(): {rendered: Array<string>} {
     const rendered = this.renderAscii().split('\n');
     return {rendered};
@@ -661,7 +661,7 @@ const renderToRowsCache = new LRU(1000);
 
 type NameMapEntry = [string, HashPriRecord];
 
-/** Extract the (name, hash, pri) infomration for insertion and deletion. */
+/** Extract the (name, hash, pri) information for insertion and deletion. */
 function infoToNameMapEntries(info: DagCommitInfo): Array<NameMapEntry> {
   // Priority, highest to lowest:
   // - full hash (handled by dag.resolve())

@@ -25,7 +25,7 @@ import {
 } from '../testUtils';
 import {GeneratedStatus} from '../types';
 
-/** Generated `num` files, in the repeating pattern: genereated, partially generated, manual */
+/** Generated `num` files, in the repeating pattern: generated, partially generated, manual */
 async function simulateGeneratedFiles(num: number) {
   const files = new Array(num).fill(null).map((_, i) => `file_${zeroPad(i)}.txt`);
   act(() => {

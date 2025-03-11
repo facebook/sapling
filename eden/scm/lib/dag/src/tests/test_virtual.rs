@@ -211,7 +211,7 @@ async fn test_setting_managed_virtual_group_on_lazy_graph() -> Result<()> {
         vec![("N".into(), vec![]), ("W".into(), vec!["B".into()])];
     client.set_managed_virtual_group(Some(parents)).await?;
 
-    // Does not trigger virutal vertex (N, W) lookups.
+    // Does not trigger virtual vertex (N, W) lookups.
     assert_eq!(client.output(), ["resolve names: [B], heads: [E]"]);
 
     // Client should see the virtual group, and be able to query it.

@@ -427,7 +427,7 @@ where
                         ) => {
                             if file_type != FileType::GitSubmodule {
                                 // Non-submodule file changes just need to have the submodule
-                                // path in the source repo pre-pended to their path.
+                                // path in the source repo prepended to their path.
                                 let new_tfc = TrackedFileChange::new(
                                     content_id,
                                     file_type,

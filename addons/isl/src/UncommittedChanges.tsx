@@ -956,7 +956,7 @@ function MergeConflictButtons({
                 platform.confirm(
                   t('Configuring External Merge Tools'),
                   t(
-                    'You can configure ISL to use an external merge tool for resovling conflicts.\n' +
+                    'You can configure ISL to use an external merge tool for resolving conflicts.\n' +
                       'Set both `ui.merge = mymergetool` and `merge-tool.mymergetool`.\n' +
                       'See `sl help config.merge-tools` for more information about setting up merge tools.\n',
                   ),

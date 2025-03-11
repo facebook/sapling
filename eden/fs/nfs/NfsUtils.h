@@ -174,7 +174,7 @@ inline pre_op_attr statToPreOpAttr(const struct stat& stat) {
 
 /**
  * Convert the struct stat returned from the NfsDispatcher into a wcc_data
- * useable by NFS.
+ * usable by NFS.
  */
 inline wcc_data statToWccData(
     const std::optional<struct stat>& preStat,

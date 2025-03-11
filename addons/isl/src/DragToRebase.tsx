@@ -121,7 +121,7 @@ export function DragToRebase({
       }
     };
 
-    // This allows us to recieve a list of "queued" DragEnter events
+    // This allows us to receive a list of "queued" DragEnter events
     // before actually handling them. This way we can skip "invalidated"
     // events and only handle the last (valid) one.
     window.setTimeout(() => {

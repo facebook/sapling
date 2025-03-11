@@ -535,7 +535,7 @@ where
         tracing::debug!(target: "dag::add_heads", lifecycle_id=?self.lifecycle_id, ?heads);
         // Populate vertex negative cache to reduce round-trips doing remote lookups.
         // Attention: this might have side effect recreating the snapshots!
-        // Skip this optimization for virtual group add_heads since the virutal set
+        // Skip this optimization for virtual group add_heads since the virtual set
         // is usually small and related tracing logs can be noisy.
         if heads.min_desired_group().unwrap_or(Group::VIRTUAL) < Group::VIRTUAL {
             self.populate_missing_vertexes_for_add_heads(parents, &heads.vertexes())
@@ -571,7 +571,7 @@ where
         // - (This use-case is going away): desired_group = MASTER for all heads. This is used by
         //   old Mononoke server-side logic. The server only indexes the "main" branch. All vertexes
         //   are in the MASTER group. To avoid misuse by the client-side, we check that there
-        //   is nothing outisde the MASTER group.
+        //   is nothing outside the MASTER group.
         // - desired_group = NON_MASTER for all heads. This is used by Sapling client.
         //   It might use desired_group = MASTER on add_heads_and_flush, but not here.
 
@@ -676,7 +676,7 @@ where
     P: TryClone + Send + Sync + 'static,
     S: TryClone + Send + Sync + 'static,
 {
-    /// Internal impelementation of "strip".
+    /// Internal implementation of "strip".
     async fn strip_with_lock(&mut self, set: &Set, map_lock: &M::Lock) -> Result<()> {
         if !self.pending_heads.is_empty() {
             return programming(format!(

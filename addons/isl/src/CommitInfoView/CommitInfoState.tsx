@@ -216,7 +216,7 @@ export const hasUnsavedEditedCommitMessage = atomFamilyWeak((hashOrHead: Hash | 
 
 /**
  * Toggle state between commit/amend modes. Note that this may be "commit" even if
- * the commit info is not looking at the head commit (this allows persistance as you select other commits and come back).
+ * the commit info is not looking at the head commit (this allows persistence as you select other commits and come back).
  * We should only behave in "commit" mode when in commit mode AND looking at the head commit.
  * Prefer using `commitMode` atom.
  */

@@ -39,7 +39,7 @@ export interface Platform {
   /** Whether to ask to configure an external merge tool. Useful for standalone platforms, but not embedded ones like vscode. */
   upsellExternalMergeTool: boolean;
   /**
-   * Get stored data from local persistant cache (usually browser local storage).
+   * Get stored data from local persistent cache (usually browser local storage).
    * Note: Some platforms may not support this (e.g. browser with localStorage disabled),
    * or it may not be persisted indefinitely---usual localStorage caveats apply.
    */

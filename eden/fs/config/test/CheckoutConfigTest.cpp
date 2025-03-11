@@ -361,7 +361,7 @@ void CheckoutConfigTest::testBadSnapshot(
 }
 
 TEST_F(CheckoutConfigTest, testBadSnapshotV1) {
-  testBadSnapshot("ede", "SNAPSHOT file is too short");
+  testBadSnapshot("edge", "SNAPSHOT file is too short");
   testBadSnapshot("eden", "SNAPSHOT file is too short");
   testBadSnapshot(StringPiece{"eden\0\0\0", 7}, "SNAPSHOT file is too short");
   testBadSnapshot(

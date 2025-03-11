@@ -45,7 +45,7 @@ use crate::ChangesetPathDiffContext;
 use crate::MononokeRepo;
 use crate::PathEntry;
 
-// This struct contains matchers which will be consulted in various scenarious
+// This struct contains matchers which will be consulted in various scenarios
 // Clients can request analysis either for ALL profiles or Set of interested
 //  1. If client requests exact list of profiles, then `exact_profiles_matcher`
 //     will be used to check for the config changed and profiles will be
@@ -171,7 +171,7 @@ impl SparseProfileMonitoring {
                         p.and_then(|path| {
                             path.into_optional_non_root_path().ok_or_else(|| {
                                 MononokeError::from(anyhow!(
-                                    "Provided root diretory as monitored profile."
+                                    "Provided root directory as monitored profile."
                                 ))
                             })
                         })

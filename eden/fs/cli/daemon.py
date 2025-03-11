@@ -258,7 +258,7 @@ def prepare_edenfs_privileges(
         return cmd, env
 
     # If we're still here, we need to run edenfs under sudo. This is
-    # undesireable with passwordless sudo as it requires multiple password
+    # undesirable with passwordless sudo as it requires multiple password
     # prompts, but we will try to run with sudo anyway.
     # In some rare cases, we may want to test using a non-setuid-root
     # privhelper binary.

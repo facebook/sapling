@@ -23,7 +23,7 @@ command = registrar.command(cmdtable)
             "",
             "waitfile",
             "",
-            "if set, wait for file before exitting",
+            "if set, wait for file before exiting",
         ),
     ],
     "hg basiccommandtest exit_code",

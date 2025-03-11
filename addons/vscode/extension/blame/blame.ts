@@ -199,7 +199,7 @@ export class InlineBlameProvider implements Disposable {
     if (textEditor && this.isFile(textEditor) && this.currentPosition) {
       const foundBlame = await this.fetchBlameIfMissing(textEditor);
       if (foundBlame) {
-        // Update blame before showing incase keystrokes were pressed on load.
+        // Update blame before showing in case keystrokes were pressed on load.
         this.updateBlame(textEditor.document);
         this.showBlameAtPos(this.currentPosition);
       }

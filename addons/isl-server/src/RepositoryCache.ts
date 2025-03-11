@@ -63,12 +63,12 @@ class RefCounted<T extends {dispose: () => void}> {
 }
 
 /**
- * Allow re-using Repository instances by storing instances by path,
+ * Allow reusing Repository instances by storing instances by path,
  * and controlling how Repositories are created.
  *
  * Some async work is needed to construct repositories (finding repo root dir),
  * so it's possible to duplicate some work if multiple repos are constructed at similar times.
- * We still enable Repository re-use in this case by double checking for pre-existing Repos at the last second.
+ * We still enable Repository reuse in this case by double checking for pre-existing Repos at the last second.
  */
 class RepositoryCache {
   // allow mocking Repository in tests
@@ -76,7 +76,7 @@ class RepositoryCache {
 
   /**
    * Previously distributed RepositoryReferences, keyed by repository root path
-   * Note that Repositories do not define their own `cwd`, and can be re-used across cwds.
+   * Note that Repositories do not define their own `cwd`, and can be reused across cwds.
    */
   private reposByRoot = new Map<AbsolutePath, RefCounted<Repository>>();
   private activeReposEmitter = new TypedEventEmitter<'change', undefined>();
@@ -96,7 +96,7 @@ class RepositoryCache {
   }
 
   /**
-   * Create a new Repository, or re-use if one already exists.
+   * Create a new Repository, or reuse if one already exists.
    * Repositories are reference-counted to ensure they can be disposed when no longer needed.
    */
   getOrCreate(ctx: RepositoryContext): RepositoryReference {
@@ -108,7 +108,7 @@ class RepositoryCache {
       return new RepositoryReferenceImpl(Promise.resolve(found.value), () => found.dispose());
     }
 
-    // More typically, we can re-use a Repository among different cwds:
+    // More typically, we can reuse a Repository among different cwds:
 
     // eslint-disable-next-line prefer-const
     let ref: RepositoryReferenceImpl;
@@ -118,7 +118,7 @@ class RepositoryCache {
       // This is probably not necessary right now, but would be useful for a VS Code extension where we need to query
       // individual file paths to add diff gutters.
       const repoInfo = await this.RepositoryType.getRepoInfo(ctx);
-      // important: there should be no `await` points after here, to ensure there is no race when re-using Repositories.
+      // important: there should be no `await` points after here, to ensure there is no race when reusing Repositories.
       if (repoInfo.type !== 'success') {
         // No repository found at this root, or some other error prevents the repo from being created
         return repoInfo;
@@ -132,7 +132,7 @@ class RepositoryCache {
 
       // Now that we've spent some async time to determine this repo's actual root,
       // we can check if we already have a reference to it saved.
-      // This way, we can still re-use a Repository, and only risk duplicating `getRepoInfo` work.
+      // This way, we can still reuse a Repository, and only risk duplicating `getRepoInfo` work.
       const newlyFound = this.lookup(repoInfo.repoRoot);
       if (newlyFound) {
         // if it is found now, it means either the cwd differs from the repo root (lookup fails), or
@@ -144,7 +144,7 @@ class RepositoryCache {
       }
 
       // This is where we actually start new subscriptions and trigger work, so we should only do this
-      // once we're sure we don't have a repository to re-use.
+      // once we're sure we don't have a repository to reuse.
       const repo = new this.RepositoryType(
         repoInfo as ValidatedRepoInfo, // repoInfo is now guaranteed to have these root/dotdir set
         ctx,
@@ -167,7 +167,7 @@ class RepositoryCache {
   }
 
   /**
-   * Lookup a cached repository without creating a new one if it doens't exist
+   * Lookup a cached repository without creating a new one if it doesn't exist
    */
   public cachedRepositoryForPath(path: AbsolutePath): Repository | undefined {
     const ref = this.lookup(path);

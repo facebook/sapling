@@ -10,7 +10,7 @@ import {DagCommitInfo} from './dagCommitInfo';
 
 /**
  * The "wdir()" virtual hash.
- * This needs to match the CLI's interpretion of "wdir()". See `wdirhex` in sapling/node.py.
+ * This needs to match the CLI's interpretation of "wdir()". See `wdirhex` in sapling/node.py.
  */
 export const WDIR_NODE = 'ffffffffffffffffffffffffffffffffffffffff';
 

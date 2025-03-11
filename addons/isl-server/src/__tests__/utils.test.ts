@@ -32,7 +32,7 @@ describe('serializeAsyncCall', () => {
     expect(started).toEqual([0]);
     expect(finished).toEqual([]); // not finished running
     await runTime(10);
-    testFn(); // this one queus up while the first is still running
+    testFn(); // this one queues up while the first is still running
     expect(started).toEqual([0]); // 1 not running yet
     expect(finished).toEqual([]);
     await runTime(10);

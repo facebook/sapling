@@ -130,7 +130,7 @@ export function PendingImageUploads({
   const [isHovering, setIsHovering] = useState(false);
   const onCancel = () => {
     setIsHovering(false);
-    // Canceling ongoing uploads doesn't actualy interrupt the async work for the uploads,
+    // Canceling ongoing uploads doesn't actually interrupt the async work for the uploads,
     // it just deletes the tracking state, by replacing 'pending' uploads as 'cancelled'.
     writeAtom(imageUploadState, current => {
       const canceledIds: Array<number> = [];
@@ -379,7 +379,7 @@ export function ImageDropZone({
 /**
  * Codicon-like 16x16 paperclip icon.
  * This seems to be the standard iconographic way to attach files to a text area.
- * Can you belive codicons don't have a paperclip icon?
+ * Can you believe codicons don't have a paperclip icon?
  */
 function PaperclipIcon() {
   return (

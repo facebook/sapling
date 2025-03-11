@@ -16,7 +16,7 @@ name1=value1
 name2 = value2
 
 [section2]
-name3 = mutliple line,
+name3 = multiple line,
   line 2
   line 3
     line 4
@@ -42,7 +42,7 @@ name3 = mutliple line,
     SetConfig {
         section: "section2",
         name: "name3",
-        value: "mutliple line,\nline 2\nline 3\nline 4",
+        value: "multiple line,\nline 2\nline 3\nline 4",
         span: 70..113,
     },
     UnsetConfig {

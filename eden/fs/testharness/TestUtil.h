@@ -32,7 +32,7 @@ Hash20 makeTestHash20(folly::StringPiece value);
  * Helper function for ensuring an inode finished materializing and events
  * to record this are correctly stored in a folly::UnboundedQueue in the right
  * order. Waits until a timeout of 1000ms to dequeue the next event off the
- * queue and checks thats its progress (START vs END) and inode number are as
+ * queue and checks that's its progress (START vs END) and inode number are as
  * given.
  */
 bool isInodeMaterializedInQueue(

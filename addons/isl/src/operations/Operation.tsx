@@ -22,7 +22,7 @@ import {CommandRunner} from '../types';
 
 /**
  * Operations represent commands that mutate the repository, such as rebasing, committing, etc.
- * Operations are intended to be relatively long-lived processses which show progress, are cancellable, and must be run one-at-a-time.
+ * Operations are intended to be relatively long-lived processes which show progress, are cancellable, and must be run one-at-a-time.
  * This is as opposed to other commands like status, log, cat, which may be run in parallel and do not (necessarily) show stdout progress.
  * You can get arguments, get the preview applier function, get the optimistic state applier function, get documentation, etc.
  */
@@ -103,7 +103,7 @@ export function getOpName(op: Operation): string {
   return (op.constructor as unknown as {opName: string}).opName;
 }
 
-/** Descirbe how to display a operation. */
+/** Describe how to display a operation. */
 export type OperationDescription = {
   /** If set, this replaces the default command arguments. */
   description?: string;

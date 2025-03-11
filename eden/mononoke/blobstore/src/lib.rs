@@ -368,7 +368,7 @@ pub trait Blobstore: fmt::Display + fmt::Debug + Send + Sync {
         value: BlobstoreBytes,
     ) -> Result<()>;
     /// Check that `get` will return a value for a given `key`, and not None. The provided
-    /// implentation just calls `get`, and discards the return value; this can be overridden to
+    /// implementation just calls `get`, and discards the return value; this can be overridden to
     /// avoid transferring data. In the absence of concurrent `put` calls, this must return
     /// `BlobstoreIsPresent::Absent` if `get` would return `None`, and `BlobstoreIsPresent::Present`
     /// if `get` would return `Some(_)`.
@@ -423,7 +423,7 @@ pub const DEFAULT_PUT_BEHAVIOUR: PutBehaviour = PutBehaviour::IfAbsent;
 pub enum PutBehaviour {
     /// Blobstore::put will overwrite even if key is already present
     Overwrite,
-    /// Blobstore::put will overwrite even if key is already present, plus log that and overwrite occured
+    /// Blobstore::put will overwrite even if key is already present, plus log that and overwrite occurred
     OverwriteAndLog,
     /// Blobstore::put will not overwrite if the key is already present.
     /// NB due to underlying stores TOCTOU limitations some puts might overwrite when when racing another put.

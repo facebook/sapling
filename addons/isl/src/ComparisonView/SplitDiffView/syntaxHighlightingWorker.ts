@@ -26,7 +26,7 @@ const URL_TO_ONIG_WASM = './generated/textmate/onig.wasm';
 /* This file is intended to be executed in a WebWorker, without access to the DOM. */
 
 /**
- * Fetch reqeusts inside the webworker must be made relative to the base URI.
+ * Fetch requests inside the webworker must be made relative to the base URI.
  * By executing the web worker via a blob: URL, we can't depend on the base being inherited.
  */
 let globalBaseUri: string;
@@ -129,7 +129,7 @@ export function handleMessage(
 if (typeof self.document === 'undefined') {
   // inside WebWorker, use global onmessage and postMessage
   onmessage = handleMessage.bind(undefined, postMessage);
-  // outside of a WebWorker, the exported `handleMessage` funciton should be used instead.
+  // outside of a WebWorker, the exported `handleMessage` function should be used instead.
 }
 
 function tokenizeHunks(

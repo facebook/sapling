@@ -598,7 +598,7 @@ TEST_F(PrivHelperTest, takeoverStartup) {
   EXPECT_THAT(server_.getUnusedBindUnmountResults(), UnorderedElementsAre());
 
   // Re-register the unmount results for repo_x just to confirm that they are
-  // not re-used on shutdown.
+  // not reused on shutdown.
   server_.setFuseUnmountResult(repoXPath).setValue();
   server_.setBindUnmountResult(repoXPath + "/y").setValue();
 

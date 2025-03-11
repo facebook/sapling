@@ -280,7 +280,7 @@ void CheckoutConfig::setCheckedOutCommit(const RootId& commit) const {
 }
 
 void CheckoutConfig::setWorkingCopyParentCommit(const RootId& commit) const {
-  // The checked out commit doesn't change, re-use what's in the file currently
+  // The checked out commit doesn't change, reuse what's in the file currently
   auto parentCommit = getParentCommit();
   auto checkedOutRootId =
       parentCommit.getLastCheckoutId(ParentCommit::RootIdPreference::OnlyStable)

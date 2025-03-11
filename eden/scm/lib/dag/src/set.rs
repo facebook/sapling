@@ -627,7 +627,7 @@ impl fmt::Debug for Set {
 
 /// Read-only queries required by [`Set`]: Iteration, length and contains.
 ///
-/// Types implementating this trait should rewrite methods to use fast paths
+/// Types implementing this trait should rewrite methods to use fast paths
 /// when possible.
 #[async_trait::async_trait]
 pub trait AsyncSetQuery: Any + Debug + Send + Sync {

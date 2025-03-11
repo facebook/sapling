@@ -299,14 +299,14 @@ describe('Dag', () => {
       expect(dag.resolve('remote/bar')?.hash).toBe('aee');
     });
 
-    it('supports hosited remotenames', () => {
+    it('supports hoisted remotenames', () => {
       expect(dag.resolve('main')?.hash).toBe('acc');
     });
 
     it('supports hash prefix', () => {
       expect(dag.resolve('af')?.hash).toBe('aff');
       expect(dag.resolve('ac')?.hash).toBe('acc');
-      expect(dag.resolve('ab')?.hash).toBe(undefined); // ambigious
+      expect(dag.resolve('ab')?.hash).toBe(undefined); // ambiguous
     });
 
     it('considers priorities between bookmarks and hashes', () => {
@@ -336,7 +336,7 @@ describe('Dag', () => {
       expect(dag.remove('abd').resolve('foo')?.hash).toBe('acc');
     });
 
-    it('hash prefix works when ambigious hashes are removed', () => {
+    it('hash prefix works when ambiguous hashes are removed', () => {
       // 'ab' prefix: abc abd
       // removing 'abc' will make 'ab' resolve to 'abd'.
       expect(dag.remove('abc').resolve('ab')?.hash).toBe('abd');
@@ -463,7 +463,7 @@ describe('Dag', () => {
       expect(dag.get('b')?.date).toEqual(date);
     });
 
-    it('handles non-continous selection', () => {
+    it('handles non-continuous selection', () => {
       // a--b--c--d--e--f  z; rebase b+c+e+f to z; result:
       // a--b(pred)--c(pred)--d; z--b(succ)--c(succ)--e--f
       let dag = new Dag().add(

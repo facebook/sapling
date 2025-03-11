@@ -16,7 +16,7 @@ use crate::detail::parse_node::parse_node;
 #[derive(Args, Debug)]
 pub struct ExcludeNodeArgs {
     /// Nodes that should be never visited, any nodes that are reachable only via those nodes will
-    /// also be omited in walks. Node format <NodeType>:<node_key>, e.g.
+    /// also be omitted in walks. Node format <NodeType>:<node_key>, e.g.
     /// HgChangeset:7712b62acdc858689504945ac8965a303ded6626
     #[clap(long)]
     pub exclude_node: Vec<String>,

@@ -182,7 +182,7 @@ impl SqlPhases {
         let heads = (self.heads_fetcher)(ctx).await?;
         let freshly_marked = mark_reachable_as_public(ctx, self, &heads, ephemeral_derive).await?;
 
-        // Still do the get_public_raw incase someone else marked the changes as public
+        // Still do the get_public_raw in case someone else marked the changes as public
         // and thus mark_reachable_as_public did not return them as freshly_marked
         let public_hot = self.get_public_raw(ctx, &unknown).await?;
 

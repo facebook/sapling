@@ -127,7 +127,7 @@ enum ChangeAction {
     /// Set the committer.
     ///
     /// ```text
-    ///     # comitter: COMMIT "Committer Name <email@domain>"
+    ///     # committer: COMMIT "Committer Name <email@domain>"
     /// ```
     Committer { committer: String },
     /// Set the committer date (in RFC3339 format).

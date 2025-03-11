@@ -70,7 +70,7 @@ const PATH: &AsciiSet = &FRAGMENT.add(b'#').add(b'?').add(b'{').add(b'}').add(b'
 
 // A path not found in repo paths.
 // The constant includes a comma so that it is not a valid percent encoding
-// so that we can distiguish in-repo paths fron the hierarchy used for the blobs.
+// so that we can distinguish in-repo paths fron the hierarchy used for the blobs.
 const DUMP_DIR: &str = ".mononoke,";
 
 // A subdir used for temp files before they are moved to final location

@@ -28,7 +28,7 @@ describe('focus mode', () => {
       phase: 'public',
       remoteBookmarks: ['remote/master'],
     }),
-    COMMIT('f', 'Commit F', 'e'), // after `.` still incldued
+    COMMIT('f', 'Commit F', 'e'), // after `.` still included
     COMMIT('e', 'Commit E', 'd', {isDot: true}),
     COMMIT('d', 'Commit D', 'c'), // branch
     COMMIT('c', 'Commit C', 'b'),

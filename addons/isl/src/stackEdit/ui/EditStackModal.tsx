@@ -124,7 +124,7 @@ function LoadedEditStackModal() {
       label: t('Split'),
       render: () => <SplitStackEditPanel />,
     },
-    // TODO: reenable the "files" tab
+    // TODO: re-enable the "files" tab
     // files: {label: t('Files'), render: () => <FileStackEditPanel />},
   } as const;
   type Tab = keyof typeof panels;

@@ -8,7 +8,7 @@
 import * as stylex from '@stylexjs/stylex';
 
 /*
-This file defines theme variables useable in StyleX styles.
+This file defines theme variables usable in StyleX styles.
  */
 
 // default is dark theme

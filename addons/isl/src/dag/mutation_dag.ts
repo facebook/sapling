@@ -78,7 +78,7 @@ export class MutationDag extends BaseDag<HashWithParents> {
     return new MutationDag(baseDag);
   }
 
-  /** Provided extra fileds for debugging use-case. For now, this includes an ASCII graph. */
+  /** Provided extra fields for debugging use-case. For now, this includes an ASCII graph. */
   getDebugState(): {rendered: Array<string>} {
     const renderer = new TextRenderer();
     const rendered = [];

@@ -78,7 +78,7 @@ pub enum UploadHgNodeHash {
 pub struct UploadHgTreeEntry {
     pub upload_node_id: UploadHgNodeHash,
     pub contents: Bytes,
-    pub p1: Option<HgNodeHash>, // TODO: How hard is it to udpate those?
+    pub p1: Option<HgNodeHash>, // TODO: How hard is it to update those?
     pub p2: Option<HgNodeHash>,
     pub path: RepoPath,
     // Computed ID for this node when it differs from the node id being used as the identity.

@@ -87,7 +87,7 @@ function PartialFileSelectionWithCheckbox(props: Props & {unified?: boolean}) {
     }
   };
 
-  // Toogle selection of a single line.
+  // Toggle selection of a single line.
   const handlePointerEnter = (line: SelectLine, e: React.PointerEvent<HTMLDivElement>) => {
     if (e.buttons === 1 && line.selected !== null && lastLine.current?.rawIndex !== line.rawIndex) {
       const newSelection = props.chunkSelection.setSelectedLines([[line.rawIndex, !line.selected]]);

@@ -252,7 +252,7 @@ registerCleanup(
       let commits = last.commits;
       const newCommits = data.commits.value;
       if (newCommits != null) {
-        // leave existing commits in place if there was no erro
+        // leave existing commits in place if there was no error
         commits = reuseEqualObjects(commits, newCommits, c => c.hash);
       }
       return {

@@ -20,7 +20,7 @@ export type ExistingServerInfo = {
    * Usually, "sl". */
   command: string;
   /**
-   * `sl version` string. If the version of sl changes, we shouldn't re-use that server instance,
+   * `sl version` string. If the version of sl changes, we shouldn't reuse that server instance,
    * due to potential incompatibilities between the old running server javascript and the new client javascript.
    */
   slVersion: string;

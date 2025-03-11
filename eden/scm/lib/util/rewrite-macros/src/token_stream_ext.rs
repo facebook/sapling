@@ -90,7 +90,7 @@ impl ToItems for TokenStream {
     }
 }
 
-// Only allow unambigious atoms.
+// Only allow unambiguous atoms.
 // ex. ">>" is ambiguous since it can be part of "Result<Vec<T>>".
 fn is_punct_pair_atom(p1: &Punct, p2: &Punct) -> bool {
     matches!(p1.spacing(), Spacing::Joint)

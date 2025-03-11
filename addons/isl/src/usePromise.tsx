@@ -13,7 +13,7 @@ import {isPromise} from 'shared/utils';
  * to support suspension and error handling, or use `<SuspenseBoundary>`.
  *
  * Be aware that the function that produces `promise` should returning
- * `Promise.resolve(data)`, and instead return `data` directly. This is becasuse
+ * `Promise.resolve(data)`, and instead return `data` directly. This is because
  * Javascript does not provide a way to test if a Promise is resolved without async.
  * So the Promise will be treated as "pending" temporarily, rendering the Suspense
  * fallback. The actual Suspense children will lose their states because the

@@ -102,7 +102,7 @@ import {
  *
  * A Repository may be reused by multiple connections, not just one ISL window.
  * This is so we don't duplicate watchman subscriptions and calls to status/log.
- * A Repository does not have a pre-defined `cwd`, so it may be re-used across cwds.
+ * A Repository does not have a pre-defined `cwd`, so it may be reused across cwds.
  *
  * Prefer using `RepositoryCache.getOrCreate()` to access and dispose `Repository`s.
  */
@@ -196,7 +196,7 @@ export class Repository {
       // Let's just rely on optimistic state to provide the "clean" outcome.
       // In case the command takes a long time to run, allow refresh after
       // the time period.
-      // Fundementally, the intermediate states have no choice but have to
+      // Fundamentally, the intermediate states have no choice but have to
       // be messy because filesystems are not transactional (and reading in
       // `sl` is designed to be lock-free).
       const elapsedMs = Date.now() - startTime.valueOf();
@@ -583,7 +583,7 @@ export class Repository {
 
     if (result !== 'skipped') {
       // After any operation finishes, make sure we poll right away,
-      // so the UI is guarnateed to get the latest data.
+      // so the UI is guaranteed to get the latest data.
       this.watchForChanges.poll('force');
     }
   }
@@ -740,7 +740,7 @@ export class Repository {
     }
 
     const execution = ejeca(command, args, options);
-    // It would be more appropriate to call this in reponse to execution.on('spawn'), but
+    // It would be more appropriate to call this in response to execution.on('spawn'), but
     // this seems to be inconsistent about firing in all versions of node.
     // Just send spawn immediately. Errors during spawn like ENOENT will still be reported by `exit`.
     onProgress('spawn');

@@ -52,9 +52,9 @@ pub async fn create_random_stack(
 
 #[derive(Clone, Copy)]
 pub struct GenSettings {
-    /// probablity of descending one level deeper when generating change
+    /// probability of descending one level deeper when generating change
     pub p_dir_descend: f64,
-    /// probablity to create directory or reuse existing when descending manifest
+    /// probability to create directory or reuse existing when descending manifest
     pub p_dir_create: f64,
     /// probability to create file or modify existing
     pub p_file_create: f64,

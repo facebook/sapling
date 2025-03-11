@@ -356,9 +356,9 @@ class remotefilectx(context.filectx):
                 ancrev = repo[str(anc)].rev()
                 lnode = self._nodefromancrev(ancrev, cl, mfl, path, fnode)
                 if lnode is not None:
-                    logmsg = "fastlog succeded"
+                    logmsg = "fastlog succeeded"
                     return lnode
-            logmsg = "fastlog succeded but linknode was not found"
+            logmsg = "fastlog succeeded but linknode was not found"
             return None
         except Exception as e:
             logmsg = "fastlog failed (%s)" % e

@@ -260,8 +260,8 @@ def jsonescape(s, paranoid=False):
     b'escape characters: \\\\b \\\\t \\\\n \\\\f \\\\r \\\\\\" \\\\\\\\'
     >>> jsonescape(b'a weird byte: \\xdd')
     b'a weird byte: \\\\xdd'
-    >>> jsonescape(b'utf-8: caf\\xc3\\xa9')
-    b'utf-8: caf\\\\xc3\\\\xa9'
+    >>> jsonescape(b'utf-8: calf\\xc3\\xa9')
+    b'utf-8: calf\\\\xc3\\\\xa9'
     >>> jsonescape(b'')
     b''
 
@@ -276,8 +276,8 @@ def jsonescape(s, paranoid=False):
     b'escape boundary: \\\\x7e \\\\x7f \\\\xc2\\\\x80'
     >>> jsonescape(b'a weird byte: \\xdd', paranoid=True)
     b'a weird byte: \\\\xdd'
-    >>> jsonescape(b'utf-8: caf\\xc3\\xa9', paranoid=True)
-    b'utf-8: caf\\\\xc3\\\\xa9'
+    >>> jsonescape(b'utf-8: calf\\xc3\\xa9', paranoid=True)
+    b'utf-8: calf\\\\xc3\\\\xa9'
     >>> jsonescape(b'non-BMP: \\xf0\\x9d\\x84\\x9e', paranoid=True)
     b'non-BMP: \\\\xf0\\\\x9d\\\\x84\\\\x9e'
     >>> jsonescape(b'<foo@example.org>', paranoid=True)

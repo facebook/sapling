@@ -446,7 +446,7 @@ impl ChunkSqlStore {
             self.delay.delay(shard_id).await;
             let generation = self.gc_generations.get().put_generation as u64;
             let conn = &self.write_connection[shard_id];
-            // Update generation incase it already exists
+            // Update generation in case it already exists
             let updated = UpdateGeneration::query(conn, &key, &generation, &full_value_len).await?;
             InsertChunk::query(conn, &[(&key, &chunk_num, &value)]).await?;
             if updated.affected_rows() > 0 {

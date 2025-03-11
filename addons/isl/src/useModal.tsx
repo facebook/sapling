@@ -34,7 +34,7 @@ type ModalConfig<T> = ModalConfigBase &
     | {
         // hack: using 'confirm' mode requires T to be string.
         // The type inference goes wrong if we try to add this constraint directly to the `buttons` field.
-        // By adding the constaint here, we get type checking that T is string in order to use this API.
+        // By adding the constraint here, we get type checking that T is string in order to use this API.
         type: T extends string ? 'confirm' : T extends ButtonConfig ? 'confirm' : never;
         message: React.ReactNode;
         buttons: ReadonlyArray<T>;
@@ -145,7 +145,7 @@ export function ModalContainer() {
  * Modal has a dismiss button & dismisses on Escape keypress, thus you must always be able to handle
  * returning `undefined`.
  *
- * For now, we assume all uses of useOptionModal are triggerred directly from a user action.
+ * For now, we assume all uses of useOptionModal are triggered directly from a user action.
  * If that's not the case, it would be possible to have multiple modals overlap.
  **/
 export function useModal(): <T>(config: ModalConfig<T>) => Promise<T | undefined> {
