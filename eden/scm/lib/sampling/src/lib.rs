@@ -13,6 +13,7 @@ use std::path::PathBuf;
 use std::sync::Arc;
 use std::sync::OnceLock;
 
+pub use clientinfo::get_client_request_info;
 use parking_lot::Mutex;
 use parking_lot::MutexGuard;
 use serde::ser::Serialize;
@@ -146,6 +147,21 @@ macro_rules! log {
             Ok(())
         }
     };
+}
+
+/// Log an event to the `sl_events` tracing target.
+#[macro_export]
+macro_rules! log_event {
+    ($event_type:expr $(, $key:ident = $value:expr )*) => {
+        let correlator = $crate::get_client_request_info().correlator;
+
+        tracing::info!(
+            target: "sl_events",
+            client_correlator=correlator,
+            event_type=$event_type,
+            event_value=$crate::serde_json::json!({$(stringify!($key): $value),*}).to_string(),
+        );
+    }
 }
 
 // Returns tuple of output path and whether it's okay if the path already exists.
