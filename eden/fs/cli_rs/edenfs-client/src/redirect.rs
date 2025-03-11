@@ -409,6 +409,9 @@ impl Redirection {
 
     #[cfg(target_os = "linux")]
     async fn _bind_mount_linux(&self, checkout_path: &Path, target: &Path) -> Result<()> {
+        let instance = EdenFsInstance::global();
+        let client = instance.get_client(None).await?;
+
         let abs_mount_path_in_repo = checkout_path.join(&self.repo_path);
         if abs_mount_path_in_repo.exists() {
             // To deal with the case where someone has manually unmounted
@@ -416,7 +419,7 @@ impl Redirection {
             // list of bind mounts, we first speculatively try asking the
             // eden daemon to unmount it first, ignoring any error that
             // might raise.
-            EdenFsInstance::global()
+            client
                 .remove_bind_mount(checkout_path, &self.repo_path)
                 .await
                 .ok();
@@ -433,7 +436,7 @@ impl Redirection {
                     abs_mount_path_in_repo.display()
                 )
             })?;
-        EdenFsInstance::global()
+        client
             .add_bind_mount(checkout_path, &self.repo_path, target)
             .await
             .with_context(|| {
@@ -625,7 +628,10 @@ impl Redirection {
 
     #[cfg(target_os = "linux")]
     async fn _bind_unmount_linux(&self, checkout: &EdenFsCheckout) -> Result<()> {
-        EdenFsInstance::global()
+        let instnace = EdenFsInstance::global();
+        let client = instnace.get_client(None).await?;
+
+        client
             .remove_bind_mount(&checkout.path(), &self.repo_path)
             .await
             .with_context(|| {

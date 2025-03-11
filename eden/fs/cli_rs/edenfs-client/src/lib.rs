@@ -5,6 +5,8 @@
  * GNU General Public License version 2.
  */
 
+#[cfg(target_os = "linux")]
+pub mod bind_mount;
 pub mod changes_since;
 pub mod checkout;
 pub mod client;
