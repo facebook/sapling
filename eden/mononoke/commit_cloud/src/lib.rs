@@ -261,12 +261,12 @@ impl CommitCloud {
         let cri = self.ctx.client_request_info();
 
         let initiate_workspace = params.version == 0
-            && (params.new_heads.is_empty()
-                && params.updated_bookmarks.is_empty()
-                && !params
-                    .updated_remote_bookmarks
-                    .clone()
-                    .is_some_and(|x| !x.is_empty()));
+            && params.new_heads.is_empty()
+            && params.updated_bookmarks.is_empty()
+            && params
+                .updated_remote_bookmarks
+                .clone()
+                .is_none_or(|x| x.is_empty());
 
         if !initiate_workspace {
             txn = update_references_data(&self.storage, txn, cri, params.clone(), cc_ctx)
