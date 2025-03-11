@@ -126,7 +126,7 @@ impl crate::Subcommand for ChangesSinceCmd {
 
         self.print_result(&result)?;
         if self.subscribe {
-            instance
+            client
                 .subscribe(
                     &self.mount_point,
                     self.throttle,

@@ -8,13 +8,18 @@
 use std::fmt;
 use std::path::Path;
 use std::path::PathBuf;
+use std::time::Duration;
+use std::time::Instant;
 
+use edenfs_error::EdenFsError;
 use edenfs_error::Result;
 use edenfs_error::ResultExt;
 use edenfs_utils::bytes_from_path;
 use edenfs_utils::path_from_bytes;
+use futures::StreamExt;
 use serde::Serialize;
 use thrift_types::edenfs::ChangesSinceV2Params;
+use tokio::time;
 
 use crate::client::EdenFsClient;
 use crate::journal_position::JournalPosition;
@@ -571,6 +576,107 @@ impl<'a> EdenFsClient<'a> {
             });
         }
         Ok(result)
+    }
+
+    pub async fn subscribe(
+        &self,
+        mount_point: &Option<PathBuf>,
+        throttle_time_ms: u64,
+        position: Option<JournalPosition>,
+        root: &Option<PathBuf>,
+        included_roots: &Option<Vec<PathBuf>>,
+        included_suffixes: &Option<Vec<String>>,
+        excluded_roots: &Option<Vec<PathBuf>>,
+        excluded_suffixes: &Option<Vec<String>>,
+        include_vcs_roots: bool,
+        handle_results: impl Fn(&ChangesSinceV2Result) -> Result<(), EdenFsError>,
+    ) -> Result<(), anyhow::Error> {
+        let mut position = position.unwrap_or(self.get_journal_position(mount_point).await?);
+        let mut subscription = self.instance.stream_journal_changed(mount_point).await?;
+
+        let mut last = Instant::now();
+        let throttle = Duration::from_millis(throttle_time_ms);
+
+        let mut pending_updates = false;
+
+        // Largest allowed sleep value  https://docs.rs/tokio/latest/tokio/time/fn.sleep.html
+        let sleep_max = Duration::from_millis(68719476734);
+        let timer = time::sleep(sleep_max);
+        tokio::pin!(timer);
+
+        loop {
+            tokio::select! {
+                // Wait on the following cases
+                // 1. The we get a notification from the subscription
+                // 2. The pending updates timer expires
+                // 3. Another signal is received
+                result = subscription.next() => {
+                    match result {
+                        // if the stream is ended somehow, we terminate as well
+                        None => break,
+                        // if any error happened during the stream, log them
+                        Some(Err(e)) => {
+                            tracing::error!(?e, "error while processing subscription");
+                            continue;
+                        },
+                        // If we have recently(within throttle ms) sent an update, set a
+                        // timer to check again when throttle time is up if we aren't already
+                        // waiting on a timer
+                        Some(Ok(_)) => {
+                            if last.elapsed() < throttle && !pending_updates {
+                                // set timer to check again when throttle time is up
+                                pending_updates = true;
+                                timer.as_mut().reset((Instant::now() + throttle).into());
+                                continue;
+                            }
+                        }
+                    }
+                },
+                // Pending updates timer expired. If we haven't gotten a subscription notification in
+                // the meantime, check for updates now. Set the timer back to the max value in either case.
+                () = &mut timer => {
+                    // Set timer to the maximum value to prevent repeated wakeups since timers are not consumed
+                    timer.as_mut().reset((Instant::now() + sleep_max).into());
+                    if !pending_updates {
+                        continue;
+                    }
+                },
+                // in all other cases, we terminate
+                else => break,
+            }
+
+            let result = self
+                .get_changes_since(
+                    mount_point,
+                    &position,
+                    root,
+                    included_roots,
+                    included_suffixes,
+                    excluded_roots,
+                    excluded_suffixes,
+                    include_vcs_roots,
+                )
+                .await
+                .map_err(anyhow::Error::msg)?;
+
+            tracing::debug!(
+                "got {} changes for position {}",
+                result.changes.len(),
+                result.to_position
+            );
+
+            if !result.changes.is_empty() {
+                // Error in handle results will terminate the loop
+                handle_results(&result)?;
+            }
+
+            pending_updates = false;
+            position = result.to_position;
+
+            last = Instant::now();
+        }
+
+        Ok(())
     }
 }
 
