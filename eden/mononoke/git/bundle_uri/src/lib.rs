@@ -52,11 +52,11 @@ pub async fn create_bundle_uri(
     _connections: sql_ext::SqlConnections,
     update_cadence: Duration,
     tracked_repos: TrackedRepos,
-) -> Result<BundleUri<EmptyGitBundleMetadataStorage, AlwaysFailBundleGenerator>> {
+) -> Result<BundleUri<EmptyGitBundleMetadataStorage, LocalFSBUndleUriGenerator>> {
     BundleUri::new(
         update_cadence,
         EmptyGitBundleMetadataStorage {},
-        AlwaysFailBundleGenerator {},
+        LocalFSBUndleUriGenerator {},
         tracked_repos,
     )
     .await
@@ -76,18 +76,18 @@ pub trait GitBundleUrlGenerator {
     async fn get_url_for_bundle_handle(&self, ttl: i64, handle: &str) -> Result<String>;
 }
 
-#[derive(Clone)]
-pub struct AlwaysFailBundleGenerator {}
-
 #[async_trait]
-impl GitBundleUrlGenerator for AlwaysFailBundleGenerator {
-    async fn get_url_for_bundle_handle(&self, _ttl: i64, _handle: &str) -> Result<String> {
-        anyhow::bail!("This genereator always fails generating urls");
+impl GitBundleUrlGenerator for LocalFSBUndleUriGenerator {
+    async fn get_url_for_bundle_handle(&self, _ttl: i64, handle: &str) -> Result<String> {
+        Ok(format!("file://{}", handle))
     }
 }
 
 #[derive(Clone)]
 pub struct EmptyGitBundleMetadataStorage {}
+
+#[derive(Clone)]
+pub struct LocalFSBUndleUriGenerator {}
 
 #[async_trait]
 impl GitBundleMetadataStorage for EmptyGitBundleMetadataStorage {
@@ -99,6 +99,16 @@ impl GitBundleMetadataStorage for EmptyGitBundleMetadataStorage {
     }
     async fn get_newest_bundle_lists(&self) -> Result<HashMap<RepositoryId, BundleList>> {
         Ok(HashMap::new())
+    }
+}
+
+impl LocalFSBUndleUriGenerator {
+    pub fn new(
+        _fb: FacebookInit,
+        _manifold_bucket_name: String,
+        _manifold_api_key: String,
+    ) -> Self {
+        Self {}
     }
 }
 
