@@ -223,8 +223,8 @@ function getMergePromise(
   return s2 as unknown as ChildProcess & Promise<EjecaReturn>;
 }
 
-function escapedCmd(file: string, argumentos: readonly string[]): string {
-  const allargs = [file, ...argumentos.map(arg => `"${arg.replace(/"/g, '\\"')}"`)];
+function escapedCmd(file: string, args: readonly string[]): string {
+  const allargs = [file, ...args.map(arg => `"${arg.replace(/"/g, '\\"')}"`)];
   return allargs.join(' ');
 }
 
@@ -323,7 +323,7 @@ function commonToSpawnOptions(options?: EjecaOptions): SpawnOptions {
 
 /**
  * Essentially a wrapper for [`child_process.spawn`](https://nodejs.org/docs/latest-v18.x/api/child_process.html#child_processspawncommand-args-options), which
- * additionally makes the result awaitable through `EjecaChildPromise`. `_file`, `_argumentos` and `_options`
+ * additionally makes the result awaitable through `EjecaChildPromise`. `_file`, `_args` and `_options`
  * are essentially the same as the args for `child_process.spawn`.
  *
  * It also has a couple of additional features:
@@ -332,11 +332,11 @@ function commonToSpawnOptions(options?: EjecaOptions): SpawnOptions {
  */
 export function ejeca(
   file: string,
-  argumentos: readonly string[],
+  args: readonly string[],
   options?: EjecaOptions,
 ): EjecaChildProcess {
-  const spawned = spawn(file, argumentos, commonToSpawnOptions(options));
-  const spawnedPromise = getSpawnedPromise(spawned, escapedCmd(file, argumentos), options);
+  const spawned = spawn(file, args, commonToSpawnOptions(options));
+  const spawnedPromise = getSpawnedPromise(spawned, escapedCmd(file, args), options);
   const mergedPromise = getMergePromise(spawned, spawnedPromise);
 
   // TODO: Handle streams
