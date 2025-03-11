@@ -140,7 +140,8 @@ impl LoggingArgs {
             .with_target("overload_protection::capacity", tracing::Level::WARN)
             .with_target("hyper::proto", tracing::Level::WARN)
             .with_target("runtime", tracing::Level::WARN)
-            .with_target("tokio", tracing::Level::WARN);
+            .with_target("tokio", tracing::Level::WARN)
+            .with_target("edenapi::client", tracing::Level::WARN);
 
         let event_format = Glog::default()
             .with_timer(tracing_glog::LocalTime::default())
