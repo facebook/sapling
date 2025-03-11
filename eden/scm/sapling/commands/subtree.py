@@ -227,6 +227,39 @@ def subtree_diff(ui, repo, *args, **opts):
     return do_diff(ui, repo, *args, **opts)
 
 
+@subtree_subcmd(
+    "inspect",
+    [
+        ("r", "rev", "", _("revision"), _("REV")),
+    ],
+    _("[OPTION]... [-r REV]"),
+    inferrepo=True,
+    cmdtype=readonly,
+)
+def subtree_inspect(ui, repo, *args, **opts):
+    """inspect the internal subtree metadata of commits"""
+    ctx = scmutil.revsingle(repo, opts.get("rev"))
+    copies = get_subtree_branches(repo, ctx.node())
+    merges = get_subtree_merges(repo, ctx.node())
+
+    if not copies and not merges:
+        ui.warn(_("no subtree metadata found for commit %s\n") % ctx)
+        return
+
+    result = {}
+    if copies:
+        result["copies"] = [c.to_full_dict() for c in copies]
+    if merges:
+        result["merges"] = [c.to_full_dict() for c in merges]
+
+    result_json = json.dumps(
+        result,
+        indent=2,
+        separators=(",", ": "),
+    )
+    ui.write(f"{result_json}\n")
+
+
 def _subtree_merge_base(repo, to_ctx, to_path, from_ctx, from_path):
     """get the best merge base for subtree merge
 
