@@ -347,7 +347,7 @@ async fn test_renamed_export_paths_are_followed<R: MononokeRepo>(
         .await?;
 
     let graph_info =
-        build_partial_commit_graph_for_export(&ctx, &logger, export_path_infos, None).await?;
+        build_partial_commit_graph_for_export(ctx, &logger, export_path_infos, None).await?;
 
     let relevant_cs_ids = graph_info
         .changesets

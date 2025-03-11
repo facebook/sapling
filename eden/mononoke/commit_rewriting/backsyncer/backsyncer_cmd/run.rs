@@ -286,7 +286,7 @@ async fn backsync_forever(
         } else {
             debug!(ctx.logger(), "push redirector is disabled");
             let delay = Delay::no_delay();
-            log_delay(&ctx, &delay, &source_repo_name, &target_repo_name);
+            log_delay(ctx, &delay, &source_repo_name, &target_repo_name);
             tokio::time::sleep(Duration::new(1, 0)).await;
         }
     }
