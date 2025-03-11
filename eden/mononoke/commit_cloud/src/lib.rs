@@ -553,10 +553,10 @@ impl CommitCloud {
                 _ => unreachable!(),
             }
         );
-        return match history.first() {
+        match history.first() {
             Some(GetOutput::WorkspaceHistory(history)) => Ok(history.clone()),
             _ => Err(anyhow::anyhow!("unexpected history type")),
-        };
+        }
     }
 
     pub async fn get_historical_versions(
