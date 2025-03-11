@@ -14,8 +14,7 @@ use tokio::io::AsyncBufReadExt;
 use tokio::io::BufReader;
 use tokio::process::Command;
 
-use crate::utils::prefix_paths;
-use crate::utils::strip_prefix_from_string;
+use crate::changes_since::prefix_paths;
 
 #[derive(Debug, PartialEq)]
 pub enum SaplingStatus {
@@ -310,6 +309,21 @@ fn is_path_included(
     }
 
     true
+}
+
+/// Given a prefix and a path string, return the path with the prefix removed.
+///
+/// If the prefix is None, the path is returned as-is.
+pub fn strip_prefix_from_string(prefix: &Option<PathBuf>, path: String) -> String {
+    if let Some(prefix) = prefix {
+        let path = Path::new(&path);
+        path.strip_prefix(prefix)
+            .map_or(path, |stripped_path| stripped_path)
+            .to_string_lossy()
+            .to_string()
+    } else {
+        path
+    }
 }
 
 #[cfg(test)]

@@ -322,7 +322,6 @@ impl EdenFsInstance {
                     excluded_roots,
                     excluded_suffixes,
                     include_vcs_roots,
-                    None,
                 )
                 .await
                 .map_err(anyhow::Error::msg)?;
