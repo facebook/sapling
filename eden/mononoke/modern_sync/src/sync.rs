@@ -283,14 +283,7 @@ pub async fn process_bookmark_update_log_entry(
         from_cs,
         to_cs
     );
-
-    let (_, ctx) = {
-        let commits = repo
-            .commit_graph()
-            .ancestors_difference_segment_slices(ctx, to_vec.clone(), from_vec.clone(), chunk_size)
-            .await?;
-        scuba::log_bookmark_update_entry_start(ctx, entry, commits.count().await)
-    };
+    let (_, ctx) = { scuba::log_bookmark_update_entry_start(ctx, entry) };
 
     let commits = repo
         .commit_graph()
