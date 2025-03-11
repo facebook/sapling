@@ -16,4 +16,5 @@ pub mod journal;
 mod mounttable;
 pub mod redirect;
 pub mod sapling;
+pub mod scm_status;
 pub mod utils;

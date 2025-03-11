@@ -30,7 +30,6 @@ use edenfs_utils::strip_unc_prefix;
 #[cfg(fbcode_build)]
 use thrift_types::edenfs::DaemonInfo;
 use thrift_types::edenfs::GetConfigParams;
-use thrift_types::edenfs::GetScmStatusParams;
 use thrift_types::edenfs::GlobParams;
 use thrift_types::edenfs::MountId;
 #[cfg(target_os = "macos")]
@@ -356,28 +355,6 @@ impl EdenFsInstance {
                 e
             ))),
         }
-    }
-
-    pub async fn get_scm_status_v2(
-        &self,
-        mount_point: PathBuf,
-        commit_str: String,
-        list_ignored: bool,
-        root_id_options: Option<thrift_types::edenfs::RootIdOptions>,
-    ) -> Result<thrift_types::edenfs::GetScmStatusResult> {
-        let client = self.get_client(None).await?;
-        let client = client.get_thrift_client();
-
-        client
-            .getScmStatusV2(&GetScmStatusParams {
-                mountPoint: bytes_from_path(mount_point)?,
-                commit: commit_str.as_bytes().to_vec(),
-                listIgnored: list_ignored,
-                rootIdOptions: root_id_options,
-                ..Default::default()
-            })
-            .await
-            .map_err(|_| EdenFsError::Other(anyhow!("failed to get scm status v2 result")))
     }
 
     pub async fn glob_files<P: AsRef<Path>, S: AsRef<Path>>(
