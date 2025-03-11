@@ -149,11 +149,14 @@ impl PathHistory {
         } else {
             bail!("PathHistory requires Dag associated with `set`");
         };
+
         let roots: Vec<Id> = roots.iter_asc().collect();
         tracing::trace!(
             roots_len = roots.len(),
             maybe_truncated_roots = ?&roots[..roots.len().min(1000)]
         );
+        sampling::log_event!("pathhistory.roots", len = &roots.len());
+
         let queue = id_dag.id_set_to_id_segments(&id_set)?;
         let compiled_paths =
             CompiledPaths::compile(paths).with_ignore_file_content(ignore_file_content);
