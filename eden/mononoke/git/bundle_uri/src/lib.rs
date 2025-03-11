@@ -73,12 +73,7 @@ pub trait GitBundleMetadataStorage {
 
 #[async_trait]
 pub trait GitBundleUrlGenerator {
-    type Options;
-    async fn get_url_for_bundle_handle(
-        &self,
-        handle: &str,
-        options: &Self::Options,
-    ) -> Result<String>;
+    async fn get_url_for_bundle_handle(&self, ttl: i64, handle: &str) -> Result<String>;
 }
 
 #[derive(Clone)]
@@ -86,12 +81,7 @@ pub struct AlwaysFailBundleGenerator {}
 
 #[async_trait]
 impl GitBundleUrlGenerator for AlwaysFailBundleGenerator {
-    type Options = ();
-    async fn get_url_for_bundle_handle(
-        &self,
-        _handle: &str,
-        _options: &Self::Options,
-    ) -> Result<String> {
+    async fn get_url_for_bundle_handle(&self, _ttl: i64, _handle: &str) -> Result<String> {
         anyhow::bail!("This genereator always fails generating urls");
     }
 }
