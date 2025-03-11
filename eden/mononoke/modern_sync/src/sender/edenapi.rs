@@ -24,6 +24,7 @@ use edenapi::Client;
 use edenapi::HttpClientBuilder;
 use edenapi::HttpClientConfig;
 use edenapi::SaplingRemoteApi;
+use edenapi_types::bookmark::Freshness;
 use edenapi_types::AnyFileContentId;
 use edenapi_types::AnyId;
 use edenapi_types::LookupResponse;
@@ -335,12 +336,17 @@ impl EdenapiSender {
     }
 
     pub async fn read_bookmark(&self, bookmark: String) -> Result<Option<HgChangesetId>> {
-        let res = self.client.bookmarks(vec![bookmark]).await?;
+        let res = self
+            .client
+            .bookmarks2(vec![bookmark], Some(Freshness::MostRecent))
+            .await?;
 
         Ok(res
             .into_iter()
             .next()
-            .and_then(|entry| entry.hgid)
+            .map(|entry| anyhow::Ok(entry.data?.hgid))
+            .transpose()?
+            .flatten()
             .map(|id| id.into()))
     }
 }
