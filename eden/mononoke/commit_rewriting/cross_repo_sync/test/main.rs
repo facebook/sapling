@@ -2137,7 +2137,7 @@ async fn test_no_accidental_preserved_roots(
         let live_commit_sync_config = Arc::new(sync_config);
 
         commit_syncer.live_commit_sync_config = live_commit_sync_config;
-        commit_syncer.repos = commit_sync_repos.clone().into();
+        commit_syncer.repos = commit_sync_repos.clone();
 
         commit_syncer
     };
@@ -2253,7 +2253,7 @@ async fn test_not_sync_candidate_if_mapping_does_not_have_small_repo(
     );
 
     let large_to_first_small_commit_syncer =
-        CommitSyncer::new(&ctx, repos.clone().into(), live_commit_sync_config.clone());
+        CommitSyncer::new(&ctx, repos.clone(), live_commit_sync_config.clone());
 
     let first_bcs_id = CreateCommitContext::new_root(&ctx, &large_repo)
         .add_file("file", "content")
@@ -2279,7 +2279,7 @@ async fn test_not_sync_candidate_if_mapping_does_not_have_small_repo(
     );
 
     let large_to_second_small_commit_syncer =
-        CommitSyncer::new(&ctx, repos.clone().into(), live_commit_sync_config.clone());
+        CommitSyncer::new(&ctx, repos.clone(), live_commit_sync_config.clone());
     large_to_second_small_commit_syncer
         .sync_commit(
             &ctx,
