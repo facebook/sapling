@@ -1202,6 +1202,8 @@ pub struct RemoteMetadataDatabaseConfig {
     pub deletion_log: Option<RemoteDatabaseConfig>,
     /// Database for commit cloud info
     pub commit_cloud: Option<RemoteDatabaseConfig>,
+    /// Database for commit git bundle uri metadata
+    pub git_bundle_metadata: Option<RemoteDatabaseConfig>,
 }
 
 /// Configuration for the Metadata database when it is remote.

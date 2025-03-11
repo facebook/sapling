@@ -360,6 +360,7 @@ impl Convert for RawMetadataConfig {
                     bonsai_blob_mapping: raw.bonsai_blob_mapping.convert()?,
                     deletion_log: raw.deletion_log.convert()?,
                     commit_cloud: raw.commit_cloud.convert()?,
+                    git_bundle_metadata: raw.git_bundles.convert()?,
                 },
             )),
             RawMetadataConfig::oss_remote(raw) => Ok(MetadataDatabaseConfig::OssRemote(

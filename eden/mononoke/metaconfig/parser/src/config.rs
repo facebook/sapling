@@ -1031,6 +1031,7 @@ mod test {
         bonsai_blob_mapping = { sharded = { shard_map = "blob_mapping_shards", shard_num = 12 } }
         deletion_log = { db_address = "deletion_log" }
         commit_cloud = { db_address = "commit_cloud_db_address" }
+        git_bundles = { db_address = "git_bundles" }
 
         [main.blobstore.multiplexed_wal]
         multiplex_id = 1
@@ -1143,6 +1144,9 @@ mod test {
                 }),
                 commit_cloud: Some(RemoteDatabaseConfig {
                     db_address: "commit_cloud_db_address".into(),
+                }),
+                git_bundle_metadata: Some(RemoteDatabaseConfig {
+                    db_address: "git_bundles".into(),
                 }),
             }),
             ephemeral_blobstore: None,
@@ -1658,6 +1662,7 @@ mod test {
         mutation = { db_address = "some_db" }
         sparse_profiles = { db_address = "some_db" }
         commit_cloud = { db_address = "some_db" }
+        git_bundles = { db_address = "git_bundles" }
 
         [multiplex_store.blobstore.multiplexed_wal]
         multiplex_id = 1
@@ -1748,6 +1753,9 @@ mod test {
                         commit_cloud:  Some(RemoteDatabaseConfig {
                             db_address: "some_db".into(),
                         }),
+                        git_bundle_metadata:  Some(RemoteDatabaseConfig {
+                            db_address: "git_bundles".into(),
+                        }),
                     }),
                     ephemeral_blobstore: None,
                 },
@@ -1800,6 +1808,7 @@ mod test {
         mutation = { db_address = "other_other_mutation_db" }
         sparse_profiles = { db_address = "test_db" }
         commit_cloud = { db_address = "other_other_other_mutation_db" }
+        git_bundles = { db_address = "git_bundles" }
 
         [storage.multiplex_store.blobstore]
         disabled = {}
@@ -1845,6 +1854,7 @@ mod test {
                         sparse_profiles: RemoteDatabaseConfig { db_address: "test_db".into(), },
                         bonsai_blob_mapping: None,
                         deletion_log: None,
+                        git_bundle_metadata: Some(RemoteDatabaseConfig { db_address: "git_bundles".into(), }),
                         commit_cloud: Some(RemoteDatabaseConfig { db_address: "other_other_other_mutation_db".into(), }),
                     }),
 
