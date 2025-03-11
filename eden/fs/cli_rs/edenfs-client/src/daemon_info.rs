@@ -12,17 +12,14 @@ use tracing::event;
 use tracing::Level;
 
 use crate::client::EdenFsClient;
-use crate::client::StreamingEdenFsClient;
 use crate::StartStatusStream;
 
-impl EdenFsClient {
+impl<'a> EdenFsClient<'a> {
     pub async fn get_health(&self) -> Result<DaemonInfo> {
         event!(Level::DEBUG, "connected to EdenFS daemon");
         self.client.getDaemonInfo().await.from_err()
     }
-}
 
-impl StreamingEdenFsClient {
     #[cfg(fbcode_build)]
     pub async fn get_health_with_startup_updates_included(
         &self,

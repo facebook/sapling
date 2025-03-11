@@ -20,19 +20,40 @@ use crate::instance::EdenFsInstance;
 use crate::EdenFsThriftClient;
 use crate::StreamingEdenFsThriftClient;
 
-pub struct EdenFsClient {
+pub struct EdenFsClient<'a> {
+    #[allow(dead_code)]
+    instance: &'a EdenFsInstance,
     pub(crate) client: EdenFsThriftClient,
+    pub(crate) streaming_client: StreamingEdenFsThriftClient,
 }
 
-impl EdenFsClient {
-    pub(crate) async fn new(instance: &EdenFsInstance, timeout: Option<Duration>) -> Result<Self> {
-        let client = EdenFsClient::connect(instance, timeout).await?;
-        Ok(Self { client })
+impl<'a> EdenFsClient<'a> {
+    pub(crate) async fn new(
+        instance: &'a EdenFsInstance,
+        connection_timeout: Option<Duration>,
+    ) -> Result<Self> {
+        let (client, streaming_client) = tokio::join!(
+            EdenFsClient::connect(instance, connection_timeout),
+            EdenFsClient::connect_streaming(instance, connection_timeout)
+        );
+
+        let result = Self {
+            instance,
+            client: client?,
+            streaming_client: streaming_client?,
+        };
+
+        Ok(result)
     }
 
     // TEMPORARY: This is a temporary workaround while we are refactoring EdenFsInstance into smaller modules
     pub fn get_thrift_client(&self) -> &EdenFsThriftClient {
         &self.client
+    }
+
+    // TEMPORARY: This is a temporary workaround while we are refactoring EdenFsInstance into smaller modules
+    pub fn get_streaming_thrift_client(&self) -> &StreamingEdenFsThriftClient {
+        &self.streaming_client
     }
 
     async fn connect(
@@ -64,22 +85,6 @@ impl EdenFsClient {
         )?;
         Ok(client)
     }
-}
-
-pub struct StreamingEdenFsClient {
-    pub(crate) streaming_client: StreamingEdenFsThriftClient,
-}
-
-impl StreamingEdenFsClient {
-    pub(crate) async fn new(instance: &EdenFsInstance, timeout: Option<Duration>) -> Result<Self> {
-        let streaming_client = StreamingEdenFsClient::connect_streaming(instance, timeout).await?;
-        Ok(Self { streaming_client })
-    }
-
-    // TEMPORARY: This is a temporary workaround while we are refactoring EdenFsInstance into smaller modules
-    pub fn get_thrift_client(&self) -> &StreamingEdenFsThriftClient {
-        &self.streaming_client
-    }
 
     #[cfg(fbcode_build)]
     pub async fn connect_streaming(
@@ -88,7 +93,7 @@ impl StreamingEdenFsClient {
     ) -> Result<StreamingEdenFsThriftClient> {
         let socket_path = instance.socketfile();
 
-        let client = StreamingEdenFsClient::_connect_streaming(&socket_path);
+        let client = EdenFsClient::_connect_streaming(&socket_path);
 
         if let Some(timeout) = timeout {
             tokio::time::timeout(timeout, client)

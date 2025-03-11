@@ -81,7 +81,7 @@ impl From<JournalPosition> for thrift_types::edenfs::JournalPosition {
     }
 }
 
-impl EdenFsClient {
+impl<'a> EdenFsClient<'a> {
     pub async fn get_journal_position(
         &self,
         mount_point: &Option<PathBuf>,

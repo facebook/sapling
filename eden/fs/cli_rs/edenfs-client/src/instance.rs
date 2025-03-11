@@ -51,7 +51,6 @@ use util::lock::PathLock;
 
 use crate::changes_since::ChangesSinceV2Result;
 use crate::client::EdenFsClient;
-use crate::client::StreamingEdenFsClient;
 use crate::journal_position::JournalPosition;
 use crate::utils::get_mount_point;
 use crate::EdenFsThriftClient;
@@ -128,13 +127,6 @@ impl EdenFsInstance {
 
     pub async fn get_client(&self, timeout: Option<Duration>) -> Result<EdenFsClient> {
         EdenFsClient::new(self, timeout).await
-    }
-
-    pub async fn get_streaming_client(
-        &self,
-        timeout: Option<Duration>,
-    ) -> Result<StreamingEdenFsClient> {
-        StreamingEdenFsClient::new(self, timeout).await
     }
 
     pub(crate) fn socketfile(&self) -> PathBuf {
@@ -233,10 +225,10 @@ impl EdenFsInstance {
     > {
         let mount_point_vec = bytes_from_path(get_mount_point(mount_point)?)?;
         let stream_client = self
-            .get_streaming_client(None)
+            .get_client(None)
             .await
             .with_context(|| anyhow!("unable to establish Thrift connection to EdenFS server"))?;
-        let stream_client = stream_client.get_thrift_client();
+        let stream_client = stream_client.get_streaming_thrift_client();
 
         stream_client
             .streamJournalChanged(&mount_point_vec)

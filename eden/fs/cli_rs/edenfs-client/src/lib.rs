@@ -34,8 +34,8 @@ pub mod utils;
 pub use instance::DaemonHealthy;
 pub use instance::EdenFsInstance;
 
+#[cfg(fbcode_build)]
 pub type EdenFsThriftClient = Arc<dyn EdenServiceExt<ThriftChannel> + Send + Sync + 'static>;
-
 #[cfg(fbcode_build)]
 pub type StreamingEdenFsThriftClient = Arc<dyn StreamingEdenService + Sync>;
 #[cfg(fbcode_build)]
