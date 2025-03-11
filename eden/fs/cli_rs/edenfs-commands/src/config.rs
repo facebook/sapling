@@ -213,12 +213,13 @@ pub struct FsConfigCmd {
 impl crate::Subcommand for FsConfigCmd {
     async fn run(&self) -> Result<ExitCode> {
         let instance = EdenFsInstance::global();
-        let config_data = instance.get_config_default().await?;
+        let client = instance.get_client(None).await?;
+        let config_data = client.get_config_default().await?;
 
         let mut current_section: Option<String> = None;
 
         for (key, value) in config_data.values {
-            if !self.all && value.sourceType == ConfigSourceType::Default {
+            if !self.all && value.source_type == ConfigSourceType::Default {
                 continue;
             }
 
@@ -235,8 +236,8 @@ impl crate::Subcommand for FsConfigCmd {
                 current_section = cs;
             }
 
-            let str = format!("{} = \"{}\"", name, value.parsedValue);
-            if value.sourcePath.is_empty() {
+            let str = format!("{} = \"{}\"", name, value.parsed_value);
+            if value.source_path.is_empty() {
                 println!("{}", str);
             } else {
                 const SOURCE_COLUMN: usize = 39;
@@ -253,7 +254,7 @@ impl crate::Subcommand for FsConfigCmd {
                     str,
                     "",
                     white,
-                    String::from_utf8_lossy(&value.sourcePath)
+                    String::from_utf8_lossy(&value.source_path)
                 );
             }
         }

@@ -28,7 +28,6 @@ use edenfs_utils::bytes_from_path;
 use edenfs_utils::get_executable;
 #[cfg(windows)]
 use edenfs_utils::strip_unc_prefix;
-use thrift_types::edenfs::GetConfigParams;
 #[cfg(target_os = "macos")]
 use thrift_types::edenfs::StartFileAccessMonitorParams;
 use tracing::event;
@@ -304,20 +303,6 @@ impl EdenFsInstance {
 
         // Lock will be released when _lock is dropped
         Ok(())
-    }
-
-    pub async fn get_config_default(&self) -> Result<thrift_types::edenfs_config::EdenConfigData> {
-        let client = self
-            .get_client(None)
-            .await
-            .with_context(|| "Unable to connect to EdenFS daemon")?;
-        let client = client.get_thrift_client();
-
-        let params: GetConfigParams = Default::default();
-        client
-            .getConfig(&params)
-            .await
-            .map_err(|_| EdenFsError::Other(anyhow!("failed to get default eden config data")))
     }
 
     pub async fn stop_recording_backing_store_fetch(
