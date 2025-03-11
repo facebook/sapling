@@ -40,7 +40,7 @@ use crate::reporting::add_common_commit_syncing_fields;
 use crate::validation::ValidationHelpers;
 use crate::Repo;
 
-pub async fn get_validation_helpers<'a>(
+pub async fn get_validation_helpers(
     fb: FacebookInit,
     _ctx: CoreContext,
     app: &MononokeApp,
@@ -121,7 +121,7 @@ pub fn format_counter() -> String {
     "x_repo_commit_validator".to_string()
 }
 
-pub async fn get_start_id<'a>(
+pub async fn get_start_id(
     ctx: &CoreContext,
     repo: &impl MutableCountersRef,
     start_id: Option<BookmarkUpdateLogId>,

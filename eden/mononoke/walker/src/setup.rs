@@ -66,7 +66,7 @@ use crate::detail::walk::RepoWalkParams;
 use crate::WalkerArgs;
 const CHECKPOINT_PREFIX: &str = "mononoke_sharded_walker";
 
-pub async fn setup_common<'a>(
+pub async fn setup_common(
     walk_stats_key: &'static str,
     app: &MononokeApp,
     repo_args: &MultiRepoArgs,

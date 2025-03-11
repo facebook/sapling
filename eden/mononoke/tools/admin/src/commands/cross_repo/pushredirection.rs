@@ -307,7 +307,7 @@ async fn pushredirection_change_mapping_version(
     Ok(())
 }
 
-async fn change_mapping_via_extras<'a>(
+async fn change_mapping_via_extras(
     ctx: &CoreContext,
     commit_syncer: &CommitSyncer<Arc<Repo>>,
     mapping_version: &CommitSyncConfigVersion,

@@ -781,7 +781,7 @@ fn get_importing_bookmark(bookmark_suffix: &str) -> Result<BookmarkKey, Error> {
 }
 
 // Note: pushredirection only works from small repo to large repo.
-async fn get_large_repo_config_if_pushredirected<'a>(
+async fn get_large_repo_config_if_pushredirected(
     ctx: &CoreContext,
     repo: &Repo,
     live_commit_sync_config: &CfgrLiveCommitSyncConfig,

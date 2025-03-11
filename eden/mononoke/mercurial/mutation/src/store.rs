@@ -72,7 +72,7 @@ impl SqlHgMutationStore {
     ///
     /// Initial commits are not expected to have entries, but we still
     /// need to record that they have been stored.
-    async fn store<'a>(
+    async fn store(
         &self,
         ctx: &CoreContext,
         new_changeset_ids: HashSet<HgChangesetId>,

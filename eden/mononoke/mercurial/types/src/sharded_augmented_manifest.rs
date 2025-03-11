@@ -563,7 +563,7 @@ impl HgAugmentedManifestEnvelope {
         Self::from_thrift(thrift_tc)
     }
 
-    pub async fn load<'a, B: Blobstore>(
+    pub async fn load<B: Blobstore>(
         ctx: &CoreContext,
         blobstore: &B,
         manifestid: HgAugmentedManifestId,

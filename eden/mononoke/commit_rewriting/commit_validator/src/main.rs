@@ -177,7 +177,7 @@ async fn run_in_once_mode(
         .await
 }
 
-async fn run<'a>(fb: FacebookInit, ctx: CoreContext, app: MononokeApp) -> Result<(), Error> {
+async fn run(fb: FacebookInit, ctx: CoreContext, app: MononokeApp) -> Result<(), Error> {
     let env = app.environment();
 
     let args: MononokeCommitValidatorArgs = app.args::<MononokeCommitValidatorArgs>()?;

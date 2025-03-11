@@ -551,7 +551,7 @@ where
     format!("xreposync_from_{}", source_repo_id)
 }
 
-async fn async_main<'a>(app: MononokeApp, ctx: CoreContext) -> Result<(), Error> {
+async fn async_main(app: MononokeApp, ctx: CoreContext) -> Result<(), Error> {
     let args: Arc<ForwardSyncerArgs> = Arc::new(app.args()?);
     let app = Arc::new(app);
     let ctx = Arc::new(ctx);
@@ -591,7 +591,7 @@ struct BackpressureParams {
 }
 
 impl BackpressureParams {
-    async fn new<'a>(app: &MononokeApp, tail_cmd_args: TailCommandArgs) -> Result<Self, Error> {
+    async fn new(app: &MononokeApp, tail_cmd_args: TailCommandArgs) -> Result<Self, Error> {
         let multi_repo_args = MultiRepoArgs {
             repo_id: tail_cmd_args.backsync_pressure_repo_ids,
             repo_name: vec![],

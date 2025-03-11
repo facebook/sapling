@@ -103,7 +103,7 @@ struct Repo {
     streaming_clone: StreamingClone,
 }
 
-async fn streaming_clone<'a>(fb: FacebookInit, app: &MononokeApp) -> Result<(), Error> {
+async fn streaming_clone(fb: FacebookInit, app: &MononokeApp) -> Result<(), Error> {
     let args: StreamingCloneArgs = app.args()?;
     let logger = app.logger();
     let repo: Repo = app.open_repo(&args.repo).await?;

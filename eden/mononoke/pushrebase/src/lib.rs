@@ -295,7 +295,7 @@ pub async fn do_pushrebase_bonsai(
     Ok(res)
 }
 
-async fn check_filenodes_backfilled<'a>(
+async fn check_filenodes_backfilled(
     ctx: &CoreContext,
     repo: &impl RepoDerivedDataRef,
     head: &ChangesetId,
