@@ -116,13 +116,6 @@ of requests that are sent to Sapling at once.
 - `hg:import-batch-size-blobmeta`: controls how many tree aux data requests we
   send to SaplingNativeBackingStore at once
 
-### Retries
-
-Any Sapling requests that fail due to SaplingAPI errors are placed on the
-`SaplingBackingStore::retryThreadPool_` where they are subsequently retried. The
-number of threads in this pool defaults to 8, but it configurable via
-`hg:num-retry-threads`.
-
 ### Post Processing
 
 Because importing from Sapling is high-latency and mostly blocking, we avoid
