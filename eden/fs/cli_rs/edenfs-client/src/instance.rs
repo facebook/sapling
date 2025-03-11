@@ -30,7 +30,6 @@ use edenfs_utils::strip_unc_prefix;
 #[cfg(fbcode_build)]
 use thrift_types::edenfs::DaemonInfo;
 use thrift_types::edenfs::GetConfigParams;
-use thrift_types::edenfs::GlobParams;
 #[cfg(target_os = "macos")]
 use thrift_types::edenfs::StartFileAccessMonitorParams;
 use thrift_types::fb303_core::fb303_status;
@@ -307,38 +306,6 @@ impl EdenFsInstance {
 
         // Lock will be released when _lock is dropped
         Ok(())
-    }
-
-    pub async fn glob_files<P: AsRef<Path>, S: AsRef<Path>>(
-        &self,
-        mount_point: P,
-        globs: Vec<String>,
-        include_dotfiles: bool,
-        prefetch_files: bool,
-        suppress_file_list: bool,
-        want_dtype: bool,
-        search_root: S,
-        background: bool,
-        list_only_files: bool,
-    ) -> Result<thrift_types::edenfs::Glob> {
-        let client = self.get_client(None).await?;
-        let client = client.get_thrift_client();
-
-        client
-            .globFiles(&GlobParams {
-                mountPoint: bytes_from_path(mount_point.as_ref().to_path_buf())?,
-                globs,
-                includeDotfiles: include_dotfiles,
-                prefetchFiles: prefetch_files,
-                suppressFileList: suppress_file_list,
-                wantDtype: want_dtype,
-                searchRoot: bytes_from_path(search_root.as_ref().to_path_buf())?,
-                background,
-                listOnlyFiles: list_only_files,
-                ..Default::default()
-            })
-            .await
-            .map_err(|_| EdenFsError::Other(anyhow!("failed to get glob files result")))
     }
 
     #[cfg(target_os = "linux")]

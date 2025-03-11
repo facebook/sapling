@@ -11,6 +11,7 @@ pub mod client;
 pub mod current_snapshot;
 pub mod daemon_info;
 pub mod fsutil;
+pub mod glob_files;
 pub mod instance;
 pub mod journal;
 mod mounttable;
