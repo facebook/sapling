@@ -8,6 +8,7 @@
 pub mod changes_since;
 pub mod checkout;
 pub mod client;
+pub mod current_snapshot;
 pub mod daemon_info;
 pub mod fsutil;
 pub mod instance;

@@ -276,16 +276,15 @@ async fn ignored_usage_counts_for_mount(checkout: &EdenFsCheckout) -> Result<u64
         ..Default::default()
     };
 
-    let edenfs_instance = EdenFsInstance::global();
-    let snapshot_info = edenfs_instance
-        .get_current_snapshot_info(checkout.path())
-        .await;
+    let instance = EdenFsInstance::global();
+    let client = instance.get_client(None).await?;
+    let snapshot_info = client.get_current_snapshot_info(checkout.path()).await;
 
     if let Ok(snapshot_info) = snapshot_info {
-        root_id_options.filterId = snapshot_info.filterId;
+        root_id_options.filterId = snapshot_info.filter_id;
     }
 
-    let scm_status = edenfs_instance
+    let scm_status = instance
         .get_scm_status_v2(
             checkout.path(),
             checkout.get_snapshot()?.working_copy_parent,

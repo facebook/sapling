@@ -30,7 +30,6 @@ use edenfs_utils::strip_unc_prefix;
 #[cfg(fbcode_build)]
 use thrift_types::edenfs::DaemonInfo;
 use thrift_types::edenfs::GetConfigParams;
-use thrift_types::edenfs::GetCurrentSnapshotInfoRequest;
 use thrift_types::edenfs::GetScmStatusParams;
 use thrift_types::edenfs::GlobParams;
 use thrift_types::edenfs::MountId;
@@ -357,28 +356,6 @@ impl EdenFsInstance {
                 e
             ))),
         }
-    }
-
-    pub async fn get_current_snapshot_info(
-        &self,
-        mount_point: PathBuf,
-    ) -> Result<thrift_types::edenfs::GetCurrentSnapshotInfoResponse> {
-        let client = self.get_client(None).await?;
-        let client = client.get_thrift_client();
-        let mount_point = bytes_from_path(mount_point)?;
-        let snapshot_info_params = GetCurrentSnapshotInfoRequest {
-            mountId: MountId {
-                mountPoint: mount_point,
-                ..Default::default()
-            },
-            cri: None,
-            ..Default::default()
-        };
-
-        client
-            .getCurrentSnapshotInfo(&snapshot_info_params)
-            .await
-            .map_err(|_| EdenFsError::Other(anyhow!("failed to get snapshot info")))
     }
 
     pub async fn get_scm_status_v2(
