@@ -381,7 +381,7 @@ class uihunk(patchnode):
         if self.after and self.after[-1] == b"\\ No newline at end of file\n":
             contextlen -= 1
         fromlen = contextlen + self.removed
-        tolen = contextlen + self.added
+        to_len = contextlen + self.added
 
         # diffutils manual, section "2.2.2.2 detailed description of unified
         # format": "an empty hunk is considered to end at the line that
@@ -393,14 +393,14 @@ class uihunk(patchnode):
         if fromline != 0:
             if fromlen == 0:
                 fromline -= 1
-            if tolen == 0 and toline > 0:
+            if to_len == 0 and toline > 0:
                 toline -= 1
 
         fromtoline = b"@@ -%d,%d +%d,%d @@%s\n" % (
             fromline,
             fromlen,
             toline,
-            tolen,
+            to_len,
             self.proc and (b" " + self.proc),
         )
         return fromtoline

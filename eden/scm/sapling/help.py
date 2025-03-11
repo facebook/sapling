@@ -521,12 +521,14 @@ class _helpdispatch:
                     )
             source = entry[0].source
             if entry[0].definition.startswith("!"):  # shell alias
+                # @lint-ignore SPELL
                 doc = _("%sshell alias for::\n\n    %s\n\ndefined by: %s\n") % (
                     aliasdoc,
                     entry[0].definition[1:],
                     source,
                 )
             else:
+                # @lint-ignore SPELL
                 doc = _("%salias for: @prog@ %s\n\n%s\n\ndefined by: %s\n") % (
                     aliasdoc,
                     entry[0].definition,

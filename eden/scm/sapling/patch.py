@@ -1153,14 +1153,14 @@ class recordhunk:
         if self.after and self.after[-1] == b"\\ No newline at end of file\n":
             delta -= 1
         fromlen = delta + self.removed
-        tolen = delta + self.added
+        to_len = delta + self.added
         fd.write(
             b"@@ -%d,%d +%d,%d @@%s\n"
             % (
                 self.fromline,
                 fromlen,
                 self.toline,
-                tolen,
+                to_len,
                 self.proc and (b" " + self.proc),
             )
         )

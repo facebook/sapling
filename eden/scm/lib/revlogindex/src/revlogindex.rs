@@ -2034,6 +2034,7 @@ commit 3"#
 
     #[test]
     fn test_delta_application() -> Result<()> {
+        // @lint-ignore-every SPELL
         // util.py.i and util.py.d come from mercurial/util.py cloned from
         // https://www.mercurial-scm.org/repo/hg with lz4revlog enabled.
         // Truncated to first 3 revs.

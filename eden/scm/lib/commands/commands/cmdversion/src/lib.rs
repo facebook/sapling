@@ -28,6 +28,7 @@ pub fn run(ctx: ReqCtx<NoOpts>) -> Result<u8> {
 }
 
 pub fn aliases() -> &'static str {
+    // @lint-ignore SPELL
     "version|vers|versi|versio"
 }
 

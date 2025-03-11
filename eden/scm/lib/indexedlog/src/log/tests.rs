@@ -303,6 +303,7 @@ fn test_fmt_debug() -> crate::Result<()> {
     }
     assert_eq!(
         format!("\n{:?}", log),
+        // @lint-ignore-every SPELL
         r#"
 # Entry 1:
 0000000c: 49 6e 64 65 78 65 64 20 4c 6f 67 20 70 72 6f 76  Indexed Log prov

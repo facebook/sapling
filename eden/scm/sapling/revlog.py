@@ -204,7 +204,7 @@ def _slicechunk(revlog, revs):
     # Store the gaps in a heap to have them sorted by decreasing size
     gapsheap = []
     heapq.heapify(gapsheap)
-    prevend = None
+    prev_end = None
     for i, rev in enumerate(revs):
         revstart = start(rev)
         revlen = length(rev)
@@ -213,13 +213,13 @@ def _slicechunk(revlog, revs):
         if revlen == 0:
             continue
 
-        if prevend is not None:
-            gapsize = revstart - prevend
+        if prev_end is not None:
+            gapsize = revstart - prev_end
             # only consider holes that are large enough
             if gapsize > revlog._srmingapsize:
                 heapq.heappush(gapsheap, (-gapsize, i))
 
-        prevend = revstart + revlen
+        prev_end = revstart + revlen
 
     # Collect the indices of the largest holes until the density is acceptable
     indicesheap = []

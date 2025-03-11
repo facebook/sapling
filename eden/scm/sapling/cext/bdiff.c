@@ -16,6 +16,7 @@
  Based roughly on Python difflib
 */
 
+// @lint-ignore-every SPELL
 #define PY_SSIZE_T_CLEAN
 #include <Python.h> // @manual=fbsource//third-party/python:python
 #include <limits.h>

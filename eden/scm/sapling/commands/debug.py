@@ -2887,14 +2887,17 @@ def debugrevspec(ui, repo, expr, **opts) -> Optional[int]:
         ui.write(_x("--- analyzed\n"), label="diff.file_a")
         ui.write(_x("+++ optimized\n"), label="diff.file_b")
         sm = difflib.SequenceMatcher(None, arevs, brevs)
+        # @lint-ignore SPELL
         for tag, alo, ahi, blo, bhi in sm.get_opcodes():
             if tag in ("delete", "replace"):
+                # @lint-ignore SPELL
                 for c in arevs[alo:ahi]:
                     ui.write("-%s\n" % c, label="diff.deleted")
             if tag in ("insert", "replace"):
                 for c in brevs[blo:bhi]:
                     ui.write("+%s\n" % c, label="diff.inserted")
             if tag == "equal":
+                # @lint-ignore SPELL
                 for c in arevs[alo:ahi]:
                     ui.write(" %s\n" % c)
         return 1
@@ -3955,7 +3958,7 @@ def debugcommitmessage(ui, repo, *args):
 
 @command(
     "debugwatchmansubscribe",
-    [("", "timeout", 2, "seconds of inactivity before exitting")],
+    [("", "timeout", 2, "seconds of inactivity before exiting")],
 )
 def debugwatchmansubscribe(ui, repo, **opts) -> None:
     """subscribe to watchman events"""

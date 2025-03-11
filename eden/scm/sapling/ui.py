@@ -139,7 +139,7 @@ class deprecationlevel(IntEnum):
     # Inserts a 2 second sleep to the deprecated code path
     Slow = 2
     # Throws an exception, but a config can be used to opt in to the deprecated feature
-    Optin = 3
+    OptIn = 3
     # Throws a non-bypassable exception
     Block = 4
 
@@ -1501,7 +1501,7 @@ class ui:
             raise error.DeprecatedError(
                 _("feature '%s' is disabled: %s") % (name, message)
             )
-        elif level == deprecationlevel.Optin and not bypassed:
+        elif level == deprecationlevel.OptIn and not bypassed:
             hint = (
                 _(
                     "set config `deprecated.bypass-%s=True` to temporarily bypass this block"

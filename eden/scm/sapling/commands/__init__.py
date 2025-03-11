@@ -10,6 +10,8 @@
 # This software may be used and distributed according to the terms of the
 # GNU General Public License version 2 or any later version.
 
+# @lint-ignore-every SPELL
+
 from __future__ import absolute_import
 
 import difflib
@@ -4657,7 +4659,7 @@ def phase(ui, repo, *revs, **opts):
         if repo.ui.configbool("experimental", "narrow-heads"):
             ui.warn(
                 _(
-                    "(phases are now managed by remotenames and heads; manully editing phases is a no-op)\n"
+                    "(phases are now managed by remotenames and heads; manually editing phases is a no-op)\n"
                 )
             )
             return 0
