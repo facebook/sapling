@@ -61,7 +61,7 @@ Sync all bookmarks moves
   Connecting to https://localhost:$LOCAL_PORT/edenapi/
   Established EdenAPI connection
   Initialized channels
-  Calculating segments for entry 1
+  Calculating segments for entry 1, from changeset None to changeset ChangesetId(Blake2(53b034a90fe3002a707a7da9cdf6eac3dea460ad72f7c6969dfb88fd0e69f856))
   Resuming from latest entry checkpoint 0
   Skipping 0 batches from entry 1
   Skipping 0 commits within batch

@@ -10,6 +10,7 @@
 use std::path::PathBuf;
 
 use anyhow::Result;
+use bonsai_hg_mapping::BonsaiHgMapping;
 use bookmarks::BookmarkUpdateLog;
 use bookmarks::Bookmarks;
 use clap::Parser;
@@ -86,6 +87,8 @@ pub struct Repo {
     pub repo_config: RepoConfig,
     #[facet]
     bookmarks: dyn Bookmarks,
+    #[facet]
+    bonsai_hg_mapping: dyn BonsaiHgMapping,
 }
 
 #[fbinit::main]

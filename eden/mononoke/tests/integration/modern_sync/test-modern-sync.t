@@ -243,14 +243,12 @@ Sync all bookmarks moves
   Connecting to https://localhost:$LOCAL_PORT/edenapi/
   Established EdenAPI connection
   Initialized channels
-  Calculating segments for entry 1
+  Calculating segments for entry 1, from changeset Some(ChangesetId(Blake2(5b1c7130dde8e54b4285b9153d8e56d69fbf4ae685eaf9e9766cc409861995f8))) to changeset ChangesetId(Blake2(53b034a90fe3002a707a7da9cdf6eac3dea460ad72f7c6969dfb88fd0e69f856))
   Resuming from latest entry checkpoint 0
   Skipping 0 batches from entry 1
-  Skipping 0 commits within batch
-  Found 0 missing commits
   Finished entry. Setting entry counter to 1 and in-entry checkpoint to 0
   Moved bookmark with result SetBookmarkResponse { data: Ok(()) }
-  Calculating segments for entry 2
+  Calculating segments for entry 2, from changeset Some(ChangesetId(Blake2(53b034a90fe3002a707a7da9cdf6eac3dea460ad72f7c6969dfb88fd0e69f856))) to changeset ChangesetId(Blake2(5b1c7130dde8e54b4285b9153d8e56d69fbf4ae685eaf9e9766cc409861995f8))
   Resuming from latest entry checkpoint 0
   Skipping 0 batches from entry 2
   Skipping 0 commits within batch

@@ -14,6 +14,7 @@ use anyhow::bail;
 use anyhow::format_err;
 use anyhow::Result;
 use blobstore::Loadable;
+use bonsai_hg_mapping::BonsaiHgMappingRef;
 use bookmarks::BookmarkKey;
 use bookmarks::BookmarkUpdateLogArc;
 use bookmarks::BookmarkUpdateLogEntry;
@@ -253,7 +254,22 @@ pub async fn process_bookmark_update_log_entry(
     let to_cs = entry
         .to_changeset_id
         .expect("bookmark update log entry should have a destination");
-    let from_vec: Vec<_> = entry.from_changeset_id.into_iter().collect();
+
+    // If the entry has a source, use it. Otherwise, get it from the bookmark.
+    let from_cs = if let Some(cs_id) = entry.from_changeset_id {
+        Some(cs_id)
+    } else if let Some(hgid) = sender
+        .read_bookmark(entry.bookmark_name.as_str().to_owned())
+        .await?
+    {
+        repo.bonsai_hg_mapping()
+            .get_bonsai_from_hg(ctx, hgid)
+            .await?
+    } else {
+        None
+    };
+
+    let from_vec: Vec<ChangesetId> = from_cs.into_iter().collect();
     let to_vec: Vec<ChangesetId> = vec![to_cs];
     let bookmark_name = entry.bookmark_name.name().to_string();
 
@@ -262,7 +278,13 @@ pub async fn process_bookmark_update_log_entry(
     // We need this in case all commits are synced so no need to wait.
     let wait_for_commit = Arc::new(AtomicBool::new(false));
 
-    info!(logger, "Calculating segments for entry {}", entry.id);
+    info!(
+        logger,
+        "Calculating segments for entry {}, from changeset {:?} to changeset {:?}",
+        entry.id,
+        from_cs,
+        to_cs
+    );
 
     let (_, ctx) = {
         let commits = repo

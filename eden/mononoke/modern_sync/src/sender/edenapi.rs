@@ -333,6 +333,16 @@ impl EdenapiSender {
         let retry_count = MAX_RETRIES;
         with_retry(retry_count, &self.logger, || func(self)).await
     }
+
+    pub async fn read_bookmark(&self, bookmark: String) -> Result<Option<HgChangesetId>> {
+        let res = self.client.bookmarks(vec![bookmark]).await?;
+
+        Ok(res
+            .into_iter()
+            .next()
+            .and_then(|entry| entry.hgid)
+            .map(|id| id.into()))
+    }
 }
 
 async fn with_retry<'t, T>(
