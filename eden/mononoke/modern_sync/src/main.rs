@@ -56,10 +56,6 @@ struct ModernSyncArgs {
     dest_repo_name: Option<String>,
 
     #[clap(long)]
-    /// Update counters in the source repo (prod and tests only)
-    update_counters: bool,
-
-    #[clap(long)]
     /// Update ODS counters
     log_to_ods: bool,
 

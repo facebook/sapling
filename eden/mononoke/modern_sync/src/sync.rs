@@ -216,7 +216,6 @@ pub async fn sync(
                             sender.clone(),
                             chunk_size,
                             app_args.log_to_ods,
-                            app_args.update_counters,
                             &logger,
                         )
                         .await
@@ -246,7 +245,6 @@ pub async fn process_bookmark_update_log_entry(
     sender: Arc<EdenapiSender>,
     chunk_size: u64,
     log_to_ods: bool,
-    update_counters: bool,
     logger: &Logger,
 ) -> Result<()> {
     let repo_name = repo.repo_identity().name().to_string();
@@ -420,60 +418,58 @@ pub async fn process_bookmark_update_log_entry(
         })
         .await?;
 
-    if update_counters {
-        // Wait for the last commit to be synced
-        if wait_for_commit.load(Ordering::SeqCst) {
-            let res = cs_rx.recv().await;
-            match res {
-                Some(Err(e)) => {
-                    bail!("Error while waiting for commit to be synced {:?}", e);
-                }
-                None => bail!("No commit synced"),
-                _ => (),
+    // Wait for the last commit to be synced
+    if wait_for_commit.load(Ordering::SeqCst) {
+        let res = cs_rx.recv().await;
+        match res {
+            Some(Err(e)) => {
+                bail!("Error while waiting for commit to be synced {:?}", e);
             }
+            None => bail!("No commit synced"),
+            _ => (),
         }
+    }
 
-        repo.mutable_counters()
-            .set_counter(&ctx, MODERN_SYNC_COUNTER_NAME, entry.id.0 as i64, None)
-            .await?;
-
-        repo.mutable_counters()
-            .set_counter(&ctx, MODERN_SYNC_BATCH_CHECKPOINT_NAME, 0, None)
-            .await?;
-
-        info!(
-            logger,
-            "Finished entry. Setting entry counter to {} and in-entry checkpoint to 0", entry.id
-        );
-
-        bul_util::update_remaining_moves(
-            entry.id,
-            repo_name.clone(),
-            ctx.clone(),
-            repo.bookmark_update_log_arc(),
-        )
+    repo.mutable_counters()
+        .set_counter(&ctx, MODERN_SYNC_COUNTER_NAME, entry.id.0 as i64, None)
         .await?;
 
-        let from_changeset = if let Some(cs_id) = entry.from_changeset_id {
-            Some(repo.derive_hg_changeset(&ctx, cs_id).await?)
-        } else {
-            None
-        };
+    repo.mutable_counters()
+        .set_counter(&ctx, MODERN_SYNC_BATCH_CHECKPOINT_NAME, 0, None)
+        .await?;
 
-        let to_changeset = if let Some(cs_id) = entry.to_changeset_id {
-            Some(repo.derive_hg_changeset(&ctx, cs_id).await?)
-        } else {
-            None
-        };
+    info!(
+        logger,
+        "Finished entry. Setting entry counter to {} and in-entry checkpoint to 0", entry.id
+    );
 
-        sender
-            .set_bookmark(
-                entry.bookmark_name.name().to_string(),
-                from_changeset,
-                to_changeset,
-            )
-            .await?;
-    }
+    bul_util::update_remaining_moves(
+        entry.id,
+        repo_name.clone(),
+        ctx.clone(),
+        repo.bookmark_update_log_arc(),
+    )
+    .await?;
+
+    let from_changeset = if let Some(cs_id) = entry.from_changeset_id {
+        Some(repo.derive_hg_changeset(&ctx, cs_id).await?)
+    } else {
+        None
+    };
+
+    let to_changeset = if let Some(cs_id) = entry.to_changeset_id {
+        Some(repo.derive_hg_changeset(&ctx, cs_id).await?)
+    } else {
+        None
+    };
+
+    sender
+        .set_bookmark(
+            entry.bookmark_name.name().to_string(),
+            from_changeset,
+            to_changeset,
+        )
+        .await?;
 
     Ok(())
 }

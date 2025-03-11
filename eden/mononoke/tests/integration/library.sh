@@ -351,7 +351,6 @@ function mononoke_modern_sync {
     --repo-name "$ORIG_REPO" \
     --dest-repo-name "$DEST_REPO" \
     --exit-file "\exit_file" \
-    --update-counters \
     --mononoke-config-path "$TESTTMP/mononoke-config" \
     --dest-socket $MONONOKE_SOCKET \
     --tls-ca "$TEST_CERTDIR/root-ca.crt" \
