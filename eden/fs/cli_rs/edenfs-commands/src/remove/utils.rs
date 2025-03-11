@@ -18,7 +18,7 @@ use anyhow::Context;
 use anyhow::Result;
 use edenfs_client::checkout::get_mounts;
 use edenfs_client::fsutil::forcefully_remove_dir_all;
-use edenfs_client::EdenFsInstance;
+use edenfs_client::instance::EdenFsInstance;
 
 use super::types::RemoveContext;
 

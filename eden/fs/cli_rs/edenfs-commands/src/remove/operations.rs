@@ -10,7 +10,7 @@ use std::path::PathBuf;
 use anyhow::anyhow;
 use anyhow::Context;
 use anyhow::Result;
-use edenfs_client::EdenFsInstance;
+use edenfs_client::instance::EdenFsInstance;
 use fail::fail_point;
 use tracing::debug;
 use tracing::warn;

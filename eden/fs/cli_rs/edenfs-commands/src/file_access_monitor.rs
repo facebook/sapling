@@ -16,7 +16,7 @@ use std::path::PathBuf;
 use anyhow::Result;
 use async_trait::async_trait;
 use clap::Parser;
-use edenfs_client::EdenFsInstance;
+use edenfs_client::instance::EdenFsInstance;
 use edenfs_utils::path_from_bytes;
 use hg_util::path::expand_path;
 use serde::Deserialize;

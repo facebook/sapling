@@ -14,7 +14,7 @@ use anyhow::anyhow;
 use anyhow::Result;
 use async_trait::async_trait;
 use clap::Parser;
-use edenfs_client::EdenFsInstance;
+use edenfs_client::instance::EdenFsInstance;
 #[cfg(windows)]
 use edenfs_utils::find_python;
 use hg_util::path::expand_path;

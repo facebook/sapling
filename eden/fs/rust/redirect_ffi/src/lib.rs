@@ -9,11 +9,11 @@ use std::path::PathBuf;
 
 use anyhow::anyhow;
 use anyhow::Result;
+use edenfs_client::instance::EdenFsInstance;
 use edenfs_client::redirect::get_effective_redirs_for_mount;
 use edenfs_client::redirect::Redirection;
 use edenfs_client::redirect::RedirectionState;
 use edenfs_client::redirect::RedirectionType;
-use edenfs_client::EdenFsInstance;
 
 #[cxx::bridge]
 mod ffi {

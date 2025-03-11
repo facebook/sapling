@@ -20,8 +20,8 @@ use async_trait::async_trait;
 use clap::Parser;
 use edenfs_client::checkout::find_checkout;
 use edenfs_client::checkout::CheckoutConfig;
+use edenfs_client::instance::EdenFsInstance;
 use edenfs_client::utils::expand_path_or_cwd;
-use edenfs_client::EdenFsInstance;
 #[cfg(fbcode_build)]
 use edenfs_telemetry::send;
 #[cfg(fbcode_build)]

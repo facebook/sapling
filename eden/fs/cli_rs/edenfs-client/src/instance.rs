@@ -45,7 +45,7 @@ use tracing::Level;
 use util::lock::PathLock;
 
 use crate::client::EdenFsClient;
-use crate::EdenFsThriftClient;
+use crate::client::EdenFsThriftClient;
 
 // We should create a single EdenFsInstance when parsing EdenFs commands and utilize
 // EdenFsInstance::global() whenever we need to access it. This way we can avoid passing an

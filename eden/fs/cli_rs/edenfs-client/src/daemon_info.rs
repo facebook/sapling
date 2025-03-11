@@ -7,12 +7,17 @@
 
 use edenfs_error::Result;
 use edenfs_error::ResultExt;
+use futures::stream::BoxStream;
+use thrift_streaming::EdenStartStatusUpdate;
+use thrift_streaming_clients::errors::StreamStartStatusStreamError;
 use thrift_types::edenfs::DaemonInfo;
 use tracing::event;
 use tracing::Level;
 
 use crate::client::EdenFsClient;
-use crate::StartStatusStream;
+
+pub type StartStatusStream =
+    BoxStream<'static, Result<EdenStartStatusUpdate, StreamStartStatusStreamError>>;
 
 impl<'a> EdenFsClient<'a> {
     pub async fn get_health(&self) -> Result<DaemonInfo> {
@@ -20,7 +25,6 @@ impl<'a> EdenFsClient<'a> {
         self.client.getDaemonInfo().await.from_err()
     }
 
-    #[cfg(fbcode_build)]
     pub async fn get_health_with_startup_updates_included(
         &self,
     ) -> Result<(DaemonInfo, StartStatusStream)> {

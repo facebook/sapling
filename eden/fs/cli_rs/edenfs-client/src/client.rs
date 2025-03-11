@@ -6,19 +6,26 @@
  */
 
 use std::path::PathBuf;
+use std::sync::Arc;
 use std::time::Duration;
 
 use anyhow::Context;
 use edenfs_error::EdenFsError;
 use edenfs_error::Result;
 use fbinit::expect_init;
+use thrift_streaming_clients::StreamingEdenService;
 use thrift_streaming_thriftclients::build_StreamingEdenService_client;
 use thrift_thriftclients::make_EdenServiceExt_thriftclient;
+use thrift_types::edenfs_clients::EdenServiceExt;
+use thriftclient::ThriftChannel;
 use thriftclient::ThriftChannelBuilder;
 
 use crate::instance::EdenFsInstance;
-use crate::EdenFsThriftClient;
-use crate::StreamingEdenFsThriftClient;
+
+#[cfg(fbcode_build)]
+pub type EdenFsThriftClient = Arc<dyn EdenServiceExt<ThriftChannel> + Send + Sync + 'static>;
+#[cfg(fbcode_build)]
+pub type StreamingEdenFsThriftClient = Arc<dyn StreamingEdenService + Send + Sync + 'static>;
 
 pub struct EdenFsClient<'a> {
     #[allow(dead_code)]
