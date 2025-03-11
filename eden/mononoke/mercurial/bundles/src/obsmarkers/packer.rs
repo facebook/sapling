@@ -133,12 +133,12 @@ mod test {
             let value_size = data[off] as usize;
             off += 1;
 
-            key_size == e.key.as_bytes().len() && value_size == e.value.as_bytes().len()
+            key_size == e.key.len() && value_size == e.value.len()
         });
 
         let strings_ok = metadata.iter().all(|e| {
-            let key_size = e.key.as_bytes().len();
-            let value_size = e.value.as_bytes().len();
+            let key_size = e.key.len();
+            let value_size = e.value.len();
 
             let key = String::from_utf8(data[off..off + key_size].to_vec());
             off += key_size;

@@ -619,7 +619,7 @@ impl BlobstorePutOps for Sqlblob {
         value: BlobstoreBytes,
         put_behaviour: PutBehaviour,
     ) -> Result<OverwriteStatus> {
-        if key.as_bytes().len() > MAX_KEY_SIZE {
+        if key.len() > MAX_KEY_SIZE {
             return Err(format_err!(
                 "Key {} exceeded max key size {}",
                 key,
