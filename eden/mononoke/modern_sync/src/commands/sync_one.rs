@@ -8,23 +8,23 @@
 use std::path::PathBuf;
 use std::sync::Arc;
 
-use anyhow::bail;
 use anyhow::format_err;
 use anyhow::Result;
 use clap::Parser;
 use clientinfo::ClientEntryPoint;
 use clientinfo::ClientInfo;
 use context::SessionContainer;
+use futures::channel::oneshot;
 use metadata::Metadata;
 use mononoke_app::MononokeApp;
 use mononoke_types::ChangesetId;
 use mutable_counters::MutableCountersArc;
 use repo_blobstore::RepoBlobstoreRef;
 use repo_identity::RepoIdentityRef;
-use tokio::sync::mpsc;
 use url::Url;
 
 use crate::sender::edenapi::EdenapiSender;
+use crate::sender::manager::ChangesetMessage;
 use crate::sender::manager::SendManager;
 use crate::ModernSyncArgs;
 use crate::Repo;
@@ -104,7 +104,6 @@ pub async fn run(app: MononokeApp, args: CommandArgs) -> Result<()> {
         PathBuf::from(""),
         repo.mutable_counters_arc(),
     );
-    let (cr_s, mut cr_r) = mpsc::channel::<Result<()>>(1);
 
     crate::sync::process_one_changeset(
         &args.cs_id,
@@ -114,19 +113,15 @@ pub async fn run(app: MononokeApp, args: CommandArgs) -> Result<()> {
         &send_manager,
         false,
         "",
-        Some(cr_s),
         None,
     )
     .await?;
 
-    let res = cr_r.recv().await;
-    match res {
-        Some(Err(e)) => {
-            bail!("Error while waiting for commit to be synced {:?}", e);
-        }
-        None => bail!("No commit synced"),
-        _ => (),
-    }
+    let (finish_tx, finish_rx) = oneshot::channel();
+    send_manager
+        .send_changeset(ChangesetMessage::NotifyCompletion(finish_tx))
+        .await?;
+    finish_rx.await??;
 
     Ok(())
 }

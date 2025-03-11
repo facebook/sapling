@@ -18,6 +18,7 @@ use bytesize::ByteSize;
 use context::CoreContext;
 use futures::channel::oneshot;
 use mercurial_types::blobs::HgBlobChangeset;
+use mercurial_types::HgChangesetId;
 use mercurial_types::HgFileNodeId;
 use mercurial_types::HgManifestId;
 use mononoke_macros::mononoke;
@@ -32,11 +33,13 @@ use slog::Logger;
 use stats::define_stats;
 use stats::prelude::*;
 use tokio::sync::mpsc;
-use tokio::sync::mpsc::Sender;
 use tokio::time::interval;
 
 use crate::sender::edenapi::EdenapiSender;
-use crate::sync::MODERN_SYNC_BATCH_CHECKPOINT_NAME;
+
+pub(crate) const MODERN_SYNC_COUNTER_NAME: &str = "modern_sync";
+pub(crate) const MODERN_SYNC_BATCH_CHECKPOINT_NAME: &str = "modern_sync_batch_checkpoint";
+pub(crate) const MODERN_SYNC_CURRENT_ENTRY_ID: &str = "modern_sync_batch_id";
 
 define_stats! {
     prefix = "mononoke.modern_sync";
@@ -113,13 +116,20 @@ pub enum ChangesetMessage {
     WaitForFilesAndTrees(oneshot::Receiver<Result<()>>, oneshot::Receiver<Result<()>>),
     // Send the changeset to remote end
     Changeset((HgBlobChangeset, BonsaiChangeset)),
+    // Checkpoint position (first argument) within the BUL entry (second argument)
+    CheckpointInEntry(u64, i64),
+    // Perfrom bookmark movement and mark BUL entry as completed once the changeset is synced
+    FinishEntry(BookmarkInfo, i64),
     // Notify changeset sending is done
-    ChangesetDone(
-        Option<mpsc::Sender<Result<()>>>, // Channel to notify entry completion
-        Option<u64>, // Changeset position within entry (assuming topological order)
-    ),
+    NotifyCompletion(oneshot::Sender<Result<()>>),
     // Log changeset completion
     Log((String, Option<i64>)),
+}
+
+pub struct BookmarkInfo {
+    pub name: String,
+    pub from_cs_id: Option<HgChangesetId>,
+    pub to_cs_id: Option<HgChangesetId>,
 }
 
 impl SendManager {
@@ -519,18 +529,30 @@ impl SendManager {
         mononoke::spawn_task(async move {
             let mut encountered_error: Option<anyhow::Error> = None;
 
-            let mut pending_messages = VecDeque::new();
             let mut pending_log = VecDeque::new();
-            let mut pending_checkpoint = VecDeque::new();
+
+            let mut latest_in_entry_checkpoint = None;
+            let mut latest_entry_id = None;
+            let mut latest_bookmark: Option<BookmarkInfo> = None;
+            let mut pending_notification = None;
 
             let mut current_batch = Vec::new();
             let mut flush_timer = interval(CHANGESETS_FLUSH_INTERVAL);
 
             while !cancellation_requested.load(Ordering::Relaxed) {
                 tokio::select! {
+
                     msg = changeset_recv.recv() => {
-                        debug!(changeset_logger, "Changeset channel capacity: {} max capacity: {} in queue: {}", changeset_recv.capacity(), CHANGESET_CHANNEL_SIZE,  changeset_recv.len());
-                        STATS::changesets_queue_len.add_value(changeset_recv.len() as i64, (reponame.clone(),));
+
+                        debug!(
+                            changeset_logger,
+                            "Changeset channel capacity: {} max capacity: {} in queue: {}",
+                            changeset_recv.capacity(),
+                            CHANGESET_CHANNEL_SIZE,
+                            changeset_recv.len()
+                        );
+                        STATS::changesets_queue_len
+                            .add_value(changeset_recv.len() as i64, (reponame.clone(),));
                         match msg {
                             Some(ChangesetMessage::WaitForFilesAndTrees(
                                 files_receiver,
@@ -570,13 +592,40 @@ impl SendManager {
                                 current_batch.push((hg_cs, bcs));
                             }
 
-                            Some(ChangesetMessage::ChangesetDone(sender, position))
+                            Some(ChangesetMessage::CheckpointInEntry(position, id))
                                 if encountered_error.is_none() =>
                             {
-                                if let Some(sender) = sender {
-                                    pending_messages.push_back(sender);
+                                latest_in_entry_checkpoint = Some((position, id));
+                            }
+
+                            Some(ChangesetMessage::FinishEntry(bookmark, id))
+                                if encountered_error.is_none() =>
+                            {
+                                latest_entry_id = Some(id);
+                                if let Some(prev_bookmark) = latest_bookmark {
+                                    latest_bookmark = Some(BookmarkInfo {
+                                        name: prev_bookmark.name,
+                                        from_cs_id: prev_bookmark.from_cs_id,
+                                        to_cs_id: bookmark.to_cs_id,
+                                    });
+                                } else {
+                                    latest_bookmark = Some(bookmark);
                                 }
-                                pending_checkpoint.push_back(position);
+                            }
+
+                            Some(ChangesetMessage::NotifyCompletion(sender))
+                                if encountered_error.is_none() =>
+                            {
+                                pending_notification = Some(sender);
+                            }
+
+                            Some(ChangesetMessage::NotifyCompletion(sender)) => {
+                                let e = encountered_error.unwrap();
+                                let _ = sender.send(Err(anyhow::anyhow!(
+                                    "Error processing changesets: {:?}",
+                                    e
+                                )));
+                                return Err(e);
                             }
 
                             Some(ChangesetMessage::Log((_, lag)))
@@ -584,36 +633,25 @@ impl SendManager {
                             {
                                 pending_log.push_back(lag);
                             }
-
-                            Some(ChangesetMessage::ChangesetDone(Some(sender), _)) => {
-                                let e = encountered_error.unwrap();
-                                sender
-                                    .send(Err(anyhow::anyhow!(
-                                        "Error processing changesets: {:?}",
-                                        e
-                                    )))
-                                    .await?;
-                                return Err(e);
-                            }
-
-                            Some(ChangesetMessage::Log((_, _)))
-                            | Some(ChangesetMessage::Changeset(_))
-                            | Some(ChangesetMessage::ChangesetDone(_, _)) => {}
-
                             None => break,
+
+                            // Ignore any other action if there's an error
+                            _ => {}
                         }
 
                         if current_batch.len() >= MAX_CHANGESET_BATCH_SIZE {
                             if let Err(e) = flush_batch(
-                                &ctx,
-                                &changeset_es,
-                                &mut current_batch,
-                                &mut pending_messages,
-                                &mut pending_log,
-                                &changeset_logger,
                                 reponame.clone(),
-                                &mut pending_checkpoint,
+                                &ctx,
+                                &changeset_logger,
+                                &changeset_es,
                                 mc.clone(),
+                                &mut current_batch,
+                                &mut pending_log,
+                                &mut latest_in_entry_checkpoint,
+                                &mut latest_entry_id,
+                                &mut latest_bookmark,
+                                &mut pending_notification,
                             )
                             .await
                             {
@@ -627,15 +665,17 @@ impl SendManager {
                     _ = flush_timer.tick() =>
                     {
                         if let Err(e) = flush_batch(
-                            &ctx,
-                            &changeset_es,
-                            &mut current_batch,
-                            &mut pending_messages,
-                            &mut pending_log,
-                            &changeset_logger,
                             reponame.clone(),
-                            &mut pending_checkpoint,
+                            &ctx,
+                            &changeset_logger,
+                            &changeset_es,
                             mc.clone(),
+                            &mut current_batch,
+                            &mut pending_log,
+                            &mut latest_in_entry_checkpoint,
+                            &mut latest_entry_id,
+                            &mut latest_bookmark,
+                            &mut pending_notification,
                         )
                         .await
                         {
@@ -646,15 +686,17 @@ impl SendManager {
             }
 
             async fn flush_batch(
-                ctx: &CoreContext,
-                changeset_es: &Arc<EdenapiSender>,
-                current_batch: &mut Vec<(HgBlobChangeset, BonsaiChangeset)>,
-                pending_messages: &mut VecDeque<Sender<Result<(), anyhow::Error>>>,
-                pending_log: &mut VecDeque<Option<i64>>,
-                changeset_logger: &Logger,
                 reponame: String,
-                pending_checkpoint: &mut VecDeque<Option<u64>>,
+                ctx: &CoreContext,
+                changeset_logger: &Logger,
+                changeset_es: &Arc<EdenapiSender>,
                 mc: Arc<dyn MutableCounters + Send + Sync>,
+                current_batch: &mut Vec<(HgBlobChangeset, BonsaiChangeset)>,
+                pending_log: &mut VecDeque<Option<i64>>,
+                latest_checkpoint: &mut Option<(u64, i64)>,
+                latest_entry_id: &mut Option<i64>,
+                latest_bookmark: &mut Option<BookmarkInfo>,
+                pending_notification: &mut Option<oneshot::Sender<Result<()>>>,
             ) -> Result<(), anyhow::Error> {
                 if !current_batch.is_empty() {
                     let start = std::time::Instant::now();
@@ -677,10 +719,17 @@ impl SendManager {
                     STATS::sync_lag_seconds.add_value(lag, (reponame.clone(),));
                 }
 
-                let position = pending_checkpoint.pop_back();
-                if let Some(Some(position)) = position {
-                    info!(changeset_logger, "Setting checkpoint to {}", position);
-                    let res = mc
+                if let Some((position, id)) = latest_checkpoint.take() {
+                    info!(
+                        changeset_logger,
+                        "Setting checkpoint from entry {} to {}", id, position
+                    );
+
+                    let res_entry = mc
+                        .set_counter(ctx, MODERN_SYNC_CURRENT_ENTRY_ID, id, None)
+                        .await?;
+
+                    let res_checkpoint = mc
                         .set_counter(
                             ctx,
                             MODERN_SYNC_BATCH_CHECKPOINT_NAME,
@@ -689,17 +738,40 @@ impl SendManager {
                         )
                         .await?;
 
-                    if !res {
-                        warn!(changeset_logger, "Failed to set checkpoint: {:?}", res);
+                    if !(res_checkpoint && res_entry) {
+                        warn!(
+                            changeset_logger,
+                            "Failed to checkpoint entry {} at position {:?}", id, position
+                        );
                     }
                 }
-                pending_checkpoint.drain(..);
 
-                while let Some(sender) = pending_messages.pop_front() {
-                    let res = sender.send(Ok(()));
-                    if let Err(e) = res.await {
-                        return Err(anyhow::anyhow!("Error sending content ready: {:?}", e));
+                if let Some(info) = latest_bookmark.take() {
+                    info!(
+                        changeset_logger,
+                        "Setting bookmark {} from {:?} to {:?}",
+                        info.name,
+                        info.from_cs_id,
+                        info.to_cs_id
+                    );
+                    changeset_es
+                        .set_bookmark(info.name, info.from_cs_id, info.to_cs_id)
+                        .await?;
+                }
+
+                if let Some(id) = latest_entry_id.take() {
+                    info!(changeset_logger, "Marking entry {} as done", id);
+                    let res = mc
+                        .set_counter(ctx, MODERN_SYNC_COUNTER_NAME, id, None)
+                        .await?;
+
+                    if !res {
+                        warn!(changeset_logger, "Failed to mark entry {} as synced", id);
                     }
+                }
+
+                if let Some(sender) = pending_notification.take() {
+                    let _ = sender.send(Ok(()));
                 }
 
                 Ok(())

@@ -65,11 +65,14 @@ Sync all bookmarks moves
   Resuming from latest entry checkpoint 0
   Skipping 0 batches from entry 1
   Skipping 0 commits within batch
-  Found 1 missing commits
-  Found error: Trees upload: Expected [1-9] responses, got 0, retrying attempt #0 (re)
-  Found error: Trees upload: Expected [1-9] responses, got 0, retrying attempt #1 (re)
-  Found error: Trees upload: Expected [1-9] responses, got 0, retrying attempt #2 (re)
-  Failed to upload trees: Trees upload: Expected [1-9] responses, got 0 (re)
-  Trees flush failed: Trees upload: Expected [1-9] responses, got 0 (re)
-  Execution error: Error while waiting for commit to be synced Error processing changesets: Error waiting for files/trees error received oneshot canceled
-  Error: Execution failed
+  Starting sync of 1 missing commits
+  Calculating segments for entry 2, from changeset Some(ChangesetId(Blake2(53b034a90fe3002a707a7da9cdf6eac3dea460ad72f7c6969dfb88fd0e69f856))) to changeset ChangesetId(Blake2(5b1c7130dde8e54b4285b9153d8e56d69fbf4ae685eaf9e9766cc409861995f8))
+  Resuming from latest entry checkpoint 0
+  Skipping 0 batches from entry 2
+  Skipping 0 commits within batch
+  Starting sync of 4 missing commits
+  Found error: Trees upload: Expected [1-9]+ responses, got 0, retrying attempt #0 (re)
+  Found error: Trees upload: Expected [1-9]+ responses, got 0, retrying attempt #1 (re)
+  Found error: Trees upload: Expected [1-9]+ responses, got 0, retrying attempt #2 (re)
+  Failed to upload trees: Trees upload: Expected [1-9]+ responses, got 0 (re)
+  Trees flush failed: Trees upload: Expected [1-9]+ responses, got 0 (re)

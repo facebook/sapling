@@ -6,11 +6,8 @@
  */
 
 use std::path::PathBuf;
-use std::sync::atomic::AtomicBool;
-use std::sync::atomic::Ordering;
 use std::sync::Arc;
 
-use anyhow::bail;
 use anyhow::format_err;
 use anyhow::Result;
 use blobstore::Loadable;
@@ -58,23 +55,23 @@ use slog::info;
 use slog::Logger;
 use stats::define_stats;
 use stats::prelude::*;
-use tokio::sync::mpsc;
 use tokio::sync::Mutex;
 use url::Url;
 
 use crate::bul_util;
 use crate::scuba;
 use crate::sender::edenapi::EdenapiSender;
+use crate::sender::manager::BookmarkInfo;
 use crate::sender::manager::ChangesetMessage;
 use crate::sender::manager::ContentMessage;
 use crate::sender::manager::FileMessage;
 use crate::sender::manager::SendManager;
 use crate::sender::manager::TreeMessage;
+use crate::sender::manager::MODERN_SYNC_BATCH_CHECKPOINT_NAME;
+use crate::sender::manager::MODERN_SYNC_COUNTER_NAME;
+use crate::sender::manager::MODERN_SYNC_CURRENT_ENTRY_ID;
 use crate::ModernSyncArgs;
 use crate::Repo;
-
-const MODERN_SYNC_COUNTER_NAME: &str = "modern_sync";
-pub const MODERN_SYNC_BATCH_CHECKPOINT_NAME: &str = "modern_sync_batch_checkpoint";
 
 define_stats! {
     prefix = "mononoke.modern_sync";
@@ -234,6 +231,13 @@ pub async fn sync(
     .try_collect::<()>()
     .await?;
 
+    // Wait for the last commit to be synced before exiting
+    let (finish_tx, finish_rx) = oneshot::channel();
+    send_manager
+        .send_changeset(ChangesetMessage::NotifyCompletion(finish_tx))
+        .await?;
+    let _ = finish_rx.await?;
+
     Ok(())
 }
 
@@ -271,11 +275,6 @@ pub async fn process_bookmark_update_log_entry(
     let to_vec: Vec<ChangesetId> = vec![to_cs];
     let bookmark_name = entry.bookmark_name.name().to_string();
 
-    let (cs_tx, mut cs_rx) = mpsc::channel::<Result<()>>(1);
-
-    // We need this in case all commits are synced so no need to wait.
-    let wait_for_commit = Arc::new(AtomicBool::new(false));
-
     info!(
         logger,
         "Calculating segments for entry {}, from changeset {:?} to changeset {:?}",
@@ -290,11 +289,20 @@ pub async fn process_bookmark_update_log_entry(
         .ancestors_difference_segment_slices(&ctx, to_vec, from_vec, chunk_size)
         .await?;
 
-    let latest_checkpoint = repo
+    let checkpointed_entry = repo
         .mutable_counters()
-        .get_counter(&ctx, MODERN_SYNC_BATCH_CHECKPOINT_NAME)
+        .get_counter(&ctx, MODERN_SYNC_CURRENT_ENTRY_ID)
         .await?
         .unwrap_or(0);
+
+    let latest_checkpoint = if checkpointed_entry == entry.id.0 as i64 {
+        repo.mutable_counters()
+            .get_counter(&ctx, MODERN_SYNC_BATCH_CHECKPOINT_NAME)
+            .await?
+            .unwrap_or(0)
+    } else {
+        0
+    };
 
     info!(
         logger,
@@ -321,9 +329,6 @@ pub async fn process_bookmark_update_log_entry(
                 sender,
                 mut send_manager,
                 bookmark_name,
-                to_cs,
-                cs_tx,
-                wait_for_commit,
                 current_position
             );
             info!(logger, "Skipping {} commits within batch", skip_commits);
@@ -353,7 +358,11 @@ pub async fn process_bookmark_update_log_entry(
                 let existing_changesets = hgids_len - missing_changesets.len();
                 *current_position.lock().await += existing_changesets as u64;
 
-                info!(logger, "Found {} missing commits", missing_changesets.len());
+                info!(
+                    logger,
+                    "Starting sync of {} missing commits",
+                    missing_changesets.len()
+                );
 
                 stream::iter(missing_changesets.into_iter().map(Ok))
                     .try_for_each(|cs_id| {
@@ -363,19 +372,8 @@ pub async fn process_bookmark_update_log_entry(
                             logger,
                             send_manager,
                             bookmark_name,
-                            to_cs,
-                            cs_tx,
-                            wait_for_commit,
                             current_position
                         );
-
-                        // We work under the assumption that if the final commit is synced all the parents ones are synced as well.
-                        let channel = if to_cs == cs_id {
-                            wait_for_commit.store(true, Ordering::SeqCst);
-                            Some(cs_tx)
-                        } else {
-                            None
-                        };
 
                         async move {
                             let now = std::time::Instant::now();
@@ -389,8 +387,7 @@ pub async fn process_bookmark_update_log_entry(
                                 &send_manager,
                                 log_to_ods,
                                 &bookmark_name,
-                                channel,
-                                Some(current_position.lock().await.clone()),
+                                Some((current_position.lock().await.clone(), entry.id.0 as i64)),
                             )
                             .await
                             {
@@ -411,38 +408,9 @@ pub async fn process_bookmark_update_log_entry(
         })
         .await?;
 
-    // Wait for the last commit to be synced
-    if wait_for_commit.load(Ordering::SeqCst) {
-        let res = cs_rx.recv().await;
-        match res {
-            Some(Err(e)) => {
-                bail!("Error while waiting for commit to be synced {:?}", e);
-            }
-            None => bail!("No commit synced"),
-            _ => (),
-        }
-    }
-
-    repo.mutable_counters()
-        .set_counter(&ctx, MODERN_SYNC_COUNTER_NAME, entry.id.0 as i64, None)
+    send_manager
+        .send_changeset(ChangesetMessage::CheckpointInEntry(0, entry.id.0 as i64))
         .await?;
-
-    repo.mutable_counters()
-        .set_counter(&ctx, MODERN_SYNC_BATCH_CHECKPOINT_NAME, 0, None)
-        .await?;
-
-    info!(
-        logger,
-        "Finished entry. Setting entry counter to {} and in-entry checkpoint to 0", entry.id
-    );
-
-    bul_util::update_remaining_moves(
-        entry.id,
-        repo_name.clone(),
-        ctx.clone(),
-        repo.bookmark_update_log_arc(),
-    )
-    .await?;
 
     let from_changeset = if let Some(cs_id) = entry.from_changeset_id {
         Some(repo.derive_hg_changeset(&ctx, cs_id).await?)
@@ -456,13 +424,24 @@ pub async fn process_bookmark_update_log_entry(
         None
     };
 
-    sender
-        .set_bookmark(
-            entry.bookmark_name.name().to_string(),
-            from_changeset,
-            to_changeset,
-        )
+    send_manager
+        .send_changeset(ChangesetMessage::FinishEntry(
+            BookmarkInfo {
+                name: entry.bookmark_name.name().to_string(),
+                from_cs_id: from_changeset,
+                to_cs_id: to_changeset,
+            },
+            entry.id.0 as i64,
+        ))
         .await?;
+
+    bul_util::update_remaining_moves(
+        entry.id,
+        repo_name.clone(),
+        ctx.clone(),
+        repo.bookmark_update_log_arc(),
+    )
+    .await?;
 
     Ok(())
 }
@@ -475,8 +454,7 @@ pub async fn process_one_changeset(
     send_manager: &SendManager,
     log_to_ods: bool,
     bookmark_name: &str,
-    changeset_ready: Option<mpsc::Sender<Result<()>>>,
-    position: Option<u64>,
+    checkpoint: Option<(u64, i64)>, // (position, entry_id)
 ) -> Result<()> {
     scuba::log_changeset_start(ctx, cs_id);
 
@@ -587,10 +565,14 @@ pub async fn process_one_changeset(
         .send_changeset(ChangesetMessage::Changeset((hg_cs, bs_cs)))
         .await?;
 
-    // Notify changeset for this changeset is ready if someone requested it
-    send_manager
-        .send_changeset(ChangesetMessage::ChangesetDone(changeset_ready, position))
-        .await?;
+    if let Some(checkpoint) = checkpoint {
+        send_manager
+            .send_changeset(ChangesetMessage::CheckpointInEntry(
+                checkpoint.0,
+                checkpoint.1,
+            ))
+            .await?;
+    }
 
     if log_to_ods {
         let lag = if let Some(cs_id) = repo
