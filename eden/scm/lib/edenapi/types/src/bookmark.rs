@@ -16,11 +16,21 @@ use crate::land::PushVar;
 use crate::ServerError;
 
 #[auto_wire]
-#[derive(Clone, Default, Debug, Deserialize, Serialize, Eq, PartialEq)]
+#[derive(Clone, Debug, Deserialize, Serialize, Eq, PartialEq)]
 #[cfg_attr(any(test, feature = "for-tests"), derive(Arbitrary))]
 pub struct BookmarkRequest {
     #[id(0)]
     pub bookmarks: Vec<String>,
+}
+
+#[auto_wire]
+#[derive(Clone, Debug, Deserialize, Serialize, Eq, PartialEq)]
+#[cfg_attr(any(test, feature = "for-tests"), derive(Arbitrary))]
+pub struct Bookmark2Request {
+    #[id(0)]
+    pub bookmarks: Vec<String>,
+    #[id(1)]
+    pub freshness: Freshness,
 }
 
 #[auto_wire]
@@ -66,4 +76,20 @@ pub struct BookmarkResult {
     #[id(0)]
     #[no_default]
     pub data: Result<BookmarkEntry, ServerError>,
+}
+
+#[auto_wire]
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[cfg_attr(any(test, feature = "for-tests"), derive(Arbitrary))]
+pub enum Freshness {
+    #[id(1)]
+    MostRecent,
+    #[id(2)]
+    MaybeStale,
+}
+
+impl Default for Freshness {
+    fn default() -> Self {
+        Self::MaybeStale
+    }
 }

@@ -10,6 +10,7 @@ use std::num::NonZeroU64;
 use std::time::Duration;
 
 use async_trait::async_trait;
+use edenapi_types::bookmark::Freshness;
 use edenapi_types::cloud::SmartlogDataResponse;
 use edenapi_types::AlterSnapshotRequest;
 use edenapi_types::AlterSnapshotResponse;
@@ -217,8 +218,9 @@ pub trait SaplingRemoteApi: Send + Sync + 'static {
     async fn bookmarks2(
         &self,
         bookmarks: Vec<String>,
+        freshness: Option<Freshness>,
     ) -> Result<Vec<BookmarkResult>, SaplingRemoteApiError> {
-        let _ = bookmarks;
+        let _ = (bookmarks, freshness);
         Err(SaplingRemoteApiError::NotSupported)
     }
 

@@ -194,6 +194,7 @@ rust_library(
         "//common/rust/shed/ascii_ext:ascii_ext",
         "//common/rust/shed/quickcheck_arbitrary_derive:quickcheck_arbitrary_derive",
         "//common/rust/shed/sql:sql",
+        "//eden/scm/lib/edenapi/types:edenapi_types",
     ],
 )
 

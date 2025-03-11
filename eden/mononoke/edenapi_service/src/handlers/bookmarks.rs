@@ -13,6 +13,7 @@ use async_trait::async_trait;
 use bookmarks::BookmarkKey;
 use bookmarks::Freshness;
 use bytes::Bytes;
+use edenapi_types::bookmark::Bookmark2Request;
 use edenapi_types::BookmarkEntry;
 use edenapi_types::BookmarkRequest;
 use edenapi_types::BookmarkResult;
@@ -62,10 +63,9 @@ impl SaplingRemoteApiHandler for BookmarksHandler {
     ) -> HandlerResult<'async_trait, Self::Response> {
         let slapi_flavour = ectx.slapi_flavour().clone();
         let repo = ectx.repo();
-        let fetches = request
-            .bookmarks
-            .into_iter()
-            .map(move |bookmark| fetch_bookmark(repo.clone(), bookmark, slapi_flavour));
+        let fetches = request.bookmarks.into_iter().map(move |bookmark| {
+            fetch_bookmark(repo.clone(), bookmark, slapi_flavour, Freshness::MaybeStale)
+        });
 
         Ok(stream::iter(fetches)
             .buffer_unordered(MAX_CONCURRENT_FETCHES_PER_REQUEST)
@@ -78,16 +78,17 @@ async fn fetch_bookmark<R: MononokeRepo>(
     repo: HgRepoContext<R>,
     bookmark: String,
     flavour: SlapiCommitIdentityScheme,
+    freshness: Freshness,
 ) -> Result<BookmarkEntry, Error> {
     let hgid = match flavour {
         SlapiCommitIdentityScheme::Git => repo
-            .resolve_bookmark_git(bookmark.clone(), Freshness::MaybeStale)
+            .resolve_bookmark_git(bookmark.clone(), freshness)
             .await
             .map_err(|_| ErrorKind::BookmarkResolutionFailed(bookmark.clone()))?
             .map(|id| HgId::from_slice(id.as_ref()))
             .transpose()?,
         SlapiCommitIdentityScheme::Hg => repo
-            .resolve_bookmark(bookmark.clone(), Freshness::MaybeStale)
+            .resolve_bookmark(bookmark.clone(), freshness)
             .await
             .map_err(|_| ErrorKind::BookmarkResolutionFailed(bookmark.clone()))?
             .map(|id| HgId::from(id.into_nodehash())),
@@ -223,7 +224,7 @@ async fn set_bookmark<R: MononokeRepo>(
 
 #[async_trait]
 impl SaplingRemoteApiHandler for Bookmarks2Handler {
-    type Request = BookmarkRequest;
+    type Request = Bookmark2Request;
     type Response = BookmarkResult;
 
     const HTTP_METHOD: hyper::Method = hyper::Method::POST;
@@ -244,10 +245,15 @@ impl SaplingRemoteApiHandler for Bookmarks2Handler {
             let repo_ctx = repo.clone();
             async move {
                 Ok(BookmarkResult {
-                    data: fetch_bookmark(repo_ctx, bookmark, slapi_flavour)
-                        .await
-                        .map_err(MononokeError::from)
-                        .map_err(ServerError::from),
+                    data: fetch_bookmark(
+                        repo_ctx,
+                        bookmark,
+                        slapi_flavour,
+                        Freshness::from(request.freshness),
+                    )
+                    .await
+                    .map_err(MononokeError::from)
+                    .map_err(ServerError::from),
                 })
             }
         });

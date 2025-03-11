@@ -27,6 +27,7 @@ use edenapi::SaplingRemoteApiError;
 use edenapi::Stats;
 use edenapi::UploadLookupPolicy;
 use edenapi_ext::calc_contentid;
+use edenapi_types::bookmark::Freshness;
 use edenapi_types::cloud::SmartlogDataResponse;
 use edenapi_types::AlterSnapshotRequest;
 use edenapi_types::AlterSnapshotResponse;
@@ -228,9 +229,10 @@ pub trait SaplingRemoteApiPyExt: SaplingRemoteApi {
         &self,
         py: Python,
         bookmarks: Vec<String>,
+        freshness: Option<Freshness>,
     ) -> PyResult<Serde<Vec<BookmarkResult>>> {
         let items = py
-            .allow_threads(|| block_unless_interrupted(self.bookmarks2(bookmarks)))
+            .allow_threads(|| block_unless_interrupted(self.bookmarks2(bookmarks, freshness)))
             .map_pyerr(py)?
             .map_pyerr(py)?;
         Ok(Serde(items))

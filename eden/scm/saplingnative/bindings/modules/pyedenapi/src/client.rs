@@ -219,7 +219,7 @@ py_class!(pub class client |py| {
     def bookmarks2(&self, bookmarks: Vec<String>)
         -> PyResult<Serde<Vec<BookmarkResult>>>
     {
-        self.inner(py).as_ref().bookmarks2_py(py, bookmarks)
+        self.inner(py).as_ref().bookmarks2_py(py, bookmarks, None)
     }
 
     /// setbookmark(bookmark, to, from, pushvars)

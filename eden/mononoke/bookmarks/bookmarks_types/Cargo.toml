@@ -14,6 +14,7 @@ ascii_ext = { version = "0.1.0", git = "https://github.com/facebookexperimental/
 clap = { version = "4.5.30", features = ["derive", "env", "string", "unicode", "wrap_help"] }
 quickcheck = "1.0"
 quickcheck_arbitrary_derive = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
+sapling-edenapi_types = { version = "0.1.0", path = "../../../scm/lib/edenapi/types" }
 sql = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 
 [dev-dependencies]

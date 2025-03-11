@@ -20,6 +20,8 @@ use anyhow::format_err;
 use async_trait::async_trait;
 use clientinfo::ClientInfo;
 use clientinfo_async::get_client_request_info_task_local;
+use edenapi_types::bookmark::Bookmark2Request;
+use edenapi_types::bookmark::Freshness;
 use edenapi_types::cloud::SmartlogDataResponse;
 use edenapi_types::make_hash_lookup_request;
 use edenapi_types::AlterSnapshotRequest;
@@ -1428,6 +1430,7 @@ impl SaplingRemoteApi for Client {
     async fn bookmarks2(
         &self,
         bookmarks: Vec<String>,
+        freshness: Option<Freshness>,
     ) -> Result<Vec<BookmarkResult>, SaplingRemoteApiError> {
         let request_len = bookmarks.len();
         tracing::info!(
@@ -1435,7 +1438,10 @@ impl SaplingRemoteApi for Client {
             bookmarks.len()
         );
         let url = self.build_url(paths::BOOKMARKS2)?;
-        let bookmark_req = BookmarkRequest { bookmarks };
+        let bookmark_req = Bookmark2Request {
+            bookmarks,
+            freshness: freshness.unwrap_or(Freshness::MaybeStale),
+        };
         self.log_request(&bookmark_req, "bookmarks2");
         let bookmarks_wire = bookmark_req.to_wire();
         let req = self

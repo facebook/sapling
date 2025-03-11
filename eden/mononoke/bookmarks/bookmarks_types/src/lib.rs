@@ -37,6 +37,15 @@ pub enum Freshness {
     MaybeStale,
 }
 
+impl From<edenapi_types::bookmark::Freshness> for Freshness {
+    fn from(f: edenapi_types::bookmark::Freshness) -> Self {
+        match f {
+            edenapi_types::bookmark::Freshness::MostRecent => Freshness::MostRecent,
+            edenapi_types::bookmark::Freshness::MaybeStale => Freshness::MaybeStale,
+        }
+    }
+}
+
 #[derive(Arbitrary, Clone, Debug, Eq, Hash, PartialEq)]
 pub struct Bookmark {
     pub key: BookmarkKey,
