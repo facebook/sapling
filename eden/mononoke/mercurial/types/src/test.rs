@@ -177,7 +177,9 @@ fn test_fsencode_from_core_hg() {
         "data/au~78.bla/bla.aux/pr~6e/_p_r_n/lpt/co~6d3/nu~6c/coma/foo._n_u_l/normal.c.i";
     check_fsencode_with_dotencode(&toencode[..], expected);
 
+    // @lint-ignore SPELL
     let toencode = b"data/AUX/SECOND/X.PRN/FOURTH/FI:FTH/SIXTH/SEVENTH/EIGHTH/NINETH/TENTH/ELEVENTH/LOREMIPSUM.TXT.i";
+    // @lint-ignore SPELL
     let expected = "dh/au~78/second/x.prn/fourth/fi~3afth/sixth/seventh/eighth/nineth/tenth/loremia20419e358ddff1bf8751e38288aff1d7c32ec05.i";
     check_fsencode_with_dotencode(&toencode[..], expected);
 

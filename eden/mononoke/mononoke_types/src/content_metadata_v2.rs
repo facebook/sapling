@@ -829,6 +829,7 @@ mod test {
 
     #[tokio::test]
     async fn almost_is_generated_test() {
+        // @lint-ignore SPELL
         let input = "@,generated @ generated @generate d @generatd @\0generated @\ngenerated @geenerated @Generated @geneRateD";
         let bytes_stream = stream::once(future::ready(Bytes::from(input)));
         assert!(!is_generated(bytes_stream).await);
