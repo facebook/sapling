@@ -17,8 +17,6 @@ pyo3-build-config = { package = "pyo3-build-config", version = "0.21.2", git = "
 pyo3-python-tracing-subscriber = { version = "0.1.0", git = "https://github.com/guswynn/pyo3-python-tracing-subscriber", rev = "2f67354200fe50c9a2438187c1e4e2e25abe8683" }
 quickcheck = { git = "https://github.com/jakoschiko/quickcheck", rev = "6ecdf5bb4b0132ce66670b4d46453aa022ea892c" }
 stabby = { git = "https://github.com/fbsource/stabby", rev = "22db1dda19938ff7725a93db64012a5730325c5d" }
-tree-sitter-bash = { git = "https://github.com/cfsmp3/tree-sitter-bash", rev = "4e9968457cd1ee5a51f8ab875cc2fcaaf7294e94" }
-tree-sitter-c = { git = "https://github.com/cfsmp3/tree-sitter-c", rev = "d01f584b67e581e9888b4b8e71e7150fd3867e38" }
 uefisettings = { git = "https://github.com/linuxboot/uefisettings", rev = "f16daed1d2bd1216204fd24e876c6477d03aebb3" }
 uefisettings_backend_thrift = { git = "https://github.com/linuxboot/uefisettings", rev = "f16daed1d2bd1216204fd24e876c6477d03aebb3" }
 vm-allocator = { git = "https://github.com/rust-vmm/vm-allocator", rev = "5fb545cc6e41fdc9f27d48d97ed26274a35bc6c6" }
