@@ -110,8 +110,17 @@ void ObjectStore::sendFetchHeavyEvent(ProcessId pid, uint64_t fetch_count)
     std::replace(processName->begin(), processName->end(), '\0', ' ');
     XLOG(WARN) << "Heavy fetches (" << fetch_count << ") from process "
                << *processName << "(pid=" << pid << ")";
+    auto repoName = backingStore_->getRepoName();
+    std::optional<uint64_t> loadedInodes = [repoName]() {
+      auto counterValue = fb303::ServiceData::get()->getCounterIfExists(
+          fmt::format("inodemap.{}.loaded", repoName.value_or("")));
+      return counterValue.has_value()
+          ? std::optional<uint64_t>(static_cast<uint64_t>(counterValue.value()))
+          : std::nullopt;
+    }();
+
     structuredLogger_->logEvent(
-        FetchHeavy{processName.value(), pid, fetch_count});
+        FetchHeavy{processName.value(), pid, fetch_count, loadedInodes});
   } else {
     XLOG(WARN) << "Heavy fetches (" << fetch_count << ") from pid " << pid
                << ")";

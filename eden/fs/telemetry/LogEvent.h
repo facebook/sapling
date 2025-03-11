@@ -137,16 +137,25 @@ struct FetchHeavy : public EdenFSEvent {
   std::string client_cmdline;
   ProcessId pid;
   uint64_t fetch_count;
+  std::optional<uint64_t> loaded_inodes;
 
-  FetchHeavy(std::string client_cmdline, ProcessId pid, uint64_t fetch_count)
+  FetchHeavy(
+      std::string client_cmdline,
+      ProcessId pid,
+      uint64_t fetch_count,
+      std::optional<uint64_t> loaded_inodes)
       : client_cmdline(std::move(client_cmdline)),
         pid(std::move(pid)),
-        fetch_count(fetch_count) {}
+        fetch_count(fetch_count),
+        loaded_inodes(loaded_inodes) {}
 
   void populate(DynamicEvent& event) const override {
     event.addString("client_cmdline", client_cmdline);
     event.addInt("client_pid", pid.get());
     event.addInt("fetch_count", fetch_count);
+    if (loaded_inodes.has_value()) {
+      event.addTruncatedInt("loaded_inodes", loaded_inodes.value(), 8U);
+    }
   }
 
   const char* getType() const override {
