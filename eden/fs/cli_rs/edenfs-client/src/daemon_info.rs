@@ -11,6 +11,7 @@ use futures::stream::BoxStream;
 use thrift_streaming::EdenStartStatusUpdate;
 use thrift_streaming_clients::errors::StreamStartStatusStreamError;
 use thrift_types::edenfs::DaemonInfo;
+use thrift_types::fb303_core::fb303_status;
 use tracing::event;
 use tracing::Level;
 
@@ -18,6 +19,17 @@ use crate::client::EdenFsClient;
 
 pub type StartStatusStream =
     BoxStream<'static, Result<EdenStartStatusUpdate, StreamStartStatusStreamError>>;
+
+pub trait DaemonHealthy {
+    fn is_healthy(&self) -> bool;
+}
+
+impl DaemonHealthy for DaemonInfo {
+    fn is_healthy(&self) -> bool {
+        self.status
+            .map_or_else(|| false, |val| val == fb303_status::ALIVE)
+    }
+}
 
 impl<'a> EdenFsClient<'a> {
     pub async fn get_health(&self) -> Result<DaemonInfo> {

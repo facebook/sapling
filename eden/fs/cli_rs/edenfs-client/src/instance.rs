@@ -27,12 +27,9 @@ use edenfs_utils::bytes_from_path;
 use edenfs_utils::get_executable;
 #[cfg(windows)]
 use edenfs_utils::strip_unc_prefix;
-#[cfg(fbcode_build)]
-use thrift_types::edenfs::DaemonInfo;
 use thrift_types::edenfs::GetConfigParams;
 #[cfg(target_os = "macos")]
 use thrift_types::edenfs::StartFileAccessMonitorParams;
-use thrift_types::fb303_core::fb303_status;
 use tracing::event;
 use tracing::Level;
 use util::lock::PathLock;
@@ -490,16 +487,5 @@ impl EdenFsInstance {
             .stopFileAccessMonitor()
             .await
             .map_err(|e| EdenFsError::Other(anyhow!("failed to stop file access monitor: {}", e)))
-    }
-}
-
-pub trait DaemonHealthy {
-    fn is_healthy(&self) -> bool;
-}
-
-impl DaemonHealthy for DaemonInfo {
-    fn is_healthy(&self) -> bool {
-        self.status
-            .map_or_else(|| false, |val| val == fb303_status::ALIVE)
     }
 }

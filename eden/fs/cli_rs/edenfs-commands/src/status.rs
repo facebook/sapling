@@ -13,7 +13,7 @@ use anyhow::anyhow;
 use anyhow::Result;
 use async_trait::async_trait;
 use clap::Parser;
-use edenfs_client::instance::DaemonHealthy;
+use edenfs_client::daemon_info::DaemonHealthy;
 use edenfs_client::instance::EdenFsInstance;
 use futures::stream::StreamExt;
 use tokio::time;

@@ -12,7 +12,7 @@ use std::time::Duration;
 use anyhow::Result;
 use async_trait::async_trait;
 use clap::Parser;
-use edenfs_client::instance::DaemonHealthy;
+use edenfs_client::daemon_info::DaemonHealthy;
 use edenfs_client::instance::EdenFsInstance;
 use edenfs_utils::humantime::HumanTime;
 
