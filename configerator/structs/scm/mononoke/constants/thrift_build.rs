@@ -8,6 +8,8 @@ use thrift_compiler::GenContext;
 const CRATEMAP: &str = "\
 configerator/structs/scm/mononoke/constants/constants.thrift crate //configerator/structs/scm/mononoke/constants:constants-rust
 configerator/structs/scm/mononoke/sharding/sharding.thrift sharding //configerator/structs/scm/mononoke/sharding:sharding-rust
+thrift/annotation/rust.thrift sharding->rust //thrift/annotation:rust-rust
+thrift/annotation/scope.thrift sharding->rust->scope //thrift/annotation:scope-rust
 ";
 #[rustfmt::skip]
 fn main() {
