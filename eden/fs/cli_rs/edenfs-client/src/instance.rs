@@ -305,13 +305,6 @@ impl EdenFsInstance {
         Ok(())
     }
 
-    pub async fn flush_stats_now(&self, client: &EdenFsThriftClient) -> Result<()> {
-        client
-            .flushStatsNow()
-            .await
-            .map_err(|_| EdenFsError::Other(anyhow!("failed to call flushstatsNow")))
-    }
-
     pub async fn get_regex_counters(
         &self,
         arg_regex: &str,

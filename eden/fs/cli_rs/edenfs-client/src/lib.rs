@@ -23,5 +23,6 @@ mod mounttable;
 pub mod redirect;
 pub mod sapling;
 pub mod scm_status;
+pub mod stats;
 pub mod unmount;
 pub mod utils;

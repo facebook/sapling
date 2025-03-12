@@ -420,8 +420,9 @@ impl Cursor {
 #[async_trait]
 impl crate::Subcommand for MinitopCmd {
     async fn run(&self) -> Result<ExitCode> {
-        let client = EdenFsInstance::global().get_client(None).await?;
-        let client = client.get_thrift_client();
+        let instance = EdenFsInstance::global();
+        let client = instance.get_client(None).await?;
+        let thrift_client = client.get_thrift_client();
         let mut tracked_processes = TrackedProcesses::new();
 
         let mut system = System::new();
@@ -443,18 +444,18 @@ impl crate::Subcommand for MinitopCmd {
             if self.interactive {
                 queue!(stdout, terminal::Clear(terminal::ClearType::All))?;
             }
-            EdenFsInstance::global().flush_stats_now(client).await?;
+            client.flush_stats_now().await?;
             system.refresh_processes();
             cursor.refresh_terminal_size()?;
 
             // Update pending imports summary stats
             let (pending_imports, live_imports) = tokio::try_join!(
-                get_pending_import_counts(client),
-                get_live_import_counts(client)
+                get_pending_import_counts(thrift_client),
+                get_live_import_counts(thrift_client)
             )?;
 
             // Update currently tracked processes (and add new ones if they haven't been tracked yet)
-            let counts = client
+            let counts = thrift_client
                 .getAccessCounts(self.refresh_rate.as_secs().try_into()?)
                 .await?;
 
