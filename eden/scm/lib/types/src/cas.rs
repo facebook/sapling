@@ -51,6 +51,12 @@ pub struct CasFetchedStats {
     // Specific to the lmdb (in-memory) cache
     pub hits_blobs_local_lmdb_cache: u64,
     pub hits_bytes_local_lmdb_cache: u64,
+    pub misses_blobs_local_lmdb_cache: u64,
+    pub misses_bytes_local_lmdb_cache: u64,
+    // Specific to counting bloom filter
+    pub cloom_false_positives: u64,
+    pub cloom_true_positives: u64,
+    pub cloom_misses: u64,
 }
 
 impl CasFetchedStats {
@@ -69,6 +75,11 @@ impl CasFetchedStats {
         self.misses_bytes_local_cache += other.misses_bytes_local_cache;
         self.hits_blobs_local_lmdb_cache += other.hits_blobs_local_lmdb_cache;
         self.hits_bytes_local_lmdb_cache += other.hits_bytes_local_lmdb_cache;
+        self.misses_blobs_local_lmdb_cache += other.misses_blobs_local_lmdb_cache;
+        self.misses_bytes_local_lmdb_cache += other.misses_bytes_local_lmdb_cache;
+        self.cloom_false_positives += other.cloom_false_positives;
+        self.cloom_true_positives += other.cloom_true_positives;
+        self.cloom_misses += other.cloom_misses;
     }
 }
 
