@@ -7,6 +7,10 @@ use thrift_compiler::Config;
 use thrift_compiler::GenContext;
 const CRATEMAP: &str = "\
 configerator/structs/scm/hg/hgclientconf/hgclient.thrift crate //configerator/structs/scm/hg/hgclientconf:config-rust
+thrift/annotation/cpp.thrift cpp //thrift/annotation:cpp-rust
+thrift/annotation/rust.thrift rust //thrift/annotation:rust-rust
+thrift/annotation/scope.thrift cpp->scope //thrift/annotation:scope-rust
+thrift/annotation/thrift.thrift cpp->thrift //thrift/annotation:thrift-rust
 ";
 #[rustfmt::skip]
 fn main() {
