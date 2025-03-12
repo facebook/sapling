@@ -469,7 +469,7 @@ fn supports_symlinks(path: &Path) -> Result<bool> {
         return Ok(true);
     }
 
-    return Ok(if let Some((root, ident)) = identity::sniff_root(path)? {
+    Ok(if let Some((root, ident)) = identity::sniff_root(path)? {
         // This assumes that at this point symlinks are already properly checked for as part of
         // the repo initialization
         fs::read_to_string(root.join(ident.dot_dir()).join("requires"))?
@@ -479,7 +479,7 @@ fn supports_symlinks(path: &Path) -> Result<bool> {
         // There are some cases (e.g., tests) where we do not have an actual repo and thus
         // no dot_dir directory. Gracefully fail in this case.
         false
-    });
+    })
 }
 
 /// Since Windows determines if a file is executable based on its extension, it doesn't support

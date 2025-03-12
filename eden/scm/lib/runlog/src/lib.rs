@@ -207,12 +207,12 @@ impl Entry {
 impl Progress {
     pub fn new(bar: Arc<progress_model::ProgressBar>) -> Progress {
         let (position, total) = bar.position_total();
-        return Progress {
+        Progress {
             topic: bar.topic().to_string(),
             position,
             total,
             unit: bar.unit().to_string(),
-        };
+        }
     }
 }
 

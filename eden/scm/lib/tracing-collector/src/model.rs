@@ -1601,7 +1601,7 @@ pub struct TreeSpans<S: Eq + Hash> {
     pub spans: Vec<TreeSpan<S>>,
 }
 
-impl<'a, S: Eq + Hash> Deref for TreeSpans<S> {
+impl<S: Eq + Hash> Deref for TreeSpans<S> {
     type Target = [TreeSpan<S>];
     fn deref(&self) -> &Self::Target {
         &self.spans

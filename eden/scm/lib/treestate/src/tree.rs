@@ -1258,7 +1258,7 @@ mod tests {
 
     #[test]
     fn visit() {
-        let mut ms = MapStore::new();
+        let ms = MapStore::new();
         let mut t = Tree::new();
         populate(&mut t, &ms);
         let mut files = Vec::new();
@@ -1267,7 +1267,7 @@ mod tests {
                 files.push(path.concat());
                 Ok(VisitorResult::NotChanged)
             };
-            t.visit(&mut ms, &mut v).expect("can visit");
+            t.visit(&ms, &mut v).expect("can visit");
         }
         assert_eq!(
             files,
@@ -1301,7 +1301,7 @@ mod tests {
                 files.push(path.concat());
                 Ok(VisitorResult::NotChanged)
             };
-            t.visit_changed(&mut ms, &mut v).expect("can visit_changed");
+            t.visit_changed(&ms, &mut v).expect("can visit_changed");
         }
         assert_eq!(
             files,

@@ -29,7 +29,6 @@ use crossbeam::channel::unbounded;
 use indexedlog::log::AUTO_SYNC_COUNT;
 use indexedlog::log::SYNC_COUNT;
 use indexedlog::rotate::ROTATE_COUNT;
-use itertools::Itertools;
 use minibytes::Bytes;
 use parking_lot::Mutex;
 use parking_lot::RwLock;

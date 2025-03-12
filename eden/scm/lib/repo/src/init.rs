@@ -273,7 +273,7 @@ treestate
         let repo_path = tmp.path().join("somerepo");
         let hg_path = repo_path.join(".sl");
 
-        init_hg_repo(repo_path.as_path(), &mut ConfigSet::new(), None).unwrap();
+        init_hg_repo(repo_path.as_path(), &ConfigSet::new(), None).unwrap();
         assert!(repo_path.exists());
         assert!(hg_path.exists());
         assert!(hg_path.join(CHANGELOG_FILE).exists());
@@ -283,7 +283,7 @@ treestate
 
         fs::remove_dir_all(repo_path.as_path()).unwrap();
         create_dir(repo_path.as_path()).unwrap();
-        init_hg_repo(repo_path.as_path(), &mut ConfigSet::new(), None).unwrap();
+        init_hg_repo(repo_path.as_path(), &ConfigSet::new(), None).unwrap();
 
         fs::remove_dir_all(repo_path.as_path()).unwrap();
         create_dir(repo_path.as_path()).unwrap();
@@ -292,7 +292,7 @@ treestate
             "repository `{}` already exists",
             repo_path.to_str().unwrap()
         );
-        let err = init_hg_repo(repo_path.as_path(), &mut ConfigSet::new(), None)
+        let err = init_hg_repo(repo_path.as_path(), &ConfigSet::new(), None)
             .err()
             .unwrap();
         assert!(matches!(err, InitError::ExistingRepoError(_)));
@@ -306,12 +306,12 @@ treestate
         // Test recursive directory creation
         let new_dir_path = tmpdir.path().join("some").join("nested").join("directory");
         create_dir(new_dir_path.as_path()).unwrap();
-        init_hg_repo(new_dir_path.as_path(), &mut ConfigSet::new(), None).unwrap();
+        init_hg_repo(new_dir_path.as_path(), &ConfigSet::new(), None).unwrap();
 
         // Test getting an error when unable to create directory
         let new_dir_path = tmpdir.path().join("foo");
         File::create(new_dir_path.as_path()).unwrap();
-        let err = init_hg_repo(new_dir_path.as_path(), &mut ConfigSet::new(), None)
+        let err = init_hg_repo(new_dir_path.as_path(), &ConfigSet::new(), None)
             .err()
             .unwrap();
         let partial_error_str =

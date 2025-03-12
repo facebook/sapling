@@ -82,7 +82,7 @@ impl RenderingConfig {
                 current_width = next_width;
             }
         }
-        return Cow::Borrowed(text);
+        Cow::Borrowed(text)
     }
 
     pub(crate) fn max_topic_len(&self) -> usize {
