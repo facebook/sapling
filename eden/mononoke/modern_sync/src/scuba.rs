@@ -44,6 +44,7 @@ pub(crate) fn log_sync_start(ctx: &CoreContext, start_id: u64) -> bool {
 pub(crate) fn log_bookmark_update_entry_start(
     ctx: &CoreContext,
     entry: &BookmarkUpdateLogEntry,
+    approx_count: Option<u64>,
 ) -> (bool, CoreContext) {
     let mut scuba_sample = ctx.scuba().clone();
     let ctx = ctx.with_mutated_scuba(|mut scuba| {
@@ -53,6 +54,9 @@ pub(crate) fn log_bookmark_update_entry_start(
 
     scuba_sample.add("log_tag", "Start processing bookmark update entry");
     add_bookmark_entry_info(&mut scuba_sample, entry);
+    if let Some(count) = approx_count {
+        scuba_sample.add("bookmark_entry_commits_count", count);
+    }
 
     let res = scuba_sample.log();
     (res, ctx)

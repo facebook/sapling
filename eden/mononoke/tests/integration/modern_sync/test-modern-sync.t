@@ -77,9 +77,10 @@ Sync all bookmarks moves
   $ cat  $TESTTMP/modern_sync_scuba_logs | summarize_scuba_json '(Start|Done|Error) processing bookmark update entry' \
   > .normal.log_tag .normal.repo .normal.run_id \
   > .normal.bookmark_entry_bookmark_name .normal.bookmark_entry_from_changeset_id .normal.bookmark_entry_to_changeset_id .normal.bookmark_entry_reason \
-  > .int.bookmark_entry_id .int.bookmark_entry_timestamp .int.elapsed
+  > .int.bookmark_entry_id .int.bookmark_entry_timestamp .int.bookmark_entry_commits_count .int.elapsed
   {
     "bookmark_entry_bookmark_name": "master_bookmark",
+    "bookmark_entry_commits_count": 1,
     "bookmark_entry_id": 1,
     "bookmark_entry_reason": "push",
     "bookmark_entry_timestamp": *, (glob)
@@ -101,6 +102,7 @@ Sync all bookmarks moves
   }
   {
     "bookmark_entry_bookmark_name": "master_bookmark",
+    "bookmark_entry_commits_count": 4,
     "bookmark_entry_from_changeset_id": "53b034a90fe3002a707a7da9cdf6eac3dea460ad72f7c6969dfb88fd0e69f856",
     "bookmark_entry_id": 2,
     "bookmark_entry_reason": "push",
@@ -244,10 +246,10 @@ Sync all bookmarks moves
   Connecting to https://localhost:$LOCAL_PORT/edenapi/
   Established EdenAPI connection
   Initialized channels
-  Calculating segments for entry 1, from changeset Some(ChangesetId(Blake2(5b1c7130dde8e54b4285b9153d8e56d69fbf4ae685eaf9e9766cc409861995f8))) to changeset ChangesetId(Blake2(53b034a90fe3002a707a7da9cdf6eac3dea460ad72f7c6969dfb88fd0e69f856))
+  Calculating segments for entry 1, from changeset Some(ChangesetId(Blake2(5b1c7130dde8e54b4285b9153d8e56d69fbf4ae685eaf9e9766cc409861995f8))) to changeset ChangesetId(Blake2(53b034a90fe3002a707a7da9cdf6eac3dea460ad72f7c6969dfb88fd0e69f856)), to generation 1
   Resuming from latest entry checkpoint 0
   Skipping 0 batches from entry 1
-  Calculating segments for entry 2, from changeset Some(ChangesetId(Blake2(53b034a90fe3002a707a7da9cdf6eac3dea460ad72f7c6969dfb88fd0e69f856))) to changeset ChangesetId(Blake2(5b1c7130dde8e54b4285b9153d8e56d69fbf4ae685eaf9e9766cc409861995f8))
+  Calculating segments for entry 2, from changeset Some(ChangesetId(Blake2(53b034a90fe3002a707a7da9cdf6eac3dea460ad72f7c6969dfb88fd0e69f856))) to changeset ChangesetId(Blake2(5b1c7130dde8e54b4285b9153d8e56d69fbf4ae685eaf9e9766cc409861995f8)), approx 4 commit(s)
   Resuming from latest entry checkpoint 0
   Skipping 0 batches from entry 2
   Skipping 0 commits within batch

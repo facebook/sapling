@@ -275,14 +275,39 @@ pub async fn process_bookmark_update_log_entry(
     let to_vec: Vec<ChangesetId> = vec![to_cs];
     let bookmark_name = entry.bookmark_name.name().to_string();
 
+    let to_generation = repo.commit_graph().changeset_generation(ctx, to_cs).await?;
+    let (approx_count, approx_count_str) = if let Some(from_cs) = entry.from_changeset_id {
+        let from_generation = repo
+            .commit_graph()
+            .changeset_generation(ctx, from_cs)
+            .await?;
+        let diff = to_generation.difference_from(from_generation);
+        let diff_str = diff.map_or_else(
+            // on the off chance we can't compute the difference, just log both generations
+            || {
+                format!(
+                    "generation from {:?} to {:?}",
+                    from_generation, to_generation
+                )
+            },
+            |count| format!("approx {} commit(s)", count),
+        );
+        (diff, diff_str)
+    } else {
+        (
+            Some(to_generation.value()),
+            format!("to generation {:?}", to_generation.value()),
+        )
+    };
     info!(
         logger,
-        "Calculating segments for entry {}, from changeset {:?} to changeset {:?}",
+        "Calculating segments for entry {}, from changeset {:?} to changeset {:?}, {}",
         entry.id,
         from_cs,
-        to_cs
+        to_cs,
+        approx_count_str,
     );
-    let (_, ctx) = { scuba::log_bookmark_update_entry_start(ctx, entry) };
+    let (_, ctx) = { scuba::log_bookmark_update_entry_start(ctx, entry, approx_count) };
 
     let commits = repo
         .commit_graph()
