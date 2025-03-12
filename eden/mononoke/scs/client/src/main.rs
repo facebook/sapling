@@ -30,6 +30,7 @@ use crate::render::OutputTarget;
 mod args;
 mod commands;
 mod connection;
+mod errors;
 pub(crate) mod library;
 mod render;
 pub(crate) mod util;

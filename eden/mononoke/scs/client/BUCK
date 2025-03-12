@@ -52,6 +52,7 @@ rust_binary(
         "//common/rust/shed/fbinit:fbinit",
         "//common/rust/shed/fbinit:fbinit-tokio",
         "//common/rust/shed/hostcaps:hostcaps",
+        "//common/rust/thrift/srclient:srclient",
         "//eden/mononoke/cmdlib/base_app:base_app",
         "//eden/mononoke/scs/if:source_control-rust",
         "//eden/mononoke/scs/if:source_control-rust-clients",

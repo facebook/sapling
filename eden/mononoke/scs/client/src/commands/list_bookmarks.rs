@@ -24,6 +24,7 @@ use crate::args::commit_id::resolve_commit_id;
 use crate::args::commit_id::CommitIdsArgs;
 use crate::args::commit_id::SchemeArgs;
 use crate::args::repo::RepoArgs;
+use crate::errors::SelectionErrorExt;
 use crate::library::commit_id::render_commit_id;
 use crate::render::Render;
 use crate::ScscApp;
@@ -118,7 +119,11 @@ fn repo_list_bookmarks(
                     identity_schemes: identity_schemes.clone(),
                     ..Default::default()
                 };
-                let response = connection.repo_list_bookmarks(&repo, &params).await?;
+                let response = connection
+                    .repo_list_bookmarks(&repo, &params)
+                    .await
+                    .map_err(|e| e.handle_selection_error(&repo))?;
+
                 let bookmarks = response
                     .bookmarks
                     .into_iter()
