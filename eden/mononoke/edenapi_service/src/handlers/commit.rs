@@ -59,6 +59,7 @@ use edenapi_types::UploadIdenticalChangesetsRequest;
 use edenapi_types::UploadToken;
 use edenapi_types::UploadTokensResponse;
 use ephemeral_blobstore::BubbleId;
+use filenodes_derivation::FilenodesOnlyPublic;
 use futures::stream;
 use futures::try_join;
 use futures::FutureExt;
@@ -75,6 +76,8 @@ use gotham_ext::middleware::request_context::RequestContext;
 use gotham_ext::middleware::scuba::ScubaMiddlewareState;
 use gotham_ext::response::TryIntoResponse;
 use maplit::hashmap;
+use mercurial_derivation::MappedHgChangesetId;
+use mercurial_derivation::RootHgAugmentedManifestId;
 use mercurial_types::HgChangesetId;
 use mercurial_types::HgNodeHash;
 use mononoke_api::CoreContext;
@@ -96,11 +99,13 @@ use mononoke_types::ChangesetId;
 use mononoke_types::DateTime;
 use mononoke_types::FileChange;
 use mononoke_types::Globalrev;
+use phases::PhasesArc;
 use rate_limiting::Metric;
 use rate_limiting::RateLimitStatus;
 use rayon::iter::IntoParallelIterator;
 use rayon::iter::ParallelIterator;
 use repo_blobstore::RepoBlobstoreRef;
+use repo_derived_data::RepoDerivedDataArc;
 use serde::Deserialize;
 use slog::debug;
 use sorted_vector_map::SortedVectorMap;
@@ -1268,6 +1273,8 @@ impl SaplingRemoteApiHandler for UploadIdenticalChangesetsHandler {
         let blobstore = cloned_repo.repo_blobstore();
         let commit_graph_writer = cloned_repo.commit_graph_writer_arc();
         let bonsai_hg_mapping = cloned_repo.bonsai_hg_mapping();
+        let phases = cloned_repo.phases_arc();
+        let repo_derived_data = cloned_repo.repo_derived_data_arc();
 
         let bonsai_changesets_clone = bonsai_changesets.clone();
         let bs_ctx = ctx.clone();
@@ -1318,6 +1325,33 @@ impl SaplingRemoteApiHandler for UploadIdenticalChangesetsHandler {
                 .add(&ctx, bonsai_hg_entry)
                 .await
                 .context("While inserting in bonsai-hg mapping")?;
+        }
+
+        let cs_ids = hg_changesets
+            .clone()
+            .into_iter()
+            .filter_map(|r| {
+                r.map_or_else(
+                    |_| None,
+                    |(_, bonsai_cs_id)| Some(bonsai_cs_id.get_changeset_id()),
+                )
+            })
+            .collect::<Vec<_>>();
+        phases.add_reachable_as_public(&ctx, cs_ids.clone()).await?;
+
+        for cs_id in cs_ids {
+            repo_derived_data
+                .derive::<MappedHgChangesetId>(&ctx, cs_id)
+                .await
+                .map_err(Error::from)?;
+            repo_derived_data
+                .derive::<RootHgAugmentedManifestId>(&ctx, cs_id)
+                .await
+                .map_err(Error::from)?;
+            repo_derived_data
+                .derive::<FilenodesOnlyPublic>(&ctx, cs_id)
+                .await
+                .map_err(Error::from)?;
         }
 
         let tokens = hg_changesets.into_iter().map(move |r| {
