@@ -6,24 +6,24 @@
  */
 
 use std::collections::HashMap;
-use std::sync::Arc;
-use std::time::Duration;
 
 use anyhow::Result;
-use arc_swap::ArcSwap;
 use async_trait::async_trait;
-use cloned::cloned;
 use fbinit::FacebookInit;
-use mononoke_macros::mononoke;
 use mononoke_types::RepositoryId;
 
 #[cfg(fbcode_build)]
 mod facebook;
 
+mod sql;
+
+#[cfg(fbcode_build)]
+pub use cdn::CdnManifoldBundleUrlGenerator as BundleUrlGenerator;
 #[cfg(fbcode_build)]
 pub use facebook::cdn;
-#[cfg(fbcode_build)]
-pub use facebook::sql;
+
+pub use crate::sql::SqlGitBundleMetadataStorage;
+pub use crate::sql::SqlGitBundleMetadataStorageBuilder;
 
 #[async_trait]
 pub trait GitBundleMetadataStorage {
@@ -33,6 +33,8 @@ pub trait GitBundleMetadataStorage {
     ) -> Result<Option<BundleList>>;
     async fn get_newest_bundle_lists(&self) -> Result<HashMap<RepositoryId, BundleList>>;
 }
+#[cfg(not(fbcode_build))]
+pub use crate::LocalFSBUndleUriGenerator as BundleUrlGenerator;
 
 #[async_trait]
 pub trait GitBundleUrlGenerator {
@@ -59,7 +61,19 @@ impl LocalFSBUndleUriGenerator {
     }
 }
 
-type BundleLists = Arc<ArcSwap<HashMap<RepositoryId, BundleList>>>;
+#[facet::facet]
+#[async_trait]
+/// Facet trait powering git's bundle-uri feature
+pub trait GitBundleUri: Send + Sync {
+    /// Gets the latest list of git bundles which together comprise the whole repo.
+    /// There might be None.
+    async fn get_latest_bundle_list(&self) -> Result<Option<BundleList>>;
+
+    async fn get_url_for_bundle_handle(&self, ttl: i64, handle: &str) -> Result<String>;
+
+    /// The repository for which the bundles are being tracked
+    fn repo_id(&self) -> RepositoryId;
+}
 
 #[derive(Clone, Debug)]
 pub struct Bundle {
@@ -74,97 +88,42 @@ pub struct BundleList {
     pub bundles: Vec<Bundle>,
 }
 
-pub struct BundleUri<S, U> {
-    pub available_bundle_lists: BundleLists,
-    pub update_cadence: Duration,
-    pub bundle_metadata_storage: Arc<S>,
+pub struct BundleUri<U> {
+    pub bundle_metadata_storage: SqlGitBundleMetadataStorage,
     pub bundle_url_generator: U,
-    pub tracked_repos: TrackedRepos,
+    pub repo_id: RepositoryId,
 }
 
-pub enum TrackedRepos {
-    All,
-    One(RepositoryId),
-}
-
-impl<S, U> BundleUri<S, U> {
+impl<U> BundleUri<U> {
     pub async fn new(
-        update_cadence: Duration,
-        storage: S,
+        storage: SqlGitBundleMetadataStorage,
         bundle_url_generator: U,
-        tracked_repos: TrackedRepos,
+        repo_id: RepositoryId,
     ) -> Result<Self>
     where
-        S: GitBundleMetadataStorage + Clone + Send + 'static,
-        U: GitBundleUrlGenerator + Clone + Send + 'static,
+        U: GitBundleUrlGenerator + Clone + Send + Sync,
     {
-        let initial_data = match tracked_repos {
-            TrackedRepos::All => storage.get_newest_bundle_lists().await?,
-            TrackedRepos::One(repo_id) => {
-                let mut h = HashMap::new();
-                if let Some(bundle_list) = storage.get_newest_bundle_list_for_repo(repo_id).await? {
-                    h.insert(repo_id, bundle_list);
-                }
-                h
-            }
-        };
-
-        let data = Arc::new(ArcSwap::new(Arc::new(initial_data)));
-
-        match tracked_repos {
-            TrackedRepos::All => {
-                mononoke::spawn_task({
-                    cloned!(data, storage);
-                    async move {
-                        loop {
-                            tokio::time::sleep(update_cadence).await;
-
-                            if let Ok(new_data) = storage.get_newest_bundle_lists().await {
-                                data.swap(Arc::new(new_data));
-                            } else {
-                                eprintln!("failed to update");
-                            }
-                        }
-                    }
-                });
-            }
-            TrackedRepos::One(repo_id) => {
-                mononoke::spawn_task({
-                    cloned!(data, storage);
-                    async move {
-                        loop {
-                            tokio::time::sleep(update_cadence).await;
-                            if let Ok(bundle_list) =
-                                storage.get_newest_bundle_list_for_repo(repo_id).await
-                            {
-                                let mut new_data = HashMap::new();
-                                if let Some(bundle_list) = bundle_list {
-                                    new_data.insert(repo_id, bundle_list);
-                                }
-                                data.swap(Arc::new(new_data));
-                            } else {
-                                eprintln!("failed to update");
-                            }
-                        }
-                    }
-                });
-            }
-        }
-
         Ok(Self {
-            available_bundle_lists: data,
-            update_cadence,
-            bundle_metadata_storage: Arc::new(storage),
+            bundle_metadata_storage: storage,
             bundle_url_generator,
-            tracked_repos,
+            repo_id,
         })
     }
+}
 
-    pub fn bundle_list_for_repo(&self, repo: RepositoryId) -> Option<BundleList> {
-        self.available_bundle_lists.load().get(&repo).cloned()
+#[async_trait]
+impl<U: Clone + Send + GitBundleUrlGenerator + Sync> GitBundleUri for BundleUri<U> {
+    fn repo_id(&self) -> RepositoryId {
+        self.repo_id
     }
 
-    pub fn bundle_lists(&self) -> Arc<HashMap<RepositoryId, BundleList>> {
-        self.available_bundle_lists.load().clone()
+    async fn get_latest_bundle_list(&self) -> Result<Option<BundleList>> {
+        self.bundle_metadata_storage.get_latest_bundle_list().await
+    }
+
+    async fn get_url_for_bundle_handle(&self, ttl: i64, handle: &str) -> Result<String> {
+        self.bundle_url_generator
+            .get_url_for_bundle_handle(ttl, handle)
+            .await
     }
 }

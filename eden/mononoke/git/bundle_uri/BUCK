@@ -1,36 +1,34 @@
 load("@fbcode_macros//build_defs:rust_library.bzl", "rust_library")
-load("@fbcode_macros//build_defs/lib:rust_oss.bzl", "rust_oss")
 
 oncall("scm_server_infra")
 
 rust_library(
     name = "bundle_uri",
-    srcs = glob(["src/**/*.rs"]),
-    test_deps = [
-    ] + ([] if rust_oss.is_oss_build() else [
-        "fbsource//third-party/rust:itertools",
-        "//common/rust/mysql:ephemeral_shards",
-        "//common/rust/mysql:mysql_client",
-        "//common/rust/shed/fbinit:fbinit-tokio",
-        "//common/rust/shed/sql:sql_common",
-        "//dba/ephemeral_shards/if:ephemeral_shards_thrift-rust",
+    srcs = glob([
+        "src/**/*.rs",
+        "schemas/**/*.sql",
     ]),
+    test_deps = [
+        "fbsource//third-party/rust:itertools",
+        "fbsource//third-party/rust:lazy_static",
+        "//common/rust/shed/fbinit:fbinit-tokio",
+        "//eden/mononoke/mononoke_macros:mononoke_macros",
+    ],
     deps = [
         "fbsource//third-party/rust:anyhow",
-        "fbsource//third-party/rust:arc-swap",
         "fbsource//third-party/rust:async-trait",
-        "fbsource//third-party/rust:tokio",
         "//common/rust/manifold/manifold-thrift:manifold-thrift",
-        "//common/rust/shed/cloned:cloned",
+        "//common/rust/shed/facet:facet",
         "//common/rust/shed/fbinit:fbinit",
-        "//eden/mononoke/mononoke_macros:mononoke_macros",
+        "//common/rust/shed/sql:sql",
+        "//eden/mononoke/common/rust/sql_ext:sql_ext",
+        "//eden/mononoke/common/sql_construct:sql_construct",
+        "//eden/mononoke/metaconfig:metaconfig_types",
         "//eden/mononoke/mononoke_types:mononoke_types",
         "//ti/urlgen:signing-if-rust",
         "//ti/urlgen/backends:if-rust",
         "//ti/urlgen/backends/manifold:if-rust",
         "//ti/urlgen/service:if-rust-clients",
         "//ti/urlgen/service:if-rust-srclients",
-    ] + ([] if rust_oss.is_oss_build() else [
-        "//eden/mononoke/common/rust/sql_ext:sql_ext",
-    ]),
+    ],
 )
