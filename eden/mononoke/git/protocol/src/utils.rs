@@ -24,6 +24,7 @@ use git_types::DeltaObjectKind;
 use git_types::GitDeltaManifestEntryOps;
 use git_types::ObjectDeltaOps;
 use gix_hash::ObjectId;
+use gix_object::bstr::ByteSlice;
 use mononoke_types::hash::GitSha1;
 use mononoke_types::ChangesetId;
 use mononoke_types::MPath;
@@ -98,6 +99,13 @@ pub(crate) fn delta_base(
     delta_inclusion: DeltaInclusion,
     filter: Arc<Option<FetchFilter>>,
 ) -> Option<&(dyn ObjectDeltaOps + Sync)> {
+    // Periodically break delta chains since resolving very long delta chains
+    // is expensive on client side
+    let byte_sum = entry.full_object_oid().first_byte() as u16
+        + entry.full_object_oid().as_bytes().last_byte().unwrap_or(0) as u16;
+    if byte_sum % 250 == 0 {
+        return None;
+    }
     match delta_inclusion {
         DeltaInclusion::Include {
             inclusion_threshold,
