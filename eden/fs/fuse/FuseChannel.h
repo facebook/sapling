@@ -856,8 +856,24 @@ class FuseChannel final : public FsChannel {
   std::shared_ptr<Notifier> const notifier_;
   CaseSensitivity caseSensitive_;
   bool requireUtf8Path_;
+  /**
+   * The maximum number of concurrent background FUSE requests we allow the
+   * kernel to send us. background should mean things like readahead prefetches
+   * and direct I/O, but may include things that seem like more traditionally
+   * foreground I/O. What counts as "background" seems to be up to the
+   * discretion of the kernel. This is managed by the kernel by setting
+   * max_background in fuse_init_out
+   */
   int32_t maximumBackgroundRequests_;
+  /**
+   * The maximum number of requests that can be processed at one time.
+   * Currently, not enforced.
+   */
   size_t maximumInFlightRequests_;
+  /**
+   * We log when the number of pending requests exceeds maximumInFlightRequests,
+   * however to avoid spamming the logs once per highFuseRequestsLogInterval.
+   */
   std::chrono::nanoseconds highFuseRequestsLogInterval_;
   bool useWriteBackCache_;
 

@@ -254,7 +254,8 @@ void RpcConnectionHandler::tryConsumeReadBuffer() noexcept {
       auto& state = state_.get();
       state.pendingRequests += 1;
 
-      if (state.pendingRequests == maximumInFlightRequests_ &&
+      if (maximumInFlightRequests_ > 0 &&
+          state.pendingRequests == maximumInFlightRequests_ &&
           now >= state.lastHighNfsRequestsLog_ + highNfsRequestsLogInterval_) {
         should_log = true;
         state.lastHighNfsRequestsLog_ = now;

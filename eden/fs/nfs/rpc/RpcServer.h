@@ -271,13 +271,13 @@ class RpcConnectionHandler : public folly::DelayedDestruction,
   std::weak_ptr<RpcServer> owningServer_;
 
   /**
-   * max number of requests that can be processed at one time. Currently not
-   * enforced.
+   * The maximum number of requests that can be processed at one time.
+   * Currently, not enforced.
    */
   size_t maximumInFlightRequests_;
 
   /**
-   * we log when the number of pending requests exceeds maximumInFlightRequests,
+   * We log when the number of pending requests exceeds maximumInFlightRequests,
    * however to avoid spamming the logs once per highNfsRequestsLogInterval.
    */
   std::chrono::nanoseconds highNfsRequestsLogInterval_;
@@ -417,10 +417,11 @@ class RpcServer final : public std::enable_shared_from_this<RpcServer>,
 
   EventBaseState<State> state_;
 
-  // max number of requests that can be processed at one time.
+  // The maximum number of requests that can be processed at one time.
+  // Currently, not enforced.
   size_t maximumInFlightRequests_;
 
-  // we log when the number of pending requests exceeds maximumInFlightRequests,
+  // We log when the number of pending requests exceeds maximumInFlightRequests,
   // however to avoid spamming the logs once per highNfsRequestsLogInterval.
   std::chrono::nanoseconds highNfsRequestsLogInterval_;
 };

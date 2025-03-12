@@ -963,8 +963,11 @@ class EdenConfig : private ConfigSettingManager {
       this};
 
   /**
-   * Maximum number of pending FS channel requests. If more requests are
-   * inflight, the FS channel code will block.
+   * Maximum number of pending FSChannel requests. This is currently not
+   * enforced. This value is also used as the threshold when determining when to
+   * log high number of pending requests. It currently is only used in FUSE and
+   * NFS FSChannel implementations. When set to 0, no limit is enforced and no
+   * logging will occur.
    */
   ConfigSetting<uint64_t> maxFsChannelInflightRequests{
       "fschannel:max-inflight-requests",

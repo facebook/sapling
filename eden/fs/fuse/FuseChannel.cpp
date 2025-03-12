@@ -901,11 +901,12 @@ FuseChannel::FuseChannel(
           fuseTraceBusCapacity)) {
   XLOGF(
       INFO,
-      "Creating FuseChannel: mountPath={}, numThreads={}, requireUtf8={}, maximumBackgroundRequests={}, useWriteBackCache={}",
+      "Creating FuseChannel: mountPath={}, numThreads={}, requireUtf8={}, maximumBackgroundRequests={}, maximumInFlightRequests={}, useWriteBackCache={}",
       mountPath,
       numThreads,
       requireUtf8Path,
       maximumBackgroundRequests,
+      maximumInFlightRequests,
       useWriteBackCache);
   XCHECK_GE(numThreads_, 1ul);
   installSignalHandler();
@@ -1861,7 +1862,8 @@ void FuseChannel::processSession() {
             auto state = state_.wlock();
             ++state->pendingRequests;
 
-            if (state->pendingRequests == maximumInFlightRequests_ &&
+            if (maximumInFlightRequests_ > 0 &&
+                state->pendingRequests == maximumInFlightRequests_ &&
                 now >= state->lastHighFuseRequestsLog_ +
                         highFuseRequestsLogInterval_) {
               should_log = true;
