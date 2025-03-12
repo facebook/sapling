@@ -5,6 +5,8 @@
  * GNU General Public License version 2.
  */
 
+use std::env;
+use std::ffi::OsString;
 use std::path::Path;
 use std::process::Command;
 
@@ -17,8 +19,13 @@ struct PythonSysConfig {
 impl PythonSysConfig {
     fn load() -> Self {
         println!("cargo:rerun-if-env-changed=PYTHON_SYS_EXECUTABLE");
-        let python = std::env::var("PYTHON_SYS_EXECUTABLE")
-            .expect("Building bindings.cext requires PYTHON_SYS_EXECUTABLE");
+        let python = match env::var_os("PYTHON_SYS_EXECUTABLE") {
+            Some(python) => python,
+            None => {
+                println!("cargo:warning=PYTHON_SYS_EXECUTABLE is recommended at build time");
+                OsString::from("python3")
+            }
+        };
         let script = concat!(
             "import sysconfig;",
             "print((sysconfig.get_config_var('CFLAGS') or '').strip());",
