@@ -78,6 +78,15 @@ cpp_unittest(
     ],
 )
 
+cpp_unittest(
+    name = "request_permit_vendor_test",
+    srcs = ["RequestPermitVendorTest.cpp"],
+    supports_static_listing = False,
+    deps = [
+        "//eden/fs/utils:request_permit_vendor",
+    ],
+)
+
 cpp_benchmark(
     name = "bench",
     srcs = [

@@ -304,3 +304,11 @@ cpp_library(
         "//folly:try",
     ],
 )
+
+cpp_library(
+    name = "request_permit_vendor",
+    headers = ["RequestPermitVendor.h"],
+    exported_deps = [
+        "//folly/fibers:semaphore",
+    ],
+)
