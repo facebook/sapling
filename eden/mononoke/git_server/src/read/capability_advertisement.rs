@@ -41,12 +41,14 @@ const UPLOAD_PACK_CAPABILITIES: &[&str] = &[
 ];
 const RECEIVE_PACK_CAPABILITIES: &str =
     "report-status atomic delete-refs quiet ofs-delta object-format=sha1";
+const BUNDLE_URI_CAPABILITY: &str = "bundle-uri";
 
 const VERSION: &str = "2";
 
 async fn advertise_capability(
     request_context: RepositoryRequestContext,
     service_type: Service,
+    repo_name: &str,
 ) -> Result<Vec<u8>, Error> {
     let mut output = Vec::new();
 
@@ -57,18 +59,28 @@ async fn advertise_capability(
     .await?;
     flush_to_write(&mut output).await?;
     match service_type {
-        Service::GitUploadPack => read_advertisement(&mut output).await?,
+        Service::GitUploadPack => read_advertisement(&mut output, repo_name).await?,
         Service::GitReceivePack => write_advertisement(request_context, &mut output).await?,
     }
     flush_to_write(&mut output).await?;
     Ok(output)
 }
 
-async fn read_advertisement(output: &mut Vec<u8>) -> Result<(), Error> {
+async fn read_advertisement(output: &mut Vec<u8>, repo_name: &str) -> Result<(), Error> {
     write_text_packetline(format!("version {}", VERSION).as_bytes(), output).await?;
     for capability in UPLOAD_PACK_CAPABILITIES {
         write_text_packetline(capability.as_bytes(), output).await?;
     }
+    if justknobs::eval(
+        "scm/mononoke:git_bundle_uri_capability",
+        None,
+        Some(repo_name),
+    )
+    .unwrap_or(false)
+    {
+        write_text_packetline(BUNDLE_URI_CAPABILITY.as_bytes(), output).await?;
+    }
+
     Ok(())
 }
 
@@ -120,13 +132,17 @@ pub async fn capability_advertisement(state: &mut State) -> Result<Response<Body
     let service_type = ServiceType::borrow_from(state).service;
     let repo_name = RepositoryParams::borrow_from(state).repo_name();
     let git_method_info = match service_type {
-        Service::GitUploadPack => GitMethodInfo::standard(repo_name, GitMethod::AdvertiseRead),
-        Service::GitReceivePack => GitMethodInfo::standard(repo_name, GitMethod::AdvertiseWrite),
+        Service::GitUploadPack => {
+            GitMethodInfo::standard(repo_name.clone(), GitMethod::AdvertiseRead)
+        }
+        Service::GitReceivePack => {
+            GitMethodInfo::standard(repo_name.clone(), GitMethod::AdvertiseWrite)
+        }
     };
     let request_context = RepositoryRequestContext::instantiate(state, git_method_info)
         .await
         .map_err(HttpError::e403)?;
-    let output = advertise_capability(request_context, service_type)
+    let output = advertise_capability(request_context, service_type, &repo_name)
         .await
         .map_err(HttpError::e500)?;
     let service_type = ServiceType::borrow_from(state).service;

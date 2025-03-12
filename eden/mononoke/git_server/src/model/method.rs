@@ -28,6 +28,8 @@ pub enum GitMethod {
     LsRefs,
     /// Method responsible for pushing changes to the repo
     Push,
+    /// Method responsible for serving bundle-uri command
+    BundleURI,
 }
 
 impl GitMethod {
@@ -46,6 +48,7 @@ impl fmt::Display for GitMethod {
             Self::AdvertiseRead => "advertise-read",
             Self::AdvertiseWrite => "advertise-write",
             Self::Push => "push",
+            Self::BundleURI => "bundle-uri",
         };
         write!(f, "{}", name)
     }
@@ -116,6 +119,7 @@ impl GitMethodInfo {
     pub fn from_command(command: &Command, repo: String) -> Self {
         let (method, variants) = match command {
             Command::LsRefs(_) => (GitMethod::LsRefs, vec![GitMethodVariant::Standard]),
+            Command::BundleUri => (GitMethod::BundleURI, vec![GitMethodVariant::Standard]),
             Command::Fetch(ref fetch_args) => {
                 let method = if fetch_args.haves.is_empty() && fetch_args.done {
                     GitMethod::Clone

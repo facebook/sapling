@@ -50,6 +50,7 @@ use bookmarks::Freshness;
 use bookmarks_cache::BookmarksCache;
 use bookmarks_cache::BookmarksCacheRef;
 use bulk_derivation::BulkDerivation;
+use bundle_uri::GitBundleUri;
 use bytes::Bytes;
 use changeset_info::ChangesetInfo;
 use commit_cloud::CommitCloud;
@@ -225,6 +226,9 @@ pub struct Repo {
 
     #[facet]
     pub git_ref_content_mapping: dyn GitRefContentMapping,
+
+    #[facet]
+    pub git_bundle_uri: dyn GitBundleUri,
 
     #[facet]
     pub bonsai_globalrev_mapping: dyn BonsaiGlobalrevMapping,

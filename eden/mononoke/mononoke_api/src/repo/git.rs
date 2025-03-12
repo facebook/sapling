@@ -13,6 +13,7 @@ use bonsai_tag_mapping::BonsaiTagMappingEntry;
 use bonsai_tag_mapping::BonsaiTagMappingRef;
 use bookmarks::BookmarksRef;
 use bookmarks_cache::BookmarksCacheRef;
+use bundle_uri::GitBundleUriRef;
 use bytes::Bytes;
 use chrono::DateTime;
 use chrono::FixedOffset;
@@ -345,6 +346,7 @@ pub trait Repo = RepoIdentityRef
     + BonsaiGitMappingRef
     + BonsaiTagMappingRef
     + GitRefContentMappingRef
+    + GitBundleUriRef
     + RepoDerivedDataRef
     + FilestoreConfigRef
     + GitSymbolicRefsRef

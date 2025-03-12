@@ -33,6 +33,7 @@ use hyper::Response;
 use mononoke_macros::mononoke;
 use packetline::encode::delim_to_write;
 use packetline::encode::flush_to_write;
+use packetline::encode::write_binary_packetline;
 use packetline::encode::write_data_channel;
 use packetline::encode::write_error_channel;
 use packetline::encode::write_progress_channel;
@@ -335,10 +336,47 @@ pub async fn upload_pack(state: &mut State) -> Result<Response<Body>, HttpError>
             };
             output.try_into_response(state).map_err(HttpError::e500)
         }
+        Command::BundleUri => {
+            let output = bundle_uri(&request_context).await;
+            let output = output.map_err(HttpError::e500)?.try_into_response(state);
+            output.map_err(HttpError::e500)
+        }
         Command::Push(_) => Err(HttpError::e500(anyhow::anyhow!(
             "Push command directed to incorrect upload-pack handler"
         ))),
     }
+}
+
+async fn bundle_uri(
+    request_context: &RepositoryRequestContext,
+) -> Result<impl TryIntoResponse, Error> {
+    let mut out: Vec<u8> = b"bundle.version=1\nbundle.mode=all".into();
+
+    let bundle_uri = &request_context.repo.git_bundle_uri;
+    let bundle_list = bundle_uri.get_latest_bundle_list().await?;
+
+    if let Some(bundle_list) = bundle_list {
+        for bundle in bundle_list.bundles.iter() {
+            let uri = bundle_uri
+                .get_url_for_bundle_handle(60, &bundle.handle)
+                .await?;
+
+            let str = format!("\nbundle.bundle_{}.uri={}", bundle.fingerprint, uri,);
+            out.extend_from_slice(str.as_bytes());
+        }
+    }
+
+    let mut output = Vec::new();
+    for line in out.split(|x| *x == b'\n') {
+        if line.is_empty() {
+            continue;
+        }
+        write_binary_packetline(line, &mut output).await?;
+    }
+
+    flush_to_write(&mut output).await?;
+    let res = BytesBody::new(Bytes::from(output), mime::TEXT_PLAIN);
+    Ok(res)
 }
 
 /// Method responsible for generating the response for ls_refs command request

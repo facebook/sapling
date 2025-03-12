@@ -254,6 +254,8 @@ def _dott_test(name, dott_files, deps, use_mysql = False, disable_all_network_ac
             "scm/mononoke/mysql/xdb.mononoke_blobstore_wal_queue",
             "--mysql-schema",
             "scm/commitcloud/xdb.commit_cloud_legacy_tests",
+            "--mysql-schema",
+            "scm/mononoke/mysql/xdb.git_bundle_metadata",
         ])
 
     env = {

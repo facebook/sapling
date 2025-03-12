@@ -28,6 +28,10 @@ use bookmarks::bookmark_heads_fetcher;
 use bookmarks::ArcBookmarkUpdateLog;
 use bookmarks::ArcBookmarks;
 use bookmarks_cache::ArcBookmarksCache;
+use bundle_uri::ArcGitBundleUri;
+use bundle_uri::BundleUri;
+use bundle_uri::LocalFSBUndleUriGenerator;
+use bundle_uri::SqlGitBundleMetadataStorageBuilder;
 use cacheblob::InProcessLease;
 use cacheblob::LeaseOps;
 use commit_cloud::sql::builder::SqlCommitCloudBuilder;
@@ -515,6 +519,18 @@ impl TestRepoFactory {
             SqlGitRefContentMappingBuilder::from_sql_connections(self.metadata_db.clone())
                 .build(repo_identity.id()),
         ))
+    }
+
+    /// Construct Git Bundle Uri object with in-memory git bundle metadata database
+    /// and local FS urls returned.
+    pub async fn git_bundle_uri(&self, repo_identity: &ArcRepoIdentity) -> Result<ArcGitBundleUri> {
+        let storage =
+            SqlGitBundleMetadataStorageBuilder::from_sql_connections(self.metadata_db.clone())
+                .build(repo_identity.id());
+
+        let generator = LocalFSBUndleUriGenerator::new(self.fb, "".into(), "".into());
+        let bundle_uri = BundleUri::new(storage, generator, repo_identity.id()).await?;
+        Ok(Arc::new(bundle_uri))
     }
 
     /// Construct Repo Metadata Checkpoint using the in-memory metadata

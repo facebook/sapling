@@ -59,6 +59,10 @@ use bookmarks::ArcBookmarkUpdateLog;
 use bookmarks::ArcBookmarks;
 use bookmarks::CachedBookmarks;
 use bookmarks_cache::ArcBookmarksCache;
+use bundle_uri::ArcGitBundleUri;
+use bundle_uri::BundleUri;
+use bundle_uri::BundleUrlGenerator;
+use bundle_uri::SqlGitBundleMetadataStorageBuilder;
 use cacheblob::new_cachelib_blobstore_no_lease;
 use cacheblob::new_memcache_blobstore;
 use cacheblob::CachelibBlobstoreOptions;
@@ -815,6 +819,9 @@ pub enum RepoFactoryError {
     #[error("Error opening git-ref-content mapping")]
     GitRefContentMapping,
 
+    #[error("Error opening git-bundle-uri")]
+    GitBundleUri,
+
     #[error("Error opening git-symbolic-refs")]
     GitSymbolicRefs,
 
@@ -1080,6 +1087,33 @@ impl RepoFactory {
             .build(repo_identity.id());
         // TODO(rajshar): Add caching for git_ref_content_mapping
         Ok(Arc::new(git_ref_content_mapping))
+    }
+
+    pub async fn git_bundle_uri(
+        &self,
+        repo_config: &ArcRepoConfig,
+        repo_identity: &ArcRepoIdentity,
+    ) -> Result<ArcGitBundleUri> {
+        let git_bundle_uri_storage = self
+            .open_sql::<SqlGitBundleMetadataStorageBuilder>(repo_config)
+            .await
+            .context(RepoFactoryError::GitBundleUri)?
+            .build(repo_identity.id());
+
+        let bundle_url_generator = BundleUrlGenerator::new(
+            self.env.fb,
+            "git-bundle-storage".into(),
+            "git-bundle-storage-key".into(),
+        );
+
+        let bundle_uri = BundleUri::new(
+            git_bundle_uri_storage,
+            bundle_url_generator,
+            repo_config.repoid,
+        )
+        .await?;
+
+        Ok(Arc::new(bundle_uri))
     }
 
     pub async fn git_symbolic_refs(

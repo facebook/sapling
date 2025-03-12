@@ -25,6 +25,7 @@ const COMMAND_PREFIX: &[u8] = b"command=";
 const LS_REFS_COMMAND: &[u8] = b"ls-refs";
 const FETCH_COMMAND: &[u8] = b"fetch";
 const PUSH_COMMAND: &[u8] = b"push";
+const BUNDLE_URI_COMMAND: &[u8] = b"bundle-uri";
 const PUSH_MARKER: u8 = b'\0';
 
 #[derive(Debug, Clone)]
@@ -32,6 +33,7 @@ pub enum Command {
     LsRefs(LsRefsArgs),
     Fetch(FetchArgs),
     Push(PushArgs),
+    BundleUri,
 }
 
 #[derive(Debug, Clone)]
@@ -74,6 +76,7 @@ impl RequestCommand {
             LS_REFS_COMMAND => Command::LsRefs(LsRefsArgs::parse_from_packetline(remaining)?),
             FETCH_COMMAND => Command::Fetch(FetchArgs::parse_from_packetline(remaining)?),
             PUSH_COMMAND => Command::Push(PushArgs::parse_from_packetline(args)?), // we went over
+            BUNDLE_URI_COMMAND => Command::BundleUri,
             unknown_command => {
                 anyhow::bail!("Unknown git protocol V2 command {:?}", unknown_command)
             }
