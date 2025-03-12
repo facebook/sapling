@@ -963,15 +963,16 @@ class EdenConfig : private ConfigSettingManager {
       this};
 
   /**
-   * Maximum number of pending FSChannel requests. This is currently not
-   * enforced. This value is also used as the threshold when determining when to
-   * log high number of pending requests. It currently is only used in FUSE and
-   * NFS FSChannel implementations. When set to 0, no limit is enforced and no
-   * logging will occur.
+   * Maximum number of pending FSChannel requests. This is currently only
+   * enforced in the FUSE FSChannel implementation. This value is also used as
+   * the threshold when determining when to log high number of pending requests.
+   * Logging is currently is only enabled in FUSE and NFS FSChannel
+   * implementations. When set to 0, no limit is enforced and no logging will
+   * occur.
    */
   ConfigSetting<uint64_t> maxFsChannelInflightRequests{
       "fschannel:max-inflight-requests",
-      1000,
+      0,
       this};
 
   ConfigSetting<std::chrono::nanoseconds> highFsRequestsLogInterval{

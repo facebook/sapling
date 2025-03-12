@@ -10,6 +10,7 @@
 #include "eden/common/utils/ImmediateFuture.h"
 #include "eden/fs/privhelper/PrivHelper.h"
 #include "eden/fs/utils/FsChannelTypes.h"
+#include "eden/fs/utils/RequestPermitVendor.h"
 
 namespace facebook::eden {
 
@@ -42,6 +43,28 @@ class FsChannel {
 
  protected:
   virtual ~FsChannel() = default;
+
+  /**
+   * A semaphore-based rate limiter used to limit the number of outstanding
+   * requests to the FsChannel. This is initalized in the constructors of the
+   * derived classes. The size of the semaphore is controlled by
+   * fschannel:max-inflight-requests. If the config is set to zero, rate
+   * limiting is disabled and this will be nullptr.
+   */
+  std::unique_ptr<RequestPermitVendor> requestRateLimiter_{nullptr};
+
+  /**
+   * Initialize the rate limiter with the given maximum number of concurrent
+   * requests. This should be called by concrete implementations in their
+   * constructor. If zero is passed, rate limiting is disabled and the permit
+   * methods will be no-ops.
+   */
+  void initalizeInflightRequestsRateLimiter(size_t maximumInFlightRequests) {
+    if (maximumInFlightRequests > 0) {
+      requestRateLimiter_ =
+          std::make_unique<RequestPermitVendor>(maximumInFlightRequests);
+    }
+  }
 
  public:
   /**
@@ -116,6 +139,17 @@ class FsChannel {
    */
   FOLLY_NODISCARD virtual ImmediateFuture<folly::Unit>
   completeInvalidations() = 0;
+
+  /**
+   * Helper function to acquire a permit from the rate limiter. This will block
+   * until a permit is available. This is a no-op if rate limiting is disabled.
+   */
+  std::unique_ptr<RequestPermit> acquireFsRequestPermit() {
+    if (requestRateLimiter_) {
+      return requestRateLimiter_->acquirePermit();
+    }
+    return nullptr;
+  }
 };
 
 /**

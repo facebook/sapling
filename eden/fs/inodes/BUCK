@@ -9,6 +9,7 @@ cpp_library(
         "//eden/common/utils:immediate_future",
         "//eden/fs/privhelper:interface",
         "//eden/fs/utils:fs_channel_types",
+        "//eden/fs/utils:request_permit_vendor",
     ],
 )
 

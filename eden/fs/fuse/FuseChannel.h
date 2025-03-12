@@ -278,7 +278,9 @@ class FuseChannel final : public FsChannel {
    *      limits the number of active FUSE requests to 16.
    * maximumInFlightRequests -
    *      The max number of in-flight requests that EdenFS will process at once.
-   *      fuse requests over this threshold will block.
+   *      New requests will block when this limit is reached and will wait until
+   *      existing requests until existing requests complete. When set to zero,
+   *      no rate limiting will be enforced.
    * highFuseRequestsLogInterval -
    *      How often to log when we see a high number of in-flight FUSE requests.
    *      This is used to prevent us from spamming data to scuba.
@@ -866,8 +868,8 @@ class FuseChannel final : public FsChannel {
    */
   int32_t maximumBackgroundRequests_;
   /**
-   * The maximum number of requests that can be processed at one time.
-   * Currently, not enforced.
+   * The maximum number of requests that can be processed at one time. This is
+   * only enforced when the value is > 0.
    */
   size_t maximumInFlightRequests_;
   /**

@@ -911,6 +911,8 @@ FuseChannel::FuseChannel(
   XCHECK_GE(numThreads_, 1ul);
   installSignalHandler();
 
+  initalizeInflightRequestsRateLimiter(maximumInFlightRequests);
+
   traceSubscriptionHandles_.push_back(traceBus_->subscribeFunction(
       "FuseChannel request tracking",
       [this,
@@ -1851,6 +1853,12 @@ void FuseChannel::processSession() {
             traceBus_->publish(FuseTraceEvent::start(requestId, *header));
           }
 
+          // Acquire a RequestPermit before executing the FUSE request. This
+          // function will block if there are too many inflight requests. This
+          // needs to be captured in the ensure block to ensure the permit is
+          // only destroyed after the request has finished
+          auto requestPermit = acquireFsRequestPermit();
+
           // This is a shared_ptr because, due to timeouts, the internal request
           // lifetime may not match the FUSE request lifetime, so we capture it
           // in both. I'm sure this could be improved with some cleverness.
@@ -1862,6 +1870,9 @@ void FuseChannel::processSession() {
             auto state = state_.wlock();
             ++state->pendingRequests;
 
+            // TODO(helsel): Use the rate limiter to log when the maximum number
+            // of inflight requests are hit instead of keeping track of pending
+            // requests separately.
             if (maximumInFlightRequests_ > 0 &&
                 state->pendingRequests == maximumInFlightRequests_ &&
                 now >= state->lastHighFuseRequestsLog_ +
@@ -1914,7 +1925,11 @@ void FuseChannel::processSession() {
                   dispatcher_->getStats().copy(),
                   handlerEntry->countSuccessful,
                   handlerEntry->countFailure)
-              .ensure([this, request, requestId, headerCopy] {
+              .ensure([this,
+                       request,
+                       requestId,
+                       headerCopy,
+                       requestPermit = std::move(requestPermit)] {
                 traceBus_->publish(FuseTraceEvent::finish(
                     requestId, headerCopy, request->getResult()));
 
@@ -1927,6 +1942,10 @@ void FuseChannel::processSession() {
                     state->stoppedThreads == numThreads_) {
                   sessionComplete(std::move(state));
                 }
+
+                // The requestPermit will automatically release the permit when
+                // it's destroyed at the end of this lambda, so we don't need an
+                // explicit releasePermit() call
               });
           break;
         }
