@@ -18,6 +18,7 @@ pub mod fsutil;
 pub mod glob_files;
 pub mod instance;
 pub mod journal;
+pub mod local_store;
 mod mounttable;
 pub mod redirect;
 pub mod sapling;

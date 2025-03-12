@@ -24,13 +24,14 @@ pub struct GcCmd {}
 #[async_trait]
 impl crate::Subcommand for GcCmd {
     async fn run(&self) -> Result<ExitCode> {
+        let instance = EdenFsInstance::global();
+        let client = instance.get_client(None).await?;
+
         // TODO: unload inodes
 
         eprint!("Clearing and compacting local caches...");
         stderr().flush()?;
-        EdenFsInstance::global()
-            .clear_and_compact_local_store()
-            .await?;
+        client.clear_and_compact_local_store().await?;
         eprintln!();
 
         // TODO: clear kernel caches here

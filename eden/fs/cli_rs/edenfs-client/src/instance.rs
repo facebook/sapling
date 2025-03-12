@@ -305,36 +305,6 @@ impl EdenFsInstance {
         Ok(())
     }
 
-    pub async fn debug_clear_local_store_caches(&self) -> Result<()> {
-        let client = self.get_client(None).await?;
-        let client = client.get_thrift_client();
-
-        client
-            .debugClearLocalStoreCaches()
-            .await
-            .map_err(|_| EdenFsError::Other(anyhow!("failed to call debugClearLocalStoreCaches")))
-    }
-
-    pub async fn debug_compact_local_storage(&self) -> Result<()> {
-        let client = self.get_client(None).await?;
-        let client = client.get_thrift_client();
-
-        client
-            .debugCompactLocalStorage()
-            .await
-            .map_err(|_| EdenFsError::Other(anyhow!("failed to call debugCompactLocalStorage")))
-    }
-
-    pub async fn clear_and_compact_local_store(&self) -> Result<()> {
-        let client = self.get_client(None).await?;
-        let client = client.get_thrift_client();
-
-        client
-            .clearAndCompactLocalStore()
-            .await
-            .map_err(|_| EdenFsError::Other(anyhow!("failed to call clearAndCompactLocalStore")))
-    }
-
     pub async fn flush_stats_now(&self, client: &EdenFsThriftClient) -> Result<()> {
         client
             .flushStatsNow()
