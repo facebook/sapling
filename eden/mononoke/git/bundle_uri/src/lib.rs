@@ -47,23 +47,7 @@ impl GitBundleUrlGenerator for LocalFSBUndleUriGenerator {
 }
 
 #[derive(Clone)]
-pub struct EmptyGitBundleMetadataStorage {}
-
-#[derive(Clone)]
 pub struct LocalFSBUndleUriGenerator {}
-
-#[async_trait]
-impl GitBundleMetadataStorage for EmptyGitBundleMetadataStorage {
-    async fn get_newest_bundle_list_for_repo(
-        &self,
-        _repo_id: RepositoryId,
-    ) -> Result<Option<BundleList>> {
-        Ok(None)
-    }
-    async fn get_newest_bundle_lists(&self) -> Result<HashMap<RepositoryId, BundleList>> {
-        Ok(HashMap::new())
-    }
-}
 
 impl LocalFSBUndleUriGenerator {
     pub fn new(
