@@ -198,11 +198,12 @@ pub enum PrefetchCmd {
 
 impl PrefetchCmd {
     async fn finish(&self, output_path: &PathBuf) -> Result<ExitCode> {
-        let files = EdenFsInstance::global()
-            .stop_recording_backing_store_fetch()
-            .await?;
+        let instance = EdenFsInstance::global();
+        let client = instance.get_client(None).await?;
+
+        let files = client.stop_recording_backing_store_fetch().await?;
         let fetched_files = files
-            .fetchedFilePaths
+            .fetched_file_paths
             .get("SaplingBackingStore")
             .ok_or_else(|| anyhow!("no Path vector found"))?;
         let mut out_file = File::create(output_path).context("unable to create output file")?;
@@ -218,9 +219,10 @@ impl PrefetchCmd {
     }
 
     async fn record(&self) -> Result<ExitCode> {
-        EdenFsInstance::global()
-            .start_recording_backing_store_fetch()
-            .await?;
+        let instance = EdenFsInstance::global();
+        let client = instance.get_client(None).await?;
+
+        client.start_recording_backing_store_fetch().await?;
         Ok(0)
     }
 

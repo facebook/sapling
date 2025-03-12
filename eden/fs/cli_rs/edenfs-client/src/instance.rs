@@ -305,30 +305,6 @@ impl EdenFsInstance {
         Ok(())
     }
 
-    pub async fn stop_recording_backing_store_fetch(
-        &self,
-    ) -> Result<thrift_types::edenfs::GetFetchedFilesResult> {
-        let client = self.get_client(None).await?;
-        let client = client.get_thrift_client();
-
-        let files = client
-            .stopRecordingBackingStoreFetch()
-            .await
-            .with_context(|| anyhow!("stopRecordingBackingStoreFetch thrift call failed"))?;
-        Ok(files)
-    }
-
-    pub async fn start_recording_backing_store_fetch(&self) -> Result<()> {
-        let client = self.get_client(None).await?;
-        let client = client.get_thrift_client();
-
-        client
-            .startRecordingBackingStoreFetch()
-            .await
-            .with_context(|| anyhow!("startRecordingBackingStoreFetch thrift call failed"))?;
-        Ok(())
-    }
-
     pub async fn debug_clear_local_store_caches(&self) -> Result<()> {
         let client = self.get_client(None).await?;
         let client = client.get_thrift_client();
