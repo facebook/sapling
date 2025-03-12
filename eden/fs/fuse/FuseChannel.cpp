@@ -901,9 +901,10 @@ FuseChannel::FuseChannel(
           fuseTraceBusCapacity)) {
   XLOGF(
       INFO,
-      "Creating FuseChannel: mountPath={}, numThreads={}, requireUtf8={}, maximumBackgroundRequests={}, maximumInFlightRequests={}, useWriteBackCache={}",
+      "Creating FuseChannel: mountPath={}, numThreads={}, caseSensitive={}, requireUtf8={}, maximumBackgroundRequests={}, maximumInFlightRequests={}, useWriteBackCache={}",
       mountPath,
       numThreads,
+      caseSensitive,
       requireUtf8Path,
       maximumBackgroundRequests,
       maximumInFlightRequests,
