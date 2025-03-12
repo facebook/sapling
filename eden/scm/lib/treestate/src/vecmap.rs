@@ -48,10 +48,10 @@ where
     }
 
     /// Utility function to binary search for an index using the key.
-    fn find_index<Q: ?Sized>(&self, q: &Q) -> Result<usize, usize>
+    fn find_index<Q>(&self, q: &Q) -> Result<usize, usize>
     where
         K: Borrow<Q>,
-        Q: Ord,
+        Q: Ord + ?Sized,
     {
         self.vec.binary_search_by(|e| e.0.borrow().cmp(q))
     }
@@ -86,10 +86,10 @@ where
 
     /// Removes a key-value pair from the map, returning the value if the key was previously in
     /// the map.
-    pub fn remove<Q: ?Sized>(&mut self, q: &Q) -> Option<V>
+    pub fn remove<Q>(&mut self, q: &Q) -> Option<V>
     where
         K: Borrow<Q>,
-        Q: Ord,
+        Q: Ord + ?Sized,
     {
         match self.find_index(q) {
             Ok(index) => {
@@ -101,10 +101,10 @@ where
     }
 
     /// Returns a reference to the value corresponding to the key.
-    pub fn get<'a, Q: ?Sized>(&'a self, q: &Q) -> Option<&'a V>
+    pub fn get<'a, Q>(&'a self, q: &Q) -> Option<&'a V>
     where
         K: Borrow<Q>,
-        Q: Ord,
+        Q: Ord + ?Sized,
     {
         match self.find_index(q) {
             Ok(index) => Some(&self.vec[index].1),
@@ -113,10 +113,10 @@ where
     }
 
     /// Returns a mutable reference to the value corresponding to the key.
-    pub fn get_mut<'a, Q: ?Sized>(&'a mut self, q: &Q) -> Option<&'a mut V>
+    pub fn get_mut<'a, Q>(&'a mut self, q: &Q) -> Option<&'a mut V>
     where
         K: Borrow<Q>,
-        Q: Ord,
+        Q: Ord + ?Sized,
     {
         match self.find_index(q) {
             Ok(index) => Some(&mut self.vec[index].1),
@@ -136,10 +136,10 @@ where
 
     /// Utility function for implementing `range` and `range_mut`.  Convert a range boundary for
     /// the start of a range into a slice index suitable for use in a range expression.
-    fn range_index_start<Q: ?Sized>(&self, b: Bound<&Q>) -> usize
+    fn range_index_start<Q>(&self, b: Bound<&Q>) -> usize
     where
         K: Borrow<Q>,
-        Q: Ord,
+        Q: Ord + ?Sized,
     {
         match b {
             Unbounded => 0,
@@ -156,10 +156,10 @@ where
 
     /// Utility function for implementing `range` and `range_mut`.  Convert a range boundary for
     /// the end of a range into a slice index suitable for use in a range expression.
-    fn range_index_end<Q: ?Sized>(&self, b: Bound<&Q>) -> usize
+    fn range_index_end<Q>(&self, b: Bound<&Q>) -> usize
     where
         K: Borrow<Q>,
-        Q: Ord,
+        Q: Ord + ?Sized,
     {
         match b {
             Unbounded => self.vec.len(),

@@ -31,10 +31,10 @@ where
     Ok(out)
 }
 
-pub fn serialize_into<W, T: ?Sized>(writer: W, value: &T) -> Result<()>
+pub fn serialize_into<W, T>(writer: W, value: &T) -> Result<()>
 where
     W: io::Write,
-    T: Serialize,
+    T: Serialize + ?Sized,
 {
     let mut ser = Serializer::new(writer);
     Serialize::serialize(value, &mut ser)
