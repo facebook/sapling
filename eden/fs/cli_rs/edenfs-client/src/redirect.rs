@@ -495,7 +495,7 @@ impl Redirection {
         // defaults if the units are unspecified, and `b` doesn't mean
         // bytes!
         let total_kib = target_stat.total() / 1024;
-        let mount_path = checkout_path.join(&self.repo_path());
+        let mount_path = checkout_path.join(self.repo_path());
 
         // We need to convert paths -> strings for the hdiutil commands
         let image_file_name = image_file_path.to_string_lossy();
@@ -509,7 +509,7 @@ impl Redirection {
                 )
             })?;
             if !image_file_dir.exists() {
-                std::fs::create_dir_all(&image_file_dir)
+                std::fs::create_dir_all(image_file_dir)
                     .from_err()
                     .with_context(|| {
                         format!("Failed to create directory {}", &image_file_dir.display())
@@ -561,7 +561,7 @@ impl Redirection {
             )
         })?;
         if !mount_path.exists() {
-            std::fs::create_dir_all(&mount_path)
+            std::fs::create_dir_all(mount_path)
                 .from_err()
                 .with_context(|| format!("Failed to create directory {}", &mount_path.display()))?;
         }
