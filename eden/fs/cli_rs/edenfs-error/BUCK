@@ -9,5 +9,7 @@ rust_library(
         "fbsource//third-party/rust:anyhow",
         "fbsource//third-party/rust:thiserror",
         "fbsource//third-party/rust:tokio",
+        "//eden/fs/service:thrift-rust-thriftclients",
+        "//eden/fs/service:thrift-streaming-rust-clients",
     ],
 )

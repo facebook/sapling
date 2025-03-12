@@ -104,7 +104,7 @@ impl<'a> EdenFsClient<'a> {
             'static,
             Result<
                 thrift_types::edenfs::JournalPosition,
-                thrift_streaming_clients::errors::SubscribeStreamTemporaryError,
+                thrift_streaming_clients::errors::StreamJournalChangedError,
             >,
         >,
         EdenFsError,
