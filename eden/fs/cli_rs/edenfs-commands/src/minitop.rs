@@ -31,7 +31,7 @@ use crossterm::event::KeyModifiers;
 use crossterm::queue;
 use crossterm::style;
 use crossterm::terminal;
-use edenfs_client::client::EdenFsThriftClient;
+use edenfs_client::client::EdenFsClient;
 use edenfs_client::instance::EdenFsInstance;
 use edenfs_utils::humantime::HumanTime;
 use edenfs_utils::humantime::TimeUnit;
@@ -259,14 +259,12 @@ struct ImportStat {
     max_duration_us: i64,
 }
 
-async fn get_pending_import_counts(
-    client: &EdenFsThriftClient,
+async fn get_pending_import_counts<'a>(
+    client: &EdenFsClient<'a>,
 ) -> Result<BTreeMap<String, ImportStat>> {
     let mut imports = BTreeMap::<String, ImportStat>::new();
 
-    let counters = EdenFsInstance::global()
-        .get_regex_counters(PENDING_COUNTER_REGEX, client)
-        .await?;
+    let counters = client.get_regex_counters(PENDING_COUNTER_REGEX).await?;
     for import_type in IMPORT_OBJECT_TYPES {
         let counter_prefix = format!("store.sapling.pending_import.{}", import_type);
         let number_requests = counters
@@ -288,13 +286,11 @@ async fn get_pending_import_counts(
     Ok(imports)
 }
 
-async fn get_live_import_counts(
-    client: &EdenFsThriftClient,
+async fn get_live_import_counts<'a>(
+    client: &EdenFsClient<'a>,
 ) -> Result<BTreeMap<String, ImportStat>> {
     let mut imports = BTreeMap::<String, ImportStat>::new();
-    let counters = EdenFsInstance::global()
-        .get_regex_counters(LIVE_COUNTER_REGEX, client)
-        .await?;
+    let counters = client.get_regex_counters(LIVE_COUNTER_REGEX).await?;
     for import_type in IMPORT_OBJECT_TYPES {
         let single_prefix = format!("store.sapling.live_import.{}", import_type);
         let batched_prefix = format!("store.sapling.live_import.batched_{}", import_type);
@@ -450,8 +446,8 @@ impl crate::Subcommand for MinitopCmd {
 
             // Update pending imports summary stats
             let (pending_imports, live_imports) = tokio::try_join!(
-                get_pending_import_counts(thrift_client),
-                get_live_import_counts(thrift_client)
+                get_pending_import_counts(&client),
+                get_live_import_counts(&client)
             )?;
 
             // Update currently tracked processes (and add new ones if they haven't been tracked yet)

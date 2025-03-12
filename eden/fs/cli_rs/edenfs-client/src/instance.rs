@@ -35,7 +35,6 @@ use tracing::Level;
 use util::lock::PathLock;
 
 use crate::client::EdenFsClient;
-use crate::client::EdenFsThriftClient;
 
 // We should create a single EdenFsInstance when parsing EdenFs commands and utilize
 // EdenFsInstance::global() whenever we need to access it. This way we can avoid passing an
@@ -303,17 +302,6 @@ impl EdenFsInstance {
 
         // Lock will be released when _lock is dropped
         Ok(())
-    }
-
-    pub async fn get_regex_counters(
-        &self,
-        arg_regex: &str,
-        client: &EdenFsThriftClient,
-    ) -> Result<BTreeMap<String, i64>> {
-        client
-            .getRegexCounters(arg_regex)
-            .await
-            .map_err(|_| EdenFsError::Other(anyhow!("failed to get regex counters")))
     }
 
     #[cfg(target_os = "macos")]
