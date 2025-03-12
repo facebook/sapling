@@ -282,6 +282,25 @@ pub struct CasBackendMetrics {
 
     /// Total number of bytes fetched from the CAS Lmdb Local Cache
     pub(crate) local_lmdb_cache_hits_bytes: &'static Counter,
+
+    /// Total number of blobs missed from the CAS Lmdb Local Cache
+    /// /// These only count for blobs that could be potentially fetched from LMDB based on the
+    /// digest size
+    pub(crate) local_lmdb_cache_misses_blobs: &'static Counter,
+
+    /// Total number of bytes missed from the CAS Lmdb Local Cache
+    /// /// /// These only count for bytes that could be potentially fetched from LMDB based on the
+    /// digest size
+    pub(crate) local_lmdb_cache_misses_bytes: &'static Counter,
+
+    /// number of blooms not present in cloom
+    pub(crate) local_cloom_misses: &'static Counter,
+
+    /// number of blooms present in cloom
+    pub(crate) local_cloom_true_positives: &'static Counter,
+
+    /// number of blooms that cloom says are present, but are not
+    pub(crate) local_cloom_false_positives: &'static Counter,
 }
 
 macro_rules! static_cas_backend_metrics {
@@ -302,6 +321,11 @@ macro_rules! static_cas_backend_metrics {
                 pub static LOCAL_CACHE_MISSES_BYTES: ::metrics::Counter = ::metrics::Counter::new_counter(concat!($prefix, ".local_cache.misses.bytes"));
                 pub static LOCAL_LMDB_CACHE_HITS_BLOBS: ::metrics::Counter = ::metrics::Counter::new_counter(concat!($prefix, ".local_lmdb_cache.hits.blobs"));
                 pub static LOCAL_LMDB_CACHE_HITS_BYTES: ::metrics::Counter = ::metrics::Counter::new_counter(concat!($prefix, ".local_lmdb_cache.hits.bytes"));
+                pub static LOCAL_LMDB_CACHE_MISSES_BLOBS: ::metrics::Counter = ::metrics::Counter::new_counter(concat!($prefix, ".local_lmdb_cache.misses.blobs"));
+                pub static LOCAL_LMDB_CACHE_MISSES_BYTES: ::metrics::Counter = ::metrics::Counter::new_counter(concat!($prefix, ".local_lmdb_cache.misses.bytes"));
+                pub static LOCAL_CLOOM_MISSES: ::metrics::Counter = ::metrics::Counter::new_counter(concat!($prefix, ".local_cloom.misses.blobs"));
+                pub static LOCAL_CLOOM_FALSE_POSITIVES: ::metrics::Counter = ::metrics::Counter::new_counter(concat!($prefix, ".local_cloom.false_positives.bytes"));
+                pub static LOCAL_CLOOM_TRUE_POSITIVES: ::metrics::Counter = ::metrics::Counter::new_counter(concat!($prefix, ".local_cloom.true_positives.bytes"));
             }
 
             static $name: $crate::scmstore::metrics::CasBackendMetrics = $crate::scmstore::metrics::CasBackendMetrics {
@@ -319,6 +343,11 @@ macro_rules! static_cas_backend_metrics {
                 local_cache_misses_bytes: &[<cas_metrics_ $name:lower>]::LOCAL_CACHE_MISSES_BYTES,
                 local_lmdb_cache_hits_blobs: &[<cas_metrics_ $name:lower>]::LOCAL_LMDB_CACHE_HITS_BLOBS,
                 local_lmdb_cache_hits_bytes: &[<cas_metrics_ $name:lower>]::LOCAL_LMDB_CACHE_HITS_BYTES,
+                local_lmdb_cache_misses_blobs: &[<cas_metrics_ $name:lower>]::LOCAL_LMDB_CACHE_MISSES_BLOBS,
+                local_lmdb_cache_misses_bytes: &[<cas_metrics_ $name:lower>]::LOCAL_LMDB_CACHE_MISSES_BYTES,
+                local_cloom_misses: &[<cas_metrics_ $name:lower>]::LOCAL_CLOOM_MISSES,
+                local_cloom_false_positives: &[<cas_metrics_ $name:lower>]::LOCAL_CLOOM_FALSE_POSITIVES,
+                local_cloom_true_positives: &[<cas_metrics_ $name:lower>]::LOCAL_CLOOM_TRUE_POSITIVES,
             };
         }
     };
@@ -368,5 +397,20 @@ impl CasBackendMetrics {
     }
     pub(crate) fn local_lmdb_cache_hits_bytes(&self, bytes: u64) {
         self.local_lmdb_cache_hits_bytes.add(bytes as usize);
+    }
+    pub(crate) fn local_lmdb_cache_misses_blobs(&self, blobs: u64) {
+        self.local_lmdb_cache_misses_blobs.add(blobs as usize);
+    }
+    pub(crate) fn local_lmdb_cache_misses_bytes(&self, bytes: u64) {
+        self.local_lmdb_cache_misses_bytes.add(bytes as usize);
+    }
+    pub(crate) fn local_cloom_misses(&self, files: u64) {
+        self.local_cloom_misses.add(files as usize);
+    }
+    pub(crate) fn local_cloom_false_positives(&self, files: u64) {
+        self.local_cloom_false_positives.add(files as usize);
+    }
+    pub(crate) fn local_cloom_true_positives(&self, files: u64) {
+        self.local_cloom_true_positives.add(files as usize);
     }
 }

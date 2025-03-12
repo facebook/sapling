@@ -402,6 +402,26 @@ impl FetchState {
         self.metrics
             .cas_backend
             .local_lmdb_cache_hits_bytes(total_stats.hits_bytes_local_lmdb_cache);
+
+        self.metrics
+            .cas_backend
+            .local_lmdb_cache_misses_blobs(total_stats.misses_blobs_local_lmdb_cache);
+
+        self.metrics
+            .cas_backend
+            .local_lmdb_cache_misses_bytes(total_stats.misses_bytes_local_lmdb_cache);
+
+        self.metrics
+            .cas_backend
+            .local_cloom_misses(total_stats.cloom_misses);
+
+        self.metrics
+            .cas_backend
+            .local_cloom_false_positives(total_stats.cloom_false_positives);
+
+        self.metrics
+            .cas_backend
+            .local_cloom_true_positives(total_stats.cloom_true_positives);
     }
 }
 
