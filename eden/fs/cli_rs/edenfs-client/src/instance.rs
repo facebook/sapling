@@ -23,13 +23,9 @@ use edenfs_config::EdenFsConfig;
 use edenfs_error::EdenFsError;
 use edenfs_error::Result;
 use edenfs_error::ResultExt;
-#[cfg(target_os = "macos")]
-use edenfs_utils::bytes_from_path;
 use edenfs_utils::get_executable;
 #[cfg(windows)]
 use edenfs_utils::strip_unc_prefix;
-#[cfg(target_os = "macos")]
-use thrift_types::edenfs::StartFileAccessMonitorParams;
 use tracing::event;
 use tracing::Level;
 use util::lock::PathLock;
@@ -302,47 +298,5 @@ impl EdenFsInstance {
 
         // Lock will be released when _lock is dropped
         Ok(())
-    }
-
-    #[cfg(target_os = "macos")]
-    pub async fn start_file_access_monitor(
-        &self,
-        path_prefix: &Vec<PathBuf>,
-        specified_output_file: Option<PathBuf>,
-        should_upload: bool,
-    ) -> Result<thrift_types::edenfs::StartFileAccessMonitorResult> {
-        let client = self.get_client(None).await?;
-        let client = client.get_thrift_client();
-
-        let mut paths = Vec::new();
-        for path in path_prefix {
-            let path = bytes_from_path(path.to_path_buf())?;
-            paths.push(path);
-        }
-        client
-            .startFileAccessMonitor(&StartFileAccessMonitorParams {
-                paths,
-                specifiedOutputPath: match specified_output_file {
-                    Some(path) => Some(bytes_from_path(path.to_path_buf())?),
-                    None => None,
-                },
-                shouldUpload: should_upload,
-                ..Default::default()
-            })
-            .await
-            .map_err(|e| EdenFsError::Other(anyhow!("failed to start file access monitor: {}", e)))
-    }
-
-    #[cfg(target_os = "macos")]
-    pub async fn stop_file_access_monitor(
-        &self,
-    ) -> Result<thrift_types::edenfs::StopFileAccessMonitorResult> {
-        let client = self.get_client(None).await?;
-        let client = client.get_thrift_client();
-
-        client
-            .stopFileAccessMonitor()
-            .await
-            .map_err(|e| EdenFsError::Other(anyhow!("failed to stop file access monitor: {}", e)))
     }
 }

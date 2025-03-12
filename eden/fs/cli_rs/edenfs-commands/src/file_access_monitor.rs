@@ -84,6 +84,9 @@ struct StartCmd {
 #[async_trait]
 impl crate::Subcommand for StartCmd {
     async fn run(&self) -> Result<ExitCode> {
+        let instance = EdenFsInstance::global();
+        let client = instance.get_client(None).await?;
+
         // Check the temporary folder exists, otherwise create it
         let tmp_dir_path = PathBuf::from(TMP_FAM_OUTPUT_DIR_PATH);
         if !tmp_dir_path.exists() {
@@ -100,14 +103,14 @@ impl crate::Subcommand for StartCmd {
 
         let output_path = self.output.as_ref().map(expand_path);
 
-        let start_result = EdenFsInstance::global()
+        let start_result = client
             .start_file_access_monitor(&monitor_paths, output_path, self.upload)
             .await?;
 
         println!("File Access Monitor started [pid {}]", start_result.pid);
         println!(
             "Temp output file path: {}",
-            path_from_bytes(&start_result.tmpOutputPath)?.display()
+            path_from_bytes(&start_result.tmp_output_path)?.display()
         );
 
         if self.background {
@@ -124,14 +127,17 @@ impl crate::Subcommand for StartCmd {
 }
 
 async fn stop_fam() -> Result<ExitCode> {
-    let stop_result = EdenFsInstance::global().stop_file_access_monitor().await?;
+    let instance = EdenFsInstance::global();
+    let client = instance.get_client(None).await?;
+
+    let stop_result = client.stop_file_access_monitor().await?;
     println!("File Access Monitor stopped");
     // TODO: handle the case when the output file is specified
-    let output_path = path_from_bytes(&stop_result.specifiedOutputPath)?;
+    let output_path = path_from_bytes(&stop_result.specified_output_path)?;
 
     println!("Output file saved to {}", output_path.display());
 
-    if stop_result.shouldUpload {
+    if stop_result.should_upload {
         // TODO[lxw]: handle uploading outputfile
         println!("Upload not implemented yet");
         return Ok(1);
