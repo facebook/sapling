@@ -454,6 +454,13 @@ export default class ServerToClientAPI {
         });
         break;
       }
+      case 'setDebugLogging': {
+        logger.info('set debug', data.name, data.enabled);
+        if (data.name === 'debug' || data.name === 'verbose') {
+          ctx[data.name] = !!data.enabled;
+        }
+        break;
+      }
       case 'requestComparison': {
         const {comparison} = data;
         const diff: Promise<Result<string>> = repo

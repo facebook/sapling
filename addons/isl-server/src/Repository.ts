@@ -721,9 +721,16 @@ export class Repository {
     ]);
 
     const ipc = (ctx.knownConfigs?.get('isl.sl-progress-enabled') ?? 'false') === 'true';
+    const fullArgs = [...cwdRelativeArgs];
+    if (ctx.debug) {
+      fullArgs.unshift('--debug');
+    }
+    if (ctx.verbose) {
+      fullArgs.unshift('--verbose');
+    }
     const {command, args, options} = getExecParams(
       this.info.command,
-      cwdRelativeArgs,
+      fullArgs,
       cwd,
       stdin ? {input: stdin, ipc} : {ipc},
       {
@@ -732,7 +739,7 @@ export class Repository {
       },
     );
 
-    ctx.logger.log('run operation: ', command, cwdRelativeArgs.join(' '));
+    ctx.logger.log('run operation: ', command, fullArgs.join(' '));
 
     const commandBlocklist = new Set(['debugshell', 'dbsh', 'debugsh']);
     if (args.some(arg => commandBlocklist.has(arg))) {
@@ -751,7 +758,7 @@ export class Repository {
       onProgress('stderr', data.toString());
     });
     signal.addEventListener('abort', () => {
-      ctx.logger.log('kill operation: ', command, cwdRelativeArgs.join(' '));
+      ctx.logger.log('kill operation: ', command, fullArgs.join(' '));
     });
     handleAbortSignalOnProcess(execution, signal);
     try {

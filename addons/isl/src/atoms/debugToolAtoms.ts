@@ -6,12 +6,25 @@
  */
 
 import {atom} from 'jotai';
-import {localStorageBackedAtom} from '../jotaiUtils';
+import serverAPI from '../ClientToServerAPI';
+import {atomWithOnChange, localStorageBackedAtom} from '../jotaiUtils';
 
 export const enableReduxTools = localStorageBackedAtom<boolean>('isl.debug-redux-tools', false);
 
 export const enableReactTools = localStorageBackedAtom<boolean>('isl.debug-react-tools', false);
 
-export const enableSaplingDebugFlag = atom<boolean>(false);
+export const enableSaplingDebugFlag = atomWithOnChange<boolean>(
+  atom(false),
+  enabled => {
+    serverAPI.postMessage({type: 'setDebugLogging', name: 'debug', enabled});
+  },
+  /* skipInitialCall */ true,
+);
 
-export const enableSaplingVerboseFlag = atom<boolean>(false);
+export const enableSaplingVerboseFlag = atomWithOnChange<boolean>(
+  atom(false),
+  enabled => {
+    serverAPI.postMessage({type: 'setDebugLogging', name: 'verbose', enabled});
+  },
+  /* skipInitialCall */ true,
+);

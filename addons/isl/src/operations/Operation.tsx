@@ -16,9 +16,11 @@ import type {
 import type {CommandArg, RunnableOperation} from '../types';
 
 import {randomId} from 'shared/utils';
-import {enableSaplingDebugFlag, enableSaplingVerboseFlag} from '../atoms/debugToolAtoms';
-import {readAtom} from '../jotaiUtils';
 import {CommandRunner} from '../types';
+
+// NOTE: This file is sensitive to what is imported, as it is used by the vscode extension as well as the client.
+// It should not import the platform, even transitively, or vscode will use the wrong platform.
+// TODO: Can we adjust how the extension uses this to prevent import issues?
 
 /**
  * Operations represent commands that mutate the repository, such as rebasing, committing, etc.
@@ -75,26 +77,12 @@ export abstract class Operation {
 
   getRunnableOperation(): RunnableOperation {
     return {
-      args: [...this.getExtraArgs(), ...this.getArgs()],
+      args: this.getArgs(),
       id: this.id,
       stdin: this.getStdin(),
       runner: this.runner,
       trackEventName: this.trackEventName,
     };
-  }
-
-  /** Extra global args, like --debug, --verbose. */
-  getExtraArgs(): Array<CommandArg> {
-    const args: Array<CommandArg> = [];
-    if (this.runner === CommandRunner.Sapling) {
-      if (readAtom(enableSaplingVerboseFlag)) {
-        args.push('--verbose');
-      }
-      if (readAtom(enableSaplingDebugFlag)) {
-        args.push('--debug');
-      }
-    }
-    return args;
   }
 }
 

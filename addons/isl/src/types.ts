@@ -801,6 +801,7 @@ export type ClientToServerMessage =
   | {type: 'refresh'}
   | {type: 'getConfig'; name: ConfigName}
   | {type: 'setConfig'; name: SettableConfigName; value: string}
+  | {type: 'setDebugLogging'; name: 'debug' | 'verbose'; enabled: boolean}
   | {type: 'changeCwd'; cwd: string}
   | {type: 'track'; data: TrackDataWithEventName}
   | {type: 'fileBugReport'; data: FileABugFields; uiState?: Json; collectRage: boolean}

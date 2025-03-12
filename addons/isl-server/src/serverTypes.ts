@@ -21,6 +21,10 @@ export type RepositoryContext = {
   tracker: ServerSideTracker;
 
   knownConfigs?: ReadonlyMap<ConfigName, string> | undefined;
+  /** Whether we pass --debug to sl commands */
+  debug?: boolean;
+  /** Whether we pass --verbose to sl commands */
+  verbose?: boolean;
   /**
    * Configured merge tool, from `ui.merge`, as long as merge-tools.$tool.gui is also True.
    * null -> no merge tool configured or not valid
