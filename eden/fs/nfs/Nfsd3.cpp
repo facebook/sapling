@@ -2132,6 +2132,12 @@ Nfsd3::Nfsd3(
           folly::SerialExecutor::create(folly::getGlobalCPUExecutor())},
       traceDetailedArguments_{0},
       traceBus_{TraceBus<NfsTraceEvent>::create("NfsTrace", traceBusCapacity)} {
+  XLOGF(
+      INFO,
+      "Creating Nfsd3: mountPath={}, caseSensitive={}",
+      mountPath_,
+      caseSensitive);
+
   traceSubscriptionHandles_.push_back(traceBus_->subscribeFunction(
       "NFS request tracking",
       [this,
