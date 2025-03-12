@@ -1302,8 +1302,7 @@ impl Screen {
             || self.following_end
             || self
                 .search
-                .as_ref()
-                .map_or(false, |search| !search.finished())
+                .as_ref().is_some_and(|search| !search.finished())
     }
 
     /// Dispatch an animation timeout, updating for the next animation frame.
@@ -1314,7 +1313,7 @@ impl Screen {
         if self
             .search
             .as_ref()
-            .map_or(false, |search| !search.finished())
+            .is_some_and(|search| !search.finished())
         {
             self.refresh_overlay();
         }

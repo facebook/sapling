@@ -157,7 +157,7 @@ pub fn triage_error(
             if cmd_err.is::<FallbackToPython>()
                 && config
                     .get_or_default::<Vec<String>>("commands", "force-rust")
-                    .map_or(false, |config| config.contains(&command_name.to_string()))
+                    .is_ok_and(|config| config.contains(&command_name.to_string()))
             {
                 return anyhow::Error::new(FailedFallbackToPython);
             }

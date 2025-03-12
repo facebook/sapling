@@ -437,7 +437,7 @@ impl FileStore {
             // Default to non-LFS if no LFS threshold is set
             if self
                 .lfs_threshold_bytes
-                .map_or(false, |threshold| hg_blob_len > threshold)
+                .is_some_and(|threshold| hg_blob_len > threshold)
             {
                 metrics.lfs.item(1);
                 if let Err(e) = self.write_lfs(key, bytes) {

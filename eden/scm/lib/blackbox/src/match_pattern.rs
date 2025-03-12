@@ -193,7 +193,7 @@ fn match_pattern_captured<'a, 'b>(
         Object(m) => m.iter().all(|(k, pat)| {
             value
                 .get(k)
-                .map_or(false, |value| match_pattern_captured(value, pat, capture))
+                .is_some_and(|value| match_pattern_captured(value, pat, capture))
         }),
     }
 }

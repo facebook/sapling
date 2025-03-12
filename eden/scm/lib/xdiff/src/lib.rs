@@ -638,7 +638,7 @@ where
         Some(file) => file
             .contents
             .as_bytes()
-            .map_or(false, |bytes| bytes.contains(&0)),
+            .is_some_and(|bytes| bytes.contains(&0)),
         None => false,
     }
 }

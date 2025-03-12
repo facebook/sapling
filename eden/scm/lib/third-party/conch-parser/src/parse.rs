@@ -2489,8 +2489,7 @@ impl<I: Iterator<Item = Token>, B: Builder> Parser<I, B> {
             let found_exact = !cfg.exact_tokens.is_empty()
                 && slf
                     .iter
-                    .peek()
-                    .map_or(false, |peeked| cfg.exact_tokens.iter().any(|tok| tok == peeked));
+                    .peek().is_some_and(|peeked| cfg.exact_tokens.iter().any(|tok| tok == peeked));
 
             found_exact
                 || slf.peek_reserved_word(cfg.reserved_words).is_some()

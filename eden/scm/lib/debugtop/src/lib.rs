@@ -118,7 +118,7 @@ impl TableGenerator {
             };
             let end_time_filter_fn =
                 |end_time| current_time() - end_time <= self.entry_removal_delay;
-            if running || entry.end_time.map_or(false, end_time_filter_fn) {
+            if running || entry.end_time.is_some_and(end_time_filter_fn) {
                 let entry_state = self.entry_states.get(&entry.id);
                 let row = self
                     .row_generator

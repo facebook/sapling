@@ -273,7 +273,7 @@ impl<M: Matcher + Clone + Send + Sync + 'static> PendingChanges<M> {
 
                     let is_tracked = ts_state
                         .as_ref()
-                        .map_or(false, |state| state.state.is_tracked());
+                        .is_some_and(|state| state.state.is_tracked());
 
                     if !is_tracked {
                         if self.ignore_matcher.matches_file(&path)? {

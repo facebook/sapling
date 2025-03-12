@@ -409,7 +409,7 @@ impl MergeState {
             || self
                 .merge_driver
                 .as_ref()
-                .map_or(false, |(_, state)| *state != MergeDriverState::Success)
+                .is_some_and(|(_, state)| *state != MergeDriverState::Success)
     }
 }
 

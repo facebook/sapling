@@ -48,7 +48,7 @@ pub fn should_color(config: &dyn Config, file: &dyn io::Write) -> bool {
         config
             .get_sources("ui", "color")
             .last()
-            .map_or(false, |s| s.source().as_ref() == "--color"),
+            .is_some_and(|s| s.source().as_ref() == "--color"),
     );
 
     match mode {

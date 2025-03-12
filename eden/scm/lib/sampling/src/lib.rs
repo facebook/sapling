@@ -181,5 +181,5 @@ fn sampling_output_file(config: &dyn configmodel::Config) -> Option<(PathBuf, bo
 
     candidates
         .into_iter()
-        .find(|(path, _okay_exists)| path.parent().map_or(false, |d| d.exists()))
+        .find(|(path, _okay_exists)| path.parent().is_some_and(|d| d.exists()))
 }

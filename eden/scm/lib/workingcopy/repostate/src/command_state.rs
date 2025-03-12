@@ -199,7 +199,7 @@ pub fn try_operation(dot_path: &Path, op: Operation) -> Result<()> {
 
     if UNRESOLVED_CONFLICTS.is_active(dot_path)? && !UNRESOLVED_CONFLICTS.allow(op) {
         if MergeState::read(&dot_path.join(UNRESOLVED_CONFLICTS.state_file))?
-            .map_or(false, |ms| ms.is_unresolved())
+            .is_some_and(|ms| ms.is_unresolved())
         {
             return Err(Conflict(UNRESOLVED_CONFLICTS.clone()).into());
         }

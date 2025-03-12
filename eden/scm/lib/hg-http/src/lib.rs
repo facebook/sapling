@@ -102,7 +102,7 @@ pub fn http_config(
     let using_auth_proxy = hc.unix_socket_path.is_some()
         && url_for_auth
             .domain()
-            .map_or(false, |d| hc.unix_socket_domains.contains(d));
+            .is_some_and(|d| hc.unix_socket_domains.contains(d));
 
     if !using_auth_proxy {
         // If we aren't using auth proxy, we need to configure client certs.

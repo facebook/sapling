@@ -151,7 +151,7 @@ mod tests {
             meta.write(&mut buf).expect("write");
             let read_meta = Metadata::read(&mut Cursor::new(&buf)).expect("read");
 
-            meta.size == read_meta.size && (meta.flags == read_meta.flags || meta.flags.map_or(false, |v| v == 0))
+            meta.size == read_meta.size && (meta.flags == read_meta.flags || (meta.flags == Some(0)))
         }
     }
 }

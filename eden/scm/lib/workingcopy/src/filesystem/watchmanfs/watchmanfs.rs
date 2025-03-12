@@ -260,7 +260,7 @@ impl WatchmanFileSystem {
             || result
                 .files
                 .as_ref()
-                .map_or(false, |f| f.len() > file_change_threshold);
+                .is_some_and(|f| f.len() > file_change_threshold);
 
         let manifests = WorkingCopy::current_manifests(ts, &self.inner.tree_resolver)?;
 
@@ -634,7 +634,7 @@ pub(crate) fn detect_changes(
         let is_tracked = wm_needs_check
             .ts_state
             .as_ref()
-            .map_or(false, |state| state.state.is_tracked());
+            .is_some_and(|state| state.state.is_tracked());
 
         if !is_tracked {
             if let Some(Some(fs_meta)) = &wm_needs_check.fs_meta {

@@ -414,7 +414,7 @@ impl Client {
                 tracing::debug!("{:?}", ResponseMeta::from(&res));
 
                 let res_meta = ResponseMeta::from(&res);
-                let is_dogfooding = res_meta.tw_task_handle.map_or(false, |handle| { handle.contains("dogfooding") });
+                let is_dogfooding = res_meta.tw_task_handle.is_some_and(|handle| { handle.contains("dogfooding") });
                 if is_dogfooding {
                     RECENT_DOGFOODING_REQUESTS.set();
                 }
