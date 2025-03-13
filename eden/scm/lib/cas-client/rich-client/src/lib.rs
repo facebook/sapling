@@ -10,6 +10,7 @@ use std::time::Duration;
 
 use anyhow::Result;
 use cas_client::CasClient;
+use cas_client::CasSuccessTracker;
 use cas_client::CasSuccessTrackerConfig;
 use configmodel::convert::ByteCount;
 use configmodel::convert::FromConfigValue;
@@ -41,6 +42,7 @@ pub enum CasCacheModeLocalFetch {
 
 pub struct RichCasClient {
     client: re_cas_common::OnceCell<REClient>,
+    cas_success_tracker: CasSuccessTracker,
     /// Verbose logging will disable quiet mode in REClient.
     verbose: bool,
     /// Contains the use case id information.
@@ -68,8 +70,6 @@ pub struct RichCasClient {
     private_cache_path: Option<String>,
     /// The size of the private cache (local cache).
     private_cache_size: ByteCount,
-    /// The configuration for the success tracker.
-    cas_success_tracker_confg: CasSuccessTrackerConfig,
 }
 
 pub fn init() {
@@ -149,11 +149,11 @@ impl RichCasClient {
             use_streaming_dowloads: config.get_or("cas", "use-streaming-downloads", || true)?,
             private_cache_path,
             private_cache_size,
-            cas_success_tracker_confg: CasSuccessTrackerConfig {
+            cas_success_tracker: CasSuccessTracker::new(CasSuccessTrackerConfig {
                 max_failures: config.get_or("cas", "max-failures", || 10)?,
                 downtime_on_failure: config
                     .get_or("cas", "downtime-on-failure", || Duration::from_secs(3))?,
-            },
+            }),
         }))
     }
 
