@@ -30,7 +30,11 @@ macro_rules! impl_handle_selection_error {
                         if err.is_selection_error()
                             && err.error_reason() == ErrorReason::SELECTION_NONEXISTENT_DOMAIN
                         {
-                            return anyhow!("repo does not exist: {}", repo.name);
+                            if let Some(possible_repo_name) = repo.name.strip_suffix(".git") {
+                                return anyhow!("repo does not exist: {}. Try removing the .git suffix (i.e. -R {})", repo.name, possible_repo_name);
+                            } else {
+                                return anyhow!("repo does not exist: {}", repo.name);
+                            };
                         }
                     }
                 }
