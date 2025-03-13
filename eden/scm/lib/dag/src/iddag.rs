@@ -76,7 +76,7 @@ pub struct IdDag<Store> {
 }
 
 /// See benches/segment_sizes.rs (D16660078) for this choice.
-const DEFAULT_SEG_SIZE: AtomicUsize = AtomicUsize::new(16);
+static DEFAULT_SEG_SIZE: AtomicUsize = AtomicUsize::new(16);
 
 /// Maximum meaningful level. 4 is chosen because it is good enough
 /// for an existing large repo (level 5 is not built because it

@@ -8,7 +8,7 @@
 use std::sync::atomic::AtomicUsize;
 use std::sync::atomic::Ordering;
 
-pub(crate) const BATCH_SIZE: AtomicUsize = AtomicUsize::new(1024);
+pub(crate) static BATCH_SIZE: AtomicUsize = AtomicUsize::new(1024);
 
 /**
  * Set the "batch size".
