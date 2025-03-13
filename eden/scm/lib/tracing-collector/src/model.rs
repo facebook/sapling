@@ -1896,8 +1896,10 @@ Start Dur.ms | Name               Source
 "#
         );
 
-        let mut opts = AsciiOptions::default();
-        opts.min_duration_micros_to_hide = 4000;
+        let opts = AsciiOptions {
+            min_duration_micros_to_hide: 4000,
+            ..Default::default()
+        };
         assert_eq!(
             data.ascii(&opts),
             r#"Process _ Thread _ Start Time _:
@@ -1944,8 +1946,10 @@ Start Dur.ms | Name               Source
         let mut data = TracingData::new_for_test();
         let span_id1 = data.add_espan(&meta("foo", "a.py", "10"), None);
         let span_id2 = data.add_espan(&meta("bar", "a.py", "20"), None);
-        let mut opts = AsciiOptions::default();
-        opts.min_duration_micros_to_hide = 3000;
+        let opts = AsciiOptions {
+            min_duration_micros_to_hide: 3000,
+            ..Default::default()
+        };
 
         data.add_action(span_id1, Action::EnterSpan);
         // Those spans should be merged.
@@ -1988,8 +1992,10 @@ Start Dur.ms | Name                          Source
         }
         data.add_action(span_id1, Action::ExitSpan);
 
-        let mut opts = AsciiOptions::default();
-        opts.min_duration_micros_to_hide = 3000;
+        let opts = AsciiOptions {
+            min_duration_micros_to_hide: 3000,
+            ..Default::default()
+        };
         assert_eq!(
             data.ascii(&opts),
             r#"Process _ Thread _ Start Time _:

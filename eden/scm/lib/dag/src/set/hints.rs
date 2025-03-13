@@ -311,11 +311,15 @@ fn test_incompatilbe_union() {
     let dag1 = DummyDag::new();
     let dag2 = DummyDag::new();
 
-    let mut hints1 = Hints::default();
-    hints1.dag = DagSnapshot(Some(dag1.dag_snapshot().unwrap()));
+    let hints1 = Hints {
+        dag: DagSnapshot(Some(dag1.dag_snapshot().unwrap())),
+        ..Default::default()
+    };
 
-    let mut hints2 = Hints::default();
-    hints2.dag = DagSnapshot(Some(dag2.dag_snapshot().unwrap()));
+    let hints2 = Hints {
+        dag: DagSnapshot(Some(dag2.dag_snapshot().unwrap())),
+        ..Default::default()
+    };
 
     assert_eq!(
         Hints::union(&[&hints1, &hints1]).dag_version(),

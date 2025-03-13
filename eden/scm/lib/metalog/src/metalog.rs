@@ -272,8 +272,10 @@ impl MetaLog {
         }
         let tracked = METALOG_TRACKED.join("\n");
         self.set("tracked", tracked.as_bytes())?;
-        let mut commit_opts = CommitOptions::default();
-        commit_opts.message = "init tracked";
+        let commit_opts = CommitOptions {
+            message: "init tracked",
+            ..Default::default()
+        };
         self.commit(commit_opts)?;
         Ok(())
     }
@@ -1175,10 +1177,11 @@ mod tests {
     }
 
     fn commit_opt(message: &str, timestamp: u64) -> CommitOptions {
-        let mut opts = CommitOptions::default();
-        opts.message = message;
-        opts.timestamp = Some(timestamp);
-        opts
+        CommitOptions {
+            message,
+            timestamp: Some(timestamp),
+            ..Default::default()
+        }
     }
 
     // Repair
