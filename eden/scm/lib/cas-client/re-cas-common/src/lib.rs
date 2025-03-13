@@ -229,17 +229,7 @@ macro_rules! re_client {
                         .download_digests_into_cache(self.metadata.clone(), request)
                         .await;
 
-                    // Unfortunately, the download_digests_into_cache fails entirely with NOT_FOUND if a digest is not found.
-                    // For now, let's report that everything is missing instead of failing the entire prefetch.
-                    // The issue should be fixed on RE side, so that they can provide correct per digest statuses.
-                    if let Err(ref err) = response {
-                        if let Some(inner) = err.downcast_ref::<REClientError>() {
-                            if inner.code == TCode::NOT_FOUND {
-                                // download_digests_into_cache failed because the digest was not found, record a success.
-                                self.cas_success_tracker.record_success()?;
-                                return Ok(($crate::CasFetchedStats::default(), Vec::new(), digests.to_vec()));
-                            }
-                        }
+                    if let Err(_) = response {
                         // Unfortunately, the download_digests_into_cache failed entirely, record a failure.
                         self.cas_success_tracker.record_failure()?;
                     }
