@@ -19,7 +19,7 @@ serde = { version = "1.0.185", features = ["derive", "rc"] }
 serde_json = { version = "1.0.132", features = ["float_roundtrip", "unbounded_depth"] }
 
 [target.'cfg(target_os = "macos")'.dependencies]
-base64 = "0.21"
+base64 = { version = "0.21", features = ["alloc"] }
 open = "4"
 sapling-version = { version = "0.1.0", path = "../version" }
 tinyfiledialogs = "3.9.1"

@@ -14,7 +14,7 @@ name = "types"
 
 [dependencies]
 anyhow = "1.0.95"
-base64 = "0.21"
+base64 = { version = "0.21", features = ["alloc"] }
 bitflags = { version = "2.6", features = ["serde"] }
 blake3 = { version = "=1.5.2", features = ["rayon", "traits-preview"] }
 byteorder = "1.3"
