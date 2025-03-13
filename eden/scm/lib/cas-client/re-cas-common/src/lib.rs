@@ -152,15 +152,13 @@ macro_rules! re_client {
                         };
 
                         let response = self.client()?
-                        .download(self.metadata.clone(), request)
-                        .await.map_err(|err| {
-                            // Unfortunately, the download failed entirely, record a failure.
-                            let failure_error = self.cas_success_tracker.record_failure();
-                            if let Err(e) = failure_error {
-                                return e;
-                            }
-                            err
-                        })?;
+                            .download(self.metadata.clone(), request)
+                            .await
+                            .map_err(|err| {
+                                // Unfortunately, the download failed entirely, record a failure.
+                                let _failure_error = self.cas_success_tracker.record_failure();
+                                err
+                            })?;
 
                         let local_cache_stats = response.local_cache_stats;
 
@@ -227,14 +225,12 @@ macro_rules! re_client {
 
                     let response = self.client()?
                         .download_digests_into_cache(self.metadata.clone(), request)
-                        .await;
+                        .await.map_err(|err| {
+                            // Unfortunately, the "download_digests_into_cache" failed entirely, record a failure.
+                            let _failure_error = self.cas_success_tracker.record_failure();
+                            err
+                        })?;
 
-                    if let Err(_) = response {
-                        // Unfortunately, the download_digests_into_cache failed entirely, record a failure.
-                        self.cas_success_tracker.record_failure()?;
-                    }
-
-                    let response = response?;
                     let local_cache_stats = response.local_cache_stats;
 
                     let stats = parse_stats(response.storage_stats.per_backend_stats.into_iter(), local_cache_stats);
