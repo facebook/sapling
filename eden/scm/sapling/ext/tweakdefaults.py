@@ -685,6 +685,8 @@ def diffcmd(orig, ui, repo, *args, **opts):
         return orig(ui, repo, *args, **opts)
 
     ui.pushbuffer()
+    # Do not ever attempt to base85 encode large binary files.
+    opts["binary"] = False
     res = orig(ui, repo, *args, **opts)
     buffer = ui.popbufferbytes()
     difflines = util.iterlines([buffer])
