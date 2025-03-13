@@ -29,7 +29,7 @@ define_stats! {
     missing_bookmark_moves:  dynamic_timeseries("{}.missing_bookmark_moves", (repo: String); Sum),
 }
 
-const SINGLE_DB_QUERY_ENTRIES_LIMIT: u64 = 10;
+const SINGLE_DB_QUERY_ENTRIES_LIMIT: u64 = 100;
 
 pub(crate) fn read_bookmark_update_log(
     ctx: &CoreContext,
