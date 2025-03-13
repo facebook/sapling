@@ -71,7 +71,7 @@ impl Counter {
         self.gauge
     }
 
-    fn counter(&'static self) -> &(AtomicUsize, ods::Counter) {
+    fn counter(&'static self) -> &'static (AtomicUsize, ods::Counter) {
         self.counter.get_or_init(|| {
             Registry::global().register_counter(self);
             (AtomicUsize::new(0), ods::new_counter(self.name))

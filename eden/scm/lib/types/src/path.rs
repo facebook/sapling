@@ -677,7 +677,7 @@ impl PathComponent {
     /// `const_fn` version of `from_str`.
     ///
     /// Path validation happens at compile time.
-    pub const fn from_static_str(s: &'static str) -> &PathComponent {
+    pub const fn from_static_str(s: &'static str) -> &'static PathComponent {
         if validate_component(s.as_bytes()).is_err() {
             panic!("invalid PathComponent::from_static_str");
         }
