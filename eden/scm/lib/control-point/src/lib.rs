@@ -132,7 +132,7 @@ fn read_instruction(name: &str) -> Result<Option<(String, Map<String, Value>)>> 
 fn write_state() -> Result<()> {
     let path = Path::new(&env::var(FILE_NAME_ENV).unwrap()).with_extension("response");
     atomic_write(&path, |f| {
-        f.write(STATE.lock().to_string().as_bytes())?;
+        f.write_all(STATE.lock().to_string().as_bytes())?;
         Ok(())
     })?;
     Ok(())
@@ -165,7 +165,7 @@ pub fn wait(file: &Path, name: &str, timeout: &Duration) -> Result<()> {
 
 pub fn set_actions(path: &Path, map: &Value) -> Result<()> {
     atomic_write(path, |f| {
-        f.write(map.to_string().as_bytes())?;
+        f.write_all(map.to_string().as_bytes())?;
         Ok(())
     })?;
     Ok(())
