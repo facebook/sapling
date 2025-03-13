@@ -32,6 +32,8 @@ use futures::stream::TryStreamExt;
 use scs_client_raw::thrift;
 use scs_client_raw::ScsClient;
 
+use crate::errors::SelectionErrorExt;
+
 pub(crate) const ARG_COMMIT_ID: &str = "commit-id";
 pub(crate) const ARG_BOOKMARK: &str = "bookmark";
 pub(crate) const ARG_HG_COMMIT_ID: &str = "hg-commit-id";
@@ -598,7 +600,10 @@ async fn try_resolve_bookmark(
             .collect(),
         ..Default::default()
     };
-    let response = conn.repo_resolve_bookmark(repo, &params).await?;
+    let response = conn
+        .repo_resolve_bookmark(repo, &params)
+        .await
+        .map_err(|e| e.handle_selection_error(repo))?;
     Ok(response
         .ids
         .and_then(|ids| ids.get(&thrift::CommitIdentityScheme::BONSAI).cloned()))
@@ -627,7 +632,8 @@ async fn try_resolve_hg_commit_id(
                 ..Default::default()
             },
         )
-        .await?;
+        .await
+        .map_err(|e| e.handle_selection_error(repo))?;
 
     if let thrift::RepoResolveCommitPrefixResponseType::AMBIGUOUS = resp.resolved_type {
         eprintln!(
@@ -664,7 +670,8 @@ async fn try_resolve_bonsai_id(
                 ..Default::default()
             },
         )
-        .await?;
+        .await
+        .map_err(|e| e.handle_selection_error(repo))?;
 
     if let thrift::RepoResolveCommitPrefixResponseType::AMBIGUOUS = resp.resolved_type {
         eprintln!(
@@ -701,7 +708,8 @@ async fn try_resolve_git_sha1(
                 ..Default::default()
             },
         )
-        .await?;
+        .await
+        .map_err(|e| e.handle_selection_error(repo))?;
 
     if let thrift::RepoResolveCommitPrefixResponseType::AMBIGUOUS = resp.resolved_type {
         eprintln!(
@@ -733,7 +741,10 @@ async fn try_resolve_globalrev(
                 id: thrift::CommitId::globalrev(globalrev),
                 ..Default::default()
             };
-            let response = conn.commit_lookup(&commit, &params).await?;
+            let response = conn
+                .commit_lookup(&commit, &params)
+                .await
+                .map_err(|e| e.handle_selection_error(repo))?;
             Ok(response
                 .ids
                 .and_then(|ids| ids.get(&thrift::CommitIdentityScheme::BONSAI).cloned()))
@@ -761,7 +772,10 @@ async fn try_resolve_svnrev(
                 id: thrift::CommitId::svnrev(globalrev),
                 ..Default::default()
             };
-            let response = conn.commit_lookup(&commit, &params).await?;
+            let response = conn
+                .commit_lookup(&commit, &params)
+                .await
+                .map_err(|e| e.handle_selection_error(repo))?;
             Ok(response
                 .ids
                 .and_then(|ids| ids.get(&thrift::CommitIdentityScheme::BONSAI).cloned()))

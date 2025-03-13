@@ -11,7 +11,10 @@ use anyhow::anyhow;
 use anyhow::Error;
 use scs_client_raw::thrift;
 use source_control_clients::errors::CommitListDescendantBookmarksError;
+use source_control_clients::errors::CommitLookupError;
 use source_control_clients::errors::RepoListBookmarksError;
+use source_control_clients::errors::RepoResolveBookmarkError;
+use source_control_clients::errors::RepoResolveCommitPrefixError;
 use srclient::ErrorReason;
 
 pub(crate) trait SelectionErrorExt {
@@ -38,4 +41,7 @@ macro_rules! impl_handle_selection_error {
 }
 
 impl_handle_selection_error!(CommitListDescendantBookmarksError);
+impl_handle_selection_error!(CommitLookupError);
 impl_handle_selection_error!(RepoListBookmarksError);
+impl_handle_selection_error!(RepoResolveBookmarkError);
+impl_handle_selection_error!(RepoResolveCommitPrefixError);
