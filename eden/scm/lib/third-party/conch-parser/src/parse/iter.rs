@@ -165,18 +165,15 @@ impl<I: Iterator<Item = Token>> Iterator for TokenIter<I> {
 
     fn next(&mut self) -> Option<Token> {
         let mut ret = None;
-        loop {
-            // Make sure we update our current position before continuing.
-            match self.next_token_or_pos() {
-                Some(TokenOrPos::Tok(next)) => {
-                    self.pos.advance(&next);
-                    ret = Some(next);
-                    break;
-                }
-
-                Some(TokenOrPos::Pos(_)) => panic!("unexpected state. This is a bug!"),
-                None => break,
+        // Make sure we update our current position before continuing.
+        match self.next_token_or_pos() {
+            Some(TokenOrPos::Tok(next)) => {
+                self.pos.advance(&next);
+                ret = Some(next);
             }
+
+            Some(TokenOrPos::Pos(_)) => panic!("unexpected state. This is a bug!"),
+            None => {},
         }
 
         // Make sure we update our position according to any trailing `Pos` points.
