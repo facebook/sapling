@@ -96,7 +96,10 @@ macro_rules! re_client {
             {
                 stream::iter(split_up_to_max_bytes(digests, self.fetch_limit.value()))
                     .map(move |digests| async move {
-
+                        if !self.cas_success_tracker.allow_request()? {
+                            $crate::tracing::debug!(target: "cas", concat!(stringify!($struct), " skip fetching {} {}(s)"), digests.len(), log_name);
+                            return Err($crate::anyhow!("skip cas prefetching due to cas success tracker error rate limiting vioaltion"));
+                        }
                         if self.use_streaming_dowloads && digests.len() == 1 && digests.first().unwrap().size >= self.fetch_limit.value() {
                             // Single large file, fetch it via the streaming API to avoid memory issues on CAS side.
                             let digest = digests.first().unwrap();
@@ -116,17 +119,25 @@ macro_rules! re_client {
                             if let Err(ref err) = response {
                                 if let Some(inner) = err.downcast_ref::<REClientError>() {
                                     if inner.code == TCode::NOT_FOUND {
+                                        // Streaming download failed because the digest was not found, record a success.
+                                        self.cas_success_tracker.record_success()?;
                                         return Ok((stats, vec![(digest.to_owned(), Ok(None))]));
                                     }
+                                    // Unfortunately, the streaming download failed, record a failure.
+                                    self.cas_success_tracker.record_failure()?;
                                 }
                             }
 
                             let mut bytes: Vec<u8> = Vec::with_capacity(digest.size as usize);
                             let mut response_stream = response?;
                             while let Some(chunk) = response_stream.next().await {
+                                if let Err(ref _err) = chunk {
+                                    self.cas_success_tracker.record_failure()?;
+                                }
                                 bytes.extend(chunk?.data);
                             }
 
+                            self.cas_success_tracker.record_success()?;
                             return Ok((stats, vec![(digest.to_owned(), Ok(Some(bytes)))]));
                         }
 
@@ -141,8 +152,15 @@ macro_rules! re_client {
                         };
 
                         let response = self.client()?
-                            .download(self.metadata.clone(), request)
-                            .await?;
+                        .download(self.metadata.clone(), request)
+                        .await.map_err(|err| {
+                            // Unfortunately, the download failed entirely, record a failure.
+                            let failure_error = self.cas_success_tracker.record_failure();
+                            if let Err(e) = failure_error {
+                                return e;
+                            }
+                            err
+                        })?;
 
                         let local_cache_stats = response.local_cache_stats;
 
@@ -169,6 +187,15 @@ macro_rules! re_client {
                             })
                             .collect::<$crate::Result<Vec<_>>>()?;
 
+                        // If all digests are failed, report a failure.
+                        // Otherwise, report a success (could be a partial success)
+                        let all_errors = data.iter().all(|(_, result)| result.is_err());
+                        if all_errors {
+                            self.cas_success_tracker.record_failure()?;
+                        } else {
+                            self.cas_success_tracker.record_success()?;
+                        }
+
                         Ok((stats, data))
                     })
                     .buffer_unordered(self.fetch_concurrency)
@@ -185,6 +212,11 @@ macro_rules! re_client {
         {
             stream::iter(split_up_to_max_bytes(digests, self.fetch_limit.value()))
                 .map(move |digests| async move {
+                    if !self.cas_success_tracker.allow_request()? {
+                        $crate::tracing::debug!(target: "cas", concat!(stringify!($struct), " skip prefetching {} {}(s)"), digests.len(), log_name);
+                        return Err($crate::anyhow!("skip cas prefetching due to cas success tracker error rate limiting vioaltion"));
+                    }
+
                     $crate::tracing::debug!(target: "cas", concat!(stringify!($struct), " prefetching {} {}(s)"), digests.len(), log_name);
 
                     let request = DownloadDigestsIntoCacheRequest {
@@ -203,9 +235,13 @@ macro_rules! re_client {
                     if let Err(ref err) = response {
                         if let Some(inner) = err.downcast_ref::<REClientError>() {
                             if inner.code == TCode::NOT_FOUND {
+                                // download_digests_into_cache failed because the digest was not found, record a success.
+                                self.cas_success_tracker.record_success()?;
                                 return Ok(($crate::CasFetchedStats::default(), Vec::new(), digests.to_vec()));
                             }
                         }
+                        // Unfortunately, the download_digests_into_cache failed entirely, record a failure.
+                        self.cas_success_tracker.record_failure()?;
                     }
 
                     let response = response?;
@@ -213,7 +249,7 @@ macro_rules! re_client {
 
                     let stats = parse_stats(response.storage_stats.per_backend_stats.into_iter(), local_cache_stats);
 
-                    let (digests_prefetched, digests_not_found) = response.digests_with_status
+                    let data = response.digests_with_status
                         .into_iter()
                         .map(|blob| {
                             let digest = from_re_digest(&blob.digest)?;
@@ -231,8 +267,17 @@ macro_rules! re_client {
                                     )),
                             }
                         })
-                        .collect::<Result<Vec<_>>>()?
-                        .into_iter()
+                        .collect::<Result<Vec<_>>>();
+
+                    // If all digests are failed, report a failure.
+                    // Otherwise, report a success (could be a partial success)
+                    if let Err(_) = data {
+                        self.cas_success_tracker.record_failure()?;
+                    } else {
+                        self.cas_success_tracker.record_success()?;
+                    }
+
+                    let (digests_prefetched, digests_not_found) = data?.into_iter()
                         .partition_map(|outcome| match outcome {
                             $crate::CasPrefetchOutcome::Prefetched(digest) => $crate::Either::Left(digest),
                             $crate::CasPrefetchOutcome::Missing(digest) => $crate::Either::Right(digest),
