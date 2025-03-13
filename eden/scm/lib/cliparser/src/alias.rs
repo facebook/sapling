@@ -5,6 +5,7 @@
  * LICENSE file in the root directory of this source tree.
  */
 
+use std::cmp::Ordering;
 use std::collections::BTreeMap;
 use std::collections::HashMap;
 use std::collections::HashSet;
@@ -277,43 +278,43 @@ pub fn expand_prefix(
                 non_debug_command_matches
             };
 
-            if command_matches.len() > 1 {
-                // Prepare the error message. It's a bit complex due to debug commands and aliases.
-                let ids: HashSet<isize> = command_matches
-                    .iter()
-                    .map(|name| command_map[name])
-                    .collect();
-                let mut id_to_command_map: HashMap<isize, Vec<String>> = HashMap::new();
-                for (name, id) in command_map {
-                    if ids.contains(id) && name.starts_with(&arg) {
-                        id_to_command_map
-                            .entry(*id)
-                            .or_insert(Vec::new())
-                            .push(name.to_string());
+            match command_matches.len().cmp(&1) {
+                Ordering::Greater => {
+                    // Prepare the error message. It's a bit complex due to debug commands and aliases.
+                    let ids: HashSet<isize> = command_matches
+                        .iter()
+                        .map(|name| command_map[name])
+                        .collect();
+                    let mut id_to_command_map: HashMap<isize, Vec<String>> = HashMap::new();
+                    for (name, id) in command_map {
+                        if ids.contains(id) && name.starts_with(&arg) {
+                            id_to_command_map
+                                .entry(*id)
+                                .or_insert(Vec::new())
+                                .push(name.to_string());
+                        }
                     }
+
+                    // sort command aliases by length for consistency
+                    for vec in id_to_command_map.values_mut() {
+                        vec.sort_by_key(|s| s.len());
+                    }
+
+                    // join command aliases with ' or ' for better UX
+                    // e.g. id or identify
+                    let mut possibilities: Vec<String> = id_to_command_map
+                        .into_values()
+                        .map(|vec| vec.join(" or "))
+                        .collect();
+                    possibilities.sort_unstable();
+
+                    return Err(ParseError::AmbiguousCommand {
+                        command_name: arg,
+                        possibilities,
+                    });
                 }
-
-                // sort command aliases by length for consistency
-                for vec in id_to_command_map.values_mut() {
-                    vec.sort_by_key(|s| s.len());
-                }
-
-                // join command aliases with ' or ' for better UX
-                // e.g. id or identify
-                let mut possibilities: Vec<String> = id_to_command_map
-                    .into_values()
-                    .map(|vec| vec.join(" or "))
-                    .collect();
-                possibilities.sort_unstable();
-
-                return Err(ParseError::AmbiguousCommand {
-                    command_name: arg,
-                    possibilities,
-                });
-            } else if command_matches.len() == 1 {
-                command_matches.into_iter().next().unwrap()
-            } else {
-                arg
+                Ordering::Equal => command_matches.into_iter().next().unwrap(),
+                Ordering::Less => arg,
             }
         }
     };

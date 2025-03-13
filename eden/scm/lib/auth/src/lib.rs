@@ -5,6 +5,7 @@
  * LICENSE file in the root directory of this source tree.
  */
 
+use std::cmp::Ordering;
 use std::collections::HashMap;
 use std::collections::HashSet;
 use std::path::PathBuf;
@@ -187,19 +188,21 @@ impl<'a> AuthSection<'a> {
             // auth entry is a more specific match.
             if let Some(best) = best {
                 // Take the entry with the longer prefix.
-                if group.prefix.len() < best.prefix.len() {
-                    continue;
-                } else if group.prefix.len() == best.prefix.len() {
-                    // If prefixes are the same, break the tie using priority.
-                    if group.priority < best.priority {
-                        continue;
-                    // If the priorities are the same, prefer entries with usernames.
-                    } else if group.priority == best.priority
-                        && best.username.is_some()
-                        && group.username.is_none()
-                    {
-                        continue;
+                match group.prefix.len().cmp(&best.prefix.len()) {
+                    Ordering::Less => continue,
+                    Ordering::Equal => {
+                        // If prefixes are the same, break the tie using priority.
+                        if group.priority < best.priority {
+                            continue;
+                        // If the priorities are the same, prefer entries with usernames.
+                        } else if group.priority == best.priority
+                            && best.username.is_some()
+                            && group.username.is_none()
+                        {
+                            continue;
+                        }
                     }
+                    Ordering::Greater => {}
                 }
             }
 
