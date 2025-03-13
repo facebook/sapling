@@ -61,6 +61,12 @@ impl EdenFsClient {
         self.with_thrift(|thrift| thrift.globFiles(&glob_params))
             .await
             .map(|glob| glob.into())
-            .map_err(|_| EdenFsError::Other(anyhow!("failed to get glob files result")))
+            .map_err(|err| {
+                EdenFsError::Other(anyhow!(
+                    "Failed invoking globFiles using params='{:?}' with error={:?}'",
+                    glob_params,
+                    err
+                ))
+            })
     }
 }
