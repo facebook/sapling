@@ -27,7 +27,7 @@ impl From<thrift_types::edenfs::GetCurrentSnapshotInfoResponse> for CurrentSnaps
     }
 }
 
-impl<'a> EdenFsClient<'a> {
+impl EdenFsClient {
     pub async fn get_current_snapshot_info(
         &self,
         mount_point: PathBuf,

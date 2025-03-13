@@ -50,7 +50,7 @@ impl From<thrift_types::edenfs_config::EdenConfigData> for ConfigData {
     }
 }
 
-impl<'a> EdenFsClient<'a> {
+impl EdenFsClient {
     pub async fn get_config_default(&self) -> Result<ConfigData> {
         let params: thrift_types::edenfs::GetConfigParams = Default::default();
         self.with_thrift(|thrift| thrift.getConfig(&params))

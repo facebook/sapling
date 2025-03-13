@@ -69,7 +69,7 @@ impl From<thrift_types::edenfs::GetScmStatusResult> for ScmStatus {
     }
 }
 
-impl<'a> EdenFsClient<'a> {
+impl EdenFsClient {
     pub async fn get_scm_status_v2(
         &self,
         mount_point: PathBuf,

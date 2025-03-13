@@ -24,21 +24,20 @@ use thrift_thriftclients::make_EdenServiceExt_thriftclient;
 use thrift_types::edenfs_clients::EdenServiceExt;
 use thriftclient::ThriftChannel;
 use thriftclient::ThriftChannelBuilder;
-
-use crate::instance::EdenFsInstance;
+use thriftclient::TransportType;
 
 #[cfg(fbcode_build)]
 pub type EdenFsThriftClient = Arc<dyn EdenServiceExt<ThriftChannel> + Send + Sync + 'static>;
 #[cfg(fbcode_build)]
 pub type StreamingEdenFsThriftClient = Arc<dyn StreamingEdenService + Send + Sync + 'static>;
 
-pub struct EdenFsClient<'a> {
-    instance: &'a EdenFsInstance,
+pub struct EdenFsClient {
+    socket_file: PathBuf,
 }
 
-impl<'a> EdenFsClient<'a> {
-    pub(crate) fn new(instance: &'a EdenFsInstance) -> Self {
-        Self { instance }
+impl EdenFsClient {
+    pub(crate) fn new(socket_file: PathBuf) -> Self {
+        Self { socket_file }
     }
 
     pub async fn with_thrift<F, Fut, T, E>(
@@ -86,25 +85,23 @@ impl<'a> EdenFsClient<'a> {
     }
 
     async fn connect(&self, timeout: Option<Duration>) -> Result<EdenFsThriftClient> {
-        let socket_path = self.instance.socketfile();
-
-        let connect = EdenFsClient::_connect(&socket_path);
+        let client_future = self.connect_impl();
         if let Some(timeout) = timeout {
-            tokio::time::timeout(timeout, connect)
+            tokio::time::timeout(timeout, client_future)
                 .await
                 .with_context(|| "Unable to connect to EdenFS daemon")
-                .map_err(|_| EdenFsError::ThriftConnectionTimeout(socket_path))?
+                .map_err(|_| EdenFsError::ThriftConnectionTimeout(self.socket_file.clone()))?
         } else {
-            connect.await
+            client_future.await
         }
     }
 
-    async fn _connect(socket_path: &PathBuf) -> Result<EdenFsThriftClient> {
+    async fn connect_impl(&self) -> Result<EdenFsThriftClient> {
         const THRIFT_TIMEOUT_MS: u32 = 120_000;
         let client = make_EdenServiceExt_thriftclient!(
             expect_init(),
             protocol = CompactProtocol,
-            from_path = socket_path,
+            from_path = &self.socket_file,
             with_conn_timeout = THRIFT_TIMEOUT_MS,
             with_recv_timeout = THRIFT_TIMEOUT_MS,
             with_secure = false,
@@ -117,25 +114,21 @@ impl<'a> EdenFsClient<'a> {
         &self,
         timeout: Option<Duration>,
     ) -> Result<StreamingEdenFsThriftClient> {
-        let socket_path = self.instance.socketfile();
-
-        let client = EdenFsClient::_connect_streaming(&socket_path);
+        let client_future = self.connect_streaming_impl();
 
         if let Some(timeout) = timeout {
-            tokio::time::timeout(timeout, client)
+            tokio::time::timeout(timeout, client_future)
                 .await
-                .map_err(|_| EdenFsError::ThriftConnectionTimeout(socket_path))?
+                .map_err(|_| EdenFsError::ThriftConnectionTimeout(self.socket_file.clone()))?
         } else {
-            client.await
+            client_future.await
         }
     }
 
     #[cfg(fbcode_build)]
-    pub async fn _connect_streaming(socket_path: &PathBuf) -> Result<StreamingEdenFsThriftClient> {
-        use thriftclient::TransportType;
-
+    pub async fn connect_streaming_impl(&self) -> Result<StreamingEdenFsThriftClient> {
         let client = build_StreamingEdenService_client(
-            ThriftChannelBuilder::from_path(expect_init(), socket_path)?
+            ThriftChannelBuilder::from_path(expect_init(), &self.socket_file)?
                 .with_transport_type(TransportType::Rocket)
                 .with_secure(false),
         )?;

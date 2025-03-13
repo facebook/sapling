@@ -483,7 +483,7 @@ impl From<thrift_types::edenfs::ChangesSinceV2Result> for ChangesSinceV2Result {
     }
 }
 
-impl<'a> EdenFsClient<'a> {
+impl EdenFsClient {
     #[cfg(fbcode_build)]
     pub async fn get_changes_since_with_includes(
         &self,

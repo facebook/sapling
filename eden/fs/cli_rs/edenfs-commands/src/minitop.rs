@@ -259,9 +259,7 @@ struct ImportStat {
     max_duration_us: i64,
 }
 
-async fn get_pending_import_counts<'a>(
-    client: &EdenFsClient<'a>,
-) -> Result<BTreeMap<String, ImportStat>> {
+async fn get_pending_import_counts(client: &EdenFsClient) -> Result<BTreeMap<String, ImportStat>> {
     let mut imports = BTreeMap::<String, ImportStat>::new();
 
     let counters = client.get_regex_counters(PENDING_COUNTER_REGEX).await?;
@@ -286,9 +284,7 @@ async fn get_pending_import_counts<'a>(
     Ok(imports)
 }
 
-async fn get_live_import_counts<'a>(
-    client: &EdenFsClient<'a>,
-) -> Result<BTreeMap<String, ImportStat>> {
+async fn get_live_import_counts(client: &EdenFsClient) -> Result<BTreeMap<String, ImportStat>> {
     let mut imports = BTreeMap::<String, ImportStat>::new();
     let counters = client.get_regex_counters(LIVE_COUNTER_REGEX).await?;
     for import_type in IMPORT_OBJECT_TYPES {

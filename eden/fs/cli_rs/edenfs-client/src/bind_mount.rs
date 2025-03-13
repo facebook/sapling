@@ -16,7 +16,7 @@ use edenfs_utils::bytes_from_path;
 
 use crate::client::EdenFsClient;
 
-impl<'a> EdenFsClient<'a> {
+impl EdenFsClient {
     pub async fn add_bind_mount(
         &self,
         mount_path: &Path,

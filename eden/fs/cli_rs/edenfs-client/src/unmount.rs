@@ -20,7 +20,7 @@ use thrift_types::fbthrift::ApplicationExceptionErrorCode;
 
 use crate::client::EdenFsClient;
 
-impl<'a> EdenFsClient<'a> {
+impl EdenFsClient {
     pub async fn unmount(&self, path: &Path, no_force: bool) -> Result<()> {
         let encoded_path = bytes_from_path(path.to_path_buf())
             .with_context(|| format!("Failed to encode path {}", path.display()))?;

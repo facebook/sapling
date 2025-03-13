@@ -52,7 +52,7 @@ impl From<thrift_types::edenfs::StopFileAccessMonitorResult> for StopFileAccessM
     }
 }
 
-impl<'a> EdenFsClient<'a> {
+impl EdenFsClient {
     pub async fn start_file_access_monitor(
         &self,
         path_prefix: &Vec<PathBuf>,

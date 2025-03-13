@@ -13,7 +13,7 @@ use edenfs_error::Result;
 
 use crate::client::EdenFsClient;
 
-impl<'a> EdenFsClient<'a> {
+impl EdenFsClient {
     pub async fn get_regex_counters(&self, arg_regex: &str) -> Result<BTreeMap<String, i64>> {
         self.with_thrift(|thrift| thrift.getRegexCounters(arg_regex))
             .await

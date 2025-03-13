@@ -102,7 +102,7 @@ impl EdenFsInstance {
     }
 
     pub fn get_client(&self) -> EdenFsClient {
-        EdenFsClient::new(self)
+        EdenFsClient::new(self.socketfile())
     }
 
     pub(crate) fn socketfile(&self) -> PathBuf {

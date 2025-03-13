@@ -30,7 +30,7 @@ impl DaemonHealthy for DaemonInfo {
     }
 }
 
-impl<'a> EdenFsClient<'a> {
+impl EdenFsClient {
     pub async fn get_health(&self) -> Result<DaemonInfo> {
         event!(Level::DEBUG, "connected to EdenFS daemon");
         self.with_thrift(|thrift| thrift.getDaemonInfo())

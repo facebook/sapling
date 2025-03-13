@@ -11,7 +11,7 @@ use edenfs_error::Result;
 
 use crate::client::EdenFsClient;
 
-impl<'a> EdenFsClient<'a> {
+impl EdenFsClient {
     pub async fn debug_clear_local_store_caches(&self) -> Result<()> {
         self.with_thrift(|thrift| thrift.debugClearLocalStoreCaches())
             .await

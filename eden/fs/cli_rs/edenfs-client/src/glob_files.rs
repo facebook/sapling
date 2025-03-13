@@ -33,7 +33,7 @@ impl From<thrift_types::edenfs::Glob> for Glob {
     }
 }
 
-impl<'a> EdenFsClient<'a> {
+impl EdenFsClient {
     pub async fn glob_files<P: AsRef<Path>, S: AsRef<Path>>(
         &self,
         mount_point: P,
