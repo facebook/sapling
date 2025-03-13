@@ -171,7 +171,8 @@ fn commit_list_descendant_bookmarks(
                 };
                 let response = connection
                     .commit_list_descendant_bookmarks(&commit, &params)
-                    .await?;
+                    .await
+                    .map_err(|e| e.handle_selection_error(&commit.repo))?;
                 let mut count = response.bookmarks.len() as i64;
                 if let Some(limit) = limit {
                     count = count.min(limit);
