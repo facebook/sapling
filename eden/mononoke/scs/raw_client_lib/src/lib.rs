@@ -41,6 +41,7 @@ pub struct ScsClientBuilder {
     repo: Option<String>,
     single_host: Option<SocketAddr>,
     processing_timeout: Option<Duration>,
+    cat: Option<String>,
 }
 
 impl ScsClientBuilder {
@@ -52,6 +53,7 @@ impl ScsClientBuilder {
             repo: None,
             single_host: None,
             processing_timeout: None,
+            cat: None,
         }
     }
 
@@ -79,6 +81,11 @@ impl ScsClientBuilder {
         self
     }
 
+    pub fn with_cat(mut self, cat: Option<String>) -> Self {
+        self.cat = cat;
+        self
+    }
+
     pub fn build(self) -> Result<ScsClient, Error> {
         build_from_tier_name(
             self.fb,
@@ -87,6 +94,7 @@ impl ScsClientBuilder {
             self.repo.clone(),
             self.single_host,
             self.processing_timeout,
+            self.cat,
         )
     }
 }
@@ -100,6 +108,7 @@ fn build_from_tier_name_via_sr(
     shardmanager_domain: Option<String>,
     single_host: Option<SocketAddr>,
     processing_timeout: Option<Duration>,
+    cat: Option<String>,
 ) -> Result<ScsClient, Error> {
     use source_control_srclients::make_SourceControlService_srclient;
     use srclient::ClientParams;
@@ -133,6 +142,7 @@ fn build_from_tier_name_via_sr(
         tiername = tier.as_ref(),
         with_persistent_headers = headers,
         with_client_params = client_params,
+        with_cat_optional = cat,
     )?;
 
     Ok(ScsClient { client, correlator })
@@ -147,6 +157,7 @@ fn build_from_tier_name_via_sr(
     _shardmanager_domain: Option<String>,
     _single_host: Option<SocketAddr>,
     _processing_timeout: Option<Duration>,
+    _cat: Option<String>,
 ) -> Result<ScsClient, Error> {
     Err(anyhow!(
         "Connection via ServiceRouter is not supported on this platform"
@@ -161,6 +172,7 @@ fn build_from_tier_name_via_x2p(
     shardmanager_domain: Option<String>,
     single_host: Option<SocketAddr>,
     _processing_timeout: Option<Duration>,
+    cat: Option<String>,
 ) -> Result<ScsClient, Error> {
     let client_info = ClientInfo::new_with_entry_point(ClientEntryPoint::ScsClient)?;
     let headers = hashmap! {
@@ -173,7 +185,9 @@ fn build_from_tier_name_via_x2p(
         .maybe_with(shardmanager_domain, |c, shardmanager_domain| {
             c.with_shard_manager_domain(encode_repo_name(&shardmanager_domain))
         })
-        .maybe_with(single_host, |c, single_host| c.with_host(single_host));
+        .maybe_with(single_host, |c, single_host| c.with_host(single_host))
+        .with_cat_optional(cat);
+
     let client = build_SourceControlService_client(channel)?;
 
     Ok(ScsClient {
@@ -190,6 +204,7 @@ fn build_from_tier_name(
     shardmanager_domain: Option<String>,
     single_host: Option<SocketAddr>,
     processing_timeout: Option<Duration>,
+    cat: Option<String>,
 ) -> Result<ScsClient, Error> {
     match x2pclient::get_env(fb) {
         x2pclient::Environment::Prod => {
@@ -201,6 +216,7 @@ fn build_from_tier_name(
                     shardmanager_domain,
                     single_host,
                     processing_timeout,
+                    cat,
                 )
             } else {
                 build_from_tier_name_via_x2p(
@@ -210,6 +226,7 @@ fn build_from_tier_name(
                     shardmanager_domain,
                     single_host,
                     processing_timeout,
+                    cat,
                 )
             }
         }
@@ -220,6 +237,7 @@ fn build_from_tier_name(
             shardmanager_domain,
             single_host,
             processing_timeout,
+            cat,
         ),
         other_env => Err(anyhow!("{} not supported", other_env)),
     }

@@ -27,6 +27,9 @@ pub(super) struct ConnectionArgs {
     host: Option<String>,
     #[clap(long, global = true)]
     processing_timeout: Option<u64>,
+    /// Serialized Crypto Auth Token (CAT) to use for authentication.
+    #[clap(long, global = true, env = "SCSC_CAT")]
+    cat: Option<String>,
 }
 
 impl ConnectionArgs {
@@ -41,6 +44,7 @@ impl ConnectionArgs {
                 .with_repo(repo.map(|r| r.to_string()))
                 .with_host_and_port(self.host.clone())?
                 .with_processing_timeout(self.processing_timeout.clone())
+                .with_cat(self.cat.clone())
                 .build()
         }
     }
