@@ -444,7 +444,7 @@ fn cmsg_vec_and_msghdr(
     let cmsg_space: usize = unsafe { libc::CMSG_SPACE(byte_size as _) } as _;
     let cmsg_vec_len: usize = {
         let cmsghdr_byte_size = mem::size_of::<libc::cmsghdr>();
-        (cmsg_space + cmsghdr_byte_size - 1) / cmsghdr_byte_size
+        cmsg_space.div_ceil(cmsghdr_byte_size)
     };
     assert!(cmsg_vec_len >= 1);
     let mut cmsg_buf: Vec<libc::cmsghdr> = vec![unsafe { mem::zeroed() }; cmsg_vec_len];

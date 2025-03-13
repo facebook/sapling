@@ -68,7 +68,7 @@ fn extract_string_literal(tokens: TokenStream) -> Option<String> {
                 // the content with surrounding " " or r#" "#. Use a naive approach to strip out
                 // the " ".
                 let quoted = lit.to_string();
-                let content = quoted.splitn(2, '"').nth(1)?.rsplitn(2, '"').nth(1)?;
+                let content = quoted.split_once('"')?.1.rsplit_once('"')?.0;
                 let content = if quoted.starts_with('r') {
                     content.to_string()
                 } else {

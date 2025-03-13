@@ -32,7 +32,7 @@ pub(crate) fn goto() -> Prompt {
                     // Percentage
                     match str::parse::<isize>(value_percent) {
                         Ok(mut value_percent) => {
-                            value_percent = value_percent.max(-100).min(100);
+                            value_percent = value_percent.clamp(-100, 100);
                             if value_percent < 0 {
                                 value_percent += 100;
                             }

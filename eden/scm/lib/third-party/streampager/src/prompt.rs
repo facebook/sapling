@@ -458,12 +458,9 @@ fn render_width(c: char) -> usize {
     if c < ' ' || c == '\x7F' {
         // Render as <XX>
         4
-    } else if let Some(w) = c.width() {
-        // Render as the character itself
-        w
     } else {
-        // Render as <U+XXXX>
-        8
+        c.width().unwrap_or(8)
+
     }
 }
 

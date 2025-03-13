@@ -95,15 +95,15 @@ impl TreeMatcher {
 
         for (idx, rule) in rules.enumerate() {
             let rule = rule.as_ref();
-            let (negative, rule) = if rule.starts_with('!') {
-                (true, &rule[1..])
+            let (negative, rule) = if let Some(rest) = rule.strip_prefix('!') {
+                (true, rest)
             } else {
                 (false, rule)
             };
 
             // Strip a leading "/". More friendly to gitignore users.
-            let rule = if rule.starts_with('/') {
-                &rule[1..]
+            let rule = if let Some(rest) = rule.strip_prefix('/') {
+                rest
             } else {
                 rule
             };
@@ -315,8 +315,7 @@ impl Matcher for TreeMatcher {
 
 fn build_globs(pat: &str) -> Result<Vec<Glob>, globset::Error> {
     // Fast path (maybe).
-    if pat.ends_with("/**") {
-        let prefix = &pat[..pat.len() - 3];
+    if let Some(prefix) = pat.strip_suffix("/**") {
         if !prefix.contains('?') && !prefix.contains('*') {
             // Rewrite "foo/**" (literal_separator=true) to
             // "foo" (literal_separator=false) and

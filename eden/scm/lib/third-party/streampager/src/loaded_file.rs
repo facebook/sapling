@@ -492,7 +492,7 @@ impl FileData {
                 let data = data.clone();
                 move || -> Result<()> {
                     let len = data.len();
-                    let blocks = (len + BUFFER_SIZE - 1) / BUFFER_SIZE;
+                    let blocks = len.div_ceil(BUFFER_SIZE);
                     for block in 0..blocks {
                         if meta.dropped.load(Ordering::SeqCst) {
                             return Ok(());
