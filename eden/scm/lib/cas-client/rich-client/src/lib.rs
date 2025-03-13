@@ -6,9 +6,11 @@
  */
 
 use std::sync::Arc;
+use std::time::Duration;
 
 use anyhow::Result;
 use cas_client::CasClient;
+use cas_client::CasSuccessTrackerConfig;
 use configmodel::convert::ByteCount;
 use configmodel::convert::FromConfigValue;
 use configmodel::Config;
@@ -66,6 +68,8 @@ pub struct RichCasClient {
     private_cache_path: Option<String>,
     /// The size of the private cache (local cache).
     private_cache_size: ByteCount,
+    /// The configuration for the success tracker.
+    cas_success_tracker_confg: CasSuccessTrackerConfig,
 }
 
 pub fn init() {
@@ -145,6 +149,11 @@ impl RichCasClient {
             use_streaming_dowloads: config.get_or("cas", "use-streaming-downloads", || true)?,
             private_cache_path,
             private_cache_size,
+            cas_success_tracker_confg: CasSuccessTrackerConfig {
+                max_failures: config.get_or("cas", "max-failures", || 10)?,
+                downtime_on_failure: config
+                    .get_or("cas", "downtime-on-failure", || Duration::from_secs(3))?,
+            },
         }))
     }
 

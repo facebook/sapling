@@ -6,10 +6,12 @@
  */
 
 use std::sync::Arc;
+use std::time::Duration;
 use std::time::Instant;
 
 use anyhow::Result;
 use cas_client::CasClient;
+use cas_client::CasSuccessTrackerConfig;
 use configmodel::convert::ByteCount;
 use configmodel::convert::FromConfigValue;
 use configmodel::Config;
@@ -32,6 +34,7 @@ pub struct ThinCasClient {
     fetch_limit: ByteCount,
     fetch_concurrency: usize,
     use_streaming_dowloads: bool,
+    cas_success_tracker_confg: CasSuccessTrackerConfig,
 }
 
 const DEFAULT_SCM_CAS_LOGS_DIR: &str = "scm_cas";
@@ -114,6 +117,11 @@ impl ThinCasClient {
                 .get_or::<ByteCount>("cas", "max-batch-bytes", || default_fetch_limit)?,
             fetch_concurrency: config.get_or("cas", "fetch-concurrency", || 4)?,
             use_streaming_dowloads: config.get_or("cas", "use-streaming-downloads", || true)?,
+            cas_success_tracker_confg: CasSuccessTrackerConfig {
+                max_failures: config.get_or("cas", "max-failures", || 10)?,
+                downtime_on_failure: config
+                    .get_or("cas", "downtime-on-failure", || Duration::from_secs(3))?,
+            },
         }))
     }
 

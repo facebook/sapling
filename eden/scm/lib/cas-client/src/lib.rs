@@ -13,6 +13,11 @@ pub use types::CasDigest;
 pub use types::CasDigestType;
 pub use types::CasFetchedStats;
 
+pub struct CasSuccessTrackerConfig {
+    pub max_failures: usize,
+    pub downtime_on_failure: std::time::Duration,
+}
+
 pub fn new(config: Arc<dyn Config>) -> anyhow::Result<Option<Arc<dyn CasClient>>> {
     match factory::call_constructor::<_, Arc<dyn CasClient>>(&config as &dyn Config) {
         Ok(client) => {
