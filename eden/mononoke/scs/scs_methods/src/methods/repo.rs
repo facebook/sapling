@@ -49,7 +49,6 @@ use mononoke_types::hash::Sha256;
 use mononoke_types::path::MPath;
 use mononoke_types::DateTime as MononokeDateTime;
 use mononoke_types::NonRootMPath;
-use mononoke_types::ThriftConvert;
 use repo_authorization::AuthorizationContext;
 use repo_identity::RepoIdentityRef;
 use scs_errors::ServiceErrorResultExt;
@@ -955,47 +954,7 @@ impl SourceControlServiceImpl {
             )
             .await?;
 
-        let mut commit_ids = btreemap! {};
-        for scheme in params.identity_schemes {
-            let commit_id = match scheme {
-                thrift::CommitIdentityScheme::BONSAI => {
-                    thrift::CommitId::bonsai(cs_ctx.id().into_bytes().into())
-                }
-                thrift::CommitIdentityScheme::HG => thrift::CommitId::hg(
-                    cs_ctx
-                        .hg_id()
-                        .await?
-                        .ok_or_else(|| {
-                            scs_errors::internal_error(format!(
-                                "No hg mapping found for changeset {}",
-                                cs_ctx.id()
-                            ))
-                        })?
-                        .as_bytes()
-                        .to_vec(),
-                ),
-                thrift::CommitIdentityScheme::GIT => thrift::CommitId::git(
-                    cs_ctx
-                        .git_sha1()
-                        .await?
-                        .ok_or_else(|| {
-                            scs_errors::internal_error(format!(
-                                "No git mapping found for changeset {}",
-                                cs_ctx.id()
-                            ))
-                        })?
-                        .into_inner()
-                        .to_vec(),
-                ),
-                _ => {
-                    return Err(scs_errors::invalid_request(format!(
-                        "{scheme} scheme is not supported"
-                    ))
-                    .into());
-                }
-            };
-            commit_ids.insert(scheme, commit_id);
-        }
+        let commit_ids = map_commit_identity(&cs_ctx, &params.identity_schemes).await?;
 
         Ok(thrift::RepoUpdateSubmoduleExpansionResponse {
             ids: commit_ids,
