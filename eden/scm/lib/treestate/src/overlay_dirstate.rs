@@ -5,6 +5,22 @@
  * LICENSE file in the root directory of this source tree.
  */
 
+//! Reader and writer functions to an _overlay_ dirstate.
+//!
+//! An _overlay_ contains entries for changes on top of an existing "status" source of truth such
+//! as edenfs or "git status". For example, if the "git status" already reports "a.txt" as
+//! "modified", then it's unnecessary for this overlay to duplicate the "M a.txt" state. The overlay
+//! can be used, for example, to overwrite "? b.txt" to "A b.txt".
+//!
+//! Right now this is just a simple serialization format that is rewritten in full every time. It
+//! has checksum and does not need "repack" like the full treestate, and can convert to an
+//! in-memory-only treestate in O(N) time just fine, assuming the overlay is always small so the
+//! O(N) is affordable and maybe even desirable for the lack of repack complexitiy. If it becomes
+//! a scalability issue we can revisit.
+//!
+//! Note carefully that a legacy Eden dirstate has a different binary format to a legacy dirstate
+//! in a non-Eden repo.
+
 use std::collections::BTreeMap;
 use std::collections::HashMap;
 use std::io::Read;
@@ -26,22 +42,6 @@ use util::file::atomic_write;
 
 use crate::filestate::FileStateV2;
 use crate::filestate::StateFlags;
-
-/// Reader and writer functions to an _overlay_ dirstate.
-///
-/// An _overlay_ contains entries for changes on top of an existing "status" source of truth such
-/// as edenfs or "git status". For example, if the "git status" already reports "a.txt" as
-/// "modified", then it's unnecessary for this overlay to duplicate the "M a.txt" state. The overlay
-/// can be used, for example, to overwrite "? b.txt" to "A b.txt".
-///
-/// Right now this is just a simple serialization format that is rewritten in full every time. It
-/// has checksum and does not need "repack" like the full treestate, and can convert to an
-/// in-memory-only treestate in O(N) time just fine, assuming the overlay is always small so the
-/// O(N) is affordable and maybe even desirable for the lack of repack complexitiy. If it becomes
-/// a scalability issue we can revisit.
-///
-/// Note carefully that a legacy Eden dirstate has a different binary format to a legacy dirstate
-/// in a non-Eden repo.
 
 const CURRENT_VERSION: u32 = 1;
 

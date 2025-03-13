@@ -1970,7 +1970,7 @@ impl IterState {
 }
 
 /// Main Index
-
+///
 /// Insertion-only mapping from `bytes` to a list of [u64]s.
 ///
 /// An [`Index`] is backed by an append-only file in the filesystem. Internally,
@@ -3369,7 +3369,6 @@ pub enum InsertValue {
 }
 
 /// Debug Formatter
-
 impl Debug for Offset {
     fn fmt(&self, f: &mut Formatter) -> Result<(), fmt::Error> {
         if self.is_null() {

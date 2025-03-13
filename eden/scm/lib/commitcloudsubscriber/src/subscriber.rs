@@ -72,7 +72,6 @@ pub struct Subscription {
 ///     same for unsubscribing (hg cloud leave)
 ///
 /// The serve function starts the service
-
 pub struct WorkspaceSubscriberService {
     /// Endpoint for real-time polling of Commit Cloud Notifications
     pub(crate) polling_update_url: String,
@@ -212,7 +211,6 @@ impl WorkspaceSubscriberService {
     }
 
     /// This helper function builds the URL for the notification polling endpoint
-
     fn build_polling_update_url(
         polling_update_url: &str,
         access_token: &util::Token,
@@ -271,7 +269,6 @@ impl WorkspaceSubscriberService {
     ///  "rc": 1,
     ///  "error": "some error message"
     /// }
-
     async fn parse_polling_update_response(
         response: Response,
         sid: &str,
@@ -327,7 +324,6 @@ impl WorkspaceSubscriberService {
     /// Once non empty cursor is returned, subsequent calls will need to provide it as an argument.
     /// If intermediate polls do not return any updates,
     /// they will not return a cursor, so we need to keep track of the latest non empty cursor.
-
     async fn poll_single_update(
         client: &Client,
         subscription: &Subscription,
@@ -366,7 +362,6 @@ impl WorkspaceSubscriberService {
     /// This helper function reads the list of current connected subscribers
     /// It starts polling updates for the connected repos/workspaces
     /// All tasks keep checking the interrupt flag and join gracefully if it is restart or stop
-
     fn run_polling_updates(&self) -> Result<Vec<tokio::task::JoinHandle<()>>> {
         util::read_subscriptions(&self.connected_subscribers_path)?
             .into_iter()
@@ -377,7 +372,6 @@ impl WorkspaceSubscriberService {
     }
 
     /// Helper function to run polling updates for a single repo/workspace
-
     fn run_polling_updates_for_repo_workspace(
         &self,
         subscription: Subscription,

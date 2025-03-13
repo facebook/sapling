@@ -49,7 +49,6 @@ pub struct Command(pub (CommandName, CommandData));
 /// Example to test: echo '["commitcloud::restart_subscriptions", {}]' | nc localhost 15432
 /// with_actions builder is used to configure callbacks
 /// The serve function starts the service
-
 pub struct TcpReceiverService {
     port: u16,
     actions: Arc<ActionsMap>,

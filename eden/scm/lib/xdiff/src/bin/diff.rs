@@ -25,7 +25,6 @@ const EXEC_BIT: u32 = 0o0000100;
 
 #[derive(Debug, StructOpt)]
 #[structopt(name = "diff", about = "A showcase binary for xdiff diff library.")]
-
 struct Opt {
     /// Input file
     #[structopt(parse(from_os_str))]

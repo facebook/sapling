@@ -5,25 +5,25 @@
  * LICENSE file in the root directory of this source tree.
  */
 
+//! Async job scheduling utilities for a blocking application
+//!
+//! We have a blocking application. We have async libraries. This crate provides common utilities
+//! for communicating between the blocking world and the async world. It is intended to be a guide
+//! so that not all developers have to get in depth understanding of Tokio in order to use async
+//! functions.
+//!
+//! The crate sets up a common Runtime that all async tasks run on. We use a threaded scheduler
+//! which enables parallelism. The async code is expected to be ran in parallel, not just
+//! concurrently. As a reminder, Python has concurrency with multiple threads but no parallelism
+//! because of the global interpreter lock.
+//! The Runtime will get forcefully shut down when the main thread exits. Any running background
+//! work will be lost at that time. This is not a hard requirement though, we can be tweak it to
+//! wait for tasks to finish but requires some ceremony around the Runtime. Since we have no need
+//! for that right now so that feature is skipped for now.
+//!
+//! TODO(T74221415): monitoring, signal handling
 use std::io::Error;
 
-///! Async job scheduling utilities for a blocking application
-///!
-///! We have a blocking application. We have async libraries. This crate provides common utilities
-///! for communicating between the blocking world and the async world. It is intended to be a guide
-///! so that not all developers have to get in depth understanding of Tokio in order to use async
-///! functions.
-///!
-///! The crate sets up a common Runtime that all async tasks run on. We use a threaded scheduler
-///! which enables parallelism. The async code is expected to be ran in parallel, not just
-///! concurrently. As a reminder, Python has concurrency with multiple threads but no parallelism
-///! because of the global interpreter lock.
-///! The Runtime will get forcefully shut down when the main thread exits. Any running background
-///! work will be lost at that time. This is not a hard requirement though, we can be tweak it to
-///! wait for tasks to finish but requires some ceremony around the Runtime. Since we have no need
-///! for that right now so that feature is skipped for now.
-///!
-///! TODO(T74221415): monitoring, signal handling
 use futures::future::Future;
 use futures::stream::BoxStream;
 use futures::stream::Stream;
@@ -91,25 +91,25 @@ where
 ///  1. unbuffered stream, stream_to_iter buffer size = 2.
 ///     - the stream has the first item polled and the result is added to the buffer
 ///     - the stream continues with polling the second item; while this is happening the iterator
-///     that is returned may start being consumed releasing capacity in the buffer; for our example
-///     let's say that the blocking thread hasn't reached that point yet and the stream fills the
-///     buffer using the second item
+///       that is returned may start being consumed releasing capacity in the buffer; for our example
+///       let's say that the blocking thread hasn't reached that point yet and the stream fills the
+///       buffer using the second item
 ///     - the stream will now poll the third item; assuming that the buffer is still full when the
-///     computation is done, it will yield the thread that is is running on until the blocking
-///     thread reads one of the items in the buffer.
+///       computation is done, it will yield the thread that is is running on until the blocking
+///       thread reads one of the items in the buffer.
 ///  2. buffered stream over 2 items (ordered), stream_to_iter buffer = 2
 ///     - the stream will take 2 futures from the underlying iterator and poll on them; when the
-///     first one returns it enquees the result in our buffer and polls the third future in the
-///     underlying stream. Assuming that f(x) produces r(x) we could write:
-///      stream: #f1, *f2, *f3, f4, f5
-///      buffer: r1
+///       first one returns it enquees the result in our buffer and polls the third future in the
+///       underlying stream. Assuming that f(x) produces r(x) we could write:
+///        stream: #f1, *f2, *f3, f4, f5
+///        buffer: r1
 ///     - let's assume that the blocking thread will not consume the buffer and the next future
-///     finishes; the result then fills the buffer and f4 will get polled:
-///      stream: #f1, #f2, *f3, *f4, f5
-///      buffer: r1, r2
+///       finishes; the result then fills the buffer and f4 will get polled:
+///        stream: #f1, #f2, *f3, *f4, f5
+///        buffer: r1, r2
 ///     - adding the result of the third future to the buffer will have to wait until the blocking
-///     thread consumes the returned iterator; only after that will the stream proceed with
-///     polling the fifth future in the stream
+///       thread consumes the returned iterator; only after that will the stream proceed with
+///       polling the fifth future in the stream
 pub fn stream_to_iter<S>(s: S) -> RunStream<S::Item>
 where
     S: Stream + Unpin + Send + 'static,

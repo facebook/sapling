@@ -699,7 +699,6 @@ impl TreeManifest {
     /// This is the inverse of ungrafted_path, but is one-to-many in this direction.
     ///
     /// With grafts of `foo->bar, foo->baz`, this turns `foo/file` into `[bar/file, baz/file]`.
-
     pub fn grafted_paths(&self, path: &RepoPath) -> Vec<RepoPathBuf> {
         // NB: we can assume we don't have overlappying "to"s since we validate in
         // register_diff_graft.

@@ -304,9 +304,9 @@ pub trait Builder {
     ///
     /// # Arguments
     /// * bang: the presence of a `!` at the start of the pipeline, typically indicating
-    /// that the pipeline's exit status should be logically inverted.
+    ///   that the pipeline's exit status should be logically inverted.
     /// * cmds: a collection of tuples which are any comments appearing after a pipe token, followed
-    /// by the command itself, all in the order they were parsed
+    ///   by the command itself, all in the order they were parsed
     fn pipeline(
         &mut self,
         bang: bool,

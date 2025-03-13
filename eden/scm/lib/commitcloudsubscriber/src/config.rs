@@ -19,7 +19,6 @@ mod defaults {
     /// Windows:
     ///    returns the value of the 'APPDATA' environment variable
     ///    if it is set and not equal to the empty string
-
     fn home_dir_os() -> Option<PathBuf> {
         let var = {
             #[cfg(not(target_os = "windows"))]
