@@ -1095,7 +1095,8 @@ def get_modified_files(instance: EdenInstance, checkout: EdenCheckout) -> List[P
 def get_hg_diff(checkout: EdenCheckout) -> Set[Path]:
     hg = os.environ.get("EDEN_HG_BINARY", "hg")
     json_diff = subprocess.run(
-        [hg, "diff", "--per-file-stat-json"],
+        # --no-binary is important for performance with large binary file changes.
+        [hg, "diff", "--per-file-stat-json", "--no-binary", "--reason=eden-doctor"],
         env=dict(os.environ, HGPLAIN="1"),
         stdout=subprocess.PIPE,
         cwd=checkout.path,
