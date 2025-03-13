@@ -34,7 +34,7 @@ impl<'a> EdenFsClient<'a> {
             ..Default::default()
         };
         match self
-            .with_client(|client| client.unmountV2(&unmount_argument))
+            .with_thrift(|thrift| thrift.unmountV2(&unmount_argument))
             .await
         {
             Ok(_) => Ok(()),
@@ -44,7 +44,7 @@ impl<'a> EdenFsClient<'a> {
                 if e.type_ == ApplicationExceptionErrorCode::UnknownMethod {
                     let encoded_path = bytes_from_path(path.to_path_buf())
                         .with_context(|| format!("Failed to encode path {}", path.display()))?;
-                    self.with_client(|client| client.unmount(&encoded_path))
+                    self.with_thrift(|thrift| thrift.unmount(&encoded_path))
                         .await
                         .with_context(|| {
                             format!(

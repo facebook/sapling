@@ -90,7 +90,7 @@ impl<'a> EdenFsClient<'a> {
     ) -> Result<JournalPosition> {
         let mount_point_path = get_mount_point(mount_point)?;
         let mount_point = bytes_from_path(mount_point_path)?;
-        self.with_client(|client| client.getCurrentJournalPosition(&mount_point))
+        self.with_thrift(|thrift| thrift.getCurrentJournalPosition(&mount_point))
             .await
             .map(|p| p.into())
             .from_err()
@@ -102,9 +102,7 @@ impl<'a> EdenFsClient<'a> {
     ) -> Result<BoxStream<'static, Result<JournalPosition>>> {
         let mount_point_vec = bytes_from_path(get_mount_point(mount_point)?)?;
         Ok(self
-            .with_streaming_client(|streaming_client| {
-                streaming_client.streamJournalChanged(&mount_point_vec)
-            })
+            .with_streaming_thrift(|thrift| thrift.streamJournalChanged(&mount_point_vec))
             .await
             .from_err()?
             .map(|item| match item {

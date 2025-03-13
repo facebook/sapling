@@ -15,7 +15,7 @@ use crate::client::EdenFsClient;
 
 impl<'a> EdenFsClient<'a> {
     pub async fn get_regex_counters(&self, arg_regex: &str) -> Result<BTreeMap<String, i64>> {
-        self.with_client(|client| client.getRegexCounters(arg_regex))
+        self.with_thrift(|thrift| thrift.getRegexCounters(arg_regex))
             .await
             .with_context(|| "failed to get regex counters")
             .map_err(EdenFsError::from)

@@ -33,7 +33,7 @@ impl DaemonHealthy for DaemonInfo {
 impl<'a> EdenFsClient<'a> {
     pub async fn get_health(&self) -> Result<DaemonInfo> {
         event!(Level::DEBUG, "connected to EdenFS daemon");
-        self.with_client(|client| client.getDaemonInfo())
+        self.with_thrift(|thrift| thrift.getDaemonInfo())
             .await
             .from_err()
     }
@@ -42,7 +42,7 @@ impl<'a> EdenFsClient<'a> {
         &self,
     ) -> Result<(DaemonInfo, BoxStream<'static, Result<Vec<u8>>>)> {
         let (daemon_info, stream) = self
-            .with_streaming_client(|streaming_client| streaming_client.streamStartStatus())
+            .with_streaming_thrift(|thrift| thrift.streamStartStatus())
             .await
             .from_err()?;
 

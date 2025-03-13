@@ -58,7 +58,7 @@ impl<'a> EdenFsClient<'a> {
             listOnlyFiles: list_only_files,
             ..Default::default()
         };
-        self.with_client(|client| client.globFiles(&glob_params))
+        self.with_thrift(|thrift| thrift.globFiles(&glob_params))
             .await
             .map(|glob| glob.into())
             .map_err(|_| EdenFsError::Other(anyhow!("failed to get glob files result")))

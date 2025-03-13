@@ -541,7 +541,7 @@ impl<'a> EdenFsClient<'a> {
             ..Default::default()
         };
         let mut result: ChangesSinceV2Result = self
-            .with_client(|client| client.changesSinceV2(&params))
+            .with_thrift(|thrift| thrift.changesSinceV2(&params))
             .await
             .map(|r| r.into())
             .from_err()?;

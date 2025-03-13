@@ -1003,7 +1003,7 @@ impl EdenFsCheckout {
                 ..Default::default()
             };
             client
-                .with_client(|client| client.predictiveGlobFiles(&glob_params))
+                .with_thrift(|thrift| thrift.predictiveGlobFiles(&glob_params))
                 .await
                 .with_context(|| "Failed predictiveGlobFiles() thrift call")?;
             Ok(())
@@ -1018,7 +1018,7 @@ impl EdenFsCheckout {
                 ..Default::default()
             };
             let res = client
-                .with_client(|client| client.prefetchFiles(&prefetch_params))
+                .with_thrift(|thrift| thrift.prefetchFiles(&prefetch_params))
                 .await;
 
             match res {
@@ -1037,7 +1037,7 @@ impl EdenFsCheckout {
                         ..Default::default()
                     };
                     client
-                        .with_client(|client| client.globFiles(&glob_params))
+                        .with_thrift(|thrift| thrift.globFiles(&glob_params))
                         .await
                         .with_context(|| "Failed globFiles() thrift call")?;
                     Ok(())
@@ -1226,7 +1226,7 @@ pub async fn get_mounts(instance: &EdenFsInstance) -> Result<BTreeMap<PathBuf, E
     // Get active mounted checkouts info from eden daemon
     let client = instance.get_client();
     // TODO: introduce connection/operation timeouts on EdenFsClient (or not)
-    let mounted_checkouts = match client.with_client(|client| client.listMounts()).await {
+    let mounted_checkouts = match client.with_thrift(|thrift| thrift.listMounts()).await {
         Ok(result) => Some(result),
         Err(_) => None, // eden daemon is not running or not healthy
     };

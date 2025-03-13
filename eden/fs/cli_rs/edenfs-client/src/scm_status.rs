@@ -84,7 +84,7 @@ impl<'a> EdenFsClient<'a> {
             rootIdOptions: root_id_options.map(|r| r.into()),
             ..Default::default()
         };
-        self.with_client(|client| client.getScmStatusV2(&get_scm_status_params))
+        self.with_thrift(|thrift| thrift.getScmStatusV2(&get_scm_status_params))
             .await
             .map(|scm_status| scm_status.into())
             .map_err(|_| EdenFsError::Other(anyhow!("failed to get scm status v2 result")))

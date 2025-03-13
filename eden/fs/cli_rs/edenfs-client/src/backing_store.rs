@@ -30,7 +30,7 @@ impl From<thrift_types::edenfs::GetFetchedFilesResult> for FetchedFiles {
 
 impl<'a> EdenFsClient<'a> {
     pub async fn stop_recording_backing_store_fetch(&self) -> Result<FetchedFiles> {
-        self.with_client(|client| client.stopRecordingBackingStoreFetch())
+        self.with_thrift(|thrift| thrift.stopRecordingBackingStoreFetch())
             .await
             .with_context(|| anyhow!("stopRecordingBackingStoreFetch thrift call failed"))
             .map(|fetched_files| fetched_files.into())
@@ -38,11 +38,9 @@ impl<'a> EdenFsClient<'a> {
     }
 
     pub async fn start_recording_backing_store_fetch(&self) -> Result<()> {
-        self.with_streaming_client(|streaming_client| {
-            streaming_client.startRecordingBackingStoreFetch()
-        })
-        .await
-        .with_context(|| anyhow!("startRecordingBackingStoreFetch thrift call failed"))
-        .map_err(EdenFsError::from)
+        self.with_streaming_thrift(|thrift| thrift.startRecordingBackingStoreFetch())
+            .await
+            .with_context(|| anyhow!("startRecordingBackingStoreFetch thrift call failed"))
+            .map_err(EdenFsError::from)
     }
 }

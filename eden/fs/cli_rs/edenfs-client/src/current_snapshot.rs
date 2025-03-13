@@ -42,7 +42,7 @@ impl<'a> EdenFsClient<'a> {
             ..Default::default()
         };
 
-        self.with_client(|client| client.getCurrentSnapshotInfo(&snapshot_info_params))
+        self.with_thrift(|thrift| thrift.getCurrentSnapshotInfo(&snapshot_info_params))
             .await
             .with_context(|| "failed to get snapshot info ")
             .map(|snapshot_info| snapshot_info.into())

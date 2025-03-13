@@ -73,14 +73,14 @@ impl<'a> EdenFsClient<'a> {
             shouldUpload: should_upload,
             ..Default::default()
         };
-        self.with_client(|client| client.startFileAccessMonitor(&start_file_access_monitor_params))
+        self.with_thrift(|thrift| thrift.startFileAccessMonitor(&start_file_access_monitor_params))
             .await
             .map(|res| res.into())
             .map_err(|e| EdenFsError::from(anyhow!("failed to start file access monitor: {}", e)))
     }
 
     pub async fn stop_file_access_monitor(&self) -> Result<StopFileAccessMonitor> {
-        self.with_client(|client| client.stopFileAccessMonitor())
+        self.with_thrift(|thrift| thrift.stopFileAccessMonitor())
             .await
             .map(|res| res.into())
             .map_err(|e| EdenFsError::from(anyhow!("failed to stop file access monitor: {}", e)))

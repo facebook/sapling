@@ -41,7 +41,7 @@ impl<'a> EdenFsClient<'a> {
         Self { instance }
     }
 
-    pub async fn with_client<F, Fut, T, E>(
+    pub async fn with_thrift<F, Fut, T, E>(
         &self,
         f: F,
     ) -> std::result::Result<T, ConnectAndRequestError<E>>
@@ -63,7 +63,7 @@ impl<'a> EdenFsClient<'a> {
             .map_err(|e| ConnectAndRequestError::RequestError(e))
     }
 
-    pub async fn with_streaming_client<F, Fut, T, E>(
+    pub async fn with_streaming_thrift<F, Fut, T, E>(
         &self,
         f: F,
     ) -> std::result::Result<T, ConnectAndRequestError<E>>

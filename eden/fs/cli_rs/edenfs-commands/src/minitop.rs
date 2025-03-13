@@ -452,7 +452,7 @@ impl crate::Subcommand for MinitopCmd {
             // Update currently tracked processes (and add new ones if they haven't been tracked yet)
             let refresh_rate_secs = self.refresh_rate.as_secs().try_into()?;
             let counts = client
-                .with_client(|client| client.getAccessCounts(refresh_rate_secs))
+                .with_thrift(|thrift| thrift.getAccessCounts(refresh_rate_secs))
                 .await?;
 
             for (mount, accesses) in &counts.accessesByMount {
