@@ -118,4 +118,7 @@ import-pattern:go=re:^\s*using .*$
 
 [clone]
 use-commit-graph=true
+
+[pager]
+stderr=true
 "#);
