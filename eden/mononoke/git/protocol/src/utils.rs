@@ -245,7 +245,7 @@ pub(crate) async fn ancestors_after_time(
                 let changeset = csid.load(&ctx, &blobstore).await?;
                 let to_include = changeset
                     .committer_date()
-                    .map_or(false, |date| date.timestamp_secs() > time as i64);
+                    .is_some_and(|date| date.timestamp_secs() > time as i64);
                 Ok(to_include)
             }
         })
