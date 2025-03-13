@@ -237,7 +237,7 @@ impl crate::Subcommand for FsConfigCmd {
             }
 
             let str = format!("{} = \"{}\"", name, value.parsed_value);
-            if value.source_path.is_empty() {
+            if value.source_path == PathBuf::new() {
                 println!("{}", str);
             } else {
                 const SOURCE_COLUMN: usize = 39;
@@ -254,7 +254,7 @@ impl crate::Subcommand for FsConfigCmd {
                     str,
                     "",
                     white,
-                    String::from_utf8_lossy(&value.source_path)
+                    value.source_path.to_string_lossy()
                 );
             }
         }

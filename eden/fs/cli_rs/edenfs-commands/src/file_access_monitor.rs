@@ -110,7 +110,7 @@ impl crate::Subcommand for StartCmd {
         println!("File Access Monitor started [pid {}]", start_result.pid);
         println!(
             "Temp output file path: {}",
-            path_from_bytes(&start_result.tmp_output_path)?.display()
+            start_result.tmp_output_path.display()
         );
 
         if self.background {
@@ -133,9 +133,10 @@ async fn stop_fam() -> Result<ExitCode> {
     let stop_result = client.stop_file_access_monitor().await?;
     println!("File Access Monitor stopped");
     // TODO: handle the case when the output file is specified
-    let output_path = path_from_bytes(&stop_result.specified_output_path)?;
-
-    println!("Output file saved to {}", output_path.display());
+    println!(
+        "Output file saved to {}",
+        stop_result.specified_output_path.display()
+    );
 
     if stop_result.should_upload {
         // TODO[lxw]: handle uploading outputfile

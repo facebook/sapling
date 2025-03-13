@@ -13,36 +13,40 @@ use anyhow::anyhow;
 use edenfs_error::EdenFsError;
 use edenfs_error::Result;
 use edenfs_utils::bytes_from_path;
+use edenfs_utils::path_from_bytes;
 
 use crate::client::EdenFsClient;
 
 #[derive(Debug, Clone)]
 pub struct StartFileAccessMonitor {
     pub pid: i32,
-    pub tmp_output_path: Vec<u8>,
+    pub tmp_output_path: PathBuf,
 }
 
 impl From<thrift_types::edenfs::StartFileAccessMonitorResult> for StartFileAccessMonitor {
     fn from(from: thrift_types::edenfs::StartFileAccessMonitorResult) -> Self {
         StartFileAccessMonitor {
             pid: from.pid,
-            tmp_output_path: from.tmpOutputPath,
+            tmp_output_path: path_from_bytes(&from.tmpOutputPath)
+                .expect("Failed to convert StartFileAccessMonitor::tmpOutputPath"),
         }
     }
 }
 
 #[derive(Debug, Clone)]
 pub struct StopFileAccessMonitor {
-    pub tmp_output_path: Vec<u8>,
-    pub specified_output_path: Vec<u8>,
+    pub tmp_output_path: PathBuf,
+    pub specified_output_path: PathBuf,
     pub should_upload: bool,
 }
 
 impl From<thrift_types::edenfs::StopFileAccessMonitorResult> for StopFileAccessMonitor {
     fn from(from: thrift_types::edenfs::StopFileAccessMonitorResult) -> Self {
         StopFileAccessMonitor {
-            tmp_output_path: from.tmpOutputPath,
-            specified_output_path: from.specifiedOutputPath,
+            tmp_output_path: path_from_bytes(&from.tmpOutputPath)
+                .expect("Failed to convert StartFileAccessMonitor::tmpOutputPath"),
+            specified_output_path: path_from_bytes(&from.specifiedOutputPath)
+                .expect("Failed to convert StartFileAccessMonitor::specifiedOutputPath"),
             should_upload: from.shouldUpload,
         }
     }
@@ -72,13 +76,13 @@ impl<'a> EdenFsClient<'a> {
         self.with_client(|client| client.startFileAccessMonitor(&start_file_access_monitor_params))
             .await
             .map(|res| res.into())
-            .map_err(|e| EdenFsError::Other(anyhow!("failed to start file access monitor: {}", e)))
+            .map_err(|e| EdenFsError::from(anyhow!("failed to start file access monitor: {}", e)))
     }
 
     pub async fn stop_file_access_monitor(&self) -> Result<StopFileAccessMonitor> {
         self.with_client(|client| client.stopFileAccessMonitor())
             .await
             .map(|res| res.into())
-            .map_err(|e| EdenFsError::Other(anyhow!("failed to stop file access monitor: {}", e)))
+            .map_err(|e| EdenFsError::from(anyhow!("failed to stop file access monitor: {}", e)))
     }
 }

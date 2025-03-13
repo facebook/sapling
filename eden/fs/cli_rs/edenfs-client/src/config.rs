@@ -6,10 +6,12 @@
  */
 
 use std::collections::BTreeMap;
+use std::path::PathBuf;
 
 use anyhow::Context;
 use edenfs_error::EdenFsError;
 use edenfs_error::Result;
+use edenfs_utils::path_from_bytes;
 
 use crate::client::EdenFsClient;
 
@@ -17,7 +19,7 @@ use crate::client::EdenFsClient;
 pub struct ConfigValue {
     pub parsed_value: String,
     pub source_type: thrift_types::edenfs_config::ConfigSourceType,
-    pub source_path: Vec<u8>,
+    pub source_path: PathBuf,
 }
 
 impl From<thrift_types::edenfs_config::ConfigValue> for ConfigValue {
@@ -25,7 +27,8 @@ impl From<thrift_types::edenfs_config::ConfigValue> for ConfigValue {
         Self {
             parsed_value: from.parsedValue,
             source_type: from.sourceType,
-            source_path: from.sourcePath,
+            source_path: path_from_bytes(&from.sourcePath)
+                .expect("Failed to convert ConfigValue::sourcePath."),
         }
     }
 }

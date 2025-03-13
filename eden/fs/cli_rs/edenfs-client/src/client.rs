@@ -95,7 +95,7 @@ impl<'a> EdenFsClient<'a> {
                 .with_context(|| "Unable to connect to EdenFS daemon")
                 .map_err(|_| EdenFsError::ThriftConnectionTimeout(socket_path))?
         } else {
-            connect.await.map_err(|err| EdenFsError::Other(err.into()))
+            connect.await
         }
     }
 

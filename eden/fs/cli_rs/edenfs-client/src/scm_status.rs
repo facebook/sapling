@@ -40,7 +40,7 @@ impl From<RootIdOptions> for thrift_types::edenfs::RootIdOptions {
 #[derive(Clone, Debug)]
 pub struct ScmStatusDetails {
     // If needed, we can also wrap ScmFileStatus to remove all Thrift types
-    // from edenfs_client APIs
+    // from edenfs_client APIs.
     pub entries: BTreeMap<Vec<u8>, thrift_types::edenfs::ScmFileStatus>,
     pub errors: BTreeMap<Vec<u8>, String>,
 }

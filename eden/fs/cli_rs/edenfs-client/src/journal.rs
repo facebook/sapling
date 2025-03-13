@@ -15,6 +15,7 @@ use edenfs_error::Result;
 use edenfs_error::ResultExt;
 use edenfs_utils::bytes_from_path;
 use futures::stream::BoxStream;
+use futures::StreamExt;
 use serde::Serialize;
 
 use crate::client::EdenFsClient;
@@ -98,21 +99,18 @@ impl<'a> EdenFsClient<'a> {
     pub async fn stream_journal_changed(
         &self,
         mount_point: &Option<PathBuf>,
-    ) -> Result<
-        BoxStream<
-            'static,
-            Result<
-                thrift_types::edenfs::JournalPosition,
-                thrift_streaming_clients::errors::StreamJournalChangedError,
-            >,
-        >,
-        EdenFsError,
-    > {
+    ) -> Result<BoxStream<'static, Result<JournalPosition>>> {
         let mount_point_vec = bytes_from_path(get_mount_point(mount_point)?)?;
-        self.with_streaming_client(|streaming_client| {
-            streaming_client.streamJournalChanged(&mount_point_vec)
-        })
-        .await
-        .from_err()
+        Ok(self
+            .with_streaming_client(|streaming_client| {
+                streaming_client.streamJournalChanged(&mount_point_vec)
+            })
+            .await
+            .from_err()?
+            .map(|item| match item {
+                Ok(item) => Ok(item.into()),
+                Err(e) => Err(EdenFsError::from(anyhow!(e))),
+            })
+            .boxed())
     }
 }
