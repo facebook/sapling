@@ -200,7 +200,7 @@ impl Elements {
     fn next_git(&mut self) -> Option<Result<Element>> {
         let slice = match self.bytes.get(self.position..) {
             None => return None,
-            Some(s) if s.is_empty() => return None,
+            Some([]) => return None,
             Some(s) => s,
         };
 

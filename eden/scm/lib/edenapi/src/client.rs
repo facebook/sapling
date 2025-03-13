@@ -1344,7 +1344,7 @@ impl SaplingRemoteApi for Client {
     ) -> Result<Response<FileResponse>, SaplingRemoteApiError> {
         RetryableFileAttrs::new(reqs)
             .perform_with_retries(self.clone())
-            .and_then(|r| async { Ok(r.then(move |r| ready(r))) })
+            .and_then(|r| async { Ok(r.then(ready)) })
             .await
     }
 
@@ -1365,7 +1365,7 @@ impl SaplingRemoteApi for Client {
     {
         RetryableTrees::new(keys, attributes)
             .perform_with_retries(self.clone())
-            .and_then(|r| async { Ok(r.then(move |r| ready(r))) })
+            .and_then(|r| async { Ok(r.then(ready)) })
             .await
     }
 
