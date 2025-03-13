@@ -6,7 +6,6 @@
  */
 
 pub mod backing_store;
-#[cfg(target_os = "linux")]
 pub mod bind_mount;
 pub mod changes_since;
 pub mod checkout;
@@ -15,7 +14,6 @@ pub mod config;
 pub mod counters;
 pub mod current_snapshot;
 pub mod daemon_info;
-#[cfg(target_os = "macos")]
 pub mod file_access_monitor;
 pub mod fsutil;
 pub mod glob_files;

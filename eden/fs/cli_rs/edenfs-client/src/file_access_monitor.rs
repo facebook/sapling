@@ -12,10 +12,8 @@ use std::path::PathBuf;
 use anyhow::anyhow;
 use edenfs_error::EdenFsError;
 use edenfs_error::Result;
-#[cfg(target_os = "macos")]
 use edenfs_utils::bytes_from_path;
 
-#[cfg(target_os = "macos")]
 use crate::client::EdenFsClient;
 
 #[derive(Debug, Clone)]
