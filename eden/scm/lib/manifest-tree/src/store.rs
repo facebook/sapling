@@ -457,10 +457,7 @@ fn find_git_entry_positions(slice: &[u8]) -> Option<(usize, usize)> {
     // MODE ' '       NAME          '\0'                     BIN_SHA1
     //      ^         ^             ^                        ^
     //      mode_len  mode_len + 1  mode_len + 1 + name_len  .. + 1
-    let mode_len = match slice.iter().position(|&x| x == b' ') {
-        Some(position) => position,
-        None => return None,
-    };
+    let mode_len = slice.iter().position(|&x| x == b' ')?;
     let name_len = match slice[mode_len..].iter().position(|&x| x == b'\0') {
         Some(position) if position > 1 => position - 1,
         _ => return None,

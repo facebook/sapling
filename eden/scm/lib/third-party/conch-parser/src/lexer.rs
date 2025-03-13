@@ -43,10 +43,7 @@ impl<I: Iterator<Item = char>> Lexer<I> {
             return self.peeked.take();
         }
 
-        let cur = match self.inner.next() {
-            Some(c) => c,
-            None => return None,
-        };
+        let cur = self.inner.next()?;
 
         let tok = match cur {
             '\n' => Newline,

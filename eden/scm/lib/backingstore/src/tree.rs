@@ -45,10 +45,7 @@ impl TreeEntry {
         let (ttype, hash, size, content_sha1, content_blake3) = match flag {
             TreeItemFlag::Directory => (TreeEntryType::Tree, hgid, None, None, None),
             TreeItemFlag::File(file_type) => {
-                let entry_type = match TreeEntryType::from_file_type(file_type) {
-                    None => return None,
-                    Some(entry_type) => entry_type,
-                };
+                let entry_type = TreeEntryType::from_file_type(file_type)?;
                 if let Some(aux_data) = aux.get(&hgid) {
                     (
                         entry_type,
