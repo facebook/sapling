@@ -5,6 +5,7 @@
  * GNU General Public License version 2.
  */
 
+use edenfs_error::ConnectAndRequestError;
 use edenfs_error::Result;
 use edenfs_error::ResultExt;
 use futures::stream::BoxStream;
@@ -34,7 +35,9 @@ impl DaemonHealthy for DaemonInfo {
 impl<'a> EdenFsClient<'a> {
     pub async fn get_health(&self) -> Result<DaemonInfo> {
         event!(Level::DEBUG, "connected to EdenFS daemon");
-        self.client.getDaemonInfo().await.from_err()
+        self.with_client(|client| client.getDaemonInfo())
+            .await
+            .from_err()
     }
 
     pub async fn get_health_with_startup_updates_included(
@@ -44,11 +47,13 @@ impl<'a> EdenFsClient<'a> {
         use thrift_streaming_clients::errors::StreamStartStatusError;
         use thrift_types::fbthrift::ApplicationExceptionErrorCode;
 
-        let result = self.streaming_client.streamStartStatus().await;
+        let result = self
+            .with_streaming_client(|streaming_client| streaming_client.streamStartStatus())
+            .await;
         match result {
-            Err(StreamStartStatusError::ApplicationException(e))
-                if e.type_ == ApplicationExceptionErrorCode::UnknownMethod =>
-            {
+            Err(ConnectAndRequestError::RequestError(
+                StreamStartStatusError::ApplicationException(e),
+            )) if e.type_ == ApplicationExceptionErrorCode::UnknownMethod => {
                 Err(EdenFsError::UnknownMethod(e.message))
             }
             r => r.from_err(),

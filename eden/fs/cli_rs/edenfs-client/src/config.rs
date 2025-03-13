@@ -7,7 +7,7 @@
 
 use std::collections::BTreeMap;
 
-use anyhow::anyhow;
+use anyhow::Context;
 use edenfs_error::EdenFsError;
 use edenfs_error::Result;
 
@@ -50,10 +50,10 @@ impl From<thrift_types::edenfs_config::EdenConfigData> for ConfigData {
 impl<'a> EdenFsClient<'a> {
     pub async fn get_config_default(&self) -> Result<ConfigData> {
         let params: thrift_types::edenfs::GetConfigParams = Default::default();
-        self.client
-            .getConfig(&params)
+        self.with_client(|client| client.getConfig(&params))
             .await
+            .with_context(|| "failed to get default eden config data")
             .map(|config_data| config_data.into())
-            .map_err(|_| EdenFsError::Other(anyhow!("failed to get default eden config data")))
+            .map_err(EdenFsError::from)
     }
 }

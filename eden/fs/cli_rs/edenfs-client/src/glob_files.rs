@@ -46,19 +46,19 @@ impl<'a> EdenFsClient<'a> {
         background: bool,
         list_only_files: bool,
     ) -> Result<Glob> {
-        self.client
-            .globFiles(&GlobParams {
-                mountPoint: bytes_from_path(mount_point.as_ref().to_path_buf())?,
-                globs,
-                includeDotfiles: include_dotfiles,
-                prefetchFiles: prefetch_files,
-                suppressFileList: suppress_file_list,
-                wantDtype: want_dtype,
-                searchRoot: bytes_from_path(search_root.as_ref().to_path_buf())?,
-                background,
-                listOnlyFiles: list_only_files,
-                ..Default::default()
-            })
+        let glob_params = GlobParams {
+            mountPoint: bytes_from_path(mount_point.as_ref().to_path_buf())?,
+            globs,
+            includeDotfiles: include_dotfiles,
+            prefetchFiles: prefetch_files,
+            suppressFileList: suppress_file_list,
+            wantDtype: want_dtype,
+            searchRoot: bytes_from_path(search_root.as_ref().to_path_buf())?,
+            background,
+            listOnlyFiles: list_only_files,
+            ..Default::default()
+        };
+        self.with_client(|client| client.globFiles(&glob_params))
             .await
             .map(|glob| glob.into())
             .map_err(|_| EdenFsError::Other(anyhow!("failed to get glob files result")))

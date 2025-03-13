@@ -5,12 +5,17 @@
  * GNU General Public License version 2.
  */
 
+use std::fmt::Debug;
+use std::fmt::Display;
+use std::future::Future;
 use std::path::PathBuf;
 use std::sync::Arc;
 use std::time::Duration;
 
 use anyhow::Context;
+use edenfs_error::ConnectAndRequestError;
 use edenfs_error::EdenFsError;
+use edenfs_error::HasErrorHandlingStrategy;
 use edenfs_error::Result;
 use fbinit::expect_init;
 use thrift_streaming_clients::StreamingEdenService;
@@ -28,46 +33,60 @@ pub type EdenFsThriftClient = Arc<dyn EdenServiceExt<ThriftChannel> + Send + Syn
 pub type StreamingEdenFsThriftClient = Arc<dyn StreamingEdenService + Send + Sync + 'static>;
 
 pub struct EdenFsClient<'a> {
-    #[allow(dead_code)]
-    pub(crate) instance: &'a EdenFsInstance,
-    pub(crate) client: EdenFsThriftClient,
-    pub(crate) streaming_client: StreamingEdenFsThriftClient,
+    instance: &'a EdenFsInstance,
 }
 
 impl<'a> EdenFsClient<'a> {
-    pub(crate) async fn new(
-        instance: &'a EdenFsInstance,
-        connection_timeout: Option<Duration>,
-    ) -> Result<Self> {
-        let (client, streaming_client) = tokio::join!(
-            EdenFsClient::connect(instance, connection_timeout),
-            EdenFsClient::connect_streaming(instance, connection_timeout)
-        );
-
-        let result = Self {
-            instance,
-            client: client?,
-            streaming_client: streaming_client?,
-        };
-
-        Ok(result)
+    pub(crate) fn new(instance: &'a EdenFsInstance) -> Self {
+        Self { instance }
     }
 
-    // TEMPORARY: This is a temporary workaround while we are refactoring EdenFsInstance into smaller modules
-    pub fn get_thrift_client(&self) -> &EdenFsThriftClient {
-        &self.client
+    pub async fn with_client<F, Fut, T, E>(
+        &self,
+        f: F,
+    ) -> std::result::Result<T, ConnectAndRequestError<E>>
+    where
+        F: Fn(&EdenFsThriftClient) -> Fut,
+        Fut: Future<Output = Result<T, E>>,
+        E: HasErrorHandlingStrategy + Debug + Display,
+    {
+        let client = self
+            .connect(None)
+            .await
+            .map_err(|e| ConnectAndRequestError::ConnectionError(e))?;
+
+        // TODO: switch to buck2 lazy connection
+        // TODO: switch to buck2 retry logic
+        // TOOD: switch to buck2 error handling
+        f(&client)
+            .await
+            .map_err(|e| ConnectAndRequestError::RequestError(e))
     }
 
-    // TEMPORARY: This is a temporary workaround while we are refactoring EdenFsInstance into smaller modules
-    pub fn get_streaming_thrift_client(&self) -> &StreamingEdenFsThriftClient {
-        &self.streaming_client
+    pub async fn with_streaming_client<F, Fut, T, E>(
+        &self,
+        f: F,
+    ) -> std::result::Result<T, ConnectAndRequestError<E>>
+    where
+        F: Fn(&StreamingEdenFsThriftClient) -> Fut,
+        Fut: Future<Output = Result<T, E>>,
+        E: HasErrorHandlingStrategy + Debug + Display,
+    {
+        let streaming_client = self
+            .connect_streaming(None)
+            .await
+            .map_err(|e| ConnectAndRequestError::ConnectionError(e))?;
+
+        // TODO: switch to buck2 lazy connection
+        // TODO: switch to buck2 retry logic
+        // TOOD: switch to buck2 error handling
+        f(&streaming_client)
+            .await
+            .map_err(|e| ConnectAndRequestError::RequestError(e))
     }
 
-    async fn connect(
-        instance: &EdenFsInstance,
-        timeout: Option<Duration>,
-    ) -> Result<EdenFsThriftClient> {
-        let socket_path = instance.socketfile();
+    async fn connect(&self, timeout: Option<Duration>) -> Result<EdenFsThriftClient> {
+        let socket_path = self.instance.socketfile();
 
         let connect = EdenFsClient::_connect(&socket_path);
         if let Some(timeout) = timeout {
@@ -95,10 +114,10 @@ impl<'a> EdenFsClient<'a> {
 
     #[cfg(fbcode_build)]
     pub async fn connect_streaming(
-        instance: &EdenFsInstance,
+        &self,
         timeout: Option<Duration>,
     ) -> Result<StreamingEdenFsThriftClient> {
-        let socket_path = instance.socketfile();
+        let socket_path = self.instance.socketfile();
 
         let client = EdenFsClient::_connect_streaming(&socket_path);
 

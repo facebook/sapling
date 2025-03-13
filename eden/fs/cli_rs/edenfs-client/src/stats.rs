@@ -13,8 +13,7 @@ use crate::client::EdenFsClient;
 
 impl<'a> EdenFsClient<'a> {
     pub async fn flush_stats_now(&self) -> Result<()> {
-        self.client
-            .flushStatsNow()
+        self.with_client(|client| client.flushStatsNow())
             .await
             .map_err(|_| EdenFsError::Other(anyhow!("failed to call flushstatsNow")))
     }

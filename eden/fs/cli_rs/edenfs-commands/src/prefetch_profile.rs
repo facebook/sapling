@@ -199,7 +199,7 @@ pub enum PrefetchCmd {
 impl PrefetchCmd {
     async fn finish(&self, output_path: &PathBuf) -> Result<ExitCode> {
         let instance = EdenFsInstance::global();
-        let client = instance.get_client(None).await?;
+        let client = instance.get_client();
 
         let files = client.stop_recording_backing_store_fetch().await?;
         let fetched_files = files
@@ -220,7 +220,7 @@ impl PrefetchCmd {
 
     async fn record(&self) -> Result<ExitCode> {
         let instance = EdenFsInstance::global();
-        let client = instance.get_client(None).await?;
+        let client = instance.get_client();
 
         client.start_recording_backing_store_fetch().await?;
         Ok(0)

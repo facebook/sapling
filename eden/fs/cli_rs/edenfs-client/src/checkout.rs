@@ -23,7 +23,6 @@ use std::path::Path;
 use std::path::PathBuf;
 use std::process::Command;
 use std::str::FromStr;
-use std::time::Duration;
 use std::vec;
 
 use anyhow::anyhow;
@@ -32,6 +31,7 @@ use atomicfile::atomic_write;
 use byteorder::BigEndian;
 use byteorder::ReadBytesExt;
 use edenfs_config::EdenFsConfig;
+use edenfs_error::ConnectAndRequestError;
 use edenfs_error::EdenFsError;
 use edenfs_error::Result;
 use edenfs_error::ResultExt;
@@ -645,14 +645,6 @@ impl SnapshotState {
     }
 }
 
-fn is_unknown_method_error(error: &PrefetchFilesError) -> bool {
-    if let PrefetchFilesError::ApplicationException(ref e) = error {
-        e.type_ == ApplicationExceptionErrorCode::UnknownMethod
-    } else {
-        false
-    }
-}
-
 /// Represents an edenfs checkout with mount information as well as information from configuration
 #[derive(Serialize)]
 pub struct EdenFsCheckout {
@@ -977,8 +969,7 @@ impl EdenFsCheckout {
             }
         }
 
-        let client = instance.get_client(None).await?;
-        let client = client.get_thrift_client();
+        let client = instance.get_client();
 
         let mnt_pt = self
             .path
@@ -1012,9 +1003,9 @@ impl EdenFsCheckout {
                 ..Default::default()
             };
             client
-                .predictiveGlobFiles(&glob_params)
+                .with_client(|client| client.predictiveGlobFiles(&glob_params))
                 .await
-                .context("Failed predictiveGlobFiles() thrift call")?;
+                .with_context(|| "Failed predictiveGlobFiles() thrift call")?;
             Ok(())
         } else {
             let profile_set = all_profile_contents.into_iter().collect::<Vec<_>>();
@@ -1026,31 +1017,32 @@ impl EdenFsCheckout {
                 background,
                 ..Default::default()
             };
-            let res = client.prefetchFiles(&prefetch_params).await;
+            let res = client
+                .with_client(|client| client.prefetchFiles(&prefetch_params))
+                .await;
 
             match res {
                 Ok(_) => Ok(()),
-                Err(error) => {
-                    if is_unknown_method_error(&error) {
-                        let glob_params = GlobParams {
-                            mountPoint: mnt_pt,
-                            globs: profile_set,
-                            includeDotfiles: false,
-                            prefetchFiles: !directories_only,
-                            suppressFileList: silent,
-                            revisions: commit_vec,
-                            background,
-                            ..Default::default()
-                        };
-                        client
-                            .globFiles(&glob_params)
-                            .await
-                            .context("Failed globFiles() thrift call")?;
-                        Ok(())
-                    } else {
-                        Err(EdenFsError::Other(error.into()))
-                    }
+                Err(ConnectAndRequestError::RequestError(
+                    PrefetchFilesError::ApplicationException(error),
+                )) if error.type_ == ApplicationExceptionErrorCode::UnknownMethod => {
+                    let glob_params = GlobParams {
+                        mountPoint: mnt_pt,
+                        globs: profile_set,
+                        includeDotfiles: false,
+                        prefetchFiles: !directories_only,
+                        suppressFileList: silent,
+                        revisions: commit_vec,
+                        background,
+                        ..Default::default()
+                    };
+                    client
+                        .with_client(|client| client.globFiles(&glob_params))
+                        .await
+                        .with_context(|| "Failed globFiles() thrift call")?;
+                    Ok(())
                 }
+                Err(err) => Err(EdenFsError::Other(err.into())),
             }
         }
     }
@@ -1232,16 +1224,11 @@ pub async fn get_mounts(instance: &EdenFsInstance) -> Result<BTreeMap<PathBuf, E
     }
 
     // Get active mounted checkouts info from eden daemon
-    let client = instance.get_client(Some(Duration::from_secs(3))).await;
-    let mounted_checkouts = match client {
-        Ok(client) => {
-            let client = client.get_thrift_client();
-            match client.listMounts().await {
-                Ok(result) => Some(result),
-                Err(_) => None, // eden daemon is not running or not healthy
-            }
-        }
-        Err(_) => None, // eden daemon not running
+    let client = instance.get_client();
+    // TODO: introduce connection/operation timeouts on EdenFsClient (or not)
+    let mounted_checkouts = match client.with_client(|client| client.listMounts()).await {
+        Ok(result) => Some(result),
+        Err(_) => None, // eden daemon is not running or not healthy
     };
 
     // Combine mount info from active mounts and mount info from config files

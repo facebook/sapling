@@ -151,7 +151,7 @@ impl crate::Subcommand for SubscribeCmd {
     #[cfg(fbcode_build)]
     async fn run(&self) -> Result<ExitCode> {
         let instance = EdenFsInstance::global();
-        let client = instance.get_client(None).await?;
+        let client = instance.get_client();
 
         let mount_point_path = get_mount_point(&self.mount_point)?;
 

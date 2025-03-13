@@ -410,7 +410,7 @@ impl Redirection {
     #[cfg(target_os = "linux")]
     async fn _bind_mount_linux(&self, checkout_path: &Path, target: &Path) -> Result<()> {
         let instance = EdenFsInstance::global();
-        let client = instance.get_client(None).await?;
+        let client = instance.get_client();
 
         let abs_mount_path_in_repo = checkout_path.join(&self.repo_path);
         if abs_mount_path_in_repo.exists() {
@@ -629,7 +629,7 @@ impl Redirection {
     #[cfg(target_os = "linux")]
     async fn _bind_unmount_linux(&self, checkout: &EdenFsCheckout) -> Result<()> {
         let instance = EdenFsInstance::global();
-        let client = instance.get_client(None).await?;
+        let client = instance.get_client();
 
         client
             .remove_bind_mount(&checkout.path(), &self.repo_path)

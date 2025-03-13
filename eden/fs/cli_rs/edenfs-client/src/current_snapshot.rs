@@ -7,7 +7,7 @@
 
 use std::path::PathBuf;
 
-use anyhow::anyhow;
+use anyhow::Context;
 use edenfs_error::EdenFsError;
 use edenfs_error::Result;
 use edenfs_utils::bytes_from_path;
@@ -42,10 +42,10 @@ impl<'a> EdenFsClient<'a> {
             ..Default::default()
         };
 
-        self.client
-            .getCurrentSnapshotInfo(&snapshot_info_params)
+        self.with_client(|client| client.getCurrentSnapshotInfo(&snapshot_info_params))
             .await
+            .with_context(|| "failed to get snapshot info ")
             .map(|snapshot_info| snapshot_info.into())
-            .map_err(|_| EdenFsError::Other(anyhow!("failed to get snapshot info")))
+            .map_err(EdenFsError::from)
     }
 }

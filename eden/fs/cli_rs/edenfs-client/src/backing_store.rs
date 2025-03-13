@@ -10,6 +10,7 @@ use std::collections::BTreeSet;
 
 use anyhow::anyhow;
 use anyhow::Context;
+use edenfs_error::EdenFsError;
 use edenfs_error::Result;
 
 use crate::client::EdenFsClient;
@@ -29,20 +30,19 @@ impl From<thrift_types::edenfs::GetFetchedFilesResult> for FetchedFiles {
 
 impl<'a> EdenFsClient<'a> {
     pub async fn stop_recording_backing_store_fetch(&self) -> Result<FetchedFiles> {
-        let files = self
-            .client
-            .stopRecordingBackingStoreFetch()
+        self.with_client(|client| client.stopRecordingBackingStoreFetch())
             .await
             .with_context(|| anyhow!("stopRecordingBackingStoreFetch thrift call failed"))
-            .map(|fetched_files| fetched_files.into())?;
-        Ok(files)
+            .map(|fetched_files| fetched_files.into())
+            .map_err(EdenFsError::from)
     }
 
     pub async fn start_recording_backing_store_fetch(&self) -> Result<()> {
-        self.client
-            .startRecordingBackingStoreFetch()
-            .await
-            .with_context(|| anyhow!("startRecordingBackingStoreFetch thrift call failed"))?;
-        Ok(())
+        self.with_streaming_client(|streaming_client| {
+            streaming_client.startRecordingBackingStoreFetch()
+        })
+        .await
+        .with_context(|| anyhow!("startRecordingBackingStoreFetch thrift call failed"))
+        .map_err(EdenFsError::from)
     }
 }

@@ -14,7 +14,6 @@ use std::fs::remove_file;
 use std::path::Path;
 use std::path::PathBuf;
 use std::sync::OnceLock;
-use std::time::Duration;
 
 use anyhow::anyhow;
 use anyhow::Context;
@@ -102,8 +101,8 @@ impl EdenFsInstance {
         self.home_dir.as_ref()
     }
 
-    pub async fn get_client(&self, timeout: Option<Duration>) -> Result<EdenFsClient> {
-        EdenFsClient::new(self, timeout).await
+    pub fn get_client(&self) -> EdenFsClient {
+        EdenFsClient::new(self)
     }
 
     pub(crate) fn socketfile(&self) -> PathBuf {

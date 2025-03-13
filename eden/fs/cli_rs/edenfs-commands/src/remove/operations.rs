@@ -82,7 +82,7 @@ pub async fn remove_active_eden_mount(context: &RemoveContext) -> Result<()> {
         .info(format!("Unmounting repo at {} ...", context.original_path));
 
     let instance = EdenFsInstance::global();
-    let client = instance.get_client(None).await?;
+    let client = instance.get_client();
 
     match client
         .unmount(&context.canonical_path, context.no_force)

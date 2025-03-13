@@ -9,6 +9,7 @@ use std::path::Path;
 
 use anyhow::anyhow;
 use anyhow::Context;
+use edenfs_error::ConnectAndRequestError;
 use edenfs_error::EdenFsError;
 use edenfs_error::Result;
 use edenfs_utils::bytes_from_path;
@@ -32,18 +33,25 @@ impl<'a> EdenFsClient<'a> {
             useForce: !no_force,
             ..Default::default()
         };
-        match self.client.unmountV2(&unmount_argument).await {
+        match self
+            .with_client(|client| client.unmountV2(&unmount_argument))
+            .await
+        {
             Ok(_) => Ok(()),
-            Err(UnmountV2Error::ApplicationException(ref e)) => {
+            Err(ConnectAndRequestError::RequestError(UnmountV2Error::ApplicationException(
+                ref e,
+            ))) => {
                 if e.type_ == ApplicationExceptionErrorCode::UnknownMethod {
                     let encoded_path = bytes_from_path(path.to_path_buf())
                         .with_context(|| format!("Failed to encode path {}", path.display()))?;
-                    self.client.unmount(&encoded_path).await.with_context(|| {
-                        format!(
-                            "Failed to unmount (legacy Thrift unmount endpoint) {}",
-                            path.display()
-                        )
-                    })?;
+                    self.with_client(|client| client.unmount(&encoded_path))
+                        .await
+                        .with_context(|| {
+                            format!(
+                                "Failed to unmount (legacy Thrift unmount endpoint) {}",
+                                path.display()
+                            )
+                        })?;
                     Ok(())
                 } else {
                     Err(EdenFsError::Other(anyhow!(

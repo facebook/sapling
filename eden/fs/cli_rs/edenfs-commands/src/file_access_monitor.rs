@@ -85,7 +85,7 @@ struct StartCmd {
 impl crate::Subcommand for StartCmd {
     async fn run(&self) -> Result<ExitCode> {
         let instance = EdenFsInstance::global();
-        let client = instance.get_client(None).await?;
+        let client = instance.get_client();
 
         // Check the temporary folder exists, otherwise create it
         let tmp_dir_path = PathBuf::from(TMP_FAM_OUTPUT_DIR_PATH);
@@ -128,7 +128,7 @@ impl crate::Subcommand for StartCmd {
 
 async fn stop_fam() -> Result<ExitCode> {
     let instance = EdenFsInstance::global();
-    let client = instance.get_client(None).await?;
+    let client = instance.get_client();
 
     let stop_result = client.stop_file_access_monitor().await?;
     println!("File Access Monitor stopped");

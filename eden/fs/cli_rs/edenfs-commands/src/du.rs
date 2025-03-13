@@ -274,7 +274,7 @@ async fn ignored_usage_counts_for_mount(checkout: &EdenFsCheckout) -> Result<u64
     let mut root_id_options = RootIdOptions::default();
 
     let instance = EdenFsInstance::global();
-    let client = instance.get_client(None).await?;
+    let client = instance.get_client();
     let snapshot_info = client.get_current_snapshot_info(checkout.path()).await;
 
     if let Ok(snapshot_info) = snapshot_info {

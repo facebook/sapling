@@ -77,14 +77,14 @@ impl<'a> EdenFsClient<'a> {
         list_ignored: bool,
         root_id_options: Option<RootIdOptions>,
     ) -> Result<ScmStatus> {
-        self.client
-            .getScmStatusV2(&thrift_types::edenfs::GetScmStatusParams {
-                mountPoint: bytes_from_path(mount_point)?,
-                commit: commit_str.as_bytes().to_vec(),
-                listIgnored: list_ignored,
-                rootIdOptions: root_id_options.map(|r| r.into()),
-                ..Default::default()
-            })
+        let get_scm_status_params = thrift_types::edenfs::GetScmStatusParams {
+            mountPoint: bytes_from_path(mount_point)?,
+            commit: commit_str.as_bytes().to_vec(),
+            listIgnored: list_ignored,
+            rootIdOptions: root_id_options.map(|r| r.into()),
+            ..Default::default()
+        };
+        self.with_client(|client| client.getScmStatusV2(&get_scm_status_params))
             .await
             .map(|scm_status| scm_status.into())
             .map_err(|_| EdenFsError::Other(anyhow!("failed to get scm status v2 result")))

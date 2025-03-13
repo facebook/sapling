@@ -62,24 +62,23 @@ impl<'a> EdenFsClient<'a> {
             let path = bytes_from_path(path.to_path_buf())?;
             paths.push(path);
         }
-        self.client
-            .startFileAccessMonitor(&thrift_types::edenfs::StartFileAccessMonitorParams {
-                paths,
-                specifiedOutputPath: match specified_output_file {
-                    Some(path) => Some(bytes_from_path(path.to_path_buf())?),
-                    None => None,
-                },
-                shouldUpload: should_upload,
-                ..Default::default()
-            })
+        let start_file_access_monitor_params = thrift_types::edenfs::StartFileAccessMonitorParams {
+            paths,
+            specifiedOutputPath: match specified_output_file {
+                Some(path) => Some(bytes_from_path(path.to_path_buf())?),
+                None => None,
+            },
+            shouldUpload: should_upload,
+            ..Default::default()
+        };
+        self.with_client(|client| client.startFileAccessMonitor(&start_file_access_monitor_params))
             .await
             .map(|res| res.into())
             .map_err(|e| EdenFsError::Other(anyhow!("failed to start file access monitor: {}", e)))
     }
 
     pub async fn stop_file_access_monitor(&self) -> Result<StopFileAccessMonitor> {
-        self.client
-            .stopFileAccessMonitor()
+        self.with_client(|client| client.stopFileAccessMonitor())
             .await
             .map(|res| res.into())
             .map_err(|e| EdenFsError::Other(anyhow!("failed to stop file access monitor: {}", e)))

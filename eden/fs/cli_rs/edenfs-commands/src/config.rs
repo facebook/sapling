@@ -213,7 +213,7 @@ pub struct FsConfigCmd {
 impl crate::Subcommand for FsConfigCmd {
     async fn run(&self) -> Result<ExitCode> {
         let instance = EdenFsInstance::global();
-        let client = instance.get_client(None).await?;
+        let client = instance.get_client();
         let config_data = client.get_config_default().await?;
 
         let mut current_section: Option<String> = None;

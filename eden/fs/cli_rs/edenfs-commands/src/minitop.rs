@@ -417,8 +417,7 @@ impl Cursor {
 impl crate::Subcommand for MinitopCmd {
     async fn run(&self) -> Result<ExitCode> {
         let instance = EdenFsInstance::global();
-        let client = instance.get_client(None).await?;
-        let thrift_client = client.get_thrift_client();
+        let client = instance.get_client();
         let mut tracked_processes = TrackedProcesses::new();
 
         let mut system = System::new();
@@ -451,8 +450,9 @@ impl crate::Subcommand for MinitopCmd {
             )?;
 
             // Update currently tracked processes (and add new ones if they haven't been tracked yet)
-            let counts = thrift_client
-                .getAccessCounts(self.refresh_rate.as_secs().try_into()?)
+            let refresh_rate_secs = self.refresh_rate.as_secs().try_into()?;
+            let counts = client
+                .with_client(|client| client.getAccessCounts(refresh_rate_secs))
                 .await?;
 
             for (mount, accesses) in &counts.accessesByMount {
