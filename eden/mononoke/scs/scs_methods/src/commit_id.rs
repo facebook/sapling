@@ -5,12 +5,16 @@
  * GNU General Public License version 2.
  */
 
+use std::borrow::Cow;
 use std::collections::BTreeMap;
 use std::collections::BTreeSet;
 
+use anyhow::Result;
 use cloned::cloned;
 use futures_util::future;
 use futures_util::FutureExt;
+use maplit::btreeset;
+use metaconfig_types::CommitIdentityScheme;
 use mononoke_api::ChangesetContext;
 use mononoke_api::ChangesetId;
 use mononoke_api::MononokeError;
@@ -29,6 +33,9 @@ pub(crate) async fn map_commit_identity(
         thrift::CommitIdentityScheme::BONSAI,
         thrift::CommitId::bonsai(changeset_ctx.id().as_ref().into()),
     );
+
+    let schemes = fall_back_to_default_identity_scheme(changeset_ctx.repo_ctx(), schemes);
+
     let mut scheme_identities = vec![];
     if schemes.contains(&thrift::CommitIdentityScheme::HG) {
         let identity = async {
@@ -112,6 +119,9 @@ pub(crate) async fn map_commit_identities(
         );
         result.insert(*id, idmap);
     }
+
+    let schemes = fall_back_to_default_identity_scheme(repo_ctx, schemes);
+
     let mut scheme_identities = vec![];
     if schemes.contains(&thrift::CommitIdentityScheme::HG) {
         let ids = ids.clone();
@@ -202,6 +212,45 @@ pub(crate) async fn map_commit_identities(
         }
     }
     Ok(result)
+}
+
+/// If identity schemes were not provided, get the repo's default identity scheme
+/// and use it.
+fn fall_back_to_default_identity_scheme<'a>(
+    repo_ctx: &RepoContext<Repo>,
+    schemes: &'a BTreeSet<thrift::CommitIdentityScheme>,
+) -> Cow<'a, BTreeSet<thrift::CommitIdentityScheme>> {
+    if !schemes.is_empty() {
+        // If identity schemes were specified by the user, return them
+        return Cow::Borrowed(schemes);
+    };
+
+    let use_default_id_scheme = justknobs::eval(
+        "scm/mononoke:use_repo_default_id_scheme_in_scs",
+        None,
+        Some(repo_ctx.name()),
+    )
+    .unwrap_or(false);
+
+    if !use_default_id_scheme {
+        // If feature is disabled, use hg as the default scheme, which was the
+        // behaviour in the client before fallback was introduced
+        return Cow::Owned(btreeset! {thrift::CommitIdentityScheme::HG});
+    };
+
+    // Otherwise, get the repo's default identity scheme and use it.
+    let default_scheme = repo_ctx.config().default_commit_identity_scheme.clone();
+
+    let maybe_translated_scheme = match default_scheme {
+        CommitIdentityScheme::HG => Some(thrift::CommitIdentityScheme::HG),
+        CommitIdentityScheme::GIT => Some(thrift::CommitIdentityScheme::GIT),
+        CommitIdentityScheme::BONSAI => Some(thrift::CommitIdentityScheme::BONSAI),
+        _ => None,
+    };
+    match maybe_translated_scheme {
+        Some(translated_scheme) => Cow::Owned(btreeset! {translated_scheme}),
+        None => Cow::Borrowed(schemes),
+    }
 }
 
 /// Trait to extend CommitId with useful functions.
