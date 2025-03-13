@@ -45,9 +45,8 @@ impl CasSuccessTracker {
         }
     }
 
-    pub fn record_success(&self) -> anyhow::Result<()> {
+    pub fn record_success(&self) {
         self.failures_since_last_success.store(0, Ordering::Relaxed);
-        Ok(())
     }
 
     pub fn record_failure(&self) -> anyhow::Result<()> {
@@ -147,11 +146,20 @@ mod tests {
         tracker.record_failure().unwrap();
         assert!(!tracker.allow_request().unwrap());
 
-        // Test that the tracker allows requests after the downtime has passed
+        // Test that the tracker allows requests after the downtime has passed again
         std::thread::sleep(Duration::from_secs(2));
         assert!(tracker.allow_request().unwrap());
 
-        tracker.record_success().unwrap();
+        tracker.record_success();
+        assert!(tracker.allow_request().unwrap());
+
+        for _ in 0..3 {
+            tracker.record_failure().unwrap();
+        }
+        assert!(!tracker.allow_request().unwrap());
+
+        // Test that the tracker allows requests after there was a success after a failure
+        tracker.record_success();
         assert!(tracker.allow_request().unwrap());
     }
 }

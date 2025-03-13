@@ -120,7 +120,7 @@ macro_rules! re_client {
                                 if let Some(inner) = err.downcast_ref::<REClientError>() {
                                     if inner.code == TCode::NOT_FOUND {
                                         // Streaming download failed because the digest was not found, record a success.
-                                        self.cas_success_tracker.record_success()?;
+                                        self.cas_success_tracker.record_success();
                                         return Ok((stats, vec![(digest.to_owned(), Ok(None))]));
                                     }
                                     // Unfortunately, the streaming download failed, record a failure.
@@ -137,7 +137,7 @@ macro_rules! re_client {
                                 bytes.extend(chunk?.data);
                             }
 
-                            self.cas_success_tracker.record_success()?;
+                            self.cas_success_tracker.record_success();
                             return Ok((stats, vec![(digest.to_owned(), Ok(Some(bytes)))]));
                         }
 
@@ -191,7 +191,7 @@ macro_rules! re_client {
                         if all_errors {
                             self.cas_success_tracker.record_failure()?;
                         } else {
-                            self.cas_success_tracker.record_success()?;
+                            self.cas_success_tracker.record_success();
                         }
 
                         Ok((stats, data))
@@ -260,7 +260,7 @@ macro_rules! re_client {
                     if let Err(_) = data {
                         self.cas_success_tracker.record_failure()?;
                     } else {
-                        self.cas_success_tracker.record_success()?;
+                        self.cas_success_tracker.record_success();
                     }
 
                     let (digests_prefetched, digests_not_found) = data?.into_iter()
