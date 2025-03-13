@@ -6,7 +6,6 @@
  */
 
 use std::sync::Arc;
-use std::u32;
 
 use radixbuf::key::KeyId;
 use radixbuf::radix::radix_insert;

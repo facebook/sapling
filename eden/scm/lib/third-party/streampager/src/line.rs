@@ -791,7 +791,7 @@ impl Line {
         let mut rows = Vec::new();
         match wrapping {
             WrappingMode::Unwrapped => {
-                rows.push((0, std::usize::MAX));
+                rows.push((0, usize::MAX));
             }
             WrappingMode::GraphemeBoundary | WrappingMode::WordBoundary => {
                 let mut start = 0;
@@ -985,7 +985,7 @@ mod test {
         let line = Line::new(0, data.as_bytes());
         assert_eq!(
             line.make_wrap(100, WrappingMode::Unwrapped),
-            vec![(0, std::usize::MAX)],
+            vec![(0, usize::MAX)],
         );
         assert_eq!(
             line.make_wrap(40, WrappingMode::GraphemeBoundary),
