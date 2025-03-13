@@ -56,6 +56,7 @@ use slog::Logger;
 use stats::define_stats;
 use stats::prelude::*;
 use tokio::sync::Mutex;
+use tokio::sync::RwLock;
 use url::Url;
 
 use crate::bul_util;
@@ -183,6 +184,7 @@ pub async fn sync(
 
     scuba::log_sync_start(ctx, start_id);
 
+    let last_entry = Arc::new(RwLock::new(None));
     bul_util::read_bookmark_update_log(
         ctx,
         BookmarkUpdateLogId(start_id),
@@ -190,7 +192,7 @@ pub async fn sync(
         repo.bookmark_update_log_arc(),
     )
     .then(|entries| {
-        cloned!(repo, logger, sender, mut send_manager);
+        cloned!(repo, logger, sender, mut send_manager, last_entry);
         borrowed!(ctx);
         async move {
             match entries {
@@ -214,6 +216,7 @@ pub async fn sync(
                             chunk_size,
                             app_args.log_to_ods,
                             &logger,
+                            *last_entry.read().await,
                         )
                         .await
                         .inspect(|_| {
@@ -222,6 +225,7 @@ pub async fn sync(
                         .inspect_err(|e| {
                             scuba::log_bookmark_update_entry_error(ctx, &entry, e, now.elapsed());
                         })?;
+                        *last_entry.write().await = entry.to_changeset_id;
                     }
                     Ok(())
                 }
@@ -250,6 +254,7 @@ pub async fn process_bookmark_update_log_entry(
     chunk_size: u64,
     log_to_ods: bool,
     logger: &Logger,
+    last_entry: Option<ChangesetId>,
 ) -> Result<()> {
     let repo_name = repo.repo_identity().name().to_string();
 
@@ -259,6 +264,8 @@ pub async fn process_bookmark_update_log_entry(
 
     // If the entry has a source, use it. Otherwise, get it from the bookmark.
     let from_cs = if let Some(cs_id) = entry.from_changeset_id {
+        Some(cs_id)
+    } else if let Some(cs_id) = last_entry {
         Some(cs_id)
     } else if let Some(hgid) = sender
         .read_bookmark(entry.bookmark_name.as_str().to_owned())
