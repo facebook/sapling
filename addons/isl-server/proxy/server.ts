@@ -198,6 +198,9 @@ export function startServer({
         case 'chromelike_app':
           platformImpl = (await import('../platform/chromelikeAppServerPlatform')).platform;
           break;
+        case 'visualStudio':
+          platformImpl = (await import('../platform/visualStudioServerPlatform')).platform;
+          break;
         default:
         case undefined:
           break;

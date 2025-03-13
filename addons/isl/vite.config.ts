@@ -29,6 +29,7 @@ const platforms = {
   androidStudioRemote: normalizeInputPath('androidStudioRemote.html'),
   webview: normalizeInputPath('webview.html'),
   chromelikeApp: normalizeInputPath('chromelikeApp.html'),
+  visualStudio: normalizeInputPath('visualStudio.html'),
 };
 
 export default defineConfig({
