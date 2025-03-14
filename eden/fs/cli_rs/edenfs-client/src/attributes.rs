@@ -311,12 +311,14 @@ impl EdenFsClient {
         requested_attributes: i64,
         paths: Vec<String>,
         sync: Option<SyncBehavior>,
+        scope: Option<AttributesRequestScope>,
     ) -> Result<GetAttributesFromFilesResultV2> {
         let params = thrift_types::edenfs::GetAttributesFromFilesParams {
             mountPoint: bytes_from_path(mount_point.as_ref().to_path_buf())?,
             requestedAttributes: requested_attributes,
             paths: paths.iter().map(|s| s.as_bytes().to_vec()).collect(),
             sync: sync.map(Into::into).unwrap_or_default(),
+            scope: scope.map(Into::into),
             ..Default::default()
         };
         self.get_attributes_from_files_v2_from_params(&params).await
@@ -328,6 +330,7 @@ struct GetAttributesV2Request {
     get_attrs_params: GetAttributesFromFilesParams,
     glob_pattern: String,
 }
+
 impl RequestFactory for GetAttributesV2Request {
     fn make_request(&self) -> impl FnOnce(RequestParam) -> RequestResult {
         let get_attrs_params = self.get_attrs_params.clone();
