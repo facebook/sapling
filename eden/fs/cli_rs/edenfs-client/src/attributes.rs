@@ -300,11 +300,30 @@ where
 }
 
 impl EdenFsClient {
-    async fn get_attributes_from_files_v2_from_params(
+    async fn get_attributes_from_files_v2<P, S>(
         &self,
-        params: &thrift_types::edenfs::GetAttributesFromFilesParams,
-    ) -> Result<GetAttributesFromFilesResultV2> {
-        self.with_thrift(|thrift| thrift.getAttributesFromFilesV2(params))
+        mount_point: P,
+        paths: &[S],
+        requested_attributes: i64,
+        sync: Option<SyncBehavior>,
+        scope: Option<AttributesRequestScope>,
+    ) -> Result<GetAttributesFromFilesResultV2>
+    where
+        P: AsRef<Path>,
+        S: AsRef<str>,
+    {
+        let params = thrift_types::edenfs::GetAttributesFromFilesParams {
+            mountPoint: bytes_from_path(mount_point.as_ref().to_path_buf())?,
+            requestedAttributes: requested_attributes,
+            paths: paths
+                .iter()
+                .map(|s| s.as_ref().as_bytes().to_vec())
+                .collect(),
+            sync: sync.map(Into::into).unwrap_or_default(),
+            scope: scope.map(Into::into),
+            ..Default::default()
+        };
+        self.with_thrift(|thrift| thrift.getAttributesFromFilesV2(&params))
             .await
             .map_err(|e| {
                 EdenFsError::Other(anyhow!(
@@ -314,62 +333,52 @@ impl EdenFsClient {
             })
             .map(Into::into)
     }
-
-    pub async fn get_attributes_from_files_v2<P: AsRef<Path>>(
-        &self,
-        mount_point: P,
-        requested_attributes: i64,
-        paths: Vec<String>,
-        sync: Option<SyncBehavior>,
-        scope: Option<AttributesRequestScope>,
-    ) -> Result<GetAttributesFromFilesResultV2> {
-        let params = thrift_types::edenfs::GetAttributesFromFilesParams {
-            mountPoint: bytes_from_path(mount_point.as_ref().to_path_buf())?,
-            requestedAttributes: requested_attributes,
-            paths: paths.iter().map(|s| s.as_bytes().to_vec()).collect(),
-            sync: sync.map(Into::into).unwrap_or_default(),
-            scope: scope.map(Into::into),
-            ..Default::default()
-        };
-        self.get_attributes_from_files_v2_from_params(&params).await
-    }
 }
 
 pub struct GetAttributesV2Request {
-    get_attrs_params: GetAttributesFromFilesParams,
+    mount_point: PathBuf,
+    paths: Vec<String>,
+    requested_attributes: i64,
 }
 
 impl GetAttributesV2Request {
-    pub fn new(
-        mount_path: PathBuf,
-        paths: Vec<Vec<u8>>,
-        requested_attributes: &[String],
-    ) -> Result<Self> {
-        Ok(Self {
-            get_attrs_params: GetAttributesFromFilesParams {
-                mountPoint: bytes_from_path(mount_path)?,
-                paths,
-                requestedAttributes: file_attributes_from_strings(requested_attributes)?,
-                sync: SyncBehavior::no_sync().into(),
-                scope: Some(AttributesRequestScope::default().into()),
-                ..Default::default()
-            },
-        })
+    pub fn new<P, S>(mount_path: PathBuf, paths: &[P], requested_attributes: &[S]) -> Self
+    where
+        P: AsRef<str>,
+        S: AsRef<str> + Display,
+    {
+        Self {
+            mount_point: mount_path,
+            paths: paths.iter().map(|p| p.as_ref().into()).collect(),
+            requested_attributes: file_attributes_from_strings(requested_attributes)
+                .unwrap_or_else(|e| {
+                    tracing::error!("failed to convert attributes to bitmap: {:?}", e);
+                    tracing::info!("defaulting to requesting all attributes in getAttributesFromFilesV2 requests");
+                    all_attributes_as_bitmap()
+        }),
+        }
     }
 }
 
 impl RequestFactory for GetAttributesV2Request {
     fn make_request(&self) -> impl FnOnce(RequestParam) -> RequestResult {
-        let get_attrs_params = self.get_attrs_params.clone();
+        let mount_point = self.mount_point.clone();
+        let paths = self.paths.clone();
+        let requested_attributes = self.requested_attributes;
         move |client: Box<Arc<EdenFsClient>>| {
             Box::new(async move {
-                match client
-                    .get_attributes_from_files_v2_from_params(&get_attrs_params)
+                // Required to ensure the lifetime of paths extends for the duration of the lambda
+                let paths = paths;
+                client
+                    .get_attributes_from_files_v2(
+                        mount_point,
+                        &paths,
+                        requested_attributes,
+                        Some(SyncBehavior::no_sync()),
+                        None,
+                    )
                     .await
-                {
-                    Ok(_) => Ok(()),
-                    Err(e) => Err(e),
-                }
+                    .map(|_| ())
             })
         }
     }

@@ -6,7 +6,6 @@
  */
 
 //! edenfsctl debug stress
-use std::path::Path;
 use std::path::PathBuf;
 use std::sync::Arc;
 
@@ -85,11 +84,16 @@ impl crate::Subcommand for StressCmd {
                     .await?;
 
                 // Construct a RequestFactory so that we can issue the requests efficiently
+                let paths: Vec<String> = glob_result
+                    .matching_files
+                    .iter()
+                    .map(|p| String::from_utf8_lossy(p).into())
+                    .collect();
                 let request_factory = Arc::new(GetAttributesV2Request::new(
                     checkout.path(),
-                    glob_result.matching_files,
+                    &paths,
                     attributes,
-                ).with_context(|| anyhow!("Failed to create request factory for GetAttributesFromFilesV2 stress test"))?);
+                ));
 
                 // Issue the requests and bail early if any of them fail
                 let request_name = request_factory.request_name();
