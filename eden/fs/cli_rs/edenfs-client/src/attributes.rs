@@ -8,6 +8,7 @@
 use std::fmt::Display;
 use std::future::Future;
 use std::path::Path;
+use std::path::PathBuf;
 use std::str::FromStr;
 use std::sync::Arc;
 
@@ -325,10 +326,27 @@ impl EdenFsClient {
     }
 }
 
-#[allow(dead_code)]
-struct GetAttributesV2Request {
+pub struct GetAttributesV2Request {
     get_attrs_params: GetAttributesFromFilesParams,
-    glob_pattern: String,
+}
+
+impl GetAttributesV2Request {
+    pub fn new(
+        mount_path: PathBuf,
+        paths: Vec<Vec<u8>>,
+        requested_attributes: &[String],
+    ) -> Result<Self> {
+        Ok(Self {
+            get_attrs_params: GetAttributesFromFilesParams {
+                mountPoint: bytes_from_path(mount_path)?,
+                paths,
+                requestedAttributes: file_attributes_from_strings(requested_attributes)?,
+                sync: SyncBehavior::no_sync().into(),
+                scope: Some(AttributesRequestScope::default().into()),
+                ..Default::default()
+            },
+        })
+    }
 }
 
 impl RequestFactory for GetAttributesV2Request {
