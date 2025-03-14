@@ -38,7 +38,7 @@ use edenfs_client::instance::EdenFsInstance;
 use edenfs_client::redirect;
 use edenfs_client::redirect::get_effective_redirections;
 use edenfs_client::redirect::scratch::usage_for_dir;
-use edenfs_client::scm_status::RootIdOptions;
+use edenfs_client::types::RootIdOptions;
 use edenfs_utils::get_buck_command;
 use edenfs_utils::get_env_with_buck_version;
 use edenfs_utils::get_environment_suitable_for_subprocess;

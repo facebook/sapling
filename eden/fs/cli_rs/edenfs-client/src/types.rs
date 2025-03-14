@@ -7,6 +7,28 @@
 
 use std::fmt;
 
+#[derive(Clone, Debug, Default)]
+pub struct RootIdOptions {
+    pub filter_id: Option<String>,
+}
+
+impl From<thrift_types::edenfs::RootIdOptions> for RootIdOptions {
+    fn from(from: thrift_types::edenfs::RootIdOptions) -> Self {
+        Self {
+            filter_id: from.filterId,
+        }
+    }
+}
+
+impl From<RootIdOptions> for thrift_types::edenfs::RootIdOptions {
+    fn from(from: RootIdOptions) -> thrift_types::edenfs::RootIdOptions {
+        thrift_types::edenfs::RootIdOptions {
+            filterId: from.filter_id,
+            ..Default::default()
+        }
+    }
+}
+
 pub enum OSName {
     Windows,
     Darwin,
