@@ -6,8 +6,10 @@
  */
 
 use std::fmt::Display;
+use std::future::Future;
 use std::path::Path;
 use std::str::FromStr;
+use std::sync::Arc;
 
 use anyhow::anyhow;
 use anyhow::Context;
@@ -15,9 +17,13 @@ use edenfs_error::EdenFsError;
 use edenfs_error::Result;
 use edenfs_utils::bytes_from_path;
 use thrift_types::edenfs::FileAttributes;
+use thrift_types::edenfs::GetAttributesFromFilesParams;
 use thrift_types::fbthrift::ThriftEnum;
 
 use crate::client::EdenFsClient;
+use crate::request_factory::RequestFactory;
+use crate::request_factory::RequestParam;
+use crate::request_factory::RequestResult;
 use crate::types::SyncBehavior;
 
 // YES, the following code is extremely repetitive. It's unfortunately the only way (for now). We
@@ -281,6 +287,28 @@ impl EdenFsClient {
             ..Default::default()
         };
         self.get_attributes_from_files_v2_from_params(&params).await
+    }
+}
+
+#[allow(dead_code)]
+struct GetAttributesV2Request {
+    get_attrs_params: GetAttributesFromFilesParams,
+    glob_pattern: String,
+}
+impl RequestFactory for GetAttributesV2Request {
+    fn make_request(&self) -> impl FnOnce(RequestParam) -> RequestResult {
+        let get_attrs_params = self.get_attrs_params.clone();
+        move |client: Box<Arc<EdenFsClient>>| {
+            Box::new(async move {
+                match client
+                    .get_attributes_from_files_v2_from_params(&get_attrs_params)
+                    .await
+                {
+                    Ok(_) => Ok(()),
+                    Err(e) => Err(e),
+                }
+            })
+        }
     }
 }
 
