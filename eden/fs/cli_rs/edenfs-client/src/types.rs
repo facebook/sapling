@@ -81,6 +81,18 @@ pub struct SyncBehavior {
     pub sync_timeout_seconds: Option<i64>,
 }
 
+const NO_SYNC: SyncBehavior = SyncBehavior {
+    sync_timeout_seconds: None,
+};
+
+impl SyncBehavior {
+    /// Returns a SyncBehavior object that informs EdenFS that no filesystem synchronization should
+    /// be performed before servicing the Thrift request that this SyncBehavior is attached to.
+    pub fn no_sync() -> Self {
+        NO_SYNC
+    }
+}
+
 impl From<thrift_types::edenfs::SyncBehavior> for SyncBehavior {
     fn from(from: thrift_types::edenfs::SyncBehavior) -> Self {
         Self {
