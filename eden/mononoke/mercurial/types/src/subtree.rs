@@ -55,7 +55,7 @@ impl HgSubtreeChanges {
         let mut merges = Vec::new();
         for changes in all_changes {
             copies.extend(changes.copies);
-            deep_copies.extend(changes.deep_copies);
+            deep_copies.extend(changes.deepcopies);
             merges.extend(changes.merges);
         }
         Ok(HgSubtreeChanges {
@@ -85,7 +85,7 @@ impl HgSubtreeChanges {
         // Currently we only support version 1.
         let all_changes = vec![HgSubtreeChangesVersion {
             copies: self.copies.clone(),
-            deep_copies: self.deep_copies.clone(),
+            deepcopies: self.deep_copies.clone(),
             merges: self.merges.clone(),
             version: 1,
         }];
@@ -173,7 +173,7 @@ pub struct HgSubtreeChangesVersion {
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     copies: Vec<HgSubtreeCopy>,
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
-    deep_copies: Vec<HgSubtreeDeepCopy>,
+    deepcopies: Vec<HgSubtreeDeepCopy>,
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     merges: Vec<HgSubtreeMerge>,
     #[serde(rename = "v", with = "version")]
@@ -386,7 +386,7 @@ mod tests {
             concat!(
                 r##"[{"copies":[{"from_commit":"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa","from_path":"a","to_path":"b"},"##,
                 r##"{"from_commit":"bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb","from_path":"c","to_path":"d"}],"##,
-                r##""deep_copies":[{"from_commit":"cccccccccccccccccccccccccccccccccccccccc","from_path":"e","to_path":"f"}],"##,
+                r##""deepcopies":[{"from_commit":"cccccccccccccccccccccccccccccccccccccccc","from_path":"e","to_path":"f"}],"##,
                 r##""merges":[{"from_commit":"dddddddddddddddddddddddddddddddddddddddd","from_path":"g","to_path":"h"}],"v":1}]"##
             ),
         );
