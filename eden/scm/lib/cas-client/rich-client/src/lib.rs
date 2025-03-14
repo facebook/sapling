@@ -152,7 +152,7 @@ impl RichCasClient {
             cas_success_tracker: CasSuccessTracker::new(CasSuccessTrackerConfig {
                 max_failures: config.get_or("cas", "max-failures", || 10)?,
                 downtime_on_failure: config
-                    .get_or("cas", "downtime-on-failure", || Duration::from_secs(3))?,
+                    .get_or("cas", "downtime-on-failure", || Duration::from_secs(1))?,
             }),
         }))
     }
