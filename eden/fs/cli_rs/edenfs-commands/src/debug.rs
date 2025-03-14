@@ -16,6 +16,7 @@ use crate::Subcommand;
 
 mod clear_local_caches;
 mod compact_local_storage;
+mod stress;
 mod subscribe;
 
 #[derive(Parser, Debug)]
@@ -34,6 +35,8 @@ pub enum DebugSubcommand {
     ClearLocalCaches(clear_local_caches::ClearLocalCachesCmd),
     CompactLocalStorage(compact_local_storage::CompactLocalStorageCmd),
     Subscribe(subscribe::SubscribeCmd),
+    #[clap(subcommand)]
+    Stress(stress::StressCmd),
 }
 
 #[async_trait]
@@ -44,6 +47,7 @@ impl Subcommand for DebugCmd {
             ClearLocalCaches(cmd) => cmd,
             CompactLocalStorage(cmd) => cmd,
             Subscribe(cmd) => cmd,
+            Stress(cmd) => cmd,
         };
         sc.run().await
     }
