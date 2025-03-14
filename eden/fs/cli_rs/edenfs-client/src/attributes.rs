@@ -6,14 +6,19 @@
  */
 
 use std::fmt::Display;
+use std::path::Path;
 use std::str::FromStr;
 
 use anyhow::anyhow;
 use anyhow::Context;
-use anyhow::Result;
 use edenfs_error::EdenFsError;
+use edenfs_error::Result;
+use edenfs_utils::bytes_from_path;
 use thrift_types::edenfs::FileAttributes;
 use thrift_types::fbthrift::ThriftEnum;
+
+use crate::client::EdenFsClient;
+use crate::types::SyncBehavior;
 
 // YES, the following code is extremely repetitive. It's unfortunately the only way (for now). We
 // could potentially use macros in the future, but that would require language feature
@@ -215,11 +220,24 @@ impl From<thrift_types::edenfs::FileAttributeDataOrErrorV2> for FileAttributeDat
         }
     }
 }
+
+pub struct GetAttributesFromFilesResultV2 {
+    pub res: Vec<FileAttributeDataOrErrorV2>,
+}
+
+impl From<thrift_types::edenfs::GetAttributesFromFilesResultV2> for GetAttributesFromFilesResultV2 {
+    fn from(from: thrift_types::edenfs::GetAttributesFromFilesResultV2) -> Self {
+        Self {
+            res: from.res.into_iter().map(Into::into).collect(),
+        }
+    }
+}
+
 pub fn all_attributes() -> &'static [&'static str] {
     FileAttributes::variants()
 }
 
-pub fn file_attributes_from_strings<T>(attrs: &[T]) -> Result<i64>
+pub fn file_attributes_from_strings<T>(attrs: &[T]) -> anyhow::Result<i64>
 where
     T: AsRef<str> + Display,
 {
@@ -230,6 +248,40 @@ where
                 .with_context(|| anyhow!("invalid file attribute: {}", attr))
         })
         .try_fold(0, |acc, x| x.map(|y| acc | y.inner_value() as i64))
+}
+
+impl EdenFsClient {
+    async fn get_attributes_from_files_v2_from_params(
+        &self,
+        params: &thrift_types::edenfs::GetAttributesFromFilesParams,
+    ) -> Result<GetAttributesFromFilesResultV2> {
+        self.with_thrift(|thrift| thrift.getAttributesFromFilesV2(params))
+            .await
+            .map_err(|e| {
+                EdenFsError::Other(anyhow!(
+                    "failed to get getAttributesFromFilesV2 result: {:?}",
+                    e
+                ))
+            })
+            .map(Into::into)
+    }
+
+    pub async fn get_attributes_from_files_v2<P: AsRef<Path>>(
+        &self,
+        mount_point: P,
+        requested_attributes: i64,
+        paths: Vec<String>,
+        sync: Option<SyncBehavior>,
+    ) -> Result<GetAttributesFromFilesResultV2> {
+        let params = thrift_types::edenfs::GetAttributesFromFilesParams {
+            mountPoint: bytes_from_path(mount_point.as_ref().to_path_buf())?,
+            requestedAttributes: requested_attributes,
+            paths: paths.iter().map(|s| s.as_bytes().to_vec()).collect(),
+            sync: sync.map(Into::into).unwrap_or_default(),
+            ..Default::default()
+        };
+        self.get_attributes_from_files_v2_from_params(&params).await
+    }
 }
 
 #[cfg(test)]
