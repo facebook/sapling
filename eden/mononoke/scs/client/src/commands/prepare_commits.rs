@@ -12,6 +12,7 @@ use crate::args::commit_id::resolve_commit_ids;
 use crate::args::commit_id::CommitIdsArgs;
 use crate::args::derived_data_type::DerivedDataTypeArgs;
 use crate::args::repo::RepoArgs;
+use crate::errors::SelectionErrorExt;
 use crate::ScscApp;
 
 #[derive(clap::Parser)]
@@ -34,6 +35,8 @@ pub(super) async fn run(app: ScscApp, args: CommandArgs) -> Result<()> {
         derived_data_type: args.derived_data_type.clone().into_derived_data_type(),
         ..Default::default()
     };
-    conn.repo_prepare_commits(&repo, &params).await?;
+    conn.repo_prepare_commits(&repo, &params)
+        .await
+        .map_err(|e| e.handle_selection_error(&repo))?;
     Ok(())
 }

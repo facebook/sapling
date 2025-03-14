@@ -17,6 +17,7 @@ use crate::args::commit_id::CommitIdNames;
 use crate::args::commit_id::NamedCommitIdsArgs;
 use crate::args::commit_id::SchemeArgs;
 use crate::args::repo::RepoArgs;
+use crate::errors::SelectionErrorExt;
 use crate::library::commit::render_commit_info;
 use crate::library::commit::render_commit_summary;
 use crate::library::commit::CommitInfo as CommitInfoOutput;
@@ -154,7 +155,7 @@ pub(super) async fn run(app: ScscApp, args: CommandArgs) -> Result<()> {
     )
     .await?;
     let commit = thrift::CommitSpecifier {
-        repo,
+        repo: repo.clone(),
         id,
         ..Default::default()
     };
@@ -190,7 +191,8 @@ pub(super) async fn run(app: ScscApp, args: CommandArgs) -> Result<()> {
                 ..Default::default()
             };
             conn.commit_path_history(&commit_and_path, &params)
-                .await?
+                .await
+                .map_err(|e| e.handle_selection_error(&repo))?
                 .history
         }
         None => {
@@ -204,7 +206,10 @@ pub(super) async fn run(app: ScscApp, args: CommandArgs) -> Result<()> {
                     exclude_changeset_and_ancestors,
                     ..Default::default()
                 };
-                conn.commit_linear_history(&commit, &params).await?.history
+                conn.commit_linear_history(&commit, &params)
+                    .await
+                    .map_err(|e| e.handle_selection_error(&repo))?
+                    .history
             } else {
                 let params = thrift::CommitHistoryParams {
                     format: thrift::HistoryFormat::COMMIT_INFO,
@@ -217,7 +222,10 @@ pub(super) async fn run(app: ScscApp, args: CommandArgs) -> Result<()> {
                     exclude_changeset_and_ancestors,
                     ..Default::default()
                 };
-                conn.commit_history(&commit, &params).await?.history
+                conn.commit_history(&commit, &params)
+                    .await
+                    .map_err(|e| e.handle_selection_error(&repo))?
+                    .history
             }
         }
     };

@@ -24,6 +24,7 @@ use crate::args::commit_id::resolve_commit_id;
 use crate::args::commit_id::CommitIdArgs;
 use crate::args::commit_id::SchemeArgs;
 use crate::args::repo::RepoArgs;
+use crate::errors::SelectionErrorExt;
 use crate::library::stress_test::StressArgs;
 use crate::library::summary::summary_output;
 use crate::render::Render;
@@ -283,9 +284,11 @@ pub(super) async fn run(app: ScscApp, args: CommandArgs) -> Result<()> {
         let runner = stress.new_runner(conn.get_client_corrrelator());
         let results = runner
             .run(Box::new(move || {
-                cloned!(conn, params, tree);
+                cloned!(conn, repo, params, tree);
                 Box::pin(async move {
-                    conn.tree_list(&tree, &params).await?;
+                    conn.tree_list(&tree, &params)
+                        .await
+                        .map_err(|e| e.handle_selection_error(&repo))?;
                     Ok(())
                 })
             }))

@@ -14,6 +14,7 @@ use crate::args::commit_id::CommitIdsArgs;
 use crate::args::pushvars::PushvarArgs;
 use crate::args::repo::RepoArgs;
 use crate::args::service_id::ServiceIdArgs;
+use crate::errors::SelectionErrorExt;
 use crate::ScscApp;
 
 #[derive(clap::Parser)]
@@ -67,6 +68,8 @@ pub(super) async fn run(app: ScscApp, args: CommandArgs) -> Result<()> {
         pushvars,
         ..Default::default()
     };
-    conn.repo_move_bookmark(&repo, &params).await?;
+    conn.repo_move_bookmark(&repo, &params)
+        .await
+        .map_err(|e| e.handle_selection_error(&repo))?;
     Ok(())
 }

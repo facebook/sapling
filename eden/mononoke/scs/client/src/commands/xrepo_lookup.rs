@@ -19,6 +19,7 @@ use crate::args::commit_id::resolve_commit_id;
 use crate::args::commit_id::CommitId;
 use crate::args::commit_id::CommitIdArgs;
 use crate::args::commit_id::SchemeArgs;
+use crate::errors::SelectionErrorExt;
 use crate::library::commit_id::render_commit_id;
 use crate::render::Render;
 use crate::ScscApp;
@@ -167,7 +168,7 @@ pub(super) async fn run(app: ScscApp, args: CommandArgs) -> Result<()> {
     let hint = build_hint(&args, &target_repo_conn, &target_repo).await?;
 
     let commit = thrift::CommitSpecifier {
-        repo: source_repo,
+        repo: source_repo.clone(),
         id,
         ..Default::default()
     };
@@ -182,7 +183,10 @@ pub(super) async fn run(app: ScscApp, args: CommandArgs) -> Result<()> {
     // XXX Repos for xrepo methods need to be available on all servers,
     // no matter if they're sharded or not, because SM doesn't support
     // shard colocation.
-    let response = src_repo_conn.commit_lookup_xrepo(&commit, &params).await?;
+    let response = src_repo_conn
+        .commit_lookup_xrepo(&commit, &params)
+        .await
+        .map_err(|e| e.handle_selection_error(&source_repo))?;
     let ids = match &response.ids {
         Some(ids) => map_commit_ids(ids.values()),
         None => BTreeMap::new(),

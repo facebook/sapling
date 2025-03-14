@@ -16,6 +16,7 @@ use scs_client_raw::thrift;
 use serde::Serialize;
 
 use crate::args::repo::RepoArgs;
+use crate::errors::SelectionErrorExt;
 use crate::library::stress_test::StressArgs;
 use crate::library::summary::summary_output;
 use crate::render::Render;
@@ -91,7 +92,9 @@ pub(super) async fn run(app: ScscApp, args: CommandArgs) -> Result<()> {
             .run(Box::new(move || {
                 cloned!(conn, repo, params);
                 Box::pin(async move {
-                    conn.repo_info(&repo, &params).await?;
+                    conn.repo_info(&repo, &params)
+                        .await
+                        .map_err(|e| e.handle_selection_error(&repo))?;
                     Ok(())
                 })
             }))
@@ -100,7 +103,10 @@ pub(super) async fn run(app: ScscApp, args: CommandArgs) -> Result<()> {
         let output = summary_output(results);
         app.target.render(&(), output).await
     } else {
-        let response = conn.repo_info(&repo, &params).await?;
+        let response = conn
+            .repo_info(&repo, &params)
+            .await
+            .map_err(|e| e.handle_selection_error(&repo))?;
         let repo_info = RepoInfo::try_from(&response)?;
         let output = RepoInfoOutput { repo: repo_info };
         app.target.render_one(&args, output).await

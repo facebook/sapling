@@ -16,6 +16,7 @@ use crate::args::commit_id::resolve_commit_id;
 use crate::args::commit_id::CommitIdArgs;
 use crate::args::pushvars::PushvarArgs;
 use crate::args::repo::RepoArgs;
+use crate::errors::SelectionErrorExt;
 use crate::render::Render;
 use crate::ScscApp;
 
@@ -94,7 +95,10 @@ pub(super) async fn run(app: ScscApp, args: CommandArgs) -> Result<()> {
         pushvars,
         ..Default::default()
     };
-    let response = conn.commit_run_hooks(&commit_specifier, &params).await?;
+    let response = conn
+        .commit_run_hooks(&commit_specifier, &params)
+        .await
+        .map_err(|e| e.handle_selection_error(&commit_specifier.repo))?;
     let outcomes = response
         .outcomes
         .into_iter()

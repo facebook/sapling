@@ -20,6 +20,7 @@ use crate::args::commit_id::resolve_commit_id;
 use crate::args::commit_id::CommitIdArgs;
 use crate::args::commit_id::SchemeArgs;
 use crate::args::repo::RepoArgs;
+use crate::errors::SelectionErrorExt;
 use crate::library::commit_id::render_commit_id;
 use crate::render::Render;
 use crate::ScscApp;
@@ -76,7 +77,10 @@ pub(super) async fn run(app: ScscApp, args: CommandArgs) -> Result<()> {
         identity_schemes: args.scheme_args.clone().into_request_schemes(),
         ..Default::default()
     };
-    let response = conn.commit_lookup(&commit, &params).await?;
+    let response = conn
+        .commit_lookup(&commit, &params)
+        .await
+        .map_err(|e| e.handle_selection_error(&commit.repo))?;
     let ids = match &response.ids {
         Some(ids) => map_commit_ids(ids.values()),
         None => BTreeMap::new(),
