@@ -273,6 +273,14 @@ impl Default for AttributesRequestScope {
     }
 }
 
+fn attributes_as_bitmask(attrs: &[FileAttributes]) -> i64 {
+    attrs.iter().fold(0, |acc, x| acc | x.inner_value() as i64)
+}
+
+pub fn all_attributes_as_bitmask() -> i64 {
+    attributes_as_bitmask(FileAttributes::variant_values())
+}
+
 pub fn all_attributes() -> &'static [&'static str] {
     FileAttributes::variants()
 }
@@ -281,13 +289,14 @@ pub fn file_attributes_from_strings<T>(attrs: &[T]) -> Result<i64>
 where
     T: AsRef<str> + Display,
 {
-    attrs
+    let attrs: Result<Vec<FileAttributes>, _> = attrs
         .iter()
         .map(|attr| {
             FileAttributes::from_str(attr.as_ref())
                 .map_err(|e| EdenFsError::Other(anyhow!("invalid file attribute: {:?}", e)))
         })
-        .try_fold(0, |acc, x| x.map(|y| acc | y.inner_value() as i64))
+        .collect();
+    Ok(attributes_as_bitmask(attrs?.as_slice()))
 }
 
 impl EdenFsClient {
