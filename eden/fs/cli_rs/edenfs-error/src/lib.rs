@@ -46,10 +46,66 @@ use thrift_thriftclients::thrift::errors::StopRecordingBackingStoreFetchError;
 use thrift_thriftclients::thrift::errors::SynchronizeWorkingCopyError;
 use thrift_thriftclients::thrift::errors::UnmountError;
 use thrift_thriftclients::thrift::errors::UnmountV2Error;
+use thrift_types::edenfs::EdenError;
 use tokio::time::error::Elapsed;
 
 pub type ExitCode = i32;
 pub type Result<T, E = EdenFsError> = std::result::Result<T, E>;
+
+#[derive(Debug)]
+enum EdenThriftErrorType {
+    PosixError,
+    Win32Error,
+    HResultError,
+    ArgumentError,
+    GenericError,
+    MountGenerationChangedError,
+    JournalTruncatedError,
+    CheckoutInProgressError,
+    OutOfDateParentError,
+    UnknownError,
+}
+
+impl From<thrift_types::edenfs::EdenErrorType> for EdenThriftErrorType {
+    fn from(from: thrift_types::edenfs::EdenErrorType) -> Self {
+        match from {
+            thrift_types::edenfs::EdenErrorType::POSIX_ERROR => Self::PosixError,
+            thrift_types::edenfs::EdenErrorType::WIN32_ERROR => Self::Win32Error,
+            thrift_types::edenfs::EdenErrorType::HRESULT_ERROR => Self::HResultError,
+            thrift_types::edenfs::EdenErrorType::ARGUMENT_ERROR => Self::ArgumentError,
+            thrift_types::edenfs::EdenErrorType::GENERIC_ERROR => Self::GenericError,
+            thrift_types::edenfs::EdenErrorType::MOUNT_GENERATION_CHANGED => {
+                Self::MountGenerationChangedError
+            }
+            thrift_types::edenfs::EdenErrorType::JOURNAL_TRUNCATED => Self::JournalTruncatedError,
+            thrift_types::edenfs::EdenErrorType::CHECKOUT_IN_PROGRESS => {
+                Self::CheckoutInProgressError
+            }
+            thrift_types::edenfs::EdenErrorType::OUT_OF_DATE_PARENT => Self::OutOfDateParentError,
+            _ => Self::UnknownError,
+        }
+    }
+}
+
+#[derive(Debug)]
+pub struct ThriftRequestError {
+    #[allow(dead_code)]
+    message: String,
+    #[allow(dead_code)]
+    error_code: Option<i32>,
+    #[allow(dead_code)]
+    error_type: EdenThriftErrorType,
+}
+
+impl From<EdenError> for ThriftRequestError {
+    fn from(from: EdenError) -> Self {
+        Self {
+            message: from.message,
+            error_code: from.errorCode,
+            error_type: from.errorType.into(),
+        }
+    }
+}
 
 #[derive(Error, Debug)]
 pub enum EdenFsError {
@@ -67,6 +123,9 @@ pub enum EdenFsError {
 
     #[error("The running version of the EdenFS daemon doesn't know that method.")]
     UnknownMethod(String),
+
+    #[error("The Eden Thrift server responded with an EdenError.")]
+    ThriftRequestError(ThriftRequestError),
 
     #[error("{0}")]
     Other(#[from] anyhow::Error),

@@ -11,5 +11,6 @@ rust_library(
         "fbsource//third-party/rust:tokio",
         "//eden/fs/service:thrift-rust-thriftclients",
         "//eden/fs/service:thrift-streaming-rust-clients",
+        "//eden/scm/lib/thrift-types:thrift-types",
     ],
 )
