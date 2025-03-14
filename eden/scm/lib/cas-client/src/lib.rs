@@ -83,6 +83,9 @@ impl CasSuccessTracker {
             // if it has been too long since the last request was allowed, allow the request now!
             if time_now - last_failure >= self.downtime_on_failure_ms * expn_backoff_coefficient {
                 self.number_of_downtimes.fetch_add(1, Ordering::Relaxed);
+                // reset the counter, because we would like to allow at least max_failures before
+                // we start to apply the downtime again
+                self.failures_since_last_success.store(0, Ordering::Relaxed);
                 return Ok(true);
             }
             // otherwise, don't allow the request
@@ -161,7 +164,9 @@ mod tests {
         std::thread::sleep(Duration::from_secs(1));
         assert!(tracker.allow_request().unwrap());
 
-        tracker.record_failure().unwrap();
+        for _ in 0..3 {
+            tracker.record_failure().unwrap();
+        }
         assert!(!tracker.allow_request().unwrap());
 
         // Test that the tracker does not allow requests after the downtime has passed again (from the last failure)
