@@ -203,7 +203,18 @@ pub async fn sync(
                     );
                     Err(e)
                 }
-                Ok(entries) => {
+                Ok(mut entries) => {
+                    if app_args.flatten_bul && !entries.is_empty() {
+                        let original_size = entries.len();
+                        let flattened_bul = bul_util::group_entries(entries);
+                        info!(
+                            logger,
+                            "Grouped {} entries into {} macro-entries",
+                            original_size,
+                            flattened_bul.len()
+                        );
+                        entries = flattened_bul;
+                    }
                     for entry in entries {
                         let now = std::time::Instant::now();
 
@@ -392,8 +403,9 @@ pub async fn process_bookmark_update_log_entry(
 
                 info!(
                     logger,
-                    "Starting sync of {} missing commits",
-                    missing_changesets.len()
+                    "Starting sync of {} missing commits, {} were already synced",
+                    missing_changesets.len(),
+                    existing_changesets
                 );
 
                 stream::iter(missing_changesets.into_iter().map(Ok))

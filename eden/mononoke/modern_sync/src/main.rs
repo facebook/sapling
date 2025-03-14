@@ -62,6 +62,10 @@ struct ModernSyncArgs {
     #[clap(long)]
     /// Path to file to check for in order to exit
     exit_file: PathBuf,
+
+    #[clap(long)]
+    /// Group bookmark update log entries into bigger batches
+    flatten_bul: bool,
 }
 
 #[facet::container]

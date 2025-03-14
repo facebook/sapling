@@ -23,6 +23,13 @@
   >          "bypass_readonly": ["$CLIENT0_ID_TYPE:$CLIENT0_ID_DATA","SERVICE_IDENTITY:server", "X509_SUBJECT_NAME:CN=localhost,O=Mononoke,C=US,ST=CA", "X509_SUBJECT_NAME:CN=client0,O=Mononoke,C=US,ST=CA"]
   >       }
   >     }
+  >   },
+  >   "tiers": {
+  >     "mirror_commit_upload": {
+  >       "actions": {
+  >         "mirror_upload": ["$CLIENT0_ID_TYPE:$CLIENT0_ID_DATA","SERVICE_IDENTITY:server", "X509_SUBJECT_NAME:CN=localhost,O=Mononoke,C=US,ST=CA", "X509_SUBJECT_NAME:CN=client0,O=Mononoke,C=US,ST=CA"]
+  >       }
+  >     }
   >   }
   > }
   > ACLS
@@ -56,23 +63,47 @@
   $ hg log > $TESTTMP/hglog.out
 
 Sync all bookmarks moves
-  $ with_stripped_logs mononoke_modern_sync "" sync-once orig dest --start-id 0 | grep -v "Uploaded" 
+  $ with_stripped_logs mononoke_modern_sync --flatten-bul sync-once orig dest  --start-id 0 |  grep -v "Upload" 
   Running sync-once loop
   Connecting to https://localhost:$LOCAL_PORT/edenapi/
   Established EdenAPI connection
   Initialized channels
-  Calculating segments for entry 1, from changeset None to changeset ChangesetId(Blake2(53b034a90fe3002a707a7da9cdf6eac3dea460ad72f7c6969dfb88fd0e69f856)), to generation 1
-  Resuming from latest entry checkpoint 0
-  Skipping 0 batches from entry 1
-  Skipping 0 commits within batch
-  Starting sync of 1 missing commits, 0 were already synced
-  Calculating segments for entry 2, from changeset Some(ChangesetId(Blake2(53b034a90fe3002a707a7da9cdf6eac3dea460ad72f7c6969dfb88fd0e69f856))) to changeset ChangesetId(Blake2(5b1c7130dde8e54b4285b9153d8e56d69fbf4ae685eaf9e9766cc409861995f8)), approx 4 commit(s)
+  Grouped 2 entries into 1 macro-entries
+  Calculating segments for entry 2, from changeset None to changeset ChangesetId(Blake2(5b1c7130dde8e54b4285b9153d8e56d69fbf4ae685eaf9e9766cc409861995f8)), to generation 5
   Resuming from latest entry checkpoint 0
   Skipping 0 batches from entry 2
   Skipping 0 commits within batch
-  Starting sync of 4 missing commits, 0 were already synced
-  Found error: Trees upload: Expected [1-9]+ responses, got 0, retrying attempt #0 (re)
-  Found error: Trees upload: Expected [1-9]+ responses, got 0, retrying attempt #1 (re)
-  Found error: Trees upload: Expected [1-9]+ responses, got 0, retrying attempt #2 (re)
-  Failed to upload trees: Trees upload: Expected [1-9]+ responses, got 0 (re)
-  Trees flush failed: Trees upload: Expected [1-9]+ responses, got 0 (re)
+  Starting sync of 5 missing commits, 0 were already synced
+  Setting checkpoint from entry 2 to 0
+  Setting bookmark master_bookmark from None to Some(HgChangesetId(HgNodeHash(Sha1(8c3947e5d8bd4fe70259eca001b8885651c75850))))
+  Moved bookmark with result SetBookmarkResponse { data: Ok(()) }
+  Marking entry 2 as done
+
+
+  $ mononoke_admin mutable-counters --repo-name orig get modern_sync
+  Some(2)
+
+  $ cd ..
+
+  $ hg clone -q mono:dest dest --noupdate
+  $ cd dest
+  $ hg pull
+  pulling from mono:dest
+
+  $ hg log > $TESTTMP/hglog2.out
+  $ hg up master_bookmark
+  10 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  $ ls dir1/dir2
+  fifth
+  first
+  forth
+  second
+  third
+
+  $ diff  $TESTTMP/hglog.out  $TESTTMP/hglog2.out
+
+  $ mononoke_admin repo-info  --repo-name dest --show-commit-count
+  Repo: dest
+  Repo-Id: 1
+  Main-Bookmark: master (not set)
+  Commits: 5 (Public: 0, Draft: 5)

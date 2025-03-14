@@ -338,13 +338,20 @@ function mononoke_hg_sync_loop_regenerate {
 }
 
 function mononoke_modern_sync {
-  COMMAND="$1"
-  ORIG_REPO="$2"
-  DEST_REPO="$3"
+  FLAGS="$1"
+  COMMAND="$2"
+  ORIG_REPO="$3"
+  DEST_REPO="$4"
+  shift
   shift
   shift
   shift
 
+  if [ -n "$FLAGS" ]; then
+    FLAGS_ARG="$FLAGS"
+  else
+    FLAGS_ARG=""
+  fi
   GLOG_minloglevel=5 "$MONONOKE_MODERN_SYNC" \
     "${CACHE_ARGS[@]}" \
     "${COMMON_ARGS[@]}" \
@@ -357,6 +364,7 @@ function mononoke_modern_sync {
     --tls-private-key "$TEST_CERTDIR/localhost.key" \
     --tls-certificate "$TEST_CERTDIR/localhost.crt" \
     --scuba-log-file "$TESTTMP/modern_sync_scuba_logs" \
+    ${FLAGS_ARG:+$FLAGS_ARG} \
     "$COMMAND" "$@"
 }
 

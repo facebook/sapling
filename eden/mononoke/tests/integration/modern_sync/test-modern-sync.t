@@ -63,7 +63,7 @@
   $ hg log > $TESTTMP/hglog.out
 
 Sync all bookmarks moves
-  $ quiet mononoke_modern_sync sync-once orig dest --start-id 0
+  $ quiet mononoke_modern_sync "" sync-once orig dest --start-id 0
 
   $ mononoke_admin mutable-counters --repo-name orig get modern_sync
   Some(2)
@@ -241,7 +241,7 @@ Sync all bookmarks moves
 // because, since we resume from latest bookmark, no commits are found given heads ends up being an ancestor of common.
 // Since we force-set master in the first entry, second entry does indeed find commits but subsequently skips them due to lookups.
 // Also there's only one bookmark moves instead of two due to the batching we use. 
-  $ with_stripped_logs mononoke_modern_sync sync-once orig dest --start-id 0
+  $ with_stripped_logs mononoke_modern_sync "" sync-once orig dest --start-id 0
   Running sync-once loop
   Connecting to https://localhost:$LOCAL_PORT/edenapi/
   Established EdenAPI connection
@@ -253,7 +253,7 @@ Sync all bookmarks moves
   Resuming from latest entry checkpoint 0
   Skipping 0 batches from entry 2
   Skipping 0 commits within batch
-  Starting sync of 0 missing commits
+  Starting sync of 0 missing commits, 4 were already synced
   Setting checkpoint from entry 2 to 0
   Setting bookmark master_bookmark from None to Some(HgChangesetId(HgNodeHash(Sha1(8c3947e5d8bd4fe70259eca001b8885651c75850))))
   Moved bookmark with result SetBookmarkResponse { data: Ok(()) }
