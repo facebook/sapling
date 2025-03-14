@@ -170,6 +170,51 @@ impl From<thrift_types::edenfs::DigestSizeOrError> for DigestSizeOrError {
     }
 }
 
+pub struct FileAttributeDataV2 {
+    pub sha1: Option<Sha1OrError>,
+    pub size: Option<SizeOrError>,
+    pub scm_type: Option<SourceControlTypeOrError>,
+    pub object_id: Option<ObjectIdOrError>,
+    pub blake3: Option<Blake3OrError>,
+    pub digest_size: Option<DigestSizeOrError>,
+    pub digest_hash: Option<DigestHashOrError>,
+}
+
+impl From<thrift_types::edenfs::FileAttributeDataV2> for FileAttributeDataV2 {
+    fn from(from: thrift_types::edenfs::FileAttributeDataV2) -> Self {
+        Self {
+            sha1: from.sha1.map(Into::into),
+            size: from.size.map(Into::into),
+            scm_type: from.sourceControlType.map(Into::into),
+            object_id: from.objectId.map(Into::into),
+            blake3: from.blake3.map(Into::into),
+            digest_size: from.digestSize.map(Into::into),
+            digest_hash: from.digestHash.map(Into::into),
+        }
+    }
+}
+
+pub enum FileAttributeDataOrErrorV2 {
+    FileAttributeData(FileAttributeDataV2),
+    Error(EdenFsError),
+    UnknownField(i32),
+}
+
+impl From<thrift_types::edenfs::FileAttributeDataOrErrorV2> for FileAttributeDataOrErrorV2 {
+    fn from(from: thrift_types::edenfs::FileAttributeDataOrErrorV2) -> Self {
+        match from {
+            thrift_types::edenfs::FileAttributeDataOrErrorV2::fileAttributeData(data) => {
+                Self::FileAttributeData(data.into())
+            }
+            thrift_types::edenfs::FileAttributeDataOrErrorV2::error(e) => {
+                Self::Error(EdenFsError::ThriftRequestError(e.into()))
+            }
+            thrift_types::edenfs::FileAttributeDataOrErrorV2::UnknownField(i) => {
+                Self::UnknownField(i)
+            }
+        }
+    }
+}
 pub fn all_attributes() -> &'static [&'static str] {
     FileAttributes::variants()
 }
