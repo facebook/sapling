@@ -26,5 +26,6 @@ pub mod redirect;
 pub mod sapling;
 pub mod scm_status;
 pub mod stats;
+pub mod types;
 pub mod unmount;
 pub mod utils;
