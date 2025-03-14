@@ -43,7 +43,7 @@ pub async fn save_changesets(
 
     if bonsai_changesets
         .iter()
-        .any(|bcs| !bcs.subtree_changes().is_empty())
+        .any(|bcs| bcs.has_subtree_changes())
         && !justknobs::eval(
             "scm/mononoke:enable_subtree_changes",
             None,
@@ -52,6 +52,19 @@ pub async fn save_changesets(
         .unwrap_or(false)
     {
         return Err(anyhow!("Subtree changes are disabled"));
+    }
+
+    if bonsai_changesets
+        .iter()
+        .any(|bcs| bcs.has_manifest_altering_subtree_changes())
+        && !justknobs::eval(
+            "scm/mononoke:enable_manifest_altering_subtree_changes",
+            None,
+            Some(repo.repo_identity().name()),
+        )
+        .unwrap_or(false)
+    {
+        return Err(anyhow!("Subtree changes that alter manifests are disabled"));
     }
 
     let mut parents_to_check: HashSet<ChangesetId> = HashSet::new();

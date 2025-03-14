@@ -43,6 +43,7 @@
     "scm/mononoke:should_set_committer_info_to_author_info_if_empty": true,
     "scm/mononoke:land_service_find_region_using_db_locator": true,
     "scm/mononoke:enable_subtree_changes": true,
+    "scm/mononoke:enable_manifest_altering_subtree_changes": true,
     "scm/mononoke:use_repo_default_id_scheme_in_scs": true
   },
   "ints": {
