@@ -14,7 +14,7 @@ Override subtree key to enable non-test subtree extra
   > EOF
   $ setconfig extensions.subtreetestoverride=$TESTTMP/subtree.py
   $ setconfig push.edenapi=true
-  $ setconfig subtree.copy-reuse-tree=true subtree.min-path-depth=1
+  $ setconfig subtree.min-path-depth=1
   $ enable amend
   $ setup_common_config
 
@@ -36,7 +36,7 @@ Override subtree key to enable non-test subtree extra
   $ cd repo 
 
   $ hg subtree copy -r .^ --from-path foo --to-path bar
-  2 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  copying foo to bar
   $ ls bar
   file2
   file3
@@ -44,34 +44,35 @@ Override subtree key to enable non-test subtree extra
   bbb
 
   $ hg push -r . --to master_bookmark
-  pushing rev 42666076b5aa to destination https://localhost:$LOCAL_PORT/edenapi/ bookmark master_bookmark
+  pushing rev d2dacebb0b05 to destination https://localhost:$LOCAL_PORT/edenapi/ bookmark master_bookmark
   edenapi: queue 1 commit for upload
-  edenapi: queue 0 files for upload
+  edenapi: queue 1 file for upload
+  edenapi: uploaded 1 file
   edenapi: queue 2 trees for upload
   edenapi: uploaded 2 trees
   edenapi: uploaded 1 changeset
-  pushrebasing stack (3527857ec5dd, 42666076b5aa] (1 commit) to remote bookmark master_bookmark
+  pushrebasing stack (3527857ec5dd, d2dacebb0b05] (1 commit) to remote bookmark master_bookmark
   0 files updated, 0 files merged, 0 files removed, 0 files unresolved
-  updated remote bookmark master_bookmark to 42666076b5aa
+  updated remote bookmark master_bookmark to d2dacebb0b05
 
   $ hg subtree copy -r . --from-path foo --to-path baz
-  2 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  copying foo to baz
   $ echo yyy >> baz/file3
   $ hg amend
   $ ls baz
   file2
   file3
   $ hg push -r . --to master_bookmark
-  pushing rev 134f9464a317 to destination https://localhost:$LOCAL_PORT/edenapi/ bookmark master_bookmark
+  pushing rev a3c72378540f to destination https://localhost:$LOCAL_PORT/edenapi/ bookmark master_bookmark
   edenapi: queue 1 commit for upload
   edenapi: queue 2 files for upload
   edenapi: uploaded 2 files
   edenapi: queue 2 trees for upload
   edenapi: uploaded 2 trees
   edenapi: uploaded 1 changeset
-  pushrebasing stack (42666076b5aa, 134f9464a317] (1 commit) to remote bookmark master_bookmark
+  pushrebasing stack (d2dacebb0b05, a3c72378540f] (1 commit) to remote bookmark master_bookmark
   0 files updated, 0 files merged, 0 files removed, 0 files unresolved
-  updated remote bookmark master_bookmark to 134f9464a317
+  updated remote bookmark master_bookmark to a3c72378540f
   $ ls
   bar
   baz

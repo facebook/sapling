@@ -14,7 +14,7 @@ Override subtree key to enable non-test subtree extra
   > EOF
   $ setconfig extensions.subtreetestoverride=$TESTTMP/subtree.py
   $ setconfig push.edenapi=true
-  $ setconfig subtree.copy-reuse-tree=true subtree.min-path-depth=1
+  $ setconfig subtree.min-path-depth=1
   $ enable amend
   $ setup_common_config
 
@@ -39,17 +39,17 @@ Subtree copies can be rebased, and they retain their original source location
 
   $ hg update -q .^
   $ hg subtree copy -r .^ --from-path foo --to-path bar
-  1 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  copying foo to bar
   $ ls bar
   file1
   $ cat bar/file1
   aaa
   $ hg log -r . -T '{extras % "{extra}\n"}'
   branch=default
-  subtree=[{"copies":[{"from_commit":"13445855d10c80bc6ef92e531c44430ea1101b6e","from_path":"foo","to_path":"bar"}],"v":1}]
+  subtree=[{"deepcopies":[{"from_commit":"13445855d10c80bc6ef92e531c44430ea1101b6e","from_path":"foo","to_path":"bar"}],"v":1}]
 
   $ hg log -G -T '{node|short} {desc|firstline} {remotebookmarks}\n'
-  @  a925cd481025 Subtree copy from 13445855d10c80bc6ef92e531c44430ea1101b6e
+  @  88f76f29ed1a Subtree copy from 13445855d10c80bc6ef92e531c44430ea1101b6e
   │
   │ o  d55124608f34 C remote/master_bookmark
   ├─╯
@@ -58,15 +58,15 @@ Subtree copies can be rebased, and they retain their original source location
   o  13445855d10c A
   
   $ hg push -r . --to master_bookmark
-  pushing rev a925cd481025 to destination https://localhost:$LOCAL_PORT/edenapi/ bookmark master_bookmark
+  pushing rev 88f76f29ed1a to destination https://localhost:$LOCAL_PORT/edenapi/ bookmark master_bookmark
   edenapi: queue 1 commit for upload
   edenapi: queue 0 files for upload
   edenapi: queue 1 tree for upload
   edenapi: uploaded 1 tree
   edenapi: uploaded 1 changeset
-  pushrebasing stack (8aeb486cc22e, a925cd481025] (1 commit) to remote bookmark master_bookmark
+  pushrebasing stack (8aeb486cc22e, 88f76f29ed1a] (1 commit) to remote bookmark master_bookmark
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
-  updated remote bookmark master_bookmark to 416d3b39a0c6
+  updated remote bookmark master_bookmark to ca8bcf7d3251
 
   $ cat bar/file1
   aaa
@@ -75,17 +75,18 @@ Subtree copies should conflict with other subtree copies when pushrebasing.
 
   $ hg update -q .^
   $ hg subtree copy -r . --from-path foo --to-path bar
-  1 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  copying foo to bar
   $ ls bar
   file2
   $ hg push -r . --to master_bookmark
-  pushing rev 5ed56273856d to destination https://localhost:$LOCAL_PORT/edenapi/ bookmark master_bookmark
+  pushing rev 8ecbd0bd2240 to destination https://localhost:$LOCAL_PORT/edenapi/ bookmark master_bookmark
   edenapi: queue 1 commit for upload
-  edenapi: queue 0 files for upload
+  edenapi: queue 1 file for upload
+  edenapi: uploaded 1 file
   edenapi: queue 2 trees for upload
   edenapi: uploaded 2 trees
   edenapi: uploaded 1 changeset
-  pushrebasing stack (d55124608f34, 5ed56273856d] (1 commit) to remote bookmark master_bookmark
+  pushrebasing stack (d55124608f34, 8ecbd0bd2240] (1 commit) to remote bookmark master_bookmark
   abort: Server error: Conflicts while pushrebasing: [PushrebaseConflict { left: MPath("bar"), right: MPath("bar") }]
   [255]
 
@@ -96,34 +97,37 @@ Subtree copies should conflict with changes made to the destination (even if the
   $ hg commit -Aqm D
   $ hg push -q --to master_bookmark
   $ hg update -q .^
-  $ hg subtree copy -r . --from-path foo --to-path bar
-  1 files updated, 0 files merged, 1 files removed, 0 files unresolved
+  $ hg subtree copy -r . --from-path foo --to-path bar --force
+  removing bar/file1
+  copying foo to bar
   $ hg push -r . --to master_bookmark
-  pushing rev 61c5ff2acb3a to destination https://localhost:$LOCAL_PORT/edenapi/ bookmark master_bookmark
+  pushing rev 60542fee7765 to destination https://localhost:$LOCAL_PORT/edenapi/ bookmark master_bookmark
   edenapi: queue 1 commit for upload
   edenapi: queue 0 files for upload
   edenapi: queue 2 trees for upload
   edenapi: uploaded 2 trees
   edenapi: uploaded 1 changeset
-  pushrebasing stack (416d3b39a0c6, 61c5ff2acb3a] (1 commit) to remote bookmark master_bookmark
+  pushrebasing stack (ca8bcf7d3251, 60542fee7765] (1 commit) to remote bookmark master_bookmark
   abort: Server error: Conflicts while pushrebasing: [PushrebaseConflict { left: MPath("bar/file3"), right: MPath("bar") }]
   [255]
 
 Subtree copies can overwrite directories as long as there are no conflicts
 
   $ hg update -q master_bookmark
-  $ hg subtree copy -r . --from-path foo --to-path bar
-  1 files updated, 0 files merged, 2 files removed, 0 files unresolved
+  $ hg subtree copy -r . --from-path foo --to-path bar --force
+  removing bar/file1
+  removing bar/file3
+  copying foo to bar
   $ hg push -r . --to master_bookmark
-  pushing rev fa91136eaad4 to destination https://localhost:$LOCAL_PORT/edenapi/ bookmark master_bookmark
+  pushing rev d5d06a3000a2 to destination https://localhost:$LOCAL_PORT/edenapi/ bookmark master_bookmark
   edenapi: queue 1 commit for upload
   edenapi: queue 0 files for upload
   edenapi: queue 2 trees for upload
   edenapi: uploaded 2 trees
   edenapi: uploaded 1 changeset
-  pushrebasing stack (3f13bd9cda35, fa91136eaad4] (1 commit) to remote bookmark master_bookmark
+  pushrebasing stack (ed89d1499167, d5d06a3000a2] (1 commit) to remote bookmark master_bookmark
   0 files updated, 0 files merged, 0 files removed, 0 files unresolved
-  updated remote bookmark master_bookmark to fa91136eaad4
+  updated remote bookmark master_bookmark to d5d06a3000a2
   $ diff -u foo bar
 
 Subtree copies can be pushrebased with their own contents
@@ -134,21 +138,22 @@ Subtree copies can be pushrebased with their own contents
   $ hg commit -qm F
   $ hg push -q --to master_bookmark
   $ hg update -q .^
-  $ hg subtree copy -r . --from-path foo --to-path bar
-  1 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  $ hg subtree copy -r . --from-path foo --to-path bar --force
+  removing bar/file2
+  copying foo to bar
   $ echo ggg > bar/file2
   $ hg amend -q
   $ hg push -r . --to master_bookmark
-  pushing rev 16b0ba258f0d to destination https://localhost:$LOCAL_PORT/edenapi/ bookmark master_bookmark
+  pushing rev 5be283ef0b37 to destination https://localhost:$LOCAL_PORT/edenapi/ bookmark master_bookmark
   edenapi: queue 1 commit for upload
   edenapi: queue 1 file for upload
   edenapi: uploaded 1 file
   edenapi: queue 2 trees for upload
   edenapi: uploaded 2 trees
   edenapi: uploaded 1 changeset
-  pushrebasing stack (8af584e22863, 16b0ba258f0d] (1 commit) to remote bookmark master_bookmark
+  pushrebasing stack (7c161b80faaa, 5be283ef0b37] (1 commit) to remote bookmark master_bookmark
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
-  updated remote bookmark master_bookmark to 7b61498bb1ca
+  updated remote bookmark master_bookmark to 59019454fbe8
   $ cat foo/file2
   fff
   $ cat bar/file2
