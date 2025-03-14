@@ -5,6 +5,7 @@
  * GNU General Public License version 2.
  */
 
+pub mod attributes;
 pub mod backing_store;
 pub mod bind_mount;
 pub mod changes_since;
