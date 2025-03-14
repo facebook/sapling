@@ -15,6 +15,8 @@ use metaconfig_types::RepoConfigRef;
 use mononoke_app::args::RepoArgs;
 use mononoke_app::MononokeApp;
 use repo_derivation_queues::RepoDerivationQueues;
+use repo_derived_data::RepoDerivedData;
+use repo_derived_data::RepoDerivedDataRef;
 use summary::SummaryArgs;
 
 /// Query and manage the derivation queue
@@ -43,11 +45,19 @@ pub struct Repo {
     repo_derivation_queues: RepoDerivationQueues,
     #[facet]
     repo_config: RepoConfig,
+    #[facet]
+    repo_derived_data: RepoDerivedData,
 }
 
 pub async fn run(app: MononokeApp, args: CommandArgs) -> Result<()> {
     let ctx = app.new_basic_context();
     let repo: Repo = app.open_repo(&args.repo).await?;
+
+    let manager = if let Some(ref config_name) = args.config_name {
+        repo.repo_derived_data().manager_for_config(&config_name)?
+    } else {
+        repo.repo_derived_data().manager()
+    };
 
     let config_name = args
         .config_name
@@ -56,7 +66,7 @@ pub async fn run(app: MononokeApp, args: CommandArgs) -> Result<()> {
 
     match args.subcommand {
         DerivationQueueSubcommand::Summary(args) => {
-            summary::summary(&ctx, &repo, config_name, args).await
+            summary::summary(&ctx, &repo, config_name, args, &manager).await
         }
     }
 }
