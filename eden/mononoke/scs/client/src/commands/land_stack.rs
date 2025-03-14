@@ -23,6 +23,7 @@ use crate::args::commit_id::SchemeArgs;
 use crate::args::pushvars::PushvarArgs;
 use crate::args::repo::RepoArgs;
 use crate::args::service_id::ServiceIdArgs;
+use crate::errors::SelectionErrorExt;
 use crate::library::commit_id::render_commit_id;
 use crate::render::Render;
 use crate::ScscApp;
@@ -127,7 +128,8 @@ pub(super) async fn run(app: ScscApp, args: CommandArgs) -> Result<()> {
     };
     let outcome = conn
         .repo_land_stack(&repo, &params)
-        .await?
+        .await
+        .map_err(|e| e.handle_selection_error(&repo))?
         .pushrebase_outcome;
     let head = map_commit_ids(outcome.head.values());
     let mut rebased_commits = outcome

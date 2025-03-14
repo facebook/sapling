@@ -18,6 +18,7 @@ use crate::args::commit_id::resolve_commit_ids;
 use crate::args::commit_id::CommitIdsArgs;
 use crate::args::commit_id::SchemeArgs;
 use crate::args::repo::RepoArgs;
+use crate::errors::SelectionErrorExt;
 use crate::render::Render;
 use crate::ScscApp;
 
@@ -67,7 +68,10 @@ pub(super) async fn run(app: ScscApp, args: CommandArgs) -> Result<()> {
         descendant_commit_id: ids[1].clone(),
         ..Default::default()
     };
-    let response = conn.commit_is_ancestor_of(&commit, &params).await?;
+    let response = conn
+        .commit_is_ancestor_of(&commit, &params)
+        .await
+        .map_err(|e| e.handle_selection_error(&commit.repo))?;
     let output = IsAncestorOutput { result: response };
     app.target.render_one(&args, output).await
 }

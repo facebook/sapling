@@ -20,6 +20,7 @@ use serde::Serialize;
 use crate::args::commit_id::resolve_commit_ids;
 use crate::args::commit_id::CommitIdsArgs;
 use crate::args::repo::RepoArgs;
+use crate::errors::SelectionErrorExt;
 use crate::library::diff::diff_files;
 use crate::render::Render;
 use crate::ScscApp;
@@ -156,7 +157,10 @@ pub(super) async fn run(app: ScscApp, args: CommandArgs) -> Result<()> {
         ordered_params,
         ..Default::default()
     };
-    let response = conn.commit_compare(&base_commit, &params).await?;
+    let response = conn
+        .commit_compare(&base_commit, &params)
+        .await
+        .map_err(|e| e.handle_selection_error(&repo))?;
 
     if args.paths_only {
         return app

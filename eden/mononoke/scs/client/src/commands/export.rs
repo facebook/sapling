@@ -47,6 +47,7 @@ use crate::args::path::PathArgs;
 use crate::args::progress::ProgressArgs;
 use crate::args::progress::ProgressOutput;
 use crate::args::repo::RepoArgs;
+use crate::errors::SelectionErrorExt;
 use crate::library::path_tree::PathItem;
 use crate::library::path_tree::PathTree;
 use crate::render::Render;
@@ -365,7 +366,7 @@ async fn export_tree(
         tokio::fs::create_dir(&destination).await?;
     }
     let tree = thrift::TreeSpecifier::by_id(thrift::TreeIdSpecifier {
-        repo,
+        repo: repo.clone(),
         id,
         ..Default::default()
     });
@@ -374,12 +375,16 @@ async fn export_tree(
         limit: TREE_CHUNK_SIZE,
         ..Default::default()
     };
-    let response = connection.tree_list(&tree, &params).await?;
+    let response = connection
+        .tree_list(&tree, &params)
+        .await
+        .map_err(|e| e.handle_selection_error(&repo))?;
     let count = response.count;
     let other_tree_chunks =
         stream::iter((TREE_CHUNK_SIZE..count).step_by(TREE_CHUNK_SIZE as usize))
             .map({
                 |offset| {
+                    cloned!(repo);
                     // Request subsequent chunks of the directory listing.
                     let connection = connection.clone();
                     let tree = tree.clone();
@@ -389,7 +394,13 @@ async fn export_tree(
                             limit: TREE_CHUNK_SIZE,
                             ..Default::default()
                         };
-                        anyhow::Ok(connection.tree_list(&tree, &params).await?.entries)
+                        anyhow::Ok(
+                            connection
+                                .tree_list(&tree, &params)
+                                .await
+                                .map_err(|e| e.handle_selection_error(&repo))?
+                                .entries,
+                        )
                     }
                 }
             })
@@ -435,7 +446,7 @@ async fn export_file(
     _type_: thrift::EntryType,
 ) -> Result<()> {
     let file = thrift::FileSpecifier::by_id(thrift::FileIdSpecifier {
-        repo,
+        repo: repo.clone(),
         id,
         ..Default::default()
     });
@@ -448,6 +459,7 @@ async fn export_file(
         stream::iter((0..size).step_by(FILE_CHUNK_SIZE as usize))
             .map({
                 move |offset| {
+                    cloned!(repo);
                     let params = thrift::FileContentChunkParams {
                         offset: offset as i64,
                         size: FILE_CHUNK_SIZE,
@@ -455,7 +467,7 @@ async fn export_file(
                     };
                     connection
                         .file_content_chunk(&file, &params)
-                        .map_err(anyhow::Error::from)
+                        .map_err(move |e| e.handle_selection_error(&repo))
                         .map_ok({
                             cloned!(file_metadata);
                             move |chunk| (file_metadata, chunk)
@@ -790,11 +802,17 @@ pub(super) async fn run(app: ScscApp, args: CommandArgs) -> Result<()> {
         ..Default::default()
     };
     let response = {
-        let mut response = conn.commit_path_info(&commit_path, &params).await?;
+        let mut response = conn
+            .commit_path_info(&commit_path, &params)
+            .await
+            .map_err(|e| e.handle_selection_error(&repo))?;
         if !response.exists && casefold == Casefold::Insensitive {
             if let Some(case_path) = case_insensitive_path(&conn, &commit, &path).await? {
                 commit_path.path = case_path;
-                response = conn.commit_path_info(&commit_path, &params).await?;
+                response = conn
+                    .commit_path_info(&commit_path, &params)
+                    .await
+                    .map_err(|e| e.handle_selection_error(&commit.repo))?;
             }
         }
         response

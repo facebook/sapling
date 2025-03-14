@@ -11,6 +11,7 @@ use std::io::Write;
 
 use anyhow::Result;
 use clap::Parser;
+use cloned::cloned;
 use futures::future;
 use futures::stream;
 use futures::stream::StreamExt;
@@ -22,6 +23,7 @@ use crate::args::commit_id::resolve_commit_id;
 use crate::args::commit_id::CommitIdArgs;
 use crate::args::path::PathArgs;
 use crate::args::repo::RepoArgs;
+use crate::errors::SelectionErrorExt;
 use crate::render::Render;
 use crate::ScscApp;
 
@@ -76,7 +78,7 @@ pub(super) async fn run(app: ScscApp, args: CommandArgs) -> Result<()> {
     let commit_id = args.commit_id_args.clone().into_commit_id();
     let id = resolve_commit_id(&conn, &repo, &commit_id).await?;
     let commit = thrift::CommitSpecifier {
-        repo,
+        repo: repo.clone(),
         id,
         ..Default::default()
     };
@@ -93,7 +95,10 @@ pub(super) async fn run(app: ScscApp, args: CommandArgs) -> Result<()> {
         size: CHUNK_SIZE,
         ..Default::default()
     };
-    let response = conn.file_content_chunk(&file, &params).await?;
+    let response = conn
+        .file_content_chunk(&file, &params)
+        .await
+        .map_err(|e| e.handle_selection_error(&repo))?;
     let output = CatOutput {
         offset: response.offset as u64,
         data: response.data,
@@ -103,13 +108,14 @@ pub(super) async fn run(app: ScscApp, args: CommandArgs) -> Result<()> {
     let stream = stream::once(future::ok(output)).chain(
         stream::iter((CHUNK_SIZE..file_size).step_by(CHUNK_SIZE as usize))
             .map(move |offset| {
+                cloned!(repo);
                 let params = thrift::FileContentChunkParams {
                     offset,
                     size: CHUNK_SIZE,
                     ..Default::default()
                 };
                 conn.file_content_chunk(&file, &params)
-                    .map_err(anyhow::Error::from)
+                    .map_err(move |e| e.handle_selection_error(&repo.clone()))
             })
             .buffered(CONCURRENT_FETCHES)
             .then(|response| {

@@ -26,6 +26,7 @@ use crate::args::commit_id::CommitIdArgs;
 use crate::args::commit_id::SchemeArgs;
 use crate::args::path::PathArgs;
 use crate::args::repo::RepoArgs;
+use crate::errors::SelectionErrorExt;
 use crate::library::commit_id::render_commit_id;
 use crate::library::datetime;
 use crate::render::Render;
@@ -418,7 +419,7 @@ pub(super) async fn run(app: ScscApp, args: CommandArgs) -> Result<()> {
     let id = resolve_commit_id(&conn, &repo, &commit_id).await?;
 
     let mut commit = thrift::CommitSpecifier {
-        repo,
+        repo: repo.clone(),
         id,
         ..Default::default()
     };
@@ -434,7 +435,10 @@ pub(super) async fn run(app: ScscApp, args: CommandArgs) -> Result<()> {
             identity_schemes: btreeset! { thrift::CommitIdentityScheme::BONSAI },
             ..Default::default()
         };
-        let response = conn.commit_info(&commit, &params).await?;
+        let response = conn
+            .commit_info(&commit, &params)
+            .await
+            .map_err(|e| e.handle_selection_error(&repo))?;
         commit.id.clone_from(
             response
                 .parents
@@ -473,7 +477,10 @@ pub(super) async fn run(app: ScscApp, args: CommandArgs) -> Result<()> {
         follow_mutable_file_history,
         ..Default::default()
     };
-    let response = conn.commit_path_blame(&commit_and_path, &params).await?;
+    let response = conn
+        .commit_path_blame(&commit_and_path, &params)
+        .await
+        .map_err(|e| e.handle_selection_error(&repo))?;
     app.target
         .render_one(
             &args,

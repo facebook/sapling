@@ -22,6 +22,7 @@ use crate::args::commit_id::resolve_commit_id;
 use crate::args::commit_id::CommitIdArgs;
 use crate::args::commit_id::SchemeArgs;
 use crate::args::repo::RepoArgs;
+use crate::errors::SelectionErrorExt;
 use crate::library::bookmark::render_bookmark_info;
 use crate::library::bookmark::BookmarkInfo;
 use crate::library::commit::render_commit_info;
@@ -180,7 +181,10 @@ async fn commit_info(app: ScscApp, args: CommandArgs, repo: thrift::RepoSpecifie
         identity_schemes: args.scheme_args.clone().into_request_schemes(),
         ..Default::default()
     };
-    let response = conn.commit_info(&commit, &params).await?;
+    let response = conn
+        .commit_info(&commit, &params)
+        .await
+        .map_err(|e| e.handle_selection_error(&commit.repo))?;
 
     let commit_info = CommitInfo::try_from(&response)?;
     let output = CommitInfoOutput {
@@ -203,7 +207,10 @@ async fn bookmark_info(app: ScscApp, args: CommandArgs, repo: thrift::RepoSpecif
         identity_schemes: args.scheme_args.clone().into_request_schemes(),
         ..Default::default()
     };
-    let response = conn.repo_bookmark_info(&repo, &params).await?;
+    let response = conn
+        .repo_bookmark_info(&repo, &params)
+        .await
+        .map_err(|e| e.handle_selection_error(&repo))?;
     let info = response
         .info
         .ok_or_else(|| anyhow!("Bookmark doesn't exist"))?;
@@ -227,7 +234,7 @@ async fn path_info(
     let conn = app.get_connection(Some(&repo.name))?;
     let id = resolve_commit_id(&conn, &repo, &commit_id).await?;
     let commit = thrift::CommitSpecifier {
-        repo,
+        repo: repo.clone(),
         id,
         ..Default::default()
     };
@@ -239,7 +246,10 @@ async fn path_info(
     let params = thrift::CommitPathInfoParams {
         ..Default::default()
     };
-    let response = conn.commit_path_info(&commit_path, &params).await?;
+    let response = conn
+        .commit_path_info(&commit_path, &params)
+        .await
+        .map_err(|e| e.handle_selection_error(&repo))?;
     if response.exists {
         match (response.r#type, response.info) {
             (Some(entry_type), Some(thrift::EntryInfo::tree(info))) => {
@@ -279,7 +289,10 @@ async fn multiple_path_info(
         paths,
         ..Default::default()
     };
-    let response = conn.commit_multiple_path_info(&commit, &params).await?;
+    let response = conn
+        .commit_multiple_path_info(&commit, &params)
+        .await
+        .map_err(|e| e.handle_selection_error(&commit.repo))?;
 
     let output = stream::iter(response.path_info).map(move |(path, commit_info)| {
         match (commit_info.r#type, commit_info.info) {

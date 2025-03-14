@@ -17,6 +17,7 @@ use crate::args::commit_id::CommitIdsArgs;
 use crate::args::commit_id::SchemeArgs;
 use crate::args::repo::RepoArgs;
 use crate::args::service_id::ServiceIdArgs;
+use crate::errors::SelectionErrorExt;
 use crate::render::Render;
 use crate::ScscApp;
 
@@ -81,7 +82,10 @@ pub(super) async fn run(app: ScscApp, args: CommandArgs) -> Result<()> {
         service_identity,
         ..Default::default()
     };
-    let outcome = conn.repo_stack_git_bundle_store(&repo, &params).await?;
+    let outcome = conn
+        .repo_stack_git_bundle_store(&repo, &params)
+        .await
+        .map_err(|e| e.handle_selection_error(&repo))?;
     let output = RepoStackGitBundleStoreOutput {
         everstore_handle: outcome.everstore_handle,
     };

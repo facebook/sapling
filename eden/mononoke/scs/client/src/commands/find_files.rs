@@ -17,6 +17,7 @@ use serde::Serialize;
 use crate::args::commit_id::resolve_commit_id;
 use crate::args::commit_id::CommitIdArgs;
 use crate::args::repo::RepoArgs;
+use crate::errors::SelectionErrorExt;
 use crate::render::Render;
 use crate::ScscApp;
 
@@ -93,14 +94,18 @@ pub(super) async fn run(app: ScscApp, args: CommandArgs) -> Result<()> {
     if args.stream {
         let (_initial_response, response_stream) = conn
             .commit_find_files_stream(&commit_specifier, &params)
-            .await?;
+            .await
+            .map_err(|e| e.handle_selection_error(&commit_specifier.repo))?;
 
         let response = response_stream
             .map_ok(|entry| FileListOutput(entry.files))
             .map_err(Into::into);
         app.target.render(&args, response).await
     } else {
-        let response = conn.commit_find_files(&commit_specifier, &params).await?;
+        let response = conn
+            .commit_find_files(&commit_specifier, &params)
+            .await
+            .map_err(|e| e.handle_selection_error(&commit_specifier.repo))?;
         app.target
             .render_one(&args, FileListOutput(response.files))
             .await
