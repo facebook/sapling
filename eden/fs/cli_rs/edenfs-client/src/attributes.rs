@@ -277,7 +277,7 @@ pub fn all_attributes() -> &'static [&'static str] {
     FileAttributes::variants()
 }
 
-pub fn file_attributes_from_strings<T>(attrs: &[T]) -> anyhow::Result<i64>
+pub fn file_attributes_from_strings<T>(attrs: &[T]) -> Result<i64>
 where
     T: AsRef<str> + Display,
 {
@@ -285,7 +285,7 @@ where
         .iter()
         .map(|attr| {
             FileAttributes::from_str(attr.as_ref())
-                .with_context(|| anyhow!("invalid file attribute: {}", attr))
+                .map_err(|e| EdenFsError::Other(anyhow!("invalid file attribute: {:?}", e)))
         })
         .try_fold(0, |acc, x| x.map(|y| acc | y.inner_value() as i64))
 }
