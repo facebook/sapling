@@ -134,7 +134,8 @@ async fn stream_tree_elements(
                 ..Default::default()
             },
         )
-        .await?;
+        .await
+        .map_err(|e| e.handle_selection_error(&commit.repo))?;
 
     Ok(stream::iter(response.entries)
         .map(|entry| Ok(entry.name))

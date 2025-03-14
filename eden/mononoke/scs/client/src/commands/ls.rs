@@ -298,7 +298,10 @@ pub(super) async fn run(app: ScscApp, args: CommandArgs) -> Result<()> {
         return app.target.render(&(), output).await;
     }
 
-    let response = conn.tree_list(&tree, &params).await?;
+    let response = conn
+        .tree_list(&tree, &params)
+        .await
+        .map_err(|e| e.handle_selection_error(&repo))?;
     let count = response.count;
     let long = args.long;
     let output = list_output(conn.clone(), repo.clone(), response, long).chain(
