@@ -11,7 +11,7 @@ use std::sync::Arc;
 use anyhow::anyhow;
 use anyhow::Context;
 use edenfs_error::Result;
-use tokio::task::JoinHandle;
+use tokio::task::JoinSet;
 
 use crate::client::EdenFsClient;
 use crate::instance::EdenFsInstance;
@@ -46,6 +46,17 @@ fn sanity_check_requests(num_requests: u64, num_tasks: u64) -> u64 {
     }
 }
 
+fn print_update(total: u64, finished: &mut u64) {
+    let update_cadence = total / 10;
+    let update = format!("{}/{} tasks finished running", finished, total);
+    if *finished % update_cadence == 0 {
+        println!("{}", update);
+    } else {
+        tracing::debug!(update);
+    }
+    *finished += 1;
+}
+
 pub async fn send_requests<Factory>(
     factory: Arc<Factory>,
     num_requests: u64,
@@ -65,7 +76,7 @@ where
     println!("NOTE: This may take a while; monitor progress with 'eden debug log --tail'");
 
     let requests_per_task = num_requests / num_tasks;
-    let mut handles: Vec<JoinHandle<Result<()>>> = Vec::new();
+    let mut handles: JoinSet<Result<()>> = JoinSet::new();
     tracing::trace!(
         "spawning {} tasks that will each issue {} requests",
         num_tasks,
@@ -78,7 +89,7 @@ where
             requests_per_task + (num_requests % num_tasks)
         };
         let fac = factory.clone();
-        handles.push(tokio::spawn(async move {
+        handles.spawn(async move {
             let client = Arc::new(EdenFsInstance::global().get_client());
             for _ in 0..num_requests {
                 let fac = fac.clone();
@@ -86,11 +97,13 @@ where
                 Box::into_pin(request(Box::new(client.clone()))).await?;
             }
             Ok(())
-        }));
+        });
     }
 
-    for handle in handles {
-        handle.await.with_context(|| anyhow!("Request failed"))??;
+    let mut num_finished = 1;
+    while let Some(response) = handles.join_next().await {
+        response.with_context(|| anyhow!("Request failed"))??;
+        print_update(num_tasks, &mut num_finished);
     }
     Ok(())
 }
