@@ -1,3 +1,9 @@
+TODO: Remove the inprocess-hg-incompatible. This test requires launching hg
+from dbsh, which doesn't work on Windows because at that point the PATH only
+contains TESTTMP/bin, which doesn't include the Python DLLs required for
+launching Sapling. If one tries to run hg from there it errors out with error
+code 0xC0000135.
+#inprocess-hg-incompatible
 #require fsmonitor no-eden
 
   $ newclientrepo repo
