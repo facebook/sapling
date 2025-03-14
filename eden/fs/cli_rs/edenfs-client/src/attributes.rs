@@ -6,19 +6,16 @@
  */
 
 use std::fmt::Display;
-use std::future::Future;
 use std::path::Path;
 use std::path::PathBuf;
 use std::str::FromStr;
 use std::sync::Arc;
 
 use anyhow::anyhow;
-use anyhow::Context;
 use edenfs_error::EdenFsError;
 use edenfs_error::Result;
 use edenfs_utils::bytes_from_path;
 use thrift_types::edenfs::FileAttributes;
-use thrift_types::edenfs::GetAttributesFromFilesParams;
 use thrift_types::fbthrift::ThriftEnum;
 
 use crate::client::EdenFsClient;
