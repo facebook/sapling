@@ -4,7 +4,7 @@ load(
     "dott_test",
 )
 
-oncall("scm_server_infra")
+oncall("scm_server_treehugger")
 
 # Test suit for testing of Mononoke CAS Sync and also
 # for testing Sapling/Cas integration when a repo is synced

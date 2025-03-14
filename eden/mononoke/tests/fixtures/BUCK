@@ -1,6 +1,6 @@
 load("@fbcode_macros//build_defs:rust_library.bzl", "rust_library")
 
-oncall("scm_server_infra")
+oncall("scm_server_treehugger")
 
 rust_library(
     name = "fixtures",

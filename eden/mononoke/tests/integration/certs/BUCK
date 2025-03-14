@@ -1,6 +1,6 @@
 load("@fbcode_macros//build_defs:native_rules.bzl", "buck_filegroup")
 
-oncall("scm_server_infra")
+oncall("scm_server_treehugger")
 
 buck_filegroup(
     name = "oss_test_certs",

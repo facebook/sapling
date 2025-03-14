@@ -3,7 +3,7 @@ load(
     "dott_test",
 )
 
-oncall("scm_server_infra")
+oncall("scm_server_treehugger")
 
 dott_test(
     name = "server",
