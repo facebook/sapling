@@ -33,8 +33,8 @@ pub struct CommonOptions {
     num_requests: u64,
 
     #[clap(short, long, default_value = "10")]
-    /// Number of threads to use for sending requests
-    num_threads: u64,
+    /// Number of tasks to use for sending requests
+    num_tasks: u64,
 }
 
 #[derive(Parser, Debug)]
