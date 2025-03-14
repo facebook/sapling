@@ -1,4 +1,5 @@
 load("@fbcode_macros//build_defs:rust_binary.bzl", "rust_binary")
+load("//cpe/nupkg_builder:nupkg.bzl", "nupkg")
 
 oncall("source_control")
 
@@ -30,5 +31,13 @@ rust_binary(
         "fbsource//third-party/rust:num_cpus",
         "//cli/rust/cli:cli",
         "//common/rust/shed/fbinit:fbinit",
+    ],
+)
+
+nupkg.builder(
+    name = "fb-fsiomicrobench-windows",
+    oncall = "dotslash",
+    deps = [
+        ":main",
     ],
 )
