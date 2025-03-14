@@ -26,6 +26,8 @@ pub(crate) type RequestResult = Box<(dyn Future<Output = Result<()>> + Send)>;
 /// capture local variables causes tricky lifetime issues.
 pub trait RequestFactory {
     fn make_request(&self) -> impl FnOnce(RequestParam) -> RequestResult;
+
+    fn request_name(&self) -> &'static str;
 }
 
 fn sanity_check_requests(num_requests: u64, num_tasks: u64) -> u64 {
@@ -53,6 +55,14 @@ where
     Factory: RequestFactory + Send + Sync + 'static,
 {
     let num_requests = sanity_check_requests(num_requests, num_tasks);
+
+    println!(
+        "Beginning stress test of {} {} requests across {} tokio tasks",
+        num_requests,
+        factory.request_name(),
+        num_tasks
+    );
+    println!("NOTE: This may take a while; monitor progress with 'eden debug log --tail'");
 
     let requests_per_task = num_requests / num_tasks;
     let mut handles: Vec<JoinHandle<Result<()>>> = Vec::new();

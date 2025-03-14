@@ -20,6 +20,7 @@ use edenfs_client::attributes::GetAttributesV2Request;
 use edenfs_client::checkout::find_checkout;
 use edenfs_client::instance::EdenFsInstance;
 use edenfs_client::request_factory::send_requests;
+use edenfs_client::request_factory::RequestFactory;
 use edenfs_client::utils::expand_path_or_cwd;
 
 use crate::ExitCode;
@@ -65,12 +66,14 @@ impl crate::Subcommand for StressCmd {
         let instance = EdenFsInstance::global();
         let client = instance.get_client();
 
-        match self {
+        let (request_name, num_requests, num_tasks) = match self {
             Self::GetAttributesV2 {
                 common,
                 glob_pattern,
                 attributes,
             } => {
+                // Resolve the glob that the user specified since getAttributesFromFilesV2 takes a
+                // list of files, not a glob pattern.
                 let checkout = find_checkout(instance, &common.mount_point).with_context(|| {
                     anyhow!(
                         "Failed to find checkout with path {}",
@@ -80,14 +83,36 @@ impl crate::Subcommand for StressCmd {
                 let glob_result = client
                     .glob_files_foreground(&checkout.path(), vec![glob_pattern.to_string()])
                     .await?;
+
+                // Construct a RequestFactory so that we can issue the requests efficiently
                 let request_factory = Arc::new(GetAttributesV2Request::new(
                     checkout.path(),
                     glob_result.matching_files,
                     attributes,
                 ).with_context(|| anyhow!("Failed to create request factory for GetAttributesFromFilesV2 stress test"))?);
-                send_requests(request_factory, common.num_requests, common.num_tasks).await?;
+
+                // Issue the requests and bail early if any of them fail
+                let request_name = request_factory.request_name();
+                let num_requests = common.num_requests;
+                let num_tasks = common.num_tasks;
+                send_requests(request_factory, num_requests, num_tasks)
+                    .await
+                    .with_context(|| {
+                        anyhow!(
+                            "failed to complete {} {} requests across {} tasks",
+                            num_requests,
+                            request_name,
+                            num_tasks
+                        )
+                    })?;
+                (request_name, num_requests, num_tasks)
             }
-        }
+        };
+
+        println!(
+            "Successfully issued {} {} requests across {} tasks",
+            num_requests, request_name, num_tasks
+        );
         Ok(0)
     }
 }

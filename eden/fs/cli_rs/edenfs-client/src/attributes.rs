@@ -364,6 +364,10 @@ impl RequestFactory for GetAttributesV2Request {
             })
         }
     }
+
+    fn request_name(&self) -> &'static str {
+        "getAttributesFromFilesV2"
+    }
 }
 
 #[cfg(test)]
