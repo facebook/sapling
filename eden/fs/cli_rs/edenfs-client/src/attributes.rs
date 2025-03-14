@@ -239,6 +239,39 @@ impl From<thrift_types::edenfs::GetAttributesFromFilesResultV2> for GetAttribute
     }
 }
 
+pub enum AttributesRequestScope {
+    FilesOnly,
+    TreesOnly,
+    TreesAndFiles,
+}
+
+impl From<thrift_types::edenfs::AttributesRequestScope> for AttributesRequestScope {
+    fn from(from: thrift_types::edenfs::AttributesRequestScope) -> Self {
+        match from {
+            thrift_types::edenfs::AttributesRequestScope::FILES => Self::FilesOnly,
+            thrift_types::edenfs::AttributesRequestScope::TREES => Self::TreesOnly,
+            thrift_types::edenfs::AttributesRequestScope::TREES_AND_FILES => Self::TreesAndFiles,
+            _ => Self::TreesAndFiles,
+        }
+    }
+}
+
+impl From<AttributesRequestScope> for thrift_types::edenfs::AttributesRequestScope {
+    fn from(from: AttributesRequestScope) -> Self {
+        match from {
+            AttributesRequestScope::FilesOnly => Self::FILES,
+            AttributesRequestScope::TreesOnly => Self::TREES,
+            AttributesRequestScope::TreesAndFiles => Self::TREES_AND_FILES,
+        }
+    }
+}
+
+impl Default for AttributesRequestScope {
+    fn default() -> Self {
+        Self::TreesAndFiles
+    }
+}
+
 pub fn all_attributes() -> &'static [&'static str] {
     FileAttributes::variants()
 }
