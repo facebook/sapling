@@ -136,6 +136,18 @@ impl UploadCounters {
     pub fn log<'a>(&self, ctx: &'a CoreContext) {
         debug!(ctx.logger(), "{}", *self);
     }
+
+    pub fn uploaded_digests(&self) -> usize {
+        self.uploaded.get()
+    }
+
+    pub fn uploaded_bytes(&self) -> usize {
+        self.uploaded_bytes.get()
+    }
+
+    pub fn already_present_digests(&self) -> usize {
+        self.already_present.get()
+    }
 }
 
 define_stats! {

@@ -22,7 +22,10 @@ use mercurial_types::HgChangesetId;
 use mononoke_types::ChangesetId;
 use mononoke_types::MPath;
 use repo_derived_data::RepoDerivedDataRef;
+use scuba_ext::MononokeScubaSampleBuilder;
 use slog::info;
+
+const SCUBA_TABLE: &str = "mononoke_cas_ttl_walker";
 
 use super::Repo;
 
@@ -115,7 +118,11 @@ pub async fn cas_store_upload(
         .await?;
 
     let stats = if args.full {
-        cas_changesets_uploader
+        let mut scuba_sample = MononokeScubaSampleBuilder::new(ctx.fb, SCUBA_TABLE)?;
+        scuba_sample.add_common_server_data();
+
+        let time = std::time::Instant::now();
+        let stats = cas_changesets_uploader
             .upload_single_changeset_recursively(
                 ctx,
                 repo,
@@ -124,7 +131,20 @@ pub async fn cas_store_upload(
                 upload_policy,
                 PriorLookupPolicy::All,
             )
-            .await?
+            .await?;
+
+        // The number of digests that were not present in the CAS store.
+        scuba_sample.add("uploaded_digests", stats.uploaded_digests());
+        // The number of bytes we uploaded to the CAS store during this walk.
+        scuba_sample.add("uploaded_bytes", stats.uploaded_bytes());
+        // The number of digests that were already present in the CAS store.
+        scuba_sample.add("present_digests", stats.already_present_digests());
+        // The repo name.
+        scuba_sample.add("repo_name", repo.repo_identity.name());
+        // The duration of the walk.
+        scuba_sample.add("walk_duration_sec", time.elapsed().as_secs());
+        scuba_sample.log();
+        stats
     } else {
         cas_changesets_uploader
             .upload_single_changeset(
