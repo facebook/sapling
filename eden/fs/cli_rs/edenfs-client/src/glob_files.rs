@@ -139,8 +139,7 @@ impl EdenFsClient {
         .await
     }
 
-    #[allow(dead_code)]
-    async fn glob_files_foreground(
+    pub async fn glob_files_foreground(
         &self,
         mount_point: &Path,
         glob_patterns: Vec<String>,
