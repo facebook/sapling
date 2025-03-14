@@ -314,6 +314,8 @@ impl SendManager {
             while !cancellation_requested.load(Ordering::Relaxed) {
                 tokio::select! {
                     msg = filenodes_recv.recv() => {
+                        debug!(filenodes_logger, "Filenodes channel capacity: {} max capacity: {} in queue: {}", filenodes_recv.capacity(), FILES_CHANNEL_SIZE,  filenodes_recv.len());
+                        STATS::files_queue_len.add_value(filenodes_recv.len() as i64, (reponame.clone(),));
                         match msg {
                             Some(FileMessage::WaitForContents(receiver)) => {
                                 let start = std::time::Instant::now();
