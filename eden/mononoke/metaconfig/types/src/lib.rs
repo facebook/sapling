@@ -1926,6 +1926,33 @@ pub enum ZelosConfig {
     },
 }
 
+/// Configuration for git's bundle-uri feature
+#[derive(Debug, Default, Clone, Eq, PartialEq)]
+pub struct GitBundleURIConfig {
+    /// Specifies what flavor of uri generator should be used.
+    pub uri_generator_type: UriGeneratorType,
+}
+
+/// Configuration for git's bundle-uri url-gen component
+#[derive(Debug, Clone, Eq, PartialEq)]
+pub enum UriGeneratorType {
+    /// Use CDN as the URI generator
+    Cdn {
+        /// Underlying storage bucket identifies
+        bucket: String,
+        /// Underlying storage bucket api-key
+        api_key: String,
+    },
+    /// Use local FS as the URI generator
+    LocalFS,
+}
+
+impl Default for UriGeneratorType {
+    fn default() -> Self {
+        Self::LocalFS
+    }
+}
+
 /// Information on a loaded config
 #[derive(Debug, Default, Clone, Eq, PartialEq)]
 pub struct ConfigInfo {
@@ -1963,6 +1990,8 @@ pub struct GitConfigs {
     /// NOTE: Adding a message is not enough! The message will only be displayed
     /// if the repo enables this feature through a JK.
     pub fetch_message: Option<String>,
+    /// Config for the git's bundle-uri feature
+    pub git_bundle_uri: Option<GitBundleURIConfig>,
 }
 
 /// Configuration for x repo syncs

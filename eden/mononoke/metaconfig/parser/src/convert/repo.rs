@@ -23,6 +23,7 @@ use metaconfig_types::ComparableRegex;
 use metaconfig_types::CrossRepoCommitValidation;
 use metaconfig_types::DerivedDataConfig;
 use metaconfig_types::DerivedDataTypesConfig;
+use metaconfig_types::GitBundleURIConfig;
 use metaconfig_types::GitConcurrencyParams;
 use metaconfig_types::GitConfigs;
 use metaconfig_types::GitDeltaManifestV2Config;
@@ -54,6 +55,7 @@ use metaconfig_types::SourceControlServiceParams;
 use metaconfig_types::SparseProfilesConfig;
 use metaconfig_types::UnodeVersion;
 use metaconfig_types::UpdateLoggingConfig;
+use metaconfig_types::UriGeneratorType;
 use metaconfig_types::WalkerConfig;
 use metaconfig_types::WalkerJobParams;
 use metaconfig_types::WalkerJobType;
@@ -75,6 +77,7 @@ use repos::RawCommitIdentityScheme;
 use repos::RawCrossRepoCommitValidationConfig;
 use repos::RawDerivedDataConfig;
 use repos::RawDerivedDataTypesConfig;
+use repos::RawGitBundleURIConfig;
 use repos::RawGitConcurrencyParams;
 use repos::RawGitConfigs;
 use repos::RawGitDeltaManifestV2Config;
@@ -100,6 +103,7 @@ use repos::RawSourceControlServiceMonitoring;
 use repos::RawSourceControlServiceParams;
 use repos::RawSparseProfilesConfig;
 use repos::RawUpdateLoggingConfig;
+use repos::RawUriGeneratorType;
 use repos::RawWalkerConfig;
 use repos::RawWalkerJobParams;
 use repos::RawWalkerJobType;
@@ -788,6 +792,27 @@ impl Convert for RawZelosConfig {
     }
 }
 
+impl Convert for RawGitBundleURIConfig {
+    type Output = GitBundleURIConfig;
+
+    fn convert(self) -> Result<Self::Output> {
+        match self.uri_generator_type {
+            RawUriGeneratorType::cdn(cdn) => Ok(GitBundleURIConfig {
+                uri_generator_type: UriGeneratorType::Cdn {
+                    bucket: cdn.bucket,
+                    api_key: cdn.api_key,
+                },
+            }),
+            RawUriGeneratorType::local_fs(_) => Ok(GitBundleURIConfig {
+                uri_generator_type: UriGeneratorType::LocalFS,
+            }),
+            RawUriGeneratorType::UnknownField(f) => {
+                Err(anyhow!("Unknown variant {} of RawGitBundleURIConfig", f))
+            }
+        }
+    }
+}
+
 impl Convert for RawShardedService {
     type Output = ShardedService;
 
@@ -854,10 +879,13 @@ impl Convert for RawGitConfigs {
 
         let fetch_message = self.fetch_message;
 
+        let git_bundle_uri = self.git_bundle_uri_config.convert()?;
+
         Ok(GitConfigs {
             git_concurrency,
             git_lfs_interpret_pointers,
             fetch_message,
+            git_bundle_uri,
         })
     }
 }
