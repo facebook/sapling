@@ -24,7 +24,6 @@ pub(crate) type RequestResult = Box<(dyn Future<Output = Result<()>> + Send)>;
 /// for that request type. The RequestFactory trait tells the stress test code how to issue a
 /// request for each Thrift endpoint. The trait is needed since passing in arbitrary lambdas that
 /// capture local variables causes tricky lifetime issues.
-#[allow(dead_code)]
 pub trait RequestFactory {
     fn make_request(&self) -> impl FnOnce(RequestParam) -> RequestResult;
 }
@@ -45,8 +44,7 @@ fn sanity_check_requests(num_requests: u64, num_tasks: u64) -> u64 {
     }
 }
 
-#[allow(dead_code)]
-async fn send_requests<Factory>(
+pub async fn send_requests<Factory>(
     factory: Arc<Factory>,
     num_requests: u64,
     num_tasks: u64,

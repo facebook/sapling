@@ -16,8 +16,10 @@ use anyhow::Result;
 use async_trait::async_trait;
 use clap::Parser;
 use edenfs_client::attributes::all_attributes;
+use edenfs_client::attributes::GetAttributesV2Request;
 use edenfs_client::checkout::find_checkout;
 use edenfs_client::instance::EdenFsInstance;
+use edenfs_client::request_factory::send_requests;
 use edenfs_client::utils::expand_path_or_cwd;
 
 use crate::ExitCode;
@@ -67,7 +69,7 @@ impl crate::Subcommand for StressCmd {
             Self::GetAttributesV2 {
                 common,
                 glob_pattern,
-                attributes: _,
+                attributes,
             } => {
                 let checkout = find_checkout(instance, &common.mount_point).with_context(|| {
                     anyhow!(
@@ -75,9 +77,15 @@ impl crate::Subcommand for StressCmd {
                         common.mount_point.display()
                     )
                 })?;
-                let _glob_result = client
+                let glob_result = client
                     .glob_files_foreground(&checkout.path(), vec![glob_pattern.to_string()])
                     .await?;
+                let request_factory = Arc::new(GetAttributesV2Request::new(
+                    checkout.path(),
+                    glob_result.matching_files,
+                    attributes,
+                ).with_context(|| anyhow!("Failed to create request factory for GetAttributesFromFilesV2 stress test"))?);
+                send_requests(request_factory, common.num_requests, common.num_tasks).await?;
             }
         }
         Ok(0)

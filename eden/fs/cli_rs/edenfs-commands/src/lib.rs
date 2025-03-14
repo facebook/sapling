@@ -5,6 +5,8 @@
  * GNU General Public License version 2.
  */
 
+#![feature(impl_trait_in_fn_trait_return)]
+
 use std::fs::File;
 use std::io::BufReader;
 use std::path::PathBuf;
