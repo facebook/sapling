@@ -97,13 +97,12 @@ impl EdenFsClient {
     }
 
     async fn connect_impl(&self) -> Result<EdenFsThriftClient> {
-        const THRIFT_TIMEOUT_MS: u32 = 120_000;
         let client = make_EdenServiceExt_thriftclient!(
             expect_init(),
             protocol = CompactProtocol,
             from_path = &self.socket_file,
-            with_conn_timeout = THRIFT_TIMEOUT_MS,
-            with_recv_timeout = THRIFT_TIMEOUT_MS,
+            with_conn_timeout = 120_000, // 2 minutes
+            with_recv_timeout = 300_000, // 5 minutes
             with_secure = false,
         )?;
         Ok(client)
