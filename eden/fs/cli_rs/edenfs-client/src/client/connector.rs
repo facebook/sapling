@@ -15,19 +15,18 @@ use edenfs_error::Result;
 use fbinit::FacebookInit;
 use futures::future::BoxFuture;
 use futures::future::Shared;
-use thrift_streaming_clients::StreamingEdenService;
-use thrift_streaming_thriftclients::build_StreamingEdenService_client;
+use thrift_streaming_clients::StreamingEdenServiceExt;
+use thrift_streaming_thriftclients::make_StreamingEdenServiceExt_thriftclient;
 use thrift_thriftclients::make_EdenServiceExt_thriftclient;
 use thrift_types::edenfs_clients::EdenServiceExt;
 use thriftclient::ThriftChannel;
-use thriftclient::ThriftChannelBuilder;
-use thriftclient::TransportType;
 
 pub type EdenFsThriftClient = Arc<dyn EdenServiceExt<ThriftChannel> + Send + Sync + 'static>;
 #[allow(dead_code)]
 type EdenFsThriftClientFuture = Shared<BoxFuture<'static, Result<EdenFsThriftClient>>>;
 
-pub type StreamingEdenFsThriftClient = Arc<dyn StreamingEdenService + Send + Sync + 'static>;
+pub type StreamingEdenFsThriftClient =
+    Arc<dyn StreamingEdenServiceExt<ThriftChannel> + Send + Sync + 'static>;
 #[allow(dead_code)]
 type StreamingEdenFsThriftClientFuture =
     Shared<BoxFuture<'static, Result<StreamingEdenFsThriftClient>>>;
@@ -82,10 +81,13 @@ impl EdenFsConnector {
     }
 
     pub async fn connect_streaming_impl(&self) -> Result<StreamingEdenFsThriftClient> {
-        let client = build_StreamingEdenService_client(
-            ThriftChannelBuilder::from_path(self.fb, &self.socket_file)?
-                .with_transport_type(TransportType::Rocket)
-                .with_secure(false),
+        let client = make_StreamingEdenServiceExt_thriftclient!(
+            self.fb,
+            protocol = CompactProtocol,
+            from_path = &self.socket_file,
+            with_conn_timeout = 120_000, // 2 minutes
+            with_recv_timeout = 300_000, // 5 minutes
+            with_secure = false,
         )?;
         Ok(client)
     }
