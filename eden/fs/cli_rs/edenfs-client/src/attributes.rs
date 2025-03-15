@@ -351,7 +351,7 @@ impl GetAttributesV2Request {
                 .unwrap_or_else(|e| {
                     tracing::error!("failed to convert attributes to bitmap: {:?}", e);
                     tracing::info!("defaulting to requesting all attributes in getAttributesFromFilesV2 requests");
-                    all_attributes_as_bitmap()
+                    all_attributes_as_bitmask()
         }),
         }
     }
