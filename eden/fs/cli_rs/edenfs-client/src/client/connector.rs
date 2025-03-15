@@ -5,6 +5,7 @@
  * GNU General Public License version 2.
  */
 
+use core::time;
 use std::path::Path;
 use std::path::PathBuf;
 use std::sync::Arc;
@@ -12,6 +13,8 @@ use std::time::Duration;
 
 use anyhow::Context;
 use edenfs_error::ConnectError;
+use edenfs_error::ErrorHandlingStrategy;
+use edenfs_error::HasErrorHandlingStrategy;
 use fbinit::FacebookInit;
 use futures::future::BoxFuture;
 use futures::future::FutureExt;
@@ -20,7 +23,9 @@ use thrift_streaming_clients::StreamingEdenServiceExt;
 use thrift_streaming_thriftclients::make_StreamingEdenServiceExt_thriftclient;
 use thrift_thriftclients::make_EdenServiceExt_thriftclient;
 use thrift_thriftclients::EdenService;
+use thrift_types::edenfs_clients::errors::GetDaemonInfoError;
 use thrift_types::edenfs_clients::EdenServiceExt;
+use thrift_types::fb303_core::fb303_status;
 use thriftclient::ThriftChannel;
 
 pub type EdenFsThriftClient = Arc<dyn EdenServiceExt<ThriftChannel> + Send + Sync + 'static>;
@@ -150,9 +155,37 @@ impl EdenFsConnector {
     }
 
     async fn wait_until_deamon_is_ready(
-        _client: Arc<dyn EdenService + Send + Sync>,
+        client: Arc<dyn EdenService + Send + Sync>,
     ) -> std::result::Result<(), ConnectError> {
-        // TODO: implement logic to wait until the daemon is ready
-        Ok(())
+        let mut interval = tokio::time::interval(Duration::from_secs(1));
+        interval.set_missed_tick_behavior(tokio::time::MissedTickBehavior::Skip);
+
+        for _ in 0..10 {
+            match EdenFsConnector::is_daemon_ready(client.clone()).await {
+                Ok(true) => return Ok(()),
+                Ok(false) => {
+                    // Fallthrough to keep going
+                }
+                Err(e) if e.get_error_handling_strategy() == ErrorHandlingStrategy::Retry => {
+                    // Fallthrough to keep going
+                }
+                Err(e) => return Err(ConnectError::DaemonNotReadyError(e.to_string())),
+            }
+
+            interval.tick().await;
+        }
+
+        Err(ConnectError::DaemonNotReadyError(
+            "Timed out waiting for the daemon to be ready".to_string(),
+        ))
+    }
+
+    async fn is_daemon_ready(
+        _client: Arc<dyn EdenService + Send + Sync>,
+    ) -> std::result::Result<bool, GetDaemonInfoError> {
+        Ok(true)
+        // TODO: debug why client is not responding here
+        // let daemon_info = client.getDaemonInfo().await?;
+        // Ok(daemon_info.status == Some(fb303_status::ALIVE))
     }
 }

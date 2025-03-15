@@ -144,8 +144,8 @@ pub enum ConnectError {
     #[error("Failed to connect to EdenFS daemon: {0}")]
     ConnectionError(String),
 
-    #[error("Failed to wait for mount to become ready: {0}")]
-    MountNotReadyError(String),
+    #[error("Failed to wait for daemon to become ready: {0}")]
+    DaemonNotReadyError(String),
 }
 
 pub trait ResultExt<T> {
