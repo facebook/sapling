@@ -22,7 +22,6 @@ use crate::client::connector::EdenFsThriftClient;
 use crate::client::connector::StreamingEdenFsThriftClient;
 
 pub struct EdenFsClient {
-    #[allow(dead_code)]
     connector: EdenFsConnector,
 }
 
@@ -42,10 +41,10 @@ impl EdenFsClient {
         Fut: Future<Output = Result<T, E>>,
         E: HasErrorHandlingStrategy + Debug + Display,
     {
-        let client = self
-            .connector
-            .connect(None)
+        let client_future = self.connector.connect(None);
+        let client = client_future
             .await
+            .clone()
             .map_err(|e| ConnectAndRequestError::ConnectionError(e))?;
 
         // TODO: switch to buck2 lazy connection
@@ -65,16 +64,17 @@ impl EdenFsClient {
         Fut: Future<Output = Result<T, E>>,
         E: HasErrorHandlingStrategy + Debug + Display,
     {
-        let streaming_client = self
-            .connector
-            .connect_streaming(None)
+        let client_future = self.connector.connect_streaming(None);
+        let client = client_future
+            .await
+            .clone()
             .await
             .map_err(|e| ConnectAndRequestError::ConnectionError(e))?;
 
         // TODO: switch to buck2 lazy connection
         // TODO: switch to buck2 retry logic
         // TOOD: switch to buck2 error handling
-        f(&streaming_client)
+        f(&client)
             .await
             .map_err(|e| ConnectAndRequestError::RequestError(e))
     }

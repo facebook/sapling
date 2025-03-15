@@ -134,9 +134,18 @@ pub enum EdenFsError {
 #[derive(Error, Debug)]
 pub enum ConnectAndRequestError<E> {
     #[error(transparent)]
-    ConnectionError(EdenFsError),
+    ConnectionError(ConnectError),
     #[error("Eden Request Failed: {0:?}")]
     RequestError(#[from] E),
+}
+
+#[derive(Clone, Debug, Error)]
+pub enum ConnectError {
+    #[error("Failed to connect to EdenFS daemon: {0}")]
+    ConnectionError(String),
+
+    #[error("Failed to wait for mount to become ready: {0}")]
+    MountNotReadyError(String),
 }
 
 pub trait ResultExt<T> {
