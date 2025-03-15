@@ -5,6 +5,8 @@
  * GNU General Public License version 2.
  */
 
+mod connector;
+
 use std::fmt::Debug;
 use std::fmt::Display;
 use std::future::Future;
@@ -13,6 +15,7 @@ use std::sync::Arc;
 use std::time::Duration;
 
 use anyhow::Context;
+use connector::EdenFsConnector;
 use edenfs_error::ConnectAndRequestError;
 use edenfs_error::EdenFsError;
 use edenfs_error::HasErrorHandlingStrategy;
@@ -32,12 +35,21 @@ pub type EdenFsThriftClient = Arc<dyn EdenServiceExt<ThriftChannel> + Send + Syn
 pub type StreamingEdenFsThriftClient = Arc<dyn StreamingEdenService + Send + Sync + 'static>;
 
 pub struct EdenFsClient {
+    #[allow(dead_code)]
+    connector: EdenFsConnector,
     socket_file: PathBuf,
 }
 
 impl EdenFsClient {
     pub(crate) fn new(socket_file: PathBuf) -> Self {
-        Self { socket_file }
+        Self {
+            connector: EdenFsConnector::new(
+                expect_init(),
+                //TODO: remove socket_file from EdenFsClient
+                socket_file.clone(),
+            ),
+            socket_file,
+        }
     }
 
     pub async fn with_thrift<F, Fut, T, E>(
