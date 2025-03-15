@@ -294,26 +294,37 @@ pub async fn process_bookmark_update_log_entry(
     let bookmark_name = entry.bookmark_name.name().to_string();
 
     let to_generation = repo.commit_graph().changeset_generation(ctx, to_cs).await?;
-    let (approx_count, approx_count_str) = if let Some(from_cs) = entry.from_changeset_id {
+    let (approx_count, approx_count_str) = if let Some(from_cs) = from_cs {
         let from_generation = repo
             .commit_graph()
             .changeset_generation(ctx, from_cs)
             .await?;
         let diff = to_generation.difference_from(from_generation);
-        let diff_str = diff.map_or_else(
-            // on the off chance we can't compute the difference, just log both generations
-            || {
-                format!(
-                    "generation from {:?} to {:?}",
-                    from_generation, to_generation
+        if let Some(diff) = diff {
+            (Some(diff as i64), format!("approx {} commit(s)", diff))
+        } else {
+            // This can happen if the bookmark was moved backwards
+            let diff = from_generation.difference_from(to_generation);
+            if let Some(diff) = diff {
+                let neg_diff = if let Ok(diff) = TryInto::<i64>::try_into(diff) {
+                    Some(-diff)
+                } else {
+                    None
+                };
+                (neg_diff, format!("moved back by approx {} commit(s)", diff))
+            } else {
+                (
+                    None,
+                    format!(
+                        "generation from {:?} to {:?}",
+                        from_generation, to_generation
+                    ),
                 )
-            },
-            |count| format!("approx {} commit(s)", count),
-        );
-        (diff, diff_str)
+            }
+        }
     } else {
         (
-            Some(to_generation.value()),
+            Some(to_generation.value() as i64),
             format!("to generation {:?}", to_generation.value()),
         )
     };

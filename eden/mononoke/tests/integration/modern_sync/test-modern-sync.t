@@ -196,7 +196,7 @@ Sync all bookmarks moves
 
 # We can't make strict assertions because batching is timing-dependent. We can't at least check that we have at least one
 # and that it has the fields we expect.
-  $ cat  $TESTTMP/modern_sync_scuba_logs | summarize_scuba_json 'EdenAPI stats' \
+  $ cat $TESTTMP/modern_sync_scuba_logs | summarize_scuba_json 'EdenAPI stats' \
   > .normal.log_tag .normal.repo \
   > .normal.endpoint \
   > .int.requests .int.downloaded_bytes .int.uploaded_bytes .int.elapsed .int.latency .int.download_speed .int.upload_speed \
@@ -240,13 +240,13 @@ Sync all bookmarks moves
 // Try to re-sync. Notice how no missing commits are found, not only because of lookups but
 // because, since we resume from latest bookmark, no commits are found given heads ends up being an ancestor of common.
 // Since we force-set master in the first entry, second entry does indeed find commits but subsequently skips them due to lookups.
-// Also there's only one bookmark moves instead of two due to the batching we use. 
+// Also there's only one bookmark moves instead of two due to the batching we use.
   $ with_stripped_logs mononoke_modern_sync "" sync-once orig dest --start-id 0
   Running sync-once loop
   Connecting to https://localhost:$LOCAL_PORT/edenapi/
   Established EdenAPI connection
   Initialized channels
-  Calculating segments for entry 1, from changeset Some(ChangesetId(Blake2(5b1c7130dde8e54b4285b9153d8e56d69fbf4ae685eaf9e9766cc409861995f8))) to changeset ChangesetId(Blake2(53b034a90fe3002a707a7da9cdf6eac3dea460ad72f7c6969dfb88fd0e69f856)), to generation 1
+  Calculating segments for entry 1, from changeset Some(ChangesetId(Blake2(5b1c7130dde8e54b4285b9153d8e56d69fbf4ae685eaf9e9766cc409861995f8))) to changeset ChangesetId(Blake2(53b034a90fe3002a707a7da9cdf6eac3dea460ad72f7c6969dfb88fd0e69f856)), moved back by approx 4 commit(s)
   Resuming from latest entry checkpoint 0
   Skipping 0 batches from entry 1
   Calculating segments for entry 2, from changeset Some(ChangesetId(Blake2(53b034a90fe3002a707a7da9cdf6eac3dea460ad72f7c6969dfb88fd0e69f856))) to changeset ChangesetId(Blake2(5b1c7130dde8e54b4285b9153d8e56d69fbf4ae685eaf9e9766cc409861995f8)), approx 4 commit(s)

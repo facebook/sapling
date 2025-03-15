@@ -44,7 +44,7 @@ pub(crate) fn log_sync_start(ctx: &CoreContext, start_id: u64) -> bool {
 pub(crate) fn log_bookmark_update_entry_start(
     ctx: &CoreContext,
     entry: &BookmarkUpdateLogEntry,
-    approx_count: Option<u64>,
+    approx_count: Option<i64>,
 ) -> (bool, CoreContext) {
     let mut scuba_sample = ctx.scuba().clone();
     let ctx = ctx.with_mutated_scuba(|mut scuba| {
