@@ -5,6 +5,8 @@
  * GNU General Public License version 2.
  */
 
+use std::time::Duration;
+
 use edenfs_error::EdenFsError;
 use edenfs_error::Result;
 use edenfs_error::ResultExt;
@@ -31,18 +33,21 @@ impl DaemonHealthy for DaemonInfo {
 }
 
 impl EdenFsClient {
-    pub async fn get_health(&self) -> Result<DaemonInfo> {
+    pub async fn get_health(&self, timeout: Option<Duration>) -> Result<DaemonInfo> {
         event!(Level::DEBUG, "connected to EdenFS daemon");
-        self.with_thrift(|thrift| thrift.getDaemonInfo())
-            .await
-            .from_err()
+        self.with_thrift_with_timeout(timeout.or_else(|| Some(Duration::from_secs(3))), |thrift| {
+            thrift.getDaemonInfo()
+        })
+        .await
+        .from_err()
     }
 
     pub async fn get_health_with_startup_updates_included(
         &self,
+        timeout: Duration,
     ) -> Result<(DaemonInfo, BoxStream<'static, Result<Vec<u8>>>)> {
         let (daemon_info, stream) = self
-            .with_streaming_thrift(|thrift| thrift.streamStartStatus())
+            .with_streaming_thrift_with_timeout(Some(timeout), |thrift| thrift.streamStartStatus())
             .await
             .from_err()?;
 

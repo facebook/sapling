@@ -11,6 +11,7 @@ use std::fmt::Debug;
 use std::fmt::Display;
 use std::future::Future;
 use std::path::PathBuf;
+use std::time::Duration;
 
 use connector::EdenFsConnector;
 use edenfs_error::ConnectAndRequestError;
@@ -41,7 +42,20 @@ impl EdenFsClient {
         Fut: Future<Output = Result<T, E>>,
         E: HasErrorHandlingStrategy + Debug + Display,
     {
-        let client_future = self.connector.connect(None);
+        self.with_thrift_with_timeout(None, f).await
+    }
+
+    pub async fn with_thrift_with_timeout<F, Fut, T, E>(
+        &self,
+        timeout: Option<Duration>,
+        f: F,
+    ) -> std::result::Result<T, ConnectAndRequestError<E>>
+    where
+        F: Fn(&EdenFsThriftClient) -> Fut,
+        Fut: Future<Output = Result<T, E>>,
+        E: HasErrorHandlingStrategy + Debug + Display,
+    {
+        let client_future = self.connector.connect(timeout);
         let client = client_future
             .await
             .clone()
@@ -64,7 +78,20 @@ impl EdenFsClient {
         Fut: Future<Output = Result<T, E>>,
         E: HasErrorHandlingStrategy + Debug + Display,
     {
-        let client_future = self.connector.connect_streaming(None);
+        self.with_streaming_thrift_with_timeout(None, f).await
+    }
+
+    pub async fn with_streaming_thrift_with_timeout<F, Fut, T, E>(
+        &self,
+        timeout: Option<Duration>,
+        f: F,
+    ) -> std::result::Result<T, ConnectAndRequestError<E>>
+    where
+        F: Fn(&StreamingEdenFsThriftClient) -> Fut,
+        Fut: Future<Output = Result<T, E>>,
+        E: HasErrorHandlingStrategy + Debug + Display,
+    {
+        let client_future = self.connector.connect_streaming(timeout);
         let client = client_future
             .await
             .clone()

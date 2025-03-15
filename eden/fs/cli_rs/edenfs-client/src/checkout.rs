@@ -23,6 +23,7 @@ use std::path::Path;
 use std::path::PathBuf;
 use std::process::Command;
 use std::str::FromStr;
+use std::time::Duration;
 use std::vec;
 
 use anyhow::anyhow;
@@ -1225,8 +1226,10 @@ pub async fn get_mounts(instance: &EdenFsInstance) -> Result<BTreeMap<PathBuf, E
 
     // Get active mounted checkouts info from eden daemon
     let client = instance.get_client();
-    // TODO: introduce connection/operation timeouts on EdenFsClient (or not)
-    let mounted_checkouts = match client.with_thrift(|thrift| thrift.listMounts()).await {
+    let mounted_checkouts = match client
+        .with_thrift_with_timeout(Some(Duration::from_secs(3)), |thrift| thrift.listMounts())
+        .await
+    {
         Ok(result) => Some(result),
         Err(_) => None, // eden daemon is not running or not healthy
     };

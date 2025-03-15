@@ -22,7 +22,7 @@ pub struct PidCmd {}
 impl crate::Subcommand for PidCmd {
     async fn run(&self) -> Result<ExitCode> {
         let client = EdenFsInstance::global().get_client();
-        let health = client.get_health().await;
+        let health = client.get_health(None).await;
 
         Ok(match health {
             Ok(health) => {
