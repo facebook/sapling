@@ -13,4 +13,5 @@ license = "MIT"
 name = "submodule"
 
 [dependencies]
+sapling-configmodel = { version = "0.1.0", path = "../config/model" }
 serde = { version = "1.0.185", features = ["derive", "rc"] }

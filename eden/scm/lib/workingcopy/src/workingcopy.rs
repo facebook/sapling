@@ -584,7 +584,11 @@ impl WorkingCopy {
         let git_modules_path = self.vfs.join(".gitmodules".try_into()?);
         let parsed = if git_modules_path.exists() {
             let origin_url = self.config.get("paths", "default");
-            let parsed = parse_gitmodules(&fs_err::read(&git_modules_path)?, origin_url.as_deref());
+            let parsed = parse_gitmodules(
+                &fs_err::read(&git_modules_path)?,
+                origin_url.as_deref(),
+                Some(&self.config),
+            );
             tracing::debug!(target: "workingcopy::submodule", "parsed {} submodules", parsed.len());
             parsed
         } else {

@@ -20,6 +20,7 @@ rust_python_library(
     },
     crate_root = "src/lib.rs",
     deps = [
+        "//eden/scm/lib/config/model:configmodel",
         "//eden/scm/lib/cpython-ext:cpython-ext",
         "//eden/scm/lib/submodule:submodule",
     ],

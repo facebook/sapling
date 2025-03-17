@@ -5,6 +5,10 @@
  * LICENSE file in the root directory of this source tree.
  */
 
+use std::sync::OnceLock;
+
+use configmodel::Config;
+use configmodel::ConfigExt;
 use serde::Serialize;
 
 #[derive(Default, Serialize)]
@@ -14,6 +18,7 @@ pub struct Submodule {
     pub path: String,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub r#ref: Option<String>,
+    pub active: bool,
 }
 
 impl Submodule {
@@ -31,26 +36,64 @@ fn config_value<'a>(line: &'a str, key: &str) -> Option<&'a str> {
 }
 
 /// Parse the `.gitmodules` file.
+///
 /// If `origin_url` is provided, relative urls will be expanded based on it.
-pub fn parse_gitmodules(data: &[u8], origin_url: Option<&str>) -> Vec<Submodule> {
-    struct State {
+///
+/// By default, all submodules are "active". If `config` is provided,
+/// submodules named `x` would be inactive if `submodule.active-x` is false,
+/// or if `submodule.active-x` is not set, and `submodule.active` is false.
+pub fn parse_gitmodules(
+    data: &[u8],
+    origin_url: Option<&str>,
+    config: Option<&(dyn Config + Send + Sync)>,
+) -> Vec<Submodule> {
+    struct State<'a> {
         submodules: Vec<Submodule>,
         current: Submodule,
+        current_active: Option<bool>,
+        config: Option<&'a (dyn Config + Send + Sync)>,
+        default_active: OnceLock<bool>,
     }
 
-    impl State {
+    impl State<'_> {
         fn push(&mut self) {
             let mut taken = Submodule::default();
             std::mem::swap(&mut taken, &mut self.current);
             if taken.is_complete() {
+                taken.active = match self.current_active {
+                    Some(v) => v,
+                    None => match self.config {
+                        Some(config) => {
+                            match config.get_opt("submodule", &format!("active-{}", &taken.name)) {
+                                Ok(Some(v)) => v,
+                                _ => self.default_active(),
+                            }
+                        }
+                        None => true,
+                    },
+                };
                 self.submodules.push(taken);
+                self.current_active = None;
             }
+        }
+
+        fn default_active(&self) -> bool {
+            *self.default_active.get_or_init(|| match self.config {
+                Some(config) => match config.get_opt::<bool>("submodule", "active") {
+                    Ok(Some(v)) => v,
+                    _ => true,
+                },
+                None => true,
+            })
         }
     }
 
     let mut state = State {
         submodules: Vec::with_capacity(data.iter().filter(|&&b| b == b'[').count()),
         current: Submodule::default(),
+        current_active: None,
+        config,
+        default_active: OnceLock::new(),
     };
 
     for line in String::from_utf8_lossy(data).lines() {
@@ -74,6 +117,8 @@ pub fn parse_gitmodules(data: &[u8], origin_url: Option<&str>) -> Vec<Submodule>
                 value.to_owned()
             };
             state.current.url = url;
+        } else if let Some(value) = config_value(line, "active") {
+            state.current_active = Some(value == "true");
         }
     }
     state.push();

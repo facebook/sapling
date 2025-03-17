@@ -20,5 +20,6 @@ rust_library(
     ],
     deps = [
         "fbsource//third-party/rust:serde",
+        "//eden/scm/lib/config/model:configmodel",
     ],
 )
