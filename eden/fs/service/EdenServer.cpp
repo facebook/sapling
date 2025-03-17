@@ -2702,7 +2702,8 @@ ImmediateFuture<uint64_t> EdenServer::garbageCollectWorkingCopy(
             WorkingCopyGc{runtime.count(), numInvalidated, success});
 
         XLOG(DBG1) << "GC for: " << mountPath
-                   << ", completed in: " << runtime.count() << " seconds";
+                   << ", completed in: " << runtime.count() << " seconds"
+                   << " and invalidated " << numInvalidated << " inodes";
 
         return numInvalidatedTry;
       });
