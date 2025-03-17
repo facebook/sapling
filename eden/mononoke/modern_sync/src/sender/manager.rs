@@ -68,22 +68,25 @@ define_stats! {
 }
 
 // Channel sizes
-const CONTENT_CHANNEL_SIZE: usize = 30000;
-const FILES_CHANNEL_SIZE: usize = 40000;
-const TREES_CHANNEL_SIZE: usize = 40000;
-const CHANGESET_CHANNEL_SIZE: usize = 15000;
+const CONTENT_CHANNEL_SIZE: usize = 40_000;
+const FILES_CHANNEL_SIZE: usize = 50_000;
+const TREES_CHANNEL_SIZE: usize = 50_000;
+const CHANGESET_CHANNEL_SIZE: usize = 15_000;
 
 // Flush intervals
-const CHANGESETS_FLUSH_INTERVAL: Duration = Duration::from_secs(3);
+// This indicates how often we flush the content, trees, files and changesets
+// despite the channel not being full. This is to ensure that we don't get stuck
+// waiting for the channel to be full with unflushed data.
+const CHANGESETS_FLUSH_INTERVAL: Duration = Duration::from_secs(1);
 const TREES_FLUSH_INTERVAL: Duration = Duration::from_secs(1);
 const FILENODES_FLUSH_INTERVAL: Duration = Duration::from_secs(1);
 const CONTENTS_FLUSH_INTERVAL: Duration = Duration::from_secs(1);
 
 // Batch sizes and limits
-const MAX_CHANGESET_BATCH_SIZE: usize = 10;
-const MAX_TREES_BATCH_SIZE: usize = 300;
-const MAX_CONTENT_BATCH_SIZE: usize = 100;
-const MAX_FILENODES_BATCH_SIZE: usize = 300;
+const MAX_CHANGESET_BATCH_SIZE: usize = 20;
+const MAX_TREES_BATCH_SIZE: usize = 500;
+const MAX_CONTENT_BATCH_SIZE: usize = 300;
+const MAX_FILENODES_BATCH_SIZE: usize = 500;
 const MAX_BLOB_BYTES: u64 = 10 * 10 * 1024 * 1024; // 100 MB
 
 #[derive(Clone)]
