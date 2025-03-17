@@ -31,7 +31,7 @@ import os
 import sys
 from contextlib import contextmanager
 from pathlib import Path
-from typing import Dict, Generator
+from typing import Dict, Generator, Optional
 
 from eden.integration.lib import edenclient
 
@@ -54,9 +54,11 @@ def override_environ(values: Dict[str, str]) -> Generator[None, None, None]:
 
 class EdenFsManager:
     test_dir: Path
+    edenfs_dir: Optional[Path]
 
     def __init__(self, test_dir: Path) -> None:
         self.test_dir = test_dir
+        self.edenfs_dir = None
 
     def start(self, overrides: Dict[str, str]) -> None:
         overrides = dict(overrides)
