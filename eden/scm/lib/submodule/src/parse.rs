@@ -4,6 +4,7 @@
  * This source code is licensed under the MIT license found in the
  * LICENSE file in the root directory of this source tree.
  */
+
 use serde::Serialize;
 
 #[derive(Default, Serialize)]
@@ -32,38 +33,52 @@ fn config_value<'a>(line: &'a str, key: &str) -> Option<&'a str> {
 /// Parse the `.gitmodules` file.
 /// If `origin_url` is provided, relative urls will be expanded based on it.
 pub fn parse_gitmodules(data: &[u8], origin_url: Option<&str>) -> Vec<Submodule> {
-    let mut submodules = Vec::with_capacity(data.iter().filter(|&&b| b == b'[').count());
-    let mut current = Submodule::default();
+    struct State {
+        submodules: Vec<Submodule>,
+        current: Submodule,
+    }
+
+    impl State {
+        fn push(&mut self) {
+            let mut taken = Submodule::default();
+            std::mem::swap(&mut taken, &mut self.current);
+            if taken.is_complete() {
+                self.submodules.push(taken);
+            }
+        }
+    }
+
+    let mut state = State {
+        submodules: Vec::with_capacity(data.iter().filter(|&&b| b == b'[').count()),
+        current: Submodule::default(),
+    };
+
     for line in String::from_utf8_lossy(data).lines() {
         let line = line.trim();
         if let Some(value) = line
             .strip_prefix("[submodule \"")
             .and_then(|r| r.strip_suffix("\"]"))
         {
-            if current.is_complete() {
-                submodules.push(current);
-                current = Submodule::default();
+            if state.current.is_complete() {
+                state.push();
             }
-            current.name = value.to_owned();
+            state.current.name = value.to_owned();
         } else if let Some(value) = config_value(line, "ref") {
-            current.r#ref = Some(value.to_owned());
+            state.current.r#ref = Some(value.to_owned());
         } else if let Some(value) = config_value(line, "path") {
-            current.path = value.to_owned();
+            state.current.path = value.to_owned();
         } else if let Some(value) = config_value(line, "url") {
             let url = if let Some(base_url) = origin_url {
                 join_url(base_url, value)
             } else {
                 value.to_owned()
             };
-            current.url = url;
+            state.current.url = url;
         }
     }
+    state.push();
 
-    if current.is_complete() {
-        submodules.push(current);
-    }
-
-    submodules
+    state.submodules
 }
 
 pub(crate) fn join_url(mut base_url: &str, mut maybe_relative_url: &str) -> String {
