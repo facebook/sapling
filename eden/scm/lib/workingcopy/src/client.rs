@@ -176,7 +176,8 @@ impl WorkingCopyClient for RepoGit {
         };
 
         let hex = node.to_hex();
-        self.run("checkout", &[flags, "--recurse-submodules", &hex])?;
+        self.call("checkout", &[flags, "--recurse-submodules", &hex])?;
+
         Ok(Vec::new())
     }
 
