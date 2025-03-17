@@ -27,6 +27,7 @@ use context::CoreContext;
 use context::SessionContainer;
 use filestore::FetchKey;
 use futures::channel::oneshot;
+use futures::future;
 use futures::stream;
 use futures::StreamExt;
 use futures::TryStreamExt;
@@ -561,19 +562,27 @@ pub async fn process_one_changeset(
         ))
         .await?;
 
-    let mut mf_ids_p = vec![];
-
-    // TODO: Parallelize
-    for parent in cs_info.parents() {
-        let hg_cs_id = repo.derive_hg_changeset(ctx, parent).await?;
-        let hg_cs = hg_cs_id.load(ctx, repo.repo_blobstore()).await?;
-        let hg_mf_id = hg_cs.manifestid();
-        mf_ids_p.push(hg_mf_id);
-    }
-
-    let hg_cs_id = repo.derive_hg_changeset(ctx, *cs_id).await?;
-    let hg_cs = hg_cs_id.load(ctx, repo.repo_blobstore()).await?;
-    let hg_mf_id = hg_cs.manifestid();
+    let (mf_ids_p, (hg_cs, hg_mf_id)) = tokio::try_join!(
+        async {
+            let parents = cs_info.parents().collect::<Vec<_>>();
+            future::try_join_all(parents.iter().map(|parent| {
+                cloned!(ctx, repo);
+                async move {
+                    let hg_cs_id = repo.derive_hg_changeset(&ctx, *parent).await?;
+                    let hg_cs = hg_cs_id.load(&ctx, repo.repo_blobstore()).await?;
+                    let hg_mf_id = hg_cs.manifestid();
+                    anyhow::Ok::<HgManifestId>(hg_mf_id)
+                }
+            }))
+            .await
+        },
+        async {
+            let hg_cs_id = repo.derive_hg_changeset(ctx, *cs_id).await?;
+            let hg_cs = hg_cs_id.load(ctx, repo.repo_blobstore()).await?;
+            let hg_mf_id = hg_cs.manifestid();
+            Ok((hg_cs, hg_mf_id))
+        }
+    )?;
 
     let (mut mf_ids, file_ids) =
         sort_manifest_changes(ctx, repo.repo_blobstore(), hg_mf_id, mf_ids_p).await?;
