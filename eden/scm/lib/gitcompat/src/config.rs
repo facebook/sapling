@@ -6,6 +6,7 @@
  */
 
 use std::borrow::Cow;
+use std::collections::BTreeMap;
 
 use anyhow::Result;
 
@@ -19,7 +20,11 @@ impl GlobalGit {
         let out = self
             .git_cmd(
                 "config",
-                &["--show-scope", "--get-regexp", "^(remote|user)\\."],
+                &[
+                    "--show-scope",
+                    "--get-regexp",
+                    "^(remote|user|submodule)\\.",
+                ],
             )
             .output()?;
         let out = String::from_utf8(out.stdout)?;
@@ -27,20 +32,44 @@ impl GlobalGit {
     }
 }
 
+#[derive(Copy, Default, Clone)]
+struct SubmoduleActiveness {
+    has_url: bool,
+    explicit_active: Option<bool>,
+}
+
+impl SubmoduleActiveness {
+    fn is_active(&self) -> bool {
+        match (self.has_url, self.explicit_active) {
+            (_, Some(v)) => v,
+            (v, None) => v,
+        }
+    }
+}
+
+/// Translate git config to `(user_config, repo_config)`.
 fn translate_git_config_output(out: &str) -> (String, String) {
-    // Example output:
+    // Example output (actually separated by a tab, not spaces):
     //  global  user.name Foo Bar
     //  global  user.email foo@example.com
     //  local   remote.origin.url https://example.com/foo/bar
     //  local   remote.origin.fetch +refs/heads/*:refs/remotes/origin/*
     //  local   remote.origin.pushurl git@example.com/foo/bar
     //  local   user.email foo@example.net
+    //  local   submodule.active .
+    //  local   submodule.sub.url submodule-url
 
     let mut global_user = "";
     let mut global_email = "";
     let mut local_user = "";
     let mut local_email = "";
     let mut paths_config = Vec::new();
+
+    // submodule.active config (default off)
+    let mut submodule_global_active = false;
+
+    // individual submodules
+    let mut submodule_individual_active = BTreeMap::<&str, SubmoduleActiveness>::new();
 
     for line in out.lines() {
         if let Some((scope, name, value)) = parse_git_config_output_line(line) {
@@ -65,6 +94,32 @@ fn translate_git_config_output(out: &str) -> (String, String) {
                                 normalize_remote_name(remote),
                                 translate_scp_url_to_ssh(value),
                             ));
+                        }
+                    } else if let Some(rest_name) = name.strip_prefix("submodule.") {
+                        // NOTE: Simplified handling, not fully confront to Git's spec [1].
+                        // Git allows `submodule.active` to be a "pathspec". Practically it is
+                        // usually set to ".".
+                        // [1]: https://git-scm.com/docs/gitsubmodules
+                        if rest_name == "active" {
+                            submodule_global_active = value == ".";
+                        } else if let Some((submodule_name, config_name)) =
+                            rest_name.split_once('.')
+                        {
+                            match config_name {
+                                "url" => {
+                                    submodule_individual_active
+                                        .entry(submodule_name)
+                                        .or_default()
+                                        .has_url = true
+                                }
+                                "active" => {
+                                    submodule_individual_active
+                                        .entry(submodule_name)
+                                        .or_default()
+                                        .explicit_active = Some(value == "true")
+                                }
+                                _ => {}
+                            }
                         }
                     }
                 }
@@ -94,11 +149,30 @@ fn translate_git_config_output(out: &str) -> (String, String) {
         ));
     }
 
+    // Submodules
+    repo_config.push_str("[submodule]\nactive = ");
+    repo_config.push_str(bool_str(submodule_global_active));
+    repo_config.push('\n');
+    for (name, activeness) in submodule_individual_active {
+        repo_config.push_str("active-");
+        repo_config.push_str(name);
+        repo_config.push_str(" = ");
+        repo_config.push_str(bool_str(activeness.is_active()));
+        repo_config.push('\n');
+    }
+
     (user_config, repo_config)
 }
 
 fn str_or<'a>(lhs: &'a str, rhs: &'a str) -> &'a str {
     if lhs.is_empty() { rhs } else { lhs }
+}
+
+fn bool_str(v: bool) -> &'static str {
+    match v {
+        true => "true",
+        false => "false",
+    }
 }
 
 fn normalize_remote_name(name: &str) -> &str {
@@ -140,7 +214,7 @@ mod tests {
     use super::*;
 
     #[test]
-    fn test_git_config_to_sapling_config() {
+    fn test_git_user_config_to_sapling_config() {
         let out = r#"global	user.name Foo Bar
 global	user.email foorbar@example.com
 local	remote.origin.url https://example.com/foo/repo
@@ -169,7 +243,32 @@ upstream = https://example.com/upstream/repo
 [ui]
 # from git config: user.name and user.email
 username = Foo Bar <foo@bar.net>
+[submodule]
+active = false
 "#
+        );
+    }
+
+    #[test]
+    fn test_git_submodule_config_to_sapling_config() {
+        let out = r#"
+local	submodule.active .
+local	submodule.sub.url sub1
+"#;
+        let (user, repo) = translate_git_config_output(out);
+        assert_eq!(user, "");
+        assert_eq!(repo, "[submodule]\nactive = true\nactive-sub = true\n");
+
+        let out = r#"
+local	submodule.sub/1.url sub1
+local	submodule.sub/1.active false
+local	submodule.sub/2.active true
+"#;
+        let (user, repo) = translate_git_config_output(out);
+        assert_eq!(user, "");
+        assert_eq!(
+            repo,
+            "[submodule]\nactive = false\nactive-sub/1 = false\nactive-sub/2 = true\n"
         );
     }
 

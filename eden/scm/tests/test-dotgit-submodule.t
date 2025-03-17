@@ -69,7 +69,6 @@ Committing from parent repo:
   M sub
 
   $ sl status sub --config submodule.active-sub=false
-  $ sl status sub --config submodule.active=false
 
   $ sl commit -m 'Modify submodule'
 
@@ -94,9 +93,8 @@ Cloning a repo with submodules, but without initializing them:
   $ git clone -q parent cloned-without-subm
   $ cd cloned-without-subm
 
-(suboptimal: submodule shown as "modified")
+- Submodules are inactive, and absent from status
   $ sl status
-  M sub
 
 (bad: should skip or create the submodule on demand, not crash)
   $ sl go '.^'
