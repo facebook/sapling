@@ -53,10 +53,18 @@ define_stats! {
     changeset_upload_time_s:  dynamic_timeseries("{}.changeset_upload_time_s", (repo: String); Average),
     content_upload_time_s:  dynamic_timeseries("{}.content_upload_time_ms", (repo: String); Average),
 
+    contents_queue_capacity: dynamic_singleton_counter("{}.contents.queue_capacity", (repo: String)),
     contents_queue_len: dynamic_histogram("{}.contents.queue_len", (repo: String); 10, 0, crate::sender::manager::CONTENT_CHANNEL_SIZE as u32, Average; P 50; P 75; P 95; P 99),
+    contents_queue_max_capacity: dynamic_singleton_counter("{}.contents.queue_max_capacity", (repo: String)),
+    files_queue_capacity: dynamic_singleton_counter("{}.files.queue_capacity", (repo: String)),
     files_queue_len: dynamic_histogram("{}.files.queue_len", (repo: String); 10, 0, crate::sender::manager::FILES_CHANNEL_SIZE as u32, Average; P 50; P 75; P 95; P 99),
+    files_queue_max_capacity: dynamic_singleton_counter("{}.files.queue_max_capacity", (repo: String)),
+    trees_queue_capacity: dynamic_singleton_counter("{}.trees.queue_capacity", (repo: String)),
     trees_queue_len: dynamic_histogram("{}.trees.queue_len", (repo: String); 10, 0, crate::sender::manager::TREES_CHANNEL_SIZE as u32, Average; P 50; P 75; P 95; P 99),
+    trees_queue_max_capacity: dynamic_singleton_counter("{}.trees.queue_max_capacity", (repo: String)),
+    changesets_queue_capacity: dynamic_singleton_counter("{}.changesets.queue_capacity", (repo: String)),
     changesets_queue_len: dynamic_histogram("{}.changesets.queue_len", (repo: String); 10, 0, crate::sender::manager::CHANGESET_CHANNEL_SIZE as u32, Average; P 50; P 75; P 95; P 99),
+    changesets_queue_max_capacity: dynamic_singleton_counter("{}.changesets.queue_max_capacity", (repo: String)),
 }
 
 // Channel sizes
@@ -154,6 +162,7 @@ impl SendManager {
         // Create channel for receiving content
         let (content_sender, content_recv) = mpsc::channel(CONTENT_CHANNEL_SIZE);
         Self::spawn_content_sender(
+            ctx.clone(),
             reponame.clone(),
             content_recv,
             external_sender.clone(),
@@ -164,6 +173,7 @@ impl SendManager {
         // Create channel for receiving files
         let (files_sender, files_recv) = mpsc::channel(FILES_CHANNEL_SIZE);
         Self::spawn_filenodes_sender(
+            ctx.clone(),
             reponame.clone(),
             files_recv,
             external_sender.clone(),
@@ -174,6 +184,7 @@ impl SendManager {
         // Create channel for receiving trees
         let (trees_sender, trees_recv) = mpsc::channel(TREES_CHANNEL_SIZE);
         Self::spawn_trees_sender(
+            ctx.clone(),
             reponame.clone(),
             trees_recv,
             external_sender.clone(),
@@ -214,6 +225,7 @@ impl SendManager {
     }
 
     fn spawn_content_sender(
+        ctx: CoreContext,
         reponame: String,
         mut content_recv: mpsc::Receiver<ContentMessage>,
         content_es: Arc<EdenapiSender>,
@@ -230,7 +242,9 @@ impl SendManager {
                 tokio::select! {
                     msg = content_recv.recv() => {
                         debug!(content_logger, "Content channel capacity: {} max capacity: {} in queue: {}", content_recv.capacity(), CONTENT_CHANNEL_SIZE,  content_recv.len());
+                        STATS::contents_queue_capacity.set_value(ctx.fb, content_recv.capacity() as i64, (reponame.clone(),));
                         STATS::contents_queue_len.add_value(content_recv.len() as i64, (reponame.clone(),));
+                        STATS::contents_queue_max_capacity.set_value(ctx.fb, content_recv.max_capacity() as i64, (reponame.clone(),));
                         match msg {
                             Some(ContentMessage::Content(ct_id, size)) => {
                                 current_batch_size += size;
@@ -307,6 +321,7 @@ impl SendManager {
     }
 
     fn spawn_filenodes_sender(
+        ctx: CoreContext,
         reponame: String,
         mut filenodes_recv: mpsc::Receiver<FileMessage>,
         filenodes_es: Arc<EdenapiSender>,
@@ -323,7 +338,9 @@ impl SendManager {
                 tokio::select! {
                     msg = filenodes_recv.recv() => {
                         debug!(filenodes_logger, "Filenodes channel capacity: {} max capacity: {} in queue: {}", filenodes_recv.capacity(), FILES_CHANNEL_SIZE,  filenodes_recv.len());
+                        STATS::files_queue_capacity.set_value(ctx.fb, filenodes_recv.capacity() as i64, (reponame.clone(),));
                         STATS::files_queue_len.add_value(filenodes_recv.len() as i64, (reponame.clone(),));
+                        STATS::files_queue_max_capacity.set_value(ctx.fb, filenodes_recv.max_capacity() as i64, (reponame.clone(),));
                         match msg {
                             Some(FileMessage::WaitForContents(receiver)) => {
                                 let start = std::time::Instant::now();
@@ -417,6 +434,7 @@ impl SendManager {
     }
 
     fn spawn_trees_sender(
+        ctx: CoreContext,
         reponame: String,
         mut trees_recv: mpsc::Receiver<TreeMessage>,
         trees_es: Arc<EdenapiSender>,
@@ -432,7 +450,9 @@ impl SendManager {
                 tokio::select! {
                     msg = trees_recv.recv() => {
                         debug!(trees_logger, "Trees channel capacity: {} max capacity: {} in queue: {}", trees_recv.capacity(), TREES_CHANNEL_SIZE,  trees_recv.len());
+                        STATS::trees_queue_capacity.set_value(ctx.fb, trees_recv.capacity() as i64, (reponame.clone(),));
                         STATS::trees_queue_len.add_value(trees_recv.len() as i64, (reponame.clone(),));
+                        STATS::trees_queue_max_capacity.set_value(ctx.fb, trees_recv.max_capacity() as i64, (reponame.clone(),));
                         match msg {
                             Some(TreeMessage::WaitForContents(receiver)) => {
                                 // Read outcome from content upload
@@ -561,8 +581,9 @@ impl SendManager {
                             CHANGESET_CHANNEL_SIZE,
                             changeset_recv.len()
                         );
-                        STATS::changesets_queue_len
-                            .add_value(changeset_recv.len() as i64, (reponame.clone(),));
+                        STATS::changesets_queue_capacity.set_value(ctx.fb, changeset_recv.capacity() as i64, (reponame.clone(),));
+                        STATS::changesets_queue_len.add_value(changeset_recv.len() as i64, (reponame.clone(),));
+                        STATS::changesets_queue_max_capacity.set_value(ctx.fb, changeset_recv.max_capacity() as i64, (reponame.clone(),));
                         match msg {
                             Some(ChangesetMessage::WaitForFilesAndTrees(
                                 files_receiver,
