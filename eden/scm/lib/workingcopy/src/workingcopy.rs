@@ -491,6 +491,10 @@ impl WorkingCopy {
             {
                 for subm in submodules.iter() {
                     let path = RepoPath::from_str(&subm.path)?;
+                    if !subm.active {
+                        status_builder.forget(path);
+                        continue;
+                    }
                     // The submodule path is treated as a file.
                     // See https://sapling-scm.com/docs/git/submodule.
                     if !matcher.matches_file(path)? {

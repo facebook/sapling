@@ -68,6 +68,9 @@ Committing from parent repo:
   $ sl status sub
   M sub
 
+  $ sl status sub --config submodule.active-sub=false
+  $ sl status sub --config submodule.active=false
+
   $ sl commit -m 'Modify submodule'
 
   $ sl status sub
