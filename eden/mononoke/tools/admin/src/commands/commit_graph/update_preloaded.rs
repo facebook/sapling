@@ -6,16 +6,23 @@
  */
 
 use std::collections::HashMap;
+use std::sync::Arc;
 
 use anyhow::anyhow;
 use anyhow::Result;
 use blobstore::Blobstore;
 use clap::Args;
+use cloned::cloned;
 use commit_graph_types::edges::ChangesetEdges;
 use context::CoreContext;
 use fbthrift::compact_protocol;
+use futures::stream;
+use futures::StreamExt;
+use futures::TryStreamExt;
 use metaconfig_types::RepoConfigRef;
 use mononoke_app::MononokeApp;
+use mononoke_app::MononokeReposManager;
+use mononoke_macros::mononoke;
 use mononoke_types::BlobstoreBytes;
 use mononoke_types::ChangesetId;
 use preloaded_commit_graph_storage::ExtendablePreloadedEdges;
@@ -28,7 +35,7 @@ use tokio::time::Duration;
 
 use super::Repo;
 
-#[derive(Args)]
+#[derive(Args, Clone)]
 pub struct UpdatePreloadedArgs {
     /// Blobstore key for the preloaded commit graph.
     #[clap(long)]
@@ -197,10 +204,43 @@ pub(super) async fn update_preloaded(
 }
 
 pub(super) async fn update_preloaded_all_repos(
-    _ctx: &CoreContext,
-    _app: &MononokeApp,
-    _args: UpdatePreloadedArgs,
+    ctx: &CoreContext,
+    app: Arc<MononokeApp>,
+    args: UpdatePreloadedArgs,
 ) -> Result<()> {
-    // TODO(rajshar): Implement bulk preloading
-    anyhow::bail!("Not implemented yet");
+    let repo_configs = app.repo_configs();
+    let applicable_repo_names =
+        Vec::from_iter(repo_configs.repos.iter().filter_map(|(name, repo_config)| {
+            repo_config
+                .commit_graph_config
+                .preloaded_commit_graph_blobstore_key
+                .as_ref()
+                .map(|_| name.to_string())
+        }));
+    let repo_mgr: MononokeReposManager<Repo> = app
+        .open_named_managed_repos(applicable_repo_names, None)
+        .await?;
+    let repos = Vec::from_iter(repo_mgr.repos().clone().iter());
+    stream::iter(repos)
+        .map(anyhow::Ok)
+        .map_ok(|repo| {
+            cloned!(app, ctx, args, repo);
+            async move {
+                let fut = mononoke::spawn_task(async move {
+                    println!(
+                        "Preloading commit graph for repo {} with blobstore key {}",
+                        repo.id.name(),
+                        args.blobstore_key.as_str()
+                    );
+                    update_preloaded(&ctx, &app, &repo, args).await
+                });
+                fut.await??;
+                anyhow::Ok(())
+            }
+        })
+        .try_buffer_unordered(10) // Preloading the commit graph can be a heavy operation
+        .try_collect::<Vec<_>>()
+        .await?;
+
+    Ok(())
 }

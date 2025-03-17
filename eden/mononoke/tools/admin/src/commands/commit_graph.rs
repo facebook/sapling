@@ -15,6 +15,8 @@ mod segments;
 mod slice_ancestors;
 mod update_preloaded;
 
+use std::sync::Arc;
+
 use ancestors_difference::AncestorsDifferenceArgs;
 use anyhow::Result;
 use bonsai_git_mapping::BonsaiGitMapping;
@@ -109,6 +111,7 @@ pub struct Repo {
 }
 
 pub async fn run(app: MononokeApp, args: CommandArgs) -> Result<()> {
+    let app = Arc::new(app);
     let ctx = app.new_basic_context();
     let maybe_repo: Option<Repo> = app.maybe_open_repo(args.repo.as_repo_arg()).await?;
 
@@ -142,7 +145,7 @@ pub async fn run(app: MononokeApp, args: CommandArgs) -> Result<()> {
         }
         (CommitGraphSubcommand::UpdatePreloaded(sub_args), None) => {
             if args.all_repos {
-                update_preloaded::update_preloaded_all_repos(&ctx, &app, sub_args).await
+                update_preloaded::update_preloaded_all_repos(&ctx, app, sub_args).await
             } else {
                 Err(anyhow::anyhow!("Must specify a repo or use --all-repos"))
             }
