@@ -96,7 +96,7 @@ pub async fn run(app: MononokeApp, args: CommandArgs) -> Result<()> {
         )
     };
 
-    let send_manager = SendManager::new(
+    let mut send_manager = SendManager::new(
         ctx.clone(),
         sender.clone(),
         logger.clone(),
@@ -105,18 +105,9 @@ pub async fn run(app: MononokeApp, args: CommandArgs) -> Result<()> {
         repo.mutable_counters_arc(),
     );
 
-    crate::sync::process_one_changeset(
-        &args.cs_id,
-        &ctx,
-        repo,
-        logger,
-        &send_manager,
-        false,
-        "",
-        None,
-    )
-    .await?;
-
+    let messages =
+        crate::sync::process_one_changeset(&args.cs_id, &ctx, repo, logger, false, "", None).await;
+    crate::sync::send_messages_in_order(messages, &mut send_manager).await?;
     let (finish_tx, finish_rx) = oneshot::channel();
     send_manager
         .send_changeset(ChangesetMessage::NotifyCompletion(finish_tx))

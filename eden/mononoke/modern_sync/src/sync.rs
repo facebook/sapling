@@ -10,6 +10,7 @@ use std::sync::Arc;
 
 use anyhow::format_err;
 use anyhow::Result;
+use assembly_line::TryAssemblyLine;
 use blobstore::Loadable;
 use bonsai_hg_mapping::BonsaiHgMappingRef;
 use bookmarks::BookmarkKey;
@@ -43,6 +44,7 @@ use mercurial_types::HgManifestId;
 use metadata::Metadata;
 use mononoke_app::args::SourceRepoArgs;
 use mononoke_app::MononokeApp;
+use mononoke_macros::mononoke;
 use mononoke_types::ChangesetId;
 use mononoke_types::FileChange;
 use mononoke_types::MPath;
@@ -67,6 +69,7 @@ use crate::sender::manager::BookmarkInfo;
 use crate::sender::manager::ChangesetMessage;
 use crate::sender::manager::ContentMessage;
 use crate::sender::manager::FileMessage;
+use crate::sender::manager::Messages;
 use crate::sender::manager::SendManager;
 use crate::sender::manager::TreeMessage;
 use crate::sender::manager::MODERN_SYNC_BATCH_CHECKPOINT_NAME;
@@ -413,6 +416,7 @@ pub async fn process_bookmark_update_log_entry(
                 let existing_changesets = hgids_len - missing_changesets.len();
                 *current_position.lock().await += existing_changesets as u64;
 
+                let entry_id = entry.id.0 as i64;
                 info!(
                     logger,
                     "Starting sync of {} missing commits, {} were already synced",
@@ -420,18 +424,11 @@ pub async fn process_bookmark_update_log_entry(
                     existing_changesets
                 );
 
-                stream::iter(missing_changesets.into_iter().map(Ok))
-                    .try_for_each(|cs_id| {
-                        cloned!(
-                            ctx,
-                            repo,
-                            logger,
-                            send_manager,
-                            bookmark_name,
-                            current_position
-                        );
+                stream::iter(missing_changesets.into_iter())
+                    .map(|cs_id| {
+                        cloned!(ctx, repo, logger, bookmark_name, current_position);
 
-                        async move {
+                        mononoke::spawn_task(async move {
                             let now = std::time::Instant::now();
 
                             *current_position.lock().await += 1;
@@ -440,10 +437,9 @@ pub async fn process_bookmark_update_log_entry(
                                 &ctx,
                                 repo,
                                 logger,
-                                &send_manager,
                                 log_to_ods,
                                 &bookmark_name,
-                                Some((current_position.lock().await.clone(), entry.id.0 as i64)),
+                                Some((current_position.lock().await.clone(), entry_id)),
                             )
                             .await
                             {
@@ -456,8 +452,21 @@ pub async fn process_bookmark_update_log_entry(
                                     Err(e)
                                 }
                             }
+                        })
+                    })
+                    .buffered(100)
+                    .map_err(anyhow::Error::from)
+                    .try_next_step(|messages| {
+                        cloned!(mut send_manager);
+                        async move {
+                            send_messages_in_order(
+                                messages.map_err(anyhow::Error::from),
+                                &mut send_manager,
+                            )
+                            .await
                         }
                     })
+                    .try_collect::<()>()
                     .await?;
                 Ok(())
             }
@@ -507,12 +516,13 @@ pub async fn process_one_changeset(
     ctx: &CoreContext,
     repo: Repo,
     logger: Logger,
-    send_manager: &SendManager,
     log_to_ods: bool,
     bookmark_name: &str,
     checkpoint: Option<(u64, i64)>, // (position, entry_id)
-) -> Result<()> {
+) -> Result<Messages> {
     scuba::log_changeset_start(ctx, cs_id);
+
+    let mut messages = Messages::default();
 
     let now = std::time::Instant::now();
 
@@ -534,33 +544,31 @@ pub async fn process_one_changeset(
 
     // Read the sizes of the contents concurrently (by reading the metadata blobs from blobstore)
     // Larger commits/older not cached commits would benefit from this concurrency.
-    stream::iter(cids)
+    let mut contents = stream::iter(cids)
         .map(|cid| {
-            cloned!(ctx, repo, send_manager);
+            cloned!(ctx, repo);
             async move {
                 let metadata =
                     filestore::get_metadata(repo.repo_blobstore(), &ctx, &FetchKey::Canonical(cid))
                         .await?
                         .expect("blob not found");
-                send_manager
-                    .send_content(ContentMessage::Content(cid, metadata.total_size))
-                    .await?;
-                anyhow::Ok(())
+
+                anyhow::Ok(ContentMessage::Content(cid, metadata.total_size))
             }
         })
         .buffered(100)
         .try_collect::<Vec<_>>()
         .await?;
 
+    messages.content_messages.append(&mut contents);
+
     // Notify contents for this changeset are ready
     let (content_files_tx, content_files_rx) = oneshot::channel();
     let (content_trees_tx, content_trees_rx) = oneshot::channel();
-    send_manager
-        .send_content(ContentMessage::ContentDone(
-            content_files_tx,
-            content_trees_tx,
-        ))
-        .await?;
+    messages.content_messages.push(ContentMessage::ContentDone(
+        content_files_tx,
+        content_trees_tx,
+    ));
 
     let (mf_ids_p, (hg_cs, hg_mf_id)) = tokio::try_join!(
         async {
@@ -589,13 +597,13 @@ pub async fn process_one_changeset(
     mf_ids.push(hg_mf_id);
 
     // Send files and trees
-    send_manager
-        .send_file(FileMessage::WaitForContents(content_files_rx))
-        .await?;
+    messages
+        .files_messages
+        .push(FileMessage::WaitForContents(content_files_rx));
 
-    send_manager
-        .send_tree(TreeMessage::WaitForContents(content_trees_rx))
-        .await?;
+    messages
+        .trees_messages
+        .push(TreeMessage::WaitForContents(content_trees_rx));
 
     // Notify files and trees for this changeset are ready
     let (f_tx, f_rx) = oneshot::channel();
@@ -604,38 +612,35 @@ pub async fn process_one_changeset(
     let (_, _) = tokio::try_join!(
         async {
             for mf_id in mf_ids {
-                send_manager.send_tree(TreeMessage::Tree(mf_id)).await?;
+                messages.trees_messages.push(TreeMessage::Tree(mf_id));
             }
-            send_manager.send_tree(TreeMessage::TreesDone(t_tx)).await?;
+            messages.trees_messages.push(TreeMessage::TreesDone(t_tx));
             anyhow::Ok(())
         },
         async {
-            cloned!(send_manager);
             for file_id in file_ids {
-                send_manager
-                    .send_file(FileMessage::FileNode(file_id))
-                    .await?;
+                messages.files_messages.push(FileMessage::FileNode(file_id));
             }
-            send_manager.send_file(FileMessage::FilesDone(f_tx)).await?;
+            messages.files_messages.push(FileMessage::FilesDone(f_tx));
             anyhow::Ok(())
         }
     )?;
 
     // Upload changeset
-    send_manager
-        .send_changeset(ChangesetMessage::WaitForFilesAndTrees(f_rx, t_rx))
-        .await?;
-    send_manager
-        .send_changeset(ChangesetMessage::Changeset((hg_cs, bs_cs)))
-        .await?;
+    messages
+        .changeset_messages
+        .push(ChangesetMessage::WaitForFilesAndTrees(f_rx, t_rx));
+    messages
+        .changeset_messages
+        .push(ChangesetMessage::Changeset((hg_cs, bs_cs)));
 
     if let Some(checkpoint) = checkpoint {
-        send_manager
-            .send_changeset(ChangesetMessage::CheckpointInEntry(
+        messages
+            .changeset_messages
+            .push(ChangesetMessage::CheckpointInEntry(
                 checkpoint.0,
                 checkpoint.1,
-            ))
-            .await?;
+            ));
     }
 
     if log_to_ods {
@@ -653,12 +658,10 @@ pub async fn process_one_changeset(
             None
         };
 
-        send_manager
-            .send_changeset(ChangesetMessage::Log((
-                repo.repo_identity().name().to_string(),
-                lag,
-            )))
-            .await?;
+        messages.changeset_messages.push(ChangesetMessage::Log((
+            repo.repo_identity().name().to_string(),
+            lag,
+        )));
     }
 
     let elapsed = now.elapsed();
@@ -668,7 +671,7 @@ pub async fn process_one_changeset(
     );
     STATS::changeset_procesed.add_value(1, (repo.repo_identity().name().to_string(),));
 
-    Ok(())
+    Ok(messages)
 }
 
 async fn sort_manifest_changes(
@@ -709,6 +712,37 @@ async fn sort_manifest_changes(
     }
 
     Ok((mf_ids, file_ids))
+}
+
+pub async fn send_messages_in_order(
+    messages: Result<Messages>,
+    send_manager: &mut SendManager,
+) -> Result<()> {
+    let messages = messages?;
+    for msg in messages.content_messages {
+        send_manager.send_content(msg).await?;
+    }
+
+    let (_, _) = tokio::try_join!(
+        async {
+            for msg in messages.files_messages {
+                send_manager.send_file(msg).await?;
+            }
+            anyhow::Ok(())
+        },
+        async {
+            cloned!(send_manager);
+            for msg in messages.trees_messages {
+                send_manager.send_tree(msg).await?;
+            }
+            anyhow::Ok(())
+        }
+    )?;
+
+    for msg in messages.changeset_messages {
+        send_manager.send_changeset(msg).await?;
+    }
+    Ok(())
 }
 
 async fn process_new_entry(

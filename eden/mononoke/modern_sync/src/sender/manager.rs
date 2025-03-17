@@ -93,6 +93,14 @@ pub enum ContentMessage {
     ContentDone(oneshot::Sender<Result<()>>, oneshot::Sender<Result<()>>),
 }
 
+#[derive(Default)]
+pub struct Messages {
+    pub content_messages: Vec<ContentMessage>,
+    pub trees_messages: Vec<TreeMessage>,
+    pub files_messages: Vec<FileMessage>,
+    pub changeset_messages: Vec<ChangesetMessage>,
+}
+
 pub enum TreeMessage {
     // Wait for contents to be sent before sending trees
     WaitForContents(oneshot::Receiver<Result<()>>),
