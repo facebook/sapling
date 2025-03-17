@@ -84,3 +84,58 @@ Committing from parent repo:
   @@ -1,1 +1,1 @@
   -Subproject commit 838d36ce8147047ed2fb694a88ea81cdfa5041b0
   +Subproject commit 7e03c5d593048a97b91470d7c33dc07e007aa5a4
+
+Cloning a repo with submodules, but without initializing them:
+
+  $ cd
+  $ git clone -q parent cloned-without-subm
+  $ cd cloned-without-subm
+
+(suboptimal: submodule shown as "modified")
+  $ sl status
+  M sub
+
+(bad: should skip or create the submodule on demand, not crash)
+  $ sl go '.^'
+  abort: $ENOENT$: $TESTTMP/cloned-without-subm/sub/.git/sl
+  [255]
+
+Cloning a repo with submodules recursively:
+
+  $ cd
+  $ git clone -q --recursive parent cloned-with-subm
+  $ cd cloned-with-subm
+
+  $ sl status
+
+  $ sl go -q '.^'
+  $ sl st
+
+Pulling a submodule:
+
+- First, create new commits in the parent repo:
+  $ cd ~/parent/sub
+  $ sl go -q tip
+  $ echo 33 >> c
+  $ sl commit -m 'Edit inside submodule'
+  $ cd ..
+  $ sl commit -m 'Modify submodule again'
+
+- Then, try to pull and checkout:
+  $ cd ~/cloned-with-subm
+(bad: should not crash)
+  $ sl pull
+  pulling from $TESTTMP/parent
+  From $TESTTMP/parent
+   * [new ref]         6c516db950c80a0c163308e8f64f0727b390be35 -> remote/main
+  Fetching submodule sub
+  fatal: git upload-pack: not our ref 0abf75b119a00371030b88df96abed7e949f63cb
+  fatal: remote error: upload-pack: not our ref 0abf75b119a00371030b88df96abed7e949f63cb
+  Errors during submodule fetch:
+  	sub
+
+(bad: checkout should create sub/c "33")
+  $ sl go -q 'next()'
+  $ cat sub/c
+  cat: sub/c: $ENOENT$
+  [1]
