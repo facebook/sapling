@@ -498,6 +498,19 @@ impl MononokeApp {
         Ok(repos)
     }
 
+    pub async fn maybe_open_repo<Repo>(
+        &self,
+        repo_args: &Option<impl AsRepoArg>,
+    ) -> Result<Option<Repo>>
+    where
+        Repo: for<'builder> AsyncBuildable<'builder, RepoFactoryBuilder<'builder>>,
+    {
+        match repo_args {
+            Some(repo_args) => Ok(Some(self.open_repo(repo_args).await?)),
+            None => Ok(None),
+        }
+    }
+
     /// Open a repository based on user-provided arguments.
     pub async fn open_repo<Repo>(&self, repo_args: &impl AsRepoArg) -> Result<Repo>
     where

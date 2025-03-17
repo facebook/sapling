@@ -195,3 +195,12 @@ pub(super) async fn update_preloaded(
 
     Ok(())
 }
+
+pub(super) async fn update_preloaded_all_repos(
+    _ctx: &CoreContext,
+    _app: &MononokeApp,
+    _args: UpdatePreloadedArgs,
+) -> Result<()> {
+    // TODO(rajshar): Implement bulk preloading
+    anyhow::bail!("Not implemented yet");
+}

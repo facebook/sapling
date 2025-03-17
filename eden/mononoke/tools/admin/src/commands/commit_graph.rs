@@ -30,7 +30,7 @@ use common_base::CommonBaseArgs;
 use descendants::DescendantsArgs;
 use is_ancestor::IsAncestorArgs;
 use metaconfig_types::RepoConfig;
-use mononoke_app::args::RepoArgs;
+use mononoke_app::args::OptRepoArgs;
 use mononoke_app::MononokeApp;
 use range_stream::RangeStreamArgs;
 use repo_blobstore::RepoBlobstore;
@@ -43,7 +43,11 @@ use update_preloaded::UpdatePreloadedArgs;
 #[derive(Parser)]
 pub struct CommandArgs {
     #[clap(flatten)]
-    repo: RepoArgs,
+    repo: OptRepoArgs,
+
+    /// Perform the commit graph operation on all applicable repos
+    #[clap(long, conflicts_with_all = &["repo-name", "repo-id"])]
+    all_repos: bool,
 
     #[clap(subcommand)]
     subcommand: CommitGraphSubcommand,
@@ -106,31 +110,43 @@ pub struct Repo {
 
 pub async fn run(app: MononokeApp, args: CommandArgs) -> Result<()> {
     let ctx = app.new_basic_context();
-    let repo: Repo = app.open_repo(&args.repo).await?;
+    let maybe_repo: Option<Repo> = app.maybe_open_repo(args.repo.as_repo_arg()).await?;
 
-    match args.subcommand {
-        CommitGraphSubcommand::AncestorsDifference(args) => {
+    match (args.subcommand, maybe_repo) {
+        (CommitGraphSubcommand::AncestorsDifference(args), Some(repo)) => {
             ancestors_difference::ancestors_difference(&ctx, &repo, args).await
         }
-        CommitGraphSubcommand::RangeStream(args) => {
+        (CommitGraphSubcommand::RangeStream(args), Some(repo)) => {
             range_stream::range_stream(&ctx, &repo, args).await
         }
-        CommitGraphSubcommand::UpdatePreloaded(args) => {
+        (CommitGraphSubcommand::UpdatePreloaded(args), Some(repo)) => {
             update_preloaded::update_preloaded(&ctx, &app, &repo, args).await
         }
-        CommitGraphSubcommand::CommonBase(args) => {
+        (CommitGraphSubcommand::CommonBase(args), Some(repo)) => {
             common_base::common_base(&ctx, &repo, args).await
         }
-        CommitGraphSubcommand::SliceAncestors(args) => {
+        (CommitGraphSubcommand::SliceAncestors(args), Some(repo)) => {
             slice_ancestors::slice_ancestors(&ctx, &repo, args).await
         }
-        CommitGraphSubcommand::Children(args) => children::children(&ctx, &repo, args).await,
-        CommitGraphSubcommand::Descendants(args) => {
+        (CommitGraphSubcommand::Children(args), Some(repo)) => {
+            children::children(&ctx, &repo, args).await
+        }
+        (CommitGraphSubcommand::Descendants(args), Some(repo)) => {
             descendants::descendants(&ctx, &repo, args).await
         }
-        CommitGraphSubcommand::Segments(args) => segments::segments(&ctx, &repo, args).await,
-        CommitGraphSubcommand::IsAncestor(args) => {
+        (CommitGraphSubcommand::Segments(args), Some(repo)) => {
+            segments::segments(&ctx, &repo, args).await
+        }
+        (CommitGraphSubcommand::IsAncestor(args), Some(repo)) => {
             is_ancestor::is_ancestor(&ctx, &repo, args).await
         }
+        (CommitGraphSubcommand::UpdatePreloaded(sub_args), None) => {
+            if args.all_repos {
+                update_preloaded::update_preloaded_all_repos(&ctx, &app, sub_args).await
+            } else {
+                Err(anyhow::anyhow!("Must specify a repo or use --all-repos"))
+            }
+        }
+        (_, None) => Err(anyhow::anyhow!("Must specify a repo for this command")),
     }
 }
