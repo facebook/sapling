@@ -9,6 +9,7 @@ use std::collections::HashMap;
 use std::sync::Arc;
 
 use anyhow::anyhow;
+use anyhow::Context;
 use anyhow::Result;
 use blobstore::Blobstore;
 use clap::Args;
@@ -128,7 +129,11 @@ pub(super) async fn update_preloaded(
         .map_or(1, |id| id.saturating_add(1));
     // Query the maximum sql id for this repo only once to avoid tailing
     // new changesets.
-    let end_id = sql_storage.max_id(ctx, false).await?.unwrap_or(0);
+    let end_id = sql_storage
+        .max_id(ctx, false)
+        .await
+        .with_context(|| format!("Failure to fetch max commit id for repo {}", repo.id.name()))?
+        .unwrap_or(0);
 
     println!(
         "Updating with changesets having sql ids between {} and {} inclusive",

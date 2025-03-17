@@ -47,6 +47,19 @@ where
 impl_commit_graph_tests!(run_test);
 
 #[mononoke::fbinit_test]
+pub async fn test_max_id_with_empty_graph(fb: FacebookInit) -> Result<()> {
+    let ctx = CoreContext::test_mock(fb);
+    let storage = Arc::new(
+        SqlCommitGraphStorageBuilder::with_sqlite_in_memory()
+            .unwrap()
+            .build(RendezVousOptions::for_test(), RepositoryId::new(1)),
+    );
+    let graph = from_dag(&ctx, r##""##, storage.clone()).await?;
+    assert_eq!(storage.max_id(&ctx, false).await?, Some(0));
+    Ok(())
+}
+
+#[mononoke::fbinit_test]
 pub async fn test_lower_level_api(fb: FacebookInit) -> Result<()> {
     let ctx = CoreContext::test_mock(fb);
     let storage = Arc::new(

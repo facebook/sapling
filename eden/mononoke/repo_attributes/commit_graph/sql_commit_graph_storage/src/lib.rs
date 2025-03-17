@@ -904,7 +904,7 @@ mononoke_queries! {
 
     read SelectMaxId(repo_id: RepositoryId) -> (u64) {
         "
-        SELECT MAX(id)
+        SELECT CAST(COALESCE(MAX(id), 0) AS UNSIGNED)
         FROM commit_graph_edges
         WHERE repo_id = {repo_id}
         "
