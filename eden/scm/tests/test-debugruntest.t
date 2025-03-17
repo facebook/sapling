@@ -1,3 +1,4 @@
+#require no-windows
 
 
 Classic .t test:
