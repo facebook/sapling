@@ -49,10 +49,18 @@ const DEBUG_LOG_INTERVAL: usize = 10000;
 
 #[derive(Default, Debug)]
 pub struct UploadCounters {
+    // Trees and blobs
     uploaded: RelaxedCounter,
+    // Trees and blobs
     uploaded_bytes: RelaxedCounter,
+    // Trees and blobs
     already_present: RelaxedCounter,
+    // Trees and blobs
     largest_uploaded_blob_bytes: RelaxedCounter,
+    // Only file content blobs
+    uploaded_files: RelaxedCounter,
+    // Only file content blobs
+    already_present_files: RelaxedCounter,
 }
 
 #[derive(Debug, PartialEq, Clone)]
@@ -108,9 +116,12 @@ impl UploadCounters {
                 other.largest_uploaded_blob_bytes.get() - self.largest_uploaded_blob_bytes.get(),
             );
         }
+        self.uploaded_files.add(other.uploaded_files.get());
+        self.already_present_files
+            .add(other.already_present_files.get());
     }
 
-    pub fn tick(&self, ctx: &CoreContext, outcome: UploadOutcome) {
+    fn tick(&self, ctx: &CoreContext, outcome: UploadOutcome) {
         match outcome {
             UploadOutcome::Uploaded(size) => {
                 let size = size as usize;
@@ -126,6 +137,22 @@ impl UploadCounters {
             }
         }
         self.maybe_log(ctx, DEBUG_LOG_INTERVAL);
+    }
+
+    pub fn tick_files(&self, ctx: &CoreContext, outcome: UploadOutcome) {
+        self.tick(ctx, outcome);
+        match outcome {
+            UploadOutcome::Uploaded(_) => {
+                self.uploaded_files.inc();
+            }
+            UploadOutcome::AlreadyPresent => {
+                self.already_present_files.inc();
+            }
+        }
+    }
+
+    pub fn tick_trees(&self, ctx: &CoreContext, outcome: UploadOutcome) {
+        self.tick(ctx, outcome);
     }
 
     pub fn maybe_log<'a>(&self, ctx: &'a CoreContext, limit: usize) {
@@ -147,6 +174,22 @@ impl UploadCounters {
 
     pub fn already_present_digests(&self) -> usize {
         self.already_present.get()
+    }
+
+    pub fn uploaded_files(&self) -> usize {
+        self.uploaded_files.get()
+    }
+
+    pub fn uploaded_trees(&self) -> usize {
+        self.uploaded.get() - self.uploaded_files.get()
+    }
+
+    pub fn already_present_files(&self) -> usize {
+        self.already_present_files.get()
+    }
+
+    pub fn already_present_trees(&self) -> usize {
+        self.already_present.get() - self.already_present_files.get()
     }
 }
 
@@ -323,7 +366,7 @@ where
                     .await?
                     .into_iter()
                     .for_each(|(_, outcome)| {
-                        upload_counter.tick(ctx, outcome);
+                        upload_counter.tick_files(ctx, outcome);
                     });
             }
             UploadPolicy::TreesOnly => {
@@ -333,7 +376,7 @@ where
                     .await?
                     .into_iter()
                     .for_each(|(_, outcome)| {
-                        upload_counter.tick(ctx, outcome);
+                        upload_counter.tick_trees(ctx, outcome);
                     });
             }
             UploadPolicy::All => {
@@ -355,11 +398,11 @@ where
                 )?;
 
                 outcomes_trees.into_iter().for_each(|(_, outcome)| {
-                    upload_counter.tick(ctx, outcome);
+                    upload_counter.tick_trees(ctx, outcome);
                 });
 
                 outcomes_files.into_iter().for_each(|(_, outcome)| {
-                    upload_counter.tick(ctx, outcome);
+                    upload_counter.tick_files(ctx, outcome);
                 });
 
                 // Upload the root manifest last
@@ -374,7 +417,7 @@ where
                     )
                     .watched(ctx.logger())
                     .await?;
-                upload_counter.tick(ctx, outcome_root);
+                upload_counter.tick_trees(ctx, outcome_root);
             }
         }
 
@@ -466,7 +509,7 @@ where
                                             error,
                                         )
                                     })?;
-                                upload_counter.tick(ctx, outcome);
+                                upload_counter.tick_files(ctx, outcome);
                                 debug!(
                                     ctx.logger(),
                                     "Upload completed for '{}' in {:.2} seconds",
@@ -519,7 +562,7 @@ where
                                     error,
                                 )
                             })?;
-                        upload_counter.tick(ctx, outcome);
+                        upload_counter.tick_trees(ctx, outcome);
                     }
                     let hg_manifest = hg_manifest_id.load(ctx, repo.repo_blobstore()).await?;
                     let mut children = Vec::new();
@@ -553,7 +596,7 @@ where
                                                         leaf.1, elem, error,
                                                     )
                                                 })?;
-                                            upload_counter.tick(ctx, outcome);
+                                            upload_counter.tick_files(ctx, outcome);
                                         }
                                         Ok(())
                                     }

@@ -135,10 +135,18 @@ pub async fn cas_store_upload(
 
         // The number of digests that were not present in the CAS store.
         scuba_sample.add("uploaded_digests", stats.uploaded_digests());
+        // The number of files we uploaded to the CAS store during this walk.
+        scuba_sample.add("uploaded_files", stats.uploaded_files());
+        // The number of trees we uploaded to the CAS store during this walk.
+        scuba_sample.add("uploaded_trees", stats.uploaded_trees());
         // The number of bytes we uploaded to the CAS store during this walk.
         scuba_sample.add("uploaded_bytes", stats.uploaded_bytes());
         // The number of digests that were already present in the CAS store.
         scuba_sample.add("present_digests", stats.already_present_digests());
+        // The number of files that were already present in the CAS store.
+        scuba_sample.add("present_files", stats.already_present_files());
+        // The number of trees that were already present in the CAS store.
+        scuba_sample.add("present_trees", stats.already_present_trees());
         // The repo name.
         scuba_sample.add("repo_name", repo.repo_identity.name());
         // The duration of the walk.
