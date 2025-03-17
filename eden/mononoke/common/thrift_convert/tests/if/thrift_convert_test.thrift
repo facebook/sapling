@@ -5,6 +5,9 @@
  * GNU General Public License version 2.
  */
 
+include "thrift/annotation/rust.thrift"
+
+@rust.Exhaustive
 struct ThriftStruct {
   1: i32 a;
   2: string b;
@@ -12,17 +15,19 @@ struct ThriftStruct {
   4: list<i32> d;
   5: ThriftSecondStruct e;
   6: list<ThriftSecondStruct> f;
-} (rust.exhaustive)
+}
 
+@rust.Exhaustive
 struct ThriftSecondStruct {
   1: i64 x;
   2: string y;
-} (rust.exhaustive)
+}
 
 union ThriftUnion {
   1: ThriftEmpty first;
   2: ThriftStruct second;
   3: ThriftSecondStruct third;
-} (rust.exhaustive)
+}
 
-struct ThriftEmpty {} (rust.exhaustive)
+@rust.Exhaustive
+struct ThriftEmpty {}

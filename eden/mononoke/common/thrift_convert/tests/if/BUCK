@@ -10,5 +10,7 @@ thrift_library(
     ],
     rust_deps = [],
     thrift_srcs = {"thrift_convert_test.thrift": []},
-    deps = [],
+    deps = [
+        "//thrift/annotation:rust",
+    ],
 )
