@@ -53,6 +53,7 @@ rust_library(
     compatible_with = [
         "ovr_config//os:macos",
     ],
+    doctests = False,
     os_deps = [
         (
             "macos",
@@ -66,6 +67,7 @@ rust_library(
         "-lframework=CoreFoundation",
         "-lframework=WebKit",
     ],
+    unittests = False,
 )
 
 cpp_library(

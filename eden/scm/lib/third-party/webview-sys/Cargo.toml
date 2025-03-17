@@ -16,6 +16,8 @@ exclude = ["Cargo.lock"]
 
 [lib]
 path = "lib.rs"
+test = false
+doctest = false
 
 [build-dependencies]
 cc = "1"
