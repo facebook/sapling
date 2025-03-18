@@ -42,12 +42,13 @@ impl EdenFsClient {
         Fut: Future<Output = Result<T, E>>,
         E: HasErrorHandlingStrategy + Debug + Display,
     {
-        self.with_thrift_with_timeout(None, f).await
+        self.with_thrift_with_timeouts(None, None, f).await
     }
 
-    pub async fn with_thrift_with_timeout<F, Fut, T, E>(
+    pub async fn with_thrift_with_timeouts<F, Fut, T, E>(
         &self,
-        timeout: Option<Duration>,
+        conn_timeout: Option<Duration>,
+        recv_timeout: Option<Duration>,
         f: F,
     ) -> std::result::Result<T, ConnectAndRequestError<E>>
     where
@@ -55,7 +56,7 @@ impl EdenFsClient {
         Fut: Future<Output = Result<T, E>>,
         E: HasErrorHandlingStrategy + Debug + Display,
     {
-        let client_future = self.connector.connect(timeout);
+        let client_future = self.connector.connect(conn_timeout, recv_timeout);
         let client = client_future
             .await
             .clone()
@@ -78,12 +79,14 @@ impl EdenFsClient {
         Fut: Future<Output = Result<T, E>>,
         E: HasErrorHandlingStrategy + Debug + Display,
     {
-        self.with_streaming_thrift_with_timeout(None, f).await
+        self.with_streaming_thrift_with_timeouts(None, None, f)
+            .await
     }
 
-    pub async fn with_streaming_thrift_with_timeout<F, Fut, T, E>(
+    pub async fn with_streaming_thrift_with_timeouts<F, Fut, T, E>(
         &self,
-        timeout: Option<Duration>,
+        conn_timeout: Option<Duration>,
+        recv_timeout: Option<Duration>,
         f: F,
     ) -> std::result::Result<T, ConnectAndRequestError<E>>
     where
@@ -91,7 +94,7 @@ impl EdenFsClient {
         Fut: Future<Output = Result<T, E>>,
         E: HasErrorHandlingStrategy + Debug + Display,
     {
-        let client_future = self.connector.connect_streaming(timeout);
+        let client_future = self.connector.connect_streaming(conn_timeout, recv_timeout);
         let client = client_future
             .await
             .clone()

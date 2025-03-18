@@ -35,9 +35,11 @@ impl DaemonHealthy for DaemonInfo {
 impl EdenFsClient {
     pub async fn get_health(&self, timeout: Option<Duration>) -> Result<DaemonInfo> {
         event!(Level::DEBUG, "connected to EdenFS daemon");
-        self.with_thrift_with_timeout(timeout.or_else(|| Some(Duration::from_secs(3))), |thrift| {
-            thrift.getDaemonInfo()
-        })
+        self.with_thrift_with_timeouts(
+            timeout.or_else(|| Some(Duration::from_secs(3))),
+            None,
+            |thrift| thrift.getDaemonInfo(),
+        )
         .await
         .from_err()
     }
@@ -47,7 +49,9 @@ impl EdenFsClient {
         timeout: Duration,
     ) -> Result<(DaemonInfo, BoxStream<'static, Result<Vec<u8>>>)> {
         let (daemon_info, stream) = self
-            .with_streaming_thrift_with_timeout(Some(timeout), |thrift| thrift.streamStartStatus())
+            .with_streaming_thrift_with_timeouts(Some(timeout), None, |thrift| {
+                thrift.streamStartStatus()
+            })
             .await
             .from_err()?;
 

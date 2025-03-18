@@ -22,11 +22,14 @@ use futures::future::Shared;
 use thrift_streaming_clients::StreamingEdenServiceExt;
 use thrift_streaming_thriftclients::make_StreamingEdenServiceExt_thriftclient;
 use thrift_thriftclients::make_EdenServiceExt_thriftclient;
-use thrift_thriftclients::EdenService;
 use thrift_types::edenfs_clients::errors::GetDaemonInfoError;
 use thrift_types::edenfs_clients::EdenServiceExt;
 use thrift_types::fb303_core::fb303_status;
 use thriftclient::ThriftChannel;
+
+// TODO: select better defaults (e.g. 1s connection timeout, 1m recv timeout)
+const DEFAULT_CONN_TIMEOUT: Duration = Duration::from_secs(120);
+const DEFAULT_RECV_TIMEOUT: Duration = Duration::from_secs(300);
 
 pub type EdenFsThriftClient = Arc<dyn EdenServiceExt<ThriftChannel> + Send + Sync + 'static>;
 type EdenFsThriftClientFuture =
@@ -47,7 +50,11 @@ impl EdenFsConnector {
         Self { fb, socket_file }
     }
 
-    pub(crate) fn connect(&self, timeout: Option<Duration>) -> EdenFsThriftClientFuture {
+    pub(crate) fn connect(
+        &self,
+        conn_timeout: Option<Duration>,
+        recv_timeout: Option<Duration>,
+    ) -> EdenFsThriftClientFuture {
         let socket_file = self.socket_file.clone();
         let fb = self.fb;
 
@@ -57,18 +64,14 @@ impl EdenFsConnector {
                 socket_file.display()
             );
 
-            // get future for the connection
-            let client_future = EdenFsConnector::connect_impl(fb, &socket_file);
-
-            // wait for the connection - with or without timeout
-            let client = if let Some(timeout) = timeout {
-                tokio::time::timeout(timeout, client_future)
-                    .await
-                    .with_context(|| "Unable to connect to EdenFS daemon")
-                    .map_err(|e| ConnectError::ConnectionError(e.to_string()))??
-            } else {
-                client_future.await?
-            };
+            // get the connection
+            let client = EdenFsConnector::connect_impl(
+                fb,
+                &socket_file,
+                conn_timeout.map_or(DEFAULT_CONN_TIMEOUT, |t| t).as_millis() as u32,
+                recv_timeout.map_or(DEFAULT_RECV_TIMEOUT, |t| t).as_millis() as u32,
+            )
+            .await?;
 
             // wait until the daemon is ready
             EdenFsConnector::wait_until_deamon_is_ready(client.clone()).await?;
@@ -86,13 +89,15 @@ impl EdenFsConnector {
     async fn connect_impl(
         fb: FacebookInit,
         socket_file: &Path,
+        conn_timeout: u32,
+        recv_timeout: u32,
     ) -> std::result::Result<EdenFsThriftClient, ConnectError> {
         make_EdenServiceExt_thriftclient!(
             fb,
             protocol = CompactProtocol,
             from_path = socket_file,
-            with_conn_timeout = 120_000, // 2 minutes
-            with_recv_timeout = 300_000, // 5 minutes
+            with_conn_timeout = conn_timeout,
+            with_recv_timeout = recv_timeout,
             with_secure = false,
         )
         .with_context(|| "Unable to create an EdenFS thrift client")
@@ -101,7 +106,8 @@ impl EdenFsConnector {
 
     pub(crate) async fn connect_streaming(
         &self,
-        timeout: Option<Duration>,
+        conn_timeout: Option<Duration>,
+        recv_timeout: Option<Duration>,
     ) -> StreamingEdenFsThriftClientFuture {
         let socket_file = self.socket_file.clone();
         let fb = self.fb;
@@ -113,17 +119,13 @@ impl EdenFsConnector {
             );
 
             // get future for the connection
-            let client_future = EdenFsConnector::connect_streaming_impl(fb, &socket_file);
-
-            // wait for the connection - with or without timeout
-            let client = if let Some(timeout) = timeout {
-                tokio::time::timeout(timeout, client_future)
-                    .await
-                    .with_context(|| "Unable to connect to EdenFS daemon")
-                    .map_err(|e| ConnectError::ConnectionError(e.to_string()))??
-            } else {
-                client_future.await?
-            };
+            let client = EdenFsConnector::connect_streaming_impl(
+                fb,
+                &socket_file,
+                conn_timeout.map_or(DEFAULT_CONN_TIMEOUT, |t| t).as_millis() as u32,
+                recv_timeout.map_or(DEFAULT_RECV_TIMEOUT, |t| t).as_millis() as u32,
+            )
+            .await?;
 
             // wait until the mount is ready
             EdenFsConnector::wait_until_deamon_is_ready(client.clone()).await?;
@@ -141,13 +143,15 @@ impl EdenFsConnector {
     pub async fn connect_streaming_impl(
         fb: FacebookInit,
         socket_file: &Path,
+        conn_timeout: u32,
+        recv_timeout: u32,
     ) -> std::result::Result<StreamingEdenFsThriftClient, ConnectError> {
         make_StreamingEdenServiceExt_thriftclient!(
             fb,
             protocol = CompactProtocol,
             from_path = socket_file,
-            with_conn_timeout = 120_000, // 2 minutes
-            with_recv_timeout = 300_000, // 5 minutes
+            with_conn_timeout = conn_timeout,
+            with_recv_timeout = recv_timeout,
             with_secure = false,
         )
         .with_context(|| "Unable to create an EdenFS streaming thrift client")
@@ -155,12 +159,14 @@ impl EdenFsConnector {
     }
 
     async fn wait_until_deamon_is_ready(
-        client: Arc<dyn EdenService + Send + Sync>,
+        client: Arc<dyn EdenServiceExt<ThriftChannel> + Send + Sync>,
     ) -> std::result::Result<(), ConnectError> {
-        let mut interval = tokio::time::interval(Duration::from_secs(1));
+        let period = Duration::from_secs(1);
+        let intervals = 10;
+        let mut interval = tokio::time::interval(period);
         interval.set_missed_tick_behavior(tokio::time::MissedTickBehavior::Skip);
 
-        for _ in 0..10 {
+        for _ in 0..intervals {
             match EdenFsConnector::is_daemon_ready(client.clone()).await {
                 Ok(true) => return Ok(()),
                 Ok(false) => {
@@ -168,20 +174,27 @@ impl EdenFsConnector {
                 }
                 Err(e) if e.get_error_handling_strategy() == ErrorHandlingStrategy::Retry => {
                     // Fallthrough to keep going
+                    tracing::info!("The daemon is not ready: {e:?}. Retrying...");
                 }
-                Err(e) => return Err(ConnectError::DaemonNotReadyError(e.to_string())),
+                Err(e) => {
+                    tracing::info!("The daemon is not ready: {e:?}. Timing out...");
+                    return Err(ConnectError::DaemonNotReadyError(e.to_string()));
+                }
             }
 
             interval.tick().await;
         }
 
-        Err(ConnectError::DaemonNotReadyError(
-            "Timed out waiting for the daemon to be ready".to_string(),
-        ))
+        let message = format!(
+            "Timed out waiting for the daemon to be ready after {} seconds",
+            intervals * period.as_secs()
+        );
+        tracing::info!(message);
+        Err(ConnectError::DaemonNotReadyError(message))
     }
 
     async fn is_daemon_ready(
-        client: Arc<dyn EdenService + Send + Sync>,
+        client: Arc<dyn EdenServiceExt<ThriftChannel> + Send + Sync>,
     ) -> std::result::Result<bool, GetDaemonInfoError> {
         // Some tests set the EDENFS_SKIP_DAEMON_READY_CHECK environment variable
         // because they don't want to wait for the daemon to be ready - typically

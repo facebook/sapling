@@ -1227,7 +1227,9 @@ pub async fn get_mounts(instance: &EdenFsInstance) -> Result<BTreeMap<PathBuf, E
     // Get active mounted checkouts info from eden daemon
     let client = instance.get_client();
     let mounted_checkouts = match client
-        .with_thrift_with_timeout(Some(Duration::from_secs(3)), |thrift| thrift.listMounts())
+        .with_thrift_with_timeouts(Some(Duration::from_secs(3)), None, |thrift| {
+            thrift.listMounts()
+        })
         .await
     {
         Ok(result) => Some(result),
