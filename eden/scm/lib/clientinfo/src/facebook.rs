@@ -29,6 +29,8 @@ pub struct FbClientInfo {
     sandcastle_alias: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
     sandcastle_type: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    sandcastle_vcs: Option<String>,
 }
 
 impl FbClientInfo {
@@ -51,6 +53,10 @@ impl FbClientInfo {
     pub fn sandcastle_type(&self) -> Option<&str> {
         self.sandcastle_type.as_deref()
     }
+
+    pub fn sandcastle_vcs(&self) -> Option<&str> {
+        self.sandcastle_vcs.as_deref()
+    }
 }
 
 fn get_tw_job_handle() -> Option<String> {
@@ -70,5 +76,6 @@ pub fn get_fb_client_info() -> FbClientInfo {
         sandcastle_nonce: var("SANDCASTLE_NONCE").ok(),
         sandcastle_alias: var("SANDCASTLE_ALIAS").ok(),
         sandcastle_type: var("SANDCASTLE_TYPE").ok(),
+        sandcastle_vcs: var("SANDCASTLE_VCS").ok(),
     }
 }
