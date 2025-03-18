@@ -1,7 +1,7 @@
 "eden restart" doesn't seem to work on Windows
 #require eden no-windows
 
-  $ setconfig scmstore.fetch-from-cas=true scmstore.fetch-tree-aux-data=true scmstore.tree-metadata-mode=always
+  $ setconfig scmstore.cas-mode=on
 
   $ eden restart &>/dev/null
 

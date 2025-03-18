@@ -1,6 +1,6 @@
 #require no-eden
 
-  $ setconfig scmstore.fetch-from-cas=true scmstore.fetch-tree-aux-data=true
+  $ setconfig scmstore.cas-mode=on
 
   $ enable rebase
 

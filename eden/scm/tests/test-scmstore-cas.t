@@ -1,5 +1,5 @@
   $ setconfig push.edenapi=true
-  $ setconfig scmstore.fetch-from-cas=true scmstore.fetch-tree-aux-data=true scmstore.tree-metadata-mode=always
+  $ setconfig scmstore.cas-mode=on
 
 First sanity check eagerepo works as CAS store
   $ newclientrepo client1 server
@@ -159,9 +159,9 @@ Make sure we don't fetch from local cache unnecessarily.
   $ hg debugscmstore -r $A --mode file "dir/file" --config devel.print-metrics=scmstore.file.fetch.indexedlog.cache.keys >/dev/null
 
 And sanity check the counter we are looking for exists:
-  $ hg debugscmstore -r $A --mode tree "dir" --config devel.print-metrics=scmstore.tree.fetch.indexedlog.cache.keys --config scmstore.fetch-from-cas=false >/dev/null
+  $ hg debugscmstore -r $A --mode tree "dir" --config devel.print-metrics=scmstore.tree.fetch.indexedlog.cache.keys --config scmstore.cas-mode=off >/dev/null
   scmstore.tree.fetch.indexedlog.cache.keys: 1
-  $ hg debugscmstore -r $A --mode file "dir/file" --config devel.print-metrics=scmstore.file.fetch.indexedlog.cache.keys --config scmstore.fetch-from-cas=false >/dev/null
+  $ hg debugscmstore -r $A --mode file "dir/file" --config devel.print-metrics=scmstore.file.fetch.indexedlog.cache.keys --config scmstore.cas-mode=off >/dev/null
   scmstore.file.fetch.indexedlog.cache.keys: 1
 
 Count duplicate key fetches properly:

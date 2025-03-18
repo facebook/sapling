@@ -1,5 +1,5 @@
 #require symlink execbit no-eden
-  $ setconfig scmstore.fetch-from-cas=true scmstore.fetch-tree-aux-data=true scmstore.tree-metadata-mode=always
+  $ setconfig scmstore.cas-mode=on
 
   $ newserver repo
   $ drawdag <<EOS
