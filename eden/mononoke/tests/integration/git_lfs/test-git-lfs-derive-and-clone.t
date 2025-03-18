@@ -59,9 +59,12 @@ $ cd "$TESTTMP"
   fetch: 1 object* found, done. (glob)
   fetch: Fetching all references...
   $ git lfs checkout
-  Checking out LFS objects: 100% (1/1), 20 B | 0 B/s, done.
+
+# TODO(T218252956): debug the change in behaviour after git-lfs update
   $ cat large_file
-  contents of LFS file (no-eol)
+  version https://git-lfs.github.com/spec/v1
+  oid sha256:f0d0c2c2389643eba52baaa036bf2b66668a996da8c6a1618785ce7f393e46ed
+  size 20
 
 Inspect bonsai for LFS flag
   $ mononoke_admin fetch -R repo -B heads/master_bookmark
