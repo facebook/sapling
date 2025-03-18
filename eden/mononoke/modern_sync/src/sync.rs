@@ -413,7 +413,8 @@ pub async fn process_bookmark_update_log_entry(
                     .collect::<Result<Vec<(HgChangesetId, ChangesetId)>>>()?;
 
                 let missing_changesets = sender.filter_existing_commits(ids).await?;
-                let existing_changesets = hgids_len - missing_changesets.len();
+                let ms_len = missing_changesets.len();
+                let existing_changesets = hgids_len - ms_len;
                 *current_position.lock().await += existing_changesets as u64;
 
                 let entry_id = entry.id.0 as i64;
@@ -426,12 +427,11 @@ pub async fn process_bookmark_update_log_entry(
 
                 stream::iter(missing_changesets.into_iter())
                     .map(|cs_id| {
-                        cloned!(ctx, repo, logger, bookmark_name, current_position);
+                        cloned!(ctx, repo, logger, bookmark_name);
 
                         mononoke::spawn_task(async move {
                             let now = std::time::Instant::now();
 
-                            *current_position.lock().await += 1;
                             match process_one_changeset(
                                 &cs_id,
                                 &ctx,
@@ -439,7 +439,6 @@ pub async fn process_bookmark_update_log_entry(
                                 logger,
                                 log_to_ods,
                                 &bookmark_name,
-                                Some((current_position.lock().await.clone(), entry_id)),
                             )
                             .await
                             {
@@ -467,6 +466,14 @@ pub async fn process_bookmark_update_log_entry(
                         }
                     })
                     .try_collect::<()>()
+                    .await?;
+
+                *current_position.lock().await += ms_len as u64;
+                send_manager
+                    .send_changeset(ChangesetMessage::CheckpointInEntry(
+                        current_position.lock().await.clone(),
+                        entry_id,
+                    ))
                     .await?;
                 Ok(())
             }
@@ -518,7 +525,6 @@ pub async fn process_one_changeset(
     logger: Logger,
     log_to_ods: bool,
     bookmark_name: &str,
-    checkpoint: Option<(u64, i64)>, // (position, entry_id)
 ) -> Result<Messages> {
     scuba::log_changeset_start(ctx, cs_id);
 
@@ -633,15 +639,6 @@ pub async fn process_one_changeset(
     messages
         .changeset_messages
         .push(ChangesetMessage::Changeset((hg_cs, bs_cs)));
-
-    if let Some(checkpoint) = checkpoint {
-        messages
-            .changeset_messages
-            .push(ChangesetMessage::CheckpointInEntry(
-                checkpoint.0,
-                checkpoint.1,
-            ));
-    }
 
     if log_to_ods {
         let lag = if let Some(cs_id) = repo
