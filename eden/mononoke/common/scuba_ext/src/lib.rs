@@ -179,6 +179,8 @@ impl MononokeScubaSampleBuilder {
         self.inner
             .add_opt("sandcastle_alias", metadata.sandcastle_alias());
         self.inner
+            .add_opt("sandcastle_vcs", metadata.sandcastle_vcs());
+        self.inner
             .add_opt("revproxy_region", metadata.revproxy_region().as_deref());
         self.inner
             .add_opt("sandcastle_nonce", metadata.sandcastle_nonce());

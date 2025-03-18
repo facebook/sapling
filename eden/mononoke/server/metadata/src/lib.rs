@@ -239,6 +239,12 @@ impl Metadata {
             .and_then(|ci| ci.fb.sandcastle_nonce())
     }
 
+    pub fn sandcastle_vcs(&self) -> Option<&str> {
+        self.client_info
+            .as_ref()
+            .and_then(|ci| ci.fb.sandcastle_vcs())
+    }
+
     pub fn client_request_info(&self) -> Option<&ClientRequestInfo> {
         self.client_info
             .as_ref()
