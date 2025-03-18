@@ -218,8 +218,8 @@ pub async fn sync(
                                 warn!(
                                     logger,
                                     "Ignoring entry with id {} from branch {}",
+                                    entry.id,
                                     entry.bookmark_name,
-                                    entry.id
                                 );
                                 None
                             }
