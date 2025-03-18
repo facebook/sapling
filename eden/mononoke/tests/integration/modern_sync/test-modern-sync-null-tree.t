@@ -68,8 +68,8 @@ Sync all bookmarks moves
   Skipping 0 batches from entry 1
   Skipping 0 commits within batch
   Starting sync of 1 missing commits, 0 were already synced
-  Found error: Mercurial content missing for node 0000000000000000000000000000000000000000 (type tree), retrying attempt #0
-  Found error: Mercurial content missing for node 0000000000000000000000000000000000000000 (type tree), retrying attempt #1
-  Found error: Mercurial content missing for node 0000000000000000000000000000000000000000 (type tree), retrying attempt #2
-  Failed to upload trees: Mercurial content missing for node 0000000000000000000000000000000000000000 (type tree)
-  Trees flush failed: Mercurial content missing for node 0000000000000000000000000000000000000000 (type tree)
+  Changeset 87d9f6e52bc2c5b123a938f090abba9b3ab691d53c51ea2496f93ec138740106 has no content
+  Setting checkpoint from entry 1 to 0
+  Setting bookmark master_bookmark from None to Some(HgChangesetId(HgNodeHash(Sha1(f8f8a958c69f2b383a6901cc91885d6dd3043f2c))))
+  Moved bookmark with result SetBookmarkResponse { data: Ok(()) }
+  Marking entry 1 as done

@@ -46,6 +46,7 @@ use metadata::Metadata;
 use mononoke_app::args::SourceRepoArgs;
 use mononoke_app::MononokeApp;
 use mononoke_macros::mononoke;
+use mononoke_types::sha1_hash::SHA1_HASH_LENGTH_BYTES;
 use mononoke_types::ChangesetId;
 use mononoke_types::ContentId;
 use mononoke_types::FileChange;
@@ -572,7 +573,11 @@ pub async fn process_one_changeset(
         })
         .collect();
 
-    process_one_changeset_contents(ctx, &mut messages, cs_info, &repo, &hg_cs, cids).await?;
+    if cids.is_empty() && hg_cs.manifestid().as_bytes() == [0; SHA1_HASH_LENGTH_BYTES] {
+        info!(logger, "Changeset {} has no content", cs_id);
+    } else {
+        process_one_changeset_contents(ctx, &mut messages, cs_info, &repo, &hg_cs, cids).await?;
+    }
 
     messages
         .changeset_messages
