@@ -233,7 +233,10 @@ class MountTest(testcase.EdenRepoTest):
         with self.eden.get_thrift_client_legacy() as client:
             # Since we blocked mount initialization the mount should still
             # report as INITIALIZING, and edenfs should report itself STARTING
-            self.assertEqual({self.mount: "INITIALIZING"}, self.eden.list_cmd_simple())
+            self.assertEqual(
+                {self.mount: "INITIALIZING"},
+                self.eden.list_cmd_simple({"EDENFS_SKIP_DAEMON_READY_CHECK": "1"}),
+            )
             self.assertEqual(fb303_status.STARTING, client.getDaemonInfo().status)
 
             # Unblock mounting and wait for the mount to transition to running
@@ -376,7 +379,7 @@ class MountTest(testcase.EdenRepoTest):
                     mount2: "INITIALIZING",
                     mount3: "INITIALIZING",
                 },
-                self.eden.list_cmd_simple(),
+                self.eden.list_cmd_simple({"EDENFS_SKIP_DAEMON_READY_CHECK": "1"}),
             )
             self.assertEqual(fb303_status.STARTING, client.getDaemonInfo().status)
 

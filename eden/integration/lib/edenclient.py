@@ -603,15 +603,17 @@ class EdenFS:
             # We expect the new process to fail starting.
             pass
 
-    def list_cmd(self) -> Dict[str, Dict[str, Any]]:
+    def list_cmd(
+        self, env: Optional[Dict[str, str]] = None
+    ) -> Dict[str, Dict[str, Any]]:
         """
         Executes "eden list --json" to list the Eden checkouts and returns the result as
         a dictionary.
         """
-        data = self.run_cmd("list", "--json")
+        data = self.run_cmd("list", "--json", env=env)
         return cast(Dict[str, Dict[str, Any]], json.loads(data))
 
-    def list_cmd_simple(self) -> Dict[str, str]:
+    def list_cmd_simple(self, env: Optional[Dict[str, str]] = None) -> Dict[str, str]:
         """
         Executes "eden list --json" to list the Eden checkouts and returns the result in
         a simplified format that can be more easily used in test case assertions.
@@ -623,7 +625,7 @@ class EdenFS:
         appended to the status string.
         """
         results: Dict[str, str] = {}
-        for path, mount_info in self.list_cmd().items():
+        for path, mount_info in self.list_cmd(env).items():
             status_str = mount_info["state"]
             if not mount_info["configured"]:
                 status_str += " (unconfigured)"

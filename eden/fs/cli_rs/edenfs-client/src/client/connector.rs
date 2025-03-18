@@ -5,7 +5,7 @@
  * GNU General Public License version 2.
  */
 
-use core::time;
+use std::env;
 use std::path::Path;
 use std::path::PathBuf;
 use std::sync::Arc;
@@ -181,11 +181,19 @@ impl EdenFsConnector {
     }
 
     async fn is_daemon_ready(
-        _client: Arc<dyn EdenService + Send + Sync>,
+        client: Arc<dyn EdenService + Send + Sync>,
     ) -> std::result::Result<bool, GetDaemonInfoError> {
-        Ok(true)
-        // TODO: debug why client is not responding here
-        // let daemon_info = client.getDaemonInfo().await?;
-        // Ok(daemon_info.status == Some(fb303_status::ALIVE))
+        // Some tests set the EDENFS_SKIP_DAEMON_READY_CHECK environment variable
+        // because they don't want to wait for the daemon to be ready - typically
+        // due to fault injection stalling the daemon.
+        //
+        // In those cases, we just return success immediately.
+        match env::var_os("EDENFS_SKIP_DAEMON_READY_CHECK") {
+            Some(_) => Ok(true),
+            None => {
+                let daemon_info = client.getDaemonInfo().await?;
+                Ok(daemon_info.status == Some(fb303_status::ALIVE))
+            }
+        }
     }
 }
