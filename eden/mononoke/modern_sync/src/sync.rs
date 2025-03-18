@@ -55,6 +55,7 @@ use repo_blobstore::RepoBlobstoreRef;
 use repo_derived_data::RepoDerivedDataRef;
 use repo_identity::RepoIdentityRef;
 use slog::info;
+use slog::warn;
 use slog::Logger;
 use stats::define_stats;
 use stats::prelude::*;
@@ -185,9 +186,9 @@ pub async fn sync(
         repo.mutable_counters_arc(),
     );
     info!(logger, "Initialized channels");
-
     scuba::log_sync_start(ctx, start_id);
 
+    let bookmark = app_args.bookmark;
     let last_entry = Arc::new(RwLock::new(None));
     bul_util::read_bookmark_update_log(
         ctx,
@@ -196,7 +197,7 @@ pub async fn sync(
         repo.bookmark_update_log_arc(),
     )
     .then(|entries| {
-        cloned!(repo, logger, sender, mut send_manager, last_entry);
+        cloned!(repo, logger, sender, mut send_manager, last_entry, bookmark);
         borrowed!(ctx);
         async move {
             match entries {
@@ -208,6 +209,23 @@ pub async fn sync(
                     Err(e)
                 }
                 Ok(mut entries) => {
+                    entries = entries
+                        .iter()
+                        .filter_map(|entry| {
+                            if entry.bookmark_name.name().as_str() == bookmark {
+                                Some(entry.clone())
+                            } else {
+                                warn!(
+                                    logger,
+                                    "Ignoring entry with id {} from branch {}",
+                                    entry.bookmark_name,
+                                    entry.id
+                                );
+                                None
+                            }
+                        })
+                        .collect::<Vec<BookmarkUpdateLogEntry>>();
+
                     if app_args.flatten_bul && !entries.is_empty() {
                         let original_size = entries.len();
                         let flattened_bul = bul_util::group_entries(entries);
@@ -219,6 +237,7 @@ pub async fn sync(
                         );
                         entries = flattened_bul;
                     }
+
                     for entry in entries {
                         let now = std::time::Instant::now();
 

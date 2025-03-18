@@ -66,6 +66,10 @@ struct ModernSyncArgs {
     #[clap(long)]
     /// Group bookmark update log entries into bigger batches
     flatten_bul: bool,
+
+    #[clap(long)]
+    /// Bookmark to sync (default: master)
+    bookmark: String,
 }
 
 #[facet::container]
