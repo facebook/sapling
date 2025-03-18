@@ -14,10 +14,10 @@ use std::future::Future;
 
 use anyhow::anyhow;
 use basename_suffix_skeleton_manifest_v3::RootBssmV3DirectoryId;
-use blobrepo_hg::BlobRepoHg;
 use blobstore::Loadable;
 use bonsai_git_mapping::BonsaiGitMappingRef;
 use bonsai_globalrev_mapping::BonsaiGlobalrevMappingRef;
+use bonsai_hg_mapping::BonsaiHgMappingRef;
 use bonsai_svnrev_mapping::BonsaiSvnrevMappingRef;
 use bookmarks::BookmarkKey;
 use bytes::Bytes;
@@ -53,6 +53,7 @@ use manifest::Entry as ManifestEntry;
 use manifest::ManifestOps;
 use manifest::ManifestOrderedOps;
 use manifest::PathOrPrefix;
+use mercurial_derivation::MappedHgChangesetId;
 use mercurial_types::Globalrev;
 use mononoke_types::path::MPath;
 use mononoke_types::skeleton_manifest_v2::SkeletonManifestV2;
@@ -259,12 +260,17 @@ impl<R: MononokeRepo> ChangesetContext<R> {
 
     /// The Mercurial ID for the changeset.
     pub async fn hg_id(&self) -> Result<Option<HgChangesetId>, MononokeError> {
-        let mapping = self
+        let maybe_hg_id = self
             .repo_ctx()
             .repo()
-            .get_hg_bonsai_mapping(self.ctx().clone(), self.id)
+            .bonsai_hg_mapping()
+            .get_hg_from_bonsai(self.ctx(), self.id)
             .await?;
-        Ok(mapping.first().map(|(hg_cs_id, _)| *hg_cs_id))
+        if maybe_hg_id.is_none() && self.repo_ctx().derive_hgchangesets_enabled() {
+            let mapped_hg_id = self.derive::<MappedHgChangesetId>().await?;
+            return Ok(Some(mapped_hg_id.hg_changeset_id()));
+        }
+        Ok(maybe_hg_id)
     }
 
     /// The Globalrev for the changeset.
