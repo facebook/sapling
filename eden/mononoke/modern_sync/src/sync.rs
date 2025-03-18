@@ -636,16 +636,16 @@ pub async fn process_one_changeset(
 
     let (_, _) = tokio::try_join!(
         async {
-            for mf_id in mf_ids {
-                messages.trees_messages.push(TreeMessage::Tree(mf_id));
-            }
+            messages
+                .trees_messages
+                .extend(mf_ids.into_iter().map(TreeMessage::Tree));
             messages.trees_messages.push(TreeMessage::TreesDone(t_tx));
             anyhow::Ok(())
         },
         async {
-            for file_id in file_ids {
-                messages.files_messages.push(FileMessage::FileNode(file_id));
-            }
+            messages
+                .files_messages
+                .extend(file_ids.into_iter().map(FileMessage::FileNode));
             messages.files_messages.push(FileMessage::FilesDone(f_tx));
             anyhow::Ok(())
         }
@@ -735,29 +735,26 @@ pub async fn send_messages_in_order(
     send_manager: &mut SendManager,
 ) -> Result<()> {
     let messages = messages?;
-    for msg in messages.content_messages {
-        send_manager.send_content(msg).await?;
-    }
+
+    send_manager
+        .send_contents(messages.content_messages)
+        .await?;
 
     let (_, _) = tokio::try_join!(
         async {
-            for msg in messages.files_messages {
-                send_manager.send_file(msg).await?;
-            }
+            send_manager.send_files(messages.files_messages).await?;
             anyhow::Ok(())
         },
         async {
-            cloned!(send_manager);
-            for msg in messages.trees_messages {
-                send_manager.send_tree(msg).await?;
-            }
+            send_manager.send_trees(messages.trees_messages).await?;
             anyhow::Ok(())
         }
     )?;
 
-    for msg in messages.changeset_messages {
-        send_manager.send_changeset(msg).await?;
-    }
+    send_manager
+        .send_changesets(messages.changeset_messages)
+        .await?;
+
     Ok(())
 }
 

@@ -842,4 +842,32 @@ impl SendManager {
             .await
             .map_err(|err| err.into())
     }
+
+    pub async fn send_contents(&self, content_msgs: Vec<ContentMessage>) -> Result<()> {
+        for content_msg in content_msgs {
+            self.send_content(content_msg).await?;
+        }
+        Ok(())
+    }
+
+    pub async fn send_files(&self, ft_msgs: Vec<FileMessage>) -> Result<()> {
+        for ft_msg in ft_msgs {
+            self.send_file(ft_msg).await?;
+        }
+        Ok(())
+    }
+
+    pub async fn send_trees(&self, ft_msgs: Vec<TreeMessage>) -> Result<()> {
+        for ft_msg in ft_msgs {
+            self.send_tree(ft_msg).await?;
+        }
+        Ok(())
+    }
+
+    pub async fn send_changesets(&self, cs_msgs: Vec<ChangesetMessage>) -> Result<()> {
+        for cs_msg in cs_msgs {
+            self.send_changeset(cs_msg).await?;
+        }
+        Ok(())
+    }
 }
