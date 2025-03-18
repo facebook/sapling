@@ -37,6 +37,7 @@ use manifest::Comparison;
 use manifest::Entry;
 use manifest::ManifestOps;
 use mercurial_derivation::derive_hg_changeset::DeriveHgChangeset;
+use mercurial_types::blobs::HgBlobChangeset;
 use mercurial_types::blobs::HgBlobManifest;
 use mercurial_types::HgChangesetId;
 use mercurial_types::HgFileNodeId;
@@ -46,6 +47,7 @@ use mononoke_app::args::SourceRepoArgs;
 use mononoke_app::MononokeApp;
 use mononoke_macros::mononoke;
 use mononoke_types::ChangesetId;
+use mononoke_types::ContentId;
 use mononoke_types::FileChange;
 use mononoke_types::MPath;
 use mutable_counters::MutableCountersArc;
@@ -570,6 +572,51 @@ pub async fn process_one_changeset(
         })
         .collect();
 
+    process_one_changeset_contents(ctx, &mut messages, cs_info, &repo, &hg_cs, cids).await?;
+
+    messages
+        .changeset_messages
+        .push(ChangesetMessage::Changeset((hg_cs, bs_cs)));
+
+    if log_to_ods {
+        let lag = if let Some(cs_id) = repo
+            .bookmarks()
+            .get(ctx.clone(), &BookmarkKey::new(bookmark_name)?)
+            .await?
+        {
+            let bookmark_commit = cs_id.load(ctx, repo.repo_blobstore()).await?;
+            let bookmark_commit_time = bookmark_commit.author_date().timestamp_secs();
+
+            Some(bookmark_commit_time - commit_time)
+        } else {
+            info!(logger, "Bookmark {} not found", bookmark_name);
+            None
+        };
+
+        messages.changeset_messages.push(ChangesetMessage::Log((
+            repo.repo_identity().name().to_string(),
+            lag,
+        )));
+    }
+
+    let elapsed = now.elapsed();
+    STATS::changeset_procesing_time_s.add_value(
+        elapsed.as_secs() as i64,
+        (repo.repo_identity().name().to_string(),),
+    );
+    STATS::changeset_procesed.add_value(1, (repo.repo_identity().name().to_string(),));
+
+    Ok(messages)
+}
+
+pub async fn process_one_changeset_contents(
+    ctx: &CoreContext,
+    messages: &mut Messages,
+    cs_info: ChangesetInfo,
+    repo: &Repo,
+    hg_cs: &HgBlobChangeset,
+    cids: Vec<ContentId>,
+) -> Result<()> {
     // Read the sizes of the contents concurrently (by reading the metadata blobs from blobstore)
     // Larger commits/older not cached commits would benefit from this concurrency.
     let mut contents = stream::iter(cids)
@@ -649,39 +696,8 @@ pub async fn process_one_changeset(
     messages
         .changeset_messages
         .push(ChangesetMessage::WaitForFilesAndTrees(f_rx, t_rx));
-    messages
-        .changeset_messages
-        .push(ChangesetMessage::Changeset((hg_cs, bs_cs)));
 
-    if log_to_ods {
-        let lag = if let Some(cs_id) = repo
-            .bookmarks()
-            .get(ctx.clone(), &BookmarkKey::new(bookmark_name)?)
-            .await?
-        {
-            let bookmark_commit = cs_id.load(ctx, repo.repo_blobstore()).await?;
-            let bookmark_commit_time = bookmark_commit.author_date().timestamp_secs();
-
-            Some(bookmark_commit_time - commit_time)
-        } else {
-            info!(logger, "Bookmark {} not found", bookmark_name);
-            None
-        };
-
-        messages.changeset_messages.push(ChangesetMessage::Log((
-            repo.repo_identity().name().to_string(),
-            lag,
-        )));
-    }
-
-    let elapsed = now.elapsed();
-    STATS::changeset_procesing_time_s.add_value(
-        elapsed.as_secs() as i64,
-        (repo.repo_identity().name().to_string(),),
-    );
-    STATS::changeset_procesed.add_value(1, (repo.repo_identity().name().to_string(),));
-
-    Ok(messages)
+    Ok(())
 }
 
 async fn sort_manifest_changes(
