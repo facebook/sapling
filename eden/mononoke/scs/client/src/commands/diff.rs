@@ -7,7 +7,6 @@
 
 //! Diff two commits
 
-use std::collections::BTreeSet;
 use std::io::Write;
 
 use anyhow::bail;
@@ -19,6 +18,7 @@ use serde::Serialize;
 
 use crate::args::commit_id::resolve_commit_ids;
 use crate::args::commit_id::CommitIdsArgs;
+use crate::args::commit_id::SchemeArgs;
 use crate::args::repo::RepoArgs;
 use crate::errors::SelectionErrorExt;
 use crate::library::diff::diff_files;
@@ -32,6 +32,9 @@ enum DiffFormat {
 }
 
 #[derive(clap::Parser)]
+// Commit identity schemes to use as an intermediate step to resolve commit ids.
+// (default: bonsai) - should be good for all cases. Overriding is only good for debugging or testing.
+#[clap(mut_arg("schemes", |arg| arg.default_value("bonsai").hide(true)))]
 /// Diff files between two commits
 pub(super) struct CommandArgs {
     #[clap(flatten)]
@@ -68,6 +71,8 @@ pub(super) struct CommandArgs {
     /// Number of lines of unified context around differences.
     #[clap(long = "unified", short = 'U', default_value_t = 3)]
     context: i64,
+    #[clap(flatten)]
+    scheme_args: SchemeArgs,
 }
 
 #[derive(Serialize)]
@@ -116,8 +121,7 @@ pub(super) async fn run(app: ScscApp, args: CommandArgs) -> Result<()> {
     let paths = args.path.clone();
     let conn = app.get_connection(Some(&repo.name))?;
     let commit_ids = resolve_commit_ids(&conn, &repo, &commit_ids).await?;
-    let mut identity_schemes = BTreeSet::new();
-    identity_schemes.insert(thrift::CommitIdentityScheme::BONSAI);
+    let identity_schemes = args.scheme_args.clone().into_request_schemes();
 
     let commits: Vec<_> = commit_ids
         .into_iter()
