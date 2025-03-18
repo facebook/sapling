@@ -129,6 +129,7 @@ pub struct HttpClientBuilder {
     headers: HashMap<String, String>,
     try_route_consistently: bool,
     augmented_trees: bool,
+    max_commit_data_per_batch: Option<usize>,
     max_files_per_batch: Option<usize>,
     max_trees_per_batch: Option<usize>,
     max_history_per_batch: Option<usize>,
@@ -211,6 +212,7 @@ impl HttpClientBuilder {
         let augmented_trees = get_config(config, "edenapi", "augmented-trees")?.unwrap_or_default();
 
         let min_batch_size = get_config(config, "edenapi", "min-batch-size")?;
+        let max_commit_data_per_batch = get_config(config, "edenapi", "maxcommitdata")?;
         let max_files_per_batch = get_config(config, "edenapi", "maxfiles")?;
         let max_trees_per_batch = get_config(config, "edenapi", "maxtrees")?;
         let max_history_per_batch = get_config(config, "edenapi", "maxhistory")?;
@@ -305,6 +307,7 @@ impl HttpClientBuilder {
             headers,
             try_route_consistently,
             augmented_trees,
+            max_commit_data_per_batch,
             max_files_per_batch,
             max_trees_per_batch,
             max_history_per_batch,
@@ -372,6 +375,13 @@ impl HttpClientBuilder {
     /// Maximum number of concurrent HTTP requests allowed.
     pub fn max_requests(mut self, size: Option<usize>) -> Self {
         self.http_config.max_concurrent_requests = size;
+        self
+    }
+
+    /// Maximum number of keys per commit data request. Larger requests will be
+    /// split up into concurrently-sent batches.
+    pub fn max_commit_data_per_batch(mut self, size: Option<usize>) -> Self {
+        self.max_commit_data_per_batch = size;
         self
     }
 
@@ -475,6 +485,7 @@ pub(crate) struct Config {
     pub(crate) headers: HashMap<String, String>,
     pub(crate) try_route_consistently: bool,
     pub(crate) augmented_trees: bool,
+    pub(crate) max_commit_data_per_batch: Option<usize>,
     pub(crate) max_files_per_batch: Option<usize>,
     pub(crate) max_trees_per_batch: Option<usize>,
     pub(crate) max_history_per_batch: Option<usize>,
@@ -506,6 +517,7 @@ impl TryFrom<HttpClientBuilder> for Config {
             headers,
             try_route_consistently,
             augmented_trees,
+            max_commit_data_per_batch,
             max_files_per_batch,
             max_trees_per_batch,
             max_history_per_batch,
@@ -538,6 +550,7 @@ impl TryFrom<HttpClientBuilder> for Config {
         }
 
         // Setting these to 0 is the same as None.
+        let max_commit_data_per_batch = max_commit_data_per_batch.filter(|n| *n > 0);
         let max_files_per_batch = max_files_per_batch.filter(|n| *n > 0);
         let max_trees_per_batch = max_trees_per_batch.filter(|n| *n > 0);
         let max_history_per_batch = max_history_per_batch.filter(|n| *n > 0);
@@ -548,6 +561,7 @@ impl TryFrom<HttpClientBuilder> for Config {
             headers,
             try_route_consistently,
             augmented_trees,
+            max_commit_data_per_batch,
             max_files_per_batch,
             max_trees_per_batch,
             max_history_per_batch,

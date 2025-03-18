@@ -762,16 +762,22 @@ impl Client {
         tracing::info!("Requesting revlog data for {} commit(s)", hgids.len());
 
         let url = self.build_url(paths::COMMIT_REVLOG_DATA)?;
-        let commit_revlog_data_req = CommitRevlogDataRequest { hgids };
 
-        self.log_request(&commit_revlog_data_req, "commit_revlog_data");
+        let requests = split_into_batches(hgids, self.config().max_commit_data_per_batch, None)
+            .into_iter()
+            .map(|hgids| {
+                let req = CommitRevlogDataRequest { hgids };
+                self.log_request(&req, "commit_data");
+                self.configure_request(
+                    paths::COMMIT_REVLOG_DATA,
+                    self.inner.client.post(url.clone()),
+                )?
+                .cbor(&req)
+                .map_err(SaplingRemoteApiError::RequestSerializationFailed)
+            })
+            .collect::<Result<_, _>>()?;
 
-        let req = self
-            .configure_request(paths::COMMIT_REVLOG_DATA, self.inner.client.post(url))?
-            .cbor(&commit_revlog_data_req)
-            .map_err(SaplingRemoteApiError::RequestSerializationFailed)?;
-
-        self.fetch_raw::<CommitRevlogData>(vec![req])
+        self.fetch_raw::<CommitRevlogData>(requests)
     }
 
     async fn upload_bonsai_changeset_attempt(
