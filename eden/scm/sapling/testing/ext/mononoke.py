@@ -690,6 +690,38 @@ def setup_mononoke_repo_config(
         with fs.open(repo_definitions_config_path, mode) as f:
             f.write((content + "\n").encode())
 
+    ## Determine the enabled derived data types
+    ## we'll use them later but let's make them visible in entirety of the function
+    if enabled_derived_data := env.getenv("ENABLED_DERIVED_DATA"):
+        derived_data_types = enabled_derived_data.split()
+    else:
+        derived_data_types = [
+            "blame",
+            "changeset_info",
+            "deleted_manifest",
+            "fastlog",
+            "filenodes",
+            "fsnodes",
+            "git_commits",
+            "git_delta_manifests_v2",
+            "unodes",
+            "hgchangesets",
+            "hg_augmented_manifests",
+            "skeleton_manifests",
+            "skeleton_manifests_v2",
+            "bssm_v3",
+            "ccsm",
+            "test_manifests",
+            "test_sharded_manifests",
+        ]
+
+    if additional_derived_data := env.getenv("ADDITIONAL_DERIVED_DATA"):
+        derived_data_types.extend(additional_derived_data.split())
+    if disabled_derived_data := env.getenv("DISABLED_DERIVED_DATA"):
+        derived_data_types = list(
+            set(derived_data_types) - set(disabled_derived_data.split())
+        )
+
     append_config(
         f"""
 hash_validation_percentage=100
@@ -716,6 +748,9 @@ hipster_acl="{env.getenv('ACL_NAME', 'default')}"
         append_def_config(
             f"\ndefault_commit_identity_scheme={env.getenv('COMMIT_IDENTITY_SCHEME')}\n"
         )
+    ## if hgchangesets are not derived let's use git
+    elif "hgchangesets" not in derived_data_types:
+        append_def_config("\ndefault_commit_identity_scheme=3\n")
 
     if env.getenv("SCUBA_LOGGING_PATH"):
         append_config(f"\nscuba_local_path=\"{env.getenv('SCUBA_LOGGING_PATH')}\"\n")
@@ -913,36 +948,6 @@ enabled_config_name = "default"
 scuba_table = "file://{}/derived_data_scuba.json"
 """.format(env.getenv("TESTTMP"))
     )
-
-    if enabled_derived_data := env.getenv("ENABLED_DERIVED_DATA"):
-        derived_data_types = enabled_derived_data.split()
-    else:
-        derived_data_types = [
-            "blame",
-            "changeset_info",
-            "deleted_manifest",
-            "fastlog",
-            "filenodes",
-            "fsnodes",
-            "git_commits",
-            "git_delta_manifests_v2",
-            "unodes",
-            "hgchangesets",
-            "hg_augmented_manifests",
-            "skeleton_manifests",
-            "skeleton_manifests_v2",
-            "bssm_v3",
-            "ccsm",
-            "test_manifests",
-            "test_sharded_manifests",
-        ]
-
-    if additional_derived_data := env.getenv("ADDITIONAL_DERIVED_DATA"):
-        derived_data_types.extend(additional_derived_data.split())
-    if disabled_derived_data := env.getenv("DISABLED_DERIVED_DATA"):
-        derived_data_types = list(
-            set(derived_data_types) - set(disabled_derived_data.split())
-        )
 
     enabled_derived_data = json.dumps(derived_data_types)
     append_config(
