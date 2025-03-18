@@ -28,11 +28,12 @@ use anyhow::Result;
 use cas_client::CasClient;
 use clientinfo::get_client_request_info_thread_local;
 use clientinfo::set_client_request_info_thread_local;
-use crossbeam::channel::unbounded;
 use edenapi_types::FileAuxData;
 use edenapi_types::TreeAuxData;
 use edenapi_types::TreeChildEntry;
 use fetch::FetchState;
+use flume::bounded;
+use flume::unbounded;
 use minibytes::Bytes;
 use once_cell::sync::OnceCell;
 use progress_model::AggregatingProgressBar;
@@ -127,6 +128,9 @@ pub struct TreeStore {
     // This bar "aggregates" across concurrent uses of this TreeStore from different
     // threads (so that only a single progress bar shows up to the user).
     pub(crate) progress_bar: Arc<AggregatingProgressBar>,
+
+    // Temporary escape hatch to disable bounding of queue.
+    pub(crate) unbounded_queue: bool,
 }
 
 impl Drop for TreeStore {
@@ -149,9 +153,22 @@ impl TreeStore {
             return FetchResults::new(Box::new(std::iter::empty()));
         }
 
+        // Unscientifically picked to be small enough to not use "all" the memory with a
+        // full queue of (small) trees, but still generous enough to keep the pipeline
+        // full of work for downstream consumers. The important thing is it is less than
+        // infinity.
+        const RESULT_QUEUE_SIZE: usize = 100_000;
+
         let bar = self.progress_bar.create_or_extend_local(0);
 
-        let (found_tx, found_rx) = unbounded();
+        let (found_tx, found_rx) = if self.unbounded_queue {
+            // Escape hatch in case something goes wrong with bounding.
+            unbounded()
+        } else {
+            // Bound channel size so we don't use unlimited memory queueing up file content
+            // when the consumer is consuming slower than we are fetching.
+            bounded(RESULT_QUEUE_SIZE)
+        };
 
         let found_tx2 = found_tx.clone();
         let mut state = FetchState::new(reqs, attrs, found_tx, fetch_mode, bar.clone());
@@ -460,6 +477,7 @@ impl TreeStore {
             prefetch_tree_parents: false,
             format: SerializationFormat::Hg,
             progress_bar: AggregatingProgressBar::new("", ""),
+            unbounded_queue: false,
         }
     }
 
@@ -523,6 +541,7 @@ impl TreeStore {
             prefetch_tree_parents: false,
             format: self.format(),
             progress_bar: self.progress_bar.clone(),
+            unbounded_queue: self.unbounded_queue,
         }
     }
 

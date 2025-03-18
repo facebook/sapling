@@ -260,6 +260,7 @@ impl AsyncResponse {
         } = streams;
 
         let header_lines = headers_rx
+            .into_stream()
             .take_while(|h| future::ready(h != &Header::EndOfHeaders))
             .collect::<Vec<_>>()
             .await;

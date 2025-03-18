@@ -12,7 +12,7 @@ use std::sync::Arc;
 use anyhow::anyhow;
 use anyhow::Error;
 use anyhow::Result;
-use crossbeam::channel::Sender;
+use flume::Sender;
 use progress_model::ProgressBar;
 use types::errors::KeyedError;
 use types::fetch_mode::FetchMode;

@@ -27,7 +27,6 @@ use anyhow::Result;
 use async_runtime::block_on;
 use atexit::AtExit;
 use context::CoreContext;
-use crossbeam::channel;
 use dag::Vertex;
 #[cfg(windows)]
 use fs_err as fs;
@@ -279,10 +278,14 @@ impl CheckoutPlan {
         let fetch_data_iter = store.get_content_iter(keys, FetchMode::AllowRemote)?;
 
         let stats = thread::scope(|s| -> Result<CheckoutStats> {
-            let (tx, rx) = channel::unbounded::<Work>();
+            const WORK_QUEUE_SIZE: usize = 10_000;
 
-            let (err_tx, err_rx) = channel::unbounded();
-            let (progress_tx, progress_rx) = channel::unbounded();
+            // Use bounded queue so we don't slurp all file contents into memory waiting
+            // to write stuff out to disk.
+            let (tx, rx) = flume::bounded::<Work>(WORK_QUEUE_SIZE);
+
+            let (err_tx, err_rx) = flume::unbounded();
+            let (progress_tx, progress_rx) = flume::unbounded();
 
             // On Ctrl+C or error, write the "progress" file to help resume.
             let progress = self.progress.clone();

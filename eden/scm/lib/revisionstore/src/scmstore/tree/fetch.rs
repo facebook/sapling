@@ -13,7 +13,7 @@ use std::time::Instant;
 use anyhow::Result;
 use async_runtime::block_on;
 use cas_client::CasClient;
-use crossbeam::channel::Sender;
+use flume::Sender;
 use futures::StreamExt;
 use progress_model::ProgressBar;
 use tracing::field;

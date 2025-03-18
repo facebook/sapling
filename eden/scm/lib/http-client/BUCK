@@ -28,6 +28,7 @@ rust_library(
         "fbsource//third-party/rust:auto_impl",
         "fbsource//third-party/rust:curl",
         "fbsource//third-party/rust:curl-sys",
+        "fbsource//third-party/rust:flume",
         "fbsource//third-party/rust:futures",
         "fbsource//third-party/rust:http",
         "fbsource//third-party/rust:lru-cache",

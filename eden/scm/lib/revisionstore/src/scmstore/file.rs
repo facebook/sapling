@@ -25,7 +25,8 @@ use anyhow::Result;
 use cas_client::CasClient;
 use clientinfo::get_client_request_info_thread_local;
 use clientinfo::set_client_request_info_thread_local;
-use crossbeam::channel::unbounded;
+use flume::bounded;
+use flume::unbounded;
 use indexedlog::log::AUTO_SYNC_COUNT;
 use indexedlog::log::SYNC_COUNT;
 use indexedlog::rotate::ROTATE_COUNT;
@@ -116,6 +117,9 @@ pub struct FileStore {
     // This bar "aggregates" across concurrent uses of this FileStore from different
     // threads (so that only a single progress bar shows up to the user).
     pub(crate) progress_bar: Arc<AggregatingProgressBar>,
+
+    // Temporary escape hatch to disable bounding of queue.
+    pub(crate) unbounded_queue: bool,
 }
 
 impl Drop for FileStore {
@@ -162,9 +166,22 @@ impl FileStore {
             return FetchResults::new(Box::new(std::iter::empty()));
         }
 
+        // Unscientifically picked to be small enough to not use "all" the memory with a
+        // full queue of files of decent size, but still generous enough to keep the
+        // pipeline full of work for downstream consumers. The important thing is it is
+        // less than infinity.
+        const RESULT_QUEUE_SIZE: usize = 10_000;
+
         let bar = self.progress_bar.create_or_extend_local(0);
 
-        let (found_tx, found_rx) = unbounded();
+        let (found_tx, found_rx) = if self.unbounded_queue {
+            // Escape hatch in case something goes wrong with bounding.
+            unbounded()
+        } else {
+            // Bound channel size so we don't use unlimited memory queueing up file content
+            // when the consumer is consuming slower than we are fetching.
+            bounded(RESULT_QUEUE_SIZE)
+        };
         let mut state = FetchState::new(
             keys,
             attrs,
@@ -535,6 +552,8 @@ impl FileStore {
             cas_cache_threshold_bytes: None,
 
             progress_bar: AggregatingProgressBar::new("", ""),
+
+            unbounded_queue: false,
         }
     }
 
@@ -585,6 +604,8 @@ impl FileStore {
             cas_cache_threshold_bytes: self.cas_cache_threshold_bytes.clone(),
 
             progress_bar: self.progress_bar.clone(),
+
+            unbounded_queue: self.unbounded_queue,
         }
     }
 

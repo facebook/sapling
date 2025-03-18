@@ -32,7 +32,7 @@ rust_python_library(
     ],
     deps = [
         "fbsource//third-party/rust:anyhow",
-        "fbsource//third-party/rust:crossbeam",
+        "fbsource//third-party/rust:flume",
         "fbsource//third-party/rust:tracing",
         "//eden/scm/lib/cpython-ext:cpython-ext",
         "//eden/scm/lib/revisionstore:revisionstore",

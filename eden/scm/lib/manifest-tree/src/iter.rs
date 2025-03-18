@@ -16,8 +16,8 @@ use anyhow::anyhow;
 use anyhow::Context;
 use anyhow::Error;
 use anyhow::Result;
-use crossbeam::channel::Receiver;
-use crossbeam::channel::Sender;
+use flume::Receiver;
+use flume::Sender;
 use manifest::FsNodeMetadata;
 use pathmatcher::Matcher;
 use types::Key;
@@ -38,11 +38,10 @@ pub fn bfs_iter<M: 'static + Matcher + Sync + Send>(
     matcher: M,
 ) -> Box<dyn Iterator<Item = Result<(RepoPathBuf, FsNodeMetadata)>>> {
     // This channel carries iteration results to the calling code.
-    let (result_send, result_recv) =
-        crossbeam::channel::unbounded::<Result<(RepoPathBuf, FsNodeMetadata)>>();
+    let (result_send, result_recv) = flume::unbounded::<Result<(RepoPathBuf, FsNodeMetadata)>>();
 
     // This channel carries BFS work to the workers threads.
-    let (work_send, work_recv) = crossbeam::channel::unbounded::<BfsWork>();
+    let (work_send, work_recv) = flume::unbounded::<BfsWork>();
 
     let worker = BfsWorker {
         work_recv,

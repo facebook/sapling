@@ -414,6 +414,10 @@ impl<'a> FileStoreBuilder<'a> {
             cas_cache_threshold_bytes,
 
             progress_bar: AggregatingProgressBar::new("fetching from ScmStore", "files"),
+
+            unbounded_queue: self
+                .config
+                .get_or_default("experimental", "unbounded-scmstore-queue")?,
         })
     }
 }
@@ -750,6 +754,9 @@ impl<'a> TreeStoreBuilder<'a> {
             flush_on_drop: true,
             format,
             progress_bar: AggregatingProgressBar::new("fetching from ScmStore", "trees"),
+            unbounded_queue: self
+                .config
+                .get_or_default("experimental", "unbounded-scmstore-queue")?,
         })
     }
 }
