@@ -5,6 +5,7 @@
  * GNU General Public License version 2.
  */
 
+use std::collections::HashSet;
 use std::path::PathBuf;
 use std::sync::atomic::AtomicUsize;
 use std::sync::atomic::Ordering;
@@ -108,7 +109,13 @@ async fn derive_boundaries(
     rederive: bool,
 ) -> Result<()> {
     let rederivation: Option<Arc<dyn Rederivation>> = if rederive {
-        Some(Arc::new(Mutex::new(boundaries.iter().copied().collect())))
+        Some(Arc::new(Mutex::new(
+            boundaries
+                .iter()
+                .copied()
+                .map(|cs_id| (derived_data_type, cs_id))
+                .collect::<HashSet<(_, _)>>(),
+        )))
     } else {
         None
     };

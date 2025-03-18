@@ -81,6 +81,20 @@ impl Rederivation for Mutex<HashSet<ChangesetId>> {
     }
 }
 
+impl Rederivation for Mutex<HashSet<(DerivableType, ChangesetId)>> {
+    fn needs_rederive(&self, derivable_type: DerivableType, csid: ChangesetId) -> Option<bool> {
+        if self.with(|rederive| rederive.contains(&(derivable_type, csid))) {
+            Some(true)
+        } else {
+            None
+        }
+    }
+
+    fn mark_derived(&self, derivable_type: DerivableType, csid: ChangesetId) {
+        self.with(|rederive| rederive.remove(&(derivable_type, csid)));
+    }
+}
+
 pub type VisitedDerivableTypesMapStatic<OkType, ErrType> =
     Arc<Mutex<HashMap<DerivableType, Shared<BoxFuture<'static, Result<OkType, ErrType>>>>>>;
 
