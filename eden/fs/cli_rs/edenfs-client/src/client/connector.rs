@@ -32,12 +32,12 @@ const DEFAULT_CONN_TIMEOUT: Duration = Duration::from_secs(120);
 const DEFAULT_RECV_TIMEOUT: Duration = Duration::from_secs(300);
 
 pub type EdenFsThriftClient = Arc<dyn EdenServiceExt<ThriftChannel> + Send + Sync + 'static>;
-type EdenFsThriftClientFuture =
+pub type EdenFsThriftClientFuture =
     Shared<BoxFuture<'static, std::result::Result<EdenFsThriftClient, ConnectError>>>;
 
 pub type StreamingEdenFsThriftClient =
     Arc<dyn StreamingEdenServiceExt<ThriftChannel> + Send + Sync + 'static>;
-type StreamingEdenFsThriftClientFuture =
+pub type StreamingEdenFsThriftClientFuture =
     Shared<BoxFuture<'static, std::result::Result<StreamingEdenFsThriftClient, ConnectError>>>;
 
 pub(crate) struct EdenFsConnector {
@@ -104,7 +104,7 @@ impl EdenFsConnector {
         .map_err(|e| ConnectError::ConnectionError(e.to_string()))
     }
 
-    pub(crate) async fn connect_streaming(
+    pub(crate) fn connect_streaming(
         &self,
         conn_timeout: Option<Duration>,
         recv_timeout: Option<Duration>,
