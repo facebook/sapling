@@ -556,6 +556,9 @@ pub async fn process_one_changeset(
         .derive::<ChangesetInfo>(ctx, cs_id.clone())
         .await?;
 
+    let hg_cs_id = repo.derive_hg_changeset(ctx, *cs_id).await?;
+    let hg_cs = hg_cs_id.load(ctx, repo.repo_blobstore()).await?;
+
     let bs_cs = cs_id.load(ctx, repo.repo_blobstore()).await?;
     let commit_time = bs_cs.author_date().timestamp_secs();
     let cids: Vec<_> = bs_cs
@@ -595,28 +598,19 @@ pub async fn process_one_changeset(
         content_trees_tx,
     ));
 
-    let (mf_ids_p, (hg_cs, hg_mf_id)) = tokio::try_join!(
-        async {
-            let parents = cs_info.parents().collect::<Vec<_>>();
-            future::try_join_all(parents.iter().map(|parent| {
-                cloned!(ctx, repo);
-                async move {
-                    let hg_cs_id = repo.derive_hg_changeset(&ctx, *parent).await?;
-                    let hg_cs = hg_cs_id.load(&ctx, repo.repo_blobstore()).await?;
-                    let hg_mf_id = hg_cs.manifestid();
-                    anyhow::Ok::<HgManifestId>(hg_mf_id)
-                }
-            }))
-            .await
-        },
-        async {
-            let hg_cs_id = repo.derive_hg_changeset(ctx, *cs_id).await?;
-            let hg_cs = hg_cs_id.load(ctx, repo.repo_blobstore()).await?;
+    let parents = cs_info.parents().collect::<Vec<_>>();
+    let mf_ids_p = future::try_join_all(parents.iter().map(|parent| {
+        cloned!(ctx, repo);
+        async move {
+            let hg_cs_id = repo.derive_hg_changeset(&ctx, *parent).await?;
+            let hg_cs = hg_cs_id.load(&ctx, repo.repo_blobstore()).await?;
             let hg_mf_id = hg_cs.manifestid();
-            Ok((hg_cs, hg_mf_id))
+            anyhow::Ok::<HgManifestId>(hg_mf_id)
         }
-    )?;
+    }))
+    .await?;
 
+    let hg_mf_id = hg_cs.manifestid();
     let (mut mf_ids, file_ids) =
         sort_manifest_changes(ctx, repo.repo_blobstore(), hg_mf_id, mf_ids_p).await?;
     mf_ids.push(hg_mf_id);
