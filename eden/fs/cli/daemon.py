@@ -315,6 +315,7 @@ def get_edenfs_environment() -> Dict[str, str]:
         "SANDCASTLE",
         "SANDCASTLE_ALIAS",
         "SANDCASTLE_INSTANCE_ID",
+        "SANDCASTLE_VCS",
         "SCRATCH_CONFIG_PATH",
         # These environment variables are used by Corp2Prod (C2P) Secure Thrift
         # clients to get the user certificates for authentication. (We use
