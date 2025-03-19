@@ -16,6 +16,9 @@ python_library(
             ],
         ),
     ],
+    deps = [
+        "//eden/fs/cli/facebook:hostcaps",
+    ],
 )
 
 python_library(
