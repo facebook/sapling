@@ -1354,8 +1354,8 @@ class EdenConfig : private ConfigSettingManager {
    * Controls whether EdenFS will periodically garbage collect the working
    * directory.
    *
-   * For now, this really only makes sense on Windows, with unknown behavior on
-   * Linux and macOS.
+   * For now, periodic GC only makes sense on Windows, with unknown behavior on
+   * Linux and macOS. For that reason, setting this on non-Windows is a no-op.
    */
   ConfigSetting<bool> enableGc{
       "experimental:enable-garbage-collection",
@@ -1363,8 +1363,13 @@ class EdenConfig : private ConfigSettingManager {
       this};
 
   /**
-   *  The interval for background periodic unloading of inodes from inodeMap.
-   * The value is in minutes.
+   * The interval for background periodic unloading of inodes from inodeMap.
+   * 0 means periodic unloading is disabled.
+   *
+   * Note 1: Periodic inode unloading and Garbage Collection (GC) are mutually
+   * exclusive. If GC is enabled, periodic unloading should be disabled or
+   * vice versa.
+   * Note 2: Periodic inode unloading is no-op on Windows.
    */
   ConfigSetting<uint32_t> periodicUnloadIntervalMinutes{
       "experimental:periodic-inode-map-unload-interval",

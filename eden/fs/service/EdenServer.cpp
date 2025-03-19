@@ -966,8 +966,11 @@ void EdenServer::updatePeriodicTaskIntervals(const EdenConfig& config) {
   localStoreTask_.updateInterval(
       std::chrono::duration_cast<std::chrono::milliseconds>(
           config.localStoreManagementInterval.getValue()));
-
-  if (config.enableGc.getValue()) {
+  /**
+   * For now, periodic GC only makes sense on Windows, with unknown behavior on
+   * Linux and macOS.
+   */
+  if (config.enableGc.getValue() && folly::kIsWindows) {
     gcTask_.updateInterval(
         std::chrono::duration_cast<std::chrono::milliseconds>(
             config.gcPeriod.getValue()));
