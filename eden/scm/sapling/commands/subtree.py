@@ -622,9 +622,8 @@ def _do_import(ui, repo, temp_dir, *args, **opts):
     git_repo = git.clone(ui, url, temp_dir, update=from_commit)
     copy_files(repo, git_repo[from_commit], from_paths, to_paths)
 
-    # XXX: generate import metadata
-    extra = {}
-    summaryfooter = ""
+    extra = subtreeutil.gen_import_info(url, from_commit, from_paths, to_paths)
+    summaryfooter = _gen_import_commit_msg(url, from_commit, from_paths, to_paths)
 
     editform = cmdutil.mergeeditform(repo[None], "subtree.import")
     editor = cmdutil.getcommiteditor(
@@ -649,6 +648,14 @@ def _gen_copy_commit_msg(from_ctx, from_paths, to_paths):
     msgs = [f"Subtree copy from {full_commit}"]
     for from_path, to_path in zip(from_paths, to_paths):
         msgs.append(f"- Copied path {from_path} to {to_path}")
+    return "\n".join(msgs)
+
+
+def _gen_import_commit_msg(url, from_commit, from_paths, to_paths):
+    msgs = [f"Subtree import from {url} at {from_commit} "]
+    for from_path, to_path in zip(from_paths, to_paths):
+        from_path = os.path.join("/", from_path)
+        msgs.append(f"- Imported path {from_path} to {to_path}")
     return "\n".join(msgs)
 
 

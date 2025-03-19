@@ -77,11 +77,17 @@ Test subtree import the root path of the external repo
   $ hg log -G -T '{node|short} {desc}\n'
   @  * import gitrepo to bar (glob)
   │
+  │  Subtree import from file:/*/$TESTTMP/gitrepo at d2a8b3fa3dfa345ea64e02ea014d21b5cabd03e0 (glob)
+  │  - Imported path / to bar
   o  9998a5c40732 B
   │
   o  d908813f0f7c A
 
 Test subtree import a sub directory of the external repo
+
+  $ hg log -r . -T '{extras % "{extra}\n"}'
+  branch=default
+  test_subtree=[{"imports":[{"from_commit":"d2a8b3fa3dfa345ea64e02ea014d21b5cabd03e0","from_path":"","to_path":"bar","url":"file:/*/$TESTTMP/gitrepo"}],"v":1}] (glob)
 
   $ hg subtree import --url file://$TESTTMP/gitrepo --rev 4487c56011495a40ce2f6c632c24ae57a210747d --from-path dir2 --to-path mydir2 -m "import gitrepo/dir2 to mydir2"
   From file:/*/$TESTTMP/gitrepo (glob)
@@ -92,10 +98,17 @@ Test subtree import a sub directory of the external repo
   $ hg st --change .
   A mydir2/gamma
   $ hg log -G -T '{node|short} {desc}\n'
-  @  ef1d307cba34 import gitrepo/dir2 to mydir2
+  @  * import gitrepo/dir2 to mydir2 (glob)
   │
-  o  7410edae120d import gitrepo to bar
+  │  Subtree import from file:/*/$TESTTMP/gitrepo at 4487c56011495a40ce2f6c632c24ae57a210747d (glob)
+  │  - Imported path /dir2 to mydir2
+  o  * import gitrepo to bar (glob)
   │
+  │  Subtree import from file:/*/$TESTTMP/gitrepo at d2a8b3fa3dfa345ea64e02ea014d21b5cabd03e0 (glob)
+  │  - Imported path / to bar
   o  9998a5c40732 B
   │
   o  d908813f0f7c A
+  $ hg log -r . -T '{extras % "{extra}\n"}'
+  branch=default
+  test_subtree=[{"imports":[{"from_commit":"4487c56011495a40ce2f6c632c24ae57a210747d","from_path":"dir2","to_path":"mydir2","url":"file:/*/$TESTTMP/gitrepo"}],"v":1}] (glob)

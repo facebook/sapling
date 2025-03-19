@@ -150,6 +150,35 @@ class SubtreeMerge:
         }
 
 
+@dataclass
+class SubtreeImport:
+    version: int
+    url: str
+    from_commit: str
+    from_path: str  # "" means the root of the repo
+    to_path: str
+
+    def to_minimal_dict(self):
+        return {
+            "url": self.url,
+            "from_commit": self.from_commit,
+            "from_path": self.from_path,
+            "to_path": self.to_path,
+        }
+
+    def to_full_dict(self):
+        return {
+            "url": self.url,
+            "from_commit": self.from_commit,
+            "from_path": self.from_path,
+            "to_path": self.to_path,
+            "v": self.version,
+        }
+
+
+### Generating metadata for branches (copies)
+
+
 def gen_branch_info(
     repo,
     from_commit: str,
@@ -194,6 +223,37 @@ def _encode_subtree_metadata_list(subtree_metadata):
     return {SUBTREE_KEY: val_str}
 
 
+### Generating metadata for imports
+
+
+def gen_import_info(
+    url, from_commit, from_paths, to_paths, version=SUBTREE_METADATA_VERSION
+):
+    imports = [
+        SubtreeImport(
+            version=version,
+            url=url,
+            from_commit=from_commit,
+            from_path=from_path,
+            to_path=to_path,
+        )
+        for from_path, to_path in zip(from_paths, to_paths)
+    ]
+    metadata = _imports_to_dict(imports, version)
+    return _encode_subtree_metadata_list([metadata])
+
+
+def _imports_to_dict(imports: List[SubtreeImport], version: int):
+    if not imports:
+        return {}
+    sorted_imports = sorted(imports, key=lambda x: x.to_path)
+    import_dist_list = [im.to_minimal_dict() for im in sorted_imports]
+    return {"v": version, "imports": import_dist_list}
+
+
+### Generating metadata for merges
+
+
 def gen_merge_info(repo, subtree_merges, version=SUBTREE_METADATA_VERSION):
     merges = [
         m for m in subtree_merges if is_source_commit_allowed(repo.ui, repo[m[0]])
@@ -228,6 +288,9 @@ def _merges_to_dict(merges: List[SubtreeMerge], version: int):
 def get_subtree_metadata(extra):
     """Get the subtree metadata from commit's extra."""
     return {k: v for k, v in extra.items() if k in SUBTREE_OPERATION_KEYS}
+
+
+### Getting subtree metadata: branches, imports, merges
 
 
 def get_subtree_branches(repo, node) -> List[SubtreeBranch]:
