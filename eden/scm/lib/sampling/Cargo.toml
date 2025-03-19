@@ -17,5 +17,5 @@ parking_lot = { version = "0.12.1", features = ["send_guard"] }
 sapling-clientinfo = { version = "0.1.0", path = "../clientinfo" }
 sapling-configmodel = { version = "0.1.0", path = "../config/model" }
 serde = { version = "1.0.185", features = ["derive", "rc"] }
-serde_json = { version = "1.0.132", features = ["float_roundtrip", "unbounded_depth"] }
+serde_json = { version = "1.0.140", features = ["float_roundtrip", "unbounded_depth"] }
 tracing = { version = "0.1.41", features = ["attributes", "valuable"] }

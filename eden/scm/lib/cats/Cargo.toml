@@ -18,6 +18,6 @@ indexmap = { version = "2.2.6", features = ["arbitrary", "rayon", "serde"] }
 sapling-configmodel = { version = "0.1.0", path = "../config/model" }
 sapling-util = { version = "0.1.0", path = "../util" }
 serde = { version = "1.0.185", features = ["derive", "rc"] }
-serde_json = { version = "1.0.132", features = ["float_roundtrip", "unbounded_depth"] }
+serde_json = { version = "1.0.140", features = ["float_roundtrip", "unbounded_depth"] }
 thiserror = "2"
 tracing = { version = "0.1.41", features = ["attributes", "valuable"] }

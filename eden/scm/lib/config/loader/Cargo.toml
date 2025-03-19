@@ -44,7 +44,7 @@ sapling-unionconfig = { version = "0.1.0", path = "../union" }
 sapling-util = { version = "0.1.0", path = "../../util" }
 sapling-version = { version = "0.1.0", path = "../../version" }
 serde = { version = "1.0.185", features = ["derive", "rc"], optional = true }
-serde_json = { version = "1.0.132", features = ["float_roundtrip", "unbounded_depth"], optional = true }
+serde_json = { version = "1.0.140", features = ["float_roundtrip", "unbounded_depth"], optional = true }
 serde_urlencoded = { version = "0.7", optional = true }
 sha2 = { version = "0.10.6", optional = true }
 tracing = { version = "0.1.41", features = ["attributes", "valuable"] }

@@ -16,7 +16,7 @@ name = "webview_app"
 anyhow = "1.0.95"
 dirs = "6.0"
 serde = { version = "1.0.185", features = ["derive", "rc"] }
-serde_json = { version = "1.0.132", features = ["float_roundtrip", "unbounded_depth"] }
+serde_json = { version = "1.0.140", features = ["float_roundtrip", "unbounded_depth"] }
 
 [target.'cfg(target_os = "macos")'.dependencies]
 base64 = { version = "0.21", features = ["alloc"] }

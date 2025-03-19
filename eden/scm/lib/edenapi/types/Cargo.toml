@@ -38,7 +38,7 @@ thiserror = "2"
 [dev-dependencies]
 quickcheck_macros = "1.0"
 sapling-insta_ext = { version = "0.1.0", path = "../../insta_ext" }
-serde_json = { version = "1.0.132", features = ["float_roundtrip", "unbounded_depth"] }
+serde_json = { version = "1.0.140", features = ["float_roundtrip", "unbounded_depth"] }
 
 [features]
 default = ["for-tests"]
