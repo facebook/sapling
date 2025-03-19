@@ -9,24 +9,30 @@ import os
 import sys
 from unittest import SkipTest
 
-from .t.runner import fixmismatches, runtest, TestId
+from .t.runner import fixmismatches, runtest, runtest_reporting_progress, TestId
 
-DESCRIPTION = """single .t test runner for run-tests.py integration
+DESCRIPTION = """Entry point to run a single .t test.
 
-This entry point runs a single test using features in the new testing
-module. It is intended to be run via 'run-tests.py' for easy integration.
-If you only need to use the new test runner, use 'debugruntest' instead.
+Support 2 modes:
 
-Unlike 'debugruntest', this entry point only runs a single test, and:
-- Does not write mismatch to stdio. Write "fixed" output to --output path.
-- Does not maintain a test process pool. Expects run-tests.py to do so.
-- Does not spawn child processes (using multiprocessing) for clean environment.
+## `--output` mode
+
+`--output`: used by the old `run-tests.py`, write the "fixed" test file
+(usually, `test-x.t.err`) so `run-tests.py` can diff them. Mismatches won't be
+reported until the end of the test.
 
 Exit code (matches run-tests.py DebugRunTestTest):
 - 0: Test passed
 - 1: Test failed (output mismatch)
 - 80: Test skipped
 - 81: Test failed (Python exception)
+
+## `--structured-output` mode
+
+`--structured-output`: used by the new `sl .t` command, report output
+mismatches as they are discovered.
+
+Exit code is 0. Test result should be reported to the specified file.
 """
 
 logger = logging.getLogger(__name__)
@@ -37,11 +43,19 @@ def main():
     # builtin module importer.
     if sys.argv[0] is None:
         sys.argv = [""] + list(sys.argv[1:])
-    parser = argparse.ArgumentParser(description=DESCRIPTION)
+    parser = argparse.ArgumentParser(
+        description=DESCRIPTION, formatter_class=argparse.RawDescriptionHelpFormatter
+    )
     parser.add_argument(
         "-o",
         "--output",
         help="write test output to the given file",
+        type=str,
+    )
+    parser.add_argument(
+        "-p",
+        "--structured-output",
+        help="write structured output (JSON per line) to the given file",
         type=str,
     )
     parser.add_argument(
@@ -66,7 +80,16 @@ def main():
     testid = TestId.frompath(args.path)
     exts = args.ext
     outpath = args.output
+    structured_output = args.structured_output
+    if structured_output:
+        if outpath:
+            raise ValueError("--structured-output conflicts with --output")
+        return runtest_reporting_progress(testid, exts, structured_output)
+    else:
+        return runtest_with_output(testid, exts, outpath)
 
+
+def runtest_with_output(testid, exts, outpath):
     mismatches = []
 
     def mismatchcb(mismatch, outpath=outpath):
