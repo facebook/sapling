@@ -38,6 +38,46 @@ DEPRECATED_SUBTREE_METADATA_KEYS = [
     SUBTREE_MERGE_KEY,
 ]
 
+# the following is the format of subtree metadata
+# [
+#   {
+#     "deepcopies": [
+#       {
+#         "from_commit": "b4cb27eee4e2633aae0d62de87523007d1b5bfdd",
+#         "from_path": "foo",
+#         "to_path": "foo2"
+#       },
+#       {
+#         "from_commit": "b4cb27eee4e2633aae0d62de87523007d1b5bfdd",
+#         "from_path": "foo",
+#         "to_path": "foo3"
+#       }
+#     ],
+#     "v": 1
+#   },
+#   {
+#     "merges": [
+#       {
+#         "from_commit": "eeb423c321b3fae8bffd501cecd7db6d8fa9b6da",
+#         "from_path": "foo",
+#         "to_path": "foo2"
+#       }
+#     ],
+#     "v": 1
+#   },
+#   {
+#     "imports": [
+#       {
+#         "from_commit": "1c9ffab8a5868369895cbdd5d42cf2b34361c5ae",
+#         "from_path": "",
+#         "to_path": "foo/sapling",
+#         "url": "https://github.com/facebook/sapling.git"
+#       }
+#     ],
+#     "v": 1
+#   }
+# ]
+
 
 class BranchType(Enum):
     DEEP_COPY = 1  # O(n) subtree copy
