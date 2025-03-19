@@ -1,6 +1,3 @@
-#require no-windows
-
-
 Classic .t test:
 
   $ cat > test-sh.t << 'EOF'
