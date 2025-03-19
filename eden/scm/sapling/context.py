@@ -2274,8 +2274,8 @@ class workingfilectx(committablefilectx):
         try:
             return self._repo.wread(self._path)
         except IOError as e:
-            if e.errno == errno.EISDIR:
-                # might be a submodule
+            if e.errno == errno.EISDIR or (util.iswindows and e.errno == errno.EACCES):
+                # might be a submodule (directory; on Windows it's EACCES)
                 if self.flags() == "m":
                     text = "Subproject commit %s\n" % hex(self.filenode())
                     return text.encode("utf-8")
