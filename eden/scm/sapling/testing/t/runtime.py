@@ -182,7 +182,7 @@ class TestTmp:
         ...     t.path.joinpath('a').write_bytes(b'5\n3\n') and None
         ...     s = 'for i in 2 1 4; do echo $i; done | syssort a -'
         ...     if os.path.exists("/bin/sort"):
-        ...         t.requireexe("syssort", "/bin/sort")
+        ...         t.requireexe("syssort", "/bin/sort") and None
         ...         # syssort is available as a function known by sheval
         ...         t.sheval(s)
         ...     else:
@@ -335,8 +335,9 @@ class TestTmp:
             self.shenv.exportenv(name)
 
     def requireexe(self, name: str, fullpath: Optional[str] = None, symlink=False):
-        """require an external binary"""
-        ext = ".exe" if os.name == "nt" else ""
+        """require an external binary
+        Returns a full path to the location of the binary, or a shim binary.
+        """
         # find the program from PATH
         if fullpath is None:
             paths = self._origpathenv.split(os.pathsep)
@@ -365,21 +366,26 @@ class TestTmp:
             self.shenv.cmdtable[allowed] = shext.wrapexe(
                 fullpath, env_override={"PATH": orig_path}
             )
-        # write a shim in $TESTTMP/bin for os.system
-        self.path.joinpath("bin").mkdir(exist_ok=True)
-        if symlink:
-            os.symlink(fullpath, self.path / "bin" / (name + ext))
+        # On Windows, just modify PATH to include the path of the exe.
+        # - Compared to a ".bat" shim, this has better compatibility,
+        #   because ".bat" cannot be natively executed. (ex. "git.bat"
+        #   breaks dotgit mode)
+        # - Compared to a ".exe" shim, this is faster, because of
+        #   Windows Defender.
+        # - Windows programs usually live in different directories,
+        #   unlike /bin having everything. Less risk about allowing
+        #   undeclared dependencies.
+        # On *nix, write a shim in $TESTTMP/bin for os.system.
+        if os.name == "nt":
+            current_path = self.shenv.getenv("PATH")
+            next_path = os.pathsep.join((current_path, os.path.dirname(fullpath)))
+            self.shenv.setenv("PATH", next_path)
+            return fullpath
         else:
-            if os.name == "nt":
-                script = "\n".join(
-                    [
-                        "@echo off",
-                        f"set PATH={orig_path}",
-                        f'"{fullpath}" %*',
-                        "exit /B %errorlevel%",
-                    ]
-                )
-                destpath = self.path / "bin" / f"{name}.bat"
+            self.path.joinpath("bin").mkdir(exist_ok=True)
+            destpath = self.path / "bin" / name
+            if symlink:
+                os.symlink(fullpath, destpath)
             else:
                 script = "\n".join(
                     [
@@ -388,9 +394,9 @@ class TestTmp:
                         f'exec {fullpath} "$@"',
                     ]
                 )
-                destpath = self.path / "bin" / name
-            destpath.write_text(script)
-            destpath.chmod(0o555)
+                destpath.write_text(script)
+                destpath.chmod(0o555)
+            return str(destpath)
 
     def updatedglobalstate(self):
         """context manager that updates global states (pwd, environ, ...)"""

@@ -48,9 +48,6 @@ test eden clone
 
 test rust clone
   $ cd $TESTTMP
-  $ hg config edenfs.command
-  $TESTTMP/bin/eden (no-windows !)
-  $TESTTMP/bin/eden.bat (windows !)
   $ LOG=cmdclone hg clone eager://$TESTTMP/e1 hemlo --config remotenames.selectivepulldefault='master, stable'
   Cloning e1 into $TESTTMP/hemlo
   TRACE cmdclone: performing rust clone

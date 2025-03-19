@@ -10,7 +10,7 @@ from ..t.runtime import TestTmp
 
 
 def testsetup(t: TestTmp):
-    t.requireexe("eden")
+    edenfsctl_path = t.requireexe("eden")
     # Make other parts of the tests aware of the fact the test is using EdenFS
     t.setenv("HGTEST_USE_EDEN", "1")
     # This fallback is there increasing the compatibility of the `goto` command.
@@ -30,11 +30,10 @@ def testsetup(t: TestTmp):
         )
     )
     # Required for using `--eden` in the `clone` command
-    edenfsctl_path = str(t.path / "bin" / "eden")
     with open(t.getenv("SL_CONFIG_PATH"), "a", encoding="utf-8") as sl_config:
         sl_config.write(f"""
 [edenfs]
-command={edenfsctl_path + ('.bat' if os.name == "nt" else '')}
+command={edenfsctl_path}
 backing-repos-dir=$TESTTMP/.eden-backing-repos
 
 [clone]
