@@ -18,10 +18,11 @@
   > A-B-C
   > # bookmark: C heads/master_bookmark
   > # modify: C large_file regular lfs "contents of LFS file"
+  > # modify: C .gitattributes "large_file filter=lfs diff=lfs merge=lfs -text\n"
   > EOF
   A=aa53d24251ff3f54b1b2c29ae02826701b2abeb0079f1bb13b8434b54cd87675
   B=f8c75e41a0c4d29281df765f39de47bca1dcadfdc55ada4ccc2f6df567201658
-  C=198d25da38c153f3feecddeee7e49fe3fa16d7e0085ea919c183372bf42a66d4
+  C=b24b4b65219123f9552072ebcd3b38244aa74b0a78236994c260a598975831bc
   $ mononoke_admin derived-data -R repo derive -T git_commits -T git_delta_manifests_v2 -T unodes --all-bookmarks
   $ mononoke_admin git-symref -R repo create --symref-name HEAD --ref-name master_bookmark --ref-type branch
   Symbolic ref HEAD pointing to branch master_bookmark has been added
@@ -35,14 +36,11 @@
   $ set_mononoke_as_source_of_truth_for_git
 
 # Clone the Git repo from Mononoke
+  $ quiet git_client lfs install
   $ CLONE_URL="$MONONOKE_GIT_SERVICE_BASE_URL/repo.git"
-  $ quiet git_client clone "$CLONE_URL"
-  $ cd repo
-  $ git lfs install --local
-  Updated ?it hooks. (glob)
-  Git LFS initialized.
-  $ git config lfs.url "$LFS_URL"
-  $ git config http.extraHeader "x-client-info: {\"request_info\": {\"entry_point\": \"CurlTest\", \"correlator\": \"test\"}}"
+  $ quiet git_client clone --config "lfs.url=$LFS_URL" "$CLONE_URL"
+  $ cd "$REPONAME"
+
 Try to push a change to non-LFS file
   $ echo contents of LFS file with some extra > some_new_large_file
   $ git add some_new_large_file
@@ -50,22 +48,20 @@ Try to push a change to non-LFS file
   $ quiet git_client push
   To https://localhost:$LOCAL_PORT/repos/git/ro/repo.git
    ! [remote rejected] master_bookmark -> master_bookmark (hooks failed:
-    limit_filesize for 423aab438fb40f9f371121bfca1383cd351afe74: File size limit is 10 bytes. You tried to push file some_new_large_file that is over the limit (37 bytes). This limit is enforced for files matching the following regex: ".*". See https://fburl.com/landing_big_diffs for instructions.
+    limit_filesize for 06fdd952d6868be8bbeb3de09c472ef197152968: File size limit is 10 bytes. You tried to push file some_new_large_file that is over the limit (37 bytes). This limit is enforced for files matching the following regex: ".*". See https://fburl.com/landing_big_diffs for instructions.
   
   For more information about hooks and bypassing, refer https://fburl.com/wiki/mb4wtk1j)
   error: failed to push some refs to 'https://localhost:$LOCAL_PORT/repos/git/ro/repo.git'
   [1]
   $ git reset --hard origin/master_bookmark
-  HEAD is now at 9659866 C
+  HEAD is now at 5d3e266 C
 
 Push a change to LFS file (this should bypass the limit filesize hook)
-  $ git lfs track large_file
-  Tracking "large_file"
   $ echo contents of LFS file with some extra > large_file
   $ git commit -aqm "new LFS change"
   $ quiet git_client push
   $ mononoke_admin fetch -R repo -B heads/master_bookmark
-  BonsaiChangesetId: bc0b66e9dda60bc3c73dc3b56f7a0b65e4eb830e76af6ab595bd5c3759e8983b
+  BonsaiChangesetId: fc5704f49997cbc853714f0d5f506ec8256b3e4cbca9692c6aef46412b87e672
   Author: mononoke <mononoke@mononoke>
   Message: new LFS change
   
