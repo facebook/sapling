@@ -163,7 +163,7 @@ class TestRunner:
         # Python global state might be polluted by uisetup or tests.
         self.mp = mp = multiprocessing.get_context("spawn")
         self.resultqueue = mp.Queue()
-        self.sem = mp.Semaphore(self.jobs)
+        self.sem = threading.Semaphore(self.jobs)
         self.running = True
         if self.isolate:
             # start running tests in background
@@ -184,11 +184,12 @@ class TestRunner:
     def _start(self):
         """run tests (blocking, intended to run in thread)"""
         processes = []
+        threads = []
         try:
             for t in self.testids:
                 kwargs = {
                     "testid": t,
-                    "sem": self.isolate and self.sem or None,
+                    "isolated": self.isolate,
                     "resultqueue": self.resultqueue,
                     "exts": self.exts,
                 }
@@ -206,19 +207,31 @@ class TestRunner:
                     )
                     p.start()
                     processes.append(p)
+                    t = threading.Thread(
+                        target=self._tail_child, args=(p,), daemon=True
+                    )
+                    t.start()
+                    threads.append(t)
                 else:
                     _spawnmain(**kwargs)
         finally:
             for p in processes:
                 p.join()
+            for t in threads:
+                t.join()
             self.resultqueue.put(StopIteration)
+
+    def _tail_child(self, child):
+        try:
+            child.join()
+        finally:
+            self.sem.release()
 
 
 def _spawnmain(
     testid: TestId,
     exts: List[str],
-    # pyre-fixme[11]: Annotation `Semaphore` is not defined as a type.
-    sem: Optional[multiprocessing.Semaphore],
+    isolated: bool,
     resultqueue: multiprocessing.Queue,
 ):
     """run a test and report progress back
@@ -245,9 +258,8 @@ def _spawnmain(
         if result.exc is None and hasmismatch:
             result.exc = MismatchError("output mismatch")
         resultqueue.put(result)
-        if sem:
+        if isolated:
             resultqueue.close()
-            sem.release()
 
 
 class TestNotFoundError(FileNotFoundError):
