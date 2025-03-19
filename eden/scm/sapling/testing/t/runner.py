@@ -5,14 +5,17 @@
 
 import collections
 import doctest
+import json
 import multiprocessing
 import os
+import queue
 import re
 import sys
+import tempfile
 import textwrap
 import threading
 import traceback
-from dataclasses import dataclass
+from dataclasses import asdict, dataclass
 from pathlib import Path
 from typing import Callable, List, Optional, Union
 
@@ -159,11 +162,13 @@ class TestRunner:
         # use 'spawn' instead of 'fork' to clean up Python global state.
         # Python global state might be polluted by uisetup or tests.
         self.mp = mp = multiprocessing.get_context("spawn")
-        self.resultqueue = mp.Queue()
+        self.tempdir = tempfile.TemporaryDirectory(prefix="sl-testing-ipc")
+        self.resultqueue = queue.Queue()
         self.sem = threading.Semaphore(self.jobs)
         self.running = True
         if self.isolate:
-            # start running tests in background
+            # start running tests in background.
+            # This thread will be "tailing" the resultqueue - see "__next__".
             self.runnerthread = thread = threading.Thread(
                 target=self._start, daemon=True
             )
@@ -175,6 +180,7 @@ class TestRunner:
     def __exit__(self, et, ev, tb):
         """stop and clean up test environment"""
         self.running = False
+        self.tempdir.cleanup()
         if self.isolate:
             self.runnerthread.join()
 
@@ -184,10 +190,13 @@ class TestRunner:
         threads = []
         try:
             for t in self.testids:
+                # child process will write to this file to report progress
+                output_path = os.path.join(self.tempdir.name, f"{t.name}-ipc")
+                with open(output_path, "w"):
+                    pass
                 kwargs = {
                     "testid": t,
-                    "isolated": self.isolate,
-                    "resultqueue": self.resultqueue,
+                    "output_path": output_path,
                     "exts": self.exts,
                 }
                 if self.isolate:
@@ -199,18 +208,18 @@ class TestRunner:
                         if acquired:
                             break
                     p = self.mp.Process(
-                        target=_spawnmain,
+                        target=runtest_reporting_progress,
                         kwargs=kwargs,
                     )
                     p.start()
                     processes.append(p)
                     t = threading.Thread(
-                        target=self._tail_child, args=(p,), daemon=True
+                        target=self._tail_child, args=(p, output_path), daemon=True
                     )
                     t.start()
                     threads.append(t)
                 else:
-                    _spawnmain(**kwargs)
+                    runtest_reporting_progress(**kwargs)
         finally:
             for p in processes:
                 p.join()
@@ -218,30 +227,51 @@ class TestRunner:
                 t.join()
             self.resultqueue.put(StopIteration)
 
-    def _tail_child(self, child):
+    def _tail_child(self, child, output_path):
+        """monitor output from child, push to resultqueue"""
         try:
-            child.join()
+            with open(output_path, "r") as f:
+                while True:
+                    line = f.readline()
+                    if not line:
+                        if child.is_alive():
+                            # child might still write to this file.
+                            child.join(0.5)
+                            continue
+                        else:
+                            # EOF. child can no longer write to this file.
+                            break
+                    obj_type, obj_data = json.loads(line)
+                    if obj_type == "Mismatch":
+                        obj = Mismatch(**obj_data)
+                    elif obj_type == "TestResult":
+                        obj_data["testid"] = TestId(**obj_data["testid"])
+                        obj = TestResult(**obj_data)
+                    else:
+                        raise TypeError(f"Unexpected type name: {obj_type}")
+                    self.resultqueue.put(obj)
         finally:
             self.sem.release()
 
 
-def _spawnmain(
+def runtest_reporting_progress(
     testid: TestId,
     exts: List[str],
-    isolated: bool,
-    resultqueue: multiprocessing.Queue,
+    output_path: str,
 ):
-    """run a test and report progress back
-    intended to be spawned via multiprocessing.Process.
-    """
+    """runtest, report progress as JSON objects to output_path"""
 
     hasmismatch = False
+
+    def write_progress(obj):
+        with open(output_path, "a") as f:
+            f.write(json.dumps([type(obj).__name__, asdict(obj)]) + "\n")
 
     def mismatchcb(mismatch: Mismatch):
         nonlocal hasmismatch
         hasmismatch = True
         mismatch.testname = testid.name
-        resultqueue.put(mismatch)
+        write_progress(mismatch)
 
     result = TestResult(testid=testid)
     try:
@@ -255,9 +285,7 @@ def _spawnmain(
         if result.exc_type is None and hasmismatch:
             result.exc_type = "MismatchError"
             result.exc_msg = "output mismatch"
-        resultqueue.put(result)
-        if isolated:
-            resultqueue.close()
+        write_progress(result)
 
 
 class TestNotFoundError(FileNotFoundError):
