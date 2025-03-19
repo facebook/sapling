@@ -192,6 +192,13 @@ fn translate_scp_url_to_ssh(value: &str) -> Cow<str> {
                 // "./foo:bar" is a filename.
                 break 'not_scp;
             }
+            if cfg!(windows)
+                && left.len() == 1
+                && (right.starts_with('/') || right.starts_with('\\'))
+            {
+                // Likely Windows path, like C:\foo\bar.
+                break 'not_scp;
+            }
             let ssh_url = if let Some((user, host)) = left.split_once('@') {
                 format!("ssh://{user}@{host}/{right}")
             } else {
@@ -277,5 +284,12 @@ local	submodule.sub/2.active true
         assert_eq!(translate_scp_url_to_ssh("a:b"), "ssh://a/b");
         assert_eq!(translate_scp_url_to_ssh("a@b.com:c/d"), "ssh://a@b.com/c/d");
         assert_eq!(translate_scp_url_to_ssh("./a:b"), "./a:b");
+    }
+
+    #[cfg(windows)]
+    #[test]
+    fn test_translate_scp_url_to_ssh_windows() {
+        assert_eq!(translate_scp_url_to_ssh("C:\\foo\\bar"), "C:\\foo\\bar");
+        assert_eq!(translate_scp_url_to_ssh("X:/bar"), "X:/bar");
     }
 }
