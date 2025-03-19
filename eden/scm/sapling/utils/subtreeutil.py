@@ -363,6 +363,24 @@ def get_subtree_merges(repo, node) -> List[SubtreeMerge]:
     return result
 
 
+def get_subtree_imports(repo, node):
+    extra = repo[node].extra()
+    result = []
+    if metadata_list := _get_subtree_metadata(extra, SUBTREE_KEY):
+        for metadata in metadata_list:
+            for im in metadata.get("imports", []):
+                result.append(
+                    SubtreeImport(
+                        version=metadata["v"],
+                        url=im["url"],
+                        from_commit=im["from_commit"],
+                        from_path=im["from_path"],
+                        to_path=im["to_path"],
+                    )
+                )
+    return result
+
+
 def _get_subtree_metadata(extra, key):
     try:
         val_str = extra[key]
@@ -375,44 +393,59 @@ def _get_subtree_metadata(extra, key):
 
 
 def merge_subtree_metadata(repo, ctxs):
-    # XXX: add 'imports' support when implementing 'subtree import' command
-    branches, merges = [], []
+    branches, merges, imports = [], [], []
 
     # get subtree metadata
     for ctx in ctxs:
         node = ctx.node()
         branches.extend(get_subtree_branches(repo, node))
         merges.extend(get_subtree_merges(repo, node))
+        imports.extend(get_subtree_imports(repo, node))
 
-    if not branches and not merges:
+    if not branches and not merges and not imports:
         return {}
 
     # metadata merge validation
-    if branches and merges:
-        # Even if we currently reject subtree copy and merge, the following logic
-        # supports it. This allows us to enable it later if needed
-        raise error.Abort(_("cannot combine commits with both subtree copy and merge"))
+    if bool(branches) + bool(merges) + bool(imports) > 1:
+        # Although we currently reject combining different subtree operations,
+        # the logic below supports it. This allows us to enable it later if needed.
+        raise error.Abort(
+            _("cannot combine different subtree operations: copy, merge or import")
+        )
 
     from_paths = [b.from_path for b in branches] + [m.from_path for m in merges]
-    to_paths = [b.to_path for b in branches] + [m.to_path for m in merges]
+    to_paths = (
+        [b.to_path for b in branches]
+        + [m.to_path for m in merges]
+        + [i.to_path for i in imports]
+    )
     try:
         validate_path_overlap(from_paths, to_paths)
     except error.Abort as e:
         raise error.Abort(
-            _("cannot combine commits with overlapping subtree copy/merge paths"),
+            _("cannot combine commits with overlapping subtree paths"),
             hint=str(e),
         )
+    # skip checking the from_paths of imports
+    from_paths += [i.from_path for i in imports]
 
     # group by version
     version_to_branches = defaultdict(list)
     version_to_merges = defaultdict(list)
+    version_to_imports = defaultdict(list)
     for b in branches:
         version_to_branches[b.version].append(b)
     for m in merges:
         version_to_merges[m.version].append(m)
+    for i in imports:
+        version_to_imports[i.version].append(i)
 
     # validate versions
-    versions = set(version_to_branches.keys()) | set(version_to_merges.keys())
+    versions = (
+        set(version_to_branches.keys())
+        | set(version_to_merges.keys())
+        | set(version_to_imports.keys())
+    )
     if unsupported_versions := versions - SUPPORTED_SUBTREE_METADATA_VERSIONS:
         raise error.Abort(
             _("unsupported subtree metadata versions: %s")
@@ -424,6 +457,7 @@ def merge_subtree_metadata(repo, ctxs):
     for v in versions:
         item = _branches_to_dict(version_to_branches[v], v)
         item.update(_merges_to_dict(version_to_merges[v], v))
+        item.update(_imports_to_dict(version_to_imports[v], v))
         result.append(item)
 
     if not result:

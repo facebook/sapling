@@ -112,3 +112,14 @@ Test subtree import a sub directory of the external repo
   $ hg log -r . -T '{extras % "{extra}\n"}'
   branch=default
   test_subtree=[{"imports":[{"from_commit":"4487c56011495a40ce2f6c632c24ae57a210747d","from_path":"dir2","to_path":"mydir2","url":"file:/*/$TESTTMP/gitrepo"}],"v":1}] (glob)
+
+  $ hg fold --from .^
+  2 changesets folded
+  0 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  $ hg st --change .
+  A bar/alpha
+  A bar/dir1/beta
+  A mydir2/gamma
+  $ hg log -r . -T '{extras % "{extra}\n"}'
+  branch=default
+  test_subtree=[{"imports":[{"from_commit":"d2a8b3fa3dfa345ea64e02ea014d21b5cabd03e0","from_path":"","to_path":"bar","url":"file://$TESTTMP/gitrepo"},{"from_commit":"4487c56011495a40ce2f6c632c24ae57a210747d","from_path":"dir2","to_path":"mydir2","url":"file:/*/$TESTTMP/gitrepo"}],"v":1}] (glob)

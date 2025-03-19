@@ -118,7 +118,7 @@ test fold two subtree copy commits that have path overlapping
   $ hg subtree copy -r $A --from-path foo --to-path bar/foo2 -m "subtree copy foo to bar/foo2"
   copying foo to bar/foo2
   $ hg fold --from .^
-  abort: cannot combine commits with overlapping subtree copy/merge paths
+  abort: cannot combine commits with overlapping subtree paths
   (overlapping --to-path entries)
   [255]
 
@@ -162,7 +162,7 @@ test fold subtree copy and subtree merge commits
   +4
   $ hg ci -m 'merge from foo to bar'
   $ hg fold --from .^
-  abort: cannot combine commits with both subtree copy and merge
+  abort: cannot combine different subtree operations: copy, merge or import
   [255]
 
 test split subtree copy commit
