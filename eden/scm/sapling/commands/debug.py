@@ -3624,7 +3624,6 @@ def debugruntest(ui, *paths, **opts) -> int:
     current configuration.
     """
     import textwrap
-    from multiprocessing import util as mputil
 
     from sapling import mdiff, patch
     from sapling.testing.t.runner import fixmismatches, Mismatch, TestResult, TestRunner
@@ -3730,23 +3729,7 @@ def debugruntest(ui, *paths, **opts) -> int:
     if jobs == 0 and util.istest():
         jobs = 1
 
-    # sys.executable is "hg" not "python" expected by
-    # multiprocessing libraries (used by TestRunner).
-    # patch it to make it work
-    def _args(orig):
-        args = orig()
-        args = ["debugpython", "--"] + args
-        return args
-
-    with (
-        extensions.wrappedfunction(
-            mputil,
-            "_args_from_interpreter_flags",
-            _args,
-            # pyre-fixme[6]: For 1st param expected `List[str]` but got `Tuple[Any, ...]`.
-        ),
-        TestRunner(paths, jobs=jobs, exts=exts, isolate=isolate) as r,
-    ):
+    with TestRunner(paths, jobs=jobs, exts=exts, isolate=isolate) as r:
         for item in r:
             if isinstance(item, Mismatch):
                 mismatches.append(item)
