@@ -318,10 +318,9 @@ Test clone into the current folder, if empty:
   $ mkdir "$TESTTMP/empty_folder"
   $ cd "$TESTTMP/empty_folder"
   $ hg clone -q --git "$TESTTMP/gitrepo" .
-  $ ls -A1 | sort -d
+  $ ls | sort
   alpha
   beta
-  .hg
 
 Make sure we clean up if repo init fails:
 
