@@ -1,5 +1,5 @@
 #chg-compatible
-#require git no-windows
+#require git
 #debugruntest-incompatible
 
   $ eagerepo

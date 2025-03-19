@@ -1,4 +1,4 @@
-#require git no-windows no-eden
+#require git no-eden
 
 Dedicated test about rebase with submodule involved.
 

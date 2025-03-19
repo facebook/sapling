@@ -1,4 +1,4 @@
-#require git no-windows
+#require git
 
   $ . $TESTDIR/git.sh
   $ setconfig diff.git=true

@@ -1,4 +1,4 @@
-#require git no-windows
+#require git
 
 Test visibleheads sync between Git and Sl (dotgit).
 

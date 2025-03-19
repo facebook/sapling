@@ -1,4 +1,4 @@
-#require git no-windows
+#require git
 
 Test active bookmark sync between Git and Sl (dotgit).
 

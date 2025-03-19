@@ -1,4 +1,4 @@
-#require git no-windows no-eden
+#require git no-eden
 
   $ . $TESTDIR/git.sh
   $ setconfig diff.git=true ui.allowemptycommit=true

@@ -1,4 +1,4 @@
-#require git no-windows execbit no-eden
+#require git execbit no-eden
 
   $ . $TESTDIR/git.sh
 

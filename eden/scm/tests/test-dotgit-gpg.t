@@ -1,4 +1,4 @@
-#require git no-windows no-eden gpg gpg2
+#require git no-eden gpg gpg2
 
   $ . $TESTDIR/git.sh
 

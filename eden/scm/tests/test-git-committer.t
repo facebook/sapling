@@ -1,4 +1,4 @@
-#require git no-windows no-eden
+#require git no-eden
 
 Test that committer and author can be set separately. Committer is updated when
 rewriting commits.

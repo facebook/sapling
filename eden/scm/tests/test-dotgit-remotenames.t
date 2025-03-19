@@ -1,4 +1,4 @@
-#require git no-windows
+#require git
 
 Test remote names can be added and updated:
 
