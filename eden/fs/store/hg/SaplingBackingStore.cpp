@@ -612,10 +612,9 @@ void SaplingBackingStore::getTreeBatch(
 
         if (isOBCEnabled_) {
           getTreePerRepoLatencies_ += batchWatch.elapsed().count();
-        } else {
-          stats_->addDuration(
-              &SaplingBackingStoreStats::fetchTree, batchWatch.elapsed());
         }
+        stats_->addDuration(
+            &SaplingBackingStoreStats::fetchTree, batchWatch.elapsed());
 
         const auto& nodeId = requests[index].node;
         XLOGF(DBG9, "Imported Tree node={}", folly::hexlify(nodeId));
