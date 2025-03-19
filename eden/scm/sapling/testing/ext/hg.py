@@ -288,7 +288,7 @@ def _rawsystem(
     env = shenv.nested(Scope.SHELL)
     env.stdin = stdin
     env.stdout = out or stdout
-    env.stderr = stderr
+    env.stderr = out or stderr
     env.fs.chdir(cwd or os.getcwd())
     if environ is not None:
         for k, v in environ.items():
