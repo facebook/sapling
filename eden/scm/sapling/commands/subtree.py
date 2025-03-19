@@ -5,6 +5,7 @@
 
 import json
 import os
+import tempfile
 import time
 from collections import defaultdict
 
@@ -12,6 +13,7 @@ from .. import (
     cmdutil,
     context,
     error,
+    git,
     hg,
     match as matchmod,
     merge as mergemod,
@@ -110,6 +112,40 @@ def subtree_copy(ui, repo, *args, **opts):
     """create a directory or file branching"""
     with repo.wlock(), repo.lock():
         return _docopy(ui, repo, *args, **opts)
+
+
+@subtree_subcmd(
+    "import",
+    [
+        (
+            "",
+            "url",
+            "",
+            _("external repository url"),
+            _("URL"),
+        ),
+        (
+            "r",
+            "rev",
+            "",
+            _("external repository commit hash"),
+            _("REV"),
+        ),
+        ("f", "force", None, _("overwrite existing path")),
+    ]
+    + subtree_path_opts
+    + commitopts
+    + commitopts2,
+    _("-r REV [--from-path PATH] --to-path PATH ..."),
+)
+def subtree_import(ui, repo, *args, **opts):
+    """import an external repository into current repository at the specified path"""
+    # PERF: Use a persistent path for Git repos, so we don't reclone every time we need
+    # to reason about some content in the repo.
+    with repo.wlock(), repo.lock(), tempfile.TemporaryDirectory(
+        prefix="subtreeimport"
+    ) as temp_dir:
+        return _do_import(ui, repo, temp_dir, *args, **opts)
 
 
 @subtree_subcmd(
@@ -547,6 +583,67 @@ def _do_normal_copy(repo, from_ctx, to_ctx, from_paths, to_paths, opts):
     cmdutil.commit(ui, repo, commitfunc, [], opts)
 
 
+def _do_import(ui, repo, temp_dir, *args, **opts):
+    cmdutil.bailifchanged(repo)
+
+    from_commit = opts.get("rev")
+    if not from_commit:
+        raise error.Abort(_("must specify the external repository commit hash"))
+    url = opts.get("url")
+    if not url:
+        raise error.Abort(_("must specify the external repository url"))
+
+    ctx = repo["."]
+    # default to root ("") of the repo
+    from_paths = opts.get("from_path") or [""]
+    to_paths = scmutil.rootrelpaths(ctx, opts.get("to_path"))
+    subtreeutil.validate_path_size(from_paths, to_paths, abort_on_empty=True)
+    subtreeutil.validate_path_overlap([], to_paths)
+    subtreeutil.validate_path_depth(ui, to_paths)
+
+    force = opts.get("force")
+    auditor = pathutil.pathauditor(repo.root)
+
+    for to_path in to_paths:
+        auditor(to_path)
+        if repo.wvfs.lexists(to_path):
+            if not force:
+                raise error.Abort(
+                    _("cannot import to an existing path: %s") % to_path,
+                    hint=_("use --force to overwrite (recursively remove %s)")
+                    % to_path,
+                )
+            matcher = matchmod.match(repo.root, "", [f"path:{to_path}"])
+            cmdutil.remove(ui, repo, matcher, mark=False, force=True)
+            if repo.wvfs.lexists(to_path):
+                repo.wvfs.rmtree(to_path)
+
+    # PERF: shallow clone, then partial checkout
+    git_repo = git.clone(ui, url, temp_dir, update=from_commit)
+    copy_files(repo, git_repo[from_commit], from_paths, to_paths)
+
+    # XXX: generate import metadata
+    extra = {}
+    summaryfooter = ""
+
+    editform = cmdutil.mergeeditform(repo[None], "subtree.import")
+    editor = cmdutil.getcommiteditor(
+        editform=editform, summaryfooter=summaryfooter, **opts
+    )
+
+    def commitfunc(ui, repo, message, match, opts):
+        return repo.commit(
+            message,
+            opts.get("user"),
+            opts.get("date"),
+            match,
+            editor=editor,
+            extra=extra,
+        )
+
+    cmdutil.commit(ui, repo, commitfunc, [], opts)
+
+
 def _gen_copy_commit_msg(from_commit, from_paths, to_paths):
     full_commit_hash = from_commit.hex()
     msgs = [f"Subtree copy from {full_commit_hash}"]
@@ -567,3 +664,47 @@ def gen_merge_commit_msg(subtree_merges):
         for from_path, to_path in paths:
             msgs.append(f"- Merged path {from_path} to {to_path}")
     return "\n".join(msgs)
+
+
+def copy_files(repo, from_ctx, from_paths, to_paths):
+    """copy files from `from_from@from_ctx` to `repo`"""
+    ui = repo.ui
+    limit = ui.configint("subtree", "max-file-count")
+    file_count = 0
+    path_to_fileids = {}
+    for path in from_paths:
+        matcher = matchmod.match(repo.root, "", [f"path:{path}"])
+        fileids = scmutil.walkfiles(repo, from_ctx, matcher)
+        file_count += len(fileids)
+        if limit and file_count > limit:
+            support = ui.config("ui", "supportcontact")
+            help_hint = _("contact %s for help") % support if support else None
+            raise error.Abort(
+                _(
+                    "subtree import includes too many files (%d), exceeding configured limit (%d)"
+                )
+                % (file_count, limit),
+                hint=help_hint,
+            )
+        path_to_fileids[path] = fileids
+
+    new_files = []
+    for from_path, to_path in zip(from_paths, to_paths):
+        ui.status(_("copying %s to %s\n") % (from_path or "/", to_path))
+        fileids = path_to_fileids[from_path]
+        with progress.bar(
+            ui,
+            _("subtree import from %s to %s") % (from_path or "/", to_path),
+            _("files"),
+            len(fileids),
+        ) as p:
+            for src, _node in fileids:
+                p.value += 1
+                tail = src[len(from_path) :]
+                dest = to_path + ("/" if from_path == "" else "") + tail
+                fctx = from_ctx[src]
+                repo.wwrite(dest, fctx.data(), fctx.flags())
+                new_files.append(dest)
+
+    wctx = repo[None]
+    wctx.add(new_files)
