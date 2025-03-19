@@ -21,7 +21,7 @@ from ..sh import Env, Scope
 from ..sh.bufio import BufIO
 from ..sh.interp import interpcode
 from ..t.runtime import TestTmp
-from ..t.shext import shellenv
+from ..t.shext import shellenv, wrapexe
 from .python import python
 
 
@@ -206,10 +206,28 @@ def _checkenvironment():
         )
 
 
+def _is_in_process_incompatible(env: Env) -> bool:
+    if "panic" in (env.getenv("FAILPOINTS") or ""):
+        # Cannot reliably handle Rust panic in-process. So it's incompatible.
+        return True
+    return False
+
+
 def hg(stdin: BinaryIO, stdout: BinaryIO, stderr: BinaryIO, env: Env) -> int:
-    """run hg commands in-process
-    requires sapling modules - run from "hg debugpython", not vanilla python
+    """run hg commands
+
+    Prefer to run in-process using the sapling modules without spawning new
+    processes.
+
+    If incompatible settings are found (ex. FAILPOINTS=something=panic),
+    and HGEXECUTABLEPATH is set, spawn HGEXECUTABLEPATH instead.
     """
+    if _is_in_process_incompatible(env):
+        hgpath = env.getenv("HGEXECUTABLEPATH")
+        if hgpath:
+            hg_external = wrapexe(hgpath).__wrapped__
+            return hg_external(stdin=stdin, stdout=stdout, stderr=stderr, env=env)
+
     # debugpython won't work - emulate Py_Main instead
     if env.args[1:3] == ["debugpython", "--"]:
         env.args = [env.args[0]] + env.args[3:]
