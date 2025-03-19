@@ -108,9 +108,9 @@ buck_command_alias(
 )
 
 buck_genrule(
-    name = "mononoke_stable",
+    name = "mononoke_prod",
     out = "mononoke",
-    bash = "$(exe fbsource//third-party/squashfs-tools-4.5.1:unsquashfs) -dest $OUT $(location " + fbpkg_fetch.fetched_with_nondeterministic_fs_metadata("mononoke.server", "stable") + ") -extract file mononoke",
+    bash = "$(exe fbsource//third-party/squashfs-tools-4.5.1:unsquashfs) -dest $OUT $(location " + fbpkg_fetch.fetched_with_nondeterministic_fs_metadata("mononoke.server", "prod") + ") -extract file mononoke",
     compatible_with = [
         "ovr_config//os:linux",
     ],

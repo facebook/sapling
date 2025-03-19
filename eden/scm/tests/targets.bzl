@@ -230,9 +230,9 @@ def generate_trinity_smoketests(included, **kwargs):
     mononoke_d = [
         {},
         {
-            # mononoke_stable is the entire squashfs fbpkg, so we need to get
+            # mononoke_prod is the entire squashfs fbpkg, so we need to get
             # the binary
-            "HGTEST_MONONOKE_SERVER": "$(location :mononoke_stable)/mononoke",
+            "HGTEST_MONONOKE_SERVER": "$(location :mononoke_prod)/mononoke",
         },
     ]
     mononoke_s = ["", "prod_mononoke_"]
