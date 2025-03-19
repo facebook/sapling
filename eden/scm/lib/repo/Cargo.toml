@@ -15,7 +15,7 @@ name = "repo"
 [dependencies]
 anyhow = "1.0.95"
 fail = { version = "0.4", features = ["failpoints"] }
-fs-err = { version = "2.6.0", features = ["tokio"] }
+fs-err = { version = "3", features = ["tokio"] }
 lru-cache = "0.1.2"
 once_cell = "1.12"
 parking_lot = { version = "0.12.1", features = ["send_guard"] }

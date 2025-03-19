@@ -16,7 +16,7 @@ name = "treestate"
 anyhow = "1.0.95"
 bitflags = { version = "2.6", features = ["serde"] }
 byteorder = "1.3"
-fs-err = { version = "2.6.0", features = ["tokio"] }
+fs-err = { version = "3", features = ["tokio"] }
 fs2 = "0.4"
 sapling-atomicfile = { version = "0.1.0", path = "../atomicfile" }
 sapling-identity = { version = "0.1.0", path = "../identity" }

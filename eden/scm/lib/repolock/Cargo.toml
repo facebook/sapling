@@ -13,7 +13,7 @@ license = "MIT"
 name = "repolock"
 
 [dependencies]
-fs-err = { version = "2.6.0", features = ["tokio"] }
+fs-err = { version = "3", features = ["tokio"] }
 fs2 = "0.4"
 parking_lot = { version = "0.12.1", features = ["send_guard"] }
 sapling-configmodel = { version = "0.1.0", path = "../config/model" }

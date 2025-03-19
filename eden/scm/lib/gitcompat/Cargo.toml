@@ -15,7 +15,7 @@ name = "gitcompat"
 [dependencies]
 anyhow = "1.0.95"
 filetime = "0.2.9"
-fs-err = { version = "2.6.0", features = ["tokio"] }
+fs-err = { version = "3", features = ["tokio"] }
 sapling-configmodel = { version = "0.1.0", path = "../config/model" }
 sapling-identity = { version = "0.1.0", path = "../identity" }
 sapling-pathmatcher-types = { version = "0.1.0", path = "../pathmatcher/types" }

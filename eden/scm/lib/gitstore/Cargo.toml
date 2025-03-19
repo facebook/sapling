@@ -19,7 +19,7 @@ harness = false
 [dependencies]
 anyhow = "1.0.95"
 async-trait = "0.1.86"
-fs-err = { version = "2.6.0", features = ["tokio"] }
+fs-err = { version = "3", features = ["tokio"] }
 git2 = "0.20"
 sapling-configmodel = { version = "0.1.0", path = "../config/model" }
 sapling-factory = { version = "0.1.0", path = "../util/factory" }
