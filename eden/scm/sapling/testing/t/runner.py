@@ -139,7 +139,7 @@ class TestRunner:
         self, paths: List[str], jobs: int = 1, exts=List[str], isolate: bool = True
     ):
         self.testids = [TestId.frompath(p) for p in paths]
-        self.jobs = jobs or multiprocessing.cpu_count()
+        self.jobs = jobs or os.cpu_count()
         self.exts = exts
         self.isolate = isolate
 
