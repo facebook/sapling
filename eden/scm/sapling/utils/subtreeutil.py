@@ -70,7 +70,7 @@ class SubtreeBranch:
     from_path: str
     to_path: str
 
-    def to_dict(self):
+    def to_minimal_dict(self):
         return {
             "from_commit": self.from_commit,
             "from_path": self.from_path,
@@ -94,7 +94,7 @@ class SubtreeMerge:
     from_path: str
     to_path: str
 
-    def to_dict(self):
+    def to_minimal_dict(self):
         return {
             "from_commit": self.from_commit,
             "from_path": self.from_path,
@@ -142,7 +142,7 @@ def _branches_to_dict(branches: List[SubtreeBranch], version: int):
     sorted_branches = sorted(branches, key=lambda x: x.to_path)
     for b in sorted_branches:
         key = b.branch_type.to_key()
-        item = b.to_dict()
+        item = b.to_minimal_dict()
         rs.setdefault(key, []).append(item)
     rs["v"] = version
     return rs
@@ -180,7 +180,7 @@ def _merges_to_dict(merges: List[SubtreeMerge], version: int):
     merge_dict_list = []
     sorted_merges = sorted(merges, key=lambda x: x.to_path)
     for m in sorted_merges:
-        item = m.to_dict()
+        item = m.to_minimal_dict()
         merge_dict_list.append(item)
     return {"v": version, "merges": merge_dict_list}
 

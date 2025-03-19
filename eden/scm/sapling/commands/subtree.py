@@ -644,9 +644,9 @@ def _do_import(ui, repo, temp_dir, *args, **opts):
     cmdutil.commit(ui, repo, commitfunc, [], opts)
 
 
-def _gen_copy_commit_msg(from_commit, from_paths, to_paths):
-    full_commit_hash = from_commit.hex()
-    msgs = [f"Subtree copy from {full_commit_hash}"]
+def _gen_copy_commit_msg(from_ctx, from_paths, to_paths):
+    full_commit = from_ctx.hex()
+    msgs = [f"Subtree copy from {full_commit}"]
     for from_path, to_path in zip(from_paths, to_paths):
         msgs.append(f"- Copied path {from_path} to {to_path}")
     return "\n".join(msgs)
