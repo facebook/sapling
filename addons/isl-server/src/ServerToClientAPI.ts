@@ -294,6 +294,7 @@ export default class ServerToClientAPI {
               };
         Internal.fileABug?.(
           ctx,
+          this.platform.platformName,
           data.data,
           data.uiState,
           // Use repo for rage, if available.
