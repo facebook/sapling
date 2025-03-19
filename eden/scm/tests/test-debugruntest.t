@@ -181,9 +181,9 @@ Doctest:
   $ ls testmodule.py
   testmodule.py
 
-  >>> import testmodule
+  >>> import testmodule  # so the test runner can locate it in sys.modules
 
-  $ hg debugruntest doctest:testmodule
+  $ hg .t --direct doctest:testmodule
   doctest:testmodule -----------------------------------------------------------
      3 >>> 1+1
       -3
@@ -206,12 +206,14 @@ Doctest:
   Failed 1 test (output mismatch):
     doctest:testmodule
   
+  # Failed tests might be false positive caused by --direct. Re-reun without --direct to confirm.
   # Ran 1 tests, 0 skipped, 1 failed.
   [1]
 
 Doctest can be auto fixed too:
 
-  $ hg debugruntest -q --fix doctest:testmodule
+  $ hg .t --direct -q --fix doctest:testmodule
+  # Failed tests might be false positive caused by --direct. Re-reun without --direct to confirm.
   [1]
   $ cat testmodule.py
   """
@@ -240,7 +242,7 @@ Reload the cached module:
 
 The doctest passes with the autofix changes:
 
-  $ hg debugruntest doctest:testmodule
+  $ hg .t --direct doctest:testmodule
   # Ran 1 tests, 0 skipped, 0 failed.
 
 
