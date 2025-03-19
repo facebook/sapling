@@ -1452,14 +1452,6 @@ class HealthReportCmd(Subcmd):
             out (ui.Output): Output stream to write the JSON data to.
             notify (bool): Whether to send notifications.
         """
-        instance.log_sample(
-            "health-report",
-            num_detected_issues=len(HealthReportCmd.error_codes),
-            detected_issues=[
-                str(error_code) for error_code in HealthReportCmd.error_codes.keys()
-            ],
-            detected_issues_descriptions=set(HealthReportCmd.error_codes.values()),
-        )
         # Serialize error codes
         data = [
             {"error": error_code.name, "description": error_additional_info}
@@ -1504,25 +1496,56 @@ class HealthReportCmd(Subcmd):
         out = ui.get_output()
         exit_code = 0
 
-        try:
-            if (
-                not self.is_eden_running(instance)
-                or not self.is_repo_mounted(instance, mounts)
-                or not all(
-                    f()
-                    for f in [
-                        self.is_eden_up_to_date,
-                        self.are_certs_valid,
-                        self.is_chef_running,
-                    ]
-                )
-                or not self.has_enough_disk_space(instance, mounts)
-            ):
-                exit_code = 1
+        with instance.get_telemetry_logger().new_sample(
+            "health-report"
+        ) as health_report_logger:
+            try:
+                if (
+                    not self.is_eden_running(instance)
+                    or not self.is_repo_mounted(instance, mounts)
+                    or not all(
+                        f()
+                        for f in [
+                            self.is_eden_up_to_date,
+                            self.are_certs_valid,
+                            self.is_chef_running,
+                        ]
+                    )
+                    or not self.has_enough_disk_space(instance, mounts)
+                ):
+                    exit_code = 1
 
+                health_report_logger.add_int(
+                    "num_detected_issues", len(HealthReportCmd.error_codes)
+                )
+                health_report_logger.add_normvector(
+                    "detected_issues",
+                    [
+                        str(error_code)
+                        for error_code in HealthReportCmd.error_codes.keys()
+                    ],
+                )
+                health_report_logger.add_tags(
+                    "detected_issues_descriptions",
+                    set(HealthReportCmd.error_codes.values()),
+                )
+            except Exception as ex:
+                print(f"Failed to run eden health report: {str(ex)}", file=sys.stderr)
+                health_report_logger.add_int("num_detected_issues", -1)
+                health_report_logger.add_tags(
+                    "detected_issues_descriptions",
+                    {str(ex)},
+                )
+                # Don't attempt to print and notify errors if we hit an exception while executing checks, just return 255 immediately
+                return 255
+
+        try:
             self.print_and_notify_errors(instance, out, args.notify)
         except Exception as ex:
-            print(f"Failed to run health report: {str(ex)}", file=sys.stderr)
+            print(
+                f"Failed to print and notify after eden health report: {str(ex)}",
+                file=sys.stderr,
+            )
             exit_code = 255
 
         return exit_code
