@@ -63,13 +63,19 @@ def main():
         "--ext",
         help="testing extension to enable",
         action="append",
-        default=["sapling.testing.ext.hg", "sapling.testing.ext.python"],
+        default=[],
     )
     parser.add_argument(
         "-d",
         "--debug",
         action="store_true",
         help="enable debug logging",
+    )
+    parser.add_argument(
+        "-N",
+        "--no-default-exts",
+        action="store_true",
+        help="disable default extensions",
     )
     parser.add_argument("path", metavar="PATH", type=str, help="test file path")
     args = parser.parse_args()
@@ -78,7 +84,12 @@ def main():
     logging.basicConfig(level=log_level)
 
     testid = TestId.frompath(args.path)
-    exts = args.ext
+    default_exts = (
+        []
+        if args.no_default_exts
+        else ["sapling.testing.ext.hg", "sapling.testing.ext.python"]
+    )
+    exts = default_exts + args.ext
     outpath = args.output
     structured_output = args.structured_output
     if structured_output:
