@@ -5,7 +5,7 @@
 
 import json
 from collections import defaultdict
-from dataclasses import dataclass
+from dataclasses import asdict, dataclass
 from enum import Enum
 from typing import List
 
@@ -111,20 +111,13 @@ class SubtreeBranch:
     to_path: str
 
     def to_minimal_dict(self):
-        return {
-            "from_commit": self.from_commit,
-            "from_path": self.from_path,
-            "to_path": self.to_path,
-        }
+        skip_keys = {"branch_type", "version"}
+        return {k: v for k, v in self.__dict__.items() if k not in skip_keys}
 
     def to_full_dict(self):
-        return {
-            "from_commit": self.from_commit,
-            "from_path": self.from_path,
-            "to_path": self.to_path,
-            "v": self.version,
-            "type": self.branch_type.to_str(),
-        }
+        d = {k: v for k, v in self.__dict__.items() if k != "branch_type"}
+        d["type"] = self.branch_type.to_str()
+        return d
 
 
 @dataclass
@@ -135,19 +128,10 @@ class SubtreeMerge:
     to_path: str
 
     def to_minimal_dict(self):
-        return {
-            "from_commit": self.from_commit,
-            "from_path": self.from_path,
-            "to_path": self.to_path,
-        }
+        return {k: v for k, v in self.__dict__.items() if k != "version"}
 
     def to_full_dict(self):
-        return {
-            "from_commit": self.from_commit,
-            "from_path": self.from_path,
-            "to_path": self.to_path,
-            "v": self.version,
-        }
+        return asdict(self)
 
 
 @dataclass
@@ -159,21 +143,10 @@ class SubtreeImport:
     to_path: str
 
     def to_minimal_dict(self):
-        return {
-            "url": self.url,
-            "from_commit": self.from_commit,
-            "from_path": self.from_path,
-            "to_path": self.to_path,
-        }
+        return {k: v for k, v in self.__dict__.items() if k != "version"}
 
     def to_full_dict(self):
-        return {
-            "url": self.url,
-            "from_commit": self.from_commit,
-            "from_path": self.from_path,
-            "to_path": self.to_path,
-            "v": self.version,
-        }
+        return asdict(self)
 
 
 ### Generating metadata for branches (copies)

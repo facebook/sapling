@@ -20,10 +20,10 @@ test subtree inspect for subtree metadata
   {
     "copies": [
       {
+        "version": 1,
         "from_commit": "9998a5c40732fc326e6f10a4f14437c7f8e8e7ae",
         "from_path": "foo",
         "to_path": "foo2",
-        "v": 1,
         "type": "deepcopy"
       }
     ]
@@ -49,10 +49,10 @@ test subtree inspect for subtree metadata
   {
     "merges": [
       {
+        "version": 1,
         "from_commit": "a1e3d459ad62ee74bdfa703d95cd4f63f21fcd3d",
         "from_path": "foo",
-        "to_path": "foo2",
-        "v": 1
+        "to_path": "foo2"
       }
     ]
   }

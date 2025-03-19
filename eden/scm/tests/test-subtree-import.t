@@ -136,18 +136,18 @@ Test subtree import a sub directory of the external repo
   {
     "imports": [
       {
+        "version": 1,
         "url": "file:/*/$TESTTMP/gitrepo", (glob)
         "from_commit": "d2a8b3fa3dfa345ea64e02ea014d21b5cabd03e0",
         "from_path": "",
-        "to_path": "bar",
-        "v": 1
+        "to_path": "bar"
       },
       {
+        "version": 1,
         "url": "file:/*/$TESTTMP/gitrepo", (glob)
         "from_commit": "4487c56011495a40ce2f6c632c24ae57a210747d",
         "from_path": "dir2",
-        "to_path": "mydir2",
-        "v": 1
+        "to_path": "mydir2"
       }
     ]
   }

@@ -441,7 +441,7 @@ test multiple subtree merge from dest -> source, then source -> dest
   +source2
   $ hg ci -m "merge foo to foo2"
   $ hg log -r . -T '{subtree_merges}\n'
-  [{"from_commit": "eeb423c321b3fae8bffd501cecd7db6d8fa9b6da", "from_path": "foo", "to_path": "foo2", "v": 1}]
+  [{"version": 1, "from_commit": "eeb423c321b3fae8bffd501cecd7db6d8fa9b6da", "from_path": "foo", "to_path": "foo2"}]
 to fix: show a better message when there is no changes for subtree merge
   $ hg subtree merge --from-path foo --to-path foo2
   computing merge base (timeout: 120 seconds)...
