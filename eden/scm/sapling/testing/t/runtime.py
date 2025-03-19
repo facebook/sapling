@@ -479,11 +479,17 @@ class TestTmp:
         self.should_delete_path = not existing_testtmp
         self.shenv = shenv
         self.pyenv = pyenv
-        self.substitutions = [(re.escape(str(path)), "$TESTTMP")]
+
+        path_str = str(path)
+        self.substitutions = [(re.escape(path_str), "$TESTTMP")]
+        path_repr = repr(path_str).strip("'\"")
+        if path_repr != path_str:
+            # TESTTMP inside a string quote (ex. python repr)
+            self.substitutions.append((re.escape(path_repr), "$TESTTMP"))
         if os.name == "nt":
             self.substitutions += [
                 # TESTTMP using posix slash
-                (re.escape(str(path).replace("\\", "/")), "$TESTTMP"),
+                (re.escape(path_str.replace("\\", "/")), "$TESTTMP"),
                 # strip UNC prefix
                 (re.escape("\\\\?\\"), ""),
             ]
