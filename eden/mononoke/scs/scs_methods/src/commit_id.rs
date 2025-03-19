@@ -233,9 +233,9 @@ fn fall_back_to_default_identity_scheme<'a>(
     .unwrap_or(false);
 
     if !use_default_id_scheme {
-        // If feature is disabled, use hg as the default scheme, which was the
-        // behaviour in the client before fallback was introduced
-        return Cow::Owned(btreeset! {thrift::CommitIdentityScheme::HG});
+        // If feature is disabled or identity schemes were specified by the
+        // user, return the provided schemes.
+        return Cow::Borrowed(schemes);
     };
 
     // Otherwise, get the repo's default identity scheme and use it.
