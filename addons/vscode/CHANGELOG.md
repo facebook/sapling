@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.1.67
+
+- Add `--debug` and `--verbose` optional args for help debugging
+- Show command output for stack editing
+
 ## 0.1.66
 
 ### Jan 30 2025
