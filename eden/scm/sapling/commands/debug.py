@@ -3625,17 +3625,9 @@ def debugruntest(ui, *paths, **opts) -> int:
     """
     import textwrap
     from multiprocessing import util as mputil
-    from unittest import SkipTest
 
     from sapling import mdiff, patch
-    from sapling.testing.t.runner import (
-        fixmismatches,
-        Mismatch,
-        MismatchError,
-        TestNotFoundError,
-        TestResult,
-        TestRunner,
-    )
+    from sapling.testing.t.runner import fixmismatches, Mismatch, TestResult, TestRunner
 
     lastname = ""
 
@@ -3708,7 +3700,7 @@ def debugruntest(ui, *paths, **opts) -> int:
 
     def writeexception(testresult: TestResult):
         writetitle(testresult.testid.name)
-        msg = testresult.tb or str(testresult.exc)
+        msg = testresult.tb or testresult.exc_msg
         ui.write(_("%s\n") % msg)
 
     def writenames(verb, names, reason=""):
@@ -3762,16 +3754,18 @@ def debugruntest(ui, *paths, **opts) -> int:
                     writemismatch(item)
             else:
                 assert isinstance(item, TestResult)
-                if item.exc is None:
+                if item.exc_type is None:
                     passed.append(item.testid.name)
-                elif isinstance(item.exc, SkipTest):
-                    skipped[str(item.exc)].append(item.testid.name)
                 else:
-                    failed[str(item.exc)].append(item.testid.name)
-                    if not ui.quiet and not isinstance(
-                        item.exc, (MismatchError, TestNotFoundError)
-                    ):
-                        writeexception(item)
+                    if item.exc_type == "SkipTest":
+                        skipped[item.exc_msg].append(item.testid.name)
+                    else:
+                        failed[item.exc_msg].append(item.testid.name)
+                        if not ui.quiet and item.exc_type not in (
+                            "MismatchError",
+                            "TestNotFoundError",
+                        ):
+                            writeexception(item)
 
     if fix and mismatches:
         fixmismatches(mismatches)

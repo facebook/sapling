@@ -105,12 +105,9 @@ class TestId:
 @dataclass
 class TestResult:
     testid: TestId
-    exc: Optional[Exception] = None
+    exc_type: Optional[str] = None
+    exc_msg: Optional[str] = None
     tb: Optional[str] = None
-
-
-class MismatchError(AssertionError):
-    pass
 
 
 class TestRunner:
@@ -249,14 +246,15 @@ def _spawnmain(
     result = TestResult(testid=testid)
     try:
         runtest(testid, exts, mismatchcb)
-    except TestNotFoundError as e:
-        result.exc = e
     except Exception as e:
-        result.exc = e
-        result.tb = traceback.format_exc(limit=-1)
+        result.exc_type = type(e).__name__
+        result.exc_msg = str(e)
+        if not isinstance(e, TestNotFoundError):
+            result.tb = traceback.format_exc(limit=-1)
     finally:
-        if result.exc is None and hasmismatch:
-            result.exc = MismatchError("output mismatch")
+        if result.exc_type is None and hasmismatch:
+            result.exc_type = "MismatchError"
+            result.exc_msg = "output mismatch"
         resultqueue.put(result)
         if isolated:
             resultqueue.close()
