@@ -567,9 +567,14 @@ class TestTmp:
             # runtime.
             version = sys.version_info
             pythonxx = f"python{version.major}{version.minor}.dll"
-            for path in sys.path:
+            for path in set([*sys.path, *self._origpathenv.split(os.pathsep)]):
                 if os.path.exists(os.path.join(path, pythonxx)):
                     environ["PATH"] += f"{os.pathsep}{path}"
+                    break
+            else:
+                raise RuntimeError(
+                    f"{pythonxx} not found in PATH. Executables linked to python will silently fail in tests."
+                )
         return environ
 
     def _applysubstitutions(self, out: str) -> str:
