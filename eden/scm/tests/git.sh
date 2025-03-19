@@ -17,8 +17,11 @@ setconfig git.committer='test'
 setconfig git.committer-date='0 0'
 
 # Avoid local clone error "fatal: transport 'file' not allowed" in new Git versions (see CVE-2022-39253).
-export XDG_CONFIG_HOME=$TESTTMP
+export XDG_CONFIG_HOME="$TESTTMP"
 git config --global protocol.file.allow always
+
+# Silent "warning: in the working copy of 'foo', LF will be replaced by CRLF the next time Git touches it" on Windows.
+git config --global core.autocrlf false
 
 # Undo default_hgrc.py defaults we don't want.
 setconfig remotenames.selectivepulldefault=main,master
