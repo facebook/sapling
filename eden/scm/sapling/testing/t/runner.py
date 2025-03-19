@@ -387,13 +387,6 @@ def runttest(testid: TestId, exts: List[str], mismatchcb: Callable[[Mismatch], N
 
     exeneeded = set()
 
-    # For running hg from within Buck, we have a Python wrapper for making it
-    # compatible with both POSIX and Windows. This wrapper needs fbpython
-    # for being run, so we add it to the list of needed exes since debugruntest
-    # modifies the PATH env var
-    if "BUCK_DEFAULT_RUNTIME_RESOURCES" in os.environ:
-        exeneeded.add("fbpython")
-
     def hasfeaturetracked(feature):
         if feature in {"ext.parallel"}:
             exts.append("sapling.testing.ext.parallel")
