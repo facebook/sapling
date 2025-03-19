@@ -132,3 +132,22 @@ Test subtree import a sub directory of the external repo
   $ hg log -r . -T '{extras % "{extra}\n"}'
   branch=default
   test_subtree=[{"imports":[{"from_commit":"d2a8b3fa3dfa345ea64e02ea014d21b5cabd03e0","from_path":"","to_path":"bar","url":"file://$TESTTMP/gitrepo"},{"from_commit":"4487c56011495a40ce2f6c632c24ae57a210747d","from_path":"dir2","to_path":"mydir2","url":"file:/*/$TESTTMP/gitrepo"}],"v":1}] (glob)
+  $ hg subtree inspect
+  {
+    "imports": [
+      {
+        "url": "file:/*/$TESTTMP/gitrepo", (glob)
+        "from_commit": "d2a8b3fa3dfa345ea64e02ea014d21b5cabd03e0",
+        "from_path": "",
+        "to_path": "bar",
+        "v": 1
+      },
+      {
+        "url": "file:/*/$TESTTMP/gitrepo", (glob)
+        "from_commit": "4487c56011495a40ce2f6c632c24ae57a210747d",
+        "from_path": "dir2",
+        "to_path": "mydir2",
+        "v": 1
+      }
+    ]
+  }

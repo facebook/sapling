@@ -41,6 +41,7 @@ from ..utils.subtreeutil import (
     BranchType,
     gen_branch_info,
     get_subtree_branches,
+    get_subtree_imports,
     get_subtree_merges,
 )
 from .cmdtable import command
@@ -277,8 +278,9 @@ def subtree_inspect(ui, repo, *args, **opts):
     ctx = scmutil.revsingle(repo, opts.get("rev"))
     copies = get_subtree_branches(repo, ctx.node())
     merges = get_subtree_merges(repo, ctx.node())
+    imports = get_subtree_imports(repo, ctx.node())
 
-    if not copies and not merges:
+    if not copies and not merges and not imports:
         ui.warn(_("no subtree metadata found for commit %s\n") % ctx)
         return
 
@@ -287,6 +289,8 @@ def subtree_inspect(ui, repo, *args, **opts):
         result["copies"] = [c.to_full_dict() for c in copies]
     if merges:
         result["merges"] = [c.to_full_dict() for c in merges]
+    if imports:
+        result["imports"] = [c.to_full_dict() for c in imports]
 
     result_json = json.dumps(
         result,
