@@ -597,6 +597,8 @@ def _do_import(ui, repo, temp_dir, *args, **opts):
     # default to root ("") of the repo
     from_paths = opts.get("from_path") or [""]
     to_paths = scmutil.rootrelpaths(ctx, opts.get("to_path"))
+    if not to_paths:
+        raise error.Abort(_("must specify the to-path"))
     subtreeutil.validate_path_size(from_paths, to_paths, abort_on_empty=True)
     subtreeutil.validate_path_overlap([], to_paths)
     subtreeutil.validate_path_depth(ui, to_paths)

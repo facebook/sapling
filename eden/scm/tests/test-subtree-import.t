@@ -62,6 +62,15 @@ Test subtree import failure cases
   abort: cannot import to an existing path: foo
   (use --force to overwrite (recursively remove foo))
   [255]
+  $ hg subtree import --url file://$TESTTMP/gitrepo --rev d2a8b3fa3dfa345ea64e02ea014d21b5cabd03e0
+  abort: must specify the to-path
+  [255]
+  $ hg subtree import --url file://$TESTTMP/gitrepo --rev d2a8b3fa3dfa345ea64e02ea014d21b5cabd03e0 --from-path dir1 --to-path bar --from-path dir2 --to-path bar/dir2
+  abort: overlapping --to-path entries
+  [255]
+  $ hg subtree import --url file://$TESTTMP/gitrepo --rev d2a8b3fa3dfa345ea64e02ea014d21b5cabd03e0 --to-path bar -m "import gitrepo to bar" --config subtree.min-path-depth=2
+  abort: path should be at least 2 levels deep: 'bar'
+  [255]
 
 Test subtree import the root path of the external repo
 
