@@ -6,10 +6,10 @@
 import collections
 import doctest
 import json
-import multiprocessing
 import os
 import queue
 import re
+import subprocess
 import sys
 import tempfile
 import textwrap
@@ -159,9 +159,6 @@ class TestRunner:
 
     def __enter__(self):
         """prepare the test runner environment, namely a way to receive test results"""
-        # use 'spawn' instead of 'fork' to clean up Python global state.
-        # Python global state might be polluted by uisetup or tests.
-        self.mp = mp = multiprocessing.get_context("spawn")
         self.tempdir = tempfile.TemporaryDirectory(prefix="sl-testing-ipc")
         self.resultqueue = queue.Queue()
         self.sem = threading.Semaphore(self.jobs)
@@ -207,11 +204,7 @@ class TestRunner:
                             return
                         if acquired:
                             break
-                    p = self.mp.Process(
-                        target=runtest_reporting_progress,
-                        kwargs=kwargs,
-                    )
-                    p.start()
+                    p = _spawn_runtest(**kwargs)
                     processes.append(p)
                     t = threading.Thread(
                         target=self._tail_child, args=(p, output_path), daemon=True
@@ -220,9 +213,10 @@ class TestRunner:
                     threads.append(t)
                 else:
                     runtest_reporting_progress(**kwargs)
+                    self._tail_child(None, output_path)
         finally:
             for p in processes:
-                p.join()
+                p.wait()
             for t in threads:
                 t.join()
             self.resultqueue.put(StopIteration)
@@ -234,9 +228,13 @@ class TestRunner:
                 while True:
                     line = f.readline()
                     if not line:
-                        if child.is_alive():
+                        child_alive = child and child.poll() is None
+                        if child_alive:
                             # child might still write to this file.
-                            child.join(0.5)
+                            try:
+                                child.wait(0.5)
+                            except subprocess.TimeoutExpired:
+                                pass
                             continue
                         else:
                             # EOF. child can no longer write to this file.
@@ -252,6 +250,18 @@ class TestRunner:
                     self.resultqueue.put(obj)
         finally:
             self.sem.release()
+
+
+def _spawn_runtest(
+    testid: TestId, exts: List[str], output_path: str
+) -> subprocess.Popen:
+    args = [sys.executable]
+    if "sapling.commands" in sys.modules:
+        args.append("debugpython")
+    args += ["-m", "sapling.testing.single"]
+    args += [f"--ext={ext}" for ext in exts]
+    args += [f"--structured-output={output_path}", "--no-default-exts", testid.path]
+    return subprocess.Popen(args, shell=False)
 
 
 def runtest_reporting_progress(
