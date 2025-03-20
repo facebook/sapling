@@ -9,6 +9,7 @@ use std::path::PathBuf;
 use std::sync::Arc;
 
 use anyhow::format_err;
+use anyhow::Context;
 use anyhow::Result;
 use assembly_line::TryAssemblyLine;
 use blobstore::Loadable;
@@ -382,24 +383,47 @@ pub async fn process_bookmark_update_log_entry(
     );
     let (_, ctx) = { stat::log_bookmark_update_entry_start(ctx, entry, approx_count) };
 
-    let commits = repo
-        .commit_graph()
-        .ancestors_difference_segment_slices(&ctx, to_vec, from_vec, chunk_size)
-        .await?;
+    let (commits, latest_checkpoint) = {
+        let now = std::time::Instant::now();
 
-    let checkpointed_entry = repo
-        .mutable_counters()
-        .get_counter(&ctx, MODERN_SYNC_CURRENT_ENTRY_ID)
-        .await?
-        .unwrap_or(0);
+        let commits = repo
+            .commit_graph()
+            .ancestors_difference_segment_slices(&ctx, to_vec, from_vec, chunk_size)
+            .await
+            .with_context(|| "calculating segments")?;
 
-    let latest_checkpoint = if checkpointed_entry == entry.id.0 as i64 {
-        repo.mutable_counters()
-            .get_counter(&ctx, MODERN_SYNC_BATCH_CHECKPOINT_NAME)
+        let checkpointed_entry = repo
+            .mutable_counters()
+            .get_counter(&ctx, MODERN_SYNC_CURRENT_ENTRY_ID)
             .await?
-            .unwrap_or(0)
-    } else {
-        0
+            .unwrap_or(0);
+
+        let latest_checkpoint = if checkpointed_entry == entry.id.0 as i64 {
+            repo.mutable_counters()
+                .get_counter(&ctx, MODERN_SYNC_BATCH_CHECKPOINT_NAME)
+                .await?
+                .unwrap_or(0)
+        } else {
+            0
+        };
+
+        info!(
+            logger,
+            "Done calculating segments for entry {}, from changeset {:?} to changeset {:?}, {} in {}ms",
+            entry.id,
+            from_cs,
+            to_cs,
+            approx_count_str,
+            now.elapsed().as_millis()
+        );
+        stat::log_bookmark_update_entry_segments_done(
+            &ctx,
+            &repo_name,
+            latest_checkpoint,
+            now.elapsed(),
+        );
+
+        (commits, latest_checkpoint)
     };
 
     info!(

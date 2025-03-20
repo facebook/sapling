@@ -64,6 +64,7 @@ Sync all bookmarks moves
   Established EdenAPI connection
   Initialized channels
   Calculating segments for entry 1, from changeset None to changeset ChangesetId(Blake2(87d9f6e52bc2c5b123a938f090abba9b3ab691d53c51ea2496f93ec138740106)), to generation 1
+  Done calculating segments for entry 1, from changeset None to changeset ChangesetId(Blake2(87d9f6e52bc2c5b123a938f090abba9b3ab691d53c51ea2496f93ec138740106)), to generation 1 in *ms (glob)
   Resuming from latest entry checkpoint 0
   Skipping 0 batches from entry 1
   Skipping 0 commits within batch

@@ -22,6 +22,7 @@ define_stats! {
     prefix = "mononoke.modern_sync.stats";
 
     bookmark_update_entry_done_count: dynamic_timeseries("{}.bookmark_update_log.processed.count", (repo: String); Sum),
+    bookmark_update_entry_segments_done_count: dynamic_timeseries("{}.bul.segments.time_ms", (repo: String); Sum),
     bookmark_update_entry_done_time_ms: dynamic_timeseries("{}.bookmark_update_log.processed.time_ms", (repo: String); Average),
     bookmark_update_entry_error_count: dynamic_timeseries("{}.bookmark_update_log.processed.error.count", (repo: String); Sum),
 }
@@ -70,6 +71,24 @@ pub(crate) fn log_bookmark_update_entry_start(
 
     let res = scuba_sample.log();
     (res, ctx)
+}
+
+pub(crate) fn log_bookmark_update_entry_segments_done(
+    ctx: &CoreContext,
+    repo_name: &str,
+    latest_checkpoint: i64,
+    elapsed: std::time::Duration,
+) {
+    let mut scuba_sample = ctx.scuba().clone();
+
+    scuba_sample.add("log_tag", "Done calculating bookmark update entry segments");
+    scuba_sample.add("latest_checkpoint", latest_checkpoint);
+    scuba_sample.add("elapsed", elapsed.as_millis());
+
+    scuba_sample.log();
+
+    STATS::bookmark_update_entry_segments_done_count
+        .add_value(elapsed.as_millis() as i64, (repo_name.to_string(),));
 }
 
 pub(crate) fn log_bookmark_update_entry_done(
