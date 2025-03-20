@@ -58,8 +58,6 @@ use slog::o;
 use slog::warn;
 use slog::Logger;
 
-mod stats;
-
 const SM_CLEANUP_TIMEOUT_SECS: u64 = 120;
 
 // We will select the first protocol supported by the server which is also supported by the client.
@@ -170,28 +168,6 @@ impl RepoShardedProcess for MononokeServerProcess {
                     repo_name
                 )
             })?;
-
-        let config = self.repos_mgr.repo_config(&repo_name)?;
-        if config.log_repo_stats {
-            let repos = self.repos_mgr.repos().get_by_name(&repo_name);
-            match repos {
-                Some(repo) => {
-                    let ctx = CoreContext::new_with_logger(self.fb, logger);
-                    stats::init_stats_loop(
-                        &ctx,
-                        self.repos_mgr.clone(),
-                        repo_name.clone(),
-                        repo.clone(),
-                    )
-                    .await;
-                }
-                None => slog::warn!(
-                    logger,
-                    "Requested to log stats of unopened repo {}",
-                    repo_name
-                ),
-            }
-        }
 
         Ok(Arc::new(MononokeServerProcessExecutor {
             repo_name,
@@ -402,22 +378,6 @@ fn main(fb: FacebookInit) -> Result<()> {
                         async move { executor.block_and_execute(&logger, will_exit).await }
                     }
                 });
-            } else {
-                let logger = app.logger().clone();
-                let ctx = CoreContext::new_with_logger(fb, logger);
-                for repo in repos_mgr.clone().repos().iter() {
-                    if repo.repo_config().log_repo_stats {
-                        let repo_name = repo.repo_identity().name().to_string();
-                        info!(ctx.logger(), "Enabling stats loop for {}", repo_name);
-                        stats::init_stats_loop(
-                            &ctx,
-                            repos_mgr.clone(),
-                            repo_name.clone(),
-                            repo.clone(),
-                        )
-                        .await;
-                    }
-                }
             }
             repo_listener::create_repo_listeners(
                 fb,
