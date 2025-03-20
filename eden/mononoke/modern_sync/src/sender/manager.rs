@@ -164,47 +164,38 @@ impl SendManager {
 
         // Create channel for receiving content
         let (content_sender, content_recv) = mpsc::channel(CONTENT_CHANNEL_SIZE);
-        Self::spawn_content_sender(
+        ContentManager::new(content_recv, external_sender.clone()).start(
             ctx.clone(),
             reponame.clone(),
-            content_recv,
-            external_sender.clone(),
             logger.clone(),
             cancellation_requested.clone(),
         );
 
         // Create channel for receiving files
         let (files_sender, files_recv) = mpsc::channel(FILES_CHANNEL_SIZE);
-        Self::spawn_filenodes_sender(
+        FilenodeManager::new(files_recv, external_sender.clone()).start(
             ctx.clone(),
             reponame.clone(),
-            files_recv,
-            external_sender.clone(),
             logger.clone(),
             cancellation_requested.clone(),
         );
 
         // Create channel for receiving trees
         let (trees_sender, trees_recv) = mpsc::channel(TREES_CHANNEL_SIZE);
-        Self::spawn_trees_sender(
+        TreeManager::new(trees_recv, external_sender.clone()).start(
             ctx.clone(),
             reponame.clone(),
-            trees_recv,
-            external_sender.clone(),
             logger.clone(),
             cancellation_requested.clone(),
         );
 
         // Create channel for receiving changesets
         let (changeset_sender, changeset_recv) = mpsc::channel(CHANGESET_CHANNEL_SIZE);
-        Self::spawn_changeset_sender(
-            ctx,
-            reponame,
-            changeset_recv,
-            external_sender,
+        ChangesetManager::new(changeset_recv, external_sender.clone(), mc).start(
+            ctx.clone(),
+            reponame.clone(),
             logger.clone(),
             cancellation_requested.clone(),
-            mc,
         );
 
         mononoke::spawn_task(async move {
@@ -227,15 +218,140 @@ impl SendManager {
         }
     }
 
-    fn spawn_content_sender(
+    pub async fn send_content(&self, content_msg: ContentMessage) -> Result<()> {
+        self.content_sender
+            .send(content_msg)
+            .await
+            .map_err(|err| err.into())
+    }
+
+    pub async fn send_file(&self, ft_msg: FileMessage) -> Result<()> {
+        self.files_sender
+            .send(ft_msg)
+            .await
+            .map_err(|err| err.into())
+    }
+
+    pub async fn send_tree(&self, ft_msg: TreeMessage) -> Result<()> {
+        self.trees_sender
+            .send(ft_msg)
+            .await
+            .map_err(|err| err.into())
+    }
+
+    pub async fn send_changeset(&self, cs_msg: ChangesetMessage) -> Result<()> {
+        self.changeset_sender
+            .send(cs_msg)
+            .await
+            .map_err(|err| err.into())
+    }
+
+    pub async fn send_contents(&self, content_msgs: Vec<ContentMessage>) -> Result<()> {
+        for content_msg in content_msgs {
+            self.send_content(content_msg).await?;
+        }
+        Ok(())
+    }
+
+    pub async fn send_files(&self, ft_msgs: Vec<FileMessage>) -> Result<()> {
+        for ft_msg in ft_msgs {
+            self.send_file(ft_msg).await?;
+        }
+        Ok(())
+    }
+
+    pub async fn send_trees(&self, ft_msgs: Vec<TreeMessage>) -> Result<()> {
+        for ft_msg in ft_msgs {
+            self.send_tree(ft_msg).await?;
+        }
+        Ok(())
+    }
+
+    pub async fn send_changesets(&self, cs_msgs: Vec<ChangesetMessage>) -> Result<()> {
+        for cs_msg in cs_msgs {
+            self.send_changeset(cs_msg).await?;
+        }
+        Ok(())
+    }
+}
+
+trait Manager {
+    fn start(
+        self,
         ctx: CoreContext,
         reponame: String,
-        mut content_recv: mpsc::Receiver<ContentMessage>,
-        content_es: Arc<EdenapiSender>,
+        logger: Logger,
+        cancellation_requested: Arc<AtomicBool>,
+    );
+}
+
+struct ContentManager {
+    content_recv: mpsc::Receiver<ContentMessage>,
+    content_es: Arc<EdenapiSender>,
+}
+
+impl ContentManager {
+    fn new(content_recv: mpsc::Receiver<ContentMessage>, content_es: Arc<EdenapiSender>) -> Self {
+        Self {
+            content_recv,
+            content_es,
+        }
+    }
+
+    async fn flush_batch(
+        content_es: &Arc<EdenapiSender>,
+        current_batch: &mut Vec<ContentId>,
+        current_batch_size: u64,
+        pending_messages: &mut VecDeque<oneshot::Sender<Result<(), anyhow::Error>>>,
+        content_logger: &Logger,
+        reponame: String,
+    ) -> Result<(), anyhow::Error> {
+        let current_batch_len = current_batch.len() as i64;
+        let start = std::time::Instant::now();
+        if current_batch_len > 0 {
+            if let Err(e) = content_es
+                .upload_contents(std::mem::take(current_batch))
+                .await
+            {
+                error!(content_logger, "Error processing content: {:?}", e);
+                return Err(e);
+            } else {
+                info!(
+                    content_logger,
+                    "Uploaded {} contents with size {} in {}ms",
+                    current_batch_len,
+                    ByteSize::b(current_batch_size).to_string(),
+                    start.elapsed().as_millis(),
+                );
+
+                let elapsed = start.elapsed().as_secs() / current_batch_len as u64;
+                STATS::content_upload_time_s.add_value(elapsed as i64, (reponame.clone(),));
+                STATS::synced_contents.add_value(current_batch_len, (reponame.clone(),));
+            }
+        }
+
+        while let Some(sender) = pending_messages.pop_front() {
+            let res = sender.send(Ok(()));
+            if let Err(e) = res {
+                return Err(anyhow::anyhow!("Error sending content ready: {:?}", e));
+            }
+        }
+        Ok(())
+    }
+}
+
+impl Manager for ContentManager {
+    fn start(
+        mut self,
+        ctx: CoreContext,
+        reponame: String,
         content_logger: Logger,
         cancellation_requested: Arc<AtomicBool>,
     ) {
         mononoke::spawn_task(async move {
+            let content_recv = &mut self.content_recv;
+            let content_es = &self.content_es;
+
             let mut pending_messages = VecDeque::new();
             let mut current_batch = Vec::new();
             let mut current_batch_size = 0;
@@ -261,7 +377,7 @@ impl SendManager {
                         }
 
                         if current_batch_size >= MAX_BLOB_BYTES || current_batch.len() >= MAX_CONTENT_BATCH_SIZE {
-                            if let Err(e) = flush_batch(&content_es, &mut current_batch, current_batch_size, &mut pending_messages, &content_logger, reponame.clone()).await {
+                            if let Err(e) = ContentManager::flush_batch(content_es, &mut current_batch, current_batch_size, &mut pending_messages, &content_logger, reponame.clone()).await {
                                 error!(content_logger, "Error processing content: {:?}", e);
                                 return;
                             }
@@ -270,7 +386,7 @@ impl SendManager {
                     }
                     _ = flush_timer.tick() => {
                         if current_batch_size > 0 || !pending_messages.is_empty() {
-                            if let Err(e) = flush_batch(&content_es, &mut current_batch,current_batch_size,  &mut pending_messages, &content_logger, reponame.clone()).await {
+                            if let Err(e) = ContentManager::flush_batch(content_es, &mut current_batch, current_batch_size, &mut pending_messages, &content_logger, reponame.clone()).await {
                                 error!(content_logger, "Error processing content: {:?}", e);
                                 return;
                             }
@@ -279,59 +395,87 @@ impl SendManager {
                     }
                 }
             }
-
-            async fn flush_batch(
-                content_es: &Arc<EdenapiSender>,
-                current_batch: &mut Vec<ContentId>,
-                current_batch_size: u64,
-                pending_messages: &mut VecDeque<oneshot::Sender<Result<(), anyhow::Error>>>,
-                content_logger: &Logger,
-                reponame: String,
-            ) -> Result<(), anyhow::Error> {
-                let current_batch_len = current_batch.len() as i64;
-                let start = std::time::Instant::now();
-                if current_batch_len > 0 {
-                    if let Err(e) = content_es
-                        .upload_contents(std::mem::take(current_batch))
-                        .await
-                    {
-                        error!(content_logger, "Error processing content: {:?}", e);
-                        return Err(e);
-                    } else {
-                        info!(
-                            content_logger,
-                            "Uploaded {} contents with size {} in {}ms",
-                            current_batch_len,
-                            ByteSize::b(current_batch_size).to_string(),
-                            start.elapsed().as_millis(),
-                        );
-
-                        let elapsed = start.elapsed().as_secs() / current_batch_len as u64;
-                        STATS::content_upload_time_s.add_value(elapsed as i64, (reponame.clone(),));
-                        STATS::synced_contents.add_value(current_batch_len, (reponame.clone(),));
-                    }
-                }
-
-                while let Some(sender) = pending_messages.pop_front() {
-                    let res = sender.send(Ok(()));
-                    if let Err(e) = res {
-                        return Err(anyhow::anyhow!("Error sending content ready: {:?}", e));
-                    }
-                }
-                Ok(())
-            }
         });
     }
+}
 
-    fn spawn_filenodes_sender(
+struct FilenodeManager {
+    filenodes_recv: mpsc::Receiver<FileMessage>,
+    filenodes_es: Arc<EdenapiSender>,
+}
+
+impl FilenodeManager {
+    fn new(filenodes_recv: mpsc::Receiver<FileMessage>, filenodes_es: Arc<EdenapiSender>) -> Self {
+        Self {
+            filenodes_recv,
+            filenodes_es,
+        }
+    }
+
+    async fn flush_filenodes(
+        filenodes_es: &Arc<EdenapiSender>,
+        batch_filenodes: &mut Vec<HgFileNodeId>,
+        batch_done_senders: &mut VecDeque<oneshot::Sender<Result<()>>>,
+        encountered_error: &mut Option<anyhow::Error>,
+        reponame: &str,
+        filenodes_logger: &Logger,
+    ) -> Result<(), anyhow::Error> {
+        if !batch_filenodes.is_empty() || !batch_done_senders.is_empty() {
+            let batch_size = batch_filenodes.len() as i64;
+            if let Some(e) = encountered_error {
+                let msg = format!("Error processing filenodes: {:?}", e);
+                while let Some(sender) = batch_done_senders.pop_front() {
+                    let _ = sender.send(Err(anyhow::anyhow!(msg.clone())));
+                }
+                error!(filenodes_logger, "Error processing filenodes: {:?}", e);
+                return Err(anyhow::anyhow!(msg.clone()));
+            }
+
+            if !batch_filenodes.is_empty() {
+                let start = std::time::Instant::now();
+                if let Err(e) = filenodes_es
+                    .upload_filenodes(std::mem::take(batch_filenodes))
+                    .await
+                {
+                    error!(filenodes_logger, "Failed to upload filenodes: {:?}", e);
+                    return Err(e);
+                } else {
+                    info!(
+                        filenodes_logger,
+                        "Uploaded {} filenodes in {}ms",
+                        batch_size,
+                        start.elapsed().as_millis(),
+                    );
+                    STATS::synced_filenodes
+                        .add_value(batch_filenodes.len() as i64, (reponame.to_owned(),));
+                }
+            }
+
+            while let Some(sender) = batch_done_senders.pop_front() {
+                let res = sender.send(Ok(()));
+                if let Err(e) = res {
+                    let msg = format!("Error sending filenodes ready: {:?}", e);
+                    error!(filenodes_logger, "{}", msg);
+                    return Err(anyhow::anyhow!(msg));
+                }
+            }
+        }
+        Ok(())
+    }
+}
+
+impl Manager for FilenodeManager {
+    fn start(
+        mut self,
         ctx: CoreContext,
         reponame: String,
-        mut filenodes_recv: mpsc::Receiver<FileMessage>,
-        filenodes_es: Arc<EdenapiSender>,
         filenodes_logger: Logger,
         cancellation_requested: Arc<AtomicBool>,
     ) {
         mononoke::spawn_task(async move {
+            let filenodes_recv = &mut self.filenodes_recv;
+            let filenodes_es = &self.filenodes_es;
+
             let mut encountered_error: Option<anyhow::Error> = None;
             let mut batch_filenodes = Vec::new();
             let mut batch_done_senders = VecDeque::new();
@@ -368,87 +512,102 @@ impl SendManager {
                             None => break,
                         }
                         if batch_filenodes.len() >= MAX_FILENODES_BATCH_SIZE {
-                            if let Err(e) = flush_filenodes(&filenodes_es, &mut batch_filenodes, &mut batch_done_senders, &mut encountered_error, &reponame, &filenodes_logger).await {
+                            if let Err(e) = FilenodeManager::flush_filenodes(filenodes_es, &mut batch_filenodes, &mut batch_done_senders, &mut encountered_error, &reponame, &filenodes_logger).await {
                                 error!(filenodes_logger, "Filenodes flush failed: {:?}", e);
                                 return;
                             }
                         }
                     }
                     _ = timer.tick() => {
-                        if let Err(e) = flush_filenodes(&filenodes_es, &mut batch_filenodes, &mut batch_done_senders, &mut encountered_error, &reponame, &filenodes_logger).await {
+                        if let Err(e) = FilenodeManager::flush_filenodes(filenodes_es, &mut batch_filenodes, &mut batch_done_senders, &mut encountered_error, &reponame, &filenodes_logger).await {
                             error!(filenodes_logger, "Filenodes flush failed: {:?}", e);
                             return;
                         }
                     }
                 }
             }
-
-            async fn flush_filenodes(
-                filenodes_es: &Arc<EdenapiSender>,
-                batch_filenodes: &mut Vec<HgFileNodeId>,
-                batch_done_senders: &mut VecDeque<oneshot::Sender<Result<()>>>,
-                encountered_error: &mut Option<anyhow::Error>,
-                reponame: &str,
-                filenodes_logger: &Logger,
-            ) -> Result<(), anyhow::Error> {
-                if !batch_filenodes.is_empty() || !batch_done_senders.is_empty() {
-                    let batch_size = batch_filenodes.len() as i64;
-                    if let Some(e) = encountered_error {
-                        let msg = format!("Error processing filenodes: {:?}", e);
-                        while let Some(sender) = batch_done_senders.pop_front() {
-                            let _ = sender.send(Err(anyhow::anyhow!(msg.clone())));
-                        }
-                        error!(filenodes_logger, "Error processing filenodes: {:?}", e);
-                        return Err(anyhow::anyhow!(msg.clone()));
-                    }
-
-                    if !batch_filenodes.is_empty() {
-                        let start = std::time::Instant::now();
-                        if let Err(e) = filenodes_es
-                            .upload_filenodes(std::mem::take(batch_filenodes))
-                            .await
-                        {
-                            error!(filenodes_logger, "Failed to upload filenodes: {:?}", e);
-                            return Err(e);
-                        } else {
-                            info!(
-                                filenodes_logger,
-                                "Uploaded {} filenodes in {}ms",
-                                batch_size,
-                                start.elapsed().as_millis(),
-                            );
-                            STATS::synced_filenodes
-                                .add_value(batch_filenodes.len() as i64, (reponame.to_owned(),));
-                        }
-                    }
-
-                    while let Some(sender) = batch_done_senders.pop_front() {
-                        let res = sender.send(Ok(()));
-                        if let Err(e) = res {
-                            let msg = format!("Error sending filenodes ready: {:?}", e);
-                            error!(filenodes_logger, "{}", msg);
-                            return Err(anyhow::anyhow!(msg));
-                        }
-                    }
-                }
-                Ok(())
-            }
         });
     }
+}
 
-    fn spawn_trees_sender(
+struct TreeManager {
+    trees_recv: mpsc::Receiver<TreeMessage>,
+    trees_es: Arc<EdenapiSender>,
+}
+
+impl TreeManager {
+    fn new(trees_recv: mpsc::Receiver<TreeMessage>, trees_es: Arc<EdenapiSender>) -> Self {
+        Self {
+            trees_recv,
+            trees_es,
+        }
+    }
+
+    async fn flush_trees(
+        trees_es: &Arc<EdenapiSender>,
+        batch_trees: &mut Vec<HgManifestId>,
+        batch_done_senders: &mut VecDeque<oneshot::Sender<Result<()>>>,
+        encountered_error: &mut Option<anyhow::Error>,
+        reponame: &str,
+        trees_logger: &Logger,
+    ) -> Result<(), anyhow::Error> {
+        if !batch_trees.is_empty() || !batch_done_senders.is_empty() {
+            let batch_size = batch_trees.len() as i64;
+            if let Some(e) = encountered_error {
+                let msg = format!("Error processing trees: {:?}", e);
+                while let Some(sender) = batch_done_senders.pop_front() {
+                    let _ = sender.send(Err(anyhow::anyhow!(msg.clone())));
+                }
+                error!(trees_logger, "Error processing files/trees: {:?}", e);
+                return Err(anyhow::anyhow!(msg.clone()));
+            }
+
+            if !batch_trees.is_empty() {
+                let start = std::time::Instant::now();
+                if let Err(e) = trees_es.upload_trees(std::mem::take(batch_trees)).await {
+                    error!(trees_logger, "Failed to upload trees: {:?}", e);
+                    return Err(e);
+                } else {
+                    info!(
+                        trees_logger,
+                        "Uploaded {} trees in {}ms",
+                        batch_size,
+                        start.elapsed().as_millis(),
+                    );
+                    STATS::synced_trees.add_value(batch_size, (reponame.to_owned(),));
+                }
+            }
+
+            while let Some(sender) = batch_done_senders.pop_front() {
+                let res = sender.send(Ok(()));
+                if let Err(e) = res {
+                    let msg = format!("Error sending content ready: {:?}", e);
+                    error!(trees_logger, "{}", msg);
+                    return Err(anyhow::anyhow!(msg));
+                }
+            }
+        }
+        Ok(())
+    }
+}
+
+impl Manager for TreeManager {
+    fn start(
+        mut self,
         ctx: CoreContext,
         reponame: String,
-        mut trees_recv: mpsc::Receiver<TreeMessage>,
-        trees_es: Arc<EdenapiSender>,
         trees_logger: Logger,
         cancellation_requested: Arc<AtomicBool>,
     ) {
         mononoke::spawn_task(async move {
+            let trees_recv = &mut self.trees_recv;
+            let trees_es = &self.trees_es;
+
             let mut encountered_error: Option<anyhow::Error> = None;
             let mut batch_trees = Vec::new();
             let mut batch_done_senders = VecDeque::new();
             let mut timer = interval(TREES_FLUSH_INTERVAL);
+
             while !cancellation_requested.load(Ordering::Relaxed) {
                 tokio::select! {
                     msg = trees_recv.recv() => {
@@ -487,79 +646,145 @@ impl SendManager {
                             None => break,
                         }
                         if batch_trees.len() >= MAX_TREES_BATCH_SIZE {
-                            if let Err(e) = flush_trees(&trees_es, &mut batch_trees, &mut batch_done_senders, &mut encountered_error, &reponame,  &trees_logger).await {
+                            if let Err(e) = TreeManager::flush_trees(trees_es, &mut batch_trees, &mut batch_done_senders, &mut encountered_error, &reponame, &trees_logger).await {
                                 error!(trees_logger, "Trees flush failed: {:?}", e);
                                 return;
                             }
                         }
                     }
                     _ = timer.tick() => {
-                        if let Err(e) = flush_trees(&trees_es, &mut batch_trees, &mut batch_done_senders, &mut encountered_error, &reponame, &trees_logger).await {
+                        if let Err(e) = TreeManager::flush_trees(trees_es, &mut batch_trees, &mut batch_done_senders, &mut encountered_error, &reponame, &trees_logger).await {
                             error!(trees_logger, "Trees flush failed: {:?}", e);
                             return;
                         }
                     }
                 }
             }
-            async fn flush_trees(
-                trees_es: &Arc<EdenapiSender>,
-                batch_trees: &mut Vec<HgManifestId>,
-                batch_done_senders: &mut VecDeque<oneshot::Sender<Result<()>>>,
-                encountered_error: &mut Option<anyhow::Error>,
-                reponame: &str,
-                trees_logger: &Logger,
-            ) -> Result<(), anyhow::Error> {
-                if !batch_trees.is_empty() || !batch_done_senders.is_empty() {
-                    let batch_size = batch_trees.len() as i64;
-                    if let Some(e) = encountered_error {
-                        let msg = format!("Error processing trees: {:?}", e);
-                        while let Some(sender) = batch_done_senders.pop_front() {
-                            let _ = sender.send(Err(anyhow::anyhow!(msg.clone())));
-                        }
-                        error!(trees_logger, "Error processing files/trees: {:?}", e);
-                        return Err(anyhow::anyhow!(msg.clone()));
-                    }
-
-                    if !batch_trees.is_empty() {
-                        let start = std::time::Instant::now();
-                        if let Err(e) = trees_es.upload_trees(std::mem::take(batch_trees)).await {
-                            error!(trees_logger, "Failed to upload trees: {:?}", e);
-                            return Err(e);
-                        } else {
-                            info!(
-                                trees_logger,
-                                "Uploaded {} trees in {}ms",
-                                batch_size,
-                                start.elapsed().as_millis(),
-                            );
-                            STATS::synced_trees.add_value(batch_size, (reponame.to_owned(),));
-                        }
-                    }
-
-                    while let Some(sender) = batch_done_senders.pop_front() {
-                        let res = sender.send(Ok(()));
-                        if let Err(e) = res {
-                            let msg = format!("Error sending content ready: {:?}", e);
-                            error!(trees_logger, "{}", msg);
-                            return Err(anyhow::anyhow!(msg));
-                        }
-                    }
-                }
-                Ok(())
-            }
         });
     }
+}
 
-    fn spawn_changeset_sender(
+struct ChangesetManager {
+    changeset_recv: mpsc::Receiver<ChangesetMessage>,
+    changeset_es: Arc<EdenapiSender>,
+    mc: Arc<dyn MutableCounters + Send + Sync>,
+}
+
+impl ChangesetManager {
+    fn new(
+        changeset_recv: mpsc::Receiver<ChangesetMessage>,
+        changeset_es: Arc<EdenapiSender>,
+        mc: Arc<dyn MutableCounters + Send + Sync>,
+    ) -> Self {
+        Self {
+            changeset_recv,
+            changeset_es,
+            mc,
+        }
+    }
+
+    async fn flush_batch(
+        reponame: String,
+        ctx: &CoreContext,
+        changeset_logger: &Logger,
+        changeset_es: &Arc<EdenapiSender>,
+        mc: Arc<dyn MutableCounters + Send + Sync>,
+        current_batch: &mut Vec<(HgBlobChangeset, BonsaiChangeset)>,
+        pending_log: &mut VecDeque<Option<i64>>,
+        latest_checkpoint: &mut Option<(u64, i64)>,
+        latest_entry_id: &mut Option<i64>,
+        latest_bookmark: &mut Option<BookmarkInfo>,
+        pending_notification: &mut Option<oneshot::Sender<Result<()>>>,
+    ) -> Result<(), anyhow::Error> {
+        if !current_batch.is_empty() {
+            let start = std::time::Instant::now();
+            let batch_size = current_batch.len();
+            if let Err(e) = changeset_es
+                .upload_identical_changeset(std::mem::take(current_batch))
+                .await
+            {
+                error!(changeset_logger, "Failed to upload changesets: {:?}", e);
+                return Err(e);
+            } else {
+                let elapsed = start.elapsed().as_secs() / batch_size as u64;
+                STATS::changeset_upload_time_s.add_value(elapsed as i64, (reponame.clone(),));
+                STATS::synced_commits.add_value(batch_size as i64, (reponame.clone(),));
+            }
+        }
+
+        while let Some(Some(lag)) = pending_log.pop_front() {
+            STATS::sync_lag_seconds.add_value(lag, (reponame.clone(),));
+        }
+
+        if let Some((position, id)) = latest_checkpoint.take() {
+            info!(
+                changeset_logger,
+                "Setting checkpoint from entry {} to {}", id, position
+            );
+
+            let res_entry = mc
+                .set_counter(ctx, MODERN_SYNC_CURRENT_ENTRY_ID, id, None)
+                .await?;
+
+            let res_checkpoint = mc
+                .set_counter(
+                    ctx,
+                    MODERN_SYNC_BATCH_CHECKPOINT_NAME,
+                    position.try_into().unwrap(),
+                    None,
+                )
+                .await?;
+
+            if !(res_checkpoint && res_entry) {
+                warn!(
+                    changeset_logger,
+                    "Failed to checkpoint entry {} at position {:?}", id, position
+                );
+            }
+        }
+
+        if let Some(info) = latest_bookmark.take() {
+            info!(
+                changeset_logger,
+                "Setting bookmark {} from {:?} to {:?}", info.name, info.from_cs_id, info.to_cs_id
+            );
+            changeset_es
+                .set_bookmark(info.name, info.from_cs_id, info.to_cs_id)
+                .await?;
+        }
+
+        if let Some(id) = latest_entry_id.take() {
+            info!(changeset_logger, "Marking entry {} as done", id);
+            let res = mc
+                .set_counter(ctx, MODERN_SYNC_COUNTER_NAME, id, None)
+                .await?;
+
+            if !res {
+                warn!(changeset_logger, "Failed to mark entry {} as synced", id);
+            }
+        }
+
+        if let Some(sender) = pending_notification.take() {
+            let _ = sender.send(Ok(()));
+        }
+
+        Ok(())
+    }
+}
+
+impl Manager for ChangesetManager {
+    fn start(
+        mut self,
         ctx: CoreContext,
         reponame: String,
-        mut changeset_recv: mpsc::Receiver<ChangesetMessage>,
-        changeset_es: Arc<EdenapiSender>,
         changeset_logger: Logger,
         cancellation_requested: Arc<AtomicBool>,
-        mc: Arc<dyn MutableCounters + Send + Sync>,
     ) {
         mononoke::spawn_task(async move {
+            let changeset_recv = &mut self.changeset_recv;
+            let changeset_es = &self.changeset_es;
+            let mc = &self.mc;
+
             let mut encountered_error: Option<anyhow::Error> = None;
 
             let mut pending_log = VecDeque::new();
@@ -674,19 +899,7 @@ impl SendManager {
                         }
 
                         if current_batch.len() >= MAX_CHANGESET_BATCH_SIZE {
-                            if let Err(e) = flush_batch(
-                                reponame.clone(),
-                                &ctx,
-                                &changeset_logger,
-                                &changeset_es,
-                                mc.clone(),
-                                &mut current_batch,
-                                &mut pending_log,
-                                &mut latest_in_entry_checkpoint,
-                                &mut latest_entry_id,
-                                &mut latest_bookmark,
-                                &mut pending_notification,
-                            )
+                            if let Err(e) = ChangesetManager::flush_batch(reponame.clone(), &ctx, &changeset_logger, changeset_es, mc.clone(), &mut current_batch, &mut pending_log, &mut latest_in_entry_checkpoint, &mut latest_entry_id, &mut latest_bookmark, &mut pending_notification)
                             .await
                             {
                                 return Err(anyhow::anyhow!(
@@ -698,19 +911,7 @@ impl SendManager {
                     }
                     _ = flush_timer.tick() =>
                     {
-                        if let Err(e) = flush_batch(
-                            reponame.clone(),
-                            &ctx,
-                            &changeset_logger,
-                            &changeset_es,
-                            mc.clone(),
-                            &mut current_batch,
-                            &mut pending_log,
-                            &mut latest_in_entry_checkpoint,
-                            &mut latest_entry_id,
-                            &mut latest_bookmark,
-                            &mut pending_notification,
-                        )
+                        if let Err(e) = ChangesetManager::flush_batch(reponame.clone(), &ctx, &changeset_logger, changeset_es, mc.clone(), &mut current_batch, &mut pending_log, &mut latest_in_entry_checkpoint, &mut latest_entry_id, &mut latest_bookmark, &mut pending_notification)
                         .await
                         {
                             return Err(anyhow::anyhow!("Error processing changesets: {:?}", e));
@@ -719,155 +920,7 @@ impl SendManager {
                 }
             }
 
-            async fn flush_batch(
-                reponame: String,
-                ctx: &CoreContext,
-                changeset_logger: &Logger,
-                changeset_es: &Arc<EdenapiSender>,
-                mc: Arc<dyn MutableCounters + Send + Sync>,
-                current_batch: &mut Vec<(HgBlobChangeset, BonsaiChangeset)>,
-                pending_log: &mut VecDeque<Option<i64>>,
-                latest_checkpoint: &mut Option<(u64, i64)>,
-                latest_entry_id: &mut Option<i64>,
-                latest_bookmark: &mut Option<BookmarkInfo>,
-                pending_notification: &mut Option<oneshot::Sender<Result<()>>>,
-            ) -> Result<(), anyhow::Error> {
-                if !current_batch.is_empty() {
-                    let start = std::time::Instant::now();
-                    let batch_size = current_batch.len();
-                    if let Err(e) = changeset_es
-                        .upload_identical_changeset(std::mem::take(current_batch))
-                        .await
-                    {
-                        error!(changeset_logger, "Failed to upload changesets: {:?}", e);
-                        return Err(e);
-                    } else {
-                        let elapsed = start.elapsed().as_secs() / batch_size as u64;
-                        STATS::changeset_upload_time_s
-                            .add_value(elapsed as i64, (reponame.clone(),));
-                        STATS::synced_commits.add_value(batch_size as i64, (reponame.clone(),));
-                    }
-                }
-
-                while let Some(Some(lag)) = pending_log.pop_front() {
-                    STATS::sync_lag_seconds.add_value(lag, (reponame.clone(),));
-                }
-
-                if let Some((position, id)) = latest_checkpoint.take() {
-                    info!(
-                        changeset_logger,
-                        "Setting checkpoint from entry {} to {}", id, position
-                    );
-
-                    let res_entry = mc
-                        .set_counter(ctx, MODERN_SYNC_CURRENT_ENTRY_ID, id, None)
-                        .await?;
-
-                    let res_checkpoint = mc
-                        .set_counter(
-                            ctx,
-                            MODERN_SYNC_BATCH_CHECKPOINT_NAME,
-                            position.try_into().unwrap(),
-                            None,
-                        )
-                        .await?;
-
-                    if !(res_checkpoint && res_entry) {
-                        warn!(
-                            changeset_logger,
-                            "Failed to checkpoint entry {} at position {:?}", id, position
-                        );
-                    }
-                }
-
-                if let Some(info) = latest_bookmark.take() {
-                    info!(
-                        changeset_logger,
-                        "Setting bookmark {} from {:?} to {:?}",
-                        info.name,
-                        info.from_cs_id,
-                        info.to_cs_id
-                    );
-                    changeset_es
-                        .set_bookmark(info.name, info.from_cs_id, info.to_cs_id)
-                        .await?;
-                }
-
-                if let Some(id) = latest_entry_id.take() {
-                    info!(changeset_logger, "Marking entry {} as done", id);
-                    let res = mc
-                        .set_counter(ctx, MODERN_SYNC_COUNTER_NAME, id, None)
-                        .await?;
-
-                    if !res {
-                        warn!(changeset_logger, "Failed to mark entry {} as synced", id);
-                    }
-                }
-
-                if let Some(sender) = pending_notification.take() {
-                    let _ = sender.send(Ok(()));
-                }
-
-                Ok(())
-            }
-
             Ok(())
         });
-    }
-
-    pub async fn send_content(&self, content_msg: ContentMessage) -> Result<()> {
-        self.content_sender
-            .send(content_msg)
-            .await
-            .map_err(|err| err.into())
-    }
-
-    pub async fn send_file(&self, ft_msg: FileMessage) -> Result<()> {
-        self.files_sender
-            .send(ft_msg)
-            .await
-            .map_err(|err| err.into())
-    }
-
-    pub async fn send_tree(&self, ft_msg: TreeMessage) -> Result<()> {
-        self.trees_sender
-            .send(ft_msg)
-            .await
-            .map_err(|err| err.into())
-    }
-
-    pub async fn send_changeset(&self, cs_msg: ChangesetMessage) -> Result<()> {
-        self.changeset_sender
-            .send(cs_msg)
-            .await
-            .map_err(|err| err.into())
-    }
-
-    pub async fn send_contents(&self, content_msgs: Vec<ContentMessage>) -> Result<()> {
-        for content_msg in content_msgs {
-            self.send_content(content_msg).await?;
-        }
-        Ok(())
-    }
-
-    pub async fn send_files(&self, ft_msgs: Vec<FileMessage>) -> Result<()> {
-        for ft_msg in ft_msgs {
-            self.send_file(ft_msg).await?;
-        }
-        Ok(())
-    }
-
-    pub async fn send_trees(&self, ft_msgs: Vec<TreeMessage>) -> Result<()> {
-        for ft_msg in ft_msgs {
-            self.send_tree(ft_msg).await?;
-        }
-        Ok(())
-    }
-
-    pub async fn send_changesets(&self, cs_msgs: Vec<ChangesetMessage>) -> Result<()> {
-        for cs_msg in cs_msgs {
-            self.send_changeset(cs_msg).await?;
-        }
-        Ok(())
     }
 }
