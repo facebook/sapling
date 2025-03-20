@@ -15,5 +15,6 @@ dott_test(
         "//eden/mononoke:mononoke",
         "//eden/mononoke/modern_sync:mononoke_modern_sync_job",
         "//eden/mononoke/tools/admin:admin",
+        "//eden/mononoke/tools/testtool:testtool",
     ],
 )
