@@ -83,10 +83,9 @@ use crate::ModernSyncArgs;
 use crate::Repo;
 
 define_stats! {
-    prefix = "mononoke.modern_sync";
-    changeset_procesing_time_s:  dynamic_timeseries("{}.changeset_procesing_time", (repo: String); Average),
-    changeset_procesed:  dynamic_timeseries("{}.changeset_procesed", (repo: String); Sum),
-
+    prefix = "mononoke.modern_sync.sync";
+    changeset_processed_time_ms:  dynamic_timeseries("{}.changeset.processed.time_ms", (repo: String); Average),
+    changeset_processed_count:  dynamic_timeseries("{}.changeset.processed.count", (repo: String); Sum),
 }
 
 #[derive(Clone)]
@@ -605,11 +604,11 @@ pub async fn process_one_changeset(
     }
 
     let elapsed = now.elapsed();
-    STATS::changeset_procesing_time_s.add_value(
-        elapsed.as_secs() as i64,
+    STATS::changeset_processed_time_ms.add_value(
+        elapsed.as_millis() as i64,
         (repo.repo_identity().name().to_string(),),
     );
-    STATS::changeset_procesed.add_value(1, (repo.repo_identity().name().to_string(),));
+    STATS::changeset_processed_count.add_value(1, (repo.repo_identity().name().to_string(),));
 
     Ok(messages)
 }
