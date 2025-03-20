@@ -351,10 +351,12 @@ void testCharClass(std::string_view name, int (*libcFn)(int)) {
     // depending on the current locale settings.)
     if (ch == '/' || ch >= 0x80) {
       EXPECT_FALSE(matcher.match(text))
-          << "character class \"" << name << "\", character " << (int)ch;
+          << "character class \"" << name << "\", character "
+          << static_cast<int>(ch);
     } else {
       EXPECT_EQ((bool)libcFn(ch), matcher.match(text))
-          << "character class \"" << name << "\", character " << (int)ch;
+          << "character class \"" << name << "\", character "
+          << static_cast<int>(ch);
     }
     if (ch == 0xff) {
       break;
