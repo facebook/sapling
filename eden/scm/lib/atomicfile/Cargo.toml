@@ -14,5 +14,6 @@ license = "MIT"
 name = "atomicfile"
 
 [dependencies]
+fs-err = { version = "3", features = ["tokio"] }
 tempfile = "3.15"
 tracing = { version = "0.1.41", features = ["attributes", "valuable"] }

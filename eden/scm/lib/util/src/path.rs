@@ -10,8 +10,8 @@
 use std::borrow::Cow;
 use std::env;
 use std::ffi::OsStr;
-use std::fs;
-use std::fs::remove_file as fs_remove_file;
+#[cfg(unix)]
+use std::fs::Permissions;
 use std::io;
 use std::io::ErrorKind;
 use std::io::Write;
@@ -22,6 +22,8 @@ use std::path::Path;
 use std::path::PathBuf;
 
 use fn_error_context::context;
+use fs::remove_file as fs_remove_file;
+use fs_err as fs;
 
 use crate::errors::IOContext;
 
@@ -41,6 +43,10 @@ use crate::errors::IOContext;
 /// Attention: the deletion attempt is based on file name. So do not use
 /// confusing file names like `path.0001.atomic` in the same directory.
 pub fn atomic_write_symlink(path: &Path, data: &[u8]) -> io::Result<()> {
+    atomic_write_symlink_inner(path, data).path_context("atomic writing symlink", path)
+}
+
+fn atomic_write_symlink_inner(path: &Path, data: &[u8]) -> io::Result<()> {
     let append_name = |suffix: &str| -> PathBuf {
         let mut s = path.to_path_buf().into_os_string();
         s.push(suffix);
@@ -62,7 +68,7 @@ pub fn atomic_write_symlink(path: &Path, data: &[u8]) -> io::Result<()> {
             Ok(file) => break Ok((real_path, file)),
             Err(e) if e.kind() == io::ErrorKind::AlreadyExists => continue, // try another file name
             Err(e) => {
-                break Err(e).path_context("error opening atomic symlink real path", &real_path);
+                break Err(e);
             }
         }
     }?;
@@ -71,8 +77,7 @@ pub fn atomic_write_symlink(path: &Path, data: &[u8]) -> io::Result<()> {
         .expect("real_path should have a file name");
 
     // Write the content.
-    file.write_all(data)
-        .path_context("error writing atomic symlink data to real path", &real_path)?;
+    file.write_all(data)?;
     drop(file);
 
     // Update the symlink by creating a temporary symlink and rename it.
@@ -82,13 +87,13 @@ pub fn atomic_write_symlink(path: &Path, data: &[u8]) -> io::Result<()> {
             Ok(()) => break Ok(symlink_path),
             Err(e) if e.kind() == io::ErrorKind::AlreadyExists => continue, // try another file name
             Err(e) => {
-                break Err(e).path_context("error creating temp atomic symlink", &symlink_path);
+                break Err(e);
             }
         }
     }?;
 
     // Overwrite the original symlink. This works on both Windows and Linux.
-    fs::rename(symlink_tmp_path, path).path_context("error renaming temp atomic symlink", path)?;
+    fs::rename(symlink_tmp_path, path)?;
 
     // Scan. Remove unreferenced files.
     let _ = (|| -> io::Result<()> {
@@ -100,8 +105,8 @@ pub fn atomic_write_symlink(path: &Path, data: &[u8]) -> io::Result<()> {
             }
         };
         if let (Some(dir), Some(prefix)) = (path.parent(), path.file_name()) {
-            for entry in fs::read_dir(dir).path_context("error reading atomic symlink dir", dir)? {
-                let entry = entry.path_context("error reading atomic symlink dir entry", dir)?;
+            for entry in fs::read_dir(dir)? {
+                let entry = entry?;
                 let name = entry.file_name();
                 if name != prefix && looks_like_atomic(&name, prefix) && name != real_file_name {
                     let _ = remove_file(entry.path());
@@ -298,7 +303,7 @@ pub fn remove_file<P: AsRef<Path>>(path: P) -> io::Result<()> {
 fn remove_directory_symlink(path: &Path) -> io::Result<bool> {
     let metadata = path.symlink_metadata()?;
     if metadata.is_symlink() {
-        std::fs::remove_dir(path)?;
+        fs::remove_dir(path)?;
         return Ok(true);
     }
     Ok(false)
@@ -436,7 +441,7 @@ fn create_dir_with_mode(path: &Path, mode: u32) -> anyhow::Result<()> {
             // Symlinks were resolved above - assume is_dir.
             if md.permissions().mode() & mode != mode {
                 // Best effort to fix permissions.
-                let _ = fs::set_permissions(path, fs::Permissions::from_mode(mode));
+                let _ = fs::set_permissions(path, Permissions::from_mode(mode));
             }
             return Ok(());
         }
@@ -462,7 +467,7 @@ fn create_dir_with_mode(path: &Path, mode: u32) -> anyhow::Result<()> {
     let temp = add_stat_context(tempfile::TempDir::new_in(&parent), Some(&parent))
         .with_context(|| format!("creating temp dir in {:?}", parent))?;
 
-    fs::set_permissions(&temp, fs::Permissions::from_mode(mode))
+    fs::set_permissions(&temp, Permissions::from_mode(mode))
         .with_context(|| format!("setting permissions on temp dir {:?}", temp))?;
 
     let temp = temp.into_path();
@@ -479,13 +484,12 @@ fn create_dir_with_mode(path: &Path, mode: u32) -> anyhow::Result<()> {
                 // Target directory exists now - we probably raced with someone else to create it.
 
                 // Best effort to fix permissions.
-                let _ = fs::set_permissions(path, fs::Permissions::from_mode(mode));
+                let _ = fs::set_permissions(path, Permissions::from_mode(mode));
 
                 Ok(())
             }
             ErrorKind::NotADirectory => Err(io::Error::from(ErrorKind::AlreadyExists).into()),
-            _ => Err::<(), anyhow::Error>(e.into())
-                .context(format!("renaming temp dir {:?} to {:?}", temp, &path)),
+            _ => Err(e.into()),
         }
     } else {
         Ok(())
@@ -867,7 +871,7 @@ mod tests {
             path.push("nope");
 
             std::fs::create_dir(&path)?;
-            std::fs::set_permissions(&path, fs::Permissions::from_mode(0o0))?;
+            std::fs::set_permissions(&path, Permissions::from_mode(0o0))?;
 
             let err = create_dir_with_mode(&path.join("dir"), 0o775).unwrap_err();
             assert!(is_io_error_kind(&err, io::ErrorKind::PermissionDenied));

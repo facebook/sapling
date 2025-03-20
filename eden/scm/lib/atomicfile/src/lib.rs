@@ -5,8 +5,7 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-use std::fs;
-use std::fs::File;
+use std::fs::Metadata;
 #[cfg(unix)]
 use std::fs::Permissions;
 use std::io;
@@ -16,6 +15,8 @@ use std::path::Path;
 use std::path::PathBuf;
 use std::time::Duration;
 
+use fs::File;
+use fs_err as fs;
 use tempfile::NamedTempFile;
 
 /// Create a temp file and then rename it into the specified path to
@@ -46,7 +47,7 @@ pub fn atomic_write(
 /// State to wait for change to a path.
 pub struct Wait<'a> {
     path: &'a Path,
-    meta: Option<fs::Metadata>,
+    meta: Option<Metadata>,
 }
 
 impl<'a> Wait<'a> {
@@ -107,7 +108,7 @@ impl<'a> Wait<'a> {
 }
 
 pub struct AtomicFile {
-    file: NamedTempFile,
+    file: NamedTempFile<File>,
     path: PathBuf,
     dir: PathBuf,
     fsync: bool,
@@ -125,7 +126,11 @@ impl AtomicFile {
         };
 
         #[allow(unused_mut)]
-        let mut temp = NamedTempFile::new_in(dir)?;
+        let mut temp = {
+            let (file, temp_path) = NamedTempFile::new_in(dir)?.into_parts();
+            let file = File::from_parts(file, path);
+            NamedTempFile::from_parts(file, temp_path)
+        };
 
         #[cfg(unix)]
         {

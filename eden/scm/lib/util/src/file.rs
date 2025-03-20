@@ -5,12 +5,13 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-use std::fs::File;
-use std::fs::OpenOptions;
 use std::io;
 use std::path::Path;
 
 use ::metrics::Counter;
+use fs::File;
+use fs::OpenOptions;
+use fs_err as fs;
 use once_cell::sync::Lazy;
 
 use crate::errors::IOContext;
@@ -78,10 +79,7 @@ pub fn open(path: impl AsRef<Path>, mode: &str) -> io::Result<File> {
     }
     let mut open_fn = |p: &Path| -> io::Result<File> { opts.open(p) };
 
-    match with_retry(&mut open_fn, path) {
-        Ok(m) => Ok(m),
-        Err(err) => Err(err).path_context("error opening file", path),
-    }
+    with_retry(&mut open_fn, path)
 }
 
 pub fn create(path: impl AsRef<Path>) -> io::Result<File> {
@@ -123,28 +121,28 @@ where
 
 pub fn exists(path: impl AsRef<Path>) -> io::Result<Option<std::fs::Metadata>> {
     let path = path.as_ref();
-    match with_retry(&mut std::fs::metadata, path) {
+    match with_retry(&mut fs::metadata, path) {
         Ok(m) => Ok(Some(m)),
         Err(err) if err.kind() == io::ErrorKind::NotFound => Ok(None),
-        Err(err) => Err(err).path_context("error reading file", path),
+        Err(err) => Err(err),
     }
 }
 
 pub fn unlink_if_exists(path: impl AsRef<Path>) -> io::Result<()> {
     let path = path.as_ref();
-    match with_retry(&mut std::fs::remove_file, path) {
+    match with_retry(&mut fs::remove_file, path) {
         Ok(()) => Ok(()),
         Err(err) if err.kind() == io::ErrorKind::NotFound => Ok(()),
-        Err(err) => Err(err).path_context("error deleting file", path),
+        Err(err) => Err(err),
     }
 }
 
 pub fn read_to_string_if_exists(path: impl AsRef<Path>) -> io::Result<Option<String>> {
     let path = path.as_ref();
-    match with_retry(&mut std::fs::read_to_string, path) {
+    match with_retry(&mut fs::read_to_string, path) {
         Ok(contents) => Ok(Some(contents)),
         Err(err) if err.kind() == io::ErrorKind::NotFound => Ok(None),
-        Err(err) => Err(err).path_context("error reading file", path),
+        Err(err) => Err(err),
     }
 }
 
@@ -186,7 +184,7 @@ mod test {
         let mut open_fn = |p: &Path| -> io::Result<File> {
             attempts += 1;
             if attempts >= *MAX_IO_RETRIES {
-                std::fs::File::open(p)
+                fs::File::open(p)
             } else {
                 Err(io::Error::new(error_kind, error_kind.to_string()))
             }

@@ -128,7 +128,7 @@ Don't fail with open files that can't be deleted:
     with open("unlink_fail/foo"), open("unlink_fail/bar"):
 
       $ hg go $B
-      update failed to remove foo: The process cannot access the file because it is being used by another process. (os error 32)! (windows !) (no-eden !)
+      update failed to remove foo: failed to rename file from $TESTTMP\unlink_fail\foo to $TESTTMP\unlink_fail\*: The process cannot access the file because it is being used by another process. (os error 32)! (glob) (windows !) (no-eden !)
       2 files updated, 0 files merged, 1 files removed, 0 files unresolved
 
 

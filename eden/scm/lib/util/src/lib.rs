@@ -19,3 +19,5 @@ pub mod file;
 pub mod lock;
 pub mod path;
 pub mod utf8;
+
+pub use fs_err;

@@ -32,17 +32,8 @@ rust_library(
     }},
     crate_root = "src/lib.rs",
     features = ["eden"],
-    os_deps = [
-        (
-            "windows",
-            [
-                "fbsource//third-party/rust:fs-err",
-            ],
-        ),
-    ],
     test_deps = [
         "fbsource//third-party/rust:async-trait",
-        "fbsource//third-party/rust:fs-err",
         "fbsource//third-party/rust:quickcheck",
         "fbsource//third-party/rust:tempfile",
         "fbsource//third-party/rust:walkdir",

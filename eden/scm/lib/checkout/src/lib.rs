@@ -8,7 +8,6 @@
 use std::collections::HashMap;
 use std::fmt;
 use std::fmt::Display;
-use std::fs::File;
 use std::io::BufRead;
 use std::io::BufReader;
 use std::io::Write;
@@ -28,8 +27,7 @@ use async_runtime::block_on;
 use atexit::AtExit;
 use context::CoreContext;
 use dag::Vertex;
-#[cfg(windows)]
-use fs_err as fs;
+use fs::File;
 use manifest::FileMetadata;
 use manifest::FileType;
 use manifest::Manifest;
@@ -61,6 +59,7 @@ use types::HgId;
 use types::Key;
 use types::RepoPath;
 use types::RepoPathBuf;
+use util::fs_err as fs;
 use vfs::UpdateFlag;
 use vfs::VFS;
 use workingcopy::sparse;
@@ -1752,8 +1751,6 @@ mod test {
     use anyhow::ensure;
     use anyhow::Context;
     use fs::create_dir;
-    #[cfg(unix)]
-    use fs_err as fs;
     use manifest_tree::testutil::make_tree_manifest_from_meta;
     use manifest_tree::testutil::TestStore;
     use pathmatcher::AlwaysMatcher;
@@ -1762,6 +1759,8 @@ mod test {
     use storemodel::KeyStore;
     use tempfile::TempDir;
     use types::testutil::generate_repo_paths;
+    #[cfg(unix)]
+    use util::fs_err as fs;
     use walkdir::DirEntry;
     use walkdir::WalkDir;
 

@@ -49,14 +49,10 @@ watchman_client = { version = "0.9.0", git = "https://github.com/facebook/watchm
 
 [dev-dependencies]
 async-trait = "0.1.86"
-fs-err = { version = "3", features = ["tokio"] }
 quickcheck = "1.0"
 sapling-manifest-tree = { version = "0.1.0", path = "../manifest-tree", features = ["for-tests"] }
 tempfile = "3.15"
 walkdir = "2.3"
-
-[target.'cfg(target_os = "windows")'.dependencies]
-fs-err = { version = "3", features = ["tokio"] }
 
 [features]
 eden = ["sapling-edenfs-client", "sapling-hg-metrics", "sapling-workingcopy/eden", "toml"]

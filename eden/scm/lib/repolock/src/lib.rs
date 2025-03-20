@@ -432,7 +432,7 @@ pub fn try_lock(dir: &Path, name: &str, contents: &[u8]) -> Result<LockHandle, L
         .as_file()
         .set_permissions(Permissions::from_mode(0o666));
 
-    let lock_file = util::file::open(&lock_paths.lock, "wc")?;
+    let lock_file = File::from(util::file::open(&lock_paths.lock, "wc")?);
 
     #[cfg(unix)]
     let _ = lock_file.set_permissions(Permissions::from_mode(0o666));

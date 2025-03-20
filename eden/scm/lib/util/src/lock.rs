@@ -5,9 +5,11 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-use std::fs::File;
 use std::io;
 use std::path::Path;
+
+use fs::File;
+use fs_err as fs;
 
 use crate::errors::IOContext;
 use crate::file::open;
@@ -23,7 +25,8 @@ impl PathLock {
     /// demand.
     pub fn exclusive<P: AsRef<Path>>(path: P) -> io::Result<Self> {
         let file = open(path.as_ref(), "wc").io_context("lock file")?;
-        fs2::FileExt::lock_exclusive(&file).path_context("error locking file", path.as_ref())?;
+        fs2::FileExt::lock_exclusive(file.file())
+            .path_context("error locking file", path.as_ref())?;
         Ok(PathLock { file })
     }
 
@@ -34,7 +37,7 @@ impl PathLock {
 
 impl Drop for PathLock {
     fn drop(&mut self) {
-        fs2::FileExt::unlock(&self.file).expect("unlock");
+        fs2::FileExt::unlock(self.file.file()).expect("unlock");
     }
 }
 
