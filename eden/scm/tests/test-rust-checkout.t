@@ -128,7 +128,7 @@ Don't fail with open files that can't be deleted:
     with open("unlink_fail/foo"), open("unlink_fail/bar"):
 
       $ hg go $B
-      update failed to remove foo: can't remove file "*foo": The process cannot access the file because it is being used by another process. (os error 32)! (glob) (windows !) (no-eden !)
+      update failed to remove foo: The process cannot access the file because it is being used by another process. (os error 32)! (windows !) (no-eden !)
       2 files updated, 0 files merged, 1 files removed, 0 files unresolved
 
 
@@ -499,7 +499,7 @@ Test update_distance logging:
 #if unix-permissions no-eden
 # Test output when there are lots of filesystem errors:
 
-  $ newclientrepo
+  $ newclientrepo repo-unix-perm
   $ mkdir dir
   $ for i in `seq 10`; do touch dir/file_$i; done
   $ hg commit -Aqm foo
@@ -508,11 +508,11 @@ Test update_distance logging:
   $ chmod 444 dir
   $ hg go tip
   abort: error writing files:
-   dir/file_1: can't clear conflicts after handling error "Permission denied (os error 13)": can't lstat "$TESTTMP/*/dir/file_1": Permission denied (os error 13) (glob)
-   dir/file_10: can't clear conflicts after handling error "Permission denied (os error 13)": can't lstat "$TESTTMP/*/dir/file_10": Permission denied (os error 13) (glob)
-   dir/file_2: can't clear conflicts after handling error "Permission denied (os error 13)": can't lstat "$TESTTMP/*/dir/file_2": Permission denied (os error 13) (glob)
-   dir/file_3: can't clear conflicts after handling error "Permission denied (os error 13)": can't lstat "$TESTTMP/*/dir/file_3": Permission denied (os error 13) (glob)
-   dir/file_4: can't clear conflicts after handling error "Permission denied (os error 13)": can't lstat "$TESTTMP/*/dir/file_4": Permission denied (os error 13) (glob)
+   dir/file_1: can't clear conflicts after handling error "failed to open file `$TESTTMP/repo-unix-perm/dir/file_1`: Permission denied (os error 13)": failed to query metadata of symlink `$TESTTMP/repo-unix-perm/dir/file_1`: Permission denied (os error 13)
+   dir/file_10: can't clear conflicts after handling error "failed to open file `$TESTTMP/repo-unix-perm/dir/file_10`: Permission denied (os error 13)": failed to query metadata of symlink `$TESTTMP/repo-unix-perm/dir/file_10`: Permission denied (os error 13)
+   dir/file_2: can't clear conflicts after handling error "failed to open file `$TESTTMP/repo-unix-perm/dir/file_2`: Permission denied (os error 13)": failed to query metadata of symlink `$TESTTMP/repo-unix-perm/dir/file_2`: Permission denied (os error 13)
+   dir/file_3: can't clear conflicts after handling error "failed to open file `$TESTTMP/repo-unix-perm/dir/file_3`: Permission denied (os error 13)": failed to query metadata of symlink `$TESTTMP/repo-unix-perm/dir/file_3`: Permission denied (os error 13)
+   dir/file_4: can't clear conflicts after handling error "failed to open file `$TESTTMP/repo-unix-perm/dir/file_4`: Permission denied (os error 13)": failed to query metadata of symlink `$TESTTMP/repo-unix-perm/dir/file_4`: Permission denied (os error 13)
    ...and 5 more
   [255]
 #endif

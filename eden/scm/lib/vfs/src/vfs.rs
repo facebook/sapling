@@ -5,16 +5,7 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-use std::fs;
-use std::fs::create_dir_all;
-use std::fs::remove_dir;
-use std::fs::remove_dir_all;
-#[cfg(unix)]
-use std::fs::set_permissions;
-use std::fs::symlink_metadata;
-use std::fs::File;
 use std::fs::Metadata;
-use std::fs::OpenOptions;
 #[cfg(unix)]
 use std::fs::Permissions;
 use std::io;
@@ -27,9 +18,17 @@ use std::path::PathBuf;
 use std::sync::Arc;
 
 use anyhow::bail;
-use anyhow::ensure;
 use anyhow::Context;
 use anyhow::Result;
+use fs::create_dir_all;
+use fs::remove_dir;
+use fs::remove_dir_all;
+#[cfg(unix)]
+use fs::set_permissions;
+use fs::symlink_metadata;
+use fs::File;
+use fs::OpenOptions;
+use fs_err as fs;
 use fsinfo::fstype;
 use fsinfo::FsType;
 use minibytes::Bytes;
@@ -137,26 +136,24 @@ impl VFS {
             let metadata = match symlink_metadata(&path_buf) {
                 Ok(metadata) => metadata,
                 Err(err) if err.kind() == ErrorKind::NotFound => break,
-                Err(err) => return Err(err).with_context(|| format!("can't lstat {:?}", path_buf)),
+                Err(err) => return Err(err.into()),
             };
 
             let file_type = metadata.file_type();
             if file_type.is_file() || file_type.is_symlink() {
-                remove_file(&path_buf)
-                    .with_context(|| format!("can't remove file {:?}", path_buf))?;
+                remove_file(&path_buf)?;
                 break;
             }
 
             // If the full destination is a directory, clear it out.
             if file_type.is_dir() && path_buf == full_path {
-                remove_dir_all(&path_buf)
-                    .with_context(|| format!("can't remove directory {:?}", path_buf))?;
+                remove_dir_all(&path_buf)?;
                 break;
             }
         }
 
         let dir = full_path.parent().unwrap();
-        create_dir_all(dir).with_context(|| format!("can't create directory {:?}", dir))?;
+        create_dir_all(dir)?;
 
         Ok(())
     }
@@ -172,7 +169,7 @@ impl VFS {
 
         #[cfg(unix)]
         {
-            use std::os::unix::fs::OpenOptionsExt;
+            use fs_err::os::unix::fs::OpenOptionsExt;
             options.custom_flags(libc::O_NOFOLLOW);
 
             // This sets file mode if file is created during "open".
@@ -188,13 +185,11 @@ impl VFS {
             let mode = Self::update_mode(permissions.mode(), exec);
             if mode != permissions.mode() {
                 permissions.set_mode(mode);
-                f.set_permissions(permissions)
-                    .with_context(|| format!("Failed to set permissions on {:?}", filepath))?;
+                f.set_permissions(permissions)?;
             }
         }
 
-        f.write_all(content)
-            .with_context(|| format!("can't write to {:?}", filepath))?;
+        f.write_all(content)?;
         Ok(content.len())
     }
 
@@ -216,8 +211,7 @@ impl VFS {
     fn set_exec(&self, filepath: &Path, flag: bool) -> Result<()> {
         let mode = if flag { 0o755 } else { 0o644 };
         let perms = Permissions::from_mode(mode);
-        set_permissions(filepath, perms)
-            .with_context(|| format!("can't update exec flag({}) on {:?}", flag, filepath))?;
+        set_permissions(filepath, perms)?;
         Ok(())
     }
 
@@ -235,10 +229,10 @@ impl VFS {
     /// Add a symlink `link_name` pointing to `link_dest`. On platforms that do not support symlinks,
     /// `link_name` will be a file containing the path to `link_dest`.
     fn symlink(&self, link_name: &Path, link_dest: &Path) -> Result<()> {
-        let result = if self.inner.supports_symlinks && (cfg!(unix) || cfg!(windows)) {
+        if self.inner.supports_symlinks && (cfg!(unix) || cfg!(windows)) {
             #[cfg(windows)]
             {
-                std::os::windows::fs::symlink_file(
+                fs_err::os::windows::fs::symlink_file(
                     util::path::replace_slash_with_backslash(link_dest).as_path(),
                     link_name,
                 )
@@ -246,13 +240,11 @@ impl VFS {
             }
             #[cfg(unix)]
             {
-                std::os::unix::fs::symlink(link_dest, link_name).map_err(Into::into)
+                fs_err::os::unix::fs::symlink(link_dest, link_name).map_err(Into::into)
             }
         } else {
             Self::plain_symlink_file(link_name, link_dest)
-        };
-
-        result.with_context(|| format!("can't symlink {:?} to {:?}", link_name, link_dest))
+        }
     }
 
     /// Write a symlink file at `filepath`. The destination is represented by `content`.
@@ -368,14 +360,11 @@ impl VFS {
         if let Ok(metadata) = symlink_metadata(filepath) {
             let file_type = metadata.file_type();
             if file_type.is_file() || file_type.is_symlink() {
-                let result = remove_file(filepath)
-                    .with_context(|| format!("can't remove file {:?}", filepath));
+                let result = remove_file(filepath);
                 if let Err(e) = result {
-                    if let Some(io_error) = e.downcast_ref::<io::Error>() {
-                        ensure!(io_error.kind() == ErrorKind::NotFound, e);
-                    } else {
-                        return Err(e);
-                    };
+                    if e.kind() != ErrorKind::NotFound {
+                        return Err(e.into());
+                    }
                 }
             }
         }

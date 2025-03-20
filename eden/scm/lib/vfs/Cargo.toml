@@ -16,6 +16,7 @@ name = "vfs"
 anyhow = "1.0.95"
 crossbeam = "0.8"
 dashmap = { version = "5.5.3", features = ["rayon", "serde"] }
+fs-err = { version = "3", features = ["tokio"] }
 once_cell = "1.12"
 sapling-fsinfo = { version = "0.1.0", path = "../fsinfo" }
 sapling-identity = { version = "0.1.0", path = "../identity" }
