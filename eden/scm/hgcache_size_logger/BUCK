@@ -5,10 +5,7 @@ oncall("sapling")
 python_binary(
     # @autodeps-skip
     name = "hgcache_size_logger",
-    srcs = [
-        "hgcache_size_logger.py",
-    ],
-    main_function = "eden.scm.hgcache_size_logger.main",
+    main_src = "hgcache_size_logger.py",
     deps = [
         "//libfb/py:log",
         "//rfe/scubadata:scubadata_py_DEPRECATED_USE_py3_INSTEAD",
