@@ -60,8 +60,6 @@ use bookmarks::ArcBookmarks;
 use bookmarks::CachedBookmarks;
 use bookmarks_cache::ArcBookmarksCache;
 use bundle_uri::ArcGitBundleUri;
-use bundle_uri::BundleUri;
-use bundle_uri::BundleUrlGenerator;
 use bundle_uri::SqlGitBundleMetadataStorageBuilder;
 use cacheblob::new_cachelib_blobstore_no_lease;
 use cacheblob::new_memcache_blobstore;
@@ -1100,20 +1098,18 @@ impl RepoFactory {
             .context(RepoFactoryError::GitBundleUri)?
             .build(repo_identity.id());
 
-        let bundle_url_generator = BundleUrlGenerator::new(
+        let config = &repo_config
+            .git_configs
+            .git_bundle_uri
+            .as_ref()
+            .ok_or(RepoFactoryError::GitBundleUri)?;
+
+        Ok(bundle_uri::bundle_uri_arc(
             self.env.fb,
-            "git-bundle-storage".into(),
-            "git-bundle-storage-key".into(),
-        );
-
-        let bundle_uri = BundleUri::new(
             git_bundle_uri_storage,
-            bundle_url_generator,
             repo_config.repoid,
-        )
-        .await?;
-
-        Ok(Arc::new(bundle_uri))
+            config,
+        ))
     }
 
     pub async fn git_symbolic_refs(

@@ -6,10 +6,13 @@
  */
 
 use std::collections::HashMap;
+use std::sync::Arc;
 
 use anyhow::Result;
 use async_trait::async_trait;
 use fbinit::FacebookInit;
+use metaconfig_types::GitBundleURIConfig;
+use metaconfig_types::UriGeneratorType;
 use mononoke_types::RepositoryId;
 
 #[cfg(fbcode_build)]
@@ -18,7 +21,7 @@ mod facebook;
 mod sql;
 
 #[cfg(fbcode_build)]
-pub use cdn::CdnManifoldBundleUrlGenerator as BundleUrlGenerator;
+pub use cdn::CdnManifoldBundleUrlGenerator;
 #[cfg(fbcode_build)]
 pub use facebook::cdn;
 
@@ -33,8 +36,6 @@ pub trait GitBundleMetadataStorage {
     ) -> Result<Option<BundleList>>;
     async fn get_newest_bundle_lists(&self) -> Result<HashMap<RepositoryId, BundleList>>;
 }
-#[cfg(not(fbcode_build))]
-pub use crate::LocalFSBUndleUriGenerator as BundleUrlGenerator;
 
 #[async_trait]
 pub trait GitBundleUrlGenerator {
@@ -50,16 +51,6 @@ impl GitBundleUrlGenerator for LocalFSBUndleUriGenerator {
 
 #[derive(Clone)]
 pub struct LocalFSBUndleUriGenerator {}
-
-impl LocalFSBUndleUriGenerator {
-    pub fn new(
-        _fb: FacebookInit,
-        _manifold_bucket_name: String,
-        _manifold_api_key: String,
-    ) -> Self {
-        Self {}
-    }
-}
 
 #[facet::facet]
 #[async_trait]
@@ -94,7 +85,7 @@ pub struct BundleUri<U> {
     pub repo_id: RepositoryId,
 }
 
-impl<U> BundleUri<U> {
+impl<U: Send + Sync + Clone + GitBundleUrlGenerator + 'static> BundleUri<U> {
     pub async fn new(
         storage: SqlGitBundleMetadataStorage,
         bundle_url_generator: U,
@@ -109,6 +100,45 @@ impl<U> BundleUri<U> {
             repo_id,
         })
     }
+}
+
+#[cfg(fbcode_build)]
+pub fn bundle_uri_arc(
+    fb: FacebookInit,
+    storage: SqlGitBundleMetadataStorage,
+    repo_id: RepositoryId,
+    config: &GitBundleURIConfig,
+) -> Arc<dyn GitBundleUri + Send + Sync + 'static> {
+    match &config.uri_generator_type {
+        UriGeneratorType::Cdn { bucket, api_key } => Arc::new(BundleUri {
+            bundle_metadata_storage: storage,
+            bundle_url_generator: CdnManifoldBundleUrlGenerator::new(
+                fb,
+                bucket.clone(),
+                api_key.clone(),
+            ),
+            repo_id,
+        }),
+        UriGeneratorType::LocalFS => Arc::new(BundleUri {
+            bundle_metadata_storage: storage,
+            bundle_url_generator: LocalFSBUndleUriGenerator {},
+            repo_id,
+        }),
+    }
+}
+
+#[cfg(not(fbcode_build))]
+pub fn bundle_uri_arc(
+    fb: FacebookInit,
+    storage: SqlGitBundleMetadataStorage,
+    repo_id: RepositoryId,
+    config: &GitBundleURIConfig,
+) -> Arc<dyn GitBundleUri + Send + Sync + 'static> {
+    Arc::new(BundleUri {
+        bundle_metadata_storage: storage,
+        bundle_url_generator: LocalFSBUndleUriGenerator {},
+        repo_id,
+    })
 }
 
 #[async_trait]

@@ -528,7 +528,7 @@ impl TestRepoFactory {
             SqlGitBundleMetadataStorageBuilder::from_sql_connections(self.metadata_db.clone())
                 .build(repo_identity.id());
 
-        let generator = LocalFSBUndleUriGenerator::new(self.fb, "".into(), "".into());
+        let generator = LocalFSBUndleUriGenerator {};
         let bundle_uri = BundleUri::new(storage, generator, repo_identity.id()).await?;
         Ok(Arc::new(bundle_uri))
     }

@@ -1026,6 +1026,10 @@ new_commit_logging_destination = {{ scribe = {{ scribe_category = "{commit_scrib
 local_zelos_port = {zelos_port}
 """
         )
+    if not env.getenv("HGTEST_IS_PROD_MONONOKE"):
+        append_config("""
+[git_configs.git_bundle_uri_config.uri_generator_type.local_fs]
+""")
 
     return 0
 
