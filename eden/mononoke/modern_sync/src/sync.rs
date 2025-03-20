@@ -199,7 +199,15 @@ pub async fn sync(
         repo.bookmark_update_log_arc(),
     )
     .then(|entries| {
-        cloned!(repo, logger, sender, mut send_manager, last_entry, bookmark);
+        cloned!(
+            repo,
+            repo_name,
+            logger,
+            sender,
+            mut send_manager,
+            last_entry,
+            bookmark
+        );
         borrowed!(ctx);
         async move {
             match entries {
@@ -256,10 +264,21 @@ pub async fn sync(
                         )
                         .await
                         .inspect(|_| {
-                            scuba::log_bookmark_update_entry_done(ctx, &entry, now.elapsed());
+                            scuba::log_bookmark_update_entry_done(
+                                ctx,
+                                &repo_name,
+                                &entry,
+                                now.elapsed(),
+                            );
                         })
                         .inspect_err(|e| {
-                            scuba::log_bookmark_update_entry_error(ctx, &entry, e, now.elapsed());
+                            scuba::log_bookmark_update_entry_error(
+                                ctx,
+                                &repo_name,
+                                &entry,
+                                e,
+                                now.elapsed(),
+                            );
                         })?;
                         *last_entry.write().await = entry.to_changeset_id;
                     }

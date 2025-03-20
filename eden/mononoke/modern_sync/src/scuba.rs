@@ -15,6 +15,16 @@ use metadata::Metadata;
 use mononoke_app::MononokeApp;
 use mononoke_types::ChangesetId;
 use scuba_ext::MononokeScubaSampleBuilder;
+use stats::define_stats;
+use stats::prelude::*;
+
+define_stats! {
+    prefix = "mononoke.modern_sync.stats";
+
+    bookmark_update_entry_done_count: dynamic_timeseries("{}.bookmark_update_log.processed.count", (repo: String); Sum),
+    bookmark_update_entry_done_time_ms: dynamic_timeseries("{}.bookmark_update_log.processed.time_ms", (repo: String); Average),
+    bookmark_update_entry_error_count: dynamic_timeseries("{}.bookmark_update_log.processed.error.count", (repo: String); Sum),
+}
 
 pub(crate) fn new(
     app: Arc<MononokeApp>,
@@ -64,16 +74,21 @@ pub(crate) fn log_bookmark_update_entry_start(
 
 pub(crate) fn log_bookmark_update_entry_done(
     ctx: &CoreContext,
+    repo_name: &str,
     entry: &BookmarkUpdateLogEntry,
     elapsed: std::time::Duration,
-) -> bool {
+) {
     let mut scuba_sample = ctx.scuba().clone();
 
     scuba_sample.add("log_tag", "Done processing bookmark update entry");
     add_bookmark_entry_info(&mut scuba_sample, entry);
     scuba_sample.add("elapsed", elapsed.as_millis());
 
-    scuba_sample.log()
+    scuba_sample.log();
+
+    STATS::bookmark_update_entry_done_count.add_value(1, (repo_name.to_string(),));
+    STATS::bookmark_update_entry_done_time_ms
+        .add_value(elapsed.as_millis() as i64, (repo_name.to_string(),));
 }
 
 pub(crate) fn add_bookmark_entry_info(
@@ -94,10 +109,11 @@ pub(crate) fn add_bookmark_entry_info(
 
 pub(crate) fn log_bookmark_update_entry_error(
     ctx: &CoreContext,
+    repo_name: &str,
     entry: &BookmarkUpdateLogEntry,
     error: &anyhow::Error,
     elapsed: std::time::Duration,
-) -> bool {
+) {
     let mut scuba_sample = ctx.scuba().clone();
 
     scuba_sample.add("log_tag", "Error processing bookmark");
@@ -105,7 +121,12 @@ pub(crate) fn log_bookmark_update_entry_error(
     scuba_sample.add("error", format!("{:?}", error));
     scuba_sample.add("elapsed", elapsed.as_millis());
 
-    scuba_sample.log()
+    scuba_sample.log();
+
+    STATS::bookmark_update_entry_done_count.add_value(1, (repo_name.to_string(),));
+    STATS::bookmark_update_entry_done_time_ms
+        .add_value(elapsed.as_millis() as i64, (repo_name.to_string(),));
+    STATS::bookmark_update_entry_error_count.add_value(1, (repo_name.to_string(),));
 }
 
 pub(crate) fn log_changeset_start(ctx: &CoreContext, changeset_id: &ChangesetId) -> bool {
