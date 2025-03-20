@@ -733,7 +733,7 @@ impl<Value: ShardedMapV2Value> ShardedMapV2Node<Value> {
             // we should output all the values included in this node and
             // its descendants, after any resume point.
 
-            accumulated_prefix.extend(current_prefix);
+            accumulated_prefix.extend_from_slice(&current_prefix);
 
             if let Some(value) = value {
                 out.push(OrderedTraversal::Output((
@@ -813,7 +813,7 @@ impl<Value: ShardedMapV2Value> ShardedMapV2Node<Value> {
                 None => return Ok(()),
             };
 
-            accumulated_prefix.extend(current_prefix);
+            accumulated_prefix.extend_from_slice(&current_prefix);
             accumulated_prefix.push(*byte_prefix);
 
             if let LoadableShardedMapV2Node::Inlined(child) = child {
@@ -929,7 +929,7 @@ impl<Value: ShardedMapV2Value> ShardedMapV2Node<Value> {
                         ..
                     } = current_node.load(ctx, blobstore).await?;
 
-                    accumulated_prefix.extend(prefix);
+                    accumulated_prefix.extend_from_slice(&prefix);
 
                     Ok((
                         value.map(|value| (accumulated_prefix.clone(), *value)),
