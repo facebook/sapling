@@ -203,7 +203,7 @@ extern "C" void traceprof_disable() {
   r2 = rdtsc();
   t2 = now_microseconds() / 1000;
   /* calculate rdtscratio */
-  rdtscratio = (t2 - t1) / (double)(r2 - r1);
+  rdtscratio = (t2 - t1) / static_cast<double>(r2 - r1);
 }
 
 /* reporting ---------------------------------------------------------------- */
@@ -332,7 +332,8 @@ static int timelen() {
     if (s.second.time > maxframetime)
       maxframetime = s.second.time;
   }
-  for (double t = (double)maxframetime * rdtscratio; t >= 10; t /= 10) {
+  for (double t = static_cast<double>(maxframetime) * rdtscratio; t >= 10;
+       t /= 10) {
     n++;
   }
   return n;
@@ -372,14 +373,17 @@ static void fprintframetree(
   rdtsc_t ctotaltime = 0;
   for (auto& cfid : framechildren[fid]) {
     auto& cs = summaries[cfid];
-    if ((double)cs.time * rdtscratio >= timethreshold || cs.count == 0)
+    if (static_cast<double>(cs.time) * rdtscratio >= timethreshold ||
+        cs.count == 0)
       cfids.push_back(cfid);
     ctotaltime += cs.time;
   }
 
   /* hot frame? frame time > 2 * sum(child frame time) and frame time >
    * 30ms */
-  int hot = (s.time > ctotaltime * 2 && (double)s.time * rdtscratio > 30);
+  int hot =
+      (s.time > ctotaltime * 2 &&
+       static_cast<double>(s.time) * rdtscratio > 30);
 
   if (fid != 0) {
     int ncol = 0;
@@ -393,7 +397,7 @@ static void fprintframetree(
 
     /* time in ms */
     if (s.count > 0) {
-      ncol += fprintf(fp, timefmt(), (double)s.time * rdtscratio);
+      ncol += fprintf(fp, timefmt(), static_cast<double>(s.time) * rdtscratio);
     } else {
       ncol += fprintindent(fp, timelen()); /* call not recorded */
     }
@@ -447,7 +451,8 @@ static void traceprof_report(FILE* fp = stderr) {
   buildsummaries();
   buildframetree();
   fprintframetree(fp, dedupfid(0));
-  fprintf(fp, "Total time: %.0f ms\n", (double)(r2 - r1) * rdtscratio);
+  fprintf(
+      fp, "Total time: %.0f ms\n", static_cast<double>(r2 - r1) * rdtscratio);
   clear();
 }
 
