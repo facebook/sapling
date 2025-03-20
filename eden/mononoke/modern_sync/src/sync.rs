@@ -458,7 +458,9 @@ pub async fn process_bookmark_update_log_entry(
                 bookmark_name,
                 current_position
             );
-            info!(logger, "Skipping {} commits within batch", skip_commits);
+            if skip_commits > 0 {
+                info!(logger, "Skipping {} commits within batch", skip_commits);
+            }
             let skip = std::mem::replace(&mut skip_commits, 0);
 
             async move {

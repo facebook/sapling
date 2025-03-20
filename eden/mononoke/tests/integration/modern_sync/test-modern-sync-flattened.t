@@ -73,7 +73,6 @@ Sync all bookmarks moves
   Done calculating segments for entry 2, from changeset None to changeset ChangesetId(Blake2(5b1c7130dde8e54b4285b9153d8e56d69fbf4ae685eaf9e9766cc409861995f8)), to generation 5 in *ms (glob)
   Resuming from latest entry checkpoint 0
   Skipping 0 batches from entry 2
-  Skipping 0 commits within batch
   Starting sync of 5 missing commits, 0 were already synced
   Setting checkpoint from entry 2 to 0
   Setting bookmark master_bookmark from None to Some(HgChangesetId(HgNodeHash(Sha1(8c3947e5d8bd4fe70259eca001b8885651c75850))))
