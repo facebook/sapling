@@ -472,13 +472,10 @@ fn create_dir_with_mode(path: &Path, mode: u32) -> anyhow::Result<()> {
         let _ = fs::remove_dir(&temp);
 
         // The rename may fail if the desinated directory already exists and is not empty. In this
-        // case it will return `ENOTEMPTY` instead of `EEXIST`. Rust does not have an
-        // `io::ErrorKind` for such error, and it will be categorized into `ErrorKind::Other`. We
-        // have to use `libc::ENOTEMPTY` because the integer value of `ENOTEMPTY` varies depends on
-        // platform we are on.
+        // case it will return `ENOTEMPTY` instead of `EEXIST`.
         // Similarly, when the destinated directory is a file, we get `ENOTDIR` instead of `EEXIST`.
-        match e.raw_os_error() {
-            Some(libc::ENOTEMPTY) => {
+        match e.kind() {
+            ErrorKind::DirectoryNotEmpty => {
                 // Target directory exists now - we probably raced with someone else to create it.
 
                 // Best effort to fix permissions.
@@ -486,7 +483,7 @@ fn create_dir_with_mode(path: &Path, mode: u32) -> anyhow::Result<()> {
 
                 Ok(())
             }
-            Some(libc::ENOTDIR) => Err(io::Error::from(ErrorKind::AlreadyExists).into()),
+            ErrorKind::NotADirectory => Err(io::Error::from(ErrorKind::AlreadyExists).into()),
             _ => Err::<(), anyhow::Error>(e.into())
                 .context(format!("renaming temp dir {:?} to {:?}", temp, &path)),
         }
