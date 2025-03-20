@@ -67,7 +67,6 @@ use tokio::sync::RwLock;
 use url::Url;
 
 use crate::bul_util;
-use crate::scuba;
 use crate::sender::edenapi::EdenapiSender;
 use crate::sender::manager::BookmarkInfo;
 use crate::sender::manager::ChangesetMessage;
@@ -79,6 +78,7 @@ use crate::sender::manager::TreeMessage;
 use crate::sender::manager::MODERN_SYNC_BATCH_CHECKPOINT_NAME;
 use crate::sender::manager::MODERN_SYNC_COUNTER_NAME;
 use crate::sender::manager::MODERN_SYNC_CURRENT_ENTRY_ID;
+use crate::stat;
 use crate::ModernSyncArgs;
 use crate::Repo;
 
@@ -124,7 +124,7 @@ pub async fn sync(
         ClientEntryPoint::ModernSync,
     ));
 
-    let scuba = scuba::new(app.clone(), &metadata, &repo_name, dry_run);
+    let scuba = stat::new(app.clone(), &metadata, &repo_name, dry_run);
     let session_container = SessionContainer::builder(app.fb)
         .metadata(Arc::new(metadata))
         .build();
@@ -188,7 +188,7 @@ pub async fn sync(
         repo.mutable_counters_arc(),
     );
     info!(logger, "Initialized channels");
-    scuba::log_sync_start(ctx, start_id);
+    stat::log_sync_start(ctx, start_id);
 
     let bookmark = app_args.bookmark;
     let last_entry = Arc::new(RwLock::new(None));
@@ -264,7 +264,7 @@ pub async fn sync(
                         )
                         .await
                         .inspect(|_| {
-                            scuba::log_bookmark_update_entry_done(
+                            stat::log_bookmark_update_entry_done(
                                 ctx,
                                 &repo_name,
                                 &entry,
@@ -272,7 +272,7 @@ pub async fn sync(
                             );
                         })
                         .inspect_err(|e| {
-                            scuba::log_bookmark_update_entry_error(
+                            stat::log_bookmark_update_entry_error(
                                 ctx,
                                 &repo_name,
                                 &entry,
@@ -380,7 +380,7 @@ pub async fn process_bookmark_update_log_entry(
         to_cs,
         approx_count_str,
     );
-    let (_, ctx) = { scuba::log_bookmark_update_entry_start(ctx, entry, approx_count) };
+    let (_, ctx) = { stat::log_bookmark_update_entry_start(ctx, entry, approx_count) };
 
     let commits = repo
         .commit_graph()
@@ -483,11 +483,11 @@ pub async fn process_bookmark_update_log_entry(
                             .await
                             {
                                 Ok(res) => {
-                                    scuba::log_changeset_done(&ctx, &cs_id, now.elapsed());
+                                    stat::log_changeset_done(&ctx, &cs_id, now.elapsed());
                                     Ok(res)
                                 }
                                 Err(e) => {
-                                    scuba::log_changeset_error(&ctx, &cs_id, &e, now.elapsed());
+                                    stat::log_changeset_error(&ctx, &cs_id, &e, now.elapsed());
                                     Err(e)
                                 }
                             }
@@ -566,7 +566,7 @@ pub async fn process_one_changeset(
     log_to_ods: bool,
     bookmark_name: &str,
 ) -> Result<Messages> {
-    scuba::log_changeset_start(ctx, cs_id);
+    stat::log_changeset_start(ctx, cs_id);
 
     let mut messages = Messages::default();
 

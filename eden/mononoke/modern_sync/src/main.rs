@@ -32,8 +32,8 @@ use repo_identity::RepoIdentity;
 
 mod bul_util;
 mod commands;
-mod scuba;
 mod sender;
+mod stat;
 mod sync;
 
 #[derive(Parser)]
