@@ -12,7 +12,7 @@ anyhow = "1.0.95"
 async-stream = "0.3"
 bytes = { version = "1.9.0", features = ["serde"] }
 futures = { version = "0.3.30", features = ["async-await", "compat"] }
-hex = "0.4.3"
+hex = { version = "0.4.3", features = ["alloc"] }
 itertools = "0.14.0"
 mercurial_bundles = { version = "0.1.0", path = "../mercurial/bundles" }
 mercurial_types = { version = "0.1.0", path = "../mercurial/types" }

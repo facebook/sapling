@@ -10,7 +10,7 @@ edition = "2021"
 anyhow = "1.0.95"
 clap = { version = "3.2.25", features = ["derive", "env", "regex", "unicode", "wrap_help"] }
 dirs = "6.0"
-hex = "0.4.3"
+hex = { version = "0.4.3", features = ["alloc"] }
 sapling-identity = { version = "0.1.0", path = "../../lib/identity" }
 serde = { version = "1.0.185", features = ["derive", "rc"] }
 sha2 = "0.10.6"

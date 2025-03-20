@@ -31,7 +31,7 @@ git_types = { version = "0.1.0", path = "../git/git_types" }
 gotham = "0.7.1"
 gotham_derive = "0.7.0"
 gotham_ext = { version = "0.1.0", path = "../gotham_ext" }
-hex = "0.4.3"
+hex = { version = "0.4.3", features = ["alloc"] }
 hooks = { version = "0.1.0", path = "../hooks" }
 http = "0.2"
 hyper = { version = "0.14.26", features = ["client", "http1", "http2", "stream"] }
