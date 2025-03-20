@@ -55,7 +55,7 @@ class TestFileParser {
       if (fileContents.find(kErrorFileContents.str()) == 0) {
         auto errorString = fileContents.substr(kErrorFileContents.size());
         auto errorNum = std::stoi(errorString);
-        return folly::makeUnexpected<int>((int)errorNum);
+        return folly::makeUnexpected<int>(static_cast<int>(errorNum));
       }
 
       return fileContents;
