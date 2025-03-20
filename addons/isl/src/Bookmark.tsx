@@ -36,7 +36,7 @@ const styles = stylex.create({
     maxWidth: 'unset',
   },
   bookmarkTag: {
-    maxWidth: '200px',
+    maxWidth: '300px',
   },
   modalButtonBar: {
     justifyContent: 'flex-end',
