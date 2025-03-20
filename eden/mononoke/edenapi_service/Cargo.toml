@@ -37,7 +37,7 @@ http = "0.2"
 hyper = { version = "0.14.26", features = ["client", "http1", "http2", "stream"] }
 itertools = "0.14.0"
 justknobs = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
-lazy_static = "1.5"
+lazy_static = { version = "1.5", features = ["spin_no_std"], default-features = false }
 manifest = { version = "0.1.0", path = "../manifest" }
 maplit = "1.0"
 mercurial_derivation = { version = "0.1.0", path = "../derived_data/mercurial_derivation" }

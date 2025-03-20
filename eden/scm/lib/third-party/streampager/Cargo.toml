@@ -18,7 +18,7 @@ bit-set = "0.5"
 dirs = "6.0"
 enum_dispatch = "0.3.13"
 indexmap = "2.2.6"
-lazy_static = "1.5"
+lazy_static = { version = "1.5", features = ["spin_no_std"], default-features = false }
 lru = { version = "=0.12.4", default-features = false }
 memmap2 = "0.5.10"
 notify = { version = "5", optional = true }

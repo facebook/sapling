@@ -13,7 +13,7 @@ license = "MIT"
 name = "zstore"
 
 [dependencies]
-lazy_static = "1.5"
+lazy_static = { version = "1.5", features = ["spin_no_std"], default-features = false }
 lru-cache = "0.1.2"
 parking_lot = { version = "0.12.1", features = ["send_guard"] }
 sapling-indexedlog = { version = "0.1.0", path = "../indexedlog" }

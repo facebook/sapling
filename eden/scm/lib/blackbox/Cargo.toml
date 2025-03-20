@@ -19,7 +19,7 @@ harness = false
 [dependencies]
 anyhow = "1.0.95"
 byteorder = "1.3"
-lazy_static = "1.5"
+lazy_static = { version = "1.5", features = ["spin_no_std"], default-features = false }
 libc = "0.2.139"
 parking_lot = { version = "0.12.1", features = ["send_guard"] }
 sapling-clientinfo = { version = "0.1.0", path = "../clientinfo" }

@@ -26,7 +26,7 @@ hyper-tls = "0.5"
 ipnetwork = "0.20.0"
 itertools = "0.14.0"
 justknobs = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
-lazy_static = "1.5"
+lazy_static = { version = "1.5", features = ["spin_no_std"], default-features = false }
 manifest = { version = "0.1.0", path = "../manifest" }
 maplit = "1.0"
 mercurial_types = { version = "0.1.0", path = "../mercurial/types" }
