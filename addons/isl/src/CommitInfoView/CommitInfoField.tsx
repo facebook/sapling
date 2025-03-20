@@ -77,44 +77,69 @@ export function CommitInfoField({
       </>
     );
   } else {
-    const Wrapper = field.type === 'textarea' ? SeeMoreContainer : Fragment;
+    const Wrapper =
+      field.type === 'textarea' || field.type === 'custom' ? SeeMoreContainer : Fragment;
     if (field.type === 'read-only' && !content) {
       // don't render empty read-only fields, since you can't "click to edit"
       return null;
     }
 
-    if (field.type !== 'read-only' && isBeingEdited) {
-      return (
-        <Section className="commit-info-field-section">
-          <SmallCapsTitle>
-            <Icon icon={field.icon} />
-            {field.key}
-          </SmallCapsTitle>
-          {field.type === 'field' ? (
-            <CommitInfoTextField
+    if (isBeingEdited) {
+      if (field.type === 'custom') {
+        const CustomEditorComponent = field.renderEditor;
+        return (
+          <Section className="commit-info-field-section">
+            <SmallCapsTitle>
+              <Icon icon={field.icon} />
+              {field.key}
+            </SmallCapsTitle>
+            <CustomEditorComponent
               field={field}
-              autoFocus={autofocus ?? false}
-              editedMessage={editedFieldContent}
-              setEditedCommitMessage={setEditedField}
-            />
-          ) : (
-            <CommitInfoTextArea
-              kind={field.type}
-              fieldConfig={field}
-              name={field.key}
-              autoFocus={autofocus ?? false}
-              editedMessage={editedFieldContent}
+              content={editedFieldContent}
               setEditedField={setEditedField}
+              autoFocus={autofocus ?? false}
             />
-          )}
-          {extra}
-        </Section>
-      );
+            {extra}
+          </Section>
+        );
+      } else if (field.type !== 'read-only') {
+        return (
+          <Section className="commit-info-field-section">
+            <SmallCapsTitle>
+              <Icon icon={field.icon} />
+              {field.key}
+            </SmallCapsTitle>
+            {field.type === 'field' ? (
+              <CommitInfoTextField
+                field={field}
+                autoFocus={autofocus ?? false}
+                editedMessage={editedFieldContent}
+                setEditedCommitMessage={setEditedField}
+              />
+            ) : (
+              <CommitInfoTextArea
+                kind={field.type}
+                fieldConfig={field}
+                name={field.key}
+                autoFocus={autofocus ?? false}
+                editedMessage={editedFieldContent}
+                setEditedField={setEditedField}
+              />
+            )}
+            {extra}
+          </Section>
+        );
+      }
     }
 
     let renderedContent;
     if (content) {
-      if (field.type === 'field') {
+      if (field.type === 'custom') {
+        const CustomDisplayComponent = field.renderDisplay;
+        const fieldContent =
+          content == null ? '' : Array.isArray(content) ? content.join(', ') : content;
+        renderedContent = <CustomDisplayComponent content={fieldContent} />;
+      } else if (field.type === 'field') {
         const tokens = Array.isArray(content) ? content : extractTokens(content)[0];
         renderedContent = (
           <div className="commit-info-tokenized-field">
@@ -183,7 +208,7 @@ function ClickToEditField({
   /** function to run when you click to edit. If null, the entire field will be non-editable. */
   startEditingField?: () => void;
   fieldKey: string;
-  kind: 'title' | 'field' | 'textarea' | 'read-only';
+  kind: 'title' | 'field' | 'textarea' | 'custom' | 'read-only';
 }) {
   const editable = startEditingField != null && kind !== 'read-only';
   const renderKey = convertFieldNameToKey(fieldKey);

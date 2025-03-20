@@ -75,7 +75,8 @@
   padding: var(--pad);
 }
 
-.commit-info-rendered-textarea {
+.commit-info-rendered-textarea,
+.commit-info-rendered-custom {
   cursor: pointer;
   white-space: pre-wrap;
   transition: background-color 0.1s;
@@ -86,7 +87,8 @@
 
 .commit-info-rendered-field:focus-visible,
 .commit-info-rendered-title:focus-visible,
-.commit-info-rendered-textarea:focus-visible {
+.commit-info-rendered-textarea:focus-visible,
+.commit-info-rendered-custom:focus-visible {
   outline: var(--focus-border) 1px auto;
   outline-offset: -1px;
 }
@@ -97,7 +99,8 @@
 }
 
 .commit-info-rendered-textarea:hover,
-.commit-info-rendered-field:hover {
+.commit-info-rendered-field:hover,
+.commit-info-rendered-custom:hover {
   background: var(--tooltip-background);
 }
 
@@ -179,9 +182,11 @@
 .commit-info-rendered-title:focus-within .hover-edit-button,
 .commit-info-rendered-field:focus-within .hover-edit-button,
 .commit-info-rendered-textarea:focus-within .hover-edit-button,
+.commit-info-rendered-custom:focus-within .hover-edit-button,
 .commit-info-rendered-title:hover .hover-edit-button,
 .commit-info-rendered-field:hover .hover-edit-button,
-.commit-info-rendered-textarea:hover .hover-edit-button {
+.commit-info-rendered-textarea:hover .hover-edit-button,
+.commit-info-rendered-custom:hover .hover-edit-button {
   opacity: 1;
 }
 

@@ -79,4 +79,15 @@ export type FieldConfig = {
       formatValues?: (tokens: Array<string>) => string | undefined;
       getUrl?: (token: string) => string;
     }
+  | {
+      type: 'custom';
+      renderEditor: React.ComponentType<{
+        field: FieldConfig;
+        content: string;
+        setEditedField: (fieldValue: string) => unknown;
+        autoFocus?: boolean;
+        extraProps?: Record<string, unknown>;
+      }>;
+      renderDisplay: React.ComponentType<{content: string}>;
+    }
 );
