@@ -31,5 +31,5 @@ tracing = { version = "0.1.41", features = ["attributes", "valuable"] }
 [dev-dependencies]
 quickcheck = "1.0"
 rand_chacha = "0.3"
-rand_core = "0.6"
+rand_core = { version = "0.6.4", features = ["getrandom", "std"], default-features = false }
 tempfile = "3.15"
