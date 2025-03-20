@@ -8,6 +8,6 @@ python_binary(
     main_src = "hgcache_size_logger.py",
     deps = [
         "//libfb/py:log",
-        "//rfe/scubadata:scubadata_py_DEPRECATED_USE_py3_INSTEAD",
+        "//rfe/scubadata:scubadata_py3",
     ],
 )

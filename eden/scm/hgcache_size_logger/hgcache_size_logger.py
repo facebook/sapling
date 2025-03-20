@@ -12,7 +12,7 @@ import socket
 import time
 
 from libfb.py import log
-from scubadata import ScubaData
+from rfe.scubadata.scubadata_py3 import Sample, ScubaData
 
 
 def computecachesize(cachepath, logger):
@@ -56,24 +56,25 @@ def main():
         return 0
 
     with ScubaData("mercurial_hgcache_size") as client:
-        scuba_dict = {
-            "normal": {"Host": socket.gethostname(), "Hgcache path": args.hgcache_path},
-            "int": {"time": int(time.time())},
-        }
+        sample = Sample()
+        # 'time' is implicitly set.
+        # https://www.internalfb.com/wiki/Scuba/user_guide/Logging_to_Scuba/Using_ScubaData/#python
+        sample.addNormalValue("Host", socket.gethostname())
+        sample.addNormalValue("Hgcache path", args.hgcache_path)
 
         try:
             cachesize, manifestsize, skipped = computecachesize(
                 args.hgcache_path, logger
             )
-            scuba_dict["int"]["Cache size"] = cachesize
-            scuba_dict["int"]["Manifest size"] = manifestsize
-            scuba_dict["int"]["Skipped"] = skipped
+            sample.addIntValue("Cache size", cachesize)
+            sample.addIntValue("Manifest size", manifestsize)
+            sample.addIntValue("Skipped", skipped)
         except Exception as exc:
             logger.exception("exception while computing cache size")
-            scuba_dict["normal"]["error"] = str(exc)
+            sample.addNormalValue("error", str(exc))
 
         try:
-            client.add_sample(scuba_dict)
+            client.addSample(sample)
         except Exception:
             logger.exception("exception while logging to scuba")
 
