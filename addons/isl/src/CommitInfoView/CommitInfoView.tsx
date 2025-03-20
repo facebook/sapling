@@ -28,22 +28,9 @@ import {ComparisonType} from 'shared/Comparison';
 import {useContextMenu} from 'shared/ContextMenu';
 import {usePrevious} from 'shared/hooks';
 import {firstLine, notEmpty, nullthrows} from 'shared/utils';
+import {tracker} from '../analytics';
 import {ChangedFilesWithFetching} from '../ChangedFilesWithFetching';
 import serverAPI from '../ClientToServerAPI';
-import {Commit} from '../Commit';
-import {OpenComparisonViewButton} from '../ComparisonView/OpenComparisonViewButton';
-import {Center} from '../ComponentUtils';
-import {confirmNoBlockingDiagnostics} from '../Diagnostics';
-import {getCachedGeneratedFileStatuses, useGeneratedFileStatuses} from '../GeneratedFile';
-import {numPendingImageUploads} from '../ImageUpload';
-import {Link} from '../Link';
-import {OperationDisabledButton} from '../OperationDisabledButton';
-import {SubmitSelectionButton} from '../SubmitSelectionButton';
-import {SubmitUpdateMessageInput} from '../SubmitUpdateMessageInput';
-import {SuggestedRebaseButton} from '../SuggestedRebase';
-import {UncommittedChanges} from '../UncommittedChanges';
-import {confirmUnsavedFiles} from '../UnsavedFiles';
-import {tracker} from '../analytics';
 import {
   allDiffSummaries,
   codeReviewProvider,
@@ -52,15 +39,23 @@ import {
 import {submitAsDraft, SubmitAsDraftCheckbox} from '../codeReview/DraftCheckbox';
 import {showBranchingPrModal} from '../codeReview/github/BranchingPrModal';
 import {overrideDisabledSubmitModes} from '../codeReview/github/branchPrState';
+import {Commit} from '../Commit';
+import {OpenComparisonViewButton} from '../ComparisonView/OpenComparisonViewButton';
+import {Center} from '../ComponentUtils';
+import {confirmNoBlockingDiagnostics} from '../Diagnostics';
 import {FoldButton, useRunFoldPreview} from '../fold';
+import {getCachedGeneratedFileStatuses, useGeneratedFileStatuses} from '../GeneratedFile';
 import {t, T} from '../i18n';
 import {IrrelevantCwdIcon} from '../icons/IrrelevantCwdIcon';
+import {numPendingImageUploads} from '../ImageUpload';
 import {readAtom, writeAtom} from '../jotaiUtils';
+import {Link} from '../Link';
 import {
   messageSyncingEnabledState,
   messageSyncingOverrideState,
   updateRemoteMessage,
 } from '../messageSyncing';
+import {OperationDisabledButton} from '../OperationDisabledButton';
 import {AmendMessageOperation} from '../operations/AmendMessageOperation';
 import {getAmendOperation} from '../operations/AmendOperation';
 import {getCommitOperation} from '../operations/CommitOperation';
@@ -76,9 +71,14 @@ import {repoRelativeCwd, useIsIrrelevantToCwd} from '../repositoryData';
 import {selectedCommits} from '../selection';
 import {commitByHash, latestHeadCommit, repositoryInfo} from '../serverAPIState';
 import {SplitButton} from '../stackEdit/ui/SplitButton';
+import {SubmitSelectionButton} from '../SubmitSelectionButton';
+import {SubmitUpdateMessageInput} from '../SubmitUpdateMessageInput';
 import {latestSuccessorUnlessExplicitlyObsolete} from '../successionUtils';
+import {SuggestedRebaseButton} from '../SuggestedRebase';
 import {showToast} from '../toast';
 import {GeneratedStatus, succeedableRevset} from '../types';
+import {UncommittedChanges} from '../UncommittedChanges';
+import {confirmUnsavedFiles} from '../UnsavedFiles';
 import {useModal} from '../useModal';
 import {firstOfIterable} from '../utils';
 import {CommitInfoField} from './CommitInfoField';
@@ -105,6 +105,8 @@ import {DiffStats, PendingDiffStats} from './DiffStats';
 import {FillCommitMessage} from './FillCommitMessage';
 import {CommitTitleByline, getFieldToAutofocus, Section, SmallCapsTitle} from './utils';
 
+import {useFeatureFlagSync} from '../featureFlags';
+import {Internal} from '../Internal';
 import './CommitInfoView.css';
 
 export function CommitInfoSidebar() {
@@ -180,6 +182,7 @@ function useFetchActiveDiffDetails(diffId?: string) {
 }
 
 export function CommitInfoDetails({commit}: {commit: CommitInfo}) {
+  const rollbackFeatureEnabled = useFeatureFlagSync(Internal.featureFlags?.ShowRollbackPlan);
   const [mode, setMode] = useAtom(commitMode);
   const isCommitMode = mode === 'commit';
   const hashOrHead = isCommitMode ? 'head' : commit.hash;
@@ -290,6 +293,10 @@ export function CommitInfoDetails({commit}: {commit: CommitInfo}) {
         {schema
           .filter(field => !isCommitMode || field.type !== 'read-only')
           .map(field => {
+            if (!rollbackFeatureEnabled && field.type === 'custom') {
+              return;
+            }
+
             const setField = (newVal: string) =>
               setEditedCommitMessage(val => ({
                 ...val,
