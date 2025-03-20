@@ -40,6 +40,11 @@ use crate::HgParents;
 use crate::MPathElement;
 use crate::Type;
 
+/// Maximum size of raw manifest contents that we will parse synchronously.
+/// Manifests that are larger than this size will be parsed on a blocking
+/// thread.
+const MAX_SYNC_PARSE_SIZE: usize = 1_000_000;
+
 #[derive(Debug, Clone, Eq, PartialEq)]
 pub struct ManifestContent {
     pub files: SortedVectorMap<MPathElement, Entry<HgManifestId, (FileType, HgFileNodeId)>>,
@@ -191,8 +196,17 @@ impl HgBlobManifest {
                     .with_max_poll(blobstore::BLOBSTORE_MAX_POLL_TIME_MS)
                     .await?;
                 match envelope {
-                    Some(envelope) => Ok(Some(Self::parse(envelope)?)),
-                    None => Result::<_>::Ok(None),
+                    Some(envelope) => {
+                        if envelope.contents().len() > MAX_SYNC_PARSE_SIZE {
+                            // This manifest is large, so parsing may block
+                            // the executor.  Parse it on a blocking thread.
+                            tokio::task::spawn_blocking(move || Ok(Some(Self::parse(envelope)?)))
+                                .await?
+                        } else {
+                            Ok(Some(Self::parse(envelope)?))
+                        }
+                    }
+                    None => anyhow::Ok(None),
                 }
             }
             .watched(ctx.logger())
