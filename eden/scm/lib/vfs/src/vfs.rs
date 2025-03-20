@@ -15,6 +15,8 @@ use std::io::Write;
 use std::os::unix::fs::PermissionsExt;
 use std::path::Path;
 use std::path::PathBuf;
+use std::sync::atomic::AtomicBool;
+use std::sync::atomic::Ordering;
 use std::sync::Arc;
 
 use anyhow::bail;
@@ -45,7 +47,7 @@ pub struct VFS {
 struct Inner {
     root: PathBuf,
     auditor: PathAuditor,
-    supports_symlinks: bool,
+    supports_symlinks: AtomicBool,
     supports_executables: bool,
     case_sensitive: bool,
 }
@@ -62,7 +64,7 @@ impl VFS {
         let auditor = PathAuditor::new(&root);
         let fs_type =
             fstype(&root).with_context(|| format!("can't construct a VFS for {:?}", root))?;
-        let supports_symlinks = supports_symlinks(root.as_path())?;
+        let supports_symlinks = AtomicBool::new(!cfg!(windows));
         let supports_executables = supports_executables(&fs_type);
         let case_sensitive = case_sensitive(&root, &fs_type)?;
 
@@ -229,7 +231,7 @@ impl VFS {
     /// Add a symlink `link_name` pointing to `link_dest`. On platforms that do not support symlinks,
     /// `link_name` will be a file containing the path to `link_dest`.
     fn symlink(&self, link_name: &Path, link_dest: &Path) -> Result<()> {
-        if self.inner.supports_symlinks && (cfg!(unix) || cfg!(windows)) {
+        if self.supports_symlinks() && (cfg!(unix) || cfg!(windows)) {
             #[cfg(windows)]
             {
                 fs_err::os::windows::fs::symlink_file(
@@ -373,7 +375,11 @@ impl VFS {
     }
 
     pub fn supports_symlinks(&self) -> bool {
-        self.inner.supports_symlinks
+        self.inner.supports_symlinks.load(Ordering::Acquire)
+    }
+
+    pub fn set_supports_symlinks(&self, value: bool) {
+        self.inner.supports_symlinks.store(value, Ordering::Release)
     }
 
     pub fn supports_executables(&self) -> bool {
@@ -447,28 +453,6 @@ mod unix_tests {
         assert_eq!(0o755, VFS::update_mode(0o644, true));
         assert_eq!(0o644, VFS::update_mode(0o755, false));
     }
-}
-
-fn supports_symlinks(path: &Path) -> Result<bool> {
-    if std::env::var("SL_DEBUG_DISABLE_SYMLINKS").is_ok() {
-        return Ok(false);
-    }
-
-    if !cfg!(windows) {
-        return Ok(true);
-    }
-
-    Ok(if let Some((root, ident)) = identity::sniff_root(path)? {
-        // This assumes that at this point symlinks are already properly checked for as part of
-        // the repo initialization
-        fs::read_to_string(root.join(ident.dot_dir()).join("requires"))?
-            .split_whitespace()
-            .any(|s| s == "windowssymlinks")
-    } else {
-        // There are some cases (e.g., tests) where we do not have an actual repo and thus
-        // no dot_dir directory. Gracefully fail in this case.
-        false
-    })
 }
 
 /// Since Windows determines if a file is executable based on its extension, it doesn't support

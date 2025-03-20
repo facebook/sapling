@@ -121,6 +121,13 @@ impl WorkingCopy {
 
         let is_eden = has_requirement("eden");
 
+        // Symlink support is currently set by a requirement.
+        if cfg!(windows) {
+            let supports_symlink = std::env::var_os("SL_DEBUG_DISABLE_SYMLINKS").is_none()
+                && has_requirement("windowssymlinks");
+            vfs.set_supports_symlinks(supports_symlink)
+        }
+
         let support_submodules =
             has_requirement("git") && config.get_or("git", "submodules", || true)?;
 
