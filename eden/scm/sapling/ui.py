@@ -1726,9 +1726,26 @@ class ui:
 
 
 def _normalizepath(rawloc: str) -> str:
+    """normalize url for comparsion
+
+    >>> def is_same(a, b):
+    ...     return _normalizepath(a) == _normalizepath(b)
+    >>> is_same(r'///a', r'file://a')
+    True
+    >>> is_same(r'/a', r'file:///a')
+    True
+    >>> is_same(r'file://///a', r'file:///a')
+    True
+    >>> is_same(r'///a', r'/a')
+    True
+    >>> is_same(r'a', r'/a')
+    False
+    """
     rawloc = rawloc.split("?", 1)[0]
     if rawloc.startswith("file:"):
         rawloc = rawloc[5:]
+    if rawloc.startswith("/"):
+        rawloc = "/" + rawloc.lstrip("/")
     if util.iswindows:
         rawloc = rawloc.replace("\\", "/")
     if os.path.sep != "/":
