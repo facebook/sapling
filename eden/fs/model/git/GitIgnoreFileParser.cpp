@@ -35,7 +35,7 @@ folly::Expected<GitIgnore, int> GitIgnoreFileParser::operator()(
       XLOG(WARNING) << "error reading file " << filePath
                     << folly::exceptionStr(ex);
     }
-    return folly::makeUnexpected((int)errNum);
+    return folly::makeUnexpected(static_cast<int>(errNum));
   } catch (const std::exception& ex) {
     XLOG(WARNING) << "error reading file " << filePath
                   << folly::exceptionStr(ex);
