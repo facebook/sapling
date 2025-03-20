@@ -145,7 +145,7 @@ impl DerivationContext {
         Derivable: BonsaiDerivable,
     {
         if let Some(rederivation) = self.rederivation.as_ref() {
-            if rederivation.needs_rederive(Derivable::VARIANT, csid) == Some(true) {
+            if rederivation.needs_rederive(Derivable::VARIANT, csid) {
                 return Ok(None);
             }
         }
@@ -163,9 +163,7 @@ impl DerivationContext {
         Derivable: BonsaiDerivable,
     {
         if let Some(rederivation) = self.rederivation.as_ref() {
-            csids.retain(|csid| {
-                rederivation.needs_rederive(Derivable::VARIANT, *csid) != Some(true)
-            });
+            csids.retain(|csid| !rederivation.needs_rederive(Derivable::VARIANT, *csid));
         }
         let derived = Derivable::fetch_batch(ctx, self, &csids).await?;
         Ok(derived)

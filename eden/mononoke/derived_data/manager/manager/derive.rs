@@ -57,23 +57,19 @@ pub trait Rederivation: Send + Sync + 'static {
     /// Determine whether a changeset needs rederivation of
     /// a particular derived data type.
     ///
-    /// If this function returns `None`, then it will only be
+    /// If this function returns `false`, then it will only be
     /// derived if it isn't already derived.
-    fn needs_rederive(&self, derivable_type: DerivableType, csid: ChangesetId) -> Option<bool>;
+    fn needs_rederive(&self, derivable_type: DerivableType, csid: ChangesetId) -> bool;
 
     /// Marks a changeset as having been derived.  After this
     /// is called, `needs_rederive` should not return `true` for
-    /// this changeset.
+    /// this changeset and derived data type.
     fn mark_derived(&self, derivable_type: DerivableType, csid: ChangesetId);
 }
 
 impl Rederivation for Mutex<HashSet<ChangesetId>> {
-    fn needs_rederive(&self, _derivable_type: DerivableType, csid: ChangesetId) -> Option<bool> {
-        if self.with(|rederive| rederive.contains(&csid)) {
-            Some(true)
-        } else {
-            None
-        }
+    fn needs_rederive(&self, _derivable_type: DerivableType, csid: ChangesetId) -> bool {
+        self.with(|rederive| rederive.contains(&csid))
     }
 
     fn mark_derived(&self, _derivable_type: DerivableType, csid: ChangesetId) {
@@ -82,12 +78,8 @@ impl Rederivation for Mutex<HashSet<ChangesetId>> {
 }
 
 impl Rederivation for Mutex<HashSet<(DerivableType, ChangesetId)>> {
-    fn needs_rederive(&self, derivable_type: DerivableType, csid: ChangesetId) -> Option<bool> {
-        if self.with(|rederive| rederive.contains(&(derivable_type, csid))) {
-            Some(true)
-        } else {
-            None
-        }
+    fn needs_rederive(&self, derivable_type: DerivableType, csid: ChangesetId) -> bool {
+        self.with(|rederive| rederive.contains(&(derivable_type, csid)))
     }
 
     fn mark_derived(&self, derivable_type: DerivableType, csid: ChangesetId) {
