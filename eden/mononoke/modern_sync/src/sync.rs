@@ -386,26 +386,31 @@ pub async fn process_bookmark_update_log_entry(
     let (commits, latest_checkpoint) = {
         let now = std::time::Instant::now();
 
-        let commits = repo
-            .commit_graph()
-            .ancestors_difference_segment_slices(&ctx, to_vec, from_vec, chunk_size)
-            .await
-            .with_context(|| "calculating segments")?;
+        let (commits, latest_checkpoint) = tokio::try_join!(
+            async {
+                repo.commit_graph()
+                    .ancestors_difference_segment_slices(&ctx, to_vec, from_vec, chunk_size)
+                    .await
+                    .with_context(|| "calculating segments")
+            },
+            async {
+                let checkpointed_entry = repo
+                    .mutable_counters()
+                    .get_counter(&ctx, MODERN_SYNC_CURRENT_ENTRY_ID)
+                    .await?
+                    .unwrap_or(0);
 
-        let checkpointed_entry = repo
-            .mutable_counters()
-            .get_counter(&ctx, MODERN_SYNC_CURRENT_ENTRY_ID)
-            .await?
-            .unwrap_or(0);
-
-        let latest_checkpoint = if checkpointed_entry == entry.id.0 as i64 {
-            repo.mutable_counters()
-                .get_counter(&ctx, MODERN_SYNC_BATCH_CHECKPOINT_NAME)
-                .await?
-                .unwrap_or(0)
-        } else {
-            0
-        };
+                if checkpointed_entry == entry.id.0 as i64 {
+                    Ok(repo
+                        .mutable_counters()
+                        .get_counter(&ctx, MODERN_SYNC_BATCH_CHECKPOINT_NAME)
+                        .await?
+                        .unwrap_or(0))
+                } else {
+                    Ok(0)
+                }
+            }
+        )?;
 
         info!(
             logger,
