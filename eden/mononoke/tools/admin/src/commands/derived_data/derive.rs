@@ -17,6 +17,7 @@ use context::SessionClass;
 use derived_data_manager::DerivedDataManager;
 use derived_data_manager::Rederivation;
 use futures_stats::TimedTryFutureExt;
+use itertools::Itertools;
 use mononoke_api::ChangesetId;
 use mononoke_app::args::ChangesetArgs;
 use mononoke_app::args::MultiDerivedDataArgs;
@@ -60,7 +61,13 @@ pub(super) async fn derive(
         // Force this binary to write to all blobstores
         ctx.session_mut()
             .override_session_class(SessionClass::Background);
-        Arc::new(Mutex::new(csids.iter().copied().collect::<HashSet<_>>()))
+        Arc::new(Mutex::new(
+            derived_data_types
+                .iter()
+                .copied()
+                .cartesian_product(csids.iter().copied())
+                .collect::<HashSet<_>>(),
+        ))
     } else {
         trace!(ctx.logger(), "about to derive {} commits", csids.len());
         Default::default()
