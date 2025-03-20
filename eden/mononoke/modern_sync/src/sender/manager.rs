@@ -164,36 +164,40 @@ impl SendManager {
 
         // Create channel for receiving content
         let (content_sender, content_recv) = mpsc::channel(CONTENT_CHANNEL_SIZE);
-        ContentManager::new(content_recv, external_sender.clone()).start(
+        ContentManager::new(content_recv).start(
             ctx.clone(),
             reponame.clone(),
+            external_sender.clone(),
             logger.clone(),
             cancellation_requested.clone(),
         );
 
         // Create channel for receiving files
         let (files_sender, files_recv) = mpsc::channel(FILES_CHANNEL_SIZE);
-        FilenodeManager::new(files_recv, external_sender.clone()).start(
+        FilenodeManager::new(files_recv).start(
             ctx.clone(),
             reponame.clone(),
+            external_sender.clone(),
             logger.clone(),
             cancellation_requested.clone(),
         );
 
         // Create channel for receiving trees
         let (trees_sender, trees_recv) = mpsc::channel(TREES_CHANNEL_SIZE);
-        TreeManager::new(trees_recv, external_sender.clone()).start(
+        TreeManager::new(trees_recv).start(
             ctx.clone(),
             reponame.clone(),
+            external_sender.clone(),
             logger.clone(),
             cancellation_requested.clone(),
         );
 
         // Create channel for receiving changesets
         let (changeset_sender, changeset_recv) = mpsc::channel(CHANGESET_CHANNEL_SIZE);
-        ChangesetManager::new(changeset_recv, external_sender.clone(), mc).start(
+        ChangesetManager::new(changeset_recv, mc).start(
             ctx.clone(),
             reponame.clone(),
+            external_sender.clone(),
             logger.clone(),
             cancellation_requested.clone(),
         );
@@ -280,6 +284,7 @@ trait Manager {
         self,
         ctx: CoreContext,
         reponame: String,
+        external_sender: Arc<EdenapiSender>,
         logger: Logger,
         cancellation_requested: Arc<AtomicBool>,
     );
@@ -287,15 +292,11 @@ trait Manager {
 
 struct ContentManager {
     content_recv: mpsc::Receiver<ContentMessage>,
-    content_es: Arc<EdenapiSender>,
 }
 
 impl ContentManager {
-    fn new(content_recv: mpsc::Receiver<ContentMessage>, content_es: Arc<EdenapiSender>) -> Self {
-        Self {
-            content_recv,
-            content_es,
-        }
+    fn new(content_recv: mpsc::Receiver<ContentMessage>) -> Self {
+        Self { content_recv }
     }
 
     async fn flush_batch(
@@ -345,12 +346,12 @@ impl Manager for ContentManager {
         mut self,
         ctx: CoreContext,
         reponame: String,
+        content_es: Arc<EdenapiSender>,
         content_logger: Logger,
         cancellation_requested: Arc<AtomicBool>,
     ) {
         mononoke::spawn_task(async move {
             let content_recv = &mut self.content_recv;
-            let content_es = &self.content_es;
 
             let mut pending_messages = VecDeque::new();
             let mut current_batch = Vec::new();
@@ -377,7 +378,7 @@ impl Manager for ContentManager {
                         }
 
                         if current_batch_size >= MAX_BLOB_BYTES || current_batch.len() >= MAX_CONTENT_BATCH_SIZE {
-                            if let Err(e) = ContentManager::flush_batch(content_es, &mut current_batch, current_batch_size, &mut pending_messages, &content_logger, reponame.clone()).await {
+                            if let Err(e) = ContentManager::flush_batch(&content_es, &mut current_batch, current_batch_size, &mut pending_messages, &content_logger, reponame.clone()).await {
                                 error!(content_logger, "Error processing content: {:?}", e);
                                 return;
                             }
@@ -386,7 +387,7 @@ impl Manager for ContentManager {
                     }
                     _ = flush_timer.tick() => {
                         if current_batch_size > 0 || !pending_messages.is_empty() {
-                            if let Err(e) = ContentManager::flush_batch(content_es, &mut current_batch, current_batch_size, &mut pending_messages, &content_logger, reponame.clone()).await {
+                            if let Err(e) = ContentManager::flush_batch(&content_es, &mut current_batch, current_batch_size, &mut pending_messages, &content_logger, reponame.clone()).await {
                                 error!(content_logger, "Error processing content: {:?}", e);
                                 return;
                             }
@@ -401,15 +402,11 @@ impl Manager for ContentManager {
 
 struct FilenodeManager {
     filenodes_recv: mpsc::Receiver<FileMessage>,
-    filenodes_es: Arc<EdenapiSender>,
 }
 
 impl FilenodeManager {
-    fn new(filenodes_recv: mpsc::Receiver<FileMessage>, filenodes_es: Arc<EdenapiSender>) -> Self {
-        Self {
-            filenodes_recv,
-            filenodes_es,
-        }
+    fn new(filenodes_recv: mpsc::Receiver<FileMessage>) -> Self {
+        Self { filenodes_recv }
     }
 
     async fn flush_filenodes(
@@ -469,12 +466,12 @@ impl Manager for FilenodeManager {
         mut self,
         ctx: CoreContext,
         reponame: String,
+        filenodes_es: Arc<EdenapiSender>,
         filenodes_logger: Logger,
         cancellation_requested: Arc<AtomicBool>,
     ) {
         mononoke::spawn_task(async move {
             let filenodes_recv = &mut self.filenodes_recv;
-            let filenodes_es = &self.filenodes_es;
 
             let mut encountered_error: Option<anyhow::Error> = None;
             let mut batch_filenodes = Vec::new();
@@ -512,14 +509,14 @@ impl Manager for FilenodeManager {
                             None => break,
                         }
                         if batch_filenodes.len() >= MAX_FILENODES_BATCH_SIZE {
-                            if let Err(e) = FilenodeManager::flush_filenodes(filenodes_es, &mut batch_filenodes, &mut batch_done_senders, &mut encountered_error, &reponame, &filenodes_logger).await {
+                            if let Err(e) = FilenodeManager::flush_filenodes(&filenodes_es, &mut batch_filenodes, &mut batch_done_senders, &mut encountered_error, &reponame, &filenodes_logger).await {
                                 error!(filenodes_logger, "Filenodes flush failed: {:?}", e);
                                 return;
                             }
                         }
                     }
                     _ = timer.tick() => {
-                        if let Err(e) = FilenodeManager::flush_filenodes(filenodes_es, &mut batch_filenodes, &mut batch_done_senders, &mut encountered_error, &reponame, &filenodes_logger).await {
+                        if let Err(e) = FilenodeManager::flush_filenodes(&filenodes_es, &mut batch_filenodes, &mut batch_done_senders, &mut encountered_error, &reponame, &filenodes_logger).await {
                             error!(filenodes_logger, "Filenodes flush failed: {:?}", e);
                             return;
                         }
@@ -532,15 +529,11 @@ impl Manager for FilenodeManager {
 
 struct TreeManager {
     trees_recv: mpsc::Receiver<TreeMessage>,
-    trees_es: Arc<EdenapiSender>,
 }
 
 impl TreeManager {
-    fn new(trees_recv: mpsc::Receiver<TreeMessage>, trees_es: Arc<EdenapiSender>) -> Self {
-        Self {
-            trees_recv,
-            trees_es,
-        }
+    fn new(trees_recv: mpsc::Receiver<TreeMessage>) -> Self {
+        Self { trees_recv }
     }
 
     async fn flush_trees(
@@ -596,12 +589,12 @@ impl Manager for TreeManager {
         mut self,
         ctx: CoreContext,
         reponame: String,
+        trees_es: Arc<EdenapiSender>,
         trees_logger: Logger,
         cancellation_requested: Arc<AtomicBool>,
     ) {
         mononoke::spawn_task(async move {
             let trees_recv = &mut self.trees_recv;
-            let trees_es = &self.trees_es;
 
             let mut encountered_error: Option<anyhow::Error> = None;
             let mut batch_trees = Vec::new();
@@ -646,14 +639,14 @@ impl Manager for TreeManager {
                             None => break,
                         }
                         if batch_trees.len() >= MAX_TREES_BATCH_SIZE {
-                            if let Err(e) = TreeManager::flush_trees(trees_es, &mut batch_trees, &mut batch_done_senders, &mut encountered_error, &reponame, &trees_logger).await {
+                            if let Err(e) = TreeManager::flush_trees(&trees_es, &mut batch_trees, &mut batch_done_senders, &mut encountered_error, &reponame, &trees_logger).await {
                                 error!(trees_logger, "Trees flush failed: {:?}", e);
                                 return;
                             }
                         }
                     }
                     _ = timer.tick() => {
-                        if let Err(e) = TreeManager::flush_trees(trees_es, &mut batch_trees, &mut batch_done_senders, &mut encountered_error, &reponame, &trees_logger).await {
+                        if let Err(e) = TreeManager::flush_trees(&trees_es, &mut batch_trees, &mut batch_done_senders, &mut encountered_error, &reponame, &trees_logger).await {
                             error!(trees_logger, "Trees flush failed: {:?}", e);
                             return;
                         }
@@ -666,21 +659,15 @@ impl Manager for TreeManager {
 
 struct ChangesetManager {
     changeset_recv: mpsc::Receiver<ChangesetMessage>,
-    changeset_es: Arc<EdenapiSender>,
     mc: Arc<dyn MutableCounters + Send + Sync>,
 }
 
 impl ChangesetManager {
     fn new(
         changeset_recv: mpsc::Receiver<ChangesetMessage>,
-        changeset_es: Arc<EdenapiSender>,
         mc: Arc<dyn MutableCounters + Send + Sync>,
     ) -> Self {
-        Self {
-            changeset_recv,
-            changeset_es,
-            mc,
-        }
+        Self { changeset_recv, mc }
     }
 
     async fn flush_batch(
@@ -777,12 +764,12 @@ impl Manager for ChangesetManager {
         mut self,
         ctx: CoreContext,
         reponame: String,
+        changeset_es: Arc<EdenapiSender>,
         changeset_logger: Logger,
         cancellation_requested: Arc<AtomicBool>,
     ) {
         mononoke::spawn_task(async move {
             let changeset_recv = &mut self.changeset_recv;
-            let changeset_es = &self.changeset_es;
             let mc = &self.mc;
 
             let mut encountered_error: Option<anyhow::Error> = None;
@@ -899,7 +886,7 @@ impl Manager for ChangesetManager {
                         }
 
                         if current_batch.len() >= MAX_CHANGESET_BATCH_SIZE {
-                            if let Err(e) = ChangesetManager::flush_batch(reponame.clone(), &ctx, &changeset_logger, changeset_es, mc.clone(), &mut current_batch, &mut pending_log, &mut latest_in_entry_checkpoint, &mut latest_entry_id, &mut latest_bookmark, &mut pending_notification)
+                            if let Err(e) = ChangesetManager::flush_batch(reponame.clone(), &ctx, &changeset_logger, &changeset_es, mc.clone(), &mut current_batch, &mut pending_log, &mut latest_in_entry_checkpoint, &mut latest_entry_id, &mut latest_bookmark, &mut pending_notification)
                             .await
                             {
                                 return Err(anyhow::anyhow!(
@@ -911,7 +898,7 @@ impl Manager for ChangesetManager {
                     }
                     _ = flush_timer.tick() =>
                     {
-                        if let Err(e) = ChangesetManager::flush_batch(reponame.clone(), &ctx, &changeset_logger, changeset_es, mc.clone(), &mut current_batch, &mut pending_log, &mut latest_in_entry_checkpoint, &mut latest_entry_id, &mut latest_bookmark, &mut pending_notification)
+                        if let Err(e) = ChangesetManager::flush_batch(reponame.clone(), &ctx, &changeset_logger, &changeset_es, mc.clone(), &mut current_batch, &mut pending_log, &mut latest_in_entry_checkpoint, &mut latest_entry_id, &mut latest_bookmark, &mut pending_notification)
                         .await
                         {
                             return Err(anyhow::anyhow!("Error processing changesets: {:?}", e));
