@@ -90,20 +90,7 @@ Sync all bookmarks moves
   Resuming from latest entry checkpoint 0
   Skipping 0 batches from entry 1
   Starting sync of 3 missing commits, 0 were already synced
-  Found error: The blob content.blake2.896ad5879a5df0403bfc93fc96507ad9c93b31b11f3d0fa05445da7918241e5d is censored.
-   Task/Sev: T0, retrying attempt #0
-  Found error: The blob content.blake2.896ad5879a5df0403bfc93fc96507ad9c93b31b11f3d0fa05445da7918241e5d is censored.
-   Task/Sev: T0, retrying attempt #1
-  Found error: The blob content.blake2.896ad5879a5df0403bfc93fc96507ad9c93b31b11f3d0fa05445da7918241e5d is censored.
-   Task/Sev: T0, retrying attempt #2
-  Error processing content: The blob content.blake2.896ad5879a5df0403bfc93fc96507ad9c93b31b11f3d0fa05445da7918241e5d is censored.
-   Task/Sev: T0
-  Error processing content: The blob content.blake2.896ad5879a5df0403bfc93fc96507ad9c93b31b11f3d0fa05445da7918241e5d is censored.
-   Task/Sev: T0
-  Error processing files/trees: Error waiting for contents: oneshot canceled
-  Trees flush failed: Error processing trees: Error waiting for contents: oneshot canceled
-  Found error: Filenodes upload: Expected 1 responses, got 0, retrying attempt #0
-  Found error: Filenodes upload: Expected 1 responses, got 0, retrying attempt #1
-  Found error: Filenodes upload: Expected 1 responses, got 0, retrying attempt #2
-  Failed to upload filenodes: Filenodes upload: Expected 1 responses, got 0
-  Filenodes flush failed: Filenodes upload: Expected 1 responses, got 0
+  Setting checkpoint from entry 1 to 0
+  Setting bookmark master_bookmark from None to Some(HgChangesetId(HgNodeHash(Sha1(d3b399ca8757acdb81c3681b052eb978db6768d8))))
+  Moved bookmark with result SetBookmarkResponse { data: Ok(()) }
+  Marking entry 1 as done

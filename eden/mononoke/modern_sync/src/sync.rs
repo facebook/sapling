@@ -105,7 +105,7 @@ pub async fn sync(
     chunk_size: u64,
     exit_file: PathBuf,
 ) -> Result<()> {
-    let repo: Repo = app.open_repo(&source_repo_arg).await?;
+    let repo: Repo = app.open_repo_unredacted(&source_repo_arg).await?;
     let _repo_id = repo.repo_identity().id();
     let repo_name = repo.repo_identity().name().to_string();
 
