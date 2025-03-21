@@ -100,6 +100,7 @@ impl RepoShardedProcessExecutor for ModernSyncProcessExecutor {
             self.sync_args.dry_run,
             self.sync_args.chunk_size.unwrap_or(CHUNK_SIZE_DEFAULT),
             self.app.args::<ModernSyncArgs>()?.exit_file.clone(),
+            false,
         )
         .await?;
         Ok(())
@@ -162,6 +163,7 @@ pub async fn run(app: MononokeApp, args: CommandArgs) -> Result<()> {
                 .clone()
                 .unwrap_or(CHUNK_SIZE_DEFAULT),
             exit_file.clone(),
+            false,
         )
         .await?;
     }

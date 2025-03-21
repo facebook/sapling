@@ -104,6 +104,7 @@ pub async fn sync(
     dry_run: bool,
     chunk_size: u64,
     exit_file: PathBuf,
+    noop_mode: bool,
 ) -> Result<()> {
     let repo: Repo = app.open_repo_unredacted(&source_repo_arg).await?;
     let _repo_id = repo.repo_identity().id();
@@ -175,6 +176,7 @@ pub async fn sync(
                 ctx.clone(),
                 repo.repo_blobstore().clone(),
             )
+            .with_noop_mode(noop_mode)
             .build()
             .await?,
         )

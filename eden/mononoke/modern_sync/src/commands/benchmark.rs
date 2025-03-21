@@ -21,10 +21,6 @@ use crate::ModernSyncArgs;
 /// Replays bookmark's moves
 #[derive(Parser)]
 pub struct CommandArgs {
-    #[clap(long = "start-id", help = "Start id for the sync [default: 0]")]
-    start_id: Option<u64>,
-    #[clap(long, help = "Print sent items without actually syncing")]
-    dry_run: bool,
     #[clap(long, help = "Chunk size for the sync [default: 1000]")]
     chunk_size: Option<u64>,
 }
@@ -37,14 +33,14 @@ pub async fn run(app: MononokeApp, args: CommandArgs) -> Result<()> {
     info!(app.logger(), "Running sync-once loop");
     crate::sync::sync(
         app,
-        args.start_id.clone(),
+        Some(0),
         source_repo_args,
         dest_repo_name,
         ExecutionType::SyncOnce,
-        args.dry_run,
+        false,
         args.chunk_size.clone().unwrap_or(CHUNK_SIZE_DEFAULT),
         PathBuf::from(""),
-        false,
+        true,
     )
     .await?;
 

@@ -56,6 +56,21 @@ use crate::stat;
 
 const MAX_RETRIES: usize = 3;
 
+#[derive(Clone, Debug, Default)]
+pub struct SenderConfig {
+    /// If true, neither loading nor sending will be attempted. Defaults to false.
+    pub disable: bool,
+}
+
+#[derive(Clone, Debug, Default)]
+pub struct EdenapiSenderConfig {
+    pub content_config: SenderConfig,
+    pub tree_config: SenderConfig,
+    pub filenode_config: SenderConfig,
+    pub changeset_config: SenderConfig,
+    pub bookmark_config: SenderConfig,
+}
+
 pub struct EdenapiSender {
     url: Url,
     reponame: String,
@@ -64,6 +79,7 @@ pub struct EdenapiSender {
     ctx: CoreContext,
     repo_blobstore: RepoBlobstore,
     client: Option<Client>,
+    config: EdenapiSenderConfig,
 }
 
 impl EdenapiSender {
@@ -82,8 +98,25 @@ impl EdenapiSender {
             logger,
             ctx,
             repo_blobstore,
+            config: EdenapiSenderConfig::default(),
             client: None,
         }
+    }
+
+    /// Disable all processing, i.e. both loading and sending.
+    pub fn with_noop_mode(mut self, noop_mode: bool) -> Self {
+        if noop_mode {
+            let config = SenderConfig { disable: true };
+            self.config = EdenapiSenderConfig {
+                content_config: config.clone(),
+                tree_config: config.clone(),
+                filenode_config: config.clone(),
+                changeset_config: config.clone(),
+                bookmark_config: config.clone(),
+            };
+        }
+
+        self
     }
 
     pub async fn build(mut self) -> Result<Self> {
@@ -121,6 +154,10 @@ impl EdenapiSender {
     }
 
     pub async fn upload_contents(&self, contents: Vec<ContentId>) -> Result<()> {
+        if self.config.content_config.disable {
+            return Ok(());
+        }
+
         self.with_retry(|this| this.upload_contents_attempt(contents.clone()).boxed())
             .await
     }
@@ -180,6 +217,10 @@ impl EdenapiSender {
     }
 
     pub async fn upload_trees(&self, trees: Vec<HgManifestId>) -> Result<()> {
+        if self.config.tree_config.disable {
+            return Ok(());
+        }
+
         self.with_retry(|this| this.upload_trees_attempt(trees.clone()).boxed())
             .await
     }
@@ -223,7 +264,12 @@ impl EdenapiSender {
         );
         Ok(())
     }
+
     pub async fn upload_filenodes(&self, fn_ids: Vec<HgFileNodeId>) -> Result<()> {
+        if self.config.filenode_config.disable {
+            return Ok(());
+        }
+
         self.with_retry(|this| this.upload_filenodes_attempt(fn_ids.clone()).boxed())
             .await
     }
@@ -274,6 +320,10 @@ impl EdenapiSender {
         from: Option<HgChangesetId>,
         to: Option<HgChangesetId>,
     ) -> Result<()> {
+        if self.config.bookmark_config.disable {
+            return Ok(());
+        }
+
         let res = self
             .client()?
             .set_bookmark(
@@ -294,6 +344,10 @@ impl EdenapiSender {
         &self,
         css: Vec<(HgBlobChangeset, BonsaiChangeset)>,
     ) -> Result<()> {
+        if self.config.changeset_config.disable {
+            return Ok(());
+        }
+
         self.with_retry(|this| this.upload_identical_changeset_attempt(css.clone()).boxed())
             .await
     }
