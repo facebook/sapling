@@ -45,6 +45,7 @@ pub async fn run(app: MononokeApp, args: CommandArgs) -> Result<()> {
         args.chunk_size.clone().unwrap_or(CHUNK_SIZE_DEFAULT),
         PathBuf::from(""),
         false,
+        None,
     )
     .await?;
 

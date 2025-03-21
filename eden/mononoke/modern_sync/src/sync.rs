@@ -52,6 +52,7 @@ use mononoke_types::ChangesetId;
 use mononoke_types::ContentId;
 use mononoke_types::FileChange;
 use mononoke_types::MPath;
+use mutable_counters::MutableCounters;
 use mutable_counters::MutableCountersArc;
 use mutable_counters::MutableCountersRef;
 use repo_blobstore::RepoBlobstore;
@@ -105,10 +106,12 @@ pub async fn sync(
     chunk_size: u64,
     exit_file: PathBuf,
     noop_mode: bool,
+    mc: Option<Arc<dyn MutableCounters + Send + Sync>>,
 ) -> Result<()> {
     let repo: Repo = app.open_repo_unredacted(&source_repo_arg).await?;
     let _repo_id = repo.repo_identity().id();
     let repo_name = repo.repo_identity().name().to_string();
+    let mc = mc.unwrap_or_else(|| repo.mutable_counters_arc());
 
     let config = repo
         .repo_config
@@ -189,7 +192,7 @@ pub async fn sync(
         logger.clone(),
         repo_name.clone(),
         exit_file,
-        repo.mutable_counters_arc(),
+        mc.clone(),
     );
     info!(logger, "Initialized channels");
     stat::log_sync_start(ctx, start_id);
@@ -206,6 +209,7 @@ pub async fn sync(
         cloned!(
             repo,
             repo_name,
+            mc,
             logger,
             sender,
             mut send_manager,
@@ -265,6 +269,7 @@ pub async fn sync(
                             app_args.log_to_ods,
                             &logger,
                             *last_entry.read().await,
+                            mc.clone(),
                         )
                         .await
                         .inspect(|_| {
@@ -314,6 +319,7 @@ pub async fn process_bookmark_update_log_entry(
     log_to_ods: bool,
     logger: &Logger,
     last_entry: Option<ChangesetId>,
+    mc: Arc<dyn MutableCounters + Send + Sync>,
 ) -> Result<()> {
     let repo_name = repo.repo_identity().name().to_string();
 
@@ -397,15 +403,13 @@ pub async fn process_bookmark_update_log_entry(
                     .with_context(|| "calculating segments")
             },
             async {
-                let checkpointed_entry = repo
-                    .mutable_counters()
+                let checkpointed_entry = mc
                     .get_counter(&ctx, MODERN_SYNC_CURRENT_ENTRY_ID)
                     .await?
                     .unwrap_or(0);
 
                 if checkpointed_entry == entry.id.0 as i64 {
-                    Ok(repo
-                        .mutable_counters()
+                    Ok(mc
                         .get_counter(&ctx, MODERN_SYNC_BATCH_CHECKPOINT_NAME)
                         .await?
                         .unwrap_or(0))
