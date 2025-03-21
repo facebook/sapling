@@ -18,7 +18,7 @@ use edenfs_error::ConnectAndRequestError;
 use edenfs_error::ErrorHandlingStrategy;
 use edenfs_error::HasErrorHandlingStrategy;
 use edenfs_error::Result;
-use fbinit::expect_init;
+use fbinit::FacebookInit;
 use parking_lot::Mutex;
 
 use crate::client::connector::EdenFsThriftClient;
@@ -44,9 +44,8 @@ pub struct EdenFsClient {
 }
 
 impl EdenFsClient {
-    // TODO: pass in FacebookInit
-    pub(crate) fn new(socket_file: PathBuf) -> Self {
-        let connector = EdenFsConnector::new(expect_init(), socket_file);
+    pub(crate) fn new(fb: FacebookInit, socket_file: PathBuf) -> Self {
+        let connector = EdenFsConnector::new(fb, socket_file);
         let connection = Mutex::new(EdenFsConnection {
             epoch: 0,
             client: connector.connect(None, None),

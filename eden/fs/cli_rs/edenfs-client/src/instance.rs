@@ -25,6 +25,7 @@ use edenfs_error::ResultExt;
 use edenfs_utils::get_executable;
 #[cfg(windows)]
 use edenfs_utils::strip_unc_prefix;
+use fbinit::expect_init;
 use tracing::event;
 use tracing::Level;
 use util::lock::PathLock;
@@ -102,7 +103,7 @@ impl EdenFsInstance {
     }
 
     pub fn get_client(&self) -> EdenFsClient {
-        EdenFsClient::new(self.socketfile())
+        EdenFsClient::new(expect_init(), self.socketfile())
     }
 
     pub(crate) fn socketfile(&self) -> PathBuf {
