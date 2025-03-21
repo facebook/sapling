@@ -56,30 +56,30 @@ Absorb
   2 changesets affected
   155c3fe 2
   edbfe68 1b
-  commit_info (author=test checkoutidentifier=0000000000000003 node=f84ddfee68927d4ebfe4344520adb71ccb173c4f repo=None)
-  commit_info (author=test checkoutidentifier=0000000000000003 node=e911dd548c90906d9f6733aa1612274865a7dfd2 repo=None)
+  commit_info (author=test checkoutidentifier=0000000000000003 mutation=absorb node=ee4c006896a84aefb2a11265c3d111fa29c5303a predecessors=edbfe685c913f3cec015588dbc0f1e03f5146d80 repo=None)
+  commit_info (author=test checkoutidentifier=0000000000000003 mutation=absorb node=4db57f75ff6289054315f0e20d85703b6122d922 predecessors=155c3fe008ceed8a313cbb9358999d850a57a06f repo=None)
   2 of 2 chunks applied
 
 Rebase with conflict resolution
   $ hg prev
   0 files updated, 0 files merged, 1 files removed, 0 files unresolved
-  [f84ddf] 1b
+  [ee4c00] 1b
   $ hg debugcheckoutidentifier
   0000000000000005
   $ echo 2z > 2
   $ hg commit -Am 2z
   adding 2
-  commit_info (author=test checkoutidentifier=0000000000000005 node=78930e916793ff11b38f4f89f92221c180f922a3 repo=None)
+  commit_info (author=test checkoutidentifier=0000000000000005 node=3affbc31f750be084dd0ff1123cb35f51949a4bf repo=None)
   $ hg debugcheckoutidentifier
   0000000000000006
   $ echo 3 > 3
   $ hg commit -Am 3
   adding 3
-  commit_info (author=test checkoutidentifier=0000000000000006 node=27fd2733660ce0233ef4603cebe6328681aa598d repo=None)
+  commit_info (author=test checkoutidentifier=0000000000000006 node=c889456c382b425f6cc387cccb7b42d176e7fe4f repo=None)
   $ hg debugcheckoutidentifier
   0000000000000007
-  $ hg rebase -s 'desc(2z)' -d e911dd548c90906d9f6733aa1612274865a7dfd2
-  rebasing 78930e916793 "2z"
+  $ hg rebase -s 'desc(2z)' -d 4db57f75ff6289054315f0e20d85703b6122d922
+  rebasing 3affbc31f750 "2z"
   merging 2
   warning: 1 conflicts while merging 2! (edit, then use 'hg resolve --mark')
   unresolved conflicts (see hg resolve, then hg rebase --continue)
@@ -93,16 +93,16 @@ Rebase with conflict resolution
   $ hg debugcheckoutidentifier
   0000000000000008
   $ hg rebase --continue
-  rebasing 78930e916793 "2z"
-  commit_info (author=test checkoutidentifier=0000000000000008 mutation=rebase node=2a9f3f40eebf9d189f51eeba40f6d45935255c3e predecessors=78930e916793ff11b38f4f89f92221c180f922a3 repo=None)
-  rebasing 27fd2733660c "3"
-  commit_info (author=test checkoutidentifier=0000000000000009 mutation=rebase node=b42c49c8c650d6040d4a4003a30c82e1cde21c50 predecessors=27fd2733660ce0233ef4603cebe6328681aa598d repo=None)
+  rebasing 3affbc31f750 "2z"
+  commit_info (author=test checkoutidentifier=0000000000000008 mutation=rebase node=bf042268a5395c9182ee4baa4385dc5de61ba908 predecessors=3affbc31f750be084dd0ff1123cb35f51949a4bf repo=None)
+  rebasing c889456c382b "3"
+  commit_info (author=test checkoutidentifier=0000000000000009 mutation=rebase node=f6174ca30f1c6747302f2b50c21c9ae1abcc3325 predecessors=c889456c382b425f6cc387cccb7b42d176e7fe4f repo=None)
   $ hg debugcheckoutidentifier
   0000000000000010
 
 Fold has no checkoutidentifier, but does log other commit info
   $ hg fold --from ".~2"
-  commit_info (author=test mutation=fold node=39938ad744a3c4695743296607b5786b8e1437c6 predecessors=e911dd548c90906d9f6733aa1612274865a7dfd2 2a9f3f40eebf9d189f51eeba40f6d45935255c3e b42c49c8c650d6040d4a4003a30c82e1cde21c50 repo=None)
+  commit_info (author=test mutation=fold node=659841fb007feadfad44964c25f67a36b46ac26b predecessors=4db57f75ff6289054315f0e20d85703b6122d922 bf042268a5395c9182ee4baa4385dc5de61ba908 f6174ca30f1c6747302f2b50c21c9ae1abcc3325 repo=None)
   3 changesets folded
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ hg debugcheckoutidentifier

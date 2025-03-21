@@ -2972,11 +2972,16 @@ class memctx(committablectx):
         ctx,
         op,
         parents=None,
+        date=None,
     ):
         extra = ctx.extra().copy()
         extra[op + "_source"] = ctx.hex()
         mutinfo = mutation.record(ctx.repo(), extra, [ctx.node()], op)
-        loginfo = {"predecessors": ctx.hex(), "mutation": op}
+        loginfo = {
+            "predecessors": ctx.hex(),
+            "mutation": op,
+            "checkoutidentifier": ctx.repo().dirstate.checkoutidentifier,
+        }
 
         return cls.mirror(
             ctx,
@@ -2984,6 +2989,7 @@ class memctx(committablectx):
             mutinfo=mutinfo,
             loginfo=loginfo,
             extra=extra,
+            date=date,
         )
 
     @classmethod

@@ -1272,27 +1272,25 @@ Absorb
   2 of 2 chunks applied
   $ 
   $ tglogm
-  @  426a0380e890 'E'
+  @  22b319b2c5c1 'E'
   │
-  o  d36b27fd01db 'D'
+  o  c383b2e801f7 'D'
   │
-  o  fe174cefb48c 'C'
+  o  a2d898e6f479 'C'
   │
   o  112478962961 'B'
   │
   o  426bada5c675 'A'
-  
   $ tglogm
-  @  426a0380e890 'E'
+  @  22b319b2c5c1 'E'
   │
-  o  d36b27fd01db 'D'
+  o  c383b2e801f7 'D'
   │
-  o  fe174cefb48c 'C'
+  o  a2d898e6f479 'C'
   │
   o  112478962961 'B'
   │
   o  426bada5c675 'A'
-  
 
 Landing
 

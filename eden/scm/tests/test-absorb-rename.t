@@ -42,9 +42,9 @@ rename a to b, then b to a
   $ hg status
 
   $ hg annotate -ncf a
-  3 5d1c5620e6f2 a: 1a
-  4 9a14ffe67ae9 b: 2a
-  5 9191d121a268 a: 3a
+  3 45a8a8907761 a: 1a
+  4 8123dbcf2e51 b: 2a
+  5 fe42bff0979f a: 3a
 
 when the first changeset is public
 
@@ -149,7 +149,7 @@ copy b to a
   $ hg absorb -aq
 
   $ hg log -G -p -T '{node|short} {desc}\n'
-  @  70606019f91b cp
+  @  10d2b0b4c50c cp
   │  diff --git a/b b/a
   │  rename from b
   │  rename to a
@@ -168,20 +168,19 @@ copy b to a
   │  +1
   │  +3c
   │
-  o  bfb67c3539c1 1
+  o  8125da0f2fc2 1
      diff --git a/b b/b
      new file mode 100644
      --- /dev/null
      +++ b/b
      @@ -0,0 +1,1 @@
      +1a
-  
 run absorb again would apply the change to c
 
   $ hg absorb -aq
 
   $ hg log -G -p -T '{node|short} {desc}\n'
-  @  8bd536cce368 cp
+  @  306537321486 cp
   │  diff --git a/b b/a
   │  rename from b
   │  rename to a
@@ -200,14 +199,13 @@ run absorb again would apply the change to c
   │  +1c
   │  +3c
   │
-  o  bfb67c3539c1 1
+  o  8125da0f2fc2 1
      diff --git a/b b/b
      new file mode 100644
      --- /dev/null
      +++ b/b
      @@ -0,0 +1,1 @@
      +1a
-  
 "move" b to a, c and d, follow d if a gets renamed to e, and c is deleted
 
   $ cd ..
@@ -248,7 +246,7 @@ run absorb again would apply the change to c
    2e
 
   $ hg log -G -p -T '{node|short} {desc}\n'
-  @  34be9b0c786e mv
+  @  89a575169d85 mv
   │  diff --git a/c b/c
   │  deleted file mode 100644
   │  --- a/c
@@ -260,7 +258,7 @@ run absorb again would apply the change to c
   │  rename from a
   │  rename to e
   │
-  o  13e56db5948d cp
+  o  d996d2ad951a cp
   │  diff --git a/b b/a
   │  rename from b
   │  rename to a
@@ -288,11 +286,10 @@ run absorb again would apply the change to c
   │   1d
   │  +4d
   │
-  o  0037613a5dc6 1
+  o  97758c741207 1
      diff --git a/b b/b
      new file mode 100644
      --- /dev/null
      +++ b/b
      @@ -0,0 +1,1 @@
      +1d
-  

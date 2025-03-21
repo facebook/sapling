@@ -26,7 +26,7 @@ Make sure various ways to mutate commits emit commit_info events.
 
 FIXME: no "predecessors"
   $ hg absorb -qa
-  {"category": "commit-info", "data": {"author": "test", "checkoutidentifier": "*", "metrics_type": "commit_info", "node": "256b43e70e5e8ac337d49411203c264bf1d17934", "repo": "repo1_server"}} (glob)
+  {"category": "commit-info", "data": {"author": "test", "checkoutidentifier": "*", "metrics_type": "commit_info", "mutation": "absorb", "node": "7da347b1b542345cf23aecffbda02adc9ca8f08a", "predecessors": "1f942012ef43a9544aa16f4823d8453d7b75c410", "repo": "repo1_server"}} (glob)
 
   $ newclientrepo
   $ drawdag <<EOS --config sampling.debug=false

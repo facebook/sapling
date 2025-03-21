@@ -93,11 +93,11 @@
   4ec16f8 commit 1
   2 of 2 chunks applied
   $ hg annotate a
-  f54828298aa6: 1a
-  bcf7a4f7b11a: 2b
-  ff5d556bb159: 3
-  63b22995aaf2: 4d
-  84e5416c937c: 5e
+  241ace8326d0: 1a
+  9b19176bb127: 2b
+  484c6ac0cea3: 3
+  04c8ba6df782: 4d
+  2f7ba78d6abc: 5e
 
 # Delete a few lines and related commits will be removed if they will be empty:
 
@@ -108,23 +108,23 @@
   $ hg absorb -a
   showing changes for a
           @@ -0,1 +0,0 @@
-  f548282 -1a
+  241ace8 -1a
           @@ -2,1 +1,0 @@
-  ff5d556 -3
+  484c6ac -3
           @@ -4,1 +2,0 @@
-  84e5416 -5e
+  2f7ba78 -5e
   
   3 changesets affected
-  84e5416 commit 5
-  ff5d556 commit 3
-  f548282 commit 1
+  2f7ba78 commit 5
+  484c6ac commit 3
+  241ace8 commit 1
   3 of 3 chunks applied
   $ hg annotate a
-  1cae118c7ed8: 2b
-  58a62bade1c6: 4d
+  17567d7d67ff: 2b
+  c04dc600ace7: 4d
   $ hg log -T '{rev} {desc}\n' -Gp
   @  12 commit 4
-  │  diff -r 1cae118c7ed8 -r 58a62bade1c6 a
+  │  diff -r 17567d7d67ff -r c04dc600ace7 a
   │  --- a/a	Thu Jan 01 00:00:00 1970 +0000
   │  +++ b/a	Thu Jan 01 00:00:00 1970 +0000
   │  @@ -1,1 +1,2 @@
@@ -132,7 +132,7 @@
   │  +4d
   │
   o  11 commit 2
-  │  diff -r 84add69aeac0 -r 1cae118c7ed8 a
+  │  diff -r 16674334a991 -r 17567d7d67ff a
   │  --- a/a	Thu Jan 01 00:00:00 1970 +0000
   │  +++ b/a	Thu Jan 01 00:00:00 1970 +0000
   │  @@ -0,0 +1,1 @@
@@ -163,10 +163,10 @@
   $ hg absorb -aq
   $ hg status
   $ hg annotate a
-  b35060a57a50: insert before 2b
-  b35060a57a50: 2b
-  946e4bc87915: 4d
-  946e4bc87915: insert aftert 4d
+  b493c37385e0: insert before 2b
+  b493c37385e0: 2b
+  ec7f94714b2a: 4d
+  ec7f94714b2a: insert aftert 4d
 
 # Bookmarks are moved:
 
@@ -174,16 +174,16 @@
   $ hg bookmark -r '.' b2
   $ hg bookmark ba
   $ hg bookmarks
-     b1                        b35060a57a50
-     b2                        946e4bc87915
-   * ba                        946e4bc87915
+     b1                        b493c37385e0
+     b2                        ec7f94714b2a
+   * ba                        ec7f94714b2a
   $ sed -i 's/insert/INSERT/' a
   $ hg absorb -aq
   $ hg status
   $ hg bookmarks
-     b1                        a4183e9b3d31
-     b2                        c9b20c925790
-   * ba                        c9b20c925790
+     b1                        701492731deb
+     b2                        a792c8f2d460
+   * ba                        a792c8f2d460
 
 # Non-mofified files are ignored:
 
@@ -199,15 +199,15 @@
   $ hg absorb -a
   showing changes for a
           @@ -0,1 +0,1 @@
-  a4183e9 -INSERT before 2b
-  a4183e9 +Insert before 2b
+  7014927 -INSERT before 2b
+  7014927 +Insert before 2b
           @@ -3,1 +3,1 @@
-  c9b20c9 -INSERT aftert 4d
-  c9b20c9 +Insert aftert 4d
+  a792c8f -INSERT aftert 4d
+  a792c8f +Insert aftert 4d
   
   2 changesets affected
-  c9b20c9 commit 4
-  a4183e9 commit 2
+  a792c8f commit 4
+  7014927 commit 2
   2 of 2 chunks applied
   $ hg status
   A c
@@ -223,35 +223,35 @@
           -Insert before 2b
           +insert before 2b
           @@ -3,1 +3,1 @@
-  85b4e0e -Insert aftert 4d
-  85b4e0e +insert aftert 4d
+  93862a2 -Insert aftert 4d
+  93862a2 +insert aftert 4d
   
   1 changeset affected
-  85b4e0e commit 4
+  93862a2 commit 4
   $ hg absorb -a
   showing changes for a
           @@ -0,1 +0,1 @@
           -Insert before 2b
           +insert before 2b
           @@ -3,1 +3,1 @@
-  85b4e0e -Insert aftert 4d
-  85b4e0e +insert aftert 4d
+  93862a2 -Insert aftert 4d
+  93862a2 +insert aftert 4d
   
   1 changeset affected
-  85b4e0e commit 4
+  93862a2 commit 4
   1 of 2 chunks applied
   $ hg diff -U 0
-  diff -r 1c8eadede62a a
+  diff -r f4cdbecd99bf a
   --- a/a	Thu Jan 01 00:00:00 1970 +0000
   +++ b/a	Thu Jan 01 00:00:00 1970 +0000
   @@ -1,1 +1,1 @@
   -Insert before 2b
   +insert before 2b
   $ hg annotate a
-  d6e0ccf6177f: Insert before 2b
-  d6e0ccf6177f: 2b
-  e2aa83de7582: 4d
-  e2aa83de7582: insert aftert 4d
+  e57f8b115d87: Insert before 2b
+  e57f8b115d87: 2b
+  fa39e2e50dfe: 4d
+  fa39e2e50dfe: insert aftert 4d
 
 # Make working copy clean:
 
@@ -331,14 +331,14 @@
   $ hg absorb -a b
   showing changes for b
           @@ -0,2 +0,2 @@
-  2517e37 -b line 1
-  61782db -b line 2
-  2517e37 +b Line 1
-  61782db +b Line 2
+  2156a2c -b line 1
+  3440b6f -b line 2
+  2156a2c +b Line 1
+  3440b6f +b Line 2
   
   2 changesets affected
-  61782db commit b 2
-  2517e37 commit b 1
+  3440b6f commit b 2
+  2156a2c commit b 1
   1 of 1 chunk applied
   $ hg status
   $ cat a b
@@ -351,10 +351,10 @@
 
   $ for i in a b; do sed -i 's/Line/line/' $i; done
   $ hg log -T '{rev}:{node} {desc}\n'
-  9:712d16a8f445834e36145408eabc1d29df05ec09 commit b 2
-  8:74cfa6294160149d60adbf7582b99ce37a4597ec commit b 1
-  5:28f10dcf96158f84985358a2e5d5b3505ca69c22 commit a 2
-  4:f9a81da8dc53380ed91902e5b82c1b36255a4bd0 commit a 1
+  9:7187128ea253f1046db1cb899a8fb84e5adf55f0 commit b 2
+  8:5998ceb9fa0dd3916e5b3bd95f21dfe901357230 commit b 1
+  5:b1717940ba15276e6ca31250ac4603f9effe8d0e commit a 2
+  4:cb19766bbe10477222cba73b7c9351e4c38bce0b commit a 1
   $ hg --config 'absorb.maxstacksize=1' absorb -n
   absorb: only the recent 1 changesets will be analysed
   showing changes for a
@@ -366,12 +366,12 @@
   showing changes for b
           @@ -0,2 +0,2 @@
           -b Line 1
-  712d16a -b Line 2
+  7187128 -b Line 2
           +b line 1
-  712d16a +b line 2
+  7187128 +b line 2
   
   1 changeset affected
-  712d16a commit b 2
+  7187128 commit b 2
 
 # Test obsolete markers creation:
 
@@ -385,40 +385,40 @@
   showing changes for a
           @@ -0,2 +0,2 @@
           -a Line 1
-  28f10dc -a Line 2
+  b171794 -a Line 2
           +a line 1
-  28f10dc +a line 2
+  b171794 +a line 2
   showing changes for b
           @@ -0,2 +0,2 @@
-  74cfa62 -b Line 1
-  712d16a -b Line 2
-  74cfa62 +b line 1
-  712d16a +b line 2
+  5998ceb -b Line 1
+  7187128 -b Line 2
+  5998ceb +b line 1
+  7187128 +b line 2
   
   3 changesets affected
-  712d16a commit b 2
-  74cfa62 commit b 1
-  28f10dc commit a 2
+  7187128 commit b 2
+  5998ceb commit b 1
+  b171794 commit a 2
   2 of 2 chunks applied
   $ hg log -T '{rev}:{node|short} {desc} {get(extras, "absorb_source")}\n'
-  12:cbc0c676ae8f commit b 2 
-  11:071dee819ad0 commit b 1 
-  10:4faf555e5598 commit a 2 
-  4:f9a81da8dc53 commit a 1 
+  12:5c0c8e4475ee commit b 2 7187128ea253f1046db1cb899a8fb84e5adf55f0
+  11:adb6517fe29c commit b 1 5998ceb9fa0dd3916e5b3bd95f21dfe901357230
+  10:1e3ad81440c1 commit a 2 b1717940ba15276e6ca31250ac4603f9effe8d0e
+  4:cb19766bbe10 commit a 1 6905bbb02e4e4ae007d5e6738558e0bbbcb08878
   $ hg absorb -a
   showing changes for a
           @@ -0,1 +0,1 @@
-  f9a81da -a Line 1
-  f9a81da +a line 1
+  cb19766 -a Line 1
+  cb19766 +a line 1
   
   1 changeset affected
-  f9a81da commit a 1
+  cb19766 commit a 1
   1 of 1 chunk applied
   $ hg log -T '{rev}:{node|short} {desc} {get(extras, "absorb_source")}\n'
-  3:a478955a9e03 commit b 2 
-  2:7380d5e6fab8 commit b 1 
-  1:4472dd5179eb commit a 2 
-  0:6905bbb02e4e commit a 1 
+  16:c972e4e4c278 commit b 2 5c0c8e4475ee09f0c4e0123f4bf3360199dae620
+  15:b68a3d5de718 commit b 1 adb6517fe29c18543f21ff85fe839aca6ab4b89e
+  14:04e06cb87728 commit a 2 1e3ad81440c1845beb9779cf7cfc3890f4db1add
+  13:b3c856cfc07f commit a 1 cb19766bbe10477222cba73b7c9351e4c38bce0b
 
 # Test config option absorb.amendflags and running as a sub command of amend:
 
@@ -458,10 +458,10 @@
           @@ -1,0 +1,1 @@
           +INS
           @@ -2,0 +3,1 @@
-  a478955 +END
+  c972e4e +END
   
   1 changeset affected
-  a478955 commit b 2
+  c972e4e commit b 2
   apply changes (yn)?  y
   1 of 2 chunks applied
   
@@ -547,8 +547,8 @@
   1154859 b12
   bfafb49 a12
   $ hg absorb -av | grep became
-  bfafb49242db: 1 file(s) changed, became 259b86984766
-  115485984805: 2 file(s) changed, became bd7f2557c265
+  bfafb49242db: 1 file(s) changed, became 1a2de97fc652
+  115485984805: 2 file(s) changed, became 0c930dfab74c
   30970dbf7b40: became empty and was dropped
   a393a58b9a85: became empty and was dropped
   $ hg log -T '{rev} {desc}\n' -Gp

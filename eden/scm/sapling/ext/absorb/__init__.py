@@ -210,18 +210,14 @@ def getfilestack(stack, path, seenfctxs=None):
     return uniq(fctxs), fctxmap
 
 
-def overlaycontext(
-    memworkingcopy, ctx, parents=None, extra=None, loginfo=None, mutinfo=None, date=None
-):
+def overlaycontext(memworkingcopy, ctx, parents=None, date=None):
     """({path: content}, ctx, (p1node, p2node)?, {}?) -> memctx
     memworkingcopy overrides file contents.
     """
-    mctx = context.memctx.mirror(
+    mctx = context.memctx.mirrorformutation(
         ctx,
+        "absorb",
         parents=parents,
-        extra=extra,
-        loginfo=loginfo,
-        mutinfo=mutinfo,
         date=date,
     )
     for path, data in memworkingcopy.items():
@@ -815,17 +811,11 @@ class fixupstate:
         different file contents replaced by memworkingcopy.
         """
         parents = p1 and [self.repo[p1]]
-        extra = ctx.extra()
-        mutinfo = mutation.record(self.repo, extra, [ctx.node()], "absorb")
-        loginfo = {"checkoutidentifier": self.checkoutidentifier}
 
         mctx = overlaycontext(
             memworkingcopy,
             ctx,
             parents,
-            extra=extra,
-            loginfo=loginfo,
-            mutinfo=mutinfo,
             date=self.opts["date"],
         )
         # preserve phase
