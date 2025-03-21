@@ -417,6 +417,10 @@ impl EdenapiSender {
     }
 
     pub async fn read_bookmark(&self, bookmark: String) -> Result<Option<HgChangesetId>> {
+        if self.config.bookmark_config.disable {
+            return Ok(None);
+        }
+
         let res = self
             .client()?
             .bookmarks2(vec![bookmark], Some(Freshness::MostRecent))
