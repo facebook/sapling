@@ -306,3 +306,17 @@ Respect IFS for read():
   > EOS
   $ echo "'$one' '$two'"
   'foo' ''
+
+ls -l behavior
+
+  $ mkdir dir
+  $ touch dir/foo dir/bar
+  $ ls -l dir
+  -rw-r--r-- bar
+  -rw-r--r-- foo
+  $ cd dir
+  $ ls -l
+  -rw-r--r-- bar
+  -rw-r--r-- foo
+  $ cd
+

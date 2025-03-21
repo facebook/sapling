@@ -15,6 +15,7 @@ import stat
 import sys
 import tarfile
 from functools import wraps
+from pathlib import PurePosixPath
 from typing import BinaryIO, Callable, Dict, Iterator, List, Optional, Tuple
 
 from .bufio import BufIO
@@ -779,28 +780,34 @@ def ls(args: List[str], stdout: BinaryIO, stderr: BinaryIO, fs: ShellFS):
                 # Expand contents of dir if arg is not a symlink or arg ends with "/"
                 arg.endswith("/") or not stat.S_ISLNK(fs.lstat(arg).st_mode)
             ):
-                entries += listdir(arg, listall=listall)
+                entries.append((arg, listdir(arg, listall=listall)))
             elif fs.lexists(arg):
-                entries.append(arg)
+                entries.append(("", [arg]))
             else:
                 stderr.write(f"ls: {arg}: No such file or directory\n".encode())
                 return 1
 
     if not paths_given:
-        entries = listdir("", listall=listall)
+        entries = [("", listdir("", listall=listall))]
+
     entries = sorted(entries)
 
-    def format_entry(path: str) -> str:
+    def format_entry(dir: str, entry: str) -> str:
         if listlong:
-            st = fs.lstat(path)
-            ls_mode = "%s %s" % (stat.filemode(st.st_mode), path)
+            full_path = PurePosixPath(dir, entry)
+            st = fs.lstat(full_path)
+            ls_mode = "%s %s" % (stat.filemode(st.st_mode), entry)
             if stat.S_ISLNK(st.st_mode):
-                ls_mode += " -> %s" % (fs.readlink(path),)
+                ls_mode += " -> %s" % (fs.readlink(full_path),)
             return ls_mode + "\n"
         else:
-            return f"{path}\n"
+            return f"{entry}\n"
 
-    lines = [format_entry(path) for path in entries]
+    lines = [
+        format_entry(dir, entry)
+        for dir, entries in entries
+        for entry in sorted(entries)
+    ]
     stdout.write("".join(lines).encode())
     return 0
 
