@@ -37,10 +37,22 @@ struct EdenFsConnection<T> {
     client: T,
 }
 
+pub trait EdenFsClientStatsHandler {
+    fn on_success(&self, attempts: usize, retries: usize);
+}
+
+struct NoopEdenFsClientStatsHandler {}
+
+impl EdenFsClientStatsHandler for NoopEdenFsClientStatsHandler {
+    fn on_success(&self, _attempts: usize, _retries: usize) {}
+}
+
 pub struct EdenFsClient {
     connector: EdenFsConnector,
     connection: Mutex<EdenFsConnection<EdenFsThriftClientFuture>>,
     streaming_connection: Mutex<EdenFsConnection<StreamingEdenFsThriftClientFuture>>,
+    stats_handler: Box<dyn EdenFsClientStatsHandler + Send + Sync>,
+    streaming_stats_handler: Box<dyn EdenFsClientStatsHandler + Send + Sync>,
 }
 
 impl EdenFsClient {
@@ -59,7 +71,23 @@ impl EdenFsClient {
             connector,
             connection,
             streaming_connection,
+            stats_handler: Box::new(NoopEdenFsClientStatsHandler {}),
+            streaming_stats_handler: Box::new(NoopEdenFsClientStatsHandler {}),
         }
+    }
+
+    pub fn set_stats_handler(
+        &mut self,
+        stats_handler: Box<dyn EdenFsClientStatsHandler + Send + Sync>,
+    ) {
+        self.stats_handler = stats_handler;
+    }
+
+    pub fn set_streaming_stats_handler(
+        &mut self,
+        stats_handler: Box<dyn EdenFsClientStatsHandler + Send + Sync>,
+    ) {
+        self.streaming_stats_handler = stats_handler;
     }
 
     pub async fn with_thrift<F, Fut, T, E>(
@@ -107,17 +135,7 @@ impl EdenFsClient {
 
             let error = match result {
                 Ok(result) => {
-                    // Attempts may be > 1 if we had to reconnect. We only want to log a soft error
-                    // on retry. Solely for logging purposes, don't panic if value wasn't "thrown"
-                    if retries > 0 {
-                        // TODO: add a mechanism for reporting successful retries to clients - maybe a succeed_after_retry lambda
-
-                        //     soft_error!(
-                        //         "eden_io_succeeded_after_retry",
-                        //         buck2_error!(buck2_error::ErrorTag::Input, "Eden IO retried {} times", retries),
-                        //         quiet: true
-                        //     ).ok();
-                    }
+                    self.stats_handler.on_success(attempts, retries);
                     break Ok(result);
                 }
                 Err(e) => e,
@@ -207,17 +225,7 @@ impl EdenFsClient {
 
             let error = match result {
                 Ok(result) => {
-                    // Attempts may be > 1 if we had to reconnect. We only want to log a soft error
-                    // on retry. Solely for logging purposes, don't panic if value wasn't "thrown"
-                    if retries > 0 {
-                        // TODO: add a mechanism for reporting successful retries to clients - maybe a succeed_after_retry lambda
-
-                        //     soft_error!(
-                        //         "eden_io_succeeded_after_retry",
-                        //         buck2_error!(buck2_error::ErrorTag::Input, "Eden IO retried {} times", retries),
-                        //         quiet: true
-                        //     ).ok();
-                    }
+                    self.streaming_stats_handler.on_success(attempts, retries);
                     break Ok(result);
                 }
                 Err(e) => e,
