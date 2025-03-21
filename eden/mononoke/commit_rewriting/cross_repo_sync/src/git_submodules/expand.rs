@@ -43,7 +43,6 @@ use mononoke_types::TrackedFileChange;
 use scuba_ext::FutureStatsScubaExt;
 use sorted_vector_map::SortedVectorMap;
 
-use crate::commit_syncers_lib::SubmoduleExpansionContentIds;
 use crate::git_submodules::in_memory_repo::InMemoryRepo;
 use crate::git_submodules::utils::build_recursive_submodule_deps;
 use crate::git_submodules::utils::get_git_hash_from_submodule_file;
@@ -56,6 +55,7 @@ use crate::git_submodules::utils::list_non_submodule_files_under;
 use crate::git_submodules::utils::submodule_diff;
 use crate::reporting::log_debug;
 use crate::reporting::log_info;
+use crate::rewrite::SubmoduleExpansionContentIds;
 use crate::types::Repo;
 
 /// Wrapper to differentiate submodule paths from file changes paths at the
