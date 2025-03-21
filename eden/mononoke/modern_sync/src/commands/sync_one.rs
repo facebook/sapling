@@ -92,6 +92,7 @@ pub async fn run(app: MononokeApp, args: CommandArgs) -> Result<()> {
                 ctx.clone(),
                 repo.repo_blobstore().clone(),
             )
+            .build()
             .await?,
         )
     };

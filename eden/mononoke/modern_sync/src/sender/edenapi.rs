@@ -57,21 +57,37 @@ use crate::stat;
 const MAX_RETRIES: usize = 3;
 
 pub struct EdenapiSender {
-    client: Client,
+    url: Url,
+    reponame: String,
     logger: Logger,
+    tls_args: TLSArgs,
     ctx: CoreContext,
     repo_blobstore: RepoBlobstore,
+    client: Option<Client>,
 }
 
 impl EdenapiSender {
-    pub async fn new(
+    pub fn new(
         url: Url,
         reponame: String,
         logger: Logger,
         tls_args: TLSArgs,
         ctx: CoreContext,
         repo_blobstore: RepoBlobstore,
-    ) -> Result<Self> {
+    ) -> Self {
+        Self {
+            url,
+            reponame,
+            tls_args,
+            logger,
+            ctx,
+            repo_blobstore,
+            client: None,
+        }
+    }
+
+    pub async fn build(mut self) -> Result<Self> {
+        let tls_args = self.tls_args.clone();
         let ci = ClientInfo::new_with_entry_point(ClientEntryPoint::ModernSync)?.to_json()?;
         let http_config = HttpClientConfig {
             cert_path: Some(tls_args.tls_certificate.into()),
@@ -81,24 +97,27 @@ impl EdenapiSender {
             ..Default::default()
         };
 
-        info!(logger, "Connecting to {}", url.to_string());
+        info!(self.logger, "Connecting to {}", self.url.to_string());
 
         let client = HttpClientBuilder::new()
-            .repo_name(&reponame)
-            .server_url(url)
-            .http_config(http_config)
+            .repo_name(&self.reponame)
+            .server_url(self.url.clone())
+            .http_config(http_config.clone())
             .http_version(HttpVersion::V11)
             .timeout(Duration::from_secs(300))
             .build()?;
 
         client.health().await?;
 
-        Ok(Self {
-            client,
-            logger,
-            ctx,
-            repo_blobstore,
-        })
+        self.client = Some(client);
+
+        Ok(self)
+    }
+
+    fn client(&self) -> Result<&Client> {
+        self.client
+            .as_ref()
+            .ok_or_else(|| anyhow!("EdenapiSender is not initialized"))
     }
 
     pub async fn upload_contents(&self, contents: Vec<ContentId>) -> Result<()> {
@@ -131,7 +150,7 @@ impl EdenapiSender {
 
         let expected_responses = full_items.len();
         let response = self
-            .client
+            .client()?
             .process_files_upload(full_items, None, None, UploadLookupPolicy::SkipLookup)
             .await?;
 
@@ -180,7 +199,7 @@ impl EdenapiSender {
             .await?;
 
         let expected_responses = entries.len();
-        let res = self.client.upload_trees_batch(entries).await?;
+        let res = self.client()?.upload_trees_batch(entries).await?;
         let ids = res
             .entries
             .try_collect::<Vec<_>>()
@@ -224,7 +243,7 @@ impl EdenapiSender {
             .await?;
 
         let expected_responses = filenodes.len();
-        let res = self.client.upload_filenodes_batch(filenodes).await?;
+        let res = self.client()?.upload_filenodes_batch(filenodes).await?;
         let ids = res
             .entries
             .try_collect::<Vec<_>>()
@@ -256,7 +275,7 @@ impl EdenapiSender {
         to: Option<HgChangesetId>,
     ) -> Result<()> {
         let res = self
-            .client
+            .client()?
             .set_bookmark(
                 bookmark,
                 to.map(|cs| cs.into()),
@@ -289,7 +308,7 @@ impl EdenapiSender {
             .await?;
 
         let expected_responses = entries.len();
-        let res = self.client.upload_identical_changesets(entries).await?;
+        let res = self.client()?.upload_identical_changesets(entries).await?;
 
         let responses = res.entries.try_collect::<Vec<_>>().await?;
         ensure!(
@@ -322,7 +341,7 @@ impl EdenapiSender {
             .iter()
             .map(|(hgid, _)| AnyId::HgChangesetId(hgid.clone().into()))
             .collect::<Vec<_>>();
-        let res = self.client.lookup_batch(hgids, None, None).await?;
+        let res = self.client()?.lookup_batch(hgids, None, None).await?;
         let missing = get_missing_in_order(res, ids);
         Ok(missing)
     }
@@ -337,7 +356,7 @@ impl EdenapiSender {
 
     pub async fn read_bookmark(&self, bookmark: String) -> Result<Option<HgChangesetId>> {
         let res = self
-            .client
+            .client()?
             .bookmarks2(vec![bookmark], Some(Freshness::MostRecent))
             .await?;
 

@@ -175,6 +175,7 @@ pub async fn sync(
                 ctx.clone(),
                 repo.repo_blobstore().clone(),
             )
+            .build()
             .await?,
         )
     };
