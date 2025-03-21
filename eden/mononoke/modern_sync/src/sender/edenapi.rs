@@ -69,6 +69,9 @@ pub struct EdenapiSenderConfig {
     pub filenode_config: SenderConfig,
     pub changeset_config: SenderConfig,
     pub bookmark_config: SenderConfig,
+
+    /// If true, the sender will not check if the content is already present in the target repo.
+    pub disable_check_existing: bool,
 }
 
 pub struct EdenapiSender {
@@ -113,6 +116,7 @@ impl EdenapiSender {
                 filenode_config: config.clone(),
                 changeset_config: config.clone(),
                 bookmark_config: config.clone(),
+                disable_check_existing: true,
             };
         }
 
@@ -390,6 +394,10 @@ impl EdenapiSender {
         &self,
         ids: Vec<(HgChangesetId, ChangesetId)>,
     ) -> Result<Vec<ChangesetId>> {
+        if self.config.disable_check_existing {
+            return Ok(ids.iter().map(|id| id.1).collect());
+        }
+
         let hgids = ids
             .clone()
             .iter()
