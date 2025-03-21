@@ -174,6 +174,15 @@ pub trait HasErrorHandlingStrategy {
     fn get_error_handling_strategy(&self) -> ErrorHandlingStrategy;
 }
 
+impl<E: HasErrorHandlingStrategy> HasErrorHandlingStrategy for ConnectAndRequestError<E> {
+    fn get_error_handling_strategy(&self) -> ErrorHandlingStrategy {
+        match self {
+            Self::ConnectionError(..) => ErrorHandlingStrategy::Reconnect,
+            Self::RequestError(e) => e.get_error_handling_strategy(),
+        }
+    }
+}
+
 macro_rules! impl_has_error_handling_strategy {
     ($err: ident) => {
         impl HasErrorHandlingStrategy for $err {
