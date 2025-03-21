@@ -15,7 +15,6 @@ mod utils;
 mod validation;
 
 pub use expand::SubmoduleExpansionData;
-pub(crate) use expand::SubmodulePath;
 pub use in_memory_repo::InMemoryRepo;
 pub use sync::sync_commit_with_submodule_expansion;
 pub(crate) use utils::build_recursive_submodule_deps;

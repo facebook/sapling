@@ -30,8 +30,8 @@ use movers::Movers;
 
 use crate::git_submodules::sync_commit_with_submodule_expansion;
 use crate::git_submodules::types::Repo;
+use crate::git_submodules::types::SubmodulePath;
 use crate::git_submodules::SubmoduleExpansionData;
-use crate::git_submodules::SubmodulePath;
 
 pub(crate) type SubmoduleExpansionContentIds = HashMap<SubmodulePath, HashSet<ContentId>>;
 

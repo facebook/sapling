@@ -78,6 +78,7 @@ use crate::commit_syncers_lib::submodule_repos_with_content_ids;
 use crate::commit_syncers_lib::update_mapping_with_version;
 use crate::commit_syncers_lib::CommitSyncRepos;
 use crate::commit_syncers_lib::SyncedAncestorsVersions;
+use crate::git_submodules::types::SubmoduleDeps;
 use crate::git_submodules::InMemoryRepo;
 use crate::git_submodules::SubmoduleExpansionData;
 use crate::rewrite::rewrite_commit;
@@ -87,7 +88,6 @@ use crate::types::ErrorKind;
 use crate::types::PushrebaseRewriteDates;
 use crate::types::Repo;
 use crate::types::Source;
-use crate::types::SubmoduleDeps;
 use crate::types::Target;
 
 #[derive(Clone)]

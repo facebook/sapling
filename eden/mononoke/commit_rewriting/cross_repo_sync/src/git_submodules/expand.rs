@@ -8,7 +8,6 @@
 use std::clone::Clone;
 use std::collections::HashMap;
 use std::collections::HashSet;
-use std::fmt;
 use std::sync::Arc;
 
 use anyhow::anyhow;
@@ -47,6 +46,7 @@ use sorted_vector_map::SortedVectorMap;
 
 use crate::git_submodules::in_memory_repo::InMemoryRepo;
 use crate::git_submodules::types::Repo;
+use crate::git_submodules::types::SubmodulePath;
 use crate::git_submodules::utils::build_recursive_submodule_deps;
 use crate::git_submodules::utils::get_git_hash_from_submodule_file;
 use crate::git_submodules::utils::get_submodule_bonsai_changeset_id;
@@ -57,17 +57,6 @@ use crate::git_submodules::utils::is_path_git_submodule;
 use crate::git_submodules::utils::list_non_submodule_files_under;
 use crate::git_submodules::utils::submodule_diff;
 use crate::rewrite::SubmoduleExpansionContentIds;
-
-/// Wrapper to differentiate submodule paths from file changes paths at the
-/// type level.
-#[derive(Eq, Clone, Debug, PartialEq, Hash, PartialOrd, Ord)]
-pub struct SubmodulePath(pub(crate) NonRootMPath);
-
-impl std::fmt::Display for SubmodulePath {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        self.0.fmt(f)
-    }
-}
 
 // TODO(T174902563): support expansion of git submodules
 /// Everything needed to expand submodule changes

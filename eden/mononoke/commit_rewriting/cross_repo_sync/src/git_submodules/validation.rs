@@ -45,8 +45,8 @@ use reporting::log_trace;
 use scuba_ext::FutureStatsScubaExt;
 
 use crate::git_submodules::expand::SubmoduleExpansionData;
-use crate::git_submodules::expand::SubmodulePath;
 use crate::git_submodules::types::Repo;
+use crate::git_submodules::types::SubmodulePath;
 use crate::git_submodules::utils::build_recursive_submodule_deps;
 use crate::git_submodules::utils::content_id_of_file_with_type;
 use crate::git_submodules::utils::get_git_hash_from_submodule_file;

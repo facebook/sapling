@@ -37,6 +37,7 @@ use crate::commit_syncers_lib::get_movers_by_version;
 use crate::commit_syncers_lib::strip_removed_parents;
 use crate::commit_syncers_lib::submodule_metadata_file_prefix_and_dangling_pointers;
 use crate::commit_syncers_lib::submodule_repos_with_content_ids;
+use crate::git_submodules::types::SubmoduleDeps;
 use crate::git_submodules::InMemoryRepo;
 use crate::git_submodules::SubmoduleExpansionData;
 use crate::rewrite::rewrite_commit;
@@ -48,7 +49,6 @@ use crate::sync_config_version_utils::get_version_for_merge;
 use crate::types::ErrorKind;
 use crate::types::Repo;
 use crate::types::Source;
-use crate::types::SubmoduleDeps;
 use crate::types::Target;
 
 // TODO(T182311609): remove duplication from `CommitSyncOutcome`

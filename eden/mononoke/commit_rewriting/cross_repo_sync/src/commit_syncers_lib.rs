@@ -62,12 +62,12 @@ use crate::commit_sync_outcome::CommitSyncOutcome;
 use crate::commit_sync_outcome::DesiredRelationship;
 use crate::commit_sync_outcome::PluralCommitSyncOutcome;
 use crate::commit_syncer::CommitSyncer;
+use crate::git_submodules::types::SubmoduleDeps;
 use crate::rewrite::SubmoduleExpansionContentIds;
 use crate::sync_config_version_utils::get_mapping_change_version;
 use crate::types::ErrorKind;
 use crate::types::Repo;
 use crate::types::Source;
-use crate::types::SubmoduleDeps;
 use crate::types::Target;
 use crate::CommitSyncContext;
 

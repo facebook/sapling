@@ -70,7 +70,6 @@ pub use types::PushrebaseRewriteDates;
 pub use types::Repo;
 pub use types::Small;
 pub use types::Source;
-pub use types::SubmoduleDeps;
 pub use types::Target;
 pub use validation::find_bookmark_diff;
 pub use validation::report_different;
@@ -81,3 +80,5 @@ pub use validation::verify_working_copy_with_version;
 pub use validation::BookmarkDiff;
 pub use validation::UpdateLargeRepoBookmarksMode;
 pub use validation::VerifyBookmarksRunMode;
+
+pub use crate::git_submodules::types::SubmoduleDeps;
