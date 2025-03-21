@@ -5,7 +5,10 @@
 
 from __future__ import absolute_import
 
-import base64, collections, functools, stat
+import base64
+import collections
+import functools
+import stat
 
 import bindings
 
@@ -527,11 +530,17 @@ def _create_commits(repo, commit_infos, marks: Marks, amend=False):
             if split_marks:
                 split_nodes = marks.to_nodes(split_marks)
 
+        operation = commit_info.get("operation") or "importstack"
+
         if pred_nodes:
-            operation = commit_info.get("operation") or "importstack"
             mutinfo = mutation.record(repo, {}, pred_nodes, operation, split_nodes)
         else:
             mutinfo = None
+
+        loginfo = {
+            "mutation": operation,
+            "predecessors": " ".join([bytes.hex(p) for p in pred_nodes]),
+        }
 
         files = list(files_dict.keys())
         filectxfn = functools.partial(_filectxfn, files_dict=files_dict)
@@ -544,6 +553,7 @@ def _create_commits(repo, commit_infos, marks: Marks, amend=False):
             user,
             date,
             mutinfo=mutinfo,
+            loginfo=loginfo,
         )
         node = repo.commitctx(mctx)
         for pred in pred_nodes:

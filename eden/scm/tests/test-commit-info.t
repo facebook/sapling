@@ -39,5 +39,5 @@ FIXME: no "predecessors"
   > [["commit", {"author": "test", "date": [0, 0], "text": "changed", "mark": ":1", "parents": [],
   >   "predecessors": ["$A"], "files": {"A": {"data": "changed"}}}]]
   > EOS
-  {"category": "commit-info", "data": {"author": "test", "metrics_type": "commit_info", "node": "75e5b2af7d86c003e77552934d7ce0da89d6a8a0", "repo": "repo2_server"}}
+  {"category": "commit-info", "data": {"author": "test", "metrics_type": "commit_info", "mutation": "importstack", "node": "75e5b2af7d86c003e77552934d7ce0da89d6a8a0", "predecessors": "426bada5c67598ca65036d57d9e4b64b0c1ce7a0", "repo": "repo2_server"}}
   {":1": "75e5b2af7d86c003e77552934d7ce0da89d6a8a0"}
