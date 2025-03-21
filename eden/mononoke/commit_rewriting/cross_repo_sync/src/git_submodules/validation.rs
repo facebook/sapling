@@ -43,6 +43,7 @@ use scuba_ext::FutureStatsScubaExt;
 
 use crate::git_submodules::expand::SubmoduleExpansionData;
 use crate::git_submodules::expand::SubmodulePath;
+use crate::git_submodules::types::Repo;
 use crate::git_submodules::utils::build_recursive_submodule_deps;
 use crate::git_submodules::utils::content_id_of_file_with_type;
 use crate::git_submodules::utils::get_git_hash_from_submodule_file;
@@ -54,7 +55,6 @@ use crate::git_submodules::utils::x_repo_submodule_metadata_file_basename;
 use crate::reporting::log_debug;
 use crate::reporting::log_error;
 use crate::reporting::log_trace;
-use crate::types::Repo;
 
 /// A wrapper over BonsaiChangeset that can only be created by running submodule
 /// expansion validation on a bonsai.

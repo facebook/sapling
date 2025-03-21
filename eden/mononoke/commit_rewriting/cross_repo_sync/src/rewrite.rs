@@ -29,9 +29,9 @@ use movers::Mover;
 use movers::Movers;
 
 use crate::git_submodules::sync_commit_with_submodule_expansion;
+use crate::git_submodules::types::Repo;
 use crate::git_submodules::SubmoduleExpansionData;
 use crate::git_submodules::SubmodulePath;
-use crate::types::Repo;
 
 pub(crate) type SubmoduleExpansionContentIds = HashMap<SubmodulePath, HashSet<ContentId>>;
 

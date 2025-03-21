@@ -295,7 +295,7 @@ impl<R> Default for SubmoduleDeps<R> {
     }
 }
 
-impl<R: Repo> SubmoduleDeps<R> {
+impl<R: RepoIdentityRef> SubmoduleDeps<R> {
     pub fn get_submodule_deps_names(&self) -> Option<SortedVectorMap<&NonRootMPath, &str>> {
         match self {
             Self::ForSync(map) => Some(

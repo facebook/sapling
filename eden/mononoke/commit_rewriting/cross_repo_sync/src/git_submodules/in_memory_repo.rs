@@ -29,7 +29,7 @@ use repo_identity::RepoIdentity;
 use scuba_ext::MononokeScubaSampleBuilder;
 
 use crate::git_submodules::dummy_struct::DummyStruct;
-use crate::types::Repo;
+use crate::git_submodules::types::Repo;
 
 /// Container to access a repo's blobstore and derived data without writing
 /// anything to its blobstore or changeset table.

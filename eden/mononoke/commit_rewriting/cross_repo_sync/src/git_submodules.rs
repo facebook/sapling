@@ -10,6 +10,7 @@ mod dummy_struct;
 mod expand;
 mod in_memory_repo;
 mod sync;
+pub mod types;
 mod utils;
 mod validation;
 

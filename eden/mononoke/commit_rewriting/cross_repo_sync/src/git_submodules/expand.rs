@@ -44,6 +44,7 @@ use scuba_ext::FutureStatsScubaExt;
 use sorted_vector_map::SortedVectorMap;
 
 use crate::git_submodules::in_memory_repo::InMemoryRepo;
+use crate::git_submodules::types::Repo;
 use crate::git_submodules::utils::build_recursive_submodule_deps;
 use crate::git_submodules::utils::get_git_hash_from_submodule_file;
 use crate::git_submodules::utils::get_submodule_bonsai_changeset_id;
@@ -56,7 +57,6 @@ use crate::git_submodules::utils::submodule_diff;
 use crate::reporting::log_debug;
 use crate::reporting::log_info;
 use crate::rewrite::SubmoduleExpansionContentIds;
-use crate::types::Repo;
 
 /// Wrapper to differentiate submodule paths from file changes paths at the
 /// type level.

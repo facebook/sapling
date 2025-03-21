@@ -22,12 +22,12 @@ use scuba_ext::FutureStatsScubaExt;
 
 use crate::git_submodules::compact::compact_all_submodule_expansion_file_changes;
 use crate::git_submodules::expand::expand_all_git_submodule_file_changes;
+use crate::git_submodules::types::Repo;
 use crate::git_submodules::utils::get_submodule_expansions_affected;
 use crate::git_submodules::validation::ValidSubmoduleExpansionBonsai;
 use crate::reporting::set_scuba_logger_fields;
 use crate::rewrite::mover_to_multi_mover;
 use crate::rewrite::CommitRewriteResult;
-use crate::types::Repo;
 use crate::SubmoduleExpansionData;
 
 /// Sync a commit to/from a small repo with submodule expansion enabled.
