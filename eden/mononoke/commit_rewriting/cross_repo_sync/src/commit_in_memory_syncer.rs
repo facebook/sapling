@@ -27,6 +27,7 @@ use mononoke_types::BonsaiChangesetMut;
 use mononoke_types::ChangesetId;
 use mononoke_types::RepositoryId;
 use movers::Movers;
+use reporting::CommitSyncContext;
 use sorted_vector_map::SortedVectorMap;
 
 use crate::commit_sync_config_utils::get_git_submodule_action_by_version;
@@ -38,7 +39,6 @@ use crate::commit_syncers_lib::submodule_metadata_file_prefix_and_dangling_point
 use crate::commit_syncers_lib::submodule_repos_with_content_ids;
 use crate::git_submodules::InMemoryRepo;
 use crate::git_submodules::SubmoduleExpansionData;
-use crate::reporting::CommitSyncContext;
 use crate::rewrite::rewrite_commit;
 use crate::rewrite::SubmoduleExpansionContentIds;
 use crate::sync_config_version_utils::get_mapping_change_version;

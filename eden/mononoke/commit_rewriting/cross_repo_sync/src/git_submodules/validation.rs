@@ -39,6 +39,9 @@ use mononoke_types::FsnodeId;
 use mononoke_types::MPathElement;
 use mononoke_types::NonRootMPath;
 use movers::Mover;
+use reporting::log_debug;
+use reporting::log_error;
+use reporting::log_trace;
 use scuba_ext::FutureStatsScubaExt;
 
 use crate::git_submodules::expand::SubmoduleExpansionData;
@@ -52,9 +55,6 @@ use crate::git_submodules::utils::git_hash_from_submodule_metadata_file;
 use crate::git_submodules::utils::list_non_submodule_files_under;
 use crate::git_submodules::utils::root_fsnode_id_from_submodule_git_commit;
 use crate::git_submodules::utils::x_repo_submodule_metadata_file_basename;
-use crate::reporting::log_debug;
-use crate::reporting::log_error;
-use crate::reporting::log_trace;
 
 /// A wrapper over BonsaiChangeset that can only be created by running submodule
 /// expansion validation on a bonsai.

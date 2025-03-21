@@ -51,12 +51,12 @@ use repo_blobstore::RepoBlobstoreArc;
 use repo_blobstore::RepoBlobstoreRef;
 use repo_derived_data::RepoDerivedDataRef;
 use repo_identity::RepoIdentityRef;
+use reporting::log_warning;
 use sorted_vector_map::SortedVectorMap;
 
 use crate::git_submodules::expand::SubmoduleExpansionData;
 use crate::git_submodules::expand::SubmodulePath;
 use crate::git_submodules::types::Repo;
-use crate::reporting::log_warning;
 use crate::SubmoduleDeps;
 
 /// Get the git hash from a submodule file, which represents the commit from the

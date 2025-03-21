@@ -63,6 +63,7 @@ rust_library(
         "//eden/mononoke/commit_rewriting/bookmark_renaming:bookmark_renaming",
         "//eden/mononoke/commit_rewriting/live_commit_sync_config:live_commit_sync_config",
         "//eden/mononoke/commit_rewriting/movers:movers",
+        "//eden/mononoke/commit_rewriting/reporting:reporting",
         "//eden/mononoke/commit_rewriting/synced_commit_mapping:synced_commit_mapping",
         "//eden/mononoke/commit_rewriting/synced_commit_mapping:synced_commit_mapping_pushrebase_hook",
         "//eden/mononoke/common/scuba_ext:scuba_ext",

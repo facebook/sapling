@@ -175,7 +175,7 @@ fn log_with_level<S: Into<String>>(ctx: &CoreContext, level: slog::Level, msg: S
     }
 }
 
-pub(crate) fn set_scuba_logger_fields<K, V, L>(ctx: &CoreContext, data: L) -> CoreContext
+pub fn set_scuba_logger_fields<K, V, L>(ctx: &CoreContext, data: L) -> CoreContext
 where
     K: Into<String>,
     V: Into<ScubaValue>,

@@ -40,6 +40,8 @@ use mononoke_types::GitLfs;
 use mononoke_types::NonRootMPath;
 use mononoke_types::RepositoryId;
 use mononoke_types::TrackedFileChange;
+use reporting::log_debug;
+use reporting::log_info;
 use scuba_ext::FutureStatsScubaExt;
 use sorted_vector_map::SortedVectorMap;
 
@@ -54,8 +56,6 @@ use crate::git_submodules::utils::get_x_repo_submodule_metadata_file_path;
 use crate::git_submodules::utils::is_path_git_submodule;
 use crate::git_submodules::utils::list_non_submodule_files_under;
 use crate::git_submodules::utils::submodule_diff;
-use crate::reporting::log_debug;
-use crate::reporting::log_info;
 use crate::rewrite::SubmoduleExpansionContentIds;
 
 /// Wrapper to differentiate submodule paths from file changes paths at the

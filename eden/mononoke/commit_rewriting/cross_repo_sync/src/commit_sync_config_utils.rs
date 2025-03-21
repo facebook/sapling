@@ -25,8 +25,7 @@ use mononoke_types::RepositoryId;
 use movers::get_movers as get_movers_from_config;
 use movers::Mover;
 use movers::Movers;
-
-use crate::reporting::log_warning;
+use reporting::log_warning;
 
 // TODO(T169306120): rename this module
 

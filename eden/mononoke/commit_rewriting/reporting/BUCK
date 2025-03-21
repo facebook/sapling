@@ -1,0 +1,16 @@
+load("@fbcode_macros//build_defs:rust_library.bzl", "rust_library")
+
+oncall("scm_server_infra")
+
+# TODO(T182311609): get rid of this library
+rust_library(
+    name = "reporting",
+    srcs = ["reporting.rs"],
+    named_deps = {"slog": "//common/rust/shed/tracing_slog_compat:tracing_slog_compat"},
+    deps = [
+        "fbsource//third-party/rust:anyhow",
+        "//eden/mononoke/common/scuba_ext:scuba_ext",
+        "//eden/mononoke/mononoke_types:mononoke_types",
+        "//eden/mononoke/server/context:context",
+    ],
+)
