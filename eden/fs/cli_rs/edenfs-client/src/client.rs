@@ -20,12 +20,19 @@ use edenfs_error::HasErrorHandlingStrategy;
 use edenfs_error::Result;
 use fbinit::FacebookInit;
 use parking_lot::Mutex;
+use tokio::sync::Semaphore;
 
 use crate::client::connector::EdenFsThriftClient;
 use crate::client::connector::EdenFsThriftClientFuture;
 use crate::client::connector::StreamingEdenFsThriftClient;
 use crate::client::connector::StreamingEdenFsThriftClientFuture;
 
+// This value was selected semi-randomly and should be revisited in the future. Anecdotally, we
+// have seen EdenFS struggle with <<< 2048 outstanding requests, but the exact number depends
+// on the size/complexity/cost of the outstanding requests.
+const DEFAULT_MAX_OUTSTANDING_REQUESTS: usize = 2048;
+
+// Number of attempts to make for a given Thrift request before giving up.
 const MAX_RETRY_ATTEMPTS: usize = 3;
 
 /// An EdenFs client and an epoch to keep track of reconnections.
@@ -53,10 +60,20 @@ pub struct EdenFsClient {
     streaming_connection: Mutex<EdenFsConnection<StreamingEdenFsThriftClientFuture>>,
     stats_handler: Box<dyn EdenFsClientStatsHandler + Send + Sync>,
     streaming_stats_handler: Box<dyn EdenFsClientStatsHandler + Send + Sync>,
+    /// Eden has limits on concurrency and will return server overloaded (or timeout) errors if we
+    /// send too many. Experimentally, even for large builds (see details in D36136516), we don't
+    /// get much performance improvement beyond 2K concurrent requests, regardless of whether Eden
+    /// has a fast or slow connection to source control, a warm cache or not, and a lot of CPU
+    /// available to run or not.
+    semaphore: Semaphore,
 }
 
 impl EdenFsClient {
-    pub(crate) fn new(fb: FacebookInit, socket_file: PathBuf) -> Self {
+    pub(crate) fn new(
+        fb: FacebookInit,
+        socket_file: PathBuf,
+        semaphore: Option<Semaphore>,
+    ) -> Self {
         let connector = EdenFsConnector::new(fb, socket_file);
         let connection = Mutex::new(EdenFsConnection {
             epoch: 0,
@@ -73,6 +90,7 @@ impl EdenFsClient {
             streaming_connection,
             stats_handler: Box::new(NoopEdenFsClientStatsHandler {}),
             streaming_stats_handler: Box::new(NoopEdenFsClientStatsHandler {}),
+            semaphore: semaphore.unwrap_or(Semaphore::new(DEFAULT_MAX_OUTSTANDING_REQUESTS)),
         }
     }
 
@@ -113,6 +131,13 @@ impl EdenFsClient {
         Fut: Future<Output = Result<T, E>>,
         E: HasErrorHandlingStrategy + Debug + Display,
     {
+        // Acquire a permit from the semaphore. This will block if we have too many outstanding requests.
+        let _permit = self
+            .semaphore
+            .acquire()
+            .await
+            .expect("Eden I/O semaphore is never closed");
+
         let mut connection = (*self.connection.lock()).clone();
         let mut attempts = 0;
         let mut retries = 0;
@@ -203,6 +228,13 @@ impl EdenFsClient {
         Fut: Future<Output = Result<T, E>>,
         E: HasErrorHandlingStrategy + Debug + Display,
     {
+        // Acquire a permit from the semaphore. This will block if we have too many outstanding requests.
+        let _permit = self
+            .semaphore
+            .acquire()
+            .await
+            .expect("Eden I/O semaphore is never closed");
+
         let mut connection = (*self.streaming_connection.lock()).clone();
         let mut attempts = 0;
         let mut retries = 0;
