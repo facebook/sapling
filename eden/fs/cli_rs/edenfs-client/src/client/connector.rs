@@ -70,8 +70,7 @@ impl EdenFsConnector {
                 &socket_file,
                 conn_timeout.map_or(DEFAULT_CONN_TIMEOUT, |t| t).as_millis() as u32,
                 recv_timeout.map_or(DEFAULT_RECV_TIMEOUT, |t| t).as_millis() as u32,
-            )
-            .await?;
+            )?;
 
             // wait until the daemon is ready
             EdenFsConnector::wait_until_deamon_is_ready(client.clone()).await?;
@@ -86,7 +85,7 @@ impl EdenFsConnector {
         .shared()
     }
 
-    async fn connect_impl(
+    fn connect_impl(
         fb: FacebookInit,
         socket_file: &Path,
         conn_timeout: u32,
@@ -124,8 +123,7 @@ impl EdenFsConnector {
                 &socket_file,
                 conn_timeout.map_or(DEFAULT_CONN_TIMEOUT, |t| t).as_millis() as u32,
                 recv_timeout.map_or(DEFAULT_RECV_TIMEOUT, |t| t).as_millis() as u32,
-            )
-            .await?;
+            )?;
 
             // wait until the mount is ready
             EdenFsConnector::wait_until_deamon_is_ready(client.clone()).await?;
@@ -140,7 +138,7 @@ impl EdenFsConnector {
         .shared()
     }
 
-    pub async fn connect_streaming_impl(
+    pub fn connect_streaming_impl(
         fb: FacebookInit,
         socket_file: &Path,
         conn_timeout: u32,
