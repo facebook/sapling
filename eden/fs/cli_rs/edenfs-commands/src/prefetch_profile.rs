@@ -220,7 +220,7 @@ impl PrefetchCmd {
 
     async fn record(&self) -> Result<ExitCode> {
         let instance = EdenFsInstance::global();
-        let client = instance.get_client();
+        let client = instance.get_streaming_client();
 
         client.start_recording_backing_store_fetch().await?;
         Ok(0)

@@ -31,6 +31,7 @@ use tracing::Level;
 use util::lock::PathLock;
 
 use crate::client::EdenFsClient;
+use crate::client::StreamingEdenFsClient;
 
 // We should create a single EdenFsInstance when parsing EdenFs commands and utilize
 // EdenFsInstance::global() whenever we need to access it. This way we can avoid passing an
@@ -104,6 +105,10 @@ impl EdenFsInstance {
 
     pub fn get_client(&self) -> EdenFsClient {
         EdenFsClient::new(expect_init(), self.socketfile(), None)
+    }
+
+    pub fn get_streaming_client(&self) -> StreamingEdenFsClient {
+        StreamingEdenFsClient::new(expect_init(), self.socketfile(), None)
     }
 
     pub(crate) fn socketfile(&self) -> PathBuf {

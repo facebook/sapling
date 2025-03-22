@@ -62,7 +62,7 @@ impl StatusCmd {
         instance: &EdenFsInstance,
     ) -> edenfs_error::Result<thrift_types::edenfs::DaemonInfo> {
         let timeout = Duration::from_secs(self.timeout);
-        let client = instance.get_client();
+        let client = instance.get_streaming_client();
         let initial_result_and_stream = client.get_health_with_startup_updates_included(timeout);
         let waited_health = time::timeout(timeout, initial_result_and_stream)
             .await

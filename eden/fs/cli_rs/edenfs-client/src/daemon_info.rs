@@ -20,6 +20,7 @@ use tracing::event;
 use tracing::Level;
 
 use crate::client::EdenFsClient;
+use crate::client::StreamingEdenFsClient;
 
 pub trait DaemonHealthy {
     fn is_healthy(&self) -> bool;
@@ -43,15 +44,15 @@ impl EdenFsClient {
         .await
         .from_err()
     }
+}
 
+impl StreamingEdenFsClient {
     pub async fn get_health_with_startup_updates_included(
         &self,
         timeout: Duration,
     ) -> Result<(DaemonInfo, BoxStream<'static, Result<Vec<u8>>>)> {
         let (daemon_info, stream) = self
-            .with_streaming_thrift_with_timeouts(Some(timeout), None, |thrift| {
-                thrift.streamStartStatus()
-            })
+            .with_thrift_with_timeouts(Some(timeout), None, |thrift| thrift.streamStartStatus())
             .await
             .from_err()?;
 

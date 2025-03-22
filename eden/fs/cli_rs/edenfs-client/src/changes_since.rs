@@ -22,6 +22,7 @@ use thrift_types::edenfs::ChangesSinceV2Params;
 use tokio::time;
 
 use crate::client::EdenFsClient;
+use crate::instance::EdenFsInstance;
 use crate::journal::JournalPosition;
 use crate::utils::get_mount_point;
 
@@ -577,6 +578,9 @@ impl EdenFsClient {
         Ok(result)
     }
 
+    //TODO: subscribe does not fit neatly in non-streaming or streaming client.
+    //      Should we pass in a stream client? Make instance accessible from
+    //      each client? Something else?
     pub async fn subscribe(
         &self,
         mount_point: &Option<PathBuf>,
@@ -590,8 +594,11 @@ impl EdenFsClient {
         include_vcs_roots: bool,
         handle_results: impl Fn(&ChangesSinceV2Result) -> Result<(), EdenFsError>,
     ) -> Result<(), anyhow::Error> {
+        let instance = EdenFsInstance::global();
+        let streaming_client = instance.get_streaming_client();
+
         let mut position = position.unwrap_or(self.get_journal_position(mount_point).await?);
-        let mut subscription = self.stream_journal_changed(mount_point).await?;
+        let mut subscription = streaming_client.stream_journal_changed(mount_point).await?;
 
         let mut last = Instant::now();
         let throttle = Duration::from_millis(throttle_time_ms);

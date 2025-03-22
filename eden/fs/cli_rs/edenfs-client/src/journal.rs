@@ -19,6 +19,7 @@ use futures::StreamExt;
 use serde::Serialize;
 
 use crate::client::EdenFsClient;
+use crate::client::StreamingEdenFsClient;
 use crate::utils::get_mount_point;
 
 #[derive(Clone, Debug, PartialEq, Serialize)]
@@ -95,14 +96,16 @@ impl EdenFsClient {
             .map(|p| p.into())
             .from_err()
     }
+}
 
+impl StreamingEdenFsClient {
     pub async fn stream_journal_changed(
         &self,
         mount_point: &Option<PathBuf>,
     ) -> Result<BoxStream<'static, Result<JournalPosition>>> {
         let mount_point_vec = bytes_from_path(get_mount_point(mount_point)?)?;
         Ok(self
-            .with_streaming_thrift(|thrift| thrift.streamJournalChanged(&mount_point_vec))
+            .with_thrift(|thrift| thrift.streamJournalChanged(&mount_point_vec))
             .await
             .from_err()?
             .map(|item| match item {

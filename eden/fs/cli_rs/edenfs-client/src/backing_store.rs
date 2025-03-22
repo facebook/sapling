@@ -14,6 +14,7 @@ use edenfs_error::EdenFsError;
 use edenfs_error::Result;
 
 use crate::client::EdenFsClient;
+use crate::client::StreamingEdenFsClient;
 
 #[derive(Debug, Clone)]
 pub struct FetchedFiles {
@@ -36,9 +37,11 @@ impl EdenFsClient {
             .map(|fetched_files| fetched_files.into())
             .map_err(EdenFsError::from)
     }
+}
 
+impl StreamingEdenFsClient {
     pub async fn start_recording_backing_store_fetch(&self) -> Result<()> {
-        self.with_streaming_thrift(|thrift| thrift.startRecordingBackingStoreFetch())
+        self.with_thrift(|thrift| thrift.startRecordingBackingStoreFetch())
             .await
             .with_context(|| anyhow!("startRecordingBackingStoreFetch thrift call failed"))
             .map_err(EdenFsError::from)
