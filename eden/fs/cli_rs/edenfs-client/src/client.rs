@@ -13,7 +13,13 @@ use std::future::Future;
 use std::path::PathBuf;
 use std::time::Duration;
 
+use connector::Connector;
 use connector::EdenFsConnector;
+use connector::EdenFsThriftClient;
+use connector::EdenFsThriftClientFuture;
+use connector::StreamingEdenFsConnector;
+use connector::StreamingEdenFsThriftClient;
+use connector::StreamingEdenFsThriftClientFuture;
 use edenfs_error::ConnectAndRequestError;
 use edenfs_error::ErrorHandlingStrategy;
 use edenfs_error::HasErrorHandlingStrategy;
@@ -21,11 +27,6 @@ use edenfs_error::Result;
 use fbinit::FacebookInit;
 use parking_lot::Mutex;
 use tokio::sync::Semaphore;
-
-use crate::client::connector::EdenFsThriftClient;
-use crate::client::connector::EdenFsThriftClientFuture;
-use crate::client::connector::StreamingEdenFsThriftClient;
-use crate::client::connector::StreamingEdenFsThriftClientFuture;
 
 // This value was selected semi-randomly and should be revisited in the future. Anecdotally, we
 // have seen EdenFS struggle with <<< 2048 outstanding requests, but the exact number depends
@@ -56,6 +57,7 @@ impl EdenFsClientStatsHandler for NoopEdenFsClientStatsHandler {
 
 pub struct EdenFsClient {
     connector: EdenFsConnector,
+    streaming_connector: StreamingEdenFsConnector,
     connection: Mutex<EdenFsConnection<EdenFsThriftClientFuture>>,
     streaming_connection: Mutex<EdenFsConnection<StreamingEdenFsThriftClientFuture>>,
     stats_handler: Box<dyn EdenFsClientStatsHandler + Send + Sync>,
@@ -74,18 +76,20 @@ impl EdenFsClient {
         socket_file: PathBuf,
         semaphore: Option<Semaphore>,
     ) -> Self {
-        let connector = EdenFsConnector::new(fb, socket_file);
+        let connector = EdenFsConnector::new(fb, socket_file.clone());
+        let streaming_connector = StreamingEdenFsConnector::new(fb, socket_file);
         let connection = Mutex::new(EdenFsConnection {
             epoch: 0,
             client: connector.connect(None, None),
         });
         let streaming_connection = Mutex::new(EdenFsConnection {
             epoch: 0,
-            client: connector.connect_streaming(None, None),
+            client: streaming_connector.connect(None, None),
         });
 
         Self {
             connector,
+            streaming_connector,
             connection,
             streaming_connection,
             stats_handler: Box::new(NoopEdenFsClientStatsHandler {}),
@@ -275,7 +279,7 @@ impl EdenFsClient {
                     );
                     let mut guard = self.streaming_connection.lock();
                     if guard.epoch == connection.epoch {
-                        guard.client = self.connector.connect_streaming(conn_timeout, recv_timeout);
+                        guard.client = self.streaming_connector.connect(conn_timeout, recv_timeout);
                         guard.epoch += 1;
                     }
                     connection = (*guard).clone();
