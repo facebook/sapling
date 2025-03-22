@@ -20,7 +20,7 @@ python_library(
         "fbsource//third-party/pypi/click:click",
         "//common/db/tests:DbDef",
         "//configerator/distribution/api/py:configerator_client",
-        "//configerator/structs/mysql:table_schema-py",
+        "//configerator/structs/mysql:table_schema-py-deprecated",
         "//dba/ephemeral_shards/if:ephemeral_shards_thrift-py",
         "//libfb/py:db_locator",
     ],
