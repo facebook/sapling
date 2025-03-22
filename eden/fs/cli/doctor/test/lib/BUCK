@@ -12,6 +12,6 @@ python_library(
         "//eden/fs/py/eden:dirstate",
         "//eden/fs/service:thrift-py-deprecated",
         "//eden/test_support:py",
-        "//fb303/thrift:fb303_core-py",
+        "//fb303/thrift:fb303_core-py-deprecated",
     ],
 )

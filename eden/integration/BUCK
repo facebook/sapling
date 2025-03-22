@@ -300,7 +300,7 @@ python_unittest(
         "//eden/fs/py/eden/thrift:legacy",
         "//eden/fs/service:thrift-py-deprecated",
         "//eden/integration/lib:lib",
-        "//fb303/thrift:fb303_core-py",
+        "//fb303/thrift:fb303_core-py-deprecated",
         "//thrift/lib/py:base",
     ],
 )
@@ -532,7 +532,7 @@ python_unittest(
     deps = [
         "//eden/fs/cli:lib",
         "//eden/integration/lib:lib",
-        "//fb303/thrift:fb303_core-py",
+        "//fb303/thrift:fb303_core-py-deprecated",
     ],
 )
 
@@ -573,7 +573,7 @@ python_unittest(
         "//eden/fs/py/eden/thrift:legacy",
         "//eden/fs/service:thrift-py-deprecated",
         "//eden/integration/lib:lib",
-        "//fb303/thrift:fb303_core-py",
+        "//fb303/thrift:fb303_core-py-deprecated",
     ],
 )
 
