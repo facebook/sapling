@@ -14,11 +14,11 @@ use anyhow::anyhow;
 use anyhow::Result;
 use async_trait::async_trait;
 use clap::Parser;
+use edenfs_client::config::ConfigSourceType;
 use edenfs_client::instance::EdenFsInstance;
 #[cfg(windows)]
 use edenfs_utils::find_python;
 use hg_util::path::expand_path;
-use thrift_types::edenfs_config::ConfigSourceType;
 
 use crate::ExitCode;
 

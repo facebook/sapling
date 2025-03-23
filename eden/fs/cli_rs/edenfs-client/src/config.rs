@@ -15,10 +15,33 @@ use edenfs_utils::path_from_bytes;
 
 use crate::client::EdenFsClient;
 
+#[derive(Copy, Clone, Debug, Eq, PartialEq, Ord, PartialOrd, Hash)]
+pub enum ConfigSourceType {
+    Default = 0,
+    SystemConfig = 1,
+    UserConfig = 2,
+    CommandLine = 3,
+    Dynamic = 4,
+    Undefined = -1,
+}
+
+impl From<thrift_types::edenfs_config::ConfigSourceType> for ConfigSourceType {
+    fn from(from: thrift_types::edenfs_config::ConfigSourceType) -> Self {
+        match from {
+            thrift_types::edenfs_config::ConfigSourceType::Default => Self::Default,
+            thrift_types::edenfs_config::ConfigSourceType::SystemConfig => Self::SystemConfig,
+            thrift_types::edenfs_config::ConfigSourceType::UserConfig => Self::UserConfig,
+            thrift_types::edenfs_config::ConfigSourceType::CommandLine => Self::CommandLine,
+            thrift_types::edenfs_config::ConfigSourceType::Dynamic => Self::Dynamic,
+            _ => Self::Undefined,
+        }
+    }
+}
+
 #[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub struct ConfigValue {
     pub parsed_value: String,
-    pub source_type: thrift_types::edenfs_config::ConfigSourceType,
+    pub source_type: ConfigSourceType,
     pub source_path: PathBuf,
 }
 
@@ -26,7 +49,7 @@ impl From<thrift_types::edenfs_config::ConfigValue> for ConfigValue {
     fn from(from: thrift_types::edenfs_config::ConfigValue) -> Self {
         Self {
             parsed_value: from.parsedValue,
-            source_type: from.sourceType,
+            source_type: from.sourceType.into(),
             source_path: path_from_bytes(&from.sourcePath)
                 .expect("Failed to convert ConfigValue::sourcePath."),
         }
