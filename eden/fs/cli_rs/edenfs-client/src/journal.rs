@@ -5,9 +5,7 @@
  * GNU General Public License version 2.
  */
 
-use std::fmt;
 use std::path::PathBuf;
-use std::str::FromStr;
 
 use anyhow::anyhow;
 use edenfs_error::EdenFsError;
@@ -16,73 +14,11 @@ use edenfs_error::ResultExt;
 use edenfs_utils::bytes_from_path;
 use futures::stream::BoxStream;
 use futures::StreamExt;
-use serde::Serialize;
 
 use crate::client::EdenFsClient;
 use crate::client::StreamingEdenFsClient;
+use crate::types::JournalPosition;
 use crate::utils::get_mount_point;
-
-#[derive(Clone, Debug, PartialEq, Serialize)]
-pub struct JournalPosition {
-    pub mount_generation: i64,
-    pub sequence_number: u64,
-    pub snapshot_hash: Vec<u8>,
-}
-
-impl fmt::Display for JournalPosition {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(
-            f,
-            "{}:{}:{}",
-            self.mount_generation,
-            self.sequence_number,
-            hex::encode(&self.snapshot_hash)
-        )
-    }
-}
-
-impl FromStr for JournalPosition {
-    type Err = EdenFsError;
-
-    /// Parse journal position string into a JournalPosition.
-    /// Format: "<mount-generation>:<sequence-number>:<hexified-snapshot-hash>"
-    fn from_str(s: &str) -> Result<Self, Self::Err> {
-        let parts = s.split(':').collect::<Vec<&str>>();
-        if parts.len() != 3 {
-            return Err(anyhow!(format!("Invalid journal position format: {}", s)).into());
-        }
-
-        let mount_generation = parts[0].parse::<i64>().from_err()?;
-        let sequence_number = parts[1].parse::<u64>().from_err()?;
-        let snapshot_hash = hex::decode(parts[2]).from_err()?;
-        Ok(JournalPosition {
-            mount_generation,
-            sequence_number,
-            snapshot_hash,
-        })
-    }
-}
-
-impl From<thrift_types::edenfs::JournalPosition> for JournalPosition {
-    fn from(from: thrift_types::edenfs::JournalPosition) -> Self {
-        Self {
-            mount_generation: from.mountGeneration,
-            sequence_number: from.sequenceNumber as u64,
-            snapshot_hash: from.snapshotHash,
-        }
-    }
-}
-
-impl From<JournalPosition> for thrift_types::edenfs::JournalPosition {
-    fn from(from: JournalPosition) -> thrift_types::edenfs::JournalPosition {
-        thrift_types::edenfs::JournalPosition {
-            mountGeneration: from.mount_generation,
-            sequenceNumber: from.sequence_number as i64,
-            snapshotHash: from.snapshot_hash,
-            ..Default::default()
-        }
-    }
-}
 
 impl EdenFsClient {
     pub async fn get_journal_position(

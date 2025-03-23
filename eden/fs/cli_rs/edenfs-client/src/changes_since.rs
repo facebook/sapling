@@ -22,8 +22,8 @@ use tokio::time;
 
 use crate::client::EdenFsClient;
 use crate::instance::EdenFsInstance;
-use crate::journal::JournalPosition;
 use crate::types::Dtype;
+use crate::types::JournalPosition;
 use crate::utils::get_mount_point;
 
 #[derive(Debug, Serialize)]

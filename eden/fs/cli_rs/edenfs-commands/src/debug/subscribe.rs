@@ -14,7 +14,7 @@ use async_trait::async_trait;
 use clap::Parser;
 use edenfs_client::changes_since::ChangesSinceV2Result;
 use edenfs_client::instance::EdenFsInstance;
-use edenfs_client::journal::JournalPosition;
+use edenfs_client::types::JournalPosition;
 use edenfs_client::utils::get_mount_point;
 use edenfs_error::EdenFsError;
 use hg_util::path::expand_path;
@@ -31,7 +31,7 @@ mod fmt {
 
     use edenfs_client::changes_since::ChangeNotification;
     use edenfs_client::changes_since::ChangesSinceV2Result;
-    use edenfs_client::journal::JournalPosition;
+    use edenfs_client::types::JournalPosition;
     use thrift_types::edenfs as edenfs_thrift;
 
     /// Courtesy of https://users.rust-lang.org/t/reusing-an-fmt-formatter/8531/4

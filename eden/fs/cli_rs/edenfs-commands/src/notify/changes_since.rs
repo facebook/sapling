@@ -14,7 +14,7 @@ use async_trait::async_trait;
 use clap::Parser;
 use edenfs_client::changes_since::ChangesSinceV2Result;
 use edenfs_client::instance::EdenFsInstance;
-use edenfs_client::journal::JournalPosition;
+use edenfs_client::types::JournalPosition;
 use edenfs_error::EdenFsError;
 use edenfs_error::ResultExt;
 use hg_util::path::expand_path;
