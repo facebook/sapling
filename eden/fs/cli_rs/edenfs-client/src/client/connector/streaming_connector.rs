@@ -19,7 +19,6 @@ use thrift_streaming_clients::StreamingEdenServiceExt;
 use thrift_streaming_thriftclients::make_StreamingEdenServiceExt_thriftclient;
 use thriftclient::ThriftChannel;
 
-use crate::client::connector::wait_until_deamon_is_ready;
 use crate::client::connector::Connector;
 use crate::client::connector::DEFAULT_CONN_TIMEOUT;
 use crate::client::connector::DEFAULT_RECV_TIMEOUT;
@@ -52,7 +51,7 @@ impl Connector for StreamingEdenFsConnector {
 
         tokio::task::spawn(async move {
             tracing::info!(
-                "Creating a new EdenFs streaming connection via `{}`",
+                "Creating a new EdenFS streaming connection via `{}`",
                 socket_file.display()
             );
 
@@ -69,9 +68,6 @@ impl Connector for StreamingEdenFsConnector {
             )
             .with_context(|| "Unable to create an EdenFS streaming thrift client")
             .map_err(|e| ConnectError::ConnectionError(e.to_string()))?;
-
-            // wait until the mount is ready
-            wait_until_deamon_is_ready(client.clone()).await?;
 
             Ok(client)
         })

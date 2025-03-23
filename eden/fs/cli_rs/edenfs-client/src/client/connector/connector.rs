@@ -19,7 +19,6 @@ use thrift_thriftclients::make_EdenServiceExt_thriftclient;
 use thrift_thriftclients::EdenServiceExt;
 use thriftclient::ThriftChannel;
 
-use crate::client::connector::wait_until_deamon_is_ready;
 use crate::client::connector::Connector;
 use crate::client::connector::DEFAULT_CONN_TIMEOUT;
 use crate::client::connector::DEFAULT_RECV_TIMEOUT;
@@ -51,7 +50,7 @@ impl Connector for EdenFsConnector {
 
         tokio::task::spawn(async move {
             tracing::info!(
-                "Creating a new EdenFs connection via `{}`",
+                "Creating a new EdenFS connection via `{}`",
                 socket_file.display()
             );
 
@@ -68,9 +67,6 @@ impl Connector for EdenFsConnector {
             )
             .with_context(|| "Unable to create an EdenFS thrift client")
             .map_err(|e| ConnectError::ConnectionError(e.to_string()))?;
-
-            // wait until the daemon is ready
-            wait_until_deamon_is_ready(client.clone()).await?;
 
             Ok(client)
         })
