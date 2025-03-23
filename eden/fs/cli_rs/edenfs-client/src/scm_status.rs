@@ -16,18 +16,41 @@ use edenfs_utils::bytes_from_path;
 use crate::client::EdenFsClient;
 use crate::types::RootIdOptions;
 
+#[derive(Copy, Clone, Debug, Eq, PartialEq, Ord, PartialOrd, Hash)]
+pub enum ScmFileStatus {
+    Added = 0,
+    Modified = 1,
+    Removed = 2,
+    Ignored = 3,
+    Undefined = -1,
+}
+
+impl From<thrift_types::edenfs::ScmFileStatus> for ScmFileStatus {
+    fn from(from: thrift_types::edenfs::ScmFileStatus) -> Self {
+        match from {
+            thrift_types::edenfs::ScmFileStatus::ADDED => ScmFileStatus::Added,
+            thrift_types::edenfs::ScmFileStatus::MODIFIED => ScmFileStatus::Modified,
+            thrift_types::edenfs::ScmFileStatus::REMOVED => ScmFileStatus::Removed,
+            thrift_types::edenfs::ScmFileStatus::IGNORED => ScmFileStatus::Ignored,
+            _ => ScmFileStatus::Undefined,
+        }
+    }
+}
+
 #[derive(Clone, Debug)]
 pub struct ScmStatusDetails {
-    // If needed, we can also wrap ScmFileStatus to remove all Thrift types
-    // from edenfs_client APIs.
-    pub entries: BTreeMap<Vec<u8>, thrift_types::edenfs::ScmFileStatus>,
+    pub entries: BTreeMap<Vec<u8>, ScmFileStatus>,
     pub errors: BTreeMap<Vec<u8>, String>,
 }
 
 impl From<thrift_types::edenfs::ScmStatus> for ScmStatusDetails {
     fn from(from: thrift_types::edenfs::ScmStatus) -> Self {
         Self {
-            entries: from.entries,
+            entries: from
+                .entries
+                .into_iter()
+                .map(|(k, v)| (k, v.into()))
+                .collect(),
             errors: from.errors,
         }
     }
