@@ -132,7 +132,10 @@ class NotifyTest(testcase.EdenRepoTest):
             [
                 {
                     "SmallChange": {
-                        "Modified": {"file_type": 8, "path": [104, 101, 108, 108, 111]}
+                        "Modified": {
+                            "file_type": "Regular",
+                            "path": [104, 101, 108, 108, 111],
+                        }
                     }
                 }
             ],

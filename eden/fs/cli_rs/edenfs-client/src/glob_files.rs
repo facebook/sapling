@@ -12,8 +12,8 @@ use anyhow::anyhow;
 use edenfs_error::EdenFsError;
 use edenfs_error::Result;
 use edenfs_utils::bytes_from_path;
-use thrift_thriftclients::thrift::OsDtype;
 use thrift_types::edenfs::GlobParams;
+use thrift_types::edenfs::OsDtype;
 
 use crate::client::EdenFsClient;
 use crate::types::OSName;

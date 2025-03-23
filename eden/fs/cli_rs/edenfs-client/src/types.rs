@@ -7,6 +7,69 @@
 
 use std::fmt;
 
+use serde::Serialize;
+
+#[derive(Clone, Copy, Debug, Serialize, PartialEq, Eq)]
+pub enum Dtype {
+    Unknown = 0,
+    Fifo = 1,
+    Char = 2,
+    Dir = 4,
+    Block = 6,
+    Regular = 8,
+    Link = 10,
+    Socket = 12,
+    Whiteout = 14,
+    Undefined = -1,
+}
+
+impl From<thrift_types::edenfs::Dtype> for Dtype {
+    fn from(from: thrift_types::edenfs::Dtype) -> Self {
+        match from {
+            thrift_types::edenfs::Dtype::UNKNOWN => Self::Unknown,
+            thrift_types::edenfs::Dtype::FIFO => Self::Fifo,
+            thrift_types::edenfs::Dtype::CHAR => Self::Char,
+            thrift_types::edenfs::Dtype::DIR => Self::Dir,
+            thrift_types::edenfs::Dtype::BLOCK => Self::Block,
+            thrift_types::edenfs::Dtype::REGULAR => Self::Regular,
+            thrift_types::edenfs::Dtype::LINK => Self::Link,
+            thrift_types::edenfs::Dtype::SOCKET => Self::Socket,
+            thrift_types::edenfs::Dtype::WHITEOUT => Self::Whiteout,
+            _ => Self::Undefined,
+        }
+    }
+}
+
+impl fmt::Display for Dtype {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        let display_str = match *self {
+            Dtype::Unknown => "Unknown",
+            Dtype::Fifo => "Fifo",
+            Dtype::Char => "Char",
+            Dtype::Dir => "Dir",
+            Dtype::Block => "Block",
+            Dtype::Regular => "Regular",
+            Dtype::Link => "Link",
+            Dtype::Socket => "Socket",
+            Dtype::Whiteout => "Whiteout",
+            _ => "Undefined",
+        };
+        write!(f, "{}", display_str)
+    }
+}
+
+impl PartialEq<i32> for Dtype {
+    fn eq(&self, other: &i32) -> bool {
+        (*self as i32) == *other
+    }
+}
+
+impl PartialEq<i16> for Dtype {
+    fn eq(&self, other: &i16) -> bool {
+        (*self as i16) == *other
+    }
+}
+
 #[derive(Clone, Debug, Default)]
 pub struct RootIdOptions {
     pub filter_id: Option<String>,

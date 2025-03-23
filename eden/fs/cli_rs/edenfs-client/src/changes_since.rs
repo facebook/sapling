@@ -18,64 +18,13 @@ use edenfs_utils::bytes_from_path;
 use edenfs_utils::path_from_bytes;
 use futures::StreamExt;
 use serde::Serialize;
-use thrift_types::edenfs::ChangesSinceV2Params;
 use tokio::time;
 
 use crate::client::EdenFsClient;
 use crate::instance::EdenFsInstance;
 use crate::journal::JournalPosition;
+use crate::types::Dtype;
 use crate::utils::get_mount_point;
-
-#[derive(Debug, PartialEq, Serialize)]
-pub struct Dtype(pub i32);
-
-impl Dtype {
-    pub const UNKNOWN: Self = Dtype(0);
-    pub const FIFO: Self = Dtype(1);
-    pub const CHAR: Self = Dtype(2);
-    pub const DIR: Self = Dtype(4);
-    pub const BLOCK: Self = Dtype(6);
-    pub const REGULAR: Self = Dtype(8);
-    pub const LINK: Self = Dtype(10);
-    pub const SOCKET: Self = Dtype(12);
-    pub const WHITEOUT: Self = Dtype(14);
-}
-
-impl From<Dtype> for i32 {
-    fn from(x: Dtype) -> Self {
-        x.0
-    }
-}
-
-impl From<i32> for Dtype {
-    fn from(x: i32) -> Self {
-        Self(x)
-    }
-}
-
-impl From<thrift_types::edenfs::Dtype> for Dtype {
-    fn from(x: thrift_types::edenfs::Dtype) -> Self {
-        Self(x.0)
-    }
-}
-
-impl fmt::Display for Dtype {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        let display_str = match *self {
-            Dtype::UNKNOWN => "Unknown",
-            Dtype::FIFO => "Fifo",
-            Dtype::CHAR => "Char",
-            Dtype::DIR => "Dir",
-            Dtype::BLOCK => "Block",
-            Dtype::REGULAR => "Regular",
-            Dtype::LINK => "Link",
-            Dtype::SOCKET => "Socket",
-            Dtype::WHITEOUT => "Whiteout",
-            _ => "Undefined",
-        };
-        write!(f, "{}", display_str)
-    }
-}
 
 #[derive(Debug, Serialize)]
 pub struct Added {
@@ -327,41 +276,34 @@ impl From<thrift_types::edenfs::CommitTransition> for CommitTransition {
     }
 }
 
-#[derive(Debug, PartialEq, Serialize)]
-pub struct LostChangesReason(pub i32);
-
-impl LostChangesReason {
-    pub const UNKNOWN: Self = LostChangesReason(0);
-    pub const EDENFS_REMOUNTED: Self = LostChangesReason(1);
-    pub const JOURNAL_TRUNCATED: Self = LostChangesReason(2);
-    pub const TOO_MANY_CHANGES: Self = LostChangesReason(3);
-}
-
-impl From<LostChangesReason> for i32 {
-    fn from(x: LostChangesReason) -> Self {
-        x.0
-    }
-}
-
-impl From<i32> for LostChangesReason {
-    fn from(x: i32) -> Self {
-        Self(x)
-    }
+#[derive(Clone, Copy, Debug, PartialEq, Serialize)]
+pub enum LostChangesReason {
+    Unknown = 0,
+    EdenFsRemounted = 1,
+    JournalTruncated = 2,
+    TooManyChanges = 3,
+    Undefined = -1,
 }
 
 impl From<thrift_types::edenfs::LostChangesReason> for LostChangesReason {
-    fn from(x: thrift_types::edenfs::LostChangesReason) -> Self {
-        Self(x.0)
+    fn from(from: thrift_types::edenfs::LostChangesReason) -> Self {
+        match from {
+            thrift_types::edenfs::LostChangesReason::UNKNOWN => Self::Unknown,
+            thrift_types::edenfs::LostChangesReason::EDENFS_REMOUNTED => Self::EdenFsRemounted,
+            thrift_types::edenfs::LostChangesReason::JOURNAL_TRUNCATED => Self::JournalTruncated,
+            thrift_types::edenfs::LostChangesReason::TOO_MANY_CHANGES => Self::TooManyChanges,
+            _ => Self::Undefined,
+        }
     }
 }
 
 impl fmt::Display for LostChangesReason {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         let display_str = match *self {
-            LostChangesReason::UNKNOWN => "Unknown",
-            LostChangesReason::EDENFS_REMOUNTED => "EdenFSRemounted",
-            LostChangesReason::JOURNAL_TRUNCATED => "JournalTruncated",
-            LostChangesReason::TOO_MANY_CHANGES => "TooManyChanges",
+            LostChangesReason::Unknown => "Unknown",
+            LostChangesReason::EdenFsRemounted => "EdenFsRemounted",
+            LostChangesReason::JournalTruncated => "JournalTruncated",
+            LostChangesReason::TooManyChanges => "TooManyChanges",
             _ => "Undefined",
         };
         write!(f, "{}", display_str)
@@ -531,7 +473,7 @@ impl EdenFsClient {
             bytes_from_path(p).expect("Failed to convert path to bytes")
         });
 
-        let params = ChangesSinceV2Params {
+        let params = thrift_types::edenfs::ChangesSinceV2Params {
             mountPoint: bytes_from_path(get_mount_point(mount_point)?)?,
             fromPosition: from_position.clone().into(),
             includeVCSRoots: Some(include_vcs_roots),
