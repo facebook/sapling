@@ -21,7 +21,7 @@ python_library(
         "//common/db/tests:DbDef",
         "//configerator/distribution/api/py:configerator_client",
         "//configerator/structs/mysql:table_schema-py-deprecated",
-        "//dba/ephemeral_shards/if:ephemeral_shards_thrift-py",
+        "//dba/ephemeral_shards/if:ephemeral_shards_thrift-py-deprecated",
         "//libfb/py:db_locator",
     ],
 )
