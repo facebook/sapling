@@ -7,20 +7,18 @@
 
 use std::time::Duration;
 
+use anyhow::Context;
 use edenfs_error::EdenFsError;
 use edenfs_error::Result;
-use edenfs_error::ResultExt;
 use futures::stream::BoxStream;
 use futures::StreamExt;
-use thrift_streaming_clients::errors::StreamStartStatusStreamError;
-use thrift_types::edenfs::DaemonInfo;
-use thrift_types::fb303_core::fb303_status;
-use thrift_types::fbthrift::ApplicationExceptionErrorCode;
 use tracing::event;
 use tracing::Level;
 
 use crate::client::EdenFsClient;
 use crate::client::StreamingEdenFsClient;
+use crate::types::DaemonInfo;
+use crate::types::Fb303Status;
 
 pub trait DaemonHealthy {
     fn is_healthy(&self) -> bool;
@@ -29,7 +27,7 @@ pub trait DaemonHealthy {
 impl DaemonHealthy for DaemonInfo {
     fn is_healthy(&self) -> bool {
         self.status
-            .map_or_else(|| false, |val| val == fb303_status::ALIVE)
+            .map_or_else(|| false, |val| val == Fb303Status::Alive)
     }
 }
 
@@ -42,7 +40,9 @@ impl EdenFsClient {
             |thrift| thrift.getDaemonInfo(),
         )
         .await
-        .from_err()
+        .with_context(|| "failed to get default eden daemon info")
+        .map(|daemon_info| daemon_info.into())
+        .map_err(EdenFsError::from)
     }
 }
 
@@ -54,16 +54,19 @@ impl StreamingEdenFsClient {
         let (daemon_info, stream) = self
             .with_thrift_with_timeouts(Some(timeout), None, |thrift| thrift.streamStartStatus())
             .await
-            .from_err()?;
+            .with_context(|| "failed to get start status stream")
+            .map(|(daemon_info, stream)| (daemon_info.into(), stream))
+            .map_err(EdenFsError::from)?;
 
         let stream = stream
             .map(|item| match item {
-                Err(StreamStartStatusStreamError::ApplicationException(e))
-                    if e.type_ == ApplicationExceptionErrorCode::UnknownMethod =>
+                Err(thrift_streaming_clients::errors::StreamStartStatusStreamError::ApplicationException(e))
+                    if e.type_ == thrift_types::fbthrift::ApplicationExceptionErrorCode::UnknownMethod =>
                 {
                     Err(EdenFsError::UnknownMethod(e.message))
                 }
-                r => r.from_err(),
+                Err(e) => Err(EdenFsError::Other(e.into())),
+                Ok(r) => Ok(r),
             })
             .boxed();
 

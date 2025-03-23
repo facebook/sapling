@@ -19,10 +19,11 @@ use edenfs_error::ErrorHandlingStrategy;
 use edenfs_error::HasErrorHandlingStrategy;
 use fbinit::FacebookInit;
 pub(crate) use streaming_connector::*;
-use thrift_types::edenfs_clients::errors::GetDaemonInfoError;
 use thrift_types::edenfs_clients::EdenServiceExt;
-use thrift_types::fb303_core::fb303_status;
 use thriftclient::ThriftChannel;
+
+use crate::types::DaemonInfo;
+use crate::types::Fb303Status;
 
 // TODO: select better defaults (e.g. 1s connection timeout, 1m recv timeout)
 const DEFAULT_CONN_TIMEOUT: Duration = Duration::from_secs(120);
@@ -86,7 +87,7 @@ async fn wait_until_deamon_is_ready(
 
 async fn is_daemon_ready(
     client: Arc<dyn EdenServiceExt<ThriftChannel> + Send + Sync>,
-) -> std::result::Result<bool, GetDaemonInfoError> {
+) -> std::result::Result<bool, thrift_types::edenfs_clients::errors::GetDaemonInfoError> {
     // Some tests set the EDENFS_SKIP_DAEMON_READY_CHECK environment variable
     // because they don't want to wait for the daemon to be ready - typically
     // due to fault injection stalling the daemon.
@@ -95,8 +96,8 @@ async fn is_daemon_ready(
     match env::var_os("EDENFS_SKIP_DAEMON_READY_CHECK") {
         Some(_) => Ok(true),
         None => {
-            let daemon_info = client.getDaemonInfo().await?;
-            Ok(daemon_info.status == Some(fb303_status::ALIVE))
+            let daemon_info: DaemonInfo = client.getDaemonInfo().await?.into();
+            Ok(daemon_info.status == Some(Fb303Status::Alive))
         }
     }
 }

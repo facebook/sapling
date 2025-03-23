@@ -15,6 +15,8 @@ use async_trait::async_trait;
 use clap::Parser;
 use edenfs_client::daemon_info::DaemonHealthy;
 use edenfs_client::instance::EdenFsInstance;
+use edenfs_client::types::DaemonInfo;
+use edenfs_client::types::Fb303Status;
 use futures::stream::StreamExt;
 use tokio::time;
 use tracing::event;
@@ -46,7 +48,7 @@ impl StatusCmd {
     async fn get_status_simple(
         &self,
         instance: &EdenFsInstance,
-    ) -> edenfs_error::Result<thrift_types::edenfs::DaemonInfo> {
+    ) -> edenfs_error::Result<DaemonInfo> {
         let timeout = Duration::from_secs(self.timeout);
         let client = instance.get_client();
         let health = client.get_health(Some(timeout));
@@ -60,7 +62,7 @@ impl StatusCmd {
     async fn get_status_blocking_on_startup(
         &self,
         instance: &EdenFsInstance,
-    ) -> edenfs_error::Result<thrift_types::edenfs::DaemonInfo> {
+    ) -> edenfs_error::Result<DaemonInfo> {
         let timeout = Duration::from_secs(self.timeout);
         let client = instance.get_streaming_client();
         let initial_result_and_stream = client.get_health_with_startup_updates_included(timeout);
@@ -69,8 +71,7 @@ impl StatusCmd {
             .map_err(edenfs_error::EdenFsError::RequestTimeout)?;
         match waited_health {
             Ok((initial_result, mut startup_stream))
-                if initial_result.status
-                    == Some(thrift_types::fb303_core::fb303_status::STARTING) =>
+                if initial_result.status == Some(Fb303Status::Starting) =>
             {
                 println!("EdenFS is starting ...");
                 while let Some(value) = startup_stream.next().await {
@@ -92,10 +93,7 @@ impl StatusCmd {
         }
     }
 
-    async fn get_status(
-        &self,
-        instance: &EdenFsInstance,
-    ) -> edenfs_error::Result<thrift_types::edenfs::DaemonInfo> {
+    async fn get_status(&self, instance: &EdenFsInstance) -> edenfs_error::Result<DaemonInfo> {
         #[cfg(fbcode_build)]
         if self.wait {
             let waited_status = self.get_status_blocking_on_startup(instance).await;
@@ -116,7 +114,7 @@ impl StatusCmd {
     fn interpret_status(
         &self,
         instance: &EdenFsInstance,
-        health: edenfs_error::Result<thrift_types::edenfs::DaemonInfo>,
+        health: edenfs_error::Result<DaemonInfo>,
     ) -> Result<EdenFsRunningStatus, anyhow::Error> {
         match health {
             Ok(health) if health.is_healthy() => {
@@ -128,11 +126,11 @@ impl StatusCmd {
                     ?health,
                     "Connected to EdenFS daemon but daemon reported unhealthy status"
                 );
-                if health.status == Some(thrift_types::fb303_core::fb303_status::STARTING) {
+                if health.status == Some(Fb303Status::Starting) {
                     return Ok(EdenFsRunningStatus::Starting);
                 }
                 if let Some(status) = health.status {
-                    return Err(anyhow!("EdenFS is {}", status));
+                    return Err(anyhow!("EdenFS is {:?}", status));
                 }
             }
             Err(e) => {

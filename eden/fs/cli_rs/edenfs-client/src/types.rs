@@ -9,6 +9,50 @@ use std::fmt;
 
 use serde::Serialize;
 
+#[derive(Copy, Clone, Debug, Eq, PartialEq, Ord, PartialOrd, Hash)]
+pub enum Fb303Status {
+    Dead = 0,
+    Starting = 1,
+    Alive = 2,
+    Stopping = 3,
+    Stopped = 4,
+    Warning = 5,
+    Undefined = -1,
+}
+
+impl From<thrift_types::fb303_core::fb303_status> for Fb303Status {
+    fn from(from: thrift_types::fb303_core::fb303_status) -> Self {
+        match from {
+            thrift_types::fb303_core::fb303_status::DEAD => Self::Dead,
+            thrift_types::fb303_core::fb303_status::STARTING => Self::Starting,
+            thrift_types::fb303_core::fb303_status::ALIVE => Self::Alive,
+            thrift_types::fb303_core::fb303_status::STOPPING => Self::Stopping,
+            thrift_types::fb303_core::fb303_status::STOPPED => Self::Stopped,
+            thrift_types::fb303_core::fb303_status::WARNING => Self::Warning,
+            _ => Self::Undefined,
+        }
+    }
+}
+
+#[derive(Debug)]
+pub struct DaemonInfo {
+    pub pid: i32,
+    pub command_line: Vec<String>,
+    pub status: Option<Fb303Status>,
+    pub uptime: Option<f32>,
+}
+
+impl From<thrift_types::edenfs::DaemonInfo> for DaemonInfo {
+    fn from(from: thrift_types::edenfs::DaemonInfo) -> Self {
+        Self {
+            pid: from.pid,
+            command_line: from.commandLine,
+            status: from.status.map(|s| s.into()),
+            uptime: from.uptime,
+        }
+    }
+}
+
 #[derive(Clone, Copy, Debug, Serialize, PartialEq, Eq)]
 pub enum Dtype {
     Unknown = 0,
