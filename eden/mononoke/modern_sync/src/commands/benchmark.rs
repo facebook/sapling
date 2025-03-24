@@ -5,25 +5,43 @@
  * GNU General Public License version 2.
  */
 
+use std::net::SocketAddr;
 use std::path::PathBuf;
 use std::sync::Arc;
+use std::time::Duration;
 
+use anyhow::Context;
 use anyhow::Result;
 use async_trait::async_trait;
 use clap::Parser;
 use clientinfo::ClientEntryPoint;
 use clientinfo::ClientInfo;
+use cloned::cloned;
 use context::CoreContext;
 use context::SessionContainer;
+#[cfg(fbcode_build)]
+use fb303_core_thriftclients::make_BaseService_thriftclient;
+#[cfg(fbcode_build)]
+use fb303_core_thriftclients::thriftclient::TransportType;
+#[cfg(fbcode_build)]
+use fb303_core_thriftclients::BaseService;
+use fbinit::FacebookInit;
 use metadata::Metadata;
+use mononoke_app::args::MonitoringArgs;
 use mononoke_app::MononokeApp;
+use mononoke_macros::mononoke;
 use mutable_counters::MutableCounters;
 use slog::info;
+use slog::warn;
+use slog::Logger;
 
 use crate::commands::sync_loop::CHUNK_SIZE_DEFAULT;
 use crate::sync::get_unsharded_repo_args;
 use crate::sync::ExecutionType;
 use crate::ModernSyncArgs;
+
+const CONN_TIMEOUT_MS: u32 = 1_000;
+const RECV_TIMEOUT_MS: u32 = 1_000;
 
 /// Replays bookmark's moves
 #[derive(Parser)]
@@ -65,8 +83,7 @@ impl MutableCounters for MemoryMutableCounters {
         self.counters
             .write()
             .unwrap()
-            .insert(name.to_string(), value)
-            .unwrap();
+            .insert(name.to_string(), value);
         Ok(true)
     }
 
@@ -91,11 +108,32 @@ pub async fn run(app: MononokeApp, args: CommandArgs) -> Result<()> {
 
     let mc = MemoryMutableCounters::new();
 
+    #[cfg(fbcode_build)]
+    let fb303 = {
+        let port = app.args::<MonitoringArgs>()?.fb303_thrift_port.unwrap();
+        let fb303 = get_fb303_client(app.fb, port).unwrap();
+
+        mononoke::spawn_task({
+            cloned!(fb303, source_repo_name, logger);
+            async move {
+                let mut interval = tokio::time::interval(Duration::from_secs(60));
+                loop {
+                    interval.tick().await;
+                    _ = log_perf_stats(fb303.clone(), &source_repo_name, &logger)
+                        .await
+                        .inspect_err(|e| warn!(logger, "Failed to get counters: {e:?}"));
+                }
+            }
+        });
+
+        fb303
+    };
+
     let now = std::time::Instant::now();
     crate::sync::sync(
         app,
         Some(0),
-        source_repo_args.clone(),
+        source_repo_args,
         dest_repo_name.clone(),
         ExecutionType::SyncOnce,
         false,
@@ -106,6 +144,13 @@ pub async fn run(app: MononokeApp, args: CommandArgs) -> Result<()> {
     )
     .await?;
     let elapsed = now.elapsed();
+
+    #[cfg(fbcode_build)]
+    {
+        _ = log_perf_stats(fb303, &source_repo_name, &logger)
+            .await
+            .inspect_err(|e| warn!(logger, "Failed to get counters: {e:?}"));
+    }
 
     info!(
         logger,
@@ -137,4 +182,73 @@ fn new_context(app: &MononokeApp) -> CoreContext {
         .build();
 
     session_container.new_context(app.logger().clone(), scuba)
+}
+
+#[cfg(fbcode_build)]
+fn get_fb303_client(fb: FacebookInit, port: i32) -> Result<Arc<dyn BaseService + Sync + Send>> {
+    let addr: SocketAddr = format!("[::]:{}", port).parse()?;
+    make_BaseService_thriftclient!(
+        fb,
+        from_sock_addr = addr,
+        with_transport_type = TransportType::Rocket,
+        with_conn_timeout = CONN_TIMEOUT_MS,
+        with_recv_timeout = RECV_TIMEOUT_MS,
+        with_secure = true,
+        with_persistent_header = ("caller_language", "rust"),
+    )
+    .with_context(|| format!("failed to create base thrift client from socket address {addr}"))
+}
+
+#[cfg(fbcode_build)]
+async fn log_perf_stats(
+    fb303: Arc<dyn BaseService + Sync + Send>,
+    repo_name: &str,
+    logger: &Logger,
+) -> Result<()> {
+    let regex = format!(
+        "^mononoke\\.modern_sync\\.manager\\.changeset\\.{}\\.commits_synced\\.sum.*",
+        repo_name
+    );
+    let sum_key = format!(
+        "mononoke.modern_sync.manager.changeset.{}.commits_synced.sum",
+        repo_name
+    );
+    let last60_key = format!(
+        "mononoke.modern_sync.manager.changeset.{}.commits_synced.sum.60",
+        repo_name
+    );
+    let last600_key = format!(
+        "mononoke.modern_sync.manager.changeset.{}.commits_synced.sum.600",
+        repo_name
+    );
+    let last3600_key = format!(
+        "mononoke.modern_sync.manager.changeset.{}.commits_synced.sum.3600",
+        repo_name
+    );
+
+    let counters = fb303
+        .getRegexCounters(&regex)
+        .await
+        .with_context(|| "Failed to get counters")?;
+
+    let sum = counters
+        .get(&sum_key)
+        .map_or("n/a".to_string(), |v| v.to_string());
+    let last60 = counters.get(&last60_key);
+    let last600 = counters.get(&last600_key);
+    let last3600 = counters.get(&last3600_key);
+
+    info!(
+        logger,
+        "Synced total={} speed={}/{}/{} (changesets/min last 60/600/3600) ({} {} {})",
+        sum,
+        last60.map_or("?".to_string(), |v| v.to_string()),
+        last600.map_or("?".to_string(), |v| (v / 10).to_string()),
+        last3600.map_or("?".to_string(), |v| (v / 60).to_string()),
+        last60.map_or("n/a".to_string(), |v| v.to_string()),
+        last600.map_or("n/a".to_string(), |v| v.to_string()),
+        last3600.map_or("n/a".to_string(), |v| v.to_string()),
+    );
+
+    Ok(())
 }

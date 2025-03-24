@@ -1,4 +1,5 @@
 load("@fbcode_macros//build_defs:rust_binary.bzl", "rust_binary")
+load("@fbcode_macros//build_defs/lib:rust_oss.bzl", "rust_oss")
 
 oncall("scm_server_infra")
 
@@ -9,7 +10,7 @@ rust_binary(
     ]),
     named_deps = {"slog": "//common/rust/shed/tracing_slog_compat:tracing_slog_compat"},
     test_deps = ["//eden/mononoke/mononoke_macros:mononoke_macros"],
-    deps = [
+    deps = ([
         "fbsource//third-party/rust:anyhow",
         "fbsource//third-party/rust:async-trait",
         "fbsource//third-party/rust:bytes",
@@ -54,5 +55,7 @@ rust_binary(
         "//eden/scm/lib/edenapi/types:edenapi_types",
         "//eden/scm/lib/http-client:http-client",
         "//eden/scm/lib/minibytes:minibytes",
-    ],
+    ] + ([] if rust_oss.is_oss_build() else [
+        "//fb303/thrift:fb303_core-rust-thriftclients",
+    ])),
 )
