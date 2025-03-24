@@ -598,3 +598,74 @@ Set a bogus mergedriver as a tripwire to make sure we don't invoke merge driver.
   $ hg log -G -T '{node|short} {desc}'
   @  9e233947f73d a
   
+
+  $ cd
+
+  $ hg init folddelete
+  $ cd folddelete
+  $ drawdag <<EOS
+  > D  # D/file2 = foo\n
+  > |  # D/file1 = (removed)
+  > |
+  > C  # C/file1 = foo\n
+  > |  # C/file2 = (removed)
+  > |
+  > B  # B/file2 = foo\n
+  > |  # B/file1 = (removed)
+  > |  # B/create = create\n
+  > |
+  > A  # A/file1 = foo\n
+  >    # drawdag.defaultfiles=false
+  > EOS
+  $ sl go -q $D
+FIXME: $D is missing remove of file1
+  $ hg histedit $B --commands - <<EOF
+  > pick $B
+  > fold $C
+  > pick $D
+  > EOF
+  $ hg log -G -p --config diff.git=1
+  @  commit:      6c8a9903aaeb
+  │  user:        test
+  │  date:        Thu Jan 01 00:00:00 1970 +0000
+  │  summary:     D
+  │
+  │  diff --git a/file2 b/file2
+  │  new file mode 100644
+  │  --- /dev/null
+  │  +++ b/file2
+  │  @@ -0,0 +1,1 @@
+  │  +foo
+  │
+  o  commit:      8f8b4b8421e6
+  │  user:        test
+  │  date:        Thu Jan 01 00:00:00 1970 +0000
+  │  summary:     B
+  │
+  │  diff --git a/create b/create
+  │  new file mode 100644
+  │  --- /dev/null
+  │  +++ b/create
+  │  @@ -0,0 +1,1 @@
+  │  +create
+  │
+  o  commit:      e1d505319e55
+     user:        test
+     date:        Thu Jan 01 00:00:00 1970 +0000
+     summary:     A
+  
+     diff --git a/file1 b/file1
+     new file mode 100644
+     --- /dev/null
+     +++ b/file1
+     @@ -0,0 +1,1 @@
+     +foo
+  
+  $ hg st
+  $ ls
+  create
+  file2
+  $ sl files -r .
+  create
+  file1
+  file2
