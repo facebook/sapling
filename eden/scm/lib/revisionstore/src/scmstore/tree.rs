@@ -30,7 +30,6 @@ use clientinfo::get_client_request_info_thread_local;
 use clientinfo::set_client_request_info_thread_local;
 use edenapi_types::FileAuxData;
 use edenapi_types::TreeAuxData;
-use edenapi_types::TreeChildEntry;
 use fetch::FetchState;
 use flume::bounded;
 use flume::unbounded;
@@ -44,6 +43,7 @@ use storemodel::InsertOpts;
 use storemodel::KeyStore;
 use storemodel::SerializationFormat;
 use storemodel::TreeEntry;
+use types::AuxData;
 
 use crate::datastore::HgIdDataStore;
 use crate::historystore::HistoryStore;
@@ -833,58 +833,29 @@ impl TreeEntry for ScmStoreTreeEntry {
     }
 
     fn file_aux_iter(&self) -> anyhow::Result<BoxIterator<anyhow::Result<(HgId, FileAuxData)>>> {
-        let maybe_iter = (move || -> Option<BoxIterator<anyhow::Result<(HgId, FileAuxData)>>> {
-            let entry = match &self.tree {
-                LazyTree::SaplingRemoteApi(entry) => entry.clone(),
-                _ => return None,
-            };
-            let children = entry.children?;
-            let iter = children.into_iter().filter_map(move |child| {
-                let child = child.as_ref().ok()?;
-                let file_entry = match child {
-                    TreeChildEntry::File(v) => v,
-                    _ => return None,
-                };
-                Some(Ok((
-                    file_entry.key.hgid,
-                    file_entry.file_metadata.clone()?.into(),
-                )))
-            });
-            Some(Box::new(iter))
-        })();
-        Ok(maybe_iter.unwrap_or_else(|| Box::new(std::iter::empty())))
+        Ok(Box::new(
+            self.tree
+                .children_aux_data()
+                .into_iter()
+                .filter_map(|(hgid, aux)| match aux {
+                    AuxData::File(file_aux_data) => Some(Ok((hgid, file_aux_data))),
+                    AuxData::Tree(_) => None,
+                }),
+        ))
     }
 
     fn tree_aux_data_iter(
         &self,
     ) -> anyhow::Result<BoxIterator<anyhow::Result<(HgId, TreeAuxData)>>> {
-        let maybe_iter = (|| -> Option<BoxIterator<anyhow::Result<(HgId, TreeAuxData)>>> {
-            let entry = match &self.tree {
-                LazyTree::SaplingRemoteApi(entry) => entry.clone(),
-                // TODO: We should also support fetching tree metadata from local cache
-                _ => return None,
-            };
-            let children = entry.children?;
-            let iter = children.into_iter().filter_map(|child| {
-                let child = child.as_ref().ok()?;
-                let directory_entry = match child {
-                    TreeChildEntry::Directory(v) => v,
-                    _ => return None,
-                };
-                let tree_aux_data = directory_entry
-                    .tree_aux_data
-                    .ok_or_else(|| {
-                        anyhow::anyhow!(format!(
-                            "tree aux data is missing for key: {}",
-                            directory_entry.key
-                        ))
-                    })
-                    .ok()?;
-                Some(Ok((directory_entry.key.hgid, tree_aux_data)))
-            });
-            Some(Box::new(iter))
-        })();
-        Ok(maybe_iter.unwrap_or_else(|| Box::new(std::iter::empty())))
+        Ok(Box::new(
+            self.tree
+                .children_aux_data()
+                .into_iter()
+                .filter_map(|(hgid, aux)| match aux {
+                    AuxData::File(_) => None,
+                    AuxData::Tree(tree_aux_data) => Some(Ok((hgid, tree_aux_data))),
+                }),
+        ))
     }
 
     /// Get the directory aux data of the tree.
