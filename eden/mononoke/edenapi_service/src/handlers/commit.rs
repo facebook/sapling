@@ -1265,7 +1265,18 @@ impl SaplingRemoteApiHandler for UploadIdenticalChangesetsHandler {
                     }
                     .freeze()?;
 
-                    Ok::<_, MononokeError>((bcs, ics))
+                    if bcs.get_changeset_id().to_hex() == ics.bcs_id.to_hex() {
+                        Ok::<_, MononokeError>((bcs, ics))
+                    } else {
+                        Err(MononokeError::InternalError(
+                            anyhow!(
+                                "the bonsai changeset id {} generated during upload does not match the one in the request {}",
+                                bcs.get_changeset_id().to_hex(),
+                                ics.bcs_id.to_hex(),
+                            )
+                            .into(),
+                        ))
+                    }
                 })
                 .collect::<Vec<_>>();
 
