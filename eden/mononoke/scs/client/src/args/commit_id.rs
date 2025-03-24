@@ -68,18 +68,9 @@ impl Scheme {
 
 #[derive(Args, Clone)]
 pub(crate) struct SchemeArgs {
-    #[clap(
-        long,
-        short('S'),
-        default_value = "hg",
-        default_value_if("no_scheme", "true", None),
-        value_delimiter = ','
-    )]
+    #[clap(long, short('S'), required = false, value_delimiter = ',')]
     /// Commit identity schemes to display
     schemes: Vec<Scheme>,
-    /// Pass empty list of identity schemes (useful for testing)
-    #[clap(long, hide = true)]
-    no_scheme: bool,
 }
 
 impl SchemeArgs {
