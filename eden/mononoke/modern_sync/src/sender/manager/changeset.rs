@@ -37,6 +37,7 @@ use crate::sender::manager::MAX_CHANGESET_BATCH_SIZE;
 use crate::sender::manager::MODERN_SYNC_BATCH_CHECKPOINT_NAME;
 use crate::sender::manager::MODERN_SYNC_COUNTER_NAME;
 use crate::sender::manager::MODERN_SYNC_CURRENT_ENTRY_ID;
+use crate::stat;
 
 define_stats! {
     prefix = "mononoke.modern_sync.manager.changeset";
@@ -84,7 +85,10 @@ impl ChangesetManager {
                 .upload_identical_changeset(std::mem::take(current_batch))
                 .await
             {
-                error!(logger, "Failed to upload changesets: {:?}", e);
+                error!(
+                    logger,
+                    "Failed to upload changesets {:?} {:?}", current_batch, e
+                );
                 return Err(e);
             } else {
                 let elapsed = start.elapsed().as_secs() / batch_size as u64;
@@ -280,22 +284,40 @@ impl Manager for ChangesetManager {
                         }
 
                         if current_batch.len() >= MAX_CHANGESET_BATCH_SIZE {
-                            if let Err(e) = ChangesetManager::flush_batch(reponame.clone(), &ctx, &changeset_es, mc.clone(), &mut current_batch, &mut pending_log, &mut latest_in_entry_checkpoint, &mut latest_entry_id, &mut latest_bookmark, &mut pending_notification, &logger)
+                            let now = std::time::Instant::now();
+                            let changeset_ids = current_batch.iter().map(|c| c.1.get_changeset_id()).collect::<Vec<_>>();
+                            stat::log_upload_changeset_start(&ctx, changeset_ids.clone());
+                            match ChangesetManager::flush_batch(reponame.clone(), &ctx, &changeset_es, mc.clone(), &mut current_batch, &mut pending_log, &mut latest_in_entry_checkpoint, &mut latest_entry_id, &mut latest_bookmark, &mut pending_notification, &logger)
                             .await
                             {
-                                return Err(anyhow::anyhow!(
-                                    "Error processing changesets: {:?}",
-                                    e
-                                ));
+                                Ok(()) => {
+                                    stat::log_upload_changeset_done(&ctx, changeset_ids, now.elapsed());
+                                }
+                                Err(e) => {
+                                    stat::log_upload_changeset_error(&ctx, changeset_ids, &e, now.elapsed());
+                                    return Err(anyhow::anyhow!(
+                                        "Error processing changesets: {:?}",
+                                        e
+                                    ));
+                                }
                             }
                         }
                     }
                     _ = flush_timer.tick() =>
                     {
-                        if let Err(e) = ChangesetManager::flush_batch(reponame.clone(), &ctx, &changeset_es, mc.clone(), &mut current_batch, &mut pending_log, &mut latest_in_entry_checkpoint, &mut latest_entry_id, &mut latest_bookmark, &mut pending_notification, &logger)
+                        let now = std::time::Instant::now();
+                        let changeset_ids = current_batch.iter().map(|c| c.1.get_changeset_id()).collect::<Vec<_>>();
+                        stat::log_upload_changeset_start(&ctx, changeset_ids.clone());
+                        match ChangesetManager::flush_batch(reponame.clone(), &ctx, &changeset_es, mc.clone(), &mut current_batch, &mut pending_log, &mut latest_in_entry_checkpoint, &mut latest_entry_id, &mut latest_bookmark, &mut pending_notification, &logger)
                         .await
                         {
-                            return Err(anyhow::anyhow!("Error processing changesets: {:?}", e));
+                            Ok(()) => {
+                                    stat::log_upload_changeset_done(&ctx, changeset_ids, now.elapsed());
+                            }
+                            Err(e) => {
+                                stat::log_upload_changeset_error(&ctx, changeset_ids, &e, now.elapsed());
+                                return Err(anyhow::anyhow!("Error processing changesets: {:?}", e));
+                            }
                         }
                     }
                 }

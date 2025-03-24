@@ -228,3 +228,55 @@ pub(crate) fn log_edenapi_stats(
     scuba.add("upload_speed", format!("{:.2}", size / time).as_str());
     scuba.log();
 }
+
+pub(crate) fn log_upload_changeset_start(
+    ctx: &CoreContext,
+    changeset_ids: Vec<ChangesetId>,
+) -> bool {
+    let mut scuba_sample = ctx.scuba().clone();
+
+    scuba_sample.add("log_tag", "Start uploading changesets");
+    add_changesets_info(&mut scuba_sample, changeset_ids);
+
+    scuba_sample.log()
+}
+
+pub(crate) fn log_upload_changeset_done(
+    ctx: &CoreContext,
+    changeset_ids: Vec<ChangesetId>,
+    elapsed: std::time::Duration,
+) -> bool {
+    let mut scuba_sample = ctx.scuba().clone();
+
+    scuba_sample.add("log_tag", "Done uploading changesets");
+    add_changesets_info(&mut scuba_sample, changeset_ids);
+    scuba_sample.add("elapsed", elapsed.as_millis());
+
+    scuba_sample.log()
+}
+
+pub(crate) fn log_upload_changeset_error(
+    ctx: &CoreContext,
+    changeset_ids: Vec<ChangesetId>,
+    error: &anyhow::Error,
+    elapsed: std::time::Duration,
+) -> bool {
+    let mut scuba_sample = ctx.scuba().clone();
+
+    scuba_sample.add("log_tag", "Error uploading changesets");
+    add_changesets_info(&mut scuba_sample, changeset_ids);
+    scuba_sample.add("error", format!("{:?}", error));
+    scuba_sample.add("elapsed", elapsed.as_millis());
+
+    scuba_sample.log()
+}
+
+fn add_changesets_info(
+    scuba_sample: &mut MononokeScubaSampleBuilder,
+    changeset_ids: Vec<ChangesetId>,
+) {
+    scuba_sample.add(
+        "changeset_ids",
+        changeset_ids.iter().map(|c| c.to_hex()).collect::<Vec<_>>(),
+    );
+}
