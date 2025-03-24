@@ -64,17 +64,4 @@ Disable Mercurial types as they do not support git submodules
 
 # Perform a shallow clone of the repo with depth = 1 and list the commits. This should fail because we try to fetch the
 # size of the submodule
-  $ git_client clone $MONONOKE_GIT_SERVICE_BASE_URL/$REPONAME.git --depth=1
-  Cloning into 'repo'...
-  remote: Converting HAVE Git commits to Bonsais        
-  remote: Converting WANT Git commits to Bonsais        
-  remote: Collecting Bonsai commits to send to client        
-  remote: Counting number of objects to be sent in packfile        
-  remote: Error while calculating object count during fetch
-  
-  Caused by:
-      0: Error while listing all entries from GitTree for changeset ChangesetId(Blake2(*)) (glob)
-      1: No metadata for de0c53cc213a98b1382aec1dcbcb01bf088273e4
-  fatal: early EOF
-  fatal: fetch-pack: invalid index-pack output
-  [128]
+  $ quiet git_client clone $MONONOKE_GIT_SERVICE_BASE_URL/$REPONAME.git --depth=1

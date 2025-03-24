@@ -106,7 +106,11 @@ async fn boundary_trees_and_blobs(
                 let objects = root_tree.list_all_entries((*ctx).clone(), blobstore.clone()).try_filter_map(|(path, entry)|{
                     cloned!(ctx, blobstore, filter);
                     async move {
-                        let size = entry.size(&ctx, &blobstore).await?;
+                        // If the entry is a submodule, then the concept of size does not apply. Assume 0 since it will be ignored anyway
+                        let size = match entry.is_submodule() {
+                            true => 0,
+                            false => entry.size(&ctx, &blobstore).await?
+                        };
                         let kind = entry.kind();
                         let oid = entry.oid();
                         // If the entry corresponds to a submodules (and shows up as a commit), then we ignore it
@@ -121,7 +125,7 @@ async fn boundary_trees_and_blobs(
                 .await
                 .with_context(|| {
                     format!(
-                        "Error while listing all entries from GitTree for changeset {changeset_id:?}",
+                        "Error while listing all entries from GitTree for changeset {changeset_id:?} and root tree {root_tree:?}",
                     )
                 })?;
                 Ok(objects)

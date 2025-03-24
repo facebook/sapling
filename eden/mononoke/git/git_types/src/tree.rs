@@ -144,6 +144,9 @@ impl GitLeaf {
     }
 
     pub(crate) async fn size(&self, ctx: &CoreContext, blobstore: &impl Blobstore) -> Result<u64> {
+        if self.is_submodule() {
+            anyhow::bail!("Fetching size of GitLeaf item that is a submodule is not supported");
+        }
         let key = GitSha1::from_object_id(&self.0)?.into();
         let metadata = filestore::get_metadata(blobstore, ctx, &key)
             .await?
