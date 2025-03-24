@@ -618,18 +618,23 @@ Set a bogus mergedriver as a tripwire to make sure we don't invoke merge driver.
   >    # drawdag.defaultfiles=false
   > EOS
   $ sl go -q $D
-FIXME: $D is missing remove of file1
   $ hg histedit $B --commands - <<EOF
   > pick $B
   > fold $C
   > pick $D
   > EOF
   $ hg log -G -p --config diff.git=1
-  @  commit:      6c8a9903aaeb
+  @  commit:      048204e0ad0b
   │  user:        test
   │  date:        Thu Jan 01 00:00:00 1970 +0000
   │  summary:     D
   │
+  │  diff --git a/file1 b/file1
+  │  deleted file mode 100644
+  │  --- a/file1
+  │  +++ /dev/null
+  │  @@ -1,1 +0,0 @@
+  │  -foo
   │  diff --git a/file2 b/file2
   │  new file mode 100644
   │  --- /dev/null
@@ -667,5 +672,4 @@ FIXME: $D is missing remove of file1
   file2
   $ sl files -r .
   create
-  file1
   file2

@@ -671,21 +671,21 @@ def collapse(repo, first, commitopts, skipprompt=False):
 
     # commit a new version of the old changeset, including the update
     # collect all files which might be affected
-    files = set()
+    all_files = set()
     for ctx in ctxs:
-        files.update(ctx.files())
+        all_files.update(ctx.files())
 
     # Recompute copies (avoid recording a -> b -> a)
     copied = copies.pathcopies(base, last)
 
     if "remotefilelog" in repo.requirements:
         # Prefetch files in `base` to avoid serial lookups.
-        fileids = base.manifest().walkfiles(matchmod.exact("", "", files))
+        fileids = base.manifest().walkfiles(matchmod.exact("", "", all_files))
         repo.fileslog.filestore.prefetch(fileids)
         repo.fileslog.metadatastore.prefetch(fileids, length=1)
 
     # prune files which were reverted by the updates
-    files = [f for f in files if not cmdutil.samefile(f, last, base)]
+    files = [f for f in all_files if not cmdutil.samefile(f, last, base)]
     # commit version of these files as defined by head
     headmf = last.manifest()
 
@@ -725,7 +725,16 @@ def collapse(repo, first, commitopts, skipprompt=False):
         mutinfo=mutinfo,
     )
     n = repo.commitctx(new)
-    new.markcommitted(n)
+
+    # Similar logic to "dirstate.rebuild()", but don't leave untracked files.
+    with repo.dirstate.parentchange():
+        for f in all_files:
+            if f in new:
+                repo.dirstate.normal(f)
+            else:
+                repo.dirstate.delete(f)
+        repo.dirstate.setparents(n)
+
     return n
 
 
