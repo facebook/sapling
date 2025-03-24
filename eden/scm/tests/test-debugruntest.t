@@ -312,11 +312,11 @@ ls -l behavior
   $ mkdir dir
   $ touch dir/foo dir/bar
   $ ls -l dir
-  -rw-r--r-- bar
-  -rw-r--r-- foo
+  -rw....... bar (re)
+  -rw....... foo (re)
   $ cd dir
   $ ls -l
-  -rw-r--r-- bar
-  -rw-r--r-- foo
+  -rw....... bar (re)
+  -rw....... foo (re)
   $ cd
 
