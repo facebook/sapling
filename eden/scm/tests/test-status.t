@@ -593,7 +593,7 @@ Make sure we expand env vars in ignore file path.
 
   $ cd ..
 
-#if symlink
+#if symlink windows
 Ignore suspiciously modified symlinks.
 
   $ newclientrepo suspicious-symlink

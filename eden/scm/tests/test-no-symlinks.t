@@ -1,11 +1,9 @@
 #modern-config-incompatible
 
-#require no-eden
+#require no-eden no-symlinks
 
 TODO(debugruntest): this test fails on Mac
 #chg-compatible
-  $ export SL_DEBUG_DISABLE_SYMLINKS=1
-
 
 # The following (test) script was used to create the bundle:
 #

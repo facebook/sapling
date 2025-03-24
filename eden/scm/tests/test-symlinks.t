@@ -325,8 +325,10 @@ Issue995: hg copy -A incorrectly handles symbolic links
 
   $ cd ..
 
+#if windows
 Don't treat symlinks as untrackable if symlinks aren't supported.
   $ newclientrepo
   $ ln -s foo bar
   $ SL_DEBUG_DISABLE_SYMLINKS=1 hg status
   ? bar
+#endif

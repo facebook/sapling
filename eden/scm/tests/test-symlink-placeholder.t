@@ -1,4 +1,4 @@
-#require symlink no-eden
+#require symlink no-eden windows
 
   $ hg init unix-repo
   $ cd unix-repo
