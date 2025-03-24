@@ -608,6 +608,12 @@ pub struct IdenticalChangesetContent {
     pub is_snapshot: bool,
     #[id(12)]
     pub hg_info: HgInfo,
+    #[id(13)]
+    pub committer: Option<String>,
+    #[id(14)]
+    pub committer_time: Option<i64>,
+    #[id(15)]
+    pub committer_tz: Option<i32>,
 }
 
 impl From<IdenticalChangesetContent> for HgChangesetContent {

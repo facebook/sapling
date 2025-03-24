@@ -93,8 +93,8 @@ pub fn to_identical_changeset(
         parents,
         author,
         author_date,
-        committer: _,
-        committer_date: _,
+        committer,
+        committer_date,
         message,
         hg_extra: _,
         git_extra_headers,
@@ -161,6 +161,9 @@ pub fn to_identical_changeset(
         message: message.to_string(),
         is_snapshot,
         hg_info,
+        committer,
+        committer_time: committer_date.map(|d| d.timestamp_secs()),
+        committer_tz: committer_date.map(|d| d.tz_offset_secs()),
     })
 }
 

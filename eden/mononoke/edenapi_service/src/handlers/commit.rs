@@ -1248,12 +1248,22 @@ impl SaplingRemoteApiHandler for UploadIdenticalChangesetsHandler {
                         })
                         .collect::<Result<_, MononokeError>>()?;
 
+                    let committer_date = if let Some(committer_time) = ics.committer_time {
+                        Some(DateTime::from_timestamp(
+                            committer_time,
+                            // strongly assume we have a committer_tz if we have a committer_time, but avoid failing
+                            ics.committer_tz.unwrap_or(0),
+                        )?)
+                    } else {
+                        None
+                    };
+
                     let bcs = BonsaiChangesetMut {
                         parents,
                         author: ics.author.clone(),
                         author_date: DateTime::from_timestamp(ics.time, ics.tz)?,
-                        committer: None,
-                        committer_date: None,
+                        committer: ics.committer.clone(),
+                        committer_date,
                         message: ics.message.clone(),
                         hg_extra,
                         file_changes,
