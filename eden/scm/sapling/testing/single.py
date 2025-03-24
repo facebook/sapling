@@ -11,6 +11,8 @@ from unittest import SkipTest
 
 from .t.runner import fixmismatches, runtest, runtest_reporting_progress, TestId
 
+SKIP_PYTHON_LOOKUP = True
+
 DESCRIPTION = """Entry point to run a single .t test.
 
 Support 2 modes:
