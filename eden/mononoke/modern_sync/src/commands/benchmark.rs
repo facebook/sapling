@@ -11,7 +11,11 @@ use std::sync::Arc;
 use anyhow::Result;
 use async_trait::async_trait;
 use clap::Parser;
+use clientinfo::ClientEntryPoint;
+use clientinfo::ClientInfo;
 use context::CoreContext;
+use context::SessionContainer;
+use metadata::Metadata;
 use mononoke_app::MononokeApp;
 use mutable_counters::MutableCounters;
 use slog::info;
@@ -28,6 +32,7 @@ pub struct CommandArgs {
     chunk_size: Option<u64>,
 }
 
+#[derive(Clone, Default)]
 struct MemoryMutableCounters {
     counters: Arc<std::sync::RwLock<std::collections::HashMap<String, i64>>>,
 }
@@ -79,24 +84,57 @@ impl MutableCounters for MemoryMutableCounters {
 pub async fn run(app: MononokeApp, args: CommandArgs) -> Result<()> {
     let app = Arc::new(app);
     let app_args = &app.args::<ModernSyncArgs>()?;
-    let (source_repo_args, dest_repo_name) = get_unsharded_repo_args(app.clone(), app_args).await?;
+    let (source_repo_args, source_repo_name, dest_repo_name) =
+        get_unsharded_repo_args(app.clone(), app_args).await?;
+    let ctx = new_context(&app);
+    let logger = app.logger().clone();
 
     let mc = MemoryMutableCounters::new();
 
-    info!(app.logger(), "Running sync-once loop");
+    let now = std::time::Instant::now();
     crate::sync::sync(
         app,
         Some(0),
-        source_repo_args,
-        dest_repo_name,
+        source_repo_args.clone(),
+        dest_repo_name.clone(),
         ExecutionType::SyncOnce,
         false,
         args.chunk_size.clone().unwrap_or(CHUNK_SIZE_DEFAULT),
         PathBuf::from(""),
         true,
-        Some(Arc::new(mc)),
+        Some(Arc::new(mc.clone())),
     )
     .await?;
+    let elapsed = now.elapsed();
+
+    info!(
+        logger,
+        "Benchmark: Sync {} to {:?} took {}ms",
+        elapsed.as_millis(),
+        &source_repo_name,
+        dest_repo_name,
+    );
+
+    info!(logger, "Counters:");
+    let mut counters = mc.get_all_counters(&ctx).await?;
+    counters.sort_by(|a, b| a.0.cmp(&b.0));
+    for (k, v) in counters {
+        info!(logger, "{}={}", k, v);
+    }
 
     Ok(())
+}
+
+fn new_context(app: &MononokeApp) -> CoreContext {
+    let mut metadata = Metadata::default();
+    metadata.add_client_info(ClientInfo::default_with_entry_point(
+        ClientEntryPoint::ModernSync,
+    ));
+
+    let scuba = app.environment().scuba_sample_builder.clone();
+    let session_container = SessionContainer::builder(app.fb)
+        .metadata(Arc::new(metadata))
+        .build();
+
+    session_container.new_context(app.logger().clone(), scuba)
 }

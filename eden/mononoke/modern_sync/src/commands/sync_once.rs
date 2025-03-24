@@ -32,7 +32,8 @@ pub struct CommandArgs {
 pub async fn run(app: MononokeApp, args: CommandArgs) -> Result<()> {
     let app = Arc::new(app);
     let app_args = &app.args::<ModernSyncArgs>()?;
-    let (source_repo_args, dest_repo_name) = get_unsharded_repo_args(app.clone(), app_args).await?;
+    let (source_repo_args, _, dest_repo_name) =
+        get_unsharded_repo_args(app.clone(), app_args).await?;
 
     info!(app.logger(), "Running sync-once loop");
     crate::sync::sync(

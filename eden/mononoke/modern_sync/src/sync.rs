@@ -874,7 +874,7 @@ fn classify_entries(
 pub(crate) async fn get_unsharded_repo_args(
     app: Arc<MononokeApp>,
     app_args: &ModernSyncArgs,
-) -> Result<(SourceRepoArgs, String)> {
+) -> Result<(SourceRepoArgs, String, String)> {
     let source_repo: Repo = app.open_repo(&app_args.repo).await?;
     let source_repo_name = source_repo.repo_identity.name().to_string();
     let target_repo_name = app_args
@@ -883,7 +883,8 @@ pub(crate) async fn get_unsharded_repo_args(
         .unwrap_or(source_repo_name.clone());
 
     Ok((
-        SourceRepoArgs::with_name(source_repo_name),
+        SourceRepoArgs::with_name(source_repo_name.clone()),
+        source_repo_name,
         target_repo_name,
     ))
 }
