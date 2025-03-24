@@ -1,6 +1,6 @@
 #modern-config-incompatible
 
-#require no-eden no-symlinks
+#require no-eden no-symlink
 
 TODO(debugruntest): this test fails on Mac
 #chg-compatible
