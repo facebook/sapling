@@ -29,6 +29,7 @@ use revisionstore::scmstore::FileAttributes;
 use serde::de::value;
 use serde::de::value::StringDeserializer;
 use serde::de::Deserialize;
+use storemodel::TreeStore;
 use types::fetch_mode::FetchMode;
 use types::Key;
 use types::RepoPathBuf;
@@ -52,6 +53,9 @@ define_flags! {
 
         /// Request tree parents.
         tree_parents: bool,
+
+        /// Run in storemodel (using storemodel traits). This is what eden uses.
+        store_model: bool,
 
         /// Revision for positional file paths.
         #[short('r')]
@@ -138,6 +142,7 @@ pub fn run(ctx: ReqCtx<DebugScmStoreOpts>, repo: &Repo) -> Result<u8> {
             &fresh_repo,
             keys,
             fetch_mode,
+            ctx.opts.store_model,
             ctx.opts.tree_parents,
             ctx.opts.aux_only,
         )?,
@@ -213,6 +218,7 @@ fn fetch_trees(
     repo: &Repo,
     keys: Vec<Key>,
     fetch_mode: FetchMode,
+    store_model: bool,
     tree_parents: bool,
     aux_only: bool,
 ) -> Result<()> {
@@ -230,14 +236,30 @@ fn fetch_trees(
         attrs |= TreeAttributes::PARENTS;
     }
 
-    let fetch_result = store.fetch_batch(keys.into_iter(), attrs, fetch_mode);
+    if store_model {
+        for tree in store.get_tree_iter(keys, fetch_mode)? {
+            let (key, tree) = tree?;
 
-    let (found, missing, _errors) = fetch_result.consume();
-    for complete in found.into_iter() {
-        write!(stdout, "Successfully fetched tree: {:#?}\n", complete)?;
-    }
-    for incomplete in missing.into_iter() {
-        write!(stdout, "Failed to fetch tree: {:#?}\n", incomplete)?;
+            writeln!(stdout, "Tree '{}' entries", key.path)?;
+            for entry in tree.iter()? {
+                writeln!(stdout, "  {:?}", entry?)?;
+            }
+
+            writeln!(stdout, "Tree '{}' file aux", key.path)?;
+            for entry in tree.file_aux_iter()? {
+                writeln!(stdout, "  {:?}", entry?)?;
+            }
+        }
+    } else {
+        let fetch_result = store.fetch_batch(keys.into_iter(), attrs, fetch_mode);
+
+        let (found, missing, _errors) = fetch_result.consume();
+        for complete in found.into_iter() {
+            write!(stdout, "Successfully fetched tree: {:#?}\n", complete)?;
+        }
+        for incomplete in missing.into_iter() {
+            write!(stdout, "Failed to fetch tree: {:#?}\n", incomplete)?;
+        }
     }
 
     Ok(())

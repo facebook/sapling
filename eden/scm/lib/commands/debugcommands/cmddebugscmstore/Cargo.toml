@@ -17,5 +17,6 @@ sapling-manifest = { version = "0.1.0", path = "../../../manifest" }
 sapling-metrics = { version = "0.1.0", path = "../../../metrics" }
 sapling-repo = { version = "0.1.0", path = "../../../repo" }
 sapling-revisionstore = { version = "0.1.0", path = "../../../revisionstore" }
+sapling-storemodel = { version = "0.1.0", path = "../../../storemodel" }
 sapling-types = { version = "0.1.0", path = "../../../types" }
 serde = { version = "1.0.185", features = ["derive", "rc"] }
