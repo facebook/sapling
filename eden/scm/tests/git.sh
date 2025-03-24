@@ -23,5 +23,8 @@ git config --global protocol.file.allow always
 # Silent "warning: in the working copy of 'foo', LF will be replaced by CRLF the next time Git touches it" on Windows.
 git config --global core.autocrlf false
 
+# Support long paths on Windows.
+git config --global core.longpaths true
+
 # Undo default_hgrc.py defaults we don't want.
 setconfig remotenames.selectivepulldefault=main,master
