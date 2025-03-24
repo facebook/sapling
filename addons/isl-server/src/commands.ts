@@ -193,6 +193,9 @@ export function getExecParams(
   if (EXCLUDE_FROM_BLACKBOX_COMMANDS.has(commandName)) {
     args.push('--config', 'extensions.blackbox=!');
   }
+  // The command should be non-interactive, so do not even attempt to run an
+  // (interactive) editor.
+  const editor = os.platform() === 'win32' ? 'exit /b 1' : 'false';
   const newEnv = {
     ...options_?.env,
     ...env,
@@ -208,7 +211,7 @@ export function getExecParams(
     EDITOR: undefined,
     VISUAL: undefined,
     HGUSER: undefined,
-    HGEDITOR: undefined,
+    HGEDITOR: editor,
   } as unknown as NodeJS.ProcessEnv;
   let langEnv = newEnv.LANG ?? process.env.LANG;
   if (langEnv === undefined || !langEnv.toUpperCase().endsWith('UTF-8')) {
