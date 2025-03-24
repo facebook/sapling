@@ -27,44 +27,54 @@ pub(crate) fn render_commit_id(
     header: Option<(&str, &str)>,
     separator: &str,
     requested: &str,
-    ids: &BTreeMap<String, String>,
+    commit_ids: &BTreeMap<String, String>,
     schemes: &HashSet<String>,
     w: &mut dyn Write,
 ) -> Result<(), Error> {
-    let ids: BTreeMap<_, _> = ids
+    let ids: BTreeMap<_, _> = commit_ids
         .iter()
-        .filter(|(scheme, _id)| schemes.contains(*scheme))
+        .filter(|(scheme, _id)| {
+            if schemes.is_empty() {
+                // If no schemes were requested, get any non-bonsai id, which
+                // should be the repo's default id scheme returned by the server
+                *scheme != "bonsai"
+            } else {
+                schemes.contains(*scheme)
+            }
+        })
         .collect();
 
-    if let Ok(scheme) = schemes.iter().exactly_one() {
-        if let Ok(id) = ids.values().exactly_one() {
-            if let Some((header, _indent)) = header {
-                write!(w, "{}: ", header)?;
-            }
-            write!(w, "{}", id)?;
-        } else {
-            bail!("{} does not have a '{}' id", requested, scheme);
-        }
-    } else {
-        if ids.is_empty() {
+    match ids.iter().at_most_one() {
+        Ok(None) => {
             let mut schemes: Vec<_> = schemes.iter().map(AsRef::as_ref).collect();
             schemes.sort_unstable();
-            bail!(
-                "{} does not have any '{}' ids",
-                requested,
-                schemes.as_slice().join("', '")
-            );
-        }
-        let mut prefix = "";
-        if let Some((header, indent)) = header {
-            write!(w, "{}:{}", header, separator)?;
-            prefix = indent;
-        }
-        for (i, (scheme, id)) in ids.iter().enumerate() {
-            if i > 0 {
-                write!(w, "{}", separator)?;
+            if schemes.is_empty() {
+                bail!("{requested} does not have an id in the default scheme");
+            } else {
+                bail!(
+                    "{requested} does not have any '{}' ids",
+                    schemes.as_slice().join("', '")
+                );
             }
-            write!(w, "{}{}={}", prefix, scheme, id)?;
+        }
+        Ok(Some((_, id))) => {
+            if let Some((header, _indent)) = header {
+                write!(w, "{header}: ")?;
+            }
+            write!(w, "{}", id)?;
+        }
+        Err(ids_iter) => {
+            let mut prefix = "";
+            if let Some((header, indent)) = header {
+                write!(w, "{}:{}", header, separator)?;
+                prefix = indent;
+            }
+            for (i, (scheme, id)) in ids_iter.enumerate() {
+                if i > 0 {
+                    write!(w, "{}", separator)?;
+                }
+                write!(w, "{}{}={}", prefix, scheme, id)?;
+            }
         }
     }
     Ok(())

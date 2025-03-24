@@ -73,7 +73,7 @@ impl Render for BookmarkOutput {
             write!(w, "{}\n", self.name)?;
         } else {
             let schemes: HashSet<String> = args.scheme_args.scheme_string_set();
-            if schemes.len() == 1 {
+            if schemes.len() <= 1 {
                 write!(w, "{:<40} ", self.name)?;
                 render_commit_id(None, "\n", &self.name, &self.ids, &schemes, w)?;
             } else {
