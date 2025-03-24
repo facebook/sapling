@@ -60,7 +60,8 @@ ServerState::ServerState(
     const EdenConfig& initialConfig,
     [[maybe_unused]] folly::EventBase* mainEventBase,
     std::shared_ptr<Notifier> notifier,
-    bool enableFaultDetection)
+    bool enableFaultDetection,
+    std::shared_ptr<InodeAccessLogger> inodeAccessLogger)
     : userInfo_{std::move(userInfo)},
       edenStats_{std::move(edenStats)},
       privHelper_{std::move(privHelper)},
@@ -95,13 +96,19 @@ ServerState::ServerState(
           initialConfig.systemIgnoreFile.getValue(),
           kSystemIgnoreMinPollSeconds}},
       notifier_{std::move(notifier)},
-      inodeAccessLogger_{std::make_shared<InodeAccessLogger>(
-          config_,
-          makeDefaultStructuredLogger<FileAccessStructuredLogger, EdenStatsPtr>(
-              config_->getEdenConfig()->scribeLogger.getValue(),
-              config_->getEdenConfig()->fileAccessScribeCategory.getValue(),
-              std::move(sessionInfo),
-              edenStats_.copy()))},
+      inodeAccessLogger_{
+          inodeAccessLogger
+              ? std::move(inodeAccessLogger)
+              : std::make_shared<InodeAccessLogger>(
+                    config_,
+                    makeDefaultStructuredLogger<
+                        FileAccessStructuredLogger,
+                        EdenStatsPtr>(
+                        config_->getEdenConfig()->scribeLogger.getValue(),
+                        config_->getEdenConfig()
+                            ->fileAccessScribeCategory.getValue(),
+                        std::move(sessionInfo),
+                        edenStats_.copy()))},
       fsEventLogger_{
           initialConfig.requestSamplesPerMinute.getValue()
               ? std::make_shared<FsEventLogger>(config_, scribeLogger_)

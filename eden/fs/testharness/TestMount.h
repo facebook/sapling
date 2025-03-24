@@ -48,6 +48,7 @@ class FuseDispatcher;
 class LocalStore;
 class TestConfigSource;
 class TreeInode;
+class MockInodeAccessLogger;
 template <typename T>
 class StoredObject;
 using StoredHash = StoredObject<ObjectId>;
@@ -236,6 +237,10 @@ class TestMount {
 
   const std::shared_ptr<TreeCache>& getTreeCache() const {
     return treeCache_;
+  }
+
+  const std::shared_ptr<InodeAccessLogger>& getInodeAccessLogger() const {
+    return serverState_->getInodeAccessLogger();
   }
 
 #ifndef _WIN32

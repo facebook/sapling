@@ -33,12 +33,12 @@ class InodeAccessLogger {
   InodeAccessLogger(
       std::shared_ptr<ReloadableConfig> reloadableConfig,
       std::shared_ptr<StructuredLogger> structuredLogger);
-  ~InodeAccessLogger();
+  virtual ~InodeAccessLogger();
 
   /**
    * Puts a InodeAccess event on a worker thread to be processed asynchronously
    */
-  void logInodeAccess(InodeAccess access);
+  virtual void logInodeAccess(InodeAccess access);
 
  private:
   struct State {

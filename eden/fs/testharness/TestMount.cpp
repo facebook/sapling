@@ -49,6 +49,7 @@
 #include "eden/fs/testharness/FakeBackingStore.h"
 #include "eden/fs/testharness/FakeClock.h"
 #include "eden/fs/testharness/FakeFuse.h"
+#include "eden/fs/testharness/FakeInodeAccessLogger.h"
 #include "eden/fs/testharness/FakePrivHelper.h"
 #include "eden/fs/testharness/FakeTreeBuilder.h"
 #include "eden/fs/testharness/TestConfigSource.h"
@@ -129,7 +130,8 @@ TestMount::TestMount(bool enableActivityBuffer, CaseSensitivity caseSensitivity)
       *edenConfig_,
       nullptr,
       make_shared<CommandNotifier>(reloadableConfig),
-      /*enableFaultInjection=*/true);
+      /*enableFaultInjection=*/true,
+      make_shared<FakeInodeAccessLogger>());
 
   backingStore_ = make_shared<FakeBackingStore>(
       BackingStore::LocalStoreCachingPolicy::NoCaching, serverState_);

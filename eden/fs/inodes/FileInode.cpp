@@ -939,6 +939,7 @@ ImmediateFuture<BlobAuxData> FileInode::getBlobAuxData(
 ImmediateFuture<struct stat> FileInode::stat(
     const ObjectFetchContextPtr& context) {
   notifyParentOfStat(/*isFile=*/true, *context);
+  logAccess(*context);
 
   auto st = getMount()->initStatData();
   st.st_nlink = 1; // Eden does not support hard links yet.

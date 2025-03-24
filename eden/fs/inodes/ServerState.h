@@ -72,7 +72,8 @@ class ServerState {
       const EdenConfig& initialConfig,
       folly::EventBase* mainEventBase,
       std::shared_ptr<Notifier> notifier,
-      bool enableFaultInjection = false);
+      bool enableFaultInjection = false,
+      std::shared_ptr<InodeAccessLogger> inodeAccessLogger = nullptr);
   ~ServerState();
 
   /**

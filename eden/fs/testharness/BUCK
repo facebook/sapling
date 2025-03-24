@@ -14,6 +14,7 @@ cpp_library(
         "fbsource//third-party/googletest:gtest",
         ":fake_backing_store_and_tree_builder",
         ":fake_fuse",
+        ":fake_inode_access_logger",
         ":fake_privhelper",
         ":test_config_source",
         ":test_util",
@@ -315,5 +316,13 @@ cpp_library(
         "//eden/fs/telemetry:scribe_logger",
         "//eden/fs/telemetry:stats",
         "//folly/executors:manual_executor",
+    ],
+)
+
+cpp_library(
+    name = "fake_inode_access_logger",
+    headers = ["FakeInodeAccessLogger.h"],
+    exported_deps = [
+        "//eden/fs/inodes:inodes",
     ],
 )
