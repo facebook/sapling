@@ -5,6 +5,8 @@
 TODO(debugruntest): this test fails on Mac
 #chg-compatible
 
+  $ setconfig experimental.windows-symlinks=false
+
 # The following (test) script was used to create the bundle:
 #
 # configure modernclient
