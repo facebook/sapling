@@ -43,7 +43,7 @@ async fn async_main(ctx: CoreContext, app: MononokeApp) -> Result<(), Error> {
     let repo_args = args.repo_args.clone();
     let runtime = app.runtime().clone();
 
-    if let Some(mut executor) = args.sharded_executor_args.clone().build_executor(
+    let res = if let Some(mut executor) = args.sharded_executor_args.clone().build_executor(
         app.fb,
         runtime.clone(),
         ctx.logger(),
@@ -60,7 +60,13 @@ async fn async_main(ctx: CoreContext, app: MononokeApp) -> Result<(), Error> {
             .context("Source and Target repos must be provided when running in non-sharded mode")?;
         let process_executor = BacksyncProcessExecutor::new(ctx.clone(), app, repo_args).await?;
         process_executor.execute().await
+    };
+
+    if let Err(ref e) = res {
+        let mut scuba = ctx.scuba().clone();
+        scuba.log_with_msg("Execution error", e.to_string());
     }
+    res
 }
 
 #[fbinit::main]

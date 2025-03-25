@@ -558,7 +558,7 @@ async fn async_main(app: MononokeApp, ctx: CoreContext) -> Result<(), Error> {
     let repo_args = args.repo_args.clone();
     let runtime = app.runtime().clone();
     let logger = app.logger().clone();
-    if let Some(mut executor) = args.sharded_executor_args.clone().build_executor(
+    let res = if let Some(mut executor) = args.sharded_executor_args.clone().build_executor(
         app.fb,
         runtime.clone(),
         &logger,
@@ -580,9 +580,15 @@ async fn async_main(app: MononokeApp, ctx: CoreContext) -> Result<(), Error> {
             .into_source_and_target_args()
             .context("Source and Target repos must be provided when running in non-sharded mode")?;
         let x_repo_process_executor =
-            XRepoSyncProcessExecutor::new(app, ctx, args, &repo_args).await?;
+            XRepoSyncProcessExecutor::new(app, ctx.clone(), args, &repo_args).await?;
         x_repo_process_executor.execute().await
+    };
+
+    if let Err(ref e) = res {
+        let mut scuba = ctx.scuba().clone();
+        scuba.log_with_msg("Execution error", e.to_string());
     }
+    res
 }
 
 struct BackpressureParams {
