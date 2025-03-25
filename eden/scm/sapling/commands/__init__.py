@@ -6296,23 +6296,17 @@ def update(
 ):
     ui.log("checkout_info", checkout_mode="python")
 
-    def abort_on_unresolved_conflicts():
+    def abort_or_reset_mergestate():
         if repo.localvfs.exists("updatemergestate"):
             ms = mergemod.mergestate.read(repo)
-            if list(ms.unresolved()):
-                raise error.Abort(
-                    _("outstanding merge conflicts"),
-                    hint=_(
-                        "use '@prog@ resolve --list' to list, '@prog@ resolve --mark FILE' to mark resolved"
-                    ),
-                )
+            cmdutil.abort_on_unresolved_conflicts(ms)
             repo.localvfs.tryunlink("updatemergestate")
             ms.reset()
 
     if opts.get("continue"):
         with repo.wlock():
             if repo.localvfs.exists("updatemergestate"):
-                abort_on_unresolved_conflicts()
+                abort_or_reset_mergestate()
                 return 0
             elif repo.localvfs.exists("updatestate") and (
                 repo.ui.configbool("experimental", "nativecheckout")
@@ -6373,7 +6367,7 @@ def update(
         if clean:
             repo.localvfs.tryunlink("updatemergestate")
         else:
-            abort_on_unresolved_conflicts()
+            abort_or_reset_mergestate()
 
         # Either we consumed this with "--continue" or we ignoring it with a
         # different destination.

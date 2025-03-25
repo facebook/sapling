@@ -5111,3 +5111,14 @@ def registerdiffgrafts(from_paths, to_paths, *ctxs):
         manifest = ctx.manifest()
         for f, t in zip(from_paths, to_paths):
             manifest.registerdiffgraft(f, t)
+
+
+def abort_on_unresolved_conflicts(ms):
+    """Abort if there are unresolved conflicts in the merge state."""
+    if ms.unresolvedcount() > 0:
+        raise error.Abort(
+            _("outstanding merge conflicts"),
+            hint=_(
+                "use '@prog@ resolve --list' to list, '@prog@ resolve --mark FILE' to mark resolved"
+            ),
+        )
