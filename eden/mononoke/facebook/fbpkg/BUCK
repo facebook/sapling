@@ -31,6 +31,7 @@ mononoke_fbpkg(
         "admin": "//eden/mononoke/tools/admin:admin",
         "newadmin": fbpkg.symlink("admin"),
     },
+    with_debug_symbols = False,
 )
 
 mononoke_fbpkg(
