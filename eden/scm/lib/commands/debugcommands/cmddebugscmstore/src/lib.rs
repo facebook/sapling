@@ -246,8 +246,10 @@ fn fetch_trees(
             }
 
             writeln!(stdout, "Tree '{}' file aux", key.path)?;
-            for entry in tree.file_aux_iter()? {
-                writeln!(stdout, "  {:?}", entry?)?;
+            let mut file_aux = tree.file_aux_iter()?.collect::<Result<Vec<_>>>()?;
+            file_aux.sort_by(|a, b| a.0.cmp(&b.0));
+            for entry in file_aux {
+                writeln!(stdout, "  {:?}", entry)?;
             }
         }
     } else {
