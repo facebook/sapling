@@ -41,7 +41,17 @@ struct EdenFsConnection<T> {
     client: T,
 }
 
+/// A trait for handling statistics about EdenFS client requests.
+///
+/// Implementations of this trait can be used to collect metrics about EdenFS client
+/// requests, such as the number of attempts and retries required for successful requests.
 pub trait EdenFsClientStatsHandler {
+    /// Called when a request completes successfully.
+    ///
+    /// # Parameters
+    ///
+    /// * `attempts` - The total number of attempts made for this request
+    /// * `retries` - The number of retries (not including the initial attempt)
     fn on_success(&self, attempts: usize, retries: usize);
 }
 
@@ -52,6 +62,18 @@ impl EdenFsClientStatsHandler for NoopEdenFsClientStatsHandler {
 }
 
 /// A generic EdenFS client that can work with any connector type.
+///
+/// This is the core client implementation that handles connections, retries, and error handling.
+/// It's used by both [`EdenFsClient`] and [`StreamingEdenFsClient`], which are specialized
+/// wrappers around this generic client.
+///
+/// The client automatically handles:
+/// - Connection management and reconnection if EdenFS restarts
+/// - Request retries based on error types
+/// - Concurrency limiting to prevent overloading the EdenFS server
+///
+/// Users typically don't interact with this class directly, but instead use
+/// [`EdenFsClient`] or [`StreamingEdenFsClient`].
 pub struct Client<C: Connector> {
     connector: C,
     connection: Mutex<EdenFsConnection<C::ClientFuture>>,
@@ -65,6 +87,16 @@ pub struct Client<C: Connector> {
 }
 
 impl<C: Connector> Client<C> {
+    /// Creates a new Client instance for a given connector.
+    ///
+    /// # Parameters
+    ///
+    /// * `connector` - The connector to use for creating Thrift clients
+    /// * `semaphore` - Optional semaphore to limit concurrent requests
+    ///
+    /// # Returns
+    ///
+    /// Returns a new `Client` instance.
     pub(crate) fn new(connector: C, semaphore: Option<Semaphore>) -> Self {
         let connection = Mutex::new(EdenFsConnection {
             epoch: 0,
@@ -79,6 +111,14 @@ impl<C: Connector> Client<C> {
         }
     }
 
+    /// Sets a custom stats handler for the client.
+    ///
+    /// The stats handler receives notifications about successful requests,
+    /// including the number of attempts and retries.
+    ///
+    /// # Parameters
+    ///
+    /// * `stats_handler` - The stats handler to use
     pub fn set_stats_handler(
         &mut self,
         stats_handler: Box<dyn EdenFsClientStatsHandler + Send + Sync>,
@@ -86,6 +126,20 @@ impl<C: Connector> Client<C> {
         self.stats_handler = stats_handler;
     }
 
+    /// Executes a Thrift request with automatic connection management and retries.
+    ///
+    /// This method handles connecting to the EdenFS service, executing the request,
+    /// and automatically retrying or reconnecting if necessary based on the error type.
+    ///
+    /// # Parameters
+    ///
+    /// * `f` - A function that takes a Thrift client and returns a future that resolves
+    ///   to a result
+    ///
+    /// # Returns
+    ///
+    /// Returns a result containing the response if successful, or an error if the request
+    /// failed after all retry attempts.
     pub async fn with_thrift<F, Fut, T, E>(
         &self,
         f: F,
@@ -98,6 +152,22 @@ impl<C: Connector> Client<C> {
         self.with_thrift_with_timeouts(None, None, f).await
     }
 
+    /// Executes a Thrift request with custom timeouts.
+    ///
+    /// This method is similar to [`with_thrift`](Self::with_thrift), but allows
+    /// specifying custom connection and receive timeouts.
+    ///
+    /// # Parameters
+    ///
+    /// * `conn_timeout` - Optional connection timeout
+    /// * `recv_timeout` - Optional receive timeout
+    /// * `f` - A function that takes a Thrift client and returns a future that resolves
+    ///   to a result
+    ///
+    /// # Returns
+    ///
+    /// Returns a result containing the response if successful, or an error if the request
+    /// failed after all retry attempts.
     pub async fn with_thrift_with_timeouts<F, Fut, T, E>(
         &self,
         conn_timeout: Option<Duration>,
