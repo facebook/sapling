@@ -35,10 +35,13 @@ use slog_term::TermDecorator;
 use tracing_glog::Glog;
 use tracing_glog::GlogFields;
 use tracing_subscriber::filter;
+use tracing_subscriber::filter::Directive;
 use tracing_subscriber::layer::SubscriberExt;
+use tracing_subscriber::EnvFilter;
 use tracing_subscriber::Layer;
 
 const LOG_LEVEL_NAMES: [&str; 6] = ["OFF", "ERROR", "WARN", "INFO", "DEBUG", "TRACE"];
+const DEFAULT_TRACING_LEVEL: filter::LevelFilter = filter::LevelFilter::INFO;
 
 /// Command line arguments for spawning slog Logger
 #[derive(Args, Debug)]
@@ -122,26 +125,64 @@ impl LoggingArgs {
         self.setup_panic_handler();
 
         let default_level = if self.debug {
-            filter::LevelFilter::DEBUG
+            Some(filter::LevelFilter::DEBUG)
         } else {
             match &self.log_level {
-                Some(log_level_str) => filter::LevelFilter::from_str(log_level_str)?,
-                None => filter::LevelFilter::INFO,
+                Some(log_level_str) => Some(filter::LevelFilter::from_str(log_level_str)?),
+                None => None,
             }
         };
 
         #[cfg(fbcode_build)]
-        crate::glog::set_glog_log_level(fb, default_level.into())?;
+        crate::glog::set_glog_log_level(fb, default_level.unwrap_or(DEFAULT_TRACING_LEVEL).into())?;
 
-        let default_filter = filter::Targets::new()
-            .with_default(default_level)
-            // Make sure noisy dependencies don't pollute the logs
-            .with_target("fb303_core::server", tracing::Level::WARN)
-            .with_target("overload_protection::capacity", tracing::Level::WARN)
-            .with_target("hyper::proto", tracing::Level::WARN)
-            .with_target("runtime", tracing::Level::WARN)
-            .with_target("tokio", tracing::Level::WARN)
-            .with_target("edenapi::client", tracing::Level::WARN);
+        // Make sure noisy dependencies don't pollute the logs
+        let mut builtins: Vec<Directive> = vec![
+            "fb303_core::server=WARN".parse()?,
+            "overload_protection::capacity=WARN".parse()?,
+            "hyper::proto=WARN".parse()?,
+            "runtime=WARN".parse()?,
+            "tokio=WARN".parse()?,
+            "edenapi::client=WARN".parse()?,
+        ];
+
+        let filter = match std::env::var("RUST_LOG") {
+            Ok(env) if !env.is_empty() => {
+                // EnvFilter doesn't offer an API that lets us merge our own directives with the ones from
+                // the environment; it's either/or. Let's just concatenate them manually.
+                let directives = builtins
+                    .iter()
+                    .map(|d| d.to_string())
+                    .collect::<Vec<_>>()
+                    .join(",");
+                let all = {
+                    // The order of precedence is: built-in, environment, command-line
+                    let mut all = vec![directives, env];
+                    if let Some(default_level) = default_level {
+                        all.push(default_level.to_string());
+                    }
+                    all
+                }
+                .join(",");
+
+                EnvFilter::builder()
+                    .with_default_directive(DEFAULT_TRACING_LEVEL.into())
+                    .parse(all)
+            }
+            _ => Ok({
+                // The order of precedence is: built-in, command-line
+                if let Some(default_level) = default_level {
+                    builtins.push(default_level.into());
+                }
+
+                builtins.into_iter().fold(
+                    EnvFilter::builder()
+                        .with_default_directive(DEFAULT_TRACING_LEVEL.into())
+                        .parse("")?,
+                    |filter, directive| filter.add_directive(directive),
+                )
+            }),
+        }?;
 
         let event_format = Glog::default()
             .with_timer(tracing_glog::LocalTime::default())
@@ -152,7 +193,7 @@ impl LoggingArgs {
             .event_format(event_format)
             .fmt_fields(GlogFields::default())
             .with_writer(std::io::stderr)
-            .with_filter(default_filter.clone());
+            .with_filter(filter);
 
         let subscriber = tracing_subscriber::registry().with(log_layer);
 
