@@ -20,7 +20,7 @@ context = { version = "0.1.0", path = "../context" }
 edenapi_service = { version = "0.1.0", path = "../../edenapi_service" }
 fbinit = { version = "0.2.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 futures = { version = "0.3.30", features = ["async-await", "compat"] }
-futures-util = "0.3.30"
+futures-util = { version = "0.3.30", features = ["compat"] }
 futures_ext = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 futures_stats = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 gotham_ext = { version = "0.1.0", path = "../../gotham_ext" }

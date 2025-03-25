@@ -24,7 +24,7 @@ context = { version = "0.1.0", path = "../server/context" }
 ephemeral_blobstore = { version = "0.1.0", path = "../blobstore/ephemeral_blobstore" }
 filestore = { version = "0.1.0", path = "../filestore" }
 futures = { version = "0.3.30", features = ["async-await", "compat"] }
-futures-util = "0.3.30"
+futures-util = { version = "0.3.30", features = ["compat"] }
 getbundle_response = { version = "0.1.0", path = "../repo_client/getbundle_response" }
 hgproto = { version = "0.1.0", path = "../hgproto" }
 mercurial_derivation = { version = "0.1.0", path = "../derived_data/mercurial_derivation" }

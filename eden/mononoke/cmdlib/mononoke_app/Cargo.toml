@@ -32,7 +32,7 @@ environment = { version = "0.1.0", path = "../environment" }
 facet = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 fbinit = { version = "0.2.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 futures = { version = "0.3.30", features = ["async-await", "compat"] }
-futures-util = "0.3.30"
+futures-util = { version = "0.3.30", features = ["compat"] }
 itertools = "0.14.0"
 justknobs = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 megarepo_config = { version = "0.1.0", path = "../../megarepo_api/megarepo_config" }

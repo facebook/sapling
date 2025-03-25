@@ -21,7 +21,7 @@ deleted_manifest = { version = "0.1.0", path = "../../derived_data/deleted_manif
 derived_data = { version = "0.1.0", path = "../../derived_data" }
 fastlog = { version = "0.1.0", path = "../../derived_data/fastlog" }
 futures = { version = "0.3.30", features = ["async-await", "compat"] }
-futures-util = "0.3.30"
+futures-util = { version = "0.3.30", features = ["compat"] }
 futures_stats = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 itertools = "0.14.0"
 justknobs = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
