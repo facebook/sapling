@@ -1997,18 +1997,12 @@ def continuecmd(ui, repo):
             return bindings.commands.run(args)
     else:
         ms = mergemod.mergestate.read(repo)
+        cmdutil.abort_on_unresolved_conflicts(ms)
+
         if ms.files():
-            if ms.unresolvedcount() == 0:
-                # no command support --continue, just delete the merge state.
-                ui.status(_("(exiting merge state)\n"))
-                ms.reset()
-            else:
-                raise error.Abort(
-                    _("outstanding merge conflicts"),
-                    hint=_(
-                        "use '@prog@ resolve -l' to see a list of conflicted files, '@prog@ resolve -m' to mark files as resolved"
-                    ),
-                )
+            # no command support --continue, just delete the merge state.
+            ui.status(_("(exiting merge state)\n"))
+            ms.reset()
         else:
             raise error.Abort(_("nothing to continue"))
 

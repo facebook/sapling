@@ -125,7 +125,7 @@ Python utility:
 
   $ hg continue
   abort: outstanding merge conflicts
-  (use 'hg resolve -l' to see a list of conflicted files, 'hg resolve -m' to mark files as resolved)
+  (use 'hg resolve --list' to list, 'hg resolve --mark FILE' to mark resolved)
   [255]
   $ hg resolve --all -t :local
   (no more unresolved files)
