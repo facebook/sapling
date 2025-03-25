@@ -540,12 +540,10 @@ void InodeMap::inodeLoadFailed(
     mount_->publishInodeTraceEvent(std::move(optionalFailEvent.value()));
   }
 
-#ifdef __APPLE__
   // Temporarily log every inode load failure and associated error string.
   // This data will help us understand the impact of X2P errors on EdenFS.
   structuredLogger_->logEvent(
       InodeLoadingFailed{errStr.toStdString(), number.getRawValue()});
-#endif // __APPLE__
   stats_->increment(&InodeMapStats::lookupInodeError, promises.size());
 }
 
