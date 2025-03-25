@@ -114,6 +114,7 @@ module.exports = {
 
     // Custom rules
     'rulesdir/jotai-maybe-use-family': 'error',
+    'rulesdir/stylex-import': 'error',
 
     // WARNINGS
     'require-await': 'warn',
