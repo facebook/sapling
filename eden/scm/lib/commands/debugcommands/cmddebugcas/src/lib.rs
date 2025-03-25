@@ -80,7 +80,8 @@ pub fn run(ctx: ReqCtx<DebugCasOpts>, repo: &Repo, wc: &WorkingCopy) -> Result<u
 
                     match res {
                         Ok(Some(contents)) => {
-                            let aug_tree = AugmentedTree::try_deserialize(&*contents)?;
+                            let aug_tree =
+                                AugmentedTree::try_deserialize(contents.into_bytes().as_ref())?;
                             write!(output, "contents:\n{aug_tree:#?}\n\n",)?
                         }
                         Ok(None) => write!(output, "not found in CAS\n\n",)?,
@@ -115,7 +116,7 @@ pub fn run(ctx: ReqCtx<DebugCasOpts>, repo: &Repo, wc: &WorkingCopy) -> Result<u
                         Ok(Some(contents)) => write!(
                             output,
                             "contents:\n{}\n\n",
-                            util::utf8::escape_non_utf8(&contents)
+                            util::utf8::escape_non_utf8(contents.into_bytes().as_ref())
                         )?,
                         Ok(None) => write!(output, "not found in CAS\n\n",)?,
                         Err(err) => write!(output, "error: {err:?}\n")?,

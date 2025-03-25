@@ -115,6 +115,30 @@ pub fn new(config: Arc<dyn Config>) -> anyhow::Result<Option<Arc<dyn CasClient>>
     }
 }
 
+pub enum CasClientFetchedBytes {
+    Bytes(minibytes::Bytes),
+    #[cfg(fbcode_build)]
+    IOBuf(iobuf::IOBufShared),
+}
+
+impl CasClientFetchedBytes {
+    pub fn to_bytes(&self) -> minibytes::Bytes {
+        match self {
+            Self::Bytes(bytes) => bytes.clone(),
+            #[cfg(fbcode_build)]
+            Self::IOBuf(buf) => minibytes::Bytes::from(Vec::<u8>::from(buf.clone())),
+        }
+    }
+
+    pub fn into_bytes(self) -> minibytes::Bytes {
+        match self {
+            Self::Bytes(bytes) => bytes,
+            #[cfg(fbcode_build)]
+            Self::IOBuf(buf) => minibytes::Bytes::from(Vec::<u8>::from(buf)),
+        }
+    }
+}
+
 #[async_trait::async_trait]
 #[auto_impl::auto_impl(&, Box, Arc)]
 pub trait CasClient: Sync + Send {
@@ -127,7 +151,7 @@ pub trait CasClient: Sync + Send {
         'a,
         anyhow::Result<(
             CasFetchedStats,
-            Vec<(CasDigest, anyhow::Result<Option<Vec<u8>>>)>,
+            Vec<(CasDigest, anyhow::Result<Option<CasClientFetchedBytes>>)>,
         )>,
     >;
 

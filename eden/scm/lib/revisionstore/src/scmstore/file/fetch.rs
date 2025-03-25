@@ -890,7 +890,7 @@ impl FetchState {
                                             self.found_attributes(
                                                 key,
                                                 StoreFile {
-                                                    content: Some(LazyFile::Cas(data.clone().into())),
+                                                    content: Some(LazyFile::Cas(data.to_bytes())),
                                                     aux_data: None,
                                                 },
                                             );
@@ -899,7 +899,7 @@ impl FetchState {
                                         self.found_attributes(
                                             last,
                                             StoreFile {
-                                                content: Some(LazyFile::Cas(data.into())),
+                                                content: Some(LazyFile::Cas(data.into_bytes())),
                                                 aux_data: None,
                                             },
                                         );

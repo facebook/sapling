@@ -278,7 +278,7 @@ impl FetchState {
                                     tracing::trace!(target: "cas", ?keys, ?digest, "tree not in cas");
                                     // miss
                                 }
-                                Ok(Some(data)) => match AugmentedTree::try_deserialize(&*data) {
+                                Ok(Some(data)) => match AugmentedTree::try_deserialize(data.into_bytes().as_ref()) {
                                     Ok(tree) => {
                                         keys_found_count += keys.len();
                                         tracing::trace!(target: "cas", ?keys, ?digest, "tree found in cas");

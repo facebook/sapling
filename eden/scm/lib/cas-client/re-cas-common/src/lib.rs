@@ -92,7 +92,7 @@ macro_rules! re_client {
                 &'a self,
                 digests: &'a [$crate::CasDigest],
                 log_name: $crate::CasDigestType,
-            ) -> BoxStream<'a, $crate::Result<($crate::CasFetchedStats, Vec<($crate::CasDigest, Result<Option<Vec<u8>>>)>)>>
+            ) -> BoxStream<'a, $crate::Result<($crate::CasFetchedStats, Vec<($crate::CasDigest, Result<Option<CasClientFetchedBytes>>)>)>>
             {
                 stream::iter(split_up_to_max_bytes(digests, self.fetch_limit.value()))
                     .map(move |digests| async move {
@@ -138,7 +138,7 @@ macro_rules! re_client {
                             }
 
                             self.cas_success_tracker.record_success();
-                            return Ok((stats, vec![(digest.to_owned(), Ok(Some(bytes)))]));
+                            return Ok((stats, vec![(digest.to_owned(), Ok(Some(CasClientFetchedBytes::Bytes(bytes.into()))))]));
                         }
 
                         // Fetch digests via the regular API (download inlined digests).
@@ -170,7 +170,7 @@ macro_rules! re_client {
                             .map(|blob| {
                                 let digest = from_re_digest(&blob.digest)?;
                                 match blob.status.code {
-                                    TCode::OK => Ok((digest, Ok(Some(blob.blob)))),
+                                    TCode::OK => Ok((digest, Ok(Some(CasClientFetchedBytes::Bytes(blob.blob.into()))))),
                                     TCode::NOT_FOUND => Ok((digest, Ok(None))),
                                     _ => Ok((
                                         digest,

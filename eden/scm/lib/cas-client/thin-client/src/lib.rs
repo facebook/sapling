@@ -11,6 +11,7 @@ use std::time::Instant;
 
 use anyhow::Result;
 use cas_client::CasClient;
+use cas_client::CasClientFetchedBytes;
 use cas_client::CasSuccessTracker;
 use cas_client::CasSuccessTrackerConfig;
 use configmodel::convert::ByteCount;

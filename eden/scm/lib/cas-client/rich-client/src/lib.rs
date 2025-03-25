@@ -10,6 +10,7 @@ use std::time::Duration;
 
 use anyhow::Result;
 use cas_client::CasClient;
+pub use cas_client::CasClientFetchedBytes;
 use cas_client::CasSuccessTracker;
 use cas_client::CasSuccessTrackerConfig;
 use configmodel::convert::ByteCount;

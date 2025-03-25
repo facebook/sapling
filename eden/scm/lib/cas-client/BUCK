@@ -1,4 +1,5 @@
 load("@fbcode_macros//build_defs:rust_library.bzl", "rust_library")
+load("@fbcode_macros//build_defs/lib:rust_oss.bzl", "rust_oss")
 
 oncall("sapling")
 
@@ -23,7 +24,10 @@ rust_library(
         "fbsource//third-party/rust:futures",
         "fbsource//third-party/rust:tracing",
         "//eden/scm/lib/config/model:configmodel",
+        "//eden/scm/lib/minibytes:minibytes",
         "//eden/scm/lib/types:types",
         "//eden/scm/lib/util/factory:factory",
-    ],
+    ] + ([] if rust_oss.is_oss_build() else [
+        "//common/rust/folly:iobuf",
+    ]),
 )

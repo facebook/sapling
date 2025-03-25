@@ -8,6 +8,7 @@
 //! Implement traits from other crates.
 
 use cas_client::CasClient;
+use cas_client::CasClientFetchedBytes;
 use cas_client::CasFetchedStats;
 use format_util::commit_text_to_root_tree_id;
 use format_util::git_sha1_serialize;
@@ -192,7 +193,7 @@ impl CasClient for EagerRepoStore {
         'a,
         anyhow::Result<(
             CasFetchedStats,
-            Vec<(CasDigest, anyhow::Result<Option<Vec<u8>>>)>,
+            Vec<(CasDigest, anyhow::Result<Option<CasClientFetchedBytes>>)>,
         )>,
     > {
         stream::once(async move {
@@ -205,7 +206,7 @@ impl CasClient for EagerRepoStore {
                         *digest,
                         self.get_cas_blob(*digest)
                             .map_err(Into::into)
-                            .map(|data| data.map(|data| data.into_vec())),
+                            .map(|data| data.map(CasClientFetchedBytes::Bytes)),
                     )
                 })
                 .collect()))
