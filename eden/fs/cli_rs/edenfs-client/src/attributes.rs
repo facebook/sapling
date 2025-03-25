@@ -5,6 +5,47 @@
  * GNU General Public License version 2.
  */
 
+//! File attribute handling for EdenFS.
+//!
+//! This module provides types and functions for working with file attributes in EdenFS.
+//! It allows querying various attributes of files such as SHA1 hash, size, source control type,
+//! and more.
+//!
+//! # Examples
+//!
+//! ## Getting all available attribute names
+//!
+//! ```
+//! use edenfs_client::attributes;
+//!
+//! // Get a list of all available attribute names
+//! let all_attrs = attributes::all_attributes();
+//! println!("Available attributes: {:?}", all_attrs);
+//! ```
+//!
+//! ## Converting attribute names to a bitmask
+//!
+//! ```
+//! use edenfs_client::attributes;
+//!
+//! // Convert a list of attribute names to a bitmask
+//! let attrs = ["SHA1_HASH", "SIZE", "SOURCE_CONTROL_TYPE"];
+//! match attributes::file_attributes_from_strings(&attrs) {
+//!     Ok(bitmask) => println!("Attribute bitmask: {}", bitmask),
+//!     Err(e) => eprintln!("Error: {}", e),
+//! }
+//! ```
+//!
+//! ## Getting a bitmask for all attributes
+//!
+//! ```
+//! use edenfs_client::attributes;
+//!
+//! // Get a bitmask representing all available attributes
+//! let all_attrs_bitmask = attributes::all_attributes_as_bitmask();
+//! println!("All attributes bitmask: {}", all_attrs_bitmask);
+//! ```
+
 use std::fmt::Display;
 use std::path::Path;
 use std::path::PathBuf;
@@ -29,9 +70,18 @@ use crate::types::SyncBehavior;
 // 'more_qualified_paths' to be stabilized first: https://github.com/rust-lang/rust/issues/86935
 // So for now, we will deal with the repetition... :(
 
+/// Represents either a SHA1 hash or an error.
+///
+/// This enum is used to represent the result of a SHA1 hash request, which can
+/// either be a successful hash value or an error.
 pub enum Sha1OrError {
+    /// A successful SHA1 hash value.
+    ///
+    /// The hash is represented as a vector of bytes.
     Sha1(Vec<u8>),
+    /// An error occurred during the request.
     Error(EdenFsError),
+    /// The request included an unknown field.
     UnknownField(i32),
 }
 
@@ -47,9 +97,16 @@ impl From<thrift_types::edenfs::Sha1OrError> for Sha1OrError {
     }
 }
 
+/// Represents either a file size or an error.
+///
+/// This enum is used to represent the result of a file size request, which can
+/// either be a successful size value or an error.
 pub enum SizeOrError {
+    /// A successful file size value.
     Size(i64),
+    /// An error occurred during the request.
     Error(EdenFsError),
+    /// The request included an unknown field.
     UnknownField(i32),
 }
 
@@ -65,11 +122,20 @@ impl From<thrift_types::edenfs::SizeOrError> for SizeOrError {
     }
 }
 
+/// Represents the type of an object in source control.
+///
+/// This enum is used to represent the type of an object in source control,
+/// such as a tree, regular file, executable file, or symlink.
 pub enum SourceControlType {
+    /// A directory (tree) in source control.
     Tree,
+    /// A regular file in source control.
     RegularFile,
+    /// An executable file in source control.
     ExecutableFile,
+    /// A symlink in source control.
     Symlink,
+    /// An unknown or unsupported type.
     Unknown,
 }
 
@@ -85,9 +151,16 @@ impl From<thrift_types::edenfs::SourceControlType> for SourceControlType {
     }
 }
 
+/// Represents either a source control type or an error.
+///
+/// This enum is used to represent the result of a source control type request,
+/// which can either be a successful type value or an error.
 pub enum SourceControlTypeOrError {
+    /// A successful source control type value.
     SourceControlType(SourceControlType),
+    /// An error occurred during the request.
     Error(EdenFsError),
+    /// The request included an unknown field.
     UnknownField(i32),
 }
 
@@ -107,9 +180,18 @@ impl From<thrift_types::edenfs::SourceControlTypeOrError> for SourceControlTypeO
     }
 }
 
+/// Represents either an object ID or an error.
+///
+/// This enum is used to represent the result of an object ID request, which can
+/// either be a successful ID value or an error.
 pub enum ObjectIdOrError {
+    /// A successful object ID value.
+    ///
+    /// The ID is represented as a vector of bytes.
     ObjectId(Vec<u8>),
+    /// An error occurred during the request.
     Error(EdenFsError),
+    /// The request included an unknown field.
     UnknownField(i32),
 }
 
@@ -125,9 +207,18 @@ impl From<thrift_types::edenfs::ObjectIdOrError> for ObjectIdOrError {
     }
 }
 
+/// Represents either a BLAKE3 hash or an error.
+///
+/// This enum is used to represent the result of a BLAKE3 hash request, which can
+/// either be a successful hash value or an error.
 pub enum Blake3OrError {
+    /// A successful BLAKE3 hash value.
+    ///
+    /// The hash is represented as a vector of bytes.
     Blake3(Vec<u8>),
+    /// An error occurred during the request.
     Error(EdenFsError),
+    /// The request included an unknown field.
     UnknownField(i32),
 }
 
@@ -143,9 +234,18 @@ impl From<thrift_types::edenfs::Blake3OrError> for Blake3OrError {
     }
 }
 
+/// Represents either a digest hash or an error.
+///
+/// This enum is used to represent the result of a digest hash request, which can
+/// either be a successful hash value or an error.
 pub enum DigestHashOrError {
+    /// A successful digest hash value.
+    ///
+    /// The hash is represented as a vector of bytes.
     DigestHash(Vec<u8>),
+    /// An error occurred during the request.
     Error(EdenFsError),
+    /// The request included an unknown field.
     UnknownField(i32),
 }
 
@@ -161,9 +261,16 @@ impl From<thrift_types::edenfs::DigestHashOrError> for DigestHashOrError {
     }
 }
 
+/// Represents either a digest size or an error.
+///
+/// This enum is used to represent the result of a digest size request, which can
+/// either be a successful size value or an error.
 pub enum DigestSizeOrError {
+    /// A successful digest size value.
     DigestSize(i64),
+    /// An error occurred during the request.
     Error(EdenFsError),
+    /// The request included an unknown field.
     UnknownField(i32),
 }
 
@@ -179,13 +286,25 @@ impl From<thrift_types::edenfs::DigestSizeOrError> for DigestSizeOrError {
     }
 }
 
+/// Contains file attribute data for a file.
+///
+/// This struct contains various attributes of a file, such as its SHA1 hash,
+/// size, source control type, and more. Each attribute is optional and may
+/// contain either a value or an error.
 pub struct FileAttributeDataV2 {
+    /// The SHA1 hash of the file, if requested and available.
     pub sha1: Option<Sha1OrError>,
+    /// The size of the file, if requested and available.
     pub size: Option<SizeOrError>,
+    /// The source control type of the file, if requested and available.
     pub scm_type: Option<SourceControlTypeOrError>,
+    /// The object ID of the file, if requested and available.
     pub object_id: Option<ObjectIdOrError>,
+    /// The BLAKE3 hash of the file, if requested and available.
     pub blake3: Option<Blake3OrError>,
+    /// The digest size of the file, if requested and available.
     pub digest_size: Option<DigestSizeOrError>,
+    /// The digest hash of the file, if requested and available.
     pub digest_hash: Option<DigestHashOrError>,
 }
 
@@ -203,9 +322,16 @@ impl From<thrift_types::edenfs::FileAttributeDataV2> for FileAttributeDataV2 {
     }
 }
 
+/// Represents either file attribute data or an error.
+///
+/// This enum is used to represent the result of a file attribute data request,
+/// which can either be successful data or an error.
 pub enum FileAttributeDataOrErrorV2 {
+    /// Successful file attribute data.
     FileAttributeData(FileAttributeDataV2),
+    /// An error occurred during the request.
     Error(EdenFsError),
+    /// The request included an unknown field.
     UnknownField(i32),
 }
 
@@ -225,7 +351,12 @@ impl From<thrift_types::edenfs::FileAttributeDataOrErrorV2> for FileAttributeDat
     }
 }
 
+/// Contains the results of a get attributes from files request.
+///
+/// This struct contains a vector of results, one for each file in the request.
+/// Each result can be either successful file attribute data or an error.
 pub struct GetAttributesFromFilesResultV2 {
+    /// The results of the request, one for each file.
     pub res: Vec<FileAttributeDataOrErrorV2>,
 }
 
@@ -237,7 +368,34 @@ impl From<thrift_types::edenfs::GetAttributesFromFilesResultV2> for GetAttribute
     }
 }
 
+/// Specifies the scope of an attributes request.
+///
+/// This enum is used to specify whether an attributes request should include
+/// files, trees (directories), or both.
+///
+/// # Examples
+///
+/// ```
+/// use edenfs_client::attributes::AttributesRequestScope;
+///
+/// // Request attributes for files only
+/// let scope = AttributesRequestScope::FilesOnly;
+///
+/// // Request attributes for trees (directories) only
+/// let scope = AttributesRequestScope::TreesOnly;
+///
+/// // Request attributes for both files and trees
+/// let scope = AttributesRequestScope::TreesAndFiles;
+///
+/// // Default scope is TreesAndFiles
+/// let default_scope = AttributesRequestScope::default();
+/// assert!(matches!(
+///     default_scope,
+///     AttributesRequestScope::TreesAndFiles
+/// ));
+/// ```
 pub enum AttributesRequestScope {
+    /// Request attributes for files only.
     FilesOnly,
     TreesOnly,
     TreesAndFiles,
@@ -270,18 +428,92 @@ impl Default for AttributesRequestScope {
     }
 }
 
+/// Converts a slice of `FileAttributes` to a bitmask.
+///
+/// This function takes a slice of `FileAttributes` and returns a bitmask
+/// representing those attributes.
+///
+/// # Parameters
+///
+/// * `attrs` - A slice of `FileAttributes` to convert to a bitmask.
+///
+/// # Returns
+///
+/// A bitmask representing the given attributes.
 fn attributes_as_bitmask(attrs: &[FileAttributes]) -> i64 {
     attrs.iter().fold(0, |acc, x| acc | x.inner_value() as i64)
 }
 
+/// Returns a bitmask representing all available file attributes.
+///
+/// This function returns a bitmask that includes all available file attributes.
+///
+/// # Returns
+///
+/// A bitmask representing all available file attributes.
+///
+/// # Examples
+///
+/// ```
+/// use edenfs_client::attributes;
+///
+/// let all_attrs_bitmask = attributes::all_attributes_as_bitmask();
+/// println!("All attributes bitmask: {}", all_attrs_bitmask);
+/// ```
 pub fn all_attributes_as_bitmask() -> i64 {
     attributes_as_bitmask(FileAttributes::variant_values())
 }
 
+/// Returns a slice of all available file attribute names.
+///
+/// This function returns a slice containing the names of all available file attributes.
+///
+/// # Returns
+///
+/// A slice of strings representing all available file attribute names.
+///
+/// # Examples
+///
+/// ```
+/// use edenfs_client::attributes;
+///
+/// let all_attrs = attributes::all_attributes();
+/// println!("Available attributes: {:?}", all_attrs);
+/// ```
 pub fn all_attributes() -> &'static [&'static str] {
     FileAttributes::variants()
 }
 
+/// Converts a slice of attribute names to a bitmask.
+///
+/// This function takes a slice of attribute names and returns a bitmask
+/// representing those attributes.
+///
+/// # Parameters
+///
+/// * `attrs` - A slice of attribute names to convert to a bitmask.
+///
+/// # Returns
+///
+/// A `Result` containing a bitmask representing the given attributes, or an error
+/// if any of the attribute names are invalid.
+///
+/// # Examples
+///
+/// ```
+/// use edenfs_client::attributes;
+///
+/// // Convert a list of attribute names to a bitmask
+/// let attrs = ["SHA1_HASH", "SIZE", "SOURCE_CONTROL_TYPE"];
+/// match attributes::file_attributes_from_strings(&attrs) {
+///     Ok(bitmask) => println!("Attribute bitmask: {}", bitmask),
+///     Err(e) => eprintln!("Error: {}", e),
+/// }
+///
+/// // Invalid attribute names will result in an error
+/// let invalid_attrs = ["INVALID_ATTR"];
+/// assert!(attributes::file_attributes_from_strings(&invalid_attrs).is_err());
+/// ```
 pub fn file_attributes_from_strings<T>(attrs: &[T]) -> Result<i64>
 where
     T: AsRef<str> + Display,
@@ -332,6 +564,11 @@ impl EdenFsClient {
     }
 }
 
+/// A request factory for getting file attributes.
+///
+/// This struct is used to create a request for getting file attributes from EdenFS.
+/// It implements the `RequestFactory` trait, which allows it to be used with the
+/// request execution framework.
 pub struct GetAttributesV2Request {
     mount_point: PathBuf,
     paths: Vec<String>,
@@ -339,6 +576,33 @@ pub struct GetAttributesV2Request {
 }
 
 impl GetAttributesV2Request {
+    /// Creates a new `GetAttributesV2Request`.
+    ///
+    /// This method creates a new request for getting file attributes from EdenFS.
+    ///
+    /// # Parameters
+    ///
+    /// * `mount_path` - The path to the EdenFS mount point.
+    /// * `paths` - A slice of paths to get attributes for, relative to the mount point.
+    /// * `requested_attributes` - A slice of attribute names to request.
+    ///
+    /// # Returns
+    ///
+    /// A new `GetAttributesV2Request` instance.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use std::path::PathBuf;
+    ///
+    /// use edenfs_client::attributes::GetAttributesV2Request;
+    ///
+    /// // Create a request for getting SHA1 and size attributes for two files
+    /// let mount_path = PathBuf::from("/path/to/mount");
+    /// let paths = ["file1.txt", "file2.txt"];
+    /// let attrs = ["SHA1_HASH", "SIZE"];
+    /// let request = GetAttributesV2Request::new(mount_path, &paths, &attrs);
+    /// ```
     pub fn new<P, S>(mount_path: PathBuf, paths: &[P], requested_attributes: &[S]) -> Self
     where
         P: AsRef<str>,
