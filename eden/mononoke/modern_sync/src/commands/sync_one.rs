@@ -23,6 +23,7 @@ use repo_blobstore::RepoBlobstoreRef;
 use repo_identity::RepoIdentityRef;
 use url::Url;
 
+use crate::sender::edenapi::DefaultEdenapiSender;
 use crate::sender::edenapi::EdenapiSender;
 use crate::sender::manager::ChangesetMessage;
 use crate::sender::manager::SendManager;
@@ -68,7 +69,7 @@ pub async fn run(app: MononokeApp, args: CommandArgs) -> Result<()> {
         .new_context(app.logger().clone(), scuba)
         .clone_with_repo_name(&repo_name.clone());
 
-    let sender = {
+    let sender: Arc<dyn EdenapiSender + Send + Sync> = {
         let url = if let Some(socket) = app_args.dest_socket {
             // Only for integration tests
             format!("{}:{}/edenapi/", &config.url, socket)
@@ -84,7 +85,7 @@ pub async fn run(app: MononokeApp, args: CommandArgs) -> Result<()> {
         let dest_repo = app_args.dest_repo_name.clone().unwrap_or(repo_name.clone());
 
         Arc::new(
-            EdenapiSender::new(
+            DefaultEdenapiSender::new(
                 Url::parse(&url)?,
                 dest_repo,
                 logger.clone(),

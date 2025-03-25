@@ -129,7 +129,7 @@ pub struct BookmarkInfo {
 impl SendManager {
     pub fn new(
         ctx: CoreContext,
-        external_sender: Arc<EdenapiSender>,
+        external_sender: Arc<dyn EdenapiSender + Send + Sync>,
         logger: Logger,
         reponame: String,
         exit_file: PathBuf,
@@ -259,7 +259,7 @@ trait Manager {
         self,
         ctx: CoreContext,
         reponame: String,
-        external_sender: Arc<EdenapiSender>,
+        external_sender: Arc<dyn EdenapiSender + Send + Sync>,
         logger: Logger,
         cancellation_requested: Arc<AtomicBool>,
     );

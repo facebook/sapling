@@ -54,7 +54,7 @@ impl ContentManager {
     }
 
     async fn flush_batch(
-        content_es: &Arc<EdenapiSender>,
+        content_es: &Arc<dyn EdenapiSender + Send + Sync>,
         current_batch: &mut Vec<ContentId>,
         current_batch_size: u64,
         pending_messages: &mut VecDeque<oneshot::Sender<Result<(), anyhow::Error>>>,
@@ -100,7 +100,7 @@ impl Manager for ContentManager {
         mut self,
         ctx: CoreContext,
         reponame: String,
-        content_es: Arc<EdenapiSender>,
+        content_es: Arc<dyn EdenapiSender + Send + Sync>,
         logger: Logger,
         cancellation_requested: Arc<AtomicBool>,
     ) {

@@ -52,7 +52,7 @@ impl TreeManager {
     }
 
     async fn flush_trees(
-        trees_es: &Arc<EdenapiSender>,
+        trees_es: &Arc<dyn EdenapiSender + Send + Sync>,
         batch_trees: &mut Vec<HgManifestId>,
         batch_done_senders: &mut VecDeque<oneshot::Sender<Result<()>>>,
         encountered_error: &mut Option<anyhow::Error>,
@@ -104,7 +104,7 @@ impl Manager for TreeManager {
         mut self,
         ctx: CoreContext,
         reponame: String,
-        trees_es: Arc<EdenapiSender>,
+        trees_es: Arc<dyn EdenapiSender + Send + Sync>,
         logger: Logger,
         cancellation_requested: Arc<AtomicBool>,
     ) {

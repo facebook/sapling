@@ -69,6 +69,7 @@ use tokio::sync::RwLock;
 use url::Url;
 
 use crate::bul_util;
+use crate::sender::edenapi::DefaultEdenapiSender;
 use crate::sender::edenapi::EdenapiSender;
 use crate::sender::manager::BookmarkInfo;
 use crate::sender::manager::ChangesetMessage;
@@ -157,7 +158,7 @@ pub async fn sync(
 
     let app_args = app.args::<ModernSyncArgs>()?;
 
-    let sender = {
+    let sender: Arc<DefaultEdenapiSender> = {
         let url = if let Some(socket) = app_args.dest_socket {
             // Only for integration tests
             format!("{}:{}/edenapi/", &config.url, socket)
@@ -171,7 +172,7 @@ pub async fn sync(
             .ok_or_else(|| format_err!("TLS params not found for repo {}", repo_name))?;
 
         Arc::new(
-            EdenapiSender::new(
+            DefaultEdenapiSender::new(
                 Url::parse(&url)?,
                 dest_repo_name.clone(),
                 logger.clone(),
@@ -314,7 +315,7 @@ pub async fn process_bookmark_update_log_entry(
     repo: &Repo,
     entry: &BookmarkUpdateLogEntry,
     send_manager: &SendManager,
-    sender: Arc<EdenapiSender>,
+    sender: Arc<dyn EdenapiSender + Send + Sync>,
     chunk_size: u64,
     log_to_ods: bool,
     logger: &Logger,

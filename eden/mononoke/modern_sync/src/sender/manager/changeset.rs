@@ -68,7 +68,7 @@ impl ChangesetManager {
     async fn flush_batch(
         reponame: String,
         ctx: &CoreContext,
-        changeset_es: &Arc<EdenapiSender>,
+        changeset_es: &Arc<dyn EdenapiSender + Send + Sync>,
         mc: Arc<dyn MutableCounters + Send + Sync>,
         current_batch: &mut Vec<(HgBlobChangeset, BonsaiChangeset)>,
         pending_log: &mut VecDeque<Option<i64>>,
@@ -162,7 +162,7 @@ impl Manager for ChangesetManager {
         mut self,
         ctx: CoreContext,
         reponame: String,
-        changeset_es: Arc<EdenapiSender>,
+        changeset_es: Arc<dyn EdenapiSender + Send + Sync>,
         logger: Logger,
         cancellation_requested: Arc<AtomicBool>,
     ) {

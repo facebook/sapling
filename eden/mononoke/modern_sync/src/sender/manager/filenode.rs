@@ -52,7 +52,7 @@ impl FilenodeManager {
     }
 
     async fn flush_filenodes(
-        filenodes_es: &Arc<EdenapiSender>,
+        filenodes_es: &Arc<dyn EdenapiSender + Send + Sync>,
         batch_filenodes: &mut Vec<HgFileNodeId>,
         batch_done_senders: &mut VecDeque<oneshot::Sender<Result<()>>>,
         encountered_error: &mut Option<anyhow::Error>,
@@ -108,7 +108,7 @@ impl Manager for FilenodeManager {
         mut self,
         ctx: CoreContext,
         reponame: String,
-        filenodes_es: Arc<EdenapiSender>,
+        filenodes_es: Arc<dyn EdenapiSender + Send + Sync>,
         logger: Logger,
         cancellation_requested: Arc<AtomicBool>,
     ) {
