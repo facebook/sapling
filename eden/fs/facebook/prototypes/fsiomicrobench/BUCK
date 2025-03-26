@@ -36,6 +36,9 @@ rust_binary(
 
 nupkg.builder(
     name = "fb-fsiomicrobench-windows",
+    compatible_with = [
+        "ovr_config//os:windows",
+    ],
     oncall = "dotslash",
     deps = [
         ":main",
