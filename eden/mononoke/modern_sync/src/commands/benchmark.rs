@@ -36,6 +36,7 @@ use slog::warn;
 use slog::Logger;
 
 use crate::commands::sync_loop::CHUNK_SIZE_DEFAULT;
+use crate::sender::edenapi::NoopEdenapiSender;
 use crate::sync::get_unsharded_repo_args;
 use crate::sync::ExecutionType;
 use crate::ModernSyncArgs;
@@ -139,7 +140,7 @@ pub async fn run(app: MononokeApp, args: CommandArgs) -> Result<()> {
         false,
         args.chunk_size.clone().unwrap_or(CHUNK_SIZE_DEFAULT),
         PathBuf::from(""),
-        true,
+        Some(Box::new(move |_| Arc::new(NoopEdenapiSender::default()))),
         Some(Arc::new(mc.clone())),
     )
     .await?;

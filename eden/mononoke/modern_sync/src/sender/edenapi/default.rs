@@ -58,24 +58,6 @@ use crate::stat;
 
 const MAX_RETRIES: usize = 3;
 
-#[derive(Clone, Debug, Default)]
-pub struct SenderConfig {
-    /// If true, neither loading nor sending will be attempted. Defaults to false.
-    pub disable: bool,
-}
-
-#[derive(Clone, Debug, Default)]
-pub struct EdenapiSenderConfig {
-    pub content_config: SenderConfig,
-    pub tree_config: SenderConfig,
-    pub filenode_config: SenderConfig,
-    pub changeset_config: SenderConfig,
-    pub bookmark_config: SenderConfig,
-
-    /// If true, the sender will not check if the content is already present in the target repo.
-    pub disable_check_existing: bool,
-}
-
 pub struct DefaultEdenapiSender {
     url: Url,
     reponame: String,
@@ -84,7 +66,6 @@ pub struct DefaultEdenapiSender {
     ctx: CoreContext,
     repo_blobstore: RepoBlobstore,
     client: Option<Client>,
-    config: EdenapiSenderConfig,
 }
 
 impl DefaultEdenapiSender {
@@ -103,26 +84,8 @@ impl DefaultEdenapiSender {
             logger,
             ctx,
             repo_blobstore,
-            config: EdenapiSenderConfig::default(),
             client: None,
         }
-    }
-
-    /// Disable all processing, i.e. both loading and sending.
-    pub fn with_noop_mode(mut self, noop_mode: bool) -> Self {
-        if noop_mode {
-            let config = SenderConfig { disable: true };
-            self.config = EdenapiSenderConfig {
-                content_config: config.clone(),
-                tree_config: config.clone(),
-                filenode_config: config.clone(),
-                changeset_config: config.clone(),
-                bookmark_config: config.clone(),
-                disable_check_existing: true,
-            };
-        }
-
-        self
     }
 
     pub async fn build(mut self) -> Result<Self> {
@@ -339,28 +302,16 @@ impl DefaultEdenapiSender {
 #[async_trait]
 impl EdenapiSender for DefaultEdenapiSender {
     async fn upload_contents(&self, contents: Vec<ContentId>) -> Result<()> {
-        if self.config.content_config.disable {
-            return Ok(());
-        }
-
         self.with_retry(|this| this.upload_contents_attempt(contents.clone()).boxed())
             .await
     }
 
     async fn upload_trees(&self, trees: Vec<HgManifestId>) -> Result<()> {
-        if self.config.tree_config.disable {
-            return Ok(());
-        }
-
         self.with_retry(|this| this.upload_trees_attempt(trees.clone()).boxed())
             .await
     }
 
     async fn upload_filenodes(&self, fn_ids: Vec<HgFileNodeId>) -> Result<()> {
-        if self.config.filenode_config.disable {
-            return Ok(());
-        }
-
         self.with_retry(|this| this.upload_filenodes_attempt(fn_ids.clone()).boxed())
             .await
     }
@@ -371,10 +322,6 @@ impl EdenapiSender for DefaultEdenapiSender {
         from: Option<HgChangesetId>,
         to: Option<HgChangesetId>,
     ) -> Result<()> {
-        if self.config.bookmark_config.disable {
-            return Ok(());
-        }
-
         let res = self
             .client()?
             .set_bookmark(
@@ -395,10 +342,6 @@ impl EdenapiSender for DefaultEdenapiSender {
         &self,
         css: Vec<(HgBlobChangeset, BonsaiChangeset)>,
     ) -> Result<()> {
-        if self.config.changeset_config.disable {
-            return Ok(());
-        }
-
         self.with_retry(|this| this.upload_identical_changeset_attempt(css.clone()).boxed())
             .await
     }
@@ -407,10 +350,6 @@ impl EdenapiSender for DefaultEdenapiSender {
         &self,
         ids: Vec<(HgChangesetId, ChangesetId)>,
     ) -> Result<Vec<ChangesetId>> {
-        if self.config.disable_check_existing {
-            return Ok(ids.iter().map(|id| id.1).collect());
-        }
-
         let hgids = ids
             .clone()
             .iter()
@@ -422,10 +361,6 @@ impl EdenapiSender for DefaultEdenapiSender {
     }
 
     async fn read_bookmark(&self, bookmark: String) -> Result<Option<HgChangesetId>> {
-        if self.config.bookmark_config.disable {
-            return Ok(None);
-        }
-
         let res = self
             .client()?
             .bookmarks2(vec![bookmark], Some(Freshness::MostRecent))

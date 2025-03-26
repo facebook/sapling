@@ -16,9 +16,11 @@ use mononoke_types::ChangesetId;
 use mononoke_types::ContentId;
 
 mod default;
+mod noop;
 mod util;
 
 pub(crate) use default::DefaultEdenapiSender;
+pub(crate) use noop::NoopEdenapiSender;
 
 #[async_trait]
 pub(crate) trait EdenapiSender {

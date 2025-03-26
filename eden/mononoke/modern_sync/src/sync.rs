@@ -106,7 +106,13 @@ pub async fn sync(
     dry_run: bool,
     chunk_size: u64,
     exit_file: PathBuf,
-    noop_mode: bool,
+    sender_decorator: Option<
+        Box<
+            dyn FnOnce(Arc<dyn EdenapiSender + Send + Sync>) -> Arc<dyn EdenapiSender + Send + Sync>
+                + Send
+                + Sync,
+        >,
+    >,
     mc: Option<Arc<dyn MutableCounters + Send + Sync>>,
 ) -> Result<()> {
     let repo: Repo = app.open_repo_unredacted(&source_repo_arg).await?;
@@ -158,7 +164,7 @@ pub async fn sync(
 
     let app_args = app.args::<ModernSyncArgs>()?;
 
-    let sender: Arc<DefaultEdenapiSender> = {
+    let sender: Arc<dyn EdenapiSender + Send + Sync> = {
         let url = if let Some(socket) = app_args.dest_socket {
             // Only for integration tests
             format!("{}:{}/edenapi/", &config.url, socket)
@@ -180,11 +186,16 @@ pub async fn sync(
                 ctx.clone(),
                 repo.repo_blobstore().clone(),
             )
-            .with_noop_mode(noop_mode)
             .build()
             .await?,
         )
     };
+    let sender = if let Some(sender_decorator) = sender_decorator {
+        sender_decorator(sender)
+    } else {
+        sender
+    };
+
     info!(logger, "Established EdenAPI connection");
 
     let send_manager = SendManager::new(
