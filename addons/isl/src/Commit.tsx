@@ -279,6 +279,14 @@ export const Commit = memo(
             ),
         });
       }
+      if (!actionsPrevented && !commit.isDot) {
+        items.push({
+          label: <T>Goto</T>,
+          onClick: async () => {
+            await gotoAction(runOperation, commit);
+          },
+        });
+      }
       return items;
     };
 
@@ -345,26 +353,7 @@ export const Commit = memo(
               xstyle={styles.gotoButton}
               onClick={async event => {
                 event.stopPropagation(); // don't toggle selection by letting click propagate onto selection target.
-
-                const dest =
-                  // If the commit has a remote bookmark, use that instead of the hash. This is easier to read in the command history
-                  // and works better with optimistic state
-                  commit.remoteBookmarks.length > 0
-                    ? succeedableRevset(commit.remoteBookmarks[0])
-                    : latestSuccessorUnlessExplicitlyObsolete(commit);
-                const shouldRebaseOffWarm = await maybeWarnAboutRebaseOffWarm(commit);
-                if (!shouldRebaseOffWarm) {
-                  return;
-                }
-                const shouldContinue = await maybeWarnAboutOldDestination(commit);
-                if (!shouldContinue) {
-                  return;
-                }
-                runOperation(new GotoOperation(dest));
-
-                // Instead of propagating, ensure we remove the selection, so we view the new head commit by default
-                // (since the head commit is the default thing shown in the sidebar)
-                writeAtom(selectedCommits, new Set());
+                await gotoAction(runOperation, commit);
               }}>
               <T>Goto</T>
               <Icon icon="newline" />
@@ -750,4 +739,25 @@ async function maybeWarnAboutRebaseOffWarm(dest: CommitInfo): Promise<boolean> {
   return true;
 }
 
+async function gotoAction(runOperation, commit: CommitInfo) {
+  const dest =
+    // If the commit has a remote bookmark, use that instead of the hash. This is easier to read in the command history
+    // and works better with optimistic state
+    commit.remoteBookmarks.length > 0
+      ? succeedableRevset(commit.remoteBookmarks[0])
+      : latestSuccessorUnlessExplicitlyObsolete(commit);
+  const shouldRebaseOffWarm = await maybeWarnAboutRebaseOffWarm(commit);
+  if (!shouldRebaseOffWarm) {
+    return;
+  }
+  const shouldContinue = await maybeWarnAboutOldDestination(commit);
+  if (!shouldContinue) {
+    return;
+  }
+  runOperation(new GotoOperation(dest));
+
+  // Instead of propagating, ensure we remove the selection, so we view the new head commit by default
+  // (since the head commit is the default thing shown in the sidebar)
+  writeAtom(selectedCommits, new Set());
+}
 const ObsoleteTip = React.memo(ObsoleteTipInner);
