@@ -17,10 +17,12 @@ use mononoke_types::ContentId;
 
 mod default;
 mod noop;
+mod retry;
 mod util;
 
 pub(crate) use default::DefaultEdenapiSender;
 pub(crate) use noop::NoopEdenapiSender;
+pub(crate) use retry::RetryEdenapiSender;
 
 #[async_trait]
 pub(crate) trait EdenapiSender {

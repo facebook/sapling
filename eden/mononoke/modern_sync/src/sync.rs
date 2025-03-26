@@ -71,6 +71,7 @@ use url::Url;
 use crate::bul_util;
 use crate::sender::edenapi::DefaultEdenapiSender;
 use crate::sender::edenapi::EdenapiSender;
+use crate::sender::edenapi::RetryEdenapiSender;
 use crate::sender::manager::BookmarkInfo;
 use crate::sender::manager::ChangesetMessage;
 use crate::sender::manager::ContentMessage;
@@ -177,18 +178,21 @@ pub async fn sync(
             .clone()
             .ok_or_else(|| format_err!("TLS params not found for repo {}", repo_name))?;
 
-        Arc::new(
-            DefaultEdenapiSender::new(
-                Url::parse(&url)?,
-                dest_repo_name.clone(),
-                logger.clone(),
-                tls_args,
-                ctx.clone(),
-                repo.repo_blobstore().clone(),
-            )
-            .build()
-            .await?,
-        )
+        Arc::new(RetryEdenapiSender::new(
+            Arc::new(
+                DefaultEdenapiSender::new(
+                    Url::parse(&url)?,
+                    dest_repo_name.clone(),
+                    logger.clone(),
+                    tls_args,
+                    ctx.clone(),
+                    repo.repo_blobstore().clone(),
+                )
+                .build()
+                .await?,
+            ),
+            logger.clone(),
+        ))
     };
     let sender = if let Some(sender_decorator) = sender_decorator {
         sender_decorator(sender)

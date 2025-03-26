@@ -32,9 +32,7 @@ use edenapi_types::LookupResponse;
 use edenapi_types::LookupResult;
 use edenapi_types::UploadToken;
 use edenapi_types::UploadTokenData;
-use futures::future::BoxFuture;
 use futures::stream;
-use futures::FutureExt;
 use futures::StreamExt;
 use futures::TryStreamExt;
 use http_client::HttpVersion;
@@ -48,15 +46,12 @@ use mononoke_types::ChangesetId;
 use mononoke_types::ContentId;
 use repo_blobstore::RepoBlobstore;
 use slog::info;
-use slog::warn;
 use slog::Logger;
 use url::Url;
 
 use crate::sender::edenapi::util;
 use crate::sender::edenapi::EdenapiSender;
 use crate::stat;
-
-const MAX_RETRIES: usize = 3;
 
 pub struct DefaultEdenapiSender {
     url: Url,
@@ -121,8 +116,11 @@ impl DefaultEdenapiSender {
             .as_ref()
             .ok_or_else(|| anyhow!("EdenapiSender is not initialized"))
     }
+}
 
-    async fn upload_contents_attempt(&self, contents: Vec<ContentId>) -> Result<()> {
+#[async_trait]
+impl EdenapiSender for DefaultEdenapiSender {
+    async fn upload_contents(&self, contents: Vec<ContentId>) -> Result<()> {
         let repo_blobstore = self.repo_blobstore.clone();
         let ctx = self.ctx.clone();
         let len = contents.len();
@@ -176,7 +174,7 @@ impl DefaultEdenapiSender {
         Ok(())
     }
 
-    async fn upload_trees_attempt(&self, trees: Vec<HgManifestId>) -> Result<()> {
+    async fn upload_trees(&self, trees: Vec<HgManifestId>) -> Result<()> {
         let batch_len = trees.len();
         let entries = stream::iter(trees.clone())
             .map(|mf_id| {
@@ -216,7 +214,7 @@ impl DefaultEdenapiSender {
         Ok(())
     }
 
-    async fn upload_filenodes_attempt(&self, fn_ids: Vec<HgFileNodeId>) -> Result<()> {
+    async fn upload_filenodes(&self, fn_ids: Vec<HgFileNodeId>) -> Result<()> {
         let batch_len = fn_ids.len();
         let filenodes = stream::iter(fn_ids)
             .map(|file_id| {
@@ -256,7 +254,29 @@ impl DefaultEdenapiSender {
         Ok(())
     }
 
-    async fn upload_identical_changeset_attempt(
+    async fn set_bookmark(
+        &self,
+        bookmark: String,
+        from: Option<HgChangesetId>,
+        to: Option<HgChangesetId>,
+    ) -> Result<()> {
+        let res = self
+            .client()?
+            .set_bookmark(
+                bookmark,
+                to.map(|cs| cs.into()),
+                from.map(|cs| cs.into()),
+                HashMap::from([
+                    ("BYPASS_READONLY".to_owned(), "true".to_owned()),
+                    ("MIRROR_UPLOAD".to_owned(), "true".to_owned()),
+                ]),
+            )
+            .await?;
+        info!(&self.logger, "Moved bookmark with result {:?}", res);
+        Ok(())
+    }
+
+    async fn upload_identical_changeset(
         &self,
         css: Vec<(HgBlobChangeset, BonsaiChangeset)>,
     ) -> Result<()> {
@@ -290,62 +310,6 @@ impl DefaultEdenapiSender {
         Ok(())
     }
 
-    async fn with_retry<'t, T>(
-        &'t self,
-        func: impl Fn(&'t Self) -> BoxFuture<'t, Result<T>>,
-    ) -> Result<T> {
-        let retry_count = MAX_RETRIES;
-        with_retry(retry_count, &self.logger, || func(self)).await
-    }
-}
-
-#[async_trait]
-impl EdenapiSender for DefaultEdenapiSender {
-    async fn upload_contents(&self, contents: Vec<ContentId>) -> Result<()> {
-        self.with_retry(|this| this.upload_contents_attempt(contents.clone()).boxed())
-            .await
-    }
-
-    async fn upload_trees(&self, trees: Vec<HgManifestId>) -> Result<()> {
-        self.with_retry(|this| this.upload_trees_attempt(trees.clone()).boxed())
-            .await
-    }
-
-    async fn upload_filenodes(&self, fn_ids: Vec<HgFileNodeId>) -> Result<()> {
-        self.with_retry(|this| this.upload_filenodes_attempt(fn_ids.clone()).boxed())
-            .await
-    }
-
-    async fn set_bookmark(
-        &self,
-        bookmark: String,
-        from: Option<HgChangesetId>,
-        to: Option<HgChangesetId>,
-    ) -> Result<()> {
-        let res = self
-            .client()?
-            .set_bookmark(
-                bookmark,
-                to.map(|cs| cs.into()),
-                from.map(|cs| cs.into()),
-                HashMap::from([
-                    ("BYPASS_READONLY".to_owned(), "true".to_owned()),
-                    ("MIRROR_UPLOAD".to_owned(), "true".to_owned()),
-                ]),
-            )
-            .await?;
-        info!(&self.logger, "Moved bookmark with result {:?}", res);
-        Ok(())
-    }
-
-    async fn upload_identical_changeset(
-        &self,
-        css: Vec<(HgBlobChangeset, BonsaiChangeset)>,
-    ) -> Result<()> {
-        self.with_retry(|this| this.upload_identical_changeset_attempt(css.clone()).boxed())
-            .await
-    }
-
     async fn filter_existing_commits(
         &self,
         ids: Vec<(HgChangesetId, ChangesetId)>,
@@ -373,31 +337,6 @@ impl EdenapiSender for DefaultEdenapiSender {
             .transpose()?
             .flatten()
             .map(|id| id.into()))
-    }
-}
-
-async fn with_retry<'t, T>(
-    max_retry_count: usize,
-    logger: &Logger,
-    func: impl Fn() -> BoxFuture<'t, Result<T>>,
-) -> Result<T> {
-    let mut attempt = 0usize;
-    loop {
-        let result = func().await;
-        if attempt >= max_retry_count {
-            return result;
-        }
-        match result {
-            Ok(result) => return Ok(result),
-            Err(e) => {
-                warn!(
-                    logger,
-                    "Found error: {:?}, retrying attempt #{}", e, attempt
-                );
-                tokio::time::sleep(Duration::from_secs(attempt as u64 + 1)).await;
-            }
-        }
-        attempt += 1;
     }
 }
 
