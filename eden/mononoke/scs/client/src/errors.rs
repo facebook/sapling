@@ -42,7 +42,6 @@ use source_control_clients::errors::RepoResolveCommitPrefixError;
 use source_control_clients::errors::RepoStackGitBundleStoreError;
 use source_control_clients::errors::RepoUpdateSubmoduleExpansionError;
 use source_control_clients::errors::TreeListError;
-use srclient::ErrorReason;
 
 pub(crate) trait SelectionErrorExt {
     fn handle_selection_error(self, repo: &thrift::RepoSpecifier) -> Error;
@@ -53,9 +52,10 @@ macro_rules! impl_handle_selection_error {
         impl SelectionErrorExt for $type {
             fn handle_selection_error(self, repo: &thrift::RepoSpecifier) -> Error {
                 if let $type::ThriftError(ref err) = self {
+                    #[cfg(not(any(target_os = "macos", target_os = "windows")))]
                     if let Some(err) = err.downcast_ref::<srclient::TServiceRouterException>() {
                         if err.is_selection_error()
-                            && err.error_reason() == ErrorReason::SELECTION_NONEXISTENT_DOMAIN
+                            && err.error_reason() == srclient::ErrorReason::SELECTION_NONEXISTENT_DOMAIN
                         {
                             if let Some(possible_repo_name) = repo.name.strip_suffix(".git") {
                                 return anyhow!("repo does not exist: {}. Try removing the .git suffix (i.e. -R {})", repo.name, possible_repo_name);
