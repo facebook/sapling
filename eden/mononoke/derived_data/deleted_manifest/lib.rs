@@ -6,7 +6,6 @@
  */
 
 #![feature(trait_alias)]
-#![feature(async_closure)]
 
 mod derive;
 mod derive_batch;

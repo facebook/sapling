@@ -8,7 +8,6 @@
 //! Mononoke -> cas sync job
 
 #![feature(auto_traits)]
-#![feature(async_closure)]
 
 use std::path::Path;
 use std::path::PathBuf;

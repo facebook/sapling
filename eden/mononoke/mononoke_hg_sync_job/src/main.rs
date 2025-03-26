@@ -12,7 +12,6 @@
 //! to verify Mononoke's correctness and/or use hg as a disaster recovery mechanism.
 
 #![feature(auto_traits)]
-#![feature(async_closure)]
 
 use std::collections::BTreeSet;
 use std::collections::HashMap;

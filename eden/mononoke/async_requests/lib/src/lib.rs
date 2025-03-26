@@ -5,7 +5,6 @@
  * GNU General Public License version 2.
  */
 
-#![feature(async_closure)]
 #![feature(error_generic_member_access)]
 
 pub mod types;

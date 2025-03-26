@@ -5,8 +5,6 @@
  * GNU General Public License version 2.
  */
 
-#![feature(async_closure)]
-
 use std::path::PathBuf;
 
 use anyhow::Result;

@@ -6,7 +6,6 @@
  */
 
 #![feature(trait_alias)]
-#![feature(async_closure)]
 
 //! State for a single source control Repo
 
