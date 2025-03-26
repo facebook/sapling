@@ -5,15 +5,12 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-import type {TypeaheadResult} from 'isl-components/Types';
-import type {FieldConfig, TypeaheadKind} from './types';
+import type {FieldConfig} from './types';
 
 import {extractTokens} from 'isl-components/Tokens';
 import {Typeahead} from 'isl-components/Typeahead';
-import {randomId} from 'shared/utils';
-import serverApi from '../ClientToServerAPI';
 import {recentReviewers, SuggestedReviewers} from './SuggestedReviewers';
-import {convertFieldNameToKey, getOnClickToken} from './utils';
+import {convertFieldNameToKey, fetchNewSuggestions, getOnClickToken} from './utils';
 
 export function CommitInfoTextField({
   field,
@@ -57,23 +54,4 @@ export function CommitInfoTextField({
       }
     />
   );
-}
-
-async function fetchNewSuggestions(
-  kind: TypeaheadKind,
-  text: string,
-): Promise<{values: Array<TypeaheadResult>; fetchStartTimestamp: number}> {
-  const now = Date.now();
-  if (text.trim().length < 2) {
-    // no need to do a fetch on zero- or one-char input...
-    // it's slow and doesn't give good suggestions anyway
-    return {values: [], fetchStartTimestamp: now};
-  }
-  const id = randomId();
-  serverApi.postMessage({type: 'typeahead', kind, id, query: text});
-  const values = await serverApi.nextMessageMatching(
-    'typeaheadResult',
-    message => message.id === id,
-  );
-  return {values: values.result, fetchStartTimestamp: now};
 }

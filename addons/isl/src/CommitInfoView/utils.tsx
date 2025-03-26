@@ -7,10 +7,13 @@
 
 import type {ReactNode} from 'react';
 import type {CommitInfo} from '../types';
-import type {CommitMessageFields, FieldConfig, FieldsBeingEdited} from './types';
+import type {CommitMessageFields, FieldConfig, FieldsBeingEdited, TypeaheadKind} from './types';
 
 import {Subtle} from 'isl-components/Subtle';
 import {Tooltip} from 'isl-components/Tooltip';
+import type {TypeaheadResult} from 'isl-components/Types';
+import {randomId} from 'shared/utils';
+import serverApi from '../ClientToServerAPI';
 import {InlineBadge} from '../InlineBadge';
 import {YouAreHereLabel} from '../YouAreHereLabel';
 import {t, T} from '../i18n';
@@ -105,4 +108,23 @@ export function getOnClickToken(
 
 export function convertFieldNameToKey(fieldName: string): string {
   return fieldName.toLowerCase().replace(/\s/g, '-');
+}
+
+export async function fetchNewSuggestions(
+  kind: TypeaheadKind,
+  text: string,
+): Promise<{values: Array<TypeaheadResult>; fetchStartTimestamp: number}> {
+  const now = Date.now();
+  if (text.trim().length < 2) {
+    // no need to do a fetch on zero- or one-char input...
+    // it's slow and doesn't give good suggestions anyway
+    return {values: [], fetchStartTimestamp: now};
+  }
+  const id = randomId();
+  serverApi.postMessage({type: 'typeahead', kind, id, query: text});
+  const values = await serverApi.nextMessageMatching(
+    'typeaheadResult',
+    message => message.id === id,
+  );
+  return {values: values.result, fetchStartTimestamp: now};
 }
