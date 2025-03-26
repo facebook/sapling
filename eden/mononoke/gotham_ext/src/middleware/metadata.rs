@@ -56,6 +56,7 @@ pub struct MetadataMiddleware {
     internal_identity: Identity,
     entry_point: ClientEntryPoint,
     mtls_disabled: bool,
+    update_client_untrusted: bool,
 }
 
 impl MetadataMiddleware {
@@ -65,6 +66,7 @@ impl MetadataMiddleware {
         internal_identity: Identity,
         entry_point: ClientEntryPoint,
         mtls_disabled: bool,
+        update_client_untrusted: bool,
     ) -> Self {
         Self {
             fb,
@@ -72,6 +74,7 @@ impl MetadataMiddleware {
             internal_identity,
             entry_point,
             mtls_disabled,
+            update_client_untrusted,
         }
     }
 
@@ -220,8 +223,7 @@ impl Middleware for MetadataMiddleware {
             let client_info = client_info
                 .unwrap_or_else(|| ClientInfo::default_with_entry_point(self.entry_point.clone()));
             metadata.add_client_info(client_info);
-            // For Mononoke Git, clients from VPNless environment are not considered untrusted
-            if self.entry_point != ClientEntryPoint::MononokeGitServer {
+            if self.update_client_untrusted {
                 metadata.update_client_untrusted(
                     metadata::security::is_client_untrusted(|h| {
                         Ok(headers
