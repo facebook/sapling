@@ -71,6 +71,19 @@ impl AuthorizationContext {
     /// Create a new authorization context.
     ///
     /// This context will use the user's identity to check whether they are
+    /// authorized to perform each action.
+    /// Doesn't consider whether use is trusted or not, returning DraftOnlyIdentity.
+    pub fn new_non_draft(ctx: &CoreContext) -> AuthorizationContext {
+        if ctx.session().is_readonly() {
+            AuthorizationContext::ReadOnlyIdentity
+        } else {
+            AuthorizationContext::Identity
+        }
+    }
+
+    /// Create a new authorization context.
+    ///
+    /// This context will use the user's identity to check whether they are
     /// permitted to act as the named service, and then check the service
     /// is permitted to perform each action.
     pub fn new_for_service_writes(service_name: impl Into<String>) -> AuthorizationContext {

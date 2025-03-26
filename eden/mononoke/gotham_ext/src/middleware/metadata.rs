@@ -56,7 +56,6 @@ pub struct MetadataMiddleware {
     internal_identity: Identity,
     entry_point: ClientEntryPoint,
     mtls_disabled: bool,
-    update_client_untrusted: bool,
 }
 
 impl MetadataMiddleware {
@@ -66,7 +65,6 @@ impl MetadataMiddleware {
         internal_identity: Identity,
         entry_point: ClientEntryPoint,
         mtls_disabled: bool,
-        update_client_untrusted: bool,
     ) -> Self {
         Self {
             fb,
@@ -74,7 +72,6 @@ impl MetadataMiddleware {
             internal_identity,
             entry_point,
             mtls_disabled,
-            update_client_untrusted,
         }
     }
 
@@ -223,17 +220,15 @@ impl Middleware for MetadataMiddleware {
             let client_info = client_info
                 .unwrap_or_else(|| ClientInfo::default_with_entry_point(self.entry_point.clone()));
             metadata.add_client_info(client_info);
-            if self.update_client_untrusted {
-                metadata.update_client_untrusted(
-                    metadata::security::is_client_untrusted(|h| {
-                        Ok(headers
-                            .get(h)
-                            .map(|h| h.to_str().map(|s| s.to_owned()))
-                            .transpose()?)
-                    })
-                    .unwrap_or_default(),
-                );
-            }
+            metadata.update_client_untrusted(
+                metadata::security::is_client_untrusted(|h| {
+                    Ok(headers
+                        .get(h)
+                        .map(|h| h.to_str().map(|s| s.to_owned()))
+                        .transpose()?)
+                })
+                .unwrap_or_default(),
+            );
         }
 
         // For the IP, we can fallback to the peer IP

@@ -88,7 +88,6 @@ pub fn build<R: Send + Sync + Clone + 'static>(
             common_config.internal_identity.clone(),
             ClientEntryPoint::SaplingRemoteApi,
             mtls_disabled,
-            true,
         ))
         .add(ServerIdentityMiddleware::new(HeaderValue::from_static(
             "edenapi_server",

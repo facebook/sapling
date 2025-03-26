@@ -73,7 +73,7 @@ pub async fn set_refs(
     let repo_context = RepoContextBuilder::new(ctx.clone(), repo.clone(), repos)
         .await
         .context("Failure in creating RepoContextBuilder for git push")?
-        .with_authorization_context(AuthorizationContext::new(&ctx))
+        .with_authorization_context(AuthorizationContext::new_non_draft(&ctx))
         .build()
         .await
         .context("Failure in creating RepoContext for git push")?;
@@ -179,7 +179,7 @@ async fn set_ref_inner(
     let repo_context = RepoContextBuilder::new(ctx.clone(), repo.clone(), repos)
         .await
         .context("Failure in creating RepoContextBuilder for git push")?
-        .with_authorization_context(AuthorizationContext::new(&ctx))
+        .with_authorization_context(AuthorizationContext::new_non_draft(&ctx))
         .build()
         .await
         .context("Failure in creating RepoContext for git push")?;

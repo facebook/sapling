@@ -178,7 +178,7 @@ async fn acl_check(
     enforce_authorization: bool,
     method: GitMethod,
 ) -> Result<(), GitServerContextErrorKind> {
-    let authz = AuthorizationContext::new(ctx);
+    let authz = AuthorizationContext::new_non_draft(ctx);
     let acl_check = if method.is_read_only() {
         authz.check_full_repo_read(ctx, repo).await
     } else {
