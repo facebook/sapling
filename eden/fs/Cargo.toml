@@ -15,6 +15,7 @@ profiling = { version = "1.0.16", git = "https://github.com/aclysma/profiling.gi
 protobuf-build = { git = "https://github.com/fbsource/protobuf-build", rev = "ee1de946ce2fd7d06a7a4fab7141e02c49f0981f" }
 quickcheck = { git = "https://github.com/jakoschiko/quickcheck", rev = "6ecdf5bb4b0132ce66670b4d46453aa022ea892c" }
 stabby = { git = "https://github.com/fbsource/stabby", rev = "22db1dda19938ff7725a93db64012a5730325c5d" }
+tarpc = { git = "https://github.com/google/tarpc", rev = "6da4fa53e506cbfd21a73182551355c0913e82a4" }
 uefisettings = { git = "https://github.com/linuxboot/uefisettings", rev = "f16daed1d2bd1216204fd24e876c6477d03aebb3" }
 uefisettings_backend_thrift = { git = "https://github.com/linuxboot/uefisettings", rev = "f16daed1d2bd1216204fd24e876c6477d03aebb3" }
 vm-allocator = { git = "https://github.com/rust-vmm/vm-allocator", rev = "5fb545cc6e41fdc9f27d48d97ed26274a35bc6c6" }
