@@ -26,6 +26,7 @@ mod limit_directory_size;
 pub(crate) mod limit_filesize;
 mod limit_path_length;
 pub(crate) mod limit_submodule_edits;
+mod limit_subtree_op_size;
 pub(crate) mod limit_tag_updates;
 pub(crate) mod missing_lfsconfig;
 pub(crate) mod no_bad_filenames;
@@ -102,6 +103,9 @@ pub async fn make_changeset_hook(
             block_unclean_merge_commits::BlockUncleanMergeCommitsHook::new(&params.config)?,
         )),
         "limit_submodule_edits" => Some(b(limit_submodule_edits::LimitSubmoduleEditsHook::new(
+            &params.config,
+        )?)),
+        "limit_subtree_op_size" => Some(b(limit_subtree_op_size::LimitSubtreeOpSizeHook::new(
             &params.config,
         )?)),
         "missing_lfsconfig" => Some(b(missing_lfsconfig::MissingLFSConfigHook::new())),
