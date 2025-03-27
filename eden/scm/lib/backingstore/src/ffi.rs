@@ -261,16 +261,38 @@ impl From<ffi::FetchCause> for FetchCause {
     }
 }
 
-fn select_cause(mut fetch_causes_iter: impl Iterator<Item = ffi::FetchCause>) -> FetchCause {
-    match fetch_causes_iter.next() {
-        Some(first) => {
-            if fetch_causes_iter.all(|cause| cause == first) {
-                first.into()
+/// Select the most popular cause from a list of causes.
+/// If no cause is more than half of the total, return EdenMixed.
+fn select_cause(fetch_causes_iter: impl Iterator<Item = ffi::FetchCause>) -> FetchCause {
+    let mut most_popular_cause = None;
+    let mut len = 0;
+    let mut max_count = 0;
+    let mut cause_counts = [0; 4]; // 4 is the number of variants in FetchCause enum
+    for cause in fetch_causes_iter {
+        let cause_index = match cause {
+            ffi::FetchCause::Unknown => 0,
+            ffi::FetchCause::Prefetch => 1,
+            ffi::FetchCause::Thrift => 2,
+            ffi::FetchCause::Fs => 3,
+            _ => 0, // should never happen
+        };
+        len += 1;
+        cause_counts[cause_index] += 1;
+        if cause_counts[cause_index] > max_count {
+            max_count = cause_counts[cause_index];
+            most_popular_cause = Some(cause);
+        }
+    }
+    match most_popular_cause {
+        Some(cause) => {
+            if max_count > len / 2 {
+                // If the most popular cause is more than half of the total, return it.
+                cause.into()
             } else {
                 FetchCause::EdenMixed
             }
         }
-        None => FetchCause::Unspecified,
+        None => FetchCause::EdenUnknown,
     }
 }
 
@@ -318,7 +340,7 @@ pub fn sapling_backingstore_get_tree_batch(
     resolver: SharedPtr<ffi::GetTreeBatchResolver>,
 ) {
     let keys: Vec<Key> = requests.iter().map(|req| req.key()).collect();
-    let cause = select_cause(requests.into_iter().map(|req| req.cause));
+    let cause = select_cause(requests.iter().map(|req| req.cause));
 
     store.get_tree_batch(
         keys,
@@ -358,7 +380,7 @@ pub fn sapling_backingstore_get_tree_aux_batch(
     resolver: SharedPtr<ffi::GetTreeAuxBatchResolver>,
 ) {
     let keys: Vec<Key> = requests.iter().map(|req| req.key()).collect();
-    let cause = select_cause(requests.into_iter().map(|req| req.cause));
+    let cause = select_cause(requests.iter().map(|req| req.cause));
 
     store.get_tree_aux_batch(
         keys,
@@ -405,7 +427,7 @@ pub fn sapling_backingstore_get_blob_batch(
     resolver: SharedPtr<ffi::GetBlobBatchResolver>,
 ) {
     let keys: Vec<Key> = requests.iter().map(|req| req.key()).collect();
-    let cause = select_cause(requests.into_iter().map(|req| req.cause));
+    let cause = select_cause(requests.iter().map(|req| req.cause));
 
     store.get_blob_batch(
         keys,
@@ -447,7 +469,7 @@ pub fn sapling_backingstore_get_file_aux_batch(
     resolver: SharedPtr<ffi::GetFileAuxBatchResolver>,
 ) {
     let keys: Vec<Key> = requests.iter().map(|req| req.key()).collect();
-    let cause = select_cause(requests.into_iter().map(|req| req.cause));
+    let cause = select_cause(requests.iter().map(|req| req.cause));
 
     store.get_file_aux_batch(
         keys,
@@ -490,4 +512,38 @@ pub fn sapling_backingstore_get_glob_files(
         .get_glob_files(commit_id, suffixes, prefix_opt)
         .and_then(|opt| opt.ok_or_else(|| Error::msg("failed to retrieve glob file")))?;
     Ok(SharedPtr::new(ffi::GlobFilesResponse { files }))
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_select_cause() {
+        let causes = [
+            ffi::FetchCause::Unknown,
+            ffi::FetchCause::Prefetch,
+            ffi::FetchCause::Thrift,
+            ffi::FetchCause::Fs,
+        ];
+        for cause in causes.iter().cloned() {
+            let selected = select_cause(std::iter::repeat(cause).take(3));
+            // Repeating causes should always return the same cause
+            assert_eq!(selected, cause.into());
+        }
+        let selected = select_cause(
+            std::iter::repeat(ffi::FetchCause::Thrift)
+                .take(3)
+                .chain(std::iter::repeat(ffi::FetchCause::Prefetch).take(2)),
+        );
+
+        // Thrift is more popular than Prefetch (> 50%)
+        assert_eq!(selected, FetchCause::EdenThrift);
+
+        // There is no single most popular cause
+        assert_eq!(select_cause(causes.into_iter()), FetchCause::EdenMixed);
+
+        // Empty causes
+        assert_eq!(select_cause(std::iter::empty()), FetchCause::EdenUnknown);
+    }
 }
