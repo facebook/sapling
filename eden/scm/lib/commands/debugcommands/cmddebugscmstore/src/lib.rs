@@ -133,18 +133,18 @@ pub fn run(ctx: ReqCtx<DebugScmStoreOpts>, repo: &Repo) -> Result<u8> {
 
     match mode {
         FetchType::File => fetch_files(
+            fctx,
             &ctx.core.io,
             &fresh_repo,
             keys,
-            fctx,
             ctx.opts.aux_only,
             ctx.opts.pure_content,
         )?,
         FetchType::Tree => fetch_trees(
+            fctx,
             &ctx.core.io,
             &fresh_repo,
             keys,
-            fctx,
             ctx.opts.store_model,
             ctx.opts.tree_parents,
             ctx.opts.aux_only,
@@ -155,10 +155,10 @@ pub fn run(ctx: ReqCtx<DebugScmStoreOpts>, repo: &Repo) -> Result<u8> {
 }
 
 fn fetch_files(
+    fctx: FetchContext,
     io: &IO,
     repo: &Repo,
     keys: Vec<Key>,
-    fctx: FetchContext,
     aux_only: bool,
     pure_content: bool,
 ) -> Result<()> {
@@ -169,7 +169,7 @@ fn fetch_files(
 
     let mut fetch_and_display_successes =
         |keys: Vec<Key>, attrs: FileAttributes| -> HashMap<Key, Error> {
-            let fetch_result = store.fetch(keys, attrs, fctx.clone());
+            let fetch_result = store.fetch(fctx.clone(), keys, attrs);
 
             let (found, missing, _errors) = fetch_result.consume();
             for (_, file) in found.into_iter() {
@@ -217,10 +217,10 @@ fn fetch_files(
 }
 
 fn fetch_trees(
+    fctx: FetchContext,
     io: &IO,
     repo: &Repo,
     keys: Vec<Key>,
-    fctx: FetchContext,
     store_model: bool,
     tree_parents: bool,
     aux_only: bool,
@@ -240,7 +240,7 @@ fn fetch_trees(
     }
 
     if store_model {
-        for tree in store.get_tree_iter(keys, fctx)? {
+        for tree in store.get_tree_iter(fctx, keys)? {
             let (key, tree) = tree?;
 
             writeln!(stdout, "Tree '{}' entries", key.path)?;
@@ -256,7 +256,7 @@ fn fetch_trees(
             }
         }
     } else {
-        let fetch_result = store.fetch_batch(keys.into_iter(), attrs, fctx);
+        let fetch_result = store.fetch_batch(fctx, keys.into_iter(), attrs);
 
         let (found, missing, _errors) = fetch_result.consume();
         for complete in found.into_iter() {

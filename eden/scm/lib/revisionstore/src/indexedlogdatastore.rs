@@ -720,9 +720,9 @@ mod tests {
         // Attempt fetch.
         let fetched = store
             .fetch(
+                FetchContext::default(),
                 std::iter::once(k),
                 FileAttributes::CONTENT,
-                FetchContext::default(),
             )
             .single()?
             .expect("key not found");
@@ -762,9 +762,9 @@ mod tests {
         // Attempt fetch.
         let fetched = store
             .fetch(
+                FetchContext::default(),
                 std::iter::once(k),
                 FileAttributes::CONTENT,
-                FetchContext::default(),
             )
             .single()?
             .expect("key not found");
@@ -813,9 +813,9 @@ mod tests {
         store.lfs_threshold_bytes = Some(123);
 
         let fetched = store.fetch(
+            FetchContext::default(),
             vec![lfs_key.clone(), nonlfs_key.clone()],
             FileAttributes::CONTENT,
-            FetchContext::default(),
         );
 
         let (mut found, missing, _errors) = fetched.consume();

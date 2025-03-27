@@ -58,7 +58,7 @@ pub fn run(ctx: ReqCtx<DebugCasOpts>, repo: &Repo, wc: &WorkingCopy) -> Result<u
                 let hgid = hgid.unwrap();
                 let aux =
                     repo.tree_store()?
-                        .get_tree_aux_data(path, hgid, FetchContext::default())?;
+                        .get_tree_aux_data(FetchContext::default(), path, hgid)?;
 
                 let fetch_res = block_on(async {
                     client
@@ -92,7 +92,7 @@ pub fn run(ctx: ReqCtx<DebugCasOpts>, repo: &Repo, wc: &WorkingCopy) -> Result<u
             Some(FsNodeMetadata::File(FileMetadata { hgid, .. })) => {
                 let aux = repo
                     .file_store()?
-                    .get_aux(path, hgid, FetchContext::default())?;
+                    .get_aux(FetchContext::default(), path, hgid)?;
 
                 let fetch_res = block_on(async {
                     client

@@ -126,18 +126,18 @@ impl CachingTreeStore {
 impl KeyStore for CachingTreeStore {
     fn get_content_iter(
         &self,
-        keys: Vec<Key>,
         fctx: FetchContext,
+        keys: Vec<Key>,
     ) -> Result<BoxIterator<Result<(Key, Bytes)>>> {
-        self.key_store.get_content_iter(keys, fctx)
+        self.key_store.get_content_iter(fctx, keys)
     }
 
     fn get_local_content(&self, path: &RepoPath, hgid: HgId) -> Result<Option<Bytes>> {
         self.key_store.get_local_content(path, hgid)
     }
 
-    fn get_content(&self, path: &RepoPath, hgid: HgId, fctx: FetchContext) -> Result<Bytes> {
-        self.key_store.get_content(path, hgid, fctx)
+    fn get_content(&self, fctx: FetchContext, path: &RepoPath, hgid: HgId) -> Result<Bytes> {
+        self.key_store.get_content(fctx, path, hgid)
     }
 
     fn prefetch(&self, keys: Vec<Key>) -> Result<()> {
@@ -181,18 +181,18 @@ impl TreeStore for CachingTreeStore {
 
     fn get_tree_iter(
         &self,
-        keys: Vec<Key>,
         fctx: FetchContext,
+        keys: Vec<Key>,
     ) -> Result<BoxIterator<Result<(Key, Box<dyn TreeEntry>)>>> {
-        self.store.get_tree_iter(keys, fctx)
+        self.store.get_tree_iter(fctx, keys)
     }
 
     fn get_tree_aux_data_iter(
         &self,
-        keys: Vec<Key>,
         fctx: FetchContext,
+        keys: Vec<Key>,
     ) -> Result<BoxIterator<Result<(Key, TreeAuxData)>>> {
-        self.store.get_tree_aux_data_iter(keys, fctx)
+        self.store.get_tree_aux_data_iter(fctx, keys)
     }
 
     fn get_local_tree_aux_data(&self, path: &RepoPath, id: HgId) -> Result<Option<TreeAuxData>> {
@@ -201,11 +201,11 @@ impl TreeStore for CachingTreeStore {
 
     fn get_tree_aux_data(
         &self,
+        fctx: FetchContext,
         path: &RepoPath,
         id: HgId,
-        fctx: FetchContext,
     ) -> Result<TreeAuxData> {
-        self.store.get_tree_aux_data(path, id, fctx)
+        self.store.get_tree_aux_data(fctx, path, id)
     }
 
     fn clone_tree_store(&self) -> Box<dyn TreeStore> {
@@ -281,11 +281,11 @@ mod test {
             .expect("to create id");
 
         let trees = caching_store.get_tree_iter(
+            FetchContext::new(FetchMode::LocalOnly),
             vec![
                 Key::new(dir2_path.clone(), dir2_id),
                 Key::new(top_level_path.clone(), top_level_id),
             ],
-            FetchContext::new(FetchMode::LocalOnly),
         )?;
 
         // TreeStore methods will only contain results from the underlying store. Any cached trees

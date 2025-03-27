@@ -119,7 +119,7 @@ pub fn build_matcher(
         };
 
         let repo_path = RepoPathBuf::from_string(path.clone())?;
-        let bytes = store.get_content(&repo_path, file_id, FetchContext::default())?;
+        let bytes = store.get_content(FetchContext::default(), &repo_path, file_id)?;
         let mut bytes = bytes.into_vec();
         if let Some(extra) = overrides.get(&path) {
             bytes.append(&mut extra.to_string().into_bytes());

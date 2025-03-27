@@ -247,9 +247,9 @@ mod tests {
         // Attempt fetch.
         let fetched = store
             .fetch(
+                FetchContext::default(),
                 std::iter::once(k.clone()),
                 FileAttributes::CONTENT,
-                FetchContext::new(FetchMode::AllowRemote),
             )
             .single()?
             .expect("key not found");
@@ -294,9 +294,9 @@ mod tests {
         // Attempt fetch.
         let fetched = store
             .fetch(
+                FetchContext::new(FetchMode::RemoteOnly),
                 std::iter::once(k.clone()),
                 FileAttributes::CONTENT,
-                FetchContext::new(FetchMode::RemoteOnly),
             )
             .single()?
             .expect("key not found");
@@ -341,9 +341,9 @@ mod tests {
         // Attempt fetch.
         let mut fetched = store
             .fetch_batch(
+                FetchContext::default(),
                 std::iter::once(k.clone()),
                 TreeAttributes::CONTENT,
-                FetchContext::new(FetchMode::AllowRemote),
             )
             .single()?
             .expect("key not found");
@@ -391,9 +391,9 @@ mod tests {
         // Attempt fetch.
         let mut fetched = store
             .fetch_batch(
+                FetchContext::new(FetchMode::RemoteOnly),
                 std::iter::once(k.clone()),
                 TreeAttributes::CONTENT,
-                FetchContext::new(FetchMode::RemoteOnly),
             )
             .single()?
             .expect("key not found");
@@ -422,9 +422,9 @@ mod tests {
 
         // Attempt fetch.
         let fetched = store.fetch_batch(
+            FetchContext::default(),
             std::iter::once(k.clone()),
             TreeAttributes::CONTENT,
-            FetchContext::new(FetchMode::AllowRemote),
         );
         let (found, missing, _errors) = fetched.consume();
         assert_eq!(found.len(), 0);
@@ -480,9 +480,9 @@ mod tests {
         // Test that we can read aux data from SaplingRemoteApi
         let fetched = store
             .fetch(
+                FetchContext::default(),
                 std::iter::once(k.clone()),
                 FileAttributes::AUX,
-                FetchContext::new(FetchMode::AllowRemote),
             )
             .single()?
             .expect("key not found");
@@ -493,9 +493,9 @@ mod tests {
         store.indexedlog_cache = None;
         let fetched = store
             .fetch(
+                FetchContext::default(),
                 std::iter::once(k.clone()),
                 FileAttributes::AUX,
-                FetchContext::new(FetchMode::AllowRemote),
             )
             .single()?
             .expect("key not found");

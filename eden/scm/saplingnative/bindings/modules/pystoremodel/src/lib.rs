@@ -57,7 +57,7 @@ py_class!(pub class KeyStore |py| {
     def get_content_iter(&self, keys: Serde<Vec<CompactKey>>, fetch_mode: Serde<FetchMode> = Serde(FetchMode::AllowRemote)) -> PyResult<PyIter> {
         let inner = self.inner(py);
         let fctx = FetchContext::new(fetch_mode.0);
-        let iter = inner.get_content_iter(keys.0.into_keys(), fctx).map_pyerr(py)?;
+        let iter = inner.get_content_iter(fctx, keys.0.into_keys()).map_pyerr(py)?;
         let iter = iter.into_compact_key();
         let iter = PyIter::new(py, iter)?;
         Ok(iter)
@@ -76,7 +76,7 @@ py_class!(pub class KeyStore |py| {
         let inner = self.inner(py);
         let path = RepoPath::from_str(path).map_pyerr(py)?;
         let fctx = FetchContext::new(fetch_mode.0);
-        let result = py.allow_threads(|| inner.get_content(path, id.0, fctx)).map_pyerr(py)?;
+        let result = py.allow_threads(|| inner.get_content(fctx, path, id.0)).map_pyerr(py)?;
         Ok(Serde(result))
     }
 
@@ -249,7 +249,7 @@ py_class!(pub class TreeStore |py| {
     def get_tree_iter(&self, keys: Serde<Vec<CompactKey>>, fetch_mode: Serde<FetchMode> = Serde(FetchMode::AllowRemote)) -> PyResult<PyIter> {
         let inner = self.inner(py);
         let fctx = FetchContext::new(fetch_mode.0);
-        let iter = inner.get_tree_iter(keys.0.into_keys(), fctx).map_pyerr(py)?;
+        let iter = inner.get_tree_iter(fctx, keys.0.into_keys()).map_pyerr(py)?;
         PyIter::new_custom(py, iter, |py, (key, entry)| {
             Ok((Serde(key.into_compact_key()), TreeEntry::create_instance(py, entry)?).to_py_object(py).into_object())
         })

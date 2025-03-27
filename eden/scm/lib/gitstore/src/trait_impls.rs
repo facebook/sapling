@@ -44,8 +44,8 @@ impl KeyStore for GitStore {
 
     fn get_content_iter(
         &self,
-        keys: Vec<types::Key>,
         fctx: FetchContext,
+        keys: Vec<types::Key>,
     ) -> anyhow::Result<BoxIterator<anyhow::Result<(types::Key, minibytes::Bytes)>>> {
         let fetch_mode = fctx.mode();
         if self.has_fetch_url() && fetch_mode.contains(FetchMode::REMOTE) {

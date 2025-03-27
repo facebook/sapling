@@ -75,18 +75,18 @@ impl CachingFileStore {
 impl KeyStore for CachingFileStore {
     fn get_content_iter(
         &self,
-        keys: Vec<Key>,
         fctx: FetchContext,
+        keys: Vec<Key>,
     ) -> Result<BoxIterator<Result<(Key, Bytes)>>> {
-        self.key_store.get_content_iter(keys, fctx)
+        self.key_store.get_content_iter(fctx, keys)
     }
 
     fn get_local_content(&self, path: &RepoPath, hgid: HgId) -> Result<Option<Bytes>> {
         self.key_store.get_local_content(path, hgid)
     }
 
-    fn get_content(&self, path: &RepoPath, hgid: HgId, fctx: FetchContext) -> Result<Bytes> {
-        self.key_store.get_content(path, hgid, fctx)
+    fn get_content(&self, fctx: FetchContext, path: &RepoPath, hgid: HgId) -> Result<Bytes> {
+        self.key_store.get_content(fctx, path, hgid)
     }
 
     fn prefetch(&self, keys: Vec<Key>) -> Result<()> {
@@ -134,10 +134,10 @@ impl FileStore for CachingFileStore {
 
     fn get_aux_iter(
         &self,
-        keys: Vec<Key>,
         fctx: FetchContext,
+        keys: Vec<Key>,
     ) -> anyhow::Result<BoxIterator<anyhow::Result<(Key, FileAuxData)>>> {
-        self.store.get_aux_iter(keys, fctx)
+        self.store.get_aux_iter(fctx, keys)
     }
 
     /// Get auxiliary metadata for the given file.
@@ -145,11 +145,11 @@ impl FileStore for CachingFileStore {
     /// When fetching many files, use `get_aux_iter` instead of calling this in a loop.
     fn get_aux(
         &self,
+        fctx: FetchContext,
         path: &RepoPath,
         id: HgId,
-        fctx: FetchContext,
     ) -> anyhow::Result<FileAuxData> {
-        self.store.get_aux(path, id, fctx)
+        self.store.get_aux(fctx, path, id)
     }
 
     fn get_hg_parents(&self, _path: &RepoPath, _id: HgId) -> anyhow::Result<Vec<HgId>> {

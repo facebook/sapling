@@ -66,8 +66,8 @@ pub trait KeyStore: Send + Sync {
     /// The iterator might block waiting for network.
     fn get_content_iter(
         &self,
-        keys: Vec<Key>,
         _fctx: FetchContext,
+        keys: Vec<Key>,
     ) -> anyhow::Result<BoxIterator<anyhow::Result<(Key, Bytes)>>> {
         let store = self.clone_key_store();
         let iter = keys
@@ -99,9 +99,9 @@ pub trait KeyStore: Send + Sync {
     /// this in a loop.
     fn get_content(
         &self,
+        fctx: FetchContext,
         path: &RepoPath,
         hgid: HgId,
-        fctx: FetchContext,
     ) -> anyhow::Result<minibytes::Bytes> {
         // Handle "broken" implementation that returns Err(_) not Ok(None) on not found.
         if !fctx.mode().is_remote() {
@@ -111,7 +111,7 @@ pub trait KeyStore: Send + Sync {
         }
 
         let key = Key::new(path.to_owned(), hgid);
-        match self.get_content_iter(vec![key], fctx)?.next() {
+        match self.get_content_iter(fctx, vec![key])?.next() {
             None => Err(anyhow::format_err!("{}@{}: not found remotely", path, hgid)),
             Some(Err(e)) => Err(e),
             Some(Ok((_k, data))) => Ok(data),
@@ -221,10 +221,10 @@ pub trait FileStore: KeyStore + 'static {
     /// The default implementation falls back to calculating them from content.
     fn get_aux_iter(
         &self,
-        keys: Vec<Key>,
         fctx: FetchContext,
+        keys: Vec<Key>,
     ) -> anyhow::Result<BoxIterator<anyhow::Result<(Key, FileAuxData)>>> {
-        let iter = self.get_content_iter(keys, fctx)?.map(|entry| match entry {
+        let iter = self.get_content_iter(fctx, keys)?.map(|entry| match entry {
             Err(e) => Err(e),
             Ok((key, data)) => Ok((key, FileAuxData::from_content(&data))),
         });
@@ -236,12 +236,12 @@ pub trait FileStore: KeyStore + 'static {
     /// When fetching many files, use `get_aux_iter` instead of calling this in a loop.
     fn get_aux(
         &self,
+        fctx: FetchContext,
         path: &RepoPath,
         id: HgId,
-        fctx: FetchContext,
     ) -> anyhow::Result<FileAuxData> {
         let key = Key::new(path.to_owned(), id);
-        match self.get_aux_iter(vec![key], fctx)?.next() {
+        match self.get_aux_iter(fctx, vec![key])?.next() {
             None => Err(anyhow::format_err!("{}@{}: not found remotely", path, id)),
             Some(Err(e)) => Err(e),
             Some(Ok((_k, aux))) => Ok(aux),
@@ -259,7 +259,7 @@ pub trait FileStore: KeyStore + 'static {
     /// This is only used by legacy Hg logic and is incompatible with Git.
     fn get_hg_raw_content(&self, path: &RepoPath, id: HgId) -> anyhow::Result<minibytes::Bytes> {
         // The default fetch mode is AllowRemote, which accesses both local and remote stores.
-        self.get_content(path, id, FetchContext::new(FetchMode::AllowRemote))
+        self.get_content(FetchContext::default(), path, id)
     }
 
     /// Get the "raw" flags. For LFS this is non-zero.
@@ -378,8 +378,8 @@ pub trait TreeStore: KeyStore {
     /// Currently mainly used by EdenFS.
     fn get_tree_iter(
         &self,
-        keys: Vec<Key>,
         _fctx: FetchContext,
+        keys: Vec<Key>,
     ) -> anyhow::Result<BoxIterator<anyhow::Result<(Key, Box<dyn TreeEntry>)>>> {
         let store = self.clone_tree_store();
         let iter = keys
@@ -403,8 +403,8 @@ pub trait TreeStore: KeyStore {
     /// Currently mainly used by EdenFS.
     fn get_tree_aux_data_iter(
         &self,
-        keys: Vec<Key>,
         _fctx: FetchContext,
+        keys: Vec<Key>,
     ) -> anyhow::Result<BoxIterator<anyhow::Result<(Key, TreeAuxData)>>> {
         let store = self.clone_tree_store();
         let iter =
@@ -448,12 +448,12 @@ pub trait TreeStore: KeyStore {
     /// instead of calling this in a loop.
     fn get_tree_aux_data(
         &self,
+        fctx: FetchContext,
         path: &RepoPath,
         id: HgId,
-        fctx: FetchContext,
     ) -> anyhow::Result<TreeAuxData> {
         let key = Key::new(path.to_owned(), id);
-        match self.get_tree_aux_data_iter(vec![key.clone()], fctx)?.next() {
+        match self.get_tree_aux_data_iter(fctx, vec![key.clone()])?.next() {
             None => Err(anyhow::format_err!("{}@{}: not found remotely", path, id)),
             Some(Err(e)) => Err(e),
             Some(Ok((_k, aux))) => Ok(aux),

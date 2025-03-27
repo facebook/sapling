@@ -479,14 +479,14 @@ impl RenameFinderInner {
         let source_content = spawn_blocking({
             let path = source_key.path.clone();
             let reader = self.file_reader.clone();
-            move || reader.get_content(&path, source_key.hgid, FetchContext::default())
+            move || reader.get_content(FetchContext::default(), &path, source_key.hgid)
         })
         .await??;
 
         block_in_place(move || {
             let iter = self
                 .file_reader
-                .get_content_iter(keys, FetchContext::default())?;
+                .get_content_iter(FetchContext::default(), keys)?;
             for entry in iter {
                 let (k, candidate_content) = entry?;
                 if is_content_similar(&source_content, &candidate_content, &self.config)? {

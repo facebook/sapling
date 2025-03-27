@@ -127,13 +127,13 @@ impl CachingKeyStore {
 impl KeyStore for CachingKeyStore {
     fn get_content_iter(
         &self,
-        keys: Vec<Key>,
         fctx: FetchContext,
+        keys: Vec<Key>,
     ) -> Result<BoxIterator<Result<(Key, Bytes)>>> {
         let (keys, cached) = self.cached_multi(keys);
 
         let uncached = CachingIter {
-            iter: self.store.get_content_iter(keys, fctx)?,
+            iter: self.store.get_content_iter(fctx, keys)?,
             cache: self.cache.clone(),
         };
 
@@ -154,11 +154,11 @@ impl KeyStore for CachingKeyStore {
         }
     }
 
-    fn get_content(&self, path: &RepoPath, hgid: HgId, fctx: FetchContext) -> Result<Bytes> {
+    fn get_content(&self, fctx: FetchContext, path: &RepoPath, hgid: HgId) -> Result<Bytes> {
         if let Some(cached) = self.cached_single(&hgid) {
             Ok(cached)
         } else {
-            match self.store.get_content(path, hgid, fctx) {
+            match self.store.get_content(fctx, path, hgid) {
                 Ok(data) => {
                     self.cache.lock().insert(hgid, data.clone());
                     Ok(data)
@@ -171,7 +171,7 @@ impl KeyStore for CachingKeyStore {
     fn prefetch(&self, keys: Vec<Key>) -> Result<()> {
         // Intercept prefetch() so we can prime our cache. This is what manifest-tree
         // operations like bfs_iter and diff use when walking trees.
-        self.get_content_iter(keys, FetchContext::default())?
+        self.get_content_iter(FetchContext::default(), keys)?
             .for_each(|_| ());
         Ok(())
     }
@@ -251,14 +251,14 @@ mod test {
         assert_eq!(inner_store.key_fetch_count(), 0);
 
         assert_eq!(
-            caching_store.get_content(&val1, val1_id, FetchContext::default())?,
+            caching_store.get_content(FetchContext::default(), &val1, val1_id)?,
             b"val1"
         );
         assert_eq!(inner_store.key_fetch_count(), 1);
 
         // Fetch again - make sure we cached it.
         assert_eq!(
-            caching_store.get_content(&val1, val1_id, FetchContext::default())?,
+            caching_store.get_content(FetchContext::default(), &val1, val1_id)?,
             b"val1"
         );
         assert_eq!(inner_store.key_fetch_count(), 1);
@@ -268,7 +268,7 @@ mod test {
         let key2 = Key::new(val2.clone(), val2_id);
         assert_eq!(
             caching_store
-                .get_content_iter(vec![key1.clone(), key2.clone()], FetchContext::default())?
+                .get_content_iter(FetchContext::default(), vec![key1.clone(), key2.clone()])?
                 .collect::<Result<Vec<_>>>()?,
             vec![
                 (key2.clone(), b"val2".as_ref().into()),
@@ -280,7 +280,7 @@ mod test {
 
         assert_eq!(
             caching_store
-                .get_content_iter(vec![key1.clone(), key2.clone()], FetchContext::default())?
+                .get_content_iter(FetchContext::default(), vec![key1.clone(), key2.clone()])?
                 .collect::<Result<Vec<_>>>()?,
             vec![
                 (key1.clone(), b"val1".as_ref().into()),

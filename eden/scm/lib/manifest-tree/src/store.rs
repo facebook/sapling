@@ -49,7 +49,7 @@ impl InnerStore {
         .in_scope(|| {
             let bytes = self
                 .tree_store
-                .get_content(path, hgid, FetchContext::default())?;
+                .get_content(FetchContext::default(), path, hgid)?;
             Ok(Entry(bytes, self.tree_store.format()))
         })
     }

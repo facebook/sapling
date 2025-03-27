@@ -41,7 +41,7 @@ pub fn run(ctx: ReqCtx<DebugScmStoreReplayOpts>, repo: &Repo) -> Result<u8> {
             activitylogger::ActivityType::FileFetch => {
                 key_count += log.keys.len();
                 fetch_count += 1;
-                let result = store.fetch(log.keys, log.attrs, FetchContext::default());
+                let result = store.fetch(FetchContext::default(), log.keys, log.attrs);
                 match result.missing() {
                     Ok(failed) => {
                         if !failed.is_empty() {

@@ -324,8 +324,8 @@ pub fn sapling_backingstore_get_tree(
     Ok(
         // the cause is not propagated for this API
         match store.get_tree(
-            node,
             FetchContext::new_with_cause(FetchMode::from(fetch_mode), FetchCause::EdenUnknown),
+            node,
         )? {
             Some(entry) => SharedPtr::new(entry.try_into()?),
             None => SharedPtr::null(),
@@ -343,8 +343,8 @@ pub fn sapling_backingstore_get_tree_batch(
     let cause = select_cause(requests.iter().map(|req| req.cause));
 
     store.get_tree_batch(
-        keys,
         FetchContext::new_with_cause(FetchMode::from(fetch_mode), cause),
+        keys,
         |idx, result| {
             let result: Result<Box<dyn storemodel::TreeEntry>> =
                 result.and_then(|opt| opt.ok_or_else(|| Error::msg("no tree found")));
@@ -365,8 +365,8 @@ pub fn sapling_backingstore_get_tree_aux(
 ) -> Result<SharedPtr<ffi::TreeAuxData>> {
     // the cause is not propagated for this API
     match store.get_tree_aux(
-        node,
         FetchContext::new_with_cause(FetchMode::from(fetch_mode), FetchCause::EdenUnknown),
+        node,
     )? {
         Some(aux) => Ok(SharedPtr::new(aux.into())),
         None => Ok(SharedPtr::null()),
@@ -383,8 +383,8 @@ pub fn sapling_backingstore_get_tree_aux_batch(
     let cause = select_cause(requests.iter().map(|req| req.cause));
 
     store.get_tree_aux_batch(
-        keys,
         FetchContext::new_with_cause(FetchMode::from(fetch_mode), cause),
+        keys,
         |idx, result| {
             let result = result.and_then(|opt| opt.ok_or_else(|| Error::msg("no aux data found")));
             let resolver = resolver.clone();
@@ -406,8 +406,8 @@ pub fn sapling_backingstore_get_blob(
 ) -> Result<ffi::OptionalBlob> {
     // the cause is not propagated for this API
     match store.get_blob(
-        node,
         FetchContext::new_with_cause(FetchMode::from(fetch_mode), FetchCause::EdenUnknown),
+        node,
     )? {
         Some(blob) => Ok(ffi::OptionalBlob {
             blob: Box::new(ffi::Blob { bytes: blob }),
@@ -430,8 +430,8 @@ pub fn sapling_backingstore_get_blob_batch(
     let cause = select_cause(requests.iter().map(|req| req.cause));
 
     store.get_blob_batch(
-        keys,
         FetchContext::new_with_cause(FetchMode::from(fetch_mode), cause),
+        keys,
         |idx, result| {
             let result = result.and_then(|opt| opt.ok_or_else(|| Error::msg("no blob found")));
             let resolver = resolver.clone();
@@ -454,8 +454,8 @@ pub fn sapling_backingstore_get_file_aux(
 ) -> Result<SharedPtr<ffi::FileAuxData>> {
     // the cause is not propagated for this API
     match store.get_file_aux(
-        node,
         FetchContext::new_with_cause(FetchMode::from(fetch_mode), FetchCause::EdenUnknown),
+        node,
     )? {
         Some(aux) => Ok(SharedPtr::new(aux.into())),
         None => Ok(SharedPtr::null()),
@@ -472,8 +472,8 @@ pub fn sapling_backingstore_get_file_aux_batch(
     let cause = select_cause(requests.iter().map(|req| req.cause));
 
     store.get_file_aux_batch(
-        keys,
         FetchContext::new_with_cause(FetchMode::from(fetch_mode), cause),
+        keys,
         |idx, result| {
             let result: Result<ScmStoreFileAuxData> =
                 result.and_then(|opt| opt.ok_or_else(|| Error::msg("no file aux data found")));

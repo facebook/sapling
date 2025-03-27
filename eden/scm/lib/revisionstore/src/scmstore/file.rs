@@ -15,6 +15,7 @@ use std::sync::Arc;
 use std::time::Instant;
 
 use ::metrics::Counter;
+use ::types::fetch_cause::FetchCause;
 use ::types::fetch_mode::FetchMode;
 use ::types::FetchContext;
 use ::types::HgId;
@@ -156,9 +157,9 @@ impl FileStore {
 
     pub fn fetch(
         &self,
+        fctx: FetchContext,
         keys: impl IntoIterator<Item = Key>,
         attrs: FileAttributes,
-        fctx: FetchContext,
     ) -> FetchResults<StoreFile> {
         let mut keys = keys.into_iter().peekable();
         if keys.peek().is_none() {
@@ -624,9 +625,9 @@ impl HgIdDataStore for FileStore {
         Ok(
             match self
                 .fetch(
+                    FetchContext::default(),
                     std::iter::once(key.clone()).filter_map(|sk| sk.maybe_into_key()),
                     FileAttributes::CONTENT,
-                    FetchContext::default(),
                 )
                 .single()?
             {
@@ -651,9 +652,12 @@ impl FileStore {
         }
 
         self.fetch(
+            FetchContext::new_with_cause(
+                FetchMode::AllowRemote | FetchMode::IGNORE_RESULT,
+                FetchCause::SaplingPrefetch,
+            ),
             keys,
             attrs,
-            FetchContext::new(FetchMode::AllowRemote | FetchMode::IGNORE_RESULT),
         )
         .missing()
     }
@@ -664,9 +668,9 @@ impl LocalStore for FileStore {
         self.metrics.write().api.hg_getmissing.call(keys.len());
         Ok(self
             .fetch(
+                FetchContext::new(FetchMode::LocalOnly | FetchMode::IGNORE_RESULT),
                 keys.iter().cloned().filter_map(|sk| sk.maybe_into_key()),
                 FileAttributes::CONTENT,
-                FetchContext::new(FetchMode::LocalOnly | FetchMode::IGNORE_RESULT),
             )
             .missing()?
             .into_iter()

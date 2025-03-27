@@ -39,7 +39,7 @@ fn main() {
 
     bench_matrix("get_blob serial (1k)", |store, mode| {
         for key in load_test_keys().iter().take(1000) {
-            let fetched = store.get_blob(key.hgid.as_ref(), FetchContext::new(mode));
+            let fetched = store.get_blob(FetchContext::new(mode), key.hgid.as_ref());
             assert!(matches!(mode, FetchMode::LocalOnly) || matches!(fetched, Ok(Some(_))));
         }
     });
@@ -47,8 +47,8 @@ fn main() {
     bench_matrix(&format!("get_blob_batch ({}k)", n / 1000), |store, mode| {
         let fetch_count = AtomicUsize::new(0);
         store.get_blob_batch(
-            load_test_keys().clone(),
             FetchContext::new(mode),
+            load_test_keys().clone(),
             |_, fetched| {
                 fetch_count.fetch_add(1, Ordering::Release);
                 assert!(matches!(mode, FetchMode::LocalOnly) || matches!(fetched, Ok(Some(_))));
@@ -59,7 +59,7 @@ fn main() {
 
     bench_matrix("get_file_aux serial (1k)", |store, mode| {
         for key in load_test_keys().iter().take(1000) {
-            let fetched = store.get_file_aux(key.hgid.as_ref(), FetchContext::new(mode));
+            let fetched = store.get_file_aux(FetchContext::new(mode), key.hgid.as_ref());
             assert!(matches!(mode, FetchMode::LocalOnly) || matches!(fetched, Ok(Some(_))));
         }
     });
@@ -69,8 +69,8 @@ fn main() {
         |store, mode| {
             let fetch_count = AtomicUsize::new(0);
             store.get_file_aux_batch(
-                load_test_keys().clone(),
                 FetchContext::new(mode),
+                load_test_keys().clone(),
                 |_, fetched| {
                     fetch_count.fetch_add(1, Ordering::Release);
                     assert!(matches!(mode, FetchMode::LocalOnly) || matches!(fetched, Ok(Some(_))));
@@ -84,7 +84,7 @@ fn main() {
 
     bench_matrix("get_tree serial (1k)", |store, mode| {
         for key in load_tree_keys().iter().take(1000) {
-            let fetched = store.get_tree(key.hgid.as_ref(), FetchContext::new(mode));
+            let fetched = store.get_tree(FetchContext::new(mode), key.hgid.as_ref());
             assert!(matches!(mode, FetchMode::LocalOnly) || matches!(fetched, Ok(Some(_))));
         }
     });
@@ -92,8 +92,8 @@ fn main() {
     bench_matrix(&format!("get_tree_batch ({}k)", n / 1000), |store, mode| {
         let fetch_count = AtomicUsize::new(0);
         store.get_tree_batch(
-            load_tree_keys().clone(),
             FetchContext::new(mode),
+            load_tree_keys().clone(),
             |_, fetched| {
                 fetch_count.fetch_add(1, Ordering::Release);
                 assert!(matches!(mode, FetchMode::LocalOnly) || matches!(fetched, Ok(Some(_))));
@@ -189,10 +189,10 @@ impl TempDirExt for tempfile::TempDir {
         let store = self.store();
         if test_title.contains("tree") {
             let keys = load_tree_keys();
-            store.get_tree_batch(keys.clone(), FetchContext::default(), |_, _| ());
+            store.get_tree_batch(FetchContext::default(), keys.clone(), |_, _| ());
         } else {
             let keys = load_test_keys();
-            store.get_blob_batch(keys.clone(), FetchContext::default(), |_, _| ());
+            store.get_blob_batch(FetchContext::default(), keys.clone(), |_, _| ());
         }
         store.flush();
     }

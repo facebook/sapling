@@ -37,10 +37,10 @@ pub struct ArcFileStore(pub Arc<FileStore>);
 impl storemodel::KeyStore for ArcFileStore {
     fn get_content_iter(
         &self,
-        keys: Vec<Key>,
         fctx: FetchContext,
+        keys: Vec<Key>,
     ) -> anyhow::Result<BoxIterator<anyhow::Result<(Key, Bytes)>>> {
-        let fetched = self.0.fetch(keys, FileAttributes::PURE_CONTENT, fctx);
+        let fetched = self.0.fetch(fctx, keys, FileAttributes::PURE_CONTENT);
         let iter = fetched
             .into_iter()
             .map(|result| -> anyhow::Result<(Key, Bytes)> {
@@ -96,9 +96,9 @@ impl storemodel::FileStore for ArcFileStore {
         keys: Vec<Key>,
     ) -> anyhow::Result<BoxIterator<anyhow::Result<(Key, Key)>>> {
         let fetched = self.0.fetch(
+            FetchContext::default(),
             keys,
             FileAttributes::CONTENT_HEADER,
-            FetchContext::default(),
         );
         let iter = fetched
             .into_iter()
@@ -116,9 +116,9 @@ impl storemodel::FileStore for ArcFileStore {
         // PERF: This could be made faster by changes like D50935733.
         let key = Key::new(path.to_owned(), id);
         let fetched = self.0.fetch(
+            FetchContext::new(FetchMode::LocalOnly),
             std::iter::once(key),
             FileAttributes::AUX,
-            FetchContext::new(FetchMode::LocalOnly),
         );
         if let Some(entry) = fetched.single()? {
             Ok(Some(entry.aux_data()?))
@@ -129,10 +129,10 @@ impl storemodel::FileStore for ArcFileStore {
 
     fn get_aux_iter(
         &self,
-        keys: Vec<Key>,
         fctx: FetchContext,
+        keys: Vec<Key>,
     ) -> anyhow::Result<BoxIterator<anyhow::Result<(Key, FileAuxData)>>> {
-        let fetched = self.0.fetch(keys, FileAttributes::AUX, fctx);
+        let fetched = self.0.fetch(fctx, keys, FileAttributes::AUX);
         let iter = fetched
             .into_iter()
             .map(|entry| -> anyhow::Result<(Key, FileAuxData)> {

@@ -416,7 +416,7 @@ impl IntoIterator for FileChangeDetector {
         // switch this to use that (rather than pulling down the entire contents of each
         // file).
         let _span = tracing::info_span!("get_content_stream").entered();
-        match self.store.get_content_iter(keys, FetchContext::default()) {
+        match self.store.get_content_iter(FetchContext::default(), keys) {
             Err(e) => results_send.send(Err(e)).unwrap(),
             Ok(v) => {
                 for entry in v {

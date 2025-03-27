@@ -376,9 +376,9 @@ mod tests {
         // Attempt fetch.
         let fetched = store
             .fetch(
+                FetchContext::default(),
                 std::iter::once(k),
                 FileAttributes::AUX,
-                FetchContext::default(),
             )
             .single()?
             .expect("key not found");
@@ -430,9 +430,9 @@ mod tests {
         // Attempt fetch.
         let fetched = store
             .fetch(
+                FetchContext::default(),
                 std::iter::once(k.clone()),
                 FileAttributes::AUX,
-                FetchContext::default(),
             )
             .single()?
             .expect("key not found");

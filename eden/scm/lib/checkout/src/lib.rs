@@ -274,7 +274,7 @@ impl CheckoutPlan {
             })
             .collect();
         let keys: Vec<_> = actions.keys().cloned().collect();
-        let fetch_data_iter = store.get_content_iter(keys, FetchContext::default())?;
+        let fetch_data_iter = store.get_content_iter(FetchContext::default(), keys)?;
 
         let stats = thread::scope(|s| -> Result<CheckoutStats> {
             const WORK_QUEUE_SIZE: usize = 10_000;
@@ -479,7 +479,7 @@ impl CheckoutPlan {
         });
         let keys: Vec<_> = keys.collect();
         let (mut count, mut size) = (0, 0);
-        let iter = store.get_content_iter(keys, FetchContext::default())?;
+        let iter = store.get_content_iter(FetchContext::default(), keys)?;
         for result in iter {
             let (_key, data) = result?;
             count += 1;
@@ -608,7 +608,7 @@ impl CheckoutPlan {
         }
 
         let mut paths = Vec::new();
-        for entry in store.get_content_iter(check_content, FetchContext::default())? {
+        for entry in store.get_content_iter(FetchContext::default(), check_content)? {
             let (key, data) = entry?;
             if let Some(path) = Self::check_content(vfs, key, data) {
                 paths.push(path);
