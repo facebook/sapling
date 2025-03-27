@@ -8,19 +8,22 @@
 use std::fmt;
 use std::path::Path;
 use std::path::PathBuf;
+use std::pin::Pin;
 use std::time::Duration;
 use std::time::Instant;
 
-use edenfs_error::EdenFsError;
 use edenfs_error::Result;
 use edenfs_error::ResultExt;
 use edenfs_utils::bytes_from_path;
 use edenfs_utils::path_from_bytes;
+use futures::stream;
+use futures::Stream;
 use futures::StreamExt;
 use serde::Serialize;
 use tokio::time;
 
 use crate::client::EdenFsClient;
+use crate::client::StreamingEdenFsClient;
 use crate::instance::EdenFsInstance;
 use crate::types::Dtype;
 use crate::types::JournalPosition;
@@ -519,112 +522,139 @@ impl EdenFsClient {
         }
         Ok(result)
     }
+}
 
-    //TODO: subscribe does not fit neatly in non-streaming or streaming client.
-    //      Should we pass in a stream client? Make instance accessible from
-    //      each client? Something else?
-    pub async fn subscribe(
+impl StreamingEdenFsClient {
+    #[cfg(fbcode_build)]
+    pub async fn stream_changes_since(
         &self,
         mount_point: &Option<PathBuf>,
         throttle_time_ms: u64,
-        position: Option<JournalPosition>,
+        position: JournalPosition,
         root: &Option<PathBuf>,
         included_roots: &Option<Vec<PathBuf>>,
         included_suffixes: &Option<Vec<String>>,
         excluded_roots: &Option<Vec<PathBuf>>,
         excluded_suffixes: &Option<Vec<String>>,
         include_vcs_roots: bool,
-        handle_results: impl Fn(&ChangesSinceV2Result) -> Result<(), EdenFsError>,
-    ) -> Result<(), anyhow::Error> {
-        let instance = EdenFsInstance::global();
-        let streaming_client = instance.get_streaming_client();
-
-        let mut position = position.unwrap_or(self.get_journal_position(mount_point).await?);
-        let mut subscription = streaming_client.stream_journal_changed(mount_point).await?;
-
-        let mut last = Instant::now();
-        let throttle = Duration::from_millis(throttle_time_ms);
-
-        let mut pending_updates = false;
-
-        // Largest allowed sleep value  https://docs.rs/tokio/latest/tokio/time/fn.sleep.html
-        let sleep_max = Duration::from_millis(68719476734);
-        let timer = time::sleep(sleep_max);
-        tokio::pin!(timer);
-
-        loop {
-            tokio::select! {
-                // Wait on the following cases
-                // 1. The we get a notification from the subscription
-                // 2. The pending updates timer expires
-                // 3. Another signal is received
-                result = subscription.next() => {
-                    match result {
-                        // if the stream is ended somehow, we terminate as well
-                        None => break,
-                        // if any error happened during the stream, log them
-                        Some(Err(e)) => {
-                            tracing::error!(?e, "error while processing subscription");
-                            continue;
-                        },
-                        // If we have recently(within throttle ms) sent an update, set a
-                        // timer to check again when throttle time is up if we aren't already
-                        // waiting on a timer
-                        Some(Ok(_)) => {
-                            if last.elapsed() < throttle && !pending_updates {
-                                // set timer to check again when throttle time is up
-                                pending_updates = true;
-                                timer.as_mut().reset((Instant::now() + throttle).into());
-                                continue;
-                            }
-                        }
-                    }
-                },
-                // Pending updates timer expired. If we haven't gotten a subscription notification in
-                // the meantime, check for updates now. Set the timer back to the max value in either case.
-                () = &mut timer => {
-                    // Set timer to the maximum value to prevent repeated wakeups since timers are not consumed
-                    timer.as_mut().reset((Instant::now() + sleep_max).into());
-                    if !pending_updates {
-                        continue;
-                    }
-                },
-                // in all other cases, we terminate
-                else => break,
-            }
-
-            let result = self
-                .get_changes_since(
-                    mount_point,
-                    &position,
-                    root,
-                    included_roots,
-                    included_suffixes,
-                    excluded_roots,
-                    excluded_suffixes,
-                    include_vcs_roots,
-                )
-                .await
-                .map_err(anyhow::Error::msg)?;
-
-            tracing::debug!(
-                "got {} changes for position {}",
-                result.changes.len(),
-                result.to_position
-            );
-
-            if !result.changes.is_empty() {
-                // Error in handle results will terminate the loop
-                handle_results(&result)?;
-            }
-
-            pending_updates = false;
-            position = result.to_position;
-
-            last = Instant::now();
+    ) -> Result<Pin<Box<dyn Stream<Item = Result<ChangesSinceV2Result>> + Send>>> {
+        struct State {
+            mount_point: Option<PathBuf>,
+            position: JournalPosition,
+            root: Option<PathBuf>,
+            included_roots: Option<Vec<PathBuf>>,
+            included_suffixes: Option<Vec<String>>,
+            excluded_roots: Option<Vec<PathBuf>>,
+            excluded_suffixes: Option<Vec<String>>,
+            include_vcs_roots: bool,
+            subscription: Pin<Box<dyn Stream<Item = Result<JournalPosition>> + Send>>,
+            last: Instant,
+            throttle: Duration,
+            pending_updates: bool,
         }
 
-        Ok(())
+        // Largest allowed sleep value  https://docs.rs/tokio/latest/tokio/time/fn.sleep.html
+        const SLEEP_MAX: Duration = Duration::from_millis(68719476734);
+
+        let state = State {
+            // Params
+            mount_point: mount_point.clone(),
+            position,
+            root: root.clone(),
+            included_roots: included_roots.clone(),
+            included_suffixes: included_suffixes.clone(),
+            excluded_roots: excluded_roots.clone(),
+            excluded_suffixes: excluded_suffixes.clone(),
+            include_vcs_roots: include_vcs_roots.clone(),
+            // Locals
+            subscription: self.stream_journal_changed(mount_point).await?,
+            last: Instant::now(),
+            throttle: Duration::from_millis(throttle_time_ms),
+            pending_updates: false,
+        };
+
+        let stream = stream::unfold(state, move |mut state| async move {
+            let timer = time::sleep(SLEEP_MAX);
+            tokio::pin!(timer);
+
+            loop {
+                tokio::select! {
+                    // Wait on the following cases
+                    // 1. The we get a notification from the subscription
+                    // 2. The pending updates timer expires
+                    // 3. Another signal is received
+                    result = state.subscription.next() => {
+                        match result {
+                            // if the stream is ended somehow, we terminate as well
+                            None => break,
+                            // if any error happened during the stream, log them
+                            Some(Err(e)) => {
+                                tracing::error!(?e, "error while processing subscription");
+                                continue;
+                            },
+                            // If we have recently(within throttle ms) sent an update, set a
+                            // timer to check again when throttle time is up if we aren't already
+                            // waiting on a timer
+                            Some(Ok(_)) => {
+                                if state.last.elapsed() < state.throttle && !state.pending_updates {
+                                    // set timer to check again when throttle time is up
+                                    state.pending_updates = true;
+                                    timer.as_mut().reset((Instant::now() + state.throttle).into());
+                                    continue;
+                                }
+                            }
+                        }
+                    },
+                    // Pending updates timer expired. If we haven't gotten a subscription notification in
+                    // the meantime, check for updates now. Set the timer back to the max value in either case.
+                    () = &mut timer => {
+                        // Set timer to the maximum value to prevent repeated wakeups since timers are not consumed
+                        timer.as_mut().reset((Instant::now() + SLEEP_MAX).into());
+                        if !state.pending_updates {
+                            continue;
+                        }
+                    },
+                    // in all other cases, we terminate
+                    else => break,
+                }
+
+                state.pending_updates = false;
+                state.last = Instant::now();
+
+                let result = EdenFsInstance::global()
+                    .get_client()
+                    .get_changes_since(
+                        &state.mount_point,
+                        &state.position,
+                        &state.root,
+                        &state.included_roots,
+                        &state.included_suffixes,
+                        &state.excluded_roots,
+                        &state.excluded_suffixes,
+                        state.include_vcs_roots,
+                    )
+                    .await;
+                match result {
+                    Ok(ref r) => {
+                        tracing::debug!(
+                            "got {} changes for position {}",
+                            r.changes.len(),
+                            r.to_position
+                        );
+
+                        state.position = r.to_position.clone();
+                        if !r.changes.is_empty() {
+                            return Some((result, state));
+                        }
+                    }
+                    Err(_) => return Some((result, state)),
+                }
+            }
+
+            None
+        });
+
+        Ok(stream.boxed())
     }
 }
 

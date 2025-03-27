@@ -17,6 +17,7 @@ use edenfs_client::instance::EdenFsInstance;
 use edenfs_client::types::JournalPosition;
 use edenfs_client::utils::get_mount_point;
 use edenfs_error::EdenFsError;
+use futures::StreamExt;
 use hg_util::path::expand_path;
 use serde::Serialize;
 use tokio::io::AsyncWriteExt;
@@ -152,8 +153,10 @@ impl crate::Subcommand for SubscribeCmd {
     async fn run(&self) -> Result<ExitCode> {
         let instance = EdenFsInstance::global();
         let client = instance.get_client();
+        let streaming_client = instance.get_streaming_client();
 
         let mount_point_path = get_mount_point(&self.mount_point)?;
+        let position = client.get_journal_position(&self.mount_point).await?;
 
         let mut stdout = tokio::io::stdout();
 
@@ -165,20 +168,28 @@ impl crate::Subcommand for SubscribeCmd {
         bytes.push(b'\n');
         stdout.write_all(&bytes).await.ok();
 
-        client
-            .subscribe(
+        let stream = streaming_client
+            .stream_changes_since(
                 &self.mount_point,
                 self.throttle,
-                None,
+                position,
                 &None,
                 &None,
                 &None,
                 &None,
                 &None,
                 false,
-                handle_result,
             )
             .await?;
+
+        stream
+            .for_each(|result| async move {
+                match result {
+                    Ok(result) => handle_result(&result).expect("Error while handling result."),
+                    Err(e) => eprintln!("Error: {}", e),
+                }
+            })
+            .await;
 
         Ok(0)
     }

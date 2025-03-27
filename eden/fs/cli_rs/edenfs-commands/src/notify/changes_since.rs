@@ -15,8 +15,7 @@ use clap::Parser;
 use edenfs_client::changes_since::ChangesSinceV2Result;
 use edenfs_client::instance::EdenFsInstance;
 use edenfs_client::types::JournalPosition;
-use edenfs_error::EdenFsError;
-use edenfs_error::ResultExt;
+use futures::StreamExt;
 use hg_util::path::expand_path;
 
 use crate::ExitCode;
@@ -81,17 +80,15 @@ pub struct ChangesSinceCmd {
 }
 
 impl ChangesSinceCmd {
-    fn print_result(&self, result: &ChangesSinceV2Result) -> Result<(), EdenFsError> {
+    fn print_result(&self, result: &ChangesSinceV2Result) {
         println!(
             "{}",
             if self.json {
-                serde_json::to_string(&result).from_err()? + "\n"
+                serde_json::to_string(&result).expect("Failed to serialize result to JSON.") + "\n"
             } else {
                 result.to_string()
             }
         );
-
-        Ok(())
     }
 }
 
@@ -124,22 +121,30 @@ impl crate::Subcommand for ChangesSinceCmd {
             )
             .await?;
 
-        self.print_result(&result)?;
+        self.print_result(&result);
         if self.subscribe {
-            client
-                .subscribe(
+            let streaming_client = instance.get_streaming_client();
+            let stream = streaming_client
+                .stream_changes_since(
                     &self.mount_point,
                     self.throttle,
-                    Some(position),
+                    position,
                     &None,
                     &self.included_roots,
                     &self.included_suffixes,
                     &self.excluded_roots,
                     &self.excluded_suffixes,
                     self.include_vcs_roots,
-                    |result| self.print_result(result),
                 )
                 .await?;
+            stream
+                .for_each(|result| async {
+                    match result {
+                        Ok(result) => self.print_result(&result),
+                        Err(e) => eprintln!("Error: {}", e),
+                    }
+                })
+                .await;
         }
         Ok(0)
     }
