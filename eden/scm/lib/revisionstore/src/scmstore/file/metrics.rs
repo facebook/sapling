@@ -20,6 +20,7 @@ use crate::scmstore::metrics::FetchMetrics;
 use crate::scmstore::metrics::LocalAndCacheFetchMetrics;
 use crate::scmstore::metrics::WriteMetrics;
 
+// DO NOT RENAME: Please be aware that the names of the metrics are used in various parts of the system
 static_local_cache_fetch_metrics!(INDEXEDLOG, "scmstore.file.fetch.indexedlog");
 static_local_cache_fetch_metrics!(LFS, "scmstore.file.fetch.lfs");
 static_local_cache_fetch_metrics!(AUX, "scmstore.file.fetch.aux");
