@@ -598,7 +598,9 @@ def _do_import(ui, repo, temp_dir, *args, **opts):
 
     # PERF: shallow clone, then partial checkout
     git_repo = git.clone(ui, url, temp_dir, update=from_commit)
-    copy_files(ui, git_repo, repo, git_repo[from_commit], from_paths, to_paths)
+    copy_files(
+        ui, git_repo, repo, git_repo[from_commit], from_paths, to_paths, "import"
+    )
 
     extra = subtreeutil.gen_import_info(url, from_commit, from_paths, to_paths)
     summaryfooter = _gen_import_commit_msg(url, from_commit, from_paths, to_paths)
@@ -651,7 +653,7 @@ def gen_merge_commit_msg(subtree_merges):
     return "\n".join(msgs)
 
 
-def copy_files(ui, from_repo, to_repo, from_ctx, from_paths, to_paths):
+def copy_files(ui, from_repo, to_repo, from_ctx, from_paths, to_paths, subcmd):
     """copy files from `from_repo` to `to_repo`.
 
     `from_repo` can be an external git repo in the `subtree import` case.
@@ -668,9 +670,9 @@ def copy_files(ui, from_repo, to_repo, from_ctx, from_paths, to_paths):
             help_hint = _("contact %s for help") % support if support else None
             raise error.Abort(
                 _(
-                    "subtree import includes too many files (%d), exceeding configured limit (%d)"
+                    "subtree %s includes too many files (%d), exceeding configured limit (%d)"
                 )
-                % (file_count, limit),
+                % (subcmd, file_count, limit),
                 hint=help_hint,
             )
         path_to_fileids[path] = fileids
@@ -681,7 +683,7 @@ def copy_files(ui, from_repo, to_repo, from_ctx, from_paths, to_paths):
         fileids = path_to_fileids[from_path]
         with progress.bar(
             ui,
-            _("subtree import from %s to %s") % (from_path or "/", to_path),
+            _("subtree %s from %s to %s") % (subcmd, from_path or "/", to_path),
             _("files"),
             len(fileids),
         ) as p:
