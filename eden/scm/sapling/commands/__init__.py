@@ -1999,6 +1999,20 @@ def continuecmd(ui, repo):
         ms = mergemod.mergestate.read(repo)
         cmdutil.abort_on_unresolved_conflicts(ms)
 
+        if len(repo[None].parents()) > 1:
+            # 'merge' or 'subtree merge'
+            if ui.interactive():
+                cliname = ui.identity.cliname()
+                args = [cliname, "commit"]
+                return bindings.commands.run(args)
+            else:
+                raise error.Abort(
+                    _("cannot continue with '@prog@ commit' in non-interactive mode"),
+                    hint=_(
+                        "use '@prog@ commit' to commit or '@prog@ status' for more info"
+                    ),
+                )
+
         if ms.files():
             # no command support --continue, just delete the merge state.
             ui.status(_("(exiting merge state)\n"))

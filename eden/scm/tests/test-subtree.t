@@ -451,6 +451,10 @@ test subtree merge
   -3
   +3a
   +4
+  $ hg continue
+  abort: cannot continue with 'hg commit' in non-interactive mode
+  (use 'hg commit' to commit or 'hg status' for more info)
+  [255]
   $ hg ci -m 'subtree merge foo to bar'
   $ hg dbsh -c 'print(repo["."].extra())'
   {'branch': 'default', 'test_subtree': '[{"merges":[{"from_commit":"907442010f516d83aea80b4382964be22a34214f","from_path":"foo","to_path":"bar"}],"v":1}]'}
