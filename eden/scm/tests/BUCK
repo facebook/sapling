@@ -76,6 +76,7 @@ run_tests_target(
 )
 
 run_tests_target(
+    compatible_with = ["ovr_config//os:linux"],
     included = "test_(fb_ext_remotefilelog_(log|getpackv2|worker|rust_lfs|ruststores_lfs_duplicated)|edenapi.*)_t",
     mononoke = True,
 )

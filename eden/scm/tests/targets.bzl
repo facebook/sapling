@@ -204,6 +204,7 @@ def run_tests_target(
         name = name + "_cli",
         env = ENV,
         exe = ":unittestify",
+        compatible_with = kwargs.pop("compatible_with", None),
     )
 
 def generate_trinity_smoketests(included, **kwargs):
