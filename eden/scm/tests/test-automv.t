@@ -333,11 +333,7 @@
 
 # error conditions
 
-  $ cat >> $HGRCPATH << 'EOF'
-  > [automv]
-  > similarity=110
-  > EOF
-  $ hg commit -m 'revision to amend to'
+  $ hg commit -m 'revision to amend to' --config automv.similarity=110
   abort: automv.similarity must be between 0 and 100
   [255]
 
@@ -349,6 +345,18 @@
   $ mv A B
   $ hg addremove A B
   $ hg ci -m mv --config automv.max-files=0 --config automv.similarity=1
+  $ hg status --change . -C
+  A B
+  R A
+
+# "mv" + "commit --adremove"
+
+  $ newrepo
+  $ echo foo > A
+  $ hg ci -Aqm A
+  $ mv A B
+  $ hg ci -Aqm mv
+FIXME: copy from A->B is not recorded
   $ hg status --change . -C
   A B
   R A
