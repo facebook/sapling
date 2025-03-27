@@ -32,8 +32,6 @@ rust_library(
         "fbsource//third-party/rust:url",
         "//eden/scm/lib/async-runtime:async-runtime",
         "//eden/scm/lib/cats:cats",
-        "//eden/scm/lib/clientinfo:clientinfo",
-        "//eden/scm/lib/clientinfo-async:clientinfo_async",
         "//eden/scm/lib/config/model:configmodel",
         "//eden/scm/lib/edenapi/trait:edenapi_trait",
         "//eden/scm/lib/edenapi/types:edenapi_types",

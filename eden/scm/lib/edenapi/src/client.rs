@@ -18,8 +18,6 @@ use std::time::Duration;
 
 use anyhow::format_err;
 use async_trait::async_trait;
-use clientinfo::ClientInfo;
-use clientinfo_async::get_client_request_info_task_local;
 use edenapi_types::bookmark::Bookmark2Request;
 use edenapi_types::bookmark::Freshness;
 use edenapi_types::cloud::SmartlogDataResponse;
@@ -348,12 +346,6 @@ impl Client {
         } else if let Some(mts) = &config.min_transfer_speed {
             tracing::trace!(?mts, path = base_path, "using generic min transfer speed");
             req.set_min_transfer_speed(*mts);
-        }
-
-        if let Some(client_info) = get_client_request_info_task_local() {
-            let client_info_json: String =
-                ClientInfo::new_with_client_request_info(client_info).to_json()?;
-            req.set_client_info(&Some(client_info_json));
         }
 
         Ok(req)

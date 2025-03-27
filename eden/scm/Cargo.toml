@@ -23,7 +23,6 @@ members = [
   "lib/checkout",
   "lib/clidispatch",
   "lib/clientinfo",
-  "lib/clientinfo-async",
   "lib/cliparser",
   "lib/clone",
   "lib/commands",

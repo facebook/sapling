@@ -17,8 +17,6 @@ use async_runtime::block_on;
 use async_runtime::spawn_blocking;
 use async_runtime::stream_to_iter;
 use cas_client::CasClient;
-use clientinfo::get_client_request_info_thread_local;
-use clientinfo_async::with_client_request_info_scope;
 use edenapi_types::FileResponse;
 use edenapi_types::FileSpec;
 use flume::Sender;
@@ -565,14 +563,10 @@ impl FetchState {
 
         let bar = ProgressBar::new_adhoc("SLAPI", pending_attrs.len() as u64, "files");
 
-        // Fetch ClientRequestInfo from a thread local and pass to async code
-        let maybe_client_request_info = get_client_request_info_thread_local();
         let response = match block_on(
-            with_client_request_info_scope(
-                maybe_client_request_info,
-                store.files_attrs(self.fctx.clone(), pending_attrs),
-            )
-            .map_err(|e| e.tag_network()),
+            store
+                .files_attrs(self.fctx.clone(), pending_attrs)
+                .map_err(|e| e.tag_network()),
         ) {
             Ok(r) => r,
             Err(err) => {

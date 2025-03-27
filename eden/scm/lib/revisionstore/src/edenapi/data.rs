@@ -10,12 +10,9 @@ use std::sync::Arc;
 use anyhow::Result;
 use async_runtime::block_on;
 use async_runtime::spawn_blocking;
-use clientinfo::get_client_request_info_thread_local;
-use clientinfo_async::with_client_request_info_scope;
 use futures::prelude::*;
 use progress_model::ProgressBar;
 use tracing::field;
-use types::fetch_cause::FetchCause;
 use types::FetchContext;
 
 use super::hgid_keys;
@@ -105,12 +102,7 @@ impl RemoteDataStore for SaplingRemoteApiDataStore<File> {
             scmstore = false,
         );
         let _enter = span.enter();
-        // Fetch ClientRequestInfo from a thread local and pass to async code
-        let maybe_client_request_info = get_client_request_info_thread_local();
-        let (keys, stats) = block_on(with_client_request_info_scope(
-            maybe_client_request_info,
-            response,
-        ))?;
+        let (keys, stats) = block_on(response)?;
         util::record_edenapi_stats(&span, &stats);
         Ok(keys)
     }
@@ -156,12 +148,7 @@ impl RemoteDataStore for SaplingRemoteApiDataStore<Tree> {
             scmstore = false,
         );
         let _enter = span.enter();
-        // Fetch ClientRequestInfo from a thread local and pass to async code
-        let maybe_client_request_info = get_client_request_info_thread_local();
-        let (keys, stats) = block_on(with_client_request_info_scope(
-            maybe_client_request_info,
-            response,
-        ))?;
+        let (keys, stats) = block_on(response)?;
         util::record_edenapi_stats(&span, &stats);
         Ok(keys)
     }

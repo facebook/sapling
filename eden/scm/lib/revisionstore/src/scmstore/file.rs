@@ -24,8 +24,6 @@ use anyhow::bail;
 use anyhow::ensure;
 use anyhow::Result;
 use cas_client::CasClient;
-use clientinfo::get_client_request_info_thread_local;
-use clientinfo::set_client_request_info_thread_local;
 use flume::bounded;
 use flume::unbounded;
 use indexedlog::log::AUTO_SYNC_COUNT;
@@ -374,15 +372,10 @@ impl FileStore {
 
         // Only kick off a thread if there's a substantial amount of work.
         if keys_len > 1000 {
-            let cri = get_client_request_info_thread_local();
             let active_bar = Registry::main().get_active_progress_bar();
             std::thread::spawn(move || {
                 // Propagate parent progress bar into the thread so things nest well.
                 Registry::main().set_active_progress_bar(active_bar);
-
-                if let Some(cri) = cri {
-                    set_client_request_info_thread_local(cri);
-                }
                 process_func();
             });
         } else {

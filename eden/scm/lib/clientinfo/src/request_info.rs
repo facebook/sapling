@@ -5,7 +5,6 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-use std::cell::RefCell;
 use std::env::var;
 use std::fmt::Display;
 
@@ -80,18 +79,6 @@ fn new_client_request_info() -> ClientRequestInfo {
     log_cross_environment_session_id();
 
     ClientRequestInfo::new_ext(entry_point, correlator)
-}
-
-thread_local! {
-    pub static CLIENT_REQUEST_INFO_THREAD_LOCAL: RefCell<Option<ClientRequestInfo>> = Default::default();
-}
-
-pub fn set_client_request_info_thread_local(cri: ClientRequestInfo) {
-    CLIENT_REQUEST_INFO_THREAD_LOCAL.with(move |cri_old| *cri_old.borrow_mut() = Some(cri));
-}
-
-pub fn get_client_request_info_thread_local() -> Option<ClientRequestInfo> {
-    CLIENT_REQUEST_INFO_THREAD_LOCAL.with(|cri| cri.borrow().clone())
 }
 
 /// ClientRequestInfo holds information that will be used for tracing the request
