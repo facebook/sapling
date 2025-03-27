@@ -84,6 +84,8 @@ use pyrevisionstore::edenapitreestore;
 use pyrevisionstore::filescmstore;
 use revisionstore::SaplingRemoteApiFileStore;
 use revisionstore::SaplingRemoteApiTreeStore;
+use types::fetch_cause::FetchCause;
+use types::FetchContext;
 use types::HgId;
 use types::RepoPathBuf;
 
@@ -161,7 +163,10 @@ py_class!(pub class client |py| {
     ) -> PyResult<TStream<anyhow::Result<Serde<FileResponse>>>> {
         let api = self.inner(py).as_ref();
         let entries = py
-            .allow_threads(|| block_unless_interrupted(api.files_attrs(spec.0)))
+            .allow_threads(|| block_unless_interrupted(async move {
+                let fctx = FetchContext::sapling_default();
+                api.files_attrs(fctx , spec.0).await
+            }))
             .map_pyerr(py)?
             .map_pyerr(py)?
             .entries;

@@ -15,6 +15,8 @@ use clientinfo_async::with_client_request_info_scope;
 use futures::prelude::*;
 use progress_model::ProgressBar;
 use tracing::field;
+use types::fetch_cause::FetchCause;
+use types::FetchContext;
 
 use super::hgid_keys;
 use super::File;
@@ -60,7 +62,8 @@ impl RemoteDataStore for SaplingRemoteApiDataStore<File> {
                 "files",
             );
 
-            let response = File::prefetch_files(client, hgidkeys).await?;
+            let fctx = FetchContext::sapling_prefetch();
+            let response = File::prefetch_files(client, fctx, hgidkeys).await?;
             // store.add_file() may compress the data before writing it to the store. This can slow
             // things down enough that we don't pull responses off the queue fast enough and
             // edenapi starts queueing all the responses in memory. Let's write to the store in
@@ -130,7 +133,8 @@ impl RemoteDataStore for SaplingRemoteApiDataStore<Tree> {
                 "trees",
             );
 
-            let mut response = Tree::prefetch_trees(client, hgidkeys, None).await?;
+            let fctx = FetchContext::sapling_prefetch();
+            let mut response = Tree::prefetch_trees(client, fctx, hgidkeys, None).await?;
             while let Some(Ok(entry)) = response.entries.try_next().await? {
                 self.store.add_tree(&entry)?;
                 prog.increase_position(1);

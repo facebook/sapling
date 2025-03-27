@@ -32,6 +32,7 @@ use futures::prelude::*;
 #[cfg(test)]
 pub use lfs_mocks::*;
 use minibytes::Bytes;
+use types::FetchContext;
 use types::Key;
 use types::NodeInfo;
 use types::Parents;
@@ -313,7 +314,11 @@ impl SaplingRemoteApi for FakeSaplingRemoteApi {
         Ok(ResponseMeta::default())
     }
 
-    async fn files(&self, keys: Vec<Key>) -> Result<Response<FileResponse>, SaplingRemoteApiError> {
+    async fn files(
+        &self,
+        _fctx: FetchContext,
+        keys: Vec<Key>,
+    ) -> Result<Response<FileResponse>, SaplingRemoteApiError> {
         Self::get_files(
             &self.files,
             keys.into_iter().map(|key| FileSpec {
@@ -328,6 +333,7 @@ impl SaplingRemoteApi for FakeSaplingRemoteApi {
 
     async fn files_attrs(
         &self,
+        _fctx: FetchContext,
         reqs: Vec<FileSpec>,
     ) -> Result<Response<FileResponse>, SaplingRemoteApiError> {
         Self::get_files(&self.files, reqs.into_iter())
@@ -354,6 +360,7 @@ impl SaplingRemoteApi for FakeSaplingRemoteApi {
 
     async fn trees(
         &self,
+        _fctx: FetchContext,
         keys: Vec<Key>,
         _attrs: Option<TreeAttributes>,
     ) -> Result<Response<Result<TreeEntry, SaplingRemoteApiServerError>>, SaplingRemoteApiError>

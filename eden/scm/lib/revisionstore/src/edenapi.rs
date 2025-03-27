@@ -18,6 +18,7 @@ use edenapi_types::FileSpec;
 use edenapi_types::SaplingRemoteApiServerError;
 use edenapi_types::TreeAttributes;
 use edenapi_types::TreeEntry;
+use types::FetchContext;
 use types::Key;
 
 use crate::datastore::HgIdMutableDeltaStore;
@@ -120,29 +121,33 @@ pub enum Tree {}
 impl SaplingRemoteApiFileStore {
     pub fn files_blocking(
         &self,
+        fctx: FetchContext,
         keys: Vec<Key>,
     ) -> Result<BlockingResponse<FileResponse>, SaplingRemoteApiError> {
-        BlockingResponse::from_async(self.client.files(keys))
+        BlockingResponse::from_async(self.client.files(fctx, keys))
     }
 
     pub fn files_attrs_blocking(
         &self,
+        fctx: FetchContext,
         reqs: Vec<FileSpec>,
     ) -> Result<BlockingResponse<FileResponse>, SaplingRemoteApiError> {
-        BlockingResponse::from_async(self.client.files_attrs(reqs))
+        BlockingResponse::from_async(self.client.files_attrs(fctx, reqs))
     }
 
     pub async fn files_attrs(
         &self,
+        fctx: FetchContext,
         reqs: Vec<FileSpec>,
     ) -> Result<Response<FileResponse>, SaplingRemoteApiError> {
-        self.client.files_attrs(reqs).await
+        self.client.files_attrs(fctx, reqs).await
     }
 }
 
 impl SaplingRemoteApiTreeStore {
     pub fn trees_blocking(
         &self,
+        fctx: FetchContext,
         keys: Vec<Key>,
         attributes: Option<TreeAttributes>,
     ) -> Result<
@@ -150,7 +155,7 @@ impl SaplingRemoteApiTreeStore {
         SaplingRemoteApiError,
     > {
         async_runtime::block_in_place(|| {
-            BlockingResponse::from_async(self.client.trees(keys, attributes))
+            BlockingResponse::from_async(self.client.trees(fctx, keys, attributes))
         })
     }
 }
@@ -161,6 +166,7 @@ impl SaplingRemoteApiTreeStore {
 pub trait SaplingRemoteApiStoreKind: Send + Sync + 'static {
     async fn prefetch_files(
         _client: Arc<dyn SaplingRemoteApi>,
+        _fctx: FetchContext,
         _keys: Vec<Key>,
     ) -> Result<Response<FileResponse>, SaplingRemoteApiError> {
         unimplemented!("fetching files not supported for this store")
@@ -168,6 +174,7 @@ pub trait SaplingRemoteApiStoreKind: Send + Sync + 'static {
 
     async fn prefetch_trees(
         _client: Arc<dyn SaplingRemoteApi>,
+        _fctx: FetchContext,
         _keys: Vec<Key>,
         _attributes: Option<TreeAttributes>,
     ) -> Result<Response<Result<TreeEntry, SaplingRemoteApiServerError>>, SaplingRemoteApiError>
@@ -180,9 +187,10 @@ pub trait SaplingRemoteApiStoreKind: Send + Sync + 'static {
 impl SaplingRemoteApiStoreKind for File {
     async fn prefetch_files(
         client: Arc<dyn SaplingRemoteApi>,
+        fctx: FetchContext,
         keys: Vec<Key>,
     ) -> Result<Response<FileResponse>, SaplingRemoteApiError> {
-        client.files(keys).await
+        client.files(fctx, keys).await
     }
 }
 
@@ -190,11 +198,12 @@ impl SaplingRemoteApiStoreKind for File {
 impl SaplingRemoteApiStoreKind for Tree {
     async fn prefetch_trees(
         client: Arc<dyn SaplingRemoteApi>,
+        fctx: FetchContext,
         keys: Vec<Key>,
         attributes: Option<TreeAttributes>,
     ) -> Result<Response<Result<TreeEntry, SaplingRemoteApiServerError>>, SaplingRemoteApiError>
     {
-        client.trees(keys, attributes).await
+        client.trees(fctx, keys, attributes).await
     }
 }
 

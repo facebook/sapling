@@ -25,6 +25,14 @@ impl FetchContext {
         }
     }
 
+    pub fn sapling_default() -> Self {
+        Self::new_with_cause(FetchMode::AllowRemote, FetchCause::SaplingUnknown)
+    }
+
+    pub fn sapling_prefetch() -> Self {
+        Self::new_with_cause(FetchMode::AllowRemote, FetchCause::SaplingPrefetch)
+    }
+
     pub fn new_with_cause(mode: FetchMode, cause: FetchCause) -> Self {
         Self { mode, cause }
     }

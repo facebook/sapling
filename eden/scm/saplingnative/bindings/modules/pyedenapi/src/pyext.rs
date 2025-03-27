@@ -84,6 +84,8 @@ use revisionstore::HgIdMutableDeltaStore;
 use revisionstore::StoreKey;
 use revisionstore::StoreResult;
 use sha1::Digest;
+use types::fetch_cause::FetchCause;
+use types::FetchContext;
 use types::HgId;
 
 use crate::pytypes::PyStats;
@@ -115,7 +117,12 @@ pub trait SaplingRemoteApiPyExt: SaplingRemoteApi {
     ) -> PyResult<TStream<anyhow::Result<Serde<FileResponse>>>> {
         let keys = to_keys(py, &keys)?;
         let entries = py
-            .allow_threads(|| block_unless_interrupted(self.files(keys)))
+            .allow_threads(|| {
+                block_unless_interrupted(async move {
+                    let fctx = FetchContext::sapling_default();
+                    self.files(fctx, keys).await
+                })
+            })
             .map_pyerr(py)?
             .map_pyerr(py)?
             .entries;
@@ -154,7 +161,8 @@ pub trait SaplingRemoteApiPyExt: SaplingRemoteApi {
         let stats = py
             .allow_threads(|| {
                 block_unless_interrupted(async move {
-                    let response = self.trees(keys, attributes).await?;
+                    let fctx = FetchContext::sapling_default();
+                    let response = self.trees(fctx, keys, attributes).await?;
                     write_trees(response, store, prog).await
                 })
             })
@@ -174,7 +182,8 @@ pub trait SaplingRemoteApiPyExt: SaplingRemoteApi {
         let (trees, stats) = py
             .allow_threads(|| {
                 block_unless_interrupted(async move {
-                    let response = self.trees(keys, attributes).await?;
+                    let fctx = FetchContext::sapling_default();
+                    let response = self.trees(fctx, keys, attributes).await?;
                     Ok::<_, SaplingRemoteApiError>((response.entries, response.stats))
                 })
             })

@@ -134,6 +134,7 @@ use progress_model::ProgressBar;
 use repourl::encode_repo_name;
 use serde::de::DeserializeOwned;
 use serde::Serialize;
+use types::FetchContext;
 use types::HgId;
 use types::Key;
 use url::Url;
@@ -563,6 +564,7 @@ impl Client {
 
     pub(crate) async fn fetch_trees(
         &self,
+        _fctx: FetchContext,
         keys: Vec<Key>,
         attributes: Option<TreeAttributes>,
     ) -> Result<Response<Result<TreeEntry, SaplingRemoteApiServerError>>, SaplingRemoteApiError>
@@ -613,6 +615,7 @@ impl Client {
 
     pub(crate) async fn fetch_files_attrs(
         &self,
+        _fctx: FetchContext,
         reqs: Vec<FileSpec>,
     ) -> Result<Response<FileResponse>, SaplingRemoteApiError> {
         tracing::info!("Fetching content and attributes for {} file(s)", reqs.len());
@@ -1346,9 +1349,10 @@ impl SaplingRemoteApi for Client {
 
     async fn files_attrs(
         &self,
+        fctx: FetchContext,
         reqs: Vec<FileSpec>,
     ) -> Result<Response<FileResponse>, SaplingRemoteApiError> {
-        RetryableFileAttrs::new(reqs)
+        RetryableFileAttrs::new(fctx, reqs)
             .perform_with_retries(self.clone())
             .and_then(|r| async { Ok(r.then(ready)) })
             .await
@@ -1365,11 +1369,12 @@ impl SaplingRemoteApi for Client {
 
     async fn trees(
         &self,
+        fctx: FetchContext,
         keys: Vec<Key>,
         attributes: Option<TreeAttributes>,
     ) -> Result<Response<Result<TreeEntry, SaplingRemoteApiServerError>>, SaplingRemoteApiError>
     {
-        RetryableTrees::new(keys, attributes)
+        RetryableTrees::new(fctx, keys, attributes)
             .perform_with_retries(self.clone())
             .and_then(|r| async { Ok(r.then(ready)) })
             .await

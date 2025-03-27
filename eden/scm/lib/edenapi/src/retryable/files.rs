@@ -8,6 +8,7 @@
 use std::collections::HashMap;
 
 use async_trait::async_trait;
+use types::FetchContext;
 use types::Key;
 
 use super::RetryableStreamRequest;
@@ -19,12 +20,13 @@ use crate::types::FileSpec;
 
 pub(crate) struct RetryableFileAttrs {
     reqs: HashMap<Key, FileSpec>,
+    fctx: FetchContext,
 }
 
 impl RetryableFileAttrs {
-    pub(crate) fn new(reqs: impl IntoIterator<Item = FileSpec>) -> Self {
+    pub(crate) fn new(fctx: FetchContext, reqs: impl IntoIterator<Item = FileSpec>) -> Self {
         let reqs = reqs.into_iter().map(|req| (req.key.clone(), req)).collect();
-        Self { reqs }
+        Self { fctx, reqs }
     }
 }
 
@@ -34,7 +36,7 @@ impl RetryableStreamRequest for RetryableFileAttrs {
 
     async fn perform(&self, client: Client) -> Result<Response<Self::Item>, SaplingRemoteApiError> {
         let reqs = self.reqs.values().cloned().collect();
-        client.fetch_files_attrs(reqs).await
+        client.fetch_files_attrs(self.fctx.clone(), reqs).await
     }
 
     fn received_item(&mut self, item: &Self::Item) {

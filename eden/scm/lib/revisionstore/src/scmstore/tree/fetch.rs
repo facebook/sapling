@@ -113,7 +113,7 @@ impl FetchState {
         let bar = ProgressBar::new_adhoc("SLAPI", pending.len() as u64, "trees");
 
         let response = edenapi
-            .trees_blocking(pending, Some(attributes))
+            .trees_blocking(self.common.fctx.clone(), pending, Some(attributes))
             .map_err(|e| e.tag_network())?;
         for entry in response.entries {
             bar.increase_position(1);

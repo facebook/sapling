@@ -570,7 +570,7 @@ impl FetchState {
         let response = match block_on(
             with_client_request_info_scope(
                 maybe_client_request_info,
-                store.files_attrs(pending_attrs),
+                store.files_attrs(self.fctx.clone(), pending_attrs),
             )
             .map_err(|e| e.tag_network()),
         ) {

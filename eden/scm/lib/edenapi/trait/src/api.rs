@@ -71,6 +71,7 @@ use edenapi_types::UploadTreeResponse;
 use edenapi_types::WorkspaceDataResponse;
 use edenapi_types::WorkspacesDataResponse;
 use minibytes::Bytes;
+use types::FetchContext;
 use types::HgId;
 use types::Key;
 
@@ -100,15 +101,22 @@ pub trait SaplingRemoteApi: Send + Sync + 'static {
         Err(SaplingRemoteApiError::NotSupported)
     }
 
-    async fn files(&self, keys: Vec<Key>) -> Result<Response<FileResponse>, SaplingRemoteApiError> {
+    async fn files(
+        &self,
+        fctx: FetchContext,
+        keys: Vec<Key>,
+    ) -> Result<Response<FileResponse>, SaplingRemoteApiError> {
+        let _ = fctx;
         let _ = keys;
         Err(SaplingRemoteApiError::NotSupported)
     }
 
     async fn files_attrs(
         &self,
+        fctx: FetchContext,
         reqs: Vec<FileSpec>,
     ) -> Result<Response<FileResponse>, SaplingRemoteApiError> {
+        let _ = fctx;
         let _ = reqs;
         Err(SaplingRemoteApiError::NotSupported)
     }
@@ -124,11 +132,12 @@ pub trait SaplingRemoteApi: Send + Sync + 'static {
 
     async fn trees(
         &self,
+        fctx: FetchContext,
         keys: Vec<Key>,
         attributes: Option<TreeAttributes>,
     ) -> Result<Response<Result<TreeEntry, SaplingRemoteApiServerError>>, SaplingRemoteApiError>
     {
-        let _ = (keys, attributes);
+        let _ = (fctx, keys, attributes);
         Err(SaplingRemoteApiError::NotSupported)
     }
 

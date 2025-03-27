@@ -99,6 +99,7 @@ use nonblocking::non_blocking_result;
 use pathmatcher::AlwaysMatcher;
 use repourl::RepoUrl;
 use storemodel::types::AugmentedTreeWithDigest;
+use storemodel::types::FetchContext;
 use storemodel::InsertOpts;
 use storemodel::KeyStore;
 use storemodel::Kind;
@@ -142,7 +143,11 @@ impl SaplingRemoteApi for EagerRepo {
         Ok(caps)
     }
 
-    async fn files(&self, keys: Vec<Key>) -> edenapi::Result<Response<FileResponse>> {
+    async fn files(
+        &self,
+        _fctx: FetchContext,
+        keys: Vec<Key>,
+    ) -> edenapi::Result<Response<FileResponse>> {
         debug!("files {}", debug_key_list(&keys));
         self.refresh_for_api();
         let mut values = Vec::with_capacity(keys.len());
@@ -170,7 +175,11 @@ impl SaplingRemoteApi for EagerRepo {
         Ok(convert_to_response(values))
     }
 
-    async fn files_attrs(&self, reqs: Vec<FileSpec>) -> edenapi::Result<Response<FileResponse>> {
+    async fn files_attrs(
+        &self,
+        _fctx: FetchContext,
+        reqs: Vec<FileSpec>,
+    ) -> edenapi::Result<Response<FileResponse>> {
         ::fail::fail_point!("eagerepo::api::files_attrs", |_| {
             Err(SaplingRemoteApiError::HttpError {
                 status: StatusCode::INTERNAL_SERVER_ERROR,
@@ -283,6 +292,7 @@ impl SaplingRemoteApi for EagerRepo {
 
     async fn trees(
         &self,
+        _fctx: FetchContext,
         keys: Vec<Key>,
         attributes: Option<TreeAttributes>,
     ) -> edenapi::Result<Response<Result<TreeEntry, SaplingRemoteApiServerError>>> {

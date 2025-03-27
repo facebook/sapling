@@ -8,6 +8,7 @@
 use std::collections::HashSet;
 
 use async_trait::async_trait;
+use types::FetchContext;
 use types::Key;
 
 use super::RetryableStreamRequest;
@@ -21,15 +22,21 @@ use crate::types::TreeEntry;
 pub(crate) struct RetryableTrees {
     keys: HashSet<Key>,
     attributes: Option<TreeAttributes>,
+    fctx: FetchContext,
 }
 
 impl RetryableTrees {
     pub(crate) fn new(
+        fctx: FetchContext,
         keys: impl IntoIterator<Item = Key>,
         attributes: Option<TreeAttributes>,
     ) -> Self {
         let keys = keys.into_iter().collect();
-        Self { keys, attributes }
+        Self {
+            fctx,
+            keys,
+            attributes,
+        }
     }
 }
 
@@ -39,7 +46,9 @@ impl RetryableStreamRequest for RetryableTrees {
 
     async fn perform(&self, client: Client) -> Result<Response<Self::Item>, SaplingRemoteApiError> {
         let keys: Vec<Key> = self.keys.iter().cloned().collect();
-        client.fetch_trees(keys, self.attributes.clone()).await
+        client
+            .fetch_trees(self.fctx.clone(), keys, self.attributes.clone())
+            .await
     }
 
     fn received_item(&mut self, item: &Self::Item) {
