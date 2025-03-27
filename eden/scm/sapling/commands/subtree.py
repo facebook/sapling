@@ -598,7 +598,7 @@ def _do_import(ui, repo, temp_dir, *args, **opts):
 
     # PERF: shallow clone, then partial checkout
     git_repo = git.clone(ui, url, temp_dir, update=from_commit)
-    copy_files(repo, git_repo[from_commit], from_paths, to_paths)
+    copy_files(ui, git_repo, repo, git_repo[from_commit], from_paths, to_paths)
 
     extra = subtreeutil.gen_import_info(url, from_commit, from_paths, to_paths)
     summaryfooter = _gen_import_commit_msg(url, from_commit, from_paths, to_paths)
@@ -651,15 +651,17 @@ def gen_merge_commit_msg(subtree_merges):
     return "\n".join(msgs)
 
 
-def copy_files(repo, from_ctx, from_paths, to_paths):
-    """copy files from `from_from@from_ctx` to `repo`"""
-    ui = repo.ui
+def copy_files(ui, from_repo, to_repo, from_ctx, from_paths, to_paths):
+    """copy files from `from_repo` to `to_repo`.
+
+    `from_repo` can be an external git repo in the `subtree import` case.
+    """
     limit = ui.configint("subtree", "max-file-count")
     file_count = 0
     path_to_fileids = {}
     for path in from_paths:
-        matcher = matchmod.match(repo.root, "", [f"path:{path}"])
-        fileids = scmutil.walkfiles(repo, from_ctx, matcher)
+        matcher = matchmod.match(from_repo.root, "", [f"path:{path}"])
+        fileids = scmutil.walkfiles(from_repo, from_ctx, matcher)
         file_count += len(fileids)
         if limit and file_count > limit:
             support = ui.config("ui", "supportcontact")
@@ -688,10 +690,10 @@ def copy_files(repo, from_ctx, from_paths, to_paths):
                 tail = src[len(from_path) :]
                 dest = to_path + ("/" if from_path == "" else "") + tail
                 fctx = from_ctx[src]
-                repo.wwrite(dest, fctx.data(), fctx.flags())
+                to_repo.wwrite(dest, fctx.data(), fctx.flags())
                 new_files.append(dest)
 
-    wctx = repo[None]
+    wctx = to_repo[None]
     wctx.add(new_files)
 
 
