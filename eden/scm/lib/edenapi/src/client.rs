@@ -365,6 +365,7 @@ impl Client {
     /// a struct that will be CBOR-encoded and used as the request body.
     fn prepare_requests<T, K, F, R, G>(
         &self,
+        fctx: Option<FetchContext>,
         base_path: &str,
         keys: K,
         batch_size: Option<usize>,
@@ -387,6 +388,10 @@ impl Client {
                 self.configure_request(base_path, self.inner.client.post(url))?
                     .cbor(&req)
                     .map_err(SaplingRemoteApiError::RequestSerializationFailed)
+                    .map(|mut req| {
+                        req.set_fetch_cause(fctx.as_ref().map(|fctx| fctx.cause().to_str()));
+                        req
+                    })
             })
             .collect()
     }
@@ -564,7 +569,7 @@ impl Client {
 
     pub(crate) async fn fetch_trees(
         &self,
-        _fctx: FetchContext,
+        fctx: FetchContext,
         keys: Vec<Key>,
         attributes: Option<TreeAttributes>,
     ) -> Result<Response<Result<TreeEntry, SaplingRemoteApiServerError>>, SaplingRemoteApiError>
@@ -589,6 +594,7 @@ impl Client {
         let min_batch_size: Option<usize> = self.config().min_batch_size;
 
         let requests = self.prepare_requests(
+            Some(fctx),
             paths::TREES,
             keys,
             self.config().max_trees_per_batch,
@@ -615,7 +621,7 @@ impl Client {
 
     pub(crate) async fn fetch_files_attrs(
         &self,
-        _fctx: FetchContext,
+        fctx: FetchContext,
         reqs: Vec<FileSpec>,
     ) -> Result<Response<FileResponse>, SaplingRemoteApiError> {
         tracing::info!("Fetching content and attributes for {} file(s)", reqs.len());
@@ -630,6 +636,7 @@ impl Client {
         let min_batch_size: Option<usize> = self.config().min_batch_size;
 
         let requests = self.prepare_requests(
+            Some(fctx),
             paths::FILES2,
             reqs,
             self.config().max_files_per_batch,
@@ -878,6 +885,7 @@ impl Client {
         let min_batch_size: Option<usize> = self.config().min_batch_size;
 
         let requests = self.prepare_requests(
+            None,
             paths::HISTORY,
             keys,
             self.config().max_history_per_batch,
@@ -918,6 +926,7 @@ impl Client {
         }
 
         let requests = self.prepare_requests(
+            None,
             paths::BLAME,
             files,
             Some(MAX_CONCURRENT_BLAMES_PER_REQUEST),
@@ -977,6 +986,7 @@ impl Client {
             scheme
         );
         let requests = self.prepare_requests(
+            None,
             paths::COMMIT_TRANSLATE_ID,
             commits,
             self.config().max_commit_translate_id_per_batch,
@@ -1104,6 +1114,7 @@ impl Client {
         }
 
         let requests = self.prepare_requests(
+            None,
             paths::UPLOAD_FILENODES,
             items,
             Some(MAX_CONCURRENT_UPLOAD_FILENODES_PER_REQUEST),
@@ -1130,6 +1141,7 @@ impl Client {
         }
 
         let requests = self.prepare_requests(
+            None,
             paths::UPLOAD_TREES,
             items,
             Some(MAX_CONCURRENT_UPLOAD_TREES_PER_REQUEST),
@@ -1398,6 +1410,7 @@ impl SaplingRemoteApi for Client {
             .map(make_hash_lookup_request)
             .collect::<Result<Vec<CommitHashLookupRequest>, _>>()?;
         let requests = self.prepare_requests(
+            None,
             paths::COMMIT_HASH_LOOKUP,
             prefixes,
             Some(MAX_CONCURRENT_HASH_LOOKUPS_PER_REQUEST),
@@ -1515,6 +1528,7 @@ impl SaplingRemoteApi for Client {
         }
 
         let formatted = self.prepare_requests(
+            None,
             paths::COMMIT_LOCATION_TO_HASH,
             requests,
             self.config().max_location_to_hash_per_batch,
@@ -1546,6 +1560,7 @@ impl SaplingRemoteApi for Client {
         }
 
         let formatted = self.prepare_requests(
+            None,
             paths::COMMIT_HASH_TO_LOCATION,
             hgids,
             self.config().max_location_to_hash_per_batch,
@@ -1675,6 +1690,7 @@ impl SaplingRemoteApi for Client {
         }
 
         let requests = self.prepare_requests(
+            None,
             paths::LOOKUP,
             items,
             Some(MAX_CONCURRENT_LOOKUPS_PER_REQUEST),
@@ -1861,6 +1877,7 @@ impl SaplingRemoteApi for Client {
     ) -> Result<Vec<CommitMutationsResponse>, SaplingRemoteApiError> {
         tracing::info!("Requesting mutation info for {} commit(s)", commits.len());
         let requests = self.prepare_requests(
+            None,
             paths::COMMIT_MUTATIONS,
             commits,
             self.config().max_commit_mutations_per_batch,

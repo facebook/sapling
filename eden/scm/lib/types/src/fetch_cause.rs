@@ -24,3 +24,36 @@ pub enum FetchCause {
     // Unknown originiation, usually from Sapling (the default)
     Unspecified,
 }
+
+impl FetchCause {
+    pub fn to_str(&self) -> &str {
+        match self {
+            FetchCause::EdenUnknown => "edenfs-unknown",
+            FetchCause::EdenPrefetch => "edenfs-prefetch",
+            FetchCause::EdenThrift => "edenfs-thrift",
+            FetchCause::EdenFs => "edenfs-fs",
+            FetchCause::EdenMixed => "edenfs-mixed",
+            FetchCause::SaplingPrefetch => "sl-prefetch",
+            FetchCause::SaplingUnknown => "sl-unknown",
+            FetchCause::Unspecified => "unspecified",
+        }
+    }
+}
+
+impl std::str::FromStr for FetchCause {
+    type Err = anyhow::Error;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        match s {
+            "edenfs-unknown" => Ok(FetchCause::EdenUnknown),
+            "edenfs-prefetch" => Ok(FetchCause::EdenPrefetch),
+            "edenfs-thrift" => Ok(FetchCause::EdenThrift),
+            "edenfs-fs" => Ok(FetchCause::EdenFs),
+            "edenfs-mixed" => Ok(FetchCause::EdenMixed),
+            "sl-prefetch" => Ok(FetchCause::SaplingPrefetch),
+            "sl-unknown" => Ok(FetchCause::SaplingUnknown),
+            "unspecified" => Ok(FetchCause::Unspecified),
+            _ => Err(anyhow::anyhow!("Invalid FetchCause string")),
+        }
+    }
+}

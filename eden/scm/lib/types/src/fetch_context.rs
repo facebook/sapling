@@ -40,6 +40,10 @@ impl FetchContext {
     pub fn mode(&self) -> &FetchMode {
         &self.mode
     }
+
+    pub fn cause(&self) -> &FetchCause {
+        &self.cause
+    }
 }
 
 impl Default for FetchContext {

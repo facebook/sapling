@@ -48,6 +48,8 @@ use crate::response::AsyncResponse;
 use crate::response::Response;
 use crate::Easy2H;
 
+pub const FETCH_CAUSE_HEADER: &str = "X-Fetch-Cause";
+
 #[derive(Copy, Clone, Debug, PartialEq)]
 pub enum Method {
     Get,
@@ -548,6 +550,14 @@ impl Request {
     pub fn set_client_info(&mut self, client_info: &Option<String>) -> &mut Self {
         if let Some(info) = client_info {
             self.set_header(CLIENT_INFO_HEADER, info);
+        }
+        self
+    }
+
+    /// Set the fetch cause for this request. This is used for traffic attribution.
+    pub fn set_fetch_cause(&mut self, fetch_cause: Option<&str>) -> &mut Self {
+        if let Some(c) = fetch_cause {
+            self.set_header(FETCH_CAUSE_HEADER, c);
         }
         self
     }
