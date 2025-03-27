@@ -29,6 +29,7 @@ use futures::stream::BoxStream;
 use futures::stream::Stream;
 use futures::stream::StreamExt;
 use futures::stream::TryStreamExt;
+use futures::AsyncWrite;
 use futures::TryFutureExt;
 use scs_client_raw::thrift;
 use scs_client_raw::ScsClient;
@@ -38,7 +39,6 @@ use tokio::io::AsyncWriteExt;
 use tokio::io::BufWriter;
 use tokio::sync::mpsc;
 use tokio_stream::wrappers::ReceiverStream;
-use tokio_util::compat::Compat;
 use tokio_util::compat::TokioAsyncWriteCompatExt;
 
 use crate::args::commit_id::resolve_commit_id;
@@ -68,8 +68,6 @@ const DOWNLOADER_OUTPUT_CHUNK_BUFFER_SIZE: usize = 25;
 /// How many files can be written concurrently to disk.
 const CONCURRENT_FILE_WRITES: usize = 30;
 
-type Archive = async_tar::Builder<Compat<tokio::fs::File>>;
-
 #[derive(Clone)]
 struct FileMetadata {
     size: u64,
@@ -92,8 +90,8 @@ pub(super) struct CommandArgs {
     #[clap(flatten)]
     progress_args: ProgressArgs,
     #[clap(long, short)]
-    /// Destination to export to
-    output: PathBuf,
+    /// Destination to export to ("-" for stdout, otherwise path)
+    output: String,
     #[clap(long, short)]
     /// Show paths of files fetched
     verbose: bool,
@@ -593,9 +591,9 @@ async fn downloader(
     Ok(())
 }
 
-async fn archive_writer<'a, 'b>(
+async fn archive_writer<W: AsyncWrite + Unpin + Send + Sync + 'static>(
     mut receiver: mpsc::Receiver<(FileMetadata, FileChunk)>,
-    archive: Archive,
+    archive: async_tar::Builder<W>,
     bytes_written: Arc<AtomicU64>,
 ) -> anyhow::Result<()> {
     // Setup initial state
@@ -741,14 +739,42 @@ async fn filesystem_write_file<'a, 'b>(
     Ok(())
 }
 
+enum Destination {
+    Path(PathBuf),
+    Stdout,
+}
+
 pub(super) async fn run(app: ScscApp, args: CommandArgs) -> Result<()> {
-    let mut destination: PathBuf = args.output;
-    if destination.exists() {
-        bail!(
-            "destination ({}) already exists",
-            destination.to_string_lossy()
-        );
-    }
+    let destination = match args.output.as_ref() {
+        "-" => {
+            if !args.tar {
+                bail!("stdout output requires --tar");
+            }
+            if args.make_parent_dirs {
+                bail!("--make-parent-dirs incompatible with stdout output");
+            }
+            Destination::Stdout
+        }
+        path => {
+            let path = PathBuf::from(path);
+            if path.exists() {
+                bail!("destination ({}) already exists", path.to_string_lossy());
+            }
+
+            if args.make_parent_dirs {
+                if let Some(parent) = path.parent() {
+                    if !parent.exists() {
+                        tokio::fs::create_dir_all(parent)
+                            .await
+                            .context("failed to create parent directories")?;
+                    }
+                }
+            }
+
+            Destination::Path(path)
+        }
+    };
+
     let casefold = if args.case_insensitive {
         Casefold::Insensitive
     } else {
@@ -772,16 +798,6 @@ pub(super) async fn run(app: ScscApp, args: CommandArgs) -> Result<()> {
         }
         None => None,
     };
-
-    if args.make_parent_dirs {
-        if let Some(parent) = destination.parent() {
-            if !parent.exists() {
-                tokio::fs::create_dir_all(parent)
-                    .await
-                    .context("failed to create parent directories")?;
-            }
-        }
-    }
 
     let repo = args.repo_args.clone().into_repo_specifier();
     let commit_id = args.commit_id_args.clone().into_commit_id();
@@ -832,24 +848,34 @@ pub(super) async fn run(app: ScscApp, args: CommandArgs) -> Result<()> {
     let (downloader_tx, downloader_rx) = mpsc::channel(DOWNLOADER_OUTPUT_CHUNK_BUFFER_SIZE);
     let downloader = tokio::spawn(downloader(rx, downloader_tx, args.concurrent_file_fetches));
 
-    let (file_writer, create_dirs) = if args.tar {
-        let archive =
-            async_tar::Builder::new(tokio::fs::File::create(&destination).await?.compat_write());
-
-        // the destination is the internal destination within tar archive
-        destination = repo.name.clone().into();
-        (
-            tokio::spawn(archive_writer(
+    let (file_writer, create_dirs, root) = if args.tar {
+        let handle = match destination {
+            Destination::Path(ref path) => tokio::spawn(archive_writer(
                 downloader_rx,
-                archive,
+                async_tar::Builder::new(tokio::fs::File::create(path).await?.compat_write()),
                 bytes_written.clone(),
             )),
+            Destination::Stdout => tokio::spawn(archive_writer(
+                downloader_rx,
+                async_tar::Builder::new(tokio::io::stdout().compat_write()),
+                bytes_written.clone(),
+            )),
+        };
+
+        (
+            handle,
             CreateDirs::No,
+            // the destination is the internal destination within tar archive
+            repo.name.clone().into(),
         )
     } else {
         (
             tokio::spawn(filesystem_writer(downloader_rx, bytes_written.clone())),
             CreateDirs::Yes,
+            match destination {
+                Destination::Path(path) => path,
+                Destination::Stdout => bail!("stdout output requires --tar"),
+            },
         )
     };
 
@@ -861,7 +887,7 @@ pub(super) async fn run(app: ScscApp, args: CommandArgs) -> Result<()> {
                 path,
                 id: info.id,
                 tx,
-                destination,
+                destination: root,
                 filter: path_tree,
             }
         }
@@ -877,7 +903,7 @@ pub(super) async fn run(app: ScscApp, args: CommandArgs) -> Result<()> {
                 path,
                 id: info.id,
                 tx,
-                destination,
+                destination: root,
                 size: info.file_size as u64,
                 type_,
             }
