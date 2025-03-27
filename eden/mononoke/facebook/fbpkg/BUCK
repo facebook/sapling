@@ -244,9 +244,16 @@ mononoke_fbpkg(
 
 mononoke_fbpkg(
     name = "mononoke.tail_to_cloudwatch",
+    compress_type = None,
+    override_log_paths = [
+        "eden/mononoke/mononoke_macros",
+        "eden/mononoke/tools/tail-to-cloudwatch",
+        "third-party2/rust",
+    ],
     path_actions = {
         "tail_to_cloudwatch": "//eden/mononoke/tools/tail-to-cloudwatch:tail-to-cloudwatch",
     },
+    with_debug_symbols = False,
 )
 
 tw.container(
