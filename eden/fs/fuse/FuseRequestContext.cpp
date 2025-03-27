@@ -25,6 +25,7 @@ FuseRequestContext::FuseRequestContext(
     : RequestContext(
           channel->getProcessAccessLog(),
           channel->getStructuredLogger(),
+          channel->getLongRunningFSRequestThreshold(),
           makeRefPtr<FuseObjectFetchContext>(
               ProcessId{fuseHeader.pid},
               fuseHeader.opcode)),

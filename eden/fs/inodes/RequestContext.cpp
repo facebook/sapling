@@ -17,12 +17,9 @@ using namespace std::chrono;
 
 namespace facebook::eden {
 
-// TODO: Make this configurable
-const std::chrono::minutes LONG_REQUEST_DURATION = std::chrono::minutes(1);
-
 void RequestContext::reportLongRunningRequest(
     const std::chrono::nanoseconds& duration) {
-  if (duration > LONG_REQUEST_DURATION) {
+  if (duration > longRunningFsRequestThreshold_) {
     auto detail = fsObjectFetchContext_->getCauseDetail().value_or("unknown");
     XLOGF(WARN, "Request {} took {}ns", detail, duration.count());
     logger_->logEvent(

@@ -41,6 +41,7 @@ class PrjfsRequestContext : public RequestContext {
       : RequestContext(
             channel->getProcessAccessLog(),
             channel->getStructuredLogger(),
+            channel->getLongRunningFSRequestThreshold(),
             makeRefPtr<PrjfsObjectFetchContext>(
                 ProcessId{prjfsData.TriggeringProcessId})),
         channel_(std::move(channel)),

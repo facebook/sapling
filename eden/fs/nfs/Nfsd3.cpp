@@ -196,8 +196,7 @@ class Nfsd3ServerProcessor final : public RpcServerProcessor {
    * "long running" and therefore log it with StructuredLogger. This value
    * is configured with EdenConfig::longRunningFSRequestThreshold.
    */
-  std::chrono::nanoseconds longRunningFSRequestThreshold_
-      __attribute__((unused));
+  std::chrono::nanoseconds longRunningFSRequestThreshold_;
 };
 
 /**
@@ -2057,7 +2056,11 @@ ImmediateFuture<folly::Unit> Nfsd3ServerProcessor::dispatchRpc(
   // TODO: Add requestMetrics for NFS.
   std::shared_ptr<RequestMetricsScope::LockedRequestWatchList> nullRequestWatch;
   auto context = std::make_unique<NfsRequestContext>(
-      xid, handlerEntry.name, processAccessLog_, structuredLogger_);
+      xid,
+      handlerEntry.name,
+      processAccessLog_,
+      structuredLogger_,
+      longRunningFSRequestThreshold_);
   context->startRequest(
       dispatcher_->getStats().copy(), handlerEntry.duration, nullRequestWatch);
   // The data that contextRef reference to is alive for the duration of the

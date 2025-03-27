@@ -92,8 +92,10 @@ class RequestContext {
   explicit RequestContext(
       ProcessAccessLog& pal,
       std::shared_ptr<StructuredLogger> logger,
+      std::chrono::nanoseconds longRunningFsRequestThreshold,
       FsObjectFetchContextPtr fsObjectFetchContext) noexcept
-      : pal_{pal},
+      : longRunningFsRequestThreshold_{longRunningFsRequestThreshold},
+        pal_{pal},
         logger_{std::move(logger)},
         fsObjectFetchContext_{std::move(fsObjectFetchContext)} {}
   ~RequestContext() noexcept;
@@ -149,6 +151,7 @@ class RequestContext {
   std::chrono::time_point<std::chrono::steady_clock> startTime_;
   EdenStatsPtr stats_;
   DurationFn latencyStat_;
+  const std::chrono::nanoseconds longRunningFsRequestThreshold_;
 
   RequestMetricsScope requestMetricsScope_;
   std::shared_ptr<RequestMetricsScope::LockedRequestWatchList>
