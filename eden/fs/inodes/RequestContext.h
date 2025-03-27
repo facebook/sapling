@@ -143,6 +143,8 @@ class RequestContext {
 
   void finishRequest() noexcept;
 
+  void reportLongRunningRequest(const std::chrono::nanoseconds& duration);
+
   // Needed to track stats
   std::chrono::time_point<std::chrono::steady_clock> startTime_;
   EdenStatsPtr stats_;

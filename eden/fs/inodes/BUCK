@@ -32,9 +32,11 @@ cpp_library(
     headers = ["RequestContext.h"],
     deps = [
         "//eden/common/utils:system_error",
+        "//eden/fs/telemetry:log_info",
         "//folly/logging:logging",
     ],
     exported_deps = [
+        "//eden/common/telemetry:structured_logger",
         "//eden/common/telemetry:telemetry",
         "//eden/fs/store:context",
         "//eden/fs/telemetry:stats",

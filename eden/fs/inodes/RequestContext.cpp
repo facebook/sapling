@@ -11,15 +11,31 @@
 
 #include "eden/common/telemetry/RequestMetricsScope.h"
 #include "eden/common/utils/SystemError.h"
+#include "eden/fs/telemetry/LogEvent.h"
 
 using namespace std::chrono;
 
 namespace facebook::eden {
 
+// TODO: Make this configurable
+const std::chrono::minutes LONG_REQUEST_DURATION = std::chrono::minutes(1);
+
+void RequestContext::reportLongRunningRequest(
+    const std::chrono::nanoseconds& duration) {
+  if (duration > LONG_REQUEST_DURATION) {
+    auto detail = fsObjectFetchContext_->getCauseDetail().value_or("unknown");
+    XLOGF(WARN, "Request {} took {}ns", detail, duration.count());
+    logger_->logEvent(
+        LongRunningFSRequest{static_cast<double>(duration.count()), detail});
+  }
+}
+
 RequestContext::~RequestContext() noexcept {
   try {
     const auto diff = steady_clock::now() - startTime_;
     const auto diff_ns = duration_cast<nanoseconds>(diff);
+
+    reportLongRunningRequest(diff_ns);
 
     if (stats_) {
       XCHECK(latencyStat_) << "stats_ and latencyStat_ must be set together";
