@@ -525,6 +525,96 @@ impl EdenFsClient {
 }
 
 impl StreamingEdenFsClient {
+    /// Streams changes to files in an EdenFS mount since a given journal position.
+    ///
+    /// This method creates a stream that continuously monitors for changes in the specified
+    /// EdenFS mount point and emits them as they occur. The stream will continue until it's
+    /// dropped or an error occurs.
+    ///
+    /// Changes are throttled to avoid overwhelming the client with rapid updates. If multiple
+    /// changes occur within the throttle time window, they will be batched together in the
+    /// next emission.
+    ///
+    /// # Parameters
+    ///
+    /// * `mount_point` - The EdenFS mount point to monitor. If `None`, the current working
+    ///   directory is used.
+    /// * `throttle_time_ms` - The minimum time in milliseconds between emitting changes.
+    /// * `position` - The journal position to start monitoring from.
+    /// * `root` - Optional root directory within the mount to restrict monitoring to.
+    /// * `included_roots` - Optional list of directories within the root to include.
+    /// * `included_suffixes` - Optional list of file suffixes to include.
+    /// * `excluded_roots` - Optional list of directories within the root to exclude.
+    /// * `excluded_suffixes` - Optional list of file suffixes to exclude.
+    /// * `include_vcs_roots` - Whether to include VCS root directories.
+    ///
+    /// # Returns
+    ///
+    /// A `Result` containing a stream that emits `Result<ChangesSinceV2Result>` items.
+    /// Each item contains a batch of changes that occurred since the last emission, along with
+    /// the new journal position.
+    ///
+    /// # Examples
+    ///
+    /// The following example shows how to use this method to monitor changes in a directory:
+    ///
+    /// ```no_run
+    /// use std::path::PathBuf;
+    ///
+    /// use edenfs_client::instance::EdenFsInstance;
+    /// use edenfs_client::types::JournalPosition;
+    /// use futures::StreamExt;
+    ///
+    /// // This example doesn't actually run the client, but demonstrates the API usage
+    /// async fn example_usage() {
+    ///     let instance = EdenFsInstance::global();
+    ///     let client = instance.get_client();
+    ///     let streaming_client = instance.get_streaming_client();
+    ///
+    ///     // Start monitoring from the current journal position
+    ///     let position = client
+    ///         .get_journal_position(&None) // Use current directory as mount point
+    ///         .await
+    ///         .expect("Failed to get journal position");
+    ///
+    ///     // Stream changes in the current directory, throttled to at most one update per second
+    ///     let mut stream = streaming_client
+    ///         .stream_changes_since(
+    ///             &None,    // Use current directory as mount point
+    ///             1000,     // Throttle to 1 update per second
+    ///             position, // Start from this journal position
+    ///             &None,    // No root directory restriction
+    ///             &None,    // No included roots
+    ///             &Some(vec![
+    ///                 // Only include .rs and .toml files
+    ///                 ".rs".to_string(),
+    ///                 ".toml".to_string(),
+    ///             ]),
+    ///             &None, // No excluded roots
+    ///             &None, // No excluded suffixes
+    ///             false, // Don't include VCS roots
+    ///         )
+    ///         .await
+    ///         .expect("Failed to create stream");
+    ///
+    ///     // Process the stream of changes
+    ///     while let Some(result) = stream.next().await {
+    ///         match result {
+    ///             Ok(r) => {
+    ///                 println!("Received {} changes", r.changes.len());
+    ///                 for change in &r.changes {
+    ///                     println!("Change: {}", change);
+    ///                 }
+    ///                 println!("New position: {}", r.to_position);
+    ///             }
+    ///             Err(e) => {
+    ///                 eprintln!("Error: {}", e);
+    ///                 break;
+    ///             }
+    ///         }
+    ///     }
+    /// }
+    /// ```
     #[cfg(fbcode_build)]
     pub async fn stream_changes_since(
         &self,
