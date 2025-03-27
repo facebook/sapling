@@ -7,6 +7,7 @@
 
 use std::path::PathBuf;
 use std::sync::Arc;
+use std::time::Duration;
 
 use anyhow::format_err;
 use anyhow::Context;
@@ -85,6 +86,8 @@ use crate::sender::manager::MODERN_SYNC_CURRENT_ENTRY_ID;
 use crate::stat;
 use crate::ModernSyncArgs;
 use crate::Repo;
+
+const SLEEP_INTERVAL_WHEN_CAUGHT_UP: Duration = Duration::from_secs(5);
 
 define_stats! {
     prefix = "mononoke.modern_sync.sync";
@@ -241,6 +244,10 @@ pub async fn sync(
                         "Found error while getting bookmark update log entry {:#?}", e
                     );
                     Err(e)
+                }
+                Ok(entries) if entries.is_empty() => {
+                    tokio::time::sleep(SLEEP_INTERVAL_WHEN_CAUGHT_UP).await;
+                    Ok(())
                 }
                 Ok(mut entries) => {
                     entries = entries
