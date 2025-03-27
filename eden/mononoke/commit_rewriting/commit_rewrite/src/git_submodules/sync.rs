@@ -30,6 +30,7 @@ use crate::rewrite::mover_to_multi_mover;
 use crate::rewrite::CommitRewriteResult;
 use crate::types::Repo;
 
+// TODO(T182311609): rename this to rewrite_commit
 /// Sync a commit to/from a small repo with submodule expansion enabled.
 pub async fn sync_commit_with_submodule_expansion<'a, R: Repo>(
     ctx: &'a CoreContext,
