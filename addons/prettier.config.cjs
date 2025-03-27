@@ -5,6 +5,8 @@
  * LICENSE file in the root directory of this source tree.
  */
 
+const path = require('path');
+
 // Note: there are 2 versions of prettiers:
 // - Local prettier. Affects `yarn run prettier`, and editors like `nvim`.
 // - Monorepo prettier. Affects `arc lint`, and the internal VSCode.
@@ -19,6 +21,14 @@ const config = {
   tabWidth: 2,
   printWidth: 100,
   trailingComma: 'all',
+  overrides: [
+    {
+      files: ['**/*.{ts,tsx}'],
+      options: {
+        parser: 'typescript',
+      },
+    },
+  ],
 };
 
 // `arc lint` runs the monorepo prettier, with cwd == monorepo root
@@ -36,7 +46,11 @@ if (isArcLint) {
   // - `require('prettier-plugin-organize-imports')` does not work either
   //    because its dependency (ex. `typescript`) cannot be imported from
   //    monorepo root.
-  config.plugins = ['prettier-plugin-organize-imports'];
+
+  // Normally, you'd just use 'prettier-plugin-organize-imports',
+  // but it incorrectly looks for this relative to the monorepo prettier,
+  // but we want it to find it in our workspace's node_modules.
+  config.plugins = [path.join(__dirname, 'node_modules/prettier-plugin-organize-imports')];
 }
 
 module.exports = config;
