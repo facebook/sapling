@@ -40,6 +40,7 @@ const CLIENT_IP: &str = "tfb-orig-client-ip";
 const CLIENT_PORT: &str = "tfb-orig-client-port";
 const HEADER_REVPROXY_REGION: &str = "x-fb-revproxy-region";
 const HEADER_FORWARDED_CATS: &str = "x-forwarded-cats";
+const FETCH_CAUSE_HEADER: &str = "X-Fetch-Cause";
 
 #[derive(StateData, Default)]
 pub struct MetadataState(Metadata);
@@ -220,6 +221,7 @@ impl Middleware for MetadataMiddleware {
             let client_info = client_info
                 .unwrap_or_else(|| ClientInfo::default_with_entry_point(self.entry_point.clone()));
             metadata.add_client_info(client_info);
+
             metadata.update_client_untrusted(
                 metadata::security::is_client_untrusted(|h| {
                     Ok(headers
@@ -229,6 +231,12 @@ impl Middleware for MetadataMiddleware {
                 })
                 .unwrap_or_default(),
             );
+
+            let request_cause: Option<String> = headers
+                .get(FETCH_CAUSE_HEADER)
+                .and_then(|h| h.to_str().map(|s| s.to_owned()).ok());
+
+            metadata = metadata.set_fetch_cause(request_cause);
         }
 
         // For the IP, we can fallback to the peer IP

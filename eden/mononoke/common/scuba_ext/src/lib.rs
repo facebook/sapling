@@ -189,6 +189,8 @@ impl MononokeScubaSampleBuilder {
         self.inner
             .add_opt("client_tw_task", metadata.clientinfo_tw_task());
 
+        self.inner.add_opt("fetch_cause", metadata.fetch_cause());
+
         self
     }
 

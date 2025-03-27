@@ -42,6 +42,7 @@ pub struct Metadata {
     revproxy_region: Option<String>,
     raw_encoded_cats: Option<String>,
     client_info: Option<ClientInfo>,
+    fetch_cause: Option<String>,
 }
 
 impl Metadata {
@@ -86,6 +87,7 @@ impl Metadata {
             revproxy_region: None,
             raw_encoded_cats: None,
             client_info: None,
+            fetch_cause: None,
         }
     }
 
@@ -213,6 +215,11 @@ impl Metadata {
         self
     }
 
+    pub fn set_fetch_cause(mut self, fetch_cause: Option<String>) -> Self {
+        self.fetch_cause = fetch_cause;
+        self
+    }
+
     pub fn unix_name(&self) -> Option<&str> {
         for identity in self.identities() {
             if identity.id_type() == "USER" {
@@ -257,5 +264,9 @@ impl Metadata {
 
     pub fn clientinfo_tw_task(&self) -> Option<&str> {
         self.client_info.as_ref().and_then(|ci| ci.fb.tw_task())
+    }
+
+    pub fn fetch_cause(&self) -> Option<&str> {
+        self.fetch_cause.as_deref()
     }
 }
