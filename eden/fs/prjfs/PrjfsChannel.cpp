@@ -459,7 +459,9 @@ PrjfsChannelInner::PrjfsChannelInner(
       traceDetailedArguments_(std::atomic<size_t>(0)),
       traceBus_(TraceBus<PrjfsTraceEvent>::create(
           "PrjfsTrace",
-          prjfsTraceBusCapacity)) {
+          prjfsTraceBusCapacity)),
+      longRunningFSRequestThreshold_(
+          config_->getEdenConfig()->longRunningFSRequestThreshold.getValue()) {
   traceSubscriptionHandles_.push_back(traceBus_->subscribeFunction(
       "PrjFS request tracking", [this](const PrjfsTraceEvent& event) {
         switch (event.getType()) {

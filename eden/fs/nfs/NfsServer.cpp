@@ -19,7 +19,8 @@ NfsServer::NfsServer(
     bool shouldRunOurOwnRpcbindServer,
     const std::shared_ptr<StructuredLogger>& structuredLogger,
     size_t maximumInFlightRequests,
-    std::chrono::nanoseconds highNfsRequestsLogInterval)
+    std::chrono::nanoseconds highNfsRequestsLogInterval,
+    std::chrono::nanoseconds longRunningFSRequestThreshold)
     : privHelper_{privHelper},
       evb_(evb),
       threadPool_{std::move(threadPool)},
@@ -38,7 +39,8 @@ NfsServer::NfsServer(
           maximumInFlightRequests,
           highNfsRequestsLogInterval),
       maximumInFlightRequests_(maximumInFlightRequests),
-      highNfsRequestsLogInterval_(highNfsRequestsLogInterval) {}
+      highNfsRequestsLogInterval_(highNfsRequestsLogInterval),
+      longRunningFSRequestThreshold_(longRunningFSRequestThreshold) {}
 
 void NfsServer::initialize(
     folly::SocketAddress addr,
@@ -98,6 +100,7 @@ NfsServer::NfsMountInfo NfsServer::registerMount(
       iosize,
       maximumInFlightRequests_,
       highNfsRequestsLogInterval_,
+      longRunningFSRequestThreshold_,
       traceBusCapacity}};
   mountd_.registerMount(path, rootIno);
 

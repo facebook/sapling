@@ -88,6 +88,7 @@ class FuseChannelTest : public ::testing::Test {
         /*maximumBackgroundRequests=*/12,
         /*maximumInFlightRequests=*/1000,
         /*highFuseRequestsLogInterval=*/std::chrono::minutes{10},
+        /*longRunningFSRequestThreshold=*/std::chrono::minutes{5},
         /*useWriteBackCache=*/false,
         /*fuseTraceBusCapacity*/ kTraceBusCapacity);
   }

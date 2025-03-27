@@ -373,6 +373,10 @@ class PrjfsChannelInner {
     return structuredLogger_;
   }
 
+  std::chrono::nanoseconds getLongRunningFSRequestThreshold() const {
+    return longRunningFSRequestThreshold_;
+  }
+
   void setMountChannel(PRJ_NAMESPACE_VIRTUALIZATION_CONTEXT channel) {
     mountChannel_ = channel;
   }
@@ -501,6 +505,13 @@ class PrjfsChannelInner {
   // The TraceBus must be the last member because its subscribed functions may
   // close over `this` and can run until the TraceBus itself is deallocated.
   std::shared_ptr<TraceBus<PrjfsTraceEvent>> traceBus_;
+
+  /**
+   * The duration that must elapse before we consider a PrjFS request to be
+   * "long running" and therefore log it with StructuredLogger. This value
+   * is configured with EdenConfig::longRunningFSRequestThreshold.
+   */
+  std::chrono::nanoseconds longRunningFSRequestThreshold_;
 
   bool symlinksSupported_ = false;
 };

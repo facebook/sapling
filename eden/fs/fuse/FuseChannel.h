@@ -309,6 +309,7 @@ class FuseChannel final : public FsChannel {
       int32_t maximumBackgroundRequests,
       size_t maximumInFlightRequests,
       std::chrono::nanoseconds highFuseRequestsLogInterval,
+      std::chrono::nanoseconds longRunningFSRequestThreshold,
       bool useWriteBackCache,
       size_t fuseTraceBusCapacity);
 
@@ -550,6 +551,10 @@ class FuseChannel final : public FsChannel {
 
   std::shared_ptr<StructuredLogger> getStructuredLogger() const {
     return structuredLogger_;
+  }
+
+  std::chrono::nanoseconds getLongRunningFSRequestThreshold() const {
+    return longRunningFSRequestThreshold_;
   }
 
   ImmediateFuture<folly::Unit> waitForPendingWrites() override {
@@ -881,6 +886,12 @@ class FuseChannel final : public FsChannel {
    * however to avoid spamming the logs once per highFuseRequestsLogInterval.
    */
   std::chrono::nanoseconds highFuseRequestsLogInterval_;
+  /**
+   * The duration that must elapse before we consider a FUSE request to be
+   * "long running" and therefore log it with StructuredLogger. This value
+   * is configured with EdenConfig::longRunningFSRequestThreshold.
+   */
+  std::chrono::nanoseconds longRunningFSRequestThreshold_;
   bool useWriteBackCache_;
 
   /*

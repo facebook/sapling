@@ -48,7 +48,8 @@ class NfsServer {
       bool shouldRunOurOwnRpcbindServer,
       const std::shared_ptr<StructuredLogger>& structuredLogger,
       size_t maximumInFlightRequests,
-      std::chrono::nanoseconds highNfsRequestsLogInterval);
+      std::chrono::nanoseconds highNfsRequestsLogInterval,
+      std::chrono::nanoseconds longRunningFSRequestThreshold);
 
   /**
    * Bind the NfsServer to the passed in socket.
@@ -136,6 +137,7 @@ class NfsServer {
   Mountd mountd_;
   size_t maximumInFlightRequests_;
   std::chrono::nanoseconds highNfsRequestsLogInterval_;
+  std::chrono::nanoseconds longRunningFSRequestThreshold_;
 };
 
 } // namespace facebook::eden

@@ -875,6 +875,7 @@ FuseChannel::FuseChannel(
     int32_t maximumBackgroundRequests,
     size_t maximumInFlightRequests,
     std::chrono::nanoseconds highFuseRequestsLogInterval,
+    std::chrono::nanoseconds longRunningFSRequestThreshold,
     bool useWriteBackCache,
     size_t fuseTraceBusCapacity)
     : privHelper_{privHelper},
@@ -892,6 +893,7 @@ FuseChannel::FuseChannel(
       maximumBackgroundRequests_{maximumBackgroundRequests},
       maximumInFlightRequests_{maximumInFlightRequests},
       highFuseRequestsLogInterval_{highFuseRequestsLogInterval},
+      longRunningFSRequestThreshold_{longRunningFSRequestThreshold},
       useWriteBackCache_{useWriteBackCache},
       fuseDevice_(std::move(fuseDevice)),
       processAccessLog_(std::move(processInfoCache)),

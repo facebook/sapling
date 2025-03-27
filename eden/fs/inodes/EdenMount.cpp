@@ -2143,6 +2143,7 @@ std::unique_ptr<FuseChannel, FsChannelDeleter> makeFuseChannel(
       edenConfig->fuseMaximumBackgroundRequests.getValue(),
       edenConfig->maxFsChannelInflightRequests.getValue(),
       edenConfig->highFsRequestsLogInterval.getValue(),
+      edenConfig->longRunningFSRequestThreshold.getValue(),
       mount->getCheckoutConfig()->getUseWriteBackCache(),
       mount->getServerState()
           ->getEdenConfig()

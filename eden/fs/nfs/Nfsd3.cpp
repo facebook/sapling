@@ -50,7 +50,8 @@ class Nfsd3ServerProcessor final : public RpcServerProcessor {
       folly::Promise<FsStopDataPtr>& stopPromise,
       ProcessAccessLog& processAccessLog,
       std::atomic<size_t>& traceDetailedArguments,
-      std::shared_ptr<TraceBus<NfsTraceEvent>>& traceBus)
+      std::shared_ptr<TraceBus<NfsTraceEvent>>& traceBus,
+      std::chrono::nanoseconds longRunningFSRequestThreshold)
       : dispatcher_(std::move(dispatcher)),
         straceLogger_(straceLogger),
         structuredLogger_(structuredLogger),
@@ -60,7 +61,8 @@ class Nfsd3ServerProcessor final : public RpcServerProcessor {
         processAccessLog_{processAccessLog},
         traceDetailedArguments_(traceDetailedArguments),
         metadataSizeMismatchLogged_(false),
-        traceBus_(traceBus) {}
+        traceBus_(traceBus),
+        longRunningFSRequestThreshold_(longRunningFSRequestThreshold) {}
 
   Nfsd3ServerProcessor(const Nfsd3ServerProcessor&) = delete;
   Nfsd3ServerProcessor(Nfsd3ServerProcessor&&) = delete;
@@ -189,6 +191,13 @@ class Nfsd3ServerProcessor final : public RpcServerProcessor {
   // size metadata.
   std::atomic_bool metadataSizeMismatchLogged_;
   std::shared_ptr<TraceBus<NfsTraceEvent>>& traceBus_;
+  /**
+   * The duration that must elapse before we consider a NFS request to be
+   * "long running" and therefore log it with StructuredLogger. This value
+   * is configured with EdenConfig::longRunningFSRequestThreshold.
+   */
+  std::chrono::nanoseconds longRunningFSRequestThreshold_
+      __attribute__((unused));
 };
 
 /**
@@ -2108,6 +2117,7 @@ Nfsd3::Nfsd3(
     uint32_t iosize,
     size_t maximumInFlightRequests,
     std::chrono::nanoseconds highNfsRequestsLogInterval,
+    std::chrono::nanoseconds longRunningFSRequestThreshold,
     size_t traceBusCapacity)
     : privHelper_{privHelper},
       mountPath_{std::move(mountPath)},
@@ -2121,7 +2131,8 @@ Nfsd3::Nfsd3(
               stopPromise_,
               processAccessLog_,
               traceDetailedArguments_,
-              traceBus_),
+              traceBus_,
+              longRunningFSRequestThreshold),
           evb,
           std::move(threadPool),
           structuredLogger,

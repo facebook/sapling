@@ -149,7 +149,9 @@ int main(int argc, char** argv) {
       /*requireUtf8Path=*/true,
       /*maximumBackgroundRequests=*/12 /* the default on Linux */,
       /*maximumInFlightRequests=*/(size_t)1000,
-      /*highFuseRequestsLogInterval=*/std::chrono::minutes{10},
+      /*highFuseRequestsLogInterval=*/
+      std::chrono::minutes{10},
+      /*longRunningFSRequestThreshold=*/std::chrono::minutes{5},
       /*useWriteBackCache=*/false,
       /*fuseTraceBusCapacity=*/kTraceBusCapacity);
 

@@ -86,7 +86,8 @@ ServerState::ServerState(
                     initialConfig.runInternalRpcbind.getValue(),
                     structuredLogger_,
                     initialConfig.maxFsChannelInflightRequests.getValue(),
-                    initialConfig.highFsRequestsLogInterval.getValue())
+                    initialConfig.highFsRequestsLogInterval.getValue(),
+                    initialConfig.longRunningFSRequestThreshold.getValue())
               : nullptr},
       config_{std::move(reloadableConfig)},
       userIgnoreFileMonitor_{CachedParsedFileMonitor<GitIgnoreFileParser>{
