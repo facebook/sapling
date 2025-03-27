@@ -5,23 +5,36 @@
  * GNU General Public License version 2.
  */
 
+use std::collections::HashMap;
+use std::collections::HashSet;
+use std::fmt;
+use std::fmt::Debug;
 use std::sync::Arc;
 
 use anyhow::anyhow;
 use anyhow::Error;
 use anyhow::Result;
+use bonsai_git_mapping::BonsaiGitMappingRef;
+use bonsai_hg_mapping::BonsaiHgMappingArc;
 use bonsai_hg_mapping::BonsaiHgMappingRef;
+use bookmarks::BookmarkUpdateLogArc;
+use bookmarks::BookmarkUpdateLogRef;
 use bookmarks::BookmarksRef;
 use commit_graph::CommitGraphRef;
 use commit_graph::CommitGraphWriterRef;
 use derivative::Derivative;
+use filestore::FilestoreConfigRef;
 use megarepo_configs::SourceMappingRules;
 use mononoke_types::path::MPath;
+use mononoke_types::BonsaiChangesetMut;
 use mononoke_types::ChangesetId;
+use mononoke_types::ContentId;
 use mononoke_types::FileChange;
 use mononoke_types::NonRootMPath;
+use movers::Mover;
 use repo_blobstore::RepoBlobstoreArc;
 use repo_blobstore::RepoBlobstoreRef;
+use repo_cross_repo::RepoCrossRepoRef;
 use repo_derived_data::RepoDerivedDataRef;
 use repo_identity::RepoIdentityRef;
 use slog::error;
@@ -76,16 +89,25 @@ pub struct FileChangeFilter<'a> {
     pub application: FileChangeFilterApplication,
 }
 
-pub trait Repo = RepoIdentityRef
-    + RepoBlobstoreArc
-    + BookmarksRef
+// TODO(T182311609): try to use all refs instead of arcs
+pub trait Repo = BonsaiGitMappingRef
+    + BonsaiHgMappingArc
     + BonsaiHgMappingRef
-    + RepoDerivedDataRef
-    + RepoBlobstoreRef
+    + BookmarksRef
+    + BookmarkUpdateLogArc
+    + BookmarkUpdateLogRef
     + CommitGraphRef
     + CommitGraphWriterRef
+    + FilestoreConfigRef
+    + RepoBlobstoreArc
+    + RepoBlobstoreRef
+    + RepoCrossRepoRef
+    + RepoDerivedDataRef
+    + RepoIdentityRef
+    + Clone
     + Send
-    + Sync;
+    + Sync
+    + 'static;
 
 #[derive(Debug, Error)]
 pub enum ErrorKind {
@@ -219,4 +241,119 @@ pub(crate) enum LossyConversionReason {
     FileChanges,
     ImplicitFileChanges,
     SubtreeChanges,
+}
+
+pub type SubmoduleExpansionContentIds = HashMap<SubmodulePath, HashSet<ContentId>>;
+
+pub struct CommitRewriteResult {
+    /// A version of the source repo's bonsai changeset with `Mover` applied to
+    /// all changes and submodules processed according to the
+    /// small repo sync config (e.g. expanded, stripped).
+    ///
+    /// - `None` if the rewrite decided that this commit should
+    ///              not be present in the rewrite target
+    /// - `Some(rewritten)` for a successful rewrite, which should be
+    ///                         present in the rewrite target
+    pub rewritten: Option<BonsaiChangesetMut>,
+    /// Map from submodule dependency repo to all the file changes that have
+    /// to be copied from its blobstore to the large repo's blobstore for the
+    /// submodule expansion in the rewritten commit.
+    pub submodule_expansion_content_ids: SubmoduleExpansionContentIds,
+}
+
+impl CommitRewriteResult {
+    pub fn new(
+        rewritten: Option<BonsaiChangesetMut>,
+        submodule_expansion_content_ids: SubmoduleExpansionContentIds,
+    ) -> Self {
+        Self {
+            rewritten,
+            submodule_expansion_content_ids,
+        }
+    }
+}
+
+/// Wrapper to differentiate submodule paths from file changes paths at the
+/// type level.
+#[derive(Eq, Clone, Debug, PartialEq, Hash, PartialOrd, Ord)]
+pub struct SubmodulePath(pub NonRootMPath);
+
+impl std::fmt::Display for SubmodulePath {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        std::fmt::Display::fmt(&self.0, f)
+    }
+}
+
+/// Syncing commits from a small Mononoke repo with submodule file changes to a
+/// large repo requires the small repo submodule dependencies to be available.
+///
+/// However, LargeToSmall sync and some SmallToLarge operations don't require
+/// loading these repos, in which case this value will be set to `None`.
+/// When rewriting commits from small to large (i.e. calling `rewrite_commit`),
+/// this map has to be available, or the operation will crash otherwise.
+#[derive(Clone)]
+pub enum SubmoduleDeps<R> {
+    ForSync(HashMap<NonRootMPath, Arc<R>>),
+    NotNeeded,
+    NotAvailable,
+}
+
+impl<R> Default for SubmoduleDeps<R> {
+    fn default() -> Self {
+        Self::NotNeeded
+    }
+}
+
+impl<R: RepoIdentityRef> SubmoduleDeps<R> {
+    pub fn get_submodule_deps_names(&self) -> Option<SortedVectorMap<&NonRootMPath, &str>> {
+        match self {
+            Self::ForSync(map) => Some(
+                map.iter()
+                    .map(|(k, v)| (k, v.repo_identity().name()))
+                    .collect(),
+            ),
+            _ => None,
+        }
+    }
+
+    pub fn repos(&self) -> Vec<Arc<R>> {
+        match self {
+            Self::ForSync(map) => map.values().cloned().collect(),
+            _ => Vec::new(),
+        }
+    }
+
+    pub fn dep_map(&self) -> Option<&HashMap<NonRootMPath, Arc<R>>> {
+        match self {
+            Self::ForSync(map) => Some(map),
+            _ => None,
+        }
+    }
+}
+
+impl<R: Repo> Debug for SubmoduleDeps<R> {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        self.get_submodule_deps_names().fmt(f)
+    }
+}
+
+impl MultiMover for Arc<dyn Mover> {
+    fn multi_move_path(&self, path: &NonRootMPath) -> Result<Vec<NonRootMPath>> {
+        Ok(self.move_path(path)?.into_iter().collect())
+    }
+
+    fn conflicts_with(&self, path: &NonRootMPath) -> Result<bool> {
+        Mover::conflicts_with(self.as_ref(), path)
+    }
+}
+
+// TODO: maybe use this
+impl<M: Mover> MultiMover for &M {
+    fn multi_move_path(&self, path: &NonRootMPath) -> Result<Vec<NonRootMPath>> {
+        Ok(self.move_path(path)?.into_iter().collect())
+    }
+
+    fn conflicts_with(&self, path: &NonRootMPath) -> Result<bool> {
+        Mover::conflicts_with(*self, path)
+    }
 }

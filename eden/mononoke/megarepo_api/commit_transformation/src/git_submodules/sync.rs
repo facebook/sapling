@@ -6,12 +6,11 @@
  */
 
 use std::collections::HashMap;
+use std::sync::Arc;
 
 use anyhow::ensure;
 use anyhow::Context;
 use anyhow::Result;
-use commit_transformation::rewrite_commit;
-use commit_transformation::RewriteOpts;
 use context::CoreContext;
 use futures_stats::TimedFutureExt;
 use itertools::Itertools;
@@ -26,9 +25,10 @@ use crate::git_submodules::expand::expand_all_git_submodule_file_changes;
 use crate::git_submodules::expand::SubmoduleExpansionData;
 use crate::git_submodules::utils::get_submodule_expansions_affected;
 use crate::git_submodules::validation::ValidSubmoduleExpansionBonsai;
-use crate::rewrite::mover_to_multi_mover;
-use crate::rewrite::CommitRewriteResult;
+use crate::rewrite_commit_with_file_changes_filter;
+use crate::types::CommitRewriteResult;
 use crate::types::Repo;
+use crate::types::RewriteOpts;
 
 // TODO(T182311609): rename this to rewrite_commit
 /// Sync a commit to/from a small repo with submodule expansion enabled.
@@ -128,14 +128,15 @@ pub async fn sync_commit_with_submodule_expansion<'a, R: Repo>(
             )
             .context("Failed to expand submodule file changes from bonsai")?;
 
-    let mb_rewritten_bonsai = rewrite_commit(
+    let mb_rewritten_bonsai = rewrite_commit_with_file_changes_filter(
         ctx,
         new_bonsai,
         remapped_parents,
-        mover_to_multi_mover(movers.mover.clone()),
+        Arc::new(movers.mover.clone()),
         source_repo,
         None,
         rewrite_opts,
+        vec![], // File change filters
     )
     .timed()
     .await
@@ -198,14 +199,15 @@ async fn backsync_without_submodule_expansion_support<'a, R: Repo>(
             .collect::<Vec<_>>(),
     );
 
-    let rewritten = rewrite_commit(
+    let rewritten = rewrite_commit_with_file_changes_filter(
         ctx,
         bonsai_mut,
         remapped_parents,
-        mover_to_multi_mover(movers.mover.clone()),
+        Arc::new(movers.mover.clone()),
         source_repo,
         None,
         rewrite_opts,
+        vec![], // File change filters
     )
     .await
     .context("Failed to create small repo bonsai")?;

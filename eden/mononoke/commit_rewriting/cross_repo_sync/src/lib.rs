@@ -19,16 +19,7 @@ mod types;
 mod validation;
 
 // TODO(T182311609): stop re-exporting git_submodules
-pub use commit_rewrite::git_submodules::get_all_repo_submodule_deps;
-pub use commit_rewrite::git_submodules::get_all_submodule_deps_from_repo_pair;
-pub use commit_rewrite::git_submodules::InMemoryRepo;
-pub use commit_rewrite::git_submodules::RepoProvider;
-pub use commit_rewrite::git_submodules::SubmoduleExpansionData;
-pub use commit_rewrite::git_submodules::SubmoduleExpansionValidationToken;
-pub use commit_rewrite::git_submodules::ValidSubmoduleExpansionBonsai;
 // TODO(T182311609): stop re-exporting rewrite_commit
-pub use commit_rewrite::rewrite_commit;
-pub use commit_rewrite::SubmoduleDeps;
 pub use commit_sync_config_utils::get_bookmark_renamer;
 pub use commit_sync_config_utils::get_common_pushrebase_bookmarks;
 pub use commit_sync_config_utils::get_git_submodule_action_by_version;
@@ -56,6 +47,15 @@ pub use commit_syncers_lib::unsafe_get_parent_map_for_target_bookmark_rewrite;
 pub use commit_syncers_lib::update_mapping_with_version;
 pub use commit_syncers_lib::CommitSyncRepos;
 pub use commit_syncers_lib::Syncers;
+pub use commit_transformation::git_submodules::get_all_repo_submodule_deps;
+pub use commit_transformation::git_submodules::get_all_submodule_deps_from_repo_pair;
+pub use commit_transformation::git_submodules::InMemoryRepo;
+pub use commit_transformation::git_submodules::RepoProvider;
+pub use commit_transformation::git_submodules::SubmoduleExpansionData;
+pub use commit_transformation::git_submodules::SubmoduleExpansionValidationToken;
+pub use commit_transformation::git_submodules::ValidSubmoduleExpansionBonsai;
+pub use commit_transformation::rewrite_commit;
+pub use commit_transformation::SubmoduleDeps;
 pub use reporting::log_debug;
 pub use reporting::log_error;
 pub use reporting::log_info;

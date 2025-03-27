@@ -15,7 +15,9 @@ use anyhow::bail;
 use anyhow::Error;
 use anyhow::Result;
 use blobstore::Loadable;
+use bonsai_git_mapping::BonsaiGitMapping;
 use bonsai_hg_mapping::BonsaiHgMapping;
+use bookmarks::BookmarkUpdateLog;
 use bookmarks::Bookmarks;
 use changesets_creation::save_changesets;
 use commit_graph::CommitGraph;
@@ -37,6 +39,7 @@ use mononoke_types::GitLfs;
 use mononoke_types::NonRootMPath;
 use repo_blobstore::RepoBlobstore;
 use repo_blobstore::RepoBlobstoreRef;
+use repo_cross_repo::RepoCrossRepo;
 use repo_derived_data::RepoDerivedData;
 use repo_identity::RepoIdentity;
 use sorted_vector_map::SortedVectorMap;
@@ -58,6 +61,9 @@ pub struct Repo(
     CommitGraph,
     dyn CommitGraphWriter,
     FilestoreConfig,
+    dyn BookmarkUpdateLog,
+    dyn BonsaiGitMapping,
+    RepoCrossRepo,
 );
 
 #[mononoke::test]

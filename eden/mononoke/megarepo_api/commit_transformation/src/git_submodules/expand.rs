@@ -54,8 +54,8 @@ use crate::git_submodules::utils::get_x_repo_submodule_metadata_file_path;
 use crate::git_submodules::utils::is_path_git_submodule;
 use crate::git_submodules::utils::list_non_submodule_files_under;
 use crate::git_submodules::utils::submodule_diff;
-use crate::rewrite::SubmoduleExpansionContentIds;
 use crate::types::Repo;
+use crate::types::SubmoduleExpansionContentIds;
 use crate::types::SubmodulePath;
 
 // TODO(T174902563): support expansion of git submodules

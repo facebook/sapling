@@ -25,14 +25,17 @@ use futures::stream;
 use futures::StreamExt;
 use futures::TryStreamExt;
 use megarepo_configs::SourceMappingRules;
+use metaconfig_types::GitSubmodulesChangesAction;
 use mononoke_types::path::MPath;
 use mononoke_types::BonsaiChangeset;
 use mononoke_types::BonsaiChangesetMut;
 use mononoke_types::ChangesetId;
 use mononoke_types::ContentId;
 use mononoke_types::FileChange;
+use mononoke_types::FileType;
 use mononoke_types::NonRootMPath;
 use mononoke_types::TrackedFileChange;
+use movers::Movers;
 use pushrebase::find_bonsai_diff;
 use repo_blobstore::RepoBlobstoreRef;
 use repo_identity::RepoIdentityRef;
@@ -41,6 +44,8 @@ use slog::error;
 use slog::Logger;
 use sorted_vector_map::SortedVectorMap;
 
+use crate::git_submodules::sync_commit_with_submodule_expansion;
+use crate::git_submodules::SubmoduleExpansionData;
 use crate::implicit_deletes::get_renamed_implicit_deletes;
 use crate::implicit_deletes::minimize_file_change_set;
 // TODO(T182311609): refine imports
@@ -67,31 +72,70 @@ This commit created by squashing the following git commits:
 ///
 /// Precondition: this function expects all `cs` parents to be present
 /// in `remapped_parents` as keys, and their remapped versions as values.
-///
-/// If `force_first_parent` is set commit parents are reordered to ensure that
-/// the specified changeset comes first.
-pub async fn rewrite_commit<'a>(
+pub async fn rewrite_commit<'a, R: Repo>(
     ctx: &'a CoreContext,
     cs: BonsaiChangesetMut,
     remapped_parents: &'a HashMap<ChangesetId, ChangesetId>,
-    mover: Arc<dyn MultiMover + 'a>,
-    source_repo: &'a impl Repo,
-    force_first_parent: Option<ChangesetId>,
+    movers: Movers,
+    source_repo: &'a R,
     rewrite_opts: RewriteOpts,
-) -> Result<Option<BonsaiChangesetMut>, Error> {
-    rewrite_commit_with_file_changes_filter(
+    git_submodules_action: GitSubmodulesChangesAction,
+    mb_submodule_expansion_data: Option<SubmoduleExpansionData<'a, R>>,
+) -> Result<CommitRewriteResult> {
+    // TODO(T169695293): add filter to only keep submodules for implicit deletes?
+    let (file_changes_filters, cs): (Vec<FileChangeFilter<'a>>, BonsaiChangesetMut) =
+        match git_submodules_action {
+            GitSubmodulesChangesAction::Strip => {
+                let filter_func: FileChangeFilterFunc<'a> = Arc::new(move |(_path, fc)| match fc {
+                    FileChange::Change(tfc) => tfc.file_type() != FileType::GitSubmodule,
+                    _ => true,
+                });
+                let filter: FileChangeFilter<'a> = FileChangeFilter {
+                    func: filter_func,
+                    application: FileChangeFilterApplication::MultiMover,
+                };
+
+                (vec![filter], cs)
+            }
+            // Keep submodules -> no filters and keep original bonsai
+            GitSubmodulesChangesAction::Keep => (vec![], cs),
+            // Expand submodules -> no filters, but modify the file change
+            // file types in the bonsai
+            GitSubmodulesChangesAction::Expand => {
+                let submodule_expansion_data = mb_submodule_expansion_data.ok_or(
+                  anyhow!("Submodule expansion data not provided when submodules is enabled for small repo")
+              )?;
+
+                return sync_commit_with_submodule_expansion(
+                    ctx,
+                    cs,
+                    source_repo,
+                    submodule_expansion_data,
+                    movers.clone(),
+                    remapped_parents,
+                    rewrite_opts,
+                )
+                .await;
+            }
+        };
+
+    let mb_rewritten = rewrite_commit_with_file_changes_filter(
         ctx,
         cs,
         remapped_parents,
-        mover,
+        Arc::new(movers.mover),
         source_repo,
-        force_first_parent,
+        None,
         rewrite_opts,
-        vec![], // No file change filters by default
+        file_changes_filters,
     )
-    .await
+    .await?;
+
+    Ok(CommitRewriteResult::new(mb_rewritten, HashMap::new()))
 }
 
+// TODO(T182311609): make this pub(crate) and ensure all external callers go through
+// `rewrite_commit` instead.
 /// Implementation of `rewrite_commit` that can take a vector of filters to
 /// apply to the commit's file changes before getting its implicit deletes.
 pub async fn rewrite_commit_with_file_changes_filter<'a>(

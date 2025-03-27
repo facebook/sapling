@@ -52,7 +52,6 @@ rust_library(
         "//eden/mononoke/bookmarks:bookmarks",
         "//eden/mononoke/cmdlib:environment",
         "//eden/mononoke/commit_rewriting/bookmark_renaming:bookmark_renaming",
-        "//eden/mononoke/commit_rewriting/commit_rewrite:commit_rewrite",
         "//eden/mononoke/commit_rewriting/live_commit_sync_config:live_commit_sync_config",
         "//eden/mononoke/commit_rewriting/movers:movers",
         "//eden/mononoke/commit_rewriting/reporting:reporting",

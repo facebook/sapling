@@ -13,7 +13,13 @@ mod implicit_deletes;
 mod test;
 mod types;
 
+// TODO(T182311609): stop exposing git_submodule directly in the public API
+pub mod git_submodules;
+
 // TODO(T182311609): refine exports
 pub use commit_rewriting::*;
 pub use implicit_deletes::get_renamed_implicit_deletes;
+pub use types::SubmoduleDeps;
+pub use types::SubmoduleExpansionContentIds;
+pub use types::SubmodulePath;
 pub use types::*;

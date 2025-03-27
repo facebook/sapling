@@ -9,36 +9,57 @@ license = "GPLv2+"
 
 [dependencies]
 anyhow = "1.0.95"
+async-recursion = "1.1.1"
+async-trait = "0.1.86"
 blobrepo_utils = { version = "0.1.0", path = "../../blobrepo_utils" }
+blobstore = { version = "0.1.0", path = "../../blobstore" }
 blobsync = { version = "0.1.0", path = "../../blobrepo/blobsync" }
+bonsai_git_mapping = { version = "0.1.0", path = "../../bonsai_git_mapping" }
 bonsai_hg_mapping = { version = "0.1.0", path = "../../bonsai_hg_mapping" }
 bookmarks = { version = "0.1.0", path = "../../bookmarks" }
 borrowed = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
+bytes = { version = "1.9.0", features = ["serde"] }
+cacheblob = { version = "0.1.0", path = "../../blobstore/cacheblob" }
 changesets_creation = { version = "0.1.0", path = "../../changesets/changesets_creation" }
+cloned = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 commit_graph = { version = "0.1.0", path = "../../repo_attributes/commit_graph/commit_graph" }
 context = { version = "0.1.0", path = "../../server/context" }
 derivative = "2.2"
+derived_data = { version = "0.1.0", path = "../../derived_data" }
+either = "1.5"
+facet = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
+filenodes = { version = "0.1.0", path = "../../filenodes" }
 filestore = { version = "0.1.0", path = "../../filestore" }
+fsnodes = { version = "0.1.0", path = "../../derived_data/fsnodes" }
 futures = { version = "0.3.30", features = ["async-await", "compat"] }
+futures_stats = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
+git_types = { version = "0.1.0", path = "../../git/git_types" }
+itertools = "0.14.0"
 justknobs = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 manifest = { version = "0.1.0", path = "../../manifest" }
+maplit = "1.0"
 megarepo_configs = { version = "0.1.0", path = "../if/megarepo_configs" }
+mercurial_types = { version = "0.1.0", path = "../../mercurial/types" }
+metaconfig_types = { version = "0.1.0", path = "../../metaconfig/types" }
 mononoke_types = { version = "0.1.0", path = "../../mononoke_types" }
+movers = { version = "0.1.0", path = "../../commit_rewriting/movers" }
 pushrebase = { version = "0.1.0", path = "../../pushrebase" }
+readonlyblob = { version = "0.1.0", path = "../../blobstore/readonlyblob" }
 repo_blobstore = { version = "0.1.0", path = "../../blobrepo/repo_blobstore" }
+repo_cross_repo = { version = "0.1.0", path = "../../repo_attributes/repo_cross_repo" }
 repo_derived_data = { version = "0.1.0", path = "../../repo_attributes/repo_derived_data" }
 repo_identity = { version = "0.1.0", path = "../../repo_attributes/repo_identity" }
+reporting = { version = "0.1.0", path = "../../commit_rewriting/reporting" }
+scuba_ext = { version = "0.1.0", path = "../../common/scuba_ext" }
 skeleton_manifest = { version = "0.1.0", path = "../../derived_data/skeleton_manifest" }
 slog = { package = "tracing_slog_compat", version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 sorted_vector_map = { version = "0.2.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
+sql = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 thiserror = "2"
 
 [dev-dependencies]
-blobstore = { version = "0.1.0", path = "../../blobstore" }
-facet = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 fbinit = { version = "0.2.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 fbinit-tokio = { version = "0.1.2", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
-maplit = "1.0"
 mononoke_macros = { version = "0.1.0", path = "../../mononoke_macros" }
 test_repo_factory = { version = "0.1.0", path = "../../repo_factory/test_repo_factory" }
 tests_utils = { version = "0.1.0", path = "../../tests/utils" }

@@ -17,7 +17,7 @@ use blobstore::Loadable;
 use changesets_creation::save_changesets;
 use commit_transformation::create_source_to_target_multi_mover;
 use commit_transformation::rewrite_as_squashed_commit;
-use commit_transformation::rewrite_commit;
+use commit_transformation::rewrite_commit_with_file_changes_filter;
 use commit_transformation::upload_commits;
 use context::CoreContext;
 use futures::stream;
@@ -486,7 +486,7 @@ async fn sync_changeset_to_target<R: MononokeRepo>(
             for css in side_parents_move_commits.iter() {
                 remapped_parents.insert(css.source, css.moved.get_changeset_id());
             }
-            rewrite_commit(
+            rewrite_commit_with_file_changes_filter(
                 ctx, // this is already a reference
                 source_cs_mut,
                 &remapped_parents,
@@ -497,6 +497,7 @@ async fn sync_changeset_to_target<R: MononokeRepo>(
                 // represented in the commit graph and the sync is a fast-forward move.
                 Some(target_cs_id),
                 Default::default(),
+                vec![],
             )
             .await
             .map_err(MegarepoError::internal)?

@@ -26,6 +26,7 @@ use commit_graph::CommitGraph;
 use commit_graph::CommitGraphWriter;
 use commit_transformation::upload_commits;
 use context::CoreContext;
+// TODO(T182311609): stop using this directly and call cross_repo_sync methods instead
 use cross_repo_sync::rewrite_commit;
 use cross_repo_sync::submodule_metadata_file_prefix_and_dangling_pointers;
 use cross_repo_sync::update_mapping_with_version;
