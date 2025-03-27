@@ -1288,6 +1288,11 @@ class EdenConfig : private ConfigSettingManager {
       100,
       this};
 
+  ConfigSetting<std::chrono::nanoseconds> longRunningFSRequestThreshold{
+      "telemetry:long-running-fs-request-threshold",
+      std::chrono::seconds{45},
+      this};
+
   // [experimental]
 
   /**
