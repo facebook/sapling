@@ -234,7 +234,7 @@ pub async fn wait_for_log_id_for_repo_to_be_synced(
                     target_repo_id
                 )
             })?;
-        if log_id > mut_counters_value.try_into().unwrap() {
+        if log_id > u64::try_from(mut_counters_value).unwrap() {
             if time_since_log.as_secs() >= 60 {
                 time_since_log = Duration::ZERO;
                 info!(

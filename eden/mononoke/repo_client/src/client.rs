@@ -868,7 +868,7 @@ impl<R: Repo> RepoClient<R> {
                 Some(client_hostname) => {
                     let mut hasher = DefaultHasher::new();
                     client_hostname.hash(&mut hasher);
-                    hasher.finish() % 100 < percentage.into()
+                    hasher.finish() % 100 < u64::from(percentage)
                 }
                 None => {
                     // Randomize in case source hostname is not set to avoid
