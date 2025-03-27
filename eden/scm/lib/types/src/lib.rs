@@ -13,6 +13,7 @@ pub mod augmented_tree;
 pub mod blake3;
 pub mod cas;
 pub mod errors;
+pub mod fetch_cause;
 pub mod fetch_context;
 pub mod fetch_mode;
 mod format;

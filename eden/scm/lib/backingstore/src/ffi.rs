@@ -15,6 +15,7 @@ use anyhow::Error;
 use anyhow::Result;
 use cxx::SharedPtr;
 use storemodel::FileAuxData as ScmStoreFileAuxData;
+use types::fetch_cause::FetchCause;
 use types::fetch_mode::FetchMode;
 use types::FetchContext;
 use types::Key;
@@ -248,6 +249,31 @@ impl From<ffi::FetchMode> for FetchMode {
     }
 }
 
+impl From<ffi::FetchCause> for FetchCause {
+    fn from(fetch_cause: ffi::FetchCause) -> Self {
+        match fetch_cause {
+            ffi::FetchCause::Unknown => FetchCause::EdenUnknown,
+            ffi::FetchCause::Prefetch => FetchCause::EdenPrefetch,
+            ffi::FetchCause::Thrift => FetchCause::EdenThrift,
+            ffi::FetchCause::Fs => FetchCause::EdenFs,
+            _ => FetchCause::Unspecified, // should never happen
+        }
+    }
+}
+
+fn select_cause(mut fetch_causes_iter: impl Iterator<Item = ffi::FetchCause>) -> FetchCause {
+    match fetch_causes_iter.next() {
+        Some(first) => {
+            if fetch_causes_iter.all(|cause| cause == first) {
+                first.into()
+            } else {
+                FetchCause::EdenMixed
+            }
+        }
+        None => FetchCause::Unspecified,
+    }
+}
+
 pub unsafe fn sapling_backingstore_new(
     repository: &[c_char],
     options: &ffi::SaplingNativeBackingStoreOptions,
@@ -274,7 +300,11 @@ pub fn sapling_backingstore_get_tree(
     fetch_mode: ffi::FetchMode,
 ) -> Result<SharedPtr<ffi::Tree>> {
     Ok(
-        match store.get_tree(node, FetchContext::new(FetchMode::from(fetch_mode)))? {
+        // the cause is not propagated for this API
+        match store.get_tree(
+            node,
+            FetchContext::new_with_cause(FetchMode::from(fetch_mode), FetchCause::EdenUnknown),
+        )? {
             Some(entry) => SharedPtr::new(entry.try_into()?),
             None => SharedPtr::null(),
         },
@@ -288,10 +318,11 @@ pub fn sapling_backingstore_get_tree_batch(
     resolver: SharedPtr<ffi::GetTreeBatchResolver>,
 ) {
     let keys: Vec<Key> = requests.iter().map(|req| req.key()).collect();
+    let cause = select_cause(requests.into_iter().map(|req| req.cause));
 
     store.get_tree_batch(
         keys,
-        FetchContext::new(FetchMode::from(fetch_mode)),
+        FetchContext::new_with_cause(FetchMode::from(fetch_mode), cause),
         |idx, result| {
             let result: Result<Box<dyn storemodel::TreeEntry>> =
                 result.and_then(|opt| opt.ok_or_else(|| Error::msg("no tree found")));
@@ -310,7 +341,11 @@ pub fn sapling_backingstore_get_tree_aux(
     node: &[u8],
     fetch_mode: ffi::FetchMode,
 ) -> Result<SharedPtr<ffi::TreeAuxData>> {
-    match store.get_tree_aux(node, FetchContext::new(FetchMode::from(fetch_mode)))? {
+    // the cause is not propagated for this API
+    match store.get_tree_aux(
+        node,
+        FetchContext::new_with_cause(FetchMode::from(fetch_mode), FetchCause::EdenUnknown),
+    )? {
         Some(aux) => Ok(SharedPtr::new(aux.into())),
         None => Ok(SharedPtr::null()),
     }
@@ -323,10 +358,11 @@ pub fn sapling_backingstore_get_tree_aux_batch(
     resolver: SharedPtr<ffi::GetTreeAuxBatchResolver>,
 ) {
     let keys: Vec<Key> = requests.iter().map(|req| req.key()).collect();
+    let cause = select_cause(requests.into_iter().map(|req| req.cause));
 
     store.get_tree_aux_batch(
         keys,
-        FetchContext::new(FetchMode::from(fetch_mode)),
+        FetchContext::new_with_cause(FetchMode::from(fetch_mode), cause),
         |idx, result| {
             let result = result.and_then(|opt| opt.ok_or_else(|| Error::msg("no aux data found")));
             let resolver = resolver.clone();
@@ -346,7 +382,11 @@ pub fn sapling_backingstore_get_blob(
     node: &[u8],
     fetch_mode: ffi::FetchMode,
 ) -> Result<ffi::OptionalBlob> {
-    match store.get_blob(node, FetchContext::new(FetchMode::from(fetch_mode)))? {
+    // the cause is not propagated for this API
+    match store.get_blob(
+        node,
+        FetchContext::new_with_cause(FetchMode::from(fetch_mode), FetchCause::EdenUnknown),
+    )? {
         Some(blob) => Ok(ffi::OptionalBlob {
             blob: Box::new(ffi::Blob { bytes: blob }),
             present: true,
@@ -365,9 +405,11 @@ pub fn sapling_backingstore_get_blob_batch(
     resolver: SharedPtr<ffi::GetBlobBatchResolver>,
 ) {
     let keys: Vec<Key> = requests.iter().map(|req| req.key()).collect();
+    let cause = select_cause(requests.into_iter().map(|req| req.cause));
+
     store.get_blob_batch(
         keys,
-        FetchContext::new(FetchMode::from(fetch_mode)),
+        FetchContext::new_with_cause(FetchMode::from(fetch_mode), cause),
         |idx, result| {
             let result = result.and_then(|opt| opt.ok_or_else(|| Error::msg("no blob found")));
             let resolver = resolver.clone();
@@ -388,7 +430,11 @@ pub fn sapling_backingstore_get_file_aux(
     node: &[u8],
     fetch_mode: ffi::FetchMode,
 ) -> Result<SharedPtr<ffi::FileAuxData>> {
-    match store.get_file_aux(node, FetchContext::new(FetchMode::from(fetch_mode)))? {
+    // the cause is not propagated for this API
+    match store.get_file_aux(
+        node,
+        FetchContext::new_with_cause(FetchMode::from(fetch_mode), FetchCause::EdenUnknown),
+    )? {
         Some(aux) => Ok(SharedPtr::new(aux.into())),
         None => Ok(SharedPtr::null()),
     }
@@ -401,10 +447,11 @@ pub fn sapling_backingstore_get_file_aux_batch(
     resolver: SharedPtr<ffi::GetFileAuxBatchResolver>,
 ) {
     let keys: Vec<Key> = requests.iter().map(|req| req.key()).collect();
+    let cause = select_cause(requests.into_iter().map(|req| req.cause));
 
     store.get_file_aux_batch(
         keys,
-        FetchContext::new(FetchMode::from(fetch_mode)),
+        FetchContext::new_with_cause(FetchMode::from(fetch_mode), cause),
         |idx, result| {
             let result: Result<ScmStoreFileAuxData> =
                 result.and_then(|opt| opt.ok_or_else(|| Error::msg("no file aux data found")));

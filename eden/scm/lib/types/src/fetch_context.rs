@@ -5,6 +5,7 @@
  * LICENSE file in the root directory of this source tree.
  */
 
+use crate::fetch_cause::FetchCause;
 use crate::fetch_mode::FetchMode;
 
 /// A context for a fetch operation.
@@ -13,15 +14,23 @@ use crate::fetch_mode::FetchMode;
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct FetchContext {
     mode: FetchMode,
+    cause: FetchCause,
 }
 
 impl FetchContext {
     pub fn new(mode: FetchMode) -> Self {
-        Self { mode }
+        Self {
+            mode,
+            cause: FetchCause::Unspecified,
+        }
     }
 
-    pub fn mode(&self) -> FetchMode {
-        self.mode
+    pub fn new_with_cause(mode: FetchMode, cause: FetchCause) -> Self {
+        Self { mode, cause }
+    }
+
+    pub fn mode(&self) -> &FetchMode {
+        &self.mode
     }
 }
 
