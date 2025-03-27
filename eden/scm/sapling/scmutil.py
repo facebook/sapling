@@ -667,8 +667,12 @@ def matchandpats(
     if not globbed and default == "relpath":
         pats = expandpats(pats or [])
 
+    seen_bad = set()
+
     def bad(f, msg):
-        ctx.repo().ui.warn("%s: %s\n" % (m.rel(f), msg))
+        if f not in seen_bad:
+            ctx.repo().ui.warn("%s: %s\n" % (m.rel(f), msg))
+        seen_bad.add(f)
 
     if badfn is None:
         badfn = bad
