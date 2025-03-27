@@ -10,6 +10,7 @@ import time
 from collections import defaultdict
 
 from .. import (
+    cloneuri,
     cmdutil,
     context,
     error,
@@ -583,6 +584,9 @@ def _do_import(ui, repo, temp_dir, *args, **opts):
     url = opts.get("url")
     if not url:
         raise error.Abort(_("must specify the external repository url"))
+    giturl = cloneuri.determine_git_uri(None, url)
+    if giturl is None:
+        raise error.Abort(_("unable to determine git url from '%s'") % url)
 
     ctx = repo["."]
     # default to root ("") of the repo
@@ -597,11 +601,13 @@ def _do_import(ui, repo, temp_dir, *args, **opts):
     abort_or_remove_paths(ui, repo, to_paths, "import", opts)
 
     # PERF: shallow clone, then partial checkout
-    git_repo = git.clone(ui, url, temp_dir, update=from_commit)
+    git_repo = git.clone(ui, giturl, temp_dir, update=from_commit)
     copy_files(
         ui, git_repo, repo, git_repo[from_commit], from_paths, to_paths, "import"
     )
 
+    # use the original `url` in the metadata, as the `giturl` may lost information
+    # e.g.: "git+" prefix
     extra = subtreeutil.gen_import_info(url, from_commit, from_paths, to_paths)
     summaryfooter = _gen_import_commit_msg(url, from_commit, from_paths, to_paths)
 

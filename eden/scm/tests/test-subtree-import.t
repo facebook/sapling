@@ -44,6 +44,8 @@ Prepare a git repo:
     Date:   Mon Jan 1 00:00:10 2007 +0000
     
         alpha
+
+  $ export GIT_URL=git+file://$TESTTMP/gitrepo
   
 Prepare a Sapling repo:
 
@@ -58,23 +60,26 @@ Prepare a Sapling repo:
 
 Test subtree import failure cases
 
-  $ hg subtree import --url file://$TESTTMP/gitrepo --rev d2a8b3fa3dfa345ea64e02ea014d21b5cabd03e0 --to-path foo -m "import gitrepo to foo"
+  $ hg subtree import --url $GIT_URL --rev d2a8b3fa3dfa345ea64e02ea014d21b5cabd03e0 --to-path foo -m "import gitrepo to foo"
   abort: cannot import to an existing path: foo
   (use --force to overwrite)
   [255]
-  $ hg subtree import --url file://$TESTTMP/gitrepo --rev d2a8b3fa3dfa345ea64e02ea014d21b5cabd03e0
+  $ hg subtree import --url $GIT_URL --rev d2a8b3fa3dfa345ea64e02ea014d21b5cabd03e0
   abort: must specify the to-path
   [255]
-  $ hg subtree import --url file://$TESTTMP/gitrepo --rev d2a8b3fa3dfa345ea64e02ea014d21b5cabd03e0 --from-path dir1 --to-path bar --from-path dir2 --to-path bar/dir2
+  $ hg subtree import --url $GIT_URL --rev d2a8b3fa3dfa345ea64e02ea014d21b5cabd03e0 --from-path dir1 --to-path bar --from-path dir2 --to-path bar/dir2
   abort: overlapping --to-path entries
   [255]
-  $ hg subtree import --url file://$TESTTMP/gitrepo --rev d2a8b3fa3dfa345ea64e02ea014d21b5cabd03e0 --to-path bar -m "import gitrepo to bar" --config subtree.min-path-depth=2
+  $ hg subtree import --url $GIT_URL --rev d2a8b3fa3dfa345ea64e02ea014d21b5cabd03e0 --to-path bar -m "import gitrepo to bar" --config subtree.min-path-depth=2
   abort: path should be at least 2 levels deep: 'bar'
+  [255]
+  $ hg subtree import --url file://$TESTTMP/gitrepo --rev d2a8b3fa3dfa345ea64e02ea014d21b5cabd03e0 --to-path bar -m "import gitrepo to bar" --config subtree.min-path-depth=2
+  abort: unable to determine git url from 'file:/*/$TESTTMP/gitrepo' (glob)
   [255]
 
 Test subtree import the root path of the external repo
 
-  $ hg subtree import --url file://$TESTTMP/gitrepo --rev d2a8b3fa3dfa345ea64e02ea014d21b5cabd03e0 --to-path bar -m "import gitrepo to bar"
+  $ hg subtree import --url $GIT_URL --rev d2a8b3fa3dfa345ea64e02ea014d21b5cabd03e0 --to-path bar -m "import gitrepo to bar"
   From file:/*/$TESTTMP/gitrepo (glob)
    * [new ref]         4487c56011495a40ce2f6c632c24ae57a210747d -> remote/master
    * [new ref]         d2a8b3fa3dfa345ea64e02ea014d21b5cabd03e0 -> refs/visibleheads/d2a8b3fa3dfa345ea64e02ea014d21b5cabd03e0
@@ -86,7 +91,7 @@ Test subtree import the root path of the external repo
   $ hg log -G -T '{node|short} {desc}\n'
   @  * import gitrepo to bar (glob)
   │
-  │  Subtree import from file:/*/$TESTTMP/gitrepo at d2a8b3fa3dfa345ea64e02ea014d21b5cabd03e0 (glob)
+  │  Subtree import from git+file:/*/$TESTTMP/gitrepo at d2a8b3fa3dfa345ea64e02ea014d21b5cabd03e0 (glob)
   │  - Imported path / to bar
   o  9998a5c40732 B
   │
@@ -96,9 +101,9 @@ Test subtree import a sub directory of the external repo
 
   $ hg log -r . -T '{extras % "{extra}\n"}'
   branch=default
-  test_subtree=[{"imports":[{"from_commit":"d2a8b3fa3dfa345ea64e02ea014d21b5cabd03e0","from_path":"","to_path":"bar","url":"file:/*/$TESTTMP/gitrepo"}],"v":1}] (glob)
+  test_subtree=[{"imports":[{"from_commit":"d2a8b3fa3dfa345ea64e02ea014d21b5cabd03e0","from_path":"","to_path":"bar","url":"git+file:/*/$TESTTMP/gitrepo"}],"v":1}] (glob)
 
-  $ hg subtree import --url file://$TESTTMP/gitrepo --rev 4487c56011495a40ce2f6c632c24ae57a210747d --from-path dir2 --to-path mydir2 -m "import gitrepo/dir2 to mydir2"
+  $ hg subtree import --url $GIT_URL --rev 4487c56011495a40ce2f6c632c24ae57a210747d --from-path dir2 --to-path mydir2 -m "import gitrepo/dir2 to mydir2"
   From file:/*/$TESTTMP/gitrepo (glob)
    * [new ref]         4487c56011495a40ce2f6c632c24ae57a210747d -> remote/master
    * [new ref]         4487c56011495a40ce2f6c632c24ae57a210747d -> refs/visibleheads/4487c56011495a40ce2f6c632c24ae57a210747d
@@ -109,18 +114,18 @@ Test subtree import a sub directory of the external repo
   $ hg log -G -T '{node|short} {desc}\n'
   @  * import gitrepo/dir2 to mydir2 (glob)
   │
-  │  Subtree import from file:/*/$TESTTMP/gitrepo at 4487c56011495a40ce2f6c632c24ae57a210747d (glob)
+  │  Subtree import from git+file:/*/$TESTTMP/gitrepo at 4487c56011495a40ce2f6c632c24ae57a210747d (glob)
   │  - Imported path /dir2 to mydir2
   o  * import gitrepo to bar (glob)
   │
-  │  Subtree import from file:/*/$TESTTMP/gitrepo at d2a8b3fa3dfa345ea64e02ea014d21b5cabd03e0 (glob)
+  │  Subtree import from git+file:/*/$TESTTMP/gitrepo at d2a8b3fa3dfa345ea64e02ea014d21b5cabd03e0 (glob)
   │  - Imported path / to bar
   o  9998a5c40732 B
   │
   o  d908813f0f7c A
   $ hg log -r . -T '{extras % "{extra}\n"}'
   branch=default
-  test_subtree=[{"imports":[{"from_commit":"4487c56011495a40ce2f6c632c24ae57a210747d","from_path":"dir2","to_path":"mydir2","url":"file:/*/$TESTTMP/gitrepo"}],"v":1}] (glob)
+  test_subtree=[{"imports":[{"from_commit":"4487c56011495a40ce2f6c632c24ae57a210747d","from_path":"dir2","to_path":"mydir2","url":"git+file:/*/$TESTTMP/gitrepo"}],"v":1}] (glob)
 
   $ hg fold --from .^
   2 changesets folded
@@ -131,20 +136,20 @@ Test subtree import a sub directory of the external repo
   A mydir2/gamma
   $ hg log -r . -T '{extras % "{extra}\n"}'
   branch=default
-  test_subtree=[{"imports":[{"from_commit":"d2a8b3fa3dfa345ea64e02ea014d21b5cabd03e0","from_path":"","to_path":"bar","url":"file://$TESTTMP/gitrepo"},{"from_commit":"4487c56011495a40ce2f6c632c24ae57a210747d","from_path":"dir2","to_path":"mydir2","url":"file:/*/$TESTTMP/gitrepo"}],"v":1}] (glob)
+  test_subtree=[{"imports":[{"from_commit":"d2a8b3fa3dfa345ea64e02ea014d21b5cabd03e0","from_path":"","to_path":"bar","url":"git+file://$TESTTMP/gitrepo"},{"from_commit":"4487c56011495a40ce2f6c632c24ae57a210747d","from_path":"dir2","to_path":"mydir2","url":"git+file:/*/$TESTTMP/gitrepo"}],"v":1}] (glob)
   $ hg subtree inspect
   {
     "imports": [
       {
         "version": 1,
-        "url": "file:/*/$TESTTMP/gitrepo", (glob)
+        "url": "git+file:/*/$TESTTMP/gitrepo", (glob)
         "from_commit": "d2a8b3fa3dfa345ea64e02ea014d21b5cabd03e0",
         "from_path": "",
         "to_path": "bar"
       },
       {
         "version": 1,
-        "url": "file:/*/$TESTTMP/gitrepo", (glob)
+        "url": "git+file:/*/$TESTTMP/gitrepo", (glob)
         "from_commit": "4487c56011495a40ce2f6c632c24ae57a210747d",
         "from_path": "dir2",
         "to_path": "mydir2"
