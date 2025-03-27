@@ -23,7 +23,11 @@ Make sure we minimize content fetches:
   $ LOG=file_fetches=trace,tree_fetches=trace hg amend -q
   TRACE tree_fetches: attrs=["content"] keys=["@eaa109a0"]
   TRACE file_fetches: attrs=["content"] keys=[".hgdirsync"]
-  TRACE tree_fetches: attrs=["content"] keys=["a_dir@4f20beec", "b_dir@79a5124d", "c_dir@bc250767"]
+  TRACE tree_fetches: attrs=["content"] keys=["a_dir@4f20beec"]
+  TRACE file_fetches: attrs=["content", "header", "aux"] keys=["a_dir/a"]
+  TRACE file_fetches: attrs=["history"] length=None keys=["a_dir/a"]
+  TRACE file_fetches: attrs=["content"] keys=[".hgdirsync"]
+  TRACE tree_fetches: attrs=["content"] keys=["b_dir@79a5124d", "c_dir@bc250767"]
   TRACE file_fetches: attrs=["content", "header", "aux"] keys=["b_dir/b", "c_dir/c"]
   TRACE file_fetches: attrs=["history"] length=Some(1) keys=["b_dir/b", "c_dir/c"]
   TRACE file_fetches: attrs=["content", "header"] keys=["b_dir/b"]

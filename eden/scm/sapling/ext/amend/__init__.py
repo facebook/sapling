@@ -188,6 +188,7 @@ def uisetup(ui):
             ),
             ("e", "edit", None, _("prompt to edit the commit message")),
             ("i", "interactive", None, _("use interactive mode")),
+            ("", "no-move-detection", None, _("disable automatic file move detection")),
         ]
         + amendopts
         + commands.walkopts
@@ -197,17 +198,6 @@ def uisetup(ui):
         _("@prog@ amend [OPTION]... [FILE]..."),
         legacyaliases=["ame", "amen", "ramen"],
     )(amend)
-
-    def has_automv(loaded):
-        if not loaded:
-            return
-        automv = extensions.find("automv")
-        entry = extensions.wrapcommand(cmdtable, "amend", automv.mvcheck)
-        entry[1].append(
-            ("", "no-move-detection", None, _("disable automatic file move detection"))
-        )
-
-    extensions.afterloaded("automv", has_automv)
 
     def rebaseloaded(loaded):
         if not loaded:
@@ -354,6 +344,8 @@ def amend(ui, repo, *pats, **opts):
     if to:
         amendtocommit(ui, repo, to, pats, opts)
         return
+
+    opts["automv"] = not (opts.get("no_automv") or opts.get("no_move_detection"))
 
     old = repo["."]
     if old.ispublic():

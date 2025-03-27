@@ -39,7 +39,7 @@
   A b.txt
   R a.txt
   $ hg commit -m msg
-  detected move of 1 files
+  recording removal of a.txt as rename to b.txt (100% similar)
   $ hg status --change . -C
   A b.txt
     a.txt
@@ -57,7 +57,7 @@
   A b.txt
   R a.txt
   $ hg commit -m msg
-  detected move of 1 files
+  recording removal of a.txt as rename to b.txt (75% similar)
   $ hg status --change . -C
   A b.txt
     a.txt
@@ -91,7 +91,7 @@
   A b.txt
   R a.txt
   $ hg commit --config 'automv.similarity=60' -m msg
-  detected move of 1 files
+  recording removal of a.txt as rename to b.txt (60% similar)
   $ hg status --change . -C
   A b.txt
     a.txt
@@ -137,7 +137,7 @@
   $ echo bar > c.txt
   $ hg add c.txt
   $ hg commit -m msg
-  detected move of 1 files
+  recording removal of a.txt as rename to b.txt (100% similar)
   $ hg status --change . -C
   A b.txt
     a.txt
@@ -174,7 +174,7 @@
   A b.txt
   R a.txt
   $ hg commit --amend -m amended
-  detected move of 1 files
+  recording removal of a.txt as rename to b.txt (100% similar)
   $ hg status --change . -C
   A b.txt
     a.txt
@@ -196,7 +196,7 @@
   A b.txt
   R a.txt
   $ hg commit --amend -m amended
-  detected move of 1 files
+  recording removal of a.txt as rename to b.txt (75% similar)
   $ hg status --change . -C
   A b.txt
     a.txt
@@ -238,7 +238,7 @@
   A b.txt
   R a.txt
   $ hg commit --amend --config 'automv.similarity=60' -m amended
-  detected move of 1 files
+  recording removal of a.txt as rename to b.txt (60% similar)
   $ hg status --change . -C
   A b.txt
     a.txt
@@ -285,7 +285,7 @@
   A b.txt
   R a.txt
   $ hg commit --amend -m amended
-  detected move of 1 files
+  recording removal of a.txt as rename to b.txt (100% similar)
   $ hg status --change . -C
   A b.txt
     a.txt
@@ -334,7 +334,7 @@
 # error conditions
 
   $ hg commit -m 'revision to amend to' --config automv.similarity=110
-  abort: automv.similarity must be between 0 and 100
+  abort: similarity must be between 0 and 100
   [255]
 
 # max-files setting
@@ -356,7 +356,7 @@
   $ hg ci -Aqm A
   $ mv A B
   $ hg ci -Aqm mv
-FIXME: copy from A->B is not recorded
   $ hg status --change . -C
   A B
+    A
   R A

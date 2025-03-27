@@ -47,6 +47,8 @@ Do error out if the naughty file is explicitly referenced:
   skipping invalid path 'hell\no'
   $ hg ci -m 2 2>&1 | sort
   skipping invalid path 'he\rllo'
+  skipping invalid path 'he\rllo'
+  skipping invalid path 'hell\no'
   skipping invalid path 'hell\no'
   $ A=`printf 'quick\rfox'`
   $ (hg cp quickfox "$A" 2>&1; echo "[$?]" 1>&2) | sort

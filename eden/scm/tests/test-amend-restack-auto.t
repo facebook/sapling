@@ -123,8 +123,8 @@ amend.autorestack=only-trivial, and dirty working copy (expect no restack)
   > EOS
   $ hg goto B -q
   $ echo 'new b' > B
-  $ hg amend a -m 'Unchanged manifest, but dirty workdir'
-  a: $ENOENT$ (?)
+  $ hg amend doesnt-exist -m 'Unchanged manifest, but dirty workdir'
+  doesnt-exist: $ENOENT$
   hint[amend-restack]: descendants of 112478962961 are left behind - use 'hg restack' to rebase them
   hint[hint-ack]: use 'hg hint --ack amend-restack' to silence these hints
 

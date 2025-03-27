@@ -3887,7 +3887,7 @@ def commit(ui, repo, commitfunc, pats, opts):
     dsguard = None
     # extract addremove carefully -- this function can be called from a command
     # that doesn't support addremove
-    if opts.get("addremove"):
+    if opts.get("addremove") or opts.get("automv"):
         dsguard = dirstateguard.dirstateguard(repo, "commit")
     with dsguard or util.nullcontextmanager():
         if dsguard:
@@ -3960,13 +3960,15 @@ def _amend(ui, repo, wctx, old, extra, opts, matcher):
         if len(old.parents()) > 1:
             # ctx.files() isn't reliable for merges, so fall back to the
             # slower repo.status() method
-            files = set([fn for st in repo.status(base, old)[:3] for fn in st])
+            files = {fn for st in repo.status(base, old)[:3] for fn in st}
         else:
             files = set(old.files())
 
         # add/remove the files to the working copy if the "addremove" option
         # was specified.
-        if opts.get("addremove") and scmutil.addremove(repo, matcher, opts):
+        if (opts.get("addremove") or opts.get("automv")) and scmutil.addremove(
+            repo, matcher, opts
+        ):
             raise error.Abort(
                 _("failed to mark all new/missing files as added/removed")
             )

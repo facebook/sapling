@@ -1640,6 +1640,13 @@ def clone(ui, source, dest=None, **opts):
         ("e", "edit", None, _("invoke editor on commit messages")),
         ("i", "interactive", None, _("use interactive mode")),
         ("M", "reuse-message", "", _("reuse commit message from REV"), _("REV")),
+        (
+            "",
+            "no-automv",
+            None,
+            _("disable automatic file move detection (DEPRECATED)"),
+        ),
+        ("", "no-move-detection", None, _("disable automatic file move detection")),
     ]
     + walkopts
     + commitopts
@@ -1699,6 +1706,9 @@ def commit(ui, repo, *pats, **opts):
     try:
         wlock = repo.wlock()
         lock = repo.lock()
+
+        opts["automv"] = not (opts.get("no_automv") or opts.get("no_move_detection"))
+
         return _docommit(ui, repo, *pats, **opts)
     finally:
         release(lock, wlock)

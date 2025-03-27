@@ -32,6 +32,7 @@ _order = []
 #
 # (If you permanently sunset an extension, add it here.)
 _ignoreextensions = {
+    "automv",
     "backups",
     "bookmarks",
     "bundle2hooks",

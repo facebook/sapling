@@ -109,7 +109,8 @@ commit added file that has been deleted
   $ cd ..
 
   $ hg commit -m commit-14 does-not-exist
-  abort: does-not-exist: * (glob)
+  does-not-exist: $ENOENT$
+  abort: does-not-exist: $ENOENT$
   [255]
 
 #if symlink

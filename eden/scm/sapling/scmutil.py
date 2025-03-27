@@ -951,6 +951,11 @@ def cleanupnodes(repo, replacements, operation, moves=None, metadata=None):
 def addremove(repo, matcher, opts):
     m = matcher
 
+    rename_detection_file_limit = None
+    if opts.get("automv"):
+        opts["similarity"] = repo.ui.configint("automv", "similarity")
+        rename_detection_file_limit = repo.ui.configint("automv", "max-files")
+
     try:
         similarity = float(opts.get("similarity") or 0)
     except ValueError:
@@ -975,25 +980,45 @@ def addremove(repo, matcher, opts):
     badmatch = matchmod.badmatch(m, badfn)
     added, unknown, deleted, removed, forgotten = _interestingfiles(repo, badmatch)
 
-    unknownset = set(unknown + forgotten)
-    toprint = unknownset.copy()
-    toprint.update(deleted)
-    for abs in sorted(toprint):
-        if repo.ui.verbose or not m.exact(abs):
-            if abs in unknownset:
-                status = _("adding %s\n") % m.uipath(abs)
-            else:
-                status = _("removing %s\n") % m.uipath(abs)
-            repo.ui.status(status)
+    # This subtle handling is for "sl commit", which without "--addremove" still wants to
+    # detect renames (via automv=True).
+    perform_addremove = opts.get("addremove", True)
 
-    renames = _findrenames(repo, m, added + unknown, removed + deleted, similarity)
+    if perform_addremove:
+        unknownset = set(unknown + forgotten)
+        toprint = unknownset.copy()
+        toprint.update(deleted)
+        for abs in sorted(toprint):
+            if repo.ui.verbose or not m.exact(abs):
+                if abs in unknownset:
+                    status = _("adding %s\n") % m.uipath(abs)
+                else:
+                    status = _("removing %s\n") % m.uipath(abs)
+                repo.ui.status(status)
+
+        # Tentatively include unknown and delete in added and removed for _findrenames() call.
+        added += unknown
+        removed += deleted
+
+    if (
+        rename_detection_file_limit
+        and len(added) + len(removed) > rename_detection_file_limit
+    ):
+        repo.ui.status_err(_("too many files - skipping rename detection"))
+        renames = {}
+    else:
+        renames = _findrenames(repo, m, added, removed, similarity)
 
     if not opts.get("dry_run"):
-        _markchanges(repo, unknown + forgotten, deleted, renames)
+        if perform_addremove:
+            _markchanges(repo, unknown + forgotten, deleted, renames)
+        else:
+            _markchanges(repo, [], [], renames)
 
-    for f in rejected:
-        if f in m.files():
-            return 1
+    if perform_addremove:
+        for f in rejected:
+            if f in m.files():
+                return 1
     return 0
 
 
