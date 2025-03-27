@@ -31,8 +31,9 @@ using NfsObjectFetchContextPtr = RefPtr<NfsObjectFetchContext>;
 NfsRequestContext::NfsRequestContext(
     uint32_t xid,
     std::string_view causeDetail,
-    ProcessAccessLog& processAccessLog)
-    : RequestContext{processAccessLog, makeRefPtr<NfsObjectFetchContext>(causeDetail)},
+    ProcessAccessLog& processAccessLog,
+    std::shared_ptr<StructuredLogger> logger)
+    : RequestContext{processAccessLog, std::move(logger), makeRefPtr<NfsObjectFetchContext>(causeDetail)},
       xid_{xid} {}
 
 } // namespace facebook::eden

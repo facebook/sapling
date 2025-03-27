@@ -548,6 +548,10 @@ class FuseChannel final : public FsChannel {
     return processAccessLog_;
   }
 
+  std::shared_ptr<StructuredLogger> getStructuredLogger() const {
+    return structuredLogger_;
+  }
+
   ImmediateFuture<folly::Unit> waitForPendingWrites() override {
     return folly::unit;
   }

@@ -2048,7 +2048,7 @@ ImmediateFuture<folly::Unit> Nfsd3ServerProcessor::dispatchRpc(
   // TODO: Add requestMetrics for NFS.
   std::shared_ptr<RequestMetricsScope::LockedRequestWatchList> nullRequestWatch;
   auto context = std::make_unique<NfsRequestContext>(
-      xid, handlerEntry.name, processAccessLog_);
+      xid, handlerEntry.name, processAccessLog_, structuredLogger_);
   context->startRequest(
       dispatcher_->getStats().copy(), handlerEntry.duration, nullRequestWatch);
   // The data that contextRef reference to is alive for the duration of the

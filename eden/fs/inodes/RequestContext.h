@@ -12,6 +12,7 @@
 #include <utility>
 
 #include "eden/common/telemetry/RequestMetricsScope.h"
+#include "eden/common/telemetry/StructuredLogger.h"
 #include "eden/fs/store/ImportPriority.h"
 #include "eden/fs/store/ObjectFetchContext.h"
 #include "eden/fs/telemetry/EdenStats.h"
@@ -90,8 +91,11 @@ class RequestContext {
  public:
   explicit RequestContext(
       ProcessAccessLog& pal,
+      std::shared_ptr<StructuredLogger> logger,
       FsObjectFetchContextPtr fsObjectFetchContext) noexcept
-      : pal_{pal}, fsObjectFetchContext_{std::move(fsObjectFetchContext)} {}
+      : pal_{pal},
+        logger_{std::move(logger)},
+        fsObjectFetchContext_{std::move(fsObjectFetchContext)} {}
   ~RequestContext() noexcept;
 
   RequestContext(const RequestContext&) = delete;
@@ -148,6 +152,7 @@ class RequestContext {
   std::shared_ptr<RequestMetricsScope::LockedRequestWatchList>
       requestWatchList_;
   ProcessAccessLog& pal_;
+  std::shared_ptr<StructuredLogger> logger_;
 
   const FsObjectFetchContextPtr fsObjectFetchContext_;
 };

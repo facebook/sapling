@@ -24,6 +24,7 @@ FuseRequestContext::FuseRequestContext(
     const fuse_in_header& fuseHeader)
     : RequestContext(
           channel->getProcessAccessLog(),
+          channel->getStructuredLogger(),
           makeRefPtr<FuseObjectFetchContext>(
               ProcessId{fuseHeader.pid},
               fuseHeader.opcode)),

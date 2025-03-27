@@ -40,6 +40,7 @@ class PrjfsRequestContext : public RequestContext {
       const PRJ_CALLBACK_DATA& prjfsData)
       : RequestContext(
             channel->getProcessAccessLog(),
+            channel->getStructuredLogger(),
             makeRefPtr<PrjfsObjectFetchContext>(
                 ProcessId{prjfsData.TriggeringProcessId})),
         channel_(std::move(channel)),

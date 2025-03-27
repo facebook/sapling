@@ -24,7 +24,8 @@ class NfsRequestContext : public RequestContext {
   explicit NfsRequestContext(
       uint32_t xid,
       std::string_view causeDetail,
-      ProcessAccessLog& processAccessLog);
+      ProcessAccessLog& processAccessLog,
+      std::shared_ptr<StructuredLogger> logger);
 
   NfsRequestContext(const NfsRequestContext&) = delete;
   NfsRequestContext& operator=(const NfsRequestContext&) = delete;

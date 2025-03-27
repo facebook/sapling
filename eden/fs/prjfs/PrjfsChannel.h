@@ -369,6 +369,10 @@ class PrjfsChannelInner {
     return processAccessLog_;
   }
 
+  std::shared_ptr<StructuredLogger> getStructuredLogger() const {
+    return structuredLogger_;
+  }
+
   void setMountChannel(PRJ_NAMESPACE_VIRTUALIZATION_CONTEXT channel) {
     mountChannel_ = channel;
   }
