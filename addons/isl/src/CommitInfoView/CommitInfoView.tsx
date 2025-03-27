@@ -259,7 +259,6 @@ export function CommitInfoDetails({commit}: {commit: CommitInfo}) {
     commit.diffId,
   );
 
-  const isSplitSuggestionSupported = provider?.isSplitSuggestionSupported() ?? false;
   const selectedFiles = uncommittedChanges.filter(f =>
     selection.isFullyOrPartiallySelected(f.path),
   );

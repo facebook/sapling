@@ -131,6 +131,7 @@ describe('CommitTreeList', () => {
     act(() => simulateCommits({value: allCommits}));
 
     expectMessageSentToServer({type: 'getConfig', name: 'extensions.commitcloud'});
+    // eslint-disable-next-line require-await
     await act(async () =>
       simulateMessageFromServer({type: 'gotConfig', name: 'extensions.commitcloud', value: '!'}),
     );
