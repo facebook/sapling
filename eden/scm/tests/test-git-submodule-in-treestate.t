@@ -1,4 +1,4 @@
-#require git no-eden
+#require git no-eden no-windows
 
 This test forces a submodule path to be tracked in treestate (which does not
 usually happen, but has been witnessed), and check related logic can handle
