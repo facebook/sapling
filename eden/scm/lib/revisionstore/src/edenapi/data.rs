@@ -208,6 +208,7 @@ mod tests {
     use types::fetch_mode::FetchMode;
     use types::testutil::*;
     use types::Blake3;
+    use types::FetchContext;
 
     use super::*;
     use crate::edenapi::File;
@@ -257,7 +258,7 @@ mod tests {
             .fetch(
                 std::iter::once(k.clone()),
                 FileAttributes::CONTENT,
-                FetchMode::AllowRemote,
+                FetchContext::new(FetchMode::AllowRemote),
             )
             .single()?
             .expect("key not found");
@@ -304,7 +305,7 @@ mod tests {
             .fetch(
                 std::iter::once(k.clone()),
                 FileAttributes::CONTENT,
-                FetchMode::RemoteOnly,
+                FetchContext::new(FetchMode::RemoteOnly),
             )
             .single()?
             .expect("key not found");
@@ -351,7 +352,7 @@ mod tests {
             .fetch_batch(
                 std::iter::once(k.clone()),
                 TreeAttributes::CONTENT,
-                FetchMode::AllowRemote,
+                FetchContext::new(FetchMode::AllowRemote),
             )
             .single()?
             .expect("key not found");
@@ -401,7 +402,7 @@ mod tests {
             .fetch_batch(
                 std::iter::once(k.clone()),
                 TreeAttributes::CONTENT,
-                FetchMode::RemoteOnly,
+                FetchContext::new(FetchMode::RemoteOnly),
             )
             .single()?
             .expect("key not found");
@@ -432,7 +433,7 @@ mod tests {
         let fetched = store.fetch_batch(
             std::iter::once(k.clone()),
             TreeAttributes::CONTENT,
-            FetchMode::AllowRemote,
+            FetchContext::new(FetchMode::AllowRemote),
         );
         let (found, missing, _errors) = fetched.consume();
         assert_eq!(found.len(), 0);
@@ -490,7 +491,7 @@ mod tests {
             .fetch(
                 std::iter::once(k.clone()),
                 FileAttributes::AUX,
-                FetchMode::AllowRemote,
+                FetchContext::new(FetchMode::AllowRemote),
             )
             .single()?
             .expect("key not found");
@@ -503,7 +504,7 @@ mod tests {
             .fetch(
                 std::iter::once(k.clone()),
                 FileAttributes::AUX,
-                FetchMode::AllowRemote,
+                FetchContext::new(FetchMode::AllowRemote),
             )
             .single()?
             .expect("key not found");

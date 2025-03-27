@@ -22,6 +22,7 @@ use storemodel::TreeEntry as NativeTreeEntry;
 use storemodel::TreeItemFlag;
 use storemodel::TreeStore as NativeTreeStore;
 use types::fetch_mode::FetchMode;
+use types::FetchContext;
 use types::Id20;
 use types::PathComponent;
 use types::PathComponentBuf;
@@ -55,7 +56,8 @@ py_class!(pub class KeyStore |py| {
     /// get_content_iter(keys, fetch_mode = (AllowRemote)) -> Iterator[Tuple[Key, bytes]]
     def get_content_iter(&self, keys: Serde<Vec<CompactKey>>, fetch_mode: Serde<FetchMode> = Serde(FetchMode::AllowRemote)) -> PyResult<PyIter> {
         let inner = self.inner(py);
-        let iter = inner.get_content_iter(keys.0.into_keys(), fetch_mode.0).map_pyerr(py)?;
+        let fctx = FetchContext::new(fetch_mode.0);
+        let iter = inner.get_content_iter(keys.0.into_keys(), fctx).map_pyerr(py)?;
         let iter = iter.into_compact_key();
         let iter = PyIter::new(py, iter)?;
         Ok(iter)
@@ -73,7 +75,8 @@ py_class!(pub class KeyStore |py| {
     def get_content(&self, path: &str, id: Serde<Id20>, fetch_mode: Serde<FetchMode> = Serde(FetchMode::AllowRemote)) -> PyResult<Serde<Bytes>> {
         let inner = self.inner(py);
         let path = RepoPath::from_str(path).map_pyerr(py)?;
-        let result = py.allow_threads(|| inner.get_content(path, id.0, fetch_mode.0)).map_pyerr(py)?;
+        let fctx = FetchContext::new(fetch_mode.0);
+        let result = py.allow_threads(|| inner.get_content(path, id.0, fctx)).map_pyerr(py)?;
         Ok(Serde(result))
     }
 
@@ -245,7 +248,8 @@ py_class!(pub class TreeStore |py| {
     /// get_tree_iter(keys, fetch_mode) -> Iterator[Tuple[Key, TreeEntry]]
     def get_tree_iter(&self, keys: Serde<Vec<CompactKey>>, fetch_mode: Serde<FetchMode> = Serde(FetchMode::AllowRemote)) -> PyResult<PyIter> {
         let inner = self.inner(py);
-        let iter = inner.get_tree_iter(keys.0.into_keys(), fetch_mode.0).map_pyerr(py)?;
+        let fctx = FetchContext::new(fetch_mode.0);
+        let iter = inner.get_tree_iter(keys.0.into_keys(), fctx).map_pyerr(py)?;
         PyIter::new_custom(py, iter, |py, (key, entry)| {
             Ok((Serde(key.into_compact_key()), TreeEntry::create_instance(py, entry)?).to_py_object(py).into_object())
         })

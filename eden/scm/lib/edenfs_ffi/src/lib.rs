@@ -25,7 +25,7 @@ use pathmatcher::TreeMatcher;
 use repo::repo::Repo;
 use sparse::Matcher;
 use sparse::Root;
-use types::fetch_mode::FetchMode;
+use types::FetchContext;
 use types::HgId;
 use types::RepoPath;
 use types::RepoPathBuf;
@@ -282,7 +282,7 @@ fn _profile_contents_from_repo(
             },
         };
 
-        let data = repo_store.get_content(&id.repo_path, file_id, FetchMode::AllowRemote)?;
+        let data = repo_store.get_content(&id.repo_path, file_id, FetchContext::default())?;
         let mut root = Root::single_profile(data, id.repo_path.to_string())?;
         root.set_version_override(Some("2".to_owned()));
         let matcher = root.matcher(|_| Ok(Some(vec![])))?;

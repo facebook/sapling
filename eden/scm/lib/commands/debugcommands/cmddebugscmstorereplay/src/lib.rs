@@ -14,7 +14,7 @@ use cmdutil::Result;
 use repo::repo::Repo;
 use revisionstore::scmstore::activitylogger;
 use revisionstore::scmstore::FileStoreBuilder;
-use types::fetch_mode::FetchMode;
+use types::FetchContext;
 
 define_flags! {
     pub struct DebugScmStoreReplayOpts {
@@ -41,7 +41,7 @@ pub fn run(ctx: ReqCtx<DebugScmStoreReplayOpts>, repo: &Repo) -> Result<u8> {
             activitylogger::ActivityType::FileFetch => {
                 key_count += log.keys.len();
                 fetch_count += 1;
-                let result = store.fetch(log.keys, log.attrs, FetchMode::AllowRemote);
+                let result = store.fetch(log.keys, log.attrs, FetchContext::default());
                 match result.missing() {
                     Ok(failed) => {
                         if !failed.is_empty() {

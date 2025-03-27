@@ -244,9 +244,9 @@ mod tests {
     use fs_err::remove_file;
     use storemodel::SerializationFormat;
     use tempfile::TempDir;
-    use types::fetch_mode::FetchMode;
     use types::testutil::*;
     use types::Blake3;
+    use types::FetchContext;
 
     use super::*;
     use crate::indexedlogdatastore::IndexedLogHgIdDataStore;
@@ -378,7 +378,7 @@ mod tests {
             .fetch(
                 std::iter::once(k),
                 FileAttributes::AUX,
-                FetchMode::AllowRemote,
+                FetchContext::default(),
             )
             .single()?
             .expect("key not found");
@@ -432,7 +432,7 @@ mod tests {
             .fetch(
                 std::iter::once(k.clone()),
                 FileAttributes::AUX,
-                FetchMode::AllowRemote,
+                FetchContext::default(),
             )
             .single()?
             .expect("key not found");

@@ -24,6 +24,7 @@ use storemodel::TreeAuxData;
 use storemodel::TreeEntry;
 use types::fetch_mode::FetchMode;
 use types::hgid;
+use types::FetchContext;
 use types::HgId;
 use types::Key;
 use types::RepoPath;
@@ -126,17 +127,17 @@ impl KeyStore for CachingTreeStore {
     fn get_content_iter(
         &self,
         keys: Vec<Key>,
-        fetch_mode: FetchMode,
+        fctx: FetchContext,
     ) -> Result<BoxIterator<Result<(Key, Bytes)>>> {
-        self.key_store.get_content_iter(keys, fetch_mode)
+        self.key_store.get_content_iter(keys, fctx)
     }
 
     fn get_local_content(&self, path: &RepoPath, hgid: HgId) -> Result<Option<Bytes>> {
         self.key_store.get_local_content(path, hgid)
     }
 
-    fn get_content(&self, path: &RepoPath, hgid: HgId, fetch_mode: FetchMode) -> Result<Bytes> {
-        self.key_store.get_content(path, hgid, fetch_mode)
+    fn get_content(&self, path: &RepoPath, hgid: HgId, fctx: FetchContext) -> Result<Bytes> {
+        self.key_store.get_content(path, hgid, fctx)
     }
 
     fn prefetch(&self, keys: Vec<Key>) -> Result<()> {
@@ -181,17 +182,17 @@ impl TreeStore for CachingTreeStore {
     fn get_tree_iter(
         &self,
         keys: Vec<Key>,
-        fetch_mode: FetchMode,
+        fctx: FetchContext,
     ) -> Result<BoxIterator<Result<(Key, Box<dyn TreeEntry>)>>> {
-        self.store.get_tree_iter(keys, fetch_mode)
+        self.store.get_tree_iter(keys, fctx)
     }
 
     fn get_tree_aux_data_iter(
         &self,
         keys: Vec<Key>,
-        fetch_mode: FetchMode,
+        fctx: FetchContext,
     ) -> Result<BoxIterator<Result<(Key, TreeAuxData)>>> {
-        self.store.get_tree_aux_data_iter(keys, fetch_mode)
+        self.store.get_tree_aux_data_iter(keys, fctx)
     }
 
     fn get_local_tree_aux_data(&self, path: &RepoPath, id: HgId) -> Result<Option<TreeAuxData>> {
@@ -202,9 +203,9 @@ impl TreeStore for CachingTreeStore {
         &self,
         path: &RepoPath,
         id: HgId,
-        fetch_mode: FetchMode,
+        fctx: FetchContext,
     ) -> Result<TreeAuxData> {
-        self.store.get_tree_aux_data(path, id, fetch_mode)
+        self.store.get_tree_aux_data(path, id, fctx)
     }
 
     fn clone_tree_store(&self) -> Box<dyn TreeStore> {
@@ -284,7 +285,7 @@ mod test {
                 Key::new(dir2_path.clone(), dir2_id),
                 Key::new(top_level_path.clone(), top_level_id),
             ],
-            FetchMode::LocalOnly,
+            FetchContext::new(FetchMode::LocalOnly),
         )?;
 
         // TreeStore methods will only contain results from the underlying store. Any cached trees

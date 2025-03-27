@@ -409,8 +409,8 @@ mod tests {
     use fs_err::remove_file;
     use minibytes::Bytes;
     use tempfile::TempDir;
-    use types::fetch_mode::FetchMode;
     use types::testutil::*;
+    use types::FetchContext;
 
     use super::*;
     use crate::scmstore::FileAttributes;
@@ -722,7 +722,7 @@ mod tests {
             .fetch(
                 std::iter::once(k),
                 FileAttributes::CONTENT,
-                FetchMode::AllowRemote,
+                FetchContext::default(),
             )
             .single()?
             .expect("key not found");
@@ -764,7 +764,7 @@ mod tests {
             .fetch(
                 std::iter::once(k),
                 FileAttributes::CONTENT,
-                FetchMode::AllowRemote,
+                FetchContext::default(),
             )
             .single()?
             .expect("key not found");
@@ -815,7 +815,7 @@ mod tests {
         let fetched = store.fetch(
             vec![lfs_key.clone(), nonlfs_key.clone()],
             FileAttributes::CONTENT,
-            FetchMode::AllowRemote,
+            FetchContext::default(),
         );
 
         let (mut found, missing, _errors) = fetched.consume();

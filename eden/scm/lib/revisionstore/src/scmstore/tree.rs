@@ -14,6 +14,7 @@ use ::metrics::Counter;
 use ::types::fetch_mode::FetchMode;
 use ::types::hgid::NULL_ID;
 use ::types::tree::TreeItemFlag;
+use ::types::FetchContext;
 use ::types::HgId;
 use ::types::Key;
 use ::types::Node;
@@ -146,7 +147,7 @@ impl TreeStore {
         &self,
         reqs: impl Iterator<Item = Key>,
         attrs: TreeAttributes,
-        fetch_mode: FetchMode,
+        fctx: FetchContext,
     ) -> FetchResults<StoreTree> {
         let mut reqs = reqs.peekable();
         if reqs.peek().is_none() {
@@ -171,7 +172,7 @@ impl TreeStore {
         };
 
         let found_tx2 = found_tx.clone();
-        let mut state = FetchState::new(reqs, attrs, found_tx, fetch_mode, bar.clone());
+        let mut state = FetchState::new(reqs, attrs, found_tx, fctx.clone(), bar.clone());
 
         if tracing::enabled!(target: "tree_fetches", tracing::Level::TRACE) {
             let attrs = [
@@ -212,16 +213,16 @@ impl TreeStore {
         let fetch_children_metadata = match self.tree_metadata_mode {
             TreeMetadataMode::Always => true,
             TreeMetadataMode::Never => false,
-            TreeMetadataMode::OptIn => fetch_mode.contains(FetchMode::PREFETCH),
+            TreeMetadataMode::OptIn => fctx.mode().contains(FetchMode::PREFETCH),
         };
         let fetch_tree_aux_data = self.fetch_tree_aux_data || attrs.aux_data;
         let fetch_parents = attrs.parents || self.prefetch_tree_parents;
 
-        let fetch_local = fetch_mode.contains(FetchMode::LOCAL);
-        let fetch_remote = fetch_mode.contains(FetchMode::REMOTE);
+        let fetch_local = fctx.mode().contains(FetchMode::LOCAL);
+        let fetch_remote = fctx.mode().contains(FetchMode::REMOTE);
 
         tracing::debug!(
-            ?fetch_mode,
+            ?fctx,
             ?attrs,
             fetch_children_metadata,
             fetch_tree_aux_data,
@@ -550,7 +551,7 @@ impl TreeStore {
             .fetch_batch(
                 keys.into_iter(),
                 TreeAttributes::CONTENT,
-                FetchMode::AllowRemote,
+                FetchContext::default(),
             )
             .missing()?
             .into_iter()
@@ -563,7 +564,7 @@ impl HgIdDataStore for TreeStore {
     fn get(&self, key: StoreKey) -> Result<StoreResult<Vec<u8>>> {
         Ok(
             match self
-                .fetch_batch(std::iter::once(key.clone()).filter_map(StoreKey::maybe_into_key), TreeAttributes::CONTENT, FetchMode::AllowRemote)
+                .fetch_batch(std::iter::once(key.clone()).filter_map(StoreKey::maybe_into_key), TreeAttributes::CONTENT, FetchContext::default())
                 .single()?
             {
                 Some(entry) => StoreResult::Found(entry.content.expect("content attribute not found despite being requested and returned as complete").hg_content()?.into_vec()),
@@ -652,7 +653,7 @@ impl HgIdHistoryStore for TreeStore {
         self.fetch_batch(
             std::iter::once(key.clone()),
             TreeAttributes::PARENTS,
-            FetchMode::AllowRemote,
+            FetchContext::default(),
         )
         .single()
         .map(|t| {
@@ -690,7 +691,7 @@ impl RemoteHistoryStore for TreeStore {
         self.fetch_batch(
             keys.iter().filter_map(StoreKey::maybe_as_key).cloned(),
             TreeAttributes::PARENTS,
-            FetchMode::AllowRemote,
+            FetchContext::default(),
         )
         .missing()?;
         Ok(())
@@ -717,7 +718,7 @@ impl storemodel::KeyStore for TreeStore {
             .fetch_batch(
                 std::iter::once(key.clone()),
                 TreeAttributes::CONTENT,
-                FetchMode::LocalOnly,
+                FetchContext::new(FetchMode::LocalOnly),
             )
             .single()?
         {
@@ -730,18 +731,14 @@ impl storemodel::KeyStore for TreeStore {
         &self,
         path: &RepoPath,
         node: Node,
-        fetch_mode: FetchMode,
+        fctx: FetchContext,
     ) -> Result<minibytes::Bytes> {
         if node.is_null() {
             return Ok(Default::default());
         }
         let key = Key::new(path.to_owned(), node);
         match self
-            .fetch_batch(
-                std::iter::once(key.clone()),
-                TreeAttributes::CONTENT,
-                fetch_mode,
-            )
+            .fetch_batch(std::iter::once(key.clone()), TreeAttributes::CONTENT, fctx)
             .single()?
         {
             Some(entry) => Ok(entry.content.expect("no tree content").hg_content()?),
@@ -752,9 +749,9 @@ impl storemodel::KeyStore for TreeStore {
     fn get_content_iter(
         &self,
         keys: Vec<Key>,
-        fetch_mode: FetchMode,
+        fctx: FetchContext,
     ) -> anyhow::Result<BoxIterator<anyhow::Result<(Key, Bytes)>>> {
-        let fetched = self.fetch_batch(keys.into_iter(), TreeAttributes::CONTENT, fetch_mode);
+        let fetched = self.fetch_batch(keys.into_iter(), TreeAttributes::CONTENT, fctx);
         let iter = fetched
             .into_iter()
             .map(|entry| -> anyhow::Result<(Key, Bytes)> {
@@ -771,7 +768,7 @@ impl storemodel::KeyStore for TreeStore {
         self.fetch_batch(
             keys.into_iter(),
             TreeAttributes::CONTENT,
-            FetchMode::AllowRemote,
+            FetchContext::default(),
         )
         .consume();
         Ok(())
@@ -873,9 +870,9 @@ impl storemodel::TreeStore for TreeStore {
     fn get_tree_iter(
         &self,
         keys: Vec<Key>,
-        fetch_mode: FetchMode,
+        fctx: FetchContext,
     ) -> anyhow::Result<BoxIterator<anyhow::Result<(Key, Box<dyn TreeEntry>)>>> {
-        let fetched = self.fetch_batch(keys.into_iter(), TreeAttributes::CONTENT, fetch_mode);
+        let fetched = self.fetch_batch(keys.into_iter(), TreeAttributes::CONTENT, fctx);
         let iter = fetched
             .into_iter()
             .map(|entry| -> anyhow::Result<(Key, Box<dyn TreeEntry>)> {
@@ -896,9 +893,9 @@ impl storemodel::TreeStore for TreeStore {
     fn get_tree_aux_data_iter(
         &self,
         keys: Vec<Key>,
-        fetch_mode: FetchMode,
+        fctx: FetchContext,
     ) -> anyhow::Result<BoxIterator<anyhow::Result<(Key, TreeAuxData)>>> {
-        let fetched = self.fetch_batch(keys.into_iter(), TreeAttributes::AUX_DATA, fetch_mode);
+        let fetched = self.fetch_batch(keys.into_iter(), TreeAttributes::AUX_DATA, fctx);
         let iter = fetched
             .into_iter()
             .map(|entry| -> anyhow::Result<(Key, TreeAuxData)> {

@@ -19,8 +19,8 @@ use storemodel::InsertOpts;
 use storemodel::Kind;
 use storemodel::SerializationFormat;
 pub use storemodel::TreeStore;
-use types::fetch_mode::FetchMode;
 pub use types::tree::TreeItemFlag as Flag;
+use types::FetchContext;
 use types::HgId;
 use types::Key;
 use types::PathComponent;
@@ -49,7 +49,7 @@ impl InnerStore {
         .in_scope(|| {
             let bytes = self
                 .tree_store
-                .get_content(path, hgid, FetchMode::AllowRemote)?;
+                .get_content(path, hgid, FetchContext::default())?;
             Ok(Entry(bytes, self.tree_store.format()))
         })
     }

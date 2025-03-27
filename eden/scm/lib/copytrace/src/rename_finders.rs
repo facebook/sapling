@@ -27,7 +27,7 @@ use parking_lot::Mutex;
 use pathmatcher::AlwaysMatcher;
 use pathmatcher::Matcher;
 use storemodel::FileStore;
-use types::fetch_mode::FetchMode;
+use types::FetchContext;
 use types::Key;
 use types::RepoPath;
 use types::RepoPathBuf;
@@ -479,14 +479,14 @@ impl RenameFinderInner {
         let source_content = spawn_blocking({
             let path = source_key.path.clone();
             let reader = self.file_reader.clone();
-            move || reader.get_content(&path, source_key.hgid, FetchMode::AllowRemote)
+            move || reader.get_content(&path, source_key.hgid, FetchContext::default())
         })
         .await??;
 
         block_in_place(move || {
             let iter = self
                 .file_reader
-                .get_content_iter(keys, FetchMode::AllowRemote)?;
+                .get_content_iter(keys, FetchContext::default())?;
             for entry in iter {
                 let (k, candidate_content) = entry?;
                 if is_content_similar(&source_content, &candidate_content, &self.config)? {

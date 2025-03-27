@@ -51,10 +51,10 @@ use treestate::filestate::FileStateV2;
 use treestate::filestate::StateFlags;
 use treestate::treestate::TreeState;
 use types::errors::KeyedError;
-use types::fetch_mode::FetchMode;
 use types::hgid::MF_ADDED_NODE_ID;
 use types::hgid::MF_MODIFIED_NODE_ID;
 use types::hgid::MF_UNTRACKED_NODE_ID;
+use types::FetchContext;
 use types::HgId;
 use types::Key;
 use types::RepoPath;
@@ -274,7 +274,7 @@ impl CheckoutPlan {
             })
             .collect();
         let keys: Vec<_> = actions.keys().cloned().collect();
-        let fetch_data_iter = store.get_content_iter(keys, FetchMode::AllowRemote)?;
+        let fetch_data_iter = store.get_content_iter(keys, FetchContext::default())?;
 
         let stats = thread::scope(|s| -> Result<CheckoutStats> {
             const WORK_QUEUE_SIZE: usize = 10_000;
@@ -479,7 +479,7 @@ impl CheckoutPlan {
         });
         let keys: Vec<_> = keys.collect();
         let (mut count, mut size) = (0, 0);
-        let iter = store.get_content_iter(keys, FetchMode::AllowRemote)?;
+        let iter = store.get_content_iter(keys, FetchContext::default())?;
         for result in iter {
             let (_key, data) = result?;
             count += 1;
@@ -608,7 +608,7 @@ impl CheckoutPlan {
         }
 
         let mut paths = Vec::new();
-        for entry in store.get_content_iter(check_content, FetchMode::AllowRemote)? {
+        for entry in store.get_content_iter(check_content, FetchContext::default())? {
             let (key, data) = entry?;
             if let Some(path) = Self::check_content(vfs, key, data) {
                 paths.push(path);

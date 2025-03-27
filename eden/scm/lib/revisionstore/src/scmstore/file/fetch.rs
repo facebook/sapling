@@ -30,10 +30,10 @@ use storemodel::SerializationFormat;
 use tracing::debug;
 use tracing::field;
 use types::errors::NetworkError;
-use types::fetch_mode::FetchMode;
 use types::CasDigest;
 use types::CasDigestType;
 use types::CasFetchedStats;
+use types::FetchContext;
 use types::Id20;
 use types::Key;
 use types::Sha256;
@@ -82,7 +82,7 @@ pub struct FetchState {
 
     lfs_enabled: bool,
 
-    fetch_mode: FetchMode,
+    fctx: FetchContext,
 
     format: SerializationFormat,
 
@@ -96,12 +96,12 @@ impl FetchState {
         file_store: &FileStore,
         found_tx: Sender<Result<(Key, StoreFile), KeyFetchError>>,
         lfs_enabled: bool,
-        fetch_mode: FetchMode,
+        fctx: FetchContext,
         cas_cache_threshold_bytes: Option<u64>,
         bar: Arc<ProgressBar>,
     ) -> Self {
         FetchState {
-            common: CommonFetchState::new(keys, attrs, found_tx, fetch_mode, bar),
+            common: CommonFetchState::new(keys, attrs, found_tx, fctx.clone(), bar),
             errors: FetchErrors::new(),
             metrics: &metrics::FILE_STORE_FETCH_METRICS,
 
@@ -110,7 +110,7 @@ impl FetchState {
             compute_aux_data: file_store.compute_aux_data,
             lfs_enabled,
             format: file_store.format(),
-            fetch_mode,
+            fctx,
             cas_cache_threshold_bytes,
         }
     }
@@ -224,7 +224,7 @@ impl FetchState {
                 count += 1;
                 bar.increase_position(1);
 
-                let res = if self.fetch_mode.ignore_result() {
+                let res = if self.fctx.mode().ignore_result() {
                     store.contains(&key.hgid).map(|contains| {
                         if contains {
                             // Insert a stub entry if caller is ignoring the results.
@@ -298,7 +298,7 @@ impl FetchState {
         let mut errors = 0;
         let mut count = 0;
         let mut error: Option<String> = None;
-        let ignore_results = self.fetch_mode.ignore_result() && !have_cas;
+        let ignore_results = self.fctx.mode().ignore_result() && !have_cas;
 
         let mut wants_aux = FileAttributes::AUX;
         if have_cas && loc == StoreLocation::Cache {
@@ -432,7 +432,7 @@ impl FetchState {
             let key = store_key.clone().maybe_into_key().expect(
                 "no Key present in StoreKey, even though this should be guaranteed by pending_all",
             );
-            match store.fetch_available(&store_key, self.fetch_mode.ignore_result()) {
+            match store.fetch_available(&store_key, self.fctx.mode().ignore_result()) {
                 Ok(Some(entry)) => {
                     bar.increase_position(1);
                     // TODO(meyer): Make found behavior w/r/t LFS pointers and content consistent
@@ -813,7 +813,7 @@ impl FetchState {
 
         let bar = ProgressBar::new_adhoc("CAS", digests.len() as u64, "files");
 
-        if self.fetch_mode.ignore_result() {
+        if self.fctx.mode().ignore_result() {
             // Prefetching files, so we don't need the data, just to ensure digests are in the CAS local Cache.
             block_on(async {
                 cas_client.prefetch(&digests, CasDigestType::File).await.for_each(|results| {
@@ -1100,7 +1100,7 @@ impl FetchState {
         }
 
         // When ignoring results, we don't reliably have file content, so don't derive.
-        if self.fetch_mode.ignore_result() {
+        if self.fctx.mode().ignore_result() {
             return;
         }
 
@@ -1135,7 +1135,7 @@ impl FetchState {
 
                         let new = new.mask(self.common.request_attrs);
 
-                        if !self.fetch_mode.ignore_result() {
+                        if !self.fctx.mode().ignore_result() {
                             let _ = self.common.found_tx.send(Ok((key.clone(), new)));
                         }
 

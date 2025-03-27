@@ -39,7 +39,7 @@ use storemodel::TreeAuxData;
 use storemodel::TreeEntry;
 use storemodel::TreeStore;
 use tracing::instrument;
-use types::fetch_mode::FetchMode;
+use types::FetchContext;
 use types::HgId;
 use types::Key;
 use types::RepoPath;
@@ -176,21 +176,21 @@ impl BackingStore {
     }
 
     #[instrument(level = "trace", skip(self))]
-    pub fn get_blob(&self, node: &[u8], fetch_mode: FetchMode) -> Result<Option<Vec<u8>>> {
-        self.maybe_reload().filestore.single(node, fetch_mode)
+    pub fn get_blob(&self, node: &[u8], fctx: FetchContext) -> Result<Option<Vec<u8>>> {
+        self.maybe_reload().filestore.single(node, fctx)
     }
 
     /// Fetch file contents in batch. Whenever a blob is fetched, the supplied `resolve` function is
     /// called with the file content or an error message, and the index of the blob in the request
     /// array.
     #[instrument(level = "trace", skip(self, resolve))]
-    pub fn get_blob_batch<F>(&self, keys: Vec<Key>, fetch_mode: FetchMode, resolve: F)
+    pub fn get_blob_batch<F>(&self, keys: Vec<Key>, fctx: FetchContext, resolve: F)
     where
         F: Fn(usize, Result<Option<Vec<u8>>>),
     {
         self.maybe_reload()
             .filestore
-            .batch_with_callback(keys, fetch_mode, resolve)
+            .batch_with_callback(keys, fctx, resolve)
     }
 
     #[instrument(level = "trace", skip(self))]
@@ -211,51 +211,47 @@ impl BackingStore {
     }
 
     #[instrument(level = "trace", skip(self))]
-    pub fn get_tree(
-        &self,
-        node: &[u8],
-        fetch_mode: FetchMode,
-    ) -> Result<Option<Box<dyn TreeEntry>>> {
-        self.maybe_reload().treestore.single(node, fetch_mode)
+    pub fn get_tree(&self, node: &[u8], fctx: FetchContext) -> Result<Option<Box<dyn TreeEntry>>> {
+        self.maybe_reload().treestore.single(node, fctx)
     }
 
     /// Fetch tree contents in batch. Whenever a tree is fetched, the supplied `resolve` function is
     /// called with the tree content or an error message, and the index of the tree in the request
     /// array.
     #[instrument(level = "trace", skip(self, resolve))]
-    pub fn get_tree_batch<F>(&self, keys: Vec<Key>, fetch_mode: FetchMode, resolve: F)
+    pub fn get_tree_batch<F>(&self, keys: Vec<Key>, fctx: FetchContext, resolve: F)
     where
         F: Fn(usize, Result<Option<Box<dyn TreeEntry>>>),
     {
         self.maybe_reload()
             .treestore
-            .batch_with_callback(keys, fetch_mode, resolve)
+            .batch_with_callback(keys, fctx, resolve)
     }
 
-    pub fn get_file_aux(&self, node: &[u8], fetch_mode: FetchMode) -> Result<Option<FileAuxData>> {
-        self.maybe_reload().filestore.single(node, fetch_mode)
+    pub fn get_file_aux(&self, node: &[u8], fctx: FetchContext) -> Result<Option<FileAuxData>> {
+        self.maybe_reload().filestore.single(node, fctx)
     }
 
-    pub fn get_file_aux_batch<F>(&self, keys: Vec<Key>, fetch_mode: FetchMode, resolve: F)
+    pub fn get_file_aux_batch<F>(&self, keys: Vec<Key>, fctx: FetchContext, resolve: F)
     where
         F: Fn(usize, Result<Option<FileAuxData>>),
     {
         self.maybe_reload()
             .filestore
-            .batch_with_callback(keys, fetch_mode, resolve)
+            .batch_with_callback(keys, fctx, resolve)
     }
 
-    pub fn get_tree_aux(&self, node: &[u8], fetch_mode: FetchMode) -> Result<Option<TreeAuxData>> {
-        self.maybe_reload().treestore.single(node, fetch_mode)
+    pub fn get_tree_aux(&self, node: &[u8], fctx: FetchContext) -> Result<Option<TreeAuxData>> {
+        self.maybe_reload().treestore.single(node, fctx)
     }
 
-    pub fn get_tree_aux_batch<F>(&self, keys: Vec<Key>, fetch_mode: FetchMode, resolve: F)
+    pub fn get_tree_aux_batch<F>(&self, keys: Vec<Key>, fctx: FetchContext, resolve: F)
     where
         F: Fn(usize, Result<Option<TreeAuxData>>),
     {
         self.maybe_reload()
             .treestore
-            .batch_with_callback(keys, fetch_mode, resolve)
+            .batch_with_callback(keys, fctx, resolve)
     }
 
     pub fn dogfooding_host(&self) -> Result<bool> {
@@ -488,40 +484,36 @@ where
     IntermediateType: Into<OutputType>,
 {
     fn get_local_single(&self, path: &RepoPath, id: HgId) -> Result<Option<IntermediateType>>;
-    fn get_single(
-        &self,
-        path: &RepoPath,
-        id: HgId,
-        fetch_mode: FetchMode,
-    ) -> Result<IntermediateType>;
+    fn get_single(&self, path: &RepoPath, id: HgId, fctx: FetchContext)
+    -> Result<IntermediateType>;
     fn get_batch_iter(
         &self,
         keys: Vec<Key>,
-        fetch_mode: FetchMode,
+        fctx: FetchContext,
     ) -> Result<BoxIterator<Result<(Key, IntermediateType)>>>;
 
     // The following methods are "derived" from the above.
 
-    fn single(&self, node: &[u8], fetch_mode: FetchMode) -> Result<Option<OutputType>> {
+    fn single(&self, node: &[u8], fctx: FetchContext) -> Result<Option<OutputType>> {
         let hgid = HgId::from_slice(node)?;
-        if fetch_mode.is_local() {
+        if fctx.mode().is_local() {
             let maybe_value = self
                 .get_local_single(RepoPath::empty(), hgid)?
                 .map(|v| v.into());
             Ok(maybe_value)
         } else {
             // FetchMode::RemoteOnly and FetchMode::AllowRemote
-            let value = self.get_single(RepoPath::empty(), hgid, fetch_mode)?;
+            let value = self.get_single(RepoPath::empty(), hgid, fctx)?;
             let value = value.into();
             Ok(Some(value))
         }
     }
 
-    fn batch_with_callback<F>(&self, keys: Vec<Key>, fetch_mode: FetchMode, resolve: F)
+    fn batch_with_callback<F>(&self, keys: Vec<Key>, fctx: FetchContext, resolve: F)
     where
         F: Fn(usize, Result<Option<OutputType>>),
     {
-        if fetch_mode.is_local() {
+        if fctx.mode().is_local() {
             // PERF: In some cases this might be sped up using threads in theory.
             // But this needs to be backed by real benchmark data. Besides, edenfs
             // does not call into this path often.
@@ -538,7 +530,7 @@ where
             let mut key_to_index = indexed_keys(&keys);
             let mut remaining = keys.len();
             let mut errors = Vec::new();
-            match self.get_batch_iter(keys, fetch_mode) {
+            match self.get_batch_iter(keys, fctx) {
                 Err(e) => errors.push(e),
                 Ok(iter) => {
                     for entry in iter {
@@ -579,15 +571,15 @@ impl LocalRemoteImpl<Bytes, Vec<u8>> for Arc<dyn FileStore> {
     fn get_local_single(&self, path: &RepoPath, id: HgId) -> Result<Option<Bytes>> {
         self.get_local_content(path, id)
     }
-    fn get_single(&self, path: &RepoPath, id: HgId, fetch_mode: FetchMode) -> Result<Bytes> {
-        self.get_content(path, id, fetch_mode)
+    fn get_single(&self, path: &RepoPath, id: HgId, fctx: FetchContext) -> Result<Bytes> {
+        self.get_content(path, id, fctx)
     }
     fn get_batch_iter(
         &self,
         keys: Vec<Key>,
-        fetch_mode: FetchMode,
+        fctx: FetchContext,
     ) -> Result<BoxIterator<Result<(Key, Bytes)>>> {
-        self.get_content_iter(keys, fetch_mode)
+        self.get_content_iter(keys, fctx)
     }
 }
 
@@ -596,15 +588,15 @@ impl LocalRemoteImpl<FileAuxData> for Arc<dyn FileStore> {
     fn get_local_single(&self, path: &RepoPath, id: HgId) -> Result<Option<FileAuxData>> {
         self.get_local_aux(path, id)
     }
-    fn get_single(&self, path: &RepoPath, id: HgId, fetch_mode: FetchMode) -> Result<FileAuxData> {
-        self.get_aux(path, id, fetch_mode)
+    fn get_single(&self, path: &RepoPath, id: HgId, fctx: FetchContext) -> Result<FileAuxData> {
+        self.get_aux(path, id, fctx)
     }
     fn get_batch_iter(
         &self,
         keys: Vec<Key>,
-        fetch_mode: FetchMode,
+        fctx: FetchContext,
     ) -> Result<BoxIterator<Result<(Key, FileAuxData)>>> {
-        self.get_aux_iter(keys, fetch_mode)
+        self.get_aux_iter(keys, fctx)
     }
 }
 
@@ -617,10 +609,10 @@ impl LocalRemoteImpl<Box<dyn TreeEntry>> for Arc<dyn TreeStore> {
         &self,
         path: &RepoPath,
         id: HgId,
-        fetch_mode: FetchMode,
+        fctx: FetchContext,
     ) -> Result<Box<dyn TreeEntry>> {
         match self
-            .get_tree_iter(vec![Key::new(path.to_owned(), id)], fetch_mode)?
+            .get_tree_iter(vec![Key::new(path.to_owned(), id)], fctx)?
             .next()
         {
             Some(Ok((_key, tree))) => Ok(tree),
@@ -631,9 +623,9 @@ impl LocalRemoteImpl<Box<dyn TreeEntry>> for Arc<dyn TreeStore> {
     fn get_batch_iter(
         &self,
         keys: Vec<Key>,
-        fetch_mode: FetchMode,
+        fctx: FetchContext,
     ) -> Result<BoxIterator<Result<(Key, Box<dyn TreeEntry>)>>> {
-        self.get_tree_iter(keys, fetch_mode)
+        self.get_tree_iter(keys, fctx)
     }
 }
 
@@ -642,15 +634,15 @@ impl LocalRemoteImpl<TreeAuxData> for Arc<dyn TreeStore> {
     fn get_local_single(&self, path: &RepoPath, id: HgId) -> Result<Option<TreeAuxData>> {
         self.get_local_tree_aux_data(path, id)
     }
-    fn get_single(&self, path: &RepoPath, id: HgId, fetch_mode: FetchMode) -> Result<TreeAuxData> {
-        self.get_tree_aux_data(path, id, fetch_mode)
+    fn get_single(&self, path: &RepoPath, id: HgId, fctx: FetchContext) -> Result<TreeAuxData> {
+        self.get_tree_aux_data(path, id, fctx)
     }
     fn get_batch_iter(
         &self,
         keys: Vec<Key>,
-        fetch_mode: FetchMode,
+        fctx: FetchContext,
     ) -> Result<BoxIterator<Result<(Key, TreeAuxData)>>> {
-        self.get_tree_aux_data_iter(keys, fetch_mode)
+        self.get_tree_aux_data_iter(keys, fctx)
     }
 }
 

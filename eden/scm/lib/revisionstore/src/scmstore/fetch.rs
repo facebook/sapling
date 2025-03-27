@@ -15,7 +15,7 @@ use anyhow::Result;
 use flume::Sender;
 use progress_model::ProgressBar;
 use types::errors::KeyedError;
-use types::fetch_mode::FetchMode;
+use types::FetchContext;
 use types::Key;
 
 use crate::scmstore::attrs::StoreAttrs;
@@ -30,7 +30,7 @@ pub(crate) struct CommonFetchState<T: StoreValue> {
 
     pub found_tx: Sender<Result<(Key, T), KeyFetchError>>,
 
-    pub mode: FetchMode,
+    pub fctx: FetchContext,
 
     bar: Arc<ProgressBar>,
 }
@@ -40,14 +40,14 @@ impl<T: StoreValue + std::fmt::Debug> CommonFetchState<T> {
         keys: impl IntoIterator<Item = Key>,
         attrs: T::Attrs,
         found_tx: Sender<Result<(Key, T), KeyFetchError>>,
-        mode: FetchMode,
+        fctx: FetchContext,
         bar: Arc<ProgressBar>,
     ) -> Self {
         Self {
             pending: keys.into_iter().map(|key| (key, T::default())).collect(),
             request_attrs: attrs,
             found_tx,
-            mode,
+            fctx,
             bar,
         }
     }
@@ -97,7 +97,7 @@ impl<T: StoreValue + std::fmt::Debug> CommonFetchState<T> {
 
                     // Check if the newly fetched attributes fulfill all what was originally requested.
                     if new.attrs().has(self.request_attrs) {
-                        if !self.mode.ignore_result() {
+                        if !self.fctx.mode().ignore_result() {
                             let new = new.mask(self.request_attrs);
                             let _ = self.found_tx.send(Ok((key.clone(), new)));
                         }
@@ -125,7 +125,7 @@ impl<T: StoreValue + std::fmt::Debug> CommonFetchState<T> {
             if new.attrs().has(self.request_attrs) {
                 self.pending.remove(&key);
 
-                if !self.mode.ignore_result() {
+                if !self.fctx.mode().ignore_result() {
                     let new = new.mask(self.request_attrs);
                     let _ = self.found_tx.send(Ok((key, new)));
                     self.bar.increase_position(1);
@@ -152,7 +152,7 @@ impl<T: StoreValue + std::fmt::Debug> CommonFetchState<T> {
             let err = match incomplete.remove(&key) {
                 Some(err) => KeyFetchError::KeyedError(KeyedError(key, err)),
                 None => {
-                    if self.mode.is_local() {
+                    if self.fctx.mode().is_local() {
                         KeyFetchError::NotFoundLocally(key)
                     } else {
                         // Should not happen normally since `incomplete` should contain the specific error we got from server.

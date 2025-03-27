@@ -18,7 +18,7 @@ use storemodel::FileStore;
 use storemodel::InsertOpts;
 use storemodel::KeyStore;
 use storemodel::SerializationFormat;
-use types::fetch_mode::FetchMode;
+use types::FetchContext;
 use types::HgId;
 use types::Key;
 use types::RepoPath;
@@ -76,17 +76,17 @@ impl KeyStore for CachingFileStore {
     fn get_content_iter(
         &self,
         keys: Vec<Key>,
-        fetch_mode: FetchMode,
+        fctx: FetchContext,
     ) -> Result<BoxIterator<Result<(Key, Bytes)>>> {
-        self.key_store.get_content_iter(keys, fetch_mode)
+        self.key_store.get_content_iter(keys, fctx)
     }
 
     fn get_local_content(&self, path: &RepoPath, hgid: HgId) -> Result<Option<Bytes>> {
         self.key_store.get_local_content(path, hgid)
     }
 
-    fn get_content(&self, path: &RepoPath, hgid: HgId, fetch_mode: FetchMode) -> Result<Bytes> {
-        self.key_store.get_content(path, hgid, fetch_mode)
+    fn get_content(&self, path: &RepoPath, hgid: HgId, fctx: FetchContext) -> Result<Bytes> {
+        self.key_store.get_content(path, hgid, fctx)
     }
 
     fn prefetch(&self, keys: Vec<Key>) -> Result<()> {
@@ -135,9 +135,9 @@ impl FileStore for CachingFileStore {
     fn get_aux_iter(
         &self,
         keys: Vec<Key>,
-        fetch_mode: FetchMode,
+        fctx: FetchContext,
     ) -> anyhow::Result<BoxIterator<anyhow::Result<(Key, FileAuxData)>>> {
-        self.store.get_aux_iter(keys, fetch_mode)
+        self.store.get_aux_iter(keys, fctx)
     }
 
     /// Get auxiliary metadata for the given file.
@@ -147,9 +147,9 @@ impl FileStore for CachingFileStore {
         &self,
         path: &RepoPath,
         id: HgId,
-        fetch_mode: FetchMode,
+        fctx: FetchContext,
     ) -> anyhow::Result<FileAuxData> {
-        self.store.get_aux(path, id, fetch_mode)
+        self.store.get_aux(path, id, fctx)
     }
 
     fn get_hg_parents(&self, _path: &RepoPath, _id: HgId) -> anyhow::Result<Vec<HgId>> {

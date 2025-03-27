@@ -16,6 +16,7 @@ use anyhow::Result;
 use cxx::SharedPtr;
 use storemodel::FileAuxData as ScmStoreFileAuxData;
 use types::fetch_mode::FetchMode;
+use types::FetchContext;
 use types::Key;
 
 use crate::backingstore::BackingStore;
@@ -272,10 +273,12 @@ pub fn sapling_backingstore_get_tree(
     node: &[u8],
     fetch_mode: ffi::FetchMode,
 ) -> Result<SharedPtr<ffi::Tree>> {
-    Ok(match store.get_tree(node, FetchMode::from(fetch_mode))? {
-        Some(entry) => SharedPtr::new(entry.try_into()?),
-        None => SharedPtr::null(),
-    })
+    Ok(
+        match store.get_tree(node, FetchContext::new(FetchMode::from(fetch_mode)))? {
+            Some(entry) => SharedPtr::new(entry.try_into()?),
+            None => SharedPtr::null(),
+        },
+    )
 }
 
 pub fn sapling_backingstore_get_tree_batch(
@@ -286,16 +289,20 @@ pub fn sapling_backingstore_get_tree_batch(
 ) {
     let keys: Vec<Key> = requests.iter().map(|req| req.key()).collect();
 
-    store.get_tree_batch(keys, FetchMode::from(fetch_mode), |idx, result| {
-        let result: Result<Box<dyn storemodel::TreeEntry>> =
-            result.and_then(|opt| opt.ok_or_else(|| Error::msg("no tree found")));
-        let resolver = resolver.clone();
-        let (error, tree) = match result.and_then(|list| list.try_into()) {
-            Ok(tree) => (String::default(), SharedPtr::new(tree)),
-            Err(error) => (format!("{:?}", error), SharedPtr::null()),
-        };
-        unsafe { ffi::sapling_backingstore_get_tree_batch_handler(resolver, idx, error, tree) };
-    });
+    store.get_tree_batch(
+        keys,
+        FetchContext::new(FetchMode::from(fetch_mode)),
+        |idx, result| {
+            let result: Result<Box<dyn storemodel::TreeEntry>> =
+                result.and_then(|opt| opt.ok_or_else(|| Error::msg("no tree found")));
+            let resolver = resolver.clone();
+            let (error, tree) = match result.and_then(|list| list.try_into()) {
+                Ok(tree) => (String::default(), SharedPtr::new(tree)),
+                Err(error) => (format!("{:?}", error), SharedPtr::null()),
+            };
+            unsafe { ffi::sapling_backingstore_get_tree_batch_handler(resolver, idx, error, tree) };
+        },
+    );
 }
 
 pub fn sapling_backingstore_get_tree_aux(
@@ -303,7 +310,7 @@ pub fn sapling_backingstore_get_tree_aux(
     node: &[u8],
     fetch_mode: ffi::FetchMode,
 ) -> Result<SharedPtr<ffi::TreeAuxData>> {
-    match store.get_tree_aux(node, FetchMode::from(fetch_mode))? {
+    match store.get_tree_aux(node, FetchContext::new(FetchMode::from(fetch_mode)))? {
         Some(aux) => Ok(SharedPtr::new(aux.into())),
         None => Ok(SharedPtr::null()),
     }
@@ -317,15 +324,21 @@ pub fn sapling_backingstore_get_tree_aux_batch(
 ) {
     let keys: Vec<Key> = requests.iter().map(|req| req.key()).collect();
 
-    store.get_tree_aux_batch(keys, FetchMode::from(fetch_mode), |idx, result| {
-        let result = result.and_then(|opt| opt.ok_or_else(|| Error::msg("no aux data found")));
-        let resolver = resolver.clone();
-        let (error, aux) = match result {
-            Ok(aux) => (String::default(), SharedPtr::new(aux.into())),
-            Err(error) => (format!("{:?}", error), SharedPtr::null()),
-        };
-        unsafe { ffi::sapling_backingstore_get_tree_aux_batch_handler(resolver, idx, error, aux) };
-    });
+    store.get_tree_aux_batch(
+        keys,
+        FetchContext::new(FetchMode::from(fetch_mode)),
+        |idx, result| {
+            let result = result.and_then(|opt| opt.ok_or_else(|| Error::msg("no aux data found")));
+            let resolver = resolver.clone();
+            let (error, aux) = match result {
+                Ok(aux) => (String::default(), SharedPtr::new(aux.into())),
+                Err(error) => (format!("{:?}", error), SharedPtr::null()),
+            };
+            unsafe {
+                ffi::sapling_backingstore_get_tree_aux_batch_handler(resolver, idx, error, aux)
+            };
+        },
+    );
 }
 
 pub fn sapling_backingstore_get_blob(
@@ -333,7 +346,7 @@ pub fn sapling_backingstore_get_blob(
     node: &[u8],
     fetch_mode: ffi::FetchMode,
 ) -> Result<ffi::OptionalBlob> {
-    match store.get_blob(node, FetchMode::from(fetch_mode))? {
+    match store.get_blob(node, FetchContext::new(FetchMode::from(fetch_mode)))? {
         Some(blob) => Ok(ffi::OptionalBlob {
             blob: Box::new(ffi::Blob { bytes: blob }),
             present: true,
@@ -352,18 +365,22 @@ pub fn sapling_backingstore_get_blob_batch(
     resolver: SharedPtr<ffi::GetBlobBatchResolver>,
 ) {
     let keys: Vec<Key> = requests.iter().map(|req| req.key()).collect();
-    store.get_blob_batch(keys, FetchMode::from(fetch_mode), |idx, result| {
-        let result = result.and_then(|opt| opt.ok_or_else(|| Error::msg("no blob found")));
-        let resolver = resolver.clone();
-        let (error, blob) = match result {
-            Ok(blob) => (String::default(), Box::new(ffi::Blob { bytes: blob })),
-            Err(error) => (
-                format!("{:?}", error),
-                Box::new(ffi::Blob { bytes: vec![] }),
-            ),
-        };
-        unsafe { ffi::sapling_backingstore_get_blob_batch_handler(resolver, idx, error, blob) };
-    });
+    store.get_blob_batch(
+        keys,
+        FetchContext::new(FetchMode::from(fetch_mode)),
+        |idx, result| {
+            let result = result.and_then(|opt| opt.ok_or_else(|| Error::msg("no blob found")));
+            let resolver = resolver.clone();
+            let (error, blob) = match result {
+                Ok(blob) => (String::default(), Box::new(ffi::Blob { bytes: blob })),
+                Err(error) => (
+                    format!("{:?}", error),
+                    Box::new(ffi::Blob { bytes: vec![] }),
+                ),
+            };
+            unsafe { ffi::sapling_backingstore_get_blob_batch_handler(resolver, idx, error, blob) };
+        },
+    );
 }
 
 pub fn sapling_backingstore_get_file_aux(
@@ -371,7 +388,7 @@ pub fn sapling_backingstore_get_file_aux(
     node: &[u8],
     fetch_mode: ffi::FetchMode,
 ) -> Result<SharedPtr<ffi::FileAuxData>> {
-    match store.get_file_aux(node, FetchMode::from(fetch_mode))? {
+    match store.get_file_aux(node, FetchContext::new(FetchMode::from(fetch_mode)))? {
         Some(aux) => Ok(SharedPtr::new(aux.into())),
         None => Ok(SharedPtr::null()),
     }
@@ -385,16 +402,22 @@ pub fn sapling_backingstore_get_file_aux_batch(
 ) {
     let keys: Vec<Key> = requests.iter().map(|req| req.key()).collect();
 
-    store.get_file_aux_batch(keys, FetchMode::from(fetch_mode), |idx, result| {
-        let result: Result<ScmStoreFileAuxData> =
-            result.and_then(|opt| opt.ok_or_else(|| Error::msg("no file aux data found")));
-        let resolver = resolver.clone();
-        let (error, aux) = match result {
-            Ok(aux) => (String::default(), SharedPtr::new(aux.into())),
-            Err(error) => (format!("{:?}", error), SharedPtr::null()),
-        };
-        unsafe { ffi::sapling_backingstore_get_file_aux_batch_handler(resolver, idx, error, aux) };
-    });
+    store.get_file_aux_batch(
+        keys,
+        FetchContext::new(FetchMode::from(fetch_mode)),
+        |idx, result| {
+            let result: Result<ScmStoreFileAuxData> =
+                result.and_then(|opt| opt.ok_or_else(|| Error::msg("no file aux data found")));
+            let resolver = resolver.clone();
+            let (error, aux) = match result {
+                Ok(aux) => (String::default(), SharedPtr::new(aux.into())),
+                Err(error) => (format!("{:?}", error), SharedPtr::null()),
+            };
+            unsafe {
+                ffi::sapling_backingstore_get_file_aux_batch_handler(resolver, idx, error, aux)
+            };
+        },
+    );
 }
 
 pub fn sapling_dogfooding_host(store: &BackingStore) -> Result<bool> {

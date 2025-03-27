@@ -41,6 +41,7 @@ use serde::Serialize;
 pub use types;
 use types::fetch_mode::FetchMode;
 pub use types::tree::TreeItemFlag;
+use types::FetchContext;
 use types::HgId;
 use types::Id20;
 use types::Key;
@@ -66,7 +67,7 @@ pub trait KeyStore: Send + Sync {
     fn get_content_iter(
         &self,
         keys: Vec<Key>,
-        _fetch_mode: FetchMode,
+        _fctx: FetchContext,
     ) -> anyhow::Result<BoxIterator<anyhow::Result<(Key, Bytes)>>> {
         let store = self.clone_key_store();
         let iter = keys
@@ -100,17 +101,17 @@ pub trait KeyStore: Send + Sync {
         &self,
         path: &RepoPath,
         hgid: HgId,
-        fetch_mode: FetchMode,
+        fctx: FetchContext,
     ) -> anyhow::Result<minibytes::Bytes> {
         // Handle "broken" implementation that returns Err(_) not Ok(None) on not found.
-        if !fetch_mode.is_remote() {
+        if !fctx.mode().is_remote() {
             if let Ok(Some(data)) = self.get_local_content(path, hgid) {
                 return Ok(data);
             }
         }
 
         let key = Key::new(path.to_owned(), hgid);
-        match self.get_content_iter(vec![key], fetch_mode)?.next() {
+        match self.get_content_iter(vec![key], fctx)?.next() {
             None => Err(anyhow::format_err!("{}@{}: not found remotely", path, hgid)),
             Some(Err(e)) => Err(e),
             Some(Ok((_k, data))) => Ok(data),
@@ -221,14 +222,12 @@ pub trait FileStore: KeyStore + 'static {
     fn get_aux_iter(
         &self,
         keys: Vec<Key>,
-        fetch_mode: FetchMode,
+        fctx: FetchContext,
     ) -> anyhow::Result<BoxIterator<anyhow::Result<(Key, FileAuxData)>>> {
-        let iter = self
-            .get_content_iter(keys, fetch_mode)?
-            .map(|entry| match entry {
-                Err(e) => Err(e),
-                Ok((key, data)) => Ok((key, FileAuxData::from_content(&data))),
-            });
+        let iter = self.get_content_iter(keys, fctx)?.map(|entry| match entry {
+            Err(e) => Err(e),
+            Ok((key, data)) => Ok((key, FileAuxData::from_content(&data))),
+        });
         Ok(Box::new(iter))
     }
 
@@ -239,10 +238,10 @@ pub trait FileStore: KeyStore + 'static {
         &self,
         path: &RepoPath,
         id: HgId,
-        fetch_mode: FetchMode,
+        fctx: FetchContext,
     ) -> anyhow::Result<FileAuxData> {
         let key = Key::new(path.to_owned(), id);
-        match self.get_aux_iter(vec![key], fetch_mode)?.next() {
+        match self.get_aux_iter(vec![key], fctx)?.next() {
             None => Err(anyhow::format_err!("{}@{}: not found remotely", path, id)),
             Some(Err(e)) => Err(e),
             Some(Ok((_k, aux))) => Ok(aux),
@@ -260,7 +259,7 @@ pub trait FileStore: KeyStore + 'static {
     /// This is only used by legacy Hg logic and is incompatible with Git.
     fn get_hg_raw_content(&self, path: &RepoPath, id: HgId) -> anyhow::Result<minibytes::Bytes> {
         // The default fetch mode is AllowRemote, which accesses both local and remote stores.
-        self.get_content(path, id, FetchMode::AllowRemote)
+        self.get_content(path, id, FetchContext::new(FetchMode::AllowRemote))
     }
 
     /// Get the "raw" flags. For LFS this is non-zero.
@@ -375,12 +374,12 @@ pub trait TreeStore: KeyStore {
     /// Get tree entries auxiliary metadata for the given files.
     /// Contact remote server on demand. Might block.
     ///
-    /// Ignores fetch_mode in the default implementation
+    /// Ignores fctx in the default implementation
     /// Currently mainly used by EdenFS.
     fn get_tree_iter(
         &self,
         keys: Vec<Key>,
-        _fetch_mode: FetchMode,
+        _fctx: FetchContext,
     ) -> anyhow::Result<BoxIterator<anyhow::Result<(Key, Box<dyn TreeEntry>)>>> {
         let store = self.clone_tree_store();
         let iter = keys
@@ -400,12 +399,12 @@ pub trait TreeStore: KeyStore {
     /// List metadata of the given trees.
     /// Contact remote server on demand. Might block.
     ///
-    /// Ignores fetch_mode in the default implementation
+    /// Ignores fctx.mode in the default implementation
     /// Currently mainly used by EdenFS.
     fn get_tree_aux_data_iter(
         &self,
         keys: Vec<Key>,
-        _fetch_mode: FetchMode,
+        _fctx: FetchContext,
     ) -> anyhow::Result<BoxIterator<anyhow::Result<(Key, TreeAuxData)>>> {
         let store = self.clone_tree_store();
         let iter =
@@ -451,13 +450,10 @@ pub trait TreeStore: KeyStore {
         &self,
         path: &RepoPath,
         id: HgId,
-        fetch_mode: FetchMode,
+        fctx: FetchContext,
     ) -> anyhow::Result<TreeAuxData> {
         let key = Key::new(path.to_owned(), id);
-        match self
-            .get_tree_aux_data_iter(vec![key.clone()], fetch_mode)?
-            .next()
-        {
+        match self.get_tree_aux_data_iter(vec![key.clone()], fctx)?.next() {
             None => Err(anyhow::format_err!("{}@{}: not found remotely", path, id)),
             Some(Err(e)) => Err(e),
             Some(Ok((_k, aux))) => Ok(aux),

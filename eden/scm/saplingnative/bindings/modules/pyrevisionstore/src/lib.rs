@@ -52,7 +52,7 @@ use revisionstore::StoreKey;
 use revisionstore::StoreResult;
 use revisionstore::StoreType;
 use storemodel::SerializationFormat;
-use types::fetch_mode::FetchMode;
+use types::FetchContext;
 use types::Key;
 use types::NodeInfo;
 
@@ -528,7 +528,7 @@ py_class!(pub class filescmstore |py| {
             .map(|tuple| from_tuple_to_key(py, &tuple))
             .collect::<PyResult<Vec<Key>>>()?;
         let results = PyList::new(py, &[]);
-        let fetch_result = self.store(py).fetch(keys.into_iter(), FileAttributes::AUX, FetchMode::AllowRemote);
+        let fetch_result = self.store(py).fetch(keys.into_iter(), FileAttributes::AUX, FetchContext::default());
 
         let (found, missing, _errors) = fetch_result.consume();
         // TODO(meyer): FileStoreFetch should have utility methods to various consumer cases like this (get complete, get missing, transform to Result<EntireBatch>, transform to iterator of Result<IndividualFetch>, etc)
@@ -747,7 +747,7 @@ py_class!(pub class treescmstore |py| {
             return py.allow_threads(|| caching_store.get_content(
                 repo_path,
                 node,
-                FetchMode::AllowRemote,
+                FetchContext::default(),
             )).map_pyerr(py)
               .map(|bytes| PyBytes::new(py, &bytes[..]));
         }

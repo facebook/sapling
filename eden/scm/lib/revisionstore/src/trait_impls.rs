@@ -21,6 +21,7 @@ use storemodel::Kind;
 use storemodel::SerializationFormat;
 use types::fetch_mode::FetchMode;
 use types::hgid::NULL_ID;
+use types::FetchContext;
 use types::HgId;
 use types::Id20;
 use types::Key;
@@ -37,9 +38,9 @@ impl storemodel::KeyStore for ArcFileStore {
     fn get_content_iter(
         &self,
         keys: Vec<Key>,
-        fetch_mode: FetchMode,
+        fctx: FetchContext,
     ) -> anyhow::Result<BoxIterator<anyhow::Result<(Key, Bytes)>>> {
-        let fetched = self.0.fetch(keys, FileAttributes::PURE_CONTENT, fetch_mode);
+        let fetched = self.0.fetch(keys, FileAttributes::PURE_CONTENT, fctx);
         let iter = fetched
             .into_iter()
             .map(|result| -> anyhow::Result<(Key, Bytes)> {
@@ -94,9 +95,11 @@ impl storemodel::FileStore for ArcFileStore {
         &self,
         keys: Vec<Key>,
     ) -> anyhow::Result<BoxIterator<anyhow::Result<(Key, Key)>>> {
-        let fetched = self
-            .0
-            .fetch(keys, FileAttributes::CONTENT_HEADER, FetchMode::AllowRemote);
+        let fetched = self.0.fetch(
+            keys,
+            FileAttributes::CONTENT_HEADER,
+            FetchContext::default(),
+        );
         let iter = fetched
             .into_iter()
             .filter_map(|result| -> Option<anyhow::Result<(Key, Key)>> {
@@ -115,7 +118,7 @@ impl storemodel::FileStore for ArcFileStore {
         let fetched = self.0.fetch(
             std::iter::once(key),
             FileAttributes::AUX,
-            FetchMode::LocalOnly,
+            FetchContext::new(FetchMode::LocalOnly),
         );
         if let Some(entry) = fetched.single()? {
             Ok(Some(entry.aux_data()?))
@@ -127,9 +130,9 @@ impl storemodel::FileStore for ArcFileStore {
     fn get_aux_iter(
         &self,
         keys: Vec<Key>,
-        fetch_mode: FetchMode,
+        fctx: FetchContext,
     ) -> anyhow::Result<BoxIterator<anyhow::Result<(Key, FileAuxData)>>> {
-        let fetched = self.0.fetch(keys, FileAttributes::AUX, fetch_mode);
+        let fetched = self.0.fetch(keys, FileAttributes::AUX, fctx);
         let iter = fetched
             .into_iter()
             .map(|entry| -> anyhow::Result<(Key, FileAuxData)> {

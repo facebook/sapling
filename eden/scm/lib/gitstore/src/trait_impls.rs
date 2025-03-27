@@ -16,6 +16,7 @@ use storemodel::Kind;
 use storemodel::SerializationFormat;
 use storemodel::TreeStore;
 use types::fetch_mode::FetchMode;
+use types::FetchContext;
 use types::HgId;
 use types::RepoPath;
 
@@ -44,8 +45,9 @@ impl KeyStore for GitStore {
     fn get_content_iter(
         &self,
         keys: Vec<types::Key>,
-        fetch_mode: FetchMode,
+        fctx: FetchContext,
     ) -> anyhow::Result<BoxIterator<anyhow::Result<(types::Key, minibytes::Bytes)>>> {
+        let fetch_mode = fctx.mode();
         if self.has_fetch_url() && fetch_mode.contains(FetchMode::REMOTE) {
             let ids = keys.iter().map(|k| k.hgid).collect::<Vec<_>>();
             self.fetch_objs(&ids)?

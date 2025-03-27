@@ -32,7 +32,7 @@ use redacted::redact_if_needed;
 use revisionstore::scmstore::FileStore;
 use revisionstore::trait_impls::ArcFileStore;
 use storemodel::KeyStore;
-use types::fetch_mode::FetchMode;
+use types::FetchContext;
 use types::HgId;
 use types::Key;
 use types::RepoPathBuf;
@@ -146,7 +146,7 @@ impl<Ret: Send + 'static, Work: Sync + Send + 'static> Worker<Ret, Work> {
 fn update(state: &WriterState, key: Key, flag: UpdateFlag) -> Result<usize> {
     let content = state
         .store
-        .get_content(&key.path, key.hgid, FetchMode::AllowRemote)?;
+        .get_content(&key.path, key.hgid, FetchContext::default())?;
 
     let content = redact_if_needed(content);
 

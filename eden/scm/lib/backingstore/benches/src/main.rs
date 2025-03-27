@@ -29,6 +29,7 @@ use minibench::bench_enabled;
 use minibench::measure;
 use minibench::Measure;
 use types::fetch_mode::FetchMode;
+use types::FetchContext;
 use types::HgId;
 use types::Key;
 use types::RepoPathBuf;
@@ -38,23 +39,27 @@ fn main() {
 
     bench_matrix("get_blob serial (1k)", |store, mode| {
         for key in load_test_keys().iter().take(1000) {
-            let fetched = store.get_blob(key.hgid.as_ref(), mode);
+            let fetched = store.get_blob(key.hgid.as_ref(), FetchContext::new(mode));
             assert!(matches!(mode, FetchMode::LocalOnly) || matches!(fetched, Ok(Some(_))));
         }
     });
 
     bench_matrix(&format!("get_blob_batch ({}k)", n / 1000), |store, mode| {
         let fetch_count = AtomicUsize::new(0);
-        store.get_blob_batch(load_test_keys().clone(), mode, |_, fetched| {
-            fetch_count.fetch_add(1, Ordering::Release);
-            assert!(matches!(mode, FetchMode::LocalOnly) || matches!(fetched, Ok(Some(_))));
-        });
+        store.get_blob_batch(
+            load_test_keys().clone(),
+            FetchContext::new(mode),
+            |_, fetched| {
+                fetch_count.fetch_add(1, Ordering::Release);
+                assert!(matches!(mode, FetchMode::LocalOnly) || matches!(fetched, Ok(Some(_))));
+            },
+        );
         assert_eq!(fetch_count.load(Ordering::Acquire), load_test_keys().len());
     });
 
     bench_matrix("get_file_aux serial (1k)", |store, mode| {
         for key in load_test_keys().iter().take(1000) {
-            let fetched = store.get_file_aux(key.hgid.as_ref(), mode);
+            let fetched = store.get_file_aux(key.hgid.as_ref(), FetchContext::new(mode));
             assert!(matches!(mode, FetchMode::LocalOnly) || matches!(fetched, Ok(Some(_))));
         }
     });
@@ -63,10 +68,14 @@ fn main() {
         &format!("get_file_aux_batch ({}k)", n / 1000),
         |store, mode| {
             let fetch_count = AtomicUsize::new(0);
-            store.get_file_aux_batch(load_test_keys().clone(), mode, |_, fetched| {
-                fetch_count.fetch_add(1, Ordering::Release);
-                assert!(matches!(mode, FetchMode::LocalOnly) || matches!(fetched, Ok(Some(_))));
-            });
+            store.get_file_aux_batch(
+                load_test_keys().clone(),
+                FetchContext::new(mode),
+                |_, fetched| {
+                    fetch_count.fetch_add(1, Ordering::Release);
+                    assert!(matches!(mode, FetchMode::LocalOnly) || matches!(fetched, Ok(Some(_))));
+                },
+            );
             assert_eq!(fetch_count.load(Ordering::Acquire), load_test_keys().len());
         },
     );
@@ -75,17 +84,21 @@ fn main() {
 
     bench_matrix("get_tree serial (1k)", |store, mode| {
         for key in load_tree_keys().iter().take(1000) {
-            let fetched = store.get_tree(key.hgid.as_ref(), mode);
+            let fetched = store.get_tree(key.hgid.as_ref(), FetchContext::new(mode));
             assert!(matches!(mode, FetchMode::LocalOnly) || matches!(fetched, Ok(Some(_))));
         }
     });
 
     bench_matrix(&format!("get_tree_batch ({}k)", n / 1000), |store, mode| {
         let fetch_count = AtomicUsize::new(0);
-        store.get_tree_batch(load_tree_keys().clone(), mode, |_, fetched| {
-            fetch_count.fetch_add(1, Ordering::Release);
-            assert!(matches!(mode, FetchMode::LocalOnly) || matches!(fetched, Ok(Some(_))));
-        });
+        store.get_tree_batch(
+            load_tree_keys().clone(),
+            FetchContext::new(mode),
+            |_, fetched| {
+                fetch_count.fetch_add(1, Ordering::Release);
+                assert!(matches!(mode, FetchMode::LocalOnly) || matches!(fetched, Ok(Some(_))));
+            },
+        );
         assert_eq!(fetch_count.load(Ordering::Acquire), load_tree_keys().len());
     });
 
@@ -176,10 +189,10 @@ impl TempDirExt for tempfile::TempDir {
         let store = self.store();
         if test_title.contains("tree") {
             let keys = load_tree_keys();
-            store.get_tree_batch(keys.clone(), FetchMode::AllowRemote, |_, _| ());
+            store.get_tree_batch(keys.clone(), FetchContext::default(), |_, _| ());
         } else {
             let keys = load_test_keys();
-            store.get_blob_batch(keys.clone(), FetchMode::AllowRemote, |_, _| ());
+            store.get_blob_batch(keys.clone(), FetchContext::default(), |_, _| ());
         }
         store.flush();
     }

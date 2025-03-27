@@ -31,6 +31,7 @@ use serde::de::value::StringDeserializer;
 use serde::de::Deserialize;
 use storemodel::TreeStore;
 use types::fetch_mode::FetchMode;
+use types::FetchContext;
 use types::Key;
 use types::RepoPathBuf;
 
@@ -122,18 +123,20 @@ pub fn run(ctx: ReqCtx<DebugScmStoreOpts>, repo: &Repo) -> Result<u8> {
     // And reset counters so tests don't see counters from above arg handling.
     metrics::Registry::global().reset();
 
-    let fetch_mode = FetchMode::deserialize(StringDeserializer::<value::Error>::new(
-        ctx.opts
-            .fetch_mode
-            .unwrap_or_else(|| "LOCAL | REMOTE".to_string()),
-    ))?;
+    let fctx = FetchContext::new(FetchMode::deserialize(
+        StringDeserializer::<value::Error>::new(
+            ctx.opts
+                .fetch_mode
+                .unwrap_or_else(|| "LOCAL | REMOTE".to_string()),
+        ),
+    )?);
 
     match mode {
         FetchType::File => fetch_files(
             &ctx.core.io,
             &fresh_repo,
             keys,
-            fetch_mode,
+            fctx,
             ctx.opts.aux_only,
             ctx.opts.pure_content,
         )?,
@@ -141,7 +144,7 @@ pub fn run(ctx: ReqCtx<DebugScmStoreOpts>, repo: &Repo) -> Result<u8> {
             &ctx.core.io,
             &fresh_repo,
             keys,
-            fetch_mode,
+            fctx,
             ctx.opts.store_model,
             ctx.opts.tree_parents,
             ctx.opts.aux_only,
@@ -155,7 +158,7 @@ fn fetch_files(
     io: &IO,
     repo: &Repo,
     keys: Vec<Key>,
-    fetch_mode: FetchMode,
+    fctx: FetchContext,
     aux_only: bool,
     pure_content: bool,
 ) -> Result<()> {
@@ -166,7 +169,7 @@ fn fetch_files(
 
     let mut fetch_and_display_successes =
         |keys: Vec<Key>, attrs: FileAttributes| -> HashMap<Key, Error> {
-            let fetch_result = store.fetch(keys, attrs, fetch_mode);
+            let fetch_result = store.fetch(keys, attrs, fctx.clone());
 
             let (found, missing, _errors) = fetch_result.consume();
             for (_, file) in found.into_iter() {
@@ -217,7 +220,7 @@ fn fetch_trees(
     io: &IO,
     repo: &Repo,
     keys: Vec<Key>,
-    fetch_mode: FetchMode,
+    fctx: FetchContext,
     store_model: bool,
     tree_parents: bool,
     aux_only: bool,
@@ -237,7 +240,7 @@ fn fetch_trees(
     }
 
     if store_model {
-        for tree in store.get_tree_iter(keys, fetch_mode)? {
+        for tree in store.get_tree_iter(keys, fctx)? {
             let (key, tree) = tree?;
 
             writeln!(stdout, "Tree '{}' entries", key.path)?;
@@ -253,7 +256,7 @@ fn fetch_trees(
             }
         }
     } else {
-        let fetch_result = store.fetch_batch(keys.into_iter(), attrs, fetch_mode);
+        let fetch_result = store.fetch_batch(keys.into_iter(), attrs, fctx);
 
         let (found, missing, _errors) = fetch_result.consume();
         for complete in found.into_iter() {

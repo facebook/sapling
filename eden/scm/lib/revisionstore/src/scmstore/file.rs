@@ -16,6 +16,7 @@ use std::time::Instant;
 
 use ::metrics::Counter;
 use ::types::fetch_mode::FetchMode;
+use ::types::FetchContext;
 use ::types::HgId;
 use ::types::Key;
 use anyhow::anyhow;
@@ -159,7 +160,7 @@ impl FileStore {
         &self,
         keys: impl IntoIterator<Item = Key>,
         attrs: FileAttributes,
-        fetch_mode: FetchMode,
+        fctx: FetchContext,
     ) -> FetchResults<StoreFile> {
         let mut keys = keys.into_iter().peekable();
         if keys.peek().is_none() {
@@ -188,13 +189,13 @@ impl FileStore {
             self,
             found_tx,
             self.lfs_threshold_bytes.is_some(),
-            fetch_mode,
+            fctx.clone(),
             self.cas_cache_threshold_bytes,
             bar.clone(),
         );
 
         // When ignoring results, we won't advance the progress bar, so update the "total".
-        if !fetch_mode.ignore_result() {
+        if !fctx.mode().ignore_result() {
             bar.increase_total(state.pending_len() as u64);
         }
 
@@ -217,7 +218,7 @@ impl FileStore {
 
         debug!(
             ?attrs,
-            ?fetch_mode,
+            ?fctx,
             num_keys = state.pending_len(),
             first_keys = "fetching"
         );
@@ -235,8 +236,8 @@ impl FileStore {
         let activity_logger = self.activity_logger.clone();
         let format = self.format();
 
-        let fetch_local = fetch_mode.contains(FetchMode::LOCAL);
-        let fetch_remote = fetch_mode.contains(FetchMode::REMOTE);
+        let fetch_local = fctx.mode().contains(FetchMode::LOCAL);
+        let fetch_remote = fctx.mode().contains(FetchMode::REMOTE);
 
         let process_func = move || {
             // Set bar as this thread's active bar. We don't do it when we create the bar
@@ -632,7 +633,7 @@ impl HgIdDataStore for FileStore {
                 .fetch(
                     std::iter::once(key.clone()).filter_map(|sk| sk.maybe_into_key()),
                     FileAttributes::CONTENT,
-                    FetchMode::AllowRemote,
+                    FetchContext::default(),
                 )
                 .single()?
             {
@@ -659,7 +660,7 @@ impl FileStore {
         self.fetch(
             keys,
             attrs,
-            FetchMode::AllowRemote | FetchMode::IGNORE_RESULT,
+            FetchContext::new(FetchMode::AllowRemote | FetchMode::IGNORE_RESULT),
         )
         .missing()
     }
@@ -672,7 +673,7 @@ impl LocalStore for FileStore {
             .fetch(
                 keys.iter().cloned().filter_map(|sk| sk.maybe_into_key()),
                 FileAttributes::CONTENT,
-                FetchMode::LocalOnly | FetchMode::IGNORE_RESULT,
+                FetchContext::new(FetchMode::LocalOnly | FetchMode::IGNORE_RESULT),
             )
             .missing()?
             .into_iter()

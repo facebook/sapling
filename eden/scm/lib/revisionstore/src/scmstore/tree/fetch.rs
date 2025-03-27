@@ -17,13 +17,13 @@ use flume::Sender;
 use futures::StreamExt;
 use progress_model::ProgressBar;
 use tracing::field;
-use types::fetch_mode::FetchMode;
 use types::hgid::NULL_ID;
 use types::AugmentedTree;
 use types::AugmentedTreeWithDigest;
 use types::CasDigest;
 use types::CasDigestType;
 use types::CasFetchedStats;
+use types::FetchContext;
 use types::Key;
 use types::NodeInfo;
 
@@ -58,11 +58,11 @@ impl FetchState {
         keys: impl IntoIterator<Item = Key>,
         attrs: TreeAttributes,
         found_tx: Sender<Result<(Key, StoreTree), KeyFetchError>>,
-        fetch_mode: FetchMode,
+        fctx: FetchContext,
         bar: Arc<ProgressBar>,
     ) -> Self {
         FetchState {
-            common: CommonFetchState::new(keys, attrs, found_tx, fetch_mode, bar),
+            common: CommonFetchState::new(keys, attrs, found_tx, fctx, bar),
             errors: FetchErrors::new(),
             metrics: &TREE_STORE_FETCH_METRICS,
         }
