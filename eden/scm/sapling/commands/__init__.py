@@ -271,8 +271,8 @@ def addremove(ui, repo, *pats, **opts):
     those similar enough as renames. Detecting renamed files this way
     can be expensive. After using this option, :prog:`status -C` can be
     used to check which files were identified as moved or renamed. If
-    not specified, ``-s/--similarity`` defaults to 100 and only renames of
-    identical files are detected.
+    not specified, ``-s/--similarity`` defaults to 100, only marking
+    identical files renamed.
 
     .. container:: verbose
 
@@ -316,14 +316,9 @@ def addremove(ui, repo, *pats, **opts):
 
     Returns 0 if all files are successfully added/removed.
     """
-    try:
-        sim = float(opts.get("similarity") or 100)
-    except ValueError:
-        raise error.Abort(_("similarity must be a number"))
-    if sim < 0 or sim > 100:
-        raise error.Abort(_("similarity must be between 0 and 100"))
+    opts["similarity"] = opts.get("similarity") or 100
     matcher = scmutil.match(repo[None], pats, opts)
-    return scmutil.addremove(repo, matcher, "", opts, similarity=sim / 100.0)
+    return scmutil.addremove(repo, matcher, opts)
 
 
 @command(

@@ -944,14 +944,17 @@ def cleanupnodes(repo, replacements, operation, moves=None, metadata=None):
     return moves
 
 
-def addremove(repo, matcher, prefix, opts=None, dry_run=None, similarity=None):
-    if opts is None:
-        opts = {}
+def addremove(repo, matcher, opts):
     m = matcher
-    if dry_run is None:
-        dry_run = opts.get("dry_run")
-    if similarity is None:
+
+    try:
         similarity = float(opts.get("similarity") or 0)
+    except ValueError:
+        raise error.Abort(_("similarity must be a number"))
+    if similarity < 0 or similarity > 100:
+        raise error.Abort(_("similarity must be between 0 and 100"))
+
+    similarity = similarity / 100.0
 
     # Is there a better place for this?
     from . import git
@@ -981,7 +984,7 @@ def addremove(repo, matcher, prefix, opts=None, dry_run=None, similarity=None):
 
     renames = _findrenames(repo, m, added + unknown, removed + deleted, similarity)
 
-    if not dry_run:
+    if not opts.get("dry_run"):
         _markchanges(repo, unknown + forgotten, deleted, renames)
 
     for f in rejected:
