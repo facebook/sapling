@@ -29,11 +29,11 @@ use movers::Mover;
 use movers::Movers;
 
 use crate::git_submodules::sync_commit_with_submodule_expansion;
-use crate::git_submodules::types::Repo;
-use crate::git_submodules::types::SubmodulePath;
 use crate::git_submodules::SubmoduleExpansionData;
+use crate::types::Repo;
+use crate::types::SubmodulePath;
 
-pub(crate) type SubmoduleExpansionContentIds = HashMap<SubmodulePath, HashSet<ContentId>>;
+pub type SubmoduleExpansionContentIds = HashMap<SubmodulePath, HashSet<ContentId>>;
 
 pub struct CommitRewriteResult {
     /// A version of the source repo's bonsai changeset with `Mover` applied to

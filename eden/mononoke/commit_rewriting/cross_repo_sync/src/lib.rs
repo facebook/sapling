@@ -13,12 +13,22 @@ mod commit_sync_config_utils;
 mod commit_sync_outcome;
 mod commit_syncer;
 mod commit_syncers_lib;
-mod git_submodules;
-mod rewrite;
+
 mod sync_config_version_utils;
 mod types;
 mod validation;
 
+// TODO(T182311609): stop re-exporting git_submodules
+pub use commit_rewrite::git_submodules::get_all_repo_submodule_deps;
+pub use commit_rewrite::git_submodules::get_all_submodule_deps_from_repo_pair;
+pub use commit_rewrite::git_submodules::InMemoryRepo;
+pub use commit_rewrite::git_submodules::RepoProvider;
+pub use commit_rewrite::git_submodules::SubmoduleExpansionData;
+pub use commit_rewrite::git_submodules::SubmoduleExpansionValidationToken;
+pub use commit_rewrite::git_submodules::ValidSubmoduleExpansionBonsai;
+// TODO(T182311609): stop re-exporting rewrite_commit
+pub use commit_rewrite::rewrite_commit;
+pub use commit_rewrite::SubmoduleDeps;
 pub use commit_sync_config_utils::get_bookmark_renamer;
 pub use commit_sync_config_utils::get_common_pushrebase_bookmarks;
 pub use commit_sync_config_utils::get_git_submodule_action_by_version;
@@ -46,21 +56,12 @@ pub use commit_syncers_lib::unsafe_get_parent_map_for_target_bookmark_rewrite;
 pub use commit_syncers_lib::update_mapping_with_version;
 pub use commit_syncers_lib::CommitSyncRepos;
 pub use commit_syncers_lib::Syncers;
-pub use git_submodules::get_all_repo_submodule_deps;
-pub use git_submodules::get_all_submodule_deps_from_repo_pair;
-pub use git_submodules::InMemoryRepo;
-pub use git_submodules::RepoProvider;
-pub use git_submodules::SubmoduleExpansionData;
-pub use git_submodules::SubmoduleExpansionValidationToken;
-pub use git_submodules::ValidSubmoduleExpansionBonsai;
 pub use reporting::log_debug;
 pub use reporting::log_error;
 pub use reporting::log_info;
 pub use reporting::log_trace;
 pub use reporting::log_warning;
 pub use reporting::CommitSyncContext;
-// TODO(T182311609): make this private and accessible only in crate
-pub use rewrite::rewrite_commit;
 pub use sync_config_version_utils::CHANGE_XREPO_MAPPING_EXTRA;
 pub use types::ConcreteRepo;
 pub use types::ErrorKind;
@@ -79,5 +80,3 @@ pub use validation::verify_working_copy_with_version;
 pub use validation::BookmarkDiff;
 pub use validation::UpdateLargeRepoBookmarksMode;
 pub use validation::VerifyBookmarksRunMode;
-
-pub use crate::git_submodules::types::SubmoduleDeps;

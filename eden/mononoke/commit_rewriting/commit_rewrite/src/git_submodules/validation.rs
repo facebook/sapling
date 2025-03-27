@@ -45,8 +45,6 @@ use reporting::log_trace;
 use scuba_ext::FutureStatsScubaExt;
 
 use crate::git_submodules::expand::SubmoduleExpansionData;
-use crate::git_submodules::types::Repo;
-use crate::git_submodules::types::SubmodulePath;
 use crate::git_submodules::utils::build_recursive_submodule_deps;
 use crate::git_submodules::utils::content_id_of_file_with_type;
 use crate::git_submodules::utils::get_git_hash_from_submodule_file;
@@ -55,6 +53,8 @@ use crate::git_submodules::utils::git_hash_from_submodule_metadata_file;
 use crate::git_submodules::utils::list_non_submodule_files_under;
 use crate::git_submodules::utils::root_fsnode_id_from_submodule_git_commit;
 use crate::git_submodules::utils::x_repo_submodule_metadata_file_basename;
+use crate::types::Repo;
+use crate::types::SubmodulePath;
 
 /// A wrapper over BonsaiChangeset that can only be created by running submodule
 /// expansion validation on a bonsai.
@@ -508,7 +508,7 @@ async fn get_submodule_expansion_fsnode_id<'a, R: Repo>(
 /// commit that it's expanding from the submodule repo and will assert that
 /// they're equivalent, accounting for expansion of any submodules.
 #[async_recursion]
-pub(crate) async fn validate_working_copy_of_expansion_with_recursive_submodules<'a, R>(
+pub async fn validate_working_copy_of_expansion_with_recursive_submodules<'a, R>(
     ctx: &'a CoreContext,
     sm_exp_data: SubmoduleExpansionData<'a, R>,
     // TODO(T186874619): build recursive sm_exp_data and pass

@@ -45,8 +45,6 @@ use scuba_ext::FutureStatsScubaExt;
 use sorted_vector_map::SortedVectorMap;
 
 use crate::git_submodules::in_memory_repo::InMemoryRepo;
-use crate::git_submodules::types::Repo;
-use crate::git_submodules::types::SubmodulePath;
 use crate::git_submodules::utils::build_recursive_submodule_deps;
 use crate::git_submodules::utils::get_git_hash_from_submodule_file;
 use crate::git_submodules::utils::get_submodule_bonsai_changeset_id;
@@ -57,6 +55,8 @@ use crate::git_submodules::utils::is_path_git_submodule;
 use crate::git_submodules::utils::list_non_submodule_files_under;
 use crate::git_submodules::utils::submodule_diff;
 use crate::rewrite::SubmoduleExpansionContentIds;
+use crate::types::Repo;
+use crate::types::SubmodulePath;
 
 // TODO(T174902563): support expansion of git submodules
 /// Everything needed to expand submodule changes

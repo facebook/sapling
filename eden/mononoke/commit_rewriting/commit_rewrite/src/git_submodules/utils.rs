@@ -55,13 +55,13 @@ use reporting::log_warning;
 use sorted_vector_map::SortedVectorMap;
 
 use crate::git_submodules::expand::SubmoduleExpansionData;
-use crate::git_submodules::types::Repo;
-use crate::git_submodules::types::SubmodulePath;
-use crate::SubmoduleDeps;
+use crate::types::Repo;
+use crate::types::SubmoduleDeps;
+use crate::types::SubmodulePath;
 
 /// Get the git hash from a submodule file, which represents the commit from the
 /// given submodule that the source repo depends on at that revision.
-pub(crate) async fn get_git_hash_from_submodule_file<'a, R: Repo>(
+pub async fn get_git_hash_from_submodule_file<'a, R: Repo>(
     ctx: &'a CoreContext,
     repo: &'a R,
     submodule_file_content_id: ContentId,
@@ -82,7 +82,7 @@ pub(crate) async fn get_git_hash_from_submodule_file<'a, R: Repo>(
 
 /// Get the git hash from a submodule file, which represents the commit from the
 /// given submodule that the source repo depends on at that revision.
-pub(crate) async fn git_hash_from_submodule_metadata_file<'a, R>(
+pub async fn git_hash_from_submodule_metadata_file<'a, R>(
     ctx: &'a CoreContext,
     large_repo: &'a R,
     submodule_file_content_id: ContentId,
@@ -105,7 +105,7 @@ where
     anyhow::Ok(git_sha1)
 }
 
-pub(crate) fn get_submodule_repo<'a, 'b, R: Repo>(
+pub fn get_submodule_repo<'a, 'b, R: Repo>(
     sm_path: &'a SubmodulePath,
     submodule_deps: &'b HashMap<NonRootMPath, Arc<R>>,
 ) -> Result<&'b R> {
@@ -117,7 +117,7 @@ pub(crate) fn get_submodule_repo<'a, 'b, R: Repo>(
 }
 
 /// Returns true if the given path is a git submodule.
-pub(crate) async fn is_path_git_submodule(
+pub async fn is_path_git_submodule(
     ctx: &CoreContext,
     repo: &impl Repo,
     changeset: ChangesetId,
@@ -128,7 +128,7 @@ pub(crate) async fn is_path_git_submodule(
         .is_some())
 }
 
-pub(crate) fn x_repo_submodule_metadata_file_basename<S: std::fmt::Display>(
+pub fn x_repo_submodule_metadata_file_basename<S: std::fmt::Display>(
     submodule_basename: &S,
     x_repo_submodule_metadata_file_prefix: &str,
 ) -> Result<MPathElement> {
@@ -140,7 +140,7 @@ pub(crate) fn x_repo_submodule_metadata_file_basename<S: std::fmt::Display>(
 }
 /// Builds the full path of the x-repo submodule metadata file for a given
 /// submodule.
-pub(crate) fn get_x_repo_submodule_metadata_file_path(
+pub fn get_x_repo_submodule_metadata_file_path(
     submodule_file_path: &SubmodulePath,
     // Prefix used to generate the metadata file basename. Obtained from
     // the small repo sync config.
@@ -161,7 +161,7 @@ pub(crate) fn get_x_repo_submodule_metadata_file_path(
 }
 
 // Returns the differences between a submodule commit and its parents.
-pub(crate) async fn submodule_diff(
+pub async fn submodule_diff(
     ctx: &CoreContext,
     sm_repo: &impl Repo,
     cs_id: ChangesetId,
@@ -211,7 +211,7 @@ pub(crate) async fn submodule_diff(
 }
 
 /// Returns the content id of the given path if it is a submodule file.
-pub(crate) async fn get_submodule_file_content_id(
+pub async fn get_submodule_file_content_id(
     ctx: &CoreContext,
     repo: &impl Repo,
     cs_id: ChangesetId,
@@ -224,7 +224,7 @@ pub(crate) async fn get_submodule_file_content_id(
 
 /// Returns the content id of a file at a given path if it was os a specific
 /// file type.
-pub(crate) async fn content_id_of_file_with_type<R>(
+pub async fn content_id_of_file_with_type<R>(
     ctx: &CoreContext,
     repo: &R,
     cs_id: ChangesetId,
@@ -258,7 +258,7 @@ where
     }
 }
 
-pub(crate) async fn list_non_submodule_files_under<R>(
+pub async fn list_non_submodule_files_under<R>(
     ctx: &CoreContext,
     repo: &R,
     cs_id: ChangesetId,
@@ -295,7 +295,7 @@ where
 /// Gets the root directory's fsnode id from a submodule commit provided as
 /// as a git hash. This is used for working copy validation of submodule
 /// expansion.
-pub(crate) async fn root_fsnode_id_from_submodule_git_commit(
+pub async fn root_fsnode_id_from_submodule_git_commit(
     ctx: &CoreContext,
     repo: &impl Repo,
     git_hash: GitSha1,
@@ -318,7 +318,7 @@ pub(crate) async fn root_fsnode_id_from_submodule_git_commit(
 /// under a given submodule.
 /// It removes the path of the given submodule from all the entries that are
 /// under it and ignores the ones that aren't.
-pub(crate) fn build_recursive_submodule_deps<R: Repo>(
+pub fn build_recursive_submodule_deps<R: Repo>(
     submodule_deps: &HashMap<NonRootMPath, Arc<R>>,
     submodule_path: &NonRootMPath,
 ) -> HashMap<NonRootMPath, Arc<R>> {
@@ -337,7 +337,7 @@ pub(crate) fn build_recursive_submodule_deps<R: Repo>(
 ///
 /// This could happen by directly modifying the submodule's expansion or its
 /// metadata file.
-pub(crate) fn get_submodule_expansions_affected<'a, R: Repo>(
+pub fn get_submodule_expansions_affected<'a, R: Repo>(
     sm_exp_data: &SubmoduleExpansionData<'a, R>,
     // Bonsai from the large repo
     bonsai: &BonsaiChangesetMut,
@@ -390,7 +390,7 @@ pub(crate) fn get_submodule_expansions_affected<'a, R: Repo>(
 /// If it's there, it will create a commit in the submodule repo containing a
 /// single README file informing that it represents a dangling submodule pointer
 /// and will return this new commit's changeset id.
-pub(crate) async fn get_submodule_bonsai_changeset_id<R: Repo>(
+pub async fn get_submodule_bonsai_changeset_id<R: Repo>(
     ctx: &CoreContext,
     submodule_repo: &R,
     git_submodule_sha1: GitSha1,

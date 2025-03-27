@@ -21,6 +21,15 @@ use bookmarks::BookmarkUpdateReason;
 use bookmarks::BookmarksMaybeStaleExt;
 use bulk_derivation::BulkDerivation;
 use cloned::cloned;
+use commit_rewrite::git_submodules::build_recursive_submodule_deps;
+use commit_rewrite::git_submodules::get_git_hash_from_submodule_file;
+use commit_rewrite::git_submodules::get_submodule_repo;
+use commit_rewrite::git_submodules::get_x_repo_submodule_metadata_file_path;
+use commit_rewrite::git_submodules::git_hash_from_submodule_metadata_file;
+use commit_rewrite::git_submodules::root_fsnode_id_from_submodule_git_commit;
+use commit_rewrite::git_submodules::validate_working_copy_of_expansion_with_recursive_submodules;
+use commit_rewrite::SubmoduleDeps;
+use commit_rewrite::SubmodulePath;
 use context::CoreContext;
 use fsnodes::RootFsnodeId;
 use futures::future;
@@ -56,20 +65,11 @@ use sorted_vector_map::SortedVectorMap;
 
 use crate::commit_syncer::CommitSyncer;
 use crate::get_git_submodule_action_by_version;
-use crate::git_submodules::build_recursive_submodule_deps;
-use crate::git_submodules::get_git_hash_from_submodule_file;
-use crate::git_submodules::get_submodule_repo;
-use crate::git_submodules::get_x_repo_submodule_metadata_file_path;
-use crate::git_submodules::git_hash_from_submodule_metadata_file;
-use crate::git_submodules::root_fsnode_id_from_submodule_git_commit;
-use crate::git_submodules::types::SubmodulePath;
-use crate::git_submodules::validate_working_copy_of_expansion_with_recursive_submodules;
 use crate::submodule_metadata_file_prefix_and_dangling_pointers;
 use crate::types::Repo;
 use crate::types::Source;
 use crate::types::Target;
 use crate::InMemoryRepo;
-use crate::SubmoduleDeps;
 use crate::SubmoduleExpansionData;
 use crate::Syncers;
 
@@ -1679,6 +1679,7 @@ mod test {
 
     use ascii::AsciiString;
     use bookmarks::BookmarkKey;
+    use commit_rewrite::SubmoduleDeps;
     use cross_repo_sync_test_utils::get_live_commit_sync_config;
     use cross_repo_sync_test_utils::TestRepo;
     use fbinit::FacebookInit;
@@ -1709,7 +1710,6 @@ mod test {
     use super::*;
     use crate::create_commit_syncers;
     use crate::CommitSyncRepos;
-    use crate::SubmoduleDeps;
     use crate::Syncers;
 
     #[mononoke::fbinit_test]

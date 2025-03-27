@@ -36,7 +36,7 @@ pub trait Repo = commit_transformation::Repo
 /// Wrapper to differentiate submodule paths from file changes paths at the
 /// type level.
 #[derive(Eq, Clone, Debug, PartialEq, Hash, PartialOrd, Ord)]
-pub struct SubmodulePath(pub(crate) NonRootMPath);
+pub struct SubmodulePath(pub NonRootMPath);
 
 impl std::fmt::Display for SubmodulePath {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
