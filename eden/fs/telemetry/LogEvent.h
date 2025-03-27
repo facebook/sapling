@@ -804,6 +804,28 @@ struct EMenuActionEvent : public EdenFSEvent {
   }
 };
 
+/**
+ * Indicates that a FS request (through FUSE, NFS, PrjFS) took longer than a set
+ * threshold.
+ */
+struct LongRunningFSRequest : public EdenFSEvent {
+  double duration = 0.0;
+  std::string causeDetail;
+
+  LongRunningFSRequest(double duration, std::string_view detail)
+      : duration(duration), causeDetail(detail) {}
+
+  void populate(DynamicEvent& event) const override {
+    // Duration in nanoseconds
+    event.addDouble("duration", duration);
+    event.addString("causeDetail", causeDetail);
+  }
+
+  const char* getType() const override {
+    return "long_running_fs_request";
+  }
+};
+
 struct FileAccessEvent : public EdenFSFileAccessEvent {
   std::string repo;
   std::string directory;
