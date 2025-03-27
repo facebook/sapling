@@ -60,7 +60,7 @@ Test subtree import failure cases
 
   $ hg subtree import --url file://$TESTTMP/gitrepo --rev d2a8b3fa3dfa345ea64e02ea014d21b5cabd03e0 --to-path foo -m "import gitrepo to foo"
   abort: cannot import to an existing path: foo
-  (use --force to overwrite (recursively remove foo))
+  (use --force to overwrite)
   [255]
   $ hg subtree import --url file://$TESTTMP/gitrepo --rev d2a8b3fa3dfa345ea64e02ea014d21b5cabd03e0
   abort: must specify the to-path

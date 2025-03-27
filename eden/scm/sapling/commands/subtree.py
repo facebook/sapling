@@ -485,20 +485,7 @@ def _do_normal_copy(repo, from_ctx, to_ctx, from_paths, to_paths, opts):
                 fileservice.prefetch(fileids, fetchhistory=False)
 
     ui = repo.ui
-    force = opts.get("force")
-    auditor = pathutil.pathauditor(repo.root)
-
-    for to_path in to_paths:
-        auditor(to_path)
-        if repo.wvfs.lexists(to_path):
-            if not force:
-                raise error.Abort(
-                    _("cannot copy to an existing path: %s") % to_path,
-                    hint=_("use --force to overwrite (recursively remove %s)")
-                    % to_path,
-                )
-            matcher = matchmod.match(repo.root, "", [f"path:{to_path}"])
-            cmdutil.remove(ui, repo, matcher, mark=False, force=True)
+    abort_or_remove_paths(ui, repo, to_paths, "copy", opts)
 
     path_to_fileids = {}
     limit = ui.configint("subtree", "copy-max-file-count", MAX_SUBTREE_COPY_FILE_COUNT)
@@ -607,22 +594,7 @@ def _do_import(ui, repo, temp_dir, *args, **opts):
     subtreeutil.validate_path_overlap([], to_paths)
     subtreeutil.validate_path_depth(ui, to_paths)
 
-    force = opts.get("force")
-    auditor = pathutil.pathauditor(repo.root)
-
-    for to_path in to_paths:
-        auditor(to_path)
-        if repo.wvfs.lexists(to_path):
-            if not force:
-                raise error.Abort(
-                    _("cannot import to an existing path: %s") % to_path,
-                    hint=_("use --force to overwrite (recursively remove %s)")
-                    % to_path,
-                )
-            matcher = matchmod.match(repo.root, "", [f"path:{to_path}"])
-            cmdutil.remove(ui, repo, matcher, mark=False, force=True)
-            if repo.wvfs.lexists(to_path):
-                repo.wvfs.rmtree(to_path)
+    abort_or_remove_paths(ui, repo, to_paths, "import", opts)
 
     # PERF: shallow clone, then partial checkout
     git_repo = git.clone(ui, url, temp_dir, update=from_commit)
@@ -721,3 +693,22 @@ def copy_files(repo, from_ctx, from_paths, to_paths):
 
     wctx = repo[None]
     wctx.add(new_files)
+
+
+def abort_or_remove_paths(ui, repo, paths, subcmd, opts):
+    """Abort if the path exists and `force` is not set, otherwise remove the path"""
+    force = opts.get("force")
+    auditor = pathutil.pathauditor(repo.root)
+
+    for path in paths:
+        auditor(path)
+        if repo.wvfs.lexists(path):
+            if not force:
+                raise error.Abort(
+                    _("cannot %s to an existing path: %s") % (subcmd, path),
+                    hint=_("use --force to overwrite"),
+                )
+            matcher = matchmod.match(repo.root, "", [f"path:{path}"])
+            cmdutil.remove(ui, repo, matcher, mark=False, force=True)
+            if repo.wvfs.lexists(path):
+                repo.wvfs.rmtree(path)

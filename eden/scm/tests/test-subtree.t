@@ -225,7 +225,7 @@ test subtree copy to tracked directory
   $ hg go $C -q
   $ hg subtree cp -r $A --from-path foo --to-path bar
   abort: cannot copy to an existing path: bar
-  (use --force to overwrite (recursively remove bar))
+  (use --force to overwrite)
   [255]
   $ hg subtree cp -r $A --from-path foo --to-path bar --force
   removing bar/x
