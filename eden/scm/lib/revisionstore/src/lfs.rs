@@ -85,6 +85,7 @@ use tracing::info_span;
 use tracing::trace_span;
 use tracing::warn;
 use tracing::Instrument;
+use types::FetchContext;
 use types::HgId;
 use types::Key;
 use types::RepoPath;
@@ -1106,6 +1107,7 @@ impl LfsRemote {
 
     pub fn batch_fetch(
         &self,
+        fctx: FetchContext,
         objs: &HashSet<(Sha256, usize)>,
         write_to_store: impl FnMut(Sha256, Bytes) -> Result<()>,
         error_handler: impl FnMut(Sha256, Error),
@@ -1113,6 +1115,7 @@ impl LfsRemote {
         let read_from_store = |_sha256, _size| unreachable!();
         match self {
             LfsRemote::Http(http) => Self::batch_http(
+                Some(fctx),
                 http,
                 objs,
                 Operation::Download,
@@ -1133,6 +1136,7 @@ impl LfsRemote {
         let write_to_store = |_, _| unreachable!();
         match self {
             LfsRemote::Http(http) => Self::batch_http(
+                None,
                 http,
                 objs,
                 Operation::Upload,
@@ -1145,6 +1149,7 @@ impl LfsRemote {
     }
 
     async fn send_with_retry(
+        fctx: Option<FetchContext>,
         client: Arc<HttpClient>,
         method: Method,
         url: Url,
@@ -1187,6 +1192,8 @@ impl LfsRemote {
                 if let Some(mts) = http_options.min_transfer_speed {
                     req.set_min_transfer_speed(mts);
                 }
+
+                req.set_fetch_cause(fctx.as_ref().map(|fctx| fctx.cause().to_str()));
 
                 let res = async {
                     let request_timeout = http_options.request_timeout;
@@ -1314,6 +1321,7 @@ impl LfsRemote {
     }
 
     fn send_batch_request(
+        fctx: Option<FetchContext>,
         http: &HttpLfsRemote,
         objects: Vec<RequestObject>,
         operation: Operation,
@@ -1334,6 +1342,7 @@ impl LfsRemote {
 
         let response_fut = async move {
             LfsRemote::send_with_retry(
+                fctx.clone(),
                 http.client.clone(),
                 Method::Post,
                 batch_url,
@@ -1360,6 +1369,7 @@ impl LfsRemote {
 
         let url = Url::from_str(&action.href.to_string())?;
         LfsRemote::send_with_retry(
+            None,
             client,
             Method::Put,
             url,
@@ -1381,6 +1391,7 @@ impl LfsRemote {
     }
 
     async fn process_download(
+        fctx: Option<FetchContext>,
         client: Arc<HttpClient>,
         chunk_size: Option<NonZeroU64>,
         action: ObjectAction,
@@ -1405,6 +1416,7 @@ impl LfsRemote {
                         let range = format!("bytes={}-{}", chunk_start, chunk_end);
 
                         let chunk = LfsRemote::send_with_retry(
+                            fctx.clone(),
                             client.clone(),
                             Method::Get,
                             url.clone(),
@@ -1437,6 +1449,7 @@ impl LfsRemote {
             }
             None => {
                 LfsRemote::send_with_retry(
+                    fctx,
                     client,
                     Method::Get,
                     url,
@@ -1470,6 +1483,7 @@ impl LfsRemote {
     ///
     /// The protocol is described at: https://github.com/git-lfs/git-lfs/blob/master/docs/api/batch.md
     fn batch_http(
+        fctx: Option<FetchContext>,
         http: &HttpLfsRemote,
         objs: &HashSet<(Sha256, usize)>,
         operation: Operation,
@@ -1483,8 +1497,12 @@ impl LfsRemote {
         });
 
         for request_objs_chunk in &request_objs_iter.chunks(http.max_batch_size) {
-            let response =
-                LfsRemote::send_batch_request(http, request_objs_chunk.collect(), operation)?;
+            let response = LfsRemote::send_batch_request(
+                fctx.clone(),
+                http,
+                request_objs_chunk.collect(),
+                operation,
+            )?;
             let response = match response {
                 None => return Ok(()),
                 Some(response) => response,
@@ -1526,6 +1544,7 @@ impl LfsRemote {
                         })
                         .left_future(),
                         Operation::Download => LfsRemote::process_download(
+                            fctx.clone(),
                             http.client.clone(),
                             http.download_chunk_size,
                             action,
@@ -1606,11 +1625,13 @@ impl LfsClient {
 
     fn batch_fetch(
         &self,
+        fctx: FetchContext,
         objs: &HashSet<(Sha256, usize)>,
         write_to_store: impl FnMut(Sha256, Bytes) -> Result<()>,
         error_handler: impl FnMut(Sha256, Error),
     ) -> Result<()> {
-        self.remote.batch_fetch(objs, write_to_store, error_handler)
+        self.remote
+            .batch_fetch(fctx, objs, write_to_store, error_handler)
     }
 
     fn batch_upload(
@@ -1798,7 +1819,11 @@ impl RemoteDataStore for LfsRemoteStore {
 
         let size = Arc::new(AtomicUsize::new(0));
         let obj_set = Arc::new(Mutex::new(obj_set));
+
+        let fctx = FetchContext::sapling_prefetch();
+
         self.remote.batch_fetch(
+            fctx,
             &objs,
             {
                 let remote = self.remote.clone();
@@ -2363,7 +2388,12 @@ mod tests {
                 .iter()
                 .cloned()
                 .collect::<HashSet<_>>();
-            remote.batch_fetch(&objs, sentinel.as_callback(), |_, _| {})?;
+            remote.batch_fetch(
+                FetchContext::default(),
+                &objs,
+                sentinel.as_callback(),
+                |_, _| {},
+            )?;
             assert!(sentinel.get());
 
             Ok(())
@@ -2389,7 +2419,12 @@ mod tests {
                 .iter()
                 .cloned()
                 .collect::<HashSet<_>>();
-            let resp = remote.batch_fetch(&objs, |_, _| unreachable!(), |_, _| {});
+            let resp = remote.batch_fetch(
+                FetchContext::default(),
+                &objs,
+                |_, _| unreachable!(),
+                |_, _| {},
+            );
             // ex. [56] Failure when receiving data from the peer (Proxy CONNECT aborted)
             // But not necessarily that message in all cases.
             assert!(resp.is_err());
@@ -2417,7 +2452,12 @@ mod tests {
                 .iter()
                 .cloned()
                 .collect::<HashSet<_>>();
-            let resp = remote.batch_fetch(&objs, |_, _| unreachable!(), |_, _| {});
+            let resp = remote.batch_fetch(
+                FetchContext::default(),
+                &objs,
+                |_, _| unreachable!(),
+                |_, _| {},
+            );
             assert!(resp.is_err());
 
             Ok(())
@@ -2448,7 +2488,12 @@ mod tests {
                 .iter()
                 .cloned()
                 .collect::<HashSet<_>>();
-            remote.batch_fetch(&objs, sentinel.as_callback(), |_, _| {})?;
+            remote.batch_fetch(
+                FetchContext::default(),
+                &objs,
+                sentinel.as_callback(),
+                |_, _| {},
+            )?;
             assert!(sentinel.get());
 
             Ok(())
@@ -2487,6 +2532,7 @@ mod tests {
 
             let out = Arc::new(Mutex::new(Vec::new()));
             remote.batch_fetch(
+                FetchContext::default(),
                 &objs,
                 {
                     let out = out.clone();
@@ -2614,7 +2660,12 @@ mod tests {
             );
 
             let objs = [(blob.0, blob.1)].iter().cloned().collect::<HashSet<_>>();
-            let res = remote.batch_fetch(&objs, |_, _| unreachable!(), |_, _| {});
+            let res = remote.batch_fetch(
+                FetchContext::default(),
+                &objs,
+                |_, _| unreachable!(),
+                |_, _| {},
+            );
             assert!(res.is_err());
 
             Ok(())
@@ -2702,7 +2753,9 @@ mod tests {
                 .iter()
                 .cloned()
                 .collect::<HashSet<_>>();
+
             remote.batch_fetch(
+                FetchContext::default(),
                 &objs,
                 |_, data| {
                     assert!(is_redacted(&data));
@@ -2754,7 +2807,9 @@ mod tests {
             .cloned()
             .collect::<HashSet<_>>();
         let out = Arc::new(Mutex::new(Vec::new()));
+
         remote.batch_fetch(
+            FetchContext::default(),
             &objs,
             {
                 let out = out.clone();
@@ -3025,7 +3080,11 @@ mod tests {
                 .collect::<HashSet<_>>();
 
             // Make sure we get an error (but don't panic).
-            assert!(remote.batch_fetch(&objs, |_, _| Ok(()), |_, _| {}).is_err());
+            assert!(
+                remote
+                    .batch_fetch(FetchContext::default(), &objs, |_, _| Ok(()), |_, _| {})
+                    .is_err()
+            );
 
             // Check request count.
             m1.assert();

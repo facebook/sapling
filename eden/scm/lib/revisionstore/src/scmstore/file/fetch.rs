@@ -1036,6 +1036,7 @@ impl FetchState {
 
         // Fetch & write to local LFS stores
         let top_level_error = store.batch_fetch(
+            self.fctx.clone(),
             &pending,
             |sha256, data| -> Result<()> {
                 bar.increase_position(1);

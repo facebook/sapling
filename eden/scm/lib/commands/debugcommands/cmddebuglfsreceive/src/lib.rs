@@ -16,6 +16,7 @@ use cmdutil::ConfigSet;
 use cmdutil::Error;
 use cmdutil::Result;
 use revisionstore::LfsRemote;
+use types::FetchContext;
 use types::Sha256;
 
 define_flags! {
@@ -47,6 +48,7 @@ pub fn run(ctx: ReqCtx<DebugLfsReceiveOpts>) -> Result<u8> {
     let lfs_remote = LfsRemote::from_config(&config)?;
     let mut error: Option<Error> = None;
     lfs_remote.batch_fetch(
+        FetchContext::default(),
         &HashSet::from([(sha256, size)]),
         |_sha, data| output.write(data.as_ref()).map_err(Into::into).map(|_| ()),
         |_sha, err| error = Some(err),
