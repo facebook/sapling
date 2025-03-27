@@ -632,17 +632,3 @@ TODO(T174902563): Fix deletion of submodules in EXPAND submodule action.
                 │
                 o  54a6db91baf1 L_A
   
-
--- Test that disabling the JK falls back to the previous behaviour
-  $ merge_just_knobs <<EOF
-  > {
-  >   "bools": {
-  >     "scm/mononoke:backsync_submodule_expansion_changes": false
-  >   }
-  > }
-  > EOF
-  $ backsync_get_info_and_derive_data
-  Processing commit: Delete repo_c recursive submodule expansion
-  Commit hash: f229a7929d48e8d5e1e461443c41071b2c0be99e
-  *error: Changeset can't be synced from large to small repo because it modifies the expansion of submodules* (glob)
-  [255]

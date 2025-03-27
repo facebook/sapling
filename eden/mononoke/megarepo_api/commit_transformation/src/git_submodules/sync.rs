@@ -8,12 +8,10 @@
 use std::collections::HashMap;
 use std::sync::Arc;
 
-use anyhow::ensure;
 use anyhow::Context;
 use anyhow::Result;
 use context::CoreContext;
 use futures_stats::TimedFutureExt;
-use itertools::Itertools;
 use mononoke_types::BonsaiChangesetMut;
 use mononoke_types::ChangesetId;
 use movers::Movers;
@@ -23,7 +21,6 @@ use scuba_ext::FutureStatsScubaExt;
 use crate::git_submodules::compact::compact_all_submodule_expansion_file_changes;
 use crate::git_submodules::expand::expand_all_git_submodule_file_changes;
 use crate::git_submodules::expand::SubmoduleExpansionData;
-use crate::git_submodules::utils::get_submodule_expansions_affected;
 use crate::git_submodules::validation::ValidSubmoduleExpansionBonsai;
 use crate::rewrite_commit_with_file_changes_filter;
 use crate::types::CommitRewriteResult;
@@ -56,27 +53,6 @@ pub async fn sync_commit_with_submodule_expansion<'a, R: Repo>(
                 ("target_repo", sm_exp_data.small_repo_id.id()),
             ],
         );
-
-        let backsync_submodule_expansion_changes = justknobs::eval(
-            "scm/mononoke:backsync_submodule_expansion_changes",
-            None,
-            None,
-        )?;
-
-        if !backsync_submodule_expansion_changes {
-            // If backsyncing changes to submodule expansion is disabled,
-            // ensure no expansions were modified before backsyncing.
-            return backsync_without_submodule_expansion_support(
-                ctx,
-                bonsai,
-                sm_exp_data,
-                source_repo,
-                movers,
-                remapped_parents,
-                rewrite_opts,
-            )
-            .await;
-        }
 
         // If any submodule expansion is being modified, run validation to make
         // sure the expansion remains valid and its metadata file was updated.
@@ -173,44 +149,4 @@ pub async fn sync_commit_with_submodule_expansion<'a, R: Repo>(
         }
         None => Ok(CommitRewriteResult::new(None, HashMap::new())),
     }
-}
-
-/// Sync a commit from large to small repo **only if it doesn't modify any
-/// submodule expansion**.
-async fn backsync_without_submodule_expansion_support<'a, R: Repo>(
-    ctx: &'a CoreContext,
-    bonsai_mut: BonsaiChangesetMut,
-    sm_exp_data: SubmoduleExpansionData<'a, R>,
-    source_repo: &'a R,
-    movers: Movers,
-    remapped_parents: &'a HashMap<ChangesetId, ChangesetId>,
-    rewrite_opts: RewriteOpts,
-) -> Result<CommitRewriteResult> {
-    let submodules_affected =
-        get_submodule_expansions_affected(&sm_exp_data, &bonsai_mut, movers.mover.clone())?;
-
-    ensure!(
-        submodules_affected.is_empty(),
-        "Changeset can't be synced from large to small repo because it modifies the expansion of submodules: {0:#?}",
-        submodules_affected
-            .into_iter()
-            .map(|p| p.to_string())
-            .sorted()
-            .collect::<Vec<_>>(),
-    );
-
-    let rewritten = rewrite_commit_with_file_changes_filter(
-        ctx,
-        bonsai_mut,
-        remapped_parents,
-        Arc::new(movers.mover.clone()),
-        source_repo,
-        None,
-        rewrite_opts,
-        vec![], // File change filters
-    )
-    .await
-    .context("Failed to create small repo bonsai")?;
-
-    Ok(CommitRewriteResult::new(rewritten, HashMap::new()))
 }
