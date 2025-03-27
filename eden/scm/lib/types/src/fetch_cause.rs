@@ -57,3 +57,30 @@ impl std::str::FromStr for FetchCause {
         }
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use std::str::FromStr;
+
+    use super::*;
+    #[test]
+    fn test_fetch_cause_serialisation_deserialisation() {
+        let variants = [
+            FetchCause::EdenUnknown,
+            FetchCause::EdenPrefetch,
+            FetchCause::EdenThrift,
+            FetchCause::EdenFs,
+            FetchCause::EdenMixed,
+            FetchCause::SaplingPrefetch,
+            FetchCause::SaplingUnknown,
+            FetchCause::Unspecified,
+        ];
+
+        for variant in variants {
+            let string = variant.to_str();
+            let parsed = FetchCause::from_str(string).unwrap();
+
+            assert_eq!(variant, parsed);
+        }
+    }
+}
