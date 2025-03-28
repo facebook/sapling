@@ -75,6 +75,7 @@ pub fn build_mononoke_cas_client<'a>(
     {
         let _fb = fb; // unused
         let _verbose = verbose; // unused
+        let _ = use_case; // unused
         DummyCasClient::new(ctx, repo)
     }
 }

@@ -12,6 +12,7 @@ use anyhow::Result;
 use async_trait::async_trait;
 use fbinit::FacebookInit;
 use metaconfig_types::GitBundleURIConfig;
+#[cfg(fbcode_build)]
 use metaconfig_types::UriGeneratorType;
 use mononoke_types::RepositoryId;
 
@@ -129,10 +130,10 @@ pub fn bundle_uri_arc(
 
 #[cfg(not(fbcode_build))]
 pub fn bundle_uri_arc(
-    fb: FacebookInit,
+    _fb: FacebookInit,
     storage: SqlGitBundleMetadataStorage,
     repo_id: RepositoryId,
-    config: &GitBundleURIConfig,
+    _config: &GitBundleURIConfig,
 ) -> Arc<dyn GitBundleUri + Send + Sync + 'static> {
     Arc::new(BundleUri {
         bundle_metadata_storage: storage,

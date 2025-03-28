@@ -8,6 +8,7 @@
 use std::str::FromStr;
 use std::sync::Arc;
 
+#[cfg(fbcode_build)]
 use anyhow::anyhow;
 use anyhow::bail;
 use anyhow::Context;
@@ -135,6 +136,8 @@ impl LoggingArgs {
 
         #[cfg(fbcode_build)]
         crate::glog::set_glog_log_level(fb, default_level.unwrap_or(DEFAULT_TRACING_LEVEL).into())?;
+        #[cfg(not(fbcode_build))]
+        let _ = fb;
 
         // Make sure noisy dependencies don't pollute the logs
         let mut builtins: Vec<Directive> = vec![

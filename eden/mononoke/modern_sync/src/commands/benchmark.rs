@@ -5,17 +5,21 @@
  * GNU General Public License version 2.
  */
 
+#[cfg(fbcode_build)]
 use std::net::SocketAddr;
 use std::path::PathBuf;
 use std::sync::Arc;
+#[cfg(fbcode_build)]
 use std::time::Duration;
 
+#[cfg(fbcode_build)]
 use anyhow::Context;
 use anyhow::Result;
 use async_trait::async_trait;
 use clap::Parser;
 use clientinfo::ClientEntryPoint;
 use clientinfo::ClientInfo;
+#[cfg(fbcode_build)]
 use cloned::cloned;
 use context::CoreContext;
 use context::SessionContainer;
@@ -25,14 +29,19 @@ use fb303_core_thriftclients::make_BaseService_thriftclient;
 use fb303_core_thriftclients::thriftclient::TransportType;
 #[cfg(fbcode_build)]
 use fb303_core_thriftclients::BaseService;
+#[cfg(fbcode_build)]
 use fbinit::FacebookInit;
 use metadata::Metadata;
+#[cfg(fbcode_build)]
 use mononoke_app::args::MonitoringArgs;
 use mononoke_app::MononokeApp;
+#[cfg(fbcode_build)]
 use mononoke_macros::mononoke;
 use mutable_counters::MutableCounters;
 use slog::info;
+#[cfg(fbcode_build)]
 use slog::warn;
+#[cfg(fbcode_build)]
 use slog::Logger;
 
 use crate::commands::sync_loop::CHUNK_SIZE_DEFAULT;
@@ -41,7 +50,9 @@ use crate::sync::get_unsharded_repo_args;
 use crate::sync::ExecutionType;
 use crate::ModernSyncArgs;
 
+#[cfg(fbcode_build)]
 const CONN_TIMEOUT_MS: u32 = 1_000;
+#[cfg(fbcode_build)]
 const RECV_TIMEOUT_MS: u32 = 1_000;
 
 /// Replays bookmark's moves

@@ -33,7 +33,7 @@ impl CounterManager for OdsCounterManager {
 }
 
 pub async fn periodic_fetch_counter(
-    manager: Arc<RwLock<OdsCounterManager>>,
-    interval_duration: Duration,
+    _manager: Arc<RwLock<OdsCounterManager>>,
+    _interval_duration: Duration,
 ) {
 }
