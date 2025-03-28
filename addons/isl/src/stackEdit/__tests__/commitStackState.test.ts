@@ -5,7 +5,8 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-import type {ExportCommit, ExportStack} from 'shared/types/stack';
+import type {RepoPath} from 'shared/types/common';
+import type {ExportCommit, ExportFile, ExportStack} from 'shared/types/stack';
 import type {CommitRev, FileRev} from '../commitStackState';
 
 import {Map as ImMap, Set as ImSet, List} from 'immutable';
@@ -91,6 +92,27 @@ const exportStack1: ExportStack = [
     text: 'C',
   },
 ];
+
+/** Construct `CommitStackState` from a stack of files for testing purpose. */
+export function linearStackWithFiles(
+  stackFiles: Array<{[path: RepoPath]: ExportFile | null}>,
+): CommitStackState {
+  return new CommitStackState(
+    stackFiles.map((files, i) => {
+      const nextFiles = stackFiles.at(i + 1) ?? {};
+      return {
+        ...exportCommitDefault,
+        node: `NODE_${i}`,
+        parents: i === 0 ? [] : [`NODE_${i - 1}`],
+        text: `Commit ${i}`,
+        files,
+        relevantFiles: Object.fromEntries(
+          Object.entries(nextFiles).filter(([path, _file]) => !Object.hasOwn(files, path)),
+        ),
+      } as ExportCommit;
+    }),
+  );
+}
 
 describe('CommitStackState', () => {
   it('accepts an empty stack', () => {

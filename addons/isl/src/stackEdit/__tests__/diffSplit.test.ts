@@ -7,49 +7,19 @@
 
 import type {CommitRev} from '../common';
 
-import {CommitStackState} from '../commitStackState';
 import {diffCommit, displayDiff} from '../diffSplit';
-import {exportCommitDefault} from './commitStackState.test';
+import {linearStackWithFiles} from './commitStackState.test';
 
 describe('diffCommit', () => {
-  const stack = new CommitStackState([
-    {
-      ...exportCommitDefault,
-      immutable: true,
-      node: 'Z_NODE',
-      relevantFiles: {'x.txt': {dataBase85: 'HHa&FWG5;0PL2'}, 'z.txt': {data: ''}},
-      requested: false,
-      text: 'Z',
-    },
-    {
-      ...exportCommitDefault,
-      files: {'x.txt': {data: '1\n2\n3\n4\n'}},
-      node: 'A_NODE',
-      parents: ['Z_NODE'],
-      relevantFiles: {'y.txt': null},
-      text: 'A',
-    },
-    {
-      ...exportCommitDefault,
-      files: {
-        'x.txt': null,
-        'y.txt': {copyFrom: 'x.txt', data: '3\n4\n5\n6', flags: 'x'},
-      },
-      node: 'B_NODE',
-      parents: ['A_NODE'],
-      text: 'B',
-    },
-    {
-      ...exportCommitDefault,
-      files: {'z.txt': null},
-      node: 'C_NODE',
-      parents: ['Z_NODE'],
-      text: 'C',
-    },
+  const stack = linearStackWithFiles([
+    {'x.txt': {dataBase85: 'HHa&FWG5;0PL2'}, 'z.txt': {data: ''}},
+    {'x.txt': {data: '1\n2\n3\n4\n'}},
+    {'x.txt': null, 'y.txt': {copyFrom: 'x.txt', data: '3\n4\n5\n6', flags: 'x'}},
+    {'z.txt': null},
   ]);
 
   it('exports commit diff as json', () => {
-    // Commit "B" includes deletion of "x.txt", and rename from "x.txt" to "y.txt".
+    // Commit 2 includes deletion of "x.txt", and rename from "x.txt" to "y.txt".
     // Right now we don't "optimize" the diff to exclude the deletion.
     const diff = diffCommit(stack, 2 as CommitRev);
     expect(diff).toMatchInlineSnapshot(`
@@ -131,11 +101,11 @@ describe('diffCommit', () => {
             ],
           },
         ],
-        "message": "B",
+        "message": "Commit 2",
       }
     `);
     expect(displayDiff(diff)).toMatchInlineSnapshot(`
-      "B
+      "Commit 2
       diff a/x.txt b/x.txt
       deleted file mode 100644
       -1
@@ -158,22 +128,22 @@ describe('diffCommit', () => {
   });
 
   it('skips binary changes', () => {
-    // Commit "A" modifies "x.txt" from binary to text. It is skipped because the binary data.
+    // Commit 1 modifies "x.txt" from binary to text. It is skipped because the binary data.
     const diff = diffCommit(stack, 1 as CommitRev);
     expect(diff).toMatchInlineSnapshot(`
-        {
-          "files": [],
-          "message": "A",
-        }
-      `);
+      {
+        "files": [],
+        "message": "Commit 1",
+      }
+    `);
     expect(displayDiff(diff)).toMatchInlineSnapshot(`
-      "A
+      "Commit 1
       "
     `);
   });
 
   it('reports deletion of an empty file', () => {
-    // Commit "C" deletes "z.txt". It should be reported despite the content diff is empty.
+    // Commit 3 deletes "z.txt". It should be reported despite the content diff is empty.
     const diff = diffCommit(stack, 3 as CommitRev);
     expect(diff).toMatchInlineSnapshot(`
       {
@@ -186,11 +156,11 @@ describe('diffCommit', () => {
             "lines": [],
           },
         ],
-        "message": "C",
+        "message": "Commit 3",
       }
     `);
     expect(displayDiff(diff)).toMatchInlineSnapshot(`
-      "C
+      "Commit 3
       diff a/z.txt b/z.txt
       deleted file mode 100644
       "
