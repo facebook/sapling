@@ -1,4 +1,4 @@
-#require git no-eden
+#require git no-eden no-windows
 #modern-config-incompatible
 
   $ . $TESTDIR/git.sh
