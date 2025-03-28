@@ -1274,6 +1274,7 @@ def shellenviron(environ=None):
     if environ:
         env.update((k, py2shell(v)) for k, v in environ.items())
     env["HG"] = hgexecutable()
+    env.pop("NODE_CHANNEL_FD", None)
     return env
 
 
