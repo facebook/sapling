@@ -489,7 +489,7 @@ def _do_normal_copy(repo, from_ctx, to_ctx, from_paths, to_paths, opts):
     abort_or_remove_paths(ui, repo, to_paths, "copy", opts)
 
     path_to_fileids = {}
-    limit = ui.configint("subtree", "copy-max-file-count", MAX_SUBTREE_COPY_FILE_COUNT)
+    limit = ui.configint("subtree", "max-file-count", MAX_SUBTREE_COPY_FILE_COUNT)
     file_count = 0
     for path in from_paths:
         matcher = matchmod.match(repo.root, "", [f"path:{path}"])
@@ -498,20 +498,12 @@ def _do_normal_copy(repo, from_ctx, to_ctx, from_paths, to_paths, opts):
         if file_count > limit:
             support = ui.config("ui", "supportcontact")
             help_hint = _("contact %s for help") % support if support else None
-            override_hint = _(
-                "use '--config subtree.copy-max-file-count=N' cautiously to override"
-            )
-            hint = (
-                _("%s or %s") % (help_hint, override_hint)
-                if help_hint
-                else override_hint
-            )
             raise error.Abort(
                 _(
                     "subtree copy includes too many files (%d), exceeding configured limit (%d)"
                 )
                 % (file_count, limit),
-                hint=hint,
+                hint=help_hint,
             )
         path_to_fileids[path] = fileids
 

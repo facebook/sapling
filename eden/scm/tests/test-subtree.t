@@ -146,13 +146,12 @@ abort when subtree copy too many files
   >     # A/foo/y = yyy\n
   >     # drawdag.defaultfiles=false
   > EOS  
-  $ hg subtree cp -r $A --from-path foo --to-path bar --config subtree.copy-max-file-count=1
+  $ hg subtree cp -r $A --from-path foo --to-path bar --config subtree.max-file-count=1
   abort: subtree copy includes too many files (2), exceeding configured limit (1)
-  (use '--config subtree.copy-max-file-count=N' cautiously to override)
   [255]
-  $ hg subtree cp -r $A --from-path foo --to-path bar --config subtree.copy-max-file-count=1 --config ui.supportcontact="Sapling Team"
+  $ hg subtree cp -r $A --from-path foo --to-path bar --config subtree.max-file-count=1 --config ui.supportcontact="Sapling Team"
   abort: subtree copy includes too many files (2), exceeding configured limit (1)
-  (contact Sapling Team for help or use '--config subtree.copy-max-file-count=N' cautiously to override)
+  (contact Sapling Team for help)
   [255]
 
 
