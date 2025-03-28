@@ -2,8 +2,8 @@
 abomonation = { git = "https://github.com/markbt/abomonation", rev = "0f43346d2afa2aedc64d61f3f4273e8d1e454642" }
 base64urlsafedata = { git = "https://github.com/kanidm/webauthn-rs.git", rev = "d278c56adfa39a0723c79bdcd461644194bc5138" }
 cbindgen = { git = "https://github.com/mozilla/cbindgen.git", rev = "89a9faa97cc267e90fc95a1cc6177a001aed5b51" }
-cxx = { package = "cxx", git = "https://github.com/facebookexperimental/cxx.git", rev = "a596961aaf3467b94428273983363f8353c22f85" }
-cxx-build = { package = "cxx-build", git = "https://github.com/facebookexperimental/cxx.git", rev = "a596961aaf3467b94428273983363f8353c22f85" }
+cxx = { package = "cxx", git = "https://github.com/facebookexperimental/cxx.git", rev = "2ea39c564284a70fdc1793fd72c442433e5a2638" }
+cxx-build = { package = "cxx-build", git = "https://github.com/facebookexperimental/cxx.git", rev = "2ea39c564284a70fdc1793fd72c442433e5a2638" }
 displaydoc = { git = "https://github.com/yaahc/displaydoc", rev = "7dc6e324b1788a6b7fb9f3a1953c512923a3e9f0" }
 graphql-parser = { git = "https://github.com/graphql-rust/graphql-parser", rev = "8d76425d83c40670570cc325f57c730262f07456" }
 imgui = { git = "https://github.com/imgui-rs/imgui-rs.git", rev = "2abba18c08fb5e70c699ba7992342e7ff8573b09" }
