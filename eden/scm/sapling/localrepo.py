@@ -20,7 +20,7 @@ import time
 import weakref
 from contextlib import contextmanager
 from functools import partial
-from typing import Optional, Set
+from typing import List, Optional, Set
 
 import bindings
 
@@ -1448,6 +1448,14 @@ class localrepository:
             pass
 
         return ds
+
+    def working_parent_nodes(self) -> List[bytes]:
+        """similar to workingctx._parents, but returns nodes instead of ctxs"""
+        p = self.dirstate.parents()
+        if p[1] == nullid:
+            return p[:-1]
+        else:
+            return p
 
     @util.propertycache
     def _eden_dirstate(self) -> "dirstatemod.dirstate":

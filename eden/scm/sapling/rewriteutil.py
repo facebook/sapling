@@ -28,7 +28,7 @@ def precheck(repo, revs, action="rewrite"):
         raise error.Abort(msg, hint=hint)
 
     publicrevs = repo.revs("%ld and public()", revs)
-    if len(repo[None].parents()) > 1:
+    if len(repo.working_parent_nodes()) > 1:
         raise error.Abort(_("cannot %s while merging") % action)
 
     if publicrevs:

@@ -307,7 +307,7 @@ def isactivewdirparent(repo):
     """
     mark = repo._activebookmark
     marks = repo._bookmarks
-    parents = [p.node() for p in repo[None].parents()]
+    parents = repo.working_parent_nodes()
     return mark in marks and marks[mark] in parents
 
 

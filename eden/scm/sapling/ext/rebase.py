@@ -791,7 +791,7 @@ class rebaseruntime:
         if self.collapsef:
             storecollapsemsg(repo, self.collapsemsg)
 
-        if self.contf and len(repo[None].parents()) == 2:
+        if self.contf and len(repo.working_parent_nodes()) == 2:
             repo.ui.debug("resuming interrupted rebase\n")
         else:
             with ui.configoverride(

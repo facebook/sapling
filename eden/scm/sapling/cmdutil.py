@@ -799,7 +799,7 @@ def fileexistspredicate(filename):
 
 
 def _mergepredicate(repo):
-    return len(repo[None].parents()) > 1
+    return len(repo.working_parent_nodes()) > 1
 
 
 STATES = (

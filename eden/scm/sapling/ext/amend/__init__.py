@@ -350,7 +350,7 @@ def amend(ui, repo, *pats, **opts):
     old = repo["."]
     if old.ispublic():
         raise error.Abort(_("cannot amend public changesets"))
-    if len(repo[None].parents()) > 1:
+    if len(repo.working_parent_nodes()) > 1:
         raise error.Abort(_("cannot amend while merging"))
 
     haschildren = bool(repo.revs("children(.)"))

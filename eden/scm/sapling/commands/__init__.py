@@ -1756,8 +1756,8 @@ def _docommit(ui, repo, *pats, **opts):
             extra.update(subtreeutil.gen_merge_info(repo, subtree_merges))
             summaryfooter = subtree.gen_merge_commit_msg(subtree_merges)
             if subtree_merges:
-                parents = repo[None].parents()
-                repo.setparents(parents[0].node())
+                parents = repo.working_parent_nodes()
+                repo.setparents(parents[0])
 
             editform = cmdutil.mergeeditform(repo[None], "commit.normal")
             editor = cmdutil.getcommiteditor(
@@ -2004,7 +2004,7 @@ def continuecmd(ui, repo):
         ms = mergemod.mergestate.read(repo)
         cmdutil.abort_on_unresolved_conflicts(ms)
 
-        if len(repo[None].parents()) > 1:
+        if len(repo.working_parent_nodes()) > 1:
             # 'merge' or 'subtree merge'
             if ui.interactive():
                 cliname = ui.identity.cliname()
@@ -4657,7 +4657,7 @@ def phase(ui, repo, *revs, **opts):
     if not revs:
         # display both parents as the second parent phase can influence
         # the phase of a merge commit
-        revs = [c.hex() for c in repo[None].parents()]
+        revs = [hex(c) for c in repo.working_parent_nodes()]
 
     revs = scmutil.revrange(repo, revs)
 
