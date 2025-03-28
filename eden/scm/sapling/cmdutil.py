@@ -3828,18 +3828,16 @@ def remove(ui, repo, m, mark, force, warnings=None):
                 ret = 1
 
     list = sorted(list)
-    with progress.bar(ui, _("deleting"), _("files"), len(list)) as prog:
-        for i, f in enumerate(list, 1):
-            if ui.verbose or not m.exact(f):
-                prog.value = i
-                ui.status(_("removing %s\n") % m.rel(f))
-
     with repo.wlock():
-        if not mark:
-            for f in list:
-                if f in added:
-                    continue  # we never unlink added files on remove
-                repo.wvfs.unlinkpath(f, ignoremissing=True)
+        with progress.bar(ui, _("deleting"), _("files"), len(list)) as prog:
+            for i, f in enumerate(list, 1):
+                prog.value = i
+                if ui.verbose or not m.exact(f):
+                    ui.status(_("removing %s\n") % m.rel(f))
+                if not mark:
+                    if f in added:
+                        continue  # we never unlink added files on remove
+                    repo.wvfs.unlinkpath(f, ignoremissing=True)
         repo[None].forget(list)
 
     if warn:
