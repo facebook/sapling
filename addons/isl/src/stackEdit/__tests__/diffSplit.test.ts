@@ -7,7 +7,8 @@
 
 import type {CommitRev} from '../common';
 
-import {diffCommit, displayDiff} from '../diffSplit';
+import {ABSENT_FLAG} from '../common';
+import {applyDiffSplit, diffCommit, displayDiff} from '../diffSplit';
 import {linearStackWithFiles} from './commitStackState.test';
 
 describe('diffCommit', () => {
@@ -163,6 +164,122 @@ describe('diffCommit', () => {
       "Commit 3
       diff a/z.txt b/z.txt
       deleted file mode 100644
+      "
+    `);
+  });
+});
+
+describe('applyDiffSplit', () => {
+  it('works in a basic case', () => {
+    const stack = linearStackWithFiles([
+      {'x.txt': {data: '', flags: ABSENT_FLAG}},
+      {'x.txt': {data: '1\n2\n3\n4\n'}},
+      {'x.txt': {data: '3\n4\n5\n6\n'}},
+      {'x.txt': {data: '3\n4\n5\n6\n7\n'}},
+    ]);
+    const diff = diffCommit(stack, 2 as CommitRev);
+    expect(diff.files[0].lines).toMatchInlineSnapshot(`
+      [
+        {
+          "a": 0,
+          "b": null,
+          "content": "1
+      ",
+        },
+        {
+          "a": 1,
+          "b": null,
+          "content": "2
+      ",
+        },
+        {
+          "a": 2,
+          "b": 0,
+          "content": "3
+      ",
+        },
+        {
+          "a": 3,
+          "b": 1,
+          "content": "4
+      ",
+        },
+        {
+          "a": null,
+          "b": 2,
+          "content": "5
+      ",
+        },
+        {
+          "a": null,
+          "b": 3,
+          "content": "6
+      ",
+        },
+      ]
+    `);
+    expect(displayDiff(diff)).toMatchInlineSnapshot(`
+      "Commit 2
+      diff a/x.txt b/x.txt
+      -1
+      -2
+       3
+       4
+      +5
+      +6
+      "
+    `);
+
+    // Pick "-2" and "+5" in the first commit, "+6" in the 2nd, and does not specify the 3rd.
+    const newStack = applyDiffSplit(stack, 2 as CommitRev, [
+      {message: 'Commit 2a', files: [{bPath: 'x.txt', aLines: [1], bLines: [2]}]},
+      {message: 'Commit 2b', files: [{bPath: 'x.txt', aLines: [], bLines: [3]}]},
+      {message: 'Commit 2c', files: []},
+    ]);
+    expect(
+      [0, 1, 2, 3, 4, 5].map(i => displayDiff(diffCommit(newStack, i as CommitRev))).join('\n'),
+    ).toMatchInlineSnapshot(`
+      "Commit 0
+
+      Commit 1
+      diff a/x.txt b/x.txt
+      new file mode 100644
+      +1
+      +2
+      +3
+      +4
+
+      Commit 2a
+      diff a/x.txt b/x.txt
+       1
+      -2
+       3
+       4
+      +5
+
+      Commit 2b
+      diff a/x.txt b/x.txt
+       1
+       3
+       4
+       5
+      +6
+
+      Commit 2c
+      diff a/x.txt b/x.txt
+      -1
+       3
+       4
+       5
+       6
+
+      Commit 3
+      diff a/x.txt b/x.txt
+       3
+       4
+       5
+       6
+      +7
       "
     `);
   });

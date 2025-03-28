@@ -1456,6 +1456,15 @@ export class CommitStackState extends SelfUpdate<CommitStackRecord> {
   }
 
   /**
+   * Update commit message.
+   */
+  editCommitMessage(rev: CommitRev, message: string): CommitStackState {
+    assert(rev <= this.stack.size && rev >= 0, 'rev out of range');
+    const newStack = this.stack.setIn([rev, 'text'], message);
+    return this.set('stack', newStack);
+  }
+
+  /**
    * Find a unique "key" not yet used by the commit stack.
    */
   nextKey(prefix: string): string {
