@@ -7,6 +7,7 @@
 
 import type {RecordOf} from 'immutable';
 import type {FlattenLine, LineIdx} from '../linelog';
+import type {FileRev} from './common';
 
 import {List, Record} from 'immutable';
 import {SelfUpdate} from 'shared/immutableExt';
@@ -290,5 +291,4 @@ type FileStackStateProps = {
 const FileStackStateRecord = Record<FileStackStateProps>({source: Source()});
 type FileStackStateRecord = RecordOf<FileStackStateProps>;
 
-/** A revision number used in the `FileStackState`. Identifies a version of a multi-version file. */
-export type FileRev = number & {__brand: 'FileStackRev'};
+export type {FileRev};
