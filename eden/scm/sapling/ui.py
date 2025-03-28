@@ -1206,6 +1206,24 @@ class ui:
         repopath=None,
         action=None,
     ):
+        def abort_edit_on_non_interactive():
+            allow_non_interactive = self.config(
+                "experimental", "allow-non-interactive-editor"
+            )
+            if allow_non_interactive == "true" or self.interactive():
+                return
+            # .t tests need to run the custom editor in non-interactive mode
+            if allow_non_interactive is None and util.istest():
+                return
+
+            raise error.Abort(
+                _(
+                    "cannot start editor in non-interactive mode to complete the '%s' action"
+                    % action
+                ),
+                hint=_("consider running '%s' action from the command line") % action,
+            )
+
         if action is None:
             self.develwarn(
                 "action is None but will soon be a required parameter to ui.edit()"
@@ -1271,6 +1289,7 @@ class ui:
                 text = self.fin.read()
                 util.writefile(name, text)
             else:
+                abort_edit_on_non_interactive()
                 with perftrace.trace("Editor"):
                     self.system(
                         f"{editor} {util.shellquote(name)}",
