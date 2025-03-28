@@ -326,7 +326,39 @@ export class CommitStackState extends SelfUpdate<CommitStackRecord> {
         }
       }
     }
-    const newStack = this.stack.setIn([rev, 'files', path], file);
+    let newStack: CommitStackState = this.set(
+      'stack',
+      this.stack.setIn([rev, 'files', path], file),
+    );
+    // Adjust "copyFrom" of child commits.
+    // If this file is deleted, then child commits cannot copy from it.
+    if (isAbsent(file) && !isAbsent(origFile)) {
+      newStack.childRevs(rev).forEach(childRev => {
+        newStack = newStack.dropCopyFromIf(childRev, (_p, f) => f.copyFrom === path);
+      });
+    }
+    // If this file is added, then the same path in the child commits cannot use copyFrom.
+    if (!isAbsent(file) && isAbsent(origFile)) {
+      newStack.childRevs(rev).forEach(childRev => {
+        newStack = newStack.dropCopyFromIf(childRev, (p, _f) => p === path);
+      });
+    }
+    return newStack;
+  }
+
+  dropCopyFromIf(
+    rev: CommitRev,
+    predicate: (path: RepoPath, file: FileState) => boolean,
+  ): CommitStackState {
+    const commit = this.stack.get(rev);
+    if (commit == null) {
+      return this;
+    }
+    const newFiles = commit.files.mapEntries(([path, file]) => {
+      const newFile = predicate(path, file) ? file.remove('copyFrom') : file;
+      return [path, newFile];
+    });
+    const newStack = this.stack.setIn([rev, 'files'], newFiles);
     return this.set('stack', newStack);
   }
 

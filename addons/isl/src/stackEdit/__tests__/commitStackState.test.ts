@@ -830,6 +830,49 @@ describe('CommitStackState', () => {
       ]);
     });
 
+    it('setFile drops invalid "copyFrom"s', () => {
+      // Commit A (x.txt) -> Commit B (y.txt, renamed from x.txt).
+      const stack = new CommitStackState([
+        {
+          ...exportCommitDefault,
+          files: {'x.txt': {data: '33'}},
+          node: 'A_NODE',
+          parents: [],
+          relevantFiles: {'y.txt': null},
+          text: 'A',
+        },
+        {
+          ...exportCommitDefault,
+          files: {'x.txt': null, 'y.txt': {data: '33', copyFrom: 'x.txt'}},
+          node: 'B_NODE',
+          parents: ['A_NODE'],
+          text: 'B',
+        },
+      ]);
+
+      // Invalid copyFrom is dropped.
+      expect(
+        stack
+          .setFile(0 as CommitRev, 'x.txt', f => f.set('copyFrom', 'z.txt'))
+          .getFile(0 as CommitRev, 'x.txt').copyFrom,
+      ).toBeUndefined();
+
+      // Creating "y.txt" in the parent commit (0) makes the child commit (1) drop copyFrom of "y.txt".
+      expect(
+        stack
+          .setFile(0 as CommitRev, 'y.txt', f => f.merge({data: '33', flags: ''}))
+          .getFile(1 as CommitRev, 'y.txt').copyFrom,
+      ).toBeUndefined();
+
+      // Dropping "x.txt" in the parent commit (0) makes the child commit (1) not copying from "x.txt".
+      // The content of "y.txt" is not changed.
+      const fileY = stack
+        .setFile(0 as CommitRev, 'x.txt', _f => ABSENT_FILE)
+        .getFile(1 as CommitRev, 'y.txt');
+      expect(fileY.copyFrom).toBeUndefined();
+      expect(fileY.data).toBe('33');
+    });
+
     it('optionally skips wdir()', () => {
       const stack = new CommitStackState([
         {
