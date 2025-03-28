@@ -7,7 +7,7 @@
 
 import type {RepoPath} from 'shared/types/common';
 import type {CommitStackState} from './commitStackState';
-import type {CommitRev, FileFlag} from './common';
+import type {ABSENT_FLAG, CommitRev, FileFlag} from './common';
 
 import {diffBlocks, splitLines} from 'shared/diff';
 import {nullthrows} from 'shared/utils';
@@ -109,6 +109,51 @@ export function diffCommit(stack: CommitStackState, rev: CommitRev): DiffCommit 
     message: commit.text,
     files,
   };
+}
+
+/** Produce a readable diff for debugging or testing purpose. */
+export function displayDiff(diff: DiffCommit): string {
+  const output = [diff.message.trimEnd(), '\n'];
+  diff.files.forEach(file => {
+    output.push(`diff a/${file.aPath} b/${file.bPath}\n`);
+    if (file.aFlag !== file.bFlag) {
+      if (file.bFlag === ABSENT_FLAG) {
+        output.push(`deleted file mode ${flagToMode(file.aFlag)}\n`);
+      } else if (file.aFlag === ABSENT_FLAG) {
+        output.push(`new file mode ${flagToMode(file.bFlag)}\n`);
+      } else {
+        output.push(`old mode ${flagToMode(file.aFlag)}\n`);
+        output.push(`new mode ${flagToMode(file.bFlag)}\n`);
+      }
+    }
+    if (file.aPath !== file.bPath) {
+      output.push(`copy from ${file.aPath}\n`);
+      output.push(`copy to ${file.bPath}\n`);
+    }
+    file.lines.forEach(line => {
+      const sign = line.a == null ? '+' : line.b == null ? '-' : ' ';
+      output.push(`${sign}${line.content}`);
+      if (!line.content.includes('\n')) {
+        output.push('\n\\ No newline at end of file');
+      }
+    });
+  });
+  return output.join('');
+}
+
+function flagToMode(flag: FileFlag): string {
+  switch (flag) {
+    case '':
+      return '100644';
+    case 'x':
+      return '100755';
+    case 'l':
+      return '120000';
+    case 'm':
+      return '160000';
+    default:
+      return '100644';
+  }
 }
 
 /** Produce `DiffFile` based on contents of both sides. */

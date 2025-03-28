@@ -8,7 +8,7 @@
 import type {CommitRev} from '../common';
 
 import {CommitStackState} from '../commitStackState';
-import {diffCommit} from '../diffSplit';
+import {diffCommit, displayDiff} from '../diffSplit';
 import {exportCommitDefault} from './commitStackState.test';
 
 describe('diffCommit', () => {
@@ -134,6 +134,27 @@ describe('diffCommit', () => {
         "message": "B",
       }
     `);
+    expect(displayDiff(diff)).toMatchInlineSnapshot(`
+      "B
+      diff a/x.txt b/x.txt
+      deleted file mode 100644
+      -1
+      -2
+      -3
+      -4
+      diff a/x.txt b/y.txt
+      old mode 100644
+      new mode 100755
+      copy from x.txt
+      copy to y.txt
+      -1
+      -2
+       3
+       4
+      +5
+      +6
+      \\ No newline at end of file"
+    `);
   });
 
   it('skips binary changes', () => {
@@ -145,6 +166,10 @@ describe('diffCommit', () => {
           "message": "A",
         }
       `);
+    expect(displayDiff(diff)).toMatchInlineSnapshot(`
+      "A
+      "
+    `);
   });
 
   it('reports deletion of an empty file', () => {
@@ -163,6 +188,12 @@ describe('diffCommit', () => {
         ],
         "message": "C",
       }
+    `);
+    expect(displayDiff(diff)).toMatchInlineSnapshot(`
+      "C
+      diff a/z.txt b/z.txt
+      deleted file mode 100644
+      "
     `);
   });
 });
