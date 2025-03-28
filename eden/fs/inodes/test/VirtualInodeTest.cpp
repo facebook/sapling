@@ -1115,3 +1115,54 @@ TEST(VirtualInodeTest, loadPropagation) {
   }
   VERIFY_TREE(VERIFY_INITIAL);
 }
+
+TEST(VirtualInodeTest, getBlob) {
+  auto flags = VERIFY_DEFAULT ^ VERIFY_SHA1 ^ VERIFY_BLAKE3;
+
+  TestFileDatabase files;
+  auto builder = MakeTestTreeBuilder(files);
+  auto mount = TestMount(builder, true);
+  auto edenMount = mount.getEdenMount();
+  VERIFY_TREE(flags);
+
+  for (const auto& info : files.getOriginalItems()) {
+    // Verify getBlob doesn't change state
+    VERIFY_TREE(flags);
+    auto virtualInode = mount.getVirtualInode(info->path);
+    EXPECT_INODE_OR(virtualInode, *info.get());
+    auto objectStore = edenMount->getObjectStore();
+    auto fetchContext = ObjectFetchContext::getNullContext();
+    if (virtualInode.isDirectory()) {
+      // Fetch blob and expect an error as it's a directory.
+      EXPECT_THROW_ERRNO(
+          std::move(virtualInode).getBlob(objectStore, fetchContext).get(),
+          EISDIR);
+    } else {
+      // Fetch blob and check the contents.
+      auto contents =
+          std::move(virtualInode).getBlob(objectStore, fetchContext).get();
+      EXPECT_EQ(contents, info.get()->getContents());
+    }
+  }
+  VERIFY_TREE(flags);
+
+  for (const auto& info : files.getOriginalItems()) {
+    if (!info->isRegularFile()) {
+      continue;
+    }
+    // Materialize the file
+    std::string oldContents = info->pathStr();
+    std::string newContents = oldContents + "~newContent";
+    mount.overwriteFile(info->path.view(), newContents);
+    files.setContents(info->path, newContents);
+    // Fetch and check the materialized contents
+    auto objectStore = edenMount->getObjectStore();
+    auto fetchContext = ObjectFetchContext::getNullContext();
+    auto virtualInode = mount.getVirtualInode(info->path);
+    auto contents =
+        std::move(virtualInode).getBlob(objectStore, fetchContext).get();
+    EXPECT_EQ(contents, newContents);
+  }
+  VERIFY_TREE(flags);
+  files.reset();
+}

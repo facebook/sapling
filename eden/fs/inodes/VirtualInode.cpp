@@ -846,4 +846,29 @@ ImmediateFuture<VirtualInode> VirtualInode::getOrFindChild(
       [&](const TreeEntry&) { return notDirectory(); });
 }
 
+ImmediateFuture<std::string> VirtualInode::getBlob(
+    const std::shared_ptr<ObjectStore>& objectStore,
+    const ObjectFetchContextPtr& fetchContext) const {
+  return match(
+      variant_,
+      [&](const InodePtr& inode) {
+        auto content = inode.asFilePtr()->readAll(fetchContext);
+        return ImmediateFuture<std::string>(std::move(content));
+      },
+      [&](const UnmaterializedUnloadedBlobDirEntry& entry) {
+        const auto& objectId = entry.getObjectId();
+        return objectStore->getBlob(objectId, fetchContext)
+            .thenValue([](auto&& blob) { return blob->asString(); });
+      },
+      [&](const TreeEntry& treeEntry) {
+        const auto& objectId = treeEntry.getObjectId();
+        return objectStore->getBlob(objectId, fetchContext)
+            .thenValue([](auto&& blob) { return blob->asString(); });
+      },
+      [&](const TreePtr&) {
+        return makeImmediateFuture<std::string>(
+            std::system_error(EISDIR, std::generic_category()));
+      });
+}
+
 } // namespace facebook::eden

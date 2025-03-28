@@ -185,6 +185,10 @@ class VirtualInode {
       const std::shared_ptr<ObjectStore>& objectStore,
       const ObjectFetchContextPtr& fetchContext);
 
+  ImmediateFuture<std::string> getBlob(
+      const std::shared_ptr<ObjectStore>& objectStore,
+      const ObjectFetchContextPtr& fetchContext) const;
+
  private:
   /**
    * Helper function for getChildrenAttributes
