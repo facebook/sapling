@@ -662,7 +662,10 @@ make_rule_compatible_with(
     blocklist = [
         "org.slf4j",
         "javax.annotation",  # provided by jsr305
-        "com.google",  # IDEA SDK contains guava already
+        # IDEA SDK already contains the following
+        "com.google",
+        "net.sf.cglib.core.AbstractClassGenerator",
+        "net.sf.cglib.core.AbstractClassGenerator$Source",
     ],
     compatible_with = [
         "ovr_config//os:linux",
