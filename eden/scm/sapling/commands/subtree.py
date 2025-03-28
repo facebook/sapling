@@ -605,20 +605,17 @@ def copy_files(ui, from_repo, to_repo, from_ctx, from_paths, to_paths, subcmd):
                 fileservice.prefetch(fileids, fetchhistory=False)
 
     limit = ui.configint("subtree", "max-file-count")
-    file_count = 0
     path_to_fileids = {}
     for path in from_paths:
         matcher = matchmod.match(from_repo.root, "", [f"path:{path}"])
         fileids = scmutil.walkfiles(from_repo, from_ctx, matcher)
-        file_count += len(fileids)
+        file_count = len(fileids)
         if limit and file_count > limit:
             support = ui.config("ui", "supportcontact")
             help_hint = _("contact %s for help") % support if support else None
             raise error.Abort(
-                _(
-                    "subtree %s includes too many files (%d), exceeding configured limit (%d)"
-                )
-                % (subcmd, file_count, limit),
+                _("path '%s' includes too many files: %d (max: %d)")
+                % (path, file_count, limit),
                 hint=help_hint,
             )
         path_to_fileids[path] = fileids

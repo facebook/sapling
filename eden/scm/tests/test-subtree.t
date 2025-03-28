@@ -147,13 +147,30 @@ abort when subtree copy too many files
   >     # drawdag.defaultfiles=false
   > EOS  
   $ hg subtree cp -r $A --from-path foo --to-path bar --config subtree.max-file-count=1
-  abort: subtree copy includes too many files (2), exceeding configured limit (1)
+  abort: path 'foo' includes too many files: 2 (max: 1)
   [255]
   $ hg subtree cp -r $A --from-path foo --to-path bar --config subtree.max-file-count=1 --config ui.supportcontact="Sapling Team"
-  abort: subtree copy includes too many files (2), exceeding configured limit (1)
+  abort: path 'foo' includes too many files: 2 (max: 1)
   (contact Sapling Team for help)
   [255]
 
+test max file count for multiple from paths, check each from path separately
+
+  $ newclientrepo
+  $ drawdag <<'EOS'
+  > B   # B/foo/x = bbb\n
+  > |
+  > A   # A/foo/x = aaa\n
+  >     # A/foo/y = yyy\n
+  >     # A/bar/z = zzz\n
+  >     # drawdag.defaultfiles=false
+  > EOS
+  $ hg subtree cp -r $A --from-path bar --to-path bar2 --from-path foo --to-path foo2 --config subtree.max-file-count=1
+  abort: path 'foo' includes too many files: 2 (max: 1)
+  [255]
+  $ hg subtree cp -r $A --from-path bar --to-path bar2 --from-path foo --to-path foo2 --config subtree.max-file-count=2
+  copying bar to bar2
+  copying foo to foo2
 
 abort when the working copy is dirty
 
