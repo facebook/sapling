@@ -3791,9 +3791,9 @@ def remove(ui, repo, m, mark, force, warnings=None):
             ret = 1
 
     if force:
-        list = modified + deleted + clean + added
+        file_list = modified + deleted + clean + added
     elif mark:
-        list = deleted
+        file_list = deleted
         # For performance, "remaining" only lists "exact" matches.
         # In theory it should also list "clean" files but that's too expensive
         # for a large repo.
@@ -3803,7 +3803,7 @@ def remove(ui, repo, m, mark, force, warnings=None):
                 warnings.append(_("not removing %s: file still exists\n") % m.rel(f))
                 ret = 1
     else:
-        list = deleted + clean
+        file_list = deleted + clean
         total = len(modified) + len(added)
         with progress.bar(ui, _("skipping"), _("files"), total) as prog:
             for f in modified:
@@ -3827,10 +3827,10 @@ def remove(ui, repo, m, mark, force, warnings=None):
                 )
                 ret = 1
 
-    list = sorted(list)
+    file_list = sorted(file_list)
     with repo.wlock():
-        with progress.bar(ui, _("deleting"), _("files"), len(list)) as prog:
-            for i, f in enumerate(list, 1):
+        with progress.bar(ui, _("deleting"), _("files"), len(file_list)) as prog:
+            for i, f in enumerate(file_list, 1):
                 prog.value = i
                 if ui.verbose or not m.exact(f):
                     ui.status(_("removing %s\n") % m.rel(f))
@@ -3838,7 +3838,7 @@ def remove(ui, repo, m, mark, force, warnings=None):
                     if f in added:
                         continue  # we never unlink added files on remove
                     repo.wvfs.unlinkpath(f, ignoremissing=True)
-        repo[None].forget(list)
+        repo[None].forget(file_list)
 
     if warn:
         for warning in warnings:
