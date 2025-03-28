@@ -23,7 +23,6 @@ from .. import (
     progress,
     registrar,
     scmutil,
-    util,
 )
 from ..cmdutil import (
     commitopts,
@@ -479,67 +478,9 @@ def _do_cheap_copy(repo, from_ctx, to_ctx, from_paths, to_paths, opts):
 
 
 def _do_normal_copy(repo, from_ctx, to_ctx, from_paths, to_paths, opts):
-    def prefetch(repo, path, fileids):
-        # fileservice is defined in shallowrepo.py
-        if fileservice := getattr(repo, "fileservice", None):
-            with progress.spinner(repo.ui, _("prefetching files in %s") % path):
-                fileservice.prefetch(fileids, fetchhistory=False)
-
     ui = repo.ui
     abort_or_remove_paths(ui, repo, to_paths, "copy", opts)
-
-    path_to_fileids = {}
-    limit = ui.configint("subtree", "max-file-count", MAX_SUBTREE_COPY_FILE_COUNT)
-    file_count = 0
-    for path in from_paths:
-        matcher = matchmod.match(repo.root, "", [f"path:{path}"])
-        fileids = scmutil.walkfiles(repo, from_ctx, matcher)
-        file_count += len(fileids)
-        if file_count > limit:
-            support = ui.config("ui", "supportcontact")
-            help_hint = _("contact %s for help") % support if support else None
-            raise error.Abort(
-                _(
-                    "subtree copy includes too many files (%d), exceeding configured limit (%d)"
-                )
-                % (file_count, limit),
-                hint=help_hint,
-            )
-        path_to_fileids[path] = fileids
-
-    new_files = []
-    for from_path, to_path in zip(from_paths, to_paths):
-        ui.status(_("copying %s to %s\n") % (from_path, to_path))
-        fileids = path_to_fileids[from_path]
-        prefetch(repo, from_path, fileids)
-
-        with progress.bar(
-            repo.ui,
-            _("subtree copy from %s to %s") % (from_path, to_path),
-            _("files"),
-            len(fileids),
-        ) as p:
-            for src, _node in fileids:
-                p.value += 1
-                tail = src[len(from_path) :]
-                dest = to_path + tail
-                os_abs_dest = repo.wjoin(dest)
-                os_abs_dest_dir = os.path.dirname(os_abs_dest)
-                if not os.path.isdir(os_abs_dest_dir):
-                    os.makedirs(os_abs_dest_dir)
-
-                new_files.append(dest)
-                fctx = from_ctx[src]
-                if fctx.islink():
-                    os.symlink(fctx.data(), os_abs_dest)
-                else:
-                    with open(os_abs_dest, "wb") as f:
-                        f.write(fctx.data())
-                    if fctx.isexec():
-                        util.setflags(os_abs_dest, l=False, x=True)
-
-    wctx = repo[None]
-    wctx.add(new_files)
+    copy_files(ui, repo, repo, from_ctx, from_paths, to_paths, "copy")
 
     extra = {}
     extra.update(
@@ -656,6 +597,13 @@ def copy_files(ui, from_repo, to_repo, from_ctx, from_paths, to_paths, subcmd):
 
     `from_repo` can be an external git repo in the `subtree import` case.
     """
+
+    def prefetch(repo, path, fileids):
+        # fileservice is defined in shallowrepo.py
+        if fileservice := getattr(repo, "fileservice", None):
+            with progress.spinner(repo.ui, _("prefetching files in %s") % path):
+                fileservice.prefetch(fileids, fetchhistory=False)
+
     limit = ui.configint("subtree", "max-file-count")
     file_count = 0
     path_to_fileids = {}
@@ -679,6 +627,7 @@ def copy_files(ui, from_repo, to_repo, from_ctx, from_paths, to_paths, subcmd):
     for from_path, to_path in zip(from_paths, to_paths):
         ui.status(_("copying %s to %s\n") % (from_path or "/", to_path))
         fileids = path_to_fileids[from_path]
+        prefetch(from_repo, from_path, fileids)
         with progress.bar(
             ui,
             _("subtree %s from %s to %s") % (subcmd, from_path or "/", to_path),
