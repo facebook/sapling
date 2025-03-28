@@ -5,7 +5,7 @@ oncall("source_control")
 thrift_library(
     name = "qps_config",
     languages = [
-        "py3",
+        "py3-deprecated",
         "rust",
         "cpp2",
         "python",
