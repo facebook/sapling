@@ -16,7 +16,7 @@ import type {
   Mark,
 } from 'shared/types/stack';
 import type {AbsorbEdit, AbsorbEditId} from './absorb';
-import type {CommitRev, FileMetadata, FileRev, FileStackIndex} from './common';
+import type {CommitRev, FileFlag, FileMetadata, FileRev, FileStackIndex} from './common';
 
 import deepEqual from 'fast-deep-equal';
 import {Map as ImMap, Set as ImSet, List, Record, Seq, is} from 'immutable';
@@ -306,7 +306,7 @@ export class CommitStackState extends SelfUpdate<CommitStackRecord> {
     let file = newFile;
     // Remove 'absent' for non-empty files.
     if (isAbsent(file) && this.getUtf8Data(file) !== '') {
-      const newFlags = (file.flags ?? '').replace(ABSENT_FLAG, '');
+      const newFlags: FileFlag = file.flags === ABSENT_FLAG ? '' : file.flags ?? '';
       file = file.set('flags', newFlags);
     }
     // Remove other flags for absent files.

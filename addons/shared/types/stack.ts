@@ -45,11 +45,20 @@ export type ExportFile = {
   /** If present, this file is copied (or renamed) from another file. */
   copyFrom?: RepoPath;
   /** 'x': executable. 'l': symlink. 'm': submodule. */
-  flags?: string;
+  flags?: FileFlag;
 };
 
 /** Matches input of debugimportstack. See debugstack.py. */
 export type ImportStack = ImportAction[];
+
+/**
+ * - 'x': executable.
+ * - 'l': symlink.
+ * - 'm': submodule.
+ * - 'a': absent (deleted), only used in ISL, not by debugimportstack.
+ * - '.': unchanged, only used by debugimportstack.
+ */
+export type FileFlag = '' | 'x' | 'l' | 'm' | 'a' | '.';
 
 export type ImportAction =
   | ['commit', ImportCommit]

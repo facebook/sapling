@@ -7,6 +7,7 @@
 
 import type {RecordOf} from 'immutable';
 import type {Author, Hash, RepoPath} from 'shared/types/common';
+import type {FileFlag} from 'shared/types/stack';
 
 import {Map as ImMap, Set as ImSet, List, Record, is} from 'immutable';
 
@@ -118,8 +119,11 @@ type FileStateProps = {
 type FileMetadataProps = {
   /** If present, this file is copied (or renamed) from another file. */
   copyFrom?: RepoPath;
-  /** 'x': executable. 'l': symlink. 'm': submodule. 'a': absent (deleted) */
-  flags?: string;
+  /**
+   * If present, whether this file is special (symlink, submodule, deleted,
+   * executable).
+   */
+  flags?: FileFlag;
 };
 
 type Base85Props = {dataBase85: string};
@@ -174,3 +178,6 @@ export type FileRev = number & {__brand: 'FileStackRev'};
 
 /** A revision number used in the `CommitStackState`. Identifies a commit in the stack. */
 export type CommitRev = number & {__branded: 'CommitRev'};
+
+// Re-export
+export type {FileFlag};
