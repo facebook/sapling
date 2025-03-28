@@ -562,13 +562,7 @@ pub async fn process_bookmark_update_log_entry(
                     .map_err(anyhow::Error::from)
                     .try_next_step(|messages| {
                         cloned!(mut send_manager);
-                        async move {
-                            send_messages_in_order(
-                                messages.map_err(anyhow::Error::from),
-                                &mut send_manager,
-                            )
-                            .await
-                        }
+                        async move { send_messages_in_order(messages, &mut send_manager).await }
                     })
                     .try_collect::<()>()
                     .await?;
