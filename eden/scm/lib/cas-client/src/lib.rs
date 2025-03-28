@@ -18,6 +18,7 @@ use futures::stream::BoxStream;
 pub use types::CasDigest;
 pub use types::CasDigestType;
 pub use types::CasFetchedStats;
+pub use types::FetchContext;
 
 pub struct CasSuccessTrackerConfig {
     // number of failures before the CAS is considered unhealthy
@@ -145,6 +146,7 @@ pub trait CasClient: Sync + Send {
     /// Fetch blobs from CAS.
     async fn fetch<'a>(
         &'a self,
+        _fctx: FetchContext,
         digests: &'a [CasDigest],
         log_name: CasDigestType,
     ) -> BoxStream<
@@ -159,6 +161,7 @@ pub trait CasClient: Sync + Send {
     /// Returns a stream of (stats, digests_prefetched, digests_not_found) tuples.
     async fn prefetch<'a>(
         &'a self,
+        _fctx: FetchContext,
         digests: &'a [CasDigest],
         log_name: CasDigestType,
     ) -> BoxStream<'a, anyhow::Result<(CasFetchedStats, Vec<CasDigest>, Vec<CasDigest>)>>;

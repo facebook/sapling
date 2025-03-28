@@ -63,6 +63,7 @@ pub fn run(ctx: ReqCtx<DebugCasOpts>, repo: &Repo, wc: &WorkingCopy) -> Result<u
                 let fetch_res = block_on(async {
                     client
                         .fetch(
+                            FetchContext::default(),
                             &[CasDigest {
                                 hash: aux.augmented_manifest_id,
                                 size: aux.augmented_manifest_size,
@@ -97,6 +98,7 @@ pub fn run(ctx: ReqCtx<DebugCasOpts>, repo: &Repo, wc: &WorkingCopy) -> Result<u
                 let fetch_res = block_on(async {
                     client
                         .fetch(
+                            FetchContext::default(),
                             &[CasDigest {
                                 hash: aux.blake3,
                                 size: aux.total_size,

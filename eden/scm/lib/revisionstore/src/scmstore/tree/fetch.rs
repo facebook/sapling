@@ -254,7 +254,7 @@ impl FetchState {
 
         async_runtime::block_in_place(|| {
             block_on(async {
-                cas_client.fetch(&digests, CasDigestType::Tree).await.for_each(|results| {
+                cas_client.fetch(self.common.fctx.clone(), &digests, CasDigestType::Tree).await.for_each(|results| {
                     match results {
                     Ok((stats, results)) => {
                         reqs += 1;

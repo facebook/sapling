@@ -810,7 +810,7 @@ impl FetchState {
         if self.fctx.mode().ignore_result() {
             // Prefetching files, so we don't need the data, just to ensure digests are in the CAS local Cache.
             block_on(async {
-                cas_client.prefetch(&digests, CasDigestType::File).await.for_each(|results| {
+                cas_client.prefetch(self.fctx.clone(), &digests, CasDigestType::File).await.for_each(|results| {
                     match results {
                     Ok((stats, digests_prefetched, digests_not_found)) => {
                         reqs += 1;
@@ -852,7 +852,7 @@ impl FetchState {
         } else {
             // Fetching files, we need the data.
             block_on(async {
-                cas_client.fetch(&digests, CasDigestType::File).await.for_each(|results|{
+                cas_client.fetch(self.fctx.clone(), &digests, CasDigestType::File).await.for_each(|results|{
                     match results {
                     Ok((stats, results)) => {
                         reqs += 1;

@@ -18,6 +18,7 @@ pub use types::CasDigest;
 pub use types::CasDigestType;
 pub use types::CasFetchedStats;
 pub use types::CasPrefetchOutcome;
+pub use types::FetchContext;
 
 #[macro_export]
 macro_rules! re_client {
@@ -90,6 +91,7 @@ macro_rules! re_client {
         impl $crate::CasClient for $struct {
             async fn fetch<'a>(
                 &'a self,
+                _fctx: $crate::FetchContext,
                 digests: &'a [$crate::CasDigest],
                 log_name: $crate::CasDigestType,
             ) -> BoxStream<'a, $crate::Result<($crate::CasFetchedStats, Vec<($crate::CasDigest, Result<Option<CasClientFetchedBytes>>)>)>>
@@ -204,6 +206,7 @@ macro_rules! re_client {
         /// Returns a stream of (stats, digests_prefetched, digests_not_found) tuples.
         async fn prefetch<'a>(
             &'a self,
+            _fctx: $crate::FetchContext,
             digests: &'a [$crate::CasDigest],
             log_name: $crate::CasDigestType,
         ) -> BoxStream<'a, $crate::Result<($crate::CasFetchedStats, Vec<$crate::CasDigest>, Vec<$crate::CasDigest>)>>

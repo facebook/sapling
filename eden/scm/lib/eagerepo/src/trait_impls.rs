@@ -29,6 +29,7 @@ use storemodel::SerializationFormat;
 use storemodel::TreeStore;
 use types::CasDigest;
 use types::CasDigestType;
+use types::FetchContext;
 use types::HgId;
 use types::Key;
 use types::RepoPath;
@@ -187,6 +188,7 @@ impl ReadRootTreeIds for EagerRepoStore {
 impl CasClient for EagerRepoStore {
     async fn fetch<'a>(
         &'a self,
+        _fctx: FetchContext,
         digests: &'a [CasDigest],
         log_name: CasDigestType,
     ) -> BoxStream<
@@ -217,6 +219,7 @@ impl CasClient for EagerRepoStore {
     /// Returns a stream of (stats, digests_prefetched, digests_not_found) tuples
     async fn prefetch<'a>(
         &'a self,
+        _fctx: FetchContext,
         digests: &'a [CasDigest],
         log_name: CasDigestType,
     ) -> BoxStream<'a, anyhow::Result<(CasFetchedStats, Vec<CasDigest>, Vec<CasDigest>)>> {
