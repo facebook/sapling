@@ -150,6 +150,26 @@ describe('CommitStackState', () => {
     expect([...stack.log(3 as CommitRev)]).toStrictEqual([3, 2, 1, 0]);
   });
 
+  it('finds child commits via childRevs', () => {
+    const stack = new CommitStackState(exportStack1);
+    expect(stack.childRevs(0 as CommitRev)).toMatchInlineSnapshot(`
+      [
+        1,
+      ]
+    `);
+    expect(stack.childRevs(1 as CommitRev)).toMatchInlineSnapshot(`
+      [
+        2,
+      ]
+    `);
+    expect(stack.childRevs(2 as CommitRev)).toMatchInlineSnapshot(`
+      [
+        3,
+      ]
+    `);
+    expect(stack.childRevs(3 as CommitRev)).toMatchInlineSnapshot(`[]`);
+  });
+
   describe('log file history', () => {
     // [rev, path] => [rev, path, file]
     const extend = (stack: CommitStackState, revPathPairs: Array<[number, string]>) => {

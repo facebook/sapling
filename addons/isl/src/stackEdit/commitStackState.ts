@@ -330,6 +330,16 @@ export class CommitStackState extends SelfUpdate<CommitStackRecord> {
     return this.set('stack', newStack);
   }
 
+  childRevs(rev: CommitRev): Array<CommitRev> {
+    const result = [];
+    for (let i = rev + 1; i < this.stack.size; ++i) {
+      if (this.stack.get(i)?.parents?.contains(rev)) {
+        result.push(i as CommitRev);
+      }
+    }
+    return result;
+  }
+
   /**
    * Get a list of paths changed by a commit.
    *
