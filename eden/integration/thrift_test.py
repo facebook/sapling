@@ -22,6 +22,9 @@ from facebook.eden.ttypes import (
     FileAttributeDataOrError,
     FileAttributeDataOrErrorV2,
     GetConfigParams,
+    GetFileContentRequest,
+    MountId,
+    ScmBlobOrError,
     ScmFileStatus,
     SHA1Result,
     SyncBehavior,
@@ -141,6 +144,41 @@ class ThriftTest(testcase.EdenRepoTest):
                 if inode.loaded:
                     inode_count += 1
         return inode_count
+
+    def test_get_file_content(self) -> None:
+        thrift_mount = MountId(self.mount.encode("utf-8"))
+
+        # Unmaterialized file
+        with self.eden.get_thrift_client_legacy() as client:
+            thrift_req = GetFileContentRequest(thrift_mount, b"hello")
+            response = client.getFileContent(thrift_req)
+            self.assertEqual(b"hola\n", response.blob.get_blob())
+
+        # Materialized file
+        self.write_file("tmpdir/file", "hola\n")
+        with self.eden.get_thrift_client_legacy() as client:
+            thrift_req = GetFileContentRequest(thrift_mount, b"tmpdir/file")
+            response = client.getFileContent(thrift_req)
+            self.assertEqual(b"hola\n", response.blob.get_blob())
+
+        # Invalid paths
+        self.rm("tmpdir/file")
+        with self.eden.get_thrift_client_legacy() as client:
+            thrift_req = GetFileContentRequest(thrift_mount, b"tmpdir/file")
+            response = client.getFileContent(thrift_req)
+            self.assertEqual(ScmBlobOrError.ERROR, response.blob.getType())
+            self.assertEqual(
+                response.blob.get_error().message,
+                "tmpdir/file: No such file or directory",
+            )
+            thrift_req = GetFileContentRequest(thrift_mount, b"tmpdir")
+            response = client.getFileContent(thrift_req)
+            self.assertEqual(ScmBlobOrError.ERROR, response.blob.getType())
+            self.assertEqual(
+                response.blob.get_error().message,
+                "tmpdir: Is a directory",
+            )
+        self.rmdir("tmpdir")
 
     def test_pid_fetch_counts(self) -> None:
         # We already test that our fetch counts get incremented correctly in

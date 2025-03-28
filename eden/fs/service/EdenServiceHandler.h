@@ -475,6 +475,10 @@ class EdenServiceHandler : virtual public StreamingEdenServiceSvIf,
       ListRedirectionsResponse& response,
       std::unique_ptr<ListRedirectionsRequest> request) override;
 
+  folly::SemiFuture<std::unique_ptr<GetFileContentResponse>>
+  semifuture_getFileContent(
+      std::unique_ptr<GetFileContentRequest> request) override;
+
  private:
   EdenMountHandle lookupMount(const MountId& mountId);
   EdenMountHandle lookupMount(const std::unique_ptr<std::string>& mountId);

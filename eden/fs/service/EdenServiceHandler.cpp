@@ -5495,6 +5495,37 @@ EdenServiceHandler::semifuture_debugInvalidateNonMaterialized(
   }
 }
 
+folly::SemiFuture<std::unique_ptr<GetFileContentResponse>>
+EdenServiceHandler::semifuture_getFileContent(
+    std::unique_ptr<GetFileContentRequest> request) {
+  auto helper = INSTRUMENT_THRIFT_CALL(DBG3, *request->mount()->mountPoint());
+  auto mountHandle = lookupMount(request->mount()->mountPoint());
+  auto objectStore = mountHandle.getObjectStorePtr();
+  auto path = RelativePathPiece(*request->filePath());
+  auto& fetchContext = helper->getFetchContext();
+
+  return wrapImmediateFuture(
+             std::move(helper),
+             mountHandle.getEdenMount()
+                 .getVirtualInode(path, fetchContext)
+                 .thenValue([objectStore = std::move(objectStore),
+                             &fetchContext](auto&& inode) {
+                   return inode.getBlob(objectStore, fetchContext);
+                 })
+                 .thenTry([](auto&& result) {
+                   ScmBlobOrError blobOrError;
+                   if (result.hasException()) {
+                     blobOrError.error_ref() = newEdenError(result.exception());
+                   } else {
+                     blobOrError.blob_ref() = std::move(result.value());
+                   }
+                   auto response = std::make_unique<GetFileContentResponse>();
+                   response->blob_ref() = std::move(blobOrError);
+                   return response;
+                 }))
+      .semi();
+}
+
 void EdenServiceHandler::listRedirections(
     ListRedirectionsResponse& response,
     std::unique_ptr<ListRedirectionsRequest> request) {
