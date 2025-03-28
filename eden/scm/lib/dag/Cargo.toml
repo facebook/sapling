@@ -16,7 +16,7 @@ name = "dag"
 [dependencies]
 anyhow = "1.0.95"
 async-trait = "0.1.86"
-bitflags = { version = "2.6", features = ["serde"] }
+bitflags = { version = "2.6", features = ["serde", "std"], default-features = false }
 byteorder = "1.3"
 fail = { version = "0.4", features = ["failpoints"] }
 fs2 = { version = "0.4", optional = true }

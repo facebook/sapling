@@ -14,7 +14,7 @@ license = "MIT"
 name = "renderdag"
 
 [dependencies]
-bitflags = { version = "2.6", features = ["serde"] }
+bitflags = { version = "2.6", features = ["serde", "std"], default-features = false }
 serde = { version = "1.0.185", features = ["derive", "rc"], optional = true }
 
 [dev-dependencies]
