@@ -3828,6 +3828,7 @@ def remove(ui, repo, m, mark, force, warnings=None):
                 ret = 1
 
     file_list = sorted(file_list)
+    added = set(added)
     with repo.wlock():
         with progress.bar(ui, _("deleting"), _("files"), len(file_list)) as prog:
             for i, f in enumerate(file_list, 1):
