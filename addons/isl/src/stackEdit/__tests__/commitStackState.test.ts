@@ -22,7 +22,7 @@ import {
 import {FileStackState} from '../fileStackState';
 import {describeAbsorbIdChunkMap} from './absorb.test';
 
-const exportCommitDefault: ExportCommit = {
+export const exportCommitDefault: ExportCommit = {
   requested: true,
   immutable: false,
   author: 'test <test@example.com>',

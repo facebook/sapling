@@ -1095,6 +1095,11 @@ export class CommitStackState extends SelfUpdate<CommitStackRecord> {
     }
   }
 
+  /** Similar to `getUtf8Data`, but returns `null` if not utf-8 */
+  getUtf8DataOptional(file: FileState, considerPendingAbsorb = true): string | null {
+    return isUtf8(file) ? this.getUtf8Data(file, considerPendingAbsorb) : null;
+  }
+
   /** Test if two files have the same data. */
   isEqualFile(a: FileState, b: FileState): boolean {
     if ((a.flags ?? '') !== (b.flags ?? '')) {
