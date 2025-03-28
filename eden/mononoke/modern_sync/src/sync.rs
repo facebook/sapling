@@ -246,6 +246,10 @@ pub async fn sync(
                     Err(e)
                 }
                 Ok(entries) if entries.is_empty() => {
+                    send_manager
+                        .send_changesets(vec![ChangesetMessage::Log((repo_name, Some(0)))])
+                        .await?;
+
                     tokio::time::sleep(SLEEP_INTERVAL_WHEN_CAUGHT_UP).await;
                     Ok(())
                 }
