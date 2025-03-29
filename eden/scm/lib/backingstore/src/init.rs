@@ -23,7 +23,7 @@ static RUST_INIT: Once = Once::new();
 /// We use this function to ensure everything we need to initialized as the Rust code may not be
 /// called when EdenFS starts. Right now it only calls `env_logger::init` so we can see logs from
 /// `edenapi` and other crates. In longer term we should bridge the logs to folly logging.
-pub(crate) fn backingstore_global_init() {
+pub fn backingstore_global_init() {
     RUST_INIT.call_once(|| {
         if let Some((var_name, _)) = identity::debug_env_var("LOG") {
             let data = Arc::new(Mutex::new(TracingData::new()));

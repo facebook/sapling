@@ -23,6 +23,7 @@ use std::sync::atomic::AtomicUsize;
 use std::sync::atomic::Ordering;
 use std::sync::OnceLock;
 
+use backingstore::backingstore_global_init;
 use backingstore::BackingStore;
 use minibench::bench;
 use minibench::bench_enabled;
@@ -35,6 +36,9 @@ use types::Key;
 use types::RepoPathBuf;
 
 fn main() {
+    // This sets up things like tracing logger, factory constructors, and other global tweaks eden does.
+    backingstore_global_init();
+
     let n = load_test_keys().len();
 
     bench_matrix("get_blob serial (1k)", |store, mode| {
