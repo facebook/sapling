@@ -7,6 +7,8 @@
 
 use std::cell::RefCell;
 use std::fmt::Debug;
+use std::sync::atomic::AtomicBool;
+use std::sync::atomic::Ordering;
 use std::sync::Arc;
 use std::sync::Weak;
 
@@ -31,6 +33,7 @@ use crate::ProgressBar;
 pub struct Registry {
     render_cond: Arc<(Mutex<bool>, Condvar)>,
     inner: Arc<RwLock<Inner>>,
+    disabled: Arc<AtomicBool>,
 }
 
 macro_rules! impl_model {
@@ -50,6 +53,9 @@ macro_rules! impl_model {
                 $(
                     /// Register a model.
                     pub fn [< register_ $field >](&self, model: &Arc<$type>) {
+                        if self.disabled() {
+                            return;
+                        }
                         tracing::debug!("registering {} {}", stringify!($type), model.topic());
                         let mut inner = self.inner.write();
                         inner.$field.push(model.clone());
@@ -90,11 +96,17 @@ macro_rules! impl_model {
 
                     /// Set active model.
                     pub fn [< set_active_ $field >](&self, model: Option<Arc<$type>>) {
+                        if self.disabled() {
+                            return;
+                        }
                         self.inner.read().[< active_ $field >].get_or_default().replace(model.map(|m| Arc::downgrade(&m)));
                     }
 
                     /// Get active model.
                     pub fn [< get_active_ $field >](&self) -> Option<Arc<$type>> {
+                        if self.disabled() {
+                            return None;
+                        }
                         self.inner.read().[< active_ $field >].get().and_then(|m| m.borrow().clone().and_then(|w| w.upgrade()))
                     }
                 )*
@@ -150,6 +162,14 @@ impl Registry {
         }
         // Wait for next step() call.
         var.wait(&mut ready);
+    }
+
+    pub fn disable(&self, disable: bool) {
+        self.disabled.store(disable, Ordering::Relaxed);
+    }
+
+    pub fn disabled(&self) -> bool {
+        self.disabled.load(Ordering::Relaxed)
     }
 }
 

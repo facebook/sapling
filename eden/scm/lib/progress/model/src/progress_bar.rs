@@ -58,6 +58,9 @@ pub struct ProgressBar {
     // Whether this bar is intended to be shared across threads as the "active" bar.
     // Causes bar to not finish when being popped as active bar.
     shared: bool,
+
+    // Disable actual work of managing progress.
+    noop: bool,
 }
 
 pub struct Builder {
@@ -71,6 +74,7 @@ pub struct Builder {
     parent: Option<Arc<ProgressBar>>,
     adhoc: bool,
     shared: bool,
+    noop: bool,
 }
 
 impl Builder {
@@ -84,6 +88,7 @@ impl Builder {
             parent: None,
             adhoc: true,
             shared: false,
+            noop: false,
         }
     }
 
@@ -127,6 +132,11 @@ impl Builder {
         self
     }
 
+    pub fn noop(mut self, n: bool) -> Self {
+        self.noop = n;
+        self
+    }
+
     pub fn active(self) -> ActiveProgressBar {
         let registry = self.registry.clone();
         let bar = self.thread_local_parent().register(true).pending();
@@ -147,6 +157,7 @@ impl Builder {
             parent: self.parent,
             adhoc: self.adhoc,
             shared: self.shared,
+            noop: self.registry.disabled(),
         });
         if self.register {
             self.registry.register_progress_bar(&bar);
@@ -222,6 +233,10 @@ impl ProgressBar {
             .pending()
     }
 
+    pub fn noop() -> Arc<Self> {
+        Builder::new().noop(true).pending()
+    }
+
     /// Start `bar` and set as active. When returned guard is dropped, progress
     /// bar will be marked finished and unset as the active bar.
     pub fn push_active(bar: Arc<Self>, registry: &Registry) -> ActiveProgressBar {
@@ -236,6 +251,10 @@ impl ProgressBar {
     /// Mark `bar` as finished and unset it as the active progress bar. This is
     /// exposed for Python use - you probably don't want to call it directly.
     pub fn pop_active(bar: &Arc<Self>, registry: &Registry) {
+        if bar.noop {
+            return;
+        }
+
         // Shared bars are used as "active" bars in multiple threads - don't assume the
         // bar is done after first pop.
         if !bar.shared {
@@ -265,15 +284,27 @@ impl ProgressBar {
     /// pop_active. This is exposed for Python use - you probably don't want to
     /// call it directly.
     pub fn set_active(bar: &Arc<Self>, registry: &Registry) {
+        if bar.noop {
+            return;
+        }
+
         bar.start();
         registry.set_active_progress_bar(Some(bar.clone()));
     }
 
     fn start(&self) {
+        if self.noop {
+            return;
+        }
+
         let _ = self.started_at.set(Instant::now());
     }
 
     fn finish(&self) {
+        if self.noop {
+            return;
+        }
+
         let _ = self.finished_at.set(Instant::now());
     }
 
@@ -289,6 +320,9 @@ impl ProgressBar {
 
     /// Set the progress message.
     pub fn set_message(&self, message: String) {
+        if self.noop {
+            return;
+        }
         self.message.store(Some(Arc::new(message)));
     }
 
@@ -301,21 +335,33 @@ impl ProgressBar {
 
     /// Set total.
     pub fn set_total(&self, total: u64) {
+        if self.noop {
+            return;
+        }
         self.total.store(total, Release);
     }
 
     /// Set position.
     pub fn set_position(&self, pos: u64) {
+        if self.noop {
+            return;
+        }
         self.pos.store(pos, Release);
     }
 
     /// Increase position.
     pub fn increase_position(&self, inc: u64) {
+        if self.noop {
+            return;
+        }
         self.pos.fetch_add(inc, AcqRel);
     }
 
     /// Increase total.
     pub fn increase_total(&self, inc: u64) {
+        if self.noop {
+            return;
+        }
         self.total.fetch_add(inc, AcqRel);
     }
 
@@ -432,6 +478,10 @@ impl AggregatingProgressBar {
     /// progress bar. You should avoid calling set_position or set_total on the returned
     /// ProgressBar.
     pub fn create_or_extend_detached(&self, additional_total: u64) -> Arc<ProgressBar> {
+        if Registry::main().disabled() {
+            return ProgressBar::noop();
+        }
+
         let mut bar = self.bar.lock();
 
         match bar.upgrade() {
@@ -455,6 +505,10 @@ impl AggregatingProgressBar {
     /// inheriting thread local parent. You should avoid calling set_position or set_total
     /// on the returned ProgressBar.
     pub fn create_or_extend_local(&self, additional_total: u64) -> Arc<ProgressBar> {
+        if Registry::main().disabled() {
+            return ProgressBar::noop();
+        }
+
         let mut bar = self.bar.lock();
 
         match bar.upgrade() {
