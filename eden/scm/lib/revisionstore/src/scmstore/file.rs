@@ -30,6 +30,7 @@ use flume::unbounded;
 use indexedlog::log::AUTO_SYNC_COUNT;
 use indexedlog::log::SYNC_COUNT;
 use indexedlog::rotate::ROTATE_COUNT;
+use metrics::FILE_STORE_FETCH_METRICS;
 use minibytes::Bytes;
 use parking_lot::Mutex;
 use parking_lot::RwLock;
@@ -131,10 +132,23 @@ impl Drop for FileStore {
 }
 
 macro_rules! try_local_content {
-    ($id:ident, $e:expr) => {
+    ($id:ident, $e:expr, $m:expr) => {
         if let Some(store) = $e.as_ref() {
-            if let Some(data) = store.get_local_content_direct($id)? {
-                return Ok(Some(data));
+            $m.requests.increment();
+            $m.keys.increment();
+            $m.singles.increment();
+            match store.get_local_content_direct($id) {
+                Ok(None) => {
+                    $m.misses.increment();
+                }
+                Ok(Some(data)) => {
+                    $m.hits.increment();
+                    return Ok(Some(data));
+                }
+                Err(err) => {
+                    $m.errors.increment();
+                    return Err(err);
+                }
             }
         }
     };
@@ -148,10 +162,11 @@ static INDEXEDLOG_ROTATE_COUNT: Counter = Counter::new_counter("scmstore.indexed
 impl FileStore {
     /// Get the "local content" without going through the heavyweight "fetch" API.
     pub(crate) fn get_local_content_direct(&self, id: &HgId) -> Result<Option<Bytes>> {
-        try_local_content!(id, self.indexedlog_cache);
-        try_local_content!(id, self.indexedlog_local);
-        try_local_content!(id, self.lfs_cache);
-        try_local_content!(id, self.lfs_local);
+        let m = &FILE_STORE_FETCH_METRICS;
+        try_local_content!(id, self.indexedlog_cache, m.indexedlog.cache);
+        try_local_content!(id, self.indexedlog_local, m.indexedlog.local);
+        try_local_content!(id, self.lfs_cache, m.lfs.cache);
+        try_local_content!(id, self.lfs_local, m.lfs.local);
         Ok(None)
     }
 
