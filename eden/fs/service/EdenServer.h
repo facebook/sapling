@@ -656,6 +656,10 @@ class EdenServer : private TakeoverHandler {
   // Run a garbage collection cycle over the inodes hierarchy.
   void garbageCollectAllMounts();
 
+  // Detects when a mount point accidentally gets unmounted, and
+  // attempts to recover it.
+  void accidentalUnmountRecovery();
+
   // Detects when NFS backed repos are being crawled.
   void detectNfsCrawl();
 
@@ -899,5 +903,7 @@ class EdenServer : private TakeoverHandler {
   PeriodicFnTask<&EdenServer::detectNfsCrawl> detectNfsCrawlTask_{
       this,
       "detect_nfs_crawl"};
+  PeriodicFnTask<&EdenServer::accidentalUnmountRecovery>
+      accidentalUnmountRecoveryTask_{this, "accidental_unmount_recovery"};
 };
 } // namespace facebook::eden

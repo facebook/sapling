@@ -2737,6 +2737,38 @@ void EdenServer::garbageCollectAllMounts() {
   }
 }
 
+void EdenServer::accidentalUnmountRecovery() {
+  folly::dynamic dirs = folly::dynamic::object();
+  try {
+    dirs = CheckoutConfig::loadClientDirectoryMap(edenDir_.getPath());
+  } catch (...) {
+    XLOGF(
+        WARN,
+        "Could not parse config.json file: {} skipping accidental unmount recovery.",
+        folly::exceptionStr(std::current_exception()));
+    return;
+  }
+
+  if (dirs.empty()) {
+    XLOGF(
+        DBG4,
+        "No mount points currently configured, skipping accidental unmount recovery.");
+    return;
+  }
+
+  const auto mountPoints = mountPoints_->rlock();
+  for (const auto& client : dirs.items()) {
+    auto mountPath = canonicalPath(client.first.stringPiece());
+    const auto it = mountPoints->find(mountPath);
+
+    if (it == mountPoints->end()) {
+      // TODO: This mount point is not currently mounted, but it was configured
+      // in config.json.  This means that the client was unmounted.
+      // We should attempt to remount it, if it is unmounted accidentally.
+    }
+  }
+}
+
 void EdenServer::detectNfsCrawl() {
   auto edenConfig = config_->getEdenConfig();
   auto readThreshold = edenConfig->nfsCrawlReadThreshold.getValue();
