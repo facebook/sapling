@@ -57,6 +57,7 @@ const PACK_OK: &[u8] = b"unpack ok";
 const REF_OK: &str = "ok";
 const REF_ERR: &str = "ng";
 const REF_UPDATE_CONCURRENCY: usize = 20;
+const MAX_LFS_RETRIES: u32 = 2;
 
 pub async fn receive_pack(state: &mut State) -> Result<Response<Body>, HttpError> {
     let repo_name = RepositoryParams::borrow_from(state).repo_name();
@@ -131,13 +132,16 @@ async fn push(
             .git_configs
             .git_lfs_interpret_pointers
         {
+            let max_lfs_tries =
+                justknobs::get_as::<u32>("scm/mononoke:git_server_lfs_max_retries", None)
+                    .unwrap_or(MAX_LFS_RETRIES);
             GitImportLfs::new(
                 git_ctx
                     .upstream_lfs_server()?
                     .ok_or_else(|| anyhow::anyhow!("No upstream LFS server specified"))?,
-                false,    // allow_not_found
-                2,        // max attempts
-                Some(50), // conn_limit
+                false,         // allow_not_found
+                max_lfs_tries, // max attempts
+                Some(50),      // conn_limit
                 git_ctx.tls_args()?,
             )?
         } else {
