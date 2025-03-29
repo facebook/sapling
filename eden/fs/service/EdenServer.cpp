@@ -988,6 +988,10 @@ void EdenServer::updatePeriodicTaskIntervals(const EdenConfig& config) {
   } else {
     detectNfsCrawlTask_.updateInterval(0s);
   }
+
+  accidentalUnmountRecoveryTask_.updateInterval(
+      std::chrono::duration_cast<std::chrono::milliseconds>(
+          config.accidentalUnmountRecoveryInterval.getValue()));
 }
 
 void EdenServer::scheduleCallbackOnMainEventBase(

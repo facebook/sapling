@@ -421,6 +421,14 @@ class EdenConfig : private ConfigSettingManager {
       this};
 
   /**
+   * Specify the interval of periodic accidental unmount recovery.
+   */
+  ConfigSetting<std::chrono::nanoseconds> accidentalUnmountRecoveryInterval{
+      "mount:accidental-unmount-recovery-interval",
+      std::chrono::minutes(0),
+      this};
+
+  /**
    * The soong build system used in AOSP loves to crawls the entirety of the
    * repository, including the .eden directory. In doing so, it infinitely
    * recurse into the this-dir.
