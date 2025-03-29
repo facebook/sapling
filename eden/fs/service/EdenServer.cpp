@@ -2738,6 +2738,7 @@ void EdenServer::garbageCollectAllMounts() {
 }
 
 void EdenServer::accidentalUnmountRecovery() {
+  XLOGF(DBG5, "Performing accidental unmount recovery.");
   folly::dynamic dirs = folly::dynamic::object();
   try {
     dirs = CheckoutConfig::loadClientDirectoryMap(edenDir_.getPath());
@@ -2762,9 +2763,46 @@ void EdenServer::accidentalUnmountRecovery() {
     const auto it = mountPoints->find(mountPath);
 
     if (it == mountPoints->end()) {
-      // TODO: This mount point is not currently mounted, but it was configured
+      // This mount point is not currently mounted, but it was configured
       // in config.json.  This means that the client was unmounted.
       // We should attempt to remount it, if it is unmounted accidentally.
+
+      // TODO: add a check here to verify that the unmount is not intentional.
+      XLOGF(
+          INFO,
+          "Mount point {} is not currently mounted, attempting to remount.",
+          mountPath);
+      // TODO: Make sure the mount path exists
+
+      folly::via(
+          getServerState()->getThreadPool().get(),
+          [this, client = client, mountPath]() mutable {
+            auto edenClientPath =
+                edenDir_.getCheckoutStateDir(client.second.stringPiece());
+            auto initialConfig = CheckoutConfig::loadFromClientDirectory(
+                mountPath, edenClientPath);
+            // TODO: Make sure the mount path exists
+            return mount(std::move(initialConfig), /*readOnly=*/false)
+                .thenTry([mountPath](
+                             folly::Try<std::shared_ptr<EdenMount>>&& result) {
+                  if (result.hasValue()) {
+                    XLOGF(
+                        DBG3,
+                        "Automatically remounted mount: {}",
+                        mountPath.value());
+                    return ImmediateFuture<folly::Unit>{std::in_place};
+                  } else {
+                    auto errorMessage = fmt::format(
+                        "Failed to remount {}: {}\n",
+                        mountPath.value(),
+                        result.exception().what());
+                    XLOG(ERR, errorMessage);
+                    return makeImmediateFuture<Unit>(
+                        std::move(result).exception());
+                  }
+                })
+                .semi();
+          });
     }
   }
 }
