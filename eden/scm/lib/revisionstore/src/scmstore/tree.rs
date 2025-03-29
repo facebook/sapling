@@ -150,6 +150,29 @@ impl TreeStore {
         Ok(None)
     }
 
+    pub(crate) fn get_local_aux_direct(&self, id: &HgId) -> Result<Option<TreeAuxData>> {
+        let m = &TREE_STORE_FETCH_METRICS.aux.cache;
+        if let Some(store) = &self.tree_aux_store {
+            m.requests.increment();
+            m.keys.increment();
+            m.singles.increment();
+            match store.get(id) {
+                Ok(None) => {
+                    m.misses.increment();
+                }
+                Ok(Some(data)) => {
+                    m.hits.increment();
+                    return Ok(Some(data));
+                }
+                Err(err) => {
+                    m.errors.increment();
+                    return Err(err);
+                }
+            }
+        }
+        Ok(None)
+    }
+
     pub fn fetch_batch(
         &self,
         fctx: FetchContext,
@@ -905,5 +928,13 @@ impl storemodel::TreeStore for TreeStore {
 
     fn clone_tree_store(&self) -> Box<dyn storemodel::TreeStore> {
         Box::new(self.clone())
+    }
+
+    fn get_local_tree_aux_data(
+        &self,
+        _path: &RepoPath,
+        id: HgId,
+    ) -> anyhow::Result<Option<TreeAuxData>> {
+        self.get_local_aux_direct(&id)
     }
 }
