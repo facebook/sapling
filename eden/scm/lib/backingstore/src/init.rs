@@ -46,5 +46,8 @@ pub fn backingstore_global_init() {
 
         #[cfg(feature = "cas")]
         rich_cas_client::init();
+
+        // Put progress into "no-op" mode to avoid overhead in eden.
+        progress_model::Registry::main().disable(true);
     });
 }
