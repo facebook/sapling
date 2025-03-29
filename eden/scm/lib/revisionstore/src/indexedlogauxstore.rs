@@ -124,9 +124,8 @@ fn deserialize(bytes: Bytes) -> Result<Option<(HgId, FileAuxData)>> {
             let size: u64 = cur.read_vlq()?;
             // read file header metadata blob
             if cur.position() + size <= bytes.len() as u64 {
-                let mut buf = vec![0u8; size as usize];
-                cur.read_exact(&mut buf)?;
-                file_header_metadata = Some(buf.into());
+                let pos = cur.position() as usize;
+                file_header_metadata = Some(bytes.slice(pos..pos + size as usize));
             } else {
                 bail!("auxstore entry is truncated/corrupted");
             };
