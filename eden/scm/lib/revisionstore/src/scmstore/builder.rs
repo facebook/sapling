@@ -583,9 +583,14 @@ impl<'a> TreeStoreBuilder<'a> {
 
     #[context("failed to build tree aux store")]
     pub fn build_tree_aux_store(&self) -> Result<Option<Arc<TreeAuxStore>>> {
-        if let Some(local_path) = self.local_path.clone() {
-            let local_path = get_local_path(local_path, &self.suffix)?;
-
+        let path = if self
+            .config
+            .get_or_default("scmstore", "store-tree-aux-in-shared-cache")?
+        {
+            // This knob is just for testing convenience so blowing away the cache dir
+            // will also blow away the tree aux cache.
+            get_cache_path(self.config, &self.suffix)
+        } else {
             // The TreeAuxStore is a mapping from HgId to augmented
             // manifest digest, and is used to convert from Hg tree
             // ids in order to make augmented manifest lookups.
@@ -594,9 +599,16 @@ impl<'a> TreeStoreBuilder<'a> {
             // it in the shared cache directory to avoid the risk of
             // poisoning by other shared cache users.  As such, we
             // create it as a rotated log, but in the local store.
+            self.local_path
+                .clone()
+                .map(|path| get_local_path(path, &self.suffix))
+                .transpose()
+        };
+
+        if let Some(path) = path? {
             Ok(Some(Arc::new(TreeAuxStore::new(
                 self.config,
-                get_tree_aux_store_path(local_path)?,
+                get_tree_aux_store_path(path)?,
                 StoreType::Rotated,
             )?)))
         } else {

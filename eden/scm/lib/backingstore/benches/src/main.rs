@@ -106,6 +106,29 @@ fn main() {
         assert_eq!(fetch_count.load(Ordering::Acquire), load_tree_keys().len());
     });
 
+    bench_matrix("get_tree_aux serial (1k)", |store, mode| {
+        for key in load_tree_keys().iter().take(1000) {
+            let fetched = store.get_tree_aux(FetchContext::new(mode), key.hgid.as_ref());
+            assert!(matches!(mode, FetchMode::LocalOnly) || matches!(fetched, Ok(Some(_))));
+        }
+    });
+
+    bench_matrix(
+        &format!("get_tree_aux_batch ({}k)", n / 1000),
+        |store, mode| {
+            let fetch_count = AtomicUsize::new(0);
+            store.get_tree_aux_batch(
+                FetchContext::new(mode),
+                load_tree_keys().clone(),
+                |_, fetched| {
+                    fetch_count.fetch_add(1, Ordering::AcqRel);
+                    assert!(matches!(mode, FetchMode::LocalOnly) || matches!(fetched, Ok(Some(_))));
+                },
+            );
+            assert_eq!(fetch_count.load(Ordering::Acquire), load_tree_keys().len());
+        },
+    );
+
     eprintln!("Max RSS: {} MB", rss_mb());
 }
 
@@ -172,6 +195,9 @@ impl TempDirExt for tempfile::TempDir {
         let mut configs = vec![
             format!("remotefilelog.cachepath={}", cache_path.display()),
             "experimental.tree-resolver-cache-size=0".to_string(),
+            // This moves the tree aux cache into the shared cache so updating the
+            // cachepath above will drop this cache as well.
+            "scmstore.store-tree-aux-in-shared-cache=true".to_string(),
         ];
         if let Ok(s) = std::env::var("CONFIGS") {
             for s in s.split_whitespace() {
