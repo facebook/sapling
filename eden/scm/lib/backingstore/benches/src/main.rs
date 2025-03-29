@@ -107,17 +107,23 @@ fn main() {
 
 /// Run benchmarks with local/remote * cold/warm matrix.
 fn bench_matrix(name: &str, func: fn(&BackingStore, FetchMode)) {
-    bench(format!("{name} (local, cold cache)"), || {
-        let dir = tempdir();
-        let store = dir.store();
-        measured(move || func(&store, FetchMode::LocalOnly))
-    });
+    let title = format!("{name} (local, cold cache)");
+    if bench_enabled(&title) {
+        bench(&title, || {
+            let dir = tempdir();
+            let store = dir.store();
+            measured(move || func(&store, FetchMode::LocalOnly))
+        });
+    }
 
-    bench(format!("{name} (remote, cold cache)"), || {
-        let dir = tempdir();
-        let store = dir.store();
-        measured(move || func(&store, FetchMode::AllowRemote))
-    });
+    let title = format!("{name} (remote, cold cache)");
+    if bench_enabled(&title) {
+        bench(&title, || {
+            let dir = tempdir();
+            let store = dir.store();
+            measured(move || func(&store, FetchMode::AllowRemote))
+        });
+    }
 
     let title = format!("{name} (local, warm cache)");
     if bench_enabled(&title) {
