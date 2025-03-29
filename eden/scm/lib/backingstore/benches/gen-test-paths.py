@@ -3,7 +3,10 @@
 # This software may be used and distributed according to the terms of the
 # GNU General Public License version 2.
 
-import itertools, os, subprocess, sys
+import itertools
+import os
+import subprocess
+import sys
 
 try:
     from sapling import bookmarks
@@ -17,17 +20,27 @@ def yield_path_nodes(repo, main, n):
     c1, c2 = list(repo.set("%s + (%s~%z)", main, main, n))
     m1, m2 = c1.manifest(), c2.manifest()
     diff = m1.diff(m2)
+    seen = set()
     for path, ((old_node, old_flags), (new_node, new_flags)) in diff.items():
         nodes = [n for n in (old_node, new_node) if n and n != nullid]
-        if nodes:
+        if nodes and nodes[0] not in seen:
+            seen.add(nodes[0])
             yield path, nodes[0]
 
 
 def yield_tree_root_nodes(repo, main, n):
     # For simplicity, we just provide root trees.
-    s = repo.revs("limit(reverse(::%s), %z)", main, n).prefetch("text")
+    # Fetch 2x what we need in case there are duplicates.
+    s = repo.revs("limit(reverse(::%s), %z)", main, 2 * n).prefetch("text")
+    seen = set()
     for ctx in s.iterctx():
-        yield ctx.manifestnode()
+        mn = ctx.manifestnode()
+        if mn not in seen:
+            n -= 1
+            seen.add(mn)
+            yield mn
+            if n == 0:
+                break
 
 
 def main(repo):

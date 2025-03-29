@@ -50,7 +50,7 @@ fn main() {
             FetchContext::new(mode),
             load_test_keys().clone(),
             |_, fetched| {
-                fetch_count.fetch_add(1, Ordering::Release);
+                fetch_count.fetch_add(1, Ordering::AcqRel);
                 assert!(matches!(mode, FetchMode::LocalOnly) || matches!(fetched, Ok(Some(_))));
             },
         );
@@ -72,7 +72,7 @@ fn main() {
                 FetchContext::new(mode),
                 load_test_keys().clone(),
                 |_, fetched| {
-                    fetch_count.fetch_add(1, Ordering::Release);
+                    fetch_count.fetch_add(1, Ordering::AcqRel);
                     assert!(matches!(mode, FetchMode::LocalOnly) || matches!(fetched, Ok(Some(_))));
                 },
             );
@@ -95,7 +95,7 @@ fn main() {
             FetchContext::new(mode),
             load_tree_keys().clone(),
             |_, fetched| {
-                fetch_count.fetch_add(1, Ordering::Release);
+                fetch_count.fetch_add(1, Ordering::AcqRel);
                 assert!(matches!(mode, FetchMode::LocalOnly) || matches!(fetched, Ok(Some(_))));
             },
         );
@@ -159,7 +159,10 @@ trait TempDirExt {
 impl TempDirExt for tempfile::TempDir {
     fn store(&self) -> BackingStore {
         let cache_path = self.path();
-        let mut configs = vec![format!("remotefilelog.cachepath={}", cache_path.display())];
+        let mut configs = vec![
+            format!("remotefilelog.cachepath={}", cache_path.display()),
+            "experimental.tree-resolver-cache-size=0".to_string(),
+        ];
         if let Ok(s) = std::env::var("CONFIGS") {
             for s in s.split_whitespace() {
                 configs.push(s.to_string());
