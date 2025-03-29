@@ -32,6 +32,7 @@ use edenapi_types::TreeAuxData;
 use fetch::FetchState;
 use flume::bounded;
 use flume::unbounded;
+use metrics::TREE_STORE_FETCH_METRICS;
 use minibytes::Bytes;
 use once_cell::sync::OnceCell;
 use progress_model::AggregatingProgressBar;
@@ -44,6 +45,7 @@ use storemodel::SerializationFormat;
 use storemodel::TreeEntry;
 use types::AuxData;
 
+use super::util::try_local_content;
 use crate::datastore::HgIdDataStore;
 use crate::historystore::HistoryStore;
 use crate::indexedlogdatastore::Entry;
@@ -141,6 +143,13 @@ impl Drop for TreeStore {
 }
 
 impl TreeStore {
+    pub(crate) fn get_local_content_direct(&self, id: &HgId) -> Result<Option<Bytes>> {
+        let m = &TREE_STORE_FETCH_METRICS;
+        try_local_content!(id, self.indexedlog_cache, m.indexedlog.cache);
+        try_local_content!(id, self.indexedlog_local, m.indexedlog.local);
+        Ok(None)
+    }
+
     pub fn fetch_batch(
         &self,
         fctx: FetchContext,
@@ -704,24 +713,13 @@ impl HistoryStore for TreeStore {
 impl storemodel::KeyStore for TreeStore {
     fn get_local_content(
         &self,
-        path: &RepoPath,
+        _path: &RepoPath,
         node: HgId,
     ) -> anyhow::Result<Option<minibytes::Bytes>> {
         if node.is_null() {
             return Ok(Some(Default::default()));
         }
-        let key = Key::new(path.to_owned(), node);
-        match self
-            .fetch_batch(
-                FetchContext::new(FetchMode::LocalOnly),
-                std::iter::once(key.clone()),
-                TreeAttributes::CONTENT,
-            )
-            .single()?
-        {
-            Some(entry) => Ok(Some(entry.content.expect("no tree content").hg_content()?)),
-            None => Ok(None),
-        }
+        self.get_local_content_direct(&node)
     }
 
     fn get_content(

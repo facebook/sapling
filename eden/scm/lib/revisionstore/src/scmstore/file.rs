@@ -61,6 +61,7 @@ use crate::lfs::LfsStore;
 use crate::scmstore::activitylogger::ActivityLogger;
 use crate::scmstore::fetch::FetchResults;
 use crate::scmstore::metrics::StoreLocation;
+use crate::scmstore::util::try_local_content;
 use crate::ContentMetadata;
 use crate::Delta;
 use crate::LocalStore;
@@ -129,29 +130,6 @@ impl Drop for FileStore {
             let _ = self.flush();
         }
     }
-}
-
-macro_rules! try_local_content {
-    ($id:ident, $e:expr, $m:expr) => {
-        if let Some(store) = $e.as_ref() {
-            $m.requests.increment();
-            $m.keys.increment();
-            $m.singles.increment();
-            match store.get_local_content_direct($id) {
-                Ok(None) => {
-                    $m.misses.increment();
-                }
-                Ok(Some(data)) => {
-                    $m.hits.increment();
-                    return Ok(Some(data));
-                }
-                Err(err) => {
-                    $m.errors.increment();
-                    return Err(err);
-                }
-            }
-        }
-    };
 }
 
 static FILESTORE_FLUSH_COUNT: Counter = Counter::new_counter("scmstore.file.flush");

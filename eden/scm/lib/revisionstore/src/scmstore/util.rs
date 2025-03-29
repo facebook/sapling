@@ -49,3 +49,28 @@ pub async fn file_to_async_key_stream(path: PathBuf) -> Result<impl Stream<Item 
             })
         }))
 }
+
+macro_rules! try_local_content {
+    ($id:ident, $e:expr, $m:expr) => {
+        if let Some(store) = $e.as_ref() {
+            $m.requests.increment();
+            $m.keys.increment();
+            $m.singles.increment();
+            match store.get_local_content_direct($id) {
+                Ok(None) => {
+                    $m.misses.increment();
+                }
+                Ok(Some(data)) => {
+                    $m.hits.increment();
+                    return Ok(Some(data));
+                }
+                Err(err) => {
+                    $m.errors.increment();
+                    return Err(err);
+                }
+            }
+        }
+    };
+}
+
+pub(crate) use try_local_content;
