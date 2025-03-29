@@ -8,10 +8,12 @@
 use std::num::NonZeroU64;
 use std::str::FromStr;
 
+use anyhow::anyhow;
 use anyhow::ensure;
 use anyhow::format_err;
 use anyhow::Context;
 use anyhow::Error;
+use async_compression::tokio::bufread::ZstdDecoder;
 use async_trait::async_trait;
 use bytes::Bytes;
 use context::PerfCounterType;
@@ -89,6 +91,7 @@ pub struct UploadFileParams {
 pub struct UploadFileQueryString {
     bubble_id: Option<NonZeroU64>,
     content_size: u64,
+    compression: Option<String>,
 }
 
 /// Fetch the content of the files requested by the client.
@@ -295,6 +298,22 @@ pub async fn upload_file(state: &mut State) -> Result<impl TryIntoResponse, Http
 
     let body = Body::take_from(state).map_err(Error::from);
     let content_size = query_string.content_size;
+    let compression = query_string.compression;
+
+    let (body, content_size) = match compression.as_deref() {
+        Some("zstd") => {
+            let body =
+                body.map_err(|e| std::io::Error::new(std::io::ErrorKind::Other, format!("{e:?}")));
+            let decoder = ZstdDecoder::new(tokio_util::io::StreamReader::new(body));
+            let body = tokio_util::io::ReaderStream::new(decoder).map_err(|e| e.into());
+            Ok((body.left_stream(), content_size))
+        }
+        None => Ok((body.right_stream(), content_size)),
+        Some(compression) => Err(HttpError::e400(anyhow!(
+            "Unsupported compression type: {:?}",
+            compression
+        ))),
+    }?;
 
     store_file(
         repo.clone(),
