@@ -330,7 +330,7 @@ impl FetchState {
                         }
                     })
                 } else {
-                    store.get(key.hgid)
+                    store.get(&key.hgid)
                 };
                 match res {
                     Ok(Some(aux)) => {

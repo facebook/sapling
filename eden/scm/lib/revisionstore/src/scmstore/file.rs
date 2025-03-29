@@ -170,6 +170,37 @@ impl FileStore {
         Ok(None)
     }
 
+    pub(crate) fn get_local_aux_direct(&self, id: &HgId) -> Result<Option<FileAuxData>> {
+        let m = FILE_STORE_FETCH_METRICS.aux.cache;
+        if let Some(store) = &self.aux_cache {
+            m.requests.increment();
+            m.keys.increment();
+            m.singles.increment();
+            match store.get(id) {
+                Ok(None) => {
+                    m.misses.increment();
+                }
+                Ok(Some(data)) => {
+                    m.hits.increment();
+                    return Ok(Some(data));
+                }
+                Err(err) => {
+                    m.errors.increment();
+                    return Err(err);
+                }
+            }
+        }
+
+        if self.compute_aux_data {
+            if let Some(content) = self.get_local_content_direct(id)? {
+                m.computed.increment();
+                return Ok(Some(FileAuxData::from_content(&content)));
+            }
+        }
+
+        Ok(None)
+    }
+
     pub fn fetch(
         &self,
         fctx: FetchContext,

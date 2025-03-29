@@ -19,7 +19,6 @@ use storemodel::InsertOpts;
 use storemodel::KeyStore;
 use storemodel::Kind;
 use storemodel::SerializationFormat;
-use types::fetch_mode::FetchMode;
 use types::hgid::NULL_ID;
 use types::FetchContext;
 use types::HgId;
@@ -112,19 +111,8 @@ impl storemodel::FileStore for ArcFileStore {
         Ok(Box::new(iter))
     }
 
-    fn get_local_aux(&self, path: &RepoPath, id: HgId) -> anyhow::Result<Option<FileAuxData>> {
-        // PERF: This could be made faster by changes like D50935733.
-        let key = Key::new(path.to_owned(), id);
-        let fetched = self.0.fetch(
-            FetchContext::new(FetchMode::LocalOnly),
-            std::iter::once(key),
-            FileAttributes::AUX,
-        );
-        if let Some(entry) = fetched.single()? {
-            Ok(Some(entry.aux_data()?))
-        } else {
-            Ok(None)
-        }
+    fn get_local_aux(&self, _path: &RepoPath, id: HgId) -> anyhow::Result<Option<FileAuxData>> {
+        self.0.get_local_aux_direct(&id)
     }
 
     fn get_aux_iter(

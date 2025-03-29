@@ -187,7 +187,7 @@ impl AuxStore {
         Ok(open_options)
     }
 
-    pub fn get(&self, hgid: HgId) -> Result<Option<FileAuxData>> {
+    pub fn get(&self, hgid: &HgId) -> Result<Option<FileAuxData>> {
         let log = self.0.read();
         let mut entries = log.lookup(0, hgid)?;
 
@@ -285,7 +285,7 @@ mod tests {
         store.put(k.hgid, &entry)?;
         store.flush()?;
 
-        let found = store.get(k.hgid)?;
+        let found = store.get(&k.hgid)?;
         assert_eq!(Some(entry), found);
         Ok(())
     }
@@ -308,7 +308,7 @@ mod tests {
 
         let k2 = key("b", "2");
 
-        let found = store.get(k2.hgid)?;
+        let found = store.get(&k2.hgid)?;
         assert_eq!(None, found);
         Ok(())
     }
@@ -438,7 +438,7 @@ mod tests {
         assert_eq!(expected, fetched.aux_data().expect("no aux data found"));
 
         // Verify we can read it directly too
-        let found = aux.get(k.hgid)?;
+        let found = aux.get(&k.hgid)?;
         assert_eq!(Some(expected), found);
         Ok(())
     }
