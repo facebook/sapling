@@ -22,7 +22,7 @@ import {Tooltip} from 'isl-components/Tooltip';
 import {useAtomValue} from 'jotai';
 import {useEffect, useMemo, useRef, useState} from 'react';
 import {useContextMenu} from 'shared/ContextMenu';
-import {diffBlocks, type LineIdx, splitLines} from 'shared/diff';
+import {readableDiffBlocks as diffBlocks, type LineIdx, splitLines} from 'shared/diff';
 import {useThrottledEffect} from 'shared/hooks';
 import {firstLine, nullthrows} from 'shared/utils';
 import {BranchIndicator} from '../../BranchIndicator';

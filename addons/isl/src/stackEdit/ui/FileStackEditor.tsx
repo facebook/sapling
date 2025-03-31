@@ -14,7 +14,12 @@ import deepEqual from 'fast-deep-equal';
 import {Set as ImSet, List, Range} from 'immutable';
 import {Checkbox} from 'isl-components/Checkbox';
 import React, {useEffect, useLayoutEffect, useRef, useState} from 'react';
-import {collapseContextBlocks, diffBlocks, mergeBlocks, splitLines} from 'shared/diff';
+import {
+  collapseContextBlocks,
+  readableDiffBlocks as diffBlocks,
+  mergeBlocks,
+  splitLines,
+} from 'shared/diff';
 import {nullthrows} from 'shared/utils';
 import {CommitTitle} from '../../CommitTitle';
 import {Row, ScrollX, ScrollY} from '../../ComponentUtils';

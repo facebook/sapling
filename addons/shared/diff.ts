@@ -42,14 +42,16 @@ export type LineIdx = number;
  *
  * @param aLines lines on the "a" side.
  * @param bLines lines on the "b" side.
+ * @param readable whether to use `readableDiffBlocks`.
  * @returns A list of `(a1, a2, b1, b2)` tuples for the line ranges that
  * are different between "a" and "b".
  */
 export function diffLines(
   aLines: string[],
   bLines: string[],
+  readable = true,
 ): [LineIdx, LineIdx, LineIdx, LineIdx][] {
-  return diffBlocks(aLines, bLines)
+  return (readable ? readableDiffBlocks : diffBlocks)(aLines, bLines)
     .filter(([sign, _range]) => sign === '!')
     .map(([_sign, range]) => range);
 }

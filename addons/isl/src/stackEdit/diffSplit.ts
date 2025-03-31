@@ -10,7 +10,7 @@ import type {CommitStackState} from './commitStackState';
 import type {CommitRev, FileFlag, FileRev} from './common';
 
 import {Set as ImSet, List, Range} from 'immutable';
-import {diffBlocks, splitLines} from 'shared/diff';
+import {readableDiffBlocks as diffBlocks, splitLines} from 'shared/diff';
 import {nullthrows} from 'shared/utils';
 import {FlattenLine} from '../linelog';
 import {ABSENT_FLAG, FileState} from './common';
