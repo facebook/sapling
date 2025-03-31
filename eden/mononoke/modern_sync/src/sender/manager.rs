@@ -23,6 +23,7 @@ use mononoke_macros::mononoke;
 use mononoke_types::BonsaiChangeset;
 use mononoke_types::ContentId;
 use mutable_counters::MutableCounters;
+use repo_blobstore::RepoBlobstore;
 use slog::warn;
 use slog::Logger;
 use tokio::sync::mpsc;
@@ -129,6 +130,7 @@ pub struct BookmarkInfo {
 impl SendManager {
     pub fn new(
         ctx: CoreContext,
+        repo_blobstore: RepoBlobstore,
         external_sender: Arc<dyn EdenapiSender + Send + Sync>,
         logger: Logger,
         reponame: String,
@@ -139,7 +141,7 @@ impl SendManager {
 
         // Create channel for receiving content
         let (content_sender, content_recv) = mpsc::channel(CONTENT_CHANNEL_SIZE);
-        ContentManager::new(content_recv).start(
+        ContentManager::new(content_recv, repo_blobstore).start(
             ctx.clone(),
             reponame.clone(),
             external_sender.clone(),

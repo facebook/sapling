@@ -16,6 +16,7 @@ use context::CoreContext;
 use futures::channel::oneshot;
 use mononoke_macros::mononoke;
 use mononoke_types::ContentId;
+use repo_blobstore::RepoBlobstore;
 use slog::debug;
 use slog::error;
 use slog::info;
@@ -46,11 +47,19 @@ define_stats! {
 
 pub(crate) struct ContentManager {
     content_recv: mpsc::Receiver<ContentMessage>,
+    #[allow(dead_code)]
+    repo_blobstore: RepoBlobstore,
 }
 
 impl ContentManager {
-    pub(crate) fn new(content_recv: mpsc::Receiver<ContentMessage>) -> Self {
-        Self { content_recv }
+    pub(crate) fn new(
+        content_recv: mpsc::Receiver<ContentMessage>,
+        repo_blobstore: RepoBlobstore,
+    ) -> Self {
+        Self {
+            content_recv,
+            repo_blobstore,
+        }
     }
 
     async fn flush_batch(

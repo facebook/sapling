@@ -122,6 +122,7 @@ pub async fn sync(
     let repo: Repo = app.open_repo_unredacted(&source_repo_arg).await?;
     let _repo_id = repo.repo_identity().id();
     let repo_name = repo.repo_identity().name().to_string();
+    let repo_blobstore = repo.repo_blobstore();
     let mc = mc.unwrap_or_else(|| repo.mutable_counters_arc());
 
     let config = repo
@@ -189,7 +190,7 @@ pub async fn sync(
                     logger.clone(),
                     tls_args,
                     ctx.clone(),
-                    repo.repo_blobstore().clone(),
+                    repo_blobstore.clone(),
                 )
                 .build()
                 .await?,
@@ -207,6 +208,7 @@ pub async fn sync(
 
     let send_manager = SendManager::new(
         ctx.clone(),
+        repo_blobstore.clone(),
         sender.clone(),
         logger.clone(),
         repo_name.clone(),

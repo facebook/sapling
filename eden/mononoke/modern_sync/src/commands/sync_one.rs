@@ -100,6 +100,7 @@ pub async fn run(app: MononokeApp, args: CommandArgs) -> Result<()> {
 
     let mut send_manager = SendManager::new(
         ctx.clone(),
+        repo.repo_blobstore().clone(),
         sender.clone(),
         logger.clone(),
         repo_name.clone(),
