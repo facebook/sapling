@@ -575,7 +575,7 @@ impl TreeStore {
     pub fn prefetch(&self, keys: Vec<Key>) -> Result<Vec<Key>> {
         Ok(self
             .fetch_batch(
-                FetchContext::default(),
+                FetchContext::sapling_prefetch(),
                 keys.into_iter(),
                 TreeAttributes::CONTENT,
             )
@@ -719,7 +719,7 @@ impl HgIdMutableHistoryStore for TreeStore {
 impl RemoteHistoryStore for TreeStore {
     fn prefetch(&self, keys: &[StoreKey], _length: Option<u32>) -> Result<()> {
         self.fetch_batch(
-            FetchContext::default(),
+            FetchContext::sapling_prefetch(),
             keys.iter().filter_map(StoreKey::maybe_as_key).cloned(),
             TreeAttributes::PARENTS,
         )
