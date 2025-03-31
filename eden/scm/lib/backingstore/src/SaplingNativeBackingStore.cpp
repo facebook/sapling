@@ -158,23 +158,10 @@ folly::Try<std::unique_ptr<folly::IOBuf>> SaplingNativeBackingStore::getBlob(
     FetchMode fetch_mode) {
   XLOGF(DBG7, "Importing blob node={} from hgcache", folly::hexlify(node));
   return folly::makeTryWith([&] {
-    auto opt_blob = sapling_backingstore_get_blob(
+    return sapling_backingstore_get_blob(
         *store_.get(),
         rust::Slice<const uint8_t>{node.data(), node.size()},
         fetch_mode);
-
-    if (!opt_blob.present) {
-      return std::unique_ptr<folly::IOBuf>(nullptr);
-    } else {
-      auto blob = opt_blob.blob.into_raw();
-      return folly::IOBuf::takeOwnership(
-          reinterpret_cast<void*>(blob->bytes.data()),
-          blob->bytes.size(),
-          [](void* /* buf */, void* blob) mutable {
-            auto vec = rust::Box<Blob>::from_raw(reinterpret_cast<Blob*>(blob));
-          },
-          reinterpret_cast<void*>(blob));
-    }
   });
 }
 

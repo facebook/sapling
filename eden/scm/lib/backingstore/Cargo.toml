@@ -33,6 +33,7 @@ sapling-repo = { version = "0.1.0", path = "../repo" }
 sapling-storemodel = { version = "0.1.0", path = "../storemodel" }
 sapling-tracing-collector = { version = "0.1.0", path = "../tracing-collector" }
 sapling-types = { version = "0.1.0", path = "../types" }
+scm-blob = { version = "0.1.0", path = "../blob" }
 tracing = { version = "0.1.41", features = ["attributes", "valuable"] }
 tracing-subscriber = { version = "0.3.18", features = ["chrono", "env-filter", "json", "local-time", "parking_lot", "registry"] }
 

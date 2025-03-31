@@ -33,6 +33,14 @@ impl ScmBlob {
         }
     }
 
+    #[cfg(fbcode_build)]
+    pub fn into_iobuf(self) -> iobuf::IOBufShared {
+        match self {
+            Self::Bytes(bytes) => iobuf::IOBufShared::from(bytes),
+            Self::IOBuf(buf) => buf,
+        }
+    }
+
     pub fn len(&self) -> usize {
         match self {
             Self::Bytes(bytes) => bytes.len(),

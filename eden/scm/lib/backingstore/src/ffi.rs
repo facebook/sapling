@@ -14,6 +14,8 @@ use anyhow::anyhow;
 use anyhow::Error;
 use anyhow::Result;
 use cxx::SharedPtr;
+use cxx::UniquePtr;
+use iobuf::IOBuf;
 use storemodel::FileAuxData as ScmStoreFileAuxData;
 use types::fetch_cause::FetchCause;
 use types::fetch_mode::FetchMode;
@@ -105,15 +107,6 @@ pub(crate) mod ffi {
         files: Vec<String>,
     }
 
-    pub struct Blob {
-        pub(crate) bytes: Vec<u8>,
-    }
-
-    pub struct OptionalBlob {
-        present: bool,
-        blob: Box<Blob>,
-    }
-
     pub struct FileAuxData {
         total_size: u64,
         content_sha1: [u8; 20],
@@ -122,6 +115,9 @@ pub(crate) mod ffi {
 
     unsafe extern "C++" {
         include!("eden/scm/lib/backingstore/include/ffi.h");
+
+        #[namespace = "folly"]
+        type IOBuf = iobuf::IOBuf;
 
         type GetTreeBatchResolver;
         type GetTreeAuxBatchResolver;
@@ -146,7 +142,7 @@ pub(crate) mod ffi {
             resolve_state: SharedPtr<GetBlobBatchResolver>,
             index: usize,
             error: String,
-            blob: Box<Blob>,
+            blob: UniquePtr<IOBuf>,
         );
 
         unsafe fn sapling_backingstore_get_file_aux_batch_handler(
@@ -202,7 +198,7 @@ pub(crate) mod ffi {
             store: &BackingStore,
             node: &[u8],
             fetch_mode: FetchMode,
-        ) -> Result<OptionalBlob>;
+        ) -> Result<UniquePtr<IOBuf>>;
 
         pub fn sapling_backingstore_get_blob_batch(
             store: &BackingStore,
@@ -403,20 +399,14 @@ pub fn sapling_backingstore_get_blob(
     store: &BackingStore,
     node: &[u8],
     fetch_mode: ffi::FetchMode,
-) -> Result<ffi::OptionalBlob> {
+) -> Result<UniquePtr<IOBuf>> {
     // the cause is not propagated for this API
     match store.get_blob(
         FetchContext::new_with_cause(FetchMode::from(fetch_mode), FetchCause::EdenUnknown),
         node,
     )? {
-        Some(blob) => Ok(ffi::OptionalBlob {
-            blob: Box::new(ffi::Blob { bytes: blob }),
-            present: true,
-        }),
-        None => Ok(ffi::OptionalBlob {
-            blob: Box::new(ffi::Blob { bytes: Vec::new() }),
-            present: false,
-        }),
+        Some(blob) => Ok(blob.into_iobuf().into()),
+        None => Ok(UniquePtr::null()),
     }
 }
 
@@ -436,11 +426,8 @@ pub fn sapling_backingstore_get_blob_batch(
             let result = result.and_then(|opt| opt.ok_or_else(|| Error::msg("no blob found")));
             let resolver = resolver.clone();
             let (error, blob) = match result {
-                Ok(blob) => (String::default(), Box::new(ffi::Blob { bytes: blob })),
-                Err(error) => (
-                    format!("{:?}", error),
-                    Box::new(ffi::Blob { bytes: vec![] }),
-                ),
+                Ok(blob) => (String::default(), blob.into_iobuf().into()),
+                Err(error) => (format!("{:?}", error), UniquePtr::null()),
             };
             unsafe { ffi::sapling_backingstore_get_blob_batch_handler(resolver, idx, error, blob) };
         },

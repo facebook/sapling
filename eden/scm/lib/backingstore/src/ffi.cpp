@@ -52,21 +52,13 @@ void sapling_backingstore_get_blob_batch_handler(
     std::shared_ptr<GetBlobBatchResolver> resolver,
     size_t index,
     rust::String error,
-    rust::Box<Blob> blob) {
+    std::unique_ptr<folly::IOBuf> blob) {
   using ResolveResult = folly::Try<std::unique_ptr<folly::IOBuf>>;
 
   resolver->resolve(
       index, folly::makeTryWith([&] {
         if (error.empty()) {
-          auto result = blob.into_raw();
-          return ResolveResult{folly::IOBuf::takeOwnership(
-              reinterpret_cast<void*>(result->bytes.data()),
-              result->bytes.size(),
-              [](void* /* buf */, void* blob) mutable {
-                auto box =
-                    rust::Box<Blob>::from_raw(reinterpret_cast<Blob*>(blob));
-              },
-              reinterpret_cast<void*>(result))};
+          return ResolveResult{std::move(blob)};
         } else {
           return ResolveResult{SaplingFetchError{std::string(error)}};
         }

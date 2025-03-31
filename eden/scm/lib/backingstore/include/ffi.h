@@ -89,7 +89,7 @@ void sapling_backingstore_get_blob_batch_handler(
     std::shared_ptr<GetBlobBatchResolver> resolver,
     size_t index,
     rust::String error,
-    rust::Box<Blob> blob);
+    std::unique_ptr<folly::IOBuf> blob);
 
 void sapling_backingstore_get_file_aux_batch_handler(
     std::shared_ptr<GetFileAuxBatchResolver> resolver,

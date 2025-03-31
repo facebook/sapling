@@ -31,8 +31,8 @@ use log::warn;
 use metrics::ods;
 use repo::repo::Repo;
 use repo::RepoMinimalInfo;
+use scm_blob::ScmBlob;
 use storemodel::BoxIterator;
-use storemodel::Bytes;
 use storemodel::FileAuxData;
 use storemodel::FileStore;
 use storemodel::TreeAuxData;
@@ -176,7 +176,7 @@ impl BackingStore {
     }
 
     #[instrument(level = "trace", skip(self))]
-    pub fn get_blob(&self, fctx: FetchContext, node: &[u8]) -> Result<Option<Vec<u8>>> {
+    pub fn get_blob(&self, fctx: FetchContext, node: &[u8]) -> Result<Option<ScmBlob>> {
         self.maybe_reload().filestore.single(fctx, node)
     }
 
@@ -186,7 +186,7 @@ impl BackingStore {
     #[instrument(level = "trace", skip(self, resolve))]
     pub fn get_blob_batch<F>(&self, fctx: FetchContext, keys: Vec<Key>, resolve: F)
     where
-        F: Fn(usize, Result<Option<Vec<u8>>>),
+        F: Fn(usize, Result<Option<ScmBlob>>),
     {
         self.maybe_reload()
             .filestore
@@ -567,24 +567,19 @@ where
 }
 
 /// Read file content.
-impl LocalRemoteImpl<Bytes, Vec<u8>> for Arc<dyn FileStore> {
-    fn get_local_single(&self, path: &RepoPath, id: HgId) -> Result<Option<Bytes>> {
-        Ok(self
-            .get_local_content(path, id)?
-            .map(|blob| blob.into_bytes()))
+impl LocalRemoteImpl<ScmBlob> for Arc<dyn FileStore> {
+    fn get_local_single(&self, path: &RepoPath, id: HgId) -> Result<Option<ScmBlob>> {
+        self.get_local_content(path, id)
     }
-    fn get_single(&self, fctx: FetchContext, path: &RepoPath, id: HgId) -> Result<Bytes> {
-        Ok(self.get_content(fctx, path, id)?.into_bytes())
+    fn get_single(&self, fctx: FetchContext, path: &RepoPath, id: HgId) -> Result<ScmBlob> {
+        self.get_content(fctx, path, id)
     }
     fn get_batch_iter(
         &self,
         fctx: FetchContext,
         keys: Vec<Key>,
-    ) -> Result<BoxIterator<Result<(Key, Bytes)>>> {
-        Ok(Box::new(
-            self.get_content_iter(fctx, keys)?
-                .map(|r| r.map(|(k, v)| (k, v.into_bytes()))),
-        ))
+    ) -> Result<BoxIterator<Result<(Key, ScmBlob)>>> {
+        Ok(Box::new(self.get_content_iter(fctx, keys)?))
     }
 }
 
