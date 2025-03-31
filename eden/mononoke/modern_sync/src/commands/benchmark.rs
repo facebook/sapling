@@ -5,6 +5,7 @@
  * GNU General Public License version 2.
  */
 
+use std::collections::HashMap;
 #[cfg(fbcode_build)]
 use std::net::SocketAddr;
 use std::path::PathBuf;
@@ -17,6 +18,7 @@ use anyhow::Context;
 use anyhow::Result;
 use async_trait::async_trait;
 use clap::Parser;
+use clap::ValueEnum;
 use clientinfo::ClientEntryPoint;
 use clientinfo::ClientInfo;
 #[cfg(fbcode_build)]
@@ -45,6 +47,9 @@ use slog::warn;
 use slog::Logger;
 
 use crate::commands::sync_loop::CHUNK_SIZE_DEFAULT;
+use crate::sender::edenapi::EdenapiSender;
+use crate::sender::edenapi::FilterEdenapiSender;
+use crate::sender::edenapi::MethodFilter;
 use crate::sender::edenapi::NoopEdenapiSender;
 use crate::sync::get_unsharded_repo_args;
 use crate::sync::ExecutionType;
@@ -55,9 +60,19 @@ const CONN_TIMEOUT_MS: u32 = 1_000;
 #[cfg(fbcode_build)]
 const RECV_TIMEOUT_MS: u32 = 1_000;
 
+#[derive(ValueEnum, Default, Clone)]
+enum BenchmarkMode {
+    #[default]
+    Noop,
+    UploadContents,
+}
+
 /// Replays bookmark's moves
 #[derive(Parser)]
 pub struct CommandArgs {
+    #[clap(long, default_value_t, value_enum)]
+    mode: BenchmarkMode,
+
     #[clap(long, help = "Chunk size for the sync [default: 1000]")]
     chunk_size: Option<u64>,
 }
@@ -118,6 +133,7 @@ pub async fn run(app: MononokeApp, args: CommandArgs) -> Result<()> {
     let ctx = new_context(&app);
     let logger = app.logger().clone();
 
+    let benchmark_mode = args.mode;
     let mc = MemoryMutableCounters::new();
 
     #[cfg(fbcode_build)]
@@ -151,7 +167,16 @@ pub async fn run(app: MononokeApp, args: CommandArgs) -> Result<()> {
         false,
         args.chunk_size.clone().unwrap_or(CHUNK_SIZE_DEFAULT),
         PathBuf::from(""),
-        Some(Box::new(move |_| Arc::new(NoopEdenapiSender::default()))),
+        Some(Box::new(move |sender| {
+            let sender: Arc<dyn EdenapiSender + Sync + Send> = match benchmark_mode {
+                BenchmarkMode::Noop => Arc::new(NoopEdenapiSender::default()),
+                BenchmarkMode::UploadContents => {
+                    let allowed = HashMap::from([(MethodFilter::UploadContents, true)]);
+                    Arc::new(FilterEdenapiSender::new(sender, allowed))
+                }
+            };
+            sender
+        })),
         Some(Arc::new(mc.clone())),
     )
     .await?;
