@@ -73,6 +73,8 @@ pub enum HttpScubaKey {
     ClientIdentities,
     /// Alias of the sandcastle job, if any.
     SandcastleAlias,
+    /// Nonce of the sandcastle job, if any.
+    SandcastleNonce,
     /// VCS type of the sandcastle job, if any.
     SandcastleVCS,
     /// A unique ID identifying this request.
@@ -122,6 +124,7 @@ impl AsRef<str> for HttpScubaKey {
             ClientIp => "client_ip",
             ClientIdentities => "client_identities",
             SandcastleAlias => "sandcastle_alias",
+            SandcastleNonce => "sandcastle_nonce",
             SandcastleVCS => "sandcastle_vcs",
             RequestId => "request_id",
             HeadersDurationMs => "headers_duration_ms",
@@ -312,6 +315,9 @@ fn populate_scuba(scuba: &mut MononokeScubaSampleBuilder, state: &mut State) {
 
         let sandcastle_alias = metadata.sandcastle_alias();
         scuba.add(HttpScubaKey::SandcastleAlias, sandcastle_alias);
+
+        let sandcastle_nonce = metadata.sandcastle_nonce();
+        scuba.add(HttpScubaKey::SandcastleNonce, sandcastle_nonce);
 
         let sandcastle_vcs = metadata.sandcastle_vcs();
         scuba.add(HttpScubaKey::SandcastleVCS, sandcastle_vcs);
