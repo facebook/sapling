@@ -66,6 +66,7 @@ rust_library(
         "//eden/mononoke/gotham_ext:gotham_ext",
         "//eden/mononoke/hooks:hooks",
         "//eden/mononoke/manifest:manifest",
+        "//eden/mononoke/phases:phases",
         "//eden/mononoke/mercurial:mercurial_types",
         "//eden/mononoke/metaconfig:metaconfig_types",
         "//eden/mononoke/mononoke_api:mononoke_api",

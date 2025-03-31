@@ -96,6 +96,7 @@ use mononoke_types::ChangesetId;
 use mononoke_types::DateTime;
 use mononoke_types::FileChange;
 use mononoke_types::Globalrev;
+use phases::PhasesArc;
 use rate_limiting::Metric;
 use rate_limiting::RateLimitStatus;
 use rayon::iter::IntoParallelIterator;
@@ -1289,6 +1290,7 @@ impl SaplingRemoteApiHandler for UploadIdenticalChangesetsHandler {
         let blobstore = cloned_repo.repo_blobstore();
         let commit_graph_writer = cloned_repo.commit_graph_writer_arc();
         let bonsai_hg_mapping = cloned_repo.bonsai_hg_mapping();
+        let phases = cloned_repo.phases_arc();
 
         let bonsai_changesets_clone = bonsai_changesets.clone();
         let bs_ctx = ctx.clone();
@@ -1340,6 +1342,18 @@ impl SaplingRemoteApiHandler for UploadIdenticalChangesetsHandler {
                 .await
                 .context("While inserting in bonsai-hg mapping")?;
         }
+
+        let cs_ids = hg_changesets
+            .clone()
+            .into_iter()
+            .filter_map(|r| {
+                r.map_or_else(
+                    |_| None,
+                    |(_, bonsai_cs_id)| Some(bonsai_cs_id.get_changeset_id()),
+                )
+            })
+            .collect::<Vec<_>>();
+        phases.add_reachable_as_public(&ctx, cs_ids.clone()).await?;
 
         let tokens = hg_changesets.into_iter().map(move |r| {
             r.map(|(hg_cs_id, _)| {
