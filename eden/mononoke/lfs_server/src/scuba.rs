@@ -61,8 +61,11 @@ pub enum LfsScubaKey {
     SandcastleNonce,
     SandcastleAlias,
     SandcastleType,
+    SandcastleVCS,
     ClientTwJob,
     ClientTwTask,
+    /// Fetch cause
+    FetchCause,
 }
 
 impl AsRef<str> for LfsScubaKey {
@@ -89,8 +92,10 @@ impl AsRef<str> for LfsScubaKey {
             SandcastleNonce => "sandcastle_nonce",
             SandcastleAlias => "sandcastle_alias",
             SandcastleType => "sandcastle_type",
+            SandcastleVCS => "sandcastle_vcs",
             ClientTwJob => "client_tw_job",
             ClientTwTask => "client_tw_task",
+            FetchCause => "fetch_cause",
         }
     }
 }
@@ -108,6 +113,7 @@ pub struct LfsScubaHandler {
     client_attempts_left: Option<u64>,
     client_throttle_attempts_left: Option<u64>,
     client_info: Option<ClientInfo>,
+    fetch_cause: Option<String>,
 }
 
 impl ScubaHandler for LfsScubaHandler {
@@ -123,12 +129,15 @@ impl ScubaHandler for LfsScubaHandler {
             read_header_value_ignore_err(state, CLIENT_INFO_HEADER)
                 .map(|ci: ClientInfoHeader| ci.0);
 
+        let fetch_cause = read_header_value_ignore_err(state, "X-Fetch-Cause");
+
         Self {
             ctx: state.try_borrow::<RequestContext>().cloned(),
             client_attempt,
             client_attempts_left,
             client_throttle_attempts_left,
             client_info,
+            fetch_cause,
         }
     }
 
@@ -174,10 +183,14 @@ impl ScubaHandler for LfsScubaHandler {
                 client_info.fb.sandcastle_type(),
             );
 
+            scuba.add_opt(LfsScubaKey::SandcastleVCS, client_info.fb.sandcastle_vcs());
+
             scuba.add_opt(LfsScubaKey::ClientTwJob, client_info.fb.tw_job());
 
             scuba.add_opt(LfsScubaKey::ClientTwTask, client_info.fb.tw_task());
         }
+
+        scuba.add_opt(LfsScubaKey::FetchCause, self.fetch_cause);
 
         scuba.log();
     }
