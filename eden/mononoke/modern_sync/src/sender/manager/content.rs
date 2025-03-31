@@ -63,6 +63,7 @@ impl ContentManager {
     }
 
     async fn flush_batch(
+        _ctx: CoreContext,
         content_es: &Arc<dyn EdenapiSender + Send + Sync>,
         current_batch: &mut Vec<ContentId>,
         current_batch_size: u64,
@@ -141,7 +142,15 @@ impl Manager for ContentManager {
                         }
 
                         if current_batch_size >= MAX_BLOB_BYTES || current_batch.len() >= MAX_CONTENT_BATCH_SIZE {
-                            if let Err(e) = ContentManager::flush_batch(&content_es, &mut current_batch, current_batch_size, &mut pending_messages, reponame.clone(), &logger).await {
+                            if let Err(e) = ContentManager::flush_batch(
+                                ctx.clone(),
+                                &content_es,
+                                &mut current_batch,
+                                current_batch_size,
+                                &mut pending_messages,
+                                reponame.clone(),
+                                &logger,
+                            ).await {
                                 error!(logger, "Error processing content: {:?}", e);
                                 return;
                             }
@@ -150,7 +159,15 @@ impl Manager for ContentManager {
                     }
                     _ = flush_timer.tick() => {
                         if current_batch_size > 0 || !pending_messages.is_empty() {
-                            if let Err(e) = ContentManager::flush_batch(&content_es, &mut current_batch, current_batch_size, &mut pending_messages, reponame.clone(), &logger).await {
+                            if let Err(e) = ContentManager::flush_batch(
+                                ctx.clone(),
+                                &content_es,
+                                &mut current_batch,
+                                current_batch_size,
+                                &mut pending_messages,
+                                reponame.clone(),
+                                &logger,
+                            ).await {
                                 error!(logger, "Error processing content: {:?}", e);
                                 return;
                             }
