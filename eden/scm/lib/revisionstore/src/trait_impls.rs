@@ -45,7 +45,7 @@ impl storemodel::KeyStore for ArcFileStore {
             .map(|result| -> anyhow::Result<(Key, Bytes)> {
                 let (key, store_file) = result?;
                 let content = store_file.file_content()?;
-                Ok((key, content))
+                Ok((key, content.into_bytes()))
             });
         Ok(Box::new(iter))
     }

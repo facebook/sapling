@@ -88,7 +88,7 @@ impl LazyFile {
             }
             _ => {
                 let (content, header) = self.file_content()?;
-                let mut aux_data = FileAuxData::from_content(&ScmBlob::Bytes(content));
+                let mut aux_data = FileAuxData::from_content(&content);
 
                 // Content header (i.e. hg copy info) is not in the (pure) content. If we
                 // have header in-hand, also include it in the aux data.
@@ -101,20 +101,26 @@ impl LazyFile {
 
     /// The file content, as would be found in the working copy (stripped of copy header), and the content header.
     /// Content header is `None` iff not available. If available but not set, content header is `Some(b"")`.
-    pub(crate) fn file_content(&self) -> Result<(Bytes, Option<Bytes>)> {
+    pub(crate) fn file_content(&self) -> Result<(ScmBlob, Option<Bytes>)> {
         use LazyFile::*;
         Ok(match self {
-            IndexedLog(entry, format) => split_file_metadata(&entry.content()?, *format),
+            IndexedLog(entry, format) => {
+                let (content, header) = split_file_metadata(&entry.content()?, *format);
+                (ScmBlob::Bytes(content), header)
+            }
             Lfs(blob, ptr, format) => {
                 let content_header = match format {
                     SerializationFormat::Hg => Some(content_header_from_pointer(ptr)),
                     SerializationFormat::Git => None,
                 };
-                (blob.clone(), content_header)
+                (ScmBlob::Bytes(blob.clone()), content_header)
             }
-            SaplingRemoteApi(ref entry, format) => split_file_metadata(&entry.data()?, *format),
+            SaplingRemoteApi(ref entry, format) => {
+                let (content, header) = split_file_metadata(&entry.data()?, *format);
+                (ScmBlob::Bytes(content), header)
+            }
             // another copy of underlying IOBuf content into a vector, to transform it into AbstractBytes
-            Cas(data) => (data.to_bytes(), None),
+            Cas(data) => (data.clone(), None),
         })
     }
 

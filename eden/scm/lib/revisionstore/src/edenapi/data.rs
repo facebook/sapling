@@ -253,7 +253,10 @@ mod tests {
             )
             .single()?
             .expect("key not found");
-        assert_eq!(fetched.file_content()?.to_vec(), d.data.as_ref().to_vec());
+        assert_eq!(
+            fetched.file_content()?.into_bytes().to_vec(),
+            d.data.as_ref().to_vec()
+        );
 
         // Check that data was written to the local store.
         let fetched = cache.get_entry(&k.hgid)?.expect("key not found");
@@ -300,7 +303,10 @@ mod tests {
             )
             .single()?
             .expect("key not found");
-        assert_eq!(fetched.file_content()?.to_vec(), d.data.as_ref().to_vec());
+        assert_eq!(
+            fetched.file_content()?.into_bytes().to_vec(),
+            d.data.as_ref().to_vec()
+        );
 
         // Check that data was written to the local store.
         let fetched = cache.get_entry(&k.hgid)?.expect("key not found");

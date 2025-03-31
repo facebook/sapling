@@ -726,7 +726,10 @@ mod tests {
             )
             .single()?
             .expect("key not found");
-        assert_eq!(fetched.file_content()?.to_vec(), d.data.as_ref().to_vec());
+        assert_eq!(
+            fetched.file_content()?.into_bytes().to_vec(),
+            d.data.as_ref().to_vec()
+        );
 
         Ok(())
     }
@@ -768,7 +771,10 @@ mod tests {
             )
             .single()?
             .expect("key not found");
-        assert_eq!(fetched.file_content()?.to_vec(), d.data.as_ref().to_vec());
+        assert_eq!(
+            fetched.file_content()?.into_bytes().to_vec(),
+            d.data.as_ref().to_vec()
+        );
 
         Ok(())
     }
@@ -823,7 +829,8 @@ mod tests {
             found
                 .get_mut(&nonlfs_key)
                 .expect("key not found")
-                .file_content()?,
+                .file_content()?
+                .into_bytes(),
             content
         );
 

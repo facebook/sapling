@@ -12,6 +12,7 @@ use anyhow::bail;
 use anyhow::Result;
 use format_util::parse_copy_from_hg_file_metadata;
 use minibytes::Bytes;
+use scm_blob::ScmBlob;
 use types::Key;
 
 use crate::scmstore::file::LazyFile;
@@ -77,7 +78,7 @@ impl StoreFile {
     }
 
     // Pure file content without hg copy info.
-    pub fn file_content(&self) -> Result<Bytes> {
+    pub fn file_content(&self) -> Result<ScmBlob> {
         self.content
             .as_ref()
             .ok_or_else(|| anyhow!("no content available"))?
