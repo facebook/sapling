@@ -11,13 +11,14 @@ use std::sync::Arc;
 use anyhow::Ok;
 use anyhow::Result;
 use async_trait::async_trait;
+use edenapi_types::AnyFileContentId;
 use mercurial_types::blobs::HgBlobChangeset;
 use mercurial_types::HgChangesetId;
 use mercurial_types::HgFileNodeId;
 use mercurial_types::HgManifestId;
+use minibytes::Bytes;
 use mononoke_types::BonsaiChangeset;
 use mononoke_types::ChangesetId;
-use mononoke_types::ContentId;
 
 use crate::sender::edenapi::EdenapiSender;
 
@@ -48,7 +49,7 @@ impl FilterEdenapiSender {
 
 #[async_trait]
 impl EdenapiSender for FilterEdenapiSender {
-    async fn upload_contents(&self, contents: Vec<ContentId>) -> Result<()> {
+    async fn upload_contents(&self, contents: Vec<(AnyFileContentId, Bytes)>) -> Result<()> {
         if self
             .allowed
             .get(&MethodFilter::UploadContents)

@@ -11,13 +11,10 @@ use std::time::Duration;
 
 use anyhow::anyhow;
 use anyhow::ensure;
-use anyhow::Error;
 use anyhow::Result;
 use async_trait::async_trait;
-use bytes::BytesMut;
 use clientinfo::ClientEntryPoint;
 use clientinfo::ClientInfo;
-use cloned::cloned;
 use context::CoreContext;
 use edenapi::api::UploadLookupPolicy;
 use edenapi::paths;
@@ -40,10 +37,10 @@ use mercurial_types::blobs::HgBlobChangeset;
 use mercurial_types::HgChangesetId;
 use mercurial_types::HgFileNodeId;
 use mercurial_types::HgManifestId;
+use minibytes::Bytes;
 use mononoke_app::args::TLSArgs;
 use mononoke_types::BonsaiChangeset;
 use mononoke_types::ChangesetId;
-use mononoke_types::ContentId;
 use repo_blobstore::RepoBlobstore;
 use slog::info;
 use slog::Logger;
@@ -120,33 +117,13 @@ impl DefaultEdenapiSender {
 
 #[async_trait]
 impl EdenapiSender for DefaultEdenapiSender {
-    async fn upload_contents(&self, contents: Vec<ContentId>) -> Result<()> {
-        let repo_blobstore = self.repo_blobstore.clone();
+    async fn upload_contents(&self, contents: Vec<(AnyFileContentId, Bytes)>) -> Result<()> {
         let ctx = self.ctx.clone();
-        let len = contents.len();
-        let full_items = stream::iter(contents)
-            .map(|id| {
-                cloned!(ctx, repo_blobstore);
-                async move {
-                    let bytes = filestore::fetch(repo_blobstore, ctx, &id.into())
-                        .await?
-                        .ok_or(anyhow!("Content is not found (which should never happen"))?
-                        .try_collect::<BytesMut>()
-                        .await?;
-                    Ok::<_, Error>((
-                        AnyFileContentId::ContentId(id.into()),
-                        bytes.freeze().into(),
-                    ))
-                }
-            })
-            .buffer_unordered(len)
-            .try_collect::<Vec<(AnyFileContentId, minibytes::Bytes)>>()
-            .await?;
 
-        let expected_responses = full_items.len();
+        let expected_responses = contents.len();
         let response = self
             .client()?
-            .process_files_upload(full_items, None, None, UploadLookupPolicy::SkipLookup)
+            .process_files_upload(contents, None, None, UploadLookupPolicy::SkipLookup)
             .await?;
 
         let ids = response

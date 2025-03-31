@@ -10,10 +10,18 @@ use std::sync::atomic::AtomicBool;
 use std::sync::atomic::Ordering;
 use std::sync::Arc;
 
+use anyhow::anyhow;
+use anyhow::Error;
 use anyhow::Result;
+use bytes::BytesMut;
 use bytesize::ByteSize;
+use cloned::cloned;
 use context::CoreContext;
+use edenapi_types::AnyFileContentId;
 use futures::channel::oneshot;
+use futures::stream;
+use futures::StreamExt;
+use futures::TryStreamExt;
 use mononoke_macros::mononoke;
 use mononoke_types::ContentId;
 use repo_blobstore::RepoBlobstore;
@@ -63,7 +71,8 @@ impl ContentManager {
     }
 
     async fn flush_batch(
-        _ctx: CoreContext,
+        ctx: CoreContext,
+        repo_blobstore: RepoBlobstore,
         content_es: &Arc<dyn EdenapiSender + Send + Sync>,
         current_batch: &mut Vec<ContentId>,
         current_batch_size: u64,
@@ -71,13 +80,32 @@ impl ContentManager {
         reponame: String,
         logger: &Logger,
     ) -> Result<(), anyhow::Error> {
-        let current_batch_len = current_batch.len() as i64;
+        let current_batch_len = current_batch.len();
         let start = std::time::Instant::now();
+
         if current_batch_len > 0 {
-            if let Err(e) = content_es
-                .upload_contents(std::mem::take(current_batch))
-                .await
-            {
+            let contents = std::mem::take(current_batch);
+
+            let full_items = stream::iter(contents)
+                .map(|id| {
+                    cloned!(ctx, repo_blobstore);
+                    async move {
+                        let bytes = filestore::fetch(repo_blobstore, ctx, &id.into())
+                            .await?
+                            .ok_or(anyhow!("Content is not found (which should never happen"))?
+                            .try_collect::<BytesMut>()
+                            .await?;
+                        Ok::<_, Error>((
+                            AnyFileContentId::ContentId(id.into()),
+                            bytes.freeze().into(),
+                        ))
+                    }
+                })
+                .buffer_unordered(current_batch_len)
+                .try_collect::<Vec<(AnyFileContentId, minibytes::Bytes)>>()
+                .await?;
+
+            if let Err(e) = content_es.upload_contents(full_items).await {
                 error!(logger, "Error processing content: {:?}", e);
                 return Err(e);
             } else {
@@ -91,7 +119,7 @@ impl ContentManager {
 
                 let elapsed = start.elapsed().as_millis() / current_batch_len as u128;
                 STATS::content_upload_time_s.add_value(elapsed as i64, (reponame.clone(),));
-                STATS::synced_contents.add_value(current_batch_len, (reponame.clone(),));
+                STATS::synced_contents.add_value(current_batch_len as i64, (reponame.clone(),));
             }
         }
 
@@ -144,6 +172,7 @@ impl Manager for ContentManager {
                         if current_batch_size >= MAX_BLOB_BYTES || current_batch.len() >= MAX_CONTENT_BATCH_SIZE {
                             if let Err(e) = ContentManager::flush_batch(
                                 ctx.clone(),
+                                self.repo_blobstore.clone(),
                                 &content_es,
                                 &mut current_batch,
                                 current_batch_size,
@@ -161,6 +190,7 @@ impl Manager for ContentManager {
                         if current_batch_size > 0 || !pending_messages.is_empty() {
                             if let Err(e) = ContentManager::flush_batch(
                                 ctx.clone(),
+                                self.repo_blobstore.clone(),
                                 &content_es,
                                 &mut current_batch,
                                 current_batch_size,

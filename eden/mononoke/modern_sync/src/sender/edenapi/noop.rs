@@ -7,13 +7,14 @@
 
 use anyhow::Result;
 use async_trait::async_trait;
+use edenapi_types::AnyFileContentId;
 use mercurial_types::blobs::HgBlobChangeset;
 use mercurial_types::HgChangesetId;
 use mercurial_types::HgFileNodeId;
 use mercurial_types::HgManifestId;
+use minibytes::Bytes;
 use mononoke_types::BonsaiChangeset;
 use mononoke_types::ChangesetId;
-use mononoke_types::ContentId;
 
 use crate::sender::edenapi::EdenapiSender;
 
@@ -22,7 +23,7 @@ pub struct NoopEdenapiSender {}
 
 #[async_trait]
 impl EdenapiSender for NoopEdenapiSender {
-    async fn upload_contents(&self, _contents: Vec<ContentId>) -> Result<()> {
+    async fn upload_contents(&self, _contents: Vec<(AnyFileContentId, Bytes)>) -> Result<()> {
         Ok(())
     }
 

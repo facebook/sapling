@@ -10,15 +10,16 @@ use std::time::Duration;
 
 use anyhow::Result;
 use async_trait::async_trait;
+use edenapi_types::AnyFileContentId;
 use futures::future::BoxFuture;
 use futures::FutureExt;
 use mercurial_types::blobs::HgBlobChangeset;
 use mercurial_types::HgChangesetId;
 use mercurial_types::HgFileNodeId;
 use mercurial_types::HgManifestId;
+use minibytes::Bytes;
 use mononoke_types::BonsaiChangeset;
 use mononoke_types::ChangesetId;
-use mononoke_types::ContentId;
 use slog::warn;
 use slog::Logger;
 
@@ -47,7 +48,7 @@ impl RetryEdenapiSender {
 
 #[async_trait]
 impl EdenapiSender for RetryEdenapiSender {
-    async fn upload_contents(&self, contents: Vec<ContentId>) -> Result<()> {
+    async fn upload_contents(&self, contents: Vec<(AnyFileContentId, Bytes)>) -> Result<()> {
         self.with_retry(|this| this.inner.upload_contents(contents.clone()).boxed())
             .await
     }

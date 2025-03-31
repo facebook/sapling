@@ -7,13 +7,14 @@
 
 use anyhow::Result;
 use async_trait::async_trait;
+use edenapi_types::AnyFileContentId;
 use mercurial_types::blobs::HgBlobChangeset;
 use mercurial_types::HgChangesetId;
 use mercurial_types::HgFileNodeId;
 use mercurial_types::HgManifestId;
+use minibytes::Bytes;
 use mononoke_types::BonsaiChangeset;
 use mononoke_types::ChangesetId;
-use mononoke_types::ContentId;
 
 mod default;
 mod filter;
@@ -29,7 +30,7 @@ pub(crate) use retry::RetryEdenapiSender;
 
 #[async_trait]
 pub(crate) trait EdenapiSender {
-    async fn upload_contents(&self, contents: Vec<ContentId>) -> Result<()>;
+    async fn upload_contents(&self, contents: Vec<(AnyFileContentId, Bytes)>) -> Result<()>;
 
     async fn upload_trees(&self, trees: Vec<HgManifestId>) -> Result<()>;
 
