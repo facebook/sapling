@@ -10,4 +10,8 @@ repository = "https://github.com/facebook/sapling"
 license = "MIT"
 
 [dependencies]
+blake3 = { version = "=1.5.2", features = ["mmap", "rayon", "traits-preview"] }
+bytes = { version = "1.9.0", features = ["serde"] }
 sapling-minibytes = { version = "0.1.0", path = "../minibytes" }
+sapling-types = { version = "0.1.0", path = "../types" }
+sha1 = "0.10.5"

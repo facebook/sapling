@@ -16,9 +16,16 @@ rust_library(
             "repository": "https://github.com/facebook/sapling",
         },
     }},
+    named_deps = {
+        "blake3-constants": "//blake3:blake3-constants-rust-nothrift",
+    },
     deps = [
+        "fbsource//third-party/rust:blake3",
+        "fbsource//third-party/rust:bytes",
+        "fbsource//third-party/rust:sha1",
         "//common/rust/folly:iobuf",
         "//eden/scm/lib/minibytes:minibytes",
+        "//eden/scm/lib/types:types",
     ] + ([] if rust_oss.is_oss_build() else [
         "//common/rust/folly:iobuf",
     ]),
