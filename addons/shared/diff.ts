@@ -70,7 +70,13 @@ export function diffLines(
 export function diffBlocks(aLines: string[], bLines: string[]): Array<Block> {
   // Avoid O(string length) comparison.
   const [aList, bList] = stringsToInts([aLines, bLines]);
+  return diffIntBlocks(aList, bList);
+}
 
+/**
+ * Similar to `diffBlocks`, but takes integer array instead.
+ */
+function diffIntBlocks(aList: ReadonlyArray<number>, bList: ReadonlyArray<number>): Array<Block> {
   // Skip common prefix and suffix.
   let aLen = aList.length;
   let bLen = bList.length;
