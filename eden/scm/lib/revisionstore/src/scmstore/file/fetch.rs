@@ -24,6 +24,7 @@ use futures::StreamExt;
 use futures::TryFutureExt;
 use minibytes::Bytes;
 use progress_model::ProgressBar;
+use scm_blob::ScmBlob;
 use storemodel::SerializationFormat;
 use tracing::debug;
 use tracing::field;
@@ -831,7 +832,7 @@ impl FetchState {
                                 self.found_attributes(
                                     key,
                                     StoreFile {
-                                        content: Some(LazyFile::Cas(cas_client::CasClientFetchedBytes::Bytes(minibytes::Bytes::new()))),
+                                        content: Some(LazyFile::Cas(ScmBlob::Bytes(minibytes::Bytes::new()))),
                                         aux_data: None,
                                     },
                                 );

@@ -1,0 +1,25 @@
+load("@fbcode_macros//build_defs:rust_library.bzl", "rust_library")
+load("@fbcode_macros//build_defs/lib:rust_oss.bzl", "rust_oss")
+
+oncall("sapling")
+
+rust_library(
+    name = "scm-blob",
+    srcs = glob(["src/**/*.rs"]),
+    autocargo = {"cargo_toml_config": {
+        "lib": {"name": "scm-blob"},
+        "package": {
+            "authors": ["Meta Source Control Team <sourcecontrol-dev@meta.com>"],
+            "homepage": "https://sapling-scm.com/",
+            "license": "MIT",
+            "name": "scm-blob",
+            "repository": "https://github.com/facebook/sapling",
+        },
+    }},
+    deps = [
+        "//common/rust/folly:iobuf",
+        "//eden/scm/lib/minibytes:minibytes",
+    ] + ([] if rust_oss.is_oss_build() else [
+        "//common/rust/folly:iobuf",
+    ]),
+)

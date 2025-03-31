@@ -11,7 +11,6 @@ use std::time::Instant;
 
 use anyhow::Result;
 use cas_client::CasClient;
-use cas_client::CasClientFetchedBytes;
 use cas_client::CasSuccessTracker;
 use cas_client::CasSuccessTrackerConfig;
 use configmodel::convert::ByteCount;
@@ -27,6 +26,7 @@ use re_client_lib::REClient;
 use re_client_lib::REClientBuilder;
 use re_client_lib::RESessionID;
 use re_client_lib::RemoteExecutionMetadata;
+use scm_blob::ScmBlob;
 #[cfg(target_os = "linux")]
 use thin_cas_client_wrapper::CASClientWrapper as REClient;
 #[cfg(target_os = "linux")]

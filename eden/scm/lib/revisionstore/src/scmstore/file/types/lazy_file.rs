@@ -8,10 +8,10 @@
 use anyhow::bail;
 use anyhow::Error;
 use anyhow::Result;
-use cas_client::CasClientFetchedBytes;
 use edenapi_types::FileEntry;
 use format_util::split_file_metadata;
 use minibytes::Bytes;
+use scm_blob::ScmBlob;
 use storemodel::SerializationFormat;
 use types::HgId;
 use types::Id20;
@@ -36,7 +36,7 @@ pub(crate) enum LazyFile {
     SaplingRemoteApi(FileEntry, SerializationFormat),
 
     /// File content read from CAS (no hg header).
-    Cas(CasClientFetchedBytes),
+    Cas(ScmBlob),
 }
 
 impl std::fmt::Debug for LazyFile {

@@ -94,7 +94,7 @@ macro_rules! re_client {
                 _fctx: $crate::FetchContext,
                 digests: &'a [$crate::CasDigest],
                 log_name: $crate::CasDigestType,
-            ) -> BoxStream<'a, $crate::Result<($crate::CasFetchedStats, Vec<($crate::CasDigest, Result<Option<CasClientFetchedBytes>>)>)>>
+            ) -> BoxStream<'a, $crate::Result<($crate::CasFetchedStats, Vec<($crate::CasDigest, Result<Option<ScmBlob>>)>)>>
             {
                 stream::iter(split_up_to_max_bytes(digests, self.fetch_limit.value()))
                     .map(move |digests| async move {
@@ -149,7 +149,7 @@ macro_rules! re_client {
                             }
 
                             self.cas_success_tracker.record_success();
-                            return Ok((stats, vec![(digest.to_owned(), Ok(Some(CasClientFetchedBytes::Bytes(bytes.into()))))]));
+                            return Ok((stats, vec![(digest.to_owned(), Ok(Some(ScmBlob::Bytes(bytes.into()))))]));
                         }
 
                         // Fetch digests via the regular API (download inlined digests).
@@ -205,10 +205,10 @@ macro_rules! re_client {
                                 #[cfg(target_os = "linux")]
                                 let (digest, status, data) = {
                                     let (digest, status, data) = FFIDownload::consume(blob);
-                                    (digest, status, CasClientFetchedBytes::IOBuf(data.into()))
+                                    (digest, status, ScmBlob::IOBuf(data.into()))
                                 };
                                 #[cfg(not(target_os = "linux"))]
-                                let (digest, status, data) = (blob.digest, blob.status, CasClientFetchedBytes::Bytes(blob.blob.into()));
+                                let (digest, status, data) = (blob.digest, blob.status, ScmBlob::Bytes(blob.blob.into()));
 
                                 let digest = from_re_digest(&digest)?;
                                 match status.code {

@@ -15,6 +15,7 @@ use std::time::UNIX_EPOCH;
 
 use configmodel::Config;
 use futures::stream::BoxStream;
+use scm_blob::ScmBlob;
 pub use types::CasDigest;
 pub use types::CasDigestType;
 pub use types::CasFetchedStats;
@@ -116,47 +117,6 @@ pub fn new(config: Arc<dyn Config>) -> anyhow::Result<Option<Arc<dyn CasClient>>
     }
 }
 
-#[derive(Clone, Debug)]
-pub enum CasClientFetchedBytes {
-    Bytes(minibytes::Bytes),
-    #[cfg(fbcode_build)]
-    IOBuf(iobuf::IOBufShared),
-}
-
-impl CasClientFetchedBytes {
-    pub fn to_bytes(&self) -> minibytes::Bytes {
-        match self {
-            Self::Bytes(bytes) => bytes.clone(),
-            #[cfg(fbcode_build)]
-            Self::IOBuf(buf) => minibytes::Bytes::from(Vec::<u8>::from(buf.clone())),
-        }
-    }
-
-    pub fn into_bytes(self) -> minibytes::Bytes {
-        match self {
-            Self::Bytes(bytes) => bytes,
-            #[cfg(fbcode_build)]
-            Self::IOBuf(buf) => minibytes::Bytes::from(Vec::<u8>::from(buf)),
-        }
-    }
-
-    pub fn len(&self) -> usize {
-        match self {
-            Self::Bytes(bytes) => bytes.len(),
-            #[cfg(fbcode_build)]
-            Self::IOBuf(buf) => buf.len(),
-        }
-    }
-
-    pub fn is_empty(&self) -> bool {
-        match self {
-            Self::Bytes(bytes) => bytes.is_empty(),
-            #[cfg(fbcode_build)]
-            Self::IOBuf(buf) => buf.is_empty(),
-        }
-    }
-}
-
 #[async_trait::async_trait]
 #[auto_impl::auto_impl(&, Box, Arc)]
 pub trait CasClient: Sync + Send {
@@ -170,7 +130,7 @@ pub trait CasClient: Sync + Send {
         'a,
         anyhow::Result<(
             CasFetchedStats,
-            Vec<(CasDigest, anyhow::Result<Option<CasClientFetchedBytes>>)>,
+            Vec<(CasDigest, anyhow::Result<Option<ScmBlob>>)>,
         )>,
     >;
 

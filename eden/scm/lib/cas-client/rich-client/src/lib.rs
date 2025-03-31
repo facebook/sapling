@@ -10,7 +10,6 @@ use std::time::Duration;
 
 use anyhow::Result;
 use cas_client::CasClient;
-pub use cas_client::CasClientFetchedBytes;
 use cas_client::CasSuccessTracker;
 use cas_client::CasSuccessTrackerConfig;
 use configmodel::convert::ByteCount;
@@ -36,6 +35,7 @@ use rich_cas_client_wrapper::CASClientWrapper as REClient;
 use rich_cas_client_wrapper::FFIDownload;
 #[cfg(target_os = "linux")]
 use rich_cas_client_wrapper::FFIDownloadResult;
+use scm_blob::ScmBlob;
 
 pub const CAS_SOCKET_PATH: &str = "/run/casd/casd.socket";
 pub const CAS_SESSION_TTL: i64 = 600; // 10 minutes

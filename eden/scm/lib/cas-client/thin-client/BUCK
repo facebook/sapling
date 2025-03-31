@@ -39,6 +39,7 @@ rust_library(
         "fbsource//third-party/rust:anyhow",
         "fbsource//third-party/rust:futures",
         "fbsource//third-party/rust:tracing",
+        "//eden/scm/lib/blob:scm-blob",
         "//eden/scm/lib/cas-client:cas-client",
         "//eden/scm/lib/cas-client/re-cas-common:re-cas-common",
         "//eden/scm/lib/clientinfo:clientinfo",
