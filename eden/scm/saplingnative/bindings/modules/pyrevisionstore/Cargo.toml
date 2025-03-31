@@ -14,4 +14,5 @@ sapling-cpython-ext = { version = "0.1.0", path = "../../../../lib/cpython-ext" 
 sapling-revisionstore = { version = "0.1.0", path = "../../../../lib/revisionstore" }
 sapling-storemodel = { version = "0.1.0", path = "../../../../lib/storemodel" }
 sapling-types = { version = "0.1.0", path = "../../../../lib/types" }
+scm-blob = { version = "0.1.0", path = "../../../../lib/blob" }
 tracing = { version = "0.1.41", features = ["attributes", "valuable"] }

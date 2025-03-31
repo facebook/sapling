@@ -15,6 +15,7 @@ use manifest::testutil::*;
 use manifest::Manifest;
 use minibytes::Bytes;
 use parking_lot::RwLock;
+use scm_blob::ScmBlob;
 use storemodel::FileStore;
 use storemodel::InsertOpts;
 use storemodel::KeyStore;
@@ -96,7 +97,7 @@ fn compute_sha1(content: &[u8]) -> HgId {
 }
 
 impl KeyStore for TestStore {
-    fn get_local_content(&self, path: &RepoPath, hgid: HgId) -> anyhow::Result<Option<Bytes>> {
+    fn get_local_content(&self, path: &RepoPath, hgid: HgId) -> anyhow::Result<Option<ScmBlob>> {
         let mut inner = self.inner.write();
         inner.key_fetch_count.fetch_add(1, Ordering::Relaxed);
         let underlying = &mut inner.entries;
@@ -104,7 +105,7 @@ impl KeyStore for TestStore {
             .get(path)
             .and_then(|hgid_hash| hgid_hash.get(&hgid))
             .cloned();
-        Ok(result)
+        Ok(result.map(ScmBlob::Bytes))
     }
 
     fn insert_data(&self, opts: InsertOpts, path: &RepoPath, data: &[u8]) -> anyhow::Result<HgId> {

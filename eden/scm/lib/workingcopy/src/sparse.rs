@@ -119,8 +119,8 @@ pub fn build_matcher(
         };
 
         let repo_path = RepoPathBuf::from_string(path.clone())?;
-        let bytes = store.get_content(FetchContext::default(), &repo_path, file_id)?;
-        let mut bytes = bytes.into_vec();
+        let blob = store.get_content(FetchContext::default(), &repo_path, file_id)?;
+        let mut bytes = blob.into_bytes().into_vec();
         if let Some(extra) = overrides.get(&path) {
             bytes.append(&mut extra.to_string().into_bytes());
         }
@@ -221,6 +221,7 @@ mod tests {
     use std::collections::BTreeMap;
 
     use pathmatcher::Matcher;
+    use scm_blob::ScmBlob;
     use storemodel::minibytes::Bytes;
     use storemodel::KeyStore;
     use types::HgId;
@@ -521,11 +522,15 @@ inc
 
     #[async_trait::async_trait]
     impl KeyStore for StubCommit {
-        fn get_local_content(&self, path: &RepoPath, hgid: HgId) -> anyhow::Result<Option<Bytes>> {
+        fn get_local_content(
+            &self,
+            path: &RepoPath,
+            hgid: HgId,
+        ) -> anyhow::Result<Option<ScmBlob>> {
             match self.file_id(path) {
-                Some(id) if id == hgid => {
-                    Ok(Some(Bytes::copy_from_slice(self.files.get(path).unwrap())))
-                }
+                Some(id) if id == hgid => Ok(Some(ScmBlob::Bytes(Bytes::copy_from_slice(
+                    self.files.get(path).unwrap(),
+                )))),
                 _ => Ok(None),
             }
         }

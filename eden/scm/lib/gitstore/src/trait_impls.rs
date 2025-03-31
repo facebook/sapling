@@ -8,6 +8,7 @@
 //! Implement traits from other crates.
 
 use async_trait::async_trait;
+use scm_blob::ScmBlob;
 use storemodel::BoxIterator;
 use storemodel::FileStore;
 use storemodel::InsertOpts;
@@ -24,13 +25,9 @@ use crate::GitStore;
 
 #[async_trait]
 impl KeyStore for GitStore {
-    fn get_local_content(
-        &self,
-        _path: &RepoPath,
-        id: HgId,
-    ) -> anyhow::Result<Option<minibytes::Bytes>> {
+    fn get_local_content(&self, _path: &RepoPath, id: HgId) -> anyhow::Result<Option<ScmBlob>> {
         match self.read_obj(id, git2::ObjectType::Any, FetchMode::LocalOnly) {
-            Ok(data) => Ok(Some(data.into())),
+            Ok(data) => Ok(Some(ScmBlob::Bytes(data.into()))),
             Err(e) => {
                 if let Some(e) = e.downcast_ref::<git2::Error>() {
                     if e.code() == git2::ErrorCode::NotFound {
@@ -46,7 +43,7 @@ impl KeyStore for GitStore {
         &self,
         fctx: FetchContext,
         keys: Vec<types::Key>,
-    ) -> anyhow::Result<BoxIterator<anyhow::Result<(types::Key, minibytes::Bytes)>>> {
+    ) -> anyhow::Result<BoxIterator<anyhow::Result<(types::Key, ScmBlob)>>> {
         let fetch_mode = fctx.mode();
         if self.has_fetch_url() && fetch_mode.contains(FetchMode::REMOTE) {
             let ids = keys.iter().map(|k| k.hgid).collect::<Vec<_>>();
@@ -58,7 +55,7 @@ impl KeyStore for GitStore {
         let store = self.clone();
         let iter = keys.into_iter().map(move |k| {
             let data = store.read_obj(k.hgid, git2::ObjectType::Any, FetchMode::AllowRemote)?;
-            Ok((k, data.into()))
+            Ok((k, ScmBlob::Bytes(data.into())))
         });
         Ok(Box::new(iter))
     }

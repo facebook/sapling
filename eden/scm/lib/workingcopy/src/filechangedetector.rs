@@ -427,7 +427,7 @@ impl IntoIterator for FileChangeDetector {
                             continue;
                         }
                     };
-                    disk_send.send((key.path, data)).unwrap();
+                    disk_send.send((key.path, data.into_bytes())).unwrap();
                 }
             }
         };

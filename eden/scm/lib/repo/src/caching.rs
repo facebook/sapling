@@ -14,6 +14,7 @@ use anyhow::Result;
 use lru_cache::LruCache;
 use metrics::Counter;
 use parking_lot::Mutex;
+use scm_blob::ScmBlob;
 use storemodel::BoxIterator;
 use storemodel::Bytes;
 use storemodel::InsertOpts;
@@ -129,7 +130,7 @@ impl KeyStore for CachingKeyStore {
         &self,
         fctx: FetchContext,
         keys: Vec<Key>,
-    ) -> Result<BoxIterator<Result<(Key, Bytes)>>> {
+    ) -> Result<BoxIterator<Result<(Key, ScmBlob)>>> {
         let (keys, cached) = self.cached_multi(keys);
 
         let uncached = CachingIter {
@@ -137,16 +138,18 @@ impl KeyStore for CachingKeyStore {
             cache: self.cache.clone(),
         };
 
-        Ok(Box::new(uncached.chain(cached.into_iter().map(Ok))))
+        Ok(Box::new(uncached.chain(
+            cached.into_iter().map(|(k, v)| Ok((k, ScmBlob::Bytes(v)))),
+        )))
     }
 
-    fn get_local_content(&self, path: &RepoPath, hgid: HgId) -> Result<Option<Bytes>> {
+    fn get_local_content(&self, path: &RepoPath, hgid: HgId) -> Result<Option<ScmBlob>> {
         if let Some(cached) = self.cached_single(&hgid) {
-            Ok(Some(cached))
+            Ok(Some(ScmBlob::Bytes(cached)))
         } else {
             match self.store.get_local_content(path, hgid) {
                 Ok(Some(data)) => {
-                    self.cache.lock().insert(hgid, data.clone());
+                    self.cache.lock().insert(hgid, data.to_bytes());
                     Ok(Some(data))
                 }
                 r => r,
@@ -154,13 +157,13 @@ impl KeyStore for CachingKeyStore {
         }
     }
 
-    fn get_content(&self, fctx: FetchContext, path: &RepoPath, hgid: HgId) -> Result<Bytes> {
+    fn get_content(&self, fctx: FetchContext, path: &RepoPath, hgid: HgId) -> Result<ScmBlob> {
         if let Some(cached) = self.cached_single(&hgid) {
-            Ok(cached)
+            Ok(ScmBlob::Bytes(cached))
         } else {
             match self.store.get_content(fctx, path, hgid) {
                 Ok(data) => {
-                    self.cache.lock().insert(hgid, data.clone());
+                    self.cache.lock().insert(hgid, data.to_bytes());
                     Ok(data)
                 }
                 r => r,
@@ -203,18 +206,18 @@ impl KeyStore for CachingKeyStore {
 
 // An Iterator that lazily populates tree cache during iteration.
 struct CachingIter {
-    iter: BoxIterator<Result<(Key, Bytes)>>,
+    iter: BoxIterator<Result<(Key, ScmBlob)>>,
     cache: Arc<Mutex<dyn CachingKeyCache<HgId, Bytes>>>,
 }
 
 impl Iterator for CachingIter {
-    type Item = Result<(Key, Bytes)>;
+    type Item = Result<(Key, ScmBlob)>;
 
     fn next(&mut self) -> Option<Self::Item> {
         match self.iter.next() {
             Some(item) => {
                 if let Ok((key, data)) = &item {
-                    self.cache.lock().insert(key.hgid, data.clone());
+                    self.cache.lock().insert(key.hgid, data.to_bytes());
                 }
                 Some(item)
             }
@@ -251,14 +254,18 @@ mod test {
         assert_eq!(inner_store.key_fetch_count(), 0);
 
         assert_eq!(
-            caching_store.get_content(FetchContext::default(), &val1, val1_id)?,
+            caching_store
+                .get_content(FetchContext::default(), &val1, val1_id)?
+                .into_bytes(),
             b"val1"
         );
         assert_eq!(inner_store.key_fetch_count(), 1);
 
         // Fetch again - make sure we cached it.
         assert_eq!(
-            caching_store.get_content(FetchContext::default(), &val1, val1_id)?,
+            caching_store
+                .get_content(FetchContext::default(), &val1, val1_id)?
+                .into_bytes(),
             b"val1"
         );
         assert_eq!(inner_store.key_fetch_count(), 1);
@@ -269,6 +276,7 @@ mod test {
         assert_eq!(
             caching_store
                 .get_content_iter(FetchContext::default(), vec![key1.clone(), key2.clone()])?
+                .map(|r| r.map(|(k, v)| (k, v.into_bytes())))
                 .collect::<Result<Vec<_>>>()?,
             vec![
                 (key2.clone(), b"val2".as_ref().into()),
@@ -281,6 +289,7 @@ mod test {
         assert_eq!(
             caching_store
                 .get_content_iter(FetchContext::default(), vec![key1.clone(), key2.clone()])?
+                .map(|r| r.map(|(k, v)| (k, v.into_bytes())))
                 .collect::<Result<Vec<_>>>()?,
             vec![
                 (key1.clone(), b"val1".as_ref().into()),

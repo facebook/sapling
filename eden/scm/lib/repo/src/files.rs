@@ -11,6 +11,7 @@ use anyhow::anyhow;
 use anyhow::Result;
 use metrics::Counter;
 use revisionstore::scmstore::FileAuxData;
+use scm_blob::ScmBlob;
 use storemodel::minibytes;
 use storemodel::BoxIterator;
 use storemodel::Bytes;
@@ -77,15 +78,15 @@ impl KeyStore for CachingFileStore {
         &self,
         fctx: FetchContext,
         keys: Vec<Key>,
-    ) -> Result<BoxIterator<Result<(Key, Bytes)>>> {
+    ) -> Result<BoxIterator<Result<(Key, ScmBlob)>>> {
         self.key_store.get_content_iter(fctx, keys)
     }
 
-    fn get_local_content(&self, path: &RepoPath, hgid: HgId) -> Result<Option<Bytes>> {
+    fn get_local_content(&self, path: &RepoPath, hgid: HgId) -> Result<Option<ScmBlob>> {
         self.key_store.get_local_content(path, hgid)
     }
 
-    fn get_content(&self, fctx: FetchContext, path: &RepoPath, hgid: HgId) -> Result<Bytes> {
+    fn get_content(&self, fctx: FetchContext, path: &RepoPath, hgid: HgId) -> Result<ScmBlob> {
         self.key_store.get_content(fctx, path, hgid)
     }
 

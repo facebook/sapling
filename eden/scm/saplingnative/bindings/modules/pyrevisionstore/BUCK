@@ -22,6 +22,7 @@ rust_python_library(
     deps = [
         "fbsource//third-party/rust:anyhow",
         "fbsource//third-party/rust:tracing",
+        "//eden/scm/lib/blob:scm-blob",
         "//eden/scm/lib/config/model:configmodel",
         "//eden/scm/lib/cpython-ext:cpython-ext",
         "//eden/scm/lib/revisionstore:revisionstore",

@@ -15,6 +15,7 @@ use manifest_tree::TreeManifest;
 use manifest_tree::TreeStore;
 use metrics::Counter;
 use parking_lot::RwLock;
+use scm_blob::ScmBlob;
 use storemodel::BoxIterator;
 use storemodel::Bytes;
 use storemodel::InsertOpts;
@@ -128,15 +129,15 @@ impl KeyStore for CachingTreeStore {
         &self,
         fctx: FetchContext,
         keys: Vec<Key>,
-    ) -> Result<BoxIterator<Result<(Key, Bytes)>>> {
+    ) -> Result<BoxIterator<Result<(Key, ScmBlob)>>> {
         self.key_store.get_content_iter(fctx, keys)
     }
 
-    fn get_local_content(&self, path: &RepoPath, hgid: HgId) -> Result<Option<Bytes>> {
+    fn get_local_content(&self, path: &RepoPath, hgid: HgId) -> Result<Option<ScmBlob>> {
         self.key_store.get_local_content(path, hgid)
     }
 
-    fn get_content(&self, fctx: FetchContext, path: &RepoPath, hgid: HgId) -> Result<Bytes> {
+    fn get_content(&self, fctx: FetchContext, path: &RepoPath, hgid: HgId) -> Result<ScmBlob> {
         self.key_store.get_content(fctx, path, hgid)
     }
 

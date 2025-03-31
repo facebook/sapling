@@ -14,6 +14,7 @@ use edenapi_types::FileAuxData;
 use format_util::git_sha1_digest;
 use format_util::hg_sha1_digest;
 use minibytes::Bytes;
+use scm_blob::ScmBlob;
 use storemodel::BoxIterator;
 use storemodel::InsertOpts;
 use storemodel::KeyStore;
@@ -38,24 +39,22 @@ impl storemodel::KeyStore for ArcFileStore {
         &self,
         fctx: FetchContext,
         keys: Vec<Key>,
-    ) -> anyhow::Result<BoxIterator<anyhow::Result<(Key, Bytes)>>> {
+    ) -> anyhow::Result<BoxIterator<anyhow::Result<(Key, ScmBlob)>>> {
         let fetched = self.0.fetch(fctx, keys, FileAttributes::PURE_CONTENT);
         let iter = fetched
             .into_iter()
-            .map(|result| -> anyhow::Result<(Key, Bytes)> {
+            .map(|result| -> anyhow::Result<(Key, ScmBlob)> {
                 let (key, store_file) = result?;
                 let content = store_file.file_content()?;
-                Ok((key, content.into_bytes()))
+                Ok((key, content))
             });
         Ok(Box::new(iter))
     }
 
-    fn get_local_content(
-        &self,
-        _path: &RepoPath,
-        hgid: HgId,
-    ) -> anyhow::Result<Option<minibytes::Bytes>> {
-        self.0.get_local_content_direct(&hgid)
+    fn get_local_content(&self, _path: &RepoPath, hgid: HgId) -> anyhow::Result<Option<ScmBlob>> {
+        self.0
+            .get_local_content_direct(&hgid)
+            .map(|r| r.map(ScmBlob::Bytes))
     }
 
     fn flush(&self) -> Result<()> {

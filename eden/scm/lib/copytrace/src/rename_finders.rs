@@ -481,7 +481,8 @@ impl RenameFinderInner {
             let reader = self.file_reader.clone();
             move || reader.get_content(FetchContext::default(), &path, source_key.hgid)
         })
-        .await??;
+        .await??
+        .into_bytes();
 
         block_in_place(move || {
             let iter = self
@@ -489,7 +490,11 @@ impl RenameFinderInner {
                 .get_content_iter(FetchContext::default(), keys)?;
             for entry in iter {
                 let (k, candidate_content) = entry?;
-                if is_content_similar(&source_content, &candidate_content, &self.config)? {
+                if is_content_similar(
+                    &source_content,
+                    &candidate_content.into_bytes(),
+                    &self.config,
+                )? {
                     return Ok(Some(k.path));
                 }
             }

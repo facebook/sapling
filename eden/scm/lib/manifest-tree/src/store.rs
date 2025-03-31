@@ -47,10 +47,10 @@ impl InnerStore {
             id = AsRef::<str>::as_ref(&hgid.to_hex())
         )
         .in_scope(|| {
-            let bytes = self
+            let blob = self
                 .tree_store
                 .get_content(FetchContext::default(), path, hgid)?;
-            Ok(Entry(bytes, self.tree_store.format()))
+            Ok(Entry(blob.into_bytes(), self.tree_store.format()))
         })
     }
 

@@ -18,6 +18,7 @@ use revisionstore::HgIdDataStore;
 use revisionstore::RemoteDataStore;
 use revisionstore::StoreKey;
 use revisionstore::StoreResult;
+use scm_blob::ScmBlob;
 use storemodel::minibytes::Bytes;
 use storemodel::FileStore;
 use storemodel::KeyStore;
@@ -89,14 +90,14 @@ impl KeyStore for ManifestStore {
         &self,
         path: &RepoPath,
         node: types::HgId,
-    ) -> anyhow::Result<Option<Bytes>> {
+    ) -> anyhow::Result<Option<ScmBlob>> {
         if node.is_null() {
-            return Ok(Some(Default::default()));
+            return Ok(Some(ScmBlob::Bytes(Default::default())));
         }
         let key = Key::new(path.to_owned(), node);
         match self.underlying.get(StoreKey::hgid(key))? {
             StoreResult::NotFound(_key) => Ok(None),
-            StoreResult::Found(data) => Ok(Some(data.into())),
+            StoreResult::Found(data) => Ok(Some(ScmBlob::Bytes(data.into()))),
         }
     }
 

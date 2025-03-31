@@ -749,7 +749,7 @@ py_class!(pub class treescmstore |py| {
                 repo_path,
                 node,
             )).map_pyerr(py)
-              .map(|bytes| PyBytes::new(py, &bytes[..]));
+              .map(|bytes| PyBytes::new(py, &bytes.into_bytes()[..]));
         }
 
         let store = self.store(py);

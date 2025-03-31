@@ -192,7 +192,7 @@ impl<'a> State<'a> {
         if item.loaded.is_none() {
             let entry = tree_store.get_content(FetchContext::default(), item.path, item.id)?;
             let format = tree_store.format();
-            item.loaded = Some(TreeEntry(entry, format));
+            item.loaded = Some(TreeEntry(entry.into_bytes(), format));
         }
         Ok(Some(item.loaded.as_ref().unwrap().clone()))
     }

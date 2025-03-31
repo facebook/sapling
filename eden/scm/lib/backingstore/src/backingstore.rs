@@ -569,17 +569,22 @@ where
 /// Read file content.
 impl LocalRemoteImpl<Bytes, Vec<u8>> for Arc<dyn FileStore> {
     fn get_local_single(&self, path: &RepoPath, id: HgId) -> Result<Option<Bytes>> {
-        self.get_local_content(path, id)
+        Ok(self
+            .get_local_content(path, id)?
+            .map(|blob| blob.into_bytes()))
     }
     fn get_single(&self, fctx: FetchContext, path: &RepoPath, id: HgId) -> Result<Bytes> {
-        self.get_content(fctx, path, id)
+        Ok(self.get_content(fctx, path, id)?.into_bytes())
     }
     fn get_batch_iter(
         &self,
         fctx: FetchContext,
         keys: Vec<Key>,
     ) -> Result<BoxIterator<Result<(Key, Bytes)>>> {
-        self.get_content_iter(fctx, keys)
+        Ok(Box::new(
+            self.get_content_iter(fctx, keys)?
+                .map(|r| r.map(|(k, v)| (k, v.into_bytes()))),
+        ))
     }
 }
 

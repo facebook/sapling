@@ -38,6 +38,7 @@ use once_cell::sync::OnceCell;
 use progress_model::AggregatingProgressBar;
 use progress_model::ProgressBar;
 use progress_model::Registry;
+use scm_blob::ScmBlob;
 use storemodel::BoxIterator;
 use storemodel::InsertOpts;
 use storemodel::KeyStore;
@@ -734,32 +735,26 @@ impl HistoryStore for TreeStore {
 }
 
 impl storemodel::KeyStore for TreeStore {
-    fn get_local_content(
-        &self,
-        _path: &RepoPath,
-        node: HgId,
-    ) -> anyhow::Result<Option<minibytes::Bytes>> {
+    fn get_local_content(&self, _path: &RepoPath, node: HgId) -> anyhow::Result<Option<ScmBlob>> {
         if node.is_null() {
-            return Ok(Some(Default::default()));
+            return Ok(Some(ScmBlob::Bytes(Default::default())));
         }
         self.get_local_content_direct(&node)
+            .map(|r| r.map(ScmBlob::Bytes))
     }
 
-    fn get_content(
-        &self,
-        fctx: FetchContext,
-        path: &RepoPath,
-        node: Node,
-    ) -> Result<minibytes::Bytes> {
+    fn get_content(&self, fctx: FetchContext, path: &RepoPath, node: Node) -> Result<ScmBlob> {
         if node.is_null() {
-            return Ok(Default::default());
+            return Ok(ScmBlob::Bytes(Default::default()));
         }
         let key = Key::new(path.to_owned(), node);
         match self
             .fetch_batch(fctx, std::iter::once(key.clone()), TreeAttributes::CONTENT)
             .single()?
         {
-            Some(entry) => Ok(entry.content.expect("no tree content").hg_content()?),
+            Some(entry) => Ok(ScmBlob::Bytes(
+                entry.content.expect("no tree content").hg_content()?,
+            )),
             None => Err(anyhow!("key {:?} not found in manifest", key)),
         }
     }
@@ -768,16 +763,16 @@ impl storemodel::KeyStore for TreeStore {
         &self,
         fctx: FetchContext,
         keys: Vec<Key>,
-    ) -> anyhow::Result<BoxIterator<anyhow::Result<(Key, Bytes)>>> {
+    ) -> anyhow::Result<BoxIterator<anyhow::Result<(Key, ScmBlob)>>> {
         let fetched = self.fetch_batch(fctx, keys.into_iter(), TreeAttributes::CONTENT);
         let iter = fetched
             .into_iter()
-            .map(|entry| -> anyhow::Result<(Key, Bytes)> {
+            .map(|entry| -> anyhow::Result<(Key, ScmBlob)> {
                 let (key, store_tree) = entry?;
                 let content = store_tree
                     .content
                     .ok_or_else(|| anyhow::format_err!("no content available"))?;
-                Ok((key, content.hg_content()?))
+                Ok((key, ScmBlob::Bytes(content.hg_content()?)))
             });
         Ok(Box::new(iter))
     }

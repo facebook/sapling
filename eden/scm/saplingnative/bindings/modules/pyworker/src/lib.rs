@@ -148,7 +148,7 @@ fn update(state: &WriterState, key: Key, flag: UpdateFlag) -> Result<usize> {
         .store
         .get_content(FetchContext::default(), &key.path, key.hgid)?;
 
-    let content = redact_if_needed(content);
+    let content = redact_if_needed(content.into_bytes());
 
     state.working_copy.write(&key.path, &content, flag)
 }

@@ -59,6 +59,7 @@ py_class!(pub class KeyStore |py| {
         let fctx = FetchContext::new(fetch_mode.0);
         let iter = inner.get_content_iter(fctx, keys.0.into_keys()).map_pyerr(py)?;
         let iter = iter.into_compact_key();
+        let iter = iter.map(|r| r.map(|(k, v)| (k, v.into_bytes())));
         let iter = PyIter::new(py, iter)?;
         Ok(iter)
     }
@@ -67,7 +68,7 @@ py_class!(pub class KeyStore |py| {
     def get_local_content(&self, path: &str, id: Serde<Id20>) -> PyResult<Serde<Option<Bytes>>> {
         let inner = self.inner(py);
         let path = RepoPath::from_str(path).map_pyerr(py)?;
-        let result = py.allow_threads(|| inner.get_local_content(path, id.0)).map_pyerr(py)?;
+        let result = py.allow_threads(|| inner.get_local_content(path, id.0).map(|r| r.map(|blob| blob.into_bytes()))).map_pyerr(py)?;
         Ok(Serde(result))
     }
 
@@ -76,7 +77,7 @@ py_class!(pub class KeyStore |py| {
         let inner = self.inner(py);
         let path = RepoPath::from_str(path).map_pyerr(py)?;
         let fctx = FetchContext::new(fetch_mode.0);
-        let result = py.allow_threads(|| inner.get_content(fctx, path, id.0)).map_pyerr(py)?;
+        let result = py.allow_threads(|| inner.get_content(fctx, path, id.0).map(|r| r.into_bytes())).map_pyerr(py)?;
         Ok(Serde(result))
     }
 

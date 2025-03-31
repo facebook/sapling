@@ -368,7 +368,7 @@ impl CheckoutPlan {
                     Ok(v) => v,
                 };
 
-                let data = redact_if_needed(data);
+                let data = redact_if_needed(data.into_bytes());
 
                 let action = actions
                     .get(&key)
@@ -610,7 +610,7 @@ impl CheckoutPlan {
         let mut paths = Vec::new();
         for entry in store.get_content_iter(FetchContext::default(), check_content)? {
             let (key, data) = entry?;
-            if let Some(path) = Self::check_content(vfs, key, data) {
+            if let Some(path) = Self::check_content(vfs, key, data.into_bytes()) {
                 paths.push(path);
             }
         }
@@ -1756,6 +1756,7 @@ mod test {
     use pathmatcher::AlwaysMatcher;
     use quickcheck::Arbitrary;
     use quickcheck::Gen;
+    use scm_blob::ScmBlob;
     use storemodel::KeyStore;
     use tempfile::TempDir;
     use types::testutil::generate_repo_paths;
@@ -2039,8 +2040,12 @@ mod test {
 
     #[async_trait::async_trait]
     impl KeyStore for DummyFileContentStore {
-        fn get_local_content(&self, _path: &RepoPath, hgid: HgId) -> anyhow::Result<Option<Bytes>> {
-            Ok(Some(hgid_file(&hgid).into()))
+        fn get_local_content(
+            &self,
+            _path: &RepoPath,
+            hgid: HgId,
+        ) -> anyhow::Result<Option<ScmBlob>> {
+            Ok(Some(ScmBlob::Bytes(hgid_file(&hgid).into())))
         }
 
         fn clone_key_store(&self) -> Box<dyn KeyStore> {

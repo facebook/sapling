@@ -69,7 +69,7 @@ pub trait KeyStore: Send + Sync {
         &self,
         _fctx: FetchContext,
         keys: Vec<Key>,
-    ) -> anyhow::Result<BoxIterator<anyhow::Result<(Key, Bytes)>>> {
+    ) -> anyhow::Result<BoxIterator<anyhow::Result<(Key, ScmBlob)>>> {
         let store = self.clone_key_store();
         let iter = keys
             .into_iter()
@@ -87,11 +87,7 @@ pub trait KeyStore: Send + Sync {
 
     /// Read the content of the specified file without connecting to a remote server.
     /// Return `None` if the file is not available locally.
-    fn get_local_content(
-        &self,
-        _path: &RepoPath,
-        _hgid: HgId,
-    ) -> anyhow::Result<Option<minibytes::Bytes>> {
+    fn get_local_content(&self, _path: &RepoPath, _hgid: HgId) -> anyhow::Result<Option<ScmBlob>> {
         Ok(None)
     }
 
@@ -103,7 +99,7 @@ pub trait KeyStore: Send + Sync {
         fctx: FetchContext,
         path: &RepoPath,
         hgid: HgId,
-    ) -> anyhow::Result<minibytes::Bytes> {
+    ) -> anyhow::Result<ScmBlob> {
         // Handle "broken" implementation that returns Err(_) not Ok(None) on not found.
         if !fctx.mode().is_remote() {
             if let Ok(Some(data)) = self.get_local_content(path, hgid) {
@@ -214,7 +210,7 @@ pub trait FileStore: KeyStore + 'static {
     fn get_local_aux(&self, path: &RepoPath, id: HgId) -> anyhow::Result<Option<FileAuxData>> {
         Ok(self
             .get_local_content(path, id)?
-            .map(|data| FileAuxData::from_content(&ScmBlob::Bytes(data))))
+            .map(|data| FileAuxData::from_content(&data)))
     }
 
     /// Get auxiliary metadata for the given files.
@@ -227,7 +223,7 @@ pub trait FileStore: KeyStore + 'static {
     ) -> anyhow::Result<BoxIterator<anyhow::Result<(Key, FileAuxData)>>> {
         let iter = self.get_content_iter(fctx, keys)?.map(|entry| match entry {
             Err(e) => Err(e),
-            Ok((key, data)) => Ok((key, FileAuxData::from_content(&ScmBlob::Bytes(data)))),
+            Ok((key, data)) => Ok((key, FileAuxData::from_content(&data))),
         });
         Ok(Box::new(iter))
     }
@@ -261,6 +257,7 @@ pub trait FileStore: KeyStore + 'static {
     fn get_hg_raw_content(&self, path: &RepoPath, id: HgId) -> anyhow::Result<minibytes::Bytes> {
         // The default fetch mode is AllowRemote, which accesses both local and remote stores.
         self.get_content(FetchContext::default(), path, id)
+            .map(|blob| blob.into_bytes())
     }
 
     /// Get the "raw" flags. For LFS this is non-zero.
@@ -360,7 +357,7 @@ pub trait TreeStore: KeyStore {
             None => return Ok(None),
             Some(v) => v,
         };
-        Ok(Some(basic_parse_tree(data, self.format())?))
+        Ok(Some(basic_parse_tree(data.into_bytes(), self.format())?))
     }
 
     fn get_remote_tree_iter(

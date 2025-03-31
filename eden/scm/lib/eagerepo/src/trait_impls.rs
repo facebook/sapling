@@ -39,18 +39,14 @@ use crate::EagerRepoStore;
 // storemodel traits
 
 impl KeyStore for EagerRepoStore {
-    fn get_local_content(
-        &self,
-        _path: &RepoPath,
-        id: HgId,
-    ) -> anyhow::Result<Option<minibytes::Bytes>> {
+    fn get_local_content(&self, _path: &RepoPath, id: HgId) -> anyhow::Result<Option<ScmBlob>> {
         match self.get_content(id)? {
             Some(data) => {
                 let data = match self.format {
                     SerializationFormat::Hg => split_hg_file_metadata(&data).0,
                     SerializationFormat::Git => data,
                 };
-                Ok(Some(data))
+                Ok(Some(ScmBlob::Bytes(data)))
             }
             None => Ok(None),
         }
