@@ -69,8 +69,6 @@ pub enum HttpScubaKey {
     ResponseContentEncoding,
     /// The IP of the connecting client.
     ClientIp,
-    /// The client correlator submitted by the client, if any.
-    ClientCorrelator,
     /// The client identities received for the client, if any.
     ClientIdentities,
     /// Alias of the sandcastle job, if any.
@@ -122,7 +120,6 @@ impl AsRef<str> for HttpScubaKey {
             ResponseContentLength => "response_content_length",
             ResponseContentEncoding => "response_content_encoding",
             ClientIp => "client_ip",
-            ClientCorrelator => "client_correlator",
             ClientIdentities => "client_identities",
             SandcastleAlias => "sandcastle_alias",
             SandcastleVCS => "sandcastle_vcs",
