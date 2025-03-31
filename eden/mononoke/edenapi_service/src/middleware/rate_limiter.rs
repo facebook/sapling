@@ -58,8 +58,8 @@ impl Middleware for ThrottleMiddleware {
                 debug!(ctx.logger(), "No client request info found");
                 None
             })?;
-        // Retrieve main client ID
-        let main_client_id = client_request_info.main_id.clone().or_else(|| {
+        // Retrieve client main id
+        let client_main_id = client_request_info.main_id.clone().or_else(|| {
             debug!(ctx.logger(), "No main client id found");
             None
         })?;
@@ -74,7 +74,7 @@ impl Middleware for ThrottleMiddleware {
         let limit = rate_limiter.find_rate_limit(
             Metric::EdenApiQps,
             Some(identities.clone()),
-            Some(&main_client_id),
+            Some(&client_main_id),
         )?;
 
         let enforced = match limit.body.raw_config.status {
@@ -85,7 +85,7 @@ impl Middleware for ThrottleMiddleware {
         };
 
         let category = rate_limiter.category();
-        let counter = build_counter(&ctx, category, EDENAPI_QPS_LIMIT, &main_client_id);
+        let counter = build_counter(&ctx, category, EDENAPI_QPS_LIMIT, &client_main_id);
         let max_value = limit.body.raw_config.limit;
         let time_window = limit.fci_metric.window.as_secs() as u32;
 
@@ -96,7 +96,7 @@ impl Middleware for ThrottleMiddleware {
             max_value,
             time_window,
             enforced,
-            hashmap! {"main_client_id" => main_client_id.as_str() },
+            hashmap! {"client_main_id" => client_main_id.as_str() },
         )
         .await
         {

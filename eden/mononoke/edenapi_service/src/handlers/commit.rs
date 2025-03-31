@@ -234,15 +234,15 @@ async fn ratelimit_commit_creation(ctx: CoreContext) -> Result<(), Error> {
     let max_value = limit.body.raw_config.limit;
     let time_window = limit.fci_metric.window.as_secs() as u32;
 
-    let main_client_id = match &client_request_info.main_id {
-        Some(main_client_id) => main_client_id,
+    let client_main_id = match &client_request_info.main_id {
+        Some(client_main_id) => client_main_id,
         None => {
             debug!(ctx.logger(), "No main client id found");
             return Ok(());
         }
     };
 
-    let counter = build_counter(&ctx, category, COMMITS_PER_USER_RATE_LIMIT, main_client_id);
+    let counter = build_counter(&ctx, category, COMMITS_PER_USER_RATE_LIMIT, client_main_id);
     counter_check_and_bump(
         &ctx,
         counter,
@@ -250,7 +250,7 @@ async fn ratelimit_commit_creation(ctx: CoreContext) -> Result<(), Error> {
         max_value,
         time_window,
         enforced,
-        hashmap! {"main_client_id" => main_client_id.as_str() },
+        hashmap! {"client_main_id" => client_main_id.as_str() },
     )
     .await
 }
