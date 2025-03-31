@@ -88,7 +88,7 @@ $ Verify that the destination repo has the same commit hashes as the source repo
   $ hg clone -q mono:dest dest
   $ cd dest
   $ hg up -q $C
-  $ mononoke_admin fetch -R orig -i $C --json | jq .
+  $ mononoke_admin fetch -R dest -i $C --json | jq .
   {
     "changeset_id": "6fd02f115a2c76bc502c5a5bb4f67a48dd92e8e9db70d3c83ef7d6a5bf2dd898",
     "parents": [
