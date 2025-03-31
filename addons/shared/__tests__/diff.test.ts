@@ -7,7 +7,13 @@
 
 import type {Block} from '../diff';
 
-import {collapseContextBlocks, diffBlocks, mergeBlocks, splitLines} from '../diff';
+import {
+  collapseContextBlocks,
+  diffBlocks,
+  mergeBlocks,
+  readableDiffBlocks,
+  splitLines,
+} from '../diff';
 
 describe('diffBlocks', () => {
   it('returns a "=" block for unchanged content', () => {
@@ -61,6 +67,239 @@ describe('diffBlocks', () => {
       const actual = diffBlocks(a, b);
       expect(actual).toEqual(expected);
     });
+  });
+});
+
+describe('readableDiffBlocks', () => {
+  it('prefers changing insignificant lines to insignificant lines 1', () => {
+    // https://stackoverflow.com/questions/40550751/unexpected-result-in-git-diff
+    const a = `sub _process_message {
+    my ($self, $message) = @_;
+
+    my $method = ref($message) eq 'HASH' ? $message->{method} : undef;
+
+    return $self->send_error(ERROR_REQUEST_INVALID)
+        unless defined($method);
+`;
+    const b = `sub _process_message {
+    my ($self, $message) = @_;
+
+    my $time =  [ gettimeofday ];
+
+    my $method = ref($message) eq 'HASH' ? $message->{method} : undef;
+    return $self->send_error(ERROR_REQUEST_INVALID)
+        unless defined($method);
+`;
+    // Does not produce this:
+    //  sub _process_message {
+    //      my ($self, $message) = @_;
+    //
+    // -    my $method = ref($message) eq 'HASH' ? $message->{method} : undef;
+    // +    my $time =  [ gettimeofday ];
+    //
+    // +    my $method = ref($message) eq 'HASH' ? $message->{method} : undef;
+    //      return $self->send_error(ERROR_REQUEST_INVALID)
+    //          unless defined($method);
+    expect(renderDiff(a, b, readableDiffBlocks)).toMatchInlineSnapshot(`
+      " sub _process_message {
+           my ($self, $message) = @_;
+       
+      +    my $time =  [ gettimeofday ];
+      +
+           my $method = ref($message) eq 'HASH' ? $message->{method} : undef;
+      -
+           return $self->send_error(ERROR_REQUEST_INVALID)
+               unless defined($method);
+      "
+    `);
+  });
+
+  it('prefers changing insignificant lines to insignificant lines 2', () => {
+    // https://gitlab.com/jssfr/diffsample/-/compare/bob...alice
+    const a = `void Chunk_copy(Chunk *src, size_t src_start, Chunk *dst, size_t dst_start, size_t n)
+{
+    if (!Chunk_bounds_check(src, src_start, n)) return;
+    if (!Chunk_bounds_check(dst, dst_start, n)) return;
+
+    memcpy(dst->data + dst_start, src->data + src_start, n);
+}
+
+int Chunk_bounds_check(Chunk *chunk, size_t start, size_t n)
+{
+    if (chunk == NULL) return 0;
+
+    return start <= chunk->length && n <= chunk->length - start;
+}
+`;
+    const b = `int Chunk_bounds_check(Chunk *chunk, size_t start, size_t n)
+{
+    if (chunk == NULL) return 0;
+
+    return start <= chunk->length && n <= chunk->length - start;
+}
+
+void Chunk_copy(Chunk *src, size_t src_start, Chunk *dst, size_t dst_start, size_t n)
+{
+    if (!Chunk_bounds_check(src, src_start, n)) return;
+    if (!Chunk_bounds_check(dst, dst_start, n)) return;
+
+    memcpy(dst->data + dst_start, src->data + src_start, n);
+}
+`;
+    // Does not produce this:
+    // -void Chunk_copy(Chunk *src, size_t src_start, Chunk *dst, size_t dst_start, size_t n)
+    // +int Chunk_bounds_check(Chunk *chunk, size_t start, size_t n)
+    //  {
+    // -    if (!Chunk_bounds_check(src, src_start, n)) return;
+    // -    if (!Chunk_bounds_check(dst, dst_start, n)) return;
+    // +    if (chunk == NULL) return 0;
+    //
+    // -    // copy the bytes
+    // -    memcpy(dst->data + dst_start, src->data + src_start, n);
+    // +    return start <= chunk->length && n <= chunk->length - start;
+    //  }
+    //
+    // -int Chunk_bounds_check(Chunk *chunk, size_t start, size_t n)
+    // +void Chunk_copy(Chunk *src, size_t src_start, Chunk *dst, size_t dst_start, size_t n)
+    //  {
+    // -    if (chunk == NULL) return 0;
+    // +    if (!Chunk_bounds_check(src, src_start, n)) return;
+    // +    if (!Chunk_bounds_check(dst, dst_start, n)) return;
+    //
+    // -    return start <= chunk->length && n <= chunk->length - start;
+    // +    memcpy(dst->data + dst_start, src->data + src_start, n);
+    //  }
+    expect(renderDiff(a, b, readableDiffBlocks)).toMatchInlineSnapshot(`
+      "+int Chunk_bounds_check(Chunk *chunk, size_t start, size_t n)
+      +{
+      +    if (chunk == NULL) return 0;
+      +
+      +    return start <= chunk->length && n <= chunk->length - start;
+      +}
+      +
+       void Chunk_copy(Chunk *src, size_t src_start, Chunk *dst, size_t dst_start, size_t n)
+       {
+           if (!Chunk_bounds_check(src, src_start, n)) return;
+           if (!Chunk_bounds_check(dst, dst_start, n)) return;
+       
+           memcpy(dst->data + dst_start, src->data + src_start, n);
+       }
+      -
+      -int Chunk_bounds_check(Chunk *chunk, size_t start, size_t n)
+      -{
+      -    if (chunk == NULL) return 0;
+      -
+      -    return start <= chunk->length && n <= chunk->length - start;
+      -}
+      "
+    `);
+    expect(renderDiff(b, a, readableDiffBlocks)).toMatchInlineSnapshot(`
+      "-int Chunk_bounds_check(Chunk *chunk, size_t start, size_t n)
+      -{
+      -    if (chunk == NULL) return 0;
+      -
+      -    return start <= chunk->length && n <= chunk->length - start;
+      -}
+      -
+       void Chunk_copy(Chunk *src, size_t src_start, Chunk *dst, size_t dst_start, size_t n)
+       {
+           if (!Chunk_bounds_check(src, src_start, n)) return;
+           if (!Chunk_bounds_check(dst, dst_start, n)) return;
+       
+           memcpy(dst->data + dst_start, src->data + src_start, n);
+       }
+      +
+      +int Chunk_bounds_check(Chunk *chunk, size_t start, size_t n)
+      +{
+      +    if (chunk == NULL) return 0;
+      +
+      +    return start <= chunk->length && n <= chunk->length - start;
+      +}
+      "
+    `);
+  });
+
+  it('sometimes produces non-minimal diff', () => {
+    const a = `b
+{
+    b1
+}
+
+a
+{
+    a1
+}
+`;
+    const b = `a
+{
+    a1
+}
+
+b
+{
+    b1
+}
+`;
+    // The regular diff produces the minimal diff with 8 changed lines.
+    expect(renderDiff(a, b, diffBlocks)).toMatchInlineSnapshot(`
+      "-b
+      +a
+       {
+      -    b1
+      +    a1
+       }
+       
+      -a
+      +b
+       {
+      -    a1
+      +    b1
+       }
+      "
+    `);
+    // The "readable" diff has 10 changed lines, but is easier to read by a human.
+    expect(renderDiff(a, b, readableDiffBlocks)).toMatchInlineSnapshot(`
+      "-b
+      -{
+      -    b1
+      -}
+      -
+       a
+       {
+           a1
+       }
+      +
+      +b
+      +{
+      +    b1
+      +}
+      "
+    `);
+  });
+
+  it('avoids the pitfall of the patience diff flaw', () => {
+    // Textbook patience diff will match the unique line "x" unconditionally,
+    // and produces suboptimal result deleting and inserting multiple
+    // insignificant lines. Our diff uses a simple heuristic to avoid that.
+    const a = `{
+{
+{
+x
+`;
+    const b = `x
+{
+{
+{
+`;
+
+    expect(renderDiff(a, b, readableDiffBlocks)).toMatchInlineSnapshot(`
+      "+x
+       {
+       {
+       {
+      -x
+      "
+    `);
   });
 });
 
@@ -269,3 +508,25 @@ describe('mergeBlocks', () => {
     ]);
   });
 });
+
+function renderDiff(
+  a: string,
+  b: string,
+  diffFunc: (aLines: string[], bLines: string[]) => Array<Block>,
+): string {
+  const aLines = splitLines(a);
+  const bLines = splitLines(b);
+  const blocks = diffFunc(aLines, bLines);
+  return blocks
+    .flatMap(([sign, [a1, a2, b1, b2]]) => {
+      if (sign === '=') {
+        return aLines.slice(a1, a2).map(l => ` ${l}`);
+      } else {
+        return aLines
+          .slice(a1, a2)
+          .map(l => `-${l}`)
+          .concat(bLines.slice(b1, b2).map(l => `+${l}`));
+      }
+    })
+    .join('');
+}

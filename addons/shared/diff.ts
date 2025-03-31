@@ -74,6 +74,109 @@ export function diffBlocks(aLines: string[], bLines: string[]): Array<Block> {
 }
 
 /**
+ * Similar to `diffBlocks`, but attempt to produce more human-readable diff.
+ *
+ * Most of the time, a diff is less human-readable because "insignificant"
+ * lines like "{" or "}" are matched. Practically, matching the actual code
+ * (significant) lines should have high priority for "readability".
+ *
+ * To prioritize significant lines, run the main diff algorithm on the
+ * significant lines first, force match "=" lines, then run the diff algorithm
+ * for the gap regions.
+ *
+ * Because insignificantCount lines are skipped, this function might not always
+ * produce the theoretical minimal diff like `diffBlocks`.
+ */
+export function readableDiffBlocks(aLines: string[], bLines: string[]): Array<Block> {
+  const aIsSignificant = aLines.map(isSignificantLine);
+  const bIsSignificant = bLines.map(isSignificantLine);
+  const insignificantCount =
+    aIsSignificant.reduce((a, b) => a + (b ? 0 : 1), 0) +
+    bIsSignificant.reduce((a, b) => a + (b ? 0 : 1), 0);
+  if (insignificantCount > (aLines.length + bLines.length + 3) / 2) {
+    // Too many insignificant lines. The algorithm might be a bad fit.
+    // Use regular diff instead.
+    return diffBlocks(aLines, bLines);
+  }
+
+  // Assign integer ids to lines.
+  const [aFull, bFull] = stringsToInts([aLines, bLines]);
+
+  // Significant (non-boring) lines.
+  const aSignificant = aFull.filter((_l, i) => aIsSignificant[i]);
+  const bSignificant = bFull.filter((_l, i) => bIsSignificant[i]);
+
+  // Index offset. aInteresting[i] == aList[aSigToFull[i]].
+  const aSigToFull = calculateSigToFull(aIsSignificant);
+  const bSigToFull = calculateSigToFull(bIsSignificant);
+
+  let aLast = 0;
+  let bLast = 0;
+  const result: Array<Block> = [];
+  const push = (blocks: ReadonlyArray<Block>, aOffset = 0, bOffset = 0) => {
+    blocks.forEach(([sign, [origA1, origA2, origB1, origB2]]) => {
+      const a1 = origA1 + aOffset;
+      const a2 = origA2 + aOffset;
+      const b1 = origB1 + bOffset;
+      const b2 = origB2 + bOffset;
+      const last = result.at(-1);
+      if (last?.[0] === sign && last[1][1] === a1 && last[1][3] === b1) {
+        last[1][1] = a2;
+        last[1][3] = b2;
+      } else {
+        result.push([sign, [a1, a2, b1, b2]]);
+      }
+    });
+  };
+
+  diffIntBlocks(aSignificant, bSignificant).forEach(
+    ([sign, [aSigStart, aSigEnd, bSigStart, _bSigEnd]]) => {
+      if (sign === '=') {
+        for (let a1Sig = aSigStart; a1Sig < aSigEnd; a1Sig++) {
+          const b1Sig = bSigStart + (a1Sig - aSigStart);
+          const [a1, b1] = [aSigToFull[a1Sig], bSigToFull[b1Sig]];
+          const [a2, b2] = [a1 + 1, b1 + 1];
+          // Force match the two sides. Run regular diff on the upper part of both sides.
+          //     aLast .. a1     | a1 .. a2     | a2 ...
+          //     bLast .. b1     | b1 .. b2     | b2 ...
+          //     To diff further | Forced match | Figure out later
+          push(diffIntBlocks(aFull.slice(aLast, a1), bFull.slice(bLast, b1)), aLast, bLast);
+          push([['=', [a1, a2, b1, b2]]]);
+          [aLast, bLast] = [a2, b2];
+        }
+      }
+    },
+  );
+  if (aLast < aFull.length || bLast < bFull.length) {
+    push(diffIntBlocks(aFull.slice(aLast), bFull.slice(bLast)), aLast, bLast);
+  }
+  return result;
+}
+
+/**
+ * Given a boolean array a[i], calculate b[i] so b[i] is the i-th `true` index in a[i],
+ * aka. a.slice(0, b[i]) has a total of `i` `true` values.
+ */
+function calculateSigToFull(isSignificant: ReadonlyArray<boolean>): ReadonlyArray<number> {
+  const result: number[] = [];
+  for (let i = 0; i < isSignificant.length; i++) {
+    if (isSignificant[i]) {
+      result.push(i);
+    }
+  }
+  result.push(isSignificant.length);
+  return result;
+}
+
+/**
+ * Test if a line is "significant". Used by `readableDiffBlocks`.
+ * Blank lines, "{", "}", "/**" are insignificant.
+ */
+function isSignificantLine(line: string): boolean {
+  return line.match(/^[\s{}/*]*$/) == null;
+}
+
+/**
  * Similar to `diffBlocks`, but takes integer array instead.
  */
 function diffIntBlocks(aList: ReadonlyArray<number>, bList: ReadonlyArray<number>): Array<Block> {
