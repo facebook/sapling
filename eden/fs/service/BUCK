@@ -663,9 +663,11 @@ make_rule_compatible_with(
         "org.slf4j",
         "javax.annotation",  # provided by jsr305
         # IDEA SDK already contains the following
+        "com.fasterxml.jackson",
         "com.google",
-        "net.sf.cglib.core.AbstractClassGenerator",
-        "net.sf.cglib.core.AbstractClassGenerator$Source",
+        "net.jcip.annotations",
+        "net.sf.cglib",
+        "org.HdrHistogram",
     ],
     compatible_with = [
         "ovr_config//os:linux",
