@@ -6,8 +6,10 @@
  */
 
 use std::collections::HashMap;
-#[cfg(fbcode_build)]
+use std::fs::File;
+use std::io::Write;
 use std::net::SocketAddr;
+use std::ops::Deref;
 use std::path::PathBuf;
 use std::sync::Arc;
 #[cfg(fbcode_build)]
@@ -144,20 +146,36 @@ pub async fn run(app: MononokeApp, args: CommandArgs) -> Result<()> {
     let mc = MemoryMutableCounters::new();
 
     #[cfg(fbcode_build)]
+    let stats_writer = {
+        let pid = std::process::id();
+        let stats_writer = Arc::new(File::create(format!(
+            "/tmp/mononoke_modern_sync_stats.{}.csv",
+            pid
+        ))?);
+        write_csv_header(&stats_writer).await?;
+        stats_writer
+    };
+
+    #[cfg(fbcode_build)]
     let fb303 = {
         let stat_interval = Duration::from_secs(args.stat_interval);
         let port = app.args::<MonitoringArgs>()?.fb303_thrift_port.unwrap();
         let fb303 = get_fb303_client(app.fb, port).unwrap();
 
         mononoke::spawn_task({
-            cloned!(fb303, source_repo_name, logger);
+            cloned!(fb303, source_repo_name, logger, stats_writer);
             async move {
                 let mut interval = tokio::time::interval(stat_interval);
                 loop {
                     interval.tick().await;
-                    _ = log_perf_stats(fb303.clone(), &source_repo_name, &logger)
-                        .await
-                        .inspect_err(|e| warn!(logger, "Failed to get counters: {e:?}"));
+                    _ = log_perf_stats(
+                        fb303.clone(),
+                        &source_repo_name,
+                        &logger,
+                        stats_writer.clone(),
+                    )
+                    .await
+                    .inspect_err(|e| warn!(logger, "Failed to get counters: {e:?}"));
                 }
             }
         });
@@ -192,7 +210,7 @@ pub async fn run(app: MononokeApp, args: CommandArgs) -> Result<()> {
 
     #[cfg(fbcode_build)]
     {
-        _ = log_perf_stats(fb303, &source_repo_name, &logger)
+        _ = log_perf_stats(fb303, &source_repo_name, &logger, stats_writer)
             .await
             .inspect_err(|e| warn!(logger, "Failed to get counters: {e:?}"));
     }
@@ -249,7 +267,11 @@ async fn log_perf_stats(
     fb303: Arc<dyn BaseService + Sync + Send>,
     repo_name: &str,
     logger: &Logger,
+    stats_writer: Arc<File>,
 ) -> Result<()> {
+    use std::ops::Deref;
+    use std::time::UNIX_EPOCH;
+
     let regex = format!(
         "^mononoke\\.modern_sync\\.manager\\.changeset\\.{}\\.commits_synced\\.sum.*",
         repo_name
@@ -276,9 +298,7 @@ async fn log_perf_stats(
         .await
         .with_context(|| "Failed to get counters")?;
 
-    let sum = counters
-        .get(&sum_key)
-        .map_or("n/a".to_string(), |v| v.to_string());
+    let sum = counters.get(&sum_key);
     let last60 = counters.get(&last60_key);
     let last600 = counters.get(&last600_key);
     let last3600 = counters.get(&last3600_key);
@@ -286,7 +306,7 @@ async fn log_perf_stats(
     info!(
         logger,
         "Synced total={} speed={}/{}/{} (changesets/min last 60/600/3600) ({} {} {})",
-        sum,
+        sum.map_or("?".to_string(), |v| v.to_string()),
         last60.map_or("?".to_string(), |v| v.to_string()),
         last600.map_or("?".to_string(), |v| (v / 10).to_string()),
         last3600.map_or("?".to_string(), |v| (v / 60).to_string()),
@@ -295,5 +315,29 @@ async fn log_perf_stats(
         last3600.map_or("n/a".to_string(), |v| v.to_string()),
     );
 
+    if sum.is_some() {
+        writeln!(
+            stats_writer.deref(),
+            "{},{},{},{},{},{},{},{}",
+            std::time::SystemTime::now()
+                .duration_since(UNIX_EPOCH)?
+                .as_secs(),
+            sum.map_or("?".to_string(), |v| v.to_string()),
+            last60.map_or("?".to_string(), |v| v.to_string()),
+            last600.map_or("?".to_string(), |v| (v / 10).to_string()),
+            last3600.map_or("?".to_string(), |v| (v / 60).to_string()),
+            last60.map_or("n/a".to_string(), |v| v.to_string()),
+            last600.map_or("n/a".to_string(), |v| v.to_string()),
+            last3600.map_or("n/a".to_string(), |v| v.to_string()),
+        )?;
+    }
+
     Ok(())
+}
+
+async fn write_csv_header(stats_writer: &Arc<File>) -> Result<(), std::io::Error> {
+    writeln!(
+        stats_writer.deref(),
+        "time,sum,last60,last600,last3600,speed60,speed600,speed3600"
+    )
 }
