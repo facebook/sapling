@@ -24,9 +24,9 @@ First, make sure that [Homebrew](https://brew.sh/) is installed on your system. 
 
 Just run:
 
-<CodeBlock>
+```
 brew install sapling
-</CodeBlock>
+```
 
 #### Installing from our prebuilt bottles
 
@@ -58,10 +58,10 @@ xattr -r -d com.apple.quarantine ~/Downloads/{macArmAsset.name}
 
 Note that to clone larger repositories, you need to change the open files limit. We recommend doing it now so it doesn't bite you in the future:
 
-<CodeBlock>
+```
 echo "ulimit -n 1048576" >> ~/.bash_profile{'\n'}
 echo "ulimit -n 1048576" >> ~/.zshrc
-</CodeBlock>
+```
 
 ### Windows
 
@@ -73,9 +73,9 @@ Expand-Archive ~/Downloads/{windowsAsset.name} 'C:\Program Files'{'\n'}
 
 This will create `C:\Program Files\Sapling`, which you likely want to add to your `%PATH%` environment variable using:
 
-<CodeBlock>
+```
 setx PATH "$env:PATH;C:\Program Files\Sapling" -m
-</CodeBlock>
+```
 
 Note the following tools must be installed to leverage Sapling's full feature set:
 
@@ -122,17 +122,17 @@ sudo apt install -y ./{ubuntu20.name}
 
 #### Arch Linux (AUR)
 
-<CodeBlock>
+```
 yay -S sapling-scm-bin
-</CodeBlock>
+```
 
 #### Other Linux distros
 
 Sapling can be installed from Homebrew on Linux. First install Homebrew on your machine, then run
 
-<CodeBlock>
+```
 brew install sapling
-</CodeBlock>
+```
 
 ## Building from source
 
