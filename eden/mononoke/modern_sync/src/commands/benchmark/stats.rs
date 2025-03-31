@@ -11,6 +11,7 @@ use std::net::SocketAddr;
 use std::ops::Deref;
 use std::sync::Arc;
 use std::time::Duration;
+use std::time::SystemTime;
 use std::time::UNIX_EPOCH;
 
 use anyhow::Context;
@@ -58,6 +59,7 @@ impl StatsBuilder {
             repo: self.repo.clone(),
             interval: self.interval,
 
+            start_time: SystemTime::now(),
             fb303,
             writer,
         })
@@ -68,6 +70,7 @@ pub(crate) struct Stats {
     repo: String,
     interval: Duration,
 
+    start_time: SystemTime,
     fb303: Arc<dyn BaseService + Send + Sync>,
     writer: Arc<File>,
 }
@@ -75,27 +78,38 @@ pub(crate) struct Stats {
 impl Stats {
     pub(crate) fn run(&self) {
         mononoke::spawn_task({
-            let interval = self.interval;
-            let fb303 = self.fb303.clone();
             let source_repo_name = self.repo.clone();
+            let interval = self.interval;
+            let start_time = self.start_time;
+            let fb303 = self.fb303.clone();
             let writer = self.writer.clone();
 
             async move {
                 let mut interval = tokio::time::interval(interval);
                 loop {
                     interval.tick().await;
-                    _ = log_perf_stats(fb303.clone(), &source_repo_name, writer.clone())
-                        .await
-                        .inspect_err(|e| tracing::warn!("Failed to get counters: {e:?}"));
+                    _ = log_perf_stats(
+                        fb303.clone(),
+                        &source_repo_name,
+                        start_time,
+                        writer.clone(),
+                    )
+                    .await
+                    .inspect_err(|e| tracing::warn!("Failed to get counters: {e:?}"));
                 }
             }
         });
     }
 
     pub(crate) async fn finish(&self) {
-        _ = log_perf_stats(self.fb303.clone(), &self.repo, self.writer.clone())
-            .await
-            .inspect_err(|e| tracing::warn!("Failed to get counters: {e:?}"));
+        _ = log_perf_stats(
+            self.fb303.clone(),
+            &self.repo,
+            self.start_time,
+            self.writer.clone(),
+        )
+        .await
+        .inspect_err(|e| tracing::warn!("Failed to get counters: {e:?}"));
     }
 }
 
@@ -116,6 +130,7 @@ fn get_fb303_client(fb: FacebookInit, port: u16) -> Result<Arc<dyn BaseService +
 async fn log_perf_stats(
     fb303: Arc<dyn BaseService + Sync + Send>,
     repo_name: &str,
+    start_time: SystemTime,
     stats_writer: Arc<File>,
 ) -> Result<()> {
     let regex = format!(
@@ -161,12 +176,12 @@ async fn log_perf_stats(
     );
 
     if sum.is_some() {
+        let now = std::time::SystemTime::now();
         writeln!(
             stats_writer.deref(),
-            "{},{},{},{},{},{},{},{}",
-            std::time::SystemTime::now()
-                .duration_since(UNIX_EPOCH)?
-                .as_secs(),
+            "{},{},{},{},{},{},{},{},{}",
+            now.duration_since(UNIX_EPOCH)?.as_secs(),
+            now.duration_since(start_time)?.as_secs(),
             sum.map_or("?".to_string(), |v| v.to_string()),
             last60.map_or("?".to_string(), |v| v.to_string()),
             last600.map_or("?".to_string(), |v| (v / 10).to_string()),
