@@ -8,6 +8,7 @@ thrift_library(
         "py3-deprecated",
         "rust",
         "python",
+        "cpp2",
     ],
     py3_namespace = "configerator",
     thrift_rust_options = "serde",
