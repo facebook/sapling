@@ -11,6 +11,7 @@ use quickcheck::Arbitrary;
 #[cfg(any(test, feature = "for-tests"))]
 use quickcheck_arbitrary_derive::Arbitrary;
 use revisionstore_types::Metadata;
+use scm_blob::ScmBlob;
 use serde_derive::Deserialize;
 use serde_derive::Serialize;
 use thiserror::Error;
@@ -159,30 +160,12 @@ pub struct FileEntry {
 
 impl FileAuxData {
     /// Calculate `FileAuxData` from file content.
-    pub fn from_content(data: &[u8]) -> Self {
-        let sha1 = {
-            use sha1::Digest;
-            let mut hash = sha1::Sha1::new();
-            hash.update(data);
-            let bytes: [u8; Sha1::len()] = hash.finalize().into();
-            Sha1::from(bytes)
-        };
-        let blake3 = {
-            use blake3::Hasher;
-            #[cfg(fbcode_build)]
-            let key = blake3_constants::BLAKE3_HASH_KEY;
-            #[cfg(not(fbcode_build))]
-            let key = b"20220728-2357111317192329313741#";
-            let mut hasher = Hasher::new_keyed(key);
-            hasher.update(data.as_ref());
-            let hashed_bytes: [u8; Blake3::len()] = hasher.finalize().into();
-            Blake3::from(hashed_bytes)
-        };
-        let total_size = data.len() as _;
+    pub fn from_content(blob: &ScmBlob) -> Self {
+        let total_size = blob.len() as _;
         Self {
             total_size,
-            sha1,
-            blake3,
+            sha1: blob.sha1(),
+            blake3: blob.blake3(),
             file_header_metadata: None, // can't be calculated
         }
     }

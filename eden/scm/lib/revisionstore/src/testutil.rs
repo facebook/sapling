@@ -32,6 +32,7 @@ use futures::prelude::*;
 #[cfg(test)]
 pub use lfs_mocks::*;
 use minibytes::Bytes;
+use scm_blob::ScmBlob;
 use types::FetchContext;
 use types::Key;
 use types::NodeInfo;
@@ -262,7 +263,8 @@ impl FakeSaplingRemoteApi {
                 };
 
                 if spec.attrs.aux_data {
-                    let aux = FileAuxData::from_content(&content.hg_file_blob);
+                    let aux =
+                        FileAuxData::from_content(&ScmBlob::Bytes(content.hg_file_blob.clone()));
                     entry = entry.with_aux_data(aux);
                 }
 

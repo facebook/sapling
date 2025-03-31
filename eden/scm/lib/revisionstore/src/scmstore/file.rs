@@ -38,6 +38,7 @@ use progress_model::AggregatingProgressBar;
 use progress_model::ProgressBar;
 use progress_model::Registry;
 use rand::Rng;
+use scm_blob::ScmBlob;
 use storemodel::SerializationFormat;
 use tracing::debug;
 
@@ -172,7 +173,7 @@ impl FileStore {
         if self.compute_aux_data {
             if let Some(content) = self.get_local_content_direct(id)? {
                 m.computed.increment();
-                return Ok(Some(FileAuxData::from_content(&content)));
+                return Ok(Some(FileAuxData::from_content(&ScmBlob::Bytes(content))));
             }
         }
 

@@ -88,7 +88,7 @@ impl LazyFile {
             }
             _ => {
                 let (content, header) = self.file_content()?;
-                let mut aux_data = FileAuxData::from_content(&content);
+                let mut aux_data = FileAuxData::from_content(&ScmBlob::Bytes(content));
 
                 // Content header (i.e. hg copy info) is not in the (pure) content. If we
                 // have header in-hand, also include it in the aux data.

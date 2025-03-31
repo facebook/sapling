@@ -36,6 +36,7 @@ pub use minibytes;
 pub use minibytes::Bytes;
 use once_cell::sync::OnceCell;
 use parking_lot::RwLock;
+use scm_blob::ScmBlob;
 use serde::Deserialize;
 use serde::Serialize;
 pub use types;
@@ -213,7 +214,7 @@ pub trait FileStore: KeyStore + 'static {
     fn get_local_aux(&self, path: &RepoPath, id: HgId) -> anyhow::Result<Option<FileAuxData>> {
         Ok(self
             .get_local_content(path, id)?
-            .map(|data| FileAuxData::from_content(&data)))
+            .map(|data| FileAuxData::from_content(&ScmBlob::Bytes(data))))
     }
 
     /// Get auxiliary metadata for the given files.
@@ -226,7 +227,7 @@ pub trait FileStore: KeyStore + 'static {
     ) -> anyhow::Result<BoxIterator<anyhow::Result<(Key, FileAuxData)>>> {
         let iter = self.get_content_iter(fctx, keys)?.map(|entry| match entry {
             Err(e) => Err(e),
-            Ok((key, data)) => Ok((key, FileAuxData::from_content(&data))),
+            Ok((key, data)) => Ok((key, FileAuxData::from_content(&ScmBlob::Bytes(data)))),
         });
         Ok(Box::new(iter))
     }
