@@ -47,6 +47,8 @@ const X_FB_NETWORK_TYPE: &str = "x-fb-validated-x2pauth-advice-subject-network-t
 /// when adding application-specific columns to the `ScubaMiddlewareState`.
 #[derive(Copy, Clone, Debug)]
 pub enum HttpScubaKey {
+    /// The cause of the fetch. E.g. eden prefetch, eden fuse, sapling prefetch, etc.
+    FetchCause,
     /// The status code for this response
     HttpStatus,
     /// The HTTP Path requested by the client.
@@ -73,6 +75,8 @@ pub enum HttpScubaKey {
     ClientIdentities,
     /// Alias of the sandcastle job, if any.
     SandcastleAlias,
+    /// VCS type of the sandcastle job, if any.
+    SandcastleVCS,
     /// A unique ID identifying this request.
     RequestId,
     /// How long it took to send headers.
@@ -107,6 +111,7 @@ impl AsRef<str> for HttpScubaKey {
         use HttpScubaKey::*;
 
         match self {
+            FetchCause => "fetch_cause",
             HttpStatus => "http_status",
             HttpPath => "http_path",
             HttpQuery => "http_query",
@@ -120,6 +125,7 @@ impl AsRef<str> for HttpScubaKey {
             ClientCorrelator => "client_correlator",
             ClientIdentities => "client_identities",
             SandcastleAlias => "sandcastle_alias",
+            SandcastleVCS => "sandcastle_vcs",
             RequestId => "request_id",
             HeadersDurationMs => "headers_duration_ms",
             DurationMs => "duration_ms",
@@ -309,6 +315,12 @@ fn populate_scuba(scuba: &mut MononokeScubaSampleBuilder, state: &mut State) {
 
         let sandcastle_alias = metadata.sandcastle_alias();
         scuba.add(HttpScubaKey::SandcastleAlias, sandcastle_alias);
+
+        let sandcastle_vcs = metadata.sandcastle_vcs();
+        scuba.add(HttpScubaKey::SandcastleVCS, sandcastle_vcs);
+
+        let fetch_cause = metadata.fetch_cause();
+        scuba.add(HttpScubaKey::FetchCause, fetch_cause);
     }
 
     if let Some(config_version) = ConfigInfo::try_borrow_from(state) {

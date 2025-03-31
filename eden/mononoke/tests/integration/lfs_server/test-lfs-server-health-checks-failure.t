@@ -62,12 +62,14 @@
       "client_hostname": "localhost",
       "client_ip": "$LOCALIP",
       "client_main_id": *, (glob)
+      "fetch_cause": null,
       "http_host": *, (glob)
       "http_method": "GET",
       "http_path": "/health_check",
       "http_user_agent": "curl/*", (glob)
       "request_id": "*", (glob)
-      "sandcastle_alias": null
+      "sandcastle_alias": null,
+      "sandcastle_vcs": null
     },
     "normvector": {
       "client_identities": []

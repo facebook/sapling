@@ -80,6 +80,7 @@
       "client_hostname": "localhost",
       "client_ip": "$LOCALIP",
       "client_main_id": "*", (glob)
+      "fetch_cause": null,
       "http_host": "*", (glob)
       "http_method": "POST",
       "http_path": "/lfs1/objects/batch",
@@ -87,7 +88,8 @@
       "method": "batch",
       "repository": "lfs1",
       "request_id": "*", (glob)
-      "sandcastle_alias": null
+      "sandcastle_alias": null,
+      "sandcastle_vcs": null
     },
     "normvector": {
       "client_identities": []
@@ -139,6 +141,7 @@
       "client_hostname": "localhost",
       "client_ip": "$LOCALIP",
       "client_main_id": "*", (glob)
+      "fetch_cause": null,
       "http_host": "*", (glob)
       "http_method": "PUT",
       "http_path": "/lfs1/upload/ab02c2a1923c8eb11cb3ddab70320746d71d32ad63f255698dc67c3295757746/2048",
@@ -147,7 +150,8 @@
       "method": "upload",
       "repository": "lfs1",
       "request_id": "*", (glob)
-      "sandcastle_alias": null
+      "sandcastle_alias": null,
+      "sandcastle_vcs": null
     },
     "normvector": {
       "client_identities": []
@@ -204,6 +208,7 @@
       "client_hostname": "localhost",
       "client_ip": "$LOCALIP",
       "client_main_id": "*", (glob)
+      "fetch_cause": "unspecified",
       "http_host": "*", (glob)
       "http_method": "POST",
       "http_path": "/lfs1/objects/batch",
@@ -211,7 +216,8 @@
       "method": "batch",
       "repository": "lfs1",
       "request_id": "*", (glob)
-      "sandcastle_alias": null
+      "sandcastle_alias": null,
+      "sandcastle_vcs": null
     },
     "normvector": {
       "batch_internal_missing_blobs": [],
@@ -269,6 +275,7 @@
       "client_hostname": "localhost",
       "client_ip": "$LOCALIP",
       "client_main_id": "*", (glob)
+      "fetch_cause": "unspecified",
       "http_host": "*", (glob)
       "http_method": "GET",
       "http_path": "/lfs1/download/d28548bc21aabf04d143886d717d72375e3deecd0dafb3d110676b70a192cb5d",
@@ -278,7 +285,8 @@
       "repository": "lfs1",
       "request_id": "*", (glob)
       "response_content_encoding": "zstd",
-      "sandcastle_alias": null
+      "sandcastle_alias": null,
+      "sandcastle_vcs": null
     },
     "normvector": {
       "client_identities": []
@@ -323,13 +331,15 @@
       "client_hostname": "localhost",
       "client_ip": "$LOCALIP",
       "client_main_id": "*", (glob)
+      "fetch_cause": null,
       "http_host": *, (glob)
       "http_method": "GET",
       "http_path": "/config",
       "http_query": "foo=bar",
       "http_user_agent": "curl/*", (glob)
       "request_id": "*", (glob)
-      "sandcastle_alias": null
+      "sandcastle_alias": null,
+      "sandcastle_vcs": null
     },
     "normvector": {
       "client_identities": []
