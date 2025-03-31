@@ -15,6 +15,7 @@ thrift_library(
         "cpp2",
         "java-swift",
         "py-deprecated",
+        "python",
     ],
     plugins = [
         thrift_plugin_automock,
