@@ -75,6 +75,13 @@ pub struct CommandArgs {
 
     #[clap(long, help = "Chunk size for the sync [default: 1000]")]
     chunk_size: Option<u64>,
+
+    #[clap(
+        long,
+        default_value = "60",
+        help = "How often to report stats, in seconds"
+    )]
+    stat_interval: u64,
 }
 
 #[derive(Clone, Default)]
@@ -138,13 +145,14 @@ pub async fn run(app: MononokeApp, args: CommandArgs) -> Result<()> {
 
     #[cfg(fbcode_build)]
     let fb303 = {
+        let stat_interval = Duration::from_secs(args.stat_interval);
         let port = app.args::<MonitoringArgs>()?.fb303_thrift_port.unwrap();
         let fb303 = get_fb303_client(app.fb, port).unwrap();
 
         mononoke::spawn_task({
             cloned!(fb303, source_repo_name, logger);
             async move {
-                let mut interval = tokio::time::interval(Duration::from_secs(60));
+                let mut interval = tokio::time::interval(stat_interval);
                 loop {
                     interval.tick().await;
                     _ = log_perf_stats(fb303.clone(), &source_repo_name, &logger)
