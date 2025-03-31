@@ -106,32 +106,41 @@ macro_rules! re_client {
                             // Single large file, fetch it via the streaming API to avoid memory issues on CAS side.
                             let digest = digests.first().unwrap();
                             $crate::tracing::debug!(target: "cas", concat!(stringify!($struct), " streaming {} {}(s)"), digests.len(), log_name);
-                            let request =  DownloadStreamRequest {
-                                digest: to_re_digest(digest),
-                                ..Default::default()
-                            };
+
 
                             // Unfortunately, the streaming API does not return the storage stats, so it won't be added to the stats.
                             let stats = $crate::CasFetchedStats::default();
 
-                            let response = self.client()?
-                                .download_stream(self.metadata.clone(), request)
+                            #[cfg(target_os = "linux")]
+                            let mut response_stream = self.client()?
+                                .download_stream(self.metadata.clone(), to_re_digest(digest))
                                 .await;
 
-                            if let Err(ref err) = response {
-                                if let Some(inner) = err.downcast_ref::<REClientError>() {
-                                    if inner.code == TCode::NOT_FOUND {
-                                        // Streaming download failed because the digest was not found, record a success.
-                                        self.cas_success_tracker.record_success();
-                                        return Ok((stats, vec![(digest.to_owned(), Ok(None))]));
+                            #[cfg(not(target_os = "linux"))]
+                            let mut response_stream = {
+                                let request =  DownloadStreamRequest {
+                                    digest: to_re_digest(digest),
+                                    ..Default::default()
+                                };
+                                let response = self.client()?
+                                    .download_stream(self.metadata.clone(), request)
+                                    .await;
+
+                                if let Err(ref err) = response {
+                                    if let Some(inner) = err.downcast_ref::<REClientError>() {
+                                        if inner.code == TCode::NOT_FOUND {
+                                            // Streaming download failed because the digest was not found, record a success.
+                                            self.cas_success_tracker.record_success();
+                                            return Ok((stats, vec![(digest.to_owned(), Ok(None))]));
+                                        }
+                                        // Unfortunately, the streaming download failed, record a failure.
+                                        self.cas_success_tracker.record_failure()?;
                                     }
-                                    // Unfortunately, the streaming download failed, record a failure.
-                                    self.cas_success_tracker.record_failure()?;
                                 }
-                            }
+                                response
+                            }?;
 
                             let mut bytes: Vec<u8> = Vec::with_capacity(digest.size as usize);
-                            let mut response_stream = response?;
                             while let Some(chunk) = response_stream.next().await {
                                 if let Err(ref _err) = chunk {
                                     self.cas_success_tracker.record_failure()?;
@@ -147,13 +156,36 @@ macro_rules! re_client {
 
                         $crate::tracing::debug!(target: "cas", concat!(stringify!($struct), " fetching {} {}(s)"), digests.len(), log_name);
 
-                        let request = DownloadRequest {
-                            inlined_digests: Some(digests.iter().map(to_re_digest).collect()),
-                            throw_on_error: false,
-                            ..Default::default()
+                        #[cfg(target_os = "linux")]
+                        let (data, stats) = {
+                            let response = self.client()?
+                                .low_level_download_inline(self.metadata.clone(), digests.iter().map(to_re_digest).collect())
+                                .await;
+                            if let Err(ref err) = response {
+                                if (err.code == TCode::NOT_FOUND) {
+                                    $crate::tracing::warn!(target: "cas", "digest not found and can not be fetched: {:?}", digests);
+                                }
+                            }
+
+                            let response = response.map_err(|err| {
+                                    // Unfortunately, the download failed entirely, record a failure.
+                                    let _failure_error = self.cas_success_tracker.record_failure();
+                                    err
+                                })?;
+
+                            let mut local_cache_stats = response.get_local_cache_stats();
+                            let mut storage_stats = response.get_storage_stats();
+                            (FFIDownloadResult::into_list_of_downloads(response),  parse_stats(storage_stats.per_backend_stats.into_iter(), local_cache_stats))
                         };
 
-                        let response = self.client()?
+                        #[cfg(not(target_os = "linux"))]
+                        let (data, stats) = {
+                            let request = DownloadRequest {
+                                inlined_digests: Some(digests.iter().map(to_re_digest).collect()),
+                                throw_on_error: false,
+                                ..Default::default()
+                            };
+                            let response = self.client()?
                             .download(self.metadata.clone(), request)
                             .await
                             .map_err(|err| {
@@ -161,26 +193,34 @@ macro_rules! re_client {
                                 let _failure_error = self.cas_success_tracker.record_failure();
                                 err
                             })?;
+                            let local_cache_stats = response.local_cache_stats;
 
-                        let local_cache_stats = response.local_cache_stats;
+                            (response.inlined_blobs.unwrap_or_default(), parse_stats(response.storage_stats.per_backend_stats.into_iter(), local_cache_stats))
+                        };
 
-                        let stats = parse_stats(response.storage_stats.per_backend_stats.into_iter(), local_cache_stats);
 
-                        let data = response.inlined_blobs
-                            .unwrap_or_default()
+                        let data = data
                             .into_iter()
                             .map(|blob| {
-                                let digest = from_re_digest(&blob.digest)?;
-                                match blob.status.code {
-                                    TCode::OK => Ok((digest, Ok(Some(CasClientFetchedBytes::Bytes(blob.blob.into()))))),
+                                #[cfg(target_os = "linux")]
+                                let (digest, status, data) = {
+                                    let (digest, status, data) = FFIDownload::consume(blob);
+                                    (digest, status, CasClientFetchedBytes::IOBuf(data.into()))
+                                };
+                                #[cfg(not(target_os = "linux"))]
+                                let (digest, status, data) = (blob.digest, blob.status, CasClientFetchedBytes::Bytes(blob.blob.into()));
+
+                                let digest = from_re_digest(&digest)?;
+                                match status.code {
+                                    TCode::OK => Ok((digest, Ok(Some(data)))),
                                     TCode::NOT_FOUND => Ok((digest, Ok(None))),
                                     _ => Ok((
                                         digest,
                                         Err($crate::anyhow!(
                                             "bad status (code={}, message={}, group={})",
-                                            blob.status.code,
-                                            blob.status.message,
-                                            blob.status.group
+                                            status.code,
+                                            status.message,
+                                            status.group
                                         )),
                                     )),
                                 }
@@ -220,19 +260,30 @@ macro_rules! re_client {
 
                     $crate::tracing::debug!(target: "cas", concat!(stringify!($struct), " prefetching {} {}(s)"), digests.len(), log_name);
 
-                    let request = DownloadDigestsIntoCacheRequest {
-                        digests: digests.iter().map(to_re_digest).collect(),
-                        throw_on_error: false,
-                        ..Default::default()
-                    };
-
+                    #[cfg(target_os = "linux")]
                     let response = self.client()?
-                        .download_digests_into_cache(self.metadata.clone(), request)
+                        .download_digests_into_cache(self.metadata.clone(), digests.into_iter().map(to_re_digest).collect())
                         .await.map_err(|err| {
                             // Unfortunately, the "download_digests_into_cache" failed entirely, record a failure.
                             let _failure_error = self.cas_success_tracker.record_failure();
                             err
                         })?;
+
+                    #[cfg(not(target_os = "linux"))]
+                    let response = {
+                        let request = DownloadDigestsIntoCacheRequest {
+                            digests: digests.iter().map(to_re_digest).collect(),
+                            throw_on_error: false,
+                            ..Default::default()
+                        };
+                        self.client()?
+                        .download_digests_into_cache(self.metadata.clone(), request)
+                        .await.map_err(|err| {
+                            // Unfortunately, the "download_digests_into_cache" failed entirely, record a failure.
+                            let _failure_error = self.cas_success_tracker.record_failure();
+                            err
+                        })
+                    }?;
 
                     let local_cache_stats = response.local_cache_stats;
 

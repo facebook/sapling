@@ -20,10 +20,19 @@ use configmodel::Config;
 use configmodel::ConfigExt;
 use re_client_lib::create_default_config;
 use re_client_lib::ExternalCASDaemonAddress;
+use re_client_lib::ExternalCASDaemonCfg;
+#[cfg(not(target_os = "linux"))]
 use re_client_lib::REClient;
+#[cfg(not(target_os = "linux"))]
 use re_client_lib::REClientBuilder;
 use re_client_lib::RESessionID;
 use re_client_lib::RemoteExecutionMetadata;
+#[cfg(target_os = "linux")]
+use thin_cas_client_wrapper::CASClientWrapper as REClient;
+#[cfg(target_os = "linux")]
+use thin_cas_client_wrapper::FFIDownload;
+#[cfg(target_os = "linux")]
+use thin_cas_client_wrapper::FFIDownloadResult;
 
 pub struct ThinCasClient {
     client: re_cas_common::OnceCell<REClient>,
@@ -37,6 +46,7 @@ pub struct ThinCasClient {
     fetch_limit: ByteCount,
     fetch_concurrency: usize,
     use_streaming_dowloads: bool,
+    session_id: String,
 }
 
 const DEFAULT_SCM_CAS_LOGS_DIR: &str = "scm_cas";
@@ -99,6 +109,7 @@ impl ThinCasClient {
 
         let default_fetch_limit = ByteCount::try_from_str("200MB")?;
         let cri = clientinfo::get_client_request_info();
+        let session_id = format!("{}_{}", cri.entry_point, cri.correlator);
 
         Ok(Some(Self {
             client: Default::default(),
@@ -109,12 +120,13 @@ impl ThinCasClient {
             metadata: RemoteExecutionMetadata {
                 use_case_id: use_case,
                 re_session_id: Some(RESessionID {
-                    id: format!("{}_{}", cri.entry_point, cri.correlator),
+                    id: session_id.clone(),
                     ..Default::default()
                 }),
                 ..Default::default()
             },
             log_dir,
+            session_id,
             fetch_limit: config
                 .get_or::<ByteCount>("cas", "max-batch-bytes", || default_fetch_limit)?,
             fetch_concurrency: config.get_or("cas", "fetch-concurrency", || 4)?,
@@ -139,24 +151,71 @@ impl ThinCasClient {
         re_config.enable_scuba_logging = false;
         re_config.enable_cancellation = true;
 
-        let mut builder = REClientBuilder::new(fbinit::expect_init()).with_config(re_config);
+        let server_address = match re_config.cas_client_config {
+            re_client_lib::CASDaemonClientCfg::external_config(ref mut external_config) => {
+                external_config.address.clone()
+            }
+            re_client_lib::CASDaemonClientCfg::embedded_config(ref mut embedded_config) => {
+                embedded_config.address.clone()
+            }
+            _ => None,
+        };
 
         if let Some(port) = self.port {
-            builder = builder
-                .with_cas_daemon(ExternalCASDaemonAddress::port(port), self.connection_count);
+            re_config.cas_client_config =
+                re_client_lib::CASDaemonClientCfg::external_config(ExternalCASDaemonCfg {
+                    cas_daemon_port: port,
+                    cas_daemon_address: ExternalCASDaemonAddress::port(port),
+                    address: server_address,
+                    connection_count: self.connection_count as i32,
+                    ..Default::default()
+                });
         } else if let Some(uds_path) = self.uds_path.clone() {
-            builder = builder.with_cas_daemon(
-                ExternalCASDaemonAddress::uds_path(uds_path),
-                self.connection_count,
-            );
+            re_config.cas_client_config =
+                re_client_lib::CASDaemonClientCfg::external_config(ExternalCASDaemonCfg {
+                    cas_daemon_port: 0,
+                    cas_daemon_address: ExternalCASDaemonAddress::uds_path(uds_path.clone()),
+                    address: server_address,
+                    connection_count: self.connection_count as i32,
+                    ..Default::default()
+                });
         } else {
-            builder = builder.with_wdb_cas_daemon(self.connection_count);
+            let socket_path = std::env::var("CASD_SOCKET_PATH")
+                .unwrap_or(re_client_lib::DEFAULT_CASD_SOCKET.to_string());
+            let config = ExternalCASDaemonCfg {
+                address: None,
+                connection_count: self.connection_count as i32,
+                cas_daemon_address: ExternalCASDaemonAddress::uds_path(socket_path),
+                socket_activation: true,
+                ..Default::default()
+            };
+            match &mut re_config.cas_client_config {
+                re_client_lib::CASDaemonClientCfg::external_config(ref mut external_config) => {
+                    *external_config = config.to_owned()
+                }
+                re_client_lib::CASDaemonClientCfg::external_with_fallback_config(
+                    ref mut external_with_fallback_config,
+                ) => external_with_fallback_config.external_cfg = config,
+                re_client_lib::CASDaemonClientCfg::embedded_config(_) => {
+                    // There's not any fields we can meaningfully carry over from the embedded config.
+                    // Clients could mistakenly set fields on embedded config then drop them here.
+                    re_config.cas_client_config =
+                        re_client_lib::CASDaemonClientCfg::external_config(config)
+                }
+                _ => {}
+            };
         }
 
-        let client = builder.build();
+        #[cfg(target_os = "linux")]
+        let client = REClient::new(self.session_id.clone(), 0, re_config);
+        #[cfg(not(target_os = "linux"))]
+        let client = REClientBuilder::new(fbinit::expect_init())
+            .with_config(re_config)
+            .build()?;
+
         let elapsed = start.elapsed();
         tracing::debug!(target: "cas", "creating RE CAS client took {} ms", elapsed.as_millis());
-        client
+        Ok(client)
     }
 }
 

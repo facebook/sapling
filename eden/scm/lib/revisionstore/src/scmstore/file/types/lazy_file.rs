@@ -8,6 +8,7 @@
 use anyhow::bail;
 use anyhow::Error;
 use anyhow::Result;
+use cas_client::CasClientFetchedBytes;
 use edenapi_types::FileEntry;
 use format_util::split_file_metadata;
 use minibytes::Bytes;
@@ -24,7 +25,6 @@ use crate::Metadata;
 
 /// A minimal file enum that simply wraps the possible underlying file types,
 /// with no processing (so Entry might have the wrong Key.path, etc.)
-#[derive(Debug)]
 pub(crate) enum LazyFile {
     /// An entry from a local IndexedLog. The contained Key's path might not match the requested Key's path.
     IndexedLog(Entry, SerializationFormat),
@@ -36,7 +36,34 @@ pub(crate) enum LazyFile {
     SaplingRemoteApi(FileEntry, SerializationFormat),
 
     /// File content read from CAS (no hg header).
-    Cas(Bytes),
+    Cas(CasClientFetchedBytes),
+}
+
+impl std::fmt::Debug for LazyFile {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result
+    where
+        Self: Sized,
+    {
+        match self {
+            LazyFile::IndexedLog(entry, format) => f
+                .debug_tuple("IndexedLog")
+                .field(entry)
+                .field(format)
+                .finish(),
+            LazyFile::Lfs(blob, ptr, format) => f
+                .debug_tuple("Lfs")
+                .field(blob)
+                .field(ptr)
+                .field(format)
+                .finish(),
+            LazyFile::SaplingRemoteApi(entry, format) => f
+                .debug_tuple("SaplingRemoteApi")
+                .field(entry)
+                .field(format)
+                .finish(),
+            LazyFile::Cas(data) => f.debug_tuple("Cas").field(&data.to_bytes()).finish(),
+        }
+    }
 }
 
 impl LazyFile {
@@ -86,7 +113,8 @@ impl LazyFile {
                 (blob.clone(), content_header)
             }
             SaplingRemoteApi(ref entry, format) => split_file_metadata(&entry.data()?, *format),
-            Cas(data) => (data.clone(), None),
+            // another copy of underlying IOBuf content into a vector, to transform it into AbstractBytes
+            Cas(data) => (data.to_bytes(), None),
         })
     }
 

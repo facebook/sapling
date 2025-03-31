@@ -15,13 +15,33 @@ rust_library(
             "repository": "https://github.com/facebook/sapling",
         },
     }},
+    os_deps = [
+        (
+            "macos",
+            [
+                "//common/rust/shed/fbinit:fbinit",
+            ],
+        ),
+        (
+            "windows",
+            [
+                "//common/rust/shed/fbinit:fbinit",
+            ],
+        ),
+        (
+            "linux",
+            [
+                "//remote_execution/cas/client_lib/ligen:rich_cas_client_wrapper-rs_bindings",
+            ],
+        ),
+    ],
     deps = [
         "fbsource//third-party/rust:anyhow",
         "fbsource//third-party/rust:futures",
         "fbsource//third-party/rust:tracing",
-        "//common/rust/shed/fbinit:fbinit",
         "//eden/scm/lib/cas-client:cas-client",
         "//eden/scm/lib/cas-client/re-cas-common:re-cas-common",
+        "//eden/scm/lib/clientinfo:clientinfo",
         "//eden/scm/lib/config/model:configmodel",
         "//eden/scm/lib/util/factory:factory",
         "//remote_execution/client_lib/wrappers/rust:re_client_lib",

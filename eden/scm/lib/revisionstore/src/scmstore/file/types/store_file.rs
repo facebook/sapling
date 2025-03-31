@@ -93,8 +93,10 @@ impl StoreFile {
                 ..
             }) = self.aux_data
             {
+                // another implicit copy of underlying content of IOBuf here
+                let pure_content = pure_content.to_bytes();
                 if header.is_empty() {
-                    Ok(pure_content.clone())
+                    Ok(pure_content)
                 } else {
                     Ok([header.as_ref(), pure_content.as_ref()].concat().into())
                 }

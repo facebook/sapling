@@ -20,13 +20,22 @@ use configmodel::ConfigExt;
 use re_client_lib::create_default_config;
 use re_client_lib::CASDaemonClientCfg;
 use re_client_lib::EmbeddedCASDaemonClientCfg;
+#[cfg(not(target_os = "linux"))]
 use re_client_lib::REClient;
+#[cfg(not(target_os = "linux"))]
 use re_client_lib::REClientBuilder;
+use re_client_lib::RESessionID;
 use re_client_lib::RemoteCASdAddress;
 use re_client_lib::RemoteCacheConfig;
 use re_client_lib::RemoteCacheManagerMode;
 use re_client_lib::RemoteExecutionMetadata;
 use re_client_lib::RemoteFetchPolicy;
+#[cfg(target_os = "linux")]
+use rich_cas_client_wrapper::CASClientWrapper as REClient;
+#[cfg(target_os = "linux")]
+use rich_cas_client_wrapper::FFIDownload;
+#[cfg(target_os = "linux")]
+use rich_cas_client_wrapper::FFIDownloadResult;
 
 pub const CAS_SOCKET_PATH: &str = "/run/casd/casd.socket";
 pub const CAS_SESSION_TTL: i64 = 600; // 10 minutes
@@ -46,6 +55,10 @@ pub struct RichCasClient {
     cas_success_tracker: CasSuccessTracker,
     /// Verbose logging will disable quiet mode in REClient.
     verbose: bool,
+    /// The log directory to store the logs of the CASd daemon.
+    log_dir: Option<String>,
+    /// The session id of the client. Used to trace RE session operations.
+    session_id: String,
     /// Contains the use case id information.
     metadata: RemoteExecutionMetadata,
     /// Whether to use the shared cache or not (CASd daemon).
@@ -134,14 +147,36 @@ impl RichCasClient {
         let private_cache_size = config
             .get_or::<ByteCount>("cas", "private-cache-size", || default_private_cache_size)?;
 
+        let cri = clientinfo::get_client_request_info();
+        let session_id = format!("{}_{}", cri.entry_point, cri.correlator);
+
+        let log_dir = config
+            .get_or("cas", "log-dir", || {
+                Some("/tmp/eden_cas_client_logs".to_owned())
+            })
+            .ok()
+            .flatten()
+            .map(|log_dir| {
+                std::fs::create_dir_all(&log_dir).unwrap_or_else(|e| {
+                    panic!("Failed to create log directory {:?}: {:?}", log_dir, e);
+                });
+                log_dir
+            });
+
         Ok(Some(Self {
             client: Default::default(),
             verbose: config.get_or_default("cas", "verbose")?,
             metadata: RemoteExecutionMetadata {
                 use_case_id: use_case,
+                re_session_id: Some(RESessionID {
+                    id: session_id.clone(),
+                    ..Default::default()
+                }),
                 ..Default::default()
             },
             use_casd_cache,
+            session_id,
+            log_dir,
             casd_cache_socket_path,
             cas_cache_mode_local_fetch,
             fetch_limit: config
@@ -163,6 +198,7 @@ impl RichCasClient {
 
         re_config.client_name = Some("sapling".to_string());
         re_config.quiet_mode = !self.verbose;
+        re_config.log_file_location = self.log_dir.clone();
         re_config.features_config_path = "remote_execution/features/client_eden".to_string();
 
         let mut embedded_config = EmbeddedCASDaemonClientCfg {
@@ -213,14 +249,18 @@ impl RichCasClient {
                 .size_bytes = self.private_cache_size.value() as i64;
             embedded_config.cache_config.writable_cache = true;
         }
+        embedded_config.rich_client_config.enable_rich_client = true;
         re_config.cas_client_config = CASDaemonClientCfg::embedded_config(embedded_config);
 
-        let builder = REClientBuilder::new(fbinit::expect_init())
+        #[cfg(target_os = "linux")]
+        let client = REClient::new(self.session_id.clone(), CAS_SESSION_TTL, re_config);
+        #[cfg(not(target_os = "linux"))]
+        let client = REClientBuilder::new(fbinit::expect_init())
             .with_config(re_config)
             .with_session_ttl(CAS_SESSION_TTL)
-            .with_rich_client(true);
+            .build()?;
 
-        builder.build()
+        Ok(client)
     }
 }
 
