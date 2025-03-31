@@ -57,5 +57,6 @@ rust_binary(
         "//eden/scm/lib/minibytes:minibytes",
     ] + ([] if rust_oss.is_oss_build() else [
         "//fb303/thrift:fb303_core-rust-thriftclients",
+        "fbsource//third-party/rust:tracing",
     ])),
 )

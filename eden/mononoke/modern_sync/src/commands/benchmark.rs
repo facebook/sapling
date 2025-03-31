@@ -6,47 +6,28 @@
  */
 
 use std::collections::HashMap;
-use std::fs::File;
-use std::io::Write;
-use std::net::SocketAddr;
-use std::ops::Deref;
 use std::path::PathBuf;
 use std::sync::Arc;
 #[cfg(fbcode_build)]
 use std::time::Duration;
 
-#[cfg(fbcode_build)]
-use anyhow::Context;
 use anyhow::Result;
 use async_trait::async_trait;
 use clap::Parser;
 use clap::ValueEnum;
 use clientinfo::ClientEntryPoint;
 use clientinfo::ClientInfo;
-#[cfg(fbcode_build)]
-use cloned::cloned;
 use context::CoreContext;
 use context::SessionContainer;
-#[cfg(fbcode_build)]
-use fb303_core_thriftclients::make_BaseService_thriftclient;
-#[cfg(fbcode_build)]
-use fb303_core_thriftclients::thriftclient::TransportType;
-#[cfg(fbcode_build)]
-use fb303_core_thriftclients::BaseService;
-#[cfg(fbcode_build)]
-use fbinit::FacebookInit;
 use metadata::Metadata;
 #[cfg(fbcode_build)]
 use mononoke_app::args::MonitoringArgs;
 use mononoke_app::MononokeApp;
-#[cfg(fbcode_build)]
-use mononoke_macros::mononoke;
 use mutable_counters::MutableCounters;
 use slog::info;
+
 #[cfg(fbcode_build)]
-use slog::warn;
-#[cfg(fbcode_build)]
-use slog::Logger;
+mod stats;
 
 use crate::commands::sync_loop::CHUNK_SIZE_DEFAULT;
 use crate::sender::edenapi::EdenapiSender;
@@ -56,11 +37,6 @@ use crate::sender::edenapi::NoopEdenapiSender;
 use crate::sync::get_unsharded_repo_args;
 use crate::sync::ExecutionType;
 use crate::ModernSyncArgs;
-
-#[cfg(fbcode_build)]
-const CONN_TIMEOUT_MS: u32 = 1_000;
-#[cfg(fbcode_build)]
-const RECV_TIMEOUT_MS: u32 = 1_000;
 
 #[derive(ValueEnum, Default, Clone)]
 enum BenchmarkMode {
@@ -146,41 +122,21 @@ pub async fn run(app: MononokeApp, args: CommandArgs) -> Result<()> {
     let mc = MemoryMutableCounters::new();
 
     #[cfg(fbcode_build)]
-    let stats_writer = {
-        let pid = std::process::id();
-        let stats_writer = Arc::new(File::create(format!(
-            "/tmp/mononoke_modern_sync_stats.{}.csv",
-            pid
-        ))?);
-        write_csv_header(&stats_writer).await?;
-        stats_writer
-    };
-
-    #[cfg(fbcode_build)]
-    let fb303 = {
+    let stats = {
+        let port = app.args::<MonitoringArgs>()?.fb303_thrift_port.unwrap() as u16;
         let stat_interval = Duration::from_secs(args.stat_interval);
-        let port = app.args::<MonitoringArgs>()?.fb303_thrift_port.unwrap();
-        let fb303 = get_fb303_client(app.fb, port).unwrap();
-
-        mononoke::spawn_task({
-            cloned!(fb303, source_repo_name, logger, stats_writer);
-            async move {
-                let mut interval = tokio::time::interval(stat_interval);
-                loop {
-                    interval.tick().await;
-                    _ = log_perf_stats(
-                        fb303.clone(),
-                        &source_repo_name,
-                        &logger,
-                        stats_writer.clone(),
-                    )
-                    .await
-                    .inspect_err(|e| warn!(logger, "Failed to get counters: {e:?}"));
-                }
-            }
-        });
-
-        fb303
+        let stats = Arc::new(
+            stats::StatsBuilder::new(
+                app.fb.clone(),
+                source_repo_name.clone(),
+                port,
+                stat_interval,
+            )
+            .build()
+            .await?,
+        );
+        stats.run();
+        stats
     };
 
     let now = std::time::Instant::now();
@@ -209,11 +165,7 @@ pub async fn run(app: MononokeApp, args: CommandArgs) -> Result<()> {
     let elapsed = now.elapsed();
 
     #[cfg(fbcode_build)]
-    {
-        _ = log_perf_stats(fb303, &source_repo_name, &logger, stats_writer)
-            .await
-            .inspect_err(|e| warn!(logger, "Failed to get counters: {e:?}"));
-    }
+    stats.finish().await;
 
     info!(
         logger,
@@ -245,99 +197,4 @@ fn new_context(app: &MononokeApp) -> CoreContext {
         .build();
 
     session_container.new_context(app.logger().clone(), scuba)
-}
-
-#[cfg(fbcode_build)]
-fn get_fb303_client(fb: FacebookInit, port: i32) -> Result<Arc<dyn BaseService + Sync + Send>> {
-    let addr: SocketAddr = format!("[::]:{}", port).parse()?;
-    make_BaseService_thriftclient!(
-        fb,
-        from_sock_addr = addr,
-        with_transport_type = TransportType::Rocket,
-        with_conn_timeout = CONN_TIMEOUT_MS,
-        with_recv_timeout = RECV_TIMEOUT_MS,
-        with_secure = true,
-        with_persistent_header = ("caller_language", "rust"),
-    )
-    .with_context(|| format!("failed to create base thrift client from socket address {addr}"))
-}
-
-#[cfg(fbcode_build)]
-async fn log_perf_stats(
-    fb303: Arc<dyn BaseService + Sync + Send>,
-    repo_name: &str,
-    logger: &Logger,
-    stats_writer: Arc<File>,
-) -> Result<()> {
-    use std::ops::Deref;
-    use std::time::UNIX_EPOCH;
-
-    let regex = format!(
-        "^mononoke\\.modern_sync\\.manager\\.changeset\\.{}\\.commits_synced\\.sum.*",
-        repo_name
-    );
-    let sum_key = format!(
-        "mononoke.modern_sync.manager.changeset.{}.commits_synced.sum",
-        repo_name
-    );
-    let last60_key = format!(
-        "mononoke.modern_sync.manager.changeset.{}.commits_synced.sum.60",
-        repo_name
-    );
-    let last600_key = format!(
-        "mononoke.modern_sync.manager.changeset.{}.commits_synced.sum.600",
-        repo_name
-    );
-    let last3600_key = format!(
-        "mononoke.modern_sync.manager.changeset.{}.commits_synced.sum.3600",
-        repo_name
-    );
-
-    let counters = fb303
-        .getRegexCounters(&regex)
-        .await
-        .with_context(|| "Failed to get counters")?;
-
-    let sum = counters.get(&sum_key);
-    let last60 = counters.get(&last60_key);
-    let last600 = counters.get(&last600_key);
-    let last3600 = counters.get(&last3600_key);
-
-    info!(
-        logger,
-        "Synced total={} speed={}/{}/{} (changesets/min last 60/600/3600) ({} {} {})",
-        sum.map_or("?".to_string(), |v| v.to_string()),
-        last60.map_or("?".to_string(), |v| v.to_string()),
-        last600.map_or("?".to_string(), |v| (v / 10).to_string()),
-        last3600.map_or("?".to_string(), |v| (v / 60).to_string()),
-        last60.map_or("n/a".to_string(), |v| v.to_string()),
-        last600.map_or("n/a".to_string(), |v| v.to_string()),
-        last3600.map_or("n/a".to_string(), |v| v.to_string()),
-    );
-
-    if sum.is_some() {
-        writeln!(
-            stats_writer.deref(),
-            "{},{},{},{},{},{},{},{}",
-            std::time::SystemTime::now()
-                .duration_since(UNIX_EPOCH)?
-                .as_secs(),
-            sum.map_or("?".to_string(), |v| v.to_string()),
-            last60.map_or("?".to_string(), |v| v.to_string()),
-            last600.map_or("?".to_string(), |v| (v / 10).to_string()),
-            last3600.map_or("?".to_string(), |v| (v / 60).to_string()),
-            last60.map_or("n/a".to_string(), |v| v.to_string()),
-            last600.map_or("n/a".to_string(), |v| v.to_string()),
-            last3600.map_or("n/a".to_string(), |v| v.to_string()),
-        )?;
-    }
-
-    Ok(())
-}
-
-async fn write_csv_header(stats_writer: &Arc<File>) -> Result<(), std::io::Error> {
-    writeln!(
-        stats_writer.deref(),
-        "time,sum,last60,last600,last3600,speed60,speed600,speed3600"
-    )
 }
