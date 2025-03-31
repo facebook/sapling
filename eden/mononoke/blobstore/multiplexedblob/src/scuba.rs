@@ -48,6 +48,9 @@ fn record_scuba_common(
     if let Some(client_info) = ctx.client_request_info() {
         scuba.add_client_request_info(client_info);
     }
+    if let Some(fetch_cause) = ctx.metadata().fetch_cause() {
+        scuba.add_fetch_cause(fetch_cause);
+    }
 }
 
 pub fn record_put<T>(

@@ -194,6 +194,11 @@ impl MononokeScubaSampleBuilder {
         self
     }
 
+    pub fn add_fetch_cause(&mut self, fetch_cause: &str) -> &mut Self {
+        self.inner.add("fetch_cause", fetch_cause);
+        self
+    }
+
     pub fn sample_for_identities(&mut self, identities: &impl MononokeIdentitySetExt) {
         // Details of quicksand traffic aren't particularly interesting because all Quicksand tasks are
         // doing effectively the same thing at the same time. If we need real-time debugging, we can
