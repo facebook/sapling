@@ -492,6 +492,7 @@ pub async fn fetch(
                 Ok(_) => anyhow::Ok(()),
                 Err(e) => {
                     scuba.add(MononokeGitScubaKey::PackfileReadError, format!("{:?}", e));
+                    scuba.unsampled();
                     scuba.log();
                     error_writer.send(format!("{:?}", e)).await?;
                     Ok(())
@@ -543,5 +544,6 @@ fn packfile_count_to_scuba(response: &FetchResponse<'_>, scuba: &mut MononokeScu
         response.num_trees_and_blobs,
     );
     scuba.add(MononokeGitScubaKey::PackfileTagCount, response.num_tags);
+    scuba.unsampled();
     scuba.log();
 }

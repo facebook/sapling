@@ -88,6 +88,8 @@ mod write;
 
 const SERVICE_NAME: &str = "mononoke_git_server";
 const SM_CLEANUP_TIMEOUT_SECS: u64 = 60;
+/// The sampling rate for perf logging, default to 1 for no sampling
+const PERF_LOG_SAMPLING: u64 = 1;
 
 // Used to determine how many entries are in cachelib's HashTable. A smaller
 // object size results in more entries and possibly higher idle memory usage.
@@ -262,7 +264,11 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
             let router = build_router(git_server_context);
 
             let capture_session_data = tls_session_data_log.is_some();
-
+            let mut git_scuba = scuba.clone();
+            let perf_sampling =
+                justknobs::get_as::<u64>("scm/mononoke:git_server_perf_log_sampling", None)
+                    .unwrap_or(PERF_LOG_SAMPLING);
+            git_scuba.sampled(perf_sampling.try_into()?);
             let handler = MononokeHttpHandler::builder()
                 .add(TlsSessionDataMiddleware::new(tls_session_data_log)?)
                 .add(ServerIdentityMiddleware::new(HeaderValue::from_static(
@@ -279,7 +285,7 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
                 .add(RequestContextMiddleware::new(
                     fb,
                     logger.clone(),
-                    scuba.clone(),
+                    git_scuba,
                     None,
                     args.readonly.readonly,
                 ))
@@ -289,7 +295,7 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
                 .add(LoadMiddleware::new_with_requests_counter(requests_counter))
                 .add(log_middleware)
                 .add(Ods3Middleware::new())
-                .add(<ScubaMiddleware<MononokeGitScubaHandler>>::new(scuba))
+                .add(<ScubaMiddleware<MononokeGitScubaHandler>>::new(scuba)) // We want request summary logging to remain unsampled (for now)
                 .add(TimerMiddleware::new())
                 .add(ConfigInfoMiddleware::new(configs))
                 .build(router);
