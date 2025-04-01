@@ -83,10 +83,11 @@ export function diffBlocks(aLines: string[], bLines: string[]): Array<Block> {
  * (significant) lines should have high priority for "readability".
  *
  * To prioritize significant lines, run the main diff algorithm on the
- * significant lines first, force match "=" lines, then run the diff algorithm
- * for the gap regions.
+ * significant lines first, force match the equal lines. Those equal lines
+ * will split the insignificant lines into smaller regions. Run the diff
+ * algorithm on those regions.
  *
- * Because insignificantCount lines are skipped, this function might not always
+ * Because insignificant lines are skipped, this function might not always
  * produce the theoretical minimal diff like `diffBlocks`.
  */
 export function readableDiffBlocks(aLines: string[], bLines: string[]): Array<Block> {
@@ -104,11 +105,11 @@ export function readableDiffBlocks(aLines: string[], bLines: string[]): Array<Bl
   // Assign integer ids to lines.
   const [aFull, bFull] = stringsToInts([aLines, bLines]);
 
-  // Significant (non-boring) lines.
+  // Significant lines.
   const aSignificant = aFull.filter((_l, i) => aIsSignificant[i]);
   const bSignificant = bFull.filter((_l, i) => bIsSignificant[i]);
 
-  // Index offset. aInteresting[i] == aList[aSigToFull[i]].
+  // Index offset. aSignificant[i] == aFull[aSigToFull[i]].
   const aSigToFull = calculateSigToFull(aIsSignificant);
   const bSigToFull = calculateSigToFull(bIsSignificant);
 
@@ -138,10 +139,12 @@ export function readableDiffBlocks(aLines: string[], bLines: string[]): Array<Bl
           const b1Sig = bSigStart + (a1Sig - aSigStart);
           const [a1, b1] = [aSigToFull[a1Sig], bSigToFull[b1Sig]];
           const [a2, b2] = [a1 + 1, b1 + 1];
-          // Force match the two sides. Run regular diff on the upper part of both sides.
-          //     aLast .. a1     | a1 .. a2     | a2 ...
-          //     bLast .. b1     | b1 .. b2     | b2 ...
-          //     To diff further | Forced match | Figure out later
+          // Force match the two sides. Run regular diff on the insignificant region.
+          //   .. aLast   | aLast .. a1   | a1 .. a2      | a2 ...
+          //   .. aLast   | bLast .. b1   | b1 .. b2      | b2 ...
+          //   ----------------------------------------------------------------
+          //   already in | insignificant | significant = | rest
+          //   result     | to diff       | force matched | to figure out later
           push(diffIntBlocks(aFull.slice(aLast, a1), bFull.slice(bLast, b1)), aLast, bLast);
           push([['=', [a1, a2, b1, b2]]]);
           [aLast, bLast] = [a2, b2];
