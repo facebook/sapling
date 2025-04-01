@@ -5,7 +5,10 @@ oncall("source_control")
 
 python_library(
     name = "usc",
-    srcs = ["usc.py"],
+    srcs = [
+        "gk.py",
+        "usc.py",
+    ],
     deps = [
         "fbsource//third-party/pypi/pandas:pandas",
         "//pvc2:pvc2",
@@ -58,4 +61,10 @@ bento_test_kernel(
     kernel_name = "eden",
     notebooks = ["notebooks/usc_okr_reviews.py"],
     target_name = "usc_okr_reviews",
+)
+
+bento_test_kernel(
+    kernel_name = "eden",
+    notebooks = ["notebooks/gk_cpe_blackbird_sensor_exclusion_mobile.py"],
+    target_name = "gk_cpe_blackbird_sensor_exclusion_mobile",
 )
