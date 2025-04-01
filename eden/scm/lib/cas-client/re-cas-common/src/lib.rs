@@ -182,7 +182,7 @@ macro_rules! re_client {
 
                             let mut local_cache_stats = response.get_local_cache_stats();
                             let mut storage_stats = response.get_storage_stats();
-                            (FFIDownloadResult::into_list_of_downloads(response),  parse_stats(storage_stats.per_backend_stats.into_iter(), local_cache_stats))
+                            (response.unpack_downloads(),  parse_stats(storage_stats.per_backend_stats.into_iter(), local_cache_stats))
                         };
 
                         #[cfg(not(target_os = "linux"))]
@@ -211,7 +211,7 @@ macro_rules! re_client {
                             .map(|blob| {
                                 #[cfg(target_os = "linux")]
                                 let (digest, status, data) = {
-                                    let (digest, status, data) = FFIDownload::consume(blob);
+                                    let (digest, status, data) = blob.unpack();
                                     (digest, status, ScmBlob::IOBuf(data.into()))
                                 };
                                 #[cfg(not(target_os = "linux"))]

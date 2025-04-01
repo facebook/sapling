@@ -31,10 +31,6 @@ use re_client_lib::RemoteExecutionMetadata;
 use re_client_lib::RemoteFetchPolicy;
 #[cfg(target_os = "linux")]
 use rich_cas_client_wrapper::CASClientWrapper as REClient;
-#[cfg(target_os = "linux")]
-use rich_cas_client_wrapper::FFIDownload;
-#[cfg(target_os = "linux")]
-use rich_cas_client_wrapper::FFIDownloadResult;
 use scm_blob::ScmBlob;
 
 pub const CAS_SOCKET_PATH: &str = "/run/casd/casd.socket";

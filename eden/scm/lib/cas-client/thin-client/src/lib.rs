@@ -29,10 +29,6 @@ use re_client_lib::RemoteExecutionMetadata;
 use scm_blob::ScmBlob;
 #[cfg(target_os = "linux")]
 use thin_cas_client_wrapper::CASClientWrapper as REClient;
-#[cfg(target_os = "linux")]
-use thin_cas_client_wrapper::FFIDownload;
-#[cfg(target_os = "linux")]
-use thin_cas_client_wrapper::FFIDownloadResult;
 
 pub struct ThinCasClient {
     client: re_cas_common::OnceCell<REClient>,
