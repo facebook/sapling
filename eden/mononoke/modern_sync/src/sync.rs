@@ -6,6 +6,7 @@
  */
 
 use std::path::PathBuf;
+use std::sync::atomic::AtomicBool;
 use std::sync::Arc;
 use std::time::Duration;
 
@@ -197,6 +198,7 @@ pub async fn sync(
 
     tracing::info!("Established EdenAPI connection");
 
+    let cancellation_requested = Arc::new(AtomicBool::new(false));
     let send_manager = SendManager::new(
         ctx.clone(),
         repo_blobstore.clone(),
@@ -204,6 +206,7 @@ pub async fn sync(
         repo_name.clone(),
         exit_file,
         mc.clone(),
+        cancellation_requested,
     );
     tracing::info!("Initialized channels");
     stat::log_sync_start(ctx, start_id);

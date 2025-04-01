@@ -133,9 +133,8 @@ impl SendManager {
         reponame: String,
         exit_file: PathBuf,
         mc: Arc<dyn MutableCounters + Send + Sync>,
+        cancellation_requested: Arc<AtomicBool>,
     ) -> Self {
-        let cancellation_requested = Arc::new(AtomicBool::new(false));
-
         // Create channel for receiving content
         let (content_sender, content_recv) = mpsc::channel(CONTENT_CHANNEL_SIZE);
         ContentManager::new(content_recv, repo_blobstore).start(

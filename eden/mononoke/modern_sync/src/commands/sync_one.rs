@@ -6,6 +6,7 @@
  */
 
 use std::path::PathBuf;
+use std::sync::atomic::AtomicBool;
 use std::sync::Arc;
 
 use anyhow::format_err;
@@ -96,6 +97,7 @@ pub async fn run(app: MononokeApp, args: CommandArgs) -> Result<()> {
         )
     };
 
+    let cancellation_requested = Arc::new(AtomicBool::new(false));
     let mut send_manager = SendManager::new(
         ctx.clone(),
         repo.repo_blobstore().clone(),
@@ -103,6 +105,7 @@ pub async fn run(app: MononokeApp, args: CommandArgs) -> Result<()> {
         repo_name.clone(),
         PathBuf::from(""),
         repo.mutable_counters_arc(),
+        cancellation_requested,
     );
 
     let messages = crate::sync::process_one_changeset(&args.cs_id, &ctx, repo, false, "").await;
