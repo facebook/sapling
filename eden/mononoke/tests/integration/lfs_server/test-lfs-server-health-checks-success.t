@@ -89,6 +89,7 @@
       "http_user_agent": "curl/*", (glob)
       "request_id": "*", (glob)
       "sandcastle_alias": null,
+      "sandcastle_nonce": null,
       "sandcastle_vcs": null
     },
     "normvector": {

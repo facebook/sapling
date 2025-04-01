@@ -89,6 +89,7 @@
       "repository": "lfs1",
       "request_id": "*", (glob)
       "sandcastle_alias": null,
+      "sandcastle_nonce": null,
       "sandcastle_vcs": null
     },
     "normvector": {
@@ -151,6 +152,7 @@
       "repository": "lfs1",
       "request_id": "*", (glob)
       "sandcastle_alias": null,
+      "sandcastle_nonce": null,
       "sandcastle_vcs": null
     },
     "normvector": {
@@ -217,6 +219,7 @@
       "repository": "lfs1",
       "request_id": "*", (glob)
       "sandcastle_alias": null,
+      "sandcastle_nonce": null,
       "sandcastle_vcs": null
     },
     "normvector": {
@@ -286,6 +289,7 @@
       "request_id": "*", (glob)
       "response_content_encoding": "zstd",
       "sandcastle_alias": null,
+      "sandcastle_nonce": null,
       "sandcastle_vcs": null
     },
     "normvector": {
@@ -339,6 +343,7 @@
       "http_user_agent": "curl/*", (glob)
       "request_id": "*", (glob)
       "sandcastle_alias": null,
+      "sandcastle_nonce": null,
       "sandcastle_vcs": null
     },
     "normvector": {
