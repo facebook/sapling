@@ -33,11 +33,18 @@ use slog_glog_fmt::kv_categorizer::FacebookCategorizer;
 use slog_glog_fmt::kv_defaults::FacebookKV;
 use slog_glog_fmt::GlogFormat;
 use slog_term::TermDecorator;
+use tracing::Event;
+use tracing::Subscriber;
 use tracing_glog::Glog;
 use tracing_glog::GlogFields;
 use tracing_subscriber::filter;
 use tracing_subscriber::filter::Directive;
+use tracing_subscriber::fmt::format;
+use tracing_subscriber::fmt::FmtContext;
+use tracing_subscriber::fmt::FormatEvent;
+use tracing_subscriber::fmt::FormatFields;
 use tracing_subscriber::layer::SubscriberExt;
+use tracing_subscriber::registry::LookupSpan;
 use tracing_subscriber::EnvFilter;
 use tracing_subscriber::Layer;
 
@@ -50,6 +57,10 @@ pub struct LoggingArgs {
     /// Use tracing instead of slog
     #[clap(long)]
     pub tracing: bool,
+
+    /// Configure tracing to output in test format
+    #[clap(long)]
+    pub tracing_test_format: bool,
 
     /// Print debug output
     ///
@@ -187,20 +198,31 @@ impl LoggingArgs {
             }),
         }?;
 
-        let event_format = Glog::default()
-            .with_timer(tracing_glog::LocalTime::default())
-            .with_span_names(false)
-            .with_target(true);
+        if self.tracing_test_format {
+            let event_format = TestFormatter {};
 
-        let log_layer = tracing_subscriber::fmt::layer()
-            .event_format(event_format)
-            .fmt_fields(GlogFields::default())
-            .with_writer(std::io::stderr)
-            .with_filter(filter);
+            let log_layer = tracing_subscriber::fmt::layer()
+                .event_format(event_format)
+                .with_writer(std::io::stderr)
+                .with_ansi(false)
+                .with_filter(filter);
 
-        let subscriber = tracing_subscriber::registry().with(log_layer);
+            let subscriber = tracing_subscriber::registry().with(log_layer);
+            tracing::subscriber::set_global_default(subscriber)?;
+        } else {
+            let event_format = Glog::default()
+                .with_timer(tracing_glog::LocalTime::default())
+                .with_span_names(false)
+                .with_target(true);
+            let log_layer = tracing_subscriber::fmt::layer()
+                .event_format(event_format)
+                .fmt_fields(GlogFields::default())
+                .with_writer(std::io::stderr)
+                .with_filter(filter);
 
-        tracing::subscriber::set_global_default(subscriber)?;
+            let subscriber = tracing_subscriber::registry().with(log_layer);
+            tracing::subscriber::set_global_default(subscriber)?;
+        }
 
         Ok(())
     }
@@ -334,4 +356,25 @@ fn glog_drain() -> impl Drain<Ok = (), Err = Never> {
     // that was added below was mainly useful for logview logging and had no effect on GlogFormat
     let drain = GlogFormat::new(decorator, FacebookCategorizer).ignore_res();
     ::std::sync::Mutex::new(drain).ignore_res()
+}
+
+pub struct TestFormatter;
+
+impl<S, N> FormatEvent<S, N> for TestFormatter
+where
+    S: Subscriber + for<'a> LookupSpan<'a>,
+    N: for<'a> FormatFields<'a> + 'static,
+{
+    fn format_event(
+        &self,
+        ctx: &FmtContext<'_, S, N>,
+        mut writer: format::Writer<'_>,
+        event: &Event<'_>,
+    ) -> std::fmt::Result {
+        write!(&mut writer, "[{}] ", event.metadata().level())?;
+
+        ctx.field_format().format_fields(writer.by_ref(), event)?;
+
+        writeln!(writer)
+    }
 }
