@@ -426,6 +426,7 @@ impl ShardedProcessHandler {
 
 impl ShardedProcessHandler {
     pub async fn set_shards(&self, shards: Vec<smtypes::Shard>) -> Result<()> {
+        let shard_count = shards.len();
         // Create map from Shard Domain (i.e. Repo Name) to Shard.
         let new_repo_shards: HashMap<RepoShard, smtypes::Shard> = shards
             .into_iter()
@@ -437,6 +438,8 @@ impl ShardedProcessHandler {
         // because of difference in scoped vs one-time write to the map.
         // The core repo allocation and removal logic is still contained
         // in a single place within Repo Setup, Executor & Cleanup process.
+
+        info!(self.logger, "Setting up {} shards", shard_count);
 
         // Ensure we are the only ones updating the repos.
         let mut guarded_repo_map = self.repo_map.write().await;
@@ -451,18 +454,22 @@ impl ShardedProcessHandler {
                     // A repo that was being setup is no longer assigned to this replica.
                     // Drop the setup process associated with the repo.
                     Setup(old_repo_setup_process) => {
+                        info!(
+                            self.logger,
+                            "Cancelling previous repo setup for shard {old_repo_name}"
+                        );
                         old_repo_setup_process.setup_handle.abort();
                         old_repo_setup_process
                             .setup_handle
                             .await
                             .with_context(|| {
                                 format!(
-                                    "Failed to execute setup for shard {} due to Tokio JoinError",
+                                    "Failed to execute setup for shard {} due to Tokio JoinError (cancelling old setup)",
                                     old_repo_name
                                 )
                             })?
                             .with_context(|| {
-                                format!("Error during setup for shard {}", old_repo_name)
+                                format!("Error during cancelled setup for shard {}", old_repo_name)
                             })?;
                     }
                     // A repo that was being executed for target process is no longer assigned
@@ -501,6 +508,9 @@ impl ShardedProcessHandler {
                     entry.insert(RepoProcess::Execution(execution_process));
                 }
             }
+
+            info!(self.logger, "Completed setup for {} shards", shard_count);
+
             Ok(())
         }
     }
@@ -529,7 +539,7 @@ impl ShardedProcessHandler {
             }
         };
         // Repo-assignment related logging
-        info!(self.logger, "Adding shard at key '{}': {:#?}", &key, shard);
+        info!(self.logger, "Adding shard {key}");
         let mut guarded_repo_map = self.runtime_handle.block_on(self.repo_map.write());
         {
             if let Some(repo_process) = guarded_repo_map.get_mut(&key) {
@@ -838,7 +848,7 @@ impl sm::ShardManagerHandler for ShardedProcessHandler {
     ) -> sm::Result<smtypes::PrepareAddShardResponse> {
         info!(
             self.logger,
-            "Prepare Add Shard Request from SM ({:#?})", request
+            "Prepare Add Shard Request from SM for {}", request.shard.id.domain
         );
 
         let key = match RepoShard::from_shard_id(&request.shard.id.domain) {
@@ -869,7 +879,10 @@ impl sm::ShardManagerHandler for ShardedProcessHandler {
         &self,
         request: smtypes::AddShardRequest,
     ) -> sm::Result<smtypes::AddShardResponse> {
-        info!(self.logger, "Add Shard Request from SM ({:#?})", request);
+        info!(
+            self.logger,
+            "Add Shard Request from SM for {}", request.shard.id.domain
+        );
         match self.on_add_shard(&request.shard.id.domain.clone(), request.shard) {
             Completed(details) => Ok(smtypes::AddShardResponse {
                 status: smtypes::CallbackCompletionStatus::success,
@@ -895,7 +908,7 @@ impl sm::ShardManagerHandler for ShardedProcessHandler {
     ) -> sm::Result<smtypes::PrepareDropShardResponse> {
         info!(
             self.logger,
-            "Prepare Drop Shard Request from SM ({:#?})", request
+            "Prepare Drop Shard Request from SM for {}", request.shardID.domain
         );
 
         let key = match RepoShard::from_shard_id(&request.shardID.domain) {
@@ -925,7 +938,10 @@ impl sm::ShardManagerHandler for ShardedProcessHandler {
         &self,
         request: smtypes::DropShardRequest,
     ) -> sm::Result<smtypes::DropShardResponse> {
-        info!(self.logger, "Drop Shard Request from SM ({:#?})", request);
+        info!(
+            self.logger,
+            "Drop Shard Request from SM for {}", request.shardID.domain
+        );
         match self.on_drop_shard(&request.shardID.domain) {
             Completed(details) => Ok(smtypes::DropShardResponse {
                 status: smtypes::CallbackCompletionStatus::success,
@@ -954,7 +970,8 @@ impl sm::ShardManagerHandler for ShardedProcessHandler {
             .collect::<Vec<_>>();
         error!(
             self.logger,
-            "Connection lost to SM. Server will continue executing with existing repos: {}",
+            "Connection lost to SM. Server will continue executing with existing {} repos: {}",
+            repos.len(),
             repos.join(", ")
         );
 
@@ -973,7 +990,8 @@ impl sm::ShardManagerHandler for ShardedProcessHandler {
             .collect::<Result<Vec<_>>>()?;
         info!(
             self.logger,
-            "Connection restored to SM after disconnection. Resetting Shards: {}",
+            "Connection restored to SM after disconnection. Resetting {} shards: {}",
+            repos.len(),
             repos.join(", ")
         );
 
@@ -984,7 +1002,11 @@ impl sm::ShardManagerHandler for ShardedProcessHandler {
         self.runtime_handle
             .block_on(self.set_shards(shards_to_serve))
             .with_context(|| {
-                format!("Error while setting shards for repos: {}", repos.join(", "))
+                format!(
+                    "Error while setting shards for {} repos: {}",
+                    repos.len(),
+                    repos.join(", ")
+                )
             })?;
         Ok(())
     }
