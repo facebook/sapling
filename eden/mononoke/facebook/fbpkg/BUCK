@@ -1,3 +1,4 @@
+load("//antlir/antlir2/bzl/feature:defs.bzl", "feature")
 load("//eden/mononoke/facebook/fbpkg:lib.bzl", "mononoke_fbpkg")
 load("//fbpkg:fbpkg.bzl", "fbpkg")
 load("//tupperware/cm/antlir2/bzl:buck2_container.bzl", "tw")
@@ -175,6 +176,19 @@ mononoke_fbpkg(
         "fbsource_commit_tailer.par": "//eden/mononoke/facebook/fbsource_commit_tailer:fbsource_commit_tailer",
         "swift": "//scribeutil/swift:swift",
     },
+)
+
+tw.container(
+    name = "tw.mononoke.fbsource_commit_tailer",
+    features = [
+        feature.fetch_fbpkg_mount(
+            name = "mononoke.fbsource_commit_tailer",
+            mountpoint = "/packages/mononoke.fbsource_commit_tailer",
+            tag = "prod",
+        ),
+        feature.rpms_install(rpms = ["jellyfish"]),
+    ],
+    oncall = "scm_server_infra",
 )
 
 mononoke_fbpkg(
