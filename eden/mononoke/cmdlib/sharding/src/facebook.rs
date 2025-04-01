@@ -459,18 +459,24 @@ impl ShardedProcessHandler {
                             "Cancelling previous repo setup for shard {old_repo_name}"
                         );
                         old_repo_setup_process.setup_handle.abort();
-                        old_repo_setup_process
-                            .setup_handle
-                            .await
-                            .with_context(|| {
-                                format!(
-                                    "Failed to execute setup for shard {} due to Tokio JoinError (cancelling old setup)",
-                                    old_repo_name
-                                )
-                            })?
-                            .with_context(|| {
-                                format!("Error during cancelled setup for shard {}", old_repo_name)
-                            })?;
+                        match old_repo_setup_process.setup_handle.await {
+                            Err(e) if e.is_cancelled() => {
+                                info!(
+                                    self.logger,
+                                    "Previous repo setup for shard {old_repo_name} was cancelled"
+                                );
+                            }
+                            result => {
+                                result.with_context(|| {
+                                    format!(
+                                        "Failed to cancel setup for shard {} due to Tokio JoinError",
+                                        old_repo_name
+                                    )
+                                })?.with_context(|| {
+                                    format!("Error during cancelled setup for shard {}", old_repo_name)
+                                })?;
+                            }
+                        };
                     }
                     // A repo that was being executed for target process is no longer assigned
                     // to this replica. Terminate the execution.
