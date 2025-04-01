@@ -238,7 +238,7 @@ impl LoadShedLimit {
                 let value = ods_counters
                     .read()
                     .expect("Poisoned lock")
-                    .get_counter_value(&key, &entity, reduce.as_deref())
+                    .get_counter_value(&entity, &key, reduce.as_deref())
                     .map(|v| v as i64);
                 (
                     format!("Ods key:{} entity:{} reduce:{:?}", entity, key, reduce),
