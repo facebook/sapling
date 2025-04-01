@@ -8,8 +8,8 @@
 use std::collections::HashMap;
 use std::path::PathBuf;
 use std::sync::atomic::AtomicBool;
+use std::sync::atomic::Ordering;
 use std::sync::Arc;
-#[cfg(fbcode_build)]
 use std::time::Duration;
 
 use anyhow::Result;
@@ -18,12 +18,14 @@ use clap::Parser;
 use clap::ValueEnum;
 use clientinfo::ClientEntryPoint;
 use clientinfo::ClientInfo;
+use cloned::cloned;
 use context::CoreContext;
 use context::SessionContainer;
 use metadata::Metadata;
 #[cfg(fbcode_build)]
 use mononoke_app::args::MonitoringArgs;
 use mononoke_app::MononokeApp;
+use mononoke_macros::mononoke;
 use mutable_counters::MutableCounters;
 
 #[cfg(fbcode_build)]
@@ -53,6 +55,12 @@ pub struct CommandArgs {
 
     #[clap(long, help = "Chunk size for the sync [default: 1000]")]
     chunk_size: Option<u64>,
+
+    #[clap(
+        long,
+        help = "How long to run the benchmark for, in seconds [default: unlimited]"
+    )]
+    duration: Option<u64>,
 
     #[clap(
         long,
@@ -140,6 +148,19 @@ pub async fn run(app: MononokeApp, args: CommandArgs) -> Result<()> {
 
     let now = std::time::Instant::now();
     let cancellation_requested = Arc::new(AtomicBool::new(false));
+
+    if let Some(duration) = args.duration {
+        mononoke::spawn_task({
+            cloned!(cancellation_requested);
+            async move {
+                let mut interval = tokio::time::interval(Duration::from_secs(duration));
+                interval.tick().await; // the first tick is instant
+                interval.tick().await;
+                cancellation_requested.store(true, Ordering::Relaxed);
+            }
+        });
+    }
+
     crate::sync::sync(
         app,
         Some(0),
