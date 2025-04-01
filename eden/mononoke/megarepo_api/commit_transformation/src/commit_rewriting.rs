@@ -15,7 +15,6 @@ use anyhow::Error;
 use anyhow::Result;
 use blobrepo_utils::convert_diff_result_into_file_change_for_diamond_merge;
 use blobsync::copy_content;
-use borrowed::borrowed;
 use changesets_creation::save_changesets;
 use commit_graph::CommitGraphRef;
 use commit_graph::CommitGraphWriterRef;
@@ -245,86 +244,7 @@ pub async fn rewrite_as_squashed_commit<'a>(
     Ok(Some(cs))
 }
 
-pub async fn rewrite_stack_no_merges<'a>(
-    ctx: &'a CoreContext,
-    css: Vec<BonsaiChangeset>,
-    mut rewritten_parent: ChangesetId,
-    mover: Arc<dyn MultiMover + 'a>,
-    source_repo: &'a impl Repo,
-    force_first_parent: Option<ChangesetId>,
-    mut modify_bonsai_cs: impl FnMut((ChangesetId, BonsaiChangesetMut)) -> BonsaiChangesetMut,
-) -> Result<Vec<Option<BonsaiChangeset>>, Error> {
-    borrowed!(mover: &Arc<_>, source_repo);
-
-    for cs in &css {
-        if cs.is_merge() {
-            return Err(anyhow!(
-                "cannot remap merges in a stack - {}",
-                cs.get_changeset_id()
-            ));
-        }
-    }
-
-    let css = stream::iter(css)
-        .map({
-            |cs| async move {
-                let deleted_file_changes = if cs.file_changes().next().is_some() {
-                    let parents = cs.parents();
-                    get_renamed_implicit_deletes(
-                        ctx,
-                        cs.file_changes().collect(),
-                        parents,
-                        mover.clone(),
-                        source_repo,
-                    )
-                    .await?
-                } else {
-                    vec![]
-                };
-
-                anyhow::Ok((cs, deleted_file_changes))
-            }
-        })
-        .buffered(100)
-        .try_collect::<Vec<_>>()
-        .await?;
-
-    let mut res = vec![];
-    for (from_cs, renamed_implicit_deletes) in css {
-        let from_cs_id = from_cs.get_changeset_id();
-        let from_cs = from_cs.into_mut();
-
-        let mut remapped_parents = HashMap::new();
-        if let Some(parent) = from_cs.parents.first() {
-            remapped_parents.insert(*parent, rewritten_parent);
-        }
-
-        let maybe_cs = rewrite_commit_with_implicit_deletes(
-            ctx.logger(),
-            from_cs,
-            &remapped_parents,
-            mover.clone(),
-            vec![],
-            force_first_parent,
-            renamed_implicit_deletes,
-            Default::default(),
-        )?;
-
-        let maybe_cs = maybe_cs
-            .map(|cs| modify_bonsai_cs((from_cs_id, cs)))
-            .map(|bcs| bcs.freeze())
-            .transpose()?;
-        if let Some(ref cs) = maybe_cs {
-            let to_cs_id = cs.get_changeset_id();
-            rewritten_parent = to_cs_id;
-        }
-
-        res.push(maybe_cs);
-    }
-
-    Ok(res)
-}
-
+// TODO(T182311609): reduce visibility to crate
 pub fn rewrite_commit_with_implicit_deletes<'a>(
     logger: &Logger,
     mut cs: BonsaiChangesetMut,

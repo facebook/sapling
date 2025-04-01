@@ -13,13 +13,25 @@ mod implicit_deletes;
 mod test;
 mod types;
 
-// TODO(T182311609): stop exposing git_submodule directly in the public API
+// Re-exporting this module because there are many helper functions related to
+// submodules that might be needed by the callers.
 pub mod git_submodules;
 
-// TODO(T182311609): refine exports
-pub use commit_rewriting::*;
+pub use commit_rewriting::copy_file_contents;
+pub use commit_rewriting::create_directory_source_to_target_multi_mover;
+pub use commit_rewriting::create_source_to_target_multi_mover;
+pub use commit_rewriting::rewrite_as_squashed_commit;
+pub use commit_rewriting::rewrite_commit;
+pub use commit_rewriting::rewrite_commit_with_file_changes_filter;
+pub use commit_rewriting::rewrite_commit_with_implicit_deletes;
+pub use commit_rewriting::upload_commits;
 pub use implicit_deletes::get_renamed_implicit_deletes;
+pub use types::CommitRewrittenToEmpty;
+pub use types::DirectoryMultiMover;
+pub use types::EmptyCommitFromLargeRepo;
+pub use types::MultiMover;
+pub use types::RewriteOpts;
+pub use types::StripCommitExtras;
 pub use types::SubmoduleDeps;
 pub use types::SubmoduleExpansionContentIds;
 pub use types::SubmodulePath;
-pub use types::*;

@@ -48,7 +48,11 @@ use tests_utils::list_working_copy_utf8;
 use tests_utils::CreateCommitContext;
 
 use super::*;
+use crate::commit_rewriting::create_source_to_target_multi_mover;
 use crate::implicit_deletes::minimize_file_change_set;
+use crate::types::FileChangeFilter;
+use crate::types::FileChangeFilterApplication;
+use crate::types::FileChangeFilterFunc;
 
 #[facet::container]
 #[derive(Clone)]
