@@ -5,7 +5,6 @@
  * GNU General Public License version 2.
  */
 
-use std::collections::hash_map::Entry;
 use std::collections::HashMap;
 use std::env;
 use std::sync::atomic::AtomicBool;
@@ -20,6 +19,7 @@ use futures::future::select;
 use futures::future::Either;
 use futures::future::FutureExt;
 use futures::stream;
+use futures::stream::FuturesUnordered;
 use futures::stream::StreamExt;
 use futures::stream::TryStreamExt;
 use sharding_ext::RepoShard;
@@ -500,19 +500,34 @@ impl ShardedProcessHandler {
             .await?;
 
             // Assign new repos to this Process based on the incoming Shards.
+            let mut setups = FuturesUnordered::new();
             for (new_repo, new_shard) in new_repo_shards {
-                if let Entry::Vacant(entry) = guarded_repo_map.entry(new_repo.clone()) {
+                while setups.len() >= 20 {
+                    // Limit the number of concurrent setups.
+                    let (new_repo, execution_process) = setups
+                        .try_next()
+                        .await?
+                        .ok_or_else(|| anyhow!("Unexpected empty setup"))?;
+                    guarded_repo_map.insert(new_repo, RepoProcess::Execution(execution_process));
+                }
+                if !guarded_repo_map.contains_key(&new_repo) {
                     let setup_process = RepoSetupProcess::new(
                         new_shard,
-                        new_repo,
+                        new_repo.clone(),
                         Arc::clone(&self.setup_job),
                         &self.runtime_handle,
                     );
-                    let execution_process = setup_process
-                        .execution_process(&self.runtime_handle)
-                        .await?;
-                    entry.insert(RepoProcess::Execution(execution_process));
+                    let setup = async move {
+                        let execution_process = setup_process
+                            .execution_process(&self.runtime_handle)
+                            .await?;
+                        anyhow::Ok((new_repo, execution_process))
+                    };
+                    setups.push(setup.boxed());
                 }
+            }
+            while let Some((new_repo, execution_process)) = setups.try_next().await? {
+                guarded_repo_map.insert(new_repo, RepoProcess::Execution(execution_process));
             }
 
             info!(self.logger, "Completed setup for {} shards", shard_count);
