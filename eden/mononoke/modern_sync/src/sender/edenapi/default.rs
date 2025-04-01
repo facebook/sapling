@@ -42,7 +42,6 @@ use mononoke_app::args::TLSArgs;
 use mononoke_types::BonsaiChangeset;
 use mononoke_types::ChangesetId;
 use repo_blobstore::RepoBlobstore;
-use slog::info;
 use slog::Logger;
 use url::Url;
 
@@ -50,6 +49,7 @@ use crate::sender::edenapi::util;
 use crate::sender::edenapi::EdenapiSender;
 use crate::stat;
 
+#[allow(dead_code)]
 pub struct DefaultEdenapiSender {
     url: Url,
     reponame: String,
@@ -91,7 +91,7 @@ impl DefaultEdenapiSender {
             ..Default::default()
         };
 
-        info!(self.logger, "Connecting to {}", self.url.to_string());
+        tracing::info!("Connecting to {}", self.url.to_string());
 
         let client = HttpClientBuilder::new()
             .repo_name(&self.reponame)
@@ -249,7 +249,7 @@ impl EdenapiSender for DefaultEdenapiSender {
                 ]),
             )
             .await?;
-        info!(&self.logger, "Moved bookmark with result {:?}", res);
+        tracing::info!("Moved bookmark with result {:?}", res);
         Ok(())
     }
 
@@ -282,7 +282,7 @@ impl EdenapiSender for DefaultEdenapiSender {
             ids.clone(),
         );
 
-        info!(&self.logger, "Uploaded changesets: {:?}", ids);
+        tracing::info!("Uploaded changesets: {:?}", ids);
 
         Ok(())
     }

@@ -24,7 +24,6 @@ use mononoke_types::BonsaiChangeset;
 use mononoke_types::ContentId;
 use mutable_counters::MutableCounters;
 use repo_blobstore::RepoBlobstore;
-use slog::warn;
 use slog::Logger;
 use tokio::sync::mpsc;
 
@@ -184,7 +183,7 @@ impl SendManager {
             loop {
                 interval.tick().await;
                 if fs::metadata(exit_file.clone()).is_ok() {
-                    warn!(logger, "Exit file detected, stopping sync");
+                    tracing::warn!("Exit file detected, stopping sync");
                     cancellation_requested.store(true, Ordering::Relaxed);
                     break;
                 }

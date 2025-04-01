@@ -60,8 +60,6 @@ use repo_blobstore::RepoBlobstore;
 use repo_blobstore::RepoBlobstoreRef;
 use repo_derived_data::RepoDerivedDataRef;
 use repo_identity::RepoIdentityRef;
-use slog::info;
-use slog::warn;
 use slog::Logger;
 use stats::define_stats;
 use stats::prelude::*;
@@ -204,7 +202,7 @@ pub async fn sync(
         sender
     };
 
-    info!(logger, "Established EdenAPI connection");
+    tracing::info!("Established EdenAPI connection");
 
     let send_manager = SendManager::new(
         ctx.clone(),
@@ -215,7 +213,7 @@ pub async fn sync(
         exit_file,
         mc.clone(),
     );
-    info!(logger, "Initialized channels");
+    tracing::info!("Initialized channels");
     stat::log_sync_start(ctx, start_id);
 
     let bookmark = app_args.bookmark;
@@ -241,9 +239,9 @@ pub async fn sync(
         async move {
             match entries {
                 Err(e) => {
-                    info!(
-                        logger,
-                        "Found error while getting bookmark update log entry {:#?}", e
+                    tracing::info!(
+                        "Found error while getting bookmark update log entry {:#?}",
+                        e
                     );
                     Err(e)
                 }
@@ -262,8 +260,7 @@ pub async fn sync(
                             if entry.bookmark_name.name().as_str() == bookmark {
                                 Some(entry.clone())
                             } else {
-                                warn!(
-                                    logger,
+                                tracing::warn!(
                                     "Ignoring entry with id {} from branch {}",
                                     entry.id,
                                     entry.bookmark_name,
@@ -276,8 +273,7 @@ pub async fn sync(
                     if app_args.flatten_bul && !entries.is_empty() {
                         let original_size = entries.len();
                         let flattened_bul = bul_util::group_entries(entries);
-                        info!(
-                            logger,
+                        tracing::info!(
                             "Grouped {} entries into {} macro-entries",
                             original_size,
                             flattened_bul.len()
@@ -411,8 +407,7 @@ pub async fn process_bookmark_update_log_entry(
             format!("to generation {:?}", to_generation.value()),
         )
     };
-    info!(
-        logger,
+    tracing::info!(
         "Calculating segments for entry {}, from changeset {:?} to changeset {:?}, {}",
         entry.id,
         from_cs,
@@ -448,8 +443,7 @@ pub async fn process_bookmark_update_log_entry(
             }
         )?;
 
-        info!(
-            logger,
+        tracing::info!(
             "Done calculating segments for entry {}, from changeset {:?} to changeset {:?}, {} in {}ms",
             entry.id,
             from_cs,
@@ -467,18 +461,15 @@ pub async fn process_bookmark_update_log_entry(
         (commits, latest_checkpoint)
     };
 
-    info!(
-        logger,
-        "Resuming from latest entry checkpoint {}", latest_checkpoint
+    tracing::info!(
+        "Resuming from latest entry checkpoint {}",
+        latest_checkpoint
     );
 
     let skip_batch = (latest_checkpoint as u64) / chunk_size;
     let mut skip_commits = (latest_checkpoint as u64) % chunk_size;
 
-    info!(
-        logger,
-        "Skipping {} batches from entry {}", skip_batch, entry.id
-    );
+    tracing::info!("Skipping {} batches from entry {}", skip_batch, entry.id);
 
     let current_position = Arc::new(Mutex::new(latest_checkpoint as u64));
 
@@ -488,14 +479,13 @@ pub async fn process_bookmark_update_log_entry(
             cloned!(
                 ctx,
                 repo,
-                logger,
                 sender,
                 mut send_manager,
                 bookmark_name,
                 current_position
             );
             if skip_commits > 0 {
-                info!(logger, "Skipping {} commits within batch", skip_commits);
+                tracing::info!("Skipping {} commits within batch", skip_commits);
             }
             let skip = std::mem::replace(&mut skip_commits, 0);
 
@@ -525,8 +515,7 @@ pub async fn process_bookmark_update_log_entry(
                 *current_position.lock().await += existing_changesets as u64;
 
                 let entry_id = entry.id.0 as i64;
-                info!(
-                    logger,
+                tracing::info!(
                     "Starting sync of {} missing commits, {} were already synced",
                     missing_changesets.len(),
                     existing_changesets
@@ -623,7 +612,7 @@ pub async fn process_one_changeset(
     cs_id: &ChangesetId,
     ctx: &CoreContext,
     repo: Repo,
-    logger: Logger,
+    _logger: Logger,
     log_to_ods: bool,
     bookmark_name: &str,
 ) -> Result<Messages> {
@@ -653,7 +642,7 @@ pub async fn process_one_changeset(
         .collect();
 
     if cids.is_empty() && hg_cs.manifestid().as_bytes() == [0; SHA1_HASH_LENGTH_BYTES] {
-        info!(logger, "Changeset {} has no content", cs_id);
+        tracing::info!("Changeset {} has no content", cs_id);
     } else {
         process_one_changeset_contents(ctx, &mut messages, cs_info, &repo, &hg_cs, cids).await?;
     }
@@ -673,7 +662,7 @@ pub async fn process_one_changeset(
 
             Some(bookmark_commit_time - commit_time)
         } else {
-            info!(logger, "Bookmark {} not found", bookmark_name);
+            tracing::info!("Bookmark {} not found", bookmark_name);
             None
         };
 

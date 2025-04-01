@@ -11,7 +11,6 @@ use std::sync::Arc;
 use anyhow::Result;
 use clap::Parser;
 use mononoke_app::MononokeApp;
-use slog::info;
 
 use crate::commands::sync_loop::CHUNK_SIZE_DEFAULT;
 use crate::sync::get_unsharded_repo_args;
@@ -35,7 +34,7 @@ pub async fn run(app: MononokeApp, args: CommandArgs) -> Result<()> {
     let (source_repo_args, _, dest_repo_name) =
         get_unsharded_repo_args(app.clone(), app_args).await?;
 
-    info!(app.logger(), "Running sync-once loop");
+    tracing::info!("Running sync-once loop");
     crate::sync::sync(
         app,
         args.start_id.clone(),

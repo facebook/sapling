@@ -18,6 +18,7 @@ rust_binary(
         "fbsource//third-party/rust:clap",
         "fbsource//third-party/rust:futures",
         "fbsource//third-party/rust:tokio",
+        "fbsource//third-party/rust:tracing",
         "fbsource//third-party/rust:url",
         "fbsource//third-party/rust:uuid",
         "//common/rust/shed/borrowed:borrowed",
@@ -57,6 +58,5 @@ rust_binary(
         "//eden/scm/lib/minibytes:minibytes",
     ] + ([] if rust_oss.is_oss_build() else [
         "//fb303/thrift:fb303_core-rust-thriftclients",
-        "fbsource//third-party/rust:tracing",
     ])),
 )

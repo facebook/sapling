@@ -17,7 +17,6 @@ use executor_lib::RepoShardedProcessExecutor;
 use mononoke_app::args::SourceRepoArgs;
 use mononoke_app::MononokeApp;
 use sharding_ext::RepoShard;
-use slog::info;
 
 use crate::sync::ExecutionType;
 use crate::ModernSyncArgs;
@@ -51,8 +50,6 @@ impl ModernSyncProcess {
 #[async_trait]
 impl RepoShardedProcess for ModernSyncProcess {
     async fn setup(&self, repo: &RepoShard) -> anyhow::Result<Arc<dyn RepoShardedProcessExecutor>> {
-        let logger = self.app.logger().clone();
-
         let source_repo_name = repo.repo_name.clone();
         let target_repo_name = match repo.target_repo_name.clone() {
             Some(repo_name) => repo_name,
@@ -65,9 +62,10 @@ impl RepoShardedProcess for ModernSyncProcess {
             }
         };
 
-        info!(
-            logger,
-            "Setting up sharded sync from repo {} to repo {}", source_repo_name, target_repo_name,
+        tracing::info!(
+            "Setting up sharded sync from repo {} to repo {}",
+            source_repo_name,
+            target_repo_name,
         );
 
         let source_repo_args = SourceRepoArgs::with_name(source_repo_name.clone());
@@ -128,12 +126,12 @@ pub async fn run(app: MononokeApp, args: CommandArgs) -> Result<()> {
         true, // enable shard (repo) level healing
         SM_CLEANUP_TIMEOUT_SECS,
     )? {
-        info!(logger, "Running sharded sync loop");
+        tracing::info!("Running sharded sync loop");
         executor
             .block_and_execute(&logger, Arc::new(AtomicBool::new(false)))
             .await?;
     } else {
-        info!(logger, "Running unsharded sync loop");
+        tracing::info!("Running unsharded sync loop");
 
         let source_repo: Repo = process.app.clone().open_repo(&app_args.repo).await?;
         let source_repo_name = source_repo.repo_identity.name().to_string();
@@ -144,8 +142,7 @@ pub async fn run(app: MononokeApp, args: CommandArgs) -> Result<()> {
 
         let source_repo_args = SourceRepoArgs::with_name(source_repo_name.clone());
 
-        info!(
-            logger,
+        tracing::info!(
             "Setting up unsharded sync from repo {:?} to repo {:?}",
             source_repo_name,
             target_repo_name,

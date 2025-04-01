@@ -358,13 +358,15 @@ function mononoke_modern_sync {
     --repo-name "$ORIG_REPO" \
     --dest-repo-name "$DEST_REPO" \
     --bookmark "master_bookmark" \
-    --exit-file "\exit_file" \
+    --exit-file "exit_file" \
     --mononoke-config-path "$TESTTMP/mononoke-config" \
     --dest-socket $MONONOKE_SOCKET \
     --tls-ca "$TEST_CERTDIR/root-ca.crt" \
     --tls-private-key "$TEST_CERTDIR/localhost.key" \
     --tls-certificate "$TEST_CERTDIR/localhost.crt" \
     --scuba-log-file "$TESTTMP/modern_sync_scuba_logs" \
+    --tracing \
+    --tracing-test-format \
     ${FLAGS_ARG:+$FLAGS_ARG} \
     "$COMMAND" "$@"
 }

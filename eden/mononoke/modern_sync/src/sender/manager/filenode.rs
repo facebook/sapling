@@ -15,9 +15,6 @@ use context::CoreContext;
 use futures::channel::oneshot;
 use mercurial_types::HgFileNodeId;
 use mononoke_macros::mononoke;
-use slog::debug;
-use slog::error;
-use slog::info;
 use slog::Logger;
 use stats::define_stats;
 use stats::prelude::*;
@@ -57,7 +54,7 @@ impl FilenodeManager {
         batch_done_senders: &mut VecDeque<oneshot::Sender<Result<()>>>,
         encountered_error: &mut Option<anyhow::Error>,
         reponame: &str,
-        logger: &Logger,
+        _logger: &Logger,
     ) -> Result<(), anyhow::Error> {
         if !batch_filenodes.is_empty() || !batch_done_senders.is_empty() {
             let batch_size = batch_filenodes.len() as i64;
@@ -66,7 +63,7 @@ impl FilenodeManager {
                 while let Some(sender) = batch_done_senders.pop_front() {
                     let _ = sender.send(Err(anyhow::anyhow!(msg.clone())));
                 }
-                error!(logger, "Error processing filenodes: {:?}", e);
+                tracing::error!("Error processing filenodes: {:?}", e);
                 return Err(anyhow::anyhow!(msg.clone()));
             }
 
@@ -76,11 +73,10 @@ impl FilenodeManager {
                     .upload_filenodes(std::mem::take(batch_filenodes))
                     .await
                 {
-                    error!(logger, "Failed to upload filenodes: {:?}", e);
+                    tracing::error!("Failed to upload filenodes: {:?}", e);
                     return Err(e);
                 } else {
-                    info!(
-                        logger,
+                    tracing::info!(
                         "Uploaded {} filenodes in {}ms",
                         batch_size,
                         start.elapsed().as_millis(),
@@ -94,7 +90,7 @@ impl FilenodeManager {
                 let res = sender.send(Ok(()));
                 if let Err(e) = res {
                     let msg = format!("Error sending filenodes ready: {:?}", e);
-                    error!(logger, "{}", msg);
+                    tracing::error!("{}", msg);
                     return Err(anyhow::anyhow!(msg));
                 }
             }
@@ -123,7 +119,7 @@ impl Manager for FilenodeManager {
             while !cancellation_requested.load(Ordering::Relaxed) {
                 tokio::select! {
                     msg = filenodes_recv.recv() => {
-                        debug!(logger, "Filenodes channel capacity: {} max capacity: {} in queue: {}", filenodes_recv.capacity(), FILES_CHANNEL_SIZE,  filenodes_recv.len());
+                        tracing::debug!("Filenodes channel capacity: {} max capacity: {} in queue: {}", filenodes_recv.capacity(), FILES_CHANNEL_SIZE,  filenodes_recv.len());
                         STATS::files_queue_capacity.set_value(ctx.fb, filenodes_recv.capacity() as i64, (reponame.clone(),));
                         STATS::files_queue_len.add_value(filenodes_recv.len() as i64, (reponame.clone(),));
                         STATS::files_queue_max_capacity.set_value(ctx.fb, filenodes_recv.max_capacity() as i64, (reponame.clone(),));
@@ -152,14 +148,14 @@ impl Manager for FilenodeManager {
                         }
                         if batch_filenodes.len() >= MAX_FILENODES_BATCH_SIZE {
                             if let Err(e) = FilenodeManager::flush_filenodes(&filenodes_es, &mut batch_filenodes, &mut batch_done_senders, &mut encountered_error, &reponame, &logger).await {
-                                error!(logger, "Filenodes flush failed: {:?}", e);
+                                tracing::error!("Filenodes flush failed: {:?}", e);
                                 return;
                             }
                         }
                     }
                     _ = timer.tick() => {
                         if let Err(e) = FilenodeManager::flush_filenodes(&filenodes_es, &mut batch_filenodes, &mut batch_done_senders, &mut encountered_error, &reponame, &logger).await {
-                            error!(logger, "Filenodes flush failed: {:?}", e);
+                            tracing::error!("Filenodes flush failed: {:?}", e);
                             return;
                         }
                     }

@@ -56,23 +56,24 @@
   $ hg log > $TESTTMP/hglog.out
 
 Sync all bookmarks moves
-  $ with_stripped_logs mononoke_modern_sync "" sync-once orig dest --start-id 0 | grep -v "Uploaded"
-  Running sync-once loop
-  Connecting to https://localhost:$LOCAL_PORT/edenapi/
-  Established EdenAPI connection
-  Initialized channels
-  Calculating segments for entry 1, from changeset None to changeset ChangesetId(Blake2(53b034a90fe3002a707a7da9cdf6eac3dea460ad72f7c6969dfb88fd0e69f856)), to generation 1
-  Done calculating segments for entry 1, from changeset None to changeset ChangesetId(Blake2(53b034a90fe3002a707a7da9cdf6eac3dea460ad72f7c6969dfb88fd0e69f856)), to generation 1 in *ms (glob)
-  Resuming from latest entry checkpoint 0
-  Skipping 0 batches from entry 1
-  Starting sync of 1 missing commits, 0 were already synced
-  Calculating segments for entry 2, from changeset Some(ChangesetId(Blake2(53b034a90fe3002a707a7da9cdf6eac3dea460ad72f7c6969dfb88fd0e69f856))) to changeset ChangesetId(Blake2(5b1c7130dde8e54b4285b9153d8e56d69fbf4ae685eaf9e9766cc409861995f8)), approx 4 commit(s)
-  Done calculating segments for entry 2, from changeset Some(ChangesetId(Blake2(53b034a90fe3002a707a7da9cdf6eac3dea460ad72f7c6969dfb88fd0e69f856))) to changeset ChangesetId(Blake2(5b1c7130dde8e54b4285b9153d8e56d69fbf4ae685eaf9e9766cc409861995f8)), approx 4 commit(s) in *ms (glob)
-  Resuming from latest entry checkpoint 0
-  Skipping 0 batches from entry 2
-  Starting sync of 4 missing commits, 0 were already synced
-  Found error: Trees upload: Expected [1-9]+ responses, got 0, retrying attempt #0 (re)
-  Found error: Trees upload: Expected [1-9]+ responses, got 0, retrying attempt #1 (re)
-  Found error: Trees upload: Expected [1-9]+ responses, got 0, retrying attempt #2 (re)
-  Failed to upload trees: Trees upload: Expected [1-9]+ responses, got 0 (re)
-  Trees flush failed: Trees upload: Expected [1-9]+ responses, got 0 (re)
+  $ mononoke_modern_sync "" sync-once orig dest --start-id 0 2>&1 | grep -v "Uploaded"
+  [INFO] Running sync-once loop
+  [INFO] Connecting to https://localhost:$LOCAL_PORT/edenapi/
+  [INFO] Established EdenAPI connection
+  [INFO] Initialized channels
+  [INFO] mononoke_host="*" dogfooding=false (glob)
+  [INFO] Calculating segments for entry 1, from changeset None to changeset ChangesetId(Blake2(53b034a90fe3002a707a7da9cdf6eac3dea460ad72f7c6969dfb88fd0e69f856)), to generation 1
+  [INFO] Done calculating segments for entry 1, from changeset None to changeset ChangesetId(Blake2(53b034a90fe3002a707a7da9cdf6eac3dea460ad72f7c6969dfb88fd0e69f856)), to generation 1 in *ms (glob)
+  [INFO] Resuming from latest entry checkpoint 0
+  [INFO] Skipping 0 batches from entry 1
+  [INFO] Starting sync of 1 missing commits, 0 were already synced
+  [INFO] Calculating segments for entry 2, from changeset Some(ChangesetId(Blake2(53b034a90fe3002a707a7da9cdf6eac3dea460ad72f7c6969dfb88fd0e69f856))) to changeset ChangesetId(Blake2(5b1c7130dde8e54b4285b9153d8e56d69fbf4ae685eaf9e9766cc409861995f8)), approx 4 commit(s)
+  [INFO] Done calculating segments for entry 2, from changeset Some(ChangesetId(Blake2(53b034a90fe3002a707a7da9cdf6eac3dea460ad72f7c6969dfb88fd0e69f856))) to changeset ChangesetId(Blake2(5b1c7130dde8e54b4285b9153d8e56d69fbf4ae685eaf9e9766cc409861995f8)), approx 4 commit(s) in *ms (glob)
+  [INFO] Resuming from latest entry checkpoint 0
+  [INFO] Skipping 0 batches from entry 2
+  [INFO] Starting sync of 4 missing commits, 0 were already synced
+  .WARN. Found error: Trees upload: Expected [1-9]+ responses, got 0, retrying attempt #0 (re)
+  .WARN. Found error: Trees upload: Expected [1-9]+ responses, got 0, retrying attempt #1 (re)
+  .WARN. Found error: Trees upload: Expected [1-9]+ responses, got 0, retrying attempt #2 (re)
+  .ERROR. Failed to upload trees: Trees upload: Expected [1-9]+ responses, got 0 (re)
+  .ERROR. Trees flush failed: Trees upload: Expected [1-9]+ responses, got 0 (re)

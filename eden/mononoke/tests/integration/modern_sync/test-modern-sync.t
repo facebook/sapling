@@ -172,21 +172,22 @@ Sync all bookmarks moves
 // because, since we resume from latest bookmark, no commits are found given heads ends up being an ancestor of common.
 // Since we force-set master in the first entry, second entry does indeed find commits but subsequently skips them due to lookups.
 // Also there's only one bookmark moves instead of two due to the batching we use.
-  $ with_stripped_logs mononoke_modern_sync "" sync-once orig dest --start-id 0
-  Running sync-once loop
-  Connecting to https://localhost:$LOCAL_PORT/edenapi/
-  Established EdenAPI connection
-  Initialized channels
-  Calculating segments for entry 1, from changeset Some(ChangesetId(Blake2(5b1c7130dde8e54b4285b9153d8e56d69fbf4ae685eaf9e9766cc409861995f8))) to changeset ChangesetId(Blake2(53b034a90fe3002a707a7da9cdf6eac3dea460ad72f7c6969dfb88fd0e69f856)), moved back by approx 4 commit(s)
-  Done calculating segments for entry 1, from changeset Some(ChangesetId(Blake2(5b1c7130dde8e54b4285b9153d8e56d69fbf4ae685eaf9e9766cc409861995f8))) to changeset ChangesetId(Blake2(53b034a90fe3002a707a7da9cdf6eac3dea460ad72f7c6969dfb88fd0e69f856)), moved back by approx 4 commit(s) in *ms (glob)
-  Resuming from latest entry checkpoint 0
-  Skipping 0 batches from entry 1
-  Calculating segments for entry 2, from changeset Some(ChangesetId(Blake2(53b034a90fe3002a707a7da9cdf6eac3dea460ad72f7c6969dfb88fd0e69f856))) to changeset ChangesetId(Blake2(5b1c7130dde8e54b4285b9153d8e56d69fbf4ae685eaf9e9766cc409861995f8)), approx 4 commit(s)
-  Done calculating segments for entry 2, from changeset Some(ChangesetId(Blake2(53b034a90fe3002a707a7da9cdf6eac3dea460ad72f7c6969dfb88fd0e69f856))) to changeset ChangesetId(Blake2(5b1c7130dde8e54b4285b9153d8e56d69fbf4ae685eaf9e9766cc409861995f8)), approx 4 commit(s) in *ms (glob)
-  Resuming from latest entry checkpoint 0
-  Skipping 0 batches from entry 2
-  Starting sync of 0 missing commits, 4 were already synced
-  Setting checkpoint from entry 2 to 0
-  Setting bookmark master_bookmark from None to Some(HgChangesetId(HgNodeHash(Sha1(8c3947e5d8bd4fe70259eca001b8885651c75850))))
-  Moved bookmark with result SetBookmarkResponse { data: Ok(()) }
-  Marking entry 2 as done
+  $ mononoke_modern_sync "" sync-once orig dest --start-id 0
+  [INFO] Running sync-once loop
+  [INFO] Connecting to https://localhost:$LOCAL_PORT/edenapi/
+  [INFO] Established EdenAPI connection
+  [INFO] Initialized channels
+  [INFO] mononoke_host="*" dogfooding=false (glob)
+  [INFO] Calculating segments for entry 1, from changeset Some(ChangesetId(Blake2(5b1c7130dde8e54b4285b9153d8e56d69fbf4ae685eaf9e9766cc409861995f8))) to changeset ChangesetId(Blake2(53b034a90fe3002a707a7da9cdf6eac3dea460ad72f7c6969dfb88fd0e69f856)), moved back by approx 4 commit(s)
+  [INFO] Done calculating segments for entry 1, from changeset Some(ChangesetId(Blake2(5b1c7130dde8e54b4285b9153d8e56d69fbf4ae685eaf9e9766cc409861995f8))) to changeset ChangesetId(Blake2(53b034a90fe3002a707a7da9cdf6eac3dea460ad72f7c6969dfb88fd0e69f856)), moved back by approx 4 commit(s) in *ms (glob)
+  [INFO] Resuming from latest entry checkpoint 0
+  [INFO] Skipping 0 batches from entry 1
+  [INFO] Calculating segments for entry 2, from changeset Some(ChangesetId(Blake2(53b034a90fe3002a707a7da9cdf6eac3dea460ad72f7c6969dfb88fd0e69f856))) to changeset ChangesetId(Blake2(5b1c7130dde8e54b4285b9153d8e56d69fbf4ae685eaf9e9766cc409861995f8)), approx 4 commit(s)
+  [INFO] Done calculating segments for entry 2, from changeset Some(ChangesetId(Blake2(53b034a90fe3002a707a7da9cdf6eac3dea460ad72f7c6969dfb88fd0e69f856))) to changeset ChangesetId(Blake2(5b1c7130dde8e54b4285b9153d8e56d69fbf4ae685eaf9e9766cc409861995f8)), approx 4 commit(s) in *ms (glob)
+  [INFO] Resuming from latest entry checkpoint 0
+  [INFO] Skipping 0 batches from entry 2
+  [INFO] Starting sync of 0 missing commits, 4 were already synced
+  [INFO] Setting checkpoint from entry 2 to 0
+  [INFO] Setting bookmark master_bookmark from None to Some(HgChangesetId(HgNodeHash(Sha1(8c3947e5d8bd4fe70259eca001b8885651c75850))))
+  [INFO] Moved bookmark with result SetBookmarkResponse { data: Ok(()) }
+  [INFO] Marking entry 2 as done

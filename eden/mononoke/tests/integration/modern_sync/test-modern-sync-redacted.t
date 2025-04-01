@@ -80,17 +80,18 @@ The files should now be marked as redacted
   T0                  : C
 
 Sync all bookmarks moves
-  $ with_stripped_logs mononoke_modern_sync "" sync-once orig dest --start-id 0 | grep -v "Uploaded"
-  Running sync-once loop
-  Connecting to https://localhost:$LOCAL_PORT/edenapi/
-  Established EdenAPI connection
-  Initialized channels
-  Calculating segments for entry 1, from changeset None to changeset ChangesetId(Blake2(e32a1e342cdb1e38e88466b4c1a01ae9f410024017aa21dc0a1c5da6b3963bf2)), to generation 3
-  Done calculating segments for entry 1, from changeset None to changeset ChangesetId(Blake2(e32a1e342cdb1e38e88466b4c1a01ae9f410024017aa21dc0a1c5da6b3963bf2)), to generation 3 in *ms (glob)
-  Resuming from latest entry checkpoint 0
-  Skipping 0 batches from entry 1
-  Starting sync of 3 missing commits, 0 were already synced
-  Setting checkpoint from entry 1 to 0
-  Setting bookmark master_bookmark from None to Some(HgChangesetId(HgNodeHash(Sha1(d3b399ca8757acdb81c3681b052eb978db6768d8))))
-  Moved bookmark with result SetBookmarkResponse { data: Ok(()) }
-  Marking entry 1 as done
+  $ mononoke_modern_sync "" sync-once orig dest --start-id 0 2>&1 | grep -v "Uploaded"
+  [INFO] Running sync-once loop
+  [INFO] Connecting to https://localhost:$LOCAL_PORT/edenapi/
+  [INFO] Established EdenAPI connection
+  [INFO] Initialized channels
+  [INFO] mononoke_host="*" dogfooding=false (glob)
+  [INFO] Calculating segments for entry 1, from changeset None to changeset ChangesetId(Blake2(e32a1e342cdb1e38e88466b4c1a01ae9f410024017aa21dc0a1c5da6b3963bf2)), to generation 3
+  [INFO] Done calculating segments for entry 1, from changeset None to changeset ChangesetId(Blake2(e32a1e342cdb1e38e88466b4c1a01ae9f410024017aa21dc0a1c5da6b3963bf2)), to generation 3 in *ms (glob)
+  [INFO] Resuming from latest entry checkpoint 0
+  [INFO] Skipping 0 batches from entry 1
+  [INFO] Starting sync of 3 missing commits, 0 were already synced
+  [INFO] Setting checkpoint from entry 1 to 0
+  [INFO] Setting bookmark master_bookmark from None to Some(HgChangesetId(HgNodeHash(Sha1(d3b399ca8757acdb81c3681b052eb978db6768d8))))
+  [INFO] Moved bookmark with result SetBookmarkResponse { data: Ok(()) }
+  [INFO] Marking entry 1 as done

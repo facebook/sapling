@@ -17,10 +17,6 @@ use mercurial_types::blobs::HgBlobChangeset;
 use mononoke_macros::mononoke;
 use mononoke_types::BonsaiChangeset;
 use mutable_counters::MutableCounters;
-use slog::debug;
-use slog::error;
-use slog::info;
-use slog::warn;
 use slog::Logger;
 use stats::define_stats;
 use stats::prelude::*;
@@ -76,7 +72,7 @@ impl ChangesetManager {
         latest_entry_id: &mut Option<i64>,
         latest_bookmark: &mut Option<BookmarkInfo>,
         pending_notification: &mut Option<oneshot::Sender<Result<()>>>,
-        logger: &Logger,
+        _logger: &Logger,
     ) -> Result<(), anyhow::Error> {
         if !current_batch.is_empty() {
             let start = std::time::Instant::now();
@@ -85,10 +81,7 @@ impl ChangesetManager {
                 .upload_identical_changeset(std::mem::take(current_batch))
                 .await
             {
-                error!(
-                    logger,
-                    "Failed to upload changesets {:?} {:?}", current_batch, e
-                );
+                tracing::error!("Failed to upload changesets {:?} {:?}", current_batch, e);
                 return Err(e);
             } else {
                 let elapsed = start.elapsed().as_secs() / batch_size as u64;
@@ -102,10 +95,7 @@ impl ChangesetManager {
         }
 
         if let Some((position, id)) = latest_checkpoint.take() {
-            info!(
-                logger,
-                "Setting checkpoint from entry {} to {}", id, position
-            );
+            tracing::info!("Setting checkpoint from entry {} to {}", id, position);
 
             let res_entry = mc
                 .set_counter(ctx, MODERN_SYNC_CURRENT_ENTRY_ID, id, None)
@@ -121,17 +111,20 @@ impl ChangesetManager {
                 .await?;
 
             if !(res_checkpoint && res_entry) {
-                warn!(
-                    logger,
-                    "Failed to checkpoint entry {} at position {:?}", id, position
+                tracing::warn!(
+                    "Failed to checkpoint entry {} at position {:?}",
+                    id,
+                    position
                 );
             }
         }
 
         if let Some(info) = latest_bookmark.take() {
-            info!(
-                logger,
-                "Setting bookmark {} from {:?} to {:?}", info.name, info.from_cs_id, info.to_cs_id
+            tracing::info!(
+                "Setting bookmark {} from {:?} to {:?}",
+                info.name,
+                info.from_cs_id,
+                info.to_cs_id
             );
             changeset_es
                 .set_bookmark(info.name, info.from_cs_id, info.to_cs_id)
@@ -139,13 +132,13 @@ impl ChangesetManager {
         }
 
         if let Some(id) = latest_entry_id.take() {
-            info!(logger, "Marking entry {} as done", id);
+            tracing::info!("Marking entry {} as done", id);
             let res = mc
                 .set_counter(ctx, MODERN_SYNC_COUNTER_NAME, id, None)
                 .await?;
 
             if !res {
-                warn!(logger, "Failed to mark entry {} as synced", id);
+                tracing::warn!("Failed to mark entry {} as synced", id);
             }
         }
 
@@ -187,8 +180,7 @@ impl Manager for ChangesetManager {
 
                     msg = changeset_recv.recv() => {
 
-                        debug!(
-                            logger,
+                        tracing::debug!(
                             "Changeset channel capacity: {} max capacity: {} in queue: {}",
                             changeset_recv.capacity(),
                             CHANGESET_CHANNEL_SIZE,
@@ -207,8 +199,7 @@ impl Manager for ChangesetManager {
                                 match tokio::try_join!(files_receiver, trees_receiver) {
                                     Ok((res_files, res_trees)) => {
                                         if res_files.is_err() || res_trees.is_err() {
-                                            error!(
-                                                logger,
+                                            tracing::error!(
                                                 "Error processing files/trees: {:?} {:?}",
                                                 res_files,
                                                 res_trees

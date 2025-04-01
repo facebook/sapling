@@ -24,7 +24,6 @@ use metadata::Metadata;
 use mononoke_app::args::MonitoringArgs;
 use mononoke_app::MononokeApp;
 use mutable_counters::MutableCounters;
-use slog::info;
 
 #[cfg(fbcode_build)]
 mod stats;
@@ -116,7 +115,6 @@ pub async fn run(app: MononokeApp, args: CommandArgs) -> Result<()> {
     let (source_repo_args, source_repo_name, dest_repo_name) =
         get_unsharded_repo_args(app.clone(), app_args).await?;
     let ctx = new_context(&app);
-    let logger = app.logger().clone();
 
     let benchmark_mode = args.mode;
     let mc = MemoryMutableCounters::new();
@@ -167,19 +165,18 @@ pub async fn run(app: MononokeApp, args: CommandArgs) -> Result<()> {
     #[cfg(fbcode_build)]
     stats.finish().await;
 
-    info!(
-        logger,
+    tracing::info!(
         "Benchmark: Sync {} to {:?} took {}ms",
         elapsed.as_millis(),
         &source_repo_name,
         dest_repo_name,
     );
 
-    info!(logger, "Counters:");
+    tracing::info!("Counters:");
     let mut counters = mc.get_all_counters(&ctx).await?;
     counters.sort_by(|a, b| a.0.cmp(&b.0));
     for (k, v) in counters {
-        info!(logger, "{}={}", k, v);
+        tracing::info!("{}={}", k, v);
     }
 
     Ok(())

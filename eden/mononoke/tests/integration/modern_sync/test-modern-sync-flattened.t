@@ -63,21 +63,22 @@
   $ hg log > $TESTTMP/hglog.out
 
 Sync all bookmarks moves
-  $ with_stripped_logs mononoke_modern_sync --flatten-bul sync-once orig dest  --start-id 0 |  grep -v "Upload"
-  Running sync-once loop
-  Connecting to https://localhost:$LOCAL_PORT/edenapi/
-  Established EdenAPI connection
-  Initialized channels
-  Grouped 2 entries into 1 macro-entries
-  Calculating segments for entry 2, from changeset None to changeset ChangesetId(Blake2(5b1c7130dde8e54b4285b9153d8e56d69fbf4ae685eaf9e9766cc409861995f8)), to generation 5
-  Done calculating segments for entry 2, from changeset None to changeset ChangesetId(Blake2(5b1c7130dde8e54b4285b9153d8e56d69fbf4ae685eaf9e9766cc409861995f8)), to generation 5 in *ms (glob)
-  Resuming from latest entry checkpoint 0
-  Skipping 0 batches from entry 2
-  Starting sync of 5 missing commits, 0 were already synced
-  Setting checkpoint from entry 2 to 0
-  Setting bookmark master_bookmark from None to Some(HgChangesetId(HgNodeHash(Sha1(8c3947e5d8bd4fe70259eca001b8885651c75850))))
-  Moved bookmark with result SetBookmarkResponse { data: Ok(()) }
-  Marking entry 2 as done
+  $ mononoke_modern_sync --flatten-bul sync-once orig dest  --start-id 0 2>&1 | grep -v "Upload"
+  [INFO] Running sync-once loop
+  [INFO] Connecting to https://localhost:$LOCAL_PORT/edenapi/
+  [INFO] Established EdenAPI connection
+  [INFO] Initialized channels
+  [INFO] Grouped 2 entries into 1 macro-entries
+  [INFO] mononoke_host="*" dogfooding=false (glob)
+  [INFO] Calculating segments for entry 2, from changeset None to changeset ChangesetId(Blake2(5b1c7130dde8e54b4285b9153d8e56d69fbf4ae685eaf9e9766cc409861995f8)), to generation 5
+  [INFO] Done calculating segments for entry 2, from changeset None to changeset ChangesetId(Blake2(5b1c7130dde8e54b4285b9153d8e56d69fbf4ae685eaf9e9766cc409861995f8)), to generation 5 in *ms (glob)
+  [INFO] Resuming from latest entry checkpoint 0
+  [INFO] Skipping 0 batches from entry 2
+  [INFO] Starting sync of 5 missing commits, 0 were already synced
+  [INFO] Setting checkpoint from entry 2 to 0
+  [INFO] Setting bookmark master_bookmark from None to Some(HgChangesetId(HgNodeHash(Sha1(8c3947e5d8bd4fe70259eca001b8885651c75850))))
+  [INFO] Moved bookmark with result SetBookmarkResponse { data: Ok(()) }
+  [INFO] Marking entry 2 as done
 
 
   $ mononoke_admin mutable-counters --repo-name orig get modern_sync

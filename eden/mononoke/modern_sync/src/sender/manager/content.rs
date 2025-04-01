@@ -25,9 +25,6 @@ use futures::TryStreamExt;
 use mononoke_macros::mononoke;
 use mononoke_types::ContentId;
 use repo_blobstore::RepoBlobstore;
-use slog::debug;
-use slog::error;
-use slog::info;
 use slog::Logger;
 use stats::define_stats;
 use stats::prelude::*;
@@ -78,7 +75,7 @@ impl ContentManager {
         current_batch_size: u64,
         pending_messages: &mut VecDeque<oneshot::Sender<Result<(), anyhow::Error>>>,
         reponame: String,
-        logger: &Logger,
+        _logger: &Logger,
     ) -> Result<(), anyhow::Error> {
         let current_batch_len = current_batch.len();
         let start = std::time::Instant::now();
@@ -106,11 +103,10 @@ impl ContentManager {
                 .await?;
 
             if let Err(e) = content_es.upload_contents(full_items).await {
-                error!(logger, "Error processing content: {:?}", e);
+                tracing::error!("Error processing content: {:?}", e);
                 return Err(e);
             } else {
-                info!(
-                    logger,
+                tracing::info!(
                     "Uploaded {} contents with size {} in {}ms",
                     current_batch_len,
                     ByteSize::b(current_batch_size).to_string(),
@@ -153,7 +149,7 @@ impl Manager for ContentManager {
             while !cancellation_requested.load(Ordering::Relaxed) {
                 tokio::select! {
                     msg = content_recv.recv() => {
-                        debug!(logger, "Content channel capacity: {} max capacity: {} in queue: {}", content_recv.capacity(), CONTENT_CHANNEL_SIZE,  content_recv.len());
+                        tracing::debug!("Content channel capacity: {} max capacity: {} in queue: {}", content_recv.capacity(), CONTENT_CHANNEL_SIZE,  content_recv.len());
                         STATS::contents_queue_capacity.set_value(ctx.fb, content_recv.capacity() as i64, (reponame.clone(),));
                         STATS::contents_queue_len.add_value(content_recv.len() as i64, (reponame.clone(),));
                         STATS::contents_queue_max_capacity.set_value(ctx.fb, content_recv.max_capacity() as i64, (reponame.clone(),));
@@ -180,7 +176,7 @@ impl Manager for ContentManager {
                                 reponame.clone(),
                                 &logger,
                             ).await {
-                                error!(logger, "Error processing content: {:?}", e);
+                                tracing::error!("Error processing content: {:?}", e);
                                 return;
                             }
                             current_batch_size = 0;
@@ -198,7 +194,7 @@ impl Manager for ContentManager {
                                 reponame.clone(),
                                 &logger,
                             ).await {
-                                error!(logger, "Error processing content: {:?}", e);
+                                tracing::error!("Error processing content: {:?}", e);
                                 return;
                             }
                             current_batch_size = 0;

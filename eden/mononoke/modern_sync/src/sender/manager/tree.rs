@@ -15,9 +15,6 @@ use context::CoreContext;
 use futures::channel::oneshot;
 use mercurial_types::HgManifestId;
 use mononoke_macros::mononoke;
-use slog::debug;
-use slog::error;
-use slog::info;
 use slog::Logger;
 use stats::define_stats;
 use stats::prelude::*;
@@ -57,7 +54,7 @@ impl TreeManager {
         batch_done_senders: &mut VecDeque<oneshot::Sender<Result<()>>>,
         encountered_error: &mut Option<anyhow::Error>,
         reponame: &str,
-        logger: &Logger,
+        _logger: &Logger,
     ) -> Result<(), anyhow::Error> {
         if !batch_trees.is_empty() || !batch_done_senders.is_empty() {
             let batch_size = batch_trees.len() as i64;
@@ -66,18 +63,17 @@ impl TreeManager {
                 while let Some(sender) = batch_done_senders.pop_front() {
                     let _ = sender.send(Err(anyhow::anyhow!(msg.clone())));
                 }
-                error!(logger, "Error processing files/trees: {:?}", e);
+                tracing::error!("Error processing files/trees: {:?}", e);
                 return Err(anyhow::anyhow!(msg.clone()));
             }
 
             if !batch_trees.is_empty() {
                 let start = std::time::Instant::now();
                 if let Err(e) = trees_es.upload_trees(std::mem::take(batch_trees)).await {
-                    error!(logger, "Failed to upload trees: {:?}", e);
+                    tracing::error!("Failed to upload trees: {:?}", e);
                     return Err(e);
                 } else {
-                    info!(
-                        logger,
+                    tracing::info!(
                         "Uploaded {} trees in {}ms",
                         batch_size,
                         start.elapsed().as_millis(),
@@ -90,7 +86,7 @@ impl TreeManager {
                 let res = sender.send(Ok(()));
                 if let Err(e) = res {
                     let msg = format!("Error sending content ready: {:?}", e);
-                    error!(logger, "{}", msg);
+                    tracing::error!("{}", msg);
                     return Err(anyhow::anyhow!(msg));
                 }
             }
@@ -119,7 +115,7 @@ impl Manager for TreeManager {
             while !cancellation_requested.load(Ordering::Relaxed) {
                 tokio::select! {
                     msg = trees_recv.recv() => {
-                        debug!(logger, "Trees channel capacity: {} max capacity: {} in queue: {}", trees_recv.capacity(), TREES_CHANNEL_SIZE,  trees_recv.len());
+                        tracing::debug!("Trees channel capacity: {} max capacity: {} in queue: {}", trees_recv.capacity(), TREES_CHANNEL_SIZE,  trees_recv.len());
                         STATS::trees_queue_capacity.set_value(ctx.fb, trees_recv.capacity() as i64, (reponame.clone(),));
                         STATS::trees_queue_len.add_value(trees_recv.len() as i64, (reponame.clone(),));
                         STATS::trees_queue_max_capacity.set_value(ctx.fb, trees_recv.max_capacity() as i64, (reponame.clone(),));
@@ -155,14 +151,14 @@ impl Manager for TreeManager {
                         }
                         if batch_trees.len() >= MAX_TREES_BATCH_SIZE {
                             if let Err(e) = TreeManager::flush_trees(&trees_es, &mut batch_trees, &mut batch_done_senders, &mut encountered_error, &reponame, &logger).await {
-                                error!(logger, "Trees flush failed: {:?}", e);
+                                tracing::error!("Trees flush failed: {:?}", e);
                                 return;
                             }
                         }
                     }
                     _ = timer.tick() => {
                         if let Err(e) = TreeManager::flush_trees(&trees_es, &mut batch_trees, &mut batch_done_senders, &mut encountered_error, &reponame, &logger).await {
-                            error!(logger, "Trees flush failed: {:?}", e);
+                            tracing::error!("Trees flush failed: {:?}", e);
                             return;
                         }
                     }

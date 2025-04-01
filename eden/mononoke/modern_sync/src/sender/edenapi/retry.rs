@@ -20,7 +20,6 @@ use mercurial_types::HgManifestId;
 use minibytes::Bytes;
 use mononoke_types::BonsaiChangeset;
 use mononoke_types::ChangesetId;
-use slog::warn;
 use slog::Logger;
 
 use crate::sender::edenapi::EdenapiSender;
@@ -94,7 +93,7 @@ impl EdenapiSender for RetryEdenapiSender {
 
 async fn with_retry<'t, T>(
     max_retry_count: usize,
-    logger: &Logger,
+    _logger: &Logger,
     func: impl Fn() -> BoxFuture<'t, Result<T>>,
 ) -> Result<T> {
     let mut attempt = 0usize;
@@ -106,10 +105,7 @@ async fn with_retry<'t, T>(
         match result {
             Ok(result) => return Ok(result),
             Err(e) => {
-                warn!(
-                    logger,
-                    "Found error: {:?}, retrying attempt #{}", e, attempt
-                );
+                tracing::warn!("Found error: {:?}, retrying attempt #{}", e, attempt);
                 tokio::time::sleep(Duration::from_secs(attempt as u64 + 1)).await;
             }
         }
