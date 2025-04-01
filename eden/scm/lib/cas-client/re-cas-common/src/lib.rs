@@ -166,8 +166,7 @@ macro_rules! re_client {
                         #[cfg(target_os = "linux")]
                         let (data, stats) = {
                             let response = self.client()?
-                                .low_level_download_inline(self.metadata.clone(), digests.iter().map(to_re_digest).collect())
-                                .await;
+                                .low_level_download_inline(self.metadata.clone(), digests.iter().map(to_re_digest).collect());
                             if let Err(ref err) = response {
                                 if (err.code == TCode::NOT_FOUND) {
                                     $crate::tracing::warn!(target: "cas", "digest not found and can not be fetched: {:?}", digests);
@@ -270,7 +269,7 @@ macro_rules! re_client {
                     #[cfg(target_os = "linux")]
                     let response = self.client()?
                         .download_digests_into_cache(self.metadata.clone(), digests.into_iter().map(to_re_digest).collect())
-                        .await.map_err(|err| {
+                        .map_err(|err| {
                             // Unfortunately, the "download_digests_into_cache" failed entirely, record a failure.
                             let _failure_error = self.cas_success_tracker.record_failure();
                             err
