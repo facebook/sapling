@@ -77,6 +77,5 @@ python_binary(
     main_function = "eden.fs.facebook.fix-windows-eden.main_2",
     deps = [
         "fbsource//third-party/pypi/colorama:colorama",
-        "fbsource//third-party/pypi/pip:pip",
     ],
 )
