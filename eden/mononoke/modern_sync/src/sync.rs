@@ -116,6 +116,7 @@ pub async fn sync(
         >,
     >,
     mc: Option<Arc<dyn MutableCounters + Send + Sync>>,
+    cancellation_requested: Arc<AtomicBool>,
 ) -> Result<()> {
     let repo: Repo = app.open_repo_unredacted(&source_repo_arg).await?;
     let _repo_id = repo.repo_identity().id();
@@ -198,7 +199,6 @@ pub async fn sync(
 
     tracing::info!("Established EdenAPI connection");
 
-    let cancellation_requested = Arc::new(AtomicBool::new(false));
     let send_manager = SendManager::new(
         ctx.clone(),
         repo_blobstore.clone(),

@@ -6,6 +6,7 @@
  */
 
 use std::path::PathBuf;
+use std::sync::atomic::AtomicBool;
 use std::sync::Arc;
 
 use anyhow::Result;
@@ -35,6 +36,7 @@ pub async fn run(app: MononokeApp, args: CommandArgs) -> Result<()> {
         get_unsharded_repo_args(app.clone(), app_args).await?;
 
     tracing::info!("Running sync-once loop");
+    let cancellation_requested = Arc::new(AtomicBool::new(false));
     crate::sync::sync(
         app,
         args.start_id.clone(),
@@ -46,6 +48,7 @@ pub async fn run(app: MononokeApp, args: CommandArgs) -> Result<()> {
         PathBuf::from(""),
         None,
         None,
+        cancellation_requested,
     )
     .await?;
 

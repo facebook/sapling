@@ -89,6 +89,7 @@ pub struct ModernSyncProcessExecutor {
 #[async_trait]
 impl RepoShardedProcessExecutor for ModernSyncProcessExecutor {
     async fn execute(&self) -> Result<()> {
+        let cancellation_requested = Arc::new(AtomicBool::new(false));
         crate::sync::sync(
             self.app.clone(),
             self.sync_args.start_id,
@@ -100,6 +101,7 @@ impl RepoShardedProcessExecutor for ModernSyncProcessExecutor {
             self.app.args::<ModernSyncArgs>()?.exit_file.clone(),
             None,
             None,
+            cancellation_requested,
         )
         .await?;
         Ok(())
@@ -148,6 +150,7 @@ pub async fn run(app: MononokeApp, args: CommandArgs) -> Result<()> {
             target_repo_name,
         );
 
+        let cancellation_requested = Arc::new(AtomicBool::new(false));
         crate::sync::sync(
             process.app.clone(),
             process.sync_args.start_id.clone(),
@@ -163,6 +166,7 @@ pub async fn run(app: MononokeApp, args: CommandArgs) -> Result<()> {
             exit_file.clone(),
             None,
             None,
+            cancellation_requested,
         )
         .await?;
     }

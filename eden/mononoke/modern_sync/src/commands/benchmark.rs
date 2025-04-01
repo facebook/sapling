@@ -7,6 +7,7 @@
 
 use std::collections::HashMap;
 use std::path::PathBuf;
+use std::sync::atomic::AtomicBool;
 use std::sync::Arc;
 #[cfg(fbcode_build)]
 use std::time::Duration;
@@ -138,6 +139,7 @@ pub async fn run(app: MononokeApp, args: CommandArgs) -> Result<()> {
     };
 
     let now = std::time::Instant::now();
+    let cancellation_requested = Arc::new(AtomicBool::new(false));
     crate::sync::sync(
         app,
         Some(0),
@@ -158,6 +160,7 @@ pub async fn run(app: MononokeApp, args: CommandArgs) -> Result<()> {
             sender
         })),
         Some(Arc::new(mc.clone())),
+        cancellation_requested,
     )
     .await?;
     let elapsed = now.elapsed();
