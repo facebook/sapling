@@ -50,6 +50,9 @@ enum BenchmarkMode {
 /// Replays bookmark's moves
 #[derive(Parser)]
 pub struct CommandArgs {
+    #[clap(long, help = "The name of the benchmark, used for logging and stats")]
+    name: Option<String>,
+
     #[clap(long, default_value_t, value_enum)]
     mode: BenchmarkMode,
 
@@ -135,6 +138,7 @@ pub async fn run(app: MononokeApp, args: CommandArgs) -> Result<()> {
         let stats = Arc::new(
             stats::StatsBuilder::new(
                 app.fb.clone(),
+                args.name.clone(),
                 source_repo_name.clone(),
                 port,
                 stat_interval,

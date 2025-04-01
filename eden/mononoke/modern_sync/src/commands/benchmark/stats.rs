@@ -27,15 +27,23 @@ const RECV_TIMEOUT_MS: u32 = 1_000;
 
 pub(crate) struct StatsBuilder {
     fb: FacebookInit,
+    name: Option<String>,
     repo: String,
     fb303_port: u16,
     interval: Duration,
 }
 
 impl StatsBuilder {
-    pub(crate) fn new(fb: FacebookInit, repo: String, fb303_port: u16, interval: Duration) -> Self {
+    pub(crate) fn new(
+        fb: FacebookInit,
+        name: Option<String>,
+        repo: String,
+        fb303_port: u16,
+        interval: Duration,
+    ) -> Self {
         Self {
             fb,
+            name,
             repo,
             fb303_port,
             interval,
@@ -45,12 +53,21 @@ impl StatsBuilder {
     pub(crate) async fn build(&self) -> Result<Stats> {
         let fb303 = get_fb303_client(self.fb, self.fb303_port)?;
 
+        let filename = {
+            let pid = format!("{}", std::process::id());
+            let benchmark = if let Some(name) = &self.name {
+                format!("benchmark-{}", name)
+            } else {
+                "benchmark".to_string()
+            };
+            format!(
+                "/tmp/{}",
+                ["modern_sync", &benchmark, &pid, "csv"].join(".")
+            )
+        };
+
         let writer = {
-            let pid = std::process::id();
-            let stats_writer = Arc::new(File::create(format!(
-                "/tmp/mononoke_modern_sync_stats.{}.csv",
-                pid
-            ))?);
+            let stats_writer = Arc::new(File::create(filename)?);
             write_csv_header(&stats_writer).await?;
             stats_writer
         };
