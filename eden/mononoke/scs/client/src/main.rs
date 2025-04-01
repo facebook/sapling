@@ -117,9 +117,7 @@ async fn main_impl(fb: FacebookInit) -> anyhow::Result<()> {
     let target = if common_args.json {
         OutputTarget::Json
     } else if stdout().is_terminal() {
-        OutputTarget::Tty(render::TtyDest::Stdout)
-    } else if stderr().is_terminal() {
-        OutputTarget::Tty(render::TtyDest::Stderr)
+        OutputTarget::Tty
     } else {
         OutputTarget::Pipe
     };

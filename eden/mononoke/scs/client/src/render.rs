@@ -39,15 +39,9 @@ pub(crate) trait Render: Send {
 
 #[derive(Copy, Clone, Debug)]
 pub(crate) enum OutputTarget {
-    Tty(TtyDest),
+    Tty,
     Pipe,
     Json,
-}
-
-#[derive(Copy, Clone, Debug)]
-pub(crate) enum TtyDest {
-    Stdout,
-    Stderr,
 }
 
 impl OutputTarget {
@@ -58,21 +52,17 @@ impl OutputTarget {
         objs: impl Stream<Item = Result<R>>,
     ) -> Result<()> {
         objs.try_for_each(move |output| async move {
+            let mut stdout = std::io::stdout();
             match self {
-                OutputTarget::Tty(tty_dest) => {
-                    let to: &mut dyn Write = match tty_dest {
-                        TtyDest::Stdout => &mut std::io::stdout(),
-                        TtyDest::Stderr => &mut std::io::stderr(),
-                    };
-                    output.render_tty(matches, to)?;
+                OutputTarget::Tty => {
+                    output.render_tty(matches, &mut stdout)?;
                 }
                 OutputTarget::Pipe => {
-                    output.render(matches, &mut std::io::stdout())?;
+                    output.render(matches, &mut stdout)?;
                 }
                 OutputTarget::Json => {
-                    let mut to = std::io::stdout();
-                    output.render_json(matches, &mut to)?;
-                    writeln!(&mut to)?;
+                    output.render_json(matches, &mut stdout)?;
+                    writeln!(&mut stdout)?;
                 }
             }
             Ok(())
