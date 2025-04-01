@@ -630,6 +630,16 @@ if interactiveui is not None:
                         "pager.interface=fullscreen",
                     ]
                 )
+            if key == self.KEY_SHIFT_H:
+                bindings.commands.run(
+                    util.hgcmd()
+                    + [
+                        "hide",
+                        self.revdag[self.dag_index][2].hex(),
+                    ]
+                )
+                # I couldn't figure out how to make the graph refresh so will just end
+                self.finish()
 
 
 def _smartlog(ui, repo, *pats, **opts):

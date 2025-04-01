@@ -111,6 +111,7 @@ class viewframe:
     KEY_Q = b"q"
     KEY_R = b"r"
     KEY_S = b"s"
+    KEY_SHIFT_H = b"H"
     KEY_RETURN = b"\r"
     KEY_UP = b"\x1b[A"
     KEY_DOWN = b"\x1b[B"
