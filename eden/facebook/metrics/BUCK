@@ -4,7 +4,7 @@ load("//bento:buck_macros.bzl", "bento_test_kernel")
 oncall("source_control")
 
 python_library(
-    name = "usc",
+    name = "lib",
     srcs = [
         "gk.py",
         "usc.py",
