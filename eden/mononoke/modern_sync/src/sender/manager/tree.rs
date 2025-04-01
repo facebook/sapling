@@ -15,7 +15,6 @@ use context::CoreContext;
 use futures::channel::oneshot;
 use mercurial_types::HgManifestId;
 use mononoke_macros::mononoke;
-use slog::Logger;
 use stats::define_stats;
 use stats::prelude::*;
 use tokio::sync::mpsc;
@@ -54,7 +53,6 @@ impl TreeManager {
         batch_done_senders: &mut VecDeque<oneshot::Sender<Result<()>>>,
         encountered_error: &mut Option<anyhow::Error>,
         reponame: &str,
-        _logger: &Logger,
     ) -> Result<(), anyhow::Error> {
         if !batch_trees.is_empty() || !batch_done_senders.is_empty() {
             let batch_size = batch_trees.len() as i64;
@@ -101,7 +99,6 @@ impl Manager for TreeManager {
         ctx: CoreContext,
         reponame: String,
         trees_es: Arc<dyn EdenapiSender + Send + Sync>,
-        logger: Logger,
         cancellation_requested: Arc<AtomicBool>,
     ) {
         mononoke::spawn_task(async move {
@@ -150,14 +147,14 @@ impl Manager for TreeManager {
                             None => break,
                         }
                         if batch_trees.len() >= MAX_TREES_BATCH_SIZE {
-                            if let Err(e) = TreeManager::flush_trees(&trees_es, &mut batch_trees, &mut batch_done_senders, &mut encountered_error, &reponame, &logger).await {
+                            if let Err(e) = TreeManager::flush_trees(&trees_es, &mut batch_trees, &mut batch_done_senders, &mut encountered_error, &reponame).await {
                                 tracing::error!("Trees flush failed: {:?}", e);
                                 return;
                             }
                         }
                     }
                     _ = timer.tick() => {
-                        if let Err(e) = TreeManager::flush_trees(&trees_es, &mut batch_trees, &mut batch_done_senders, &mut encountered_error, &reponame, &logger).await {
+                        if let Err(e) = TreeManager::flush_trees(&trees_es, &mut batch_trees, &mut batch_done_senders, &mut encountered_error, &reponame).await {
                             tracing::error!("Trees flush failed: {:?}", e);
                             return;
                         }

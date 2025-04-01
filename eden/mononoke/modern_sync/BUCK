@@ -8,7 +8,6 @@ rust_binary(
     srcs = glob([
         "src/**/*.rs",
     ]),
-    named_deps = {"slog": "//common/rust/shed/tracing_slog_compat:tracing_slog_compat"},
     test_deps = ["//eden/mononoke/mononoke_macros:mononoke_macros"],
     deps = ([
         "fbsource//third-party/rust:anyhow",

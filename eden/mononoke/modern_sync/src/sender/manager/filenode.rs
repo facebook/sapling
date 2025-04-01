@@ -15,7 +15,6 @@ use context::CoreContext;
 use futures::channel::oneshot;
 use mercurial_types::HgFileNodeId;
 use mononoke_macros::mononoke;
-use slog::Logger;
 use stats::define_stats;
 use stats::prelude::*;
 use tokio::sync::mpsc;
@@ -54,7 +53,6 @@ impl FilenodeManager {
         batch_done_senders: &mut VecDeque<oneshot::Sender<Result<()>>>,
         encountered_error: &mut Option<anyhow::Error>,
         reponame: &str,
-        _logger: &Logger,
     ) -> Result<(), anyhow::Error> {
         if !batch_filenodes.is_empty() || !batch_done_senders.is_empty() {
             let batch_size = batch_filenodes.len() as i64;
@@ -105,7 +103,6 @@ impl Manager for FilenodeManager {
         ctx: CoreContext,
         reponame: String,
         filenodes_es: Arc<dyn EdenapiSender + Send + Sync>,
-        logger: Logger,
         cancellation_requested: Arc<AtomicBool>,
     ) {
         mononoke::spawn_task(async move {
@@ -147,14 +144,14 @@ impl Manager for FilenodeManager {
                             None => break,
                         }
                         if batch_filenodes.len() >= MAX_FILENODES_BATCH_SIZE {
-                            if let Err(e) = FilenodeManager::flush_filenodes(&filenodes_es, &mut batch_filenodes, &mut batch_done_senders, &mut encountered_error, &reponame, &logger).await {
+                            if let Err(e) = FilenodeManager::flush_filenodes(&filenodes_es, &mut batch_filenodes, &mut batch_done_senders, &mut encountered_error, &reponame).await {
                                 tracing::error!("Filenodes flush failed: {:?}", e);
                                 return;
                             }
                         }
                     }
                     _ = timer.tick() => {
-                        if let Err(e) = FilenodeManager::flush_filenodes(&filenodes_es, &mut batch_filenodes, &mut batch_done_senders, &mut encountered_error, &reponame, &logger).await {
+                        if let Err(e) = FilenodeManager::flush_filenodes(&filenodes_es, &mut batch_filenodes, &mut batch_done_senders, &mut encountered_error, &reponame).await {
                             tracing::error!("Filenodes flush failed: {:?}", e);
                             return;
                         }

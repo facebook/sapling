@@ -24,7 +24,6 @@ use mononoke_types::BonsaiChangeset;
 use mononoke_types::ContentId;
 use mutable_counters::MutableCounters;
 use repo_blobstore::RepoBlobstore;
-use slog::Logger;
 use tokio::sync::mpsc;
 
 use crate::sender::edenapi::EdenapiSender;
@@ -131,7 +130,6 @@ impl SendManager {
         ctx: CoreContext,
         repo_blobstore: RepoBlobstore,
         external_sender: Arc<dyn EdenapiSender + Send + Sync>,
-        logger: Logger,
         reponame: String,
         exit_file: PathBuf,
         mc: Arc<dyn MutableCounters + Send + Sync>,
@@ -144,7 +142,6 @@ impl SendManager {
             ctx.clone(),
             reponame.clone(),
             external_sender.clone(),
-            logger.clone(),
             cancellation_requested.clone(),
         );
 
@@ -154,7 +151,6 @@ impl SendManager {
             ctx.clone(),
             reponame.clone(),
             external_sender.clone(),
-            logger.clone(),
             cancellation_requested.clone(),
         );
 
@@ -164,7 +160,6 @@ impl SendManager {
             ctx.clone(),
             reponame.clone(),
             external_sender.clone(),
-            logger.clone(),
             cancellation_requested.clone(),
         );
 
@@ -174,7 +169,6 @@ impl SendManager {
             ctx.clone(),
             reponame.clone(),
             external_sender.clone(),
-            logger.clone(),
             cancellation_requested.clone(),
         );
 
@@ -261,7 +255,6 @@ trait Manager {
         ctx: CoreContext,
         reponame: String,
         external_sender: Arc<dyn EdenapiSender + Send + Sync>,
-        logger: Logger,
         cancellation_requested: Arc<AtomicBool>,
     );
 }

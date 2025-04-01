@@ -25,7 +25,6 @@ use futures::TryStreamExt;
 use mononoke_macros::mononoke;
 use mononoke_types::ContentId;
 use repo_blobstore::RepoBlobstore;
-use slog::Logger;
 use stats::define_stats;
 use stats::prelude::*;
 use tokio::sync::mpsc;
@@ -75,7 +74,6 @@ impl ContentManager {
         current_batch_size: u64,
         pending_messages: &mut VecDeque<oneshot::Sender<Result<(), anyhow::Error>>>,
         reponame: String,
-        _logger: &Logger,
     ) -> Result<(), anyhow::Error> {
         let current_batch_len = current_batch.len();
         let start = std::time::Instant::now();
@@ -135,7 +133,6 @@ impl Manager for ContentManager {
         ctx: CoreContext,
         reponame: String,
         content_es: Arc<dyn EdenapiSender + Send + Sync>,
-        logger: Logger,
         cancellation_requested: Arc<AtomicBool>,
     ) {
         mononoke::spawn_task(async move {
@@ -174,7 +171,6 @@ impl Manager for ContentManager {
                                 current_batch_size,
                                 &mut pending_messages,
                                 reponame.clone(),
-                                &logger,
                             ).await {
                                 tracing::error!("Error processing content: {:?}", e);
                                 return;
@@ -192,7 +188,6 @@ impl Manager for ContentManager {
                                 current_batch_size,
                                 &mut pending_messages,
                                 reponame.clone(),
-                                &logger,
                             ).await {
                                 tracing::error!("Error processing content: {:?}", e);
                                 return;

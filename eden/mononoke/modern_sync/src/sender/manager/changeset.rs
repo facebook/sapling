@@ -17,7 +17,6 @@ use mercurial_types::blobs::HgBlobChangeset;
 use mononoke_macros::mononoke;
 use mononoke_types::BonsaiChangeset;
 use mutable_counters::MutableCounters;
-use slog::Logger;
 use stats::define_stats;
 use stats::prelude::*;
 use tokio::sync::mpsc;
@@ -72,7 +71,6 @@ impl ChangesetManager {
         latest_entry_id: &mut Option<i64>,
         latest_bookmark: &mut Option<BookmarkInfo>,
         pending_notification: &mut Option<oneshot::Sender<Result<()>>>,
-        _logger: &Logger,
     ) -> Result<(), anyhow::Error> {
         if !current_batch.is_empty() {
             let start = std::time::Instant::now();
@@ -156,7 +154,6 @@ impl Manager for ChangesetManager {
         ctx: CoreContext,
         reponame: String,
         changeset_es: Arc<dyn EdenapiSender + Send + Sync>,
-        logger: Logger,
         cancellation_requested: Arc<AtomicBool>,
     ) {
         mononoke::spawn_task(async move {
@@ -278,7 +275,7 @@ impl Manager for ChangesetManager {
                             let now = std::time::Instant::now();
                             let changeset_ids = current_batch.iter().map(|c| c.1.get_changeset_id()).collect::<Vec<_>>();
                             stat::log_upload_changeset_start(&ctx, changeset_ids.clone());
-                            match ChangesetManager::flush_batch(reponame.clone(), &ctx, &changeset_es, mc.clone(), &mut current_batch, &mut pending_log, &mut latest_in_entry_checkpoint, &mut latest_entry_id, &mut latest_bookmark, &mut pending_notification, &logger)
+                            match ChangesetManager::flush_batch(reponame.clone(), &ctx, &changeset_es, mc.clone(), &mut current_batch, &mut pending_log, &mut latest_in_entry_checkpoint, &mut latest_entry_id, &mut latest_bookmark, &mut pending_notification)
                             .await
                             {
                                 Ok(()) => {
@@ -299,7 +296,7 @@ impl Manager for ChangesetManager {
                         let now = std::time::Instant::now();
                         let changeset_ids = current_batch.iter().map(|c| c.1.get_changeset_id()).collect::<Vec<_>>();
                         stat::log_upload_changeset_start(&ctx, changeset_ids.clone());
-                        match ChangesetManager::flush_batch(reponame.clone(), &ctx, &changeset_es, mc.clone(), &mut current_batch, &mut pending_log, &mut latest_in_entry_checkpoint, &mut latest_entry_id, &mut latest_bookmark, &mut pending_notification, &logger)
+                        match ChangesetManager::flush_batch(reponame.clone(), &ctx, &changeset_es, mc.clone(), &mut current_batch, &mut pending_log, &mut latest_in_entry_checkpoint, &mut latest_entry_id, &mut latest_bookmark, &mut pending_notification)
                         .await
                         {
                             Ok(()) => {

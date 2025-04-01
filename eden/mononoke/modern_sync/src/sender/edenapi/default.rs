@@ -42,7 +42,6 @@ use mononoke_app::args::TLSArgs;
 use mononoke_types::BonsaiChangeset;
 use mononoke_types::ChangesetId;
 use repo_blobstore::RepoBlobstore;
-use slog::Logger;
 use url::Url;
 
 use crate::sender::edenapi::util;
@@ -53,7 +52,6 @@ use crate::stat;
 pub struct DefaultEdenapiSender {
     url: Url,
     reponame: String,
-    logger: Logger,
     tls_args: TLSArgs,
     ctx: CoreContext,
     repo_blobstore: RepoBlobstore,
@@ -64,7 +62,6 @@ impl DefaultEdenapiSender {
     pub fn new(
         url: Url,
         reponame: String,
-        logger: Logger,
         tls_args: TLSArgs,
         ctx: CoreContext,
         repo_blobstore: RepoBlobstore,
@@ -73,7 +70,6 @@ impl DefaultEdenapiSender {
             url,
             reponame,
             tls_args,
-            logger,
             ctx,
             repo_blobstore,
             client: None,

@@ -20,7 +20,6 @@ use mercurial_types::HgManifestId;
 use minibytes::Bytes;
 use mononoke_types::BonsaiChangeset;
 use mononoke_types::ChangesetId;
-use slog::Logger;
 
 use crate::sender::edenapi::EdenapiSender;
 
@@ -28,12 +27,11 @@ const MAX_RETRIES: usize = 3;
 
 pub struct RetryEdenapiSender {
     inner: Arc<dyn EdenapiSender + Send + Sync>,
-    logger: Logger,
 }
 
 impl RetryEdenapiSender {
-    pub fn new(inner: Arc<dyn EdenapiSender + Send + Sync>, logger: Logger) -> Self {
-        Self { inner, logger }
+    pub fn new(inner: Arc<dyn EdenapiSender + Send + Sync>) -> Self {
+        Self { inner }
     }
 
     async fn with_retry<'t, T>(
@@ -41,7 +39,7 @@ impl RetryEdenapiSender {
         func: impl Fn(&'t Self) -> BoxFuture<'t, Result<T>>,
     ) -> Result<T> {
         let retry_count = MAX_RETRIES;
-        with_retry(retry_count, &self.logger, || func(self)).await
+        with_retry(retry_count, || func(self)).await
     }
 }
 
@@ -93,7 +91,6 @@ impl EdenapiSender for RetryEdenapiSender {
 
 async fn with_retry<'t, T>(
     max_retry_count: usize,
-    _logger: &Logger,
     func: impl Fn() -> BoxFuture<'t, Result<T>>,
 ) -> Result<T> {
     let mut attempt = 0usize;

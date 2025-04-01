@@ -60,7 +60,6 @@ use repo_blobstore::RepoBlobstore;
 use repo_blobstore::RepoBlobstoreRef;
 use repo_derived_data::RepoDerivedDataRef;
 use repo_identity::RepoIdentityRef;
-use slog::Logger;
 use stats::define_stats;
 use stats::prelude::*;
 use tokio::sync::Mutex;
@@ -132,8 +131,6 @@ pub async fn sync(
             repo_name
         ))?;
 
-    let logger = app.logger().clone();
-
     let mut metadata = Metadata::default();
     metadata.add_client_info(ClientInfo::default_with_entry_point(
         ClientEntryPoint::ModernSync,
@@ -180,21 +177,17 @@ pub async fn sync(
             .clone()
             .ok_or_else(|| format_err!("TLS params not found for repo {}", repo_name))?;
 
-        Arc::new(RetryEdenapiSender::new(
-            Arc::new(
-                DefaultEdenapiSender::new(
-                    Url::parse(&url)?,
-                    dest_repo_name.clone(),
-                    logger.clone(),
-                    tls_args,
-                    ctx.clone(),
-                    repo_blobstore.clone(),
-                )
-                .build()
-                .await?,
-            ),
-            logger.clone(),
-        ))
+        Arc::new(RetryEdenapiSender::new(Arc::new(
+            DefaultEdenapiSender::new(
+                Url::parse(&url)?,
+                dest_repo_name.clone(),
+                tls_args,
+                ctx.clone(),
+                repo_blobstore.clone(),
+            )
+            .build()
+            .await?,
+        )))
     };
     let sender = if let Some(sender_decorator) = sender_decorator {
         sender_decorator(sender)
@@ -208,7 +201,6 @@ pub async fn sync(
         ctx.clone(),
         repo_blobstore.clone(),
         sender.clone(),
-        logger.clone(),
         repo_name.clone(),
         exit_file,
         mc.clone(),
@@ -229,7 +221,6 @@ pub async fn sync(
             repo,
             repo_name,
             mc,
-            logger,
             sender,
             mut send_manager,
             last_entry,
@@ -292,7 +283,6 @@ pub async fn sync(
                             sender.clone(),
                             chunk_size,
                             app_args.log_to_ods,
-                            &logger,
                             *last_entry.read().await,
                             mc.clone(),
                         )
@@ -342,7 +332,6 @@ pub async fn process_bookmark_update_log_entry(
     sender: Arc<dyn EdenapiSender + Send + Sync>,
     chunk_size: u64,
     log_to_ods: bool,
-    logger: &Logger,
     last_entry: Option<ChangesetId>,
     mc: Arc<dyn MutableCounters + Send + Sync>,
 ) -> Result<()> {
@@ -523,7 +512,7 @@ pub async fn process_bookmark_update_log_entry(
 
                 stream::iter(missing_changesets.into_iter())
                     .map(|cs_id| {
-                        cloned!(ctx, repo, logger, bookmark_name);
+                        cloned!(ctx, repo, bookmark_name);
 
                         mononoke::spawn_task(async move {
                             let now = std::time::Instant::now();
@@ -532,7 +521,6 @@ pub async fn process_bookmark_update_log_entry(
                                 &cs_id,
                                 &ctx,
                                 repo,
-                                logger,
                                 log_to_ods,
                                 &bookmark_name,
                             )
@@ -612,7 +600,6 @@ pub async fn process_one_changeset(
     cs_id: &ChangesetId,
     ctx: &CoreContext,
     repo: Repo,
-    _logger: Logger,
     log_to_ods: bool,
     bookmark_name: &str,
 ) -> Result<Messages> {

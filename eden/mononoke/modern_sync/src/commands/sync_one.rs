@@ -51,7 +51,6 @@ pub async fn run(app: MononokeApp, args: CommandArgs) -> Result<()> {
             "No modern sync config found for repo {}",
             repo_name
         ))?;
-    let logger = app.logger().clone();
 
     let mut metadata = Metadata::default();
     metadata.add_client_info(ClientInfo::default_with_entry_point(
@@ -88,7 +87,6 @@ pub async fn run(app: MononokeApp, args: CommandArgs) -> Result<()> {
             DefaultEdenapiSender::new(
                 Url::parse(&url)?,
                 dest_repo,
-                logger.clone(),
                 tls_args,
                 ctx.clone(),
                 repo.repo_blobstore().clone(),
@@ -102,14 +100,12 @@ pub async fn run(app: MononokeApp, args: CommandArgs) -> Result<()> {
         ctx.clone(),
         repo.repo_blobstore().clone(),
         sender.clone(),
-        logger.clone(),
         repo_name.clone(),
         PathBuf::from(""),
         repo.mutable_counters_arc(),
     );
 
-    let messages =
-        crate::sync::process_one_changeset(&args.cs_id, &ctx, repo, logger, false, "").await;
+    let messages = crate::sync::process_one_changeset(&args.cs_id, &ctx, repo, false, "").await;
     crate::sync::send_messages_in_order(messages, &mut send_manager).await?;
     let (finish_tx, finish_rx) = oneshot::channel();
     send_manager
