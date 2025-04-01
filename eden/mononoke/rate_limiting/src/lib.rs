@@ -100,10 +100,13 @@ impl RateLimitEnvironment {
     ) -> Self {
         for limit in &config.get().load_shed_limits {
             match &limit.raw_config.load_shedding_metric {
-                LoadSheddingMetric::external_ods_counter(counter) => counter_manager
-                    .write()
-                    .expect("Poisoned lock")
-                    .add_counter(counter.entity.clone(), counter.key.clone(), None),
+                LoadSheddingMetric::external_ods_counter(counter) => {
+                    counter_manager.write().expect("Poisoned lock").add_counter(
+                        counter.entity.clone(),
+                        counter.key.clone(),
+                        counter.reduce.clone(),
+                    )
+                }
                 _ => {}
             };
         }
