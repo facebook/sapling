@@ -126,7 +126,7 @@ impl RichCasClient {
         if use_casd_cache {
             cas_cache_mode_local_fetch = Some(CasCacheModeLocalFetch::AllRemote);
 
-            if config.get_or("cas", "shared_cache.local.small_files", || false)? {
+            if config.get_or("cas", "shared_cache.local.small_files", || true)? {
                 cas_cache_mode_local_fetch = Some(CasCacheModeLocalFetch::SmallFilesLocally);
             }
 
