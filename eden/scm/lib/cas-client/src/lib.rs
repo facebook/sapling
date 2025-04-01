@@ -120,6 +120,12 @@ pub fn new(config: Arc<dyn Config>) -> anyhow::Result<Option<Arc<dyn CasClient>>
 #[async_trait::async_trait]
 #[auto_impl::auto_impl(&, Box, Arc)]
 pub trait CasClient: Sync + Send {
+    /// Fetch a single blob from local CAS caches.
+    fn fetch_single_local_direct(
+        &self,
+        _fctx: FetchContext,
+        digest: &CasDigest,
+    ) -> anyhow::Result<Option<ScmBlob>>;
     /// Fetch blobs from CAS.
     async fn fetch<'a>(
         &'a self,

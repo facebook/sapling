@@ -89,6 +89,13 @@ macro_rules! re_client {
 
         #[$crate::async_trait]
         impl $crate::CasClient for $struct {
+            fn fetch_single_local_direct(
+                &self,
+                _fctx: $crate::FetchContext,
+                digest: &$crate::CasDigest,
+            ) -> Result<Option<ScmBlob>> {
+                return Ok(None);
+            }
             async fn fetch<'a>(
                 &'a self,
                 _fctx: $crate::FetchContext,

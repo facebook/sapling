@@ -182,6 +182,16 @@ impl ReadRootTreeIds for EagerRepoStore {
 
 #[async_trait::async_trait]
 impl CasClient for EagerRepoStore {
+    /// Fetch a single blob from local CAS caches.
+    fn fetch_single_local_direct(
+        &self,
+        _fctx: FetchContext,
+        digest: &CasDigest,
+    ) -> anyhow::Result<Option<ScmBlob>> {
+        self.get_cas_blob(*digest)
+            .map_err(Into::into)
+            .map(|data| data.map(ScmBlob::Bytes))
+    }
     async fn fetch<'a>(
         &'a self,
         _fctx: FetchContext,
