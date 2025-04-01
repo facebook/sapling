@@ -70,6 +70,21 @@ Example:
 BENCHMARK_ENABLE_ON_DISK_RG=1 /usr/local/libexec/eden/eden_bench.sh 5808178a971157999fb581af1c59ade724d66f8e sl_prefetch
 ```
 
+## Measurements under Memory Pressure
+
+To make the run more similar to a production environment, consider the following strategies:
+* Prefetch an extensive cache, rather than just the data accessed during the current crawling session.
+
+```
+export BENCHMARK_PREFETCH_REPO_PATH="www"
+```
+* Execute your benchmark within the context of a systemd unit.
+
+```
+systemd-run --scope --user -p MemorySwapMax=0 -p MemoryMax=7G -- eden_bench <all args>
+```
+
+
 ## Check Configuration
 
 If your host is enrolled to use the Mononoke dogfooding tier, it is recommended to disable it as it may impact performance.
