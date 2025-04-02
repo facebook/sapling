@@ -67,6 +67,28 @@ pub enum StressCmd {
         )]
         attributes: Vec<String>,
     },
+
+    #[clap(about = "Stress the readdir endpoint")]
+    RecursiveReaddir {
+        #[clap(flatten)]
+        common: CommonOptions,
+
+        #[clap(
+            index = 1,
+            required = true,
+            help = "directory to recursively call readdir on"
+        )]
+        root_dir: String,
+
+        #[clap(
+            long,
+            possible_values = all_attributes(),
+            use_value_delimiter = true,
+            default_values = all_attributes(),
+            help = "Attributes to query with each readdir request"
+        )]
+        attributes: Vec<String>,
+    },
 }
 
 #[async_trait]
@@ -125,6 +147,14 @@ impl crate::Subcommand for StressCmd {
                     num_requests, request_name, num_tasks
                 );
                 Ok(0)
+            }
+            Self::RecursiveReaddir {
+                common: _,
+                root_dir: _,
+                attributes: _,
+            } => {
+                eprintln!("Not yet implemented");
+                Ok(1)
             }
         }
     }
