@@ -30,10 +30,6 @@ pub struct CommonOptions {
     /// Path to the mount point
     mount_point: PathBuf,
 
-    #[clap(short, long, default_value = "1000")]
-    /// Number of requests to send to the Thrift server
-    num_requests: u64,
-
     #[clap(short, long, default_value = "10")]
     /// Number of tasks to use for sending requests
     num_tasks: u64,
@@ -54,7 +50,21 @@ pub enum StressCmd {
         )]
         glob_pattern: String,
 
-        #[clap(long, possible_values = all_attributes(), use_value_delimiter = true, default_values = all_attributes())]
+        #[clap(
+            short,
+            long,
+            default_value = "1000",
+            help = "Number of requests to send to the Thrift server"
+        )]
+        num_requests: u64,
+
+        #[clap(
+            long,
+            possible_values = all_attributes(),
+            use_value_delimiter = true,
+            default_values = all_attributes(),
+            help = "Attributes to query for each file"
+        )]
         attributes: Vec<String>,
     },
 }
@@ -65,10 +75,11 @@ impl crate::Subcommand for StressCmd {
         let instance = EdenFsInstance::global();
         let client = instance.get_client();
 
-        let (request_name, num_requests, num_tasks) = match self {
+        match self {
             Self::GetAttributesV2 {
                 common,
                 glob_pattern,
+                num_requests,
                 attributes,
             } => {
                 // Resolve the glob that the user specified since getAttributesFromFilesV2 takes a
@@ -97,7 +108,7 @@ impl crate::Subcommand for StressCmd {
 
                 // Issue the requests and bail early if any of them fail
                 let request_name = request_factory.request_name();
-                let num_requests = common.num_requests;
+                let num_requests = *num_requests;
                 let num_tasks = common.num_tasks;
                 send_requests(request_factory, num_requests, num_tasks)
                     .await
@@ -109,14 +120,12 @@ impl crate::Subcommand for StressCmd {
                             num_tasks
                         )
                     })?;
-                (request_name, num_requests, num_tasks)
+                println!(
+                    "Successfully issued {} {} requests across {} tasks",
+                    num_requests, request_name, num_tasks
+                );
+                Ok(0)
             }
-        };
-
-        println!(
-            "Successfully issued {} {} requests across {} tasks",
-            num_requests, request_name, num_tasks
-        );
-        Ok(0)
+        }
     }
 }
