@@ -5,7 +5,9 @@
  * GNU General Public License version 2.
  */
 
+use std::collections::HashMap;
 use std::env;
+use std::ffi::OsString;
 use std::fs::read_to_string;
 use std::path::Path;
 use std::path::PathBuf;
@@ -42,6 +44,23 @@ fn get_sapling_executable_path() -> String {
     }
 }
 
+fn get_sapling_options() -> HashMap<OsString, OsString> {
+    let mut options = HashMap::<OsString, OsString>::new();
+    // Ensure that the hgrc doesn't mess with the behavior of the commands that we're running.
+    options.insert("HGPLAIN".to_string().into(), "1".to_string().into());
+    // Ensure that we do not log profiling data for the commands we are
+    // running. This is to avoid a significant increase in the rate of logging.
+    options.insert("NOSCMLOG".to_string().into(), "1".to_string().into());
+    // chg can elect to kill all children if an error occurs in any child.
+    // This can cause commands we spawn to fail transiently.  While we'd
+    // love to have the lowest latency, the transient failure causes problems
+    // with our ability to deliver notifications to our clients in a timely
+    // manner, so we disable the use of chg for the sapling processes
+    // that we spawn.
+    options.insert("CHGDISABLE".to_string().into(), "1".to_string().into());
+    options
+}
+
 #[allow(dead_code)]
 pub fn is_fbsource_checkout(mount_point: &Path) -> bool {
     let project_id_path = mount_point.join(".projectid");
@@ -54,7 +73,7 @@ pub fn is_fbsource_checkout(mount_point: &Path) -> bool {
 
 pub async fn get_current_commit_id() -> anyhow::Result<String> {
     let output = Command::new(get_sapling_executable_path())
-        .env("HGPLAIN", "1")
+        .envs(get_sapling_options())
         .args(["whereami", "--traceback"])
         .output()
         .await?;
@@ -63,7 +82,7 @@ pub async fn get_current_commit_id() -> anyhow::Result<String> {
 
 pub async fn get_commit_timestamp(commit_id: &str) -> anyhow::Result<u64> {
     let output = Command::new(get_sapling_executable_path())
-        .env("HGPLAIN", "1")
+        .envs(get_sapling_options())
         .args(["log", "--traceback", "-T", "{date}", "-r", commit_id])
         .output()
         .await?;
@@ -76,7 +95,7 @@ pub async fn get_commit_timestamp(commit_id: &str) -> anyhow::Result<u64> {
 
 pub async fn is_commit_in_repo(commit_id: &str) -> anyhow::Result<bool> {
     let output = Command::new(get_sapling_executable_path())
-        .env("HGPLAIN", "1")
+        .envs(get_sapling_options())
         .args([
             "log",
             "--traceback",
@@ -93,7 +112,7 @@ pub async fn is_commit_in_repo(commit_id: &str) -> anyhow::Result<bool> {
 
 pub async fn get_mergebase(commit: &str, mergegase_with: &str) -> anyhow::Result<Option<String>> {
     let output = Command::new(get_sapling_executable_path())
-        .env("HGPLAIN", "1")
+        .envs(get_sapling_options())
         .args([
             "log",
             "-T",
@@ -189,7 +208,7 @@ pub async fn get_status(
     }
 
     let mut output = Command::new(get_sapling_executable_path())
-        .env("HGPLAIN", "1")
+        .envs(get_sapling_options())
         .args(args)
         .stdout(Stdio::piped())
         .spawn()?;
