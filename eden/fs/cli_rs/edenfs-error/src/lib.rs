@@ -107,6 +107,31 @@ impl From<EdenError> for ThriftRequestError {
     }
 }
 
+pub trait EdenDataIntoResult {
+    type Data;
+
+    fn into_result(self) -> Result<Self::Data, EdenFsError>;
+}
+
+#[macro_export]
+macro_rules! impl_eden_data_into_result {
+    ($typ: ident, $data: ty, $ok_variant: ident) => {
+        impl EdenDataIntoResult for $typ {
+            type Data = $data;
+
+            fn into_result(self) -> Result<Self::Data, EdenFsError> {
+                match self {
+                    Self::$ok_variant(data) => Ok(data),
+                    Self::Error(e) => Err(e),
+                    Self::UnknownField(field) => Err(EdenFsError::Other {
+                        0: anyhow::anyhow!("Unknown field: {}", field),
+                    }),
+                }
+            }
+        }
+    };
+}
+
 #[derive(Error, Debug)]
 pub enum EdenFsError {
     #[error("Timed out when connecting to EdenFS daemon: {0:?}")]
