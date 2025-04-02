@@ -56,7 +56,6 @@ use anyhow::anyhow;
 use edenfs_error::EdenFsError;
 use edenfs_error::Result;
 use edenfs_utils::bytes_from_path;
-use thrift_types::edenfs::FileAttributes;
 use thrift_types::fbthrift::ThriftEnum;
 
 use crate::client::EdenFsClient;
@@ -428,6 +427,70 @@ impl Default for AttributesRequestScope {
     }
 }
 
+#[repr(i32)]
+#[derive(Debug, Clone, PartialEq)]
+enum FileAttributes {
+    None = 0,
+    Sha1 = 1,
+    FileSize = 2,
+    SourceControlType = 4,
+    ObjectId = 8,
+    Blake3 = 16,
+    DigestSize = 32,
+    DigestHash = 64,
+}
+
+impl From<FileAttributes> for thrift_types::edenfs::FileAttributes {
+    fn from(from: FileAttributes) -> Self {
+        match from {
+            FileAttributes::None => Self::NONE,
+            FileAttributes::Sha1 => Self::SHA1_HASH,
+            FileAttributes::FileSize => Self::FILE_SIZE,
+            FileAttributes::SourceControlType => Self::SOURCE_CONTROL_TYPE,
+            FileAttributes::ObjectId => Self::OBJECT_ID,
+            FileAttributes::Blake3 => Self::BLAKE3_HASH,
+            FileAttributes::DigestSize => Self::DIGEST_SIZE,
+            FileAttributes::DigestHash => Self::DIGEST_HASH,
+        }
+    }
+}
+
+impl From<thrift_types::edenfs::FileAttributes> for FileAttributes {
+    fn from(from: thrift_types::edenfs::FileAttributes) -> Self {
+        match from {
+            thrift_types::edenfs::FileAttributes::NONE => Self::None,
+            thrift_types::edenfs::FileAttributes::SHA1_HASH => Self::Sha1,
+            thrift_types::edenfs::FileAttributes::FILE_SIZE => Self::FileSize,
+            thrift_types::edenfs::FileAttributes::SOURCE_CONTROL_TYPE => Self::SourceControlType,
+            thrift_types::edenfs::FileAttributes::OBJECT_ID => Self::ObjectId,
+            thrift_types::edenfs::FileAttributes::BLAKE3_HASH => Self::Blake3,
+            thrift_types::edenfs::FileAttributes::DIGEST_SIZE => Self::DigestSize,
+            thrift_types::edenfs::FileAttributes::DIGEST_HASH => Self::DigestHash,
+            _ => Self::None,
+        }
+    }
+}
+
+impl FromStr for FileAttributes {
+    type Err = EdenFsError;
+    fn from_str(s: &str) -> std::result::Result<Self, Self::Err> {
+        match s {
+            "None" => Ok(Self::None),
+            "Sha1" => Ok(Self::Sha1),
+            "FileSize" => Ok(Self::FileSize),
+            "SourceControlType" => Ok(Self::SourceControlType),
+            "ObjectId" => Ok(Self::ObjectId),
+            "Blake3" => Ok(Self::Blake3),
+            "DigestSize" => Ok(Self::DigestSize),
+            "DigestHash" => Ok(Self::DigestHash),
+            _ => Err(EdenFsError::Other(anyhow!(
+                "invalid file attribute: {:?}",
+                s
+            ))),
+        }
+    }
+}
+
 /// Converts a slice of `FileAttributes` to a bitmask.
 ///
 /// This function takes a slice of `FileAttributes` and returns a bitmask
@@ -441,7 +504,7 @@ impl Default for AttributesRequestScope {
 ///
 /// A bitmask representing the given attributes.
 fn attributes_as_bitmask(attrs: &[FileAttributes]) -> i64 {
-    attrs.iter().fold(0, |acc, x| acc | x.inner_value() as i64)
+    attrs.iter().fold(0, |acc, x| acc | x.clone() as i64)
 }
 
 /// Returns a bitmask representing all available file attributes.
@@ -461,7 +524,11 @@ fn attributes_as_bitmask(attrs: &[FileAttributes]) -> i64 {
 /// println!("All attributes bitmask: {}", all_attrs_bitmask);
 /// ```
 pub fn all_attributes_as_bitmask() -> i64 {
-    attributes_as_bitmask(FileAttributes::variant_values())
+    let vals: Vec<FileAttributes> = thrift_types::edenfs::FileAttributes::variant_values()
+        .iter()
+        .map(|v| v.clone().into())
+        .collect();
+    attributes_as_bitmask(&vals)
 }
 
 /// Returns a slice of all available file attribute names.
@@ -481,7 +548,7 @@ pub fn all_attributes_as_bitmask() -> i64 {
 /// println!("Available attributes: {:?}", all_attrs);
 /// ```
 pub fn all_attributes() -> &'static [&'static str] {
-    FileAttributes::variants()
+    thrift_types::edenfs::FileAttributes::variants()
 }
 
 /// Converts a slice of attribute names to a bitmask.
@@ -504,14 +571,14 @@ pub fn all_attributes() -> &'static [&'static str] {
 /// use edenfs_client::attributes;
 ///
 /// // Convert a list of attribute names to a bitmask
-/// let attrs = ["SHA1_HASH", "SIZE", "SOURCE_CONTROL_TYPE"];
+/// let attrs = ["Sha1", "FileSize", "SourceControlType"];
 /// match attributes::file_attributes_from_strings(&attrs) {
 ///     Ok(bitmask) => println!("Attribute bitmask: {}", bitmask),
 ///     Err(e) => eprintln!("Error: {}", e),
 /// }
 ///
 /// // Invalid attribute names will result in an error
-/// let invalid_attrs = ["INVALID_ATTR"];
+/// let invalid_attrs = ["invalid"];
 /// assert!(attributes::file_attributes_from_strings(&invalid_attrs).is_err());
 /// ```
 pub fn file_attributes_from_strings<T>(attrs: &[T]) -> Result<i64>
@@ -600,7 +667,7 @@ impl GetAttributesV2Request {
     /// // Create a request for getting SHA1 and size attributes for two files
     /// let mount_path = PathBuf::from("/path/to/mount");
     /// let paths = ["file1.txt", "file2.txt"];
-    /// let attrs = ["SHA1_HASH", "SIZE"];
+    /// let attrs = ["Sha1", "FileSize"];
     /// let request = GetAttributesV2Request::new(mount_path, &paths, &attrs);
     /// ```
     pub fn new<P, S>(mount_path: PathBuf, paths: &[P], requested_attributes: &[S]) -> Self
@@ -657,11 +724,10 @@ mod test {
     fn test_attributes_from_strings() -> Result<()> {
         assert_eq!(file_attributes_from_strings::<String>(&[])?, 0);
         assert_eq!(
-            file_attributes_from_strings(&["SHA1_HASH", "SOURCE_CONTROL_TYPE"])?,
-            FileAttributes::SHA1_HASH.inner_value() as i64
-                | FileAttributes::SOURCE_CONTROL_TYPE.inner_value() as i64
+            file_attributes_from_strings(&["Sha1", "SourceControlType"])?,
+            FileAttributes::Sha1 as i64 | FileAttributes::SourceControlType as i64
         );
-        assert!(file_attributes_from_strings(&["INVALID"]).is_err());
+        assert!(file_attributes_from_strings(&["Invalid"]).is_err());
         Ok(())
     }
 }
