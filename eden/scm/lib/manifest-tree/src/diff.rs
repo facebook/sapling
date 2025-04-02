@@ -85,14 +85,12 @@ impl DiffWork {
     }
 }
 
-#[allow(unused)]
 #[derive(Clone)]
 pub(crate) enum ResultSender {
     File(Sender<Result<DiffEntry>>),
     Dir(Sender<Result<DirDiffEntry>>),
 }
 
-#[allow(unused)]
 impl ResultSender {
     fn send_file_diff(&self, diff: DiffEntry) -> Result<()> {
         if let Self::File(sender) = self {
@@ -131,7 +129,6 @@ impl From<Sender<Result<DiffEntry>>> for ResultSender {
     }
 }
 
-#[allow(unused)]
 impl From<Sender<Result<DirDiffEntry>>> for ResultSender {
     fn from(sender: Sender<Result<DirDiffEntry>>) -> Self {
         Self::Dir(sender)
@@ -338,6 +335,14 @@ fn diff_single(
 ) -> Result<()> {
     let (files, dirs) = dir.list(store)?;
 
+    if result.need_dir_diff() {
+        result.send_dir_diff(DirDiffEntry {
+            path: dir.path,
+            left: side == Side::Left,
+            right: side == Side::Right,
+        })?;
+    }
+
     for d in dirs.into_iter() {
         if matcher.matches_directory(&d.path)? != DirectoryMatch::Nothing {
             work.push(DiffWork::Single(d, side, path_conflict));
@@ -373,8 +378,25 @@ fn diff_dirs(
     work: &mut Vec<DiffWork>,
     result: ResultSender,
 ) -> Result<()> {
-    let mut add_diffs = |l, r| -> Result<()> {
+    // Returns whether the parent directory is considered as modified:
+    // - Either `l` or `r` is None (added or deleted).
+    // - Item type change (file -> dir, or vice-versa).
+    let mut add_diffs = |l, r| -> Result<bool> {
+        #[cfg(debug_assertions)]
+        {
+            if let (Some((l_path, _)), Some((r_path, _))) = (l, r) {
+                debug_assert_eq!(l_path, r_path);
+            }
+        }
+
         let (file_diff, dir_diff) = diff_links(&left.path, l, r);
+
+        let dir_changed = result.need_dir_diff()
+            && match (l, r) {
+                (Some(..), None) | (None, Some(..)) => true,
+                (None, None) => false,
+                (Some((_, llink)), Some((_, rlink))) => llink.is_leaf() != rlink.is_leaf(),
+            };
 
         if result.need_file_diff() {
             if let Some(file_diff) = file_diff {
@@ -390,28 +412,32 @@ fn diff_dirs(
             }
         }
 
-        Ok(())
+        Ok(dir_changed)
     };
 
     let mut llinks = left.links(store)?.peekable();
     let mut rlinks = right.links(store)?.peekable();
+    let mut dir_changed = false;
 
     loop {
-        match (llinks.peek(), rlinks.peek()) {
+        let item_changed = match (llinks.peek(), rlinks.peek()) {
             (Some((lname, _)), Some((rname, _))) => match lname.cmp(rname) {
-                Ordering::Less => {
-                    add_diffs(llinks.next(), None)?;
-                }
-                Ordering::Equal => {
-                    add_diffs(llinks.next(), rlinks.next())?;
-                }
-                Ordering::Greater => {
-                    add_diffs(None, rlinks.next())?;
-                }
+                Ordering::Less => add_diffs(llinks.next(), None)?,
+                Ordering::Equal => add_diffs(llinks.next(), rlinks.next())?,
+                Ordering::Greater => add_diffs(None, rlinks.next())?,
             },
             (Some(_), None) | (None, Some(_)) => add_diffs(llinks.next(), rlinks.next())?,
             (None, None) => break,
-        }
+        };
+        dir_changed = dir_changed || item_changed
+    }
+
+    if result.need_dir_diff() && dir_changed {
+        result.send_dir_diff(DirDiffEntry {
+            path: left.path.clone(),
+            left: true,
+            right: true,
+        })?;
     }
 
     Ok(())
@@ -989,6 +1015,71 @@ mod tests {
                 DiffType::RightOnly(make_meta("30"))
             ),],
         );
+    }
+
+    #[test]
+    fn test_modified_dirs() {
+        let store = Arc::new(TestStore::new());
+        let left = make_tree_manifest(
+            store.clone(),
+            &[
+                ("left/a/b", "1"),
+                ("unmodified/a/b", "1"),
+                ("modified/1/a/b", "1"),
+                ("modified/2/a/b", "1"),
+                ("modified/3/a/b", "1"),
+                ("modified/3/b", "1"),
+                ("modified/4/a", "1"),
+            ],
+        );
+        let right = make_tree_manifest(
+            store,
+            &[
+                ("right/a/b", "2"),
+                ("unmodified/a/b", "2"),
+                ("modified/1/b/a", "2"),
+                ("modified/2/a/c", "1"),
+                ("modified/3/b", "1"),
+                ("modified/4/a/b", "1"),
+            ],
+        );
+        let mut dirs: Vec<String> = left
+            .modified_dirs(&right, AlwaysMatcher::new())
+            .unwrap()
+            .map(|v| dir_diff_entry_to_string(v.unwrap()))
+            .collect();
+        dirs.sort_unstable();
+        assert_eq!(
+            dirs,
+            [
+                "A modified/1/b",
+                "A modified/4/a",
+                "A right",
+                "A right/a",
+                "M ",
+                "M modified/1",
+                "M modified/2/a",
+                "M modified/3",
+                "M modified/4",
+                "R left",
+                "R left/a",
+                "R modified/1/a",
+                "R modified/3/a"
+            ]
+        );
+        // modified has sub-directory changes, but no add/remove or type change.
+        // So it should not be considered as modified.
+        assert!(!dirs.contains(&"M modified".to_string()));
+    }
+
+    fn dir_diff_entry_to_string(entry: DirDiffEntry) -> String {
+        let status = match (entry.left, entry.right) {
+            (true, true) => "M",
+            (true, false) => "R",
+            (false, true) => "A",
+            (false, false) => "!",
+        };
+        format!("{} {}", status, entry.path)
     }
 
     #[test]

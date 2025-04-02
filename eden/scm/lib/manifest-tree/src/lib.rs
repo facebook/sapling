@@ -26,6 +26,7 @@ use format_util::git_sha1_digest;
 use format_util::hg_sha1_digest;
 use iter::bfs_iter;
 use manifest::DiffEntry;
+use manifest::DirDiffEntry;
 use manifest::Directory;
 use manifest::File;
 use manifest::FileMetadata;
@@ -377,6 +378,14 @@ impl Manifest for TreeManifest {
         other: &'a Self,
         matcher: M,
     ) -> Result<Box<dyn Iterator<Item = Result<DiffEntry>> + 'a>> {
+        Ok(diff::diff(self, other, Arc::new(matcher)))
+    }
+
+    fn modified_dirs<'a, M: 'static + Matcher + Sync + Send>(
+        &'a self,
+        other: &'a Self,
+        matcher: M,
+    ) -> Result<Box<dyn Iterator<Item = Result<DirDiffEntry>> + 'a>> {
         Ok(diff::diff(self, other, Arc::new(matcher)))
     }
 }
