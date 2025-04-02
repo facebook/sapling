@@ -307,14 +307,14 @@ impl DiffWorker {
     }
 }
 
-struct DiffIter {
-    result_recv: Receiver<Result<DiffEntry>>,
+struct DiffIter<T = DiffEntry> {
+    result_recv: Receiver<Result<T>>,
     #[allow(unused)]
     progress_bar: ActiveProgressBar,
 }
 
-impl Iterator for DiffIter {
-    type Item = Result<DiffEntry>;
+impl<T> Iterator for DiffIter<T> {
+    type Item = Result<T>;
 
     fn next(&mut self) -> Option<Self::Item> {
         self.result_recv.recv().ok()
