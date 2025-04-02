@@ -74,6 +74,9 @@ ObjectStore::ObjectStore(
     bool windowsSymlinksEnabled,
     CaseSensitivity caseSensitive)
     : blobAuxDataCache_{std::in_place, edenConfig->metadataCacheSize.getValue()},
+      treeAuxDataCache_{
+          std::in_place,
+          edenConfig->metadataCacheSize.getValue()},
       treeCache_{std::move(treeCache)},
       backingStore_{std::move(backingStore)},
       localStore_{std::move(localStore)},

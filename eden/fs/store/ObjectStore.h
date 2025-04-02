@@ -20,6 +20,7 @@
 #include "eden/fs/model/BlobAuxData.h"
 #include "eden/fs/model/Hash.h"
 #include "eden/fs/model/RootId.h"
+#include "eden/fs/model/TreeAuxData.h"
 #include "eden/fs/model/TreeEntry.h"
 #include "eden/fs/model/TreeFwd.h"
 #include "eden/fs/store/BackingStore.h"
@@ -413,6 +414,9 @@ class ObjectStore : public IObjectStore,
    */
   mutable folly::Synchronized<folly::EvictingCacheMap<ObjectId, BlobAuxData>>
       blobAuxDataCache_;
+
+  mutable folly::Synchronized<folly::EvictingCacheMap<ObjectId, TreeAuxData>>
+      treeAuxDataCache_;
 
   /**
    * During glob, we need to read a lot of trees, but we avoid loading inodes,
