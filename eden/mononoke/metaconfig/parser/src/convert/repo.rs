@@ -39,6 +39,7 @@ use metaconfig_types::InfinitepushParams;
 use metaconfig_types::LfsParams;
 use metaconfig_types::LoggingDestination;
 use metaconfig_types::MetadataLoggerConfig;
+use metaconfig_types::ModernSyncChannelConfig;
 use metaconfig_types::ModernSyncConfig;
 use metaconfig_types::MononokeCasSyncConfig;
 use metaconfig_types::PushParams;
@@ -68,6 +69,7 @@ use mononoke_types::NonRootMPath;
 use mononoke_types::PrefixTrie;
 use mononoke_types::RepositoryId;
 use regex::Regex;
+use repos::ModernSyncChannelConfig as RawModernSyncChannelConfig;
 use repos::RawBookmarkConfig;
 use repos::RawCacheWarmupConfig;
 use repos::RawCasSyncConfig;
@@ -718,7 +720,29 @@ impl Convert for RawModernSyncConfig {
     type Output = ModernSyncConfig;
 
     fn convert(self) -> Result<Self::Output> {
-        Ok(ModernSyncConfig { url: self.url })
+        Ok(ModernSyncConfig {
+            url: self.url,
+            chunk_size: self.chunk_size,
+            single_db_query_entries_limit: self.single_db_query_entries_limit,
+            changeset_concurrency: self.changeset_concurrency,
+            max_blob_bytes: self.max_blob_bytes,
+            content_channel_config: self.content_channel_config.convert()?,
+            filenodes_channel_config: self.filenodes_channel_config.convert()?,
+            trees_channel_config: self.trees_channel_config.convert()?,
+            changesets_channel_config: self.changesets_channel_config.convert()?,
+        })
+    }
+}
+
+impl Convert for RawModernSyncChannelConfig {
+    type Output = ModernSyncChannelConfig;
+
+    fn convert(self) -> Result<Self::Output> {
+        Ok(ModernSyncChannelConfig {
+            batch_size: self.batch_size,
+            channel_size: self.channel_size,
+            flush_interval_ms: self.flush_interval_ms,
+        })
     }
 }
 

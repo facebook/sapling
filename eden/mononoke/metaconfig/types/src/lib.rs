@@ -1863,10 +1863,37 @@ pub struct MononokeCasSyncConfig {
 }
 
 /// Repo-specific configuration parameters for modern sync job for a specific job variant
-#[derive(Debug, Default, Clone, Eq, PartialEq)]
+#[derive(Debug, Default, Clone, PartialEq, Eq)]
 pub struct ModernSyncConfig {
     /// Edenapi url to use for modern sync
     pub url: String,
+    /// Size of each chunk from a big bookmark mve.
+    pub chunk_size: i64,
+    /// Maximum number of BUL entries to query from a single database transaction.
+    pub single_db_query_entries_limit: i64,
+    /// Number of concurrent changesets to process.
+    pub changeset_concurrency: i64,
+    /// Maximum size of blob sent in one query in bytes.
+    pub max_blob_bytes: i64,
+    /// Configuration for the content channel.
+    pub content_channel_config: ModernSyncChannelConfig,
+    /// Configuration for the filenodes channel.
+    pub filenodes_channel_config: ModernSyncChannelConfig,
+    /// Configuration for the trees channel.
+    pub trees_channel_config: ModernSyncChannelConfig,
+    /// Configuration for the changesets channel.
+    pub changesets_channel_config: ModernSyncChannelConfig,
+}
+
+/// Configuration for a modern sync channel.
+#[derive(Debug, PartialEq, Default, Clone, Eq)]
+pub struct ModernSyncChannelConfig {
+    /// Number of items to include in each batch.
+    pub batch_size: i64,
+    /// Total number of items to process in the channel.
+    pub channel_size: i64,
+    /// Interval between flushes in milliseconds.
+    pub flush_interval_ms: i64,
 }
 
 /// Destination for telemetry logging.
