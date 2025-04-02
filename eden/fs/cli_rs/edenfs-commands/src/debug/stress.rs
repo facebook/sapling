@@ -14,12 +14,12 @@ use anyhow::Context;
 use anyhow::Result;
 use async_trait::async_trait;
 use clap::Parser;
-use edenfs_client::attributes::all_attributes;
 use edenfs_client::attributes::GetAttributesV2Request;
 use edenfs_client::checkout::find_checkout;
 use edenfs_client::instance::EdenFsInstance;
 use edenfs_client::request_factory::send_requests;
 use edenfs_client::request_factory::RequestFactory;
+use edenfs_client::types::all_attributes;
 use edenfs_client::utils::expand_path_or_cwd;
 
 use crate::ExitCode;

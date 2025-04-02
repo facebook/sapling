@@ -5,63 +5,22 @@
  * GNU General Public License version 2.
  */
 
-//! File attribute handling for EdenFS.
-//!
-//! This module provides types and functions for working with file attributes in EdenFS.
-//! It allows querying various attributes of files such as SHA1 hash, size, source control type,
-//! and more.
-//!
-//! # Examples
-//!
-//! ## Getting all available attribute names
-//!
-//! ```
-//! use edenfs_client::attributes;
-//!
-//! // Get a list of all available attribute names
-//! let all_attrs = attributes::all_attributes();
-//! println!("Available attributes: {:?}", all_attrs);
-//! ```
-//!
-//! ## Converting attribute names to a bitmask
-//!
-//! ```
-//! use edenfs_client::attributes;
-//!
-//! // Convert a list of attribute names to a bitmask
-//! let attrs = ["SHA1_HASH", "SIZE", "SOURCE_CONTROL_TYPE"];
-//! match attributes::file_attributes_from_strings(&attrs) {
-//!     Ok(bitmask) => println!("Attribute bitmask: {}", bitmask),
-//!     Err(e) => eprintln!("Error: {}", e),
-//! }
-//! ```
-//!
-//! ## Getting a bitmask for all attributes
-//!
-//! ```
-//! use edenfs_client::attributes;
-//!
-//! // Get a bitmask representing all available attributes
-//! let all_attrs_bitmask = attributes::all_attributes_as_bitmask();
-//! println!("All attributes bitmask: {}", all_attrs_bitmask);
-//! ```
-
 use std::fmt::Display;
 use std::path::Path;
 use std::path::PathBuf;
-use std::str::FromStr;
 use std::sync::Arc;
 
 use anyhow::anyhow;
 use edenfs_error::EdenFsError;
 use edenfs_error::Result;
 use edenfs_utils::bytes_from_path;
-use thrift_types::fbthrift::ThriftEnum;
 
 use crate::client::EdenFsClient;
 use crate::request_factory::RequestFactory;
 use crate::request_factory::RequestParam;
 use crate::request_factory::RequestResult;
+use crate::types::all_attributes_as_bitmask;
+use crate::types::file_attributes_from_strings;
 use crate::types::SyncBehavior;
 
 // YES, the following code is extremely repetitive. It's unfortunately the only way (for now). We
@@ -427,174 +386,6 @@ impl Default for AttributesRequestScope {
     }
 }
 
-#[repr(i32)]
-#[derive(Debug, Clone, PartialEq)]
-enum FileAttributes {
-    None = 0,
-    Sha1 = 1,
-    FileSize = 2,
-    SourceControlType = 4,
-    ObjectId = 8,
-    Blake3 = 16,
-    DigestSize = 32,
-    DigestHash = 64,
-}
-
-impl From<FileAttributes> for thrift_types::edenfs::FileAttributes {
-    fn from(from: FileAttributes) -> Self {
-        match from {
-            FileAttributes::None => Self::NONE,
-            FileAttributes::Sha1 => Self::SHA1_HASH,
-            FileAttributes::FileSize => Self::FILE_SIZE,
-            FileAttributes::SourceControlType => Self::SOURCE_CONTROL_TYPE,
-            FileAttributes::ObjectId => Self::OBJECT_ID,
-            FileAttributes::Blake3 => Self::BLAKE3_HASH,
-            FileAttributes::DigestSize => Self::DIGEST_SIZE,
-            FileAttributes::DigestHash => Self::DIGEST_HASH,
-        }
-    }
-}
-
-impl From<thrift_types::edenfs::FileAttributes> for FileAttributes {
-    fn from(from: thrift_types::edenfs::FileAttributes) -> Self {
-        match from {
-            thrift_types::edenfs::FileAttributes::NONE => Self::None,
-            thrift_types::edenfs::FileAttributes::SHA1_HASH => Self::Sha1,
-            thrift_types::edenfs::FileAttributes::FILE_SIZE => Self::FileSize,
-            thrift_types::edenfs::FileAttributes::SOURCE_CONTROL_TYPE => Self::SourceControlType,
-            thrift_types::edenfs::FileAttributes::OBJECT_ID => Self::ObjectId,
-            thrift_types::edenfs::FileAttributes::BLAKE3_HASH => Self::Blake3,
-            thrift_types::edenfs::FileAttributes::DIGEST_SIZE => Self::DigestSize,
-            thrift_types::edenfs::FileAttributes::DIGEST_HASH => Self::DigestHash,
-            _ => Self::None,
-        }
-    }
-}
-
-impl FromStr for FileAttributes {
-    type Err = EdenFsError;
-    fn from_str(s: &str) -> std::result::Result<Self, Self::Err> {
-        match s {
-            "None" => Ok(Self::None),
-            "Sha1" => Ok(Self::Sha1),
-            "FileSize" => Ok(Self::FileSize),
-            "SourceControlType" => Ok(Self::SourceControlType),
-            "ObjectId" => Ok(Self::ObjectId),
-            "Blake3" => Ok(Self::Blake3),
-            "DigestSize" => Ok(Self::DigestSize),
-            "DigestHash" => Ok(Self::DigestHash),
-            _ => Err(EdenFsError::Other(anyhow!(
-                "invalid file attribute: {:?}",
-                s
-            ))),
-        }
-    }
-}
-
-/// Converts a slice of `FileAttributes` to a bitmask.
-///
-/// This function takes a slice of `FileAttributes` and returns a bitmask
-/// representing those attributes.
-///
-/// # Parameters
-///
-/// * `attrs` - A slice of `FileAttributes` to convert to a bitmask.
-///
-/// # Returns
-///
-/// A bitmask representing the given attributes.
-fn attributes_as_bitmask(attrs: &[FileAttributes]) -> i64 {
-    attrs.iter().fold(0, |acc, x| acc | x.clone() as i64)
-}
-
-/// Returns a bitmask representing all available file attributes.
-///
-/// This function returns a bitmask that includes all available file attributes.
-///
-/// # Returns
-///
-/// A bitmask representing all available file attributes.
-///
-/// # Examples
-///
-/// ```
-/// use edenfs_client::attributes;
-///
-/// let all_attrs_bitmask = attributes::all_attributes_as_bitmask();
-/// println!("All attributes bitmask: {}", all_attrs_bitmask);
-/// ```
-pub fn all_attributes_as_bitmask() -> i64 {
-    let vals: Vec<FileAttributes> = thrift_types::edenfs::FileAttributes::variant_values()
-        .iter()
-        .map(|v| v.clone().into())
-        .collect();
-    attributes_as_bitmask(&vals)
-}
-
-/// Returns a slice of all available file attribute names.
-///
-/// This function returns a slice containing the names of all available file attributes.
-///
-/// # Returns
-///
-/// A slice of strings representing all available file attribute names.
-///
-/// # Examples
-///
-/// ```
-/// use edenfs_client::attributes;
-///
-/// let all_attrs = attributes::all_attributes();
-/// println!("Available attributes: {:?}", all_attrs);
-/// ```
-pub fn all_attributes() -> &'static [&'static str] {
-    thrift_types::edenfs::FileAttributes::variants()
-}
-
-/// Converts a slice of attribute names to a bitmask.
-///
-/// This function takes a slice of attribute names and returns a bitmask
-/// representing those attributes.
-///
-/// # Parameters
-///
-/// * `attrs` - A slice of attribute names to convert to a bitmask.
-///
-/// # Returns
-///
-/// A `Result` containing a bitmask representing the given attributes, or an error
-/// if any of the attribute names are invalid.
-///
-/// # Examples
-///
-/// ```
-/// use edenfs_client::attributes;
-///
-/// // Convert a list of attribute names to a bitmask
-/// let attrs = ["Sha1", "FileSize", "SourceControlType"];
-/// match attributes::file_attributes_from_strings(&attrs) {
-///     Ok(bitmask) => println!("Attribute bitmask: {}", bitmask),
-///     Err(e) => eprintln!("Error: {}", e),
-/// }
-///
-/// // Invalid attribute names will result in an error
-/// let invalid_attrs = ["invalid"];
-/// assert!(attributes::file_attributes_from_strings(&invalid_attrs).is_err());
-/// ```
-pub fn file_attributes_from_strings<T>(attrs: &[T]) -> Result<i64>
-where
-    T: AsRef<str> + Display,
-{
-    let attrs: Result<Vec<FileAttributes>, _> = attrs
-        .iter()
-        .map(|attr| {
-            FileAttributes::from_str(attr.as_ref())
-                .map_err(|e| EdenFsError::Other(anyhow!("invalid file attribute: {:?}", e)))
-        })
-        .collect();
-    Ok(attributes_as_bitmask(attrs?.as_slice()))
-}
-
 impl EdenFsClient {
     async fn get_attributes_from_files_v2<P, S>(
         &self,
@@ -713,21 +504,5 @@ impl RequestFactory for GetAttributesV2Request {
 
     fn request_name(&self) -> &'static str {
         "getAttributesFromFilesV2"
-    }
-}
-
-#[cfg(test)]
-mod test {
-    use super::*;
-
-    #[test]
-    fn test_attributes_from_strings() -> Result<()> {
-        assert_eq!(file_attributes_from_strings::<String>(&[])?, 0);
-        assert_eq!(
-            file_attributes_from_strings(&["Sha1", "SourceControlType"])?,
-            FileAttributes::Sha1 as i64 | FileAttributes::SourceControlType as i64
-        );
-        assert!(file_attributes_from_strings(&["Invalid"]).is_err());
-        Ok(())
     }
 }
