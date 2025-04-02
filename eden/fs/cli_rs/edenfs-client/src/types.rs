@@ -435,7 +435,7 @@ impl FromStr for FileAttributes {
 /// # Returns
 ///
 /// A bitmask representing the given attributes.
-fn attributes_as_bitmask(attrs: &[FileAttributes]) -> i64 {
+pub fn attributes_as_bitmask(attrs: &[FileAttributes]) -> i64 {
     attrs.iter().fold(0, |acc, x| acc | x.clone() as i64)
 }
 
