@@ -131,46 +131,65 @@ impl EdenFsClient {
         self.readdir(mount_path, directory_paths, attributes, sync)
             .await
     }
-}
 
-#[allow(dead_code)]
-async fn recursive_readdir(
-    mount_path: PathBuf,
-    root: Arc<PathBuf>,
-    attributes: &[FileAttributes],
-    client: Arc<EdenFsClient>,
-    parallelism: usize,
-) -> ListDirResult {
-    // We depend on the SourceControlType to determine how to recurse through the directories.
-    // Always include it in the attributes bitmask.
-    let attributes_bitmask =
-        attributes_as_bitmask(attributes) | (FileAttributes::SourceControlType as i64);
-    _recursive_readdir(
-        mount_path,
-        root,
-        vec![],
-        attributes_bitmask,
-        client,
-        parallelism,
-    )
-    .await
+    pub async fn recursive_readdir_with_attributes_vec<P, R>(
+        self: Arc<Self>,
+        mount_path: &P,
+        root: &R,
+        attributes: &[FileAttributes],
+        parallelism: usize,
+    ) -> ListDirResult
+    where
+        P: AsRef<Path>,
+        R: AsRef<Path>,
+    {
+        // We depend on the SourceControlType to determine how to recurse through the directories.
+        // Always include it in the attributes bitmask.
+        let attributes_bitmask =
+            attributes_as_bitmask(attributes) | (FileAttributes::SourceControlType as i64);
+        self.recursive_readdir(mount_path, root, attributes_bitmask, parallelism)
+            .await
+    }
+
+    pub async fn recursive_readdir<P, R>(
+        self: Arc<Self>,
+        mount_path: &P,
+        root: &R,
+        attributes: i64,
+        parallelism: usize,
+    ) -> ListDirResult
+    where
+        P: AsRef<Path>,
+        R: AsRef<Path>,
+    {
+        _recursive_readdir(
+            mount_path.as_ref().to_path_buf(),
+            self.clone(),
+            root.as_ref().to_path_buf(),
+            vec!["".into()],
+            attributes,
+            parallelism,
+        )
+        .await
+    }
 }
 
 #[async_recursion]
 async fn _recursive_readdir(
     mount_path: PathBuf,
-    root: Arc<PathBuf>,
+    client: Arc<EdenFsClient>,
+    root: PathBuf,
     directory_list: Vec<PathBuf>,
     attributes: i64,
-    client: Arc<EdenFsClient>,
     parallelism: usize,
 ) -> ListDirResult {
     let mut files: Vec<ReaddirEntry> = Vec::new();
+    let client = client.clone();
     let directory_list: std::vec::Vec<PathBuf> = directory_list
         .iter()
         .map(|dir| match dir.as_os_str().len() {
-            0 => root.to_path_buf(),
-            _ => root.join(dir).to_path_buf(),
+            0 => root.clone(),
+            _ => root.join(dir),
         })
         .collect();
     let directory_listings = match client
@@ -183,7 +202,9 @@ async fn _recursive_readdir(
         .await
     {
         Ok(lists) => lists,
-        Err(e) => return Err(anyhow!("readdir failed root={}: {e:?}", root.display()).into()),
+        Err(e) => {
+            return Err(anyhow!("readdir failed root={}: {e:?}", root.display()).into());
+        }
     };
 
     let mut child_directories = Vec::new();
@@ -248,16 +269,16 @@ async fn _recursive_readdir(
     let subdir_files =
         futures::future::try_join_all(child_directories.chunks(parallelism).map(|directories| {
             let root = root.clone();
-            let client = client.clone();
             let directories = directories.to_vec();
             let mount_path = mount_path.clone();
+            let client = client.clone();
             tokio::spawn(async move {
                 _recursive_readdir(
                     mount_path,
+                    client,
                     root,
                     directories,
                     attributes,
-                    client,
                     parallelism,
                 )
                 .await

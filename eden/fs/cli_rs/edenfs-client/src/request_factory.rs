@@ -30,7 +30,7 @@ pub trait RequestFactory {
     fn request_name(&self) -> &'static str;
 }
 
-fn sanity_check_requests(num_requests: u64, num_tasks: u64) -> u64 {
+fn sanity_check_requests(num_requests: usize, num_tasks: usize) -> usize {
     if num_tasks > num_requests {
         eprintln!(
             "Cannot specify more tasks ({}) than requests ({}).",
@@ -46,7 +46,7 @@ fn sanity_check_requests(num_requests: u64, num_tasks: u64) -> u64 {
     }
 }
 
-fn print_update(total: u64, finished: &mut u64) {
+fn print_update(total: usize, finished: &mut usize) {
     let update_cadence = total / 10;
     let update = format!("{}/{} tasks finished running", finished, total);
     if *finished % update_cadence == 0 {
@@ -59,8 +59,8 @@ fn print_update(total: u64, finished: &mut u64) {
 
 pub async fn send_requests<Factory>(
     factory: Arc<Factory>,
-    num_requests: u64,
-    num_tasks: u64,
+    num_requests: usize,
+    num_tasks: usize,
 ) -> Result<()>
 where
     Factory: RequestFactory + Send + Sync + 'static,
@@ -100,7 +100,7 @@ where
         });
     }
 
-    let mut num_finished = 1;
+    let mut num_finished = 1usize;
     while let Some(response) = handles.join_next().await {
         response.with_context(|| anyhow!("Request failed"))??;
         print_update(num_tasks, &mut num_finished);

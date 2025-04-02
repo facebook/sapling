@@ -20,6 +20,7 @@ use edenfs_client::instance::EdenFsInstance;
 use edenfs_client::request_factory::send_requests;
 use edenfs_client::request_factory::RequestFactory;
 use edenfs_client::types::all_attributes;
+use edenfs_client::types::file_attributes_from_strings;
 use edenfs_client::utils::expand_path_or_cwd;
 
 use crate::ExitCode;
@@ -32,7 +33,7 @@ pub struct CommonOptions {
 
     #[clap(short, long, default_value = "10")]
     /// Number of tasks to use for sending requests
-    num_tasks: u64,
+    num_tasks: usize,
 }
 
 #[derive(Parser, Debug)]
@@ -56,7 +57,7 @@ pub enum StressCmd {
             default_value = "1000",
             help = "Number of requests to send to the Thrift server"
         )]
-        num_requests: u64,
+        num_requests: usize,
 
         #[clap(
             long,
@@ -68,7 +69,7 @@ pub enum StressCmd {
         attributes: Vec<String>,
     },
 
-    #[clap(about = "Stress the readdir endpoint")]
+    #[clap(about = "Stress the readdir endpoint by issuing a recursive readdir request")]
     RecursiveReaddir {
         #[clap(flatten)]
         common: CommonOptions,
@@ -149,12 +150,25 @@ impl crate::Subcommand for StressCmd {
                 Ok(0)
             }
             Self::RecursiveReaddir {
-                common: _,
-                root_dir: _,
-                attributes: _,
+                common,
+                root_dir,
+                attributes,
             } => {
-                eprintln!("Not yet implemented");
-                Ok(1)
+                let checkout = find_checkout(instance, &common.mount_point).with_context(|| {
+                    anyhow!(
+                        "Failed to find checkout with path {}",
+                        common.mount_point.display()
+                    )
+                })?;
+                let client = Arc::new(client);
+                let attributes = file_attributes_from_strings(attributes)?;
+                let readdir_results = client
+                    .recursive_readdir(&checkout.path(), root_dir, attributes, common.num_tasks)
+                    .await?;
+                for (path, readdir_result) in readdir_results {
+                    println!("Success - {}: {:?}", path.display(), readdir_result);
+                }
+                Ok(0)
             }
         }
     }
