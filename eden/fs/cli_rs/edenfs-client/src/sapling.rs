@@ -10,11 +10,10 @@ use std::path::Path;
 use std::path::PathBuf;
 use std::process::Stdio;
 
+use edenfs_utils::prefix_paths;
 use tokio::io::AsyncBufReadExt;
 use tokio::io::BufReader;
 use tokio::process::Command;
-
-use crate::changes_since::prefix_paths;
 
 #[derive(Debug, PartialEq)]
 pub enum SaplingStatus {

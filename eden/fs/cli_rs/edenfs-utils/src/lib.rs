@@ -259,3 +259,39 @@ pub fn execute_par(par: PathBuf) -> anyhow::Result<Command> {
     python.arg(par);
     Ok(python)
 }
+
+/// Given a prefix and a list of paths, return a list of paths with the prefix prepended to each path.
+///
+/// If the prefix is None the paths are processed as-is.
+/// All paths are post-processed with the provided function.
+pub fn prefix_paths<F, T>(
+    prefix: &Option<PathBuf>,
+    paths: &Option<Vec<PathBuf>>,
+    f: F,
+) -> Option<Vec<T>>
+where
+    F: Fn(PathBuf) -> T,
+{
+    if let Some(prefix) = prefix {
+        paths
+            .as_ref()
+            .map(|ps| ps.iter().map(|p| f(prefix.join(p))).collect::<Vec<_>>())
+    } else {
+        paths
+            .as_ref()
+            .map(|ps| ps.iter().map(|p| f(p.to_path_buf())).collect::<Vec<_>>())
+    }
+}
+
+pub fn strip_prefix_from_bytes(prefix: &Option<PathBuf>, path: &[u8]) -> Vec<u8> {
+    if let Some(prefix) = prefix {
+        let path = Path::new(std::str::from_utf8(path).expect("Failed to convert path to string"));
+        path.strip_prefix(prefix)
+            .map_or(path, |stripped_path| stripped_path)
+            .to_string_lossy()
+            .to_string()
+            .into_bytes()
+    } else {
+        path.to_vec()
+    }
+}
