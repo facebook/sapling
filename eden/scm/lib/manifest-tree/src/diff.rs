@@ -153,11 +153,15 @@ struct DiffWorker {
 ///
 /// The iteration is breadth first but in parallel, so different depths can be processed
 /// at the same time.
-pub fn diff(
+pub(crate) fn diff<T>(
     left: &TreeManifest,
     right: &TreeManifest,
     matcher: Arc<dyn Matcher + Send + Sync>,
-) -> Box<dyn Iterator<Item = Result<DiffEntry>>> {
+) -> Box<dyn Iterator<Item = Result<T>>>
+where
+    ResultSender: From<Sender<Result<T>>>,
+    T: 'static,
+{
     let lroot = DirLink::from_root(&left.root).expect("tree root is not a directory");
     let rroot = DirLink::from_root(&right.root).expect("tree root is not a directory");
 
@@ -172,7 +176,7 @@ pub fn diff(
 
     // Bound this channel so we don't use up unlimited memory if we are diffing faster
     // than caller is reading results.
-    let (result_send, result_recv) = bounded(RESULT_QUEUE_SIZE);
+    let (result_send, result_recv) = bounded::<Result<T>>(RESULT_QUEUE_SIZE);
 
     // Use unbounded channel to avoid deadlocks. Memory use should be bounded in practice
     // since workers will block sending results to caller.
