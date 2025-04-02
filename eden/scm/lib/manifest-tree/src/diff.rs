@@ -19,6 +19,7 @@ use flume::Receiver;
 use flume::Sender;
 use manifest::DiffEntry;
 use manifest::DiffType;
+use manifest::DirDiffEntry;
 use pathmatcher::DirectoryMatch;
 use pathmatcher::Matcher;
 use progress_model::ActiveProgressBar;
@@ -66,7 +67,7 @@ impl DiffWork {
         store: &InnerStore,
         matcher: &dyn Matcher,
         work: &mut Vec<DiffWork>,
-        result: Sender<Result<DiffEntry>>,
+        result: ResultSender,
     ) -> Result<()> {
         match self {
             DiffWork::Single(dir, side, path_conflict) => {
@@ -84,11 +85,64 @@ impl DiffWork {
     }
 }
 
+#[allow(unused)]
+#[derive(Clone)]
+pub(crate) enum ResultSender {
+    File(Sender<Result<DiffEntry>>),
+    Dir(Sender<Result<DirDiffEntry>>),
+}
+
+#[allow(unused)]
+impl ResultSender {
+    fn send_file_diff(&self, diff: DiffEntry) -> Result<()> {
+        if let Self::File(sender) = self {
+            sender.send(Ok(diff))?;
+        }
+        Ok(())
+    }
+
+    fn send_dir_diff(&self, diff: DirDiffEntry) -> Result<()> {
+        if let Self::Dir(sender) = self {
+            sender.send(Ok(diff))?;
+        }
+        Ok(())
+    }
+
+    fn need_file_diff(&self) -> bool {
+        matches!(self, Self::File(_))
+    }
+
+    fn need_dir_diff(&self) -> bool {
+        matches!(self, Self::Dir(_))
+    }
+
+    fn send_error(&self, error: anyhow::Error) -> Result<()> {
+        match self {
+            Self::File(sender) => sender.send(Err(error))?,
+            Self::Dir(sender) => sender.send(Err(error))?,
+        }
+        Ok(())
+    }
+}
+
+impl From<Sender<Result<DiffEntry>>> for ResultSender {
+    fn from(sender: Sender<Result<DiffEntry>>) -> Self {
+        Self::File(sender)
+    }
+}
+
+#[allow(unused)]
+impl From<Sender<Result<DirDiffEntry>>> for ResultSender {
+    fn from(sender: Sender<Result<DirDiffEntry>>) -> Self {
+        Self::Dir(sender)
+    }
+}
+
 #[derive(Clone)]
 struct DiffWorker {
     work_recv: Receiver<WorkerInput>,
     work_send: Sender<WorkerInput>,
-    result_send: Sender<Result<DiffEntry>>,
+    result_send: ResultSender,
     matcher: Arc<dyn Matcher + Sync + Send>,
     store: InnerStore,
     pending: Arc<AtomicUsize>,
@@ -129,6 +183,8 @@ pub fn diff(
     let progress_bar = ProgressBar::new("diffing manifest", 0, "trees");
     let registry = Registry::main();
     registry.register_progress_bar(&progress_bar);
+
+    let result_send = ResultSender::from(result_send);
 
     let worker = DiffWorker {
         work_recv,
@@ -213,7 +269,7 @@ impl DiffWorker {
                     self.result_send.clone(),
                 );
                 if let Err(err) = res {
-                    self.result_send.send(Err(err))?;
+                    self.result_send.send_error(err)?;
                 }
 
                 if to_send.len() >= Self::BATCH_SIZE {
@@ -274,7 +330,7 @@ fn diff_single(
     store: &InnerStore,
     matcher: &dyn Matcher,
     work: &mut Vec<DiffWork>,
-    result: Sender<Result<DiffEntry>>,
+    result: ResultSender,
 ) -> Result<()> {
     let (files, dirs) = dir.list(store)?;
 
@@ -289,12 +345,12 @@ fn diff_single(
             continue;
         }
 
-        if matcher.matches_file(&f.path)? {
+        if result.need_file_diff() && matcher.matches_file(&f.path)? {
             let entry = match side {
                 Side::Left => DiffEntry::left(f),
                 Side::Right => DiffEntry::right(f),
             };
-            result.send(Ok(entry))?;
+            result.send_file_diff(entry)?;
         }
     }
 
@@ -311,14 +367,16 @@ fn diff_dirs(
     store: &InnerStore,
     matcher: &dyn Matcher,
     work: &mut Vec<DiffWork>,
-    result: Sender<Result<DiffEntry>>,
+    result: ResultSender,
 ) -> Result<()> {
     let mut add_diffs = |l, r| -> Result<()> {
         let (file_diff, dir_diff) = diff_links(&left.path, l, r);
 
-        if let Some(file_diff) = file_diff {
-            if matcher.matches_file(&file_diff.path)? {
-                result.send(Ok(file_diff))?;
+        if result.need_file_diff() {
+            if let Some(file_diff) = file_diff {
+                if matcher.matches_file(&file_diff.path)? {
+                    result.send_file_diff(file_diff)?;
+                }
             }
         }
 
@@ -502,8 +560,9 @@ mod tests {
         let store = Arc::new(TestStore::new());
         let tree = make_tree_manifest(store, &[("a", "1"), ("b/f", "2"), ("c", "3"), ("d/f", "4")]);
         let dir = DirLink::from_root(&tree.root).unwrap();
-        let (sender, receiver) = unbounded();
+        let (sender, receiver) = unbounded::<Result<DiffEntry>>();
         let mut work = Vec::new();
+        let sender = ResultSender::from(sender);
 
         let matcher = AlwaysMatcher::new();
         diff_single(
