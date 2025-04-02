@@ -66,7 +66,7 @@ class BackingStore : public RootIdCodec, public ObjectIdCodec {
     Trees = 1 << 0,
     Blobs = 1 << 1,
     BlobAuxData = 1 << 2,
-    // TODO(T192128228): Add caching policy for TreeAuxData
+    TreeAuxData = 1 << 3,
     TreesAndBlobs = Trees | Blobs,
     TreesAndBlobAuxData = Trees | BlobAuxData,
     BlobsAndBlobAuxData = Blobs | BlobAuxData,
