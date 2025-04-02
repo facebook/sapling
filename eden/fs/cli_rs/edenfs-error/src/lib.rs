@@ -52,7 +52,7 @@ use tokio::time::error::Elapsed;
 pub type ExitCode = i32;
 pub type Result<T, E = EdenFsError> = std::result::Result<T, E>;
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq, Eq)]
 enum EdenThriftErrorType {
     PosixError,
     Win32Error,
@@ -271,3 +271,28 @@ macro_rules! impl_has_error_handling_strategy_streaming {
 }
 
 impl_has_error_handling_strategy_streaming!(StreamJournalChangedError);
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_thrift_error_to_eden_error() {
+        let error = EdenError {
+            message: "test".to_string(),
+            errorCode: Some(1),
+            errorType: thrift_types::edenfs::EdenErrorType::POSIX_ERROR,
+            ..Default::default()
+        };
+        let result: Result<(), EdenFsError> = Err(EdenFsError::ThriftRequestError(error.into()));
+        assert!(result.is_err());
+        match result {
+            Err(EdenFsError::ThriftRequestError(e)) => {
+                assert_eq!(e.message, "test");
+                assert_eq!(e.error_code, Some(1));
+                assert_eq!(e.error_type, EdenThriftErrorType::PosixError);
+            }
+            _ => panic!("Expected EdenFsError::ThriftRequestError"),
+        }
+    }
+}
