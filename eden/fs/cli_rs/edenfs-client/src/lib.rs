@@ -24,6 +24,7 @@ pub mod instance;
 pub mod journal;
 pub mod local_store;
 mod mounttable;
+pub mod readdir;
 pub mod redirect;
 pub mod request_factory;
 pub mod scm_status;

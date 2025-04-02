@@ -34,6 +34,7 @@ use crate::types::SyncBehavior;
 ///
 /// This enum is used to represent the result of a SHA1 hash request, which can
 /// either be a successful hash value or an error.
+#[derive(Debug)]
 pub enum Sha1OrError {
     /// A successful SHA1 hash value.
     ///
@@ -61,6 +62,7 @@ impl From<thrift_types::edenfs::Sha1OrError> for Sha1OrError {
 ///
 /// This enum is used to represent the result of a file size request, which can
 /// either be a successful size value or an error.
+#[derive(Debug)]
 pub enum SizeOrError {
     /// A successful file size value.
     Size(i64),
@@ -86,6 +88,7 @@ impl From<thrift_types::edenfs::SizeOrError> for SizeOrError {
 ///
 /// This enum is used to represent the type of an object in source control,
 /// such as a tree, regular file, executable file, or symlink.
+#[derive(Debug)]
 pub enum SourceControlType {
     /// A directory (tree) in source control.
     Tree,
@@ -115,6 +118,7 @@ impl From<thrift_types::edenfs::SourceControlType> for SourceControlType {
 ///
 /// This enum is used to represent the result of a source control type request,
 /// which can either be a successful type value or an error.
+#[derive(Debug)]
 pub enum SourceControlTypeOrError {
     /// A successful source control type value.
     SourceControlType(SourceControlType),
@@ -144,6 +148,7 @@ impl From<thrift_types::edenfs::SourceControlTypeOrError> for SourceControlTypeO
 ///
 /// This enum is used to represent the result of an object ID request, which can
 /// either be a successful ID value or an error.
+#[derive(Debug)]
 pub enum ObjectIdOrError {
     /// A successful object ID value.
     ///
@@ -171,6 +176,7 @@ impl From<thrift_types::edenfs::ObjectIdOrError> for ObjectIdOrError {
 ///
 /// This enum is used to represent the result of a BLAKE3 hash request, which can
 /// either be a successful hash value or an error.
+#[derive(Debug)]
 pub enum Blake3OrError {
     /// A successful BLAKE3 hash value.
     ///
@@ -198,6 +204,7 @@ impl From<thrift_types::edenfs::Blake3OrError> for Blake3OrError {
 ///
 /// This enum is used to represent the result of a digest hash request, which can
 /// either be a successful hash value or an error.
+#[derive(Debug)]
 pub enum DigestHashOrError {
     /// A successful digest hash value.
     ///
@@ -225,6 +232,7 @@ impl From<thrift_types::edenfs::DigestHashOrError> for DigestHashOrError {
 ///
 /// This enum is used to represent the result of a digest size request, which can
 /// either be a successful size value or an error.
+#[derive(Debug)]
 pub enum DigestSizeOrError {
     /// A successful digest size value.
     DigestSize(i64),
@@ -251,6 +259,7 @@ impl From<thrift_types::edenfs::DigestSizeOrError> for DigestSizeOrError {
 /// This struct contains various attributes of a file, such as its SHA1 hash,
 /// size, source control type, and more. Each attribute is optional and may
 /// contain either a value or an error.
+#[derive(Debug)]
 pub struct FileAttributeDataV2 {
     /// The SHA1 hash of the file, if requested and available.
     pub sha1: Option<Sha1OrError>,
@@ -286,6 +295,7 @@ impl From<thrift_types::edenfs::FileAttributeDataV2> for FileAttributeDataV2 {
 ///
 /// This enum is used to represent the result of a file attribute data request,
 /// which can either be successful data or an error.
+#[derive(Debug)]
 pub enum FileAttributeDataOrErrorV2 {
     /// Successful file attribute data.
     FileAttributeData(FileAttributeDataV2),
