@@ -5,6 +5,7 @@
  * GNU General Public License version 2.
  */
 
+use std::env;
 use std::fs::read_to_string;
 use std::path::Path;
 use std::path::PathBuf;
@@ -32,6 +33,15 @@ pub enum SaplingGetStatusResult {
     TooManyChanges,
 }
 
+fn get_sapling_executable_path() -> String {
+    let path = env::var("EDEN_HG_BINARY").unwrap_or_else(|_| String::new());
+    if path.is_empty() {
+        "sl".to_string()
+    } else {
+        path
+    }
+}
+
 #[allow(dead_code)]
 pub fn is_fbsource_checkout(mount_point: &Path) -> bool {
     let project_id_path = mount_point.join(".projectid");
@@ -43,7 +53,7 @@ pub fn is_fbsource_checkout(mount_point: &Path) -> bool {
 }
 
 pub async fn get_current_commit_id() -> anyhow::Result<String> {
-    let output = Command::new("sl")
+    let output = Command::new(get_sapling_executable_path())
         .env("HGPLAIN", "1")
         .args(["whereami", "--traceback"])
         .output()
@@ -52,7 +62,7 @@ pub async fn get_current_commit_id() -> anyhow::Result<String> {
 }
 
 pub async fn get_commit_timestamp(commit_id: &str) -> anyhow::Result<u64> {
-    let output = Command::new("sl")
+    let output = Command::new(get_sapling_executable_path())
         .env("HGPLAIN", "1")
         .args(["log", "--traceback", "-T", "{date}", "-r", commit_id])
         .output()
@@ -65,7 +75,7 @@ pub async fn get_commit_timestamp(commit_id: &str) -> anyhow::Result<u64> {
 }
 
 pub async fn is_commit_in_repo(commit_id: &str) -> anyhow::Result<bool> {
-    let output = Command::new("sl")
+    let output = Command::new(get_sapling_executable_path())
         .env("HGPLAIN", "1")
         .args([
             "log",
@@ -82,7 +92,7 @@ pub async fn is_commit_in_repo(commit_id: &str) -> anyhow::Result<bool> {
 }
 
 pub async fn get_mergebase(commit: &str, mergegase_with: &str) -> anyhow::Result<Option<String>> {
-    let output = Command::new("sl")
+    let output = Command::new(get_sapling_executable_path())
         .env("HGPLAIN", "1")
         .args([
             "log",
@@ -178,7 +188,7 @@ pub async fn get_status(
         args.push(second);
     }
 
-    let mut output = Command::new("sl")
+    let mut output = Command::new(get_sapling_executable_path())
         .env("HGPLAIN", "1")
         .args(args)
         .stdout(Stdio::piped())
