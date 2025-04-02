@@ -1235,6 +1235,46 @@ def debugdifftree(ui, repo, *pats, **opts) -> None:
 
 
 @command(
+    "debugdiffdirs",
+    [("r", "rev", [], "revs to diff (2 revs)")]
+    + cmdutil.walkopts
+    + cmdutil.templateopts,
+)
+def debugdiffdirs(ui, repo, *pats, **opts) -> None:
+    """print the changed directories between two commits
+
+    Print the directories who have had children added or removed. Modified
+    children do not count and will not cause a directory to be printed.
+
+    Used by tools like buck2.
+    """
+    revs = scmutil.revrange(repo, opts.get("rev"))
+    oldrev = revs.first()
+    newrev = revs.last()
+    oldctx = repo[oldrev]
+    newctx = repo[newrev]
+
+    oldmf = oldctx.manifest()
+    newmf = newctx.manifest()
+    matcher = scmutil.match(newctx, pats, opts)
+    diff = oldmf.modifieddirs(newmf, matcher)
+
+    fm = ui.formatter("debugdifftree", opts)
+
+    statuslist = [" ", "R", "A", "M"]
+    for path, inold, innew in diff:
+        # Skip the root path.
+        if not path:
+            continue
+        statusindex = inold | (innew << 1)
+        status = statuslist[statusindex]
+        fm.write("status path", "%s %s\n", status, path)
+        fm.data(path=path, status=status)
+
+    fm.end()
+
+
+@command(
     "debugdiscovery",
     [("", "rev", [], "restrict discovery to this set of revs")],
     _("[--rev REV] [OTHER]"),
