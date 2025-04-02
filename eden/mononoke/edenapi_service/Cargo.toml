@@ -51,7 +51,6 @@ mononoke_types = { version = "0.1.0", path = "../mononoke_types" }
 nonzero_ext = "0.2"
 once_cell = "1.12"
 permission_checker = { version = "0.1.0", path = "../permission_checker" }
-phases = { version = "0.1.0", path = "../phases" }
 pin-project = "0.4.30"
 rand = { version = "0.8", features = ["small_rng"] }
 rate_limiting = { version = "0.1.0", path = "../rate_limiting" }
