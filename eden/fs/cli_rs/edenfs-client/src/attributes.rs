@@ -10,8 +10,8 @@ use std::path::PathBuf;
 use std::sync::Arc;
 
 use anyhow::anyhow;
-use edenfs_error::impl_eden_data_into_result;
-use edenfs_error::EdenDataIntoResult;
+use edenfs_error::impl_eden_data_into_edenfs_result;
+use edenfs_error::EdenDataIntoEdenFsResult;
 use edenfs_error::EdenFsError;
 use edenfs_error::Result;
 use edenfs_utils::bytes_from_path;
@@ -320,18 +320,18 @@ impl From<thrift_types::edenfs::FileAttributeDataOrErrorV2> for FileAttributeDat
     }
 }
 
-impl_eden_data_into_result!(Sha1OrError, Vec<u8>, Sha1);
-impl_eden_data_into_result!(SizeOrError, i64, Size);
-impl_eden_data_into_result!(
+impl_eden_data_into_edenfs_result!(Sha1OrError, Vec<u8>, Sha1);
+impl_eden_data_into_edenfs_result!(SizeOrError, i64, Size);
+impl_eden_data_into_edenfs_result!(
     SourceControlTypeOrError,
     SourceControlType,
     SourceControlType
 );
-impl_eden_data_into_result!(ObjectIdOrError, Vec<u8>, ObjectId);
-impl_eden_data_into_result!(Blake3OrError, Vec<u8>, Blake3);
-impl_eden_data_into_result!(DigestSizeOrError, i64, DigestSize);
-impl_eden_data_into_result!(DigestHashOrError, Vec<u8>, DigestHash);
-impl_eden_data_into_result!(
+impl_eden_data_into_edenfs_result!(ObjectIdOrError, Vec<u8>, ObjectId);
+impl_eden_data_into_edenfs_result!(Blake3OrError, Vec<u8>, Blake3);
+impl_eden_data_into_edenfs_result!(DigestSizeOrError, i64, DigestSize);
+impl_eden_data_into_edenfs_result!(DigestHashOrError, Vec<u8>, DigestHash);
+impl_eden_data_into_edenfs_result!(
     FileAttributeDataOrErrorV2,
     FileAttributeDataV2,
     FileAttributeData
@@ -543,19 +543,19 @@ mod tests {
     use super::*;
 
     #[test]
-    fn test_sha1_or_error_into_result() {
+    fn test_sha1_or_error_into_edenfs_result() {
         let sha1 = Sha1OrError::Sha1(vec![1, 2, 3]);
-        let result = sha1.into_result();
+        let result = sha1.into_edenfs_result();
         assert!(result.is_ok());
         assert_eq!(result.unwrap(), vec![1, 2, 3]);
 
         let error = Sha1OrError::Error(EdenFsError::Other(anyhow!("error")));
-        let result = error.into_result();
+        let result = error.into_edenfs_result();
         assert!(result.is_err());
         assert_eq!(result.unwrap_err().to_string(), "error");
 
         let unknown_field = Sha1OrError::UnknownField(123);
-        let result = unknown_field.into_result();
+        let result = unknown_field.into_edenfs_result();
         assert!(result.is_err());
         assert_eq!(result.unwrap_err().to_string(), "Unknown field: 123");
     }

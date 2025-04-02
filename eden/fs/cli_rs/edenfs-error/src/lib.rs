@@ -107,19 +107,19 @@ impl From<EdenError> for ThriftRequestError {
     }
 }
 
-pub trait EdenDataIntoResult {
+pub trait EdenDataIntoEdenFsResult {
     type Data;
 
-    fn into_result(self) -> Result<Self::Data, EdenFsError>;
+    fn into_edenfs_result(self) -> Result<Self::Data, EdenFsError>;
 }
 
 #[macro_export]
-macro_rules! impl_eden_data_into_result {
+macro_rules! impl_eden_data_into_edenfs_result {
     ($typ: ident, $data: ty, $ok_variant: ident) => {
-        impl EdenDataIntoResult for $typ {
+        impl EdenDataIntoEdenFsResult for $typ {
             type Data = $data;
 
-            fn into_result(self) -> Result<Self::Data, EdenFsError> {
+            fn into_edenfs_result(self) -> Result<Self::Data, EdenFsError> {
                 match self {
                     Self::$ok_variant(data) => Ok(data),
                     Self::Error(e) => Err(e),

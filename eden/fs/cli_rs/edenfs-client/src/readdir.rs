@@ -13,8 +13,8 @@ use std::sync::Arc;
 use anyhow::anyhow;
 use anyhow::Context;
 use async_recursion::async_recursion;
-use edenfs_error::impl_eden_data_into_result;
-use edenfs_error::EdenDataIntoResult;
+use edenfs_error::impl_eden_data_into_edenfs_result;
+use edenfs_error::EdenDataIntoEdenFsResult;
 use edenfs_error::EdenFsError;
 use edenfs_error::Result;
 use edenfs_error::ResultExt;
@@ -62,7 +62,7 @@ impl From<thrift_types::edenfs::DirListAttributeDataOrError> for DirListAttribut
     }
 }
 
-impl_eden_data_into_result!(
+impl_eden_data_into_edenfs_result!(
     DirListAttributeDataOrError,
     DirListAttributeEntry,
     DirListAttributeData
@@ -197,11 +197,11 @@ async fn recursive_readdir_impl(
         })
     {
         for (filename, entry_data) in data_or_error
-            .into_result()
+            .into_edenfs_result()
             .with_context(|| directory.display().to_string())?
         {
             let entry_data = entry_data
-                .into_result()
+                .into_edenfs_result()
                 .with_context(|| anyhow!("missing entry data for {}", filename.display()))?;
             let scm_type = entry_data.scm_type.as_ref().map_or_else(
                 || Err(EdenFsError::Other(anyhow!("missing scm_type"))),
