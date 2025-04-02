@@ -20,9 +20,9 @@ use crate::client::EdenFsClient;
 use crate::request_factory::RequestFactory;
 use crate::request_factory::RequestParam;
 use crate::request_factory::RequestResult;
-use crate::types::file_attributes_from_strings;
 use crate::types::FileAttributes;
 use crate::types::SyncBehavior;
+use crate::types::TryIntoFileAttributeBitmask;
 
 // YES, the following code is extremely repetitive. It's unfortunately the only way (for now). We
 // could potentially use macros in the future, but that would require language feature
@@ -415,21 +415,22 @@ impl Default for AttributesRequestScope {
 }
 
 impl EdenFsClient {
-    async fn get_attributes_from_files_v2<P, S>(
+    async fn get_attributes_from_files_v2<P, S, A>(
         &self,
         mount_point: P,
         paths: &[S],
-        requested_attributes: i64,
+        requested_attributes: A,
         sync: Option<SyncBehavior>,
         scope: Option<AttributesRequestScope>,
     ) -> Result<GetAttributesFromFilesResultV2>
     where
         P: AsRef<Path>,
         S: AsRef<str>,
+        A: TryIntoFileAttributeBitmask,
     {
         let params = thrift_types::edenfs::GetAttributesFromFilesParams {
             mountPoint: bytes_from_path(mount_point.as_ref().to_path_buf())?,
-            requestedAttributes: requested_attributes,
+            requestedAttributes: requested_attributes.try_into_bitmask()?,
             paths: paths
                 .iter()
                 .map(|s| s.as_ref().as_bytes().to_vec())
@@ -482,27 +483,29 @@ impl GetAttributesV2Request {
     /// use std::path::PathBuf;
     ///
     /// use edenfs_client::attributes::GetAttributesV2Request;
+    /// use edenfs_client::types::FileAttributes;
     ///
     /// // Create a request for getting SHA1 and size attributes for two files
     /// let mount_path = PathBuf::from("/path/to/mount");
     /// let paths = ["file1.txt", "file2.txt"];
-    /// let attrs = ["Sha1", "FileSize"];
-    /// let request = GetAttributesV2Request::new(mount_path, &paths, &attrs);
+    /// let attrs = [FileAttributes::Sha1, FileAttributes::FileSize];
+    /// let request = GetAttributesV2Request::new(mount_path, &paths, attrs.as_slice());
     /// ```
-    pub fn new<P, S>(mount_path: PathBuf, paths: &[P], requested_attributes: &[S]) -> Self
+    pub fn new<P, A>(mount_path: PathBuf, paths: &[P], requested_attributes: A) -> Self
     where
         P: AsRef<str>,
-        S: AsRef<str>,
+        A: TryIntoFileAttributeBitmask,
     {
         Self {
             mount_point: mount_path,
             paths: paths.iter().map(|p| p.as_ref().into()).collect(),
-            requested_attributes: file_attributes_from_strings(requested_attributes)
-                .unwrap_or_else(|e| {
-                    tracing::error!("failed to convert attributes to bitmap: {:?}", e);
-                    tracing::info!("defaulting to requesting all attributes in getAttributesFromFilesV2 requests");
-                    FileAttributes::all_attributes_as_bitmask()
-        }),
+            requested_attributes: requested_attributes.try_into_bitmask().unwrap_or_else(|e| {
+                tracing::error!("failed to convert attributes to bitmap: {:?}", e);
+                tracing::info!(
+                    "defaulting to requesting all attributes in getAttributesFromFilesV2 requests"
+                );
+                FileAttributes::all_attributes_as_bitmask()
+            }),
         }
     }
 }

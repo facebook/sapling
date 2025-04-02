@@ -466,18 +466,11 @@ impl FileAttributes {
             .iter()
             .map(|v| v.clone().into())
             .collect();
-        attributes_as_bitmask(&vals)
+        // The bitmask of all available file attributes should always be valid
+        vals.as_slice().try_into_bitmask().unwrap()
     }
 
-    /// Returns a slice of all available file attribute names.
-    ///
-    /// This function returns a slice containing the names of all available file attributes.
-    ///
-    /// # Returns
-    ///
-    /// A slice of strings representing all available file attribute names.
-    ///
-    /// # Examples
+    /// Returns all available file attributes as a vector.
     ///
     /// ```
     /// use edenfs_client::types::FileAttributes;
@@ -506,50 +499,6 @@ impl FileAttributes {
     }
 }
 
-/// Converts a slice of `FileAttributes` to a bitmask. Prefer using try_into_bitmask where possible
-///
-/// This function takes a slice of `FileAttributes` and returns a bitmask
-/// representing those attributes.
-///
-/// # Parameters
-///
-/// * `attrs` - A slice of `FileAttributes` to convert to a bitmask.
-///
-/// # Returns
-///
-/// A bitmask representing the given attributes.
-pub fn attributes_as_bitmask(attrs: &[FileAttributes]) -> i64 {
-    attrs.iter().fold(0, |acc, x| acc | x.clone() as i64)
-}
-
-/// Converts a slice of attribute names to a bitmask.
-///
-/// This function takes a slice of attribute names and returns a bitmask
-/// representing those attributes.
-///
-/// # Parameters
-///
-/// * `attrs` - A slice of attribute names to convert to a bitmask.
-///
-/// # Returns
-///
-/// A `Result` containing a bitmask representing the given attributes, or an error
-/// if any of the attribute names are invalid.
-pub fn file_attributes_from_strings<T>(attrs: &[T]) -> Result<i64>
-where
-    T: AsRef<str>,
-{
-    let attrs: Result<Vec<FileAttributes>, _> = attrs
-        .iter()
-        .map(|attr| {
-            FileAttributes::from_str(attr.as_ref())
-                .map_err(|e| EdenFsError::Other(anyhow!("invalid file attribute: {:?}", e)))
-        })
-        .collect();
-    Ok(attributes_as_bitmask(attrs?.as_slice()))
-}
-
-#[allow(dead_code)]
 pub trait TryIntoFileAttributeBitmask {
     fn try_into_bitmask(self) -> Result<i64>;
 }
@@ -630,5 +579,11 @@ mod test {
             FileAttributes::SourceControlType.as_mask()
         );
         assert!(400i32.try_into_bitmask().is_err());
+    }
+
+    #[test]
+    fn test_all_attributes_as_bitmask() {
+        // Just asserting this does not panic
+        FileAttributes::all_attributes();
     }
 }

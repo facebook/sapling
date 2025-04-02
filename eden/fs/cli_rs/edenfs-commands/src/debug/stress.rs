@@ -19,7 +19,6 @@ use edenfs_client::checkout::find_checkout;
 use edenfs_client::instance::EdenFsInstance;
 use edenfs_client::request_factory::send_requests;
 use edenfs_client::request_factory::RequestFactory;
-use edenfs_client::types::file_attributes_from_strings;
 use edenfs_client::types::FileAttributes;
 use edenfs_client::utils::expand_path_or_cwd;
 
@@ -125,7 +124,7 @@ impl crate::Subcommand for StressCmd {
                 let request_factory = Arc::new(GetAttributesV2Request::new(
                     checkout.path(),
                     &paths,
-                    &attributes,
+                    attributes.as_slice(),
                 ));
 
                 // Issue the requests and bail early if any of them fail
@@ -160,13 +159,16 @@ impl crate::Subcommand for StressCmd {
                     )
                 })?;
                 let client = Arc::new(client);
-                let attributes = file_attributes_from_strings(
-                    &attributes
-                        .clone()
-                        .unwrap_or(FileAttributes::all_attributes()),
-                )?;
+                let attributes = attributes
+                    .clone()
+                    .unwrap_or(FileAttributes::all_attributes());
                 let readdir_results = client
-                    .recursive_readdir(&checkout.path(), root_dir, attributes, common.num_tasks)
+                    .recursive_readdir(
+                        &checkout.path(),
+                        root_dir,
+                        attributes.as_slice(),
+                        common.num_tasks,
+                    )
                     .await?;
                 for (path, readdir_result) in readdir_results {
                     println!("Success - {}: {:?}", path.display(), readdir_result);

@@ -27,9 +27,9 @@ use crate::attributes::FileAttributeDataV2;
 use crate::attributes::SourceControlType;
 use crate::attributes::SourceControlTypeOrError;
 use crate::client::EdenFsClient;
-use crate::types::attributes_as_bitmask;
 use crate::types::FileAttributes;
 use crate::types::SyncBehavior;
+use crate::types::TryIntoFileAttributeBitmask;
 
 pub type DirListAttributeEntry = HashMap<PathBuf, FileAttributeDataOrErrorV2>;
 pub type ReaddirEntry = (PathBuf, FileAttributeDataV2);
@@ -83,16 +83,17 @@ impl From<thrift_types::edenfs::ReaddirResult> for ReaddirResult {
 }
 
 impl EdenFsClient {
-    async fn readdir<P, R>(
+    async fn readdir<P, R, A>(
         &self,
         mount_path: &P,
         directory_paths: &[R],
-        attributes: i64,
+        attributes: A,
         sync: SyncBehavior,
     ) -> Result<ReaddirResult>
     where
         P: AsRef<Path>,
         R: AsRef<Path>,
+        A: TryIntoFileAttributeBitmask,
     {
         let directory_paths: Result<Vec<Vec<u8>>> = directory_paths
             .iter()
@@ -101,11 +102,11 @@ impl EdenFsClient {
         let params = thrift_types::edenfs::ReaddirParams {
             mountPoint: bytes_from_path(mount_path.as_ref().to_path_buf())?,
             directoryPaths: directory_paths?,
-            requestedAttributes: attributes,
+            requestedAttributes: attributes.try_into_bitmask()?,
             sync: sync.into(),
             ..Default::default()
         };
-        tracing::trace!(
+        tracing::debug!(
             "Issuing readdir request with the following params: {:?}",
             &params
         );
@@ -115,53 +116,22 @@ impl EdenFsClient {
             .map(Into::into)
     }
 
-    #[allow(dead_code)]
-    async fn readdir_with_attributes_vec<P, R>(
-        &self,
-        mount_path: &P,
-        directory_paths: &[R],
-        attributes: &[FileAttributes],
-        sync: SyncBehavior,
-    ) -> Result<ReaddirResult>
-    where
-        P: AsRef<Path>,
-        R: AsRef<Path>,
-    {
-        let attributes = attributes_as_bitmask(attributes);
-        self.readdir(mount_path, directory_paths, attributes, sync)
-            .await
-    }
-
-    pub async fn recursive_readdir_with_attributes_vec<P, R>(
+    pub async fn recursive_readdir<P, R, A>(
         self: Arc<Self>,
         mount_path: &P,
         root: &R,
-        attributes: &[FileAttributes],
+        attributes: A,
         parallelism: usize,
     ) -> ListDirResult
     where
         P: AsRef<Path>,
         R: AsRef<Path>,
+        A: TryIntoFileAttributeBitmask,
     {
-        // We depend on the SourceControlType to determine how to recurse through the directories.
-        // Always include it in the attributes bitmask.
-        let attributes_bitmask =
-            attributes_as_bitmask(attributes) | (FileAttributes::SourceControlType as i64);
-        self.recursive_readdir(mount_path, root, attributes_bitmask, parallelism)
-            .await
-    }
-
-    pub async fn recursive_readdir<P, R>(
-        self: Arc<Self>,
-        mount_path: &P,
-        root: &R,
-        attributes: i64,
-        parallelism: usize,
-    ) -> ListDirResult
-    where
-        P: AsRef<Path>,
-        R: AsRef<Path>,
-    {
+        // Recursive readdir depends on SourceControlType to determine which readdir entries need
+        // to be recursed into. Always add SCM Type as a required attribute.
+        let attributes =
+            attributes.try_into_bitmask()? | FileAttributes::SourceControlType.as_mask();
         _recursive_readdir(
             mount_path.as_ref().to_path_buf(),
             self.clone(),
@@ -189,7 +159,7 @@ async fn _recursive_readdir(
         .iter()
         .map(|dir| match dir.as_os_str().len() {
             0 => root.clone(),
-            _ => root.join(dir),
+            _ => dir.clone(),
         })
         .collect();
     let directory_listings = match client
@@ -249,9 +219,8 @@ async fn _recursive_readdir(
                 }
                 Ok(SourceControlType::Tree) => {
                     if !filename.starts_with(".") {
-                        let relpath = directory.join(filename.clone());
-                        child_directories.push(filename);
-                        files.push((relpath, entry_data));
+                        child_directories.push(directory.join(&filename));
+                        files.push((filename.clone(), entry_data));
                     }
                 }
                 Ok(SourceControlType::RegularFile) | Ok(SourceControlType::ExecutableFile) => {
