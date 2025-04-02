@@ -88,7 +88,7 @@ impl From<thrift_types::edenfs::SizeOrError> for SizeOrError {
 ///
 /// This enum is used to represent the type of an object in source control,
 /// such as a tree, regular file, executable file, or symlink.
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub enum SourceControlType {
     /// A directory (tree) in source control.
     Tree,

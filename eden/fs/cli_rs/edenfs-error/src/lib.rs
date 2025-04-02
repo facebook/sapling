@@ -53,7 +53,7 @@ pub type ExitCode = i32;
 pub type Result<T, E = EdenFsError> = std::result::Result<T, E>;
 
 #[derive(Debug, PartialEq, Eq)]
-enum EdenThriftErrorType {
+pub enum EdenThriftErrorType {
     PosixError,
     Win32Error,
     HResultError,
@@ -90,11 +90,11 @@ impl From<thrift_types::edenfs::EdenErrorType> for EdenThriftErrorType {
 #[derive(Debug)]
 pub struct ThriftRequestError {
     #[allow(dead_code)]
-    message: String,
+    pub message: String,
     #[allow(dead_code)]
-    error_code: Option<i32>,
+    pub error_code: Option<i32>,
     #[allow(dead_code)]
-    error_type: EdenThriftErrorType,
+    pub error_type: EdenThriftErrorType,
 }
 
 impl From<EdenError> for ThriftRequestError {

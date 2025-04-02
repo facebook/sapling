@@ -8,22 +8,32 @@
 use std::collections::HashMap;
 use std::path::Path;
 use std::path::PathBuf;
+use std::sync::Arc;
 
 use anyhow::anyhow;
+use anyhow::Context;
+use async_recursion::async_recursion;
 use edenfs_error::impl_eden_data_into_result;
 use edenfs_error::EdenDataIntoResult;
 use edenfs_error::EdenFsError;
 use edenfs_error::Result;
+use edenfs_error::ResultExt;
+use edenfs_error::ThriftRequestError;
 use edenfs_utils::bytes_from_path;
 use edenfs_utils::path_from_bytes_lossy;
 
 use crate::attributes::FileAttributeDataOrErrorV2;
+use crate::attributes::FileAttributeDataV2;
+use crate::attributes::SourceControlType;
+use crate::attributes::SourceControlTypeOrError;
 use crate::client::EdenFsClient;
 use crate::types::attributes_as_bitmask;
 use crate::types::FileAttributes;
 use crate::types::SyncBehavior;
 
-type DirListAttributeEntry = HashMap<PathBuf, FileAttributeDataOrErrorV2>;
+pub type DirListAttributeEntry = HashMap<PathBuf, FileAttributeDataOrErrorV2>;
+pub type ReaddirEntry = (PathBuf, FileAttributeDataV2);
+pub type ListDirResult = Result<Vec<ReaddirEntry>>;
 
 #[derive(Debug)]
 enum DirListAttributeDataOrError {
@@ -121,4 +131,142 @@ impl EdenFsClient {
         self.readdir(mount_path, directory_paths, attributes, sync)
             .await
     }
+}
+
+#[allow(dead_code)]
+async fn recursive_readdir(
+    mount_path: PathBuf,
+    root: Arc<PathBuf>,
+    attributes: &[FileAttributes],
+    client: Arc<EdenFsClient>,
+    parallelism: usize,
+) -> ListDirResult {
+    // We depend on the SourceControlType to determine how to recurse through the directories.
+    // Always include it in the attributes bitmask.
+    let attributes_bitmask =
+        attributes_as_bitmask(attributes) | (FileAttributes::SourceControlType as i64);
+    _recursive_readdir(
+        mount_path,
+        root,
+        vec![],
+        attributes_bitmask,
+        client,
+        parallelism,
+    )
+    .await
+}
+
+#[async_recursion]
+async fn _recursive_readdir(
+    mount_path: PathBuf,
+    root: Arc<PathBuf>,
+    directory_list: Vec<PathBuf>,
+    attributes: i64,
+    client: Arc<EdenFsClient>,
+    parallelism: usize,
+) -> ListDirResult {
+    let mut files: Vec<ReaddirEntry> = Vec::new();
+    let directory_list: std::vec::Vec<PathBuf> = directory_list
+        .iter()
+        .map(|dir| match dir.as_os_str().len() {
+            0 => root.to_path_buf(),
+            _ => root.join(dir).to_path_buf(),
+        })
+        .collect();
+    let directory_listings = match client
+        .readdir(
+            &mount_path,
+            &directory_list,
+            attributes,
+            SyncBehavior::no_sync(),
+        )
+        .await
+    {
+        Ok(lists) => lists,
+        Err(e) => return Err(anyhow!("readdir failed root={}: {e:?}", root.display()).into()),
+    };
+
+    let mut child_directories = Vec::new();
+    for (data_or_error, directory) in directory_listings
+        .dir_lists
+        .into_iter()
+        .zip(directory_list)
+        .filter(|(data_or_error, dir)| match data_or_error {
+            DirListAttributeDataOrError::Error(EdenFsError::ThriftRequestError(
+                ThriftRequestError {
+                    message: _,
+                    error_code: Some(errno),
+                    error_type: _,
+                },
+            )) if *errno == libc::ENOENT => {
+                tracing::warn!("warning: {} does not exist.", dir.display());
+                false
+            }
+            _ => true,
+        })
+    {
+        for (filename, entry_data) in data_or_error
+            .into_result()
+            .with_context(|| directory.display().to_string())?
+        {
+            let entry_data = entry_data
+                .into_result()
+                .with_context(|| anyhow!("missing entry data for {}", filename.display()))?;
+            let scm_type = entry_data.scm_type.as_ref().map_or_else(
+                || Err(EdenFsError::Other(anyhow!("missing scm_type"))),
+                |t| match t {
+                    SourceControlTypeOrError::SourceControlType(t) => Ok(t),
+                    _ => Err(EdenFsError::Other(anyhow!("missing scm_type"))),
+                },
+            );
+            match scm_type {
+                Err(e) => {
+                    tracing::warn!(
+                        "warning: failed to get scm_type for {}: {e:?}",
+                        filename.display()
+                    );
+                }
+                Ok(SourceControlType::Tree) => {
+                    if !filename.starts_with(".") {
+                        let relpath = directory.join(filename.clone());
+                        child_directories.push(filename);
+                        files.push((relpath, entry_data));
+                    }
+                }
+                Ok(SourceControlType::RegularFile) | Ok(SourceControlType::ExecutableFile) => {
+                    let relpath = directory.join(filename);
+                    files.push((relpath, entry_data));
+                }
+                Ok(SourceControlType::Symlink) => {
+                    tracing::debug!("symlink: {}", directory.display());
+                }
+                bad => return Err(anyhow!("unexpected SourceControlType: {:?}", bad).into()),
+            }
+        }
+    }
+
+    let subdir_files =
+        futures::future::try_join_all(child_directories.chunks(parallelism).map(|directories| {
+            let root = root.clone();
+            let client = client.clone();
+            let directories = directories.to_vec();
+            let mount_path = mount_path.clone();
+            tokio::spawn(async move {
+                _recursive_readdir(
+                    mount_path,
+                    root,
+                    directories,
+                    attributes,
+                    client,
+                    parallelism,
+                )
+                .await
+            })
+        }))
+        .await
+        .from_err()?;
+    for subfiles in subdir_files {
+        files.extend(subfiles?);
+    }
+    Ok(files)
 }
