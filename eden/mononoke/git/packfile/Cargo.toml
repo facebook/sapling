@@ -18,10 +18,10 @@ bytes = { version = "1.9.0", features = ["serde"] }
 fbthrift = { version = "0.0.1+unstable", git = "https://github.com/facebook/fbthrift.git", branch = "main" }
 flate2 = { version = "1.0.33", features = ["rust_backend"], default-features = false }
 futures = { version = "0.3.30", features = ["async-await", "compat"] }
-gix-features = { version = "0.39.1", features = ["parallel", "rustsha1"] }
-gix-hash = "0.15.1"
-gix-object = "0.46.0"
-gix-pack = "0.55.0"
+gix-features = { version = "0.40.0", features = ["parallel", "rustsha1"] }
+gix-hash = "0.16.0"
+gix-object = "0.47.0"
+gix-pack = "0.57.0"
 mononoke_types = { version = "0.1.0", path = "../../mononoke_types" }
 packfile_thrift = { version = "0.1.0", path = "if" }
 pin-project = "0.4.30"

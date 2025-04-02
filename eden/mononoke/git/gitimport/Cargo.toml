@@ -26,7 +26,7 @@ filestore = { version = "0.1.0", path = "../../filestore" }
 futures = { version = "0.3.30", features = ["async-await", "compat"] }
 git_ref_content_mapping = { version = "0.1.0", path = "../../git_ref_content_mapping" }
 git_symbolic_refs = { version = "0.1.0", path = "../../git_symbolic_refs" }
-gix-hash = "0.15.1"
+gix-hash = "0.16.0"
 import_direct = { version = "0.1.0", path = "../import_direct" }
 import_tools = { version = "0.1.0", path = "../import_tools" }
 linked-hash-map = { version = "0.5", features = ["serde_impl"] }
