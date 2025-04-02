@@ -26,10 +26,59 @@ pub mod varint;
 #[cfg(windows)]
 pub mod winargv;
 
+/// Converts bytes to a PathBuf.
+///
+/// This function attempts to convert a byte slice to a PathBuf by interpreting the bytes
+/// as a UTF-8 encoded string. It's commonly used when working with paths received from
+/// external sources.
+///
+/// # Arguments
+/// * `bytes` - The byte slice to convert to a path
+///
+/// # Returns
+/// * `Result<PathBuf>` - A PathBuf on success, or an error if the bytes contain invalid UTF-8
+///
+///
+/// # Example
+/// ```
+/// use std::path::PathBuf;
+///
+/// use edenfs_utils::path_from_bytes;
+///
+/// let valid_bytes = b"/path/to/file";
+/// let path = path_from_bytes(valid_bytes).unwrap();
+/// assert_eq!(path, PathBuf::from("/path/to/file"));
+/// ```
 pub fn path_from_bytes(bytes: &[u8]) -> Result<PathBuf> {
     Ok(PathBuf::from(std::str::from_utf8(bytes).from_err()?))
 }
 
+/// Infallible helper that converts bytes to a PathBuf using lossy conversion.
+///
+/// This function will replace invalid UTF-8 sequences with a replacement character.
+/// It's intended to be used when converting paths that are known to be valid UTF-8, such as
+/// when EdenFS returns path data via its thrift endpoints.
+///
+/// # Arguments
+/// * `bytes` - The byte slice to convert to a path
+///
+/// # Returns
+/// A PathBuf containing the converted string, with any invalid UTF-8 sequences replaced
+pub fn path_from_bytes_lossy(bytes: &[u8]) -> PathBuf {
+    String::from_utf8_lossy(bytes).to_string().into()
+}
+
+/// Converts a PathBuf to a byte vector.
+///
+/// This function takes a PathBuf and attempts to convert it to a UTF-8 string,
+/// then to a byte vector. It will fail if the path contains non-UTF-8 characters.
+///
+/// # Arguments
+/// * `path` - The PathBuf to convert
+///
+/// # Returns
+/// * `Result<Vec<u8>>` - A byte vector representation of the path on success,
+///   or an EdenFsError if the path contains invalid UTF-8
 pub fn bytes_from_path(path: PathBuf) -> Result<Vec<u8>> {
     Ok(path
         .into_os_string()
