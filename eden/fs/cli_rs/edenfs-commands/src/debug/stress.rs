@@ -15,6 +15,8 @@ use anyhow::Result;
 use async_trait::async_trait;
 use clap::Parser;
 use edenfs_client::attributes::GetAttributesV2Request;
+use edenfs_client::attributes::SourceControlType;
+use edenfs_client::attributes::SourceControlTypeOrError;
 use edenfs_client::checkout::find_checkout;
 use edenfs_client::instance::EdenFsInstance;
 use edenfs_client::request_factory::send_requests;
@@ -76,7 +78,7 @@ pub enum StressCmd {
             required = true,
             help = "directory to recursively call readdir on"
         )]
-        root_dir: String,
+        root_dir: PathBuf,
 
         #[clap(
             long,
@@ -84,6 +86,9 @@ pub enum StressCmd {
             help = "Attributes to query with each readdir request"
         )]
         attributes: Option<Vec<FileAttributes>>,
+
+        #[clap(long, help = "Print attributes for every file and directory")]
+        print_all_attributes: bool,
     },
 }
 
@@ -151,6 +156,7 @@ impl crate::Subcommand for StressCmd {
                 common,
                 root_dir,
                 attributes,
+                print_all_attributes,
             } => {
                 let checkout = find_checkout(instance, &common.mount_point).with_context(|| {
                     anyhow!(
@@ -170,9 +176,27 @@ impl crate::Subcommand for StressCmd {
                         common.num_tasks,
                     )
                     .await?;
+
+                let num_results = readdir_results.len();
+                let (mut num_tree_results, mut num_file_results) = (0, 0);
                 for (path, readdir_result) in readdir_results {
-                    println!("Success - {}: {:?}", path.display(), readdir_result);
+                    if *print_all_attributes {
+                        println!("Success - {}: {:?}", path.display(), readdir_result);
+                    }
+                    match readdir_result.scm_type {
+                        Some(SourceControlTypeOrError::SourceControlType(
+                            SourceControlType::Tree,
+                        )) => num_tree_results += 1,
+                        Some(SourceControlTypeOrError::SourceControlType(_)) => {
+                            num_file_results += 1
+                        }
+                        _ => continue,
+                    }
                 }
+                println!(
+                    "Total results: {} ({} directories, {} files).",
+                    num_results, num_tree_results, num_file_results
+                );
                 Ok(0)
             }
         }

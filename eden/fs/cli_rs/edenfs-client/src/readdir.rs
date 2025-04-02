@@ -132,7 +132,7 @@ impl EdenFsClient {
         // to be recursed into. Always add SCM Type as a required attribute.
         let attributes =
             attributes.try_into_bitmask()? | FileAttributes::SourceControlType.as_mask();
-        _recursive_readdir(
+        recursive_readdir_impl(
             mount_path.as_ref().to_path_buf(),
             self.clone(),
             root.as_ref().to_path_buf(),
@@ -145,7 +145,7 @@ impl EdenFsClient {
 }
 
 #[async_recursion]
-async fn _recursive_readdir(
+async fn recursive_readdir_impl(
     mount_path: PathBuf,
     client: Arc<EdenFsClient>,
     root: PathBuf,
@@ -155,7 +155,7 @@ async fn _recursive_readdir(
 ) -> ListDirResult {
     let mut files: Vec<ReaddirEntry> = Vec::new();
     let client = client.clone();
-    let directory_list: std::vec::Vec<PathBuf> = directory_list
+    let directory_list: Vec<PathBuf> = directory_list
         .iter()
         .map(|dir| match dir.as_os_str().len() {
             0 => root.clone(),
@@ -242,7 +242,7 @@ async fn _recursive_readdir(
             let mount_path = mount_path.clone();
             let client = client.clone();
             tokio::spawn(async move {
-                _recursive_readdir(
+                recursive_readdir_impl(
                     mount_path,
                     client,
                     root,
