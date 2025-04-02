@@ -21,6 +21,7 @@ rust_binary(
         "//configerator/structs/scm/mononoke/load_limiter:load_limiter_config-rust",
         "//eden/mononoke/cmdlib/mononoke_app:mononoke_app",
         "//eden/mononoke/common/ods_counters:ods_counters",
+        "//eden/mononoke/common/scuba_ext:scuba_ext",
         "//fb303/thrift:fb303_core-rust",
         "//fb303/thrift:fb303_core-rust-services",
         "//sandcastle/jupiter/if:JupiterExternalDependencyService-metadata-sys",
