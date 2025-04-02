@@ -550,6 +550,29 @@ std::optional<BlobAuxData> ObjectStore::getBlobAuxDataFromInMemoryCache(
   return std::nullopt;
 }
 
+// TODO: This code is "identical" to the blob code. Though it is small today, it
+// might make sense to refactor into some kind of template and/or helper
+// methods.
+std::optional<TreeAuxData> ObjectStore::getTreeAuxDataFromInMemoryCache(
+    const ObjectId& id,
+    const ObjectFetchContextPtr& context) const {
+  // Check in-memory cache
+  {
+    auto auxDataCache = treeAuxDataCache_.wlock();
+    auto cacheIter = auxDataCache->find(id);
+    if (cacheIter != auxDataCache->end()) {
+      context->didFetch(
+          ObjectFetchContext::BlobAuxData,
+          id,
+          ObjectFetchContext::FromMemoryCache);
+
+      updateProcessFetch(*context);
+      return cacheIter->second;
+    }
+  }
+  return std::nullopt;
+}
+
 ImmediateFuture<BlobAuxData> ObjectStore::getBlobAuxData(
     const ObjectId& id,
     const ObjectFetchContextPtr& fetchContext,

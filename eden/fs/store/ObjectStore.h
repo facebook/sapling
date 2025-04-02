@@ -191,6 +191,17 @@ class ObjectStore : public IObjectStore,
       const ObjectFetchContextPtr& context) const;
 
   /**
+   * Get aux data about a Tree from EdenFS's in memory TreeAuxData cache.
+   *
+   * This returns an ImmediateFuture object that will produce the TreeAuxData
+   * when it is ready.  It may result in a std::domain_error if the specified
+   * tree does not exist, or possibly other exceptions on error.
+   */
+  std::optional<TreeAuxData> getTreeAuxDataFromInMemoryCache(
+      const ObjectId& id,
+      const ObjectFetchContextPtr& context) const;
+
+  /**
    * Returns the DigestHash hash of the contents of the tree with the given ID.
    */
   ImmediateFuture<Hash32> getTreeDigestHash(
