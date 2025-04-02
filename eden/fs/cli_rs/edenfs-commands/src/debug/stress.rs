@@ -19,8 +19,8 @@ use edenfs_client::checkout::find_checkout;
 use edenfs_client::instance::EdenFsInstance;
 use edenfs_client::request_factory::send_requests;
 use edenfs_client::request_factory::RequestFactory;
-use edenfs_client::types::all_attributes;
 use edenfs_client::types::file_attributes_from_strings;
+use edenfs_client::types::FileAttributes;
 use edenfs_client::utils::expand_path_or_cwd;
 
 use crate::ExitCode;
@@ -61,12 +61,10 @@ pub enum StressCmd {
 
         #[clap(
             long,
-            possible_values = all_attributes(),
             use_value_delimiter = true,
-            default_values = all_attributes(),
             help = "Attributes to query for each file"
         )]
-        attributes: Vec<String>,
+        attributes: Option<Vec<FileAttributes>>,
     },
 
     #[clap(about = "Stress the readdir endpoint by issuing a recursive readdir request")]
@@ -83,12 +81,10 @@ pub enum StressCmd {
 
         #[clap(
             long,
-            possible_values = all_attributes(),
             use_value_delimiter = true,
-            default_values = all_attributes(),
             help = "Attributes to query with each readdir request"
         )]
-        attributes: Vec<String>,
+        attributes: Option<Vec<FileAttributes>>,
     },
 }
 
@@ -123,10 +119,13 @@ impl crate::Subcommand for StressCmd {
                     .iter()
                     .map(|p| String::from_utf8_lossy(p).into())
                     .collect();
+                let attributes = attributes
+                    .clone()
+                    .unwrap_or(FileAttributes::all_attributes());
                 let request_factory = Arc::new(GetAttributesV2Request::new(
                     checkout.path(),
                     &paths,
-                    attributes,
+                    &attributes,
                 ));
 
                 // Issue the requests and bail early if any of them fail
@@ -161,7 +160,11 @@ impl crate::Subcommand for StressCmd {
                     )
                 })?;
                 let client = Arc::new(client);
-                let attributes = file_attributes_from_strings(attributes)?;
+                let attributes = file_attributes_from_strings(
+                    &attributes
+                        .clone()
+                        .unwrap_or(FileAttributes::all_attributes()),
+                )?;
                 let readdir_results = client
                     .recursive_readdir(&checkout.path(), root_dir, attributes, common.num_tasks)
                     .await?;

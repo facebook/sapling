@@ -48,21 +48,26 @@
 //! ## Getting all available attribute names
 //!
 //! ```
-//! use edenfs_client::types;
+//! use edenfs_client::types::FileAttributes;
 //!
 //! // Get a list of all available attribute names
-//! let all_attrs = types::all_attributes();
+//! let all_attrs = FileAttributes::all_attributes();
 //! println!("Available attributes: {:?}", all_attrs);
 //! ```
 //!
 //! ## Converting attribute names to a bitmask
 //!
 //! ```
-//! use edenfs_client::types;
+//! use edenfs_client::types::FileAttributes;
+//! use edenfs_client::types::TryIntoFileAttributeBitmask;
 //!
 //! // Convert a list of attribute names to a bitmask
-//! let attrs = ["Sha1", "FileSize", "SourceControlType"];
-//! match types::file_attributes_from_strings(&attrs) {
+//! let attrs = [
+//!     FileAttributes::Sha1,
+//!     FileAttributes::FileSize,
+//!     FileAttributes::SourceControlType,
+//! ];
+//! match attrs.try_into_bitmask() {
 //!     Ok(bitmask) => println!("Attribute bitmask: {}", bitmask),
 //!     Err(e) => eprintln!("Error: {}", e),
 //! }
@@ -71,15 +76,14 @@
 //! ## Getting a bitmask for all attributes
 //!
 //! ```
-//! use edenfs_client::types;
+//! use edenfs_client::types::FileAttributes;
 //!
 //! // Get a bitmask representing all available attributes
-//! let all_attrs_bitmask = types::all_attributes_as_bitmask();
+//! let all_attrs_bitmask = FileAttributes::all_attributes_as_bitmask();
 //! println!("All attributes bitmask: {}", all_attrs_bitmask);
 //! ```
 
 use std::fmt;
-use std::fmt::Display;
 use std::str::FromStr;
 
 use anyhow::anyhow;
@@ -87,6 +91,8 @@ use edenfs_error::EdenFsError;
 use edenfs_error::Result;
 use edenfs_error::ResultExt;
 use serde::Serialize;
+use strum::EnumIter;
+use strum::IntoEnumIterator;
 use thrift_types::fbthrift::ThriftEnum;
 
 #[derive(Copy, Clone, Debug, Eq, PartialEq, Ord, PartialOrd, Hash)]
@@ -360,7 +366,7 @@ impl From<SyncBehavior> for thrift_types::edenfs::SyncBehavior {
 }
 
 #[repr(i32)]
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, EnumIter)]
 pub enum FileAttributes {
     None = 0,
     Sha1 = 1,
@@ -406,15 +412,15 @@ impl From<thrift_types::edenfs::FileAttributes> for FileAttributes {
 impl FromStr for FileAttributes {
     type Err = EdenFsError;
     fn from_str(s: &str) -> std::result::Result<Self, Self::Err> {
-        match s {
-            "None" => Ok(Self::None),
-            "Sha1" => Ok(Self::Sha1),
-            "FileSize" => Ok(Self::FileSize),
-            "SourceControlType" => Ok(Self::SourceControlType),
-            "ObjectId" => Ok(Self::ObjectId),
-            "Blake3" => Ok(Self::Blake3),
-            "DigestSize" => Ok(Self::DigestSize),
-            "DigestHash" => Ok(Self::DigestHash),
+        match s.to_ascii_lowercase().as_str() {
+            "none" => Ok(Self::None),
+            "sha1" => Ok(Self::Sha1),
+            "filesize" => Ok(Self::FileSize),
+            "sourcecontroltype" => Ok(Self::SourceControlType),
+            "objectid" => Ok(Self::ObjectId),
+            "blake3" => Ok(Self::Blake3),
+            "digestsize" => Ok(Self::DigestSize),
+            "digesthash" => Ok(Self::DigestHash),
             _ => Err(EdenFsError::Other(anyhow!(
                 "invalid file attribute: {:?}",
                 s
@@ -423,7 +429,84 @@ impl FromStr for FileAttributes {
     }
 }
 
-/// Converts a slice of `FileAttributes` to a bitmask.
+impl AsRef<str> for FileAttributes {
+    fn as_ref(&self) -> &str {
+        match *self {
+            FileAttributes::None => "None",
+            FileAttributes::Sha1 => "Sha1",
+            FileAttributes::FileSize => "FileSize",
+            FileAttributes::SourceControlType => "SourceControlType",
+            FileAttributes::ObjectId => "ObjectId",
+            FileAttributes::Blake3 => "Blake3",
+            FileAttributes::DigestSize => "DigestSize",
+            FileAttributes::DigestHash => "DigestHash",
+        }
+    }
+}
+
+impl FileAttributes {
+    /// Returns a bitmask representing all available file attributes.
+    ///
+    /// This function returns a bitmask that includes all available file attributes.
+    ///
+    /// # Returns
+    ///
+    /// A bitmask representing all available file attributes.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use edenfs_client::types::FileAttributes;
+    ///
+    /// let all_attrs_bitmask = FileAttributes::all_attributes_as_bitmask();
+    /// println!("All attributes bitmask: {}", all_attrs_bitmask);
+    /// ```
+    pub fn all_attributes_as_bitmask() -> i64 {
+        let vals: Vec<FileAttributes> = thrift_types::edenfs::FileAttributes::variant_values()
+            .iter()
+            .map(|v| v.clone().into())
+            .collect();
+        attributes_as_bitmask(&vals)
+    }
+
+    /// Returns a slice of all available file attribute names.
+    ///
+    /// This function returns a slice containing the names of all available file attributes.
+    ///
+    /// # Returns
+    ///
+    /// A slice of strings representing all available file attribute names.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use edenfs_client::types::FileAttributes;
+    ///
+    /// let all_attrs = FileAttributes::all_attributes();
+    /// println!("Available attributes: {:?}", all_attrs);
+    /// ```
+    pub fn all_attributes() -> Vec<FileAttributes> {
+        FileAttributes::iter().collect()
+    }
+
+    pub fn as_mask(self) -> i64 {
+        self as i64
+    }
+
+    pub fn is_valid_bitmask(value: i64) -> bool {
+        let mut remaining_value = value;
+        for val in FileAttributes::iter() {
+            let mask = val.as_mask();
+            if (remaining_value & mask) != 0 && (remaining_value & mask) != mask {
+                return false;
+            }
+            remaining_value &= !mask;
+        }
+        remaining_value == 0
+    }
+}
+
+/// Converts a slice of `FileAttributes` to a bitmask. Prefer using try_into_bitmask where possible
 ///
 /// This function takes a slice of `FileAttributes` and returns a bitmask
 /// representing those attributes.
@@ -439,50 +522,6 @@ pub fn attributes_as_bitmask(attrs: &[FileAttributes]) -> i64 {
     attrs.iter().fold(0, |acc, x| acc | x.clone() as i64)
 }
 
-/// Returns a bitmask representing all available file attributes.
-///
-/// This function returns a bitmask that includes all available file attributes.
-///
-/// # Returns
-///
-/// A bitmask representing all available file attributes.
-///
-/// # Examples
-///
-/// ```
-/// use edenfs_client::types;
-///
-/// let all_attrs_bitmask = types::all_attributes_as_bitmask();
-/// println!("All attributes bitmask: {}", all_attrs_bitmask);
-/// ```
-pub fn all_attributes_as_bitmask() -> i64 {
-    let vals: Vec<FileAttributes> = thrift_types::edenfs::FileAttributes::variant_values()
-        .iter()
-        .map(|v| v.clone().into())
-        .collect();
-    attributes_as_bitmask(&vals)
-}
-
-/// Returns a slice of all available file attribute names.
-///
-/// This function returns a slice containing the names of all available file attributes.
-///
-/// # Returns
-///
-/// A slice of strings representing all available file attribute names.
-///
-/// # Examples
-///
-/// ```
-/// use edenfs_client::types;
-///
-/// let all_attrs = types::all_attributes();
-/// println!("Available attributes: {:?}", all_attrs);
-/// ```
-pub fn all_attributes() -> &'static [&'static str] {
-    thrift_types::edenfs::FileAttributes::variants()
-}
-
 /// Converts a slice of attribute names to a bitmask.
 ///
 /// This function takes a slice of attribute names and returns a bitmask
@@ -496,26 +535,9 @@ pub fn all_attributes() -> &'static [&'static str] {
 ///
 /// A `Result` containing a bitmask representing the given attributes, or an error
 /// if any of the attribute names are invalid.
-///
-/// # Examples
-///
-/// ```
-/// use edenfs_client::types;
-///
-/// // Convert a list of attribute names to a bitmask
-/// let attrs = ["Sha1", "Size", "SourceControlType"];
-/// match types::file_attributes_from_strings(&attrs) {
-///     Ok(bitmask) => println!("Attribute bitmask: {}", bitmask),
-///     Err(e) => eprintln!("Error: {}", e),
-/// }
-///
-/// // Invalid attribute names will result in an error
-/// let invalid_attrs = ["Invalid"];
-/// assert!(types::file_attributes_from_strings(&invalid_attrs).is_err());
-/// ```
 pub fn file_attributes_from_strings<T>(attrs: &[T]) -> Result<i64>
 where
-    T: AsRef<str> + Display,
+    T: AsRef<str>,
 {
     let attrs: Result<Vec<FileAttributes>, _> = attrs
         .iter()
@@ -527,18 +549,86 @@ where
     Ok(attributes_as_bitmask(attrs?.as_slice()))
 }
 
+#[allow(dead_code)]
+pub trait TryIntoFileAttributeBitmask {
+    fn try_into_bitmask(self) -> Result<i64>;
+}
+
+impl TryIntoFileAttributeBitmask for i64 {
+    fn try_into_bitmask(self) -> Result<i64> {
+        if FileAttributes::is_valid_bitmask(self) {
+            Ok(self)
+        } else {
+            Err(anyhow!(
+                "invalid file attribute bitmask: {}. Valid attributes are: {}",
+                self,
+                FileAttributes::all_attributes()
+                    .into_iter()
+                    .map(|a| a.as_ref().to_string())
+                    .collect::<Vec<_>>()
+                    .join(", "),
+            )
+            .into())
+        }
+    }
+}
+
+impl TryIntoFileAttributeBitmask for i32 {
+    fn try_into_bitmask(self) -> Result<i64> {
+        (self as i64).try_into_bitmask()
+    }
+}
+
+impl TryIntoFileAttributeBitmask for FileAttributes {
+    fn try_into_bitmask(self) -> Result<i64> {
+        let bitmask = self as i32;
+        bitmask.try_into_bitmask()
+    }
+}
+
+impl TryIntoFileAttributeBitmask for &[FileAttributes] {
+    fn try_into_bitmask(self) -> Result<i64> {
+        let bitmasks = self
+            .iter()
+            .map(|a| a.clone().try_into_bitmask())
+            .collect::<Result<Vec<_>>>()?;
+        Ok(bitmasks.into_iter().fold(0i64, |acc, b| acc | b))
+    }
+}
+
 #[cfg(test)]
 mod test {
     use super::*;
 
     #[test]
-    fn test_attributes_from_strings() -> Result<()> {
-        assert_eq!(file_attributes_from_strings::<String>(&[])?, 0);
+    fn test_attribute_as_mask() {
+        assert_eq!(FileAttributes::None.as_mask(), 0);
+        assert_eq!(FileAttributes::Sha1.as_mask(), 1);
+        assert_eq!(FileAttributes::FileSize.as_mask(), 2);
+        assert_eq!(FileAttributes::SourceControlType.as_mask(), 4);
+        assert_eq!(FileAttributes::ObjectId.as_mask(), 8);
+        assert_eq!(FileAttributes::Blake3.as_mask(), 16);
+        assert_eq!(FileAttributes::DigestSize.as_mask(), 32);
+        assert_eq!(FileAttributes::DigestHash.as_mask(), 64);
+    }
+
+    #[test]
+    fn test_into_file_attributes_bitmask() {
+        let file_attrs_vec: Vec<FileAttributes> = vec![];
+        assert_eq!(file_attrs_vec.as_slice().try_into_bitmask().unwrap(), 0);
         assert_eq!(
-            file_attributes_from_strings(&["Sha1", "SourceControlType"])?,
-            FileAttributes::Sha1 as i64 | FileAttributes::SourceControlType as i64
+            vec![FileAttributes::Sha1, FileAttributes::Blake3]
+                .as_slice()
+                .try_into_bitmask()
+                .unwrap(),
+            FileAttributes::Sha1.as_mask() | FileAttributes::Blake3.as_mask()
         );
-        assert!(file_attributes_from_strings(&["Invalid"]).is_err());
-        Ok(())
+        assert_eq!(
+            FileAttributes::SourceControlType
+                .try_into_bitmask()
+                .unwrap(),
+            FileAttributes::SourceControlType.as_mask()
+        );
+        assert!(400i32.try_into_bitmask().is_err());
     }
 }

@@ -5,7 +5,6 @@
  * GNU General Public License version 2.
  */
 
-use std::fmt::Display;
 use std::path::Path;
 use std::path::PathBuf;
 use std::sync::Arc;
@@ -21,8 +20,8 @@ use crate::client::EdenFsClient;
 use crate::request_factory::RequestFactory;
 use crate::request_factory::RequestParam;
 use crate::request_factory::RequestResult;
-use crate::types::all_attributes_as_bitmask;
 use crate::types::file_attributes_from_strings;
+use crate::types::FileAttributes;
 use crate::types::SyncBehavior;
 
 // YES, the following code is extremely repetitive. It's unfortunately the only way (for now). We
@@ -493,7 +492,7 @@ impl GetAttributesV2Request {
     pub fn new<P, S>(mount_path: PathBuf, paths: &[P], requested_attributes: &[S]) -> Self
     where
         P: AsRef<str>,
-        S: AsRef<str> + Display,
+        S: AsRef<str>,
     {
         Self {
             mount_point: mount_path,
@@ -502,7 +501,7 @@ impl GetAttributesV2Request {
                 .unwrap_or_else(|e| {
                     tracing::error!("failed to convert attributes to bitmap: {:?}", e);
                     tracing::info!("defaulting to requesting all attributes in getAttributesFromFilesV2 requests");
-                    all_attributes_as_bitmask()
+                    FileAttributes::all_attributes_as_bitmask()
         }),
         }
     }
