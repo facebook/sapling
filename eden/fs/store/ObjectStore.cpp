@@ -73,7 +73,7 @@ ObjectStore::ObjectStore(
     std::shared_ptr<const EdenConfig> edenConfig,
     bool windowsSymlinksEnabled,
     CaseSensitivity caseSensitive)
-    : auxDataCache_{std::in_place, edenConfig->metadataCacheSize.getValue()},
+    : blobAuxDataCache_{std::in_place, edenConfig->metadataCacheSize.getValue()},
       treeCache_{std::move(treeCache)},
       backingStore_{std::move(backingStore)},
       localStore_{std::move(localStore)},
@@ -532,7 +532,7 @@ std::optional<BlobAuxData> ObjectStore::getBlobAuxDataFromInMemoryCache(
     const ObjectFetchContextPtr& context) const {
   // Check in-memory cache
   {
-    auto auxDataCache = auxDataCache_.wlock();
+    auto auxDataCache = blobAuxDataCache_.wlock();
     auto cacheIter = auxDataCache->find(id);
     if (cacheIter != auxDataCache->end()) {
       context->didFetch(
@@ -569,7 +569,7 @@ ImmediateFuture<BlobAuxData> ObjectStore::getBlobAuxData(
                 // updating the aux data with the computed blake3 hash and
                 // update the cache
                 auxData.blake3.emplace(blake3);
-                self->auxDataCache_.wlock()->set(id, auxData);
+                self->blobAuxDataCache_.wlock()->set(id, auxData);
                 self->stats_->increment(
                     &ObjectStoreStats::getBlobAuxDataFromBlob);
                 self->stats_->addDuration(
@@ -614,11 +614,11 @@ ImmediateFuture<BlobAuxData> ObjectStore::getBlobAuxData(
                         // and update the cache
                         auto auxDataCopy = *auxData;
                         auxDataCopy.blake3.emplace(blake3);
-                        self->auxDataCache_.wlock()->set(id, auxDataCopy);
+                        self->blobAuxDataCache_.wlock()->set(id, auxDataCopy);
                         return auxDataCopy;
                       });
             } else {
-              self->auxDataCache_.wlock()->set(id, *auxData);
+              self->blobAuxDataCache_.wlock()->set(id, *auxData);
               fetchContext->didFetch(
                   ObjectFetchContext::BlobAuxData, id, result.origin);
               self->updateProcessFetch(*fetchContext);

@@ -412,7 +412,7 @@ class ObjectStore : public IObjectStore,
    * the data structure. Thus, should we use a more appropriate type of lock?
    */
   mutable folly::Synchronized<folly::EvictingCacheMap<ObjectId, BlobAuxData>>
-      auxDataCache_;
+      blobAuxDataCache_;
 
   /**
    * During glob, we need to read a lot of trees, but we avoid loading inodes,
