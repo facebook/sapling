@@ -15,6 +15,9 @@
 #[cfg(any(test, feature = "for-tests"))]
 pub mod testutil;
 
+use std::borrow::Cow;
+
+use anyhow::bail;
 use anyhow::Result;
 use pathmatcher::Matcher;
 pub use types::tree::FileType;
@@ -113,6 +116,35 @@ pub trait Manifest {
         other: &'a Self,
         matcher: M,
     ) -> Result<Box<dyn Iterator<Item = Result<DiffEntry>> + 'a>>;
+
+    /// Calculates modified directories between two Manifests.
+    /// Also reports whether the directories were added or removed.
+    ///
+    /// A directory is considered "modified" if:
+    /// - It only exists in one Manifest.
+    /// - It exists in both Manifests. A direct sub-item (file or dir)
+    ///   is added, removed, or renamed.
+    ///
+    /// Similar to when the OS needs to update directory mtime.
+    /// Modifying content of a file alone does not count as modifying its
+    /// parent directory.
+    ///
+    /// Note: whether the directories were added or removed cannot be inferred
+    /// from purely `diff` alone, since an added file cannot decide whether its
+    /// parent directory was added or modified - need information about the rest
+    /// of the directory to tell.
+    fn modified_dirs<'a, M: 'static + Matcher + Sync + Send>(
+        &'a self,
+        _other: &'a Self,
+        _matcher: M,
+    ) -> Result<Box<dyn Iterator<Item = Result<DirDiffEntry>> + 'a>> {
+        bail!("modified_dirs is not implemented for {}", self.type_name())
+    }
+
+    /// Obtain the type name of the store.
+    fn type_name(&self) -> Cow<'static, str> {
+        std::any::type_name::<Self>().into()
+    }
 }
 
 /// The result of a list operation. Given a path, the manifest will return:
@@ -242,6 +274,16 @@ impl DiffEntry {
         debug_assert!(left.path == right.path);
         Self::new(left.path, DiffType::Changed(left.meta, right.meta))
     }
+}
+
+#[derive(Clone, Debug, Ord, PartialOrd, Eq, PartialEq, Hash)]
+pub struct DirDiffEntry {
+    /// Path of the directory.
+    pub path: RepoPathBuf,
+    /// Exist on the left side.
+    pub left: bool,
+    /// Exist on the right side.
+    pub right: bool,
 }
 
 #[derive(Clone, Copy, Debug, Ord, PartialOrd, Eq, PartialEq, Hash)]
