@@ -14,6 +14,7 @@ use context::CoreContext;
 use edenapi_service::utils::to_hg_path;
 use edenapi_types::commit::BonsaiExtra;
 use edenapi_types::commit::BonsaiParents;
+use edenapi_types::commit::GitExtraHeader;
 use edenapi_types::commit::HgInfo;
 use edenapi_types::AnyFileContentId;
 use edenapi_types::AnyId;
@@ -118,6 +119,18 @@ pub fn to_identical_changeset(
             .collect(),
     };
 
+    let mut git_extra = None;
+    if let Some(headers) = git_extra_headers {
+        let mut all_headers = vec![];
+        for (key, value) in headers {
+            all_headers.push(GitExtraHeader {
+                key: key.to_vec(),
+                value: value.to_vec(),
+            });
+        }
+        git_extra = Some(all_headers);
+    }
+
     let bonsai_parents = BonsaiParents::from_iter(parents.clone().iter().map(|p| (*p).into()));
 
     // Ensure items are indeed equivalent between bonsai and hg changeset
@@ -128,10 +141,6 @@ pub fn to_identical_changeset(
     ensure!(
         git_annotated_tag.is_none(),
         "Unexpected git annotated tag found"
-    );
-    ensure!(
-        git_extra_headers.is_none(),
-        "Unexpected git extra headers found"
     );
     ensure!(
         subtree_changes.is_empty(),
@@ -164,6 +173,7 @@ pub fn to_identical_changeset(
         committer,
         committer_time: committer_date.map(|d| d.timestamp_secs()),
         committer_tz: committer_date.map(|d| d.tz_offset_secs()),
+        git_extra_headers: git_extra,
     })
 }
 

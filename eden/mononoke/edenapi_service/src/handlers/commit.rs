@@ -104,6 +104,7 @@ use rayon::iter::ParallelIterator;
 use repo_blobstore::RepoBlobstoreRef;
 use serde::Deserialize;
 use slog::debug;
+use smallvec::SmallVec;
 use sorted_vector_map::SortedVectorMap;
 use types::HgId;
 use types::Parents;
@@ -1222,6 +1223,15 @@ impl SaplingRemoteApiHandler for UploadIdenticalChangesetsHandler {
                         hg_extra.insert(bs_extra.key.clone(), bs_extra.value.clone());
                     });
 
+                    let mut git_extra_headers = None;
+                    if let Some(ref git_extra) = ics.git_extra_headers {
+                        let mut res = SortedVectorMap::new();
+                        git_extra.iter().for_each(|e| {
+                            res.insert(SmallVec::from(e.key.clone()), e.value.clone().into());
+                        });
+                        git_extra_headers = Some(res);
+                    }
+
                     let file_changes = ics
                         .bonsai_file_changes
                         .clone()
@@ -1263,7 +1273,7 @@ impl SaplingRemoteApiHandler for UploadIdenticalChangesetsHandler {
                         message: ics.message.clone(),
                         hg_extra,
                         file_changes,
-                        git_extra_headers: None,
+                        git_extra_headers,
                         git_tree_hash: None,
                         is_snapshot: false,
                         git_annotated_tag: None,

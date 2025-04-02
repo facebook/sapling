@@ -309,6 +309,16 @@ pub struct BonsaiExtra {
     pub value: Vec<u8>,
 }
 
+#[auto_wire]
+#[derive(Clone, Default, Debug, Deserialize, Serialize, Eq, PartialEq)]
+#[cfg_attr(any(test, feature = "for-tests"), derive(Arbitrary))]
+pub struct GitExtraHeader {
+    #[id(1)]
+    pub key: Vec<u8>,
+    #[id(2)]
+    pub value: Vec<u8>,
+}
+
 #[derive(Clone, Debug, Deserialize, Serialize, Eq, PartialEq)]
 pub enum BonsaiFileChange {
     Change {
@@ -614,6 +624,8 @@ pub struct IdenticalChangesetContent {
     pub committer_time: Option<i64>,
     #[id(15)]
     pub committer_tz: Option<i32>,
+    #[id(16)]
+    pub git_extra_headers: Option<Vec<GitExtraHeader>>,
 }
 
 impl From<IdenticalChangesetContent> for HgChangesetContent {
