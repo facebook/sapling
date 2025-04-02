@@ -7,13 +7,13 @@
 
 use std::ops::Add;
 
-use edenfs_client::sapling::get_commit_timestamp;
-use edenfs_client::sapling::is_commit_in_repo;
 use mysql_client::query;
 use mysql_client::DbLocator;
 use mysql_client::InstanceRequirement;
 use mysql_client::MysqlCppClient;
 use mysql_client::Query;
+use sapling_client::get_commit_timestamp;
+use sapling_client::is_commit_in_repo;
 
 const XDB_SAVED_STATE: &str = "xdb.devinfra_saved_state";
 

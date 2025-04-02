@@ -3,15 +3,14 @@ load("@fbcode_macros//build_defs:rust_library.bzl", "rust_library")
 oncall("scm_client_infra")
 
 rust_library(
-    name = "edenfs-saved-state",
+    name = "sapling-client",
     srcs = glob(["src/**/*.rs"]),
     test_deps = [
-        "//common/rust/shed/fbinit:fbinit-tokio",
+        "//eden/fs/cli_rs/edenfs-client:edenfs-client",
     ],
     deps = [
         "fbsource//third-party/rust:anyhow",
-        "//common/rust/mysql:mysql_client",
-        "//common/rust/shed/fbinit:fbinit",
-        "//eden/fs/cli_rs/sapling-client:sapling-client",
+        "fbsource//third-party/rust:tokio",
+        "//eden/fs/cli_rs/edenfs-utils:edenfs-utils",
     ],
 )

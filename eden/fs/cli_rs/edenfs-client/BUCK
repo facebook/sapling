@@ -26,7 +26,6 @@ rust_library(
         "fbsource//third-party/rust:rand",
         "fbsource//third-party/rust:serde_test",
         "fbsource//third-party/rust:tempfile",
-        "//common/rust/shed/fbinit:fbinit-tokio",
     ],
     deps = [
         "fbsource//third-party/rust:anyhow",

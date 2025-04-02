@@ -26,7 +26,6 @@ pub mod local_store;
 mod mounttable;
 pub mod redirect;
 pub mod request_factory;
-pub mod sapling;
 pub mod scm_status;
 pub mod stats;
 pub mod types;

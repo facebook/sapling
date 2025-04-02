@@ -265,7 +265,7 @@ fn is_path_included(
     excluded_roots: &Option<Vec<PathBuf>>,
     excluded_suffixes: &Option<Vec<String>>,
 ) -> bool {
-    if !included_roots.as_ref().map_or(true, |roots| {
+    if !included_roots.as_ref().is_none_or(|roots| {
         let path = Path::new(path);
         roots
             .iter()
@@ -274,7 +274,7 @@ fn is_path_included(
         return false;
     }
 
-    if !included_suffixes.as_ref().map_or(true, |suffixes| {
+    if !included_suffixes.as_ref().is_none_or(|suffixes| {
         suffixes.iter().any(|suffix| {
             if case_insensitive_suffix_compares {
                 path.to_ascii_lowercase().ends_with(suffix)
@@ -327,20 +327,21 @@ pub fn strip_prefix_from_string(prefix: &Option<PathBuf>, path: String) -> Strin
 
 #[cfg(test)]
 mod tests {
-    use crate::sapling::*;
-    use crate::utils::get_mount_point;
+    use edenfs_client::utils::get_mount_point;
+
+    use crate::*;
 
     const FBSOURCE_COMMIT_ID: &str = "5496dd87e5fe7430a1a399530cc339a479097524";
     const WWW_COMMIT_ID: &str = "1061662d6db2072dd30308d1626a45ac11db3467";
 
-    #[fbinit::test]
+    #[tokio::test]
     pub async fn test_current_commit_id() -> anyhow::Result<()> {
         let commit_id = get_current_commit_id().await?;
         assert!(!commit_id.is_empty());
         Ok(())
     }
 
-    #[fbinit::test]
+    #[tokio::test]
     pub async fn test_is_commit_in_repo() -> anyhow::Result<()> {
         let mount_point = get_mount_point(&None)?;
         let commit_id = get_current_commit_id().await?;
@@ -357,14 +358,14 @@ mod tests {
         Ok(())
     }
 
-    #[fbinit::test]
-    pub async fn test_is_fbsource_checkout() -> anyhow::Result<()> {
+    #[test]
+    pub fn test_is_fbsource_checkout() -> anyhow::Result<()> {
         let mount_point = get_mount_point(&None)?;
         assert!(is_fbsource_checkout(&mount_point));
         Ok(())
     }
 
-    #[fbinit::test]
+    #[tokio::test]
     pub async fn test_get_commit_timestamp() -> anyhow::Result<()> {
         // sl log of commit in fbsource:
         //   changeset:   5496dd87e5fe7430a1a399530cc339a479097524  D68746950
@@ -445,20 +446,20 @@ mod tests {
 
         // Space in path
         assert_eq!(
-            process_one_status_line("M ovrsource-legacy/unity/socialvr/modules/wb_unity_asset_bundles/Assets/MetaHorizonUnityAssetBundle/Editor/Unity Dependencies/ABDataSource.cs")?,
-            Some((
-                SaplingStatus::Modified,
-                "ovrsource-legacy/unity/socialvr/modules/wb_unity_asset_bundles/Assets/MetaHorizonUnityAssetBundle/Editor/Unity Dependencies/ABDataSource.cs".to_owned()
-            ))
-        );
+             process_one_status_line("M ovrsource-legacy/unity/socialvr/modules/wb_unity_asset_bundles/Assets/MetaHorizonUnityAssetBundle/Editor/Unity Dependencies/ABDataSource.cs")?,
+             Some((
+                 SaplingStatus::Modified,
+                 "ovrsource-legacy/unity/socialvr/modules/wb_unity_asset_bundles/Assets/MetaHorizonUnityAssetBundle/Editor/Unity Dependencies/ABDataSource.cs".to_owned()
+             ))
+         );
 
         // Invalid status
         assert!(process_one_status_line("Invalid status").is_err());
 
         // Invalid status (missing status), but valid path with space in it
         assert!(
-            process_one_status_line(" ovrsource-legacy/unity/socialvr/modules/wb_unity_asset_bundles/Assets/MetaHorizonUnityAssetBundle/Editor/Unity Dependencies/ABDataSource.cs")
-            .is_err());
+             process_one_status_line(" ovrsource-legacy/unity/socialvr/modules/wb_unity_asset_bundles/Assets/MetaHorizonUnityAssetBundle/Editor/Unity Dependencies/ABDataSource.cs")
+             .is_err());
 
         // Malformed status (no space)
         assert!(
