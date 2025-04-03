@@ -12,8 +12,8 @@ use mysql_client::DbLocator;
 use mysql_client::InstanceRequirement;
 use mysql_client::MysqlCppClient;
 use mysql_client::Query;
-use sapling_client::get_commit_timestamp;
-use sapling_client::is_commit_in_repo;
+use sapling_client::commit::get_commit_timestamp;
+use sapling_client::commit::is_commit_in_repo;
 
 const XDB_SAVED_STATE: &str = "xdb.devinfra_saved_state";
 
