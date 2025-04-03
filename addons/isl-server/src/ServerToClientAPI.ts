@@ -941,6 +941,16 @@ export default class ServerToClientAPI {
         });
         break;
       }
+      case 'splitCommitWithAI': {
+        Internal.splitCommitWithAI?.(ctx, data.diffCommit).then(result => {
+          this.postMessage({
+            type: 'splitCommitWithAI',
+            id: data.id,
+            result,
+          });
+        });
+        break;
+      }
       case 'fetchActiveAlerts': {
         repo
           .getActiveAlerts(ctx)

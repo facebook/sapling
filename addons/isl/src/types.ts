@@ -17,6 +17,7 @@ import type {ExportStack, ImportedStack, ImportStack} from 'shared/types/stack';
 import type {TypeaheadKind} from './CommitInfoView/types';
 import type {InternalTypes} from './InternalTypes';
 import type {Serializable} from './serialize';
+import type {DiffCommit, PartiallySelectedDiffCommit} from './stackEdit/diffSplit';
 
 export type Result<T> = {value: T; error?: undefined} | {value?: undefined; error: Error};
 
@@ -864,6 +865,7 @@ export type ClientToServerMessage =
       latestFields: InternalCommitMessageFields;
       suggestionId: string;
     }
+  | {type: 'splitCommitWithAI'; id: string; diffCommit: DiffCommit}
   | {type: 'gotUiState'; state: string}
   | CodeReviewProviderSpecificClientToServerMessages
   | PlatformSpecificClientToServerMessages
@@ -955,6 +957,11 @@ export type ServerToClientMessage =
       type: 'generatedSuggestionWithAI';
       message: Result<string>;
       id: string;
+    }
+  | {
+      type: 'splitCommitWithAI';
+      id: string;
+      result: Result<ReadonlyArray<PartiallySelectedDiffCommit>>;
     }
   | {type: 'getUiState'}
   | OperationProgressEvent
