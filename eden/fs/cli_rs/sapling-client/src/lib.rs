@@ -5,6 +5,8 @@
  * GNU General Public License version 2.
  */
 
+pub mod mergebase;
+
 use std::collections::HashMap;
 use std::env;
 use std::ffi::OsString;
@@ -35,7 +37,7 @@ pub enum SaplingGetStatusResult {
     TooManyChanges,
 }
 
-fn get_sapling_executable_path() -> String {
+pub(crate) fn get_sapling_executable_path() -> String {
     let path = env::var("EDEN_HG_BINARY").unwrap_or_else(|_| String::new());
     if path.is_empty() {
         "sl".to_string()
@@ -44,7 +46,7 @@ fn get_sapling_executable_path() -> String {
     }
 }
 
-fn get_sapling_options() -> HashMap<OsString, OsString> {
+pub(crate) fn get_sapling_options() -> HashMap<OsString, OsString> {
     let mut options = HashMap::<OsString, OsString>::new();
     // Ensure that the hgrc doesn't mess with the behavior of the commands that we're running.
     options.insert("HGPLAIN".to_string().into(), "1".to_string().into());
@@ -61,7 +63,6 @@ fn get_sapling_options() -> HashMap<OsString, OsString> {
     options
 }
 
-#[allow(dead_code)]
 pub fn is_fbsource_checkout(mount_point: &Path) -> bool {
     let project_id_path = mount_point.join(".projectid");
     let project_id = read_to_string(project_id_path).ok();
@@ -108,27 +109,6 @@ pub async fn is_commit_in_repo(commit_id: &str) -> anyhow::Result<bool> {
         .output()
         .await?;
     Ok(output.status.success())
-}
-
-pub async fn get_mergebase(commit: &str, mergegase_with: &str) -> anyhow::Result<Option<String>> {
-    let output = Command::new(get_sapling_executable_path())
-        .envs(get_sapling_options())
-        .args([
-            "log",
-            "-T",
-            "{node}",
-            "-r",
-            format!("ancestor({}, {})", commit, mergegase_with).as_str(),
-        ])
-        .output()
-        .await?;
-
-    let mergebase = String::from_utf8(output.stdout)?;
-    if mergebase.is_empty() {
-        Ok(None)
-    } else {
-        Ok(Some(mergebase))
-    }
 }
 
 pub async fn get_status_with_includes(
