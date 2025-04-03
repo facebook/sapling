@@ -156,3 +156,28 @@ Test subtree import a sub directory of the external repo
       }
     ]
   }
+
+Test subtree import with branch name
+
+  $ newclientrepo
+  $ drawdag <<'EOS'
+  > A
+  > EOS
+  $ hg go $A -q
+  $ hg subtree import --url $GIT_URL --rev master --to-path bar -m "import gitrepo to bar"
+  From file:/*/$TESTTMP/gitrepo (glob)
+   * [new ref]         4487c56011495a40ce2f6c632c24ae57a210747d -> remote/master
+  3 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  copying / to bar
+  $ hg subtree inspect
+  {
+    "imports": [
+      {
+        "version": 1,
+        "url": "git+file:/*/$TESTTMP/gitrepo", (glob)
+        "from_commit": "4487c56011495a40ce2f6c632c24ae57a210747d",
+        "from_path": "",
+        "to_path": "bar"
+      }
+    ]
+  }

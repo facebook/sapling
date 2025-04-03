@@ -511,8 +511,8 @@ def _do_normal_copy(repo, from_ctx, to_ctx, from_paths, to_paths, opts):
 def _do_import(ui, repo, temp_dir, *args, **opts):
     cmdutil.bailifchanged(repo)
 
-    from_commit = opts.get("rev")
-    if not from_commit:
+    from_rev = opts.get("rev")
+    if not from_rev:
         raise error.Abort(_("must specify the external repository commit hash"))
     url = opts.get("url")
     if not url:
@@ -534,11 +534,11 @@ def _do_import(ui, repo, temp_dir, *args, **opts):
     abort_or_remove_paths(ui, repo, to_paths, "import", opts)
 
     # PERF: shallow clone, then partial checkout
-    git_repo = git.clone(ui, giturl, temp_dir, update=from_commit)
-    copy_files(
-        ui, git_repo, repo, git_repo[from_commit], from_paths, to_paths, "import"
-    )
+    git_repo = git.clone(ui, giturl, temp_dir, update=from_rev)
+    from_ctx = git_repo[from_rev]
+    copy_files(ui, git_repo, repo, from_ctx, from_paths, to_paths, "import")
 
+    from_commit = from_ctx.hex()
     # use the original `url` in the metadata, as the `giturl` may lost information
     # e.g.: "git+" prefix
     extra = subtreeutil.gen_import_info(url, from_commit, from_paths, to_paths)
