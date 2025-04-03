@@ -39,7 +39,7 @@ pub async fn get_mergebase(commit: &str, mergegase_with: &str) -> Result<Option<
 #[derive(Clone)]
 pub struct MergebaseDetails {
     pub mergebase: String,
-    pub timestamp: u64,
+    pub timestamp: Option<u64>,
     pub global_rev: Option<u64>,
 }
 
@@ -99,9 +99,8 @@ fn parse_mergebase_details(output: Vec<u8>) -> Result<Option<MergebaseDetails>> 
         .to_string();
     let timestamp = v
         .get(1)
-        .with_context(|| "Failed to parse mergebase timestamp")?
-        .parse::<f64>() // hg returns the fractional seconds
-        .with_context(|| "Failed to parse mergebase timestamp")? as u64;
+        .and_then(|t| t.parse::<f64>().ok())
+        .map(|t| t as u64); // sl returns the fractional seconds
     let global_rev = if let Some(global_rev) = v.get(2) {
         Some(
             global_rev
@@ -133,7 +132,7 @@ mod tests {
             details.mergebase,
             "71de423b796418e8ff5300dbe9bd9ad3aef63a9c"
         );
-        assert_eq!(details.timestamp, 1739790802);
+        assert_eq!(details.timestamp, Some(1739790802));
         assert_eq!(details.global_rev, Some(1020164040));
         Ok(())
     }
@@ -148,7 +147,7 @@ mod tests {
             "71de423b796418e8ff5300dbe9bd9ad3aef63a9c"
         );
         assert_eq!(details.global_rev, None);
-        assert_eq!(details.timestamp, 1739790802);
+        assert_eq!(details.timestamp, Some(1739790802));
         Ok(())
     }
 }

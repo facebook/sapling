@@ -14,7 +14,7 @@ use std::path::Path;
 pub(crate) fn get_sapling_executable_path() -> String {
     let path = env::var("EDEN_HG_BINARY").unwrap_or_else(|_| String::new());
     if path.is_empty() {
-        "sl".to_string()
+        "hg".to_string() // `sl` is not always available, so use `hg`
     } else {
         path
     }
