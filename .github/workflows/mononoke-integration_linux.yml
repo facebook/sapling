@@ -123,6 +123,9 @@ jobs:
     - name: Fetch folly
       if: ${{ steps.paths.outputs.folly_SOURCE }}
       run: python3 build/fbcode_builder/getdeps.py --allow-system-packages fetch --no-tests folly
+    - name: Fetch nmap
+      if: ${{ steps.paths.outputs.nmap_SOURCE }}
+      run: python3 build/fbcode_builder/getdeps.py --allow-system-packages fetch --no-tests nmap
     - name: Fetch libffi
       if: ${{ steps.paths.outputs.libffi_SOURCE }}
       run: python3 build/fbcode_builder/getdeps.py --allow-system-packages fetch --no-tests libffi
@@ -132,9 +135,6 @@ jobs:
     - name: Fetch python
       if: ${{ steps.paths.outputs.python_SOURCE }}
       run: python3 build/fbcode_builder/getdeps.py --allow-system-packages fetch --no-tests python
-    - name: Fetch nmap
-      if: ${{ steps.paths.outputs.nmap_SOURCE }}
-      run: python3 build/fbcode_builder/getdeps.py --allow-system-packages fetch --no-tests nmap
     - name: Fetch openssl
       if: ${{ steps.paths.outputs.openssl_SOURCE }}
       run: python3 build/fbcode_builder/getdeps.py --allow-system-packages fetch --no-tests openssl
@@ -671,6 +671,22 @@ jobs:
       with:
        path: ${{ steps.paths.outputs.folly_INSTALL }}
        key: ${{ steps.paths.outputs.folly_CACHE_KEY }}-install
+    - name: Restore nmap from cache
+      id: restore_nmap
+      if: ${{ steps.paths.outputs.nmap_SOURCE }}
+      uses: actions/cache/restore@v4
+      with:
+       path: ${{ steps.paths.outputs.nmap_INSTALL }}
+       key: ${{ steps.paths.outputs.nmap_CACHE_KEY }}-install
+    - name: Build nmap
+      if: ${{ steps.paths.outputs.nmap_SOURCE && ! steps.restore_nmap.outputs.cache-hit }}
+      run: python3 build/fbcode_builder/getdeps.py --allow-system-packages build --no-tests nmap
+    - name: Save nmap to cache
+      uses: actions/cache/save@v4
+      if: ${{ steps.paths.outputs.nmap_SOURCE && ! steps.restore_nmap.outputs.cache-hit }}
+      with:
+       path: ${{ steps.paths.outputs.nmap_INSTALL }}
+       key: ${{ steps.paths.outputs.nmap_CACHE_KEY }}-install
     - name: Restore libffi from cache
       id: restore_libffi
       if: ${{ steps.paths.outputs.libffi_SOURCE }}
@@ -719,22 +735,6 @@ jobs:
       with:
        path: ${{ steps.paths.outputs.python_INSTALL }}
        key: ${{ steps.paths.outputs.python_CACHE_KEY }}-install
-    - name: Restore nmap from cache
-      id: restore_nmap
-      if: ${{ steps.paths.outputs.nmap_SOURCE }}
-      uses: actions/cache/restore@v4
-      with:
-       path: ${{ steps.paths.outputs.nmap_INSTALL }}
-       key: ${{ steps.paths.outputs.nmap_CACHE_KEY }}-install
-    - name: Build nmap
-      if: ${{ steps.paths.outputs.nmap_SOURCE && ! steps.restore_nmap.outputs.cache-hit }}
-      run: python3 build/fbcode_builder/getdeps.py --allow-system-packages build --no-tests nmap
-    - name: Save nmap to cache
-      uses: actions/cache/save@v4
-      if: ${{ steps.paths.outputs.nmap_SOURCE && ! steps.restore_nmap.outputs.cache-hit }}
-      with:
-       path: ${{ steps.paths.outputs.nmap_INSTALL }}
-       key: ${{ steps.paths.outputs.nmap_CACHE_KEY }}-install
     - name: Restore openssl from cache
       id: restore_openssl
       if: ${{ steps.paths.outputs.openssl_SOURCE }}
