@@ -7,8 +7,8 @@
 
 use tokio::process::Command;
 
-use crate::get_sapling_executable_path;
-use crate::get_sapling_options;
+use crate::utils::get_sapling_executable_path;
+use crate::utils::get_sapling_options;
 
 pub async fn get_mergebase(commit: &str, mergegase_with: &str) -> anyhow::Result<Option<String>> {
     let output = Command::new(get_sapling_executable_path())

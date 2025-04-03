@@ -7,8 +7,8 @@
 
 use tokio::process::Command;
 
-use crate::get_sapling_executable_path;
-use crate::get_sapling_options;
+use crate::utils::get_sapling_executable_path;
+use crate::utils::get_sapling_options;
 
 pub async fn get_current_commit_id() -> anyhow::Result<String> {
     let output = Command::new(get_sapling_executable_path())
@@ -54,7 +54,7 @@ mod tests {
     use edenfs_client::utils::get_mount_point;
 
     use crate::commit::*;
-    use crate::*;
+    use crate::utils::*;
 
     const FBSOURCE_COMMIT_ID: &str = "5496dd87e5fe7430a1a399530cc339a479097524";
     const WWW_COMMIT_ID: &str = "1061662d6db2072dd30308d1626a45ac11db3467";

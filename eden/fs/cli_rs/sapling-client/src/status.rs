@@ -14,8 +14,8 @@ use tokio::io::AsyncBufReadExt;
 use tokio::io::BufReader;
 use tokio::process::Command;
 
-use crate::get_sapling_executable_path;
-use crate::get_sapling_options;
+use crate::utils::get_sapling_executable_path;
+use crate::utils::get_sapling_options;
 
 #[derive(Debug, PartialEq)]
 pub enum SaplingStatus {
