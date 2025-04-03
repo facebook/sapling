@@ -49,11 +49,15 @@ from facebook.eden.ttypes import (
 
 try:
     from eden.fs.cli.doctor.facebook.internal_error_messages import (
-        get_inode_count_advice,
+        get_high_inode_count_wiki_link_windows,
+        get_inode_count_advice_darwin,
     )
 except ImportError:
 
-    def get_inode_count_advice() -> str:
+    def get_inode_count_advice_darwin() -> str:
+        return ""
+
+    def get_high_inode_count_wiki_link_windows() -> str:
         return ""
 
 
@@ -927,7 +931,7 @@ class HighInodeCountProblemDarwin(Problem):
             description=f"Mount point {self._info.path} has {inode_count} loaded files{self._additional_info}. High inode count may impact EdenFS performance.\n",
             severity=ProblemSeverity.ADVICE,
         )
-        self._remediation: str = get_inode_count_advice()
+        self._remediation: str = get_inode_count_advice_darwin()
 
 
 class HighInodeCountProblemWindows(Problem, FixableProblem):
@@ -972,7 +976,9 @@ class HighInodeCountProblemWindows(Problem, FixableProblem):
         if inode_count > self._threshold:
             if self.fix_result:
                 print(
-                    f"Invalidated {self.fix_result.numInvalidated} inodes. {inode_count} inodes is still greater than the threshold of {self._threshold} inodes. "
+                    f"\n Invalidated {self.fix_result.numInvalidated} inodes. ",
+                    f"\n {inode_count} inodes is still greater than the threshold of {self._threshold} inodes.",
+                    f"\n Follow the instructions in {get_high_inode_count_wiki_link_windows()} to further reduce the inode count",
                 )
             return False
         return True
