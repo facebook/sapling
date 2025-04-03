@@ -150,30 +150,48 @@ class ThriftTest(testcase.EdenRepoTest):
 
         # Unmaterialized file
         with self.eden.get_thrift_client_legacy() as client:
-            thrift_req = GetFileContentRequest(thrift_mount, b"hello")
+            thrift_req = GetFileContentRequest(thrift_mount, b"hello", SyncBehavior())
             response = client.getFileContent(thrift_req)
+            self.assertEqual(
+                ScmBlobOrError.BLOB,
+                response.blob.getType(),
+                "expect success",
+            )
             self.assertEqual(b"hola\n", response.blob.get_blob())
 
         # Materialized file
         self.write_file("tmpdir/file", "hola\n")
         with self.eden.get_thrift_client_legacy() as client:
-            thrift_req = GetFileContentRequest(thrift_mount, b"tmpdir/file")
+            thrift_req = GetFileContentRequest(
+                thrift_mount, b"tmpdir/file", SyncBehavior()
+            )
+            self.assertEqual(
+                ScmBlobOrError.BLOB,
+                response.blob.getType(),
+                "expect success",
+            )
             response = client.getFileContent(thrift_req)
             self.assertEqual(b"hola\n", response.blob.get_blob())
 
         # Invalid paths
         self.rm("tmpdir/file")
         with self.eden.get_thrift_client_legacy() as client:
-            thrift_req = GetFileContentRequest(thrift_mount, b"tmpdir/file")
+            thrift_req = GetFileContentRequest(
+                thrift_mount, b"tmpdir/file", SyncBehavior()
+            )
             response = client.getFileContent(thrift_req)
-            self.assertEqual(ScmBlobOrError.ERROR, response.blob.getType())
+            self.assertEqual(
+                ScmBlobOrError.ERROR, response.blob.getType(), "expect error"
+            )
             self.assertEqual(
                 response.blob.get_error().message,
                 "tmpdir/file: No such file or directory",
             )
-            thrift_req = GetFileContentRequest(thrift_mount, b"tmpdir")
+            thrift_req = GetFileContentRequest(thrift_mount, b"tmpdir", SyncBehavior())
             response = client.getFileContent(thrift_req)
-            self.assertEqual(ScmBlobOrError.ERROR, response.blob.getType())
+            self.assertEqual(
+                ScmBlobOrError.ERROR, response.blob.getType(), "expect error"
+            )
             self.assertEqual(
                 response.blob.get_error().message,
                 "tmpdir: Is a directory",

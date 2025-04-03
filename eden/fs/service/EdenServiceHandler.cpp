@@ -5498,18 +5498,36 @@ EdenServiceHandler::semifuture_debugInvalidateNonMaterialized(
 folly::SemiFuture<std::unique_ptr<GetFileContentResponse>>
 EdenServiceHandler::semifuture_getFileContent(
     std::unique_ptr<GetFileContentRequest> request) {
-  auto helper = INSTRUMENT_THRIFT_CALL(DBG3, *request->mount()->mountPoint());
-  auto mountHandle = lookupMount(request->mount()->mountPoint());
-  auto objectStore = mountHandle.getObjectStorePtr();
-  auto path = RelativePathPiece(*request->filePath());
+  // Read from request
+  auto sync = request->sync();
+  auto mountPoint = request->mount()->mountPoint();
+  auto filePath = request->filePath();
+
+  // Set up log helper
+  auto helper = INSTRUMENT_THRIFT_CALL(
+      DBG3, *mountPoint, getSyncTimeout(*sync), *filePath);
+
+  // Prepare params for querying
+  auto mountHandle = lookupMount(mountPoint);
+  auto path = RelativePathPiece(*filePath);
   auto& fetchContext = helper->getFetchContext();
+
+  // Ensure Eden has its internal state updated.
+  // See SyncBehavior struct in eden.thrift for details.
+  auto fut = waitForPendingWrites(mountHandle.getEdenMount(), *request->sync());
 
   return wrapImmediateFuture(
              std::move(helper),
-             mountHandle.getEdenMount()
-                 .getVirtualInode(path, fetchContext)
-                 .thenValue([objectStore = std::move(objectStore),
-                             &fetchContext](auto&& inode) {
+             std::move(fut)
+                 .thenValue([mountHandle,
+                             path = path.copy(),
+                             fetchContext = fetchContext.copy()](auto&&) {
+                   auto& edenMount = mountHandle.getEdenMount();
+                   return edenMount.getVirtualInode(path, fetchContext);
+                 })
+                 .thenValue([mountHandle,
+                             fetchContext = fetchContext.copy()](auto&& inode) {
+                   auto& objectStore = mountHandle.getObjectStorePtr();
                    return inode.getBlob(objectStore, fetchContext);
                  })
                  .thenTry([](auto&& result) {
