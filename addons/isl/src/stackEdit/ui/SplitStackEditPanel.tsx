@@ -24,7 +24,7 @@ import {useEffect, useMemo, useRef, useState} from 'react';
 import {useContextMenu} from 'shared/ContextMenu';
 import {readableDiffBlocks as diffBlocks, type LineIdx, splitLines} from 'shared/diff';
 import {useThrottledEffect} from 'shared/hooks';
-import {firstLine, nullthrows} from 'shared/utils';
+import {firstLine, nullthrows, randomId} from 'shared/utils';
 import {BranchIndicator} from '../../BranchIndicator';
 import {commitMessageTemplate} from '../../CommitInfoView/CommitInfoState';
 import {
@@ -46,6 +46,10 @@ import {max, next, prev} from '../revMath';
 import {computeLinesForFileStackEditor} from './FileStackEditorLines';
 import {bumpStackEditMetric, SplitRangeRecord, useStackEditState} from './stackEditState';
 
+import {InlineErrorBadge} from 'isl-components/ErrorNotice';
+import {Internal} from '../../Internal';
+import {useFeatureFlagSync} from '../../featureFlags';
+import {applyDiffSplit, diffCommit, type PartiallySelectedDiffCommit} from '../diffSplit';
 import './SplitStackEditPanel.css';
 
 const styles = stylex.create({
@@ -107,11 +111,39 @@ export function SplitStackEditPanel() {
     stackEdit.push(newStack, {name: 'insertBlankCommit'}, splitRange);
   };
 
+  const applyNewDiffSplitCommits = (
+    subStack: CommitStackState,
+    rev: CommitRev,
+    commits: ReadonlyArray<PartiallySelectedDiffCommit>,
+  ) => {
+    const [startRev, endRev] = findStartEndRevs(stackEdit);
+    if (startRev != null && endRev != null) {
+      // Replace the current, single rev with the new stack, which might have multiple revs.
+      const newSubStack = applyDiffSplit(subStack, rev, commits);
+      // Replace the [start, end+1] range with the new stack in the commit stack.
+      const newCommitStack = commitStack.applySubStack(startRev, next(endRev), newSubStack);
+      // Find the new split range.
+      const endOffset = newCommitStack.size - commitStack.size;
+      const startKey = newCommitStack.get(rev)?.key ?? '';
+      const endKey = newCommitStack.get(next(rev, endOffset))?.key ?? '';
+      const splitRange = SplitRangeRecord({startKey, endKey});
+      // Update the main stack state.
+      stackEdit.push(newCommitStack, {name: 'splitWithAI'}, splitRange);
+    }
+  };
+
   // One commit per column.
   const columns: JSX.Element[] = subStack
     .revs()
     .map(rev => (
-      <SplitColumn key={rev} rev={rev} subStack={subStack} insertBlankCommit={insertBlankCommit} />
+      <SplitColumn
+        commitStack={commitStack}
+        key={rev}
+        rev={rev}
+        subStack={subStack}
+        applyNewDiffSplitCommits={applyNewDiffSplitCommits}
+        insertBlankCommit={insertBlankCommit}
+      />
     ));
 
   return (
@@ -124,9 +156,15 @@ export function SplitStackEditPanel() {
 }
 
 type SplitColumnProps = {
+  commitStack: CommitStackState;
   subStack: CommitStackState;
   rev: CommitRev;
   insertBlankCommit: (rev: CommitRev) => unknown;
+  applyNewDiffSplitCommits: (
+    subStack: CommitStackState,
+    rev: CommitRev,
+    commits: ReadonlyArray<PartiallySelectedDiffCommit>,
+  ) => unknown;
 };
 
 function InsertBlankCommitButton({
@@ -154,7 +192,7 @@ function InsertBlankCommitButton({
 }
 
 function SplitColumn(props: SplitColumnProps) {
-  const {subStack, rev, insertBlankCommit} = props;
+  const {commitStack, subStack, rev, insertBlankCommit, applyNewDiffSplitCommits} = props;
 
   const [collapsedFiles, setCollapsedFiles] = useState(new Set());
 
@@ -247,9 +285,19 @@ function SplitColumn(props: SplitColumnProps) {
       </Column>
     </EmptyState>
   ) : (
-    <ScrollY maxSize="calc((100vh / var(--zoom)) - var(--split-vertical-overhead))" hideBar={true}>
-      {editors}
-    </ScrollY>
+    <Column alignStart>
+      <AISplitButton
+        commitStack={commitStack}
+        subStack={subStack}
+        rev={rev}
+        applyNewDiffSplitCommits={applyNewDiffSplitCommits}
+      />
+      <ScrollY
+        maxSize="calc((100vh / var(--zoom)) - var(--split-vertical-overhead))"
+        hideBar={true}>
+        {editors}
+      </ScrollY>
+    </Column>
   );
 
   const showExtraCommitActionsContextMenu = useContextMenu(() => {
@@ -293,6 +341,113 @@ function SplitColumn(props: SplitColumnProps) {
       </div>
     </>
   );
+}
+
+type AISplitButtonProps = {
+  commitStack: CommitStackState;
+  subStack: CommitStackState;
+  rev: CommitRev;
+  applyNewDiffSplitCommits: (
+    subStack: CommitStackState,
+    rev: CommitRev,
+    commits: ReadonlyArray<PartiallySelectedDiffCommit>,
+  ) => unknown;
+};
+
+type AISplitButtonLoadingState =
+  | {type: 'READY'}
+  | {type: 'LOADING'; id: string}
+  | {type: 'ERROR'; error: Error};
+
+function AISplitButton({commitStack, subStack, rev, applyNewDiffSplitCommits}: AISplitButtonProps) {
+  const {splitCommitWithAI} = Internal;
+  const enableAICommitSplit =
+    useFeatureFlagSync(Internal.featureFlags?.AICommitSplit) && splitCommitWithAI != null;
+
+  const [loadingState, setLoadingState] = useState<AISplitButtonLoadingState>({type: 'READY'});
+
+  // Reset state if commitStack changes while in LOADING state. E.g., user manually updated commits locally.
+  useEffect(() => {
+    if (loadingState.type === 'LOADING') {
+      setLoadingState({type: 'READY'});
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [commitStack]); // Triggered when commitStack changes
+
+  const fetch = async () => {
+    if (loadingState.type === 'LOADING') {
+      return;
+    }
+    const diff = diffCommit(subStack, rev);
+    if (diff.files.length === 0) {
+      return;
+    }
+    const id = randomId();
+    setLoadingState({type: 'LOADING', id});
+    const result = await nullthrows(splitCommitWithAI)(diff);
+    if (result.error != null) {
+      setLoadingState(prev => {
+        if (prev.type === 'LOADING' && prev.id === id) {
+          return {type: 'ERROR', error: result.error};
+        }
+        return prev;
+      });
+      return;
+    }
+    setLoadingState(prev => {
+      if (prev.type === 'LOADING' && prev.id === id) {
+        const commits = result.value.filter(c => c.files.length > 0);
+        if (commits.length > 0) {
+          applyNewDiffSplitCommits(subStack, rev, commits);
+        }
+        return {type: 'READY'};
+      }
+      return prev;
+    });
+  };
+
+  const cancel = () => {
+    setLoadingState(prev => {
+      const {type} = prev;
+      if (type === 'LOADING' || type === 'ERROR') {
+        return {type: 'READY'};
+      }
+      return prev;
+    });
+  };
+
+  if (!enableAICommitSplit) {
+    return null;
+  }
+
+  switch (loadingState.type) {
+    case 'READY':
+      return (
+        <Button onClick={fetch}>
+          <Icon icon="sparkle" />
+          <T>Split this commit with AI</T>
+        </Button>
+      );
+    case 'LOADING':
+      return (
+        <Button onClick={cancel}>
+          <Icon icon="loading" />
+          <T>Splitting</T>
+        </Button>
+      );
+    case 'ERROR':
+      return (
+        <div>
+          <Button onClick={fetch}>
+            <Icon icon="sparkle" />
+            <T>Split this commit with AI</T>
+          </Button>
+          <InlineErrorBadge error={loadingState.error}>
+            {loadingState.error.message}
+          </InlineErrorBadge>
+        </div>
+      );
+  }
 }
 
 type SplitEditorWithTitleProps = {

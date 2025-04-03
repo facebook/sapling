@@ -64,6 +64,7 @@ export type StackEditOpDescription =
   | {name: 'insertBlankCommit'}
   | {name: 'fileStack'; fileDesc: string}
   | {name: 'split'; path: string}
+  | {name: 'splitWithAI'}
   | {name: 'metaedit'; commit: CommitState}
   | {name: 'absorbMove'; commit: CommitState};
 
