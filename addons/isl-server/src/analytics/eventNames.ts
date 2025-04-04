@@ -136,6 +136,7 @@ export type TrackEventName =
   | 'SplitOpenFromCommitContextMenu'
   | 'SplitOpenFromHeadCommit'
   | 'SplitOpenRangeSelector'
+  | 'AISplitButtonClick'
   | 'SuccessionsDetected'
   | 'BuggySuccessionDetected'
   | 'SyncDiffMessageMutation'

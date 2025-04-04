@@ -378,35 +378,44 @@ function AISplitButton({commitStack, subStack, rev, applyNewDiffSplitCommits}: A
   }, [commitStack]); // Triggered when commitStack changes
 
   const fetch = async () => {
-    if (loadingState.type === 'LOADING') {
+    if (loadingState.type === 'LOADING' || splitCommitWithAI == null) {
       return;
     }
     const diff = diffCommit(subStack, rev);
     if (diff.files.length === 0) {
       return;
     }
+
     const id = randomId();
     setLoadingState({type: 'LOADING', id});
-    const result = await nullthrows(splitCommitWithAI)(diff);
-    if (result.error != null) {
+    try {
+      const result = await tracker.operation(
+        'AISplitButtonClick',
+        'SplitSuggestionError',
+        undefined,
+        () => splitCommitWithAI(diff),
+      );
       setLoadingState(prev => {
         if (prev.type === 'LOADING' && prev.id === id) {
-          return {type: 'ERROR', error: result.error};
+          const commits = result.filter(c => c.files.length > 0);
+          if (commits.length > 0) {
+            applyNewDiffSplitCommits(subStack, rev, commits);
+          }
+          return {type: 'READY'};
         }
         return prev;
       });
-      return;
-    }
-    setLoadingState(prev => {
-      if (prev.type === 'LOADING' && prev.id === id) {
-        const commits = result.value.filter(c => c.files.length > 0);
-        if (commits.length > 0) {
-          applyNewDiffSplitCommits(subStack, rev, commits);
-        }
-        return {type: 'READY'};
+    } catch (err) {
+      if (err != null) {
+        setLoadingState(prev => {
+          if (prev.type === 'LOADING' && prev.id === id) {
+            return {type: 'ERROR', error: err as Error};
+          }
+          return prev;
+        });
+        return;
       }
-      return prev;
-    });
+    }
   };
 
   const cancel = () => {
