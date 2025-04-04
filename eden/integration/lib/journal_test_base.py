@@ -7,6 +7,7 @@
 # pyre-unsafe
 
 import subprocess
+import sys
 import time
 from typing import Dict, List, Optional
 
@@ -16,6 +17,7 @@ from facebook.eden.ttypes import (
     ChangesSinceV2Result,
     Dtype,
     SmallChangeNotification,
+    SynchronizeWorkingCopyParams,
 )
 
 from . import testcase
@@ -74,6 +76,12 @@ class JournalTestBase(testcase.EdenRepoTest):
         included_suffixes=None,
         excluded_suffixes=None,
     ) -> ChangesSinceV2Result:
+        if sys.platform == "win32":
+            # On Windows, we need to wait for the file system to settle before
+            # calling getChangesSinceV2. Otherwise, we may get missing results.
+            self.client.synchronizeWorkingCopy(
+                self.mount_path_bytes, SynchronizeWorkingCopyParams()
+            )
         return self.client.changesSinceV2(
             ChangesSinceV2Params(
                 mountPoint=self.mount_path_bytes,

@@ -15,7 +15,6 @@ python_library(
         ),
     ],
     deps = [
-        "fbcode//fb303/thrift:fb303_core-py",
         "fbsource//third-party/pypi/pexpect:pexpect",
         "//eden/fs/cli:lib",
         "//eden/fs/cli:proc_utils",
@@ -24,6 +23,7 @@ python_library(
         "//eden/fs/service:thrift-py-deprecated",
         "//eden/integration/facebook/lib:lib",
         "//eden/test_support:py",
+        "//fb303/thrift:fb303_core-py-deprecated",
     ],
 )
 
