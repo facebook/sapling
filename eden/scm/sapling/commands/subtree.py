@@ -48,6 +48,7 @@ from .cmdtable import command
 
 MAX_SUBTREE_COPY_FILE_COUNT = 10_000
 MERGE_BASE_TIMEOUT_SECS = 120
+COPY_REUSE_TREE = False
 
 readonly = registrar.command.readonly
 
@@ -436,7 +437,7 @@ def _docopy(ui, repo, *args, **opts):
     subtreeutil.validate_path_overlap(from_paths, to_paths)
     subtreeutil.validate_source_commit(ui, from_ctx, "copy")
 
-    if ui.configbool("subtree", "copy-reuse-tree"):
+    if COPY_REUSE_TREE:
         _do_cheap_copy(repo, from_ctx, to_ctx, from_paths, to_paths, opts)
     else:
         _do_normal_copy(repo, from_ctx, to_ctx, from_paths, to_paths, opts)

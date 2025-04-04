@@ -1,5 +1,4 @@
   $ setconfig diff.git=True
-  $ setconfig subtree.copy-reuse-tree=False
   $ setconfig subtree.allow-any-source-commit=True
   $ enable rebase
 

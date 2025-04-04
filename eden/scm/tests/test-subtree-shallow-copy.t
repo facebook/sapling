@@ -1,6 +1,11 @@
   $ setconfig diff.git=True
-  $ setconfig subtree.copy-reuse-tree=True
   $ setconfig subtree.allow-any-source-commit=True
+  $ cat > $TESTTMP/subtree.py <<EOF
+  > from sapling.commands import subtree
+  > def extsetup(ui):
+  >     subtree.COPY_REUSE_TREE = True
+  > EOF
+  $ setconfig extensions.subtreecopyreusetree=$TESTTMP/subtree.py
 
 test subtree copy
   $ newclientrepo

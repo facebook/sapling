@@ -268,7 +268,7 @@ def get_subtree_metadata(extra):
 
 def get_subtree_branches(repo, node) -> List[SubtreeBranch]:
     def detect_branch_type(repo, node):
-        # we have not enabled "subtree.copy-reuse-tree" yet, so we use
+        # we have not enabled shallow copies yet, so we use
         # a simple method here
         if not repo[node].changeset().files:
             return BranchType.SHALLOW_COPY

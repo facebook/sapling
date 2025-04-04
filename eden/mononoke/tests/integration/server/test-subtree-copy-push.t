@@ -6,7 +6,12 @@
 
   $ . "${TEST_FIXTURES}/library.sh"
   $ setconfig push.edenapi=true
-  $ setconfig subtree.copy-reuse-tree=true
+  $ cat > $TESTTMP/subtree.py <<EOF
+  > from sapling.commands import subtree
+  > def extsetup(ui):
+  >     subtree.COPY_REUSE_TREE = True
+  > EOF
+  $ setconfig extensions.subtreecopyreusetree=$TESTTMP/subtree.py
   $ BLOB_TYPE="blob_files" default_setup --scuba-log-file "$TESTTMP/log.json"
   hg repo
   o  C [draft;rev=2;26805aba1e60]
