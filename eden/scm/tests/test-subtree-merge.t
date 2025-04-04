@@ -571,3 +571,128 @@ test subtree merge source commit validation
   +source
   $ hg dbsh -c 'print(repo["."].extra())'
   {'branch': 'default'}
+
+test subtree merge with different merge tools
+
+  $ newclientrepo
+  $ drawdag <<'EOS'
+  > B   # B/foo/x = 1foo\n2\n3\n4\n5foo\n
+  > |   # B/foo/y = yfoo\n
+  > |
+  > A   # A/foo/x = 1\n2\n3\n4\n5\n
+  >     # A/foo/y = y\n
+  >     # A/foo/z = z\n
+  >     # drawdag.defaultfiles=false
+  > EOS
+  $ hg go -q $B
+  $ hg subtree copy -r $A --from-path foo --to-path foo2 -m "subtree copy foo -> foo2"
+  copying foo to foo2
+  $ cat > foo2/x <<EOF
+  > 1
+  > 2
+  > 3foo2
+  > 4
+  > 5foo2
+  > EOF
+  $ echo "zfoo2" > foo2/z
+  $ hg ci -m "update foo2"
+  $ hg log -G -T '{node|short} {desc}\n'
+  @  37f56915baff update foo2
+  │
+  o  dfb7e4c6a0af subtree copy foo -> foo2
+  │
+  │  Subtree copy from d1c0dec1161c673fb29a7658c93fd0000c9793ff
+  │  - Copied path foo to foo2
+  o  1fe9e555c542 B
+  │
+  o  d1c0dec1161c A
+
+  $ hg subtree merge --from-path foo --to-path foo2 -t :other
+  computing merge base (timeout: 120 seconds)...
+  merge base: d1c0dec1161c
+  1 files updated, 1 files merged, 0 files removed, 0 files unresolved
+  (subtree merge, don't forget to commit)
+  $ hg diff
+  diff --git a/foo2/x b/foo2/x
+  --- a/foo2/x
+  +++ b/foo2/x
+  @@ -1,5 +1,5 @@
+  -1
+  +1foo
+   2
+  -3foo2
+  +3
+   4
+  -5foo2
+  +5foo
+  diff --git a/foo2/y b/foo2/y
+  --- a/foo2/y
+  +++ b/foo2/y
+  @@ -1,1 +1,1 @@
+  -y
+  +yfoo
+  $ hg go -C . -q && hg clean
+
+  $ hg subtree merge --from-path foo --to-path foo2 -t :merge-other
+  computing merge base (timeout: 120 seconds)...
+  merge base: d1c0dec1161c
+  merging foo2/x and foo/x to foo2/x
+  1 files updated, 1 files merged, 0 files removed, 0 files unresolved
+  (subtree merge, don't forget to commit)
+  $ hg diff
+  diff --git a/foo2/x b/foo2/x
+  --- a/foo2/x
+  +++ b/foo2/x
+  @@ -1,5 +1,5 @@
+  -1
+  +1foo
+   2
+   3foo2
+   4
+  -5foo2
+  +5foo
+  diff --git a/foo2/y b/foo2/y
+  --- a/foo2/y
+  +++ b/foo2/y
+  @@ -1,1 +1,1 @@
+  -y
+  +yfoo
+  $ hg go -C . -q && hg clean
+
+  $ hg subtree merge --from-path foo --to-path foo2 -t :local
+  computing merge base (timeout: 120 seconds)...
+  merge base: d1c0dec1161c
+  1 files updated, 1 files merged, 0 files removed, 0 files unresolved
+  (subtree merge, don't forget to commit)
+  $ hg diff
+  diff --git a/foo2/y b/foo2/y
+  --- a/foo2/y
+  +++ b/foo2/y
+  @@ -1,1 +1,1 @@
+  -y
+  +yfoo
+  $ hg go -C . -q && hg clean
+
+  $ hg subtree merge --from-path foo --to-path foo2 -t :merge-local
+  computing merge base (timeout: 120 seconds)...
+  merge base: d1c0dec1161c
+  merging foo2/x and foo/x to foo2/x
+  1 files updated, 1 files merged, 0 files removed, 0 files unresolved
+  (subtree merge, don't forget to commit)
+  $ hg diff
+  diff --git a/foo2/x b/foo2/x
+  --- a/foo2/x
+  +++ b/foo2/x
+  @@ -1,4 +1,4 @@
+  -1
+  +1foo
+   2
+   3foo2
+   4
+  diff --git a/foo2/y b/foo2/y
+  --- a/foo2/y
+  +++ b/foo2/y
+  @@ -1,1 +1,1 @@
+  -y
+  +yfoo
+  $ hg go -C . -q && hg clean
