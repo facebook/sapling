@@ -361,13 +361,14 @@ ImmediateFuture<TreeAuxData> ObjectStore::getTreeAuxData(
     const ObjectId& id,
     const ObjectFetchContextPtr& fetchContext) const {
   DurationScope<EdenStats> statScope{stats_, &ObjectStoreStats::getTreeAuxData};
+  folly::stop_watch<std::chrono::milliseconds> watch;
 
   // TODO(cuev): Check in-memory cache
 
   deprioritizeWhenFetchHeavy(*fetchContext);
 
   return ImmediateFuture<BackingStore::GetTreeAuxResult>{
-      getTreeAuxDataImpl(id, fetchContext)}
+      getTreeAuxDataImpl(id, fetchContext, watch)}
       .thenValue(
           [self = shared_from_this(),
            fetchContext = fetchContext.copy(),
@@ -392,17 +393,21 @@ ImmediateFuture<TreeAuxData> ObjectStore::getTreeAuxData(
 folly::SemiFuture<BackingStore::GetTreeAuxResult>
 ObjectStore::getTreeAuxDataImpl(
     const ObjectId& id,
-    const ObjectFetchContextPtr& context) const {
+    const ObjectFetchContextPtr& context,
+    folly::stop_watch<std::chrono::milliseconds> watch) const {
   // TODO(cuev): Look in the LocalStore for TreeAuxData
 
   return ImmediateFuture{backingStore_->getTreeAuxData(id, context)}
       .thenValue(
-          [self = shared_from_this(), id, context = context.copy()](
+          [self = shared_from_this(), id, context = context.copy(), watch](
               BackingStore::GetTreeAuxResult result)
               -> ImmediateFuture<BackingStore::GetTreeAuxResult> {
             if (result.treeAux) {
               self->stats_->increment(
                   &ObjectStoreStats::getTreeAuxDataFromBackingStore);
+              self->stats_->addDuration(
+                  &ObjectStoreStats::getTreeAuxDataBackingstoreDuration,
+                  watch.elapsed());
               return result;
             }
             self->stats_->increment(&ObjectStoreStats::getTreeAuxDataFailed);
