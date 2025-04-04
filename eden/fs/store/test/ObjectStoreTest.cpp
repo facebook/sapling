@@ -102,12 +102,29 @@ struct ObjectStoreTest : public ::testing::TestWithParam<CaseSensitivity> {
     return storedTree->get().getHash();
   }
 
+  ObjectId putReadyTree(const Tree::container& entries) {
+    {
+      auto* storedBlob = fakeBackingStoreWithKeyedBlake3->putTree(entries);
+      storedBlob->setReady();
+    }
+
+    StoredTree* storedTree = fakeBackingStore->putTree(entries);
+    storedTree->setReady();
+    return storedTree->get().getHash();
+  }
+
   void putReadyGlob(
       std::pair<RootId, std::string> suffixQuery,
       std::vector<std::string> globPtr) {
     StoredGlob* storedGlob =
         fakeBackingStore->putGlob(suffixQuery, std::move(globPtr));
     storedGlob->setReady();
+  }
+
+  CaseSensitivity getOppositeCaseSensitivity() const {
+    return GetParam() == CaseSensitivity::Sensitive
+        ? CaseSensitivity::Insensitive
+        : CaseSensitivity::Sensitive;
   }
 
   RefPtr<LoggingFetchContext> loggingContext =
@@ -462,16 +479,22 @@ class FetchContext final : public ObjectFetchContext {
     return nullptr;
   }
 
-  void didFetch(ObjectType, const ObjectId&, Origin) override {
+  void didFetch(ObjectType, const ObjectId&, Origin origin) override {
     ++fetchCount_;
+    origin_ = origin;
   }
 
   uint64_t getFetchCount() const {
     return fetchCount_;
   }
 
+  Origin getFetchedOrigin() const {
+    return origin_;
+  }
+
  private:
   std::atomic<uint64_t> fetchCount_{0};
+  std::atomic<Origin> origin_{Origin::NotFetched};
 };
 
 TEST_P(ObjectStoreTest, blobs_with_same_objectid_are_equal) {
@@ -534,6 +557,95 @@ TEST_P(ObjectStoreTest, glob_files_test) {
   for (int i = 0; i < 2; i++) {
     EXPECT_EQ(sorted_result[i], expected_result[i]);
   }
+}
+
+TEST_P(ObjectStoreTest, get_tree_with_different_sensitivities) {
+  auto context1 = makeRefPtr<FetchContext>();
+  auto context2 = makeRefPtr<FetchContext>();
+  auto context3 = makeRefPtr<FetchContext>();
+  auto context4 = makeRefPtr<FetchContext>();
+
+  // construct an object store with the opposite case sensitivity that shares
+  // the same treecache
+  auto oppositeSensitivityObjectStore = ObjectStore::create(
+      fakeBackingStore,
+      localStore,
+      treeCache,
+      stats.copy(),
+      std::make_shared<ProcessInfoCache>(),
+      std::make_shared<NullStructuredLogger>(),
+      EdenConfig::createTestEdenConfig(),
+      true,
+      getOppositeCaseSensitivity());
+
+  auto blobOne = putReadyBlob("foo content");
+  auto blobTwo = putReadyBlob("bar content");
+
+  // put a tree with the correct case sensitivity
+  auto treeId = putReadyTree(
+      {{{PathComponent{"Bar"},
+         TreeEntry{blobOne, TreeEntryType::EXECUTABLE_FILE}}},
+       GetParam()});
+
+  // put a tree with the opposite case sensitivity
+  auto oppositeSensitivityTreeId = putReadyTree(
+      {{{PathComponent{"foo"}, TreeEntry{blobOne, TreeEntryType::REGULAR_FILE}},
+        {PathComponent{"Baz"}, TreeEntry{readyTreeId, TreeEntryType::TREE}}},
+       getOppositeCaseSensitivity()});
+
+  // fetch the "GetParam() case sensitivity" tree from the "GetParam() case
+  // sensitivity" object store. this should populate the treecache
+  auto treeFromMatchingObjectStoreResult =
+      objectStore->getTree(treeId, context1.as<ObjectFetchContext>()).get(0ms);
+
+  EXPECT_EQ(context1->getFetchedOrigin(), ObjectFetchContext::FromNetworkFetch);
+  EXPECT_EQ(
+      treeFromMatchingObjectStoreResult->getCaseSensitivity(), GetParam());
+
+  // fetch the "getOppositeCaseSensitivity() case sensitivity" tree from the
+  // "GetParam() case sensitivity" object store. this should populate the
+  // treecache
+  auto oppositeSensitivityTreeFromMatchingObjectStoreResult =
+      objectStore
+          ->getTree(
+              oppositeSensitivityTreeId, context2.as<ObjectFetchContext>())
+          .get(0ms);
+
+  EXPECT_EQ(context2->getFetchedOrigin(), ObjectFetchContext::FromNetworkFetch);
+  EXPECT_EQ(
+      oppositeSensitivityTreeFromMatchingObjectStoreResult
+          ->getCaseSensitivity(),
+      GetParam());
+
+  // get the "GetParam() case sensitivity" from the
+  // "getOppositeCaseSensitivity() case sensitivity" object store. this should
+  // not fetch from the backing store and should instead be served from the
+  // treecache populated by the first object store's call to getTree
+  auto treeFromOppositeObjectStoreResult =
+      oppositeSensitivityObjectStore
+          ->getTree(treeId, context3.as<ObjectFetchContext>())
+          .get(0ms);
+
+  EXPECT_EQ(context3->getFetchedOrigin(), ObjectFetchContext::FromMemoryCache);
+  EXPECT_EQ(
+      treeFromOppositeObjectStoreResult->getCaseSensitivity(),
+      getOppositeCaseSensitivity());
+
+  // get the "getOppositeCaseSensitivity() case sensitivity" from the
+  // "getOppositeCaseSensitivity() case sensitivity" object store. this should
+  // not fetch from the backing store and should instead be served from the
+  // treecache populated by the first object store's call to getTree
+  auto oppositeSensitivityTreeFromOppositeObjectStoreResult =
+      oppositeSensitivityObjectStore
+          ->getTree(
+              oppositeSensitivityTreeId, context4.as<ObjectFetchContext>())
+          .get(0ms);
+
+  EXPECT_EQ(context4->getFetchedOrigin(), ObjectFetchContext::FromMemoryCache);
+  EXPECT_EQ(
+      oppositeSensitivityTreeFromOppositeObjectStoreResult
+          ->getCaseSensitivity(),
+      getOppositeCaseSensitivity());
 }
 
 INSTANTIATE_TEST_SUITE_P(
