@@ -9,6 +9,7 @@ import type {ReactNode} from 'react';
 
 import React, {Component, useState} from 'react';
 import {Icon} from './Icon';
+import type {Placement} from './Tooltip';
 import {Tooltip} from './Tooltip';
 
 import './error-notice.css';
@@ -91,14 +92,16 @@ export function InlineErrorBadge({
   children,
   error,
   title,
+  placement,
 }: {
   children: ReactNode;
   error: Error;
   title?: ReactNode;
+  placement?: Placement;
 }) {
   return (
     <div className="inline-error-badge">
-      <Tooltip component={TooltipErrorDetails(error, title)}>
+      <Tooltip component={TooltipErrorDetails(error, title)} placement={placement}>
         <Icon icon="error" slot="start" />
         <span>{children}</span>
       </Tooltip>

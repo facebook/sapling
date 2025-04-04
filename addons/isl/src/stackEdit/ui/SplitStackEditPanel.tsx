@@ -453,15 +453,15 @@ function AISplitButton({commitStack, subStack, rev, applyNewDiffSplitCommits}: A
       );
     case 'ERROR':
       return (
-        <div>
+        <Column alignStart>
           <Button onClick={fetch}>
             <Icon icon="sparkle" />
             <T>Split this commit with AI</T>
           </Button>
-          <InlineErrorBadge error={loadingState.error}>
-            {loadingState.error.message}
+          <InlineErrorBadge error={loadingState.error} placement="bottom">
+            <T>AI Split Failed</T>
           </InlineErrorBadge>
-        </div>
+        </Column>
       );
   }
 }
