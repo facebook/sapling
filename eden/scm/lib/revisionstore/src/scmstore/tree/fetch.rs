@@ -16,6 +16,7 @@ use cas_client::CasClient;
 use flume::Sender;
 use futures::StreamExt;
 use progress_model::ProgressBar;
+use scm_blob::ScmBlob;
 use tracing::field;
 use types::hgid::NULL_ID;
 use types::AugmentedTree;
@@ -278,56 +279,63 @@ impl FetchState {
                                     tracing::trace!(target: "cas", ?keys, ?digest, "tree not in cas");
                                     // miss
                                 }
-                                Ok(Some(data)) => match AugmentedTree::try_deserialize(data.into_bytes().as_ref()) {
-                                    Ok(tree) => {
-                                        keys_found_count += keys.len();
-                                        tracing::trace!(target: "cas", ?keys, ?digest, "tree found in cas");
+                                Ok(Some(data)) => {
+                                    let deserialization_result = match data {
+                                        ScmBlob::Bytes(bytes) => AugmentedTree::try_deserialize(bytes.as_ref()),
+                                        #[cfg(fbcode_build)]
+                                        ScmBlob::IOBuf(buf) => AugmentedTree::try_deserialize(buf.cursor()),
+                                    };
+                                    match deserialization_result {
+                                        Ok(tree) => {
+                                            keys_found_count += keys.len();
+                                            tracing::trace!(target: "cas", ?keys, ?digest, "tree found in cas");
 
-                                        let lazy_tree = LazyTree::Cas(AugmentedTreeWithDigest {
-                                            augmented_manifest_id: digest.hash,
-                                            augmented_manifest_size: digest.size,
-                                            augmented_tree: tree,
-                                        });
+                                            let lazy_tree = LazyTree::Cas(AugmentedTreeWithDigest {
+                                                augmented_manifest_id: digest.hash,
+                                                augmented_manifest_size: digest.size,
+                                                augmented_tree: tree,
+                                            });
 
-                                        if let Err(err) =
-                                            cache_child_aux_data(
-                                                &lazy_tree,
-                                                aux_cache,
-                                                tree_aux_store,
-                                                // read_before_write=true - check presence in indexedlog before appending (to avoid duplicate entries on every CAS fetch)
-                                                true,
-                                            )
-                                        {
-                                            self.errors.multiple_keyed_error(keys, "cache child aux data failed", err);
-                                        } else if !keys.is_empty() {
-                                            let last = keys.pop().unwrap();
-                                            for key in keys {
+                                            if let Err(err) =
+                                                cache_child_aux_data(
+                                                    &lazy_tree,
+                                                    aux_cache,
+                                                    tree_aux_store,
+                                                    // read_before_write=true - check presence in indexedlog before appending (to avoid duplicate entries on every CAS fetch)
+                                                    true,
+                                                )
+                                            {
+                                                self.errors.multiple_keyed_error(keys, "cache child aux data failed", err);
+                                            } else if !keys.is_empty() {
+                                                let last = keys.pop().unwrap();
+                                                for key in keys {
+                                                    self.common.found(
+                                                        key,
+                                                        StoreTree {
+                                                            content: Some(lazy_tree.clone()),
+                                                            parents: None,
+                                                            aux_data: None,
+                                                        },
+                                                    );
+                                                }
+                                                // no clones needed
                                                 self.common.found(
-                                                    key,
+                                                    last,
                                                     StoreTree {
-                                                        content: Some(lazy_tree.clone()),
+                                                        content: Some(lazy_tree),
                                                         parents: None,
                                                         aux_data: None,
                                                     },
                                                 );
                                             }
-                                            // no clones needed
-                                            self.common.found(
-                                                last,
-                                                StoreTree {
-                                                    content: Some(lazy_tree),
-                                                    parents: None,
-                                                    aux_data: None,
-                                                },
-                                            );
+                                        }
+                                        Err(err) => {
+                                            error += keys.len();
+                                            tracing::error!(target: "cas", ?err, ?keys, ?digest, "error deserializing tree");
+                                            self.errors.multiple_keyed_error(keys, "CAS tree deserialization failed", err);
                                         }
                                     }
-                                    Err(err) => {
-                                        error += keys.len();
-                                        tracing::error!(target: "cas", ?err, ?keys, ?digest, "error deserializing tree");
-                                        self.errors.multiple_keyed_error(keys, "CAS tree deserialization failed", err);
-                                    }
-                                },
+                                }
                             }
                         }
                         future::ready(())

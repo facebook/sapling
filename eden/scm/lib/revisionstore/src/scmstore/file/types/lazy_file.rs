@@ -119,7 +119,6 @@ impl LazyFile {
                 let (content, header) = split_file_metadata(&entry.data()?, *format);
                 (ScmBlob::Bytes(content), header)
             }
-            // another copy of underlying IOBuf content into a vector, to transform it into AbstractBytes
             Cas(data) => (data.clone(), None),
         })
     }
