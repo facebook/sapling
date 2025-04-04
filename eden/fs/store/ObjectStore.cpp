@@ -212,10 +212,12 @@ ImmediateFuture<ObjectStore::GetRootTreeResult> ObjectStore::getRootTree(
       .thenValue(
           [treeCache = treeCache_, rootId, caseSensitive = caseSensitive_](
               BackingStore::GetRootTreeResult result) {
-            treeCache->insert(result.treeId, result.tree);
+            auto tree =
+                changeCaseSensitivity(std::move(result.tree), caseSensitive);
+            treeCache->insert(result.treeId, tree);
 
             return GetRootTreeResult{
-                changeCaseSensitivity(std::move(result.tree), caseSensitive),
+                std::move(tree),
                 result.treeId,
             };
           })
@@ -279,11 +281,12 @@ ImmediateFuture<shared_ptr<const Tree>> ObjectStore::getTree(
        id,
        fetchContext = fetchContext.copy()](BackingStore::GetTreeResult result) {
         TaskTraceBlock block2{"ObjectStore::getTree::thenValue"};
-        self->treeCache_->insert(result.tree->getHash(), result.tree);
+        auto tree =
+            changeCaseSensitivity(std::move(result.tree), self->caseSensitive_);
+        self->treeCache_->insert(tree->getHash(), tree);
         fetchContext->didFetch(ObjectFetchContext::Tree, id, result.origin);
         self->updateProcessFetch(*fetchContext);
-        return changeCaseSensitivity(
-            std::move(result.tree), self->caseSensitive_);
+        return tree;
       });
 }
 

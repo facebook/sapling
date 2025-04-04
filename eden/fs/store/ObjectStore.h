@@ -440,6 +440,10 @@ class ObjectStore : public IObjectStore,
    * the cache is allowed to retain a small fixed number of these in cache, and
    * violate the fixed size. This generally, should be rare as no trees should
    * approach the size limit of the cache.)
+   *
+   * TODO: treeCache_ is a shared across all object stores. We should explore
+   * having two tree caches (case sensitive and case insensitive) and give the
+   * ObjectStore the corresponding tree cache at creation time.
    */
   const std::shared_ptr<TreeCache> treeCache_;
 
