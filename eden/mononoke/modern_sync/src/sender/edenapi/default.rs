@@ -10,6 +10,7 @@ use std::collections::HashSet;
 use std::time::Duration;
 
 use anyhow::ensure;
+use anyhow::Context;
 use anyhow::Result;
 use async_trait::async_trait;
 use clientinfo::ClientEntryPoint;
@@ -74,7 +75,10 @@ impl DefaultEdenapiSenderBuilder {
 
     pub async fn build(self) -> Result<DefaultEdenapiSender> {
         let tls_args = self.tls_args.clone();
-        let ci = ClientInfo::new_with_entry_point(ClientEntryPoint::ModernSync)?.to_json()?;
+        let ci = ClientInfo::new_with_entry_point(ClientEntryPoint::ModernSync)
+            .with_context(|| "building client info")?
+            .to_json()
+            .with_context(|| "converting to json")?;
         let http_config = HttpClientConfig {
             cert_path: Some(tls_args.tls_certificate.into()),
             key_path: Some(tls_args.tls_private_key.into()),
@@ -91,9 +95,13 @@ impl DefaultEdenapiSenderBuilder {
             .http_config(http_config.clone())
             .http_version(HttpVersion::V11)
             .timeout(Duration::from_secs(300))
-            .build()?;
+            .build()
+            .with_context(|| "building http client")?;
 
-        client.health().await?;
+        client
+            .health()
+            .await
+            .with_context(|| "checking client health")?;
 
         Ok(DefaultEdenapiSender {
             ctx: self.ctx.clone(),
@@ -118,22 +126,21 @@ impl EdenapiSender for DefaultEdenapiSender {
         let response = self
             .client
             .process_files_upload(contents, None, None, UploadLookupPolicy::SkipLookup)
-            .await?;
+            .await
+            .with_context(|| "uploading contents")?;
 
         let ids = response
             .entries
             .try_collect::<Vec<_>>()
-            .await?
+            .await
+            .with_context(|| "collecting contents entries")?
             .iter()
             .map(|e| e.data.id)
             .collect::<Vec<_>>();
 
-        stat::log_edenapi_stats(
-            ctx.scuba().clone(),
-            &response.stats.await?,
-            paths::UPLOAD_FILE,
-            ids.clone(),
-        );
+        if let Ok(stats) = response.stats.await {
+            stat::log_edenapi_stats(ctx.scuba().clone(), &stats, paths::UPLOAD_FILE, ids.clone());
+        }
 
         ensure!(
             expected_responses == ids.len(),
@@ -157,24 +164,28 @@ impl EdenapiSender for DefaultEdenapiSender {
             // can read all the tree blobs concurrently.
             .buffer_unordered(batch_len)
             .try_collect::<Vec<_>>()
-            .await?;
+            .await
+            .with_context(|| "uploading trees")?;
 
         let expected_responses = entries.len();
         let res = self.client.upload_trees_batch(entries).await?;
         let ids = res
             .entries
             .try_collect::<Vec<_>>()
-            .await?
+            .await
+            .with_context(|| "collecting trees entries")?
             .iter()
             .map(|e| e.token.data.id)
             .collect::<Vec<_>>();
 
-        stat::log_edenapi_stats(
-            self.ctx.scuba().clone(),
-            &res.stats.await?,
-            paths::UPLOAD_TREES,
-            ids.clone(),
-        );
+        if let Ok(stats) = res.stats.await {
+            stat::log_edenapi_stats(
+                self.ctx.scuba().clone(),
+                &stats,
+                paths::UPLOAD_TREES,
+                ids.clone(),
+            );
+        }
 
         ensure!(
             expected_responses == ids.len(),
@@ -197,24 +208,28 @@ impl EdenapiSender for DefaultEdenapiSender {
             // so we can read all the filenode blobs concurrently.
             .buffer_unordered(batch_len)
             .try_collect::<Vec<_>>()
-            .await?;
+            .await
+            .with_context(|| "uploading filenodes")?;
 
         let expected_responses = filenodes.len();
         let res = self.client.upload_filenodes_batch(filenodes).await?;
         let ids = res
             .entries
             .try_collect::<Vec<_>>()
-            .await?
+            .await
+            .with_context(|| "collecting filenodes entries")?
             .iter()
             .map(|e| e.token.data.id)
             .collect::<Vec<_>>();
 
-        stat::log_edenapi_stats(
-            self.ctx.scuba().clone(),
-            &res.stats.await?,
-            paths::UPLOAD_FILENODES,
-            ids.clone(),
-        );
+        if let Ok(stats) = res.stats.await {
+            stat::log_edenapi_stats(
+                self.ctx.scuba().clone(),
+                &stats,
+                paths::UPLOAD_FILENODES,
+                ids.clone(),
+            );
+        }
 
         ensure!(
             expected_responses == ids.len(),
@@ -242,7 +257,8 @@ impl EdenapiSender for DefaultEdenapiSender {
                     ("MIRROR_UPLOAD".to_owned(), "true".to_owned()),
                 ]),
             )
-            .await?;
+            .await
+            .with_context(|| "setting bookmark")?;
         tracing::info!("Moved bookmark with result {:?}", res);
         Ok(())
     }
@@ -254,12 +270,21 @@ impl EdenapiSender for DefaultEdenapiSender {
         let entries = stream::iter(css)
             .map(util::to_identical_changeset)
             .try_collect::<Vec<_>>()
-            .await?;
+            .await
+            .with_context(|| "collecting changeset entries")?;
 
         let expected_responses = entries.len();
-        let res = self.client.upload_identical_changesets(entries).await?;
+        let res = self
+            .client
+            .upload_identical_changesets(entries)
+            .await
+            .with_context(|| "uploading changesets")?;
 
-        let responses = res.entries.try_collect::<Vec<_>>().await?;
+        let responses = res
+            .entries
+            .try_collect::<Vec<_>>()
+            .await
+            .with_context(|| "collecting changesets responses")?;
         ensure!(
             expected_responses == responses.len(),
             "Not all changesets were uploaded"
@@ -269,12 +294,14 @@ impl EdenapiSender for DefaultEdenapiSender {
             .map(|r| r.token.data.id)
             .collect::<Vec<_>>();
 
-        stat::log_edenapi_stats(
-            self.ctx.scuba().clone(),
-            &res.stats.await?,
-            paths::UPLOAD_IDENTICAL_CHANGESET,
-            ids.clone(),
-        );
+        if let Ok(stats) = res.stats.await {
+            stat::log_edenapi_stats(
+                self.ctx.scuba().clone(),
+                &stats,
+                paths::UPLOAD_IDENTICAL_CHANGESET,
+                ids.clone(),
+            );
+        }
 
         tracing::info!("Uploaded changesets: {:?}", ids);
 
@@ -290,7 +317,11 @@ impl EdenapiSender for DefaultEdenapiSender {
             .iter()
             .map(|(hgid, _)| AnyId::HgChangesetId(hgid.clone().into()))
             .collect::<Vec<_>>();
-        let res = self.client.lookup_batch(hgids, None, None).await?;
+        let res = self
+            .client
+            .lookup_batch(hgids, None, None)
+            .await
+            .with_context(|| "filtering existing commits")?;
         let missing = get_missing_in_order(res, ids);
         Ok(missing)
     }
@@ -299,13 +330,22 @@ impl EdenapiSender for DefaultEdenapiSender {
         let res = self
             .client
             .bookmarks2(vec![bookmark], Some(Freshness::MostRecent))
-            .await?;
+            .await
+            .with_context(|| "reading bookmark")?;
 
         Ok(res
             .into_iter()
             .next()
-            .map(|entry| anyhow::Ok(entry.data?.hgid))
-            .transpose()?
+            .map(|entry| {
+                anyhow::Ok(
+                    entry
+                        .data
+                        .with_context(|| "extracing bookmark response")?
+                        .hgid,
+                )
+            })
+            .transpose()
+            .with_context(|| "processing bookmark response")?
             .flatten()
             .map(|id| id.into()))
     }
