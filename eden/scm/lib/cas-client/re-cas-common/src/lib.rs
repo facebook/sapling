@@ -91,10 +91,23 @@ macro_rules! re_client {
         impl $crate::CasClient for $struct {
             fn fetch_single_local_direct(
                 &self,
-                _fctx: $crate::FetchContext,
                 digest: &$crate::CasDigest,
-            ) -> Result<Option<ScmBlob>> {
-                return Ok(None);
+            ) -> Result<($crate::CasFetchedStats, Option<ScmBlob>)> {
+                #[cfg(target_os = "linux")]{
+                    let (stats, data) = self.client()?
+                    .low_level_lookup_cache(self.metadata.clone(), to_re_digest(digest))?.unpack();
+
+                    let parsed_stats = parse_stats(std::iter::empty(), stats);
+
+                    if data.is_null() {
+                        return Ok((parsed_stats, None));
+                    } else {
+                        return Ok((parsed_stats, Some(ScmBlob::IOBuf(data.into()))));
+                    }
+                }
+
+                #[cfg(not(target_os = "linux"))]
+                return Ok(($crate::CasFetchedStats::default(), None));
             }
             async fn fetch<'a>(
                 &'a self,

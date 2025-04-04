@@ -17,6 +17,7 @@ use std::time::Instant;
 use ::metrics::Counter;
 use ::types::fetch_cause::FetchCause;
 use ::types::fetch_mode::FetchMode;
+use ::types::CasDigest;
 use ::types::FetchContext;
 use ::types::HgId;
 use ::types::Key;
@@ -140,12 +141,37 @@ static INDEXEDLOG_ROTATE_COUNT: Counter = Counter::new_counter("scmstore.indexed
 
 impl FileStore {
     /// Get the "local content" without going through the heavyweight "fetch" API.
-    pub(crate) fn get_local_content_direct(&self, id: &HgId) -> Result<Option<Bytes>> {
+    pub(crate) fn get_local_content_direct(&self, id: &HgId) -> Result<Option<ScmBlob>> {
         let m = &FILE_STORE_FETCH_METRICS;
+
+        if let Some(blob) = self.get_local_content_cas_cache(id)? {
+            return Ok(Some(blob));
+        }
         try_local_content!(id, self.indexedlog_cache, m.indexedlog.cache);
         try_local_content!(id, self.indexedlog_local, m.indexedlog.local);
         try_local_content!(id, self.lfs_cache, m.lfs.cache);
         try_local_content!(id, self.lfs_local, m.lfs.local);
+        Ok(None)
+    }
+
+    fn get_local_content_cas_cache(&self, id: &HgId) -> Result<Option<ScmBlob>> {
+        if let (Some(aux_cache), Some(cas_client)) = (&self.aux_cache, &self.cas_client) {
+            let aux_data = aux_cache.get(id)?;
+            if let Some(aux_data) = aux_data {
+                let (stats, maybe_blob) = cas_client.fetch_single_local_direct(&CasDigest {
+                    hash: aux_data.blake3,
+                    size: aux_data.total_size,
+                })?;
+
+                FILE_STORE_FETCH_METRICS.cas.fetch(1);
+                FILE_STORE_FETCH_METRICS.update_cas_backend_stats(&stats);
+
+                if let Some(blob) = maybe_blob {
+                    FILE_STORE_FETCH_METRICS.cas.hit(1);
+                    return Ok(Some(blob));
+                }
+            }
+        }
         Ok(None)
     }
 
@@ -173,7 +199,7 @@ impl FileStore {
         if self.compute_aux_data {
             if let Some(content) = self.get_local_content_direct(id)? {
                 m.computed.increment();
-                return Ok(Some(FileAuxData::from_content(&ScmBlob::Bytes(content))));
+                return Ok(Some(FileAuxData::from_content(&content)));
             }
         }
 

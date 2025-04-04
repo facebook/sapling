@@ -52,9 +52,7 @@ impl storemodel::KeyStore for ArcFileStore {
     }
 
     fn get_local_content(&self, _path: &RepoPath, hgid: HgId) -> anyhow::Result<Option<ScmBlob>> {
-        self.0
-            .get_local_content_direct(&hgid)
-            .map(|r| r.map(ScmBlob::Bytes))
+        self.0.get_local_content_direct(&hgid)
     }
 
     fn flush(&self) -> Result<()> {

@@ -185,12 +185,11 @@ impl CasClient for EagerRepoStore {
     /// Fetch a single blob from local CAS caches.
     fn fetch_single_local_direct(
         &self,
-        _fctx: FetchContext,
         digest: &CasDigest,
-    ) -> anyhow::Result<Option<ScmBlob>> {
+    ) -> anyhow::Result<(CasFetchedStats, Option<ScmBlob>)> {
         self.get_cas_blob(*digest)
             .map_err(Into::into)
-            .map(|data| data.map(ScmBlob::Bytes))
+            .map(|data| (CasFetchedStats::default(), data.map(ScmBlob::Bytes)))
     }
     async fn fetch<'a>(
         &'a self,

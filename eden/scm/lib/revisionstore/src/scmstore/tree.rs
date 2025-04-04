@@ -14,6 +14,9 @@ use ::metrics::Counter;
 use ::types::fetch_mode::FetchMode;
 use ::types::hgid::NULL_ID;
 use ::types::tree::TreeItemFlag;
+use ::types::AugmentedTree;
+use ::types::AugmentedTreeEntry;
+use ::types::CasDigest;
 use ::types::FetchContext;
 use ::types::HgId;
 use ::types::Key;
@@ -144,11 +147,86 @@ impl Drop for TreeStore {
 }
 
 impl TreeStore {
-    pub(crate) fn get_local_content_direct(&self, id: &HgId) -> Result<Option<Bytes>> {
+    pub(crate) fn get_local_content_direct(&self, id: &HgId) -> Result<Option<ScmBlob>> {
         let m = &TREE_STORE_FETCH_METRICS;
+
+        if let Some(blob) = self.get_local_content_cas_cache(id)? {
+            return Ok(Some(blob));
+        }
         try_local_content!(id, self.indexedlog_cache, m.indexedlog.cache);
         try_local_content!(id, self.indexedlog_local, m.indexedlog.local);
         Ok(None)
+    }
+
+    fn get_local_content_cas_cache(&self, id: &HgId) -> Result<Option<ScmBlob>> {
+        if let (Some(tree_aux_store), Some(cas_client)) = (&self.tree_aux_store, &self.cas_client) {
+            let aux_data = tree_aux_store.get(id)?;
+            if let Some(aux_data) = aux_data {
+                let (stats, maybe_blob) = cas_client.fetch_single_local_direct(&CasDigest {
+                    hash: aux_data.augmented_manifest_id,
+                    size: aux_data.augmented_manifest_size,
+                })?;
+
+                TREE_STORE_FETCH_METRICS.cas.fetch(1);
+                TREE_STORE_FETCH_METRICS.update_cas_backend_stats(&stats);
+
+                if let Some(blob) = maybe_blob {
+                    TREE_STORE_FETCH_METRICS.cas.hit(1);
+
+                    let augmented_tree = match blob {
+                        ScmBlob::Bytes(bytes) => AugmentedTree::try_deserialize(bytes.as_ref())?,
+                        #[cfg(fbcode_build)]
+                        ScmBlob::IOBuf(buf) => AugmentedTree::try_deserialize(buf.cursor())?,
+                    };
+
+                    return self
+                        .convert_augmented_tree_to_sapling_tree_blob(augmented_tree, tree_aux_store)
+                        .map(Some);
+                }
+            }
+        }
+        Ok(None)
+    }
+
+    fn convert_augmented_tree_to_sapling_tree_blob(
+        &self,
+        augmented_tree: AugmentedTree,
+        tree_aux_store: &Arc<TreeAuxStore>,
+    ) -> Result<ScmBlob> {
+        let mut sapling_tree_blob =
+            Vec::<u8>::with_capacity(augmented_tree.sapling_tree_blob_size());
+        augmented_tree.write_sapling_tree_blob(&mut sapling_tree_blob)?;
+
+        for (_path, entry) in augmented_tree.entries {
+            match entry {
+                AugmentedTreeEntry::FileNode(file) => {
+                    if let Some(filestore) = &self.filestore {
+                        if let Some(aux_cache) = &filestore.aux_cache {
+                            aux_cache.put(
+                                file.filenode,
+                                &FileAuxData {
+                                    total_size: file.total_size,
+                                    sha1: file.content_sha1,
+                                    blake3: file.content_blake3,
+                                    file_header_metadata: Some(
+                                        file.file_header_metadata.unwrap_or_default(),
+                                    ),
+                                },
+                            )?;
+                        }
+                    }
+                }
+                AugmentedTreeEntry::DirectoryNode(tree) => tree_aux_store.put(
+                    tree.treenode,
+                    &TreeAuxData {
+                        augmented_manifest_id: tree.augmented_manifest_id,
+                        augmented_manifest_size: tree.augmented_manifest_size,
+                    },
+                )?,
+            }
+        }
+
+        Ok(ScmBlob::Bytes(sapling_tree_blob.into()))
     }
 
     pub(crate) fn get_local_aux_direct(&self, id: &HgId) -> Result<Option<TreeAuxData>> {
@@ -740,7 +818,6 @@ impl storemodel::KeyStore for TreeStore {
             return Ok(Some(ScmBlob::Bytes(Default::default())));
         }
         self.get_local_content_direct(&node)
-            .map(|r| r.map(ScmBlob::Bytes))
     }
 
     fn get_content(&self, fctx: FetchContext, path: &RepoPath, node: Node) -> Result<ScmBlob> {

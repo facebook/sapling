@@ -123,9 +123,8 @@ pub trait CasClient: Sync + Send {
     /// Fetch a single blob from local CAS caches.
     fn fetch_single_local_direct(
         &self,
-        _fctx: FetchContext,
         digest: &CasDigest,
-    ) -> anyhow::Result<Option<ScmBlob>>;
+    ) -> anyhow::Result<(CasFetchedStats, Option<ScmBlob>)>;
     /// Fetch blobs from CAS.
     async fn fetch<'a>(
         &'a self,

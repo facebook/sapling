@@ -926,74 +926,7 @@ impl FetchState {
         self.metrics.cas.err(error);
         self.metrics.cas.hit(keys_found_count);
         self.metrics.cas.miss(keys_fetch_count - keys_found_count);
-        self.metrics
-            .cas_backend
-            .zdb_bytes(total_stats.total_bytes_zdb);
-        self.metrics
-            .cas_backend
-            .zgw_bytes(total_stats.total_bytes_zgw);
-        self.metrics
-            .cas_backend
-            .manifold_bytes(total_stats.total_bytes_manifold);
-        self.metrics
-            .cas_backend
-            .hedwig_bytes(total_stats.total_bytes_hedwig);
-        self.metrics
-            .cas_backend
-            .zdb_queries(total_stats.queries_zdb);
-        self.metrics
-            .cas_backend
-            .zgw_queries(total_stats.queries_zgw);
-        self.metrics
-            .cas_backend
-            .manifold_queries(total_stats.queries_manifold);
-        self.metrics
-            .cas_backend
-            .hedwig_queries(total_stats.queries_hedwig);
-
-        self.metrics
-            .cas_backend
-            .local_cache_hits_files(total_stats.hits_files_local_cache);
-
-        self.metrics
-            .cas_backend
-            .local_cache_hits_bytes(total_stats.hits_bytes_local_cache);
-
-        self.metrics
-            .cas_backend
-            .local_cache_misses_files(total_stats.misses_files_local_cache);
-
-        self.metrics
-            .cas_backend
-            .local_cache_misses_bytes(total_stats.misses_bytes_local_cache);
-
-        self.metrics
-            .cas_backend
-            .local_lmdb_cache_hits_blobs(total_stats.hits_blobs_local_lmdb_cache);
-
-        self.metrics
-            .cas_backend
-            .local_lmdb_cache_hits_bytes(total_stats.hits_bytes_local_lmdb_cache);
-
-        self.metrics
-            .cas_backend
-            .local_lmdb_cache_misses_blobs(total_stats.misses_blobs_local_lmdb_cache);
-
-        self.metrics
-            .cas_backend
-            .local_lmdb_cache_misses_bytes(total_stats.misses_bytes_local_lmdb_cache);
-
-        self.metrics
-            .cas_backend
-            .local_cloom_misses(total_stats.cloom_misses);
-
-        self.metrics
-            .cas_backend
-            .local_cloom_false_positives(total_stats.cloom_false_positives);
-
-        self.metrics
-            .cas_backend
-            .local_cloom_true_positives(total_stats.cloom_true_positives);
+        self.metrics.update_cas_backend_stats(&total_stats);
     }
 
     pub(crate) fn fetch_lfs_remote(
