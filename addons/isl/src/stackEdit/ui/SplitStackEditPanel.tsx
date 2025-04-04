@@ -286,12 +286,6 @@ function SplitColumn(props: SplitColumnProps) {
     </EmptyState>
   ) : (
     <Column alignStart>
-      <AISplitButton
-        commitStack={commitStack}
-        subStack={subStack}
-        rev={rev}
-        applyNewDiffSplitCommits={applyNewDiffSplitCommits}
-      />
       <ScrollY
         maxSize="calc((100vh / var(--zoom)) - var(--split-vertical-overhead))"
         hideBar={true}>
@@ -333,6 +327,12 @@ function SplitColumn(props: SplitColumnProps) {
             {rev + 1} / {subStack.size}
           </span>
           <EditableCommitTitle commitMessage={commitMessage} commitKey={commit?.key} />
+          <AISplitButton
+            commitStack={commitStack}
+            subStack={subStack}
+            rev={rev}
+            applyNewDiffSplitCommits={applyNewDiffSplitCommits}
+          />
           <Button icon onClick={e => showExtraCommitActionsContextMenu(e)}>
             <Icon icon="ellipsis" />
           </Button>
@@ -365,6 +365,9 @@ function AISplitButton({commitStack, subStack, rev, applyNewDiffSplitCommits}: A
     useFeatureFlagSync(Internal.featureFlags?.AICommitSplit) && splitCommitWithAI != null;
 
   const [loadingState, setLoadingState] = useState<AISplitButtonLoadingState>({type: 'READY'});
+
+  // Make first commit be emphasized if there's only one commit (size == 2 due to empty right commit)
+  const emphasize = rev === 0 && commitStack.size === 2;
 
   // Reset state if commitStack changes while in LOADING state. E.g., user manually updated commits locally.
   useEffect(() => {
@@ -423,17 +426,21 @@ function AISplitButton({commitStack, subStack, rev, applyNewDiffSplitCommits}: A
   switch (loadingState.type) {
     case 'READY':
       return (
-        <Button onClick={fetch}>
-          <Icon icon="sparkle" />
-          <T>Split this commit with AI</T>
-        </Button>
+        <Tooltip title={t('Automatically split this commit using AI')} placement="bottom">
+          <Button onClick={fetch} icon={!emphasize}>
+            <Icon icon="sparkle" />
+            <T>AI Split</T>
+          </Button>
+        </Tooltip>
       );
     case 'LOADING':
       return (
-        <Button onClick={cancel}>
-          <Icon icon="loading" />
-          <T>Splitting</T>
-        </Button>
+        <Tooltip title={t('Split is working, click to cancel')} placement="bottom">
+          <Button onClick={cancel}>
+            <Icon icon="loading" />
+            <T>Splitting</T>
+          </Button>
+        </Tooltip>
       );
     case 'ERROR':
       return (
