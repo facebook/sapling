@@ -120,6 +120,10 @@ pub fn bundle_uri_arc(
             ),
             repo_id,
         }),
+        UriGeneratorType::Manifold {
+            bucket: _,
+            api_key: _,
+        } => unimplemented!("Not supported yet"),
         UriGeneratorType::LocalFS => Arc::new(BundleUri {
             bundle_metadata_storage: storage,
             bundle_url_generator: LocalFSBUndleUriGenerator {},

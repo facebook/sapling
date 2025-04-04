@@ -1032,6 +1032,7 @@ mod test {
         deletion_log = { db_address = "deletion_log" }
         commit_cloud = { db_address = "commit_cloud_db_address" }
         git_bundles = { db_address = "git_bundles" }
+        repo_metadata = { db_address = "repo_metadata" }
 
         [main.blobstore.multiplexed_wal]
         multiplex_id = 1
@@ -1147,6 +1148,9 @@ mod test {
                 }),
                 git_bundle_metadata: Some(RemoteDatabaseConfig {
                     db_address: "git_bundles".into(),
+                }),
+                repo_metadata: Some(RemoteDatabaseConfig {
+                    db_address: "repo_metadata".into(),
                 }),
             }),
             ephemeral_blobstore: None,
@@ -1665,6 +1669,7 @@ mod test {
         sparse_profiles = { db_address = "some_db" }
         commit_cloud = { db_address = "some_db" }
         git_bundles = { db_address = "git_bundles" }
+        repo_metadata = { db_address = "repo_metadata" }
 
         [multiplex_store.blobstore.multiplexed_wal]
         multiplex_id = 1
@@ -1758,6 +1763,9 @@ mod test {
                         git_bundle_metadata:  Some(RemoteDatabaseConfig {
                             db_address: "git_bundles".into(),
                         }),
+                        repo_metadata: Some(RemoteDatabaseConfig {
+                            db_address: "repo_metadata".into(),
+                        })
                     }),
                     ephemeral_blobstore: None,
                 },
@@ -1811,6 +1819,7 @@ mod test {
         sparse_profiles = { db_address = "test_db" }
         commit_cloud = { db_address = "other_other_other_mutation_db" }
         git_bundles = { db_address = "git_bundles" }
+        repo_metadata = { db_address = "repo_metadata" }
 
         [storage.multiplex_store.blobstore]
         disabled = {}
@@ -1858,6 +1867,7 @@ mod test {
                         deletion_log: None,
                         git_bundle_metadata: Some(RemoteDatabaseConfig { db_address: "git_bundles".into(), }),
                         commit_cloud: Some(RemoteDatabaseConfig { db_address: "other_other_other_mutation_db".into(), }),
+                        repo_metadata: Some(RemoteDatabaseConfig { db_address: "repo_metadata".into() })
                     }),
 
                     ephemeral_blobstore: None,

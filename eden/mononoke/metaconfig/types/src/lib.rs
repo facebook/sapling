@@ -1204,6 +1204,8 @@ pub struct RemoteMetadataDatabaseConfig {
     pub commit_cloud: Option<RemoteDatabaseConfig>,
     /// Database for commit git bundle uri metadata
     pub git_bundle_metadata: Option<RemoteDatabaseConfig>,
+    /// Database for repo metadata logger checkpointing
+    pub repo_metadata: Option<RemoteDatabaseConfig>,
 }
 
 /// Configuration for the Metadata database when it is remote.
@@ -1965,6 +1967,13 @@ pub struct GitBundleURIConfig {
 pub enum UriGeneratorType {
     /// Use CDN as the URI generator
     Cdn {
+        /// Underlying storage bucket identifies
+        bucket: String,
+        /// Underlying storage bucket api-key
+        api_key: String,
+    },
+    /// Use Manifold as the URI generator
+    Manifold {
         /// Underlying storage bucket identifies
         bucket: String,
         /// Underlying storage bucket api-key

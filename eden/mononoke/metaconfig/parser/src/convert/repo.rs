@@ -827,6 +827,12 @@ impl Convert for RawGitBundleURIConfig {
                     api_key: cdn.api_key,
                 },
             }),
+            RawUriGeneratorType::manifold(manifold) => Ok(GitBundleURIConfig {
+                uri_generator_type: UriGeneratorType::Manifold {
+                    bucket: manifold.bucket,
+                    api_key: manifold.api_key,
+                },
+            }),
             RawUriGeneratorType::local_fs(_) => Ok(GitBundleURIConfig {
                 uri_generator_type: UriGeneratorType::LocalFS,
             }),

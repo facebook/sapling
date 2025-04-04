@@ -361,6 +361,7 @@ impl Convert for RawMetadataConfig {
                     deletion_log: raw.deletion_log.convert()?,
                     commit_cloud: raw.commit_cloud.convert()?,
                     git_bundle_metadata: raw.git_bundles.convert()?,
+                    repo_metadata: raw.repo_metadata.convert()?,
                 },
             )),
             RawMetadataConfig::oss_remote(raw) => Ok(MetadataDatabaseConfig::OssRemote(
