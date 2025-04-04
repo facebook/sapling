@@ -32,7 +32,7 @@ constexpr size_t kTreeCacheMaximumSize = 1000; // bytes
 constexpr size_t kTreeCacheMinimumEntries = 0;
 constexpr folly::StringPiece kBlake3Key = "19700101-1111111111111111111111#";
 
-struct ObjectStoreTest : ::testing::Test {
+struct ObjectStoreTest : public ::testing::TestWithParam<CaseSensitivity> {
   void SetUp() override {
     std::shared_ptr<EdenConfig> rawEdenConfig{
         EdenConfig::createTestEdenConfig()};
@@ -56,7 +56,7 @@ struct ObjectStoreTest : ::testing::Test {
         std::make_shared<NullStructuredLogger>(),
         EdenConfig::createTestEdenConfig(),
         true,
-        kPathMapDefaultCaseSensitive);
+        GetParam());
 
     auto configWithBlake3Key = EdenConfig::createTestEdenConfig();
     configWithBlake3Key->blake3Key.setStringValue(
@@ -74,7 +74,7 @@ struct ObjectStoreTest : ::testing::Test {
         std::make_shared<NullStructuredLogger>(),
         std::move(configWithBlake3Key),
         true,
-        kPathMapDefaultCaseSensitive);
+        GetParam());
 
     readyBlobId = putReadyBlob("readyblob");
     readyTreeId = putReadyTree();
@@ -128,7 +128,7 @@ struct ObjectStoreTest : ::testing::Test {
 };
 
 } // namespace
-TEST_F(ObjectStoreTest, getBlob_tracks_backing_store_read) {
+TEST_P(ObjectStoreTest, getBlob_tracks_backing_store_read) {
   objectStore->getBlob(readyBlobId, context).get(0ms);
   ASSERT_EQ(1, loggingContext->requests.size());
   auto& request = loggingContext->requests[0];
@@ -137,7 +137,7 @@ TEST_F(ObjectStoreTest, getBlob_tracks_backing_store_read) {
   EXPECT_EQ(ObjectFetchContext::FromNetworkFetch, request.origin);
 }
 
-TEST_F(ObjectStoreTest, caching_policies_anything) {
+TEST_P(ObjectStoreTest, caching_policies_anything) {
   objectStore->setLocalStoreCachingPolicy(
       BackingStore::LocalStoreCachingPolicy::Anything);
   EXPECT_TRUE(objectStore->shouldCacheOnDisk(
@@ -154,7 +154,7 @@ TEST_F(ObjectStoreTest, caching_policies_anything) {
       BackingStore::LocalStoreCachingPolicy::NoCaching));
 }
 
-TEST_F(ObjectStoreTest, caching_policies_no_caching) {
+TEST_P(ObjectStoreTest, caching_policies_no_caching) {
   objectStore->setLocalStoreCachingPolicy(
       BackingStore::LocalStoreCachingPolicy::NoCaching);
   EXPECT_FALSE(objectStore->shouldCacheOnDisk(
@@ -170,7 +170,7 @@ TEST_F(ObjectStoreTest, caching_policies_no_caching) {
   EXPECT_FALSE(objectStore->shouldCacheOnDisk(
       BackingStore::LocalStoreCachingPolicy::NoCaching));
 }
-TEST_F(ObjectStoreTest, caching_policies_blob) {
+TEST_P(ObjectStoreTest, caching_policies_blob) {
   objectStore->setLocalStoreCachingPolicy(
       BackingStore::LocalStoreCachingPolicy::Blobs);
   EXPECT_FALSE(objectStore->shouldCacheOnDisk(
@@ -187,7 +187,7 @@ TEST_F(ObjectStoreTest, caching_policies_blob) {
       BackingStore::LocalStoreCachingPolicy::NoCaching));
 }
 
-TEST_F(ObjectStoreTest, caching_policies_trees) {
+TEST_P(ObjectStoreTest, caching_policies_trees) {
   objectStore->setLocalStoreCachingPolicy(
       BackingStore::LocalStoreCachingPolicy::Trees);
   EXPECT_TRUE(objectStore->shouldCacheOnDisk(
@@ -204,7 +204,7 @@ TEST_F(ObjectStoreTest, caching_policies_trees) {
       BackingStore::LocalStoreCachingPolicy::NoCaching));
 }
 
-TEST_F(ObjectStoreTest, caching_policies_blob_aux_data) {
+TEST_P(ObjectStoreTest, caching_policies_blob_aux_data) {
   objectStore->setLocalStoreCachingPolicy(
       BackingStore::LocalStoreCachingPolicy::BlobAuxData);
   EXPECT_FALSE(objectStore->shouldCacheOnDisk(
@@ -221,7 +221,7 @@ TEST_F(ObjectStoreTest, caching_policies_blob_aux_data) {
       BackingStore::LocalStoreCachingPolicy::NoCaching));
 }
 
-TEST_F(ObjectStoreTest, caching_policies_trees_and_blob_aux_data) {
+TEST_P(ObjectStoreTest, caching_policies_trees_and_blob_aux_data) {
   objectStore->setLocalStoreCachingPolicy(
       BackingStore::LocalStoreCachingPolicy::TreesAndBlobAuxData);
   EXPECT_TRUE(objectStore->shouldCacheOnDisk(
@@ -237,7 +237,7 @@ TEST_F(ObjectStoreTest, caching_policies_trees_and_blob_aux_data) {
   EXPECT_FALSE(objectStore->shouldCacheOnDisk(
       BackingStore::LocalStoreCachingPolicy::NoCaching));
 }
-TEST_F(ObjectStoreTest, getBlob_tracks_second_read_from_cache) {
+TEST_P(ObjectStoreTest, getBlob_tracks_second_read_from_cache) {
   objectStore->getBlob(readyBlobId, context).get(0ms);
   objectStore->getBlob(readyBlobId, context).get(0ms);
   ASSERT_EQ(2, loggingContext->requests.size());
@@ -247,7 +247,7 @@ TEST_F(ObjectStoreTest, getBlob_tracks_second_read_from_cache) {
   EXPECT_EQ(ObjectFetchContext::FromDiskCache, request.origin);
 }
 
-TEST_F(ObjectStoreTest, getTree_tracks_backing_store_read) {
+TEST_P(ObjectStoreTest, getTree_tracks_backing_store_read) {
   objectStore->getTree(readyTreeId, context).get(0ms);
   ASSERT_EQ(1, loggingContext->requests.size());
   auto& request = loggingContext->requests[0];
@@ -256,7 +256,7 @@ TEST_F(ObjectStoreTest, getTree_tracks_backing_store_read) {
   EXPECT_EQ(ObjectFetchContext::FromNetworkFetch, request.origin);
 }
 
-TEST_F(ObjectStoreTest, getTree_tracks_second_read_from_cache) {
+TEST_P(ObjectStoreTest, getTree_tracks_second_read_from_cache) {
   objectStore->getTree(readyTreeId, context).get(0ms);
   objectStore->getTree(readyTreeId, context).get(0ms);
   ASSERT_EQ(2, loggingContext->requests.size());
@@ -266,7 +266,7 @@ TEST_F(ObjectStoreTest, getTree_tracks_second_read_from_cache) {
   EXPECT_EQ(ObjectFetchContext::FromMemoryCache, request.origin);
 }
 
-TEST_F(ObjectStoreTest, getTree_tracks_second_read_from_local_store) {
+TEST_P(ObjectStoreTest, getTree_tracks_second_read_from_local_store) {
   objectStore->getTree(readyTreeId, context).get(0ms);
 
   // clear the in memory cache so the tree can not be found here
@@ -280,7 +280,7 @@ TEST_F(ObjectStoreTest, getTree_tracks_second_read_from_local_store) {
   EXPECT_EQ(ObjectFetchContext::FromDiskCache, request.origin);
 }
 
-TEST_F(ObjectStoreTest, getBlobSize_tracks_backing_store_read) {
+TEST_P(ObjectStoreTest, getBlobSize_tracks_backing_store_read) {
   objectStore->getBlobSize(readyBlobId, context).get(0ms);
   ASSERT_EQ(1, loggingContext->requests.size());
   auto& request = loggingContext->requests[0];
@@ -289,7 +289,7 @@ TEST_F(ObjectStoreTest, getBlobSize_tracks_backing_store_read) {
   EXPECT_EQ(ObjectFetchContext::FromNetworkFetch, request.origin);
 }
 
-TEST_F(ObjectStoreTest, getBlobSize_tracks_second_read_from_cache) {
+TEST_P(ObjectStoreTest, getBlobSize_tracks_second_read_from_cache) {
   objectStore->getBlobSize(readyBlobId, context).get(0ms);
   objectStore->getBlobSize(readyBlobId, context).get(0ms);
   ASSERT_EQ(2, loggingContext->requests.size());
@@ -299,7 +299,7 @@ TEST_F(ObjectStoreTest, getBlobSize_tracks_second_read_from_cache) {
   EXPECT_EQ(ObjectFetchContext::FromMemoryCache, request.origin);
 }
 
-TEST_F(ObjectStoreTest, getBlobSizeFromLocalStore) {
+TEST_P(ObjectStoreTest, getBlobSizeFromLocalStore) {
   auto data = "A"_sp;
   ObjectId id = putReadyBlob(data);
 
@@ -315,14 +315,14 @@ TEST_F(ObjectStoreTest, getBlobSizeFromLocalStore) {
       std::make_shared<NullStructuredLogger>(),
       EdenConfig::createTestEdenConfig(),
       true,
-      kPathMapDefaultCaseSensitive);
+      GetParam());
 
   size_t expectedSize = data.size();
   size_t size = objectStore->getBlobSize(id, context).get();
   EXPECT_EQ(expectedSize, size);
 }
 
-TEST_F(ObjectStoreTest, getBlobSizeFromBackingStore) {
+TEST_P(ObjectStoreTest, getBlobSizeFromBackingStore) {
   auto data = "A"_sp;
   ObjectId id = putReadyBlob(data);
 
@@ -331,7 +331,7 @@ TEST_F(ObjectStoreTest, getBlobSizeFromBackingStore) {
   EXPECT_EQ(expectedSize, size);
 }
 
-TEST_F(ObjectStoreTest, getBlobSizeNotFound) {
+TEST_P(ObjectStoreTest, getBlobSizeNotFound) {
   ObjectId id;
 
   EXPECT_THROW_RE(
@@ -340,7 +340,7 @@ TEST_F(ObjectStoreTest, getBlobSizeNotFound) {
       "blob .* not found");
 }
 
-TEST_F(ObjectStoreTest, getBlobSha1) {
+TEST_P(ObjectStoreTest, getBlobSha1) {
   auto data = "A"_sp;
   ObjectId id = putReadyBlob(data);
 
@@ -349,7 +349,7 @@ TEST_F(ObjectStoreTest, getBlobSha1) {
   EXPECT_EQ(expectedSha1.toString(), sha1.toString());
 }
 
-TEST_F(ObjectStoreTest, getBlobBlake3) {
+TEST_P(ObjectStoreTest, getBlobBlake3) {
   auto data = "A"_sp;
   ObjectId id = putReadyBlob(data);
 
@@ -358,7 +358,7 @@ TEST_F(ObjectStoreTest, getBlobBlake3) {
   EXPECT_EQ(expectedBlake3.toString(), blake3.toString());
 }
 
-TEST_F(ObjectStoreTest, getBlobBlake3IsMissingInLocalStore) {
+TEST_P(ObjectStoreTest, getBlobBlake3IsMissingInLocalStore) {
   auto data = "A"_sp;
   ObjectId id = putReadyBlob(data);
   BlobAuxData blobAuxdata(Hash20::sha1(data), std::nullopt, data.size());
@@ -372,7 +372,7 @@ TEST_F(ObjectStoreTest, getBlobBlake3IsMissingInLocalStore) {
   EXPECT_EQ(blake3Try->toString(), expectedBlake3.toString());
 }
 
-TEST_F(ObjectStoreTest, getBlobKeyedBlake3) {
+TEST_P(ObjectStoreTest, getBlobKeyedBlake3) {
   auto data = "A"_sp;
   ObjectId id = putReadyBlob(data);
 
@@ -382,7 +382,7 @@ TEST_F(ObjectStoreTest, getBlobKeyedBlake3) {
   EXPECT_EQ(expectedBlake3.toString(), blake3.toString());
 }
 
-TEST_F(ObjectStoreTest, getBlobSha1NotFound) {
+TEST_P(ObjectStoreTest, getBlobSha1NotFound) {
   ObjectId id;
 
   EXPECT_THROW_RE(
@@ -391,7 +391,7 @@ TEST_F(ObjectStoreTest, getBlobSha1NotFound) {
       "blob .* not found");
 }
 
-TEST_F(ObjectStoreTest, getBlobBlake3NotFound) {
+TEST_P(ObjectStoreTest, getBlobBlake3NotFound) {
   ObjectId id;
 
   EXPECT_THROW_RE(
@@ -400,7 +400,7 @@ TEST_F(ObjectStoreTest, getBlobBlake3NotFound) {
       "blob .* not found");
 }
 
-TEST_F(ObjectStoreTest, get_size_and_sha1_and_blake3_only_imports_blob_once) {
+TEST_P(ObjectStoreTest, get_size_and_sha1_and_blake3_only_imports_blob_once) {
   objectStore->getBlobSize(readyBlobId, context).get(0ms);
   objectStore->getBlobSha1(readyBlobId, context).get(0ms);
   objectStore->getBlobBlake3(readyBlobId, context).get(0ms);
@@ -429,7 +429,7 @@ class PidFetchContext final : public ObjectFetchContext {
   ProcessId pid_;
 };
 
-TEST_F(ObjectStoreTest, test_process_access_counts) {
+TEST_P(ObjectStoreTest, test_process_access_counts) {
   auto pid0 = ProcessId(10000);
   ObjectFetchContextPtr pidContext0 = makeRefPtr<PidFetchContext>(pid0);
   auto pid1 = ProcessId(10001);
@@ -474,7 +474,7 @@ class FetchContext final : public ObjectFetchContext {
   std::atomic<uint64_t> fetchCount_{0};
 };
 
-TEST_F(ObjectStoreTest, blobs_with_same_objectid_are_equal) {
+TEST_P(ObjectStoreTest, blobs_with_same_objectid_are_equal) {
   auto context = makeRefPtr<FetchContext>();
 
   auto objectId = putReadyBlob("foo");
@@ -485,7 +485,7 @@ TEST_F(ObjectStoreTest, blobs_with_same_objectid_are_equal) {
   EXPECT_EQ(context->getFetchCount(), 0);
 }
 
-TEST_F(ObjectStoreTest, different_blobs_arent_equal) {
+TEST_P(ObjectStoreTest, different_blobs_arent_equal) {
   auto context = makeRefPtr<FetchContext>();
 
   auto one = putReadyBlob("foo");
@@ -497,7 +497,7 @@ TEST_F(ObjectStoreTest, different_blobs_arent_equal) {
   EXPECT_EQ(context->getFetchCount(), 2);
 }
 
-TEST_F(
+TEST_P(
     ObjectStoreTest,
     blobs_with_different_objectid_but_same_content_are_equal) {
   auto context = makeRefPtr<FetchContext>();
@@ -513,7 +513,7 @@ TEST_F(
   EXPECT_EQ(context->getFetchCount(), 2);
 }
 
-TEST_F(ObjectStoreTest, glob_files_test) {
+TEST_P(ObjectStoreTest, glob_files_test) {
   RootId rootId{"00000000000000000000"};
   auto glob = std::vector<std::string>{"foo.txt", "bar.txt"};
   putReadyGlob(std::pair<RootId, std::string>(rootId, ".txt"), std::move(glob));
@@ -535,5 +535,12 @@ TEST_F(ObjectStoreTest, glob_files_test) {
     EXPECT_EQ(sorted_result[i], expected_result[i]);
   }
 }
+
+INSTANTIATE_TEST_SUITE_P(
+    ObjectStoreTest,
+    ObjectStoreTest,
+    ::testing::Values(
+        CaseSensitivity::Sensitive,
+        CaseSensitivity::Insensitive));
 
 } // namespace facebook::eden
