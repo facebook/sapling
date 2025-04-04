@@ -1764,6 +1764,32 @@ impl SqlCommitGraphStorage {
         )
         .await?;
 
+        let subtree_source_rows = many_edges
+            .iter()
+            .flat_map(|edges| {
+                edges
+                    .subtree_sources
+                    .iter()
+                    .enumerate()
+                    .map(|(subtree_source_num, node)| {
+                        Ok((get_id(&edges.node)?, subtree_source_num, get_id(node)?))
+                    })
+            })
+            .collect::<Result<Vec<_>>>()?;
+
+        let (transaction, result) = InsertSubtreeSources::maybe_traced_query_with_transaction(
+            transaction,
+            cri,
+            // This pattern is used to convert a ref to tuple into a tuple of refs.
+            #[allow(clippy::map_identity)]
+            subtree_source_rows
+                .iter()
+                .map(|(a, b, c)| (a, b, c))
+                .collect::<Vec<_>>()
+                .as_slice(),
+        )
+        .await?;
+
         // All good, nodes were added and correctly updated, let's commit.
         transaction.commit().await?;
         ctx.perf_counters()

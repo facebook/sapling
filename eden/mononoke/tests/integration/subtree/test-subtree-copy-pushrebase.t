@@ -130,7 +130,7 @@ Subtree copies can overwrite directories as long as there are no conflicts
   updated remote bookmark master_bookmark to d5d06a3000a2
   $ diff -u foo bar
 
-Subtree copies can be pushrebased with their own contents
+Subtree copies can be pushrebased with their own contents and commits stacked on top
 
   $ echo eee > foo/file2
   $ hg commit -qm E
@@ -143,18 +143,21 @@ Subtree copies can be pushrebased with their own contents
   copying foo to bar
   $ echo ggg > bar/file2
   $ hg amend -q
+  $ echo hhh >> bar/file2
+  $ hg commit -qm H
   $ hg push -r . --to master_bookmark
-  pushing rev 5be283ef0b37 to destination https://localhost:$LOCAL_PORT/edenapi/ bookmark master_bookmark
-  edenapi: queue 1 commit for upload
-  edenapi: queue 1 file for upload
-  edenapi: uploaded 1 file
-  edenapi: queue 2 trees for upload
-  edenapi: uploaded 2 trees
-  edenapi: uploaded 1 changeset
-  pushrebasing stack (7c161b80faaa, 5be283ef0b37] (1 commit) to remote bookmark master_bookmark
+  pushing rev 69cecf474522 to destination https://localhost:$LOCAL_PORT/edenapi/ bookmark master_bookmark
+  edenapi: queue 2 commits for upload
+  edenapi: queue 2 files for upload
+  edenapi: uploaded 2 files
+  edenapi: queue 4 trees for upload
+  edenapi: uploaded 4 trees
+  edenapi: uploaded 2 changesets
+  pushrebasing stack (7c161b80faaa, 69cecf474522] (2 commits) to remote bookmark master_bookmark
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
-  updated remote bookmark master_bookmark to 59019454fbe8
+  updated remote bookmark master_bookmark to 2cb798c4a29b
   $ cat foo/file2
   fff
   $ cat bar/file2
   ggg
+  hhh
