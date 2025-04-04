@@ -874,7 +874,8 @@ class CloneCmd(Subcmd):
             help=(
                 "The FilteredFS filter to activate when "
                 "--backing-store=filteredhg. When this option is omitted, no "
-                "filter is applied to the repo but FilteredFS is still used."
+                "filter is applied to the repo but FilteredFS is still used. "
+                'Passing "" or "null" will result in similar behavior.'
             ),
         )
 
@@ -976,8 +977,16 @@ Warning: Creating a case-insensitive checkout on a platform where the default
 is case-sensitive. This is not recommended and is intended only for testing."""
             )
 
+        # The null (empty) filter can be specified by:
+        #   1) Not supplying the --filter-path arg
+        #   2) Supplying an empty string to --filter-path
+        #   3) Specifying the --filter-path as "null" (or any variation)
+        filter_path = args.filter_path or ""
+        if filter_path == "" or filter_path.lower() == "null":
+            filter_path = None
+
         # Filters are only valid for repos using FilteredFS
-        if args.filter_path and not args.backing_store == "filteredhg":
+        if filter_path and not args.backing_store == "filteredhg":
             print_stderr(
                 "error: --filter-path can only be used with --backing-store=filteredhg"
             )
@@ -1097,7 +1106,7 @@ is case-sensitive. This is not recommended and is intended only for testing."""
         print(f"Cloning new repository at {args.path}...")
 
         try:
-            instance.clone(repo_config, args.path, commit, args.filter_path)
+            instance.clone(repo_config, args.path, commit, filter_path)
             print(f"Success.  Checked out commit {commit:.8}")
             # In the future it would probably be nice to fork a background
             # process here to prefetch files that we think the user is likely
