@@ -9,7 +9,6 @@ use std::collections::HashMap;
 use std::collections::HashSet;
 use std::time::Duration;
 
-use anyhow::anyhow;
 use anyhow::ensure;
 use anyhow::Result;
 use async_trait::async_trait;
@@ -48,17 +47,15 @@ use crate::sender::edenapi::util;
 use crate::sender::edenapi::EdenapiSender;
 use crate::stat;
 
-#[allow(dead_code)]
-pub struct DefaultEdenapiSender {
+pub struct DefaultEdenapiSenderBuilder {
     url: Url,
     reponame: String,
     tls_args: TLSArgs,
     ctx: CoreContext,
     repo_blobstore: RepoBlobstore,
-    client: Option<Client>,
 }
 
-impl DefaultEdenapiSender {
+impl DefaultEdenapiSenderBuilder {
     pub fn new(
         url: Url,
         reponame: String,
@@ -72,11 +69,10 @@ impl DefaultEdenapiSender {
             tls_args,
             ctx,
             repo_blobstore,
-            client: None,
         }
     }
 
-    pub async fn build(mut self) -> Result<Self> {
+    pub async fn build(self) -> Result<DefaultEdenapiSender> {
         let tls_args = self.tls_args.clone();
         let ci = ClientInfo::new_with_entry_point(ClientEntryPoint::ModernSync)?.to_json()?;
         let http_config = HttpClientConfig {
@@ -99,16 +95,18 @@ impl DefaultEdenapiSender {
 
         client.health().await?;
 
-        self.client = Some(client);
-
-        Ok(self)
+        Ok(DefaultEdenapiSender {
+            ctx: self.ctx.clone(),
+            repo_blobstore: self.repo_blobstore,
+            client,
+        })
     }
+}
 
-    fn client(&self) -> Result<&Client> {
-        self.client
-            .as_ref()
-            .ok_or_else(|| anyhow!("EdenapiSender is not initialized"))
-    }
+pub struct DefaultEdenapiSender {
+    ctx: CoreContext,
+    client: Client,
+    repo_blobstore: RepoBlobstore,
 }
 
 #[async_trait]
@@ -118,7 +116,7 @@ impl EdenapiSender for DefaultEdenapiSender {
 
         let expected_responses = contents.len();
         let response = self
-            .client()?
+            .client
             .process_files_upload(contents, None, None, UploadLookupPolicy::SkipLookup)
             .await?;
 
@@ -162,7 +160,7 @@ impl EdenapiSender for DefaultEdenapiSender {
             .await?;
 
         let expected_responses = entries.len();
-        let res = self.client()?.upload_trees_batch(entries).await?;
+        let res = self.client.upload_trees_batch(entries).await?;
         let ids = res
             .entries
             .try_collect::<Vec<_>>()
@@ -202,7 +200,7 @@ impl EdenapiSender for DefaultEdenapiSender {
             .await?;
 
         let expected_responses = filenodes.len();
-        let res = self.client()?.upload_filenodes_batch(filenodes).await?;
+        let res = self.client.upload_filenodes_batch(filenodes).await?;
         let ids = res
             .entries
             .try_collect::<Vec<_>>()
@@ -234,7 +232,7 @@ impl EdenapiSender for DefaultEdenapiSender {
         to: Option<HgChangesetId>,
     ) -> Result<()> {
         let res = self
-            .client()?
+            .client
             .set_bookmark(
                 bookmark,
                 to.map(|cs| cs.into()),
@@ -259,7 +257,7 @@ impl EdenapiSender for DefaultEdenapiSender {
             .await?;
 
         let expected_responses = entries.len();
-        let res = self.client()?.upload_identical_changesets(entries).await?;
+        let res = self.client.upload_identical_changesets(entries).await?;
 
         let responses = res.entries.try_collect::<Vec<_>>().await?;
         ensure!(
@@ -292,14 +290,14 @@ impl EdenapiSender for DefaultEdenapiSender {
             .iter()
             .map(|(hgid, _)| AnyId::HgChangesetId(hgid.clone().into()))
             .collect::<Vec<_>>();
-        let res = self.client()?.lookup_batch(hgids, None, None).await?;
+        let res = self.client.lookup_batch(hgids, None, None).await?;
         let missing = get_missing_in_order(res, ids);
         Ok(missing)
     }
 
     async fn read_bookmark(&self, bookmark: String) -> Result<Option<HgChangesetId>> {
         let res = self
-            .client()?
+            .client
             .bookmarks2(vec![bookmark], Some(Freshness::MostRecent))
             .await?;
 

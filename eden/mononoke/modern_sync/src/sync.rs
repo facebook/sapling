@@ -68,7 +68,7 @@ use tokio::sync::RwLock;
 use url::Url;
 
 use crate::bul_util;
-use crate::sender::edenapi::DefaultEdenapiSender;
+use crate::sender::edenapi::DefaultEdenapiSenderBuilder;
 use crate::sender::edenapi::EdenapiSender;
 use crate::sender::edenapi::RetryEdenapiSender;
 use crate::sender::manager::BookmarkInfo;
@@ -180,7 +180,7 @@ pub async fn sync(
             .ok_or_else(|| format_err!("TLS params not found for repo {}", repo_name))?;
 
         Arc::new(RetryEdenapiSender::new(Arc::new(
-            DefaultEdenapiSender::new(
+            DefaultEdenapiSenderBuilder::new(
                 Url::parse(&url)?,
                 dest_repo_name.clone(),
                 tls_args,

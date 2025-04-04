@@ -22,7 +22,7 @@ mod noop;
 mod retry;
 mod util;
 
-pub(crate) use default::DefaultEdenapiSender;
+pub(crate) use default::DefaultEdenapiSenderBuilder;
 pub(crate) use filter::FilterEdenapiSender;
 pub(crate) use filter::MethodFilter;
 pub(crate) use noop::NoopEdenapiSender;

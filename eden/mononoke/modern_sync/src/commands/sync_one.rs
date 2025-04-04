@@ -24,7 +24,7 @@ use repo_blobstore::RepoBlobstoreRef;
 use repo_identity::RepoIdentityRef;
 use url::Url;
 
-use crate::sender::edenapi::DefaultEdenapiSender;
+use crate::sender::edenapi::DefaultEdenapiSenderBuilder;
 use crate::sender::edenapi::EdenapiSender;
 use crate::sender::manager::ChangesetMessage;
 use crate::sender::manager::SendManager;
@@ -85,7 +85,7 @@ pub async fn run(app: MononokeApp, args: CommandArgs) -> Result<()> {
         let dest_repo = app_args.dest_repo_name.clone().unwrap_or(repo_name.clone());
 
         Arc::new(
-            DefaultEdenapiSender::new(
+            DefaultEdenapiSenderBuilder::new(
                 Url::parse(&url)?,
                 dest_repo,
                 tls_args,
