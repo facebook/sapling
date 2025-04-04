@@ -9,7 +9,7 @@ use regex::Regex;
 
 const WORKSPACE_NAME_PATTERN: &str = r"user/([^/]+)/.+";
 const EMAIL_PATTERN: &str = r"^([a-zA-Z0-9_\-.]+)@([a-zA-Z0-9_\-.]+)\.([a-zA-Z]{2,5})$";
-const LINUX_USER_PATTERN: &str = r"^[a-z_]([a-z0-9_-]{0,31}|[a-z0-9_-]{0,30}\\$)$";
+const LINUX_USER_PATTERN: &str = r"^[a-z_.]([a-z0-9_.-]{0,31}|[a-z0-9_.-]{0,30}\\$)$";
 const VALID_ACL_PATTERN: &str = "^[a-zA-Z0-9,=_\\.\\-]+([/][a-zA-Z0-9,=_\\.\\-]+)*$";
 
 pub fn is_valid_workspace_structure(name: &str) -> (bool, Option<String>) {
@@ -102,6 +102,7 @@ mod test {
         assert!(sanity_check_workspace_name(
             "user/testuser@oculus.com/other name with spaces"
         ));
+        assert!(sanity_check_workspace_name("user/user.with.dots/othername"));
     }
 
     #[mononoke::test]
