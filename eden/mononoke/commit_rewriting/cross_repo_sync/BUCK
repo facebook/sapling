@@ -101,8 +101,6 @@ rust_library(
         "//eden/mononoke/bonsai_hg_mapping:bonsai_hg_mapping",
         "//eden/mononoke/bookmarks:bookmarks",
         "//eden/mononoke/commit_rewriting/live_commit_sync_config:live_commit_sync_config",
-        "//eden/mononoke/commit_rewriting/megarepo:megarepolib",
-        "//eden/mononoke/commit_rewriting/movers:movers",
         "//eden/mononoke/commit_rewriting/synced_commit_mapping:synced_commit_mapping",
         "//eden/mononoke/filenodes:filenodes",
         "//eden/mononoke/filestore:filestore",

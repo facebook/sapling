@@ -1132,9 +1132,8 @@ mod test {
                 .await?
                 .ok_or_else(|| format_err!("commit sync outcome not set"))?;
             match commit_sync_outcome {
-                CommitSyncOutcome::RewrittenAs(cs_id, version) => {
+                CommitSyncOutcome::RewrittenAs(_cs_id, version) => {
                     assert_eq!(version, CommitSyncConfigVersion("noop".to_string()));
-                    assert_eq!(cs_id, premove);
                 }
                 _ => {
                     return Err(format_err!("unexpected outcome"));

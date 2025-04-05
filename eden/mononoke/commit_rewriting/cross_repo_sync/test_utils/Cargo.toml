@@ -27,10 +27,8 @@ filenodes = { version = "0.1.0", path = "../../../filenodes" }
 filestore = { version = "0.1.0", path = "../../../filestore" }
 live_commit_sync_config = { version = "0.1.0", path = "../../live_commit_sync_config" }
 maplit = "1.0"
-megarepolib = { version = "0.1.0", path = "../../megarepo" }
 metaconfig_types = { version = "0.1.0", path = "../../../metaconfig/types" }
 mononoke_types = { version = "0.1.0", path = "../../../mononoke_types" }
-movers = { version = "0.1.0", path = "../../movers" }
 mutable_counters = { version = "0.1.0", path = "../../../mutable_counters" }
 phases = { version = "0.1.0", path = "../../../phases" }
 pushrebase_mutation_mapping = { version = "0.1.0", path = "../../../pushrebase_mutation_mapping" }

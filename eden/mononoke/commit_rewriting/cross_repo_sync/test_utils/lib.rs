@@ -44,8 +44,6 @@ use live_commit_sync_config::LiveCommitSyncConfig;
 use live_commit_sync_config::TestLiveCommitSyncConfig;
 use live_commit_sync_config::TestLiveCommitSyncConfigSource;
 use maplit::hashmap;
-use megarepolib::common::ChangesetArgs;
-use megarepolib::perform_move;
 use metaconfig_types::CommitSyncConfig;
 use metaconfig_types::CommitSyncConfigVersion;
 use metaconfig_types::CommitSyncDirection;
@@ -55,11 +53,8 @@ use metaconfig_types::RepoConfig;
 use metaconfig_types::SmallRepoCommitSyncConfig;
 use metaconfig_types::SmallRepoPermanentConfig;
 use mononoke_types::ChangesetId;
-use mononoke_types::DateTime;
 use mononoke_types::NonRootMPath;
 use mononoke_types::RepositoryId;
-use movers::CrossRepoMover;
-use movers::DefaultAction;
 use mutable_counters::MutableCounters;
 use phases::Phases;
 use pushrebase_mutation_mapping::PushrebaseMutationMapping;
@@ -259,11 +254,11 @@ where
     Ok(target_bcs.get_changeset_id())
 }
 
-pub async fn init_small_large_repo<Repo>(
+pub async fn init_small_large_repo<R>(
     ctx: &CoreContext,
 ) -> Result<
     (
-        Syncers<Repo>,
+        Syncers<R>,
         CommitSyncConfig,
         Arc<dyn LiveCommitSyncConfig>,
         TestLiveCommitSyncConfigSource,
@@ -271,19 +266,18 @@ pub async fn init_small_large_repo<Repo>(
     Error,
 >
 where
-    Repo: cross_repo_sync::Repo
-        + for<'builder> facet::AsyncBuildable<'builder, TestRepoFactoryBuilder<'builder>>,
+    R: Repo + for<'builder> facet::AsyncBuildable<'builder, TestRepoFactoryBuilder<'builder>>,
 {
     let mut factory = TestRepoFactory::new(ctx.fb)?;
     let (sync_config, source) = TestLiveCommitSyncConfig::new_with_source();
     let sync_config = Arc::new(sync_config);
-    let megarepo: Repo = factory
+    let megarepo: R = factory
         .with_id(RepositoryId::new(1))
         .with_name("largerepo")
         .with_live_commit_sync_config(sync_config.clone())
         .build()
         .await?;
-    let smallrepo: Repo = factory
+    let smallrepo: R = factory
         .with_id(RepositoryId::new(0))
         .with_name("smallrepo")
         .with_live_commit_sync_config(sync_config.clone())
@@ -365,7 +359,7 @@ where
             CommitSyncContext::Tests,
         )
         .await?;
-    small_to_large_commit_syncer
+    let second_large_cs_id = small_to_large_commit_syncer
         .unsafe_always_rewrite_sync_commit(
             ctx,
             second_bcs_id,
@@ -373,35 +367,18 @@ where
             &noop_version,
             CommitSyncContext::Tests,
         )
-        .await?;
+        .await?
+        .expect("second commit exists in large repo");
+
     bookmark(ctx, &smallrepo, "premove")
         .set_to(second_bcs_id)
         .await?;
     bookmark(ctx, &megarepo, "premove")
-        .set_to(second_bcs_id)
+        .set_to(second_large_cs_id)
         .await?;
-
-    let move_cs_args = ChangesetArgs {
-        author: "Author Authorov".to_string(),
-        message: "move commit".to_string(),
-        datetime: DateTime::from_rfc3339("2018-11-29T12:00:00.00Z").unwrap(),
-        bookmark: None,
-        mark_public: false,
-    };
-    let mover = CrossRepoMover::new(
-        HashMap::new(),
-        DefaultAction::PrependPrefix(NonRootMPath::new("prefix")?),
-    )?;
-    let move_hg_cs = perform_move(ctx, &megarepo, second_bcs_id, &mover, move_cs_args).await?;
-
-    let maybe_move_bcs_id = megarepo
-        .bonsai_hg_mapping()
-        .get_bonsai_from_hg(ctx, move_hg_cs)
-        .await?;
-    let move_bcs_id = maybe_move_bcs_id.unwrap();
 
     bookmark(ctx, &megarepo, "megarepo_start")
-        .set_to(move_bcs_id)
+        .set_to(second_large_cs_id)
         .await?;
 
     bookmark(ctx, &smallrepo, "megarepo_start")
@@ -415,7 +392,7 @@ where
         .await?;
 
     // Master commit in large repo after "big move"
-    let large_master_bcs_id = CreateCommitContext::new(ctx, &megarepo, vec![move_bcs_id])
+    let large_master_bcs_id = CreateCommitContext::new(ctx, &megarepo, vec![second_large_cs_id])
         .add_file("prefix/file3", "content3")
         .commit()
         .await?;
@@ -519,7 +496,9 @@ pub fn get_live_commit_sync_config() -> Arc<dyn LiveCommitSyncConfig> {
 
 fn get_small_repo_sync_config_noop() -> SmallRepoCommitSyncConfig {
     SmallRepoCommitSyncConfig {
-        default_action: DefaultSmallToLargeCommitSyncPathAction::Preserve,
+        default_action: DefaultSmallToLargeCommitSyncPathAction::PrependPrefix(
+            NonRootMPath::new("prefix").unwrap(),
+        ),
         map: hashmap! {},
         submodule_config: Default::default(),
     }
