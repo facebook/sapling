@@ -1680,8 +1680,6 @@ mod test {
     use ascii::AsciiString;
     use bookmarks::BookmarkKey;
     use commit_transformation::SubmoduleDeps;
-    use cross_repo_sync_test_utils::get_live_commit_sync_config;
-    use cross_repo_sync_test_utils::TestRepo;
     use fbinit::FacebookInit;
     use fixtures::Linear;
     use fixtures::TestRepoFixture;
@@ -1709,6 +1707,8 @@ mod test {
 
     use super::*;
     use crate::create_commit_syncers;
+    use crate::test_utils::get_live_commit_sync_config;
+    use crate::test_utils::TestRepo;
     use crate::CommitSyncRepos;
     use crate::Syncers;
 

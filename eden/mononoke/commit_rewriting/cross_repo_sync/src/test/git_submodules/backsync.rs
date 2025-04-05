@@ -21,10 +21,10 @@ use mononoke_types::NonRootMPath;
 use repo_derived_data::RepoDerivedDataRef;
 use tests_utils::CreateCommitContext;
 
-use crate::check_mapping;
-use crate::git_submodules::git_submodules_test_utils::*;
-use crate::sync_to_master;
-use crate::TestRepo;
+use crate::test::check_mapping;
+use crate::test::git_submodules::git_submodules_test_utils::*;
+use crate::test::sync_to_master;
+use crate::test::TestRepo;
 
 const REPO_B_SUBMODULE_PATH: &str = "submodules/repo_b";
 

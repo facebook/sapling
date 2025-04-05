@@ -25,11 +25,6 @@ use bookmarks::BookmarksRef;
 use bulk_derivation::BulkDerivation;
 use commit_graph::CommitGraphRef;
 use context::CoreContext;
-use cross_repo_sync::CommitSyncRepos;
-use cross_repo_sync::CommitSyncer;
-use cross_repo_sync::SubmoduleDeps;
-use cross_repo_sync_test_utils::rebase_root_on_master;
-use cross_repo_sync_test_utils::TestRepo;
 use fbinit::FacebookInit;
 use fn_error_context::context;
 use fsnodes::RootFsnodeId;
@@ -73,8 +68,13 @@ use tests_utils::bookmark;
 use tests_utils::drawdag::extend_from_dag_with_actions;
 use tests_utils::CreateCommitContext;
 
-use crate::prepare_repos_mapping_and_config_with_repo_config_overrides;
-use crate::sync_to_master;
+use crate::test::prepare_repos_mapping_and_config_with_repo_config_overrides;
+use crate::test::sync_to_master;
+use crate::test_utils::rebase_root_on_master;
+use crate::test_utils::TestRepo;
+use crate::CommitSyncRepos;
+use crate::CommitSyncer;
+use crate::SubmoduleDeps;
 
 pub const MASTER_BOOKMARK_NAME: &str = "master";
 

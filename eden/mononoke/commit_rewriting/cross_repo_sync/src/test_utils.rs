@@ -24,20 +24,13 @@ use bookmarks::BookmarkUpdateReason;
 use bookmarks::Bookmarks;
 use commit_graph::CommitGraph;
 use commit_graph::CommitGraphWriter;
-use commit_transformation::upload_commits;
-use context::CoreContext;
+use commit_transformation::git_submodules::InMemoryRepo;
+use commit_transformation::git_submodules::SubmoduleExpansionData;
 // TODO(T182311609): stop using this directly and call cross_repo_sync methods instead
-use cross_repo_sync::rewrite_commit;
-use cross_repo_sync::submodule_metadata_file_prefix_and_dangling_pointers;
-use cross_repo_sync::update_mapping_with_version;
-use cross_repo_sync::CommitSyncContext;
-use cross_repo_sync::CommitSyncRepos;
-use cross_repo_sync::CommitSyncer;
-use cross_repo_sync::InMemoryRepo;
-use cross_repo_sync::Repo;
-use cross_repo_sync::SubmoduleDeps;
-use cross_repo_sync::SubmoduleExpansionData;
-use cross_repo_sync::Syncers;
+use commit_transformation::rewrite_commit;
+use commit_transformation::upload_commits;
+use commit_transformation::SubmoduleDeps;
+use context::CoreContext;
 use filenodes::Filenodes;
 use filestore::FilestoreConfig;
 use live_commit_sync_config::LiveCommitSyncConfig;
@@ -64,6 +57,7 @@ use repo_cross_repo::RepoCrossRepo;
 use repo_derived_data::RepoDerivedData;
 use repo_identity::RepoIdentity;
 use repo_identity::RepoIdentityRef;
+use reporting::CommitSyncContext;
 use sql_query_config::SqlQueryConfig;
 use synced_commit_mapping::SyncedCommitMapping;
 use synced_commit_mapping::SyncedCommitMappingEntry;
@@ -71,6 +65,13 @@ use test_repo_factory::TestRepoFactory;
 use test_repo_factory::TestRepoFactoryBuilder;
 use tests_utils::bookmark;
 use tests_utils::CreateCommitContext;
+
+use crate::commit_syncer::CommitSyncer;
+use crate::commit_syncers_lib::update_mapping_with_version;
+use crate::commit_syncers_lib::CommitSyncRepos;
+use crate::commit_syncers_lib::Syncers;
+use crate::submodule_metadata_file_prefix_and_dangling_pointers;
+use crate::types::Repo;
 
 #[facet::container]
 #[derive(Clone)]

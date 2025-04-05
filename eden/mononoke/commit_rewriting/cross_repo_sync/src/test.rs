@@ -6,6 +6,7 @@
  */
 
 //! Tests for the synced commits mapping.
+
 use std::collections::BTreeMap;
 use std::collections::HashMap;
 use std::str::FromStr;
@@ -22,21 +23,6 @@ use bookmarks::BookmarksRef;
 use changesets_creation::save_changesets;
 use commit_graph::CommitGraphRef;
 use context::CoreContext;
-use cross_repo_sync::find_toposorted_unsynced_ancestors;
-use cross_repo_sync::update_mapping_with_version;
-use cross_repo_sync::verify_working_copy;
-use cross_repo_sync::CandidateSelectionHint;
-use cross_repo_sync::CommitSyncContext;
-use cross_repo_sync::CommitSyncOutcome;
-use cross_repo_sync::CommitSyncRepos;
-use cross_repo_sync::CommitSyncer;
-use cross_repo_sync::ErrorKind;
-use cross_repo_sync::PluralCommitSyncOutcome;
-use cross_repo_sync::PushrebaseRewriteDates;
-use cross_repo_sync::SubmoduleDeps;
-use cross_repo_sync::Target;
-use cross_repo_sync_test_utils::rebase_root_on_master;
-use cross_repo_sync_test_utils::TestRepo;
 use fbinit::FacebookInit;
 use fixtures::Linear;
 use fixtures::ManyFilesDirs;
@@ -84,6 +70,22 @@ use test_repo_factory::TestRepoFactory;
 use tests_utils::bookmark;
 use tests_utils::resolve_cs_id;
 use tests_utils::CreateCommitContext;
+
+use crate::find_toposorted_unsynced_ancestors;
+use crate::test_utils::rebase_root_on_master;
+use crate::test_utils::TestRepo;
+use crate::update_mapping_with_version;
+use crate::verify_working_copy;
+use crate::CandidateSelectionHint;
+use crate::CommitSyncContext;
+use crate::CommitSyncOutcome;
+use crate::CommitSyncRepos;
+use crate::CommitSyncer;
+use crate::ErrorKind;
+use crate::PluralCommitSyncOutcome;
+use crate::PushrebaseRewriteDates;
+use crate::SubmoduleDeps;
+use crate::Target;
 
 #[cfg(test)]
 mod git_submodules;
@@ -217,7 +219,7 @@ async fn get_bcs_id(
         .unwrap()
 }
 
-async fn check_mapping(
+pub(crate) async fn check_mapping(
     ctx: CoreContext,
     config: &CommitSyncer<TestRepo>,
     source_bcs_id: ChangesetId,
@@ -511,7 +513,7 @@ async fn prepare_repos_mapping_and_config(
 > {
     prepare_repos_mapping_and_config_with_repo_config_overrides(fb, |_| (), |_| ()).await
 }
-async fn prepare_repos_mapping_and_config_with_repo_config_overrides(
+pub(crate) async fn prepare_repos_mapping_and_config_with_repo_config_overrides(
     fb: FacebookInit,
     small_repo_override: impl FnOnce(&mut RepoConfig),
     large_repo_override: impl FnOnce(&mut RepoConfig),

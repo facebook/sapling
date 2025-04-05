@@ -309,10 +309,10 @@ async fn remap<R: CrossRepo>(
 
 #[cfg(test)]
 mod tests {
+    use cross_repo_sync::test_utils::init_small_large_repo;
+    use cross_repo_sync::test_utils::TestRepo;
     use cross_repo_sync::CandidateSelectionHint;
     use cross_repo_sync::CommitSyncContext;
-    use cross_repo_sync_test_utils::init_small_large_repo;
-    use cross_repo_sync_test_utils::TestRepo;
     use fbinit::FacebookInit;
     use mononoke_macros::mononoke;
     use mononoke_types::DateTime;

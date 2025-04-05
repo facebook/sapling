@@ -24,7 +24,6 @@ rust_library(
         "//eden/mononoke/blobrepo:repo_blobstore",
         "//eden/mononoke/bonsai_hg_mapping:bonsai_hg_mapping",
         "//eden/mononoke/changesets/changesets_creation:changesets_creation",
-        "//eden/mononoke/commit_rewriting/cross_repo_sync:cross_repo_sync_test_utils",
         "//eden/mononoke/commit_rewriting/live_commit_sync_config:live_commit_sync_config",
         "//eden/mononoke/commit_rewriting/movers:movers",
         "//eden/mononoke/commit_rewriting/synced_commit_mapping:synced_commit_mapping",

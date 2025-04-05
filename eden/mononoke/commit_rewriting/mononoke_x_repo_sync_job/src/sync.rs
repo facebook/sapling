@@ -1053,9 +1053,9 @@ mod test {
     use bookmarks::BookmarksMaybeStaleExt;
     use bookmarks::Freshness;
     use cross_repo_sync::find_bookmark_diff;
+    use cross_repo_sync::test_utils::init_small_large_repo;
+    use cross_repo_sync::test_utils::TestRepo;
     use cross_repo_sync::verify_working_copy;
-    use cross_repo_sync_test_utils::init_small_large_repo;
-    use cross_repo_sync_test_utils::TestRepo;
     use fbinit::FacebookInit;
     use futures::TryStreamExt;
     use maplit::hashset;

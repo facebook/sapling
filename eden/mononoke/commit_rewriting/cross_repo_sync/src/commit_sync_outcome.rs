@@ -657,7 +657,6 @@ mod tests {
     use std::sync::Arc;
 
     use bookmarks::BookmarkUpdateReason;
-    use cross_repo_sync_test_utils::TestRepo;
     use fbinit::FacebookInit;
     use live_commit_sync_config::TestLiveCommitSyncConfig;
     use mononoke_macros::mononoke;
@@ -678,6 +677,7 @@ mod tests {
     use tests_utils::drawdag::create_from_dag;
 
     use super::*;
+    use crate::test_utils::TestRepo;
 
     const SMALL_REPO_ID: RepositoryId = RepositoryId::new(0);
     const LARGE_REPO_ID: RepositoryId = RepositoryId::new(1);

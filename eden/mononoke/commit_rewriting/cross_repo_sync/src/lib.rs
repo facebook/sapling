@@ -13,6 +13,9 @@ mod commit_sync_config_utils;
 mod commit_sync_outcome;
 mod commit_syncer;
 mod commit_syncers_lib;
+#[cfg(test)]
+mod test;
+pub mod test_utils;
 
 mod sync_config_version_utils;
 mod types;

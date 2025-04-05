@@ -16,8 +16,6 @@ use anyhow::Context;
 use anyhow::Result;
 use blobstore::Loadable;
 use context::CoreContext;
-use cross_repo_sync::CandidateSelectionHint;
-use cross_repo_sync::CommitSyncContext;
 use fbinit::FacebookInit;
 use maplit::btreemap;
 use mononoke_macros::mononoke;
@@ -28,9 +26,11 @@ use mononoke_types::NonRootMPath;
 use repo_blobstore::RepoBlobstoreRef;
 use tests_utils::CreateCommitContext;
 
-use crate::check_mapping;
-use crate::git_submodules::git_submodules_test_utils::*;
-use crate::sync_to_master;
+use crate::test::check_mapping;
+use crate::test::git_submodules::git_submodules_test_utils::*;
+use crate::test::sync_to_master;
+use crate::CandidateSelectionHint;
+use crate::CommitSyncContext;
 
 const REPO_B_SUBMODULE_PATH: &str = "submodules/repo_b";
 

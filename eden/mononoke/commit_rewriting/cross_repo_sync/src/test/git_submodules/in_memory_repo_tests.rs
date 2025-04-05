@@ -14,7 +14,6 @@ use anyhow::Result;
 use blobstore::Loadable;
 use changesets_creation::save_changesets;
 use context::CoreContext;
-use cross_repo_sync::InMemoryRepo;
 use fbinit::FacebookInit;
 use fsnodes::RootFsnodeId;
 use mononoke_macros::mononoke;
@@ -24,7 +23,8 @@ use repo_blobstore::RepoBlobstoreRef;
 use repo_derived_data::RepoDerivedDataRef;
 use sorted_vector_map::SortedVectorMap;
 
-use crate::git_submodules::git_submodules_test_utils::*;
+use crate::test::git_submodules::git_submodules_test_utils::*;
+use crate::InMemoryRepo;
 
 #[mononoke::fbinit_test]
 async fn test_original_blobstore_and_changesets_are_the_same_after_validation(

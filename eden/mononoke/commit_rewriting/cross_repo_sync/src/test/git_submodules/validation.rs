@@ -11,16 +11,16 @@
 
 use anyhow::Result;
 use context::CoreContext;
-use cross_repo_sync::verify_working_copy;
-use cross_repo_sync::verify_working_copy_with_version;
-use cross_repo_sync::Source;
-use cross_repo_sync::Target;
 use fbinit::FacebookInit;
 use mononoke_macros::mononoke;
 use mononoke_types::NonRootMPath;
 use tests_utils::CreateCommitContext;
 
-use crate::git_submodules::git_submodules_test_utils::*;
+use crate::test::git_submodules::git_submodules_test_utils::*;
+use crate::verify_working_copy;
+use crate::verify_working_copy_with_version;
+use crate::Source;
+use crate::Target;
 const REPO_B_SUBMODULE_PATH: &str = "submodules/repo_b";
 
 #[mononoke::fbinit_test]
