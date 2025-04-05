@@ -15,7 +15,7 @@ crate-type = ["lib", "staticlib"]
 
 [dependencies]
 anyhow = "1.0.95"
-arc-swap = "1.5"
+arc-swap = { version = "1.5", features = ["weak"] }
 cxx = "1.0.119"
 env_logger = "0.10"
 log = { version = "0.4.22", features = ["kv_unstable"] }

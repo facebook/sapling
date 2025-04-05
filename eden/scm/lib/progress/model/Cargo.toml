@@ -13,7 +13,7 @@ license = "MIT"
 name = "progress_model"
 
 [dependencies]
-arc-swap = "1.5"
+arc-swap = { version = "1.5", features = ["weak"] }
 once_cell = "1.12"
 parking_lot = { version = "0.12.1", features = ["send_guard"] }
 paste = "1.0.14"
