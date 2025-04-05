@@ -17,10 +17,10 @@ use mononoke_types::NonRootMPath;
 use tests_utils::CreateCommitContext;
 
 use crate::test::git_submodules::git_submodules_test_utils::*;
-use crate::verify_working_copy;
-use crate::verify_working_copy_with_version;
-use crate::Source;
-use crate::Target;
+use crate::types::Source;
+use crate::types::Target;
+use crate::validation::verify_working_copy;
+use crate::validation::verify_working_copy_with_version;
 const REPO_B_SUBMODULE_PATH: &str = "submodules/repo_b";
 
 #[mononoke::fbinit_test]

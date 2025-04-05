@@ -28,6 +28,8 @@ use commit_transformation::git_submodules::get_x_repo_submodule_metadata_file_pa
 use commit_transformation::git_submodules::git_hash_from_submodule_metadata_file;
 use commit_transformation::git_submodules::root_fsnode_id_from_submodule_git_commit;
 use commit_transformation::git_submodules::validate_working_copy_of_expansion_with_recursive_submodules;
+use commit_transformation::git_submodules::InMemoryRepo;
+use commit_transformation::git_submodules::SubmoduleExpansionData;
 use commit_transformation::SubmoduleDeps;
 use commit_transformation::SubmodulePath;
 use context::CoreContext;
@@ -63,15 +65,13 @@ use slog::info;
 use slog::warn;
 use sorted_vector_map::SortedVectorMap;
 
+use crate::commit_sync_config_utils::get_git_submodule_action_by_version;
 use crate::commit_syncer::CommitSyncer;
-use crate::get_git_submodule_action_by_version;
-use crate::submodule_metadata_file_prefix_and_dangling_pointers;
+use crate::commit_syncers_lib::submodule_metadata_file_prefix_and_dangling_pointers;
+use crate::commit_syncers_lib::Syncers;
 use crate::types::Repo;
 use crate::types::Source;
 use crate::types::Target;
-use crate::InMemoryRepo;
-use crate::SubmoduleExpansionData;
-use crate::Syncers;
 
 // NOTE: Occurrences of Option<NonRootMPath> in this file have not been replaced with MPath since such a
 // replacement is only possible in cases where Option<NonRootMPath> is used to represent a path that can also
@@ -1593,7 +1593,7 @@ pub async fn update_large_repo_bookmarks<'a, R: Repo>(
                         format!("Missing outcome for {} from small repo", target_cs_id)
                     })?;
 
-                use crate::PluralCommitSyncOutcome::*;
+                use crate::commit_sync_outcome::PluralCommitSyncOutcome::*;
                 let new_value = match outcomes {
                     NotSyncCandidate(..) => {
                         warn!(
@@ -1706,11 +1706,10 @@ mod test {
     use tests_utils::CreateCommitContext;
 
     use super::*;
-    use crate::create_commit_syncers;
+    use crate::commit_syncers_lib::create_commit_syncers;
+    use crate::commit_syncers_lib::CommitSyncRepos;
     use crate::test_utils::get_live_commit_sync_config;
     use crate::test_utils::TestRepo;
-    use crate::CommitSyncRepos;
-    use crate::Syncers;
 
     #[mononoke::fbinit_test]
     async fn test_bookmark_diff_with_renamer(fb: FacebookInit) -> Result<(), Error> {

@@ -21,13 +21,10 @@ mod sync_config_version_utils;
 mod types;
 mod validation;
 
-// TODO(T182311609): stop re-exporting git_submodules
-// TODO(T182311609): stop re-exporting rewrite_commit
 pub use commit_sync_config_utils::get_bookmark_renamer;
 pub use commit_sync_config_utils::get_common_pushrebase_bookmarks;
 pub use commit_sync_config_utils::get_git_submodule_action_by_version;
 pub use commit_sync_config_utils::get_mover;
-pub use commit_sync_config_utils::get_reverse_mover;
 pub use commit_sync_config_utils::version_exists;
 pub use commit_sync_outcome::commit_sync_outcome_exists;
 pub use commit_sync_outcome::get_commit_sync_outcome;
@@ -38,7 +35,6 @@ pub use commit_sync_outcome::CommitSyncOutcome;
 pub use commit_sync_outcome::CommitSyncOutcome::*;
 pub use commit_sync_outcome::PluralCommitSyncOutcome;
 pub use commit_syncer::CommitSyncer;
-pub use commit_syncers_lib::commit_sync_direction_from_config;
 pub use commit_syncers_lib::create_commit_syncer_lease;
 pub use commit_syncers_lib::create_commit_syncers;
 pub use commit_syncers_lib::find_toposorted_unsynced_ancestors;
@@ -55,7 +51,6 @@ pub use commit_transformation::git_submodules::get_all_submodule_deps_from_repo_
 pub use commit_transformation::git_submodules::InMemoryRepo;
 pub use commit_transformation::git_submodules::RepoProvider;
 pub use commit_transformation::git_submodules::SubmoduleExpansionData;
-pub use commit_transformation::git_submodules::SubmoduleExpansionValidationToken;
 pub use commit_transformation::git_submodules::ValidSubmoduleExpansionBonsai;
 pub use commit_transformation::rewrite_commit;
 pub use commit_transformation::SubmoduleDeps;

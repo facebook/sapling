@@ -67,10 +67,10 @@ use tests_utils::bookmark;
 use tests_utils::CreateCommitContext;
 
 use crate::commit_syncer::CommitSyncer;
+use crate::commit_syncers_lib::submodule_metadata_file_prefix_and_dangling_pointers;
 use crate::commit_syncers_lib::update_mapping_with_version;
 use crate::commit_syncers_lib::CommitSyncRepos;
 use crate::commit_syncers_lib::Syncers;
-use crate::submodule_metadata_file_prefix_and_dangling_pointers;
 use crate::types::Repo;
 
 #[facet::container]

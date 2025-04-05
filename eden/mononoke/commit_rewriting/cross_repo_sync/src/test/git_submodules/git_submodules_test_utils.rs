@@ -24,6 +24,7 @@ use bookmarks::BookmarkKey;
 use bookmarks::BookmarksRef;
 use bulk_derivation::BulkDerivation;
 use commit_graph::CommitGraphRef;
+use commit_transformation::SubmoduleDeps;
 use context::CoreContext;
 use fbinit::FacebookInit;
 use fn_error_context::context;
@@ -68,13 +69,12 @@ use tests_utils::bookmark;
 use tests_utils::drawdag::extend_from_dag_with_actions;
 use tests_utils::CreateCommitContext;
 
+use crate::commit_syncer::CommitSyncer;
+use crate::commit_syncers_lib::CommitSyncRepos;
 use crate::test::prepare_repos_mapping_and_config_with_repo_config_overrides;
 use crate::test::sync_to_master;
 use crate::test_utils::rebase_root_on_master;
 use crate::test_utils::TestRepo;
-use crate::CommitSyncRepos;
-use crate::CommitSyncer;
-use crate::SubmoduleDeps;
 
 pub const MASTER_BOOKMARK_NAME: &str = "master";
 

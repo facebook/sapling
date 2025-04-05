@@ -7,7 +7,12 @@
 
 #![allow(non_snake_case)]
 
-//! Tests for handling git submodules in x-repo sync
+/*!
+ * Test submodule expansion when syncing a small repo with submodule changes
+ * to a large repo.
+ *
+ * These tests use repo A as the small repo, depending on repo B as a submodule.
+ */
 
 use std::str::FromStr;
 
@@ -24,22 +29,15 @@ use mononoke_types::ChangesetId;
 use mononoke_types::FileType;
 use mononoke_types::NonRootMPath;
 use repo_blobstore::RepoBlobstoreRef;
+use reporting::CommitSyncContext;
 use tests_utils::CreateCommitContext;
 
+use crate::commit_sync_outcome::CandidateSelectionHint;
 use crate::test::check_mapping;
 use crate::test::git_submodules::git_submodules_test_utils::*;
 use crate::test::sync_to_master;
-use crate::CandidateSelectionHint;
-use crate::CommitSyncContext;
 
 const REPO_B_SUBMODULE_PATH: &str = "submodules/repo_b";
-
-/**!
- * Test submodule expansion when syncing a small repo with submodule changes
- * to a large repo.
- *
- * These tests use repo A as the small repo, depending on repo B as a submodule.
- */
 
 /// Tests the basic setup of expanding a submodule.
 /// Also test that adding and deleting files in the submodule repo will generate
