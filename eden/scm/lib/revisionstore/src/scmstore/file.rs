@@ -144,7 +144,7 @@ impl FileStore {
     pub(crate) fn get_local_content_direct(&self, id: &HgId) -> Result<Option<ScmBlob>> {
         let m = &FILE_STORE_FETCH_METRICS;
 
-        if let Some(blob) = self.get_local_content_cas_cache(id)? {
+        if let Ok(Some(blob)) = self.get_local_content_cas_cache(id) {
             return Ok(Some(blob));
         }
         try_local_content!(id, self.indexedlog_cache, m.indexedlog.cache);
