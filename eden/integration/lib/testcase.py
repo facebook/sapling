@@ -40,6 +40,14 @@ from eden.fs.cli import util
 from eden.test_support.testcase import EdenTestCaseBase
 from eden.thrift import legacy
 
+if sys.platform == "win32":
+    from eden.thrift.windows_thrift import WindowsSocketException
+else:
+
+    class WindowsSocketException(Exception):
+        pass
+
+
 from facebook.eden.ttypes import (
     FaultDefinition,
     GetBlockedFaultsRequest,
@@ -113,7 +121,46 @@ class EdenTestCase(EdenTestCaseBase):
         # Set this environment variable to enable Sl tracing during the test
         # self.setenv("SL_LOG", "trace")
 
-        self.setup_eden_test()
+        # This value seems to work well. Increase it if it's not enough.
+        retry_count = 5
+        retry_time = 5
+        # We are setting the time it takes to free a closed socket
+        # to 30 seconds, so this value should match
+        max_retry_time = 30
+
+        while retry_count > 0:
+            try:
+                self.report_time(f"setup_eden with remaining retries {retry_count}")
+                self.setup_eden_test()
+                self.report_time(
+                    f"Done setup_eden with remaining retries {retry_count}"
+                )
+                break
+            except (
+                WindowsSocketException,
+                edenclient.EdenCommandError,
+                util.EdenStartError,
+            ) as e:
+                retry_count -= 1
+                if retry_count == 0:
+                    self.report_time(
+                        f"Retries exhausted, failing due to {e.__class__}: {e}"
+                    )
+                    raise
+
+                retry_time = min(2 * retry_time, max_retry_time)
+                self.report_time(
+                    f"Failed to start edenfs, retrying in {retry_time} seconds. Error: {e}"
+                )
+
+                self.eden.kill()
+                self.new_tmp_dir()
+
+                time.sleep(retry_time)
+            except Exception as e:
+                self.report_time(f"Another exception {e.__class__}: {e}")
+                raise
+
         self.report_time("test setup done")
 
     def tearDown(self) -> None:
@@ -133,10 +180,10 @@ class EdenTestCase(EdenTestCaseBase):
 
         # Parent directory for any git/hg repositories created during the test
         self.repos_dir = os.path.join(self.tmp_dir, "repos")
-        os.mkdir(self.repos_dir)
+        os.makedirs(self.repos_dir, exist_ok=True)
         # Parent directory for eden mount points
         self.mounts_dir = os.path.join(self.tmp_dir, "mounts")
-        os.mkdir(self.mounts_dir)
+        os.makedirs(self.mounts_dir, exist_ok=True)
         self.report_time("temporary directory creation done")
 
         self.eden = self.init_eden_client()
@@ -155,6 +202,7 @@ class EdenTestCase(EdenTestCaseBase):
         self.set_rust_rollout_config({})
 
         self.eden.start()
+
         # Store a lambda in case self.eden is replaced during the test.
         self.addCleanup(lambda: self.eden.cleanup())
         self.report_time("eden daemon started")
@@ -301,7 +349,7 @@ class EdenTestCase(EdenTestCaseBase):
         | 3 | Yes          | Yes              | No                         |
         """
         repo_path = os.path.join(self.repos_dir, name)
-        os.mkdir(repo_path)
+        os.makedirs(repo_path, exist_ok=True)
 
         if self.system_hgrc is None:
             system_hgrc_path = os.path.join(self.repos_dir, "hgrc")
@@ -321,7 +369,7 @@ class EdenTestCase(EdenTestCaseBase):
 
     def create_git_repo(self, name: str) -> gitrepo.GitRepository:
         repo_path = os.path.join(self.repos_dir, name)
-        os.mkdir(repo_path)
+        os.makedirs(repo_path, exist_ok=True)
         repo = gitrepo.GitRepository(repo_path, temp_mgr=self.temp_mgr)
         repo.init()
 
@@ -595,6 +643,7 @@ class EdenRepoTest(EdenTestCase):
             self.is_case_sensitive = actual_case_sensitive
         else:
             self.assertEqual(self.is_case_sensitive, actual_case_sensitive)
+        self.report_time("eden repo setup done")
 
     def populate_repo(self) -> None:
         raise NotImplementedError(

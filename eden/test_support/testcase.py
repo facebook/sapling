@@ -41,6 +41,7 @@ class EdenTestCaseBase(IsolatedAsyncioTestCase):
 
     exit_stack: contextlib.ExitStack
     temp_mgr: TempFileManager
+    _tmp_dir: Optional[Path] = None
 
     def setUp(self) -> None:
         super().setUp()
@@ -76,7 +77,12 @@ class EdenTestCaseBase(IsolatedAsyncioTestCase):
 
     @property
     def tmp_dir(self) -> Path:
-        return self.temp_mgr.top_level_tmp_dir()
+        if not self._tmp_dir:
+            self._tmp_dir = self.make_temp_dir()
+        return self._tmp_dir
+
+    def new_tmp_dir(self, prefix: Optional[str] = None) -> None:
+        self._tmp_dir = self.make_temp_dir(prefix)
 
     def make_temp_dir(self, prefix: Optional[str] = None) -> Path:
         """Make a directory with a uniquely-generated name under the top-level test-case
