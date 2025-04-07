@@ -25,7 +25,6 @@ python_unittest(
     ],
     env = artifacts["env"],
     supports_static_listing = False,
-    runtime_deps = artifacts["deps"],
     deps = [
         ":testutil",
         "//eden/integration/lib:lib",

@@ -10,7 +10,6 @@ python_unittest(
     srcs = ["basic_test.py"],
     env = artifacts["env"],
     supports_static_listing = False,
-    runtime_deps = artifacts["deps"],
     deps = [
         "//eden/integration/lib:lib",
     ],
@@ -21,7 +20,6 @@ python_unittest(
     srcs = ["casing_test.py"],
     env = artifacts["env"],
     supports_static_listing = False,
-    runtime_deps = artifacts["deps"],
     deps = [
         "//eden/integration/lib:lib",
     ],
@@ -32,7 +30,6 @@ python_unittest(
     srcs = ["changes_test.py"],
     env = artifacts["env"],
     supports_static_listing = False,
-    runtime_deps = artifacts["deps"],
     deps = [
         "//eden/fs/service:thrift-py-deprecated",
         "//eden/integration/lib:lib",
@@ -44,7 +41,6 @@ python_unittest(
     srcs = ["chown_test.py"],
     env = artifacts["env"],
     supports_static_listing = False,
-    runtime_deps = artifacts["deps"],
     deps = [
         "//eden/integration/lib:lib",
     ],
@@ -55,7 +51,6 @@ python_unittest(
     srcs = ["clone_test.py"],
     env = artifacts["env"],
     supports_static_listing = False,
-    runtime_deps = artifacts["deps"],
     deps = [
         "//eden/integration/lib:lib",
     ],
@@ -66,7 +61,6 @@ python_unittest(
     srcs = ["config_test.py"],
     env = artifacts["env"],
     supports_static_listing = False,
-    runtime_deps = artifacts["deps"],
     deps = [
         "//eden/fs/config:config_thrift-py-deprecated",
         "//eden/fs/py/eden/thrift:legacy",
@@ -80,7 +74,6 @@ python_unittest(
     srcs = ["corrupt_overlay_test.py"],
     env = artifacts["env"],
     supports_static_listing = False,
-    runtime_deps = artifacts["deps"],
     deps = [
         "//eden/fs/service:thrift-py-deprecated",
         "//eden/integration/lib:lib",
@@ -92,7 +85,6 @@ python_unittest(
     srcs = ["debug_getpath_test.py"],
     env = artifacts["env"],
     supports_static_listing = False,
-    runtime_deps = artifacts["deps"],
     deps = [
         "//eden/fs/service:thrift-py-deprecated",
         "//eden/integration/lib:lib",
@@ -104,7 +96,6 @@ python_unittest(
     srcs = ["debug_subscribe_test.py"],
     env = artifacts["env"],
     supports_static_listing = False,
-    runtime_deps = artifacts["deps"],
     deps = [
         "//eden/integration/lib:lib",
     ],
@@ -115,7 +106,6 @@ python_unittest(
     srcs = ["debug_test.py"],
     env = artifacts["env"],
     supports_static_listing = False,
-    runtime_deps = artifacts["deps"],
     deps = [
         "//eden/fs/py/eden/thrift:legacy",
         "//eden/fs/service:thrift-py-deprecated",
@@ -128,7 +118,6 @@ python_unittest(
     srcs = ["doteden_test.py"],
     env = artifacts["env"],
     supports_static_listing = False,
-    runtime_deps = artifacts["deps"],
     deps = [
         "//eden/integration/lib:lib",
     ],
@@ -139,7 +128,6 @@ python_unittest(
     srcs = ["edenclient_test.py"],
     env = artifacts["env"],
     supports_static_listing = False,
-    runtime_deps = artifacts["deps"],
     deps = [
         "//eden/integration/lib:lib",
     ],
@@ -154,7 +142,6 @@ python_unittest(
     ],
     env = artifacts["env"],
     supports_static_listing = False,
-    runtime_deps = artifacts["deps"],
     deps = [
         "//eden/integration/lib:lib",
         "//eden/test_support:py",
@@ -166,7 +153,6 @@ python_unittest(
     srcs = ["glob_test.py"],
     env = artifacts["env"],
     supports_static_listing = False,
-    runtime_deps = artifacts["deps"],
     deps = [
         "//eden/fs/service:thrift-py-deprecated",
         "//eden/integration/lib:lib",
@@ -178,7 +164,6 @@ python_unittest(
     srcs = ["health_test.py"],
     env = artifacts["env"],
     supports_static_listing = False,
-    runtime_deps = artifacts["deps"],
     deps = [
         "//eden/fs/cli:lib",
         "//eden/integration/lib:lib",
@@ -190,7 +175,6 @@ python_unittest(
     srcs = ["help_test.py"],
     env = artifacts["env"],
     supports_static_listing = False,
-    runtime_deps = artifacts["deps"],
     deps = [
         "//eden/integration/lib:lib",
     ],
@@ -201,7 +185,6 @@ python_unittest(
     srcs = ["info_test.py"],
     env = artifacts["env"],
     supports_static_listing = False,
-    runtime_deps = artifacts["deps"],
     deps = [
         "//eden/fs/cli:lib",
         "//eden/integration/lib:lib",
@@ -217,7 +200,6 @@ python_unittest(
     ],
     env = artifacts["env"],
     supports_static_listing = False,
-    runtime_deps = artifacts["deps"],
     deps = [
         "//eden/fs/service:thrift-py-deprecated",
         "//eden/integration/lib:lib",
@@ -232,7 +214,6 @@ python_unittest(
     ],
     env = artifacts["env"],
     supports_static_listing = False,
-    runtime_deps = artifacts["deps"],
     deps = [
         "//eden/integration/lib:lib",
         "//eden/integration/lib:ntapi",
@@ -247,7 +228,6 @@ python_unittest(
     ],
     env = artifacts["env"],
     supports_static_listing = False,
-    runtime_deps = artifacts["deps"],
     deps = [
         "//eden/integration/lib:lib",
         "//eden/integration/lib:ntapi",
@@ -259,7 +239,6 @@ python_unittest(
     srcs = ["long_path_test.py"],
     env = artifacts["env"],
     supports_static_listing = False,
-    runtime_deps = artifacts["deps"],
     deps = [
         "//eden/fs/service:thrift-py-deprecated",
         "//eden/integration/lib:lib",
@@ -271,7 +250,6 @@ python_unittest(
     srcs = ["materialized_query_test.py"],
     env = artifacts["env"],
     supports_static_listing = False,
-    runtime_deps = artifacts["deps"],
     deps = [
         "//eden/fs/service:thrift-py-deprecated",
         "//eden/integration/lib:lib",
@@ -283,7 +261,6 @@ python_unittest(
     srcs = ["mmap_test.py"],
     env = artifacts["env"],
     supports_static_listing = False,
-    runtime_deps = artifacts["deps"],
     deps = [
         "//eden/integration/lib:lib",
     ],
@@ -294,7 +271,6 @@ python_unittest(
     srcs = ["mount_test.py"],
     env = artifacts["env"],
     supports_static_listing = False,
-    runtime_deps = artifacts["deps"],
     deps = [
         "//eden/fs/cli:lib",
         "//eden/fs/py/eden/thrift:legacy",
@@ -310,7 +286,6 @@ python_unittest(
     srcs = ["notify_test.py"],
     env = artifacts["env"],
     supports_static_listing = False,
-    runtime_deps = artifacts["deps"],
     deps = [
         "//eden/integration/lib:lib",
     ],
@@ -321,7 +296,6 @@ python_unittest(
     srcs = ["oexcl_test.py"],
     env = artifacts["env"],
     supports_static_listing = False,
-    runtime_deps = artifacts["deps"],
     deps = [
         "//eden/integration/lib:lib",
     ],
@@ -332,7 +306,6 @@ python_unittest(
     srcs = ["patch_test.py"],
     env = artifacts["env"],
     supports_static_listing = False,
-    runtime_deps = artifacts["deps"],
     deps = [
         "//eden/integration/lib:lib",
     ],
@@ -343,7 +316,6 @@ python_unittest(
     srcs = ["persistence_test.py"],
     env = artifacts["env"],
     supports_static_listing = False,
-    runtime_deps = artifacts["deps"],
     deps = [
         "//eden/integration/lib:lib",
     ],
@@ -354,7 +326,6 @@ python_unittest(
     srcs = ["prjfs_stress.py"],
     env = artifacts["env"],
     supports_static_listing = False,
-    runtime_deps = artifacts["deps"],
     deps = [
         "//eden/integration/lib:lib",
     ],
@@ -365,7 +336,6 @@ python_unittest(
     srcs = ["prjfs_match_fs.py"],
     env = artifacts["env"],
     supports_static_listing = False,
-    runtime_deps = artifacts["deps"],
     deps = [
         "//eden/fs/service:thrift-py-deprecated",
         "//eden/integration/lib:lib",
@@ -377,7 +347,6 @@ python_unittest(
     srcs = ["rage_test.py"],
     env = artifacts["env"],
     supports_static_listing = False,
-    runtime_deps = artifacts["deps"],
     deps = [
         "//eden/integration/lib:lib",
     ],
@@ -388,7 +357,6 @@ python_unittest(
     srcs = ["rc_test.py"],
     env = artifacts["env"],
     supports_static_listing = False,
-    runtime_deps = artifacts["deps"],
     deps = [
         "//eden/integration/lib:lib",
     ],
@@ -399,7 +367,6 @@ python_unittest(
     srcs = ["readdir_test.py"],
     env = artifacts["env"],
     supports_static_listing = False,
-    runtime_deps = artifacts["deps"],
     deps = [
         "//eden/fs/service:thrift-py-deprecated",
         "//eden/integration/lib:lib",
@@ -411,7 +378,6 @@ python_unittest(
     srcs = ["redirect_test.py"],
     env = artifacts["env"],
     supports_static_listing = False,
-    runtime_deps = artifacts["deps"],
     deps = [
         "//eden/fs/cli:lib",
         "//eden/fs/service:thrift-py-deprecated",
@@ -424,7 +390,6 @@ python_unittest(
     srcs = ["remount_test.py"],
     env = artifacts["env"],
     supports_static_listing = False,
-    runtime_deps = artifacts["deps"],
     deps = [
         "//eden/integration/lib:lib",
     ],
@@ -435,7 +400,6 @@ python_unittest(
     srcs = ["rename_test.py"],
     env = artifacts["env"],
     supports_static_listing = False,
-    runtime_deps = artifacts["deps"],
     deps = [
         "//eden/integration/lib:lib",
     ],
@@ -446,7 +410,6 @@ python_unittest(
     srcs = ["restart_test.py"],
     env = artifacts["env"],
     supports_static_listing = False,
-    runtime_deps = artifacts["deps"],
     deps = [
         "//eden/fs/cli:lib",
         "//eden/fs/py/eden/thrift:legacy",
@@ -459,7 +422,6 @@ python_unittest(
     srcs = ["rocksdb_store_test.py"],
     env = artifacts["env"],
     supports_static_listing = False,
-    runtime_deps = artifacts["deps"],
     deps = [
         "//eden/fs/cli:lib",
         "//eden/integration/lib:lib",
@@ -471,7 +433,6 @@ python_unittest(
     srcs = ["sed_test.py"],
     env = artifacts["env"],
     supports_static_listing = False,
-    runtime_deps = artifacts["deps"],
     deps = [
         "//eden/integration/lib:lib",
     ],
@@ -482,7 +443,6 @@ python_unittest(
     srcs = ["setattr_test.py"],
     env = artifacts["env"],
     supports_static_listing = False,
-    runtime_deps = artifacts["deps"],
     deps = [
         "//eden/integration/lib:lib",
     ],
@@ -493,7 +453,6 @@ python_unittest(
     srcs = ["service_log_test.py"],
     env = artifacts["env"],
     supports_static_listing = False,
-    runtime_deps = artifacts["deps"],
     deps = [
         "//eden/integration/lib:lib",
     ],
@@ -504,7 +463,6 @@ python_unittest(
     srcs = ["stale_test.py"],
     env = artifacts["env"],
     supports_static_listing = False,
-    runtime_deps = artifacts["deps"],
     deps = [
         "//eden/fs/py/eden:config",
         "//eden/integration/lib:lib",
@@ -516,7 +474,6 @@ python_unittest(
     srcs = ["stale_inode_test.py"],
     env = artifacts["env"],
     supports_static_listing = False,
-    runtime_deps = artifacts["deps"],
     deps = [
         "//eden/integration/hg/lib:testutil",
         "//eden/integration/lib:lib",
@@ -528,7 +485,6 @@ python_unittest(
     srcs = ["start_test.py"],
     env = artifacts["env"],
     supports_static_listing = False,
-    runtime_deps = artifacts["deps"],
     deps = [
         "//eden/fs/cli:lib",
         "//eden/integration/lib:lib",
@@ -541,7 +497,6 @@ python_unittest(
     srcs = ["stats_test.py"],
     env = artifacts["env"],
     supports_static_listing = False,
-    runtime_deps = artifacts["deps"],
     deps = [
         "//eden/fs/service:thrift-py-deprecated",
         "//eden/integration/lib:lib",
@@ -553,7 +508,6 @@ python_unittest(
     srcs = ["stop_test.py"],
     env = artifacts["env"],
     supports_static_listing = False,
-    runtime_deps = artifacts["deps"],
     deps = [
         "//eden/fs/cli:lib",
         "//eden/fs/cli:proc_utils",
@@ -566,7 +520,6 @@ python_unittest(
     srcs = ["takeover_test.py"],
     env = artifacts["env"],
     supports_static_listing = False,
-    runtime_deps = artifacts["deps"],
     deps = [
         "fbsource//third-party/pypi/pexpect:pexpect",
         "//eden/fs/cli:lib",
@@ -582,7 +535,6 @@ python_unittest(
     srcs = ["thrift_test.py"],
     env = artifacts["env"],
     supports_static_listing = False,
-    runtime_deps = artifacts["deps"],
     deps = [
         "//eden/fs/config:config_thrift-py-deprecated",
         "//eden/fs/service:thrift-py-deprecated",
@@ -595,7 +547,6 @@ python_unittest(
     srcs = ["unicode_test.py"],
     env = artifacts["env"],
     supports_static_listing = False,
-    runtime_deps = artifacts["deps"],
     deps = [
         "//eden/integration/lib:lib",
     ],
@@ -606,7 +557,6 @@ python_unittest(
     srcs = ["unixsocket_test.py"],
     env = artifacts["env"],
     supports_static_listing = False,
-    runtime_deps = artifacts["deps"],
     deps = [
         "//eden/integration/lib:lib",
     ],
@@ -617,7 +567,6 @@ python_unittest(
     srcs = ["unlink_test.py"],
     env = artifacts["env"],
     supports_static_listing = False,
-    runtime_deps = artifacts["deps"],
     deps = [
         "//eden/integration/lib:lib",
     ],
@@ -628,7 +577,6 @@ python_unittest(
     srcs = ["userinfo_test.py"],
     env = artifacts["env"],
     supports_static_listing = False,
-    runtime_deps = artifacts["deps"],
     deps = [
         "//eden/integration/lib:lib",
     ],
@@ -643,7 +591,6 @@ python_unittest(
     ],
     env = artifacts["env"],
     supports_static_listing = False,
-    runtime_deps = artifacts["deps"],
     deps = [
         "//eden/fs/service:thrift-py-deprecated",
         "//eden/integration/lib:lib",
@@ -658,7 +605,6 @@ python_unittest(
     ],
     env = artifacts["env"],
     supports_static_listing = False,
-    runtime_deps = artifacts["deps"],
     deps = [
         "//eden/integration/lib:lib",
     ],
@@ -673,7 +619,6 @@ python_unittest(
     ],
     env = artifacts["env"],
     supports_static_listing = False,
-    runtime_deps = artifacts["deps"],
     deps = [
         "//eden/integration/lib:lib",
     ],
@@ -688,7 +633,6 @@ python_unittest(
     ],
     env = artifacts["env"],
     supports_static_listing = False,
-    runtime_deps = artifacts["deps"],
     deps = [
         "//eden/integration/lib:lib",
         "//eden/integration/lib:ntapi",
@@ -708,7 +652,6 @@ python_unittest(
     ],
     env = full_artifacts["env"],
     supports_static_listing = False,
-    runtime_deps = full_artifacts["deps"],
     deps = [
         "//eden/integration/lib:lib",
     ],

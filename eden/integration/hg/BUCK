@@ -10,7 +10,6 @@ python_unittest(
     srcs = ["absorb_test.py"],
     env = artifacts["env"],
     supports_static_listing = False,
-    runtime_deps = artifacts["deps"],
     deps = [
         "//eden/integration/hg/lib:testutil",
         "//eden/integration/lib:lib",
@@ -22,7 +21,6 @@ python_unittest(
     srcs = ["add_test.py"],
     env = artifacts["env"],
     supports_static_listing = False,
-    runtime_deps = artifacts["deps"],
     deps = [
         "//eden/integration/hg/lib:testutil",
         "//eden/integration/lib:lib",
@@ -34,7 +32,6 @@ python_unittest(
     srcs = ["commit_test.py"],
     env = artifacts["env"],
     supports_static_listing = False,
-    runtime_deps = artifacts["deps"],
     deps = [
         "//eden/integration/hg/lib:testutil",
         "//eden/integration/lib:lib",
@@ -46,7 +43,6 @@ python_unittest(
     srcs = ["copy_test.py"],
     env = artifacts["env"],
     supports_static_listing = False,
-    runtime_deps = artifacts["deps"],
     deps = [
         "//eden/integration/hg/lib:testutil",
         "//eden/integration/lib:lib",
@@ -58,7 +54,6 @@ python_unittest(
     srcs = ["debug_clear_local_caches_test.py"],
     env = artifacts["env"],
     supports_static_listing = False,
-    runtime_deps = artifacts["deps"],
     deps = [
         "//eden/integration/hg/lib:testutil",
         "//eden/integration/lib:lib",
@@ -70,7 +65,6 @@ python_unittest(
     srcs = ["debug_get_parents.py"],
     env = artifacts["env"],
     supports_static_listing = False,
-    runtime_deps = artifacts["deps"],
     deps = [
         "//eden/fs/service:thrift-py-deprecated",
         "//eden/integration/hg/lib:testutil",
@@ -83,7 +77,6 @@ python_unittest(
     srcs = ["debug_hg_dirstate_test.py"],
     env = artifacts["env"],
     supports_static_listing = False,
-    runtime_deps = artifacts["deps"],
     deps = [
         "//eden/integration/hg/lib:testutil",
         "//eden/integration/lib:lib",
@@ -95,7 +88,6 @@ python_unittest(
     srcs = ["diff_test.py"],
     env = artifacts["env"],
     supports_static_listing = False,
-    runtime_deps = artifacts["deps"],
     deps = [
         "//eden/integration/hg/lib:testutil",
         "//eden/integration/lib:lib",
@@ -107,7 +99,6 @@ python_unittest(
     srcs = ["doctor_test.py"],
     env = artifacts["env"],
     supports_static_listing = False,
-    runtime_deps = artifacts["deps"],
     deps = [
         "//eden/fs/service:thrift-py-deprecated",
         "//eden/integration/hg/lib:testutil",
@@ -120,7 +111,6 @@ python_unittest(
     srcs = ["eden_journal_test.py"],
     env = artifacts["env"],
     supports_static_listing = False,
-    runtime_deps = artifacts["deps"],
     deps = [
         "//eden/fs/service:thrift-python-types",
         "//eden/fs/service:thrift-streaming-python-clients",
@@ -136,7 +126,6 @@ python_unittest(
     srcs = ["files_test.py"],
     env = artifacts["env"],
     supports_static_listing = False,
-    runtime_deps = artifacts["deps"],
     deps = [
         "//eden/integration/hg/lib:testutil",
         "//eden/integration/lib:lib",
@@ -148,7 +137,6 @@ python_unittest(
     srcs = ["filteredhg_test.py"],
     env = artifacts["env"],
     supports_static_listing = False,
-    runtime_deps = artifacts["deps"],
     deps = [
         "//eden/integration/hg/lib:testutil",
         "//eden/integration/lib:lib",
@@ -160,7 +148,6 @@ python_unittest(
     srcs = ["filteredhg_clone_test.py"],
     env = artifacts["env"],
     supports_static_listing = False,
-    runtime_deps = artifacts["deps"],
     deps = [
         "//eden/fs/service:thrift-py-deprecated",
         "//eden/integration/hg/lib:testutil",
@@ -173,7 +160,6 @@ python_unittest(
     srcs = ["fold_test.py"],
     env = artifacts["env"],
     supports_static_listing = False,
-    runtime_deps = artifacts["deps"],
     deps = [
         "//eden/integration/hg/lib:testutil",
         "//eden/integration/lib:lib",
@@ -185,7 +171,6 @@ python_unittest(
     srcs = ["graft_test.py"],
     env = artifacts["env"],
     supports_static_listing = False,
-    runtime_deps = artifacts["deps"],
     deps = [
         "//eden/integration/hg/lib:testutil",
         "//eden/integration/lib:lib",
@@ -197,7 +182,6 @@ python_unittest(
     srcs = ["grep_test.py"],
     env = artifacts["env"],
     supports_static_listing = False,
-    runtime_deps = artifacts["deps"],
     deps = [
         "//eden/integration/hg/lib:testutil",
         "//eden/integration/lib:lib",
@@ -209,7 +193,6 @@ python_unittest(
     srcs = ["histedit_test.py"],
     env = artifacts["env"],
     supports_static_listing = False,
-    runtime_deps = artifacts["deps"],
     deps = [
         "//eden/integration/hg/lib:testutil",
         "//eden/integration/lib:lib",
@@ -221,7 +204,6 @@ python_unittest(
     srcs = ["journal_test.py"],
     env = artifacts["env"],
     supports_static_listing = False,
-    runtime_deps = artifacts["deps"],
     deps = [
         "//eden/integration/hg/lib:testutil",
         "//eden/integration/lib:lib",
@@ -233,7 +215,6 @@ python_unittest(
     srcs = ["merge_test.py"],
     env = artifacts["env"],
     supports_static_listing = False,
-    runtime_deps = artifacts["deps"],
     deps = [
         "//eden/integration/hg/lib:testutil",
         "//eden/integration/lib:lib",
@@ -245,7 +226,6 @@ python_unittest(
     srcs = ["move_test.py"],
     env = artifacts["env"],
     supports_static_listing = False,
-    runtime_deps = artifacts["deps"],
     deps = [
         "//eden/integration/hg/lib:testutil",
         "//eden/integration/lib:lib",
@@ -257,7 +237,6 @@ python_unittest(
     srcs = ["negative_caching_test.py"],
     env = artifacts["env"],
     supports_static_listing = False,
-    runtime_deps = artifacts["deps"],
     deps = [
         "//eden/integration/hg/lib:testutil",
         "//eden/integration/lib:lib",
@@ -269,7 +248,6 @@ python_unittest(
     srcs = ["non_eden_operation_test.py"],
     env = artifacts["env"],
     supports_static_listing = False,
-    runtime_deps = artifacts["deps"],
     deps = [
         "//eden/integration/hg/lib:testutil",
         "//eden/integration/lib:lib",
@@ -281,7 +259,6 @@ python_unittest(
     srcs = ["post_clone_test.py"],
     env = artifacts["env"],
     supports_static_listing = False,
-    runtime_deps = artifacts["deps"],
     deps = [
         "//eden/integration/hg/lib:testutil",
         "//eden/integration/lib:lib",
@@ -293,7 +270,6 @@ python_unittest(
     srcs = ["pull_test.py"],
     env = artifacts["env"],
     supports_static_listing = False,
-    runtime_deps = artifacts["deps"],
     deps = [
         "//eden/integration/hg/lib:testutil",
         "//eden/integration/lib:lib",
@@ -305,7 +281,6 @@ python_unittest(
     srcs = ["rebase_test.py"],
     env = artifacts["env"],
     supports_static_listing = False,
-    runtime_deps = artifacts["deps"],
     deps = [
         "//eden/integration/hg/lib:testutil",
         "//eden/integration/lib:lib",
@@ -317,7 +292,6 @@ python_unittest(
     srcs = ["revert_test.py"],
     env = artifacts["env"],
     supports_static_listing = False,
-    runtime_deps = artifacts["deps"],
     deps = [
         "//eden/integration/hg/lib:testutil",
         "//eden/integration/lib:lib",
@@ -329,7 +303,6 @@ python_unittest(
     srcs = ["rm_test.py"],
     env = artifacts["env"],
     supports_static_listing = False,
-    runtime_deps = artifacts["deps"],
     deps = [
         "//eden/integration/hg/lib:testutil",
         "//eden/integration/lib:lib",
@@ -341,7 +314,6 @@ python_unittest(
     srcs = ["rollback_test.py"],
     env = artifacts["env"],
     supports_static_listing = False,
-    runtime_deps = artifacts["deps"],
     deps = [
         "//eden/integration/hg/lib:testutil",
         "//eden/integration/lib:lib",
@@ -353,7 +325,6 @@ python_unittest(
     srcs = ["shelve_test.py"],
     env = artifacts["env"],
     supports_static_listing = False,
-    runtime_deps = artifacts["deps"],
     deps = [
         "//eden/integration/hg/lib:testutil",
         "//eden/integration/lib:lib",
@@ -365,7 +336,6 @@ python_unittest(
     srcs = ["sparse_test.py"],
     env = artifacts["env"],
     supports_static_listing = False,
-    runtime_deps = artifacts["deps"],
     deps = [
         "//eden/integration/hg/lib:testutil",
         "//eden/integration/lib:lib",
@@ -377,7 +347,6 @@ python_unittest(
     srcs = ["split_test.py"],
     env = artifacts["env"],
     supports_static_listing = False,
-    runtime_deps = artifacts["deps"],
     deps = [
         "//eden/integration/hg/lib:testutil",
         "//eden/integration/lib:lib",
@@ -389,7 +358,6 @@ python_unittest(
     srcs = ["status_deadlock_test.py"],
     env = artifacts["env"],
     supports_static_listing = False,
-    runtime_deps = artifacts["deps"],
     deps = [
         "//eden/integration/hg/lib:testutil",
         "//eden/integration/lib:lib",
@@ -407,7 +375,6 @@ python_unittest(
         ),
     ],
     supports_static_listing = False,
-    runtime_deps = artifacts["deps"],
     deps = [
         "//eden/fs/service:thrift-py-deprecated",
         "//eden/integration/hg/lib:testutil",
@@ -421,7 +388,6 @@ python_unittest(
     srcs = ["storage_engine_test.py"],
     env = artifacts["env"],
     supports_static_listing = False,
-    runtime_deps = artifacts["deps"],
     deps = [
         "//eden/integration/hg/lib:testutil",
         "//eden/integration/lib:lib",
@@ -433,7 +399,6 @@ python_unittest(
     srcs = ["symlink_test.py"],
     env = artifacts["env"],
     supports_static_listing = False,
-    runtime_deps = artifacts["deps"],
     deps = [
         "//eden/integration/hg/lib:testutil",
         "//eden/integration/lib:lib",
@@ -445,7 +410,6 @@ python_unittest(
     srcs = ["undo_test.py"],
     env = artifacts["env"],
     supports_static_listing = False,
-    runtime_deps = artifacts["deps"],
     deps = [
         "//eden/integration/hg/lib:testutil",
         "//eden/integration/lib:lib",
@@ -457,7 +421,6 @@ python_unittest(
     srcs = ["update_test.py"],
     env = artifacts["env"],
     supports_static_listing = False,
-    runtime_deps = artifacts["deps"],
     deps = [
         "//eden/fs/cli:lib",
         "//eden/fs/service:thrift-py-deprecated",
@@ -471,7 +434,6 @@ python_unittest(
     srcs = ["uncommit_test.py"],
     env = artifacts["env"],
     supports_static_listing = False,
-    runtime_deps = artifacts["deps"],
     deps = [
         "//eden/integration/hg/lib:testutil",
         "//eden/integration/lib:lib",

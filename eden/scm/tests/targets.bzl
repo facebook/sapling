@@ -154,14 +154,12 @@ def run_tests_target(
     resources = dict(_RT_RESOURCES)
     if not eden:
         ENV = dict(_RT_ENV)
-        rt_deps = []
     else:
         artifacts = get_integration_test_env_and_deps()
         ENV = artifacts["env"]
         ENV.update(_RT_ENV)
         ENV["HGTEST_RUN_TESTS_PY"] = "$(location :run_tests_py_eden)"
         ENV["HGTEST_USE_EDEN"] = "1"
-        rt_deps = artifacts["deps"]
     if watchman:
         ENV["HGTEST_WATCHMAN"] = "$(location //watchman:watchman)"
         resources["//watchman:watchman"] = "watchman"
@@ -175,8 +173,6 @@ def run_tests_target(
         resources["//eden/mononoke/tests/integration/certs/facebook:test_certs"] = "certs"
         resources["//eden/mononoke/tests/integration:get_free_socket"] = "get_free_socket.par"
         resources["//eden/mononoke:mononoke"] = "mononoke"
-        rt_deps.append("//eden/mononoke/tests/integration/certs/facebook:test_certs")
-        rt_deps.append("//eden/mononoke/tests/integration:test_fixtures")
     if excluded:
         ENV["HGTEST_EXCLUDED"] = excluded
     if included:
@@ -197,7 +193,6 @@ def run_tests_target(
         env = ENV,
         resources = resources,
         supports_static_listing = False,
-        runtime_deps = rt_deps,
         **kwargs
     )
     buck_command_alias(

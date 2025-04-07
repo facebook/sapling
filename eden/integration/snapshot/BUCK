@@ -44,7 +44,6 @@ python_unittest(
     srcs = ["test_snapshots.py"],
     env = artifacts["env"],
     supports_static_listing = False,
-    runtime_deps = artifacts["deps"],
     deps = [
         ":snapshot",
         "//eden/integration/lib:lib",
