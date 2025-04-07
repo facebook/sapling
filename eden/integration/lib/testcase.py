@@ -153,7 +153,7 @@ class EdenTestCase(EdenTestCaseBase):
                     f"Failed to start edenfs, retrying in {retry_time} seconds. Error: {e}"
                 )
 
-                self.eden.kill()
+                self.eden.kill(retry=True)
                 self.new_tmp_dir()
 
                 time.sleep(retry_time)

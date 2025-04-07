@@ -40,6 +40,8 @@ class EdenFS:
     """Manages an instance of the EdenFS fuse server."""
 
     _eden_dir: Path
+    start_time: float = 0.0
+    last_event: float = 0.0
 
     def __init__(
         self,
@@ -131,18 +133,32 @@ class EdenFS:
         self.cleanup()
         return False
 
+    def report_time(self, event: str) -> None:
+        """
+        report_time() is a helper function for logging how long different
+        parts of the test took.
+
+        Each time it is called it logs a message containing the time since the
+        test started and the time since the last time report_time() was called.
+        """
+        now = time.time()
+        since_last = now - self.last_event
+        since_start = now - self.start_time
+        logging.info("=== Eden %s at %.03fs (+%0.3fs)", event, since_start, since_last)
+        self.last_event = now
+
     def cleanup(self) -> None:
         """Stop the instance and clean up its temporary directories"""
         self.kill()
         if self._cleanup_base_dir:
             shutil.rmtree(self._base_dir, ignore_errors=True)
 
-    def kill(self) -> None:
+    def kill(self, retry=False) -> None:
         """Stops and unmounts this instance."""
         process = self._process
         if process is None or process.returncode is not None:
             return
-        self.shutdown()
+        self.shutdown(retry=retry)
 
     def kill_dirty(self) -> None:
         """Kills privhelper and this instance directly, without waiting for cleanup.
@@ -307,6 +323,9 @@ class EdenFS:
         You might want to avoid blocking on restart if you are injecting a
         blocking fault into restart/start.
         """
+        self.start_time = time.time()
+        self.last_event = self.start_time
+
         use_gdb = False
         if os.environ.get("EDEN_GDB"):
             use_gdb = True
@@ -444,7 +463,7 @@ class EdenFS:
 
         self._process = process
 
-    def shutdown(self) -> None:
+    def shutdown(self, retry=False) -> None:
         """
         Run "eden shutdown" to stop the eden daemon.
         """
@@ -457,31 +476,73 @@ class EdenFS:
             self.get_thrift_client_legacy, self.eden_dir, timeout=30
         ).pid
 
+        self.report_time(
+            f"Shutting down eden with pid {process.pid}, daemon pid: {daemon_pid}"
+        )
+
+        timeout = EDENFS_STOP_TIMEOUT
+        if retry:
+            # If we know eden is already in a bad state use a more aggressive timeout value
+            # to prevent overall test timeouts.
+            timeout = 10
+
         # Run "edenfsctl stop" with a timeout of 0 to tell it not to wait for the EdenFS
         # process to exit.  Since we are running it directly (self._process) we will
         # need to wait on it.  Depending on exactly how it is being run the process may
         # not go away until we wait on it.
-        self.run_cmd("stop", "-t", "0")
-
-        self._process = None
         try:
-            return_code = process.wait(timeout=EDENFS_STOP_TIMEOUT)
+            if process.returncode:
+                # Process has already terminated.
+                self.report_time(
+                    f"Eden process has already terminated with return code {process.returncode}."
+                )
+                self._process = None
+                return
+
+            self.run_cmd("stop", "-t", "0")
+            return_code = process.wait(timeout=timeout)
         except subprocess.TimeoutExpired:
             # EdenFS did not exit normally on its own.
+            self.report_time("Eden stop timed out, killing process")
             if can_run_sudo() and daemon_pid is not None:
                 os.kill(daemon_pid, signal.SIGKILL)
             else:
                 process.kill()
-            process.wait(timeout=10)
-            raise Exception(
-                f"edenfs did not shutdown within {EDENFS_STOP_TIMEOUT} seconds; "
-                "had to send SIGKILL"
-            )
+            return_code = process.wait(timeout=10)
+            if not retry:
+                raise Exception(
+                    f"edenfs did not shutdown within {timeout} seconds; "
+                    "had to send SIGKILL"
+                )
+        except EdenCommandError as e:
+            # EdenFS did not exit normally on its own.
+            self.report_time(f"Got EdenCommandError {e.returncode} {e.stderr}")
+            if e.returncode == 2 and "edenfs is not running" in e.stderr:
+                self.report_time("edenfs was not running, killing old process")
+                if can_run_sudo() and daemon_pid is not None:
+                    os.kill(daemon_pid, signal.SIGKILL)
+                else:
+                    process.kill()
+                return_code = process.wait(timeout=10)
+                self.report_time(f"process exited with return code {return_code}")
+                if retry:
+                    return
+                else:
+                    raise Exception(
+                        f"edenfs did not shutdown within {timeout} seconds; "
+                        "had to send SIGKILL"
+                    )
+            else:
+                self.report_time(f"Hit unhandled EdenCommandError: {e}")
+                raise
+        finally:
+            self._process = None
 
-        if return_code != 0:
+        if return_code != 0 and not retry:
             raise Exception(
                 "eden exited unsuccessfully with status {}".format(return_code)
             )
+        self.report_time("Shutdown complete")
 
     def restart(self) -> None:
         self.shutdown()
