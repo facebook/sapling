@@ -204,7 +204,7 @@ impl TryFrom<AugmentedTree> for TreeEntry {
             hgid: aug_tree.hg_node_id,
             ..Default::default()
         });
-        let mut buf: Vec<u8> = Vec::with_capacity(aug_tree.sapling_tree_blob_size());
+        let mut buf: Vec<u8> = Vec::with_capacity(aug_tree.sapling_tree_blob_size);
         aug_tree
             .write_sapling_tree_blob(&mut buf)
             .map_err(|e| TreeError::AugmentedTreeConversionError(e.to_string()))?;

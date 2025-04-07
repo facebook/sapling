@@ -53,6 +53,7 @@ Can also fetch tree data.
               ),
           ),
       ],
+      sapling_tree_blob_size: 89,
   }
 
 
@@ -128,6 +129,7 @@ Then fetch "dir" from CAS:
                                   ),
                               ),
                           ],
+                          sapling_tree_blob_size: 46,
                       },
                   },
               ),

@@ -193,8 +193,7 @@ impl TreeStore {
         augmented_tree: AugmentedTree,
         tree_aux_store: &Arc<TreeAuxStore>,
     ) -> Result<ScmBlob> {
-        let mut sapling_tree_blob =
-            Vec::<u8>::with_capacity(augmented_tree.sapling_tree_blob_size());
+        let mut sapling_tree_blob = Vec::<u8>::with_capacity(augmented_tree.sapling_tree_blob_size);
         augmented_tree.write_sapling_tree_blob(&mut sapling_tree_blob)?;
 
         for (_path, entry) in augmented_tree.entries {

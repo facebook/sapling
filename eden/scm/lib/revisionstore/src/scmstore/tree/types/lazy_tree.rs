@@ -68,7 +68,7 @@ impl LazyTree {
             SaplingRemoteApi(entry) => entry.data()?,
             Cas(entry) => {
                 let tree = &entry.augmented_tree;
-                let mut data = Vec::with_capacity(tree.sapling_tree_blob_size());
+                let mut data = Vec::with_capacity(tree.sapling_tree_blob_size);
                 tree.write_sapling_tree_blob(&mut data)?;
                 data.into()
             }

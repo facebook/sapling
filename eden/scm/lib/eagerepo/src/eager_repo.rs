@@ -510,6 +510,7 @@ impl EagerRepo {
                 let (parents, data) = Self::extract_parents_from_tree_data_hg(sapling_manifest)?;
                 let tree_entry = manifest_tree::TreeEntry(data, SerializationFormat::Hg);
                 let mut entries: Vec<(PathComponentBuf, AugmentedTreeEntry)> = Vec::new();
+                let mut sapling_tree_blob_size = 0;
                 for child in tree_entry.elements() {
                     let child = child?;
                     let hgid = child.hgid;
@@ -523,6 +524,9 @@ impl EagerRepo {
                                 AugmentedTreeWithDigest::try_deserialize_digest(
                                     &mut std::io::Cursor::new(subtree_bytes.unwrap()),
                                 )?;
+
+                            sapling_tree_blob_size += HgId::hex_len() + 1;
+
                             AugmentedTreeEntry::DirectoryNode(AugmentedDirectoryNode {
                                 treenode: hgid,
                                 augmented_manifest_id: hash,
@@ -546,6 +550,8 @@ impl EagerRepo {
                                 CasPointer::File(hgid),
                             )?;
 
+                            sapling_tree_blob_size += HgId::hex_len();
+
                             AugmentedTreeEntry::FileNode(AugmentedFileNode {
                                 file_type,
                                 filenode: hgid,
@@ -560,6 +566,7 @@ impl EagerRepo {
                             })
                         }
                     };
+                    sapling_tree_blob_size += child.component.len() + 2;
                     entries.push((child.component, entry));
                 }
 
@@ -569,6 +576,7 @@ impl EagerRepo {
                     p1: parents.p1().copied(),
                     p2: parents.p2().copied(),
                     entries,
+                    sapling_tree_blob_size,
                 };
 
                 let digest = aug_tree.compute_content_addressed_digest()?;

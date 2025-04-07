@@ -68,25 +68,10 @@ pub struct AugmentedTree {
     pub p1: Option<HgId>,
     pub p2: Option<HgId>,
     pub entries: Vec<(PathComponentBuf, AugmentedTreeEntry)>,
+    pub sapling_tree_blob_size: usize,
 }
 
 impl AugmentedTree {
-    pub fn sapling_tree_blob_size(&self) -> usize {
-        let mut size: usize = 0;
-        for (path, subentry) in self.entries.iter() {
-            size += path.len() + 2;
-            match subentry {
-                AugmentedTreeEntry::DirectoryNode(_) => {
-                    size += HgId::hex_len() + 1;
-                }
-                AugmentedTreeEntry::FileNode(_) => {
-                    size += HgId::hex_len();
-                }
-            };
-        }
-        size
-    }
-
     pub fn write_sapling_tree_blob(&self, mut w: impl Write) -> Result<()> {
         for (path, subentry) in self.entries.iter() {
             w.write_all(path.as_ref())?;
@@ -291,98 +276,112 @@ impl AugmentedTree {
             Some(HgId::from_hex(p2.as_ref())?)
         };
 
+        let mut sapling_tree_blob_size = 0;
+
+        let entries = reader
+        .lines()
+        .map(|line| {
+            let line = line?;
+            let line = line.trim();
+
+            let (path, rest) = line
+                .split_once('\0')
+                .ok_or(anyhow!("augmented tree: invalid format of a child entry"))?;
+
+            let mut parts = rest.split(' ');
+            let id = parts.next().ok_or(anyhow!(
+                "augmented tree: missing id part in a child entry"
+            ))?;
+
+            let mut id = id.to_string();
+            let flag = id.pop().ok_or(anyhow!(
+                "augmented tree: missing flag part in a child entry"
+            ))?;
+            let hgid = HgId::from_hex(id.as_ref())?;
+            let blake3 = parts.next().ok_or(anyhow!(
+                "augmented tree: missing blake3 part in a child entry"
+            ))?;
+            let blake3 = Blake3::from_hex(blake3.as_ref())?;
+
+            let size = parts
+                .next()
+                .ok_or(anyhow!(
+                    "augmented tree: missing size part in a child entry"
+                ))?
+                .trim();
+            let size = size.parse::<u64>()?;
+
+            let path = PathComponentBuf::try_from(path.to_string())?;
+            sapling_tree_blob_size += path.len() + 2;
+
+            match flag {
+                't' => {
+                    sapling_tree_blob_size += HgId::hex_len() + 1;
+
+                    Ok((
+                        path,
+                        AugmentedTreeEntry::DirectoryNode(AugmentedDirectoryNode {
+                            treenode: hgid,
+                            augmented_manifest_id: blake3,
+                            augmented_manifest_size: size,
+                        }),
+                    ))
+                },
+                _ => {
+                    sapling_tree_blob_size += HgId::hex_len();
+
+                    let sha1 = parts
+                        .next()
+                        .ok_or(anyhow!(
+                            "augmented tree: missing sha1 part in a child entry"
+                        ))?
+                        .trim();
+
+                    let sha1 = Sha1::from_hex(sha1.as_ref())?;
+
+                    let file_header_metadata = parts
+                    .next()
+                    .ok_or(anyhow!(
+                        "augmented tree: missing file_header_metadata part in a child entry"
+                    ))?
+                    .trim();
+
+                    let file_header_metadata = if file_header_metadata == "-" {
+                        None
+                    } else {
+                        Some(Bytes::from(
+                            STANDARD_INDIFFERENT.decode(file_header_metadata)?,
+                        ))
+                    };
+
+                    Ok((
+                        path,
+                        AugmentedTreeEntry::FileNode(AugmentedFileNode {
+                            file_type: match flag {
+                                'l' => FileType::Symlink,
+                                'x' => FileType::Executable,
+                                'r' => FileType::Regular,
+                                _ => bail!("augmented tree: invalid flag '{flag}' in a child entry for tree {hg_node_id}")
+                            },
+                            filenode: hgid,
+                            content_blake3: blake3,
+                            content_sha1: sha1,
+                            total_size: size,
+                            file_header_metadata,
+                        }),
+                    ))
+                }
+            }
+        })
+        .collect::<anyhow::Result<Vec<(PathComponentBuf, AugmentedTreeEntry)>, Error>>()?;
+
         anyhow::Ok(Self {
             hg_node_id,
             computed_hg_node_id,
             p1,
             p2,
-            entries: reader
-                .lines()
-                .map(|line| {
-                    let line = line?;
-                    let line = line.trim();
-
-                    let (path, rest) = line
-                        .split_once('\0')
-                        .ok_or(anyhow!("augmented tree: invalid format of a child entry"))?;
-
-                    let mut parts = rest.split(' ');
-                    let id = parts.next().ok_or(anyhow!(
-                        "augmented tree: missing id part in a child entry"
-                    ))?;
-
-                    let mut id = id.to_string();
-                    let flag = id.pop().ok_or(anyhow!(
-                        "augmented tree: missing flag part in a child entry"
-                    ))?;
-                    let hgid = HgId::from_hex(id.as_ref())?;
-                    let blake3 = parts.next().ok_or(anyhow!(
-                        "augmented tree: missing blake3 part in a child entry"
-                    ))?;
-                    let blake3 = Blake3::from_hex(blake3.as_ref())?;
-
-                    let size = parts
-                        .next()
-                        .ok_or(anyhow!(
-                            "augmented tree: missing size part in a child entry"
-                        ))?
-                        .trim();
-                    let size = size.parse::<u64>()?;
-
-                    match flag {
-                        't' => Ok((
-                            path.to_string().try_into()?,
-                            AugmentedTreeEntry::DirectoryNode(AugmentedDirectoryNode {
-                                treenode: hgid,
-                                augmented_manifest_id: blake3,
-                                augmented_manifest_size: size,
-                            }),
-                        )),
-                        _ => {
-                            let sha1 = parts
-                                .next()
-                                .ok_or(anyhow!(
-                                    "augmented tree: missing sha1 part in a child entry"
-                                ))?
-                                .trim();
-
-                            let sha1 = Sha1::from_hex(sha1.as_ref())?;
-
-                            let file_header_metadata = parts
-                            .next()
-                            .ok_or(anyhow!(
-                                "augmented tree: missing file_header_metadata part in a child entry"
-                            ))?
-                            .trim();
-
-                            let file_header_metadata = if file_header_metadata == "-" {
-                                None
-                            } else {
-                                Some(Bytes::from(
-                                    STANDARD_INDIFFERENT.decode(file_header_metadata)?,
-                                ))
-                            };
-
-                            Ok((
-                                path.to_string().try_into()?,
-                                AugmentedTreeEntry::FileNode(AugmentedFileNode {
-                                    file_type: match flag {
-                                        'l' => FileType::Symlink,
-                                        'x' => FileType::Executable,
-                                        'r' => FileType::Regular,
-                                        _ => bail!("augmented tree: invalid flag '{flag}' in a child entry for tree {hg_node_id}")
-                                    },
-                                    filenode: hgid,
-                                    content_blake3: blake3,
-                                    content_sha1: sha1,
-                                    total_size: size,
-                                    file_header_metadata,
-                                }),
-                            ))
-                        }
-                    }
-                })
-                .collect::<anyhow::Result<Vec<(PathComponentBuf, AugmentedTreeEntry)>, Error>>()?,
+            entries,
+            sapling_tree_blob_size,
         })
     }
 
@@ -523,7 +522,7 @@ mod tests {
             ))
         );
         // validate that the size calculation is correct
-        assert_eq!(buf.len(), augmented_tree_entry.sapling_tree_blob_size());
+        assert_eq!(buf.len(), augmented_tree_entry.sapling_tree_blob_size);
     }
 
     #[test]
@@ -614,7 +613,7 @@ mod tests {
                 "row_level_policy\x000238567d1c15525d8b2f2d366bd4aa306e20d8dft\n"
             ))
         );
-        assert_eq!(buf.len(), augmented_tree_entry.sapling_tree_blob_size());
+        assert_eq!(buf.len(), augmented_tree_entry.sapling_tree_blob_size);
     }
 
     #[test]
