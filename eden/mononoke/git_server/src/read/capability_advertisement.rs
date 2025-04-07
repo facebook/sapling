@@ -50,6 +50,8 @@ async fn advertise_capability(
     service_type: Service,
     repo_name: &str,
 ) -> Result<Vec<u8>, Error> {
+    let client_untrusted = request_context.ctx.metadata().client_untrusted();
+
     let mut output = Vec::new();
 
     write_text_packetline(
@@ -59,14 +61,20 @@ async fn advertise_capability(
     .await?;
     flush_to_write(&mut output).await?;
     match service_type {
-        Service::GitUploadPack => read_advertisement(&mut output, repo_name).await?,
+        Service::GitUploadPack => {
+            read_advertisement(&mut output, repo_name, client_untrusted).await?
+        }
         Service::GitReceivePack => write_advertisement(request_context, &mut output).await?,
     }
     flush_to_write(&mut output).await?;
     Ok(output)
 }
 
-async fn read_advertisement(output: &mut Vec<u8>, repo_name: &str) -> Result<(), Error> {
+async fn read_advertisement(
+    output: &mut Vec<u8>,
+    repo_name: &str,
+    client_untrusted: bool,
+) -> Result<(), Error> {
     write_text_packetline(format!("version {}", VERSION).as_bytes(), output).await?;
     for capability in UPLOAD_PACK_CAPABILITIES {
         write_text_packetline(capability.as_bytes(), output).await?;
@@ -77,6 +85,7 @@ async fn read_advertisement(output: &mut Vec<u8>, repo_name: &str) -> Result<(),
         Some(repo_name),
     )
     .unwrap_or(false)
+        && !client_untrusted
     {
         write_text_packetline(BUNDLE_URI_CAPABILITY.as_bytes(), output).await?;
     }

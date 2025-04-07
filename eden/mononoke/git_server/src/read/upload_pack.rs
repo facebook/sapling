@@ -352,17 +352,19 @@ async fn bundle_uri(
 ) -> Result<impl TryIntoResponse, Error> {
     let mut out: Vec<u8> = b"bundle.version=1\nbundle.mode=all".into();
 
-    let bundle_uri = &request_context.repo.git_bundle_uri;
-    let bundle_list = bundle_uri.get_latest_bundle_list().await?;
+    if !request_context.ctx.metadata().client_untrusted() {
+        let bundle_uri = &request_context.repo.git_bundle_uri;
+        let bundle_list = bundle_uri.get_latest_bundle_list().await?;
 
-    if let Some(bundle_list) = bundle_list {
-        for bundle in bundle_list.bundles.iter() {
-            let uri = bundle_uri
-                .get_url_for_bundle_handle(60, &bundle.handle)
-                .await?;
+        if let Some(bundle_list) = bundle_list {
+            for bundle in bundle_list.bundles.iter() {
+                let uri = bundle_uri
+                    .get_url_for_bundle_handle(60, &bundle.handle)
+                    .await?;
 
-            let str = format!("\nbundle.bundle_{}.uri={}", bundle.fingerprint, uri,);
-            out.extend_from_slice(str.as_bytes());
+                let str = format!("\nbundle.bundle_{}.uri={}", bundle.fingerprint, uri,);
+                out.extend_from_slice(str.as_bytes());
+            }
         }
     }
 
