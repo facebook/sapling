@@ -55,6 +55,8 @@ use rate_limiting::Metric;
 use rate_limiting::Scope;
 use repo_blobstore::RepoBlobstoreRef;
 use serde::Deserialize;
+use stats::define_stats;
+use stats::prelude::TimeseriesStatic;
 use types::Key;
 use types::RepoPathBuf;
 
@@ -70,6 +72,11 @@ use crate::middleware::request_dumper::RequestDumper;
 use crate::utils::custom_cbor_stream;
 use crate::utils::get_repo;
 use crate::utils::parse_wire_request;
+
+define_stats! {
+    prefix = "mononoke.trees";
+    manifests_served: timeseries(Rate, Sum),
+}
 
 // The size is optimized for the batching settings in EdenFs.
 const MAX_CONCURRENT_TREE_FETCHES_PER_REQUEST: usize = 128;
@@ -131,6 +138,7 @@ fn fetch_all_trees<R: MononokeRepo>(
         .inspect_ok(move |_| {
             ctx.session()
                 .bump_load(Metric::TotalManifests, Scope::Regional, 1.0);
+            STATS::manifests_served.add_value(1);
         })
 }
 

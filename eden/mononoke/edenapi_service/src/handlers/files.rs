@@ -61,6 +61,8 @@ use rate_limiting::Metric;
 use rate_limiting::Scope;
 use revisionstore_types::Metadata;
 use serde::Deserialize;
+use stats::define_stats;
+use stats::prelude::TimeseriesStatic;
 use types::key::Key;
 use types::parents::Parents;
 
@@ -79,6 +81,11 @@ use crate::utils::get_repo;
 const MAX_CONCURRENT_FILE_FETCHES_PER_REQUEST: usize = 32;
 
 const MAX_CONCURRENT_UPLOAD_FILENODES_PER_REQUEST: usize = 1000;
+
+define_stats! {
+    prefix = "mononoke.files";
+    files_served: timeseries(Rate, Sum),
+}
 
 #[derive(Debug, Deserialize, StateData, StaticResponseExtender)]
 pub struct UploadFileParams {
@@ -147,6 +154,8 @@ impl SaplingRemoteApiHandler for Files2Handler {
                     if result.result.is_ok() {
                         ctx.session()
                             .bump_load(Metric::GetpackFiles, Scope::Regional, 1.0);
+
+                        STATS::files_served.add_value(1);
                     }
                 }
             })
