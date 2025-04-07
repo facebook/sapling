@@ -1296,9 +1296,13 @@ class EdenConfig : private ConfigSettingManager {
       100,
       this};
 
+  // TODO: Understand why long running requests are hit so frequently on Windows
+  // hosts. For now, disable the config on Windows because too many Scuba
+  // samples are generated.
   ConfigSetting<std::chrono::nanoseconds> longRunningFSRequestThreshold{
       "telemetry:long-running-fs-request-threshold",
-      std::chrono::seconds{45},
+      folly::kIsWindows ? std::chrono::nanoseconds(0)
+                        : std::chrono::seconds{45},
       this};
 
   // [experimental]

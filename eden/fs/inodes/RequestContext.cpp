@@ -19,7 +19,8 @@ namespace facebook::eden {
 
 void RequestContext::reportLongRunningRequest(
     const std::chrono::nanoseconds& duration) {
-  if (duration > longRunningFsRequestThreshold_) {
+  if (longRunningFsRequestThreshold_.count() != 0 &&
+      duration > longRunningFsRequestThreshold_) {
     auto detail = fsObjectFetchContext_->getCauseDetail().value_or("unknown");
     XLOGF(WARN, "Request {} took {}ns", detail, duration.count());
     logger_->logEvent(
