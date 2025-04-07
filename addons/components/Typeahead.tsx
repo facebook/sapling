@@ -8,7 +8,8 @@
 import type {TypeaheadResult} from './Types';
 import type {ReactProps} from './utils';
 
-import {useEffect, useRef, useState} from 'react';
+import {useCallback, useEffect, useMemo, useRef, useState} from 'react';
+import {debounce} from 'shared/debounce';
 import {Icon} from './Icon';
 import {Subtle} from './Subtle';
 import {TextField} from './TextField';
@@ -23,6 +24,7 @@ export function Typeahead({
   renderExtra,
   maxTokens,
   autoFocus,
+  debounceInterval,
   ...rest
 }: {
   tokenString: string;
@@ -36,6 +38,7 @@ export function Typeahead({
   renderExtra?: (saveNewValue: (value: string) => void) => React.ReactNode;
   maxTokens?: number;
   autoFocus: boolean;
+  debounceInterval?: number;
 } & ReactProps<HTMLInputElement>) {
   const ref = useRef<HTMLInputElement>(null);
 
@@ -51,23 +54,38 @@ export function Typeahead({
 
   const [selectedSuggestionIndex, setSelectedIndex] = useState(0);
 
+  const fetchTokenHandler = useCallback(
+    (value: string, previousTokens: Array<string>) => {
+      fetchTokens(value).then(({values, fetchStartTimestamp}) => {
+        // don't show typeahead suggestions that are already entered
+        const newValues = values.filter(v => !previousTokens.includes(v.value));
+
+        setTypeaheadSuggestions(last =>
+          last?.type === 'success' && last.timestamp > fetchStartTimestamp
+            ? // this result is older than the one we've already set: ignore it
+              last
+            : {type: 'success', values: newValues, timestamp: fetchStartTimestamp},
+        );
+      });
+    },
+    [fetchTokens],
+  );
+
+  const debouncedFetchTokenHandler = useMemo(() => {
+    return debounce(fetchTokenHandler, debounceInterval ?? 0);
+  }, [debounceInterval, fetchTokenHandler]);
+
   const onInput = (event: {target: EventTarget | null}) => {
     const newValue = (event?.target as HTMLInputElement)?.value;
     setTokenString(tokensToString(tokens, newValue));
+
     if (typeaheadSuggestions?.type !== 'success' || typeaheadSuggestions.values.length === 0) {
       setTypeaheadSuggestions({type: 'loading'});
     }
-    fetchTokens(newValue).then(({values, fetchStartTimestamp}) => {
-      // don't show typeahead suggestions that are already entered
-      const newValues = values.filter(v => !tokens.includes(v.value));
 
-      setTypeaheadSuggestions(last =>
-        last?.type === 'success' && last.timestamp > fetchStartTimestamp
-          ? // this result is older than the one we've already set: ignore it
-            last
-          : {type: 'success', values: newValues, timestamp: fetchStartTimestamp},
-      );
-    });
+    debounceInterval
+      ? debouncedFetchTokenHandler(newValue, tokens)
+      : fetchTokenHandler(newValue, tokens);
   };
 
   const saveNewValue = (value: string | undefined) => {
