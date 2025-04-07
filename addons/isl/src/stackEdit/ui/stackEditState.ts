@@ -53,6 +53,9 @@ export type StackEditOpDescription =
       commit: CommitState;
     }
   | {
+      name: 'swap';
+    }
+  | {
       name: 'drop';
       commit: CommitState;
     }
@@ -556,6 +559,7 @@ type StackEditMetrics = {
   fold?: number;
   drop?: number;
   moveUpDown?: number;
+  swapLeftRight?: number;
   moveDnD?: number;
   fileStackEdit?: number;
   splitMoveFile?: number;

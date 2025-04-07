@@ -325,6 +325,8 @@ export function UndoDescription({op}: {op?: StackEditOpDescription}): React.Reac
         return <T replace={replace}>moving down $commit by $offset commits</T>;
       }
     }
+  } else if (op.name === 'swap') {
+    return <T>swap the order of two commits</T>;
   } else if (op.name === 'fold') {
     const replace = {$commit: <CommitTitle commit={op.commit} />};
     return <T replace={replace}>folding down $commit</T>;

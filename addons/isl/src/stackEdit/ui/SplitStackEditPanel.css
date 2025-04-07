@@ -165,9 +165,8 @@ label.split-range-label {
   cursor: pointer;
   margin: calc(-1 * var(--pad) + var(--halfpad));
   padding: var(--halfpad);
-  padding-top: calc(2 * var(--pad));
+  margin-top: calc(2 * var(--pad));
   padding-bottom: 0;
-  margin-top: 0;
   margin-bottom: 0;
   height: 100%;
   transition: background-color 0.1s;

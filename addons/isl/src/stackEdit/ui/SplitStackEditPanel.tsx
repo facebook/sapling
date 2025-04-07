@@ -41,7 +41,7 @@ import {t, T} from '../../i18n';
 import {readAtom} from '../../jotaiUtils';
 import {themeState} from '../../theme';
 import {GeneratedStatus} from '../../types';
-import {isAbsent} from '../commitStackState';
+import {isAbsent, reorderedRevs} from '../commitStackState';
 import {max, next, prev} from '../revMath';
 import {computeLinesForFileStackEditor} from './FileStackEditorLines';
 import {bumpStackEditMetric, SplitRangeRecord, useStackEditState} from './stackEditState';
@@ -137,6 +137,7 @@ export function SplitStackEditPanel() {
     .revs()
     .map(rev => (
       <SplitColumn
+        stackEdit={stackEdit}
         commitStack={commitStack}
         key={rev}
         rev={rev}
@@ -156,6 +157,7 @@ export function SplitStackEditPanel() {
 }
 
 type SplitColumnProps = {
+  stackEdit: UseStackEditState;
   commitStack: CommitStackState;
   subStack: CommitStackState;
   rev: CommitRev;
@@ -191,8 +193,48 @@ function InsertBlankCommitButton({
   );
 }
 
+function SwapCommitsButton({
+  stackEdit,
+  beforeRev,
+}: {
+  stackEdit: UseStackEditState;
+  beforeRev: CommitRev | undefined;
+}) {
+  if (beforeRev == null || beforeRev === 0) {
+    return null;
+  }
+  const state = stackEdit.commitStack;
+  const beforeRevCommit = state.get(beforeRev);
+  if (beforeRevCommit == null) {
+    return null;
+  }
+  const newOrder = reorderedRevs(state, beforeRev);
+  const canSwap = state.canReorder(newOrder);
+  if (!canSwap) {
+    return null;
+  }
+  return (
+    <div
+      className="split-insert-blank-commit-container"
+      role="button"
+      onClick={() => {
+        stackEdit.push(state.reorder(newOrder), {
+          name: 'swap',
+        });
+        bumpStackEditMetric('swapLeftRight');
+      }}>
+      <Tooltip placement="top" title={t('Swap the order of two commits.')}>
+        <div className="split-insert-blank-commit">
+          <Icon icon="arrow-swap" />
+        </div>
+      </Tooltip>
+    </div>
+  );
+}
+
 function SplitColumn(props: SplitColumnProps) {
-  const {commitStack, subStack, rev, insertBlankCommit, applyNewDiffSplitCommits} = props;
+  const {stackEdit, commitStack, subStack, rev, insertBlankCommit, applyNewDiffSplitCommits} =
+    props;
 
   const [collapsedFiles, setCollapsedFiles] = useState(new Set());
 
@@ -319,7 +361,10 @@ function SplitColumn(props: SplitColumnProps) {
   return (
     <>
       {editors.isEmpty() ? null : (
-        <InsertBlankCommitButton beforeRev={rev} onClick={() => insertBlankCommit(rev)} />
+        <Column>
+          <InsertBlankCommitButton beforeRev={rev} onClick={() => insertBlankCommit(rev)} />
+          <SwapCommitsButton stackEdit={stackEdit} beforeRev={rev} />
+        </Column>
       )}
       <div className="split-commit-column">
         <div className="split-commit-header">
