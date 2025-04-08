@@ -69,9 +69,7 @@ Redact file 'C' in commit '477211daba9d'
   >  ]
   > }
   > EOF
-  $ rm rs_0 rs_1
-  rm: cannot remove 'rs_1': No such file or directory
-  [1]
+  $ rm rs_0
 
 The files should now be marked as redacted
   $ mononoke_admin redaction list -R orig -i $C
