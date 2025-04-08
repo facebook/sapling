@@ -76,15 +76,21 @@ Test subtree import failure cases
   $ hg subtree import --url file://$TESTTMP/gitrepo --rev d2a8b3fa3dfa345ea64e02ea014d21b5cabd03e0 --to-path bar -m "import gitrepo to bar" --config subtree.min-path-depth=2
   abort: unable to determine git url from 'file:/*/$TESTTMP/gitrepo' (glob)
   [255]
+  $ hg subtree import --url $GIT_URL --rev b6c31add3e60ded7a9c9c803641edffb1dccd251 --from-path nonexistent_dir --to-path bar
+  creating git repo at $TESTTMP/default-hgcache/gitrepos/* (glob)
+  From file:/*/$TESTTMP/gitrepo (glob)
+   * [new ref]         4487c56011495a40ce2f6c632c24ae57a210747d -> remote/master
+   * [new ref]         b6c31add3e60ded7a9c9c803641edffb1dccd251 -> refs/visibleheads/b6c31add3e60ded7a9c9c803641edffb1dccd251
+  1 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  abort: path 'nonexistent_dir' does not exist in commit b6c31add3e60
+  [255]
 
 Test subtree import the root path of the external repo
 
   $ hg subtree import --url $GIT_URL --rev d2a8b3fa3dfa345ea64e02ea014d21b5cabd03e0 --to-path bar -m "import gitrepo to bar"
-  creating git repo at $TESTTMP/default-hgcache/gitrepos/* (glob)
+  using cached git repo at $TESTTMP/default-hgcache/gitrepos/* (glob)
   From file:/*/$TESTTMP/gitrepo (glob)
-   * [new ref]         4487c56011495a40ce2f6c632c24ae57a210747d -> remote/master
    * [new ref]         d2a8b3fa3dfa345ea64e02ea014d21b5cabd03e0 -> refs/visibleheads/d2a8b3fa3dfa345ea64e02ea014d21b5cabd03e0
-  2 files updated, 0 files merged, 0 files removed, 0 files unresolved
   copying / to bar
   $ hg st --change .
   A bar/alpha

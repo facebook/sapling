@@ -537,6 +537,8 @@ def _do_import(ui, repo, *args, **opts):
 
     git_repo = get_or_clone_git_repo(ui, giturl, from_rev)
     from_ctx = git_repo[from_rev]
+    subtreeutil.validate_path_exist(ui, from_ctx, from_paths, abort_on_missing=True)
+
     copy_files(ui, git_repo, repo, from_ctx, from_paths, to_paths, "import")
 
     from_commit = from_ctx.hex()
