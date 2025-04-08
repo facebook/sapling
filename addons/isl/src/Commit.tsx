@@ -739,7 +739,7 @@ async function maybeWarnAboutRebaseOffWarm(dest: CommitInfo): Promise<boolean> {
   return true;
 }
 
-async function gotoAction(runOperation, commit: CommitInfo) {
+async function gotoAction(runOperation: ReturnType<typeof useRunOperation>, commit: CommitInfo) {
   const dest =
     // If the commit has a remote bookmark, use that instead of the hash. This is easier to read in the command history
     // and works better with optimistic state
