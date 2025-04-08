@@ -9,7 +9,6 @@ import type {EnsureAssignedTogether} from 'shared/EnsureAssignedTogether';
 import type {RepoPath} from 'shared/types/common';
 import type {CommitMessageFields} from '../../CommitInfoView/types';
 import type {CommitRev, CommitStackState, FileMetadata, FileStackIndex} from '../commitStackState';
-import type {PartiallySelectedDiffCommit} from '../diffSplitTypes';
 import type {FileRev, FileStackState} from '../fileStackState';
 import type {UseStackEditState} from './stackEditState';
 
@@ -43,11 +42,15 @@ import {readAtom} from '../../jotaiUtils';
 import {themeState} from '../../theme';
 import {GeneratedStatus} from '../../types';
 import {isAbsent, reorderedRevs} from '../commitStackState';
-import {applyDiffSplit} from '../diffSplit';
 import {max, next, prev} from '../revMath';
 import {AISplitButton} from './AISplit';
 import {computeLinesForFileStackEditor} from './FileStackEditorLines';
-import {bumpStackEditMetric, SplitRangeRecord, useStackEditState} from './stackEditState';
+import {
+  bumpStackEditMetric,
+  findStartEndRevs,
+  SplitRangeRecord,
+  useStackEditState,
+} from './stackEditState';
 
 import './SplitStackEditPanel.css';
 
@@ -110,27 +113,6 @@ export function SplitStackEditPanel() {
     stackEdit.push(newStack, {name: 'insertBlankCommit'}, splitRange);
   };
 
-  const applyNewDiffSplitCommits = (
-    subStack: CommitStackState,
-    rev: CommitRev,
-    commits: ReadonlyArray<PartiallySelectedDiffCommit>,
-  ) => {
-    const [startRev, endRev] = findStartEndRevs(stackEdit);
-    if (startRev != null && endRev != null) {
-      // Replace the current, single rev with the new stack, which might have multiple revs.
-      const newSubStack = applyDiffSplit(subStack, rev, commits);
-      // Replace the [start, end+1] range with the new stack in the commit stack.
-      const newCommitStack = commitStack.applySubStack(startRev, next(endRev), newSubStack);
-      // Find the new split range.
-      const endOffset = newCommitStack.size - commitStack.size;
-      const startKey = newCommitStack.get(rev)?.key ?? '';
-      const endKey = newCommitStack.get(next(rev, endOffset))?.key ?? '';
-      const splitRange = SplitRangeRecord({startKey, endKey});
-      // Update the main stack state.
-      stackEdit.push(newCommitStack, {name: 'splitWithAI'}, splitRange);
-    }
-  };
-
   // One commit per column.
   const columns: JSX.Element[] = subStack
     .revs()
@@ -141,7 +123,6 @@ export function SplitStackEditPanel() {
         key={rev}
         rev={rev}
         subStack={subStack}
-        applyNewDiffSplitCommits={applyNewDiffSplitCommits}
         insertBlankCommit={insertBlankCommit}
       />
     ));
@@ -161,11 +142,6 @@ type SplitColumnProps = {
   subStack: CommitStackState;
   rev: CommitRev;
   insertBlankCommit: (rev: CommitRev) => unknown;
-  applyNewDiffSplitCommits: (
-    subStack: CommitStackState,
-    rev: CommitRev,
-    commits: ReadonlyArray<PartiallySelectedDiffCommit>,
-  ) => unknown;
 };
 
 function InsertBlankCommitButton({
@@ -232,8 +208,7 @@ function SwapCommitsButton({
 }
 
 function SplitColumn(props: SplitColumnProps) {
-  const {stackEdit, commitStack, subStack, rev, insertBlankCommit, applyNewDiffSplitCommits} =
-    props;
+  const {stackEdit, commitStack, subStack, rev, insertBlankCommit} = props;
 
   const [collapsedFiles, setCollapsedFiles] = useState(new Set());
 
@@ -372,10 +347,10 @@ function SplitColumn(props: SplitColumnProps) {
           </span>
           <EditableCommitTitle commitMessage={commitMessage} commitKey={commit?.key} />
           <AISplitButton
+            stackEdit={stackEdit}
             commitStack={commitStack}
             subStack={subStack}
             rev={rev}
-            applyNewDiffSplitCommits={applyNewDiffSplitCommits}
           />
           <Button icon onClick={e => showExtraCommitActionsContextMenu(e)}>
             <Icon icon="ellipsis" />
@@ -808,21 +783,6 @@ function EditableCommitTitle(props: MaybeEditableCommitTitleProps) {
       onInput={e => handleEdit(e.currentTarget?.value)}
     />
   );
-}
-
-function findStartEndRevs(
-  stackEdit: UseStackEditState,
-): [CommitRev | undefined, CommitRev | undefined] {
-  const {splitRange, intention, commitStack} = stackEdit;
-  if (intention === 'split') {
-    return [1 as CommitRev, prev(commitStack.size as CommitRev)];
-  }
-  const startRev = commitStack.findCommitByKey(splitRange.startKey)?.rev;
-  let endRev = commitStack.findCommitByKey(splitRange.endKey)?.rev;
-  if (startRev == null || startRev > (endRev ?? -1)) {
-    endRev = undefined;
-  }
-  return [startRev, endRev];
 }
 
 const splitMessagePrefix = t('Split of "');

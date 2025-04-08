@@ -7,6 +7,7 @@
 
 import type {CommitRev, CommitStackState} from '../commitStackState';
 import type {PartiallySelectedDiffCommit} from '../diffSplitTypes';
+import {findStartEndRevs, SplitRangeRecord, type UseStackEditState} from './stackEditState';
 
 import {Button} from 'isl-components/Button';
 import {InlineErrorBadge} from 'isl-components/ErrorNotice';
@@ -19,17 +20,14 @@ import {Internal} from '../../Internal';
 import {tracker} from '../../analytics';
 import {useFeatureFlagSync} from '../../featureFlags';
 import {t, T} from '../../i18n';
-import {diffCommit} from '../diffSplit';
+import {applyDiffSplit, diffCommit} from '../diffSplit';
+import {next} from '../revMath';
 
 type AISplitButtonProps = {
+  stackEdit: UseStackEditState;
   commitStack: CommitStackState;
   subStack: CommitStackState;
   rev: CommitRev;
-  applyNewDiffSplitCommits: (
-    subStack: CommitStackState,
-    rev: CommitRev,
-    commits: ReadonlyArray<PartiallySelectedDiffCommit>,
-  ) => unknown;
 };
 
 type AISplitButtonLoadingState =
@@ -37,12 +35,7 @@ type AISplitButtonLoadingState =
   | {type: 'LOADING'; id: string}
   | {type: 'ERROR'; error: Error};
 
-export function AISplitButton({
-  commitStack,
-  subStack,
-  rev,
-  applyNewDiffSplitCommits,
-}: AISplitButtonProps) {
+export function AISplitButton({stackEdit, commitStack, subStack, rev}: AISplitButtonProps) {
   const {splitCommitWithAI} = Internal;
   const enableAICommitSplit =
     useFeatureFlagSync(Internal.featureFlags?.AICommitSplit) && splitCommitWithAI != null;
@@ -59,6 +52,27 @@ export function AISplitButton({
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [commitStack]); // Triggered when commitStack changes
+
+  const applyNewDiffSplitCommits = (
+    subStack: CommitStackState,
+    rev: CommitRev,
+    commits: ReadonlyArray<PartiallySelectedDiffCommit>,
+  ) => {
+    const [startRev, endRev] = findStartEndRevs(stackEdit);
+    if (startRev != null && endRev != null) {
+      // Replace the current, single rev with the new stack, which might have multiple revs.
+      const newSubStack = applyDiffSplit(subStack, rev, commits);
+      // Replace the [start, end+1] range with the new stack in the commit stack.
+      const newCommitStack = commitStack.applySubStack(startRev, next(endRev), newSubStack);
+      // Find the new split range.
+      const endOffset = newCommitStack.size - commitStack.size;
+      const startKey = newCommitStack.get(rev)?.key ?? '';
+      const endKey = newCommitStack.get(next(rev, endOffset))?.key ?? '';
+      const splitRange = SplitRangeRecord({startKey, endKey});
+      // Update the main stack state.
+      stackEdit.push(newCommitStack, {name: 'splitWithAI'}, splitRange);
+    }
+  };
 
   const fetch = async () => {
     if (loadingState.type === 'LOADING' || splitCommitWithAI == null) {

@@ -8,7 +8,7 @@
 import type {RecordOf} from 'immutable';
 import type {ExportStack} from 'shared/types/stack';
 import type {Hash} from '../../types';
-import type {CommitState} from '../commitStackState';
+import type {CommitRev, CommitState} from '../commitStackState';
 
 import {List, Record} from 'immutable';
 import {atom, useAtom} from 'jotai';
@@ -27,6 +27,7 @@ import {waitForNothingRunning} from '../../operationsState';
 import {uncommittedSelection} from '../../partialSelection';
 import {CommitStackState} from '../../stackEdit/commitStackState';
 import {assert, registerDisposable} from '../../utils';
+import {prev} from '../revMath';
 
 /**
  * The "edit stack" dialog state that works with undo/redo in the dialog.
@@ -586,3 +587,18 @@ export function sendStackEditMetrics(save = true) {
 }
 
 export {WDIR_NODE};
+
+export function findStartEndRevs(
+  stackEdit: UseStackEditState,
+): [CommitRev | undefined, CommitRev | undefined] {
+  const {splitRange, intention, commitStack} = stackEdit;
+  if (intention === 'split') {
+    return [1 as CommitRev, prev(commitStack.size as CommitRev)];
+  }
+  const startRev = commitStack.findCommitByKey(splitRange.startKey)?.rev;
+  let endRev = commitStack.findCommitByKey(splitRange.endKey)?.rev;
+  if (startRev == null || startRev > (endRev ?? -1)) {
+    endRev = undefined;
+  }
+  return [startRev, endRev];
+}
