@@ -196,36 +196,58 @@ impl TreeStore {
         let mut sapling_tree_blob = Vec::<u8>::with_capacity(augmented_tree.sapling_tree_blob_size);
         augmented_tree.write_sapling_tree_blob(&mut sapling_tree_blob)?;
 
+        self.cache_child_aux_data(tree_aux_store, augmented_tree)?;
+
+        Ok(ScmBlob::Bytes(sapling_tree_blob.into()))
+    }
+
+    fn cache_child_aux_data(
+        &self,
+        tree_aux_store: &Arc<TreeAuxStore>,
+        augmented_tree: AugmentedTree,
+    ) -> Result<()> {
+        let filestore = if let Some(filestore) = &self.filestore {
+            filestore
+        } else {
+            return Ok(());
+        };
+        let aux_cache = if let Some(aux_cache) = &filestore.aux_cache {
+            aux_cache
+        } else {
+            return Ok(());
+        };
+
         for (_path, entry) in augmented_tree.entries {
             match entry {
                 AugmentedTreeEntry::FileNode(file) => {
-                    if let Some(filestore) = &self.filestore {
-                        if let Some(aux_cache) = &filestore.aux_cache {
-                            aux_cache.put(
-                                file.filenode,
-                                &FileAuxData {
-                                    total_size: file.total_size,
-                                    sha1: file.content_sha1,
-                                    blake3: file.content_blake3,
-                                    file_header_metadata: Some(
-                                        file.file_header_metadata.unwrap_or_default(),
-                                    ),
-                                },
-                            )?;
-                        }
+                    if !aux_cache.contains(file.filenode)? {
+                        aux_cache.put(
+                            file.filenode,
+                            &FileAuxData {
+                                total_size: file.total_size,
+                                sha1: file.content_sha1,
+                                blake3: file.content_blake3,
+                                file_header_metadata: Some(
+                                    file.file_header_metadata.unwrap_or_default(),
+                                ),
+                            },
+                        )?;
                     }
                 }
-                AugmentedTreeEntry::DirectoryNode(tree) => tree_aux_store.put(
-                    tree.treenode,
-                    &TreeAuxData {
-                        augmented_manifest_id: tree.augmented_manifest_id,
-                        augmented_manifest_size: tree.augmented_manifest_size,
-                    },
-                )?,
+                AugmentedTreeEntry::DirectoryNode(tree) => {
+                    if !tree_aux_store.contains(tree.treenode)? {
+                        tree_aux_store.put(
+                            tree.treenode,
+                            &TreeAuxData {
+                                augmented_manifest_id: tree.augmented_manifest_id,
+                                augmented_manifest_size: tree.augmented_manifest_size,
+                            },
+                        )?
+                    }
+                }
             }
         }
-
-        Ok(ScmBlob::Bytes(sapling_tree_blob.into()))
+        Ok(())
     }
 
     pub(crate) fn get_local_aux_direct(&self, id: &HgId) -> Result<Option<TreeAuxData>> {
