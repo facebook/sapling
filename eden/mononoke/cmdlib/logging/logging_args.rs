@@ -72,6 +72,10 @@ pub struct LoggingArgs {
     #[clap(long, conflicts_with = "debug", value_parser = PossibleValuesParser::new(&LOG_LEVEL_NAMES))]
     pub log_level: Option<String>,
 
+    /// Log level to use for C++ logging
+    #[clap(long, conflicts_with = "debug", value_parser = PossibleValuesParser::new(&LOG_LEVEL_NAMES))]
+    pub cxx_log_level: Option<String>,
+
     /// Include only log messages with these slog::Record::tags() or
     /// log::Record::targets
     #[clap(long, short = 'l')]
@@ -146,7 +150,15 @@ impl LoggingArgs {
         };
 
         #[cfg(fbcode_build)]
-        crate::glog::set_glog_log_level(fb, default_level.unwrap_or(DEFAULT_TRACING_LEVEL).into())?;
+        if let Some(log_level_str) = &self.cxx_log_level {
+            let level = filter::LevelFilter::from_str(log_level_str)?;
+            crate::glog::set_glog_log_level(fb, level.into())?;
+        } else {
+            crate::glog::set_glog_log_level(
+                fb,
+                default_level.unwrap_or(DEFAULT_TRACING_LEVEL).into(),
+            )?;
+        }
         #[cfg(not(fbcode_build))]
         let _ = fb;
 
