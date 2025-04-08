@@ -86,7 +86,7 @@ export function AISplitButton({stackEdit, commitStack, subStack, rev}: AISplitBu
     const id = randomId();
     setLoadingState({type: 'LOADING', id});
     try {
-      const result = await tracker.operation(
+      const result: ReadonlyArray<PartiallySelectedDiffCommit> = await tracker.operation(
         'AISplitButtonClick',
         'SplitSuggestionError',
         undefined,
