@@ -80,6 +80,7 @@ Test subtree import failure cases
 Test subtree import the root path of the external repo
 
   $ hg subtree import --url $GIT_URL --rev d2a8b3fa3dfa345ea64e02ea014d21b5cabd03e0 --to-path bar -m "import gitrepo to bar"
+  creating git repo at $TESTTMP/default-hgcache/gitrepos/* (glob)
   From file:/*/$TESTTMP/gitrepo (glob)
    * [new ref]         4487c56011495a40ce2f6c632c24ae57a210747d -> remote/master
    * [new ref]         d2a8b3fa3dfa345ea64e02ea014d21b5cabd03e0 -> refs/visibleheads/d2a8b3fa3dfa345ea64e02ea014d21b5cabd03e0
@@ -104,10 +105,9 @@ Test subtree import a sub directory of the external repo
   test_subtree=[{"imports":[{"from_commit":"d2a8b3fa3dfa345ea64e02ea014d21b5cabd03e0","from_path":"","to_path":"bar","url":"git+file:/*/$TESTTMP/gitrepo"}],"v":1}] (glob)
 
   $ hg subtree import --url $GIT_URL --rev 4487c56011495a40ce2f6c632c24ae57a210747d --from-path dir2 --to-path mydir2 -m "import gitrepo/dir2 to mydir2"
+  using cached git repo at $TESTTMP/default-hgcache/gitrepos/* (glob)
   From file:/*/$TESTTMP/gitrepo (glob)
-   * [new ref]         4487c56011495a40ce2f6c632c24ae57a210747d -> remote/master
    * [new ref]         4487c56011495a40ce2f6c632c24ae57a210747d -> refs/visibleheads/4487c56011495a40ce2f6c632c24ae57a210747d
-  3 files updated, 0 files merged, 0 files removed, 0 files unresolved
   copying dir2 to mydir2
   $ hg st --change .
   A mydir2/gamma
@@ -165,9 +165,9 @@ Test subtree import with branch name
   > EOS
   $ hg go $A -q
   $ hg subtree import --url $GIT_URL --rev master --to-path bar -m "import gitrepo to bar"
+  using cached git repo at $TESTTMP/default-hgcache/gitrepos/* (glob)
   From file:/*/$TESTTMP/gitrepo (glob)
-   * [new ref]         4487c56011495a40ce2f6c632c24ae57a210747d -> remote/master
-  3 files updated, 0 files merged, 0 files removed, 0 files unresolved
+   * [new ref]         4487c56011495a40ce2f6c632c24ae57a210747d -> refs/visibleheads/4487c56011495a40ce2f6c632c24ae57a210747d
   copying / to bar
   $ hg subtree inspect
   {

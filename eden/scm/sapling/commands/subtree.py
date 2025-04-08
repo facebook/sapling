@@ -3,11 +3,14 @@
 # This software may be used and distributed according to the terms of the
 # GNU General Public License version 2.
 
+import hashlib
 import json
 import os
-import tempfile
+import shutil
 import time
 from collections import defaultdict
+
+import bindings
 
 from .. import (
     cloneuri,
@@ -16,6 +19,7 @@ from .. import (
     error,
     git,
     hg,
+    localrepo,
     match as matchmod,
     merge as mergemod,
     node,
@@ -23,6 +27,7 @@ from .. import (
     progress,
     registrar,
     scmutil,
+    util,
 )
 from ..cmdutil import (
     commitopts,
@@ -142,12 +147,8 @@ def subtree_copy(ui, repo, *args, **opts):
 )
 def subtree_import(ui, repo, *args, **opts):
     """import an external repository into current repository at the specified path"""
-    # PERF: Use a persistent path for Git repos, so we don't reclone every time we need
-    # to reason about some content in the repo.
-    with repo.wlock(), repo.lock(), tempfile.TemporaryDirectory(
-        prefix="subtreeimport"
-    ) as temp_dir:
-        return _do_import(ui, repo, temp_dir, *args, **opts)
+    with repo.wlock(), repo.lock():
+        return _do_import(ui, repo, *args, **opts)
 
 
 @subtree_subcmd(
@@ -509,7 +510,7 @@ def _do_normal_copy(repo, from_ctx, to_ctx, from_paths, to_paths, opts):
     cmdutil.commit(ui, repo, commitfunc, [], opts)
 
 
-def _do_import(ui, repo, temp_dir, *args, **opts):
+def _do_import(ui, repo, *args, **opts):
     cmdutil.bailifchanged(repo)
 
     from_rev = opts.get("rev")
@@ -534,8 +535,7 @@ def _do_import(ui, repo, temp_dir, *args, **opts):
 
     abort_or_remove_paths(ui, repo, to_paths, "import", opts)
 
-    # PERF: shallow clone, then partial checkout
-    git_repo = git.clone(ui, giturl, temp_dir, update=from_rev)
+    git_repo = get_or_clone_git_repo(ui, giturl, from_rev)
     from_ctx = git_repo[from_rev]
     copy_files(ui, git_repo, repo, from_ctx, from_paths, to_paths, "import")
 
@@ -661,3 +661,42 @@ def abort_or_remove_paths(ui, repo, paths, subcmd, opts):
             cmdutil.remove(ui, repo, matcher, mark=False, force=True)
             if repo.wvfs.lexists(path):
                 repo.wvfs.rmtree(path)
+
+
+def get_or_clone_git_repo(ui, url, from_rev):
+    def try_reuse_git_repo(git_repo_dir):
+        """try to reuse an existing git repo, otherwise return None"""
+        if not os.path.exists(git_repo_dir):
+            return None
+        if not os.path.isdir(git_repo_dir):
+            # should not happen, but just in case
+            os.unlink(git_repo_dir)
+            return None
+
+        try:
+            git_repo = localrepo.localrepository(ui, git_repo_dir)
+        except Exception:
+            # invalid git repo directory, remove it
+            shutil.rmtree(git_repo_dir)
+            return None
+
+        ui.status(_("using cached git repo at %s\n") % git_repo_dir)
+        nodes = [git_repo[from_rev].node()]
+        git.pull(git_repo, "default", nodes=nodes)
+        return git_repo
+
+    url_hash = hashlib.sha256(url.encode("utf-8")).hexdigest()
+    if cache_dir := ui.config("remotefilelog", "cachepath"):
+        cache_dir = util.expandpath(cache_dir)
+        git_repo_dir = os.path.join(cache_dir, "gitrepos", url_hash)
+    else:
+        user_cache_dir = bindings.dirs.cache_dir()
+        git_repo_dir = os.path.join(user_cache_dir, "Sapling", "gitrepos", url_hash)
+
+    if git_repo := try_reuse_git_repo(git_repo_dir):
+        return git_repo
+    else:
+        ui.status(_("creating git repo at %s\n") % git_repo_dir)
+        # PERF: shallow clone, then partial checkout
+        git_repo = git.clone(ui, url, git_repo_dir, update=from_rev)
+        return git_repo
