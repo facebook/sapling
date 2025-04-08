@@ -16,7 +16,6 @@ import type {UseStackEditState} from './stackEditState';
 import * as stylex from '@stylexjs/stylex';
 import {Set as ImSet, type List, Range} from 'immutable';
 import {Button} from 'isl-components/Button';
-import {InlineErrorBadge} from 'isl-components/ErrorNotice';
 import {Icon} from 'isl-components/Icon';
 import {Subtle} from 'isl-components/Subtle';
 import {TextField} from 'isl-components/TextField';
@@ -26,7 +25,7 @@ import {useEffect, useMemo, useRef, useState} from 'react';
 import {useContextMenu} from 'shared/ContextMenu';
 import {readableDiffBlocks as diffBlocks, type LineIdx, splitLines} from 'shared/diff';
 import {useThrottledEffect} from 'shared/hooks';
-import {firstLine, nullthrows, randomId} from 'shared/utils';
+import {firstLine, nullthrows} from 'shared/utils';
 import {BranchIndicator} from '../../BranchIndicator';
 import {commitMessageTemplate} from '../../CommitInfoView/CommitInfoState';
 import {
@@ -38,16 +37,15 @@ import {useTokenizedContentsOnceVisible} from '../../ComparisonView/SplitDiffVie
 import {Column, Row, ScrollX, ScrollY} from '../../ComponentUtils';
 import {EmptyState} from '../../EmptyState';
 import {useGeneratedFileStatuses} from '../../GeneratedFile';
-import {Internal} from '../../Internal';
 import {tracker} from '../../analytics';
-import {useFeatureFlagSync} from '../../featureFlags';
 import {t, T} from '../../i18n';
 import {readAtom} from '../../jotaiUtils';
 import {themeState} from '../../theme';
 import {GeneratedStatus} from '../../types';
 import {isAbsent, reorderedRevs} from '../commitStackState';
-import {applyDiffSplit, diffCommit} from '../diffSplit';
+import {applyDiffSplit} from '../diffSplit';
 import {max, next, prev} from '../revMath';
+import {AISplitButton} from './AISplit';
 import {computeLinesForFileStackEditor} from './FileStackEditorLines';
 import {bumpStackEditMetric, SplitRangeRecord, useStackEditState} from './stackEditState';
 
@@ -387,129 +385,6 @@ function SplitColumn(props: SplitColumnProps) {
       </div>
     </>
   );
-}
-
-type AISplitButtonProps = {
-  commitStack: CommitStackState;
-  subStack: CommitStackState;
-  rev: CommitRev;
-  applyNewDiffSplitCommits: (
-    subStack: CommitStackState,
-    rev: CommitRev,
-    commits: ReadonlyArray<PartiallySelectedDiffCommit>,
-  ) => unknown;
-};
-
-type AISplitButtonLoadingState =
-  | {type: 'READY'}
-  | {type: 'LOADING'; id: string}
-  | {type: 'ERROR'; error: Error};
-
-function AISplitButton({commitStack, subStack, rev, applyNewDiffSplitCommits}: AISplitButtonProps) {
-  const {splitCommitWithAI} = Internal;
-  const enableAICommitSplit =
-    useFeatureFlagSync(Internal.featureFlags?.AICommitSplit) && splitCommitWithAI != null;
-
-  const [loadingState, setLoadingState] = useState<AISplitButtonLoadingState>({type: 'READY'});
-
-  // Make first commit be emphasized if there's only one commit (size == 2 due to empty right commit)
-  const emphasize = rev === 0 && commitStack.size === 2;
-
-  // Reset state if commitStack changes while in LOADING state. E.g., user manually updated commits locally.
-  useEffect(() => {
-    if (loadingState.type === 'LOADING') {
-      setLoadingState({type: 'READY'});
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [commitStack]); // Triggered when commitStack changes
-
-  const fetch = async () => {
-    if (loadingState.type === 'LOADING' || splitCommitWithAI == null) {
-      return;
-    }
-    const diff = diffCommit(subStack, rev);
-    if (diff.files.length === 0) {
-      return;
-    }
-
-    const id = randomId();
-    setLoadingState({type: 'LOADING', id});
-    try {
-      const result = await tracker.operation(
-        'AISplitButtonClick',
-        'SplitSuggestionError',
-        undefined,
-        () => splitCommitWithAI(diff),
-      );
-      setLoadingState(prev => {
-        if (prev.type === 'LOADING' && prev.id === id) {
-          const commits = result.filter(c => c.files.length > 0);
-          if (commits.length > 0) {
-            applyNewDiffSplitCommits(subStack, rev, commits);
-          }
-          return {type: 'READY'};
-        }
-        return prev;
-      });
-    } catch (err) {
-      if (err != null) {
-        setLoadingState(prev => {
-          if (prev.type === 'LOADING' && prev.id === id) {
-            return {type: 'ERROR', error: err as Error};
-          }
-          return prev;
-        });
-        return;
-      }
-    }
-  };
-
-  const cancel = () => {
-    setLoadingState(prev => {
-      const {type} = prev;
-      if (type === 'LOADING' || type === 'ERROR') {
-        return {type: 'READY'};
-      }
-      return prev;
-    });
-  };
-
-  if (!enableAICommitSplit) {
-    return null;
-  }
-
-  switch (loadingState.type) {
-    case 'READY':
-      return (
-        <Tooltip title={t('Automatically split this commit using AI')} placement="bottom">
-          <Button onClick={fetch} icon={!emphasize}>
-            <Icon icon="sparkle" />
-            <T>AI Split</T>
-          </Button>
-        </Tooltip>
-      );
-    case 'LOADING':
-      return (
-        <Tooltip title={t('Split is working, click to cancel')} placement="bottom">
-          <Button onClick={cancel}>
-            <Icon icon="loading" />
-            <T>Splitting</T>
-          </Button>
-        </Tooltip>
-      );
-    case 'ERROR':
-      return (
-        <Column alignStart>
-          <Button onClick={fetch}>
-            <Icon icon="sparkle" />
-            <T>Split this commit with AI</T>
-          </Button>
-          <InlineErrorBadge error={loadingState.error} placement="bottom">
-            <T>AI Split Failed</T>
-          </InlineErrorBadge>
-        </Column>
-      );
-  }
 }
 
 type SplitEditorWithTitleProps = {
