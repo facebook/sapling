@@ -10,7 +10,7 @@ import {initRepo} from './setup';
 
 describe('commits integration test', () => {
   it('shows commits', async () => {
-    const {cleanup, drawdag} = await initRepo();
+    const {cleanup, drawdag, refresh} = await initRepo();
     await act(() =>
       drawdag(`
         C D
@@ -20,6 +20,7 @@ describe('commits integration test', () => {
         A
       `),
     );
+    refresh();
 
     // commits should show up in the commit tree
     await waitFor(() => within(screen.getByTestId('commit-tree-root')).getByText('A'));

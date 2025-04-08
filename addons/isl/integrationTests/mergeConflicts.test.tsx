@@ -10,7 +10,7 @@ import {initRepo} from './setup';
 
 describe('merge conflicts integration test', () => {
   it('shows conflicts, supports resolving, and continuing the operation', async () => {
-    const {cleanup, sl, drawdag, writeFileInRepo} = await initRepo();
+    const {cleanup, sl, drawdag, writeFileInRepo, refresh} = await initRepo();
     const {ignoreRTL} = await import('../src/testQueries');
     await act(() =>
       drawdag(`
@@ -33,6 +33,7 @@ commit('A', files={"file1.txt": "base\\n"})
       // this amend onto B will hit conflicts with C
       await sl(['amend', '--rebase']).catch(() => undefined);
     });
+    refresh();
 
     await waitFor(() =>
       within(screen.getByTestId('commit-tree-root')).getByText('Unresolved Merge Conflicts'),
