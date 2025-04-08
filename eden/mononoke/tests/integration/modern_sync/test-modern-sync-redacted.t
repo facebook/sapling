@@ -77,6 +77,114 @@ The files should now be marked as redacted
   Found 1 redacted paths
   T0                  : C
 
+Restart mononoke server to pick up the redaction config without relying on timing
+  $ termandwait $MONONOKE_PID
+  $ start_and_wait_for_mononoke_server
+
+Sync all bookmarks moves
+  $ mononoke_modern_sync "" sync-once orig dest --start-id 0 2>&1 | grep -v "error sending header to receiver err=sending on a closed channel"
+  [INFO] Running sync-once loop
+  [INFO] Connecting to https://localhost:$LOCAL_PORT/edenapi/
+  [INFO] Established EdenAPI connection
+  [INFO] Initialized channels
+  [INFO] mononoke_host="*" dogfooding=false (glob)
+  [INFO] Calculating segments for entry 1, from changeset None to changeset ChangesetId(Blake2(e32a1e342cdb1e38e88466b4c1a01ae9f410024017aa21dc0a1c5da6b3963bf2)), to generation 3
+  [INFO] Done calculating segments for entry 1, from changeset None to changeset ChangesetId(Blake2(e32a1e342cdb1e38e88466b4c1a01ae9f410024017aa21dc0a1c5da6b3963bf2)), to generation 3 in *ms (glob)
+  [INFO] Resuming from latest entry checkpoint 0
+  [INFO] Skipping 0 batches from entry 1
+  [INFO] Starting sync of 3 missing commits, 0 were already synced
+  [WARN] Found error: collecting contents entries
+  
+  Caused by:
+      server responded 500 Internal Server Error for https://localhost:$LOCAL_PORT/edenapi/dest/upload/file/content_id/896ad5879a5df0403bfc93fc96507ad9c93b31b11f3d0fa05445da7918241e5d?content_size=1: {"message":"internal error: The blob content.blake2.896ad5879a5df0403bfc93fc96507ad9c93b31b11f3d0fa05445da7918241e5d is censored.\n Task/Sev: T0: The blob content.blake2.896ad5879a5df0403bfc93fc96507ad9c93b31b11f3d0fa05445da7918241e5d is censored.\n Task/Sev: T0: The blob content.blake2.896ad5879a5df0403bfc93fc96507ad9c93b31b11f3d0fa05445da7918241e5d is censored.\n Task/Sev: T0","request_id":"*"}. Headers: { (glob)
+          "x-request-id": "*", (glob)
+          "content-type": "application/json",
+          "x-load": "*", (glob)
+          "server": "edenapi_server",
+          "x-mononoke-host": "*", (glob)
+          "content-length": "406",
+          "date": "*", (glob)
+      }, retrying attempt #0
+  [WARN] Found error: collecting contents entries
+  
+  Caused by:
+      server responded 500 Internal Server Error for https://localhost:$LOCAL_PORT/edenapi/dest/upload/file/content_id/896ad5879a5df0403bfc93fc96507ad9c93b31b11f3d0fa05445da7918241e5d?content_size=1: {"message":"internal error: The blob content.blake2.896ad5879a5df0403bfc93fc96507ad9c93b31b11f3d0fa05445da7918241e5d is censored.\n Task/Sev: T0: The blob content.blake2.896ad5879a5df0403bfc93fc96507ad9c93b31b11f3d0fa05445da7918241e5d is censored.\n Task/Sev: T0: The blob content.blake2.896ad5879a5df0403bfc93fc96507ad9c93b31b11f3d0fa05445da7918241e5d is censored.\n Task/Sev: T0","request_id":"*"}. Headers: { (glob)
+          "x-request-id": "*", (glob)
+          "content-type": "application/json",
+          "x-load": "*", (glob)
+          "server": "edenapi_server",
+          "x-mononoke-host": "*", (glob)
+          "content-length": "406",
+          "date": "*", (glob)
+      }, retrying attempt #1
+  [WARN] Found error: collecting contents entries
+  
+  Caused by:
+      server responded 500 Internal Server Error for https://localhost:$LOCAL_PORT/edenapi/dest/upload/file/content_id/896ad5879a5df0403bfc93fc96507ad9c93b31b11f3d0fa05445da7918241e5d?content_size=1: {"message":"internal error: The blob content.blake2.896ad5879a5df0403bfc93fc96507ad9c93b31b11f3d0fa05445da7918241e5d is censored.\n Task/Sev: T0: The blob content.blake2.896ad5879a5df0403bfc93fc96507ad9c93b31b11f3d0fa05445da7918241e5d is censored.\n Task/Sev: T0: The blob content.blake2.896ad5879a5df0403bfc93fc96507ad9c93b31b11f3d0fa05445da7918241e5d is censored.\n Task/Sev: T0","request_id":"*"}. Headers: { (glob)
+          "x-request-id": "*", (glob)
+          "content-type": "application/json",
+          "x-load": "*", (glob)
+          "server": "edenapi_server",
+          "x-mononoke-host": "*", (glob)
+          "content-length": "406",
+          "date": "*", (glob)
+      }, retrying attempt #2
+  [ERROR] Error processing content: collecting contents entries
+  
+  Caused by:
+      server responded 500 Internal Server Error for https://localhost:$LOCAL_PORT/edenapi/dest/upload/file/content_id/896ad5879a5df0403bfc93fc96507ad9c93b31b11f3d0fa05445da7918241e5d?content_size=1: {"message":"internal error: The blob content.blake2.896ad5879a5df0403bfc93fc96507ad9c93b31b11f3d0fa05445da7918241e5d is censored.\n Task/Sev: T0: The blob content.blake2.896ad5879a5df0403bfc93fc96507ad9c93b31b11f3d0fa05445da7918241e5d is censored.\n Task/Sev: T0: The blob content.blake2.896ad5879a5df0403bfc93fc96507ad9c93b31b11f3d0fa05445da7918241e5d is censored.\n Task/Sev: T0","request_id":"*"}. Headers: { (glob)
+          "x-request-id": "*", (glob)
+          "content-type": "application/json",
+          "x-load": "*", (glob)
+          "server": "edenapi_server",
+          "x-mononoke-host": "*", (glob)
+          "content-length": "406",
+          "date": "*", (glob)
+      }
+  [ERROR] Error processing content: collecting contents entries
+  
+  Caused by:
+      server responded 500 Internal Server Error for https://localhost:$LOCAL_PORT/edenapi/dest/upload/file/content_id/896ad5879a5df0403bfc93fc96507ad9c93b31b11f3d0fa05445da7918241e5d?content_size=1: {"message":"internal error: The blob content.blake2.896ad5879a5df0403bfc93fc96507ad9c93b31b11f3d0fa05445da7918241e5d is censored.\n Task/Sev: T0: The blob content.blake2.896ad5879a5df0403bfc93fc96507ad9c93b31b11f3d0fa05445da7918241e5d is censored.\n Task/Sev: T0: The blob content.blake2.896ad5879a5df0403bfc93fc96507ad9c93b31b11f3d0fa05445da7918241e5d is censored.\n Task/Sev: T0","request_id":"*"}. Headers: { (glob)
+          "x-request-id": "*", (glob)
+          "content-type": "application/json",
+          "x-load": "*", (glob)
+          "server": "edenapi_server",
+          "x-mononoke-host": "*", (glob)
+          "content-length": "406",
+          "date": "*", (glob)
+      }
+  [ERROR] Error processing files/trees: Error waiting for contents: oneshot canceled
+  [ERROR] Trees flush failed: Error processing trees: Error waiting for contents: oneshot canceled
+  [INFO] Uploaded * filenodes in *ms (glob)
+  [ERROR] Error processing files/trees: Ok(()) Err(Error processing trees: Error waiting for contents: oneshot canceled)
+
+
+
+
+
+
+
+
+
+
+
+Removing the redaction config should allow the sync to succeed. That is the scenario we use in the initial AWS sync
+  $ cat > "$REDACTION_CONF/redaction_sets" <<EOF
+  > {
+  >  "all_redactions": [
+  >  ]
+  > }
+  > EOF
+
+The files should not be marked as redacted
+  $ mononoke_admin redaction list -R orig -i $C
+  Searching for redacted paths in e32a1e342cdb1e38e88466b4c1a01ae9f410024017aa21dc0a1c5da6b3963bf2
+  Found 0 redacted paths
+
+Restart mononoke server to pick up the redaction config without relying on timing
+  $ termandwait $MONONOKE_PID
+  $ start_and_wait_for_mononoke_server
+
 Sync all bookmarks moves
   $ mononoke_modern_sync "" sync-once orig dest --start-id 0 2>&1 | grep -v "Uploaded"
   [INFO] Running sync-once loop
