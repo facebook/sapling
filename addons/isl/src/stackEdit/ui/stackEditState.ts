@@ -519,6 +519,12 @@ class UseStackEditState {
     this.setHistory(this.history.redo());
   }
 
+  numHistoryEditsOfType(name: StackEditOpDescription['name']): number {
+    return this.history.history
+      .slice(0, this.history.currentIndex + 1)
+      .filter(s => s.op.name === name).size;
+  }
+
   private setHistory(newHistory: History) {
     const {hashes, intention} = this.state;
     this.setState({
@@ -554,6 +560,7 @@ type StackEditMetrics = {
   commits: number;
   fileStacks: number;
   fileStackRevs: number;
+  acceptedAiSplits?: number;
   // Maintained by UI, via 'bumpStackEditMetric'.
   undo?: number;
   redo?: number;
@@ -568,21 +575,32 @@ type StackEditMetrics = {
   splitInsertBlank?: number;
   splitChangeRange?: number;
   splitFromSuggestion?: number;
+  clickedAiSplit?: number;
 };
 
 // Not atoms. They do not trigger re-render.
 let currentMetrics: StackEditMetrics = {commits: 0, fileStackRevs: 0, fileStacks: 0};
 let currentMetricsStartTime = 0;
 
-export function bumpStackEditMetric(key: keyof StackEditMetrics) {
-  currentMetrics[key] = (currentMetrics[key] ?? 0) + 1;
+export function bumpStackEditMetric(key: keyof StackEditMetrics, count = 1) {
+  currentMetrics[key] = (currentMetrics[key] ?? 0) + count;
 }
 
-export function sendStackEditMetrics(save = true) {
+export function sendStackEditMetrics(stackEdit: UseStackEditState, save = true) {
   const tracker = getTracker();
   const duration = Date.now() - currentMetricsStartTime;
   const intention = readAtom(stackEditState).intention;
-  tracker?.track('StackEditMetrics', {duration, extras: {...currentMetrics, save, intention}});
+
+  // # accepted AI splits is how many AI split operations are remaining at the end
+  const numAiSplits = stackEdit.numHistoryEditsOfType('splitWithAI');
+  if (numAiSplits) {
+    bumpStackEditMetric('acceptedAiSplits', numAiSplits);
+  }
+
+  tracker?.track('StackEditMetrics', {
+    duration,
+    extras: {...currentMetrics, save, intention},
+  });
   currentMetrics.splitFromSuggestion = 0; // Reset for next time.
 }
 

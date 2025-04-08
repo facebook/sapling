@@ -7,7 +7,12 @@
 
 import type {CommitRev, CommitStackState} from '../commitStackState';
 import type {PartiallySelectedDiffCommit} from '../diffSplitTypes';
-import {findStartEndRevs, SplitRangeRecord, type UseStackEditState} from './stackEditState';
+import {
+  bumpStackEditMetric,
+  findStartEndRevs,
+  SplitRangeRecord,
+  type UseStackEditState,
+} from './stackEditState';
 
 import {Button} from 'isl-components/Button';
 import {InlineErrorBadge} from 'isl-components/ErrorNotice';
@@ -82,6 +87,8 @@ export function AISplitButton({stackEdit, commitStack, subStack, rev}: AISplitBu
     if (diff.files.length === 0) {
       return;
     }
+
+    bumpStackEditMetric('clickedAiSplit');
 
     const id = randomId();
     setLoadingState({type: 'LOADING', id});

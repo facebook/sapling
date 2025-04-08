@@ -81,7 +81,7 @@ export function StackEditConfirmButtons(): React.ReactElement {
     });
     const op = new ImportStackOperation(importStack, stack.originalStack);
     runOperation(op);
-    sendStackEditMetrics(true);
+    sendStackEditMetrics(stackEdit, true);
 
     invalidateUnsavedCommitMessages(stack.originalStack.map(c => c.node));
 
@@ -106,7 +106,7 @@ export function StackEditConfirmButtons(): React.ReactElement {
   };
 
   const handleCancel = () => {
-    sendStackEditMetrics(false);
+    sendStackEditMetrics(stackEdit, false);
     setStackIntentionHashes(['general', new Set<Hash>()]);
   };
 
