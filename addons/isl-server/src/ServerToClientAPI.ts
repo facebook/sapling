@@ -32,6 +32,7 @@ import type {ServerPlatform} from './serverPlatform';
 import type {RepositoryContext} from './serverTypes';
 
 import {deserializeFromString, serializeToString} from 'isl/src/serialize';
+import type {PartiallySelectedDiffCommit} from 'isl/src/stackEdit/diffSplitTypes';
 import {Readable} from 'node:stream';
 import path from 'path';
 import {beforeRevsetForComparison} from 'shared/Comparison';
@@ -942,13 +943,15 @@ export default class ServerToClientAPI {
         break;
       }
       case 'splitCommitWithAI': {
-        Internal.splitCommitWithAI?.(ctx, data.diffCommit).then(result => {
-          this.postMessage({
-            type: 'splitCommitWithAI',
-            id: data.id,
-            result,
-          });
-        });
+        Internal.splitCommitWithAI?.(ctx, data.diffCommit).then(
+          (result: Result<ReadonlyArray<PartiallySelectedDiffCommit>>) => {
+            this.postMessage({
+              type: 'splitCommitWithAI',
+              id: data.id,
+              result,
+            });
+          },
+        );
         break;
       }
       case 'fetchActiveAlerts': {
