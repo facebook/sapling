@@ -5530,12 +5530,24 @@ EdenServiceHandler::semifuture_getFileContent(
                    auto& objectStore = mountHandle.getObjectStorePtr();
                    return inode.getBlob(objectStore, fetchContext);
                  })
-                 .thenTry([](auto&& result) {
+                 .thenTry([path = path.copy()](auto&& result) {
                    ScmBlobOrError blobOrError;
                    if (result.hasException()) {
                      blobOrError.error_ref() = newEdenError(result.exception());
                    } else {
-                     blobOrError.blob_ref() = std::move(result.value());
+                     // Return error if the binary size exceeds 2GB limit.
+                     // Enforced by CompactProtocolWriter in the Thrift
+                     // https://github.com/facebook/fbthrift/blob/main/thrift/lib/cpp2/protocol/CompactProtocol-inl.h
+                     const auto blobSize = result.value().size();
+                     if (blobSize > std::numeric_limits<int32_t>::max()) {
+                       blobOrError.error_ref() = newEdenError(
+                           EFBIG,
+                           EdenErrorType::POSIX_ERROR,
+                           "Thrift size limit (2GB) exceeded by file: ",
+                           path);
+                     } else {
+                       blobOrError.blob_ref() = std::move(result.value());
+                     }
                    }
                    auto response = std::make_unique<GetFileContentResponse>();
                    response->blob_ref() = std::move(blobOrError);
