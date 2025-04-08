@@ -881,6 +881,11 @@ export type ClientToServerMessage =
       requestId: number;
       hash: Hash;
       includedFiles: string[];
+    }
+  | {
+      type: 'fetchGkDetails';
+      id: string;
+      name: string;
     };
 
 export type SubscriptionResultsData = {
@@ -983,7 +988,13 @@ export type ServerToClientMessage =
       requestId: number;
       hash: Hash;
       result: Result<number>;
+    }
+  | {
+      type: 'fetchedGkDetails';
+      id: string;
+      result: Result<InternalTypes['PhabricatorGatekeeper']>;
     };
+
 export type Disposable = {
   dispose(): void;
 };

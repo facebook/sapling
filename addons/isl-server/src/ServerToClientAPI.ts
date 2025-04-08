@@ -983,6 +983,21 @@ export default class ServerToClientAPI {
         });
         break;
       }
+      case 'fetchGkDetails': {
+        Internal.fetchGkDetails?.(ctx, data.name)
+          .then(gk => {
+            this.postMessage({type: 'fetchedGkDetails', id: data.id, result: {value: gk}});
+          })
+          .catch(err => {
+            logger?.error('Could not fetch GK details', err);
+            this.postMessage({
+              type: 'fetchedGkDetails',
+              id: data.id,
+              result: {error: err as Error},
+            });
+          });
+        break;
+      }
       case 'getRepoUrlAtHash': {
         const args = ['url', '--rev', data.revset];
         // validate that the path is a valid file in repo
