@@ -471,7 +471,7 @@ class localrepository:
         self.requirements = set()
         self.storerequirements = set()
 
-        self.root = os.path.realpath(util.expandpath(path))
+        self.root = os.path.realpath(path)
 
         self.baseui = baseui
         self.ui = baseui.copy()
