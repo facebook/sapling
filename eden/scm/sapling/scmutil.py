@@ -1004,7 +1004,7 @@ def addremove(repo, matcher, opts):
         rename_detection_file_limit
         and len(added) + len(removed) > rename_detection_file_limit
     ):
-        repo.ui.status_err(_("too many files - skipping rename detection"))
+        repo.ui.status_err(_("too many files - skipping rename detection\n"))
         renames = {}
     else:
         renames = _findrenames(repo, m, added, removed, similarity)
