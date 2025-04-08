@@ -312,9 +312,14 @@ impl MononokeAppBuilder {
                 &self.default_scuba_dataset,
             )
             .context("Failed to create scuba sample builder")?;
-        let warm_bookmarks_cache_scuba_sample_builder = scuba_logging_args
-            .create_warm_bookmark_cache_scuba_sample_builder(self.fb)
-            .context("Failed to create warm bookmark cache scuba sample builder")?;
+        let warm_bookmarks_cache_scuba_sample_builder =
+            if scuba_logging_args.warm_bookmark_cache_default_scuba_dataset {
+                scuba_sample_builder.clone()
+            } else {
+                scuba_logging_args
+                    .create_warm_bookmark_cache_scuba_sample_builder(self.fb)
+                    .context("Failed to create warm bookmark cache scuba sample builder")?
+            };
 
         let caching = init_cachelib(self.fb, &self.cachelib_settings, &cachelib_args);
 

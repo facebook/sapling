@@ -34,6 +34,9 @@ pub struct ScubaLoggingArgs {
     /// use warm bookmark cache then this parameter is ignored
     #[clap(long)]
     pub warm_bookmark_cache_scuba_dataset: Option<String>,
+    /// If true, use the default scuba dataset for warm bookmark cache.
+    #[clap(long)]
+    pub warm_bookmark_cache_default_scuba_dataset: bool,
 }
 
 impl ScubaLoggingArgs {
