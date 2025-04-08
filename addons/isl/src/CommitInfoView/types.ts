@@ -27,7 +27,8 @@ export type TypeaheadKind =
   | 'meta-diff'
   | 'meta-privacy-context'
   | 'meta-gk'
-  | 'meta-jk';
+  | 'meta-jk'
+  | 'meta-qe';
 
 /**
  * Which fields of the message should display as editors instead of rendered values.
