@@ -18,10 +18,10 @@ const renderedMarkup = atomFamilyWeak((markup: string) => {
   return lazyAtom(get => {
     const provider = get(codeReviewProvider);
     if (provider?.enableMessageSyncing !== true) {
-      return markup;
+      return null;
     }
     return renderMarkupToHTML(markup);
-  }, markup);
+  }, null);
 });
 
 let requestId = 0;
