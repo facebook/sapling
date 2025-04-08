@@ -9,12 +9,14 @@ import type {EnsureAssignedTogether} from 'shared/EnsureAssignedTogether';
 import type {RepoPath} from 'shared/types/common';
 import type {CommitMessageFields} from '../../CommitInfoView/types';
 import type {CommitRev, CommitStackState, FileMetadata, FileStackIndex} from '../commitStackState';
+import type {PartiallySelectedDiffCommit} from '../diffSplitTypes';
 import type {FileRev, FileStackState} from '../fileStackState';
 import type {UseStackEditState} from './stackEditState';
 
 import * as stylex from '@stylexjs/stylex';
 import {Set as ImSet, type List, Range} from 'immutable';
 import {Button} from 'isl-components/Button';
+import {InlineErrorBadge} from 'isl-components/ErrorNotice';
 import {Icon} from 'isl-components/Icon';
 import {Subtle} from 'isl-components/Subtle';
 import {TextField} from 'isl-components/TextField';
@@ -36,20 +38,19 @@ import {useTokenizedContentsOnceVisible} from '../../ComparisonView/SplitDiffVie
 import {Column, Row, ScrollX, ScrollY} from '../../ComponentUtils';
 import {EmptyState} from '../../EmptyState';
 import {useGeneratedFileStatuses} from '../../GeneratedFile';
+import {Internal} from '../../Internal';
 import {tracker} from '../../analytics';
+import {useFeatureFlagSync} from '../../featureFlags';
 import {t, T} from '../../i18n';
 import {readAtom} from '../../jotaiUtils';
 import {themeState} from '../../theme';
 import {GeneratedStatus} from '../../types';
 import {isAbsent, reorderedRevs} from '../commitStackState';
+import {applyDiffSplit, diffCommit} from '../diffSplit';
 import {max, next, prev} from '../revMath';
 import {computeLinesForFileStackEditor} from './FileStackEditorLines';
 import {bumpStackEditMetric, SplitRangeRecord, useStackEditState} from './stackEditState';
 
-import {InlineErrorBadge} from 'isl-components/ErrorNotice';
-import {Internal} from '../../Internal';
-import {useFeatureFlagSync} from '../../featureFlags';
-import {applyDiffSplit, diffCommit, type PartiallySelectedDiffCommit} from '../diffSplit';
 import './SplitStackEditPanel.css';
 
 const styles = stylex.create({

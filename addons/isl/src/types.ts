@@ -17,7 +17,7 @@ import type {ExportStack, ImportedStack, ImportStack} from 'shared/types/stack';
 import type {TypeaheadKind} from './CommitInfoView/types';
 import type {InternalTypes} from './InternalTypes';
 import type {Serializable} from './serialize';
-import type {DiffCommit, PartiallySelectedDiffCommit} from './stackEdit/diffSplit';
+import type {DiffCommit, PartiallySelectedDiffCommit} from './stackEdit/diffSplitTypes';
 
 export type Result<T> = {value: T; error?: undefined} | {value?: undefined; error: Error};
 
