@@ -24,7 +24,7 @@ Can override fields even for initial commit
   Reviewers: otherperson
 
 Works with metaedit
-  $ sl metaedit -r . --message-field="Test Plan=
+  $ HGEDITOR=doesnt-exist sl metaedit -r . --message-field="Test Plan=
   > 
   > my test plan
   > "

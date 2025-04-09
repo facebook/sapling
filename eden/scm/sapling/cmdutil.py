@@ -1739,7 +1739,6 @@ def tryimportone(ui, repo, hunk, parents, opts, msgs, updatefunc):
     message = extractdata.get("message")
     user = opts.get("user") or extractdata.get("user")
     date = opts.get("date") or extractdata.get("date")
-    branch = extractdata.get("branch")
     nodeid = extractdata.get("nodeid")
     p1 = extractdata.get("p1")
     p2 = extractdata.get("p2")

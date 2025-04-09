@@ -182,6 +182,14 @@ def metaedit(ui, repo, templ, *revs, **opts) -> Optional[int]:
                 commitopts.get(name) for name in ["message", "logfile", "reuse_message"]
             ):
                 commitopts["edit"] = False
+            elif commitopts.get("message_field"):
+                if root != head:
+                    raise error.Abort(
+                        _("--message-field only supports a single commit")
+                    )
+                commitopts["edit"] = False
+                if not commitopts.get("message"):
+                    commitopts["message"] = head.description()
             else:
                 if opts["fold"]:
                     msgs = [
