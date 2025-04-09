@@ -45,7 +45,6 @@ rust_library(
     deps = [
         "fbsource//third-party/rust:dirs",
         "fbsource//third-party/rust:enum_dispatch",
-        "fbsource//third-party/rust:lazy_static",
         "fbsource//third-party/rust:lru",
         "fbsource//third-party/rust:memmap2",
         "fbsource//third-party/rust:regex",

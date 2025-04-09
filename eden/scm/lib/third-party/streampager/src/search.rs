@@ -3,17 +3,17 @@
 use std::borrow::Cow;
 use std::cmp::min;
 use std::ops::RangeInclusive;
+use std::sync::LazyLock;
 use std::sync::atomic::{AtomicBool, AtomicUsize, Ordering};
 use std::sync::{Arc, RwLock};
 use std::thread;
 use std::time;
 
-use lazy_static::lazy_static;
 use regex::bytes::{NoExpand, Regex};
 use termwiz::cell::CellAttributes;
 use termwiz::color::AnsiColor;
-use termwiz::surface::change::Change;
 use termwiz::surface::Position;
+use termwiz::surface::change::Change;
 use unicode_width::UnicodeWidthStr;
 
 use crate::error::Error;
@@ -24,10 +24,9 @@ use crate::spanset::SpanSet;
 
 const SEARCH_BATCH_SIZE: usize = 10000;
 
-lazy_static! {
-    /// Regex for detecting and removing escape sequences during search.
-    pub(crate) static ref ESCAPE_SEQUENCE: Regex = Regex::new("\x1B\\[[0123456789:;\\[?!\"'#%()*+ ]{0,32}m").unwrap();
-}
+/// Regex for detecting and removing escape sequences during search.
+pub(crate) static ESCAPE_SEQUENCE: LazyLock<Regex> =
+    LazyLock::new(|| Regex::new("\x1B\\[[0123456789:;\\[?!\"'#%()*+ ]{0,32}m").unwrap());
 
 /// What kind of search to perform.
 #[derive(Copy, Clone, Debug, Eq, PartialEq)]
