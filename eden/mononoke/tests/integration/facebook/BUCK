@@ -375,6 +375,7 @@ dott_test(
 
 dott_test(
     name = "admin",
+    disable_all_network_access_target = False,
     dott_files = glob(["test-admin-*.t"]),
     deps = [
         "//eden/mononoke:mononoke",
