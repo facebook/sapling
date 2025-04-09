@@ -135,11 +135,13 @@ impl MononokeGitScubaHandler {
         }
         scuba.add(MononokeGitScubaKey::ErrorCount, info.error_count());
         scuba.add("log_tag", "MononokeGit Request Processed");
+        scuba.unsampled();
         scuba.log();
     }
 
     fn log_cancelled(mut scuba: MononokeScubaSampleBuilder) {
         scuba.add("log_tag", "MononokeGit Request Cancelled");
+        scuba.unsampled();
         scuba.log();
     }
 }
