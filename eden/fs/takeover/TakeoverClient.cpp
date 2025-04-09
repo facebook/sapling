@@ -112,12 +112,15 @@ TakeoverData takeoverMounts(
   evb.loop();
 
   if (!expectedMessage) {
-    XLOG(ERR) << "error receiving takeover data: " << expectedMessage.error();
+    XLOGF(
+        ERR,
+        "error receiving takeover data: {}",
+        expectedMessage.error().what());
     expectedMessage.error().throw_exception();
   }
   auto& message = expectedMessage.value();
   for (auto& file : message.files) {
-    XLOG(DBG7) << "received fd for takeover: " << file.fd();
+    XLOGF(DBG7, "received fd for takeover: {}", file.fd());
   }
 
   return TakeoverData::deserialize(message);
