@@ -7,7 +7,6 @@ rust_library(
     srcs = glob(["src/**/*.rs"]),
     autocargo = {"cargo_toml_config": {
         "dependencies_override": {"dependencies": {
-            "indexmap": {"features": []},
             "serde": {"features": ["derive"]},
             "smallvec": {
                 "default-features": False,
@@ -47,7 +46,6 @@ rust_library(
         "fbsource//third-party/rust:bit-set",
         "fbsource//third-party/rust:dirs",
         "fbsource//third-party/rust:enum_dispatch",
-        "fbsource//third-party/rust:indexmap",
         "fbsource//third-party/rust:lazy_static",
         "fbsource//third-party/rust:lru",
         "fbsource//third-party/rust:memmap2",

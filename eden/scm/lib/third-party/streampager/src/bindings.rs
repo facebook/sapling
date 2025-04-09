@@ -4,7 +4,6 @@ use std::collections::HashMap;
 use std::sync::atomic::{AtomicUsize, Ordering};
 use std::sync::Arc;
 
-use indexmap::IndexMap;
 use thiserror::Error;
 
 use crate::action::Action;
@@ -337,7 +336,10 @@ pub struct Keymap {
     bindings: HashMap<(Modifiers, KeyCode), Binding>,
 
     /// Map of visible keys from bindings.
-    keys: IndexMap<Binding, Vec<(Modifiers, KeyCode)>>,
+    keys: HashMap<Binding, Vec<(Modifiers, KeyCode)>>,
+
+    /// Order of `keys`.
+    keys_order: Vec<Binding>,
 }
 
 impl<'a, I: IntoIterator<Item = &'a ((Modifiers, KeyCode), BindingConfig)>> From<I> for Keymap {
@@ -345,16 +347,20 @@ impl<'a, I: IntoIterator<Item = &'a ((Modifiers, KeyCode), BindingConfig)>> From
         let iter = iter.into_iter();
         let size_hint = iter.size_hint();
         let mut bindings = HashMap::with_capacity(size_hint.0);
-        let mut keys = IndexMap::with_capacity(size_hint.0);
+        let mut keys = HashMap::with_capacity(size_hint.0);
+        let mut keys_order = Vec::with_capacity(size_hint.0);
         for &((modifiers, keycode), ref binding_config) in iter {
             bindings.insert((modifiers, keycode), binding_config.binding.clone());
             if binding_config.visible {
                 keys.entry(binding_config.binding.clone())
-                    .or_insert_with(Vec::new)
+                    .or_insert_with(|| {
+                        keys_order.push(binding_config.binding.clone());
+                        Vec::new()
+                    })
                     .push((modifiers, keycode));
             }
         }
-        Keymap { bindings, keys }
+        Keymap { bindings, keys, keys_order }
     }
 }
 
@@ -363,7 +369,8 @@ impl Keymap {
     pub fn new() -> Self {
         Keymap {
             bindings: HashMap::new(),
-            keys: IndexMap::new(),
+            keys: HashMap::new(),
+            keys_order: Vec::new(),
         }
     }
 
@@ -408,8 +415,11 @@ impl Keymap {
             self.bindings.insert((modifiers, keycode), binding.clone());
             if visible {
                 self.keys
-                    .entry(binding)
-                    .or_insert_with(Vec::new)
+                    .entry(binding.clone())
+                    .or_insert_with(|| {
+                        self.keys_order.push(binding);
+                        Vec::new()
+                    })
                     .push((modifiers, keycode));
             }
         }
@@ -417,7 +427,9 @@ impl Keymap {
     }
 
     pub(crate) fn iter_keys(&self) -> impl Iterator<Item = (&Binding, &Vec<(Modifiers, KeyCode)>)> {
-        self.keys.iter()
+        self.keys_order.iter().filter_map(|b| {
+             self.keys.get(b).map(|v| (b, v))
+        })
     }
 }
 
