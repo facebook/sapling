@@ -13,6 +13,7 @@
 #include <folly/io/async/EventBase.h>
 #include <folly/logging/xlog.h>
 #include <thrift/lib/cpp2/protocol/Serializer.h>
+#include "eden/common/utils/FaultInjector.h"
 #include "eden/common/utils/FutureUnixSocket.h"
 #include "eden/fs/takeover/TakeoverData.h"
 #include "eden/fs/takeover/gen-cpp2/takeover_types.h"
@@ -33,6 +34,7 @@ namespace facebook::eden {
 
 TakeoverData takeoverMounts(
     AbsolutePathPiece socketPath,
+    bool shouldThrowDuringTakeover,
     bool shouldPing,
     const std::set<int32_t>& supportedVersions,
     const uint64_t supportedTakeoverCapabilities) {
@@ -61,17 +63,32 @@ TakeoverData takeoverMounts(
         auto timeout = std::chrono::seconds(FLAGS_takeoverReceiveTimeout);
         return socket.receive(timeout);
       })
-      .thenValue([&socket, shouldPing](UnixSocket::Message&& msg) {
+      .thenValue([&socket, shouldPing, shouldThrowDuringTakeover](
+                     UnixSocket::Message&& msg) mutable {
         if (TakeoverData::isPing(&msg.data)) {
           if (shouldPing) {
             // Just send an empty message back here, the server knows it sent a
             // ping so it does not need to parse the message.
             UnixSocket::Message ping;
-            return socket.send(std::move(ping)).thenValue([&socket](auto&&) {
-              // Wait for the takeover data response
-              auto timeout = std::chrono::seconds(FLAGS_takeoverReceiveTimeout);
-              return socket.receive(timeout);
-            });
+            return socket.send(std::move(ping))
+                .thenValue([&socket,
+                            shouldThrowDuringTakeover](auto&&) mutable {
+                  // Possibly simulate a takeover error during data transfer
+                  // for testing purposes. While we would prefer to use
+                  // fault injection here, it's not possible to inject an
+                  // error into the TakeoverClient because the thrift server
+                  // is not yet running.
+                  if (shouldThrowDuringTakeover) {
+                    // throw std::runtime_error("simulated takeover error");
+                    return folly::makeFuture<UnixSocket::Message>(
+                        folly::exception_wrapper(
+                            std::runtime_error("simulated takeover error")));
+                  }
+                  // Wait for the takeover data response
+                  auto timeout =
+                      std::chrono::seconds(FLAGS_takeoverReceiveTimeout);
+                  return socket.receive(timeout);
+                });
           } else {
             // This should only be hit during integration tests.
             return folly::makeFuture<UnixSocket::Message>(

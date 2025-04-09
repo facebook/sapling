@@ -29,6 +29,11 @@ DEFINE_bool(
     true,
     "This is used by integration tests to avoid sending a ping");
 
+DEFINE_bool(
+    shouldThrowDuringTakeover,
+    false,
+    "This can be used by tests to initiate an error in the TakeoverClient");
+
 using namespace facebook::eden::path_literals;
 
 /*
@@ -55,11 +60,15 @@ int main(int argc, char* argv[]) {
 
   facebook::eden::TakeoverData data;
   if (FLAGS_takeoverVersion == 0) {
-    data = facebook::eden::takeoverMounts(takeoverSocketPath, FLAGS_shouldPing);
+    data = facebook::eden::takeoverMounts(
+        takeoverSocketPath, FLAGS_shouldThrowDuringTakeover, FLAGS_shouldPing);
   } else {
     auto takeoverVersion = std::set<int32_t>{FLAGS_takeoverVersion};
     data = facebook::eden::takeoverMounts(
-        takeoverSocketPath, FLAGS_shouldPing, takeoverVersion);
+        takeoverSocketPath,
+        FLAGS_shouldThrowDuringTakeover,
+        FLAGS_shouldPing,
+        takeoverVersion);
   }
   for (const auto& mount : data.mountPoints) {
     const folly::File* mountFD = nullptr;

@@ -231,6 +231,18 @@ class EdenConfig : private ConfigSettingManager {
       12,
       this};
 
+  /**
+   * Whether graceful takeover client should purposefully return an exception
+   * during the takeover process. Intended to be used only in integration tests.
+   *
+   * NOTE: if you want the takeover server to throw an exception, you can use
+   * FaultInjector with the key/value pair: ("takeover", "error during send")
+   */
+  ConfigSetting<bool> clientThrowsDuringTakeover{
+      "core:client-throws-during-takeover",
+      false,
+      this};
+
   // [config]
 
   /**

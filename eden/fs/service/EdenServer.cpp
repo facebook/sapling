@@ -1143,6 +1143,12 @@ Future<Unit> EdenServer::prepare(std::shared_ptr<StartupLogger> logger) {
           [this] { runningState_.wlock()->state = RunState::RUNNING; });
 }
 
+namespace {
+bool shouldThrowDuringTakeover(const EdenConfig& config) {
+  return config.clientThrowsDuringTakeover.getValue();
+}
+} // namespace
+
 Future<Unit> EdenServer::prepareImpl(std::shared_ptr<StartupLogger> logger) {
   bool doingTakeover = false;
   if (!edenDir_.acquireLock()) {
@@ -1177,7 +1183,9 @@ Future<Unit> EdenServer::prepareImpl(std::shared_ptr<StartupLogger> logger) {
     logger->log(
         "Requesting existing edenfs process to gracefully "
         "transfer its mount points...");
-    takeoverData = takeoverMounts(takeoverPath);
+    takeoverData = takeoverMounts(
+        takeoverPath,
+        shouldThrowDuringTakeover(*serverState_->getEdenConfig()));
     logger->log(
         "Received takeover information for ",
         takeoverData.mountPoints.size(),

@@ -21,6 +21,7 @@ TakeoverData takeoverMounts(
     AbsolutePathPiece socketPath,
     // the following parameters are present for testing purposes and should not
     // normally be used in the production build.
+    bool shouldThrowDuringTakeover = false,
     bool shouldPing = true,
     const std::set<int32_t>& supportedTakeoverVersions =
         kSupportedTakeoverVersions,

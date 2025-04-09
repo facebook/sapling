@@ -79,6 +79,7 @@ Future<TakeoverData> takeoverViaEventBase(
     promise.setWith([&] {
       return takeoverMounts(
           path,
+          /*shouldThrowDuringTakeover=*/false,
           /*shouldPing=*/true,
           supportedVersions,
           supportedCapabilities);
