@@ -14,7 +14,6 @@ categories = ["command-line-utilities", "text-processing"]
 name = "streampager"
 
 [dependencies]
-bit-set = "0.5"
 dirs = "6.0"
 enum_dispatch = "0.3.13"
 lazy_static = { version = "1.5", features = ["spin_no_std"], default-features = false }

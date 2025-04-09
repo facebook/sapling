@@ -8,7 +8,6 @@ use std::sync::{Arc, RwLock};
 use std::thread;
 use std::time;
 
-use bit_set::BitSet;
 use lazy_static::lazy_static;
 use regex::bytes::{NoExpand, Regex};
 use termwiz::cell::CellAttributes;
@@ -21,6 +20,7 @@ use crate::error::Error;
 use crate::event::{Event, EventSender};
 use crate::file::{File, FileInfo};
 use crate::overstrike;
+use crate::spanset::SpanSet;
 
 const SEARCH_BATCH_SIZE: usize = 10000;
 
@@ -58,7 +58,7 @@ struct SearchInner {
     kind: SearchKind,
     regex: Regex,
     matches: RwLock<Vec<(usize, usize)>>,
-    matching_lines: RwLock<BitSet>,
+    matching_lines: RwLock<SpanSet>,
     current_match: RwLock<Option<usize>>,
     matching_line_count: AtomicUsize,
     search_line_count: AtomicUsize,
@@ -84,7 +84,7 @@ impl SearchInner {
             kind,
             regex: regex.clone(),
             matches: RwLock::new(Vec::new()),
-            matching_lines: RwLock::new(BitSet::new()),
+            matching_lines: RwLock::new(SpanSet::new()),
             current_match: RwLock::new(None),
             matching_line_count: AtomicUsize::new(0),
             search_line_count: AtomicUsize::new(0),

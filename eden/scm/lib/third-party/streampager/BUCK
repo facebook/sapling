@@ -43,7 +43,6 @@ rust_library(
         },
     }},
     deps = [
-        "fbsource//third-party/rust:bit-set",
         "fbsource//third-party/rust:dirs",
         "fbsource//third-party/rust:enum_dispatch",
         "fbsource//third-party/rust:lazy_static",
