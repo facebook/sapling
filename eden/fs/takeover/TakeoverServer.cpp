@@ -267,6 +267,9 @@ Future<Unit> TakeoverServer::ConnHandler::sendTakeoverData(
 
   UnixSocket::Message msg;
   try {
+    // Possibly simulate a takeover error during data transfer
+    // for testing purposes.
+    server_->faultInjector_.check("takeover", "error during send");
     data.serialize(state.protocolCapabilities, msg);
     for (auto& file : msg.files) {
       XLOG(DBG7) << "sending fd for takeover: " << file.fd();
