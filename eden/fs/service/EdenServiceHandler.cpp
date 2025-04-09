@@ -2329,6 +2329,7 @@ void EdenServiceHandler::sync_changesSinceV2(
     std::unique_ptr<ChangesSinceV2Params> params) {
   auto mountHandle = lookupMount(params->mountPoint());
   const auto& fromPosition = *params->fromPosition_ref();
+  auto root = params->root_ref().has_value() ? params->root_ref().value() : "";
   auto includedRoots = params->includedRoots_ref().has_value()
       ? params->includedRoots_ref().value()
       : std::vector<PathString>{};
@@ -2346,10 +2347,11 @@ void EdenServiceHandler::sync_changesSinceV2(
       DBG3,
       *params->mountPoint(),
       fmt::format(
-          "fromPosition={}:{}:{}, includedRoots:{}, excludedRoots:{}, includedSuffixes:{}, excludedSuffixes:{}",
+          "fromPosition={}:{}:{}, root:{}, includedRoots:{}, excludedRoots:{}, includedSuffixes:{}, excludedSuffixes:{}",
           fromPosition.mountGeneration().value(),
           fromPosition.sequenceNumber().value(),
           logHash(fromPosition.snapshotHash().value()),
+          root,
           toLogArg(includedRoots),
           toLogArg(excludedRoots),
           toLogArg(includedSuffixes),
