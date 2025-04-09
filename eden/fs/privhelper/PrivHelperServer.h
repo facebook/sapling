@@ -122,6 +122,13 @@ class PrivHelperServer : private UnixSocket::ReceiveCallback {
 
   void unmountStaleMount(const std::string& mountPoint);
 
+  // Uses stat to determine if there's a stale mount point at the given path. If
+  // there is, force unmounts it.
+  void detectAndUnmountStaleMount(
+      const std::string& mountPoint,
+      bool isNFS,
+      bool isHardMount);
+
   /**
    * Verify that the user has the right credentials to mount/unmount this path.
    *
@@ -129,7 +136,10 @@ class PrivHelperServer : private UnixSocket::ReceiveCallback {
    * leading to the mount point. A std::domain_error exception will be raised
    * if the user doesn't have access to the mount point.
    */
-  void sanityCheckMountPoint(const std::string& mountPoint, bool isNfs = false);
+  void sanityCheckMountPoint(
+      const std::string& mountPoint,
+      bool isNFS = false,
+      bool isHardMount = false);
 
   // These methods are virtual so we can override them during unit tests
   virtual folly::File

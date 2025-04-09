@@ -1032,7 +1032,7 @@ UnixSocket::Message PrivHelperServer::processMountNfsMsg(Cursor& cursor) {
   PrivHelperConn::parseMountNfsRequest(cursor, mountPath, options);
   XLOGF(DBG3, "mount.nfs \"{}\"", mountPath);
 
-  sanityCheckMountPoint(mountPath, true /* isNfs */);
+  sanityCheckMountPoint(mountPath, /*isNFS=*/true, !options.useSoftMount);
 
   nfsMount(mountPath, std::move(options));
   mountPoints_.insert(mountPath);

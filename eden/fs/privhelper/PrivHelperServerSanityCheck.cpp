@@ -19,6 +19,7 @@
 #include <cerrno>
 #include <string>
 
+#include "eden/common/utils/ErrnoUtils.h"
 #include "eden/common/utils/FSDetect.h"
 #include "eden/common/utils/Throw.h"
 
@@ -80,18 +81,23 @@ bool isOldEdenMount(const std::string& mountPoint) {
   }
   // We couldn't verify that the mount is an old, disconnected EdenFS mount.
   // We assume it isn't to be safe.
+  XLOGF(DBG4, "Could not verify that {} is an old EdenFS mount.", mountPoint);
   return false;
 }
 
-bool isErrorSafeToIgnore(int err, const std::string& mountPoint) {
-  // Remote filesystems like NFS, AFS, and FUSE return ENOTCONN if the mount
+bool isErrorSafeToIgnore(int err, bool isNFS, const std::string& mountPoint) {
+  // Some remote filesystems like AFS and FUSE return ENOTCONN if the mount
   // is still in the kernel mount table but the socket is closed. Allow
   // mounting in that case if the hanging mount looks like it was
   // previously mounted by EdenFS.
   //
+  // Other remote filesystems (mainly NFS) return a variety of errors when
+  // mounts are hanging. We've currently observed EIO and ETIMEDOUT depending
+  // on whether hard or soft NFS mounts are utilized.
+  //
   // In all likelihood, this is a mount from a prior EdenFS
   // process that crashed without unmounting.
-  return err == ENOTCONN && isOldEdenMount(mountPoint);
+  return isErrnoFromHangingMount(err, isNFS) && isOldEdenMount(mountPoint);
 }
 
 /**
@@ -105,11 +111,6 @@ void sanityCheckFs(const std::string& mountPoint) {
   struct statfs fsBuf;
   if (statfs(mountPoint.c_str(), &fsBuf) < 0) {
     auto err = errno;
-    if (isErrorSafeToIgnore(err, mountPoint)) {
-      // The previous attempt to unmount the stale mount failed. We'll just
-      // mount over top of it.
-      return;
-    }
     throwf<std::domain_error>(
         "statfs failed for: {}: {}", mountPoint, folly::errnoStr(err));
   }
@@ -172,36 +173,32 @@ void PrivHelperServer::unmountStaleMount(const std::string& mountPoint) {
   mountPoints_.erase(mountPoint);
 }
 
-void PrivHelperServer::sanityCheckMountPoint(
+void PrivHelperServer::detectAndUnmountStaleMount(
     const std::string& mountPoint,
-    bool isNfs) {
-  XLOGF(DBG4, "SanityCheckMountPoint {}", mountPoint);
-  if (getuid() == 0) {
-    return;
-  }
-
-  if (access(mountPoint.c_str(), W_OK) < 0) {
-    auto err = errno;
-    throwf<std::domain_error>(
-        "User:{} doesn't have write access to {}: {}",
-        getuid(),
-        mountPoint,
-        folly::errnoStr(err));
-  }
-
+    bool isNFS,
+    bool isHardMount) {
   struct stat st;
-  // Stat the mount point to determine its status. If the error is type
-  // ENOTCONN: The mount is hanging. We'll try to unmount it, but if
-  // that fails, we'll just mount over it.
-  // On any other error, we throw.
+  // Stat the mount point to determine its status. If the errno matches certain
+  // values, then the mount is likely hanging. We'll try to unmount it before
+  // performing further sanity checks. On any other error, we throw.
   bool is_hanging = false;
+
+  // Stat is only being used to check if the mount is hanging, not to perform
+  // any sanity checks. Therefore, it should be safe to ignore this lint.
+  //
+  // @lint-ignore CLANGTIDY facebook-hte-BadCall-stat
   if (stat(mountPoint.c_str(), &st) < 0) {
     auto err = errno;
-    XLOGF(DBG3, "Error checking mount {}: {}", mountPoint, err);
-    // Avoids running on NFS mounts since they hang
-    // instead of returning ENOTCONN
-    if (!isNfs && isErrorSafeToIgnore(err, mountPoint)) {
-      XLOGF(DBG3, "Found stale mount {}, attempting to unmount", mountPoint);
+    XLOGF(
+        WARN,
+        "Error when sanity checking mount {}: {}. Checking for stale mounts.",
+        mountPoint,
+        folly::errnoStr(err));
+
+    // Avoids running on hard NFS mounts since IO into hard mounts can hang
+    // forever instead of returning an error.
+    if (!isHardMount && isErrorSafeToIgnore(err, isNFS, mountPoint)) {
+      XLOGF(INFO, "Found a stale mount {}, attempting to unmount", mountPoint);
       unmountStaleMount(mountPoint);
       is_hanging = true;
     } else {
@@ -216,20 +213,61 @@ void PrivHelperServer::sanityCheckMountPoint(
   // Sometimes stat will not return this error even if the mount is
   // hanging because the stat'd path is cached by the kernel. We check for this
   // by attempting to stat a non-existent file under a non-existent folder.
-  if (!isNfs && !is_hanging) {
+  if (!isHardMount && !is_hanging) {
     // Check in case the mount point is cached in the kernel.
+    XLOG(DBG4, "Double checking whether a stale mount is present.");
     std::string test_path =
         mountPoint + "/this-folder-does-not-exist/this-file-does-not-exist";
     struct stat test_st;
 
-    auto fd = open(test_path.c_str(), O_RDONLY);
-    if (fstat(fd, &test_st) < 0) {
+    // As mentioned above, using path-based stat is fine for our usescase.
+    //
+    // @lint-ignore CLANGTIDY facebook-hte-BadCall-stat
+    if (stat(test_path.c_str(), &test_st) < 0) {
       auto err = errno;
-      if (err == ENOTCONN) {
-        XLOGF(DBG3, "Found stale mount {}, attempting to unmount", mountPoint);
+      if (isErrnoFromHangingMount(err, isNFS)) {
+        XLOGF(
+            INFO,
+            "Found a stale mount {}, attempting to unmount it",
+            mountPoint);
         unmountStaleMount(mountPoint);
       }
     }
+    XLOGF(DBG4, "Mount {} is not stale.", mountPoint);
+  }
+}
+
+void PrivHelperServer::sanityCheckMountPoint(
+    const std::string& mountPoint,
+    bool isNFS,
+    bool isHardMount) {
+  XLOGF(INFO, "Sanity checking mount {}", mountPoint);
+  if (getuid() == 0) {
+    XLOG(INFO, "Skipping sanity check for root user.");
+    return;
+  }
+
+  detectAndUnmountStaleMount(mountPoint, isNFS, isHardMount);
+
+  if (access(mountPoint.c_str(), W_OK) < 0) {
+    auto err = errno;
+    throwf<std::domain_error>(
+        "User:{} doesn't have write access to {}: {}",
+        getuid(),
+        mountPoint,
+        folly::errnoStr(err));
+  }
+
+  // At this point, any stat errors are not due to a stale mount.
+  struct stat st {};
+  auto fd = open(mountPoint.c_str(), O_RDONLY);
+  if (fd == -1 || fstat(fd, &st) < 0) {
+    auto err = errno;
+    throwf<std::domain_error>(
+        "User:{} cannot stat {}: {}",
+        getuid(),
+        mountPoint,
+        folly::errnoStr(err));
   }
 
   if (!S_ISDIR(st.st_mode)) {

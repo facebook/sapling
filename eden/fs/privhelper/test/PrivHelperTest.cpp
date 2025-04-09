@@ -347,9 +347,9 @@ TEST_F(PrivHelperTest, fuseMountPermissions) {
         client_->fuseMount(path, false, "fuse").get(),
         std::exception,
         folly::to<std::string>(
-            "User:",
+            "std::domain_error: User:",
             getuid(),
-            " doesn't have write access to ",
+            " cannot stat ",
             path,
             ": Permission denied"));
   }
