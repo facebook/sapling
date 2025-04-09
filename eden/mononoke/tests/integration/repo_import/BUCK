@@ -7,6 +7,7 @@ oncall("scm_server_treehugger")
 
 dott_test(
     name = "repo_import",
+    disable_all_network_access_target = False,
     dott_files = glob(["*.t"]),
     deps = [
         "//eden/mononoke:mononoke",
