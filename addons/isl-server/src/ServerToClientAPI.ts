@@ -1013,6 +1013,25 @@ export default class ServerToClientAPI {
           });
         break;
       }
+      case 'fetchKnobsetDetails': {
+        Internal.fetchKnobset?.(ctx, data.configPath)
+          .then(knobset => {
+            this.postMessage({
+              type: 'fetchedKnobsetDetails',
+              id: data.id,
+              result: {value: knobset},
+            });
+          })
+          .catch(err => {
+            logger?.error('Could not fetch knobset details', err);
+            this.postMessage({
+              type: 'fetchedKnobsetDetails',
+              id: data.id,
+              result: {error: err as Error},
+            });
+          });
+        break;
+      }
       case 'getRepoUrlAtHash': {
         const args = ['url', '--rev', data.revset];
         // validate that the path is a valid file in repo

@@ -891,6 +891,11 @@ export type ClientToServerMessage =
       type: 'fetchJkDetails';
       id: string;
       names: string[];
+    }
+  | {
+      type: 'fetchKnobsetDetails';
+      id: string;
+      configPath: string;
     };
 
 export type SubscriptionResultsData = {
@@ -1003,6 +1008,11 @@ export type ServerToClientMessage =
       type: 'fetchedJkDetails';
       id: string;
       result: Result<InternalTypes['InternalJustknob']>;
+    }
+  | {
+      type: 'fetchedKnobsetDetails';
+      id: string;
+      result: Result<InternalTypes['InternalKnobset']>;
     };
 
 export type Disposable = {
