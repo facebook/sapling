@@ -5,8 +5,14 @@
  * GNU General Public License version 2.
  */
 
-pub mod commit;
-pub mod mergebase;
-pub mod status;
-pub mod types;
-pub mod utils;
+#[derive(Debug, PartialEq)]
+pub enum SaplingStatus {
+    Modified,
+    Added,
+    Removed,
+    Clean,
+    Missing,
+    NotTracked,
+    Ignored,
+    Copied,
+}

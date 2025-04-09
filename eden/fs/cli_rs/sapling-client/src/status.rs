@@ -14,20 +14,10 @@ use tokio::io::AsyncBufReadExt;
 use tokio::io::BufReader;
 use tokio::process::Command;
 
+use crate::types::SaplingStatus;
 use crate::utils::get_sapling_executable_path;
 use crate::utils::get_sapling_options;
-
-#[derive(Debug, PartialEq)]
-pub enum SaplingStatus {
-    Modified,
-    Added,
-    Removed,
-    Clean,
-    Missing,
-    NotTracked,
-    Ignored,
-    Copied,
-}
+use crate::utils::process_one_status_line;
 
 pub enum SaplingGetStatusResult {
     Normal(Vec<(SaplingStatus, String)>),
@@ -146,49 +136,6 @@ pub async fn get_status(
     Ok(SaplingGetStatusResult::Normal(status))
 }
 
-//
-// Single line looks like:
-//    <status> <path>
-//
-// Where status is one of:
-//   M = modified
-//   A = added
-//   R = removed
-//   C = clean
-//   ! = missing (deleted by a non-sl command, but still tracked)
-//   ? = not tracked
-//   I = ignored
-//     = origin of the previous file (with --copies)
-// Note:
-//   Paths can have spaces, but are not quoted.
-fn process_one_status_line(line: &str) -> anyhow::Result<Option<(SaplingStatus, String)>> {
-    // Must include a status and at least one char path.
-    let mut chars = line.chars();
-    let status = chars
-        .next()
-        .ok_or_else(|| anyhow::anyhow!("Invalid status line: {line}"))?;
-    let space = chars
-        .next()
-        .ok_or_else(|| anyhow::anyhow!("Invalid status line: {line}"))?;
-    if space != ' ' {
-        return Err(anyhow::anyhow!("Invalid status line: {line}"));
-    }
-    let path = line.chars().skip(1).collect::<String>().trim().to_owned();
-    let result = match status {
-        'M' => Some((SaplingStatus::Modified, path)),
-        'A' => Some((SaplingStatus::Added, path)),
-        'R' => Some((SaplingStatus::Removed, path)),
-        'C' => Some((SaplingStatus::Clean, path)),
-        '!' => Some((SaplingStatus::Missing, path)),
-        '?' => Some((SaplingStatus::NotTracked, path)),
-        'I' => Some((SaplingStatus::Ignored, path)),
-        ' ' => Some((SaplingStatus::Copied, path)),
-        _ => None, // Skip all others
-    };
-
-    Ok(result)
-}
-
 fn is_path_included(
     case_insensitive_suffix_compares: bool,
     path: &str,
@@ -254,107 +201,5 @@ pub fn strip_prefix_from_string(prefix: &Option<PathBuf>, path: String) -> Strin
             .to_string()
     } else {
         path
-    }
-}
-
-#[cfg(test)]
-mod tests {
-    use crate::status::*;
-
-    #[test]
-    fn test_process_one_status_line() -> anyhow::Result<()> {
-        assert_eq!(
-            process_one_status_line("M buck2/app/buck2_file_watcher/src/edenfs/sapling.rs")?,
-            Some((
-                SaplingStatus::Modified,
-                "buck2/app/buck2_file_watcher/src/edenfs/sapling.rs".to_owned()
-            ))
-        );
-
-        assert_eq!(
-            process_one_status_line("A buck2/app/buck2_file_watcher/src/edenfs/interface.rs")?,
-            Some((
-                SaplingStatus::Added,
-                "buck2/app/buck2_file_watcher/src/edenfs/interface.rs".to_owned()
-            ))
-        );
-
-        assert_eq!(
-            process_one_status_line("R buck2/app/buck2_file_watcher/src/edenfs/utils.rs")?,
-            Some((
-                SaplingStatus::Removed,
-                "buck2/app/buck2_file_watcher/src/edenfs/utils.rs".to_owned()
-            ))
-        );
-
-        assert_eq!(
-            process_one_status_line("! buck2/app/buck2_file_watcher/src/edenfs/sapling.rs")?,
-            Some((
-                SaplingStatus::Missing,
-                "buck2/app/buck2_file_watcher/src/edenfs/sapling.rs".to_owned()
-            ))
-        );
-
-        assert_eq!(
-            process_one_status_line("? buck2/app/buck2_file_watcher/src/edenfs/sapling.rs")?,
-            Some((
-                SaplingStatus::NotTracked,
-                "buck2/app/buck2_file_watcher/src/edenfs/sapling.rs".to_owned()
-            ))
-        );
-
-        assert_eq!(
-            process_one_status_line("C buck2/app/buck2_file_watcher/src/edenfs/sapling.rs")?,
-            Some((
-                SaplingStatus::Clean,
-                "buck2/app/buck2_file_watcher/src/edenfs/sapling.rs".to_owned()
-            ))
-        );
-
-        assert_eq!(
-            process_one_status_line("I buck2/app/buck2_file_watcher/src/edenfs/sapling.rs")?,
-            Some((
-                SaplingStatus::Ignored,
-                "buck2/app/buck2_file_watcher/src/edenfs/sapling.rs".to_owned()
-            ))
-        );
-
-        assert_eq!(
-            process_one_status_line("  buck2/app/buck2_file_watcher/src/edenfs/sapling.rs")?,
-            Some((
-                SaplingStatus::Copied,
-                "buck2/app/buck2_file_watcher/src/edenfs/sapling.rs".to_owned()
-            ))
-        );
-
-        // Space in path
-        assert_eq!(
-             process_one_status_line("M ovrsource-legacy/unity/socialvr/modules/wb_unity_asset_bundles/Assets/MetaHorizonUnityAssetBundle/Editor/Unity Dependencies/ABDataSource.cs")?,
-             Some((
-                 SaplingStatus::Modified,
-                 "ovrsource-legacy/unity/socialvr/modules/wb_unity_asset_bundles/Assets/MetaHorizonUnityAssetBundle/Editor/Unity Dependencies/ABDataSource.cs".to_owned()
-             ))
-         );
-
-        // Invalid status
-        assert!(process_one_status_line("Invalid status").is_err());
-
-        // Invalid status (missing status), but valid path with space in it
-        assert!(
-             process_one_status_line(" ovrsource-legacy/unity/socialvr/modules/wb_unity_asset_bundles/Assets/MetaHorizonUnityAssetBundle/Editor/Unity Dependencies/ABDataSource.cs")
-             .is_err());
-
-        // Malformed status (no space)
-        assert!(
-            process_one_status_line("Mbuck2/app/buck2_file_watcher/src/edenfs/sapling.rs").is_err()
-        );
-
-        // Malformed status (colon instead of space)
-        assert!(
-            process_one_status_line("M:buck2/app/buck2_file_watcher/src/edenfs/sapling.rs")
-                .is_err()
-        );
-
-        Ok(())
     }
 }
