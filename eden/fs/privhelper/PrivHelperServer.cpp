@@ -1034,7 +1034,7 @@ UnixSocket::Message PrivHelperServer::processMountNfsMsg(Cursor& cursor) {
 
   sanityCheckMountPoint(mountPath, true /* isNfs */);
 
-  nfsMount(mountPath, options);
+  nfsMount(mountPath, std::move(options));
   mountPoints_.insert(mountPath);
 
   return makeResponse();
