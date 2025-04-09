@@ -26,7 +26,7 @@ static MAX_IO_RETRIES: Lazy<u32> = Lazy::new(|| {
 static FILE_UTIL_RETRY_SUCCESS: Counter = Counter::new_counter("util.file_retry_success");
 static FILE_UTIL_RETRY_FAILURE: Counter = Counter::new_counter("util.file_retry_failure");
 
-static UMASK: Lazy<u32> = Lazy::new(|| unsafe {
+pub(crate) static UMASK: Lazy<u32> = Lazy::new(|| unsafe {
     #[cfg(unix)]
     {
         let umask = libc::umask(0);

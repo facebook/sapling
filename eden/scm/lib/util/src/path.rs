@@ -26,6 +26,7 @@ use fs::remove_file as fs_remove_file;
 use fs_err as fs;
 
 use crate::errors::IOContext;
+use crate::file::get_umask;
 
 /// Pick a random file name `path.$RAND.atomic` as `real_path`. Write `data` to
 /// it.  Then modify the symlink `path` to point to `real_path`.  Attempt to
@@ -508,6 +509,16 @@ fn create_dir_with_mode(path: &Path, _mode: u32) -> anyhow::Result<()> {
     }
 }
 
+fn dir_mode(umask: u32) -> u32 {
+    // umask affects the "group" and "other" permission.
+    0o777 ^ (0o077 & umask)
+}
+
+fn shared_dir_mode(umask: u32) -> u32 {
+    // umask affects the "other" permission.
+    0o2777 ^ (0o0007 & umask)
+}
+
 fn is_io_error_kind(err: &anyhow::Error, kind: ErrorKind) -> bool {
     err.downcast_ref::<io::Error>()
         .is_some_and(|err| err.kind() == kind)
@@ -515,12 +526,12 @@ fn is_io_error_kind(err: &anyhow::Error, kind: ErrorKind) -> bool {
 
 /// Create the directory and ignore failures when a directory of the same name already exists.
 pub fn create_dir(path: impl AsRef<Path>) -> anyhow::Result<()> {
-    create_dir_with_mode(path.as_ref(), 0o755)
+    create_dir_with_mode(path.as_ref(), dir_mode(get_umask()))
 }
 
 /// Create the directory with group write permission on UNIX systems.
 pub fn create_shared_dir(path: impl AsRef<Path>) -> anyhow::Result<()> {
-    create_dir_with_mode(path.as_ref(), 0o2775)
+    create_dir_with_mode(path.as_ref(), shared_dir_mode(get_umask()))
 }
 
 /// Create the directory and its ancestors. The mode argument is ignored on non-UNIX systems.
@@ -544,7 +555,7 @@ pub fn create_dir_all_with_mode(path: impl AsRef<Path>, mode: u32) -> anyhow::Re
 
 /// Create the directory and ancestors with group write permission on UNIX systems.
 pub fn create_shared_dir_all(path: impl AsRef<Path>) -> anyhow::Result<()> {
-    create_dir_all_with_mode(path, 0o2775)
+    create_dir_all_with_mode(path, shared_dir_mode(get_umask()))
 }
 
 /// Expand the user's home directory and any environment variables references in
@@ -1130,6 +1141,18 @@ mod tests {
         assert!(root_relative_path(&root, &root, &parent.join("rootbeer"))?.is_none());
 
         Ok(())
+    }
+
+    #[test]
+    fn test_dir_mode() {
+        assert_eq!(dir_mode(0o022), 0o755);
+        assert_eq!(shared_dir_mode(0o022), 0o2775);
+
+        assert_eq!(dir_mode(0), 0o777);
+        assert_eq!(shared_dir_mode(0), 0o2777);
+
+        assert_eq!(dir_mode(0o777), 0o700);
+        assert_eq!(shared_dir_mode(0o777), 0o2770);
     }
 
     #[test]
