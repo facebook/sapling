@@ -998,6 +998,21 @@ export default class ServerToClientAPI {
           });
         break;
       }
+      case 'fetchJkDetails': {
+        Internal.fetchJustKnobsByNames?.(ctx, data.names)
+          .then(jk => {
+            this.postMessage({type: 'fetchedJkDetails', id: data.id, result: {value: jk}});
+          })
+          .catch(err => {
+            logger?.error('Could not fetch JK details', err);
+            this.postMessage({
+              type: 'fetchedJkDetails',
+              id: data.id,
+              result: {error: err as Error},
+            });
+          });
+        break;
+      }
       case 'getRepoUrlAtHash': {
         const args = ['url', '--rev', data.revset];
         // validate that the path is a valid file in repo

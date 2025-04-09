@@ -886,6 +886,11 @@ export type ClientToServerMessage =
       type: 'fetchGkDetails';
       id: string;
       name: string;
+    }
+  | {
+      type: 'fetchJkDetails';
+      id: string;
+      names: string[];
     };
 
 export type SubscriptionResultsData = {
@@ -992,7 +997,12 @@ export type ServerToClientMessage =
   | {
       type: 'fetchedGkDetails';
       id: string;
-      result: Result<InternalTypes['PhabricatorGatekeeper']>;
+      result: Result<InternalTypes['InternalGatekeeper']>;
+    }
+  | {
+      type: 'fetchedJkDetails';
+      id: string;
+      result: Result<InternalTypes['InternalJustknob']>;
     };
 
 export type Disposable = {
