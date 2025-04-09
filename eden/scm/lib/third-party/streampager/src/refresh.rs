@@ -2,7 +2,7 @@
 
 use std::cmp::{max, min};
 
-use bit_set::BitSet;
+use crate::spanset::SpanSet;
 
 /// Tracks which parts of the screen need to be refreshed.
 #[derive(Clone, Debug, Eq, PartialEq)]
@@ -11,19 +11,17 @@ pub(crate) enum Refresh {
     None,
 
     /// The rows in the bitset must be rendered.
-    Rows(BitSet),
+    Rows(SpanSet),
 
     /// The whole screen must be rendered.
     All,
 }
 
-fn fill_range(b: &mut BitSet, start: usize, end: usize, fill: bool) {
+fn fill_range(b: &mut SpanSet, start: usize, end: usize, fill: bool) {
     if fill {
         b.extend(start..end);
     } else {
-        for row in start..end {
-            b.remove(row);
-        }
+        b.remove_range(start..end);
     }
 }
 
@@ -32,7 +30,7 @@ impl Refresh {
     pub(crate) fn add_range(&mut self, start: usize, end: usize) {
         match *self {
             Refresh::None => {
-                let mut b = BitSet::new();
+                let mut b = SpanSet::new();
                 b.extend(start..end);
                 *self = Refresh::Rows(b);
             }
@@ -50,7 +48,7 @@ impl Refresh {
             Refresh::All => {}
             Refresh::None => {
                 if fill {
-                    let mut b = BitSet::new();
+                    let mut b = SpanSet::new();
                     let mid = max(start, end.saturating_sub(step));
                     b.extend(mid..end);
                     *self = Refresh::Rows(b);
@@ -76,7 +74,7 @@ impl Refresh {
         match *self {
             Refresh::None => {
                 if fill {
-                    let mut b = BitSet::new();
+                    let mut b = SpanSet::new();
                     let mid = min(start.saturating_add(step), end);
                     b.extend(start..mid);
                     *self = Refresh::Rows(b);

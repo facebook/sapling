@@ -40,6 +40,7 @@ mod ruler;
 mod screen;
 mod search;
 mod util;
+pub(crate) mod spanset;
 
 pub use error::{Error, Result};
 pub use file::FileIndex;
