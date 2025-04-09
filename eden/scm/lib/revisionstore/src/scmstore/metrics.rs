@@ -8,6 +8,7 @@
 use std::ops::AddAssign;
 
 use ::metrics::Counter;
+use types::CasFetchedStats;
 
 pub struct FetchMetrics {
     /// Number of requests / batches
@@ -264,7 +265,9 @@ pub struct CasBackendMetrics {
 
     /// Total number of queries to the CAS Hedwig backend
     pub(crate) hedwig_queries: &'static Counter,
+}
 
+pub struct CasLocalCacheMetrics {
     /// Total number of files fetched from the CAS Local Cache
     pub(crate) local_cache_hits_files: &'static Counter,
 
@@ -315,6 +318,26 @@ macro_rules! static_cas_backend_metrics {
                 pub static MANIFOLD_QUERIES: ::metrics::Counter = ::metrics::Counter::new_counter(concat!($prefix, ".manifold.queries"));
                 pub static HEDWIG_BYTES: ::metrics::Counter = ::metrics::Counter::new_counter(concat!($prefix, ".hedwig.bytes"));
                 pub static HEDWIG_QUERIES: ::metrics::Counter = ::metrics::Counter::new_counter(concat!($prefix, ".hedwig.queries"));
+            }
+
+            static $name: $crate::scmstore::metrics::CasBackendMetrics = $crate::scmstore::metrics::CasBackendMetrics {
+                zdb_bytes: &[<cas_metrics_ $name:lower>]::ZDB_BYTES,
+                zdb_queries: &[<cas_metrics_ $name:lower>]::ZDB_QUERIES,
+                zgw_bytes: &[<cas_metrics_ $name:lower>]::ZGW_BYTES,
+                zgw_queries: &[<cas_metrics_ $name:lower>]::ZGW_QUERIES,
+                manifold_bytes: &[<cas_metrics_ $name:lower>]::MANIFOLD_BYTES,
+                manifold_queries: &[<cas_metrics_ $name:lower>]::MANIFOLD_QUERIES,
+                hedwig_bytes: &[<cas_metrics_ $name:lower>]::HEDWIG_BYTES,
+                hedwig_queries: &[<cas_metrics_ $name:lower>]::HEDWIG_QUERIES,
+            };
+        }
+    };
+}
+
+macro_rules! static_cas_local_cache_metrics {
+    ($name:ident, $prefix:tt) => {
+        paste::paste! {
+            mod [<cas_metrics_ $name:lower>] {
                 pub static LOCAL_CACHE_HITS_FILES: ::metrics::Counter = ::metrics::Counter::new_counter(concat!($prefix, ".local_cache.hits.files"));
                 pub static LOCAL_CACHE_HITS_BYTES: ::metrics::Counter = ::metrics::Counter::new_counter(concat!($prefix, ".local_cache.hits.bytes"));
                 pub static LOCAL_CACHE_MISSES_FILES: ::metrics::Counter = ::metrics::Counter::new_counter(concat!($prefix, ".local_cache.misses.files"));
@@ -328,15 +351,7 @@ macro_rules! static_cas_backend_metrics {
                 pub static LOCAL_CLOOM_TRUE_POSITIVES: ::metrics::Counter = ::metrics::Counter::new_counter(concat!($prefix, ".local_cloom.true_positives.bytes"));
             }
 
-            static $name: $crate::scmstore::metrics::CasBackendMetrics = $crate::scmstore::metrics::CasBackendMetrics {
-                zdb_bytes: &[<cas_metrics_ $name:lower>]::ZDB_BYTES,
-                zdb_queries: &[<cas_metrics_ $name:lower>]::ZDB_QUERIES,
-                zgw_bytes: &[<cas_metrics_ $name:lower>]::ZGW_BYTES,
-                zgw_queries: &[<cas_metrics_ $name:lower>]::ZGW_QUERIES,
-                manifold_bytes: &[<cas_metrics_ $name:lower>]::MANIFOLD_BYTES,
-                manifold_queries: &[<cas_metrics_ $name:lower>]::MANIFOLD_QUERIES,
-                hedwig_bytes: &[<cas_metrics_ $name:lower>]::HEDWIG_BYTES,
-                hedwig_queries: &[<cas_metrics_ $name:lower>]::HEDWIG_QUERIES,
+            static $name: $crate::scmstore::metrics::CasLocalCacheMetrics = $crate::scmstore::metrics::CasLocalCacheMetrics {
                 local_cache_hits_files: &[<cas_metrics_ $name:lower>]::LOCAL_CACHE_HITS_FILES,
                 local_cache_hits_bytes: &[<cas_metrics_ $name:lower>]::LOCAL_CACHE_HITS_BYTES,
                 local_cache_misses_files: &[<cas_metrics_ $name:lower>]::LOCAL_CACHE_MISSES_FILES,
@@ -354,63 +369,43 @@ macro_rules! static_cas_backend_metrics {
 }
 
 pub(crate) use static_cas_backend_metrics;
+pub(crate) use static_cas_local_cache_metrics;
 
 impl CasBackendMetrics {
-    pub(crate) fn zdb_bytes(&self, bytes: u64) {
-        self.zdb_bytes.add(bytes as usize);
+    pub(crate) fn update(&self, stats: &CasFetchedStats) {
+        self.zdb_bytes.add(stats.total_bytes_zdb as usize);
+        self.zgw_bytes.add(stats.total_bytes_zgw as usize);
+        self.manifold_bytes.add(stats.total_bytes_manifold as usize);
+        self.hedwig_bytes.add(stats.total_bytes_hedwig as usize);
+        self.zdb_queries.add(stats.queries_zdb as usize);
+        self.zgw_queries.add(stats.queries_zgw as usize);
+        self.manifold_queries.add(stats.queries_manifold as usize);
+        self.hedwig_queries.add(stats.queries_hedwig as usize);
     }
-    pub(crate) fn zdb_queries(&self, queries: u64) {
-        self.zdb_queries.add(queries as usize);
-    }
-    pub(crate) fn zgw_bytes(&self, bytes: u64) {
-        self.zgw_bytes.add(bytes as usize);
-    }
-    pub(crate) fn zgw_queries(&self, queries: u64) {
-        self.zgw_queries.add(queries as usize);
-    }
-    pub(crate) fn manifold_bytes(&self, bytes: u64) {
-        self.manifold_bytes.add(bytes as usize);
-    }
-    pub(crate) fn manifold_queries(&self, queries: u64) {
-        self.manifold_queries.add(queries as usize);
-    }
-    pub(crate) fn hedwig_bytes(&self, bytes: u64) {
-        self.hedwig_bytes.add(bytes as usize);
-    }
-    pub(crate) fn hedwig_queries(&self, queries: u64) {
-        self.hedwig_queries.add(queries as usize);
-    }
-    pub(crate) fn local_cache_hits_files(&self, files: u64) {
-        self.local_cache_hits_files.add(files as usize);
-    }
-    pub(crate) fn local_cache_hits_bytes(&self, bytes: u64) {
-        self.local_cache_hits_bytes.add(bytes as usize);
-    }
-    pub(crate) fn local_cache_misses_files(&self, files: u64) {
-        self.local_cache_misses_files.add(files as usize);
-    }
-    pub(crate) fn local_cache_misses_bytes(&self, bytes: u64) {
-        self.local_cache_misses_bytes.add(bytes as usize);
-    }
-    pub(crate) fn local_lmdb_cache_hits_blobs(&self, blobs: u64) {
-        self.local_lmdb_cache_hits_blobs.add(blobs as usize);
-    }
-    pub(crate) fn local_lmdb_cache_hits_bytes(&self, bytes: u64) {
-        self.local_lmdb_cache_hits_bytes.add(bytes as usize);
-    }
-    pub(crate) fn local_lmdb_cache_misses_blobs(&self, blobs: u64) {
-        self.local_lmdb_cache_misses_blobs.add(blobs as usize);
-    }
-    pub(crate) fn local_lmdb_cache_misses_bytes(&self, bytes: u64) {
-        self.local_lmdb_cache_misses_bytes.add(bytes as usize);
-    }
-    pub(crate) fn local_cloom_misses(&self, files: u64) {
-        self.local_cloom_misses.add(files as usize);
-    }
-    pub(crate) fn local_cloom_false_positives(&self, files: u64) {
-        self.local_cloom_false_positives.add(files as usize);
-    }
-    pub(crate) fn local_cloom_true_positives(&self, files: u64) {
-        self.local_cloom_true_positives.add(files as usize);
+}
+
+impl CasLocalCacheMetrics {
+    pub(crate) fn update(&self, stats: &CasFetchedStats) {
+        self.local_cache_hits_files
+            .add(stats.hits_files_local_cache as usize);
+        self.local_cache_hits_bytes
+            .add(stats.hits_bytes_local_cache as usize);
+        self.local_cache_misses_files
+            .add(stats.misses_files_local_cache as usize);
+        self.local_cache_misses_bytes
+            .add(stats.misses_bytes_local_cache as usize);
+        self.local_lmdb_cache_hits_blobs
+            .add(stats.hits_blobs_local_lmdb_cache as usize);
+        self.local_lmdb_cache_hits_bytes
+            .add(stats.hits_bytes_local_lmdb_cache as usize);
+        self.local_lmdb_cache_misses_blobs
+            .add(stats.misses_blobs_local_lmdb_cache as usize);
+        self.local_lmdb_cache_misses_bytes
+            .add(stats.misses_bytes_local_lmdb_cache as usize);
+        self.local_cloom_misses.add(stats.cloom_misses as usize);
+        self.local_cloom_false_positives
+            .add(stats.cloom_false_positives as usize);
+        self.local_cloom_true_positives
+            .add(stats.cloom_true_positives as usize);
     }
 }
