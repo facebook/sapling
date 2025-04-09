@@ -3,8 +3,6 @@
 use std::fs::File;
 use std::io::{BufRead, BufReader, Write};
 
-use tempfile::NamedTempFile;
-
 use crate::display::DisplayAction;
 use crate::error::Error;
 use crate::prompt::PromptState;
@@ -139,8 +137,9 @@ impl PromptHistory {
                 path.push("streampager");
                 path.push("history");
                 std::fs::create_dir_all(&path)?;
-                let mut new_file = NamedTempFile::new_in(&path)?;
                 path.push(format!("{}.history", &self.ident));
+                let tmp_path = path.with_extension(format!("history-tmp-{}", std::process::id()));
+                let mut new_file = File::create_new(&tmp_path)?;
                 if let Ok(file) = File::open(&path) {
                     let file = BufReader::new(file);
                     for line in file
@@ -151,7 +150,7 @@ impl PromptHistory {
                     }
                 }
                 writeln!(new_file, "{}", data)?;
-                new_file.persist(&path)?;
+                std::fs::rename(tmp_path, path)?;
             }
         }
         Ok(())

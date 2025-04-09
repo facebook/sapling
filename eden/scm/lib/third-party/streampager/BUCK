@@ -55,7 +55,6 @@ rust_library(
         "fbsource//third-party/rust:scopeguard",
         "fbsource//third-party/rust:serde",
         "fbsource//third-party/rust:smallvec",
-        "fbsource//third-party/rust:tempfile",
         "fbsource//third-party/rust:terminfo",
         "fbsource//third-party/rust:termwiz",
         "fbsource//third-party/rust:thiserror",

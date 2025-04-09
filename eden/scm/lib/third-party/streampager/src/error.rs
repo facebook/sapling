@@ -27,10 +27,6 @@ pub enum Error {
     #[error("i/o error")]
     Io(#[from] std::io::Error),
 
-    /// Returned when persisting a temporary file fails.
-    #[error(transparent)]
-    TempfilePersist(#[from] tempfile::PersistError),
-
     /// Keymap-related error.
     #[error("keymap error")]
     Keymap(#[from] crate::keymap_error::KeymapError),
