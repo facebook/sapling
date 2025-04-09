@@ -5,8 +5,6 @@
  * GNU General Public License version 2.
  */
 
-#![feature(trait_upcasting)]
-
 pub mod attributes;
 pub mod backing_store;
 pub mod bind_mount;

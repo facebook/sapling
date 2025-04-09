@@ -6,7 +6,6 @@
  */
 
 #![feature(iter_array_chunks)]
-#![feature(trait_upcasting)]
 
 use std::collections::HashSet;
 use std::str::FromStr;
