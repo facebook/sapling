@@ -90,6 +90,7 @@ rust_library(
         "fbsource//third-party/rust:rand",
         "fbsource//third-party/rust:thiserror",
         "fbsource//third-party/rust:tokio",
+        "fbsource//third-party/rust:tracing",
         ":derived_data_constants",
         ":derived_data_remote",
         "//common/rust/shed/borrowed:borrowed",

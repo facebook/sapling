@@ -42,7 +42,6 @@ use lock_ext::LockExt;
 use mononoke_types::ChangesetId;
 use mononoke_types::DerivableType;
 use scuba_ext::FutureStatsScubaExt;
-use slog::debug;
 
 use super::DerivationAssignment;
 use super::DerivedDataManager;
@@ -801,8 +800,8 @@ impl DerivedDataManager {
         let csid_range = if let (Some(first), Some(last)) = (bonsais.first(), bonsais.last()) {
             let first_csid = first.get_changeset_id();
             let last_csid = last.get_changeset_id();
-            debug!(
-                ctx.logger(),
+            tracing::debug!(
+                repo = self.repo_name(),
                 "derive exactly {} batch from {} to {}",
                 Derivable::NAME,
                 first_csid,
