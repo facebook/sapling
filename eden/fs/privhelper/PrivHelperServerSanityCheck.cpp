@@ -22,7 +22,9 @@
 #include "eden/common/utils/FSDetect.h"
 #include "eden/common/utils/Throw.h"
 
-#ifndef __APPLE__
+#ifdef __APPLE__
+#include <sys/mount.h>
+#else
 #include <sys/statfs.h>
 #endif
 
@@ -30,12 +32,38 @@ namespace facebook::eden {
 
 namespace {
 
+bool getSystemMountList(std::string& out) {
+#ifdef __APPLE__
+  struct statfs* buf;
+  int count = getmntinfo(&buf, MNT_WAIT);
+  if (count == 0) {
+    XLOGF(ERR, "getmntinfo failed: {}", folly::errnoStr(errno));
+    return false;
+  }
+  for (int i = 0; i < count; i++) {
+    out += fmt::format(
+        "{} {} {}\n",
+        buf[i].f_mntfromname,
+        buf[i].f_mntonname,
+        buf[i].f_fstypename);
+  }
+  return true;
+#else
+  if (folly::readFile("/proc/mounts", out)) {
+    return true;
+  } else {
+    XLOGF(ERR, "failed to read /proc/mounts: {}", folly::errnoStr(errno));
+    return false;
+  }
+#endif
+}
+
 /* Determines whether the given mountPoint is contained in the mount table
  * and looks like it was previously mounted by EdenFS.
  */
 bool isOldEdenMount(const std::string& mountPoint) {
   std::string mounts;
-  if (folly::readFile("/proc/mounts", mounts)) {
+  if (getSystemMountList(mounts)) {
     // TODO(T201411922): Update to std::string_view once our macOS build uses
     // C++20.
     // https://en.cppreference.com/w/cpp/string/basic_string_view/starts_with
