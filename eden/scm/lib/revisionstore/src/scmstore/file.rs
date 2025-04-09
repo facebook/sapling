@@ -164,7 +164,9 @@ impl FileStore {
                 })?;
 
                 FILE_STORE_FETCH_METRICS.cas.fetch(1);
-                FILE_STORE_FETCH_METRICS.cas_local_cache.update(&stats);
+                FILE_STORE_FETCH_METRICS
+                    .cas_direct_local_cache
+                    .update(&stats);
 
                 if let Some(blob) = maybe_blob {
                     FILE_STORE_FETCH_METRICS.cas.hit(1);

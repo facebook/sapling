@@ -31,6 +31,7 @@ static_fetch_metrics!(CAS, "scmstore.file.fetch.cas");
 
 static_cas_backend_metrics!(CAS_BACKEND, "scmstore.file.fetch.cas");
 static_cas_local_cache_metrics!(CAS_LOCAL_CACHE, "scmstore.file.fetch.cas");
+static_cas_local_cache_metrics!(CAS_DIRECT_LOCAL_CACHE, "scmstore.file.fetch.cas_direct");
 
 pub(crate) static FILE_STORE_FETCH_METRICS: FileStoreFetchMetrics = FileStoreFetchMetrics {
     indexedlog: &INDEXEDLOG,
@@ -40,6 +41,7 @@ pub(crate) static FILE_STORE_FETCH_METRICS: FileStoreFetchMetrics = FileStoreFet
     cas: &CAS,
     cas_backend: &CAS_BACKEND,
     cas_local_cache: &CAS_LOCAL_CACHE,
+    cas_direct_local_cache: &CAS_DIRECT_LOCAL_CACHE,
 };
 
 pub struct FileStoreFetchMetrics {
@@ -50,6 +52,7 @@ pub struct FileStoreFetchMetrics {
     pub(crate) cas: &'static FetchMetrics,
     pub(crate) cas_backend: &'static CasBackendMetrics,
     pub(crate) cas_local_cache: &'static CasLocalCacheMetrics,
+    pub(crate) cas_direct_local_cache: &'static CasLocalCacheMetrics,
 }
 
 #[derive(Clone, Debug, Default)]

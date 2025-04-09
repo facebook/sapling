@@ -21,6 +21,7 @@ static_fetch_metrics!(CAS, "scmstore.tree.fetch.cas");
 
 static_cas_backend_metrics!(CAS_BACKEND, "scmstore.tree.fetch.cas");
 static_cas_local_cache_metrics!(CAS_LOCAL_CACHE, "scmstore.tree.fetch.cas");
+static_cas_local_cache_metrics!(CAS_DIRECT_LOCAL_CACHE, "scmstore.tree.fetch.cas_direct");
 
 pub(crate) static TREE_STORE_FETCH_METRICS: TreeStoreFetchMetrics = TreeStoreFetchMetrics {
     indexedlog: &INDEXEDLOG,
@@ -29,6 +30,7 @@ pub(crate) static TREE_STORE_FETCH_METRICS: TreeStoreFetchMetrics = TreeStoreFet
     cas: &CAS,
     cas_backend: &CAS_BACKEND,
     cas_local_cache: &CAS_LOCAL_CACHE,
+    cas_direct_local_cache: &CAS_DIRECT_LOCAL_CACHE,
 };
 
 pub struct TreeStoreFetchMetrics {
@@ -38,4 +40,5 @@ pub struct TreeStoreFetchMetrics {
     pub(crate) cas: &'static FetchMetrics,
     pub(crate) cas_backend: &'static CasBackendMetrics,
     pub(crate) cas_local_cache: &'static CasLocalCacheMetrics,
+    pub(crate) cas_direct_local_cache: &'static CasLocalCacheMetrics,
 }

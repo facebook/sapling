@@ -168,7 +168,9 @@ impl TreeStore {
                 })?;
 
                 TREE_STORE_FETCH_METRICS.cas.fetch(1);
-                TREE_STORE_FETCH_METRICS.cas_local_cache.update(&stats);
+                TREE_STORE_FETCH_METRICS
+                    .cas_direct_local_cache
+                    .update(&stats);
 
                 if let Some(blob) = maybe_blob {
                     TREE_STORE_FETCH_METRICS.cas.hit(1);
