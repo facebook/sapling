@@ -9,7 +9,6 @@ use std::path::Path;
 use std::path::PathBuf;
 use std::process::Stdio;
 
-use edenfs_utils::prefix_paths;
 use tokio::io::AsyncBufReadExt;
 use tokio::io::BufReader;
 use tokio::process::Command;
@@ -50,7 +49,6 @@ pub async fn get_status_with_includes(
 // Get status between two revisions. If second is None, then it is the working copy.
 // Limit the number of results to limit_results. If the number of results is greater than
 // limit_results return TooManyResults. Apply root and suffix filters if provided.
-// TODO: replace with a method that returns an iterator over (SaplingStatus, String)
 pub async fn get_status(
     first: &str,
     second: Option<&str>,
@@ -62,8 +60,6 @@ pub async fn get_status(
     excluded_roots: &Option<Vec<PathBuf>>,
     excluded_suffixes: &Option<Vec<String>>,
 ) -> anyhow::Result<SaplingGetStatusResult> {
-    let included_roots =
-        prefix_paths(root, included_roots, |p| p).or_else(|| root.clone().map(|r| vec![r]));
     let included_suffixes = included_suffixes.clone().map(|is| {
         is.into_iter()
             .map(|s| {
@@ -78,7 +74,6 @@ pub async fn get_status(
             })
             .collect::<Vec<String>>()
     });
-    let excluded_roots = prefix_paths(root, excluded_roots, |p| p);
     let excluded_suffixes = excluded_suffixes.clone().map(|is| {
         is.into_iter()
             .map(|s| {
@@ -100,6 +95,12 @@ pub async fn get_status(
         args.push(second);
     }
 
+    let root_path_arg: String;
+    if let Some(root) = root {
+        root_path_arg = format!("path:{}", root.display());
+        args.push(&root_path_arg);
+    };
+
     let mut output = Command::new(get_sapling_executable_path())
         .envs(get_sapling_options())
         .args(args)
@@ -115,19 +116,18 @@ pub async fn get_status(
     let mut status = vec![];
     let mut lines = reader.lines();
     while let Some(line) = lines.next_line().await? {
-        if let Some(mut status_line) = process_one_status_line(&line)? {
+        if let Some(status_line) = process_one_status_line(&line)? {
             if is_path_included(
                 case_insensitive_suffix_compares,
                 &status_line.1,
-                &included_roots,
+                included_roots,
                 &included_suffixes,
-                &excluded_roots,
+                excluded_roots,
                 &excluded_suffixes,
             ) {
                 if status.len() >= limit_results {
                     return Ok(SaplingGetStatusResult::TooManyChanges);
                 }
-                status_line.1 = strip_prefix_from_string(root, status_line.1);
                 status.push(status_line);
             }
         }
@@ -187,19 +187,4 @@ fn is_path_included(
     }
 
     true
-}
-
-/// Given a prefix and a path string, return the path with the prefix removed.
-///
-/// If the prefix is None, the path is returned as-is.
-pub fn strip_prefix_from_string(prefix: &Option<PathBuf>, path: String) -> String {
-    if let Some(prefix) = prefix {
-        let path = Path::new(&path);
-        path.strip_prefix(prefix)
-            .map_or(path, |stripped_path| stripped_path)
-            .to_string_lossy()
-            .to_string()
-    } else {
-        path
-    }
 }
