@@ -205,7 +205,7 @@ std::shared_ptr<Notifier> getPlatformNotifier(
       return notifier;
     } catch (const std::exception& ex) {
       auto reason = folly::exceptionStr(ex);
-      XLOG(WARN) << "Couldn't start E-Menu: " << reason;
+      XLOGF(WARN, "Couldn't start E-Menu: {}", reason);
       logger->logEvent(EMenuStartupFailure{reason.toStdString()});
     }
   }
@@ -376,13 +376,13 @@ class EdenServer::ThriftServerEventHandler
     switch (sig) {
 #ifndef _WIN32
       case SIGCHLD:
-        XLOG(DBG4) << "got SIGCHLD";
+        XLOG(DBG4, "got SIGCHLD");
         {
           // Clean up zombie processes (ex. `sl debugrefreshconfig`).
           int status;
           pid_t pid;
           while ((pid = waitpid(-1, &status, WNOHANG)) > 0) {
-            XLOG(DBG5) << "waited pid " << pid << " status " << status;
+            XLOGF(DBG5, "waited pid {} status {}", pid, status);
           }
         }
         return;
@@ -395,7 +395,7 @@ class EdenServer::ThriftServerEventHandler
         // This makes it easier to kill the daemon if graceful shutdown hangs or
         // takes longer than expected for some reason.  (For instance, if we
         // unmounting the mount points hangs for some reason.)
-        XLOG(INFO) << "stopping due to signal " << sig;
+        XLOGF(INFO, "stopping due to signal {}", sig);
         unregisterSignalHandler(sig);
         edenServer_->stop();
     }
@@ -785,9 +785,11 @@ folly::SemiFuture<Unit> EdenServer::unmountAll() {
             if (result.hasValue()) {
               return std::move(unmountFuture);
             } else {
-              XLOG(ERR) << "Failed to perform unmount for \""
-                        << mount->getPath()
-                        << "\": " << folly::exceptionStr(result.exception());
+              XLOGF(
+                  ERR,
+                  "Failed to perform unmount for \"{}\": {}",
+                  mount->getPath(),
+                  result.exception().what());
               return makeFuture<Unit>(result.exception());
             }
           });
@@ -823,8 +825,7 @@ Future<TakeoverData> EdenServer::stopMountsForTakeover(
               << folly::to_underlying(info.edenMount->getState());
         }
 
-        XLOG(DBG7) << "Calling takeoverStop on " << fsChannel->getName()
-                   << " channel";
+        XLOGF(DBG7, "Calling takeoverStop on {} channel", fsChannel->getName());
         if (fsChannel->takeoverStop()) {
           // Success! Takeover has begun.
         } else {
@@ -858,8 +859,8 @@ Future<TakeoverData> EdenServer::stopMountsForTakeover(
             }));
       } catch (...) {
         auto ew = folly::exception_wrapper{std::current_exception()};
-        XLOG(ERR) << "Error while stopping \"" << mountPath
-                  << "\" for takeover: " << ew;
+        XLOGF(
+            ERR, "Error while stopping \"{}\" for takeover: {}", mountPath, ew);
         futures.push_back(
             makeFuture<optional<TakeoverData::MountInfo>>(std::move(ew)));
       }
@@ -884,8 +885,10 @@ Future<TakeoverData> EdenServer::stopMountsForTakeover(
           if (!result.hasValue()) {
             // TODO: Log this type of error either in the new process or the old
             // process.
-            XLOG(ERR) << "error stopping mount during takeover shutdown: "
-                      << result.exception().what();
+            XLOGF(
+                ERR,
+                "error stopping mount during takeover shutdown: {}",
+                result.exception().what());
             continue;
           }
 
@@ -896,8 +899,7 @@ Future<TakeoverData> EdenServer::stopMountsForTakeover(
           if (!result.value().has_value()) {
             // TODO: Log this type of error either in the new process or the old
             // process.
-            XLOG(WARN) << "mount point was unmounted during "
-                          "takeover shutdown";
+            XLOG(WARN, "mount point was unmounted during takeover shutdown");
             continue;
           }
 
@@ -1007,15 +1009,16 @@ void EdenServer::scheduleCallbackOnMainEventBase(
       // Delete this even under exceptions.
       std::unique_ptr<Wrapper> self{this};
 
-      XLOG(DBG3) << "Callback expired, running function";
+      XLOG(DBG3, "Callback expired, running function");
       try {
         fn_();
       } catch (std::exception const& e) {
-        LOG(ERROR) << "HHWheelTimerBase timeout callback threw an exception: "
-                   << e.what();
+        XLOG(
+            ERR,
+            "HHWheelTimerBase timeout callback threw an exception: {}",
+            e.what());
       } catch (...) {
-        LOG(ERROR)
-            << "HHWheelTimerBase timeout callback threw a non-exception.";
+        XLOG(ERR, "HHWheelTimerBase timeout callback threw a non-exception.");
       }
     }
     // The callback will be canceled if the timer is destroyed. Or we use
@@ -1023,7 +1026,7 @@ void EdenServer::scheduleCallbackOnMainEventBase(
     void callbackCanceled() noexcept override {
       // Delete this even under exceptions.
       std::unique_ptr<Wrapper> self{this};
-      XLOG(DBG3) << "Callback cancelled, NOT running function";
+      XLOG(DBG3, "Callback cancelled, NOT running function");
     }
     std::function<void()> fn_;
   };
@@ -1083,7 +1086,7 @@ void EdenServer::unloadInodes() {
 void EdenServer::scheduleInodeUnload(std::chrono::milliseconds timeout) {
   mainEventBase_->timer().scheduleTimeoutFn(
       [this] {
-        XLOG(DBG4) << "Beginning periodic inode unload";
+        XLOG(DBG4, "Beginning periodic inode unload");
         unloadInodes();
       },
       timeout);
@@ -1194,11 +1197,11 @@ Future<Unit> EdenServer::prepareImpl(std::shared_ptr<StartupLogger> logger) {
   if (auto nfsServer = serverState_->getNfsServer()) {
 #ifndef _WIN32
     if (doingTakeover && takeoverData.mountdServerSocket.has_value()) {
-      XLOG(DBG7) << "Initializing mountd from existing socket";
+      XLOG(DBG7, "Initializing mountd from existing socket");
       nfsServer->initialize(std::move(takeoverData.mountdServerSocket.value()));
     } else {
 #endif
-      XLOG(DBG7) << "Initializing mountd from scratch";
+      XLOG(DBG7, "Initializing mountd from scratch");
       std::optional<AbsolutePath> unixSocketPath;
       if (serverState_->getEdenConfig()->useUnixSocket.getValue()) {
         unixSocketPath = edenDir_.getMountdSocketPath();
@@ -1308,19 +1311,21 @@ bool EdenServer::createStorageEngine(cpptoml::table& config) {
   }
 
   if (storageEngine == "memory") {
-    XLOG(DBG2) << "Creating new memory store.";
+    XLOG(DBG2, "Creating new memory store.");
     localStore_ = make_shared<MemoryLocalStore>(getStats().copy());
   } else if (storageEngine == "sqlite") {
     const auto path = edenDir_.getPath() + RelativePathPiece{kSqlitePath};
     const auto parentDir = path.dirname();
     ensureDirectoryExists(parentDir);
-    XLOG(DBG2) << "Creating local SQLite store " << path << "...";
+    XLOGF(DBG2, "Creating local SQLite store {}...", path);
     folly::stop_watch<std::chrono::milliseconds> watch;
     localStore_ = make_shared<SqliteLocalStore>(path, getStats().copy());
-    XLOG(DBG2) << "Opened SQLite store in " << watch.elapsed().count() / 1000.0
-               << " seconds.";
+    XLOGF(
+        DBG2,
+        "Opened SQLite store in {:.1f} seconds.",
+        watch.elapsed().count() / 1000.0);
   } else if (storageEngine == "rocksdb") {
-    XLOG(DBG2) << "Creating local RocksDB store...";
+    XLOG(DBG2, "Creating local RocksDB store...");
     folly::stop_watch<std::chrono::milliseconds> watch;
     const auto rocksPath = edenDir_.getPath() + RelativePathPiece{kRocksDBPath};
     ensureDirectoryExists(rocksPath);
@@ -1330,8 +1335,10 @@ bool EdenServer::createStorageEngine(cpptoml::table& config) {
         serverState_->getStructuredLogger(),
         &serverState_->getFaultInjector(),
         config_);
-    XLOG(DBG2) << "Created RocksDB store in "
-               << watch.elapsed().count() / 1000.0 << " seconds.";
+    XLOGF(
+        DBG2,
+        "Created RocksDB store in {} seconds.",
+        watch.elapsed().count() / 1000.0);
   } else {
     throw std::runtime_error(
         folly::to<string>("invalid storage engine: ", storageEngine));
@@ -1448,7 +1455,7 @@ std::vector<ImmediateFuture<Unit>> EdenServer::prepareMounts(
                   "Failed to remount {}: {}\n",
                   mountPath.value(),
                   result.exception().what());
-              XLOG(DBG7) << errorMessage;
+              XLOG(DBG7, errorMessage);
               auto wl = progressManager_->wlock();
               wl->markFailed(progressIndex);
               wl->printProgresses(logger, errorMessage);
@@ -1537,8 +1544,7 @@ bool EdenServer::performCleanup() {
     if (shutdownValue.has_value()) {
       // shutdownValue only contains a value if a takeover was not successful.
       shutdownSuccess = false;
-      XLOG(INFO)
-          << "edenfs encountered a takeover error, attempting to recover";
+      XLOG(INFO, "edenfs encountered a takeover error, attempting to recover");
       // We do not wait here for the remounts to succeed, and instead will
       // let runServer() drive the mainEventBase loop to finish this call
       folly::futures::detachOn(
@@ -1572,11 +1578,15 @@ void EdenServer::shutdownPrivhelper() {
   const auto privhelperExitCode = serverState_->getPrivHelper()->stop();
   if (privhelperExitCode != 0) {
     if (privhelperExitCode > 0) {
-      XLOG(ERR) << "privhelper process exited with unexpected code "
-                << privhelperExitCode;
+      XLOG(
+          ERR,
+          "privhelper process exited with unexpected code {}",
+          privhelperExitCode);
     } else {
-      XLOG(ERR) << "privhelper process was killed by signal "
-                << privhelperExitCode;
+      XLOGF(
+          ERR,
+          "privhelper process was killed by signal {}",
+          privhelperExitCode);
     }
   }
 }
@@ -1825,8 +1835,8 @@ ImmediateFuture<std::shared_ptr<EdenMount>> EdenServer::mount(
   // Now actually begin starting the mount point
   return std::move(initFuture)
       .thenError([this, edenMount](folly::exception_wrapper ew) {
-        XLOG(ERR) << "error initializing " << edenMount->getPath() << ": "
-                  << ew.what();
+        XLOGF(
+            ERR, "error initializing {}: {}", edenMount->getPath(), ew.what());
         mountFinished(edenMount.get(), std::nullopt);
         return makeImmediateFuture<folly::Unit>(std::move(ew));
       })
@@ -1874,9 +1884,10 @@ ImmediateFuture<std::shared_ptr<EdenMount>> EdenServer::mount(
                 return edenMount->performBindMounts()
                     .deferValue([edenMount](auto&&) { return edenMount; })
                     .deferError([edenMount](folly::exception_wrapper ew) {
-                      XLOG(ERR)
-                          << "Error while performing bind mounts, will continue with mount anyway: "
-                          << folly::exceptionStr(ew);
+                      XLOG(
+                          ERR,
+                          "Error while performing bind mounts, will continue with mount anyway: {}",
+                          ew.what());
                       return edenMount;
                     })
                     .via(getServerState()->getThreadPool().get());
@@ -1932,8 +1943,7 @@ folly::SemiFuture<Unit> EdenServer::unmount(
                });
          })
       .deferError([path = mountPath.copy()](folly::exception_wrapper&& ew) {
-        XLOG(ERR) << "Failed to perform unmount for \"" << path
-                  << "\": " << folly::exceptionStr(ew);
+        XLOGF(ERR, "Failed to perform unmount for \"{}\": {}", path, ew.what());
         return folly::makeSemiFuture<Unit>(std::move(ew));
       });
 }
@@ -1942,7 +1952,7 @@ void EdenServer::mountFinished(
     EdenMount* edenMount,
     std::optional<TakeoverData::MountInfo> takeover) {
   const auto& mountPath = edenMount->getPath();
-  XLOG(INFO) << "mount point \"" << mountPath << "\" stopped";
+  XLOGF(INFO, "mount point \"{}\" stopped", mountPath);
 
   // Save the unmount and takeover Promises
   folly::SharedPromise<Unit> unmountPromise;
@@ -2110,9 +2120,11 @@ ImmediateFuture<CheckoutResult> EdenServer::checkOutRevision(
               auto delay = serverState_->getReloadableConfig()
                                ->getEdenConfig()
                                ->postCheckoutDelayToUnloadInodes.getValue();
-              XLOG(DBG9) << "Scheduling unlinked inode cleanup for mount "
-                         << mountPath << " in " << durationStr(delay)
-                         << " seconds.";
+              XLOGF(
+                  DBG9,
+                  "Scheduling unlinked inode cleanup for mount {} in {} seconds.",
+                  mountPath,
+                  durationStr(delay));
               this->scheduleCallbackOnMainEventBase(
                   std::chrono::duration_cast<std::chrono::milliseconds>(delay),
                   [this, mountPath = mountPath.copy()]() {
@@ -2126,9 +2138,10 @@ ImmediateFuture<CheckoutResult> EdenServer::checkOutRevision(
                       // This is an expected error if the mount has been
                       // unmounted before this callback ran.
                       if (err.errorCode_ref() == ENOENT) {
-                        XLOG(DBG3)
-                            << "Callback to clear inodes: Mount cannot be found. "
-                            << (*err.message());
+                        XLOGF(
+                            DBG3,
+                            "Callback to clear inodes: Mount cannot be found. {}",
+                            *err.message());
                       } else {
                         throw;
                       }
@@ -2480,7 +2493,7 @@ void EdenServer::stop() {
       // If we are already shutting down, we don't want to continue down this
       // code path in case we are doing a graceful restart. That could result in
       // a race which could trigger a failure in performCleanup.
-      XLOG(INFO) << "stop was called while server was already shutting down";
+      XLOG(INFO, "stop was called while server was already shutting down");
       return;
     }
     state->state = RunState::SHUTTING_DOWN;
@@ -2561,8 +2574,10 @@ folly::Future<TakeoverData> EdenServer::startTakeoverShutdown() {
         try {
           localStore_->compactStorage();
         } catch (const std::exception& e) {
-          XLOG(ERR) << "Failed to compact local store with error: " << e.what()
-                    << ". Continuing takeover server shutdown anyway.";
+          XLOGF(
+              ERR,
+              "Failed to compact local store with error: {}. Continuing takeover server shutdown anyway.",
+              e.what());
         }
 
         shutdownSubscribers();
@@ -2604,8 +2619,10 @@ folly::Future<TakeoverData> EdenServer::startTakeoverShutdown() {
             .thenValue([takeover = std::move(takeover)](
                            std::optional<folly::File>&& mountdSocket) mutable {
               if (mountdSocket.has_value()) {
-                XLOG(DBG7) << "Got mountd Socket for takeover "
-                           << mountdSocket.value().fd();
+                XLOGF(
+                    DBG7,
+                    "Got mountd Socket for takeover {}",
+                    mountdSocket.value().fd());
               }
               takeover.mountdServerSocket = std::move(mountdSocket);
               return std::move(takeover);
@@ -2623,7 +2640,7 @@ void EdenServer::shutdownSubscribers() {
   // If we have any subscription sessions from watchman, we want to shut
   // those down now, otherwise they will block the server_->stop() call
   // below
-  XLOG(DBG1) << "cancel all subscribers prior to stopping thrift";
+  XLOG(DBG1, "cancel all subscribers prior to stopping thrift");
   auto mountPoints = mountPoints_->wlock();
   for (auto& [path, info] : *mountPoints) {
     info.edenMount->getJournal().cancelAllSubscribers();
@@ -2684,13 +2701,15 @@ ImmediateFuture<uint64_t> EdenServer::garbageCollectWorkingCopy(
 
   auto lease = mount.tryStartWorkingCopyGC(rootInode);
   if (!lease) {
-    XLOG(DBG6) << "Not running GC for: " << mount.getPath()
-               << ", another GC is already in progress";
+    XLOGF(
+        DBG6,
+        "Not running GC for: {}, another GC is already in progress",
+        mount.getPath());
     return 0u;
   }
 
   auto mountPath = mount.getPath();
-  XLOG(DBG1) << "Starting GC for: " << mountPath;
+  XLOGF(DBG1, "Starting GC for: {}", mountPath);
   return rootInode->invalidateChildrenNotMaterialized(cutoff, context)
       .ensure([rootInode, lease = std::move(lease)] {
         rootInode->unloadChildrenUnreferencedByFs();
@@ -2708,9 +2727,12 @@ ImmediateFuture<uint64_t> EdenServer::garbageCollectWorkingCopy(
         structuredLogger->logEvent(
             WorkingCopyGc{runtime.count(), numInvalidated, success});
 
-        XLOG(DBG1) << "GC for: " << mountPath
-                   << ", completed in: " << runtime.count() << " seconds"
-                   << " and invalidated " << numInvalidated << " inodes";
+        XLOGF(
+            DBG1,
+            "GC for: {}, completed in: {} seconds and invalidated {} inodes",
+            mountPath,
+            runtime.count(),
+            numInvalidated);
 
         return numInvalidatedTry;
       });
@@ -2965,7 +2987,7 @@ void EdenServer::checkLockValidity() {
   // directory or moves it to another location.  Otherwise an EdenFS process
   // could continue running indefinitely in the background even though its state
   // directory no longer exists.
-  XLOG(ERR) << "Stopping EdenFS: on-disk lock file is no longer valid";
+  XLOG(ERR, "Stopping EdenFS: on-disk lock file is no longer valid");
 
   // Attempt an orderly shutdown for now.  Since our state directory may have
   // been deleted we might not really be able to shut down normally, but for now
