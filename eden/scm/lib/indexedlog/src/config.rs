@@ -10,6 +10,25 @@
 use std::sync::atomic;
 use std::sync::atomic::AtomicI64;
 use std::sync::atomic::AtomicU32;
+use std::sync::LazyLock;
+
+static UMASK: LazyLock<u32> = LazyLock::new(|| {
+    #[cfg(unix)]
+    unsafe {
+        let umask = libc::umask(0);
+        libc::umask(umask);
+        #[allow(clippy::useless_conversion)] // mode_t is u16 on mac and u32 on linux
+        return umask.into();
+    }
+    #[cfg(not(unix))]
+    {
+        return 0;
+    }
+});
+
+fn apply_masked_umask(mode: u32, mask: u32) -> u32 {
+    mode ^ (mask & *UMASK)
+}
 
 /// If set to true, prefer symlinks to normal files for atomic_write. This avoids
 /// states where the metadata file is empty in theory.
@@ -23,11 +42,13 @@ static ENFORCE_FSYNC: atomic::AtomicBool = atomic::AtomicBool::new(false);
 
 /// Default chmod mode for directories.
 /// u: rwx g:rws o:r-x
-pub static CHMOD_DIR: AtomicI64 = AtomicI64::new(0o2775);
+pub static CHMOD_DIR: LazyLock<AtomicI64> =
+    LazyLock::new(|| AtomicI64::new(apply_masked_umask(0o2777, 0o7) as _));
 
 // XXX: This works around https://github.com/Stebalien/tempfile/pull/61.
 /// Default chmod mode for atomic_write files.
-pub static CHMOD_FILE: AtomicI64 = AtomicI64::new(0o664);
+pub static CHMOD_FILE: LazyLock<AtomicI64> =
+    LazyLock::new(|| AtomicI64::new(apply_masked_umask(0o666, 0o7) as _));
 
 /// Default maximum chain length for index. See `index::OpenOptions::checksum_max_chain_len`.
 pub static INDEX_CHECKSUM_MAX_CHAIN_LEN: AtomicU32 = AtomicU32::new(10);
