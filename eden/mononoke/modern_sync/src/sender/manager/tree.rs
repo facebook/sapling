@@ -9,11 +9,13 @@ use std::collections::VecDeque;
 use std::sync::atomic::AtomicBool;
 use std::sync::atomic::Ordering;
 use std::sync::Arc;
+use std::time::Duration;
 
 use anyhow::Result;
 use context::CoreContext;
 use futures::channel::oneshot;
 use mercurial_types::HgManifestId;
+use metaconfig_types::ModernSyncChannelConfig;
 use mononoke_macros::mononoke;
 use stats::define_stats;
 use stats::prelude::*;
@@ -23,9 +25,6 @@ use tokio::time::interval;
 use crate::sender::edenapi::EdenapiSender;
 use crate::sender::manager::Manager;
 use crate::sender::manager::TreeMessage;
-use crate::sender::manager::MAX_TREES_BATCH_SIZE;
-use crate::sender::manager::TREES_CHANNEL_SIZE;
-use crate::sender::manager::TREES_FLUSH_INTERVAL;
 
 define_stats! {
     prefix = "mononoke.modern_sync.manager.tree";
@@ -34,17 +33,21 @@ define_stats! {
     content_wait_time_s:  dynamic_timeseries("{}.content_wait_time_s", (repo: String); Average),
 
     trees_queue_capacity: dynamic_singleton_counter("{}.trees.queue_capacity", (repo: String)),
-    trees_queue_len: dynamic_histogram("{}.trees.queue_len", (repo: String); 10, 0, crate::sender::manager::TREES_CHANNEL_SIZE as u32, Average; P 50; P 75; P 95; P 99),
+    trees_queue_len: dynamic_histogram("{}.trees.queue_len", (repo: String); 10, 0,  100_000, Average; P 50; P 75; P 95; P 99),
     trees_queue_max_capacity: dynamic_singleton_counter("{}.trees.queue_max_capacity", (repo: String)),
 }
 
 pub(crate) struct TreeManager {
+    config: ModernSyncChannelConfig,
     trees_recv: mpsc::Receiver<TreeMessage>,
 }
 
 impl TreeManager {
-    pub(crate) fn new(trees_recv: mpsc::Receiver<TreeMessage>) -> Self {
-        Self { trees_recv }
+    pub(crate) fn new(
+        config: ModernSyncChannelConfig,
+        trees_recv: mpsc::Receiver<TreeMessage>,
+    ) -> Self {
+        Self { config, trees_recv }
     }
 
     async fn flush_trees(
@@ -107,12 +110,12 @@ impl Manager for TreeManager {
             let mut encountered_error: Option<anyhow::Error> = None;
             let mut batch_trees = Vec::new();
             let mut batch_done_senders = VecDeque::new();
-            let mut timer = interval(TREES_FLUSH_INTERVAL);
+            let mut timer = interval(Duration::from_millis(self.config.flush_interval_ms as u64));
 
             while !cancellation_requested.load(Ordering::Relaxed) {
                 tokio::select! {
                     msg = trees_recv.recv() => {
-                        tracing::debug!("Trees channel capacity: {} max capacity: {} in queue: {}", trees_recv.capacity(), TREES_CHANNEL_SIZE,  trees_recv.len());
+                        tracing::debug!("Trees channel capacity: {} max capacity: {} in queue: {}", trees_recv.capacity(), self.config.channel_size,  trees_recv.len());
                         STATS::trees_queue_capacity.set_value(ctx.fb, trees_recv.capacity() as i64, (reponame.clone(),));
                         STATS::trees_queue_len.add_value(trees_recv.len() as i64, (reponame.clone(),));
                         STATS::trees_queue_max_capacity.set_value(ctx.fb, trees_recv.max_capacity() as i64, (reponame.clone(),));
@@ -146,7 +149,7 @@ impl Manager for TreeManager {
                             Some(TreeMessage::Tree(_)) => (),
                             None => break,
                         }
-                        if batch_trees.len() >= MAX_TREES_BATCH_SIZE {
+                        if batch_trees.len() >= self.config.batch_size as usize {
                             if let Err(e) = TreeManager::flush_trees(&trees_es, &mut batch_trees, &mut batch_done_senders, &mut encountered_error, &reponame).await {
                                 tracing::error!("Trees flush failed: {:?}", e);
                                 return;

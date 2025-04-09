@@ -45,6 +45,7 @@ use mercurial_types::blobs::HgBlobManifest;
 use mercurial_types::HgChangesetId;
 use mercurial_types::HgFileNodeId;
 use mercurial_types::HgManifestId;
+use metaconfig_types::ModernSyncConfig;
 use metadata::Metadata;
 use mononoke_app::args::SourceRepoArgs;
 use mononoke_app::MononokeApp;
@@ -106,7 +107,6 @@ pub async fn sync(
     dest_repo_name: String,
     exec_type: ExecutionType,
     dry_run: bool,
-    chunk_size: u64,
     exit_file: PathBuf,
     sender_decorator: Option<
         Box<
@@ -201,6 +201,7 @@ pub async fn sync(
 
     let send_manager = SendManager::new(
         ctx.clone(),
+        &config,
         repo_blobstore.clone(),
         sender.clone(),
         repo_name.clone(),
@@ -218,6 +219,7 @@ pub async fn sync(
         BookmarkUpdateLogId(start_id),
         exec_type,
         repo.bookmark_update_log_arc(),
+        config.single_db_query_entries_limit as u64,
     )
     .then(|entries| {
         cloned!(
@@ -227,7 +229,8 @@ pub async fn sync(
             sender,
             mut send_manager,
             last_entry,
-            bookmark
+            bookmark,
+            config
         );
         borrowed!(ctx);
         async move {
@@ -280,11 +283,12 @@ pub async fn sync(
 
                         process_bookmark_update_log_entry(
                             ctx,
+                            &config,
                             &repo,
                             &entry,
                             &send_manager,
                             sender.clone(),
-                            chunk_size,
+                            config.chunk_size as u64,
                             app_args.log_to_ods,
                             *last_entry.read().await,
                             mc.clone(),
@@ -329,6 +333,7 @@ pub async fn sync(
 
 pub async fn process_bookmark_update_log_entry(
     ctx: &CoreContext,
+    config: &ModernSyncConfig,
     repo: &Repo,
     entry: &BookmarkUpdateLogEntry,
     send_manager: &SendManager,
@@ -540,7 +545,7 @@ pub async fn process_bookmark_update_log_entry(
                             }
                         })
                     })
-                    .buffered(100)
+                    .buffered(config.changeset_concurrency as usize)
                     .map_err(anyhow::Error::from)
                     .try_next_step(|messages| {
                         cloned!(mut send_manager);

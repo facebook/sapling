@@ -19,6 +19,7 @@ use mercurial_types::blobs::HgBlobChangeset;
 use mercurial_types::HgChangesetId;
 use mercurial_types::HgFileNodeId;
 use mercurial_types::HgManifestId;
+use metaconfig_types::ModernSyncConfig;
 use mononoke_macros::mononoke;
 use mononoke_types::BonsaiChangeset;
 use mononoke_types::ContentId;
@@ -40,28 +41,6 @@ mod tree;
 pub(crate) const MODERN_SYNC_COUNTER_NAME: &str = "modern_sync";
 pub(crate) const MODERN_SYNC_BATCH_CHECKPOINT_NAME: &str = "modern_sync_batch_checkpoint";
 pub(crate) const MODERN_SYNC_CURRENT_ENTRY_ID: &str = "modern_sync_batch_id";
-
-// Channel sizes
-const CONTENT_CHANNEL_SIZE: usize = 40_000;
-const FILES_CHANNEL_SIZE: usize = 50_000;
-const TREES_CHANNEL_SIZE: usize = 50_000;
-const CHANGESET_CHANNEL_SIZE: usize = 15_000;
-
-// Flush intervals
-// This indicates how often we flush the content, trees, files and changesets
-// despite the channel not being full. This is to ensure that we don't get stuck
-// waiting for the channel to be full with unflushed data.
-const CHANGESETS_FLUSH_INTERVAL: Duration = Duration::from_secs(1);
-const TREES_FLUSH_INTERVAL: Duration = Duration::from_secs(1);
-const FILENODES_FLUSH_INTERVAL: Duration = Duration::from_secs(1);
-const CONTENTS_FLUSH_INTERVAL: Duration = Duration::from_secs(1);
-
-// Batch sizes and limits
-const MAX_CHANGESET_BATCH_SIZE: usize = 20;
-const MAX_TREES_BATCH_SIZE: usize = 500;
-const MAX_CONTENT_BATCH_SIZE: usize = 300;
-const MAX_FILENODES_BATCH_SIZE: usize = 500;
-const MAX_BLOB_BYTES: u64 = 10 * 10 * 1024 * 1024; // 100 MB
 
 #[derive(Clone)]
 pub struct SendManager {
@@ -128,6 +107,7 @@ pub struct BookmarkInfo {
 impl SendManager {
     pub fn new(
         ctx: CoreContext,
+        config: &ModernSyncConfig,
         repo_blobstore: RepoBlobstore,
         external_sender: Arc<dyn EdenapiSender + Send + Sync>,
         reponame: String,
@@ -136,8 +116,20 @@ impl SendManager {
         cancellation_requested: Arc<AtomicBool>,
     ) -> Self {
         // Create channel for receiving content
-        let (content_sender, content_recv) = mpsc::channel(CONTENT_CHANNEL_SIZE);
-        ContentManager::new(content_recv, repo_blobstore).start(
+        let (content_sender, content_recv) = mpsc::channel(
+            config
+                .content_channel_config
+                .channel_size
+                .try_into()
+                .expect("channel size is too large"),
+        );
+        ContentManager::new(
+            config.max_blob_bytes as u64,
+            config.content_channel_config.clone(),
+            content_recv,
+            repo_blobstore,
+        )
+        .start(
             ctx.clone(),
             reponame.clone(),
             external_sender.clone(),
@@ -145,8 +137,14 @@ impl SendManager {
         );
 
         // Create channel for receiving files
-        let (files_sender, files_recv) = mpsc::channel(FILES_CHANNEL_SIZE);
-        FilenodeManager::new(files_recv).start(
+        let (files_sender, files_recv) = mpsc::channel(
+            config
+                .filenodes_channel_config
+                .channel_size
+                .try_into()
+                .expect("channel size is too large"),
+        );
+        FilenodeManager::new(config.filenodes_channel_config.clone(), files_recv).start(
             ctx.clone(),
             reponame.clone(),
             external_sender.clone(),
@@ -154,8 +152,14 @@ impl SendManager {
         );
 
         // Create channel for receiving trees
-        let (trees_sender, trees_recv) = mpsc::channel(TREES_CHANNEL_SIZE);
-        TreeManager::new(trees_recv).start(
+        let (trees_sender, trees_recv) = mpsc::channel(
+            config
+                .trees_channel_config
+                .channel_size
+                .try_into()
+                .expect("channel size is too large"),
+        );
+        TreeManager::new(config.trees_channel_config.clone(), trees_recv).start(
             ctx.clone(),
             reponame.clone(),
             external_sender.clone(),
@@ -163,8 +167,14 @@ impl SendManager {
         );
 
         // Create channel for receiving changesets
-        let (changeset_sender, changeset_recv) = mpsc::channel(CHANGESET_CHANNEL_SIZE);
-        ChangesetManager::new(changeset_recv, mc).start(
+        let (changeset_sender, changeset_recv) = mpsc::channel(
+            config
+                .changesets_channel_config
+                .channel_size
+                .try_into()
+                .expect("channel size is too large"),
+        );
+        ChangesetManager::new(config.changesets_channel_config.clone(), changeset_recv, mc).start(
             ctx.clone(),
             reponame.clone(),
             external_sender.clone(),

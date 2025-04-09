@@ -29,13 +29,12 @@ define_stats! {
     missing_bookmark_moves:  dynamic_timeseries("{}.missing_bookmark_moves", (repo: String); Sum),
 }
 
-const SINGLE_DB_QUERY_ENTRIES_LIMIT: u64 = 1000;
-
 pub(crate) fn read_bookmark_update_log(
     ctx: &CoreContext,
     start_id: BookmarkUpdateLogId,
     exec_type: ExecutionType,
     bookmark_update_log: Arc<dyn BookmarkUpdateLog>,
+    single_db_query_entries_limit: u64,
 ) -> impl stream::Stream<Item = Result<Vec<BookmarkUpdateLogEntry>, Error>> + '_ {
     stream::try_unfold(Some(start_id), move |maybe_id| {
         cloned!(ctx, bookmark_update_log, exec_type);
@@ -46,7 +45,7 @@ pub(crate) fn read_bookmark_update_log(
                         .read_next_bookmark_log_entries_same_bookmark_and_reason(
                             ctx.clone(),
                             id,
-                            SINGLE_DB_QUERY_ENTRIES_LIMIT,
+                            single_db_query_entries_limit,
                         )
                         .try_collect()
                         .await

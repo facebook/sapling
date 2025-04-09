@@ -9,6 +9,7 @@ use std::collections::VecDeque;
 use std::sync::atomic::AtomicBool;
 use std::sync::atomic::Ordering;
 use std::sync::Arc;
+use std::time::Duration;
 
 use anyhow::anyhow;
 use anyhow::Error;
@@ -22,6 +23,7 @@ use futures::channel::oneshot;
 use futures::stream;
 use futures::StreamExt;
 use futures::TryStreamExt;
+use metaconfig_types::ModernSyncChannelConfig;
 use mononoke_macros::mononoke;
 use mononoke_types::ContentId;
 use repo_blobstore::RepoBlobstore;
@@ -33,10 +35,6 @@ use tokio::time::interval;
 use crate::sender::edenapi::EdenapiSender;
 use crate::sender::manager::ContentMessage;
 use crate::sender::manager::Manager;
-use crate::sender::manager::CONTENTS_FLUSH_INTERVAL;
-use crate::sender::manager::CONTENT_CHANNEL_SIZE;
-use crate::sender::manager::MAX_BLOB_BYTES;
-use crate::sender::manager::MAX_CONTENT_BATCH_SIZE;
 
 define_stats! {
     prefix = "mononoke.modern_sync.manager.content";
@@ -45,22 +43,27 @@ define_stats! {
     content_upload_time_s:  dynamic_timeseries("{}.content_upload_time_ms", (repo: String); Average),
 
     contents_queue_capacity: dynamic_singleton_counter("{}.contents.queue_capacity", (repo: String)),
-    contents_queue_len: dynamic_histogram("{}.contents.queue_len", (repo: String); 10, 0, crate::sender::manager::CONTENT_CHANNEL_SIZE as u32, Average; P 50; P 75; P 95; P 99),
+    contents_queue_len: dynamic_histogram("{}.contents.queue_len", (repo: String); 10, 0, 100_000, Average; P 50; P 75; P 95; P 99),
     contents_queue_max_capacity: dynamic_singleton_counter("{}.contents.queue_max_capacity", (repo: String)),
 }
 
 pub(crate) struct ContentManager {
+    max_blob_bytes: u64,
+    config: ModernSyncChannelConfig,
     content_recv: mpsc::Receiver<ContentMessage>,
-    #[allow(dead_code)]
     repo_blobstore: RepoBlobstore,
 }
 
 impl ContentManager {
     pub(crate) fn new(
+        max_blob_bytes: u64,
+        config: ModernSyncChannelConfig,
         content_recv: mpsc::Receiver<ContentMessage>,
         repo_blobstore: RepoBlobstore,
     ) -> Self {
         Self {
+            max_blob_bytes,
+            config,
             content_recv,
             repo_blobstore,
         }
@@ -141,12 +144,13 @@ impl Manager for ContentManager {
             let mut pending_messages = VecDeque::new();
             let mut current_batch = Vec::new();
             let mut current_batch_size = 0;
-            let mut flush_timer = interval(CONTENTS_FLUSH_INTERVAL);
+            let mut flush_timer =
+                interval(Duration::from_millis(self.config.flush_interval_ms as u64));
 
             while !cancellation_requested.load(Ordering::Relaxed) {
                 tokio::select! {
                     msg = content_recv.recv() => {
-                        tracing::debug!("Content channel capacity: {} max capacity: {} in queue: {}", content_recv.capacity(), CONTENT_CHANNEL_SIZE,  content_recv.len());
+                        tracing::debug!("Content channel capacity: {} max capacity: {} in queue: {}", content_recv.capacity(), self.config.channel_size,  content_recv.len());
                         STATS::contents_queue_capacity.set_value(ctx.fb, content_recv.capacity() as i64, (reponame.clone(),));
                         STATS::contents_queue_len.add_value(content_recv.len() as i64, (reponame.clone(),));
                         STATS::contents_queue_max_capacity.set_value(ctx.fb, content_recv.max_capacity() as i64, (reponame.clone(),));
@@ -162,7 +166,7 @@ impl Manager for ContentManager {
                             None => break,
                         }
 
-                        if current_batch_size >= MAX_BLOB_BYTES || current_batch.len() >= MAX_CONTENT_BATCH_SIZE {
+                        if current_batch_size >= self.max_blob_bytes || current_batch.len() >= self.config.batch_size as usize {
                             if let Err(e) = ContentManager::flush_batch(
                                 ctx.clone(),
                                 self.repo_blobstore.clone(),

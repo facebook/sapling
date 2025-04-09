@@ -9,11 +9,13 @@ use std::collections::VecDeque;
 use std::sync::atomic::AtomicBool;
 use std::sync::atomic::Ordering;
 use std::sync::Arc;
+use std::time::Duration;
 
 use anyhow::Result;
 use context::CoreContext;
 use futures::channel::oneshot;
 use mercurial_types::blobs::HgBlobChangeset;
+use metaconfig_types::ModernSyncChannelConfig;
 use mononoke_macros::mononoke;
 use mononoke_types::BonsaiChangeset;
 use mutable_counters::MutableCounters;
@@ -26,9 +28,6 @@ use crate::sender::edenapi::EdenapiSender;
 use crate::sender::manager::BookmarkInfo;
 use crate::sender::manager::ChangesetMessage;
 use crate::sender::manager::Manager;
-use crate::sender::manager::CHANGESETS_FLUSH_INTERVAL;
-use crate::sender::manager::CHANGESET_CHANNEL_SIZE;
-use crate::sender::manager::MAX_CHANGESET_BATCH_SIZE;
 use crate::sender::manager::MODERN_SYNC_BATCH_CHECKPOINT_NAME;
 use crate::sender::manager::MODERN_SYNC_COUNTER_NAME;
 use crate::sender::manager::MODERN_SYNC_CURRENT_ENTRY_ID;
@@ -43,21 +42,27 @@ define_stats! {
     changeset_upload_time_s:  dynamic_timeseries("{}.changeset_upload_time_s", (repo: String); Average),
 
     changesets_queue_capacity: dynamic_singleton_counter("{}.changesets.queue_capacity", (repo: String)),
-    changesets_queue_len: dynamic_histogram("{}.changesets.queue_len", (repo: String); 10, 0, crate::sender::manager::CHANGESET_CHANNEL_SIZE as u32, Average; P 50; P 75; P 95; P 99),
+    changesets_queue_len: dynamic_histogram("{}.changesets.queue_len", (repo: String); 10, 0, 100_000, Average; P 50; P 75; P 95; P 99),
     changesets_queue_max_capacity: dynamic_singleton_counter("{}.changesets.queue_max_capacity", (repo: String)),
 }
 
 pub(crate) struct ChangesetManager {
+    config: ModernSyncChannelConfig,
     changeset_recv: mpsc::Receiver<ChangesetMessage>,
     mc: Arc<dyn MutableCounters + Send + Sync>,
 }
 
 impl ChangesetManager {
     pub(crate) fn new(
+        config: ModernSyncChannelConfig,
         changeset_recv: mpsc::Receiver<ChangesetMessage>,
         mc: Arc<dyn MutableCounters + Send + Sync>,
     ) -> Self {
-        Self { changeset_recv, mc }
+        Self {
+            config,
+            changeset_recv,
+            mc,
+        }
     }
 
     async fn flush_batch(
@@ -170,7 +175,8 @@ impl Manager for ChangesetManager {
             let mut pending_notification = None;
 
             let mut current_batch = Vec::new();
-            let mut flush_timer = interval(CHANGESETS_FLUSH_INTERVAL);
+            let mut flush_timer =
+                interval(Duration::from_millis(self.config.flush_interval_ms as u64));
 
             while !cancellation_requested.load(Ordering::Relaxed) {
                 tokio::select! {
@@ -180,7 +186,7 @@ impl Manager for ChangesetManager {
                         tracing::debug!(
                             "Changeset channel capacity: {} max capacity: {} in queue: {}",
                             changeset_recv.capacity(),
-                            CHANGESET_CHANNEL_SIZE,
+                            self.config.channel_size,
                             changeset_recv.len()
                         );
                         STATS::changesets_queue_capacity.set_value(ctx.fb, changeset_recv.capacity() as i64, (reponame.clone(),));
@@ -271,7 +277,7 @@ impl Manager for ChangesetManager {
                             _ => {}
                         }
 
-                        if current_batch.len() >= MAX_CHANGESET_BATCH_SIZE {
+                        if current_batch.len() >= self.config.batch_size as usize {
                             let now = std::time::Instant::now();
                             let changeset_ids = current_batch.iter().map(|c| c.1.get_changeset_id()).collect::<Vec<_>>();
                             stat::log_upload_changeset_start(&ctx, changeset_ids.clone());

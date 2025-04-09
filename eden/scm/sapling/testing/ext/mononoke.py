@@ -835,7 +835,15 @@ sync_all_bookmarks=true
     append_config(
         f"""
 [modern_sync_config]
-url=\"https://localhost\"
+url="https://localhost"
+chunk_size=100
+single_db_query_entries_limit=10
+changeset_concurrency=10
+max_blob_bytes=1000000
+content_channel_config={{ batch_size=10, channel_size=100, flush_interval_ms=1000 }}
+filenodes_channel_config={{ batch_size=10, channel_size=100, flush_interval_ms=1000 }}
+trees_channel_config={{ batch_size=10, channel_size=100, flush_interval_ms=1000 }}
+changesets_channel_config={{ batch_size=10, channel_size=100, flush_interval_ms=1000 }}
 """
     )
 

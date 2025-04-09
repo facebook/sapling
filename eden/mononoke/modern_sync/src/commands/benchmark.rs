@@ -31,7 +31,6 @@ use mutable_counters::MutableCounters;
 #[cfg(fbcode_build)]
 mod stats;
 
-use crate::commands::sync_loop::CHUNK_SIZE_DEFAULT;
 use crate::sender::edenapi::EdenapiSender;
 use crate::sender::edenapi::FilterEdenapiSender;
 use crate::sender::edenapi::MethodFilter;
@@ -172,7 +171,6 @@ pub async fn run(app: MononokeApp, args: CommandArgs) -> Result<()> {
         dest_repo_name.clone(),
         ExecutionType::SyncOnce,
         false,
-        args.chunk_size.clone().unwrap_or(CHUNK_SIZE_DEFAULT),
         PathBuf::from(""),
         Some(Box::new(move |sender| {
             let sender: Arc<dyn EdenapiSender + Sync + Send> = match benchmark_mode {

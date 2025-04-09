@@ -13,7 +13,6 @@ use anyhow::Result;
 use clap::Parser;
 use mononoke_app::MononokeApp;
 
-use crate::commands::sync_loop::CHUNK_SIZE_DEFAULT;
 use crate::sync::get_unsharded_repo_args;
 use crate::sync::ExecutionType;
 use crate::ModernSyncArgs;
@@ -25,8 +24,6 @@ pub struct CommandArgs {
     start_id: Option<u64>,
     #[clap(long, help = "Print sent items without actually syncing")]
     dry_run: bool,
-    #[clap(long, help = "Chunk size for the sync [default: 1000]")]
-    chunk_size: Option<u64>,
 }
 
 pub async fn run(app: MononokeApp, args: CommandArgs) -> Result<()> {
@@ -44,7 +41,6 @@ pub async fn run(app: MononokeApp, args: CommandArgs) -> Result<()> {
         dest_repo_name,
         ExecutionType::SyncOnce,
         args.dry_run,
-        args.chunk_size.clone().unwrap_or(CHUNK_SIZE_DEFAULT),
         PathBuf::from(""),
         None,
         None,

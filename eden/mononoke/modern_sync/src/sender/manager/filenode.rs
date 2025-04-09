@@ -9,11 +9,13 @@ use std::collections::VecDeque;
 use std::sync::atomic::AtomicBool;
 use std::sync::atomic::Ordering;
 use std::sync::Arc;
+use std::time::Duration;
 
 use anyhow::Result;
 use context::CoreContext;
 use futures::channel::oneshot;
 use mercurial_types::HgFileNodeId;
+use metaconfig_types::ModernSyncChannelConfig;
 use mononoke_macros::mononoke;
 use stats::define_stats;
 use stats::prelude::*;
@@ -23,9 +25,6 @@ use tokio::time::interval;
 use crate::sender::edenapi::EdenapiSender;
 use crate::sender::manager::FileMessage;
 use crate::sender::manager::Manager;
-use crate::sender::manager::FILENODES_FLUSH_INTERVAL;
-use crate::sender::manager::FILES_CHANNEL_SIZE;
-use crate::sender::manager::MAX_FILENODES_BATCH_SIZE;
 
 define_stats! {
     prefix = "mononoke.modern_sync.manager.filenode";
@@ -34,17 +33,24 @@ define_stats! {
     content_wait_time_s:  dynamic_timeseries("{}.content_wait_time_s", (repo: String); Average),
 
     files_queue_capacity: dynamic_singleton_counter("{}.files.queue_capacity", (repo: String)),
-    files_queue_len: dynamic_histogram("{}.files.queue_len", (repo: String); 10, 0, crate::sender::manager::FILES_CHANNEL_SIZE as u32, Average; P 50; P 75; P 95; P 99),
+    files_queue_len: dynamic_histogram("{}.files.queue_len", (repo: String); 10, 0, 100_000, Average; P 50; P 75; P 95; P 99),
     files_queue_max_capacity: dynamic_singleton_counter("{}.files.queue_max_capacity", (repo: String)),
 }
 
 pub(crate) struct FilenodeManager {
+    config: ModernSyncChannelConfig,
     filenodes_recv: mpsc::Receiver<FileMessage>,
 }
 
 impl FilenodeManager {
-    pub(crate) fn new(filenodes_recv: mpsc::Receiver<FileMessage>) -> Self {
-        Self { filenodes_recv }
+    pub(crate) fn new(
+        config: ModernSyncChannelConfig,
+        filenodes_recv: mpsc::Receiver<FileMessage>,
+    ) -> Self {
+        Self {
+            config,
+            filenodes_recv,
+        }
     }
 
     async fn flush_filenodes(
@@ -111,12 +117,12 @@ impl Manager for FilenodeManager {
             let mut encountered_error: Option<anyhow::Error> = None;
             let mut batch_filenodes = Vec::new();
             let mut batch_done_senders = VecDeque::new();
-            let mut timer = interval(FILENODES_FLUSH_INTERVAL);
+            let mut timer = interval(Duration::from_millis(self.config.flush_interval_ms as u64));
 
             while !cancellation_requested.load(Ordering::Relaxed) {
                 tokio::select! {
                     msg = filenodes_recv.recv() => {
-                        tracing::debug!("Filenodes channel capacity: {} max capacity: {} in queue: {}", filenodes_recv.capacity(), FILES_CHANNEL_SIZE,  filenodes_recv.len());
+                        tracing::debug!("Filenodes channel capacity: {} max capacity: {} in queue: {}", filenodes_recv.capacity(), self.config.channel_size,  filenodes_recv.len());
                         STATS::files_queue_capacity.set_value(ctx.fb, filenodes_recv.capacity() as i64, (reponame.clone(),));
                         STATS::files_queue_len.add_value(filenodes_recv.len() as i64, (reponame.clone(),));
                         STATS::files_queue_max_capacity.set_value(ctx.fb, filenodes_recv.max_capacity() as i64, (reponame.clone(),));
@@ -143,7 +149,7 @@ impl Manager for FilenodeManager {
                             Some(FileMessage::FileNode(_)) => (),
                             None => break,
                         }
-                        if batch_filenodes.len() >= MAX_FILENODES_BATCH_SIZE {
+                        if batch_filenodes.len() >= self.config.batch_size as usize {
                             if let Err(e) = FilenodeManager::flush_filenodes(&filenodes_es, &mut batch_filenodes, &mut batch_done_senders, &mut encountered_error, &reponame).await {
                                 tracing::error!("Filenodes flush failed: {:?}", e);
                                 return;

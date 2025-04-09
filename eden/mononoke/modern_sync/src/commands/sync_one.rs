@@ -100,6 +100,7 @@ pub async fn run(app: MononokeApp, args: CommandArgs) -> Result<()> {
     let cancellation_requested = Arc::new(AtomicBool::new(false));
     let mut send_manager = SendManager::new(
         ctx.clone(),
+        &config,
         repo.repo_blobstore().clone(),
         sender.clone(),
         repo_name.clone(),

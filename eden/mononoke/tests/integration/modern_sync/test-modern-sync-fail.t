@@ -72,8 +72,8 @@ Sync all bookmarks moves
   [INFO] Resuming from latest entry checkpoint 0
   [INFO] Skipping 0 batches from entry 2
   [INFO] Starting sync of 4 missing commits, 0 were already synced
-  .WARN. Found error: Trees upload: Expected [1-9]+ responses, got 0, retrying attempt #0 (re)
-  .WARN. Found error: Trees upload: Expected [1-9]+ responses, got 0, retrying attempt #1 (re)
-  .WARN. Found error: Trees upload: Expected [1-9]+ responses, got 0, retrying attempt #2 (re)
-  .ERROR. Failed to upload trees: Trees upload: Expected [1-9]+ responses, got 0 (re)
-  .ERROR. Trees flush failed: Trees upload: Expected [1-9]+ responses, got 0 (re)
+  .WARN. Found error: Trees upload: Expected [0-9]+ responses, got 0, retrying attempt #0 (re)
+  .WARN. Found error: Trees upload: Expected [0-9]+ responses, got 0, retrying attempt #1 (re)
+  .WARN. Found error: Trees upload: Expected [0-9]+ responses, got 0, retrying attempt #2 (re)
+  .ERROR. Failed to upload trees: Trees upload: Expected [0-9]+ responses, got 0 (re)
+  .ERROR. Trees flush failed: Trees upload: Expected [0-9]+ responses, got 0 (re)
