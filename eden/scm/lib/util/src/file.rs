@@ -26,17 +26,26 @@ static MAX_IO_RETRIES: Lazy<u32> = Lazy::new(|| {
 static FILE_UTIL_RETRY_SUCCESS: Counter = Counter::new_counter("util.file_retry_success");
 static FILE_UTIL_RETRY_FAILURE: Counter = Counter::new_counter("util.file_retry_failure");
 
-#[cfg(unix)]
 static UMASK: Lazy<u32> = Lazy::new(|| unsafe {
-    let umask = libc::umask(0);
-    libc::umask(umask);
-    #[allow(clippy::useless_conversion)] // mode_t is u16 on mac and u32 on linux
-    umask.into()
+    #[cfg(unix)]
+    {
+        let umask = libc::umask(0);
+        libc::umask(umask);
+        #[allow(clippy::useless_conversion)] // mode_t is u16 on mac and u32 on linux
+        return umask.into();
+    }
+    #[cfg(not(unix))]
+    {
+        return 0;
+    }
 });
 
-#[cfg(unix)]
+pub fn get_umask() -> u32 {
+    *UMASK
+}
+
 pub fn apply_umask(mode: u32) -> u32 {
-    mode & !*UMASK
+    mode & !get_umask()
 }
 
 pub fn atomic_write(path: &Path, op: impl FnOnce(&mut File) -> io::Result<()>) -> io::Result<File> {
