@@ -1,13 +1,13 @@
 //! Support for `InterfaceMode::Direct` and other modes using `Direct`.
 
+use std::collections::HashSet;
 use std::time::Duration;
 use std::time::Instant;
 
-use bit_set::BitSet;
 use termwiz::input::InputEvent;
-use termwiz::surface::change::Change;
 use termwiz::surface::CursorVisibility;
 use termwiz::surface::Position;
+use termwiz::surface::change::Change;
 use termwiz::terminal::Terminal;
 use vec_map::VecMap;
 
@@ -80,7 +80,7 @@ pub(crate) fn direct<T: Terminal>(
         InterfaceMode::Delayed(duration) => Some(Instant::now() + duration),
         _ => None,
     };
-    let mut loading = BitSet::with_capacity(output_files.len() + error_files.len());
+    let mut loading = HashSet::with_capacity(output_files.len() + error_files.len());
     for file in output_files.iter().chain(error_files.iter()) {
         loading.insert(file.index());
     }
@@ -144,7 +144,7 @@ pub(crate) fn direct<T: Terminal>(
     };
 
     let mut size = term.get_screen_size().map_err(Error::Termwiz)?;
-    let mut loaded = BitSet::with_capacity(loading.capacity());
+    let mut loaded = HashSet::with_capacity(loading.capacity());
     let mut remaining = output_files.len() + error_files.len();
     let interval = Duration::from_millis(10);
     while remaining > 0 {
@@ -155,7 +155,7 @@ pub(crate) fn direct<T: Terminal>(
         };
         match maybe_event {
             Some(Event::Loaded(i)) => {
-                if loading.contains(i) && loaded.insert(i) {
+                if loading.contains(&i) && loaded.insert(i) {
                     remaining -= 1;
                 }
             }
