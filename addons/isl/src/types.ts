@@ -896,6 +896,11 @@ export type ClientToServerMessage =
       type: 'fetchKnobsetDetails';
       id: string;
       configPath: string;
+    }
+  | {
+      type: 'fetchQeDetails';
+      id: string;
+      name: string;
     };
 
 export type SubscriptionResultsData = {
@@ -1013,6 +1018,11 @@ export type ServerToClientMessage =
       type: 'fetchedKnobsetDetails';
       id: string;
       result: Result<InternalTypes['InternalKnobset']>;
+    }
+  | {
+      type: 'fetchedQeDetails';
+      id: string;
+      result: Result<InternalTypes['InternalQuickExperment']>;
     };
 
 export type Disposable = {

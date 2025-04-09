@@ -1032,6 +1032,25 @@ export default class ServerToClientAPI {
           });
         break;
       }
+      case 'fetchQeDetails': {
+        Internal.fetchQeMetadata?.(ctx, data.name)
+          .then(qe => {
+            this.postMessage({
+              type: 'fetchedQeDetails',
+              id: data.id,
+              result: {value: qe},
+            });
+          })
+          .catch(err => {
+            logger?.error('Could not fetch QE details', err);
+            this.postMessage({
+              type: 'fetchedQeDetails',
+              id: data.id,
+              result: {error: err as Error},
+            });
+          });
+        break;
+      }
       case 'getRepoUrlAtHash': {
         const args = ['url', '--rev', data.revset];
         // validate that the path is a valid file in repo
