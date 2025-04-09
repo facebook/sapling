@@ -23,6 +23,7 @@
 
 #include "eden/common/telemetry/StructuredLogger.h"
 #include "eden/common/utils/Bug.h"
+#include "eden/common/utils/ErrnoUtils.h"
 #include "eden/common/utils/FaultInjector.h"
 #include "eden/common/utils/Future.h"
 #include "eden/common/utils/ImmediateFuture.h"
@@ -2379,10 +2380,24 @@ folly::Future<folly::Unit> EdenMount::startFsChannel(bool readOnly) {
                /*expected=*/State::INITIALIZED, /*newState=*/State::STARTING);
 
            // Just in case the mount point directory doesn't exist,
-           // automatically create it.
+           // make a best effort attempt to automatically create it.
            boost::filesystem::path boostMountPath{getPath().value()};
-           boost::filesystem::create_directories(boostMountPath);
-
+           try {
+             boost::filesystem::create_directories(boostMountPath);
+           } catch (const boost::filesystem::filesystem_error& e) {
+             // If the error is caused by a hanging mount, then we can ignore
+             // it. The hanging mount will be dealt with later.
+             if (isErrnoFromHangingMount(
+                     e.code().value(), this->isNfsdChannel())) {
+               XLOGF(
+                   ERR,
+                   "Failed to create mount point: {}: {}",
+                   e.code(),
+                   e.what());
+             } else {
+               throw;
+             }
+           }
            return fsChannelMount(readOnly);
          })
       .thenValue([this](auto&&) -> folly::Future<folly::Unit> {
