@@ -74,6 +74,24 @@ py_class!(pub class repo |py| {
         PyWorkingCopy::create_instance(py, wc_option.as_ref().unwrap().clone())
     }
 
+    /// Returns the hashes of the working parents. Might return an empty list!
+    def working_parent_nodes(&self) -> PyResult<Serde<Vec<HgId>>> {
+        let wc_option = self.inner_wc(py).borrow();
+        let parents = match wc_option.as_ref() {
+            Some(wc) => {
+                let wc = wc.read();
+                let parents = wc.parents().map_pyerr(py)?;
+                parents.into_iter().filter(|n| !n.is_null()).collect::<Vec<_>>()
+            }
+            None => {
+                // Use a fast path without constructing the working copy.
+                let repo = self.inner(py).read();
+                workingcopy::sniff_wdir_parents(repo.path(), Some(repo.ident())).map_pyerr(py)?.to_vec()
+            }
+        };
+        Ok(Serde(parents))
+    }
+
     def invalidateworkingcopy(&self) -> PyResult<PyNone> {
         let wc_option = self.inner_wc(py).borrow_mut();
         if wc_option.is_some() {
