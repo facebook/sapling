@@ -90,7 +90,7 @@ impl TreeAuxStore {
     fn open_options(config: &dyn Config) -> StoreOpenOptions {
         StoreOpenOptions::new(config)
             .max_log_count(4)
-            .max_bytes_per_log(100_000_000)
+            .max_bytes_per_log(150_000_000)
             .auto_sync_threshold(1_000_000)
             .create(true)
             .index("node", |_| {
