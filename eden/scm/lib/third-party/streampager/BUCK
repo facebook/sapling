@@ -20,6 +20,7 @@ rust_library(
         "features": {
             "keymap-file": [],
             "load_file": ["notify"],
+            "toml_config": ["toml"],
         },
         "lib": {"name": "streampager"},
         "package": {
@@ -42,6 +43,7 @@ rust_library(
             "version": "0.11.0",
         },
     }},
+    features = ["toml_config"],
     deps = [
         "fbsource//third-party/rust:dirs",
         "fbsource//third-party/rust:enum_dispatch",

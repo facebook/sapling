@@ -199,6 +199,7 @@ impl Default for Config {
 impl Config {
     /// Create [`Config`] from the user's default config file.
     pub fn from_config_file() -> Self {
+        #[cfg(feature = "toml_config")]
         if let Some(mut path) = dirs::config_dir() {
             path.push("streampager");
             path.push("streampager.toml");

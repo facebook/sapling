@@ -26,7 +26,7 @@ smallvec = { version = "1.13.2", default-features = false }
 terminfo = "0.9"
 termwiz = "0.23"
 thiserror = "2"
-toml = "0.8.19"
+toml = { version = "0.8.19", optional = true }
 unicode-segmentation = "1.12.0"
 unicode-width = "=0.1.12"
 vec_map = "0.8"
@@ -34,3 +34,4 @@ vec_map = "0.8"
 [features]
 keymap-file = []
 load_file = ["notify"]
+toml_config = ["toml"]
