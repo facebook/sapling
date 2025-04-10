@@ -90,6 +90,28 @@ impl Parents {
             Key::new(Default::default(), p2),
         ]
     }
+
+    /// Reports `Vec<HgId>` excluding `NULL_ID`s. Might reutrn an empty vec.
+    pub fn to_vec(&self) -> Vec<HgId> {
+        let mut result = Vec::new();
+        match self {
+            Parents::None => {}
+            Parents::One(p1) => {
+                if !p1.is_null() {
+                    result.push(*p1);
+                }
+            }
+            Parents::Two(p1, p2) => {
+                if !p1.is_null() {
+                    result.push(*p1);
+                }
+                if !p2.is_null() {
+                    result.push(*p2);
+                }
+            }
+        }
+        result
+    }
 }
 
 impl FromIterator<HgId> for Parents {
