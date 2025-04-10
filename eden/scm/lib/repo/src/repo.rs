@@ -61,6 +61,7 @@ use crate::init;
 use crate::trees::CachingTreeStore;
 use crate::trees::TreeManifestResolver;
 
+#[derive(Clone)]
 pub struct Repo {
     path: PathBuf,
     ident: identity::Identity,
