@@ -3356,7 +3356,7 @@ def _openchangelog(repo):
     # changelog. This is the simplest thing which matches all the
     # Python cache invalidation logic exactly.
     repo._rsrepo.invalidatechangelog()
-    inner = repo._rsrepo.changelog()
+    inner = repo._rsrepo.commits()
     return changelog2.changelog(repo, inner, repo.ui.uiconfig())
 
 

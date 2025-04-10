@@ -148,7 +148,7 @@ py_class!(pub class repo |py| {
         PyTreeScmStore::create_instance(py, tree_scm_store, caching_store)
     }
 
-    def changelog(&self) -> PyResult<PyCommits> {
+    def commits(&self) -> PyResult<PyCommits> {
         let repo_ref = self.inner(py).write();
         let changelog_ref = py
             .allow_threads(|| repo_ref.dag_commits())
