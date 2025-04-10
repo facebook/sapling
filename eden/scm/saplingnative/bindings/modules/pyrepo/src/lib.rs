@@ -192,7 +192,8 @@ py_class!(pub class repo |py| {
         Ok(PyNone)
     }
 
-    def dotpath(&self) -> PyResult<PyPathBuf> {
+    @property
+    def dot_path(&self) -> PyResult<PyPathBuf> {
         self.inner(py).read().dot_hg_path().try_into().map_pyerr(py)
     }
 

@@ -486,7 +486,7 @@ class localrepository:
         # If this is a shared repository, this vfs may point to another
         # repository's .hg/store directory.
         self.svfs = None
-        self.path = self._rsrepo.dotpath()
+        self.path = self._rsrepo.dot_path
         self.origroot = path
         # localvfs: rooted at .hg, used to access repo files outside of
         # the store that are local to this working copy.
