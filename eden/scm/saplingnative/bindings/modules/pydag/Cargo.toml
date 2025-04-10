@@ -11,6 +11,7 @@ cpython = { version = "0.7.2", default-features = false }
 futures = { version = "0.3.30", features = ["async-await", "compat"] }
 parking_lot = { version = "0.12.1", features = ["send_guard"] }
 pyedenapi = { version = "0.1.0", path = "../pyedenapi" }
+pyformatutil = { version = "0.1.0", path = "../pyformatutil" }
 pyio = { version = "0.1.0", path = "../pyio" }
 pymetalog = { version = "0.1.0", path = "../pymetalog" }
 sapling-async-runtime = { version = "0.1.0", path = "../../../../lib/async-runtime" }

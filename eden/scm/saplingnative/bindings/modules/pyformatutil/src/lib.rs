@@ -158,3 +158,9 @@ fn git_sha1_digest(py: Python, raw_text: PyBytes, kind: &str) -> PyResult<Serde<
     let id = format_util::git_sha1_digest(raw_text, kind);
     Ok(Serde(id))
 }
+
+impl CommitFields {
+    pub fn from_native(py: Python, fields: Box<dyn NativeCommitFields>) -> PyResult<Self> {
+        Self::create_instance(py, fields)
+    }
+}

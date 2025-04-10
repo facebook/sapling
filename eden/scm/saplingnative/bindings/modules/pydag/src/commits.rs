@@ -36,6 +36,7 @@ use edenapi_types::CommitGraphSegmentsEntry;
 use minibytes::Bytes;
 use parking_lot::RwLock;
 use pyedenapi::PyClient;
+use pyformatutil::CommitFields;
 use pymetalog::metalog as PyMetaLog;
 use storemodel::ReadRootTreeIds;
 use storemodel::SerializationFormat;
@@ -117,6 +118,17 @@ py_class!(pub class commits |py| {
         Ok(optional_bytes.map(|bytes| PyBytes::new(py, bytes.as_ref())))
     }
 
+    /// Parse commit into fields.
+    def getcommitfields(&self, node: PyBytes) -> PyResult<Option<CommitFields>> {
+        let vertex = node.data(py).to_vec().into();
+        let inner = self.inner(py).read();
+        let optional_fields = block_on(inner.get_commit_fields(&vertex)).map_pyerr(py)?;
+        match optional_fields {
+            Some(fields) => Ok(Some(CommitFields::from_native(py, fields)?)),
+            None => Ok(None)
+        }
+    }
+
     /// Lookup the raw texts by a list of binary commit hashes.
     def getcommitrawtextlist(&self, nodes: Vec<BytesLike<Vertex>>) -> PyResult<Vec<BytesLike<Bytes>>>
     {
@@ -124,6 +136,14 @@ py_class!(pub class commits |py| {
         let inner = self.inner(py).read();
         let texts = block_on(inner.get_commit_raw_text_list(&vertexes)).map_pyerr(py)?;
         Ok(texts.into_iter().map(BytesLike).collect())
+    }
+
+    /// Parse commits into a list of fields.
+    def getcommitfieldslist(&self, nodes: Vec<BytesLike<Vertex>>) -> PyResult<Vec<CommitFields>> {
+        let vertexes: Vec<Vertex> = nodes.into_iter().map(|b| b.0).collect();
+        let inner = self.inner(py).read();
+        let fields = block_on(inner.get_commit_fields_list(&vertexes)).map_pyerr(py)?;
+        fields.into_iter().map(|f| CommitFields::from_native(py, f)).collect()
     }
 
     /// Convert Set to IdSet. For compatibility with legacy code only.
