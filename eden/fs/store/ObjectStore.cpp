@@ -366,7 +366,15 @@ ImmediateFuture<TreeAuxData> ObjectStore::getTreeAuxData(
   DurationScope<EdenStats> statScope{stats_, &ObjectStoreStats::getTreeAuxData};
   folly::stop_watch<std::chrono::milliseconds> watch;
 
-  // TODO(cuev): Check in-memory cache
+  // Check in-memory cache
+  auto inMemoryCacheTreeAuxData =
+      getTreeAuxDataFromInMemoryCache(id, fetchContext);
+  if (inMemoryCacheTreeAuxData) {
+    stats_->increment(&ObjectStoreStats::getTreeAuxDataFromMemory);
+    stats_->addDuration(
+        &ObjectStoreStats::getTreeAuxDataMemoryDuration, watch.elapsed());
+    return std::move(inMemoryCacheTreeAuxData).value();
+  }
 
   deprioritizeWhenFetchHeavy(*fetchContext);
 
@@ -385,7 +393,7 @@ ImmediateFuture<TreeAuxData> ObjectStore::getTreeAuxData(
               throwf<std::domain_error>("aux data for {} not found", id);
             }
             auto auxData = std::move(result.treeAux);
-            // TODO(cuev): Write back to caches
+            self->treeAuxDataCache_.wlock()->set(id, *auxData);
             fetchContext->didFetch(
                 ObjectFetchContext::TreeAuxData, id, result.origin);
             self->updateProcessFetch(*fetchContext);
@@ -570,7 +578,7 @@ std::optional<TreeAuxData> ObjectStore::getTreeAuxDataFromInMemoryCache(
     auto cacheIter = auxDataCache->find(id);
     if (cacheIter != auxDataCache->end()) {
       context->didFetch(
-          ObjectFetchContext::BlobAuxData,
+          ObjectFetchContext::TreeAuxData,
           id,
           ObjectFetchContext::FromMemoryCache);
 
