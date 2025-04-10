@@ -294,10 +294,12 @@ class BaseService(abc.ABC):
                 parents = [p for p in nodeinfos[node].parents if p in nodeinfos]
             return parents
 
-        dag = bindings.dag.commits.openmemory()
-        commits = [(node, getparents(node), b"") for node in sorted(nodeinfos.keys())]
-        dag.addcommits(commits)
-        dag = dag.dagalgo()
+        commits = bindings.dag.commits.openmemory()
+        commit_list = [
+            (node, getparents(node), b"") for node in sorted(nodeinfos.keys())
+        ]
+        commits.addcommits(commit_list)
+        dag = commits.dag()
         return SmartlogInfo(
             dag=dag,
             public=public,

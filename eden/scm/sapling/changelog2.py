@@ -110,7 +110,7 @@ class changelog:
     @property
     def dag(self):
         """Get the DAG with algorithms. Require rust-commit."""
-        return self.inner.dagalgo()
+        return self.inner.dag()
 
     def dageval(self, func, extraenv=None):
         """Evaluate func with the current DAG context.

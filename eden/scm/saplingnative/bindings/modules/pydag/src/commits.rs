@@ -170,7 +170,7 @@ py_class!(pub class commits |py| {
     }
 
     /// Obtain the read-only dagalgo object that supports various DAG algorithms.
-    def dagalgo(&self) -> PyResult<dagalgo> {
+    def dag(&self) -> PyResult<dagalgo> {
         dagalgo::from_arc_dag(py, self.inner(py).read().dag_snapshot().map_pyerr(py)?)
     }
 

@@ -23,7 +23,7 @@ class PyDagTests(unittest.TestCase):
         a_text = b"Commit A"
         a_node = git_commit_hash(a_text)
         commits.addcommits([(a_node, [], a_text)])
-        a_nodes = commits.dagalgo().sort([a_node])
+        a_nodes = commits.dag().sort([a_node])
         self.assertEqual(list(commits.torevs(a_nodes)), [non_master_id(0)])
         # Flush the commit to the MASTER group. This reassigns the node to "MASTER".
         commits.flush([a_node])
