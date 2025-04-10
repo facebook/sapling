@@ -34,6 +34,7 @@ mod utils;
 
 pub use anyhow::Result;
 pub use doublewrite::DoubleWriteCommits;
+pub use format_util::CommitFields;
 pub use hybrid::HybridCommits;
 pub use mem_commits::MemCommits;
 pub use on_disk_commits::OnDiskCommits;

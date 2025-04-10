@@ -31,6 +31,8 @@ use dag::DagAlgorithm;
 use dag::Set;
 use dag::Vertex;
 use dag::VertexListWithOptions;
+use format_util::commit_text_to_fields;
+use format_util::CommitFields;
 use futures::future::try_join_all;
 use futures::stream::BoxStream;
 use metalog::MetaLog;
@@ -60,7 +62,38 @@ pub trait ReadCommitText: Sync {
         .await
     }
 
-    /// Return a trait object to resolve root tree ids from commit ids.
+    /// Returns parsed fields of a commit.
+    async fn get_commit_fields(&self, vertex: &Vertex) -> Result<Option<Box<dyn CommitFields>>> {
+        let text = match self.get_commit_raw_text(vertex).await? {
+            None => return Ok(None),
+            Some(text) => text,
+        };
+        // Matches the Python-side behavior: silently accept non-utf8 text.
+        let text = text.into_text_lossy();
+        let format = self.format();
+        let fields = commit_text_to_fields(text, format);
+        Ok(Some(fields))
+    }
+
+    /// Read commits in batch and parse them into `CommitFields`.
+    async fn get_commit_fields_list(
+        &self,
+        vertexes: &[Vertex],
+    ) -> Result<Vec<Box<dyn CommitFields>>> {
+        let texts = self.get_commit_raw_text_list(vertexes).await?;
+        let format = self.format();
+        let fields: Vec<_> = texts
+            .into_iter()
+            .map(|bytes| {
+                // Matches the Python-side behavior: silently accept non-utf8 text.
+                let text = bytes.into_text_lossy();
+                commit_text_to_fields(text, format)
+            })
+            .collect();
+        Ok(fields)
+    }
+
+    /// Return a trait object that is easier to be passed around.
     fn to_dyn_read_commit_text(&self) -> Arc<dyn ReadCommitText + Send + Sync>;
 
     /// Return a trait object to resolve root tree ids from commit ids.
