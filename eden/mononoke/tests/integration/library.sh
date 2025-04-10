@@ -945,10 +945,14 @@ function start_and_wait_for_land_service {
 }
 
 function _megarepo_async_worker_cmd {
-  GLOG_minloglevel=5 "$ASYNC_REQUESTS_WORKER" "$@" \
+  GLOG_minloglevel=5 \
+    RUST_LOG="warm_bookmarks_cache=WARN" \
+    "$ASYNC_REQUESTS_WORKER" "$@" \
     --log-level INFO \
     --mononoke-config-path "$TESTTMP/mononoke-config" \
     --scuba-log-file "$TESTTMP/async-worker.json" \
+    --tracing \
+    --tracing-test-format \
     "${CACHE_ARGS[@]}" \
     "${COMMON_ARGS[@]}"
 }
