@@ -75,9 +75,6 @@ use repo_identity::RepoIdentity;
 use repo_identity::RepoIdentityRef;
 use skeleton_manifest::RootSkeletonManifestId;
 use skeleton_manifest_v2::RootSkeletonManifestV2Id;
-use slog::debug;
-use slog::info;
-use slog::warn;
 use stats::prelude::*;
 use tokio::sync::Notify;
 use tokio::task::JoinHandle;
@@ -411,7 +408,7 @@ impl WarmBookmarksCache {
         let notify_sync_start = Arc::new(Notify::new());
         let notify_sync_complete = Arc::new(Notify::new());
 
-        info!(ctx.logger(), "Starting warm bookmark cache updater");
+        tracing::info!("Starting warm bookmark cache updater");
         let sub = bookmarks
             .create_subscription(ctx, Freshness::MaybeStale)
             .await
@@ -533,7 +530,7 @@ async fn init_bookmarks(
     let all_bookmarks = sub.bookmarks();
     let total = all_bookmarks.len();
 
-    info!(ctx.logger(), "{} bookmarks to warm up", total);
+    tracing::info!("{} bookmarks to warm up", total);
 
     let futs = all_bookmarks
         .iter()
@@ -558,14 +555,11 @@ async fn init_bookmarks(
                         .watched(ctx.logger())
                         .await?;
 
-                        info!(
-                            ctx.logger(),
-                            "moved {} back in history to {:?}", book, maybe_cs_id
-                        );
+                        tracing::info!("moved {} back in history to {:?}", book, maybe_cs_id);
                         Ok((remaining, maybe_cs_id.map(|cs_id| (book, (cs_id, kind)))))
                     }
                     InitMode::Warm => {
-                        info!(ctx.logger(), "warmed bookmark {} at {}", book, cs_id);
+                        tracing::info!("warmed bookmark {} at {}", book, cs_id);
                         warm_all(ctx, cs_id, warmers).watched(ctx.logger()).await?;
                         Ok((remaining, Some((book, (cs_id, kind)))))
                     }
@@ -581,7 +575,7 @@ async fn init_bookmarks(
         .try_filter_map(|element| async move {
             let (remaining, entry) = element;
             if remaining % 1000 == 0 {
-                info!(ctx.logger(), "{} bookmarks left to warm up", remaining);
+                tracing::info!("{} bookmarks left to warm up", remaining);
             }
             Result::<_, Error>::Ok(entry)
         })
@@ -589,7 +583,7 @@ async fn init_bookmarks(
         .await
         .with_context(|| "Error warming up bookmarks")?;
 
-    info!(ctx.logger(), "all bookmarks are warmed up");
+    tracing::info!("all bookmarks are warmed up");
 
     Ok(res)
 }
@@ -633,7 +627,7 @@ async fn move_bookmark_back_in_history_until_derived(
     book: &BookmarkKey,
     warmers: &Arc<Vec<Warmer>>,
 ) -> Result<Option<ChangesetId>, Error> {
-    info!(ctx.logger(), "moving {} bookmark back in history...", book);
+    tracing::info!("moving {} bookmark back in history...", book);
 
     let (latest_derived_entry, _) =
         find_latest_derived_and_underived(ctx, bookmarks, bookmark_update_log, book, warmers)
@@ -645,8 +639,7 @@ async fn move_bookmark_back_in_history_until_derived(
         }
         LatestDerivedBookmarkEntry::NotFound => {
             let cur_bookmark_value = bookmarks.get(ctx.clone(), book).await?;
-            warn!(
-                ctx.logger(),
+            tracing::warn!(
                 "cannot find previous derived version of {}, returning current version {:?}",
                 book,
                 cur_bookmark_value
@@ -687,7 +680,7 @@ pub async fn find_latest_derived_and_underived(
 
     for (prev_limit, limit) in history_depth_limits.into_iter().tuple_windows() {
         if prev_limit > 0 {
-            debug!(ctx.logger(), "{} bookmark, limit {}", book, limit);
+            tracing::debug!("{} bookmark, limit {}", book, limit);
         }
         // Note that since new entries might be inserted to the bookmark log,
         // the next call to `list_bookmark_log_entries(...)` might return
@@ -709,7 +702,7 @@ pub async fn find_latest_derived_and_underived(
             .await?;
 
         if log_entries.is_empty() {
-            debug!(ctx.logger(), "bookmark {} has no history in the log", book);
+            tracing::debug!("bookmark {} has no history in the log", book);
             let maybe_cs_id = bookmarks.get(ctx.clone(), book).await?;
             // If a bookmark has no history then we add a fake entry saying that
             // timestamp is unknown.
@@ -899,7 +892,7 @@ impl BookmarksCoordinator {
                                 event: Some(WarmBookmarkCacheEvent::UpdateFailure),
                                 ..Default::default()
                             });
-                            warn!(ctx.logger(), "update of {} failed: {:?}", book.key(), err);
+                            tracing::warn!("update of {} failed: {:?}", book.key(), err);
                         };
 
                         live_updaters.with_write(|live_updaters| {
@@ -925,7 +918,7 @@ impl BookmarksCoordinator {
         notify_sync_complete: Arc<Notify>,
     ) {
         let fut = async move {
-            info!(ctx.logger(), "Started warm bookmark cache updater");
+            tracing::info!("Started warm bookmark cache updater");
 
             let infinite_loop = async {
                 // Indicates that the sync method was called and is waiting for a sync
@@ -942,7 +935,7 @@ impl BookmarksCoordinator {
                             event: Some(WarmBookmarkCacheEvent::DiscoverFailure),
                             ..Default::default()
                         });
-                        warn!(ctx.logger(), "failed to update bookmarks {:?}", err);
+                        tracing::warn!("failed to update bookmarks {:?}", err);
                     }
 
                     if sync_started {
@@ -955,9 +948,9 @@ impl BookmarksCoordinator {
                             .try_collect::<Vec<_>>()
                             .await
                         {
-                            warn!(
-                                ctx.logger(),
-                                "failed to join updater tasks when syncing {:?}", join_err
+                            tracing::warn!(
+                                "failed to join updater tasks when syncing {:?}",
+                                join_err
                             );
                         }
                         notify_sync_complete.notify_waiters();
@@ -989,7 +982,7 @@ impl BookmarksCoordinator {
 
             let _ = select(infinite_loop, terminate).await;
 
-            info!(ctx.logger(), "Stopped warm bookmark cache updater");
+            tracing::info!("Stopped warm bookmark cache updater");
         };
 
         // Fire and forget. This will terminate using the `terminate` receiver.
@@ -1134,8 +1127,7 @@ async fn single_bookmark_updater(
             }
         },
         LatestDerivedBookmarkEntry::NotFound => {
-            warn!(
-                ctx.logger(),
+            tracing::warn!(
                 "Haven't found previous derived version of {}! Will try to derive anyway",
                 bookmark.key()
             );
@@ -1178,8 +1170,7 @@ async fn single_bookmark_updater(
                 update_bookmark(underived_cs_id).await;
             }
             Err(err) => {
-                warn!(
-                    ctx.logger(),
+                tracing::warn!(
                     "failed to derive data for {} while updating {}: {}",
                     underived_cs_id,
                     bookmark.key(),
@@ -1315,7 +1306,7 @@ mod tests {
         ));
         let warmers = Arc::new(warmers);
 
-        info!(ctx.logger(), "creating 5 derived commits");
+        tracing::info!("creating 5 derived commits");
         let mut master = resolve_cs_id(&ctx, &repo, "master").await?;
         for _ in 1..5 {
             let new_master = CreateCommitContext::new(&ctx, &repo, vec![master])
@@ -1330,7 +1321,7 @@ mod tests {
             .await?;
         let derived_master = master;
 
-        info!(ctx.logger(), "creating 5 more underived commits");
+        tracing::info!("creating 5 more underived commits");
         for _ in 1..5 {
             let new_master = CreateCommitContext::new(&ctx, &repo, vec![master])
                 .commit()
@@ -1566,17 +1557,17 @@ mod tests {
         ));
         let warmers = Arc::new(warmers);
 
-        info!(ctx.logger(), "created stack of commits");
+        tracing::info!("created stack of commits");
         for i in 1..10 {
             let master = CreateCommitContext::new(&ctx, &repo, vec!["master"])
                 .add_file(format!("somefile{}", i).as_str(), "content")
                 .commit()
                 .await?;
-            info!(ctx.logger(), "created {}", master);
+            tracing::info!("created {}", master);
             bookmark(&ctx, &repo, "master").set_to(master).await?;
         }
         let master_cs_id = resolve_cs_id(&ctx, &repo, "master").await?;
-        info!(ctx.logger(), "created the whole stack of commits");
+        tracing::info!("created the whole stack of commits");
 
         let master_book_name = BookmarkKey::new("master")?;
         let master_book = Bookmark::new(

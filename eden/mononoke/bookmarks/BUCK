@@ -144,6 +144,7 @@ rust_library(
         "fbsource//third-party/rust:futures",
         "fbsource//third-party/rust:itertools",
         "fbsource//third-party/rust:tokio",
+        "fbsource//third-party/rust:tracing",
         ":bookmarks",
         ":bookmarks_cache",
         ":bookmarks_types",
