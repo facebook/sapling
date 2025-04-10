@@ -49,7 +49,7 @@ fn sanity_check_requests(num_requests: usize, num_tasks: usize) -> usize {
 fn print_update(total: usize, finished: &mut usize) {
     let update_cadence = total / 10;
     let update = format!("{}/{} tasks finished running", finished, total);
-    if *finished % update_cadence == 0 {
+    if update_cadence == 0 || *finished % update_cadence == 0 {
         println!("{}", update);
     } else {
         tracing::debug!(update);
