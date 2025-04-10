@@ -7,6 +7,7 @@
 
 use std::path::Path;
 use std::path::PathBuf;
+use std::str::FromStr;
 use std::sync::Arc;
 
 use anyhow::anyhow;
@@ -380,6 +381,8 @@ impl From<thrift_types::edenfs::GetAttributesFromFilesResultV2> for GetAttribute
 ///     AttributesRequestScope::TreesAndFiles
 /// ));
 /// ```
+#[repr(i32)]
+#[derive(Debug, Clone)]
 pub enum AttributesRequestScope {
     /// Request attributes for files only.
     FilesOnly,
@@ -404,6 +407,21 @@ impl From<AttributesRequestScope> for thrift_types::edenfs::AttributesRequestSco
             AttributesRequestScope::FilesOnly => Self::FILES,
             AttributesRequestScope::TreesOnly => Self::TREES,
             AttributesRequestScope::TreesAndFiles => Self::TREES_AND_FILES,
+        }
+    }
+}
+
+impl FromStr for AttributesRequestScope {
+    type Err = EdenFsError;
+    fn from_str(s: &str) -> std::result::Result<Self, Self::Err> {
+        match s.to_ascii_lowercase().as_str() {
+            "filesonly" => Ok(Self::FilesOnly),
+            "treesonly" => Ok(Self::TreesOnly),
+            "treesandfiles" => Ok(Self::TreesAndFiles),
+            _ => Err(EdenFsError::Other(anyhow!(
+                "invalid file attribute request scope: {:?}",
+                s
+            ))),
         }
     }
 }
@@ -460,6 +478,7 @@ pub struct GetAttributesV2Request {
     mount_point: PathBuf,
     paths: Vec<String>,
     requested_attributes: i64,
+    request_scope: Option<AttributesRequestScope>,
 }
 
 impl GetAttributesV2Request {
@@ -482,6 +501,7 @@ impl GetAttributesV2Request {
     /// ```
     /// use std::path::PathBuf;
     ///
+    /// use edenfs_client::attributes::AttributesRequestScope;
     /// use edenfs_client::attributes::GetAttributesV2Request;
     /// use edenfs_client::types::FileAttributes;
     ///
@@ -489,9 +509,15 @@ impl GetAttributesV2Request {
     /// let mount_path = PathBuf::from("/path/to/mount");
     /// let paths = ["file1.txt", "file2.txt"];
     /// let attrs = [FileAttributes::Sha1, FileAttributes::FileSize];
-    /// let request = GetAttributesV2Request::new(mount_path, &paths, attrs.as_slice());
+    /// let scope = AttributesRequestScope::TreesAndFiles;
+    /// let request = GetAttributesV2Request::new(mount_path, &paths, attrs.as_slice(), Some(scope));
     /// ```
-    pub fn new<P, A>(mount_path: PathBuf, paths: &[P], requested_attributes: A) -> Self
+    pub fn new<P, A>(
+        mount_path: PathBuf,
+        paths: &[P],
+        requested_attributes: A,
+        request_scope: Option<AttributesRequestScope>,
+    ) -> Self
     where
         P: AsRef<str>,
         A: TryIntoFileAttributeBitmask,
@@ -506,6 +532,7 @@ impl GetAttributesV2Request {
                 );
                 FileAttributes::all_attributes_as_bitmask()
             }),
+            request_scope,
         }
     }
 }
@@ -515,6 +542,7 @@ impl RequestFactory for GetAttributesV2Request {
         let mount_point = self.mount_point.clone();
         let paths = self.paths.clone();
         let requested_attributes = self.requested_attributes;
+        let request_scope = self.request_scope.clone();
         move |client: Box<Arc<EdenFsClient>>| {
             Box::new(async move {
                 // Required to ensure the lifetime of paths extends for the duration of the lambda
@@ -525,7 +553,7 @@ impl RequestFactory for GetAttributesV2Request {
                         &paths,
                         requested_attributes,
                         Some(SyncBehavior::no_sync()),
-                        None,
+                        request_scope,
                     )
                     .await
                     .map(|_| ())

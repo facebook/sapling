@@ -14,6 +14,7 @@ use anyhow::Context;
 use anyhow::Result;
 use async_trait::async_trait;
 use clap::Parser;
+use edenfs_client::attributes::AttributesRequestScope;
 use edenfs_client::attributes::GetAttributesV2Request;
 use edenfs_client::attributes::SourceControlType;
 use edenfs_client::attributes::SourceControlTypeOrError;
@@ -66,6 +67,12 @@ pub enum StressCmd {
             help = "Attributes to query for each file"
         )]
         attributes: Option<Vec<FileAttributes>>,
+
+        #[clap(
+            long,
+            help = "Indicates whether requests should include results for files, trees, or both."
+        )]
+        scope: Option<AttributesRequestScope>,
     },
 
     #[clap(about = "Stress the readdir endpoint by issuing a recursive readdir request")]
@@ -104,6 +111,7 @@ impl crate::Subcommand for StressCmd {
                 glob_pattern,
                 num_requests,
                 attributes,
+                scope,
             } => {
                 // Resolve the glob that the user specified since getAttributesFromFilesV2 takes a
                 // list of files, not a glob pattern.
@@ -130,6 +138,7 @@ impl crate::Subcommand for StressCmd {
                     checkout.path(),
                     &paths,
                     attributes.as_slice(),
+                    scope.clone(),
                 ));
 
                 // Issue the requests and bail early if any of them fail
