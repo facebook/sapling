@@ -92,7 +92,7 @@ async fn tail(args: &Args, f: Stdin, client: &Client) -> Result<(), Error> {
         };
         if num_bytes == 0 {
             // we are at EOF. Sleep, then try again
-            std::thread::sleep(std::time::Duration::from_secs(5));
+            tokio::time::sleep(std::time::Duration::from_secs(5)).await;
             continue;
         }
 

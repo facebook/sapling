@@ -192,11 +192,12 @@ where
         if counter >= log_id {
             return Ok(());
         }
-        std::thread::sleep(
+        tokio::time::sleep(
             sleep_times
                 .next()
                 .expect("sleep_times is an unbounded iterator"),
         )
+        .await;
     }
     bail!("Timeout expired while waiting for backsyncing")
 }
