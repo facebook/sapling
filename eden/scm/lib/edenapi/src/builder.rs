@@ -205,7 +205,10 @@ impl HttpClientBuilder {
             headers.insert("x-forwarded-cats".to_string(), cats.clone());
         }
 
-        let max_requests = get_config(config, "edenapi", "maxrequests")?;
+        // edenapi.maxrequests is old name supported for transition to new name - can delete in future
+        let max_requests = get_config(config, "edenapi", "max-concurrent-requests")?
+            .or(get_config(config, "edenapi", "maxrequests")?);
+
         let try_route_consistently =
             get_config(config, "edenapi", "try-route-consistently")?.unwrap_or_default();
 
