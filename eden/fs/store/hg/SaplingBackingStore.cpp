@@ -322,6 +322,8 @@ SaplingBackingStore::constructLocalStoreCachingPolicy() {
       config_->getEdenConfig()->hgEnableBlobLocalStoreCaching.getValue();
   bool shouldCacheBlobAuxData =
       config_->getEdenConfig()->hgEnableBlobMetaLocalStoreCaching.getValue();
+  bool shouldCacheTreeAuxData =
+      config_->getEdenConfig()->hgEnableTreeMetaLocalStoreCaching.getValue();
 
   using PolicyType =
       std::underlying_type_t<BackingStore::LocalStoreCachingPolicy>;
@@ -341,6 +343,11 @@ SaplingBackingStore::constructLocalStoreCachingPolicy() {
   if (shouldCacheBlobAuxData) {
     result |= static_cast<PolicyType>(
         BackingStore::LocalStoreCachingPolicy::BlobAuxData);
+  }
+
+  if (shouldCacheTreeAuxData) {
+    result |= static_cast<PolicyType>(
+        BackingStore::LocalStoreCachingPolicy::TreeAuxData);
   }
   return static_cast<BackingStore::LocalStoreCachingPolicy>(result);
 }

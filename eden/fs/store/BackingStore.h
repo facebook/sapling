@@ -70,7 +70,7 @@ class BackingStore : public RootIdCodec, public ObjectIdCodec {
     TreesAndBlobs = Trees | Blobs,
     TreesAndBlobAuxData = Trees | BlobAuxData,
     BlobsAndBlobAuxData = Blobs | BlobAuxData,
-    Anything = Trees | Blobs | BlobAuxData,
+    Anything = Trees | Blobs | BlobAuxData | TreeAuxData,
   };
 
   virtual LocalStoreCachingPolicy getLocalStoreCachingPolicy() const = 0;

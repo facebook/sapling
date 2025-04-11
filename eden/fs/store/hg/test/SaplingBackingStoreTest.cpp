@@ -294,6 +294,8 @@ TEST_F(SaplingBackingStoreNoFaultInjectorTest, cachingPolicyConstruction) {
   // No caching
   testEdenConfig->hgEnableTreeLocalStoreCaching.setValue(
       false, ConfigSourceType::UserConfig);
+  testEdenConfig->hgEnableTreeMetaLocalStoreCaching.setValue(
+      false, ConfigSourceType::UserConfig);
   testEdenConfig->hgEnableBlobLocalStoreCaching.setValue(
       false, ConfigSourceType::UserConfig);
   testEdenConfig->hgEnableBlobMetaLocalStoreCaching.setValue(
@@ -305,6 +307,8 @@ TEST_F(SaplingBackingStoreNoFaultInjectorTest, cachingPolicyConstruction) {
   // Trees
   testEdenConfig->hgEnableTreeLocalStoreCaching.setValue(
       true, ConfigSourceType::UserConfig);
+  testEdenConfig->hgEnableTreeMetaLocalStoreCaching.setValue(
+      false, ConfigSourceType::UserConfig);
   testEdenConfig->hgEnableBlobLocalStoreCaching.setValue(
       false, ConfigSourceType::UserConfig);
   testEdenConfig->hgEnableBlobMetaLocalStoreCaching.setValue(
@@ -313,8 +317,23 @@ TEST_F(SaplingBackingStoreNoFaultInjectorTest, cachingPolicyConstruction) {
       queuedBackingStore->constructLocalStoreCachingPolicy(),
       BackingStore::LocalStoreCachingPolicy::Trees);
 
+  // TreeAuxData
+  testEdenConfig->hgEnableTreeLocalStoreCaching.setValue(
+      false, ConfigSourceType::UserConfig);
+  testEdenConfig->hgEnableTreeMetaLocalStoreCaching.setValue(
+      true, ConfigSourceType::UserConfig);
+  testEdenConfig->hgEnableBlobLocalStoreCaching.setValue(
+      false, ConfigSourceType::UserConfig);
+  testEdenConfig->hgEnableBlobMetaLocalStoreCaching.setValue(
+      false, ConfigSourceType::UserConfig);
+  EXPECT_EQ(
+      queuedBackingStore->constructLocalStoreCachingPolicy(),
+      BackingStore::LocalStoreCachingPolicy::TreeAuxData);
+
   // Blobs
   testEdenConfig->hgEnableTreeLocalStoreCaching.setValue(
+      false, ConfigSourceType::UserConfig);
+  testEdenConfig->hgEnableTreeMetaLocalStoreCaching.setValue(
       false, ConfigSourceType::UserConfig);
   testEdenConfig->hgEnableBlobLocalStoreCaching.setValue(
       true, ConfigSourceType::UserConfig);
@@ -327,6 +346,8 @@ TEST_F(SaplingBackingStoreNoFaultInjectorTest, cachingPolicyConstruction) {
   // BlobAuxData
   testEdenConfig->hgEnableTreeLocalStoreCaching.setValue(
       false, ConfigSourceType::UserConfig);
+  testEdenConfig->hgEnableTreeMetaLocalStoreCaching.setValue(
+      false, ConfigSourceType::UserConfig);
   testEdenConfig->hgEnableBlobLocalStoreCaching.setValue(
       false, ConfigSourceType::UserConfig);
   testEdenConfig->hgEnableBlobMetaLocalStoreCaching.setValue(
@@ -338,6 +359,8 @@ TEST_F(SaplingBackingStoreNoFaultInjectorTest, cachingPolicyConstruction) {
   // TreesAndBlobs
   testEdenConfig->hgEnableTreeLocalStoreCaching.setValue(
       true, ConfigSourceType::UserConfig);
+  testEdenConfig->hgEnableTreeMetaLocalStoreCaching.setValue(
+      false, ConfigSourceType::UserConfig);
   testEdenConfig->hgEnableBlobLocalStoreCaching.setValue(
       true, ConfigSourceType::UserConfig);
   testEdenConfig->hgEnableBlobMetaLocalStoreCaching.setValue(
@@ -349,6 +372,8 @@ TEST_F(SaplingBackingStoreNoFaultInjectorTest, cachingPolicyConstruction) {
   // TreesAndBlobAuxData
   testEdenConfig->hgEnableTreeLocalStoreCaching.setValue(
       true, ConfigSourceType::UserConfig);
+  testEdenConfig->hgEnableTreeMetaLocalStoreCaching.setValue(
+      false, ConfigSourceType::UserConfig);
   testEdenConfig->hgEnableBlobLocalStoreCaching.setValue(
       false, ConfigSourceType::UserConfig);
   testEdenConfig->hgEnableBlobMetaLocalStoreCaching.setValue(
@@ -360,6 +385,8 @@ TEST_F(SaplingBackingStoreNoFaultInjectorTest, cachingPolicyConstruction) {
   // BlobsAndBlobAuxData
   testEdenConfig->hgEnableTreeLocalStoreCaching.setValue(
       false, ConfigSourceType::UserConfig);
+  testEdenConfig->hgEnableTreeMetaLocalStoreCaching.setValue(
+      false, ConfigSourceType::UserConfig);
   testEdenConfig->hgEnableBlobLocalStoreCaching.setValue(
       true, ConfigSourceType::UserConfig);
   testEdenConfig->hgEnableBlobMetaLocalStoreCaching.setValue(
@@ -370,6 +397,8 @@ TEST_F(SaplingBackingStoreNoFaultInjectorTest, cachingPolicyConstruction) {
 
   // Anything
   testEdenConfig->hgEnableTreeLocalStoreCaching.setValue(
+      true, ConfigSourceType::UserConfig);
+  testEdenConfig->hgEnableTreeMetaLocalStoreCaching.setValue(
       true, ConfigSourceType::UserConfig);
   testEdenConfig->hgEnableBlobLocalStoreCaching.setValue(
       true, ConfigSourceType::UserConfig);

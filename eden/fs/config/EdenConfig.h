@@ -1090,6 +1090,11 @@ class EdenConfig : private ConfigSettingManager {
       true,
       this};
 
+  ConfigSetting<bool> hgEnableTreeMetaLocalStoreCaching{
+      "hg:cache-tree-metadata-in-localstore",
+      true,
+      this};
+
   ConfigSetting<bool> hgEnableTreeLocalStoreCaching{
       "hg:cache-trees-in-localstore",
       true,
