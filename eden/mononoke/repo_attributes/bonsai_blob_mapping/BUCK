@@ -9,7 +9,8 @@ rust_library(
         "schemas/**/*.sql",
     ]),
     test_deps = [
-        "fbsource//third-party/rust:tokio",
+        "//common/rust/shed/fbinit:fbinit",
+        "//common/rust/shed/fbinit:fbinit-tokio",
         "//eden/mononoke/mononoke_macros:mononoke_macros",
         "//eden/mononoke/mononoke_types:mononoke_types-mocks",
     ],

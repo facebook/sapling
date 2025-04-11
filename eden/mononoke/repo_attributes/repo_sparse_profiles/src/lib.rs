@@ -123,13 +123,14 @@ impl SqlSparseProfilesSizes {
 
 #[cfg(test)]
 mod test {
+    use mononoke_macros::mononoke;
     use mononoke_types_mocks::changesetid::ONES_CSID;
     use mononoke_types_mocks::changesetid::THREES_CSID;
     use mononoke_types_mocks::changesetid::TWOS_CSID;
 
     use super::*;
 
-    #[tokio::test]
+    #[mononoke::fbinit_test]
     async fn test_simple() -> Result<()> {
         let sql = SqlSparseProfilesSizes::with_sqlite_in_memory()?;
 

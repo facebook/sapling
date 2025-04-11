@@ -235,6 +235,8 @@ impl RepoLock for AlwaysUnlockedRepoLock {
 
 #[cfg(test)]
 mod test {
+    use mononoke_macros::mononoke;
+
     use super::*;
 
     mononoke_queries! {
@@ -245,7 +247,7 @@ mod test {
         }
     }
 
-    #[tokio::test]
+    #[mononoke::fbinit_test]
     async fn test_locked() -> Result<(), Error> {
         let sql_repo_lock = SqlRepoLock::with_sqlite_in_memory()?;
         let repo_id = RepositoryId::new(0);
@@ -268,7 +270,7 @@ mod test {
         Ok(())
     }
 
-    #[tokio::test]
+    #[mononoke::fbinit_test]
     async fn test_default_to_unlocked() -> Result<(), Error> {
         let sql_repo_lock = SqlRepoLock::with_sqlite_in_memory()?;
         let repo_id = RepositoryId::new(0);
@@ -280,7 +282,7 @@ mod test {
         Ok(())
     }
 
-    #[tokio::test]
+    #[mononoke::fbinit_test]
     async fn test_lock_with_other_repo() -> Result<(), Error> {
         let sql_repo_lock = SqlRepoLock::with_sqlite_in_memory()?;
         let repo_id = RepositoryId::new(0);

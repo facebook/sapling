@@ -231,7 +231,7 @@ mod test {
 
     use super::*;
 
-    #[tokio::test]
+    #[mononoke::fbinit_test]
     async fn test_single_write_and_read() -> Result<()> {
         let sql = SqlBonsaiBlobMapping::with_sqlite_in_memory()?;
         let repo_id = RepositoryId::new(1);
@@ -258,7 +258,7 @@ mod test {
         Ok(())
     }
 
-    #[tokio::test]
+    #[mononoke::fbinit_test]
     async fn test_read_write_multiple_values() -> Result<()> {
         let sql = SqlBonsaiBlobMapping::with_sqlite_in_memory()?;
         let repo_id = RepositoryId::new(1);

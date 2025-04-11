@@ -297,6 +297,7 @@ impl SqlDeletionLog {
 
 #[cfg(test)]
 mod test {
+    use mononoke_macros::mononoke;
     use mononoke_types_mocks::changesetid::ONES_CSID;
     use mononoke_types_mocks::changesetid::THREES_CSID;
     use mononoke_types_mocks::changesetid::TWOS_CSID;
@@ -304,7 +305,7 @@ mod test {
 
     use super::*;
 
-    #[tokio::test]
+    #[mononoke::fbinit_test]
     async fn test_read_write() -> Result<()> {
         let sql = SqlDeletionLog::with_sqlite_in_memory()?;
         let repo_id = RepositoryId::new(1);
@@ -358,7 +359,7 @@ mod test {
         Ok(())
     }
 
-    #[tokio::test]
+    #[mononoke::fbinit_test]
     async fn test_update() -> Result<()> {
         let sql = SqlDeletionLog::with_sqlite_in_memory()?;
         let deletion_log = DeletionLog {

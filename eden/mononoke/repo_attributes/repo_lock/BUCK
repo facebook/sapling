@@ -10,7 +10,9 @@ rust_library(
     ]),
     autocargo = {"cargo_toml_dir": "repo_lock"},
     test_deps = [
-        "fbsource//third-party/rust:tokio",
+        "//common/rust/shed/fbinit:fbinit",
+        "//common/rust/shed/fbinit:fbinit-tokio",
+        "//eden/mononoke/mononoke_macros:mononoke_macros",
     ],
     deps = [
         "fbsource//third-party/rust:anyhow",
