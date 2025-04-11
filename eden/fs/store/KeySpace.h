@@ -97,7 +97,7 @@ class KeySpace {
   static constexpr KeySpaceRecord TreeAuxDataFamily{
       7,
       "treemeta",
-      Deprecated{}};
+      Ephemeral{&EdenConfig::localStoreTreeAuxSizeLimit}};
   static constexpr KeySpaceRecord ReCasDigestProxyHashFamily{
       8,
       "recasdigestproxyhash",
