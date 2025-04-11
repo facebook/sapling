@@ -182,6 +182,7 @@ cpp_library(
     deps = [
         "//eden/common/telemetry:structured_logger",
         "//eden/common/utils:bug",
+        "//eden/common/utils:hash",
         "//eden/common/utils:process_info_cache",
         "//eden/common/utils:throw",
         "//eden/fs/model/git:git",

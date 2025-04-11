@@ -15,6 +15,7 @@
 #include <folly/logging/xlog.h>
 #include <cstddef>
 
+#include "eden/common/utils/Hash.h"
 #include "eden/common/utils/Throw.h"
 #include "eden/fs/model/BlobAuxData.h"
 #include "eden/fs/model/Hash.h"
@@ -37,22 +38,9 @@ folly::ByteRange SerializedBlobAuxData::slice() const {
 }
 
 namespace {
-// bit enum representing possible hash types that could be used
-// 8 should be more than enough for now
-// but still this enum is represented as a varint
-enum class HashType : uint8_t {
-  SHA1 = (1 << 0),
-  BLAKE3 = (1 << 1),
-};
 
 constexpr size_t kLegacySize = sizeof(uint64_t) + Hash20::RAW_SIZE;
 constexpr uint8_t kCurrentVersion = 1;
-
-FOLLY_ALWAYS_INLINE void
-write(const uint8_t* src, size_t len, uint8_t* dest, size_t& off) {
-  memcpy(dest + off, src, len);
-  off += len;
-}
 
 BlobAuxDataPtr unsliceLegacy(folly::ByteRange bytes) {
   uint64_t blobSizeBE;
@@ -61,24 +49,6 @@ BlobAuxDataPtr unsliceLegacy(folly::ByteRange bytes) {
   auto contentsHash = Hash20{bytes};
   return std::make_shared<BlobAuxDataPtr::element_type>(
       contentsHash, std::nullopt, folly::Endian::big(blobSizeBE));
-}
-
-template <size_t SIZE>
-void readHash(
-    const ObjectId& blobID,
-    folly::ByteRange& bytes,
-    Hash<SIZE>& hash) {
-  if (bytes.size() < SIZE) {
-    throwf<std::invalid_argument>(
-        "Blob auxData for {} had unexpected size {}. Could not deserialize the hash of size {}.",
-        blobID,
-        bytes.size(),
-        SIZE);
-  }
-
-  auto mutableBytes = hash.mutableBytes();
-  memcpy(mutableBytes.data(), bytes.data(), mutableBytes.size());
-  bytes.advance(mutableBytes.size());
 }
 
 std::pair<Hash20, std::optional<Hash32>>
@@ -90,12 +60,12 @@ unsliceV1(const ObjectId& blobID, uint8_t usedHashes, folly::ByteRange& bytes) {
   }
 
   Hash20 sha1;
-  readHash(blobID, bytes, sha1);
+  readAuxDataHash(blobID, bytes, sha1);
 
   std::optional<Hash32> blake3;
   if ((usedHashes & static_cast<uint8_t>(HashType::BLAKE3)) != 0) {
     blake3.emplace();
-    readHash(blobID, bytes, *blake3);
+    readAuxDataHash(blobID, bytes, *blake3);
   }
 
   return {std::move(sha1), std::move(blake3)};
