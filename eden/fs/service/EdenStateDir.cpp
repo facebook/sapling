@@ -38,7 +38,7 @@ bool EdenStateDir::acquireLock() {
   } catch (const std::system_error& ex) {
     throw std::runtime_error(fmt::format(
         "Error acquiring lock: {}. Another EdenFS process may have raced with "
-        "this one. Try `eden start --wait` to check if EdenFS is starting and "
+        "this one. Try `eden status --wait` to check if EdenFS is starting and "
         "watch it's progress.",
         ex.what()));
   }
