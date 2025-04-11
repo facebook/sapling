@@ -153,6 +153,14 @@ class LocalStore : public std::enable_shared_from_this<LocalStore> {
   ImmediateFuture<BlobAuxDataPtr> getBlobAuxData(const ObjectId& id) const;
 
   /**
+   * Get the size and hash of the digest of a tree.
+   *
+   * Returns std::nullopt if this key is not present in the store, or throws an
+   * exception on error.
+   */
+  ImmediateFuture<TreeAuxDataPtr> getTreeAuxData(const ObjectId& id) const;
+
+  /**
    * Test whether the key is stored.
    */
   virtual bool hasKey(KeySpace keySpace, folly::ByteRange key) const = 0;
@@ -172,6 +180,11 @@ class LocalStore : public std::enable_shared_from_this<LocalStore> {
    * Store a blob aux data.
    */
   void putBlobAuxData(const ObjectId& id, const BlobAuxData& auxData);
+
+  /**
+   * Store a tree aux data.
+   */
+  void putTreeAuxData(const ObjectId& id, const TreeAuxData& auxData);
 
   /**
    * Put arbitrary data in the store.

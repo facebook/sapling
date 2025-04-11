@@ -19,6 +19,7 @@
 #include "eden/fs/model/git/GitBlob.h"
 #include "eden/fs/model/git/GitTree.h"
 #include "eden/fs/store/SerializedBlobAuxData.h"
+#include "eden/fs/store/SerializedTreeAuxData.h"
 #include "eden/fs/store/StoreResult.h"
 #include "eden/fs/telemetry/EdenStats.h"
 
@@ -188,6 +189,30 @@ ImmediateFuture<BlobAuxDataPtr> LocalStore::getBlobAuxData(
           });
 }
 
+ImmediateFuture<TreeAuxDataPtr> LocalStore::getTreeAuxData(
+    const ObjectId& id) const {
+  DurationScope<EdenStats> stat{stats_, &LocalStoreStats::getTreeAuxData};
+  return getImmediateFuture(KeySpace::TreeAuxDataFamily, id)
+      .thenValue(
+          [id, stat = std::move(stat), stats = stats_.copy()](
+              StoreResult&& data) -> TreeAuxDataPtr {
+            if (data.isValid()) {
+              return parse<const TreeAuxData>(
+                  id,
+                  "TreeAuxData",
+                  stats,
+                  &LocalStoreStats::getTreeAuxDataSuccess,
+                  &LocalStoreStats::getTreeAuxDataError,
+                  [&id, &data]() {
+                    return SerializedTreeAuxData::parse(id, data);
+                  });
+            }
+
+            stats->increment(&LocalStoreStats::getTreeAuxDataFailure);
+            return nullptr;
+          });
+}
+
 folly::IOBuf LocalStore::serializeTree(const Tree& tree) {
   return tree.serialize();
 }
@@ -237,6 +262,15 @@ void LocalStore::WriteBatch::putBlobAuxData(
   SerializedBlobAuxData auxDataBytes(auxData);
 
   put(KeySpace::BlobAuxDataFamily, hashBytes, auxDataBytes.slice());
+}
+
+void LocalStore::putTreeAuxData(
+    const ObjectId& id,
+    const TreeAuxData& auxData) {
+  auto hashBytes = id.getBytes();
+  SerializedTreeAuxData auxDataBytes(auxData);
+
+  put(KeySpace::TreeAuxDataFamily, hashBytes, auxDataBytes.slice());
 }
 
 void LocalStore::put(
