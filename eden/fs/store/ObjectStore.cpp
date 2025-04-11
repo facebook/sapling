@@ -406,31 +406,64 @@ ObjectStore::getTreeAuxDataImpl(
     const ObjectId& id,
     const ObjectFetchContextPtr& context,
     folly::stop_watch<std::chrono::milliseconds> watch) const {
-  // TODO(cuev): Look in the LocalStore for TreeAuxData
+  auto localStoreGetTreeAuxData =
+      ImmediateFuture<TreeAuxDataPtr>{std::in_place, nullptr};
+  if (shouldCacheOnDisk(BackingStore::LocalStoreCachingPolicy::TreeAuxData)) {
+    localStoreGetTreeAuxData = localStore_->getTreeAuxData(id);
+  }
 
-  return ImmediateFuture{backingStore_->getTreeAuxData(id, context)}
+  return std::move(localStoreGetTreeAuxData)
       .thenValue(
-          [self = shared_from_this(), id, context = context.copy(), watch](
-              BackingStore::GetTreeAuxResult result)
-              -> ImmediateFuture<BackingStore::GetTreeAuxResult> {
-            if (result.treeAux) {
+          [self = shared_from_this(), id = id, context = context.copy(), watch](
+              TreeAuxDataPtr auxData) mutable
+          -> ImmediateFuture<BackingStore::GetTreeAuxResult> {
+            if (auxData) {
               self->stats_->increment(
-                  &ObjectStoreStats::getTreeAuxDataFromBackingStore);
+                  &ObjectStoreStats::getTreeAuxDataFromLocalStore);
               self->stats_->addDuration(
-                  &ObjectStoreStats::getTreeAuxDataBackingstoreDuration,
+                  &ObjectStoreStats::getTreeAuxDataLocalstoreDuration,
                   watch.elapsed());
-              return result;
+              return BackingStore::GetTreeAuxResult{
+                  std::move(auxData), ObjectFetchContext::FromDiskCache};
             }
-            self->stats_->increment(&ObjectStoreStats::getTreeAuxDataFailed);
-            return BackingStore::GetTreeAuxResult{
-                nullptr, ObjectFetchContext::Origin::NotFetched};
-          })
-      .thenError(
-          [self = shared_from_this(), id](const folly::exception_wrapper& ew)
-              -> ImmediateFuture<BackingStore::GetTreeAuxResult> {
-            self->stats_->increment(&ObjectStoreStats::getTreeAuxDataFailed);
-            XLOGF(DBG4, "unable to find aux data for {}", id);
-            return makeImmediateFuture<BackingStore::GetTreeAuxResult>(ew);
+
+            return ImmediateFuture{
+                self->backingStore_->getTreeAuxData(id, context)}
+                .thenValue(
+                    [self, id, context = context.copy(), watch](
+                        BackingStore::GetTreeAuxResult result)
+                        -> ImmediateFuture<BackingStore::GetTreeAuxResult> {
+                      if (result.treeAux) {
+                        self->stats_->increment(
+                            &ObjectStoreStats::getTreeAuxDataFromBackingStore);
+                        self->stats_->addDuration(
+                            &ObjectStoreStats::
+                                getTreeAuxDataBackingstoreDuration,
+                            watch.elapsed());
+                        return result;
+                      }
+                      self->stats_->increment(
+                          &ObjectStoreStats::getTreeAuxDataFailed);
+                      return BackingStore::GetTreeAuxResult{
+                          nullptr, ObjectFetchContext::Origin::NotFetched};
+                    })
+                .thenValue([self, id](BackingStore::GetTreeAuxResult result) {
+                  if (result.treeAux &&
+                      self->shouldCacheOnDisk(
+                          BackingStore::LocalStoreCachingPolicy::TreeAuxData)) {
+                    self->localStore_->putTreeAuxData(id, *result.treeAux);
+                  }
+                  return result;
+                })
+                .thenError(
+                    [self, id](const folly::exception_wrapper& ew)
+                        -> ImmediateFuture<BackingStore::GetTreeAuxResult> {
+                      self->stats_->increment(
+                          &ObjectStoreStats::getTreeAuxDataFailed);
+                      XLOGF(DBG4, "unable to find aux data for {}", id);
+                      return makeImmediateFuture<
+                          BackingStore::GetTreeAuxResult>(ew);
+                    });
           })
       .semi();
 }

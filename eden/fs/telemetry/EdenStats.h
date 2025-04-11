@@ -494,6 +494,8 @@ struct ObjectStoreStats : StatsGroup<ObjectStoreStats> {
   Counter getTreeFailed{"object_store.get_tree_failed"};
 
   Counter getTreeAuxDataFromMemory{"object_store.get_tree_metadata.memory"};
+  Counter getTreeAuxDataFromLocalStore{
+      "object_store.get_tree_metadata.local_store"};
   Counter getTreeAuxDataFromBackingStore{
       "object_store.get_tree_metadata.backing_store"};
   Counter getTreeAuxDataFailed{"object_store.get_tree_metadata_failed"};
