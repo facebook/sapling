@@ -7,6 +7,7 @@
 
 pub mod commit;
 pub mod debug_diff_dirs;
+pub mod error;
 pub mod mergebase;
 pub mod status;
 pub mod types;

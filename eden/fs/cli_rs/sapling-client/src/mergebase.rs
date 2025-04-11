@@ -7,11 +7,11 @@
 
 use std::path::Path;
 
-use anyhow::anyhow;
 use anyhow::Context;
-use anyhow::Result;
 use tokio::process::Command;
 
+use crate::error::Result;
+use crate::error::SaplingError;
 use crate::utils::get_sapling_executable_path;
 use crate::utils::get_sapling_options;
 
@@ -73,22 +73,20 @@ where
             format!("ancestor({}, {})", commit.as_ref(), mergegase_with.as_ref()).as_str(),
         ])
         .output()
-        .await
-        .with_context(|| "Failed to obtain mergebase")?;
+        .await?;
 
     if !output.status.success() || !output.stderr.is_empty() {
-        Err(anyhow!(
+        Err(SaplingError::Other(format!(
             "Failed to obtain mergebase:\n{}",
-            String::from_utf8(output.stderr)
-                .with_context(|| "Failed to stderr reported by get_mergebase.")?
-        ))
+            String::from_utf8(output.stderr).unwrap_or("Failed to parse stderr".to_string())
+        )))
     } else {
         parse_mergebase_details(output.stdout)
     }
 }
 
 fn parse_mergebase_details(output: Vec<u8>) -> Result<Option<MergebaseDetails>> {
-    let output = String::from_utf8(output).with_context(|| "Failed to parse sl log output")?;
+    let output = String::from_utf8(output)?;
     if output.is_empty() {
         return Ok(None);
     }
@@ -102,11 +100,7 @@ fn parse_mergebase_details(output: Vec<u8>) -> Result<Option<MergebaseDetails>> 
         .and_then(|t| t.parse::<f64>().ok())
         .map(|t| t as u64); // sl returns the fractional seconds
     let global_rev = if let Some(global_rev) = v.get(2) {
-        Some(
-            global_rev
-                .parse::<u64>()
-                .with_context(|| "Failed to parse global_rev")?,
-        )
+        Some(global_rev.parse::<u64>()?)
     } else {
         None
     };

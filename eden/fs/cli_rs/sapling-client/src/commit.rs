@@ -7,10 +7,11 @@
 
 use tokio::process::Command;
 
+use crate::error::Result;
 use crate::utils::get_sapling_executable_path;
 use crate::utils::get_sapling_options;
 
-pub async fn get_current_commit_id() -> anyhow::Result<String> {
+pub async fn get_current_commit_id() -> Result<String> {
     let output = Command::new(get_sapling_executable_path())
         .envs(get_sapling_options())
         .args(["whereami", "--traceback"])
@@ -19,20 +20,20 @@ pub async fn get_current_commit_id() -> anyhow::Result<String> {
     Ok(String::from_utf8(output.stdout)?)
 }
 
-pub async fn get_commit_timestamp(commit_id: &str) -> anyhow::Result<u64> {
+pub async fn get_commit_timestamp(commit_id: &str) -> Result<u64> {
     let output = Command::new(get_sapling_executable_path())
         .envs(get_sapling_options())
         .args(["log", "--traceback", "-T", "{date}", "-r", commit_id])
         .output()
         .await?;
     let date = String::from_utf8(output.stdout)?;
-    let date = date.parse::<f64>().map_err(anyhow::Error::msg)?;
+    let date = date.parse::<f64>()?;
     // NOTE: Sapling returns fractional seconds, but we only want whole seconds.
     //       Truncate to the nearest second.
     Ok(date as u64)
 }
 
-pub async fn is_commit_in_repo(commit_id: &str) -> anyhow::Result<bool> {
+pub async fn is_commit_in_repo(commit_id: &str) -> Result<bool> {
     let output = Command::new(get_sapling_executable_path())
         .envs(get_sapling_options())
         .args([
@@ -60,14 +61,14 @@ mod tests {
     const WWW_COMMIT_ID: &str = "1061662d6db2072dd30308d1626a45ac11db3467";
 
     #[tokio::test]
-    pub async fn test_current_commit_id() -> anyhow::Result<()> {
+    pub async fn test_current_commit_id() -> Result<()> {
         let commit_id = get_current_commit_id().await?;
         assert!(!commit_id.is_empty());
         Ok(())
     }
 
     #[tokio::test]
-    pub async fn test_is_commit_in_repo() -> anyhow::Result<()> {
+    pub async fn test_is_commit_in_repo() -> Result<()> {
         let mount_point = get_mount_point(&None)?;
         let commit_id = get_current_commit_id().await?;
         assert!(is_commit_in_repo(&commit_id).await?);
@@ -84,7 +85,7 @@ mod tests {
     }
 
     #[tokio::test]
-    pub async fn test_get_commit_timestamp() -> anyhow::Result<()> {
+    pub async fn test_get_commit_timestamp() -> Result<()> {
         // sl log of commit in fbsource:
         //   changeset:   5496dd87e5fe7430a1a399530cc339a479097524  D68746950
         //   user:        John Elliott <jdelliot@fb.com>

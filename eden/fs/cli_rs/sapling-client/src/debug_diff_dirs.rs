@@ -13,6 +13,8 @@ use tokio::io::AsyncBufReadExt;
 use tokio::io::BufReader;
 use tokio::process::Command;
 
+use crate::error::Result;
+use crate::error::SaplingError;
 use crate::types::SaplingStatus;
 use crate::utils::get_sapling_executable_path;
 use crate::utils::get_sapling_options;
@@ -29,7 +31,7 @@ pub async fn get_diff_dirs_with_includes(
     limit_results: usize,
     root: &Option<PathBuf>,
     included_roots: Vec<PathBuf>,
-) -> anyhow::Result<SaplingGetDiffDirsResult> {
+) -> Result<SaplingGetDiffDirsResult> {
     get_diff_dirs(
         first,
         second,
@@ -51,7 +53,7 @@ pub async fn get_diff_dirs(
     root: &Option<PathBuf>,
     included_roots: &Option<Vec<PathBuf>>,
     excluded_roots: &Option<Vec<PathBuf>>,
-) -> anyhow::Result<SaplingGetDiffDirsResult> {
+) -> Result<SaplingGetDiffDirsResult> {
     let mut args = vec!["debugdiffdirs", "--rev", first];
     if let Some(second) = second {
         args.push("--rev");
@@ -71,7 +73,7 @@ pub async fn get_diff_dirs(
         .spawn()?;
 
     let stdout = output.stdout.take().ok_or_else(|| {
-        anyhow::anyhow!("Failed to read stdout when invoking 'sl debugdiffdirs'.")
+        SaplingError::Other("Failed to read stdout when invoking 'sl debugdiffdirs'.".to_string())
     })?;
     let reader = BufReader::new(stdout);
 

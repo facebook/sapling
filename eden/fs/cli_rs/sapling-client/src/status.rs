@@ -13,6 +13,8 @@ use tokio::io::AsyncBufReadExt;
 use tokio::io::BufReader;
 use tokio::process::Command;
 
+use crate::error::Result;
+use crate::error::SaplingError;
 use crate::types::SaplingStatus;
 use crate::utils::get_sapling_executable_path;
 use crate::utils::get_sapling_options;
@@ -31,7 +33,7 @@ pub async fn get_status_with_includes(
     root: &Option<PathBuf>,
     included_roots: Vec<PathBuf>,
     included_suffixes: Vec<String>,
-) -> anyhow::Result<SaplingGetStatusResult> {
+) -> Result<SaplingGetStatusResult> {
     get_status(
         first,
         second,
@@ -59,7 +61,7 @@ pub async fn get_status(
     included_suffixes: &Option<Vec<String>>,
     excluded_roots: &Option<Vec<PathBuf>>,
     excluded_suffixes: &Option<Vec<String>>,
-) -> anyhow::Result<SaplingGetStatusResult> {
+) -> Result<SaplingGetStatusResult> {
     let included_suffixes = included_suffixes.clone().map(|is| {
         is.into_iter()
             .map(|s| {
@@ -107,10 +109,9 @@ pub async fn get_status(
         .stdout(Stdio::piped())
         .spawn()?;
 
-    let stdout = output
-        .stdout
-        .take()
-        .ok_or_else(|| anyhow::anyhow!("Failed to read stdout when invoking 'sl status'."))?;
+    let stdout = output.stdout.take().ok_or_else(|| {
+        SaplingError::Other("Failed to read stdout when invoking 'sl status'.".to_string())
+    })?;
     let reader = BufReader::new(stdout);
 
     let mut status = vec![];
