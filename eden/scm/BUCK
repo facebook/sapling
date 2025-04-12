@@ -16,8 +16,6 @@ load("@fbcode_macros//build_defs/lib:rust_oss.bzl", "rust_oss")
 
 oncall("sapling")
 
-BUILD_MODE = read_config("fbcode", "build_mode")
-
 cpp_library(
     # @autodeps-skip
     name = "core_headers",
@@ -176,8 +174,14 @@ hg_binary(
         "DEFAULT": [],
         "ovr_config//os:linux": [] if rust_oss.is_oss_build() else ["cas"],
     }),
-    link_group_map = EVICT_FBCODE_DEFAULT_DEV_GROUP_MAP if BUILD_MODE == "dev" else None,
-    link_group_min_binary_node_count = PYTHON_EXTREME_LINK_GROUP_THRESHOLD if BUILD_MODE == "dev" else None,
+    link_group_map = select({
+        "DEFAULT": None,
+        "ovr_config//build_mode/constraints:dev": EVICT_FBCODE_DEFAULT_DEV_GROUP_MAP,
+    }),
+    link_group_min_binary_node_count = select({
+        "DEFAULT": None,
+        "ovr_config//build_mode/constraints:dev": PYTHON_EXTREME_LINK_GROUP_THRESHOLD,
+    }),
     named_deps = select({
         "DEFAULT": {},
         "ovr_config//os:linux": {} if rust_oss.is_oss_build() else ({"cas_client": "//eden/scm/lib/cas-client/rich-client:rich-cas-client"} if fetch_as_eden() else {"cas_client": "//eden/scm/lib/cas-client/thin-client:thin-cas-client"}),
