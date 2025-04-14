@@ -15,28 +15,20 @@ use crate::error::SaplingError;
 use crate::utils::get_sapling_executable_path;
 use crate::utils::get_sapling_options;
 
-pub async fn get_mergebase(commit: &str, mergegase_with: &str) -> Result<Option<String>> {
-    let output = Command::new(get_sapling_executable_path())
-        .envs(get_sapling_options())
-        .args([
-            "log",
-            "-T",
-            "{node}",
-            "-r",
-            format!("ancestor({}, {})", commit, mergegase_with).as_str(),
-        ])
-        .output()
-        .await?;
-
-    let mergebase = String::from_utf8(output.stdout)?;
-    if mergebase.is_empty() {
-        Ok(None)
-    } else {
-        Ok(Some(mergebase))
-    }
+pub async fn get_mergebase<D, C, M>(
+    current_dir: D,
+    commit: C,
+    mergegase_with: M,
+) -> Result<Option<String>>
+where
+    D: AsRef<Path>,
+    C: AsRef<str>,
+    M: AsRef<str>,
+{
+    let details = get_mergebase_details(current_dir, commit, mergegase_with).await?;
+    Ok(details.map(|d| d.mergebase))
 }
 
-#[derive(Clone)]
 pub struct MergebaseDetails {
     pub mergebase: String,
     pub timestamp: Option<u64>,
@@ -62,8 +54,8 @@ where
     M: AsRef<str>,
 {
     let output = Command::new(get_sapling_executable_path())
-        .envs(get_sapling_options())
         .current_dir(current_dir)
+        .envs(get_sapling_options())
         .args([
             "log",
             "--traceback",
@@ -85,12 +77,12 @@ where
     }
 }
 
-fn parse_mergebase_details(output: Vec<u8>) -> Result<Option<MergebaseDetails>> {
-    let output = String::from_utf8(output)?;
-    if output.is_empty() {
+fn parse_mergebase_details(mergebase_details: Vec<u8>) -> Result<Option<MergebaseDetails>> {
+    let mergebase_details = String::from_utf8(mergebase_details)?;
+    if mergebase_details.is_empty() {
         return Ok(None);
     }
-    let v: Vec<&str> = output.trim().splitn(3, '\n').collect();
+    let v: Vec<&str> = mergebase_details.trim().splitn(3, '\n').collect();
     let mergebase = v
         .first()
         .with_context(|| "Failed to parse mergebase")?
