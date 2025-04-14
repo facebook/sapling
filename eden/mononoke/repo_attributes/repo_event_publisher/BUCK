@@ -1,0 +1,11 @@
+load("@fbcode_macros//build_defs:rust_library.bzl", "rust_library")
+
+oncall("scm_server_infra")
+
+rust_library(
+    name = "repo_event_publisher",
+    srcs = glob(["src/**/*.rs"]),
+    deps = [
+        "//common/rust/shed/facet:facet",
+    ],
+)
