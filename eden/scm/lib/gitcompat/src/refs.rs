@@ -13,6 +13,7 @@ use std::io::BufWriter;
 use std::io::Write as _;
 use std::process::Stdio;
 
+use anyhow::Context;
 use anyhow::Result;
 use fs_err as fs;
 use pathmatcher_types::AlwaysMatcher;
@@ -274,7 +275,14 @@ impl ReferenceValue {
         let content = content.trim_end();
         let result = match content.strip_prefix("ref: ") {
             Some(rest) => Self::Sym(rest.to_string()),
-            None => Self::Id(HgId::from_hex(content.as_bytes())?),
+            None => {
+                // Usually, "content" is just HEX_HASH.
+                // But it can also have extra data, like: HEX_HASH\t\t'HEX_HASH'.
+                let first_word = content.split_ascii_whitespace().next().unwrap_or("");
+                let id = HgId::from_hex(first_word.as_bytes())
+                    .with_context(|| format!("Resolve Git reference: {:?}", content))?;
+                Self::Id(id)
+            }
         };
         Ok(result)
     }
