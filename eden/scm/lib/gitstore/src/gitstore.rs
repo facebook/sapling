@@ -23,7 +23,6 @@ use gitcompat::BareGit;
 use gitcompat::GitCmd;
 use progress_model::ProgressBar;
 use spawn_ext::CommandError;
-use tracing::debug;
 use types::errors::NetworkError;
 use types::fetch_mode::FetchMode;
 use types::HgId;
@@ -134,7 +133,8 @@ impl GitStore {
         // Cast to `Opaque` and prevents access to `git_repo`.
         let opaque_repo: Box<dyn Opaque + Send + Sync> = Box::new(UnsafeForceSync(git_repo));
 
-        debug!(
+        tracing::debug!(
+            target: "gitstore::open",
             git_dir = ?git_dir,
             fetch_url = &fetch_url,
             fetch_filter = &fetch_filter,
@@ -263,12 +263,16 @@ impl GitStore {
 
         if let Some(stdin) = child.stdin.take() {
             let mut stdin = BufWriter::new(stdin);
+            let mut count = 0;
             for id in missing_ids {
                 let hex = id.to_hex();
+                tracing::trace!(target: "gitstore::fetch::detail", hex, "fetch object");
                 stdin.write_all(hex.as_bytes())?;
                 stdin.write_all(b"\n")?;
+                count += 1;
             }
             drop(stdin);
+            tracing::debug!(target: "gitstore::fetch", count, "fetch objects");
         }
 
         // git reads all input before running actual fetch that might print progress info
