@@ -9,16 +9,21 @@ use std::borrow::Cow;
 use std::cell::Cell;
 use std::collections::BTreeMap;
 use std::fmt;
+use std::io::BufWriter;
+use std::io::Write as _;
+use std::process::Stdio;
 
 use anyhow::Result;
 use fs_err as fs;
 use pathmatcher_types::AlwaysMatcher;
 use pathmatcher_types::DirectoryMatch;
 use pathmatcher_types::Matcher;
+use spawn_ext::CommandExt;
 use types::HgId;
 use types::RepoPath;
 
 use crate::rungit::BareGit;
+use crate::GitCmd;
 
 /// Value of a Git reference.
 #[derive(Clone)]
@@ -116,6 +121,60 @@ impl BareGit {
             self.populate_loose_file_reference(matcher, Cow::Borrowed(name), insert)?;
         }
         Ok(result)
+    }
+
+    /// Update a git reference. If `value` is `None` it means to delete the reference.
+    /// If `old_value` is not `None`, refuse to update if the current reference does not match.
+    pub fn update_reference(
+        &self,
+        name: &str,
+        value: Option<HgId>,
+        old_value: Option<Option<HgId>>,
+    ) -> Result<()> {
+        self.update_references(std::iter::once((name, value, old_value)))
+    }
+
+    /// Batch update git references. `items` is a list of `(name, value, old_value)`.
+    /// See `update_reference`.
+    /// Currently implemented by the `git update-ref` command.
+    pub fn update_references<'a>(
+        &self,
+        items: impl IntoIterator<Item = (&'a str, Option<HgId>, Option<Option<HgId>>)>,
+    ) -> Result<()> {
+        let mut cmd = self.git_cmd("update-ref", &["--stdin", "-z"]);
+        let mut child = cmd
+            .stdin(Stdio::piped())
+            .stderr(Stdio::piped())
+            .stdout(Stdio::piped())
+            .spawn()?;
+        if let Some(stdin) = child.stdin.take() {
+            let mut stdin = BufWriter::new(stdin);
+            for (name, value, old_value) in items {
+                tracing::debug!(name, ?value, ?old_value, "update reference");
+                // From `git-update-ref` manpage:
+                // update SP <ref> NUL <new-oid> NUL [<old-oid>] NUL
+                // In this format, use 40 "0" to specify a zero value, and use the empty string to
+                // specify a missing value.
+                // Specify a zero <new-oid> to ensure the ref does not exist after the update
+                // and/or a zero <old-oid> to make sure the ref does not exist before the update.
+                stdin.write_all(b"update ")?;
+                stdin.write_all(name.as_bytes())?;
+                stdin.write_all(b"\0")?;
+                let new = value.unwrap_or_else(|| *HgId::null_id());
+                stdin.write_all(new.to_hex().as_bytes())?;
+                stdin.write_all(b"\0")?;
+                if let Some(old) = old_value {
+                    let old = old.unwrap_or_else(|| *HgId::null_id());
+                    stdin.write_all(old.to_hex().as_bytes())?;
+                }
+                stdin.write_all(b"\0")?;
+            }
+            stdin.flush()?;
+            drop(stdin);
+        }
+        let output = child.wait_with_output()?;
+        cmd.report_failure_with_output(&output)?;
+        Ok(())
     }
 }
 
@@ -238,6 +297,7 @@ mod tests {
     use std::collections::BTreeMap;
 
     use tempfile::TempDir;
+    use types::hgid::GIT_EMPTY_TREE_ID;
 
     use super::*;
 
@@ -375,6 +435,53 @@ mod tests {
             git.debug_lookup_reference("refs/not-found/not-found"),
             "None"
         );
+    }
+
+    #[test]
+    fn test_update_references() {
+        let (_dir, git) = match setup_real_git() {
+            Ok(v) => v,
+            // `git` cannot create a repo. Skip the test.
+            Err(_) => return,
+        };
+
+        let name = "refs/foo";
+        let id = GIT_EMPTY_TREE_ID;
+
+        // Create a new reference.
+        git.update_reference(name, Some(id), Some(None)).unwrap();
+        let looked_up = git.lookup_reference_follow_links(name).unwrap();
+        assert_eq!(looked_up, Some(id));
+
+        // Delete a reference.
+        git.update_reference(name, None, Some(Some(id))).unwrap();
+        let looked_up = git.lookup_reference_follow_links(name).unwrap();
+        assert_eq!(looked_up, None);
+
+        // Batch update.
+        git.update_references([
+            ("refs/baz", Some(id), None),
+            ("refs/bar", Some(id), Some(None)),
+        ])
+        .unwrap();
+        let looked_up = git.lookup_reference_follow_links("refs/bar").unwrap();
+        assert_eq!(looked_up, Some(id));
+        let looked_up = git.lookup_reference_follow_links("refs/baz").unwrap();
+        assert_eq!(looked_up, Some(id));
+    }
+
+    /// Setup a real git repo by running the command-line `git`.
+    fn setup_real_git() -> Result<(TempDir, BareGit)> {
+        let dir = tempfile::tempdir().unwrap();
+        let mut config: BTreeMap<String, String> = BTreeMap::new();
+        if let Ok(git) = std::env::var("GIT") {
+            config.insert("ui.git".to_owned(), git);
+        }
+        let mut git = BareGit::from_git_dir_and_config(dir.path().to_owned(), &config);
+        git.extra_git_configs
+            .push("init.defaultBranch=main".to_string());
+        git.call("init", &["-q"])?;
+        Ok((dir, git))
     }
 
     fn setup(loose: &[&str], packed: Option<&str>) -> (TempDir, BareGit) {
