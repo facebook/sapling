@@ -6,14 +6,24 @@
  */
 
 use std::path::Path;
+use std::sync::LazyLock;
+use std::sync::Mutex;
 
 use anyhow::Context;
+use lru_cache::LruCache;
 use tokio::process::Command;
 
 use crate::error::Result;
 use crate::error::SaplingError;
 use crate::utils::get_sapling_executable_path;
 use crate::utils::get_sapling_options;
+
+// NOTE: We might wish to cache Results here, but we would want to add a way to evict
+// Err entries from the cache based on some policy - e.g. a TTL in seconds.
+// For now, we just cache Ok entries.
+const MERGEBASE_LRU_CACHE_SIZE: usize = 32;
+static MERGEBASE_LRU_CACHE: LazyLock<Mutex<LruCache<String, Option<MergebaseDetails>>>> =
+    LazyLock::new(|| Mutex::new(LruCache::new(MERGEBASE_LRU_CACHE_SIZE)));
 
 pub async fn get_mergebase<D, C, M>(
     current_dir: D,
@@ -29,6 +39,7 @@ where
     Ok(details.map(|d| d.mergebase))
 }
 
+#[derive(Clone, Debug)]
 pub struct MergebaseDetails {
     pub mergebase: String,
     pub timestamp: Option<u64>,
@@ -53,28 +64,43 @@ where
     C: AsRef<str>,
     M: AsRef<str>,
 {
-    let output = Command::new(get_sapling_executable_path())
-        .current_dir(current_dir)
-        .envs(get_sapling_options())
-        .args([
-            "log",
-            "--traceback",
-            "-T",
-            "{node}\n{date}\n{get(extras, \"global_rev\")}",
-            "-r",
-            format!("ancestor({}, {})", commit.as_ref(), mergegase_with.as_ref()).as_str(),
-        ])
-        .output()
-        .await?;
-
-    if !output.status.success() || !output.stderr.is_empty() {
-        Err(SaplingError::Other(format!(
-            "Failed to obtain mergebase:\n{}",
-            String::from_utf8(output.stderr).unwrap_or("Failed to parse stderr".to_string())
-        )))
-    } else {
-        parse_mergebase_details(output.stdout)
+    let lru_key = format!("{}:{}", commit.as_ref(), mergegase_with.as_ref());
+    {
+        let mut lru_cache = MERGEBASE_LRU_CACHE.lock().unwrap();
+        let entry = lru_cache.get_mut(&lru_key).cloned();
+        if let Some(entry) = entry {
+            return Ok(entry);
+        }
     }
+
+    let result = {
+        let output = Command::new(get_sapling_executable_path())
+            .current_dir(current_dir)
+            .envs(get_sapling_options())
+            .args([
+                "log",
+                "--traceback",
+                "-T",
+                "{node}\n{date}\n{get(extras, \"global_rev\")}",
+                "-r",
+                format!("ancestor({}, {})", commit.as_ref(), mergegase_with.as_ref()).as_str(),
+            ])
+            .output()
+            .await?;
+
+        if !output.status.success() || !output.stderr.is_empty() {
+            Err(SaplingError::Other(format!(
+                "Failed to obtain mergebase:\n{}",
+                String::from_utf8(output.stderr).unwrap_or("Failed to parse stderr".to_string())
+            )))
+        } else {
+            parse_mergebase_details(output.stdout)
+        }
+    }?;
+
+    let mut lru_cache = MERGEBASE_LRU_CACHE.lock().unwrap();
+    lru_cache.insert(lru_key, result.clone());
+    Ok(result)
 }
 
 fn parse_mergebase_details(mergebase_details: Vec<u8>) -> Result<Option<MergebaseDetails>> {
