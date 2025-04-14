@@ -173,6 +173,29 @@ impl GitStore {
         Ok(obj.data().to_vec())
     }
 
+    /// Read an object. Do not trigger remote fetching.
+    /// Returns `None` if the object does not exist.
+    pub fn read_local_obj_optional(&self, id: HgId, kind: ObjectType) -> Result<Option<Vec<u8>>> {
+        // NOTE: This might be racy.
+        if !self.has_obj(id)? {
+            return Ok(None);
+        }
+        let oid = hgid_to_git_oid(id);
+        let obj = self.odb.read(oid)?;
+        let kind = git2::ObjectType::from(kind);
+        if kind != git2::ObjectType::Any && obj.kind() != kind {
+            return Ok(None);
+        }
+        Ok(Some(obj.data().to_vec()))
+    }
+
+    /// Test if an object exists in the odb.
+    pub fn has_obj(&self, id: HgId) -> Result<bool> {
+        let oid = hgid_to_git_oid(id);
+        // Note: "exists" triggers "refresh".
+        Ok(self.odb.exists(oid))
+    }
+
     /// Read the size of an object without its full content.
     pub fn read_obj_size(&self, id: HgId, kind: ObjectType) -> Result<usize> {
         if id.is_null() {
