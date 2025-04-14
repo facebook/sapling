@@ -617,20 +617,21 @@ def rage(ui, repo, *pats, **opts) -> None:
             ret = 1
 
     if ret:
+        ui.write(_("Failed calling pastry to pate to Phabricator:\n\n"))
+        ui.write(
+            _("  %s\n\n") % out.decode(errors="replace").rstrip().replace("\n", "\n  ")
+        )
+
         fd, tmpname = tempfile.mkstemp(prefix="hg-rage-")
         with util.fdopen(fd, r"w", encoding="utf-8") as tmpfp:
             tmpfp.write(msg)
-            ui.write(
-                _(
-                    "Failed to post the diagnostic paste to Phabricator, "
-                    "but its contents have been written to:\n\n"
-                )
-            )
-            ui.write(_("  %s\n") % tmpname, label="rage.link")
-            ui.write(
-                _("\nPlease include this file in the %s.\n")
-                % ui.config("ui", "supportcontact")
-            )
+
+        ui.write(_("The Sapling diagnostic information has been saved to:\n\n"))
+        ui.write(_("  %s\n") % tmpname, label="rage.link")
+        ui.write(
+            _("\nPlease include this file in the %s.\n")
+            % ui.config("ui", "supportcontact")
+        )
     else:
         ui.write(
             _("Please post in %s with the following link:\n\n")
