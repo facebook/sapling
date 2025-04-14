@@ -10,7 +10,7 @@ use commit_cloud_helpers::sanity_check_workspace_name;
 use commit_cloud_types::SmartlogFlag;
 use commit_cloud_types::SmartlogNode;
 use commit_cloud_types::WorkspaceData;
-use commit_cloud_types::WorkspaceRemoteBookmark as CCWorkspaceRemoteBookmark;
+use commit_cloud_types::WorkspaceRemoteBookmark as CloudWorkspaceRemoteBookmark;
 use context::CoreContext;
 use mononoke_api_hg::RepoContextHgExt;
 use scs_errors::invalid_request;
@@ -147,7 +147,7 @@ fn into_thrift_smartlog_node(node: SmartlogNode) -> thrift::SmartlogNode {
     }
 }
 
-fn into_thrift_remote_bookmark(b: CCWorkspaceRemoteBookmark) -> thrift::WorkspaceRemoteBookmark {
+fn into_thrift_remote_bookmark(b: CloudWorkspaceRemoteBookmark) -> thrift::WorkspaceRemoteBookmark {
     thrift::WorkspaceRemoteBookmark {
         remote: b.remote().to_string(),
         name: b.name().to_string(),
