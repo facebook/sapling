@@ -46,6 +46,13 @@ pub trait CommandExt {
     /// `Command`. On Windows, you do not need to use the shell to run batch files (the
     /// Rust stdlib detects batch files and uses "cmd.exe" automatically).
     fn new_shell(shell_cmd: impl AsRef<str>) -> Command;
+
+    /// Report an error if exit code is not 0, with the output in the error
+    /// message. Do nothing if exit code is 0.
+    ///
+    /// Similar to `checked_output`, but takes `Output`. Useful with custom
+    /// stdin.
+    fn report_failure_with_output(&mut self, output: &Output) -> io::Result<()>;
 }
 
 #[derive(Debug)]
@@ -177,11 +184,7 @@ impl CommandExt for Command {
         let out = self
             .output()
             .map_err(|e| CommandError::new(self, Some(e)).into_io_error())?;
-        if !out.status.success() {
-            return Err(CommandError::new(self, None)
-                .with_output(&out)
-                .into_io_error());
-        }
+        self.report_failure_with_output(&out)?;
         Ok(out)
     }
 
@@ -203,6 +206,15 @@ impl CommandExt for Command {
 
         #[cfg(windows)]
         return windows::new_shell(shell_cmd);
+    }
+
+    fn report_failure_with_output(&mut self, output: &Output) -> io::Result<()> {
+        if !output.status.success() {
+            return Err(CommandError::new(self, None)
+                .with_output(output)
+                .into_io_error());
+        }
+        Ok(())
     }
 }
 
@@ -377,6 +389,10 @@ mod unix {
 
 #[cfg(test)]
 mod tests {
+    use std::path::Path;
+
+    use io::Write as _;
+
     use super::*;
 
     // It's hard to test the real effects. Here we just check command still runs.
@@ -403,6 +419,47 @@ mod tests {
         child.wait().unwrap();
 
         assert_eq!(&std::fs::read(dir.path().join("a")).unwrap()[..3], b"foo")
+    }
+
+    #[test]
+    fn test_checked_output() {
+        let sh_path = Path::new("/bin/bash");
+        if sh_path.exists() {
+            let mut cmd = Command::new(&sh_path);
+            cmd.args(["-c", "echo my-message-to-stderr 1>&2 && false"]);
+            let out_err = cmd.checked_output().unwrap_err();
+            assert_eq!(
+                out_err.to_string(),
+                r#"Command exited with code 1
+  /bin/bash -c "echo my-message-to-stderr 1>&2 && false"
+    my-message-to-stderr
+"#
+            );
+        }
+    }
+
+    #[test]
+    fn test_report_error_with_output() {
+        let sh_path = Path::new("/bin/bash");
+        if sh_path.exists() {
+            let mut cmd = Command::new(&sh_path);
+            cmd.args(["-c", "cat && false"]);
+            cmd.stdin(Stdio::piped());
+            cmd.stdout(Stdio::piped());
+            let mut child = cmd.spawn().unwrap();
+            if let Some(mut stdin) = child.stdin.take() {
+                stdin.write_all(b"my-message-to-stdin\n").unwrap();
+            }
+            let out = child.wait_with_output().unwrap();
+            let out_err = cmd.report_failure_with_output(&out).unwrap_err();
+            assert_eq!(
+                out_err.to_string(),
+                r#"Command exited with code 1
+  /bin/bash -c "cat && false"
+    my-message-to-stdin
+"#
+            );
+        }
     }
 
     #[test]
