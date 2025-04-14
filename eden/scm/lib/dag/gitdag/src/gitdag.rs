@@ -8,7 +8,6 @@
 use std::ops::Deref;
 use std::ops::DerefMut;
 use std::path::Path;
-use std::path::PathBuf;
 
 use dag::ops::DagPersistent;
 use dag::Dag;
@@ -30,40 +29,29 @@ use crate::errors::MapDagError;
 /// the git repo, and use `&` to filter them.
 pub struct GitDag {
     dag: Dag,
-    git_dir: PathBuf,
 }
 
 impl GitDag {
     /// Creates `GitDag`. This does not automatically import Git references.
     /// The callsite is expected to read, resolve Git references, then call
     /// `sync_from_git` to import them.
-    pub fn open(dag_dir: &Path, git_dir: &Path) -> dag::Result<Self> {
+    pub fn open(dag_dir: &Path) -> dag::Result<Self> {
         let dag = Dag::open(dag_dir)?;
-        let git_dir = git_dir.to_owned();
-        Ok(Self { dag, git_dir })
+        Ok(Self { dag })
     }
 
     /// Import heads (and ancestors) from Git objects to the `dag`.
     /// The commit hashes are imported, but not the commit messages.
     pub fn import_from_git(
         &mut self,
-        git_repo: Option<&git2::Repository>,
+        git_repo: &git2::Repository,
         heads: VertexListWithOptions,
     ) -> anyhow::Result<()> {
         if heads.is_empty() {
             return Ok(());
         }
         // git_repo is used to read local objects, not for reading references.
-        let git_repo_owned;
-        let git_repo_ref = match git_repo {
-            None => {
-                git_repo_owned = git2::Repository::open(&self.git_dir)
-                    .with_context(|| format!("opening git repo at {}", self.git_dir.display()))?;
-                &git_repo_owned
-            }
-            Some(repo) => repo,
-        };
-        sync_from_git(&mut self.dag, git_repo_ref, heads)?;
+        sync_from_git(&mut self.dag, git_repo, heads)?;
         Ok(())
     }
 }

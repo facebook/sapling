@@ -130,7 +130,7 @@ impl GitSegmentedCommits {
         is_dotgit: bool,
     ) -> Result<Self> {
         let git_repo = git2::Repository::open(git_dir)?;
-        let dag = GitDag::open(dag_dir, git_dir)?;
+        let dag = GitDag::open(dag_dir)?;
         let dag_path = dag_dir.to_path_buf();
         let git_path = git_dir.to_path_buf();
         let git = BareGit::from_git_dir_and_config(git_path, config);
@@ -272,7 +272,7 @@ impl GitSegmentedCommits {
         );
 
         let git_repo = self.git_repo.lock();
-        self.dag.import_from_git(Some(&*git_repo), heads)?;
+        self.dag.import_from_git(&*git_repo, heads)?;
 
         let encoded_bookmarks = refencode::encode_bookmarks(&bookmarks);
         let encoded_remotenames = refencode::encode_remotenames(&remotenames);
@@ -399,7 +399,7 @@ impl GitSegmentedCommits {
 
         if !heads.is_empty() {
             let git_repo = self.git_repo.lock();
-            self.dag.import_from_git(Some(&*git_repo), heads.into())?;
+            self.dag.import_from_git(&*git_repo, heads.into())?;
         }
 
         if let Some(v) = bookmarks {
