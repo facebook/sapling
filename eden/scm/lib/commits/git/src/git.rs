@@ -45,13 +45,14 @@ use gitcompat::GitCmd as _;
 use gitcompat::ReferenceValue;
 use gitdag::GitDag;
 use gitstore::GitStore;
+use gitstore::ObjectType;
 use metalog::MetaLog;
 use minibytes::Bytes;
-use parking_lot::Mutex;
 use paste::paste;
 use spawn_ext::CommandError;
 use storemodel::ReadRootTreeIds;
 use storemodel::SerializationFormat;
+use types::fetch_mode::FetchMode;
 use types::HgId;
 
 use crate::ref_filter::GitRefFilter;
@@ -110,7 +111,6 @@ use crate::utils;
 /// It does not support migrating to other formats via
 /// `debugchangelog --migrate`, because of SHA1 incompatibility.
 pub struct GitSegmentedCommits {
-    git_repo: Arc<Mutex<git2::Repository>>,
     git_store: GitStore,
     dag: GitDag,
     dag_path: PathBuf,
@@ -130,7 +130,6 @@ impl GitSegmentedCommits {
         config: &dyn Config,
         is_dotgit: bool,
     ) -> Result<Self> {
-        let git_repo = git2::Repository::open(git_dir)?;
         let git_store = GitStore::open(git_dir, config)?;
         let dag = GitDag::open(dag_dir)?;
         let dag_path = dag_dir.to_path_buf();
@@ -140,7 +139,6 @@ impl GitSegmentedCommits {
         let config_selective_pull_default =
             config.get_or_default("remotenames", "selectivepulldefault")?;
         Ok(Self {
-            git_repo: Arc::new(Mutex::new(git_repo)),
             git_store,
             dag,
             dag_path,
@@ -439,7 +437,6 @@ impl GitSegmentedCommits {
             metalog.message(),
             metalog.root_id().to_hex()
         );
-        let repo = self.git_repo.lock();
         let mut ref_to_change = HashMap::<String, Option<HgId>>::new();
 
         let new_bookmarks = metalog.get_bookmarks()?;
@@ -458,12 +455,7 @@ impl GitSegmentedCommits {
             let visibleheads: HashSet<HgId> = visibleheads.into_iter().collect();
             let mut git_visibleheads = HashSet::with_capacity(visibleheads.len());
             // Delete non-existed visibleheads.
-            for reference in repo.references()? {
-                let reference = reference?;
-                let ref_name = match reference.name() {
-                    Some(n) => n,
-                    None => continue,
-                };
+            for (ref_name, _ref_value) in self.git.list_references(None)? {
                 if let Some(hex) = ref_name.strip_prefix("refs/visibleheads/") {
                     let should_delete = match HgId::from_hex(hex.as_bytes()) {
                         Ok(id) => {
@@ -578,10 +570,10 @@ impl AppendCommits for GitSegmentedCommits {
         // Write to git odb.
         // Raw text format should be in git, although the type name is HgCommit.
         {
-            let repo = self.git_repo.lock();
-            let odb = repo.odb()?;
             for commit in commits {
-                let oid = odb.write(git2::ObjectType::Commit, commit.raw_text.as_ref())?;
+                let oid = self
+                    .git_store
+                    .write_obj(ObjectType::Commit, commit.raw_text.as_ref())?;
                 if oid.as_ref() != commit.vertex.as_ref() {
                     return Err(crate::errors::hash_mismatch(
                         &Vertex::copy_from(oid.as_ref()),
@@ -645,18 +637,17 @@ impl AppendCommits for GitSegmentedCommits {
 #[async_trait::async_trait]
 impl ReadCommitText for GitSegmentedCommits {
     async fn get_commit_raw_text(&self, vertex: &Vertex) -> Result<Option<Bytes>> {
-        let repo = self.git_repo.lock();
-        get_commit_raw_text(&repo, vertex)
+        get_commit_raw_text(&self.git_store, vertex)
     }
 
     fn to_dyn_read_commit_text(&self) -> Arc<dyn ReadCommitText + Send + Sync> {
-        ArcMutexGitRepo(self.git_repo.clone()).to_dyn_read_commit_text()
+        Wrapper(self.git_store.clone()).to_dyn_read_commit_text()
     }
 
     fn to_dyn_read_root_tree_ids(&self) -> Arc<dyn ReadRootTreeIds + Send + Sync> {
         // The default impl works. But ReadCommitText has overhead constructing
         // the hg text. Bypass that overhead.
-        Arc::new(Wrapper(self.git_repo.clone()))
+        Arc::new(Wrapper(self.git_store.clone()))
     }
 
     fn format(&self) -> SerializationFormat {
@@ -664,14 +655,10 @@ impl ReadCommitText for GitSegmentedCommits {
     }
 }
 
-#[derive(Clone)]
-struct ArcMutexGitRepo(Arc<Mutex<git2::Repository>>);
-
 #[async_trait::async_trait]
-impl ReadCommitText for ArcMutexGitRepo {
+impl ReadCommitText for Wrapper<GitStore> {
     async fn get_commit_raw_text(&self, vertex: &Vertex) -> Result<Option<Bytes>> {
-        let repo = self.0.lock();
-        get_commit_raw_text(&repo, vertex)
+        get_commit_raw_text(&self.0, vertex)
     }
 
     fn to_dyn_read_commit_text(&self) -> Arc<dyn ReadCommitText + Send + Sync> {
@@ -683,37 +670,38 @@ impl ReadCommitText for ArcMutexGitRepo {
     }
 }
 
-fn get_commit_raw_text(repo: &git2::Repository, vertex: &Vertex) -> Result<Option<Bytes>> {
-    let oid = match git2::Oid::from_bytes(vertex.as_ref()) {
-        Ok(oid) => oid,
+fn get_commit_raw_text(store: &GitStore, vertex: &Vertex) -> Result<Option<Bytes>> {
+    let id = match HgId::from_slice(vertex.as_ref()) {
+        Ok(id) => id,
         Err(_) => return Ok(None),
     };
-    match repo.odb()?.read(oid) {
-        Ok(obj) => Ok(Some(Bytes::copy_from_slice(obj.data()))),
-        Err(e) if e.code() == git2::ErrorCode::NotFound => Ok(get_hard_coded_commit_text(vertex)),
-        Err(e) => Err(e.into()),
+    // Git commits are not expected to be lazily fetched here.
+    match store.read_local_obj_optional(id, ObjectType::Commit)? {
+        None => Ok(get_hard_coded_commit_text(vertex)),
+        Some(data) => Ok(Some(Bytes::from(data))),
     }
 }
 
 // Workaround orphan rule
+#[derive(Clone)]
 struct Wrapper<T>(T);
 
 #[async_trait::async_trait]
-impl ReadRootTreeIds for Wrapper<Arc<Mutex<git2::Repository>>> {
+impl ReadRootTreeIds for Wrapper<GitStore> {
     async fn read_root_tree_ids(&self, commits: Vec<HgId>) -> anyhow::Result<Vec<(HgId, HgId)>> {
         let mut result = Vec::with_capacity(commits.len());
-        let repo = self.0.lock();
-        for commit_hgid in commits {
-            if commit_hgid.is_null() {
+        for commit_id in commits {
+            if commit_id.is_null() {
                 continue;
             }
-
-            let oid = hgid_to_git_oid(commit_hgid);
-            let commit = repo.find_commit(oid)?;
-            let tree_id = commit.tree_id();
-            let tree_hgid =
-                HgId::from_slice(tree_id.as_bytes()).expect("git Oid should convert to HgId");
-            result.push((commit_hgid, tree_hgid));
+            let data = self
+                .0
+                .read_obj(commit_id, ObjectType::Commit, FetchMode::LocalOnly)?;
+            let data = Bytes::from(data);
+            let text = data.into_text_lossy();
+            let fields = format_util::commit_text_to_fields(text, SerializationFormat::Git);
+            let tree_id = fields.root_tree()?;
+            result.push((commit_id, tree_id));
         }
         Ok(result)
     }
@@ -724,10 +712,10 @@ impl StreamCommitText for GitSegmentedCommits {
         &self,
         stream: BoxStream<'static, anyhow::Result<Vertex>>,
     ) -> Result<BoxStream<'static, anyhow::Result<ParentlessHgCommit>>> {
-        let git_repo = git2::Repository::open(self.git.git_dir())?;
+        let store = self.git_store.clone();
         let stream = stream.map(move |item| {
             let vertex = item?;
-            let raw_text = match get_commit_raw_text(&git_repo, &vertex)? {
+            let raw_text = match get_commit_raw_text(&store, &vertex)? {
                 Some(v) => v,
                 None => return vertex.not_found().map_err(Into::into),
             };
@@ -793,10 +781,6 @@ fn find_changes<'a>(
         }
     });
     deleted.chain(changed)
-}
-
-fn hgid_to_git_oid(id: HgId) -> git2::Oid {
-    git2::Oid::from_bytes(id.as_ref()).expect("HgId should convert to git2::Oid")
 }
 
 /// Hardcoded commit hashes defined by hg.
