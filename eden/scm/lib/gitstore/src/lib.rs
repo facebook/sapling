@@ -16,6 +16,7 @@ mod trait_impls;
 pub use git2;
 
 pub use crate::gitstore::GitStore;
+pub use crate::gitstore::ObjectType;
 
 /// Initialization. Register abstraction implementations.
 pub fn init() {

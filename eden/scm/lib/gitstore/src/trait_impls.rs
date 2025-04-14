@@ -22,11 +22,12 @@ use types::HgId;
 use types::RepoPath;
 
 use crate::GitStore;
+use crate::ObjectType;
 
 #[async_trait]
 impl KeyStore for GitStore {
     fn get_local_content(&self, _path: &RepoPath, id: HgId) -> anyhow::Result<Option<ScmBlob>> {
-        match self.read_obj(id, git2::ObjectType::Any, FetchMode::LocalOnly) {
+        match self.read_obj(id, ObjectType::Any, FetchMode::LocalOnly) {
             Ok(data) => Ok(Some(ScmBlob::Bytes(data.into()))),
             Err(e) => {
                 if let Some(e) = e.downcast_ref::<git2::Error>() {
@@ -54,7 +55,7 @@ impl KeyStore for GitStore {
         }
         let store = self.clone();
         let iter = keys.into_iter().map(move |k| {
-            let data = store.read_obj(k.hgid, git2::ObjectType::Any, FetchMode::AllowRemote)?;
+            let data = store.read_obj(k.hgid, ObjectType::Any, FetchMode::AllowRemote)?;
             Ok((k, ScmBlob::Bytes(data.into())))
         });
         Ok(Box::new(iter))
@@ -71,8 +72,8 @@ impl KeyStore for GitStore {
 
     fn insert_data(&self, opts: InsertOpts, path: &RepoPath, data: &[u8]) -> anyhow::Result<HgId> {
         let kind = match opts.kind {
-            Kind::File => git2::ObjectType::Blob,
-            Kind::Tree => git2::ObjectType::Tree,
+            Kind::File => ObjectType::Blob,
+            Kind::Tree => ObjectType::Tree,
         };
         let id = self.write_obj(kind, data)?;
         if let Some(forced_id) = opts.forced_id {

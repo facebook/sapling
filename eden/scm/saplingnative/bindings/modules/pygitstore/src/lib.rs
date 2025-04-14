@@ -9,8 +9,8 @@
 
 use std::sync::Arc;
 
-use ::gitstore::git2;
 use ::gitstore::GitStore;
+use ::gitstore::ObjectType;
 use configmodel::Config;
 use cpython::*;
 use cpython_ext::convert::ImplInto;
@@ -64,8 +64,8 @@ py_class!(pub class gitstore |py| {
     }
 });
 
-fn str_to_object_type(py: Python, kind: &str) -> PyResult<git2::ObjectType> {
-    match git2::ObjectType::from_str(kind) {
+fn str_to_object_type(py: Python, kind: &str) -> PyResult<ObjectType> {
+    match ObjectType::from_str(kind) {
         Some(v) => Ok(v),
         None => Err(PyErr::new::<exc::ValueError, _>(
             py,

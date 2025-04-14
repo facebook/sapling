@@ -58,6 +58,41 @@ impl Deref for GitStore {
     }
 }
 
+#[derive(Copy, Clone, Eq, PartialEq, Debug)]
+pub enum ObjectType {
+    Any,
+    Commit,
+    Tree,
+    Blob,
+    Tag,
+}
+
+impl ObjectType {
+    /// Convert a string object type representation to its object type.
+    pub fn from_str(s: &str) -> Option<ObjectType> {
+        match s {
+            "any" => Some(ObjectType::Any),
+            "commit" => Some(ObjectType::Commit),
+            "tree" => Some(ObjectType::Tree),
+            "blob" => Some(ObjectType::Blob),
+            "tag" => Some(ObjectType::Tag),
+            _ => return None,
+        }
+    }
+}
+
+impl From<ObjectType> for git2::ObjectType {
+    fn from(value: ObjectType) -> Self {
+        match value {
+            ObjectType::Any => git2::ObjectType::Any,
+            ObjectType::Commit => git2::ObjectType::Commit,
+            ObjectType::Tree => git2::ObjectType::Tree,
+            ObjectType::Blob => git2::ObjectType::Blob,
+            ObjectType::Tag => git2::ObjectType::Tag,
+        }
+    }
+}
+
 impl GitStore {
     /// `open` a Git bare repo at `git_dir`. Gain access to its odb (object database).
     pub fn open(git_dir: &Path, config: &dyn Config) -> Result<Self> {
@@ -117,7 +152,7 @@ impl GitStore {
     }
 
     /// Read an object of the given type.
-    pub fn read_obj(&self, id: HgId, kind: git2::ObjectType, mode: FetchMode) -> Result<Vec<u8>> {
+    pub fn read_obj(&self, id: HgId, kind: ObjectType, mode: FetchMode) -> Result<Vec<u8>> {
         if id.is_null() {
             return Ok(Vec::new());
         }
@@ -126,6 +161,7 @@ impl GitStore {
         }
         let oid = hgid_to_git_oid(id);
         let obj = self.odb.read(oid)?;
+        let kind = git2::ObjectType::from(kind);
         if kind != git2::ObjectType::Any && obj.kind() != kind {
             return Err(git2::Error::new(
                 git2::ErrorCode::NotFound,
@@ -138,13 +174,14 @@ impl GitStore {
     }
 
     /// Read the size of an object without its full content.
-    pub fn read_obj_size(&self, id: HgId, kind: git2::ObjectType) -> Result<usize> {
+    pub fn read_obj_size(&self, id: HgId, kind: ObjectType) -> Result<usize> {
         if id.is_null() {
             return Ok(0);
         }
         self.fetch_objs(&[id])?;
         let oid = hgid_to_git_oid(id);
         let (size, obj_kind) = self.odb.read_header(oid)?;
+        let kind = git2::ObjectType::from(kind);
         if kind != git2::ObjectType::Any && obj_kind != kind {
             return Err(git2::Error::new(
                 git2::ErrorCode::NotFound,
@@ -157,8 +194,8 @@ impl GitStore {
     }
 
     /// Write object to the odb.
-    pub fn write_obj(&self, kind: git2::ObjectType, data: &[u8]) -> Result<HgId> {
-        let oid = self.odb.write(kind, data)?;
+    pub fn write_obj(&self, kind: ObjectType, data: &[u8]) -> Result<HgId> {
+        let oid = self.odb.write(kind.into(), data)?;
         let id = git_oid_to_hgid(oid);
         Ok(id)
     }
