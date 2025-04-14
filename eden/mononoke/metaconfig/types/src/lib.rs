@@ -277,6 +277,9 @@ pub struct RepoConfig {
     pub modern_sync_config: Option<ModernSyncConfig>,
     /// Expose continuous stats about repo contents, this is for when mononoke server is the receiving end of a sync
     pub log_repo_stats: bool,
+    /// Configuration controlling the caching mechanism used for different types of Mononoke metadata
+    /// (e.g. bookmarks, bonsai hash mappings, git symref mappings, etc.)
+    pub metadata_cache_config: Option<MetadataCacheConfig>,
 }
 
 /// Config determining if the repo is deep sharded in the context of a service.
@@ -2076,4 +2079,28 @@ impl Deref for ObjectsCountMultiplier {
     fn deref(&self) -> &Self::Target {
         &self.0
     }
+}
+
+/// Enum controlling how certain Mononoke metadata cache is updated
+#[derive(Debug, Default, Clone, PartialEq, Eq)]
+pub enum MetadataCacheUpdateMode {
+    /// Mode in which metadata cache updater tails the input category for updates
+    Tailing {
+        /// Scribe category to tail for updates
+        category: String,
+    },
+    /// Mode in which metadata cache updater directly polls the XDB periodically for updates
+    #[default]
+    Polling,
+}
+
+/// Configuration for Mononoke metadata cache
+#[derive(Debug, Default, Clone, PartialEq, Eq)]
+pub struct MetadataCacheConfig {
+    /// Mode for updating the warm bookmark metadata cache
+    pub wbc_update_mode: Option<MetadataCacheUpdateMode>,
+    /// Mode for updating the tags metadata cache
+    pub tags_update_mode: Option<MetadataCacheUpdateMode>,
+    /// Mode for updating the content refs metadata cache
+    pub content_refs_update_mode: Option<MetadataCacheUpdateMode>,
 }

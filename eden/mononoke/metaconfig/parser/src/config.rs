@@ -245,6 +245,7 @@ fn parse_with_repo_definition(
         git_configs,
         modern_sync_config,
         log_repo_stats,
+        metadata_cache_config,
         ..
     } = named_repo_config;
 
@@ -371,7 +372,9 @@ fn parse_with_repo_definition(
     let modern_sync_config = modern_sync_config.convert()?;
     let log_repo_stats = log_repo_stats.unwrap_or(false);
     let objects_count_multiplier = objects_count_multiplier.map(ObjectsCountMultiplier::new);
-
+    let metadata_cache_config = metadata_cache_config
+        .map(|cache_config| cache_config.convert())
+        .transpose()?;
     Ok(RepoConfig {
         enabled,
         storage_config,
@@ -425,6 +428,7 @@ fn parse_with_repo_definition(
         git_configs,
         modern_sync_config,
         log_repo_stats,
+        metadata_cache_config,
     })
 }
 
@@ -584,6 +588,8 @@ mod test {
     use metaconfig_types::LfsParams;
     use metaconfig_types::LocalDatabaseConfig;
     use metaconfig_types::LoggingDestination;
+    use metaconfig_types::MetadataCacheConfig;
+    use metaconfig_types::MetadataCacheUpdateMode;
     use metaconfig_types::MetadataDatabaseConfig;
     use metaconfig_types::MetadataLoggerConfig;
     use metaconfig_types::MultiplexId;
@@ -976,6 +982,10 @@ mod test {
             bookmarks = ["master", "release"]
             sleep_interval_secs = 100
 
+            [metadata_cache_config]
+            wbc_update_mode = { tailing = { category = "scribe_category" } }
+            tags_update_mode = { polling = {} }            
+            
             [x_repo_sync_source_mapping.mapping.aros]
             bookmark_regex = "master"
             backsync_enabled = true            
@@ -1423,6 +1433,13 @@ mod test {
                 },
                 modern_sync_config: None,
                 log_repo_stats: false,
+                metadata_cache_config: Some(MetadataCacheConfig {
+                    wbc_update_mode: Some(MetadataCacheUpdateMode::Tailing {
+                        category: "scribe_category".to_string(),
+                    }),
+                    tags_update_mode: Some(MetadataCacheUpdateMode::Polling),
+                    content_refs_update_mode: None,
+                }),
             },
         );
 
@@ -1504,6 +1521,7 @@ mod test {
                 },
                 modern_sync_config: None,
                 log_repo_stats: false,
+                metadata_cache_config: None,
             },
         );
         assert_eq!(

@@ -8,6 +8,7 @@
 use std::collections::HashMap;
 
 use anyhow::anyhow;
+use anyhow::bail;
 use anyhow::Context;
 use anyhow::Result;
 use bookmarks_types::BookmarkKey;
@@ -38,6 +39,8 @@ use metaconfig_types::InfinitepushNamespace;
 use metaconfig_types::InfinitepushParams;
 use metaconfig_types::LfsParams;
 use metaconfig_types::LoggingDestination;
+use metaconfig_types::MetadataCacheConfig;
+use metaconfig_types::MetadataCacheUpdateMode;
 use metaconfig_types::MetadataLoggerConfig;
 use metaconfig_types::ModernSyncChannelConfig;
 use metaconfig_types::ModernSyncConfig;
@@ -90,6 +93,8 @@ use repos::RawInfinitepushParams;
 use repos::RawLfsParams;
 use repos::RawLoggingDestination;
 use repos::RawLoggingDestinationScribe;
+use repos::RawMetadataCacheConfig;
+use repos::RawMetadataCacheUpdateMode;
 use repos::RawMetadataLoggerConfig;
 use repos::RawModernSyncConfig;
 use repos::RawPushParams;
@@ -952,6 +957,42 @@ impl Convert for RawCommitCloudConfig {
         Ok(CommitCloudConfig {
             mocked_employees: self.mocked_employees,
             disable_interngraph_notification: self.disable_interngraph_notification,
+        })
+    }
+}
+
+impl Convert for RawMetadataCacheUpdateMode {
+    type Output = MetadataCacheUpdateMode;
+    fn convert(self) -> Result<Self::Output> {
+        let cache_update_mode = match self {
+            RawMetadataCacheUpdateMode::tailing(tailing) => MetadataCacheUpdateMode::Tailing {
+                category: tailing.category,
+            },
+            RawMetadataCacheUpdateMode::polling(_) => MetadataCacheUpdateMode::Polling,
+            RawMetadataCacheUpdateMode::UnknownField(f) => {
+                bail!("Unsupported MetadataCacheUpdateMode {}", f)
+            }
+        };
+        Ok(cache_update_mode)
+    }
+}
+
+impl Convert for RawMetadataCacheConfig {
+    type Output = MetadataCacheConfig;
+    fn convert(self) -> Result<Self::Output> {
+        Ok(MetadataCacheConfig {
+            wbc_update_mode: self
+                .wbc_update_mode
+                .map(|mode| mode.convert())
+                .transpose()?,
+            tags_update_mode: self
+                .tags_update_mode
+                .map(|mode| mode.convert())
+                .transpose()?,
+            content_refs_update_mode: self
+                .content_refs_update_mode
+                .map(|mode| mode.convert())
+                .transpose()?,
         })
     }
 }
