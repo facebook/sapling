@@ -126,7 +126,7 @@ class Client:
 
     @classmethod
     def _raisearcrcerror(cls):
-        raise arcconfig.ArcConfigError(
+        raise arcconfig.ArcRcMissingCredentials(
             "arcrc is missing user "
             "credentials. Use "
             '"jf authenticate" to fix, '

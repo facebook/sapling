@@ -56,7 +56,7 @@ class PhabricatorGraphQLClient:
                 "variables": params,
             }
         else:
-            raise arcconfig.ArcConfigError(
+            raise arcconfig.ArcRcMissingCredentials(
                 "The arcrc was missing valid authentication (either OAuth or CATs). "
                 "For humans, follow the instructions at "
                 "https://www.internalfb.com/intern/jf/authenticate/ "

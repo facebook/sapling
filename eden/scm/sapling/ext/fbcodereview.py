@@ -572,7 +572,7 @@ def _query_phabricator(repo, diffids, diff_status_list):
     ui = repo.ui
     try:
         client = graphql.Client(repo=repo)
-    except arcconfig.ArcConfigError:
+    except arcconfig.ArcConfigLoadError:
         # Not all repos have arcconfig. If a repo doesn't have one, that's not
         # a fatal error.
         return
@@ -587,7 +587,6 @@ def _query_phabricator(repo, diffids, diff_status_list):
 
     try:
         return client.getnodes(repo, diffids, diff_status_list)
-
     except Exception as ex:
         ui.warn(
             _(

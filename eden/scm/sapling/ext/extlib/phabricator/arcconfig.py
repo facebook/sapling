@@ -21,6 +21,14 @@ class ArcConfigError(Exception):
     pass
 
 
+class ArcConfigLoadError(ArcConfigError):
+    pass
+
+
+class ArcRcMissingCredentials(ArcConfigError):
+    pass
+
+
 def _loadfile(filename):
     try:
         with open(filename, "r") as f:
@@ -32,7 +40,7 @@ def _loadfile(filename):
     except ValueError as ex:
         # if the json file is badly formatted
         if "Expecting property name" in str(ex):
-            raise ArcConfigError(
+            raise ArcConfigLoadError(
                 "Configuration file %s is not a proper JSON file." % filename
             )
         raise
@@ -46,7 +54,7 @@ def loadforpath(path):
         envvar = "HOME"
     homedir = encoding.environ.get(envvar)
     if not homedir:
-        raise ArcConfigError("$%s environment variable not found" % envvar)
+        raise ArcConfigLoadError("$%s environment variable not found" % envvar)
 
     # Use their own file as a basis
     userconfig = _loadfile(os.path.join(homedir, ".arcrc")) or {}
@@ -79,7 +87,7 @@ def loadforpath(path):
 
     if not userconfig:
         # We didn't load anything from the .arcrc file, and didn't find a file searching upwards.
-        raise ArcConfigError("no .arcconfig found")
+        raise ArcConfigLoadError("no .arcconfig found")
     return userconfig
 
 
