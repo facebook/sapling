@@ -154,7 +154,13 @@ def clone(ui, url, destpath=None, update=True, pullnames=None, submodule=None):
                 _("destination '%s' exists and is not a directory") % destpath
             )
 
-    with bindings.atexit.AtExit.rmtree(destpath):
+    if ui.debugflag:
+        # Allow `--debug` to keep bad state for investigation.
+        context = util.nullcontextmanager()
+    else:
+        context = bindings.atexit.AtExit.rmtree(destpath)
+
+    with context:
         try:
             repo = createrepo(ui, url, destpath, submodule=submodule)
             ret = initgitbare(ui, repo.svfs.join("git"))
