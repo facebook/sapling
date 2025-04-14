@@ -8,6 +8,4 @@
 pub mod errors;
 mod gitdag;
 
-pub use git2;
-
 pub use self::gitdag::GitDag;

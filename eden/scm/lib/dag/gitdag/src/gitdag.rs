@@ -13,8 +13,13 @@ use dag::ops::DagPersistent;
 use dag::Dag;
 use dag::Vertex;
 use dag::VertexListWithOptions;
+use gitstore::GitStore;
+use gitstore::ObjectType;
+use minibytes::Bytes;
 use nonblocking::non_blocking_result;
-use parking_lot::Mutex;
+use types::fetch_mode::FetchMode;
+use types::HgId;
+use types::SerializationFormat;
 
 use crate::errors::MapDagError;
 
@@ -44,14 +49,14 @@ impl GitDag {
     /// The commit hashes are imported, but not the commit messages.
     pub fn import_from_git(
         &mut self,
-        git_repo: &git2::Repository,
+        git_store: &GitStore,
         heads: VertexListWithOptions,
     ) -> anyhow::Result<()> {
         if heads.is_empty() {
             return Ok(());
         }
         // git_repo is used to read local objects, not for reading references.
-        sync_from_git(&mut self.dag, git_repo, heads)?;
+        sync_from_git(&mut self.dag, git_store, heads)?;
         Ok(())
     }
 }
@@ -73,54 +78,38 @@ impl DerefMut for GitDag {
 /// Read from Git commit objects. Build segments for provided heads.
 fn sync_from_git(
     dag: &mut Dag,
-    git_repo: &git2::Repository,
+    git_store: &GitStore,
     heads: VertexListWithOptions,
 ) -> anyhow::Result<()> {
-    struct ForceSend<T>(T);
-
     // Filter out non-commit (ex. tree) references.
     let heads = heads.try_filter(&|vertex, _opts| {
-        let oid = git2::Oid::from_bytes(vertex.as_ref())?;
-        match git_repo.find_object(oid, Some(git2::ObjectType::Commit)) {
-            Err(e) if e.code() == git2::ErrorCode::NotFound => {
-                tracing::warn!(?vertex, "ignored missing git head");
-                Ok(false)
-            }
-            Ok(o) => {
-                let kind = match o.kind() {
-                    Some(v) => v,
-                    None => anyhow::bail!("unexpected: no git object type for {:?}", vertex),
-                };
-                if kind != git2::ObjectType::Commit {
-                    tracing::warn!(kind=?o.kind(), ?vertex, "ignored non-commit git head");
-                    Ok(false)
-                } else {
-                    Ok(true)
-                }
-            }
-            Err(e) => Err(e.into()),
-        }
+        let id = HgId::from_slice(vertex.as_ref())?;
+        // `has_obj` is not enough. We need to filter out objects of wrong type (ex. trees) too.
+        // Sapling's references cannot be "tree"s.
+        Ok(git_store
+            .read_local_obj_optional(id, ObjectType::Commit)?
+            .is_some())
     })?;
 
-    // See https://github.com/rust-lang/git2-rs/issues/194, libgit2 can be
-    // accessed by a different thread.
-    unsafe impl<T> Send for ForceSend<T> {}
-
-    let git_repo = ForceSend(git_repo);
-    let git_repo = Mutex::new(git_repo);
-
+    let git_store = git_store.clone();
     let parent_func = move |v: Vertex| -> dag::Result<Vec<Vertex>> {
         tracing::trace!("visiting git commit {:?}", &v);
-        let oid = git2::Oid::from_bytes(v.as_ref())
-            .with_context(|| format!("converting to git oid for {:?}", &v))?;
-        let commit = git_repo
-            .lock()
-            .0
-            .find_commit(oid)
-            .with_context(|| format!("resolving {:?} to git commit", &v))?;
-        Ok(commit
-            .parent_ids()
-            .map(|id| Vertex::copy_from(id.as_bytes()))
+        let id = HgId::from_slice(v.as_ref())
+            .map_err(anyhow::Error::from)
+            .context("converting to SHA1")?;
+        let bytes = git_store
+            .read_obj(id, ObjectType::Commit, FetchMode::LocalOnly)
+            .context("reading git commit")?;
+        let bytes: Bytes = bytes.into();
+        let text = bytes.into_text_lossy();
+        let fields = format_util::commit_text_to_fields(text, SerializationFormat::Git);
+        let parents = fields
+            .parents()
+            .context("extracting parents from git commit")?;
+        let parents = parents.unwrap_or(&[]);
+        Ok(parents
+            .iter()
+            .map(|id| Vertex::copy_from(id.as_ref()))
             .collect())
     };
     let parents: Box<dyn Fn(Vertex) -> dag::Result<Vec<Vertex>> + Send + Sync> =

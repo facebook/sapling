@@ -20,10 +20,12 @@ rust_library(
     crate_root = "src/lib.rs",
     deps = [
         "fbsource//third-party/rust:anyhow",
-        "fbsource//third-party/rust:git2",
-        "fbsource//third-party/rust:parking_lot",
         "fbsource//third-party/rust:tracing",
         "//eden/scm/lib/dag:dag",
+        "//eden/scm/lib/gitstore:gitstore",
+        "//eden/scm/lib/minibytes:minibytes",
         "//eden/scm/lib/nonblocking:nonblocking",
+        "//eden/scm/lib/types:types",
+        "//eden/scm/lib/util/format-util:format-util",
     ],
 )

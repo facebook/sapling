@@ -43,8 +43,8 @@ use futures::stream::StreamExt;
 use gitcompat::BareGit;
 use gitcompat::GitCmd as _;
 use gitcompat::ReferenceValue;
-use gitdag::git2;
 use gitdag::GitDag;
+use gitstore::GitStore;
 use metalog::MetaLog;
 use minibytes::Bytes;
 use parking_lot::Mutex;
@@ -111,6 +111,7 @@ use crate::utils;
 /// `debugchangelog --migrate`, because of SHA1 incompatibility.
 pub struct GitSegmentedCommits {
     git_repo: Arc<Mutex<git2::Repository>>,
+    git_store: GitStore,
     dag: GitDag,
     dag_path: PathBuf,
     git: BareGit,
@@ -130,6 +131,7 @@ impl GitSegmentedCommits {
         is_dotgit: bool,
     ) -> Result<Self> {
         let git_repo = git2::Repository::open(git_dir)?;
+        let git_store = GitStore::open(git_dir, config)?;
         let dag = GitDag::open(dag_dir)?;
         let dag_path = dag_dir.to_path_buf();
         let git_path = git_dir.to_path_buf();
@@ -139,6 +141,7 @@ impl GitSegmentedCommits {
             config.get_or_default("remotenames", "selectivepulldefault")?;
         Ok(Self {
             git_repo: Arc::new(Mutex::new(git_repo)),
+            git_store,
             dag,
             dag_path,
             is_dotgit,
@@ -271,8 +274,7 @@ impl GitSegmentedCommits {
             "git import"
         );
 
-        let git_repo = self.git_repo.lock();
-        self.dag.import_from_git(&*git_repo, heads)?;
+        self.dag.import_from_git(&self.git_store, heads)?;
 
         let encoded_bookmarks = refencode::encode_bookmarks(&bookmarks);
         let encoded_remotenames = refencode::encode_remotenames(&remotenames);
@@ -398,8 +400,7 @@ impl GitSegmentedCommits {
         );
 
         if !heads.is_empty() {
-            let git_repo = self.git_repo.lock();
-            self.dag.import_from_git(&*git_repo, heads.into())?;
+            self.dag.import_from_git(&self.git_store, heads.into())?;
         }
 
         if let Some(v) = bookmarks {

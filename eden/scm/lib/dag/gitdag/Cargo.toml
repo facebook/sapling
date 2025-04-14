@@ -14,8 +14,10 @@ name = "gitdag"
 
 [dependencies]
 anyhow = "1.0.95"
-git2 = "0.20"
-parking_lot = { version = "0.12.1", features = ["send_guard"] }
 sapling-dag = { version = "0.1.0", path = ".." }
+sapling-format-util = { version = "0.1.0", path = "../../util/format-util" }
+sapling-gitstore = { version = "0.1.0", path = "../../gitstore" }
+sapling-minibytes = { version = "0.1.0", path = "../../minibytes" }
 sapling-nonblocking = { version = "0.1.0", path = "../../nonblocking" }
+sapling-types = { version = "0.1.0", path = "../../types" }
 tracing = { version = "0.1.41", features = ["attributes", "valuable"] }

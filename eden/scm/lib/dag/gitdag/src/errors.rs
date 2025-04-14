@@ -10,7 +10,7 @@ pub trait MapDagError<T> {
     fn with_context(self, func: impl Fn() -> String) -> dag::Result<T>;
 }
 
-impl<T> MapDagError<T> for Result<T, git2::Error> {
+impl<T> MapDagError<T> for Result<T, anyhow::Error> {
     fn context(self, message: &'static str) -> dag::Result<T> {
         anyhow::Context::context(self, message)
             .map_err(|e| dag::errors::BackendError::Other(e).into())
