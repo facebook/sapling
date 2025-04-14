@@ -207,7 +207,7 @@ class Client:
         return latest
 
     def getnodes(self, repo, diffids, diff_status, timeout=10):
-        """Get nodes for diffids for a list of diff  status. Return {diffid: node}, {diffid: set(node)}"""
+        """Get nodes for diffids for a list of diff status. Return {diffid: node}, {diffid: set(node)}"""
         if not diffids:
             return {}, {}, {}
         if self._mock:
@@ -263,7 +263,17 @@ class Client:
         difftolocalcommits = {}  # {str: set(node)}
         diffidentifiers = {}
         difftostatus = {}
-        for result in ret["data"]["phabricator_diff_query"][0]["results"]["nodes"]:
+
+        try:
+            diffnodes = ret["data"]["phabricator_diff_query"][0]["results"]["nodes"]
+        except (KeyError, IndexError):
+            raise ClientError(
+                None,
+                _("Failed to get diff info via Phabricator. GraphQL response: %s")
+                % json.dumps(ret),
+            )
+
+        for result in diffnodes:
             try:
                 diffid = "%s" % result["number"]
                 _status = result["diff_status_name"]
