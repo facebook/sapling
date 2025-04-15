@@ -19,6 +19,7 @@ use thrift_types::edenfs::UnmountArgument;
 use thrift_types::fbthrift::ApplicationExceptionErrorCode;
 
 use crate::client::EdenFsClient;
+use crate::instance::EdenFsInstance;
 
 impl EdenFsClient {
     pub async fn unmount(&self, path: &Path, no_force: bool) -> Result<()> {
@@ -33,11 +34,15 @@ impl EdenFsClient {
             useForce: !no_force,
             ..Default::default()
         };
+        let instance = EdenFsInstance::global();
         match self
             .with_thrift(|thrift| thrift.unmountV2(&unmount_argument))
             .await
         {
-            Ok(_) => Ok(()),
+            Ok(_) => {
+                instance.create_intentional_unmount_flag(path)?;
+                Ok(())
+            }
             Err(ConnectAndRequestError::RequestError(UnmountV2Error::ApplicationException(
                 ref e,
             ))) => {
@@ -52,6 +57,7 @@ impl EdenFsClient {
                                 path.display()
                             )
                         })?;
+                    instance.create_intentional_unmount_flag(path)?;
                     Ok(())
                 } else {
                     Err(EdenFsError::Other(anyhow!(

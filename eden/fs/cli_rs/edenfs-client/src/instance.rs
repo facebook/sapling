@@ -812,6 +812,28 @@ impl EdenFsInstance {
         Ok(self.clients_dir().join(self.client_name(path)?))
     }
 
+    /// If the unmount succeeded, this function creates a file in the client directory
+    /// to indicate that the unmount was intentional. This will prevent
+    /// periodic unmount recovery from remounting this repo.
+    pub fn create_intentional_unmount_flag(&self, path: &Path) -> Result<()> {
+        let client_dir = self.client_dir_for_mount_point(path).with_context(|| {
+            format!(
+                "Failed to get client directory for mount point {}",
+                path.display()
+            )
+        })?;
+
+        // Create a file to indicate that the unmount was intentional
+        let unmount_marker_path = client_dir.join("intentionally-unmounted");
+        std::fs::File::create(&unmount_marker_path).with_context(|| {
+            format!(
+                "Failed to create unmount marker file at {}",
+                unmount_marker_path.display()
+            )
+        })?;
+        Ok(())
+    }
+
     /// Removes a path from the EdenFS directory map.
     ///
     /// This method acquires an exclusive lock on the configuration file, reads the
