@@ -2367,6 +2367,35 @@ void EdenServiceHandler::sync_changesSinceV2(
   RootId currentHash = toSnapshotHash;
   RootIdCodec& rootIdCodec = mountHandle.getObjectStore();
 
+  auto& fetchContext = helper->getFetchContext();
+
+  if (!root.empty()) {
+    auto& mount = mountHandle.getEdenMount();
+    auto& mountPath = mount.getPath();
+    auto repoPath = RelativePathPiece{root};
+    bool rootExists =
+        waitForPendingWrites(mount, *params->sync())
+            .thenValue(
+                [&mount, repoPath, fetchContext = fetchContext.copy()](auto&&) {
+                  return mount.getVirtualInode(repoPath, fetchContext)
+                      .thenTry([](folly::Try<VirtualInode> tree) mutable {
+                        if (tree.hasException()) {
+                          // Root does not exist, or something else went wrong
+                          return false;
+                        }
+                        // Files are not valid roots
+                        return tree.value().isDirectory();
+                      });
+                })
+            .get();
+    if (!rootExists) {
+      throw newEdenError(
+          EINVAL,
+          EdenErrorType::ARGUMENT_ERROR,
+          fmt::format("Invalid root path \"{}\" in mount {}", root, mountPath));
+    }
+  }
+
   // Has EdenFS restarted or remounted
   if (folly::to_unsigned(*fromPosition.mountGeneration()) !=
       mountHandle.getEdenMount().getMountGeneration()) {

@@ -6,11 +6,14 @@
 
 # pyre-unsafe
 
+import errno
 import os
 import sys
 
 from facebook.eden.ttypes import (
     Dtype,
+    EdenError,
+    EdenErrorType,
     LargeChangeNotification,
     LostChangesReason,
     SmallChangeNotification,
@@ -326,6 +329,115 @@ class ChangesTestCommon(testBase):
         self.assertTrue(self.check_changes(changes.changes, expected_changes))
         self.assertEqual(changes2.changes, [])
         self.assertTrue(self.check_changes(changes3.changes, expected_changes3))
+
+    def test_root_does_not_exist(self):
+        position = self.client.getCurrentJournalPosition(self.mount_path_bytes)
+        with self.assertRaises(EdenError) as ctx:
+            self.getChangesSinceV2(position=position, root="this_path_does_not_exist")
+
+        self.assertEquals(
+            ctx.exception.message,
+            f'Invalid root path "this_path_does_not_exist" in mount {self.mount_path}',
+        )
+        self.assertEqual(ctx.exception.errorCode, errno.EINVAL)
+        self.assertEqual(
+            ctx.exception.errorType,
+            EdenErrorType.ARGUMENT_ERROR,
+        )
+
+    def test_root_exists(self):
+        position = self.client.getCurrentJournalPosition(self.mount_path_bytes)
+        self.mkdir("test_folder")
+        self.repo_write_file("test_folder/test_file", "contents", add=True)
+        self.mkdir("root_folder")
+        self.repo_write_file("root_folder/test_file", "contents", add=True)
+        changes1 = self.getChangesSinceV2(position=position)
+        expected_changes1 = [
+            buildSmallChange(
+                SmallChangeNotification.ADDED,
+                Dtype.DIR,
+                path=b"test_folder",
+            ),
+            buildSmallChange(
+                SmallChangeNotification.ADDED,
+                Dtype.REGULAR,
+                path=b"test_folder/test_file",
+            ),
+            buildSmallChange(
+                SmallChangeNotification.MODIFIED,
+                Dtype.REGULAR,
+                path=b"test_folder/test_file",
+            ),
+            buildSmallChange(
+                SmallChangeNotification.ADDED,
+                Dtype.DIR,
+                path=b"root_folder",
+            ),
+            buildSmallChange(
+                SmallChangeNotification.ADDED,
+                Dtype.REGULAR,
+                path=b"root_folder/test_file",
+            ),
+            buildSmallChange(
+                SmallChangeNotification.MODIFIED,
+                Dtype.REGULAR,
+                path=b"root_folder/test_file",
+            ),
+        ]
+        self.assertTrue(self.check_changes(changes1.changes, expected_changes1))
+
+        changes2 = self.getChangesSinceV2(position=position, root="root_folder")
+        # Currently actually checking for the root is not implemented. Remove the entries
+        # under test_folder once that is implemented
+        expected_changes2 = [
+            buildSmallChange(
+                SmallChangeNotification.ADDED,
+                Dtype.DIR,
+                path=b"test_folder",
+            ),
+            buildSmallChange(
+                SmallChangeNotification.ADDED,
+                Dtype.REGULAR,
+                path=b"test_folder/test_file",
+            ),
+            buildSmallChange(
+                SmallChangeNotification.MODIFIED,
+                Dtype.REGULAR,
+                path=b"test_folder/test_file",
+            ),
+            buildSmallChange(
+                SmallChangeNotification.ADDED,
+                Dtype.DIR,
+                path=b"root_folder",
+            ),
+            buildSmallChange(
+                SmallChangeNotification.ADDED,
+                Dtype.REGULAR,
+                path=b"root_folder/test_file",
+            ),
+            buildSmallChange(
+                SmallChangeNotification.MODIFIED,
+                Dtype.REGULAR,
+                path=b"root_folder/test_file",
+            ),
+        ]
+        self.assertTrue(self.check_changes(changes2.changes, expected_changes2))
+
+    def test_root_is_file(self):
+        self.repo_write_file("this_path_is_a_file", "contents", add=True)
+        position = self.client.getCurrentJournalPosition(self.mount_path_bytes)
+        with self.assertRaises(EdenError) as ctx:
+            self.getChangesSinceV2(position=position, root="this_path_is_a_file")
+
+        self.assertEquals(
+            ctx.exception.message,
+            f'Invalid root path "this_path_is_a_file" in mount {self.mount_path}',
+        )
+        self.assertEqual(ctx.exception.errorCode, errno.EINVAL)
+        self.assertEqual(
+            ctx.exception.errorType,
+            EdenErrorType.ARGUMENT_ERROR,
+        )
 
 
 # The following tests have different results based on platform
