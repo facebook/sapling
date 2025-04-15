@@ -174,38 +174,19 @@ Test a push that comes with out-of-date bookmark discovery
   $ hg -R server commit -qAm 'bb'
   $ hg log -R client -G -r 'all()' -T '{desc} {remotebookmarks} {bookmarks}'
 
-  $ cat >> $TESTTMP/move.py <<EOF
-  > def movebookmark(ui, repo, **kwargs):
-  >     import traceback
-  >     if [f for f in traceback.extract_stack(limit=10)[:-1] if f[2] == "movebookmark"]:
-  >         return
-  >     import sapling.lock as lockmod
-  >     tr = None
-  >     try:
-  >         lock = repo.lock()
-  >         tr = repo.transaction("pretxnopen.movebook")
-  >         changes = [('bm', repo[1].node())]
-  >         repo._bookmarks.applychanges(repo, tr, changes)
-  >         tr.close()
-  >     finally:
-  >         if tr:
-  >             tr.release()
-  >         lockmod.release(lock)
-  >     ui.status("moved bookmark to rev 1\n")
-  > EOF
-  $ cat >> server/.hg/hgrc <<EOF
-  > [hooks]
-  > pretxnopen.movebook = python:$TESTTMP/move.py:movebookmark
-  > EOF
   $ hg -R client pull -q -r 0
   $ hg -R client update -q 'desc(aa)'
   $ echo c >> client/c
   $ hg -R client commit -qAm 'cc'
-  $ hg -R client log -G -T '"{desc}" {bookmarks}'
+  $ hg -R client log -G -T '"{desc}" {bookmarks} {remotenames}'
   @  "cc"
   │
-  o  "aa"
-  
+  o  "aa"  remote/bm
+
+(move the "bm" to point to "bb" server-side, so the client-side is "out dated")
+  $ hg -R server bookmark -r 'desc(bb)' bm
+  moving bookmark 'bm' forward from 8f0162e483d0
+
   $ hg -R client push --to bm
   pushing rev 5db65b93a12b to destination ssh://user@dummy/server bookmark bm
   searching for changes
@@ -213,7 +194,6 @@ Test a push that comes with out-of-date bookmark discovery
   adding manifests
   adding file changes
   updating bookmark bm
-  remote: moved bookmark to rev 1
   remote: pushing 1 changeset:
   remote:     5db65b93a12b  cc
   remote: 2 new changesets from the server will be downloaded
@@ -231,32 +211,27 @@ Test a push that comes with out-of-date bookmark discovery
   o  "bb"
   │
   o  "aa"
-  
 
-Test that we still don't allow non-ff bm changes
+Test that pushing the obsoleted commit fails:
 
   $ echo d > client/d
+  $ hg -R client update -q 'min(predecessors(desc(cc)))'
   $ hg -R client commit -qAm "dd"
-  $ hg -R client log -G -T '"{desc}" {bookmarks}'
+  $ hg -R client log -G -T '"{desc}" {bookmarks} {remotenames}'
   @  "dd"
   │
-  o  "cc"
-  │
-  o  "bb"
-  │
+  │ o  "cc"  remote/bm
+  │ │
+  │ o  "bb"
+  │ │
+  x │  "cc"
+  ├─╯
   o  "aa"
-  
 
   $ hg -R client push --to bm
-  pushing rev 2f9755549086 to destination ssh://user@dummy/server bookmark bm
+  pushing rev efec53e7b035 to destination ssh://user@dummy/server bookmark bm
   searching for changes
-  remote: moved bookmark to rev 1
-  remote: pushing 1 changeset:
-  remote:     2f9755549086  dd
-  remote: 1 new changeset from the server will be downloaded
-  remote: transaction abort! (?)
-  remote: rollback completed (?)
-  abort: updating bookmark bm failed!
+  abort: commits already rebased to destination as cee15c91b57e
   [255]
 
 Test force pushes
