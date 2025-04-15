@@ -231,6 +231,7 @@ members = [
   "saplingnative/bindings/modules/pygitstore",
   "saplingnative/bindings/modules/pyhgmetrics",
   "saplingnative/bindings/modules/pyhgtime",
+  "saplingnative/bindings/modules/pyhook",
   "saplingnative/bindings/modules/pyidentity",
   "saplingnative/bindings/modules/pyindexedlog",
   "saplingnative/bindings/modules/pyio",

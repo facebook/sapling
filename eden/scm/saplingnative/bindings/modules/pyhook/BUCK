@@ -1,0 +1,19 @@
+load("//eden/scm:targets.bzl", "rust_python_library")
+
+oncall("sapling")
+
+rust_python_library(
+    name = "pyhook",
+    srcs = glob(["src/**/*.rs"]),
+    crate_root = "src/lib.rs",
+    deps = [
+        "fbsource//third-party/rust:anyhow",
+        "fbsource//third-party/rust:blake2",
+        "fbsource//third-party/rust:erased-serde",
+        "fbsource//third-party/rust:tracing",
+        "//eden/scm/lib/cpython-ext:cpython-ext",
+        "//eden/scm/lib/repo:repo",
+        "//eden/scm/lib/util:util",
+        "//eden/scm/saplingnative/bindings/modules/pyrepo:pyrepo",
+    ],
+)

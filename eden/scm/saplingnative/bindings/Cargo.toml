@@ -38,6 +38,7 @@ pygitcompat = { version = "0.1.0", path = "modules/pygitcompat" }
 pygitstore = { version = "0.1.0", path = "modules/pygitstore" }
 pyhgmetrics = { version = "0.1.0", path = "modules/pyhgmetrics" }
 pyhgtime = { version = "0.1.0", path = "modules/pyhgtime" }
+pyhook = { version = "0.1.0", path = "modules/pyhook" }
 pyidentity = { version = "0.1.0", path = "modules/pyidentity" }
 pyindexedlog = { version = "0.1.0", path = "modules/pyindexedlog" }
 pyio = { version = "0.1.0", path = "modules/pyio" }

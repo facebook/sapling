@@ -58,6 +58,7 @@ rust_python_library(
         "//eden/scm/saplingnative/bindings/modules/pygitstore:pygitstore",
         "//eden/scm/saplingnative/bindings/modules/pyhgmetrics:pyhgmetrics",
         "//eden/scm/saplingnative/bindings/modules/pyhgtime:pyhgtime",
+        "//eden/scm/saplingnative/bindings/modules/pyhook:pyhook",
         "//eden/scm/saplingnative/bindings/modules/pyidentity:pyidentity",
         "//eden/scm/saplingnative/bindings/modules/pyindexedlog:pyindexedlog",
         "//eden/scm/saplingnative/bindings/modules/pyio:pyio",
