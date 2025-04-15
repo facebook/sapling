@@ -1,5 +1,4 @@
-  $ enable amend rebase
-
+  $ enable amend rebase undo
 
   $ newclientrepo
   $ drawdag <<EOS
@@ -11,7 +10,11 @@
   $ echo changed > C
   $ hg amend -q
   $ hg rebase -qr . -d $B
-FIXME: this is unexpected - "unamend" reset backwards across rebase
+  $ hg unamend
+  abort: commit was not amended
+  (use "hg undo" to undo the last command, or "hg reset COMMIT" to reset to a previous commit, or see "hg journal" to view commit mutations)
+  [255]
+  $ hg undo -q
   $ hg unamend
   $ hg st
-  R A
+  M C

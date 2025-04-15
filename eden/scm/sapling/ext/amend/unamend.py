@@ -46,7 +46,9 @@ def unamend(ui, repo, **opts):
       Although :prog:`unamend` is typically used to reverse the effects of
       :prog:`amend`, it actually rolls back the current commit to its previous
       version, regardless of whether the changes resulted from an :prog:`amend`
-      operation or from another operation, such as :prog:`rebase`.
+      operation or from another operation. We disallow :prog:`unamend` if the
+      predecessor's parents don't match the current commit's parents to avoid
+      unexpected behavior after, for example, :prog:`rebase`.
     """
     unfi = repo
 
@@ -61,16 +63,43 @@ def unamend(ui, repo, **opts):
     else:
         prednodes = []
 
-    if len(prednodes) != 1:
-        e = _("changeset must have one predecessor, found %i predecessors")
-        raise error.Abort(e % len(prednodes))
-    prednode = prednodes[0]
+    if repo.ui.configbool("experimental", "unamend-siblings-only", True):
+        autopull.trypull(unfi, [nodemod.hex(n) for n in prednodes])
 
-    if prednode not in unfi:
-        # Trigger autopull.
-        autopull.trypull(unfi, [nodemod.hex(prednode)])
+        # Filters to predecessors with the same parents as the current commit.
+        # This avoids accidentally resetting across a rebase.
+        siblingpredctxs = [
+            ctx
+            for ctx in (unfi[n] for n in prednodes)
+            if ctx.parents() == curctx.parents()
+        ]
+        if not siblingpredctxs:
+            if prednodes:
+                raise error.Abort(
+                    _("commit was not amended"),
+                    hint=_(
+                        """use "hg undo" to undo the last command, or "hg reset COMMIT" to reset to a previous commit, or see "hg journal" to view commit mutations"""
+                    ),
+                )
+            else:
+                raise error.Abort(_("commit has no predecessors"))
+        elif len(siblingpredctxs) > 1:
+            raise error.Abort(
+                _("commit has too many predecessors (%i)") % len(siblingpredctxs)
+            )
+        else:
+            predctx = siblingpredctxs[0]
+    else:
+        if len(prednodes) != 1:
+            e = _("changeset must have one predecessor, found %i predecessors")
+            raise error.Abort(e % len(prednodes))
+        prednode = prednodes[0]
 
-    predctx = unfi[prednode]
+        if prednode not in unfi:
+            # Trigger autopull.
+            autopull.trypull(unfi, [nodemod.hex(prednode)])
+
+        predctx = unfi[prednode]
 
     if curctx.children():
         raise error.Abort(_("cannot unamend in the middle of a stack"))
@@ -87,7 +116,7 @@ def unamend(ui, repo, **opts):
 
         tr = repo.transaction("unamend")
         with dirstate.parentchange():
-            dirstate.rebuild(prednode, cm, changedfiles)
+            dirstate.rebuild(predctx.node(), cm, changedfiles)
             # we want added and removed files to be shown
             # properly, not with ? and ! prefixes
             for filename, data in diff.items():
@@ -97,7 +126,7 @@ def unamend(ui, repo, **opts):
                     dirstate.remove(filename)
         changes = []
         for book in ctxbookmarks:
-            changes.append((book, prednode))
+            changes.append((book, predctx.node()))
         repo._bookmarks.applychanges(repo, tr, changes)
         visibility.remove(repo, [curctx.node()])
         visibility.add(repo, [predctx.node()])
