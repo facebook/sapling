@@ -82,7 +82,8 @@ Restart mononoke server to pick up the redaction config without relying on timin
   $ start_and_wait_for_mononoke_server
 
 Sync all bookmarks moves
-  $ mononoke_modern_sync "" sync-once orig dest --start-id 0 2>&1 | grep -v "error sending header to receiver err=sending on a closed channel"
+  $ RUST_LOG="INFO,http_client::handler::streaming=OFF,mononoke_modern_sync_job::sender::manager=OFF,mononoke_modern_sync_job::sender::manager::content=WARN" \
+  > mononoke_modern_sync "" sync-once orig dest --start-id 0
   [INFO] Running sync-once loop
   [INFO] Connecting to https://localhost:$LOCAL_PORT/edenapi/
   [INFO] Established EdenAPI connection
@@ -153,18 +154,6 @@ Sync all bookmarks moves
           "content-length": "406",
           "date": "*", (glob)
       }
-  [ERROR] Error processing files/trees: Error waiting for contents: oneshot canceled
-  [ERROR] Trees flush failed: Error processing trees: Error waiting for contents: oneshot canceled
-  [INFO] Uploaded * filenodes in *ms (glob)
-  [ERROR] Error processing files/trees: Ok(()) Err(Error processing trees: Error waiting for contents: oneshot canceled)
-
-
-
-
-
-
-
-
 
 
 
