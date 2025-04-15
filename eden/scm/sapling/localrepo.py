@@ -906,6 +906,13 @@ class localrepository:
                     "features", feature="cannot-flush-commitdata", message=str(e)
                 )
 
+    @property
+    def config(self):
+        return self.ui._rcfg
+
+    def workingcopy(self):
+        return self._rsrepo.workingcopy()
+
     def storage_format(self):
         """return the main storage format: remotefilelog, git, eager, revlog
 
