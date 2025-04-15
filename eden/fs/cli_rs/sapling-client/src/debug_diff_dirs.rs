@@ -9,9 +9,12 @@ use std::path::Path;
 use std::path::PathBuf;
 use std::process::Stdio;
 
+use async_process_traits::Child;
+use async_process_traits::Command;
+use async_process_traits::CommandSpawner;
+use async_process_traits::TokioCommandSpawner;
 use tokio::io::AsyncBufReadExt;
 use tokio::io::BufReader;
-use tokio::process::Command;
 
 use crate::error::Result;
 use crate::error::SaplingError;
@@ -20,6 +23,7 @@ use crate::utils::get_sapling_executable_path;
 use crate::utils::get_sapling_options;
 use crate::utils::process_one_status_line;
 
+#[derive(Clone, Debug, PartialEq)]
 pub enum SaplingGetDiffDirsResult {
     Normal(Vec<(SaplingStatus, String)>),
     TooManyChanges,
@@ -54,6 +58,30 @@ pub async fn get_diff_dirs(
     included_roots: &Option<Vec<PathBuf>>,
     excluded_roots: &Option<Vec<PathBuf>>,
 ) -> Result<SaplingGetDiffDirsResult> {
+    get_diff_dirs_impl(
+        &TokioCommandSpawner,
+        first,
+        second,
+        limit_results,
+        root,
+        included_roots,
+        excluded_roots,
+    )
+    .await
+}
+
+pub async fn get_diff_dirs_impl<Spawner>(
+    spawner: &Spawner,
+    first: &str,
+    second: Option<&str>,
+    limit_results: usize,
+    root: &Option<PathBuf>,
+    included_roots: &Option<Vec<PathBuf>>,
+    excluded_roots: &Option<Vec<PathBuf>>,
+) -> Result<SaplingGetDiffDirsResult>
+where
+    Spawner: CommandSpawner,
+{
     let mut args = vec!["debugdiffdirs", "--rev", first];
     if let Some(second) = second {
         args.push("--rev");
@@ -66,13 +94,13 @@ pub async fn get_diff_dirs(
         args.push(&root_path_arg);
     };
 
-    let mut output = Command::new(get_sapling_executable_path())
+    let mut command = Spawner::Command::new(get_sapling_executable_path());
+    command
         .envs(get_sapling_options())
         .args(args)
-        .stdout(Stdio::piped())
-        .spawn()?;
-
-    let stdout = output.stdout.take().ok_or_else(|| {
+        .stdout(Stdio::piped());
+    let mut child = spawner.spawn(&mut command)?;
+    let stdout = child.stdout().take().ok_or_else(|| {
         SaplingError::Other("Failed to read stdout when invoking 'sl debugdiffdirs'.".to_string())
     })?;
     let reader = BufReader::new(stdout);
@@ -117,4 +145,58 @@ fn is_path_included(
     }
 
     true
+}
+
+#[cfg(test)]
+mod tests {
+    use crate::debug_diff_dirs::*;
+    use crate::types::SaplingStatus;
+    use crate::utils::tests::get_mock_spawner;
+
+    const FIRST_COMMIT_ID: &str = "0000111122223333444455556666777788889999";
+    const SECOND_COMMIT_ID: &str = "999988887777666655554444333322221100000";
+
+    #[tokio::test]
+    pub async fn test_get_diff_dirs_basic() -> Result<()> {
+        let output = r"M fbcode/buck2/app/buck2_audit/src
+M fbcode/buck2/app/buck2_audit_server/src
+A fbcode/buck2/app/buck2_audit/src/perf
+A fbcode/buck2/app/buck2_audit_server/src/perf
+";
+        let spawner = get_mock_spawner(
+            get_sapling_executable_path(),
+            Some((0, Some(output.as_bytes().to_vec()))),
+        );
+        let result = get_diff_dirs_impl(
+            &spawner,
+            FIRST_COMMIT_ID,
+            Some(SECOND_COMMIT_ID),
+            1000,
+            &None,
+            &None,
+            &None,
+        )
+        .await?;
+        let expected = SaplingGetDiffDirsResult::Normal(vec![
+            (
+                SaplingStatus::Modified,
+                "fbcode/buck2/app/buck2_audit/src".to_string(),
+            ),
+            (
+                SaplingStatus::Modified,
+                "fbcode/buck2/app/buck2_audit_server/src".to_string(),
+            ),
+            (
+                SaplingStatus::Added,
+                "fbcode/buck2/app/buck2_audit/src/perf".to_string(),
+            ),
+            (
+                SaplingStatus::Added,
+                "fbcode/buck2/app/buck2_audit_server/src/perf".to_string(),
+            ),
+        ]);
+
+        assert_eq!(result, expected);
+        Ok(())
+    }
 }

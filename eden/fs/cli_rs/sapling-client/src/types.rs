@@ -5,7 +5,7 @@
  * GNU General Public License version 2.
  */
 
-#[derive(Debug, PartialEq)]
+#[derive(Clone, Debug, PartialEq)]
 pub enum SaplingStatus {
     Modified,
     Added,

@@ -213,7 +213,7 @@ pub(crate) mod tests {
         Ok(())
     }
 
-    pub fn get_mock_spawner(
+    pub(crate) fn get_mock_spawner(
         program: String,
         output: Option<(i32, Option<Vec<u8>>)>,
     ) -> MockCommandSpawner {
