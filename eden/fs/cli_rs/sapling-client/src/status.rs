@@ -9,9 +9,12 @@ use std::path::Path;
 use std::path::PathBuf;
 use std::process::Stdio;
 
+use async_process_traits::Child;
+use async_process_traits::Command;
+use async_process_traits::CommandSpawner;
+use async_process_traits::TokioCommandSpawner;
 use tokio::io::AsyncBufReadExt;
 use tokio::io::BufReader;
-use tokio::process::Command;
 
 use crate::error::Result;
 use crate::error::SaplingError;
@@ -20,6 +23,7 @@ use crate::utils::get_sapling_executable_path;
 use crate::utils::get_sapling_options;
 use crate::utils::process_one_status_line;
 
+#[derive(Clone, Debug, PartialEq)]
 pub enum SaplingGetStatusResult {
     Normal(Vec<(SaplingStatus, String)>),
     TooManyChanges,
@@ -62,6 +66,36 @@ pub async fn get_status(
     excluded_roots: &Option<Vec<PathBuf>>,
     excluded_suffixes: &Option<Vec<String>>,
 ) -> Result<SaplingGetStatusResult> {
+    get_status_impl(
+        &TokioCommandSpawner,
+        first,
+        second,
+        limit_results,
+        case_insensitive_suffix_compares,
+        root,
+        included_roots,
+        included_suffixes,
+        excluded_roots,
+        excluded_suffixes,
+    )
+    .await
+}
+
+pub async fn get_status_impl<Spawner>(
+    spawner: &Spawner,
+    first: &str,
+    second: Option<&str>,
+    limit_results: usize,
+    case_insensitive_suffix_compares: bool,
+    root: &Option<PathBuf>,
+    included_roots: &Option<Vec<PathBuf>>,
+    included_suffixes: &Option<Vec<String>>,
+    excluded_roots: &Option<Vec<PathBuf>>,
+    excluded_suffixes: &Option<Vec<String>>,
+) -> Result<SaplingGetStatusResult>
+where
+    Spawner: CommandSpawner,
+{
     let included_suffixes = included_suffixes.clone().map(|is| {
         is.into_iter()
             .map(|s| {
@@ -103,13 +137,13 @@ pub async fn get_status(
         args.push(&root_path_arg);
     };
 
-    let mut output = Command::new(get_sapling_executable_path())
+    let mut command = Spawner::Command::new(get_sapling_executable_path());
+    command
         .envs(get_sapling_options())
         .args(args)
-        .stdout(Stdio::piped())
-        .spawn()?;
-
-    let stdout = output.stdout.take().ok_or_else(|| {
+        .stdout(Stdio::piped());
+    let mut child = spawner.spawn(&mut command)?;
+    let stdout = child.stdout().take().ok_or_else(|| {
         SaplingError::Other("Failed to read stdout when invoking 'sl status'.".to_string())
     })?;
     let reader = BufReader::new(stdout);
@@ -188,4 +222,71 @@ fn is_path_included(
     }
 
     true
+}
+
+#[cfg(test)]
+mod tests {
+    use crate::status::*;
+    use crate::types::SaplingStatus;
+    use crate::utils::tests::get_mock_spawner;
+
+    const FIRST_COMMIT_ID: &str = "0000111122223333444455556666777788889999";
+    const SECOND_COMMIT_ID: &str = "999988887777666655554444333322221100000";
+
+    #[tokio::test]
+    pub async fn test_get_status_basic() -> Result<()> {
+        let output = r"M fbcode/buck2/app/buck2_audit/src/lib.rs
+M fbcode/buck2/app/buck2_audit_server/src/lib.rs
+A fbcode/buck2/app/buck2_audit/src/perf.rs
+A fbcode/buck2/app/buck2_audit/src/perf/configured_graph_size.rs
+A fbcode/buck2/app/buck2_audit_server/src/perf.rs
+A fbcode/buck2/app/buck2_audit_server/src/perf/configured_graph_size.rs
+";
+        let spawner = get_mock_spawner(
+            get_sapling_executable_path(),
+            Some((0, Some(output.as_bytes().to_vec()))),
+        );
+        let result = get_status_impl(
+            &spawner,
+            FIRST_COMMIT_ID,
+            Some(SECOND_COMMIT_ID),
+            1000,
+            false,
+            &None,
+            &None,
+            &None,
+            &None,
+            &None,
+        )
+        .await?;
+        let expected = SaplingGetStatusResult::Normal(vec![
+            (
+                SaplingStatus::Modified,
+                "fbcode/buck2/app/buck2_audit/src/lib.rs".to_string(),
+            ),
+            (
+                SaplingStatus::Modified,
+                "fbcode/buck2/app/buck2_audit_server/src/lib.rs".to_string(),
+            ),
+            (
+                SaplingStatus::Added,
+                "fbcode/buck2/app/buck2_audit/src/perf.rs".to_string(),
+            ),
+            (
+                SaplingStatus::Added,
+                "fbcode/buck2/app/buck2_audit/src/perf/configured_graph_size.rs".to_string(),
+            ),
+            (
+                SaplingStatus::Added,
+                "fbcode/buck2/app/buck2_audit_server/src/perf.rs".to_string(),
+            ),
+            (
+                SaplingStatus::Added,
+                "fbcode/buck2/app/buck2_audit_server/src/perf/configured_graph_size.rs".to_string(),
+            ),
+        ]);
+
+        assert_eq!(result, expected);
+        Ok(())
+    }
 }
