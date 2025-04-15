@@ -192,6 +192,20 @@ py_class!(pub class repo |py| {
         Ok(PyNone)
     }
 
+    /// Path of the working copy root.
+    @property
+    def path(&self) -> PyResult<PyPathBuf> {
+        let repo = self.inner(py).read();
+        repo.path().try_into().map_pyerr(py)
+    }
+
+    /// Path of the store. Similar to `repo.svfs.base` in the Python world.
+    @property
+    def store_path(&self) -> PyResult<PyPathBuf> {
+        let repo = self.inner(py).read();
+        repo.store_path().try_into().map_pyerr(py)
+    }
+
     @property
     def dot_path(&self) -> PyResult<PyPathBuf> {
         self.inner(py).read().dot_hg_path().try_into().map_pyerr(py)
