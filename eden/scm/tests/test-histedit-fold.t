@@ -11,6 +11,8 @@ case.
 Initialization
 ---------------
 
+  $ setconfig experimental.run-python-hooks-via-pyhook=true
+
   $ eagerepo
   $ . "$TESTDIR/histedit-helpers.sh"
 
@@ -150,12 +152,13 @@ description is taken from rollup target commit
 check saving last-message.txt
 
   $ cat > $TESTTMP/abortfolding.py <<EOF
-  > from sapling import util
-  > def abortfolding(ui, repo, hooktype, **kwargs):
-  >     ctx = repo[kwargs.get('node')]
-  >     if set(ctx.files()) == {'c', 'd', 'f'}:
-  >         return True # abort folding commit only
-  >     ui.warn('allow non-folding commit\\n')
+  > from binascii import unhexlify as bin
+  > def abortfolding(repo, node, **kwargs):
+  >     commits = repo.commits()
+  >     assert node is not None
+  >     fields = commits.getcommitfields(bin(node))
+  >     if set(fields.files()) == {'c', 'd', 'f'}:
+  >         return 1  # return non-zero to abort folding commit only
   > EOF
   $ cat > .hg/hgrc <<EOF
   > [hooks]
