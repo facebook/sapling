@@ -366,23 +366,6 @@ struct FinishedMount : public EdenFSEvent {
   }
 };
 
-struct FuseError : public EdenFSEvent {
-  int64_t fuse_op = 0;
-  int64_t error_code = 0;
-
-  FuseError(int64_t fuse_op, int64_t error_code)
-      : fuse_op(fuse_op), error_code(error_code) {}
-
-  void populate(DynamicEvent& event) const override {
-    event.addInt("fuse_op", fuse_op);
-    event.addInt("error_code", error_code);
-  }
-
-  const char* getType() const override {
-    return "fuse_error";
-  }
-};
-
 struct RocksDbAutomaticGc : public EdenFSEvent {
   double duration = 0.0;
   bool success = false;
@@ -408,38 +391,6 @@ struct RocksDbAutomaticGc : public EdenFSEvent {
 
   const char* getType() const override {
     return "rocksdb_autogc";
-  }
-};
-
-struct ThriftError : public EdenFSEvent {
-  std::string thrift_method;
-
-  explicit ThriftError(std::string thrift_method)
-      : thrift_method(std::move(thrift_method)) {}
-
-  void populate(DynamicEvent& event) const override {
-    event.addString("thrift_method", thrift_method);
-  }
-
-  const char* getType() const override {
-    return "thrift_error";
-  }
-};
-
-struct ThriftAuthFailure : public EdenFSEvent {
-  std::string thrift_method;
-  std::string reason;
-
-  ThriftAuthFailure(std::string thrift_method, std::string reason)
-      : thrift_method(std::move(thrift_method)), reason(std::move(reason)) {}
-
-  void populate(DynamicEvent& event) const override {
-    event.addString("thrift_method", thrift_method);
-    event.addString("reason", reason);
-  }
-
-  const char* getType() const override {
-    return "thrift_auth_failure";
   }
 };
 
@@ -857,45 +808,6 @@ struct FileAccessEvent : public EdenFSFileAccessEvent {
       // prefetch profiles on sandcastle, we will want the sandcastle alias.
       event.addString("sandcastle_alias", alias);
     }
-  }
-};
-
-/**
- * Used to log status of automatic doctor runs
- */
-struct AutoEdenDoctorRunEvent : public EdenFSEvent {
-  enum RunStatus : uint8_t {
-    Success = 0,
-    ProcessCreationFailure = 1,
-    TimeoutOrFailure = 2
-  };
-
-  RunStatus run_status;
-  std::string failure_reason;
-
-  explicit AutoEdenDoctorRunEvent(
-      RunStatus run_status,
-      std::string failure_reason)
-      : run_status(run_status), failure_reason(std::move(failure_reason)) {}
-
-  void populate(DynamicEvent& event) const override {
-    if (run_status == Success) {
-      event.addString("run_status", "Success");
-    } else if (run_status == ProcessCreationFailure) {
-      event.addString("run_status", "ProcessCreationFailure");
-    } else if (run_status == TimeoutOrFailure) {
-      event.addString("run_status", "TimeoutOrFailure");
-    } else {
-      // Logging numerical value in case there is no string mapping here
-      event.addString("run_status", std::to_string(run_status));
-    }
-
-    // Reusing existing column
-    event.addString("reason", failure_reason);
-  }
-
-  const char* getType() const override {
-    return "auto_eden_doctor_run_events";
   }
 };
 
