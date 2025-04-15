@@ -2825,12 +2825,19 @@ void EdenServer::accidentalUnmountRecovery() {
           getServerState()->getThreadPool().get(),
           [this,
            initialConfig = std::move(initialConfig),
-           mountPath]() mutable {
+           structuredLogger = structuredLogger_,
+           mountPath,
+           &client]() mutable {
             // TODO: Make sure the mount path exists
             return mount(std::move(initialConfig), /*readOnly=*/false)
-                .thenTry([mountPath](
+                .thenTry([mountPath, structuredLogger, &client](
                              folly::Try<std::shared_ptr<EdenMount>>&& result) {
-                  if (result.hasValue()) {
+                  bool success = result.hasValue();
+                  std::string exceptionMessage =
+                      success ? "" : result.exception().what().toStdString();
+                  structuredLogger->logEvent(AccidentalUnmountRecovery{
+                      exceptionMessage, success, client.second.asString()});
+                  if (success) {
                     XLOGF(
                         DBG3,
                         "Automatically remounted mount: {}",

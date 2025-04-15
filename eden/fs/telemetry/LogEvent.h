@@ -601,6 +601,25 @@ struct WorkingCopyGc : public EdenFSEvent {
   }
 };
 
+struct AccidentalUnmountRecovery : public EdenFSEvent {
+  std::string error;
+  bool success = false;
+  std::string repo;
+
+  AccidentalUnmountRecovery(std::string error, bool success, std::string repo)
+      : error(std::move(error)), success(success), repo(std::move(repo)) {}
+
+  void populate(DynamicEvent& event) const override {
+    event.addString("remount_error", error);
+    event.addBool("success", success);
+    event.addString("repo", repo);
+  }
+
+  const char* getType() const override {
+    return "accidental_unmount_recovery";
+  }
+};
+
 struct SqliteIntegrityCheck : public EdenFSEvent {
   double duration = 0.0;
   int64_t numErrors = 0;
