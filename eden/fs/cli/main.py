@@ -2210,6 +2210,12 @@ class UnmountCmd(Subcmd):
         parser.add_argument(
             "--no-force", default=False, action="store_true", help=argparse.SUPPRESS
         )
+        parser.add_argument(
+            "--debug-mark-unintentional",
+            default=False,
+            action="store_true",
+            help=argparse.SUPPRESS,
+        )
 
     def run(self, args: argparse.Namespace) -> int:
         if args.destroy:
@@ -2229,7 +2235,11 @@ class UnmountCmd(Subcmd):
 
             path = normalize_path_arg(path)
             try:
-                instance.unmount(path, use_force=not args.no_force)
+                instance.unmount(
+                    path,
+                    use_force=not args.no_force,
+                    unintentional_unmount=args.debug_mark_unintentional,
+                )
                 if args.destroy:
                     instance.destroy_mount(path)
             except (EdenService.EdenError, EdenNotRunningError) as ex:

@@ -904,7 +904,9 @@ Do you want to run `eden mount %s` instead?"""
 
         return 0
 
-    def unmount(self, path: str, use_force: bool = True) -> None:
+    def unmount(
+        self, path: str, use_force: bool = True, unintentional_unmount: bool = False
+    ) -> None:
         """Ask edenfs to unmount the specified checkout."""
         # In some cases edenfs can take a long time unmounting while it waits for
         # inodes to become unreferenced.  Ideally we should have edenfs timeout and
@@ -930,13 +932,14 @@ Do you want to run `eden mount %s` instead?"""
                 else:
                     raise e
 
-        # If the unmount succeeded, create a file in the client directory
-        # to indicate that the unmount was intentional. This will prevent
-        # periodic unmount recovery from remount this repo.
-        mount_path = Path(path).resolve(strict=False)
-        client_dir = self._get_client_dir_for_mount_point(mount_path)
-        intentionally_unmounted_dir = client_dir / INTENTIONALLY_UNMOUNTED
-        intentionally_unmounted_dir.touch()
+        if not unintentional_unmount:
+            # If the unmount succeeded, create a file in the client directory
+            # to indicate that the unmount was intentional. This will prevent
+            # periodic unmount recovery from remount this repo.
+            mount_path = Path(path).resolve(strict=False)
+            client_dir = self._get_client_dir_for_mount_point(mount_path)
+            intentionally_unmounted_dir = client_dir / INTENTIONALLY_UNMOUNTED
+            intentionally_unmounted_dir.touch()
 
     def destroy_mount(
         self, path: Union[Path, str], preserve_mount_point: bool = False
