@@ -24,14 +24,13 @@
   examine changes to 'foo'? [Ynesfdaq?] n
   
   Done splitting? [yN] y
-  adding baz
 
-FIXME: untracked "baz" was committed
   $ hg st
+  ? baz
   $ hg show
-  commit:      ec4dca983e64
+  commit:      2bd450b41765
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
-  files:       baz foo
+  files:       foo
   description:
   add foo, bar

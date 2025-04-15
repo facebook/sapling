@@ -316,9 +316,15 @@ def addremove(ui, repo, *pats, **opts):
 
     Returns 0 if all files are successfully added/removed.
     """
-    opts["similarity"] = opts.get("similarity") or 100
     matcher = scmutil.match(repo[None], pats, opts)
-    return scmutil.addremove(repo, matcher, opts)
+    return scmutil.addremove(
+        repo,
+        matcher,
+        addremove=True,
+        automv=False,
+        similarity=opts.get("similarity") or 100,
+        dry_run=opts.get("dry_run"),
+    )
 
 
 @command(
@@ -1702,6 +1708,7 @@ def commit(ui, repo, *pats, **opts):
 
           @prog@ commit --exclude "set:binary()"
     """
+
     wlock = lock = None
     try:
         wlock = repo.wlock()

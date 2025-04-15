@@ -948,16 +948,19 @@ def cleanupnodes(repo, replacements, operation, moves=None, metadata=None):
     return moves
 
 
-def addremove(repo, matcher, opts):
+def addremove(
+    repo, matcher, addremove=True, automv=True, similarity=None, dry_run=False
+):
     m = matcher
 
     rename_detection_file_limit = None
-    if opts.get("automv"):
-        opts["similarity"] = repo.ui.configint("automv", "similarity")
+    if automv:
+        if similarity is None:
+            similarity = repo.ui.configint("automv", "similarity")
         rename_detection_file_limit = repo.ui.configint("automv", "max-files")
 
     try:
-        similarity = float(opts.get("similarity") or 0)
+        similarity = float(similarity or 0)
     except ValueError:
         raise error.Abort(_("similarity must be a number"))
     if similarity < 0 or similarity > 100:
@@ -980,11 +983,7 @@ def addremove(repo, matcher, opts):
     badmatch = matchmod.badmatch(m, badfn)
     added, unknown, deleted, removed, forgotten = _interestingfiles(repo, badmatch)
 
-    # This subtle handling is for "sl commit", which without "--addremove" still wants to
-    # detect renames (via automv=True).
-    perform_addremove = opts.get("addremove", True)
-
-    if perform_addremove:
+    if addremove:
         unknownset = set(unknown + forgotten)
         toprint = unknownset.copy()
         toprint.update(deleted)
@@ -1009,13 +1008,13 @@ def addremove(repo, matcher, opts):
     else:
         renames = _findrenames(repo, m, added, removed, similarity)
 
-    if not opts.get("dry_run"):
-        if perform_addremove:
+    if not dry_run:
+        if addremove:
             _markchanges(repo, unknown + forgotten, deleted, renames)
         else:
             _markchanges(repo, [], [], renames)
 
-    if perform_addremove:
+    if addremove:
         for f in rejected:
             if f in m.files():
                 return 1
