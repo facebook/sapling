@@ -577,7 +577,7 @@ class localrepository:
             lambda base: vfsmod.vfs(base, cacheaudited=True),
             self.ui.uiconfig(),
         )
-        self.spath = self.store.path
+        self.spath = self.store_path = self.store.path
         self.svfs = self.store.vfs
         self.svfs._rsrepo = self._rsrepo
         self.sjoin = self.store.join
