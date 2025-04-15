@@ -1,4 +1,6 @@
 load("@fbcode_macros//build_defs:python_unittest.bzl", "python_unittest")
+load("@fbsource//tools/target_determinator/macros:ci.bzl", "ci")
+load("@fbsource//tools/target_determinator/macros:fbcode_ci_helpers.bzl", "fbcode_ci")
 load("//eden:defs.bzl", "get_integration_test_env_and_deps")
 
 oncall("scm_client_infra")
@@ -368,6 +370,7 @@ python_unittest(
     name = "status",
     srcs = ["status_test.py"],
     env = artifacts["env"],
+    labels = ci.labels(fbcode_ci.use_opt_instead_of_dev()),
     os_deps = [
         (
             "windows",
