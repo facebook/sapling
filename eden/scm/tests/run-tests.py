@@ -2063,19 +2063,19 @@ class TTest(Test):
             elif l.startswith(b"#if"):
                 lsplit = _strpath(l).split()
                 if len(lsplit) < 2 or lsplit[0] != "#if":
-                    after.setdefault(pos, []).append("  !!! invalid #if\n")
+                    after.setdefault(pos, []).append(b"  !!! invalid #if\n")
                 if skipping is not None:
-                    after.setdefault(pos, []).append("  !!! nested #if\n")
+                    after.setdefault(pos, []).append(b"  !!! nested #if\n")
                 skipping = not self._iftest(lsplit[1:])
                 after.setdefault(pos, []).append(l)
             elif l.startswith(b"#else"):
                 if skipping is None:
-                    after.setdefault(pos, []).append("  !!! missing #if\n")
+                    after.setdefault(pos, []).append(b"  !!! missing #if\n")
                 skipping = not skipping
                 after.setdefault(pos, []).append(l)
             elif l.startswith(b"#endif"):
                 if skipping is None:
-                    after.setdefault(pos, []).append("  !!! missing #if\n")
+                    after.setdefault(pos, []).append(b"  !!! missing #if\n")
                 skipping = None
                 after.setdefault(pos, []).append(l)
             elif skipping:
