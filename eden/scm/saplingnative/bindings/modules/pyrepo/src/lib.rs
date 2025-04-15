@@ -65,6 +65,12 @@ py_class!(pub class repo |py| {
         Self::create_instance(py, RwLock::new(repo), RefCell::new(None))
     }
 
+    @property
+    def config(&self) -> PyResult<config> {
+        let repo = self.inner(py).read();
+        config::from_dyn_config(py, Arc::clone(repo.config()))
+    }
+
     def workingcopy(&self) -> PyResult<PyWorkingCopy> {
         let mut wc_option = self.inner_wc(py).borrow_mut();
         if wc_option.is_none() {
