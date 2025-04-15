@@ -11,12 +11,12 @@ use std::sync::Once;
 
 use parking_lot::Mutex;
 use tracing_collector::TracingData;
-use tracing_subscriber::fmt::format::FmtSpan;
-use tracing_subscriber::fmt::Layer as FmtLayer;
-use tracing_subscriber::layer::SubscriberExt;
 use tracing_subscriber::EnvFilter;
 use tracing_subscriber::Layer;
 use tracing_subscriber::Registry;
+use tracing_subscriber::fmt::Layer as FmtLayer;
+use tracing_subscriber::fmt::format::FmtSpan;
+use tracing_subscriber::layer::SubscriberExt;
 
 static RUST_INIT: Once = Once::new();
 

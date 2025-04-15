@@ -6,8 +6,8 @@
  */
 
 use anyhow::Error;
-use sql::rusqlite::Connection as SqliteConnection;
 use sql::Connection;
+use sql::rusqlite::Connection as SqliteConnection;
 use sql_construct::SqlConstruct;
 use vec1::Vec1;
 

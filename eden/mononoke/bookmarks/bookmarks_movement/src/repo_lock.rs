@@ -7,9 +7,9 @@
 
 use std::collections::HashMap;
 
-use anyhow::anyhow;
 use anyhow::Context;
 use anyhow::Result;
+use anyhow::anyhow;
 use async_trait::async_trait;
 use bookmarks::BookmarkTransactionError;
 use bookmarks_types::BookmarkKind;

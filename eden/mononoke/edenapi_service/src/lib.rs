@@ -17,8 +17,8 @@ mod scuba;
 pub mod utils;
 
 use std::path::Path;
-use std::sync::atomic::AtomicBool;
 use std::sync::Arc;
+use std::sync::atomic::AtomicBool;
 
 use anyhow::Error;
 use clientinfo::ClientEntryPoint;

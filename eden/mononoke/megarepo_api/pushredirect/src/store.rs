@@ -14,8 +14,8 @@ use mononoke_types::RepositoryId;
 use sql_construct::SqlConstruct;
 use sql_construct::SqlConstructFromMetadataDatabaseConfig;
 use sql_ext::_macro_internal::SqlQueryConfig;
-use sql_ext::mononoke_queries;
 use sql_ext::SqlConnections;
+use sql_ext::mononoke_queries;
 
 use crate::PushRedirectionConfig;
 use crate::PushRedirectionConfigEntry;

@@ -10,6 +10,8 @@ use std::sync::atomic;
 use std::sync::atomic::AtomicU64;
 
 use super::IdMapWrite;
+use crate::Result;
+use crate::VerLink;
 use crate::errors::NotFoundError;
 use crate::id::Group;
 use crate::id::Id;
@@ -17,8 +19,6 @@ use crate::id::Vertex;
 use crate::ops::IdConvert;
 use crate::ops::Persist;
 use crate::ops::PrefixLookup;
-use crate::Result;
-use crate::VerLink;
 
 /// Bi-directional mapping between an integer id and a name (`[u8]`).
 ///

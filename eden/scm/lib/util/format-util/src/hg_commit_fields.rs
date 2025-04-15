@@ -8,22 +8,22 @@
 use std::collections::BTreeMap;
 use std::fmt::Write as _;
 
-use anyhow::bail;
 use anyhow::Context as _;
 use anyhow::Result;
+use anyhow::bail;
 use minibytes::Text;
 use once_cell::sync::OnceCell;
 use serde::Deserialize;
-use types::hgid::NULL_ID;
 use types::Id20;
 use types::RepoPath;
 use types::SerializationFormat;
+use types::hgid::NULL_ID;
 
+pub use crate::CommitFields;
+use crate::HgTime;
 use crate::normalize_email_user;
 use crate::utils::with_indented_commit_text;
 use crate::utils::write_multi_line;
-pub use crate::CommitFields;
-use crate::HgTime;
 
 /// Holds the Hg commit text. Fields can be lazily parsed.
 pub struct HgCommitLazyFields {

@@ -7,8 +7,8 @@
 
 #![type_length_limit = "1817182"]
 
-use anyhow::anyhow;
 use anyhow::Result;
+use anyhow::anyhow;
 use context::CoreContext;
 use filestore::FetchKey;
 use filestore::FilestoreConfig;
@@ -56,10 +56,10 @@ mod test {
     use futures::stream;
     use memblob::Memblob;
     use mononoke_macros::mononoke;
-    use mononoke_types::typed_hash;
     use mononoke_types::BlobstoreBytes;
     use mononoke_types::ContentMetadataV2;
     use mononoke_types::RepositoryId;
+    use mononoke_types::typed_hash;
     use redactedblobstore::RedactedBlobstore;
     use repo_blobstore::RepoBlobstore;
     use scuba_ext::MononokeScubaSampleBuilder;

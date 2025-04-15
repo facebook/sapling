@@ -8,11 +8,11 @@
 use std::sync::Arc;
 
 use cpython::*;
-use cpython_ext::convert::Serde;
 use cpython_ext::ExtractInner;
 use cpython_ext::PyPath;
 use cpython_ext::PyPathBuf;
 use cpython_ext::ResultPyErrExt;
+use cpython_ext::convert::Serde;
 use edenapi::ResponseMeta;
 use edenapi_types::ContentId;
 use edenapi_types::UploadTreeEntry;

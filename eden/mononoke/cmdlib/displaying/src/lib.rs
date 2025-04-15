@@ -13,8 +13,8 @@ mod mercurial;
 use std::io::Write;
 
 use anyhow::Result;
-pub use changeset::display_file_change;
 pub use changeset::DisplayChangeset;
+pub use changeset::display_file_change;
 pub use content::display_content;
 pub use fsnode::display_fsnode_manifest;
 pub use mercurial::display_hg_manifest;

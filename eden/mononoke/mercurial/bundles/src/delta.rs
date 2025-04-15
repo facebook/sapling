@@ -7,9 +7,9 @@
 
 //! Code to deal with deltas received or sent over the wire.
 
-use anyhow::bail;
 use anyhow::Context;
 use anyhow::Result;
+use anyhow::bail;
 use bufsize::SizeCounter;
 use bytes::Buf;
 use bytes::BufMut;

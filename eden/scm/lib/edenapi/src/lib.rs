@@ -12,11 +12,11 @@ mod retryable;
 
 // Re-export for convenience.
 pub use configmodel;
-pub use edenapi_trait::api;
-pub use edenapi_trait::errors;
 pub use edenapi_trait::Entries;
 pub use edenapi_trait::Response;
 pub use edenapi_trait::ResponseMeta;
+pub use edenapi_trait::api;
+pub use edenapi_trait::errors;
 pub use edenapi_types as types;
 pub use http_client::Config as HttpClientConfig;
 pub use http_client::Stats;
@@ -25,9 +25,9 @@ pub use crate::api::SaplingRemoteApi;
 pub use crate::api::UploadLookupPolicy;
 pub use crate::builder::Builder;
 pub use crate::builder::HttpClientBuilder;
-pub use crate::client::paths;
 pub use crate::client::Client;
 pub use crate::client::RECENT_DOGFOODING_REQUESTS;
+pub use crate::client::paths;
 pub use crate::errors::ConfigError;
 pub use crate::errors::SaplingRemoteApiError;
 pub use crate::response::BlockingResponse;

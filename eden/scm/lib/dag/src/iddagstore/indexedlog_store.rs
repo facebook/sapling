@@ -12,11 +12,11 @@ use std::io;
 use std::io::Cursor;
 use std::path::Path;
 use std::path::PathBuf;
+use std::sync::Mutex;
 use std::sync::atomic::AtomicU8;
 use std::sync::atomic::Ordering::AcqRel;
 use std::sync::atomic::Ordering::Acquire;
 use std::sync::atomic::Ordering::Release;
-use std::sync::Mutex;
 
 use byteorder::BigEndian;
 use byteorder::ReadBytesExt;
@@ -26,23 +26,23 @@ use indexedlog::log::Fold;
 use minibytes::Bytes;
 
 use super::IdDagStore;
-use crate::errors::bug;
-use crate::id::Group;
-use crate::id::Id;
-use crate::idset::Span;
-use crate::lifecycle::trace_print_short_backtrace;
-use crate::lifecycle::LifecycleId;
-use crate::ops::Persist;
-use crate::ops::StorageVersion;
-use crate::ops::TryClone;
-use crate::segment::describe_segment_bytes;
-use crate::segment::hex;
-use crate::segment::Segment;
-use crate::segment::SegmentFlags;
 use crate::IdSet;
 use crate::Level;
 use crate::Result;
 use crate::VerLink;
+use crate::errors::bug;
+use crate::id::Group;
+use crate::id::Id;
+use crate::idset::Span;
+use crate::lifecycle::LifecycleId;
+use crate::lifecycle::trace_print_short_backtrace;
+use crate::ops::Persist;
+use crate::ops::StorageVersion;
+use crate::ops::TryClone;
+use crate::segment::Segment;
+use crate::segment::SegmentFlags;
+use crate::segment::describe_segment_bytes;
+use crate::segment::hex;
 
 pub struct IndexedLogStore {
     log: log::Log,

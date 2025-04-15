@@ -10,8 +10,8 @@
 use std::num::NonZeroU32;
 
 use abomonation_derive::Abomonation;
-use anyhow::anyhow;
 use anyhow::Result;
+use anyhow::anyhow;
 use commit_graph_thrift as thrift;
 use futures::Future;
 use mononoke_types::ChangesetId;

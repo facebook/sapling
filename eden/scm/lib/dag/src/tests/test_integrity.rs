@@ -6,9 +6,9 @@
  */
 
 use super::TestDag;
+use crate::Group;
 use crate::ops::CheckIntegrity;
 use crate::ops::DagAlgorithm;
-use crate::Group;
 
 #[tokio::test]
 async fn test_isomorphic_graph_with_different_segments() {

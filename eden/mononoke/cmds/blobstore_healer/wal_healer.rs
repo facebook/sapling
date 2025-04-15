@@ -7,9 +7,9 @@
 
 use std::collections::HashMap;
 use std::collections::HashSet;
+use std::sync::Arc;
 use std::sync::atomic::AtomicUsize;
 use std::sync::atomic::Ordering;
-use std::sync::Arc;
 
 use anyhow::Result;
 use async_trait::async_trait;
@@ -20,10 +20,10 @@ use blobstore_sync_queue::BlobstoreWalEntry;
 use chrono::Duration as ChronoDuration;
 use cloned::cloned;
 use context::CoreContext;
-use futures::future::join_all;
-use futures::stream;
 use futures::FutureExt;
 use futures::StreamExt;
+use futures::future::join_all;
+use futures::stream;
 use futures_03_ext::BufferedParams;
 use futures_03_ext::FbStreamExt;
 use itertools::Itertools;
@@ -32,14 +32,14 @@ use metaconfig_types::MultiplexId;
 use mononoke_types::BlobstoreBytes;
 use mononoke_types::DateTime;
 use mononoke_types::Timestamp;
-use rand::thread_rng;
 use rand::Rng;
+use rand::thread_rng;
 use slog::info;
 use slog::warn;
 
+use crate::healer::DEFAULT_BLOB_SIZE_BYTES;
 use crate::healer::HealResult;
 use crate::healer::Healer;
-use crate::healer::DEFAULT_BLOB_SIZE_BYTES;
 use crate::healer::MAX_FETCH_FAILURE_DELAY;
 use crate::healer::MIN_FETCH_FAILURE_DELAY;
 

@@ -5,9 +5,9 @@
  * GNU General Public License version 2.
  */
 
-use anyhow::anyhow;
 use anyhow::Error;
 use anyhow::Result;
+use anyhow::anyhow;
 use async_trait::async_trait;
 use context::CoreContext;
 use mercurial_types::simple_fsencode;

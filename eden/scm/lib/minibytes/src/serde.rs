@@ -8,11 +8,11 @@
 use std::cell::RefCell;
 use std::fmt;
 
-use serde::de;
 use serde::Deserialize;
 use serde::Deserializer;
 use serde::Serialize;
 use serde::Serializer;
+use serde::de;
 
 use crate::Bytes;
 use crate::Text;

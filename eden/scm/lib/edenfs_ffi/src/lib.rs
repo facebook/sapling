@@ -10,8 +10,8 @@ use std::fmt;
 use std::path::PathBuf;
 use std::str::FromStr;
 
-use anyhow::anyhow;
 use anyhow::Context;
+use anyhow::anyhow;
 use cxx::SharedPtr;
 use cxx::UniquePtr;
 use manifest::FileMetadata;
@@ -30,12 +30,12 @@ use types::HgId;
 use types::RepoPath;
 use types::RepoPathBuf;
 
+use crate::ffi::MatcherPromise;
+use crate::ffi::MatcherWrapper;
 use crate::ffi::set_matcher_error;
 use crate::ffi::set_matcher_promise_error;
 use crate::ffi::set_matcher_promise_result;
 use crate::ffi::set_matcher_result;
-use crate::ffi::MatcherPromise;
-use crate::ffi::MatcherWrapper;
 
 static REPO_HASHMAP: Lazy<Mutex<HashMap<PathBuf, Repo>>> = Lazy::new(|| Mutex::new(HashMap::new()));
 

@@ -8,12 +8,12 @@
 use std::env::var;
 use std::fmt::Display;
 
-use anyhow::anyhow;
 use anyhow::Result;
+use anyhow::anyhow;
 use once_cell::sync::Lazy;
+use rand::Rng;
 use rand::distributions::Alphanumeric;
 use rand::thread_rng;
-use rand::Rng;
 use serde::Deserialize;
 use serde::Serialize;
 

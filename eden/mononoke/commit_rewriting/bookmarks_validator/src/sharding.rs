@@ -5,13 +5,13 @@
  * GNU General Public License version 2.
  */
 
+use std::sync::Arc;
 use std::sync::atomic::AtomicBool;
 use std::sync::atomic::Ordering;
-use std::sync::Arc;
 
-use anyhow::bail;
 use anyhow::Context;
 use anyhow::Result;
+use anyhow::bail;
 use async_trait::async_trait;
 use cmdlib_cross_repo::create_commit_syncers_from_app;
 use context::CoreContext;
@@ -19,8 +19,8 @@ use cross_repo_sync::Syncers;
 use environment::MononokeEnvironment;
 use executor_lib::RepoShardedProcess;
 use executor_lib::RepoShardedProcessExecutor;
-use mononoke_app::args::SourceAndTargetRepoArgs;
 use mononoke_app::MononokeApp;
+use mononoke_app::args::SourceAndTargetRepoArgs;
 use repo_identity::RepoIdentityRef;
 use sharding_ext::RepoShard;
 use slog::error;

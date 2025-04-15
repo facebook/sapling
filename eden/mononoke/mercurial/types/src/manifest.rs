@@ -7,8 +7,8 @@
 
 use std::fmt;
 
-use anyhow::anyhow;
 use anyhow::Result;
+use anyhow::anyhow;
 use mononoke_types::FileType;
 use serde_derive::Serialize;
 

@@ -14,8 +14,8 @@ use cached_config::ModificationTime;
 use cached_config::TestSource;
 use context::CoreContext;
 use fbinit::FacebookInit;
-use live_commit_sync_config::CfgrLiveCommitSyncConfig;
 use live_commit_sync_config::CONFIGERATOR_ALL_COMMIT_SYNC_CONFIGS;
+use live_commit_sync_config::CfgrLiveCommitSyncConfig;
 use pushredirect::TestPushRedirectionConfig;
 
 macro_rules! is_error_kind {

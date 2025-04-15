@@ -8,15 +8,15 @@
 #![feature(never_type)]
 
 use std::path::PathBuf;
+use std::sync::Arc;
 use std::sync::atomic::AtomicBool;
 use std::sync::atomic::Ordering;
-use std::sync::Arc;
 
 use anyhow::Context;
 use anyhow::Result;
 use async_trait::async_trait;
-use cache_warmup::cache_warmup;
 use cache_warmup::CacheWarmupKind;
+use cache_warmup::cache_warmup;
 use clap::Parser;
 use clientinfo::ClientEntryPoint;
 use cloned::cloned;
@@ -24,9 +24,9 @@ use cmdlib_logging::ScribeLoggingArgs;
 use environment::BookmarkCacheDerivedData;
 use environment::BookmarkCacheKind;
 use environment::BookmarkCacheOptions;
-use executor_lib::args::ShardedExecutorArgs;
 use executor_lib::RepoShardedProcess;
 use executor_lib::RepoShardedProcessExecutor;
+use executor_lib::args::ShardedExecutorArgs;
 use fbinit::FacebookInit;
 use futures::channel::oneshot;
 use futures::stream;
@@ -36,6 +36,9 @@ use metaconfig_types::RepoConfigRef;
 use metaconfig_types::ShardedService;
 use mononoke_api::CoreContext;
 use mononoke_api::Repo;
+use mononoke_app::MononokeApp;
+use mononoke_app::MononokeAppBuilder;
+use mononoke_app::MononokeReposManager;
 use mononoke_app::args::HooksAppExtension;
 use mononoke_app::args::McrouterAppExtension;
 use mononoke_app::args::ReadonlyArgs;
@@ -45,18 +48,15 @@ use mononoke_app::args::TLSArgs;
 use mononoke_app::args::WarmBookmarksCacheExtension;
 use mononoke_app::monitoring::MonitoringAppExtension;
 use mononoke_app::monitoring::ReadyFlagService;
-use mononoke_app::MononokeApp;
-use mononoke_app::MononokeAppBuilder;
-use mononoke_app::MononokeReposManager;
 use openssl::ssl::AlpnError;
 use repo_identity::RepoIdentityRef;
 use scuba_ext::MononokeScubaSampleBuilder;
 use sharding_ext::RepoShard;
+use slog::Logger;
 use slog::error;
 use slog::info;
 use slog::o;
 use slog::warn;
-use slog::Logger;
 
 const SM_CLEANUP_TIMEOUT_SECS: u64 = 120;
 

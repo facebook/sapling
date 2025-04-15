@@ -12,8 +12,8 @@ mod batch;
 mod derive;
 pub mod mapping;
 
-pub use mapping::format_key;
 pub use mapping::RootSkeletonManifestId;
+pub use mapping::format_key;
 
 #[derive(Debug, Error)]
 pub enum SkeletonManifestDerivationError {

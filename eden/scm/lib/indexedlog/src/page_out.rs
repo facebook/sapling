@@ -7,10 +7,10 @@
 
 //! "Page out" logic as an attempt to reduce RSS / Working Set usage.
 
+use std::sync::Mutex;
 use std::sync::atomic::AtomicBool;
 use std::sync::atomic::AtomicI64;
 use std::sync::atomic::Ordering;
-use std::sync::Mutex;
 
 use minibytes::Bytes;
 use minibytes::WeakBytes;

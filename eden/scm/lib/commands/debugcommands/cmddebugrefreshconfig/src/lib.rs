@@ -9,13 +9,13 @@
 use std::str::FromStr;
 
 use clidispatch::ReqCtx;
-use cmdutil::define_flags;
 #[cfg(feature = "fb")]
 use cmdutil::Config;
 #[cfg(feature = "fb")]
 use cmdutil::ConfigExt;
 use cmdutil::Repo;
 use cmdutil::Result;
+use cmdutil::define_flags;
 #[cfg(feature = "fb")]
 use configloader::hg::generate_internalconfig;
 

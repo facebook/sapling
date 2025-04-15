@@ -19,8 +19,8 @@ use mononoke_macros::mononoke;
 use openssl::ssl::Ssl;
 use openssl::ssl::SslAcceptor;
 use quiet_stream::QuietShutdownStream;
-use slog::warn;
 use slog::Logger;
+use slog::warn;
 use tokio::net::TcpListener;
 use tokio_openssl::SslStream;
 

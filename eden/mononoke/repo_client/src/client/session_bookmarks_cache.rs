@@ -12,8 +12,8 @@ use std::time::Duration;
 
 use anyhow::Error;
 use anyhow::Result;
-use blobrepo_hg::to_hg_bookmark_stream;
 use blobrepo_hg::BlobRepoHg;
+use blobrepo_hg::to_hg_bookmark_stream;
 use bookmarks::Bookmark;
 use bookmarks::BookmarkCategory;
 use bookmarks::BookmarkKey;
@@ -25,14 +25,14 @@ use bookmarks::Freshness;
 use bookmarks_cache::BookmarksCache;
 use bookmarks_cache::BookmarksCacheRef;
 use context::CoreContext;
-use futures::compat::Future01CompatExt;
-use futures::compat::Stream01CompatExt;
-use futures::future;
 use futures::FutureExt;
 use futures::Stream;
 use futures::StreamExt;
 use futures::TryFutureExt;
 use futures::TryStreamExt;
+use futures::compat::Future01CompatExt;
+use futures::compat::Stream01CompatExt;
+use futures::future;
 use futures_01_ext::StreamExt as OldStreamExt;
 use futures_ext::FbFutureExt;
 use futures_ext::FbTryFutureExt;
@@ -310,8 +310,8 @@ mod test {
     use phases::PhasesArc;
     use repo_derived_data::RepoDerivedDataArc;
     use repo_identity::RepoIdentityArc;
-    use tests_utils::bookmark;
     use tests_utils::CreateCommitContext;
+    use tests_utils::bookmark;
     use warm_bookmarks_cache::WarmBookmarksCacheBuilder;
 
     use super::*;

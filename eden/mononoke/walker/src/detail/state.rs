@@ -17,15 +17,15 @@ use std::sync::atomic::AtomicUsize;
 use std::sync::atomic::Ordering;
 
 use ahash::RandomState;
-use anyhow::bail;
 use anyhow::Error;
+use anyhow::bail;
 use array_init::array_init;
 use async_trait::async_trait;
 use bonsai_hg_mapping::BonsaiHgMapping;
 use bonsai_hg_mapping::BonsaiHgMappingEntry;
 use context::CoreContext;
-use dashmap::mapref::one::Ref;
 use dashmap::DashMap;
+use dashmap::mapref::one::Ref;
 use futures::future::TryFutureExt;
 use itertools::Itertools;
 use mercurial_types::HgChangesetId;
@@ -41,8 +41,8 @@ use mononoke_types::ManifestUnodeId;
 use mononoke_types::SkeletonManifestId;
 use phases::Phase;
 use phases::Phases;
-use slog::info;
 use slog::Logger;
+use slog::info;
 use strum::EnumCount;
 use strum::EnumIter;
 use strum::EnumString;
@@ -58,12 +58,12 @@ use crate::detail::graph::WrappedPath;
 use crate::detail::graph::WrappedPathHash;
 use crate::detail::log;
 use crate::detail::progress::sort_by_string;
-use crate::detail::walk::expand_checked_nodes;
 use crate::detail::walk::EmptyRoute;
 use crate::detail::walk::OutgoingEdge;
 use crate::detail::walk::TailingWalkVisitor;
 use crate::detail::walk::VisitOne;
 use crate::detail::walk::WalkVisitor;
+use crate::detail::walk::expand_checked_nodes;
 
 #[derive(Clone, Copy, Default, Debug, PartialEq)]
 pub struct StepStats {

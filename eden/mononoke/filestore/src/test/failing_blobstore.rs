@@ -12,8 +12,8 @@ use blobstore::BlobstoreGetData;
 use blobstore::BlobstoreIsPresent;
 use context::CoreContext;
 use mononoke_types::BlobstoreBytes;
-use rand::thread_rng;
 use rand::Rng;
+use rand::thread_rng;
 use thiserror::Error;
 
 #[derive(Debug, Error)]

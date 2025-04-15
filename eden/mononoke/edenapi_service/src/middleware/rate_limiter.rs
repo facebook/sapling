@@ -8,9 +8,9 @@
 use context::CoreContext;
 use gotham::state::FromState;
 use gotham::state::State;
-use gotham_ext::middleware::request_context::RequestContext;
 use gotham_ext::middleware::MetadataState;
 use gotham_ext::middleware::Middleware;
+use gotham_ext::middleware::request_context::RequestContext;
 use hyper::Body;
 use hyper::Response;
 use hyper::StatusCode;

@@ -7,41 +7,41 @@
 
 use std::collections::HashMap;
 
+use anyhow::Context;
+use anyhow::Result;
 use anyhow::anyhow;
 use anyhow::bail;
 use anyhow::format_err;
-use anyhow::Context;
-use anyhow::Result;
 use async_trait::async_trait;
 use bonsai_git_mapping::BonsaiGitMappingEntry;
 use context::CoreContext;
-use derived_data_manager::dependencies;
 use derived_data_manager::BonsaiDerivable;
 use derived_data_manager::DerivableType;
 use derived_data_manager::DerivationContext;
+use derived_data_manager::dependencies;
 use derived_data_service_if as thrift;
-use futures::stream;
 use futures::StreamExt;
 use futures::TryStreamExt;
+use futures::stream;
 use gix_actor::Signature;
 use gix_hash::ObjectId;
 use gix_object::Commit;
 use gix_object::Object;
-use mononoke_types::hash::GitSha1;
 use mononoke_types::BonsaiChangeset;
 use mononoke_types::ChangesetId;
 use mononoke_types::DateTime;
+use mononoke_types::hash::GitSha1;
 #[allow(unused_imports)]
 use tokio::runtime::Runtime;
 
+use crate::GitTreeId;
+use crate::MappedGitCommitId;
 use crate::fetch_non_blob_git_object;
 use crate::git_object_bytes_with_hash;
 use crate::tree::derive_git_tree;
 use crate::tree::get_git_file_changes;
 use crate::tree::get_git_subtree_changes;
 use crate::upload_non_blob_git_object;
-use crate::GitTreeId;
-use crate::MappedGitCommitId;
 
 fn get_signature(id_str: &str, time: &DateTime) -> Result<Signature> {
     let (name, email) = get_name_and_email(id_str)?;
@@ -235,13 +235,13 @@ mod test {
     use fbinit::FacebookInit;
     use filestore::FilestoreConfig;
     use fixtures::TestRepoFixture;
-    use futures::stream;
     use futures::StreamExt;
     use futures::TryStreamExt;
+    use futures::stream;
     use maplit::hashmap;
     use mononoke_macros::mononoke;
-    use mononoke_types::hash::GitSha1;
     use mononoke_types::ChangesetIdPrefix;
+    use mononoke_types::hash::GitSha1;
     use repo_blobstore::RepoBlobstore;
     use repo_blobstore::RepoBlobstoreArc;
     use repo_derived_data::RepoDerivedData;

@@ -18,10 +18,10 @@ use mononoke_types::Svnrev;
 use slog::warn;
 
 pub use crate::caching::CachingBonsaiSvnrevMapping;
-pub use crate::sql::bulk_import_svnrevs;
 pub use crate::sql::AddSvnrevsErrorKind;
 pub use crate::sql::SqlBonsaiSvnrevMapping;
 pub use crate::sql::SqlBonsaiSvnrevMappingBuilder;
+pub use crate::sql::bulk_import_svnrevs;
 
 #[derive(Clone, Debug, Eq, Hash, PartialEq)]
 pub struct BonsaiSvnrevMappingEntry {

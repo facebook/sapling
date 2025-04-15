@@ -14,11 +14,11 @@ use std::path::PathBuf;
 use std::str::FromStr;
 use std::sync::Arc;
 
-use anyhow::bail;
-use anyhow::format_err;
 use anyhow::Context;
 use anyhow::Error;
 use anyhow::Result;
+use anyhow::bail;
+use anyhow::format_err;
 use ascii::AsciiString;
 use blobimport_lib::BlobimportRepo;
 use blobimport_lib::BookmarkImportPolicy;
@@ -29,25 +29,25 @@ use commit_graph::CommitGraphRef;
 use context::CoreContext;
 use context::SessionContainer;
 use fbinit::FacebookInit;
-use futures::future::try_join;
 use futures::future::TryFutureExt;
+use futures::future::try_join;
 #[cfg(fbcode_build)]
 use mercurial_revlog::revlog::RevIdx;
 use mercurial_types::HgChangesetId;
 use mercurial_types::HgNodeHash;
+use mononoke_app::MononokeApp;
+use mononoke_app::MononokeAppBuilder;
 use mononoke_app::args::AsRepoArg;
 use mononoke_app::args::RepoArgs;
 use mononoke_app::monitoring::MonitoringAppExtension;
-use mononoke_app::MononokeApp;
-use mononoke_app::MononokeAppBuilder;
 use mononoke_types::ChangesetId;
 use mononoke_types::DerivableType;
 use mutable_counters::MutableCountersRef;
 use repo_identity::RepoIdentityRef;
+use slog::Logger;
 use slog::error;
 use slog::info;
 use slog::warn;
-use slog::Logger;
 use sql_construct::SqlConstructFromMetadataDatabaseConfig;
 use synced_commit_mapping::SqlSyncedCommitMappingBuilder;
 use wireproto_handler::BackupSourceRepo;
@@ -105,10 +105,10 @@ fn parse_fixed_parent_order<P: AsRef<Path>>(
 
 #[cfg(fbcode_build)]
 mod facebook {
+    use manifold_client::ManifoldClient;
     use manifold_client::cpp_client::ClientOptionsBuilder;
     use manifold_client::cpp_client::ManifoldCppClient;
     use manifold_client::write::WriteRequestOptionsBuilder;
-    use manifold_client::ManifoldClient;
 
     use super::*;
 

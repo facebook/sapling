@@ -20,30 +20,30 @@ use std::path::Path;
 use std::path::PathBuf;
 use std::str;
 use std::str::FromStr;
+use std::sync::Arc;
 use std::sync::atomic::AtomicUsize;
 use std::sync::atomic::Ordering;
-use std::sync::Arc;
 use std::time::Duration;
 use std::time::Instant;
 
+use anyhow::Context;
+use anyhow::Error;
+use anyhow::Result;
 use anyhow::anyhow;
 use anyhow::bail;
 use anyhow::ensure;
 use anyhow::format_err;
-use anyhow::Context;
-use anyhow::Error;
-use anyhow::Result;
 use async_runtime::block_on;
 use async_runtime::stream_to_iter;
-use configmodel::convert::ByteCount;
 use configmodel::Config;
 use configmodel::ConfigExt;
+use configmodel::convert::ByteCount;
 use format_util::strip_file_metadata;
 use fs_err::File;
 use futures::future::FutureExt;
-use futures::stream::iter;
 use futures::stream::FuturesUnordered;
 use futures::stream::StreamExt;
+use futures::stream::iter;
 use hg_http::http_client;
 use hg_http::http_config;
 use http::status::StatusCode;
@@ -56,10 +56,10 @@ use http_client::MinTransferSpeed;
 use http_client::Request;
 use http_client::TlsError;
 use http_client::TlsErrorKind;
-use indexedlog::log::IndexOutput;
-use indexedlog::rotate;
 use indexedlog::DefaultOpenOptions;
 use indexedlog::Repair;
+use indexedlog::log::IndexOutput;
+use indexedlog::rotate;
 use itertools::Itertools;
 use lfs_protocol::ObjectAction;
 use lfs_protocol::ObjectStatus;
@@ -72,8 +72,8 @@ use mincode::deserialize;
 use mincode::serialize;
 use minibytes::Bytes;
 use parking_lot::Mutex;
-use rand::thread_rng;
 use rand::Rng;
+use rand::thread_rng;
 use redacted::is_redacted;
 use serde_derive::Deserialize;
 use serde_derive::Serialize;
@@ -81,10 +81,10 @@ use storemodel::SerializationFormat;
 use tokio::task::spawn_blocking;
 use tokio::time::sleep;
 use tokio::time::timeout;
+use tracing::Instrument;
 use tracing::info_span;
 use tracing::trace_span;
 use tracing::warn;
-use tracing::Instrument;
 use types::FetchContext;
 use types::HgId;
 use types::Key;
@@ -1952,6 +1952,8 @@ mod tests {
     use types::testutil::*;
 
     use super::*;
+    #[cfg(feature = "fb")]
+    use crate::testutil::TestBlob;
     use crate::testutil::example_blob;
     #[cfg(feature = "fb")]
     use crate::testutil::example_blob2;
@@ -1961,8 +1963,6 @@ mod tests {
     #[cfg(feature = "fb")]
     use crate::testutil::nonexistent_blob;
     use crate::testutil::setconfig;
-    #[cfg(feature = "fb")]
-    use crate::testutil::TestBlob;
 
     #[test]
     fn test_new_rotated() -> Result<()> {

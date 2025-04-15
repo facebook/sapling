@@ -7,18 +7,18 @@
 
 use std::io::Write;
 
-use anyhow::bail;
 use anyhow::Result;
+use anyhow::bail;
 use scs_client_raw::thrift;
 use serde::Serialize;
 use source_control_clients::errors::CommitSparseProfileDeltaPollError;
 
-use crate::args::commit_id::resolve_commit_ids;
+use crate::ScscApp;
 use crate::args::commit_id::CommitIdsArgs;
+use crate::args::commit_id::resolve_commit_ids;
 use crate::args::repo::RepoArgs;
 use crate::args::sparse_profiles::SparseProfilesArgs;
 use crate::render::Render;
-use crate::ScscApp;
 
 const POLL_SLEEP_DURATION: std::time::Duration = std::time::Duration::from_secs(1);
 

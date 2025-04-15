@@ -7,8 +7,8 @@
 
 use std::collections::HashMap;
 
-use anyhow::anyhow;
 use anyhow::Result;
+use anyhow::anyhow;
 use commit_graph_types::edges::ChangesetEdges;
 use commit_graph_types::edges::ChangesetNode;
 use commit_graph_types::edges::ChangesetNodeParents;

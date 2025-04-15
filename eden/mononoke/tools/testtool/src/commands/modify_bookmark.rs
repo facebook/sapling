@@ -5,17 +5,17 @@
  * GNU General Public License version 2.
  */
 
-use anyhow::bail;
 use anyhow::Context;
 use anyhow::Result;
+use anyhow::bail;
 use bookmarks::BookmarkKey;
 use bookmarks::BookmarkUpdateReason;
 use bookmarks::Bookmarks;
 use bookmarks::BookmarksRef;
 use clap::Parser;
 use clap::Subcommand;
-use mononoke_app::args::RepoArgs;
 use mononoke_app::MononokeApp;
+use mononoke_app::args::RepoArgs;
 use mononoke_types::ChangesetId;
 
 /// Modify a bookmark

@@ -13,8 +13,8 @@ mod batch;
 mod derive;
 mod mapping;
 
-pub use mapping::format_key;
 pub use mapping::RootFsnodeId;
+pub use mapping::format_key;
 
 #[derive(Debug, Error)]
 pub enum FsnodeDerivationError {

@@ -8,12 +8,13 @@
 use std::path::Path;
 use std::path::PathBuf;
 
-use indexedlog::multi;
 use indexedlog::DefaultOpenOptions;
 use indexedlog::OpenWithRepair;
+use indexedlog::multi;
 
 use super::AbstractDag;
 use super::DagBuilder;
+use crate::Result;
 use crate::errors::bug;
 use crate::iddag::IdDag;
 use crate::iddagstore::IndexedLogStore;
@@ -22,7 +23,6 @@ use crate::ops::Open;
 use crate::ops::Persist;
 use crate::ops::StorageVersion;
 use crate::ops::TryClone;
-use crate::Result;
 
 /// A DAG that uses Vertex instead of ids as vertexes.
 ///

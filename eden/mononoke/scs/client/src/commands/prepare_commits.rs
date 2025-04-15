@@ -8,12 +8,12 @@
 use anyhow::Result;
 use scs_client_raw::thrift;
 
-use crate::args::commit_id::resolve_commit_ids;
+use crate::ScscApp;
 use crate::args::commit_id::CommitIdsArgs;
+use crate::args::commit_id::resolve_commit_ids;
 use crate::args::derived_data_type::DerivedDataTypeArgs;
 use crate::args::repo::RepoArgs;
 use crate::errors::SelectionErrorExt;
-use crate::ScscApp;
 
 #[derive(clap::Parser)]
 /// Prepare a commit by deriving the required derived data type

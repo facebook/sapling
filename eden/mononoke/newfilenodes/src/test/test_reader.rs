@@ -7,8 +7,8 @@
 
 use std::sync::Arc;
 
-use anyhow::format_err;
 use anyhow::Error;
+use anyhow::format_err;
 use context::CoreContext;
 use fbinit::FacebookInit;
 use filenodes::FilenodeInfo;
@@ -29,8 +29,8 @@ use mononoke_types_mocks::repo::REPO_ONE;
 use mononoke_types_mocks::repo::REPO_ZERO;
 use sql::Connection;
 use sql_ext::mononoke_queries;
-use vec1::vec1;
 use vec1::Vec1;
+use vec1::vec1;
 
 use super::util::build_reader_writer;
 use super::util::build_shard;

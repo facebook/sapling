@@ -9,16 +9,16 @@ use std::cmp::Ordering;
 use std::fmt;
 use std::sync::Arc;
 
-use anyhow::bail;
 use anyhow::Error;
+use anyhow::bail;
 use mononoke_types::RepositoryId;
 use mononoke_types::Timestamp;
-use slog::info;
 use slog::Logger;
+use slog::info;
 use sql_construct::SqlConstruct;
 use sql_construct::SqlConstructFromMetadataDatabaseConfig;
-use sql_ext::mononoke_queries;
 use sql_ext::SqlConnections;
+use sql_ext::mononoke_queries;
 
 use crate::detail::fetcher::Direction;
 use crate::detail::log;

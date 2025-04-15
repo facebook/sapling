@@ -14,20 +14,20 @@ use std::io;
 use std::path::Path;
 use std::sync::Arc;
 
-use anyhow::bail;
-use anyhow::format_err;
 use anyhow::Context;
 use anyhow::Result;
+use anyhow::bail;
+use anyhow::format_err;
 use bytes::Bytes;
 use memmap2::Mmap;
-pub use mercurial_types::bdiff;
-pub use mercurial_types::bdiff::Delta;
-pub use mercurial_types::delta;
 pub use mercurial_types::HgBlob;
 pub use mercurial_types::HgBlobNode;
 pub use mercurial_types::HgEntryId;
 pub use mercurial_types::HgNodeHash;
 pub use mercurial_types::HgParents;
+pub use mercurial_types::bdiff;
+pub use mercurial_types::bdiff::Delta;
+pub use mercurial_types::delta;
 use nom::IResult;
 
 use crate::errors::ErrorKind;

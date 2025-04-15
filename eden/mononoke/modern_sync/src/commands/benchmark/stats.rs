@@ -16,9 +16,9 @@ use std::time::UNIX_EPOCH;
 
 use anyhow::Context;
 use anyhow::Result;
+use fb303_core_thriftclients::BaseService;
 use fb303_core_thriftclients::make_BaseService_thriftclient;
 use fb303_core_thriftclients::thriftclient::TransportType;
-use fb303_core_thriftclients::BaseService;
 use fbinit::FacebookInit;
 use mononoke_macros::mononoke;
 

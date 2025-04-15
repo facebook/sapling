@@ -5,9 +5,9 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-use anyhow::bail;
 use anyhow::Error;
 use anyhow::Result;
+use anyhow::bail;
 use edenapi_types::FileEntry;
 use format_util::split_file_metadata;
 use minibytes::Bytes;
@@ -16,12 +16,12 @@ use storemodel::SerializationFormat;
 use types::HgId;
 use types::Id20;
 
+use crate::Metadata;
 use crate::indexedlogdatastore::Entry;
+use crate::lfs::LfsPointersEntry;
 use crate::lfs::content_header_from_pointer;
 use crate::lfs::rebuild_metadata;
-use crate::lfs::LfsPointersEntry;
 use crate::scmstore::file::FileAuxData;
-use crate::Metadata;
 
 /// A minimal file enum that simply wraps the possible underlying file types,
 /// with no processing (so Entry might have the wrong Key.path, etc.)

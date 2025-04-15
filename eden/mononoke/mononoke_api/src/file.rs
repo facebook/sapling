@@ -12,8 +12,8 @@ use bytes::Bytes;
 use bytes::BytesMut;
 use cloned::cloned;
 use context::CoreContext;
-use filestore::get_metadata;
 use filestore::FetchKey;
+use filestore::get_metadata;
 use futures::stream::TryStreamExt;
 use futures::try_join;
 use futures_lazy_shared::LazyShared;
@@ -25,9 +25,9 @@ pub use mononoke_types::ContentMetadataV2 as FileMetadata;
 pub use mononoke_types::FileType;
 use repo_blobstore::RepoBlobstoreRef;
 
+use crate::MononokeRepo;
 use crate::errors::MononokeError;
 use crate::repo::RepoContext;
-use crate::MononokeRepo;
 
 #[derive(Clone)]
 pub struct FileContext<R> {

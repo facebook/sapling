@@ -15,9 +15,9 @@ use std::sync::Arc;
 use std::thread;
 use std::time::Duration;
 
-use anyhow::bail;
 use anyhow::Context;
 use anyhow::Result;
+use anyhow::bail;
 use configmodel::Config;
 use configmodel::ConfigExt;
 use context::CoreContext;
@@ -31,24 +31,24 @@ use status::Status;
 use status::StatusBuilder;
 use termlogger::TermLogger;
 use treestate::filestate::StateFlags;
+use types::HgId;
+use types::RepoPath;
 use types::workingcopy_client::CheckoutConflict;
 use types::workingcopy_client::CheckoutMode;
 use types::workingcopy_client::ConflictType;
-use types::HgId;
-use types::RepoPath;
 use workingcopy::client::WorkingCopyClient;
 use workingcopy::util::walk_treestate;
 use workingcopy::workingcopy::LockedWorkingCopy;
 use workingcopy::workingcopy::WorkingCopy;
 
-use crate::actions::changed_metadata_to_action;
-use crate::actions::Action;
-use crate::actions::UpdateAction;
-use crate::check_conflicts;
-use crate::errors::EdenConflictError;
 use crate::ActionMap;
 use crate::Checkout;
 use crate::CheckoutPlan;
+use crate::actions::Action;
+use crate::actions::UpdateAction;
+use crate::actions::changed_metadata_to_action;
+use crate::check_conflicts;
+use crate::errors::EdenConflictError;
 
 fn actionmap_from_eden_conflicts(
     config: &dyn Config,

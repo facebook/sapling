@@ -32,11 +32,11 @@ use types::Key;
 use types::RepoPath;
 use types::RepoPathBuf;
 
+use crate::SearchDirection;
 use crate::error::CopyTraceError;
 use crate::utils::compute_missing_files;
 use crate::utils::file_path_similarity;
 use crate::utils::is_content_similar;
-use crate::SearchDirection;
 
 /// Maximum rename candidate files to check
 const DEFAULT_MAX_RENAME_CANDIDATES: usize = 1000;

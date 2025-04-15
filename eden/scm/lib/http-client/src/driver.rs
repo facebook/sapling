@@ -14,12 +14,12 @@ use curl::multi::Easy2Handle;
 use curl::multi::Message;
 use curl::multi::Multi;
 
+use crate::Easy2H;
 use crate::errors::Abort;
 use crate::errors::HttpClientError;
 use crate::handler::HandlerExt;
 use crate::progress::ProgressReporter;
 use crate::stats::Stats;
-use crate::Easy2H;
 
 /// Maximum time that libcurl should wait for socket activity during a call to
 /// `Multi::wait`. The Multi session maintains its own timeout internally based

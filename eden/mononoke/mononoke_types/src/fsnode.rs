@@ -5,9 +5,9 @@
  * GNU General Public License version 2.
  */
 
-use anyhow::bail;
 use anyhow::Context;
 use anyhow::Result;
+use anyhow::bail;
 use fbthrift::compact_protocol;
 use sorted_vector_map::SortedVectorMap;
 

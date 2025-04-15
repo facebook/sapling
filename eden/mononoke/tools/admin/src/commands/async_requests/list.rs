@@ -8,17 +8,17 @@
 use anyhow::Context;
 use anyhow::Error;
 use anyhow::Result;
-use async_requests::types::ThriftAsynchronousRequestParams;
 use async_requests::AsyncMethodRequestQueue;
+use async_requests::types::ThriftAsynchronousRequestParams;
 use clap::Args;
 use context::CoreContext;
 use mononoke_api::MononokeRepo;
 use mononoke_types::ChangesetId;
 use mononoke_types::DateTime;
 use mononoke_types::Timestamp;
+use prettytable::Table;
 use prettytable::format;
 use prettytable::row;
-use prettytable::Table;
 
 #[derive(Args)]
 /// Lists asynchronous requests (by default the ones active

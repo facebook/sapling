@@ -16,9 +16,9 @@ use context::CoreContext;
 use derived_data_manager::DerivationContext;
 use futures::TryStreamExt;
 use manifest::ManifestOps;
-use mononoke_types::case_conflict_skeleton_manifest::CaseConflictSkeletonManifest;
 use mononoke_types::BlobstoreValue;
 use mononoke_types::SkeletonManifestId;
+use mononoke_types::case_conflict_skeleton_manifest::CaseConflictSkeletonManifest;
 use skeleton_manifest::RootSkeletonManifestId;
 
 use crate::derive::inner_derive;

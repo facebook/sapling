@@ -29,12 +29,12 @@ use futures::FutureExt;
 use futures::TryFutureExt;
 use futures_stats::FutureStats;
 use futures_stats::TimedFutureExt;
-use mononoke_types::hash::GitSha1;
 use mononoke_types::BasicFileChange;
 use mononoke_types::BonsaiChangeset;
 use mononoke_types::ChangesetId;
 use mononoke_types::ContentId;
 use mononoke_types::NonRootMPath;
+use mononoke_types::hash::GitSha1;
 use scuba_ext::MononokeScubaSampleBuilder;
 
 pub use crate::errors::HookManagerError;

@@ -23,9 +23,9 @@ use std::path::PathBuf;
 use std::str::FromStr;
 use std::sync::Arc;
 
+use anyhow::Result;
 #[cfg(feature = "fb")]
 use anyhow::bail;
-use anyhow::Result;
 use configmodel::Config;
 use configmodel::ConfigExt;
 use gitcompat::init::translated_git_repo_config_path;
@@ -789,8 +789,8 @@ pub fn generate_internalconfig(
 
     use faccess::AccessMode;
     use faccess::PathExt;
-    use filetime::set_file_mtime;
     use filetime::FileTime;
+    use filetime::set_file_mtime;
 
     tracing::debug!(
         repo_path = ?info.map(|i| &i.path),
@@ -896,8 +896,8 @@ fn load_dynamic(
     domain_override: Option<Text>,
     errors: &mut Vec<Error>,
 ) -> Result<ConfigSet> {
-    use crate::fb::internalconfig::vpnless_config_path;
     use crate::fb::internalconfig::Domain;
+    use crate::fb::internalconfig::vpnless_config_path;
 
     let mode = FbConfigMode::from_identity(identity);
     let mut this = ConfigSet::new().named("dynamic");

@@ -7,16 +7,16 @@
 
 use std::pin::Pin;
 
-use anyhow::anyhow;
 use anyhow::Result;
-use futures::future;
-use futures::ready;
-use futures::task::Context;
-use futures::task::Poll;
+use anyhow::anyhow;
 use futures::Stream;
 use futures::StreamExt;
 use futures::TryFutureExt;
 use futures::TryStreamExt;
+use futures::future;
+use futures::ready;
+use futures::task::Context;
+use futures::task::Poll;
 use futures_ext::FbStreamExt;
 use mercurial_bundles::changegroup::Part;
 use mercurial_bundles::changegroup::Section;

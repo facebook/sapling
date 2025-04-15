@@ -5,23 +5,23 @@
  * GNU General Public License version 2.
  */
 
+use std::collections::HashMap;
 use std::collections::hash_map::Entry::Occupied;
 use std::collections::hash_map::Entry::Vacant;
-use std::collections::HashMap;
 use std::num::NonZeroU64;
 
-use anyhow::anyhow;
-use anyhow::bail;
 use anyhow::Context;
 use anyhow::Result;
+use anyhow::anyhow;
+use anyhow::bail;
 use async_trait::async_trait;
 use edenapi_types::BlameData;
 use edenapi_types::BlameRequest;
 use edenapi_types::BlameResult;
 use edenapi_types::Key;
 use edenapi_types::ServerError;
-use futures::stream;
 use futures::StreamExt;
+use futures::stream;
 use gotham_ext::handler::SlapiCommitIdentityScheme;
 use mononoke_api::ChangesetId;
 use mononoke_api::MononokeRepo;
@@ -31,10 +31,10 @@ use mononoke_types::blame_v2::BlameV2;
 use mononoke_types::hash::GitSha1;
 use types::HgId;
 
-use super::handler::SaplingRemoteApiContext;
 use super::HandlerResult;
 use super::SaplingRemoteApiHandler;
 use super::SaplingRemoteApiMethod;
+use super::handler::SaplingRemoteApiContext;
 use crate::errors::ErrorKind;
 use crate::utils::to_hg_path;
 use crate::utils::to_mpath;

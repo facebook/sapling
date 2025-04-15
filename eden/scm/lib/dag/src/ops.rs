@@ -12,6 +12,11 @@ use std::sync::Arc;
 use futures::StreamExt;
 use futures::TryStreamExt;
 
+use crate::IdList;
+use crate::IdSet;
+use crate::Result;
+use crate::VerLink;
+use crate::VertexListWithOptions;
 use crate::clone::CloneData;
 use crate::dag::MemDag;
 use crate::default_impl;
@@ -20,14 +25,9 @@ use crate::id::Group;
 use crate::id::Id;
 use crate::id::Vertex;
 pub use crate::iddag::IdDagAlgorithm;
+use crate::set::Set;
 use crate::set::id_lazy::IdLazySet;
 use crate::set::id_static::IdStaticSet;
-use crate::set::Set;
-use crate::IdList;
-use crate::IdSet;
-use crate::Result;
-use crate::VerLink;
-use crate::VertexListWithOptions;
 
 /// DAG related read-only algorithms.
 #[async_trait::async_trait]

@@ -9,17 +9,17 @@ use std::collections::HashMap;
 
 use anyhow::Result;
 use context::CoreContext;
-use futures::future::BoxFuture;
 use futures::Stream;
 use futures::TryStreamExt;
-use futures_ext::future::TryShared;
+use futures::future::BoxFuture;
 use futures_ext::FbTryFutureExt;
+use futures_ext::future::TryShared;
 use mercurial_revlog::manifest::ManifestContent;
-use mercurial_types::blobs::UploadHgNodeHash;
-use mercurial_types::blobs::UploadHgTreeEntry;
 use mercurial_types::HgManifestId;
 use mercurial_types::HgNodeHash;
 use mercurial_types::HgNodeKey;
+use mercurial_types::blobs::UploadHgNodeHash;
+use mercurial_types::blobs::UploadHgTreeEntry;
 use mononoke_types::RepoPath;
 use wirepack::TreemanifestEntry;
 

@@ -12,10 +12,10 @@ use std::io::Read;
 #[cfg(target_os = "macos")]
 use std::io::Write;
 
-use anyhow::anyhow;
-use anyhow::bail;
 use anyhow::Context;
 use anyhow::Result;
+use anyhow::anyhow;
+use anyhow::bail;
 use clap::App;
 use clap::Arg;
 use commitcloudsubscriber::CommitCloudConfig;

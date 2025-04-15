@@ -9,9 +9,9 @@ use std::collections::HashMap;
 use std::sync::Arc;
 use std::sync::Mutex;
 
-use anyhow::anyhow;
 use anyhow::Error;
 use anyhow::Result;
+use anyhow::anyhow;
 use async_trait::async_trait;
 use cached_config::ConfigHandle;
 use cached_config::ConfigStore;

@@ -22,9 +22,9 @@ mod windows {
     use winapi::um::handleapi::CloseHandle;
     use winapi::um::handleapi::INVALID_HANDLE_VALUE;
     use winapi::um::tlhelp32::CreateToolhelp32Snapshot;
+    use winapi::um::tlhelp32::PROCESSENTRY32W;
     use winapi::um::tlhelp32::Process32FirstW;
     use winapi::um::tlhelp32::Process32NextW;
-    use winapi::um::tlhelp32::PROCESSENTRY32W;
     use winapi::um::tlhelp32::TH32CS_SNAPPROCESS;
     use winapi::um::winnt::HANDLE;
 

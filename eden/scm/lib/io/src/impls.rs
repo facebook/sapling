@@ -5,11 +5,11 @@
  * LICENSE file in the root directory of this source tree.
  */
 
+use std::io::Cursor;
+use std::io::IsTerminal;
 use std::io::stderr;
 use std::io::stdin;
 use std::io::stdout;
-use std::io::Cursor;
-use std::io::IsTerminal;
 use std::sync::Weak;
 
 use crate::IsTty;

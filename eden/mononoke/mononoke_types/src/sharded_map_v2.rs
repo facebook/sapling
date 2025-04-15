@@ -10,9 +10,9 @@ use std::hash::Hash;
 use std::num::NonZeroUsize;
 use std::sync::OnceLock;
 
-use anyhow::bail;
 use anyhow::Context;
 use anyhow::Result;
+use anyhow::bail;
 use async_recursion::async_recursion;
 use blobstore::Blobstore;
 use blobstore::Loadable;
@@ -20,13 +20,13 @@ use blobstore::Storable;
 use bounded_traversal::OrderedTraversal;
 use context::CoreContext;
 use derivative::Derivative;
+use futures::FutureExt;
+use futures::StreamExt;
+use futures::TryStreamExt;
 use futures::stream;
 use futures::stream::FuturesUnordered;
 use futures::stream::Stream;
 use futures::try_join;
-use futures::FutureExt;
-use futures::StreamExt;
-use futures::TryStreamExt;
 use futures_watchdog::WatchdogExt;
 use itertools::Either;
 use itertools::Itertools;
@@ -34,16 +34,16 @@ use nonzero_ext::nonzero;
 use quickcheck::Arbitrary;
 use quickcheck::Gen;
 use smallvec::SmallVec;
-use sorted_vector_map::sorted_vector_map;
 use sorted_vector_map::SortedVectorMap;
+use sorted_vector_map::sorted_vector_map;
 
+use crate::ThriftConvert;
+use crate::TrieMap;
 use crate::blob::Blob;
 use crate::blob::BlobstoreValue;
 use crate::thrift;
 use crate::typed_hash::IdContext;
 use crate::typed_hash::MononokeId;
-use crate::ThriftConvert;
-use crate::TrieMap;
 
 // More detailed documentation about ShardedMapV2 can be found in serialization/sharded_map.thrift
 
@@ -1150,9 +1150,9 @@ mod test {
     use mononoke_macros::mononoke;
 
     use super::*;
+    use crate::BlobstoreKey;
     use crate::impl_typed_hash;
     use crate::private::Blake2;
-    use crate::BlobstoreKey;
 
     #[derive(Debug, Clone, Copy, Eq, PartialEq, Hash)]
     pub struct TestValue(u32);

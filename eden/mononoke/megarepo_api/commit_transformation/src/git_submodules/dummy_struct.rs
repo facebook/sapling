@@ -20,9 +20,9 @@ use filenodes::FilenodeResult;
 use filenodes::Filenodes;
 use filenodes::PreparedFilenode;
 use mercurial_types::HgFileNodeId;
-use mononoke_types::hash::GitSha1;
 use mononoke_types::RepoPath;
 use mononoke_types::RepositoryId;
+use mononoke_types::hash::GitSha1;
 
 /// Struct created to satisfy the type system when creating a `RepoDerivedData`
 /// for the `InMemoryRepo`.

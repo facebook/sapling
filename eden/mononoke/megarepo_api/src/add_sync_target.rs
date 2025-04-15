@@ -12,9 +12,9 @@ use bookmarks::BookmarkKey;
 use bookmarks::BookmarksRef;
 use context::CoreContext;
 use futures::TryFutureExt;
-use megarepo_config::verify_config;
 use megarepo_config::MononokeMegarepoConfigs;
 use megarepo_config::SyncTargetConfig;
+use megarepo_config::verify_config;
 use megarepo_error::MegarepoError;
 use megarepo_mapping::SourceName;
 use metaconfig_types::RepoConfigArc;
@@ -23,8 +23,8 @@ use mononoke_api::MononokeRepo;
 use mononoke_api::RepoContext;
 use mononoke_types::ChangesetId;
 
-use crate::common::derive_all_types;
 use crate::common::MegarepoOp;
+use crate::common::derive_all_types;
 
 // Create a new sync target given a config.
 // After this command finishes it creates

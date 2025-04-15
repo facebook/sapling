@@ -24,15 +24,15 @@ use repo_authorization::RepoWriteOperation;
 use repo_update_logger::BookmarkInfo;
 use repo_update_logger::BookmarkOperation;
 
-use crate::affected_changesets::AdditionalChangesets;
-use crate::affected_changesets::AffectedChangesets;
-use crate::repo_lock::check_repo_lock;
-use crate::restrictions::check_bookmark_sync_config;
-use crate::restrictions::BookmarkKindRestrictions;
 use crate::BookmarkInfoData;
 use crate::BookmarkInfoTransaction;
 use crate::BookmarkMovementError;
 use crate::Repo;
+use crate::affected_changesets::AdditionalChangesets;
+use crate::affected_changesets::AffectedChangesets;
+use crate::repo_lock::check_repo_lock;
+use crate::restrictions::BookmarkKindRestrictions;
+use crate::restrictions::check_bookmark_sync_config;
 
 #[must_use = "CreateBookmarkOp must be run to have an effect"]
 pub struct CreateBookmarkOp<'op> {

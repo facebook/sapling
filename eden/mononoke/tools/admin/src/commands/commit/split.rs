@@ -7,8 +7,8 @@
 
 use std::collections::BTreeMap;
 
-use anyhow::bail;
 use anyhow::Result;
+use anyhow::bail;
 use blobstore::Loadable;
 use changesets_creation::save_changesets;
 use clap::ArgGroup;
@@ -221,8 +221,8 @@ mod test {
     use repo_blobstore::RepoBlobstoreRef;
     use repo_derived_data::RepoDerivedData;
     use repo_identity::RepoIdentity;
-    use tests_utils::list_working_copy_utf8;
     use tests_utils::CreateCommitContext;
+    use tests_utils::list_working_copy_utf8;
 
     use super::*;
 

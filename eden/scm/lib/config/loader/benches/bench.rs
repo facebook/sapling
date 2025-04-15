@@ -5,10 +5,10 @@
  * LICENSE file in the root directory of this source tree.
  */
 
+use configloader::Text;
 use configloader::config::ConfigSet;
 use configloader::hg::ConfigSetHgExt;
 use configloader::hg::RepoInfo;
-use configloader::Text;
 use minibench::bench;
 use minibench::elapsed;
 use repo_minimal_info::RepoMinimalInfo;

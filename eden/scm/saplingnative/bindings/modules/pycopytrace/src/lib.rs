@@ -19,18 +19,18 @@ use copytrace::MetadataRenameFinder;
 use copytrace::RenameFinder;
 use copytrace::TraceResult;
 use cpython::*;
-use cpython_ext::convert::ImplInto;
-use cpython_ext::convert::Serde;
 use cpython_ext::PyPathBuf;
 use cpython_ext::ResultPyErrExt;
+use cpython_ext::convert::ImplInto;
+use cpython_ext::convert::Serde;
 use dag::DagAlgorithm;
 use dag::Vertex;
 use pypathmatcher::extract_matcher;
-use storemodel::types::RepoPathBuf;
 use storemodel::FileStore;
 use storemodel::ReadRootTreeIds;
 use storemodel::SerializationFormat;
 use storemodel::TreeStore;
+use storemodel::types::RepoPathBuf;
 
 pub fn init_module(py: Python, package: &str) -> PyResult<PyModule> {
     let name = [package, "copytrace"].join(".");

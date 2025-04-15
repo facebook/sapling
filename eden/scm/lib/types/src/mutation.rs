@@ -10,8 +10,8 @@
 use std::io::Read;
 use std::io::Write;
 
-use anyhow::anyhow;
 use anyhow::Result;
+use anyhow::anyhow;
 use byteorder::BigEndian;
 use byteorder::ReadBytesExt;
 use byteorder::WriteBytesExt;

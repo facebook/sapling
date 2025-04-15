@@ -10,18 +10,18 @@
 #![feature(trait_alias)]
 use std::sync::Arc;
 
-use anyhow::bail;
 use anyhow::Error;
 use anyhow::Result;
+use anyhow::bail;
 use context::CoreContext;
-use cross_repo_sync::create_commit_syncers;
-use cross_repo_sync::get_all_submodule_deps_from_repo_pair;
 use cross_repo_sync::CommitSyncRepos;
 use cross_repo_sync::CommitSyncer;
 use cross_repo_sync::RepoProvider;
 use cross_repo_sync::Syncers;
-use mononoke_app::args::RepoArg;
+use cross_repo_sync::create_commit_syncers;
+use cross_repo_sync::get_all_submodule_deps_from_repo_pair;
 use mononoke_app::MononokeApp;
+use mononoke_app::args::RepoArg;
 use sql_query_config::SqlQueryConfigArc;
 
 pub trait CrossRepo = cross_repo_sync::Repo

@@ -7,15 +7,15 @@
 
 use std::fmt::Debug;
 
+use mononoke_types::ContentId;
 use mononoke_types::hash::Blake3;
 use mononoke_types::hash::RichGitSha1;
 use mononoke_types::hash::Sha1;
 use mononoke_types::hash::Sha256;
-use mononoke_types::ContentId;
 use thiserror::Error;
 
-use crate::expected_size::ExpectedSize;
 use crate::FetchKey;
+use crate::expected_size::ExpectedSize;
 
 #[derive(Debug)]
 pub struct InvalidHash<T: Debug> {

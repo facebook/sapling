@@ -7,8 +7,8 @@
 
 use std::num::NonZeroU64;
 
-use anyhow::anyhow;
 use anyhow::Context;
+use anyhow::anyhow;
 use async_stream::try_stream;
 use async_trait::async_trait;
 use edenapi_types::SuffixQueryRequest;
@@ -22,10 +22,10 @@ use mononoke_types::MPath;
 use types::RepoPathBuf;
 use vec1::Vec1;
 
-use super::handler::SaplingRemoteApiContext;
 use super::HandlerResult;
 use super::SaplingRemoteApiHandler;
 use super::SaplingRemoteApiMethod;
+use super::handler::SaplingRemoteApiContext;
 use crate::errors::ErrorKind;
 
 pub struct SuffixQueryHandler;

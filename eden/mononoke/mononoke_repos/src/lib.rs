@@ -8,9 +8,9 @@
 use std::collections::HashMap;
 use std::sync::Arc;
 
-use anyhow::bail;
 use anyhow::Ok;
 use anyhow::Result;
+use anyhow::bail;
 use arc_swap::ArcSwap;
 use futures::stream::AbortHandle;
 use parking_lot::Mutex;

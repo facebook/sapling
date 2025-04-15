@@ -5,9 +5,9 @@
  * GNU General Public License version 2.
  */
 
-use anyhow::bail;
 use anyhow::Error;
 use anyhow::Result;
+use anyhow::bail;
 use byteorder::BigEndian;
 use byteorder::ByteOrder;
 use bytes::Buf;
@@ -162,12 +162,12 @@ mod test {
     use std::io::Cursor;
 
     use assert_matches::assert_matches;
-    use futures::stream;
     use futures::SinkExt;
     use futures::TryStreamExt;
+    use futures::stream;
     use mononoke_macros::mononoke;
-    use quickcheck::quickcheck;
     use quickcheck::TestResult;
+    use quickcheck::quickcheck;
     use tokio_util::codec::FramedRead;
     use tokio_util::codec::FramedWrite;
 

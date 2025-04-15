@@ -8,10 +8,10 @@
 use std::collections::BTreeMap;
 use std::collections::HashSet;
 
-use anyhow::bail;
 use anyhow::Context;
 use anyhow::Error;
 use anyhow::Result;
+use anyhow::bail;
 use bytes::Bytes;
 use fbthrift::compact_protocol;
 use quickcheck::Arbitrary;
@@ -20,6 +20,7 @@ use smallvec::SmallVec;
 use sorted_vector_map::SortedVectorMap;
 use thrift_convert::ThriftConvert;
 
+use crate::ContentId;
 use crate::blob::Blob;
 use crate::blob::BlobstoreValue;
 use crate::blob::ChangesetBlob;
@@ -35,7 +36,6 @@ use crate::subtree_change::SubtreeChange;
 use crate::thrift;
 use crate::typed_hash::ChangesetId;
 use crate::typed_hash::ChangesetIdContext;
-use crate::ContentId;
 
 /// A struct callers can use to build up a `BonsaiChangeset`.
 #[derive(Debug, Clone, Eq, PartialEq, Hash)]

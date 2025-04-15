@@ -13,11 +13,11 @@ use commit_cloud_types::WorkspaceRemoteBookmark;
 use mercurial_types::HgChangesetId;
 use sql::Transaction;
 
+use crate::CommitCloudContext;
 use crate::sql::ops::Delete;
 use crate::sql::ops::Insert;
 use crate::sql::ops::SqlCommitCloud;
 use crate::sql::remote_bookmarks_ops::DeleteArgs;
-use crate::CommitCloudContext;
 
 // This must stay as-is to work with serde
 #[allow(clippy::ptr_arg)]

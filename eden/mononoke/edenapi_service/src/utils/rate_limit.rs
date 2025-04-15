@@ -8,9 +8,9 @@
 use std::collections::HashMap;
 use std::time::Duration;
 
-use anyhow::anyhow;
 use anyhow::Error;
 use anyhow::Result;
+use anyhow::anyhow;
 use context::CoreContext;
 use sha2::Digest;
 use sha2::Sha256;

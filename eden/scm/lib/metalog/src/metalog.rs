@@ -16,10 +16,10 @@ use std::sync::Arc;
 
 use anyhow::Context;
 use hgtime::HgTime;
-use indexedlog::lock::ScopedDirLock;
-use indexedlog::log as ilog;
 use indexedlog::OpenWithRepair;
 use indexedlog::Repair;
+use indexedlog::lock::ScopedDirLock;
+use indexedlog::log as ilog;
 use lazy_static::lazy_static;
 use minibytes::Bytes;
 use parking_lot::RwLock;
@@ -29,9 +29,9 @@ use serde_json::Value;
 pub use zstore::Id20;
 use zstore::Zstore;
 
-use crate::constants::METALOG_TRACKED;
 use crate::Error;
 use crate::Result;
+use crate::constants::METALOG_TRACKED;
 
 /// Key-value metadata storage that can be atomically read and written,
 /// and preserves a linear history.
@@ -624,8 +624,8 @@ pub mod resolver {
     use super::Id20;
     use super::MetaLog;
     use super::SerId20;
-    use crate::resolve::try_resolve_metalog_conflict;
     use crate::Result;
+    use crate::resolve::try_resolve_metalog_conflict;
 
     /// Simple merge strategy: Only reject conflicted changes.
     ///

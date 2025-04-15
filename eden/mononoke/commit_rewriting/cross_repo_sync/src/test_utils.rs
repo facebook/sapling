@@ -10,9 +10,9 @@ use std::collections::HashSet;
 use std::str::FromStr;
 use std::sync::Arc;
 
-use anyhow::format_err;
 use anyhow::Context;
 use anyhow::Error;
+use anyhow::format_err;
 use ascii::AsciiString;
 use blobstore::Loadable;
 use bonsai_git_mapping::BonsaiGitMapping;
@@ -24,12 +24,12 @@ use bookmarks::BookmarkUpdateReason;
 use bookmarks::Bookmarks;
 use commit_graph::CommitGraph;
 use commit_graph::CommitGraphWriter;
+use commit_transformation::SubmoduleDeps;
 use commit_transformation::git_submodules::InMemoryRepo;
 use commit_transformation::git_submodules::SubmoduleExpansionData;
 // TODO(T182311609): stop using this directly and call cross_repo_sync methods instead
 use commit_transformation::rewrite_commit;
 use commit_transformation::upload_commits;
-use commit_transformation::SubmoduleDeps;
 use context::CoreContext;
 use filenodes::Filenodes;
 use filestore::FilestoreConfig;
@@ -63,14 +63,14 @@ use synced_commit_mapping::SyncedCommitMapping;
 use synced_commit_mapping::SyncedCommitMappingEntry;
 use test_repo_factory::TestRepoFactory;
 use test_repo_factory::TestRepoFactoryBuilder;
-use tests_utils::bookmark;
 use tests_utils::CreateCommitContext;
+use tests_utils::bookmark;
 
 use crate::commit_syncer::CommitSyncer;
-use crate::commit_syncers_lib::submodule_metadata_file_prefix_and_dangling_pointers;
-use crate::commit_syncers_lib::update_mapping_with_version;
 use crate::commit_syncers_lib::CommitSyncRepos;
 use crate::commit_syncers_lib::Syncers;
+use crate::commit_syncers_lib::submodule_metadata_file_prefix_and_dangling_pointers;
+use crate::commit_syncers_lib::update_mapping_with_version;
 use crate::types::Repo;
 
 #[facet::container]

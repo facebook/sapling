@@ -26,8 +26,8 @@ use repo_derived_data::RepoDerivedData;
 use repo_identity::RepoIdentity;
 use repo_identity::RepoIdentityRef;
 use test_repo_factory::TestRepoFactory;
-use tests_utils::bookmark;
 use tests_utils::CreateCommitContext;
+use tests_utils::bookmark;
 
 use super::SaveMappingPushrebaseHook;
 use crate::get_prepushrebase_ids;

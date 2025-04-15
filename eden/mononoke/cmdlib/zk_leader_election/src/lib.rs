@@ -9,15 +9,15 @@
 use anyhow::Context;
 use anyhow::Result;
 use async_trait::async_trait;
-#[cfg(fbcode_build)]
-use slog::info;
 use slog::Logger;
 #[cfg(fbcode_build)]
-use zkserverguard_helper::become_leader;
+use slog::info;
 #[cfg(fbcode_build)]
 use zkserverguard_helper::ServerGuard;
 #[cfg(fbcode_build)]
 use zkserverguard_helper::ZkServerGuardTier;
+#[cfg(fbcode_build)]
+use zkserverguard_helper::become_leader;
 
 #[cfg(fbcode_build)]
 const ZEUS_CLIENT_ID: &str = "mononoke";

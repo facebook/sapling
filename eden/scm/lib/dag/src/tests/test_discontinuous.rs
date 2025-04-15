@@ -23,16 +23,16 @@
 //! Note: discontinuous segments is not designed to support massive amount of
 //! branches. It introduces O(branch) factor in complexity in many places.
 
-use crate::ops::DagAddHeads;
-use crate::ops::DagAlgorithm;
-use crate::ops::DagPersistent;
-use crate::tests::dbg;
-use crate::tests::DrawDag;
-use crate::tests::TestDag;
 use crate::Group;
 use crate::Vertex;
 use crate::VertexListWithOptions;
 use crate::VertexOptions;
+use crate::ops::DagAddHeads;
+use crate::ops::DagAlgorithm;
+use crate::ops::DagPersistent;
+use crate::tests::DrawDag;
+use crate::tests::TestDag;
+use crate::tests::dbg;
 
 #[tokio::test]
 async fn test_simple_3_branches() {

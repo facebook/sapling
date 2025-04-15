@@ -15,8 +15,8 @@ use scs_client_raw::thrift;
 use serde::Serialize;
 use source_control_clients::errors::AsyncPingPollError;
 
-use crate::render::Render;
 use crate::ScscApp;
+use crate::render::Render;
 
 const POLL_SLEEP_DURATION: std::time::Duration = std::time::Duration::from_secs(1);
 

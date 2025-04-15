@@ -10,9 +10,9 @@ use std::cell::RefCell;
 use cpython::*;
 use cpython_ext::AnyhowResultExt;
 use cpython_ext::ResultPyErrExt;
+use futures::Stream;
 use futures::stream::BoxStream;
 use futures::stream::TryStreamExt;
-use futures::Stream;
 
 /// `TStream` is a thin wrapper of `Stream` from async Rust to Python.
 ///

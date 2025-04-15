@@ -6,9 +6,9 @@
  */
 
 use abomonation_derive::Abomonation;
-use anyhow::bail;
 use anyhow::Context as _;
 use anyhow::Result;
+use anyhow::bail;
 use lazy_static::lazy_static;
 use quickcheck::Arbitrary;
 use quickcheck::Gen;

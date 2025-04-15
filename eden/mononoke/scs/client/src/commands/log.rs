@@ -11,19 +11,19 @@ use std::io::Write;
 use anyhow::Result;
 use scs_client_raw::thrift;
 
-use crate::args::commit_id::resolve_commit_ids;
-use crate::args::commit_id::resolve_optional_commit_id;
+use crate::ScscApp;
 use crate::args::commit_id::CommitIdNames;
 use crate::args::commit_id::NamedCommitIdsArgs;
 use crate::args::commit_id::SchemeArgs;
+use crate::args::commit_id::resolve_commit_ids;
+use crate::args::commit_id::resolve_optional_commit_id;
 use crate::args::repo::RepoArgs;
 use crate::errors::SelectionErrorExt;
+use crate::library::commit::CommitInfo as CommitInfoOutput;
 use crate::library::commit::render_commit_info;
 use crate::library::commit::render_commit_summary;
-use crate::library::commit::CommitInfo as CommitInfoOutput;
 use crate::render::Render;
 use crate::util::convert_to_ts;
-use crate::ScscApp;
 
 #[derive(Copy, Clone)]
 struct LogCommitIdNames;

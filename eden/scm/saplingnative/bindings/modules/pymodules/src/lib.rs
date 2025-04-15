@@ -5,8 +5,8 @@
  * GNU General Public License version 2.
  */
 
-use std::path::Path;
 use std::path::MAIN_SEPARATOR_STR as SEP;
+use std::path::Path;
 use std::sync::atomic::AtomicBool;
 use std::sync::atomic::Ordering;
 

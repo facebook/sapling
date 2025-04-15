@@ -11,9 +11,9 @@ use std::sync::Arc;
 
 use configmodel::Config;
 use cpython::*;
+use cpython_ext::ResultPyErrExt;
 use cpython_ext::convert::ImplInto;
 use cpython_ext::convert::Serde;
-use cpython_ext::ResultPyErrExt;
 use gitcompat::rungit::BareGit as RustBareGit;
 use gitcompat::rungit::GitCmd;
 use pyprocess::Command as PyCommand;

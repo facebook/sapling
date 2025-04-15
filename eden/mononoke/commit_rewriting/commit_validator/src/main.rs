@@ -15,10 +15,10 @@
 use std::collections::HashSet;
 use std::sync::Arc;
 
-use anyhow::format_err;
 use anyhow::Context;
 use anyhow::Error;
 use anyhow::Result;
+use anyhow::format_err;
 use bookmarks::BookmarkKey;
 use bookmarks::BookmarkUpdateLogArc;
 use bookmarks::BookmarkUpdateLogEntry;
@@ -36,11 +36,11 @@ use futures::stream::Stream;
 use futures::stream::StreamExt;
 use futures::stream::TryStreamExt;
 use metadata::Metadata;
+use mononoke_app::MononokeApp;
+use mononoke_app::MononokeAppBuilder;
 use mononoke_app::args::AsRepoArg;
 use mononoke_app::monitoring::AliveService;
 use mononoke_app::monitoring::MonitoringAppExtension;
-use mononoke_app::MononokeApp;
-use mononoke_app::MononokeAppBuilder;
 use mutable_counters::MutableCountersRef;
 use repo_identity::RepoIdentityRef;
 use scuba_ext::MononokeScubaSampleBuilder;
@@ -60,14 +60,14 @@ use crate::repo::Repo;
 use crate::setup::format_counter;
 use crate::setup::get_start_id;
 use crate::setup::get_validation_helpers;
-use crate::tail::tail_entries;
 use crate::tail::QueueSize;
+use crate::tail::tail_entries;
+use crate::validation::EntryCommitId;
+use crate::validation::ValidationHelpers;
 use crate::validation::get_entry_with_small_repo_mapings;
 use crate::validation::prepare_entry;
 use crate::validation::unfold_bookmarks_update_log_entry;
 use crate::validation::validate_entry;
-use crate::validation::EntryCommitId;
-use crate::validation::ValidationHelpers;
 
 const SERVICE_NAME: &str = "mononoke_x_repo_commit_validator";
 

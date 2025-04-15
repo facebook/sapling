@@ -11,11 +11,11 @@ use std::io::Write;
 
 use anyhow::Result;
 use cloned::cloned;
+use futures::Stream;
 use futures::stream;
 use futures::stream::StreamExt;
-use futures::Stream;
-use scs_client_raw::thrift;
 use scs_client_raw::ScsClient;
+use scs_client_raw::thrift;
 use serde::Serialize;
 
 use crate::render::Render;

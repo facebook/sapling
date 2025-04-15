@@ -9,13 +9,13 @@ use std::fmt;
 use std::pin::Pin;
 use std::sync::Arc;
 
-use anyhow::anyhow;
 use anyhow::Error;
+use anyhow::anyhow;
 use bookmarks::BookmarkKey;
 use context::CoreContext;
-use futures::future::try_join_all;
 use futures::Future;
 use futures::TryFutureExt;
+use futures::future::try_join_all;
 use live_commit_sync_config::LiveCommitSyncConfig;
 use metaconfig_types::CommitSyncConfigVersion;
 use metaconfig_types::CommitSyncDirection;
@@ -665,8 +665,8 @@ mod tests {
     use mononoke_types_mocks::changesetid::THREES_CSID;
     use mononoke_types_mocks::changesetid::TWOS_CSID;
     use rendezvous::RendezVousOptions;
-    use sql::rusqlite::Connection as SqliteConnection;
     use sql::Connection;
+    use sql::rusqlite::Connection as SqliteConnection;
     use sql_construct::SqlConstruct;
     use sql_ext::SqlConnections;
     use synced_commit_mapping::SqlSyncedCommitMapping;

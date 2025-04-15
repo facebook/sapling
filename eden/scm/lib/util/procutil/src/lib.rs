@@ -101,11 +101,11 @@ mod win32 {
     use winapi::um::jobapi2::TerminateJobObject;
     use winapi::um::processthreadsapi::OpenProcess;
     use winapi::um::processthreadsapi::TerminateProcess;
-    use winapi::um::wincon::GenerateConsoleCtrlEvent;
     use winapi::um::wincon::CTRL_C_EVENT;
-    use winapi::um::winnt::JobObjectExtendedLimitInformation;
-    use winapi::um::winnt::JOBOBJECT_EXTENDED_LIMIT_INFORMATION;
+    use winapi::um::wincon::GenerateConsoleCtrlEvent;
     use winapi::um::winnt::JOB_OBJECT_LIMIT_KILL_ON_JOB_CLOSE;
+    use winapi::um::winnt::JOBOBJECT_EXTENDED_LIMIT_INFORMATION;
+    use winapi::um::winnt::JobObjectExtendedLimitInformation;
     use winapi::um::winnt::PROCESS_QUERY_LIMITED_INFORMATION;
     use winapi::um::winnt::PROCESS_SET_QUOTA;
     use winapi::um::winnt::PROCESS_TERMINATE;

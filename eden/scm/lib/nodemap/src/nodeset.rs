@@ -8,11 +8,11 @@
 use std::path::Path;
 
 use anyhow::Result;
+use indexedlog::DefaultOpenOptions;
+use indexedlog::OpenWithRepair;
 use indexedlog::log;
 use indexedlog::log::IndexOutput;
 use indexedlog::log::Log;
-use indexedlog::DefaultOpenOptions;
-use indexedlog::OpenWithRepair;
 use thiserror::Error;
 use types::errors::KeyError;
 use types::node::Node;

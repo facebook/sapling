@@ -111,8 +111,8 @@ impl FileHook for NoBadFilenamesHook {
 
 #[cfg(test)]
 mod test {
-    use anyhow::anyhow;
     use anyhow::Error;
+    use anyhow::anyhow;
     use blobstore::Loadable;
     use borrowed::borrowed;
     use fbinit::FacebookInit;

@@ -8,10 +8,10 @@
 use std::sync::Arc;
 use std::sync::Mutex;
 
-use anyhow::anyhow;
 use anyhow::Context;
 use anyhow::Error;
 use anyhow::Result;
+use anyhow::anyhow;
 use bytes::Bytes;
 use connection_security_checker::ConnectionSecurityChecker;
 use context::LoggingContainer;
@@ -23,8 +23,8 @@ use futures::sink::SinkExt;
 use futures::stream::StreamExt;
 use futures::stream::TryStreamExt;
 use futures_stats::TimedFutureExt;
-use hgproto::sshproto;
 use hgproto::HgProtoHandler;
+use hgproto::sshproto;
 use mononoke_api::Mononoke;
 use mononoke_api::Repo;
 use mononoke_configs::MononokeConfigs;
@@ -43,8 +43,8 @@ use textwrap::indent;
 use time_ext::DurationExt;
 
 use crate::errors::ErrorKind;
-use crate::repo_handlers::repo_handler;
 use crate::repo_handlers::RepoHandler;
+use crate::repo_handlers::repo_handler;
 
 define_stats! {
     prefix = "mononoke.request_handler";

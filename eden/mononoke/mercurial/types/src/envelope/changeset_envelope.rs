@@ -14,9 +14,9 @@ use anyhow::Error;
 use anyhow::Result;
 use bytes::Bytes;
 use fbthrift::compact_protocol;
-use quickcheck::empty_shrinker;
 use quickcheck::Arbitrary;
 use quickcheck::Gen;
+use quickcheck::empty_shrinker;
 
 use super::HgEnvelopeBlob;
 use crate::errors::*;

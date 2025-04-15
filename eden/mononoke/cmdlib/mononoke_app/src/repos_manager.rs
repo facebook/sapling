@@ -8,9 +8,13 @@
 use std::sync::Arc;
 use std::time::Instant;
 
-use anyhow::anyhow;
+#[cfg(fbcode_build)]
+use MononokeAppStats_ods3::Instrument_MononokeAppStats;
+#[cfg(fbcode_build)]
+use MononokeAppStats_ods3_types::MononokeAppStats;
 use anyhow::Context;
 use anyhow::Result;
+use anyhow::anyhow;
 use async_trait::async_trait;
 use facet::AsyncBuildable;
 use futures::stream;
@@ -29,14 +33,10 @@ use mononoke_configs::MononokeConfigs;
 use mononoke_repos::MononokeRepos;
 use repo_factory::RepoFactory;
 use repo_factory::RepoFactoryBuilder;
+use slog::Logger;
 use slog::info;
 use slog::o;
-use slog::Logger;
 use stats::prelude::*;
-#[cfg(fbcode_build)]
-use MononokeAppStats_ods3::Instrument_MononokeAppStats;
-#[cfg(fbcode_build)]
-use MononokeAppStats_ods3_types::MononokeAppStats;
 
 define_stats! {
     prefix = "mononoke.app";

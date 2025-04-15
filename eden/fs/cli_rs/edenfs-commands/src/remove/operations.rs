@@ -7,9 +7,9 @@
 
 use std::path::PathBuf;
 
-use anyhow::anyhow;
 use anyhow::Context;
 use anyhow::Result;
+use anyhow::anyhow;
 use edenfs_client::instance::EdenFsInstance;
 use fail::fail_point;
 use tracing::debug;
@@ -170,8 +170,8 @@ mod tests {
     use std::fs;
 
     use anyhow::Context;
-    use tempfile::tempdir;
     use tempfile::TempDir;
+    use tempfile::tempdir;
 
     use super::*;
 

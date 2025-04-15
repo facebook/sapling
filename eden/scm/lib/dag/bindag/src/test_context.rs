@@ -9,10 +9,6 @@ use std::collections::HashMap;
 use std::collections::HashSet;
 use std::ops::Range;
 
-use dag::ops::DagAlgorithm;
-use dag::ops::DagPersistent;
-use dag::ops::IdConvert;
-use dag::set::SyncSetQuery;
 use dag::Dag;
 use dag::Group;
 use dag::Id;
@@ -20,11 +16,15 @@ use dag::IdSet;
 use dag::OnDiskIdDag;
 use dag::Vertex;
 use dag::VertexListWithOptions;
+use dag::ops::DagAlgorithm;
+use dag::ops::DagPersistent;
+use dag::ops::IdConvert;
+use dag::set::SyncSetQuery;
 use nonblocking::non_blocking_result;
 use tempfile::TempDir;
 
-use crate::parse_bindag;
 use crate::ParentRevs;
+use crate::parse_bindag;
 
 /// Context for testing purpose.
 /// Contains the parsed bindag and Dag from the dag crate.

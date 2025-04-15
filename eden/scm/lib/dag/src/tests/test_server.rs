@@ -14,13 +14,13 @@
 //!   more entries than `IdDag`. The client uses `MultiLog` in indexedlog to
 //!   ensure `IdMap` and `IdDag` are in sync.
 
+use crate::Group;
+use crate::Id;
+use crate::VertexListWithOptions;
 use crate::idmap::IdMapWrite;
 use crate::ops::DagAddHeads;
 use crate::tests::DrawDag;
 use crate::tests::TestDag;
-use crate::Group;
-use crate::Id;
-use crate::VertexListWithOptions;
 
 #[tokio::test]
 async fn test_idmap_more_entries_than_iddag() {

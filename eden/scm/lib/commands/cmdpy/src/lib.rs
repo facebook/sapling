@@ -9,6 +9,6 @@
 
 mod hgpython;
 mod python;
-pub use hgpython::prepare_builtin_modules;
 pub use hgpython::HgPython;
 pub use hgpython::RustCommandConfig;
+pub use hgpython::prepare_builtin_modules;

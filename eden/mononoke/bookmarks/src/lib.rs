@@ -12,11 +12,11 @@ use std::sync::Arc;
 use anyhow::Result;
 use async_trait::async_trait;
 use context::CoreContext;
+use futures::StreamExt;
 use futures::future::BoxFuture;
 use futures::future::FutureExt;
 use futures::stream::BoxStream;
 use futures::stream::TryStreamExt;
-use futures::StreamExt;
 use mononoke_types::ChangesetId;
 
 mod cache;

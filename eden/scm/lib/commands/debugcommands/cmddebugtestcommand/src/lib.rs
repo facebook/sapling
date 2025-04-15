@@ -7,11 +7,11 @@
 
 use std::io::Write;
 
-use clidispatch::abort;
 use clidispatch::ReqCtx;
-use cmdutil::define_flags;
+use clidispatch::abort;
 use cmdutil::Repo;
 use cmdutil::Result;
+use cmdutil::define_flags;
 
 define_flags! {
     pub struct TestCommandOpts {

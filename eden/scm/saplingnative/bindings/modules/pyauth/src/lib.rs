@@ -7,8 +7,8 @@
 
 #![allow(non_camel_case_types)]
 
-use anyhow::anyhow;
 use anyhow::Context;
+use anyhow::anyhow;
 use auth::AuthSection;
 use cpython::*;
 use cpython_ext::PyNone;

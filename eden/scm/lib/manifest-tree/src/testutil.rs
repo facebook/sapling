@@ -6,13 +6,13 @@
  */
 
 use std::collections::HashMap;
+use std::sync::Arc;
 use std::sync::atomic::AtomicU64;
 use std::sync::atomic::Ordering;
-use std::sync::Arc;
 
 use anyhow::Result;
-use manifest::testutil::*;
 use manifest::Manifest;
+use manifest::testutil::*;
 use minibytes::Bytes;
 use parking_lot::RwLock;
 use scm_blob::ScmBlob;
@@ -20,11 +20,11 @@ use storemodel::FileStore;
 use storemodel::InsertOpts;
 use storemodel::KeyStore;
 use storemodel::SerializationFormat;
-use types::testutil::*;
 use types::HgId;
 use types::Key;
 use types::RepoPath;
 use types::RepoPathBuf;
+use types::testutil::*;
 
 use crate::FileMetadata;
 use crate::TreeManifest;

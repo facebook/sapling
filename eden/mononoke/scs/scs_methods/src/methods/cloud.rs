@@ -13,8 +13,8 @@ use commit_cloud_types::WorkspaceData;
 use commit_cloud_types::WorkspaceRemoteBookmark as CloudWorkspaceRemoteBookmark;
 use context::CoreContext;
 use mononoke_api_hg::RepoContextHgExt;
-use scs_errors::invalid_request;
 use scs_errors::ServiceError;
+use scs_errors::invalid_request;
 
 use crate::into_response::IntoResponse;
 use crate::methods::thrift;

@@ -11,11 +11,11 @@ use megarepo_configs::Source;
 use megarepo_configs::SyncConfigVersion;
 use mononoke_types::RepositoryId;
 use sql::mysql;
+use sql::mysql_async::FromValueError;
+use sql::mysql_async::Value;
 use sql::mysql_async::from_value_opt;
 use sql::mysql_async::prelude::ConvIr;
 use sql::mysql_async::prelude::FromValue;
-use sql::mysql_async::FromValueError;
-use sql::mysql_async::Value;
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq, mysql::OptTryFromRowField)]
 pub struct RowId(pub u64);

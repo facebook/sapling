@@ -12,12 +12,12 @@ use context::CoreContext;
 use futures::stream;
 use futures::stream::BoxStream;
 use futures::stream::StreamExt;
-use mononoke_types::unode::ManifestUnode;
-use mononoke_types::unode::UnodeEntry;
 use mononoke_types::FileUnodeId;
 use mononoke_types::MPathElement;
 use mononoke_types::ManifestUnodeId;
 use mononoke_types::SortedVectorTrieMap;
+use mononoke_types::unode::ManifestUnode;
+use mononoke_types::unode::UnodeEntry;
 
 use super::Entry;
 use super::Manifest;

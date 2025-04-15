@@ -14,8 +14,8 @@ use std::time::Duration;
 
 use clidispatch::ReqCtx;
 use cliparser::define_flags;
-use cmdutil::Result;
 use cmdutil::IO;
+use cmdutil::Result;
 use progress_model::IoSample;
 use progress_model::IoTimeSeries;
 use progress_model::ProgressBar;

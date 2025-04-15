@@ -12,6 +12,11 @@ use nonblocking::non_blocking_result as nbr;
 
 use super::ProtocolMonitor;
 use super::TestDag;
+use crate::Group;
+use crate::Id;
+use crate::Set;
+use crate::Vertex;
+use crate::VertexListWithOptions;
 use crate::ops::DagAddHeads;
 use crate::ops::DagAlgorithm;
 use crate::ops::DagExportPullData;
@@ -19,11 +24,6 @@ use crate::ops::DagImportPullData;
 use crate::ops::DagPersistent;
 use crate::ops::IdConvert;
 use crate::tests::dbg;
-use crate::Group;
-use crate::Id;
-use crate::Set;
-use crate::Vertex;
-use crate::VertexListWithOptions;
 
 #[tokio::test]
 async fn test_sparse_dag() {

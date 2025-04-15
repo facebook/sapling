@@ -12,11 +12,11 @@ use anyhow::Result;
 use blobstore::StoreLoadable;
 use cloned::cloned;
 use context::CoreContext;
-use futures::future;
-use futures::stream;
 use futures::Stream;
 use futures::StreamExt;
 use futures::TryStreamExt;
+use futures::future;
+use futures::stream;
 use mononoke_types::NonRootMPath;
 
 use crate::Entry;

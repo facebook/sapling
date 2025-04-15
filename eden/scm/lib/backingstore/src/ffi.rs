@@ -10,17 +10,17 @@
 use std::ffi::CStr;
 use std::os::raw::c_char;
 
-use anyhow::anyhow;
 use anyhow::Error;
 use anyhow::Result;
+use anyhow::anyhow;
 use cxx::SharedPtr;
 use cxx::UniquePtr;
 use iobuf::IOBuf;
 use storemodel::FileAuxData as ScmStoreFileAuxData;
-use types::fetch_cause::FetchCause;
-use types::fetch_mode::FetchMode;
 use types::FetchContext;
 use types::Key;
+use types::fetch_cause::FetchCause;
+use types::fetch_mode::FetchMode;
 
 use crate::backingstore::BackingStore;
 

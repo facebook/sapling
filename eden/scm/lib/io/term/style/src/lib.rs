@@ -5,14 +5,14 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-use configmodel::convert::FromConfigValue;
 use configmodel::Config;
+use configmodel::convert::FromConfigValue;
 
 mod effects;
 
-pub use effects::eval_style;
 pub use effects::ColorLevel;
 pub use effects::Styler;
+pub use effects::eval_style;
 
 enum ColorMode {
     Off,

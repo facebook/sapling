@@ -8,8 +8,8 @@
 use std::time::Duration;
 
 use futures::Future;
-use slog::info;
 use slog::Logger;
+use slog::info;
 
 #[derive(Copy, Clone)]
 pub struct RetryAttemptsCount(pub usize);

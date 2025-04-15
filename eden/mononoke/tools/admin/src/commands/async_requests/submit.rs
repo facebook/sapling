@@ -7,13 +7,13 @@
 
 use std::fs;
 
-use anyhow::bail;
 use anyhow::Context;
 use anyhow::Error;
 use anyhow::Result;
+use anyhow::bail;
+use async_requests::AsyncMethodRequestQueue;
 use async_requests::types::ThriftParams;
 use async_requests::types::Token;
-use async_requests::AsyncMethodRequestQueue;
 use clap::Args;
 use context::CoreContext;
 use mononoke_api::MononokeRepo;

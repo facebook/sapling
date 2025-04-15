@@ -5,9 +5,9 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-use serde::de::Error;
 use serde::Deserializer;
 use serde::Serializer;
+use serde::de::Error;
 
 use crate::sha::Sha256;
 

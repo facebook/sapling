@@ -11,8 +11,8 @@ use std::hash::Hash;
 use std::iter::Iterator;
 use std::sync::Arc;
 
-use anyhow::anyhow;
 use anyhow::Result;
+use anyhow::anyhow;
 use cloned::cloned;
 use context::CoreContext;
 use futures::future::FutureExt;

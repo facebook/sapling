@@ -8,13 +8,13 @@
 use std::cmp::max;
 use std::cmp::min;
 use std::collections::HashSet;
+use std::sync::Arc;
 use std::sync::atomic::AtomicBool;
 use std::sync::atomic::Ordering;
-use std::sync::Arc;
 
+use anyhow::Error;
 use anyhow::anyhow;
 use anyhow::bail;
-use anyhow::Error;
 use bonsai_hg_mapping::BonsaiHgMappingRef;
 use bonsai_hg_mapping::BonsaiOrHgChangesetIds;
 use clientinfo::ClientEntryPoint;
@@ -35,8 +35,8 @@ use mononoke_types::ChangesetId;
 use mononoke_types::RepositoryId;
 use mononoke_types::Timestamp;
 use repo_identity::RepoIdentityRef;
-use slog::info;
 use slog::Logger;
+use slog::info;
 use sql_commit_graph_storage::CommitGraphBulkFetcherArc;
 use strum::IntoEnumIterator;
 use tokio::time::Duration;
@@ -52,13 +52,13 @@ use crate::detail::graph::Node;
 use crate::detail::graph::NodeType;
 use crate::detail::log;
 use crate::detail::state::InternedType;
-use crate::detail::walk::walk_exact;
 use crate::detail::walk::OutgoingEdge;
 use crate::detail::walk::RepoWalkParams;
 use crate::detail::walk::RepoWalkTypeParams;
 use crate::detail::walk::StepRoute;
 use crate::detail::walk::TailingWalkVisitor;
 use crate::detail::walk::WalkVisitor;
+use crate::detail::walk::walk_exact;
 
 // We can chose to go direct from the ChangesetId to types keyed by it without loading the Changeset
 fn roots_for_chunk(

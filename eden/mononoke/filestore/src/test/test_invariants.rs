@@ -8,9 +8,9 @@
 use std::collections::HashSet;
 use std::sync::Arc;
 
-use anyhow::format_err;
 use anyhow::Error;
 use anyhow::Result;
+use anyhow::format_err;
 use blobstore::Blobstore;
 use borrowed::borrowed;
 use bytes::Bytes;
@@ -26,14 +26,14 @@ use quickcheck::Gen;
 use super::failing_blobstore::FailingBlobstore;
 use super::request;
 use crate as filestore;
-use crate::incremental_hash::hash_bytes;
+use crate::Alias;
+use crate::FetchKey;
+use crate::FilestoreConfig;
 use crate::incremental_hash::ContentIdIncrementalHasher;
 use crate::incremental_hash::GitSha1IncrementalHasher;
 use crate::incremental_hash::Sha1IncrementalHasher;
 use crate::incremental_hash::Sha256IncrementalHasher;
-use crate::Alias;
-use crate::FetchKey;
-use crate::FilestoreConfig;
+use crate::incremental_hash::hash_bytes;
 
 /// Fetching through any alias should return the same outcome.
 async fn check_consistency<B: Blobstore>(

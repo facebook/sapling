@@ -14,11 +14,11 @@ use async_runtime::try_block_unless_interrupted as block_on;
 use cpython::*;
 use cpython_ext::AnyhowResultExt;
 use cpython_ext::ResultPyErrExt;
-use dag::set::hints::Flags;
-use dag::set::hints::Hints;
-use dag::set::BoxVertexStream;
 use dag::Set;
 use dag::Vertex;
+use dag::set::BoxVertexStream;
+use dag::set::hints::Flags;
+use dag::set::hints::Hints;
 use futures::stream::StreamExt;
 use types::hgid::NULL_ID;
 

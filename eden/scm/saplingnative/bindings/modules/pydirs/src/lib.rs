@@ -8,8 +8,8 @@
 #![allow(non_camel_case_types)]
 
 use std::cell::RefCell;
-use std::collections::hash_map::Keys;
 use std::collections::HashMap;
+use std::collections::hash_map::Keys;
 use std::path::PathBuf;
 use std::str;
 

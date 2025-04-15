@@ -16,17 +16,17 @@ use pathmatcher::DirectoryMatch;
 use pathmatcher::DynMatcher;
 use pathmatcher::Matcher;
 use repolock::RepoLocker;
+use treestate::ErrorKind;
 use treestate::dirstate;
 use treestate::filestate::FileStateV2;
 use treestate::filestate::StateFlags;
 use treestate::serialization::Serializable as _;
 use treestate::tree::VisitorResult;
 use treestate::treestate::TreeState;
-use treestate::ErrorKind;
-use types::path::ParseError;
 use types::Parents;
 use types::RepoPath;
 use types::RepoPathBuf;
+use types::path::ParseError;
 
 use crate::metadata::Metadata;
 

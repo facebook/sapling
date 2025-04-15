@@ -9,9 +9,9 @@
 
 use std::io::Cursor;
 
-use anyhow::bail;
 use anyhow::Error;
 use anyhow::Result;
+use anyhow::bail;
 use byteorder::ReadBytesExt;
 use byteorder::WriteBytesExt;
 use bytes::Buf;

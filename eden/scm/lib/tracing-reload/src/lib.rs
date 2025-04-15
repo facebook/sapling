@@ -17,12 +17,12 @@ use std::io::Write;
 use std::sync::Arc;
 use std::sync::Mutex;
 
-use anyhow::bail;
 use anyhow::Result;
+use anyhow::bail;
 use once_cell::sync::Lazy;
 use tracing::Subscriber;
-use tracing_subscriber::reload;
 use tracing_subscriber::EnvFilter;
+use tracing_subscriber::reload;
 
 static UPDATE_ENV_FILTER: Lazy<Mutex<Option<Box<dyn (Fn(&str) -> Result<()>) + Send + Sync>>>> =
     Lazy::new(|| Mutex::new(None));

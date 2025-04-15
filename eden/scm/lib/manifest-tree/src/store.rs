@@ -9,8 +9,8 @@ use std::cmp::Ordering;
 use std::ops::Deref;
 use std::sync::Arc;
 
-use anyhow::format_err;
 use anyhow::Result;
+use anyhow::format_err;
 use manifest::FileMetadata;
 use manifest::FileType;
 use manifest::FsNodeMetadata;
@@ -19,13 +19,13 @@ use storemodel::InsertOpts;
 use storemodel::Kind;
 use storemodel::SerializationFormat;
 pub use storemodel::TreeStore;
-pub use types::tree::TreeItemFlag as Flag;
 use types::FetchContext;
 use types::HgId;
 use types::Key;
 use types::PathComponent;
 use types::PathComponentBuf;
 use types::RepoPath;
+pub use types::tree::TreeItemFlag as Flag;
 
 #[derive(Clone)]
 pub struct InnerStore {

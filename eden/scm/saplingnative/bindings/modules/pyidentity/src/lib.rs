@@ -10,9 +10,9 @@
 extern crate identity as rsident;
 
 use cpython::*;
+use cpython_ext::PyPathBuf;
 use cpython_ext::error::Result;
 use cpython_ext::error::ResultPyErrExt;
-use cpython_ext::PyPathBuf;
 use rsident::Identity;
 
 pub fn init_module(py: Python, package: &str) -> PyResult<PyModule> {

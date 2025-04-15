@@ -14,9 +14,9 @@ use anyhow::Result;
 use crossterm::style::Stylize;
 use dialoguer::Confirm;
 #[cfg(fbcode_build)]
-use edenfs_telemetry::send;
-#[cfg(fbcode_build)]
 use edenfs_telemetry::EDEN_EVENTS_SCUBA;
+#[cfg(fbcode_build)]
+use edenfs_telemetry::send;
 use io::IO;
 use termlogger::TermLogger;
 

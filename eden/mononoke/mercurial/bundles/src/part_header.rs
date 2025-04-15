@@ -9,9 +9,9 @@
 
 use std::collections::HashMap;
 
-use anyhow::bail;
 use anyhow::Context;
 use anyhow::Result;
+use anyhow::bail;
 use bytes::Buf;
 use bytes::BufMut;
 use bytes::Bytes;
@@ -447,8 +447,8 @@ impl Arbitrary for PartHeaderType {
 #[cfg(test)]
 mod test {
     use mononoke_macros::mononoke;
-    use quickcheck::quickcheck;
     use quickcheck::TestResult;
+    use quickcheck::quickcheck;
 
     use super::*;
     use crate::quickcheck_types::QCBytes;

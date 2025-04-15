@@ -7,25 +7,26 @@
 
 use std::path::PathBuf;
 use std::str;
+use std::sync::Arc;
 use std::sync::atomic::AtomicBool;
 use std::sync::atomic::Ordering;
 use std::sync::mpsc;
-use std::sync::Arc;
 use std::time::Duration;
 
-use anyhow::bail;
 use anyhow::Result;
+use anyhow::bail;
 use log::debug;
 use log::error;
 use log::info;
 use parking_lot::Mutex;
-use reqwest::header::CONNECTION;
 use reqwest::Client;
 use reqwest::Response;
 use reqwest::Url;
+use reqwest::header::CONNECTION;
 use serde::Deserialize;
 use serde_json::Value;
 
+use crate::ActionsMap;
 use crate::action::CloudSyncTrigger;
 use crate::config::CommitCloudConfig;
 use crate::error::*;
@@ -34,7 +35,6 @@ use crate::receiver::CommandName::CommitCloudCancelSubscriptions;
 use crate::receiver::CommandName::CommitCloudRestartSubscriptions;
 use crate::receiver::CommandName::CommitCloudStartSubscriptions;
 use crate::util;
-use crate::ActionsMap;
 
 const POLLING_INTERVAL_SEC: u64 = 3;
 const POLLING_CONNECTION_KEEP_ALIVE_SEC: u64 = 5 * 60; // 5 minutes

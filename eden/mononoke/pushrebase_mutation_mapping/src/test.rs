@@ -14,10 +14,10 @@ use sql::Connection;
 use sql_construct::SqlConstruct;
 use sql_ext::open_sqlite_in_memory;
 
-use crate::add_pushrebase_mapping;
-use crate::get_prepushrebase_ids;
 use crate::PushrebaseMutationMappingEntry;
 use crate::SqlPushrebaseMutationMappingConnection;
+use crate::add_pushrebase_mapping;
+use crate::get_prepushrebase_ids;
 
 #[mononoke::fbinit_test]
 async fn test_add_and_get(_fb: FacebookInit) -> Result<()> {

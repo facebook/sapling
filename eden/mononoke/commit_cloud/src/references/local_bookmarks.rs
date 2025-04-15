@@ -13,11 +13,11 @@ use commit_cloud_types::WorkspaceLocalBookmark;
 use mercurial_types::HgChangesetId;
 use sql::Transaction;
 
+use crate::CommitCloudContext;
 use crate::sql::local_bookmarks_ops::DeleteArgs;
 use crate::sql::ops::Delete;
 use crate::sql::ops::Insert;
 use crate::sql::ops::SqlCommitCloud;
-use crate::CommitCloudContext;
 
 pub fn lbs_from_map(map: &HashMap<String, String>) -> anyhow::Result<Vec<WorkspaceLocalBookmark>> {
     map.iter()

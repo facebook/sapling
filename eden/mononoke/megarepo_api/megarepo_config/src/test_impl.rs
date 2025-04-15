@@ -17,11 +17,11 @@ use megarepo_configs::SyncTargetConfig;
 use megarepo_configs::Target;
 use megarepo_error::MegarepoError;
 use metaconfig_types::RepoConfig;
-use slog::info;
 use slog::Logger;
+use slog::info;
 
-use crate::verification::verify_config;
 use crate::MononokeMegarepoConfigs;
+use crate::verification::verify_config;
 
 #[derive(Clone)]
 pub struct TestMononokeMegarepoConfigs {

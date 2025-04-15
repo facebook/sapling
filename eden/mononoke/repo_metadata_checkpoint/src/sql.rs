@@ -15,8 +15,8 @@ use mononoke_types::RepositoryId;
 use mononoke_types::Timestamp;
 use sql_construct::SqlConstruct;
 use sql_construct::SqlConstructFromMetadataDatabaseConfig;
-use sql_ext::mononoke_queries;
 use sql_ext::SqlConnections;
+use sql_ext::mononoke_queries;
 
 use super::RepoMetadataCheckpoint;
 use super::RepoMetadataCheckpointEntry;

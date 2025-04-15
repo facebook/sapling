@@ -36,11 +36,11 @@ use shared_error::anyhow::IntoSharedError;
 use shared_error::anyhow::SharedError;
 use stats::prelude::*;
 
+use crate::Bookmarks;
 use crate::log::BookmarkUpdateReason;
 use crate::subscription::BookmarksSubscription;
 use crate::transaction::BookmarkTransaction;
 use crate::transaction::BookmarkTransactionHook;
-use crate::Bookmarks;
 
 define_stats! {
     prefix = "mononoke.bookmarks.cache";
@@ -505,9 +505,9 @@ mod tests {
     use futures::future::Future;
     use futures::stream::Stream;
     use futures::stream::StreamFuture;
-    use justknobs::test_helpers::with_just_knobs_async;
     use justknobs::test_helpers::JustKnobsInMemory;
     use justknobs::test_helpers::KnobVal;
+    use justknobs::test_helpers::with_just_knobs_async;
     use maplit::hashmap;
     use mononoke_macros::mononoke;
     use mononoke_types_mocks::changesetid::ONES_CSID;

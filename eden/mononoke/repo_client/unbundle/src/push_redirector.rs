@@ -7,15 +7,15 @@
 
 use std::collections::HashMap;
 use std::collections::HashSet;
-use std::sync::atomic::AtomicBool;
 use std::sync::Arc;
+use std::sync::atomic::AtomicBool;
 
-use anyhow::format_err;
 use anyhow::Context;
 use anyhow::Error;
+use anyhow::format_err;
+use backsyncer::BacksyncLimit;
 use backsyncer::backsync_latest;
 use backsyncer::ensure_backsynced;
-use backsyncer::BacksyncLimit;
 use blobstore::Loadable;
 use bookmarks::BookmarkKey;
 use bookmarks::BookmarkUpdateLogId;
@@ -23,20 +23,20 @@ use bookmarks::BookmarkUpdateLogRef;
 use bookmarks::Freshness;
 use cloned::cloned;
 use context::CoreContext;
-use cross_repo_sync::create_commit_syncers;
 use cross_repo_sync::CandidateSelectionHint;
 use cross_repo_sync::CommitSyncContext;
 use cross_repo_sync::CommitSyncOutcome;
 use cross_repo_sync::CommitSyncer;
 use cross_repo_sync::SubmoduleDeps;
 use cross_repo_sync::Target;
+use cross_repo_sync::create_commit_syncers;
 use futures::future;
-use futures::future::try_join_all;
 use futures::future::FutureExt;
+use futures::future::try_join_all;
 use futures::try_join;
-use hook_manager::manager::HookManagerRef;
 use hook_manager::CrossRepoPushSource;
 use hook_manager::HookRejection;
+use hook_manager::manager::HookManagerRef;
 use live_commit_sync_config::LiveCommitSyncConfig;
 use mercurial_derivation::DeriveHgChangeset;
 use mononoke_types::BonsaiChangeset;
@@ -46,9 +46,6 @@ use synced_commit_mapping::SyncedCommitMapping;
 use topo_sort::sort_topological;
 use wireproto_handler::TargetRepoDbs;
 
-use crate::hook_running::HookRejectionRemapper;
-use crate::resolver::HgHookRejection;
-use crate::run_post_resolve_action;
 use crate::BundleResolverError;
 use crate::InfiniteBookmarkPush;
 use crate::PlainBookmarkPush;
@@ -64,6 +61,9 @@ use crate::UnbundlePushRebaseResponse;
 use crate::UnbundlePushResponse;
 use crate::UnbundleResponse;
 use crate::UploadedBonsais;
+use crate::hook_running::HookRejectionRemapper;
+use crate::resolver::HgHookRejection;
+use crate::run_post_resolve_action;
 
 pub trait Repo =
     crate::processing::Repo + backsyncer::RepoLike + HookManagerRef + Clone + Send + Sync + 'static;

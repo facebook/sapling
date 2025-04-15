@@ -18,11 +18,11 @@
 pub mod hg;
 
 pub use configmodel;
-pub use configmodel::convert;
-pub use configmodel::error;
 pub use configmodel::Config;
 pub use configmodel::Error;
 pub use configmodel::Result;
+pub use configmodel::convert;
+pub use configmodel::error;
 pub use configset::config;
 pub use error::Errors;
 // Re-export

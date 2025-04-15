@@ -10,13 +10,13 @@ use std::collections::HashSet;
 use std::collections::VecDeque;
 use std::sync::Mutex;
 
-use futures::future::BoxFuture;
 use futures::TryStreamExt;
+use futures::future::BoxFuture;
 
-use crate::errors::programming;
 use crate::Result;
 use crate::Set;
 use crate::Vertex;
+use crate::errors::programming;
 
 /// Pre-process a parent function that might have cycles.
 /// Return a new parent function that won't have cycles.

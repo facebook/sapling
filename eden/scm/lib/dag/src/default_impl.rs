@@ -12,6 +12,14 @@ use std::sync::Arc;
 use futures::StreamExt;
 use futures::TryStreamExt;
 
+use crate::DagAlgorithm;
+use crate::Group;
+use crate::Id;
+use crate::IdSet;
+use crate::Result;
+use crate::Set;
+use crate::Vertex;
+use crate::VertexListWithOptions;
 use crate::dag::MemDag;
 use crate::errors::programming;
 use crate::ops::DagAddHeads;
@@ -22,14 +30,6 @@ use crate::ops::ToIdSet;
 use crate::ops::ToSet;
 use crate::set::hints::Hints;
 use crate::utils;
-use crate::DagAlgorithm;
-use crate::Group;
-use crate::Id;
-use crate::IdSet;
-use crate::Result;
-use crate::Set;
-use crate::Vertex;
-use crate::VertexListWithOptions;
 
 /// Re-create the graph so it looks better when rendered.
 ///

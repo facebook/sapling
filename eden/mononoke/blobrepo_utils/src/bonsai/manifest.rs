@@ -9,39 +9,39 @@ use std::collections::HashSet;
 use std::fmt;
 use std::sync::Arc;
 
-use anyhow::bail;
 use anyhow::Result;
+use anyhow::bail;
 use blobstore::Blobstore;
 use blobstore::Loadable;
 use cacheblob::MemWritesBlobstore;
 use cloned::cloned;
 use context::CoreContext;
-use futures::pin_mut;
-use futures::stream::FuturesOrdered;
-use futures::try_join;
 use futures::Stream;
 use futures::StreamExt;
 use futures::TryStreamExt;
-use manifest::bonsai_diff;
+use futures::pin_mut;
+use futures::stream::FuturesOrdered;
+use futures::try_join;
 use manifest::BonsaiDiffFileChange;
 use manifest::Diff;
 use manifest::Entry;
 use manifest::ManifestOps;
+use manifest::bonsai_diff;
 use mercurial_derivation::derive_hg_manifest;
-use mercurial_types::blobs::HgBlobChangeset;
-use mercurial_types::blobs::HgBlobManifest;
 use mercurial_types::HgChangesetId;
 use mercurial_types::HgFileNodeId;
 use mercurial_types::HgManifestId;
 use mercurial_types::HgNodeHash;
+use mercurial_types::blobs::HgBlobChangeset;
+use mercurial_types::blobs::HgBlobManifest;
 use mononoke_types::DateTime;
 use mononoke_types::FileType;
-use slog::debug;
 use slog::Logger;
+use slog::debug;
 
-use crate::changeset::visit_changesets;
-use crate::changeset::ChangesetVisitMeta;
 use crate::Repo;
+use crate::changeset::ChangesetVisitMeta;
+use crate::changeset::visit_changesets;
 
 #[derive(Clone, Debug)]
 pub enum BonsaiMFVerifyResult<R> {

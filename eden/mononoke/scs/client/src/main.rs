@@ -10,9 +10,9 @@
 //! Command-line client for the Source Control Service.
 
 use std::env;
+use std::io::IsTerminal;
 use std::io::stderr;
 use std::io::stdout;
-use std::io::IsTerminal;
 use std::process::ExitCode;
 
 use ansi_term::Colour;

@@ -21,14 +21,14 @@ use std::os::windows::fs::OpenOptionsExt;
 use std::path::Path;
 use std::path::PathBuf;
 
-use criterion::criterion_group;
-use criterion::criterion_main;
 use criterion::Bencher;
 use criterion::Criterion;
 use criterion::Throughput;
+use criterion::criterion_group;
+use criterion::criterion_main;
+use rand::Rng;
 use rand::prelude::SliceRandom;
 use rand::thread_rng;
-use rand::Rng;
 
 const PAGE_SIZE: usize = 4096;
 const DEFAULT_FILE_SIZE: u64 = 16 * 1024 * 1024;

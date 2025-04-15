@@ -10,8 +10,8 @@
 use std::fmt::Write as _;
 use std::io::Write;
 
-use anyhow::format_err;
 use anyhow::Result;
+use anyhow::format_err;
 use clap::Parser;
 use maplit::btreeset;
 use scs_client_raw::thrift;
@@ -20,17 +20,17 @@ use unicode_truncate::Alignment;
 use unicode_truncate::UnicodeTruncateStr;
 use unicode_width::UnicodeWidthStr;
 
-use crate::args::commit_id::map_commit_ids;
-use crate::args::commit_id::resolve_commit_id;
+use crate::ScscApp;
 use crate::args::commit_id::CommitIdArgs;
 use crate::args::commit_id::SchemeArgs;
+use crate::args::commit_id::map_commit_ids;
+use crate::args::commit_id::resolve_commit_id;
 use crate::args::path::PathArgs;
 use crate::args::repo::RepoArgs;
 use crate::errors::SelectionErrorExt;
 use crate::library::commit_id::render_commit_id;
 use crate::library::datetime;
 use crate::render::Render;
-use crate::ScscApp;
 
 const DEFAULT_TITLE_WIDTH: usize = 32;
 

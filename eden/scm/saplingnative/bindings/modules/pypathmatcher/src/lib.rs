@@ -13,12 +13,12 @@ use std::sync::Arc;
 
 use anyhow::Result;
 use cpython::*;
-use cpython_ext::error::AnyhowResultExt;
-use cpython_ext::error::ResultPyErrExt;
 use cpython_ext::ExtractInner;
 use cpython_ext::ExtractInnerRef;
 use cpython_ext::PyPath;
 use cpython_ext::PyPathBuf;
+use cpython_ext::error::AnyhowResultExt;
+use cpython_ext::error::ResultPyErrExt;
 use pathmatcher::AlwaysMatcher;
 use pathmatcher::DifferenceMatcher;
 use pathmatcher::DirectoryMatch;

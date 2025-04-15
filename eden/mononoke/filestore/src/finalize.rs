@@ -15,12 +15,12 @@ use mononoke_types::ContentAlias;
 use mononoke_types::ContentMetadataV2;
 use strum::IntoEnumIterator;
 
+use crate::StoreRequest;
 use crate::errors::ErrorKind;
 use crate::errors::InvalidHash;
 use crate::fetch_key::Alias;
 use crate::fetch_key::AliasBlob;
 use crate::prepare::Prepared;
-use crate::StoreRequest;
 
 fn check_hash<T: std::fmt::Debug + PartialEq + Copy>(
     expected: Option<T>,

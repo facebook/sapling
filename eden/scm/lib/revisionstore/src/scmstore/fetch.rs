@@ -9,14 +9,14 @@ use std::collections::HashMap;
 use std::fmt;
 use std::sync::Arc;
 
-use anyhow::anyhow;
 use anyhow::Error;
 use anyhow::Result;
+use anyhow::anyhow;
 use flume::Sender;
 use progress_model::ProgressBar;
-use types::errors::KeyedError;
 use types::FetchContext;
 use types::Key;
+use types::errors::KeyedError;
 
 use crate::scmstore::attrs::StoreAttrs;
 use crate::scmstore::value::StoreValue;

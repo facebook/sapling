@@ -7,9 +7,9 @@
 
 use anyhow::Context as _;
 use anyhow::Result;
+use types::Id20;
 use types::hgid::GIT_EMPTY_TREE_ID;
 use types::hgid::NULL_ID;
-use types::Id20;
 
 use crate::utils::with_indented_commit_text;
 

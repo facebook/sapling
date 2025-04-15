@@ -7,11 +7,11 @@
 
 use std::sync::Arc;
 
+use async_requests::AsyncMethodRequestQueue;
+use async_requests::PollError;
 use async_requests::types::Request;
 use async_requests::types::ThriftParams;
 use async_requests::types::Token;
-use async_requests::AsyncMethodRequestQueue;
-use async_requests::PollError;
 use context::CoreContext;
 use mononoke_api::RepositoryId;
 

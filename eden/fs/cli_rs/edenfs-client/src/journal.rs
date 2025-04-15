@@ -12,8 +12,8 @@ use edenfs_error::EdenFsError;
 use edenfs_error::Result;
 use edenfs_error::ResultExt;
 use edenfs_utils::bytes_from_path;
-use futures::stream::BoxStream;
 use futures::StreamExt;
+use futures::stream::BoxStream;
 
 use crate::client::EdenFsClient;
 use crate::client::StreamingEdenFsClient;

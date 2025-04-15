@@ -8,15 +8,15 @@
 use std::fs;
 use std::fs::File;
 use std::io;
-use std::io::prelude::*;
 use std::io::BufReader;
+use std::io::prelude::*;
 use std::path::Path;
 use std::path::PathBuf;
 use std::time::Instant;
 
-use anyhow::bail;
 use anyhow::Context;
 use anyhow::Result;
+use anyhow::bail;
 use blobstore_factory::make_packblob;
 use borrowed::borrowed;
 use clap::Parser;
@@ -26,9 +26,9 @@ use futures::stream;
 use futures::stream::TryStreamExt;
 use metaconfig_types::BlobConfig;
 use metaconfig_types::BlobstoreId;
-use mononoke_app::monitoring::MonitoringAppExtension;
 use mononoke_app::MononokeApp;
 use mononoke_app::MononokeAppBuilder;
+use mononoke_app::monitoring::MonitoringAppExtension;
 use rand::seq::SliceRandom;
 use rand::thread_rng;
 use regex::Regex;

@@ -14,19 +14,19 @@ use blobstore::Loadable;
 use cloned::cloned;
 use context::CoreContext;
 use dashmap::DashMap;
-use futures::try_join;
 use futures::Stream;
+use futures::try_join;
 use mercurial_types::HgChangesetId;
 use mononoke_macros::mononoke;
-use slog::o;
 use slog::Logger;
+use slog::o;
 use tokio::sync::mpsc;
 use tokio::sync::mpsc::Sender;
 use tokio_stream::wrappers::ReceiverStream;
 
-use crate::bonsai::BonsaiMFVerifyVisitor;
 use crate::BonsaiMFVerifyResult;
 use crate::Repo;
+use crate::bonsai::BonsaiMFVerifyVisitor;
 
 /// Information about the specific changeset whose result is provided.
 #[derive(Clone, Debug, Eq, PartialEq)]

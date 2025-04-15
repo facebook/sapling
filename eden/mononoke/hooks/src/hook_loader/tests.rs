@@ -23,9 +23,9 @@ use permission_checker::InternalAclProvider;
 use repo_permission_checker::NeverAllowRepoPermissionChecker;
 use scuba_ext::MononokeScubaSampleBuilder;
 
+use crate::HookManager;
 use crate::errors::ErrorKind;
 use crate::hook_loader::load_hooks;
-use crate::HookManager;
 
 async fn hook_manager_repo(fb: FacebookInit, repo: &HookTestRepo) -> HookManager {
     let ctx = CoreContext::test_mock(fb);

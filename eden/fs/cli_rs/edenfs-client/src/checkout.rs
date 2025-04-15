@@ -13,10 +13,10 @@ use std::fmt::Write as _;
 #[cfg(unix)]
 use std::fs;
 use std::fs::File;
-use std::io::prelude::*;
 use std::io::BufReader;
 use std::io::Read;
 use std::io::Write;
+use std::io::prelude::*;
 #[cfg(unix)]
 use std::os::unix::fs::PermissionsExt;
 use std::path::Path;
@@ -26,8 +26,8 @@ use std::str::FromStr;
 use std::time::Duration;
 use std::vec;
 
-use anyhow::anyhow;
 use anyhow::Context;
+use anyhow::anyhow;
 use atomicfile::atomic_write;
 use byteorder::BigEndian;
 use byteorder::ReadBytesExt;
@@ -40,11 +40,11 @@ use edenfs_utils::path_from_bytes;
 #[cfg(windows)]
 use edenfs_utils::strip_unc_prefix;
 use edenfs_utils::varint::decode_varint;
-use serde::ser::SerializeMap;
 use serde::Deserialize;
 use serde::Deserializer;
 use serde::Serialize;
 use serde::Serializer;
+use serde::ser::SerializeMap;
 use strum::EnumString;
 use strum::VariantNames;
 use thrift_types::edenfs::GlobParams;
@@ -58,10 +58,10 @@ use toml::value::Value;
 use uuid::Uuid;
 
 use crate::instance::EdenFsInstance;
-use crate::redirect::deserialize_redirections;
+use crate::redirect::REPO_SOURCE;
 use crate::redirect::Redirection;
 use crate::redirect::RedirectionType;
-use crate::redirect::REPO_SOURCE;
+use crate::redirect::deserialize_redirections;
 
 // files in the client directory (aka data_dir aka state_dir)
 const MOUNT_CONFIG: &str = "config.toml";
@@ -1378,18 +1378,18 @@ mod tests {
     use std::path::Path;
     use std::path::PathBuf;
 
-    use anyhow::anyhow;
     use anyhow::Context;
+    use anyhow::anyhow;
     use edenfs_error::EdenFsError;
     use edenfs_error::Result;
     use edenfs_error::ResultExt;
-    use tempfile::tempdir;
     use tempfile::TempDir;
+    use tempfile::tempdir;
 
     use crate::checkout::CheckoutConfig;
-    use crate::checkout::RedirectionType;
     use crate::checkout::MOUNT_CONFIG;
     use crate::checkout::REPO_SOURCE;
+    use crate::checkout::RedirectionType;
     use crate::redirect::Redirection;
     use crate::redirect::RedirectionState;
 

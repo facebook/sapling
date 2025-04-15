@@ -13,9 +13,9 @@ use std::io::ErrorKind;
 use std::os::unix::fs::PermissionsExt;
 use std::path::Path;
 
-use anyhow::anyhow;
 use anyhow::Context;
 use anyhow::Result;
+use anyhow::anyhow;
 use edenfs_client::checkout::get_mounts;
 use edenfs_client::fsutil::forcefully_remove_dir_all;
 use edenfs_client::instance::EdenFsInstance;

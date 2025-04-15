@@ -203,12 +203,12 @@ where
 mod tests {
     use std::io::Cursor;
 
-    use anyhow::ensure;
     use anyhow::Result;
-    use quickcheck::quickcheck;
+    use anyhow::ensure;
     use quickcheck::Arbitrary;
     use quickcheck::Gen;
     use quickcheck::TestResult;
+    use quickcheck::quickcheck;
     use tokio::io::AsyncBufReadExt;
     use tokio::io::AsyncReadExt;
     use tokio::runtime::Runtime;

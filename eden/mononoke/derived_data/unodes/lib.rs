@@ -7,30 +7,30 @@
 
 use std::collections::HashMap;
 
-use anyhow::anyhow;
 use anyhow::Error;
 use anyhow::Result;
+use anyhow::anyhow;
 use cloned::cloned;
 use context::CoreContext;
 use derived_data_manager::DerivationContext;
-use futures::future;
 use futures::TryFutureExt;
 use futures::TryStreamExt;
+use futures::future;
 use manifest::ManifestOps;
 use manifest::PathTree;
-use mononoke_types::subtree_change::SubtreeChange;
 use mononoke_types::BonsaiChangeset;
 use mononoke_types::ChangesetId;
 use mononoke_types::FileUnodeId;
 use mononoke_types::MPath;
 use mononoke_types::NonRootMPath;
+use mononoke_types::subtree_change::SubtreeChange;
 use thiserror::Error;
 
 mod derive;
 pub mod mapping;
 
-pub use mapping::format_key;
 pub use mapping::RootUnodeManifestId;
+pub use mapping::format_key;
 
 #[derive(Debug, Error)]
 pub enum ErrorKind {

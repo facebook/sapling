@@ -11,18 +11,18 @@ use std::fmt::Display;
 use std::str::FromStr;
 
 use abomonation_derive::Abomonation;
-use anyhow::bail;
 use anyhow::Error;
 use anyhow::Result;
+use anyhow::bail;
 use ascii::AsciiStr;
 use ascii::AsciiString;
-use blake2::digest::typenum::U32;
+use blake2::Blake2b;
+use blake2::Blake2bMac;
 use blake2::digest::Digest;
 use blake2::digest::FixedOutput;
 use blake2::digest::KeyInit;
 use blake2::digest::Update;
-use blake2::Blake2b;
-use blake2::Blake2bMac;
+use blake2::digest::typenum::U32;
 use edenapi_types::Blake3 as EdenapiBlake3;
 use edenapi_types::CommitId as EdenapiCommitId;
 use edenapi_types::GitSha1 as EdenapiGitSha1;
@@ -31,9 +31,9 @@ use edenapi_types::Sha256 as EdenapiSha256;
 use faster_hex::hex_decode;
 use faster_hex::hex_encode;
 use gix_hash::ObjectId;
-use quickcheck::empty_shrinker;
 use quickcheck::Arbitrary;
 use quickcheck::Gen;
+use quickcheck::empty_shrinker;
 use sql::mysql;
 
 use crate::errors::MononokeTypeError;
@@ -666,8 +666,8 @@ impl std::fmt::Display for MononokeDigest {
 #[cfg(test)]
 mod test {
     use mononoke_macros::mononoke;
-    use quickcheck::quickcheck;
     use quickcheck::TestResult;
+    use quickcheck::quickcheck;
 
     use super::*;
 

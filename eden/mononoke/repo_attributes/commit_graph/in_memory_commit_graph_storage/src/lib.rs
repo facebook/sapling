@@ -10,8 +10,8 @@ use std::collections::HashMap;
 use std::collections::HashSet;
 use std::fmt::Write;
 
-use anyhow::anyhow;
 use anyhow::Result;
+use anyhow::anyhow;
 use async_trait::async_trait;
 use commit_graph_types::edges::ChangesetEdges;
 use commit_graph_types::storage::CommitGraphStorage;

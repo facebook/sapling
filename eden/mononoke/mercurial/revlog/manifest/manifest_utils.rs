@@ -14,17 +14,17 @@ use anyhow::Error;
 use futures_ext::BoxStream;
 use futures_ext::StreamExt;
 use futures_old::future::Future;
+use futures_old::stream::Stream;
 use futures_old::stream::empty;
 use futures_old::stream::iter_ok;
 use futures_old::stream::once;
-use futures_old::stream::Stream;
 use mercurial_types::MPath;
 use mercurial_types::MPathElement;
 use mercurial_types::Type;
 
-use super::revlog::EntryContent;
 use super::RevlogEntry;
 use super::RevlogManifest;
+use super::revlog::EntryContent;
 
 // Note that:
 // * this isn't "left" and "right" because an explicit direction makes the API clearer

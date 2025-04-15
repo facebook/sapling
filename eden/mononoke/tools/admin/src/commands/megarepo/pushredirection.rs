@@ -15,12 +15,12 @@ use clap::Subcommand;
 use context::CoreContext;
 use mononoke_app::MononokeApp;
 
-use self::disable::disable;
 use self::disable::DisableArgs;
-use self::enable::enable;
+use self::disable::disable;
 use self::enable::EnableArgs;
-use self::show::show;
+use self::enable::enable;
 use self::show::ShowArgs;
+use self::show::show;
 
 /// Manage pushredirect configuration
 #[derive(Parser)]

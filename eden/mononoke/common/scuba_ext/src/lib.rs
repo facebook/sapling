@@ -25,11 +25,11 @@ use observability::ScubaLoggingDecisionFields;
 pub use observability::ScubaVerbosityLevel;
 use permission_checker::MononokeIdentitySetExt;
 pub use scribe_ext::ScribeClientImplementation;
-use scuba::builder::ServerData;
 pub use scuba::Sampling;
 use scuba::ScubaSample;
 use scuba::ScubaSampleBuilder;
 pub use scuba::ScubaValue;
+use scuba::builder::ServerData;
 use time_ext::DurationExt;
 
 const FILE_PREFIX: &str = "file://";

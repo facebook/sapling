@@ -5,15 +5,15 @@
  * GNU General Public License version 2.
  */
 
-use anyhow::anyhow;
 use anyhow::Result;
+use anyhow::anyhow;
 use clap::Args;
 use context::CoreContext;
 use derived_data_manager::DerivedDataManager;
 use mononoke_app::args::MultiDerivedDataArgs;
+use prettytable::Table;
 use prettytable::cell;
 use prettytable::row;
-use prettytable::Table;
 use repo_derivation_queues::RepoDerivationQueuesRef;
 
 use super::Repo;

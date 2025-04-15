@@ -78,12 +78,13 @@ use revisionstore_types::Metadata as RevisionstoreMetadata;
 use serde_derive::Deserialize;
 use serde_derive::Serialize;
 use thiserror::Error;
-use types::path::ParseError as RepoPathParseError;
 use types::HgId;
 use types::Key;
 use types::Parents;
 use types::RepoPathBuf;
+use types::path::ParseError as RepoPathParseError;
 
+use crate::SaplingRemoteApiServerErrorKind;
 pub use crate::wire::anyid::WireAnyId;
 pub use crate::wire::anyid::WireLookupRequest;
 pub use crate::wire::anyid::WireLookupResponse;
@@ -144,7 +145,6 @@ pub use crate::wire::tree::WireTreeRequest;
 pub use crate::wire::tree::WireUploadTreeEntry;
 pub use crate::wire::tree::WireUploadTreeRequest;
 pub use crate::wire::tree::WireUploadTreeResponse;
-use crate::SaplingRemoteApiServerErrorKind;
 
 #[derive(Copy, Clone, Debug, Error)]
 #[error("invalid byte slice length, expected {expected_len} found {found_len}")]

@@ -8,14 +8,14 @@
 use std::borrow::Borrow;
 use std::collections::btree_map;
 use std::mem;
+use std::sync::Arc;
 use std::sync::atomic::AtomicUsize;
 use std::sync::atomic::Ordering;
-use std::sync::Arc;
 
-use anyhow::anyhow;
 use anyhow::Context;
 use anyhow::Error;
 use anyhow::Result;
+use anyhow::anyhow;
 use flume::Receiver;
 use flume::Sender;
 use manifest::FsNodeMetadata;
@@ -25,12 +25,12 @@ use types::PathComponentBuf;
 use types::RepoPath;
 use types::RepoPathBuf;
 
+use crate::THREAD_POOL;
 use crate::link::Durable;
 use crate::link::Ephemeral;
 use crate::link::Leaf;
 use crate::link::Link;
 use crate::store::InnerStore;
-use crate::THREAD_POOL;
 
 pub fn bfs_iter<M: 'static + Matcher + Sync + Send>(
     store: InnerStore,
@@ -361,16 +361,16 @@ impl<'a> DfsCursor<'a> {
 mod tests {
     use std::sync::Arc;
 
-    use manifest::testutil::*;
     use manifest::Manifest;
+    use manifest::testutil::*;
     use pathmatcher::AlwaysMatcher;
     use pathmatcher::TreeMatcher;
     use types::testutil::*;
 
     use super::*;
+    use crate::TreeManifest;
     use crate::prefetch;
     use crate::testutil::*;
-    use crate::TreeManifest;
 
     #[test]
     fn test_items_empty() {

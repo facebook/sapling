@@ -69,9 +69,9 @@ impl DarkstormVerifier {
 mod test {
     #![allow(warnings)]
     use fbinit::FacebookInit;
-    use futures::stream;
     use futures::TryFutureExt;
     use futures::TryStreamExt;
+    use futures::stream;
     use memblob::Memblob;
     use mononoke_macros::mononoke;
 

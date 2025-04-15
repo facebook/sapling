@@ -7,14 +7,14 @@
 
 use std::time::Duration;
 
-use anyhow::anyhow;
 use anyhow::Context;
 use anyhow::Error;
 use anyhow::Result;
+use anyhow::anyhow;
 use futures::stream::TryStreamExt;
-use futures_ext::stream::StreamTimeoutError;
 use futures_ext::FbStreamExt;
 use futures_ext::FbTryStreamExt;
+use futures_ext::stream::StreamTimeoutError;
 use http::HeaderMap;
 use http::HeaderValue;
 use http::Method;

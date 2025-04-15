@@ -5,8 +5,8 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-pub use anyhow::anyhow;
 pub use anyhow::Result;
+pub use anyhow::anyhow;
 pub use async_trait::async_trait;
 pub use cas_client::CasClient;
 pub use itertools::Either;

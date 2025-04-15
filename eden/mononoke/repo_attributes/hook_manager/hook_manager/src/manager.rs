@@ -16,13 +16,13 @@ use bytes::Bytes;
 use cloned::cloned;
 use context::CoreContext;
 use fbinit::FacebookInit;
-use futures::future::BoxFuture;
-use futures::stream::futures_unordered::FuturesUnordered;
-use futures::stream::StreamExt;
-use futures::stream::TryStreamExt;
-use futures::try_join;
 use futures::Future;
 use futures::FutureExt;
+use futures::future::BoxFuture;
+use futures::stream::StreamExt;
+use futures::stream::TryStreamExt;
+use futures::stream::futures_unordered::FuturesUnordered;
+use futures::try_join;
 use metaconfig_types::BookmarkOrRegex;
 use metaconfig_types::HookBypass;
 use metaconfig_types::HookConfig;
@@ -40,7 +40,6 @@ use scuba::builder::ServerData;
 use scuba_ext::MononokeScubaSampleBuilder;
 use slog::debug;
 
-use crate::errors::HookManagerError;
 use crate::BookmarkHook;
 use crate::ChangesetHook;
 use crate::CrossRepoPushSource;
@@ -48,6 +47,7 @@ use crate::FileHook;
 use crate::HookOutcome;
 use crate::HookRepo;
 use crate::PushAuthoredBy;
+use crate::errors::HookManagerError;
 
 /// Manages hooks and allows them to be installed and uninstalled given a name
 /// Knows how to run hooks

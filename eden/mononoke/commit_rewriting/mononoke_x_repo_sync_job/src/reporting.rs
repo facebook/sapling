@@ -14,10 +14,10 @@ use futures_stats::FutureStats;
 use mononoke_types::ChangesetId;
 use mononoke_types::Timestamp;
 use scuba_ext::MononokeScubaSampleBuilder;
+use slog::Logger;
 use slog::error;
 use slog::info;
 use slog::warn;
-use slog::Logger;
 
 use crate::sync::SyncResult;
 

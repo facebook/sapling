@@ -19,11 +19,11 @@ use mononoke_types::RepositoryId;
 
 pub use crate::caching::BonsaiGlobalrevMappingCacheEntry;
 pub use crate::caching::CachingBonsaiGlobalrevMapping;
-pub use crate::sql::add_globalrevs;
-pub use crate::sql::bulk_import_globalrevs;
 pub use crate::sql::AddGlobalrevsErrorKind;
 pub use crate::sql::SqlBonsaiGlobalrevMapping;
 pub use crate::sql::SqlBonsaiGlobalrevMappingBuilder;
+pub use crate::sql::add_globalrevs;
+pub use crate::sql::bulk_import_globalrevs;
 
 #[derive(Clone, Debug, Eq, Hash, PartialEq)]
 pub struct BonsaiGlobalrevMappingEntry {

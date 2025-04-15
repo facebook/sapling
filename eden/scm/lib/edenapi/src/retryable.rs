@@ -130,8 +130,8 @@ mod tests {
     use std::collections::HashSet;
     use std::sync::Arc;
 
-    use anyhow::anyhow;
     use anyhow::Result;
+    use anyhow::anyhow;
     use async_runtime::block_on;
     use async_runtime::stream_to_iter;
     use async_trait::async_trait;
@@ -142,9 +142,9 @@ mod tests {
     use types::RepoPathBuf;
 
     use super::*;
-    use crate::builder::HttpClientBuilder;
     use crate::Response;
     use crate::SaplingRemoteApiError;
+    use crate::builder::HttpClientBuilder;
 
     pub(crate) struct RetryableTest {
         pub keys: HashSet<Key>,

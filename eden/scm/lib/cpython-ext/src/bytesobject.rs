@@ -12,12 +12,12 @@ use std::slice;
 
 use cpython::PyObject as RustPyObject;
 use cpython::Python as RustPythonGILGuard;
+use ffi::_PyObject_NewVar;
+use ffi::Py_hash_t;
+use ffi::Py_ssize_t;
 use ffi::PyBytes_Type;
 use ffi::PyObject;
 use ffi::PyVarObject;
-use ffi::Py_hash_t;
-use ffi::Py_ssize_t;
-use ffi::_PyObject_NewVar;
 use python3_sys as ffi;
 
 // From Python bytesobject.h. Must match the C definition.

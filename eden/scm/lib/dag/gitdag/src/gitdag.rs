@@ -9,17 +9,17 @@ use std::ops::Deref;
 use std::ops::DerefMut;
 use std::path::Path;
 
-use dag::ops::DagPersistent;
 use dag::Dag;
 use dag::Vertex;
 use dag::VertexListWithOptions;
+use dag::ops::DagPersistent;
 use gitstore::GitStore;
 use gitstore::ObjectType;
 use minibytes::Bytes;
 use nonblocking::non_blocking_result;
-use types::fetch_mode::FetchMode;
 use types::HgId;
 use types::SerializationFormat;
+use types::fetch_mode::FetchMode;
 
 use crate::errors::MapDagError;
 

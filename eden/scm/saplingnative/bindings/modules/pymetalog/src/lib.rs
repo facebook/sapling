@@ -11,18 +11,18 @@ use std::collections::BTreeMap;
 use std::path::Path;
 use std::sync::Arc;
 
-use ::metalog::constants::*;
 use ::metalog::CommitOptions;
 use ::metalog::Id20;
 use ::metalog::MetaLog;
 use ::metalog::Repair;
+use ::metalog::constants::*;
 use cpython::*;
-use cpython_ext::convert::Serde;
 use cpython_ext::Bytes;
 use cpython_ext::PyNone;
 use cpython_ext::PyPath;
 use cpython_ext::PyPathBuf;
 use cpython_ext::ResultPyErrExt;
+use cpython_ext::convert::Serde;
 use parking_lot::RwLock;
 
 pub fn init_module(py: Python, package: &str) -> PyResult<PyModule> {

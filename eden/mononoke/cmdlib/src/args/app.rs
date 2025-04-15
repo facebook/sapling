@@ -12,10 +12,10 @@ use std::sync::OnceLock;
 
 use anyhow::Error;
 use anyhow::Result;
+use blobstore_factory::DEFAULT_PUT_BEHAVIOUR;
 use blobstore_factory::PutBehaviour;
 use blobstore_factory::ScrubAction;
 use blobstore_factory::SrubWriteOnly;
-use blobstore_factory::DEFAULT_PUT_BEHAVIOUR;
 use clap_old::App;
 use clap_old::Arg;
 use clap_old::ArgGroup;
@@ -26,8 +26,8 @@ use sql_ext::facebook::SharedConnectionPool;
 use strum::VariantNames;
 use tokio::runtime::Runtime;
 
-use super::cache::add_cachelib_args;
 use super::cache::CachelibSettings;
+use super::cache::add_cachelib_args;
 use super::matches::MononokeMatches;
 
 pub const CONFIG_PATH: &str = "mononoke-config-path";

@@ -10,8 +10,8 @@ use std::io::Read;
 use std::io::Write;
 use std::path::Path;
 
-use anyhow::bail;
 use anyhow::Result;
+use anyhow::bail;
 use byteorder::BigEndian;
 use byteorder::ReadBytesExt;
 use byteorder::WriteBytesExt;
@@ -19,13 +19,13 @@ use configmodel::Config;
 use edenapi_types::DirectoryMetadata as TreeAuxData;
 use indexedlog::log::IndexOutput;
 use minibytes::Bytes;
-use types::hgid::ReadHgIdExt;
 use types::Blake3;
 use types::HgId;
+use types::hgid::ReadHgIdExt;
 
+use crate::StoreType;
 use crate::indexedlogutil::Store;
 use crate::indexedlogutil::StoreOpenOptions;
-use crate::StoreType;
 
 pub struct TreeAuxStore {
     store: Store,

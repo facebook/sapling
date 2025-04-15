@@ -19,7 +19,6 @@ mod common;
 mod log;
 
 use commit_graph::CommitGraphRef;
-pub use log::list_file_history;
 pub use log::CsAndPath;
 pub use log::FastlogError;
 pub use log::FollowMutableRenames;
@@ -27,6 +26,7 @@ pub use log::HistoryAcrossDeletions;
 pub use log::NextChangeset;
 pub use log::TraversalOrder;
 pub use log::Visitor;
+pub use log::list_file_history;
 use mutable_renames::MutableRenamesRef;
 use repo_blobstore::RepoBlobstoreArc;
 use repo_blobstore::RepoBlobstoreRef;

@@ -9,9 +9,9 @@ use std::any::Any;
 use std::fmt;
 use std::sync::Arc;
 
+use futures::StreamExt;
 use futures::lock::Mutex;
 use futures::lock::MutexGuard;
-use futures::StreamExt;
 use indexmap::IndexSet;
 
 use super::AsyncSetQuery;

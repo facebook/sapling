@@ -16,13 +16,13 @@ mod facebook;
 mod oss;
 
 #[cfg(fbcode_build)]
-pub use facebook::periodic_fetch_counter;
-#[cfg(fbcode_build)]
 pub use facebook::OdsCounterManager;
-#[cfg(not(fbcode_build))]
-pub use oss::periodic_fetch_counter;
+#[cfg(fbcode_build)]
+pub use facebook::periodic_fetch_counter;
 #[cfg(not(fbcode_build))]
 pub use oss::OdsCounterManager;
+#[cfg(not(fbcode_build))]
+pub use oss::periodic_fetch_counter;
 
 #[async_trait]
 pub trait CounterManager {

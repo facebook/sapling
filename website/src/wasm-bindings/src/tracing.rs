@@ -11,13 +11,13 @@ use std::sync::Arc;
 use std::sync::Mutex;
 
 use serde::Serialize;
-use tracing::span::Attributes;
-use tracing::span::Id;
-use tracing::span::Record;
 use tracing::Event;
 use tracing::Level;
 use tracing::Metadata;
 use tracing::Subscriber;
+use tracing::span::Attributes;
+use tracing::span::Id;
+use tracing::span::Record;
 use wasm_bindgen::prelude::*;
 
 #[derive(Serialize, Clone)]

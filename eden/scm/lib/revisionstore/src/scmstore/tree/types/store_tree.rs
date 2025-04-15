@@ -8,8 +8,8 @@
 use std::collections::HashMap;
 use std::ops::BitOr;
 
-use anyhow::anyhow;
 use anyhow::Result;
+use anyhow::anyhow;
 use manifest_tree::TreeEntry as ManifestTreeEntry;
 use storemodel::TreeAuxData;
 use types::HgId;

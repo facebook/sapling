@@ -7,14 +7,14 @@
 
 use std::collections::BTreeMap;
 
-use anyhow::anyhow;
 use anyhow::Result;
+use anyhow::anyhow;
 use pathmatcher::DynMatcher;
 use treestate::filestate::FileStateV2;
 use treestate::filestate::StateFlags;
 use treestate::treestate::TreeState;
-use types::path::ParseError;
 use types::RepoPathBuf;
+use types::path::ParseError;
 use watchman_client::prelude::*;
 
 use crate::metadata::Metadata;

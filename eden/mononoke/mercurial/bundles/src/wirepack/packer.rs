@@ -9,20 +9,20 @@
 //! The format is documented at
 //! <https://phab.mercurial-scm.org/diffusion/FBHGX/browse/default/remotefilelog/wirepack.py>
 
-use anyhow::bail;
 use anyhow::Result;
+use anyhow::bail;
 use bytes::BufMut;
 use futures::Stream;
 use mercurial_types::NonRootMPath;
 use mercurial_types::RepoPath;
 
-use super::converter::convert_wirepack;
-use super::converter::WirePackPartProcessor;
 use super::DataEntry;
 use super::HistoryEntry;
 use super::Kind;
 use super::Part;
 use super::WIREPACK_END;
+use super::converter::WirePackPartProcessor;
+use super::converter::convert_wirepack;
 use crate::chunk::Chunk;
 use crate::errors::ErrorKind;
 

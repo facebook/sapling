@@ -9,12 +9,12 @@ use std::collections::HashMap;
 use std::sync::Arc;
 use std::time::Duration;
 
-use anyhow::bail;
 use anyhow::Result;
+use anyhow::bail;
 use tracing::instrument;
 use types::HgId;
-use watchman_client::prelude::*;
 use watchman_client::Value;
+use watchman_client::prelude::*;
 use workingcopy::workingcopy::LockedWorkingCopy;
 
 #[derive(Default)]

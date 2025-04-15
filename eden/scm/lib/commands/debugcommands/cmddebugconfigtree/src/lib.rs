@@ -7,11 +7,11 @@
 
 use std::collections::HashSet;
 
-use cmdutil::define_flags;
 use cmdutil::Config;
 use cmdutil::Repo;
 use cmdutil::ReqCtx;
 use cmdutil::Result;
+use cmdutil::define_flags;
 
 define_flags! {
     pub struct DebugConfigTreeOpts {

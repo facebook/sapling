@@ -7,10 +7,10 @@
 
 use std::sync::Arc;
 
-use obc_lib::obc_client::OBCClient;
-use obc_lib::obc_client::OBCClientOptions;
 use obc_lib::AggValue;
 use obc_lib::OBCBumper as _;
+use obc_lib::obc_client::OBCClient;
+use obc_lib::obc_client::OBCClientOptions;
 use once_cell::sync::OnceCell;
 use sysutil::hostname;
 

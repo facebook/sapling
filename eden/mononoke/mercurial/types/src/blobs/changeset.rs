@@ -6,10 +6,10 @@
  */
 
 mod revlog;
-pub use revlog::serialize_cs;
-pub use revlog::serialize_extras;
 pub use revlog::Extra;
 pub use revlog::RevlogChangeset;
+pub use revlog::serialize_cs;
+pub use revlog::serialize_extras;
 
 mod blob;
 pub use blob::ChangesetMetadata;

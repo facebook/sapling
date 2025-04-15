@@ -10,15 +10,15 @@ use std::collections::BTreeMap;
 use bytes::Bytes;
 use mononoke_macros::mononoke;
 use mononoke_types::DateTime;
-use quickcheck::quickcheck;
 use quickcheck::QuickCheck;
 use quickcheck::TestResult;
+use quickcheck::quickcheck;
 
+use super::revlog::Extra;
+use super::revlog::RevlogChangeset;
 use super::revlog::escape;
 use super::revlog::serialize_extras;
 use super::revlog::unescape;
-use super::revlog::Extra;
-use super::revlog::RevlogChangeset;
 use crate::HgBlob;
 use crate::HgBlobNode;
 use crate::HgManifestId;

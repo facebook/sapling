@@ -11,9 +11,9 @@ use std::str;
 use std::str::FromStr;
 
 use abomonation_derive::Abomonation;
-use anyhow::bail;
 use anyhow::Error;
 use anyhow::Result;
+use anyhow::bail;
 use edenapi_types::CommitId as EdenapiCommitId;
 use serde_derive::Serialize;
 use sql::mysql;
@@ -138,12 +138,12 @@ mod test {
     use anyhow::Error;
     use mononoke_macros::mononoke;
 
-    use crate::private::Blake2;
     use crate::BonsaiChangeset;
     use crate::BonsaiChangesetMut;
     use crate::ChangesetId;
     use crate::DateTime;
     use crate::Globalrev;
+    use crate::private::Blake2;
 
     fn create_bonsai(
         hg_extra: impl IntoIterator<Item = (String, Vec<u8>)>,

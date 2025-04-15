@@ -17,8 +17,8 @@ use configset::config::ConfigSet;
 use configset::config::Options;
 use identity::Identity;
 use repo_minimal_info::RepoMinimalInfo;
-use staticconfig::static_config;
 use staticconfig::StaticConfig;
+use staticconfig::static_config;
 use unionconfig::UnionConfig;
 
 use crate::hg::OptionsHgExt;

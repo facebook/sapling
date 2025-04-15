@@ -5,9 +5,9 @@
  * GNU General Public License version 2.
  */
 
-use anyhow::anyhow;
 use anyhow::Context;
 use anyhow::Result;
+use anyhow::anyhow;
 use async_trait::async_trait;
 use bookmarks::Bookmark;
 use bookmarks::BookmarkCategory;
@@ -42,8 +42,8 @@ use mononoke_types::RepositoryId;
 use mononoke_types::Timestamp;
 use rand::Rng;
 use sql::Connection;
-use sql_ext::mononoke_queries;
 use sql_ext::SqlConnections;
+use sql_ext::mononoke_queries;
 use stats::prelude::*;
 
 use crate::subscription::SqlBookmarksSubscription;

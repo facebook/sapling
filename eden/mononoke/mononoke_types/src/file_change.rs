@@ -8,14 +8,14 @@
 use std::fmt;
 use std::str::FromStr;
 
-use anyhow::bail;
 use anyhow::Context;
 use anyhow::Result;
+use anyhow::bail;
 use edenapi_types::FileType as EdenapiFileType;
-use quickcheck::empty_shrinker;
-use quickcheck::single_shrinker;
 use quickcheck::Arbitrary;
 use quickcheck::Gen;
+use quickcheck::empty_shrinker;
+use quickcheck::single_shrinker;
 use serde_derive::Deserialize;
 use serde_derive::Serialize;
 

@@ -9,8 +9,8 @@ use std::io::Write;
 use std::path::Path;
 
 use clidispatch::ReqCtx;
-use cmdutil::define_flags;
 use cmdutil::Result;
+use cmdutil::define_flags;
 
 define_flags! {
     pub struct DebugArgsOpts {

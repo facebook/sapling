@@ -25,9 +25,9 @@ use mononoke_types::ChangesetId;
 use mononoke_types::RepositoryId;
 use reloader::Reloader;
 
-use crate::deserialize_preloaded_edges;
 use crate::ExtendablePreloadedEdges;
 use crate::PreloadedCommitGraphStorage;
+use crate::deserialize_preloaded_edges;
 
 impl PreloadedCommitGraphStorage {
     /// Constructs PreloadedCommitGraphStorage from a fixed list of edges

@@ -12,8 +12,8 @@ use std::ops::Range;
 
 use cpython::*;
 use cpython_ext::ResultPyErrExt;
-use regex::bytes::Regex as BinaryRegex;
 use regex::Regex;
+use regex::bytes::Regex as BinaryRegex;
 
 pub fn init_module(py: Python, package: &str) -> PyResult<PyModule> {
     let name = [package, "regex"].join(".");

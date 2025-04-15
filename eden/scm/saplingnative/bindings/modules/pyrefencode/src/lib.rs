@@ -8,8 +8,8 @@
 use std::collections::BTreeMap;
 
 use cpython::*;
-use cpython_ext::convert::Serde;
 use cpython_ext::ResultPyErrExt;
+use cpython_ext::convert::Serde;
 use refencode::HgId;
 
 pub fn init_module(py: Python, package: &str) -> PyResult<PyModule> {

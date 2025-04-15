@@ -9,9 +9,9 @@ use anyhow::Error;
 use context::CoreContext;
 use futures::stream;
 use futures::stream::TryStreamExt;
-use mononoke_types::path::MPath;
 use mononoke_types::ChangesetId;
 use mononoke_types::Generation;
+use mononoke_types::path::MPath;
 
 use crate::Repo;
 

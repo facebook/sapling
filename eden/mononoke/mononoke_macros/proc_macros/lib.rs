@@ -7,9 +7,9 @@
 
 use proc_macro::TokenStream;
 use quote::quote;
+use syn::ItemFn;
 use syn::parse_macro_input;
 use syn::parse_quote;
-use syn::ItemFn;
 
 fn modify_function(mut function: ItemFn) -> ItemFn {
     function

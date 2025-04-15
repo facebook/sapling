@@ -5,18 +5,18 @@
  * GNU General Public License version 2.
  */
 
-use anyhow::ensure;
 use anyhow::Result;
+use anyhow::ensure;
 use bytes::Bytes;
 use futures::stream::Stream;
 use futures::stream::TryStreamExt;
 use mercurial_bundles::changegroup::CgDeltaChunk;
 use mercurial_revlog::changeset::RevlogChangeset;
-use mercurial_types::delta;
 use mercurial_types::HgBlob;
 use mercurial_types::HgBlobNode;
 use mercurial_types::HgChangesetId;
 use mercurial_types::NULL_HASH;
+use mercurial_types::delta;
 
 #[derive(Debug, Eq, PartialEq)]
 pub(crate) struct ChangesetDeltaed {

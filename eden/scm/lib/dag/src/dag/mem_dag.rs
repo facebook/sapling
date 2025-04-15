@@ -10,13 +10,13 @@ use std::sync::atomic::AtomicU64;
 
 use super::AbstractDag;
 use super::DagBuilder;
+use crate::Result;
 use crate::iddag::IdDag;
 use crate::iddagstore::MemStore;
 use crate::idmap::MemIdMap;
 use crate::ops::Open;
 use crate::ops::Persist;
 use crate::ops::StorageVersion;
-use crate::Result;
 
 /// In-memory version of [`Dag`].
 ///

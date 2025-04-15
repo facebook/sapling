@@ -17,11 +17,11 @@ use sql_construct::SqlShardableConstructFromMetadataDatabaseConfig;
 use sql_construct::SqlShardedConstruct;
 use sql_ext::SqlShardedConnections;
 
+use crate::NewFilenodes;
 use crate::local_cache::LocalCache;
 use crate::reader::FilenodesReader;
 use crate::remote_cache::RemoteCache;
 use crate::writer::FilenodesWriter;
-use crate::NewFilenodes;
 
 pub const MYSQL_INSERT_CHUNK_SIZE: usize = 1000;
 pub const SQLITE_INSERT_CHUNK_SIZE: usize = 100;

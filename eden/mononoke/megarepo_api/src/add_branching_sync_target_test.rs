@@ -16,9 +16,9 @@ use megarepo_config::Target;
 use megarepo_mapping::SourceName;
 use metaconfig_types::RepoConfigArc;
 use mononoke_macros::mononoke;
+use tests_utils::CreateCommitContext;
 use tests_utils::bookmark;
 use tests_utils::resolve_cs_id;
-use tests_utils::CreateCommitContext;
 
 use crate::add_branching_sync_target::AddBranchingSyncTarget;
 use crate::add_sync_target::AddSyncTarget;

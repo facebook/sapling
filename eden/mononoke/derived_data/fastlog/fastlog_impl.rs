@@ -17,11 +17,11 @@ use context::CoreContext;
 use futures::future::try_join_all;
 use manifest::Entry;
 use maplit::hashset;
-use mononoke_types::fastlog_batch::FastlogBatch;
-use mononoke_types::fastlog_batch::ParentOffset;
 use mononoke_types::ChangesetId;
 use mononoke_types::FileUnodeId;
 use mononoke_types::ManifestUnodeId;
+use mononoke_types::fastlog_batch::FastlogBatch;
+use mononoke_types::fastlog_batch::ParentOffset;
 
 use crate::ErrorKind;
 use crate::FastlogParent;

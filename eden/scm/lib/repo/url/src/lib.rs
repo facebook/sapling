@@ -10,13 +10,13 @@ use std::fmt::Display;
 
 use anyhow::Context;
 use anyhow::Result;
-use configmodel::convert::FromConfig;
 use configmodel::Config;
+use configmodel::convert::FromConfig;
 use fn_error_context::context;
-use percent_encoding::percent_decode_str;
-use percent_encoding::utf8_percent_encode;
 use percent_encoding::AsciiSet;
 use percent_encoding::NON_ALPHANUMERIC;
+use percent_encoding::percent_decode_str;
+use percent_encoding::utf8_percent_encode;
 use url::Url;
 
 #[derive(Debug)]

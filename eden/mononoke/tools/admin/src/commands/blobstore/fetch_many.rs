@@ -10,8 +10,8 @@ use anyhow::Result;
 use blobstore::Blobstore;
 use clap::Args;
 use context::CoreContext;
-use futures::stream;
 use futures::StreamExt;
+use futures::stream;
 
 #[derive(Args)]
 pub struct BlobstoreFetchManyArgs {

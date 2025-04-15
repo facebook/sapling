@@ -5,8 +5,8 @@
  * GNU General Public License version 2.
  */
 
-use anyhow::anyhow;
 use anyhow::Result;
+use anyhow::anyhow;
 use clap::Parser;
 use fbinit::FacebookInit;
 use mononoke_app::MononokeApp;

@@ -17,9 +17,9 @@ use configmodel::Config;
 use repo::repo::Repo;
 use workingcopy::workingcopy::WorkingCopy;
 
-use crate::io::IO;
 use crate::OptionalRepo;
 use crate::ReqCtx;
+use crate::io::IO;
 
 pub enum CommandFunc {
     NoRepo(Box<dyn Fn(ParseOutput, &IO, &Arc<dyn Config>) -> Result<u8>>),

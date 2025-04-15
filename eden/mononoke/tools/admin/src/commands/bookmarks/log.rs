@@ -5,8 +5,8 @@
  * GNU General Public License version 2.
  */
 
-use anyhow::anyhow;
 use anyhow::Result;
+use anyhow::anyhow;
 use bookmarks::BookmarkKey;
 use bookmarks::BookmarkUpdateLogRef;
 use bookmarks::Freshness;

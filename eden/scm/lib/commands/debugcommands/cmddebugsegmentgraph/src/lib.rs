@@ -7,8 +7,8 @@
 
 use std::io::Write;
 
-use clidispatch::errors;
 use clidispatch::ReqCtx;
+use clidispatch::errors;
 use cliparser::define_flags;
 use cmdutil::Result;
 use dag::render::render_segment_dag;

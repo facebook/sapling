@@ -18,20 +18,20 @@ pub use file::META_MARKER;
 pub use file::META_SZ;
 
 mod manifest;
+pub use self::manifest::HgBlobManifest;
+pub use self::manifest::ManifestContent;
 pub use self::manifest::fetch_manifest_envelope;
 pub use self::manifest::fetch_manifest_envelope_opt;
 pub use self::manifest::fetch_raw_manifest_bytes;
-pub use self::manifest::HgBlobManifest;
-pub use self::manifest::ManifestContent;
 
 mod changeset;
-pub use changeset::serialize_cs;
-pub use changeset::serialize_extras;
 pub use changeset::ChangesetMetadata;
 pub use changeset::Extra;
 pub use changeset::HgBlobChangeset;
 pub use changeset::HgChangesetContent;
 pub use changeset::RevlogChangeset;
+pub use changeset::serialize_cs;
+pub use changeset::serialize_extras;
 
 pub mod filenode_lookup;
 

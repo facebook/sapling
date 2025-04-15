@@ -8,16 +8,16 @@
 use std::path::Path;
 
 use anyhow::Result;
-use configmodel::convert::ByteCount;
 use configmodel::Config;
 use configmodel::ConfigExt;
+use configmodel::convert::ByteCount;
 
-use crate::lfs::LfsStore;
-use crate::util::get_indexedlogdatastore_path;
-use crate::util::get_local_path;
 use crate::IndexedLogHgIdDataStore;
 use crate::IndexedLogHgIdDataStoreConfig;
 use crate::StoreType;
+use crate::lfs::LfsStore;
+use crate::util::get_indexedlogdatastore_path;
+use crate::util::get_local_path;
 
 /// Attempt to repair the underlying indexedlog stores.
 ///

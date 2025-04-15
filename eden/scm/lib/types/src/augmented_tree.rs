@@ -10,14 +10,14 @@ use std::io::BufRead;
 use std::io::Result;
 use std::io::Write;
 
+use anyhow::Error;
 use anyhow::anyhow;
 use anyhow::bail;
-use anyhow::Error;
+use base64::Engine;
 use base64::alphabet::STANDARD;
+use base64::engine::DecodePaddingMode;
 use base64::engine::general_purpose::GeneralPurpose;
 use base64::engine::general_purpose::GeneralPurposeConfig;
-use base64::engine::DecodePaddingMode;
-use base64::Engine;
 use blake3::Hasher as Blake3Hasher;
 use minibytes::Bytes;
 

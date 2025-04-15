@@ -13,6 +13,8 @@ use futures::stream;
 use futures::stream::BoxStream;
 use futures::stream::StreamExt;
 use futures::stream::TryStreamExt;
+use mononoke_types::MPathElement;
+use mononoke_types::SortedVectorTrieMap;
 use mononoke_types::sharded_map_v2::LoadableShardedMapV2Node;
 use mononoke_types::test_manifest::TestManifest;
 use mononoke_types::test_manifest::TestManifestDirectory;
@@ -20,8 +22,6 @@ use mononoke_types::test_manifest::TestManifestEntry;
 use mononoke_types::test_sharded_manifest::TestShardedManifest;
 use mononoke_types::test_sharded_manifest::TestShardedManifestDirectory;
 use mononoke_types::test_sharded_manifest::TestShardedManifestEntry;
-use mononoke_types::MPathElement;
-use mononoke_types::SortedVectorTrieMap;
 
 use super::Entry;
 use super::Manifest;

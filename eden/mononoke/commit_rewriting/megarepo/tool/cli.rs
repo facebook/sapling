@@ -5,8 +5,8 @@
  * GNU General Public License version 2.
  */
 
-use anyhow::format_err;
 use anyhow::Error;
+use anyhow::format_err;
 use bookmarks::BookmarkKey;
 use clap::App;
 use clap::Arg;

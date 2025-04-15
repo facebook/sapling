@@ -7,18 +7,18 @@
 
 use std::fs;
 use std::path::PathBuf;
+use std::sync::Arc;
 use std::sync::atomic::AtomicBool;
 use std::sync::atomic::Ordering;
-use std::sync::Arc;
 use std::time::Duration;
 
 use anyhow::Result;
 use context::CoreContext;
 use futures::channel::oneshot;
-use mercurial_types::blobs::HgBlobChangeset;
 use mercurial_types::HgChangesetId;
 use mercurial_types::HgFileNodeId;
 use mercurial_types::HgManifestId;
+use mercurial_types::blobs::HgBlobChangeset;
 use metaconfig_types::ModernSyncConfig;
 use mononoke_macros::mononoke;
 use mononoke_types::BonsaiChangeset;

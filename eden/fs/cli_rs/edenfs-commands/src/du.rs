@@ -19,9 +19,9 @@ use std::process::Command;
 #[cfg(target_os = "macos")]
 use std::process::Stdio;
 
-use anyhow::anyhow;
 use anyhow::Context;
 use anyhow::Result;
+use anyhow::anyhow;
 use async_trait::async_trait;
 use clap::Parser;
 use colored::Colorize;
@@ -32,8 +32,8 @@ use comfy_table::Row;
 use comfy_table::Table;
 #[cfg(target_os = "macos")]
 use dialoguer::Confirm;
-use edenfs_client::checkout::find_checkout;
 use edenfs_client::checkout::EdenFsCheckout;
+use edenfs_client::checkout::find_checkout;
 use edenfs_client::instance::EdenFsInstance;
 use edenfs_client::redirect;
 use edenfs_client::redirect::get_effective_redirections;
@@ -969,8 +969,8 @@ mod tests {
     use edenfs_error::ResultExt;
     use edenfs_utils::remove_symlink;
     use hg_util::path::symlink_dir;
-    use tempfile::tempdir;
     use tempfile::TempDir;
+    use tempfile::tempdir;
 
     use super::*;
 

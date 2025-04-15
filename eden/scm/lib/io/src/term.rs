@@ -7,13 +7,13 @@
 
 use std::io;
 
+use termwiz::Result;
 use termwiz::caps::Capabilities;
-use termwiz::render::terminfo::TerminfoRenderer;
 use termwiz::render::RenderTty;
+use termwiz::render::terminfo::TerminfoRenderer;
 use termwiz::surface;
 use termwiz::surface::Change;
 use termwiz::terminal::Terminal;
-use termwiz::Result;
 
 use crate::IsTty;
 

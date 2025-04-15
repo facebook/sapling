@@ -7,9 +7,9 @@
 
 use std::borrow::Cow;
 
+use anyhow::Result;
 use anyhow::bail;
 use anyhow::ensure;
-use anyhow::Result;
 use hgtime::HgTime;
 use memchr::memchr;
 use minibytes::Text;

@@ -20,8 +20,8 @@ use mononoke_types::ChangesetId;
 use scuba_ext::MononokeScubaSampleBuilder;
 use slog::warn;
 
-use super::derive::DerivationOutcome;
 use super::DerivedDataManager;
+use super::derive::DerivationOutcome;
 use crate::derivable::BonsaiDerivable;
 use crate::error::SharedDerivationError;
 

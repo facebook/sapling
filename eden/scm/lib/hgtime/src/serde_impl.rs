@@ -7,15 +7,15 @@
 
 use std::fmt;
 
+use serde::Deserialize;
+use serde::Deserializer;
+use serde::Serialize;
+use serde::Serializer;
 use serde::de;
 use serde::de::Error;
 use serde::de::IgnoredAny;
 use serde::de::Unexpected;
 use serde::ser::SerializeTuple;
-use serde::Deserialize;
-use serde::Deserializer;
-use serde::Serialize;
-use serde::Serializer;
 
 use crate::HgTime;
 

@@ -5,9 +5,9 @@
  * LICENSE file in the root directory of this source tree.
  */
 
+use blake2::Blake2bMac;
 use blake2::digest::FixedOutput;
 use blake2::digest::Mac;
-use blake2::Blake2bMac;
 use edenapi_types::ContentId;
 
 pub fn calc_contentid(data: &[u8]) -> ContentId {

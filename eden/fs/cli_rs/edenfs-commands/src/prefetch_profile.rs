@@ -13,19 +13,19 @@ use std::path::Path;
 use std::path::PathBuf;
 use std::str;
 
-use anyhow::anyhow;
 use anyhow::Context;
 use anyhow::Result;
+use anyhow::anyhow;
 use async_trait::async_trait;
 use clap::Parser;
-use edenfs_client::checkout::find_checkout;
 use edenfs_client::checkout::CheckoutConfig;
+use edenfs_client::checkout::find_checkout;
 use edenfs_client::instance::EdenFsInstance;
 use edenfs_client::utils::expand_path_or_cwd;
 #[cfg(fbcode_build)]
-use edenfs_telemetry::send;
-#[cfg(fbcode_build)]
 use edenfs_telemetry::EDEN_EVENTS_SCUBA;
+#[cfg(fbcode_build)]
+use edenfs_telemetry::send;
 use hg_util::path::expand_path;
 
 use crate::ExitCode;

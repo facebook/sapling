@@ -229,8 +229,8 @@ impl Iterator for CachingIter {
 #[cfg(test)]
 mod test {
     use manifest_tree::testutil::TestStore;
-    use rand_chacha::rand_core::SeedableRng;
     use rand_chacha::ChaChaRng;
+    use rand_chacha::rand_core::SeedableRng;
     use types::RepoPathBuf;
 
     use super::*;

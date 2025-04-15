@@ -10,8 +10,8 @@ use std::str::FromStr;
 
 use clap_old::App;
 use clap_old::SubCommand;
-use mercurial_revlog::revlog::Revlog;
 use mercurial_revlog::RevlogChangeset;
+use mercurial_revlog::revlog::Revlog;
 use mercurial_types::HgNodeHash;
 
 fn setup_app<'a, 'b>() -> App<'a, 'b> {

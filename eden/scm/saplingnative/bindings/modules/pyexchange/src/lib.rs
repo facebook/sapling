@@ -9,11 +9,11 @@ use std::sync::Arc;
 
 use configmodel::Config;
 use cpython::*;
+use cpython_ext::ExtractInner;
+use cpython_ext::PyNone;
 use cpython_ext::convert::ImplInto;
 use cpython_ext::convert::Serde;
 use cpython_ext::error::ResultPyErrExt;
-use cpython_ext::ExtractInner;
-use cpython_ext::PyNone;
 use pydag::commits::commits;
 use pyedenapi::PyClient;
 use pymetalog::metalog;

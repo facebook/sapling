@@ -16,8 +16,8 @@ pub use mononoke_app::monitoring::ReadyFlagService;
 // get AliveService.
 pub use services::AliveService;
 use services::Fb303Service;
-use slog::info;
 use slog::Logger;
+use slog::info;
 
 use crate::args::MononokeMatches;
 

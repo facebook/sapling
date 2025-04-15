@@ -19,8 +19,8 @@ use context::CoreContext;
 use metaconfig_types::MultiplexId;
 use mononoke_types::BlobstoreBytes;
 use mononoke_types::Timestamp;
-use slog::info;
 use slog::Logger;
+use slog::info;
 
 #[derive(Debug)]
 pub struct DummyBlobstore<B> {

@@ -15,10 +15,10 @@ use bytes::Bytes;
 use bytes::BytesMut;
 use context::CoreContext;
 use fileblob::Fileblob;
-use futures::stream;
 use futures::Stream;
 use futures::StreamExt;
 use futures::TryStreamExt;
+use futures::stream;
 use mononoke_types::BlobstoreBytes;
 use mononoke_types::MononokeDigest;
 

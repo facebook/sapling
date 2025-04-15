@@ -7,8 +7,8 @@
 
 use std::path::Path;
 
-use anyhow::anyhow;
 use anyhow::Context;
+use anyhow::anyhow;
 use edenfs_error::ConnectAndRequestError;
 use edenfs_error::EdenFsError;
 use edenfs_error::Result;

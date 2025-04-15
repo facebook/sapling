@@ -6,7 +6,6 @@
  */
 
 use anyhow::Result;
-use clap::value_parser;
 use clap::Arg;
 use clap::ArgGroup;
 use clap::ArgMatches;
@@ -14,6 +13,7 @@ use clap::Args;
 use clap::Command;
 use clap::Error;
 use clap::FromArgMatches;
+use clap::value_parser;
 use mononoke_types::RepositoryId;
 
 /// Command line arguments for specifying a single repo.

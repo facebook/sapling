@@ -13,11 +13,10 @@ use anyhow::Result;
 use cas_client::CasClient;
 use cas_client::CasSuccessTracker;
 use cas_client::CasSuccessTrackerConfig;
-use configmodel::convert::ByteCount;
-use configmodel::convert::FromConfigValue;
 use configmodel::Config;
 use configmodel::ConfigExt;
-use re_client_lib::create_default_config;
+use configmodel::convert::ByteCount;
+use configmodel::convert::FromConfigValue;
 use re_client_lib::ExternalCASDaemonAddress;
 use re_client_lib::ExternalCASDaemonCfg;
 #[cfg(not(target_os = "linux"))]
@@ -26,6 +25,7 @@ use re_client_lib::REClient;
 use re_client_lib::REClientBuilder;
 use re_client_lib::RESessionID;
 use re_client_lib::RemoteExecutionMetadata;
+use re_client_lib::create_default_config;
 use scm_blob::ScmBlob;
 #[cfg(target_os = "linux")]
 use thin_cas_client_wrapper::CASClientWrapper as REClient;

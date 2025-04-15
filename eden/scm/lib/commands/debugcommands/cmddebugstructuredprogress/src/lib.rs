@@ -10,9 +10,9 @@ use std::thread;
 use std::thread::JoinHandle;
 use std::time::Duration;
 
+use anyhow::Result;
 use anyhow::anyhow;
 use anyhow::bail;
-use anyhow::Result;
 use clidispatch::ReqCtx;
 use cliparser::define_flags;
 use progress_model::IoTimeSeries;

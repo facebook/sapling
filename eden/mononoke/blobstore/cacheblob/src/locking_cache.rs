@@ -21,8 +21,8 @@ use futures::future::FutureExt;
 use mononoke_macros::mononoke;
 use mononoke_types::BlobstoreBytes;
 use prefixblob::PrefixBlobstore;
-use redactedblobstore::config::GET_OPERATION;
 use redactedblobstore::RedactedBlobstore;
+use redactedblobstore::config::GET_OPERATION;
 use stats::prelude::*;
 
 define_stats! {

@@ -357,8 +357,8 @@ mod tests {
     use futures::TryStreamExt;
     use url::Url;
 
-    use crate::request::Encoding;
     use crate::HttpClient;
+    use crate::request::Encoding;
 
     #[tokio::test]
     async fn test_decompression() -> Result<()> {

@@ -26,6 +26,7 @@ use edenapi_types::FsnodeId as EdenapiFsnodeId;
 pub use slog;
 use sql::mysql;
 
+use crate::ThriftConvert;
 use crate::basename_suffix_skeleton_manifest_v3::BssmV3Directory;
 use crate::basename_suffix_skeleton_manifest_v3::BssmV3Entry;
 use crate::blob::Blob;
@@ -56,7 +57,6 @@ use crate::test_sharded_manifest::TestShardedManifestEntry;
 use crate::thrift;
 use crate::unode::FileUnode;
 use crate::unode::ManifestUnode;
-use crate::ThriftConvert;
 
 pub const SLOW_DESERIAZLIZATION_THRESHOLD_MS: u128 = 100;
 

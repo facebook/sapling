@@ -11,8 +11,8 @@ use std::io::Write;
 use std::path::Path;
 use std::time::Duration;
 
-use anyhow::bail;
 use anyhow::Result;
+use anyhow::bail;
 use lazy_static::lazy_static;
 use parking_lot::Mutex;
 use serde_json::Map;
@@ -173,9 +173,9 @@ pub fn set_actions(path: &Path, map: &Value) -> Result<()> {
 
 #[cfg(test)]
 mod tests {
+    use std::sync::Arc;
     use std::sync::atomic::AtomicU64;
     use std::sync::atomic::Ordering;
-    use std::sync::Arc;
     use std::thread::spawn;
 
     use serde_json::json;

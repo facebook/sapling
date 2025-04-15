@@ -20,12 +20,12 @@ use blobstore::BlobstoreUnlinkOps;
 use blobstore::OverwriteStatus;
 use blobstore::PutBehaviour;
 use context::CoreContext;
-use governor::clock::DefaultClock;
-use governor::state::direct::NotKeyed;
-use governor::state::InMemoryState;
 use governor::Jitter;
 use governor::Quota;
 use governor::RateLimiter;
+use governor::clock::DefaultClock;
+use governor::state::InMemoryState;
+use governor::state::direct::NotKeyed;
 use mononoke_types::BlobstoreBytes;
 use nonzero_ext::nonzero;
 

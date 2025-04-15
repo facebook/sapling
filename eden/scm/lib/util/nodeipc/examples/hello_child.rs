@@ -5,8 +5,8 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-use serde_json::json;
 use serde_json::Value;
+use serde_json::json;
 
 fn main() {
     if let Some(ipc) = nodeipc::get_singleton() {

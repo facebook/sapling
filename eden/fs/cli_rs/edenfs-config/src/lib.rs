@@ -13,9 +13,9 @@ use edenfs_error::EdenFsError;
 use serde::Deserialize;
 use serde::Serialize;
 use stack_config::StackConfig;
+use tracing::Level;
 use tracing::event;
 use tracing::trace;
-use tracing::Level;
 
 #[derive(Serialize, Deserialize, StackConfig, Debug)]
 #[serde(rename_all = "camelCase")]

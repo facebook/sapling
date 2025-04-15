@@ -18,9 +18,9 @@ use hyper::Response;
 use hyper::StatusCode;
 use hyper::Uri;
 use hyper::Version;
+use slog::Logger;
 use slog::info;
 use slog::o;
-use slog::Logger;
 use time_ext::DurationExt;
 
 use super::MetadataState;

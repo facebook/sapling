@@ -13,13 +13,13 @@ use proc_macro2::Punct;
 use proc_macro2::Spacing;
 use proc_macro2::TokenStream;
 use proc_macro2::TokenTree;
-use tree_pattern_match::find_all;
-use tree_pattern_match::matches_full;
-use tree_pattern_match::replace_all;
 use tree_pattern_match::Match;
 use tree_pattern_match::Placeholder;
 use tree_pattern_match::PlaceholderExt as _;
 use tree_pattern_match::Replace;
+use tree_pattern_match::find_all;
+use tree_pattern_match::matches_full;
+use tree_pattern_match::replace_all;
 
 use crate::prelude::Item;
 use crate::prelude::TokenInfo;

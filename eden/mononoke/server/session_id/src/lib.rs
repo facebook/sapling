@@ -7,9 +7,9 @@
 
 use std::fmt;
 
+use rand::Rng;
 use rand::distributions::Alphanumeric;
 use rand::thread_rng;
-use rand::Rng;
 
 #[derive(Debug, Clone, Hash, Eq, PartialEq)]
 pub struct SessionId(String);

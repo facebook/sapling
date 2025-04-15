@@ -19,10 +19,10 @@ use gotham::handler::IntoResponse;
 use gotham::handler::NewHandler;
 use gotham::state::State;
 use gotham_derive::StateData;
-use hyper::service::Service;
 use hyper::Body;
 use hyper::Request;
 use hyper::Response;
+use hyper::service::Service;
 
 use crate::middleware::Middleware;
 use crate::socket_data::TlsSocketData;
@@ -226,8 +226,8 @@ mod test {
     use futures::future;
     use gotham::test::TestServer;
     use gotham_derive::StateData;
-    use hyper::http::StatusCode;
     use hyper::Body;
+    use hyper::http::StatusCode;
     use mononoke_macros::mononoke;
 
     use super::*;

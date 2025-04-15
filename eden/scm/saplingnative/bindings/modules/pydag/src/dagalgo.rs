@@ -10,9 +10,9 @@ use std::sync::Arc;
 
 use async_runtime::try_block_unless_interrupted as block_on;
 use cpython::*;
+use cpython_ext::ResultPyErrExt;
 use cpython_ext::convert::ImplInto;
 use cpython_ext::convert::Serde;
-use cpython_ext::ResultPyErrExt;
 use dag::DagAlgorithm;
 use dag::IdSegment;
 use dag::Set;

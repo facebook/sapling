@@ -10,10 +10,10 @@ use std::time::Duration;
 use anyhow::Context;
 use edenfs_error::EdenFsError;
 use edenfs_error::Result;
-use futures::stream::BoxStream;
 use futures::StreamExt;
-use tracing::event;
+use futures::stream::BoxStream;
 use tracing::Level;
+use tracing::event;
 
 use crate::client::EdenFsClient;
 use crate::client::StreamingEdenFsClient;

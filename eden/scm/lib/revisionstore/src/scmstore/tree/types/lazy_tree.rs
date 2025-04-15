@@ -13,17 +13,17 @@ use edenapi_types::TreeEntry;
 use manifest_tree::TreeEntry as ManifestTreeEntry;
 use minibytes::Bytes;
 use storemodel::SerializationFormat;
-use types::hgid::NULL_ID;
 use types::AugmentedTreeEntry;
 use types::AugmentedTreeWithDigest;
 use types::HgId;
 use types::Id20;
 use types::Parents;
+use types::hgid::NULL_ID;
 
+use crate::Metadata;
 use crate::indexedlogdatastore::Entry;
 use crate::scmstore::file::FileAuxData;
 use crate::scmstore::tree::TreeAuxData;
-use crate::Metadata;
 
 /// A minimal tree enum that simply wraps the possible underlying tree types,
 /// with no processing.

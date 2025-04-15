@@ -13,14 +13,14 @@ use serde_derive::Deserialize;
 use serde_derive::Serialize;
 use types::HgId;
 
+use crate::CloneData;
+use crate::FlatSegment;
+use crate::PreparedFlatSegments;
 use crate::wire::ToApi;
 use crate::wire::ToWire;
 use crate::wire::WireDagId;
 use crate::wire::WireHgId;
 use crate::wire::WireToApiConversionError;
-use crate::CloneData;
-use crate::FlatSegment;
-use crate::PreparedFlatSegments;
 
 // Only when an id has more than one parent it is sent over the wire.
 #[derive(Clone, Debug, Serialize, Deserialize, Eq, PartialEq)]

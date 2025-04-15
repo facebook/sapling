@@ -11,9 +11,9 @@ use anyhow::Result;
 use formatter::Formattable;
 use formatter::ListFormatter;
 use serde::Serialize;
-use types::path::RepoPathRelativizer;
 use types::RepoPath;
 use types::RepoPathBuf;
+use types::path::RepoPathRelativizer;
 
 /// Config that determines how the output of `hg status` will be printed to the console.
 pub struct PrintConfig {
@@ -290,8 +290,8 @@ mod test {
     use std::str;
 
     use clidispatch::io::IO;
-    use formatter::formatter::get_formatter;
     use formatter::formatter::FormatOptions;
+    use formatter::formatter::get_formatter;
 
     use super::*;
 

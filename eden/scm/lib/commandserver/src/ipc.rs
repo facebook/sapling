@@ -10,9 +10,9 @@ use std::process::Command;
 use std::sync::Arc;
 use std::sync::Weak;
 
+use nodeipc::NodeIpc;
 use nodeipc::derive::HasIpc;
 use nodeipc::ipc;
-use nodeipc::NodeIpc;
 use serde::Deserialize;
 use serde::Serialize;
 use spawn_ext::CommandExt;

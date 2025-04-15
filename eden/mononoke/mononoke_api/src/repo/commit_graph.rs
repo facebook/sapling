@@ -19,8 +19,8 @@ use futures::stream::Stream;
 use futures::stream::StreamExt;
 use futures::stream::TryStreamExt;
 use mercurial_types::HgChangesetId;
-use mononoke_types::hash::GitSha1;
 use mononoke_types::ChangesetId;
+use mononoke_types::hash::GitSha1;
 
 use super::MononokeRepo;
 use super::RepoContext;

@@ -12,8 +12,8 @@ use std::fmt::Debug;
 use std::sync::Arc;
 use std::time::Duration;
 
-use anyhow::format_err;
 use anyhow::Error;
+use anyhow::format_err;
 use blobstore::Loadable;
 use bookmarks::BookmarkKey;
 use bookmarks::BookmarkUpdateLogEntry;
@@ -23,13 +23,14 @@ use cloned::cloned;
 use commit_graph::CommitGraphArc;
 use commit_graph::CommitGraphRef;
 use context::CoreContext;
-use cross_repo_sync::get_commit_sync_outcome;
-use cross_repo_sync::report_different;
 use cross_repo_sync::CommitSyncOutcome;
 use cross_repo_sync::Large;
 use cross_repo_sync::Small;
 use cross_repo_sync::Source;
 use cross_repo_sync::Target;
+use cross_repo_sync::get_commit_sync_outcome;
+use cross_repo_sync::report_different;
+use futures::TryFutureExt;
 use futures::future;
 use futures::future::try_join_all;
 use futures::stream;
@@ -37,7 +38,6 @@ use futures::stream::Stream;
 use futures::stream::StreamExt;
 use futures::stream::TryStreamExt;
 use futures::try_join;
-use futures::TryFutureExt;
 use futures_stats::TimedFutureExt;
 use live_commit_sync_config::CfgrLiveCommitSyncConfig;
 use live_commit_sync_config::LiveCommitSyncConfig;
@@ -54,8 +54,8 @@ use mononoke_macros::mononoke;
 use mononoke_types::ChangesetId;
 use mononoke_types::NonRootMPath;
 use mononoke_types::RepositoryId;
-use movers::get_movers;
 use movers::Mover;
+use movers::get_movers;
 use ref_cast::RefCast;
 use repo_blobstore::RepoBlobstoreRef;
 use repo_identity::RepoIdentityRef;
@@ -1583,9 +1583,9 @@ async fn verify_filenodes_have_same_contents<
 
 #[cfg(test)]
 mod tests {
+    use cross_repo_sync::test_utils::TestRepo;
     use cross_repo_sync::test_utils::init_small_large_repo;
     use cross_repo_sync::test_utils::xrepo_mapping_version_with_small_repo;
-    use cross_repo_sync::test_utils::TestRepo;
     use cross_repo_sync::update_mapping_with_version;
     use fbinit::FacebookInit;
     use maplit::hashmap;

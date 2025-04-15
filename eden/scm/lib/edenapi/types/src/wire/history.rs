@@ -10,6 +10,9 @@ use quickcheck_arbitrary_derive::Arbitrary;
 use serde_derive::Deserialize;
 use serde_derive::Serialize;
 
+use crate::HistoryRequest;
+use crate::HistoryResponseChunk;
+use crate::WireHistoryEntry;
 use crate::wire::ToApi;
 use crate::wire::ToWire;
 use crate::wire::WireHgId;
@@ -17,9 +20,6 @@ use crate::wire::WireKey;
 use crate::wire::WireParents;
 use crate::wire::WireRepoPathBuf;
 use crate::wire::WireToApiConversionError;
-use crate::HistoryRequest;
-use crate::HistoryResponseChunk;
-use crate::WireHistoryEntry;
 
 // TODO: attributes in this file aren't renamed to 0, 1, ...
 #[derive(Clone, Default, Debug, PartialEq, Eq, Serialize, Deserialize)]

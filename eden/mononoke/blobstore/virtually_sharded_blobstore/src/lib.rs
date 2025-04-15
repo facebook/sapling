@@ -23,9 +23,9 @@ use std::pin::Pin;
 use std::sync::Arc;
 use std::sync::Mutex;
 
-use anyhow::anyhow;
 use anyhow::Context;
 use anyhow::Result;
+use anyhow::anyhow;
 use async_trait::async_trait;
 use blobstore::Blobstore;
 use blobstore::BlobstoreGetData;
@@ -40,8 +40,8 @@ use cachelib::VolatileLruCachePool;
 use cloned::cloned;
 use context::CoreContext;
 use context::PerfCounterType;
-use futures::future::WeakShared;
 use futures::FutureExt;
+use futures::future::WeakShared;
 use mononoke_macros::mononoke;
 use mononoke_types::BlobstoreBytes;
 use shard::SemaphoreAcquisition;
@@ -655,8 +655,8 @@ mod test {
     }
 
     mod caching {
-        use mononoke_types::content_chunk::new_blob_and_pointer;
         use mononoke_types::BlobstoreKey;
+        use mononoke_types::content_chunk::new_blob_and_pointer;
 
         use super::*;
 
@@ -1184,10 +1184,10 @@ mod test {
         use mononoke_macros::mononoke;
         use nonzero_ext::nonzero;
         use scuba_ext::MononokeScubaSampleBuilder;
-        use slog::o;
         use slog::Drain;
         use slog::Level;
         use slog::Logger;
+        use slog::o;
         use slog_glog_fmt::default_drain;
 
         use super::*;

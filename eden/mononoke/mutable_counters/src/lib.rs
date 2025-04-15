@@ -20,9 +20,9 @@ use mononoke_types::RepositoryId;
 use sql::Transaction as SqlTransaction;
 use sql_construct::SqlConstruct;
 use sql_construct::SqlConstructFromMetadataDatabaseConfig;
-use sql_ext::mononoke_queries;
 use sql_ext::SqlConnections;
 use sql_ext::TransactionResult;
+use sql_ext::mononoke_queries;
 use stats::prelude::*;
 
 define_stats! {

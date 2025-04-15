@@ -7,8 +7,8 @@
 
 use std::collections::HashMap;
 
-use anyhow::bail;
 use anyhow::Result;
+use anyhow::bail;
 use async_trait::async_trait;
 use blobstore::Blobstore;
 use blobstore::Loadable;
@@ -18,26 +18,24 @@ use context::CoreContext;
 use derived_data_manager::DerivationContext;
 use filestore::FetchKey;
 use filestore::FilestoreConfig;
-use futures::future::ready;
-use futures::stream;
-use futures::stream::BoxStream;
 use futures::FutureExt;
 use futures::StreamExt;
 use futures::TryStreamExt;
+use futures::future::ready;
+use futures::stream;
+use futures::stream::BoxStream;
 use futures_watchdog::WatchdogExt;
 use gix_hash::ObjectId;
-use gix_object::tree;
 use gix_object::Object;
 use gix_object::Tree;
 use gix_object::WriteTo;
-use manifest::derive_manifest;
-use manifest::flatten_subentries;
+use gix_object::tree;
 use manifest::Entry;
 use manifest::Manifest;
 use manifest::ManifestOps;
 use manifest::ManifestParentReplacement;
-use mononoke_types::hash::GitSha1;
-use mononoke_types::hash::RichGitSha1;
+use manifest::derive_manifest;
+use manifest::flatten_subentries;
 use mononoke_types::BasicFileChange;
 use mononoke_types::BonsaiChangeset;
 use mononoke_types::ChangesetId;
@@ -47,16 +45,18 @@ use mononoke_types::GitLfs;
 use mononoke_types::MPathElement;
 use mononoke_types::NonRootMPath;
 use mononoke_types::SortedVectorTrieMap;
+use mononoke_types::hash::GitSha1;
+use mononoke_types::hash::RichGitSha1;
 use sorted_vector_map::SortedVectorMap;
 
+use crate::DeltaObjectKind;
+use crate::GitIdentifier;
+use crate::MappedGitCommitId;
 use crate::errors::MononokeGitError;
 use crate::fetch_non_blob_git_object;
 use crate::git_lfs::generate_and_store_git_lfs_pointer;
 use crate::git_object_bytes_with_hash;
 use crate::upload_non_blob_git_object;
-use crate::DeltaObjectKind;
-use crate::GitIdentifier;
-use crate::MappedGitCommitId;
 
 /// An id of a Git tree object.
 #[derive(Copy, Clone, Debug, Eq, PartialEq, Hash)]

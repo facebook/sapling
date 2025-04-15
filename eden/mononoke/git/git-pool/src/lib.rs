@@ -10,8 +10,8 @@ use std::path::PathBuf;
 use std::sync::Arc;
 use std::time::Duration;
 
-use anyhow::anyhow;
 use anyhow::Error;
+use anyhow::anyhow;
 use git2::Error as Git2Error;
 use git2::Repository;
 use mononoke_macros::mononoke;

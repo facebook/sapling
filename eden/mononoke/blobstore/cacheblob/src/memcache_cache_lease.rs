@@ -17,9 +17,9 @@ use context::CoreContext;
 use context::PerfCounterType;
 use fbinit::FacebookInit;
 use fbthrift::compact_protocol;
-use futures::future::select;
 use futures::future::BoxFuture;
 use futures::future::Either;
+use futures::future::select;
 use hostname::get_hostname;
 use memcache::KeyGen;
 use memcache::MemcacheClient;
@@ -28,10 +28,10 @@ use mononoke_macros::mononoke;
 use slog::warn;
 use stats::prelude::*;
 
-use crate::dummy::DummyLease;
 use crate::CacheBlobstore;
 use crate::CacheOps;
 use crate::LeaseOps;
+use crate::dummy::DummyLease;
 
 define_stats! {
     prefix = "mononoke.blobstore.memcache";

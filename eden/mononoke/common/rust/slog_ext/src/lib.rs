@@ -9,14 +9,14 @@ use std::collections::HashSet;
 use std::fmt;
 use std::io;
 
-use anyhow::bail;
 use anyhow::Error;
+use anyhow::bail;
 use slog::Drain;
+use slog::KV;
 use slog::Never;
 use slog::OwnedKVList;
 use slog::Record;
 use slog::Serializer;
-use slog::KV;
 use slog_term::Decorator;
 
 // Allow us to switch drain types without runtime check

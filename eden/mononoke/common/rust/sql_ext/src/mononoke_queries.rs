@@ -12,8 +12,8 @@ use std::time::Duration;
 
 use abomonation::Abomonation;
 use abomonation_derive::Abomonation;
-use anyhow::anyhow;
 use anyhow::Result;
+use anyhow::anyhow;
 use async_trait::async_trait;
 use base64::Engine;
 use bytes::Bytes;
@@ -22,8 +22,8 @@ use itertools::Itertools;
 use maplit::hashmap;
 use maplit::hashset;
 use memcache::KeyGen;
-use retry::retry;
 use retry::RetryLogic;
+use retry::retry;
 use sql_query_config::CachingConfig;
 
 const RETRY_ATTEMPTS: usize = 2;
@@ -559,8 +559,8 @@ fn retryable_mysql_errno(errno: u32) -> bool {
 /// useful for retry logic that has to cover greater span than single query
 /// like retrying the whole transaction.
 pub fn should_retry_mysql_query(err: &anyhow::Error) -> bool {
-    use mysql_client::MysqlError;
     use MysqlError::*;
+    use mysql_client::MysqlError;
     match err.downcast_ref::<MysqlError>() {
         Some(ConnectionOperationError { mysql_errno, .. })
         | Some(QueryResultError { mysql_errno, .. }) => retryable_mysql_errno(*mysql_errno),

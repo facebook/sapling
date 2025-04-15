@@ -8,9 +8,9 @@
 use std::sync::Arc;
 
 use cpython::*;
-use cpython_ext::convert::Serde;
 use cpython_ext::PyNone;
 use cpython_ext::ResultPyErrExt;
+use cpython_ext::convert::Serde;
 use nodeipc::get_singleton;
 use serde_json::Value;
 

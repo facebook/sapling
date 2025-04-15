@@ -12,6 +12,10 @@ use std::collections::BTreeSet;
 use futures::StreamExt;
 use futures::TryStreamExt;
 
+use crate::Group;
+use crate::Id;
+use crate::Result;
+use crate::Vertex;
 use crate::dag::AbstractDag;
 use crate::iddag::IdDag;
 use crate::iddagstore::IdDagStore;
@@ -23,10 +27,6 @@ use crate::ops::Persist;
 use crate::ops::TryClone;
 use crate::segment::SegmentFlags;
 use crate::set::Set;
-use crate::Group;
-use crate::Id;
-use crate::Result;
-use crate::Vertex;
 
 #[async_trait::async_trait]
 impl<IS, M, P, S> CheckIntegrity for AbstractDag<IdDag<IS>, M, P, S>

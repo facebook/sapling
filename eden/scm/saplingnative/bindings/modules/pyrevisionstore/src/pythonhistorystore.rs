@@ -6,7 +6,6 @@
  */
 
 use anyhow::Result;
-use cpython::exc;
 use cpython::FromPyObject;
 use cpython::NoArgs;
 use cpython::ObjectProtocol;
@@ -17,6 +16,7 @@ use cpython::PyObject;
 use cpython::Python;
 use cpython::PythonObject;
 use cpython::PythonObjectWithTypeObject;
+use cpython::exc;
 use cpython_ext::PyErr;
 use cpython_ext::PyPathBuf;
 use revisionstore::HgIdHistoryStore;

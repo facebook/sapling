@@ -10,9 +10,9 @@ use std::convert::AsRef;
 use blake3::Hasher as Blake3;
 use bytes::Bytes;
 use digest::Digest;
+use mononoke_types::ContentId;
 use mononoke_types::hash;
 use mononoke_types::typed_hash;
-use mononoke_types::ContentId;
 use sha1::Sha1;
 use sha2::Sha256;
 

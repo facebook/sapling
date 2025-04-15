@@ -9,28 +9,28 @@ use std::any::Any;
 use std::borrow::Cow;
 use std::collections::HashSet;
 use std::fmt;
+use std::sync::Arc;
 use std::sync::atomic::AtomicBool;
 use std::sync::atomic::Ordering::Acquire;
 use std::sync::atomic::Ordering::Release;
-use std::sync::Arc;
 
-use futures::lock::Mutex;
 use futures::StreamExt;
+use futures::lock::Mutex;
 use indexmap::IndexSet;
+use tracing::Level;
 use tracing::debug;
 use tracing::instrument;
 use tracing::trace;
-use tracing::Level;
 
-use super::hints::Flags;
-use super::id_static::IdStaticSet;
 use super::AsyncSetQuery;
 use super::BoxVertexStream;
 use super::Hints;
 use super::Set;
-use crate::fmt::write_debug;
+use super::hints::Flags;
+use super::id_static::IdStaticSet;
 use crate::Result;
 use crate::Vertex;
+use crate::fmt::write_debug;
 
 /// Slice of a set.
 #[derive(Clone)]

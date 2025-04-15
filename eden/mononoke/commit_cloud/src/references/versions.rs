@@ -8,9 +8,9 @@
 use commit_cloud_types::WorkspaceData;
 use mononoke_types::Timestamp;
 
-use crate::sql::versions_ops::get_version_by_prefix;
 use crate::Get;
 use crate::SqlCommitCloud;
+use crate::sql::versions_ops::get_version_by_prefix;
 
 #[derive(Clone, Debug, PartialEq)]
 pub struct WorkspaceVersion {

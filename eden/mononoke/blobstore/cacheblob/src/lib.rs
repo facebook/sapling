@@ -6,9 +6,9 @@
  */
 
 mod cachelib_cache;
+pub use crate::cachelib_cache::CachelibBlobstoreOptions;
 pub use crate::cachelib_cache::new_cachelib_blobstore;
 pub use crate::cachelib_cache::new_cachelib_blobstore_no_lease;
-pub use crate::cachelib_cache::CachelibBlobstoreOptions;
 
 pub mod dummy;
 
@@ -22,8 +22,8 @@ pub use crate::locking_cache::CacheOps;
 pub use crate::locking_cache::LeaseOps;
 
 mod memcache_cache_lease;
-pub use crate::memcache_cache_lease::new_memcache_blobstore;
 pub use crate::memcache_cache_lease::MemcacheOps;
+pub use crate::memcache_cache_lease::new_memcache_blobstore;
 
 mod mem_writes;
 pub use crate::mem_writes::MemWritesBlobstore;

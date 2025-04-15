@@ -19,21 +19,21 @@
 use std::fs;
 use std::path::Path;
 use std::process::Command;
+use std::sync::OnceLock;
 use std::sync::atomic::AtomicUsize;
 use std::sync::atomic::Ordering;
-use std::sync::OnceLock;
 
-use backingstore::backingstore_global_init;
 use backingstore::BackingStore;
+use backingstore::backingstore_global_init;
+use minibench::Measure;
 use minibench::bench;
 use minibench::bench_enabled;
 use minibench::measure;
-use minibench::Measure;
-use types::fetch_mode::FetchMode;
 use types::FetchContext;
 use types::HgId;
 use types::Key;
 use types::RepoPathBuf;
+use types::fetch_mode::FetchMode;
 
 fn main() {
     // This sets up things like tracing logger, factory constructors, and other global tweaks eden does.

@@ -5,9 +5,9 @@
  * GNU General Public License version 2.
  */
 
+use std::sync::Arc;
 use std::sync::atomic::AtomicBool;
 use std::sync::atomic::Ordering;
-use std::sync::Arc;
 use std::thread;
 
 use anyhow::Error;
@@ -19,8 +19,8 @@ use fbinit::FacebookInit;
 pub use services::AliveService;
 use services::Fb303Service;
 use services::FbStatus;
-use slog::info;
 use slog::Logger;
+use slog::info;
 use tokio::runtime::Handle;
 
 use crate::AppExtension;

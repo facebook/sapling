@@ -5,9 +5,9 @@
  * GNU General Public License version 2.
  */
 
-use anyhow::anyhow;
 use anyhow::Error;
 use anyhow::Result;
+use anyhow::anyhow;
 use blobstore::Blobstore;
 use context::CoreContext;
 use mononoke_types::hash::GitSha1;

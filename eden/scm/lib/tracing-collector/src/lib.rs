@@ -15,11 +15,11 @@ use std::sync::Arc;
 
 pub use model::TracingData;
 use parking_lot::Mutex;
-use tracing::span::Attributes;
-use tracing::span::Record;
 use tracing::Event;
 use tracing::Id;
 use tracing::Subscriber;
+use tracing::span::Attributes;
+use tracing::span::Record;
 use tracing_subscriber::layer::Context;
 use tracing_subscriber::layer::Layer;
 
@@ -92,8 +92,8 @@ impl<S: Subscriber> Layer<S> for TracingCollector {
 #[cfg(test)]
 mod tests {
     use tracing::instrument;
-    use tracing_subscriber::layer::SubscriberExt;
     use tracing_subscriber::Registry;
+    use tracing_subscriber::layer::SubscriberExt;
 
     use super::*;
 

@@ -6,13 +6,13 @@
  */
 
 use anyhow::bail;
-use commit_cloud_types::references::WorkspaceRemoteBookmark;
 use commit_cloud_types::HistoricalVersion;
 use commit_cloud_types::LocalBookmarksMap;
 use commit_cloud_types::RemoteBookmarksMap;
 use commit_cloud_types::SmartlogFlag;
 use commit_cloud_types::WorkspaceHead;
 use commit_cloud_types::WorkspaceLocalBookmark;
+use commit_cloud_types::references::WorkspaceRemoteBookmark;
 use mercurial_types::HgChangesetId;
 use mononoke_types::Timestamp;
 

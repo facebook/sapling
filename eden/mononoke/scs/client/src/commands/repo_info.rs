@@ -15,12 +15,12 @@ use cloned::cloned;
 use scs_client_raw::thrift;
 use serde::Serialize;
 
+use crate::ScscApp;
 use crate::args::repo::RepoArgs;
 use crate::errors::SelectionErrorExt;
 use crate::library::stress_test::StressArgs;
 use crate::library::summary::summary_output;
 use crate::render::Render;
-use crate::ScscApp;
 
 #[derive(clap::Parser)]
 /// Fetch information about a repo

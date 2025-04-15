@@ -22,10 +22,10 @@ pub use indexedlog::Repair;
 #[cfg(test)]
 use parking_lot::Mutex;
 
-pub use crate::metalog::resolver;
 pub use crate::metalog::CommitOptions;
 pub use crate::metalog::Id20;
 pub use crate::metalog::MetaLog;
+pub use crate::metalog::resolver;
 
 #[cfg(test)]
 /// Lock for the environment.  This should be acquired by tests that rely on particular

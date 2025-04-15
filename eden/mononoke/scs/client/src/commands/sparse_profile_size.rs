@@ -12,12 +12,12 @@ use scs_client_raw::thrift;
 use serde::Serialize;
 use source_control_clients::errors::CommitSparseProfileSizePollError;
 
-use crate::args::commit_id::resolve_commit_id;
+use crate::ScscApp;
 use crate::args::commit_id::CommitIdArgs;
+use crate::args::commit_id::resolve_commit_id;
 use crate::args::repo::RepoArgs;
 use crate::args::sparse_profiles::SparseProfilesArgs;
 use crate::render::Render;
-use crate::ScscApp;
 
 const POLL_SLEEP_DURATION: std::time::Duration = std::time::Duration::from_secs(1);
 

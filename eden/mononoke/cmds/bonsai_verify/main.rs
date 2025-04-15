@@ -9,17 +9,17 @@ mod config;
 use std::collections::HashSet;
 use std::io::Write;
 use std::process;
+use std::sync::Arc;
+use std::sync::Mutex;
 use std::sync::atomic::AtomicU64;
 use std::sync::atomic::AtomicUsize;
 use std::sync::atomic::Ordering;
-use std::sync::Arc;
-use std::sync::Mutex;
 use std::time::Instant;
 
-use anyhow::ensure;
-use anyhow::format_err;
 use anyhow::Error;
 use anyhow::Result;
+use anyhow::ensure;
+use anyhow::format_err;
 use blobrepo_override::DangerousOverride;
 use blobrepo_utils::BonsaiMFVerify;
 use blobrepo_utils::BonsaiMFVerifyResult;
@@ -39,20 +39,20 @@ use futures::future::TryFutureExt;
 use futures::stream::StreamExt;
 use futures::stream::TryStreamExt;
 use lock_ext::LockExt;
-use mercurial_derivation::get_manifest_from_bonsai;
 use mercurial_derivation::DeriveHgChangeset;
+use mercurial_derivation::get_manifest_from_bonsai;
 use mercurial_types::HgChangesetId;
-use mononoke_app::args::RepoArgs;
 use mononoke_app::MononokeAppBuilder;
+use mononoke_app::args::RepoArgs;
 use repo_blobstore::RepoBlobstore;
 use repo_blobstore::RepoBlobstoreArc;
 use repo_blobstore::RepoBlobstoreRef;
 use repo_derived_data::RepoDerivedData;
+use slog::Logger;
 use slog::debug;
 use slog::error;
 use slog::info;
 use slog::warn;
-use slog::Logger;
 
 #[facet::container]
 #[derive(Clone)]

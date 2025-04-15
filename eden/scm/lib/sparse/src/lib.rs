@@ -5,9 +5,9 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-use std::collections::hash_map::Entry;
 use std::collections::HashMap;
 use std::collections::VecDeque;
+use std::collections::hash_map::Entry;
 use std::hash::Hash;
 use std::hash::Hasher;
 use std::io;
@@ -25,10 +25,10 @@ use types::RepoPath;
 
 #[cfg(feature = "async")]
 mod extra_use {
+    pub(crate) use futures::Future;
     pub(crate) use futures::executor;
     pub(crate) use futures::future::BoxFuture;
     pub(crate) use futures::future::FutureExt;
-    pub(crate) use futures::Future;
 }
 
 #[cfg(not(feature = "async"))]

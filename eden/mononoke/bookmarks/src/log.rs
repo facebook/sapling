@@ -26,10 +26,10 @@ use mononoke_types::ChangesetId;
 use mononoke_types::RepositoryId;
 use mononoke_types::Timestamp;
 use sql::mysql;
-use sql::mysql_async::prelude::ConvIr;
-use sql::mysql_async::prelude::FromValue;
 use sql::mysql_async::FromValueError;
 use sql::mysql_async::Value;
+use sql::mysql_async::prelude::ConvIr;
+use sql::mysql_async::prelude::FromValue;
 
 /// An id in the BookmarkUpdateLog
 #[derive(

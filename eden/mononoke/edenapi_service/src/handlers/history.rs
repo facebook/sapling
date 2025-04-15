@@ -12,10 +12,10 @@ use cloned::cloned;
 use edenapi_types::HistoryRequest;
 use edenapi_types::HistoryResponseChunk;
 use edenapi_types::WireHistoryEntry;
-use futures::stream;
-use futures::stream::BoxStream;
 use futures::StreamExt;
 use futures::TryStreamExt;
+use futures::stream;
+use futures::stream::BoxStream;
 use mercurial_types::HgFileNodeId;
 use mercurial_types::HgNodeHash;
 use mononoke_api::MononokeRepo;
@@ -23,10 +23,10 @@ use mononoke_api::Repo;
 use mononoke_api_hg::HgRepoContext;
 use types::Key;
 
-use super::handler::SaplingRemoteApiContext;
 use super::HandlerResult;
 use super::SaplingRemoteApiHandler;
 use super::SaplingRemoteApiMethod;
+use super::handler::SaplingRemoteApiContext;
 use crate::errors::ErrorKind;
 use crate::utils::to_mpath;
 

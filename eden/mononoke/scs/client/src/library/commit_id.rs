@@ -11,8 +11,8 @@ use std::collections::BTreeMap;
 use std::collections::HashSet;
 use std::io::Write;
 
-use anyhow::bail;
 use anyhow::Error;
+use anyhow::bail;
 use itertools::Itertools;
 
 /// Render a Commit ID, potentially in multiple schemes.

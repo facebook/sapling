@@ -14,15 +14,15 @@ use futures::Stream;
 use futures::StreamExt;
 use serde::Deserialize;
 
-use super::hints::Flags;
-use super::id_static::IdStaticSet;
 use super::AsyncSetQuery;
 use super::BoxVertexStream;
 use super::Hints;
 use super::Set;
-use crate::fmt::write_debug;
+use super::hints::Flags;
+use super::id_static::IdStaticSet;
 use crate::Result;
 use crate::Vertex;
+use crate::fmt::write_debug;
 
 #[derive(Copy, Clone, Debug, Eq, PartialEq, Deserialize)]
 pub enum UnionOrder {

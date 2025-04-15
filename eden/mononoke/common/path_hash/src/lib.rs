@@ -10,15 +10,15 @@ use std::borrow::Cow;
 use std::hash::Hash;
 
 use abomonation_derive::Abomonation;
+use mononoke_types::RepoPath;
 use mononoke_types::hash;
 use mononoke_types::path::MPath;
 use mononoke_types::path_bytes_from_mpath;
-use mononoke_types::RepoPath;
 use sql::mysql;
-use sql::mysql_async::prelude::ConvIr;
-use sql::mysql_async::prelude::FromValue;
 use sql::mysql_async::FromValueError;
 use sql::mysql_async::Value;
+use sql::mysql_async::prelude::ConvIr;
+use sql::mysql_async::prelude::FromValue;
 #[derive(Abomonation, Debug, Clone, PartialEq, Eq, Hash, PartialOrd, Ord)]
 #[derive(mysql::OptTryFromRowField)]
 pub struct PathHashBytes(pub Vec<u8>);

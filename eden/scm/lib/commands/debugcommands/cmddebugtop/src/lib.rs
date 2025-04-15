@@ -9,8 +9,8 @@ use std::io::Write;
 use std::thread::sleep;
 use std::time::Duration;
 
-use clidispatch::io::IsTty;
 use clidispatch::ReqCtx;
+use clidispatch::io::IsTty;
 use cliparser::define_flags;
 use cmdutil::Result;
 use comfy_table::Table;

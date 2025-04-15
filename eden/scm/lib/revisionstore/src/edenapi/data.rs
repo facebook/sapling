@@ -15,11 +15,11 @@ use progress_model::ProgressBar;
 use tracing::field;
 use types::FetchContext;
 
-use super::hgid_keys;
 use super::File;
 use super::SaplingRemoteApiRemoteStore;
 use super::SaplingRemoteApiStoreKind;
 use super::Tree;
+use super::hgid_keys;
 use crate::datastore::HgIdDataStore;
 use crate::datastore::HgIdMutableDeltaStore;
 use crate::datastore::RemoteDataStore;
@@ -196,10 +196,10 @@ mod tests {
     use maplit::hashmap;
     use storemodel::SerializationFormat;
     use tempfile::TempDir;
-    use types::fetch_mode::FetchMode;
-    use types::testutil::*;
     use types::Blake3;
     use types::FetchContext;
+    use types::fetch_mode::FetchMode;
+    use types::testutil::*;
 
     use super::*;
     use crate::edenapi::File;
@@ -208,11 +208,11 @@ mod tests {
     use crate::indexedlogdatastore::IndexedLogHgIdDataStore;
     use crate::indexedlogdatastore::IndexedLogHgIdDataStoreConfig;
     use crate::indexedlogutil::StoreType;
-    use crate::scmstore::tree::types::TreeAttributes;
     use crate::scmstore::FileAttributes;
     use crate::scmstore::FileAuxData;
     use crate::scmstore::FileStore;
     use crate::scmstore::TreeStore;
+    use crate::scmstore::tree::types::TreeAttributes;
     use crate::testutil::*;
 
     #[test]

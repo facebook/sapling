@@ -9,28 +9,28 @@ use std::collections::HashSet;
 use std::fs::Metadata;
 use std::io;
 use std::path::PathBuf;
+use std::sync::Arc;
 use std::sync::atomic::AtomicU64;
 use std::sync::atomic::Ordering;
-use std::sync::Arc;
 use std::thread;
 use std::thread::JoinHandle;
 use std::time::Duration;
 
 use anyhow::Error;
 use anyhow::Result;
-use crossbeam::channel::unbounded;
 use crossbeam::channel::Receiver;
 use crossbeam::channel::RecvError;
 use crossbeam::channel::RecvTimeoutError;
 use crossbeam::channel::Sender;
+use crossbeam::channel::unbounded;
 use fs_err as fs;
 use fs_err::DirEntry;
 use pathmatcher::DirectoryMatch;
 use pathmatcher::Matcher;
 use thiserror::Error;
-use types::path::ParseError;
 use types::RepoPath;
 use types::RepoPathBuf;
+use types::path::ParseError;
 
 #[derive(Error, Debug)]
 pub enum WalkError {
@@ -332,8 +332,8 @@ where
 mod tests {
     use std::path::PathBuf;
 
-    use fs_err::create_dir_all;
     use fs_err::OpenOptions;
+    use fs_err::create_dir_all;
     use pathmatcher::AlwaysMatcher;
     use pathmatcher::NeverMatcher;
     use pathmatcher::TreeMatcher;

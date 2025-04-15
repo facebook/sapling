@@ -15,9 +15,9 @@ use blobstore::Storable;
 use bytes::Bytes;
 use context::CoreContext;
 use fbthrift::compact_protocol;
-use futures::future::try_join_all;
 use futures::future::BoxFuture;
 use futures::future::FutureExt;
+use futures::future::try_join_all;
 use itertools::Itertools;
 
 use crate::blob::Blob;

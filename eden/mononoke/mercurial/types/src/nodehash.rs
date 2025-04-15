@@ -17,19 +17,19 @@ use anyhow::Result;
 use ascii::AsciiStr;
 use ascii::AsciiString;
 use edenapi_types::CommitId as EdenapiCommitId;
+use mononoke_types::FileType;
 use mononoke_types::sha1_hash;
 use mononoke_types::sha1_hash::Sha1;
 use mononoke_types::sha1_hash::Sha1Prefix;
-use mononoke_types::FileType;
 use quickcheck_arbitrary_derive::Arbitrary;
 use sql::mysql;
 /// Type used to represent a node hash in the Mercurial client's Rust code.
 /// Equivalent to HgNodeHash;
 use types::HgId;
 
+use crate::RepoPath;
 use crate::manifest::Type;
 use crate::thrift;
-use crate::RepoPath;
 
 pub const NULL_HASH: HgNodeHash = HgNodeHash(sha1_hash::NULL);
 pub const NULL_CSID: HgChangesetId = HgChangesetId(NULL_HASH);

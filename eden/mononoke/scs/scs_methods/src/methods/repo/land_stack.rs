@@ -5,9 +5,9 @@
  * GNU General Public License version 2.
  */
 
-use bookmarks_movement::describe_hook_rejections;
 use bookmarks_movement::BookmarkKindRestrictions;
 use bookmarks_movement::HookRejection;
+use bookmarks_movement::describe_hook_rejections;
 use borrowed::borrowed;
 use context::CoreContext;
 use futures_watchdog::WatchdogExt;
@@ -23,8 +23,8 @@ use service::RepoLandStackExn;
 use source_control as thrift;
 use source_control_services::errors::source_control_service as service;
 
-use crate::from_request::convert_pushvars;
 use crate::from_request::FromRequest;
+use crate::from_request::convert_pushvars;
 use crate::into_response::AsyncIntoResponseWith;
 use crate::source_control_impl::SourceControlServiceImpl;
 

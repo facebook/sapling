@@ -8,43 +8,43 @@
 use core::future::Future;
 use std::sync::Arc;
 
-use anyhow::format_err;
 use anyhow::Context;
 use anyhow::Error;
+use anyhow::format_err;
 use bytes::Bytes;
-use clientinfo::ClientInfo;
 use clientinfo::CLIENT_INFO_HEADER;
+use clientinfo::ClientInfo;
 use context::CoreContext;
 use filestore::StoreRequest;
-use futures::stream;
 use futures::Stream;
 use futures::StreamExt;
 use futures::TryStreamExt;
-use git_types::git_lfs::parse_lfs_pointer;
+use futures::stream;
 use git_types::git_lfs::LfsPointerData;
+use git_types::git_lfs::parse_lfs_pointer;
 use gix_hash::ObjectId;
 use http::HeaderValue;
 use http::Request;
 use http::Uri;
-use hyper::body;
-use hyper::client::connect::HttpConnector;
 use hyper::Body;
 use hyper::Client;
 use hyper::StatusCode;
+use hyper::body;
+use hyper::client::connect::HttpConnector;
 use hyper_openssl::HttpsConnector;
 use mononoke_macros::mononoke;
 use mononoke_types::hash;
 use openssl::ssl::SslConnector;
 use openssl::ssl::SslFiletype;
 use openssl::ssl::SslMethod;
-use rand::thread_rng;
 use rand::Rng;
+use rand::thread_rng;
 use slog::error;
 use slog::warn;
 use tls::TLSArgs;
 use tokio::sync::Semaphore;
-use tokio::time::sleep;
 use tokio::time::Duration;
+use tokio::time::sleep;
 
 /// Module to be passed into gitimport that defines how LFS files are imported.
 /// The default will disable any LFS support (and the metadata of files pointing to LFS files

@@ -16,13 +16,13 @@ use futures_stats::TimedStreamExt;
 use gotham::handler::HandlerError;
 use gotham::helpers::http::response::create_response;
 use gotham::state::State;
-use hyper::header::HeaderValue;
-use hyper::header::CONTENT_ENCODING;
-use hyper::header::CONTENT_LENGTH;
-use hyper::header::CONTENT_TYPE;
 use hyper::Body;
 use hyper::Response;
 use hyper::StatusCode;
+use hyper::header::CONTENT_ENCODING;
+use hyper::header::CONTENT_LENGTH;
+use hyper::header::CONTENT_TYPE;
+use hyper::header::HeaderValue;
 use mime::Mime;
 
 use super::content_meta::ContentMetaProvider;

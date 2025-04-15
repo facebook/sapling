@@ -10,10 +10,10 @@ mod create_changeset;
 pub mod repo_commit;
 
 pub use crate::bonsai_generation::save_bonsai_changeset_object;
-// TODO: This is exported for testing - is this the right place for it?
-pub use crate::repo_commit::compute_changed_files;
 pub use crate::repo_commit::ChangesetHandle;
 pub use crate::repo_commit::UploadEntries;
+// TODO: This is exported for testing - is this the right place for it?
+pub use crate::repo_commit::compute_changed_files;
 pub mod errors {
     pub use blobrepo_errors::*;
 }
@@ -45,13 +45,13 @@ use filenodes::FilenodeInfo;
 use filenodes::FilenodeRange;
 use filenodes::FilenodeResult;
 use filenodes::FilenodesRef;
-use futures::future;
-use futures::stream;
-use futures::stream::BoxStream;
 use futures::Stream;
 use futures::StreamExt;
 use futures::TryFutureExt;
 use futures::TryStreamExt;
+use futures::future;
+use futures::stream;
+use futures::stream::BoxStream;
 use mercurial_derivation::DeriveHgChangeset;
 use mercurial_types::HgChangesetId;
 use mercurial_types::HgFileNodeId;

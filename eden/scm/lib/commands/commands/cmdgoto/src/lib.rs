@@ -7,14 +7,14 @@
 
 use std::io;
 
-use anyhow::bail;
 use anyhow::Context;
 use anyhow::Result;
+use anyhow::bail;
 use checkout::BookmarkAction;
 use checkout::ReportMode;
+use clidispatch::ReqCtx;
 use clidispatch::abort;
 use clidispatch::fallback;
-use clidispatch::ReqCtx;
 use cliparser::define_flags;
 use cmdutil::MergeToolOpts;
 use configmodel::ConfigExt;

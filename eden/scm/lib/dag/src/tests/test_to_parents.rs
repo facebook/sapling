@@ -6,10 +6,10 @@
  */
 
 use super::TestDag;
-use crate::ops::DagAlgorithm;
-use crate::ops::Parents;
 use crate::Set;
 use crate::Vertex;
+use crate::ops::DagAlgorithm;
+use crate::ops::Parents;
 
 #[tokio::test]
 async fn test_to_parents() {

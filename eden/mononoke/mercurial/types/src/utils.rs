@@ -5,9 +5,9 @@
  * GNU General Public License version 2.
  */
 
-use percent_encoding::utf8_percent_encode;
 use percent_encoding::AsciiSet;
 use percent_encoding::CONTROLS;
+use percent_encoding::utf8_percent_encode;
 
 // https://url.spec.whatwg.org/#fragment-percent-encode-set
 const FRAGMENT: &AsciiSet = &CONTROLS.add(b' ').add(b'"').add(b'<').add(b'>').add(b'`');

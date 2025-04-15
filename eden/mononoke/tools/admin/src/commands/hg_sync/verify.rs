@@ -13,8 +13,8 @@ use context::CoreContext;
 use mutable_counters::MutableCountersRef;
 use repo_identity::RepoIdentityRef;
 
-use super::Repo;
 use super::LATEST_REPLAYED_REQUEST_KEY;
+use super::Repo;
 
 #[derive(Args)]
 pub struct HgSyncVerifyArgs {}

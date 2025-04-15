@@ -17,8 +17,8 @@ mod blobstore;
 mod facebook;
 mod sql;
 
-pub use ::blobstore::PutBehaviour;
 pub use ::blobstore::DEFAULT_PUT_BEHAVIOUR;
+pub use ::blobstore::PutBehaviour;
 pub use blobstore_stats::OperationType;
 pub use cacheblob::CachelibBlobstoreOptions;
 pub use chaosblob::ChaosOptions;
@@ -27,17 +27,18 @@ pub use delayblob::DelayOptions;
 pub use facebook::ManifoldArgs;
 #[cfg(fbcode_build)]
 pub use manifoldblob::ManifoldOptions;
-pub use multiplexedblob::scrub::default_scrub_handler;
-pub use multiplexedblob::scrub::ScrubOptions;
-pub use multiplexedblob::scrub::SrubWriteOnly;
 pub use multiplexedblob::ScrubAction;
 pub use multiplexedblob::ScrubHandler;
+pub use multiplexedblob::scrub::ScrubOptions;
+pub use multiplexedblob::scrub::SrubWriteOnly;
+pub use multiplexedblob::scrub::default_scrub_handler;
 pub use packblob::PackOptions;
 pub use samplingblob::ComponentSamplingHandler;
 pub use throttledblob::ThrottleOptions;
 
 pub use crate::args::BlobstoreArgDefaults;
 pub use crate::args::BlobstoreArgs;
+pub use crate::blobstore::BlobstoreOptions;
 pub use crate::blobstore::make_blobstore;
 pub use crate::blobstore::make_blobstore_enumerable_with_unlink;
 pub use crate::blobstore::make_blobstore_put_ops;
@@ -48,7 +49,6 @@ pub use crate::blobstore::make_manifold_blobstore_enumerable_with_unlink;
 pub use crate::blobstore::make_packblob;
 pub use crate::blobstore::make_sql_blobstore;
 pub use crate::blobstore::make_sql_blobstore_xdb;
-pub use crate::blobstore::BlobstoreOptions;
 pub use crate::sql::MetadataSqlFactory;
 pub use crate::sql::SqlTierInfo;
 

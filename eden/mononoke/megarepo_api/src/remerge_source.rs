@@ -18,10 +18,10 @@ use mononoke_api::MononokeRepo;
 use mononoke_api::RepoContext;
 use mononoke_types::ChangesetId;
 
+use crate::common::MegarepoOp;
 use crate::common::find_source_config;
 use crate::common::find_target_bookmark_and_value;
 use crate::common::find_target_sync_config;
-use crate::common::MegarepoOp;
 
 // remerge_source resets source in a given target to a specified commit.
 // This is normally used for the cases where a bookmark had a non-fast

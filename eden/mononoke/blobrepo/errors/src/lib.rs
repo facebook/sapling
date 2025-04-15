@@ -8,7 +8,6 @@
 use std::fmt;
 
 use ascii::AsciiString;
-use mercurial_types::blobs::HgBlobChangeset;
 use mercurial_types::HgBlob;
 use mercurial_types::HgChangesetId;
 use mercurial_types::HgFileNodeId;
@@ -18,9 +17,10 @@ use mercurial_types::HgParents;
 use mercurial_types::NonRootMPath;
 use mercurial_types::RepoPath;
 use mercurial_types::Type;
-use mononoke_types::hash::Sha256;
+use mercurial_types::blobs::HgBlobChangeset;
 use mononoke_types::ChangesetId;
 use mononoke_types::FileType;
+use mononoke_types::hash::Sha256;
 use thiserror::Error;
 
 #[derive(Debug)]

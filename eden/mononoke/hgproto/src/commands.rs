@@ -23,23 +23,23 @@ use async_stream::try_stream;
 use bytes::Buf;
 use bytes::Bytes;
 use bytes::BytesMut;
+use futures::Stream;
 use futures::channel::oneshot;
 use futures::future;
-use futures::future::ok;
 use futures::future::BoxFuture;
 use futures::future::FutureExt;
 use futures::future::TryFutureExt;
+use futures::future::ok;
 use futures::pin_mut;
-use futures::stream::once;
 use futures::stream::BoxStream;
 use futures::stream::StreamExt;
 use futures::stream::TryStreamExt;
-use futures::Stream;
+use futures::stream::once;
+use mercurial_bundles::Bundle2Item;
 use mercurial_bundles::bundle2;
-use mercurial_bundles::bundle2::bundle2_stream;
 use mercurial_bundles::bundle2::Bundle2Stream;
 use mercurial_bundles::bundle2::StreamEvent;
-use mercurial_bundles::Bundle2Item;
+use mercurial_bundles::bundle2::bundle2_stream;
 use mercurial_types::HgChangesetId;
 use mercurial_types::HgFileNodeId;
 use mercurial_types::NonRootMPath;
@@ -50,12 +50,12 @@ use tokio::io::AsyncBufReadExt;
 use tokio_util::codec::Decoder;
 use tokio_util::io::StreamReader;
 
-use crate::dechunker::Dechunker;
-use crate::errors::*;
 use crate::GetbundleArgs;
 use crate::GettreepackArgs;
 use crate::SingleRequest;
 use crate::SingleResponse;
+use crate::dechunker::Dechunker;
+use crate::errors::*;
 
 pub struct HgCommandHandler<H> {
     logger: Logger,
@@ -651,8 +651,8 @@ mod test {
     use bytes::BufMut;
     use futures::stream;
     use mononoke_macros::mononoke;
-    use slog::o;
     use slog::Discard;
+    use slog::o;
 
     use super::*;
 

@@ -10,12 +10,12 @@ mod print;
 use std::sync::Arc;
 
 use anyhow::Result;
-use clidispatch::fallback;
 use clidispatch::ReqCtx;
-use cmdutil::define_flags;
-use cmdutil::get_formatter;
+use clidispatch::fallback;
 use cmdutil::FormatterOpts;
 use cmdutil::WalkOpts;
+use cmdutil::define_flags;
+use cmdutil::get_formatter;
 use configloader::configmodel::ConfigExt;
 use print::PrintConfig;
 use print::PrintConfigStatusTypes;

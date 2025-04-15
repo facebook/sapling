@@ -20,12 +20,12 @@ use mononoke_types::FileContents;
 use slog::debug;
 use thiserror::Error;
 
-use crate::fetch;
-use crate::get_metadata;
-use crate::store;
 use crate::FetchKey;
 use crate::FilestoreConfig;
 use crate::StoreRequest;
+use crate::fetch;
+use crate::get_metadata;
+use crate::store;
 
 #[derive(Debug, Error)]
 pub enum ErrorKind {

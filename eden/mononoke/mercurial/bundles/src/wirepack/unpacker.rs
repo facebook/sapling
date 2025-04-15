@@ -10,17 +10,17 @@
 use std::cmp;
 use std::mem;
 
-use anyhow::bail;
 use anyhow::Context;
 use anyhow::Error;
 use anyhow::Result;
+use anyhow::bail;
 use byteorder::BigEndian;
 use byteorder::ByteOrder;
 use bytes::Buf;
 use bytes::BytesMut;
 use mercurial_types::RepoPath;
-use slog::trace;
 use slog::Logger;
+use slog::trace;
 use tokio_util::codec::Decoder;
 
 use super::DataEntry;
@@ -271,8 +271,8 @@ mod test {
     use std::io::Cursor;
 
     use futures::TryStreamExt;
-    use slog::o;
     use slog::Discard;
+    use slog::o;
     use tokio_util::codec::FramedRead;
 
     use super::*;

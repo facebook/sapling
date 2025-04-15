@@ -51,8 +51,8 @@ pub fn apply(text: &[u8], deltas: &[Delta]) -> Vec<u8> {
 mod test {
     use mononoke_macros::mononoke;
 
-    use super::apply;
     use super::Delta;
+    use super::apply;
 
     #[mononoke::test]
     fn test_1() {

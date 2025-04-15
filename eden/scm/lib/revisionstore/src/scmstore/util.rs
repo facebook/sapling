@@ -8,8 +8,8 @@
 use std::path::PathBuf;
 use std::str::FromStr;
 
-use anyhow::anyhow;
 use anyhow::Result;
+use anyhow::anyhow;
 use futures::future;
 use futures::stream::Stream;
 use futures::stream::StreamExt;

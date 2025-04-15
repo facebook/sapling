@@ -10,10 +10,10 @@ use quickcheck::Arbitrary;
 use serde::Deserialize;
 use serde::Serialize;
 
+use crate::Batch;
 use crate::wire::ToApi;
 use crate::wire::ToWire;
 use crate::wire::WireToApiConversionError;
-use crate::Batch;
 
 #[derive(Clone, Debug, Serialize, Deserialize, Eq, PartialEq)]
 pub struct WireBatch<T> {
@@ -62,8 +62,8 @@ where
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::wire::tests::auto_wire_tests;
     use crate::wire::WireHgId;
+    use crate::wire::tests::auto_wire_tests;
 
     type WireHgIdBatch = WireBatch<WireHgId>;
 

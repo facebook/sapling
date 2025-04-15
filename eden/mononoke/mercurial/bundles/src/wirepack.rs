@@ -10,10 +10,10 @@
 use std::fmt;
 use std::io::Cursor;
 
-use anyhow::bail;
-use anyhow::ensure;
 use anyhow::Context;
 use anyhow::Result;
+use anyhow::bail;
+use anyhow::ensure;
 use byteorder::BigEndian;
 use byteorder::ByteOrder;
 use bytes::Buf;
@@ -21,8 +21,8 @@ use bytes::BufMut;
 use bytes::BytesMut;
 use mercurial_types::Delta;
 use mercurial_types::HgNodeHash;
-use mercurial_types::RepoPath;
 use mercurial_types::NULL_HASH;
+use mercurial_types::RepoPath;
 use revisionstore_types::Metadata;
 
 use crate::delta;
@@ -369,9 +369,9 @@ mod test {
     use mercurial_types_mocks::nodehash::AS_HASH;
     use mercurial_types_mocks::nodehash::BS_HASH;
     use mononoke_macros::mononoke;
-    use quickcheck::quickcheck;
     use quickcheck::Arbitrary;
     use quickcheck::Gen;
+    use quickcheck::quickcheck;
 
     use super::*;
 

@@ -10,10 +10,10 @@ use std::collections::BTreeMap;
 use std::ops::Deref;
 use std::sync::Arc;
 
-use anyhow::anyhow;
-use anyhow::bail;
 use anyhow::Context;
 use anyhow::Result;
+use anyhow::anyhow;
+use anyhow::bail;
 use manifest::File;
 use manifest::FileMetadata;
 use manifest::FsNodeMetadata;

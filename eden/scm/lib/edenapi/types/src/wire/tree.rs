@@ -13,6 +13,7 @@ use quickcheck_arbitrary_derive::Arbitrary;
 use serde_derive::Deserialize;
 use serde_derive::Serialize;
 
+use crate::SaplingRemoteApiServerError;
 use crate::tree::TreeAttributes;
 use crate::tree::TreeChildDirectoryEntry;
 use crate::tree::TreeChildEntry;
@@ -22,7 +23,6 @@ use crate::tree::TreeRequest;
 pub use crate::tree::WireUploadTreeEntry;
 pub use crate::tree::WireUploadTreeRequest;
 pub use crate::tree::WireUploadTreeResponse;
-use crate::wire::is_default;
 use crate::wire::ToApi;
 use crate::wire::ToWire;
 use crate::wire::WireFileMetadata;
@@ -31,7 +31,7 @@ use crate::wire::WireParents;
 use crate::wire::WireSaplingRemoteApiServerError;
 use crate::wire::WireToApiConversionError;
 use crate::wire::WireTreeAuxData;
-use crate::SaplingRemoteApiServerError;
+use crate::wire::is_default;
 
 #[derive(Clone, Debug, Default, Eq, PartialEq, Serialize, Deserialize)]
 pub struct WireTreeEntry {

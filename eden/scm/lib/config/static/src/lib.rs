@@ -153,9 +153,9 @@ mod tests {
     // Emulates external crate usage where `staticconfig::StaticConfig` is available.
     // This is needed, since `static_rc!` refers to `staticconfig::StaticConfig`.
     pub mod staticconfig {
-        pub use crate::phf;
-        pub use crate::StaticConfig;
         pub use crate::_detail;
+        pub use crate::StaticConfig;
+        pub use crate::phf;
     }
 
     #[test]

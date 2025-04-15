@@ -16,9 +16,9 @@ use std::sync::OnceLock;
 pub use clientinfo::get_client_request_info;
 use parking_lot::Mutex;
 use parking_lot::MutexGuard;
+use serde::Serializer;
 use serde::ser::Serialize;
 use serde::ser::SerializeMap;
-use serde::Serializer;
 pub use serde_json;
 use serde_json::Serializer as JsonSerializer;
 

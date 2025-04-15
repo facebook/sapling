@@ -20,9 +20,9 @@ use quickcheck_arbitrary_derive::Arbitrary;
 use serde_derive::Deserialize;
 use serde_derive::Serialize;
 use type_macros::auto_wire;
-use types::hgid::HgId;
 use types::Parents;
 use types::RepoPathBuf;
+use types::hgid::HgId;
 
 use crate::BonsaiChangesetId;
 use crate::CommitId;

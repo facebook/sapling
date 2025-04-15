@@ -25,16 +25,16 @@ use repo_authorization::RepoWriteOperation;
 use repo_update_logger::BookmarkInfo;
 use repo_update_logger::BookmarkOperation;
 
-use crate::affected_changesets::AdditionalChangesets;
-use crate::affected_changesets::AffectedChangesets;
-use crate::repo_lock::check_repo_lock;
-use crate::restrictions::check_bookmark_sync_config;
-use crate::restrictions::BookmarkKindRestrictions;
+use crate::ALLOW_NON_FFWD_PUSHVAR;
 use crate::BookmarkInfoData;
 use crate::BookmarkInfoTransaction;
 use crate::BookmarkMovementError;
 use crate::Repo;
-use crate::ALLOW_NON_FFWD_PUSHVAR;
+use crate::affected_changesets::AdditionalChangesets;
+use crate::affected_changesets::AffectedChangesets;
+use crate::repo_lock::check_repo_lock;
+use crate::restrictions::BookmarkKindRestrictions;
+use crate::restrictions::check_bookmark_sync_config;
 
 /// The old and new changeset during a bookmark update.
 ///

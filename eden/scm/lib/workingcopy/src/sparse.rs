@@ -5,8 +5,8 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-use std::collections::hash_map::DefaultHasher;
 use std::collections::HashMap;
+use std::collections::hash_map::DefaultHasher;
 use std::hash::Hash;
 use std::hash::Hasher;
 use std::ops::DerefMut;
@@ -222,8 +222,8 @@ mod tests {
 
     use pathmatcher::Matcher;
     use scm_blob::ScmBlob;
-    use storemodel::minibytes::Bytes;
     use storemodel::KeyStore;
+    use storemodel::minibytes::Bytes;
     use types::HgId;
     use types::Parents;
     use types::RepoPath;

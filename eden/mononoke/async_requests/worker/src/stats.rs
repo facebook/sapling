@@ -8,8 +8,8 @@
 use std::collections::HashMap;
 use std::time::Duration;
 
-use async_requests::types::RequestStatus;
 use async_requests::AsyncMethodRequestQueue;
+use async_requests::types::RequestStatus;
 use context::CoreContext;
 use mononoke_api::RepositoryId;
 use mononoke_types::Timestamp;

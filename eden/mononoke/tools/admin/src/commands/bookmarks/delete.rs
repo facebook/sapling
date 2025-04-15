@@ -7,14 +7,14 @@
 
 use std::time::Duration;
 
-use anyhow::anyhow;
 use anyhow::Context;
 use anyhow::Result;
+use anyhow::anyhow;
 use bookmarks::BookmarkKey;
 use bookmarks::BookmarkUpdateReason;
 use bookmarks::BookmarksRef;
-use bookmarks_movement::check_bookmark_sync_config;
 use bookmarks_movement::BookmarkKind;
+use bookmarks_movement::check_bookmark_sync_config;
 use clap::Args;
 use commit_id::parse_commit_id;
 use context::CoreContext;

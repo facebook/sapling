@@ -8,17 +8,17 @@
 use std::collections::BTreeMap;
 
 use cpython::*;
-use cpython_ext::convert::Serde;
 use cpython_ext::ResultPyErrExt;
-use format_util::commit_text_to_fields;
+use cpython_ext::convert::Serde;
 use format_util::CommitFields as NativeCommitFields;
 use format_util::GitCommitFields;
 use format_util::HgCommitFields;
 use format_util::HgTime;
+use format_util::commit_text_to_fields;
 use minibytes::Text;
 use storemodel::SerializationFormat;
-use types::hgid::NULL_ID;
 use types::Id20;
+use types::hgid::NULL_ID;
 
 pub fn init_module(py: Python, package: &str) -> PyResult<PyModule> {
     let name = [package, "formatutil"].join(".");

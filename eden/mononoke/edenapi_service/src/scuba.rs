@@ -6,10 +6,10 @@
  */
 
 use gotham::state::State;
-use gotham_ext::middleware::request_context::RequestContext;
 use gotham_ext::middleware::MetadataState;
 use gotham_ext::middleware::PostResponseInfo;
 use gotham_ext::middleware::ScubaHandler;
+use gotham_ext::middleware::request_context::RequestContext;
 use permission_checker::MononokeIdentitySetExt;
 use scuba_ext::MononokeScubaSampleBuilder;
 

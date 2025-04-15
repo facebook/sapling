@@ -73,11 +73,11 @@
 //! "20-byte key + 4-byte offset + ..." so those key entries could contain
 //! additional data.
 
+use crate::Result;
 use crate::base16::Base16Iter;
 use crate::errors::ErrorKind;
 use crate::key::KeyId;
 use crate::traits::Resize;
-use crate::Result;
 
 /// Number of children ("pointer"s) a radix node has
 pub const RADIX_NCHILDREN: usize = 16;

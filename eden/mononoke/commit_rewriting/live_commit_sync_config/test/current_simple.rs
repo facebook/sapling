@@ -11,8 +11,8 @@ use live_commit_sync_config::LiveCommitSyncConfig;
 use mononoke_macros::mononoke;
 use mononoke_types::RepositoryId;
 
-use crate::get_ctx_source_store_and_live_config;
 use crate::EMTPY_COMMIT_SYNC_ALL;
+use crate::get_ctx_source_store_and_live_config;
 
 #[mononoke::fbinit_test]
 async fn test_empty_configs(fb: FacebookInit) -> Result<()> {

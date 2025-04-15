@@ -184,8 +184,8 @@ impl From<mercurial_types::HgChangesetIdsResolvedFromPrefix>
     for ChangesetSpecifierPrefixResolution
 {
     fn from(resolved: mercurial_types::HgChangesetIdsResolvedFromPrefix) -> Self {
-        use mercurial_types::HgChangesetIdsResolvedFromPrefix::*;
         use ChangesetSpecifier::*;
+        use mercurial_types::HgChangesetIdsResolvedFromPrefix::*;
         match resolved {
             Single(id) => Self::Single(Hg(id)),
             Multiple(ids) => Self::Multiple(ids.into_iter().map(Hg).collect()),
@@ -197,8 +197,8 @@ impl From<mercurial_types::HgChangesetIdsResolvedFromPrefix>
 
 impl From<bonsai_git_mapping::GitSha1sResolvedFromPrefix> for ChangesetSpecifierPrefixResolution {
     fn from(resolved: bonsai_git_mapping::GitSha1sResolvedFromPrefix) -> Self {
-        use bonsai_git_mapping::GitSha1sResolvedFromPrefix::*;
         use ChangesetSpecifier::*;
+        use bonsai_git_mapping::GitSha1sResolvedFromPrefix::*;
         match resolved {
             Single(id) => Self::Single(GitSha1(id)),
             Multiple(ids) => Self::Multiple(ids.into_iter().map(GitSha1).collect()),
@@ -210,8 +210,8 @@ impl From<bonsai_git_mapping::GitSha1sResolvedFromPrefix> for ChangesetSpecifier
 
 impl From<mononoke_types::ChangesetIdsResolvedFromPrefix> for ChangesetSpecifierPrefixResolution {
     fn from(resolved: mononoke_types::ChangesetIdsResolvedFromPrefix) -> Self {
-        use mononoke_types::ChangesetIdsResolvedFromPrefix::*;
         use ChangesetSpecifier::*;
+        use mononoke_types::ChangesetIdsResolvedFromPrefix::*;
         match resolved {
             Single(id) => Self::Single(Bonsai(id)),
             Multiple(ids) => Self::Multiple(ids.into_iter().map(Bonsai).collect()),

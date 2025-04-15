@@ -9,15 +9,15 @@ use std::collections::HashMap;
 use std::collections::HashSet;
 
 use ::sql::Transaction;
-use anyhow::ensure;
 use anyhow::Result;
+use anyhow::ensure;
 use ascii::AsciiStr;
 use async_trait::async_trait;
 use context::CoreContext;
-use mononoke_types::hash::GitSha1;
 use mononoke_types::BonsaiChangeset;
 use mononoke_types::ChangesetId;
 use mononoke_types::RepositoryId;
+use mononoke_types::hash::GitSha1;
 use slog::warn;
 
 mod caching;

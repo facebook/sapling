@@ -20,9 +20,6 @@ pub use renderdag::Renderer;
 pub use renderdag::*;
 
 #[cfg(any(test, feature = "indexedlog-backend"))]
-use crate::ops::IdConvert;
-use crate::set::SyncSetQuery;
-#[cfg(any(test, feature = "indexedlog-backend"))]
 use crate::Dag;
 use crate::DagAlgorithm;
 #[cfg(any(test, feature = "indexedlog-backend"))]
@@ -33,6 +30,9 @@ use crate::IdSpan;
 use crate::Level;
 use crate::Set;
 use crate::Vertex;
+#[cfg(any(test, feature = "indexedlog-backend"))]
+use crate::ops::IdConvert;
+use crate::set::SyncSetQuery;
 
 /// Render a Dag or MemDag into a String.
 pub fn render_dag(

@@ -28,7 +28,7 @@ mod mapping;
 pub use fastlog_impl::fetch_fastlog_batch_by_unode_id;
 pub use fastlog_impl::fetch_flattened;
 pub use fastlog_impl::unode_entry_to_fastlog_batch_key;
-pub use mapping::format_key;
 pub use mapping::ErrorKind;
 pub use mapping::FastlogParent;
 pub use mapping::RootFastlog;
+pub use mapping::format_key;

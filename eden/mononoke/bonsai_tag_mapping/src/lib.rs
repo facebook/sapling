@@ -9,9 +9,9 @@ mod sql;
 
 use anyhow::Result;
 use async_trait::async_trait;
-use mononoke_types::hash::GitSha1;
 use mononoke_types::ChangesetId;
 use mononoke_types::RepositoryId;
+use mononoke_types::hash::GitSha1;
 
 pub use crate::sql::SqlBonsaiTagMapping;
 pub use crate::sql::SqlBonsaiTagMappingBuilder;

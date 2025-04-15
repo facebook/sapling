@@ -16,11 +16,11 @@ use std::ops::Deref;
 use std::ops::DerefMut;
 use std::path::PathBuf;
 use std::str::FromStr;
+use std::sync::Arc;
+use std::sync::Weak;
 use std::sync::atomic::AtomicBool;
 use std::sync::atomic::Ordering;
 use std::sync::mpsc::channel;
-use std::sync::Arc;
-use std::sync::Weak;
 use std::thread;
 use std::time::Duration;
 use std::time::Instant;
@@ -33,8 +33,8 @@ use clidispatch::dispatch;
 use clidispatch::dispatch::Dispatcher;
 use clidispatch::errors;
 use clidispatch::global_flags::HgGlobalOpts;
-use clidispatch::io::IsTty;
 use clidispatch::io::IO;
+use clidispatch::io::IsTty;
 use commandserver::ipc::Server;
 use configloader::config::ConfigSet;
 use configmodel::Config;
@@ -44,19 +44,19 @@ use parking_lot::Mutex;
 use progress_model::Registry;
 use repo::repo::Repo;
 use testutil::failpoint;
+use tracing::Level;
 use tracing::dispatcher;
 use tracing::dispatcher::Dispatch;
 use tracing::metadata::LevelFilter;
-use tracing::Level;
 use tracing_collector::TracingData;
 use tracing_sampler::SamplingLayer;
-use tracing_subscriber::fmt::format::FmtSpan;
-use tracing_subscriber::fmt::Layer as FmtLayer;
-use tracing_subscriber::layer::SubscriberExt;
 use tracing_subscriber::Layer;
+use tracing_subscriber::fmt::Layer as FmtLayer;
+use tracing_subscriber::fmt::format::FmtSpan;
+use tracing_subscriber::layer::SubscriberExt;
 
-use crate::commands;
 use crate::HgPython;
+use crate::commands;
 
 /// Run a Rust or Python command.
 ///

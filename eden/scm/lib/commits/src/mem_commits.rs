@@ -11,13 +11,13 @@ use std::io;
 use std::sync::Arc;
 
 use anyhow::bail;
+use dag::MemDag;
+use dag::Set;
+use dag::Vertex;
 use dag::delegate;
 use dag::errors::NotFoundError;
 use dag::ops::DagAddHeads;
 use dag::ops::DagStrip;
-use dag::MemDag;
-use dag::Set;
-use dag::Vertex;
 use futures::stream::BoxStream;
 use futures::stream::StreamExt;
 use minibytes::Bytes;

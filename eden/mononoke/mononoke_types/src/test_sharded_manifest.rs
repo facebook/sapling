@@ -11,10 +11,12 @@ use blobstore::Blobstore;
 use blobstore::Loadable;
 use blobstore::LoadableError;
 use context::CoreContext;
-use futures::stream::BoxStream;
 use futures::StreamExt;
 use futures::TryStreamExt;
+use futures::stream::BoxStream;
 
+use crate::MPathElement;
+use crate::ThriftConvert;
 use crate::blob::Blob;
 use crate::blob::BlobstoreValue;
 use crate::blob::TestShardedManifestBlob;
@@ -27,8 +29,6 @@ use crate::typed_hash::ShardedMapV2NodeTestShardedManifestContext;
 use crate::typed_hash::ShardedMapV2NodeTestShardedManifestId;
 use crate::typed_hash::TestShardedManifestId;
 use crate::typed_hash::TestShardedManifestIdContext;
-use crate::MPathElement;
-use crate::ThriftConvert;
 
 /// A sharded version of TestManifest intended only to be used in tests.
 /// It contains only the file names and the maximum basename length of all files

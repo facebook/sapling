@@ -7,19 +7,19 @@
 
 use std::cmp;
 use std::fmt;
+use std::sync::Arc;
 use std::sync::atomic::AtomicU32;
 use std::sync::atomic::AtomicU64;
 use std::sync::atomic::Ordering::Acquire;
 use std::sync::atomic::Ordering::Relaxed;
 use std::sync::atomic::Ordering::Release;
-use std::sync::Arc;
 
 use bitflags::bitflags;
 
-use crate::ops::DagAlgorithm;
-use crate::ops::IdConvert;
 use crate::Id;
 use crate::VerLink;
+use crate::ops::DagAlgorithm;
+use crate::ops::IdConvert;
 
 bitflags! {
     #[derive(PartialEq, Eq, PartialOrd, Ord, Hash, Debug, Clone, Copy)]

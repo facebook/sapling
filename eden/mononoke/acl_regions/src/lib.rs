@@ -10,8 +10,8 @@ mod trie;
 use std::collections::HashMap;
 use std::sync::Arc;
 
-use anyhow::anyhow;
 use anyhow::Result;
+use anyhow::anyhow;
 use async_trait::async_trait;
 use commit_graph::ArcCommitGraph;
 use context::CoreContext;
@@ -20,8 +20,8 @@ use futures::stream::StreamExt;
 use futures::stream::TryStreamExt;
 use metaconfig_types::AclRegion;
 use metaconfig_types::AclRegionConfig;
-use mononoke_types::path::MPath;
 use mononoke_types::ChangesetId;
+use mononoke_types::path::MPath;
 use trie::PrefixTrieWithRules;
 
 #[derive(Debug, Default, Clone, Eq, PartialEq)]

@@ -9,12 +9,12 @@
 
 use mercurial_types::Delta;
 use mercurial_types::HgNodeHash;
+use mercurial_types::NULL_HASH;
 use mercurial_types::NonRootMPath;
 use mercurial_types::RepoPath;
-use mercurial_types::NULL_HASH;
-use quickcheck::empty_shrinker;
 use quickcheck::Arbitrary;
 use quickcheck::Gen;
+use quickcheck::empty_shrinker;
 use revisionstore_types::Metadata;
 
 use super::DataEntry;

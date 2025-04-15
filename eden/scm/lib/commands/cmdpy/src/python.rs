@@ -8,14 +8,14 @@
 use std::ffi::CStr;
 use std::ffi::CString;
 
-use ffi::PyEval_InitThreads;
-use ffi::PyGILState_Ensure;
-use ffi::PyUnicode_AsWideCharString;
-use ffi::PyUnicode_FromString;
 use ffi::Py_DECREF;
 use ffi::Py_Finalize;
 use ffi::Py_IsInitialized;
 use ffi::Py_Main;
+use ffi::PyEval_InitThreads;
+use ffi::PyGILState_Ensure;
+use ffi::PyUnicode_AsWideCharString;
+use ffi::PyUnicode_FromString;
 use libc::c_int;
 use libc::wchar_t;
 use python3_sys as ffi;

@@ -14,8 +14,8 @@ use storemodel::TreeItemFlag;
 use types::Id20;
 use types::PathComponentBuf;
 
-use crate::store::Entry;
 use crate::TreeElement;
+use crate::store::Entry;
 
 pub(crate) fn setup_basic_tree_parser_constructor() {
     fn parse_tree(data: Bytes, format: SerializationFormat) -> anyhow::Result<Box<dyn TreeEntry>> {

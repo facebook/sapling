@@ -8,8 +8,8 @@
 use async_runtime::try_block_unless_interrupted as block_on;
 use cpython::*;
 use cpython_ext::ResultPyErrExt;
-use dag::ops::Parents as DagParents;
 use dag::Vertex;
+use dag::ops::Parents as DagParents;
 
 // A wrapper around [`DagParents`].
 py_class!(pub class parents |py| {

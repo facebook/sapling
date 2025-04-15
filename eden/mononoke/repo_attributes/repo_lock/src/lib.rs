@@ -7,9 +7,9 @@
 
 use std::collections::HashMap;
 
-use anyhow::anyhow;
 use anyhow::Context;
 use anyhow::Error;
+use anyhow::anyhow;
 use async_trait::async_trait;
 use maplit::hashmap;
 use mononoke_types::RepositoryId;
@@ -17,8 +17,8 @@ use sql::Connection;
 use sql::Transaction;
 use sql_construct::SqlConstruct;
 use sql_construct::SqlConstructFromMetadataDatabaseConfig;
-use sql_ext::mononoke_queries;
 use sql_ext::SqlConnections;
+use sql_ext::mononoke_queries;
 
 const DEFAULT_DB_MSG: &str = "Repo is locked in DB";
 

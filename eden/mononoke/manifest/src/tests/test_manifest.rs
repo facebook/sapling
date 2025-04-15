@@ -5,8 +5,8 @@
  * GNU General Public License version 2.
  */
 
-use std::collections::hash_map::DefaultHasher;
 use std::collections::BTreeMap;
+use std::collections::hash_map::DefaultHasher;
 use std::hash::Hash;
 use std::hash::Hasher;
 use std::sync::Arc;
@@ -27,25 +27,25 @@ use futures::stream;
 use futures::stream::BoxStream;
 use futures::stream::StreamExt;
 use futures::stream::TryStreamExt;
-use mononoke_types::path::MPath;
 use mononoke_types::BlobstoreBytes;
 use mononoke_types::ChangesetId;
 use mononoke_types::FileType;
 use mononoke_types::MPathElement;
 use mononoke_types::NonRootMPath;
 use mononoke_types::SortedVectorTrieMap;
+use mononoke_types::path::MPath;
 use serde_derive::Deserialize;
 use serde_derive::Serialize;
 
-pub(crate) use crate::derive_batch::derive_manifests_for_simple_stack_of_commits;
-pub(crate) use crate::derive_batch::ManifestChanges;
-pub(crate) use crate::derive_manifest;
-pub(crate) use crate::flatten_subentries;
-pub(crate) use crate::types::Weight;
 pub(crate) use crate::Entry;
 pub(crate) use crate::Manifest;
 pub(crate) use crate::OrderedManifest;
 pub(crate) use crate::TreeInfo;
+pub(crate) use crate::derive_batch::ManifestChanges;
+pub(crate) use crate::derive_batch::derive_manifests_for_simple_stack_of_commits;
+pub(crate) use crate::derive_manifest;
+pub(crate) use crate::flatten_subentries;
+pub(crate) use crate::types::Weight;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub(crate) struct TestLeafId(u64);

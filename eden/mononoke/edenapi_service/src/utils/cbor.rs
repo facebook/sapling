@@ -8,9 +8,9 @@
 //! cbor.rs - Utilities for working with CBOR data in HTTP requests and responses.
 use std::pin::Pin;
 
-use anyhow::format_err;
 use anyhow::Context;
 use anyhow::Error;
+use anyhow::format_err;
 use bytes::Bytes;
 use edenapi_types::ToApi;
 use edenapi_types::ToWire;
@@ -30,8 +30,8 @@ use gotham_ext::response::TryIntoResponse;
 use mime::Mime;
 use once_cell::sync::Lazy;
 use pin_project::pin_project;
-use serde::de::DeserializeOwned;
 use serde::Serialize;
+use serde::de::DeserializeOwned;
 
 use super::get_request_body;
 use crate::errors::ErrorKind;

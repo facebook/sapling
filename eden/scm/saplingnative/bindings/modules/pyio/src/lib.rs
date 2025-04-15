@@ -17,8 +17,8 @@ use std::io::Write;
 use cpython::*;
 use cpython_ext::PyNone;
 use cpython_ext::ResultPyErrExt;
-use io::time_interval;
 use io::IO as RustIO;
+use io::time_interval;
 use pyconfigloader::config as PyConfig;
 
 pub fn init_module(py: Python, package: &str) -> PyResult<PyModule> {

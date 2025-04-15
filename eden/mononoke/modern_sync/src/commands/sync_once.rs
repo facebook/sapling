@@ -6,16 +6,16 @@
  */
 
 use std::path::PathBuf;
-use std::sync::atomic::AtomicBool;
 use std::sync::Arc;
+use std::sync::atomic::AtomicBool;
 
 use anyhow::Result;
 use clap::Parser;
 use mononoke_app::MononokeApp;
 
-use crate::sync::get_unsharded_repo_args;
-use crate::sync::ExecutionType;
 use crate::ModernSyncArgs;
+use crate::sync::ExecutionType;
+use crate::sync::get_unsharded_repo_args;
 
 /// Replays bookmark's moves
 #[derive(Parser)]

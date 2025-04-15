@@ -40,8 +40,8 @@ use std::path::Path;
 use std::path::PathBuf;
 use std::str::Utf8Error;
 
-use ref_cast::ref_cast_custom;
 use ref_cast::RefCastCustom;
+use ref_cast::ref_cast_custom;
 use serde_derive::Deserialize;
 use serde_derive::Serialize;
 use thiserror::Error;

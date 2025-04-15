@@ -14,10 +14,10 @@ use gotham::state::State;
 use gotham_ext::body_ext::BodyExt;
 use gotham_ext::middleware::Middleware;
 use http::header::CONTENT_ENCODING;
-use hyper::body::Body;
 use hyper::HeaderMap;
 use hyper::Response;
 use hyper::StatusCode;
+use hyper::body::Body;
 
 const GZIP_ENCODING: &str = "gzip";
 

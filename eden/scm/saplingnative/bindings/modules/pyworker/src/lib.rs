@@ -15,18 +15,18 @@ use std::sync::Arc;
 use std::thread;
 use std::thread::JoinHandle;
 
-use anyhow::format_err;
 use anyhow::Context;
 use anyhow::Result;
+use anyhow::format_err;
 use cpython::*;
 use cpython_ext::ExtractInner;
 use cpython_ext::PyNone;
 use cpython_ext::PyPath;
 use cpython_ext::PyPathBuf;
 use cpython_ext::ResultPyErrExt;
-use flume::bounded;
 use flume::Receiver;
 use flume::Sender;
+use flume::bounded;
 use pyrevisionstore::filescmstore;
 use redacted::redact_if_needed;
 use revisionstore::scmstore::FileStore;
@@ -321,12 +321,12 @@ py_class!(class removerworker |py| {
 #[cfg(test)]
 mod tests {
     use std::collections::HashSet;
+    use std::fs::File;
     use std::fs::create_dir_all;
     use std::fs::metadata;
     use std::fs::read_dir;
     use std::fs::read_to_string;
     use std::fs::symlink_metadata;
-    use std::fs::File;
     use std::io::Write;
     #[cfg(unix)]
     use std::os::unix::fs::PermissionsExt;
@@ -334,15 +334,15 @@ mod tests {
     use anyhow::ensure;
     use memmap2::MmapOptions;
     use minibytes::Bytes;
-    use quickcheck::quickcheck;
     use quickcheck::TestResult;
+    use quickcheck::quickcheck;
     use revisionstore::datastore::Delta;
     use revisionstore::datastore::HgIdMutableDeltaStore;
     use revisionstore::scmstore::FileStoreBuilder;
     use revisionstore::testutil::make_config;
     use tempfile::TempDir;
-    use types::testutil::key;
     use types::RepoPath;
+    use types::testutil::key;
 
     use super::*;
 

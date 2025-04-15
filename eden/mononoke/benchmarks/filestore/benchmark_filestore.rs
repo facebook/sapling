@@ -13,12 +13,12 @@ use std::path::PathBuf;
 use std::sync::Arc;
 use std::time::Duration;
 
-use anyhow::format_err;
 use anyhow::Error;
+use anyhow::format_err;
 use blobstore::Blobstore;
-use blobstore_factory::make_sql_blobstore_xdb;
 use blobstore_factory::BlobstoreOptions;
 use blobstore_factory::ReadOnlyStorage;
+use blobstore_factory::make_sql_blobstore_xdb;
 use bytes::Bytes;
 use bytes::BytesMut;
 use cacheblob::new_memcache_blobstore;

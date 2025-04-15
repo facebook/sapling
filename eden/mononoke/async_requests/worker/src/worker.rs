@@ -13,29 +13,29 @@
 //! One important consideration to keep in mind - worker executes request "at least once"
 //! but not exactly once i.e. the same request might be executed a few times.
 
+use std::sync::Arc;
 use std::sync::atomic::AtomicBool;
 use std::sync::atomic::Ordering;
-use std::sync::Arc;
 use std::time::Duration;
 
 use anyhow::Error;
 use anyhow::Result;
-use async_requests::types::AsynchronousRequestParams;
 use async_requests::AsyncMethodRequestQueue;
 use async_requests::AsyncRequestsError;
 use async_requests::ClaimedBy;
 use async_requests::RequestId;
+use async_requests::types::AsynchronousRequestParams;
 use async_stream::stream;
 use async_trait::async_trait;
 use cloned::cloned;
 use context::CoreContext;
 use executor_lib::RepoShardedProcessExecutor;
+use futures::Stream;
+use futures::future::Either;
 use futures::future::abortable;
 use futures::future::select;
-use futures::future::Either;
 use futures::pin_mut;
 use futures::stream::StreamExt;
-use futures::Stream;
 use futures_stats::TimedFutureExt;
 use hostname::get_hostname;
 use megarepo_api::MegarepoApi;
@@ -51,12 +51,12 @@ use slog::warn;
 use stats::define_stats;
 use stats::prelude::*;
 
+use crate::AsyncRequestsWorkerArgs;
 use crate::methods::megarepo_async_request_compute;
 use crate::scuba::log_result;
 use crate::scuba::log_retriable_error;
 use crate::scuba::log_start;
 use crate::stats::stats_loop;
-use crate::AsyncRequestsWorkerArgs;
 
 const DEQUEUE_STREAM_SLEEP_TIME: u64 = 1000;
 // Number of seconds after which inprogress request is considered abandoned

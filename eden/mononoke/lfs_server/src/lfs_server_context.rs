@@ -8,18 +8,18 @@
 use std::fmt::Arguments;
 use std::fmt::Write;
 use std::num::NonZeroU16;
-use std::sync::atomic::AtomicBool;
-use std::sync::atomic::Ordering;
 use std::sync::Arc;
 use std::sync::Mutex;
+use std::sync::atomic::AtomicBool;
+use std::sync::atomic::Ordering;
 
 use anyhow::Context;
 use anyhow::Error;
 use bytes::Bytes;
 use cached_config::ConfigHandle;
+use clientinfo::CLIENT_INFO_HEADER;
 use clientinfo::ClientEntryPoint;
 use clientinfo::ClientInfo;
-use clientinfo::CLIENT_INFO_HEADER;
 use context::CoreContext;
 use futures::future;
 use futures::stream::Stream;
@@ -36,11 +36,11 @@ use http::uri::Parts;
 use http::uri::PathAndQuery;
 use http::uri::Scheme;
 use http::uri::Uri;
-use hyper::client::HttpConnector;
-use hyper::header;
 use hyper::Body;
 use hyper::Client;
 use hyper::Request;
+use hyper::client::HttpConnector;
+use hyper::header;
 use hyper_openssl::HttpsConnector;
 use lfs_protocol::RequestBatch;
 use lfs_protocol::RequestObject;
@@ -56,17 +56,17 @@ use openssl::ssl::SslFiletype;
 use openssl::ssl::SslMethod;
 use repo_authorization::AuthorizationContext;
 use repo_permission_checker::RepoPermissionCheckerRef;
-use slog::info;
 use slog::Logger;
+use slog::info;
 use tokio::runtime::Handle;
 
+use crate::LfsRepos;
+use crate::Repo;
 use crate::config::ServerConfig;
 use crate::errors::ErrorKind;
 use crate::errors::LfsServerContextErrorKind;
 use crate::middleware::LfsMethod;
 use crate::middleware::RequestContext;
-use crate::LfsRepos;
-use crate::Repo;
 
 pub type HttpsHyperClient = Client<HttpsConnector<HttpConnector>>;
 
@@ -595,8 +595,8 @@ mod test {
     use fbinit::FacebookInit;
     use lfs_protocol::Sha256 as LfsSha256;
     use mononoke_macros::mononoke;
-    use mononoke_types::hash::Sha256;
     use mononoke_types::ContentId;
+    use mononoke_types::hash::Sha256;
     use repo_permission_checker::AlwaysAllowRepoPermissionChecker;
     use repo_permission_checker::MockRepoPermissionChecker;
     use test_repo_factory::TestRepoFactory;

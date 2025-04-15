@@ -9,14 +9,14 @@ use std::collections::HashMap;
 use std::fmt;
 use std::num::NonZeroU64;
 use std::num::NonZeroUsize;
+use std::sync::Arc;
 use std::sync::atomic::AtomicU64;
 use std::sync::atomic::Ordering;
-use std::sync::Arc;
 
-use anyhow::anyhow;
 use anyhow::Context as _;
 use anyhow::Error;
 use anyhow::Result;
+use anyhow::anyhow;
 use async_trait::async_trait;
 use blobstore::Blobstore;
 use blobstore::BlobstoreGetData;
@@ -32,12 +32,12 @@ use cloned::cloned;
 use context::CoreContext;
 use context::PerfCounterType;
 use fbinit::FacebookInit;
-use futures::future;
-use futures::stream::FuturesUnordered;
 use futures::Future;
 use futures::Stream;
 use futures::StreamExt;
 use futures::TryStreamExt;
+use futures::future;
+use futures::stream::FuturesUnordered;
 use futures_stats::TimedFutureExt;
 use metaconfig_types::BlobstoreId;
 use metaconfig_types::MultiplexId;
@@ -50,9 +50,9 @@ use thiserror::Error;
 use time_ext::DurationExt;
 use tokio::task::JoinHandle;
 
-use crate::timed::with_timed_stores;
 use crate::timed::MultiplexTimeout;
 use crate::timed::TimedStore;
+use crate::timed::with_timed_stores;
 type BlobstoresReturnedError = HashMap<BlobstoreId, Error>;
 
 #[derive(Error, Debug, Clone)]

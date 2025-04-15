@@ -11,8 +11,6 @@ use anyhow::Result;
 use types::RepoPath;
 use types::RepoPathBuf;
 
-use crate::matcher::build_matcher_from_patterns;
-use crate::pattern::Pattern;
 use crate::AlwaysMatcher;
 use crate::DifferenceMatcher;
 use crate::DirectoryMatch;
@@ -22,6 +20,8 @@ use crate::IntersectMatcher;
 use crate::Matcher;
 use crate::NeverMatcher;
 use crate::UnionMatcher;
+use crate::matcher::build_matcher_from_patterns;
+use crate::pattern::Pattern;
 
 /// HintedMatcher tracks some basic metadata about the patterns in
 /// order to fulfill Python's matcher interface. The hints are best
@@ -220,8 +220,8 @@ impl HintedMatcher {
 #[cfg(test)]
 mod test {
     use super::*;
-    use crate::pattern::normalize_patterns;
     use crate::PatternKind;
+    use crate::pattern::normalize_patterns;
 
     #[test]
     fn test_empty_hinted_matcher() -> Result<()> {

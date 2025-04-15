@@ -5,9 +5,9 @@
  * GNU General Public License version 2.
  */
 
-use anyhow::bail;
 use anyhow::Context;
 use anyhow::Result;
+use anyhow::bail;
 use fbthrift::compact_protocol;
 use sorted_vector_map::SortedVectorMap;
 
@@ -17,8 +17,8 @@ use crate::blob::FileUnodeBlob;
 use crate::blob::ManifestUnodeBlob;
 use crate::errors::MononokeTypeError;
 use crate::file_change::FileType;
-use crate::path::mpath_element::MPathElement;
 use crate::path::MPathHash;
+use crate::path::mpath_element::MPathElement;
 use crate::thrift;
 use crate::typed_hash::ChangesetId;
 use crate::typed_hash::ContentId;

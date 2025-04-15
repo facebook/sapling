@@ -32,7 +32,6 @@ use gotham_ext::response::TryIntoResponse;
 use http::header::HeaderMap;
 use hyper::Body;
 use hyper::StatusCode;
-use lfs_protocol::git_lfs_mime;
 use lfs_protocol::ObjectAction;
 use lfs_protocol::ObjectError;
 use lfs_protocol::ObjectStatus;
@@ -42,10 +41,11 @@ use lfs_protocol::RequestObject;
 use lfs_protocol::ResponseBatch;
 use lfs_protocol::ResponseObject;
 use lfs_protocol::Transfer;
+use lfs_protocol::git_lfs_mime;
 use maplit::hashmap;
+use mononoke_types::BlobstoreKey;
 use mononoke_types::hash::Sha256;
 use mononoke_types::typed_hash::ContentId;
-use mononoke_types::BlobstoreKey;
 use rand::Rng;
 use redactedblobstore::has_redaction_root_cause;
 use repo_blobstore::RepoBlobstoreRef;
@@ -682,9 +682,9 @@ pub async fn batch(state: &mut State) -> Result<impl TryIntoResponse, HttpError>
 #[cfg(test)]
 mod test {
     use std::collections::HashSet;
+    use std::sync::Arc;
     use std::sync::atomic::AtomicU64;
     use std::sync::atomic::Ordering;
-    use std::sync::Arc;
 
     use async_trait::async_trait;
     use blobstore::BlobstoreBytes;
@@ -709,8 +709,8 @@ mod test {
     use test_repo_factory::TestRepoFactory;
 
     use super::*;
-    use crate::lfs_server_context::ServerUris;
     use crate::Repo;
+    use crate::lfs_server_context::ServerUris;
 
     const SERVER_HOSTNAME: &str = "mzr.re";
 

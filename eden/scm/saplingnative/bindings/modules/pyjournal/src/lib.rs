@@ -8,8 +8,8 @@
 #![allow(non_camel_case_types)]
 
 use cpython::*;
-use cpython_ext::convert::Serde;
 use cpython_ext::ResultPyErrExt;
+use cpython_ext::convert::Serde;
 use journal::JournalEntry;
 use types::HgId;
 

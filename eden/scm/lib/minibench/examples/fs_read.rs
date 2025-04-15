@@ -7,9 +7,9 @@
 
 use std::thread;
 
+use futures::StreamExt;
 use futures::future::join_all;
 use futures::stream;
-use futures::StreamExt;
 use minibench::bench;
 use minibench::elapsed;
 

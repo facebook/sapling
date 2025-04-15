@@ -22,17 +22,17 @@ use futures::stream::StreamExt;
 use futures::stream::TryStreamExt;
 use futures_watchdog::WatchdogExt;
 use mononoke_macros::mononoke;
-use mononoke_types::path::MPath;
 use mononoke_types::MPathElement;
+use mononoke_types::path::MPath;
 use nonzero_ext::nonzero;
 
-use crate::ops::Diff;
-use crate::select::select_path_tree;
 use crate::Entry;
 use crate::Manifest;
 use crate::OrderedManifest;
 use crate::PathOrPrefix;
 use crate::StoreLoadable;
+use crate::ops::Diff;
+use crate::select::select_path_tree;
 
 /// Track where we are relative to the `after` parameter.
 pub enum After {

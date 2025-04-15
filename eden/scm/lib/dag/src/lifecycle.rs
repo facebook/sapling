@@ -9,9 +9,9 @@ use std::backtrace::Backtrace;
 use std::fmt;
 use std::io;
 use std::io::Write;
+use std::sync::OnceLock;
 use std::sync::atomic::AtomicUsize;
 use std::sync::atomic::Ordering;
-use std::sync::OnceLock;
 
 /// Used as a struct field to provide a stable identity for debug logging purpose.
 ///

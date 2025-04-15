@@ -8,9 +8,9 @@
 use anyhow::Error;
 use gotham::state::FromState;
 use gotham::state::State;
+use http::header::ACCEPT_ENCODING;
 use http::header::HeaderMap;
 use http::header::HeaderValue;
-use http::header::ACCEPT_ENCODING;
 
 const GZIP: &str = "gzip";
 const ZSTD: &str = "zstd";

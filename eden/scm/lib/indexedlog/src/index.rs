@@ -79,11 +79,11 @@ use std::ops::Deref;
 use std::ops::RangeBounds;
 use std::path::Path;
 use std::path::PathBuf;
+use std::sync::Arc;
 use std::sync::atomic::AtomicU64;
 use std::sync::atomic::Ordering::AcqRel;
 use std::sync::atomic::Ordering::Acquire;
 use std::sync::atomic::Ordering::Relaxed;
-use std::sync::Arc;
 
 use byteorder::ByteOrder;
 use byteorder::LittleEndian;
@@ -96,9 +96,9 @@ use twox_hash::XxHash;
 use vlqencoding::VLQDecodeAt;
 use vlqencoding::VLQEncode;
 
+use crate::base16::Base16Iter;
 use crate::base16::base16_to_base256;
 use crate::base16::single_hex_to_base16;
-use crate::base16::Base16Iter;
 use crate::config;
 use crate::errors::IoResultExt;
 use crate::errors::ResultExt;

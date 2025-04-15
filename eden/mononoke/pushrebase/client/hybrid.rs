@@ -22,10 +22,10 @@ use pushrebase::PushrebaseOutcome;
 use repo_authorization::AuthorizationContext;
 use scuba_ext::MononokeScubaSampleBuilder;
 
+use crate::PushrebaseClient;
 #[cfg(fbcode_build)]
 use crate::facebook::land_service::LandServicePushrebaseClient;
 use crate::local::LocalPushrebaseClient;
-use crate::PushrebaseClient;
 
 pub async fn normal_pushrebase<'a>(
     ctx: &'a CoreContext,

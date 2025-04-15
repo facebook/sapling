@@ -7,8 +7,8 @@
 
 use std::sync::Arc;
 
-use anyhow::bail;
 use anyhow::Result;
+use anyhow::bail;
 use commits_trait::DagCommits;
 use manifest_tree::ReadTreeManifest;
 use manifest_tree::TreeManifest;
@@ -23,12 +23,12 @@ use storemodel::KeyStore;
 use storemodel::SerializationFormat;
 use storemodel::TreeAuxData;
 use storemodel::TreeEntry;
-use types::fetch_mode::FetchMode;
-use types::hgid;
 use types::FetchContext;
 use types::HgId;
 use types::Key;
 use types::RepoPath;
+use types::fetch_mode::FetchMode;
+use types::hgid;
 
 use crate::caching::CachingKeyStore;
 
@@ -220,11 +220,11 @@ impl TreeStore for CachingTreeStore {
 mod test {
     use manifest_tree::init;
     use manifest_tree::testutil::TestStore;
-    use rand_chacha::rand_core::SeedableRng;
     use rand_chacha::ChaChaRng;
-    use storemodel::basic_serialize_tree;
+    use rand_chacha::rand_core::SeedableRng;
     use storemodel::Kind;
     use storemodel::TreeItemFlag;
+    use storemodel::basic_serialize_tree;
     use types::RepoPathBuf;
 
     use super::*;

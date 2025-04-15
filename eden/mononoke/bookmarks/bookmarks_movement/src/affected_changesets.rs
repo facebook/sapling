@@ -8,10 +8,10 @@
 use std::collections::HashMap;
 use std::collections::HashSet;
 
-use anyhow::anyhow;
 use anyhow::Context;
 use anyhow::Error;
 use anyhow::Result;
+use anyhow::anyhow;
 use blobstore::Loadable;
 use bookmarks::BookmarkUpdateReason;
 use bookmarks_types::BookmarkKey;
@@ -37,11 +37,11 @@ use repo_authorization::AuthorizationContext;
 use repo_update_logger::CommitInfo;
 use skeleton_manifest::RootSkeletonManifestId;
 
+use crate::BookmarkMovementError;
+use crate::Repo;
 use crate::hook_running::run_bookmark_hooks;
 use crate::hook_running::run_changeset_hooks;
 use crate::restrictions::should_run_hooks;
-use crate::BookmarkMovementError;
-use crate::Repo;
 
 const N_CHANGESETS_TO_LOAD_AT_ONCE: usize = 1000;
 

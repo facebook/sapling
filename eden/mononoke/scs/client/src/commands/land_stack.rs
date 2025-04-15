@@ -8,25 +8,25 @@
 use std::collections::BTreeMap;
 use std::io::Write;
 
+use anyhow::Result;
 use anyhow::anyhow;
 use anyhow::bail;
-use anyhow::Result;
 use maplit::btreeset;
 use scs_client_raw::thrift;
 use serde::Serialize;
 
+use crate::ScscApp;
+use crate::args::commit_id::CommitIdsArgs;
+use crate::args::commit_id::SchemeArgs;
 use crate::args::commit_id::map_commit_id;
 use crate::args::commit_id::map_commit_ids;
 use crate::args::commit_id::resolve_commit_ids;
-use crate::args::commit_id::CommitIdsArgs;
-use crate::args::commit_id::SchemeArgs;
 use crate::args::pushvars::PushvarArgs;
 use crate::args::repo::RepoArgs;
 use crate::args::service_id::ServiceIdArgs;
 use crate::errors::SelectionErrorExt;
 use crate::library::commit_id::render_commit_id;
 use crate::render::Render;
-use crate::ScscApp;
 
 #[derive(clap::Parser)]
 

@@ -13,16 +13,16 @@ use futures::stream::StreamExt;
 use futures::stream::TryStreamExt;
 use itertools::EitherOrBoth;
 use manifest::Entry as ManifestEntry;
-use mononoke_types::path::MPath;
 use mononoke_types::MPathElement;
+use mononoke_types::path::MPath;
 use repo_blobstore::RepoBlobstoreRef;
 use vec1::Vec1;
 
-use super::to_vec1;
 use super::ChangesetContext;
 use super::ChangesetFileOrdering;
-use crate::errors::MononokeError;
+use super::to_vec1;
 use crate::MononokeRepo;
+use crate::errors::MononokeError;
 
 /// A context object representing a query to a particular commit in a repo.
 impl<R: MononokeRepo> ChangesetContext<R> {

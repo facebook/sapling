@@ -10,12 +10,12 @@ use context::CoreContext;
 use mercurial_types::NonRootMPath;
 use mononoke_types::ChangesetId;
 
+use crate::Repo;
 use crate::chunking::Chunker;
-use crate::common::delete_files_in_chunks;
 use crate::common::ChangesetArgsFactory;
+use crate::common::delete_files_in_chunks;
 use crate::working_copy::get_changed_working_copy_paths;
 use crate::working_copy::get_working_copy_paths;
-use crate::Repo;
 
 /// A struct containing pre-merge delete information
 /// Pre-merge delete commits look like this:
@@ -89,8 +89,8 @@ mod test {
     use repo_blobstore::RepoBlobstore;
     use repo_derived_data::RepoDerivedData;
     use repo_identity::RepoIdentity;
-    use tests_utils::resolve_cs_id;
     use tests_utils::CreateCommitContext;
+    use tests_utils::resolve_cs_id;
 
     use super::*;
     use crate::common::ChangesetArgs;

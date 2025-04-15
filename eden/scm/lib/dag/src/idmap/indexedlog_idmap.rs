@@ -17,11 +17,13 @@ use indexedlog::log;
 use vlqencoding::VLQDecode;
 use vlqencoding::VLQEncode;
 
-use super::mem_idmap::CoreMemIdMap;
 use super::IdMapWrite;
+use super::mem_idmap::CoreMemIdMap;
+use crate::Result;
+use crate::VerLink;
+use crate::errors::NotFoundError;
 use crate::errors::bug;
 use crate::errors::programming;
-use crate::errors::NotFoundError;
 use crate::id::Group;
 use crate::id::Id;
 use crate::id::Vertex;
@@ -29,8 +31,6 @@ use crate::ops::IdConvert;
 use crate::ops::Persist;
 use crate::ops::PrefixLookup;
 use crate::ops::TryClone;
-use crate::Result;
-use crate::VerLink;
 
 /// Bi-directional mapping between an integer id and a name (`[u8]`).
 ///

@@ -10,14 +10,14 @@ use std::collections::HashMap;
 use anyhow::Result;
 use bytesize::ByteSize;
 use clap::Parser;
+use futures::TryFutureExt;
 use futures::stream;
 use futures::stream::StreamExt;
 use futures::stream::TryStreamExt;
-use futures::TryFutureExt;
 use mononoke_app::MononokeApp;
 
-use crate::utils;
 use crate::MononokeSQLBlobGCArgs;
+use crate::utils;
 
 /// measure generation sizes
 #[derive(Parser)]

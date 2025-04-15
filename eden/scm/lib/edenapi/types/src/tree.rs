@@ -14,15 +14,14 @@ use serde_derive::Deserialize;
 use serde_derive::Serialize;
 use thiserror::Error;
 use type_macros::auto_wire;
+use types::AugmentedTree;
+use types::AugmentedTreeEntry;
+use types::AugmentedTreeWithDigest;
 use types::hgid::HgId;
 use types::hgid::NULL_ID;
 use types::key::Key;
 use types::parents::Parents;
-use types::AugmentedTree;
-use types::AugmentedTreeEntry;
-use types::AugmentedTreeWithDigest;
 
-use crate::hash::check_hash;
 use crate::Blake3;
 use crate::DirectoryMetadata;
 use crate::FileAuxData;
@@ -31,6 +30,7 @@ use crate::InvalidHgId;
 use crate::SaplingRemoteApiServerError;
 use crate::Sha1;
 use crate::UploadToken;
+use crate::hash::check_hash;
 
 pub type TreeAuxData = DirectoryMetadata;
 

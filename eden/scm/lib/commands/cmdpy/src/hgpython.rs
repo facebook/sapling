@@ -19,12 +19,12 @@ use commandserver::ipc::CommandEnv;
 use commandserver::ipc::Server;
 use configmodel::Config;
 use cpython::*;
+use cpython_ext::ResultPyErrExt;
 use cpython_ext::convert::Serde;
 use cpython_ext::format_py_error;
-use cpython_ext::ResultPyErrExt;
 use nodeipc::NodeIpc;
-use pyio::wrap_pyio;
 use pyio::WrappedIO;
+use pyio::wrap_pyio;
 use tracing::debug_span;
 use tracing::info_span;
 

@@ -7,9 +7,9 @@
 
 use std::collections::HashSet;
 
-use anyhow::format_err;
 use anyhow::Context;
 use anyhow::Error;
+use anyhow::format_err;
 use changeset_info::ChangesetInfo;
 use context::CoreContext;
 use metaconfig_types::CommitSyncConfigVersion;

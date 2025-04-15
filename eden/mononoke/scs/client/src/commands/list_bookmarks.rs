@@ -15,19 +15,19 @@ use futures::stream;
 use futures::stream::Stream;
 use futures::stream::StreamExt;
 use futures::stream::TryStreamExt;
-use scs_client_raw::thrift;
 use scs_client_raw::ScsClient;
+use scs_client_raw::thrift;
 use serde::Serialize;
 
-use crate::args::commit_id::map_commit_ids;
-use crate::args::commit_id::resolve_commit_id;
+use crate::ScscApp;
 use crate::args::commit_id::CommitIdsArgs;
 use crate::args::commit_id::SchemeArgs;
+use crate::args::commit_id::map_commit_ids;
+use crate::args::commit_id::resolve_commit_id;
 use crate::args::repo::RepoArgs;
 use crate::errors::SelectionErrorExt;
 use crate::library::commit_id::render_commit_id;
 use crate::render::Render;
-use crate::ScscApp;
 
 #[derive(clap::Parser)]
 /// List bookmarks and their current commits

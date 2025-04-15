@@ -7,10 +7,10 @@
 
 //! Default configs for indexed log.
 
+use std::sync::LazyLock;
 use std::sync::atomic;
 use std::sync::atomic::AtomicI64;
 use std::sync::atomic::AtomicU32;
-use std::sync::LazyLock;
 
 static UMASK: LazyLock<u32> = LazyLock::new(|| {
     #[cfg(unix)]
@@ -91,8 +91,8 @@ pub fn set_page_out_threshold(threshold: i64) {
 /// Configure various settings based on a `Config`.
 #[cfg(feature = "configurable")]
 pub fn configure(config: &dyn configmodel::Config) -> configmodel::Result<()> {
-    use configmodel::convert::ByteCount;
     use configmodel::ConfigExt;
+    use configmodel::convert::ByteCount;
 
     if cfg!(unix) {
         let chmod_file = config.get_or("permissions", "chmod-file", || -1)?;

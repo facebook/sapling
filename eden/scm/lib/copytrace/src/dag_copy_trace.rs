@@ -27,12 +27,12 @@ use types::HgId;
 use types::RepoPath;
 use types::RepoPathBuf;
 
-use crate::error::CopyTraceError;
-use crate::utils::compute_missing_files;
 use crate::CopyTrace;
 use crate::RenameFinder;
 use crate::SearchDirection;
 use crate::TraceResult;
+use crate::error::CopyTraceError;
+use crate::utils::compute_missing_files;
 
 /// limits the number of commits in path_copies
 const DEFAULT_PATH_COPIES_COMMIT_LIMIT: u64 = 100;

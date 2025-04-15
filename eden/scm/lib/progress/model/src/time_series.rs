@@ -8,17 +8,17 @@
 use std::borrow::Cow;
 use std::fmt;
 use std::future::Future;
+use std::sync::Arc;
+use std::sync::Weak;
 use std::sync::atomic::AtomicU64;
 use std::sync::atomic::AtomicUsize;
 use std::sync::atomic::Ordering::AcqRel;
 use std::sync::atomic::Ordering::Acquire;
 use std::sync::atomic::Ordering::Release;
-use std::sync::Arc;
-use std::sync::Weak;
 use std::time::Duration;
 
-use crate::io_sample::MutableIoSample;
 use crate::IoSample;
+use crate::io_sample::MutableIoSample;
 
 /// Time series for IO bytes. For example, Network [▁▂▄█▇▅▃▆] 3MB/s.
 pub struct IoTimeSeries {

@@ -5,8 +5,8 @@
  * GNU General Public License version 2.
  */
 
-use anyhow::bail;
 use anyhow::Result;
+use anyhow::bail;
 use clap::Args;
 use commit_graph::CommitGraphRef;
 use commit_id::parse_commit_id;

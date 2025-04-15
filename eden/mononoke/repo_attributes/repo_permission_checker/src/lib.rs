@@ -17,8 +17,8 @@ use permission_checker::BoxPermissionChecker;
 use permission_checker::MononokeIdentity;
 use permission_checker::MononokeIdentitySet;
 use permission_checker::PermissionCheckerBuilder;
-use slog::trace;
 use slog::Logger;
+use slog::trace;
 use tokio::join;
 
 /// Repository permissions checks

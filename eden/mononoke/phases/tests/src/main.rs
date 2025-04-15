@@ -7,9 +7,9 @@
 
 use std::str::FromStr;
 
-use anyhow::format_err;
 use anyhow::Error;
 use anyhow::Result;
+use anyhow::format_err;
 use bonsai_hg_mapping::BonsaiHgMapping;
 use bonsai_hg_mapping::BonsaiHgMappingRef;
 use bonsai_tag_mapping::BonsaiTagMapping;
@@ -27,9 +27,9 @@ use fbinit::FacebookInit;
 use filestore::FilestoreConfig;
 use fixtures::Linear;
 use fixtures::TestRepoFixture;
-use futures::future;
 use futures::TryFutureExt;
 use futures::TryStreamExt;
+use futures::future;
 use maplit::hashset;
 use mercurial_types::nodehash::HgChangesetId;
 use mononoke_macros::mononoke;

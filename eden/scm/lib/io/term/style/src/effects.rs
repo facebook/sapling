@@ -17,8 +17,8 @@ use termwiz::cell::Underline;
 use termwiz::color::AnsiColor;
 use termwiz::color::ColorSpec;
 use termwiz::color::RgbColor;
-use termwiz::render::terminfo::TerminfoRenderer;
 use termwiz::render::RenderTty;
+use termwiz::render::terminfo::TerminfoRenderer;
 use termwiz::surface::Change;
 
 /// Evaluate style specs given supported color level, yielding a

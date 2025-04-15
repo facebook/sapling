@@ -19,21 +19,21 @@ use anyhow::Error;
 use anyhow::Result;
 use async_stream::try_stream;
 use bytes::BytesMut;
-use futures::pin_mut;
-use futures::stream::BoxStream;
 use futures::StreamExt;
 use futures::TryStreamExt;
+use futures::pin_mut;
+use futures::stream::BoxStream;
 use slog::Logger;
 use tokio::io::AsyncBufRead;
 use tokio::io::AsyncReadExt;
 use tokio_util::codec::FramedRead;
 
+use crate::Bundle2Item;
 use crate::errors::ErrorKind;
 use crate::part_inner::inner_stream;
-use crate::part_outer::outer_stream;
 use crate::part_outer::OuterFrame;
+use crate::part_outer::outer_stream;
 use crate::stream_start::StartDecoder;
-use crate::Bundle2Item;
 
 pub enum StreamEvent<I, S> {
     Next(I),

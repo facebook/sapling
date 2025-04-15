@@ -12,6 +12,9 @@ use futures::stream::BoxStream;
 use futures::stream::StreamExt;
 use futures::stream::TryStreamExt;
 
+use crate::FileType;
+use crate::MPathElement;
+use crate::ThriftConvert;
 use crate::blob::Blob;
 use crate::blob::BlobstoreValue;
 use crate::blob::ContentManifestBlob;
@@ -24,9 +27,6 @@ use crate::typed_hash::ContentManifestIdContext;
 use crate::typed_hash::IdContext;
 use crate::typed_hash::ShardedMapV2NodeContentManifestContext;
 use crate::typed_hash::ShardedMapV2NodeContentManifestId;
-use crate::FileType;
-use crate::MPathElement;
-use crate::ThriftConvert;
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub struct ContentManifestFile {
@@ -218,9 +218,9 @@ impl ShardedMapV2Value for ContentManifestEntry {
 pub mod compat {
     use either::Either;
 
-    use crate::fsnode;
     use crate::ContentId;
     use crate::FileType;
+    use crate::fsnode;
 
     pub type ContentManifestId = Either<super::ContentManifestId, crate::FsnodeId>;
 

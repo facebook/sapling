@@ -15,13 +15,13 @@ mod store;
 pub mod testutil;
 mod trait_impls;
 
-use std::collections::btree_map::Entry;
 use std::collections::BTreeMap;
+use std::collections::btree_map::Entry;
 use std::fmt;
 use std::sync::Arc;
 
-use anyhow::bail;
 use anyhow::Result;
+use anyhow::bail;
 use format_util::git_sha1_digest;
 use format_util::hg_sha1_digest;
 use iter::bfs_iter;
@@ -936,8 +936,8 @@ dev_logger::init!();
 
 #[cfg(test)]
 mod tests {
-    use manifest::testutil::*;
     use manifest::FileType;
+    use manifest::testutil::*;
     use pathmatcher::AlwaysMatcher;
     use store::Element;
     use storemodel::InsertOpts;

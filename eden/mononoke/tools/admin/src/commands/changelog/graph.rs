@@ -13,8 +13,8 @@ use commit_id::parse_commit_id;
 use context::CoreContext;
 use futures::future::join_all;
 use mononoke_types::ChangesetId;
-use print_graph::print_graph;
 use print_graph::PrintGraphOptions;
+use print_graph::print_graph;
 
 use super::Repo;
 

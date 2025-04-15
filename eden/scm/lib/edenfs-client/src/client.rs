@@ -12,8 +12,8 @@ use std::path::PathBuf;
 use std::sync::Arc;
 use std::time::Instant;
 
-use anyhow::anyhow;
 use anyhow::Result;
+use anyhow::anyhow;
 use async_runtime::block_on;
 use clientinfo::get_client_request_info;
 use fbthrift_socket::SocketTransport;

@@ -7,10 +7,10 @@
 
 // Definitions for interfacing with SQL data stores
 
-use sql::mysql_async::prelude::ConvIr;
-use sql::mysql_async::prelude::FromValue;
 use sql::mysql_async::FromValueError;
 use sql::mysql_async::Value;
+use sql::mysql_async::prelude::ConvIr;
+use sql::mysql_async::prelude::FromValue;
 
 use crate::HgChangesetId;
 use crate::HgFileNodeId;

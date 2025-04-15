@@ -21,8 +21,8 @@ use pushrebase_hook::PushrebaseTransactionHook;
 use pushrebase_hook::RebasedChangesets;
 use sql::Transaction;
 
-use crate::sql_queries::add_pushrebase_mapping;
 use crate::PushrebaseMutationMappingEntry;
+use crate::sql_queries::add_pushrebase_mapping;
 
 pub struct SaveMappingPushrebaseHook {
     repository_id: RepositoryId,

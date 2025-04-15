@@ -12,11 +12,10 @@ use anyhow::Result;
 use cas_client::CasClient;
 use cas_client::CasSuccessTracker;
 use cas_client::CasSuccessTrackerConfig;
-use configmodel::convert::ByteCount;
-use configmodel::convert::FromConfigValue;
 use configmodel::Config;
 use configmodel::ConfigExt;
-use re_client_lib::create_default_config;
+use configmodel::convert::ByteCount;
+use configmodel::convert::FromConfigValue;
 use re_client_lib::CASDaemonClientCfg;
 use re_client_lib::EmbeddedCASDaemonClientCfg;
 #[cfg(not(target_os = "linux"))]
@@ -29,6 +28,7 @@ use re_client_lib::RemoteCacheConfig;
 use re_client_lib::RemoteCacheManagerMode;
 use re_client_lib::RemoteExecutionMetadata;
 use re_client_lib::RemoteFetchPolicy;
+use re_client_lib::create_default_config;
 #[cfg(target_os = "linux")]
 use rich_cas_client_wrapper::CASClientWrapper as REClient;
 use scm_blob::ScmBlob;

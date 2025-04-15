@@ -9,13 +9,14 @@ use std::path::Path;
 use std::path::PathBuf;
 use std::sync::Arc;
 
+use anyhow::Result;
 use anyhow::bail;
 use anyhow::format_err;
-use anyhow::Result;
 use configmodel::Config;
 use types::Key;
 use types::NodeInfo;
 
+use crate::HistoryStore;
 use crate::historystore::HgIdHistoryStore;
 use crate::historystore::HgIdMutableHistoryStore;
 use crate::historystore::RemoteHistoryStore;
@@ -28,7 +29,6 @@ use crate::unionhistorystore::UnionHgIdHistoryStore;
 use crate::util::get_cache_path;
 use crate::util::get_indexedloghistorystore_path;
 use crate::util::get_local_path;
-use crate::HistoryStore;
 
 /// A `MetadataStore` aggregate all the local and remote stores and expose them as one. Both local and
 /// remote stores can be queried and accessed via the `HgIdHistoryStore` trait. The local store can also
@@ -295,8 +295,8 @@ mod tests {
     use types::testutil::*;
 
     use super::*;
-    use crate::testutil::make_config;
     use crate::testutil::FakeHgIdRemoteStore;
+    use crate::testutil::make_config;
 
     #[test]
     fn test_new() -> Result<()> {

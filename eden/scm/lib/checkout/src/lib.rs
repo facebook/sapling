@@ -18,11 +18,11 @@ use std::thread;
 use std::time::SystemTime;
 
 use actions::UpdateAction;
+use anyhow::Error;
+use anyhow::Result;
 use anyhow::anyhow;
 use anyhow::bail;
 use anyhow::format_err;
-use anyhow::Error;
-use anyhow::Result;
 use async_runtime::block_on;
 use atexit::AtExit;
 use context::CoreContext;
@@ -50,15 +50,15 @@ use treestate::dirstate;
 use treestate::filestate::FileStateV2;
 use treestate::filestate::StateFlags;
 use treestate::treestate::TreeState;
-use types::errors::KeyedError;
-use types::hgid::MF_ADDED_NODE_ID;
-use types::hgid::MF_MODIFIED_NODE_ID;
-use types::hgid::MF_UNTRACKED_NODE_ID;
 use types::FetchContext;
 use types::HgId;
 use types::Key;
 use types::RepoPath;
 use types::RepoPathBuf;
+use types::errors::KeyedError;
+use types::hgid::MF_ADDED_NODE_ID;
+use types::hgid::MF_MODIFIED_NODE_ID;
+use types::hgid::MF_UNTRACKED_NODE_ID;
 use util::fs_err as fs;
 use vfs::UpdateFlag;
 use vfs::VFS;
@@ -1747,12 +1747,12 @@ mod test {
     use std::collections::HashMap;
     use std::path::Path;
 
+    use anyhow::Context;
     #[cfg(unix)]
     use anyhow::ensure;
-    use anyhow::Context;
     use fs::create_dir;
-    use manifest_tree::testutil::make_tree_manifest_from_meta;
     use manifest_tree::testutil::TestStore;
+    use manifest_tree::testutil::make_tree_manifest_from_meta;
     use pathmatcher::AlwaysMatcher;
     use quickcheck::Arbitrary;
     use quickcheck::Gen;

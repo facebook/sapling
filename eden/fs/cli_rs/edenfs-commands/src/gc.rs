@@ -7,8 +7,8 @@
 
 //! edenfsctl gc
 
-use std::io::stderr;
 use std::io::Write;
+use std::io::stderr;
 
 use anyhow::Result;
 use async_trait::async_trait;

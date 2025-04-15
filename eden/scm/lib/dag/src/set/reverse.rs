@@ -9,12 +9,12 @@ use std::any::Any;
 use std::borrow::Cow;
 use std::fmt;
 
-use super::hints::Flags;
-use super::id_static::IdStaticSet;
 use super::AsyncSetQuery;
 use super::BoxVertexStream;
 use super::Hints;
 use super::Set;
+use super::hints::Flags;
+use super::id_static::IdStaticSet;
 use crate::Result;
 use crate::Vertex;
 

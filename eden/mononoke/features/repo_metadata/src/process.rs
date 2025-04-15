@@ -5,8 +5,8 @@
  * GNU General Public License version 2.
  */
 
-use anyhow::anyhow;
 use anyhow::Result;
+use anyhow::anyhow;
 use blame::RootBlameV2;
 use blobstore::Loadable;
 use bookmarks::BookmarkKey;
@@ -14,27 +14,29 @@ use changeset_info::ChangesetInfo;
 use context::CoreContext;
 use filestore::FetchKey;
 use fsnodes::RootFsnodeId;
-use futures::stream::BoxStream;
-use futures::try_join;
 use futures::Stream;
 use futures::StreamExt;
 use futures::TryFutureExt;
 use futures::TryStreamExt;
+use futures::stream::BoxStream;
+use futures::try_join;
 use manifest::CombinedId;
 use manifest::Diff;
 use manifest::Entry;
 use manifest::ManifestOps;
-use mononoke_types::blame_v2::BlameV2;
-use mononoke_types::fsnode::FsnodeFile;
-use mononoke_types::path::MPath;
 use mononoke_types::BlameV2Id;
 use mononoke_types::ChangesetId;
 use mononoke_types::FileType;
 use mononoke_types::FileUnodeId;
 use mononoke_types::FsnodeId;
 use mononoke_types::ManifestUnodeId;
+use mononoke_types::blame_v2::BlameV2;
+use mononoke_types::fsnode::FsnodeFile;
+use mononoke_types::path::MPath;
 use unodes::RootUnodeManifestId;
 
+use crate::Repo;
+use crate::RepoMetadataLoggerMode;
 use crate::types::BlamedTextFileMetadata;
 use crate::types::ChangeType;
 use crate::types::DirectoryMetadata;
@@ -43,8 +45,6 @@ use crate::types::ItemHistory;
 use crate::types::MetadataItem;
 use crate::types::SymlinkMetadata;
 use crate::types::TextFileMetadata;
-use crate::Repo;
-use crate::RepoMetadataLoggerMode;
 
 /// Produces stream of file and directory metadata items for the given
 /// bookmark in the given repo

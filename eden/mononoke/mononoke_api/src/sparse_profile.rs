@@ -10,24 +10,24 @@ use std::collections::HashSet;
 use std::ops::Not;
 use std::sync::Arc;
 
-use anyhow::anyhow;
 use anyhow::Context;
 use anyhow::Result;
+use anyhow::anyhow;
 use blobstore::Loadable;
 use cloned::cloned;
 use context::CoreContext;
-use futures::stream;
-use futures::try_join;
 use futures::FutureExt;
 use futures::StreamExt;
 use futures::TryStreamExt;
+use futures::stream;
+use futures::try_join;
 use futures_ext::FbStreamExt;
 use futures_watchdog::WatchdogExt;
 use maplit::btreeset;
 use metaconfig_types::SparseProfilesConfig;
+use mononoke_types::NonRootMPath;
 use mononoke_types::fsnode::FsnodeEntry;
 use mononoke_types::path::MPath;
-use mononoke_types::NonRootMPath;
 use pathmatcher::DirectoryMatch;
 use pathmatcher::Matcher;
 use repo_blobstore::RepoBlobstoreRef;
@@ -36,7 +36,6 @@ use slog::debug;
 use slog::warn;
 use types::RepoPath;
 
-use crate::errors::MononokeError;
 use crate::ChangesetContext;
 use crate::ChangesetDiffItem;
 use crate::ChangesetFileOrdering;
@@ -44,6 +43,7 @@ use crate::ChangesetPathContentContext;
 use crate::ChangesetPathDiffContext;
 use crate::MononokeRepo;
 use crate::PathEntry;
+use crate::errors::MononokeError;
 
 // This struct contains matchers which will be consulted in various scenarios
 // Clients can request analysis either for ALL profiles or Set of interested

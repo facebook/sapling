@@ -17,16 +17,16 @@ use bookmarks::BookmarkKey;
 use context::CoreContext;
 use fbinit::FacebookInit;
 use fsnodes::RootFsnodeId;
-use futures::future::abortable;
 use futures::future::AbortHandle;
+use futures::future::abortable;
 use metaconfig_types::ArcRepoConfig;
 use mononoke_macros::mononoke;
 use mononoke_types::ChangesetId;
 use repo_blobstore::ArcRepoBlobstore;
 use repo_derived_data::ArcRepoDerivedData;
 use sharding_ext::encode_repo_name;
-use slog::warn;
 use slog::Logger;
+use slog::warn;
 use stats::define_stats;
 use stats::prelude::DynamicSingletonCounter;
 
@@ -227,10 +227,10 @@ mod tests {
     use fbinit::FacebookInit;
     use filestore::FilestoreConfig;
     use futures::future::FutureExt;
-    use justknobs::test_helpers::with_just_knobs;
-    use justknobs::test_helpers::with_just_knobs_async;
     use justknobs::test_helpers::JustKnobsInMemory;
     use justknobs::test_helpers::KnobVal;
+    use justknobs::test_helpers::with_just_knobs;
+    use justknobs::test_helpers::with_just_knobs_async;
     use maplit::hashmap;
     use metaconfig_types::ObjectsCountMultiplier;
     use metaconfig_types::RepoConfig;
@@ -242,8 +242,8 @@ mod tests {
     use repo_derived_data::RepoDerivedDataArc;
     use repo_identity::RepoIdentity;
     use test_repo_factory::TestRepoFactory;
-    use tests_utils::bookmark;
     use tests_utils::CreateCommitContext;
+    use tests_utils::bookmark;
 
     use super::*;
 

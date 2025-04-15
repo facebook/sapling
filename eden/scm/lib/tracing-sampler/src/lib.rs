@@ -9,15 +9,15 @@ use std::sync::Arc;
 use std::sync::OnceLock;
 
 use sampling::SamplingConfig;
-use tracing::subscriber::Interest;
 use tracing::Event;
 use tracing::Metadata;
 use tracing::Subscriber;
+use tracing::subscriber::Interest;
 use tracing_serde::fields::AsMap;
+use tracing_subscriber::Layer;
 use tracing_subscriber::layer::Context;
 use tracing_subscriber::layer::Filter;
 use tracing_subscriber::registry::LookupSpan;
-use tracing_subscriber::Layer;
 
 pub struct SamplingLayer {
     config: &'static OnceLock<Option<Arc<SamplingConfig>>>,
@@ -83,8 +83,8 @@ mod tests {
     use std::collections::BTreeMap;
 
     use tempfile::tempdir;
-    use tracing_subscriber::layer::SubscriberExt;
     use tracing_subscriber::Registry;
+    use tracing_subscriber::layer::SubscriberExt;
 
     use super::*;
 

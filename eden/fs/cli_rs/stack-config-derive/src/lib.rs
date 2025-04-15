@@ -10,15 +10,15 @@ use proc_macro_error::abort;
 use proc_macro_error::proc_macro_error;
 use quote::format_ident;
 use quote::quote;
-use syn::parse_macro_input;
-use syn::parse_quote;
-use syn::visit_mut;
-use syn::visit_mut::VisitMut;
 use syn::Attribute;
 use syn::Field;
 use syn::Ident;
 use syn::ItemStruct;
 use syn::Visibility;
+use syn::parse_macro_input;
+use syn::parse_quote;
+use syn::visit_mut;
+use syn::visit_mut::VisitMut;
 
 mod field;
 

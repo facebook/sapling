@@ -8,12 +8,12 @@
 use std::collections::HashSet;
 use std::sync::Arc;
 
-use anyhow::anyhow;
 use anyhow::Error;
 use anyhow::Result;
-use bookmark_renaming::get_bookmark_renamers;
+use anyhow::anyhow;
 use bookmark_renaming::BookmarkRenamer;
 use bookmark_renaming::BookmarkRenamers;
+use bookmark_renaming::get_bookmark_renamers;
 use bookmarks::BookmarkKey;
 use context::CoreContext;
 use live_commit_sync_config::LiveCommitSyncConfig;
@@ -22,9 +22,9 @@ use metaconfig_types::CommitSyncDirection;
 use metaconfig_types::CommonCommitSyncConfig;
 use metaconfig_types::GitSubmodulesChangesAction;
 use mononoke_types::RepositoryId;
-use movers::get_movers as get_movers_from_config;
 use movers::Mover;
 use movers::Movers;
+use movers::get_movers as get_movers_from_config;
 use reporting::log_warning;
 
 // TODO(T169306120): rename this module

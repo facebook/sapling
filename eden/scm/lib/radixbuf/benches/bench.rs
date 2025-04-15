@@ -11,9 +11,9 @@ use radixbuf::key::FixedKey;
 use radixbuf::key::KeyId;
 use radixbuf::radix::radix_insert;
 use radixbuf::radix::radix_lookup;
+use rand_chacha::ChaChaRng;
 use rand_chacha::rand_core::RngCore;
 use rand_chacha::rand_core::SeedableRng;
-use rand_chacha::ChaChaRng;
 
 const N: usize = 204800;
 

@@ -22,11 +22,11 @@ use cmdlib_caching::CachelibSettings;
 use cmdlib_scrubbing::ScrubAppExtension;
 use fbinit::FacebookInit;
 use metaconfig_types::WalkerJobType;
+use mononoke_app::MononokeApp;
+use mononoke_app::MononokeAppBuilder;
 use mononoke_app::args::MultiRepoArgs;
 use mononoke_app::monitoring::MonitoringAppExtension;
 use mononoke_app::monitoring::ReadyFlagService;
-use mononoke_app::MononokeApp;
-use mononoke_app::MononokeAppBuilder;
 use multiplexedblob::SrubWriteOnly;
 
 #[derive(Parser)]

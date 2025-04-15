@@ -14,9 +14,9 @@ use progress_model::ProgressBar;
 use types::Key;
 use types::NodeInfo;
 
-use super::hgid_keys;
 use super::File;
 use super::SaplingRemoteApiRemoteStore;
+use super::hgid_keys;
 use crate::historystore::HgIdHistoryStore;
 use crate::historystore::HgIdMutableHistoryStore;
 use crate::historystore::RemoteHistoryStore;

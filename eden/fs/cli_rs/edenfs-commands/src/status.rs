@@ -9,8 +9,8 @@
 
 use std::time::Duration;
 
-use anyhow::anyhow;
 use anyhow::Result;
+use anyhow::anyhow;
 use async_trait::async_trait;
 use clap::Parser;
 use edenfs_client::daemon_info::DaemonHealthy;
@@ -19,8 +19,8 @@ use edenfs_client::types::DaemonInfo;
 use edenfs_client::types::Fb303Status;
 use futures::stream::StreamExt;
 use tokio::time;
-use tracing::event;
 use tracing::Level;
+use tracing::event;
 
 use crate::ExitCode;
 

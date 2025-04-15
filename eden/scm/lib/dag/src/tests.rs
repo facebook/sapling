@@ -10,6 +10,13 @@ use tempfile::tempdir;
 pub use test_dag::TestDag;
 
 pub use self::drawdag::DrawDag;
+use crate::Dag;
+use crate::DagAlgorithm;
+use crate::IdMap;
+#[cfg(test)]
+use crate::IdSet;
+use crate::Result;
+use crate::Set;
 use crate::id::Group;
 use crate::id::Vertex;
 use crate::ops::DagAddHeads;
@@ -18,13 +25,6 @@ use crate::ops::ImportAscii;
 #[cfg(feature = "render")]
 use crate::render::render_dag;
 use crate::set::SyncSetQuery;
-use crate::Dag;
-use crate::DagAlgorithm;
-use crate::IdMap;
-#[cfg(test)]
-use crate::IdSet;
-use crate::Result;
-use crate::Set;
 
 mod drawdag;
 mod test_dag;
@@ -62,6 +62,10 @@ pub mod dummy_dag;
 #[cfg(test)]
 pub(crate) use test_dag::ProtocolMonitor;
 
+#[cfg(test)]
+use crate::Id;
+#[cfg(test)]
+use crate::VertexListWithOptions;
 use crate::dag::MemDag;
 #[cfg(test)]
 use crate::iddag::FirstAncestorConstraint;
@@ -74,10 +78,6 @@ use crate::protocol::RequestLocationToName;
 use crate::protocol::RequestNameToLocation;
 #[cfg(test)]
 use crate::render::render_segment_dag;
-#[cfg(test)]
-use crate::Id;
-#[cfg(test)]
-use crate::VertexListWithOptions;
 
 // Example from segmented-changelog.pdf
 // - DAG1: page 10

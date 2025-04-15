@@ -9,8 +9,8 @@ mod cli;
 mod run;
 mod sharding;
 
-use std::sync::atomic::AtomicBool;
 use std::sync::Arc;
+use std::sync::atomic::AtomicBool;
 
 use anyhow::Context;
 use anyhow::Error;
@@ -23,17 +23,17 @@ use cross_repo_sync::Repo as CrossRepo;
 use executor_lib::RepoShardedProcessExecutor;
 use fbinit::FacebookInit;
 use metadata::Metadata;
-use mononoke_app::monitoring::AliveService;
-use mononoke_app::monitoring::MonitoringAppExtension;
 use mononoke_app::MononokeApp;
 use mononoke_app::MononokeAppBuilder;
+use mononoke_app::monitoring::AliveService;
+use mononoke_app::monitoring::MonitoringAppExtension;
 use slog::info;
 
 use crate::cli::BacksyncerArgs;
 use crate::cli::SCUBA_TABLE;
+use crate::sharding::APP_NAME;
 use crate::sharding::BacksyncProcess;
 use crate::sharding::BacksyncProcessExecutor;
-use crate::sharding::APP_NAME;
 use crate::sharding::SM_CLEANUP_TIMEOUT_SECS;
 
 async fn async_main(ctx: CoreContext, app: MononokeApp) -> Result<(), Error> {

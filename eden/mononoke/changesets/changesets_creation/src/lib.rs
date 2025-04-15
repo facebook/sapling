@@ -8,8 +8,8 @@
 use std::collections::HashMap;
 use std::collections::HashSet;
 
-use anyhow::anyhow;
 use anyhow::Result;
+use anyhow::anyhow;
 use blobstore::Blobstore;
 use cloned::cloned;
 use commit_graph::ChangesetParents;

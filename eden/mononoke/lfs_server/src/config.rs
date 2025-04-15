@@ -9,17 +9,17 @@ use std::collections::BTreeSet;
 use std::num::NonZeroU16;
 use std::str::FromStr;
 
-use anyhow::bail;
 use anyhow::Context;
 use anyhow::Error;
+use anyhow::bail;
 use gotham_ext::middleware::PostResponseConfig;
 use permission_checker::MononokeIdentitySet;
 use rate_limiting::LoadShedLimit;
+use serde::Deserialize;
+use serde::Serialize;
 use serde::de::Deserializer;
 use serde::de::Error as _;
 use serde::ser::Serializer;
-use serde::Deserialize;
-use serde::Serialize;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ObjectPopularity {

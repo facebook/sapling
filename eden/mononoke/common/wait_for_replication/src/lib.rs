@@ -26,8 +26,8 @@ use metaconfig_types::ShardedDatabaseConfig;
 use metaconfig_types::StorageConfig;
 use replication_lag_config::ReplicationLagBlobstoreConfig;
 use replication_lag_config::ReplicationLagTableConfig;
-use slog::info;
 use slog::Logger;
+use slog::info;
 #[cfg(fbcode_build)]
 use sql_ext::facebook::MyAdmin;
 use sql_ext::replication::NoReplicaLagMonitor;

@@ -7,8 +7,8 @@
 
 use std::str::FromStr;
 
-use anyhow::anyhow;
 use anyhow::Error;
+use anyhow::anyhow;
 use blobrepo_hg::file_history::get_file_history;
 use blobstore::Loadable;
 use context::CoreContext;

@@ -14,11 +14,11 @@ use curl::easy::SeekResult;
 use curl::easy::WriteError;
 
 use super::HandlerExt;
+use crate::RequestContext;
 use crate::claimer::RequestClaim;
 use crate::header::Header;
 use crate::progress::Progress;
 use crate::receiver::Receiver;
-use crate::RequestContext;
 
 pub struct Streaming {
     receiver: Option<Box<dyn Receiver>>,

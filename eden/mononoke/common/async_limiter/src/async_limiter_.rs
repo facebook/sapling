@@ -11,11 +11,11 @@ use futures::channel::oneshot;
 use futures::future;
 use futures::future::Future;
 use futures::stream::StreamExt;
+use governor::RateLimiter;
 use governor::clock::ReasonablyRealtime;
 use governor::state::direct::DirectStateStore;
 use governor::state::direct::NotKeyed;
 use governor::state::direct::StreamRateLimitExt;
-use governor::RateLimiter;
 use mononoke_macros::mononoke;
 
 use crate::ErrorKind;

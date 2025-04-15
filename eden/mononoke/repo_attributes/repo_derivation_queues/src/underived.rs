@@ -8,8 +8,8 @@
 use std::sync::Arc;
 use std::time::Duration;
 
-use anyhow::anyhow;
 use anyhow::Result;
+use anyhow::anyhow;
 use bulk_derivation::BulkDerivation;
 use cloned::cloned;
 use commit_graph::CommitGraph;

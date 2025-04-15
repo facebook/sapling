@@ -23,9 +23,9 @@ use gitcompat::BareGit;
 use gitcompat::GitCmd;
 use progress_model::ProgressBar;
 use spawn_ext::CommandError;
+use types::HgId;
 use types::errors::NetworkError;
 use types::fetch_mode::FetchMode;
-use types::HgId;
 
 #[derive(Clone)]
 pub struct GitStore(Arc<GitStoreInner>);

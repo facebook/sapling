@@ -15,8 +15,8 @@ use fbinit::FacebookInit;
 use futures::future::BoxFuture;
 use futures::future::FutureExt;
 use futures::future::Shared;
-use thrift_thriftclients::make_EdenServiceExt_thriftclient;
 use thrift_thriftclients::EdenServiceExt;
+use thrift_thriftclients::make_EdenServiceExt_thriftclient;
 use thriftclient::ThriftChannel;
 
 use crate::client::connector::Connector;

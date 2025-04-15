@@ -13,16 +13,16 @@ use async_trait::async_trait;
 use chrono::DateTime;
 use chrono::TimeDelta;
 use chrono::Utc;
-use configerator_structs_rapido_if_clients::errors::QueryDataFromSourceError;
 use configerator_structs_rapido_if_clients::RapidoClient;
+use configerator_structs_rapido_if_clients::errors::QueryDataFromSourceError;
 use configerator_structs_rapido_if_source::RapidoDataQuery;
 use configerator_structs_rapido_if_source::RapidoDataResults;
 use configerator_structs_rapido_if_srclients::make_Rapido_srclient;
 use fbinit::FacebookInit;
 use maplit::btreemap;
 use thiserror::Error;
-use tokio::time::interval;
 use tokio::time::Duration;
+use tokio::time::interval;
 
 use crate::CounterManager;
 

@@ -208,8 +208,8 @@ mod tests {
     use std::thread;
 
     use super::*;
-    use crate::ipc;
     use crate::NodeIpc;
+    use crate::ipc;
 
     #[test]
     fn test_mutural_recursive() {

@@ -9,10 +9,10 @@
 
 use anyhow::Error;
 use fbinit::FacebookInit;
+use scs_client_raw::SCS_DEFAULT_TIER;
 use scs_client_raw::ScsClient;
 use scs_client_raw::ScsClientBuilder;
 use scs_client_raw::ScsClientHostBuilder;
-use scs_client_raw::SCS_DEFAULT_TIER;
 
 #[derive(clap::Args)]
 pub(super) struct ConnectionArgs {

@@ -15,9 +15,9 @@ use std::sync::Arc;
 
 use minibytes::Text;
 
-use crate::convert::FromConfig;
 use crate::Error;
 use crate::Result;
+use crate::convert::FromConfig;
 
 #[derive(Debug, Copy, Clone, Hash, PartialEq, Eq)]
 pub struct ContentHash(u64);

@@ -7,8 +7,8 @@
 
 use std::sync::Arc;
 
-use anyhow::anyhow;
 use anyhow::Error;
+use anyhow::anyhow;
 use context::CoreContext;
 use fbinit::FacebookInit;
 use filenodes::FilenodeInfo;
@@ -29,9 +29,9 @@ use super::util::build_shard;
 use crate::local_cache::LocalCache;
 use crate::reader::filenode_cache_key;
 use crate::reader::history_cache_key;
+use crate::remote_cache::RemoteCache;
 use crate::remote_cache::test::wait_for_filenode;
 use crate::remote_cache::test::wait_for_history;
-use crate::remote_cache::RemoteCache;
 
 fn filenode() -> FilenodeInfo {
     FilenodeInfo {

@@ -8,12 +8,12 @@
 use dag_types::Group;
 use nonblocking::non_blocking_result as r;
 
+use crate::Result;
+use crate::VertexOptions;
 use crate::ops::DagAddHeads;
 use crate::ops::IdConvert;
 use crate::tests::DrawDag;
 use crate::tests::TestDag;
-use crate::Result;
-use crate::VertexOptions;
 
 #[test]
 fn test_add_heads_refuse_reassign_group() -> Result<()> {

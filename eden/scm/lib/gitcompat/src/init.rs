@@ -8,21 +8,21 @@
 use std::collections::BTreeMap;
 use std::env;
 use std::io;
+use std::path::MAIN_SEPARATOR_STR as SEP;
 use std::path::Path;
 use std::path::PathBuf;
-use std::path::MAIN_SEPARATOR_STR as SEP;
 
 use anyhow::Result;
-use filetime::set_file_mtime;
 use filetime::FileTime;
+use filetime::set_file_mtime;
 use fs_err as fs;
-use identity::dotgit::follow_dotgit_path;
 use identity::Identity;
+use identity::dotgit::follow_dotgit_path;
 use tracing::debug;
 use types::HgId;
 
-use crate::refs::ReferenceValue;
 use crate::BareGit;
+use crate::refs::ReferenceValue;
 
 /// Initialize and update Sapling's dotdir inside `.git/`.
 /// - Write requirements, on demand.

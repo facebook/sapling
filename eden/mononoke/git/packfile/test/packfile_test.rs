@@ -10,9 +10,9 @@ use std::sync::atomic::AtomicBool;
 
 use bytes::Bytes;
 use bytes::BytesMut;
+use flate2::Compression;
 use flate2::write::ZlibDecoder;
 use flate2::write::ZlibEncoder;
-use flate2::Compression;
 use futures::stream;
 use gix_hash::ObjectId;
 use gix_object::Object;
@@ -23,10 +23,10 @@ use packfile::bundle::BundleWriter;
 use packfile::pack::DeltaForm;
 use packfile::pack::PackfileWriter;
 use packfile::thrift;
-use packfile::types::to_vec_bytes;
 use packfile::types::BaseObject;
 use packfile::types::GitPackfileBaseItem;
 use packfile::types::PackfileItem;
+use packfile::types::to_vec_bytes;
 use quickcheck::quickcheck;
 use tempfile::NamedTempFile;
 

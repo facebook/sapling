@@ -5,9 +5,9 @@
  * LICENSE file in the root directory of this source tree.
  */
 
+use std::sync::Arc;
 use std::sync::atomic::AtomicU64;
 use std::sync::atomic::Ordering;
-use std::sync::Arc;
 
 use memmap2::MmapMut;
 

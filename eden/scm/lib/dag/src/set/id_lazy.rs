@@ -14,19 +14,19 @@ use std::sync::MutexGuard;
 use indexmap::IndexSet;
 use nonblocking::non_blocking_result;
 
-use super::hints::Flags;
-use super::id_static::IdStaticSet;
 use super::AsyncSetQuery;
 use super::BoxVertexStream;
 use super::Hints;
-use crate::ops::DagAlgorithm;
-use crate::ops::IdConvert;
-use crate::protocol::disable_remote_protocol;
+use super::hints::Flags;
+use super::id_static::IdStaticSet;
 use crate::Group;
 use crate::Id;
 use crate::IdSet;
 use crate::Result;
 use crate::Vertex;
+use crate::ops::DagAlgorithm;
+use crate::ops::IdConvert;
+use crate::protocol::disable_remote_protocol;
 
 /// A set backed by a lazy iterator of Ids.
 pub struct IdLazySet {
@@ -351,9 +351,9 @@ pub(crate) mod test_utils {
     use std::sync::atomic::Ordering::AcqRel;
 
     use super::*;
+    use crate::VerLink;
     use crate::ops::PrefixLookup;
     use crate::tests::dummy_dag::DummyDag;
-    use crate::VerLink;
 
     static STR_ID_MAP_ID: AtomicU64 = AtomicU64::new(0);
 
@@ -440,8 +440,8 @@ pub(crate) mod tests {
 
     use nonblocking::non_blocking_result as r;
 
-    use super::super::tests::*;
     use super::super::Set;
+    use super::super::tests::*;
     use super::test_utils::*;
     use super::*;
 

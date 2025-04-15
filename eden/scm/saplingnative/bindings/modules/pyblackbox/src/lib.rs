@@ -9,17 +9,17 @@
 
 use std::ops::Deref;
 
-use blackbox::event::Event;
-use blackbox::init;
-use blackbox::serde_json;
 use blackbox::BlackboxOptions;
 use blackbox::SessionId;
 use blackbox::ToValue;
+use blackbox::event::Event;
+use blackbox::init;
+use blackbox::serde_json;
 use cpython::*;
-use cpython_ext::de::from_object;
 use cpython_ext::PyNone;
 use cpython_ext::PyPath;
 use cpython_ext::ResultPyErrExt;
+use cpython_ext::de::from_object;
 
 pub fn init_module(py: Python, package: &str) -> PyResult<PyModule> {
     let name = [package, "blackbox"].join(".");

@@ -9,9 +9,9 @@ use std::collections::HashMap;
 use std::collections::HashSet;
 use std::sync::Arc;
 
-use anyhow::anyhow;
 use anyhow::Context;
 use anyhow::Result;
+use anyhow::anyhow;
 use async_trait::async_trait;
 use blobstore::Loadable;
 use commit_graph::BaseCommitGraphWriter;
@@ -31,10 +31,10 @@ use mononoke_types::RepositoryId;
 use repo_blobstore::RepoBlobstore;
 use smallvec::ToSmallVec;
 use sql::Connection;
-use sql_ext::mononoke_queries;
 use sql_ext::SqlConnections;
-use vec1::vec1;
+use sql_ext::mononoke_queries;
 use vec1::Vec1;
+use vec1::vec1;
 
 use crate::bubble::BubbleId;
 

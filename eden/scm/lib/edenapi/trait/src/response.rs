@@ -8,10 +8,10 @@
 use std::pin::Pin;
 
 use futures::prelude::*;
-use http::header;
 use http::HeaderMap;
 use http::StatusCode;
 use http::Version;
+use http::header;
 use http_client::AsyncResponse as AsyncHttpResponse;
 use http_client::Response as HttpResponse;
 use http_client::Stats;

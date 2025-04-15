@@ -10,11 +10,11 @@
 pub use anyhow::Error;
 pub use anyhow::Result;
 pub use clidispatch;
+pub use clidispatch::ReqCtx;
 use clidispatch::errors::FallbackToPython;
 use clidispatch::global_flags::HgGlobalOpts;
-use clidispatch::io::Write;
 pub use clidispatch::io::IO;
-pub use clidispatch::ReqCtx;
+use clidispatch::io::Write;
 pub use cliparser::define_flags;
 pub use configmodel::Config;
 pub use configmodel::ConfigExt;

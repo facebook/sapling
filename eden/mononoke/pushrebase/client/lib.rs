@@ -17,9 +17,9 @@ use bookmarks_movement::BookmarkMovementError;
 use bookmarks_types::BookmarkKey;
 use bytes::Bytes;
 #[cfg(fbcode_build)]
-pub use facebook::land_service::override_certificate_paths as land_service_override_certificate_paths;
-#[cfg(fbcode_build)]
 pub use facebook::land_service::LandServicePushrebaseClient;
+#[cfg(fbcode_build)]
+pub use facebook::land_service::override_certificate_paths as land_service_override_certificate_paths;
 use hooks::CrossRepoPushSource;
 pub use hybrid::normal_pushrebase;
 pub use local::LocalPushrebaseClient;

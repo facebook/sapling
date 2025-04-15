@@ -7,9 +7,9 @@
 
 use std::collections::HashMap;
 use std::path::PathBuf;
+use std::sync::Arc;
 use std::sync::atomic::AtomicBool;
 use std::sync::atomic::Ordering;
-use std::sync::Arc;
 use std::time::Duration;
 
 use anyhow::Result;
@@ -22,22 +22,22 @@ use cloned::cloned;
 use context::CoreContext;
 use context::SessionContainer;
 use metadata::Metadata;
+use mononoke_app::MononokeApp;
 #[cfg(fbcode_build)]
 use mononoke_app::args::MonitoringArgs;
-use mononoke_app::MononokeApp;
 use mononoke_macros::mononoke;
 use mutable_counters::MutableCounters;
 
 #[cfg(fbcode_build)]
 mod stats;
 
+use crate::ModernSyncArgs;
 use crate::sender::edenapi::EdenapiSender;
 use crate::sender::edenapi::FilterEdenapiSender;
 use crate::sender::edenapi::MethodFilter;
 use crate::sender::edenapi::NoopEdenapiSender;
-use crate::sync::get_unsharded_repo_args;
 use crate::sync::ExecutionType;
-use crate::ModernSyncArgs;
+use crate::sync::get_unsharded_repo_args;
 
 #[derive(ValueEnum, Default, Clone)]
 enum BenchmarkMode {

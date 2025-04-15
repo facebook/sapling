@@ -11,18 +11,18 @@ use std::str::FromStr;
 use std::sync::atomic::Ordering;
 use std::task;
 
-use anyhow::anyhow;
 use anyhow::Context;
 use anyhow::Error;
 use anyhow::Result;
+use anyhow::anyhow;
 use base64::Engine;
 use bookmarks::BookmarksRef;
+#[cfg(fbcode_build)]
+use clientinfo::CLIENT_INFO_HEADER;
 #[cfg(fbcode_build)]
 use clientinfo::ClientEntryPoint;
 #[cfg(fbcode_build)]
 use clientinfo::ClientInfo;
-#[cfg(fbcode_build)]
-use clientinfo::CLIENT_INFO_HEADER;
 use futures::future::BoxFuture;
 use futures::future::FutureExt;
 use gotham_ext::handler::SlapiCommitIdentityScheme;
@@ -35,8 +35,8 @@ use http::Method;
 use http::Request;
 use http::Response;
 use http::Uri;
-use hyper::service::Service;
 use hyper::Body;
+use hyper::service::Service;
 use metadata::Metadata;
 use mononoke_api::Repo;
 use percent_encoding::percent_decode;
@@ -44,10 +44,10 @@ use qps::Qps;
 use session_id::generate_session_id;
 use sha1::Digest;
 use sha1::Sha1;
+use slog::Logger;
 use slog::debug;
 use slog::error;
 use slog::trace;
-use slog::Logger;
 use thiserror::Error;
 use tokio::io::AsyncReadExt;
 

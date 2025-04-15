@@ -9,8 +9,8 @@ use std::sync::Arc;
 
 use configmodel::Config;
 use cpython::*;
-use cpython_ext::convert::ImplInto;
 use cpython_ext::ResultPyErrExt;
+use cpython_ext::convert::ImplInto;
 use io::IO;
 use parking_lot::RwLock;
 use termlogger::TermLogger;

@@ -7,9 +7,9 @@
 
 use std::num::NonZeroU64;
 
-use anyhow::anyhow;
 use anyhow::Error;
 use anyhow::Result;
+use anyhow::anyhow;
 use async_trait::async_trait;
 use blobstore::Loadable;
 use bonsai_globalrev_mapping::BonsaiGlobalrevMappingRef;
@@ -21,9 +21,9 @@ use chrono::Utc;
 use commit_graph::CommitGraphRef;
 use context::CoreContext;
 use ephemeral_blobstore::BubbleId;
-use futures::stream;
 use futures::StreamExt;
 use futures::TryStreamExt;
+use futures::stream;
 use futures_ext::stream::FbStreamExt;
 use futures_stats::TimedTryFutureExt;
 use logger_ext::Loggable;

@@ -7,10 +7,10 @@
 
 use gotham::state::State;
 use gotham_ext::middleware::Middleware;
-use http::header::CONTENT_TYPE;
 use http::HeaderValue;
-use hyper::body::Body;
+use http::header::CONTENT_TYPE;
 use hyper::Response;
+use hyper::body::Body;
 
 use crate::model::ResponseType;
 use crate::model::Service;

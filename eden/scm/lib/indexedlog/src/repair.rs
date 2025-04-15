@@ -12,8 +12,8 @@ use std::path::Path;
 
 use crate::errors::ResultExt;
 use crate::lock::DirLockOptions;
-use crate::lock::ScopedDirLock;
 use crate::lock::READER_LOCK_OPTS;
+use crate::lock::ScopedDirLock;
 
 // Public interface -------------------------------------------------------
 

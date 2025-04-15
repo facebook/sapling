@@ -6,11 +6,11 @@
  */
 
 use std::path::PathBuf;
-use std::sync::atomic::AtomicBool;
 use std::sync::Arc;
+use std::sync::atomic::AtomicBool;
 
-use anyhow::format_err;
 use anyhow::Result;
+use anyhow::format_err;
 use clap::Parser;
 use clientinfo::ClientEntryPoint;
 use clientinfo::ClientInfo;
@@ -24,12 +24,12 @@ use repo_blobstore::RepoBlobstoreRef;
 use repo_identity::RepoIdentityRef;
 use url::Url;
 
+use crate::ModernSyncArgs;
+use crate::Repo;
 use crate::sender::edenapi::DefaultEdenapiSenderBuilder;
 use crate::sender::edenapi::EdenapiSender;
 use crate::sender::manager::ChangesetMessage;
 use crate::sender::manager::SendManager;
-use crate::ModernSyncArgs;
-use crate::Repo;
 
 /// Sync one changeset (debug only)
 #[derive(Parser)]

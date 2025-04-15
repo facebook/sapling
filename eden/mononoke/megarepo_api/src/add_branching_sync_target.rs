@@ -17,8 +17,8 @@ use mononoke_api::Mononoke;
 use mononoke_api::MononokeRepo;
 use mononoke_types::ChangesetId;
 
-use crate::common::find_target_sync_config;
 use crate::common::MegarepoOp;
+use crate::common::find_target_sync_config;
 
 // Create a new sync target
 pub struct AddBranchingSyncTarget<'a, R> {

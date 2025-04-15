@@ -9,26 +9,26 @@ use std::any::Any;
 use std::borrow::Cow;
 use std::cmp;
 use std::fmt;
-use std::sync::atomic::Ordering;
 use std::sync::Arc;
+use std::sync::atomic::Ordering;
 
 use nonblocking::non_blocking_result;
 
-use super::hints::Flags;
 use super::AsyncSetQuery;
 use super::BoxVertexStream;
 use super::Hints;
-use crate::idset::IdList;
-use crate::idset::OrderedSpan;
-use crate::ops::DagAlgorithm;
-use crate::ops::IdConvert;
-use crate::protocol::disable_remote_protocol;
+use super::hints::Flags;
 use crate::Group;
 use crate::Id;
 use crate::IdSet;
 use crate::Result;
 use crate::Set;
 use crate::Vertex;
+use crate::idset::IdList;
+use crate::idset::OrderedSpan;
+use crate::ops::DagAlgorithm;
+use crate::ops::IdConvert;
+use crate::protocol::disable_remote_protocol;
 
 /// A set backed by [`IdSet`] + [`IdMap`].
 /// Efficient for DAG calculation.
@@ -592,9 +592,11 @@ pub(crate) mod tests {
     use futures::TryStreamExt;
     use nonblocking::non_blocking_result as r;
 
-    use super::super::tests::*;
     use super::super::Set;
+    use super::super::tests::*;
     use super::*;
+    use crate::Dag;
+    use crate::DagAlgorithm;
     use crate::ops::IdMapSnapshot;
     use crate::ops::ToIdSet;
     use crate::set::difference::DifferenceSet;
@@ -602,8 +604,6 @@ pub(crate) mod tests {
     use crate::set::slice::SliceSet;
     use crate::set::union::UnionSet;
     use crate::tests::build_segments;
-    use crate::Dag;
-    use crate::DagAlgorithm;
 
     /// Test with a predefined DAG.
     pub(crate) fn with_dag<R, F: Fn(&Dag) -> R>(func: F) -> R {

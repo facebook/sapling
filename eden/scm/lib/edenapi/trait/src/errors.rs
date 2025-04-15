@@ -7,8 +7,8 @@
 
 use std::time::Duration;
 
-use edenapi_types::wire::WireToApiConversionError;
 use edenapi_types::SaplingRemoteApiServerError;
+use edenapi_types::wire::WireToApiConversionError;
 use http::header::HeaderMap;
 use http::status::StatusCode;
 use http_client::HttpClientError;
@@ -79,8 +79,8 @@ impl SaplingRemoteApiError {
     }
 
     pub fn is_retryable(&self) -> bool {
-        use http_client::HttpClientError::*;
         use SaplingRemoteApiError::*;
+        use http_client::HttpClientError::*;
         match self {
             Http(client_error) => match client_error {
                 Tls(TlsError { kind, .. }) => {

@@ -7,24 +7,24 @@
 
 use std::ops::Range;
 
-use anyhow::anyhow;
 use anyhow::Context;
 use anyhow::Error;
+use anyhow::anyhow;
 use bytes::Bytes;
 use context::CoreContext;
 use derivative::Derivative;
 use futures::try_join;
 use lazy_static::lazy_static;
-use mononoke_types::hash::GitSha1;
 use mononoke_types::ContentMetadataV2;
+use mononoke_types::hash::GitSha1;
 use regex::Regex;
 pub use xdiff::CopyInfo;
 
+use crate::FileContext;
+use crate::MononokeRepo;
 use crate::changeset_path::ChangesetPathContentContext;
 use crate::errors::MononokeError;
 use crate::file::FileType;
-use crate::FileContext;
-use crate::MononokeRepo;
 
 lazy_static! {
     static ref BEGIN_MANUAL_SECTION_REGEX: Regex =

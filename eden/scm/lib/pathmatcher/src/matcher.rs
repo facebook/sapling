@@ -9,14 +9,10 @@ use std::collections::HashMap;
 use std::path::Path;
 use std::sync::Arc;
 
-use anyhow::anyhow;
 use anyhow::Result;
+use anyhow::anyhow;
 use types::RepoPathBuf;
 
-use crate::pattern::explicit_pattern_kind;
-use crate::pattern::normalize_patterns;
-use crate::pattern::Pattern;
-use crate::regex_matcher::SlowRegexMatcher;
 use crate::AlwaysMatcher;
 use crate::DifferenceMatcher;
 use crate::DynMatcher;
@@ -27,6 +23,10 @@ use crate::PatternKind;
 use crate::RegexMatcher;
 use crate::TreeMatcher;
 use crate::UnionMatcher;
+use crate::pattern::Pattern;
+use crate::pattern::explicit_pattern_kind;
+use crate::pattern::normalize_patterns;
+use crate::regex_matcher::SlowRegexMatcher;
 
 /// Create top level matcher from non-normalized CLI input.
 pub fn cli_matcher<R>(

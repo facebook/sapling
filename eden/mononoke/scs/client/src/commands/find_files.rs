@@ -14,12 +14,12 @@ use futures::TryStreamExt;
 use scs_client_raw::thrift;
 use serde::Serialize;
 
-use crate::args::commit_id::resolve_commit_id;
+use crate::ScscApp;
 use crate::args::commit_id::CommitIdArgs;
+use crate::args::commit_id::resolve_commit_id;
 use crate::args::repo::RepoArgs;
 use crate::errors::SelectionErrorExt;
 use crate::render::Render;
-use crate::ScscApp;
 
 #[derive(Parser)]
 /// Find all files inside a certain dir or with certain filename

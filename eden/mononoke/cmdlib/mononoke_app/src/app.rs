@@ -11,15 +11,19 @@ use std::collections::HashSet;
 use std::fs;
 use std::future::Future;
 use std::path::Path;
-use std::sync::atomic::AtomicI64;
 use std::sync::Arc;
+use std::sync::atomic::AtomicI64;
 use std::time::Duration;
 use std::time::Instant;
 
-use anyhow::anyhow;
-use anyhow::bail;
+#[cfg(fbcode_build)]
+use MononokeAppStats_ods3::Instrument_MononokeAppStats;
+#[cfg(fbcode_build)]
+use MononokeAppStats_ods3_types::MononokeAppStats;
 use anyhow::Context;
 use anyhow::Result;
+use anyhow::anyhow;
+use anyhow::bail;
 use base_app::BaseApp;
 use blobstore::Blobstore;
 use blobstore::BlobstoreUnlinkOps;
@@ -56,10 +60,10 @@ use repo_factory::RepoFactoryBuilder;
 use running::run_until_terminated;
 use scuba_ext::MononokeScubaSampleBuilder;
 use services::Fb303Service;
+use slog::Logger;
 use slog::error;
 use slog::info;
 use slog::o;
-use slog::Logger;
 use sql_ext::facebook::MysqlOptions;
 use stats::prelude::*;
 #[cfg(not(test))]
@@ -67,10 +71,6 @@ use stats::schedule_stats_aggregation_preview;
 use tokio::runtime::Handle;
 use tokio::runtime::Runtime;
 use tokio::sync::oneshot;
-#[cfg(fbcode_build)]
-use MononokeAppStats_ods3::Instrument_MononokeAppStats;
-#[cfg(fbcode_build)]
-use MononokeAppStats_ods3_types::MononokeAppStats;
 
 use crate::args::AsRepoArg;
 use crate::args::ConfigArgs;

@@ -13,15 +13,15 @@ use curl::easy::Handler;
 use curl::easy::ReadError;
 use curl::easy::SeekResult;
 use curl::easy::WriteError;
-use http::header;
 use http::HeaderMap;
 use http::StatusCode;
 use http::Version;
+use http::header;
 
 use super::HandlerExt;
+use crate::RequestContext;
 use crate::header::Header;
 use crate::progress::Progress;
-use crate::RequestContext;
 
 /// Initial buffer capacity to allocate if we don't get a Content-Length header.
 /// Usually, the lack of a Content-Length header indicates a streaming response,

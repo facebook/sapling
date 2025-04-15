@@ -14,12 +14,12 @@ use commit_cloud_types::WorkspaceHead;
 use commit_cloud_types::WorkspaceRemoteBookmark;
 use mercurial_types::HgChangesetId;
 
-use crate::ctx::CommitCloudContext;
-use crate::sql::ops::Get;
-use crate::sql::ops::GetAsMap;
 use crate::CommitCloud;
 use crate::Phase;
 use crate::SqlCommitCloud;
+use crate::ctx::CommitCloudContext;
+use crate::sql::ops::Get;
+use crate::sql::ops::GetAsMap;
 
 // Workspace information needed to create smartlog
 #[derive(Debug, Clone)]

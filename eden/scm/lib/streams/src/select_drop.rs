@@ -178,12 +178,12 @@ where
 #[cfg(test)]
 mod tests {
     use anyhow::Result;
-    use futures::channel::mpsc::channel;
-    use futures::stream;
     use futures::SinkExt;
     use futures::StreamExt;
-    use tokio::time::timeout;
+    use futures::channel::mpsc::channel;
+    use futures::stream;
     use tokio::time::Duration;
+    use tokio::time::timeout;
 
     use super::*;
 

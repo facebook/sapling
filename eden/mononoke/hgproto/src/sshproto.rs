@@ -48,10 +48,10 @@ use anyhow::Result;
 use bytes::BytesMut;
 use tokio_util::codec::Decoder;
 
-use crate::handler::OutputStream;
-use crate::handler::ResponseEncoder;
 use crate::Request;
 use crate::Response;
+use crate::handler::OutputStream;
+use crate::handler::ResponseEncoder;
 
 pub mod request;
 pub mod response;

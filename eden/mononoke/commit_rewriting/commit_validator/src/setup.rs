@@ -7,9 +7,9 @@
 
 use std::sync::Arc;
 
-use anyhow::format_err;
 use anyhow::Error;
 use anyhow::Result;
+use anyhow::format_err;
 use blobstore_factory::MetadataSqlFactory;
 use blobstore_factory::ReadOnlyStorage;
 use bookmarks::BookmarkKey;
@@ -24,8 +24,8 @@ use futures::future::try_join_all;
 use live_commit_sync_config::CfgrLiveCommitSyncConfig;
 use live_commit_sync_config::LiveCommitSyncConfig;
 use metaconfig_types::RepoConfig;
-use mononoke_app::args::RepoArg;
 use mononoke_app::MononokeApp;
+use mononoke_app::args::RepoArg;
 use mutable_counters::MutableCountersRef;
 use pushredirect::SqlPushRedirectionConfigBuilder;
 use repo_identity::RepoIdentityRef;
@@ -35,10 +35,10 @@ use sql_ext::facebook::MysqlOptions;
 use sql_query_config::SqlQueryConfigArc;
 use synced_commit_mapping::SqlSyncedCommitMappingBuilder;
 
+use crate::Repo;
 use crate::cli::MononokeCommitValidatorArgs;
 use crate::reporting::add_common_commit_syncing_fields;
 use crate::validation::ValidationHelpers;
-use crate::Repo;
 
 pub async fn get_validation_helpers(
     fb: FacebookInit,

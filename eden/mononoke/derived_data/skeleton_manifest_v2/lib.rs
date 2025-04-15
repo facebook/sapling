@@ -13,5 +13,5 @@ mod test_fixtures;
 #[cfg(test)]
 mod tests;
 
-pub use mapping::format_key;
 pub use mapping::RootSkeletonManifestV2Id;
+pub use mapping::format_key;

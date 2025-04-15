@@ -17,6 +17,10 @@ use fbinit::FacebookInit;
 use metaconfig_types::RepoConfig;
 use permission_checker::AclProvider;
 
+use crate::BookmarkHook;
+use crate::ChangesetHook;
+use crate::FileHook;
+use crate::HookManager;
 use crate::errors::*;
 #[cfg(fbcode_build)]
 use crate::facebook::implementations::make_bookmark_hook;
@@ -30,10 +34,6 @@ use crate::implementations::make_bookmark_hook;
 use crate::implementations::make_changeset_hook;
 #[cfg(not(fbcode_build))]
 use crate::implementations::make_file_hook;
-use crate::BookmarkHook;
-use crate::ChangesetHook;
-use crate::FileHook;
-use crate::HookManager;
 
 enum LoadedRustHook {
     BookmarkHook(Box<dyn BookmarkHook>),

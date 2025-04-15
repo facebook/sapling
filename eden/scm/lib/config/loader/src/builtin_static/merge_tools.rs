@@ -5,8 +5,8 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-use staticconfig::static_config;
 use staticconfig::StaticConfig;
+use staticconfig::static_config;
 
 /// Merge tools.
 ///

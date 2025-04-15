@@ -9,14 +9,14 @@ use std::collections::BTreeMap;
 use std::sync::Arc;
 
 use cpython::*;
-use cpython_ext::convert::Serde;
 use cpython_ext::PyNone;
 use cpython_ext::ResultPyErrExt;
+use cpython_ext::convert::Serde;
+use types::HgId;
+use types::RepoPathBuf;
 use types::workingcopy_client::CheckoutConflict;
 use types::workingcopy_client::CheckoutMode;
 use types::workingcopy_client::FileStatus;
-use types::HgId;
-use types::RepoPathBuf;
 
 pub fn init_module(py: Python, package: &str) -> PyResult<PyModule> {
     let name = [package, "edenclient"].join(".");

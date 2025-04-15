@@ -18,7 +18,6 @@ use futures::StreamExt;
 use progress_model::ProgressBar;
 use scm_blob::ScmBlob;
 use tracing::field;
-use types::hgid::NULL_ID;
 use types::AugmentedTree;
 use types::AugmentedTreeWithDigest;
 use types::CasDigest;
@@ -27,22 +26,23 @@ use types::CasFetchedStats;
 use types::FetchContext;
 use types::Key;
 use types::NodeInfo;
+use types::hgid::NULL_ID;
 
-use super::metrics::TreeStoreFetchMetrics;
 use super::metrics::TREE_STORE_FETCH_METRICS;
+use super::metrics::TreeStoreFetchMetrics;
 use super::types::StoreTree;
 use super::types::TreeAttributes;
-use crate::indexedlogtreeauxstore::TreeAuxStore;
-use crate::scmstore::fetch::CommonFetchState;
-use crate::scmstore::fetch::FetchErrors;
-use crate::scmstore::tree::types::AuxData;
-use crate::scmstore::tree::types::LazyTree;
-use crate::scmstore::KeyFetchError;
 use crate::AuxStore;
 use crate::HgIdMutableHistoryStore;
 use crate::IndexedLogHgIdDataStore;
 use crate::IndexedLogHgIdHistoryStore;
 use crate::SaplingRemoteApiTreeStore;
+use crate::indexedlogtreeauxstore::TreeAuxStore;
+use crate::scmstore::KeyFetchError;
+use crate::scmstore::fetch::CommonFetchState;
+use crate::scmstore::fetch::FetchErrors;
+use crate::scmstore::tree::types::AuxData;
+use crate::scmstore::tree::types::LazyTree;
 
 pub struct FetchState {
     pub(crate) common: CommonFetchState<StoreTree>,

@@ -16,10 +16,10 @@ use context::CoreContext;
 use mononoke_types::ChangesetId;
 use mononoke_types::RepositoryId;
 use pushrebase_hook::PushrebaseHook;
-pub use sql_queries::add_pushrebase_mapping;
-pub use sql_queries::get_prepushrebase_ids;
 pub use sql_queries::SqlPushrebaseMutationMapping;
 pub use sql_queries::SqlPushrebaseMutationMappingConnection;
+pub use sql_queries::add_pushrebase_mapping;
+pub use sql_queries::get_prepushrebase_ids;
 
 pub struct PushrebaseMutationMappingEntry {
     repo_id: RepositoryId,

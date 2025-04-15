@@ -6,9 +6,9 @@
  */
 
 use anyhow::Result;
-use clap::builder::PossibleValuesParser;
 use clap::ArgGroup;
 use clap::Args;
+use clap::builder::PossibleValuesParser;
 use metaconfig_types::DerivedDataTypesConfig;
 use mononoke_types::DerivableType;
 use strum::IntoEnumIterator;

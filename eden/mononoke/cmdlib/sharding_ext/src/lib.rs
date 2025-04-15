@@ -8,9 +8,9 @@
 #[cfg(test)]
 mod test;
 
-use anyhow::format_err;
 use anyhow::Context;
 use anyhow::Result;
+use anyhow::format_err;
 
 const ENCODED_SLASH: &str = "_SLASH_";
 const ENCODED_PLUS: &str = "_PLUS_";

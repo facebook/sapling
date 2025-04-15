@@ -12,9 +12,9 @@ use std::fmt::Display;
 use std::mem;
 use std::str::FromStr;
 
-use anyhow::bail;
 use anyhow::Error;
 use anyhow::Result;
+use anyhow::bail;
 use faster_hex::hex_decode;
 use faster_hex::hex_string;
 use http::Uri;

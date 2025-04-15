@@ -5,18 +5,18 @@
  * GNU General Public License version 2.
  */
 
-use anyhow::anyhow;
 use anyhow::Context;
 use anyhow::Result;
+use anyhow::anyhow;
 use bufsize::SizeCounter;
 use bytes::Bytes;
 use bytes::BytesMut;
-use fbthrift::compact_protocol;
-use fbthrift::compact_protocol::CompactProtocolDeserializer;
-use fbthrift::compact_protocol::CompactProtocolSerializer;
 use fbthrift::Deserialize;
 use fbthrift::GetTType;
 use fbthrift::Serialize;
+use fbthrift::compact_protocol;
+use fbthrift::compact_protocol::CompactProtocolDeserializer;
+use fbthrift::compact_protocol::CompactProtocolSerializer;
 pub use thrift_convert_proc_macros::ThriftConvert;
 
 mod impls;

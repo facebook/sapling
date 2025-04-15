@@ -12,12 +12,12 @@ use context::CoreContext;
 use futures::stream::BoxStream;
 use futures::stream::StreamExt;
 use futures::stream::TryStreamExt;
+use mononoke_types::ContentManifestId;
+use mononoke_types::MPathElement;
 use mononoke_types::content_manifest::ContentManifest;
 use mononoke_types::content_manifest::ContentManifestEntry;
 use mononoke_types::content_manifest::ContentManifestFile;
 use mononoke_types::sharded_map_v2::LoadableShardedMapV2Node;
-use mononoke_types::ContentManifestId;
-use mononoke_types::MPathElement;
 
 use super::Entry;
 use super::Manifest;

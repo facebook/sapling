@@ -5,9 +5,9 @@
  * GNU General Public License version 2.
  */
 
-use anyhow::bail;
 use anyhow::Context;
 use anyhow::Result;
+use anyhow::bail;
 use blobstore::BlobstoreBytes;
 use bytes::Bytes;
 use fbthrift::compact_protocol;
@@ -471,11 +471,11 @@ mod test {
     use futures::future;
     use futures::stream;
     use quickcheck::quickcheck;
+    use rand::Rng;
     use rand::distributions::Alphanumeric;
     use rand::distributions::Distribution;
     use rand::distributions::Standard;
     use rand::thread_rng;
-    use rand::Rng;
 
     use super::*;
 

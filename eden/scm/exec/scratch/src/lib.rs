@@ -5,8 +5,8 @@
  * GNU General Public License version 2.
  */
 
-use sha2::digest::Digest;
 use sha2::Sha256;
+use sha2::digest::Digest;
 
 /// Normalizes various path format on Windows. This function will convert
 /// various Windows path format to full path form. Note this function does not

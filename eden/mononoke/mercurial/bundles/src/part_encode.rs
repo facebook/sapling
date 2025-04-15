@@ -15,14 +15,14 @@ use anyhow::Error;
 use anyhow::Result;
 use async_stream::try_stream;
 use bytes::Bytes;
-use futures::future;
-use futures::stream::BoxStream;
 use futures::Future;
 use futures::FutureExt;
 use futures::Stream;
 use futures::StreamExt;
 use futures::TryFutureExt;
 use futures::TryStreamExt;
+use futures::future;
+use futures::stream::BoxStream;
 
 use crate::chunk::Chunk;
 use crate::part_header::PartHeaderBuilder;

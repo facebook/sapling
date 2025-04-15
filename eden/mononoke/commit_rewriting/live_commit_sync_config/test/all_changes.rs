@@ -7,9 +7,9 @@
 
 use cached_config::ModificationTime;
 use fbinit::FacebookInit;
+use live_commit_sync_config::CONFIGERATOR_ALL_COMMIT_SYNC_CONFIGS;
 use live_commit_sync_config::ErrorKind;
 use live_commit_sync_config::LiveCommitSyncConfig;
-use live_commit_sync_config::CONFIGERATOR_ALL_COMMIT_SYNC_CONFIGS;
 use metaconfig_types::CommitSyncConfigVersion;
 use mononoke_macros::mononoke;
 use mononoke_types::RepositoryId;

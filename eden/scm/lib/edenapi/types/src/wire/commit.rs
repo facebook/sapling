@@ -38,7 +38,6 @@ pub use crate::commit::WireHgMutationEntryContent;
 pub use crate::commit::WireUploadBonsaiChangesetRequest;
 pub use crate::commit::WireUploadHgChangeset;
 pub use crate::commit::WireUploadHgChangesetsRequest;
-use crate::wire::is_default;
 use crate::wire::ToApi;
 use crate::wire::ToWire;
 use crate::wire::WireFileType;
@@ -48,6 +47,7 @@ use crate::wire::WireRepoPathBuf;
 use crate::wire::WireResult;
 use crate::wire::WireToApiConversionError;
 use crate::wire::WireUploadToken;
+use crate::wire::is_default;
 
 #[derive(Clone, Default, Debug, Serialize, Deserialize, Eq, PartialEq)]
 pub struct WireCommitLocation {

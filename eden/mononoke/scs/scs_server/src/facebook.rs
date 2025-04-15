@@ -5,16 +5,16 @@
  * GNU General Public License version 2.
  */
 
+use std::sync::Arc;
 use std::sync::atomic::AtomicBool;
 use std::sync::atomic::Ordering;
-use std::sync::Arc;
 
 use async_trait::async_trait;
 use fb303_core::fb303_status;
+use fb303_core_services::BaseService;
 use fb303_core_services::errors::GetNameExn;
 use fb303_core_services::errors::GetStatusDetailsExn;
 use fb303_core_services::errors::GetStatusExn;
-use fb303_core_services::BaseService;
 
 #[derive(Clone)]
 pub struct BaseServiceImpl {

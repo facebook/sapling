@@ -12,11 +12,11 @@ use commit_cloud_types::WorkspaceHead;
 use mercurial_types::HgChangesetId;
 use sql::Transaction;
 
+use crate::CommitCloudContext;
+use crate::SqlCommitCloud;
 use crate::sql::heads_ops::DeleteArgs;
 use crate::sql::ops::Delete;
 use crate::sql::ops::Insert;
-use crate::CommitCloudContext;
-use crate::SqlCommitCloud;
 
 #[allow(clippy::ptr_arg)]
 pub fn heads_from_list(s: &Vec<String>) -> anyhow::Result<Vec<WorkspaceHead>> {

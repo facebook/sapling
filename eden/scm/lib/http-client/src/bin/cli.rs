@@ -6,10 +6,10 @@
  */
 
 use std::env;
+use std::io::IsTerminal;
 use std::io::prelude::*;
 use std::io::stdin;
 use std::io::stdout;
-use std::io::IsTerminal;
 
 use anyhow::Result;
 use futures::prelude::*;

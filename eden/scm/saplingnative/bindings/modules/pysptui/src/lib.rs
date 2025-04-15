@@ -15,6 +15,7 @@ use clidispatch::io::IO;
 use cpython::*;
 use cpython_ext::PyNone;
 use cpython_ext::ResultPyErrExt;
+use streampager::Pager;
 use streampager::action::Action;
 use streampager::action::ActionSender;
 use streampager::bindings::Binding;
@@ -25,7 +26,6 @@ use streampager::bindings::Modifiers;
 use streampager::config::InterfaceMode;
 use streampager::control::Change;
 use streampager::control::Controller;
-use streampager::Pager;
 
 pub fn init_module(py: Python, package: &str) -> PyResult<PyModule> {
     let name = [package, "sptui"].join(".");

@@ -10,8 +10,8 @@
 use std::str;
 use std::str::FromStr;
 
-use anyhow::bail;
 use anyhow::Result;
+use anyhow::bail;
 use minibytes::Bytes;
 use types::HgId;
 use types::Key;

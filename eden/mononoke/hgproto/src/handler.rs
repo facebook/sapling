@@ -9,8 +9,8 @@ use std::io;
 use std::sync::Arc;
 use std::sync::Mutex;
 
-use anyhow::anyhow;
 use anyhow::Error;
+use anyhow::anyhow;
 use async_stream::try_stream;
 use bytes::Bytes;
 use futures::channel::oneshot;
@@ -27,11 +27,11 @@ use tokio_util::codec::Decoder;
 use tokio_util::codec::FramedRead;
 use tokio_util::io::StreamReader;
 
-use crate::commands::HgCommandHandler;
-use crate::errors::ErrorKind;
 use crate::HgCommands;
 use crate::Request;
 use crate::Response;
+use crate::commands::HgCommandHandler;
+use crate::errors::ErrorKind;
 
 pub type OutputStream = BoxStream<'static, Result<Bytes, Error>>;
 

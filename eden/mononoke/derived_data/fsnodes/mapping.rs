@@ -7,27 +7,26 @@
 
 use std::collections::HashMap;
 
-use anyhow::anyhow;
 use anyhow::Error;
 use anyhow::Result;
+use anyhow::anyhow;
 use async_trait::async_trait;
 use blobstore::Blobstore;
 use blobstore::BlobstoreGetData;
 use bytes::Bytes;
 use cloned::cloned;
 use context::CoreContext;
-use derived_data_manager::dependencies;
 use derived_data_manager::BonsaiDerivable;
 use derived_data_manager::DerivableType;
 use derived_data_manager::DerivationContext;
+use derived_data_manager::dependencies;
 use derived_data_service_if as thrift;
-use futures::stream;
 use futures::FutureExt;
 use futures::StreamExt;
 use futures::TryStreamExt;
+use futures::stream;
 use manifest::ManifestOps;
 use manifest::ManifestParentReplacement;
-use mononoke_types::fsnode::FsnodeFile;
 use mononoke_types::BlobstoreBytes;
 use mononoke_types::BonsaiChangeset;
 use mononoke_types::ChangesetId;
@@ -35,6 +34,7 @@ use mononoke_types::ContentId;
 use mononoke_types::FileType;
 use mononoke_types::FsnodeId;
 use mononoke_types::NonRootMPath;
+use mononoke_types::fsnode::FsnodeFile;
 
 use crate::batch::derive_fsnode_in_batch;
 use crate::derive::derive_fsnode;

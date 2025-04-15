@@ -5,8 +5,8 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-use staticconfig::static_config;
 use staticconfig::StaticConfig;
+use staticconfig::static_config;
 
 /// Config loaded only in OSS build.
 pub static CONFIG: StaticConfig = static_config!("builtin:open_source" => r###"

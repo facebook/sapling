@@ -11,16 +11,19 @@ use std::fmt;
 use std::iter;
 use std::result::Result as StdResult;
 
-use serde::de::Error;
-use serde::de::SeqAccess;
-use serde::de::Visitor;
-use serde::ser::SerializeSeq;
 use serde::Deserialize;
 use serde::Deserializer;
 use serde::Serialize;
 use serde::Serializer;
+use serde::de::Error;
+use serde::de::SeqAccess;
+use serde::de::Visitor;
+use serde::ser::SerializeSeq;
 
 use super::IdDagStore;
+use crate::IdSet;
+use crate::Level;
+use crate::Result;
 use crate::errors::bug;
 use crate::id::Group;
 use crate::id::Id;
@@ -28,9 +31,6 @@ use crate::idset::Span;
 use crate::ops::Persist;
 use crate::ops::StorageVersion;
 use crate::segment::Segment;
-use crate::IdSet;
-use crate::Level;
-use crate::Result;
 
 #[derive(Clone)]
 pub struct MemStore {

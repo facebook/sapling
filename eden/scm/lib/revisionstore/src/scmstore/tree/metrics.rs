@@ -5,14 +5,14 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-use crate::scmstore::metrics::static_cas_backend_metrics;
-use crate::scmstore::metrics::static_cas_local_cache_metrics;
-use crate::scmstore::metrics::static_fetch_metrics;
-use crate::scmstore::metrics::static_local_cache_fetch_metrics;
 use crate::scmstore::metrics::CasBackendMetrics;
 use crate::scmstore::metrics::CasLocalCacheMetrics;
 use crate::scmstore::metrics::FetchMetrics;
 use crate::scmstore::metrics::LocalAndCacheFetchMetrics;
+use crate::scmstore::metrics::static_cas_backend_metrics;
+use crate::scmstore::metrics::static_cas_local_cache_metrics;
+use crate::scmstore::metrics::static_fetch_metrics;
+use crate::scmstore::metrics::static_local_cache_fetch_metrics;
 
 static_local_cache_fetch_metrics!(INDEXEDLOG, "scmstore.tree.fetch.indexedlog");
 static_local_cache_fetch_metrics!(AUX, "scmstore.tree.fetch.aux");

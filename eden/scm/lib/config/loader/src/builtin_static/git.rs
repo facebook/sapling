@@ -5,8 +5,8 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-use staticconfig::static_config;
 use staticconfig::StaticConfig;
+use staticconfig::static_config;
 
 /// Git config applied to `sl clone` `.sl` repos.
 pub static GIT_CONFIG: StaticConfig = static_config!("builtin:git" => r#"

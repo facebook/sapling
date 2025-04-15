@@ -10,11 +10,11 @@ use std::sync::Arc;
 use std::sync::Mutex;
 
 use ::manifest::Entry;
-use anyhow::anyhow;
-use anyhow::format_err;
 use anyhow::Context;
 use anyhow::Error;
 use anyhow::Result;
+use anyhow::anyhow;
+use anyhow::format_err;
 use blobstore::Blobstore;
 use blobstore::Loadable;
 use bonsai_hg_mapping::BonsaiHgMappingArc;
@@ -32,21 +32,21 @@ use futures::stream::BoxStream;
 use futures_ext::FbTryFutureExt;
 use futures_stats::TimedTryFutureExt;
 use manifest::ManifestParentReplacement;
-use mercurial_types::blobs::ChangesetMetadata;
-use mercurial_types::blobs::HgBlobChangeset;
-use mercurial_types::subtree::HgSubtreeChanges;
 use mercurial_types::HgChangesetId;
 use mercurial_types::HgFileNodeId;
 use mercurial_types::HgManifestId;
 use mercurial_types::HgNodeHash;
 use mercurial_types::RepoPath;
+use mercurial_types::blobs::ChangesetMetadata;
+use mercurial_types::blobs::HgBlobChangeset;
+use mercurial_types::subtree::HgSubtreeChanges;
 use mononoke_macros::mononoke;
-use mononoke_types::subtree_change::SubtreeChange;
 use mononoke_types::BlobstoreValue;
 use mononoke_types::BonsaiChangeset;
 use mononoke_types::FileType;
 use mononoke_types::MPath;
 use mononoke_types::NonRootMPath;
+use mononoke_types::subtree_change::SubtreeChange;
 use repo_blobstore::RepoBlobstoreArc;
 use repo_blobstore::RepoBlobstoreRef;
 use scuba_ext::MononokeScubaSampleBuilder;
@@ -55,10 +55,10 @@ use stats::prelude::*;
 use uuid::Uuid;
 use wireproto_handler::BackupSourceRepo;
 
+use crate::ErrorKind;
 use crate::bonsai_generation::create_bonsai_changeset_object;
 use crate::bonsai_generation::save_bonsai_changeset_object;
 use crate::repo_commit::*;
-use crate::ErrorKind;
 
 define_stats! {
     prefix = "mononoke.blobrepo";
@@ -439,8 +439,8 @@ mod tests {
     use mercurial_types::subtree::HgSubtreeMerge;
     use mononoke_macros::mononoke;
     use sorted_vector_map::sorted_vector_map;
-    use tests_utils::drawdag::extend_from_dag_with_actions;
     use tests_utils::BasicTestRepo;
+    use tests_utils::drawdag::extend_from_dag_with_actions;
 
     use super::*;
 

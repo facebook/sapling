@@ -5,9 +5,9 @@
  * GNU General Public License version 2.
  */
 
-use anyhow::bail;
 use anyhow::Context;
 use anyhow::Result;
+use anyhow::bail;
 use async_trait::async_trait;
 use bookmarks::BookmarkKey;
 use bookmarks::BookmarkName;
@@ -17,12 +17,12 @@ use megarepo_configs::SyncConfigVersion;
 use mononoke_types::RepositoryId;
 use sql_construct::SqlConstruct;
 use sql_construct::SqlConstructFromMetadataDatabaseConfig;
-use sql_ext::mononoke_queries;
 use sql_ext::SqlConnections;
+use sql_ext::mononoke_queries;
 
+use crate::db::MegarepoSyncConfig;
 use crate::db::types::MegarepoSyncConfigEntry;
 use crate::db::types::RowId;
-use crate::db::MegarepoSyncConfig;
 
 mononoke_queries! {
     write AddRepoConfig(repo_id: RepositoryId, bookmark: BookmarkName, version: SyncConfigVersion, serialized_config: &str) {

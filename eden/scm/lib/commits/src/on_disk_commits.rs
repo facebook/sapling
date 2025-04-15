@@ -11,17 +11,17 @@ use std::path::PathBuf;
 use std::sync::Arc;
 
 use anyhow::bail;
+use dag::Dag;
+use dag::Group;
+use dag::Set;
+use dag::Vertex;
+use dag::VertexListWithOptions;
 use dag::delegate;
 use dag::errors::NotFoundError;
 use dag::ops::DagAlgorithm;
 use dag::ops::DagPersistent;
 use dag::ops::DagStrip;
 use dag::ops::IdConvert;
-use dag::Dag;
-use dag::Group;
-use dag::Set;
-use dag::Vertex;
-use dag::VertexListWithOptions;
 use format_util::git_sha1_serialize;
 use format_util::hg_sha1_serialize;
 use format_util::strip_sha1_header;
@@ -34,7 +34,6 @@ use types::HgId;
 use zstore::Id20;
 use zstore::Zstore;
 
-use crate::utils;
 use crate::AppendCommits;
 use crate::DescribeBackend;
 use crate::GraphNode;
@@ -44,6 +43,7 @@ use crate::ReadCommitText;
 use crate::Result;
 use crate::StreamCommitText;
 use crate::StripCommits;
+use crate::utils;
 
 /// Commits stored on disk, identified by SHA1.
 pub struct OnDiskCommits {

@@ -6,9 +6,9 @@
  */
 
 use bytes::Bytes;
-use quickcheck::single_shrinker;
 use quickcheck::Arbitrary;
 use quickcheck::Gen;
+use quickcheck::single_shrinker;
 
 /// Contents of a Mercurial file, stripped of any inline metadata.
 #[derive(Debug, Clone, Eq, PartialEq, Ord, PartialOrd, Hash, Default)]

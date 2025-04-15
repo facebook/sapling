@@ -9,11 +9,11 @@ use std::sync::Arc;
 
 use nonblocking::non_blocking;
 
-use crate::ops::DagAlgorithm;
 use crate::Result;
 use crate::Set;
 use crate::VerLink;
 use crate::Vertex;
+use crate::ops::DagAlgorithm;
 
 /// The DummyDag implements a DAG that contains all vertexes with no parents.
 #[derive(Debug, Clone)]

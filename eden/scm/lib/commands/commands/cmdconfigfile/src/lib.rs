@@ -7,9 +7,9 @@
 
 use std::io::Write;
 
+use clidispatch::ReqCtx;
 use clidispatch::abort;
 use clidispatch::abort_if;
-use clidispatch::ReqCtx;
 use cliparser::define_flags;
 use cmdutil::Repo;
 use cmdutil::Result;

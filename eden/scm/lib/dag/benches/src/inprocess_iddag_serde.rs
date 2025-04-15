@@ -5,13 +5,13 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-use dag::idmap::IdMap;
-use dag::idmap::IdMapAssignHead;
 use dag::Group;
 use dag::IdDag;
 use dag::IdSet;
 use dag::MemIdDag;
 use dag::Vertex;
+use dag::idmap::IdMap;
+use dag::idmap::IdMapAssignHead;
 use minibench::bench;
 use minibench::elapsed;
 use nonblocking::non_blocking_result as nbr;

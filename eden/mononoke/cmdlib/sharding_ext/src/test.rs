@@ -7,9 +7,9 @@
 
 use mononoke_macros::mononoke;
 
+use crate::RepoShard;
 use crate::decode_repo_name;
 use crate::encode_repo_name;
-use crate::RepoShard;
 
 #[mononoke::test]
 fn basic_create_repo_shard_test() {

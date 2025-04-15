@@ -10,13 +10,13 @@ use std::sync::Arc;
 use indexedlog::index::InsertKey;
 use indexedlog::index::InsertValue;
 use indexedlog::index::OpenOptions;
+use minibench::Measure;
 use minibench::bench;
 use minibench::elapsed;
 use minibench::measure;
-use minibench::Measure;
+use rand_chacha::ChaChaRng;
 use rand_chacha::rand_core::RngCore;
 use rand_chacha::rand_core::SeedableRng;
-use rand_chacha::ChaChaRng;
 use tempfile::tempdir;
 
 const N: usize = 204800;

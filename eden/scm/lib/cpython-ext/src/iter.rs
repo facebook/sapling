@@ -11,8 +11,8 @@ use ::serde::Serialize;
 use anyhow::Result;
 use cpython::*;
 
-use crate::ser::to_object;
 use crate::ResultPyErrExt as _;
+use crate::ser::to_object;
 
 // Exposes a Rust iterator as a Python iterator.
 // This allows to avoid using bincode or writing wrapper types for some basic use cases

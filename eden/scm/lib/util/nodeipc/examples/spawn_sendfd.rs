@@ -18,8 +18,8 @@ use filedescriptor::FileDescriptor;
 use filedescriptor::FromRawFileDescriptor;
 use filedescriptor::RawFileDescriptor;
 use nodeipc::NodeIpc;
-use serde_json::json;
 use serde_json::Value;
+use serde_json::json;
 
 fn main() {
     let is_child = env::args().nth(1).as_deref() == Some("child");
@@ -142,8 +142,8 @@ fn parent_main() {
 fn maybe_init_winsock() {
     #[cfg(windows)]
     unsafe {
-        use winapi::um::winsock2::WSAStartup;
         use winapi::um::winsock2::WSADATA;
+        use winapi::um::winsock2::WSAStartup;
 
         let mut data: WSADATA = mem::zeroed();
         let ret = WSAStartup(

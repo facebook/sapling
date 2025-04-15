@@ -9,12 +9,12 @@
 
 use serde::Serialize;
 use thrift_types::edenfs;
+use types::RepoPathBuf;
 pub use types::workingcopy_client::CheckoutConflict;
 pub use types::workingcopy_client::CheckoutMode;
 pub use types::workingcopy_client::ConflictType;
 pub use types::workingcopy_client::FileStatus;
 pub use types::workingcopy_client::ProgressInfo;
-use types::RepoPathBuf;
 
 // edenfs::EdenError
 #[derive(Debug, Serialize)]

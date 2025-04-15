@@ -8,8 +8,8 @@
 use std::io::Cursor;
 use std::io::Write;
 
-use anyhow::format_err;
 use anyhow::Result;
+use anyhow::format_err;
 use byteorder::BigEndian;
 use byteorder::ReadBytesExt;
 use byteorder::WriteBytesExt;

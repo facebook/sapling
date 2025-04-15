@@ -5,8 +5,8 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-use std::collections::hash_map::Entry;
 use std::collections::HashMap;
+use std::collections::hash_map::Entry;
 use std::fmt;
 use std::ops::Deref;
 use std::ops::DerefMut;
@@ -222,8 +222,8 @@ fn pyflags(t: &FileType) -> &'static str {
 mod tests {
     use std::sync::Arc;
 
-    use manifest_tree::testutil::make_tree_manifest_from_meta;
     use manifest_tree::testutil::TestStore;
+    use manifest_tree::testutil::make_tree_manifest_from_meta;
     use pathmatcher::TreeMatcher;
     use types::HgId;
 

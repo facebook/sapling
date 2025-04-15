@@ -7,8 +7,8 @@
 
 use std::collections::HashMap;
 
-use anyhow::anyhow;
 use anyhow::Error;
+use anyhow::anyhow;
 use blobstore::Loadable;
 use context::CoreContext;
 use cross_repo_sync::CommitSyncContext;
@@ -82,16 +82,16 @@ pub async fn manual_commit_sync<R: CrossRepo>(
 
 #[cfg(test)]
 mod test {
+    use cross_repo_sync::test_utils::TestRepo;
     use cross_repo_sync::test_utils::init_small_large_repo;
     use cross_repo_sync::test_utils::xrepo_mapping_version_with_small_repo;
-    use cross_repo_sync::test_utils::TestRepo;
     use fbinit::FacebookInit;
     use maplit::hashmap;
     use mononoke_macros::mononoke;
     use mononoke_types::NonRootMPath;
+    use tests_utils::CreateCommitContext;
     use tests_utils::list_working_copy_utf8;
     use tests_utils::resolve_cs_id;
-    use tests_utils::CreateCommitContext;
 
     use super::*;
 

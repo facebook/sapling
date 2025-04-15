@@ -11,8 +11,8 @@ use std::collections::HashMap;
 use std::collections::HashSet;
 use std::sync::Arc;
 
-use anyhow::anyhow;
 use anyhow::Result;
+use anyhow::anyhow;
 use cloned::cloned;
 use commit_graph_types::segments::ChangesetSegment;
 use commit_graph_types::segments::ChangesetSegmentFrontier;
@@ -23,20 +23,20 @@ use commit_graph_types::storage::CommitGraphStorage;
 use commit_graph_types::storage::Prefetch;
 use commit_graph_types::storage::PrefetchTarget;
 use context::CoreContext;
-use futures::stream;
-use futures::stream::BoxStream;
 use futures::StreamExt;
 use futures::TryStreamExt;
+use futures::stream;
+use futures::stream::BoxStream;
 use futures_stats::TimedTryFutureExt;
-use itertools::sorted;
 use itertools::Itertools;
+use itertools::sorted;
 use mononoke_macros::mononoke;
 use mononoke_types::ChangesetId;
-use mononoke_types::Generation;
 use mononoke_types::FIRST_GENERATION;
+use mononoke_types::Generation;
 use slog::debug;
-use smallvec::smallvec;
 use smallvec::SmallVec;
+use smallvec::smallvec;
 
 use crate::CommitGraph;
 

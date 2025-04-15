@@ -20,8 +20,8 @@
 //! Traits can be combined later. For example, reading file content, metadata,
 //! and history should probably be 3 different traits.
 
-use std::any::type_name;
 use std::any::Any;
+use std::any::type_name;
 use std::borrow::Cow;
 use std::path::Path;
 use std::sync::Arc;
@@ -40,8 +40,6 @@ use scm_blob::ScmBlob;
 use serde::Deserialize;
 use serde::Serialize;
 pub use types;
-use types::fetch_mode::FetchMode;
-pub use types::tree::TreeItemFlag;
 use types::FetchContext;
 use types::HgId;
 use types::Id20;
@@ -50,6 +48,8 @@ use types::PathComponent;
 use types::PathComponentBuf;
 use types::RepoPath;
 pub use types::SerializationFormat;
+use types::fetch_mode::FetchMode;
+pub use types::tree::TreeItemFlag;
 
 /// Boxed dynamic iterator. Similar to `BoxStream`.
 pub type BoxIterator<T> = Box<dyn Iterator<Item = T> + Send + 'static>;

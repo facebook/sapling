@@ -8,13 +8,13 @@
 use std::collections::HashMap;
 
 use ::sql::mysql;
-use ::sql::mysql_async::prelude::ConvIr;
-use ::sql::mysql_async::prelude::FromValue;
 use ::sql::mysql_async::FromValueError;
 use ::sql::mysql_async::Value;
+use ::sql::mysql_async::prelude::ConvIr;
+use ::sql::mysql_async::prelude::FromValue;
 use abomonation_derive::Abomonation;
-use anyhow::anyhow;
 use anyhow::Error;
+use anyhow::anyhow;
 use async_trait::async_trait;
 use auto_impl::auto_impl;
 use context::CoreContext;

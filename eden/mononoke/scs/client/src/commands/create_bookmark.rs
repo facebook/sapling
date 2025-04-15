@@ -8,13 +8,13 @@
 use anyhow::Result;
 use scs_client_raw::thrift;
 
-use crate::args::commit_id::resolve_commit_id;
+use crate::ScscApp;
 use crate::args::commit_id::CommitIdArgs;
+use crate::args::commit_id::resolve_commit_id;
 use crate::args::pushvars::PushvarArgs;
 use crate::args::repo::RepoArgs;
 use crate::args::service_id::ServiceIdArgs;
 use crate::errors::SelectionErrorExt;
-use crate::ScscApp;
 
 #[derive(clap::Parser)]
 /// Create a bookmark

@@ -6,21 +6,21 @@
  */
 
 use std::fmt;
+use std::sync::Arc;
 use std::sync::atomic::AtomicU64;
 use std::sync::atomic::Ordering::AcqRel;
-use std::sync::Arc;
 
 use once_cell::sync::Lazy;
 use parking_lot::Mutex;
 use regex::Regex;
-use tracing::span::Attributes;
-use tracing::span::Record;
 use tracing::Callsite;
 use tracing::Event;
 use tracing::Id;
 use tracing::Level;
 use tracing::Metadata;
 use tracing::Subscriber;
+use tracing::span::Attributes;
+use tracing::span::Record;
 
 use super::*;
 

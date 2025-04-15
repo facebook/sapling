@@ -18,8 +18,8 @@ use hyper::Response;
 use metadata::Metadata;
 use rate_limiting::RateLimitEnvironment;
 use scuba_ext::MononokeScubaSampleBuilder;
-use slog::o;
 use slog::Logger;
+use slog::o;
 
 use crate::middleware::MetadataState;
 use crate::middleware::Middleware;

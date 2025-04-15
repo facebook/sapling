@@ -16,10 +16,6 @@ use commit_cloud_types::UpdateReferencesParams as CloudUpdateReferencesParams;
 use commit_cloud_types::WorkspaceData as CloudWorkspaceData;
 use commit_cloud_types::WorkspaceRemoteBookmark;
 use commit_cloud_types::WorkspaceSharingData as CloudWorkspaceSharingData;
-use edenapi_types::cloud::ClientInfo;
-use edenapi_types::cloud::ReferencesData;
-use edenapi_types::cloud::RemoteBookmark;
-use edenapi_types::cloud::SmartlogFilter;
 use edenapi_types::GetSmartlogFlag;
 use edenapi_types::HgId;
 use edenapi_types::HistoricalVersion;
@@ -28,6 +24,10 @@ use edenapi_types::SmartlogNode;
 use edenapi_types::UpdateReferencesParams;
 use edenapi_types::WorkspaceData;
 use edenapi_types::WorkspaceSharingData;
+use edenapi_types::cloud::ClientInfo;
+use edenapi_types::cloud::ReferencesData;
+use edenapi_types::cloud::RemoteBookmark;
+use edenapi_types::cloud::SmartlogFilter;
 use mercurial_types::HgChangesetId;
 
 pub trait FromCommitCloudType<T> {

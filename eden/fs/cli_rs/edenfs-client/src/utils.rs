@@ -9,10 +9,10 @@ use std::env;
 use std::path::Path;
 use std::path::PathBuf;
 
-use anyhow::anyhow;
-use anyhow::bail;
 use anyhow::Context;
 use anyhow::Result;
+use anyhow::anyhow;
+use anyhow::bail;
 use hg_util::path::expand_path;
 
 use crate::instance::DEFAULT_CONFIG_DIR;

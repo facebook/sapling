@@ -5,8 +5,8 @@
  * GNU General Public License version 2.
  */
 
-use anyhow::format_err;
 use anyhow::Result;
+use anyhow::format_err;
 use cpython::PyBytes;
 use cpython::PyIterator;
 use cpython::PyList;

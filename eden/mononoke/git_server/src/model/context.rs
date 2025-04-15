@@ -21,12 +21,12 @@ use repo_authorization::AuthorizationContext;
 use repo_permission_checker::RepoPermissionCheckerRef;
 use slog::Logger;
 
-use super::method::GitMethod;
 use super::GitMethodInfo;
 use super::Pushvars;
-use crate::errors::GitServerContextErrorKind;
+use super::method::GitMethod;
 use crate::GitRepos;
 use crate::Repo;
+use crate::errors::GitServerContextErrorKind;
 
 #[derive(Clone)]
 pub struct RepositoryRequestContext {

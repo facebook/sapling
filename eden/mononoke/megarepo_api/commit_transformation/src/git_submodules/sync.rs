@@ -19,8 +19,8 @@ use reporting::set_scuba_logger_fields;
 use scuba_ext::FutureStatsScubaExt;
 
 use crate::git_submodules::compact::compact_all_submodule_expansion_file_changes;
-use crate::git_submodules::expand::expand_all_git_submodule_file_changes;
 use crate::git_submodules::expand::SubmoduleExpansionData;
+use crate::git_submodules::expand::expand_all_git_submodule_file_changes;
 use crate::git_submodules::validation::ValidSubmoduleExpansionBonsai;
 use crate::rewrite_commit_with_file_changes_filter;
 use crate::types::CommitRewriteResult;

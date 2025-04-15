@@ -11,25 +11,25 @@ use std::sync::Arc;
 
 use anyhow::Result;
 use cpython::*;
-use cpython_ext::convert::register_into;
 use cpython_ext::ExtractInner;
-use revisionstore::trait_impls::ArcFileStore;
+use cpython_ext::convert::register_into;
 use revisionstore::HgIdDataStore;
 use revisionstore::RemoteDataStore;
 use revisionstore::StoreKey;
 use revisionstore::StoreResult;
+use revisionstore::trait_impls::ArcFileStore;
 use scm_blob::ScmBlob;
-use storemodel::minibytes::Bytes;
 use storemodel::FileStore;
 use storemodel::KeyStore;
 use storemodel::SerializationFormat;
 use storemodel::TreeStore;
+use storemodel::minibytes::Bytes;
 use types::Key;
 use types::RepoPath;
 
+use crate::PythonHgIdDataStore;
 use crate::filescmstore;
 use crate::treescmstore;
-use crate::PythonHgIdDataStore;
 
 pub(crate) fn register(py: Python) {
     register_into(py, |py, t: treescmstore| t.to_dyn_treestore(py));

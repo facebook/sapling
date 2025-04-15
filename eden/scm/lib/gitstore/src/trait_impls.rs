@@ -16,10 +16,10 @@ use storemodel::KeyStore;
 use storemodel::Kind;
 use storemodel::SerializationFormat;
 use storemodel::TreeStore;
-use types::fetch_mode::FetchMode;
 use types::FetchContext;
 use types::HgId;
 use types::RepoPath;
+use types::fetch_mode::FetchMode;
 
 use crate::GitStore;
 use crate::ObjectType;

@@ -11,16 +11,16 @@ use std::fmt;
 use std::fmt::Display;
 use std::io;
 use std::io::Write;
-use std::iter::once;
 use std::iter::Once;
+use std::iter::once;
 use std::os::unix::ffi::OsStrExt;
 use std::slice::Iter;
 
 use abomonation_derive::Abomonation;
-use anyhow::bail;
 use anyhow::Context as _;
 use anyhow::Error;
 use anyhow::Result;
+use anyhow::bail;
 use ascii::AsciiString;
 use itertools::Itertools;
 use quickcheck::Arbitrary;
@@ -31,12 +31,12 @@ use serde_derive::Deserialize;
 use serde_derive::Serialize;
 
 use self::mpath_element::MPathElement;
+use crate::ThriftConvert;
 use crate::bonsai_changeset::BonsaiChangeset;
 use crate::errors::MononokeTypeError;
 use crate::hash::Blake2;
 use crate::hash::Context;
 use crate::thrift;
-use crate::ThriftConvert;
 
 pub mod mpath_element;
 
@@ -1469,8 +1469,8 @@ mod test {
     use std::mem::size_of;
 
     use mononoke_macros::mononoke;
-    use quickcheck::quickcheck;
     use quickcheck::TestResult;
+    use quickcheck::quickcheck;
 
     use super::*;
 

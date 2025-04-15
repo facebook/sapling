@@ -16,16 +16,16 @@ use megarepo_configs::SyncTargetConfig;
 use megarepo_configs::Target;
 use megarepo_error::MegarepoError;
 use metaconfig_types::RepoConfig;
-use slog::info;
 use slog::Logger;
+use slog::info;
 use sql_ext::facebook::MysqlOptions;
 
 mod reader;
 mod writer;
 
+use crate::MononokeMegarepoConfigs;
 use crate::facebook::reader::CfgrMononokeMegarepoConfigsReader;
 use crate::facebook::writer::CfgrMononokeMegarepoConfigsWriter;
-use crate::MononokeMegarepoConfigs;
 
 pub struct CfgrMononokeMegarepoConfigs {
     reader: CfgrMononokeMegarepoConfigsReader,

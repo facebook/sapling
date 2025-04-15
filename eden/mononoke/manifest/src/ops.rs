@@ -12,26 +12,26 @@ use anyhow::Error;
 use borrowed::borrowed;
 use cloned::cloned;
 use context::CoreContext;
+use futures::FutureExt;
+use futures::StreamExt;
+use futures::TryFutureExt;
+use futures::TryStreamExt;
 use futures::future;
 use futures::future::BoxFuture;
 use futures::pin_mut;
 use futures::stream;
 use futures::stream::BoxStream;
 use futures::stream::Stream;
-use futures::FutureExt;
-use futures::StreamExt;
-use futures::TryFutureExt;
-use futures::TryStreamExt;
 use futures_watchdog::WatchdogExt;
 use mononoke_macros::mononoke;
-use mononoke_types::path::MPath;
 use mononoke_types::NonRootMPath;
+use mononoke_types::path::MPath;
 
-use crate::select::select_path_tree;
 use crate::Entry;
 use crate::Manifest;
 use crate::PathOrPrefix;
 use crate::StoreLoadable;
+use crate::select::select_path_tree;
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub enum Diff<Entry> {

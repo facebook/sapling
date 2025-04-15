@@ -6,23 +6,23 @@
  */
 
 use std::collections::VecDeque;
+use std::sync::Arc;
 use std::sync::atomic::AtomicBool;
 use std::sync::atomic::Ordering;
-use std::sync::Arc;
 use std::time::Duration;
 
-use anyhow::anyhow;
 use anyhow::Error;
 use anyhow::Result;
+use anyhow::anyhow;
 use bytes::BytesMut;
 use bytesize::ByteSize;
 use cloned::cloned;
 use context::CoreContext;
 use edenapi_types::AnyFileContentId;
-use futures::channel::oneshot;
-use futures::stream;
 use futures::StreamExt;
 use futures::TryStreamExt;
+use futures::channel::oneshot;
+use futures::stream;
 use metaconfig_types::ModernSyncChannelConfig;
 use mononoke_macros::mononoke;
 use mononoke_types::ContentId;

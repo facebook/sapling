@@ -15,10 +15,10 @@ use cloned::cloned;
 use scs_client_raw::thrift;
 use serde::Serialize;
 
+use crate::ScscApp;
 use crate::library::stress_test::StressArgs;
 use crate::library::summary::summary_output;
 use crate::render::Render;
-use crate::ScscApp;
 
 #[derive(Parser)]
 /// List repositories

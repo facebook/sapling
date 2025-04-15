@@ -12,15 +12,15 @@ use anyhow::Result;
 use blobstore::Blobstore;
 use bytes::Bytes;
 use context::CoreContext;
+use filestore::Sha1IncrementalHasher;
 use filestore::fetch_with_size;
 use filestore::hash_bytes;
-use filestore::Sha1IncrementalHasher;
 use futures::TryStreamExt;
 use gix_hash::ObjectId;
 use gix_object::WriteTo;
+use mononoke_types::BlobstoreBytes;
 use mononoke_types::hash::GitSha1;
 use mononoke_types::hash::RichGitSha1;
-use mononoke_types::BlobstoreBytes;
 use packfile::types::BaseObject;
 use packfile::types::GitPackfileBaseItem;
 
@@ -325,8 +325,8 @@ mod test {
     use gix_object::Object;
     use gix_object::Tag;
     use mononoke_macros::mononoke;
-    use packfile::types::to_vec_bytes;
     use packfile::types::BaseObject;
+    use packfile::types::to_vec_bytes;
     use repo_blobstore::RepoBlobstore;
     use repo_blobstore::RepoBlobstoreArc;
     use repo_derived_data::RepoDerivedData;

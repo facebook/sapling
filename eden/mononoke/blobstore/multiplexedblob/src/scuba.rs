@@ -12,12 +12,12 @@
 use anyhow::Result;
 use blobstore::BlobstoreGetData;
 use blobstore::BlobstoreIsPresent;
-use blobstore_stats::add_completion_time;
-use blobstore_stats::OperationType;
 use blobstore_stats::BLOB_PRESENT;
 use blobstore_stats::ERROR;
 use blobstore_stats::KEY;
 use blobstore_stats::OPERATION;
+use blobstore_stats::OperationType;
+use blobstore_stats::add_completion_time;
 use context::CoreContext;
 use futures_stats::FutureStats;
 use metaconfig_types::BlobstoreId;

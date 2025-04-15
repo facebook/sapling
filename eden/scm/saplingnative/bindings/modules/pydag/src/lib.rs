@@ -12,10 +12,10 @@ use std::sync::Arc;
 use configmodel::Config;
 use configmodel::ConfigExt;
 use cpython::*;
-use cpython_ext::convert::ImplInto;
 use cpython_ext::PyNone;
 use cpython_ext::PyPath;
 use cpython_ext::ResultPyErrExt;
+use cpython_ext::convert::ImplInto;
 use dag::Repair;
 
 pub mod commits;
@@ -28,8 +28,8 @@ pub mod spanset;
 mod verlink;
 
 pub use set::Names;
-pub use spanset::spans;
 pub use spanset::Spans;
+pub use spanset::spans;
 pub(crate) use verlink::VerLink;
 
 pub fn init_module(py: Python, package: &str) -> PyResult<PyModule> {

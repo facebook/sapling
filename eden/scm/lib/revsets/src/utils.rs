@@ -7,26 +7,26 @@
 
 use std::collections::BTreeMap;
 
-use anyhow::anyhow;
-use anyhow::bail;
 use anyhow::Context;
 use anyhow::Result;
+use anyhow::anyhow;
+use anyhow::bail;
 use async_runtime::block_on;
 use configmodel::Config;
 use configmodel::ConfigExt;
-use dag::ops::IdConvert;
 use dag::DagAlgorithm;
 use dag::Id;
 use dag::Vertex;
+use dag::ops::IdConvert;
 use edenapi::SaplingRemoteApi;
 use metalog::MetaLog;
 use refencode::decode_bookmarks;
 use refencode::decode_remotenames;
 use treestate::treestate::TreeState;
+use types::HgId;
 use types::hgid::NULL_ID;
 use types::hgid::WDIR_ID;
 use types::hgid::WDIR_REV;
-use types::HgId;
 
 use crate::errors::RevsetLookupError;
 

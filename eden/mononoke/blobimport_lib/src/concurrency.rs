@@ -5,17 +5,17 @@
  * GNU General Public License version 2.
  */
 
-use anyhow::format_err;
 use anyhow::Error;
 use anyhow::Result;
+use anyhow::format_err;
 use futures::compat::Future01CompatExt;
 use futures_01_ext::BoxFuture;
 use futures_01_ext::FutureExt;
-use futures_old::sync::mpsc;
-use futures_old::sync::oneshot;
 use futures_old::Future;
 use futures_old::IntoFuture;
 use futures_old::Stream;
+use futures_old::sync::mpsc;
+use futures_old::sync::oneshot;
 use tokio::runtime::Handle;
 
 type Job<In, Out> = (In, oneshot::Sender<Result<Out>>);

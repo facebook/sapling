@@ -5,8 +5,8 @@
  * GNU General Public License version 2.
  */
 
-use anyhow::format_err;
 use anyhow::Result;
+use anyhow::format_err;
 
 mod acl;
 mod changeset;

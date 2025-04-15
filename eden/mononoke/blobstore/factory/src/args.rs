@@ -8,9 +8,9 @@
 use std::num::NonZeroU32;
 use std::num::NonZeroUsize;
 
-use anyhow::anyhow;
 use anyhow::Context;
 use anyhow::Result;
+use anyhow::anyhow;
 use arg_extensions::ArgDefaults;
 use clap::ArgAction;
 use clap::Args;

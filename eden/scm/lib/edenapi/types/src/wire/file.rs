@@ -21,7 +21,6 @@ pub use crate::file::WireFileSpec;
 pub use crate::file::WireHgFilenodeData;
 pub use crate::file::WireUploadHgFilenodeRequest;
 pub use crate::file::WireUploadTokensResponse;
-use crate::wire::is_default;
 use crate::wire::ToApi;
 use crate::wire::ToWire;
 use crate::wire::WireKey;
@@ -29,6 +28,7 @@ use crate::wire::WireParents;
 use crate::wire::WireResult;
 use crate::wire::WireRevisionstoreMetadata;
 use crate::wire::WireToApiConversionError;
+use crate::wire::is_default;
 
 #[derive(Clone, Debug, Default, Eq, PartialEq, Serialize, Deserialize)]
 pub struct WireFileEntry {

@@ -11,8 +11,8 @@ use std::panic;
 use std::sync::Arc;
 use std::time::Duration;
 
-use anyhow::anyhow;
 use anyhow::Result;
+use anyhow::anyhow;
 use blobstore::Blobstore;
 use blobstore::BlobstoreGetData;
 use blobstore::BlobstoreIsPresent;
@@ -42,10 +42,10 @@ use nonzero_ext::nonzero;
 use scuba_ext::MononokeScubaSampleBuilder;
 use sql_construct::SqlConstruct;
 
-use crate::scrub::WalScrubBlobstore;
 use crate::MultiplexTimeout;
 use crate::Scuba;
 use crate::WalMultiplexedBlobstore;
+use crate::scrub::WalScrubBlobstore;
 
 #[mononoke::fbinit_test]
 async fn test_quorum_is_valid(_fb: FacebookInit) -> Result<()> {

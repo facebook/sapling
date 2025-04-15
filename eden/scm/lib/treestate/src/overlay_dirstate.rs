@@ -28,16 +28,16 @@ use std::io::Write;
 use std::path::Path;
 use std::str::FromStr;
 
-use anyhow::anyhow;
 use anyhow::Result;
+use anyhow::anyhow;
 use byteorder::BigEndian;
 use byteorder::ReadBytesExt;
 use byteorder::WriteBytesExt;
 use fs_err::File;
 use sha2::Digest;
 use sha2::Sha256;
-use types::hgid::WriteHgIdExt;
 use types::HgId;
+use types::hgid::WriteHgIdExt;
 use util::file::atomic_write;
 
 use crate::filestate::FileStateV2;

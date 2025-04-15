@@ -20,12 +20,12 @@ use storemodel::InsertOpts;
 use storemodel::KeyStore;
 use storemodel::Kind;
 use storemodel::SerializationFormat;
-use types::hgid::NULL_ID;
 use types::FetchContext;
 use types::HgId;
 use types::Id20;
 use types::Key;
 use types::RepoPath;
+use types::hgid::NULL_ID;
 
 use crate::scmstore::FileAttributes;
 use crate::scmstore::FileStore;

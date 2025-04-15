@@ -9,9 +9,9 @@ use std::io;
 use std::path::Path;
 use std::sync::Arc;
 
-use dag::delegate;
 use dag::Set;
 use dag::Vertex;
+use dag::delegate;
 use futures::stream::BoxStream;
 use minibytes::Bytes;
 use storemodel::SerializationFormat;

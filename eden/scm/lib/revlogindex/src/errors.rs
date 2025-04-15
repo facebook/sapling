@@ -8,9 +8,9 @@
 use std::fmt;
 use std::io;
 
-use dag::errors::NotFoundError;
 use dag::Id;
 use dag::Vertex;
+use dag::errors::NotFoundError;
 use thiserror::Error;
 
 #[derive(Debug, Error)]
@@ -119,8 +119,8 @@ impl std::error::Error for RevNotFound {}
 
 impl From<RevlogIndexError> for dag::Error {
     fn from(err: RevlogIndexError) -> dag::Error {
-        use dag::errors::BackendError;
         use RevlogIndexError as R;
+        use dag::errors::BackendError;
 
         match err {
             R::CommitNotFound(CommitNotFound(vertex)) => vertex.not_found_error(),

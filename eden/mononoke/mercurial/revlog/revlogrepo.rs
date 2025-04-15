@@ -5,9 +5,9 @@
  * GNU General Public License version 2.
  */
 
+use std::collections::HashSet;
 use std::collections::hash_map::Entry;
 use std::collections::hash_map::HashMap;
-use std::collections::HashSet;
 use std::fmt;
 use std::fmt::Display;
 use std::fs;
@@ -18,30 +18,30 @@ use std::str::FromStr;
 use std::sync::Arc;
 use std::sync::RwLock;
 
-use anyhow::format_err;
 use anyhow::Context;
 use anyhow::Error;
 use anyhow::Result;
-use futures_ext::try_boxfuture;
+use anyhow::format_err;
 use futures_ext::BoxFuture;
 use futures_ext::BoxStream;
 use futures_ext::FutureExt;
 use futures_ext::StreamExt;
-use futures_old::future;
-use futures_old::stream;
+use futures_ext::try_boxfuture;
 use futures_old::Async;
 use futures_old::IntoFuture;
 use futures_old::Poll;
 use futures_old::Stream;
-use mercurial_types::blobs::RevlogChangeset;
-use mercurial_types::fncache_fsencode;
-use mercurial_types::simple_fsencode;
+use futures_old::future;
+use futures_old::stream;
 use mercurial_types::HgChangesetId;
 use mercurial_types::HgManifestId;
 use mercurial_types::HgNodeHash;
 use mercurial_types::MPathElement;
 use mercurial_types::NonRootMPath;
 use mercurial_types::RepoPath;
+use mercurial_types::blobs::RevlogChangeset;
+use mercurial_types::fncache_fsencode;
+use mercurial_types::simple_fsencode;
 
 use crate::errors::ErrorKind;
 pub use crate::manifest::RevlogManifest;

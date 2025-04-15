@@ -8,14 +8,14 @@
 use std::borrow::Cow;
 
 use anyhow::bail;
+use clidispatch::ReqCtx;
 use clidispatch::abort_if;
 use clidispatch::errors;
-use clidispatch::ReqCtx;
-use cmdutil::define_flags;
-use cmdutil::get_formatter;
 use cmdutil::FormatterOpts;
 use cmdutil::Repo;
 use cmdutil::Result;
+use cmdutil::define_flags;
+use cmdutil::get_formatter;
 use configloader::Config;
 use configmodel::ConfigExt;
 use configmodel::ValueSource;

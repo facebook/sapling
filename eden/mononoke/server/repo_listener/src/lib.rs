@@ -18,8 +18,8 @@ mod request_handler;
 mod wireproto_sink;
 
 use std::path::PathBuf;
-use std::sync::atomic::AtomicBool;
 use std::sync::Arc;
+use std::sync::atomic::AtomicBool;
 
 use anyhow::Context as _;
 use anyhow::Result;
@@ -37,8 +37,8 @@ use permission_checker::AclProvider;
 use rate_limiting::RateLimitEnvironment;
 use scribe_ext::Scribe;
 use scuba_ext::MononokeScubaSampleBuilder;
-use slog::o;
 use slog::Logger;
+use slog::o;
 
 use crate::connection_acceptor::connection_acceptor;
 pub use crate::connection_acceptor::wait_for_connections_closed;

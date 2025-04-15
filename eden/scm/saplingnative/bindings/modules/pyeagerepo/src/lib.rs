@@ -11,10 +11,10 @@ use std::sync::Arc;
 
 use async_runtime::block_on;
 use cpython::*;
-use cpython_ext::convert::Serde;
 use cpython_ext::PyNone;
 use cpython_ext::PyPath;
 use cpython_ext::ResultPyErrExt;
+use cpython_ext::convert::Serde;
 use dag::ops::DagAlgorithm;
 use eagerepo::EagerRepo as RustEagerRepo;
 use eagerepo::EagerRepoStore as RustEagerRepoStore;

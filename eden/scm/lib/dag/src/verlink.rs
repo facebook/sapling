@@ -8,11 +8,11 @@
 use std::cmp;
 use std::collections::HashMap;
 use std::fmt;
-use std::sync::atomic;
-use std::sync::atomic::AtomicU32;
 use std::sync::Arc;
 use std::sync::OnceLock;
 use std::sync::RwLock;
+use std::sync::atomic;
+use std::sync::atomic::AtomicU32;
 
 /// A linked list tracking a logic "version" with compatibility rules:
 /// - Append-only changes bump the version, the new version is backwards

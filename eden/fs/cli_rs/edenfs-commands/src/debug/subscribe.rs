@@ -22,8 +22,8 @@ use hg_util::path::expand_path;
 use serde::Serialize;
 use tokio::io::AsyncWriteExt;
 
-use crate::util::jsonrpc::ResponseBuilder;
 use crate::ExitCode;
+use crate::util::jsonrpc::ResponseBuilder;
 
 // Defines a few helper functions to make the debug format easier to read.
 mod fmt {

@@ -12,10 +12,10 @@ use context::CoreContext;
 use futures::stream::BoxStream;
 use futures::stream::StreamExt;
 use futures::stream::TryStreamExt;
+use mononoke_types::MPathElement;
 use mononoke_types::case_conflict_skeleton_manifest::CaseConflictSkeletonManifest;
 use mononoke_types::case_conflict_skeleton_manifest::CcsmEntry;
 use mononoke_types::sharded_map_v2::LoadableShardedMapV2Node;
-use mononoke_types::MPathElement;
 
 use super::Entry;
 use super::Manifest;

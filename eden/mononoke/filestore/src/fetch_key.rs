@@ -17,11 +17,11 @@ use blobstore::Storable;
 use context::CoreContext;
 use edenapi_types::AnyFileContentId;
 use futures_watchdog::WatchdogExt;
-use mononoke_types::errors::MononokeTypeError;
-use mononoke_types::hash;
 use mononoke_types::BlobstoreKey;
 use mononoke_types::ContentAlias;
 use mononoke_types::ContentId;
+use mononoke_types::errors::MononokeTypeError;
+use mononoke_types::hash;
 use strum::EnumIter;
 
 /// Key for fetching - we can access with any of the supported key types

@@ -11,16 +11,16 @@ use std::fmt::Display;
 use std::str::FromStr;
 
 use abomonation_derive::Abomonation;
-use anyhow::bail;
 use anyhow::Error;
 use anyhow::Result;
+use anyhow::bail;
 use ascii::AsciiStr;
 use ascii::AsciiString;
 use faster_hex::hex_decode;
 use faster_hex::hex_encode;
-use quickcheck::single_shrinker;
 use quickcheck::Arbitrary;
 use quickcheck::Gen;
+use quickcheck::single_shrinker;
 use serde_derive::Deserialize;
 use serde_derive::Serialize;
 use sha1::Digest;
@@ -306,8 +306,8 @@ mod test {
     use std::str::FromStr;
 
     use mononoke_macros::mononoke;
-    use quickcheck::quickcheck;
     use quickcheck::TestResult;
+    use quickcheck::quickcheck;
 
     use super::*;
 

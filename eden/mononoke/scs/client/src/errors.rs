@@ -7,8 +7,8 @@
 
 use std::convert::Into;
 
-use anyhow::anyhow;
 use anyhow::Error;
+use anyhow::anyhow;
 use scs_client_raw::thrift;
 use source_control_clients::errors::CommitCommonBaseWithError;
 use source_control_clients::errors::CommitCompareError;

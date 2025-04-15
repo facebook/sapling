@@ -5,8 +5,6 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-use dag::ops::DagImportCloneData;
-use dag::ops::DagImportPullData;
 use dag::CloneData;
 use dag::Dag;
 use dag::DagAlgorithm;
@@ -16,6 +14,8 @@ use dag::Id;
 use dag::PreparedFlatSegments;
 use dag::Vertex;
 use dag::VertexListWithOptions;
+use dag::ops::DagImportCloneData;
+use dag::ops::DagImportPullData;
 use minibench::bench;
 use minibench::elapsed;
 use nonblocking::non_blocking_result as nbr;

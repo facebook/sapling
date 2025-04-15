@@ -5,15 +5,15 @@
  * GNU General Public License version 2.
  */
 
+use sql::mysql_async::FromValueError;
+use sql::mysql_async::Value;
 use sql::mysql_async::from_value_opt;
 use sql::mysql_async::prelude::ConvIr;
 use sql::mysql_async::prelude::FromValue;
-use sql::mysql_async::FromValueError;
-use sql::mysql_async::Value;
-use sql::sql_common::mysql::opt_try_from_rowfield;
 use sql::sql_common::mysql::OptionalTryFromRowField;
 use sql::sql_common::mysql::RowField;
 use sql::sql_common::mysql::ValueError;
+use sql::sql_common::mysql::opt_try_from_rowfield;
 
 use crate::datetime::Timestamp;
 use crate::globalrev::Globalrev;

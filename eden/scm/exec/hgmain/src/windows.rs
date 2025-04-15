@@ -7,14 +7,14 @@
 
 use std::path::Path;
 
-use anyhow::format_err;
 use anyhow::Error;
+use anyhow::format_err;
 use winapi::shared::minwindef::DWORD;
 use winapi::um::consoleapi::GetConsoleMode;
 use winapi::um::consoleapi::SetConsoleMode;
 use winapi::um::errhandlingapi::GetLastError;
-use winapi::um::handleapi::SetHandleInformation;
 use winapi::um::handleapi::INVALID_HANDLE_VALUE;
+use winapi::um::handleapi::SetHandleInformation;
 use winapi::um::processenv::GetStdHandle;
 use winapi::um::winbase::HANDLE_FLAG_INHERIT;
 use winapi::um::winbase::STD_ERROR_HANDLE;

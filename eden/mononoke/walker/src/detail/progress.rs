@@ -23,8 +23,8 @@ use futures::stream::Stream;
 use futures::stream::StreamExt;
 use futures::stream::TryStreamExt;
 use scuba_ext::MononokeScubaSampleBuilder;
-use slog::info;
 use slog::Logger;
+use slog::info;
 use stats::prelude::*;
 
 use crate::detail::graph::Node;

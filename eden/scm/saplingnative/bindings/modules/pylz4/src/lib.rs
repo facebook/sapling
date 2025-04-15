@@ -8,10 +8,10 @@
 #![allow(non_camel_case_types)]
 
 use cpython::*;
-use cpython_ext::allocate_pybytes;
-use cpython_ext::vec_to_pyobj;
 use cpython_ext::ResultPyErrExt;
 use cpython_ext::SimplePyBuf;
+use cpython_ext::allocate_pybytes;
+use cpython_ext::vec_to_pyobj;
 use lz4_pyframe::compress;
 use lz4_pyframe::compresshc;
 use lz4_pyframe::decompress_into;

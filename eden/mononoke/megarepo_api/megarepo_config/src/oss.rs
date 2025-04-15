@@ -16,8 +16,8 @@ use megarepo_configs::SyncTargetConfig;
 use megarepo_configs::Target;
 use megarepo_error::MegarepoError;
 use metaconfig_types::RepoConfig;
-use slog::warn;
 use slog::Logger;
+use slog::warn;
 use sql_ext::facebook::MysqlOptions;
 
 use crate::MononokeMegarepoConfigs;

@@ -9,9 +9,9 @@
 use std::path::PathBuf;
 use std::sync::Arc;
 
-use anyhow::anyhow;
 use anyhow::Context;
 use anyhow::Result;
+use anyhow::anyhow;
 use async_trait::async_trait;
 use clap::Parser;
 use edenfs_client::attributes::AttributesRequestScope;
@@ -20,8 +20,8 @@ use edenfs_client::attributes::SourceControlType;
 use edenfs_client::attributes::SourceControlTypeOrError;
 use edenfs_client::checkout::find_checkout;
 use edenfs_client::instance::EdenFsInstance;
-use edenfs_client::request_factory::send_requests;
 use edenfs_client::request_factory::RequestFactory;
+use edenfs_client::request_factory::send_requests;
 use edenfs_client::types::FileAttributes;
 use edenfs_client::utils::expand_path_or_cwd;
 

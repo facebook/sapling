@@ -17,9 +17,9 @@ use edenfs_utils::bytes_from_path;
 use edenfs_utils::path_from_bytes;
 use edenfs_utils::prefix_paths;
 use edenfs_utils::strip_prefix_from_bytes;
-use futures::stream;
 use futures::Stream;
 use futures::StreamExt;
+use futures::stream;
 use serde::Serialize;
 use tokio::time;
 

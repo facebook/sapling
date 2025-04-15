@@ -12,9 +12,9 @@ use std::path::Path;
 use std::path::PathBuf;
 use std::time::Duration;
 
-use anyhow::format_err;
 use anyhow::Error;
 use anyhow::Result;
+use anyhow::format_err;
 use blobstore::Blobstore;
 use blobstore::Loadable;
 use bookmarks::BookmarkUpdateLogRef;

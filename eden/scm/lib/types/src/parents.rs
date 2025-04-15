@@ -8,9 +8,9 @@
 use serde_derive::Deserialize;
 use serde_derive::Serialize;
 
+use crate::Key;
 use crate::hgid::HgId;
 use crate::hgid::NULL_ID;
-use crate::Key;
 
 /// Enum representing a Mercurial hgid's parents.
 ///

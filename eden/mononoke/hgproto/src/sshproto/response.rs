@@ -16,10 +16,10 @@ use futures::stream;
 use futures::stream::StreamExt;
 use itertools::Itertools;
 
-use crate::batch;
-use crate::handler::OutputStream;
 use crate::Response;
 use crate::SingleResponse;
+use crate::batch;
+use crate::handler::OutputStream;
 
 fn separated<I, W>(write: &mut W, iter: I, sep: &str) -> io::Result<()>
 where

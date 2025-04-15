@@ -25,18 +25,18 @@ mod tests {
     use cached_config::ModificationTime;
     use cached_config::TestSource;
     use context::CoreContext;
-    use cross_repo_sync::create_commit_syncers;
     use cross_repo_sync::CommitSyncContext;
     use cross_repo_sync::SubmoduleDeps;
+    use cross_repo_sync::create_commit_syncers;
     use derived_data_manager::BonsaiDerivable;
     use fbinit::FacebookInit;
     use futures::stream::TryStreamExt;
     use git_types::MappedGitCommitId;
     use git_types::RootGitDeltaManifestV2Id;
+    use live_commit_sync_config::CONFIGERATOR_ALL_COMMIT_SYNC_CONFIGS;
     use live_commit_sync_config::CfgrLiveCommitSyncConfig;
     use live_commit_sync_config::LiveCommitSyncConfig;
     use live_commit_sync_config::TestLiveCommitSyncConfig;
-    use live_commit_sync_config::CONFIGERATOR_ALL_COMMIT_SYNC_CONFIGS;
     use maplit::hashmap;
     use mercurial_types::NonRootMPath;
     use metaconfig_types::CommitSyncConfig;
@@ -49,12 +49,12 @@ mod tests {
     use metaconfig_types::SmallRepoCommitSyncConfig;
     use metaconfig_types::SmallRepoPermanentConfig;
     use mononoke_macros::mononoke;
-    use mononoke_types::globalrev::Globalrev;
-    use mononoke_types::globalrev::START_COMMIT_GLOBALREV;
     use mononoke_types::BonsaiChangeset;
     use mononoke_types::ChangesetId;
     use mononoke_types::DateTime;
     use mononoke_types::RepositoryId;
+    use mononoke_types::globalrev::Globalrev;
+    use mononoke_types::globalrev::START_COMMIT_GLOBALREV;
     use movers::CrossRepoMover;
     use movers::DefaultAction;
     use movers::Mover;
@@ -64,11 +64,19 @@ mod tests {
     use repo_blobstore::RepoBlobstoreRef;
     use repo_derived_data::RepoDerivedDataRef;
     use test_repo_factory::TestRepoFactory;
+    use tests_utils::CreateCommitContext;
     use tests_utils::bookmark;
     use tests_utils::drawdag::create_from_dag;
     use tests_utils::list_working_copy_utf8;
-    use tests_utils::CreateCommitContext;
 
+    use crate::ChangesetArgs;
+    use crate::CheckerFlags;
+    use crate::CombinedMover;
+    use crate::ImportStage;
+    use crate::InvalidReverseMover;
+    use crate::RecoveryFields;
+    use crate::Repo;
+    use crate::RepoImportSetting;
     use crate::back_sync_commits_to_small_repo;
     use crate::derive_bonsais_single_repo;
     use crate::find_mapping_version;
@@ -78,14 +86,6 @@ mod tests {
     use crate::move_bookmark;
     use crate::push_merge_commit;
     use crate::rewrite_file_paths;
-    use crate::ChangesetArgs;
-    use crate::CheckerFlags;
-    use crate::CombinedMover;
-    use crate::ImportStage;
-    use crate::InvalidReverseMover;
-    use crate::RecoveryFields;
-    use crate::Repo;
-    use crate::RepoImportSetting;
 
     fn create_bookmark_name(book: &str) -> BookmarkKey {
         BookmarkKey::new(book).unwrap()

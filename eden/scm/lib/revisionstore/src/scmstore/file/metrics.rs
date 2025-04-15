@@ -10,17 +10,17 @@ use std::sync::Arc;
 
 use parking_lot::RwLock;
 
-use crate::scmstore::metrics::namespaced;
-use crate::scmstore::metrics::static_cas_backend_metrics;
-use crate::scmstore::metrics::static_cas_local_cache_metrics;
-use crate::scmstore::metrics::static_fetch_metrics;
-use crate::scmstore::metrics::static_local_cache_fetch_metrics;
 use crate::scmstore::metrics::ApiMetrics;
 use crate::scmstore::metrics::CasBackendMetrics;
 use crate::scmstore::metrics::CasLocalCacheMetrics;
 use crate::scmstore::metrics::FetchMetrics;
 use crate::scmstore::metrics::LocalAndCacheFetchMetrics;
 use crate::scmstore::metrics::WriteMetrics;
+use crate::scmstore::metrics::namespaced;
+use crate::scmstore::metrics::static_cas_backend_metrics;
+use crate::scmstore::metrics::static_cas_local_cache_metrics;
+use crate::scmstore::metrics::static_fetch_metrics;
+use crate::scmstore::metrics::static_local_cache_fetch_metrics;
 
 // DO NOT RENAME: Please be aware that the names of the metrics are used in various parts of the system
 static_local_cache_fetch_metrics!(INDEXEDLOG, "scmstore.file.fetch.indexedlog");

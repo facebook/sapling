@@ -14,8 +14,8 @@ use cached_config::ConfigStore;
 
 use crate::config::ObservabilityConfig;
 use crate::config::ScubaVerbosityLevel;
-use crate::scuba::should_log_scuba_sample;
 use crate::scuba::ScubaLoggingDecisionFields;
+use crate::scuba::should_log_scuba_sample;
 
 const CONFIGERATOR_OBSERVABILITY_CONFIG: &str = "scm/mononoke/observability/observability_config";
 

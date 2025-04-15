@@ -22,8 +22,8 @@ use vlqencoding::VLQEncode;
 
 use crate::errors::IoResultExt;
 use crate::errors::ResultExt;
-use crate::lock::ScopedDirLock;
 use crate::lock::READER_LOCK_OPTS;
+use crate::lock::ScopedDirLock;
 use crate::log;
 use crate::log::GenericPath;
 use crate::log::LogMetadata;

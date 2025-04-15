@@ -49,17 +49,17 @@
 
 #![feature(trait_alias)]
 
-use std::cmp::max;
 use std::cmp::Ordering;
+use std::cmp::max;
 use std::collections::HashMap;
 use std::collections::HashSet;
 use std::collections::VecDeque;
 use std::sync::Arc;
 use std::time::Instant;
 
-use anyhow::format_err;
 use anyhow::Error;
 use anyhow::Result;
+use anyhow::format_err;
 use blobrepo_utils::convert_diff_result_into_file_change_for_diamond_merge;
 use blobstore::Loadable;
 use bonsai_hg_mapping::BonsaiHgMappingRef;
@@ -71,18 +71,18 @@ use commit_graph::CommitGraphRef;
 use commit_graph::CommitGraphWriterRef;
 use context::CoreContext;
 use filenodes_derivation::FilenodesOnlyPublic;
-use futures::future;
-use futures::future::try_join;
-use futures::future::try_join_all;
-use futures::stream;
 use futures::FutureExt;
 use futures::StreamExt;
 use futures::TryFutureExt;
 use futures::TryStream;
 use futures::TryStreamExt;
-use manifest::bonsai_diff;
+use futures::future;
+use futures::future::try_join;
+use futures::future::try_join_all;
+use futures::stream;
 use manifest::BonsaiDiffFileChange;
 use manifest::ManifestOps;
+use manifest::bonsai_diff;
 use maplit::hashmap;
 use mercurial_derivation::DeriveHgChangeset;
 use mercurial_types::HgChangesetId;
@@ -90,7 +90,6 @@ use mercurial_types::HgFileNodeId;
 use mercurial_types::HgManifestId;
 use mercurial_types::NonRootMPath;
 use metaconfig_types::PushrebaseFlags;
-use mononoke_types::check_case_conflicts;
 use mononoke_types::BonsaiChangeset;
 use mononoke_types::ChangesetId;
 use mononoke_types::DateTime;
@@ -100,6 +99,7 @@ use mononoke_types::FileType;
 use mononoke_types::GitLfs;
 use mononoke_types::MPath;
 use mononoke_types::Timestamp;
+use mononoke_types::check_case_conflicts;
 use pushrebase_hook::PushrebaseCommitHook;
 use pushrebase_hook::PushrebaseHook;
 use pushrebase_hook::PushrebaseTransactionHook;
@@ -1286,8 +1286,8 @@ mod tests {
     use std::str::FromStr;
     use std::time::Duration;
 
-    use anyhow::format_err;
     use anyhow::Context;
+    use anyhow::format_err;
     use async_trait::async_trait;
     use blobrepo_hg::BlobRepoHg;
     use bonsai_hg_mapping::BonsaiHgMapping;
@@ -1303,8 +1303,8 @@ mod tests {
     use fixtures::ManyFilesDirs;
     use fixtures::MergeEven;
     use fixtures::TestRepoFixture;
-    use futures::future::try_join_all;
     use futures::future::TryFutureExt;
+    use futures::future::try_join_all;
     use futures::stream;
     use futures::stream::TryStreamExt;
     use manifest::Entry;
@@ -1329,10 +1329,10 @@ mod tests {
     use sql::Transaction;
     use sql_ext::TransactionResult;
     use test_repo_factory::TestRepoFactory;
+    use tests_utils::CreateCommitContext;
     use tests_utils::bookmark;
     use tests_utils::drawdag::extend_from_dag_with_actions;
     use tests_utils::resolve_cs_id;
-    use tests_utils::CreateCommitContext;
 
     use super::*;
 

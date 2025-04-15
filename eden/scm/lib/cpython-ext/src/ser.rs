@@ -15,8 +15,8 @@ use cpython::PyTuple;
 use cpython::Python;
 use cpython::PythonObject;
 use cpython::ToPyObject;
-use serde::ser;
 use serde::Serialize;
+use serde::ser;
 
 use crate::PyErr as Error;
 

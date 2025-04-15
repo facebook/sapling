@@ -10,13 +10,13 @@ use std::hash::Hash;
 use std::time::Duration;
 
 use anyhow::Result;
-use cachelib::get_cached;
-use cachelib::set_cached;
 use cachelib::Abomonation;
 use cachelib::VolatileLruCachePool;
+use cachelib::get_cached;
+use cachelib::set_cached;
 
-use crate::mock_store::MockStore;
 use crate::CachelibKey;
+use crate::mock_store::MockStore;
 
 #[derive(Clone)]
 pub enum CachelibHandler<T> {
@@ -103,8 +103,8 @@ impl<T: Abomonation + Clone + Send + 'static> CachelibHandler<T> {
 mod tests {
     use std::collections::HashSet;
 
-    use quickcheck::quickcheck;
     use quickcheck::TestResult;
+    use quickcheck::quickcheck;
 
     use super::*;
 

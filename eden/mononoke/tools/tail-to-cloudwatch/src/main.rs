@@ -7,14 +7,14 @@
 
 use std::io::Stdin;
 
-use anyhow::bail;
 use anyhow::Error;
+use anyhow::bail;
 use aws_config::BehaviorVersion;
+use aws_sdk_cloudwatchlogs::Client;
 use aws_sdk_cloudwatchlogs::error::SdkError;
 use aws_sdk_cloudwatchlogs::operation::create_log_group::CreateLogGroupError;
 use aws_sdk_cloudwatchlogs::operation::create_log_stream::CreateLogStreamError;
 use aws_sdk_cloudwatchlogs::types::InputLogEvent;
-use aws_sdk_cloudwatchlogs::Client;
 use clap::Parser;
 use serde::Deserialize;
 use serde_json::Map;

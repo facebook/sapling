@@ -26,10 +26,10 @@ use std::sync::Arc;
 use std::sync::Mutex;
 
 pub use ctor::ctor;
-use tracing_subscriber::fmt::format::FmtSpan;
+use tracing_subscriber::EnvFilter;
 use tracing_subscriber::fmt::MakeWriter;
 use tracing_subscriber::fmt::Subscriber;
-use tracing_subscriber::EnvFilter;
+use tracing_subscriber::fmt::format::FmtSpan;
 
 /// Initialize tracing and env_logger for adhoc logging (ex. in a library test)
 /// purpose.

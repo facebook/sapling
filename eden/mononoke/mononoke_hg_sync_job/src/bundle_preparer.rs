@@ -17,11 +17,11 @@ use cloned::cloned;
 use commit_graph::CommitGraph;
 use commit_graph::CommitGraphRef;
 use context::CoreContext;
-use futures::future::try_join;
-use futures::future::try_join_all;
 use futures::future::BoxFuture;
 use futures::future::FutureExt;
 use futures::future::TryFutureExt;
+use futures::future::try_join;
+use futures::future::try_join_all;
 use futures::lock::Mutex;
 use futures_watchdog::WatchdogExt;
 use getbundle_response::SessionLfsParams;
@@ -32,14 +32,18 @@ use metaconfig_types::RepoConfigRef;
 use mononoke_hg_sync_job_helper_lib::save_bytes_to_temp_file;
 use mononoke_hg_sync_job_helper_lib::write_to_named_temp_file;
 use mononoke_macros::mononoke;
-use mononoke_types::datetime::Timestamp;
 use mononoke_types::ChangesetId;
 use mononoke_types::Generation;
+use mononoke_types::datetime::Timestamp;
 use regex::Regex;
 use slog::info;
 use slog::warn;
 use tempfile::NamedTempFile;
 
+use crate::BookmarkOverlay;
+use crate::CombinedBookmarkUpdateLogEntry;
+use crate::CommitsInBundle;
+use crate::Repo;
 use crate::bind_sync_err;
 use crate::bundle_generator::BookmarkChange;
 use crate::bundle_generator::FilenodeVerifier;
@@ -47,10 +51,6 @@ use crate::bundle_generator::FilterExistingChangesets;
 use crate::errors::ErrorKind::BookmarkMismatchInBundleCombining;
 use crate::errors::ErrorKind::UnexpectedBookmarkMove;
 use crate::errors::PipelineError;
-use crate::BookmarkOverlay;
-use crate::CombinedBookmarkUpdateLogEntry;
-use crate::CommitsInBundle;
-use crate::Repo;
 
 pub struct BundlePreparer {
     repo: Repo,

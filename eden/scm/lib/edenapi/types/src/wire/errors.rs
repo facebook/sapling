@@ -8,10 +8,10 @@
 use serde::Deserialize;
 use serde::Serialize;
 
+use crate::ServerError;
 use crate::wire::ToApi;
 use crate::wire::ToWire;
 use crate::wire::WireToApiConversionError;
-use crate::ServerError;
 
 pub type WireResult<T> = Result<T, WireError>;
 

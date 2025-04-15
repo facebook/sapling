@@ -5,9 +5,9 @@
  * GNU General Public License version 2.
  */
 
-use std::collections::hash_map;
 use std::collections::HashMap;
 use std::collections::HashSet;
+use std::collections::hash_map;
 
 use anyhow::Context;
 use anyhow::Result;
@@ -22,11 +22,11 @@ use mercurial_types::HgChangesetId;
 use mononoke_types::RepositoryId;
 use slog::debug;
 use sql::Connection;
-use sql_ext::mononoke_queries;
 use sql_ext::SqlConnections;
+use sql_ext::mononoke_queries;
 
-use crate::entry::HgMutationEntry;
 use crate::HgMutationStore;
+use crate::entry::HgMutationEntry;
 
 /// To avoid overloading the database with too many changesets in a single
 /// select, we chunk selects of chains to this size.

@@ -5,8 +5,8 @@
  * GNU General Public License version 2.
  */
 
-use anyhow::bail;
 use anyhow::Result;
+use anyhow::bail;
 use strum::AsRefStr;
 use strum::Display;
 use strum::EnumIter;

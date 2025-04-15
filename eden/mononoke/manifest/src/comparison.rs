@@ -413,17 +413,17 @@ mod tests {
     use maplit::btreemap;
     use memblob::Memblob;
     use mononoke_macros::mononoke;
-    use mononoke_types::path::MPath;
     use mononoke_types::FileType;
     use mononoke_types::SortedVectorTrieMap;
+    use mononoke_types::path::MPath;
     use pretty_assertions::assert_eq;
 
     use super::*;
     use crate::ops::ManifestOps;
-    use crate::tests::test_manifest::derive_test_manifest;
     // use crate::tests::test_manifest::TestLeaf;
     use crate::tests::test_manifest::TestLeafId;
     use crate::tests::test_manifest::TestManifestId;
+    use crate::tests::test_manifest::derive_test_manifest;
 
     async fn get_trie_map(
         ctx: &CoreContext,

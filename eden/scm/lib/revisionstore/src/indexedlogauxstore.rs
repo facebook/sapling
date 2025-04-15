@@ -10,17 +10,17 @@ use std::io::Read;
 use std::io::Write;
 use std::path::Path;
 
-use anyhow::bail;
 use anyhow::Result;
+use anyhow::bail;
 use byteorder::ReadBytesExt;
 use byteorder::WriteBytesExt;
-use configmodel::convert::ByteCount;
 use configmodel::Config;
 use configmodel::ConfigExt;
+use configmodel::convert::ByteCount;
 use indexedlog::log::IndexOutput;
 use minibytes::Bytes;
-use types::hgid::ReadHgIdExt;
 use types::HgId;
+use types::hgid::ReadHgIdExt;
 use vlqencoding::VLQDecode;
 use vlqencoding::VLQEncode;
 
@@ -243,17 +243,17 @@ mod tests {
     use fs_err::remove_file;
     use storemodel::SerializationFormat;
     use tempfile::TempDir;
-    use types::testutil::*;
     use types::Blake3;
     use types::FetchContext;
+    use types::testutil::*;
 
     use super::*;
+    use crate::HgIdMutableDeltaStore;
     use crate::indexedlogdatastore::IndexedLogHgIdDataStore;
     use crate::indexedlogdatastore::IndexedLogHgIdDataStoreConfig;
     use crate::scmstore::FileAttributes;
     use crate::scmstore::FileStore;
     use crate::testutil::*;
-    use crate::HgIdMutableDeltaStore;
 
     fn single_byte_sha1(fst: u8) -> Sha1 {
         let mut x: [u8; Sha1::len()] = Default::default();

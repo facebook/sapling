@@ -12,15 +12,15 @@ use byteorder::ReadBytesExt;
 use byteorder::WriteBytesExt;
 use libc::c_int;
 use libc::c_void;
-use lz4_sys::LZ4StreamDecode;
-use lz4_sys::LZ4StreamEncode;
-use lz4_sys::LZ4_compressBound;
 use lz4_sys::LZ4_compress_continue;
+use lz4_sys::LZ4_compressBound;
 use lz4_sys::LZ4_createStream;
 use lz4_sys::LZ4_createStreamDecode;
 use lz4_sys::LZ4_decompress_safe_continue;
 use lz4_sys::LZ4_freeStream;
 use lz4_sys::LZ4_freeStreamDecode;
+use lz4_sys::LZ4StreamDecode;
+use lz4_sys::LZ4StreamEncode;
 use thiserror::Error;
 
 use crate::Result;

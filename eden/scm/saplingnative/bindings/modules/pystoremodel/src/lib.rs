@@ -8,10 +8,10 @@
 use std::sync::Arc;
 
 use cpython::*;
-use cpython_ext::convert::ImplInto;
-use cpython_ext::convert::Serde;
 use cpython_ext::PyIter;
 use cpython_ext::ResultPyErrExt;
+use cpython_ext::convert::ImplInto;
+use cpython_ext::convert::Serde;
 use storemodel::Bytes;
 use storemodel::FileStore as NativeFileStore;
 use storemodel::InsertOpts;
@@ -21,12 +21,12 @@ use storemodel::SerializationFormat;
 use storemodel::TreeEntry as NativeTreeEntry;
 use storemodel::TreeItemFlag;
 use storemodel::TreeStore as NativeTreeStore;
-use types::fetch_mode::FetchMode;
 use types::FetchContext;
 use types::Id20;
 use types::PathComponent;
 use types::PathComponentBuf;
 use types::RepoPath;
+use types::fetch_mode::FetchMode;
 mod key;
 use key::CompactKey;
 use key::IntoCompactKey as _;

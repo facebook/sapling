@@ -5,9 +5,9 @@
  * GNU General Public License version 2.
  */
 
-use mononoke_types::typed_hash;
 use mononoke_types::ContentChunkId;
 use mononoke_types::ContentId;
+use mononoke_types::typed_hash;
 
 use super::StoreRequest;
 

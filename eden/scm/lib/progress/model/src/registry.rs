@@ -7,10 +7,10 @@
 
 use std::cell::RefCell;
 use std::fmt::Debug;
-use std::sync::atomic::AtomicBool;
-use std::sync::atomic::Ordering;
 use std::sync::Arc;
 use std::sync::Weak;
+use std::sync::atomic::AtomicBool;
+use std::sync::atomic::Ordering;
 
 use once_cell::sync::Lazy;
 use parking_lot::Condvar;

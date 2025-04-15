@@ -6,8 +6,8 @@
  */
 
 use cpython::*;
-use cpython_ext::convert::Serde;
 use cpython_ext::ResultPyErrExt;
+use cpython_ext::convert::Serde;
 
 pub fn init_module(py: Python, package: &str) -> PyResult<PyModule> {
     let name = [package, "toml"].join(".");

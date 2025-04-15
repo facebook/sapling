@@ -7,9 +7,9 @@
 
 use std::str::FromStr;
 
-use mercurial_types::sha1_hash::Sha1;
 use mercurial_types::HgChangesetId;
 use mercurial_types::HgNodeHash;
+use mercurial_types::sha1_hash::Sha1;
 
 #[allow(unused)]
 pub fn changeset_from_bytes(bytes: &[u8], is_hex_encoded: bool) -> anyhow::Result<HgChangesetId> {

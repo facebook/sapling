@@ -9,9 +9,9 @@ use std::cmp::max;
 use std::cmp::min;
 use std::time::Duration;
 
-use anyhow::bail;
 use anyhow::Error;
 use anyhow::Result;
+use anyhow::bail;
 use fbinit::FacebookInit;
 
 use super::settings::CachelibSettings;

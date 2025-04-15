@@ -10,11 +10,11 @@
 //! `except KeyboardInterrupt`.
 
 use std::borrow::Cow;
-use std::sync::atomic::AtomicBool;
-use std::sync::atomic::Ordering;
 use std::sync::Arc;
 use std::sync::Mutex;
 use std::sync::Weak;
+use std::sync::atomic::AtomicBool;
+use std::sync::atomic::Ordering;
 
 use once_cell::sync::Lazy;
 

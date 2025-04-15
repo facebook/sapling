@@ -8,10 +8,10 @@
 use std::io::Write;
 
 use async_runtime::try_block_unless_interrupted as block_on;
-use clidispatch::abort;
 use clidispatch::ReqCtx;
-use cmdutil::define_flags;
+use clidispatch::abort;
 use cmdutil::Result;
+use cmdutil::define_flags;
 use futures::TryStreamExt;
 use manifest::FileMetadata;
 use manifest::FsNodeMetadata;

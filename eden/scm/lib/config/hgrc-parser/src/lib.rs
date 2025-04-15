@@ -18,5 +18,5 @@ pub(crate) mod config;
 #[cfg(test)]
 mod tests;
 
-pub use config::parse;
 pub use config::Instruction;
+pub use config::parse;

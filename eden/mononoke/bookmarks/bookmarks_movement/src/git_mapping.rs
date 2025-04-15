@@ -16,15 +16,15 @@ use anyhow::Context;
 use anyhow::Error;
 use anyhow::Result;
 use blobstore::Loadable;
-use bonsai_git_mapping::extract_git_sha1_from_bonsai_extra;
 use bonsai_git_mapping::BonsaiGitMapping;
 use bonsai_git_mapping::BonsaiGitMappingEntry;
+use bonsai_git_mapping::extract_git_sha1_from_bonsai_extra;
 use bookmarks::BookmarkTransactionHook;
 use cloned::cloned;
 use context::CoreContext;
-use futures::future::try_join;
 use futures::future::FutureExt;
 use futures::future::TryFutureExt;
+use futures::future::try_join;
 use futures::stream::FuturesOrdered;
 use futures::stream::StreamExt;
 use mononoke_types::BonsaiChangeset;
@@ -258,9 +258,9 @@ mod tests {
     use repo_lock::RepoLock;
     use repo_permission_checker::RepoPermissionChecker;
     use test_repo_factory::TestRepoFactory;
+    use tests_utils::CreateCommitContext;
     use tests_utils::drawdag::changes;
     use tests_utils::drawdag::create_from_dag_with_changes;
-    use tests_utils::CreateCommitContext;
 
     use super::*;
 

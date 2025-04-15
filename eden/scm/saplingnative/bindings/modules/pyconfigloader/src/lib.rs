@@ -10,19 +10,19 @@
 use std::cell::RefCell;
 use std::sync::Arc;
 
+use configloader::Config;
 use configloader::config::ConfigSet;
 use configloader::config::Options;
 use configloader::convert::parse_list;
 use configloader::hg::ConfigSetHgExt;
 use configloader::hg::OptionsHgExt;
 use configloader::hg::RepoInfo;
-use configloader::Config;
 use cpython::*;
-use cpython_ext::error::Result;
-use cpython_ext::error::ResultPyErrExt;
 use cpython_ext::PyNone;
 use cpython_ext::PyPath;
 use cpython_ext::PyPathBuf;
+use cpython_ext::error::Result;
+use cpython_ext::error::ResultPyErrExt;
 use repo_minimal_info::RepoMinimalInfo;
 
 mod impl_into;

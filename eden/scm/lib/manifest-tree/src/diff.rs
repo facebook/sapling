@@ -7,16 +7,16 @@
 
 use std::cmp::Ordering;
 use std::mem;
+use std::sync::Arc;
 use std::sync::atomic;
 use std::sync::atomic::AtomicUsize;
-use std::sync::Arc;
 
-use anyhow::anyhow;
 use anyhow::Result;
-use flume::bounded;
-use flume::unbounded;
+use anyhow::anyhow;
 use flume::Receiver;
 use flume::Sender;
+use flume::bounded;
+use flume::unbounded;
 use manifest::DiffEntry;
 use manifest::DiffType;
 use manifest::DirDiffEntry;
@@ -29,14 +29,14 @@ use types::PathComponentBuf;
 use types::RepoPath;
 use types::RepoPathBuf;
 
+use crate::DirLink;
+use crate::Link;
+use crate::THREAD_POOL;
+use crate::TreeManifest;
 use crate::link::Durable;
 use crate::link::Ephemeral;
 use crate::link::Leaf;
 use crate::store::InnerStore;
-use crate::DirLink;
-use crate::Link;
-use crate::TreeManifest;
-use crate::THREAD_POOL;
 
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
 enum Side {
@@ -541,21 +541,21 @@ fn diff_links(
 mod tests {
     use std::sync::Arc;
 
-    use manifest::testutil::*;
     use manifest::DiffType;
     use manifest::File;
     use manifest::FileMetadata;
     use manifest::FileType;
     use manifest::Manifest;
+    use manifest::testutil::*;
     use pathmatcher::AlwaysMatcher;
     use pathmatcher::TreeMatcher;
     use types::hgid::MF_UNTRACKED_NODE_ID;
     use types::testutil::*;
 
     use super::*;
+    use crate::Link;
     use crate::link::DirLink;
     use crate::testutil::*;
-    use crate::Link;
 
     #[test]
     fn test_diff_entry_from_file() {

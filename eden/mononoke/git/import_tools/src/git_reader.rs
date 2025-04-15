@@ -12,11 +12,11 @@ use std::process::Stdio;
 use std::sync::Arc;
 use std::sync::Mutex;
 
+use anyhow::Context;
+use anyhow::Result;
 use anyhow::anyhow;
 use anyhow::bail;
 use anyhow::format_err;
-use anyhow::Context;
-use anyhow::Result;
 use async_trait::async_trait;
 use auto_impl::auto_impl;
 use bytes::Bytes;

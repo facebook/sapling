@@ -9,8 +9,8 @@ use std::borrow::Cow;
 use std::collections::HashMap;
 use std::sync::Arc;
 
-use anyhow::anyhow;
 use anyhow::Result;
+use anyhow::anyhow;
 use blobstore::Blobstore;
 use blobstore::Storable;
 use blobstore::StoreLoadable;
@@ -24,24 +24,24 @@ use futures::stream;
 use futures::stream::FuturesUnordered;
 use futures::stream::StreamExt;
 use futures::stream::TryStreamExt;
-use manifest::derive_manifest_from_predecessor;
 use manifest::Entry;
 use manifest::ManifestComparison;
-use mercurial_types::sharded_augmented_manifest::HgAugmentedDirectoryNode;
-use mercurial_types::sharded_augmented_manifest::HgAugmentedFileLeafNode;
+use manifest::derive_manifest_from_predecessor;
 use mercurial_types::HgAugmentedManifestEntry;
 use mercurial_types::HgAugmentedManifestEnvelope;
 use mercurial_types::HgAugmentedManifestId;
 use mercurial_types::HgManifestId;
 use mercurial_types::ShardedHgAugmentedManifest;
-use mononoke_types::hash::Blake3;
-use mononoke_types::sharded_map_v2::LookupKind;
-use mononoke_types::sharded_map_v2::ShardedMapV2Node;
+use mercurial_types::sharded_augmented_manifest::HgAugmentedDirectoryNode;
+use mercurial_types::sharded_augmented_manifest::HgAugmentedFileLeafNode;
 use mononoke_types::ContentId;
 use mononoke_types::ContentMetadataV2;
 use mononoke_types::MPathElement;
 use mononoke_types::MPathElementPrefix;
 use mononoke_types::TrieMap;
+use mononoke_types::hash::Blake3;
+use mononoke_types::sharded_map_v2::LookupKind;
+use mononoke_types::sharded_map_v2::ShardedMapV2Node;
 
 /// Derive an HgAugmentedManifestId from an HgManifestId and parents.
 pub async fn derive_from_hg_manifest_and_parents(

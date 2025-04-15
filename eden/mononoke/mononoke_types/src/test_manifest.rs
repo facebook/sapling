@@ -13,6 +13,8 @@ use blobstore::LoadableError;
 use context::CoreContext;
 use sorted_vector_map::SortedVectorMap;
 
+use crate::MPathElement;
+use crate::ThriftConvert;
 use crate::blob::Blob;
 use crate::blob::BlobstoreValue;
 use crate::blob::TestManifestBlob;
@@ -20,8 +22,6 @@ use crate::thrift;
 use crate::typed_hash::IdContext;
 use crate::typed_hash::TestManifestId;
 use crate::typed_hash::TestManifestIdContext;
-use crate::MPathElement;
-use crate::ThriftConvert;
 
 /// A manifest type intended only to be used in tests. It contains
 /// only the file names and the maximum basename length of all files

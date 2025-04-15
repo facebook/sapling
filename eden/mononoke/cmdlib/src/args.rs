@@ -16,10 +16,10 @@ use std::path::PathBuf;
 use std::str::FromStr;
 use std::time::Duration;
 
-use anyhow::bail;
-use anyhow::format_err;
 use anyhow::Error;
 use anyhow::Result;
+use anyhow::bail;
+use anyhow::format_err;
 use cached_config::ConfigStore;
 use clap_old::ArgMatches;
 use fbinit::FacebookInit;
@@ -33,18 +33,18 @@ use mononoke_types::RepositoryId;
 use repo_factory::RepoFactory;
 use repo_factory::RepoFactoryBuilder;
 use scribe_ext::Scribe;
+use slog::Logger;
 use slog::info;
 use slog::warn;
-use slog::Logger;
 use sql_construct::SqlConstructFromMetadataDatabaseConfig;
 
 pub use self::app::ArgType;
+use self::app::CONFIG_PATH;
 pub use self::app::MononokeAppBuilder;
 pub use self::app::MononokeClapApp;
-pub use self::app::RepoRequirement;
-use self::app::CONFIG_PATH;
 use self::app::REPO_ID;
 use self::app::REPO_NAME;
+pub use self::app::RepoRequirement;
 use self::app::SCRIBE_LOGGING_DIRECTORY;
 pub use self::app::SHARDED_SCOPE_NAME;
 pub use self::app::SHARDED_SERVICE_NAME;
@@ -54,8 +54,8 @@ use self::app::TARGET_REPO_ID;
 use self::app::TARGET_REPO_NAME;
 pub use self::cache::CachelibSettings;
 pub use self::matches::MononokeMatches;
-use crate::helpers::setup_repo_dir;
 use crate::helpers::CreateStorage;
+use crate::helpers::setup_repo_dir;
 
 pub struct ResolvedRepo {
     pub id: RepositoryId,

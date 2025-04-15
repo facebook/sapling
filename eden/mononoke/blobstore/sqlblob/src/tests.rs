@@ -12,10 +12,10 @@ use borrowed::borrowed;
 use bytes::Bytes;
 use fbinit::FacebookInit;
 use mononoke_macros::mononoke;
-use rand::distributions::Alphanumeric;
-use rand::thread_rng;
 use rand::Rng;
 use rand::RngCore;
+use rand::distributions::Alphanumeric;
+use rand::thread_rng;
 use strum::IntoEnumIterator;
 
 use super::*;

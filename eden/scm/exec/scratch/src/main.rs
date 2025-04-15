@@ -23,11 +23,11 @@ use std::path::Component;
 use std::path::Path;
 use std::path::PathBuf;
 
+use anyhow::Result;
 use anyhow::bail;
 #[cfg(unix)]
 use anyhow::ensure;
 use anyhow::format_err;
-use anyhow::Result;
 use clap::App;
 use clap::AppSettings;
 use clap::Arg;

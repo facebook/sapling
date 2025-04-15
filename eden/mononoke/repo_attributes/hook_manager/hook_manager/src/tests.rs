@@ -5,9 +5,9 @@
  * GNU General Public License version 2.
  */
 
-use std::collections::hash_map::Entry;
 use std::collections::HashMap;
 use std::collections::HashSet;
+use std::collections::hash_map::Entry;
 use std::sync::Arc;
 
 use anyhow::Error;

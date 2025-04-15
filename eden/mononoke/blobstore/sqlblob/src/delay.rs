@@ -12,8 +12,8 @@ use std::time::Duration;
 use std::time::Instant;
 
 use futures::stream::StreamExt;
-use rand::thread_rng;
 use rand::Rng;
+use rand::thread_rng;
 use stats::prelude::*;
 use tokio::sync::watch;
 

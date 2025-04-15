@@ -17,14 +17,14 @@ pub mod testutil;
 
 use std::borrow::Cow;
 
-use anyhow::bail;
 use anyhow::Result;
+use anyhow::bail;
 use pathmatcher::Matcher;
-pub use types::tree::FileType;
 use types::HgId;
 use types::PathComponentBuf;
 use types::RepoPath;
 use types::RepoPathBuf;
+pub use types::tree::FileType;
 
 /// Manifest describes a mapping between file path ([`String`]) and file metadata ([`FileMetadata`]).
 /// Fundamentally it is just a Map<file_path, file_metadata>.

@@ -12,13 +12,13 @@ use blobstore::Loadable;
 use blobstore::LoadableError;
 use cloned::cloned;
 use futures_lazy_shared::LazyShared;
+// Trees are identified by their FsnodeId.
+pub use mononoke_types::FsnodeId as TreeId;
 use mononoke_types::fsnode::Fsnode;
 // An entry within a tree list (either a file or subdirectory).
 pub use mononoke_types::fsnode::FsnodeEntry as TreeEntry;
 // Summary information about the files in a tree.
 pub use mononoke_types::fsnode::FsnodeSummary as TreeSummary;
-// Trees are identified by their FsnodeId.
-pub use mononoke_types::FsnodeId as TreeId;
 use repo_blobstore::RepoBlobstoreRef;
 
 use crate::errors::MononokeError;

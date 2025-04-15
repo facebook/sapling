@@ -66,23 +66,23 @@ pub mod utils;
 
 // Re-exports from mononoke_types. Eventually these should go away and everything should depend
 // directly on mononoke_types;
-pub use mononoke_types::path::MPath;
-pub use mononoke_types::sha1_hash;
 pub use mononoke_types::FileType;
 pub use mononoke_types::Globalrev;
 pub use mononoke_types::MPathElement;
 pub use mononoke_types::NonRootMPath;
 pub use mononoke_types::RepoPath;
+pub use mononoke_types::path::MPath;
+pub use mononoke_types::sha1_hash;
 
 pub use crate::blob::HgBlob;
-pub use crate::blobnode::calculate_hg_node_id;
-pub use crate::blobnode::calculate_hg_node_id_stream;
 pub use crate::blobnode::HgBlobNode;
 pub use crate::blobnode::HgParents;
+pub use crate::blobnode::calculate_hg_node_id;
+pub use crate::blobnode::calculate_hg_node_id_stream;
+pub use crate::blobs::HgBlobEnvelope;
 pub use crate::blobs::fetch_manifest_envelope;
 pub use crate::blobs::fetch_manifest_envelope_opt;
 pub use crate::blobs::fetch_raw_manifest_bytes;
-pub use crate::blobs::HgBlobEnvelope;
 pub use crate::delta::Delta;
 pub use crate::envelope::HgChangesetEnvelope;
 pub use crate::envelope::HgChangesetEnvelopeMut;
@@ -92,8 +92,8 @@ pub use crate::envelope::HgManifestEnvelope;
 pub use crate::envelope::HgManifestEnvelopeMut;
 pub use crate::errors::MononokeHgError;
 pub use crate::file::FileBytes;
-pub use crate::flags::parse_rev_flags;
 pub use crate::flags::RevFlags;
+pub use crate::flags::parse_rev_flags;
 pub use crate::fsencode::fncache_fsencode;
 pub use crate::fsencode::simple_fsencode;
 pub use crate::manifest::Type;
@@ -109,12 +109,12 @@ pub use crate::nodehash::HgNodeKey;
 pub use crate::nodehash::NULL_CSID;
 pub use crate::nodehash::NULL_HASH;
 pub use crate::preloaded_augmented_manifest::HgPreloadedAugmentedManifest;
-pub use crate::remotefilelog::convert_parents_to_remotefilelog_format;
 pub use crate::remotefilelog::HgFileHistoryEntry;
-pub use crate::sharded_augmented_manifest::fetch_augmented_manifest_envelope_opt;
+pub use crate::remotefilelog::convert_parents_to_remotefilelog_format;
 pub use crate::sharded_augmented_manifest::HgAugmentedManifestEntry;
 pub use crate::sharded_augmented_manifest::HgAugmentedManifestEnvelope;
 pub use crate::sharded_augmented_manifest::ShardedHgAugmentedManifest;
+pub use crate::sharded_augmented_manifest::fetch_augmented_manifest_envelope_opt;
 pub use crate::utils::percent_encode;
 
 #[cfg(test)]

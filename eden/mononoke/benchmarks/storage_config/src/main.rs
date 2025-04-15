@@ -8,13 +8,13 @@
 use std::sync::Arc;
 use std::time::Duration;
 
-use anyhow::anyhow;
 use anyhow::Context;
 use anyhow::Error;
+use anyhow::anyhow;
 use blobstore::Blobstore;
 use blobstore_factory::make_blobstore;
-use cacheblob::new_memcache_blobstore;
 use cacheblob::CachelibBlobstoreOptions;
+use cacheblob::new_memcache_blobstore;
 use clap::Parser;
 use context::CoreContext;
 use criterion::Criterion;

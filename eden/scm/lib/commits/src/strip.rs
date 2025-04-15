@@ -8,12 +8,12 @@
 use std::fs;
 use std::path::Path;
 
-use dag::errors::NotFoundError;
-// TODO: Consider migrating to async, or get rid of strip in tests.
-use dag::set::SyncSetQuery;
 use dag::DagAlgorithm;
 use dag::Set;
 use dag::Vertex;
+use dag::errors::NotFoundError;
+// TODO: Consider migrating to async, or get rid of strip in tests.
+use dag::set::SyncSetQuery;
 
 use crate::AppendCommits;
 use crate::HgCommit;

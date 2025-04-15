@@ -5,8 +5,8 @@
  * GNU General Public License version 2.
  */
 
-use anyhow::anyhow;
 use anyhow::Result;
+use anyhow::anyhow;
 use commit_graph_types::edges::ChangesetNode;
 use commit_graph_types::storage::Prefetch;
 use commit_graph_types::storage::PrefetchTarget;

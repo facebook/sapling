@@ -9,8 +9,8 @@ use std::collections::BTreeMap;
 use std::collections::HashMap;
 use std::sync::Arc;
 
-use anyhow::bail;
 use anyhow::Result;
+use anyhow::bail;
 use blobstore::Blobstore;
 use blobstore::Loadable;
 use borrowed::borrowed;
@@ -22,11 +22,11 @@ use futures::stream::StreamExt;
 use futures::stream::TryStreamExt;
 use itertools::Itertools;
 use manifest::PathTree;
-use mononoke_types::deleted_manifest_common::DeletedManifestCommon;
 use mononoke_types::BlobstoreKey;
 use mononoke_types::ChangesetId;
 use mononoke_types::MPathElement;
 use mononoke_types::NonRootMPath;
+use mononoke_types::deleted_manifest_common::DeletedManifestCommon;
 
 use crate::derive::DeletedManifestChangeType;
 use crate::derive::DeletedManifestDeriver;

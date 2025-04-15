@@ -417,9 +417,9 @@ fn normalize_path_pattern(pattern: &str) -> String {
 #[cfg(test)]
 mod tests {
 
+    use PatternKind::*;
     use fs_err as fs;
     use tempfile::TempDir;
-    use PatternKind::*;
 
     use super::*;
 

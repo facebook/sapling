@@ -7,10 +7,10 @@
 
 use std::collections::HashSet;
 use std::path::PathBuf;
-use std::sync::atomic::AtomicUsize;
-use std::sync::atomic::Ordering;
 use std::sync::Arc;
 use std::sync::Mutex;
+use std::sync::atomic::AtomicUsize;
+use std::sync::atomic::Ordering;
 
 use anyhow::Context;
 use anyhow::Result;
@@ -26,9 +26,9 @@ use context::CoreContext;
 use context::SessionClass;
 use derived_data_manager::DerivedDataManager;
 use derived_data_manager::Rederivation;
-use futures::stream;
 use futures::StreamExt;
 use futures::TryStreamExt;
+use futures::stream;
 use futures_stats::TimedTryFutureExt;
 use mononoke_app::args::DerivedDataArgs;
 use mononoke_macros::mononoke;

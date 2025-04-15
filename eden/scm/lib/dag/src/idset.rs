@@ -1267,10 +1267,10 @@ impl IntoIterator for &IdList {
 // This would be easier if `Id` has `#[serde(transparent)]`.
 // But that might be a breaking change now...
 mod flat_id {
-    use serde::de;
-    use serde::de::Visitor;
     use serde::Deserializer;
     use serde::Serializer;
+    use serde::de;
+    use serde::de::Visitor;
 
     use super::*;
 

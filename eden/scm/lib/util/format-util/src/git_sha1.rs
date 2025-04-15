@@ -7,9 +7,9 @@
 
 use std::io;
 
-use anyhow::ensure;
 use anyhow::Context as _;
 use anyhow::Result;
+use anyhow::ensure;
 use types::Id20;
 
 use crate::ByteCount;

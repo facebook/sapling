@@ -19,7 +19,7 @@ pub use crate::revlogrepo::RevlogRepo;
 pub use crate::revlogrepo::RevlogRepoOptions;
 
 pub mod changeset {
-    pub use mercurial_types::blobs::serialize_cs;
     pub use mercurial_types::blobs::RevlogChangeset;
+    pub use mercurial_types::blobs::serialize_cs;
 }
 pub use crate::changeset::RevlogChangeset;

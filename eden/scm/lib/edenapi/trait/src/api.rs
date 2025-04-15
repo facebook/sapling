@@ -10,8 +10,6 @@ use std::num::NonZeroU64;
 use std::time::Duration;
 
 use async_trait::async_trait;
-use edenapi_types::bookmark::Freshness;
-use edenapi_types::cloud::SmartlogDataResponse;
 use edenapi_types::AlterSnapshotRequest;
 use edenapi_types::AlterSnapshotResponse;
 use edenapi_types::AnyFileContentId;
@@ -70,6 +68,8 @@ use edenapi_types::UploadTreeEntry;
 use edenapi_types::UploadTreeResponse;
 use edenapi_types::WorkspaceDataResponse;
 use edenapi_types::WorkspacesDataResponse;
+use edenapi_types::bookmark::Freshness;
+use edenapi_types::cloud::SmartlogDataResponse;
 use minibytes::Bytes;
 use types::FetchContext;
 use types::HgId;

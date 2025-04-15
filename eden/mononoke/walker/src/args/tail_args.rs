@@ -16,8 +16,8 @@ use sql_construct::SqlConstructFromMetadataDatabaseConfig;
 use sql_ext::facebook::MysqlOptions;
 
 use crate::args::arg_types::ChunkByPublicArg;
-use crate::args::arg_types::InternedTypeArg;
 use crate::args::arg_types::DEFAULT_INTERNED_TYPES_STR;
+use crate::args::arg_types::InternedTypeArg;
 use crate::args::graph_arg_types::NodeTypeArg;
 use crate::detail::checkpoint::CheckpointsByName;
 use crate::detail::checkpoint::CheckpointsVersion;

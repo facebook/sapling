@@ -37,21 +37,21 @@ use std::sync::Arc;
 
 use anyhow::Result;
 use bitflags::bitflags;
-use dag::dag::MemDag;
-use dag::ops::DagAddHeads;
-use dag::set::hints::Flags;
 use dag::DagAlgorithm;
 use dag::Set;
 use dag::Vertex;
+use dag::dag::MemDag;
+use dag::ops::DagAddHeads;
+use dag::set::hints::Flags;
 use futures::stream::StreamExt;
 use futures::stream::TryStreamExt;
+use indexedlog::DefaultOpenOptions;
+use indexedlog::OpenWithRepair;
+pub use indexedlog::Repair;
 use indexedlog::log::IndexDef;
 use indexedlog::log::IndexOutput;
 use indexedlog::log::Log;
 use indexedlog::log::{self as ilog};
-use indexedlog::DefaultOpenOptions;
-use indexedlog::OpenWithRepair;
-pub use indexedlog::Repair;
 pub use types::mutation::MutationEntry;
 use types::node::Node;
 use vlqencoding::VLQDecodeAt;
@@ -444,9 +444,9 @@ impl MutationStore {
 
 #[cfg(test)]
 mod tests {
+    use dag::DagAlgorithm;
     use dag::nonblocking::non_blocking_result;
     use dag::nonblocking::non_blocking_result as r;
-    use dag::DagAlgorithm;
     use rand::SeedableRng;
     use rand_chacha::ChaChaRng;
     use tempfile::TempDir;

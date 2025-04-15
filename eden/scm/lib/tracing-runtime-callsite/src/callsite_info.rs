@@ -9,8 +9,8 @@ use std::collections::HashMap;
 
 use once_cell::sync::Lazy;
 use parking_lot::RwLock;
-use tracing::metadata::Kind;
 use tracing::Level;
+use tracing::metadata::Kind;
 
 use crate::RuntimeCallsite;
 use crate::StaticBox;

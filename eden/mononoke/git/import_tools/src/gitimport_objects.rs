@@ -11,11 +11,11 @@ use std::path::Path;
 use std::path::PathBuf;
 use std::process::Stdio;
 
-use anyhow::anyhow;
-use anyhow::bail;
 use anyhow::Context;
 use anyhow::Error;
 use anyhow::Result;
+use anyhow::anyhow;
+use anyhow::bail;
 use async_trait::async_trait;
 use blobstore::LoadableError;
 use bytes::Bytes;
@@ -28,24 +28,24 @@ use futures::stream::Stream;
 use futures::stream::StreamExt;
 use futures::stream::TryStreamExt;
 use gix_hash::ObjectId;
-use gix_object::bstr::BString;
-use gix_object::tree;
 use gix_object::Commit;
 use gix_object::Tag;
-use manifest::bonsai_diff;
-use manifest::find_intersection_of_diffs;
+use gix_object::bstr::BString;
+use gix_object::tree;
 use manifest::BonsaiDiffFileChange;
 use manifest::Entry;
 use manifest::Manifest;
 use manifest::StoreLoadable;
-use mononoke_types::hash;
+use manifest::bonsai_diff;
+use manifest::find_intersection_of_diffs;
 use mononoke_types::ChangesetId;
 use mononoke_types::DateTime;
 use mononoke_types::FileType;
 use mononoke_types::MPathElement;
 use mononoke_types::SortedVectorTrieMap;
-use slog::debug;
+use mononoke_types::hash;
 use slog::Logger;
+use slog::debug;
 use smallvec::SmallVec;
 use sorted_vector_map::SortedVectorMap;
 use tokio::io::AsyncBufReadExt;
@@ -666,9 +666,9 @@ mod tests {
     use mononoke_macros::mononoke;
     use slog::o;
 
-    use super::decode_message;
     use super::BString;
     use super::Logger;
+    use super::decode_message;
 
     fn should_decode_into(message: &[u8], encoding: &Option<BString>, expected: &str) {
         let logger = Logger::root(slog::Discard, o!());

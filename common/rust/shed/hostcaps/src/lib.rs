@@ -12,6 +12,8 @@ use std::sync::LazyLock;
 #[cfg(fbcode_build)]
 mod facebook;
 #[cfg(fbcode_build)]
+pub use facebook::Env;
+#[cfg(fbcode_build)]
 pub use facebook::get_env;
 #[cfg(fbcode_build)]
 pub use facebook::is_corp;
@@ -19,8 +21,6 @@ pub use facebook::is_corp;
 pub use facebook::is_lab;
 #[cfg(fbcode_build)]
 pub use facebook::is_prod;
-#[cfg(fbcode_build)]
-pub use facebook::Env;
 
 pub static IN_PROD: LazyLock<bool> = LazyLock::new(is_prod);
 pub static IN_CORP: LazyLock<bool> = LazyLock::new(is_corp);

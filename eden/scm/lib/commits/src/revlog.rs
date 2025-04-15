@@ -13,14 +13,14 @@ use std::path::PathBuf;
 use std::sync::Arc;
 
 use anyhow::ensure;
-use dag::delegate;
-use dag::errors::programming;
-use dag::errors::NotFoundError;
-use dag::nonblocking::non_blocking_result;
-use dag::ops::IdConvert;
 use dag::Group;
 use dag::Set;
 use dag::Vertex;
+use dag::delegate;
+use dag::errors::NotFoundError;
+use dag::errors::programming;
+use dag::nonblocking::non_blocking_result;
+use dag::ops::IdConvert;
 use futures::stream::BoxStream;
 use futures::stream::StreamExt;
 use minibytes::Bytes;
@@ -28,7 +28,6 @@ use revlogindex::RevlogIndex;
 use storemodel::SerializationFormat;
 use zstore::Id20;
 
-use crate::strip;
 use crate::AppendCommits;
 use crate::DescribeBackend;
 use crate::HgCommit;
@@ -37,6 +36,7 @@ use crate::ReadCommitText;
 use crate::Result;
 use crate::StreamCommitText;
 use crate::StripCommits;
+use crate::strip;
 
 /// HG commits stored on disk using the revlog format.
 #[derive(Clone)]

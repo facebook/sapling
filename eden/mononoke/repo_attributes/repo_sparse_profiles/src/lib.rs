@@ -14,8 +14,8 @@ use mononoke_types::ChangesetId;
 use sql::Connection;
 use sql_construct::SqlConstruct;
 use sql_construct::SqlConstructFromMetadataDatabaseConfig;
-use sql_ext::mononoke_queries;
 use sql_ext::SqlConnections;
+use sql_ext::mononoke_queries;
 
 mononoke_queries! {
     read GetProfilesSize(

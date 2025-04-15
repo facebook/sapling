@@ -9,9 +9,9 @@ use std::collections::HashMap;
 use std::collections::HashSet;
 use std::future::Future;
 use std::hash::Hasher;
+use std::sync::Arc;
 use std::sync::atomic::AtomicUsize;
 use std::sync::atomic::Ordering;
-use std::sync::Arc;
 use std::time::Duration;
 
 use anyhow::Error;

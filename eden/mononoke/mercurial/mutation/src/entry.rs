@@ -9,9 +9,9 @@ use std::io::Read;
 
 use abomonable_string::AbomonableString;
 use abomonation_derive::Abomonation;
-use anyhow::anyhow;
 use anyhow::Error;
 use anyhow::Result;
+use anyhow::anyhow;
 use edenapi_types::Extra;
 use edenapi_types::HgMutationEntryContent;
 use hg_mutation_entry_thrift as thrift;
@@ -19,8 +19,8 @@ use mercurial_types::HgChangesetId;
 use mercurial_types::HgNodeHash;
 #[cfg(test)]
 use quickcheck_arbitrary_derive::Arbitrary;
-use types::mutation::MutationEntry;
 use types::HgId;
+use types::mutation::MutationEntry;
 
 use crate::aligned_hg_changeset_id::AlignedHgChangesetId;
 

@@ -55,9 +55,9 @@ pub(crate) mod testutil {
     use std::sync::Arc;
     use std::sync::Mutex;
 
+    use http::StatusCode;
     use http::header::HeaderName;
     use http::header::HeaderValue;
-    use http::StatusCode;
 
     use super::*;
 

@@ -5,9 +5,9 @@
  * GNU General Public License version 2.
  */
 
-use anyhow::bail;
 use anyhow::Context;
 use anyhow::Result;
+use anyhow::bail;
 use gix_hash::ObjectId;
 use gix_object::Kind;
 use gix_packetline::PacketLineRef;
@@ -380,8 +380,8 @@ mod tests {
     use std::io::Write;
 
     use anyhow::Result;
-    use gix_packetline::encode::flush_to_write;
     use gix_packetline::Writer;
+    use gix_packetline::encode::flush_to_write;
     use mononoke_macros::mononoke;
 
     use super::*;

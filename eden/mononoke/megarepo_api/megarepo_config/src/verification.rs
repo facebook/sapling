@@ -7,8 +7,8 @@
 
 use std::collections::HashSet;
 
-use anyhow::anyhow;
 use anyhow::Result;
+use anyhow::anyhow;
 use context::CoreContext;
 use megarepo_configs::SyncTargetConfig;
 use slog::warn;

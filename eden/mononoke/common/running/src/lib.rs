@@ -6,21 +6,21 @@
  */
 
 use std::future::Future;
-use std::sync::atomic::AtomicI64;
 use std::sync::Arc;
+use std::sync::atomic::AtomicI64;
 use std::time::Duration;
 
 use anyhow::Error;
 use anyhow::Result;
+use futures::TryFutureExt;
 use futures::future;
 use futures::future::Either;
-use futures::TryFutureExt;
 use mononoke_macros::mononoke;
+use slog::Logger;
 use slog::error;
 use slog::info;
-use slog::Logger;
-use tokio::signal::unix::signal;
 use tokio::signal::unix::SignalKind;
+use tokio::signal::unix::signal;
 use tokio::time;
 
 /// Run a server future, and wait until a termination signal is received.

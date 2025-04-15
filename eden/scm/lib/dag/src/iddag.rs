@@ -23,8 +23,15 @@ use serde::Serialize;
 use tracing::debug;
 use tracing::trace;
 
-use crate::errors::bug;
+use crate::Error::Programming;
+use crate::IdSegment;
+use crate::IdSet;
+use crate::IdSpan;
+use crate::Level;
+use crate::Result;
+use crate::VerLink;
 use crate::errors::NotFoundError;
+use crate::errors::bug;
 use crate::id::Group;
 use crate::id::Id;
 use crate::iddagstore::IdDagStore;
@@ -42,13 +49,6 @@ use crate::segment::PreparedFlatSegments;
 use crate::segment::Segment;
 use crate::segment::SegmentFlags;
 use crate::types_ext::PreparedFlatSegmentsExt;
-use crate::Error::Programming;
-use crate::IdSegment;
-use crate::IdSet;
-use crate::IdSpan;
-use crate::Level;
-use crate::Result;
-use crate::VerLink;
 
 /// Structure to store a DAG of integers, with indexes to speed up ancestry queries.
 ///

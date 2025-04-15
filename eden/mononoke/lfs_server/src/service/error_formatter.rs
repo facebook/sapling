@@ -10,8 +10,8 @@ use anyhow::Error;
 use gotham::state::State;
 use gotham_ext::error::ErrorFormatter;
 use gotham_ext::state_ext::StateExt;
-use lfs_protocol::git_lfs_mime;
 use lfs_protocol::ResponseError;
+use lfs_protocol::git_lfs_mime;
 use mime::Mime;
 
 pub struct LfsErrorFormatter;

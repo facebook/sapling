@@ -11,26 +11,27 @@ use std::collections::HashMap;
 use std::collections::HashSet;
 use std::str;
 
-use anyhow::bail;
-use anyhow::ensure;
 use anyhow::Error;
 use anyhow::Result;
+use anyhow::bail;
+use anyhow::ensure;
 use bytes::BytesMut;
-use futures::future;
-use futures::future::BoxFuture;
 use futures::FutureExt;
 use futures::StreamExt;
 use futures::TryFutureExt;
 use futures::TryStreamExt;
+use futures::future;
+use futures::future::BoxFuture;
 use futures_ext::stream::FbStreamExt;
 use lazy_static::lazy_static;
 use maplit::hashset;
+use slog::Logger;
 use slog::o;
 use slog::warn;
-use slog::Logger;
 use tokio::io::AsyncBufRead;
 use tokio_util::codec::Decoder;
 
+use crate::Bundle2Item;
 use crate::capabilities;
 use crate::changegroup;
 use crate::errors::ErrorKind;
@@ -41,7 +42,6 @@ use crate::part_outer::OuterStream;
 use crate::pushrebase;
 use crate::utils::decode_stream;
 use crate::wirepack;
-use crate::Bundle2Item;
 
 // --- Part parameters
 

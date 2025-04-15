@@ -9,9 +9,9 @@ use std::collections::HashMap;
 use std::time::Duration;
 use std::time::Instant;
 
-use anyhow::bail;
 use anyhow::Context;
 use anyhow::Result;
+use anyhow::bail;
 use async_trait::async_trait;
 use bookmarks::BookmarkCategory;
 use bookmarks::BookmarkKey;

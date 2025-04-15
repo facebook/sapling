@@ -5,9 +5,9 @@
  * GNU General Public License version 2.
  */
 
-use anyhow::bail;
 use anyhow::Error;
 use anyhow::Result;
+use anyhow::bail;
 use blobstore::Loadable;
 use clap::Args;
 use commit_id::parse_commit_id;

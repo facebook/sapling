@@ -8,13 +8,13 @@
 use std::collections::HashSet;
 use std::io::Write;
 
+use clidispatch::ReqCtx;
 use clidispatch::abort;
 use clidispatch::abort_if;
-use clidispatch::ReqCtx;
-use cmdutil::define_flags;
 use cmdutil::ConfigSet;
 use cmdutil::Error;
 use cmdutil::Result;
+use cmdutil::define_flags;
 use revisionstore::LfsRemote;
 use types::FetchContext;
 use types::Sha256;

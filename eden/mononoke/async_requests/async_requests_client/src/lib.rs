@@ -7,8 +7,8 @@
 
 use std::sync::Arc;
 
-use anyhow::bail;
 use anyhow::Error;
+use anyhow::bail;
 use async_requests::AsyncMethodRequestQueue;
 use blobstore::Blobstore;
 use blobstore_factory::make_files_blobstore;

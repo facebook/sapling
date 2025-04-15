@@ -18,33 +18,33 @@ use blobstore::Storable;
 use bytes::Bytes;
 use bytes::BytesMut;
 use context::CoreContext;
-use flate2::write::ZlibEncoder;
 use flate2::Compression;
+use flate2::write::ZlibEncoder;
+use futures::StreamExt;
+use futures::TryStreamExt;
 use futures::future;
 use futures::stream;
 use futures::stream::BoxStream;
-use futures::StreamExt;
-use futures::TryStreamExt;
-use gix_hash::oid;
 use gix_hash::ObjectId;
+use gix_hash::oid;
 use gix_object::Kind;
 use manifest::Entry;
-use mononoke_types::hash::Blake2;
-use mononoke_types::hash::BLAKE2_HASH_LENGTH_BYTES;
-use mononoke_types::impl_typed_hash;
-use mononoke_types::path::MPath;
-use mononoke_types::sharded_map_v2::ShardedMapV2Node;
-use mononoke_types::sharded_map_v2::ShardedMapV2Value;
-use mononoke_types::typed_hash::IdContext;
 use mononoke_types::Blob;
 use mononoke_types::BlobstoreKey;
 use mononoke_types::BlobstoreValue;
 use mononoke_types::MononokeId;
 use mononoke_types::ThriftConvert;
+use mononoke_types::hash::BLAKE2_HASH_LENGTH_BYTES;
+use mononoke_types::hash::Blake2;
+use mononoke_types::impl_typed_hash;
+use mononoke_types::path::MPath;
+use mononoke_types::sharded_map_v2::ShardedMapV2Node;
+use mononoke_types::sharded_map_v2::ShardedMapV2Value;
+use mononoke_types::typed_hash::IdContext;
 
-use crate::thrift;
 use crate::GitLeaf;
 use crate::GitTreeId;
+use crate::thrift;
 
 /// A manifest that contains an entry for each Git object that was added or modified as part of
 /// a commit. The object needs to be different from all objects at the same path in all parents

@@ -11,9 +11,9 @@ use std::path::Path;
 use std::path::PathBuf;
 
 use anyhow::Result;
+use ignore::Match;
 use ignore::gitignore;
 use ignore::gitignore::Glob;
-use ignore::Match;
 use parking_lot::RwLock;
 use types::RepoPath;
 
@@ -342,8 +342,8 @@ impl Matcher for GitignoreMatcher {
 mod tests {
     use std::io::Write;
 
-    use fs_err::create_dir_all;
     use fs_err::File;
+    use fs_err::create_dir_all;
     use tempfile::tempdir;
 
     use super::*;

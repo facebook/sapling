@@ -18,8 +18,8 @@ use blobstore::OverwriteStatus;
 use blobstore::PutBehaviour;
 use context::CoreContext;
 use mononoke_types::BlobstoreBytes;
-use rand::thread_rng;
 use rand::Rng;
+use rand::thread_rng;
 
 mod errors;
 pub use crate::errors::ErrorKind;

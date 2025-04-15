@@ -10,8 +10,8 @@
 //! Based on the Mercurial wire protocol documentation. See
 //! <https://www.mercurial-scm.org/repo/hg/file/@/mercurial/help/internals/wireprotocol.txt>
 
-use anyhow::bail;
 use anyhow::Result;
+use anyhow::bail;
 
 use crate::errors::ErrorKind;
 
@@ -60,8 +60,8 @@ pub fn escape<T: AsRef<[u8]>>(res: T) -> Vec<u8> {
 #[cfg(test)]
 mod test {
     use bytes::Bytes;
-    use quickcheck::quickcheck;
     use quickcheck::TestResult;
+    use quickcheck::quickcheck;
 
     use super::*;
 

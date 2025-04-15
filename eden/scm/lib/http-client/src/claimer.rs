@@ -5,9 +5,9 @@
  * LICENSE file in the root directory of this source tree.
  */
 
+use std::sync::Arc;
 use std::sync::atomic::AtomicUsize;
 use std::sync::atomic::Ordering;
-use std::sync::Arc;
 use std::time::Duration;
 
 /// A glorified atomic counter to limit the number of in-flight requests.

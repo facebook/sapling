@@ -14,21 +14,22 @@ use anyhow::Result;
 use byteorder::BigEndian;
 use byteorder::ReadBytesExt;
 use byteorder::WriteBytesExt;
-use configmodel::convert::ByteCount;
 use configmodel::Config;
 use configmodel::ConfigExt;
+use configmodel::convert::ByteCount;
 use indexedlog::log::IndexOutput;
 use minibytes::Bytes;
 use sha1::Digest;
 use sha1::Sha1;
-use types::hgid::ReadHgIdExt;
-use types::hgid::WriteHgIdExt;
 use types::HgId;
 use types::Key;
 use types::NodeInfo;
 use types::RepoPath;
 use types::RepoPathBuf;
+use types::hgid::ReadHgIdExt;
+use types::hgid::WriteHgIdExt;
 
+use crate::ToKeys;
 use crate::historystore::HgIdHistoryStore;
 use crate::historystore::HgIdMutableHistoryStore;
 use crate::indexedlogutil::Store;
@@ -37,7 +38,6 @@ use crate::indexedlogutil::StoreType;
 use crate::localstore::LocalStore;
 use crate::sliceext::SliceExt;
 use crate::types::StoreKey;
-use crate::ToKeys;
 
 pub struct IndexedLogHgIdHistoryStore {
     log: Store,

@@ -23,8 +23,8 @@ use util::path::expand_path;
 
 pub mod x509;
 
-pub use x509::check_certs;
 pub use x509::X509Error;
+pub use x509::check_certs;
 
 #[derive(Debug, Error)]
 #[error("Certificate(s) or private key(s) not found for {url}: {missing:?}\n{msg}")]

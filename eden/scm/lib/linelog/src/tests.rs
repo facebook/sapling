@@ -6,9 +6,9 @@
  */
 
 use im::Vector as ImVec;
+use rand_chacha::ChaChaRng;
 use rand_chacha::rand_core::RngCore;
 use rand_chacha::rand_core::SeedableRng;
-use rand_chacha::ChaChaRng;
 
 use crate::LineLog;
 

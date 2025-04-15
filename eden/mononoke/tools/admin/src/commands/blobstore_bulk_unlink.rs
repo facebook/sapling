@@ -7,8 +7,8 @@
 
 use std::collections::HashMap;
 use std::fs;
-use std::fs::metadata;
 use std::fs::File;
+use std::fs::metadata;
 use std::io;
 use std::io::BufRead;
 use std::io::BufReader;
@@ -18,10 +18,10 @@ use std::str::FromStr;
 use std::sync::Arc;
 use std::time::Instant;
 
-use anyhow::bail;
 use anyhow::Context;
 use anyhow::Error;
 use anyhow::Result;
+use anyhow::bail;
 use blobstore::BlobstoreUnlinkOps;
 use clap::ArgAction;
 use clap::Parser;
@@ -30,8 +30,8 @@ use context::CoreContext;
 use futures::stream;
 use futures::stream::StreamExt;
 use futures::stream::TryStreamExt;
-use mononoke_app::args::RepoArg;
 use mononoke_app::MononokeApp;
+use mononoke_app::args::RepoArg;
 use mononoke_types::RepositoryId;
 use regex::Regex;
 

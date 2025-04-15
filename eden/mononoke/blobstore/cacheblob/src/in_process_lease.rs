@@ -5,16 +5,16 @@
  * GNU General Public License version 2.
  */
 
-use std::collections::hash_map::Entry;
 use std::collections::HashMap;
+use std::collections::hash_map::Entry;
 use std::sync::Arc;
 
 use anyhow::Result;
 use async_trait::async_trait;
 use context::CoreContext;
-use futures::channel::oneshot::channel;
 use futures::channel::oneshot::Receiver;
 use futures::channel::oneshot::Sender;
+use futures::channel::oneshot::channel;
 use futures::future::BoxFuture;
 use futures::future::FutureExt;
 use futures::future::Shared;

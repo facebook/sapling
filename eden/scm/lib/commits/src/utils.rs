@@ -8,9 +8,9 @@
 use std::collections::HashMap;
 use std::collections::HashSet;
 
-use dag::ops::DagAddHeads;
 use dag::Dag;
 use dag::Vertex;
+use dag::ops::DagAddHeads;
 
 use crate::GraphNode;
 use crate::HgCommit;

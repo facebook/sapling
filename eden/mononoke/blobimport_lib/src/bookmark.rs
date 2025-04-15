@@ -8,8 +8,8 @@
 use std::collections::HashMap;
 use std::sync::Arc;
 
-use anyhow::format_err;
 use anyhow::Error;
+use anyhow::format_err;
 use ascii::AsciiString;
 use blobrepo_hg::BlobRepoHg;
 use bonsai_hg_mapping::BonsaiHgMappingRef;
@@ -20,16 +20,16 @@ use cloned::cloned;
 use context::CoreContext;
 use futures::FutureExt;
 use futures::TryFutureExt;
-use futures_01_ext::try_boxfuture;
 use futures_01_ext::BoxFuture;
 use futures_01_ext::FutureExt as _;
+use futures_01_ext::try_boxfuture;
 use futures_old::prelude::*;
 use futures_old::stream;
 use mercurial_revlog::RevlogRepo;
 use mercurial_types::HgChangesetId;
 use mononoke_types::ChangesetId;
-use slog::info;
 use slog::Logger;
+use slog::info;
 
 use crate::BlobimportRepoLike;
 

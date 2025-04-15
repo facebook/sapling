@@ -18,15 +18,15 @@ use gotham_derive::StateData;
 use gotham_ext::middleware::MetadataState;
 use gotham_ext::middleware::Middleware;
 use gotham_ext::state_ext::StateExt;
-use hyper::body::Body;
 use hyper::Response;
 use hyper::StatusCode;
+use hyper::body::Body;
 use metadata::Metadata;
 use permission_checker::MononokeIdentitySetExt;
 use scuba_ext::MononokeScubaSampleBuilder;
+use slog::Logger;
 use slog::error;
 use slog::o;
-use slog::Logger;
 
 #[derive(Copy, Clone)]
 pub enum LfsMethod {

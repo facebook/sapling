@@ -10,8 +10,8 @@
 
 use std::borrow::Borrow;
 
-use anyhow::anyhow;
 use anyhow::Error;
+use anyhow::anyhow;
 use blobstore::Blobstore;
 use blobstore::Loadable;
 use blobstore::LoadableError;
@@ -24,11 +24,11 @@ use futures::future::TryFutureExt;
 use futures::stream;
 use futures::stream::Stream;
 use futures::stream::TryStreamExt;
-use mononoke_types::hash;
 use mononoke_types::BlobstoreKey;
 use mononoke_types::ContentId;
 use mononoke_types::ContentMetadataV2;
 use mononoke_types::FileContents;
+use mononoke_types::hash;
 
 mod alias;
 mod chunk;
@@ -46,20 +46,20 @@ mod rechunk;
 mod streamhash;
 
 pub use alias::add_aliases_to_multiplexer;
-pub use chunk::make_chunks;
 pub use chunk::Chunks;
+pub use chunk::make_chunks;
 pub use copy::copy;
 pub use expected_size::ExpectedSize;
-pub use fetch::stream_file_bytes;
 pub use fetch::Range;
+pub use fetch::stream_file_bytes;
 pub use fetch_key::Alias;
 pub use fetch_key::AliasBlob;
 pub use fetch_key::FetchKey;
-pub use incremental_hash::hash_bytes;
 pub use incremental_hash::Blake3IncrementalHasher;
 pub use incremental_hash::GitSha1IncrementalHasher;
 pub use incremental_hash::Sha1IncrementalHasher;
 pub use incremental_hash::Sha256IncrementalHasher;
+pub use incremental_hash::hash_bytes;
 pub use rechunk::force_rechunk;
 pub use rechunk::rechunk;
 

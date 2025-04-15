@@ -9,8 +9,8 @@
 //!
 //! Stores configuration and permission checkers for bookmarks
 
-use anyhow::bail;
 use anyhow::Result;
+use anyhow::bail;
 use bookmarks_types::BookmarkKey;
 use context::CoreContext;
 use metaconfig_types::BookmarkParams;

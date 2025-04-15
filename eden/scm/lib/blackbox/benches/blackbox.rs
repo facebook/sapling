@@ -5,17 +5,17 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-use blackbox::event::Event;
-use blackbox::event::NetworkOp;
 use blackbox::Blackbox;
 use blackbox::BlackboxOptions;
 use blackbox::IndexFilter;
+use blackbox::event::Event;
+use blackbox::event::NetworkOp;
 use minibench::bench;
 use minibench::measure::Both;
 use minibench::measure::Bytes;
+use minibench::measure::IO;
 use minibench::measure::Measure;
 use minibench::measure::WallClock;
-use minibench::measure::IO;
 use serde_json::json;
 use tempfile::tempdir;
 

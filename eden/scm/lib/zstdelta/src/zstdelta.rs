@@ -10,9 +10,15 @@ use std::ffi::CStr;
 use std::io;
 
 use libc::c_void;
+use zstd_sys::ZSTD_CHAINLOG_MIN;
+use zstd_sys::ZSTD_CONTENTSIZE_ERROR;
+use zstd_sys::ZSTD_CONTENTSIZE_UNKNOWN;
 use zstd_sys::ZSTD_DCtx_setMaxWindowSize;
-use zstd_sys::ZSTD_compressBound;
+use zstd_sys::ZSTD_HASHLOG_MIN;
+use zstd_sys::ZSTD_SEARCHLOG_MIN;
+use zstd_sys::ZSTD_WINDOWLOG_MIN;
 use zstd_sys::ZSTD_compress_advanced;
+use zstd_sys::ZSTD_compressBound;
 use zstd_sys::ZSTD_compressionParameters;
 use zstd_sys::ZSTD_createCCtx;
 use zstd_sys::ZSTD_createDCtx;
@@ -25,12 +31,6 @@ use zstd_sys::ZSTD_getErrorName;
 use zstd_sys::ZSTD_isError;
 use zstd_sys::ZSTD_parameters;
 use zstd_sys::ZSTD_strategy;
-use zstd_sys::ZSTD_CHAINLOG_MIN;
-use zstd_sys::ZSTD_CONTENTSIZE_ERROR;
-use zstd_sys::ZSTD_CONTENTSIZE_UNKNOWN;
-use zstd_sys::ZSTD_HASHLOG_MIN;
-use zstd_sys::ZSTD_SEARCHLOG_MIN;
-use zstd_sys::ZSTD_WINDOWLOG_MIN;
 
 // They are complex "#define"s that are not exposed by bindgen automatically
 const ZSTD_WINDOWLOG_MAX: u32 = 30;

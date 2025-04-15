@@ -10,8 +10,8 @@ use std::time::Duration;
 
 use anyhow::Result;
 use async_trait::async_trait;
-use slog::info;
 use slog::Logger;
+use slog::info;
 use tokio::time;
 
 const MAX_ALLOWED_REPLICATION_LAG_SECS: u64 = 5;

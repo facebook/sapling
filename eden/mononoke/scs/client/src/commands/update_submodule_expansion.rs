@@ -13,15 +13,15 @@ use anyhow::Result;
 use scs_client_raw::thrift;
 use serde::Serialize;
 
-use crate::args::commit_id::map_commit_ids;
-use crate::args::commit_id::resolve_commit_id;
+use crate::ScscApp;
 use crate::args::commit_id::CommitIdArgs;
 use crate::args::commit_id::SchemeArgs;
+use crate::args::commit_id::map_commit_ids;
+use crate::args::commit_id::resolve_commit_id;
 use crate::args::repo::RepoArgs;
 use crate::library::commit_id::render_commit_id;
 use crate::render::Render;
 use crate::util::convert_to_ts;
-use crate::ScscApp;
 
 /// Update a submodule expansion
 #[derive(clap::Parser)]

@@ -122,9 +122,9 @@ gen_event_listeners! {
 
 #[cfg(test)]
 mod tests {
+    use std::sync::Arc;
     use std::sync::atomic::AtomicUsize;
     use std::sync::atomic::Ordering::SeqCst;
-    use std::sync::Arc;
 
     gen_event_listeners! {
         /// Testing event listeners.

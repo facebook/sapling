@@ -12,9 +12,9 @@ use std::path::PathBuf;
 use anyhow::Result;
 use tempfile::tempdir;
 
+use crate::util::TOKEN_FILENAME;
 use crate::util::read_or_generate_access_token;
 use crate::util::read_subscriptions;
-use crate::util::TOKEN_FILENAME;
 
 #[test]
 fn test_read_access_token_from_file_should_return_token() {

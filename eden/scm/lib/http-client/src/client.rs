@@ -14,6 +14,7 @@ use std::vec::IntoIter;
 use futures::prelude::*;
 use url::Url;
 
+use crate::Easy2H;
 use crate::claimer::RequestClaimer;
 use crate::driver::MultiDriver;
 use crate::errors::Abort;
@@ -28,7 +29,6 @@ use crate::request::StreamRequest;
 use crate::response::AsyncResponse;
 use crate::response::Response;
 use crate::stats::Stats;
-use crate::Easy2H;
 
 pub type ResponseFuture =
     Pin<Box<dyn Future<Output = Result<AsyncResponse, HttpClientError>> + Send + 'static>>;
@@ -469,9 +469,9 @@ mod tests {
     use url::Url;
 
     use super::*;
-    use crate::receiver::testutil::TestReceiver;
     use crate::Method;
     use crate::RequestContext;
+    use crate::receiver::testutil::TestReceiver;
 
     #[test]
     fn test_client() -> Result<()> {

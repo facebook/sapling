@@ -10,20 +10,20 @@ use std::fmt;
 use std::hash::Hash;
 use std::sync::Arc;
 
-use anyhow::anyhow;
 use anyhow::Context;
 use anyhow::Result;
+use anyhow::anyhow;
 use blobstore::StoreLoadable;
 use cloned::cloned;
 use context::CoreContext;
-use futures::stream::TryStreamExt;
 use futures::Future;
 use futures::FutureExt;
+use futures::stream::TryStreamExt;
 use itertools::Either;
-use mononoke_types::path::MPath;
 use mononoke_types::ChangesetId;
 use mononoke_types::MPathElement;
 use mononoke_types::NonRootMPath;
+use mononoke_types::path::MPath;
 
 use crate::Entry;
 use crate::LeafInfo;

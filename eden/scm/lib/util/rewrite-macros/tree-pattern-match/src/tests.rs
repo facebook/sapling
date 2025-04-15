@@ -5,13 +5,13 @@
  * LICENSE file in the root directory of this source tree.
  */
 
+use crate::Match;
+use crate::Placeholder;
 use crate::find_all;
 use crate::matches_full;
 use crate::matches_start;
 use crate::replace_all;
 use crate::tree_match::PlaceholderExt;
-use crate::Match;
-use crate::Placeholder;
 
 type Item = crate::Item<String>;
 

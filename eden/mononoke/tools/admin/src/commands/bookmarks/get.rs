@@ -13,8 +13,8 @@ use bookmarks::BookmarkKey;
 use bookmarks::BookmarkName;
 use bookmarks::BookmarksRef;
 use clap::Args;
-use commit_id::print_commit_id;
 use commit_id::IdentityScheme;
+use commit_id::print_commit_id;
 use context::CoreContext;
 
 use super::Repo;

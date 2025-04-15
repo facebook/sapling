@@ -20,8 +20,8 @@ use std::time::SystemTime;
 use clientinfo::CLIENT_INFO_HEADER;
 use curl::easy::HttpVersion;
 use curl::easy::List;
-use curl_sys::CURLoption;
 use curl_sys::CURLOPTTYPE_LONG;
+use curl_sys::CURLoption;
 use http::header;
 use lru_cache::LruCache;
 use maplit::hashmap;
@@ -34,6 +34,7 @@ use parking_lot::RwLock;
 use serde::Serialize;
 use url::Url;
 
+use crate::Easy2H;
 use crate::claimer::RequestClaim;
 use crate::claimer::RequestClaimer;
 use crate::errors::HttpClientError;
@@ -46,7 +47,6 @@ use crate::receiver::ChannelReceiver;
 use crate::receiver::Receiver;
 use crate::response::AsyncResponse;
 use crate::response::Response;
-use crate::Easy2H;
 
 pub const FETCH_CAUSE_HEADER: &str = "X-Fetch-Cause";
 
@@ -947,15 +947,15 @@ fn pem_to_pkcs12(
 
 #[cfg(test)]
 mod tests {
-    use std::sync::atomic::Ordering::Acquire;
     use std::sync::Arc;
+    use std::sync::atomic::Ordering::Acquire;
 
     use anyhow::Result;
     use futures::TryStreamExt;
+    use http::StatusCode;
     use http::header;
     use http::header::HeaderName;
     use http::header::HeaderValue;
-    use http::StatusCode;
     use mockito::Matcher;
     use serde_json::json;
 

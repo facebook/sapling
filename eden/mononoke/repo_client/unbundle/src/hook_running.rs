@@ -20,11 +20,11 @@ use hooks::HookRejection;
 use hooks::PushAuthoredBy;
 use mercurial_derivation::DeriveHgChangeset;
 
+use crate::BundleResolverError;
+use crate::Repo;
 use crate::resolver::HgHookRejection;
 use crate::resolver::PostResolveAction;
 use crate::resolver::PostResolvePushRebase;
-use crate::BundleResolverError;
-use crate::Repo;
 
 /// A function to remap hook rejections from Bonsai to Hg.
 pub(crate) trait HookRejectionRemapper = (Fn(HookRejection) -> BoxFuture<'static, Result<HgHookRejection, Error>>)

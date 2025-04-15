@@ -10,9 +10,9 @@ mod tests;
 
 use std::collections::HashMap;
 
-use anyhow::anyhow;
 use anyhow::Context;
 use anyhow::Result;
+use anyhow::anyhow;
 use blobstore::Loadable;
 use bonsai_git_mapping::BonsaiGitMapping;
 use bonsai_tag_mapping::BonsaiTagMapping;
@@ -33,7 +33,6 @@ use manifest::Diff;
 use manifest::Entry;
 use manifest::ManifestOps;
 use metaconfig_types::RepoConfig;
-use mononoke_types::hash::GitSha1;
 use mononoke_types::ChangesetId;
 use mononoke_types::ContentId;
 use mononoke_types::ContentMetadataV2;
@@ -41,6 +40,7 @@ use mononoke_types::FsnodeId;
 use mononoke_types::MPath;
 use mononoke_types::ManifestUnodeId;
 use mononoke_types::NonRootMPath;
+use mononoke_types::hash::GitSha1;
 use repo_blobstore::RepoBlobstore;
 use repo_cross_repo::RepoCrossRepo;
 use repo_derived_data::RepoDerivedData;

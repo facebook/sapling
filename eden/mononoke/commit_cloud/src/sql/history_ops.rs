@@ -8,9 +8,9 @@
 use ::sql_ext::mononoke_queries;
 use async_trait::async_trait;
 use clientinfo::ClientRequestInfo;
-use commit_cloud_types::references::WorkspaceRemoteBookmark;
 use commit_cloud_types::WorkspaceHead;
 use commit_cloud_types::WorkspaceLocalBookmark;
+use commit_cloud_types::references::WorkspaceRemoteBookmark;
 use mononoke_types::Timestamp;
 use sql::Transaction;
 

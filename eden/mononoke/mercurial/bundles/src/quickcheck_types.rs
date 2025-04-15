@@ -14,16 +14,16 @@ use std::iter;
 use anyhow::Result;
 use bytes::Bytes;
 #[cfg(test)]
-use futures::stream;
-#[cfg(test)]
 use futures::Stream;
+#[cfg(test)]
+use futures::stream;
 use mercurial_types::Delta;
 use mercurial_types::HgNodeHash;
 use mercurial_types::NonRootMPath;
 use mercurial_types::RevFlags;
-use quickcheck::empty_shrinker;
 use quickcheck::Arbitrary;
 use quickcheck::Gen;
+use quickcheck::empty_shrinker;
 
 use crate::changegroup;
 

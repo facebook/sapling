@@ -24,17 +24,17 @@ use futures::stream;
 use futures::stream::StreamExt;
 use futures::stream::TryStreamExt;
 
-use crate::id::Vertex;
-use crate::iddag::FirstAncestorConstraint;
-use crate::iddag::IdDag;
-use crate::iddagstore::IdDagStore;
-use crate::ops::IdConvert;
 use crate::Group;
 use crate::Id;
 #[cfg(any(test, feature = "indexedlog-backend"))]
 use crate::IdMap;
 use crate::IdSet;
 use crate::Result;
+use crate::id::Vertex;
+use crate::iddag::FirstAncestorConstraint;
+use crate::iddag::IdDag;
+use crate::iddagstore::IdDagStore;
+use crate::ops::IdConvert;
 
 // Request and Response structures -------------------------------------------
 

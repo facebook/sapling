@@ -7,9 +7,9 @@
 
 use std::collections::HashMap;
 
-use anyhow::anyhow;
 use anyhow::Context;
 use anyhow::Result;
+use anyhow::anyhow;
 use bookmarks_types::BookmarkKey;
 use bytes::Bytes;
 use context::CoreContext;

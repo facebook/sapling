@@ -10,8 +10,8 @@ use clap::Args;
 use commit_graph::CommitGraphRef;
 use commit_id::parse_commit_id;
 use context::CoreContext;
-use futures::try_join;
 use futures::StreamExt;
+use futures::try_join;
 
 use super::Repo;
 

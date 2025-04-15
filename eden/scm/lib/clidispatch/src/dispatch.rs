@@ -19,13 +19,14 @@ use cliparser::parser::ParseOutput;
 use cliparser::parser::StructFlags;
 use cliparser::parser::Value;
 use configloader::config::ConfigSet;
-use configloader::hg::set_pinned;
 use configloader::hg::RepoInfo;
+use configloader::hg::set_pinned;
 use configmodel::Config;
 use configmodel::ConfigExt;
 use hgtime::HgTime;
 use repo::repo::Repo;
 
+use crate::OptionalRepo;
 use crate::abort_if;
 use crate::command::CommandDefinition;
 use crate::command::CommandFunc;
@@ -35,7 +36,6 @@ use crate::errors::UnknownCommand;
 use crate::global_flags::HgGlobalOpts;
 use crate::io::IO;
 use crate::util::pinned_configs;
-use crate::OptionalRepo;
 
 type Result<T, E = Error> = std::result::Result<T, E>;
 

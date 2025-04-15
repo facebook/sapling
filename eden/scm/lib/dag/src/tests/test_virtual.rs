@@ -11,18 +11,18 @@ use dag_types::Vertex;
 use nonblocking::non_blocking as nb;
 use nonblocking::non_blocking_result as r;
 
-use crate::ops::DagAddHeads;
-use crate::ops::DagPersistent;
-use crate::ops::IdConvert;
-use crate::ops::IdMapSnapshot;
-use crate::tests::dbg;
-use crate::tests::DrawDag;
-use crate::tests::TestDag;
 use crate::DagAlgorithm;
 use crate::Result;
 use crate::Set;
 use crate::VertexListWithOptions;
 use crate::VertexOptions;
+use crate::ops::DagAddHeads;
+use crate::ops::DagPersistent;
+use crate::ops::IdConvert;
+use crate::ops::IdMapSnapshot;
+use crate::tests::DrawDag;
+use crate::tests::TestDag;
+use crate::tests::dbg;
 
 impl TestDag {
     fn insert_virtual(&mut self, ascii: &str) {

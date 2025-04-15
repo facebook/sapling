@@ -22,8 +22,8 @@ use mononoke_types::ChangesetId;
 use mononoke_types::DateTime;
 use mononoke_types::RepositoryId;
 use mononoke_types::Timestamp;
-use sql_ext::mononoke_queries;
 use sql_ext::SqlConnections;
+use sql_ext::mononoke_queries;
 use sql_query_config::SqlQueryConfig;
 
 use crate::bubble::Bubble;

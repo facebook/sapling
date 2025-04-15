@@ -7,11 +7,11 @@
 
 use std::ops::Add;
 
-use mysql_client::query;
 use mysql_client::DbLocator;
 use mysql_client::InstanceRequirement;
 use mysql_client::MysqlCppClient;
 use mysql_client::Query;
+use mysql_client::query;
 use sapling_client::commit::get_commit_timestamp;
 use sapling_client::commit::is_commit_in_repo;
 

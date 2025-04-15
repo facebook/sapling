@@ -10,5 +10,5 @@ mod mapping;
 #[cfg(test)]
 mod tests;
 
-pub use mapping::format_key;
 pub use mapping::RootTestManifestDirectory;
+pub use mapping::format_key;

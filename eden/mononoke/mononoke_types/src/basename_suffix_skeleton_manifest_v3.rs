@@ -15,6 +15,10 @@ use futures::stream::BoxStream;
 use futures::stream::StreamExt;
 use futures::stream::TryStreamExt;
 
+use crate::Blob;
+use crate::BlobstoreValue;
+use crate::MPathElement;
+use crate::ThriftConvert;
 use crate::blob::BssmV3DirectoryBlob;
 use crate::sharded_map_v2::Rollup;
 use crate::sharded_map_v2::ShardedMapV2Node;
@@ -25,10 +29,6 @@ use crate::typed_hash::BssmV3DirectoryId;
 use crate::typed_hash::IdContext;
 use crate::typed_hash::ShardedMapV2NodeBssmV3Context;
 pub use crate::typed_hash::ShardedMapV2NodeBssmV3Id;
-use crate::Blob;
-use crate::BlobstoreValue;
-use crate::MPathElement;
-use crate::ThriftConvert;
 
 // See docs/basename_suffix_skeleton_manifest.md and serialization/bssm.thrift
 // for more documentation on this.

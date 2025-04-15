@@ -8,17 +8,17 @@
 use std::path::Path;
 use std::process::Command;
 
-use anyhow::anyhow;
 use anyhow::Context;
 use anyhow::Result;
+use anyhow::anyhow;
 use clap::Parser;
 use edenfs_commands::is_command_enabled_in_rust;
+#[cfg(fbcode_build)]
+use edenfs_telemetry::EDENFSCTL_CLI_USAGE;
 #[cfg(fbcode_build)]
 use edenfs_telemetry::cli_usage::CliUsageSample;
 #[cfg(fbcode_build)]
 use edenfs_telemetry::send;
-#[cfg(fbcode_build)]
-use edenfs_telemetry::EDENFSCTL_CLI_USAGE;
 #[cfg(windows)]
 use edenfs_utils::execute_par;
 #[cfg(windows)]

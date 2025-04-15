@@ -17,8 +17,8 @@ use futures::future::TryFutureExt;
 use futures::stream::Stream;
 use futures::stream::TryFold;
 use futures::stream::TryStreamExt;
-use http::header::HeaderMap;
 use http::header::CONTENT_LENGTH;
+use http::header::HeaderMap;
 
 type BodyFuture<S, E> = MapOk<
     TryFold<

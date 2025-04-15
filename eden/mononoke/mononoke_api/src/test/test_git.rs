@@ -11,17 +11,17 @@ use std::sync::Arc;
 use anyhow::Result;
 use blobstore::Blobstore;
 use fbinit::FacebookInit;
-use filestore::hash_bytes;
 use filestore::Sha1IncrementalHasher;
+use filestore::hash_bytes;
 use git_types::GitError;
 use gix_hash::ObjectId;
 use gix_object::Tag;
 use gix_object::WriteTo;
 use mononoke_macros::mononoke;
 
-use crate::repo::Repo;
 use crate::CoreContext;
 use crate::RepoContext;
+use crate::repo::Repo;
 
 async fn init_repo(ctx: &CoreContext) -> Result<RepoContext<Repo>> {
     let repo: Repo = test_repo_factory::build_empty(ctx.fb).await?;

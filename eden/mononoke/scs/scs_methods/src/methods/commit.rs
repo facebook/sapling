@@ -53,9 +53,9 @@ use source_control as thrift;
 
 use crate::commit_id::map_commit_identities;
 use crate::commit_id::map_commit_identity;
+use crate::from_request::FromRequest;
 use crate::from_request::check_range_and_convert;
 use crate::from_request::validate_timestamp;
-use crate::from_request::FromRequest;
 use crate::history::collect_history;
 use crate::into_response::AsyncIntoResponse;
 use crate::into_response::AsyncIntoResponseWith;

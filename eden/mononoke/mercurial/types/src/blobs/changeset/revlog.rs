@@ -11,10 +11,10 @@ use std::io::Write;
 use std::str;
 use std::str::FromStr;
 
-use anyhow::bail;
 use anyhow::Context;
 use anyhow::Error;
 use anyhow::Result;
+use anyhow::bail;
 use blobstore::Blobstore;
 use bytes::Bytes;
 use context::CoreContext;
@@ -27,8 +27,8 @@ use crate::HgChangesetId;
 use crate::HgManifestId;
 use crate::HgNodeHash;
 use crate::HgParents;
-use crate::NonRootMPath;
 use crate::NULL_HASH;
+use crate::NonRootMPath;
 
 // The `user` and `comments` fields are expected to be utf8 encoded, but
 // some older commits might be corrupted. We handle them as pure binary here

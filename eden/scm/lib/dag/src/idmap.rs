@@ -11,6 +11,9 @@
 
 use std::borrow::Cow;
 
+use crate::Error;
+use crate::IdSet;
+use crate::Result;
 use crate::errors::bug;
 use crate::id::Group;
 use crate::id::Id;
@@ -19,9 +22,6 @@ use crate::ops::IdConvert;
 use crate::ops::Parents;
 use crate::segment::PreparedFlatSegments;
 use crate::types_ext::PreparedFlatSegmentsExt;
-use crate::Error;
-use crate::IdSet;
-use crate::Result;
 
 #[cfg(any(test, feature = "indexedlog-backend"))]
 mod indexedlog_idmap;

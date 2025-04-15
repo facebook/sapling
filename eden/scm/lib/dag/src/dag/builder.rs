@@ -7,10 +7,10 @@
 
 use std::sync::Arc;
 
-use crate::dag::AbstractDag;
-use crate::lifecycle::LifecycleId;
 use crate::IdDag;
 use crate::IdDagStore;
+use crate::dag::AbstractDag;
+use crate::lifecycle::LifecycleId;
 
 /// State to build a new `AbstractDag`.
 pub struct DagBuilder<M, D, P, S> {
@@ -113,10 +113,10 @@ mod tests {
     use std::collections::HashMap;
 
     use super::*;
+    use crate::VertexListWithOptions;
     use crate::iddag::IdDag;
     use crate::idmap::MemIdMap;
     use crate::ops::DagAddHeads;
-    use crate::VertexListWithOptions;
 
     #[tokio::test]
     async fn test_builder_absent_path_state_can_use_add_heads() {

@@ -15,13 +15,13 @@ use termwiz::cell::AttributeChange;
 use termwiz::cell::Intensity;
 use termwiz::color::AnsiColor;
 use termwiz::color::ColorAttribute;
-use termwiz::surface::change::ChangeSequence;
 use termwiz::surface::Change;
+use termwiz::surface::change::ChangeSequence;
 use unicode_segmentation::UnicodeSegmentation;
 
+use crate::RenderingConfig;
 use crate::maybe_pad;
 use crate::unit::human_duration;
-use crate::RenderingConfig;
 
 const SPINNER: &[&str] = &["⠉", "⠙", "⠹", "⠸", "⠼", "⠴", "⠤", "⠦", "⠧", "⠇", "⠏", "⠋"];
 const SPINNER_INTERVAL_MS: u128 = 100;
@@ -338,8 +338,8 @@ mod test {
 
     use progress_model::ProgressBarBuilder;
     use termwiz::caps::Capabilities;
-    use termwiz::render::terminfo::TerminfoRenderer;
     use termwiz::render::RenderTty;
+    use termwiz::render::terminfo::TerminfoRenderer;
 
     use super::*;
 

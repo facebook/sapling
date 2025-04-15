@@ -5,10 +5,10 @@
  * GNU General Public License version 2.
  */
 
-use std::sync::atomic::AtomicBool;
-use std::sync::atomic::Ordering;
 use std::sync::Arc;
 use std::sync::OnceLock;
+use std::sync::atomic::AtomicBool;
+use std::sync::atomic::Ordering;
 
 use anyhow::Context;
 use anyhow::Error;
@@ -18,12 +18,13 @@ use executor_lib::RepoShardedProcess;
 use executor_lib::RepoShardedProcessExecutor;
 use executor_lib::ShardedProcessExecutor;
 use fbinit::FacebookInit;
-use mononoke_app::args::MultiRepoArgs;
 use mononoke_app::MononokeApp;
+use mononoke_app::args::MultiRepoArgs;
 use sharding_ext::RepoShard;
-use slog::info;
 use slog::Logger;
+use slog::info;
 
+use crate::WalkerArgs;
 use crate::args::OutputFormat;
 use crate::args::SamplingArgs;
 use crate::args::ScrubOutputNodeArgs;
@@ -33,11 +34,10 @@ use crate::commands::JobParams;
 use crate::commands::SCRUB;
 use crate::detail::graph::Node;
 use crate::detail::sampling::WalkSampleMapping;
-use crate::detail::scrub::scrub_objects;
 use crate::detail::scrub::ScrubCommand;
 use crate::detail::scrub::ScrubSample;
+use crate::detail::scrub::scrub_objects;
 use crate::setup::setup_common;
-use crate::WalkerArgs;
 
 const SM_SERVICE_SCOPE: &str = "global";
 const SM_CLEANUP_TIMEOUT_SECS: u64 = 120;

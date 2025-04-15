@@ -14,10 +14,10 @@ use std::process::Output;
 use std::str;
 use std::sync::OnceLock;
 
-use anyhow::anyhow;
-use anyhow::bail;
 use anyhow::Context;
 use anyhow::Result;
+use anyhow::anyhow;
+use anyhow::bail;
 use serde::de::DeserializeOwned;
 use serde::*;
 use sha2::Digest;

@@ -14,9 +14,9 @@ use std::ops::Deref;
 use std::os::windows::ffi::OsStrExt;
 use std::os::windows::ffi::OsStringExt;
 
+use anyhow::Result;
 use anyhow::anyhow;
 use anyhow::bail;
-use anyhow::Result;
 use winapi::um::errhandlingapi::GetLastError;
 use winapi::um::shellapi::CommandLineToArgvW;
 use winapi::um::winbase::LocalFree;

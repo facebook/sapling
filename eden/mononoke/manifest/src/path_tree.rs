@@ -5,10 +5,10 @@
  * GNU General Public License version 2.
  */
 
-use mononoke_types::path::MPath;
-use mononoke_types::prefix_tree::PrefixTree;
 use mononoke_types::MPathElement;
 use mononoke_types::NonRootMPath;
+use mononoke_types::path::MPath;
+use mononoke_types::prefix_tree::PrefixTree;
 
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct PathTree<V> {

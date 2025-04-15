@@ -20,8 +20,8 @@ use mononoke_types::RepositoryId;
 use sql::Connection;
 use sql_construct::SqlShardableConstructFromMetadataDatabaseConfig;
 use sql_construct::SqlShardedConstruct;
-use sql_ext::mononoke_queries;
 use sql_ext::SqlShardedConnections;
+use sql_ext::mononoke_queries;
 use twox_hash::XxHash32;
 use vec1::Vec1;
 

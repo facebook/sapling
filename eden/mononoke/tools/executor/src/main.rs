@@ -5,13 +5,13 @@
  * GNU General Public License version 2.
  */
 
-use std::sync::atomic::AtomicBool;
-use std::sync::atomic::Ordering;
 use std::sync::Arc;
 use std::sync::OnceLock;
+use std::sync::atomic::AtomicBool;
+use std::sync::atomic::Ordering;
 
-use anyhow::bail;
 use anyhow::Result;
+use anyhow::bail;
 use async_trait::async_trait;
 use clap::Parser;
 use executor_lib::RepoShardedProcess;
@@ -21,8 +21,8 @@ use fbinit::FacebookInit;
 use mononoke_app::MononokeApp;
 use mononoke_app::MononokeAppBuilder;
 use sharding_ext::RepoShard;
-use slog::info;
 use slog::Logger;
+use slog::info;
 use tokio::time;
 
 /// Test application for validating integration behavior with ShardManager.

@@ -9,8 +9,8 @@ use std::collections::HashSet;
 use std::str::FromStr;
 use std::string::ToString;
 
-use anyhow::anyhow;
 use anyhow::Result;
+use anyhow::anyhow;
 use futures::stream;
 use futures::stream::StreamExt;
 use futures::stream::TryStreamExt;
@@ -22,8 +22,8 @@ use mononoke_types::Timestamp;
 use sql::Connection;
 use sql_construct::SqlConstruct;
 use sql_construct::SqlConstructFromMetadataDatabaseConfig;
-use sql_ext::mononoke_queries;
 use sql_ext::SqlConnections;
+use sql_ext::mononoke_queries;
 use strum::Display;
 use strum::EnumString;
 

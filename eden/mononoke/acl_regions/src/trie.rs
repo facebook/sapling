@@ -9,8 +9,8 @@ use std::collections::HashMap;
 use std::sync::Arc;
 
 use metaconfig_types::AclRegionRule;
-use mononoke_types::path::MPath;
 use mononoke_types::MPathElement;
+use mononoke_types::path::MPath;
 
 #[derive(Debug, Default, Clone, Copy, Eq, PartialEq, Hash)]
 pub struct RegionIndex(pub usize);

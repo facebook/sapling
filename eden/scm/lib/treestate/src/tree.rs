@@ -1106,8 +1106,8 @@ fn trim_separator(path: &[u8]) -> &[u8] {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::store::tests::MapStore;
     use crate::store::NullStore;
+    use crate::store::tests::MapStore;
 
     // Test files in order.  Note lexicographic ordering of file9 and file10.
     static TEST_FILES: [(&[u8], u32, i32, i32); 16] = [

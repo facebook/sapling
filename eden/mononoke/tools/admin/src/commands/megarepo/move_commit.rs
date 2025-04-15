@@ -17,16 +17,16 @@ use megarepolib::perform_move;
 use megarepolib::perform_stack_move;
 use metaconfig_types::CommitSyncConfigVersion;
 use mononoke_api::Repo;
+use mononoke_app::MononokeApp;
 use mononoke_app::args::ChangesetArgs;
 use mononoke_app::args::RepoArgs;
 use mononoke_app::args::SourceRepoArgs;
-use mononoke_app::MononokeApp;
 use movers::get_small_to_large_mover;
 use repo_identity::RepoIdentityRef;
 use slog::info;
 
-use super::common::get_live_commit_sync_config;
 use super::common::ResultingChangesetArgs;
+use super::common::get_live_commit_sync_config;
 
 /// Create a move commit, using a provided spec
 #[derive(Debug, clap::Args)]

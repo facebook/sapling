@@ -7,11 +7,11 @@
 
 use std::pin::Pin;
 
+use futures::Future;
 use futures::stream::FusedStream;
 use futures::stream::Stream;
 use futures::task::Context;
 use futures::task::Poll;
-use futures::Future;
 use pin_project::pin_project;
 
 #[pin_project]
@@ -99,8 +99,8 @@ mod test {
     use std::sync::atomic::AtomicUsize;
     use std::sync::atomic::Ordering::Relaxed;
 
-    use futures::stream;
     use futures::StreamExt;
+    use futures::stream;
 
     use super::*;
 

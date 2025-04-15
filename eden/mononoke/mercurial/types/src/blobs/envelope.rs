@@ -8,12 +8,12 @@
 use anyhow::Result;
 
 use super::file::File;
-use crate::blobs::HgBlobManifest;
 use crate::HgFileEnvelope;
 use crate::HgFileNodeId;
 use crate::HgManifestEnvelope;
 use crate::HgParents;
 use crate::NonRootMPath;
+use crate::blobs::HgBlobManifest;
 
 pub trait HgBlobEnvelope: Send + Sync + 'static {
     fn get_parents(&self) -> HgParents;

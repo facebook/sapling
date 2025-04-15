@@ -9,9 +9,9 @@
 
 use std::path::PathBuf;
 
+use anyhow::Result;
 #[cfg(windows)]
 use anyhow::anyhow;
-use anyhow::Result;
 use async_trait::async_trait;
 use clap::Parser;
 use edenfs_client::config::ConfigSourceType;

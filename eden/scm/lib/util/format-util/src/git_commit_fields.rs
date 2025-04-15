@@ -8,25 +8,25 @@
 use std::collections::BTreeMap;
 use std::fmt::Write as _;
 
-use anyhow::bail;
-use anyhow::ensure;
 use anyhow::Context as _;
 use anyhow::Result;
+use anyhow::bail;
+use anyhow::ensure;
 use minibytes::Text;
 use once_cell::sync::OnceCell;
 use serde::Deserialize;
-use types::hgid::GIT_EMPTY_TREE_ID;
-use types::hgid::NULL_ID;
 use types::Id20;
 use types::SerializationFormat;
+use types::hgid::GIT_EMPTY_TREE_ID;
+use types::hgid::NULL_ID;
 
-use crate::git_commit::normalize_git_tree_id;
-use crate::normalize_email_user;
-use crate::utils::with_indented_commit_text;
-use crate::utils::write_multi_line;
-use crate::utils::HgTimeExt;
 use crate::CommitFields;
 use crate::HgTime;
+use crate::git_commit::normalize_git_tree_id;
+use crate::normalize_email_user;
+use crate::utils::HgTimeExt;
+use crate::utils::with_indented_commit_text;
+use crate::utils::write_multi_line;
 
 /// Holds the Git commit text. Fields can be lazily fields.
 pub struct GitCommitLazyFields {

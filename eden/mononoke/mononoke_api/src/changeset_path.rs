@@ -8,8 +8,8 @@
 use std::collections::HashMap;
 use std::fmt;
 
-use anyhow::anyhow;
 use anyhow::Error;
+use anyhow::anyhow;
 use async_trait::async_trait;
 use blobstore::Blobstore;
 use blobstore::Loadable;
@@ -22,8 +22,8 @@ use context::CoreContext;
 use deleted_manifest::DeletedManifestOps;
 use deleted_manifest::RootDeletedManifestIdCommon;
 use filestore::FetchKey;
-use futures::future::try_join_all;
 use futures::future::TryFutureExt;
+use futures::future::try_join_all;
 use futures::stream;
 use futures::stream::BoxStream;
 use futures::stream::StreamExt;
@@ -31,19 +31,15 @@ use futures::stream::TryStreamExt;
 use futures_ext::stream::FbStreamExt;
 use futures_lazy_shared::LazyShared;
 use futures_watchdog::WatchdogExt;
-use history_traversal::list_file_history;
 use history_traversal::CsAndPath;
 use history_traversal::FastlogError;
 use history_traversal::FollowMutableRenames;
 use history_traversal::HistoryAcrossDeletions;
 use history_traversal::TraversalOrder;
 use history_traversal::Visitor;
+use history_traversal::list_file_history;
 use manifest::Entry;
 use manifest::ManifestOps;
-use mononoke_types::blame_v2::BlameV2;
-use mononoke_types::deleted_manifest_common::DeletedManifestCommon;
-use mononoke_types::fsnode::FsnodeFile;
-use mononoke_types::path::MPath;
 use mononoke_types::ChangesetId;
 use mononoke_types::ContentMetadataV2;
 /// Metadata about a file.
@@ -52,14 +48,18 @@ use mononoke_types::FileType;
 use mononoke_types::FileUnodeId;
 use mononoke_types::FsnodeId;
 use mononoke_types::ManifestUnodeId;
+use mononoke_types::blame_v2::BlameV2;
+use mononoke_types::deleted_manifest_common::DeletedManifestCommon;
+use mononoke_types::fsnode::FsnodeFile;
+use mononoke_types::path::MPath;
 use repo_blobstore::RepoBlobstoreRef;
 
+use crate::MononokeRepo;
 use crate::changeset::ChangesetContext;
 use crate::errors::MononokeError;
 use crate::file::FileContext;
 use crate::repo::RepoContext;
 use crate::tree::TreeContext;
-use crate::MononokeRepo;
 
 pub struct HistoryEntry {
     pub name: String,

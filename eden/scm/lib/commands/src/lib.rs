@@ -8,8 +8,8 @@
 pub mod commands;
 mod run;
 
-pub use cmdpy::prepare_builtin_modules;
 pub use cmdpy::HgPython;
+pub use cmdpy::prepare_builtin_modules;
 pub use run::run_command;
 
 /// Register Rust functions required by `cmdpy`. Can be called multiple times.

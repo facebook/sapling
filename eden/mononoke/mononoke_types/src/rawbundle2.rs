@@ -8,14 +8,14 @@
 use std::fmt;
 use std::fmt::Debug;
 
-use anyhow::bail;
 use anyhow::Context;
 use anyhow::Result;
+use anyhow::bail;
 use bytes::Bytes;
 use fbthrift::compact_protocol;
-use quickcheck::single_shrinker;
 use quickcheck::Arbitrary;
 use quickcheck::Gen;
+use quickcheck::single_shrinker;
 
 use crate::blob::Blob;
 use crate::blob::BlobstoreValue;

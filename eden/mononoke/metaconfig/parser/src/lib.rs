@@ -16,10 +16,10 @@ mod raw;
 
 pub use convert::Convert;
 
+pub use crate::config::RepoConfigs;
+pub use crate::config::StorageConfigs;
 pub use crate::config::load_common_config;
 pub use crate::config::load_empty_repo_configs;
 pub use crate::config::load_repo_configs;
 pub use crate::config::load_storage_configs;
-pub use crate::config::RepoConfigs;
-pub use crate::config::StorageConfigs;
 pub use crate::errors::ConfigurationError;

@@ -6,12 +6,12 @@
  */
 
 use anyhow::Result;
-use regex_automata::dfa::dense;
-use regex_automata::dfa::Automaton;
-use regex_automata::dfa::StartKind;
-use regex_automata::util::syntax;
 use regex_automata::Anchored;
 use regex_automata::Input;
+use regex_automata::dfa::Automaton;
+use regex_automata::dfa::StartKind;
+use regex_automata::dfa::dense;
+use regex_automata::util::syntax;
 use types::RepoPath;
 
 use crate::DirectoryMatch;

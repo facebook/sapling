@@ -7,9 +7,9 @@
 
 use std::collections::HashMap;
 
-use anyhow::bail;
 use anyhow::Context;
 use anyhow::Result;
+use anyhow::bail;
 use cloned::cloned;
 use crossbeam::channel;
 use edenapi::api::SaplingRemoteApi;
@@ -17,9 +17,9 @@ use edenapi_types::AnyFileContentId;
 use edenapi_types::AnyId;
 use edenapi_types::FileType;
 use edenapi_types::UploadToken;
-use futures::stream;
 use futures::StreamExt;
 use futures::TryStreamExt;
+use futures::stream;
 use minibytes::Bytes;
 use types::RepoPathBuf;
 use vfs::AsyncVfsWriter;

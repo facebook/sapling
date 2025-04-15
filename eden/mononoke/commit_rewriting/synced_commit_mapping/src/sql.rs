@@ -8,8 +8,8 @@
 use std::collections::HashMap;
 use std::sync::Arc;
 
-use anyhow::anyhow;
 use anyhow::Error;
+use anyhow::anyhow;
 use async_trait::async_trait;
 use context::CoreContext;
 use context::PerfCounterType;
@@ -26,8 +26,8 @@ use sql::Connection;
 use sql::Transaction;
 use sql_construct::SqlConstruct;
 use sql_construct::SqlConstructFromMetadataDatabaseConfig;
-use sql_ext::mononoke_queries;
 use sql_ext::SqlConnections;
+use sql_ext::mononoke_queries;
 use stats::prelude::*;
 
 use crate::EquivalentWorkingCopyEntry;

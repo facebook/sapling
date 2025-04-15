@@ -13,18 +13,18 @@ use std::ops::RangeFrom;
 use std::ops::RangeFull;
 use std::str::FromStr;
 
-use anyhow::format_err;
 use anyhow::Error;
+use anyhow::format_err;
 use ascii::AsciiChar;
 use ascii::AsciiString;
 use quickcheck::Arbitrary;
 use quickcheck::Gen;
 use quickcheck_arbitrary_derive::Arbitrary;
 use sql::mysql;
-use sql::mysql_async::prelude::ConvIr;
-use sql::mysql_async::prelude::FromValue;
 use sql::mysql_async::FromValueError;
 use sql::mysql_async::Value;
+use sql::mysql_async::prelude::ConvIr;
+use sql::mysql_async::prelude::FromValue;
 
 /// This enum represents how fresh you want results to be. MostRecent will go to the master, so you
 /// normally don't want to issue queries using MostRecent unless you have a very good reason.

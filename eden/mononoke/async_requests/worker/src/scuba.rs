@@ -7,8 +7,8 @@
 
 use anyhow::Error;
 use anyhow::Result;
-use async_requests::types::AsynchronousRequestResult;
 use async_requests::RequestId;
+use async_requests::types::AsynchronousRequestResult;
 use async_requests_types_thrift::AsynchronousRequestResult as ThriftAsynchronousRequestResult;
 use context::CoreContext;
 use futures_stats::FutureStats;

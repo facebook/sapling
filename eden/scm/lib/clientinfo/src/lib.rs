@@ -21,17 +21,17 @@ pub const CLIENT_INFO_HEADER: &str = "X-Client-Info";
 mod facebook;
 #[cfg(not(fbcode_build))]
 mod oss;
+use facebook::FbClientInfo;
 use facebook::get_fb_client_info;
 use facebook::log_cross_environment_session_id;
-use facebook::FbClientInfo;
 #[cfg(not(fbcode_build))]
 use oss as facebook;
 
-pub use crate::request_info::get_client_request_info;
 pub use crate::request_info::ClientEntryPoint;
 pub use crate::request_info::ClientRequestInfo;
 pub use crate::request_info::ENV_SAPLING_CLIENT_CORRELATOR;
 pub use crate::request_info::ENV_SAPLING_CLIENT_ENTRY_POINT;
+pub use crate::request_info::get_client_request_info;
 
 #[derive(Default, Clone, Deserialize, Serialize, Debug, PartialEq, Eq)]
 pub struct ClientInfo {

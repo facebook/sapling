@@ -11,12 +11,12 @@
 
 use std::marker::PhantomData;
 
-use futures::future;
-use futures::stream::FusedStream;
 use futures::Future;
 use futures::FutureExt;
 use futures::Stream;
 use futures::TryStream;
+use futures::future;
+use futures::stream::FusedStream;
 
 mod next_step;
 

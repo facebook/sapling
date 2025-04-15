@@ -5,8 +5,8 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-use anyhow::bail;
 use anyhow::Result;
+use anyhow::bail;
 use configmodel::Config;
 use configset::ConfigSet;
 

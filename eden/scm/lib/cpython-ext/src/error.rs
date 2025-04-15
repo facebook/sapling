@@ -12,7 +12,6 @@ use std::fmt;
 
 pub use anyhow::Error;
 pub use anyhow::Result;
-use cpython::exc;
 use cpython::FromPyObject;
 use cpython::GILGuard;
 use cpython::ObjectProtocol;
@@ -21,6 +20,7 @@ use cpython::PyList;
 use cpython::PyModule;
 use cpython::PyResult;
 use cpython::Python;
+use cpython::exc;
 use once_cell::sync::Lazy;
 use parking_lot::Mutex;
 
@@ -33,11 +33,11 @@ use parking_lot::Mutex;
 /// # Examples
 ///
 /// ```
-/// use anyhow::format_err;
 /// use anyhow::Error;
-/// use cpython::exc;
+/// use anyhow::format_err;
 /// use cpython::PyResult;
 /// use cpython::Python;
+/// use cpython::exc;
 /// use cpython_ext::error::ResultPyErrExt;
 ///
 /// fn fail_if_negative(i: i32) -> Result<i32, Error> {

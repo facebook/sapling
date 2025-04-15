@@ -9,10 +9,10 @@ use std::mem;
 
 use cpython::PyObject as RustPyObject;
 use cpython::Python as RustPythonGILGuard;
+use ffi::Py_ssize_t;
 use ffi::PyByteArray_Size;
 use ffi::PyObject;
 use ffi::PyVarObject;
-use ffi::Py_ssize_t;
 use python3_sys as ffi;
 
 // Ideally this struct comes from bindgen to ensure it's up-to-date

@@ -12,9 +12,9 @@ use anyhow::Error;
 use blobstore::Loadable;
 use borrowed::borrowed;
 use context::CoreContext;
-use derived_data::batch::split_batch_in_linear_stacks;
 use derived_data::batch::FileConflicts;
 use derived_data::batch::StackItem;
+use derived_data::batch::split_batch_in_linear_stacks;
 use derived_data_manager::BonsaiDerivable;
 use derived_data_manager::DerivationContext;
 use futures::stream::FuturesOrdered;
@@ -23,8 +23,8 @@ use mononoke_types::ChangesetId;
 use mononoke_types::FsnodeId;
 use stats::prelude::*;
 
-use crate::derive::derive_fsnodes_stack;
 use crate::RootFsnodeId;
+use crate::derive::derive_fsnodes_stack;
 
 define_stats! {
     prefix = "mononoke.derived_data.fsnodes";

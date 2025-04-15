@@ -14,12 +14,12 @@ use std::path::Path;
 use vlqencoding::VLQDecode;
 use vlqencoding::VLQEncode;
 
+use crate::Error;
+use crate::Result;
 use crate::errors::IoResultExt;
 use crate::log::Log;
 use crate::utils::atomic_write_plain;
 use crate::utils::xxhash;
-use crate::Error;
-use crate::Result;
 
 /// Definition of a "fold" function.
 ///

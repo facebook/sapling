@@ -16,18 +16,18 @@ use anyhow::Result;
 use async_trait::async_trait;
 use context::CoreContext;
 use context::PerfCounterType;
-use mononoke_types::hash::GitSha1;
 use mononoke_types::ChangesetId;
 use mononoke_types::RepositoryId;
+use mononoke_types::hash::GitSha1;
 use sql_construct::SqlConstruct;
 use sql_construct::SqlConstructFromMetadataDatabaseConfig;
 use sql_ext::SqlConnections;
 use stats::prelude::*;
 
-use crate::errors::AddGitMappingErrorKind;
 use crate::BonsaiGitMapping;
 use crate::BonsaiGitMappingEntry;
 use crate::BonsaisOrGitShas;
+use crate::errors::AddGitMappingErrorKind;
 
 define_stats! {
     prefix = "mononoke.bonsai_git_mapping";

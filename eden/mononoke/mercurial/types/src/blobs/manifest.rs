@@ -9,11 +9,11 @@
 
 use std::str;
 
-use anyhow::bail;
-use anyhow::ensure;
 use anyhow::Context;
 use anyhow::Error;
 use anyhow::Result;
+use anyhow::bail;
+use anyhow::ensure;
 use async_trait::async_trait;
 use blobstore::Blobstore;
 use blobstore::Loadable;
@@ -29,8 +29,6 @@ use mononoke_types::SortedVectorTrieMap;
 use sorted_vector_map::SortedVectorMap;
 
 use super::errors::MononokeHgBlobError;
-use crate::nodehash::HgNodeHash;
-use crate::nodehash::NULL_HASH;
 use crate::FileType;
 use crate::HgBlob;
 use crate::HgFileNodeId;
@@ -39,6 +37,8 @@ use crate::HgManifestId;
 use crate::HgParents;
 use crate::MPathElement;
 use crate::Type;
+use crate::nodehash::HgNodeHash;
+use crate::nodehash::NULL_HASH;
 
 /// Maximum size of raw manifest contents that we will parse synchronously.
 /// Manifests that are larger than this size will be parsed on a blocking

@@ -14,9 +14,9 @@ use std::ops::DerefMut;
 use lazy_static::lazy_static;
 use parking_lot::Mutex;
 
-use crate::event::Event;
 use crate::Blackbox;
 use crate::BlackboxOptions;
+use crate::event::Event;
 
 lazy_static! {
     pub static ref SINGLETON: Mutex<Blackbox> =

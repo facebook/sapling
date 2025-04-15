@@ -7,15 +7,15 @@
 
 use std::io::Write;
 
-use anyhow::format_err;
 use anyhow::Result;
+use anyhow::format_err;
 use blobstore::BlobstoreUnlinkOps;
 use clap::Parser;
 use metaconfig_types::BlobConfig;
 use metaconfig_types::BlobstoreId;
+use mononoke_app::MononokeApp;
 use mononoke_app::args::AsRepoArg;
 use mononoke_app::args::RepoArgs;
-use mononoke_app::MononokeApp;
 
 /// Unlink blobstore keys
 #[derive(Parser)]

@@ -13,8 +13,8 @@ use std::time::Duration;
 use std::time::Instant;
 
 use clidispatch::ReqCtx;
-use cmdutil::define_flags;
 use cmdutil::Result;
+use cmdutil::define_flags;
 use repo::repo::Repo;
 
 define_flags! {

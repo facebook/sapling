@@ -9,9 +9,9 @@ use std::collections::HashMap;
 use std::collections::HashSet;
 use std::sync::Arc;
 
-use anyhow::anyhow;
 use anyhow::Context;
 use anyhow::Result;
+use anyhow::anyhow;
 use async_trait::async_trait;
 use blobstore::Loadable;
 use changesets_creation::save_changesets;
@@ -20,9 +20,9 @@ use commit_transformation::rewrite_as_squashed_commit;
 use commit_transformation::rewrite_commit_with_file_changes_filter;
 use commit_transformation::upload_commits;
 use context::CoreContext;
-use futures::stream;
 use futures::StreamExt;
 use futures::TryStreamExt;
+use futures::stream;
 use megarepo_config::MononokeMegarepoConfigs;
 use megarepo_config::Source;
 use megarepo_config::SourceMappingRules;
@@ -40,11 +40,11 @@ use mononoke_types::BonsaiChangeset;
 use mononoke_types::ChangesetId;
 use repo_blobstore::RepoBlobstoreRef;
 
+use crate::common::MegarepoOp;
+use crate::common::SourceAndMovedChangesets;
 use crate::common::find_source_config;
 use crate::common::find_target_bookmark_and_value;
 use crate::common::find_target_sync_config;
-use crate::common::MegarepoOp;
-use crate::common::SourceAndMovedChangesets;
 
 pub(crate) struct SyncChangeset<'a, R> {
     megarepo_configs: &'a Arc<dyn MononokeMegarepoConfigs>,
@@ -593,10 +593,10 @@ mod test {
     use mononoke_macros::mononoke;
     use mononoke_types::FileChange;
     use mononoke_types::NonRootMPath;
+    use tests_utils::CreateCommitContext;
     use tests_utils::bookmark;
     use tests_utils::list_working_copy_utf8;
     use tests_utils::resolve_cs_id;
-    use tests_utils::CreateCommitContext;
 
     use super::*;
     use crate::common::SYNC_TARGET_CONFIG_FILE;

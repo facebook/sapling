@@ -22,8 +22,8 @@ use hyper::Body;
 use packetline::encode::flush_to_write;
 use packetline::encode::write_text_packetline;
 use protocol::generator::ls_refs_response;
-use protocol::types::ref_line;
 use protocol::types::LsRefsRequest;
+use protocol::types::ref_line;
 
 use crate::model::GitMethod;
 use crate::model::GitMethodInfo;

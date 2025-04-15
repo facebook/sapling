@@ -5,8 +5,8 @@
  * GNU General Public License version 2.
  */
 
-use anyhow::format_err;
 use anyhow::Error;
+use anyhow::format_err;
 use blobstore_sync_queue::BlobstoreWal;
 use blobstore_sync_queue::BlobstoreWalEntry;
 use blobstore_sync_queue::SqlBlobstoreWal;

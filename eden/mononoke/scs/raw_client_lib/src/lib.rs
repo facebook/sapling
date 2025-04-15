@@ -12,12 +12,12 @@ use std::net::ToSocketAddrs;
 use std::sync::Arc;
 use std::time::Duration;
 
-use anyhow::anyhow;
 use anyhow::Error;
 use anyhow::Result;
+use anyhow::anyhow;
+use clientinfo::CLIENT_INFO_HEADER;
 use clientinfo::ClientEntryPoint;
 use clientinfo::ClientInfo;
-use clientinfo::CLIENT_INFO_HEADER;
 use fbinit::FacebookInit;
 #[cfg(not(target_os = "windows"))]
 use identity::IdentitySet;

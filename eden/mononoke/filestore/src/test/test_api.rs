@@ -21,11 +21,11 @@ use futures::stream;
 use futures::stream::TryStreamExt;
 use lazy_static::lazy_static;
 use mononoke_macros::mononoke;
-use mononoke_types::hash;
-use mononoke_types::typed_hash::BlobstoreKey;
 use mononoke_types::ContentId;
 use mononoke_types::ContentMetadataV2;
 use mononoke_types::ContentMetadataV2Id;
+use mononoke_types::hash;
+use mononoke_types::typed_hash::BlobstoreKey;
 use mononoke_types_mocks::contentid::ONES_CTID;
 
 use super::canonical;
@@ -34,11 +34,11 @@ use super::failing_blobstore::FailingBlobstore;
 use super::failing_blobstore::FailingBlobstoreError;
 use super::request;
 use crate as filestore;
-use crate::errors;
 use crate::Alias;
 use crate::FetchKey;
 use crate::FilestoreConfig;
 use crate::StoreRequest;
+use crate::errors;
 
 const HELLO_WORLD: &[u8] = b"hello, world";
 const HELLO_WORLD_LENGTH: u64 = 12;

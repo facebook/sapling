@@ -22,21 +22,21 @@ use std::ops::Sub;
 use std::pin::Pin;
 use std::sync::Arc;
 
-use futures::future::BoxFuture;
 use futures::Stream;
 use futures::StreamExt;
+use futures::future::BoxFuture;
 use nonblocking::non_blocking;
 
-use crate::default_impl;
-use crate::ops::DagAlgorithm;
-use crate::ops::IdConvert;
-use crate::ops::IdMapSnapshot;
-use crate::ops::Parents;
 use crate::Id;
 use crate::IdList;
 use crate::IdSet;
 use crate::Result;
 use crate::Vertex;
+use crate::default_impl;
+use crate::ops::DagAlgorithm;
+use crate::ops::IdConvert;
+use crate::ops::IdMapSnapshot;
+use crate::ops::Parents;
 
 pub mod difference;
 pub mod hints;
@@ -922,8 +922,8 @@ pub(crate) mod tests {
     use nonblocking::non_blocking_result as r;
 
     use super::*;
-    pub(crate) use crate::tests::dbg;
     use crate::Id;
+    pub(crate) use crate::tests::dbg;
 
     pub(crate) fn nb<F, R>(future: F) -> R
     where

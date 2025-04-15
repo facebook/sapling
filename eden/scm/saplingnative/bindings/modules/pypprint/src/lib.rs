@@ -7,8 +7,8 @@
 
 use cpython::*;
 use cpython_ext::ResultPyErrExt;
-use pprint::pformat_value;
 use pprint::Value;
+use pprint::pformat_value;
 
 pub fn init_module(py: Python, package: &str) -> PyResult<PyModule> {
     let name = [package, "pprint"].join(".");

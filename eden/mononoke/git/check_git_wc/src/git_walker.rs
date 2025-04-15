@@ -8,19 +8,19 @@
 use std::collections::HashMap;
 use std::str::FromStr;
 
+use anyhow::Result;
 use anyhow::anyhow;
 use anyhow::bail;
-use anyhow::Result;
 use git2::ObjectType;
 use git2::Oid;
 use git2::Repository;
 use git2::Tree;
 use git2::TreeEntry;
-use mononoke_types::hash;
 use mononoke_types::FileType;
 use mononoke_types::MPathElement;
 use mononoke_types::NonRootMPath;
 use mononoke_types::RepoPath;
+use mononoke_types::hash;
 use tokio::sync::mpsc;
 
 use crate::CheckEntry;

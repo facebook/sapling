@@ -10,10 +10,10 @@ use std::fmt;
 
 use indexmap::IndexSet;
 
-use super::hints::Flags;
 use super::AsyncSetQuery;
 use super::BoxVertexStream;
 use super::Hints;
+use super::hints::Flags;
 use crate::Result;
 use crate::Vertex;
 

@@ -8,8 +8,8 @@
 use std::io;
 use std::sync::Arc;
 
-use anyhow::anyhow;
 use anyhow::Result;
+use anyhow::anyhow;
 use bytes::BufMut;
 use bytes::Bytes;
 use bytes::BytesMut;

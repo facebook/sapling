@@ -8,8 +8,8 @@
 use std::io::Write;
 
 use anyhow::Result;
-use clidispatch::errors;
 use clidispatch::ReqCtx;
+use clidispatch::errors;
 use cliparser::define_flags;
 use repo::repo::Repo;
 

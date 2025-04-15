@@ -8,9 +8,9 @@
 use quickcheck_arbitrary_derive::Arbitrary;
 use thrift_convert::ThriftConvert;
 
+use crate::ChangesetId;
 use crate::path::MPath;
 use crate::thrift;
-use crate::ChangesetId;
 
 #[derive(ThriftConvert, Arbitrary, Debug, Clone, Eq, PartialEq, Hash)]
 #[thrift(thrift::bonsai::SubtreeChange)]

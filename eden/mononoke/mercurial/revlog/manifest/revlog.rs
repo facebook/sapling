@@ -10,25 +10,23 @@ use std::io::Write;
 use std::str;
 use std::vec;
 
-use anyhow::bail;
-use anyhow::ensure;
-use anyhow::format_err;
 use anyhow::Context;
 use anyhow::Error;
 use anyhow::Result;
+use anyhow::bail;
+use anyhow::ensure;
+use anyhow::format_err;
 use futures_ext::BoxFuture;
 use futures_ext::BoxStream;
 use futures_ext::FutureExt;
 use futures_ext::StreamExt;
+use futures_old::Async;
+use futures_old::Poll;
 use futures_old::future;
 use futures_old::future::Future;
 use futures_old::future::IntoFuture;
 use futures_old::stream;
 use futures_old::stream::Stream;
-use futures_old::Async;
-use futures_old::Poll;
-use mercurial_types::blobs::file;
-use mercurial_types::manifest::Type;
 use mercurial_types::FileType;
 use mercurial_types::HgBlob;
 use mercurial_types::HgBlobNode;
@@ -40,9 +38,11 @@ use mercurial_types::HgParents;
 use mercurial_types::MPathElement;
 use mercurial_types::NonRootMPath;
 use mercurial_types::RepoPath;
+use mercurial_types::blobs::file;
+use mercurial_types::manifest::Type;
 
-use crate::errors::ErrorKind;
 use crate::RevlogRepo;
+use crate::errors::ErrorKind;
 
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
 pub struct Details {

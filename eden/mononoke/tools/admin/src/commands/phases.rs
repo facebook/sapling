@@ -20,8 +20,8 @@ use clap::Parser;
 use clap::Subcommand;
 use fetch::FetchArgs;
 use list_public::ListPublicArgs;
-use mononoke_app::args::RepoArgs;
 use mononoke_app::MononokeApp;
+use mononoke_app::args::RepoArgs;
 use phases::Phases;
 
 /// Commands to work with phases

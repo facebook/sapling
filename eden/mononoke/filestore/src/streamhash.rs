@@ -30,11 +30,11 @@ where
 mod test {
     use bytes::Bytes;
     use futures::stream;
+    use mononoke_types::ContentId;
     use mononoke_types::hash::Blake3;
     use mononoke_types::hash::RichGitSha1;
     use mononoke_types::hash::Sha1;
     use mononoke_types::hash::Sha256;
-    use mononoke_types::ContentId;
 
     use super::*;
     use crate::expected_size::ExpectedSize;

@@ -8,8 +8,8 @@
 use std::collections::HashSet;
 use std::sync::Arc;
 
-use anyhow::bail;
 use anyhow::Error;
+use anyhow::bail;
 use caching_ext::CacheHandlerFactory;
 use commit_graph::CommitGraph;
 use context::CoreContext;
@@ -17,20 +17,20 @@ use context::PerfCounterType;
 use futures::try_join;
 use manifest::Entry;
 use maplit::hashset;
-use mononoke_types::hash::Blake2;
-use mononoke_types::path::MPath;
-use mononoke_types::path_bytes_from_mpath;
 use mononoke_types::ChangesetId;
 use mononoke_types::FileUnodeId;
 use mononoke_types::ManifestUnodeId;
 use mononoke_types::RepositoryId;
+use mononoke_types::hash::Blake2;
+use mononoke_types::path::MPath;
+use mononoke_types::path_bytes_from_mpath;
 use path_hash::PathHash;
 use path_hash::PathHashBytes;
 use sql::Connection;
 use sql_construct::SqlConstruct;
 use sql_construct::SqlConstructFromMetadataDatabaseConfig;
-use sql_ext::mononoke_queries;
 use sql_ext::SqlConnections;
+use sql_ext::mononoke_queries;
 
 mod caching;
 use crate::caching::CacheHandlers;

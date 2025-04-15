@@ -9,9 +9,9 @@ use std::collections::HashMap;
 use std::collections::HashSet;
 use std::sync::Arc;
 
-use anyhow::anyhow;
 use anyhow::Context;
 use anyhow::Result;
+use anyhow::anyhow;
 use blobstore::Blobstore;
 use context::CoreContext;
 use futures::future::FutureExt;
@@ -21,13 +21,13 @@ use futures::stream::TryStreamExt;
 use manifest::ManifestOps;
 use manifest::ManifestParentReplacement;
 use manifest::StoreLoadable;
+use mononoke_types::ChangesetId;
+use mononoke_types::FileType;
+use mononoke_types::MPath;
 use mononoke_types::subtree_change::SubtreeChange;
 use mononoke_types::subtree_change::SubtreeCopy;
 use mononoke_types::subtree_change::SubtreeDeepCopy;
 use mononoke_types::subtree_change::SubtreeMerge;
-use mononoke_types::ChangesetId;
-use mononoke_types::FileType;
-use mononoke_types::MPath;
 use serde_derive::Deserialize;
 use serde_derive::Serialize;
 use sorted_vector_map::SortedVectorMap;
@@ -239,8 +239,8 @@ pub struct HgSubtreeMerge {
 }
 
 mod version {
-    use serde::de::Error;
     use serde::Deserialize;
+    use serde::de::Error;
 
     pub fn deserialize<'de, D>(deserializer: D) -> Result<u64, D::Error>
     where
@@ -266,8 +266,8 @@ mod version {
 
 mod mpath {
     use mononoke_types::MPath;
-    use serde::de::Error;
     use serde::Deserialize;
+    use serde::de::Error;
 
     pub fn deserialize<'de, D>(deserializer: D) -> Result<MPath, D::Error>
     where
@@ -290,8 +290,8 @@ mod mpath {
 mod hg_changeset_id {
     use std::str::FromStr;
 
-    use serde::de::Error;
     use serde::Deserialize;
+    use serde::de::Error;
 
     use crate::HgChangesetId;
 

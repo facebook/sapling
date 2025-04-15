@@ -18,31 +18,31 @@ use std::path::PathBuf;
 use std::process::Command;
 use std::str::FromStr;
 
-use anyhow::anyhow;
 use anyhow::Context;
 use anyhow::Result;
+use anyhow::anyhow;
 use async_trait::async_trait;
 use clap::Parser;
 #[cfg(target_os = "macos")]
 use dialoguer::Confirm;
-use edenfs_client::checkout::find_checkout;
 use edenfs_client::checkout::CheckoutConfig;
+use edenfs_client::checkout::find_checkout;
 use edenfs_client::instance::EdenFsInstance;
+#[cfg(target_os = "macos")]
+use edenfs_client::redirect::APFS_HELPER;
+use edenfs_client::redirect::REPO_SOURCE;
+use edenfs_client::redirect::Redirection;
+use edenfs_client::redirect::RedirectionState;
+use edenfs_client::redirect::RedirectionType;
 use edenfs_client::redirect::get_configured_redirections;
 use edenfs_client::redirect::get_effective_redirections;
 use edenfs_client::redirect::get_effective_redirs_for_mount;
 use edenfs_client::redirect::try_add_redirection;
-use edenfs_client::redirect::Redirection;
-use edenfs_client::redirect::RedirectionState;
-use edenfs_client::redirect::RedirectionType;
-#[cfg(target_os = "macos")]
-use edenfs_client::redirect::APFS_HELPER;
-use edenfs_client::redirect::REPO_SOURCE;
 use edenfs_client::utils::expand_path_or_cwd;
 use edenfs_client::utils::remove_trailing_slash;
 use hg_util::path::expand_path;
-use tabular::row;
 use tabular::Table;
+use tabular::row;
 
 use crate::ExitCode;
 use crate::Subcommand;

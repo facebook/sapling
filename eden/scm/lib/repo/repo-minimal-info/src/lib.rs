@@ -11,8 +11,8 @@ pub mod requirements;
 use std::path::Path;
 use std::path::PathBuf;
 
-use anyhow::bail;
 use anyhow::Result;
+use anyhow::bail;
 use fs_err as fs;
 use identity::dotgit::follow_dotgit_path;
 pub use requirements::Requirements;

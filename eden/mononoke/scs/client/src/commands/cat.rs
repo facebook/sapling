@@ -12,20 +12,20 @@ use std::io::Write;
 use anyhow::Result;
 use clap::Parser;
 use cloned::cloned;
+use futures::TryFutureExt;
 use futures::future;
 use futures::stream;
 use futures::stream::StreamExt;
-use futures::TryFutureExt;
 use scs_client_raw::thrift;
 use serde_json::json;
 
-use crate::args::commit_id::resolve_commit_id;
+use crate::ScscApp;
 use crate::args::commit_id::CommitIdArgs;
+use crate::args::commit_id::resolve_commit_id;
 use crate::args::path::PathArgs;
 use crate::args::repo::RepoArgs;
 use crate::errors::SelectionErrorExt;
 use crate::render::Render;
-use crate::ScscApp;
 
 /// Chunk size for requests.
 const CHUNK_SIZE: i64 = source_control::FILE_CONTENT_CHUNK_RECOMMENDED_SIZE;

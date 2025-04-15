@@ -10,27 +10,27 @@
 use std::collections::HashSet;
 use std::io::Write;
 
+use anyhow::Result;
 use anyhow::anyhow;
 use anyhow::bail;
-use anyhow::Result;
 use futures::stream;
 use futures::stream::StreamExt;
 use scs_client_raw::thrift;
 use serde::Serialize;
 
-use crate::args::commit_id::resolve_commit_id;
+use crate::ScscApp;
 use crate::args::commit_id::CommitIdArgs;
 use crate::args::commit_id::SchemeArgs;
+use crate::args::commit_id::resolve_commit_id;
 use crate::args::repo::RepoArgs;
 use crate::errors::SelectionErrorExt;
-use crate::library::bookmark::render_bookmark_info;
 use crate::library::bookmark::BookmarkInfo;
-use crate::library::commit::render_commit_info;
+use crate::library::bookmark::render_bookmark_info;
 use crate::library::commit::CommitInfo;
+use crate::library::commit::render_commit_info;
 use crate::render::Render;
 use crate::util::byte_count_iec;
 use crate::util::plural;
-use crate::ScscApp;
 
 #[derive(clap::Parser)]
 /// Fetch info about a commit, directory, file or bookmark

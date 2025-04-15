@@ -13,10 +13,10 @@ use std::io::BufReader;
 use std::io::Read;
 use std::path::PathBuf;
 
-use anyhow::bail;
 use anyhow::Context;
 use anyhow::Error;
 use anyhow::Result;
+use anyhow::bail;
 use ascii::AsciiStr;
 use futures_ext::BoxFuture;
 use futures_ext::BoxStream;

@@ -6,28 +6,28 @@
  */
 
 use std::fmt;
+use std::fs::File;
+use std::fs::OpenOptions;
 use std::fs::create_dir;
 use std::fs::create_dir_all;
 use std::fs::remove_dir;
 use std::fs::remove_dir_all;
 use std::fs::remove_file;
-use std::fs::File;
-use std::fs::OpenOptions;
 use std::io::BufRead;
 use std::io::BufReader;
 use std::io::Read;
 use std::path::Path;
 use std::path::PathBuf;
+use std::sync::Arc;
 use std::sync::atomic::AtomicU64;
 use std::sync::atomic::Ordering;
 use std::sync::mpsc;
 use std::sync::mpsc::TrySendError;
-use std::sync::Arc;
 use std::thread;
 use std::time::Instant;
 
-use anyhow::bail;
 use anyhow::Result;
+use anyhow::bail;
 use structopt::StructOpt;
 
 #[derive(StructOpt)]

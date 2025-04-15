@@ -19,9 +19,9 @@ use context::CoreContext;
 use mononoke_types::ChangesetId;
 use mononoke_types::ChangesetIdPrefix;
 use mononoke_types::ChangesetIdsResolvedFromPrefix;
+use mononoke_types::FIRST_GENERATION;
 use mononoke_types::Generation;
 use mononoke_types::RepositoryId;
-use mononoke_types::FIRST_GENERATION;
 use vec1::Vec1;
 
 use crate::edges::ChangesetEdges;

@@ -9,8 +9,8 @@ use std::collections::HashSet;
 use std::sync::Arc;
 use std::time::Duration;
 
-use anyhow::anyhow;
 use anyhow::Result;
+use anyhow::anyhow;
 use async_requests::tokens::MegarepoAddBranchingTargetToken;
 use async_requests::tokens::MegarepoAddTargetToken;
 use async_requests::tokens::MegarepoChangeTargetConfigToken;

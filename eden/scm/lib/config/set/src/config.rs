@@ -18,12 +18,12 @@ use std::rc::Rc;
 use std::str;
 use std::sync::Arc;
 
-use configmodel::config::ContentHash;
 use configmodel::Config;
 pub use configmodel::ValueLocation;
 pub use configmodel::ValueSource;
-use hgrc_parser::parse;
+use configmodel::config::ContentHash;
 use hgrc_parser::Instruction;
+use hgrc_parser::parse;
 use indexmap::IndexMap;
 use indexmap::IndexSet;
 use minibytes::Text;

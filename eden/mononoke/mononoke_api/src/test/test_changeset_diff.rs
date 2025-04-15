@@ -8,9 +8,9 @@
 use std::ops::Deref;
 use std::str::FromStr;
 
-use anyhow::anyhow;
 use anyhow::Context;
 use anyhow::Error;
+use anyhow::anyhow;
 use fbinit::FacebookInit;
 use fixtures::ManyFilesDirs;
 use fixtures::TestRepoFixture;
@@ -20,14 +20,14 @@ use mononoke_types::path::MPath;
 use pretty_assertions::assert_eq;
 use tests_utils::CreateCommitContext;
 
-use crate::repo::MononokeRepo;
-use crate::repo::Repo;
 use crate::ChangesetDiffItem;
 use crate::ChangesetFileOrdering;
 use crate::ChangesetPathDiffContext;
 use crate::CoreContext;
 use crate::HgChangesetId;
 use crate::Mononoke;
+use crate::repo::MononokeRepo;
+use crate::repo::Repo;
 
 #[mononoke::fbinit_test]
 async fn test_diff_with_moves(fb: FacebookInit) -> Result<(), Error> {

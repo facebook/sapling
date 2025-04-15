@@ -39,9 +39,9 @@ mod tests {
 
     use super::super::id_static::tests::with_dag;
     use super::*;
-    use crate::tests::dbg;
     use crate::DagAlgorithm;
     use crate::Result;
+    use crate::tests::dbg;
 
     #[test]
     fn test_legacy_convert() -> Result<()> {

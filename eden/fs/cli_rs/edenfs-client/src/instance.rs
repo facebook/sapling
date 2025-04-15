@@ -93,8 +93,8 @@ use std::path::Path;
 use std::path::PathBuf;
 use std::sync::OnceLock;
 
-use anyhow::anyhow;
 use anyhow::Context;
+use anyhow::anyhow;
 use atomicfile::atomic_write;
 use edenfs_config::EdenFsConfig;
 use edenfs_error::EdenFsError;
@@ -104,8 +104,8 @@ use edenfs_utils::get_executable;
 #[cfg(windows)]
 use edenfs_utils::strip_unc_prefix;
 use fbinit::expect_init;
-use tracing::event;
 use tracing::Level;
+use tracing::event;
 use util::lock::PathLock;
 
 use crate::client::EdenFsClient;

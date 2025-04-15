@@ -9,16 +9,16 @@ use std::sync::Arc;
 use std::time::Duration;
 use std::time::Instant;
 
-use anyhow::anyhow;
 use anyhow::Context;
 use anyhow::Error;
+use anyhow::anyhow;
 use blobstore::Blobstore;
 use blobstore::PutBehaviour;
 use blobstore::Storable;
 use context::CoreContext;
-use futures::stream;
 use futures::StreamExt;
 use futures::TryStreamExt;
+use futures::stream;
 use memblob::Memblob;
 use mononoke_api::MononokeRepo;
 use mononoke_types::BlobstoreKey as BlobstoreKeyTrait;
@@ -37,12 +37,12 @@ use sql_construct::SqlConstruct;
 use stats::define_stats;
 use stats::prelude::TimeseriesStatic;
 
+use crate::AsyncRequestsError;
 use crate::types::AsynchronousRequestParams;
 use crate::types::AsynchronousRequestResult;
 use crate::types::Request;
 use crate::types::ThriftParams;
 use crate::types::Token;
-use crate::AsyncRequestsError;
 
 const INITIAL_POLL_DELAY_MS: u64 = 1000;
 const MAX_POLL_DURATION: Duration = Duration::from_secs(60);
@@ -461,9 +461,9 @@ mod tests {
     use context::CoreContext;
     use fbinit::FacebookInit;
     use futures::FutureExt;
-    use justknobs::test_helpers::with_just_knobs_async;
     use justknobs::test_helpers::JustKnobsInMemory;
     use justknobs::test_helpers::KnobVal;
+    use justknobs::test_helpers::with_just_knobs_async;
     use maplit::hashmap;
     use mononoke_api::Repo;
     use mononoke_macros::mononoke;

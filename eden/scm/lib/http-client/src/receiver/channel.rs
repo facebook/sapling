@@ -8,9 +8,9 @@
 use std::pin::Pin;
 
 use anyhow::Result;
-use futures::channel::oneshot;
 use futures::Stream;
 use futures::StreamExt;
+use futures::channel::oneshot;
 
 use crate::errors::Abort;
 use crate::errors::HttpClientError;

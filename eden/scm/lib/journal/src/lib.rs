@@ -9,9 +9,9 @@ use std::io::Write;
 use std::path::PathBuf;
 use std::str::FromStr;
 
-use anyhow::bail;
 use anyhow::Context;
 use anyhow::Result;
+use anyhow::bail;
 use hgtime::HgTime;
 use repolock::try_lock_with_contents;
 use sysutil::shell_escape;

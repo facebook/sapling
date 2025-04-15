@@ -13,8 +13,8 @@ use storemodel::SerializationFormat;
 use storemodel::StoreInfo;
 use storemodel::StoreOutput;
 
-use crate::cas::cas_client_from_config;
 use crate::EagerRepoStore;
+use crate::cas::cas_client_from_config;
 
 pub(crate) fn init() {
     fn maybe_construct_eagerepo_store(

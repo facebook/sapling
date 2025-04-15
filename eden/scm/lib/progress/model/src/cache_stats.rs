@@ -7,9 +7,9 @@
 
 use std::borrow::Cow;
 use std::fmt;
+use std::sync::Arc;
 use std::sync::atomic::AtomicUsize;
 use std::sync::atomic::Ordering::Relaxed;
-use std::sync::Arc;
 
 /// Statistics for cache data. For example, "files: hit 1000, miss 2".
 pub struct CacheStats {

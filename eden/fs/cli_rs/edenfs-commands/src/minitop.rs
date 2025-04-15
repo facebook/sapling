@@ -8,20 +8,20 @@
 //! edenfsctl minitop
 
 use std::collections::BTreeMap;
-use std::io::stdout;
 use std::io::Stdout;
 use std::io::Write;
+use std::io::stdout;
 use std::time::Duration;
 use std::time::Instant;
 
-use anyhow::anyhow;
 use anyhow::Result;
+use anyhow::anyhow;
 use async_trait::async_trait;
 use clap::Parser;
-use comfy_table::presets::UTF8_BORDERS_ONLY;
 use comfy_table::ContentArrangement;
 use comfy_table::Row;
 use comfy_table::Table;
+use comfy_table::presets::UTF8_BORDERS_ONLY;
 use crossterm::cursor;
 use crossterm::event::Event;
 use crossterm::event::EventStream;
@@ -40,9 +40,9 @@ use futures::FutureExt;
 use futures::StreamExt;
 use sysinfo::Pid;
 use sysinfo::System;
-use thrift_types::edenfs::pid_t;
 use thrift_types::edenfs::AccessCounts;
 use thrift_types::edenfs::GetAccessCountsResult;
+use thrift_types::edenfs::pid_t;
 
 #[cfg(unix)]
 use self::unix::trim_cmd_binary_path;
@@ -576,8 +576,8 @@ impl crate::Subcommand for MinitopCmd {
 mod unix {
     use std::path::Path;
 
-    use anyhow::anyhow;
     use anyhow::Result;
+    use anyhow::anyhow;
     use shlex::try_quote;
 
     pub fn trim_cmd_binary_path(cmd: &str) -> Result<String> {
@@ -612,8 +612,8 @@ mod windows {
     use std::ffi::OsStr;
     use std::path::Path;
 
-    use anyhow::anyhow;
     use anyhow::Result;
+    use anyhow::anyhow;
     use edenfs_utils::winargv::argv_to_command_line;
     use edenfs_utils::winargv::command_line_to_argv;
 

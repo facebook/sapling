@@ -8,9 +8,9 @@
 use anyhow::Result;
 use clap::Parser;
 use fbinit::FacebookInit;
-use mononoke_app::args::MultiRepoArgs;
 use mononoke_app::MononokeApp;
 use mononoke_app::MononokeAppBuilder;
+use mononoke_app::args::MultiRepoArgs;
 use repo_identity::RepoIdentity;
 use repo_identity::RepoIdentityRef;
 

@@ -6,10 +6,10 @@
  */
 
 use std::mem;
+use std::sync::OnceLock;
 use std::sync::atomic::AtomicBool;
 use std::sync::atomic::AtomicUsize;
 use std::sync::atomic::Ordering;
-use std::sync::OnceLock;
 
 static mut ORIG_HANDLER: Option<libc::sigaction> = None;
 

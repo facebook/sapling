@@ -33,9 +33,9 @@ use mononoke_types::RepositoryId;
 use sorted_vector_map::SortedVectorMap;
 use test_repo_factory::TestRepoFactory;
 use test_repo_factory::TestRepoFactoryBuilder;
-use tests_utils::drawdag::extend_from_dag_with_actions;
 use tests_utils::BasicTestRepo;
 use tests_utils::Repo;
+use tests_utils::drawdag::extend_from_dag_with_actions;
 
 pub async fn store_files(
     ctx: &CoreContext,

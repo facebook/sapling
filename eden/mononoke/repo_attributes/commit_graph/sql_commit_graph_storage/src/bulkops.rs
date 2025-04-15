@@ -10,10 +10,10 @@ use std::sync::Arc;
 
 use anyhow::Result;
 use context::CoreContext;
-use futures::stream;
 use futures::Stream;
 use futures::StreamExt;
 use futures::TryStreamExt;
+use futures::stream;
 use mononoke_types::ChangesetId;
 use mononoke_types::RepositoryId;
 

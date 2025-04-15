@@ -13,6 +13,12 @@ use std::sync::Arc;
 use std::sync::RwLock;
 use std::time::Duration;
 
+#[cfg(fbcode_build)]
+use MononokeWarmBookmarkCacheStats_ods3::Instrument_MononokeWarmBookmarkCacheStats;
+#[cfg(fbcode_build)]
+use MononokeWarmBookmarkCacheStats_ods3_types::MononokeWarmBookmarkCacheStats;
+#[cfg(fbcode_build)]
+use MononokeWarmBookmarkCacheStats_ods3_types::WarmBookmarkCacheEvent;
 use anyhow::Context as _;
 use anyhow::Error;
 use async_trait::async_trait;
@@ -47,9 +53,9 @@ use filenodes_derivation::FilenodesOnlyPublic;
 use fsnodes::RootFsnodeId;
 use futures::channel::oneshot;
 use futures::future;
-use futures::future::select;
 use futures::future::BoxFuture;
 use futures::future::FutureExt;
+use futures::future::select;
 use futures::stream;
 use futures::stream::FuturesUnordered;
 use futures::stream::StreamExt;
@@ -79,12 +85,6 @@ use stats::prelude::*;
 use tokio::sync::Notify;
 use tokio::task::JoinHandle;
 use unodes::RootUnodeManifestId;
-#[cfg(fbcode_build)]
-use MononokeWarmBookmarkCacheStats_ods3::Instrument_MononokeWarmBookmarkCacheStats;
-#[cfg(fbcode_build)]
-use MononokeWarmBookmarkCacheStats_ods3_types::MononokeWarmBookmarkCacheStats;
-#[cfg(fbcode_build)]
-use MononokeWarmBookmarkCacheStats_ods3_types::WarmBookmarkCacheEvent;
 
 mod warmers;
 pub use warmers::create_derived_data_warmer;
@@ -1212,9 +1212,9 @@ mod tests {
     use repo_identity::RepoIdentityArc;
     use sql_ext::mononoke_queries;
     use test_repo_factory::TestRepoFactory;
+    use tests_utils::CreateCommitContext;
     use tests_utils::bookmark;
     use tests_utils::resolve_cs_id;
-    use tests_utils::CreateCommitContext;
     use tokio::time;
 
     use super::*;

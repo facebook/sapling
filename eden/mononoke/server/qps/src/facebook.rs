@@ -7,8 +7,8 @@
 
 use std::collections::HashMap;
 
-use anyhow::anyhow;
 use anyhow::Error;
+use anyhow::anyhow;
 use cached_config::ConfigHandle;
 use cached_config::ConfigStore;
 use common_server_region::RegionLong;

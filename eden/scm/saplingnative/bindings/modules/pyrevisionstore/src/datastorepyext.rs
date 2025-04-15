@@ -5,8 +5,8 @@
  * GNU General Public License version 2.
  */
 
-use anyhow::format_err;
 use anyhow::Result;
+use anyhow::format_err;
 use cpython::PyBytes;
 use cpython::PyDict;
 use cpython::PyIterator;
@@ -21,12 +21,12 @@ use cpython_ext::PyNone;
 use cpython_ext::PyPath;
 use cpython_ext::PyPathBuf;
 use cpython_ext::ResultPyErrExt;
-use revisionstore::datastore::Delta;
-use revisionstore::datastore::StoreResult;
 use revisionstore::HgIdDataStore;
 use revisionstore::HgIdMutableDeltaStore;
 use revisionstore::StoreKey;
 use revisionstore::ToKeys;
+use revisionstore::datastore::Delta;
+use revisionstore::datastore::StoreResult;
 use types::Node;
 
 use crate::pythonutil::from_base;

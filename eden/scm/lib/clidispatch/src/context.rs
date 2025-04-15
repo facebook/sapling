@@ -10,13 +10,13 @@ use std::sync::Arc;
 
 use anyhow::Result;
 use cliparser::parser::ParseOutput;
-use configmodel::convert::FromConfigValue;
 use configmodel::Config;
 use configmodel::ConfigExt;
+use configmodel::convert::FromConfigValue;
 use context::CoreContext;
 use hgplain::is_plain;
-use io::IsTty;
 use io::IO;
+use io::IsTty;
 use termlogger::TermLogger;
 
 use crate::global_flags::HgGlobalOpts;

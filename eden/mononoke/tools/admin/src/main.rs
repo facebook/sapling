@@ -12,10 +12,10 @@ use anyhow::Result;
 use clap::Parser;
 use cmdlib_scrubbing::ScrubAppExtension;
 use fbinit::FacebookInit;
-use mononoke_app::monitoring::AliveService;
-use mononoke_app::monitoring::MonitoringAppExtension;
 use mononoke_app::MononokeApp;
 use mononoke_app::MononokeAppBuilder;
+use mononoke_app::monitoring::AliveService;
+use mononoke_app::monitoring::MonitoringAppExtension;
 
 mod bookmark_log_entry;
 mod commands;

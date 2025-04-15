@@ -27,10 +27,10 @@ use mononoke_api::MononokeRepo;
 use mononoke_api::RepoContext;
 use mononoke_types::ChangesetId;
 
+use crate::common::MegarepoOp;
 use crate::common::derive_all_types;
 use crate::common::find_target_bookmark_and_value;
 use crate::common::find_target_sync_config;
-use crate::common::MegarepoOp;
 
 /// Structure representing changes needed to be applied onto target to change its
 /// config.

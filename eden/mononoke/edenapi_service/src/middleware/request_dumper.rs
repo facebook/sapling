@@ -7,18 +7,18 @@
 
 use std::collections::HashSet;
 
-use anyhow::bail;
 use anyhow::Context;
 use anyhow::Result;
+use anyhow::bail;
 use base64::Engine;
 use bytes::Bytes;
 use fbinit::FacebookInit;
 use gotham::state::FromState;
 use gotham::state::State;
 use gotham_derive::StateData;
-use gotham_ext::middleware::request_context::RequestContext;
 use gotham_ext::middleware::Middleware;
 use gotham_ext::middleware::PostResponseCallbacks;
+use gotham_ext::middleware::request_context::RequestContext;
 use gotham_ext::state_ext::StateExt;
 use http::HeaderMap;
 use hyper::Body;

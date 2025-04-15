@@ -5,10 +5,10 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-use serde::ser::SerializeTuple;
 use serde::Deserialize;
 use serde::Deserializer;
 use serde::Serializer;
+use serde::ser::SerializeTuple;
 
 use crate::HgId;
 

@@ -10,8 +10,8 @@ use std::collections::BTreeSet;
 use std::collections::HashMap;
 use std::ops::Bound;
 
-use anyhow::bail;
 use anyhow::Result;
+use anyhow::bail;
 use dag_types::CloneData;
 use dag_types::FlatSegment;
 use dag_types::Id;

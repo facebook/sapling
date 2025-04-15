@@ -12,15 +12,15 @@ use std::sync::Arc;
 use std::sync::RwLock;
 use std::time::Duration;
 
-use anyhow::anyhow;
 use anyhow::Error;
+use anyhow::anyhow;
 use async_trait::async_trait;
 use cached_config::ConfigHandle;
 use fbinit::FacebookInit;
 use mononoke_macros::mononoke;
-use ods_counters::periodic_fetch_counter;
 use ods_counters::CounterManager;
 use ods_counters::OdsCounterManager;
+use ods_counters::periodic_fetch_counter;
 use permission_checker::MononokeIdentitySet;
 use permission_checker::MononokeIdentitySetExt;
 use rate_limiting_config::ExternalOdsCounter;

@@ -10,14 +10,14 @@ use std::io::Write;
 use std::path::Path;
 use std::path::PathBuf;
 
+use anyhow::Result;
 use anyhow::bail;
 use anyhow::ensure;
-use anyhow::Result;
 use byteorder::BigEndian;
 use byteorder::ReadBytesExt;
 use byteorder::WriteBytesExt;
-use configmodel::convert::ByteCount;
 use configmodel::Config;
+use configmodel::convert::ByteCount;
 use edenapi_types::FileEntry;
 use edenapi_types::TreeEntry;
 use indexedlog::log::IndexOutput;
@@ -27,12 +27,13 @@ use minibytes::Bytes;
 use once_cell::sync::OnceCell;
 use storemodel::SerializationFormat;
 use tracing::warn;
-use types::hgid::ReadHgIdExt;
 use types::HgId;
 use types::Id20;
 use types::Key;
 use types::RepoPathBuf;
+use types::hgid::ReadHgIdExt;
 
+use crate::ToKeys;
 use crate::datastore::Delta;
 use crate::datastore::HgIdDataStore;
 use crate::datastore::HgIdMutableDeltaStore;
@@ -45,7 +46,6 @@ use crate::localstore::LocalStore;
 use crate::missing::MissingInjection;
 use crate::sliceext::SliceExt;
 use crate::types::StoreKey;
-use crate::ToKeys;
 
 pub struct IndexedLogHgIdDataStoreConfig {
     pub max_log_count: Option<u8>,
@@ -409,8 +409,8 @@ mod tests {
     use fs_err::remove_file;
     use minibytes::Bytes;
     use tempfile::TempDir;
-    use types::testutil::*;
     use types::FetchContext;
+    use types::testutil::*;
 
     use super::*;
     use crate::scmstore::FileAttributes;

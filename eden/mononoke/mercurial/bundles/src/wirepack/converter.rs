@@ -9,13 +9,13 @@
 
 use std::mem;
 
+use anyhow::Result;
 use anyhow::bail;
 use anyhow::ensure;
-use anyhow::Result;
 use async_stream::try_stream;
-use futures::pin_mut;
 use futures::Stream;
 use futures::TryStreamExt;
+use futures::pin_mut;
 use mercurial_types::RepoPath;
 
 use super::DataEntry;

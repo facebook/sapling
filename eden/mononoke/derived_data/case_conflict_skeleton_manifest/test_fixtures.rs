@@ -6,9 +6,9 @@
  */
 
 use std::collections::HashSet;
+use std::sync::RwLock;
 use std::sync::atomic::AtomicU64;
 use std::sync::atomic::Ordering;
-use std::sync::RwLock;
 
 use anyhow::Result;
 use async_recursion::async_recursion;
@@ -27,10 +27,10 @@ use futures::TryStreamExt;
 use itertools::Itertools;
 use manifest::ManifestOps;
 use mononoke_macros::mononoke;
-use mononoke_types::case_conflict_skeleton_manifest::CaseConflictSkeletonManifest;
-use mononoke_types::case_conflict_skeleton_manifest::CcsmEntry;
 use mononoke_types::ChangesetIdPrefix;
 use mononoke_types::ChangesetIdsResolvedFromPrefix;
+use mononoke_types::case_conflict_skeleton_manifest::CaseConflictSkeletonManifest;
+use mononoke_types::case_conflict_skeleton_manifest::CcsmEntry;
 use repo_blobstore::RepoBlobstore;
 use repo_blobstore::RepoBlobstoreRef;
 use repo_derived_data::RepoDerivedData;

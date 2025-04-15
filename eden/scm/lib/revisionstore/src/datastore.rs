@@ -17,10 +17,10 @@ use serde_derive::Deserialize;
 use serde_derive::Serialize;
 use types::Key;
 
+pub use crate::Metadata;
 use crate::localstore::LocalStore;
 use crate::types::ContentHash;
 use crate::types::StoreKey;
-pub use crate::Metadata;
 
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 pub struct Delta {

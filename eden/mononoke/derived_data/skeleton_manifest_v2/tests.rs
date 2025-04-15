@@ -28,9 +28,9 @@ use repo_blobstore::RepoBlobstoreRef;
 use repo_derived_data::RepoDerivedData;
 use repo_derived_data::RepoDerivedDataRef;
 use repo_identity::RepoIdentity;
+use tests_utils::CreateCommitContext;
 use tests_utils::drawdag::changes;
 use tests_utils::drawdag::create_from_dag_with_changes;
-use tests_utils::CreateCommitContext;
 
 use super::*;
 

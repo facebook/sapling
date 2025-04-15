@@ -20,8 +20,8 @@ use filedescriptor::FileDescriptor;
 use filedescriptor::FromRawFileDescriptor;
 use filedescriptor::IntoRawSocketDescriptor;
 use filedescriptor::RawFileDescriptor;
-use serde::de::DeserializeOwned;
 use serde::Serialize;
+use serde::de::DeserializeOwned;
 
 // 0, 1, 2, ..., file descriptor used by libc (or msvcrt, ucrt).
 //

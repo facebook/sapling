@@ -9,27 +9,27 @@
 
 use std::io::Write;
 
-use anyhow::bail;
 use anyhow::Result;
+use anyhow::bail;
 use cloned::cloned;
+use futures::Stream;
 use futures::stream;
 use futures::stream::StreamExt;
 use futures::stream::TryStreamExt;
-use futures::Stream;
-use scs_client_raw::thrift;
 use scs_client_raw::ScsClient;
+use scs_client_raw::thrift;
 use serde::Serialize;
 
-use crate::args::commit_id::resolve_commit_id;
+use crate::ScscApp;
 use crate::args::commit_id::CommitIdArgs;
 use crate::args::commit_id::SchemeArgs;
+use crate::args::commit_id::resolve_commit_id;
 use crate::args::repo::RepoArgs;
 use crate::errors::SelectionErrorExt;
 use crate::library::stress_test::StressArgs;
 use crate::library::summary::summary_output;
 use crate::render::Render;
 use crate::util::byte_count_short;
-use crate::ScscApp;
 
 const CHUNK_SIZE: i64 = source_control::TREE_LIST_MAX_LIMIT;
 

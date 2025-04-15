@@ -7,8 +7,8 @@
 
 use std::collections::HashMap;
 
-use anyhow::anyhow;
 use anyhow::Result;
+use anyhow::anyhow;
 use borrowed::borrowed;
 use commit_graph_types::edges::ChangesetNode;
 use commit_graph_types::frontier::ChangesetFrontier;
@@ -16,15 +16,15 @@ use commit_graph_types::frontier::ChangesetFrontierWithinDistance;
 use commit_graph_types::storage::Prefetch;
 use commit_graph_types::storage::PrefetchTarget;
 use context::CoreContext;
-use futures::future;
-use futures::stream;
 use futures::Future;
 use futures::StreamExt;
 use futures::TryStreamExt;
+use futures::future;
+use futures::stream;
 use futures_watchdog::WatchdogExt;
 use mononoke_types::ChangesetId;
-use mononoke_types::Generation;
 use mononoke_types::FIRST_GENERATION;
+use mononoke_types::Generation;
 
 use crate::CommitGraph;
 

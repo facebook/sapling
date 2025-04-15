@@ -11,13 +11,13 @@ use std::path::Path;
 use std::process::Command;
 use std::process::ExitStatus;
 
-use anyhow::bail;
 use anyhow::Context;
 use anyhow::Result;
+use anyhow::bail;
 use configmodel::Config;
 use configmodel::ConfigExt;
-use io::IsTty;
 use io::IO;
+use io::IsTty;
 use minibytes::Text;
 use spawn_ext::CommandExt;
 

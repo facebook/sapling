@@ -8,9 +8,9 @@
 use std::collections::HashMap;
 use std::str::FromStr;
 
-use anyhow::anyhow;
 use anyhow::Context;
 use anyhow::Result;
+use anyhow::anyhow;
 use ascii::AsciiString;
 use bookmarks_types::BookmarkKey;
 use commitsync::CommonCommitSyncConfig as RawCommonCommitSyncConfig;
@@ -18,15 +18,15 @@ use itertools::Itertools;
 use metaconfig_types::CommitSyncConfig;
 use metaconfig_types::CommitSyncConfigVersion;
 use metaconfig_types::CommonCommitSyncConfig;
+use metaconfig_types::DEFAULT_GIT_SUBMODULE_METADATA_FILE_PREFIX;
 use metaconfig_types::DefaultSmallToLargeCommitSyncPathAction;
 use metaconfig_types::GitSubmodulesChangesAction;
 use metaconfig_types::SmallRepoCommitSyncConfig;
 use metaconfig_types::SmallRepoGitSubmoduleConfig;
 use metaconfig_types::SmallRepoPermanentConfig;
-use metaconfig_types::DEFAULT_GIT_SUBMODULE_METADATA_FILE_PREFIX;
-use mononoke_types::hash::GitSha1;
 use mononoke_types::NonRootMPath;
 use mononoke_types::RepositoryId;
+use mononoke_types::hash::GitSha1;
 use repos::RawCommitSyncConfig;
 use repos::RawCommitSyncSmallRepoConfig;
 use repos::RawGitSubmodulesChangesAction;

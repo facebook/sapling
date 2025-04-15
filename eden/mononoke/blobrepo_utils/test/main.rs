@@ -29,9 +29,9 @@ mod test {
                 use fbinit::FacebookInit;
                 use filestore::FilestoreConfig;
                 use fixtures::TestRepoFixture;
-                use futures::stream::FuturesOrdered;
                 use futures::TryFutureExt;
                 use futures::TryStreamExt;
+                use futures::stream::FuturesOrdered;
                 use mononoke_macros::mononoke;
                 use repo_blobstore::RepoBlobstore;
                 use repo_derived_data::RepoDerivedData;

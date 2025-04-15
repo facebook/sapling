@@ -11,8 +11,8 @@ use std::path::PathBuf;
 use std::sync::Arc;
 use std::sync::Mutex;
 
-use anyhow::anyhow;
 use anyhow::Error;
+use anyhow::anyhow;
 use fbinit::FacebookInit;
 #[cfg(fbcode_build)]
 use scribe::ScribeClient; // oss uses anyhow
@@ -21,13 +21,13 @@ use scribe::ScribeClient; // oss uses anyhow
 mod oss;
 
 #[cfg(not(fbcode_build))]
-pub use oss::new_scribe_client;
-#[cfg(not(fbcode_build))]
 pub use oss::ScribeClientImplementation;
-#[cfg(fbcode_build)]
-pub use scuba::new_scribe_client;
+#[cfg(not(fbcode_build))]
+pub use oss::new_scribe_client;
 #[cfg(fbcode_build)]
 pub use scuba::ScribeClientImplementation;
+#[cfg(fbcode_build)]
+pub use scuba::new_scribe_client;
 
 #[derive(Clone)]
 pub enum Scribe {

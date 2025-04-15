@@ -7,9 +7,9 @@
 
 use std::path::PathBuf;
 
-use super::meta::LogMetadata;
 use super::Log;
 use super::META_FILE;
+use super::meta::LogMetadata;
 use crate::errors::IoResultExt;
 
 /// State to detect on-disk updates.

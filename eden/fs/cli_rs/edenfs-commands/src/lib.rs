@@ -20,8 +20,8 @@ use edenfs_client::utils::get_config_dir;
 use edenfs_client::utils::get_etc_eden_dir;
 use edenfs_client::utils::get_home_dir;
 use hg_util::path::expand_path;
-use tracing::event;
 use tracing::Level;
+use tracing::event;
 
 mod config;
 mod debug;

@@ -5,10 +5,6 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-pub use crate::metadata::WireAnyFileContentId;
-pub use crate::metadata::WireFileMetadata;
-pub use crate::metadata::WireFileType;
-pub use crate::metadata::WireTreeAuxData;
 use crate::Blake3;
 use crate::ContentId;
 use crate::FsnodeId;
@@ -16,6 +12,10 @@ use crate::Sha1;
 use crate::Sha256;
 use crate::ToApi;
 use crate::ToWire;
+pub use crate::metadata::WireAnyFileContentId;
+pub use crate::metadata::WireFileMetadata;
+pub use crate::metadata::WireFileType;
+pub use crate::metadata::WireTreeAuxData;
 
 wire_hash! {
     wire => WireFsnodeId,

@@ -8,9 +8,9 @@
 use std::str::FromStr;
 
 use clidispatch::ReqCtx;
-use cmdutil::define_flags;
 use cmdutil::ConfigExt;
 use cmdutil::Result;
+use cmdutil::define_flags;
 use configloader::convert::ByteCount;
 use repo::repo::Repo;
 use revisionstore::HgIdDataStore;

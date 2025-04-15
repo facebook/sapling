@@ -15,11 +15,11 @@ use mononoke_macros::mononoke;
 use tests_utils::drawdag::changes;
 use tests_utils::drawdag::create_from_dag_with_changes;
 
-use crate::headerless_unified_diff;
-use crate::repo::Repo;
 use crate::ChangesetId;
 use crate::CoreContext;
 use crate::RepoContext;
+use crate::headerless_unified_diff;
+use crate::repo::Repo;
 
 async fn init_repo(
     ctx: &CoreContext,

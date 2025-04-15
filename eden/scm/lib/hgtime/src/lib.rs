@@ -17,9 +17,9 @@ use std::sync::atomic::AtomicI32;
 use std::sync::atomic::AtomicU64;
 use std::sync::atomic::Ordering;
 
-use chrono::prelude::*;
 use chrono::Duration;
 use chrono::LocalResult;
+use chrono::prelude::*;
 
 #[cfg(feature = "serde")]
 mod serde_impl;

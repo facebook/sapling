@@ -7,9 +7,9 @@
 
 use std::mem::size_of;
 
-use anyhow::format_err;
 use anyhow::Context;
 use anyhow::Error;
+use anyhow::format_err;
 use blobstore::SizeMetadata;
 use bufsize::SizeCounter;
 use bytes::Buf;

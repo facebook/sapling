@@ -18,25 +18,25 @@ use borrowed::borrowed;
 use bounded_traversal::bounded_traversal;
 use context::CoreContext;
 use fbthrift::compact_protocol;
+use futures::future::FutureExt;
 use futures::future::try_join;
 use futures::future::try_join_all;
-use futures::future::FutureExt;
 use futures::stream;
 use futures::stream::StreamExt;
 use futures::stream::TryStreamExt;
 use sorted_vector_map::SortedVectorMap;
 
+use crate::PrefixTrie;
 use crate::blob::Blob;
 use crate::blob::BlobstoreValue;
 use crate::blob::SkeletonManifestBlob;
 use crate::errors::MononokeTypeError;
-use crate::path::mpath_element::MPathElement;
 use crate::path::MPath;
 use crate::path::NonRootMPath;
+use crate::path::mpath_element::MPathElement;
 use crate::thrift;
 use crate::typed_hash::SkeletonManifestId;
 use crate::typed_hash::SkeletonManifestIdContext;
-use crate::PrefixTrie;
 
 /// A skeleton manifest is a manifest node containing summary information about the
 /// the structure of files (their names, but not their contents) that is useful

@@ -7,6 +7,10 @@
 
 use std::cmp::Ordering;
 
+use crate::IdSet;
+use crate::Level;
+use crate::Result;
+use crate::VerLink;
 use crate::errors::bug;
 use crate::errors::programming;
 use crate::id::Group;
@@ -14,10 +18,6 @@ use crate::id::Id;
 use crate::idset::Span;
 use crate::segment::Segment;
 use crate::segment::SegmentFlags;
-use crate::IdSet;
-use crate::Level;
-use crate::Result;
-use crate::VerLink;
 
 mod mem_store;
 

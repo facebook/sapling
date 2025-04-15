@@ -21,12 +21,12 @@ use mononoke_macros::mononoke;
 use mononoke_types::DateTime;
 use tests_utils::CreateCommitContext;
 
-use crate::repo::Repo;
 use crate::ChangesetHistoryOptions;
 use crate::ChangesetId;
 use crate::ChangesetLinearHistoryOptions;
 use crate::ChangesetPathHistoryOptions;
 use crate::RepoContext;
+use crate::repo::Repo;
 
 // Generates this commit graph:
 //

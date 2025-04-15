@@ -388,8 +388,8 @@ fn add_stat_context<T, E: Into<anyhow::Error>>(
 fn resolve_symlinks(path: &Path) -> anyhow::Result<PathBuf> {
     use std::collections::HashSet;
 
-    use anyhow::bail;
     use anyhow::Context;
+    use anyhow::bail;
     fn inner(path: PathBuf, seen: &mut HashSet<PathBuf>) -> anyhow::Result<PathBuf> {
         if seen.contains(&path) {
             bail!("symlink cycle containing {:?}", path);
@@ -428,8 +428,8 @@ fn resolve_symlinks(path: &Path) -> anyhow::Result<PathBuf> {
 #[cfg(unix)]
 #[context("creating dir {:?} with mode 0o{:o}", path, mode)]
 fn create_dir_with_mode(path: &Path, mode: u32) -> anyhow::Result<()> {
-    use anyhow::anyhow;
     use anyhow::Context;
+    use anyhow::anyhow;
 
     let path = resolve_symlinks(path)?;
 
@@ -716,9 +716,9 @@ pub fn replace_slash_with_backslash(path: &Path) -> PathBuf {
 
 #[cfg(test)]
 mod tests {
+    use std::fs::File;
     use std::fs::create_dir_all;
     use std::fs::remove_dir_all;
-    use std::fs::File;
 
     use anyhow::Result;
     use tempfile::TempDir;

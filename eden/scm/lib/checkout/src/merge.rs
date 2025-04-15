@@ -8,8 +8,8 @@
 use std::collections::HashSet;
 use std::fmt;
 
-use anyhow::bail;
 use anyhow::Result;
+use anyhow::bail;
 use manifest::FileType;
 use manifest::FsNodeMetadata;
 use manifest::Manifest;

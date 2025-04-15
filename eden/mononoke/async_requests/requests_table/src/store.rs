@@ -5,9 +5,9 @@
  * GNU General Public License version 2.
  */
 
-use anyhow::bail;
 use anyhow::Context;
 use anyhow::Result;
+use anyhow::bail;
 use async_trait::async_trait;
 use context::CoreContext;
 use mononoke_types::RepositoryId;
@@ -15,11 +15,9 @@ use mononoke_types::Timestamp;
 use sql::Connection;
 use sql_construct::SqlConstruct;
 use sql_construct::SqlConstructFromMetadataDatabaseConfig;
-use sql_ext::mononoke_queries;
 use sql_ext::SqlConnections;
+use sql_ext::mononoke_queries;
 
-use crate::types::QueueStats;
-use crate::types::QueueStatsEntry;
 use crate::BlobstoreKey;
 use crate::ClaimedBy;
 use crate::LongRunningRequestEntry;
@@ -28,6 +26,8 @@ use crate::RequestId;
 use crate::RequestStatus;
 use crate::RequestType;
 use crate::RowId;
+use crate::types::QueueStats;
+use crate::types::QueueStatsEntry;
 
 mononoke_queries! {
     read TestGetRequest(id: RowId) -> (

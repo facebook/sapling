@@ -6,9 +6,9 @@
  */
 
 use std::collections::VecDeque;
+use std::sync::Arc;
 use std::sync::atomic::AtomicBool;
 use std::sync::atomic::Ordering;
-use std::sync::Arc;
 use std::time::Duration;
 
 use anyhow::Result;
@@ -27,10 +27,10 @@ use tokio::time::interval;
 use crate::sender::edenapi::EdenapiSender;
 use crate::sender::manager::BookmarkInfo;
 use crate::sender::manager::ChangesetMessage;
-use crate::sender::manager::Manager;
 use crate::sender::manager::MODERN_SYNC_BATCH_CHECKPOINT_NAME;
 use crate::sender::manager::MODERN_SYNC_COUNTER_NAME;
 use crate::sender::manager::MODERN_SYNC_CURRENT_ENTRY_ID;
+use crate::sender::manager::Manager;
 use crate::stat;
 
 define_stats! {

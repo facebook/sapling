@@ -16,6 +16,6 @@ mod test_fixtures;
 #[cfg(test)]
 mod tests;
 
-pub use mapping::format_key;
 pub use mapping::RootCaseConflictSkeletonManifestId;
+pub use mapping::format_key;
 pub use path::CcsmPath;

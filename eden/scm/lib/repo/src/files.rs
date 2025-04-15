@@ -7,18 +7,18 @@
 
 use std::sync::Arc;
 
-use anyhow::anyhow;
 use anyhow::Result;
+use anyhow::anyhow;
 use metrics::Counter;
 use revisionstore::scmstore::FileAuxData;
 use scm_blob::ScmBlob;
-use storemodel::minibytes;
 use storemodel::BoxIterator;
 use storemodel::Bytes;
 use storemodel::FileStore;
 use storemodel::InsertOpts;
 use storemodel::KeyStore;
 use storemodel::SerializationFormat;
+use storemodel::minibytes;
 use types::FetchContext;
 use types::HgId;
 use types::Key;

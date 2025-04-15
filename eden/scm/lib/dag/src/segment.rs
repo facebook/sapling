@@ -28,12 +28,12 @@ use vlqencoding::VLQDecode;
 use vlqencoding::VLQDecodeAt;
 use vlqencoding::VLQEncode;
 
-use crate::errors::bug;
-use crate::errors::programming;
-use crate::id::Id;
 use crate::IdSpan;
 use crate::Level;
 use crate::Result;
+use crate::errors::bug;
+use crate::errors::programming;
+use crate::id::Id;
 
 /// [`Segment`] represents a range of [`Id`]s in an [`IdDag`] graph.
 /// It provides methods to access properties of the segments, including the range itself,

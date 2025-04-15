@@ -9,9 +9,9 @@ use anyhow::Result;
 use blobstore::Loadable;
 use blobstore::Storable;
 use context::CoreContext;
-use mononoke_types::typed_hash::RedactionKeyListId;
 use mononoke_types::BlobstoreValue;
 use mononoke_types::RedactionKeyList;
+use mononoke_types::typed_hash::RedactionKeyListId;
 use redactedblobstore::RedactionConfigBlobstore;
 
 pub async fn create_key_list(

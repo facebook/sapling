@@ -36,18 +36,18 @@ pub mod _macro_internal {
     pub use clientinfo::ClientRequestInfo;
     pub use paste;
     pub use serde_json;
-    pub use sql::queries;
     pub use sql::Connection;
     pub use sql::Transaction;
     pub use sql::WriteResult;
+    pub use sql::queries;
     pub use sql_query_config::SqlQueryConfig;
     pub use twox_hash::xxh3::Hash128;
     pub use twox_hash::xxh3::HasherExt;
 
-    pub use crate::mononoke_queries::query_with_retry;
-    pub use crate::mononoke_queries::query_with_retry_no_cache;
     pub use crate::mononoke_queries::CacheData;
     pub use crate::mononoke_queries::CachedQueryResult;
+    pub use crate::mononoke_queries::query_with_retry;
+    pub use crate::mononoke_queries::query_with_retry_no_cache;
 }
 
 pub mod facebook {
@@ -58,26 +58,22 @@ pub mod facebook {
     use std::fmt::Debug;
 
     #[cfg(fbcode_build)]
+    pub use r#impl::PoolConfig;
+    #[cfg(fbcode_build)]
+    pub use r#impl::SharedConnectionPool;
+    #[cfg(fbcode_build)]
     pub use r#impl::create_mysql_connections_sharded;
     #[cfg(fbcode_build)]
     pub use r#impl::create_mysql_connections_unsharded;
     #[cfg(fbcode_build)]
     pub use r#impl::create_oss_mysql_connections_unsharded;
     #[cfg(fbcode_build)]
-    pub use r#impl::myadmin::replication_status_chunked;
-    #[cfg(fbcode_build)]
     pub use r#impl::myadmin::MyAdmin;
     #[cfg(fbcode_build)]
     pub use r#impl::myadmin::MyAdminLagMonitor;
     #[cfg(fbcode_build)]
-    pub use r#impl::PoolConfig;
-    #[cfg(fbcode_build)]
-    pub use r#impl::SharedConnectionPool;
+    pub use r#impl::myadmin::replication_status_chunked;
 
-    #[cfg(not(fbcode_build))]
-    pub use crate::oss::create_mysql_connections_sharded;
-    #[cfg(not(fbcode_build))]
-    pub use crate::oss::create_mysql_connections_unsharded;
     #[cfg(not(fbcode_build))]
     pub use crate::oss::MyAdmin;
     #[cfg(not(fbcode_build))]
@@ -86,6 +82,10 @@ pub mod facebook {
     pub use crate::oss::PoolConfig;
     #[cfg(not(fbcode_build))]
     pub use crate::oss::SharedConnectionPool;
+    #[cfg(not(fbcode_build))]
+    pub use crate::oss::create_mysql_connections_sharded;
+    #[cfg(not(fbcode_build))]
+    pub use crate::oss::create_mysql_connections_unsharded;
 
     /// MySQL global shared connection pool configuration.
     #[derive(Clone, Default)]

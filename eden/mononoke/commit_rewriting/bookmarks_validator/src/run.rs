@@ -5,9 +5,9 @@
  * GNU General Public License version 2.
  */
 
+use std::sync::Arc;
 use std::sync::atomic::AtomicBool;
 use std::sync::atomic::Ordering;
-use std::sync::Arc;
 use std::time::Duration;
 
 use anyhow::Error;
@@ -16,15 +16,15 @@ use blobstore_factory::MetadataSqlFactory;
 use bookmarks::BookmarkKey;
 use bookmarks::Freshness;
 use context::CoreContext;
-use cross_repo_sync::find_bookmark_diff;
 use cross_repo_sync::BookmarkDiff;
 use cross_repo_sync::CommitSyncOutcome;
 use cross_repo_sync::CommitSyncer;
 use cross_repo_sync::Repo as CrossRepo;
 use cross_repo_sync::Syncers;
+use cross_repo_sync::find_bookmark_diff;
 use environment::MononokeEnvironment;
-use futures::future;
 use futures::TryStreamExt;
+use futures::future;
 use mononoke_types::ChangesetId;
 use pushredirect::PushRedirectionConfig;
 use pushredirect::SqlPushRedirectionConfigBuilder;
@@ -309,16 +309,16 @@ async fn remap<R: CrossRepo>(
 
 #[cfg(test)]
 mod tests {
-    use cross_repo_sync::test_utils::init_small_large_repo;
-    use cross_repo_sync::test_utils::TestRepo;
     use cross_repo_sync::CandidateSelectionHint;
     use cross_repo_sync::CommitSyncContext;
+    use cross_repo_sync::test_utils::TestRepo;
+    use cross_repo_sync::test_utils::init_small_large_repo;
     use fbinit::FacebookInit;
     use mononoke_macros::mononoke;
     use mononoke_types::DateTime;
+    use tests_utils::CreateCommitContext;
     use tests_utils::bookmark;
     use tests_utils::resolve_cs_id;
-    use tests_utils::CreateCommitContext;
 
     use super::*;
 

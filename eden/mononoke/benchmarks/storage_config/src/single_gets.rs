@@ -13,9 +13,9 @@ use context::CoreContext;
 use criterion::BenchmarkId;
 use criterion::Criterion;
 use criterion::Throughput;
-use rand::thread_rng;
 use rand::Rng;
 use rand::RngCore;
+use rand::thread_rng;
 use tokio::runtime::Handle;
 
 use crate::KB;

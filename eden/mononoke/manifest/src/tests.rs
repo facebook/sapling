@@ -17,28 +17,28 @@ use futures::stream::TryStreamExt;
 use maplit::btreemap;
 use memblob::Memblob;
 use mononoke_macros::mononoke;
-use mononoke_types::path::MPath;
 use mononoke_types::FileType;
 use mononoke_types::NonRootMPath;
+use mononoke_types::path::MPath;
 use mononoke_types_mocks::changesetid::ONES_CSID;
 use mononoke_types_mocks::changesetid::THREES_CSID;
 use mononoke_types_mocks::changesetid::TWOS_CSID;
 use pretty_assertions::assert_eq;
 
-pub(crate) use crate::find_intersection_of_diffs;
 pub(crate) use crate::Diff;
 pub(crate) use crate::Entry;
 pub(crate) use crate::ManifestOps;
 pub(crate) use crate::ManifestOrderedOps;
 pub(crate) use crate::PathOrPrefix;
+pub(crate) use crate::find_intersection_of_diffs;
 
 pub mod test_manifest;
 
+use self::test_manifest::TestLeafId;
+use self::test_manifest::TestManifestId;
 use self::test_manifest::derive_stack_of_test_manifests;
 use self::test_manifest::derive_test_manifest;
 use self::test_manifest::list_test_manifest;
-use self::test_manifest::TestLeafId;
-use self::test_manifest::TestManifestId;
 
 fn files_reference(files: BTreeMap<&str, &str>) -> Result<BTreeMap<NonRootMPath, String>> {
     files

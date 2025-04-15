@@ -8,8 +8,8 @@
 use std::collections::BTreeMap;
 use std::collections::HashMap;
 
-use anyhow::anyhow;
 use anyhow::Result;
+use anyhow::anyhow;
 use fbinit::FacebookInit;
 use futures::future::try_join_all;
 use maplit::hashmap;

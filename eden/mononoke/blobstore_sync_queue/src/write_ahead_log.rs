@@ -9,14 +9,14 @@ use std::collections::HashMap;
 use std::collections::HashSet;
 use std::ops::Index;
 use std::slice::SliceIndex;
+use std::sync::Arc;
 use std::sync::atomic::AtomicUsize;
 use std::sync::atomic::Ordering;
-use std::sync::Arc;
 use std::time::Duration;
 
-use anyhow::format_err;
 use anyhow::Context;
 use anyhow::Result;
+use anyhow::format_err;
 use async_trait::async_trait;
 use auto_impl::auto_impl;
 use context::CoreContext;
@@ -44,8 +44,8 @@ use sql::Connection;
 use sql::WriteResult;
 use sql_common::mysql::IsolationLevel;
 use sql_construct::SqlShardedConstruct;
-use sql_ext::mononoke_queries;
 use sql_ext::SqlShardedConnections;
+use sql_ext::mononoke_queries;
 use vec1::Vec1;
 
 const SQL_WAL_WRITE_BUFFER_SIZE: usize = 1000;

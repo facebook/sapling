@@ -19,20 +19,20 @@ use mononoke_types::BonsaiChangeset;
 use pushrebase_hooks::get_pushrebase_hooks;
 use repo_authorization::AuthorizationContext;
 use repo_authorization::RepoWriteOperation;
-use repo_update_logger::log_bookmark_operation;
-use repo_update_logger::log_new_commits;
 use repo_update_logger::BookmarkInfo;
 use repo_update_logger::BookmarkOperation;
 use repo_update_logger::CommitInfo;
+use repo_update_logger::log_bookmark_operation;
+use repo_update_logger::log_new_commits;
 
-use crate::affected_changesets::AdditionalChangesets;
-use crate::affected_changesets::AffectedChangesets;
-use crate::repo_lock::check_repo_lock;
-use crate::repo_lock::RepoLockPushrebaseHook;
-use crate::restrictions::check_bookmark_sync_config;
-use crate::restrictions::BookmarkKindRestrictions;
 use crate::BookmarkMovementError;
 use crate::Repo;
+use crate::affected_changesets::AdditionalChangesets;
+use crate::affected_changesets::AffectedChangesets;
+use crate::repo_lock::RepoLockPushrebaseHook;
+use crate::repo_lock::check_repo_lock;
+use crate::restrictions::BookmarkKindRestrictions;
+use crate::restrictions::check_bookmark_sync_config;
 
 #[must_use = "PushrebaseOntoBookmarkOp must be run to have an effect"]
 pub struct PushrebaseOntoBookmarkOp<'op> {

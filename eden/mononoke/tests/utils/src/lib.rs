@@ -11,8 +11,8 @@ use std::collections::BTreeMap;
 use std::collections::HashMap;
 use std::str::FromStr;
 
-use anyhow::format_err;
 use anyhow::Error;
+use anyhow::format_err;
 use bonsai_git_mapping::BonsaiGitMapping;
 use bonsai_hg_mapping::BonsaiHgMapping;
 use bonsai_hg_mapping::BonsaiHgMappingRef;

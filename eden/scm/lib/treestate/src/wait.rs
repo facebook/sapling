@@ -10,8 +10,8 @@ use std::path::Path;
 use std::path::PathBuf;
 
 use fs_err as fs;
-use types::hgid::NULL_ID;
 use types::HgId;
+use types::hgid::NULL_ID;
 
 /// State to wait for dirstate changes.
 pub struct Wait {

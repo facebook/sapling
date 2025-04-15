@@ -12,9 +12,9 @@ use std::collections::HashSet;
 use std::path::Path;
 use std::str;
 
-use anyhow::anyhow;
 use anyhow::Context;
 use anyhow::Result;
+use anyhow::anyhow;
 use cached_config::ConfigHandle;
 use cached_config::ConfigStore;
 use metaconfig_types::AsyncRequestsConfig;
@@ -615,9 +615,9 @@ mod test {
     use metaconfig_types::XRepoSyncSourceConfig;
     use metaconfig_types::XRepoSyncSourceConfigMapping;
     use mononoke_macros::mononoke;
-    use mononoke_types::path::MPath;
     use mononoke_types::DerivableType;
     use mononoke_types::NonRootMPath;
+    use mononoke_types::path::MPath;
     use mononoke_types_mocks::changesetid::ONES_CSID;
     use nonzero_ext::nonzero;
     use pretty_assertions::assert_eq;

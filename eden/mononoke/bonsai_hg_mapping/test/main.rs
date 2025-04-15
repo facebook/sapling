@@ -8,9 +8,9 @@
 //! Tests for the Changesets store.
 
 use std::str::FromStr;
+use std::sync::Arc;
 use std::sync::atomic::AtomicUsize;
 use std::sync::atomic::Ordering;
-use std::sync::Arc;
 
 use anyhow::Error;
 use assert_matches::assert_matches;

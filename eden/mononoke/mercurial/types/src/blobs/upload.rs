@@ -8,10 +8,10 @@
 use std::sync::Arc;
 
 use ::manifest::Entry;
-use anyhow::bail;
 use anyhow::Context;
 use anyhow::Error;
 use anyhow::Result;
+use anyhow::bail;
 use blobstore::Blobstore;
 use bytes::Bytes;
 use cloned::cloned;
@@ -30,13 +30,12 @@ use mononoke_types::NonRootMPath;
 use mononoke_types::RepoPath;
 use stats::prelude::*;
 
-use super::errors::MononokeHgBlobError;
-use super::filenode_lookup::lookup_filenode_id;
-use super::filenode_lookup::store_filenode_id;
-use super::filenode_lookup::FileNodeIdPointer;
 use super::File;
 use super::META_SZ;
-use crate::calculate_hg_node_id_stream;
+use super::errors::MononokeHgBlobError;
+use super::filenode_lookup::FileNodeIdPointer;
+use super::filenode_lookup::lookup_filenode_id;
+use super::filenode_lookup::store_filenode_id;
 use crate::FileBytes;
 use crate::HgBlobNode;
 use crate::HgFileEnvelopeMut;
@@ -45,6 +44,7 @@ use crate::HgManifestEnvelopeMut;
 use crate::HgManifestId;
 use crate::HgNodeHash;
 use crate::HgParents;
+use crate::calculate_hg_node_id_stream;
 
 define_stats! {
     prefix = "mononoke.blobrepo";

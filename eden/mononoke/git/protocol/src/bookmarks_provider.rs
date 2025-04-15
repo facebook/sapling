@@ -17,11 +17,11 @@ use futures::TryStreamExt;
 use mononoke_types::ChangesetId;
 use rustc_hash::FxHashMap;
 
+use crate::REF_PREFIX;
+use crate::Repo;
 use crate::types::BonsaiBookmarks;
 use crate::types::RefsSource;
 use crate::types::RequestedRefs;
-use crate::Repo;
-use crate::REF_PREFIX;
 
 /// Get the bookmarks (branches, tags) and their corresponding commits
 /// for the given repo based on the request parameters. If the request

@@ -395,10 +395,10 @@ pub struct SendFdPayload {
 // even if f64 cannot represent the number.
 mod serde_raw_fds {
     use filedescriptor::RawFileDescriptor;
-    use serde::ser::SerializeSeq;
     use serde::Deserialize;
     use serde::Deserializer;
     use serde::Serializer;
+    use serde::ser::SerializeSeq;
 
     pub fn serialize<S>(raw_fds: &Vec<RawFileDescriptor>, serializer: S) -> Result<S::Ok, S::Error>
     where

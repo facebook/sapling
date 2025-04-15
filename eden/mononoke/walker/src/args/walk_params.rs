@@ -10,10 +10,10 @@ use std::collections::HashSet;
 use anyhow::Error;
 use clap::Args;
 
-use crate::args::graph_arg_types::EdgeTypeArg;
-use crate::args::graph_arg_types::NodeTypeArg;
 use crate::args::graph_arg_types::DEEP;
 use crate::args::graph_arg_types::DEFAULT;
+use crate::args::graph_arg_types::EdgeTypeArg;
+use crate::args::graph_arg_types::NodeTypeArg;
 use crate::detail::graph::EdgeType;
 use crate::detail::graph::NodeType;
 

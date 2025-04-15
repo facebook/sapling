@@ -8,9 +8,9 @@
 use std::collections::HashMap;
 use std::sync::Arc;
 
-use anyhow::anyhow;
 use anyhow::Context;
 use anyhow::Result;
+use anyhow::anyhow;
 use async_trait::async_trait;
 use blobstore::Blobstore;
 use blobstore::BlobstoreBytes;
@@ -26,15 +26,15 @@ use context::CoreContext;
 use futures::stream::StreamExt;
 use metaconfig_types::BlobstoreId;
 use metaconfig_types::MultiplexId;
-use multiplexedblob::base::ErrorKind;
 use multiplexedblob::ScrubHandler;
 use multiplexedblob::ScrubOptions;
 use multiplexedblob::SrubWriteOnly;
+use multiplexedblob::base::ErrorKind;
 
-use crate::multiplex;
 use crate::MultiplexTimeout;
 use crate::Scuba;
 use crate::WalMultiplexedBlobstore;
+use crate::multiplex;
 
 impl WalMultiplexedBlobstore {
     async fn scrub_get(

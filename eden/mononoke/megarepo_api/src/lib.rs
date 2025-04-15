@@ -14,9 +14,9 @@ use std::sync::Arc;
 
 use add_branching_sync_target::AddBranchingSyncTarget;
 use add_sync_target::AddSyncTarget;
+use anyhow::Error;
 use anyhow::anyhow;
 use anyhow::bail;
-use anyhow::Error;
 use async_once_cell::AsyncOnceCell;
 use bonsai_hg_mapping::BonsaiHgMappingRef;
 use bookmarks::BookmarksRef;

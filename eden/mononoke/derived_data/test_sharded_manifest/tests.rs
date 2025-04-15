@@ -6,9 +6,9 @@
  */
 
 use std::collections::HashSet;
+use std::sync::RwLock;
 use std::sync::atomic::AtomicU64;
 use std::sync::atomic::Ordering;
-use std::sync::RwLock;
 
 use anyhow::Result;
 use async_recursion::async_recursion;
@@ -28,10 +28,10 @@ use fixtures::TestRepoFixture;
 use futures::TryStreamExt;
 use manifest::ManifestOps;
 use mononoke_macros::mononoke;
-use mononoke_types::test_sharded_manifest::TestShardedManifestDirectory;
-use mononoke_types::test_sharded_manifest::TestShardedManifestEntry;
 use mononoke_types::ChangesetIdPrefix;
 use mononoke_types::ChangesetIdsResolvedFromPrefix;
+use mononoke_types::test_sharded_manifest::TestShardedManifestDirectory;
+use mononoke_types::test_sharded_manifest::TestShardedManifestEntry;
 use repo_blobstore::RepoBlobstore;
 use repo_blobstore::RepoBlobstoreRef;
 use repo_derived_data::RepoDerivedData;
@@ -40,8 +40,8 @@ use repo_identity::RepoIdentity;
 use skeleton_manifest::RootSkeletonManifestId;
 use test_manifest::RootTestManifestDirectory;
 
-use crate::derive_from_predecessor::inner_derive_from_predecessor;
 use crate::RootTestShardedManifestDirectory;
+use crate::derive_from_predecessor::inner_derive_from_predecessor;
 
 #[facet::container]
 struct Repo(

@@ -14,11 +14,11 @@ use std::path::Path;
 use std::path::PathBuf;
 
 use structopt::StructOpt;
-use xdiff::diff_unified;
 use xdiff::CopyInfo;
 use xdiff::DiffFile;
 use xdiff::DiffOpts;
 use xdiff::FileType;
+use xdiff::diff_unified;
 
 #[cfg(target_family = "unix")]
 const EXEC_BIT: u32 = 0o0000100;

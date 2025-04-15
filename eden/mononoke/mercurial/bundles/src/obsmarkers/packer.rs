@@ -13,11 +13,11 @@ use anyhow::Result;
 use byteorder::BigEndian;
 use byteorder::ByteOrder;
 use bytes::BufMut;
-use futures::future;
-use futures::stream;
 use futures::Stream;
 use futures::StreamExt;
 use futures::TryStreamExt;
+use futures::future;
+use futures::stream;
 use mercurial_types::HgChangesetId;
 use mononoke_types::DateTime;
 

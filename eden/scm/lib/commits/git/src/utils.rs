@@ -11,9 +11,9 @@ use std::collections::HashSet;
 use anyhow::Result;
 use commits_trait::GraphNode;
 use commits_trait::HgCommit;
-use dag::ops::DagAddHeads;
 use dag::Dag;
 use dag::Vertex;
+use dag::ops::DagAddHeads;
 
 pub(crate) fn commits_to_graph_nodes(commits: &[HgCommit]) -> Vec<GraphNode> {
     commits

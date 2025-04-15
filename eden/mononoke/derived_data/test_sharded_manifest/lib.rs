@@ -11,5 +11,5 @@ mod mapping;
 #[cfg(test)]
 mod tests;
 
-pub use mapping::format_key;
 pub use mapping::RootTestShardedManifestDirectory;
+pub use mapping::format_key;

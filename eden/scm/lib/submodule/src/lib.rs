@@ -7,5 +7,5 @@
 
 mod parse;
 
-pub use parse::parse_gitmodules;
 pub use parse::Submodule;
+pub use parse::parse_gitmodules;

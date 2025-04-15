@@ -5,9 +5,9 @@
  * GNU General Public License version 2.
  */
 
-use anyhow::anyhow;
 use anyhow::Context;
 use anyhow::Result;
+use anyhow::anyhow;
 use fbinit::FacebookInit;
 use metaconfig_types::DatabaseConfig;
 use metaconfig_types::LocalDatabaseConfig;

@@ -17,8 +17,8 @@ use edenapi_types::LandStackData;
 use edenapi_types::LandStackRequest;
 use edenapi_types::LandStackResponse;
 use edenapi_types::ServerError;
-use futures::stream;
 use futures::StreamExt;
+use futures::stream;
 use hooks::PushAuthoredBy;
 use mercurial_types::HgChangesetId;
 use mercurial_types::HgNodeHash;
@@ -27,10 +27,10 @@ use mononoke_api::Repo;
 use mononoke_api_hg::HgRepoContext;
 use repo_identity::RepoIdentityRef;
 
-use super::handler::SaplingRemoteApiContext;
 use super::HandlerResult;
 use super::SaplingRemoteApiHandler;
 use super::SaplingRemoteApiMethod;
+use super::handler::SaplingRemoteApiContext;
 use crate::errors::ErrorKind;
 
 /// Rebase a stack of commits onto a bookmark, and update the bookmark to the top of the newly-rebased stack.

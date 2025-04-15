@@ -9,11 +9,11 @@ use std::io::Write;
 use std::time::Instant;
 
 use clidispatch::ReqCtx;
-use cmdutil::define_flags;
 use cmdutil::Result;
+use cmdutil::define_flags;
 use repo::repo::Repo;
-use revisionstore::scmstore::activitylogger;
 use revisionstore::scmstore::FileStoreBuilder;
+use revisionstore::scmstore::activitylogger;
 use types::FetchContext;
 
 define_flags! {

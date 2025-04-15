@@ -15,9 +15,9 @@ use edenapi_types::GitObjectsRequest;
 use edenapi_types::GitObjectsResponse;
 use edenapi_types::ServerError;
 use futures::StreamExt;
-use git_types::fetch_git_object_bytes;
 use git_types::GitIdentifier;
 use git_types::HeaderState;
+use git_types::fetch_git_object_bytes;
 use gotham_ext::handler::SlapiCommitIdentityScheme;
 use mononoke_api::MononokeRepo;
 use mononoke_api::Repo;
@@ -25,10 +25,10 @@ use mononoke_api_hg::HgRepoContext;
 use mononoke_types::hash::GitSha1;
 use types::Id20;
 
-use super::handler::SaplingRemoteApiContext;
 use super::HandlerResult;
 use super::SaplingRemoteApiHandler;
 use super::SaplingRemoteApiMethod;
+use super::handler::SaplingRemoteApiContext;
 
 pub struct GitObjectsHandler;
 

@@ -13,7 +13,6 @@ use async_trait::async_trait;
 use bookmarks::BookmarkKey;
 use bookmarks::Freshness;
 use bytes::Bytes;
-use edenapi_types::bookmark::Bookmark2Request;
 use edenapi_types::BookmarkEntry;
 use edenapi_types::BookmarkRequest;
 use edenapi_types::BookmarkResult;
@@ -21,8 +20,9 @@ use edenapi_types::HgId;
 use edenapi_types::ServerError;
 use edenapi_types::SetBookmarkRequest;
 use edenapi_types::SetBookmarkResponse;
-use futures::stream;
+use edenapi_types::bookmark::Bookmark2Request;
 use futures::StreamExt;
+use futures::stream;
 use gotham_ext::handler::SlapiCommitIdentityScheme;
 use mercurial_types::HgChangesetId;
 use mercurial_types::HgNodeHash;
@@ -31,10 +31,10 @@ use mononoke_api::MononokeRepo;
 use mononoke_api::Repo;
 use mononoke_api_hg::HgRepoContext;
 
-use super::handler::SaplingRemoteApiContext;
 use super::HandlerResult;
 use super::SaplingRemoteApiHandler;
 use super::SaplingRemoteApiMethod;
+use super::handler::SaplingRemoteApiContext;
 use crate::errors::ErrorKind;
 
 /// XXX: This number was chosen arbitrarily.

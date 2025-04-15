@@ -8,45 +8,45 @@
 use std::collections::HashMap;
 use std::mem;
 
-use anyhow::bail;
 use anyhow::Context;
 use anyhow::Error;
 use anyhow::Result;
+use anyhow::bail;
 use blobstore::Loadable;
 use bytes::Bytes;
 use cloned::cloned;
 use context::CoreContext;
 use filestore::FetchKey;
-use futures::future::BoxFuture;
 use futures::Future;
 use futures::FutureExt;
 use futures::Stream;
 use futures::TryFutureExt;
 use futures::TryStreamExt;
-use futures_ext::future::TryShared;
+use futures::future::BoxFuture;
 use futures_ext::FbTryFutureExt;
+use futures_ext::future::TryShared;
 use mercurial_bundles::changegroup::CgDeltaChunk;
+use mercurial_types::Delta;
+use mercurial_types::HgFileNodeId;
+use mercurial_types::HgNodeHash;
+use mercurial_types::HgNodeKey;
+use mercurial_types::NULL_HASH;
+use mercurial_types::NonRootMPath;
+use mercurial_types::RepoPath;
+use mercurial_types::RevFlags;
 use mercurial_types::blobs::ContentBlobMeta;
 use mercurial_types::blobs::File;
 use mercurial_types::blobs::UploadHgFileContents;
 use mercurial_types::blobs::UploadHgFileEntry;
 use mercurial_types::blobs::UploadHgNodeHash;
 use mercurial_types::delta;
-use mercurial_types::Delta;
-use mercurial_types::HgFileNodeId;
-use mercurial_types::HgNodeHash;
-use mercurial_types::HgNodeKey;
-use mercurial_types::NonRootMPath;
-use mercurial_types::RepoPath;
-use mercurial_types::RevFlags;
-use mercurial_types::NULL_HASH;
 use quickcheck::Arbitrary;
 use quickcheck::Gen;
 use remotefilelog::create_raw_filenode_blob;
 
+use crate::Repo;
 use crate::stats::*;
 use crate::upload_blobs::UploadableHgBlob;
-use crate::Repo;
 
 #[derive(Debug, Eq, PartialEq)]
 pub struct FilelogDeltaed {
@@ -339,12 +339,12 @@ mod tests {
     use fbinit::FacebookInit;
     use filestore::FilestoreConfig;
     use futures::stream::iter;
-    use itertools::assert_equal;
     use itertools::EitherOrBoth;
     use itertools::Itertools;
+    use itertools::assert_equal;
     use mercurial_mutation::HgMutationStore;
-    use mercurial_types::delta::Fragment;
     use mercurial_types::NULL_HASH;
+    use mercurial_types::delta::Fragment;
     use mercurial_types_mocks::nodehash::*;
     use mononoke_macros::mononoke;
     use phases::Phases;

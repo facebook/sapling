@@ -17,6 +17,14 @@ use nonblocking::non_blocking;
 use nonblocking::non_blocking_result;
 use tracing::debug;
 
+use crate::CloneData;
+use crate::Dag;
+use crate::Group;
+use crate::Level;
+use crate::Result;
+use crate::Set;
+use crate::Vertex;
+use crate::VertexListWithOptions;
 use crate::ops::CheckIntegrity;
 use crate::ops::DagAddHeads;
 use crate::ops::DagAlgorithm;
@@ -32,14 +40,6 @@ use crate::protocol::RemoteIdConvertProtocol;
 #[cfg(feature = "render")]
 use crate::render::render_dag;
 use crate::tests::DrawDag;
-use crate::CloneData;
-use crate::Dag;
-use crate::Group;
-use crate::Level;
-use crate::Result;
-use crate::Set;
-use crate::Vertex;
-use crate::VertexListWithOptions;
 
 /// Dag structure for testing purpose.
 pub struct TestDag {
@@ -359,8 +359,8 @@ impl TestDag {
     #[cfg(test)]
     /// Dump Dag state as a string.
     pub async fn dump_state(&self) -> String {
-        use crate::iddagstore::tests::dump_store_state;
         use crate::Id;
+        use crate::iddagstore::tests::dump_store_state;
         let iddag = &self.dag.dag;
         let all = iddag.all().unwrap();
         let iddag_state = dump_store_state(&iddag.store, &all);

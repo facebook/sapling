@@ -7,11 +7,11 @@
 
 use std::cmp::Ordering;
 
+use anyhow::Context;
+use anyhow::Result;
 use anyhow::bail;
 use anyhow::ensure;
 use anyhow::format_err;
-use anyhow::Context;
-use anyhow::Result;
 use quickcheck::Arbitrary;
 use quickcheck::Gen;
 use rand_distr::Distribution;

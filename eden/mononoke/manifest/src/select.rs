@@ -5,8 +5,8 @@
  * GNU General Public License version 2.
  */
 
-use mononoke_types::path::MPath;
 use mononoke_types::NonRootMPath;
+use mononoke_types::path::MPath;
 
 use crate::PathTree;
 

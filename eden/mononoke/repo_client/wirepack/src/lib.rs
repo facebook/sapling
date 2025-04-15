@@ -11,17 +11,17 @@ use std::mem;
 use anyhow::Result;
 use bytes::Bytes;
 use futures::Stream;
-use mercurial_bundles::wirepack::converter::convert_wirepack;
-use mercurial_bundles::wirepack::converter::WirePackPartProcessor;
 use mercurial_bundles::wirepack::DataEntry;
 use mercurial_bundles::wirepack::HistoryEntry;
 use mercurial_bundles::wirepack::Part;
+use mercurial_bundles::wirepack::converter::WirePackPartProcessor;
+use mercurial_bundles::wirepack::converter::convert_wirepack;
 use mercurial_revlog::manifest::ManifestContent;
-use mercurial_types::delta;
 use mercurial_types::HgNodeHash;
 use mercurial_types::HgNodeKey;
-use mercurial_types::RepoPath;
 use mercurial_types::NULL_HASH;
+use mercurial_types::RepoPath;
+use mercurial_types::delta;
 use thiserror::Error;
 
 #[derive(Debug, Error)]
@@ -160,9 +160,9 @@ mod test {
     use futures::stream::TryStreamExt;
     use maplit::btreemap;
     use mercurial_revlog::manifest::Details;
-    use mercurial_types::manifest::Type;
     use mercurial_types::FileType;
     use mercurial_types::NonRootMPath;
+    use mercurial_types::manifest::Type;
     use mercurial_types_mocks::nodehash::*;
 
     use super::*;

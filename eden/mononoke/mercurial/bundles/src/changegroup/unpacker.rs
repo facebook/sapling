@@ -12,11 +12,11 @@ use std::cmp;
 use std::mem;
 use std::str::FromStr;
 
-use anyhow::bail;
-use anyhow::format_err;
 use anyhow::Context;
 use anyhow::Error;
 use anyhow::Result;
+use anyhow::bail;
+use anyhow::format_err;
 use byteorder::BigEndian;
 use byteorder::ByteOrder;
 use bytes::Buf;

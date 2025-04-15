@@ -11,8 +11,8 @@ use std::collections::BTreeMap;
 use std::collections::HashSet;
 use std::num::NonZeroU64;
 
-use anyhow::anyhow;
 use anyhow::Error;
+use anyhow::anyhow;
 use changesets_creation::save_changesets;
 use commit_graph::CommitGraphRef;
 use commit_graph::CommitGraphWriterRef;
@@ -21,12 +21,10 @@ use content_manifest_derivation::RootContentManifestId;
 use context::CoreContext;
 use filestore::FilestoreConfigRef;
 use fsnodes::RootFsnodeId;
-use futures::future::try_join;
 use futures::TryStreamExt;
+use futures::future::try_join;
 use manifest::Entry;
 use manifest::ManifestOps;
-use mononoke_types::content_manifest::compat::ContentManifestFile;
-use mononoke_types::content_manifest::compat::ContentManifestId;
 use mononoke_types::BonsaiChangeset;
 use mononoke_types::BonsaiChangesetMut;
 use mononoke_types::ChangesetId;
@@ -34,6 +32,8 @@ use mononoke_types::DateTime;
 use mononoke_types::FileChange;
 use mononoke_types::GitLfs;
 use mononoke_types::NonRootMPath;
+use mononoke_types::content_manifest::compat::ContentManifestFile;
+use mononoke_types::content_manifest::compat::ContentManifestId;
 use regex::Regex;
 use repo_blobstore::RepoBlobstoreRef;
 use repo_derived_data::RepoDerivedDataRef;
@@ -380,8 +380,8 @@ mod test {
     use repo_derived_data::RepoDerivedData;
     use repo_identity::RepoIdentity;
     use test_repo_factory::TestRepoFactory;
-    use tests_utils::list_working_copy_utf8;
     use tests_utils::CreateCommitContext;
+    use tests_utils::list_working_copy_utf8;
 
     use super::*;
 

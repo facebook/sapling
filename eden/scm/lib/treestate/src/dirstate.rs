@@ -12,19 +12,19 @@ use std::path::PathBuf;
 use std::time::Duration;
 use std::time::SystemTime;
 
-use anyhow::anyhow;
 use anyhow::Context;
 use anyhow::Result;
+use anyhow::anyhow;
 use repolock::LockError;
 use repolock::LockedPath;
 use repolock::RepoLocker;
-use types::hgid::NULL_ID;
 use types::HgId;
+use types::hgid::NULL_ID;
 
+use crate::ErrorKind;
 use crate::serialization::Serializable;
 use crate::store::BlockId;
 use crate::treestate::TreeState;
-use crate::ErrorKind;
 
 /// A dirstate object. This maintains .hg/dirstate file
 #[derive(Debug, PartialEq)]

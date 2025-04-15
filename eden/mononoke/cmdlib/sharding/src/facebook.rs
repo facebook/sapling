@@ -7,17 +7,17 @@
 
 use std::collections::HashMap;
 use std::env;
+use std::sync::Arc;
 use std::sync::atomic::AtomicBool;
 use std::sync::atomic::Ordering;
-use std::sync::Arc;
 
-use anyhow::anyhow;
 use anyhow::Context;
 use anyhow::Result;
+use anyhow::anyhow;
 use fbinit::FacebookInit;
-use futures::future::select;
 use futures::future::Either;
 use futures::future::FutureExt;
+use futures::future::select;
 use futures::stream;
 use futures::stream::FuturesUnordered;
 use futures::stream::StreamExt;
@@ -25,9 +25,9 @@ use futures::stream::TryStreamExt;
 use sharding_ext::RepoShard;
 use shardmanager_lib::smtypes;
 use shardmanager_lib::{self as sm};
+use slog::Logger;
 use slog::error;
 use slog::info;
-use slog::Logger;
 use stats::prelude::*;
 use tokio::runtime::Handle;
 use tokio::sync::RwLock;

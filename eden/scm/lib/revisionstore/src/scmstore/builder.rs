@@ -12,9 +12,9 @@ use std::sync::Arc;
 
 use anyhow::Result;
 use cas_client::CasClient;
-use configmodel::convert::ByteCount;
 use configmodel::Config;
 use configmodel::ConfigExt;
+use configmodel::convert::ByteCount;
 use edenapi::Builder;
 use fn_error_context::context;
 use hgtime::HgTime;
@@ -22,6 +22,9 @@ use parking_lot::Mutex;
 use progress_model::AggregatingProgressBar;
 use storemodel::SerializationFormat;
 
+use crate::IndexedLogHgIdHistoryStore;
+use crate::SaplingRemoteApiFileStore;
+use crate::SaplingRemoteApiTreeStore;
 use crate::indexedlogauxstore::AuxStore;
 use crate::indexedlogdatastore::IndexedLogHgIdDataStore;
 use crate::indexedlogdatastore::IndexedLogHgIdDataStoreConfig;
@@ -29,11 +32,12 @@ use crate::indexedlogtreeauxstore::TreeAuxStore;
 use crate::indexedlogutil::StoreType;
 use crate::lfs::LfsClient;
 use crate::lfs::LfsStore;
+use crate::scmstore::FileStore;
+use crate::scmstore::TreeStore;
 use crate::scmstore::activitylogger::ActivityLogger;
 use crate::scmstore::file::FileStoreMetrics;
 use crate::scmstore::tree::TreeMetadataMode;
-use crate::scmstore::FileStore;
-use crate::scmstore::TreeStore;
+use crate::util::RUN_ONCE_FILENAME;
 use crate::util::check_run_once;
 use crate::util::get_cache_path;
 use crate::util::get_indexedlogdatastore_aux_path;
@@ -41,10 +45,6 @@ use crate::util::get_indexedlogdatastore_path;
 use crate::util::get_indexedloghistorystore_path;
 use crate::util::get_local_path;
 use crate::util::get_tree_aux_store_path;
-use crate::util::RUN_ONCE_FILENAME;
-use crate::IndexedLogHgIdHistoryStore;
-use crate::SaplingRemoteApiFileStore;
-use crate::SaplingRemoteApiTreeStore;
 
 pub struct FileStoreBuilder<'a> {
     config: &'a dyn Config,

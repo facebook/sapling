@@ -8,16 +8,16 @@
 use anyhow::Error;
 use metaconfig_types::HgsqlName;
 use metaconfig_types::RepoReadOnly;
+use sql::Connection;
 use sql::mysql;
-use sql::mysql_async::prelude::ConvIr;
-use sql::mysql_async::prelude::FromValue;
 use sql::mysql_async::FromValueError;
 use sql::mysql_async::Value;
-use sql::Connection;
+use sql::mysql_async::prelude::ConvIr;
+use sql::mysql_async::prelude::FromValue;
 use sql_construct::SqlConstruct;
 use sql_construct::SqlConstructFromMetadataDatabaseConfig;
-use sql_ext::mononoke_queries;
 use sql_ext::SqlConnections;
+use sql_ext::mononoke_queries;
 
 static DEFAULT_MSG: &str = "Defaulting to locked as the lock state isn't initialised for this repo";
 static NOT_CONNECTED_MSG: &str = "Defaulting to locked as no database connection passed";

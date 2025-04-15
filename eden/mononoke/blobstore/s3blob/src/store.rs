@@ -11,8 +11,8 @@ use std::num::NonZeroU32;
 use std::sync::Arc;
 use std::time::Duration;
 
-use anyhow::format_err;
 use anyhow::Result;
+use anyhow::format_err;
 use async_trait::async_trait;
 use blobstore::Blobstore;
 use blobstore::BlobstoreGetData;

@@ -5,8 +5,8 @@
  * GNU General Public License version 2.
  */
 
-use anyhow::bail;
 use anyhow::Error;
+use anyhow::bail;
 use cloned::cloned;
 use fbinit::FacebookInit;
 use metaconfig_types::LocalDatabaseConfig;
@@ -14,10 +14,10 @@ use metaconfig_types::MetadataDatabaseConfig;
 use metaconfig_types::OssRemoteMetadataDatabaseConfig;
 use metaconfig_types::RemoteMetadataDatabaseConfig;
 use metaconfig_types::ShardableRemoteDatabaseConfig;
-use sql::sqlite::SqliteMultithreaded;
-use sql::sqlite::SqliteQueryType;
 use sql::Connection;
 use sql::SqlConnections;
+use sql::sqlite::SqliteMultithreaded;
+use sql::sqlite::SqliteQueryType;
 use sql_construct::SqlConstruct;
 use sql_construct::SqlConstructFromMetadataDatabaseConfig;
 use sql_construct::SqlShardableConstructFromMetadataDatabaseConfig;

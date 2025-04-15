@@ -16,13 +16,13 @@ use std::ops::Deref;
 
 use ::serde::Deserialize;
 use ::serde::Serialize;
+use cpython::_detail::ffi;
 use cpython::FromPyObject;
 use cpython::PyObject;
 use cpython::PyType;
 use cpython::Python;
 use cpython::PythonObjectDowncastError;
 use cpython::PythonObjectWithTypeObject;
-use cpython::_detail::ffi;
 use cpython::*;
 use once_cell::sync::Lazy;
 use parking_lot::RwLock;

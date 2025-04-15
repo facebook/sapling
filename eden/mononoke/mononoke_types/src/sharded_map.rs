@@ -13,39 +13,39 @@ use std::collections::BTreeMap;
 use std::fmt::Debug;
 use std::sync::OnceLock;
 
-use anyhow::bail;
 use anyhow::Context;
 use anyhow::Ok;
 use anyhow::Result;
+use anyhow::bail;
 use async_recursion::async_recursion;
 use blobstore::Blobstore;
 use blobstore::Loadable;
 use blobstore::Storable;
-use bounded_traversal::bounded_traversal_ordered_stream;
 use bounded_traversal::OrderedTraversal;
+use bounded_traversal::bounded_traversal_ordered_stream;
 use bytes::Bytes;
 use context::CoreContext;
 use derivative::Derivative;
-use futures::stream;
-use futures::stream::BoxStream;
 use futures::FutureExt;
 use futures::Stream;
 use futures::StreamExt;
 use futures::TryStreamExt;
+use futures::stream;
+use futures::stream::BoxStream;
 use itertools::Either;
 use itertools::Itertools;
 use nonzero_ext::nonzero;
 use smallvec::SmallVec;
-use sorted_vector_map::sorted_vector_map;
 use sorted_vector_map::SortedVectorMap;
+use sorted_vector_map::sorted_vector_map;
 
+use crate::ThriftConvert;
+use crate::TrieMap;
 use crate::blob::Blob;
 use crate::blob::BlobstoreValue;
 use crate::thrift;
 use crate::typed_hash::IdContext;
 use crate::typed_hash::MononokeId;
-use crate::ThriftConvert;
-use crate::TrieMap;
 
 pub trait MapValue: ThriftConvert + Debug + Clone + Send + Sync + 'static {
     type Id: MononokeId<Thrift = thrift::id::ShardedMapNodeId, Value = ShardedMapNode<Self>>;
@@ -1128,6 +1128,7 @@ impl<Value: MapValue> BlobstoreValue for ShardedMapNode<Value> {
 mod test {
     use std::str::FromStr;
 
+    use ShardedMapNode::*;
     use async_trait::async_trait;
     use blobstore::BlobstoreKeyParam;
     use blobstore::BlobstoreKeyRange;
@@ -1144,7 +1145,6 @@ mod test {
     use quickcheck::QuickCheck;
     use quickcheck::TestResult;
     use quickcheck::Testable;
-    use ShardedMapNode::*;
 
     use super::*;
     use crate::impl_typed_hash;

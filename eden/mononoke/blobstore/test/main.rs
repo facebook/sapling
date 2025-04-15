@@ -26,8 +26,8 @@ use fileblob::Fileblob;
 use memblob::Memblob;
 use mononoke_macros::mononoke;
 use mononoke_types::BlobstoreBytes;
-use sqlblob::get_test_config_store;
 use sqlblob::Sqlblob;
+use sqlblob::get_test_config_store;
 use strum::IntoEnumIterator;
 use tempfile::TempDir;
 

@@ -15,22 +15,22 @@ use std::fmt;
 use std::marker::PhantomData;
 use std::num::NonZeroU64;
 
-use anyhow::format_err;
 use anyhow::Error;
-use clap::builder::ValueRange;
+use anyhow::format_err;
 use clap::Arg;
 use clap::ArgAction;
 use clap::ArgGroup;
 use clap::ArgMatches;
 use clap::Args;
+use clap::builder::ValueRange;
 use faster_hex::hex_decode;
 use faster_hex::hex_string;
-use futures::future::try_join_all;
 use futures::future::FutureExt;
+use futures::future::try_join_all;
 use futures::stream::FuturesOrdered;
 use futures::stream::TryStreamExt;
-use scs_client_raw::thrift;
 use scs_client_raw::ScsClient;
+use scs_client_raw::thrift;
 
 use crate::errors::SelectionErrorExt;
 

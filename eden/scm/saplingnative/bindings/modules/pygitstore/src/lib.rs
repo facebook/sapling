@@ -13,10 +13,10 @@ use ::gitstore::GitStore;
 use ::gitstore::ObjectType;
 use configmodel::Config;
 use cpython::*;
-use cpython_ext::convert::ImplInto;
-use cpython_ext::convert::Serde;
 use cpython_ext::PyPath;
 use cpython_ext::ResultPyErrExt;
+use cpython_ext::convert::ImplInto;
+use cpython_ext::convert::Serde;
 use storemodel::types::HgId;
 use types::fetch_mode::FetchMode;
 

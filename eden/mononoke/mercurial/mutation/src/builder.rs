@@ -8,8 +8,8 @@
 use metaconfig_types::RemoteDatabaseConfig;
 use metaconfig_types::RemoteMetadataDatabaseConfig;
 use mononoke_types::RepositoryId;
-use sql::mysql::IsolationLevel;
 use sql::Connection;
+use sql::mysql::IsolationLevel;
 use sql_construct::SqlConstruct;
 use sql_construct::SqlConstructFromMetadataDatabaseConfig;
 use sql_ext::SqlConnections;

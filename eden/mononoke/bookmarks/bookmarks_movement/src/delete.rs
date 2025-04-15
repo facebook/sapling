@@ -20,16 +20,16 @@ use repo_authorization::RepoWriteOperation;
 use repo_update_logger::BookmarkInfo;
 use repo_update_logger::BookmarkOperation;
 
-use crate::repo_lock::check_repo_lock;
-use crate::restrictions::check_bookmark_sync_config;
-use crate::restrictions::BookmarkKindRestrictions;
+use crate::ALLOW_BRANCH_DELETION;
+use crate::ALLOW_NON_FFWD_PUSHVAR;
+use crate::ALLOW_TAG_DELETION;
 use crate::BookmarkInfoData;
 use crate::BookmarkInfoTransaction;
 use crate::BookmarkMovementError;
 use crate::Repo;
-use crate::ALLOW_BRANCH_DELETION;
-use crate::ALLOW_NON_FFWD_PUSHVAR;
-use crate::ALLOW_TAG_DELETION;
+use crate::repo_lock::check_repo_lock;
+use crate::restrictions::BookmarkKindRestrictions;
+use crate::restrictions::check_bookmark_sync_config;
 
 #[must_use = "DeleteBookmarkOp must be run to have an effect"]
 pub struct DeleteBookmarkOp<'op> {

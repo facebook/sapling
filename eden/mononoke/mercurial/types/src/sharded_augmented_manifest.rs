@@ -8,9 +8,9 @@
 use std::io::Write;
 use std::str::FromStr;
 
-use anyhow::bail;
 use anyhow::Context;
 use anyhow::Result;
+use anyhow::bail;
 use async_trait::async_trait;
 use base64::Engine;
 use blake3::Hasher as Blake3Hasher;
@@ -30,6 +30,11 @@ use futures_ext::FbStreamExt;
 use futures_watchdog::WatchdogExt;
 use manifest::Entry;
 use manifest::Manifest;
+use mononoke_types::Blob;
+use mononoke_types::BlobstoreKey;
+use mononoke_types::BlobstoreValue;
+use mononoke_types::MononokeId;
+use mononoke_types::ThriftConvert;
 use mononoke_types::hash::Blake2;
 use mononoke_types::hash::Blake3;
 use mononoke_types::hash::Sha1;
@@ -38,22 +43,17 @@ use mononoke_types::sharded_map_v2::LoadableShardedMapV2Node;
 use mononoke_types::sharded_map_v2::Rollup;
 use mononoke_types::sharded_map_v2::ShardedMapV2Node;
 use mononoke_types::sharded_map_v2::ShardedMapV2Value;
-use mononoke_types::Blob;
-use mononoke_types::BlobstoreKey;
-use mononoke_types::BlobstoreValue;
-use mononoke_types::MononokeId;
-use mononoke_types::ThriftConvert;
 
-use crate::blobs::MononokeHgBlobError;
-use crate::thrift;
 use crate::FileType;
 use crate::HgAugmentedManifestId;
 use crate::HgNodeHash;
 use crate::HgParents;
 use crate::MPathElement;
 use crate::MononokeHgError;
-use crate::Type;
 use crate::NULL_HASH;
+use crate::Type;
+use crate::blobs::MononokeHgBlobError;
+use crate::thrift;
 
 const MAX_BUFFERED_ENTRIES: usize = 500;
 

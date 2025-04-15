@@ -11,11 +11,11 @@ use std::hash::Hash;
 use std::pin::Pin;
 
 use async_trait::async_trait;
+use futures::Stream;
 use futures::stream::BoxStream;
 use futures::stream::StreamExt;
 use futures::task::Context;
 use futures::task::Poll;
-use futures::Stream;
 
 use crate::countedmap::CountedMap;
 
@@ -241,8 +241,8 @@ mod tests {
 
     use futures::stream;
     use futures::stream::StreamExt;
-    use tokio::time::sleep;
     use tokio::time::Duration;
+    use tokio::time::sleep;
 
     use super::*;
 

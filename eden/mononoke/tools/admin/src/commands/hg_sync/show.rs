@@ -14,8 +14,8 @@ use context::CoreContext;
 use futures::stream::TryStreamExt;
 use mutable_counters::MutableCountersRef;
 
-use super::Repo;
 use super::LATEST_REPLAYED_REQUEST_KEY;
+use super::Repo;
 use crate::bookmark_log_entry::BookmarkLogEntry;
 
 #[derive(Args)]

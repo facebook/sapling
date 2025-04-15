@@ -7,11 +7,11 @@
 
 use std::any::Any;
 use std::collections::HashMap;
-use std::sync::atomic::AtomicUsize;
-use std::sync::atomic::Ordering;
 use std::sync::Arc;
 use std::sync::RwLock;
 use std::sync::Weak;
+use std::sync::atomic::AtomicUsize;
+use std::sync::atomic::Ordering;
 
 type CallbackAny = dyn (Fn(&dyn Any) -> anyhow::Result<()>) + Send + Sync + 'static;
 type Table = HashMap<String, Vec<Weak<CallbackAny>>>;

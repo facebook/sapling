@@ -7,8 +7,8 @@
 
 use std::sync::Arc;
 
-use anyhow::anyhow;
 use anyhow::Result;
+use anyhow::anyhow;
 use clap::Args;
 use clap::Subcommand;
 use cmdlib_cross_repo::create_commit_syncers_from_app;

@@ -40,13 +40,13 @@ mod vertex_options;
 #[cfg(any(test, feature = "indexedlog-backend"))]
 pub use dag::Dag;
 pub use dag::DagBuilder;
-pub use dag_types::clone;
-pub use dag_types::id;
 pub use dag_types::CloneData;
 pub use dag_types::Group;
 pub use dag_types::Id;
 pub use dag_types::Location;
 pub use dag_types::Vertex;
+pub use dag_types::clone;
+pub use dag_types::id;
 pub use iddag::FirstAncestorConstraint;
 pub use iddag::IdDag;
 pub use iddag::IdDagAlgorithm;

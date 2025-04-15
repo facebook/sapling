@@ -10,9 +10,9 @@
 use std::collections::BTreeMap;
 use std::fmt;
 
-use anyhow::anyhow;
 use anyhow::Context;
 use anyhow::Error;
+use anyhow::anyhow;
 use content_manifest_derivation::RootContentManifestId;
 use context::CoreContext;
 use context::PerfCounterType;
@@ -26,9 +26,6 @@ pub use megarepo_configs::SourceRevision;
 pub use megarepo_configs::SyncConfigVersion;
 pub use megarepo_configs::SyncTargetConfig;
 pub use megarepo_configs::Target;
-use mononoke_types::content_manifest::compat::ContentManifestFile;
-use mononoke_types::content_manifest::compat::ContentManifestId;
-use mononoke_types::path::MPath;
 use mononoke_types::BonsaiChangesetMut;
 use mononoke_types::ChangesetId;
 use mononoke_types::ContentId;
@@ -36,6 +33,9 @@ use mononoke_types::FileChange;
 use mononoke_types::FileType;
 use mononoke_types::GitLfs;
 use mononoke_types::NonRootMPath;
+use mononoke_types::content_manifest::compat::ContentManifestFile;
+use mononoke_types::content_manifest::compat::ContentManifestId;
+use mononoke_types::path::MPath;
 use repo_blobstore::RepoBlobstoreRef;
 use repo_derived_data::RepoDerivedDataRef;
 use repo_identity::RepoIdentityRef;
@@ -44,8 +44,8 @@ use serde::Serialize;
 use sql::Connection;
 use sql_construct::SqlConstruct;
 use sql_construct::SqlConstructFromMetadataDatabaseConfig;
-use sql_ext::mononoke_queries;
 use sql_ext::SqlConnections;
+use sql_ext::mononoke_queries;
 
 pub trait Repo =
     RepoDerivedDataRef + RepoBlobstoreRef + FilestoreConfigRef + RepoIdentityRef + Sync + Send;

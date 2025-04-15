@@ -5,9 +5,9 @@
  * GNU General Public License version 2.
  */
 
+use std::sync::Arc;
 use std::sync::atomic::AtomicUsize;
 use std::sync::atomic::Ordering;
-use std::sync::Arc;
 
 use ::sql::Transaction;
 use anyhow::Error;
@@ -22,15 +22,15 @@ use bonsai_git_mapping::SqlBonsaiGitMappingBuilder;
 use context::CoreContext;
 use fbinit::FacebookInit;
 use mononoke_macros::mononoke;
-use mononoke_types::hash::GitSha1;
 use mononoke_types::RepositoryId;
+use mononoke_types::hash::GitSha1;
 use mononoke_types_mocks::changesetid as bonsai;
 use mononoke_types_mocks::hash::*;
 use mononoke_types_mocks::repo::REPO_ZERO;
 use sql::Connection;
 use sql_construct::SqlConstruct;
-use sql_ext::open_sqlite_in_memory;
 use sql_ext::SqlConnections;
+use sql_ext::open_sqlite_in_memory;
 
 struct CountedBonsaiGitMapping {
     inner_mapping: Arc<dyn BonsaiGitMapping>,

@@ -10,9 +10,9 @@ use std::hash::Hasher;
 use std::num::NonZeroUsize;
 use std::sync::Arc;
 
+use anyhow::Error;
 use anyhow::bail;
 use anyhow::format_err;
-use anyhow::Error;
 use bytes::BytesMut;
 use cached_config::ConfigHandle;
 use futures::future::TryFutureExt;
@@ -28,10 +28,10 @@ use crate::delay::BlobDelay;
 
 mod types {
     use sql::mysql;
-    use sql::mysql_async::prelude::ConvIr;
-    use sql::mysql_async::prelude::FromValue;
     use sql::mysql_async::FromValueError;
     use sql::mysql_async::Value;
+    use sql::mysql_async::prelude::ConvIr;
+    use sql::mysql_async::prelude::FromValue;
 
     type FromValueResult<T> = Result<T, FromValueError>;
 

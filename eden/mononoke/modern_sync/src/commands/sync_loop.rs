@@ -5,22 +5,22 @@
  * GNU General Public License version 2.
  */
 
-use std::sync::atomic::AtomicBool;
 use std::sync::Arc;
+use std::sync::atomic::AtomicBool;
 
-use anyhow::bail;
 use anyhow::Result;
+use anyhow::bail;
 use async_trait::async_trait;
 use clap::Parser;
 use executor_lib::RepoShardedProcess;
 use executor_lib::RepoShardedProcessExecutor;
-use mononoke_app::args::SourceRepoArgs;
 use mononoke_app::MononokeApp;
+use mononoke_app::args::SourceRepoArgs;
 use sharding_ext::RepoShard;
 
-use crate::sync::ExecutionType;
 use crate::ModernSyncArgs;
 use crate::Repo;
+use crate::sync::ExecutionType;
 
 const SM_CLEANUP_TIMEOUT_SECS: u64 = 120;
 

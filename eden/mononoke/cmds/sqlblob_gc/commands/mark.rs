@@ -8,9 +8,9 @@
 use std::sync::Arc;
 use std::time::Duration;
 
-use anyhow::anyhow;
 use anyhow::Context;
 use anyhow::Result;
+use anyhow::anyhow;
 use clap::Parser;
 use futures::channel::mpsc;
 use futures::sink::SinkExt;
@@ -20,12 +20,12 @@ use futures::stream::TryStreamExt;
 use mononoke_app::MononokeApp;
 use mononoke_macros::mononoke;
 use retry::retry_always;
-use slog::info;
 use slog::Logger;
+use slog::info;
 use sqlblob::Sqlblob;
 
-use crate::utils;
 use crate::MononokeSQLBlobGCArgs;
+use crate::utils;
 
 const BASE_RETRY_DELAY: Duration = Duration::from_secs(1);
 const RETRIES: usize = 3;

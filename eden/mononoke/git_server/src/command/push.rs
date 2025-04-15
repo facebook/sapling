@@ -7,16 +7,16 @@
 
 use std::str::from_utf8;
 
-use anyhow::bail;
 use anyhow::Context;
 use anyhow::Result;
+use anyhow::bail;
 use bytes::Bytes;
 use gix_hash::ObjectId;
 use gix_packetline::PacketLineRef;
 use gix_packetline::StreamingPeekableIter;
 
-use super::fetch::parse_oid;
 use super::PUSH_MARKER;
+use super::fetch::parse_oid;
 
 const REPORT_STATUS: &str = "report-status";
 const OBJECT_FORMAT: &str = "object-format=";

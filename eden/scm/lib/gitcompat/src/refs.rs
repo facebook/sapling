@@ -23,8 +23,8 @@ use spawn_ext::CommandExt;
 use types::HgId;
 use types::RepoPath;
 
-use crate::rungit::BareGit;
 use crate::GitCmd;
+use crate::rungit::BareGit;
 
 /// Value of a Git reference.
 #[derive(Clone)]

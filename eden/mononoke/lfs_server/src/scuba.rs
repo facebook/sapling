@@ -7,8 +7,8 @@
 
 use std::str::FromStr;
 
-use clientinfo::ClientInfo;
 use clientinfo::CLIENT_INFO_HEADER;
+use clientinfo::ClientInfo;
 use gotham::state::State;
 use gotham_ext::middleware::PostResponseInfo;
 use gotham_ext::middleware::ScubaHandler;

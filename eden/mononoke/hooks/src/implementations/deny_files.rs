@@ -13,13 +13,13 @@ use metaconfig_types::HookConfig;
 use mononoke_types::BasicFileChange;
 use mononoke_types::NonRootMPath;
 
-use crate::lua_pattern::LuaPattern;
 use crate::CrossRepoPushSource;
 use crate::FileHook;
 use crate::HookExecution;
 use crate::HookRejectionInfo;
 use crate::HookRepo;
 use crate::PushAuthoredBy;
+use crate::lua_pattern::LuaPattern;
 
 #[derive(Default)]
 pub struct DenyFilesBuilder {

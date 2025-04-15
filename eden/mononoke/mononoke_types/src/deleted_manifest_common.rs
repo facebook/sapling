@@ -14,10 +14,10 @@ use blobstore::Loadable;
 use context::CoreContext;
 use futures::stream::BoxStream;
 
-use crate::blob::BlobstoreValue;
 use crate::ChangesetId;
 use crate::MPathElement;
 use crate::MononokeId;
+use crate::blob::BlobstoreValue;
 
 /// This trait has common behaviour that should be shared among all versions
 /// of deleted manifest, and should be used to generalize usage of them.

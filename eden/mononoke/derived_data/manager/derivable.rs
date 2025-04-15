@@ -11,8 +11,8 @@ use std::collections::HashSet;
 use std::fmt::Debug;
 use std::sync::Arc;
 
-use anyhow::anyhow;
 use anyhow::Result;
+use anyhow::anyhow;
 use async_trait::async_trait;
 use context::CoreContext;
 use derived_data_service_if::DerivedData;
@@ -24,11 +24,11 @@ use mononoke_types::BonsaiChangeset;
 use mononoke_types::ChangesetId;
 use mononoke_types::DerivableType;
 
-use crate::context::DerivationContext;
 use crate::DerivedDataManager;
 use crate::Rederivation;
 use crate::SharedDerivationError;
 use crate::VisitedDerivableTypesMapStatic;
+use crate::context::DerivationContext;
 
 /// Defines how derivation occurs.  Each derived data type must implement
 /// `BonsaiDerivable` to describe how to derive a new value from its inputs

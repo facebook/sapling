@@ -20,12 +20,12 @@ use types::hgid::HgId;
 use types::key::Key;
 use types::parents::Parents;
 
-use crate::hash::check_hash;
 use crate::Blake3;
 use crate::InvalidHgId;
 use crate::ServerError;
 use crate::Sha1;
 use crate::UploadToken;
+use crate::hash::check_hash;
 
 /// Tombstone string that replaces the content of redacted files.
 /// TODO(T48685378): Handle redacted content in a less hacky way.

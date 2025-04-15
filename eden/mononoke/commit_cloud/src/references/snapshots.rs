@@ -10,11 +10,11 @@ use commit_cloud_types::WorkspaceSnapshot;
 use mercurial_types::HgChangesetId;
 use sql::Transaction;
 
+use crate::CommitCloudContext;
+use crate::SqlCommitCloud;
 use crate::sql::ops::Delete;
 use crate::sql::ops::Insert;
 use crate::sql::snapshots_ops::DeleteArgs;
-use crate::CommitCloudContext;
-use crate::SqlCommitCloud;
 
 pub async fn update_snapshots(
     sql_commit_cloud: &SqlCommitCloud,

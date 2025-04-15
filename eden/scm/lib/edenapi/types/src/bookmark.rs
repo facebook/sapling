@@ -12,8 +12,8 @@ use serde_derive::Serialize;
 use type_macros::auto_wire;
 use types::hgid::HgId;
 
-use crate::land::PushVar;
 use crate::ServerError;
+use crate::land::PushVar;
 
 #[auto_wire]
 #[derive(Clone, Debug, Deserialize, Serialize, Eq, PartialEq)]

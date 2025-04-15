@@ -10,9 +10,9 @@ use async_stream::try_stream;
 use byteorder::BigEndian;
 use byteorder::ByteOrder;
 use bytes::BufMut;
-use futures::pin_mut;
 use futures::Stream;
 use futures::TryStreamExt;
+use futures::pin_mut;
 
 use super::CgDeltaChunk;
 use super::Part;

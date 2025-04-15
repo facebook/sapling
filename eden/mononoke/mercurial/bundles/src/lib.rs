@@ -37,6 +37,7 @@ use std::fmt;
 use anyhow::Error;
 use anyhow::Result;
 use bytes::Bytes;
+use futures::FutureExt;
 use futures::channel::mpsc;
 use futures::channel::oneshot;
 use futures::future::BoxFuture;
@@ -44,7 +45,6 @@ use futures::sink::SinkExt;
 use futures::stream::BoxStream;
 use futures::stream::Stream;
 use futures::stream::StreamExt;
-use futures::FutureExt;
 use tokio_util::io::CopyToBytes;
 use tokio_util::io::SinkWriter;
 

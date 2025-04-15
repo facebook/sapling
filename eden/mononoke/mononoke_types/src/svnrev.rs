@@ -11,9 +11,9 @@ use std::str;
 use std::str::FromStr;
 
 use abomonation_derive::Abomonation;
-use anyhow::bail;
 use anyhow::Error;
 use anyhow::Result;
+use anyhow::bail;
 use sql::mysql;
 
 use crate::BonsaiChangeset;

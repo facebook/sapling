@@ -14,9 +14,9 @@ use std::fmt;
 use std::path::Path;
 use std::path::PathBuf;
 
-use indexedlog::log as ilog;
 use indexedlog::DefaultOpenOptions;
 use indexedlog::OpenWithRepair;
+use indexedlog::log as ilog;
 use lazy_static::lazy_static;
 use lru_cache::LruCache;
 use minibytes::Bytes;

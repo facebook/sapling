@@ -7,10 +7,10 @@
 
 use std::collections::HashMap;
 
-use anyhow::bail;
 use anyhow::Context;
 use anyhow::Error;
 use anyhow::Result;
+use anyhow::bail;
 use byteorder::BigEndian;
 use byteorder::ByteOrder;
 use bytes::BytesMut;

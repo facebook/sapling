@@ -5,7 +5,6 @@
  * GNU General Public License version 2.
  */
 
-use cpython::exc;
 use cpython::FromPyObject;
 use cpython::PyBytes;
 use cpython::PyDict;
@@ -16,12 +15,13 @@ use cpython::PyTuple;
 use cpython::Python;
 use cpython::PythonObject;
 use cpython::ToPyObject;
+use cpython::exc;
 use cpython_ext::PyPath;
 use cpython_ext::PyPathBuf;
 use cpython_ext::ResultPyErrExt;
+use revisionstore::StoreKey;
 use revisionstore::datastore::Delta;
 use revisionstore::datastore::Metadata;
-use revisionstore::StoreKey;
 use types::Key;
 use types::Node;
 use types::RepoPathBuf;

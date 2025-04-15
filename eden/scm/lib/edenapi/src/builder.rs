@@ -11,12 +11,12 @@ use std::path::PathBuf;
 use std::sync::Arc;
 use std::time::Duration;
 
-use anyhow::anyhow;
 use anyhow::Context;
 use anyhow::Error;
+use anyhow::anyhow;
 use cats::CatsSection;
-use configmodel::convert::FromConfigValue;
 use configmodel::ConfigExt;
+use configmodel::convert::FromConfigValue;
 use http_client::Encoding;
 use http_client::HttpVersion;
 use http_client::MinTransferSpeed;
@@ -24,10 +24,10 @@ use once_cell::sync::Lazy;
 use parking_lot::RwLock;
 use url::Url;
 
+use crate::SaplingRemoteApi;
 use crate::client::Client;
 use crate::errors::ConfigError;
 use crate::errors::SaplingRemoteApiError;
-use crate::SaplingRemoteApi;
 
 /// External function that constructs other kinds of `SaplingRemoteApi` from config.
 static CUSTOM_BUILD_FUNCS: Lazy<

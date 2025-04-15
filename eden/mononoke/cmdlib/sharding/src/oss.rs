@@ -5,8 +5,8 @@
  * GNU General Public License version 2.
  */
 
-use std::sync::atomic::AtomicBool;
 use std::sync::Arc;
+use std::sync::atomic::AtomicBool;
 
 use anyhow::Result;
 use fbinit::FacebookInit;

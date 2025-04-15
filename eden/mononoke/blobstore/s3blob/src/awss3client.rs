@@ -13,9 +13,9 @@ use rusoto_core::Region;
 use rusoto_sts::WebIdentityProvider;
 use tokio::sync::Semaphore;
 
-use crate::s3client::get_s3_client;
 use crate::S3ClientBackend;
 use crate::S3ClientWrapper;
+use crate::s3client::get_s3_client;
 
 pub struct AwsS3ClientPool {
     client: Arc<S3ClientWrapper>,

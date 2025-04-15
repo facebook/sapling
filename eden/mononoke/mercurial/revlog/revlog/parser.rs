@@ -12,14 +12,14 @@ use std::io::Read;
 
 use bitflags::bitflags;
 use flate2::read::ZlibDecoder;
-use mercurial_types::bdiff::Delta;
 use mercurial_types::HgNodeHash;
-use nom::be_u16;
-use nom::be_u32;
+use mercurial_types::bdiff::Delta;
 use nom::Err;
 use nom::ErrorKind;
 use nom::IResult;
 use nom::Needed;
+use nom::be_u16;
+use nom::be_u32;
 use nom::*;
 
 use super::lz4;
@@ -295,10 +295,10 @@ mod test {
     use mononoke_macros::mononoke;
     use nom::IResult;
 
-    use super::header;
     use super::Features;
     use super::Header;
     use super::Version;
+    use super::header;
 
     #[mononoke::test]
     fn test_header_0() {

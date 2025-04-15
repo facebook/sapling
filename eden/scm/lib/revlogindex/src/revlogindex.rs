@@ -23,8 +23,15 @@ use std::slice;
 use std::sync::Arc;
 
 use bit_vec::BitVec;
-use byteorder::ReadBytesExt;
 use byteorder::BE;
+use byteorder::ReadBytesExt;
+use dag::Group;
+use dag::Id;
+use dag::IdSet;
+use dag::Set;
+use dag::VerLink;
+use dag::Vertex;
+use dag::VertexListWithOptions;
 use dag::errors::DagError;
 use dag::errors::NotFoundError;
 use dag::ops::CheckIntegrity;
@@ -35,17 +42,10 @@ use dag::ops::IdMapSnapshot;
 use dag::ops::Parents;
 use dag::ops::PrefixLookup;
 use dag::ops::ToIdSet;
-use dag::set::hints::Flags;
-use dag::set::meta::MetaSet;
 // Revset is non-lazy. Sync APIs can be used.
 use dag::set::SyncSetQuery;
-use dag::Group;
-use dag::Id;
-use dag::IdSet;
-use dag::Set;
-use dag::VerLink;
-use dag::Vertex;
-use dag::VertexListWithOptions;
+use dag::set::hints::Flags;
+use dag::set::meta::MetaSet;
 use indexedlog::lock::ScopedDirLock;
 use indexedlog::utils::atomic_write_plain;
 use indexedlog::utils::mmap_bytes;
@@ -56,13 +56,13 @@ use parking_lot::RwLock;
 use util::path::atomic_write_symlink;
 use util::path::remove_file;
 
-use crate::errors::corruption;
-use crate::errors::unsupported;
-use crate::errors::CorruptionError;
-use crate::nodemap;
 use crate::Error;
 use crate::NodeRevMap;
 use crate::Result;
+use crate::errors::CorruptionError;
+use crate::errors::corruption;
+use crate::errors::unsupported;
+use crate::nodemap;
 
 const REVIDX_OCTOPUS_MERGE: u16 = 1 << 12;
 

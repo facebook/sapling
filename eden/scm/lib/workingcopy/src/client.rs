@@ -8,17 +8,17 @@
 use std::any::Any;
 use std::collections::BTreeMap;
 
-use anyhow::bail;
 use anyhow::Result;
-use gitcompat::rungit::RepoGit;
+use anyhow::bail;
 use gitcompat::GitCmd;
+use gitcompat::rungit::RepoGit;
+use types::HgId;
+use types::RepoPathBuf;
 use types::hgid::GIT_EMPTY_TREE_ID;
 use types::workingcopy_client::CheckoutConflict;
 use types::workingcopy_client::CheckoutMode;
 use types::workingcopy_client::FileStatus;
 use types::workingcopy_client::ProgressInfo;
-use types::HgId;
-use types::RepoPathBuf;
 
 /// The "client" that talks to an external program for working copy management.
 /// Practically, a "client" could be an "edenfs" client or a "git" client.

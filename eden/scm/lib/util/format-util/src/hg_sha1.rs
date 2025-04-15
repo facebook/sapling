@@ -7,8 +7,8 @@
 
 use std::io;
 
-use anyhow::ensure;
 use anyhow::Result;
+use anyhow::ensure;
 use types::HgId;
 use types::Id20;
 

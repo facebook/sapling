@@ -11,17 +11,17 @@ use std::io::Read;
 use std::io::Write;
 use std::path::Path;
 
-use anyhow::anyhow;
-use anyhow::bail;
 use anyhow::Context;
 use anyhow::Result;
+use anyhow::anyhow;
+use anyhow::bail;
 use byteorder::BigEndian;
 use byteorder::ReadBytesExt;
 use byteorder::WriteBytesExt;
-use types::hgid::NULL_ID;
 use types::HgId;
 use types::RepoPath;
 use types::RepoPathBuf;
+use types::hgid::NULL_ID;
 
 /// MergeState represents the repo state when merging two commits.
 ///

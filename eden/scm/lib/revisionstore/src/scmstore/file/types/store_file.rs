@@ -7,18 +7,18 @@
 
 use std::ops::BitOr;
 
+use anyhow::Result;
 use anyhow::anyhow;
 use anyhow::bail;
-use anyhow::Result;
 use format_util::parse_copy_from_hg_file_metadata;
 use minibytes::Bytes;
 use scm_blob::ScmBlob;
 use types::Key;
 
-use crate::scmstore::file::LazyFile;
-use crate::scmstore::value::StoreValue;
 use crate::scmstore::FileAttributes;
 use crate::scmstore::FileAuxData;
+use crate::scmstore::file::LazyFile;
+use crate::scmstore::value::StoreValue;
 
 #[derive(Debug, Default)]
 pub struct StoreFile {

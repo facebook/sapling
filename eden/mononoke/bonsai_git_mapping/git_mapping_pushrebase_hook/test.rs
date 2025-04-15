@@ -28,8 +28,8 @@ use repo_blobstore::RepoBlobstoreRef;
 use repo_derived_data::RepoDerivedData;
 use repo_identity::RepoIdentity;
 use test_repo_factory::TestRepoFactory;
-use tests_utils::bookmark;
 use tests_utils::CreateCommitContext;
+use tests_utils::bookmark;
 
 use crate::GitMappingPushrebaseHook;
 

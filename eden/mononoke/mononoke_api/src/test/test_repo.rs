@@ -15,11 +15,11 @@ use bookmarks::BookmarkKey;
 use bytes::Bytes;
 use chrono::FixedOffset;
 use chrono::TimeZone;
-use cross_repo_sync::test_utils::init_small_large_repo;
-use cross_repo_sync::update_mapping_with_version;
 use cross_repo_sync::CommitSyncRepos;
 use cross_repo_sync::CommitSyncer;
 use cross_repo_sync::SubmoduleDeps;
+use cross_repo_sync::test_utils::init_small_large_repo;
+use cross_repo_sync::update_mapping_with_version;
 use fbinit::FacebookInit;
 use fixtures::BranchUneven;
 use fixtures::Linear;
@@ -31,20 +31,19 @@ use metaconfig_types::CommitSyncConfigVersion;
 use metaconfig_types::CommitSyncDirection;
 use metaconfig_types::DefaultSmallToLargeCommitSyncPathAction;
 use mononoke_macros::mononoke;
+use mononoke_types::NonRootMPath;
 use mononoke_types::hash::Blake3;
 use mononoke_types::hash::GitSha1;
 use mononoke_types::hash::RichGitSha1;
 use mononoke_types::hash::Sha1;
 use mononoke_types::hash::Sha256;
-use mononoke_types::NonRootMPath;
 use repo_blobstore::RepoBlobstoreRef;
 use repo_identity::RepoIdentityRef;
 use slog::info;
+use tests_utils::CreateCommitContext;
 use tests_utils::bookmark;
 use tests_utils::resolve_cs_id;
-use tests_utils::CreateCommitContext;
 
-use crate::repo::XRepoLookupExactBehaviour;
 use crate::BookmarkFreshness;
 use crate::ChangesetId;
 use crate::ChangesetIdPrefix;
@@ -62,6 +61,7 @@ use crate::Repo;
 use crate::TreeEntry;
 use crate::TreeId;
 use crate::XRepoLookupSyncBehaviour;
+use crate::repo::XRepoLookupExactBehaviour;
 
 #[mononoke::fbinit_test]
 async fn commit_info_by_hash(fb: FacebookInit) -> Result<(), Error> {

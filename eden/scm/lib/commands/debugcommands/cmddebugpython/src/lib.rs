@@ -5,10 +5,10 @@
  * GNU General Public License version 2.
  */
 
-use clidispatch::errors;
 use clidispatch::ReqCtx;
-use cmdutil::define_flags;
+use clidispatch::errors;
 use cmdutil::Result;
+use cmdutil::define_flags;
 
 define_flags! {
     pub struct DebugPythonOpts {

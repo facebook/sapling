@@ -10,8 +10,8 @@ use std::path::Path;
 use std::path::PathBuf;
 use std::sync::Arc;
 
-use anyhow::anyhow;
 use anyhow::Result;
+use anyhow::anyhow;
 use configmodel::ConfigExt;
 use context::CoreContext;
 use manifest_tree::ReadTreeManifest;

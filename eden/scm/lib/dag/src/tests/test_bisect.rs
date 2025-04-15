@@ -10,10 +10,10 @@ use std::collections::BTreeMap;
 use futures::TryStreamExt;
 use nonblocking::non_blocking_result as r;
 
-use crate::ops::DagAlgorithm;
-use crate::tests::TestDag;
 use crate::Set;
 use crate::Vertex;
+use crate::ops::DagAlgorithm;
+use crate::tests::TestDag;
 
 impl TestDag {
     /// For each vertex, set it as "first bad" and check how many steps bisect takes.

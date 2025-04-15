@@ -7,15 +7,15 @@
 
 use std::sync::RwLock;
 
-use anyhow::anyhow;
 use anyhow::Error;
+use anyhow::anyhow;
 use observability_config::ObservabilityConfig as CfgrObservabilityConfig;
 use observability_config::ScubaObservabilityConfig as CfgrScubaObservabilityConfig;
 use observability_config::ScubaVerbosityLevel as CfgrScubaVerbosityLevel;
 use regex::Regex;
+use serde::Deserialize;
 use serde::de::Deserializer;
 use serde::de::Error as _;
-use serde::Deserialize;
 
 fn cfgr_to_scuba_level(level: &CfgrScubaVerbosityLevel) -> Result<ScubaVerbosityLevel, Error> {
     match *level {

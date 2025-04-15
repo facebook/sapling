@@ -56,16 +56,16 @@ mod test {
     use futures::StreamExt;
     use futures::TryStreamExt;
     use mononoke_macros::mononoke;
-    use partial_io::quickcheck_types::GenWouldBlock;
-    use partial_io::quickcheck_types::PartialWithErrors;
     use partial_io::PartialAsyncRead;
     use partial_io::PartialAsyncWrite;
+    use partial_io::quickcheck_types::GenWouldBlock;
+    use partial_io::quickcheck_types::PartialWithErrors;
     use quickcheck::Gen;
     use quickcheck::QuickCheck;
     use quickcheck::TestResult;
-    use slog::o;
     use slog::Discard;
     use slog::Logger;
+    use slog::o;
     use tokio_util::codec::FramedRead;
     use tokio_util::codec::FramedWrite;
 

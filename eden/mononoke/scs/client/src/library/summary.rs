@@ -10,8 +10,8 @@ use std::io::Write;
 
 use anyhow::Error;
 use anyhow::Result;
-use futures::stream;
 use futures::Stream;
+use futures::stream;
 use itertools::Itertools;
 use serde::Serialize;
 

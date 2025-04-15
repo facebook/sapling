@@ -13,8 +13,8 @@ use std::hash::Hash;
 use std::iter::Iterator;
 use std::sync::Arc;
 
-use anyhow::format_err;
 use anyhow::Result;
+use anyhow::format_err;
 use borrowed::borrowed;
 use cloned::cloned;
 use context::CoreContext;
@@ -27,12 +27,12 @@ use futures::stream::StreamExt;
 use futures::stream::TryStreamExt;
 use itertools::Either;
 use mononoke_macros::mononoke;
-use mononoke_types::path::MPath;
-use mononoke_types::prefix_tree::PrefixTree;
 use mononoke_types::MPathElement;
 use mononoke_types::NonRootMPath;
-use smallvec::smallvec;
+use mononoke_types::path::MPath;
+use mononoke_types::prefix_tree::PrefixTree;
 use smallvec::SmallVec;
+use smallvec::smallvec;
 
 use crate::Entry;
 use crate::Manifest;

@@ -9,8 +9,8 @@ use std::collections::BTreeSet;
 use std::collections::HashMap;
 use std::path::Path;
 
-use anyhow::anyhow;
 use anyhow::Result;
+use anyhow::anyhow;
 use cached_config::ConfigStore;
 use repos::RawAclRegionConfig;
 use repos::RawCommitSyncConfig;

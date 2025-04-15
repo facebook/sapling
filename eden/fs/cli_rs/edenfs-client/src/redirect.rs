@@ -16,16 +16,16 @@ use std::path::PathBuf;
 use std::process::Command;
 use std::str::FromStr;
 
-use anyhow::anyhow;
 use anyhow::Context;
+use anyhow::anyhow;
 use async_recursion::async_recursion;
 use edenfs_error::EdenFsError;
 use edenfs_error::Result;
 use edenfs_error::ResultExt;
 #[cfg(fbcode_build)]
-use edenfs_telemetry::send;
-#[cfg(fbcode_build)]
 use edenfs_telemetry::EDEN_EVENTS_SCUBA;
+#[cfg(fbcode_build)]
+use edenfs_telemetry::send;
 use edenfs_utils::metadata::MetadataExt;
 use edenfs_utils::remove_symlink;
 #[cfg(target_os = "windows")]
@@ -39,9 +39,9 @@ use serde::Serialize;
 use toml::value::Value;
 use util::path::absolute;
 
-use crate::checkout::find_checkout;
 use crate::checkout::CheckoutConfig;
 use crate::checkout::EdenFsCheckout;
+use crate::checkout::find_checkout;
 use crate::fsutil::forcefully_remove_dir_all;
 use crate::fsutil::remove_file;
 use crate::instance::EdenFsInstance;
@@ -1941,15 +1941,15 @@ mod tests {
     use mkscratch::zzencode;
     use rand::distributions::Alphanumeric;
     use rand::distributions::DistString;
-    use serde_test::assert_ser_tokens;
     use serde_test::Token;
+    use serde_test::assert_ser_tokens;
     use tempfile::tempdir;
 
+    use crate::redirect::REPO_SOURCE;
     use crate::redirect::Redirection;
     use crate::redirect::RedirectionState;
     use crate::redirect::RedirectionType;
     use crate::redirect::RepoPathDisposition;
-    use crate::redirect::REPO_SOURCE;
 
     #[test]
     fn test_apply_symlink() {

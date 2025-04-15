@@ -8,15 +8,15 @@
 use std::collections::HashMap;
 use std::sync::Arc;
 
-use anyhow::format_err;
 use anyhow::Error;
+use anyhow::format_err;
 use bonsai_globalrev_mapping::BonsaiGlobalrevMappingEntry;
 use bonsai_globalrev_mapping::BonsaiGlobalrevMappingRef;
 use cloned::cloned;
 use context::CoreContext;
-use futures::stream;
 use futures::StreamExt;
 use futures::TryStreamExt;
+use futures::stream;
 use sql::Connection;
 use sql_construct::SqlConstruct;
 use sql_ext::SqlConnections;

@@ -11,9 +11,9 @@ use std::pin::Pin;
 use std::task::Context;
 use std::task::Poll;
 
-use anyhow::bail;
 use anyhow::Context as _;
 use anyhow::Result;
+use anyhow::bail;
 use byteorder::BigEndian;
 use byteorder::ByteOrder;
 use bytes::BufMut;

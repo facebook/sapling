@@ -10,8 +10,6 @@ extern crate proc_macro;
 use proc_macro2::Span;
 use proc_macro2::TokenStream;
 use quote::quote;
-use syn::parse_macro_input;
-use syn::spanned::Spanned;
 use syn::Attribute;
 use syn::Error;
 use syn::Fields;
@@ -22,6 +20,8 @@ use syn::ItemStruct;
 use syn::Path;
 use syn::Type;
 use syn::TypePath;
+use syn::parse_macro_input;
+use syn::spanned::Spanned;
 
 #[proc_macro_derive(ThriftConvert, attributes(thrift))]
 pub fn derive_thrift_convert(item: proc_macro::TokenStream) -> proc_macro::TokenStream {

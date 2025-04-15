@@ -41,8 +41,8 @@ use mononoke_types_mocks::repo::REPO_ONE;
 use mononoke_types_mocks::repo::REPO_TWO;
 use mononoke_types_mocks::repo::REPO_ZERO;
 use quickcheck_arbitrary_derive::Arbitrary;
-use sql::mysql_async::prelude::ConvIr;
 use sql::mysql_async::Value;
+use sql::mysql_async::prelude::ConvIr;
 use sql_construct::SqlConstruct;
 
 fn create_bookmark_name(book: &str) -> BookmarkKey {

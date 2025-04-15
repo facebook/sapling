@@ -7,10 +7,10 @@
 
 use std::collections::HashMap;
 
-use anyhow::anyhow;
-use anyhow::bail;
 use anyhow::Context;
 use anyhow::Result;
+use anyhow::anyhow;
+use anyhow::bail;
 use bookmarks_types::BookmarkKey;
 use metaconfig_types::Address;
 use metaconfig_types::BlameVersion;
@@ -66,11 +66,11 @@ use metaconfig_types::WalkerJobType;
 use metaconfig_types::XRepoSyncSourceConfig;
 use metaconfig_types::XRepoSyncSourceConfigMapping;
 use metaconfig_types::ZelosConfig;
-use mononoke_types::path::MPath;
 use mononoke_types::DerivableType;
 use mononoke_types::NonRootMPath;
 use mononoke_types::PrefixTrie;
 use mononoke_types::RepositoryId;
+use mononoke_types::path::MPath;
 use regex::Regex;
 use repos::ModernSyncChannelConfig as RawModernSyncChannelConfig;
 use repos::RawBookmarkConfig;

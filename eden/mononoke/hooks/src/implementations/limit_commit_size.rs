@@ -170,8 +170,8 @@ impl ChangesetHook for LimitCommitSizeHook {
 
 #[cfg(test)]
 mod test {
-    use anyhow::anyhow;
     use anyhow::Error;
+    use anyhow::anyhow;
     use blobstore::Loadable;
     use borrowed::borrowed;
     use fbinit::FacebookInit;

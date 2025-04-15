@@ -12,11 +12,11 @@ use std::path::Path;
 use std::process::Command;
 use std::process::Stdio;
 
-use crate::metalog::load_root;
-use crate::metalog::Id20;
-use crate::metalog::SerId20;
 use crate::MetaLog;
 use crate::Result;
+use crate::metalog::Id20;
+use crate::metalog::SerId20;
+use crate::metalog::load_root;
 
 impl MetaLog {
     /// Export metalog to a git repo for investigation.

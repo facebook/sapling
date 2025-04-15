@@ -15,16 +15,16 @@ use anyhow::Result;
 use bytes::Bytes;
 use fbthrift::compact_protocol;
 use mononoke_types::ContentId;
-use quickcheck::empty_shrinker;
 use quickcheck::Arbitrary;
 use quickcheck::Gen;
+use quickcheck::empty_shrinker;
 
 use super::HgEnvelopeBlob;
+use crate::HgParents;
 use crate::errors::MononokeHgError;
 use crate::nodehash::HgFileNodeId;
 use crate::nodehash::HgNodeHash;
 use crate::thrift;
-use crate::HgParents;
 
 /// A mutable representation of a Mercurial file node.
 #[derive(Clone, Debug, Eq, PartialEq)]

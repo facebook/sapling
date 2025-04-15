@@ -7,9 +7,9 @@
 
 use anyhow::Result;
 use bytes::Bytes;
-use futures::pin_mut;
 use futures::Stream;
 use futures::TryStreamExt;
+use futures::pin_mut;
 use mononoke_types::sha1_hash;
 use mononoke_types::sha1_hash::Context;
 use quickcheck::Arbitrary;
