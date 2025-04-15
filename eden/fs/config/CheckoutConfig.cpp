@@ -14,6 +14,7 @@
 #include <folly/io/Cursor.h>
 #include <folly/io/IOBuf.h>
 #include <folly/json/json.h>
+#include <filesystem>
 #include <optional>
 
 #include "eden/common/utils/FileUtils.h"
@@ -327,6 +328,12 @@ void CheckoutConfig::clearIntentionallyUnmountedFlag() const {
   auto intentionallyUnmountedFile =
       clientDirectory_ + kIntentionallyUnmountedFile;
   std::remove(intentionallyUnmountedFile.c_str());
+}
+
+bool CheckoutConfig::isIntentionallyUnmounted() const {
+  auto intentionallyUnmountedFile =
+      clientDirectory_ + kIntentionallyUnmountedFile;
+  return std::filesystem::exists(intentionallyUnmountedFile.c_str());
 }
 
 const AbsolutePath& CheckoutConfig::getClientDirectory() const {

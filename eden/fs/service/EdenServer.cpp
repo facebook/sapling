@@ -2788,7 +2788,7 @@ void EdenServer::accidentalUnmountRecovery() {
 
   if (dirs.empty()) {
     XLOGF(
-        DBG4,
+        DBG5,
         "No mount points currently configured, skipping accidental unmount recovery.");
     return;
   }
@@ -2803,7 +2803,18 @@ void EdenServer::accidentalUnmountRecovery() {
       // in config.json.  This means that the client was unmounted.
       // We should attempt to remount it, if it is unmounted accidentally.
 
-      // TODO: add a check here to verify that the unmount is not intentional.
+      auto edenClientPath =
+          edenDir_.getCheckoutStateDir(client.second.stringPiece());
+      auto initialConfig =
+          CheckoutConfig::loadFromClientDirectory(mountPath, edenClientPath);
+      if (initialConfig->isIntentionallyUnmounted()) {
+        XLOGF(
+            DBG5,
+            "Mount point {} is intentionally unmounted, skipping unmount recovery.",
+            mountPath);
+        continue;
+      }
+
       XLOGF(
           INFO,
           "Mount point {} is not currently mounted, attempting to remount.",
@@ -2812,11 +2823,9 @@ void EdenServer::accidentalUnmountRecovery() {
 
       folly::via(
           getServerState()->getThreadPool().get(),
-          [this, client = client, mountPath]() mutable {
-            auto edenClientPath =
-                edenDir_.getCheckoutStateDir(client.second.stringPiece());
-            auto initialConfig = CheckoutConfig::loadFromClientDirectory(
-                mountPath, edenClientPath);
+          [this,
+           initialConfig = std::move(initialConfig),
+           mountPath]() mutable {
             // TODO: Make sure the mount path exists
             return mount(std::move(initialConfig), /*readOnly=*/false)
                 .thenTry([mountPath](

@@ -109,6 +109,8 @@ class CheckoutConfig {
    */
   void clearIntentionallyUnmountedFlag() const;
 
+  bool isIntentionallyUnmounted() const;
+
   const AbsolutePath& getMountPath() const {
     return mountPath_;
   }
