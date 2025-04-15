@@ -5,6 +5,7 @@ Setup
 
   $ configure dummyssh
   $ enable pushrebase
+  $ setconfig experimental.run-python-hooks-via-pyhook=true
 
   $ cat >> "$TESTTMP/commit.sh" << EOF
   > #!/bin/bash
@@ -22,8 +23,14 @@ Setup
   > EOF
 
   $ cat >> "$TESTTMP/hook.py" << EOF
-  > def log(ui, repo, namespace, key, old, new, **kwargs):
-  >   ui.write_err("log %s %s %s -> %s\n" % (namespace, key, repo[old].description(), repo[new].description()))
+  > import bindings
+  > from binascii import unhexlify as bin
+  > def log(repo, namespace, key, old, new, **kwargs):
+  >   io = bindings.io.IO.main()
+  >   commits = repo.commits()
+  >   def desc(hex_node):
+  >     return commits.getcommitfields(bin(hex_node)).description()
+  >   io.write_err(("log %s %s %s -> %s\n" % (namespace, key, desc(old), desc(new))).encode())
   >   return True # True means block the commit here
   > EOF
 

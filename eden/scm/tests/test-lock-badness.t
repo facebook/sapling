@@ -4,6 +4,7 @@
 #require unix-permissions no-root no-windows no-eden
 
   $ configure modernclient
+  $ setconfig experimental.run-python-hooks-via-pyhook=true
 
 Prepare
 
@@ -128,7 +129,7 @@ On processs waiting on another, warning after a long time (debug output on)
   > > preup-stdout 2>preup-stderr
   $ wait
   $ cat preup-stdout
-  calling hook pre-update: hghook_pre-update.sleephalf
+  calling pyhook pre-update: $TESTTMP/hooks.py:sleephalf
   0 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ cat preup-stderr
   waiting for lock on working directory of b held by process '*' on host * (glob)
@@ -146,7 +147,7 @@ On processs waiting on another, warning disabled, (debug output on)
   > > preup-stdout 2>preup-stderr
   $ wait
   $ cat preup-stdout
-  calling hook pre-update: hghook_pre-update.sleephalf
+  calling pyhook pre-update: $TESTTMP/hooks.py:sleephalf
   0 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ cat preup-stderr
   waiting for lock on working directory of b held by process '*' on host * (glob)

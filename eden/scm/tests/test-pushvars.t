@@ -10,6 +10,7 @@
 
 # Setup
 
+  $ setconfig experimental.run-python-hooks-via-pyhook=true
 
   $ cat > $TESTTMP/pretxnchangegroup.sh << 'EOF'
   > env | egrep "^HG_USERVAR_(DEBUG|BYPASS_REVIEW)" | sort
@@ -79,10 +80,12 @@
 # Test Python hooks
 
   $ cat >> $TESTTMP/pyhook.py << 'EOF'
-  > def hook(ui, repo, hooktype, **kwargs):
+  > import bindings
+  > def hook(repo, **kwargs):
+  >     io = bindings.io.IO.main()
   >     for k, v in sorted(kwargs.items()):
   >         if "USERVAR" in k:
-  >             ui.write("Got pushvar: %s=%s\n" % (k, v))
+  >             io.write(("Got pushvar: %s=%s\n" % (k, v)).encode())
   > EOF
 
   $ cp "$HGRCPATH" "$TESTTMP/hgrc.bak"

@@ -31,7 +31,10 @@ def _pythonhook(ui, repo, htype, hname, funcname, args, throw):
 
     reason for "true" meaning "hook failed" is so that
     unmodified commands (e.g. commands.update) can
-    be run as hooks without wrappers to convert return values."""
+    be run as hooks without wrappers to convert return values.
+
+    This function is used by ext/mergedriver.
+    """
 
     if callable(funcname):
         obj = funcname
@@ -82,6 +85,37 @@ def _pythonhook(ui, repo, htype, hname, funcname, args, throw):
     try:
         with util.traced("pythonhook", hookname=hname, cat="blocked"):
             r = obj(ui=ui, repo=repo, hooktype=htype, **args)
+    except Exception as exc:
+        if isinstance(exc, error.Abort):
+            ui.warn(_("error: %s hook failed: %s\n") % (hname, exc.args[0]))
+        else:
+            ui.warn(_("error: %s hook raised an exception: %s\n") % (hname, str(exc)))
+        if throw:
+            raise
+        ui.traceback(force=True)
+        return True, True
+    finally:
+        duration = util.timer() - starttime
+        ui.log(
+            "pythonhook",
+            "pythonhook-%s: %s finished in %0.2f seconds\n",
+            htype,
+            funcname,
+            duration,
+        )
+    if r:
+        if throw:
+            raise error.HookAbort(_("%s hook failed") % hname)
+        ui.warn(_("warning: %s hook failed\n") % hname)
+    return r, False
+
+
+def _pythonhook_via_pyhook(ui, repo, htype, hname, funcname, args, throw):
+    ui.note(_("calling pyhook %s: %s\n") % (hname, funcname))
+    starttime = util.timer()
+    try:
+        with util.traced("pythonhook", hookname=hname, cat="blocked"):
+            r = bindings.hook.run_python_hook(repo._rsrepo, funcname, hname, args)
     except Exception as exc:
         if isinstance(exc, error.Abort):
             ui.warn(_("error: %s hook failed: %s\n") % (hname, exc.args[0]))
@@ -219,8 +253,17 @@ def runhooks(ui, repo, htype, hooks, throw: bool = False, **args):
         if callable(cmd):
             r, raised = _pythonhook(ui, repo, htype, hname, cmd, args, throw)
         elif cmd.startswith("python:"):
-            hookfn = _getpyhook(ui, repo, hname, cmd)
-            r, raised = _pythonhook(ui, repo, htype, hname, hookfn, args, throw)
+            if (
+                ui.configbool("experimental", "run-python-hooks-via-pyhook")
+                and repo is not None
+            ):
+                funcname = cmd.split(":", 1)[1]
+                r, raised = _pythonhook_via_pyhook(
+                    ui, repo, htype, hname, funcname, args, throw
+                )
+            else:
+                hookfn = _getpyhook(ui, repo, hname, cmd)
+                r, raised = _pythonhook(ui, repo, htype, hname, hookfn, args, throw)
         elif cmd.startswith("background:"):
             # Run a shell command in background. Do not throw.
             cmd = cmd.split(":", 1)[1]
