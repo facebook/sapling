@@ -190,6 +190,12 @@ impl config {
     pub(crate) fn get_thread_safe_config_trait(&self, py: Python) -> Arc<dyn Config + Send + Sync> {
         Arc::new(self.get_cfg(py))
     }
+
+    pub fn from_dyn_config(py: Python, config: Arc<dyn Config>) -> PyResult<Self> {
+        let mut cfg = ConfigSet::new();
+        cfg.secondary(config);
+        Self::create_instance(py, RefCell::new(cfg))
+    }
 }
 
 fn parselist(py: Python, value: String) -> PyResult<Vec<PyString>> {
