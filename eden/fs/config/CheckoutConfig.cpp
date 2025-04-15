@@ -54,6 +54,7 @@ constexpr folly::StringPiece kEnableWindowsSymlinks{"enable-windows-symlinks"};
 // Files of interest in the client directory.
 const RelativePathPiece kSnapshotFile{"SNAPSHOT"};
 const RelativePathPiece kOverlayDir{"local"};
+const RelativePathPiece kIntentionallyUnmountedFile{"intentionally-unmounted"};
 
 // File holding mapping of client directories.
 const RelativePathPiece kClientDirectoryMap{"config.json"};
@@ -320,6 +321,12 @@ void CheckoutConfig::setCheckoutInProgress(const RootId& from, const RootId& to)
   writeFileAtomicWithRetry(
       getSnapshotPath(), ByteRange{buf->data(), buf->length()})
       .value();
+}
+
+void CheckoutConfig::clearIntentionallyUnmountedFlag() const {
+  auto intentionallyUnmountedFile =
+      clientDirectory_ + kIntentionallyUnmountedFile;
+  std::remove(intentionallyUnmountedFile.c_str());
 }
 
 const AbsolutePath& CheckoutConfig::getClientDirectory() const {

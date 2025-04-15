@@ -99,6 +99,16 @@ class CheckoutConfig {
    */
   void setCheckoutInProgress(const RootId& from, const RootId& to) const;
 
+  /**
+   * The periodic unmount recovery will attempt to remount the repo if it
+   * was unintentionally unmounted. For all the intentional unmounts, we
+   * set a flag to indicate that the repo was intentionally unmounted.
+   * In the beginning of the mount process, we should ensure that the
+   * intentional unmount flag, which might exists from a previous unmount
+   * is cleared.
+   */
+  void clearIntentionallyUnmountedFlag() const;
+
   const AbsolutePath& getMountPath() const {
     return mountPath_;
   }
