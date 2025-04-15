@@ -263,6 +263,12 @@ py_class!(pub class repo |py| {
     }
 });
 
+impl repo {
+    pub fn from_native(py: Python, repo: Repo) -> PyResult<Self> {
+        Self::create_instance(py, RwLock::new(repo), Default::default())
+    }
+}
+
 py_class!(pub class repolock |py| {
     data lock: Cell<Option<rsrepolock::LockedPath>>;
 
