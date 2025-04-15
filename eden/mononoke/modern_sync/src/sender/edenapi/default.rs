@@ -87,14 +87,21 @@ impl DefaultEdenapiSenderBuilder {
             ..Default::default()
         };
 
-        tracing::info!("Connecting to {}", self.url.to_string());
+        let timeout = justknobs::get_as::<u64>("scm/mononoke:modern_sync_edenapi_timeout", None)
+            .unwrap_or(300);
+
+        tracing::info!(
+            "Connecting to {}, timeout {}s",
+            self.url.to_string(),
+            timeout
+        );
 
         let client = HttpClientBuilder::new()
             .repo_name(&self.reponame)
             .server_url(self.url.clone())
             .http_config(http_config.clone())
             .http_version(HttpVersion::V11)
-            .timeout(Duration::from_secs(300))
+            .timeout(Duration::from_secs(timeout))
             .build()
             .with_context(|| "building http client")?;
 

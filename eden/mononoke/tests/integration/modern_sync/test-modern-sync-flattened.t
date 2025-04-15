@@ -65,7 +65,7 @@
 Sync all bookmarks moves
   $ mononoke_modern_sync --flatten-bul sync-once orig dest  --start-id 0 2>&1 | grep -v "Upload"
   [INFO] Running sync-once loop
-  [INFO] Connecting to https://localhost:$LOCAL_PORT/edenapi/
+  [INFO] Connecting to https://localhost:$LOCAL_PORT/edenapi/, timeout 300s
   [INFO] Established EdenAPI connection
   [INFO] Initialized channels
   [INFO] Grouped 2 entries into 1 macro-entries
