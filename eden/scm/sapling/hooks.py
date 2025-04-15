@@ -7,10 +7,11 @@
 
 import bindings
 
-from . import util
+# Try to avoid module-level imports so this module has low-overhead if run by
+# Rust hook handling.
 
 
-def backgroundfsync(ui, repo, hooktype, **kwargs) -> None:
+def backgroundfsync(repo=None, **kwargs) -> None:
     """run fsync in background
 
     Example config::
@@ -20,8 +21,11 @@ def backgroundfsync(ui, repo, hooktype, **kwargs) -> None:
     """
     if not repo:
         return
-    util.spawndetached(util.hgcmd() + ["debugfsync"], cwd=repo.svfs.join(""))
+
+    from . import util
+
+    util.spawndetached(util.hgcmd() + ["debugfsync"], cwd=repo.store_path)
 
 
-def edenfs_redirect_fixup(ui, repo, hooktype, **kwargs) -> None:
-    bindings.checkout.edenredirectfixup(ui._rcfg, repo._rsrepo.workingcopy())
+def edenfs_redirect_fixup(repo, **kwargs) -> None:
+    bindings.checkout.edenredirectfixup(repo.config, repo.workingcopy())
