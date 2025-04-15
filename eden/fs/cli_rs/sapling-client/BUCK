@@ -6,6 +6,7 @@ rust_library(
     name = "sapling-client",
     srcs = glob(["src/**/*.rs"]),
     test_deps = [
+        "fbsource//third-party/rust:tokio-test",
         "//eden/fs/cli_rs/edenfs-client:edenfs-client",
     ],
     deps = [
@@ -13,5 +14,6 @@ rust_library(
         "fbsource//third-party/rust:lru-cache",
         "fbsource//third-party/rust:thiserror",
         "fbsource//third-party/rust:tokio",
+        "//common/rust/async_process_traits:async_process_traits",
     ],
 )

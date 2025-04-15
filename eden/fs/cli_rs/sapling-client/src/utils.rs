@@ -94,8 +94,17 @@ pub(crate) fn process_one_status_line(
 }
 
 #[cfg(test)]
-mod tests {
+pub(crate) mod tests {
+    use std::io::Error;
+    use std::io::ErrorKind;
+
+    use async_process_traits::MockChild;
+    use async_process_traits::MockChildHandle;
+    use async_process_traits::MockCommandSpawner;
+    use async_process_traits::MockExitStatus;
     use edenfs_client::utils::get_mount_point;
+    use tokio::io;
+    use tokio_test::io::Builder as MockIoBuilder;
 
     use crate::types::*;
     use crate::utils::*;
@@ -202,5 +211,32 @@ mod tests {
         );
 
         Ok(())
+    }
+
+    pub fn get_mock_spawner(
+        program: String,
+        output: Option<(i32, Option<Vec<u8>>)>,
+    ) -> MockCommandSpawner {
+        MockCommandSpawner::with_callback(move |cmd| match cmd.program.to_str() {
+            Some(cmd_program) if cmd_program == program && output.is_some() => {
+                let (exit_code, stdout_lines) = output.clone().unwrap();
+                Ok(mock_child(exit_code, stdout_lines))
+            }
+            program => Err(Error::new(
+                ErrorKind::Other,
+                anyhow::anyhow!("Not expected program: {:?}", program),
+            )),
+        })
+    }
+
+    fn mock_child(exit_code: i32, stdout_lines: Option<Vec<u8>>) -> MockChild {
+        let handle = MockChildHandle::new();
+        handle.set_status(Ok(Some(MockExitStatus::new(Some(exit_code)))));
+        if let Some(stdout_lines) = stdout_lines {
+            let stdout = MockIoBuilder::new().read(&stdout_lines).build();
+            MockChild::with_stdio(handle, Some(io::sink()), Some(stdout), Some(io::empty()))
+        } else {
+            MockChild::new(handle)
+        }
     }
 }

@@ -5,23 +5,34 @@
  * GNU General Public License version 2.
  */
 
-use tokio::process::Command;
+use async_process_traits::Command;
+use async_process_traits::CommandSpawner;
+use async_process_traits::Output;
+use async_process_traits::TokioCommandSpawner;
 
 use crate::error::Result;
 use crate::utils::get_sapling_executable_path;
 use crate::utils::get_sapling_options;
 
 pub async fn get_current_commit_id() -> Result<String> {
-    let output = Command::new(get_sapling_executable_path())
+    get_current_commit_id_impl(&TokioCommandSpawner).await
+}
+
+async fn get_current_commit_id_impl<Spawner>(spawner: &Spawner) -> Result<String>
+where
+    Spawner: CommandSpawner,
+{
+    let mut command = Spawner::Command::new(get_sapling_executable_path());
+    command
         .envs(get_sapling_options())
-        .args(["whereami", "--traceback"])
-        .output()
-        .await?;
-    Ok(String::from_utf8(output.stdout)?)
+        .args(["whereami", "--traceback"]);
+    let output = spawner.output(&mut command).await?;
+
+    Ok(String::from_utf8(output.stdout().to_vec())?)
 }
 
 pub async fn get_commit_timestamp(commit_id: &str) -> Result<u64> {
-    let output = Command::new(get_sapling_executable_path())
+    let output = tokio::process::Command::new(get_sapling_executable_path())
         .envs(get_sapling_options())
         .args(["log", "--traceback", "-T", "{date}", "-r", commit_id])
         .output()
@@ -34,7 +45,7 @@ pub async fn get_commit_timestamp(commit_id: &str) -> Result<u64> {
 }
 
 pub async fn is_commit_in_repo(commit_id: &str) -> Result<bool> {
-    let output = Command::new(get_sapling_executable_path())
+    let output = tokio::process::Command::new(get_sapling_executable_path())
         .envs(get_sapling_options())
         .args([
             "log",
@@ -55,6 +66,7 @@ mod tests {
     use edenfs_client::utils::get_mount_point;
 
     use crate::commit::*;
+    use crate::utils::tests::get_mock_spawner;
     use crate::utils::*;
 
     const FBSOURCE_COMMIT_ID: &str = "5496dd87e5fe7430a1a399530cc339a479097524";
@@ -62,8 +74,13 @@ mod tests {
 
     #[tokio::test]
     pub async fn test_current_commit_id() -> Result<()> {
-        let commit_id = get_current_commit_id().await?;
-        assert!(!commit_id.is_empty());
+        let hash = "0000111122223333444455556666777788889999".to_owned();
+        let spawner = get_mock_spawner(
+            get_sapling_executable_path(),
+            Some((0, Some(hash.as_bytes().to_vec()))),
+        );
+        let commit_id = get_current_commit_id_impl(&spawner).await?;
+        assert_eq!(commit_id, hash);
         Ok(())
     }
 
