@@ -7,7 +7,7 @@
 
 use clientinfo::ClientRequestInfo;
 use commit_cloud_types::WorkspaceSnapshot;
-use mercurial_types::HgChangesetId;
+use commit_cloud_types::changeset::CloudChangesetId;
 use sql::Transaction;
 
 use crate::CommitCloudContext;
@@ -21,13 +21,11 @@ pub async fn update_snapshots(
     mut txn: Transaction,
     cri: Option<&ClientRequestInfo>,
     ctx: &CommitCloudContext,
-    new_snapshots: Vec<HgChangesetId>,
-    removed_snapshots: Vec<HgChangesetId>,
+    new_snapshots: Vec<CloudChangesetId>,
+    removed_snapshots: Vec<CloudChangesetId>,
 ) -> anyhow::Result<Transaction> {
     if !removed_snapshots.is_empty() {
-        let delete_args = DeleteArgs {
-            removed_commits: removed_snapshots,
-        };
+        let delete_args = DeleteArgs { removed_snapshots };
 
         txn = Delete::<WorkspaceSnapshot>::delete(
             sql_commit_cloud,

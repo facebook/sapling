@@ -14,9 +14,10 @@ use commit_cloud::sql::ops::Delete;
 use commit_cloud::sql::ops::Insert;
 use commit_cloud::sql::ops::Update;
 use commit_cloud_types::WorkspaceSnapshot;
+use commit_cloud_types::changeset::CloudChangesetId;
 use fbinit::FacebookInit;
-use mercurial_types::HgChangesetId;
 use mononoke_macros::mononoke;
+use mononoke_types::sha1_hash::Sha1;
 use sql_construct::SqlConstruct;
 
 #[mononoke::fbinit_test]
@@ -32,11 +33,15 @@ async fn test_snapshots(_fb: FacebookInit) -> anyhow::Result<()> {
     let cc_ctx = CommitCloudContext::new(&workspace, &reponame)?;
 
     let snapshot1 = WorkspaceSnapshot {
-        commit: HgChangesetId::from_str("2d7d4ba9ce0a6ffd222de7785b249ead9c51c536").unwrap(),
+        commit: CloudChangesetId(
+            Sha1::from_str("2d7d4ba9ce0a6ffd222de7785b249ead9c51c536").unwrap(),
+        ),
     };
 
     let snapshot2 = WorkspaceSnapshot {
-        commit: HgChangesetId::from_str("3e0e761030db6e479a7fb58b12881883f9f8c63f").unwrap(),
+        commit: CloudChangesetId(
+            Sha1::from_str("3e0e761030db6e479a7fb58b12881883f9f8c63f").unwrap(),
+        ),
     };
     let mut txn = sql.connections.write_connection.start_transaction().await?;
     txn = sql
@@ -63,7 +68,7 @@ async fn test_snapshots(_fb: FacebookInit) -> anyhow::Result<()> {
     let res: Vec<WorkspaceSnapshot> = sql.get(reponame.clone(), workspace.clone()).await?;
     assert_eq!(res.len(), 2);
 
-    let removed_commits = vec![snapshot1.commit];
+    let removed_snapshots = vec![snapshot1.commit];
     txn = sql.connections.write_connection.start_transaction().await?;
     txn = Delete::<WorkspaceSnapshot>::delete(
         &sql,
@@ -71,7 +76,7 @@ async fn test_snapshots(_fb: FacebookInit) -> anyhow::Result<()> {
         None,
         reponame.clone(),
         workspace.clone(),
-        DeleteArgs { removed_commits },
+        DeleteArgs { removed_snapshots },
     )
     .await?;
     txn.commit().await?;

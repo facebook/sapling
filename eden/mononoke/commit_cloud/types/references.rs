@@ -14,6 +14,8 @@ use mononoke_types::Timestamp;
 use serde::Deserialize;
 use serde::Serialize;
 
+use crate::changeset::CloudChangesetId;
+
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 pub struct WorkspaceHead {
     pub commit: HgChangesetId,
@@ -31,8 +33,9 @@ pub struct WorkspaceCheckoutLocation {
 
 #[derive(Clone, Debug, PartialEq)]
 pub struct WorkspaceSnapshot {
-    pub commit: HgChangesetId,
+    pub commit: CloudChangesetId,
 }
+
 #[derive(Clone, Serialize, Deserialize, Debug, PartialEq)]
 pub struct WorkspaceLocalBookmark {
     name: String,
@@ -109,7 +112,7 @@ pub struct ReferencesData {
     pub bookmarks: Option<HashMap<String, HgChangesetId>>,
     pub heads_dates: Option<HashMap<HgChangesetId, i64>>,
     pub remote_bookmarks: Option<Vec<WorkspaceRemoteBookmark>>,
-    pub snapshots: Option<Vec<HgChangesetId>>,
+    pub snapshots: Option<Vec<CloudChangesetId>>,
     pub timestamp: Option<i64>,
 }
 
@@ -124,8 +127,8 @@ pub struct UpdateReferencesParams {
     pub removed_bookmarks: Vec<String>,
     pub updated_remote_bookmarks: Option<Vec<WorkspaceRemoteBookmark>>,
     pub removed_remote_bookmarks: Option<Vec<WorkspaceRemoteBookmark>>,
-    pub new_snapshots: Vec<HgChangesetId>,
-    pub removed_snapshots: Vec<HgChangesetId>,
+    pub new_snapshots: Vec<CloudChangesetId>,
+    pub removed_snapshots: Vec<CloudChangesetId>,
     pub client_info: Option<ClientInfo>,
 }
 

@@ -18,6 +18,7 @@ use commit_cloud_types::WorkspaceCheckoutLocation;
 use commit_cloud_types::WorkspaceHead;
 use commit_cloud_types::WorkspaceLocalBookmark;
 use commit_cloud_types::WorkspaceSnapshot;
+use commit_cloud_types::changeset::CloudChangesetId;
 use commit_cloud_types::references::WorkspaceRemoteBookmark;
 use context::CoreContext;
 use futures::FutureExt;
@@ -92,7 +93,7 @@ pub(crate) async fn cast_references_data(
 ) -> Result<ReferencesData, anyhow::Error> {
     let mut bookmarks: HashMap<String, HgChangesetId> = HashMap::new();
     let remote_bookmarks: Vec<WorkspaceRemoteBookmark> = raw_references_data.remote_bookmarks;
-    let mut snapshots: Vec<HgChangesetId> = Vec::new();
+    let mut snapshots: Vec<CloudChangesetId> = Vec::new();
 
     // Start the pipeline with batches of 1000 heads.
     let chunks_iter = raw_references_data.heads.chunks(1000).map(|chunk| {
