@@ -8,11 +8,14 @@
 use std::path::Path;
 use std::path::PathBuf;
 use std::process::Stdio;
+use std::sync::LazyLock;
+use std::sync::Mutex;
 
 use async_process_traits::Child;
 use async_process_traits::Command;
 use async_process_traits::CommandSpawner;
 use async_process_traits::TokioCommandSpawner;
+use lru_cache::LruCache;
 use tokio::io::AsyncBufReadExt;
 use tokio::io::BufReader;
 
@@ -23,13 +26,20 @@ use crate::utils::get_sapling_executable_path;
 use crate::utils::get_sapling_options;
 use crate::utils::process_one_status_line;
 
+// NOTE: We might wish to cache Results here, but we would want to add a way to evict
+// Err entries from the cache based on some policy - e.g. a TTL in seconds.
+// For now, we just cache Ok entries.
+const STATUS_LRU_CACHE_SIZE: usize = 32;
+static STATUS_LRU_CACHE: LazyLock<Mutex<LruCache<GetStatusParams, SaplingGetStatusResult>>> =
+    LazyLock::new(|| Mutex::new(LruCache::new(STATUS_LRU_CACHE_SIZE)));
+
 #[derive(Clone, Debug, PartialEq)]
 pub enum SaplingGetStatusResult {
     Normal(Vec<(SaplingStatus, String)>),
     TooManyChanges,
 }
 
-#[derive(Clone, Debug, Hash, PartialEq)]
+#[derive(Clone, Debug, Eq, Hash, PartialEq)]
 struct GetStatusParams {
     first: String,
     second: Option<String>,
@@ -130,52 +140,66 @@ where
             .collect::<Vec<String>>()
     });
 
-    let mut args = vec!["status", "-mardu", "--rev", &params.first];
-    let second: String;
-    if let Some(second_) = params.second {
-        second = second_;
-        args.push("--rev");
-        args.push(&second);
-    }
-
-    let root_path_arg: String;
-    if let Some(root) = params.root {
-        root_path_arg = format!("path:{}", root.display());
-        args.push(&root_path_arg);
-    };
-
-    let mut command = Spawner::Command::new(get_sapling_executable_path());
-    command
-        .envs(get_sapling_options())
-        .args(args)
-        .stdout(Stdio::piped());
-    let mut child = spawner.spawn(&mut command)?;
-    let stdout = child.stdout().take().ok_or_else(|| {
-        SaplingError::Other("Failed to read stdout when invoking 'sl status'.".to_string())
-    })?;
-    let reader = BufReader::new(stdout);
-
-    let mut status = vec![];
-    let mut lines = reader.lines();
-    while let Some(line) = lines.next_line().await? {
-        if let Some(status_line) = process_one_status_line(&line)? {
-            if is_path_included(
-                params.case_insensitive_suffix_compares,
-                &status_line.1,
-                &params.included_roots,
-                &params.included_suffixes,
-                &params.excluded_roots,
-                &params.excluded_suffixes,
-            ) {
-                if status.len() >= params.limit_results {
-                    return Ok(SaplingGetStatusResult::TooManyChanges);
-                }
-                status.push(status_line);
-            }
+    {
+        let mut lru_cache = STATUS_LRU_CACHE.lock().unwrap();
+        let entry = lru_cache.get_mut(&params).cloned();
+        if let Some(entry) = entry {
+            return Ok(entry);
         }
     }
 
-    Ok(SaplingGetStatusResult::Normal(status))
+    let result = {
+        let mut args = vec!["status", "-mardu", "--rev", &params.first];
+        let second: String;
+        if let Some(second_) = &params.second {
+            second = second_.to_string();
+            args.push("--rev");
+            args.push(&second);
+        }
+
+        let root_path_arg: String;
+        if let Some(root) = &params.root {
+            root_path_arg = format!("path:{}", root.display());
+            args.push(&root_path_arg);
+        };
+
+        let mut command = Spawner::Command::new(get_sapling_executable_path());
+        command
+            .envs(get_sapling_options())
+            .args(args)
+            .stdout(Stdio::piped());
+        let mut child = spawner.spawn(&mut command)?;
+        let stdout = child.stdout().take().ok_or_else(|| {
+            SaplingError::Other("Failed to read stdout when invoking 'sl status'.".to_string())
+        })?;
+        let reader = BufReader::new(stdout);
+
+        let mut status = vec![];
+        let mut lines = reader.lines();
+        while let Some(line) = lines.next_line().await? {
+            if let Some(status_line) = process_one_status_line(&line)? {
+                if is_path_included(
+                    params.case_insensitive_suffix_compares,
+                    &status_line.1,
+                    &params.included_roots,
+                    &params.included_suffixes,
+                    &params.excluded_roots,
+                    &params.excluded_suffixes,
+                ) {
+                    if status.len() >= params.limit_results {
+                        return Ok(SaplingGetStatusResult::TooManyChanges);
+                    }
+                    status.push(status_line);
+                }
+            }
+        }
+
+        SaplingGetStatusResult::Normal(status)
+    };
+
+    let mut lru_cache = STATUS_LRU_CACHE.lock().unwrap();
+    lru_cache.insert(params, result.clone());
+    Ok(result)
 }
 
 fn is_path_included(
