@@ -335,7 +335,7 @@ class ChangesTestCommon(testBase):
         with self.assertRaises(EdenError) as ctx:
             self.getChangesSinceV2(position=position, root="this_path_does_not_exist")
 
-        self.assertEquals(
+        self.assertEqual(
             ctx.exception.message,
             f'Invalid root path "this_path_does_not_exist" in mount {self.mount_path}',
         )
@@ -429,7 +429,7 @@ class ChangesTestCommon(testBase):
         with self.assertRaises(EdenError) as ctx:
             self.getChangesSinceV2(position=position, root="this_path_is_a_file")
 
-        self.assertEquals(
+        self.assertEqual(
             ctx.exception.message,
             f'Invalid root path "this_path_is_a_file" in mount {self.mount_path}',
         )
