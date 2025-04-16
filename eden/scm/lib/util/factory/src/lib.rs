@@ -97,24 +97,26 @@ pub fn register_constructor<In: 'static + ?Sized, Out: 'static>(
 /// generic types like `(&str, &str) -> String`, an explicit type parameter
 /// `F` is required to specify the input and output types.
 /// implement the `FunctionSignature` trait.
-pub fn register_function<F: FunctionSignature>(
-    func: fn(F::In) -> F::Out,
-) -> Option<fn(F::In) -> F::Out> {
+pub fn register_function<'a, F: FunctionSignature<'a>>(
+    func: for<'any> fn(<F as FunctionSignature<'any>>::In) -> F::Out,
+) -> Option<for<'any> fn(<F as FunctionSignature<'any>>::In) -> F::Out> {
     let mut table = FUNCTION_TABLE.write().unwrap();
     let key = TypeId::of::<F>();
     match table.insert(key, Box::new(func)) {
         None => None,
         Some(f) => {
             // downcast should succeed
-            let f = f.downcast::<fn(F::In) -> F::Out>().unwrap();
+            let f = f
+                .downcast::<for<'any> fn(<F as FunctionSignature<'any>>::In) -> F::Out>()
+                .unwrap();
             Some(*f)
         }
     }
 }
 
 /// Defines the input and output types used by `register_function` and `call_function`.
-pub trait FunctionSignature: 'static {
-    type In: 'static;
+pub trait FunctionSignature<'a>: 'static {
+    type In: 'a;
     type Out: 'static;
 }
 
@@ -161,13 +163,15 @@ pub fn call_constructor<In: 'static + ?Sized, Out: 'static>(input: &In) -> anyho
 ///
 /// If there was no function registered for the `In` and `Out` types,
 /// return `None`.
-pub fn call_function<F: FunctionSignature>(input: F::In) -> Option<F::Out> {
+pub fn call_function<'a, F: FunctionSignature<'a>>(input: F::In) -> Option<F::Out> {
     let key = TypeId::of::<F>();
     let f = {
         let table = FUNCTION_TABLE.read().unwrap();
         match table.get(&key) {
             None => return None,
-            Some(f) => *f.downcast_ref::<fn(F::In) -> F::Out>().unwrap(),
+            Some(f) => *f
+                .downcast_ref::<for<'any> fn(<F as FunctionSignature<'any>>::In) -> F::Out>()
+                .unwrap(),
         }
     };
     Some(f(input))
@@ -301,7 +305,7 @@ mod tests {
         }
 
         struct Sig1;
-        impl FunctionSignature for Sig1 {
+        impl FunctionSignature<'_> for Sig1 {
             type In = u8;
             type Out = u8;
         }
@@ -317,7 +321,7 @@ mod tests {
 
         // Use a separate signature.
         struct Sig2;
-        impl FunctionSignature for Sig2 {
+        impl FunctionSignature<'_> for Sig2 {
             type In = u8;
             type Out = u8;
         }
@@ -326,5 +330,30 @@ mod tests {
         // Sig1 and Sig2 work independently.
         assert_eq!(call_function::<Sig1>(1u8), Some(3));
         assert_eq!(call_function::<Sig2>(1u8), Some(0));
+    }
+
+    #[test]
+    fn test_call_function_with_non_static_lifetime_input() {
+        struct MyArgs<'a>(&'a str, &'a str);
+        fn f(args: MyArgs) -> String {
+            format!("{}-{}", args.0, args.1)
+        }
+
+        struct Sig;
+        impl<'a> FunctionSignature<'a> for Sig {
+            type In = MyArgs<'a>;
+            type Out = String;
+        }
+
+        // Use local strings to force non-static `&str`.
+        let s1 = "foo".to_string();
+        let s2 = "bar".to_string();
+        let args = MyArgs(s1.as_ref(), s2.as_ref());
+
+        assert!(register_function::<Sig>(f).is_none());
+
+        // `args` is `MyArgs<'a>`, not `MyArgs<'static>`.
+        // It still compiles and runs fine.
+        assert_eq!(call_function::<Sig>(args).unwrap(), "foo-bar");
     }
 }
