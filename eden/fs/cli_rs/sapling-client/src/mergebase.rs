@@ -10,8 +10,12 @@ use std::sync::LazyLock;
 use std::sync::Mutex;
 
 use anyhow::Context;
+use async_process_traits::Command;
+use async_process_traits::CommandSpawner;
+use async_process_traits::ExitStatus;
+use async_process_traits::Output;
+use async_process_traits::TokioCommandSpawner;
 use lru_cache::LruCache;
-use tokio::process::Command;
 
 use crate::error::Result;
 use crate::error::SaplingError;
@@ -64,6 +68,21 @@ where
     C: AsRef<str>,
     M: AsRef<str>,
 {
+    get_mergebase_details_impl(&TokioCommandSpawner, current_dir, commit, mergegase_with).await
+}
+
+pub async fn get_mergebase_details_impl<Spawner, D, C, M>(
+    spawner: &Spawner,
+    current_dir: D,
+    commit: C,
+    mergegase_with: M,
+) -> Result<Option<MergebaseDetails>>
+where
+    Spawner: CommandSpawner,
+    D: AsRef<Path>,
+    C: AsRef<str>,
+    M: AsRef<str>,
+{
     let lru_key = format!("{}:{}", commit.as_ref(), mergegase_with.as_ref());
     {
         let mut lru_cache = MERGEBASE_LRU_CACHE.lock().unwrap();
@@ -74,7 +93,8 @@ where
     }
 
     let result = {
-        let output = Command::new(get_sapling_executable_path())
+        let mut command = Spawner::Command::new(get_sapling_executable_path());
+        command
             .current_dir(current_dir)
             .envs(get_sapling_options())
             .args([
@@ -84,17 +104,17 @@ where
                 "{node}\n{date}\n{get(extras, \"global_rev\")}",
                 "-r",
                 format!("ancestor({}, {})", commit.as_ref(), mergegase_with.as_ref()).as_str(),
-            ])
-            .output()
-            .await?;
+            ]);
+        let output = spawner.output(&mut command).await?;
 
-        if !output.status.success() || !output.stderr.is_empty() {
+        if !output.status().success() || !output.stderr().is_empty() {
             Err(SaplingError::Other(format!(
                 "Failed to obtain mergebase:\n{}",
-                String::from_utf8(output.stderr).unwrap_or("Failed to parse stderr".to_string())
+                String::from_utf8(output.stderr().to_vec())
+                    .unwrap_or("Failed to parse stderr".to_string())
             )))
         } else {
-            parse_mergebase_details(output.stdout)
+            parse_mergebase_details(output.stdout().to_vec())
         }
     }?;
 
@@ -132,34 +152,62 @@ fn parse_mergebase_details(mergebase_details: Vec<u8>) -> Result<Option<Mergebas
 
 #[cfg(test)]
 mod tests {
-    use super::*;
+    use crate::mergebase::*;
+    use crate::utils::tests::get_mock_spawner;
+
+    // the format is {node}\n{date}\n{global_rev}
+    const DETAILS: &str = "0000111122223333444455556666777788889999\n1234567890.012345\n9876543210";
+    const DETAILS_NO_GLOBAL_REV: &str =
+        "0000111122223333444455556666777788889999\n1234567890.012345\n";
+    const COMMIT_ID: &str = "0000111122223333444455556666777788889999";
+    const MERGEBASE_WITH: &str = "master";
+
+    #[tokio::test]
+    #[allow(clippy::unnecessary_literal_unwrap)]
+    async fn test_get_mergebase_details() -> Result<()> {
+        let output = DETAILS.to_owned();
+        let spawner = get_mock_spawner(
+            get_sapling_executable_path(),
+            Some((0, Some(output.as_bytes().to_vec()))),
+        );
+
+        let current_dir = ".";
+        let details =
+            get_mergebase_details_impl(&spawner, current_dir, COMMIT_ID, MERGEBASE_WITH).await?;
+        let expected = Some(MergebaseDetails {
+            mergebase: COMMIT_ID.to_owned(),
+            timestamp: Some(1234567890),
+            global_rev: Some(9876543210),
+        });
+
+        assert_eq!(details, expected);
+
+        // PartialEq is implemented for MergebaseDetails, only comparing the mergebase field
+        // Unwrap and compare remaining fields one by one
+        let details = details.unwrap();
+        let expected = expected.unwrap();
+        assert_eq!(details.timestamp, expected.timestamp);
+        assert_eq!(details.global_rev, expected.global_rev);
+
+        Ok(())
+    }
 
     #[test]
     fn test_parse_mergebase_details() -> Result<()> {
-        // the format is {node}\n{date}\n{global_rev}
-        let output =
-            "71de423b796418e8ff5300dbe9bd9ad3aef63a9c\n1739790802.028800\n1020164040".to_owned();
-        let details = parse_mergebase_details(output.as_bytes().to_vec())?.unwrap();
-        assert_eq!(
-            details.mergebase,
-            "71de423b796418e8ff5300dbe9bd9ad3aef63a9c"
-        );
-        assert_eq!(details.timestamp, Some(1739790802));
-        assert_eq!(details.global_rev, Some(1020164040));
+        let details = parse_mergebase_details(DETAILS.as_bytes().to_vec())?.unwrap();
+        assert_eq!(details.mergebase, COMMIT_ID);
+        assert_eq!(details.timestamp, Some(1234567890));
+        assert_eq!(details.global_rev, Some(9876543210));
         Ok(())
     }
 
     #[test]
     fn test_parse_mergebase_details_no_global_rev() -> Result<()> {
         // Not all repos have global revision
-        let output = "71de423b796418e8ff5300dbe9bd9ad3aef63a9c\n1739790802.028800\n".to_owned();
-        let details = parse_mergebase_details(output.as_bytes().to_vec())?.unwrap();
-        assert_eq!(
-            details.mergebase,
-            "71de423b796418e8ff5300dbe9bd9ad3aef63a9c"
-        );
+        let details = parse_mergebase_details(DETAILS_NO_GLOBAL_REV.as_bytes().to_vec())?.unwrap();
+        assert_eq!(details.mergebase, COMMIT_ID);
+        assert_eq!(details.timestamp, Some(1234567890));
         assert_eq!(details.global_rev, None);
-        assert_eq!(details.timestamp, Some(1739790802));
         Ok(())
     }
 }
