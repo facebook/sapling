@@ -19,7 +19,7 @@ using namespace facebook::eden;
 using namespace facebook::eden::proc_util;
 
 TEST(procUtil, trimTest) {
-  std::string tst("");
+  std::string tst;
   EXPECT_EQ(proc_util::trim(tst), "");
 
   tst = "   spaceBefore";
