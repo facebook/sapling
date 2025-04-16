@@ -57,7 +57,7 @@ export const useIsIrrelevantToCwd = (commit: CommitInfo) => {
   return isIrrelevantToCwd(commit, cwd);
 };
 
-function isIrrelevantToCwd(commit: CommitInfo, repoRelativeCwd: RepoRelativePath): boolean {
+export function isIrrelevantToCwd(commit: CommitInfo, repoRelativeCwd: RepoRelativePath): boolean {
   return (
     repoRelativeCwd !== '/' &&
     !commit.maxCommonPathPrefix.startsWith(repoRelativeCwd) &&
@@ -69,6 +69,48 @@ export const __TEST__ = {isIrrelevantToCwd};
 export const irrelevantCwdDeemphasisEnabled = localStorageBackedAtom<boolean>(
   'isl.deemphasize-cwd-irrelevant-commits',
   true,
+);
+
+export const hideIrrelevantCwdStacks = localStorageBackedAtom<boolean>(
+  'isl.hide-cwd-irrelevant-stacks',
+  false,
+);
+
+/**
+ * Derived atom that combines the irrelevant CWD display settings into a single value.
+ * - 'show': Show irrelevant commits normally (deemphasis disabled)
+ * - 'deemphasize': Show irrelevant commits but with reduced visual prominence
+ * - 'hide': Don't show irrelevant commits at all
+ */
+export const irrelevantCwdDisplayModeAtom = atom(
+  get => {
+    const deemphasizeEnabled = get(irrelevantCwdDeemphasisEnabled);
+    const hideEnabled = get(hideIrrelevantCwdStacks);
+
+    if (hideEnabled) {
+      return 'hide';
+    }
+    if (deemphasizeEnabled) {
+      return 'deemphasize';
+    }
+    return 'show';
+  },
+  (_get, set, newValue: 'show' | 'deemphasize' | 'hide') => {
+    switch (newValue) {
+      case 'show':
+        set(irrelevantCwdDeemphasisEnabled, false);
+        set(hideIrrelevantCwdStacks, false);
+        break;
+      case 'deemphasize':
+        set(irrelevantCwdDeemphasisEnabled, true);
+        set(hideIrrelevantCwdStacks, false);
+        break;
+      case 'hide':
+        set(irrelevantCwdDeemphasisEnabled, true);
+        set(hideIrrelevantCwdStacks, true);
+        break;
+    }
+  },
 );
 
 /**

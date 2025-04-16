@@ -26,6 +26,7 @@ import {atomFamilyWeak, localStorageBackedAtom} from './jotaiUtils';
 import {CreateEmptyInitialCommitOperation} from './operations/CreateEmptyInitialCommitOperation';
 import {inlineProgressByHash, useRunOperation} from './operationsState';
 import {dagWithPreviews, treeWithPreviews, useMarkOperationsCompleted} from './previews';
+import {hideIrrelevantCwdStacks, isIrrelevantToCwd, repoRelativeCwd} from './repositoryData';
 import {isNarrowCommitTree} from './responsive';
 import {
   selectedCommits,
@@ -61,9 +62,16 @@ export const condenseObsoleteStacks = localStorageBackedAtom<boolean | null>(
 const renderSubsetUnionSelection = atom(get => {
   const dag = get(dagWithYouAreHere);
   const condense = get(condenseObsoleteStacks);
-  const subset = dag.subsetForRendering(undefined, /* condenseObsoleteStacks */ condense !== false);
+  let subset = dag.subsetForRendering(undefined, /* condenseObsoleteStacks */ condense !== false);
   // If selectedCommits includes commits unknown to dag (ex. in tests), ignore them to avoid errors.
   const selection = dag.present(get(selectedCommits));
+
+  const hideIrrelevant = get(hideIrrelevantCwdStacks);
+  if (hideIrrelevant) {
+    const cwd = get(repoRelativeCwd);
+    subset = dag.filter(commit => commit.isDot || !isIrrelevantToCwd(commit, cwd), subset);
+  }
+
   return subset.union(selection);
 });
 

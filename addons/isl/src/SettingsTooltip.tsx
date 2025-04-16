@@ -48,7 +48,7 @@ import {AutoResolveSettingCheckbox} from './mergeConflicts/state';
 import {SetConfigOperation} from './operations/SetConfigOperation';
 import {useRunOperation} from './operationsState';
 import platform from './platform';
-import {irrelevantCwdDeemphasisEnabled} from './repositoryData';
+import {irrelevantCwdDisplayModeAtom} from './repositoryData';
 import {renderCompactAtom, useZoomShortcut, zoomUISettingAtom} from './responsive';
 import {mainCommandName, repositoryInfo} from './serverAPIState';
 import {themeState, useThemeShortcut} from './theme';
@@ -130,8 +130,8 @@ function SettingsDropdown({
         <Column alignStart>
           <RenderCompactSetting />
           <CondenseObsoleteSetting />
-          <DeemphasizeIrrelevantCommitsSetting />
           <RebaseOffWarmWarningSetting />
+          <DeemphasizeIrrelevantCommitsSetting />
         </Column>
       </Setting>
       <Setting title={<T>Conflicts</T>}>
@@ -276,20 +276,26 @@ function CondenseObsoleteSetting() {
 }
 
 function DeemphasizeIrrelevantCommitsSetting() {
-  const [value, setValue] = useAtom(irrelevantCwdDeemphasisEnabled);
+  const [value, setValue] = useAtom(irrelevantCwdDisplayModeAtom);
   return (
     <Tooltip
       title={t(
-        'Grey out commits which only change files in an unrelated directory to your current working directory.\n',
+        'How to display commits which only change files in an unrelated directory to your current working directory.\n',
       )}>
-      <Checkbox
-        data-testid="deemphasize-irrelevant-commits-setting"
-        checked={value !== false}
-        onChange={checked => {
-          setValue(checked);
-        }}>
-        <T>Deemphasize Cwd-Irrelevant Commits</T>
-      </Checkbox>
+      <div className="dropdown-container setting-inline-dropdown">
+        <T>Cwd-Irrelevant Commits</T>
+        <Dropdown<{value: typeof value; name: string}>
+          options={[
+            {value: 'show', name: t('Show')},
+            {value: 'deemphasize', name: t('Deemphasize')},
+            {value: 'hide', name: t('Hide')},
+          ]}
+          value={value}
+          onChange={event => {
+            setValue(event.currentTarget.value as typeof value);
+          }}
+        />
+      </div>
     </Tooltip>
   );
 }
