@@ -322,9 +322,17 @@ Test clone into the current folder, if empty:
   alpha
   beta
 
+Test init without URL on existing repo:
+
+  $ hg init --git .
+  abort: repository `$TESTTMP/empty_folder` already exists
+  [255]
+FIXME: we deleted all the files!
+  $ ls | sort
+
 Make sure we clean up if repo init fails:
 
-  $ FAILPOINTS=repo-init=panic hg clone -q --git "$TESTTMP/gitrepo" "$TESTTMP/init_fails" &> /dev/null
+  $ FAILPOINTS=repo-init=panic hg clone -q --git "$TESTTMP/gitrepo" "$TESTTMP/init_fails" 2> /dev/null
   [1]
   $ test -d "$TESTTMP/init_fails"
   [1]
