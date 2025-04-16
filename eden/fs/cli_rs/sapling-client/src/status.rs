@@ -29,6 +29,19 @@ pub enum SaplingGetStatusResult {
     TooManyChanges,
 }
 
+#[derive(Clone, Debug, Hash, PartialEq)]
+struct GetStatusParams {
+    first: String,
+    second: Option<String>,
+    limit_results: usize,
+    case_insensitive_suffix_compares: bool,
+    root: Option<PathBuf>,
+    included_roots: Option<Vec<PathBuf>>,
+    included_suffixes: Option<Vec<String>>,
+    excluded_roots: Option<Vec<PathBuf>>,
+    excluded_suffixes: Option<Vec<String>>,
+}
+
 pub async fn get_status_with_includes(
     first: &str,
     second: Option<&str>,
@@ -66,42 +79,34 @@ pub async fn get_status(
     excluded_roots: &Option<Vec<PathBuf>>,
     excluded_suffixes: &Option<Vec<String>>,
 ) -> Result<SaplingGetStatusResult> {
-    get_status_impl(
-        &TokioCommandSpawner,
-        first,
-        second,
+    let params = GetStatusParams {
+        first: first.to_string(),
+        second: second.map(|s| s.to_string()),
         limit_results,
         case_insensitive_suffix_compares,
-        root,
-        included_roots,
-        included_suffixes,
-        excluded_roots,
-        excluded_suffixes,
-    )
-    .await
+        root: root.clone(),
+        included_roots: included_roots.clone(),
+        included_suffixes: included_suffixes.clone(),
+        excluded_roots: excluded_roots.clone(),
+        excluded_suffixes: excluded_suffixes.clone(),
+    };
+
+    get_status_impl(&TokioCommandSpawner, params).await
 }
 
-pub async fn get_status_impl<Spawner>(
+async fn get_status_impl<Spawner>(
     spawner: &Spawner,
-    first: &str,
-    second: Option<&str>,
-    limit_results: usize,
-    case_insensitive_suffix_compares: bool,
-    root: &Option<PathBuf>,
-    included_roots: &Option<Vec<PathBuf>>,
-    included_suffixes: &Option<Vec<String>>,
-    excluded_roots: &Option<Vec<PathBuf>>,
-    excluded_suffixes: &Option<Vec<String>>,
+    mut params: GetStatusParams,
 ) -> Result<SaplingGetStatusResult>
 where
     Spawner: CommandSpawner,
 {
-    let included_suffixes = included_suffixes.clone().map(|is| {
+    params.included_suffixes = params.included_suffixes.clone().map(|is| {
         is.into_iter()
             .map(|s| {
                 format!(
                     ".{}",
-                    if case_insensitive_suffix_compares {
+                    if params.case_insensitive_suffix_compares {
                         s.to_ascii_lowercase()
                     } else {
                         s
@@ -110,12 +115,12 @@ where
             })
             .collect::<Vec<String>>()
     });
-    let excluded_suffixes = excluded_suffixes.clone().map(|is| {
+    params.excluded_suffixes = params.excluded_suffixes.clone().map(|is| {
         is.into_iter()
             .map(|s| {
                 format!(
                     ".{}",
-                    if case_insensitive_suffix_compares {
+                    if params.case_insensitive_suffix_compares {
                         s.to_ascii_lowercase()
                     } else {
                         s
@@ -125,14 +130,16 @@ where
             .collect::<Vec<String>>()
     });
 
-    let mut args = vec!["status", "-mardu", "--rev", first];
-    if let Some(second) = second {
+    let mut args = vec!["status", "-mardu", "--rev", &params.first];
+    let second: String;
+    if let Some(second_) = params.second {
+        second = second_;
         args.push("--rev");
-        args.push(second);
+        args.push(&second);
     }
 
     let root_path_arg: String;
-    if let Some(root) = root {
+    if let Some(root) = params.root {
         root_path_arg = format!("path:{}", root.display());
         args.push(&root_path_arg);
     };
@@ -153,14 +160,14 @@ where
     while let Some(line) = lines.next_line().await? {
         if let Some(status_line) = process_one_status_line(&line)? {
             if is_path_included(
-                case_insensitive_suffix_compares,
+                params.case_insensitive_suffix_compares,
                 &status_line.1,
-                included_roots,
-                &included_suffixes,
-                excluded_roots,
-                &excluded_suffixes,
+                &params.included_roots,
+                &params.included_suffixes,
+                &params.excluded_roots,
+                &params.excluded_suffixes,
             ) {
-                if status.len() >= limit_results {
+                if status.len() >= params.limit_results {
                     return Ok(SaplingGetStatusResult::TooManyChanges);
                 }
                 status.push(status_line);
@@ -246,19 +253,18 @@ A fbcode/buck2/app/buck2_audit_server/src/perf/configured_graph_size.rs
             get_sapling_executable_path(),
             Some((0, Some(output.as_bytes().to_vec()))),
         );
-        let result = get_status_impl(
-            &spawner,
-            FIRST_COMMIT_ID,
-            Some(SECOND_COMMIT_ID),
-            1000,
-            false,
-            &None,
-            &None,
-            &None,
-            &None,
-            &None,
-        )
-        .await?;
+        let params = GetStatusParams {
+            first: FIRST_COMMIT_ID.to_string(),
+            second: Some(SECOND_COMMIT_ID.to_string()),
+            limit_results: 1000,
+            case_insensitive_suffix_compares: false,
+            root: None,
+            included_roots: None,
+            included_suffixes: None,
+            excluded_roots: None,
+            excluded_suffixes: None,
+        };
+        let result = get_status_impl(&spawner, params).await?;
         let expected = SaplingGetStatusResult::Normal(vec![
             (
                 SaplingStatus::Modified,

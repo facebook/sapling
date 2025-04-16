@@ -70,7 +70,7 @@ pub async fn get_diff_dirs(
     .await
 }
 
-pub async fn get_diff_dirs_impl<Spawner>(
+async fn get_diff_dirs_impl<Spawner>(
     spawner: &Spawner,
     first: &str,
     second: Option<&str>,

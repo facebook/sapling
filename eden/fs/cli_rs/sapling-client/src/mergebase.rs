@@ -71,7 +71,7 @@ where
     get_mergebase_details_impl(&TokioCommandSpawner, current_dir, commit, mergegase_with).await
 }
 
-pub async fn get_mergebase_details_impl<Spawner, D, C, M>(
+async fn get_mergebase_details_impl<Spawner, D, C, M>(
     spawner: &Spawner,
     current_dir: D,
     commit: C,
