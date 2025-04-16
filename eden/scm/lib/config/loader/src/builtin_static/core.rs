@@ -64,6 +64,8 @@ local-committemplate=true
 
 evalframe-passthrough=true
 
+run-python-hooks-via-pyhook=true
+
 [zsh]
 completion-age=7
 completion-description=false
