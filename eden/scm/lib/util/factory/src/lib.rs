@@ -55,7 +55,6 @@ use std::collections::BTreeMap;
 use std::collections::HashMap;
 use std::fmt;
 use std::sync::LazyLock;
-use std::sync::OnceLock;
 use std::sync::RwLock;
 
 /// Register a constructor `func` to produce `Out` from `In`.
@@ -82,7 +81,7 @@ pub fn register_constructor<In: 'static + ?Sized, Out: 'static>(
     );
     let dyn_func: BoxAny = Box::new(func) as BoxAny;
     let key = constructor_table_key::<In, Out>();
-    let mut table = constructor_table().write().unwrap();
+    let mut table = CONSTRUCTOR_TABLE.write().unwrap();
     table.entry(key).or_default().insert(name, dyn_func);
 }
 
@@ -127,7 +126,7 @@ pub fn call_constructor<In: 'static + ?Sized, Out: 'static>(input: &In) -> anyho
         "calling constructors",
     );
     let key = constructor_table_key::<In, Out>();
-    let table = constructor_table().read().unwrap();
+    let table = CONSTRUCTOR_TABLE.read().unwrap();
     let mut error_context = ErrorContext {
         from_type_name: any::type_name::<In>(),
         to_type_name: any::type_name::<Out>(),
@@ -188,10 +187,7 @@ fn constructor_table_key<In: 'static + ?Sized, Out: 'static>() -> TypeId {
 type ConstructorTable = RwLock<HashMap<TypeId, BTreeMap<&'static str, BoxAny>>>;
 type BoxAny = Box<dyn Any + Send + Sync>;
 
-fn constructor_table() -> &'static ConstructorTable {
-    static TABLE: OnceLock<ConstructorTable> = OnceLock::new();
-    TABLE.get_or_init(Default::default)
-}
+static CONSTRUCTOR_TABLE: LazyLock<ConstructorTable> = LazyLock::new(Default::default);
 
 type FunctionTable = RwLock<HashMap<TypeId, BoxAny>>;
 
