@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.1.68
+
+- Add a setting to completely hide cwd-irrelevant commits
+- Add button to swap two commits in the Split UI
+
 ## 0.1.67
 
 - Add `--debug` and `--verbose` optional args for help debugging
