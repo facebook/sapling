@@ -344,6 +344,65 @@ describe('CommitTreeList', () => {
   });
 
   describe('render dag subset', () => {
+    describe('irrelevant cwd stacks', () => {
+      beforeEach(() => {
+        render(<App />);
+        act(() => {
+          // Set repo root to "/repo" and cwd to "/repo/www"
+          simulateRepoConnected('/repo', '/repo/www');
+          closeCommitInfoSidebar();
+          expectMessageSentToServer({
+            type: 'subscribe',
+            kind: 'smartlogCommits',
+            subscriptionID: expect.anything(),
+          });
+          simulateCommits({
+            value: [
+              COMMIT('1', 'Public base', '0', {phase: 'public'}),
+              // Commits with different maxCommonPathPrefix values
+              COMMIT('a', 'Commit in www', '1', {maxCommonPathPrefix: 'www/'}),
+              COMMIT('b', 'Commit in addons', '1', {maxCommonPathPrefix: 'addons/'}),
+              COMMIT('c', 'Commit in root', '1', {maxCommonPathPrefix: ''}),
+              COMMIT('d', 'Commit in www/js', '1', {
+                maxCommonPathPrefix: 'www/js/',
+                isDot: true,
+              }),
+            ],
+          });
+        });
+      });
+
+      it('shows irrelevant commits by default', () => {
+        // By default, hideIrrelevantCwdStacks is false, so all commits should be visible
+        expect(screen.queryByText('Commit in www')).toBeInTheDocument();
+        expect(screen.queryByText('Commit in addons')).toBeInTheDocument();
+        expect(screen.queryByText('Commit in root')).toBeInTheDocument();
+        expect(screen.queryByText('Commit in www/js')).toBeInTheDocument();
+
+        // But the addons/ commit should be marked as irrelevant
+        expect(document.body.querySelectorAll('.commit.irrelevant')).toHaveLength(1);
+      });
+
+      it('can hide irrelevant commits when enabled', async () => {
+        fireEvent.click(screen.getByTestId('settings-gear-button'));
+
+        const settingsDropdown = screen.getByTestId('settings-dropdown');
+        expect(settingsDropdown).toBeInTheDocument();
+        const cwdIrrelevantDropdown =
+          within(settingsDropdown).getByTestId('cwd-irrelevant-commits');
+        expect(cwdIrrelevantDropdown).toBeInTheDocument();
+
+        // Change the dropdown value to 'hide'
+        fireEvent.change(cwdIrrelevantDropdown, {target: {value: 'hide'}});
+
+        expect(screen.queryByText('Commit in www')).toBeInTheDocument();
+        expect(screen.queryByText('Commit in root')).toBeInTheDocument();
+        expect(screen.queryByText('Commit in www/js')).toBeInTheDocument();
+
+        expect(screen.queryByText('Commit in addons')).not.toBeInTheDocument();
+      });
+    });
+
     describe('obsolete stacks', () => {
       beforeEach(() => {
         render(<App />);

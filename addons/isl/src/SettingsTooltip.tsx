@@ -285,6 +285,7 @@ function DeemphasizeIrrelevantCommitsSetting() {
       <div className="dropdown-container setting-inline-dropdown">
         <T>Cwd-Irrelevant Commits</T>
         <Dropdown<{value: typeof value; name: string}>
+          data-testid="cwd-irrelevant-commits"
           options={[
             {value: 'show', name: t('Show')},
             {value: 'deemphasize', name: t('Deemphasize')},
