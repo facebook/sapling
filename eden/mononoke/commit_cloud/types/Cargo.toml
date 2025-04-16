@@ -14,5 +14,7 @@ path = "lib.rs"
 anyhow = "1.0.95"
 mercurial_types = { version = "0.1.0", path = "../../mercurial/types" }
 mononoke_types = { version = "0.1.0", path = "../../mononoke_types" }
+mysql_common = { version = "0.29.0", features = ["chrono", "default"] }
 serde = { version = "1.0.185", features = ["derive", "rc"] }
+sql = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 thiserror = "2"

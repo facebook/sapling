@@ -5,10 +5,10 @@
  * GNU General Public License version 2.
  */
 
+pub mod changeset;
 pub mod error;
 pub mod references;
 pub mod smartlog;
-
 pub use error::CommitCloudError;
 pub use error::CommitCloudInternalError;
 pub use error::CommitCloudUserError;
