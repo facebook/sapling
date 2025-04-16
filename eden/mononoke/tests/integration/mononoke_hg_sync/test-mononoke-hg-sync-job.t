@@ -236,6 +236,8 @@ Verify that repo-2 is locked for normal pushes
 Test hook bypass using REPLAY_BYPASS file
   $ cd $TESTTMP/repo-2
   $ cat >>.hg/hgrc <<CONFIG
+  > [experimental]
+  > run-python-hooks-via-pyhook = true
   > [hooks]
   > prepushkey = python:$TESTTMP/replayverification.py:verify_replay
   > [facebook]
@@ -261,6 +263,8 @@ Test further sync
 
 Test bookmark deletion sync
   $ cat >>$TESTTMP/repo-3/.hg/hgrc <<CONFIG
+  > [experimental]
+  > run-python-hooks-via-pyhook = true
   > [hooks]
   > prepushkey = python:$TESTTMP/replayverification.py:verify_replay
   > CONFIG
