@@ -19,10 +19,10 @@ from dataclasses import dataclass
 from typing import Optional, Tuple
 
 import bindings
+
 from sapling import tracing
 
 from . import bookmarks as bookmod, error, identity, progress, rcutil, util
-
 from .i18n import _
 from .node import bin, hex, nullid
 
@@ -145,20 +145,24 @@ def clone(ui, url, destpath=None, update=True, pullnames=None, submodule=None):
 
     destpath = ui.expandpath(destpath)
 
+    # Allow `--debug` to keep bad state for investigation.
+    clean_up_on_error = not ui.debugflag
+
     if os.path.lexists(destpath):
         if os.path.isdir(destpath):
-            if os.listdir(destpath) and url:
-                raise error.Abort(_("destination '%s' is not empty") % destpath)
+            clean_up_on_error = False
+            if os.listdir(destpath):
+                if url:
+                    raise error.Abort(_("destination '%s' is not empty") % destpath)
         else:
             raise error.Abort(
                 _("destination '%s' exists and is not a directory") % destpath
             )
 
-    if ui.debugflag:
-        # Allow `--debug` to keep bad state for investigation.
-        context = util.nullcontextmanager()
-    else:
+    if clean_up_on_error:
         context = bindings.atexit.AtExit.rmtree(destpath)
+    else:
+        context = util.nullcontextmanager()
 
     with context:
         try:

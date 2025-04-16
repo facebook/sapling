@@ -327,8 +327,10 @@ Test init without URL on existing repo:
   $ hg init --git .
   abort: repository `$TESTTMP/empty_folder` already exists
   [255]
-FIXME: we deleted all the files!
+Make sure we didn't delete the folder contents:
   $ ls | sort
+  alpha
+  beta
 
 Make sure we clean up if repo init fails:
 
