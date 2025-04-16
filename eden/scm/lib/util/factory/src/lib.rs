@@ -80,8 +80,8 @@ pub fn register_constructor<In: 'static + ?Sized, Out: 'static>(
         "registering constructor",
     );
     let dyn_func: BoxAny = Box::new(func) as BoxAny;
-    let key = table_key::<In, Out>();
-    let mut table = table().write().unwrap();
+    let key = constructor_table_key::<In, Out>();
+    let mut table = constructor_table().write().unwrap();
     table.entry(key).or_default().insert(name, dyn_func);
 }
 
@@ -98,8 +98,8 @@ pub fn call_constructor<In: 'static + ?Sized, Out: 'static>(input: &In) -> anyho
         out_type = any::type_name::<Out>(),
         "calling constructors",
     );
-    let key = table_key::<In, Out>();
-    let table = table().read().unwrap();
+    let key = constructor_table_key::<In, Out>();
+    let table = constructor_table().read().unwrap();
     let mut error_context = ErrorContext {
         from_type_name: any::type_name::<In>(),
         to_type_name: any::type_name::<Out>(),
@@ -134,15 +134,15 @@ pub fn is_error_from_constructor(error: &anyhow::Error) -> bool {
     }
 }
 
-fn table_key<In: 'static + ?Sized, Out: 'static>() -> TypeId {
+fn constructor_table_key<In: 'static + ?Sized, Out: 'static>() -> TypeId {
     TypeId::of::<fn(&In) -> Option<anyhow::Result<Out>>>()
 }
 
-type Table = RwLock<HashMap<TypeId, BTreeMap<&'static str, BoxAny>>>;
+type ConstructorTable = RwLock<HashMap<TypeId, BTreeMap<&'static str, BoxAny>>>;
 type BoxAny = Box<dyn Any + Send + Sync>;
 
-fn table() -> &'static Table {
-    static TABLE: OnceLock<Table> = OnceLock::new();
+fn constructor_table() -> &'static ConstructorTable {
+    static TABLE: OnceLock<ConstructorTable> = OnceLock::new();
     TABLE.get_or_init(Default::default)
 }
 
