@@ -6,24 +6,25 @@
  */
 
 use std::cell::Cell;
-use std::cell::RefCell;
 use std::io;
 use std::io::BufRead;
 use std::io::Read;
+use std::sync::RwLock;
 
 use cpython::*;
 use cpython_ext::PyNone;
 use cpython_ext::ResultPyErrExt;
 
 py_class!(pub class PyRustIO |py| {
-    data r: RefCell<Option<io::BufReader<Box<dyn ::io::Read + Send>>>>;
-    data w: RefCell<Option<Box<dyn ::io::Write + Send>>>;
+    data r: RwLock<Option<io::BufReader<Box<dyn ::io::Read + Send>>>>;
+    data w: RwLock<Option<Box<dyn ::io::Write + Send>>>;
     data is_closed: Cell<bool>;
 
     /// Read at most `n` bytes from the input.
     /// If `n` is negative, read everything till the end.
     def read(&self, n: i64 = -1) -> PyResult<PyBytes> {
-        let mut io = self.r(py).borrow_mut();
+        let r = self.r(py);
+        let mut io = py.allow_threads(|| r.write().unwrap());
         let io = match io.as_mut() {
             Some(io) => io,
             None => return Err(not_readable(py)),
@@ -42,7 +43,8 @@ py_class!(pub class PyRustIO |py| {
     }
 
     def readline(&self) -> PyResult<PyBytes> {
-        let mut io = self.r(py).borrow_mut();
+        let r = self.r(py);
+        let mut io = py.allow_threads(|| r.write().unwrap());
         let io = match io.as_mut() {
             Some(io) => io,
             None => return Err(not_readable(py)),
@@ -53,7 +55,8 @@ py_class!(pub class PyRustIO |py| {
     }
 
     def write(&self, bytes: PyBytes) -> PyResult<usize> {
-        let mut io = self.w(py).borrow_mut();
+        let w = self.w(py);
+        let mut io = py.allow_threads(|| w.write().unwrap());
         let io = match io.as_mut() {
             Some(io) => io,
             None => return Err(not_writable(py)),
@@ -64,7 +67,8 @@ py_class!(pub class PyRustIO |py| {
     }
 
     def flush(&self) -> PyResult<PyNone> {
-        let mut io = self.w(py).borrow_mut();
+        let w = self.w(py);
+        let mut io = py.allow_threads(|| w.write().unwrap());
         let io = match io.as_mut() {
             Some(io) => io,
             None => return Ok(PyNone),
@@ -74,11 +78,12 @@ py_class!(pub class PyRustIO |py| {
     }
 
     def isatty(&self) -> PyResult<bool> {
-        let io = self.w(py).borrow();
+        let w = self.w(py);
+        let io = py.allow_threads(|| w.read().unwrap());
         match io.as_ref() {
             Some(io) => Ok(io.is_tty()),
             None => {
-                let io = self.r(py).borrow();
+                let io = self.r(py).read().unwrap();
                 match io.as_ref() {
                     Some(io) => Ok(io.get_ref().is_tty()),
                     None => Ok(false),
@@ -88,7 +93,8 @@ py_class!(pub class PyRustIO |py| {
     }
 
     def isstdin(&self) -> PyResult<bool> {
-        let io = self.r(py).borrow();
+        let r = self.r(py);
+        let io = py.allow_threads(|| r.read().unwrap());
         match io.as_ref() {
             Some(io) => Ok(io.get_ref().is_stdin()),
             None => Ok(false),
@@ -96,7 +102,8 @@ py_class!(pub class PyRustIO |py| {
     }
 
     def isstdout(&self) -> PyResult<bool> {
-        let io = self.w(py).borrow();
+        let w = self.w(py);
+        let io = py.allow_threads(|| w.read().unwrap());
         match io.as_ref() {
             Some(io) => Ok(io.is_stdout()),
             None => Ok(false),
@@ -104,7 +111,8 @@ py_class!(pub class PyRustIO |py| {
     }
 
     def isstderr(&self) -> PyResult<bool> {
-        let io = self.w(py).borrow();
+        let w = self.w(py);
+        let io = py.allow_threads(|| w.read().unwrap());
         match io.as_ref() {
             Some(io) => Ok(io.is_stderr()),
             None => Ok(false),
@@ -112,12 +120,14 @@ py_class!(pub class PyRustIO |py| {
     }
 
     def close(&self) -> PyResult<PyNone> {
-        let mut io = self.w(py).borrow_mut();
+        let w = self.w(py);
+        let mut io = py.allow_threads(|| w.write().unwrap());
         if let Some(inner_io) = io.as_mut() {
             inner_io.flush().map_pyerr(py)?;
             *io = Some(Box::new(ClosedIO));
         };
-        let mut io = self.r(py).borrow_mut();
+        let r = self.r(py);
+        let mut io = py.allow_threads(|| r.write().unwrap());
         if io.is_some() {
             *io = Some(io::BufReader::new(Box::new(ClosedIO)));
         }
@@ -131,7 +141,9 @@ py_class!(pub class PyRustIO |py| {
     }
 
     def readable(&self) -> PyResult<bool> {
-        Ok(self.r(py).borrow().is_some())
+        let r = self.r(py);
+        let io = py.allow_threads(|| r.read().unwrap());
+        Ok(io.is_some())
     }
 
     def seekable(&self) -> PyResult<bool> {
@@ -139,7 +151,9 @@ py_class!(pub class PyRustIO |py| {
     }
 
     def writable(&self) -> PyResult<bool> {
-        Ok(self.w(py).borrow().is_some())
+        let w = self.w(py);
+        let io = py.allow_threads(|| w.read().unwrap());
+        Ok(io.is_some())
     }
 
     def fileno(&self) -> PyResult<usize> {
@@ -201,8 +215,8 @@ impl ::io::IsTty for ClosedIO {
 pub(crate) fn wrap_rust_write(py: Python, w: impl ::io::Write + 'static) -> PyResult<PyRustIO> {
     PyRustIO::create_instance(
         py,
-        RefCell::new(None),
-        RefCell::new(Some(Box::new(w))),
+        RwLock::new(None),
+        RwLock::new(Some(Box::new(w))),
         Cell::new(false),
     )
 }
@@ -211,8 +225,8 @@ pub(crate) fn wrap_rust_write(py: Python, w: impl ::io::Write + 'static) -> PyRe
 pub(crate) fn wrap_rust_read(py: Python, r: impl ::io::Read + 'static) -> PyResult<PyRustIO> {
     PyRustIO::create_instance(
         py,
-        RefCell::new(Some(io::BufReader::new(Box::new(r)))),
-        RefCell::new(None),
+        RwLock::new(Some(io::BufReader::new(Box::new(r)))),
+        RwLock::new(None),
         Cell::new(false),
     )
 }
