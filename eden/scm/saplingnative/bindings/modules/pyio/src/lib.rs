@@ -35,7 +35,7 @@ pub fn init_module(py: Python, package: &str) -> PyResult<PyModule> {
     Ok(m)
 }
 
-py_class!(class IO |py| {
+py_class!(pub class IO |py| {
     data closed: Cell<bool>;
 
     @staticmethod

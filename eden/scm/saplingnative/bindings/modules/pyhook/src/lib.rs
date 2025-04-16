@@ -86,6 +86,7 @@ fn run_python_hook_py(
         Some(kwargs) => kwargs,
     };
     kwargs.set_item(py, "repo", repo.clone_ref(py))?;
+    kwargs.set_item(py, "io", pyio::IO::main(py)?)?;
     let repo_root = repo.path(py)?;
     let callable = get_callable(py, spec, &repo_root, hook_name)?;
     let result = callable.call(py, NoArgs, Some(&kwargs))?;
