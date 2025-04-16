@@ -13,7 +13,7 @@ license = "MIT"
 name = "configset"
 
 [dependencies]
-indexmap = { version = "2.2.6", features = ["arbitrary", "rayon", "serde"] }
+indexmap = { version = "2.9.0", features = ["arbitrary", "rayon", "serde"] }
 sapling-configmodel = { version = "0.1.0", path = "../model" }
 sapling-hgrc-parser = { version = "0.1.0", path = "../hgrc-parser" }
 sapling-minibytes = { version = "0.1.0", path = "../../minibytes" }
