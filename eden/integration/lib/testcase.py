@@ -13,6 +13,7 @@ import json
 import logging
 import os
 import pathlib
+import shutil
 import sys
 import time
 import typing
@@ -397,6 +398,14 @@ class EdenTestCase(EdenTestCaseBase):
         """Create or overwrite a file with the given contents."""
         fullpath = self.get_path(path)
         os.chmod(fullpath, mode)
+
+    def copy(self, from_path: str, to_path: str) -> None:
+        """Copy a file/directory at the specified paths relative to the
+        clone.
+        """
+        full_from = self.get_path(from_path)
+        full_to = self.get_path(to_path)
+        shutil.copy(full_from, full_to)
 
     def rename(self, from_path: str, to_path: str) -> None:
         """Rename a file/directory at the specified paths relative to the

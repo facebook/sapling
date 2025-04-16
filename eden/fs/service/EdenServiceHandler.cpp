@@ -557,6 +557,14 @@ RelativePath relpathFromUserPath(StringPiece userPath) {
   }
 }
 
+RelativePathPiece relpathPieceFromUserPath(StringPiece userPath) {
+  if (userPath.empty() || userPath == ".") {
+    return RelativePathPiece{};
+  } else {
+    return RelativePathPiece{userPath};
+  }
+}
+
 facebook::eden::InodePtr inodeFromUserPath(
     facebook::eden::EdenMount& mount,
     StringPiece rootRelativePath,
@@ -2232,20 +2240,37 @@ buildIncludedAndExcludedRoots(
     bool includeVCSRoots,
     const std::vector<RelativePath>& vcsDirectories,
     const std::vector<PathString>& includedRoots,
-    const std::vector<PathString>& excludedRoots) {
-  std::vector<RelativePath> outIncludedRoots(includedRoots.size());
-  std::transform(
-      includedRoots.begin(),
-      includedRoots.end(),
-      outIncludedRoots.begin(),
-      [](PathString root) { return RelativePath{root}; });
+    const std::vector<PathString>& excludedRoots,
+    const RelativePathPiece& root) {
+  // This uses/returns RelativePath instead of RelativePathPiece due to the
+  // value constructed with the root + include/excludeRoot going out of
+  // scope
+  std::vector<RelativePath> outIncludedRoots;
+  outIncludedRoots.reserve(includedRoots.size());
+  // If there are includedRoots, append them to the root if there
+  // is one, otherwise just fill out the vector with the values
+  if (includedRoots.size() > 0) {
+    std::transform(
+        includedRoots.begin(),
+        includedRoots.end(),
+        std::back_inserter(outIncludedRoots),
+        [root](const PathString& includedRoot) {
+          return root + relpathPieceFromUserPath(includedRoot);
+        });
+  } else if (!root.empty()) {
+    // If there are no includedRoots and there is a root, use
+    // it as an includedRoot
+    outIncludedRoots.emplace_back(root);
+  }
 
   std::vector<RelativePath> outExcludedRoots(excludedRoots.size());
   std::transform(
       excludedRoots.begin(),
       excludedRoots.end(),
       outExcludedRoots.begin(),
-      [](PathString root) { return RelativePath{root}; });
+      [root](const PathString& excludedRoot) {
+        return root + relpathPieceFromUserPath(excludedRoot);
+      });
 
   if (includeVCSRoots) {
     outIncludedRoots.insert(
@@ -2329,13 +2354,17 @@ void EdenServiceHandler::sync_changesSinceV2(
     std::unique_ptr<ChangesSinceV2Params> params) {
   auto mountHandle = lookupMount(params->mountPoint());
   const auto& fromPosition = *params->fromPosition_ref();
-  auto root = params->root_ref().has_value() ? params->root_ref().value() : "";
+  RelativePathPiece root = params->root_ref().has_value()
+      ? RelativePathPiece{params->root_ref().value()}
+      : RelativePathPiece{};
+
   auto includedRoots = params->includedRoots_ref().has_value()
       ? params->includedRoots_ref().value()
       : std::vector<PathString>{};
   auto excludedRoots = params->excludedRoots_ref().has_value()
       ? params->excludedRoots_ref().value()
       : std::vector<PathString>{};
+
   auto includedSuffixes = params->includedSuffixes_ref().has_value()
       ? params->includedSuffixes_ref().value()
       : std::vector<std::string>{};
@@ -2372,12 +2401,11 @@ void EdenServiceHandler::sync_changesSinceV2(
   if (!root.empty()) {
     auto& mount = mountHandle.getEdenMount();
     auto& mountPath = mount.getPath();
-    auto repoPath = RelativePathPiece{root};
     bool rootExists =
         waitForPendingWrites(mount, *params->sync())
             .thenValue(
-                [&mount, repoPath, fetchContext = fetchContext.copy()](auto&&) {
-                  return mount.getVirtualInode(repoPath, fetchContext)
+                [&mount, root, fetchContext = fetchContext.copy()](auto&&) {
+                  return mount.getVirtualInode(root, fetchContext)
                       .thenTry([](folly::Try<VirtualInode> tree) mutable {
                         if (tree.hasException()) {
                           // Root does not exist, or something else went wrong
@@ -2418,13 +2446,14 @@ void EdenServiceHandler::sync_changesSinceV2(
     // TODO: move to helper
     auto config = server_->getServerState()->getEdenConfig();
     auto maxNumberOfChanges = config->notifyMaxNumberOfChanges.getValue();
-    auto includedAndExcludeRoots = buildIncludedAndExcludedRoots(
+    auto includedAndExcludedRoots = buildIncludedAndExcludedRoots(
         params->includeVCSRoots().has_value()
             ? params->includeVCSRoots().value()
             : false,
         config->vcsDirectories.getValue(),
         includedRoots,
-        excludedRoots);
+        excludedRoots,
+        root);
     auto includedAndExcludedSuffixes = std::make_pair(
         std::move(includedSuffixes), std::move(excludedSuffixes));
 
@@ -2440,8 +2469,8 @@ void EdenServiceHandler::sync_changesSinceV2(
           // Changes can effect either path1 or both paths
           // Determine if path1 pass the filters and default path2 to not
           bool includePath1 = isPathIncluded(
-              includedAndExcludeRoots.first,
-              includedAndExcludeRoots.second,
+              includedAndExcludedRoots.first,
+              includedAndExcludedRoots.second,
               includedAndExcludedSuffixes.first,
               includedAndExcludedSuffixes.second,
               current.path1);
@@ -2456,8 +2485,8 @@ void EdenServiceHandler::sync_changesSinceV2(
             includePath2 = includePath1
                 ? false
                 : isPathIncluded(
-                      includedAndExcludeRoots.first,
-                      includedAndExcludeRoots.second,
+                      includedAndExcludedRoots.first,
+                      includedAndExcludedRoots.second,
                       includedAndExcludedSuffixes.first,
                       includedAndExcludedSuffixes.second,
                       current.path2);
@@ -2467,30 +2496,87 @@ void EdenServiceHandler::sync_changesSinceV2(
               // validate the infoN states would be a lot simpler if we
               // removed this infoN state and replaced them with a simple
               // enum
-              if (info.existedBefore) {
-                // Replaced
-                Replaced replaced;
-                replaced.from() = current.path1.asString();
-                replaced.to() = current.path2.asString();
-                replaced.fileType() = static_cast<Dtype>(current.type);
-                smallChange.replaced_ref() = std::move(replaced);
-                change.smallChange_ref() = std::move(smallChange);
-              } else {
-                // Renamed
-                if (current.type == dtype_t::Dir) {
-                  DirectoryRenamed directoryRenamed;
-                  directoryRenamed.from() = current.path1.asString();
-                  directoryRenamed.to() = current.path2.asString();
-                  largeChange.directoryRenamed_ref() =
-                      std::move(directoryRenamed);
-                  change.largeChange_ref() = std::move(largeChange);
-                } else {
-                  Renamed renamed;
-                  renamed.from() = current.path1.asString();
-                  renamed.to() = current.path2.asString();
-                  renamed.fileType() = static_cast<Dtype>(current.type);
-                  smallChange.renamed_ref() = std::move(renamed);
+
+              // Constructs a Piece from the RelativePath
+              RelativePathPiece pathString1 = current.path1;
+              RelativePathPiece pathString2 = current.path2;
+
+              // If root is empty, returns true if pathString is not also empty
+              bool path1InRoot = pathString1.isSubDirOf(root);
+              bool path2InRoot = pathString2.isSubDirOf(root);
+
+              if (!root.empty()) {
+                // Filters include the path that matches the filter, but we want
+                // to exclude it from a root
+                // This is to match watchman's behavior regarding
+                // relative roots.
+                if (pathString1 == root || pathString2 == root) {
+                  // Return value ignored here
+                  return true;
+                }
+                // Trim the root + the separator
+                if (path1InRoot) {
+                  pathString1 = pathString1.substr(root.view().size() + 1);
+                }
+                if (path2InRoot) {
+                  pathString2 = pathString2.substr(root.view().size() + 1);
+                }
+              }
+
+              if (path1InRoot && path2InRoot) {
+                if (info.existedBefore) {
+                  // Replaced
+                  Replaced replaced;
+                  replaced.from() = pathString1.asString();
+                  replaced.to() = pathString2.asString();
+                  replaced.fileType() = static_cast<Dtype>(current.type);
+                  smallChange.replaced_ref() = std::move(replaced);
                   change.smallChange_ref() = std::move(smallChange);
+                } else {
+                  // Renamed
+                  if (current.type == dtype_t::Dir) {
+                    DirectoryRenamed directoryRenamed;
+                    directoryRenamed.from() = pathString1.asString();
+                    directoryRenamed.to() = pathString2.asString();
+                    largeChange.directoryRenamed_ref() =
+                        std::move(directoryRenamed);
+                    change.largeChange_ref() = std::move(largeChange);
+                  } else {
+                    Renamed renamed;
+                    renamed.from() = pathString1.asString();
+                    renamed.to() = pathString2.asString();
+                    renamed.fileType() = static_cast<Dtype>(current.type);
+                    smallChange.renamed_ref() = std::move(renamed);
+                    change.smallChange_ref() = std::move(smallChange);
+                  }
+                }
+              } else {
+                if (path1InRoot) {
+                  // File/Directory was renamed or replaced to a path outside of
+                  // root. Report change as removed.
+                  Removed removed;
+                  removed.path() = pathString1.asString();
+                  removed.fileType() = static_cast<Dtype>(current.type);
+                  smallChange.removed_ref() = std::move(removed);
+                  change.smallChange_ref() = std::move(smallChange);
+                } else {
+                  // File/Directory was renamed or replaced to a path inside of
+                  // root. Report change as added (if renamed) or modified (if
+                  // replaced).
+                  if (info.existedBefore) {
+                    // Modified
+                    Modified modified;
+                    modified.path() = pathString2.asString();
+                    modified.fileType() = static_cast<Dtype>(current.type);
+                    smallChange.modified_ref() = std::move(modified);
+                    change.smallChange_ref() = std::move(smallChange);
+                  } else {
+                    Added added;
+                    added.path() = pathString2.asString();
+                    added.fileType() = static_cast<Dtype>(current.type);
+                    smallChange.added_ref() = std::move(added);
+                    change.smallChange_ref() = std::move(smallChange);
+                  }
                 }
               }
             }
@@ -2498,24 +2584,44 @@ void EdenServiceHandler::sync_changesSinceV2(
           // All single file changes have path1 pass the filters
           else if (includePath1) {
             const auto& info = current.info1;
+
+            // Filters include the path that matches the filter, but we want
+            // to exclude it from a root
+            // This is to match watchman's behavior regarding
+            // relative roots.
+            if (!root.empty() && current.path1 == root) {
+              // Return value ignored here
+              return true;
+            }
+
+            // If a root is specified, it should be present due to being added
+            // to includedRoots. Strip it and the first '/' out
+
+            // Need to explicitly allocate storage in this scope for
+            // mac/windows
+            RelativePathPiece pathString = current.path1;
+
+            if (!root.empty()) {
+              pathString = pathString.substr(root.view().size());
+            }
             if (!info.existedBefore) {
               // Added
               Added added;
-              added.path() = current.path1.asString();
+              added.path() = pathString.asString();
               added.fileType() = static_cast<Dtype>(current.type);
               smallChange.added_ref() = std::move(added);
               change.smallChange_ref() = std::move(smallChange);
             } else if (!info.existedAfter) {
               // Removed
               Removed removed;
-              removed.path() = current.path1.asString();
+              removed.path() = pathString.asString();
               removed.fileType() = static_cast<Dtype>(current.type);
               smallChange.removed_ref() = std::move(removed);
               change.smallChange_ref() = std::move(smallChange);
             } else {
               // Modified
               Modified modified;
-              modified.path() = current.path1.asString();
+              modified.path() = pathString.asString();
               modified.fileType() = static_cast<Dtype>(current.type);
               smallChange.modified_ref() = std::move(modified);
               change.smallChange_ref() = std::move(smallChange);

@@ -181,11 +181,37 @@ class ChangesTestCommon(testBase):
         ]
         self.assertTrue(self.check_changes(changes.changes, expected_changes))
 
+    def test_modify_file_root(self):
+        self.repo_write_file("root/test_file", "", add=False)
+        position = self.client.getCurrentJournalPosition(self.mount_path_bytes)
+        self.repo_write_file("root/test_file", "contents", add=False)
+        changes = self.getChangesSinceV2(position=position, root="root")
+        expected_changes = [
+            buildSmallChange(
+                SmallChangeNotification.MODIFIED, Dtype.REGULAR, path=b"test_file"
+            ),
+        ]
+        self.assertTrue(self.check_changes(changes.changes, expected_changes))
+
     def test_remove_file(self):
         self.repo_write_file("test_file", "", add=False)
         position = self.client.getCurrentJournalPosition(self.mount_path_bytes)
         self.rm("test_file")
         changes = self.getChangesSinceV2(position=position)
+        expected_changes = [
+            buildSmallChange(
+                SmallChangeNotification.REMOVED,
+                Dtype.REGULAR,
+                path=b"test_file",
+            ),
+        ]
+        self.assertTrue(self.check_changes(changes.changes, expected_changes))
+
+    def test_remove_file_root(self):
+        self.repo_write_file("root/test_file", "", add=False)
+        position = self.client.getCurrentJournalPosition(self.mount_path_bytes)
+        self.rm("root/test_file")
+        changes = self.getChangesSinceV2(position=position, root="root")
         expected_changes = [
             buildSmallChange(
                 SmallChangeNotification.REMOVED,
@@ -208,11 +234,38 @@ class ChangesTestCommon(testBase):
         ]
         self.assertTrue(self.check_changes(changes.changes, expected_changes))
 
+    def test_add_folder_root(self):
+        position = self.client.getCurrentJournalPosition(self.mount_path_bytes)
+        self.mkdir("root/test_folder")
+        changes = self.getChangesSinceV2(position=position, root="root")
+        expected_changes = [
+            buildSmallChange(
+                SmallChangeNotification.ADDED,
+                Dtype.DIR,
+                path=b"test_folder",
+            ),
+        ]
+        self.assertTrue(self.check_changes(changes.changes, expected_changes))
+
     def test_remove_folder(self):
         self.mkdir("test_folder")
         position = self.client.getCurrentJournalPosition(self.mount_path_bytes)
         self.repo_rmdir("test_folder")
         changes = self.getChangesSinceV2(position=position)
+        expected_changes = [
+            buildSmallChange(
+                SmallChangeNotification.REMOVED,
+                Dtype.DIR,
+                path=b"test_folder",
+            ),
+        ]
+        self.assertTrue(self.check_changes(changes.changes, expected_changes))
+
+    def test_remove_folder_root(self):
+        self.mkdir("root/test_folder/")
+        position = self.client.getCurrentJournalPosition(self.mount_path_bytes)
+        self.repo_rmdir("root/test_folder")
+        changes = self.getChangesSinceV2(position=position, root="root")
         expected_changes = [
             buildSmallChange(
                 SmallChangeNotification.REMOVED,
@@ -335,9 +388,12 @@ class ChangesTestCommon(testBase):
         with self.assertRaises(EdenError) as ctx:
             self.getChangesSinceV2(position=position, root="this_path_does_not_exist")
 
+        mount_string = self.mount_path
+        if sys.platform == "win32":
+            mount_string = f"\\\\?\\{mount_string}"
         self.assertEqual(
             ctx.exception.message,
-            f'Invalid root path "this_path_does_not_exist" in mount {self.mount_path}',
+            f'Invalid root path "this_path_does_not_exist" in mount {mount_string}',
         )
         self.assertEqual(ctx.exception.errorCode, errno.EINVAL)
         self.assertEqual(
@@ -351,6 +407,7 @@ class ChangesTestCommon(testBase):
         self.repo_write_file("test_folder/test_file", "contents", add=True)
         self.mkdir("root_folder")
         self.repo_write_file("root_folder/test_file", "contents", add=True)
+        self.mkdir("root_folder/subfolder")
         changes1 = self.getChangesSinceV2(position=position)
         expected_changes1 = [
             buildSmallChange(
@@ -383,42 +440,32 @@ class ChangesTestCommon(testBase):
                 Dtype.REGULAR,
                 path=b"root_folder/test_file",
             ),
+            buildSmallChange(
+                SmallChangeNotification.ADDED,
+                Dtype.DIR,
+                path=b"root_folder/subfolder",
+            ),
         ]
         self.assertTrue(self.check_changes(changes1.changes, expected_changes1))
 
         changes2 = self.getChangesSinceV2(position=position, root="root_folder")
-        # Currently actually checking for the root is not implemented. Remove the entries
-        # under test_folder once that is implemented
+        # Only include files and folders inside the root, not including the root itself
+        # Paths should be relative to the root
         expected_changes2 = [
             buildSmallChange(
                 SmallChangeNotification.ADDED,
-                Dtype.DIR,
-                path=b"test_folder",
-            ),
-            buildSmallChange(
-                SmallChangeNotification.ADDED,
                 Dtype.REGULAR,
-                path=b"test_folder/test_file",
+                path=b"test_file",
             ),
             buildSmallChange(
                 SmallChangeNotification.MODIFIED,
                 Dtype.REGULAR,
-                path=b"test_folder/test_file",
+                path=b"test_file",
             ),
             buildSmallChange(
                 SmallChangeNotification.ADDED,
                 Dtype.DIR,
-                path=b"root_folder",
-            ),
-            buildSmallChange(
-                SmallChangeNotification.ADDED,
-                Dtype.REGULAR,
-                path=b"root_folder/test_file",
-            ),
-            buildSmallChange(
-                SmallChangeNotification.MODIFIED,
-                Dtype.REGULAR,
-                path=b"root_folder/test_file",
+                path=b"subfolder",
             ),
         ]
         self.assertTrue(self.check_changes(changes2.changes, expected_changes2))
@@ -429,9 +476,12 @@ class ChangesTestCommon(testBase):
         with self.assertRaises(EdenError) as ctx:
             self.getChangesSinceV2(position=position, root="this_path_is_a_file")
 
+        mount_string = self.mount_path
+        if sys.platform == "win32":
+            mount_string = f"\\\\?\\{mount_string}"
         self.assertEqual(
             ctx.exception.message,
-            f'Invalid root path "this_path_is_a_file" in mount {self.mount_path}',
+            f'Invalid root path "this_path_is_a_file" in mount {mount_string}',
         )
         self.assertEqual(ctx.exception.errorCode, errno.EINVAL)
         self.assertEqual(
@@ -439,8 +489,72 @@ class ChangesTestCommon(testBase):
             EdenErrorType.ARGUMENT_ERROR,
         )
 
+    def test_rename_file_root_in_to_out(self):
+        self.repo_write_file("root/test_file", "A")
+        self.mkdir("out/")
+        position = self.client.getCurrentJournalPosition(self.mount_path_bytes)
+        self.rename("root/test_file", "out/test_file")
+        changes = self.getChangesSinceV2(position=position, root="root")
+        expected_changes = [
+            buildSmallChange(
+                SmallChangeNotification.REMOVED,
+                Dtype.REGULAR,
+                path=b"test_file",
+            )
+        ]
+        self.assertTrue(self.check_changes(changes.changes, expected_changes))
 
-# The following tests have different results based on platform
+    def test_rename_file_root_out_to_in(self):
+        self.repo_write_file("out/test_file", "A")
+        self.mkdir("root/")
+        position = self.client.getCurrentJournalPosition(self.mount_path_bytes)
+        self.rename("out/test_file", "root/test_file")
+        changes = self.getChangesSinceV2(position=position, root="root")
+        expected_changes = [
+            buildSmallChange(
+                SmallChangeNotification.ADDED,
+                Dtype.REGULAR,
+                path=b"test_file",
+            )
+        ]
+        self.assertTrue(self.check_changes(changes.changes, expected_changes))
+
+    def test_rename_folder_root_in_to_out(self):
+        self.mkdir("root/test_folder")
+        self.mkdir("out/")
+        position = self.client.getCurrentJournalPosition(self.mount_path_bytes)
+        self.rename("root/test_folder", "out/test_folder")
+        changes = self.getChangesSinceV2(position=position, root="root")
+        expected_changes = [
+            buildSmallChange(
+                SmallChangeNotification.REMOVED,
+                Dtype.DIR,
+                path=b"test_folder",
+            )
+        ]
+        self.assertTrue(self.check_changes(changes.changes, expected_changes))
+
+    def test_rename_folder_root_out_to_in(self):
+        self.mkdir("out/test_folder")
+        self.mkdir("root/")
+        position = self.client.getCurrentJournalPosition(self.mount_path_bytes)
+        self.rename("out/test_folder", "root/test_folder")
+        changes = self.getChangesSinceV2(position=position, root="root")
+        expected_changes = [
+            buildSmallChange(
+                SmallChangeNotification.ADDED,
+                Dtype.DIR,
+                path=b"test_folder",
+            )
+        ]
+        self.assertTrue(self.check_changes(changes.changes, expected_changes))
+
+    def test_root_not_included_in_result(self):
+        position = self.client.getCurrentJournalPosition(self.mount_path_bytes)
+        self.mkdir("root/")
+        changes = self.getChangesSinceV2(position=position, root="root")
+        expected_changes = []
+        self.assertEqual(changes.changes, expected_changes)
 
 
 @testcase.eden_repo_test
@@ -463,8 +577,37 @@ class ChangesTestNix(JournalTestBase):
         ]
         self.assertTrue(self.check_changes(changes.changes, expected_changes))
 
+    def test_add_file_root(self):
+        # When adding a file, it is technically written to so there's an additional modified operation
+        changes = self.setup_test_add_file_root("root")
+        expected_changes = [
+            buildSmallChange(
+                SmallChangeNotification.ADDED, Dtype.REGULAR, path=b"test_file"
+            ),
+            buildSmallChange(
+                SmallChangeNotification.MODIFIED, Dtype.REGULAR, path=b"test_file"
+            ),
+        ]
+        self.assertTrue(self.check_changes(changes.changes, expected_changes))
+
     def test_rename_file(self):
         changes = self.setup_test_rename_file()
+        expected_changes = [
+            buildSmallChange(
+                SmallChangeNotification.RENAMED,
+                Dtype.REGULAR,
+                from_path=b"test_file",
+                to_path=b"best_file",
+            ),
+        ]
+        self.assertTrue(self.check_changes(changes.changes, expected_changes))
+
+    def test_rename_file_root(self):
+        self.repo_write_file("root/test_file", "", add=False)
+        position = self.client.getCurrentJournalPosition(self.mount_path_bytes)
+        self.rename("root/test_file", "root/best_file")
+        changes = self.getChangesSinceV2(position=position, root="root")
+
         expected_changes = [
             buildSmallChange(
                 SmallChangeNotification.RENAMED,
@@ -491,6 +634,86 @@ class ChangesTestNix(JournalTestBase):
         ]
         self.assertTrue(self.check_changes(changes.changes, expected_changes))
 
+    def test_replace_file_root(self):
+        self.eden_repo.write_file("root/test_file", "test_contents", add=False)
+        self.eden_repo.write_file("root/gone_file", "replaced_contents", add=False)
+        position = self.client.getCurrentJournalPosition(self.mount_path_bytes)
+        self.rename("root/test_file", "root/gone_file")
+        changes = self.getChangesSinceV2(position=position, root="root")
+        expected_changes = [
+            buildSmallChange(
+                SmallChangeNotification.REPLACED,
+                Dtype.REGULAR,
+                from_path=b"test_file",
+                to_path=b"gone_file",
+            ),
+        ]
+        self.assertTrue(self.check_changes(changes.changes, expected_changes))
+
+    def test_replace_file_root_in_to_out(self):
+        self.eden_repo.write_file("root/test_file", "test_contents", add=False)
+        self.eden_repo.write_file("out/gone_file", "replaced_contents", add=False)
+        position = self.client.getCurrentJournalPosition(self.mount_path_bytes)
+        self.rename("root/test_file", "out/gone_file")
+        changes = self.getChangesSinceV2(position=position, root="root")
+        expected_changes = [
+            buildSmallChange(
+                SmallChangeNotification.REMOVED,
+                Dtype.REGULAR,
+                path=b"test_file",
+            ),
+        ]
+        self.assertTrue(self.check_changes(changes.changes, expected_changes))
+
+    def test_replace_file_root_out_to_in(self):
+        self.eden_repo.write_file("out/test_file", "test_contents", add=False)
+        self.eden_repo.write_file("root/gone_file", "replaced_contents", add=False)
+        position = self.client.getCurrentJournalPosition(self.mount_path_bytes)
+        self.rename("out/test_file", "root/gone_file")
+        changes = self.getChangesSinceV2(position=position, root="root")
+        expected_changes = [
+            buildSmallChange(
+                SmallChangeNotification.MODIFIED,
+                Dtype.REGULAR,
+                path=b"gone_file",
+            ),
+        ]
+        self.assertTrue(self.check_changes(changes.changes, expected_changes))
+
+    def test_replace_file_different_folder(self):
+        self.eden_repo.write_file("source_folder/test_file", "test_contents", add=False)
+        self.eden_repo.write_file("gone_file", "replaced_contents", add=False)
+        position = self.client.getCurrentJournalPosition(self.mount_path_bytes)
+        self.rename("source_folder/test_file", "gone_file")
+        changes = self.getChangesSinceV2(position=position)
+        expected_changes = [
+            buildSmallChange(
+                SmallChangeNotification.REPLACED,
+                Dtype.REGULAR,
+                from_path=b"source_folder/test_file",
+                to_path=b"gone_file",
+            ),
+        ]
+        self.assertTrue(self.check_changes(changes.changes, expected_changes))
+        self.assertEqual("test_contents", self.read_file("gone_file"))
+
+    def test_copy_file_different_folder(self):
+        # Copying a file over a different file shows up as a "Modify"
+        self.eden_repo.write_file("source_folder/test_file", "test_contents", add=False)
+        self.eden_repo.write_file("gone_file", "replaced_contents", add=False)
+        position = self.client.getCurrentJournalPosition(self.mount_path_bytes)
+        self.copy("source_folder/test_file", "gone_file")
+        changes = self.getChangesSinceV2(position=position)
+        expected_changes = [
+            buildSmallChange(
+                SmallChangeNotification.MODIFIED,
+                Dtype.REGULAR,
+                path=b"gone_file",
+            ),
+        ]
+        self.assertTrue(self.check_changes(changes.changes, expected_changes))
+        self.assertEqual("test_contents", self.read_file("gone_file"))
+
     # Python's chmod/chown only work on nix systems
     def test_modify_folder_chmod(self):
         self.mkdir("test_folder_chmod")
@@ -508,7 +731,7 @@ class ChangesTestNix(JournalTestBase):
 
     def test_modify_folder_chown(self):
         # Due to platform differences and root permission requirements,
-        # this test doesn't run on Sandcastle
+        # this test doesn't run on Sandcastle or on Mac
         self.eden_repo.mkdir("test_folder_chown")
         position = self.client.getCurrentJournalPosition(self.mount_path_bytes)
         self.repo_chown("test_folder_chown")
@@ -527,6 +750,20 @@ class ChangesTestNix(JournalTestBase):
         position = self.client.getCurrentJournalPosition(self.mount_path_bytes)
         self.rename("test_folder", "best_folder")
         changes = self.getChangesSinceV2(position=position)
+        expected_changes = [
+            buildLargeChange(
+                LargeChangeNotification.DIRECTORYRENAMED,
+                from_bytes=b"test_folder",
+                to_bytes=b"best_folder",
+            ),
+        ]
+        self.assertTrue(self.check_changes(changes.changes, expected_changes))
+
+    def test_rename_folder_root(self):
+        self.mkdir("root/test_folder")
+        position = self.client.getCurrentJournalPosition(self.mount_path_bytes)
+        self.rename("root/test_folder", "root/best_folder")
+        changes = self.getChangesSinceV2(position=position, root="root")
         expected_changes = [
             buildLargeChange(
                 LargeChangeNotification.DIRECTORYRENAMED,
@@ -724,16 +961,34 @@ class ChangesTestWin(WindowsJournalTestBase):
         ]
         self.assertTrue(self.check_changes(changes.changes, expected_changes))
 
+    def test_add_file_root(self):
+        # In windows, the file is created and then modified in projfs, then eden gets
+        # a single ADDED notification
+        changes = self.setup_test_add_file_root("root")
+        expected_changes = [
+            buildSmallChange(
+                SmallChangeNotification.ADDED, Dtype.REGULAR, path=b"test_file"
+            )
+        ]
+        self.assertTrue(self.check_changes(changes.changes, expected_changes))
+
     def test_rename_file(self):
         changes = self.setup_test_rename_file()
         expected_changes = [
             buildSmallChange(
-                SmallChangeNotification.RENAMED,
-                Dtype.REGULAR,
-                from_path=b"test_file",
-                to_path=b"best_file",
+                SmallChangeNotification.REMOVED, Dtype.REGULAR, path=b"test_file"
+            ),
+            buildSmallChange(
+                SmallChangeNotification.ADDED, Dtype.REGULAR, path=b"best_file"
             ),
         ]
+        self.assertTrue(self.check_changes(changes.changes, expected_changes))
+
+    def test_rename_file_root(self):
+        self.repo_write_file("root/test_file", "", add=False)
+        position = self.client.getCurrentJournalPosition(self.mount_path_bytes)
+        self.rename("root/test_file", "root/best_file")
+        changes = self.getChangesSinceV2(position=position, root="root")
         expected_changes = [
             buildSmallChange(
                 SmallChangeNotification.REMOVED, Dtype.REGULAR, path=b"test_file"
@@ -764,6 +1019,51 @@ class ChangesTestWin(WindowsJournalTestBase):
             buildSmallChange(
                 SmallChangeNotification.ADDED, Dtype.DIR, path=b"best_folder"
             ),
+        ]
+        self.assertTrue(self.check_changes(changes.changes, expected_changes))
+
+    def test_rename_folder_root(self):
+        self.mkdir("root/test_folder")
+        position = self.client.getCurrentJournalPosition(self.mount_path_bytes)
+        self.rename("root/test_folder", "root/best_folder")
+        changes = self.getChangesSinceV2(position=position, root="root")
+        expected_changes = [
+            buildSmallChange(
+                SmallChangeNotification.REMOVED, Dtype.DIR, path=b"test_folder"
+            ),
+            buildSmallChange(
+                SmallChangeNotification.ADDED, Dtype.DIR, path=b"best_folder"
+            ),
+        ]
+        self.assertTrue(self.check_changes(changes.changes, expected_changes))
+
+    def test_rename_folder_root_in_to_out(self):
+        self.mkdir("root/test_folder")
+        self.mkdir("out/")
+        position = self.client.getCurrentJournalPosition(self.mount_path_bytes)
+        self.rename("root/test_folder", "out/test_folder")
+        changes = self.getChangesSinceV2(position=position, root="root")
+        expected_changes = [
+            buildSmallChange(
+                SmallChangeNotification.REMOVED,
+                Dtype.DIR,
+                path=b"test_folder",
+            )
+        ]
+        self.assertTrue(self.check_changes(changes.changes, expected_changes))
+
+    def test_rename_folder_root_out_to_in(self):
+        self.mkdir("out/test_folder")
+        self.mkdir("root/")
+        position = self.client.getCurrentJournalPosition(self.mount_path_bytes)
+        self.rename("out/test_folder", "root/test_folder")
+        changes = self.getChangesSinceV2(position=position, root="root")
+        expected_changes = [
+            buildSmallChange(
+                SmallChangeNotification.ADDED,
+                Dtype.DIR,
+                path=b"test_folder",
+            )
         ]
         self.assertTrue(self.check_changes(changes.changes, expected_changes))
 

@@ -195,6 +195,11 @@ elif sys.platform.startswith("darwin"):
         "test_status_thrift_apis",
     ]
 
+    # Requires Password on macOS
+    TEST_DISABLED["changes_test.ChangesTestNix"] = [
+        "test_modify_folder_chown",
+    ]
+
     # Times out on macOS
     TEST_DISABLED["stats_test.ObjectCacheStatsTest"] = [
         "test_get_tree_memory",

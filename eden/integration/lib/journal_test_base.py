@@ -106,6 +106,11 @@ class JournalTestBase(testcase.EdenRepoTest):
         self.repo_write_file("test_file", "", add=False)
         return self.getChangesSinceV2(position=position)
 
+    def setup_test_add_file_root(self, root) -> ChangesSinceV2Result:
+        position = self.client.getCurrentJournalPosition(self.mount_path_bytes)
+        self.repo_write_file(f"{root}/test_file", "", add=False)
+        return self.getChangesSinceV2(position=position, root=root)
+
     def setup_test_rename_file(self) -> ChangesSinceV2Result:
         self.repo_write_file("test_file", "", add=False)
         position = self.client.getCurrentJournalPosition(self.mount_path_bytes)
