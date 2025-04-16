@@ -617,7 +617,7 @@ def rage(ui, repo, *pats, **opts) -> None:
             ret = 1
 
     if ret:
-        ui.write(_("Failed calling pastry to pate to Phabricator:\n\n"))
+        ui.write(_("Failed calling pastry to paste to Phabricator:\n\n"))
         ui.write(
             _("  %s\n\n") % out.decode(errors="replace").rstrip().replace("\n", "\n  ")
         )
