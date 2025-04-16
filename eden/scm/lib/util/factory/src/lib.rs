@@ -54,6 +54,7 @@ use std::any::TypeId;
 use std::collections::BTreeMap;
 use std::collections::HashMap;
 use std::fmt;
+use std::sync::LazyLock;
 use std::sync::OnceLock;
 use std::sync::RwLock;
 
@@ -83,6 +84,33 @@ pub fn register_constructor<In: 'static + ?Sized, Out: 'static>(
     let key = constructor_table_key::<In, Out>();
     let mut table = constructor_table().write().unwrap();
     table.entry(key).or_default().insert(name, dyn_func);
+}
+
+/// Register a function to turn `In` to `Out`.
+///
+/// Unlike `register_constructor`, there won't be multiple functions handling
+/// the same `In` type. There is no need to assign a "name" to `func`.
+///
+/// If the same `F: FunctionSignature` was already registered, return the old
+/// function. Otherwise, return `None`.
+///
+/// To avoid type collision, avoid general types, use an unique type in `In`.
+/// For example, use `(MyUniqueMark, &str, &str)`, or
+/// `struct MyUniqueArgs(&str, &str)`, do not use `(&str, &str)`.
+pub fn register_function<In: ?Sized, Out>(func: fn(In) -> Out) -> Option<fn(In) -> Out>
+where
+    fn(In) -> Out: 'static,
+{
+    let mut table = FUNCTION_TABLE.write().unwrap();
+    let key = TypeId::of::<fn(In) -> Out>();
+    match table.insert(key, Box::new(func)) {
+        None => None,
+        Some(f) => {
+            // downcast should succeed
+            let f = f.downcast::<fn(In) -> Out>().unwrap();
+            Some(*f)
+        }
+    }
 }
 
 /// Call registered constructors to construct `Out`.
@@ -124,6 +152,25 @@ pub fn call_constructor<In: 'static + ?Sized, Out: 'static>(input: &In) -> anyho
     Err(error_context.into())
 }
 
+/// Call a previously registered function.
+///
+/// If there was no function registered for the `In` and `Out` types,
+/// return `None`.
+pub fn call_function<In, Out>(input: In) -> Option<Out>
+where
+    fn(In) -> Out: 'static,
+{
+    let key = TypeId::of::<fn(In) -> Out>();
+    let f = {
+        let table = FUNCTION_TABLE.read().unwrap();
+        match table.get(&key) {
+            None => return None,
+            Some(f) => *f.downcast_ref::<fn(In) -> Out>().unwrap(),
+        }
+    };
+    Some(f(input))
+}
+
 /// Returns `true` if the error is from a constructor, based on the `error`.
 /// Returns `false` otherwise, or cannot decide.
 pub fn is_error_from_constructor(error: &anyhow::Error) -> bool {
@@ -145,6 +192,10 @@ fn constructor_table() -> &'static ConstructorTable {
     static TABLE: OnceLock<ConstructorTable> = OnceLock::new();
     TABLE.get_or_init(Default::default)
 }
+
+type FunctionTable = RwLock<HashMap<TypeId, BoxAny>>;
+
+static FUNCTION_TABLE: LazyLock<FunctionTable> = LazyLock::new(Default::default);
 
 #[derive(Debug)]
 struct ErrorContext {
@@ -239,5 +290,22 @@ mod tests {
             Ok(Some(O(s.len())))
         });
         assert_eq!(call_constructor::<str, O>("foo").unwrap().0, 3);
+    }
+
+    #[test]
+    fn test_register_function_and_call_function() {
+        fn f1(x: u8) -> u8 {
+            x ^ 1
+        }
+        fn f2(x: u8) -> u8 {
+            x ^ 2
+        }
+
+        assert!(call_function::<_, u8>(1u8).is_none());
+        assert!(register_function(f1).is_none());
+        assert_eq!(call_function::<_, u8>(1u8), Some(0));
+        let old_f = register_function(f2).unwrap();
+        assert_eq!(old_f(1u8), 0);
+        assert_eq!(call_function::<_, u8>(1u8), Some(3));
     }
 }
