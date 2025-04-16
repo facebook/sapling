@@ -24,7 +24,7 @@ pub struct WorkspaceHead {
 #[derive(Clone, Debug, PartialEq)]
 pub struct WorkspaceCheckoutLocation {
     pub hostname: String,
-    pub commit: HgChangesetId,
+    pub commit: CloudChangesetId,
     pub checkout_path: PathBuf,
     pub shared_path: PathBuf,
     pub timestamp: Timestamp,

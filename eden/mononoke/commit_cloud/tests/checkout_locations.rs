@@ -15,14 +15,15 @@ use commit_cloud::sql::ops::Insert;
 use commit_cloud::sql::ops::Update;
 use commit_cloud_types::WorkspaceCheckoutLocation;
 use fbinit::FacebookInit;
-use mercurial_types::HgChangesetId;
 use mononoke_macros::mononoke;
 use mononoke_types::Timestamp;
+use mononoke_types::sha1_hash::Sha1;
 use sql_construct::SqlConstruct;
 
 #[mononoke::fbinit_test]
 async fn test_checkout_locations(_fb: FacebookInit) -> anyhow::Result<()> {
     use commit_cloud::sql::ops::Get;
+    use commit_cloud_types::changeset::CloudChangesetId;
     let sql = SqlCommitCloudBuilder::with_sqlite_in_memory()?.new(false);
     let reponame = "test_repo".to_owned();
     let workspace = "user_testuser_default".to_owned();
@@ -31,7 +32,9 @@ async fn test_checkout_locations(_fb: FacebookInit) -> anyhow::Result<()> {
 
     let args = WorkspaceCheckoutLocation {
         hostname: "testhost".to_owned(),
-        commit: HgChangesetId::from_str("2d7d4ba9ce0a6ffd222de7785b249ead9c51c536").unwrap(),
+        commit: CloudChangesetId(
+            Sha1::from_str("2d7d4ba9ce0a6ffd222de7785b249ead9c51c536").unwrap(),
+        ),
         checkout_path: PathBuf::from("checkout/path"),
         shared_path: PathBuf::from("shared/path"),
         timestamp: Timestamp::now(),

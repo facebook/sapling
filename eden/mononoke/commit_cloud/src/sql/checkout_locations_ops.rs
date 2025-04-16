@@ -11,7 +11,7 @@ use ::sql_ext::mononoke_queries;
 use async_trait::async_trait;
 use clientinfo::ClientRequestInfo;
 use commit_cloud_types::WorkspaceCheckoutLocation;
-use mercurial_types::HgChangesetId;
+use commit_cloud_types::changeset::CloudChangesetId;
 use mononoke_types::Timestamp;
 use sql::Connection;
 use sql::Transaction;
@@ -24,7 +24,7 @@ use crate::sql::ops::SqlCommitCloud;
 use crate::sql::ops::Update;
 
 mononoke_queries! {
-    pub(crate) read GetCheckoutLocations(reponame: String, workspace: String) -> (String, String, String, HgChangesetId, Timestamp, String) {
+    pub(crate) read GetCheckoutLocations(reponame: String, workspace: String) -> (String, String, String, CloudChangesetId, Timestamp, String) {
         "SELECT
             `hostname`,
             `checkout_path`,
@@ -36,7 +36,7 @@ mononoke_queries! {
         WHERE `reponame`={reponame} AND `workspace`={workspace}"
     }
 
-    pub(crate) write InsertCheckoutLocations(reponame: String, workspace: String, hostname: String, commit: HgChangesetId, checkout_path: String, shared_path: String, unixname: String, timestamp: Timestamp) {
+    pub(crate) write InsertCheckoutLocations(reponame: String, workspace: String, hostname: String, commit: CloudChangesetId, checkout_path: String, shared_path: String, unixname: String, timestamp: Timestamp) {
         none,
         mysql("INSERT INTO `checkoutlocations` (
             `reponame`,
