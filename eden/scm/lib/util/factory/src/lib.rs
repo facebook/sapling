@@ -93,23 +93,29 @@ pub fn register_constructor<In: 'static + ?Sized, Out: 'static>(
 /// If the same `F: FunctionSignature` was already registered, return the old
 /// function. Otherwise, return `None`.
 ///
-/// To avoid type collision, avoid general types, use an unique type in `In`.
-/// For example, use `(MyUniqueMark, &str, &str)`, or
-/// `struct MyUniqueArgs(&str, &str)`, do not use `(&str, &str)`.
-pub fn register_function<In: ?Sized, Out>(func: fn(In) -> Out) -> Option<fn(In) -> Out>
-where
-    fn(In) -> Out: 'static,
-{
+/// To avoid type collision (like multiple crates registering functions on
+/// generic types like `(&str, &str) -> String`, an explicit type parameter
+/// `F` is required to specify the input and output types.
+/// implement the `FunctionSignature` trait.
+pub fn register_function<F: FunctionSignature>(
+    func: fn(F::In) -> F::Out,
+) -> Option<fn(F::In) -> F::Out> {
     let mut table = FUNCTION_TABLE.write().unwrap();
-    let key = TypeId::of::<fn(In) -> Out>();
+    let key = TypeId::of::<F>();
     match table.insert(key, Box::new(func)) {
         None => None,
         Some(f) => {
             // downcast should succeed
-            let f = f.downcast::<fn(In) -> Out>().unwrap();
+            let f = f.downcast::<fn(F::In) -> F::Out>().unwrap();
             Some(*f)
         }
     }
+}
+
+/// Defines the input and output types used by `register_function` and `call_function`.
+pub trait FunctionSignature: 'static {
+    type In: 'static;
+    type Out: 'static;
 }
 
 /// Call registered constructors to construct `Out`.
@@ -155,16 +161,13 @@ pub fn call_constructor<In: 'static + ?Sized, Out: 'static>(input: &In) -> anyho
 ///
 /// If there was no function registered for the `In` and `Out` types,
 /// return `None`.
-pub fn call_function<In, Out>(input: In) -> Option<Out>
-where
-    fn(In) -> Out: 'static,
-{
-    let key = TypeId::of::<fn(In) -> Out>();
+pub fn call_function<F: FunctionSignature>(input: F::In) -> Option<F::Out> {
+    let key = TypeId::of::<F>();
     let f = {
         let table = FUNCTION_TABLE.read().unwrap();
         match table.get(&key) {
             None => return None,
-            Some(f) => *f.downcast_ref::<fn(In) -> Out>().unwrap(),
+            Some(f) => *f.downcast_ref::<fn(F::In) -> F::Out>().unwrap(),
         }
     };
     Some(f(input))
@@ -297,11 +300,31 @@ mod tests {
             x ^ 2
         }
 
-        assert!(call_function::<_, u8>(1u8).is_none());
-        assert!(register_function(f1).is_none());
-        assert_eq!(call_function::<_, u8>(1u8), Some(0));
-        let old_f = register_function(f2).unwrap();
+        struct Sig1;
+        impl FunctionSignature for Sig1 {
+            type In = u8;
+            type Out = u8;
+        }
+
+        assert!(call_function::<Sig1>(1u8).is_none());
+        assert!(register_function::<Sig1>(f1).is_none());
+        assert_eq!(call_function::<Sig1>(1u8), Some(0));
+
+        // Re-register. Replaces the old function.
+        let old_f = register_function::<Sig1>(f2).unwrap();
         assert_eq!(old_f(1u8), 0);
-        assert_eq!(call_function::<_, u8>(1u8), Some(3));
+        assert_eq!(call_function::<Sig1>(1u8), Some(3));
+
+        // Use a separate signature.
+        struct Sig2;
+        impl FunctionSignature for Sig2 {
+            type In = u8;
+            type Out = u8;
+        }
+        assert!(register_function::<Sig2>(f1).is_none());
+
+        // Sig1 and Sig2 work independently.
+        assert_eq!(call_function::<Sig1>(1u8), Some(3));
+        assert_eq!(call_function::<Sig2>(1u8), Some(0));
     }
 }
