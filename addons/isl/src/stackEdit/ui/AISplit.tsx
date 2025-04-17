@@ -55,6 +55,10 @@ export function AISplitButton({stackEdit, commitStack, subStack, rev}: AISplitBu
     if (loadingState.type === 'LOADING') {
       setLoadingState({type: 'READY'});
     }
+    return () => {
+      // Cancel loading state when unmounted
+      setLoadingState({type: 'READY'});
+    };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [commitStack]); // Triggered when commitStack changes
 
