@@ -2559,6 +2559,7 @@ Attempted and failed to fix problem CheckoutNotMounted
         os.unlink(checkout.state_dir / "config.toml")
 
         check_running_mount(
+            out,
             fixer,
             # pyre-fixme[6]: For 2nd param expected `EdenInstance` but got
             # `FakeEdenInstance`.
@@ -2621,6 +2622,7 @@ Reinitialize checkout config.......<green>fixed<reset>
             print(f.read())
 
         check_running_mount(
+            out,
             fixer,
             # pyre-fixme[6]: For 2nd param expected `EdenInstance` but got
             # `FakeEdenInstance`.
@@ -2681,6 +2683,7 @@ Reinitialize checkout config.......<green>fixed<reset>
         watchman_info = check_watchman.WatchmanCheckInfo(watchman_roots)
 
         check_running_mount(
+            out,
             fixer,
             # pyre-fixme[6]: For 2nd param expected `EdenInstance` but got
             # `FakeEdenInstance`.
@@ -2753,6 +2756,7 @@ To reclone the corrupted repo, run: `fbclone $REPO --reclone --eden`"""
         watchman_info = check_watchman.WatchmanCheckInfo(watchman_roots)
 
         check_running_mount(
+            out,
             fixer,
             # pyre-fixme[6]: For 2nd param expected `EdenInstance` but got
             # `FakeEdenInstance`.
@@ -2815,6 +2819,7 @@ To remove the corrupted repo, run: `eden rm {checkout.path}`
         watchman_info = check_watchman.WatchmanCheckInfo(watchman_roots)
 
         check_running_mount(
+            out,
             fixer,
             # pyre-fixme[6]: For 2nd param expected `EdenInstance` but got
             # `FakeEdenInstance`.

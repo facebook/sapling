@@ -880,6 +880,7 @@ def check_mount(
     elif checkout.state == MountState.RUNNING:
         try:
             check_running_mount(
+                out,
                 tracker,
                 instance,
                 checkout,
@@ -992,6 +993,7 @@ def check_starting_mount(
 
 
 def check_running_mount(
+    out: ui.Output,
     tracker: ProblemTracker,
     instance: EdenInstance,
     checkout_info: CheckoutInfo,
@@ -1004,6 +1006,28 @@ def check_running_mount(
         tracker.add_problem(CheckoutNotConfigured(checkout_info))
         return
     elif checkout_info.configured_state_dir != checkout_info.running_state_dir:
+        try:
+            configured_state_dir_inode = (
+                checkout_info.configured_state_dir.stat().st_ino
+                if checkout_info.configured_state_dir is not None
+                and checkout_info.configured_state_dir.exists()
+                else None
+            )
+            running_state_dir_inode = (
+                checkout_info.running_state_dir.stat().st_ino
+                if checkout_info.running_state_dir is not None
+                and checkout_info.running_state_dir.exists()
+                else None
+            )
+            if (
+                configured_state_dir_inode is not None
+                and configured_state_dir_inode == running_state_dir_inode
+            ):
+                return
+        except OSError as ex:
+            # If we fail to confirm they have the same inode, we'll just
+            # assume they're different and report the problem.
+            out.write(f"Error reading inode for state directories: {ex}", flush=True)
         tracker.add_problem(CheckoutConfigurationMismatch(checkout_info))
         return
 
