@@ -5,6 +5,8 @@
  * GNU General Public License version 2.
  */
 
+mod in_memory;
+
 use std::collections::HashMap;
 use std::collections::HashSet;
 use std::fmt;
@@ -32,6 +34,8 @@ use futures::future::TryFutureExt;
 use futures::stream;
 use futures::stream::StreamExt;
 use futures::stream::TryStreamExt;
+use in_memory::CommitInMemorySyncer;
+use in_memory::unsafe_sync_commit_in_memory;
 use live_commit_sync_config::LiveCommitSyncConfig;
 use maplit::hashmap;
 use maplit::hashset;
@@ -59,8 +63,6 @@ use synced_commit_mapping::SyncedCommitMapping;
 use synced_commit_mapping::SyncedCommitSourceRepo;
 use synced_commit_mapping_pushrebase_hook::ForwardSyncedCommitInfo;
 
-use crate::commit_in_memory_syncer::CommitInMemorySyncer;
-use crate::commit_in_memory_syncer::unsafe_sync_commit_in_memory;
 use crate::commit_sync_config_utils::get_bookmark_renamer;
 use crate::commit_sync_config_utils::get_common_pushrebase_bookmarks;
 use crate::commit_sync_config_utils::get_git_submodule_action_by_version;

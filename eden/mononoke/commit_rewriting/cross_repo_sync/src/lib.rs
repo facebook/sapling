@@ -8,11 +8,10 @@
 #![feature(trait_alias)]
 #![feature(never_type)]
 
-mod commit_in_memory_syncer;
 mod commit_sync_config_utils;
 mod commit_sync_outcome;
-mod commit_syncer;
 mod commit_syncers_lib;
+mod sync_commit;
 #[cfg(test)]
 mod test;
 pub mod test_utils;
@@ -34,11 +33,6 @@ pub use commit_sync_outcome::commit_sync_outcome_exists;
 pub use commit_sync_outcome::get_commit_sync_outcome;
 pub use commit_sync_outcome::get_commit_sync_outcome_with_hint;
 pub use commit_sync_outcome::get_plural_commit_sync_outcome;
-pub use commit_syncer::CommitSyncer;
-pub use commit_syncer::sync_commit;
-pub use commit_syncer::unsafe_always_rewrite_sync_commit;
-pub use commit_syncer::unsafe_sync_commit;
-pub use commit_syncer::unsafe_sync_commit_pushrebase;
 pub use commit_syncers_lib::CommitSyncRepos;
 pub use commit_syncers_lib::Syncers;
 pub use commit_syncers_lib::create_commit_syncer_lease;
@@ -64,6 +58,11 @@ pub use reporting::log_error;
 pub use reporting::log_info;
 pub use reporting::log_trace;
 pub use reporting::log_warning;
+pub use sync_commit::CommitSyncer;
+pub use sync_commit::sync_commit;
+pub use sync_commit::unsafe_always_rewrite_sync_commit;
+pub use sync_commit::unsafe_sync_commit;
+pub use sync_commit::unsafe_sync_commit_pushrebase;
 pub use sync_config_version_utils::CHANGE_XREPO_MAPPING_EXTRA;
 pub use types::ConcreteRepo;
 pub use types::ErrorKind;

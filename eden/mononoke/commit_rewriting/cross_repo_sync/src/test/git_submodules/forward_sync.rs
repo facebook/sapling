@@ -33,7 +33,7 @@ use reporting::CommitSyncContext;
 use tests_utils::CreateCommitContext;
 
 use crate::commit_sync_outcome::CandidateSelectionHint;
-use crate::commit_syncer::unsafe_sync_commit;
+use crate::sync_commit::unsafe_sync_commit;
 use crate::test::check_mapping;
 use crate::test::git_submodules::git_submodules_test_utils::*;
 use crate::test::sync_to_master;

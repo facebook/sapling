@@ -69,8 +69,8 @@ use tests_utils::CreateCommitContext;
 use tests_utils::bookmark;
 use tests_utils::drawdag::extend_from_dag_with_actions;
 
-use crate::commit_syncer::CommitSyncer;
 use crate::commit_syncers_lib::CommitSyncRepos;
+use crate::sync_commit::CommitSyncer;
 use crate::test::prepare_repos_mapping_and_config_with_repo_config_overrides;
 use crate::test::sync_to_master;
 use crate::test_utils::TestRepo;

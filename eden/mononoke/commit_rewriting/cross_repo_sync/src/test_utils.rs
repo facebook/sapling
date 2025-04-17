@@ -66,12 +66,12 @@ use test_repo_factory::TestRepoFactoryBuilder;
 use tests_utils::CreateCommitContext;
 use tests_utils::bookmark;
 
-use crate::commit_syncer::CommitSyncer;
-use crate::commit_syncer::unsafe_always_rewrite_sync_commit;
 use crate::commit_syncers_lib::CommitSyncRepos;
 use crate::commit_syncers_lib::Syncers;
 use crate::commit_syncers_lib::submodule_metadata_file_prefix_and_dangling_pointers;
 use crate::commit_syncers_lib::update_mapping_with_version;
+use crate::sync_commit::CommitSyncer;
+use crate::sync_commit::unsafe_always_rewrite_sync_commit;
 use crate::types::Repo;
 
 #[facet::container]

@@ -66,9 +66,9 @@ use slog::warn;
 use sorted_vector_map::SortedVectorMap;
 
 use crate::commit_sync_config_utils::get_git_submodule_action_by_version;
-use crate::commit_syncer::CommitSyncer;
 use crate::commit_syncers_lib::Syncers;
 use crate::commit_syncers_lib::submodule_metadata_file_prefix_and_dangling_pointers;
+use crate::sync_commit::CommitSyncer;
 use crate::types::Repo;
 use crate::types::Source;
 use crate::types::Target;
