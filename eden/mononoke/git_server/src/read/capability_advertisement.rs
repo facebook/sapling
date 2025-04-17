@@ -89,7 +89,6 @@ async fn read_advertisement(
     {
         write_text_packetline(BUNDLE_URI_CAPABILITY.as_bytes(), output).await?;
     }
-
     Ok(())
 }
 

@@ -18,6 +18,7 @@ use either::Either;
 use futures::SinkExt;
 use futures::StreamExt;
 use futures::future::try_join4;
+use git_env::GitHost;
 use gotham::mime;
 use gotham::state::FromState;
 use gotham::state::State;
@@ -337,7 +338,8 @@ pub async fn upload_pack(state: &mut State) -> Result<Response<Body>, HttpError>
             output.try_into_response(state).map_err(HttpError::e500)
         }
         Command::BundleUri => {
-            let output = bundle_uri(&request_context).await;
+            let git_host = GitHost::from_state_mononoke_host(state)?;
+            let output = bundle_uri(&request_context, git_host).await;
             let output = output.map_err(HttpError::e500)?.try_into_response(state);
             output.map_err(HttpError::e500)
         }
@@ -349,6 +351,7 @@ pub async fn upload_pack(state: &mut State) -> Result<Response<Body>, HttpError>
 
 async fn bundle_uri(
     request_context: &RepositoryRequestContext,
+    git_host: GitHost,
 ) -> Result<impl TryIntoResponse, Error> {
     let mut out: Vec<u8> = b"bundle.version=1\nbundle.mode=all".into();
 
@@ -359,7 +362,7 @@ async fn bundle_uri(
         if let Some(bundle_list) = bundle_list {
             for bundle in bundle_list.bundles.iter() {
                 let uri = bundle_uri
-                    .get_url_for_bundle_handle(60, &bundle.handle)
+                    .get_url_for_bundle_handle(&request_context.ctx, &git_host, 60, &bundle.handle)
                     .await?;
 
                 let str = format!("\nbundle.bundle_{}.uri={}", bundle.fingerprint, uri,);

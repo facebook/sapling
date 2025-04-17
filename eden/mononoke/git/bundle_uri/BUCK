@@ -1,4 +1,5 @@
 load("@fbcode_macros//build_defs:rust_library.bzl", "rust_library")
+load("@fbcode_macros//build_defs/lib:rust_oss.bzl", "rust_oss")
 
 oncall("scm_server_infra")
 
@@ -14,14 +15,18 @@ rust_library(
         "//common/rust/shed/fbinit:fbinit-tokio",
         "//eden/mononoke/mononoke_macros:mononoke_macros",
     ],
-    deps = [
+    deps = ([
         "fbsource//third-party/rust:anyhow",
         "fbsource//third-party/rust:async-trait",
         "//common/rust/manifold/manifold-thrift:manifold-thrift",
         "//common/rust/shed/facet:facet",
         "//common/rust/shed/fbinit:fbinit",
         "//common/rust/shed/sql:sql",
+        "//configerator/structs/infrasec/if:acl-rust",
+        "//eden/mononoke/server/context:context",
+        "//crypto/cat/rust:cryptocat",
         "//eden/mononoke/common/rust/sql_ext:sql_ext",
+        "//eden/mononoke/git/git_env:git_env",
         "//eden/mononoke/common/sql_construct:sql_construct",
         "//eden/mononoke/metaconfig:metaconfig_types",
         "//eden/mononoke/mononoke_types:mononoke_types",
@@ -30,5 +35,8 @@ rust_library(
         "//ti/urlgen/backends/manifold:if-rust",
         "//ti/urlgen/service:if-rust-clients",
         "//ti/urlgen/service:if-rust-srclients",
-    ],
+    ] + ([] if rust_oss.is_oss_build() else [
+        "fbsource//third-party/rust:base64",
+        "fbsource//third-party/rust:serde_json",
+    ])) + ["//configerator/structs/fi/common:context-rust"],
 )

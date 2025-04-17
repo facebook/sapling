@@ -5,12 +5,21 @@
  * GNU General Public License version 2.
  */
 
+/*
+
+*
+* This software may be used and distributed according to the terms of the
+* GNU General Public License version 2.
+*/
+
 use std::collections::HashMap;
 use std::sync::Arc;
 
 use anyhow::Result;
 use async_trait::async_trait;
+use context::CoreContext;
 use fbinit::FacebookInit;
+use git_env::GitHost;
 use metaconfig_types::GitBundleURIConfig;
 #[cfg(fbcode_build)]
 use metaconfig_types::UriGeneratorType;
@@ -18,13 +27,17 @@ use mononoke_types::RepositoryId;
 
 #[cfg(fbcode_build)]
 mod facebook;
+#[cfg(fbcode_build)]
+pub use facebook::cdn;
+#[cfg(fbcode_build)]
+pub use facebook::manifold;
 
 mod sql;
 
 #[cfg(fbcode_build)]
 pub use cdn::CdnManifoldBundleUrlGenerator;
 #[cfg(fbcode_build)]
-pub use facebook::cdn;
+pub use manifold::ManifoldBundleUrlGenerator;
 
 pub use crate::sql::SqlGitBundleMetadataStorage;
 pub use crate::sql::SqlGitBundleMetadataStorageBuilder;
@@ -40,12 +53,24 @@ pub trait GitBundleMetadataStorage {
 
 #[async_trait]
 pub trait GitBundleUrlGenerator {
-    async fn get_url_for_bundle_handle(&self, ttl: i64, handle: &str) -> Result<String>;
+    async fn get_url_for_bundle_handle(
+        &self,
+        ctx: &CoreContext,
+        git_host: &GitHost,
+        ttl: i64,
+        handle: &str,
+    ) -> Result<String>;
 }
 
 #[async_trait]
 impl GitBundleUrlGenerator for LocalFSBUndleUriGenerator {
-    async fn get_url_for_bundle_handle(&self, _ttl: i64, handle: &str) -> Result<String> {
+    async fn get_url_for_bundle_handle(
+        &self,
+        _ctx: &CoreContext,
+        _git_host: &GitHost,
+        _ttl: i64,
+        handle: &str,
+    ) -> Result<String> {
         Ok(format!("file://{}", handle))
     }
 }
@@ -61,7 +86,13 @@ pub trait GitBundleUri: Send + Sync {
     /// There might be None.
     async fn get_latest_bundle_list(&self) -> Result<Option<BundleList>>;
 
-    async fn get_url_for_bundle_handle(&self, ttl: i64, handle: &str) -> Result<String>;
+    async fn get_url_for_bundle_handle(
+        &self,
+        ctx: &CoreContext,
+        git_host: &GitHost,
+        ttl: i64,
+        handle: &str,
+    ) -> Result<String>;
 
     /// The repository for which the bundles are being tracked
     fn repo_id(&self) -> RepositoryId;
@@ -120,10 +151,15 @@ pub fn bundle_uri_arc(
             ),
             repo_id,
         }),
-        UriGeneratorType::Manifold {
-            bucket: _,
-            api_key: _,
-        } => unimplemented!("Not supported yet"),
+        UriGeneratorType::Manifold { bucket, api_key } => Arc::new(BundleUri {
+            bundle_metadata_storage: storage,
+            bundle_url_generator: ManifoldBundleUrlGenerator::new(
+                fb,
+                bucket.clone(),
+                api_key.clone(),
+            ),
+            repo_id,
+        }),
         UriGeneratorType::LocalFS => Arc::new(BundleUri {
             bundle_metadata_storage: storage,
             bundle_url_generator: LocalFSBUndleUriGenerator {},
@@ -156,9 +192,15 @@ impl<U: Clone + Send + GitBundleUrlGenerator + Sync> GitBundleUri for BundleUri<
         self.bundle_metadata_storage.get_latest_bundle_list().await
     }
 
-    async fn get_url_for_bundle_handle(&self, ttl: i64, handle: &str) -> Result<String> {
+    async fn get_url_for_bundle_handle(
+        &self,
+        ctx: &CoreContext,
+        git_host: &GitHost,
+        ttl: i64,
+        handle: &str,
+    ) -> Result<String> {
         self.bundle_url_generator
-            .get_url_for_bundle_handle(ttl, handle)
+            .get_url_for_bundle_handle(ctx, git_host, ttl, handle)
             .await
     }
 }

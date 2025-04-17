@@ -35,4 +35,19 @@ impl GitHost {
             _ => Ok(Self::Unknown(host_header)),
         }
     }
+
+    pub fn from_state_mononoke_host(state: &mut State) -> Result<Self, HttpError> {
+        let host_header: String = read_header_value(state, "Host")
+            .ok_or_else(|| HttpError::e400(anyhow!("No 'Host' header")))?
+            .map_err(|e| HttpError::e400(anyhow!("Header 'Host' not a valid utf-8 string: {e}")))?;
+        let corpx2pagent: bool =
+            read_header_value_ignore_err::<&str, String>(state, "corpx2pagent").is_some();
+        match (host_header.as_str(), corpx2pagent) {
+            ("mononoke-git.c2p.facebook.net", true) => Ok(Self::CorpX2pagent),
+            ("mononoke-git.c2p.facebook.net", _) => Ok(Self::Corp),
+            ("mononoke-git.edge.x2p.facebook.net", _) => Ok(Self::X2P),
+            ("mononoke-git.internal.tfbnw.net", _) => Ok(Self::Prod),
+            _ => Ok(Self::Unknown(host_header)),
+        }
+    }
 }
