@@ -67,6 +67,7 @@ use tests_utils::CreateCommitContext;
 use tests_utils::bookmark;
 
 use crate::commit_syncer::CommitSyncer;
+use crate::commit_syncer::unsafe_always_rewrite_sync_commit;
 use crate::commit_syncers_lib::CommitSyncRepos;
 use crate::commit_syncers_lib::Syncers;
 use crate::commit_syncers_lib::submodule_metadata_file_prefix_and_dangling_pointers;
@@ -351,25 +352,25 @@ where
         .commit()
         .await?;
 
-    small_to_large_commit_syncer
-        .unsafe_always_rewrite_sync_commit(
-            ctx,
-            first_bcs_id,
-            None, // parents override
-            &noop_version,
-            CommitSyncContext::Tests,
-        )
-        .await?;
-    let second_large_cs_id = small_to_large_commit_syncer
-        .unsafe_always_rewrite_sync_commit(
-            ctx,
-            second_bcs_id,
-            None, // parents override
-            &noop_version,
-            CommitSyncContext::Tests,
-        )
-        .await?
-        .expect("second commit exists in large repo");
+    unsafe_always_rewrite_sync_commit(
+        ctx,
+        first_bcs_id,
+        &small_to_large_commit_syncer,
+        None, // parents override
+        &noop_version,
+        CommitSyncContext::Tests,
+    )
+    .await?;
+    let second_large_cs_id = unsafe_always_rewrite_sync_commit(
+        ctx,
+        second_bcs_id,
+        &small_to_large_commit_syncer,
+        None, // parents override
+        &noop_version,
+        CommitSyncContext::Tests,
+    )
+    .await?
+    .expect("second commit exists in large repo");
 
     bookmark(ctx, &smallrepo, "premove")
         .set_to(second_bcs_id)

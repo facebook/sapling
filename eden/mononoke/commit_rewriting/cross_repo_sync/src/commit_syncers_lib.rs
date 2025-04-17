@@ -65,6 +65,7 @@ use crate::commit_sync_outcome::CommitSyncOutcome;
 use crate::commit_sync_outcome::DesiredRelationship;
 use crate::commit_sync_outcome::PluralCommitSyncOutcome;
 use crate::commit_syncer::CommitSyncer;
+use crate::commit_syncer::sync_commit;
 use crate::sync_config_version_utils::get_mapping_change_version;
 use crate::types::ErrorKind;
 use crate::types::Repo;
@@ -435,16 +436,16 @@ where
     // Let's first validate that the target bookmark is still working-copy equivalent to what the
     // parent of the commit we'd like to sync
     let backsyncer = commit_syncer.reverse();
-    let mb_small_csid_equivalent_to_target_bookmark = backsyncer
-        .sync_commit(
-            ctx,
-            target_bookmark_csid,
-            CandidateSelectionHint::Only,
-            CommitSyncContext::XRepoSyncJob,
-            false,
-        )
-        .await
-        .context("Failed to backsync commit and to verify wc equivalence")?;
+    let mb_small_csid_equivalent_to_target_bookmark = sync_commit(
+        ctx,
+        target_bookmark_csid,
+        &backsyncer,
+        CandidateSelectionHint::Only,
+        CommitSyncContext::XRepoSyncJob,
+        false,
+    )
+    .await
+    .context("Failed to backsync commit and to verify wc equivalence")?;
 
     let small_csid_equivalent_to_target_bookmark = if let Some(
         small_csid_equivalent_to_target_bookmark,

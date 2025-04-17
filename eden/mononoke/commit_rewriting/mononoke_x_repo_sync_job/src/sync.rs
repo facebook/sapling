@@ -36,7 +36,10 @@ use cross_repo_sync::log_debug;
 use cross_repo_sync::log_info;
 use cross_repo_sync::log_trace;
 use cross_repo_sync::log_warning;
+use cross_repo_sync::unsafe_always_rewrite_sync_commit;
 use cross_repo_sync::unsafe_get_parent_map_for_target_bookmark_rewrite;
+use cross_repo_sync::unsafe_sync_commit;
+use cross_repo_sync::unsafe_sync_commit_pushrebase;
 use fsnodes::RootFsnodeId;
 use futures::FutureExt;
 use futures::future::try_join_all;
@@ -501,16 +504,16 @@ where
             );
         };
 
-        commit_syncer
-            .unsafe_always_rewrite_sync_commit(
-                ctx,
-                cs_id,
-                None,
-                version,
-                CommitSyncContext::XRepoSyncJob,
-            )
-            .timed()
-            .await
+        unsafe_always_rewrite_sync_commit(
+            ctx,
+            cs_id,
+            &commit_syncer,
+            None,
+            version,
+            CommitSyncContext::XRepoSyncJob,
+        )
+        .timed()
+        .await
     } else {
         // When there are multiple choices for what should be the parent of the commit there's no
         // right or wrong answers, yet we have to pick something. Let's find something close to
@@ -530,17 +533,18 @@ where
                 // XXX: in this case it should be "Any" rather than "Only"
                 CandidateSelectionHint::Only
             };
-        commit_syncer
-            .unsafe_sync_commit(
-                ctx,
-                cs_id,
-                parent_mapping_selection_hint,
-                CommitSyncContext::XRepoSyncJob,
-                Some(version.clone()),
-                false, // add_mapping_to_hg_extra
-            )
-            .timed()
-            .await
+
+        unsafe_sync_commit(
+            ctx,
+            cs_id,
+            &commit_syncer,
+            parent_mapping_selection_hint,
+            CommitSyncContext::XRepoSyncJob,
+            Some(version.clone()),
+            false, // add_mapping_to_hg_extra
+        )
+        .timed()
+        .await
     };
 
     log_non_pushrebase_sync_single_changeset_result(
@@ -660,18 +664,18 @@ where
 
     // Sync all of the ancestors first
     for ancestor_cs_id in unsynced_ancestors {
-        let (stats, mb_synced) = commit_syncer
-            .unsafe_sync_commit(
-                ctx,
-                ancestor_cs_id,
-                CandidateSelectionHint::Only,
-                CommitSyncContext::ForwardSyncerInitialImport,
-                Some(config_version.clone()),
-                add_mapping_to_hg_extra,
-            )
-            .timed()
-            .boxed()
-            .await;
+        let (stats, mb_synced) = unsafe_sync_commit(
+            ctx,
+            ancestor_cs_id,
+            &commit_syncer,
+            CandidateSelectionHint::Only,
+            CommitSyncContext::ForwardSyncerInitialImport,
+            Some(config_version.clone()),
+            add_mapping_to_hg_extra,
+        )
+        .timed()
+        .boxed()
+        .await;
         let mb_synced = mb_synced?;
         let synced = mb_synced
             .clone()
@@ -723,18 +727,18 @@ where
         changesets_to_derive.clear();
     };
 
-    let (stats, result) = commit_syncer
-        .unsafe_sync_commit(
-            ctx,
-            cs_id,
-            CandidateSelectionHint::Only,
-            CommitSyncContext::ForwardSyncerInitialImport,
-            Some(config_version),
-            add_mapping_to_hg_extra,
-        )
-        .timed()
-        .boxed()
-        .await;
+    let (stats, result) = unsafe_sync_commit(
+        ctx,
+        cs_id,
+        &commit_syncer,
+        CandidateSelectionHint::Only,
+        CommitSyncContext::ForwardSyncerInitialImport,
+        Some(config_version),
+        add_mapping_to_hg_extra,
+    )
+    .timed()
+    .boxed()
+    .await;
 
     let maybe_cs_id: Option<ChangesetId> = result?;
 
@@ -861,18 +865,19 @@ where
 {
     let small_repo = commit_syncer.get_source_repo();
     let bcs = cs_id.load(ctx, small_repo.repo_blobstore()).await?;
-    commit_syncer
-        .unsafe_sync_commit_pushrebase(
-            ctx,
-            bcs,
-            target_bookmark.clone(),
-            CommitSyncContext::XRepoSyncJob,
-            pushrebase_rewrite_dates,
-            version,
-            change_mapping_version,
-            parent_mapping,
-        )
-        .await
+
+    unsafe_sync_commit_pushrebase(
+        ctx,
+        bcs,
+        &commit_syncer,
+        target_bookmark.clone(),
+        CommitSyncContext::XRepoSyncJob,
+        pushrebase_rewrite_dates,
+        version,
+        change_mapping_version,
+        parent_mapping,
+    )
+    .await
 }
 
 /// Function validates if a this merge is supported for x-repo sync. At the moment we support

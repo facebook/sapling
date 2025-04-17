@@ -30,6 +30,7 @@ use cross_repo_sync::CommitSyncer;
 use cross_repo_sync::SubmoduleDeps;
 use cross_repo_sync::Target;
 use cross_repo_sync::create_commit_syncers;
+use cross_repo_sync::unsafe_sync_commit;
 use futures::future;
 use futures::future::FutureExt;
 use futures::future::try_join_all;
@@ -903,23 +904,22 @@ impl<R: Repo> PushRedirector<R> {
         };
 
         for bcs_id in to_sync.iter() {
-            let synced_bcs_id = self
-                .small_to_large_commit_syncer
-                .unsafe_sync_commit(
-                    ctx,
-                    *bcs_id,
-                    candidate_selection_hint.clone(),
-                    CommitSyncContext::PushRedirector,
-                    None,
-                    false, // add_mapping_to_hg_extra
+            let synced_bcs_id = unsafe_sync_commit(
+                ctx,
+                *bcs_id,
+                &self.small_to_large_commit_syncer,
+                candidate_selection_hint.clone(),
+                CommitSyncContext::PushRedirector,
+                None,
+                false, // add_mapping_to_hg_extra
+            )
+            .await?
+            .ok_or_else(|| {
+                format_err!(
+                    "{} was rewritten into nothingness during uploaded changesets sync",
+                    bcs_id
                 )
-                .await?
-                .ok_or_else(|| {
-                    format_err!(
-                        "{} was rewritten into nothingness during uploaded changesets sync",
-                        bcs_id
-                    )
-                })?;
+            })?;
             synced_ids.push((bcs_id, synced_bcs_id));
         }
 

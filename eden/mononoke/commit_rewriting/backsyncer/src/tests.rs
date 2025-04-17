@@ -43,6 +43,8 @@ use cross_repo_sync::SubmoduleDeps;
 use cross_repo_sync::get_git_submodule_action_by_version;
 use cross_repo_sync::rewrite_commit;
 use cross_repo_sync::test_utils::TestRepo;
+use cross_repo_sync::unsafe_always_rewrite_sync_commit;
+use cross_repo_sync::unsafe_sync_commit;
 use fbinit::FacebookInit;
 use fixtures::Linear;
 use fixtures::TestRepoFixture;
@@ -778,15 +780,15 @@ async fn backsync_change_mapping(fb: FacebookInit) -> Result<(), Error> {
         .commit()
         .await?;
 
-    commit_syncer
-        .unsafe_always_rewrite_sync_commit(
-            &ctx,
-            root_cs_id,
-            None,
-            &current_version,
-            CommitSyncContext::Tests,
-        )
-        .await?;
+    unsafe_always_rewrite_sync_commit(
+        &ctx,
+        root_cs_id,
+        &commit_syncer,
+        None,
+        &current_version,
+        CommitSyncContext::Tests,
+    )
+    .await?;
 
     // Add one more empty commit with old mapping
     let before_mapping_change = CreateCommitContext::new(&ctx, &large_repo, vec![root_cs_id])
@@ -1989,16 +1991,16 @@ async fn preserve_premerge_commit(
         CommitSyncer::new(&ctx, repos, live_commit_sync_config)
     };
 
-    small_to_large_sync_config
-        .unsafe_sync_commit(
-            &ctx,
-            bcs_id,
-            CandidateSelectionHint::Only,
-            CommitSyncContext::Tests,
-            Some(CommitSyncConfigVersion("noop".to_string())),
-            false,
-        )
-        .await?;
+    unsafe_sync_commit(
+        &ctx,
+        bcs_id,
+        &small_to_large_sync_config,
+        CandidateSelectionHint::Only,
+        CommitSyncContext::Tests,
+        Some(CommitSyncConfigVersion("noop".to_string())),
+        false,
+    )
+    .await?;
 
     for another_repo_id in another_small_repo_ids {
         mapping

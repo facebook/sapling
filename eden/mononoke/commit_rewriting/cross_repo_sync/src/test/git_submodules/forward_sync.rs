@@ -33,6 +33,7 @@ use reporting::CommitSyncContext;
 use tests_utils::CreateCommitContext;
 
 use crate::commit_sync_outcome::CandidateSelectionHint;
+use crate::commit_syncer::unsafe_sync_commit;
 use crate::test::check_mapping;
 use crate::test::git_submodules::git_submodules_test_utils::*;
 use crate::test::sync_to_master;
@@ -1956,29 +1957,29 @@ async fn test_submodule_expansion_and_deletion_on_merge_commits(fb: FacebookInit
 
     // Sync both standalone commits, because we can't sync any commits without
     // first syncing all of their parents.
-    let _large_p1_cs_id = commit_syncer
-        .unsafe_sync_commit(
-            &ctx,
-            p1_cs_id,
-            CandidateSelectionHint::Only,
-            CommitSyncContext::XRepoSyncJob,
-            Some(base_commit_sync_version_name()),
-            false, // add_mapping_to_hg_extra
-        )
-        .await
-        .context("Failed to sync standalone parent commit")?;
+    let _large_p1_cs_id = unsafe_sync_commit(
+        &ctx,
+        p1_cs_id,
+        &commit_syncer,
+        CandidateSelectionHint::Only,
+        CommitSyncContext::XRepoSyncJob,
+        Some(base_commit_sync_version_name()),
+        false, // add_mapping_to_hg_extra
+    )
+    .await
+    .context("Failed to sync standalone parent commit")?;
 
-    let _large_p2_cs_id = commit_syncer
-        .unsafe_sync_commit(
-            &ctx,
-            p2_cs_id,
-            CandidateSelectionHint::Only,
-            CommitSyncContext::XRepoSyncJob,
-            Some(base_commit_sync_version_name()),
-            false, // add_mapping_to_hg_extra
-        )
-        .await
-        .context("Failed to sync standalone parent commit")?;
+    let _large_p2_cs_id = unsafe_sync_commit(
+        &ctx,
+        p2_cs_id,
+        &commit_syncer,
+        CandidateSelectionHint::Only,
+        CommitSyncContext::XRepoSyncJob,
+        Some(base_commit_sync_version_name()),
+        false, // add_mapping_to_hg_extra
+    )
+    .await
+    .context("Failed to sync standalone parent commit")?;
 
     // COMMIT 1: MERGE commit updating the repo_b submodule pointer
     let repo_b_git_commit_hash =

@@ -70,6 +70,7 @@ use cross_repo_sync::Target;
 use cross_repo_sync::get_all_repo_submodule_deps;
 use cross_repo_sync::get_all_submodule_deps_from_repo_pair;
 use cross_repo_sync::get_small_and_large_repos;
+use cross_repo_sync::sync_commit;
 use dag_types::Location;
 use derived_data_manager::BonsaiDerivable;
 use derived_data_manager::DerivableType;
@@ -1673,15 +1674,15 @@ impl<R: MononokeRepo> RepoContext<R> {
             CommitSyncer::new(&self.ctx, commit_sync_repos, self.live_commit_sync_config());
 
         if sync_behaviour == XRepoLookupSyncBehaviour::SyncIfAbsent {
-            let _ = commit_syncer
-                .sync_commit(
-                    &self.ctx,
-                    changeset,
-                    candidate_selection_hint,
-                    CommitSyncContext::ScsXrepoLookup,
-                    false,
-                )
-                .await?;
+            let _ = sync_commit(
+                &self.ctx,
+                changeset,
+                &commit_syncer,
+                candidate_selection_hint,
+                CommitSyncContext::ScsXrepoLookup,
+                false,
+            )
+            .await?;
         }
         use cross_repo_sync::CommitSyncOutcome::*;
         let maybe_cs_id = commit_syncer

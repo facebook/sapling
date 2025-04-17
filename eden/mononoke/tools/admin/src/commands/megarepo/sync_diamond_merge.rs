@@ -41,6 +41,7 @@ use cross_repo_sync::create_commit_syncers;
 use cross_repo_sync::get_all_submodule_deps_from_repo_pair;
 use cross_repo_sync::rewrite_commit;
 use cross_repo_sync::submodule_metadata_file_prefix_and_dangling_pointers;
+use cross_repo_sync::unsafe_sync_commit;
 use cross_repo_sync::update_mapping_with_version;
 use futures::future::try_join;
 use futures::stream;
@@ -255,17 +256,17 @@ pub async fn do_sync_diamond_merge(
         // hint here. Current thinking is: let the sync fail if one of
         // the `new_branch` commits rewrites into 2 commits in the target
         // repo. Manual remediation would be needed in that case.
-        syncers
-            .small_to_large
-            .unsafe_sync_commit(
-                ctx,
-                cs_id,
-                CandidateSelectionHint::Only,
-                CommitSyncContext::SyncDiamondMerge,
-                None,
-                false, // add_mapping_to_hg_extra
-            )
-            .await?;
+
+        unsafe_sync_commit(
+            ctx,
+            cs_id,
+            &syncers.small_to_large,
+            CandidateSelectionHint::Only,
+            CommitSyncContext::SyncDiamondMerge,
+            None,
+            false, // add_mapping_to_hg_extra
+        )
+        .await?;
     }
 
     let maybe_onto_value = large_repo

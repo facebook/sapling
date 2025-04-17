@@ -77,6 +77,10 @@ use crate::commit_sync_outcome::CandidateSelectionHint;
 use crate::commit_sync_outcome::CommitSyncOutcome;
 use crate::commit_sync_outcome::PluralCommitSyncOutcome;
 use crate::commit_syncer::CommitSyncer;
+use crate::commit_syncer::sync_commit;
+use crate::commit_syncer::unsafe_always_rewrite_sync_commit;
+use crate::commit_syncer::unsafe_sync_commit;
+use crate::commit_syncer::unsafe_sync_commit_pushrebase;
 use crate::commit_syncers_lib::CommitSyncRepos;
 use crate::commit_syncers_lib::find_toposorted_unsynced_ancestors;
 use crate::commit_syncers_lib::update_mapping_with_version;
@@ -191,18 +195,18 @@ pub(crate) async fn sync_to_master(
         .await
         .unwrap();
     let version = get_version(&ctx, config, source_bcs_id).await?;
-    config
-        .unsafe_sync_commit_pushrebase(
-            &ctx,
-            source_bcs,
-            Target(bookmark_name),
-            CommitSyncContext::Tests,
-            PushrebaseRewriteDates::No,
-            version,
-            None,
-            Default::default(),
-        )
-        .await
+    unsafe_sync_commit_pushrebase(
+        &ctx,
+        source_bcs,
+        config,
+        Target(bookmark_name),
+        CommitSyncContext::Tests,
+        PushrebaseRewriteDates::No,
+        version,
+        None,
+        Default::default(),
+    )
+    .await
 }
 
 async fn get_bcs_id(
@@ -1038,33 +1042,33 @@ async fn get_multiple_master_mapping_setup(
         .load(&ctx, small_repo.repo_blobstore())
         .await?;
     let version = get_version(&ctx, &small_to_large_syncer, small_repo_master_cs_id).await?;
-    small_to_large_syncer
-        .unsafe_sync_commit_pushrebase(
-            &ctx,
-            small_cs.clone(),
-            Target(BookmarkKey::new("master").unwrap()),
-            CommitSyncContext::Tests,
-            PushrebaseRewriteDates::No,
-            version.clone(),
-            None,
-            Default::default(),
-        )
-        .await
-        .expect("sync should have succeeded");
+    unsafe_sync_commit_pushrebase(
+        &ctx,
+        small_cs.clone(),
+        &small_to_large_syncer,
+        Target(BookmarkKey::new("master").unwrap()),
+        CommitSyncContext::Tests,
+        PushrebaseRewriteDates::No,
+        version.clone(),
+        None,
+        Default::default(),
+    )
+    .await
+    .expect("sync should have succeeded");
 
-    small_to_large_syncer
-        .unsafe_sync_commit_pushrebase(
-            &ctx,
-            small_cs.clone(),
-            Target(BookmarkKey::new("other_branch").unwrap()),
-            CommitSyncContext::Tests,
-            PushrebaseRewriteDates::No,
-            version,
-            None,
-            Default::default(),
-        )
-        .await
-        .expect("sync should have succeeded");
+    unsafe_sync_commit_pushrebase(
+        &ctx,
+        small_cs.clone(),
+        &small_to_large_syncer,
+        Target(BookmarkKey::new("other_branch").unwrap()),
+        CommitSyncContext::Tests,
+        PushrebaseRewriteDates::No,
+        version,
+        None,
+        Default::default(),
+    )
+    .await
+    .expect("sync should have succeeded");
 
     // 3. Sanity-check that the small repo master is indeed rewritten
     // into two different commits in the large repo
@@ -1104,32 +1108,32 @@ async fn test_sync_parent_has_multiple_mappings(fb: FacebookInit) -> Result<(), 
     .await;
 
     // Cannot sync without a hint
-    let e = small_to_large_syncer
-        .unsafe_sync_commit(
-            &ctx,
-            to_sync,
-            CandidateSelectionHint::Only,
-            CommitSyncContext::Tests,
-            None,
-            false, // add_mapping_to_hg_extra
-        )
-        .await
-        .expect_err("sync should have failed");
+    let e = unsafe_sync_commit(
+        &ctx,
+        to_sync,
+        &small_to_large_syncer,
+        CandidateSelectionHint::Only,
+        CommitSyncContext::Tests,
+        None,
+        false, // add_mapping_to_hg_extra
+    )
+    .await
+    .expect_err("sync should have failed");
     assert!(format!("{:?}", e).contains("Too many rewritten candidates for"));
 
     // Can sync with a bookmark-based hint
     let book = Target(BookmarkKey::new("master").unwrap());
-    small_to_large_syncer
-        .unsafe_sync_commit(
-            &ctx,
-            to_sync,
-            CandidateSelectionHint::AncestorOfBookmark(book, Target(megarepo.clone())),
-            CommitSyncContext::Tests,
-            None,
-            false, // add_mapping_to_hg_extra
-        )
-        .await
-        .expect("sync should have succeeded");
+    unsafe_sync_commit(
+        &ctx,
+        to_sync,
+        &small_to_large_syncer,
+        CandidateSelectionHint::AncestorOfBookmark(book, Target(megarepo.clone())),
+        CommitSyncContext::Tests,
+        None,
+        false, // add_mapping_to_hg_extra
+    )
+    .await
+    .expect("sync should have succeeded");
 
     Ok(())
 }
@@ -1156,19 +1160,19 @@ async fn test_sync_no_op_pushrebase_has_multiple_mappings(fb: FacebookInit) -> R
     let to_sync = to_sync_id.load(&ctx, small_repo.repo_blobstore()).await?;
 
     let version = get_version(&ctx, &small_to_large_syncer, small_repo_master_cs_id).await?;
-    small_to_large_syncer
-        .unsafe_sync_commit_pushrebase(
-            &ctx,
-            to_sync,
-            Target(BookmarkKey::new("master").unwrap()),
-            CommitSyncContext::Tests,
-            PushrebaseRewriteDates::No,
-            version,
-            None,
-            Default::default(),
-        )
-        .await
-        .expect("sync should have succeeded");
+    unsafe_sync_commit_pushrebase(
+        &ctx,
+        to_sync,
+        &small_to_large_syncer,
+        Target(BookmarkKey::new("master").unwrap()),
+        CommitSyncContext::Tests,
+        PushrebaseRewriteDates::No,
+        version,
+        None,
+        Default::default(),
+    )
+    .await
+    .expect("sync should have succeeded");
 
     Ok(())
 }
@@ -1205,19 +1209,19 @@ async fn test_sync_real_pushrebase_has_multiple_mappings(fb: FacebookInit) -> Re
     let to_sync = to_sync_id.load(&ctx, small_repo.repo_blobstore()).await?;
 
     let version = get_version(&ctx, &small_to_large_syncer, small_repo_master_cs_id).await?;
-    small_to_large_syncer
-        .unsafe_sync_commit_pushrebase(
-            &ctx,
-            to_sync,
-            Target(BookmarkKey::new("master").unwrap()),
-            CommitSyncContext::Tests,
-            PushrebaseRewriteDates::No,
-            version,
-            None,
-            Default::default(),
-        )
-        .await
-        .expect("sync should have succeeded");
+    unsafe_sync_commit_pushrebase(
+        &ctx,
+        to_sync,
+        &small_to_large_syncer,
+        Target(BookmarkKey::new("master").unwrap()),
+        CommitSyncContext::Tests,
+        PushrebaseRewriteDates::No,
+        version,
+        None,
+        Default::default(),
+    )
+    .await
+    .expect("sync should have succeeded");
 
     Ok(())
 }
@@ -1242,15 +1246,15 @@ async fn test_sync_with_mapping_change(fb: FacebookInit) -> Result<(), Error> {
             .commit()
             .await?;
 
-    let synced = large_to_small_syncer
-        .sync_commit(
-            &ctx,
-            new_mapping_cs_id,
-            CandidateSelectionHint::Only,
-            CommitSyncContext::Tests,
-            false,
-        )
-        .await?;
+    let synced = sync_commit(
+        &ctx,
+        new_mapping_cs_id,
+        &large_to_small_syncer,
+        CandidateSelectionHint::Only,
+        CommitSyncContext::Tests,
+        false,
+    )
+    .await?;
     assert!(synced.is_some());
     let new_mapping_small_cs_id = synced.unwrap();
 
@@ -1291,15 +1295,15 @@ async fn test_sync_with_mapping_change(fb: FacebookInit) -> Result<(), Error> {
             .add_file("prefix/file", "2")
             .commit()
             .await?;
-    let synced = large_to_small_syncer
-        .sync_commit(
-            &ctx,
-            old_mapping_cs_id,
-            CandidateSelectionHint::Only,
-            CommitSyncContext::Tests,
-            false,
-        )
-        .await?;
+    let synced = sync_commit(
+        &ctx,
+        old_mapping_cs_id,
+        &large_to_small_syncer,
+        CandidateSelectionHint::Only,
+        CommitSyncContext::Tests,
+        false,
+    )
+    .await?;
     assert!(synced.is_some());
     let old_mapping_small_cs_id = synced.unwrap();
 
@@ -1352,24 +1356,24 @@ async fn test_sync_equivalent_wc_with_mapping_change(fb: FacebookInit) -> Result
             .commit()
             .await?;
 
-    let synced = large_to_small_syncer
-        .sync_commit(
-            &ctx,
-            does_not_rewrite_large_cs_id,
-            CandidateSelectionHint::Only,
-            CommitSyncContext::Tests,
-            false,
-        )
-        .await?;
-    let parent_synced = large_to_small_syncer
-        .sync_commit(
-            &ctx,
-            new_mapping_large_cs_id,
-            CandidateSelectionHint::Only,
-            CommitSyncContext::Tests,
-            false,
-        )
-        .await?;
+    let synced = sync_commit(
+        &ctx,
+        does_not_rewrite_large_cs_id,
+        &large_to_small_syncer,
+        CandidateSelectionHint::Only,
+        CommitSyncContext::Tests,
+        false,
+    )
+    .await?;
+    let parent_synced = sync_commit(
+        &ctx,
+        new_mapping_large_cs_id,
+        &large_to_small_syncer,
+        CandidateSelectionHint::Only,
+        CommitSyncContext::Tests,
+        false,
+    )
+    .await?;
     // does_not_rewrite_large_cs_id commit was rewritten out, so sync_commit
     // should return the same changeset id as the parent
     assert_eq!(synced, parent_synced);
@@ -1384,15 +1388,15 @@ async fn test_sync_equivalent_wc_with_mapping_change(fb: FacebookInit) -> Result
             .commit()
             .await?;
 
-    let synced = large_to_small_syncer
-        .sync_commit(
-            &ctx,
-            new_mapping_cs_id,
-            CandidateSelectionHint::Only,
-            CommitSyncContext::Tests,
-            false,
-        )
-        .await?;
+    let synced = sync_commit(
+        &ctx,
+        new_mapping_cs_id,
+        &large_to_small_syncer,
+        CandidateSelectionHint::Only,
+        CommitSyncContext::Tests,
+        false,
+    )
+    .await?;
     assert!(synced.is_some());
     let new_mapping_small_cs_id = synced.unwrap();
 
@@ -1440,15 +1444,15 @@ async fn test_sync_equivalent_wc_with_mapping_change(fb: FacebookInit) -> Result
             .add_file("prefix/file", "2")
             .commit()
             .await?;
-    let synced = large_to_small_syncer
-        .sync_commit(
-            &ctx,
-            old_mapping_cs_id,
-            CandidateSelectionHint::Only,
-            CommitSyncContext::Tests,
-            false,
-        )
-        .await?;
+    let synced = sync_commit(
+        &ctx,
+        old_mapping_cs_id,
+        &large_to_small_syncer,
+        CandidateSelectionHint::Only,
+        CommitSyncContext::Tests,
+        false,
+    )
+    .await?;
     assert!(synced.is_some());
     let old_mapping_small_cs_id = synced.unwrap();
 
@@ -1502,15 +1506,15 @@ async fn test_disabled_sync(fb: FacebookInit) -> Result<(), Error> {
             "scm/mononoke:xrepo_sync_disable_all_syncs".to_string() => KnobVal::Bool(true)
         ]),
         async {
-            large_to_small_syncer
-                .sync_commit(
-                    &ctx,
-                    new_mapping_cs_id,
-                    CandidateSelectionHint::Only,
-                    CommitSyncContext::Tests,
-                    false,
-                )
-                .await
+            sync_commit(
+                &ctx,
+                new_mapping_cs_id,
+                &large_to_small_syncer,
+                CandidateSelectionHint::Only,
+                CommitSyncContext::Tests,
+                false,
+            )
+            .await
         }
         .boxed(),
     )
@@ -1581,18 +1585,19 @@ async fn test_disabled_sync_pushrebase(fb: FacebookInit) -> Result<(), Error> {
         async {
             let version =
                 get_version(&ctx, &small_to_large_syncer, small_repo_master_cs_id).await?;
-            small_to_large_syncer
-                .unsafe_sync_commit_pushrebase(
-                    &ctx,
-                    small_cs.clone(),
-                    Target(BookmarkKey::new("master").unwrap()),
-                    CommitSyncContext::Tests,
-                    PushrebaseRewriteDates::No,
-                    version,
-                    None,
-                    Default::default(),
-                )
-                .await
+
+            unsafe_sync_commit_pushrebase(
+                &ctx,
+                small_cs.clone(),
+                &small_to_large_syncer,
+                Target(BookmarkKey::new("master").unwrap()),
+                CommitSyncContext::Tests,
+                PushrebaseRewriteDates::No,
+                version,
+                None,
+                Default::default(),
+            )
+            .await
         }
         .boxed(),
     )
@@ -1656,15 +1661,15 @@ async fn prepare_commit_syncer_with_mapping_change(
         .set_to(root_cs_id)
         .await?;
 
-    let maybe_small_root_cs_id = large_to_small_syncer
-        .unsafe_always_rewrite_sync_commit(
-            &ctx,
-            root_cs_id,
-            None,
-            &version_name_with_small_repo(),
-            CommitSyncContext::Tests,
-        )
-        .await?;
+    let maybe_small_root_cs_id = unsafe_always_rewrite_sync_commit(
+        &ctx,
+        root_cs_id,
+        &large_to_small_syncer,
+        None,
+        &version_name_with_small_repo(),
+        CommitSyncContext::Tests,
+    )
+    .await?;
     assert!(maybe_small_root_cs_id.is_some());
     let small_root_cs_id = maybe_small_root_cs_id.unwrap();
 
@@ -1893,42 +1898,42 @@ async fn merge_test_setup(
         create_initial_commit_with_contents(ctx.clone(), &large_repo, btreemap! { "f4" => "4" })
             .await;
 
-    lts_syncer
-        .unsafe_always_rewrite_sync_commit(
-            &ctx,
-            c1,
-            None, // parents override
-            &v1,
-            CommitSyncContext::Tests,
-        )
-        .await?;
-    lts_syncer
-        .unsafe_always_rewrite_sync_commit(
-            &ctx,
-            c2,
-            None, // parents override
-            &v1,
-            CommitSyncContext::Tests,
-        )
-        .await?;
-    lts_syncer
-        .unsafe_always_rewrite_sync_commit(
-            &ctx,
-            c3,
-            None, // parents override
-            &v2,
-            CommitSyncContext::Tests,
-        )
-        .await?;
-    lts_syncer
-        .unsafe_always_rewrite_sync_commit(
-            &ctx,
-            c4,
-            None, // parents override
-            &v2,
-            CommitSyncContext::Tests,
-        )
-        .await?;
+    unsafe_always_rewrite_sync_commit(
+        &ctx,
+        c1,
+        &lts_syncer,
+        None, // parents override
+        &v1,
+        CommitSyncContext::Tests,
+    )
+    .await?;
+    unsafe_always_rewrite_sync_commit(
+        &ctx,
+        c2,
+        &lts_syncer,
+        None, // parents override
+        &v1,
+        CommitSyncContext::Tests,
+    )
+    .await?;
+    unsafe_always_rewrite_sync_commit(
+        &ctx,
+        c3,
+        &lts_syncer,
+        None, // parents override
+        &v2,
+        CommitSyncContext::Tests,
+    )
+    .await?;
+    unsafe_always_rewrite_sync_commit(
+        &ctx,
+        c4,
+        &lts_syncer,
+        None, // parents override
+        &v2,
+        CommitSyncContext::Tests,
+    )
+    .await?;
 
     let heads_with_versions = hashmap! {
         Some(v1) => vec![c1, c2],
@@ -1967,15 +1972,15 @@ async fn test_sync_merge_gets_version_from_parents_1(fb: FacebookInit) -> Result
     let merge_bcs_id = create_merge(&ctx, lts_syncer.get_source_repo(), heads).await;
     println!(
         "merge sync outcome: {:?}",
-        lts_syncer
-            .sync_commit(
-                &ctx,
-                merge_bcs_id,
-                CandidateSelectionHint::Only,
-                CommitSyncContext::Tests,
-                false
-            )
-            .await?
+        sync_commit(
+            &ctx,
+            merge_bcs_id,
+            &lts_syncer,
+            CandidateSelectionHint::Only,
+            CommitSyncContext::Tests,
+            false
+        )
+        .await?
     );
     let outcome = lts_syncer
         .get_commit_sync_outcome(&ctx, merge_bcs_id)
@@ -1998,16 +2003,16 @@ async fn test_sync_merge_gets_version_from_parents_2(fb: FacebookInit) -> Result
     let (ctx, lts_syncer, heads_with_versions) = merge_test_setup(fb).await?;
     let heads = heads_with_versions[&Some(v2.clone())].clone();
     let merge_bcs_id = create_merge(&ctx, lts_syncer.get_source_repo(), heads).await;
-    lts_syncer
-        .sync_commit(
-            &ctx,
-            merge_bcs_id,
-            CandidateSelectionHint::Only,
-            CommitSyncContext::Tests,
-            false,
-        )
-        .await?
-        .unwrap();
+    sync_commit(
+        &ctx,
+        merge_bcs_id,
+        &lts_syncer,
+        CandidateSelectionHint::Only,
+        CommitSyncContext::Tests,
+        false,
+    )
+    .await?
+    .unwrap();
     let outcome = lts_syncer
         .get_commit_sync_outcome(&ctx, merge_bcs_id)
         .await?
@@ -2034,16 +2039,16 @@ async fn test_sync_merge_fails_when_parents_have_different_versions(
     let heads_1 = heads_with_versions[&Some(v2)].clone();
     let merge_heads = [heads_0[0], heads_1[0]].to_vec();
     let merge_bcs_id = create_merge(&ctx, lts_syncer.get_source_repo(), merge_heads).await;
-    let e = lts_syncer
-        .sync_commit(
-            &ctx,
-            merge_bcs_id,
-            CandidateSelectionHint::Only,
-            CommitSyncContext::Tests,
-            false,
-        )
-        .await
-        .expect_err("syncing a merge with differently-remapped parents must fail");
+    let e = sync_commit(
+        &ctx,
+        merge_bcs_id,
+        &lts_syncer,
+        CandidateSelectionHint::Only,
+        CommitSyncContext::Tests,
+        false,
+    )
+    .await
+    .expect_err("syncing a merge with differently-remapped parents must fail");
     assert!(format!("{}", e).contains("failed getting a mover to use for merge rewriting"));
     Ok(())
 }
@@ -2145,16 +2150,17 @@ async fn test_no_accidental_preserved_roots(
     };
 
     let root_commit = create_initial_commit(ctx.clone(), commit_sync_repos.get_source_repo()).await;
-    commit_syncer
-        .unsafe_sync_commit(
-            &ctx,
-            root_commit,
-            CandidateSelectionHint::Only,
-            CommitSyncContext::Tests,
-            Some(CommitSyncConfigVersion("TEST_VERSION_NAME".to_string())),
-            false, // add_mapping_to_hg_extra
-        )
-        .await?;
+
+    unsafe_sync_commit(
+        &ctx,
+        root_commit,
+        &commit_syncer,
+        CandidateSelectionHint::Only,
+        CommitSyncContext::Tests,
+        Some(CommitSyncConfigVersion("TEST_VERSION_NAME".to_string())),
+        false, // add_mapping_to_hg_extra
+    )
+    .await?;
     let outcome = commit_syncer
         .get_commit_sync_outcome(&ctx, root_commit)
         .await?;
@@ -2261,15 +2267,15 @@ async fn test_not_sync_candidate_if_mapping_does_not_have_small_repo(
         .add_file("file", "content")
         .commit()
         .await?;
-    large_to_first_small_commit_syncer
-        .unsafe_always_rewrite_sync_commit(
-            &ctx,
-            first_bcs_id,
-            None, // parents override
-            &noop_version_first_small_repo,
-            CommitSyncContext::Tests,
-        )
-        .await?;
+    unsafe_always_rewrite_sync_commit(
+        &ctx,
+        first_bcs_id,
+        &large_to_first_small_commit_syncer,
+        None, // parents override
+        &noop_version_first_small_repo,
+        CommitSyncContext::Tests,
+    )
+    .await?;
 
     // Now try to sync it to the other small repo, it should return NotSyncCandidate
 
@@ -2282,15 +2288,15 @@ async fn test_not_sync_candidate_if_mapping_does_not_have_small_repo(
 
     let large_to_second_small_commit_syncer =
         CommitSyncer::new(&ctx, repos.clone(), live_commit_sync_config.clone());
-    large_to_second_small_commit_syncer
-        .sync_commit(
-            &ctx,
-            first_bcs_id,
-            CandidateSelectionHint::Only,
-            CommitSyncContext::Tests,
-            false,
-        )
-        .await?;
+    sync_commit(
+        &ctx,
+        first_bcs_id,
+        &large_to_second_small_commit_syncer,
+        CandidateSelectionHint::Only,
+        CommitSyncContext::Tests,
+        false,
+    )
+    .await?;
 
     assert_eq!(
         large_to_second_small_commit_syncer

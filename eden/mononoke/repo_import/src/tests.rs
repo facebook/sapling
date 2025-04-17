@@ -28,6 +28,7 @@ mod tests {
     use cross_repo_sync::CommitSyncContext;
     use cross_repo_sync::SubmoduleDeps;
     use cross_repo_sync::create_commit_syncers;
+    use cross_repo_sync::unsafe_always_rewrite_sync_commit;
     use derived_data_manager::BonsaiDerivable;
     use fbinit::FacebookInit;
     use futures::stream::TryStreamExt;
@@ -940,15 +941,15 @@ mod tests {
             .set_to(change_mapping_cs_id)
             .await?;
 
-        large_to_small_syncer
-            .unsafe_always_rewrite_sync_commit(
-                &ctx,
-                change_mapping_cs_id,
-                None,
-                &CommitSyncConfigVersion("TEST_VERSION2".to_string()),
-                CommitSyncContext::Tests,
-            )
-            .await?;
+        unsafe_always_rewrite_sync_commit(
+            &ctx,
+            change_mapping_cs_id,
+            &large_to_small_syncer,
+            None,
+            &CommitSyncConfigVersion("TEST_VERSION2".to_string()),
+            CommitSyncContext::Tests,
+        )
+        .await?;
 
         assert_eq!(
             find_mapping_version(

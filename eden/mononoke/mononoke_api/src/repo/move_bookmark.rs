@@ -21,6 +21,7 @@ use bookmarks_movement::UpdateBookmarkOp;
 use bytes::Bytes;
 use cross_repo_sync::CandidateSelectionHint;
 use cross_repo_sync::CommitSyncContext;
+use cross_repo_sync::sync_commit;
 use hook_manager::manager::HookManagerRef;
 use mononoke_types::ChangesetId;
 
@@ -88,22 +89,21 @@ impl<R: MononokeRepo> RepoContext<R> {
                 )));
             }
             let ctx = self.ctx();
-            let target = redirector
-                .small_to_large_commit_syncer
-                .sync_commit(
-                    ctx,
+            let target = sync_commit(
+                ctx,
+                target,
+                &redirector.small_to_large_commit_syncer,
+                CandidateSelectionHint::Only,
+                CommitSyncContext::PushRedirector,
+                false,
+            )
+            .await?
+            .ok_or_else(|| {
+                format_err!(
+                    "Error in move_bookmark absence of corresponding commit in target repo for {}",
                     target,
-                    CandidateSelectionHint::Only,
-                    CommitSyncContext::PushRedirector,
-                    false,
                 )
-                .await?
-                .ok_or_else(|| {
-                    format_err!(
-                        "Error in move_bookmark absence of corresponding commit in target repo for {}",
-                        target,
-                    )
-                })?;
+            })?;
             let old_target = redirector
                 .get_small_to_large_commit_equivalent(ctx, old_target)
                 .await?;

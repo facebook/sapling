@@ -39,6 +39,7 @@ use cross_repo_sync::ConcreteRepo as CrossRepo;
 use cross_repo_sync::Source;
 use cross_repo_sync::Target;
 use cross_repo_sync::find_toposorted_unsynced_ancestors;
+use cross_repo_sync::unsafe_sync_commit;
 use cross_repo_sync::verify_working_copy_with_version;
 use fbinit::FacebookInit;
 use filenodes::Filenodes;
@@ -1067,16 +1068,16 @@ async fn run_sync_commit_and_ancestors<'a>(
         find_toposorted_unsynced_ancestors(ctx, &commit_syncer, source_cs_id, None).await?;
 
     for ancestor in unsynced_ancestors {
-        commit_syncer
-            .unsafe_sync_commit(
-                ctx,
-                ancestor,
-                CandidateSelectionHint::Only,
-                CommitSyncContext::AdminChangeMapping,
-                None,
-                false, // add_mapping_to_hg_extra
-            )
-            .await?;
+        unsafe_sync_commit(
+            ctx,
+            ancestor,
+            &commit_syncer,
+            CandidateSelectionHint::Only,
+            CommitSyncContext::AdminChangeMapping,
+            None,
+            false, // add_mapping_to_hg_extra
+        )
+        .await?;
     }
 
     let commit_sync_outcome = commit_syncer

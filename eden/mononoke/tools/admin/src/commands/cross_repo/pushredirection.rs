@@ -25,6 +25,7 @@ use cross_repo_sync::CHANGE_XREPO_MAPPING_EXTRA;
 use cross_repo_sync::CommitSyncContext;
 use cross_repo_sync::CommitSyncer;
 use cross_repo_sync::Syncers;
+use cross_repo_sync::unsafe_always_rewrite_sync_commit;
 use filestore::FilestoreConfigRef;
 use futures::stream;
 use futures::try_join;
@@ -271,17 +272,17 @@ async fn pushredirection_change_mapping_version(
     )
     .await?;
 
-    let maybe_rewritten_small_cs_id = commit_syncer
-        .unsafe_always_rewrite_sync_commit(
-            ctx,
-            large_cs_id,
-            Some(hashmap! {
-              large_bookmark_value => small_bookmark_value,
-            }),
-            &mapping_version,
-            CommitSyncContext::AdminChangeMapping,
-        )
-        .await?;
+    let maybe_rewritten_small_cs_id = unsafe_always_rewrite_sync_commit(
+        ctx,
+        large_cs_id,
+        &commit_syncer,
+        Some(hashmap! {
+          large_bookmark_value => small_bookmark_value,
+        }),
+        &mapping_version,
+        CommitSyncContext::AdminChangeMapping,
+    )
+    .await?;
 
     let rewritten_small_cs_id = maybe_rewritten_small_cs_id
         .ok_or_else(|| anyhow!("{} was rewritten into non-existent commit", large_cs_id))?;

@@ -311,6 +311,7 @@ async fn remap<R: CrossRepo>(
 mod tests {
     use cross_repo_sync::CandidateSelectionHint;
     use cross_repo_sync::CommitSyncContext;
+    use cross_repo_sync::sync_commit;
     use cross_repo_sync::test_utils::TestRepo;
     use cross_repo_sync::test_utils::init_small_large_repo;
     use fbinit::FacebookInit;
@@ -417,16 +418,16 @@ mod tests {
             bookmark(&ctx, &large_repo, "master").set_to(cs_id).await?;
             last = Some(cs_id);
         }
-        syncers
-            .large_to_small
-            .sync_commit(
-                &ctx,
-                last.unwrap(),
-                CandidateSelectionHint::Only,
-                CommitSyncContext::Tests,
-                false,
-            )
-            .await?;
+
+        sync_commit(
+            &ctx,
+            last.unwrap(),
+            &syncers.large_to_small,
+            CandidateSelectionHint::Only,
+            CommitSyncContext::Tests,
+            false,
+        )
+        .await?;
 
         // Since all commits were from another repo, large repo's master still remaps
         // to small repo master, so it's in history
@@ -578,16 +579,16 @@ mod tests {
         bookmark(&ctx, &large_repo, "master")
             .set_to(new_master)
             .await?;
-        syncers
-            .large_to_small
-            .sync_commit(
-                &ctx,
-                new_master,
-                CandidateSelectionHint::Only,
-                CommitSyncContext::Tests,
-                false,
-            )
-            .await?;
+
+        sync_commit(
+            &ctx,
+            new_master,
+            &syncers.large_to_small,
+            CandidateSelectionHint::Only,
+            CommitSyncContext::Tests,
+            false,
+        )
+        .await?;
 
         let max_delay_secs = 1;
         let in_history = check_large_bookmark_history(

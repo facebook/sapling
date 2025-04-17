@@ -61,6 +61,7 @@ use cross_repo_sync::CommitSyncContext;
 use cross_repo_sync::CommitSyncOutcome;
 use cross_repo_sync::CommitSyncer;
 use cross_repo_sync::find_toposorted_unsynced_ancestors;
+use cross_repo_sync::sync_commit;
 use filenodes::Filenodes;
 use filestore::FilestoreConfig;
 use futures::Future;
@@ -372,18 +373,18 @@ where
                 cloned!(ctx, sync_context, to_cs_id, commit_syncer);
                 mononoke::spawn_task(async move {
                     commit_only_backsync_future.await;
-                    let res = commit_syncer
-                        .sync_commit(
-                            &ctx,
-                            to_cs_id.clone(),
-                            // Backsyncer is always used in the large-to-small direction,
-                            // therefore there can be at most one remapped candidate,
-                            // so `CandidateSelectionHint::Only` is a safe choice
-                            CandidateSelectionHint::Only,
-                            sync_context,
-                            disable_lease,
-                        )
-                        .await;
+                    let res = sync_commit(
+                        &ctx,
+                        to_cs_id.clone(),
+                        &commit_syncer,
+                        // Backsyncer is always used in the large-to-small direction,
+                        // therefore there can be at most one remapped candidate,
+                        // so `CandidateSelectionHint::Only` is a safe choice
+                        CandidateSelectionHint::Only,
+                        sync_context,
+                        disable_lease,
+                    )
+                    .await;
                     if let Err(err) = res {
                         error!(
                             ctx.logger(),
@@ -437,15 +438,16 @@ where
         // Backsyncer is always used in the large-to-small direction,
         // therefore there can be at most one remapped candidate,
         // so `CandidateSelectionHint::Only` is a safe choice
-        commit_syncer
-            .sync_commit(
-                &ctx,
-                to_cs_id,
-                CandidateSelectionHint::Only,
-                sync_context,
-                disable_lease,
-            )
-            .await?;
+
+        sync_commit(
+            &ctx,
+            to_cs_id,
+            &commit_syncer,
+            CandidateSelectionHint::Only,
+            sync_context,
+            disable_lease,
+        )
+        .await?;
     }
 
     let new_counter = entry.id;

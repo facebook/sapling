@@ -73,6 +73,7 @@ use cross_repo_sync::log_debug;
 use cross_repo_sync::log_error;
 use cross_repo_sync::log_info;
 use cross_repo_sync::log_warning;
+use cross_repo_sync::sync_commit;
 use executor_lib::RepoShardedProcessExecutor;
 use fbinit::FacebookInit;
 use futures::FutureExt;
@@ -348,16 +349,16 @@ async fn run_in_tailing_mode(
                                     target_bookmark
                                 )
                             })?;
-                        commit_syncer
-                            .reverse()
-                            .sync_commit(
-                                ctx,
-                                target_bookmark_value,
-                                CandidateSelectionHint::Only,
-                                CommitSyncContext::XRepoSyncJob,
-                                false,
-                            )
-                            .await?;
+
+                        sync_commit(
+                            ctx,
+                            target_bookmark_value,
+                            &commit_syncer.reverse(),
+                            CandidateSelectionHint::Only,
+                            CommitSyncContext::XRepoSyncJob,
+                            false,
+                        )
+                        .await?;
                     }
 
                     tokio::time::sleep(sleep_duration).await;

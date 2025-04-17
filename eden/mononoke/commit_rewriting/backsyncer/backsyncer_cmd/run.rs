@@ -31,6 +31,7 @@ use cross_repo_sync::CandidateSelectionHint;
 use cross_repo_sync::CommitSyncContext;
 use cross_repo_sync::CommitSyncOutcome;
 use cross_repo_sync::CommitSyncer;
+use cross_repo_sync::sync_commit;
 use futures::future;
 use futures::future::FutureExt;
 use futures::stream;
@@ -179,15 +180,16 @@ pub(crate) async fn run_backsyncer(
                                     // Backsyncer is always used in the large-to-small direction,
                                     // therefore there can be at most one remapped candidate,
                                     // so `CandidateSelectionHint::Only` is a safe choice
-                                    commit_syncer
-                                        .sync_commit(
-                                            ctx.as_ref(),
-                                            bonsai.clone(),
-                                            CandidateSelectionHint::Only,
-                                            CommitSyncContext::Backsyncer,
-                                            false,
-                                        )
-                                        .await?;
+
+                                    sync_commit(
+                                        ctx.as_ref(),
+                                        bonsai.clone(),
+                                        commit_syncer,
+                                        CandidateSelectionHint::Only,
+                                        CommitSyncContext::Backsyncer,
+                                        false,
+                                    )
+                                    .await?;
 
                                     let maybe_sync_outcome =
                                         commit_syncer.get_commit_sync_outcome(&ctx, bonsai).await?;

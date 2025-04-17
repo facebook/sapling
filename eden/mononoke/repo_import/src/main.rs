@@ -42,6 +42,7 @@ use cross_repo_sync::create_commit_syncers;
 use cross_repo_sync::find_toposorted_unsynced_ancestors;
 use cross_repo_sync::get_all_submodule_deps_from_repo_pair;
 use cross_repo_sync::rewrite_commit;
+use cross_repo_sync::unsafe_sync_commit;
 use environment::MononokeEnvironment;
 use fbinit::FacebookInit;
 use futures::future;
@@ -303,16 +304,16 @@ async fn back_sync_commits_to_small_repo(
         for ancestor in unsynced_ancestors {
             // It is always safe to use `CandidateSelectionHint::Only` in
             // the large-to-small direction
-            let maybe_synced_cs_id = large_to_small_syncer
-                .unsafe_sync_commit(
-                    ctx,
-                    ancestor,
-                    CandidateSelectionHint::Only,
-                    CommitSyncContext::RepoImport,
-                    Some(version.clone()),
-                    false, // add_mapping_to_hg_extra
-                )
-                .await?;
+            let maybe_synced_cs_id = unsafe_sync_commit(
+                ctx,
+                ancestor,
+                &large_to_small_syncer,
+                CandidateSelectionHint::Only,
+                CommitSyncContext::RepoImport,
+                Some(version.clone()),
+                false, // add_mapping_to_hg_extra
+            )
+            .await?;
 
             if let Some(synced_cs_id) = maybe_synced_cs_id {
                 info!(
