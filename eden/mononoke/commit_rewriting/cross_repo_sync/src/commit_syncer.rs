@@ -60,6 +60,7 @@ use synced_commit_mapping::SyncedCommitSourceRepo;
 use synced_commit_mapping_pushrebase_hook::ForwardSyncedCommitInfo;
 
 use crate::commit_in_memory_syncer::CommitInMemorySyncer;
+use crate::commit_in_memory_syncer::unsafe_sync_commit_in_memory;
 use crate::commit_sync_config_utils::get_bookmark_renamer;
 use crate::commit_sync_config_utils::get_common_pushrebase_bookmarks;
 use crate::commit_sync_config_utils::get_git_submodule_action_by_version;
@@ -854,7 +855,7 @@ async fn unsafe_sync_commit_impl<'a, R: Repo>(
         .repos
         .should_set_committer_info_to_author_info_if_empty()?;
 
-    CommitInMemorySyncer {
+    let in_memory_syncer = CommitInMemorySyncer {
         ctx,
         source_repo: Source(commit_syncer.get_source_repo()),
         mapped_parents: &mapped_parents,
@@ -866,8 +867,14 @@ async fn unsafe_sync_commit_impl<'a, R: Repo>(
         strip_commit_extras,
         should_set_committer_info_to_author_info_if_empty,
         add_mapping_to_hg_extra,
-    }
-    .unsafe_sync_commit_in_memory(ctx, cs, commit_sync_context, expected_version)
+    };
+    unsafe_sync_commit_in_memory(
+        ctx,
+        cs,
+        in_memory_syncer,
+        commit_sync_context,
+        expected_version,
+    )
     .await?
     .write(ctx, commit_syncer)
     .await
