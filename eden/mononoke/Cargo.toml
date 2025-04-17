@@ -313,6 +313,7 @@ members = [
   "git/bundle_uri",
   "git/check_git_wc",
   "git/git-pool",
+  "git/git_env",
   "git/git_types",
   "git/git_types/if",
   "git/git_types/if/clients",
