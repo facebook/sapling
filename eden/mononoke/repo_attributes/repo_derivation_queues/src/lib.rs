@@ -24,8 +24,6 @@ pub use crate::dag_items::DagItemId;
 pub use crate::dag_items::DagItemInfo;
 pub use crate::dag_items::DerivationDagItem;
 pub use crate::errors::InternalError;
-#[cfg(fbcode_build)]
-pub use crate::errors::ZeusWrapperError;
 pub use crate::underived::build_underived_batched_graph;
 
 #[facet::facet]

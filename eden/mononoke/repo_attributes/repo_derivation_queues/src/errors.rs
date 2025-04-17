@@ -6,7 +6,7 @@
  */
 
 #[cfg(fbcode_build)]
-use bytes::Bytes;
+use delos_zk_common::ZelosExceptionType;
 use derived_data_manager::DerivationError;
 use derived_data_manager::SharedDerivationError;
 use mononoke_types::RepositoryId;
@@ -27,23 +27,12 @@ pub enum InternalError {
     ItemExists(Box<DerivationDagItem>),
     #[error("Item with not derived and not present dependencies in Derivation DAG {0:#?}")]
     MissingDependencies(Box<DerivationDagItem>),
-    #[error("While querying Derivation DAG item was deleted {0}")]
+    #[error("While querying Derivation DAG item was deleted: {0}")]
     ItemDeleted(String),
     #[error("Attepmt to create Derivation Item with dependency on itself {0:#?}")]
     CircularDependency(DagItemId),
     #[error(transparent)]
     Other(#[from] anyhow::Error),
-}
-
-#[cfg(fbcode_build)]
-#[derive(Error, Debug)]
-pub enum ZeusWrapperError {
-    #[error("Attempt to create already existing znode: {path}")]
-    NodeExists { path: String, data: Option<Bytes> },
-    #[error("Attempt to access non existent znode: {0}")]
-    NoSuchNode(String),
-    #[error(transparent)]
-    Other(#[from] zeus_client::ZeusError),
 }
 
 impl From<DerivationError> for InternalError {
@@ -59,18 +48,14 @@ impl From<SharedDerivationError> for InternalError {
 }
 
 #[cfg(fbcode_build)]
-impl From<ZeusWrapperError> for InternalError {
-    fn from(e: ZeusWrapperError) -> Self {
-        match e {
-            ZeusWrapperError::NoSuchNode(path) => InternalError::ItemDeleted(path),
-            e => InternalError::Other(e.into()),
-        }
-    }
-}
-
-#[cfg(fbcode_build)]
 impl From<zeus_client::ZeusError> for InternalError {
     fn from(e: zeus_client::ZeusError) -> Self {
-        InternalError::Other(e.into())
+        match e {
+            zeus_client::ZeusError::RuntimeError {
+                message: msg,
+                exception_type: ZelosExceptionType::ZNONODE,
+            } => InternalError::ItemDeleted(msg),
+            _ => InternalError::Other(e.into()),
+        }
     }
 }
