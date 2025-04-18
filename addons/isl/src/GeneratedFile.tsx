@@ -83,9 +83,21 @@ export function getCachedGeneratedFileStatuses(
  * No-op if all files already in the cache.
  */
 export function fetchMissingGeneratedFileStatuses(files: ReadonlyArray<RepoRelativePath>) {
-  const notCached = files.filter(
-    file => genereatedFileCache.get(file) == null && !currentlyFetching.has(file),
-  );
+  let changed = false;
+  const notCached = files
+    .filter(file => genereatedFileCache.get(file) == null && !currentlyFetching.has(file))
+    .filter(path => {
+      const isGeneratedTestedFromPath =
+        path.indexOf('__generated__') !== -1 || path.indexOf('/generated/') !== -1;
+      if (isGeneratedTestedFromPath) {
+        genereatedFileCache.set(path, GeneratedStatus.Generated);
+        changed = true;
+      }
+      return !isGeneratedTestedFromPath;
+    });
+  if (changed) {
+    writeAtom(generatedFileGeneration, old => old + 1);
+  }
   if (notCached.length > 0) {
     for (const file of notCached) {
       currentlyFetching.add(file);
