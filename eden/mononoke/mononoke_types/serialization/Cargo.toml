@@ -22,7 +22,7 @@ fbthrift = { version = "0.0.1+unstable", git = "https://github.com/facebook/fbth
 futures = { version = "0.3.30", features = ["async-await", "compat"] }
 ref-cast = "1.0.18"
 rust = { version = "0.0.1+unstable", git = "https://github.com/facebook/fbthrift.git", branch = "main" }
-smallvec = { version = "1.13.2", features = ["serde", "specialization", "union"] }
+smallvec = { version = "1.15", features = ["impl_bincode", "serde", "specialization", "union"] }
 sorted_vector_map = { version = "0.2.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 thiserror = "2"
 

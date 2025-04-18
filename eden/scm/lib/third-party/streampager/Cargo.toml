@@ -22,7 +22,7 @@ notify = { version = "5", optional = true }
 regex = "1.11.1"
 scopeguard = "1.2.0"
 serde = { version = "1.0.185", features = ["derive"] }
-smallvec = { version = "1.13.2", default-features = false }
+smallvec = { version = "1.15", default-features = false }
 terminfo = "0.9"
 termwiz = "0.23"
 thiserror = "2"
