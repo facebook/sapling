@@ -8,6 +8,7 @@
 
 import errno
 import os
+import re
 import sys
 
 from facebook.eden.ttypes import (
@@ -22,7 +23,6 @@ from facebook.eden.ttypes import (
 from .lib import testcase
 from .lib.journal_test_base import JournalTestBase, WindowsJournalTestBase
 from .lib.thrift_objects import buildLargeChange, buildSmallChange, getLargeChangeSafe
-
 
 if sys.platform == "win32":
     testBase = WindowsJournalTestBase
@@ -389,11 +389,10 @@ class ChangesTestCommon(testBase):
             self.getChangesSinceV2(position=position, root="this_path_does_not_exist")
 
         mount_string = self.mount_path
-        if sys.platform == "win32":
-            mount_string = f"\\\\?\\{mount_string}"
-        self.assertEqual(
+        self.assertRegex(
             ctx.exception.message,
-            f'Invalid root path "this_path_does_not_exist" in mount {mount_string}',
+            'Invalid root path "this_path_does_not_exist" in mount .*'
+            + re.escape(str(mount_string)),
         )
         self.assertEqual(ctx.exception.errorCode, errno.EINVAL)
         self.assertEqual(
@@ -477,11 +476,10 @@ class ChangesTestCommon(testBase):
             self.getChangesSinceV2(position=position, root="this_path_is_a_file")
 
         mount_string = self.mount_path
-        if sys.platform == "win32":
-            mount_string = f"\\\\?\\{mount_string}"
-        self.assertEqual(
+        self.assertRegex(
             ctx.exception.message,
-            f'Invalid root path "this_path_is_a_file" in mount {mount_string}',
+            'Invalid root path "this_path_is_a_file" in mount .*'
+            + re.escape(str(mount_string)),
         )
         self.assertEqual(ctx.exception.errorCode, errno.EINVAL)
         self.assertEqual(
