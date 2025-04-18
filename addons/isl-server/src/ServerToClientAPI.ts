@@ -31,6 +31,7 @@ import type {Logger} from './logger';
 import type {ServerPlatform} from './serverPlatform';
 import type {RepositoryContext} from './serverTypes';
 
+import type {InternalTypes} from 'isl/src/InternalTypes';
 import {deserializeFromString, serializeToString} from 'isl/src/serialize';
 import type {PartiallySelectedDiffCommit} from 'isl/src/stackEdit/diffSplitTypes';
 import {Readable} from 'node:stream';
@@ -985,10 +986,10 @@ export default class ServerToClientAPI {
       }
       case 'fetchGkDetails': {
         Internal.fetchGkDetails?.(ctx, data.name)
-          .then(gk => {
+          .then((gk: InternalTypes['InternalGatekeeper']) => {
             this.postMessage({type: 'fetchedGkDetails', id: data.id, result: {value: gk}});
           })
-          .catch(err => {
+          .catch((err: unknown) => {
             logger?.error('Could not fetch GK details', err);
             this.postMessage({
               type: 'fetchedGkDetails',
@@ -1000,10 +1001,10 @@ export default class ServerToClientAPI {
       }
       case 'fetchJkDetails': {
         Internal.fetchJustKnobsByNames?.(ctx, data.names)
-          .then(jk => {
+          .then((jk: InternalTypes['InternalJustknob']) => {
             this.postMessage({type: 'fetchedJkDetails', id: data.id, result: {value: jk}});
           })
-          .catch(err => {
+          .catch((err: unknown) => {
             logger?.error('Could not fetch JK details', err);
             this.postMessage({
               type: 'fetchedJkDetails',
@@ -1015,14 +1016,14 @@ export default class ServerToClientAPI {
       }
       case 'fetchKnobsetDetails': {
         Internal.fetchKnobset?.(ctx, data.configPath)
-          .then(knobset => {
+          .then((knobset: InternalTypes['InternalKnobset']) => {
             this.postMessage({
               type: 'fetchedKnobsetDetails',
               id: data.id,
               result: {value: knobset},
             });
           })
-          .catch(err => {
+          .catch((err: unknown) => {
             logger?.error('Could not fetch knobset details', err);
             this.postMessage({
               type: 'fetchedKnobsetDetails',
@@ -1034,14 +1035,14 @@ export default class ServerToClientAPI {
       }
       case 'fetchQeDetails': {
         Internal.fetchQeMetadata?.(ctx, data.name)
-          .then(qe => {
+          .then((qe: InternalTypes['InternalQuickExperiment']) => {
             this.postMessage({
               type: 'fetchedQeDetails',
               id: data.id,
               result: {value: qe},
             });
           })
-          .catch(err => {
+          .catch((err: unknown) => {
             logger?.error('Could not fetch QE details', err);
             this.postMessage({
               type: 'fetchedQeDetails',

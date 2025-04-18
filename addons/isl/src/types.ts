@@ -1023,7 +1023,7 @@ export type ServerToClientMessage =
   | {
       type: 'fetchedQeDetails';
       id: string;
-      result: Result<InternalTypes['InternalQuickExperment']>;
+      result: Result<InternalTypes['InternalQuickExperiment']>;
     };
 
 export type Disposable = {
