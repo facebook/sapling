@@ -31,6 +31,7 @@ use configmodel::ConfigExt;
 use configmodel::ValueSource;
 use eagerepo::EagerRepo;
 use migration::feature::deprecate;
+use regex::Regex;
 use repo::repo::Repo;
 use repourl::RepoUrl;
 use repourl::encode_repo_name;
@@ -146,6 +147,16 @@ fn run_eden(
     mut config: ConfigSet,
 ) -> Result<()> {
     let logger = ctx.logger();
+
+    if let Some(preferred_regex) = ctx
+        .config()
+        .get_nonempty_opt::<Regex>("clone", "eden-preferred-destination-regex")?
+    {
+        let dest_str = destination.to_string_lossy();
+        if !preferred_regex.is_match(&dest_str) {
+            logger.warn(format!("WARNING: Clone destination {dest_str} is not a preferred location and may result in a bad experience. Preferred locations match the regex '{}'.", preferred_regex.as_str()));
+        }
+    }
 
     // We don't return an error immediately because we need to log the clone
     // type before that, yet we might need to log something different if we
