@@ -561,6 +561,21 @@ def is_source_commit_allowed(ui, source_ctx) -> bool:
     return False
 
 
+def is_commit_graftable(repo, rev) -> bool:
+    ui = repo.ui
+    if ui.configbool("subtree", "allow-graft-subtree-commit"):
+        return True
+
+    ctx = repo[rev]
+    if get_subtree_metadata(ctx.extra()):
+        subtree_ops = ", ".join(["copy", "merge", "import"])
+        ui.warn(
+            _("skipping ungraftable subtree (%s) revision %s\n") % (subtree_ops, ctx)
+        )
+        return False
+    return True
+
+
 def contains_shallow_copy(repo, node):
     branches = get_subtree_branches(repo, node)
     for b in branches:

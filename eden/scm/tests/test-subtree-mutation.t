@@ -200,7 +200,23 @@ test graft subtree copy and merge commits
   o  b4cb27eee4e2 A
   $ hg go -q $B
   $ hg graft 5d2f9c7b4852 ee6785824a72
-  skipping ungraftable subtree copy and merge revision 5d2f9c7b4852
-  skipping ungraftable subtree copy and merge revision ee6785824a72
+  skipping ungraftable subtree (copy, merge, import) revision 5d2f9c7b4852
+  skipping ungraftable subtree (copy, merge, import) revision ee6785824a72
   abort: empty revision set was specified
   [255]
+
+enables grafting of subtree commits without retaining subtree metadata
+  $ hg graft ee6785824a72 --config subtree.allow-graft-subtree-commit=True
+  grafting ee6785824a72 "subtree copy foo to bar"
+  $ hg log -G -T '{node|short} {desc|firstline}'
+  @  aa57c2d74172 subtree copy foo to bar
+  │
+  │ o  5d2f9c7b4852 subtree merge foo to bar
+  │ │
+  │ o  ee6785824a72 subtree copy foo to bar
+  ├─╯
+  o  c4fbbcdf676b B
+  │
+  o  b4cb27eee4e2 A
+  $ hg subtree inspect -r .
+  no subtree metadata found for commit aa57c2d74172
