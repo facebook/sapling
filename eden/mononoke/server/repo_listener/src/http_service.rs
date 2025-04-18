@@ -36,6 +36,7 @@ use http::Request;
 use http::Response;
 use http::Uri;
 use hyper::Body;
+use hyper::ext;
 use hyper::service::Service;
 use metadata::Metadata;
 use mononoke_api::Repo;
@@ -149,6 +150,35 @@ fn bump_qps(headers: &HeaderMap, qps: Option<&Qps>) -> Result<()> {
     }
 }
 
+/**
+ * websocket upgrades:
+ *  – http/1.1 (RFC6455) uses "upgrade" header
+ *  – http/2 (RFC8441) uses CONNECT method & :protocol pseudo header
+ */
+fn is_websocket_req(is_h2: bool, req: &Request<Body>) -> Result<bool, HttpError> {
+    let upgrade_protocol: &str = if is_h2 {
+        req.extensions()
+            .get::<ext::Protocol>()
+            .map(|p| p.as_str())
+            .unwrap_or_default()
+    } else {
+        req.headers()
+            .get(http::header::UPGRADE)
+            .as_ref()
+            .map(|h| h.to_str())
+            .transpose()
+            .with_context(|| {
+                // NOTE: We're just stringifying here: the borrow is fine.
+                #[allow(clippy::borrow_interior_mutable_const)]
+                let header = &http::header::UPGRADE;
+                format!("Invalid header: {}", header)
+            })
+            .map_err(HttpError::BadRequest)?
+            .unwrap_or_default()
+    };
+    Ok(upgrade_protocol == "websocket")
+}
+
 impl<S> MononokeHttpService<S>
 where
     S: MononokeStream,
@@ -171,21 +201,7 @@ where
             return Ok(res);
         }
 
-        let upgrade = req
-            .headers()
-            .get(http::header::UPGRADE)
-            .as_ref()
-            .map(|h| h.to_str())
-            .transpose()
-            .with_context(|| {
-                // NOTE: We're just stringifying here: the borrow is fine.
-                #[allow(clippy::borrow_interior_mutable_const)]
-                let header = &http::header::UPGRADE;
-                format!("Invalid header: {}", header)
-            })
-            .map_err(HttpError::BadRequest)?;
-
-        if upgrade == Some("websocket") {
+        if is_websocket_req(self.conn.is_h2, &req)? {
             return self.handle_websocket_request(req).await;
         }
 
@@ -244,8 +260,14 @@ where
 
         let websocket_key = calculate_websocket_accept(req.headers());
 
+        let status_code = if self.conn.is_h2 {
+            http::StatusCode::OK
+        } else {
+            http::StatusCode::SWITCHING_PROTOCOLS
+        };
+
         let mut builder = Response::builder()
-            .status(http::StatusCode::SWITCHING_PROTOCOLS)
+            .status(status_code)
             .header(http::header::CONNECTION, "upgrade")
             .header(http::header::UPGRADE, "websocket")
             .header(HEADER_WEBSOCKET_ACCEPT, websocket_key);
@@ -285,13 +307,7 @@ where
                 .await
                 .context("Failed to upgrade connection")?;
 
-            // NOTE: We unwrap() here because we explicitly parameterize the MononokeHttpService
-            // over its socket type. If we get it wrong then that'd be a deterministic failure that
-            // would show up in tests.
-            let hyper::upgrade::Parts { io, read_buf, .. } = io.downcast::<S>().unwrap();
-
-            let (rx, tx) = tokio::io::split(io);
-            let mut rx = AsyncReadExt::chain(Cursor::new(read_buf), rx);
+            let (mut rx, tx) = tokio::io::split(io);
 
             // Sometimes server rejects client's request quickly. So quickly,
             // that right after sending 101 Switching Protocols, it immediately
