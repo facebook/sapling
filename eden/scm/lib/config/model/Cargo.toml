@@ -16,6 +16,7 @@ name = "configmodel"
 [dependencies]
 anyhow = "1.0.95"
 auto_impl = "1.2.1"
+regex = "1.11.1"
 sapling-minibytes = { version = "0.1.0", path = "../../minibytes" }
 sapling-util = { version = "0.1.0", path = "../../util" }
 thiserror = "2"

@@ -20,6 +20,7 @@ rust_library(
     deps = [
         "fbsource//third-party/rust:anyhow",
         "fbsource//third-party/rust:auto_impl",
+        "fbsource//third-party/rust:regex",
         "fbsource//third-party/rust:thiserror",
         "fbsource//third-party/rust:twox-hash",
         "//eden/scm/lib/minibytes:minibytes",

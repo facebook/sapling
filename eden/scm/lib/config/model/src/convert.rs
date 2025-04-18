@@ -12,6 +12,7 @@ use std::path::PathBuf;
 use std::time::Duration;
 
 use minibytes::Text;
+use regex::Regex;
 use util::path::expand_path;
 
 use crate::Config;
@@ -255,6 +256,13 @@ impl FromConfigValue for Vec<Text> {
 impl<T: FromConfigValue> FromConfigValue for Option<T> {
     fn try_from_str(s: &str) -> Result<Self> {
         T::try_from_str(s).map(Option::Some)
+    }
+}
+
+impl FromConfigValue for Regex {
+    fn try_from_str(s: &str) -> Result<Self> {
+        Regex::new(s)
+            .map_err(|err| Error::Convert(format!("error parsing '{s}' as regex: {err:?}")))
     }
 }
 
@@ -526,6 +534,16 @@ mod tests {
         // Don't allow capitals for now - ambiguous with "month" potentially if we ever
         // want to support that.
         assert!(Duration::try_from_str("1M").is_err());
+
+        Ok(())
+    }
+
+    #[test]
+    fn test_regex() -> anyhow::Result<()> {
+        let re = Regex::try_from_str("one|two")?;
+        assert!(re.is_match("two"));
+
+        assert!(Regex::try_from_str("(oops").is_err());
 
         Ok(())
     }
