@@ -122,6 +122,14 @@ std::string logHash(StringPiece thriftArg) {
   }
 }
 
+std::string logPosition(JournalPosition position) {
+  return fmt::format(
+      "{}:{}:{}",
+      position.mountGeneration().value(),
+      position.sequenceNumber().value(),
+      logHash(position.snapshotHash().value()));
+}
+
 /**
  * Convert a vector of strings from a thrift argument to a field
  * that we can log in an INSTRUMENT_THRIFT_CALL() log message.
@@ -2376,10 +2384,8 @@ void EdenServiceHandler::sync_changesSinceV2(
       DBG3,
       *params->mountPoint(),
       fmt::format(
-          "fromPosition={}:{}:{}, root:{}, includedRoots:{}, excludedRoots:{}, includedSuffixes:{}, excludedSuffixes:{}",
-          fromPosition.mountGeneration().value(),
-          fromPosition.sequenceNumber().value(),
-          logHash(fromPosition.snapshotHash().value()),
+          "fromPosition={}, root:{}, includedRoots:{}, excludedRoots:{}, includedSuffixes:{}, excludedSuffixes:{}",
+          logPosition(fromPosition),
           root,
           toLogArg(includedRoots),
           toLogArg(excludedRoots),
@@ -2398,9 +2404,9 @@ void EdenServiceHandler::sync_changesSinceV2(
 
   auto& fetchContext = helper->getFetchContext();
 
+  auto& mount = mountHandle.getEdenMount();
+  auto& mountPath = mount.getPath();
   if (!root.empty()) {
-    auto& mount = mountHandle.getEdenMount();
-    auto& mountPath = mount.getPath();
     bool rootExists =
         waitForPendingWrites(mount, *params->sync())
             .thenValue(
@@ -2424,6 +2430,9 @@ void EdenServiceHandler::sync_changesSinceV2(
     }
   }
 
+  bool includeVCSRoots = params->includeVCSRoots().has_value()
+      ? params->includeVCSRoots().value()
+      : false;
   // Has EdenFS restarted or remounted
   if (folly::to_unsigned(*fromPosition.mountGeneration()) !=
       mountHandle.getEdenMount().getMountGeneration()) {
@@ -2447,15 +2456,13 @@ void EdenServiceHandler::sync_changesSinceV2(
     auto config = server_->getServerState()->getEdenConfig();
     auto maxNumberOfChanges = config->notifyMaxNumberOfChanges.getValue();
     auto includedAndExcludedRoots = buildIncludedAndExcludedRoots(
-        params->includeVCSRoots().has_value()
-            ? params->includeVCSRoots().value()
-            : false,
+        includeVCSRoots,
         config->vcsDirectories.getValue(),
         includedRoots,
         excludedRoots,
         root);
-    auto includedAndExcludedSuffixes = std::make_pair(
-        std::move(includedSuffixes), std::move(excludedSuffixes));
+    auto includedAndExcludedSuffixes =
+        std::make_pair(includedSuffixes, excludedSuffixes);
 
     const auto isTruncated = mountHandle.getJournal().forEachDelta(
         *fromPosition.sequenceNumber_ref() + 1,
@@ -2689,6 +2696,23 @@ void EdenServiceHandler::sync_changesSinceV2(
 
     result.toPosition_ref() = std::move(toPosition);
   }
+
+  server_->getServerState()->getStructuredLogger()->logEvent(ChangesSince{
+      "",
+      logPosition(fromPosition),
+      mountPath.asString(),
+      root.asString(),
+      includedRoots,
+      excludedRoots,
+      includedSuffixes,
+      excludedSuffixes,
+      includeVCSRoots,
+      0,
+      0,
+      0,
+      0,
+      0,
+  });
 }
 
 folly::SemiFuture<std::unique_ptr<StartFileAccessMonitorResult>>
