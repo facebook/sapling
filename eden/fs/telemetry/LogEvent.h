@@ -847,4 +847,74 @@ struct CheckoutUpdateError : public EdenFSEvent {
   }
 };
 
+struct ChangesSince : public EdenFSEvent {
+  std::string client_cmdline;
+  std::string position;
+  std::string mount;
+  std::string root;
+  std::vector<std::string> included_roots;
+  std::vector<std::string> excluded_roots;
+  std::vector<std::string> included_suffixes;
+  std::vector<std::string> excluded_suffixes;
+  bool include_vcs;
+  uint64_t num_small_changes;
+  uint64_t num_renamed_directories;
+  uint64_t num_commit_transitions;
+  std::optional<uint64_t> lost_changes;
+  uint64_t num_filtered_changes;
+
+  ChangesSince(
+      std::string client_cmdline,
+      std::string position,
+      std::string mount,
+      std::string root,
+      std::vector<std::string> included_roots,
+      std::vector<std::string> excluded_roots,
+      std::vector<std::string> included_suffixes,
+      std::vector<std::string> excluded_suffixes,
+      bool include_vcs,
+      uint64_t num_small_changes,
+      uint64_t num_renamed_directories,
+      uint64_t num_commit_transitions,
+      std::optional<uint64_t> lost_changes,
+      uint64_t num_filtered_changes)
+      : client_cmdline(std::move(client_cmdline)),
+        position(std::move(position)),
+        mount(std::move(mount)),
+        root(std::move(root)),
+        included_roots(std::move(included_roots)),
+        excluded_roots(std::move(excluded_roots)),
+        included_suffixes(std::move(included_suffixes)),
+        excluded_suffixes(std::move(excluded_suffixes)),
+        include_vcs(include_vcs),
+        num_small_changes(num_small_changes),
+        num_renamed_directories(num_renamed_directories),
+        num_commit_transitions(num_commit_transitions),
+        lost_changes(lost_changes),
+        num_filtered_changes(num_filtered_changes) {}
+
+  void populate(DynamicEvent& event) const override {
+    event.addString("client_cmdline", client_cmdline);
+    event.addString("position", position);
+    event.addString("mount", mount);
+    event.addString("root", root);
+    event.addStringVec("included_roots", included_roots);
+    event.addStringVec("excluded_roots", excluded_roots);
+    event.addStringVec("included_suffixes", included_suffixes);
+    event.addStringVec("excluded_suffixes", excluded_suffixes);
+    event.addBool("include_vcs", include_vcs);
+    event.addInt("num_small_changes", num_small_changes);
+    event.addInt("num_renamed_directory", num_renamed_directories);
+    event.addInt("num_commit_transition", num_commit_transitions);
+    if (lost_changes.has_value()) {
+      event.addInt("lost_changes", lost_changes.value());
+    }
+    event.addInt("num_filtered_changes", num_filtered_changes);
+  }
+
+  const char* getType() const override {
+    return "changes_since";
+  }
+};
+
 } // namespace facebook::eden
