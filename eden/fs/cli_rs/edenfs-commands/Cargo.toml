@@ -26,6 +26,7 @@ hex = { version = "0.4.3", features = ["alloc"] }
 hg_util = { package = "sapling-util", version = "0.1.0", path = "../../../scm/lib/util" }
 once_cell = "1.12"
 rand = { version = "0.8", features = ["small_rng"] }
+rusqlite = { version = "0.32.1", features = ["backup", "blob", "column_decltype", "limits"] }
 sapling-io = { version = "0.1.0", path = "../../../scm/lib/io" }
 sapling-termlogger = { version = "0.1.0", path = "../../../scm/lib/io/term/logger" }
 sapling-thrift-types = { version = "0.1.0", path = "../../../scm/lib/thrift-types" }

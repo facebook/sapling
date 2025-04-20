@@ -28,6 +28,7 @@ use crate::ExitCode;
 const BENCH_DIR_NAME: &str = "__fsiomicrobench__";
 const ROCKSDB_FILE_NAME: &str = "__rocksdb__";
 const LMDB_FILE_NAME: &str = "__lmdb__";
+const SQLITE_FILE_NAME: &str = "__sqlite__";
 const COMBINED_DATA_FILE_NAME: &str = "__combined_data__";
 const DEFAULT_NUMBER_OF_FILES: usize = 64 * 1024;
 const DEFAULT_CHUNK_SIZE: usize = 4 * 1024;
@@ -131,6 +132,10 @@ impl RandomData {
 
     fn lmdb_path(&self) -> PathBuf {
         self.test_dir.join(LMDB_FILE_NAME)
+    }
+
+    fn sqlite_path(&self) -> PathBuf {
+        self.test_dir.join(SQLITE_FILE_NAME)
     }
 }
 
@@ -378,6 +383,60 @@ fn bench_lmdb_read_mfmd(random_data: &RandomData) -> Result<()> {
     Ok(())
 }
 
+fn bench_sqlite_write_mfmd(random_data: &RandomData) -> Result<()> {
+    let conn = rusqlite::Connection::open(random_data.sqlite_path())?;
+    conn.execute_batch("PRAGMA journal_mode = WAL; PRAGMA synchronous = OFF;")?;
+    conn.execute(
+        "CREATE TABLE IF NOT EXISTS data (key BLOB PRIMARY KEY, value BLOB NOT NULL)",
+        [],
+    )?;
+    let mut stmt = conn.prepare("INSERT INTO data (key, value) VALUES (?, ?)")?;
+    let keys = random_data.keys();
+    let mut agg_write_dur = std::time::Duration::new(0, 0);
+    for (chunk, key) in random_data.chunks.iter().zip(keys.iter()) {
+        let start = Instant::now();
+        stmt.execute(rusqlite::params![key, chunk])?;
+        agg_write_dur += start.elapsed();
+    }
+    let avg_write_dur = agg_write_dur.as_secs_f64() / random_data.number_of_files as f64;
+    let mb_per_second = random_data.chunk_size as f64 / avg_write_dur / BYTES_IN_MEGABYTE as f64;
+    println!("MFMD Write with SQLite");
+    println!("\t- {:.2} MiB/s write()", mb_per_second);
+    println!(
+        "\t- {:.4} ms write() {:.0} KiB latency",
+        avg_write_dur * 1000.0,
+        random_data.chunk_size as f64 / BYTES_IN_KILOBYTE as f64
+    );
+    Ok(())
+}
+
+fn bench_sqlite_read_mfmd(random_data: &RandomData) -> Result<()> {
+    let conn = rusqlite::Connection::open(random_data.sqlite_path())?;
+    let mut stmt = conn.prepare("SELECT value FROM data WHERE key = ?")?;
+    let keys = random_data.keys();
+    let mut read_data = vec![0u8; random_data.chunk_size];
+    let mut agg_read_dur = std::time::Duration::new(0, 0);
+    for key in keys {
+        let start = Instant::now();
+        stmt.query_row(rusqlite::params![key], |row| {
+            let value: Vec<u8> = row.get(0)?;
+            read_data.copy_from_slice(&value);
+            Ok(())
+        })?;
+        agg_read_dur += start.elapsed();
+    }
+    let avg_read_dur = agg_read_dur.as_secs_f64() / random_data.number_of_files as f64;
+    let mb_per_second = random_data.chunk_size as f64 / avg_read_dur / BYTES_IN_MEGABYTE as f64;
+    println!("MFMD Read with SQLite");
+    println!("\t- {:.2} MiB/s read()", mb_per_second);
+    println!(
+        "\t- {:.4} ms read() {:.0} KiB latency",
+        avg_read_dur * 1000.0,
+        random_data.chunk_size as f64 / BYTES_IN_KILOBYTE as f64
+    );
+    Ok(())
+}
+
 fn bench_write_sfmd(random_data: &RandomData) -> Result<()> {
     let start = Instant::now();
     let mut file = File::create(random_data.combined_data_path())?;
@@ -477,6 +536,8 @@ impl crate::Subcommand for BenchCmd {
                     bench_rocksdb_read_mfmd(&random_data)?;
                     bench_lmdb_write_mfmd(&random_data)?;
                     bench_lmdb_read_mfmd(&random_data)?;
+                    bench_sqlite_write_mfmd(&random_data)?;
+                    bench_sqlite_read_mfmd(&random_data)?;
                     print_section_divider();
                     println!("Removing the directory at {:?}", random_data.test_dir);
                     remove_test_dir(&random_data.test_dir)?;
