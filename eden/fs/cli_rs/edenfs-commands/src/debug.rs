@@ -14,6 +14,7 @@ use clap::Parser;
 use crate::ExitCode;
 use crate::Subcommand;
 
+mod bench;
 mod clear_local_caches;
 mod compact_local_storage;
 mod stress;
@@ -37,6 +38,7 @@ pub enum DebugSubcommand {
     Subscribe(subscribe::SubscribeCmd),
     #[clap(subcommand)]
     Stress(stress::StressCmd),
+    Bench(bench::BenchCmd),
 }
 
 #[async_trait]
@@ -48,6 +50,7 @@ impl Subcommand for DebugCmd {
             CompactLocalStorage(cmd) => cmd,
             Subscribe(cmd) => cmd,
             Stress(cmd) => cmd,
+            Bench(cmd) => cmd,
         };
         sc.run().await
     }
