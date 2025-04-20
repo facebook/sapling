@@ -37,8 +37,7 @@ const BYTES_IN_MEGABYTE: usize = 1024 * BYTES_IN_KILOBYTE;
 const BYTES_IN_GIGABYTE: usize = 1024 * BYTES_IN_MEGABYTE;
 
 #[derive(Parser, Debug)]
-#[clap(about = "Run benchmarks for EdenFS and OS-native file systems on Linux, macOS, and Windows")]
-pub struct BenchCmd {
+pub struct CommonOptions {
     /// Directory to use for testing
     #[clap(long, default_value_t = std::env::temp_dir().to_str().unwrap().to_string())]
     test_dir: String,
@@ -50,6 +49,22 @@ pub struct BenchCmd {
     /// Size of each chunk in bytes
     #[clap(long, default_value_t = DEFAULT_CHUNK_SIZE)]
     chunk_size: usize,
+}
+
+#[derive(Parser, Debug)]
+#[clap(about = "Run benchmarks for EdenFS and OS-native file systems on Linux, macOS, and Windows")]
+pub enum BenchCmd {
+    #[clap(about = "Run filesystem I/O benchmarks")]
+    FsIo {
+        #[clap(flatten)]
+        common: CommonOptions,
+    },
+
+    #[clap(about = "Run database I/O benchmarks")]
+    DbIo {
+        #[clap(flatten)]
+        common: CommonOptions,
+    },
 }
 
 struct RandomData {
@@ -418,32 +433,56 @@ impl crate::Subcommand for BenchCmd {
     async fn run(&self) -> Result<ExitCode> {
         print_section_divider();
         print_glossary();
-        match validate_test_dir(&self.test_dir) {
-            Ok(path) => {
-                print_section_divider();
-                println!("Prepared the directory at {:?}", path);
-                println!("Generating in-memory random data ...");
-                let random_data = RandomData::new(path, self.number_of_files, self.chunk_size);
-                println!(
-                    "The random data generated with {} chunks with {:.0} KiB each, with the total size of {:.2} GiB.",
-                    random_data.number_of_files,
-                    random_data.chunk_size as f64 / BYTES_IN_KILOBYTE as f64,
-                    random_data.total_size() as f64 / BYTES_IN_GIGABYTE as f64
-                );
-                print_section_divider();
-                bench_write_mfmd(&random_data)?;
-                bench_read_mfmd(&random_data)?;
-                bench_rocksdb_write_mfmd(&random_data)?;
-                bench_rocksdb_read_mfmd(&random_data)?;
-                bench_lmdb_write_mfmd(&random_data)?;
-                bench_lmdb_read_mfmd(&random_data)?;
-                bench_write_sfmd(&random_data)?;
-                bench_read_sfmd(&random_data)?;
-                print_section_divider();
-                println!("Removing the directory at {:?}", random_data.test_dir);
-                remove_test_dir(&random_data.test_dir)?;
-            }
-            Err(e) => return Err(e),
+
+        match self {
+            Self::FsIo { common } => match validate_test_dir(&common.test_dir) {
+                Ok(path) => {
+                    print_section_divider();
+                    println!("Prepared the directory at {:?}", path);
+                    println!("Generating in-memory random data ...");
+                    let random_data =
+                        RandomData::new(path, common.number_of_files, common.chunk_size);
+                    println!(
+                        "The random data generated with {} chunks with {:.0} KiB each, with the total size of {:.2} GiB.",
+                        random_data.number_of_files,
+                        random_data.chunk_size as f64 / BYTES_IN_KILOBYTE as f64,
+                        random_data.total_size() as f64 / BYTES_IN_GIGABYTE as f64
+                    );
+                    print_section_divider();
+                    bench_write_mfmd(&random_data)?;
+                    bench_read_mfmd(&random_data)?;
+                    bench_write_sfmd(&random_data)?;
+                    bench_read_sfmd(&random_data)?;
+                    print_section_divider();
+                    println!("Removing the directory at {:?}", random_data.test_dir);
+                    remove_test_dir(&random_data.test_dir)?;
+                }
+                Err(e) => return Err(e),
+            },
+            Self::DbIo { common } => match validate_test_dir(&common.test_dir) {
+                Ok(path) => {
+                    print_section_divider();
+                    println!("Prepared the directory at {:?}", path);
+                    println!("Generating in-memory random data ...");
+                    let random_data =
+                        RandomData::new(path, common.number_of_files, common.chunk_size);
+                    println!(
+                        "The random data generated with {} chunks with {:.0} KiB each, with the total size of {:.2} GiB.",
+                        random_data.number_of_files,
+                        random_data.chunk_size as f64 / BYTES_IN_KILOBYTE as f64,
+                        random_data.total_size() as f64 / BYTES_IN_GIGABYTE as f64
+                    );
+                    print_section_divider();
+                    bench_rocksdb_write_mfmd(&random_data)?;
+                    bench_rocksdb_read_mfmd(&random_data)?;
+                    bench_lmdb_write_mfmd(&random_data)?;
+                    bench_lmdb_read_mfmd(&random_data)?;
+                    print_section_divider();
+                    println!("Removing the directory at {:?}", random_data.test_dir);
+                    remove_test_dir(&random_data.test_dir)?;
+                }
+                Err(e) => return Err(e),
+            },
         }
 
         Ok(0)

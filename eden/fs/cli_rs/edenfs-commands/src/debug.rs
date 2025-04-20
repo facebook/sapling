@@ -38,6 +38,7 @@ pub enum DebugSubcommand {
     Subscribe(subscribe::SubscribeCmd),
     #[clap(subcommand)]
     Stress(stress::StressCmd),
+    #[clap(subcommand)]
     Bench(bench::BenchCmd),
 }
 
