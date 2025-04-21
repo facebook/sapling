@@ -1079,7 +1079,7 @@ pub fn checkout(
 
     let preupdate_hooks = hook::Hooks::from_config(repo.config(), &ctx.io, "preupdate");
     preupdate_hooks.run_shell_hooks(
-        Some(repo.path()),
+        Some(repo),
         true,
         Some(&HashMap::from([
             ("parent1".to_string(), wc.first_parent()?.to_hex()),
@@ -1126,7 +1126,7 @@ pub fn checkout(
 
     let update_hooks = hook::Hooks::from_config(repo.config(), &ctx.io, "update");
     update_hooks.run_shell_hooks(
-        Some(repo.path()),
+        Some(repo),
         false,
         Some(&HashMap::from([
             ("parent1".to_string(), target_commit.to_hex()),

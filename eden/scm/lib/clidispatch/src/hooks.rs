@@ -7,12 +7,12 @@
 
 use std::collections::HashMap;
 use std::io::Write;
-use std::path::Path;
 
 use anyhow::Result;
 use configmodel::Config;
 use configmodel::ConfigExt;
 use io::IO;
+use repo::Repo;
 use sysutil::shell_escape;
 
 use crate::command::CommandDefinition;
@@ -53,21 +53,21 @@ impl Hooks {
 
     // Run "pre-" command hooks, skipping Python hooks. Will propagate errors from the
     // hooks, aborting the command.
-    pub(crate) fn run_pre(&self, repo_root: Option<&Path>, full_args: &[String]) -> Result<()> {
-        run_hooks(&self.pre, repo_root, full_args, true, None)
+    pub(crate) fn run_pre(&self, repo: Option<&Repo>, full_args: &[String]) -> Result<()> {
+        run_hooks(&self.pre, repo, full_args, true, None)
     }
 
     // Run "post-" command hooks, skipping Python hooks. Will not propagate errors from
     // the hooks.
     pub(crate) fn run_post(
         &self,
-        repo_root: Option<&Path>,
+        repo: Option<&Repo>,
         full_args: &[String],
         result: u8,
     ) -> Result<()> {
         run_hooks(
             &self.post,
-            repo_root,
+            repo,
             full_args,
             false,
             Some(&|kwargs| {
@@ -78,8 +78,8 @@ impl Hooks {
 
     // Run "fail-" command hooks, skipping Python hooks. Will not propagate errors from
     // the hooks.
-    pub(crate) fn run_fail(&self, repo_root: Option<&Path>, full_args: &[String]) -> Result<()> {
-        run_hooks(&self.fail, repo_root, full_args, false, None)
+    pub(crate) fn run_fail(&self, repo: Option<&Repo>, full_args: &[String]) -> Result<()> {
+        run_hooks(&self.fail, repo, full_args, false, None)
     }
 
     fn add_command(&mut self, command_name: &str, config: &dyn Config) -> Result<()> {
@@ -127,7 +127,7 @@ impl Hooks {
 
 fn run_hooks(
     hooks: &[hook::Hooks],
-    repo_root: Option<&Path>,
+    repo: Option<&Repo>,
     full_args: &[String],
     propagate_errors: bool,
     extra_kwargs_func: Option<&dyn Fn(&mut HashMap<&str, Option<String>>)>,
@@ -142,7 +142,7 @@ fn run_hooks(
         (func)(&mut hook_args);
     }
     for hooks in hooks {
-        hooks.run_shell_hooks(repo_root, propagate_errors, Some(&hook_args))?;
+        hooks.run_shell_hooks(repo, propagate_errors, Some(&hook_args))?;
     }
 
     Ok(())

@@ -6,7 +6,6 @@
  */
 
 use std::io::Write;
-use std::path::Path;
 use std::process::Command;
 use std::process::ExitStatus;
 
@@ -114,7 +113,7 @@ impl Hooks {
 
     pub fn run_shell_hooks(
         &self,
-        repo_root: Option<&Path>,
+        repo: Option<&Repo>,
         propagate_errors: bool,
         kwargs: Option<&dyn Serialize>,
     ) -> Result<()> {
@@ -128,8 +127,8 @@ impl Hooks {
 
                 let mut cmd = Command::new_shell(shell_cmd);
 
-                if let Some(repo_root) = &repo_root {
-                    cmd.current_dir(repo_root);
+                if let Some(repo) = repo {
+                    cmd.current_dir(repo.path());
                 }
 
                 cmd.env("HG_HOOKTYPE", &self.hook_type);

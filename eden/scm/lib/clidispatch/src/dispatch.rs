@@ -450,7 +450,7 @@ impl Dispatcher {
                 self.convert_to_repoless_config()?;
             }
 
-            hooks.run_pre(self.repo().map(|r| r.path()), &self.args[1..])?;
+            hooks.run_pre(self.repo(), &self.args[1..])?;
 
             let res = match handler.func() {
                 CommandFunc::Repo(f) => f(parsed, io, self.repo_mut()?),
@@ -465,10 +465,8 @@ impl Dispatcher {
             };
 
             match &res {
-                Ok(result_code) => {
-                    hooks.run_post(self.repo().map(|r| r.path()), &self.args[1..], *result_code)?
-                }
-                Err(_) => hooks.run_fail(self.repo().map(|r| r.path()), &self.args[1..])?,
+                Ok(result_code) => hooks.run_post(self.repo(), &self.args[1..], *result_code)?,
+                Err(_) => hooks.run_fail(self.repo(), &self.args[1..])?,
             }
 
             res
