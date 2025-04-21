@@ -1124,7 +1124,9 @@ pub fn checkout(
         )?)
     };
 
-    let update_hooks = hook::Hooks::from_config(repo.config(), &ctx.io, "update");
+    let mut update_hooks = hook::Hooks::from_config(repo.config(), &ctx.io, "update");
+    // No need to run this hook as it was part of `edenfs::edenfs_checkout`.
+    update_hooks.ignore("python:sapling.hooks.edenfs_redirect_fixup");
     update_hooks.run_shell_hooks(
         Some(repo),
         false,
