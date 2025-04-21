@@ -5,6 +5,7 @@
  * LICENSE file in the root directory of this source tree.
  */
 
+use std::any::Any;
 use std::collections::HashMap;
 use std::io::Write;
 use std::path::Path;
@@ -16,6 +17,7 @@ use anyhow::Result;
 use anyhow::bail;
 use configmodel::Config;
 use configmodel::ConfigExt;
+use erased_serde::Serialize;
 use io::IO;
 use io::IsTty;
 use minibytes::Text;
@@ -47,6 +49,15 @@ pub struct Hooks {
     hooks: Vec<Hook>,
 }
 
+pub struct PythonHookSig;
+
+impl<'a> factory::FunctionSignature<'a> for PythonHookSig {
+    /// (repo, spec, hook_name, kwargs)
+    /// See run_python_hook in pyhook. `Any` is intended for `Repo`, without depending on `lib/repo`.
+    type In = (&'a dyn Any, &'a str, &'a str, Option<&'a dyn Serialize>);
+    type Out = Result<i8>;
+}
+
 impl Hooks {
     pub fn from_config(cfg: &dyn Config, io: &IO, hook_type: &str) -> Self {
         Self {
@@ -62,6 +73,38 @@ impl Hooks {
             .filter(|h| h.is_python())
             .map(|h| h.name.clone())
             .collect()
+    }
+
+    pub fn run_python_hooks(
+        &self,
+        repo: &dyn Any,
+        propagate_errors: bool,
+        kwargs: Option<&dyn Serialize>,
+    ) -> Result<()> {
+        for hook in &self.hooks {
+            if let HookType::Python(spec) = &hook.typ {
+                let span = tracing::info_span!("python hook", hook = %hook.name, exit = tracing::field::Empty);
+                let maybe_error_message =
+                    match run_python_hook(repo, spec.as_ref(), hook.name.as_ref(), kwargs) {
+                        Err(e) => Some(format!("{} hook error: {}", hook.name, e)),
+                        Ok(0) => None,
+                        Ok(v) => Some(format!("{} hook returned non-zero: {}", hook.name, v)),
+                    };
+                match maybe_error_message {
+                    None => {
+                        span.record("exit", "success");
+                    }
+                    Some(e) => {
+                        span.record("exit", &e);
+                        match propagate_errors {
+                            false => tracing::warn!("{} (not fatal)", e),
+                            true => bail!("{}", e),
+                        }
+                    }
+                }
+            }
+        }
+        Ok(())
     }
 
     pub fn run_shell_hooks(
@@ -149,6 +192,18 @@ impl Hooks {
         }
 
         Ok(())
+    }
+}
+
+fn run_python_hook(
+    repo: &dyn Any,
+    hook_spec: &str,
+    hook_name: &str,
+    kwargs: Option<&dyn Serialize>,
+) -> Result<i8> {
+    match factory::call_function::<PythonHookSig>((repo, hook_spec, hook_name, kwargs)) {
+        Some(v) => v,
+        None => bail!("Python hooks are not enabled at runtime"),
     }
 }
 
