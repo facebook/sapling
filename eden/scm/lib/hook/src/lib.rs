@@ -26,7 +26,6 @@ use spawn_ext::CommandExt;
 pub struct Hook {
     name: Text,
     priority: i64,
-    background: bool,
     spec: HookSpec,
 }
 
@@ -38,7 +37,7 @@ impl Hook {
 
 #[derive(Debug, PartialEq)]
 enum HookSpec {
-    Shell(Text),
+    Shell { script: Text, background: bool },
     Python(Text),
 }
 
@@ -120,7 +119,11 @@ impl Hooks {
         let client_info = clientinfo::get_client_request_info();
 
         for h in self.hooks.iter() {
-            if let HookSpec::Shell(shell_cmd) = &h.spec {
+            if let HookSpec::Shell {
+                script: shell_cmd,
+                background,
+            } = &h.spec
+            {
                 let span =
                     tracing::info_span!("shell hook", hook = %h.name, exit = tracing::field::Empty);
                 let _enter = span.enter();
@@ -157,7 +160,7 @@ impl Hooks {
                         .unwrap_or_else(|| identity::cli_name()),
                 );
 
-                if h.background {
+                if *background {
                     if let Err(err) = cmd.spawn_detached() {
                         tracing::warn!(?err, "error spawning background hook");
                     }
@@ -274,22 +277,25 @@ fn hooks_from_config(cfg: &dyn Config, hook_name_prefix: &str) -> Vec<Hook> {
             hooks.push(Hook {
                 name,
                 priority,
-                background: false,
                 spec: HookSpec::Python(value.slice(PY_PREFIX.len()..)),
             });
         } else if value.starts_with(BG_PREFIX) {
             hooks.push(Hook {
                 name,
                 priority,
-                background: true,
-                spec: HookSpec::Shell(value.slice(BG_PREFIX.len()..)),
+                spec: HookSpec::Shell {
+                    script: value.slice(BG_PREFIX.len()..),
+                    background: true,
+                },
             });
         } else {
             hooks.push(Hook {
                 name,
                 priority,
-                background: false,
-                spec: HookSpec::Shell(value),
+                spec: HookSpec::Shell {
+                    script: value,
+                    background: false,
+                },
             });
         }
     }
@@ -322,16 +328,25 @@ mod test {
         assert_eq!(hooks.len(), 3);
 
         assert_eq!(hooks[0].name, "foo.baz.qux");
-        assert!(!hooks[0].background);
         assert_eq!(hooks[0].spec, HookSpec::Python("foo.py".into()));
 
         assert_eq!(hooks[1].name, "foo");
-        assert!(!hooks[1].background);
-        assert_eq!(hooks[1].spec, HookSpec::Shell("echo ok".into()));
+        assert_eq!(
+            hooks[1].spec,
+            HookSpec::Shell {
+                script: "echo ok".into(),
+                background: false,
+            }
+        );
 
         assert_eq!(hooks[2].name, "foo.bar");
-        assert!(hooks[2].background);
-        assert_eq!(hooks[2].spec, HookSpec::Shell("touch foo".into()));
+        assert_eq!(
+            hooks[2].spec,
+            HookSpec::Shell {
+                script: "touch foo".into(),
+                background: true,
+            }
+        );
     }
 
     #[test]
