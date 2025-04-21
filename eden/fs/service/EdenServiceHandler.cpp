@@ -2360,6 +2360,12 @@ bool isPathIncluded(
 void EdenServiceHandler::sync_changesSinceV2(
     ChangesSinceV2Result& result,
     std::unique_ptr<ChangesSinceV2Params> params) {
+  uint64_t numSmallChanges = 0;
+  uint64_t numRenamedDirectory = 0;
+  uint64_t numCommitTransition = 0;
+  std::optional<uint64_t> lostChangesReason;
+  uint64_t numFilteredResults = 0;
+
   auto mountHandle = lookupMount(params->mountPoint());
   const auto& fromPosition = *params->fromPosition_ref();
   RelativePathPiece root = params->root_ref().has_value()
@@ -2449,6 +2455,8 @@ void EdenServiceHandler::sync_changesSinceV2(
 
     ChangeNotification change;
     change.largeChange_ref() = std::move(largeChange);
+    lostChangesReason =
+        static_cast<uint64_t>(LostChangesReason::EDENFS_REMOUNTED);
 
     result.changes_ref()->push_back(std::move(change));
   } else {
@@ -2539,6 +2547,7 @@ void EdenServiceHandler::sync_changesSinceV2(
                   replaced.fileType() = static_cast<Dtype>(current.type);
                   smallChange.replaced_ref() = std::move(replaced);
                   change.smallChange_ref() = std::move(smallChange);
+                  numSmallChanges += 1;
                 } else {
                   // Renamed
                   if (current.type == dtype_t::Dir) {
@@ -2548,6 +2557,7 @@ void EdenServiceHandler::sync_changesSinceV2(
                     largeChange.directoryRenamed_ref() =
                         std::move(directoryRenamed);
                     change.largeChange_ref() = std::move(largeChange);
+                    numRenamedDirectory += 1;
                   } else {
                     Renamed renamed;
                     renamed.from() = pathString1.asString();
@@ -2555,6 +2565,7 @@ void EdenServiceHandler::sync_changesSinceV2(
                     renamed.fileType() = static_cast<Dtype>(current.type);
                     smallChange.renamed_ref() = std::move(renamed);
                     change.smallChange_ref() = std::move(smallChange);
+                    numSmallChanges += 1;
                   }
                 }
               } else {
@@ -2566,6 +2577,7 @@ void EdenServiceHandler::sync_changesSinceV2(
                   removed.fileType() = static_cast<Dtype>(current.type);
                   smallChange.removed_ref() = std::move(removed);
                   change.smallChange_ref() = std::move(smallChange);
+                  numSmallChanges += 1;
                 } else {
                   // File/Directory was renamed or replaced to a path inside of
                   // root. Report change as added (if renamed) or modified (if
@@ -2577,12 +2589,14 @@ void EdenServiceHandler::sync_changesSinceV2(
                     modified.fileType() = static_cast<Dtype>(current.type);
                     smallChange.modified_ref() = std::move(modified);
                     change.smallChange_ref() = std::move(smallChange);
+                    numSmallChanges += 1;
                   } else {
                     Added added;
                     added.path() = pathString2.asString();
                     added.fileType() = static_cast<Dtype>(current.type);
                     smallChange.added_ref() = std::move(added);
                     change.smallChange_ref() = std::move(smallChange);
+                    numSmallChanges += 1;
                   }
                 }
               }
@@ -2618,6 +2632,7 @@ void EdenServiceHandler::sync_changesSinceV2(
               added.fileType() = static_cast<Dtype>(current.type);
               smallChange.added_ref() = std::move(added);
               change.smallChange_ref() = std::move(smallChange);
+              numSmallChanges += 1;
             } else if (!info.existedAfter) {
               // Removed
               Removed removed;
@@ -2625,6 +2640,7 @@ void EdenServiceHandler::sync_changesSinceV2(
               removed.fileType() = static_cast<Dtype>(current.type);
               smallChange.removed_ref() = std::move(removed);
               change.smallChange_ref() = std::move(smallChange);
+              numSmallChanges += 1;
             } else {
               // Modified
               Modified modified;
@@ -2632,12 +2648,15 @@ void EdenServiceHandler::sync_changesSinceV2(
               modified.fileType() = static_cast<Dtype>(current.type);
               smallChange.modified_ref() = std::move(modified);
               change.smallChange_ref() = std::move(smallChange);
+              numSmallChanges += 1;
             }
           }
 
           // Include a change if either path passes the filters
           if (includePath1 || includePath2) {
             result.changes_ref()->push_back(std::move(change));
+          } else {
+            numFilteredResults += 1;
           }
           // Return value ignored here
           return true;
@@ -2656,6 +2675,7 @@ void EdenServiceHandler::sync_changesSinceV2(
           change.largeChange_ref() = std::move(largeChange);
 
           result.changes_ref()->push_back(std::move(change));
+          numCommitTransition += 1;
           // Return value ignored here
           return true;
         });
@@ -2665,6 +2685,7 @@ void EdenServiceHandler::sync_changesSinceV2(
       lostChanges.reason_ref() = isTruncated
           ? LostChangesReason::JOURNAL_TRUNCATED
           : LostChangesReason::TOO_MANY_CHANGES;
+      lostChangesReason = static_cast<uint64_t>(lostChanges.reason().value());
 
       LargeChangeNotification largeChange;
       largeChange.lostChanges_ref() = std::move(lostChanges);
@@ -2707,11 +2728,11 @@ void EdenServiceHandler::sync_changesSinceV2(
       includedSuffixes,
       excludedSuffixes,
       includeVCSRoots,
-      0,
-      0,
-      0,
-      0,
-      0,
+      numSmallChanges,
+      numRenamedDirectory,
+      numCommitTransition,
+      lostChangesReason,
+      numFilteredResults,
   });
 }
 
