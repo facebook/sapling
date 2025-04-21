@@ -26,6 +26,7 @@ rust_library(
         "//eden/scm/lib/identity:identity",
         "//eden/scm/lib/io:io",
         "//eden/scm/lib/minibytes:minibytes",
+        "//eden/scm/lib/repo:repo",
         "//eden/scm/lib/spawn-ext:spawn-ext",
         "//eden/scm/lib/util/factory:factory",
     ],

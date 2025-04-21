@@ -23,7 +23,6 @@ sapling-cpython-ext = { version = "0.1.0", path = "../../cpython-ext" }
 sapling-factory = { version = "0.1.0", path = "../../util/factory" }
 sapling-hook = { version = "0.1.0", path = "../../hook" }
 sapling-nodeipc = { version = "0.1.0", path = "../../util/nodeipc" }
-sapling-repo = { version = "0.1.0", path = "../../repo" }
 tracing = { version = "0.1.41", features = ["attributes", "valuable"] }
 
 [features]

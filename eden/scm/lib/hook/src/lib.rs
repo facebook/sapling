@@ -5,7 +5,6 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-use std::any::Any;
 use std::io::Write;
 use std::path::Path;
 use std::process::Command;
@@ -20,6 +19,7 @@ use erased_serde::Serialize;
 use io::IO;
 use io::IsTty;
 use minibytes::Text;
+use repo::Repo;
 use serde_json::Value;
 use spawn_ext::CommandExt;
 
@@ -53,9 +53,9 @@ pub struct PythonHookSig;
 
 impl<'a> factory::FunctionSignature<'a> for PythonHookSig {
     /// (repo, spec, hook_name, kwargs)
-    /// See run_python_hook in pyhook. `Any` is intended for `Repo`, without depending on `lib/repo`.
+    /// See run_python_hook in pyhook.
     type In = (
-        Option<&'a dyn Any>,
+        Option<&'a Repo>,
         &'a str,
         &'a str,
         Option<&'a dyn Serialize>,
@@ -82,7 +82,7 @@ impl Hooks {
 
     pub fn run_python_hooks(
         &self,
-        repo: Option<&dyn Any>,
+        repo: Option<&Repo>,
         propagate_errors: bool,
         kwargs: Option<&dyn Serialize>,
     ) -> Result<()> {
@@ -226,7 +226,7 @@ fn to_env_vars(
 }
 
 fn run_python_hook(
-    repo: Option<&dyn Any>,
+    repo: Option<&Repo>,
     hook_spec: &str,
     hook_name: &str,
     kwargs: Option<&dyn Serialize>,

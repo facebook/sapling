@@ -44,7 +44,6 @@ rust_python_library(
         "//eden/scm/lib/context:context",
         "//eden/scm/lib/cpython-ext:cpython-ext",
         "//eden/scm/lib/hook:hook",
-        "//eden/scm/lib/repo:repo",
         "//eden/scm/lib/util/factory:factory",
         "//eden/scm/lib/util/nodeipc:nodeipc",
         "//eden/scm/saplingnative/bindings:bindings",
