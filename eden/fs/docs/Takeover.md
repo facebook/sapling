@@ -64,21 +64,21 @@ socket:
 
 The client has one function - `takeoverMounts`. This function requests to take
 over mount points from an existing edenfs process. On success, it returns a
-`TakeoverData` object, and it throws an exception on error. It takes four
-parameters: a socketPath, a bool shouldPing, and a set of integers of supported
-takeover versions (legacy), and a bit mask of the supported takeover versions.
-The last three parameters are for testing purposes and should not be used in
-productions builds.
+`TakeoverData` object, and it throws an exception on error. It takes five
+parameters: a socketPath, a bool shouldThrowDuringTakeover, a bool shouldPing,
+and a set of integers of supported takeover versions (legacy), and a bit mask of
+the supported takeover versions. The last four parameters are for testing
+purposes and should not be used in productions builds.
 
 This has a takeover timeout of 5 minutes for receiving takeover data from old
 process.
 
-We connect to the socket at the given path, then send our send our protocol
-capabilities so that the server knows whether we're capable of handshaking
-successfully. We then wait for the server to send us a "ready" ping, making sure
-we are still listening on the socket. We respond to this ping and then wait for
-the takeover data response. It is possible that we will not receive this ping,
-and instead just receive the takeover data response.
+We connect to the socket at the given path, then send our protocol capabilities
+so that the server knows whether we're capable of handshaking successfully. We
+then wait for the server to send us a "ready" ping, making sure we are still
+listening on the socket. We respond to this ping and then wait for the takeover
+data response. It is possible that we will not receive this ping, and instead
+just receive the takeover data response.
 
 After we get the takeover data response, we either throw an exception if we do
 not get a message, or we deserialize the message and check its contents. We
