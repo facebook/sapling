@@ -257,6 +257,24 @@ fn exit_description(status: &ExitStatus) -> String {
 const PY_PREFIX: &str = "python:";
 const BG_PREFIX: &str = "background:";
 
+impl HookSpec {
+    fn from_text(value: Text) -> Self {
+        if value.starts_with(PY_PREFIX) {
+            HookSpec::Python(value.slice(PY_PREFIX.len()..))
+        } else if value.starts_with(BG_PREFIX) {
+            HookSpec::Shell {
+                script: value.slice(BG_PREFIX.len()..),
+                background: true,
+            }
+        } else {
+            HookSpec::Shell {
+                script: value,
+                background: false,
+            }
+        }
+    }
+}
+
 fn hooks_from_config(cfg: &dyn Config, hook_name_prefix: &str) -> Vec<Hook> {
     let mut hooks = Vec::new();
 
@@ -273,31 +291,12 @@ fn hooks_from_config(cfg: &dyn Config, hook_name_prefix: &str) -> Vec<Hook> {
             .must_get("hooks", &format!("priority.{name}"))
             .unwrap_or_default();
 
-        if value.starts_with(PY_PREFIX) {
-            hooks.push(Hook {
-                name,
-                priority,
-                spec: HookSpec::Python(value.slice(PY_PREFIX.len()..)),
-            });
-        } else if value.starts_with(BG_PREFIX) {
-            hooks.push(Hook {
-                name,
-                priority,
-                spec: HookSpec::Shell {
-                    script: value.slice(BG_PREFIX.len()..),
-                    background: true,
-                },
-            });
-        } else {
-            hooks.push(Hook {
-                name,
-                priority,
-                spec: HookSpec::Shell {
-                    script: value,
-                    background: false,
-                },
-            });
-        }
+        let spec = HookSpec::from_text(value);
+        hooks.push(Hook {
+            name,
+            priority,
+            spec,
+        });
     }
 
     hooks.sort_by_key(|h| -h.priority);
