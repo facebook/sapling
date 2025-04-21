@@ -54,17 +54,7 @@ impl Hooks {
     // Run "pre-" command hooks, skipping Python hooks. Will propagate errors from the
     // hooks, aborting the command.
     pub(crate) fn run_pre(&self, repo_root: Option<&Path>, full_args: &[String]) -> Result<()> {
-        if self.pre.is_empty() {
-            return Ok(());
-        }
-
-        let full_args = shell_escape(full_args);
-        let hook_args = HashMap::from([("args".to_string(), full_args)]);
-        for hooks in &self.pre {
-            hooks.run_shell_hooks(repo_root, true, Some(&hook_args))?;
-        }
-
-        Ok(())
+        run_hooks(&self.pre, repo_root, full_args, true, None)
     }
 
     // Run "post-" command hooks, skipping Python hooks. Will not propagate errors from
@@ -75,36 +65,21 @@ impl Hooks {
         full_args: &[String],
         result: u8,
     ) -> Result<()> {
-        if self.post.is_empty() {
-            return Ok(());
-        }
-
-        let full_args = shell_escape(full_args);
-        let hook_args = HashMap::from([
-            ("args".to_string(), full_args),
-            ("result".to_string(), format!("{result}")),
-        ]);
-        for hooks in &self.post {
-            hooks.run_shell_hooks(repo_root, false, Some(&hook_args))?;
-        }
-
-        Ok(())
+        run_hooks(
+            &self.post,
+            repo_root,
+            full_args,
+            false,
+            Some(&|kwargs| {
+                kwargs.insert("result", Some(result.to_string()));
+            }),
+        )
     }
 
     // Run "fail-" command hooks, skipping Python hooks. Will not propagate errors from
     // the hooks.
     pub(crate) fn run_fail(&self, repo_root: Option<&Path>, full_args: &[String]) -> Result<()> {
-        if self.fail.is_empty() {
-            return Ok(());
-        }
-
-        let full_args = shell_escape(full_args);
-        let hook_args = HashMap::from([("args".to_string(), full_args)]);
-        for hooks in &self.fail {
-            hooks.run_shell_hooks(repo_root, false, Some(&hook_args))?;
-        }
-
-        Ok(())
+        run_hooks(&self.fail, repo_root, full_args, false, None)
     }
 
     fn add_command(&mut self, command_name: &str, config: &dyn Config) -> Result<()> {
@@ -148,4 +123,27 @@ impl Hooks {
 
         Ok(hooks)
     }
+}
+
+fn run_hooks(
+    hooks: &[hook::Hooks],
+    repo_root: Option<&Path>,
+    full_args: &[String],
+    propagate_errors: bool,
+    extra_kwargs_func: Option<&dyn Fn(&mut HashMap<&str, Option<String>>)>,
+) -> Result<()> {
+    if hooks.is_empty() {
+        return Ok(());
+    }
+
+    let full_args = shell_escape(full_args);
+    let mut hook_args = HashMap::from([("args", Some(full_args))]);
+    if let Some(func) = extra_kwargs_func {
+        (func)(&mut hook_args);
+    }
+    for hooks in hooks {
+        hooks.run_shell_hooks(repo_root, propagate_errors, Some(&hook_args))?;
+    }
+
+    Ok(())
 }
