@@ -26,6 +26,7 @@ use spawn_ext::CommandExt;
 pub struct Hook {
     name: Text,
     priority: i64,
+    ignored: bool,
     spec: HookSpec,
 }
 
@@ -70,6 +71,21 @@ impl Hooks {
         }
     }
 
+    /// Ignore hooks with the exact definition.
+    ///
+    /// lib/checkout uses this to skip hooks like
+    /// "hooks.edenfs-update.eden-redirect=python:sapling.hooks.edenfs_redirect_fixup"
+    /// because it has the same behavior implemented natively.
+    pub fn ignore(&mut self, spec: &'static str) {
+        let text = Text::from_static(spec);
+        let spec = HookSpec::from_text(text);
+        for hook in &mut self.hooks {
+            if hook.spec == spec {
+                hook.ignored = true;
+            }
+        }
+    }
+
     pub fn python_hook_names(&self) -> Vec<Text> {
         self.hooks
             .iter()
@@ -85,6 +101,9 @@ impl Hooks {
         kwargs: Option<&dyn Serialize>,
     ) -> Result<()> {
         for hook in &self.hooks {
+            if hook.ignored {
+                continue;
+            }
             if let HookSpec::Python(spec) = &hook.spec {
                 let span = tracing::info_span!("python hook", hook = %hook.name, exit = tracing::field::Empty);
                 let maybe_error_message =
@@ -119,6 +138,9 @@ impl Hooks {
         let client_info = clientinfo::get_client_request_info();
 
         for h in self.hooks.iter() {
+            if h.ignored {
+                continue;
+            }
             if let HookSpec::Shell {
                 script: shell_cmd,
                 background,
@@ -295,6 +317,7 @@ fn hooks_from_config(cfg: &dyn Config, hook_name_prefix: &str) -> Vec<Hook> {
         hooks.push(Hook {
             name,
             priority,
+            ignored: false,
             spec,
         });
     }
@@ -371,12 +394,18 @@ mod test {
 
         let cfg = BTreeMap::from([("hooks.foo.shell", "not-a-real-command")]);
 
-        let hooks = Hooks::from_config(&cfg, &io, "foo");
+        let mut hooks = Hooks::from_config(&cfg, &io, "foo");
         assert!(hooks.run_shell_hooks(None, true, None).is_err());
 
         // Now not propagating error:
 
         assert!(hooks.run_shell_hooks(None, false, None).is_ok());
+
+        // Hooks can be ignored.
+        for spec in cfg.values() {
+            hooks.ignore(spec)
+        }
+        assert!(hooks.run_shell_hooks(None, true, None).is_ok());
 
         Ok(())
     }
