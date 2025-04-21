@@ -112,6 +112,25 @@ using namespace std::literals::string_view_literals;
 namespace {
 using namespace facebook::eden;
 
+std::string getClientCmdline(
+    const std::shared_ptr<ServerState>& serverState_,
+    const ObjectFetchContextPtr& context_) {
+  std::string client_cmdline = "<unknown>";
+  if (auto clientPid = context_->getClientPid()) {
+    // TODO: we should look up client scope here instead of command line
+    // since it will give move context into the overarching process or
+    // system producing the expensive query
+    const ProcessInfo* processInfoPtr = serverState_->getProcessInfoCache()
+                                            ->lookup(clientPid.value().get())
+                                            .get_optional();
+    if (processInfoPtr) {
+      client_cmdline = processInfoPtr->name;
+      std::replace(client_cmdline.begin(), client_cmdline.end(), '\0', ' ');
+    }
+  }
+  return client_cmdline;
+}
+
 std::string logHash(StringPiece thriftArg) {
   if (thriftArg.size() == Hash20::RAW_SIZE) {
     return Hash20{folly::ByteRange{thriftArg}}.toString();
@@ -435,22 +454,7 @@ class SuffixGlobRequestScope {
     // Logging completion time for the request
     auto elapsed = itcTimer_.elapsed();
     auto duration = std::chrono::duration<double>{elapsed}.count();
-    std::string client_cmdline = "<unknown>";
-    if (auto clientPid = context_->getClientPid()) {
-      // TODO: we should look up client scope here instead of command line
-      // since it will give move context into the overarching process or
-      // system producing the expensive query
-      // To avoid waiting on retrieving the ProcessInfo, only get the
-      // client_commandline if it's immediately available
-      const ProcessInfo* processInfoPtr = serverState_->getProcessInfoCache()
-                                              ->lookup(clientPid.value().get())
-                                              .get_optional();
-      if (processInfoPtr) {
-        client_cmdline = processInfoPtr->name;
-        std::replace(client_cmdline.begin(), client_cmdline.end(), '\0', ' ');
-      }
-    }
-
+    std::string client_cmdline = getClientCmdline(serverState_, context_);
     XLOG(DBG4) << "EdenFS asked to evaluate suffix glob by caller '"
                << client_cmdline << "':" << globberLogString_
                << ": duration=" << duration << "s";
@@ -495,20 +499,7 @@ class GlobFilesRequestScope {
 
     // Log if this request is an expensive request
     if (duration >= EXPENSIVE_GLOB_FILES_DURATION) {
-      std::string client_cmdline = "<unknown>";
-      if (auto clientPid = context_->getClientPid()) {
-        // TODO: we should look up client scope here instead of command line
-        // since it will give move context into the overarching process or
-        // system producing the expensive query
-        const ProcessInfo* processInfoPtr =
-            serverState_->getProcessInfoCache()
-                ->lookup(clientPid.value().get())
-                .get_optional();
-        if (processInfoPtr) {
-          client_cmdline = processInfoPtr->name;
-          std::replace(client_cmdline.begin(), client_cmdline.end(), '\0', ' ');
-        }
-      }
+      std::string client_cmdline = getClientCmdline(serverState_, context_);
 
       serverState_->getStructuredLogger()->logEvent(ExpensiveGlob{
           duration, logString_, std::move(client_cmdline), local});
@@ -2719,7 +2710,7 @@ void EdenServiceHandler::sync_changesSinceV2(
   }
 
   server_->getServerState()->getStructuredLogger()->logEvent(ChangesSince{
-      "",
+      getClientCmdline(server_->getServerState(), fetchContext),
       logPosition(fromPosition),
       mountPath.asString(),
       root.asString(),
@@ -3890,20 +3881,7 @@ void maybeLogExpensiveGlob(
 
   if (shouldLogExpensiveGlob) {
     auto logString = globber.logString(globs);
-    std::string client_cmdline = "<unknown>";
-    if (auto clientPid = context->getClientPid()) {
-      // TODO: we should look up client scope here instead of command line
-      // since it will give move context into the overarching process or
-      // system producing the expensive query
-      const ProcessInfo* processInfoPtr = serverState->getProcessInfoCache()
-                                              ->lookup(clientPid.value().get())
-                                              .get_optional();
-      if (processInfoPtr) {
-        client_cmdline = processInfoPtr->name;
-        std::replace(client_cmdline.begin(), client_cmdline.end(), '\0', ' ');
-      }
-    }
-
+    std::string client_cmdline = getClientCmdline(serverState, context);
     XLOG(WARN) << "EdenFS asked to evaluate expensive glob by caller "
                << client_cmdline << " : " << logString;
     serverState->getStructuredLogger()->logEvent(
