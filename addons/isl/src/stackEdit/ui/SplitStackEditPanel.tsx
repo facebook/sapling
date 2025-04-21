@@ -301,13 +301,9 @@ function SplitColumn(props: SplitColumnProps) {
       </Column>
     </EmptyState>
   ) : (
-    <Column alignStart>
-      <ScrollY
-        maxSize="calc((100vh / var(--zoom)) - var(--split-vertical-overhead))"
-        hideBar={true}>
-        {editors}
-      </ScrollY>
-    </Column>
+    <ScrollY maxSize="calc((100vh / var(--zoom)) - var(--split-vertical-overhead))" hideBar={true}>
+      {editors}
+    </ScrollY>
   );
 
   const showExtraCommitActionsContextMenu = useContextMenu(() => {
