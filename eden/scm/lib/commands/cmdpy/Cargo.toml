@@ -6,10 +6,12 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
+anyhow = "1.0.95"
 bindings = { version = "0.1.0", path = "../../../saplingnative/bindings", default-features = false }
 cpython = { version = "0.7.2", features = ["python3-sys"], default-features = false }
 libc = "0.2.139"
 pycontext = { version = "0.1.0", path = "../../../saplingnative/bindings/modules/pycontext" }
+pyhook = { version = "0.1.0", path = "../../../saplingnative/bindings/modules/pyhook" }
 pyio = { version = "0.1.0", path = "../../../saplingnative/bindings/modules/pyio" }
 pymodules = { version = "0.1.0", path = "../../../saplingnative/bindings/modules/pymodules" }
 python3-sys = "0.7.2"
@@ -18,7 +20,10 @@ sapling-commandserver = { version = "0.1.0", path = "../../commandserver" }
 sapling-configmodel = { version = "0.1.0", path = "../../config/model" }
 sapling-context = { version = "0.1.0", path = "../../context" }
 sapling-cpython-ext = { version = "0.1.0", path = "../../cpython-ext" }
+sapling-factory = { version = "0.1.0", path = "../../util/factory" }
+sapling-hook = { version = "0.1.0", path = "../../hook" }
 sapling-nodeipc = { version = "0.1.0", path = "../../util/nodeipc" }
+sapling-repo = { version = "0.1.0", path = "../../repo" }
 tracing = { version = "0.1.41", features = ["attributes", "valuable"] }
 
 [features]

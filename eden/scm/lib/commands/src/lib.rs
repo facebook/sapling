@@ -14,6 +14,8 @@ pub use run::run_command;
 
 /// Register Rust functions required by `cmdpy`. Can be called multiple times.
 /// This is used by `run_command` and `pybindings`.
+///
+/// Register the Python hook runner.
 pub fn init() {
     use cmdpy::RustCommandConfig;
     let cfg = RustCommandConfig {
@@ -21,4 +23,7 @@ pub fn init() {
         run_command,
     };
     cfg.register();
+
+    // Enables lib/hook to run Python hooks.
+    cmdpy::init();
 }
