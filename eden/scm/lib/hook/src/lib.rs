@@ -27,17 +27,17 @@ pub struct Hook {
     name: Text,
     priority: i64,
     background: bool,
-    typ: HookType,
+    spec: HookSpec,
 }
 
 impl Hook {
     pub fn is_python(&self) -> bool {
-        matches!(self.typ, HookType::Python(_))
+        matches!(self.spec, HookSpec::Python(_))
     }
 }
 
 #[derive(Debug, PartialEq)]
-enum HookType {
+enum HookSpec {
     Shell(Text),
     Python(Text),
 }
@@ -86,7 +86,7 @@ impl Hooks {
         kwargs: Option<&dyn Serialize>,
     ) -> Result<()> {
         for hook in &self.hooks {
-            if let HookType::Python(spec) = &hook.typ {
+            if let HookSpec::Python(spec) = &hook.spec {
                 let span = tracing::info_span!("python hook", hook = %hook.name, exit = tracing::field::Empty);
                 let maybe_error_message =
                     match run_python_hook(repo, spec.as_ref(), hook.name.as_ref(), kwargs) {
@@ -120,7 +120,7 @@ impl Hooks {
         let client_info = clientinfo::get_client_request_info();
 
         for h in self.hooks.iter() {
-            if let HookType::Shell(shell_cmd) = &h.typ {
+            if let HookSpec::Shell(shell_cmd) = &h.spec {
                 let span =
                     tracing::info_span!("shell hook", hook = %h.name, exit = tracing::field::Empty);
                 let _enter = span.enter();
@@ -275,21 +275,21 @@ fn hooks_from_config(cfg: &dyn Config, hook_name_prefix: &str) -> Vec<Hook> {
                 name,
                 priority,
                 background: false,
-                typ: HookType::Python(value.slice(PY_PREFIX.len()..)),
+                spec: HookSpec::Python(value.slice(PY_PREFIX.len()..)),
             });
         } else if value.starts_with(BG_PREFIX) {
             hooks.push(Hook {
                 name,
                 priority,
                 background: true,
-                typ: HookType::Shell(value.slice(BG_PREFIX.len()..)),
+                spec: HookSpec::Shell(value.slice(BG_PREFIX.len()..)),
             });
         } else {
             hooks.push(Hook {
                 name,
                 priority,
                 background: false,
-                typ: HookType::Shell(value),
+                spec: HookSpec::Shell(value),
             });
         }
     }
@@ -323,15 +323,15 @@ mod test {
 
         assert_eq!(hooks[0].name, "foo.baz.qux");
         assert!(!hooks[0].background);
-        assert_eq!(hooks[0].typ, HookType::Python("foo.py".into()));
+        assert_eq!(hooks[0].spec, HookSpec::Python("foo.py".into()));
 
         assert_eq!(hooks[1].name, "foo");
         assert!(!hooks[1].background);
-        assert_eq!(hooks[1].typ, HookType::Shell("echo ok".into()));
+        assert_eq!(hooks[1].spec, HookSpec::Shell("echo ok".into()));
 
         assert_eq!(hooks[2].name, "foo.bar");
         assert!(hooks[2].background);
-        assert_eq!(hooks[2].typ, HookType::Shell("touch foo".into()));
+        assert_eq!(hooks[2].spec, HookSpec::Shell("touch foo".into()));
     }
 
     #[test]
