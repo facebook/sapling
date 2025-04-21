@@ -300,6 +300,16 @@ impl HookSpec {
 fn hooks_from_config(cfg: &dyn Config, hook_name_prefix: &str) -> Vec<Hook> {
     let mut hooks = Vec::new();
 
+    if hook_name_prefix == "priority" || hook_name_prefix == "disabled" {
+        return hooks;
+    }
+
+    // Python hooks not running through pyhook are incompatible.
+    // This is temporary. Remove once pyhook runs fine in production.
+    let pyhook_enabled = cfg
+        .get_or_default::<bool>("experimental", "run-python-hooks-via-pyhook")
+        .unwrap_or_default();
+
     for name in cfg.keys("hooks") {
         if name != hook_name_prefix && !name.starts_with(&format!("{hook_name_prefix}.")) {
             continue;
@@ -313,11 +323,18 @@ fn hooks_from_config(cfg: &dyn Config, hook_name_prefix: &str) -> Vec<Hook> {
             .must_get("hooks", &format!("priority.{name}"))
             .unwrap_or_default();
 
+        // Add a way to disable hooks.
+        let disabled = cfg
+            .must_get("hooks", &format!("disabled.{name}"))
+            .unwrap_or_default();
+
         let spec = HookSpec::from_text(value);
+        let ignored = disabled || (matches!(spec, HookSpec::Python(..)) && !pyhook_enabled);
+
         hooks.push(Hook {
             name,
             priority,
-            ignored: false,
+            ignored,
             spec,
         });
     }
@@ -408,6 +425,39 @@ mod test {
         assert!(hooks.run_shell_hooks(None, true, None).is_ok());
 
         Ok(())
+    }
+
+    #[test]
+    fn test_disable_hooks_via_config() {
+        let mut cfg = BTreeMap::from([
+            ("hooks.foo.hook1", "true"),
+            ("hooks.foo.hook2", "python:a.b:c"),
+            ("experimental.run-python-hooks-via-pyhook", "true"),
+        ]);
+
+        let hooks = hooks_from_config(&cfg, "foo");
+        assert!(!hooks[0].ignored);
+        assert!(!hooks[1].ignored);
+
+        // Disable via "disabled.".
+        cfg.insert("hooks.disabled.foo.hook1", "true");
+        cfg.insert("hooks.disabled.foo.hook2", "true");
+        let hooks = hooks_from_config(&cfg, "foo");
+        assert!(hooks[0].ignored);
+        assert!(hooks[1].ignored);
+
+        // Enable via "disabled.".
+        cfg.insert("hooks.disabled.foo.hook1", "false");
+        cfg.insert("hooks.disabled.foo.hook2", "false");
+        let hooks = hooks_from_config(&cfg, "foo");
+        assert!(!hooks[0].ignored);
+        assert!(!hooks[1].ignored);
+
+        // Disable pyhooks.
+        cfg.insert("experimental.run-python-hooks-via-pyhook", "false");
+        let hooks = hooks_from_config(&cfg, "foo");
+        assert!(!hooks[0].ignored);
+        assert!(hooks[1].ignored);
     }
 
     #[test]
