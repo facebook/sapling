@@ -1081,10 +1081,10 @@ pub fn checkout(
     preupdate_hooks.run_shell_hooks(
         Some(repo.path()),
         true,
-        &HashMap::from([
+        Some(&HashMap::from([
             ("parent1".to_string(), wc.first_parent()?.to_hex()),
             ("parent2".to_string(), target_commit.to_hex()),
-        ]),
+        ])),
     )?;
 
     if let Err(err) = prefetch_children(repo, &target_commit) {
@@ -1128,13 +1128,13 @@ pub fn checkout(
     update_hooks.run_shell_hooks(
         Some(repo.path()),
         false,
-        &HashMap::from([
+        Some(&HashMap::from([
             ("parent1".to_string(), target_commit.to_hex()),
             ("parent2".to_string(), "".to_string()),
             // This is number of unresolved files. We don't support leaving unresolved
             // files in Rust yet, so hard code to "0" for now.
             ("error".to_string(), "0".to_string()),
-        ]),
+        ])),
     )?;
 
     let current_bookmark = wc.active_bookmark()?;

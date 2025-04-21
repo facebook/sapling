@@ -61,7 +61,7 @@ impl Hooks {
         let full_args = shell_escape(full_args);
         let hook_args = HashMap::from([("args".to_string(), full_args)]);
         for hooks in &self.pre {
-            hooks.run_shell_hooks(repo_root, true, &hook_args)?;
+            hooks.run_shell_hooks(repo_root, true, Some(&hook_args))?;
         }
 
         Ok(())
@@ -85,7 +85,7 @@ impl Hooks {
             ("result".to_string(), format!("{result}")),
         ]);
         for hooks in &self.post {
-            hooks.run_shell_hooks(repo_root, false, &hook_args)?;
+            hooks.run_shell_hooks(repo_root, false, Some(&hook_args))?;
         }
 
         Ok(())
@@ -101,7 +101,7 @@ impl Hooks {
         let full_args = shell_escape(full_args);
         let hook_args = HashMap::from([("args".to_string(), full_args)]);
         for hooks in &self.fail {
-            hooks.run_shell_hooks(repo_root, false, &hook_args)?;
+            hooks.run_shell_hooks(repo_root, false, Some(&hook_args))?;
         }
 
         Ok(())

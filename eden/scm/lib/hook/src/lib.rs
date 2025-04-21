@@ -6,7 +6,6 @@
  */
 
 use std::any::Any;
-use std::collections::HashMap;
 use std::io::Write;
 use std::path::Path;
 use std::process::Command;
@@ -21,6 +20,7 @@ use erased_serde::Serialize;
 use io::IO;
 use io::IsTty;
 use minibytes::Text;
+use serde_json::Value;
 use spawn_ext::CommandExt;
 
 #[derive(Debug)]
@@ -116,7 +116,7 @@ impl Hooks {
         &self,
         repo_root: Option<&Path>,
         propagate_errors: bool,
-        args: &HashMap<String, String>,
+        kwargs: Option<&dyn Serialize>,
     ) -> Result<()> {
         let client_info = clientinfo::get_client_request_info();
 
@@ -140,8 +140,13 @@ impl Hooks {
                 );
                 cmd.env("SAPLING_CLIENT_CORRELATOR", &client_info.correlator);
 
-                for (k, v) in args {
-                    cmd.env(format!("HG_{}", k.to_uppercase()), v);
+                if let Some(kwargs) = kwargs {
+                    for (k, v) in to_env_vars(kwargs)? {
+                        match v {
+                            Some(v) => cmd.env(k, v),
+                            None => cmd.env_remove(k),
+                        };
+                    }
                 }
 
                 cmd.env(
@@ -198,6 +203,26 @@ impl Hooks {
 
         Ok(())
     }
+}
+
+/// Converts a `dyn Serialize` to env vars used by shell hooks.
+fn to_env_vars(
+    kwargs: &dyn Serialize,
+) -> Result<impl IntoIterator<Item = (String, Option<String>)>> {
+    let args = serde_json::to_value(kwargs)?;
+    let map = match args {
+        Value::Object(map) => map,
+        _ => bail!("shell hook args is not a map: {}", args),
+    };
+    Ok(map.into_iter().map(|(k, v)| {
+        let env_name = format!("HG_{}", k.to_uppercase());
+        let env_value = match v {
+            Value::Null => return (env_name, None),
+            Value::String(v) => v, // do not quote the string
+            _ => v.to_string(),
+        };
+        (env_name, Some(env_value))
+    }))
 }
 
 fn run_python_hook(
@@ -326,7 +351,7 @@ mod test {
 
         let hooks = Hooks::from_config(&cfg, &io, "foo");
         assert_eq!(hooks.python_hook_names(), &["foo.python"]);
-        assert!(hooks.run_shell_hooks(None, true, &HashMap::new()).is_ok());
+        assert!(hooks.run_shell_hooks(None, true, None).is_ok());
         assert!(String::from_utf8(output.to_vec())?.starts_with("ok"));
 
         // Now with an erroring hook propagating error:
@@ -334,12 +359,49 @@ mod test {
         let cfg = BTreeMap::from([("hooks.foo.shell", "not-a-real-command")]);
 
         let hooks = Hooks::from_config(&cfg, &io, "foo");
-        assert!(hooks.run_shell_hooks(None, true, &HashMap::new()).is_err());
+        assert!(hooks.run_shell_hooks(None, true, None).is_err());
 
         // Now not propagating error:
 
-        assert!(hooks.run_shell_hooks(None, false, &HashMap::new()).is_ok());
+        assert!(hooks.run_shell_hooks(None, false, None).is_ok());
 
         Ok(())
+    }
+
+    #[test]
+    fn test_shell_env_vars() {
+        let t = |m: &dyn Serialize| -> Vec<String> {
+            to_env_vars(m)
+                .unwrap()
+                .into_iter()
+                .map(|(k, v)| {
+                    let v = match &v {
+                        Some(v) => v.as_str(),
+                        None => "(unset)",
+                    };
+                    format!("{}={}", k, v)
+                })
+                .collect()
+        };
+        // Strings
+        assert_eq!(
+            t(&BTreeMap::from([("a", "1"), ("b", "2")])),
+            ["HG_A=1", "HG_B=2"]
+        );
+        // Numbers
+        assert_eq!(
+            t(&BTreeMap::from([("a", 1i32), ("b", 2)])),
+            ["HG_A=1", "HG_B=2"]
+        );
+        // `None` can be used to unset env vars.
+        assert_eq!(
+            t(&BTreeMap::from([("a", Some("1")), ("b", None)])),
+            ["HG_A=1", "HG_B=(unset)"]
+        );
+        // Arrays - will be converted to JSON.
+        assert_eq!(
+            t(&BTreeMap::from([("a", vec!["1", "2"]), ("b", vec![])])),
+            ["HG_A=[\"1\",\"2\"]", "HG_B=[]"]
+        );
     }
 }

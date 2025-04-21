@@ -19,6 +19,7 @@ rust_library(
     deps = [
         "fbsource//third-party/rust:anyhow",
         "fbsource//third-party/rust:erased-serde",
+        "fbsource//third-party/rust:serde_json",
         "fbsource//third-party/rust:tracing",
         "//eden/scm/lib/clientinfo:clientinfo",
         "//eden/scm/lib/config/model:configmodel",
