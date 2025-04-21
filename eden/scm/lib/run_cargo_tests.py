@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 # Copyright (c) Meta Platforms, Inc. and affiliates.
 #
-# This software may be used and distributed according to the terms of the
-# GNU General Public License version 2.
+# This source code is licensed under the MIT license found in the
+# LICENSE file in the root directory of this source tree.
 
 
 import argparse
@@ -79,6 +79,13 @@ def runtest(
             #   | ^^^^^^^^^^^^^
             #   |
             return (0, name, output)
+        elif "::fbthrift" in output:
+            # Thrift related issue. Ignore for now.
+            message = (
+                "fbthrift-related compilation error is ignored:\n%s"
+                % shorten_error_message(output)
+            )
+            return (2, name, message)
         elif b"could not compile" in ex.stderr:
             # Only show stderr with information about how it fails
             # to compile.
@@ -105,6 +112,110 @@ def runtest(
                 name,
                 output,
             )
+
+
+def shorten_error_message(message: str) -> str:
+    r"""Shortern error message. Pick up 2 "error" blocks.
+
+    This can be useful when the error is super long (ex. 2k lines) because of a
+    mismatched dependency somehow.
+
+    >>> m = r'''warning: unnecessary `unsafe` block
+    ...   --> eden\scm\lib\util\src\file.rs:29:51
+    ...    |
+    ... 29 | pub(crate) static UMASK: Lazy<u32> = Lazy::new(|| unsafe {
+    ...    |                                                   ^^^^^^ unnecessary `unsafe` block
+    ...    |
+    ...    = note: `#[warn(unused_unsafe)]` on by default
+    ...
+    ... error[E0407]: method `write` is not a member of trait `fbthrift::Serialize`
+    ...    --> eden\scm\build\cargo-target\debug\build\config_thrift-b6a866cf8706c848\out\lib.rs:155:5
+    ...     |
+    ... 155 | /     fn write(&self, p: &mut P) {
+    ... 156 | |         p.write_i32(self.into())
+    ... 157 | |     }
+    ...     | |_____^ not a member of trait `fbthrift::Serialize`
+    ...
+    ... error[E0407]: method `read` is not a member of trait `fbthrift::Deserialize`
+    ...    --> eden\scm\build\cargo-target\debug\build\config_thrift-b6a866cf8706c848\out\lib.rs:165:5
+    ...     |
+    ... 165 | /     fn read(p: &mut P) -> ::anyhow::Result<Self> {
+    ... 166 | |         ::std::result::Result::Ok(Self::from(::anyhow::Context::context(p.read_i32(), "Expected a number indicating enum variant")?))
+    ... 167 | |     }
+    ...     | |_____^ not a member of trait `fbthrift::Deserialize`
+    ...
+    ... error[E0407]: method `write` is not a member of trait `fbthrift::Serialize`
+    ...    --> eden\scm\build\cargo-target\debug\build\config_thrift-b6a866cf8706c848\out\lib.rs:275:5
+    ...     |
+    ... 275 | /     fn write(&self, p: &mut P) {
+    ... 276 | |         p.write_i32(self.into())
+    ... 277 | |     }
+    ...     | |_____^ not a member of trait `fbthrift::Serialize`
+    ...
+    ... error[E0407]: method `read` is not a member of trait `fbthrift::Deserialize`
+    ...    --> eden\scm\build\cargo-target\debug\build\config_thrift-b6a866cf8706c848\out\lib.rs:285:5
+    ...     |
+    ... 285 | /     fn read(p: &mut P) -> ::anyhow::Result<Self> {
+    ... 286 | |         ::std::result::Result::Ok(Self::from(::anyhow::Context::context(p.read_i32(), "Expected a number indicating enum variant")?))
+    ... 287 | |     }
+    ...     | |_____^ not a member of trait `fbthrift::Deserialize`
+    ...
+    ... Other message 1
+    ... Other message 2'''
+    >>> print(shorten_error_message(m))
+    ... [omitted 8 lines] ...
+    error[E0407]: method `write` is not a member of trait `fbthrift::Serialize`
+       --> eden\scm\build\cargo-target\debug\build\config_thrift-b6a866cf8706c848\out\lib.rs:155:5
+        |
+    155 | /     fn write(&self, p: &mut P) {
+    156 | |         p.write_i32(self.into())
+    157 | |     }
+        | |_____^ not a member of trait `fbthrift::Serialize`
+    <BLANKLINE>
+    error[E0407]: method `read` is not a member of trait `fbthrift::Deserialize`
+       --> eden\scm\build\cargo-target\debug\build\config_thrift-b6a866cf8706c848\out\lib.rs:165:5
+        |
+    165 | /     fn read(p: &mut P) -> ::anyhow::Result<Self> {
+    166 | |         ::std::result::Result::Ok(Self::from(::anyhow::Context::context(p.read_i32(), "Expected a number indicating enum variant")?))
+    167 | |     }
+        | |_____^ not a member of trait `fbthrift::Deserialize`
+    <BLANKLINE>
+    ... [omitted 18 lines] ...
+    <BLANKLINE>
+    """
+    important_lines = []
+    is_important = False
+    error_count = 0
+    omitted = 0
+
+    def append_omitted():
+        nonlocal omitted
+        if omitted:
+            important_lines.append(f"... [omitted {omitted} lines] ...\n")
+        omitted = 0
+
+    lines = message.splitlines(True)
+    for line in lines:
+        if not is_important and line.startswith("error[E") and error_count < 2:
+            error_count += 1
+            is_important = True
+            append_omitted()
+        if is_important:
+            important_lines.append(line)
+        else:
+            omitted += 1
+        if is_important and not line.strip():
+            is_important = False
+    append_omitted()
+
+    if not important_lines:
+        # Just truncate the lines
+        threshold = 20
+        important_lines += lines[:threshold]
+        omitted = max(0, len(lines) - threshold)
+        append_omitted()
+
+    return "".join(important_lines)
 
 
 def describeruntestargs(
