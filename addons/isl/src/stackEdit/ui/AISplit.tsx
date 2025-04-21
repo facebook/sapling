@@ -6,7 +6,7 @@
  */
 
 import type {CommitRev, CommitStackState} from '../commitStackState';
-import type {PartiallySelectedDiffCommit} from '../diffSplitTypes';
+import type {DiffCommit, PartiallySelectedDiffCommit} from '../diffSplitTypes';
 import {
   bumpStackEditMetric,
   findStartEndRevs,
@@ -21,10 +21,12 @@ import {Tooltip} from 'isl-components/Tooltip';
 import {useEffect, useState} from 'react';
 import {randomId} from 'shared/utils';
 import {Column} from '../../ComponentUtils';
+import {useGeneratedFileStatuses} from '../../GeneratedFile';
 import {Internal} from '../../Internal';
 import {tracker} from '../../analytics';
 import {useFeatureFlagSync} from '../../featureFlags';
 import {t, T} from '../../i18n';
+import {GeneratedStatus} from '../../types';
 import {applyDiffSplit, diffCommit} from '../diffSplit';
 import {next} from '../revMath';
 
@@ -83,12 +85,13 @@ export function AISplitButton({stackEdit, commitStack, subStack, rev}: AISplitBu
     }
   };
 
+  const diffWithoutGeneratedFiles = useDiffWithoutGeneratedFiles(subStack, rev);
+
   const fetch = async () => {
     if (loadingState.type === 'LOADING' || splitCommitWithAI == null) {
       return;
     }
-    const diff = diffCommit(subStack, rev);
-    if (diff.files.length === 0) {
+    if (diffWithoutGeneratedFiles.files.length === 0) {
       return;
     }
 
@@ -101,7 +104,7 @@ export function AISplitButton({stackEdit, commitStack, subStack, rev}: AISplitBu
         'AISplitButtonClick',
         'SplitSuggestionError',
         undefined,
-        () => splitCommitWithAI(diff),
+        () => splitCommitWithAI(diffWithoutGeneratedFiles),
       );
       setLoadingState(prev => {
         if (prev.type === 'LOADING' && prev.id === id) {
@@ -172,4 +175,17 @@ export function AISplitButton({stackEdit, commitStack, subStack, rev}: AISplitBu
         </Column>
       );
   }
+}
+
+function useDiffWithoutGeneratedFiles(subStack: CommitStackState, rev: CommitRev): DiffCommit {
+  const diffForAllFiles = diffCommit(subStack, rev);
+  const allFilePaths = diffForAllFiles.files.map(f => f.bPath);
+  const generatedFileStatuses = useGeneratedFileStatuses(allFilePaths);
+  const filesWithoutGeneratedFiles = diffForAllFiles.files.filter(
+    f => generatedFileStatuses[f.bPath] !== GeneratedStatus.Generated,
+  );
+  return {
+    ...diffForAllFiles,
+    files: filesWithoutGeneratedFiles,
+  };
 }
