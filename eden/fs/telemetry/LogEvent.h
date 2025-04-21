@@ -88,7 +88,7 @@ struct SuffixGlob : public EdenFSEvent {
   void populate(DynamicEvent& event) const override {
     event.addDouble("duration", duration);
     event.addString("glob_request", glob_request);
-    event.addString("client_scope", client_cmdline);
+    event.addString("client_cmdline", client_cmdline);
     event.addBool("is_local", is_local);
   }
 
@@ -116,7 +116,7 @@ struct ExpensiveGlob : public EdenFSEvent {
   void populate(DynamicEvent& event) const override {
     event.addDouble("duration", duration);
     event.addString("glob_request", glob_request);
-    event.addString("client_scope", client_cmdline);
+    event.addString("client_cmdline", client_cmdline);
     event.addBool("is_local", is_local);
   }
 
