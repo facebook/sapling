@@ -54,7 +54,12 @@ pub struct PythonHookSig;
 impl<'a> factory::FunctionSignature<'a> for PythonHookSig {
     /// (repo, spec, hook_name, kwargs)
     /// See run_python_hook in pyhook. `Any` is intended for `Repo`, without depending on `lib/repo`.
-    type In = (&'a dyn Any, &'a str, &'a str, Option<&'a dyn Serialize>);
+    type In = (
+        Option<&'a dyn Any>,
+        &'a str,
+        &'a str,
+        Option<&'a dyn Serialize>,
+    );
     type Out = Result<i8>;
 }
 
@@ -77,7 +82,7 @@ impl Hooks {
 
     pub fn run_python_hooks(
         &self,
-        repo: &dyn Any,
+        repo: Option<&dyn Any>,
         propagate_errors: bool,
         kwargs: Option<&dyn Serialize>,
     ) -> Result<()> {
@@ -196,7 +201,7 @@ impl Hooks {
 }
 
 fn run_python_hook(
-    repo: &dyn Any,
+    repo: Option<&dyn Any>,
     hook_spec: &str,
     hook_name: &str,
     kwargs: Option<&dyn Serialize>,

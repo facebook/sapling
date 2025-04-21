@@ -26,7 +26,7 @@ pub fn init_module(py: Python, package: &str) -> PyResult<PyModule> {
     m.add(
         py,
         "get_callable",
-        py_fn!(py, get_callable(spec: &str, repo_root: &PyPath, hook_name: &str)),
+        py_fn!(py, get_callable(spec: &str, repo_root: Option<&PyPath>, hook_name: &str)),
     )?;
     m.add(
         py,
@@ -36,7 +36,7 @@ pub fn init_module(py: Python, package: &str) -> PyResult<PyModule> {
     m.add(
         py,
         "run_python_hook",
-        py_fn!(py, run_python_hook_py(repo: pyrepo::repo, spec: &str, hook_name: &str, kwargs: Option<PyDict> = None)),
+        py_fn!(py, run_python_hook_py(repo: Option<pyrepo::repo>, spec: &str, hook_name: &str, kwargs: Option<PyDict> = None)),
     )?;
 
     Ok(m)
@@ -52,7 +52,7 @@ pub fn init_module(py: Python, package: &str) -> PyResult<PyModule> {
 /// - sapling.hooks.foobar (sapling.hooks module, "foobar" function)
 /// - path/to/hook.py:foobar (file relative to repo root, "foobar" function)
 pub fn run_python_hook(
-    repo: &Repo,
+    repo: Option<&Repo>,
     spec: &str,
     hook_name: &str,
     kwargs: Option<&dyn Serialize>,
@@ -67,15 +67,17 @@ pub fn run_python_hook(
         }
         None => None,
     };
-    let py_repo = pyrepo::repo::from_native(py, repo.clone()).into_anyhow_result()?;
-
+    let py_repo = match repo {
+        Some(repo) => Some(pyrepo::repo::from_native(py, repo.clone()).into_anyhow_result()?),
+        None => None,
+    };
     run_python_hook_py(py, py_repo, spec, hook_name, kwargs).into_anyhow_result()
 }
 
 /// `run_python_hook`, but intended to be used as a binding function.
 fn run_python_hook_py(
     py: Python,
-    repo: pyrepo::repo,
+    repo: Option<pyrepo::repo>,
     spec: &str,
     hook_name: &str,
     kwargs: Option<PyDict>,
@@ -85,21 +87,31 @@ fn run_python_hook_py(
         None => PyDict::new(py),
         Some(kwargs) => kwargs,
     };
-    kwargs.set_item(py, "repo", repo.clone_ref(py))?;
+    let repo_root = match repo.as_ref() {
+        Some(repo) => Some(repo.path(py)?),
+        None => None,
+    };
+    kwargs.set_item(py, "repo", repo.map(|repo| repo.clone_ref(py)))?;
     kwargs.set_item(py, "io", pyio::IO::main(py)?)?;
-    let repo_root = repo.path(py)?;
-    let callable = get_callable(py, spec, &repo_root, hook_name)?;
+    let callable = get_callable(py, spec, repo_root.as_deref(), hook_name)?;
     let result = callable.call(py, NoArgs, Some(&kwargs))?;
     Ok(result.extract::<i8>(py).unwrap_or(0))
 }
 
 // Similar to sapling.hook._getpyhook.
 // `spec` can be `file_path:func_name` or `module_name.func_name`.
-fn get_callable(py: Python, spec: &str, repo_root: &PyPath, hook_name: &str) -> PyResult<PyObject> {
+fn get_callable(
+    py: Python,
+    spec: &str,
+    repo_root: Option<&PyPath>,
+    hook_name: &str,
+) -> PyResult<PyObject> {
     match spec.rsplit_once(':') {
         Some((path, func_name)) => {
-            let path = util::path::expand_path(path);
-            let path = repo_root.as_path().join(path);
+            let mut path = util::path::expand_path(path);
+            if let Some(repo_root) = repo_root {
+                path = repo_root.as_path().join(path);
+            }
             let path = PyPathBuf::try_from(path).map_pyerr(py)?;
             let module_name = format!("slhook_{}", hook_name);
             load_path(py, path, &module_name)?.getattr(py, func_name)

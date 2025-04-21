@@ -25,10 +25,13 @@ fn initialize_python_and_run_python_hook(
     let _python = HgPython::new(&[]);
 
     // Prepare input. Downcast is to avoid lib/hook depending on lib/repo.
-    let (repo, spec, hook_name, kwargs) = input;
-    let repo = match repo.downcast_ref::<Repo>() {
-        None => bail!("bug: unexpected Repo type"),
-        Some(v) => v,
+    let (optional_repo, spec, hook_name, kwargs) = input;
+    let repo = match optional_repo {
+        Some(repo) => match repo.downcast_ref::<Repo>() {
+            None => bail!("bug: unexpected Repo type"),
+            Some(v) => Some(v),
+        },
+        None => None,
     };
     pyhook::run_python_hook(repo, spec, hook_name, kwargs)
 }
