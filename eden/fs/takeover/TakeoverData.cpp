@@ -257,12 +257,12 @@ void TakeoverData::serializeFd(
           "Unexpected FileDescriptorType {}", fmt::underlying(type));
   }
 
-  XLOG(DBG7, "serializing file type: {} fd: {}", type, fileToSerialize->fd());
+  XLOGF(DBG7, "serializing file type: {} fd: {}", type, fileToSerialize->fd());
   files.push_back(std::move(*fileToSerialize));
 }
 
 void TakeoverData::deserializeFd(FileDescriptorType type, folly::File& file) {
-  XLOG(DBG7, "deserializing file type: {} fd: {}", type, file.fd());
+  XLOGF(DBG7, "deserializing file type: {} fd: {}", type, file.fd());
   switch (type) {
     case FileDescriptorType::LOCK_FILE:
       lockFile = std::move(file);
@@ -297,7 +297,7 @@ void TakeoverData::serialize(
     msg.files.push_back(std::move(thriftSocket));
 
     if (shouldSerdeNFSInfo(protocolCapabilities)) {
-      XLOG(DBG7) << "serializing mountd socket: " << mountdServerSocket->fd();
+      XLOGF(DBG7, "serializing mountd socket: {}", mountdServerSocket->fd());
       msg.files.push_back(std::move(mountdServerSocket.value()));
     }
   }
@@ -393,8 +393,8 @@ TakeoverData TakeoverData::deserialize(UnixSocket::Message& msg) {
     data.thriftSocket = std::move(msg.files[1]);
     if (shouldSerdeNFSInfo(capabilities)) {
       data.mountdServerSocket = std::move(msg.files[2]);
-      XLOG(DBG1) << "Deserialized mountd Socket "
-                 << data.mountdServerSocket->fd();
+      XLOGF(
+          DBG1, "Deserialized mountd Socket {}", data.mountdServerSocket->fd());
     }
   }
   for (size_t n = 0; n < data.mountPoints.size(); ++n) {
