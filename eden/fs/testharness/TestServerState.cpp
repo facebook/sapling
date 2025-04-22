@@ -40,6 +40,7 @@ std::shared_ptr<ServerState> createTestServerState() {
       std::make_shared<FakeClock>(),
       std::make_shared<ProcessInfoCache>(),
       std::make_shared<NullStructuredLogger>(),
+      std::make_shared<NullStructuredLogger>(),
       std::make_shared<NullScribeLogger>(),
       std::make_shared<ReloadableConfig>(edenConfig),
       *edenConfig,

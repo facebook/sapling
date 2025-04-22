@@ -452,6 +452,12 @@ EdenServer::EdenServer(
               edenConfig->scribeCategory.getValue(),
               sessionInfo,
               edenStats.copy())},
+      notificationsStructuredLogger_{
+          makeDefaultStructuredLogger<EdenStructuredLogger, EdenStatsPtr>(
+              edenConfig->scribeLogger.getValue(),
+              edenConfig->notificationsScribeCategory.getValue(),
+              sessionInfo,
+              edenStats.copy())},
       serverState_{make_shared<ServerState>(
           std::move(userInfo),
           std::move(edenStats),
@@ -465,6 +471,7 @@ EdenServer::EdenServer(
           std::make_shared<UnixClock>(),
           std::make_shared<ProcessInfoCache>(),
           structuredLogger_,
+          notificationsStructuredLogger_,
           std::move(scribeLogger),
           config_,
           *edenConfig,

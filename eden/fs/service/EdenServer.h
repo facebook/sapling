@@ -770,6 +770,11 @@ class EdenServer : private TakeoverHandler {
   std::shared_ptr<StructuredLogger> structuredLogger_;
 
   /**
+   * Notifications telemetry logger.
+   */
+  std::shared_ptr<StructuredLogger> notificationsStructuredLogger_;
+
+  /**
    * Common state shared by all of the EdenMount objects.
    */
   const std::shared_ptr<ServerState> serverState_;

@@ -2709,22 +2709,23 @@ void EdenServiceHandler::sync_changesSinceV2(
     result.toPosition_ref() = std::move(toPosition);
   }
 
-  server_->getServerState()->getStructuredLogger()->logEvent(ChangesSince{
-      getClientCmdline(server_->getServerState(), fetchContext),
-      logPosition(fromPosition),
-      mountPath.asString(),
-      root.asString(),
-      includedRoots,
-      excludedRoots,
-      includedSuffixes,
-      excludedSuffixes,
-      includeVCSRoots,
-      numSmallChanges,
-      numRenamedDirectory,
-      numCommitTransition,
-      lostChangesReason,
-      numFilteredResults,
-  });
+  server_->getServerState()->getNotificationsStructuredLogger()->logEvent(
+      ChangesSince{
+          getClientCmdline(server_->getServerState(), fetchContext),
+          logPosition(fromPosition),
+          mountPath.asString(),
+          root.asString(),
+          includedRoots,
+          excludedRoots,
+          includedSuffixes,
+          excludedSuffixes,
+          includeVCSRoots,
+          numSmallChanges,
+          numRenamedDirectory,
+          numCommitTransition,
+          lostChangesReason,
+          numFilteredResults,
+      });
 }
 
 folly::SemiFuture<std::unique_ptr<StartFileAccessMonitorResult>>

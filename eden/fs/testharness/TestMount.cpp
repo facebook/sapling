@@ -125,6 +125,7 @@ TestMount::TestMount(bool enableActivityBuffer, CaseSensitivity caseSensitivity)
       clock_,
       make_shared<ProcessInfoCache>(),
       make_shared<NullStructuredLogger>(),
+      make_shared<NullStructuredLogger>(),
       make_shared<NullScribeLogger>(),
       reloadableConfig,
       *edenConfig_,
