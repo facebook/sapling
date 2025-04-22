@@ -328,7 +328,6 @@ Test extension help:
                      numbers
        grpcheck      check if the user is in specified groups
        hgevents      publishes state-enter and state-leave events to Watchman
-       hgsql         sync hg repos with MySQL
        histedit      interactive history editing
        interactiveui
                      (no help text available)

@@ -105,7 +105,6 @@ _RT_ENV = {
     "HGTEST_DIR": "eden/scm/tests",
     "HGTEST_DUMMYSSH": "$(location :dummyssh3)",
     "HGTEST_EXCLUDED": get_hg_run_tests_excluded(),
-    "HGTEST_GETDB_SH": "$(location //eden/scm/fb/tests:getdb_sh)",
     "HGTEST_HG": "$(location //eden/scm:hg_test)",
     "HGTEST_NORMAL_LAYOUT": "0",
     "HGTEST_PYTHON": "fbpython",

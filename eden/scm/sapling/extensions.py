@@ -60,6 +60,7 @@ _ignoreextensions = {
     "hbisect",
     "hgcia",
     "hgk",
+    "hgsql",
     "hiddenerror",
     "infinitepush",
     "infinitepushbackup",

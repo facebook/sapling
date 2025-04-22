@@ -16,7 +16,6 @@ New errors are not allowed. Warnings are strongly discouraged.
   $ cat $TESTTMP/files.txt | PYTHONPATH= xargs -n64 -P $NPROC contrib/check-code.py --warnings --per-file=0 | LC_ALL=C sort
   Skipping sapling/commands/eden.py it has no-che?k-code (glob)
   Skipping sapling/ext/globalrevs.py it has no-che?k-code (glob)
-  Skipping sapling/ext/hgsql.py it has no-che?k-code (glob)
   Skipping sapling/httpclient/__init__.py it has no-che?k-code (glob)
   Skipping sapling/httpclient/_readers.py it has no-che?k-code (glob)
   Skipping sapling/statprof.py it has no-che?k-code (glob)

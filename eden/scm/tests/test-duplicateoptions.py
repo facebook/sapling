@@ -10,7 +10,6 @@ ignore = {
     b"factotum",
     b"fbcodereview",
     b"globalrevs",
-    b"hgsql",
     b"highlight",
     b"lz4revlog",
     b"remotenames",

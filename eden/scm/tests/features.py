@@ -137,9 +137,6 @@ ignorerevnumincompatiblelist = """
     test-update-empty.t
     test-url-rev.t
     test-visibility-reset.t
-    test-hgsql-sqlrefill.t
-    test-hgsql-strip.t
-    test-hgsql-treemanifest.t
     test-casecollision-merge.t
     test-casefolding.t
     test-commitcloud-backup-sql2.t

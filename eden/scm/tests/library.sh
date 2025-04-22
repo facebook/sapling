@@ -70,15 +70,3 @@ ls_l() {
 findfilessorted() {
   find "$1" -type f | sort
 }
-
-getmysqldb() {
-  source "$TESTDIR/hgsql/library.sh"
-}
-
-createpushrebaserecordingdb() {
-mysql -h $DBHOST -P $DBPORT -u $DBUSER $DBPASSOPT -e "CREATE DATABASE IF NOT EXISTS $DBNAME;" 2>/dev/null
-mysql -h $DBHOST -P $DBPORT -D $DBNAME -u $DBUSER $DBPASSOPT <<EOF
-DROP TABLE IF EXISTS pushrebaserecording;
-$(cat $TESTDIR/pushrebase_replay_schema.sql)
-EOF
-}
