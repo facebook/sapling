@@ -257,19 +257,18 @@ fn bench_read_mfmd(random_data: &RandomData) -> Result<()> {
 
 fn bench_rocksdb_write_mfmd(random_data: &RandomData) -> Result<()> {
     let mut agg_write_dur = std::time::Duration::new(0, 0);
-    let db = rocksdb::Db::open(
-        random_data.rocksdb_path(),
-        rocksdb::Options::new().create_if_missing(true),
-    )?;
-    let keys = random_data.keys();
+    let db_opts = rocksdb::Options::new().create_if_missing(true);
+    let flush_opts = rocksdb::FlushOptions::new();
     let write_opts = rocksdb::WriteOptions::new();
+    let db = rocksdb::Db::open(random_data.rocksdb_path(), db_opts)?;
+    let keys = random_data.keys();
     for (chunk, key) in random_data.chunks.iter().zip(keys.iter()) {
         let start = Instant::now();
         db.put(key, chunk, &write_opts)?;
         agg_write_dur += start.elapsed();
     }
     let start = Instant::now();
-    db.flush(rocksdb::FlushOptions::new(), None)?;
+    db.flush(flush_opts, None)?;
     let flush_dur = start.elapsed().as_secs_f64();
     let avg_write_dur = agg_write_dur.as_secs_f64() / random_data.number_of_files as f64;
     let avg_flush_dur = flush_dur / random_data.number_of_files as f64;
@@ -292,9 +291,10 @@ fn bench_rocksdb_write_mfmd(random_data: &RandomData) -> Result<()> {
 fn bench_rocksdb_read_mfmd(random_data: &RandomData) -> Result<()> {
     let mut agg_read_dur = std::time::Duration::new(0, 0);
     let mut read_data = vec![0u8; random_data.chunk_size];
-    let db = rocksdb::Db::open(random_data.rocksdb_path(), rocksdb::Options::new())?;
-    let keys = random_data.keys();
+    let db_opts = rocksdb::Options::new();
     let read_opts = rocksdb::ReadOptions::new();
+    let db = rocksdb::Db::open(random_data.rocksdb_path(), db_opts)?;
+    let keys = random_data.keys();
     for key in keys {
         let start = Instant::now();
         let dbres = db.get(&key, &read_opts)?;
