@@ -55,7 +55,6 @@ rust_library(
         "//eden/scm/lib/manifest-tree:manifest-tree",
         "//eden/scm/lib/metalog:metalog",
         "//eden/scm/lib/metrics:metrics",
-        "//eden/scm/lib/refencode:refencode",
         "//eden/scm/lib/repo/repo-minimal-info:repo-minimal-info",
         "//eden/scm/lib/repo/url:repourl",
         "//eden/scm/lib/repolock:repolock",

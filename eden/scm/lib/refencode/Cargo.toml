@@ -14,3 +14,7 @@ name = "refencode"
 
 [dependencies]
 sapling-types = { version = "0.1.0", path = "../types" }
+serde = { version = "1.0.185", features = ["derive", "rc"] }
+
+[dev-dependencies]
+serde_json = { version = "1.0.140", features = ["float_roundtrip", "unbounded_depth"] }

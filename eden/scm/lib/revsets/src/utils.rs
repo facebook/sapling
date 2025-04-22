@@ -203,12 +203,12 @@ fn error_if_ambiguous(input: &str, hgids: Vec<HgId>) -> Result<Option<HgId>> {
 }
 
 fn resolve_bookmark(args: &LookupArgs) -> Result<Option<HgId>> {
-    let mut local_bookmarks = metalog_bookmarks(args.metalog, "bookmarks", decode_bookmarks)?;
+    let mut local_bookmarks = args.metalog.get_bookmarks()?;
     if let Some(hash) = local_bookmarks.remove(args.change_id) {
         return Ok(Some(hash));
     }
 
-    let mut remote_bookmarks = metalog_bookmarks(args.metalog, "remotenames", decode_remotenames)?;
+    let mut remote_bookmarks = args.metalog.get_remotenames()?;
     if let Some(hash) = remote_bookmarks.remove(args.change_id) {
         return Ok(Some(hash));
     }
@@ -220,22 +220,6 @@ fn resolve_bookmark(args: &LookupArgs) -> Result<Option<HgId>> {
     }
 
     Ok(None)
-}
-
-fn metalog_bookmarks(
-    metalog: &MetaLog,
-    bookmark_type: &str,
-    decoder: fn(&[u8]) -> std::io::Result<BTreeMap<String, HgId>>,
-) -> Result<BTreeMap<String, HgId>> {
-    let raw_bookmarks = match metalog.get(bookmark_type)? {
-        None => {
-            return Ok(Default::default());
-        }
-        Some(raw_bookmarks) => raw_bookmarks.into_vec(),
-    };
-
-    Ok(decoder(raw_bookmarks.as_slice())
-        .map_err(|err| RevsetLookupError::BookmarkDecodeError(bookmark_type.to_owned(), err))?)
 }
 
 fn resolve_revnum(args: &LookupArgs) -> Result<Option<HgId>> {

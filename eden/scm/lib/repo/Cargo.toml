@@ -32,7 +32,6 @@ sapling-identity = { version = "0.1.0", path = "../identity" }
 sapling-manifest-tree = { version = "0.1.0", path = "../manifest-tree" }
 sapling-metalog = { version = "0.1.0", path = "../metalog" }
 sapling-metrics = { version = "0.1.0", path = "../metrics" }
-sapling-refencode = { version = "0.1.0", path = "../refencode" }
 sapling-repo-minimal-info = { version = "0.1.0", path = "repo-minimal-info" }
 sapling-repolock = { version = "0.1.0", path = "../repolock" }
 sapling-repourl = { version = "0.1.0", path = "url" }

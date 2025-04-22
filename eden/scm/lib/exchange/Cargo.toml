@@ -19,6 +19,5 @@ sapling-commits = { version = "0.1.0", path = "../commits" }
 sapling-dag = { version = "0.1.0", path = "../dag" }
 sapling-edenapi = { version = "0.1.0", path = "../edenapi" }
 sapling-metalog = { version = "0.1.0", path = "../metalog" }
-sapling-refencode = { version = "0.1.0", path = "../refencode" }
 sapling-types = { version = "0.1.0", path = "../types" }
 tracing = { version = "0.1.41", features = ["attributes", "valuable"] }

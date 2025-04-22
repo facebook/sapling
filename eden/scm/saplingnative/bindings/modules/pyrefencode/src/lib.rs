@@ -11,6 +11,7 @@ use cpython::*;
 use cpython_ext::ResultPyErrExt;
 use cpython_ext::convert::Serde;
 use refencode::HgId;
+use refencode::RefName;
 
 pub fn init_module(py: Python, package: &str) -> PyResult<PyModule> {
     let name = [package, "refencode"].join(".");
@@ -37,7 +38,7 @@ pub fn init_module(py: Python, package: &str) -> PyResult<PyModule> {
         "encodebookmarks",
         py_fn!(
             py,
-            encodebookmarks(namenodes: Serde<BTreeMap<String, HgId>>)
+            encodebookmarks(namenodes: Serde<BTreeMap<RefName, HgId>>)
         ),
     )?;
     m.add(
@@ -45,7 +46,7 @@ pub fn init_module(py: Python, package: &str) -> PyResult<PyModule> {
         "encoderemotenames",
         py_fn!(
             py,
-            encoderemotenames(namenodes: Serde<BTreeMap<String, HgId>>)
+            encoderemotenames(namenodes: Serde<BTreeMap<RefName, HgId>>)
         ),
     )?;
     m.add(
@@ -57,13 +58,13 @@ pub fn init_module(py: Python, package: &str) -> PyResult<PyModule> {
     Ok(m)
 }
 
-fn decodebookmarks(py: Python, data: PyBytes) -> PyResult<Serde<BTreeMap<String, HgId>>> {
+fn decodebookmarks(py: Python, data: PyBytes) -> PyResult<Serde<BTreeMap<RefName, HgId>>> {
     let data = data.data(py);
     let decoded = refencode::decode_bookmarks(data).map_pyerr(py)?;
     Ok(Serde(decoded))
 }
 
-fn decoderemotenames(py: Python, data: PyBytes) -> PyResult<Serde<BTreeMap<String, HgId>>> {
+fn decoderemotenames(py: Python, data: PyBytes) -> PyResult<Serde<BTreeMap<RefName, HgId>>> {
     let data = data.data(py);
     let decoded = refencode::decode_remotenames(data).map_pyerr(py)?;
     Ok(Serde(decoded))
@@ -75,12 +76,12 @@ fn decodevisibleheads(py: Python, data: PyBytes) -> PyResult<Serde<Vec<HgId>>> {
     Ok(Serde(decoded))
 }
 
-fn encodebookmarks(py: Python, namenodes: Serde<BTreeMap<String, HgId>>) -> PyResult<PyBytes> {
+fn encodebookmarks(py: Python, namenodes: Serde<BTreeMap<RefName, HgId>>) -> PyResult<PyBytes> {
     let encoded = refencode::encode_bookmarks(&namenodes.0);
     Ok(PyBytes::new(py, encoded.as_ref()))
 }
 
-fn encoderemotenames(py: Python, namenodes: Serde<BTreeMap<String, HgId>>) -> PyResult<PyBytes> {
+fn encoderemotenames(py: Python, namenodes: Serde<BTreeMap<RefName, HgId>>) -> PyResult<PyBytes> {
     let encoded = refencode::encode_remotenames(&namenodes.0);
     Ok(PyBytes::new(py, encoded.as_ref()))
 }

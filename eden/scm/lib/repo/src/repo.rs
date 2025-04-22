@@ -28,6 +28,7 @@ use edenapi::SaplingRemoteApiError;
 use identity::Identity;
 use manifest_tree::ReadTreeManifest;
 use metalog::MetaLog;
+use metalog::RefName;
 use once_cell::sync::OnceCell;
 use parking_lot::RwLock;
 use repo_minimal_info::RepoMinimalInfo;
@@ -400,25 +401,16 @@ impl Repo {
         Ok(Arc::new(RwLock::new(commits)))
     }
 
-    pub fn remote_bookmarks(&self) -> Result<BTreeMap<String, HgId>> {
-        match self.metalog()?.read().get("remotenames")? {
-            Some(rn) => Ok(refencode::decode_remotenames(&rn)?),
-            None => Err(errors::RemotenamesMetalogKeyError.into()),
-        }
+    pub fn remote_bookmarks(&self) -> Result<BTreeMap<RefName, HgId>> {
+        self.metalog()?.read().get_remotenames()
     }
 
-    pub fn set_remote_bookmarks(&self, names: &BTreeMap<String, HgId>) -> Result<()> {
-        self.metalog()?
-            .write()
-            .set("remotenames", &refencode::encode_remotenames(names))?;
-        Ok(())
+    pub fn set_remote_bookmarks(&self, names: &BTreeMap<RefName, HgId>) -> Result<()> {
+        self.metalog()?.write().set_remotenames(names)
     }
 
-    pub fn local_bookmarks(&self) -> Result<BTreeMap<String, HgId>> {
-        match self.metalog()?.read().get("bookmarks")? {
-            Some(rn) => Ok(refencode::decode_bookmarks(&rn)?),
-            None => Err(errors::RemotenamesMetalogKeyError.into()),
-        }
+    pub fn local_bookmarks(&self) -> Result<BTreeMap<RefName, HgId>> {
+        self.metalog()?.read().get_bookmarks()
     }
 
     pub fn add_requirement(&mut self, requirement: &str) -> Result<()> {

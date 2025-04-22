@@ -15,6 +15,7 @@ use ::metalog::CommitOptions;
 use ::metalog::Id20;
 use ::metalog::MetaLog;
 use ::metalog::Phase;
+use ::metalog::RefName;
 use ::metalog::Repair;
 use ::metalog::constants::*;
 use cpython::*;
@@ -178,25 +179,25 @@ py_class!(pub class metalog |py| {
 
     // metalog_ext APIs
 
-    def get_bookmarks(&self) -> PyResult<Serde<BTreeMap<String, Id20>>> {
+    def get_bookmarks(&self) -> PyResult<Serde<BTreeMap<RefName, Id20>>> {
         let log = self.log(py).read();
         let decoded = log.get_bookmarks().map_pyerr(py)?;
         Ok(Serde(decoded))
     }
 
-    def get_git_refs(&self) -> PyResult<Serde<BTreeMap<String, Id20>>> {
+    def get_git_refs(&self) -> PyResult<Serde<BTreeMap<RefName, Id20>>> {
         let log = self.log(py).read();
         let decoded = log.get_git_refs().map_pyerr(py)?;
         Ok(Serde(decoded))
     }
 
-    def get_remotenames(&self) -> PyResult<Serde<BTreeMap<String, Id20>>> {
+    def get_remotenames(&self) -> PyResult<Serde<BTreeMap<RefName, Id20>>> {
         let log = self.log(py).read();
         let decoded = log.get_remotenames().map_pyerr(py)?;
         Ok(Serde(decoded))
     }
 
-    def get_remotename_phases(&self) -> PyResult<Serde<BTreeMap<String, Phase>>> {
+    def get_remotename_phases(&self) -> PyResult<Serde<BTreeMap<RefName, Phase>>> {
         let log = self.log(py).read();
         let decoded = log.get_remotename_phases().map_pyerr(py)?;
         Ok(Serde(decoded))
@@ -208,25 +209,25 @@ py_class!(pub class metalog |py| {
         Ok(Serde(decoded))
     }
 
-    def set_bookmarks(&self, value: Serde<BTreeMap<String, Id20>>) -> PyResult<PyNone> {
+    def set_bookmarks(&self, value: Serde<BTreeMap<RefName, Id20>>) -> PyResult<PyNone> {
         let mut log = self.log(py).write();
         log.set_bookmarks(&value.0).map_pyerr(py)?;
         Ok(PyNone)
     }
 
-    def set_git_refs(&self, value: Serde<BTreeMap<String, Id20>>) -> PyResult<PyNone> {
+    def set_git_refs(&self, value: Serde<BTreeMap<RefName, Id20>>) -> PyResult<PyNone> {
         let mut log = self.log(py).write();
         log.set_git_refs(&value.0).map_pyerr(py)?;
         Ok(PyNone)
     }
 
-    def set_remotenames(&self, value: Serde<BTreeMap<String, Id20>>) -> PyResult<PyNone> {
+    def set_remotenames(&self, value: Serde<BTreeMap<RefName, Id20>>) -> PyResult<PyNone> {
         let mut log = self.log(py).write();
         log.set_remotenames(&value.0).map_pyerr(py)?;
         Ok(PyNone)
     }
 
-    def set_remotename_phases(&self, value: Serde<BTreeMap<String, Phase>>) -> PyResult<PyNone> {
+    def set_remotename_phases(&self, value: Serde<BTreeMap<RefName, Phase>>) -> PyResult<PyNone> {
         let mut log = self.log(py).write();
         log.set_remotename_phases(&value.0).map_pyerr(py)?;
         Ok(PyNone)

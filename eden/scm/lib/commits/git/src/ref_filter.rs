@@ -11,6 +11,7 @@ use std::sync::LazyLock;
 
 use anyhow::Result;
 use gitcompat::ReferenceValue;
+use refencode::RefName;
 use types::HgId;
 
 /// Help decide whether a Git ref should be imported or not.
@@ -19,7 +20,7 @@ pub(crate) struct GitRefFilter<'a> {
     // e.g. "origin/main"
     head_remotenames: HashSet<&'a str>,
     // e.g. "origin/main"
-    existing_remotenames: &'a BTreeMap<String, HgId>,
+    existing_remotenames: &'a BTreeMap<RefName, HgId>,
     // e.g. "main", without "origin".
     selective_pull_default: &'a HashSet<String>,
     // e.g. "origin"
@@ -31,7 +32,7 @@ impl<'a> GitRefFilter<'a> {
     /// Initialize for dotgit use-case.
     pub(crate) fn new_for_dotgit(
         refs: &'a BTreeMap<String, ReferenceValue>,
-        existing_remotenames: &'a BTreeMap<String, HgId>,
+        existing_remotenames: &'a BTreeMap<RefName, HgId>,
         hoist: Option<&'a str>,
         selective_pull_default: &'a HashSet<String>,
     ) -> Result<Self> {
@@ -47,14 +48,14 @@ impl<'a> GitRefFilter<'a> {
     /// Initialize for non-dotgit use-case.
     pub(crate) fn new_for_dotsl(refs: &'a BTreeMap<String, ReferenceValue>) -> Result<Self> {
         // No need to use "existing_remotenames" for non-dotgit.
-        static EMPTY_MAP: BTreeMap<String, HgId> = BTreeMap::new();
+        static EMPTY_MAP: BTreeMap<RefName, HgId> = BTreeMap::new();
         static EMPTY_SET: LazyLock<HashSet<String>> = LazyLock::new(Default::default);
         Self::new(refs, &EMPTY_MAP, "remote", &EMPTY_SET, false)
     }
 
     fn new(
         refs: &'a BTreeMap<String, ReferenceValue>,
-        existing_remotenames: &'a BTreeMap<String, HgId>,
+        existing_remotenames: &'a BTreeMap<RefName, HgId>,
         hoist: &'a str,
         selective_pull_default: &'a HashSet<String>,
         is_dotgit: bool,
@@ -149,7 +150,7 @@ mod tests {
         let refs = get_test_refs("origin");
 
         let mut existing_remotenames = BTreeMap::new();
-        existing_remotenames.insert("origin/b2".to_string(), *HgId::null_id());
+        existing_remotenames.insert(RefName::try_from("origin/b2").unwrap(), *HgId::null_id());
 
         let mut selected = HashSet::new();
         selected.insert("b3".to_string());

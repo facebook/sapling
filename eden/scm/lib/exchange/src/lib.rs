@@ -21,16 +21,19 @@ use edenapi::configmodel::ConfigExt;
 use edenapi::types::CommitGraphSegments;
 use metalog::CommitOptions;
 use metalog::MetaLog;
+use metalog::RefName;
 use tracing::instrument;
 use types::HgId;
 
 // TODO: move to a bookmarks crate
-pub fn convert_to_remote(config: &dyn Config, bookmark: &str) -> Result<String> {
+pub fn convert_to_remote(config: &dyn Config, bookmark: &str) -> Result<RefName> {
+    // FIXME: "hoist" is not the right config here.
     Ok(format!(
         "{}/{}",
         config.must_get::<String>("remotenames", "hoist")?,
         bookmark
-    ))
+    )
+    .try_into()?)
 }
 
 /// Download initial commit data via fast pull endpoint. Returns hash of bookmarks, if any.
@@ -81,14 +84,11 @@ pub fn clone(
     if let Some(tip) = tip {
         metalog.set("tip", tip.as_ref())?;
     }
-    metalog.set(
-        "remotenames",
-        &refencode::encode_remotenames(
-            &bookmarks
-                .iter()
-                .map(|(bm, id)| Ok((convert_to_remote(config, bm)?, id.clone())))
-                .collect::<Result<_>>()?,
-        ),
+    metalog.set_remotenames(
+        &bookmarks
+            .iter()
+            .map(|(bm, id)| Ok((convert_to_remote(config, bm)?, id.clone())))
+            .collect::<Result<_>>()?,
     )?;
     metalog.commit(CommitOptions::default())?;
 

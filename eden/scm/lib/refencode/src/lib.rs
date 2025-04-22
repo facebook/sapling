@@ -14,11 +14,15 @@ use std::collections::BTreeMap;
 use std::io;
 use std::str::FromStr;
 
+mod ref_name;
+
 pub use types::HgId;
 pub use types::Phase;
 
+pub use crate::ref_name::RefName;
+
 /// Encode remote bookmarks like `[('remote/master', node), ...]` to bytes.
-pub fn encode_remotenames(name_nodes: &BTreeMap<String, HgId>) -> Vec<u8> {
+pub fn encode_remotenames(name_nodes: &BTreeMap<RefName, HgId>) -> Vec<u8> {
     let encoded = name_nodes
         .iter()
         .map(|(name, node)| format!("{} bookmarks {}\n", node.to_hex(), name))
@@ -28,16 +32,17 @@ pub fn encode_remotenames(name_nodes: &BTreeMap<String, HgId>) -> Vec<u8> {
 }
 
 /// Decode remote bookmarks encoded by `encode_remotenames`.
-pub fn decode_remotenames(bytes: &[u8]) -> io::Result<BTreeMap<String, HgId>> {
+pub fn decode_remotenames(bytes: &[u8]) -> io::Result<BTreeMap<RefName, HgId>> {
     let text = std::str::from_utf8(bytes).map_err(invalid)?;
-    let mut decoded = BTreeMap::<String, HgId>::new();
+    let mut decoded = BTreeMap::<RefName, HgId>::new();
     for line in text.lines() {
         let split: Vec<&str> = line.splitn(3, ' ').collect();
         if let [hex, kind, name] = split[..] {
             // See https://fburl.com/1rft34i8 for why ignore default-push/
             if kind == "bookmarks" && !name.starts_with("default-push/") {
                 let node = HgId::from_str(hex).map_err(invalid)?;
-                decoded.insert(name.to_string(), node);
+                let name = RefName::try_from(name)?;
+                decoded.insert(name, node);
             }
         } else {
             return Err(invalid(format!("corrupt entry in remotenames: {}", line)));
@@ -47,29 +52,24 @@ pub fn decode_remotenames(bytes: &[u8]) -> io::Result<BTreeMap<String, HgId>> {
 }
 
 /// Encode remote bookmarks like `[('remote/master', Public), ...]` to bytes.
-pub fn encode_remotename_phases(name_nodes: &BTreeMap<String, Phase>) -> io::Result<Vec<u8>> {
+pub fn encode_remotename_phases(name_nodes: &BTreeMap<RefName, Phase>) -> io::Result<Vec<u8>> {
     let encoded = name_nodes
         .iter()
-        .map(|(name, phase)| {
-            if name.contains(' ') || name.is_empty() {
-                Err(invalid(format!("invalid remotename: {:?}", name)))
-            } else {
-                Ok(format!("{} {}\n", phase, name))
-            }
-        })
-        .collect::<io::Result<Vec<_>>>()?
+        .map(|(name, phase)| format!("{} {}\n", phase, name))
+        .collect::<Vec<_>>()
         .concat();
     Ok(encoded.into_bytes())
 }
 
 /// Decode remote bookmarks encoded by `encode_remotenames_phases`.
-pub fn decode_remotename_phases(bytes: &[u8]) -> io::Result<BTreeMap<String, Phase>> {
+pub fn decode_remotename_phases(bytes: &[u8]) -> io::Result<BTreeMap<RefName, Phase>> {
     let text = std::str::from_utf8(bytes).map_err(invalid)?;
-    let mut decoded = BTreeMap::<String, Phase>::new();
+    let mut decoded = BTreeMap::<RefName, Phase>::new();
     for line in text.lines() {
         if let Some((phase, name)) = line.split_once(' ') {
             let phase = Phase::from_str(phase).map_err(invalid)?;
-            decoded.insert(name.to_string(), phase);
+            let name = RefName::try_from(name)?;
+            decoded.insert(name, phase);
         } else {
             return Err(invalid(format!(
                 "corrupt entry in remotenames-phases: {}",
@@ -81,7 +81,7 @@ pub fn decode_remotename_phases(bytes: &[u8]) -> io::Result<BTreeMap<String, Pha
 }
 
 /// Encode local bookmarks.
-pub fn encode_bookmarks(name_nodes: &BTreeMap<String, HgId>) -> Vec<u8> {
+pub fn encode_bookmarks(name_nodes: &BTreeMap<RefName, HgId>) -> Vec<u8> {
     let encoded = name_nodes
         .iter()
         .map(|(name, node)| format!("{} {}\n", node.to_hex(), name))
@@ -91,14 +91,15 @@ pub fn encode_bookmarks(name_nodes: &BTreeMap<String, HgId>) -> Vec<u8> {
 }
 
 /// Decode local bookmarks encoded by `encode_bookmarks`.
-pub fn decode_bookmarks(bytes: &[u8]) -> io::Result<BTreeMap<String, HgId>> {
+pub fn decode_bookmarks(bytes: &[u8]) -> io::Result<BTreeMap<RefName, HgId>> {
     let text = std::str::from_utf8(bytes).map_err(invalid)?;
-    let mut decoded = BTreeMap::<String, HgId>::new();
+    let mut decoded = BTreeMap::<RefName, HgId>::new();
     for line in text.lines() {
         let split: Vec<&str> = line.splitn(2, ' ').collect();
         if let [hex, name] = split[..] {
             let node = HgId::from_str(hex).map_err(invalid)?;
-            decoded.insert(name.to_string(), node);
+            let name = RefName::try_from(name)?;
+            decoded.insert(name, node);
         } else {
             return Err(invalid(format!("corrupt entry in bookmarks: {}", line)));
         }
@@ -132,7 +133,7 @@ pub fn decode_visibleheads(bytes: &[u8]) -> io::Result<Vec<HgId>> {
     Ok(decoded)
 }
 
-fn invalid(error: impl Into<Box<dyn std::error::Error + Send + Sync>>) -> io::Error {
+pub(crate) fn invalid(error: impl Into<Box<dyn std::error::Error + Send + Sync>>) -> io::Error {
     io::Error::new(io::ErrorKind::InvalidData, error)
 }
 
@@ -172,17 +173,30 @@ mod tests {
         assert_eq!(decoded, heads);
     }
 
-    fn map() -> BTreeMap<String, HgId> {
+    #[test]
+    fn test_invalid_ref_names() {
+        // via "decode_remotename_phases"
+        let data = b"public ";
+        let err = decode_remotename_phases(data).unwrap_err();
+        assert_eq!(err.to_string(), "invalid reference name: \"\"");
+
+        // via serde
+        let s = serde_json::to_string(&"foo\nbar").unwrap();
+        let err = serde_json::from_str::<RefName>(&s).unwrap_err();
+        assert_eq!(err.to_string(), "invalid reference name: \"foo\\nbar\"");
+    }
+
+    fn map() -> BTreeMap<RefName, HgId> {
         let mut m = BTreeMap::new();
         for i in 0..10 {
             let name = format!("foo/a{}", i);
             let node = HgId::from_byte_array([i * 11; HgId::len()]);
-            m.insert(name, node);
+            m.insert(name.try_into().unwrap(), node);
         }
         m
     }
 
-    fn map_phases() -> BTreeMap<String, Phase> {
+    fn map_phases() -> BTreeMap<RefName, Phase> {
         let mut m = BTreeMap::new();
         for i in 0..10 {
             let name = format!("foo/a{}", i);
@@ -190,7 +204,7 @@ mod tests {
                 0 => Phase::Public,
                 _ => Phase::Draft,
             };
-            m.insert(name, phase);
+            m.insert(name.try_into().unwrap(), phase);
         }
         m
     }

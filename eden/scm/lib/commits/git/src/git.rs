@@ -49,6 +49,7 @@ use gitstore::ObjectType;
 use metalog::MetaLog;
 use minibytes::Bytes;
 use paste::paste;
+use refencode::RefName;
 use spawn_ext::CommandError;
 use storemodel::ReadRootTreeIds;
 use storemodel::SerializationFormat;
@@ -212,7 +213,7 @@ impl GitSegmentedCommits {
                             }
                             heads.push((Vertex::copy_from(id.as_ref()), opts));
                         }
-                        remotenames.insert(name.to_string(), id);
+                        remotenames.insert(RefName::try_from(*name)?, id);
                     }
                 }
                 ["refs", "remotetags", name] => {
@@ -228,7 +229,7 @@ impl GitSegmentedCommits {
                     if should_import_to_dag {
                         heads.push((Vertex::copy_from(id.as_ref()), head_opts.clone()));
                     }
-                    remotenames.insert(remotename, id);
+                    remotenames.insert(RefName::try_from(remotename)?, id);
                 }
                 ["refs", "heads", name] => {
                     let should_import_to_dag = match existing_bookmarks.get(*name) {
@@ -239,10 +240,10 @@ impl GitSegmentedCommits {
                         heads.push((Vertex::copy_from(id.as_ref()), head_opts.clone()));
                     }
                     if remote_name_filter.should_treat_local_ref_as_visible_head(name) {
-                        extra_git_refs.insert(ref_name.clone(), id);
+                        extra_git_refs.insert(RefName::try_from(ref_name.as_str())?, id);
                         visibleheads.push(id);
                     } else {
-                        bookmarks.insert(name.to_string(), id);
+                        bookmarks.insert(RefName::try_from(*name)?, id);
                     }
                 }
                 ["refs", "visibleheads", _name] => {
@@ -303,8 +304,8 @@ impl GitSegmentedCommits {
         #[derive(Default)]
         struct State {
             // state (lazy loaded)
-            bookmarks: Option<BTreeMap<String, HgId>>,
-            remotenames: Option<BTreeMap<String, HgId>>,
+            bookmarks: Option<BTreeMap<RefName, HgId>>,
+            remotenames: Option<BTreeMap<RefName, HgId>>,
             visibleheads: Option<Vec<HgId>>,
             // heads to import to dag
             heads: Vec<Vertex>,
@@ -326,7 +327,7 @@ impl GitSegmentedCommits {
         macro_rules! update_map {
             ($field:ident) => {
                 paste! {
-                    fn [<update_ $field>](&mut self, metalog: &MetaLog, name: String, value: Option<HgId>) -> Result<()> {
+                    fn [<update_ $field>](&mut self, metalog: &MetaLog, name: RefName, value: Option<HgId>) -> Result<()> {
                         let map = load!(self, $field, metalog);
                         match value {
                             None => { map.remove(&name); }
@@ -364,15 +365,15 @@ impl GitSegmentedCommits {
         for ref_name in ref_names {
             let ref_value = self.git.lookup_reference_follow_links(ref_name)?;
             if let Some(name) = ref_name.strip_prefix("refs/heads/") {
-                state.update_bookmarks(metalog, name.into(), ref_value)?;
+                state.update_bookmarks(metalog, RefName::try_from(name)?, ref_value)?;
             } else if let Some(name) = ref_name.strip_prefix("refs/remotes/") {
-                state.update_remotenames(metalog, name.into(), ref_value)?;
+                state.update_remotenames(metalog, RefName::try_from(name)?, ref_value)?;
             } else if let Some(rest) = ref_name.strip_prefix("refs/remotetags/") {
                 let name = match rest.split_once('/') {
                     Some((remote, name)) => format!("{}/tags/{}", remote, name),
                     None => bail!("illformed ref_name: {}", ref_name),
                 };
-                state.update_remotenames(metalog, name, ref_value)?;
+                state.update_remotenames(metalog, RefName::try_from(name)?, ref_value)?;
             } else if ref_name.starts_with("refs/visibleheads/") {
                 if let Some(id) = ref_value {
                     state.insert_visiblehead(metalog, id)?;
@@ -513,8 +514,8 @@ impl GitSegmentedCommits {
                 ref_to_change.insert(ref_name, optional_id);
             }
             for (ref_name, optional_id) in find_changes(&old_git_refs, &new_git_refs) {
-                tracing::trace!(ref_name=&ref_name, id=?optional_id, "updating git ref");
-                ref_to_change.insert(ref_name.clone(), optional_id);
+                tracing::trace!(ref_name=ref_name.as_str(), id=?optional_id, "updating git ref");
+                ref_to_change.insert(ref_name.to_string(), optional_id);
             }
         }
 
@@ -765,9 +766,9 @@ Feature Providers:
 
 /// Find "deleted" and "changed" references.
 fn find_changes<'a>(
-    old: &'a BTreeMap<String, HgId>,
-    new: &'a BTreeMap<String, HgId>,
-) -> impl Iterator<Item = (&'a String, Option<HgId>)> + 'a {
+    old: &'a BTreeMap<RefName, HgId>,
+    new: &'a BTreeMap<RefName, HgId>,
+) -> impl Iterator<Item = (&'a RefName, Option<HgId>)> + 'a {
     let deleted = old
         .keys()
         .filter(|name| !new.contains_key(name.as_str()))

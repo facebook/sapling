@@ -16,7 +16,11 @@ rust_library(
         },
     }},
     crate_root = "src/lib.rs",
+    test_deps = [
+        "fbsource//third-party/rust:serde_json",
+    ],
     deps = [
+        "fbsource//third-party/rust:serde",
         "//eden/scm/lib/types:types",
     ],
 )

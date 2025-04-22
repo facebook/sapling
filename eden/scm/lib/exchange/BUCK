@@ -26,7 +26,6 @@ rust_library(
         "//eden/scm/lib/dag:dag",
         "//eden/scm/lib/edenapi:edenapi",
         "//eden/scm/lib/metalog:metalog",
-        "//eden/scm/lib/refencode:refencode",
         "//eden/scm/lib/types:types",
     ],
 )
