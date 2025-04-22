@@ -102,10 +102,14 @@ TakeoverData takeoverMounts(
         }
       })
       .thenValue([&takeoverData](UnixSocket::Message&& msg) {
-        for (auto& file : msg.files) {
-          XLOGF(DBG7, "received fd for takeover: {}", file.fd());
+        if (TakeoverData::isChunked(&msg.data)) {
+          // Not Implemented Yet
+        } else {
+          for (auto& file : msg.files) {
+            XLOGF(DBG7, "received fd for takeover: {}", file.fd());
+          }
+          takeoverData = TakeoverData::deserialize(msg);
         }
-        takeoverData = TakeoverData::deserialize(msg);
       })
       .thenError([&expectedException](folly::exception_wrapper&& ew) {
         expectedException = std::move(ew);

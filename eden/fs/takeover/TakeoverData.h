@@ -110,6 +110,10 @@ class TakeoverCapabilities {
     // Indicates that we include the size of the header in the header itself.
     // This will allow us to more safely evolve the header in the future.
     INCLUDE_HEADER_SIZE = 1 << 10,
+
+    // Indicates that we chunk the takeover data into multiple messages. This
+    // allows us to send larger amounts of data in a single takeover.
+    CHUNKED_MESSAGE = 1 << 11,
   };
 };
 
@@ -314,6 +318,12 @@ class TakeoverData {
    * Deserialize the TakeoverData from a UnixSocket msg.
    */
   static TakeoverData deserialize(UnixSocket::Message& msg);
+
+  /**
+   * Check to see if the message is in chunks. This is used to determine if we
+   * should continue to read from the socket or not.
+   */
+  static bool isChunked(folly::IOBuf* buf);
 
   /**
    * Checks to see if a message is of type PING

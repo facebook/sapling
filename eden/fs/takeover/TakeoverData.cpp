@@ -339,6 +339,12 @@ folly::IOBuf TakeoverData::serializeError(
   return serializeErrorThrift(protocolCapabilities, ew);
 }
 
+bool TakeoverData::isChunked(IOBuf* buf) {
+  // We don't trim the buffer here
+  ProtocolCapabilitiesAndTrimSize result =
+      getProtocolCapabilitiesWithoutTrim(buf);
+  return result.protocolCapabilities & TakeoverCapabilities::CHUNKED_MESSAGE;
+}
 bool TakeoverData::isPing(const IOBuf* buf) {
   if (buf->length() == sizeof(uint32_t)) {
     folly::io::Cursor cursor(buf);
