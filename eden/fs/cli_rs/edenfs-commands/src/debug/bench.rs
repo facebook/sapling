@@ -37,11 +37,43 @@ const BYTES_IN_KILOBYTE: usize = 1024;
 const BYTES_IN_MEGABYTE: usize = 1024 * BYTES_IN_KILOBYTE;
 const BYTES_IN_GIGABYTE: usize = 1024 * BYTES_IN_MEGABYTE;
 
+/// Represents the type of benchmark being performed
+#[derive(Debug, Clone)]
+enum BenchmarkType {
+    FsWriteMultipleFiles,
+    FsReadMultipleFiles,
+    FsWriteSingleFile,
+    FsReadSingleFile,
+    RocksDbWriteMultipleFiles,
+    RocksDbReadMultipleFiles,
+    LmdbWriteMultipleFiles,
+    LmdbReadMultipleFiles,
+    SqliteWriteMultipleFiles,
+    SqliteReadMultipleFiles,
+}
+
+impl std::fmt::Display for BenchmarkType {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            BenchmarkType::FsWriteMultipleFiles => write!(f, "Filesystem Write Multiple Files"),
+            BenchmarkType::FsReadMultipleFiles => write!(f, "Filesystem Read Multiple Files"),
+            BenchmarkType::FsWriteSingleFile => write!(f, "Filesystem Write Single File"),
+            BenchmarkType::FsReadSingleFile => write!(f, "Filesystem Read Single File"),
+            BenchmarkType::RocksDbWriteMultipleFiles => write!(f, "RocksDB Write Multiple Files"),
+            BenchmarkType::RocksDbReadMultipleFiles => write!(f, "RocksDB Read Multiple Files"),
+            BenchmarkType::LmdbWriteMultipleFiles => write!(f, "LMDB Write Multiple Files"),
+            BenchmarkType::LmdbReadMultipleFiles => write!(f, "LMDB Read Multiple Files"),
+            BenchmarkType::SqliteWriteMultipleFiles => write!(f, "SQLite Write Multiple Files"),
+            BenchmarkType::SqliteReadMultipleFiles => write!(f, "SQLite Read Multiple Files"),
+        }
+    }
+}
+
 /// Represents the result of a benchmark operation
 #[derive(Debug, Clone)]
 struct Benchmark {
-    /// Name of the benchmark
-    name: String,
+    /// Type of the benchmark
+    benchmark_type: BenchmarkType,
     /// Various metrics
     metrics: Vec<Metric>,
 }
@@ -60,10 +92,10 @@ struct Metric {
 }
 
 impl Benchmark {
-    /// Creates a new benchmark result with the given name
-    fn new(name: &str) -> Self {
+    /// Creates a new benchmark result with the given benchmark type
+    fn new(benchmark_type: BenchmarkType) -> Self {
         Benchmark {
-            name: name.to_string(),
+            benchmark_type,
             metrics: Vec::new(),
         }
     }
@@ -83,7 +115,7 @@ impl Benchmark {
         let format_value_with_precision =
             |value: f64, precision: u8| -> String { format!("{:.1$}", value, precision as usize) };
 
-        println!("{}", self.name);
+        println!("{}", self.benchmark_type);
 
         let max_value_len = self
             .metrics
@@ -306,7 +338,7 @@ fn bench_write_mfmd(test_dir: &TestDir, random_data: &RandomData) -> Result<Benc
     let mb_per_second_create_write =
         random_data.chunk_size as f64 / avg_create_write_dur / BYTES_IN_MEGABYTE as f64;
 
-    let mut result = Benchmark::new("MFMD Write");
+    let mut result = Benchmark::new(BenchmarkType::FsWriteMultipleFiles);
 
     // Add throughput measurements
     result.add_measurement(
@@ -361,7 +393,7 @@ fn bench_read_mfmd(test_dir: &TestDir, random_data: &RandomData) -> Result<Bench
     let avg_dur = avg_open_dur + avg_read_dur;
     let mb_per_second = random_data.chunk_size as f64 / avg_dur / BYTES_IN_MEGABYTE as f64;
 
-    let mut result = Benchmark::new("MFMD Read");
+    let mut result = Benchmark::new(BenchmarkType::FsReadMultipleFiles);
 
     // Add throughput measurements
     result.add_measurement("open() + read() throughput", mb_per_second, "MiB/s", None);
@@ -403,7 +435,7 @@ fn bench_rocksdb_write_mfmd(test_dir: &TestDir, random_data: &RandomData) -> Res
     let mb_per_second_write =
         random_data.chunk_size as f64 / avg_write_dur / BYTES_IN_MEGABYTE as f64;
 
-    let mut result = Benchmark::new("MFMD Write with RocksDB");
+    let mut result = Benchmark::new(BenchmarkType::RocksDbWriteMultipleFiles);
 
     // Add throughput measurements
     result.add_measurement("write() + flush()", mb_per_second_e2e, "MiB/s", None);
@@ -442,7 +474,7 @@ fn bench_rocksdb_read_mfmd(test_dir: &TestDir, random_data: &RandomData) -> Resu
     let avg_read_dur = agg_read_dur.as_secs_f64() / random_data.number_of_files as f64;
     let mb_per_second = random_data.chunk_size as f64 / avg_read_dur / BYTES_IN_MEGABYTE as f64;
 
-    let mut result = Benchmark::new("MFMD Read with RocksDB");
+    let mut result = Benchmark::new(BenchmarkType::RocksDbReadMultipleFiles);
 
     // Add throughput measurements
     result.add_measurement("read()", mb_per_second, "MiB/s", None);
@@ -486,7 +518,7 @@ fn bench_lmdb_write_mfmd(test_dir: &TestDir, random_data: &RandomData) -> Result
     let mb_per_second_write =
         random_data.chunk_size as f64 / avg_write_dur / BYTES_IN_MEGABYTE as f64;
 
-    let mut result = Benchmark::new("MFMD Write with LMDB");
+    let mut result = Benchmark::new(BenchmarkType::LmdbWriteMultipleFiles);
 
     // Add throughput measurements
     result.add_measurement("write() + sync()", mb_per_second_e2e, "MiB/s", None);
@@ -527,7 +559,7 @@ fn bench_lmdb_read_mfmd(test_dir: &TestDir, random_data: &RandomData) -> Result<
     let avg_read_dur = agg_read_dur.as_secs_f64() / random_data.number_of_files as f64;
     let mb_per_second = random_data.chunk_size as f64 / avg_read_dur / BYTES_IN_MEGABYTE as f64;
 
-    let mut result = Benchmark::new("MFMD Read with LMDB");
+    let mut result = Benchmark::new(BenchmarkType::LmdbReadMultipleFiles);
 
     // Add throughput measurements
     result.add_measurement("read()", mb_per_second, "MiB/s", None);
@@ -562,7 +594,7 @@ fn bench_sqlite_write_mfmd(test_dir: &TestDir, random_data: &RandomData) -> Resu
     let avg_write_dur = agg_write_dur.as_secs_f64() / random_data.number_of_files as f64;
     let mb_per_second = random_data.chunk_size as f64 / avg_write_dur / BYTES_IN_MEGABYTE as f64;
 
-    let mut result = Benchmark::new("MFMD Write with SQLite");
+    let mut result = Benchmark::new(BenchmarkType::SqliteWriteMultipleFiles);
 
     // Add throughput measurements
     result.add_measurement("write()", mb_per_second, "MiB/s", None);
@@ -598,7 +630,7 @@ fn bench_sqlite_read_mfmd(test_dir: &TestDir, random_data: &RandomData) -> Resul
     let avg_read_dur = agg_read_dur.as_secs_f64() / random_data.number_of_files as f64;
     let mb_per_second = random_data.chunk_size as f64 / avg_read_dur / BYTES_IN_MEGABYTE as f64;
 
-    let mut result = Benchmark::new("MFMD Read with SQLite");
+    let mut result = Benchmark::new(BenchmarkType::SqliteReadMultipleFiles);
 
     // Add throughput measurements
     result.add_measurement("read()", mb_per_second, "MiB/s", None);
@@ -631,7 +663,7 @@ fn bench_write_sfmd(test_dir: &TestDir, random_data: &RandomData) -> Result<Benc
     let mb_per_second_write =
         random_data.total_size() as f64 / BYTES_IN_MEGABYTE as f64 / write_dur;
 
-    let mut result = Benchmark::new("SFMD Write");
+    let mut result = Benchmark::new(BenchmarkType::FsWriteSingleFile);
 
     // Add throughput measurements
     result.add_measurement(
@@ -655,7 +687,7 @@ fn bench_read_sfmd(test_dir: &TestDir, random_data: &RandomData) -> Result<Bench
     let agg_dur = start.elapsed().as_secs_f64();
     let mb_per_second = read_data.len() as f64 / BYTES_IN_MEGABYTE as f64 / agg_dur;
 
-    let mut result = Benchmark::new("SFMD Read");
+    let mut result = Benchmark::new(BenchmarkType::FsReadSingleFile);
 
     // Add throughput measurements
     result.add_measurement("open() + read() throughput", mb_per_second, "MiB/s", None);
