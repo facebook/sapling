@@ -46,27 +46,27 @@ pub fn is_lab() -> bool {
     false
 }
 
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub extern "C" fn fb_get_env() -> u8 {
     get_env() as u8
 }
 
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub extern "C" fn fb_is_prod() -> bool {
     *IN_PROD
 }
 
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub extern "C" fn fb_is_corp() -> bool {
     *IN_CORP
 }
 
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub extern "C" fn fb_is_lab() -> bool {
     *IN_LAB
 }
 
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub extern "C" fn fb_has_servicerouter() -> bool {
     *IN_PROD
 }
