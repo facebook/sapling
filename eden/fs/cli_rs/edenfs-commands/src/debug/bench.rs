@@ -272,7 +272,7 @@ impl RandomData {
 }
 
 /// Runs the MFMD write benchmark and returns the benchmark results
-fn run_write_mfmd(test_dir: &TestDir, random_data: &RandomData) -> Result<Benchmark> {
+fn bench_write_mfmd(test_dir: &TestDir, random_data: &RandomData) -> Result<Benchmark> {
     let mut agg_create_dur = std::time::Duration::new(0, 0);
     let mut agg_write_dur = std::time::Duration::new(0, 0);
     for (chunk, path) in random_data
@@ -342,15 +342,8 @@ fn run_write_mfmd(test_dir: &TestDir, random_data: &RandomData) -> Result<Benchm
     Ok(result)
 }
 
-/// Runs the MFMD write benchmark and displays the results
-fn bench_write_mfmd(test_dir: &TestDir, random_data: &RandomData) -> Result<()> {
-    let result = run_write_mfmd(test_dir, random_data)?;
-    result.display();
-    Ok(())
-}
-
 /// Runs the MFMD read benchmark and returns the benchmark results
-fn run_read_mfmd(test_dir: &TestDir, random_data: &RandomData) -> Result<Benchmark> {
+fn bench_read_mfmd(test_dir: &TestDir, random_data: &RandomData) -> Result<Benchmark> {
     let mut agg_open_dur = std::time::Duration::new(0, 0);
     let mut agg_read_dur = std::time::Duration::new(0, 0);
     let mut read_data = vec![0u8; random_data.chunk_size];
@@ -387,15 +380,8 @@ fn run_read_mfmd(test_dir: &TestDir, random_data: &RandomData) -> Result<Benchma
     Ok(result)
 }
 
-/// Runs the MFMD read benchmark and displays the results
-fn bench_read_mfmd(test_dir: &TestDir, random_data: &RandomData) -> Result<()> {
-    let result = run_read_mfmd(test_dir, random_data)?;
-    result.display();
-    Ok(())
-}
-
 /// Runs the RocksDB write benchmark and returns the benchmark results
-fn run_rocksdb_write_mfmd(test_dir: &TestDir, random_data: &RandomData) -> Result<Benchmark> {
+fn bench_rocksdb_write_mfmd(test_dir: &TestDir, random_data: &RandomData) -> Result<Benchmark> {
     let mut agg_write_dur = std::time::Duration::new(0, 0);
     let db_opts = rocksdb::Options::new().create_if_missing(true);
     let flush_opts = rocksdb::FlushOptions::new();
@@ -436,15 +422,8 @@ fn run_rocksdb_write_mfmd(test_dir: &TestDir, random_data: &RandomData) -> Resul
     Ok(result)
 }
 
-/// Runs the RocksDB write benchmark and displays the results
-fn bench_rocksdb_write_mfmd(test_dir: &TestDir, random_data: &RandomData) -> Result<()> {
-    let result = run_rocksdb_write_mfmd(test_dir, random_data)?;
-    result.display();
-    Ok(())
-}
-
 /// Runs the RocksDB read benchmark and returns the benchmark results
-fn run_rocksdb_read_mfmd(test_dir: &TestDir, random_data: &RandomData) -> Result<Benchmark> {
+fn bench_rocksdb_read_mfmd(test_dir: &TestDir, random_data: &RandomData) -> Result<Benchmark> {
     let mut agg_read_dur = std::time::Duration::new(0, 0);
     let mut read_data = vec![0u8; random_data.chunk_size];
     let db_opts = rocksdb::Options::new();
@@ -480,15 +459,8 @@ fn run_rocksdb_read_mfmd(test_dir: &TestDir, random_data: &RandomData) -> Result
     Ok(result)
 }
 
-/// Runs the RocksDB read benchmark and displays the results
-fn bench_rocksdb_read_mfmd(test_dir: &TestDir, random_data: &RandomData) -> Result<()> {
-    let result = run_rocksdb_read_mfmd(test_dir, random_data)?;
-    result.display();
-    Ok(())
-}
-
 /// Runs the LMDB write benchmark and returns the benchmark results
-fn run_lmdb_write_mfmd(test_dir: &TestDir, random_data: &RandomData) -> Result<Benchmark> {
+fn bench_lmdb_write_mfmd(test_dir: &TestDir, random_data: &RandomData) -> Result<Benchmark> {
     let mut agg_write_dur = std::time::Duration::new(0, 0);
     let env = lmdb::Env::options()?
         .set_mapsize(4 * random_data.total_size())?
@@ -533,15 +505,8 @@ fn run_lmdb_write_mfmd(test_dir: &TestDir, random_data: &RandomData) -> Result<B
     Ok(result)
 }
 
-/// Runs the LMDB write benchmark and displays the results
-fn bench_lmdb_write_mfmd(test_dir: &TestDir, random_data: &RandomData) -> Result<()> {
-    let result = run_lmdb_write_mfmd(test_dir, random_data)?;
-    result.display();
-    Ok(())
-}
-
 /// Runs the LMDB read benchmark and returns the benchmark results
-fn run_lmdb_read_mfmd(test_dir: &TestDir, random_data: &RandomData) -> Result<Benchmark> {
+fn bench_lmdb_read_mfmd(test_dir: &TestDir, random_data: &RandomData) -> Result<Benchmark> {
     let mut agg_read_dur = std::time::Duration::new(0, 0);
     let mut read_data = vec![0u8; random_data.chunk_size];
     let env = lmdb::Env::options()?
@@ -578,16 +543,8 @@ fn run_lmdb_read_mfmd(test_dir: &TestDir, random_data: &RandomData) -> Result<Be
 
     Ok(result)
 }
-
-/// Runs the LMDB read benchmark and displays the results
-fn bench_lmdb_read_mfmd(test_dir: &TestDir, random_data: &RandomData) -> Result<()> {
-    let result = run_lmdb_read_mfmd(test_dir, random_data)?;
-    result.display();
-    Ok(())
-}
-
 /// Runs the SQLite write benchmark and returns the benchmark results
-fn run_sqlite_write_mfmd(test_dir: &TestDir, random_data: &RandomData) -> Result<Benchmark> {
+fn bench_sqlite_write_mfmd(test_dir: &TestDir, random_data: &RandomData) -> Result<Benchmark> {
     let conn = rusqlite::Connection::open(test_dir.sqlite_path())?;
     conn.execute_batch("PRAGMA journal_mode = WAL; PRAGMA synchronous = OFF;")?;
     conn.execute(
@@ -622,15 +579,8 @@ fn run_sqlite_write_mfmd(test_dir: &TestDir, random_data: &RandomData) -> Result
     Ok(result)
 }
 
-/// Runs the SQLite write benchmark and displays the results
-fn bench_sqlite_write_mfmd(test_dir: &TestDir, random_data: &RandomData) -> Result<()> {
-    let result = run_sqlite_write_mfmd(test_dir, random_data)?;
-    result.display();
-    Ok(())
-}
-
 /// Runs the SQLite read benchmark and returns the benchmark results
-fn run_sqlite_read_mfmd(test_dir: &TestDir, random_data: &RandomData) -> Result<Benchmark> {
+fn bench_sqlite_read_mfmd(test_dir: &TestDir, random_data: &RandomData) -> Result<Benchmark> {
     let conn = rusqlite::Connection::open(test_dir.sqlite_path())?;
     let mut stmt = conn.prepare("SELECT value FROM data WHERE key = ?")?;
     let keys = random_data.keys();
@@ -665,15 +615,8 @@ fn run_sqlite_read_mfmd(test_dir: &TestDir, random_data: &RandomData) -> Result<
     Ok(result)
 }
 
-/// Runs the SQLite read benchmark and displays the results
-fn bench_sqlite_read_mfmd(test_dir: &TestDir, random_data: &RandomData) -> Result<()> {
-    let result = run_sqlite_read_mfmd(test_dir, random_data)?;
-    result.display();
-    Ok(())
-}
-
 /// Runs the SFMD write benchmark and returns the benchmark results
-fn run_write_sfmd(test_dir: &TestDir, random_data: &RandomData) -> Result<Benchmark> {
+fn bench_write_sfmd(test_dir: &TestDir, random_data: &RandomData) -> Result<Benchmark> {
     let start = Instant::now();
     let mut file = File::create(test_dir.combined_data_path())?;
     for chunk in &random_data.chunks {
@@ -702,15 +645,8 @@ fn run_write_sfmd(test_dir: &TestDir, random_data: &RandomData) -> Result<Benchm
     Ok(result)
 }
 
-/// Runs the SFMD write benchmark and displays the results
-fn bench_write_sfmd(test_dir: &TestDir, random_data: &RandomData) -> Result<()> {
-    let result = run_write_sfmd(test_dir, random_data)?;
-    result.display();
-    Ok(())
-}
-
 /// Runs the SFMD read benchmark and returns the benchmark results
-fn run_read_sfmd(test_dir: &TestDir, random_data: &RandomData) -> Result<Benchmark> {
+fn bench_read_sfmd(test_dir: &TestDir, random_data: &RandomData) -> Result<Benchmark> {
     let file_path = test_dir.combined_data_path();
     let mut read_data = Vec::with_capacity(random_data.total_size());
     let start = Instant::now();
@@ -725,13 +661,6 @@ fn run_read_sfmd(test_dir: &TestDir, random_data: &RandomData) -> Result<Benchma
     result.add_measurement("open() + read() throughput", mb_per_second, "MiB/s", None);
 
     Ok(result)
-}
-
-/// Runs the SFMD read benchmark and displays the results
-fn bench_read_sfmd(test_dir: &TestDir, random_data: &RandomData) -> Result<()> {
-    let result = run_read_sfmd(test_dir, random_data)?;
-    result.display();
-    Ok(())
 }
 
 fn print_section_divider() {
@@ -768,10 +697,10 @@ impl crate::Subcommand for BenchCmd {
                         random_data.total_size() as f64 / BYTES_IN_GIGABYTE as f64
                     );
                     print_section_divider();
-                    bench_write_mfmd(&test_dir, &random_data)?;
-                    bench_read_mfmd(&test_dir, &random_data)?;
-                    bench_write_sfmd(&test_dir, &random_data)?;
-                    bench_read_sfmd(&test_dir, &random_data)?;
+                    bench_write_mfmd(&test_dir, &random_data)?.display();
+                    bench_read_mfmd(&test_dir, &random_data)?.display();
+                    bench_write_sfmd(&test_dir, &random_data)?.display();
+                    bench_read_sfmd(&test_dir, &random_data)?.display();
                     print_section_divider();
                     println!("Removing the directory at {:?}", test_dir.path);
                     test_dir.remove()?;
@@ -791,12 +720,12 @@ impl crate::Subcommand for BenchCmd {
                         random_data.total_size() as f64 / BYTES_IN_GIGABYTE as f64
                     );
                     print_section_divider();
-                    bench_rocksdb_write_mfmd(&test_dir, &random_data)?;
-                    bench_rocksdb_read_mfmd(&test_dir, &random_data)?;
-                    bench_lmdb_write_mfmd(&test_dir, &random_data)?;
-                    bench_lmdb_read_mfmd(&test_dir, &random_data)?;
-                    bench_sqlite_write_mfmd(&test_dir, &random_data)?;
-                    bench_sqlite_read_mfmd(&test_dir, &random_data)?;
+                    bench_rocksdb_write_mfmd(&test_dir, &random_data)?.display();
+                    bench_rocksdb_read_mfmd(&test_dir, &random_data)?.display();
+                    bench_lmdb_write_mfmd(&test_dir, &random_data)?.display();
+                    bench_lmdb_read_mfmd(&test_dir, &random_data)?.display();
+                    bench_sqlite_write_mfmd(&test_dir, &random_data)?.display();
+                    bench_sqlite_read_mfmd(&test_dir, &random_data)?.display();
                     print_section_divider();
                     println!("Removing the directory at {:?}", test_dir.path);
                     test_dir.remove()?;
