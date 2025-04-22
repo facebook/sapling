@@ -27,3 +27,7 @@ pub fn init() {
     // Enables lib/hook to run Python hooks.
     cmdpy::init();
 }
+
+pub fn deinit() {
+    cmdpy::deinit();
+}

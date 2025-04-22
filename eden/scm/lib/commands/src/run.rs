@@ -199,6 +199,8 @@ pub fn run_command(args: Vec<String>, io: &IO) -> i32 {
         failpoint::teardown_fail_points(scenario);
     }
 
+    crate::deinit();
+
     exit_code
 }
 

@@ -18,3 +18,7 @@ pub use hgpython::prepare_builtin_modules;
 pub fn init() {
     factory_impls::init();
 }
+
+pub fn deinit() {
+    factory_impls::deinit();
+}
