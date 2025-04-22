@@ -37,6 +37,83 @@ const BYTES_IN_KILOBYTE: usize = 1024;
 const BYTES_IN_MEGABYTE: usize = 1024 * BYTES_IN_KILOBYTE;
 const BYTES_IN_GIGABYTE: usize = 1024 * BYTES_IN_MEGABYTE;
 
+/// Represents the result of a benchmark operation
+#[derive(Debug, Clone)]
+struct Benchmark {
+    /// Name of the benchmark
+    name: String,
+    /// Various metrics
+    metrics: Vec<Metric>,
+}
+
+/// Represents a measurement with a name, value, unit, and precision
+#[derive(Debug, Clone)]
+struct Metric {
+    /// Name of the measurement (e.g., "write()", "write() latency")
+    name: String,
+    /// Value of the measurement
+    value: f64,
+    /// Unit of the measurement (e.g., "MiB/s", "ms")
+    unit: String,
+    /// Precision for display (number of decimal places)
+    precision: u8,
+}
+
+impl Benchmark {
+    /// Creates a new benchmark result with the given name
+    fn new(name: &str) -> Self {
+        Benchmark {
+            name: name.to_string(),
+            metrics: Vec::new(),
+        }
+    }
+
+    /// Adds a measurement with optional precision (defaults to 2)
+    fn add_measurement(&mut self, name: &str, value: f64, unit: &str, precision: Option<u8>) {
+        self.metrics.push(Metric {
+            name: name.to_string(),
+            value,
+            unit: unit.to_string(),
+            precision: precision.unwrap_or(2),
+        });
+    }
+
+    /// Displays the benchmark result
+    fn display(&self) {
+        println!("{}", self.name);
+
+        // Display metrics
+        for measurement in &self.metrics {
+            match measurement.precision {
+                0 => println!(
+                    "\t- {}: {:.0} {}",
+                    measurement.name, measurement.value, measurement.unit
+                ),
+                1 => println!(
+                    "\t- {}: {:.1} {}",
+                    measurement.name, measurement.value, measurement.unit
+                ),
+                2 => println!(
+                    "\t- {}: {:.2} {}",
+                    measurement.name, measurement.value, measurement.unit
+                ),
+                3 => println!(
+                    "\t- {}: {:.3} {}",
+                    measurement.name, measurement.value, measurement.unit
+                ),
+                4 => println!(
+                    "\t- {}: {:.4} {}",
+                    measurement.name, measurement.value, measurement.unit
+                ),
+                _ => println!(
+                    "\t- {}: {} {}",
+                    measurement.name, measurement.value, measurement.unit
+                ),
+            }
+        }
+    }
+}
+
 #[derive(Parser, Debug)]
 pub struct CommonOptions {
     /// Directory to use for testing
@@ -192,7 +269,8 @@ impl RandomData {
     }
 }
 
-fn bench_write_mfmd(test_dir: &TestDir, random_data: &RandomData) -> Result<()> {
+/// Runs the MFMD write benchmark and returns the benchmark results
+fn run_write_mfmd(test_dir: &TestDir, random_data: &RandomData) -> Result<Benchmark> {
     let mut agg_create_dur = std::time::Duration::new(0, 0);
     let mut agg_write_dur = std::time::Duration::new(0, 0);
     for (chunk, path) in random_data
@@ -225,30 +303,52 @@ fn bench_write_mfmd(test_dir: &TestDir, random_data: &RandomData) -> Result<()> 
     let mb_per_second_e2e = random_data.chunk_size as f64 / avg_e2e_dur / BYTES_IN_MEGABYTE as f64;
     let mb_per_second_create_write =
         random_data.chunk_size as f64 / avg_create_write_dur / BYTES_IN_MEGABYTE as f64;
-    println!("MFMD Write");
-    println!(
-        "\t- {:.2} MiB/s create() + write() + sync()",
-        mb_per_second_e2e
+
+    let mut result = Benchmark::new("MFMD Write");
+
+    // Add throughput measurements
+    result.add_measurement(
+        "create() + write() + sync() throughput",
+        mb_per_second_e2e,
+        "MiB/s",
+        None,
     );
-    println!(
-        "\t- {:.2} MiB/s create() + write()",
-        mb_per_second_create_write
+    result.add_measurement(
+        "create() + write() throughput",
+        mb_per_second_create_write,
+        "MiB/s",
+        None,
     );
-    println!("\t- {:.4} ms create() latency", avg_create_dur * 1000.0);
-    println!(
-        "\t- {:.4} ms write() {:.0} KiB bytes latency",
+
+    // Add latency measurements
+    result.add_measurement("create() latency", avg_create_dur * 1000.0, "ms", Some(4));
+
+    let chunk_size_kb = random_data.chunk_size as f64 / BYTES_IN_KILOBYTE as f64;
+    result.add_measurement(
+        &format!("write() {:.0} KiB latency", chunk_size_kb),
         avg_write_dur * 1000.0,
-        random_data.chunk_size as f64 / BYTES_IN_KILOBYTE as f64
+        "ms",
+        Some(4),
     );
-    println!(
-        "\t- {:.4} ms sync() {:.0} KiB latency",
+    result.add_measurement(
+        &format!("sync() {:.0} KiB latency", chunk_size_kb),
         avg_sync_dur * 1000.0,
-        random_data.chunk_size as f64 / BYTES_IN_KILOBYTE as f64
+        "ms",
+        Some(4),
     );
+
+    Ok(result)
+}
+
+/// Runs the MFMD write benchmark and displays the results
+fn bench_write_mfmd(test_dir: &TestDir, random_data: &RandomData) -> Result<()> {
+    let result = run_write_mfmd(test_dir, random_data)?;
+    result.display();
     Ok(())
 }
 
-fn bench_read_mfmd(test_dir: &TestDir, random_data: &RandomData) -> Result<()> {
+/// Runs the MFMD read benchmark and returns the benchmark results
+fn run_read_mfmd(test_dir: &TestDir, random_data: &RandomData) -> Result<Benchmark> {
     let mut agg_open_dur = std::time::Duration::new(0, 0);
     let mut agg_read_dur = std::time::Duration::new(0, 0);
     let mut read_data = vec![0u8; random_data.chunk_size];
@@ -265,18 +365,35 @@ fn bench_read_mfmd(test_dir: &TestDir, random_data: &RandomData) -> Result<()> {
     let avg_read_dur = agg_read_dur.as_secs_f64() / random_data.number_of_files as f64;
     let avg_dur = avg_open_dur + avg_read_dur;
     let mb_per_second = random_data.chunk_size as f64 / avg_dur / BYTES_IN_MEGABYTE as f64;
-    println!("MFMD Read");
-    println!("\t- {:.2} MiB/s open() + read()", mb_per_second);
-    println!("\t- {:.4} ms open() latency", avg_open_dur * 1000.0);
-    println!(
-        "\t- {:.4} ms read() {:.0} KiB latency",
+
+    let mut result = Benchmark::new("MFMD Read");
+
+    // Add throughput measurements
+    result.add_measurement("open() + read() throughput", mb_per_second, "MiB/s", None);
+
+    // Add latency measurements
+    result.add_measurement("open() latency", avg_open_dur * 1000.0, "ms", Some(4));
+
+    let chunk_size_kb = random_data.chunk_size as f64 / BYTES_IN_KILOBYTE as f64;
+    result.add_measurement(
+        &format!("read() {:.0} KiB latency", chunk_size_kb),
         avg_read_dur * 1000.0,
-        random_data.chunk_size as f64 / BYTES_IN_KILOBYTE as f64
+        "ms",
+        Some(4),
     );
+
+    Ok(result)
+}
+
+/// Runs the MFMD read benchmark and displays the results
+fn bench_read_mfmd(test_dir: &TestDir, random_data: &RandomData) -> Result<()> {
+    let result = run_read_mfmd(test_dir, random_data)?;
+    result.display();
     Ok(())
 }
 
-fn bench_rocksdb_write_mfmd(test_dir: &TestDir, random_data: &RandomData) -> Result<()> {
+/// Runs the RocksDB write benchmark and returns the benchmark results
+fn run_rocksdb_write_mfmd(test_dir: &TestDir, random_data: &RandomData) -> Result<Benchmark> {
     let mut agg_write_dur = std::time::Duration::new(0, 0);
     let db_opts = rocksdb::Options::new().create_if_missing(true);
     let flush_opts = rocksdb::FlushOptions::new();
@@ -297,19 +414,35 @@ fn bench_rocksdb_write_mfmd(test_dir: &TestDir, random_data: &RandomData) -> Res
     let mb_per_second_e2e = random_data.chunk_size as f64 / avg_dur / BYTES_IN_MEGABYTE as f64;
     let mb_per_second_write =
         random_data.chunk_size as f64 / avg_write_dur / BYTES_IN_MEGABYTE as f64;
-    println!("MFMD Write with RocksDB");
-    println!("\t- {:.2} MiB/s write() + flush()", mb_per_second_e2e);
-    println!("\t- {:.2} MiB/s write()", mb_per_second_write);
-    println!(
-        "\t- {:.4} ms write() {:.0} KiB latency",
-        avg_write_dur * 1000.0,
-        random_data.chunk_size as f64 / BYTES_IN_KILOBYTE as f64
-    );
 
+    let mut result = Benchmark::new("MFMD Write with RocksDB");
+
+    // Add throughput measurements
+    result.add_measurement("write() + flush()", mb_per_second_e2e, "MiB/s", None);
+    result.add_measurement("write()", mb_per_second_write, "MiB/s", None);
+
+    // Add latency measurements
+    let chunk_size_kb = random_data.chunk_size as f64 / BYTES_IN_KILOBYTE as f64;
+    result.add_measurement(
+        &format!("write() {:.0} KiB latency", chunk_size_kb),
+        avg_write_dur * 1000.0,
+        "ms",
+        Some(4),
+    );
+    result.add_measurement("flush() latency", avg_flush_dur * 1000.0, "ms", Some(4));
+
+    Ok(result)
+}
+
+/// Runs the RocksDB write benchmark and displays the results
+fn bench_rocksdb_write_mfmd(test_dir: &TestDir, random_data: &RandomData) -> Result<()> {
+    let result = run_rocksdb_write_mfmd(test_dir, random_data)?;
+    result.display();
     Ok(())
 }
 
-fn bench_rocksdb_read_mfmd(test_dir: &TestDir, random_data: &RandomData) -> Result<()> {
+/// Runs the RocksDB read benchmark and returns the benchmark results
+fn run_rocksdb_read_mfmd(test_dir: &TestDir, random_data: &RandomData) -> Result<Benchmark> {
     let mut agg_read_dur = std::time::Duration::new(0, 0);
     let mut read_data = vec![0u8; random_data.chunk_size];
     let db_opts = rocksdb::Options::new();
@@ -327,17 +460,33 @@ fn bench_rocksdb_read_mfmd(test_dir: &TestDir, random_data: &RandomData) -> Resu
     }
     let avg_read_dur = agg_read_dur.as_secs_f64() / random_data.number_of_files as f64;
     let mb_per_second = random_data.chunk_size as f64 / avg_read_dur / BYTES_IN_MEGABYTE as f64;
-    println!("MFMD Read with RocksDB");
-    println!("\t- {:.2} MiB/s read()", mb_per_second);
-    println!(
-        "\t- {:.4} ms read() {:.0} KiB latency",
+
+    let mut result = Benchmark::new("MFMD Read with RocksDB");
+
+    // Add throughput measurements
+    result.add_measurement("read()", mb_per_second, "MiB/s", None);
+
+    // Add latency measurements
+    let chunk_size_kb = random_data.chunk_size as f64 / BYTES_IN_KILOBYTE as f64;
+    result.add_measurement(
+        &format!("read() {:.0} KiB latency", chunk_size_kb),
         avg_read_dur * 1000.0,
-        random_data.chunk_size as f64 / BYTES_IN_KILOBYTE as f64
+        "ms",
+        Some(4),
     );
+
+    Ok(result)
+}
+
+/// Runs the RocksDB read benchmark and displays the results
+fn bench_rocksdb_read_mfmd(test_dir: &TestDir, random_data: &RandomData) -> Result<()> {
+    let result = run_rocksdb_read_mfmd(test_dir, random_data)?;
+    result.display();
     Ok(())
 }
 
-fn bench_lmdb_write_mfmd(test_dir: &TestDir, random_data: &RandomData) -> Result<()> {
+/// Runs the LMDB write benchmark and returns the benchmark results
+fn run_lmdb_write_mfmd(test_dir: &TestDir, random_data: &RandomData) -> Result<Benchmark> {
     let mut agg_write_dur = std::time::Duration::new(0, 0);
     let env = lmdb::Env::options()?
         .set_mapsize(4 * random_data.total_size())?
@@ -362,19 +511,35 @@ fn bench_lmdb_write_mfmd(test_dir: &TestDir, random_data: &RandomData) -> Result
     let mb_per_second_e2e = random_data.chunk_size as f64 / avg_dur / BYTES_IN_MEGABYTE as f64;
     let mb_per_second_write =
         random_data.chunk_size as f64 / avg_write_dur / BYTES_IN_MEGABYTE as f64;
-    println!("MFMD Write with LMDB");
-    println!("\t- {:.2} MiB/s write() + sync()", mb_per_second_e2e);
-    println!("\t- {:.2} MiB/s write()", mb_per_second_write);
-    println!(
-        "\t- {:.4} ms write() {:.0} KiB latency",
-        avg_write_dur * 1000.0,
-        random_data.chunk_size as f64 / BYTES_IN_KILOBYTE as f64
-    );
 
+    let mut result = Benchmark::new("MFMD Write with LMDB");
+
+    // Add throughput measurements
+    result.add_measurement("write() + sync()", mb_per_second_e2e, "MiB/s", None);
+    result.add_measurement("write()", mb_per_second_write, "MiB/s", None);
+
+    // Add latency measurements
+    let chunk_size_kb = random_data.chunk_size as f64 / BYTES_IN_KILOBYTE as f64;
+    result.add_measurement(
+        &format!("write() {:.0} KiB latency", chunk_size_kb),
+        avg_write_dur * 1000.0,
+        "ms",
+        Some(4),
+    );
+    result.add_measurement("sync() latency", avg_sync_dur * 1000.0, "ms", Some(4));
+
+    Ok(result)
+}
+
+/// Runs the LMDB write benchmark and displays the results
+fn bench_lmdb_write_mfmd(test_dir: &TestDir, random_data: &RandomData) -> Result<()> {
+    let result = run_lmdb_write_mfmd(test_dir, random_data)?;
+    result.display();
     Ok(())
 }
 
-fn bench_lmdb_read_mfmd(test_dir: &TestDir, random_data: &RandomData) -> Result<()> {
+/// Runs the LMDB read benchmark and returns the benchmark results
+fn run_lmdb_read_mfmd(test_dir: &TestDir, random_data: &RandomData) -> Result<Benchmark> {
     let mut agg_read_dur = std::time::Duration::new(0, 0);
     let mut read_data = vec![0u8; random_data.chunk_size];
     let env = lmdb::Env::options()?
@@ -394,17 +559,33 @@ fn bench_lmdb_read_mfmd(test_dir: &TestDir, random_data: &RandomData) -> Result<
     }
     let avg_read_dur = agg_read_dur.as_secs_f64() / random_data.number_of_files as f64;
     let mb_per_second = random_data.chunk_size as f64 / avg_read_dur / BYTES_IN_MEGABYTE as f64;
-    println!("MFMD Read with LMDB");
-    println!("\t- {:.2} MiB/s read()", mb_per_second);
-    println!(
-        "\t- {:.4} ms read() {:.0} KiB latency",
+
+    let mut result = Benchmark::new("MFMD Read with LMDB");
+
+    // Add throughput measurements
+    result.add_measurement("read()", mb_per_second, "MiB/s", None);
+
+    // Add latency measurements
+    let chunk_size_kb = random_data.chunk_size as f64 / BYTES_IN_KILOBYTE as f64;
+    result.add_measurement(
+        &format!("read() {:.0} KiB latency", chunk_size_kb),
         avg_read_dur * 1000.0,
-        random_data.chunk_size as f64 / BYTES_IN_KILOBYTE as f64
+        "ms",
+        Some(4),
     );
+
+    Ok(result)
+}
+
+/// Runs the LMDB read benchmark and displays the results
+fn bench_lmdb_read_mfmd(test_dir: &TestDir, random_data: &RandomData) -> Result<()> {
+    let result = run_lmdb_read_mfmd(test_dir, random_data)?;
+    result.display();
     Ok(())
 }
 
-fn bench_sqlite_write_mfmd(test_dir: &TestDir, random_data: &RandomData) -> Result<()> {
+/// Runs the SQLite write benchmark and returns the benchmark results
+fn run_sqlite_write_mfmd(test_dir: &TestDir, random_data: &RandomData) -> Result<Benchmark> {
     let conn = rusqlite::Connection::open(test_dir.sqlite_path())?;
     conn.execute_batch("PRAGMA journal_mode = WAL; PRAGMA synchronous = OFF;")?;
     conn.execute(
@@ -421,17 +602,33 @@ fn bench_sqlite_write_mfmd(test_dir: &TestDir, random_data: &RandomData) -> Resu
     }
     let avg_write_dur = agg_write_dur.as_secs_f64() / random_data.number_of_files as f64;
     let mb_per_second = random_data.chunk_size as f64 / avg_write_dur / BYTES_IN_MEGABYTE as f64;
-    println!("MFMD Write with SQLite");
-    println!("\t- {:.2} MiB/s write()", mb_per_second);
-    println!(
-        "\t- {:.4} ms write() {:.0} KiB latency",
+
+    let mut result = Benchmark::new("MFMD Write with SQLite");
+
+    // Add throughput measurements
+    result.add_measurement("write()", mb_per_second, "MiB/s", None);
+
+    // Add latency measurements
+    let chunk_size_kb = random_data.chunk_size as f64 / BYTES_IN_KILOBYTE as f64;
+    result.add_measurement(
+        &format!("write() {:.0} KiB latency", chunk_size_kb),
         avg_write_dur * 1000.0,
-        random_data.chunk_size as f64 / BYTES_IN_KILOBYTE as f64
+        "ms",
+        Some(4),
     );
+
+    Ok(result)
+}
+
+/// Runs the SQLite write benchmark and displays the results
+fn bench_sqlite_write_mfmd(test_dir: &TestDir, random_data: &RandomData) -> Result<()> {
+    let result = run_sqlite_write_mfmd(test_dir, random_data)?;
+    result.display();
     Ok(())
 }
 
-fn bench_sqlite_read_mfmd(test_dir: &TestDir, random_data: &RandomData) -> Result<()> {
+/// Runs the SQLite read benchmark and returns the benchmark results
+fn run_sqlite_read_mfmd(test_dir: &TestDir, random_data: &RandomData) -> Result<Benchmark> {
     let conn = rusqlite::Connection::open(test_dir.sqlite_path())?;
     let mut stmt = conn.prepare("SELECT value FROM data WHERE key = ?")?;
     let keys = random_data.keys();
@@ -448,17 +645,33 @@ fn bench_sqlite_read_mfmd(test_dir: &TestDir, random_data: &RandomData) -> Resul
     }
     let avg_read_dur = agg_read_dur.as_secs_f64() / random_data.number_of_files as f64;
     let mb_per_second = random_data.chunk_size as f64 / avg_read_dur / BYTES_IN_MEGABYTE as f64;
-    println!("MFMD Read with SQLite");
-    println!("\t- {:.2} MiB/s read()", mb_per_second);
-    println!(
-        "\t- {:.4} ms read() {:.0} KiB latency",
+
+    let mut result = Benchmark::new("MFMD Read with SQLite");
+
+    // Add throughput measurements
+    result.add_measurement("read()", mb_per_second, "MiB/s", None);
+
+    // Add latency measurements
+    let chunk_size_kb = random_data.chunk_size as f64 / BYTES_IN_KILOBYTE as f64;
+    result.add_measurement(
+        &format!("read() {:.0} KiB latency", chunk_size_kb),
         avg_read_dur * 1000.0,
-        random_data.chunk_size as f64 / BYTES_IN_KILOBYTE as f64
+        "ms",
+        Some(4),
     );
+
+    Ok(result)
+}
+
+/// Runs the SQLite read benchmark and displays the results
+fn bench_sqlite_read_mfmd(test_dir: &TestDir, random_data: &RandomData) -> Result<()> {
+    let result = run_sqlite_read_mfmd(test_dir, random_data)?;
+    result.display();
     Ok(())
 }
 
-fn bench_write_sfmd(test_dir: &TestDir, random_data: &RandomData) -> Result<()> {
+/// Runs the SFMD write benchmark and returns the benchmark results
+fn run_write_sfmd(test_dir: &TestDir, random_data: &RandomData) -> Result<Benchmark> {
     let start = Instant::now();
     let mut file = File::create(test_dir.combined_data_path())?;
     for chunk in &random_data.chunks {
@@ -472,16 +685,30 @@ fn bench_write_sfmd(test_dir: &TestDir, random_data: &RandomData) -> Result<()> 
     let mb_per_second_e2e = random_data.total_size() as f64 / BYTES_IN_MEGABYTE as f64 / agg_dur;
     let mb_per_second_write =
         random_data.total_size() as f64 / BYTES_IN_MEGABYTE as f64 / write_dur;
-    println!("SFMD Write");
-    println!(
-        "\t- {:.2} MiB/s create() + write() + sync()",
-        mb_per_second_e2e
+
+    let mut result = Benchmark::new("SFMD Write");
+
+    // Add throughput measurements
+    result.add_measurement(
+        "create() + write() + sync() throughput",
+        mb_per_second_e2e,
+        "MiB/s",
+        None,
     );
-    println!("\t- {:.2} MiB/s create() + write()", mb_per_second_write);
+    result.add_measurement("create() + write()", mb_per_second_write, "MiB/s", None);
+
+    Ok(result)
+}
+
+/// Runs the SFMD write benchmark and displays the results
+fn bench_write_sfmd(test_dir: &TestDir, random_data: &RandomData) -> Result<()> {
+    let result = run_write_sfmd(test_dir, random_data)?;
+    result.display();
     Ok(())
 }
 
-fn bench_read_sfmd(test_dir: &TestDir, random_data: &RandomData) -> Result<()> {
+/// Runs the SFMD read benchmark and returns the benchmark results
+fn run_read_sfmd(test_dir: &TestDir, random_data: &RandomData) -> Result<Benchmark> {
     let file_path = test_dir.combined_data_path();
     let mut read_data = Vec::with_capacity(random_data.total_size());
     let start = Instant::now();
@@ -489,8 +716,19 @@ fn bench_read_sfmd(test_dir: &TestDir, random_data: &RandomData) -> Result<()> {
     file.read_to_end(&mut read_data)?;
     let agg_dur = start.elapsed().as_secs_f64();
     let mb_per_second = read_data.len() as f64 / BYTES_IN_MEGABYTE as f64 / agg_dur;
-    println!("SFMD Read");
-    println!("\t- {:.2} MiB/s open() + read()", mb_per_second);
+
+    let mut result = Benchmark::new("SFMD Read");
+
+    // Add throughput measurements
+    result.add_measurement("open() + read() throughput", mb_per_second, "MiB/s", None);
+
+    Ok(result)
+}
+
+/// Runs the SFMD read benchmark and displays the results
+fn bench_read_sfmd(test_dir: &TestDir, random_data: &RandomData) -> Result<()> {
+    let result = run_read_sfmd(test_dir, random_data)?;
+    result.display();
     Ok(())
 }
 
