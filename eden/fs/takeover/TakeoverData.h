@@ -258,6 +258,11 @@ class TakeoverData {
     SerializedInodeMap inodeMap;
   };
 
+  struct ProtocolCapabilitiesAndTrimSize {
+    uint64_t protocolCapabilities;
+    size_t trimSize;
+  };
+
   /**
    * Serialize the TakeoverData into a unix socket message.
    *
@@ -424,6 +429,15 @@ class TakeoverData {
   static TakeoverData deserializeThriftMounts(
       uint32_t protocolCapabilities,
       std::vector<SerializedMountInfo>& serializedMounts);
+
+  /**
+   * Determine the protocol version of the serialized message in buf.
+   *
+   * Note this doesn't trim the header from the buffer. This is because we
+   * want to be able to read the header multiple times with this function.
+   */
+  static ProtocolCapabilitiesAndTrimSize getProtocolCapabilitiesWithoutTrim(
+      folly::IOBuf* buf);
 
   /**
    * Generates an order for the general file descriptors to be sent in

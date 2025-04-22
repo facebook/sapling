@@ -406,10 +406,25 @@ TakeoverData TakeoverData::deserialize(UnixSocket::Message& msg) {
 }
 
 uint64_t TakeoverData::getProtocolCapabilities(IOBuf* buf) {
+  ProtocolCapabilitiesAndTrimSize result =
+      getProtocolCapabilitiesWithoutTrim(buf);
+
+  // trim the buffer to the real data
+  buf->trimStart(result.trimSize);
+
+  return result.protocolCapabilities;
+}
+
+TakeoverData::ProtocolCapabilitiesAndTrimSize
+TakeoverData::getProtocolCapabilitiesWithoutTrim(IOBuf* buf) {
   // We need to probe the data to see which version we have
   folly::io::Cursor cursor(buf);
 
   auto version = cursor.readBE<uint32_t>();
+
+  // We don't trim the buffer here but the caller should know the trimSize
+  // and trim the buffer to get to the real data if needed.
+  uint32_t trimSize = 0;
 
   switch (version) {
     case kTakeoverProtocolVersionNeverSupported:
@@ -419,8 +434,8 @@ uint64_t TakeoverData::getProtocolCapabilities(IOBuf* buf) {
     case kTakeoverProtocolVersionFour:
     case kTakeoverProtocolVersionFive:
     case kTakeoverProtocolVersionSix:
-      buf->trimStart(sizeof(uint32_t));
-      return versionToCapabilities(version);
+      trimSize = sizeof(uint32_t);
+      return {versionToCapabilities(version), trimSize};
     case kTakeoverProtocolVersionSeven: {
       // version 7 and above should support INCLUDE_HEADER_SIZE and
       // CAPABILITY_MATCHING but we check those assumptions to make this more
@@ -450,13 +465,13 @@ uint64_t TakeoverData::getProtocolCapabilities(IOBuf* buf) {
 
       uint64_t capabilities = cursor.readBE<uint64_t>();
 
-      // We move the buffer forwards past the header, so that the caller
-      // can begin parsing the real message data at the start of this buffer.
       // The header contains the version, header size and header size
       // bytes (currently header size bytes equals 8 and only contain the
-      // capabilities).
-      buf->trimStart(sizeof(uint32_t) + sizeof(uint32_t) + header_size);
-      return capabilities;
+      // capabilities). Then the trimSize is the size of the version, header
+      // size and capabilities.
+      trimSize = sizeof(uint32_t) + sizeof(uint32_t) + header_size;
+
+      return {capabilities, trimSize};
     }
     default:
       throw std::runtime_error(fmt::format(
