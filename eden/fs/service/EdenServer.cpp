@@ -2431,7 +2431,8 @@ folly::SemiFuture<Unit> EdenServer::createThriftServer() {
   // server object destruction. This specifically matters in the takeover
   // shutdown code path.
   server_->setStopWorkersOnStopListening(false);
-  server_->leakOutstandingRequestsWhenServerStops(true);
+  server_->leakOutstandingRequestsWhenServerStops(
+      edenConfig->thriftLeakOutstandingRequestsWhenServerStops.getValue());
 
 #ifdef EDEN_HAVE_USAGE_SERVICE
   auto usageService = std::make_unique<EdenFSSmartPlatformServiceEndpoint>(

@@ -378,6 +378,15 @@ class EdenConfig : private ConfigSettingManager {
       std::chrono::milliseconds(1000),
       this};
 
+  /**
+   * Whether the Thrift server should be configured to leak outstanding requests
+   * when the server is stopped during shutdown/restart.
+   */
+  ConfigSetting<bool> thriftLeakOutstandingRequestsWhenServerStops{
+      "thrift:leak-outstanding-requests-when-server-stops",
+      false,
+      this};
+
   // [ssl]
 
   ConfigSetting<AbsolutePath> clientCertificate{
