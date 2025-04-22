@@ -932,7 +932,12 @@ impl BookmarksCoordinator {
     ) {
         let fut = async move {
             tracing::info!("Started warm bookmark cache updater");
-
+            let repo_name = self.repo.repo_identity().name().to_string();
+            let mut bookmark_update_subscriber = self
+                .repo
+                .repo_event_publisher
+                .subscribe_for_bookmark_updates(&repo_name)
+                .ok();
             let infinite_loop = async {
                 // Indicates that the sync method was called and is waiting for a sync
                 // completion notification
@@ -978,16 +983,24 @@ impl BookmarksCoordinator {
                         .unwrap_or(FALLBACK_WBC_POLL_INTERVAL_MS),
                     );
 
-                    // Receiving a sync notification interrupts sleep and forces
+                    // Receiving a sync notification interrupts sleep/listen and forces
                     // waiting for all updaters to finish in the next iteration
                     let notified = notify_sync_start.notified();
-                    let sleep = tokio::time::sleep(delay);
 
-                    futures::pin_mut!(notified, sleep);
-
-                    match select(notified, sleep).await {
-                        future::Either::Left(_) => sync_started = true,
-                        future::Either::Right(_) => sync_started = false,
+                    if let Some(sub) = bookmark_update_subscriber.as_mut() {
+                        let receiver_fut = sub.recv();
+                        futures::pin_mut!(notified, receiver_fut);
+                        match select(notified, receiver_fut).await {
+                            future::Either::Left(_) => sync_started = true,
+                            future::Either::Right(_) => sync_started = false,
+                        }
+                    } else {
+                        let sleep = tokio::time::sleep(delay);
+                        futures::pin_mut!(notified, sleep);
+                        match select(notified, sleep).await {
+                            future::Either::Left(_) => sync_started = true,
+                            future::Either::Right(_) => sync_started = false,
+                        }
                     }
                 }
             }
