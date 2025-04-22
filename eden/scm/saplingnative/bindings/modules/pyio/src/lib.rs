@@ -59,18 +59,18 @@ py_class!(pub class IO |py| {
     }
 
     /// Write to pager's main buffer. Text should be in utf-8.
-    def write(&self, bytes: PyBytes) -> PyResult<PyNone> {
+    def write(&self, bytes: PyObject) -> PyResult<PyNone> {
         self.check_closed(py)?;
         let io = RustIO::main().map_pyerr(py)?;
-        io.write(bytes.data(py)).map_pyerr(py)?;
+        with_bytes(py, bytes, |bytes| { io.write(bytes)})?;
         Ok(PyNone)
     }
 
     /// Write to pager's stderr buffer. Text should be in utf-8.
-    def write_err(&self, bytes: PyBytes) -> PyResult<PyNone> {
+    def write_err(&self, bytes: PyObject) -> PyResult<PyNone> {
         self.check_closed(py)?;
         let io = RustIO::main().map_pyerr(py)?;
-        io.write_err(bytes.data(py)).map_pyerr(py)?;
+        with_bytes(py, bytes, |bytes| { io.write_err(bytes) })?;
         Ok(PyNone)
     }
 
@@ -416,6 +416,27 @@ impl std::io::Write for WrappedIO {
             .call_method(py, "flush", NoArgs, None)
             .map_err(convert_ioerr)?;
         Ok(())
+    }
+}
+
+/// Take `bytes` or (utf-8) `str`, call `func`.
+fn with_bytes<T, E>(
+    py: Python,
+    obj: PyObject,
+    func: impl FnOnce(&[u8]) -> Result<T, E> + Send,
+) -> PyResult<T>
+where
+    E: Into<anyhow::Error>,
+{
+    match obj.extract::<PyBytes>(py) {
+        Ok(bytes) => {
+            let data = bytes.data(py);
+            py.allow_threads(|| func(data)).map_pyerr(py)
+        }
+        Err(_) => {
+            let str = obj.extract::<String>(py)?;
+            py.allow_threads(|| func(str.as_bytes())).map_pyerr(py)
+        }
     }
 }
 
