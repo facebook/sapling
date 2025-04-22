@@ -699,32 +699,12 @@ fn bench_read_sfmd(test_dir: &TestDir, random_data: &RandomData) -> Result<Bench
     Ok(result)
 }
 
-fn print_section_divider() {
-    println!("-----------------------------------");
-}
-
-fn print_glossary() {
-    println!("Glossary:");
-    println!(
-        "MFMD - Multiple Files Multiple Data - Writing and reading multiple files, each containing different data chunks."
-    );
-    println!(
-        "SFMD - Single File Multiple Data - Writing and reading a single file containing multiple data chunks."
-    );
-}
-
 #[async_trait]
 impl crate::Subcommand for BenchCmd {
     async fn run(&self) -> Result<ExitCode> {
-        print_section_divider();
-        print_glossary();
-
         match self {
             Self::FsIo { common } => match TestDir::validate(&common.test_dir) {
                 Ok(test_dir) => {
-                    print_section_divider();
-                    println!("Prepared the directory at {:?}", test_dir.path);
-                    println!("Generating in-memory random data ...");
                     let random_data = RandomData::new(common.number_of_files, common.chunk_size);
                     println!(
                         "The random data generated with {} chunks with {:.0} KiB each, with the total size of {:.2} GiB.",
@@ -732,22 +712,16 @@ impl crate::Subcommand for BenchCmd {
                         random_data.chunk_size as f64 / BYTES_IN_KILOBYTE as f64,
                         random_data.total_size() as f64 / BYTES_IN_GIGABYTE as f64
                     );
-                    print_section_divider();
                     println!("{}", bench_write_mfmd(&test_dir, &random_data)?);
                     println!("{}", bench_read_mfmd(&test_dir, &random_data)?);
                     println!("{}", bench_write_sfmd(&test_dir, &random_data)?);
                     println!("{}", bench_read_sfmd(&test_dir, &random_data)?);
-                    print_section_divider();
-                    println!("Removing the directory at {:?}", test_dir.path);
                     test_dir.remove()?;
                 }
                 Err(e) => return Err(e),
             },
             Self::DbIo { common } => match TestDir::validate(&common.test_dir) {
                 Ok(test_dir) => {
-                    print_section_divider();
-                    println!("Prepared the directory at {:?}", test_dir.path);
-                    println!("Generating in-memory random data ...");
                     let random_data = RandomData::new(common.number_of_files, common.chunk_size);
                     println!(
                         "The random data generated with {} chunks with {:.0} KiB each, with the total size of {:.2} GiB.",
@@ -755,15 +729,12 @@ impl crate::Subcommand for BenchCmd {
                         random_data.chunk_size as f64 / BYTES_IN_KILOBYTE as f64,
                         random_data.total_size() as f64 / BYTES_IN_GIGABYTE as f64
                     );
-                    print_section_divider();
                     println!("{}", bench_rocksdb_write_mfmd(&test_dir, &random_data)?);
                     println!("{}", bench_rocksdb_read_mfmd(&test_dir, &random_data)?);
                     println!("{}", bench_lmdb_write_mfmd(&test_dir, &random_data)?);
                     println!("{}", bench_lmdb_read_mfmd(&test_dir, &random_data)?);
                     println!("{}", bench_sqlite_write_mfmd(&test_dir, &random_data)?);
                     println!("{}", bench_sqlite_read_mfmd(&test_dir, &random_data)?);
-                    print_section_divider();
-                    println!("Removing the directory at {:?}", test_dir.path);
                     test_dir.remove()?;
                 }
                 Err(e) => return Err(e),
