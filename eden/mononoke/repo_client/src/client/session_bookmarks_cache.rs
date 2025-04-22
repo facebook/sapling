@@ -309,6 +309,7 @@ mod test {
     use mononoke_macros::mononoke;
     use phases::PhasesArc;
     use repo_derived_data::RepoDerivedDataArc;
+    use repo_event_publisher::RepoEventPublisherArc;
     use repo_identity::RepoIdentityArc;
     use tests_utils::CreateCommitContext;
     use tests_utils::bookmark;
@@ -377,6 +378,7 @@ mod test {
             repo.bookmarks_arc(),
             repo.bookmark_update_log_arc(),
             repo.repo_identity_arc(),
+            repo.repo_event_publisher_arc(),
         );
         builder.add_hg_warmers(&repo.repo_derived_data_arc(), &repo.phases_arc())?;
         let wbc = builder.build().await?;

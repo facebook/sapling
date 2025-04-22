@@ -1687,6 +1687,7 @@ impl RepoFactory {
         bookmark_update_log: &ArcBookmarkUpdateLog,
         repo_identity: &ArcRepoIdentity,
         repo_derived_data: &ArcRepoDerivedData,
+        repo_event_publisher: &ArcRepoEventPublisher,
         phases: &ArcPhases,
     ) -> Result<ArcBookmarksCache> {
         match &self.env.bookmark_cache_options.cache_kind {
@@ -1705,6 +1706,7 @@ impl RepoFactory {
                     bookmarks.clone(),
                     bookmark_update_log.clone(),
                     repo_identity.clone(),
+                    repo_event_publisher.clone(),
                 );
 
                 match self.env.bookmark_cache_options.derived_data {

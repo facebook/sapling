@@ -76,6 +76,8 @@ use mononoke_types::DerivableType;
 use mononoke_types::Timestamp;
 use phases::ArcPhases;
 use repo_derived_data::ArcRepoDerivedData;
+use repo_event_publisher::ArcRepoEventPublisher;
+use repo_event_publisher::RepoEventPublisher;
 use repo_identity::ArcRepoIdentity;
 use repo_identity::RepoIdentity;
 use repo_identity::RepoIdentityRef;
@@ -137,6 +139,7 @@ pub struct WarmBookmarksCacheBuilder {
     bookmarks: ArcBookmarks,
     bookmark_update_log: ArcBookmarkUpdateLog,
     repo_identity: ArcRepoIdentity,
+    repo_event_publisher: ArcRepoEventPublisher,
     warmers: Vec<Warmer>,
     init_mode: InitMode,
 }
@@ -147,6 +150,7 @@ impl WarmBookmarksCacheBuilder {
         bookmarks: ArcBookmarks,
         bookmark_update_log: ArcBookmarkUpdateLog,
         repo_identity: ArcRepoIdentity,
+        repo_event_publisher: ArcRepoEventPublisher,
     ) -> Self {
         ctx.session_mut()
             .override_session_class(SessionClass::WarmBookmarksCache);
@@ -161,6 +165,7 @@ impl WarmBookmarksCacheBuilder {
             bookmarks,
             bookmark_update_log,
             repo_identity,
+            repo_event_publisher,
             warmers: vec![],
             init_mode: InitMode::Rewind,
         }
@@ -337,6 +342,7 @@ impl WarmBookmarksCacheBuilder {
             &self.bookmarks,
             &self.bookmark_update_log,
             &self.repo_identity,
+            &self.repo_event_publisher,
             self.warmers,
             self.init_mode,
         )
@@ -400,6 +406,7 @@ impl WarmBookmarksCache {
         bookmarks: &ArcBookmarks,
         bookmark_update_log: &ArcBookmarkUpdateLog,
         repo_identity: &ArcRepoIdentity,
+        repo_event_publisher: &ArcRepoEventPublisher,
         warmers: Vec<Warmer>,
         init_mode: InitMode,
     ) -> Result<Self, Error> {
@@ -432,6 +439,7 @@ impl WarmBookmarksCache {
             bookmarks.clone(),
             bookmark_update_log.clone(),
             repo_identity.clone(),
+            repo_event_publisher.clone(),
             warmers.clone(),
         )
         .spawn(
@@ -766,6 +774,9 @@ struct BookmarksCoordinatorRepo {
 
     #[facet]
     repo_identity: RepoIdentity,
+
+    #[facet]
+    repo_event_publisher: dyn RepoEventPublisher,
 }
 
 struct BookmarksCoordinator {
@@ -784,12 +795,14 @@ impl BookmarksCoordinator {
         bookmarks_fetcher: ArcBookmarks,
         bookmark_update_log: ArcBookmarkUpdateLog,
         repo_identity: ArcRepoIdentity,
+        repo_event_publisher: ArcRepoEventPublisher,
         warmers: Arc<Vec<Warmer>>,
     ) -> Self {
         let repo = BookmarksCoordinatorRepo {
             bookmarks: bookmarks_fetcher,
             bookmark_update_log,
             repo_identity,
+            repo_event_publisher,
         };
 
         Self {
@@ -1208,6 +1221,8 @@ mod tests {
     use repo_derived_data::RepoDerivedData;
     use repo_derived_data::RepoDerivedDataArc;
     use repo_derived_data::RepoDerivedDataRef;
+    use repo_event_publisher::RepoEventPublisher;
+    use repo_event_publisher::RepoEventPublisherArc;
     use repo_identity::RepoIdentity;
     use repo_identity::RepoIdentityArc;
     use sql_ext::mononoke_queries;
@@ -1230,6 +1245,7 @@ mod tests {
         dyn BonsaiHgMapping,
         dyn BookmarkUpdateLog,
         dyn Bookmarks,
+        dyn RepoEventPublisher,
         FilestoreConfig,
     );
 
@@ -1509,6 +1525,7 @@ mod tests {
             repo.bookmarks_arc(),
             repo.bookmark_update_log_arc(),
             repo.repo_identity_arc(),
+            repo.repo_event_publisher_arc(),
             warmers,
         );
 
@@ -1701,6 +1718,7 @@ mod tests {
             repo.bookmarks_arc(),
             repo.bookmark_update_log_arc(),
             repo.repo_identity_arc(),
+            repo.repo_event_publisher_arc(),
             warmers,
         );
 
@@ -1736,6 +1754,7 @@ mod tests {
             repo.bookmarks_arc(),
             repo.bookmark_update_log_arc(),
             repo.repo_identity_arc(),
+            repo.repo_event_publisher_arc(),
             warmers,
         );
 
@@ -1833,6 +1852,7 @@ mod tests {
             repo.bookmarks_arc(),
             repo.bookmark_update_log_arc(),
             repo.repo_identity_arc(),
+            repo.repo_event_publisher_arc(),
             warmers.clone(),
         );
         coordinator.update(&ctx).await?;
@@ -1898,6 +1918,7 @@ mod tests {
             repo.bookmarks_arc(),
             repo.bookmark_update_log_arc(),
             repo.repo_identity_arc(),
+            repo.repo_event_publisher_arc(),
             warmers,
         );
 

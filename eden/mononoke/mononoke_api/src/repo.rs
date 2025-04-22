@@ -137,6 +137,7 @@ use repo_cross_repo::RepoCrossRepo;
 use repo_cross_repo::RepoCrossRepoRef;
 use repo_derived_data::RepoDerivedData;
 use repo_derived_data::RepoDerivedDataRef;
+use repo_event_publisher::RepoEventPublisher;
 use repo_identity::RepoIdentity;
 use repo_identity::RepoIdentityRef;
 use repo_lock::RepoLock;
@@ -233,6 +234,9 @@ pub struct Repo {
 
     #[facet]
     pub bonsai_globalrev_mapping: dyn BonsaiGlobalrevMapping,
+
+    #[facet]
+    pub repo_event_publisher: dyn RepoEventPublisher,
 
     #[facet]
     pub bonsai_svnrev_mapping: dyn BonsaiSvnrevMapping,

@@ -26,6 +26,7 @@ use repo_blobstore::RepoBlobstore;
 use repo_bookmark_attrs::RepoBookmarkAttrs;
 use repo_cross_repo::RepoCrossRepo;
 use repo_derived_data::RepoDerivedData;
+use repo_event_publisher::RepoEventPublisher;
 use repo_identity::RepoIdentity;
 use repo_lock::RepoLock;
 use repo_permission_checker::RepoPermissionChecker;
@@ -61,4 +62,5 @@ pub struct RepoClientRepo(
     HookManager,
     dyn RepoLock,
     dyn RepoPermissionChecker,
+    dyn RepoEventPublisher,
 );

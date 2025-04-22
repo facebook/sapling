@@ -896,6 +896,7 @@ impl TestRepoFactory {
         bookmarks: &ArcBookmarks,
         bookmark_update_log: &ArcBookmarkUpdateLog,
         repo_derived_data: &ArcRepoDerivedData,
+        repo_event_publisher: &ArcRepoEventPublisher,
         phases: &ArcPhases,
     ) -> Result<ArcBookmarksCache> {
         match self.bookmarks_cache {
@@ -906,6 +907,7 @@ impl TestRepoFactory {
                     bookmarks.clone(),
                     bookmark_update_log.clone(),
                     repo_identity.clone(),
+                    repo_event_publisher.clone(),
                 );
                 warm_bookmarks_cache_builder.add_all_warmers(repo_derived_data, phases)?;
                 warm_bookmarks_cache_builder.wait_until_warmed();
