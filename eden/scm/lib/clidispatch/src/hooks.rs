@@ -5,7 +5,7 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-use std::collections::HashMap;
+use std::collections::BTreeMap;
 use std::io::Write;
 
 use anyhow::Result;
@@ -130,14 +130,14 @@ fn run_hooks(
     repo: Option<&Repo>,
     full_args: &[String],
     propagate_errors: bool,
-    extra_kwargs_func: Option<&dyn Fn(&mut HashMap<&str, Option<String>>)>,
+    extra_kwargs_func: Option<&dyn Fn(&mut BTreeMap<&str, Option<String>>)>,
 ) -> Result<()> {
     if hooks.is_empty() {
         return Ok(());
     }
 
     let full_args = shell_escape(full_args);
-    let mut hook_args = HashMap::from([("args", Some(full_args))]);
+    let mut hook_args = BTreeMap::from([("args", Some(full_args))]);
     if let Some(func) = extra_kwargs_func {
         (func)(&mut hook_args);
     }
