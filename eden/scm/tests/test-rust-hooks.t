@@ -121,11 +121,12 @@ Both fire for old command name:
 Python hooks now work in Rust commands:
   $ newclientrepo
   $ setconfig 'hooks.pre-debugtestcommand.python=python:foo.py:main'
-  $ setconfig 'hooks.post-debugtestcommand.python=python:foo.py:main'
   $ cat > foo.py << 'EOF'
   > def main(io, repo, **kwargs):
   >     io.write_err(('repo is %s. kwargs: %r\n' % (repo.path, kwargs)).encode())
   > EOF
+(hook can be defined in base64, too)
+  $ setconfig "hooks.post-debugtestcommand.python=python:base64:$(base64 -w0 foo.py):main"
   $ hg debugtestcommand
   repo is $TESTTMP/repo2. kwargs: {'args': ['debugtestcommand']}
   repo is $TESTTMP/repo2. kwargs: {'args': ['debugtestcommand'], 'result': 0}

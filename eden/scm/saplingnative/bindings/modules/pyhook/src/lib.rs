@@ -7,6 +7,8 @@
 
 use std::path::PathBuf;
 
+use base64::Engine;
+use base64::engine::general_purpose::STANDARD as BASE64;
 use blake2::Blake2s256;
 use blake2::Digest;
 use cpython::exc::ImportError;
@@ -99,7 +101,9 @@ fn run_python_hook_py(
 }
 
 // Similar to sapling.hook._getpyhook.
-// `spec` can be `file_path:func_name` or `module_name.func_name`.
+//
+// `spec` can be `file_path:func_name`, or `module_name.func_name`,
+// or `base64:...:func_name`.
 fn get_callable(
     py: Python,
     spec: &str,
@@ -107,14 +111,24 @@ fn get_callable(
     hook_name: &str,
 ) -> PyResult<PyObject> {
     match spec.rsplit_once(':') {
-        Some((path, func_name)) => {
-            let mut path = util::path::expand_path(path);
-            if let Some(repo_root) = repo_root {
-                path = repo_root.as_path().join(path);
-            }
-            let path = PyPathBuf::try_from(path).map_pyerr(py)?;
+        Some((left, func_name)) => {
             let module_name = format!("slhook_{}", hook_name);
-            load_path(py, path, &module_name)?.getattr(py, func_name)
+            let module = match left.strip_prefix("base64:") {
+                Some(source_base64) => {
+                    let source = BASE64.decode(source_base64).map_pyerr(py)?;
+                    let source = String::from_utf8(source).map_pyerr(py)?;
+                    load_source(py, &source, &module_name)
+                }
+                None => {
+                    let mut path = util::path::expand_path(left);
+                    if let Some(repo_root) = repo_root {
+                        path = repo_root.as_path().join(path);
+                    }
+                    let path = PyPathBuf::try_from(path).map_pyerr(py)?;
+                    load_path(py, path, &module_name)
+                }
+            }?;
+            module.getattr(py, func_name)
         }
         None => {
             // See `sapling.hook._pythonhook`.
