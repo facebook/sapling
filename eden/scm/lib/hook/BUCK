@@ -29,5 +29,6 @@ rust_library(
         "//eden/scm/lib/repo:repo",
         "//eden/scm/lib/spawn-ext:spawn-ext",
         "//eden/scm/lib/util/factory:factory",
+        "//eden/scm/lib/util/sysutil:sysutil",
     ],
 )

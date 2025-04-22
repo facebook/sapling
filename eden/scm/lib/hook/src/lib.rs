@@ -232,6 +232,11 @@ fn to_env_vars(
         let env_value = match v {
             Value::Null => return (env_name, None),
             Value::String(v) => v, // do not quote the string
+            Value::Array(v) if v.iter().all(|i| i.is_string()) => {
+                // Shell escape a list of strings.
+                let args: Vec<&str> = v.iter().filter_map(|i| i.as_str()).collect();
+                sysutil::shell_escape(&args)
+            }
             _ => v.to_string(),
         };
         (env_name, Some(env_value))
@@ -482,10 +487,16 @@ mod test {
             t(&BTreeMap::from([("a", Some("1")), ("b", None)])),
             ["HG_A=1", "HG_B=(unset)"]
         );
-        // Arrays - will be converted to JSON.
+        // Arrays of strings will be shell-escaped.
+        #[cfg(unix)]
         assert_eq!(
-            t(&BTreeMap::from([("a", vec!["1", "2"]), ("b", vec![])])),
-            ["HG_A=[\"1\",\"2\"]", "HG_B=[]"]
+            t(&BTreeMap::from([("a", vec!["1", "2 3"]), ("b", vec![])])),
+            ["HG_A=1 '2 3'", "HG_B="]
+        );
+        // Arrays of numbers will be JSON encoded.
+        assert_eq!(
+            t(&BTreeMap::from([("a", vec![1, 2]), ("b", vec![])])),
+            ["HG_A=[1,2]", "HG_B="]
         );
     }
 }

@@ -23,5 +23,6 @@ sapling-io = { version = "0.1.0", path = "../io" }
 sapling-minibytes = { version = "0.1.0", path = "../minibytes" }
 sapling-repo = { version = "0.1.0", path = "../repo" }
 sapling-spawn-ext = { version = "0.1.0", path = "../spawn-ext" }
+sapling-sysutil = { version = "0.1.0", path = "../util/sysutil" }
 serde_json = { version = "1.0.140", features = ["float_roundtrip", "unbounded_depth"] }
 tracing = { version = "0.1.41", features = ["attributes", "valuable"] }
