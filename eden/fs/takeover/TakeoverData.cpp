@@ -358,6 +358,24 @@ folly::IOBuf TakeoverData::serializePing() {
   IOBuf buf(IOBuf::CREATE, kHeaderLength);
   folly::io::Appender app(&buf, 0);
   app.writeBE<uint32_t>(MessageType::PING);
+  XLOGF(DBG8, "Serialized ping message");
+  return buf;
+}
+
+bool TakeoverData::isLastChunk(const IOBuf* buf) {
+  if (buf->length() == sizeof(uint32_t)) {
+    folly::io::Cursor cursor(buf);
+    auto messageType = cursor.readBE<uint32_t>();
+    return messageType == MessageType::LAST_CHUNK;
+  }
+  return false;
+}
+
+folly::IOBuf TakeoverData::serializeLastChunk() {
+  IOBuf buf(IOBuf::CREATE, kHeaderLength);
+  folly::io::Appender app(&buf, 0);
+  app.writeBE<uint32_t>(MessageType::LAST_CHUNK);
+  XLOGF(DBG8, "Serialized last chunk message");
   return buf;
 }
 

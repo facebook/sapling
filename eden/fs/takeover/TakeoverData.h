@@ -306,6 +306,11 @@ class TakeoverData {
   static folly::IOBuf serializePing();
 
   /**
+   * Create a LAST_CHUNK message to send.
+   */
+  static folly::IOBuf serializeLastChunk();
+
+  /**
    * Determine the protocol version of the serialized message in buf.
    *
    * Note this should only be called once. This will advance the buffer past
@@ -329,6 +334,11 @@ class TakeoverData {
    * Checks to see if a message is of type PING
    */
   static bool isPing(const folly::IOBuf* buf);
+
+  /**
+   * Checks to see if a message is of type LAST_CHUNK
+   */
+  static bool isLastChunk(const folly::IOBuf* buf);
 
   /**
    * Determines if we should serialized NFS data given the protocol version
@@ -471,6 +481,7 @@ class TakeoverData {
     ERROR = 1,
     MOUNTS = 2,
     PING = 3,
+    LAST_CHUNK = 4,
   };
 
   /**
