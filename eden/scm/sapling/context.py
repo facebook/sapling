@@ -288,13 +288,6 @@ class basectx:
     def getfileset(self, expr):
         return fileset.getfileset(self, expr)
 
-    def invisible(self) -> bool:
-        repo = self.repo()
-        if visibility.enabled(repo):
-            return self.rev() in visibility.invisiblerevs(repo)
-        else:
-            return False
-
     def obsolete(self) -> bool:
         """True if the changeset is obsolete"""
         if mutation.enabled(self._repo):

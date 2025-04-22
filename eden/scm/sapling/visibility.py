@@ -61,7 +61,6 @@ class visibleheads:
 
     def __init__(self, vfs):
         self.vfs = vfs
-        self._invisiblerevs = None
         self._allheads = bindings.nodemap.nodeset(vfs.join("allheads"))
 
         heads = self.heads
@@ -137,7 +136,6 @@ class visibleheads:
             self._changecount += 1
             self._logchange(oldheads, newheads)
             self.heads = newheads
-            self._invisiblerevs = None
             add = self._allheads.add
             for head in newheads:
                 add(head)
@@ -203,33 +201,6 @@ class visibleheads:
         if newdraft:
             newheads.update(newdraft)
         self._updateheads(repo, newheads, tr)
-
-    def invisiblerevs(self, repo):
-        if self._invisiblerevs is not None:
-            return self._invisiblerevs
-
-        if repo.ui.configbool("experimental", "narrow-heads"):
-            # With narrow-heads, "draft()" lists all visible draft commits,
-            # nothing needs to be filtered out.
-            self._invisiblerevs = frozenset()
-            return self._invisiblerevs
-
-        from . import phases  # avoid circular import
-
-        hidden = set(repo._phasecache.getrevset(repo, (phases.draft, phases.secret)))
-        rfunc = repo.changelog.rev
-        pfunc = repo.changelog.parentrevs
-        hasnode = repo.changelog.nodemap.__contains__
-        visible = [rfunc(n) for n in self.heads if hasnode(n)]
-        hidden.difference_update(visible)
-        while visible:
-            for p in pfunc(visible.pop()):
-                if p != node.nullrev and p in hidden:
-                    hidden.remove(p)
-                    visible.append(p)
-
-        self._invisiblerevs = hidden
-        return hidden
 
 
 class bundlevisibleheads(visibleheads):
@@ -320,12 +291,6 @@ def heads(repo):
     """returns the current set of visible mutable heads"""
     if tracking(repo):
         return repo.changelog._visibleheads.heads
-
-
-def invisiblerevs(repo):
-    """returns the invisible mutable revs in this repo"""
-    if tracking(repo):
-        return repo.changelog._visibleheads.invisiblerevs(repo)
 
 
 def tracking(repo):

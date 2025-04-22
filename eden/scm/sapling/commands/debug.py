@@ -2426,9 +2426,6 @@ def debugpreviewbindag(ui, repo, path):
         def node(self):
             return ("%s" % self.id).rjust(20)
 
-        def invisible(self):
-            return False
-
         def obsolete(self):
             return False
 

@@ -59,9 +59,6 @@ class FakeCtx:
     def obsolete(self):
         return False
 
-    def invisible(self):
-        return False
-
     def hex(self):
         return nodemod.hex(self._nodeinfo.node)
 
