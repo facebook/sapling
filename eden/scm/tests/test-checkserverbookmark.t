@@ -1,12 +1,8 @@
-
 #require no-eden
 
 #chg-compatible
 
-  $ . "$TESTDIR/hgsql/library.sh"
-
 Do some initial setup
-  $ configure dummyssh
   $ enable checkserverbookmark smartlog
   $ setconfig ui.user="nobody <no.reply@fb.com>"
 
