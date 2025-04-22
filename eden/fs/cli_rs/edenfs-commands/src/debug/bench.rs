@@ -109,13 +109,14 @@ impl Benchmark {
             precision: precision.unwrap_or(2),
         });
     }
+}
 
-    /// Displays the benchmark result
-    fn display(&self) {
+impl std::fmt::Display for Benchmark {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         let format_value_with_precision =
             |value: f64, precision: u8| -> String { format!("{:.1$}", value, precision as usize) };
 
-        println!("{}", self.benchmark_type);
+        writeln!(f, "{}", self.benchmark_type)?;
 
         let max_value_len = self
             .metrics
@@ -136,15 +137,18 @@ impl Benchmark {
         for measurement in &self.metrics {
             let value_str = format_value_with_precision(measurement.value, measurement.precision);
 
-            println!(
+            writeln!(
+                f,
                 "{:>width$} {:<unit_width$} - {}",
                 value_str,
                 measurement.unit,
                 measurement.name,
                 width = max_value_len,
                 unit_width = max_unit_len
-            );
+            )?;
         }
+
+        Ok(())
     }
 }
 
@@ -729,10 +733,10 @@ impl crate::Subcommand for BenchCmd {
                         random_data.total_size() as f64 / BYTES_IN_GIGABYTE as f64
                     );
                     print_section_divider();
-                    bench_write_mfmd(&test_dir, &random_data)?.display();
-                    bench_read_mfmd(&test_dir, &random_data)?.display();
-                    bench_write_sfmd(&test_dir, &random_data)?.display();
-                    bench_read_sfmd(&test_dir, &random_data)?.display();
+                    println!("{}", bench_write_mfmd(&test_dir, &random_data)?);
+                    println!("{}", bench_read_mfmd(&test_dir, &random_data)?);
+                    println!("{}", bench_write_sfmd(&test_dir, &random_data)?);
+                    println!("{}", bench_read_sfmd(&test_dir, &random_data)?);
                     print_section_divider();
                     println!("Removing the directory at {:?}", test_dir.path);
                     test_dir.remove()?;
@@ -752,12 +756,12 @@ impl crate::Subcommand for BenchCmd {
                         random_data.total_size() as f64 / BYTES_IN_GIGABYTE as f64
                     );
                     print_section_divider();
-                    bench_rocksdb_write_mfmd(&test_dir, &random_data)?.display();
-                    bench_rocksdb_read_mfmd(&test_dir, &random_data)?.display();
-                    bench_lmdb_write_mfmd(&test_dir, &random_data)?.display();
-                    bench_lmdb_read_mfmd(&test_dir, &random_data)?.display();
-                    bench_sqlite_write_mfmd(&test_dir, &random_data)?.display();
-                    bench_sqlite_read_mfmd(&test_dir, &random_data)?.display();
+                    println!("{}", bench_rocksdb_write_mfmd(&test_dir, &random_data)?);
+                    println!("{}", bench_rocksdb_read_mfmd(&test_dir, &random_data)?);
+                    println!("{}", bench_lmdb_write_mfmd(&test_dir, &random_data)?);
+                    println!("{}", bench_lmdb_read_mfmd(&test_dir, &random_data)?);
+                    println!("{}", bench_sqlite_write_mfmd(&test_dir, &random_data)?);
+                    println!("{}", bench_sqlite_read_mfmd(&test_dir, &random_data)?);
                     print_section_divider();
                     println!("Removing the directory at {:?}", test_dir.path);
                     test_dir.remove()?;
