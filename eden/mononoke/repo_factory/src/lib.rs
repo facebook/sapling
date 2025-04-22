@@ -133,6 +133,7 @@ use metaconfig_types::ArcCommonConfig;
 use metaconfig_types::ArcRepoConfig;
 use metaconfig_types::BlobConfig;
 use metaconfig_types::CommonConfig;
+use metaconfig_types::MetadataCacheConfig;
 use metaconfig_types::MetadataDatabaseConfig;
 use metaconfig_types::Redaction;
 #[cfg(fbcode_build)]
@@ -331,6 +332,7 @@ pub struct RepoFactory {
     redacted_blobs: RepoFactoryCache<MetadataDatabaseConfig, Arc<RedactedBlobs>>,
     #[cfg(fbcode_build)]
     zelos_clients: RepoFactoryCache<ZelosConfig, Arc<dyn ZeusClient>>,
+    repo_event_publishers: RepoFactoryCache<Option<MetadataCacheConfig>, ArcRepoEventPublisher>,
     blobstore_override: Option<Arc<dyn RepoFactoryOverride<Arc<dyn Blobstore>>>>,
     lease_override: Option<Arc<dyn RepoFactoryOverride<Arc<dyn LeaseOps>>>>,
     scrub_handler: Arc<dyn ScrubHandler>,
@@ -346,6 +348,7 @@ impl RepoFactory {
             redacted_blobs: RepoFactoryCache::new(env.fb, "redacted_blobs"),
             #[cfg(fbcode_build)]
             zelos_clients: RepoFactoryCache::new(env.fb, "zelos_clients"),
+            repo_event_publishers: RepoFactoryCache::new(env.fb, "repo_event_publishers"),
             blobstore_override: None,
             lease_override: None,
             scrub_handler: default_scrub_handler(),
@@ -1949,18 +1952,22 @@ impl RepoFactory {
         &self,
         repo_config: &ArcRepoConfig,
     ) -> Result<ArcRepoEventPublisher> {
-        #[cfg(fbcode_build)]
-        {
-            let event_publisher = ScribeRepoEventPublisher::new(
-                self.env.fb,
-                repo_config.metadata_cache_config.as_ref(),
-            )?;
-            Ok(Arc::new(event_publisher))
-        }
-        #[cfg(not(fbcode_build))]
-        {
-            Ok(Arc::new(UnsupportedRepoEventPublisher {}))
-        }
+        self.repo_event_publishers
+            .get_or_try_init(&repo_config.metadata_cache_config, || async move {
+                #[cfg(fbcode_build)]
+                {
+                    let event_publisher = ScribeRepoEventPublisher::new(
+                        self.env.fb,
+                        repo_config.metadata_cache_config.as_ref(),
+                    )?;
+                    Ok(Arc::new(event_publisher) as ArcRepoEventPublisher)
+                }
+                #[cfg(not(fbcode_build))]
+                {
+                    Ok(Arc::new(UnsupportedRepoEventPublisher {}) as ArcRepoEventPublisher)
+                }
+            })
+            .await
     }
 
     pub async fn deletion_log(&self, repo_config: &ArcRepoConfig) -> Result<ArcDeletionLog> {

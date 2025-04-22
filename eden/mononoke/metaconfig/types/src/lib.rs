@@ -2082,7 +2082,7 @@ impl Deref for ObjectsCountMultiplier {
 }
 
 /// Enum controlling how certain Mononoke metadata cache is updated
-#[derive(Debug, Default, Clone, PartialEq, Eq)]
+#[derive(Debug, Default, Clone, PartialEq, Eq, Hash)]
 pub enum MetadataCacheUpdateMode {
     /// Mode in which metadata cache updater tails the input category for updates
     Tailing {
@@ -2095,7 +2095,7 @@ pub enum MetadataCacheUpdateMode {
 }
 
 /// Configuration for Mononoke metadata cache
-#[derive(Debug, Default, Clone, PartialEq, Eq)]
+#[derive(Debug, Default, Clone, PartialEq, Eq, Hash)]
 pub struct MetadataCacheConfig {
     /// Mode for updating the warm bookmark metadata cache
     pub wbc_update_mode: Option<MetadataCacheUpdateMode>,
