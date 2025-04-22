@@ -163,6 +163,18 @@ fn load_path(py: Python, path: PyPathBuf, module_name: &str) -> PyResult<PyObjec
             ));
         }
     };
+
+    let module = load_source(py, &source, module_name)?;
+    if let Ok(path) = PyPathBuf::try_from(path) {
+        module.setattr(py, "__file__", path)?;
+    }
+
+    Ok(module)
+}
+
+/// Construct a Python standalone module from the given source code.
+/// Reuse `sys.modules[module_name]` if `__source_hash__` does not change.
+fn load_source(py: Python, source: &str, module_name: &str) -> PyResult<PyObject> {
     let new_hash = {
         let mut hasher = Blake2s256::new();
         hasher.update(source.as_bytes());
@@ -174,20 +186,17 @@ fn load_path(py: Python, path: PyPathBuf, module_name: &str) -> PyResult<PyObjec
         if let Ok(old_hash) = module.getattr(py, "__source_hash__") {
             if let Ok(old_hash) = old_hash.extract::<PyBytes>(py) {
                 if old_hash.data(py) == new_hash.as_slice() {
-                    tracing::debug!(target: "pyhook::load_path", module_name, ?path, "reused module");
+                    tracing::debug!(target: "pyhook::load_source", module_name, "reused module");
                     return Ok(module);
                 }
             }
         }
     }
 
-    tracing::debug!(target: "pyhook::load_path", module_name, ?path, "imported module");
+    tracing::debug!(target: "pyhook::load_source", module_name, "imported module");
 
     let module = create_module_from_source_code(py, module_name, &source)?;
     module.add(py, "__source_hash__", PyBytes::new(py, new_hash.as_slice()))?;
-    if let Ok(path) = PyPathBuf::try_from(path) {
-        module.add(py, "__file__", path)?;
-    }
 
     // sys.modules[module_name] = module
     sys_modules.set_item(py, module_name, module.clone_ref(py))?;
