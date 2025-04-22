@@ -10,6 +10,7 @@ use std::collections::BTreeMap;
 
 use anyhow::Result;
 use types::HgId;
+use types::Phase;
 
 use crate::Id20;
 use crate::MetaLog;
@@ -48,6 +49,15 @@ impl MetaLog {
         Ok(decoded)
     }
 
+    /// Decode remotename phases.
+    pub fn get_remotename_phases(&self) -> Result<BTreeMap<String, Phase>> {
+        let decoded = match self.get("remotename_phases")? {
+            Some(data) => refencode::decode_remotename_phases(&data)?,
+            None => Default::default(),
+        };
+        Ok(decoded)
+    }
+
     /// Decode visibleheads.
     pub fn get_visibleheads(&self) -> Result<Vec<HgId>> {
         let decoded = match self.get("visibleheads")? {
@@ -75,6 +85,13 @@ impl MetaLog {
     pub fn set_remotenames(&mut self, value: &BTreeMap<String, HgId>) -> Result<()> {
         let encoded = refencode::encode_remotenames(value);
         self.set("remotenames", &encoded)?;
+        Ok(())
+    }
+
+    /// Update remotename phases. This does not write to disk until `commit`.
+    pub fn set_remotename_phases(&mut self, value: &BTreeMap<String, Phase>) -> Result<()> {
+        let encoded = refencode::encode_remotename_phases(value)?;
+        self.set("remotename_phases", &encoded)?;
         Ok(())
     }
 

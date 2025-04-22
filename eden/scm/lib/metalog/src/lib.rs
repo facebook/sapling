@@ -21,6 +21,7 @@ pub use errors::Result;
 pub use indexedlog::Repair;
 #[cfg(test)]
 use parking_lot::Mutex;
+pub use types::Phase;
 
 pub use crate::metalog::CommitOptions;
 pub use crate::metalog::Id20;
