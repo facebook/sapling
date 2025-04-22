@@ -1176,6 +1176,15 @@ class EdenConfig : private ConfigSettingManager {
       this};
 
   /**
+   * Scribe category is the first argument passed to the scribe_cat binary. This
+   * is used by the NotificationsStructuredLogger
+   */
+  ConfigSetting<std::string> notificationsScribeCategory{
+      "telemetry:notifications-scribe-category",
+      "",
+      this};
+
+  /**
    * Controls which paths eden will log data fetches for when this is set.
    * Fetches for any paths that match the regex will be logged.
    */
