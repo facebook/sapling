@@ -142,7 +142,7 @@ fn run_hooks(
         (func)(&mut hook_args);
     }
     for hooks in hooks {
-        hooks.run_shell_hooks(repo, propagate_errors, Some(&hook_args))?;
+        hooks.run_hooks(repo, propagate_errors, Some(&hook_args))?;
     }
 
     Ok(())

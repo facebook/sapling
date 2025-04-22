@@ -118,11 +118,15 @@ Both fire for old command name:
   POST
 #endif
 
-Warn about python hooks since we can't fall back to Python:
+Python hooks now work in Rust commands:
   $ newclientrepo
-  $ setconfig 'hooks.pre-debugtestcommand.python=python:foo.py'
+  $ setconfig 'hooks.pre-debugtestcommand.python=python:foo.py:main'
+  $ cat > foo.py << 'EOF'
+  > def main(io, repo, **kwargs):
+  >     io.write_err(('repo is %s. kwargs: %r\n' % (repo.path, kwargs)).encode())
+  > EOF
   $ hg debugtestcommand
-  WARNING: not running python hooks ["pre-debugtestcommand.python"]
+  repo is $TESTTMP/repo2. kwargs: {'args': 'debugtestcommand'}
 
 
 "pre" hooks abort on error:

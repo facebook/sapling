@@ -1078,7 +1078,7 @@ pub fn checkout(
     let mut state_change = WatchmanStateChange::maybe_open(wc, target_commit);
 
     let preupdate_hooks = hook::Hooks::from_config(repo.config(), &ctx.io, "preupdate");
-    preupdate_hooks.run_shell_hooks(
+    preupdate_hooks.run_hooks(
         Some(repo),
         true,
         Some(&HashMap::from([
@@ -1127,7 +1127,7 @@ pub fn checkout(
     let mut update_hooks = hook::Hooks::from_config(repo.config(), &ctx.io, "update");
     // No need to run this hook as it was part of `edenfs::edenfs_checkout`.
     update_hooks.ignore("python:sapling.hooks.edenfs_redirect_fixup");
-    update_hooks.run_shell_hooks(
+    update_hooks.run_hooks(
         Some(repo),
         false,
         Some(&HashMap::from([

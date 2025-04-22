@@ -46,6 +46,7 @@ pub struct Hooks {
     io: IO,
     hook_type: String,
     hooks: Vec<Hook>,
+    verbose: bool,
 }
 
 pub struct PythonHookSig;
@@ -64,10 +65,13 @@ impl<'a> factory::FunctionSignature<'a> for PythonHookSig {
 
 impl Hooks {
     pub fn from_config(cfg: &dyn Config, io: &IO, hook_type: &str) -> Self {
+        let verbose = cfg.get_or_default("ui", "verbose").unwrap_or_default()
+            || cfg.get_or_default("ui", "debug").unwrap_or_default();
         Self {
             io: io.clone(),
             hook_type: hook_type.to_string(),
             hooks: hooks_from_config(cfg, hook_type),
+            verbose,
         }
     }
 
@@ -86,50 +90,16 @@ impl Hooks {
         }
     }
 
+    /// Report python hook names that won't run by `run_hooks`.
     pub fn python_hook_names(&self) -> Vec<Text> {
         self.hooks
             .iter()
-            .filter(|h| h.is_python())
+            .filter(|h| h.is_python() && h.ignored)
             .map(|h| h.name.clone())
             .collect()
     }
 
-    pub fn run_python_hooks(
-        &self,
-        repo: Option<&Repo>,
-        propagate_errors: bool,
-        kwargs: Option<&dyn Serialize>,
-    ) -> Result<()> {
-        for hook in &self.hooks {
-            if hook.ignored {
-                continue;
-            }
-            if let HookSpec::Python(spec) = &hook.spec {
-                let span = tracing::info_span!("python hook", hook = %hook.name, exit = tracing::field::Empty);
-                let maybe_error_message =
-                    match run_python_hook(repo, spec.as_ref(), hook.name.as_ref(), kwargs) {
-                        Err(e) => Some(format!("{} hook error: {}", hook.name, e)),
-                        Ok(0) => None,
-                        Ok(v) => Some(format!("{} hook returned non-zero: {}", hook.name, v)),
-                    };
-                match maybe_error_message {
-                    None => {
-                        span.record("exit", "success");
-                    }
-                    Some(e) => {
-                        span.record("exit", &e);
-                        match propagate_errors {
-                            false => tracing::warn!("{} (not fatal)", e),
-                            true => bail!("{}", e),
-                        }
-                    }
-                }
-            }
-        }
-        Ok(())
-    }
-
-    pub fn run_shell_hooks(
+    pub fn run_hooks(
         &self,
         repo: Option<&Repo>,
         propagate_errors: bool,
@@ -139,87 +109,106 @@ impl Hooks {
 
         for h in self.hooks.iter() {
             if h.ignored {
+                tracing::debug!(hook=%h.name, "hook ignored");
                 continue;
             }
-            if let HookSpec::Shell {
-                script: shell_cmd,
-                background,
-            } = &h.spec
-            {
-                let span =
-                    tracing::info_span!("shell hook", hook = %h.name, exit = tracing::field::Empty);
-                let _enter = span.enter();
 
-                let mut cmd = Command::new_shell(shell_cmd);
+            if self.verbose {
+                let _ = write!(self.io.error(), "calling hook: {}\n", h.name.as_ref());
+            }
 
-                if let Some(repo) = repo {
-                    cmd.current_dir(repo.path());
-                }
+            let span = tracing::info_span!("hook", hook = %h.name, exit = tracing::field::Empty);
+            let _enter = span.enter();
 
-                cmd.env("HG_HOOKTYPE", &self.hook_type);
-                cmd.env("HG_HOOKNAME", h.name.as_ref());
-                cmd.env(
-                    "SAPLING_CLIENT_ENTRY_POINT",
-                    format!("{}", client_info.entry_point),
-                );
-                cmd.env("SAPLING_CLIENT_CORRELATOR", &client_info.correlator);
+            let maybe_error_description = match &h.spec {
+                HookSpec::Shell {
+                    script: shell_cmd,
+                    background,
+                } => 'shell_hook: {
+                    let mut cmd = Command::new_shell(shell_cmd);
 
-                if let Some(kwargs) = kwargs {
-                    for (k, v) in to_env_vars(kwargs)? {
-                        match v {
-                            Some(v) => cmd.env(k, v),
-                            None => cmd.env_remove(k),
-                        };
+                    if let Some(repo) = repo {
+                        cmd.current_dir(repo.path());
                     }
-                }
 
-                cmd.env(
-                    "HG",
-                    std::env::current_exe()
-                        .ok()
-                        .as_ref()
-                        .and_then(|p| p.to_str())
-                        .unwrap_or_else(|| identity::cli_name()),
-                );
+                    cmd.env("HG_HOOKTYPE", &self.hook_type);
+                    cmd.env("HG_HOOKNAME", h.name.as_ref());
+                    cmd.env(
+                        "SAPLING_CLIENT_ENTRY_POINT",
+                        format!("{}", client_info.entry_point),
+                    );
+                    cmd.env("SAPLING_CLIENT_CORRELATOR", &client_info.correlator);
 
-                if *background {
-                    if let Err(err) = cmd.spawn_detached() {
-                        tracing::warn!(?err, "error spawning background hook");
+                    if let Some(kwargs) = kwargs {
+                        for (k, v) in to_env_vars(kwargs)? {
+                            match v {
+                                Some(v) => cmd.env(k, v),
+                                None => cmd.env_remove(k),
+                            };
+                        }
                     }
-                } else {
-                    let _hook_blocked = self
-                        .io
-                        .time_interval()
-                        .scoped_blocked_interval("exthook".into());
 
-                    let status = if self.io.output().is_tty() {
-                        // If stdout is tty, let child inherit our file handles.
-                        cmd.status()
+                    cmd.env(
+                        "HG",
+                        std::env::current_exe()
+                            .ok()
+                            .as_ref()
+                            .and_then(|p| p.to_str())
+                            .unwrap_or_else(|| identity::cli_name()),
+                    );
+
+                    if *background {
+                        if let Err(err) = cmd.spawn_detached() {
+                            tracing::warn!(?err, "error spawning background hook");
+                        }
                     } else {
-                        // Stdout is not a tty - capture output and proxy to our IO.
-                        // Stdin is not inherited.
-                        match cmd.output() {
-                            Err(err) => Err(err),
-                            Ok(out) => {
-                                let _ = self.io.output().write_all(&out.stdout);
-                                let _ = self.io.error().write_all(&out.stderr);
-                                Ok(out.status)
+                        let _hook_blocked = self
+                            .io
+                            .time_interval()
+                            .scoped_blocked_interval("exthook".into());
+
+                        let status = if self.io.output().is_tty() {
+                            // If stdout is tty, let child inherit our file handles.
+                            cmd.status()
+                        } else {
+                            // Stdout is not a tty - capture output and proxy to our IO.
+                            // Stdin is not inherited.
+                            match cmd.output() {
+                                Err(err) => Err(err),
+                                Ok(out) => {
+                                    let _ = self.io.output().write_all(&out.stdout);
+                                    let _ = self.io.error().write_all(&out.stderr);
+                                    Ok(out.status)
+                                }
                             }
                         }
-                    }
-                    .with_context(|| format!("starting hook {}", h.name))?;
+                        .with_context(|| format!("starting hook {}", h.name))?;
 
-                    if status.success() {
-                        span.record("exit", "success");
-                    } else {
-                        let exit_description = exit_description(&status);
-                        span.record("exit", &exit_description);
-
-                        if propagate_errors {
-                            bail!("{} hook {}", h.name, exit_description);
-                        } else {
-                            tracing::warn!(exit=exit_description, hook=%h.name, "bad hook exit");
+                        if !status.success() {
+                            let exit_description = exit_description(&status);
+                            break 'shell_hook Some(exit_description);
                         }
+                    }
+                    None
+                }
+                HookSpec::Python(spec) => {
+                    match run_python_hook(repo, spec.as_ref(), h.name.as_ref(), kwargs) {
+                        Err(e) => Some(format!("{} hook error: {}", h.name, e)),
+                        Ok(0) => None,
+                        Ok(v) => Some(format!("{} hook returned non-zero: {}", h.name, v)),
+                    }
+                }
+            };
+
+            match maybe_error_description {
+                None => {
+                    span.record("exit", "success");
+                }
+                Some(e) => {
+                    span.record("exit", &e);
+                    match propagate_errors {
+                        false => tracing::warn!(exit=e, hook=%h.name, "bad hook exit"),
+                        true => bail!("{} hook {}", h.name, e),
                     }
                 }
             }
@@ -402,9 +391,12 @@ mod test {
         let output = BufIO::empty();
         let io = IO::new(BufIO::dev_null(), output.clone(), None::<BufIO>);
 
-        let hooks = Hooks::from_config(&cfg, &io, "foo");
+        let mut hooks = Hooks::from_config(&cfg, &io, "foo");
         assert_eq!(hooks.python_hook_names(), &["foo.python"]);
-        assert!(hooks.run_shell_hooks(None, true, None).is_ok());
+
+        // Cannot run the Python hook from this test.
+        hooks.ignore("python:foo.py");
+        assert!(hooks.run_hooks(None, true, None).is_ok());
         assert!(String::from_utf8(output.to_vec())?.starts_with("ok"));
 
         // Now with an erroring hook propagating error:
@@ -412,17 +404,17 @@ mod test {
         let cfg = BTreeMap::from([("hooks.foo.shell", "not-a-real-command")]);
 
         let mut hooks = Hooks::from_config(&cfg, &io, "foo");
-        assert!(hooks.run_shell_hooks(None, true, None).is_err());
+        assert!(hooks.run_hooks(None, true, None).is_err());
 
         // Now not propagating error:
 
-        assert!(hooks.run_shell_hooks(None, false, None).is_ok());
+        assert!(hooks.run_hooks(None, false, None).is_ok());
 
         // Hooks can be ignored.
         for spec in cfg.values() {
             hooks.ignore(spec)
         }
-        assert!(hooks.run_shell_hooks(None, true, None).is_ok());
+        assert!(hooks.run_hooks(None, true, None).is_ok());
 
         Ok(())
     }
