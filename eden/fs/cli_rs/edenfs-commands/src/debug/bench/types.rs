@@ -63,14 +63,14 @@ pub struct Benchmark {
     pub metrics: Vec<Metric>,
 }
 
-/// Represents a measurement with a name, value, unit, and precision
+/// Represents a metric with a name, value, unit, and precision
 #[derive(Debug, Clone)]
 pub struct Metric {
-    /// Name of the measurement (e.g., "write()", "write() latency")
+    /// Name of the metric (e.g., "write()", "write() latency")
     pub name: String,
-    /// Value of the measurement
+    /// Value of the metric
     pub value: f64,
-    /// Unit of the measurement (e.g., "MiB/s", "ms")
+    /// Unit of the metric (e.g., "MiB/s", "ms")
     pub unit: String,
     /// Precision for display (number of decimal places)
     pub precision: u8,
@@ -85,8 +85,8 @@ impl Benchmark {
         }
     }
 
-    /// Adds a measurement with optional precision (defaults to 2)
-    pub fn add_measurement(&mut self, name: &str, value: f64, unit: &str, precision: Option<u8>) {
+    /// Adds a metric with optional precision (defaults to 2)
+    pub fn add_metric(&mut self, name: &str, value: f64, unit: &str, precision: Option<u8>) {
         self.metrics.push(Metric {
             name: name.to_string(),
             value,
@@ -106,28 +106,26 @@ impl std::fmt::Display for Benchmark {
         let max_value_len = self
             .metrics
             .iter()
-            .map(|measurement| {
-                format_value_with_precision(measurement.value, measurement.precision).len()
-            })
+            .map(|metric| format_value_with_precision(metric.value, metric.precision).len())
             .max()
             .map_or(0, |len| if len < 10 { 10 } else { len });
 
         let max_unit_len = self
             .metrics
             .iter()
-            .map(|measurement| measurement.unit.len())
+            .map(|metric| metric.unit.len())
             .max()
             .unwrap_or(0);
 
-        for measurement in &self.metrics {
-            let value_str = format_value_with_precision(measurement.value, measurement.precision);
+        for metric in &self.metrics {
+            let value_str = format_value_with_precision(metric.value, metric.precision);
 
             writeln!(
                 f,
                 "{:>width$} {:<unit_width$} - {}",
                 value_str,
-                measurement.unit,
-                measurement.name,
+                metric.unit,
+                metric.name,
                 width = max_value_len,
                 unit_width = max_unit_len
             )?;

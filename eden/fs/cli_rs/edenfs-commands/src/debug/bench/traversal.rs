@@ -52,9 +52,9 @@ pub fn bench_fs_traversal(dir_path: &str) -> Result<Benchmark> {
 
     let mut result = Benchmark::new(BenchmarkType::FsTraversal);
 
-    result.add_measurement("Traversal throughput", files_per_second, "files/s", Some(0));
-    result.add_measurement("Total files", file_count as f64, "files", Some(0));
-    result.add_measurement("Total time", duration, "seconds", Some(2));
+    result.add_metric("Traversal throughput", files_per_second, "files/s", Some(0));
+    result.add_metric("Total files", file_count as f64, "files", Some(0));
+    result.add_metric("Total time", duration, "seconds", Some(2));
 
     Ok(result)
 }

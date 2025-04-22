@@ -58,31 +58,31 @@ pub fn bench_write_mfmd(test_dir: &TestDir, random_data: &RandomData) -> Result<
 
     let mut result = Benchmark::new(BenchmarkType::FsWriteMultipleFiles);
 
-    // Add throughput measurements
-    result.add_measurement(
+    // Add throughput metrics
+    result.add_metric(
         "create() + write() + sync() throughput",
         mb_per_second_e2e,
         "MiB/s",
         None,
     );
-    result.add_measurement(
+    result.add_metric(
         "create() + write() throughput",
         mb_per_second_create_write,
         "MiB/s",
         None,
     );
 
-    // Add latency measurements
-    result.add_measurement("create() latency", avg_create_dur * 1000.0, "ms", Some(4));
+    // Add latency metrics
+    result.add_metric("create() latency", avg_create_dur * 1000.0, "ms", Some(4));
 
     let chunk_size_kb = random_data.chunk_size as f64 / types::BYTES_IN_KILOBYTE as f64;
-    result.add_measurement(
+    result.add_metric(
         &format!("write() {:.0} KiB latency", chunk_size_kb),
         avg_write_dur * 1000.0,
         "ms",
         Some(4),
     );
-    result.add_measurement(
+    result.add_metric(
         &format!("sync() {:.0} KiB latency", chunk_size_kb),
         avg_sync_dur * 1000.0,
         "ms",
@@ -113,14 +113,14 @@ pub fn bench_read_mfmd(test_dir: &TestDir, random_data: &RandomData) -> Result<B
 
     let mut result = Benchmark::new(BenchmarkType::FsReadMultipleFiles);
 
-    // Add throughput measurements
-    result.add_measurement("open() + read() throughput", mb_per_second, "MiB/s", None);
+    // Add throughput metrics
+    result.add_metric("open() + read() throughput", mb_per_second, "MiB/s", None);
 
-    // Add latency measurements
-    result.add_measurement("open() latency", avg_open_dur * 1000.0, "ms", Some(4));
+    // Add latency metrics
+    result.add_metric("open() latency", avg_open_dur * 1000.0, "ms", Some(4));
 
     let chunk_size_kb = random_data.chunk_size as f64 / types::BYTES_IN_KILOBYTE as f64;
-    result.add_measurement(
+    result.add_metric(
         &format!("read() {:.0} KiB latency", chunk_size_kb),
         avg_read_dur * 1000.0,
         "ms",
@@ -149,14 +149,14 @@ pub fn bench_write_sfmd(test_dir: &TestDir, random_data: &RandomData) -> Result<
 
     let mut result = Benchmark::new(BenchmarkType::FsWriteSingleFile);
 
-    // Add throughput measurements
-    result.add_measurement(
+    // Add throughput metrics
+    result.add_metric(
         "create() + write() + sync() throughput",
         mb_per_second_e2e,
         "MiB/s",
         None,
     );
-    result.add_measurement("create() + write()", mb_per_second_write, "MiB/s", None);
+    result.add_metric("create() + write()", mb_per_second_write, "MiB/s", None);
 
     Ok(result)
 }
@@ -173,8 +173,8 @@ pub fn bench_read_sfmd(test_dir: &TestDir, random_data: &RandomData) -> Result<B
 
     let mut result = Benchmark::new(BenchmarkType::FsReadSingleFile);
 
-    // Add throughput measurements
-    result.add_measurement("open() + read() throughput", mb_per_second, "MiB/s", None);
+    // Add throughput metrics
+    result.add_metric("open() + read() throughput", mb_per_second, "MiB/s", None);
 
     Ok(result)
 }
