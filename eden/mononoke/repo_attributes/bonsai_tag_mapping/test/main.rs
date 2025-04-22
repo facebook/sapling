@@ -23,7 +23,6 @@ use mononoke_types::hash::GitSha1;
 use mononoke_types_mocks::changesetid as bonsai;
 use mononoke_types_mocks::repo::REPO_ZERO;
 use repo_update_logger::PlainBookmarkInfo;
-use slog::Logger;
 use sql_construct::SqlConstruct;
 use tokio::sync::broadcast;
 use tokio::time::sleep;

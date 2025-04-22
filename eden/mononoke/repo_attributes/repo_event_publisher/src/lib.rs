@@ -15,6 +15,7 @@
 #[cfg(fbcode_build)]
 mod facebook;
 mod from_scuba_json;
+mod notification_filter;
 #[cfg(not(fbcode_build))]
 mod oss;
 mod repo_name_provider;
@@ -24,6 +25,7 @@ use anyhow::Result;
 pub use facebook::scribe_listener::ScribeListener;
 #[cfg(fbcode_build)]
 pub use facebook::scribe_repo_event_publisher::ScribeRepoEventPublisher;
+pub use notification_filter::AllBookmarksFilter;
 #[cfg(not(fbcode_build))]
 pub use oss::UnsupportedRepoEventPublisher;
 use repo_update_logger::PlainBookmarkInfo;

@@ -30,7 +30,6 @@ rust_unittest(
     name = "bonsai_tag_mapping_test",
     srcs = glob(["test/**/*.rs"]),
     crate = "bonsai_tag_mapping_test",
-    named_deps = {"slog": "//common/rust/shed/tracing_slog_compat:tracing_slog_compat"},
     deps = [
         "fbsource//third-party/rust:anyhow",
         "fbsource//third-party/rust:tokio",
