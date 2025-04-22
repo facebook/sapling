@@ -15,6 +15,7 @@ use std::io;
 use std::str::FromStr;
 
 pub use types::HgId;
+pub use types::Phase;
 
 /// Encode remote bookmarks like `[('remote/master', node), ...]` to bytes.
 pub fn encode_remotenames(name_nodes: &BTreeMap<String, HgId>) -> Vec<u8> {
@@ -40,6 +41,40 @@ pub fn decode_remotenames(bytes: &[u8]) -> io::Result<BTreeMap<String, HgId>> {
             }
         } else {
             return Err(invalid(format!("corrupt entry in remotenames: {}", line)));
+        }
+    }
+    Ok(decoded)
+}
+
+/// Encode remote bookmarks like `[('remote/master', Public), ...]` to bytes.
+pub fn encode_remotename_phases(name_nodes: &BTreeMap<String, Phase>) -> io::Result<Vec<u8>> {
+    let encoded = name_nodes
+        .iter()
+        .map(|(name, phase)| {
+            if name.contains(' ') || name.is_empty() {
+                Err(invalid(format!("invalid remotename: {:?}", name)))
+            } else {
+                Ok(format!("{} {}\n", phase, name))
+            }
+        })
+        .collect::<io::Result<Vec<_>>>()?
+        .concat();
+    Ok(encoded.into_bytes())
+}
+
+/// Decode remote bookmarks encoded by `encode_remotenames_phases`.
+pub fn decode_remotename_phases(bytes: &[u8]) -> io::Result<BTreeMap<String, Phase>> {
+    let text = std::str::from_utf8(bytes).map_err(invalid)?;
+    let mut decoded = BTreeMap::<String, Phase>::new();
+    for line in text.lines() {
+        if let Some((phase, name)) = line.split_once(' ') {
+            let phase = Phase::from_str(phase).map_err(invalid)?;
+            decoded.insert(name.to_string(), phase);
+        } else {
+            return Err(invalid(format!(
+                "corrupt entry in remotenames-phases: {}",
+                line
+            )));
         }
     }
     Ok(decoded)
@@ -114,6 +149,14 @@ mod tests {
     }
 
     #[test]
+    fn test_encode_decode_remotenames_phases() {
+        let m = map_phases();
+        let encoded = encode_remotename_phases(&m).unwrap();
+        let decoded = decode_remotename_phases(&encoded).unwrap();
+        assert_eq!(decoded, m);
+    }
+
+    #[test]
     fn test_encode_decode_bookmarks() {
         let m = map();
         let encoded = encode_bookmarks(&m);
@@ -135,6 +178,19 @@ mod tests {
             let name = format!("foo/a{}", i);
             let node = HgId::from_byte_array([i * 11; HgId::len()]);
             m.insert(name, node);
+        }
+        m
+    }
+
+    fn map_phases() -> BTreeMap<String, Phase> {
+        let mut m = BTreeMap::new();
+        for i in 0..10 {
+            let name = format!("foo/a{}", i);
+            let phase = match i % 2 {
+                0 => Phase::Public,
+                _ => Phase::Draft,
+            };
+            m.insert(name, phase);
         }
         m
     }
