@@ -932,12 +932,21 @@ impl BookmarksCoordinator {
     ) {
         let fut = async move {
             tracing::info!("Started warm bookmark cache updater");
-            let repo_name = self.repo.repo_identity().name().to_string();
-            let mut bookmark_update_subscriber = self
-                .repo
-                .repo_event_publisher
-                .subscribe_for_bookmark_updates(&repo_name)
-                .ok();
+            let repo_name: String = self.repo.repo_identity().name().to_string();
+            let tailing_enabled = justknobs::eval(
+                "scm/mononoke:wbc_update_by_scribe_tailer",
+                None,
+                Some(&repo_name),
+            )
+            .unwrap_or(false);
+            let mut bookmark_update_subscriber = tailing_enabled
+                .then(|| {
+                    self.repo
+                        .repo_event_publisher
+                        .subscribe_for_bookmark_updates(&repo_name)
+                        .ok()
+                })
+                .flatten();
             let infinite_loop = async {
                 // Indicates that the sync method was called and is waiting for a sync
                 // completion notification
