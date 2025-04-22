@@ -1,12 +1,9 @@
-
-#require no-eden
-
+#debugruntest-incompatible
 #chg-compatible
-
-  $ . "$TESTDIR/hgsql/library.sh"
+#require no-eden no-windows
 
 Start up translation service.
-
+ 
   $ hg debugpython -- "$TESTDIR/conduithttp.py" --port-file conduit.port --pid conduit.pid
   $ cat conduit.pid >> $DAEMON_PIDS
   $ CONDUIT_PORT=`cat conduit.port`
@@ -204,12 +201,12 @@ Make sure that locally found commits actually work
 
 Make sure that globalrevs work
 
-  $ cd ..
-  $ initserver mockwwwrepo mockwwwrepo
+  $ cd
+  $ hg init mockwwwrepo
   $ cd mockwwwrepo
   $ enable fbcodereview globalrevs pushrebase
   $ setconfig \
-  > hgsql.enabled=True \
+  > globalrevs.server=True \
   > fbscmquery.reponame=basic \
   > fbscmquery.host=localhost:$CONDUIT_PORT \
   > fbscmquery.path=/intern/conduit/ \
@@ -224,10 +221,11 @@ Make sure that globalrevs work
   > phabricator.graphql_app_token=TOKEN123
   > echo {} > .arcconfig
 
-  $ hg initglobalrev 5000 --i-know-what-i-am-doing
+  $ hg debuginitglobalrev 5000
 
   $ touch x
   $ hg commit -Aqm "added a file"
+  $ hg debugmakepublic -r .
 
   $ hg up rWWW4999
   abort: unknown revision 'rWWW4999'!
@@ -252,9 +250,11 @@ globalrevs.
 fallback to the slow lookup path.
 
   $ hg up -q m5000
-  failed to lookup globalrev 5000 from scmquery: No JSON object could be decoded
-  failed to lookup globalrev 5000 from scmquery: No JSON object could be decoded
-  failed to lookup globalrev 5000 from scmquery: No JSON object could be decoded
+  *DeprecationWarning: ssl.wrap_socket() is deprecated, use SSLContext.wrap_socket() (glob) (?)
+  *return _wrap_socket(sock, **ssl_opts) (glob) (?)
+  failed to lookup globalrev 5000 from scmquery: * (glob)
+  failed to lookup globalrev 5000 from scmquery: * (glob)
+  failed to lookup globalrev 5000 from scmquery: * (glob)
 
 - Fix the conduit configurations so that we can mock ScmQuery lookups.
 

@@ -62,7 +62,6 @@ from sapling import (
 from sapling.i18n import _
 from sapling.namespaces import namespace
 
-from .hgsql import CorruptionException, executewithsql, ishgsqlbypassed, issqlrepo
 from .pushrebase import isnonpushrebaseblocked
 
 
@@ -93,39 +92,11 @@ def globalrevkw(repo, ctx, **kwargs):
     return _getglobalrev(repo.ui, ctx.extra())
 
 
-def _newreporequirementswrapper(orig, repo):
-    reqs = orig(repo)
-    if repo.ui.configbool("format", "useglobalrevs"):
-        reqs.add("globalrevs")
-    return reqs
-
-
-def uisetup(ui) -> None:
-    extensions.wrapfunction(
-        localrepo, "newreporequirements", _newreporequirementswrapper
-    )
-
-    def _hgsqlwrapper(loaded):
-        if loaded:
-            hgsqlmod = extensions.find("hgsql")
-            extensions.wrapfunction(hgsqlmod, "wraprepo", _sqllocalrepowrapper)
-
-    # We only wrap `hgsql` extension for embedding strictly increasing global
-    # revision number in commits if the repository has `hgsql` enabled and it is
-    # also configured to write data to the commits. Therefore, do not wrap the
-    # extension if that is not the case.
-    if not ui.configbool("globalrevs", "readonly") and not ishgsqlbypassed(ui):
-        extensions.afterloaded("hgsql", _hgsqlwrapper)
-
-    cls = localrepo.localrepository
-    for reqs in ["_basesupported", "supportedformats"]:
-        getattr(cls, reqs).add("globalrevs")
-
-
 def reposetup(ui, repo) -> None:
     # Only need the extra functionality on the servers.
-    if issqlrepo(repo):
-        _validateextensions(["hgsql", "pushrebase"])
+    if repo.ui.configbool("globalrevs", "server"):
+        _wrap_server_repo(repo)
+        _validateextensions(["pushrebase"])
         _validaterepo(repo)
 
 
@@ -145,12 +116,12 @@ def _validaterepo(repo) -> None:
         raise error.Abort(_("pushrebase using incorrect configuration"))
 
 
-def _sqllocalrepowrapper(orig, repo) -> None:
-    # This ensures that the repo is of type `sqllocalrepo` which is defined in
-    # hgsql extension.
-    orig(repo)
+def _wrap_server_repo(repo) -> None:
+    """Wrap SERVER repo to assign global revs"""
 
-    if not extensions.isenabled(repo.ui, "globalrevs"):
+    if not extensions.isenabled(repo.ui, "globalrevs") or not repo.ui.configbool(
+        "globalrevs", "server"
+    ):
         return
 
     # This class will effectively extend the `sqllocalrepo` class.
@@ -163,36 +134,7 @@ def _sqllocalrepowrapper(orig, repo) -> None:
             return super(globalrevsrepo, self).commitctx(ctx, error)
 
         def revisionnumberfromdb(self):
-            # This must be executed while the SQL lock is taken
-            if not self.hassqlwritelock():
-                raise error.ProgrammingError("acquiring globalrev needs SQL write lock")
-
-            reponame = self._globalrevsreponame
-            cursor = self.sqlcursor
-
-            cursor.execute(
-                "SELECT value FROM revision_references "
-                + "WHERE repo = %s AND "
-                + "namespace = 'counter' AND "
-                + "name='commit' ",
-                (reponame,),
-            )
-
-            counterresults = cursor.fetchall()
-            if len(counterresults) == 1:
-                return int(counterresults[0][0])
-            elif len(counterresults) == 0:
-                raise error.Abort(
-                    CorruptionException(
-                        _("no commit counters for %s in database") % reponame
-                    )
-                )
-            else:
-                raise error.Abort(
-                    CorruptionException(
-                        _("multiple commit counters for %s in database") % reponame
-                    )
-                )
+            return int(self.metalog().get("next_globalrev") or "1")
 
         def nextrevisionnumber(self):
             """get the next strictly increasing revision number for this
@@ -223,22 +165,11 @@ def _sqllocalrepowrapper(orig, repo) -> None:
 
             newcount = self._nextrevisionnumber
 
-            # Only write to database if the global revision number actually
+            # Only write to metalog if the global revision number actually
             # changed.
             if newcount is not None:
-                reponame = self._globalrevsreponame
-                cursor = self.sqlcursor
+                _update_global_rev(self.metalog(), newcount)
 
-                cursor.execute(
-                    "UPDATE revision_references "
-                    + "SET value=%s "
-                    + "WHERE repo=%s AND namespace='counter' AND name='commit'",
-                    (newcount, reponame),
-                )
-
-    repo._globalrevsreponame = (
-        repo.ui.config("globalrevs", "reponame") or repo.sqlreponame
-    )
     repo._nextrevisionnumber = None
     repo.__class__ = globalrevsrepo
 
@@ -371,67 +302,30 @@ def _getsvnrev(commitextra):
         return convertrev.rsplit("@", 1)[-1]
 
 
-@command("globalrev", [], _("@prog@ globalrev"))
-def globalrev(ui, repo, *args, **opts) -> None:
+@command("debugnextglobalrev", [])
+def globalrev(ui, repo) -> None:
     """prints out the next global revision number for a particular repository by
-    reading it from the database.
+    reading it from the metalog.
     """
 
-    if not issqlrepo(repo):
-        raise error.Abort(_("this repository is not a sql backed repository"))
-
-    def _printnextglobalrev():
-        ui.status(_("%s\n") % repo.revisionnumberfromdb())
-
-    executewithsql(repo, _printnextglobalrev, sqllock=True)
+    ui.status(_("%s\n") % repo.revisionnumberfromdb())
 
 
 @command(
-    "initglobalrev",
-    [
-        (
-            "",
-            "i-know-what-i-am-doing",
-            None,
-            _("only run initglobalrev if you know exactly what you're doing"),
-        )
-    ],
-    _("@prog@ initglobalrev START"),
+    "debuginitglobalrev",
 )
-def initglobalrev(ui, repo, start, *args, **opts) -> None:
+def initglobalrev(ui, repo, start) -> None:
     """initializes the global revision number for a particular repository by
     writing it to the database.
     """
-
-    if not issqlrepo(repo):
-        raise error.Abort(_("this repository is not a sql backed repository"))
-
-    if not opts.get("i_know_what_i_am_doing"):
-        raise error.Abort(
-            _(
-                "You must pass --i-know-what-i-am-doing to run this command. "
-                + "Only the Mercurial server admins should ever run this."
-            )
-        )
-
     try:
         startrev = int(start)
     except ValueError:
         raise error.Abort(_("start must be an integer."))
 
-    def _initglobalrev():
-        cursor = repo.sqlcursor
-        reponame = repo._globalrevsreponame
+    _update_global_rev(repo.metalog(), startrev)
 
-        # Our schemas are setup such that this query will fail if we try to
-        # update an existing row which is exactly what we desire here.
-        cursor.execute(
-            "INSERT INTO "
-            + "revision_references(repo, namespace, name, value) "
-            + "VALUES(%s, 'counter', 'commit', %s)",
-            (reponame, startrev),
-        )
 
-        repo.sqlconn.commit()
-
-    executewithsql(repo, _initglobalrev, sqllock=True)
+def _update_global_rev(metalog, new_count):
+    metalog.set("next_globalrev", str(new_count).encode())
+    metalog.commit("bump next_globalrev")
