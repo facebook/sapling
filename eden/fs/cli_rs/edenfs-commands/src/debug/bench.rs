@@ -80,36 +80,38 @@ impl Benchmark {
 
     /// Displays the benchmark result
     fn display(&self) {
+        let format_value_with_precision =
+            |value: f64, precision: u8| -> String { format!("{:.1$}", value, precision as usize) };
+
         println!("{}", self.name);
 
-        // Display metrics
+        let max_value_len = self
+            .metrics
+            .iter()
+            .map(|measurement| {
+                format_value_with_precision(measurement.value, measurement.precision).len()
+            })
+            .max()
+            .map_or(0, |len| if len < 10 { 10 } else { len });
+
+        let max_unit_len = self
+            .metrics
+            .iter()
+            .map(|measurement| measurement.unit.len())
+            .max()
+            .unwrap_or(0);
+
         for measurement in &self.metrics {
-            match measurement.precision {
-                0 => println!(
-                    "\t- {}: {:.0} {}",
-                    measurement.name, measurement.value, measurement.unit
-                ),
-                1 => println!(
-                    "\t- {}: {:.1} {}",
-                    measurement.name, measurement.value, measurement.unit
-                ),
-                2 => println!(
-                    "\t- {}: {:.2} {}",
-                    measurement.name, measurement.value, measurement.unit
-                ),
-                3 => println!(
-                    "\t- {}: {:.3} {}",
-                    measurement.name, measurement.value, measurement.unit
-                ),
-                4 => println!(
-                    "\t- {}: {:.4} {}",
-                    measurement.name, measurement.value, measurement.unit
-                ),
-                _ => println!(
-                    "\t- {}: {} {}",
-                    measurement.name, measurement.value, measurement.unit
-                ),
-            }
+            let value_str = format_value_with_precision(measurement.value, measurement.precision);
+
+            println!(
+                "{:>width$} {:<unit_width$} - {}",
+                value_str,
+                measurement.unit,
+                measurement.name,
+                width = max_value_len,
+                unit_width = max_unit_len
+            );
         }
     }
 }
