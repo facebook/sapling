@@ -107,6 +107,13 @@ impl Hooks {
     ) -> Result<()> {
         let client_info = clientinfo::get_client_request_info();
 
+        // Set `SL_LOG=commands::run::blocked=debug` to see the blocked duration.
+        // By default, duration < 10ms is ignored.
+        let _blocked = self
+            .io
+            .time_interval()
+            .scoped_blocked_interval("hook".into());
+
         for h in self.hooks.iter() {
             if h.ignored {
                 tracing::debug!(hook=%h.name, "hook ignored");
