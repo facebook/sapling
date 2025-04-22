@@ -14,6 +14,7 @@ pub mod de;
 pub mod error;
 mod extract;
 mod iter;
+mod keepalive;
 mod none;
 mod path;
 mod pybuf;
@@ -23,8 +24,8 @@ pub mod ser;
 #[cfg(test)]
 mod tests;
 
-pub use bytes::Bytes;
 // Re-export
+pub use bytes::Bytes;
 pub use cpython;
 
 pub use crate::bytearrayobject::boxed_slice_to_pyobj;
@@ -38,6 +39,7 @@ pub use crate::error::format_py_error;
 pub use crate::extract::ExtractInner;
 pub use crate::extract::ExtractInnerRef;
 pub use crate::iter::PyIter;
+pub use crate::keepalive::PythonKeepAlive;
 pub use crate::none::PyNone;
 pub use crate::path::Error;
 pub use crate::path::PyPath;
