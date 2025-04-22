@@ -2104,3 +2104,13 @@ pub struct MetadataCacheConfig {
     /// Mode for updating the content refs metadata cache
     pub content_refs_update_mode: Option<MetadataCacheUpdateMode>,
 }
+
+impl MetadataCacheConfig {
+    /// Returns the scribe category to tail for warm bookmark cache updates if it exists
+    pub fn wbc_scribe_category(&self) -> Option<String> {
+        match &self.wbc_update_mode {
+            Some(MetadataCacheUpdateMode::Tailing { category }) => Some(category.to_string()),
+            _ => None,
+        }
+    }
+}

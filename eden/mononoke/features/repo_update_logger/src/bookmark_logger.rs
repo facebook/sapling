@@ -153,17 +153,17 @@ impl Loggable for GitBookmarkInfo {
     }
 }
 
-#[derive(Serialize)]
-struct PlainBookmarkInfo {
-    repo_name: String,
-    bookmark_name: String,
-    bookmark_kind: String,
+#[derive(Serialize, Clone, Debug)]
+pub struct PlainBookmarkInfo {
+    pub repo_name: String,
+    pub bookmark_name: String,
+    pub bookmark_kind: String,
     #[serde(skip_serializing_if = "Option::is_none")]
-    old_bookmark_value: Option<String>,
+    pub old_bookmark_value: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
-    new_bookmark_value: Option<String>,
-    operation: String,
-    update_reason: String,
+    pub new_bookmark_value: Option<String>,
+    pub operation: String,
+    pub update_reason: String,
 }
 
 impl PlainBookmarkInfo {
@@ -183,6 +183,10 @@ impl PlainBookmarkInfo {
             operation: format!("{}", info.operation),
             update_reason: format!("{}", info.reason),
         }
+    }
+
+    pub fn repo_name(&self) -> &str {
+        &self.repo_name
     }
 }
 
