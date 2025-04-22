@@ -189,7 +189,7 @@ mod tests {
     fn map() -> BTreeMap<RefName, HgId> {
         let mut m = BTreeMap::new();
         for i in 0..10 {
-            let name = format!("foo/a{}", i);
+            let name = format!("foo/a {}", i);
             let node = HgId::from_byte_array([i * 11; HgId::len()]);
             m.insert(name.try_into().unwrap(), node);
         }
@@ -199,7 +199,7 @@ mod tests {
     fn map_phases() -> BTreeMap<RefName, Phase> {
         let mut m = BTreeMap::new();
         for i in 0..10 {
-            let name = format!("foo/a{}", i);
+            let name = format!("foo/a {}", i);
             let phase = match i % 2 {
                 0 => Phase::Public,
                 _ => Phase::Draft,
