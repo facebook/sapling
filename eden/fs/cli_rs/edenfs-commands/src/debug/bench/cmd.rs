@@ -14,6 +14,7 @@ use clap::Parser;
 use super::dbio;
 use super::fsio;
 use super::gen;
+use super::traversal;
 use super::types;
 use crate::ExitCode;
 
@@ -45,6 +46,13 @@ pub enum BenchCmd {
     DbIo {
         #[clap(flatten)]
         common: CommonOptions,
+    },
+
+    #[clap(about = "Run filesystem traversal benchmark")]
+    FsTraversal {
+        /// Directory to traverse
+        #[clap(long)]
+        dir: String,
     },
 }
 
@@ -99,6 +107,13 @@ impl crate::Subcommand for BenchCmd {
                 }
                 Err(e) => return Err(e),
             },
+            Self::FsTraversal { dir } => {
+                println!(
+                    "Running filesystem traversal benchmark on directory: {}",
+                    dir
+                );
+                println!("{}", traversal::bench_fs_traversal(dir)?);
+            }
         }
 
         Ok(0)
