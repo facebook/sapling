@@ -24,6 +24,8 @@ use cpython::exc;
 use once_cell::sync::Lazy;
 use parking_lot::Mutex;
 
+use crate::PythonKeepAlive;
+
 /// Extends the `Result` type to allow conversion to `PyResult` from a native
 /// Rust result.
 ///
@@ -164,6 +166,7 @@ impl<T> AnyhowResultExt<T> for PyResult<T> {
 /// An enhanced version of `PyErr` that implements [`std::error::Error`].
 pub struct PyErr {
     inner: cpython::PyErr,
+    _keep_alive: PythonKeepAlive,
 }
 
 impl PyErr {
@@ -174,7 +177,10 @@ impl PyErr {
 
 impl From<cpython::PyErr> for PyErr {
     fn from(e: cpython::PyErr) -> PyErr {
-        PyErr { inner: e }
+        PyErr {
+            inner: e,
+            _keep_alive: PythonKeepAlive::new(),
+        }
     }
 }
 
@@ -233,7 +239,10 @@ impl serde::ser::Error for PyErr {
         let gil = Python::acquire_gil();
         let py = gil.python();
         let err = cpython::PyErr::new::<cpython::exc::TypeError, _>(py, msg.to_string());
-        Self { inner: err }
+        Self {
+            inner: err,
+            _keep_alive: PythonKeepAlive::new(),
+        }
     }
 }
 
@@ -243,7 +252,10 @@ impl serde::de::Error for PyErr {
         let gil = Python::acquire_gil();
         let py = gil.python();
         let err = cpython::PyErr::new::<cpython::exc::TypeError, _>(py, msg.to_string());
-        Self { inner: err }
+        Self {
+            inner: err,
+            _keep_alive: PythonKeepAlive::new(),
+        }
     }
 }
 
