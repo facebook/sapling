@@ -129,6 +129,37 @@ def basename(args: List[str]) -> str:
 
 
 @command
+def base64(
+    args: List[str], stdout: BinaryIO, stdin: BinaryIO, stderr: BinaryIO, fs: ShellFS
+) -> int:
+    import base64, binascii
+
+    exitcode = 0
+
+    def reporterror(path, message):
+        nonlocal exitcode
+        exitcode = 1
+        stderr.write(f"base64: {path}: {message}\n".encode())
+
+    if args and args[0] == "-d":
+        # decode
+        args = args[1:]
+        process = base64.decodebytes
+    else:
+        # encode
+        if args and args[0] == "-w0":
+            args = args[1:]
+            process = binascii.b2a_base64
+        else:
+            process = base64.encodebytes
+
+    data = b"".join(_lines(fs, args, stdin, reporterror=reporterror))
+    processed = process(data)
+    stdout.write(processed)
+    return exitcode
+
+
+@command
 def dirname(args: List[str]) -> str:
     return "".join(arg.rsplit("/", 1)[0] + "\n" for arg in args)
 

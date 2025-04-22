@@ -473,6 +473,13 @@ sed:
     >>> t("seq 3 | sed '$d'")
     '1\n2\n'
 
+base64:
+
+    >>> t("echo abc | base64")
+    'YWJjCg==\n'
+    >>> t("echo abc | base64 | base64 -d")
+    'abc\n'
+
 py (python lookup):
 
     >>> pyval1 = 123
