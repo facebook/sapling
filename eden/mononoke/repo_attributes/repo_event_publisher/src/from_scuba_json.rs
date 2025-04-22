@@ -46,5 +46,8 @@ fn get_normal(val: &serde_json::Value, key: &str) -> anyhow::Result<String> {
 }
 
 fn maybe_get_normal(val: &serde_json::Value, key: &str) -> Option<String> {
-    val["normal"][key].as_str().map(|s| s.to_string())
+    val["normal"][key]
+        .as_str()
+        .map(|s| s.to_string())
+        .or_else(|| val[key].as_str().map(|s| s.to_string()))
 }

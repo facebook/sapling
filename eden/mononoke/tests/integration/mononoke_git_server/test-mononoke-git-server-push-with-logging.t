@@ -6,6 +6,7 @@
 
   $ export COMMIT_SCRIBE_CATEGORY=mononoke_commits
   $ export BOOKMARK_SCRIBE_CATEGORY=mononoke_bookmark
+  $ export WBC_SCRIBE_CATEGORY=mononoke_bookmark
   $ export MONONOKE_TEST_SCRIBE_LOGGING_DIRECTORY=$TESTTMP/scribe_logs/
   $ . "${TEST_FIXTURES}/library.sh"
   $ export ENABLE_BOOKMARK_CACHE=1
@@ -13,6 +14,14 @@
   $ setup_common_config $REPOTYPE
   $ GIT_REPO_ORIGIN="${TESTTMP}/origin/repo-git"
   $ GIT_REPO="${TESTTMP}/repo-git"
+
+  $ merge_just_knobs <<EOF
+  > {
+  >   "bools": {
+  >     "scm/mononoke:wbc_update_by_scribe_tailer": true
+  >   }
+  > }
+  > EOF
 
 # Setup git repository
   $ mkdir -p "$GIT_REPO_ORIGIN"

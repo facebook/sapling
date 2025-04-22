@@ -4,11 +4,23 @@
 # GNU General Public License found in the LICENSE file in the root
 # directory of this source tree.
 
+  $ export COMMIT_SCRIBE_CATEGORY=mononoke_commits
+  $ export BOOKMARK_SCRIBE_CATEGORY=mononoke_bookmark
+  $ export WBC_SCRIBE_CATEGORY=mononoke_bookmark
+  $ export MONONOKE_TEST_SCRIBE_LOGGING_DIRECTORY=$TESTTMP/scribe_logs/
   $ . "${TEST_FIXTURES}/library.sh"
   $ REPOTYPE="blob_files"
   $ setup_common_config $REPOTYPE
   $ GIT_REPO_ORIGIN="${TESTTMP}/origin/repo-git"
   $ GIT_REPO="${TESTTMP}/repo-git"
+
+  $ merge_just_knobs <<EOF
+  > {
+  >   "bools": {
+  >     "scm/mononoke:wbc_update_by_scribe_tailer": true
+  >   }
+  > }
+  > EOF
 
 # Setup git repository
   $ mkdir -p "$GIT_REPO_ORIGIN"
@@ -28,6 +40,10 @@
   Cloning into 'repo-git'...
   done.
 
+# Enable logging of bookmark updates
+  $ mkdir -p $TESTTMP/scribe_logs
+  $ touch $TESTTMP/scribe_logs/$BOOKMARK_SCRIBE_CATEGORY
+
 # Import it into Mononoke
   $ cd "$TESTTMP"
   $ quiet gitimport "$GIT_REPO" --derive-hg --generate-bookmarks full-repo
@@ -42,7 +58,6 @@
 
 # Add some new commits to the cloned repo and push it to remote
   $ cd repo
-  $ current_head=$(git rev-parse HEAD)
   $ echo "newly added file" > new_file
   $ git add .
   $ git commit -qam "Commit with newly added file"
@@ -70,15 +85,14 @@
   $ git_client push -f origin pusher_branch
   To https://localhost:$LOCAL_PORT/repos/git/ro/repo.git
      e8615d6..70faae0  pusher_branch -> pusher_branch
+  $ current_head=$(git rev-parse pusher_branch)
   $ git branch -f pusher_branch master_bookmark
   $ git_client push -f origin pusher_branch
   To https://localhost:$LOCAL_PORT/repos/git/ro/repo.git
      70faae0..5d04bf5  pusher_branch -> pusher_branch
 
 # Wait for the warm bookmark cache to catch up with the latest changes
-  $ wait_for_git_bookmark_move HEAD $current_head
-  bookmark move of  away from e8615d6f149b876be0a2f30a1c5bf0c42bf8e136 has not happened
-  [1]
+  $ wait_for_git_bookmark_move refs/heads/pusher_branch $current_head
 
 # Cloning the repo in a new folder will not get the latest changes since we didn't really accept the push
   $ cd "$TESTTMP"

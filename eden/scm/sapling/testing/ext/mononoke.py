@@ -1039,6 +1039,37 @@ local_zelos_port = {zelos_port}
 [git_configs.git_bundle_uri_config.uri_generator_type.local_fs]
 """)
 
+    if (
+        env.getenv("WBC_SCRIBE_CATEGORY")
+        or env.getenv("TAGS_SCRIBE_CATEGORY")
+        or env.getenv("CONTENT_REFS_SCRIBE_CATEGORY")
+    ):
+        append_config("[metadata_cache_config]")
+
+    if env.getenv("WBC_SCRIBE_CATEGORY"):
+        wbc_scribe_category = env.getenv("WBC_SCRIBE_CATEGORY")
+        append_config(
+            f"""
+wbc_update_mode = {{ tailing = {{ category = "{wbc_scribe_category}" }} }}
+"""
+        )
+
+    if env.getenv("TAGS_SCRIBE_CATEGORY"):
+        tags_scribe_category = env.getenv("TAGS_SCRIBE_CATEGORY")
+        append_config(
+            f"""
+tags_update_mode = {{ tailing = {{ category = "{tags_scribe_category}" }} }}
+"""
+        )
+
+    if env.getenv("CONTENT_REFS_SCRIBE_CATEGORY"):
+        content_refs_scribe_category = env.getenv("CONTENT_REFS_SCRIBE_CATEGORY")
+        append_config(
+            f"""
+content_refs_update_mode = {{ tailing = {{ category = "{content_refs_scribe_category}" }} }}
+"""
+        )
+
     return 0
 
 
