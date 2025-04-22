@@ -39,8 +39,8 @@ TakeoverData takeoverMounts(
     const std::set<int32_t>& supportedVersions,
     const uint64_t supportedTakeoverCapabilities) {
   folly::EventBase evb;
-  folly::Expected<UnixSocket::Message, folly::exception_wrapper>
-      expectedMessage;
+  folly::exception_wrapper expectedException;
+  TakeoverData takeoverData;
 
   auto connectTimeout = std::chrono::seconds(1);
   FutureUnixSocket socket;
@@ -101,29 +101,25 @@ TakeoverData takeoverMounts(
           return folly::makeFuture<UnixSocket::Message>(std::move(msg));
         }
       })
-      .thenValue([&expectedMessage](UnixSocket::Message&& msg) {
-        expectedMessage = std::move(msg);
+      .thenValue([&takeoverData](UnixSocket::Message&& msg) {
+        for (auto& file : msg.files) {
+          XLOGF(DBG7, "received fd for takeover: {}", file.fd());
+        }
+        takeoverData = TakeoverData::deserialize(msg);
       })
-      .thenError([&expectedMessage](folly::exception_wrapper&& ew) {
-        expectedMessage = folly::makeUnexpected(std::move(ew));
+      .thenError([&expectedException](folly::exception_wrapper&& ew) {
+        expectedException = std::move(ew);
       })
       .ensure([&evb] { evb.terminateLoopSoon(); });
 
   evb.loop();
 
-  if (!expectedMessage) {
-    XLOGF(
-        ERR,
-        "error receiving takeover data: {}",
-        expectedMessage.error().what());
-    expectedMessage.error().throw_exception();
-  }
-  auto& message = expectedMessage.value();
-  for (auto& file : message.files) {
-    XLOGF(DBG7, "received fd for takeover: {}", file.fd());
+  if (expectedException) {
+    XLOGF(ERR, "error receiving takeover data: {}", expectedException.what());
+    expectedException.throw_exception();
   }
 
-  return TakeoverData::deserialize(message);
+  return takeoverData;
 }
 } // namespace facebook::eden
 
