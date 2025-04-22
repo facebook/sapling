@@ -43,7 +43,9 @@ impl TraversalProgress {
 
     fn increment_count(&mut self) {
         self.file_count += 1;
-        self.update_progress();
+        if self.file_count % 100 == 0 {
+            self.update_progress();
+        }
     }
 
     fn update_progress(&mut self) {
