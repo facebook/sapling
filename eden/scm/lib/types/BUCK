@@ -1,4 +1,3 @@
-load("@fbcode_macros//build_defs:rust_binary.bzl", "rust_binary")
 load("@fbcode_macros//build_defs:rust_library.bzl", "rust_library")
 
 oncall("sapling")
@@ -62,18 +61,5 @@ rust_library(
         "//eden/scm/lib/minibytes:minibytes",
         "//eden/scm/lib/util:util",
         "//eden/scm/lib/vlqencoding:vlqencoding",
-    ],
-)
-
-rust_binary(
-    name = "benchmark_types",
-    srcs = ["bench/main.rs"],
-    autocargo = {"ignore_rule": True},
-    deps = [
-        "fbsource//third-party/rust:criterion",
-        "fbsource//third-party/rust:faster-hex",
-        "fbsource//third-party/rust:hex",
-        "fbsource//third-party/rust:sha1",
-        "//eden/scm/lib/types:types",
     ],
 )

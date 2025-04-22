@@ -1,0 +1,16 @@
+load("@fbcode_macros//build_defs:rust_binary.bzl", "rust_binary")
+
+oncall("mercurial_release")
+
+rust_binary(
+    name = "types-benches",
+    srcs = ["main.rs"],
+    crate_root = "main.rs",
+    deps = [
+        "fbsource//third-party/rust:criterion",
+        "fbsource//third-party/rust:faster-hex",
+        "fbsource//third-party/rust:hex",
+        "fbsource//third-party/rust:sha1",
+        "//eden/scm/lib/types:types",
+    ],
+)
