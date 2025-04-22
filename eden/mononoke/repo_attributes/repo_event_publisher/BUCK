@@ -1,4 +1,6 @@
 load("@fbcode_macros//build_defs:rust_library.bzl", "rust_library")
+load("@fbcode_macros//build_defs:rust_unittest.bzl", "rust_unittest")
+load("@fbcode_macros//build_defs/lib:rust_oss.bzl", "rust_oss")
 
 oncall("scm_server_infra")
 
@@ -6,6 +8,34 @@ rust_library(
     name = "repo_event_publisher",
     srcs = glob(["src/**/*.rs"]),
     deps = [
+        "fbsource//third-party/rust:anyhow",
+        "fbsource//third-party/rust:serde_json",
+        "fbsource//third-party/rust:tokio",
         "//common/rust/shed/facet:facet",
-    ],
+        "//eden/mononoke/features/repo_update_logger:repo_update_logger",
+    ] + ([] if rust_oss.is_oss_build() else [
+        "//eden/mononoke/metaconfig:metaconfig_types",
+        "//eden/mononoke/mononoke_macros:mononoke_macros",
+        "//common/rust/shed/fbinit:fbinit",
+        "//common/rust/shed/justknobs_stub:justknobs",
+        "//common/rust/scribe/api:scribe_api",
+        "//common/rust/shed/cloned:cloned",
+        "fbsource//third-party/rust:bytes",
+        "fbsource//third-party/rust:dashmap",
+    ]),
+)
+
+rust_unittest(
+    name = "repo_event_publisher_test",
+    srcs = glob(["test/**/*.rs"]),
+    crate = "repo_event_publisher_test",
+    deps = ([] if rust_oss.is_oss_build() else [
+        ":repo_event_publisher",
+        "//eden/mononoke/features/repo_update_logger:repo_update_logger",
+        "fbsource//third-party/rust:anyhow",
+        "//eden/mononoke/mononoke_macros:mononoke_macros",
+        "//common/rust/shed/fbinit:fbinit",
+        "//common/rust/shed/fbinit:fbinit-tokio",
+        "//common/rust/scribe/api:scribe_api",
+    ]),
 )

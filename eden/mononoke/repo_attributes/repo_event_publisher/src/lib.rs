@@ -9,9 +9,36 @@
 //!
 //! Responsible for publishing repo events (e.g. bookmark updates, tag updates, etc.)
 //! and allowing interested parties to subscribe to them.
-use std::hash::Hash;
+
+#![feature(trait_alias)]
+
+#[cfg(fbcode_build)]
+mod facebook;
+mod from_scuba_json;
+#[cfg(not(fbcode_build))]
+mod oss;
+mod repo_name_provider;
+
+use anyhow::Result;
+#[cfg(fbcode_build)]
+pub use facebook::scribe_listener::ScribeListener;
+#[cfg(fbcode_build)]
+pub use facebook::scribe_repo_event_publisher::ScribeRepoEventPublisher;
+#[cfg(not(fbcode_build))]
+pub use oss::UnsupportedRepoEventPublisher;
+use repo_update_logger::PlainBookmarkInfo;
+use tokio::sync::broadcast;
+
+/// The name of the repo.
+pub(crate) type RepoName = String;
 
 /// The core Repo Event Publisher facet.
 #[facet::facet]
-#[derive(Hash, PartialEq, Eq, Clone)]
-pub struct RepoEventPublisher {}
+#[allow(dead_code)]
+trait RepoEventPublisher {
+    /// Subscribe to bookmark create/update/delete notifications for the repo.
+    fn subscribe_for_bookmark_updates(
+        &self,
+        repo_name: &RepoName,
+    ) -> Result<broadcast::Receiver<PlainBookmarkInfo>>;
+}
