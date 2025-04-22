@@ -19,6 +19,7 @@ use commandserver::ipc::CommandEnv;
 use commandserver::ipc::Server;
 use configmodel::Config;
 use cpython::*;
+use cpython_ext::PythonKeepAlive;
 use cpython_ext::ResultPyErrExt;
 use cpython_ext::convert::Serde;
 use cpython_ext::format_py_error;
@@ -28,7 +29,6 @@ use pyio::wrap_pyio;
 use tracing::debug_span;
 use tracing::info_span;
 
-use crate::python::py_finalize;
 use crate::python::py_init_threads;
 use crate::python::py_initialize;
 use crate::python::py_is_initialized;
@@ -37,7 +37,7 @@ use crate::python::py_main;
 const HGPYENTRYPOINT_MOD: &str = "sapling";
 /// Python interpreter that bridges to Rust commands and bindings.
 pub struct HgPython {
-    py_initialized_by_us: bool,
+    keep_alive: Option<PythonKeepAlive>,
 }
 
 /// Configuration for Rust commands used by Python.
@@ -75,12 +75,18 @@ impl RustCommandConfig {
 impl HgPython {
     pub fn new(args: &[String]) -> HgPython {
         let py_initialized_by_us = !py_is_initialized();
-        if py_initialized_by_us {
+        let keep_alive = if py_initialized_by_us {
+            let keep_alive = PythonKeepAlive::new();
             Self::setup_python(args);
-        }
-        HgPython {
-            py_initialized_by_us,
-        }
+            Some(keep_alive.enable_py_finalize_on_drop(true))
+        } else {
+            None
+        };
+        HgPython { keep_alive }
+    }
+
+    fn is_python_initialized_by_us(&self) -> bool {
+        self.keep_alive.is_some()
     }
 
     fn setup_python(args: &[String]) {
@@ -255,9 +261,9 @@ impl HgPython {
     /// Run the Python interpreter.
     pub fn run_python(&mut self, args: &[String], io: &clidispatch::io::IO) -> u8 {
         let args = Self::prepare_args(args);
-        if self.py_initialized_by_us {
-            // Py_Main will call Py_Finalize. Therefore skip Py_Finalize here.
-            self.py_initialized_by_us = false;
+        if self.is_python_initialized_by_us() {
+            // Note Py_Main will call Py_Finalize too. `PythonKeepAlive::drop`
+            // detects that and avoids calling `Py_Finalize` again.
             py_main(&args)
         } else {
             // If Python is not initialized by us, it's expected that this
@@ -324,14 +330,6 @@ impl HgPython {
         )?;
 
         Ok(())
-    }
-}
-
-impl Drop for HgPython {
-    fn drop(&mut self) {
-        if self.py_initialized_by_us {
-            info_span!("Finalize Python").in_scope(py_finalize)
-        }
     }
 }
 
