@@ -4,11 +4,32 @@
 # GNU General Public License found in the LICENSE file in the root
 # directory of this source tree.
 
+  $ export COMMIT_SCRIBE_CATEGORY=mononoke_commits
+  $ export BOOKMARK_SCRIBE_CATEGORY=mononoke_bookmark
+  $ export WBC_SCRIBE_CATEGORY=mononoke_bookmark
+  $ export TAGS_SCRIBE_CATEGORY=mononoke_bookmark
+  $ export MONONOKE_TEST_SCRIBE_LOGGING_DIRECTORY=$TESTTMP/scribe_logs/
   $ . "${TEST_FIXTURES}/library.sh"
+  $ export ENABLE_BOOKMARK_CACHE=1
   $ REPOTYPE="blob_files"
   $ setup_common_config $REPOTYPE
   $ GIT_REPO_ORIGIN="${TESTTMP}/origin/repo-git"
   $ GIT_REPO="${TESTTMP}/repo-git"
+
+  $ merge_just_knobs <<EOF
+  > {
+  >   "bools": {
+  >     "scm/mononoke:wbc_update_by_scribe_tailer": true
+  >   }
+  > }
+  > EOF
+  $ merge_just_knobs <<EOF
+  > {
+  >   "bools": {
+  >     "scm/mononoke:enable_bonsai_tag_mapping_caching": true
+  >   }
+  > }
+  > EOF
 
 # Setup git repository
   $ mkdir -p "$GIT_REPO_ORIGIN"
@@ -30,6 +51,10 @@
   $ git clone "$GIT_REPO_ORIGIN"
   Cloning into 'repo-git'...
   done.
+
+# Enable logging of bookmark updates
+  $ mkdir -p $TESTTMP/scribe_logs
+  $ touch $TESTTMP/scribe_logs/$BOOKMARK_SCRIBE_CATEGORY
 
 # Import it into Mononoke
   $ cd "$TESTTMP"

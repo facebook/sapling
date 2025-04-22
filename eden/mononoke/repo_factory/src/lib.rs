@@ -53,6 +53,7 @@ use bonsai_svnrev_mapping::ArcBonsaiSvnrevMapping;
 use bonsai_svnrev_mapping::CachingBonsaiSvnrevMapping;
 use bonsai_svnrev_mapping::SqlBonsaiSvnrevMappingBuilder;
 use bonsai_tag_mapping::ArcBonsaiTagMapping;
+use bonsai_tag_mapping::CachedBonsaiTagMapping;
 use bonsai_tag_mapping::SqlBonsaiTagMappingBuilder;
 #[cfg(fbcode_build)]
 use bookmark_service_client::BookmarkServiceClient;
@@ -1071,14 +1072,39 @@ impl RepoFactory {
         &self,
         repo_config: &ArcRepoConfig,
         repo_identity: &ArcRepoIdentity,
+        repo_event_publisher: &ArcRepoEventPublisher,
     ) -> Result<ArcBonsaiTagMapping> {
         let bonsai_tag_mapping = self
             .open_sql::<SqlBonsaiTagMappingBuilder>(repo_config)
             .await
             .context(RepoFactoryError::BonsaiTagMapping)?
             .build(repo_identity.id());
-        // Caching is not enabled for now, but can be added later if required.
-        Ok(Arc::new(bonsai_tag_mapping))
+        let repo_name = repo_identity.name();
+        if justknobs::eval(
+            "scm/mononoke:enable_bonsai_tag_mapping_caching",
+            None,
+            Some(repo_name),
+        )
+        .unwrap_or(false)
+        {
+            let logger = self.env.logger.clone();
+            match repo_event_publisher.subscribe_for_tag_updates(&repo_name.to_string()) {
+                Ok(update_notification_receiver) => {
+                    let cached_bonsai_tag_mapping = CachedBonsaiTagMapping::new(
+                        Arc::new(bonsai_tag_mapping),
+                        update_notification_receiver,
+                        logger,
+                    )
+                    .await?;
+                    Ok(Arc::new(cached_bonsai_tag_mapping))
+                }
+                // The scribe configuration does not exist for tag updates for this repo, so use the non-cached
+                // version of bonsai_tag_mapping
+                Err(_) => Ok(Arc::new(bonsai_tag_mapping)),
+            }
+        } else {
+            Ok(Arc::new(bonsai_tag_mapping))
+        }
     }
 
     pub async fn git_ref_content_mapping(

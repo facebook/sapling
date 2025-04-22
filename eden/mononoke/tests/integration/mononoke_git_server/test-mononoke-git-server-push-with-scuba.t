@@ -7,6 +7,7 @@
   $ export COMMIT_SCRIBE_CATEGORY=mononoke_commits
   $ export BOOKMARK_SCRIBE_CATEGORY=mononoke_bookmark
   $ export WBC_SCRIBE_CATEGORY=mononoke_bookmark
+  $ export TAGS_SCRIBE_CATEGORY=mononoke_bookmark
   $ export MONONOKE_TEST_SCRIBE_LOGGING_DIRECTORY=$TESTTMP/scribe_logs/
   $ . "${TEST_FIXTURES}/library.sh"
   $ export ENABLE_BOOKMARK_CACHE=1
@@ -21,6 +22,13 @@
   > {
   >   "bools": {
   >     "scm/mononoke:wbc_update_by_scribe_tailer": true
+  >   }
+  > }
+  > EOF
+  $ merge_just_knobs <<EOF
+  > {
+  >   "bools": {
+  >     "scm/mononoke:enable_bonsai_tag_mapping_caching": true
   >   }
   > }
   > EOF
