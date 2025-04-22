@@ -672,38 +672,7 @@ def _pushdiscoveryphase(pushop):
     """discover the phase that needs to be pushed
 
     (computed for both success and failure case for changesets push)"""
-    # Skip phase exchange if narrow-heads is on.
-    if pushop.repo.ui.configbool("experimental", "narrow-heads"):
-        return
-    outgoing = pushop.outgoing
-    unfi = pushop.repo
-    remotephases = pushop.remote.listkeys("phases")
-
-    pushop.remotephases = phases.remotephasessummary(
-        pushop.repo, pushop.fallbackheads, remotephases
-    )
-    droots = pushop.remotephases.draftroots
-
-    extracond = ""
-    if not pushop.remotephases.publishing:
-        extracond = " and public()"
-    revset = "heads((%%ln::%%ln) %s)" % extracond
-    # Get the list of all revs draft on remote by public here.
-    # XXX Beware that revset break if droots is not strictly
-    # XXX root we may want to ensure it is but it is costly
-    fallback = list(unfi.set(revset, droots, pushop.fallbackheads))
-    if not outgoing.missing:
-        future = fallback
-    else:
-        # adds changeset we are going to push as draft
-        #
-        # should not be necessary for publishing server, but because of an
-        # issue fixed in xxxxx we have to do it anyway.
-        fdroots = list(unfi.set("roots(%ln  + %ln::)", outgoing.missing, droots))
-        fdroots = [f.node() for f in fdroots]
-        future = list(unfi.set(revset, fdroots, pushop.futureheads))
-    pushop.outdatedphases = future
-    pushop.fallbackoutdatedphases = fallback
+    return
 
 
 @pushdiscovery("bookmarks")
@@ -898,71 +867,9 @@ def _pushb2ctx(pushop, bundler):
 
 
 @b2partsgenerator("phase")
-@perftrace.tracefunc("phase")
 def _pushb2phases(pushop, bundler):
     """handle phase push through bundle2"""
-    # Skip phase sync if narrow-heads is on.
-    if pushop.repo.ui.configbool("experimental", "narrow-heads"):
-        return
-    if "phases" in pushop.stepsdone:
-        return
-    b2caps = bundle2.bundle2caps(pushop.remote)
-    ui = pushop.repo.ui
-
-    legacyphase = "phases" in ui.configlist("devel", "legacy.exchange")
-    haspushkey = "pushkey" in b2caps
-    hasphaseheads = "heads" in b2caps.get("phases", ())
-
-    if hasphaseheads and not legacyphase:
-        return _pushb2phaseheads(pushop, bundler)
-    elif haspushkey:
-        return _pushb2phasespushkey(pushop, bundler)
-
-
-def _pushb2phaseheads(pushop, bundler):
-    """push phase information through a bundle2 - binary part"""
-    pushop.stepsdone.add("phases")
-    if pushop.outdatedphases:
-        updates = [[] for p in phases.allphases]
-        updates[0].extend(h.node() for h in pushop.outdatedphases)
-        phasedata = phases.binaryencode(updates)
-        bundler.newpart("phase-heads", data=phasedata)
-
-
-def _pushb2phasespushkey(pushop, bundler):
-    """push phase information through a bundle2 - pushkey part"""
-    pushop.stepsdone.add("phases")
-    part2node = []
-
-    def handlefailure(pushop, exc):
-        targetid = int(exc.partid)
-        for partid, node in part2node:
-            if partid == targetid:
-                raise error.Abort(_("updating %s to public failed") % node)
-
-    for newremotehead in pushop.outdatedphases:
-        part = bundler.newpart("pushkey")
-        part.addparam("namespace", "phases")
-        part.addparam("key", newremotehead.hex())
-        part.addparam("old", "%d" % phases.draft)
-        part.addparam("new", "%d" % phases.public)
-        part2node.append((part.id, newremotehead))
-        pushop.pkfailcb[part.id] = handlefailure
-
-    def handlereply(op):
-        for partid, node in part2node:
-            partrep = op.records.getreplies(partid)
-            results = partrep["pushkey"]
-            assert len(results) <= 1
-            msg = None
-            if not results:
-                msg = _("server ignored update of %s to public!\n") % node
-            elif not int(results[0]["return"]):
-                msg = _("updating %s to public failed!\n") % node
-            if msg is not None:
-                pushop.ui.warn(msg)
-
-    return handlereply
+    return
 
 
 @b2partsgenerator("obsmarkers")
