@@ -170,6 +170,11 @@ use repo_cross_repo::RepoCrossRepo;
 use repo_derivation_queues::ArcRepoDerivationQueues;
 use repo_derived_data::ArcRepoDerivedData;
 use repo_derived_data::RepoDerivedData;
+use repo_event_publisher::ArcRepoEventPublisher;
+#[cfg(fbcode_build)]
+use repo_event_publisher::ScribeRepoEventPublisher;
+#[cfg(not(fbcode_build))]
+use repo_event_publisher::UnsupportedRepoEventPublisher;
 use repo_identity::ArcRepoIdentity;
 use repo_identity::RepoIdentity;
 use repo_lock::AlwaysLockedRepoLock;
@@ -1938,6 +1943,24 @@ impl RepoFactory {
         Ok(Arc::new(BonsaiBlobMapping {
             sql_bonsai_blob_mapping,
         }))
+    }
+
+    pub async fn repo_event_publisher(
+        &self,
+        repo_config: &ArcRepoConfig,
+    ) -> Result<ArcRepoEventPublisher> {
+        #[cfg(fbcode_build)]
+        {
+            let event_publisher = ScribeRepoEventPublisher::new(
+                self.env.fb,
+                repo_config.metadata_cache_config.as_ref(),
+            )?;
+            Ok(Arc::new(event_publisher))
+        }
+        #[cfg(not(fbcode_build))]
+        {
+            Ok(Arc::new(UnsupportedRepoEventPublisher {}))
+        }
     }
 
     pub async fn deletion_log(&self, repo_config: &ArcRepoConfig) -> Result<ArcDeletionLog> {

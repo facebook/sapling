@@ -35,7 +35,7 @@ pub(crate) type RepoName = String;
 /// The core Repo Event Publisher facet.
 #[facet::facet]
 #[allow(dead_code)]
-trait RepoEventPublisher {
+pub trait RepoEventPublisher {
     /// Subscribe to bookmark create/update/delete notifications for the repo.
     fn subscribe_for_bookmark_updates(
         &self,

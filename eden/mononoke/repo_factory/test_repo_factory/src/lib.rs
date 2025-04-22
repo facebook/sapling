@@ -103,6 +103,11 @@ use repo_cross_repo::ArcRepoCrossRepo;
 use repo_cross_repo::RepoCrossRepo;
 use repo_derived_data::ArcRepoDerivedData;
 use repo_derived_data::RepoDerivedData;
+use repo_event_publisher::ArcRepoEventPublisher;
+#[cfg(fbcode_build)]
+use repo_event_publisher::ScribeRepoEventPublisher;
+#[cfg(not(fbcode_build))]
+use repo_event_publisher::UnsupportedRepoEventPublisher;
 use repo_identity::ArcRepoIdentity;
 use repo_identity::RepoIdentity;
 use repo_lock::AlwaysUnlockedRepoLock;
@@ -822,6 +827,23 @@ impl TestRepoFactory {
         Ok(Arc::new(RepoBookmarkAttrs::new_test(
             repo_config.bookmarks.clone(),
         )?))
+    }
+
+    /// Repo event publisher
+    pub async fn repo_event_publisher(
+        &self,
+        repo_config: &ArcRepoConfig,
+    ) -> Result<ArcRepoEventPublisher> {
+        #[cfg(fbcode_build)]
+        {
+            let event_publisher =
+                ScribeRepoEventPublisher::new(self.fb, repo_config.metadata_cache_config.as_ref())?;
+            Ok(Arc::new(event_publisher))
+        }
+        #[cfg(not(fbcode_build))]
+        {
+            Ok(Arc::new(UnsupportedRepoEventPublisher {}))
+        }
     }
 
     /// Streaming clone
