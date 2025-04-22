@@ -5,6 +5,7 @@
  * GNU General Public License version 2.
  */
 
+mod cache;
 mod sql;
 
 use anyhow::Result;
@@ -13,6 +14,7 @@ use mononoke_types::ChangesetId;
 use mononoke_types::RepositoryId;
 use mononoke_types::hash::GitSha1;
 
+pub use crate::cache::CachedBonsaiTagMapping;
 pub use crate::sql::SqlBonsaiTagMapping;
 pub use crate::sql::SqlBonsaiTagMappingBuilder;
 

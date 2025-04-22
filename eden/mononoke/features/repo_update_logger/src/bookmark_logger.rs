@@ -153,7 +153,7 @@ impl Loggable for GitBookmarkInfo {
     }
 }
 
-#[derive(Serialize, Clone, Debug)]
+#[derive(Serialize, Clone, Debug, Default)]
 pub struct PlainBookmarkInfo {
     pub repo_name: String,
     pub bookmark_name: String,
