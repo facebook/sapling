@@ -11,9 +11,9 @@ use std::io::Write;
 use anyhow::Result;
 use configmodel::Config;
 use configmodel::ConfigExt;
+use erased_serde::Serialize;
 use io::IO;
 use repo::Repo;
-use sysutil::shell_escape;
 
 use crate::command::CommandDefinition;
 use crate::fallback;
@@ -71,7 +71,7 @@ impl Hooks {
             full_args,
             false,
             Some(&|kwargs| {
-                kwargs.insert("result", Some(result.to_string()));
+                kwargs.insert("result", Box::new(result));
             }),
         )
     }
@@ -125,19 +125,18 @@ impl Hooks {
     }
 }
 
-fn run_hooks(
+fn run_hooks<'a>(
     hooks: &[hook::Hooks],
     repo: Option<&Repo>,
-    full_args: &[String],
+    full_args: &'a [String],
     propagate_errors: bool,
-    extra_kwargs_func: Option<&dyn Fn(&mut BTreeMap<&str, Option<String>>)>,
+    extra_kwargs_func: Option<&dyn Fn(&mut BTreeMap<&str, Box<dyn Serialize + 'a>>)>,
 ) -> Result<()> {
     if hooks.is_empty() {
         return Ok(());
     }
 
-    let full_args = shell_escape(full_args);
-    let mut hook_args = BTreeMap::from([("args", Some(full_args))]);
+    let mut hook_args = BTreeMap::from([("args", Box::new(full_args) as Box<dyn Serialize>)]);
     if let Some(func) = extra_kwargs_func {
         (func)(&mut hook_args);
     }
