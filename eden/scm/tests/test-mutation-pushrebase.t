@@ -9,7 +9,6 @@ Eagerepo doesn't support pushrebase yet.
   $ configure dummyssh
   $ enable pushrebase amend
   $ setconfig experimental.evolution=obsolete
-  $ setconfig experimental.narrow-heads=true
   $ setconfig visibility.enabled=true
   $ setconfig mutation.record=true mutation.enabled=true
   $ setconfig pushrebase.trystackpush=true
@@ -17,7 +16,6 @@ Eagerepo doesn't support pushrebase yet.
 Set up server repository
 
   $ newserver server
-  $ setconfig experimental.narrow-heads=false
   $ echo 1 > a
   $ echo 2 > b
   $ hg commit -Aqm base
