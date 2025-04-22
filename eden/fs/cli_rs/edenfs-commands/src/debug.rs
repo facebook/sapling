@@ -39,7 +39,7 @@ pub enum DebugSubcommand {
     #[clap(subcommand)]
     Stress(stress::StressCmd),
     #[clap(subcommand)]
-    Bench(bench::BenchCmd),
+    Bench(bench::cmd::BenchCmd),
 }
 
 #[async_trait]
