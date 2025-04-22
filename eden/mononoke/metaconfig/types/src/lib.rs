@@ -2113,4 +2113,12 @@ impl MetadataCacheConfig {
             _ => None,
         }
     }
+
+    /// Returns the scribe category to tail for tags cache updates if it exists
+    pub fn tags_scribe_category(&self) -> Option<String> {
+        match &self.tags_update_mode {
+            Some(MetadataCacheUpdateMode::Tailing { category }) => Some(category.to_string()),
+            _ => None,
+        }
+    }
 }
