@@ -36,9 +36,9 @@ pub fn username() -> Result<String> {
     }
 }
 
-pub fn shell_escape(args: &[String]) -> String {
+pub fn shell_escape(args: &[impl AsRef<str>]) -> String {
     args.iter()
-        .map(|a| shell_escape::escape(Cow::Borrowed(a.as_str())))
+        .map(|a| shell_escape::escape(Cow::Borrowed(a.as_ref())))
         .collect::<Vec<_>>()
         .join(" ")
 }
