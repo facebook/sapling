@@ -68,10 +68,80 @@ pub enum BenchCmd {
     },
 }
 
-struct RandomData {
-    // Directory to use for testing.
-    test_dir: PathBuf,
+/// TestDir represents a directory used for testing.
+/// It handles creation, validation, and removal of test directories,
+/// as well as generating paths for test files and databases.
+struct TestDir {
+    // Path to the test directory
+    path: PathBuf,
+}
 
+impl TestDir {
+    /// Validates and prepares a test directory.
+    /// Returns a TestDir instance if successful.
+    fn validate(test_dir: &str) -> Result<Self> {
+        let test_dir_path = Path::new(test_dir);
+        if !test_dir_path.exists() {
+            return Err(anyhow!("The directory {} does not exist.", test_dir));
+        }
+        let bench_dir_path = test_dir_path.join(BENCH_DIR_NAME);
+        if bench_dir_path.exists() {
+            fs::remove_dir_all(&bench_dir_path)?;
+        }
+        fs::create_dir(&bench_dir_path)?;
+        Self::prepare_directories(&bench_dir_path)?;
+        Ok(TestDir {
+            path: bench_dir_path,
+        })
+    }
+
+    /// Prepares subdirectories for the test directory.
+    fn prepare_directories(root: &Path) -> Result<()> {
+        for i in 0..NUMBER_OF_SUB_DIRS {
+            let sub_dir = format!("{:02x}", i);
+            let sub_dir_path = root.join(sub_dir);
+            fs::create_dir_all(&sub_dir_path)?;
+        }
+        Ok(())
+    }
+
+    /// Removes the test directory.
+    fn remove(&self) -> Result<()> {
+        if self.path.exists() {
+            fs::remove_dir_all(&self.path)?;
+        }
+        Ok(())
+    }
+
+    /// Converts a hash to a file path within the test directory.
+    fn hash_to_path(&self, hash: &Hash) -> PathBuf {
+        let hash_str = hash.to_hex().to_string();
+        let sub_dir = &hash_str[0..2];
+        self.path.join(sub_dir).join(hash_str)
+    }
+
+    /// Returns the path to the combined data file.
+    fn combined_data_path(&self) -> PathBuf {
+        self.path.join(COMBINED_DATA_FILE_NAME)
+    }
+
+    /// Returns the path to the RocksDB file.
+    fn rocksdb_path(&self) -> PathBuf {
+        self.path.join(ROCKSDB_FILE_NAME)
+    }
+
+    /// Returns the path to the LMDB file.
+    fn lmdb_path(&self) -> PathBuf {
+        self.path.join(LMDB_FILE_NAME)
+    }
+
+    /// Returns the path to the SQLite file.
+    fn sqlite_path(&self) -> PathBuf {
+        self.path.join(SQLITE_FILE_NAME)
+    }
+}
+
+struct RandomData {
     // Number of randomly generated files.
     number_of_files: usize,
 
@@ -87,7 +157,7 @@ struct RandomData {
 }
 
 impl RandomData {
-    fn new(test_dir: PathBuf, number_of_files: usize, chunk_size: usize) -> Self {
+    fn new(number_of_files: usize, chunk_size: usize) -> Self {
         let mut rng = rand::thread_rng();
         let mut chunks = Vec::with_capacity(number_of_files);
         let mut hashes = Vec::with_capacity(number_of_files);
@@ -99,7 +169,6 @@ impl RandomData {
             hashes.push(hash);
         }
         RandomData {
-            test_dir,
             number_of_files,
             chunk_size,
             chunks,
@@ -107,10 +176,10 @@ impl RandomData {
         }
     }
 
-    fn paths(&self) -> Vec<PathBuf> {
+    fn paths(&self, test_dir: &TestDir) -> Vec<PathBuf> {
         self.hashes
             .iter()
-            .map(|hash| hash_to_path(&self.test_dir, hash))
+            .map(|hash| test_dir.hash_to_path(hash))
             .collect()
     }
 
@@ -121,64 +190,16 @@ impl RandomData {
     fn total_size(&self) -> usize {
         self.number_of_files * self.chunk_size
     }
-
-    fn combined_data_path(&self) -> PathBuf {
-        self.test_dir.join(COMBINED_DATA_FILE_NAME)
-    }
-
-    fn rocksdb_path(&self) -> PathBuf {
-        self.test_dir.join(ROCKSDB_FILE_NAME)
-    }
-
-    fn lmdb_path(&self) -> PathBuf {
-        self.test_dir.join(LMDB_FILE_NAME)
-    }
-
-    fn sqlite_path(&self) -> PathBuf {
-        self.test_dir.join(SQLITE_FILE_NAME)
-    }
 }
 
-fn prepare_directories(root: &Path) -> Result<()> {
-    for i in 0..NUMBER_OF_SUB_DIRS {
-        let sub_dir = format!("{:02x}", i);
-        let sub_dir_path = root.join(sub_dir);
-        fs::create_dir_all(&sub_dir_path)?;
-    }
-    Ok(())
-}
-
-fn validate_test_dir(test_dir: &str) -> Result<PathBuf> {
-    let test_dir_path = Path::new(test_dir);
-    if !test_dir_path.exists() {
-        return Err(anyhow!("The directory {} does not exist.", test_dir));
-    }
-    let bench_dir_path = test_dir_path.join(BENCH_DIR_NAME);
-    if bench_dir_path.exists() {
-        fs::remove_dir_all(&bench_dir_path)?;
-    }
-    fs::create_dir(&bench_dir_path)?;
-    prepare_directories(&bench_dir_path)?;
-    Ok(bench_dir_path)
-}
-
-fn remove_test_dir(test_dir: &PathBuf) -> Result<()> {
-    if test_dir.exists() {
-        fs::remove_dir_all(test_dir)?;
-    }
-    Ok(())
-}
-
-fn hash_to_path(root: &Path, hash: &Hash) -> PathBuf {
-    let hash_str = hash.to_hex().to_string();
-    let sub_dir = &hash_str[0..2];
-    root.join(sub_dir).join(hash_str)
-}
-
-fn bench_write_mfmd(random_data: &RandomData) -> Result<()> {
+fn bench_write_mfmd(test_dir: &TestDir, random_data: &RandomData) -> Result<()> {
     let mut agg_create_dur = std::time::Duration::new(0, 0);
     let mut agg_write_dur = std::time::Duration::new(0, 0);
-    for (chunk, path) in random_data.chunks.iter().zip(random_data.paths().iter()) {
+    for (chunk, path) in random_data
+        .chunks
+        .iter()
+        .zip(random_data.paths(test_dir).iter())
+    {
         let start = Instant::now();
         let mut file = File::create(path)?;
         agg_create_dur += start.elapsed();
@@ -189,7 +210,7 @@ fn bench_write_mfmd(random_data: &RandomData) -> Result<()> {
     }
 
     let mut agg_sync_dur = std::time::Duration::new(0, 0);
-    for path in random_data.paths() {
+    for path in random_data.paths(test_dir) {
         let start = Instant::now();
         let file = File::options().write(true).open(path)?;
         file.sync_all()?;
@@ -227,11 +248,11 @@ fn bench_write_mfmd(random_data: &RandomData) -> Result<()> {
     Ok(())
 }
 
-fn bench_read_mfmd(random_data: &RandomData) -> Result<()> {
+fn bench_read_mfmd(test_dir: &TestDir, random_data: &RandomData) -> Result<()> {
     let mut agg_open_dur = std::time::Duration::new(0, 0);
     let mut agg_read_dur = std::time::Duration::new(0, 0);
     let mut read_data = vec![0u8; random_data.chunk_size];
-    for path in random_data.paths() {
+    for path in random_data.paths(test_dir) {
         let start = Instant::now();
         let mut file = File::open(path)?;
         agg_open_dur += start.elapsed();
@@ -255,12 +276,12 @@ fn bench_read_mfmd(random_data: &RandomData) -> Result<()> {
     Ok(())
 }
 
-fn bench_rocksdb_write_mfmd(random_data: &RandomData) -> Result<()> {
+fn bench_rocksdb_write_mfmd(test_dir: &TestDir, random_data: &RandomData) -> Result<()> {
     let mut agg_write_dur = std::time::Duration::new(0, 0);
     let db_opts = rocksdb::Options::new().create_if_missing(true);
     let flush_opts = rocksdb::FlushOptions::new();
     let write_opts = rocksdb::WriteOptions::new();
-    let db = rocksdb::Db::open(random_data.rocksdb_path(), db_opts)?;
+    let db = rocksdb::Db::open(test_dir.rocksdb_path(), db_opts)?;
     let keys = random_data.keys();
     for (chunk, key) in random_data.chunks.iter().zip(keys.iter()) {
         let start = Instant::now();
@@ -288,12 +309,12 @@ fn bench_rocksdb_write_mfmd(random_data: &RandomData) -> Result<()> {
     Ok(())
 }
 
-fn bench_rocksdb_read_mfmd(random_data: &RandomData) -> Result<()> {
+fn bench_rocksdb_read_mfmd(test_dir: &TestDir, random_data: &RandomData) -> Result<()> {
     let mut agg_read_dur = std::time::Duration::new(0, 0);
     let mut read_data = vec![0u8; random_data.chunk_size];
     let db_opts = rocksdb::Options::new();
     let read_opts = rocksdb::ReadOptions::new();
-    let db = rocksdb::Db::open(random_data.rocksdb_path(), db_opts)?;
+    let db = rocksdb::Db::open(test_dir.rocksdb_path(), db_opts)?;
     let keys = random_data.keys();
     for key in keys {
         let start = Instant::now();
@@ -316,13 +337,13 @@ fn bench_rocksdb_read_mfmd(random_data: &RandomData) -> Result<()> {
     Ok(())
 }
 
-fn bench_lmdb_write_mfmd(random_data: &RandomData) -> Result<()> {
+fn bench_lmdb_write_mfmd(test_dir: &TestDir, random_data: &RandomData) -> Result<()> {
     let mut agg_write_dur = std::time::Duration::new(0, 0);
     let env = lmdb::Env::options()?
         .set_mapsize(4 * random_data.total_size())?
         .set_nosync(true)
         .set_nordahead(true)
-        .create_file(random_data.lmdb_path(), 0o644)?;
+        .create_file(test_dir.lmdb_path(), 0o644)?;
     let db: lmdb::TypedDb<lmdb::VecU8> = lmdb::TypedDb::create(&env, None)?;
     let keys = random_data.keys();
     for (chunk, key) in random_data.chunks.iter().zip(keys.iter()) {
@@ -353,12 +374,12 @@ fn bench_lmdb_write_mfmd(random_data: &RandomData) -> Result<()> {
     Ok(())
 }
 
-fn bench_lmdb_read_mfmd(random_data: &RandomData) -> Result<()> {
+fn bench_lmdb_read_mfmd(test_dir: &TestDir, random_data: &RandomData) -> Result<()> {
     let mut agg_read_dur = std::time::Duration::new(0, 0);
     let mut read_data = vec![0u8; random_data.chunk_size];
     let env = lmdb::Env::options()?
         .set_nordahead(true)
-        .open_file(random_data.lmdb_path(), 0o644)?;
+        .open_file(test_dir.lmdb_path(), 0o644)?;
     let db: lmdb::TypedDb<lmdb::VecU8> = lmdb::TypedDb::open(&env, None)?;
     let keys = random_data.keys();
     for key in keys {
@@ -383,8 +404,8 @@ fn bench_lmdb_read_mfmd(random_data: &RandomData) -> Result<()> {
     Ok(())
 }
 
-fn bench_sqlite_write_mfmd(random_data: &RandomData) -> Result<()> {
-    let conn = rusqlite::Connection::open(random_data.sqlite_path())?;
+fn bench_sqlite_write_mfmd(test_dir: &TestDir, random_data: &RandomData) -> Result<()> {
+    let conn = rusqlite::Connection::open(test_dir.sqlite_path())?;
     conn.execute_batch("PRAGMA journal_mode = WAL; PRAGMA synchronous = OFF;")?;
     conn.execute(
         "CREATE TABLE IF NOT EXISTS data (key BLOB PRIMARY KEY, value BLOB NOT NULL)",
@@ -410,8 +431,8 @@ fn bench_sqlite_write_mfmd(random_data: &RandomData) -> Result<()> {
     Ok(())
 }
 
-fn bench_sqlite_read_mfmd(random_data: &RandomData) -> Result<()> {
-    let conn = rusqlite::Connection::open(random_data.sqlite_path())?;
+fn bench_sqlite_read_mfmd(test_dir: &TestDir, random_data: &RandomData) -> Result<()> {
+    let conn = rusqlite::Connection::open(test_dir.sqlite_path())?;
     let mut stmt = conn.prepare("SELECT value FROM data WHERE key = ?")?;
     let keys = random_data.keys();
     let mut read_data = vec![0u8; random_data.chunk_size];
@@ -437,9 +458,9 @@ fn bench_sqlite_read_mfmd(random_data: &RandomData) -> Result<()> {
     Ok(())
 }
 
-fn bench_write_sfmd(random_data: &RandomData) -> Result<()> {
+fn bench_write_sfmd(test_dir: &TestDir, random_data: &RandomData) -> Result<()> {
     let start = Instant::now();
-    let mut file = File::create(random_data.combined_data_path())?;
+    let mut file = File::create(test_dir.combined_data_path())?;
     for chunk in &random_data.chunks {
         file.write_all(chunk)?;
     }
@@ -460,8 +481,8 @@ fn bench_write_sfmd(random_data: &RandomData) -> Result<()> {
     Ok(())
 }
 
-fn bench_read_sfmd(random_data: &RandomData) -> Result<()> {
-    let file_path = random_data.combined_data_path();
+fn bench_read_sfmd(test_dir: &TestDir, random_data: &RandomData) -> Result<()> {
+    let file_path = test_dir.combined_data_path();
     let mut read_data = Vec::with_capacity(random_data.total_size());
     let start = Instant::now();
     let mut file = File::open(&file_path)?;
@@ -494,13 +515,12 @@ impl crate::Subcommand for BenchCmd {
         print_glossary();
 
         match self {
-            Self::FsIo { common } => match validate_test_dir(&common.test_dir) {
-                Ok(path) => {
+            Self::FsIo { common } => match TestDir::validate(&common.test_dir) {
+                Ok(test_dir) => {
                     print_section_divider();
-                    println!("Prepared the directory at {:?}", path);
+                    println!("Prepared the directory at {:?}", test_dir.path);
                     println!("Generating in-memory random data ...");
-                    let random_data =
-                        RandomData::new(path, common.number_of_files, common.chunk_size);
+                    let random_data = RandomData::new(common.number_of_files, common.chunk_size);
                     println!(
                         "The random data generated with {} chunks with {:.0} KiB each, with the total size of {:.2} GiB.",
                         random_data.number_of_files,
@@ -508,23 +528,22 @@ impl crate::Subcommand for BenchCmd {
                         random_data.total_size() as f64 / BYTES_IN_GIGABYTE as f64
                     );
                     print_section_divider();
-                    bench_write_mfmd(&random_data)?;
-                    bench_read_mfmd(&random_data)?;
-                    bench_write_sfmd(&random_data)?;
-                    bench_read_sfmd(&random_data)?;
+                    bench_write_mfmd(&test_dir, &random_data)?;
+                    bench_read_mfmd(&test_dir, &random_data)?;
+                    bench_write_sfmd(&test_dir, &random_data)?;
+                    bench_read_sfmd(&test_dir, &random_data)?;
                     print_section_divider();
-                    println!("Removing the directory at {:?}", random_data.test_dir);
-                    remove_test_dir(&random_data.test_dir)?;
+                    println!("Removing the directory at {:?}", test_dir.path);
+                    test_dir.remove()?;
                 }
                 Err(e) => return Err(e),
             },
-            Self::DbIo { common } => match validate_test_dir(&common.test_dir) {
-                Ok(path) => {
+            Self::DbIo { common } => match TestDir::validate(&common.test_dir) {
+                Ok(test_dir) => {
                     print_section_divider();
-                    println!("Prepared the directory at {:?}", path);
+                    println!("Prepared the directory at {:?}", test_dir.path);
                     println!("Generating in-memory random data ...");
-                    let random_data =
-                        RandomData::new(path, common.number_of_files, common.chunk_size);
+                    let random_data = RandomData::new(common.number_of_files, common.chunk_size);
                     println!(
                         "The random data generated with {} chunks with {:.0} KiB each, with the total size of {:.2} GiB.",
                         random_data.number_of_files,
@@ -532,15 +551,15 @@ impl crate::Subcommand for BenchCmd {
                         random_data.total_size() as f64 / BYTES_IN_GIGABYTE as f64
                     );
                     print_section_divider();
-                    bench_rocksdb_write_mfmd(&random_data)?;
-                    bench_rocksdb_read_mfmd(&random_data)?;
-                    bench_lmdb_write_mfmd(&random_data)?;
-                    bench_lmdb_read_mfmd(&random_data)?;
-                    bench_sqlite_write_mfmd(&random_data)?;
-                    bench_sqlite_read_mfmd(&random_data)?;
+                    bench_rocksdb_write_mfmd(&test_dir, &random_data)?;
+                    bench_rocksdb_read_mfmd(&test_dir, &random_data)?;
+                    bench_lmdb_write_mfmd(&test_dir, &random_data)?;
+                    bench_lmdb_read_mfmd(&test_dir, &random_data)?;
+                    bench_sqlite_write_mfmd(&test_dir, &random_data)?;
+                    bench_sqlite_read_mfmd(&test_dir, &random_data)?;
                     print_section_divider();
-                    println!("Removing the directory at {:?}", random_data.test_dir);
-                    remove_test_dir(&random_data.test_dir)?;
+                    println!("Removing the directory at {:?}", test_dir.path);
+                    test_dir.remove()?;
                 }
                 Err(e) => return Err(e),
             },
