@@ -126,7 +126,6 @@ pub enum ClientEntryPoint {
     MononokeHgSync,
     MononokeCasSync,
     CurlTest,
-    MirrorHgCommits,
     StreamingClone,
     ScmDaemon,
     BookmarkService,
@@ -218,7 +217,6 @@ impl Display for ClientEntryPoint {
             ClientEntryPoint::MononokeCasSync => "mononoke_re_cas_sync",
             ClientEntryPoint::ModernSync => "modern_sync",
             ClientEntryPoint::CurlTest => "curl_test",
-            ClientEntryPoint::MirrorHgCommits => "mirror_hg_commits",
             ClientEntryPoint::StreamingClone => "streaming_clone",
             ClientEntryPoint::ScmDaemon => "scm_daemon",
             ClientEntryPoint::BookmarkService => "bookmark_service",
@@ -263,7 +261,6 @@ impl TryFrom<&str> for ClientEntryPoint {
             "mononoke_re_cas_sync" => Ok(ClientEntryPoint::MononokeCasSync),
             "modern_sync" => Ok(ClientEntryPoint::ModernSync),
             "curl_test" => Ok(ClientEntryPoint::CurlTest),
-            "mirror_hg_commits" => Ok(ClientEntryPoint::MirrorHgCommits),
             "streaming_clone" => Ok(ClientEntryPoint::StreamingClone),
             "scm_daemon" => Ok(ClientEntryPoint::ScmDaemon),
             "bookmark_service" => Ok(ClientEntryPoint::BookmarkService),
@@ -434,10 +431,6 @@ mod tests {
         assert_eq!(
             Some(ClientEntryPoint::CurlTest),
             ClientEntryPoint::try_from(ClientEntryPoint::CurlTest.to_string().as_ref()).ok()
-        );
-        assert_eq!(
-            Some(ClientEntryPoint::MirrorHgCommits),
-            ClientEntryPoint::try_from(ClientEntryPoint::MirrorHgCommits.to_string().as_ref()).ok()
         );
 
         assert_eq!(
