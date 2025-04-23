@@ -11,34 +11,21 @@ setup configuration
 
 setup repo
   $ cd $TESTTMP
-  $ hginit_treemanifest repo
-  $ cd repo
-  $ touch a
-  $ hg add a
-  $ hg ci -ma
-  $ touch b
-  $ hg add b
-  $ hg ci -ma
-  $ hg log
-  commit:      f9ae6ef0865e
-  user:        test
-  date:        Thu Jan 01 00:00:00 1970 +0000
-  summary:     a
-   (re)
-  commit:      3903775176ed
-  user:        test
-  date:        Thu Jan 01 00:00:00 1970 +0000
-  summary:     a
-   (re)
-
-setup master bookmark
-  $ hg bookmark master_bookmark -r 3903775176ed
-  $ hg bookmark ffff775176ed42b1458a6281db4a0ccf4d9f287a
-  $ hg bookmark 3e19bf519e9af6c66edf28380101a92122cbea50
-
-blobimport
-  $ cd $TESTTMP
-  $ blobimport repo/.hg repo
+  $ testtool_drawdag --print-hg-hashes -R repo --derive-all --no-default-files <<EOF
+  > A-B
+  > # modify: A "a" "file_content"
+  > # modify: B "b" "file_content"
+  > # bookmark: B master_bookmark
+  > # bookmark: A ffff775176ed42b1458a6281db4a0ccf4d9f287a
+  > # author_date: A "1970-01-01T00:00:00+00:00"
+  > # author_date: B "1970-01-01T00:00:00+00:00"
+  > # author: A "test"
+  > # author: B "test"
+  > # message: A "a"
+  > # message: B "a"
+  > EOF
+  A=63854830c9a9dc28e88ff155f2cb8bfebe6e8df0
+  B=08c3b3bd5982552ae16fe66c208e885d1841fa0c
 
 start mononoke
   $ start_and_wait_for_mononoke_server
@@ -69,7 +56,7 @@ Lookup non-existent hash
   [255]
 
 Lookup existing hash
-  $ hg --config extensions.lookup=$TESTTMP/lookup.py lookup f9ae6ef0865e00431f2af076be6b680f75dd2777
+  $ hg --config extensions.lookup=$TESTTMP/lookup.py lookup $A
 
 Lookup non-existent bookmark
   $ hg --config extensions.lookup=$TESTTMP/lookup.py lookup fake_bookmark
@@ -80,7 +67,7 @@ Lookup existing bookmark
   $ hg --config extensions.lookup=$TESTTMP/lookup.py lookup master_bookmark
 
 Lookup bookmark with hash name that exists as a hash (returns hash)
-  $ hg --config extensions.lookup=$TESTTMP/lookup.py lookup 3903775176ed42b1458a6281db4a0ccf4d9f287a
+  $ hg --config extensions.lookup=$TESTTMP/lookup.py lookup $B
 
 Lookup bookmark with hash name that doesn't exist as a hash (returns bookmark -> hash)
   $ hg --config extensions.lookup=$TESTTMP/lookup.py lookup ffff775176ed42b1458a6281db4a0ccf4d9f287a
