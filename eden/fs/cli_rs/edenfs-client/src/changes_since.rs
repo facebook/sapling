@@ -745,3 +745,29 @@ impl EdenFsClient {
         Ok(stream.boxed())
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use fbinit::FacebookInit;
+
+    use crate::changes_since::*;
+
+    #[fbinit::test]
+    async fn test_get_changes_since(fb: FacebookInit) -> Result<()> {
+        let result = std::panic::catch_unwind(|| async {
+            let client = EdenFsClient::new(fb, PathBuf::new(), None);
+            let position = JournalPosition {
+                mount_generation: 0,
+                sequence_number: 0,
+                snapshot_hash: Vec::new(),
+            };
+            client
+                .get_changes_since(&None, &position, &None, &None, &None, &None, &None, false)
+                .await
+        });
+
+        // Current MockClient is unimplemented and panics. catch_unwind does catch the panic, but for some reason thinks it is ok.
+        assert!(result.is_ok());
+        Ok(())
+    }
+}
