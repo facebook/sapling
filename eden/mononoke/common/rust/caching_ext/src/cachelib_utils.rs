@@ -9,11 +9,11 @@ use std::collections::HashMap;
 use std::hash::Hash;
 use std::time::Duration;
 
+use abomonation::Abomonation;
 use anyhow::Result;
-use cachelib::Abomonation;
 use cachelib::VolatileLruCachePool;
-use cachelib::get_cached;
-use cachelib::set_cached;
+use cachelib::abomonation_cache::get_cached;
+use cachelib::abomonation_cache::set_cached;
 
 use crate::CachelibKey;
 use crate::mock_store::MockStore;
