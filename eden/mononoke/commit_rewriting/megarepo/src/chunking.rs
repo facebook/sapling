@@ -8,7 +8,7 @@
 use anyhow::Error;
 use mercurial_types::NonRootMPath;
 
-pub type Chunker<T> = Box<dyn Fn(Vec<T>) -> Vec<Vec<T>>>;
+pub type Chunker<T> = Box<dyn Fn(Vec<T>) -> Vec<Vec<T>> + Send + Sync>;
 
 /// Build a "chunking hint" out of a string hint with `\n`-separated
 /// lists of ','-separated lists of path prefixes

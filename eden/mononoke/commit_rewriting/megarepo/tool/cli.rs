@@ -21,7 +21,6 @@ use megarepolib::common::StackPosition;
 use mononoke_types::DateTime;
 
 pub const BACKFILL_NOOP_MAPPING: &str = "backfill-noop-mapping";
-pub const BASE_COMMIT_HASH: &str = "base-commit-hash";
 pub const BONSAI_MERGE_P1: &str = "bonsai-merge-p1";
 pub const BONSAI_MERGE_P2: &str = "bonsai-merge-p2";
 pub const BONSAI_MERGE: &str = "bonsai-merge";
@@ -61,7 +60,6 @@ pub const PATH: &str = "path";
 pub const PATH_PREFIX: &str = "path-prefix";
 pub const PATHS_FILE: &str = "paths-file";
 pub const PRE_DELETION_COMMIT: &str = "pre-deletion-commit";
-pub const PRE_MERGE_DELETE: &str = "pre-merge-delete";
 pub const SELECT_PARENTS_AUTOMATICALLY: &str = "select-parents-automatically";
 pub const SOURCE_CHANGESET: &str = "source-changeset";
 pub const SYNC_COMMIT_AND_ANCESTORS: &str = "sync-commit-and-ancestors";
@@ -178,38 +176,6 @@ fn add_light_resulting_commit_args<'a, 'b>(subcommand: App<'a, 'b>) -> App<'a, '
 }
 
 pub fn setup_app<'a, 'b>() -> MononokeClapApp<'a, 'b> {
-    let pre_merge_delete_subcommand = SubCommand::with_name(PRE_MERGE_DELETE)
-        .about("create a set of pre-merge delete commits (which remove all of the files in working copy)")
-        .arg(
-            Arg::with_name(COMMIT_HASH)
-                .help("commit from which to start deletion")
-                .takes_value(true)
-                .required(true)
-        )
-        .arg(
-            Arg::with_name(CHUNKING_HINT_FILE)
-                .help(r#"a path to working copy chunking hint. If not provided, working copy will
-                        be chunked evenly into `--even-chunk-size` commits"#)
-                .long(CHUNKING_HINT_FILE)
-                .takes_value(true)
-                .required(false)
-        )
-        .arg(
-            Arg::with_name(EVEN_CHUNK_SIZE)
-                .help("chunk size for even chunking when --chunking-hing-file is not provided")
-                .long(EVEN_CHUNK_SIZE)
-                .takes_value(true)
-                .required(false)
-        )
-        .arg(
-            Arg::with_name(BASE_COMMIT_HASH)
-                .help("commit that will be diffed against to find what files needs to be deleted - \
-                 only files that don't exist or differ from base commit will be deleted.")
-                .long(BASE_COMMIT_HASH)
-                .takes_value(true)
-                .required(false)
-        );
-
     let history_fixup_delete_subcommand =
         add_light_resulting_commit_args(SubCommand::with_name(HISTORY_FIXUP_DELETE))
             .about("create a set of delete commits before the path fixup.")
@@ -600,7 +566,6 @@ pub fn setup_app<'a, 'b>() -> MononokeClapApp<'a, 'b> {
         .with_advanced_args_hidden()
         .with_source_and_target_repos()
         .build()
-        .subcommand(add_light_resulting_commit_args(pre_merge_delete_subcommand))
         .subcommand(history_fixup_delete_subcommand)
         .subcommand(add_light_resulting_commit_args(bonsai_merge_subcommand))
         .subcommand(add_light_resulting_commit_args(gradual_merge_subcommand))

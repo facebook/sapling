@@ -14,6 +14,8 @@ use bookmarks::BookmarkKey;
 use context::CoreContext;
 use live_commit_sync_config::CfgrLiveCommitSyncConfig;
 use megarepolib::common::ChangesetArgs as MegarepoNewChangesetArgs;
+use megarepolib::common::ChangesetArgsFactory;
+use megarepolib::common::StackPosition;
 use mononoke_api::Repo;
 use mononoke_app::MononokeApp;
 use mononoke_app::args::AsRepoArg;
@@ -42,6 +44,18 @@ pub(crate) struct ResultingChangesetArgs {
     pub mark_public: bool,
 }
 
+#[derive(Debug, clap::Args)]
+pub(crate) struct LightResultingChangesetArgs {
+    #[clap(long, short = 'm')]
+    pub commit_message: String,
+
+    #[clap(long, short = 'a')]
+    pub commit_author: String,
+
+    #[clap(long = "commit-date-rfc3339")]
+    pub datetime: Option<String>,
+}
+
 impl TryInto<MegarepoNewChangesetArgs> for ResultingChangesetArgs {
     type Error = Error;
 
@@ -61,6 +75,36 @@ impl TryInto<MegarepoNewChangesetArgs> for ResultingChangesetArgs {
         };
         Ok(res)
     }
+}
+
+pub(crate) fn get_delete_commits_cs_args_factory(
+    res_cs_args: LightResultingChangesetArgs,
+) -> Result<Box<dyn ChangesetArgsFactory>> {
+    get_commit_factory(res_cs_args, |s, num| -> String {
+        format!("[MEGAREPO DELETE] {} ({})", s, num)
+    })
+}
+
+pub(crate) fn get_commit_factory(
+    res_cs_args: LightResultingChangesetArgs,
+    msg_factory: impl Fn(&String, usize) -> String + Send + Sync + 'static,
+) -> Result<Box<dyn ChangesetArgsFactory>> {
+    let message = res_cs_args.commit_message;
+    let author = res_cs_args.commit_author;
+    let datetime = res_cs_args
+        .datetime
+        .as_deref()
+        .map_or_else(|| Ok(DateTime::now()), DateTime::from_rfc3339)?;
+
+    Ok(Box::new(move |num: StackPosition| {
+        MegarepoNewChangesetArgs {
+            author: author.clone(),
+            message: msg_factory(&message, num.0),
+            datetime,
+            bookmark: None,
+            mark_public: false,
+        }
+    }))
 }
 
 pub(crate) async fn get_live_commit_sync_config(

@@ -57,15 +57,11 @@ use manifest::ManifestOps;
 use manifest::PathOrPrefix;
 use megarepolib::chunking::Chunker;
 use megarepolib::chunking::even_chunker_with_max_size;
-use megarepolib::chunking::parse_chunking_hint;
-use megarepolib::chunking::path_chunker_from_hint;
 use megarepolib::commit_sync_config_utils::diff_small_repo_commit_sync_configs;
 use megarepolib::common::create_and_save_bonsai;
 use megarepolib::common::delete_files_in_chunks;
 use megarepolib::history_fixup_delete::HistoryFixupDeletes;
 use megarepolib::history_fixup_delete::create_history_fixup_deletes;
-use megarepolib::pre_merge_delete::PreMergeDelete;
-use megarepolib::pre_merge_delete::create_pre_merge_delete;
 use megarepolib::working_copy::get_working_copy_paths_by_prefixes;
 use metaconfig_types::CommitSyncConfigVersion;
 use metaconfig_types::MetadataDatabaseConfig;
@@ -107,7 +103,6 @@ use tokio::io::AsyncBufReadExt;
 use tokio::io::BufReader;
 
 use crate::cli::BACKFILL_NOOP_MAPPING;
-use crate::cli::BASE_COMMIT_HASH;
 use crate::cli::BONSAI_MERGE;
 use crate::cli::BONSAI_MERGE_P1;
 use crate::cli::BONSAI_MERGE_P2;
@@ -142,7 +137,6 @@ use crate::cli::PATH_PREFIX;
 use crate::cli::PATH_REGEX;
 use crate::cli::PATHS_FILE;
 use crate::cli::PRE_DELETION_COMMIT;
-use crate::cli::PRE_MERGE_DELETE;
 use crate::cli::SELECT_PARENTS_AUTOMATICALLY;
 use crate::cli::SOURCE_CHANGESET;
 use crate::cli::SYNC_COMMIT_AND_ANCESTORS;
@@ -184,76 +178,6 @@ pub struct Repo(
     dyn Filenodes,
     SqlQueryConfig,
 );
-
-async fn run_pre_merge_delete<'a>(
-    ctx: &CoreContext,
-    matches: &MononokeMatches<'a>,
-    sub_m: &ArgMatches<'a>,
-) -> Result<(), Error> {
-    let repo: Repo =
-        args::not_shardmanager_compatible::open_repo(ctx.fb, &ctx.logger().clone(), matches)
-            .await?;
-
-    let delete_cs_args_factory = get_delete_commits_cs_args_factory(sub_m)?;
-
-    let chunker = match sub_m.value_of(CHUNKING_HINT_FILE) {
-        Some(hint_file) => {
-            let hint_str = std::fs::read_to_string(hint_file)?;
-            let hint = parse_chunking_hint(hint_str)?;
-            path_chunker_from_hint(hint)?
-        }
-        None => {
-            let even_chunk_size: usize = sub_m
-                .value_of(EVEN_CHUNK_SIZE)
-                .ok_or_else(|| {
-                    format_err!(
-                        "either {} or {} is required",
-                        CHUNKING_HINT_FILE,
-                        EVEN_CHUNK_SIZE
-                    )
-                })?
-                .parse::<usize>()?;
-            even_chunker_with_max_size(even_chunk_size)?
-        }
-    };
-
-    let parent_bcs_id = {
-        let hash = sub_m.value_of(COMMIT_HASH).unwrap().to_owned();
-        helpers::csid_resolve(ctx, &repo, hash).await?
-    };
-
-    let base_bcs_id = {
-        match sub_m.value_of(BASE_COMMIT_HASH) {
-            Some(hash) => {
-                let bcs_id = helpers::csid_resolve(ctx, &repo, hash).await?;
-                Some(bcs_id)
-            }
-            None => None,
-        }
-    };
-    let pmd = create_pre_merge_delete(
-        ctx,
-        &repo,
-        parent_bcs_id,
-        chunker,
-        delete_cs_args_factory,
-        base_bcs_id,
-    )
-    .await?;
-
-    let PreMergeDelete { mut delete_commits } = pmd;
-
-    info!(
-        ctx.logger(),
-        "Listing deletion commits in top-to-bottom order (first commit is a descendant of the last)"
-    );
-    delete_commits.reverse();
-    for delete_commit in delete_commits {
-        println!("{}", delete_commit);
-    }
-
-    Ok(())
-}
 
 async fn run_history_fixup_delete<'a>(
     ctx: &CoreContext,
@@ -1249,7 +1173,6 @@ fn main(fb: FacebookInit) -> Result<()> {
             (GRADUAL_MERGE_PROGRESS, Some(sub_m)) => {
                 run_gradual_merge_progress(ctx, &matches, sub_m).await
             }
-            (PRE_MERGE_DELETE, Some(sub_m)) => run_pre_merge_delete(ctx, &matches, sub_m).await,
             (HISTORY_FIXUP_DELETE, Some(sub_m)) => {
                 run_history_fixup_delete(ctx, &matches, sub_m).await
             }

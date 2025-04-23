@@ -53,7 +53,7 @@ pub struct ChangesetArgs {
 pub struct StackPosition(pub usize);
 
 /// For creating stacks of changesets
-pub trait ChangesetArgsFactory = Fn(StackPosition) -> ChangesetArgs;
+pub trait ChangesetArgsFactory = Fn(StackPosition) -> ChangesetArgs + Send + Sync;
 
 pub async fn create_save_and_generate_hg_changeset(
     ctx: &CoreContext,

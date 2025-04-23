@@ -8,6 +8,7 @@
 pub(crate) mod common;
 mod merge;
 mod move_commit;
+mod pre_merge_delete;
 mod pushredirection;
 mod run_mover;
 mod sync_diamond_merge;
@@ -19,6 +20,7 @@ use mononoke_app::MononokeApp;
 
 use self::merge::MergeArgs;
 use self::move_commit::MoveArgs;
+use self::pre_merge_delete::PreMergeDeleteArgs;
 use self::pushredirection::PushRedirectionArgs;
 use self::run_mover::RunMoverArgs;
 use self::sync_diamond_merge::SyncDiamondMergeArgs;
@@ -38,6 +40,7 @@ enum MegarepoSubcommand {
     MoveCommit(MoveArgs),
     RunMover(RunMoverArgs),
     SyncDiamondMerge(SyncDiamondMergeArgs),
+    PreMergeDelete(PreMergeDeleteArgs),
 }
 
 pub async fn run(app: MononokeApp, args: CommandArgs) -> Result<()> {
@@ -51,6 +54,7 @@ pub async fn run(app: MononokeApp, args: CommandArgs) -> Result<()> {
         MegarepoSubcommand::SyncDiamondMerge(args) => {
             sync_diamond_merge::run(&ctx, app, args).await?
         }
+        MegarepoSubcommand::PreMergeDelete(args) => pre_merge_delete::run(&ctx, app, args).await?,
     }
 
     Ok(())

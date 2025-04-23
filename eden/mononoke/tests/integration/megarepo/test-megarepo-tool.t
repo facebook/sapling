@@ -161,7 +161,11 @@ pull the result
 
 test pre-merge deletes functionality
   $ cd "$TESTTMP"
-  $ megarepo_tool pre-merge-delete master_bookmark author "merge preparation" --even-chunk-size 4 --commit-date-rfc3339 "$COMMIT_DATE" 2>/dev/null
+  $ mononoke_admin megarepo pre-merge-delete --repo-id 0 \
+  > --bookmark master_bookmark \
+  > -a author -m "merge preparation" \
+  > --even-chunk-size 4 \
+  > --commit-date-rfc3339 "$COMMIT_DATE" 2>/dev/null
   32d2e80ff176b65df5cdeadec6dc52fdf8b66264965b001b91fab99dfb7aad75
   8807f350542a43aa815abc0c250c4a79ba35fd5bb68594e3ce6555e6630d81c2
   090a140adb3da3f4a629014cd9625055d8bd992a967ad7fc7e4e4d74892c4b71
