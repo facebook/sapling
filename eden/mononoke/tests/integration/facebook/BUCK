@@ -164,27 +164,6 @@ dott_test(
 )
 
 dott_test(
-    name = "mirror-hg-commits",
-    # Components linked with SM library invoke some network calls to loopback
-    # address for configerator and ODS even without being part of actual execution.
-    # Skip the below tests until RCA is completed for SM integration so
-    # that integration tests do not time-out due to failed network call retries.
-    # TODO(rajshar): Investigate root cause for network calls from SM Client.
-    # Post: https://fb.workplace.com/groups/sm.users/permalink/2490367831097595/
-    disable_all_network_access_target = False,
-    dott_files = glob([
-        "test-mirror-hg-commits*.t",
-    ]),
-    deps = [
-        "//eden/mononoke:blobimport",
-        "//eden/mononoke/commit_rewriting/megarepo:megarepotool",
-        "//eden/mononoke/facebook/mirror_hg_commits:mirror_hg_commits",
-        "//eden/mononoke/tools/admin:admin",
-        "//eden/mononoke/tools/testtool:testtool",
-    ],
-)
-
-dott_test(
     name = "server-needs-network",
     disable_all_network_access_target = False,
     dott_files = [
