@@ -233,6 +233,7 @@ pub async fn find_unode_rename_sources(
                     from_path: merge.from_path.clone(),
                 })),
             ),
+            SubtreeChange::SubtreeImport(_) => (to_path.clone(), None),
         },
     ));
 

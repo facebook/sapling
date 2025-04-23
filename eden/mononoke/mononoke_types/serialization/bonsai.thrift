@@ -219,6 +219,22 @@ struct SubtreeMerge {
   2: id.ChangesetId from_cs_id;
 }
 
+// A subtree import marks an entire subtree as *imported* from a path in a
+// different repository.  History operations for these files should yield
+// the link to the source repository.   Note that Mononoke does not follow
+// these links, it merely stores the fact that the link exists.
+struct SubtreeImport {
+  // Path in the source commit the subtree is copied form.
+  1: path.MPath from_path;
+
+  // Source commit id in the source repository.  The exact meaning of this
+  // id is up to the source repository.
+  2: string from_commit;
+
+  // Source repository url.
+  3: string from_repo_url;
+}
+
 // A change that applies to a whole subtree.
 //
 // Subtree changes can have two kinds of effects:
@@ -253,6 +269,14 @@ union SubtreeChange {
   // This change is *not* manifest altering.   The file changes will contain the
   // necessary changes to merge the source with the destination.
   3: SubtreeMerge subtree_merge;
+  // This subtree is imported from another repository.
+  //
+  // This change modifies history to point to another repository.  Note: Mononoke
+  // does not follow that link, it merely stores the fact that the link exists.
+  //
+  // This change is *not* manifest altering.  The file changes will contain the
+  // necessary changes to import the source to the destination.
+  4: SubtreeImport subtree_import;
 }
 
 @rust.Type{name = "sorted_vector_map::SortedVectorMap"}

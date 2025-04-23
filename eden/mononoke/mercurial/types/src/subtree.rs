@@ -27,6 +27,7 @@ use mononoke_types::MPath;
 use mononoke_types::subtree_change::SubtreeChange;
 use mononoke_types::subtree_change::SubtreeCopy;
 use mononoke_types::subtree_change::SubtreeDeepCopy;
+use mononoke_types::subtree_change::SubtreeImport;
 use mononoke_types::subtree_change::SubtreeMerge;
 use serde_derive::Deserialize;
 use serde_derive::Serialize;
@@ -43,6 +44,7 @@ pub struct HgSubtreeChanges {
     pub copies: Vec<HgSubtreeCopy>,
     pub deep_copies: Vec<HgSubtreeDeepCopy>,
     pub merges: Vec<HgSubtreeMerge>,
+    pub imports: Vec<HgSubtreeImport>,
 }
 
 impl HgSubtreeChanges {
@@ -53,22 +55,30 @@ impl HgSubtreeChanges {
         let mut copies = Vec::new();
         let mut deep_copies = Vec::new();
         let mut merges = Vec::new();
+        let mut imports = Vec::new();
         for changes in all_changes {
             copies.extend(changes.copies);
             deep_copies.extend(changes.deepcopies);
             merges.extend(changes.merges);
+            imports.extend(changes.imports);
         }
         Ok(HgSubtreeChanges {
             copies,
             deep_copies,
             merges,
+            imports,
         })
     }
 
     pub fn is_empty(&self) -> bool {
-        self.copies.is_empty() && self.deep_copies.is_empty() && self.merges.is_empty()
+        self.copies.is_empty()
+            && self.deep_copies.is_empty()
+            && self.merges.is_empty()
+            && self.imports.is_empty()
     }
 
+    /// Get the set of changeset ids that are referenced by this set of changes.
+    /// This does not include ids from external repositories that have been imported.
     pub fn source_changeset_ids(&self) -> HashSet<HgChangesetId> {
         let mut ids = HashSet::new();
         ids.extend(self.copies.iter().map(|copy| copy.from_commit));
@@ -87,6 +97,7 @@ impl HgSubtreeChanges {
             copies: self.copies.clone(),
             deepcopies: self.deep_copies.clone(),
             merges: self.merges.clone(),
+            imports: self.imports.clone(),
             version: 1,
         }];
         let json = serde_json::to_string(&all_changes).context("Failed to serialize changes")?;
@@ -98,7 +109,7 @@ impl HgSubtreeChanges {
         ctx: &CoreContext,
         blobstore: &Arc<dyn Blobstore>,
     ) -> Result<Vec<ManifestParentReplacement<HgManifestId, (FileType, HgFileNodeId)>>> {
-        // Deep copies and merges do not modify the parents: they just adjust history.
+        // Deep copies, merges and imports do not modify the parents: they just adjust history.
         stream::iter(self.copies.iter())
             .map(|copy| Ok(async move { copy.to_manifest_replacement(ctx, blobstore).await }))
             .try_buffered(10)
@@ -117,6 +128,7 @@ impl HgSubtreeChanges {
         let mut copies = Vec::new();
         let mut deep_copies = Vec::new();
         let mut merges = Vec::new();
+        let mut imports = Vec::new();
         for (path, change) in subtree_changes.iter() {
             match change {
                 SubtreeChange::SubtreeCopy(SubtreeCopy {
@@ -158,12 +170,25 @@ impl HgSubtreeChanges {
                             .clone(),
                     });
                 }
+                SubtreeChange::SubtreeImport(SubtreeImport {
+                    from_path,
+                    from_commit,
+                    from_repo_url,
+                }) => {
+                    imports.push(HgSubtreeImport {
+                        from_path: from_path.clone(),
+                        to_path: path.clone(),
+                        from_commit: from_commit.clone(),
+                        url: from_repo_url.clone(),
+                    });
+                }
             }
         }
         Ok(Some(HgSubtreeChanges {
             copies,
             deep_copies,
             merges,
+            imports,
         }))
     }
 }
@@ -176,6 +201,8 @@ pub struct HgSubtreeChangesVersion {
     deepcopies: Vec<HgSubtreeDeepCopy>,
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     merges: Vec<HgSubtreeMerge>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    imports: Vec<HgSubtreeImport>,
     #[serde(rename = "v", with = "version")]
     #[allow(unused)]
     version: u64,
@@ -236,6 +263,16 @@ pub struct HgSubtreeMerge {
     pub from_path: MPath,
     #[serde(with = "mpath")]
     pub to_path: MPath,
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq)]
+pub struct HgSubtreeImport {
+    pub from_commit: String,
+    #[serde(with = "mpath")]
+    pub from_path: MPath,
+    #[serde(with = "mpath")]
+    pub to_path: MPath,
+    pub url: String,
 }
 
 mod version {
@@ -382,12 +419,20 @@ mod tests {
                     )
                     .unwrap(),
                 }],
+                imports: vec![HgSubtreeImport {
+                    from_path: MPath::new("i").unwrap(),
+                    to_path: MPath::new("j").unwrap(),
+                    from_commit: "eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee".to_string(),
+                    url: "other:repo".to_string(),
+                }],
             },
             concat!(
                 r##"[{"copies":[{"from_commit":"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa","from_path":"a","to_path":"b"},"##,
                 r##"{"from_commit":"bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb","from_path":"c","to_path":"d"}],"##,
                 r##""deepcopies":[{"from_commit":"cccccccccccccccccccccccccccccccccccccccc","from_path":"e","to_path":"f"}],"##,
-                r##""merges":[{"from_commit":"dddddddddddddddddddddddddddddddddddddddd","from_path":"g","to_path":"h"}],"v":1}]"##
+                r##""merges":[{"from_commit":"dddddddddddddddddddddddddddddddddddddddd","from_path":"g","to_path":"h"}],"##,
+                r##""imports":[{"from_commit":"eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee","from_path":"i","to_path":"j","url":"other:repo"}],"##,
+                r##""v":1}]"##
             ),
         );
     }

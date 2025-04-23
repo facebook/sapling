@@ -419,6 +419,16 @@ async fn resolve_subtree_changes(
                 SubtreeChange::merge(merge.from_path.clone(), *from_cs_id),
             ));
         }
+        for import in changes.imports.iter() {
+            subtree_changes.push((
+                import.to_path.clone(),
+                SubtreeChange::import(
+                    import.from_path.clone(),
+                    import.from_commit.clone(),
+                    import.url.clone(),
+                ),
+            ))
+        }
         let subtree_changes = SortedVectorMap::from_iter(subtree_changes.into_iter());
         Ok((manifest_replacements, subtree_changes))
     } else {
@@ -436,6 +446,7 @@ mod tests {
     use mercurial_types::subtree::HgSubtreeChanges;
     use mercurial_types::subtree::HgSubtreeCopy;
     use mercurial_types::subtree::HgSubtreeDeepCopy;
+    use mercurial_types::subtree::HgSubtreeImport;
     use mercurial_types::subtree::HgSubtreeMerge;
     use mononoke_macros::mononoke;
     use sorted_vector_map::sorted_vector_map;
@@ -494,6 +505,12 @@ mod tests {
                         from_commit: a_id,
                         to_path: MPath::new("dir1/dir3")?,
                     }],
+                    imports: vec![HgSubtreeImport {
+                        from_path: MPath::new("otherdir")?,
+                        from_commit: "other commit".to_string(),
+                        url: "other:repo".to_string(),
+                        to_path: MPath::new("dir4")?,
+                    }],
                 },
                 hashmap! {
                     a_id => a_handle,
@@ -524,6 +541,7 @@ mod tests {
                 MPath::new("dir1/dir3")? => SubtreeChange::merge( MPath::new("dir1/dir2")?, commits["A"] ),
                 MPath::new("dir1/dir3a")? => SubtreeChange::deep_copy(MPath::new("dir1/dir3")?, commits["B"]),
                 MPath::new("dir1a")? =>  SubtreeChange::copy( MPath::new("dir1")?, commits["A"]),
+                MPath::new("dir4")? => SubtreeChange::import(MPath::new("otherdir")?, "other commit".to_string(), "other:repo".to_string()),
             }
         );
 

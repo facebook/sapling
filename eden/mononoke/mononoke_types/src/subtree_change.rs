@@ -26,6 +26,9 @@ pub enum SubtreeChange {
     /// Merge the history of a subtree with another commit and path.
     #[thrift(thrift::bonsai::SubtreeMerge)]
     SubtreeMerge(SubtreeMerge),
+    /// Import history from an external repository.
+    #[thrift(thrift::bonsai::SubtreeImport)]
+    SubtreeImport(SubtreeImport),
 }
 
 impl SubtreeChange {
@@ -50,11 +53,20 @@ impl SubtreeChange {
         })
     }
 
+    pub fn import(from_path: MPath, from_commit: String, from_repo_url: String) -> Self {
+        Self::SubtreeImport(SubtreeImport {
+            from_path,
+            from_commit,
+            from_repo_url,
+        })
+    }
+
     pub fn source(&self) -> Option<ChangesetId> {
         match self {
             Self::SubtreeCopy(copy) => Some(copy.from_cs_id),
             Self::SubtreeDeepCopy(copy) => Some(copy.from_cs_id),
             Self::SubtreeMerge(merge) => Some(merge.from_cs_id),
+            Self::SubtreeImport(_) => None,
         }
     }
 
@@ -64,6 +76,7 @@ impl SubtreeChange {
             Self::SubtreeCopy(copy) => Some((copy.from_cs_id, &copy.from_path)),
             Self::SubtreeDeepCopy(copy) => Some((copy.from_cs_id, &copy.from_path)),
             Self::SubtreeMerge(merge) => Some((merge.from_cs_id, &merge.from_path)),
+            Self::SubtreeImport(_) => None,
         }
     }
 
@@ -89,6 +102,7 @@ impl SubtreeChange {
             Self::SubtreeCopy(copy) => copy.from_cs_id = new_cs_id,
             Self::SubtreeDeepCopy(copy) => copy.from_cs_id = new_cs_id,
             Self::SubtreeMerge(merge) => merge.from_cs_id = new_cs_id,
+            Self::SubtreeImport(_) => {}
         }
     }
 }
@@ -112,4 +126,12 @@ pub struct SubtreeDeepCopy {
 pub struct SubtreeMerge {
     pub from_path: MPath,
     pub from_cs_id: ChangesetId,
+}
+
+#[derive(ThriftConvert, Arbitrary, Debug, Clone, Eq, PartialEq, Hash)]
+#[thrift(thrift::bonsai::SubtreeImport)]
+pub struct SubtreeImport {
+    pub from_path: MPath,
+    pub from_commit: String,
+    pub from_repo_url: String,
 }
