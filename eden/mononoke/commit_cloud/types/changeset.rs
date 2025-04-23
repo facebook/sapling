@@ -5,16 +5,29 @@
  * GNU General Public License version 2.
  */
 
+use std::fmt;
+use std::fmt::Display;
 use std::str::FromStr;
 
+use mercurial_types::HgChangesetId;
+use mercurial_types::HgNodeHash;
 use mononoke_types::sha1_hash::Sha1;
 use mysql_common::value::convert::ConvIr;
 use mysql_common::value::convert::FromValue;
+use serde_derive::Deserialize;
+use serde_derive::Serialize;
 use sql::mysql;
 use sql::mysql_async::FromValueError;
 use sql::mysql_async::Value;
 
-#[derive(Clone, Debug, PartialEq, mysql::OptTryFromRowField)]
+#[derive(
+    Clone,
+    Debug,
+    PartialEq,
+    mysql::OptTryFromRowField,
+    Serialize,
+    Deserialize
+)]
 pub struct CloudChangesetId(pub Sha1);
 
 impl From<CloudChangesetId> for Value {
@@ -47,4 +60,22 @@ impl ConvIr<CloudChangesetId> for CloudChangesetId {
 
 impl FromValue for CloudChangesetId {
     type Intermediate = CloudChangesetId;
+}
+
+impl Display for CloudChangesetId {
+    fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
+        self.0.fmt(fmt)
+    }
+}
+
+impl From<CloudChangesetId> for HgChangesetId {
+    fn from(cs: CloudChangesetId) -> Self {
+        HgChangesetId::new(HgNodeHash::new(cs.0))
+    }
+}
+
+impl From<HgChangesetId> for CloudChangesetId {
+    fn from(cs: HgChangesetId) -> Self {
+        CloudChangesetId(*cs.into_nodehash().sha1())
+    }
 }

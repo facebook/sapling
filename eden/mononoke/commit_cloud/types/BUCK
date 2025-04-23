@@ -9,6 +9,7 @@ rust_library(
         "fbsource//third-party/rust:anyhow",
         "fbsource//third-party/rust:mysql_common",
         "fbsource//third-party/rust:serde",
+        "fbsource//third-party/rust:serde_derive",
         "fbsource//third-party/rust:thiserror",
         "//common/rust/shed/sql:sql",
         "//eden/mononoke/mercurial:mercurial_types",
