@@ -49,5 +49,8 @@ pub fn backingstore_global_init() {
 
         // Put progress into "no-op" mode to avoid overhead in eden.
         progress_model::Registry::main().disable(true);
+
+        // For tests to trigger errors from instrumented code paths.
+        testutil::failpoint::setup_global_fail_points();
     });
 }

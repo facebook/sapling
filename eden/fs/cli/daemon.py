@@ -16,7 +16,6 @@ from . import daemon_util, proc_utils as proc_utils_mod
 from .config import EdenInstance
 from .util import is_apple_silicon, poll_until, print_stderr, ShutdownError
 
-
 # The amount of time to wait for the edenfs process to exit after we send SIGKILL.
 # We normally expect the process to be killed and reaped fairly quickly in this
 # situation.  However, in rare cases on very heavily loaded systems it can take a while
@@ -347,6 +346,8 @@ def get_edenfs_environment() -> Dict[str, str]:
         "INSIDE_RE_WORKER",
         # Allow jemalloc heap profiling env vars to be passed through
         "MALLOC_CONF",
+        # Used by tests to trigger error conditions in instrumented Rust code.
+        "FAILPOINTS",
     ]
 
     if sys.platform == "win32":
