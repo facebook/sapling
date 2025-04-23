@@ -200,7 +200,7 @@ impl PartialEq<i16> for Dtype {
     }
 }
 
-#[derive(Clone, Debug, PartialEq, Serialize)]
+#[derive(Clone, Debug, Default, PartialEq, Serialize)]
 pub struct JournalPosition {
     pub mount_generation: i64,
     pub sequence_number: u64,

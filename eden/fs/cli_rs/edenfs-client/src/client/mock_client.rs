@@ -22,8 +22,9 @@ use fb303_core_clients::BaseService;
 use fb303_core_clients::errors::*;
 use fbinit::FacebookInit;
 use futures::future::BoxFuture;
+use futures::future::FutureExt;
 use mockall::mock;
-use thrift_thriftclients::EdenService;
+pub use thrift_thriftclients::EdenService;
 use thrift_thriftclients::thrift::errors::*;
 use thrift_types::edenfs::*;
 use thrift_types::edenfs_config::EdenConfigData;
@@ -31,20 +32,29 @@ use thrift_types::fb303_core::fb303_status;
 use tokio::sync::Semaphore;
 
 use crate::client::Client;
+use crate::client::Connector;
 use crate::client::EdenFsClientStatsHandler;
 use crate::client::NoopEdenFsClientStatsHandler;
-use crate::client::connector::Connector;
 use crate::client::connector::EdenFsConnector;
+use crate::client::connector::EdenFsThriftClient;
 use crate::client::connector::StreamingEdenFsConnector;
 
 pub struct MockThriftClient {
+    thrift_service: Option<EdenFsThriftClient>,
     stats_handler: Box<dyn EdenFsClientStatsHandler + Send + Sync>,
+}
+
+impl MockThriftClient {
+    pub fn set_thrift_service(&mut self, client: EdenFsThriftClient) {
+        self.thrift_service = Some(client);
+    }
 }
 
 #[async_trait]
 impl Client for MockThriftClient {
     fn new(_fb: FacebookInit, _socket_file: PathBuf, _semaphore: Option<Semaphore>) -> Self {
         Self {
+            thrift_service: None,
             stats_handler: Box::new(NoopEdenFsClientStatsHandler {}),
         }
     }
@@ -60,7 +70,7 @@ impl Client for MockThriftClient {
         &self,
         _conn_timeout: Option<Duration>,
         _recv_timeout: Option<Duration>,
-        _f: F,
+        f: F,
     ) -> std::result::Result<T, ConnectAndRequestError<E>>
     where
         F: Fn(&<EdenFsConnector as Connector>::Client) -> Fut + Send + Sync,
@@ -68,7 +78,8 @@ impl Client for MockThriftClient {
         T: Send,
         E: HasErrorHandlingStrategy + Debug + Display,
     {
-        unimplemented!()
+        let service = self.thrift_service.clone().unwrap();
+        f(&service).await.map_err(|e| e.into())
     }
 
     async fn with_streaming_thrift_with_timeouts<F, Fut, T, E>(
@@ -87,8 +98,21 @@ impl Client for MockThriftClient {
     }
 }
 
+pub fn make_boxed_future_result<T, E>(result: Result<T, E>) -> BoxFuture<'static, Result<T, E>>
+where
+    T: Send + 'static,
+    E: Send + 'static,
+{
+    tokio::task::spawn(async move { result })
+        .map(|r| match r {
+            Ok(r) => r,
+            Err(_) => panic!("Error joing tokio task."),
+        })
+        .boxed()
+}
+
 mock! {
-    EdenFsService {}
+    pub EdenFsService {}
 
     #[allow(non_snake_case)]
     impl BaseService for EdenFsService {

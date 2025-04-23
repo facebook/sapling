@@ -39,7 +39,7 @@ pub trait Connector: Send + Sync {
     /// The type of client this connector creates.
     ///
     /// This is typically an Arc-wrapped Thrift client trait object.
-    type Client: Send + Sync + 'static;
+    type Client: Clone + Send + Sync + 'static;
 
     /// The future type returned by the connect method.
     ///

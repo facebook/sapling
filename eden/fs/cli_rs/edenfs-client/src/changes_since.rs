@@ -748,26 +748,35 @@ impl EdenFsClient {
 
 #[cfg(test)]
 mod tests {
+    use std::sync::Arc;
+
     use fbinit::FacebookInit;
+    use thrift_types::edenfs_clients::types::ChangesSinceV2Result;
 
     use crate::changes_since::*;
+    use crate::client::mock_client::MockEdenFsService;
+    use crate::client::mock_client::make_boxed_future_result;
 
     #[fbinit::test]
     async fn test_get_changes_since(fb: FacebookInit) -> Result<()> {
-        let result = std::panic::catch_unwind(|| async {
-            let client = EdenFsClient::new(fb, PathBuf::new(), None);
-            let position = JournalPosition {
-                mount_generation: 0,
-                sequence_number: 0,
-                snapshot_hash: Vec::new(),
-            };
-            client
-                .get_changes_since(&None, &position, &None, &None, &None, &None, &None, false)
-                .await
-        });
+        let mut client = EdenFsClient::new(fb, PathBuf::new(), None);
+        let mock_client = &mut *client;
+        let mut mock_service = MockEdenFsService::new();
+        mock_service.expect_changesSinceV2().returning(|_| {
+            let expected_result = Ok(ChangesSinceV2Result {
+                ..Default::default()
+            });
 
-        // Current MockClient is unimplemented and panics. catch_unwind does catch the panic, but for some reason thinks it is ok.
+            make_boxed_future_result(expected_result)
+        });
+        mock_client.set_thrift_service(Arc::new(mock_service));
+
+        let position = JournalPosition::default();
+        let result = client
+            .get_changes_since(&None, &position, &None, &None, &None, &None, &None, false)
+            .await;
         assert!(result.is_ok());
+
         Ok(())
     }
 }
