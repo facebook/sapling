@@ -30,7 +30,7 @@ use crate::types::Dtype;
 use crate::types::JournalPosition;
 use crate::utils::get_mount_point;
 
-#[derive(Debug, Serialize)]
+#[derive(Clone, Debug, PartialEq, Serialize)]
 pub struct Added {
     pub file_type: Dtype,
     pub path: Vec<u8>,
@@ -51,14 +51,24 @@ impl fmt::Display for Added {
 
 impl From<thrift_types::edenfs::Added> for Added {
     fn from(from: thrift_types::edenfs::Added) -> Self {
-        Added {
+        Self {
             file_type: from.fileType.into(),
             path: from.path,
         }
     }
 }
 
-#[derive(Debug, Serialize)]
+impl From<Added> for thrift_types::edenfs::Added {
+    fn from(from: Added) -> Self {
+        Self {
+            fileType: from.file_type.into(),
+            path: from.path,
+            ..Default::default()
+        }
+    }
+}
+
+#[derive(Clone, Debug, PartialEq, Serialize)]
 pub struct Modified {
     pub file_type: Dtype,
     pub path: Vec<u8>,
@@ -79,14 +89,24 @@ impl fmt::Display for Modified {
 
 impl From<thrift_types::edenfs::Modified> for Modified {
     fn from(from: thrift_types::edenfs::Modified) -> Self {
-        Modified {
+        Self {
             file_type: from.fileType.into(),
             path: from.path,
         }
     }
 }
 
-#[derive(Debug, Serialize)]
+impl From<Modified> for thrift_types::edenfs::Modified {
+    fn from(from: Modified) -> Self {
+        Self {
+            fileType: from.file_type.into(),
+            path: from.path,
+            ..Default::default()
+        }
+    }
+}
+
+#[derive(Clone, Debug, PartialEq, Serialize)]
 pub struct Renamed {
     pub file_type: Dtype,
     pub from: Vec<u8>,
@@ -119,7 +139,18 @@ impl From<thrift_types::edenfs::Renamed> for Renamed {
     }
 }
 
-#[derive(Debug, Serialize)]
+impl From<Renamed> for thrift_types::edenfs::Renamed {
+    fn from(from: Renamed) -> Self {
+        Self {
+            fileType: from.file_type.into(),
+            from: from.from,
+            to: from.to,
+            ..Default::default()
+        }
+    }
+}
+
+#[derive(Clone, Debug, PartialEq, Serialize)]
 pub struct Replaced {
     pub file_type: Dtype,
     pub from: Vec<u8>,
@@ -144,7 +175,7 @@ impl fmt::Display for Replaced {
 
 impl From<thrift_types::edenfs::Replaced> for Replaced {
     fn from(from: thrift_types::edenfs::Replaced) -> Self {
-        Replaced {
+        Self {
             file_type: from.fileType.into(),
             from: from.from,
             to: from.to,
@@ -152,7 +183,18 @@ impl From<thrift_types::edenfs::Replaced> for Replaced {
     }
 }
 
-#[derive(Debug, Serialize)]
+impl From<Replaced> for thrift_types::edenfs::Replaced {
+    fn from(from: Replaced) -> Self {
+        Self {
+            fileType: from.file_type.into(),
+            from: from.from,
+            to: from.to,
+            ..Default::default()
+        }
+    }
+}
+
+#[derive(Clone, Debug, PartialEq, Serialize)]
 pub struct Removed {
     pub file_type: Dtype,
     pub path: Vec<u8>,
@@ -180,7 +222,17 @@ impl From<thrift_types::edenfs::Removed> for Removed {
     }
 }
 
-#[derive(Debug, Serialize)]
+impl From<Removed> for thrift_types::edenfs::Removed {
+    fn from(from: Removed) -> Self {
+        Self {
+            fileType: from.file_type.into(),
+            path: from.path,
+            ..Default::default()
+        }
+    }
+}
+
+#[derive(Clone, Debug, PartialEq, Serialize)]
 pub enum SmallChangeNotification {
     Added(Added),
     Modified(Modified),
@@ -224,7 +276,19 @@ impl From<thrift_types::edenfs::SmallChangeNotification> for SmallChangeNotifica
     }
 }
 
-#[derive(Debug, Serialize)]
+impl From<SmallChangeNotification> for thrift_types::edenfs::SmallChangeNotification {
+    fn from(from: SmallChangeNotification) -> Self {
+        match from {
+            SmallChangeNotification::Added(added) => Self::added(added.into()),
+            SmallChangeNotification::Modified(modified) => Self::modified(modified.into()),
+            SmallChangeNotification::Renamed(renamed) => Self::renamed(renamed.into()),
+            SmallChangeNotification::Replaced(replaced) => Self::replaced(replaced.into()),
+            SmallChangeNotification::Removed(removed) => Self::removed(removed.into()),
+        }
+    }
+}
+
+#[derive(Clone, Debug, PartialEq, Serialize)]
 pub struct DirectoryRenamed {
     pub from: Vec<u8>,
     pub to: Vec<u8>,
@@ -254,7 +318,17 @@ impl From<thrift_types::edenfs::DirectoryRenamed> for DirectoryRenamed {
     }
 }
 
-#[derive(Debug, Serialize)]
+impl From<DirectoryRenamed> for thrift_types::edenfs::DirectoryRenamed {
+    fn from(from: DirectoryRenamed) -> Self {
+        Self {
+            from: from.from,
+            to: from.to,
+            ..Default::default()
+        }
+    }
+}
+
+#[derive(Clone, Debug, PartialEq, Serialize)]
 pub struct CommitTransition {
     pub from: Vec<u8>,
     pub to: Vec<u8>,
@@ -280,6 +354,16 @@ impl From<thrift_types::edenfs::CommitTransition> for CommitTransition {
     }
 }
 
+impl From<CommitTransition> for thrift_types::edenfs::CommitTransition {
+    fn from(from: CommitTransition) -> Self {
+        Self {
+            from: from.from,
+            to: from.to,
+            ..Default::default()
+        }
+    }
+}
+
 #[derive(Clone, Copy, Debug, PartialEq, Serialize)]
 pub enum LostChangesReason {
     Unknown = 0,
@@ -301,6 +385,17 @@ impl From<thrift_types::edenfs::LostChangesReason> for LostChangesReason {
     }
 }
 
+impl From<LostChangesReason> for thrift_types::edenfs::LostChangesReason {
+    fn from(from: LostChangesReason) -> Self {
+        match from {
+            LostChangesReason::Unknown | LostChangesReason::Undefined => Self::UNKNOWN,
+            LostChangesReason::EdenFsRemounted => Self::EDENFS_REMOUNTED,
+            LostChangesReason::JournalTruncated => Self::JOURNAL_TRUNCATED,
+            LostChangesReason::TooManyChanges => Self::TOO_MANY_CHANGES,
+        }
+    }
+}
+
 impl fmt::Display for LostChangesReason {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         let display_str = match *self {
@@ -314,7 +409,7 @@ impl fmt::Display for LostChangesReason {
     }
 }
 
-#[derive(Debug, Serialize)]
+#[derive(Clone, Debug, PartialEq, Serialize)]
 pub struct LostChanges {
     pub reason: LostChangesReason,
 }
@@ -333,7 +428,16 @@ impl From<thrift_types::edenfs::LostChanges> for LostChanges {
     }
 }
 
-#[derive(Debug, Serialize)]
+impl From<LostChanges> for thrift_types::edenfs::LostChanges {
+    fn from(from: LostChanges) -> Self {
+        Self {
+            reason: from.reason.into(),
+            ..Default::default()
+        }
+    }
+}
+
+#[derive(Clone, Debug, PartialEq, Serialize)]
 pub enum LargeChangeNotification {
     DirectoryRenamed(DirectoryRenamed),
     CommitTransition(CommitTransition),
@@ -373,7 +477,23 @@ impl From<thrift_types::edenfs::LargeChangeNotification> for LargeChangeNotifica
     }
 }
 
-#[derive(Debug, Serialize)]
+impl From<LargeChangeNotification> for thrift_types::edenfs::LargeChangeNotification {
+    fn from(from: LargeChangeNotification) -> Self {
+        match from {
+            LargeChangeNotification::DirectoryRenamed(directory_renamed) => {
+                Self::directoryRenamed(directory_renamed.into())
+            }
+            LargeChangeNotification::CommitTransition(commit_transition) => {
+                Self::commitTransition(commit_transition.into())
+            }
+            LargeChangeNotification::LostChanges(lost_changes) => {
+                Self::lostChanges(lost_changes.into())
+            }
+        }
+    }
+}
+
+#[derive(Clone, Debug, PartialEq, Serialize)]
 pub enum ChangeNotification {
     SmallChange(SmallChangeNotification),
     LargeChange(LargeChangeNotification),
@@ -406,7 +526,16 @@ impl From<thrift_types::edenfs::ChangeNotification> for ChangeNotification {
     }
 }
 
-#[derive(Debug, Serialize)]
+impl From<ChangeNotification> for thrift_types::edenfs::ChangeNotification {
+    fn from(from: ChangeNotification) -> Self {
+        match from {
+            ChangeNotification::SmallChange(small_change) => Self::smallChange(small_change.into()),
+            ChangeNotification::LargeChange(large_change) => Self::largeChange(large_change.into()),
+        }
+    }
+}
+
+#[derive(Clone, Debug, PartialEq, Serialize)]
 pub struct ChangesSinceV2Result {
     pub to_position: JournalPosition,
     pub changes: Vec<ChangeNotification>,
@@ -426,6 +555,16 @@ impl From<thrift_types::edenfs::ChangesSinceV2Result> for ChangesSinceV2Result {
         ChangesSinceV2Result {
             to_position: from.toPosition.into(),
             changes: from.changes.into_iter().map(|c| c.into()).collect(),
+        }
+    }
+}
+
+impl From<ChangesSinceV2Result> for thrift_types::edenfs::ChangesSinceV2Result {
+    fn from(from: ChangesSinceV2Result) -> Self {
+        Self {
+            toPosition: from.to_position.into(),
+            changes: from.changes.into_iter().map(|c| c.into()).collect(),
+            ..Default::default()
         }
     }
 }
@@ -751,31 +890,53 @@ mod tests {
     use std::sync::Arc;
 
     use fbinit::FacebookInit;
-    use thrift_types::edenfs_clients::types::ChangesSinceV2Result;
 
+    use crate::changes_since::ChangesSinceV2Result;
     use crate::changes_since::*;
     use crate::client::mock_client::make_boxed_future_result;
     use crate::client::mock_service::MockEdenFsService;
+
+    fn make_changes_since_result() -> ChangesSinceV2Result {
+        ChangesSinceV2Result {
+            to_position: JournalPosition {
+                mount_generation: -1234,
+                sequence_number: 1234,
+                snapshot_hash: vec![],
+            },
+            changes: vec![ChangeNotification::SmallChange(
+                SmallChangeNotification::Added(Added {
+                    file_type: Dtype::Regular,
+                    path: bytes_from_path(PathBuf::from(
+                        "fbcode/eden/fs/cli_rs/eden_client/src/test.rs",
+                    ))
+                    .unwrap(),
+                }),
+            )],
+        }
+    }
 
     #[fbinit::test]
     async fn test_get_changes_since(fb: FacebookInit) -> Result<()> {
         let mut client = EdenFsClient::new(fb, PathBuf::new(), None);
         let mock_client = &mut *client;
         let mut mock_service = MockEdenFsService::new();
-        mock_service.expect_changesSinceV2().returning(|_| {
-            let expected_result = Ok(ChangesSinceV2Result {
-                ..Default::default()
-            });
 
-            make_boxed_future_result(expected_result)
+        let mut changes_since_result = make_changes_since_result();
+        let position = changes_since_result.to_position.clone();
+        changes_since_result.to_position.sequence_number += 10;
+
+        let expected_result = changes_since_result.clone();
+        mock_service.expect_changesSinceV2().returning(move |_| {
+            let expected_result = expected_result.clone();
+            make_boxed_future_result(Ok(expected_result.into()))
         });
         mock_client.set_thrift_service(Arc::new(mock_service));
 
-        let position = JournalPosition::default();
         let result = client
             .get_changes_since(&None, &position, &None, &None, &None, &None, &None, false)
             .await;
         assert!(result.is_ok());
+        assert_eq!(result.unwrap(), changes_since_result);
 
         Ok(())
     }

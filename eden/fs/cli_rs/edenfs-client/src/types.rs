@@ -170,6 +170,22 @@ impl From<thrift_types::edenfs::Dtype> for Dtype {
     }
 }
 
+impl From<Dtype> for thrift_types::edenfs::Dtype {
+    fn from(from: Dtype) -> Self {
+        match from {
+            Dtype::Unknown | Dtype::Undefined => Self::UNKNOWN,
+            Dtype::Fifo => Self::FIFO,
+            Dtype::Char => Self::CHAR,
+            Dtype::Dir => Self::DIR,
+            Dtype::Block => Self::BLOCK,
+            Dtype::Regular => Self::REGULAR,
+            Dtype::Link => Self::LINK,
+            Dtype::Socket => Self::SOCKET,
+            Dtype::Whiteout => Self::WHITEOUT,
+        }
+    }
+}
+
 impl fmt::Display for Dtype {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         let display_str = match *self {
