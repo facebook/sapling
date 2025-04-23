@@ -33,29 +33,21 @@ mononoke + local commit cloud backend
 
 setup repo
 
-  $ hginit_treemanifest repo
-  $ cd repo
-  $ mkcommit "base_commit"
-  $ hg log -T '{short(node)}\n'
-  8b2dca0c8a72
-
-create master bookmark
-  $ hg bookmark master_bookmark -r tip
-
-  $ cd $TESTTMP
-
-setup client1 and client2
-  $ hg clone -q mono:repo client1 --noupdate
-  $ hg clone -q mono:repo client2 --noupdate
-
-blobimport
-
-  $ blobimport repo/.hg repo
+  $ testtool_drawdag --print-hg-hashes -R repo --derive-all --no-default-files <<EOF
+  > A
+  > # modify: A "a" "file_content"
+  > # bookmark: A master_bookmark
+  > # message: A "base_commit"
+  > EOF
+  A=f4292546bbf22a29348935427ccd5b8ea2f3aa33
 
 start mononoke
 
   $ start_and_wait_for_mononoke_server
 
+setup client1 and client2
+  $ hg clone -q mono:repo client1 --noupdate
+  $ hg clone -q mono:repo client2 --noupdate
   $ cd client1
   $ hg cloud join
   commitcloud: this repository is now connected to the 'user/test/default' workspace for the 'repo' repo
@@ -81,7 +73,7 @@ Make commits in the first client, and sync it
   $ mkcommit "commit3"
   $ hg cloud sync
   commitcloud: synchronizing 'repo' with 'user/test/default'
-  commitcloud: head '44641a2b1a42' hasn't been uploaded yet
+  commitcloud: head '37ed84dd5e70' hasn't been uploaded yet
   edenapi: queue 3 commits for upload
   edenapi: queue 3 files for upload
   edenapi: uploaded 3 files
@@ -92,32 +84,32 @@ Make commits in the first client, and sync it
   finished in * (glob)
 
   $ tglogp
-  @  44641a2b1a42 draft 'commit3'
+  @  37ed84dd5e70 draft 'commit3'
   │
-  o  eba3648c3275 draft 'commit2'
+  o  4867355284e4 draft 'commit2'
   │
-  o  660cb078da57 draft 'commit1'
+  o  89bab2e12da2 draft 'commit1'
   │
-  o  8b2dca0c8a72 public 'base_commit'
+  o  f4292546bbf2 public 'base_commit'
   
 Sync from the second client - the commits should appear
   $ cd ../client2
   $ hg cloud sync
   commitcloud: synchronizing 'repo' with 'user/test/default'
   commitcloud: nothing to upload
-  pulling 44641a2b1a42 from mono:repo
+  pulling 37ed84dd5e70 from mono:repo
   searching for changes
   commitcloud: commits synchronized
   finished in * (glob)
 
   $ tglogp
-  o  44641a2b1a42 draft 'commit3'
+  o  37ed84dd5e70 draft 'commit3'
   │
-  o  eba3648c3275 draft 'commit2'
+  o  4867355284e4 draft 'commit2'
   │
-  o  660cb078da57 draft 'commit1'
+  o  89bab2e12da2 draft 'commit1'
   │
-  @  8b2dca0c8a72 public 'base_commit'
+  @  f4292546bbf2 public 'base_commit'
   
 
 Make commits from the second client and sync it
@@ -126,7 +118,7 @@ Make commits from the second client and sync it
   $ mkcommit "commit6"
   $ hg cloud sync
   commitcloud: synchronizing 'repo' with 'user/test/default'
-  commitcloud: head '58508421158d' hasn't been uploaded yet
+  commitcloud: head '732edd29dff2' hasn't been uploaded yet
   edenapi: queue 3 commits for upload
   edenapi: queue 3 files for upload
   edenapi: uploaded 3 files
@@ -143,35 +135,35 @@ On the first client, make a bookmark, then sync - the bookmark and the new commi
   $ hg cloud sync
   commitcloud: synchronizing 'repo' with 'user/test/default'
   commitcloud: nothing to upload
-  pulling 58508421158d from mono:repo
+  pulling 732edd29dff2 from mono:repo
   searching for changes
   commitcloud: commits synchronized
   finished in * (glob)
 
   $ tglogp
-  o  58508421158d draft 'commit6'
+  o  732edd29dff2 draft 'commit6'
   │
-  o  a1806767adaa draft 'commit5'
+  o  1006c3d2da01 draft 'commit5'
   │
-  o  15f040cf571c draft 'commit4'
+  o  48ad5bad9631 draft 'commit4'
   │
-  │ @  44641a2b1a42 draft 'commit3'
+  │ @  37ed84dd5e70 draft 'commit3'
   │ │
-  │ o  eba3648c3275 draft 'commit2'
+  │ o  4867355284e4 draft 'commit2'
   │ │
-  │ o  660cb078da57 draft 'commit1'
+  │ o  89bab2e12da2 draft 'commit1'
   ├─╯
-  o  8b2dca0c8a72 public 'base_commit' bookmark1
+  o  f4292546bbf2 public 'base_commit' bookmark1
   
  
 On the first client rebase the stack
-  $ hg rebase -s 15f040cf571c -d 44641a2b1a42
-  rebasing 15f040cf571c "commit4"
-  rebasing a1806767adaa "commit5"
-  rebasing 58508421158d "commit6"
+  $ hg rebase -s 48ad5bad9631 -d 37ed84dd5e70
+  rebasing 48ad5bad9631 "commit4"
+  rebasing 1006c3d2da01 "commit5"
+  rebasing 732edd29dff2 "commit6"
   $ hg cloud sync
   commitcloud: synchronizing 'repo' with 'user/test/default'
-  commitcloud: head '8e3f03f8d9db' hasn't been uploaded yet
+  commitcloud: head '1ff094a3d8b7' hasn't been uploaded yet
   edenapi: queue 3 commits for upload
   edenapi: queue 0 files for upload
   edenapi: queue 3 trees for upload
@@ -186,40 +178,40 @@ On the second client sync it
   $ hg cloud sync
   commitcloud: synchronizing 'repo' with 'user/test/default'
   commitcloud: nothing to upload
-  pulling 8e3f03f8d9db from mono:repo
+  pulling 1ff094a3d8b7 from mono:repo
   searching for changes
   commitcloud: commits synchronized
   finished in * (glob)
-  commitcloud: current revision 58508421158d has been moved remotely to 8e3f03f8d9db
-  updating to 8e3f03f8d9db
+  commitcloud: current revision 732edd29dff2 has been moved remotely to 1ff094a3d8b7
+  updating to 1ff094a3d8b7
   3 files updated, 0 files merged, 0 files removed, 0 files unresolved
 
   $ tglogp
-  @  8e3f03f8d9db draft 'commit6'
+  @  1ff094a3d8b7 draft 'commit6'
   │
-  o  fc9e76452973 draft 'commit5'
+  o  2449d7845608 draft 'commit5'
   │
-  o  f0345b3976c9 draft 'commit4'
+  o  40afcb5da906 draft 'commit4'
   │
-  o  44641a2b1a42 draft 'commit3'
+  o  37ed84dd5e70 draft 'commit3'
   │
-  o  eba3648c3275 draft 'commit2'
+  o  4867355284e4 draft 'commit2'
   │
-  o  660cb078da57 draft 'commit1'
+  o  89bab2e12da2 draft 'commit1'
   │
-  o  8b2dca0c8a72 public 'base_commit' bookmark1
+  o  f4292546bbf2 public 'base_commit' bookmark1
   
 
 On the second client hide all draft commits
   $ hg hide -r 'draft()'
-  hiding commit 660cb078da57 "commit1"
-  hiding commit eba3648c3275 "commit2"
-  hiding commit 44641a2b1a42 "commit3"
-  hiding commit f0345b3976c9 "commit4"
-  hiding commit fc9e76452973 "commit5"
-  hiding commit 8e3f03f8d9db "commit6"
+  hiding commit 89bab2e12da2 "commit1"
+  hiding commit 4867355284e4 "commit2"
+  hiding commit 37ed84dd5e70 "commit3"
+  hiding commit 40afcb5da906 "commit4"
+  hiding commit 2449d7845608 "commit5"
+  hiding commit 1ff094a3d8b7 "commit6"
   0 files updated, 0 files merged, 6 files removed, 0 files unresolved
-  working directory now at 8b2dca0c8a72
+  working directory now at f4292546bbf2
   6 changesets hidden
   $ hg cloud sync
   commitcloud: synchronizing 'repo' with 'user/test/default'
@@ -229,7 +221,7 @@ On the second client hide all draft commits
   $ hg up master_bookmark -q
 
   $ tglogp
-  @  8b2dca0c8a72 public 'base_commit' bookmark1
+  @  f4292546bbf2 public 'base_commit' bookmark1
   
 
 On the first client check that all commits were hidden
@@ -242,7 +234,7 @@ On the first client check that all commits were hidden
   $ hg up master_bookmark -q
 
   $ tglogp
-  @  8b2dca0c8a72 public 'base_commit' bookmark1
+  @  f4292546bbf2 public 'base_commit' bookmark1
   
  
 On the first client make 2 stacks
@@ -253,25 +245,25 @@ On the first client make 2 stacks
   $ mkcommit 'stack 2 second'
 
   $ tglogp
-  @  88d416aed919 draft 'stack 2 second'
+  @  58da2fa41628 draft 'stack 2 second'
   │
-  o  77a917e6c3a5 draft 'stack 2 first'
+  o  9ac275085c59 draft 'stack 2 first'
   │
-  │ o  ec61bf312a03 draft 'stack 1 second'
+  │ o  53e6d921f416 draft 'stack 1 second'
   │ │
-  │ o  8d621fa11677 draft 'stack 1 first'
+  │ o  f10e962f3f60 draft 'stack 1 first'
   ├─╯
-  o  8b2dca0c8a72 public 'base_commit' bookmark1
+  o  f4292546bbf2 public 'base_commit' bookmark1
   
 Make one of the commits public when it shouldn't be.
-  $ hg debugmakepublic 8d621fa11677
+  $ hg debugmakepublic f10e962f3f60
   $ hg cloud sync 2>&1 | grep fail
-  commitcloud: failed to synchronize ec61bf312a03
+  commitcloud: failed to synchronize 53e6d921f416
 
-  $ hg debugmakepublic --delete 8d621fa11677
+  $ hg debugmakepublic --delete f10e962f3f60
   $ hg cloud sync
   commitcloud: synchronizing 'repo' with 'user/test/default'
-  commitcloud: head 'ec61bf312a03' hasn't been uploaded yet
+  commitcloud: head '53e6d921f416' hasn't been uploaded yet
   edenapi: queue 2 commits for upload
   edenapi: queue 1 file for upload
   edenapi: uploaded 1 file
@@ -286,28 +278,28 @@ Commit still becomes available in the other repo
   $ hg cloud sync
   commitcloud: synchronizing 'repo' with 'user/test/default'
   commitcloud: nothing to upload
-  pulling 88d416aed919 ec61bf312a03 from mono:repo
+  pulling 58da2fa41628 53e6d921f416 from mono:repo
   searching for changes
   commitcloud: commits synchronized
   finished in * (glob)
 
 # Mononoke order is not stable, so the stacks print stacks separately
-  $ tglogpnr -r "::ec61bf312a03 - ::master_bookmark"
-  o  ec61bf312a03 draft 'stack 1 second'
+  $ tglogpnr -r "::53e6d921f416 - ::master_bookmark"
+  o  53e6d921f416 draft 'stack 1 second'
   │
-  o  8d621fa11677 draft 'stack 1 first'
+  o  f10e962f3f60 draft 'stack 1 first'
   │
   ~
-  $ tglogpnr -r "::88d416aed919 - ::master_bookmark"
-  o  88d416aed919 draft 'stack 2 second'
+  $ tglogpnr -r "::58da2fa41628 - ::master_bookmark"
+  o  58da2fa41628 draft 'stack 2 second'
   │
-  o  77a917e6c3a5 draft 'stack 2 first'
+  o  9ac275085c59 draft 'stack 2 first'
   │
   ~
 
 Fix up that public commit, set it back to draft
   $ cd ../client1
-  $ hg debugmakepublic -d 8d621fa11677
+  $ hg debugmakepublic -d f10e962f3f60
 
 Clean up
   $ hg hide -r 'draft()' -q
@@ -316,5 +308,5 @@ Clean up
   $ hg cloud sync -q
 
   $ tglogp
-  @  8b2dca0c8a72 public 'base_commit' bookmark1
+  @  f4292546bbf2 public 'base_commit' bookmark1
   
