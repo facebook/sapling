@@ -754,8 +754,8 @@ mod tests {
     use thrift_types::edenfs_clients::types::ChangesSinceV2Result;
 
     use crate::changes_since::*;
-    use crate::client::mock_client::MockEdenFsService;
     use crate::client::mock_client::make_boxed_future_result;
+    use crate::client::mock_service::MockEdenFsService;
 
     #[fbinit::test]
     async fn test_get_changes_since(fb: FacebookInit) -> Result<()> {
