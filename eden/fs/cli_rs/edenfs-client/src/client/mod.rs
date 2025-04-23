@@ -24,7 +24,6 @@ use fbinit::FacebookInit;
 use tokio::sync::Semaphore;
 
 use crate::client::connector::Connector;
-use crate::client::connector::EdenFsConnector;
 use crate::client::connector::StreamingEdenFsConnector;
 #[cfg(not(test))]
 use crate::client::thrift_client::ThriftClient;
@@ -104,7 +103,7 @@ pub trait Client: Send + Sync {
         f: F,
     ) -> std::result::Result<T, ConnectAndRequestError<E>>
     where
-        F: Fn(&<EdenFsConnector as Connector>::Client) -> Fut + Send + Sync,
+        F: Fn(&<StreamingEdenFsConnector as Connector>::Client) -> Fut + Send + Sync,
         Fut: Future<Output = Result<T, E>> + Send,
         T: Send,
         E: HasErrorHandlingStrategy + Debug + Display,
@@ -135,7 +134,7 @@ pub trait Client: Send + Sync {
         f: F,
     ) -> std::result::Result<T, ConnectAndRequestError<E>>
     where
-        F: Fn(&<EdenFsConnector as Connector>::Client) -> Fut + Send + Sync,
+        F: Fn(&<StreamingEdenFsConnector as Connector>::Client) -> Fut + Send + Sync,
         Fut: Future<Output = Result<T, E>> + Send,
         T: Send,
         E: HasErrorHandlingStrategy + Debug + Display;

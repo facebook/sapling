@@ -27,17 +27,16 @@ use crate::client::Client;
 use crate::client::Connector;
 use crate::client::EdenFsClientStatsHandler;
 use crate::client::NoopEdenFsClientStatsHandler;
-use crate::client::connector::EdenFsConnector;
-use crate::client::connector::EdenFsThriftClient;
 use crate::client::connector::StreamingEdenFsConnector;
+use crate::client::connector::StreamingEdenFsThriftClient;
 
 pub struct MockThriftClient {
-    thrift_service: Option<EdenFsThriftClient>,
+    thrift_service: Option<StreamingEdenFsThriftClient>,
     stats_handler: Box<dyn EdenFsClientStatsHandler + Send + Sync>,
 }
 
 impl MockThriftClient {
-    pub fn set_thrift_service(&mut self, client: EdenFsThriftClient) {
+    pub fn set_thrift_service(&mut self, client: StreamingEdenFsThriftClient) {
         self.thrift_service = Some(client);
     }
 }
@@ -65,7 +64,7 @@ impl Client for MockThriftClient {
         f: F,
     ) -> std::result::Result<T, ConnectAndRequestError<E>>
     where
-        F: Fn(&<EdenFsConnector as Connector>::Client) -> Fut + Send + Sync,
+        F: Fn(&<StreamingEdenFsConnector as Connector>::Client) -> Fut + Send + Sync,
         Fut: Future<Output = Result<T, E>> + Send,
         T: Send,
         E: HasErrorHandlingStrategy + Debug + Display,
@@ -78,7 +77,7 @@ impl Client for MockThriftClient {
         &self,
         _conn_timeout: Option<Duration>,
         _recv_timeout: Option<Duration>,
-        _f: F,
+        f: F,
     ) -> std::result::Result<T, ConnectAndRequestError<E>>
     where
         F: Fn(&<StreamingEdenFsConnector as Connector>::Client) -> Fut + Send + Sync,
@@ -86,7 +85,8 @@ impl Client for MockThriftClient {
         T: Send,
         E: HasErrorHandlingStrategy + Debug + Display,
     {
-        unimplemented!()
+        let service = self.thrift_service.clone().unwrap();
+        f(&service).await.map_err(|e| e.into())
     }
 }
 

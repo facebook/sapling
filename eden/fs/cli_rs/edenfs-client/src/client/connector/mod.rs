@@ -11,7 +11,6 @@ mod streaming_connector;
 use std::path::PathBuf;
 use std::time::Duration;
 
-pub(crate) use connector::*;
 use edenfs_error::ConnectError;
 use fbinit::FacebookInit;
 pub(crate) use streaming_connector::*;

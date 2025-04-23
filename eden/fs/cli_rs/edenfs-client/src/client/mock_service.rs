@@ -13,8 +13,12 @@ use std::result::Result;
 use fb303_core_clients::BaseService;
 use fb303_core_clients::errors::*;
 use futures::future::BoxFuture;
+use futures::stream::BoxStream;
 use mockall::mock;
-pub use thrift_thriftclients::EdenService;
+use thrift_streaming_clients::StreamingEdenService;
+use thrift_streaming_clients::errors::*;
+use thrift_streaming_clients::types::*;
+use thrift_thriftclients::EdenService;
 use thrift_thriftclients::thrift::errors::*;
 use thrift_types::edenfs::*;
 use thrift_types::edenfs_config::EdenConfigData;
@@ -515,5 +519,57 @@ mock! {
             &self,
             request: &GetFileContentRequest,
         ) -> BoxFuture<'static, Result<GetFileContentResponse, GetFileContentError>>;
+    }
+
+    #[allow(non_snake_case)]
+    impl StreamingEdenService for EdenFsService {
+        fn subscribeStreamTemporary(
+            &self,
+            mount_point: &PathString,
+        ) -> BoxFuture<'static, Result<BoxStream<'static, Result<JournalPosition, SubscribeStreamTemporaryStreamError>>, SubscribeStreamTemporaryError>>;
+
+        fn streamJournalChanged(
+            &self,
+            mount_point: &PathString,
+        ) -> BoxFuture<'static, Result<BoxStream<'static, Result<JournalPosition, StreamJournalChangedStreamError>>, StreamJournalChangedError>>;
+
+        fn traceFsEvents(
+            &self,
+            mount_point: &PathString,
+            event_category_mask: i64,
+        ) -> BoxFuture<'static, Result<BoxStream<'static, Result<FsEvent, TraceFsEventsStreamError>>, TraceFsEventsError>>;
+
+        fn traceThriftRequestEvents(
+            &self,
+        ) -> BoxFuture<'static, Result<BoxStream<'static, Result<ThriftRequestEvent, TraceThriftRequestEventsStreamError>>, TraceThriftRequestEventsError>>;
+
+        fn traceHgEvents(
+            &self,
+            mount_point: &PathString,
+        ) -> BoxFuture<'static, Result<BoxStream<'static, Result<HgEvent, TraceHgEventsStreamError>>, TraceHgEventsError>>;
+
+        fn traceInodeEvents(
+            &self,
+            mount_point: &PathString,
+        ) -> BoxFuture<'static, Result<BoxStream<'static, Result<InodeEvent, TraceInodeEventsStreamError>>, TraceInodeEventsError>>;
+
+        fn traceTaskEvents(
+            &self,
+            request: &TraceTaskEventsRequest,
+        ) -> BoxFuture<'static, Result<BoxStream<'static, Result<TaskEvent, TraceTaskEventsStreamError>>, TraceTaskEventsError>>;
+
+        fn streamChangesSince(
+            &self,
+            params: &StreamChangesSinceParams,
+        ) -> BoxFuture<'static, Result<(ChangesSinceResult, BoxStream<'static, Result<ChangedFileResult, StreamChangesSinceStreamError>>), StreamChangesSinceError>>;
+
+        fn streamSelectedChangesSince(
+            &self,
+            params: &StreamSelectedChangesSinceParams,
+        ) -> BoxFuture<'static, Result<(ChangesSinceResult, BoxStream<'static, Result<ChangedFileResult, StreamSelectedChangesSinceStreamError>>), StreamSelectedChangesSinceError>>;
+
+        fn streamStartStatus(
+            &self,
+        ) -> BoxFuture<'static, Result<(DaemonInfo, BoxStream<'static, Result<EdenStartStatusUpdate, StreamStartStatusStreamError>>), StreamStartStatusError>>;
     }
 }

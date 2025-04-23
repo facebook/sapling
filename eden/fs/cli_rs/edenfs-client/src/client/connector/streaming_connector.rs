@@ -15,16 +15,14 @@ use fbinit::FacebookInit;
 use futures::future::BoxFuture;
 use futures::future::FutureExt;
 use futures::future::Shared;
-use thrift_streaming_clients::StreamingEdenServiceExt;
+use thrift_streaming_clients::StreamingEdenService;
 use thrift_streaming_thriftclients::make_StreamingEdenServiceExt_thriftclient;
-use thriftclient::ThriftChannel;
 
 use crate::client::connector::Connector;
 use crate::client::connector::DEFAULT_CONN_TIMEOUT;
 use crate::client::connector::DEFAULT_RECV_TIMEOUT;
 
-pub type StreamingEdenFsThriftClient =
-    Arc<dyn StreamingEdenServiceExt<ThriftChannel> + Send + Sync + 'static>;
+pub type StreamingEdenFsThriftClient = Arc<dyn StreamingEdenService + Send + Sync + 'static>;
 pub type StreamingEdenFsThriftClientFuture =
     Shared<BoxFuture<'static, std::result::Result<StreamingEdenFsThriftClient, ConnectError>>>;
 
@@ -56,7 +54,7 @@ impl Connector for StreamingEdenFsConnector {
             );
 
             // get future for the connection
-            let client = make_StreamingEdenServiceExt_thriftclient!(
+            let client: StreamingEdenFsThriftClient = make_StreamingEdenServiceExt_thriftclient!(
                 fb,
                 protocol = CompactProtocol,
                 from_path = &socket_file,

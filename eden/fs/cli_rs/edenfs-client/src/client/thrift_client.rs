@@ -25,8 +25,6 @@ use crate::client::EdenFsClientStatsHandler;
 use crate::client::EdenFsConnection;
 use crate::client::NoopEdenFsClientStatsHandler;
 use crate::client::connector::Connector;
-use crate::client::connector::EdenFsConnector;
-use crate::client::connector::EdenFsThriftClientFuture;
 use crate::client::connector::StreamingEdenFsConnector;
 use crate::client::connector::StreamingEdenFsThriftClientFuture;
 
@@ -51,8 +49,8 @@ const MAX_RETRY_ATTEMPTS: usize = 3;
 /// - Request retries based on error types
 /// - Concurrency limiting to prevent overloading the EdenFS server
 pub struct ThriftClient {
-    connector: EdenFsConnector,
-    connection: Mutex<EdenFsConnection<EdenFsThriftClientFuture>>,
+    connector: StreamingEdenFsConnector,
+    connection: Mutex<EdenFsConnection<StreamingEdenFsThriftClientFuture>>,
     streaming_connector: StreamingEdenFsConnector,
     streaming_connection: Mutex<EdenFsConnection<StreamingEdenFsThriftClientFuture>>,
     stats_handler: Box<dyn EdenFsClientStatsHandler + Send + Sync>,
@@ -67,7 +65,7 @@ pub struct ThriftClient {
 #[async_trait]
 impl Client for ThriftClient {
     fn new(fb: FacebookInit, socket_file: PathBuf, semaphore: Option<Semaphore>) -> Self {
-        let connector = EdenFsConnector::new(fb, socket_file.clone());
+        let connector = StreamingEdenFsConnector::new(fb, socket_file.clone());
         let connection = Mutex::new(EdenFsConnection {
             epoch: 0,
             client: connector.connect(None, None),
@@ -103,7 +101,7 @@ impl Client for ThriftClient {
         f: F,
     ) -> std::result::Result<T, ConnectAndRequestError<E>>
     where
-        F: Fn(&<EdenFsConnector as Connector>::Client) -> Fut + Send + Sync,
+        F: Fn(&<StreamingEdenFsConnector as Connector>::Client) -> Fut + Send + Sync,
         Fut: Future<Output = Result<T, E>> + Send,
         T: Send,
         E: HasErrorHandlingStrategy + Debug + Display,
