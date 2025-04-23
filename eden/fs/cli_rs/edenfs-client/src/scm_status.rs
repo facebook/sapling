@@ -13,6 +13,7 @@ use edenfs_error::EdenFsError;
 use edenfs_error::Result;
 use edenfs_utils::bytes_from_path;
 
+use crate::client::Client;
 use crate::client::EdenFsClient;
 use crate::types::RootIdOptions;
 

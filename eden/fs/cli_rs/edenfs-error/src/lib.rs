@@ -195,7 +195,7 @@ pub enum ErrorHandlingStrategy {
     Abort,
 }
 
-pub trait HasErrorHandlingStrategy {
+pub trait HasErrorHandlingStrategy: Send + Sync {
     fn get_error_handling_strategy(&self) -> ErrorHandlingStrategy;
 }
 

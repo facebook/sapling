@@ -30,6 +30,7 @@ rust_library(
     deps = [
         "fbsource//third-party/rust:anyhow",
         "fbsource//third-party/rust:async-recursion",
+        "fbsource//third-party/rust:async-trait",
         "fbsource//third-party/rust:byteorder",
         "fbsource//third-party/rust:dirs",
         "fbsource//third-party/rust:dunce",

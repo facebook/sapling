@@ -15,6 +15,7 @@ use edenfs_utils::bytes_from_path;
 use futures::StreamExt;
 use futures::stream::BoxStream;
 
+use crate::client::Client;
 use crate::client::EdenFsClient;
 use crate::types::JournalPosition;
 use crate::utils::get_mount_point;

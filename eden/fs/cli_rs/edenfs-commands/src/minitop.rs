@@ -31,6 +31,7 @@ use crossterm::event::KeyModifiers;
 use crossterm::queue;
 use crossterm::style;
 use crossterm::terminal;
+use edenfs_client::client::Client;
 use edenfs_client::client::EdenFsClient;
 use edenfs_client::instance::EdenFsInstance;
 use edenfs_utils::humantime::HumanTime;

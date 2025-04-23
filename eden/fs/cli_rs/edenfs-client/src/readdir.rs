@@ -26,6 +26,7 @@ use crate::attributes::FileAttributeDataOrErrorV2;
 use crate::attributes::FileAttributeDataV2;
 use crate::attributes::SourceControlType;
 use crate::attributes::SourceControlTypeOrError;
+use crate::client::Client;
 use crate::client::EdenFsClient;
 use crate::types::FileAttributes;
 use crate::types::SyncBehavior;

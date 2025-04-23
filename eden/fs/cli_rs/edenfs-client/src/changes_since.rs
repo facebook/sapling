@@ -23,6 +23,7 @@ use futures::stream;
 use serde::Serialize;
 use tokio::time;
 
+use crate::client::Client;
 use crate::client::EdenFsClient;
 use crate::instance::EdenFsInstance;
 use crate::types::Dtype;

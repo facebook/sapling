@@ -57,6 +57,7 @@ use thrift_types::fbthrift::ApplicationExceptionErrorCode;
 use toml::value::Value;
 use uuid::Uuid;
 
+use crate::client::Client;
 use crate::instance::EdenFsInstance;
 use crate::redirect::REPO_SOURCE;
 use crate::redirect::Redirection;

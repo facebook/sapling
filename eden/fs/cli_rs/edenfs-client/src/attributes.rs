@@ -17,6 +17,7 @@ use edenfs_error::Result;
 use edenfs_error::impl_eden_data_into_edenfs_result;
 use edenfs_utils::bytes_from_path;
 
+use crate::client::Client;
 use crate::client::EdenFsClient;
 use crate::request_factory::RequestFactory;
 use crate::request_factory::RequestParam;

@@ -15,6 +15,7 @@ use edenfs_utils::bytes_from_path;
 use thrift_types::edenfs::GlobParams;
 use thrift_types::edenfs::OsDtype;
 
+use crate::client::Client;
 use crate::client::EdenFsClient;
 use crate::types::OSName;
 use crate::types::SyncBehavior;

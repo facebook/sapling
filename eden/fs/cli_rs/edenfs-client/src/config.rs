@@ -13,6 +13,7 @@ use edenfs_error::EdenFsError;
 use edenfs_error::Result;
 use edenfs_utils::path_from_bytes;
 
+use crate::client::Client;
 use crate::client::EdenFsClient;
 
 #[derive(Copy, Clone, Debug, Eq, PartialEq, Ord, PartialOrd, Hash)]

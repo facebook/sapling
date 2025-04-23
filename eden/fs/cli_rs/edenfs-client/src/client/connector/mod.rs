@@ -35,7 +35,7 @@ const DEFAULT_RECV_TIMEOUT: Duration = Duration::from_secs(300);
 ///
 /// * `Client` - The type of Thrift client this connector creates
 /// * `ClientFuture` - The future type returned by the connect method
-pub trait Connector {
+pub trait Connector: Send + Sync {
     /// The type of client this connector creates.
     ///
     /// This is typically an Arc-wrapped Thrift client trait object.
@@ -46,7 +46,8 @@ pub trait Connector {
     /// This future resolves to either a client instance or a connection error.
     type ClientFuture: Clone
         + std::future::Future<Output = std::result::Result<Self::Client, ConnectError>>
-        + Send;
+        + Send
+        + Sync;
 
     /// Creates a new connector instance.
     ///

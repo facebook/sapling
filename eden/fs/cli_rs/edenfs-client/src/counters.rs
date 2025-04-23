@@ -11,6 +11,7 @@ use anyhow::Context;
 use edenfs_error::EdenFsError;
 use edenfs_error::Result;
 
+use crate::client::Client;
 use crate::client::EdenFsClient;
 
 impl EdenFsClient {

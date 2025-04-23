@@ -18,6 +18,7 @@ use thrift_types::edenfs::MountId;
 use thrift_types::edenfs::UnmountArgument;
 use thrift_types::fbthrift::ApplicationExceptionErrorCode;
 
+use crate::client::Client;
 use crate::client::EdenFsClient;
 use crate::instance::EdenFsInstance;
 

@@ -15,6 +15,7 @@ use futures::stream::BoxStream;
 use tracing::Level;
 use tracing::event;
 
+use crate::client::Client;
 use crate::client::EdenFsClient;
 use crate::types::DaemonInfo;
 use crate::types::Fb303Status;

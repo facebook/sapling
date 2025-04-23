@@ -13,6 +13,7 @@ use anyhow::anyhow;
 use edenfs_error::EdenFsError;
 use edenfs_error::Result;
 
+use crate::client::Client;
 use crate::client::EdenFsClient;
 
 #[derive(Debug, Clone)]
