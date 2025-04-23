@@ -19,23 +19,16 @@ setup common configuration
   > EOF
 
 setup repo
-  $ hginit_treemanifest repo
-  $ cd repo
-  $ hg debugdrawdag <<EOF
-  > C
-  > |
-  > B
-  > |
-  > A
+  $ testtool_drawdag --print-hg-hashes -R repo --derive-all --no-default-files <<EOF
+  > A-B-C
+  > # modify: A "a" "file_content"
+  > # modify: B "b" "file_content"
+  > # modify: C "c" "file_content"
+  > # bookmark: C master_bookmark
   > EOF
-
-create master bookmark
-
-  $ hg bookmark master_bookmark -r tip
-
-blobimport them into Mononoke storage and start Mononoke
-  $ cd ..
-  $ blobimport repo/.hg repo
+  A=06e03b1b8f6dd9f3a5868cb5197ebf3ed8812ed3
+  B=f9a27f526038f019dce279a56566b848ade238d2
+  C=ebf6f9404607c1addccefe62e8ed8febc2865958
 
 start mononoke
   $ mononoke
