@@ -54,11 +54,19 @@ Extension to inject two errors:
   +foo
   record change 2/2 to 'foo'? [Ynesfdaq?] y
   
-  abort: copyfile error
+  error restoring $TESTTMP/repo1/.hg/record-backups/* to bar: copyfile error (glob)
+  abort: internalpatch error
   [255]
 
-FIXME: we lost our pending changes
+We only lost the change for the one file that failed to restore ("bar"):
   $ hg st
+  M foo
+
+Backup file still contains content for "bar":
+  $ cat $TESTTMP/repo1/.hg/record-backups/*
+  bar
+  bar
+
   $ hg show
   commit:      1435984fdceb
   user:        test

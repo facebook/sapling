@@ -543,9 +543,19 @@ def dorecord(ui, repo, commitfunc, cmdsuggest, backupall, filterfn, *pats, **opt
                     #
                     # Also note that this racy as an editor could notice the
                     # file's mtime before we've finished writing it.
-                    util.copyfile(tmpname, repo.wjoin(realname), copystat=True)
+                    try:
+                        util.copyfile(tmpname, repo.wjoin(realname), copystat=True)
+                    except Exception as ex:
+                        ui.warn(
+                            _("error restoring %s to %s: %s\n")
+                            % (tmpname, realname, ex)
+                        )
+                        continue
+
                     os.unlink(tmpname)
-                if tobackup:
+
+                # Don't clean up the backup dir if we failed to restore files.
+                if tobackup and not os.listdir(backupdir):
                     os.rmdir(backupdir)
             except OSError:
                 pass
