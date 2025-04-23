@@ -31,7 +31,6 @@ def mononoke_fbpkg(
     )
     if with_debug_symbols:
         buck_opts["config"].update({
-            "fbcode.dwp": "true",
         })
     else:
         buck_opts["config"].update({
