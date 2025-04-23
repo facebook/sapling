@@ -5,7 +5,10 @@ oncall("scm_server_infra")
 rust_library(
     name = "mononoke_types",
     srcs = glob(["src/**/*.rs"]),
-    named_deps = {"slog": "//common/rust/shed/tracing_slog_compat:tracing_slog_compat"},
+    named_deps = {
+        "bincode": "fbsource//third-party/rust:bincode-2",
+        "slog": "//common/rust/shed/tracing_slog_compat:tracing_slog_compat",
+    },
     test_deps = [
         "fbsource//third-party/rust:crossbeam",
         "fbsource//third-party/rust:paste",

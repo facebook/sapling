@@ -6,6 +6,7 @@ rust_library(
     name = "metaconfig_types",
     srcs = glob(["types/src/**/*.rs"]),
     autocargo = {"cargo_toml_dir": "types"},
+    named_deps = {"bincode": "fbsource//third-party/rust:bincode-2"},
     deps = [
         "fbsource//third-party/rust:abomonation",
         "fbsource//third-party/rust:abomonation_derive",

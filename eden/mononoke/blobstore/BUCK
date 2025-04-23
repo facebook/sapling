@@ -50,6 +50,7 @@ rust_library(
 rust_library(
     name = "blobstore",
     srcs = glob(["src/**/*.rs"]),
+    named_deps = {"bincode": "fbsource//third-party/rust:bincode-2"},
     test_deps = [
         "//common/rust/shed/fbinit:fbinit",
         "//common/rust/shed/fbinit:fbinit-tokio",
@@ -575,6 +576,7 @@ rust_library(
         "ephemeral_blobstore/schemas/**/*.sql",
     ]),
     autocargo = {"cargo_toml_dir": "ephemeral_blobstore"},
+    named_deps = {"bincode": "fbsource//third-party/rust:bincode-2"},
     test_deps = [
         "fbsource//third-party/rust:maplit",
         ":memblob",

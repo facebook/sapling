@@ -19,6 +19,7 @@ use mononoke_types::ChangesetId;
 use mononoke_types::RepositoryId;
 
 #[derive(Abomonation, Clone, Copy, PartialEq, Eq, Debug)]
+#[derive(bincode::Encode, bincode::Decode)]
 pub enum Phase {
     Draft,
     Public,

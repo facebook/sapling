@@ -43,6 +43,7 @@ use crate::HgMutationStore;
 /// Struct representing the cache entry for
 /// (repo_id, cs_id) -> Vec<HgMutationEntry> mapping
 #[derive(Abomonation, Clone, Debug, Eq, Hash, PartialEq)]
+#[derive(bincode::Encode, bincode::Decode)]
 #[cfg_attr(test, derive(Arbitrary))]
 #[repr(align(8))]
 pub struct HgMutationCacheEntry {

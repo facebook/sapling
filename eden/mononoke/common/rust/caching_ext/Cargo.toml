@@ -23,6 +23,7 @@ stats = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust
 
 [dev-dependencies]
 abomonation_derive = "0.5"
+bincode = { version = "2", features = ["serde"] }
 maplit = "1.0"
 quickcheck = "1.0"
 tokio = { version = "1.41.0", features = ["full", "test-util", "tracing"] }

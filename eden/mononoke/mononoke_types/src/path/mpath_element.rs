@@ -43,6 +43,7 @@ const MPATH_ELEMENT_INVALID_BYTES: &[(u8, &str)] = &[(0, "\\0"), (b'/', "/")];
 /// Bytes member stack sise (Bytes will usually have heap as well of course)
 #[derive(Clone, Ord, PartialOrd, Eq, PartialEq, Hash)]
 #[derive(Abomonation, Serialize, Deserialize)]
+#[derive(bincode::Encode, bincode::Decode)]
 pub struct MPathElement(pub(super) SmallVec<[u8; 24]>);
 
 impl MPathElement {

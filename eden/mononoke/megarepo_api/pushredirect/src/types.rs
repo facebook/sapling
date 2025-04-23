@@ -19,6 +19,7 @@ use sql::mysql_async::prelude::FromValue;
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq, Abomonation, Serialize, Deserialize)]
 #[derive(mysql::OptTryFromRowField)]
+#[derive(bincode::Encode, bincode::Decode)]
 pub struct RowId(pub u64);
 
 impl From<RowId> for Value {

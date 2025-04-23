@@ -506,6 +506,7 @@ mod test {
     use super::*;
 
     #[derive(Abomonation, Clone, Debug, PartialEq, Eq)]
+    #[derive(bincode::Encode, bincode::Decode)]
     struct TestEntity(Vec<u8>);
 
     impl MemcacheEntity for TestEntity {

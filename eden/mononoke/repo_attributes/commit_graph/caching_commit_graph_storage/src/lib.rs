@@ -89,6 +89,7 @@ struct CacheRequest<'a> {
 
 /// Origin of a value in the cachelib cache.
 #[derive(Copy, Clone, Debug, Abomonation)]
+#[derive(bincode::Encode, bincode::Decode)]
 pub enum CacheOrigin {
     /// This cached value originated from a direct fetch.
     Fetched,
@@ -103,10 +104,11 @@ pub enum CacheOrigin {
     MemcachePrefetched,
 }
 
-#[derive(Clone, Debug, Abomonation)]
 /// A cached copy of changeset edges
 ///
 /// This structure contains what is stored in the in-memory cache (cachelib).
+#[derive(Clone, Debug, Abomonation)]
+#[derive(bincode::Encode, bincode::Decode)]
 pub struct CachedChangesetEdges {
     /// The cached edges.
     edges: ChangesetEdges,
@@ -154,6 +156,28 @@ impl Abomonation for CachedPrefetchedChangesetEdges {
     #[inline(always)]
     fn extent(&self) -> usize {
         self.inner.extent()
+    }
+}
+
+impl bincode::Encode for CachedPrefetchedChangesetEdges {
+    fn encode<E: bincode::enc::Encoder>(
+        &self,
+        encoder: &mut E,
+    ) -> Result<(), bincode::error::EncodeError> {
+        // prefetched edges should be ignored
+        self.inner.encode(encoder)
+    }
+}
+
+impl<Context> bincode::Decode<Context> for CachedPrefetchedChangesetEdges {
+    fn decode<D: bincode::de::Decoder<Context = Context>>(
+        decoder: &mut D,
+    ) -> Result<Self, bincode::error::DecodeError> {
+        let inner = CachedChangesetEdges::decode(decoder)?;
+        Ok(Self {
+            inner,
+            prefetched_edges: HashMap::new(),
+        })
     }
 }
 

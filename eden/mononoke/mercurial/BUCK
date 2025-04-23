@@ -45,6 +45,7 @@ rust_library(
     srcs = glob(["types/src/**/*.rs"]),
     autocargo = {"cargo_toml_dir": "types"},
     named_deps = {
+        "bincode": "fbsource//third-party/rust:bincode-2",
         "blake3-constants": "//blake3:blake3-constants-rust-nothrift",
         "slog": "//common/rust/shed/tracing_slog_compat:tracing_slog_compat",
     },
@@ -192,7 +193,10 @@ rust_library(
         "mutation/schemas/**/*.sql",
     ]),
     autocargo = {"cargo_toml_dir": "mutation"},
-    named_deps = {"slog": "//common/rust/shed/tracing_slog_compat:tracing_slog_compat"},
+    named_deps = {
+        "bincode": "fbsource//third-party/rust:bincode-2",
+        "slog": "//common/rust/shed/tracing_slog_compat:tracing_slog_compat",
+    },
     test_deps = [
         "fbsource//third-party/rust:quickcheck",
         "//common/rust/shed/quickcheck_arbitrary_derive:quickcheck_arbitrary_derive",

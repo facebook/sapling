@@ -48,16 +48,9 @@ pub enum ErrorKind {
 }
 
 // Repo that originally contained the synced commit
-#[derive(
-    Abomonation,
-    Copy,
-    Clone,
-    Debug,
-    Eq,
-    Hash,
-    PartialEq,
-    mysql::OptTryFromRowField
-)]
+#[derive(Copy, Clone, Debug, Eq, Hash, PartialEq)]
+#[derive(Abomonation, mysql::OptTryFromRowField)]
+#[derive(bincode::Encode, bincode::Decode)]
 pub enum SyncedCommitSourceRepo {
     Large,
     Small,
@@ -339,6 +332,7 @@ pub trait SyncedCommitMapping: Send + Sync {
 }
 
 #[derive(Abomonation, Clone, Debug, Hash, PartialEq, Eq)]
+#[derive(bincode::Encode, bincode::Decode)]
 pub struct FetchedMappingEntry {
     pub target_bcs_id: ChangesetId,
     pub maybe_version_name: Option<CommitSyncConfigVersion>,

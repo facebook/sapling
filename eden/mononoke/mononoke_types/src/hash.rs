@@ -59,17 +59,9 @@ use crate::thrift;
 pub const BLAKE2_HASH_LENGTH_BYTES: usize = 32;
 pub const BLAKE2_HASH_LENGTH_HEX: usize = BLAKE2_HASH_LENGTH_BYTES * 2;
 
-#[derive(
-    Abomonation,
-    Clone,
-    Copy,
-    Eq,
-    PartialEq,
-    Ord,
-    PartialOrd,
-    Hash,
-    mysql::OptTryFromRowField
-)]
+#[derive(Clone, Copy, Eq, PartialEq, Ord, PartialOrd, Hash)]
+#[derive(Abomonation, mysql::OptTryFromRowField)]
+#[derive(bincode::Encode, bincode::Decode)]
 pub struct Blake2([u8; BLAKE2_HASH_LENGTH_BYTES]);
 
 impl Blake2 {
@@ -231,6 +223,7 @@ impl Debug for Blake2 {
 }
 
 #[derive(Abomonation, Clone, Copy, Eq, PartialEq, Ord, PartialOrd, Hash)]
+#[derive(bincode::Encode, bincode::Decode)]
 pub struct Blake2Prefix(Blake2, Blake2);
 
 impl Blake2Prefix {
@@ -335,6 +328,7 @@ impl Debug for Blake2Prefix {
 macro_rules! impl_hash {
     ($type:ident, $size:literal, $error:ident) => {
         #[derive(Abomonation, Clone, Copy, Eq, PartialEq, Ord, PartialOrd, Hash)]
+        #[derive(bincode::Encode, bincode::Decode)]
         pub struct $type([u8; $size]);
 
         impl $type {

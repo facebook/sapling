@@ -34,6 +34,7 @@ pub struct PreparedFilenode {
 }
 
 #[derive(Abomonation, Arbitrary, Clone, Debug, Eq, PartialEq)]
+#[derive(bincode::Encode, bincode::Decode)]
 pub struct FilenodeInfo {
     pub filenode: HgFileNodeId,
     pub p1: Option<HgFileNodeId>,
@@ -43,6 +44,7 @@ pub struct FilenodeInfo {
 }
 
 #[derive(Abomonation, Clone, Debug, Eq, PartialEq)]
+#[derive(bincode::Encode, bincode::Decode)]
 pub enum FilenodeRange {
     /// A range of filenodes.
     Filenodes(Vec<FilenodeInfo>),

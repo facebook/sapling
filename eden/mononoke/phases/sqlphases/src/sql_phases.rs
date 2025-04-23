@@ -44,6 +44,7 @@ define_stats! {
 /// Newtype wrapper for Phase that allows us to derive SQL conversions.
 #[derive(Abomonation, Clone, Copy, PartialEq, Eq, Debug)]
 #[derive(mysql::OptTryFromRowField)]
+#[derive(bincode::Encode, bincode::Decode)]
 #[repr(transparent)]
 pub struct SqlPhase(pub Phase);
 

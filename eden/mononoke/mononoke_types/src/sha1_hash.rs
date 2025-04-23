@@ -39,6 +39,7 @@ pub const NULL: Sha1 = Sha1([0; SHA1_HASH_LENGTH_BYTES]);
 /// more specific typed hashes.
 #[derive(Clone, Copy, Eq, PartialEq, Ord, PartialOrd, Hash)]
 #[derive(Serialize, Deserialize, Abomonation)]
+#[derive(bincode::Encode, bincode::Decode)]
 pub struct Sha1([u8; SHA1_HASH_LENGTH_BYTES]);
 
 impl Sha1 {
@@ -184,6 +185,7 @@ impl Arbitrary for Sha1 {
 
 #[derive(Clone, Copy, Eq, PartialEq, Ord, PartialOrd, Hash)]
 #[derive(Serialize, Deserialize, Abomonation)]
+#[derive(bincode::Encode, bincode::Decode)]
 /// Raw SHA-1 hash prefix.
 /// Internal implementation is the inclusive range of Sha1 objects.
 /// If can be build from a from a hex-encoded string (len <= SHA1_HASH_LENGTH_HEX (40))

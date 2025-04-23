@@ -44,6 +44,7 @@ pub mod mpath_element;
 /// it's the root of the repo, a directory or a file.
 #[derive(Arbitrary, Clone, Debug, PartialEq, Eq, Hash)]
 #[derive(Abomonation, Serialize, Deserialize)]
+#[derive(bincode::Encode, bincode::Decode)]
 pub enum RepoPath {
     // It is now *completely OK* to create a RepoPath directly. All MPaths are valid once
     // constructed.
@@ -200,6 +201,7 @@ impl From<MPathElement> for NonRootMPath {
 /// This is called `MPath` so that it can be differentiated from `std::path::Path`.
 #[derive(Clone, Ord, PartialOrd, Eq, PartialEq, Hash)]
 #[derive(Abomonation, Serialize, Deserialize)]
+#[derive(bincode::Encode, bincode::Decode)]
 pub struct MPath {
     elements: Vec<MPathElement>,
 }
@@ -600,6 +602,7 @@ impl Arbitrary for MPath {
 /// The path can ONLY be non-root path (i.e. just / is not allowed)
 #[derive(Clone, Ord, PartialOrd, Eq, PartialEq, Hash)]
 #[derive(Abomonation, Serialize, Deserialize)]
+#[derive(bincode::Encode, bincode::Decode)]
 pub struct NonRootMPath(MPath);
 
 impl Extend<MPathElement> for MPath {

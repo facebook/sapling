@@ -49,6 +49,7 @@ lazy_static! {
 #[derive(Clone, Copy, Eq, PartialEq, Ord, PartialOrd, Debug, Hash)]
 #[derive(Abomonation, Arbitrary)]
 #[derive(Serialize, Deserialize, mysql::OptTryFromRowField)]
+#[derive(bincode::Encode, bincode::Decode)]
 pub struct RepositoryId(i32);
 
 impl RepositoryId {

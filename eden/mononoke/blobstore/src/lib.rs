@@ -152,6 +152,7 @@ impl From<BlobstoreGetData> for BlobstoreBytes {
 }
 
 #[derive(Abomonation, Clone, Debug, PartialEq, Eq, Hash)]
+#[derive(bincode::Encode, bincode::Decode)]
 pub struct PackMetadata {
     /// Gives an idea what its packed with, if anything
     pub pack_key: String,
@@ -163,6 +164,7 @@ pub struct PackMetadata {
 
 /// Optional information about the size of a value
 #[derive(Abomonation, Clone, Debug, PartialEq, Eq, Hash)]
+#[derive(bincode::Encode, bincode::Decode)]
 pub struct SizeMetadata {
     /// How much size this value has added to storage on its own.
     /// unique uncompressed size is already available from BlobstoreBytes::len()
@@ -172,6 +174,7 @@ pub struct SizeMetadata {
 }
 
 #[derive(Abomonation, Clone, Debug, Default, PartialEq, Eq, Hash)]
+#[derive(bincode::Encode, bincode::Decode)]
 pub struct BlobstoreMetadata {
     ctime: Option<i64>,
     sizes: Option<SizeMetadata>,
@@ -282,6 +285,7 @@ impl BlobstoreBytes {
 /// Serialisable counterpart of BlobstoreBytes fields mimic exactly its original
 /// struct except in types that cannot be serialised
 #[derive(Abomonation, Clone)]
+#[derive(bincode::Encode, bincode::Decode)]
 struct BlobstoreBytesSerialisable(Vec<u8>);
 
 impl From<BlobstoreBytes> for BlobstoreBytesSerialisable {

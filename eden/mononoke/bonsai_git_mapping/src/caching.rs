@@ -50,6 +50,7 @@ define_stats! {
 }
 
 #[derive(Abomonation, Clone, Debug, Eq, Hash, PartialEq)]
+#[derive(bincode::Encode, bincode::Decode)]
 pub struct BonsaiGitMappingCacheEntry {
     pub repo_id: RepositoryId,
     pub git_sha1: GitSha1,

@@ -135,6 +135,7 @@ impl CacheHandlers {
 }
 
 #[derive(Abomonation, Clone, Copy, Debug)]
+#[derive(bincode::Encode, bincode::Decode)]
 pub struct HasMutableRename(pub bool);
 const TRUE: &[u8] = b"y";
 const FALSE: &[u8] = b"n";
@@ -216,9 +217,11 @@ impl<'a> KeyedEntityStore<ChangesetId, HasMutableRename> for CachedHasMutableRen
 }
 
 #[derive(Abomonation, Clone)]
+#[derive(bincode::Encode, bincode::Decode)]
 pub struct CachedMutableRenameEntry(pub Option<CacheableMutableRenameEntry>);
 
 #[derive(Abomonation, Clone)]
+#[derive(bincode::Encode, bincode::Decode)]
 pub struct CacheableMutableRenameEntry {
     dst_cs_id: ChangesetId,
     dst_path: Vec<u8>,
@@ -463,6 +466,7 @@ impl<'a> KeyedEntityStore<RenameKey, CachedMutableRenameEntry> for CachedGetMuta
 }
 
 #[derive(Abomonation, Clone)]
+#[derive(bincode::Encode, bincode::Decode)]
 pub struct ChangesetIdSet {
     // You can't easily Abomonate HashSet, but you can Vec. Store as Vec, construct from HashSet only
     set: Vec<ChangesetId>,

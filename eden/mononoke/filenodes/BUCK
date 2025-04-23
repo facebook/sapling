@@ -5,6 +5,7 @@ oncall("scm_server_infra")
 rust_library(
     name = "filenodes",
     srcs = glob(["src/**/*.rs"]),
+    named_deps = {"bincode": "fbsource//third-party/rust:bincode-2"},
     deps = [
         "fbsource//third-party/rust:abomonation",
         "fbsource//third-party/rust:abomonation_derive",

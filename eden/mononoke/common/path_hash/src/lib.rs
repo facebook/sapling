@@ -19,8 +19,10 @@ use sql::mysql_async::FromValueError;
 use sql::mysql_async::Value;
 use sql::mysql_async::prelude::ConvIr;
 use sql::mysql_async::prelude::FromValue;
+
 #[derive(Abomonation, Debug, Clone, PartialEq, Eq, Hash, PartialOrd, Ord)]
 #[derive(mysql::OptTryFromRowField)]
+#[derive(bincode::Encode, bincode::Decode)]
 pub struct PathHashBytes(pub Vec<u8>);
 
 impl PathHashBytes {
@@ -70,6 +72,7 @@ impl std::fmt::Display for PathHashBytes {
 
 #[derive(Abomonation, Debug, Clone, PartialEq, Eq, Hash, PartialOrd, Ord)]
 #[derive(mysql::OptTryFromRowField)]
+#[derive(bincode::Encode, bincode::Decode)]
 pub struct PathBytes(pub Vec<u8>);
 
 impl ConvIr<PathBytes> for Vec<u8> {
@@ -147,6 +150,7 @@ fn convert_from_repo_path(path: &RepoPath) -> (Vec<u8>, bool) {
 }
 
 #[derive(Abomonation, Clone, Debug, Eq, PartialEq)]
+#[derive(bincode::Encode, bincode::Decode)]
 pub struct PathHash {
     pub path_bytes: PathBytes,
     pub is_tree: bool,

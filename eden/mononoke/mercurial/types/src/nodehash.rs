@@ -40,6 +40,7 @@ pub const NULL_CSID: HgChangesetId = HgChangesetId(NULL_HASH);
 /// which parses raw bytes or hex string to create HgNodeHash.
 #[derive(Arbitrary, Clone, Copy, Eq, PartialEq, Ord, PartialOrd, Debug, Hash)]
 #[derive(Abomonation)]
+#[derive(bincode::Encode, bincode::Decode)]
 pub struct HgNodeHash(pub(crate) Sha1);
 
 impl HgNodeHash {
@@ -211,6 +212,7 @@ impl Display for HgNodeHash {
 
 #[derive(Arbitrary, Clone, Copy, Eq, PartialEq, Ord, PartialOrd, Debug, Hash)]
 #[derive(Abomonation, mysql::OptTryFromRowField)]
+#[derive(bincode::Encode, bincode::Decode)]
 pub struct HgChangesetId(HgNodeHash);
 
 impl HgChangesetId {
@@ -337,6 +339,7 @@ impl From<HgChangesetId> for HgId {
 /// An identifier for a changeset hash prefix in Nercurial.
 #[derive(Clone, Copy, Eq, PartialEq, Ord, PartialOrd, Debug, Hash)]
 #[derive(Abomonation)]
+#[derive(bincode::Encode, bincode::Decode)]
 pub struct HgChangesetIdPrefix(Sha1Prefix);
 
 impl HgChangesetIdPrefix {
@@ -522,6 +525,7 @@ impl Display for HgAugmentedManifestId {
 
 #[derive(Arbitrary, Clone, Copy, Eq, PartialEq, Ord, PartialOrd, Debug, Hash)]
 #[derive(Abomonation, mysql::OptTryFromRowField)]
+#[derive(bincode::Encode, bincode::Decode)]
 pub struct HgFileNodeId(HgNodeHash);
 
 impl HgFileNodeId {

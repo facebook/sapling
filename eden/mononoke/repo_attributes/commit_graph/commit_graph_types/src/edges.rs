@@ -19,6 +19,7 @@ use mononoke_types::Generation;
 use smallvec::SmallVec;
 
 #[derive(Abomonation, Copy, Clone, Debug, Eq, PartialEq)]
+#[derive(bincode::Encode, bincode::Decode)]
 pub struct ChangesetNode {
     /// The id of the changeset.
     pub cs_id: ChangesetId,
@@ -95,6 +96,7 @@ pub type ChangesetNodeSubtreeSources = Vec<ChangesetNode>;
 
 /// Outgoing edges from a changeset node.
 #[derive(Abomonation, Clone, Debug, Eq, PartialEq)]
+#[derive(bincode::Encode, bincode::Decode)]
 pub struct ChangesetEdges {
     /// The starting changeset for this set of edges.
     pub node: ChangesetNode,

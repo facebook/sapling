@@ -73,6 +73,7 @@ impl CachingSyncedCommitMapping {
 }
 
 #[derive(Abomonation, Clone, Debug, Default, Eq, Hash, PartialEq)]
+#[derive(bincode::Encode, bincode::Decode)]
 struct CacheEntry {
     mapping_entries: Vec<FetchedMappingEntry>,
 }

@@ -26,6 +26,7 @@ use crate::aligned_hg_changeset_id::AlignedHgChangesetId;
 
 /// Record of a Mercurial mutation operation (e.g. amend or rebase).
 #[derive(Abomonation, Clone, Debug, Hash, Eq, PartialEq)]
+#[derive(bincode::Encode, bincode::Decode)]
 #[cfg_attr(test, derive(Arbitrary))]
 #[repr(align(8))]
 pub struct HgMutationEntry {

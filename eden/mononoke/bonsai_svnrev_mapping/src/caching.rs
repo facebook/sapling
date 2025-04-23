@@ -40,6 +40,7 @@ use super::BonsaiSvnrevMappingEntry;
 use super::BonsaisOrSvnrevs;
 
 #[derive(Abomonation, Clone, Debug, Eq, Hash, PartialEq)]
+#[derive(bincode::Encode, bincode::Decode)]
 pub struct BonsaiSvnrevMappingCacheEntry {
     pub repo_id: RepositoryId,
     pub bcs_id: ChangesetId,

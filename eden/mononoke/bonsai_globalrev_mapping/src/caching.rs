@@ -41,6 +41,7 @@ use super::BonsaiGlobalrevMappingEntry;
 use super::BonsaisOrGlobalrevs;
 
 #[derive(Abomonation, Clone, Debug, Eq, Hash, PartialEq)]
+#[derive(bincode::Encode, bincode::Decode)]
 pub struct BonsaiGlobalrevMappingCacheEntry {
     pub repo_id: RepositoryId,
     pub bcs_id: Option<ChangesetId>,

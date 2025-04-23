@@ -13,19 +13,9 @@ use serde_derive::Serialize;
 ///
 /// The generation number for a changeset is defined as the max of the changeset's parents'
 /// generation number plus 1; if there are no parents then it's 1.
-#[derive(
-    Abomonation,
-    Debug,
-    Copy,
-    Clone,
-    Eq,
-    PartialEq,
-    Ord,
-    PartialOrd,
-    Hash,
-    Serialize,
-    Deserialize
-)]
+#[derive(Debug, Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash)]
+#[derive(Abomonation, Serialize, Deserialize)]
+#[derive(bincode::Encode, bincode::Decode)]
 pub struct Generation(u64);
 
 pub const FIRST_GENERATION: Generation = Generation(1);

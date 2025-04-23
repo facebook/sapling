@@ -14,6 +14,7 @@ rust_library(
         "fbsource//third-party/rust:tokio",
         "//eden/mononoke/mononoke_macros:mononoke_macros",
     ],
+    test_named_deps = {"bincode": "fbsource//third-party/rust:bincode-2"},
     deps = [
         "fbsource//third-party/rust:abomonation",
         "fbsource//third-party/rust:anyhow",

@@ -49,6 +49,7 @@ define_stats! {
 }
 
 #[derive(Abomonation, Clone, Debug, Eq, Hash, PartialEq)]
+#[derive(bincode::Encode, bincode::Decode)]
 pub struct BonsaiHgMappingCacheEntry {
     pub repo_id: RepositoryId,
     pub hg_cs_id: HgChangesetId,

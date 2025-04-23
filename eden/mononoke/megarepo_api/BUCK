@@ -158,6 +158,7 @@ rust_library(
         "pushredirect/schemas/**/*.sql",
     ]),
     autocargo = {"cargo_toml_dir": "pushredirect"},
+    named_deps = {"bincode": "fbsource//third-party/rust:bincode-2"},
     test_deps = [
         "//common/rust/shed/fbinit:fbinit",
         "//common/rust/shed/fbinit:fbinit-tokio",

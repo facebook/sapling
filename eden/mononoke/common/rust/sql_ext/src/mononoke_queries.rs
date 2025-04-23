@@ -639,6 +639,7 @@ where
 }
 
 #[derive(Abomonation, Clone)]
+#[derive(bincode::Encode, bincode::Decode)]
 pub struct CachedQueryResult<T>(pub T);
 
 impl<T> MemcacheEntity for CachedQueryResult<Vec<T>>

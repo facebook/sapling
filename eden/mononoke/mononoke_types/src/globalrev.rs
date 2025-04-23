@@ -30,19 +30,10 @@ pub const GLOBALREV_EXTRA: &str = "global_rev";
 pub const START_COMMIT_GLOBALREV: u64 = 1000147970;
 
 // Changeset globalrev.
-#[derive(
-    Abomonation,
-    Debug,
-    Clone,
-    Copy,
-    Eq,
-    PartialEq,
-    Ord,
-    PartialOrd,
-    Hash,
-    Serialize
-)]
+#[derive(Debug, Clone, Copy, Eq, PartialEq, Ord, PartialOrd, Hash)]
+#[derive(Abomonation, Serialize)]
 #[derive(mysql::OptTryFromRowField)]
+#[derive(bincode::Encode, bincode::Decode)]
 pub struct Globalrev(u64);
 
 impl Globalrev {

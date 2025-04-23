@@ -8,6 +8,7 @@ rust_library(
         "src/**/*.rs",
         "schemas/**/*.sql",
     ]),
+    named_deps = {"bincode": "fbsource//third-party/rust:bincode-2"},
     test_deps = [
         "//common/rust/shed/fbinit:fbinit",
         "//common/rust/shed/fbinit:fbinit-tokio",

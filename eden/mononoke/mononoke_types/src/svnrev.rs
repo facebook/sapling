@@ -21,6 +21,7 @@ use crate::BonsaiChangeset;
 // Changeset svnrev. Present only in some repos which were imported from SVN.
 #[derive(Abomonation, Debug, Clone, Copy, Eq, PartialEq, Ord, PartialOrd, Hash)]
 #[derive(mysql::OptTryFromRowField)]
+#[derive(bincode::Encode, bincode::Decode)]
 pub struct Svnrev(u64);
 
 impl Svnrev {

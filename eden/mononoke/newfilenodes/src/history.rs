@@ -11,6 +11,7 @@ use filenodes::FilenodeInfo;
 use filenodes::FilenodeInfoCached;
 
 #[derive(Abomonation, Clone)]
+#[derive(bincode::Encode, bincode::Decode)]
 pub struct FilenodeHistoryCached {
     // TODO: We could store this more efficiently by deduplicating filenode IDs.
     history: Vec<FilenodeInfoCached>,

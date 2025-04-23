@@ -190,6 +190,7 @@ type RawBubbleBlobstore = PrefixBlobstore<Arc<dyn BlobstoreEnumerableWithUnlink>
 
 /// Enum representing the expiry status of a bubble in the backing store.
 #[derive(Copy, Debug, Clone, PartialEq, Serialize, Deserialize, Abomonation)]
+#[derive(bincode::Encode, bincode::Decode)]
 pub enum ExpiryStatus {
     Active = 0,
     Expired = 1,

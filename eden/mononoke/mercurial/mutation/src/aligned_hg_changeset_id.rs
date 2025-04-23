@@ -12,6 +12,7 @@ use quickcheck_arbitrary_derive::Arbitrary;
 
 /// Wrapper around `HgChangesetId` to force alignment to 8 bytes.
 #[derive(Abomonation, Copy, Clone, Debug, Eq, PartialEq, Hash)]
+#[derive(bincode::Encode, bincode::Decode)]
 #[cfg_attr(test, derive(Arbitrary))]
 #[repr(align(8))]
 pub struct AlignedHgChangesetId(HgChangesetId);

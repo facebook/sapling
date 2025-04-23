@@ -12,6 +12,7 @@ abomonation = { version = "0.7", features = ["smallvec"] }
 abomonation_derive = "0.5"
 anyhow = "1.0.95"
 ascii = "1.0"
+bincode = { version = "2", features = ["serde"] }
 bookmarks_types = { version = "0.1.0", path = "../../bookmarks/bookmarks_types" }
 clap = { version = "4.5.30", features = ["derive", "env", "string", "unicode", "wrap_help"] }
 derive_more = { version = "1.0.0", features = ["full"] }

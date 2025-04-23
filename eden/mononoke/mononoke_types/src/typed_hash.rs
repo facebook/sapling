@@ -92,10 +92,12 @@ where
 /// An identifier for a changeset in Mononoke.
 #[derive(Clone, Copy, Eq, PartialEq, Ord, PartialOrd, Debug, Hash, Abomonation)]
 #[derive(mysql::OptTryFromRowField)]
+#[derive(bincode::Encode, bincode::Decode)]
 pub struct ChangesetId(Blake2);
 
 /// An identifier for a changeset hash prefix in Mononoke.
 #[derive(Clone, Copy, Eq, PartialEq, Ord, PartialOrd, Debug, Hash, Abomonation)]
+#[derive(bincode::Encode, bincode::Decode)]
 pub struct ChangesetIdPrefix(Blake2Prefix);
 
 /// The type for resolving changesets by prefix of the hash

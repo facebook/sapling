@@ -1449,6 +1449,7 @@ impl CommitSyncDirection {
 /// CommitSyncConfig version name
 #[derive(Abomonation, Debug, Clone, PartialEq, Eq, Hash, PartialOrd, Ord)]
 #[derive(mysql::OptTryFromRowField)]
+#[derive(bincode::Encode, bincode::Decode)]
 pub struct CommitSyncConfigVersion(pub String);
 
 impl fmt::Display for CommitSyncConfigVersion {

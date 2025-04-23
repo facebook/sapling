@@ -21,6 +21,7 @@ use mononoke_types::sha1_hash::Sha1Prefix;
 /// An identifier for a changeset hash prefix in Git.
 #[derive(Clone, Copy, Eq, PartialEq, Ord, PartialOrd, Debug, Hash)]
 #[derive(Abomonation)]
+#[derive(bincode::Encode, bincode::Decode)]
 pub struct GitSha1Prefix(Sha1Prefix);
 
 impl GitSha1Prefix {
