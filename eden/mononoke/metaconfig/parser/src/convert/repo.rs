@@ -30,7 +30,6 @@ use metaconfig_types::GitConfigs;
 use metaconfig_types::GitDeltaManifestV2Config;
 use metaconfig_types::GitDeltaManifestVersion;
 use metaconfig_types::GlobalrevConfig;
-use metaconfig_types::HgSyncConfig;
 use metaconfig_types::HookBypass;
 use metaconfig_types::HookConfig;
 use metaconfig_types::HookManagerParams;
@@ -86,7 +85,6 @@ use repos::RawGitBundleURIConfig;
 use repos::RawGitConcurrencyParams;
 use repos::RawGitConfigs;
 use repos::RawGitDeltaManifestV2Config;
-use repos::RawHgSyncConfig;
 use repos::RawHookConfig;
 use repos::RawHookManagerParams;
 use repos::RawInfinitepushParams;
@@ -376,9 +374,6 @@ impl Convert for RawLfsParams {
         Ok(LfsParams {
             threshold: self.threshold.map(|v| v.try_into()).transpose()?,
             rollout_percentage: self.rollout_percentage.unwrap_or(0).try_into()?,
-            generate_lfs_blob_in_hg_sync_job: self
-                .generate_lfs_blob_in_hg_sync_job
-                .unwrap_or(false),
             use_upstream_lfs_server: self.use_upstream_lfs_server.unwrap_or(false),
         })
     }
@@ -697,19 +692,6 @@ impl Convert for RawSparseProfilesConfig {
     }
 }
 
-impl Convert for RawHgSyncConfig {
-    type Output = HgSyncConfig;
-
-    fn convert(self) -> Result<Self::Output> {
-        Ok(HgSyncConfig {
-            hg_repo_ssh_path: self.hg_repo_ssh_path,
-            batch_size: self.batch_size,
-            lock_on_failure: self.lock_on_failure,
-            darkstorm_backup_repo_id: self.darkstorm_backup_repo_id,
-        })
-    }
-}
-
 impl Convert for RawCasSyncConfig {
     type Output = MononokeCasSyncConfig;
 
@@ -862,8 +844,6 @@ impl Convert for RawShardedService {
             RawShardedService::ASYNC_REQUESTS_WORKER => ShardedService::AsyncRequestsWorker,
             RawShardedService::WALKER_SCRUB_ALL => ShardedService::WalkerScrubAll,
             RawShardedService::WALKER_VALIDATE_ALL => ShardedService::WalkerValidateAll,
-            RawShardedService::HG_SYNC => ShardedService::HgSync,
-            RawShardedService::HG_SYNC_BACKUP => ShardedService::HgSyncBackup,
             RawShardedService::DERIVED_DATA_TAILER => ShardedService::DerivedDataTailer,
             RawShardedService::ALIAS_VERIFY => ShardedService::AliasVerify,
             RawShardedService::DRAFT_COMMIT_DELETION => ShardedService::DraftCommitDeletion,

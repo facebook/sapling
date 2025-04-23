@@ -227,8 +227,6 @@ fn parse_with_repo_definition(
         walker_config,
         cross_repo_commit_validation_config,
         sparse_profiles_config,
-        hg_sync_config,
-        backup_hg_sync_config,
         update_logging_config,
         commit_graph_config,
         deep_sharding_config,
@@ -352,8 +350,6 @@ fn parse_with_repo_definition(
     let cross_repo_commit_validation_config = cross_repo_commit_validation_config.convert()?;
 
     let sparse_profiles_config = sparse_profiles_config.convert()?;
-    let hg_sync_config = hg_sync_config.convert()?;
-    let backup_hg_sync_config = backup_hg_sync_config.convert()?;
 
     let update_logging_config = update_logging_config.convert()?.unwrap_or_default();
 
@@ -409,8 +405,6 @@ fn parse_with_repo_definition(
         walker_config,
         cross_repo_commit_validation_config,
         sparse_profiles_config,
-        hg_sync_config,
-        backup_hg_sync_config,
         update_logging_config,
         commit_graph_config,
         default_commit_identity_scheme,
@@ -577,7 +571,6 @@ mod test {
     use metaconfig_types::FilestoreParams;
     use metaconfig_types::GitConcurrencyParams;
     use metaconfig_types::GitConfigs;
-    use metaconfig_types::HgSyncConfig;
     use metaconfig_types::HookBypass;
     use metaconfig_types::HookConfig;
     use metaconfig_types::HookManagerParams;
@@ -926,7 +919,6 @@ mod test {
             [lfs]
             threshold = 1000
             rollout_percentage = 56
-            generate_lfs_blob_in_hg_sync_job = true
             use_upstream_lfs_server = false
 
             [infinitepush]
@@ -961,17 +953,6 @@ mod test {
             [sparse_profiles_config]
             sparse_profiles_location = "sparse"
 
-            [hg_sync_config]
-            hg_repo_ssh_path = "ssh://hg.vip.facebook.com//data/scm/just_some_repo"
-            batch_size = 10
-            lock_on_failure = true
-
-            [backup_hg_sync_config]
-            hg_repo_ssh_path = "mononoke://mononoke-backup.internal.tfbnw.net/just_some_repo"
-            batch_size = 20
-            lock_on_failure = false
-            darkstorm_backup_repo_id = 1001
-
             [update_logging_config]
             new_commit_logging_destination = { scribe = { scribe_category = "cat" } }
 
@@ -984,12 +965,12 @@ mod test {
 
             [metadata_cache_config]
             wbc_update_mode = { tailing = { category = "scribe_category" } }
-            tags_update_mode = { polling = {} }            
-            
+            tags_update_mode = { polling = {} }
+
             [x_repo_sync_source_mapping.mapping.aros]
             bookmark_regex = "master"
-            backsync_enabled = true            
-            
+            backsync_enabled = true
+
             [deep_sharding_config.status]
         "#;
         let fbsource_repo_def = r#"
@@ -1275,7 +1256,6 @@ mod test {
                 lfs: LfsParams {
                     threshold: Some(1000),
                     rollout_percentage: 56,
-                    generate_lfs_blob_in_hg_sync_job: true,
                     use_upstream_lfs_server: false,
                 },
                 hash_validation_percentage: 0,
@@ -1365,20 +1345,6 @@ mod test {
                     sparse_profiles_location: "sparse".to_string(),
                     excluded_paths: vec![],
                     monitored_profiles: vec![],
-                }),
-                hg_sync_config: Some(HgSyncConfig {
-                    hg_repo_ssh_path: "ssh://hg.vip.facebook.com//data/scm/just_some_repo"
-                        .to_string(),
-                    batch_size: 10,
-                    lock_on_failure: true,
-                    darkstorm_backup_repo_id: None,
-                }),
-                backup_hg_sync_config: Some(HgSyncConfig {
-                    hg_repo_ssh_path:
-                        "mononoke://mononoke-backup.internal.tfbnw.net/just_some_repo".to_string(),
-                    batch_size: 20,
-                    lock_on_failure: false,
-                    darkstorm_backup_repo_id: Some(1001),
                 }),
                 update_logging_config: UpdateLoggingConfig {
                     bookmark_logging_destination: None,
@@ -1498,8 +1464,6 @@ mod test {
                 walker_config: None,
                 cross_repo_commit_validation_config: None,
                 sparse_profiles_config: None,
-                hg_sync_config: None,
-                backup_hg_sync_config: None,
                 update_logging_config: UpdateLoggingConfig::default(),
                 commit_graph_config: CommitGraphConfig::default(),
                 deep_sharding_config: None,

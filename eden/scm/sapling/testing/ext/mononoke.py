@@ -933,12 +933,10 @@ bookmark="{cache_warmup_bookmark}"
     if env.getenv("LFS_THRESHOLD"):
         lfs_threshold = env.getenv("LFS_THRESHOLD")
         lfs_rollout_percentage = env.getenv("LFS_ROLLOUT_PERCENTAGE", "100")
-        lfs_blob_hg_sync_job = env.getenv("LFS_BLOB_HG_SYNC_JOB", "true")
         append_config(
             f"""
 threshold={lfs_threshold}
 rollout_percentage={lfs_rollout_percentage}
-generate_lfs_blob_in_hg_sync_job={lfs_blob_hg_sync_job}
 """
         )
 
