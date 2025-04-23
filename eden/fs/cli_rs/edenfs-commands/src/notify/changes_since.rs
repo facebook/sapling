@@ -123,8 +123,7 @@ impl crate::Subcommand for ChangesSinceCmd {
 
         self.print_result(&result);
         if self.subscribe {
-            let streaming_client = instance.get_streaming_client();
-            let stream = streaming_client
+            let stream = client
                 .stream_changes_since(
                     &self.mount_point,
                     self.throttle,

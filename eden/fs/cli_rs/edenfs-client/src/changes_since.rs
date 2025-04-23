@@ -24,7 +24,6 @@ use serde::Serialize;
 use tokio::time;
 
 use crate::client::EdenFsClient;
-use crate::client::StreamingEdenFsClient;
 use crate::instance::EdenFsInstance;
 use crate::types::Dtype;
 use crate::types::JournalPosition;
@@ -523,9 +522,7 @@ impl EdenFsClient {
         }
         Ok(result)
     }
-}
 
-impl StreamingEdenFsClient {
     /// Streams changes to files in an EdenFS mount since a given journal position.
     ///
     /// This method creates a stream that continuously monitors for changes in the specified
@@ -570,7 +567,6 @@ impl StreamingEdenFsClient {
     /// async fn example_usage() {
     ///     let instance = EdenFsInstance::global();
     ///     let client = instance.get_client();
-    ///     let streaming_client = instance.get_streaming_client();
     ///
     ///     // Start monitoring from the current journal position
     ///     let position = client
@@ -579,7 +575,7 @@ impl StreamingEdenFsClient {
     ///         .expect("Failed to get journal position");
     ///
     ///     // Stream changes in the current directory, throttled to at most one update per second
-    ///     let mut stream = streaming_client
+    ///     let mut stream = client
     ///         .stream_changes_since(
     ///             &None,    // Use current directory as mount point
     ///             1000,     // Throttle to 1 update per second

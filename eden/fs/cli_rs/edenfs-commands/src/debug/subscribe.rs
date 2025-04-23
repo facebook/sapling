@@ -153,7 +153,6 @@ impl crate::Subcommand for SubscribeCmd {
     async fn run(&self) -> Result<ExitCode> {
         let instance = EdenFsInstance::global();
         let client = instance.get_client();
-        let streaming_client = instance.get_streaming_client();
 
         let mount_point_path = get_mount_point(&self.mount_point)?;
         let position = client.get_journal_position(&self.mount_point).await?;
@@ -168,7 +167,7 @@ impl crate::Subcommand for SubscribeCmd {
         bytes.push(b'\n');
         stdout.write_all(&bytes).await.ok();
 
-        let stream = streaming_client
+        let stream = client
             .stream_changes_since(
                 &self.mount_point,
                 self.throttle,

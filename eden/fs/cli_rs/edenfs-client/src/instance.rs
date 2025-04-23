@@ -109,7 +109,6 @@ use tracing::event;
 use util::lock::PathLock;
 
 use crate::client::EdenFsClient;
-use crate::client::StreamingEdenFsClient;
 
 // We create a single EdenFsInstance when starting up and utilize EdenFsInstance::global()
 // whenever we need to access it.
@@ -342,19 +341,6 @@ impl EdenFsInstance {
     /// Returns a new `EdenFsClient` instance.
     pub fn get_client(&self) -> EdenFsClient {
         EdenFsClient::new(expect_init(), self.socketfile(), None)
-    }
-
-    /// Creates and returns a new `StreamingEdenFsClient` for interacting with EdenFS.
-    ///
-    /// This method creates a new streaming client that connects to the EdenFS daemon using
-    /// the socket file path from this instance. Streaming clients are useful for operations
-    /// that return streams of data.
-    ///
-    /// # Returns
-    ///
-    /// Returns a new `StreamingEdenFsClient` instance.
-    pub fn get_streaming_client(&self) -> StreamingEdenFsClient {
-        StreamingEdenFsClient::new(expect_init(), self.socketfile(), None)
     }
 
     /// Returns the path to the EdenFS socket file.

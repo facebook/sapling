@@ -16,7 +16,6 @@ use tracing::Level;
 use tracing::event;
 
 use crate::client::EdenFsClient;
-use crate::client::StreamingEdenFsClient;
 use crate::types::DaemonInfo;
 use crate::types::Fb303Status;
 
@@ -44,15 +43,15 @@ impl EdenFsClient {
         .map(|daemon_info| daemon_info.into())
         .map_err(EdenFsError::from)
     }
-}
 
-impl StreamingEdenFsClient {
     pub async fn get_health_with_startup_updates_included(
         &self,
         timeout: Duration,
     ) -> Result<(DaemonInfo, BoxStream<'static, Result<Vec<u8>>>)> {
         let (daemon_info, stream) = self
-            .with_thrift_with_timeouts(Some(timeout), None, |thrift| thrift.streamStartStatus())
+            .with_streaming_thrift_with_timeouts(Some(timeout), None, |thrift| {
+                thrift.streamStartStatus()
+            })
             .await
             .with_context(|| "failed to get start status stream")
             .map(|(daemon_info, stream)| (daemon_info.into(), stream))
