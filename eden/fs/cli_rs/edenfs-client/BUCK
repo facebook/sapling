@@ -23,11 +23,13 @@ rust_library(
         ),
     ],
     test_deps = [
+        "fbsource//third-party/rust:mockall",
         "fbsource//third-party/rust:rand",
         "fbsource//third-party/rust:serde_test",
         "fbsource//third-party/rust:tempfile",
         "fbsource//third-party/rust:tokio",
         "//common/rust/shed/fbinit:fbinit-tokio",
+        "//fb303/thrift:fb303_core-rust-clients",
     ],
     deps = [
         "fbsource//third-party/rust:anyhow",
