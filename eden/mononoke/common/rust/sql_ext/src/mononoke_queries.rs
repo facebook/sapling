@@ -34,7 +34,8 @@ const RETRY_ATTEMPTS: usize = 2;
 /// Caching can be enabled on a read query by:
 /// - Adding "cacheable" keyword to your query.
 /// - Make sure all parameters (input) to the query implement the Hash trait.
-/// - Making sure the return values (output) implement Serialize, Deserialize, and Abomonation.
+/// - Making sure the return values (output) implement Serialize, Deserialize, Abomonation,
+///   and bincode::{Encode, Decode}.
 ///
 /// Queries that return no rows are not cached to allow later retries to succeed.
 #[macro_export]
@@ -691,7 +692,7 @@ pub async fn query_with_retry<T, Fut>(
     do_query: impl Fn() -> Fut + Send + Sync,
 ) -> Result<CachedQueryResult<Vec<T>>>
 where
-    T: Send + Abomonation + Clone + 'static,
+    T: Send + Abomonation + bincode::Encode + bincode::Decode<()> + Clone + 'static,
     CachedQueryResult<Vec<T>>: MemcacheEntity,
     Fut: Future<Output = Result<CachedQueryResult<Vec<T>>>> + Send,
 {

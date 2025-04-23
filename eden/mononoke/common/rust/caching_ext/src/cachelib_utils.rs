@@ -31,7 +31,7 @@ impl<T> From<VolatileLruCachePool> for CachelibHandler<T> {
     }
 }
 
-impl<T: Abomonation + Clone + Send + 'static> CachelibHandler<T> {
+impl<T: Abomonation + bincode::Encode + bincode::Decode<()> + Clone> CachelibHandler<T> {
     pub(crate) fn get_multiple_from_cachelib<Key: Eq + Hash>(
         &self,
         keys: Vec<(Key, CachelibKey)>,

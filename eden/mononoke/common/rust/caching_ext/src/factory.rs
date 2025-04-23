@@ -38,7 +38,7 @@ impl CacheHandlerFactory {
     /// Build cachelib cache handler.
     pub fn cachelib<T>(&self) -> CachelibHandler<T>
     where
-        T: Abomonation + Send + Clone + 'static,
+        T: Abomonation + bincode::Encode + bincode::Decode<()> + Clone,
     {
         match self {
             Self::Shared { cachelib_pool, .. } | Self::Local { cachelib_pool, .. } => {
