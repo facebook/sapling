@@ -14,6 +14,11 @@ Move between two commits to make sure we have root trees fetched. Errors fetchin
   $ hg go -q $A
   $ echo mismatch > dir/file
 
+  $ cat >> $HOME/.edenrc <<EOS
+  > [experimental]
+  > propagate-checkout-errors = true
+  > EOS
+
 Restart eden with error injected into eagerepo tree fetching.
   $ eden stop >/dev/null 2>&1
   $ FAILPOINTS=eagerepo::api::trees=return eden start >/dev/null 2>&1
@@ -21,11 +26,30 @@ Restart eden with error injected into eagerepo tree fetching.
   $ hg st
   M dir/file
 
-FIXME: checkout should fail
-  $ hg go -C $B 
-  update complete
+Checkout fails since it can't fetch the tree:
+  $ hg go -C $B
+  abort: EdenError: sapling::SaplingFetchError: Network Error: server responded 500 Internal Server Error for eager://$TESTTMP/server/trees: failpoint. Headers: {}
+  
+  Caused by:
+      0: Network Error: server responded 500 Internal Server Error for eager://$TESTTMP/server/trees: failpoint. Headers: {}
+      1: Network Error: server responded 500 Internal Server Error for eager://$TESTTMP/server/trees: failpoint. Headers: {}
+      2: server responded 500 Internal Server Error for eager://$TESTTMP/server/trees: failpoint. Headers: {}
+  [255]
 
-FIXME: status is clean but we have the wrong file content
+Restart eden without injected network error.
+  $ eden stop >/dev/null 2>&1
+  $ eden start >/dev/null 2>&1
+
+We are still in interrupted checkout state:
   $ hg st
+  abort: EdenError: cannot compute status while a checkout is in progress - please run 'hg update --clean 62236523d20eb09473170bc922c224800a9ec819' to resume it
+  [255]
+
+Complete the checkout:
+  $ hg update -qC 62236523d20eb09473170bc922c224800a9ec819
+
+  $ hg st
+
+File has the correct contents:
   $ cat dir/file
-  mismatch
+  changed

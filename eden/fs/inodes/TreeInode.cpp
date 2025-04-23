@@ -3095,6 +3095,9 @@ ImmediateFuture<Unit> TreeInode::checkout(
   bool shouldInvalidateDirectory =
       getMount()->getEdenConfig()->alwaysInvalidateDirectory.getValue();
 
+  bool propagateErrors =
+      getMount()->getEdenConfig()->propagateCheckoutErrors.getValue();
+
   computeCheckoutActions(
       ctx,
       fromTree.get(),
@@ -3130,7 +3133,8 @@ ImmediateFuture<Unit> TreeInode::checkout(
            self = inodePtrFromThis(),
            toTree = std::move(toTree),
            actions = std::move(actions),
-           shouldInvalidateDirectory](
+           shouldInvalidateDirectory,
+           propagateErrors](
               vector<folly::Try<InvalidationRequired>> actionResults) mutable
           -> ImmediateFuture<folly::Unit> {
             // Record any errors that occurred
@@ -3142,9 +3146,21 @@ ImmediateFuture<Unit> TreeInode::checkout(
                     (result.value() == InvalidationRequired::Yes);
                 continue;
               }
-              ++numErrors;
-              ctx->addError(
-                  self.get(), actions[n]->getEntryName(), result.exception());
+
+              if (propagateErrors) {
+                // If propagating errors... propagate the error. This will cause
+                // the checkout operation to fail at the top level, and leave us
+                // in an interrupted checkout state.
+                return makeImmediateFuture<Unit>(result.exception());
+              } else {
+                // Not propagating errors - hide this error away as a
+                // "conflict". Sapling can see the error, but we pretend the
+                // checkout succeeded, which makes it hard if not impossible to
+                // recover properly.
+                ++numErrors;
+                ctx->addError(
+                    self.get(), actions[n]->getEntryName(), result.exception());
+              }
             }
 
             auto invalidation = ImmediateFuture<folly::Unit>{folly::unit};

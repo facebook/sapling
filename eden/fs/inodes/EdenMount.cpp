@@ -1578,21 +1578,41 @@ ImmediateFuture<CheckoutResult> EdenMount::checkout(
         // Complete the checkout
         return ctx->finish(snapshotHash);
       })
-      .ensure([this, ctx, oldState]() {
-        // Checkout completed, make sure to always reset the checkoutInProgress
-        // flag!
+      .thenTry([this, ctx, oldState, oldParent, snapshotHash](
+                   folly::Try<
+                       CheckoutContext::CheckoutConflictsAndInvalidations>&&
+                       res) {
+        bool propagateErrors = this->getServerState()
+                                   ->getReloadableConfig()
+                                   ->getEdenConfig()
+                                   ->propagateCheckoutErrors.getValue();
+
+        // Checkout completed, make sure to always reset
+        // the checkoutInProgress flag!
         auto parentLock = parentState_.wlock();
         XCHECK(std::holds_alternative<ParentCommitState::CheckoutInProgress>(
             parentLock->checkoutState));
         if (ctx->isDryRun()) {
-          // In the case where a past checkout was interrupted, we need to make
-          // sure that future checkout operations will properly attempt to
-          // resume it, thus restore the checkoutState to what it was prior to
-          // the DRY_RUN checkout.
+          // In the case where a past checkout was interrupted, we need to
+          // make sure that future checkout operations will properly attempt
+          // to resume it, thus restore the checkoutState to what it was
+          // prior to the DRY_RUN checkout.
           parentLock->checkoutState = oldState;
+        } else if (propagateErrors && res.hasException()) {
+          // If we have an error and are propagating errors, leave the mount in
+          // the interrupted checkout state instead of pretending like the
+          // checkout succeeded.
+          parentLock->checkoutState = ParentCommitState::InterruptedCheckout{
+              oldParent,
+              snapshotHash,
+          };
+          return folly::Try<CheckoutContext::CheckoutConflictsAndInvalidations>{
+              newEdenError(res.exception())};
         } else {
+          // If the checkout was successful, clear out the checkoutState.
           parentLock->checkoutState = ParentCommitState::NoOngoingCheckout{};
         }
+        return std::move(res);
       })
       .thenValue(
           [this,
