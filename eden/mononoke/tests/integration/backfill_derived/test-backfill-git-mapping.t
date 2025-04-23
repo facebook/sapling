@@ -13,38 +13,31 @@
   $ cd "$TESTTMP"
 
 Setup testing repo for mononoke:
-  $ hginit_treemanifest repo
-  $ cd repo
+  $ testtool_drawdag --print-hg-hashes -R repo --derive-all --no-default-files <<EOF
+  > A-B
+  > # modify: A "a" "file_content"
+  > # modify: B "b" "file_content"
+  > # message: A "first commit"
+  > # message: B "commit with git sha"
+  > # extra: B  convert_revision "f350b5c6e32b47fa2fdfc104a6670436439110ec"
+  > # extra: B  hg-git-rename-source "git"
+  > EOF
+  A=95cd11f31e0f6e7f36548cf49e032c87326e9c76
+  B=833378ee4669a6bb8f1fbefa6d1a0c731b5ae31c
 
-Commit without git mapping:
-  $ touch a
-  $ hg add a
-  $ hg commit -Am "first commit"
-  $ export HG_HASH_1="$(hg --debug id -i)"
-
-Commit git SHA:
-  $ touch b
-  $ hg add b
-  $ hg commit -Am "commit with git sha" --extra convert_revision=37b0a167e07f2b84149c918cec818ffeb183dddd --extra hg-git-rename-source=git
-  $ export HG_HASH_2="$(hg --debug id -i)"
-
-import testing repo to mononoke
-  $ cd ..
-  $ blobimport repo/.hg repo --has-globalrev
-
-  $ echo $HG_HASH_1 > hash_list
-  $ echo $HG_HASH_2 > hash_list
+  $ echo $B > hash_list
   $ backfill_mapping --git hash_list
 
 check that mapping is populated
-  $ echo ${HG_HASH_1^^}
-  D000F571737066778CC230F7DC9A763180FDE257
-  $ echo ${HG_HASH_2^^}
-  87B89069092550479FDF0EB22E632E031AF9C3D9
+  $ echo ${A^^}
+  95CD11F31E0F6E7F36548CF49E032C87326E9C76
+  $ echo ${B^^}
+  833378EE4669A6BB8F1FBEFA6D1A0C731B5AE31C
 
   $ get_bonsai_git_mapping
-  1DE9FD24AAA4D21A00FF488B6C363C8E52CDFEC73E363766110A03C810821FEF|37B0A167E07F2B84149C918CEC818FFEB183DDDD
+  5813E88365587DA762E3FB9902F2128DAD1107CF33323C3E640D78700710E03B|A95913EE898E934E6FEA274872154D297A9F6869
+  40F737643CE7257B8A32058DCAD01D2FAAB9B8F1EC9C6DA459033B367CB3036F|F350B5C6E32B47FA2FDFC104A6670436439110EC
 
   $ get_bonsai_hg_mapping
-  1DE9FD24AAA4D21A00FF488B6C363C8E52CDFEC73E363766110A03C810821FEF|87B89069092550479FDF0EB22E632E031AF9C3D9
-  7BB4BC4B68FA09F86A9D757D345418ED6B83A1EF7FD6BF614FFA63F9338FBAC1|D000F571737066778CC230F7DC9A763180FDE257
+  40F737643CE7257B8A32058DCAD01D2FAAB9B8F1EC9C6DA459033B367CB3036F|833378EE4669A6BB8F1FBEFA6D1A0C731B5AE31C
+  5813E88365587DA762E3FB9902F2128DAD1107CF33323C3E640D78700710E03B|95CD11F31E0F6E7F36548CF49E032C87326E9C76
