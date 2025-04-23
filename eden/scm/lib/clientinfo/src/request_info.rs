@@ -123,7 +123,6 @@ pub enum ClientEntryPoint {
     RemoteGitImport,
     #[serde(rename = "EdenApiReplay", alias = "SaplingRemoteApiReplay")]
     SaplingRemoteApiReplay,
-    MononokeHgSync,
     MononokeCasSync,
     CurlTest,
     StreamingClone,
@@ -213,7 +212,6 @@ impl Display for ClientEntryPoint {
             ClientEntryPoint::GitImport => "git_import",
             ClientEntryPoint::RemoteGitImport => "remote_git_import",
             ClientEntryPoint::SaplingRemoteApiReplay => "eden_api_replay",
-            ClientEntryPoint::MononokeHgSync => "hg_sync",
             ClientEntryPoint::MononokeCasSync => "mononoke_re_cas_sync",
             ClientEntryPoint::ModernSync => "modern_sync",
             ClientEntryPoint::CurlTest => "curl_test",
@@ -257,7 +255,6 @@ impl TryFrom<&str> for ClientEntryPoint {
             "git_import" => Ok(ClientEntryPoint::GitImport),
             "remote_git_import" => Ok(ClientEntryPoint::RemoteGitImport),
             "eden_api_replay" => Ok(ClientEntryPoint::SaplingRemoteApiReplay),
-            "hg_sync" => Ok(ClientEntryPoint::MononokeHgSync),
             "mononoke_re_cas_sync" => Ok(ClientEntryPoint::MononokeCasSync),
             "modern_sync" => Ok(ClientEntryPoint::ModernSync),
             "curl_test" => Ok(ClientEntryPoint::CurlTest),
@@ -423,10 +420,6 @@ mod tests {
                     .as_ref()
             )
             .ok()
-        );
-        assert_eq!(
-            Some(ClientEntryPoint::MononokeHgSync),
-            ClientEntryPoint::try_from(ClientEntryPoint::MononokeHgSync.to_string().as_ref()).ok()
         );
         assert_eq!(
             Some(ClientEntryPoint::CurlTest),
