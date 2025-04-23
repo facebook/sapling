@@ -139,18 +139,6 @@ impl RepoPath {
         }
     }
 
-    /// Serialize this RepoPath into a string. This shouldn't (yet) be considered stable if the
-    /// definition of RepoPath changes.
-    pub fn serialize(&self) -> Vec<u8> {
-        bincode::serialize(self).expect("serialize for RepoPath cannot fail")
-    }
-
-    /// Serialize this RepoPath into a writer. This shouldn't (yet) be considered stable if the
-    /// definition of RepoPath changes.
-    pub fn serialize_into<W: Write>(&self, writer: &mut W) -> Result<()> {
-        Ok(bincode::serialize_into(writer, self)?)
-    }
-
     pub fn from_thrift(path: thrift::path::RepoPath) -> Result<Self> {
         let path = match path {
             thrift::path::RepoPath::RootPath(_) => Self::root(),
