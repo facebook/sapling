@@ -14,16 +14,16 @@ Setup repo config
 
 Setup repo
 
-  $ hginit_treemanifest repo
-  $ cd repo
-  $ echo s > smallfile
-  $ hg commit -Aqm "add small file"
-  $ hg bookmark master_bookmark -r tip
-  $ cd "$TESTTMP"
+  $ testtool_drawdag --print-hg-hashes -R repo --derive-all --no-default-files <<EOF
+  > A
+  > # modify: A "smallfile" "s\n"
+  > # bookmark: A master_bookmark
+  > # message: A "add small file"
+  > EOF
+  A=7a5f7decadde2305e44f1c94f4d8fe37c0eca02f
 
-Blobimport the hg repo to Mononoke
+Start Mononoke
 
-  $ blobimport repo/.hg repo
   $ mononoke --scuba-log-file "$TESTTMP/log.json"
   $ wait_for_mononoke
 
