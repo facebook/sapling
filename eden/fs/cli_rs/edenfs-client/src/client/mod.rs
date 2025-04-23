@@ -138,62 +138,6 @@ pub trait Client: Send + Sync {
         Fut: Future<Output = Result<T, E>> + Send,
         T: Send,
         E: HasErrorHandlingStrategy + Debug + Display;
-
-    /// Executes a streaming Thrift request with automatic connection management and retries.
-    ///
-    /// This method handles connecting to the EdenFS service, executing the request,
-    /// and automatically retrying or reconnecting if necessary based on the error type.
-    ///
-    /// # Parameters
-    ///
-    /// * `f` - A function that takes a streaming Thrift client and returns a future that resolves
-    ///   to a result
-    ///
-    /// # Returns
-    ///
-    /// Returns a result containing the response if successful, or an error if the request
-    /// failed after all retry attempts.
-    async fn with_streaming_thrift<F, Fut, T, E>(
-        &self,
-        f: F,
-    ) -> std::result::Result<T, ConnectAndRequestError<E>>
-    where
-        F: Fn(&<StreamingEdenFsConnector as Connector>::Client) -> Fut + Send + Sync,
-        Fut: Future<Output = Result<T, E>> + Send,
-        T: Send,
-        E: HasErrorHandlingStrategy + Debug + Display,
-    {
-        self.with_streaming_thrift_with_timeouts(None, None, f)
-            .await
-    }
-
-    /// Executes a streaming Thrift request with custom timeouts.
-    ///
-    /// This method is similar to [`with_streaming_thrift`](Self::with_streaming_thrift), but allows
-    /// specifying custom connection and receive timeouts.
-    ///
-    /// # Parameters
-    ///
-    /// * `conn_timeout` - Optional connection timeout
-    /// * `recv_timeout` - Optional receive timeout
-    /// * `f` - A function that takes a streanubg Thrift client and returns a future that resolves
-    ///   to a result
-    ///
-    /// # Returns
-    ///
-    /// Returns a result containing the response if successful, or an error if the request
-    /// failed after all retry attempts.
-    async fn with_streaming_thrift_with_timeouts<F, Fut, T, E>(
-        &self,
-        conn_timeout: Option<Duration>,
-        recv_timeout: Option<Duration>,
-        f: F,
-    ) -> std::result::Result<T, ConnectAndRequestError<E>>
-    where
-        F: Fn(&<StreamingEdenFsConnector as Connector>::Client) -> Fut + Send + Sync,
-        Fut: Future<Output = Result<T, E>> + Send,
-        T: Send,
-        E: HasErrorHandlingStrategy + Debug + Display;
 }
 
 /// A client for interacting with the EdenFS daemon.

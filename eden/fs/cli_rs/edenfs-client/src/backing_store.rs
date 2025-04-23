@@ -38,7 +38,7 @@ impl EdenFsClient {
             .map_err(EdenFsError::from)
     }
     pub async fn start_recording_backing_store_fetch(&self) -> Result<()> {
-        self.with_streaming_thrift(|thrift| thrift.startRecordingBackingStoreFetch())
+        self.with_thrift(|thrift| thrift.startRecordingBackingStoreFetch())
             .await
             .with_context(|| anyhow!("startRecordingBackingStoreFetch thrift call failed"))
             .map_err(EdenFsError::from)

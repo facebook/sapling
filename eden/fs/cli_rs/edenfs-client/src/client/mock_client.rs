@@ -72,22 +72,6 @@ impl Client for MockThriftClient {
         let service = self.thrift_service.clone().unwrap();
         f(&service).await.map_err(|e| e.into())
     }
-
-    async fn with_streaming_thrift_with_timeouts<F, Fut, T, E>(
-        &self,
-        _conn_timeout: Option<Duration>,
-        _recv_timeout: Option<Duration>,
-        f: F,
-    ) -> std::result::Result<T, ConnectAndRequestError<E>>
-    where
-        F: Fn(&<StreamingEdenFsConnector as Connector>::Client) -> Fut + Send + Sync,
-        Fut: Future<Output = Result<T, E>> + Send,
-        T: Send,
-        E: HasErrorHandlingStrategy + Debug + Display,
-    {
-        let service = self.thrift_service.clone().unwrap();
-        f(&service).await.map_err(|e| e.into())
-    }
 }
 
 pub fn make_boxed_future_result<T, E>(result: Result<T, E>) -> BoxFuture<'static, Result<T, E>>

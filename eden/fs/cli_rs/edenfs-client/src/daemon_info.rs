@@ -50,9 +50,7 @@ impl EdenFsClient {
         timeout: Duration,
     ) -> Result<(DaemonInfo, BoxStream<'static, Result<Vec<u8>>>)> {
         let (daemon_info, stream) = self
-            .with_streaming_thrift_with_timeouts(Some(timeout), None, |thrift| {
-                thrift.streamStartStatus()
-            })
+            .with_thrift_with_timeouts(Some(timeout), None, |thrift| thrift.streamStartStatus())
             .await
             .with_context(|| "failed to get start status stream")
             .map(|(daemon_info, stream)| (daemon_info.into(), stream))
