@@ -12,6 +12,8 @@ use fail::FailScenario;
 
 static FAIL_SETUP: AtomicBool = AtomicBool::new(false);
 
+/// Install fail points based on $FAILPOINTS env var.
+/// Fail points are removed when return value goes out of scope.
 pub fn setup_fail_points<'a>() -> Option<FailScenario<'a>> {
     if std::env::var("FAILPOINTS").is_err() {
         // No need to setup failpoints.
@@ -22,6 +24,18 @@ pub fn setup_fail_points<'a>() -> Option<FailScenario<'a>> {
         None
     } else {
         Some(FailScenario::setup())
+    }
+}
+
+/// Install fail points based on $FAILPOINTS env var.
+/// Prefer setup_fail_points() where possible.
+pub fn setup_global_fail_points() {
+    if let Ok(val) = std::env::var("FAILPOINTS") {
+        for kv in val.split(';') {
+            if let Some((k, v)) = kv.split_once('=') {
+                fail::cfg(k, v).unwrap();
+            }
+        }
     }
 }
 
