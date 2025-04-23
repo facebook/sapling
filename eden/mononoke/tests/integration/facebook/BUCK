@@ -308,7 +308,6 @@ dott_test(
         "//eden/mononoke:mononoke",
         "//eden/mononoke/commit_rewriting/megarepo:megarepotool",
         "//eden/mononoke/facebook/slow_bookmark_mover:slow_bookmark_mover",
-        "//eden/mononoke/mononoke_hg_sync_job:mononoke_hg_sync_job",
         "//eden/mononoke/tools/admin:admin",
         "//eden/mononoke/tools/testtool:testtool",
     ],
