@@ -35,6 +35,7 @@ use commit_cloud_types::SmartlogFilter;
 use commit_cloud_types::UpdateReferencesParams;
 use commit_cloud_types::WorkspaceData;
 use commit_cloud_types::WorkspaceSharingData;
+use commit_cloud_types::changeset::CloudChangesetId;
 use context::CoreContext;
 use facet::facet;
 #[cfg(fbcode_build)]
@@ -646,7 +647,7 @@ impl CommitCloud {
             .map(|x| x.name().clone())
             .collect();
 
-        let new_bookmarks: HashMap<String, HgChangesetId> = destination_workspace
+        let new_bookmarks: HashMap<String, CloudChangesetId> = destination_workspace
             .local_bookmarks
             .iter()
             .map(|x| (x.name().clone(), x.commit().clone()))

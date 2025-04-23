@@ -21,20 +21,24 @@ use commit_cloud::sql::ops::Insert;
 use commit_cloud::sql::ops::Update;
 use commit_cloud_types::LocalBookmarksMap;
 use commit_cloud_types::WorkspaceLocalBookmark;
+use commit_cloud_types::changeset::CloudChangesetId;
 use fbinit::FacebookInit;
 use mercurial_types::HgChangesetId;
 use mononoke_macros::mononoke;
+use mononoke_types::sha1_hash::Sha1;
 use sql_construct::SqlConstruct;
 
 #[mononoke::test]
 fn test_local_bookmarks_success() {
-    let commit_id = HgChangesetId::from_str("2d7d4ba9ce0a6ffd222de7785b249ead9c51c536").unwrap();
+    let commit_id =
+        CloudChangesetId(Sha1::from_str("2d7d4ba9ce0a6ffd222de7785b249ead9c51c536").unwrap());
     let bookmark = WorkspaceLocalBookmark::new("valid_name".to_string(), commit_id);
     assert!(bookmark.is_ok());
 }
 #[mononoke::test]
 fn test_local_bookmarks_empty_name() {
-    let commit_id = HgChangesetId::from_str("2d7d4ba9ce0a6ffd222de7785b249ead9c51c536").unwrap();
+    let commit_id =
+        CloudChangesetId(Sha1::from_str("2d7d4ba9ce0a6ffd222de7785b249ead9c51c536").unwrap());
     let bookmark = WorkspaceLocalBookmark::new("".to_string(), commit_id);
     assert!(bookmark.is_err());
     assert_eq!(
@@ -58,7 +62,7 @@ fn test_lbs_from_map_valid() {
     let expected = vec![
         WorkspaceLocalBookmark::new(
             "bookmark1".to_string(),
-            HgChangesetId::from_str("2d7d4ba9ce0a6ffd222de7785b249ead9c51c536").unwrap(),
+            CloudChangesetId(Sha1::from_str("2d7d4ba9ce0a6ffd222de7785b249ead9c51c536").unwrap()),
         )
         .unwrap(),
     ];
@@ -79,7 +83,7 @@ fn test_lbs_to_map() {
     let list = vec![
         WorkspaceLocalBookmark::new(
             "bookmark1".to_string(),
-            HgChangesetId::from_str("2d7d4ba9ce0a6ffd222de7785b249ead9c51c536").unwrap(),
+            CloudChangesetId(Sha1::from_str("2d7d4ba9ce0a6ffd222de7785b249ead9c51c536").unwrap()),
         )
         .unwrap(),
     ];
@@ -100,11 +104,13 @@ async fn test_local_bookmarks(_fb: FacebookInit) -> anyhow::Result<()> {
     let renamed_workspace = "user_testuser_default_renamed".to_owned();
     let cc_ctx = CommitCloudContext::new(&workspace.clone(), &reponame.clone())?;
 
-    let hgid1 = HgChangesetId::from_str("2d7d4ba9ce0a6ffd222de7785b249ead9c51c536").unwrap();
-    let hgid2 = HgChangesetId::from_str("3e0e761030db6e479a7fb58b12881883f9f8c63f").unwrap();
+    let hgid1 =
+        CloudChangesetId(Sha1::from_str("2d7d4ba9ce0a6ffd222de7785b249ead9c51c536").unwrap());
+    let hgid2 =
+        CloudChangesetId(Sha1::from_str("3e0e761030db6e479a7fb58b12881883f9f8c63f").unwrap());
 
-    let bookmark1 = WorkspaceLocalBookmark::new("my_bookmark1".to_owned(), hgid1)?;
-    let bookmark2 = WorkspaceLocalBookmark::new("my_bookmark2".to_owned(), hgid2)?;
+    let bookmark1 = WorkspaceLocalBookmark::new("my_bookmark1".to_owned(), hgid1.clone())?;
+    let bookmark2 = WorkspaceLocalBookmark::new("my_bookmark2".to_owned(), hgid2.clone())?;
 
     let mut txn = sql.connections.write_connection.start_transaction().await?;
     txn = sql
@@ -133,11 +139,11 @@ async fn test_local_bookmarks(_fb: FacebookInit) -> anyhow::Result<()> {
 
     let res_map: LocalBookmarksMap = sql.get_as_map(reponame.clone(), workspace.clone()).await?;
     assert_eq!(
-        res_map.get(&hgid1).unwrap().to_owned(),
+        res_map.get(&hgid1.into()).unwrap().to_owned(),
         vec!["my_bookmark1"]
     );
     assert_eq!(
-        res_map.get(&hgid2).unwrap().to_owned(),
+        res_map.get(&hgid2.into()).unwrap().to_owned(),
         vec!["my_bookmark2"]
     );
 

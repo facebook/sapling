@@ -54,7 +54,12 @@ impl IntoCommitCloudType<CloudUpdateReferencesParams> for UpdateReferencesParams
             updated_bookmarks: self
                 .updated_bookmarks
                 .into_iter()
-                .map(|(name, node)| (name, node.into()))
+                .map(|(name, node)| {
+                    (
+                        name,
+                        CloudChangesetId(Sha1::from_byte_array(node.into_byte_array())),
+                    )
+                })
                 .collect(),
             removed_bookmarks: self.removed_bookmarks,
             updated_remote_bookmarks: self
@@ -113,7 +118,7 @@ impl FromCommitCloudType<CloudReferencesData> for ReferencesData {
             heads: cc.heads.map(map_hgcsids),
             bookmarks: cc.bookmarks.map(|bms| {
                 bms.into_iter()
-                    .map(|(name, node)| (name, node.into()))
+                    .map(|(name, node)| (name, HgId::from_byte_array(node.0.into_byte_array())))
                     .collect()
             }),
             remote_bookmarks: cc.remote_bookmarks.map(rbs_from_cc_type).transpose()?,

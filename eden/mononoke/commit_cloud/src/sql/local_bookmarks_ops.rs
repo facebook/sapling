@@ -10,6 +10,7 @@ use async_trait::async_trait;
 use clientinfo::ClientRequestInfo;
 use commit_cloud_types::LocalBookmarksMap;
 use commit_cloud_types::WorkspaceLocalBookmark;
+use commit_cloud_types::changeset::CloudChangesetId;
 use sql::Connection;
 use sql::Transaction;
 
@@ -21,15 +22,13 @@ use crate::sql::ops::GetAsMap;
 use crate::sql::ops::Insert;
 use crate::sql::ops::SqlCommitCloud;
 use crate::sql::ops::Update;
-use crate::sql::utils::changeset_as_bytes;
-use crate::sql::utils::changeset_from_bytes;
 
 pub struct DeleteArgs {
     pub removed_bookmarks: Vec<String>,
 }
 
 mononoke_queries! {
-    read GetLocalBookmarks(reponame: String, workspace: String) -> (String,  Vec<u8>){
+    read GetLocalBookmarks(reponame: String, workspace: String) -> (String,  CloudChangesetId){
         mysql("SELECT `name`, `node` FROM `bookmarks` WHERE `reponame`={reponame} AND `workspace`={workspace}")
         sqlite("SELECT `name`, `commit` FROM `workspacebookmarks` WHERE `reponame`={reponame} AND `workspace`={workspace}")
     }
@@ -38,7 +37,7 @@ mononoke_queries! {
         mysql("DELETE FROM `bookmarks` WHERE `reponame`={reponame} AND `workspace`={workspace} AND `name` IN {removed_bookmarks}")
         sqlite("DELETE FROM `workspacebookmarks` WHERE `reponame`={reponame} AND `workspace`={workspace} AND `name` IN {removed_bookmarks}")
     }
-    write InsertLocalBookmark(reponame: String, workspace: String, name: String, commit: Vec<u8>) {
+    write InsertLocalBookmark(reponame: String, workspace: String, name: String, commit: CloudChangesetId) {
         none,
         mysql("INSERT INTO `bookmarks` (`reponame`, `workspace`, `name`, `node`) VALUES ({reponame}, {workspace}, {name}, {commit})")
         sqlite("INSERT INTO `workspacebookmarks` (`reponame`, `workspace`, `name`, `commit`) VALUES ({reponame}, {workspace}, {name}, {commit})")
@@ -64,9 +63,7 @@ impl Get<WorkspaceLocalBookmark> for SqlCommitCloud {
         )
         .await?;
         rows.into_iter()
-            .map(|(name, commit)| {
-                WorkspaceLocalBookmark::new(name, changeset_from_bytes(&commit, self.uses_mysql)?)
-            })
+            .map(|(name, commit)| WorkspaceLocalBookmark::new(name, commit))
             .collect::<anyhow::Result<Vec<WorkspaceLocalBookmark>>>()
     }
 }
@@ -83,15 +80,11 @@ impl GetAsMap<LocalBookmarksMap> for SqlCommitCloud {
                 .await?;
         let mut map = LocalBookmarksMap::new();
         for (name, node) in rows {
-            match changeset_from_bytes(&node, self.uses_mysql) {
-                Ok(hgid) => {
-                    if let Some(val) = map.get_mut(&hgid) {
-                        val.push(name.clone());
-                    } else {
-                        map.insert(hgid, vec![name]);
-                    }
-                }
-                Err(e) => return Err(e),
+            let hgid = node.into();
+            if let Some(val) = map.get_mut(&hgid) {
+                val.push(name.clone());
+            } else {
+                map.insert(hgid, vec![name]);
             }
         }
         Ok(map)
@@ -114,7 +107,7 @@ impl Insert<WorkspaceLocalBookmark> for SqlCommitCloud {
             &reponame,
             &workspace,
             data.name(),
-            &changeset_as_bytes(data.commit(), self.uses_mysql)?,
+            data.commit(),
         )
         .await?;
         Ok(txn)

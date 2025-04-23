@@ -91,7 +91,7 @@ pub(crate) async fn cast_references_data(
     repo_derived_data: ArcRepoDerivedData,
     core_ctx: &CoreContext,
 ) -> Result<ReferencesData, anyhow::Error> {
-    let mut bookmarks: HashMap<String, HgChangesetId> = HashMap::new();
+    let mut bookmarks: HashMap<String, CloudChangesetId> = HashMap::new();
     let remote_bookmarks: Vec<WorkspaceRemoteBookmark> = raw_references_data.remote_bookmarks;
     let mut snapshots: Vec<CloudChangesetId> = Vec::new();
 
@@ -134,7 +134,7 @@ pub(crate) async fn cast_references_data(
         .await?;
 
     for bookmark in raw_references_data.local_bookmarks {
-        bookmarks.insert(bookmark.name().clone(), *bookmark.commit());
+        bookmarks.insert(bookmark.name().clone(), bookmark.commit().clone());
     }
 
     for snapshot in raw_references_data.snapshots {

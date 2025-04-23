@@ -50,7 +50,9 @@ impl WorkspaceHistory {
     pub fn local_bookmarks_as_map(&self) -> LocalBookmarksMap {
         let mut map = LocalBookmarksMap::new();
         self.local_bookmarks.iter().for_each(|bookmark| {
-            let value = map.entry(*bookmark.commit()).or_insert(vec![]);
+            let value = map
+                .entry(bookmark.commit().clone().into())
+                .or_insert(vec![]);
             value.push(bookmark.name().clone())
         });
         map

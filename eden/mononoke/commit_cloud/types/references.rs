@@ -39,11 +39,11 @@ pub struct WorkspaceSnapshot {
 #[derive(Clone, Serialize, Deserialize, Debug, PartialEq)]
 pub struct WorkspaceLocalBookmark {
     name: String,
-    commit: HgChangesetId,
+    commit: CloudChangesetId,
 }
 
 impl WorkspaceLocalBookmark {
-    pub fn new(name: String, commit: HgChangesetId) -> anyhow::Result<Self> {
+    pub fn new(name: String, commit: CloudChangesetId) -> anyhow::Result<Self> {
         ensure!(
             !name.is_empty(),
             "'commit cloud' failed: Local bookmark name cannot be empty"
@@ -56,7 +56,7 @@ impl WorkspaceLocalBookmark {
         &self.name
     }
 
-    pub fn commit(&self) -> &HgChangesetId {
+    pub fn commit(&self) -> &CloudChangesetId {
         &self.commit
     }
 }
@@ -109,7 +109,7 @@ pub type RemoteBookmarksMap = HashMap<HgChangesetId, Vec<WorkspaceRemoteBookmark
 pub struct ReferencesData {
     pub version: u64,
     pub heads: Option<Vec<HgChangesetId>>,
-    pub bookmarks: Option<HashMap<String, HgChangesetId>>,
+    pub bookmarks: Option<HashMap<String, CloudChangesetId>>,
     pub heads_dates: Option<HashMap<HgChangesetId, i64>>,
     pub remote_bookmarks: Option<Vec<WorkspaceRemoteBookmark>>,
     pub snapshots: Option<Vec<CloudChangesetId>>,
@@ -123,7 +123,7 @@ pub struct UpdateReferencesParams {
     pub version: u64,
     pub removed_heads: Vec<HgChangesetId>,
     pub new_heads: Vec<HgChangesetId>,
-    pub updated_bookmarks: HashMap<String, HgChangesetId>,
+    pub updated_bookmarks: HashMap<String, CloudChangesetId>,
     pub removed_bookmarks: Vec<String>,
     pub updated_remote_bookmarks: Option<Vec<WorkspaceRemoteBookmark>>,
     pub removed_remote_bookmarks: Option<Vec<WorkspaceRemoteBookmark>>,

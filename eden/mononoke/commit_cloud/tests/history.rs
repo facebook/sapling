@@ -15,11 +15,13 @@ use commit_cloud::sql::ops::Insert;
 use commit_cloud::sql::ops::Update;
 use commit_cloud_types::WorkspaceHead;
 use commit_cloud_types::WorkspaceLocalBookmark;
+use commit_cloud_types::changeset::CloudChangesetId;
 use commit_cloud_types::references::WorkspaceRemoteBookmark;
 use fbinit::FacebookInit;
 use mercurial_types::HgChangesetId;
 use mononoke_macros::mononoke;
 use mononoke_types::Timestamp;
+use mononoke_types::sha1_hash::Sha1;
 use sql_construct::SqlConstruct;
 
 #[mononoke::fbinit_test]
@@ -50,7 +52,7 @@ async fn test_history(_fb: FacebookInit) -> anyhow::Result<()> {
 
     let local_bookmark1 = WorkspaceLocalBookmark::new(
         "my_bookmark1".to_owned(),
-        HgChangesetId::from_str("2d7d4ba9ce0a6ffd222de7785b249ead9c51c536").unwrap(),
+        CloudChangesetId(Sha1::from_str("3e0e761030db6e479a7fb58b12881883f9f8c63f").unwrap()),
     )?;
 
     let args1 = WorkspaceHistory {

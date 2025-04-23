@@ -10,7 +10,8 @@ use std::str::FromStr;
 
 use clientinfo::ClientRequestInfo;
 use commit_cloud_types::WorkspaceLocalBookmark;
-use mercurial_types::HgChangesetId;
+use commit_cloud_types::changeset::CloudChangesetId;
+use mononoke_types::sha1_hash::Sha1;
 use sql::Transaction;
 
 use crate::CommitCloudContext;
@@ -22,8 +23,9 @@ use crate::sql::ops::SqlCommitCloud;
 pub fn lbs_from_map(map: &HashMap<String, String>) -> anyhow::Result<Vec<WorkspaceLocalBookmark>> {
     map.iter()
         .map(|(name, commit)| {
-            HgChangesetId::from_str(commit)
-                .and_then(|commit_id| WorkspaceLocalBookmark::new(name.to_string(), commit_id))
+            Sha1::from_str(commit).and_then(|commit_id| {
+                WorkspaceLocalBookmark::new(name.to_string(), CloudChangesetId(commit_id))
+            })
         })
         .collect()
 }
@@ -41,7 +43,7 @@ pub async fn update_bookmarks(
     mut txn: Transaction,
     cri: Option<&ClientRequestInfo>,
     ctx: &CommitCloudContext,
-    updated_bookmarks: HashMap<String, HgChangesetId>,
+    updated_bookmarks: HashMap<String, CloudChangesetId>,
     removed_bookmarks: Vec<String>,
 ) -> anyhow::Result<Transaction> {
     if !removed_bookmarks.is_empty() {
