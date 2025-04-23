@@ -298,6 +298,16 @@ impl SaplingRemoteApi for EagerRepo {
         attributes: Option<TreeAttributes>,
     ) -> edenapi::Result<Response<Result<TreeEntry, SaplingRemoteApiServerError>>> {
         debug!("trees {} {:?}", debug_key_list(&keys), attributes);
+
+        ::fail::fail_point!("eagerepo::api::trees", |_| {
+            Err(SaplingRemoteApiError::HttpError {
+                status: StatusCode::INTERNAL_SERVER_ERROR,
+                message: "failpoint".to_string(),
+                headers: Default::default(),
+                url: self.url("trees"),
+            })
+        });
+
         self.refresh_for_api();
         let mut values = Vec::new();
         let attributes = attributes.unwrap_or_default();
