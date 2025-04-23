@@ -52,13 +52,6 @@ mononoke_fbpkg(
 )
 
 mononoke_fbpkg(
-    name = "mononoke.hg-sync-job",
-    path_actions = {
-        "mononoke_hg_sync_job": "//eden/mononoke/mononoke_hg_sync_job:mononoke_hg_sync_job",
-    },
-)
-
-mononoke_fbpkg(
     name = "mononoke.lfs_server",
     path_actions = {
         "lfs_server": "//eden/mononoke/lfs_server:lfs_server",

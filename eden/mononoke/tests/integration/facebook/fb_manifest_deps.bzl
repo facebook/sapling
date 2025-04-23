@@ -35,7 +35,6 @@ MONONOKE_TARGETS_TO_ENV = {
     "//eden/mononoke/microwave:builder": "MONONOKE_MICROWAVE_BUILDER",
     "//eden/mononoke/modern_sync:mononoke_modern_sync_job": "MONONOKE_MODERN_SYNC",
     "//eden/mononoke/mononoke_cas_sync_job:mononoke_cas_sync_job": "MONONOKE_CAS_SYNC",
-    "//eden/mononoke/mononoke_hg_sync_job:mononoke_hg_sync_job": "MONONOKE_HG_SYNC",
     "//eden/mononoke/repo_import:repo_import": "MONONOKE_REPO_IMPORT",
     "//eden/mononoke/scs/client:scsc": "SCS_CLIENT",
     "//eden/mononoke/scs/scs_server:scs_server": "SCS_SERVER",

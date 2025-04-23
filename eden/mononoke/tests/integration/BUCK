@@ -175,17 +175,6 @@ dott_test(
 )
 
 dott_test(
-    name = "mononoke-hg-sync-mysql",
-    dott_files = ["mononoke_hg_sync/test-mononoke-hg-sync-job-generate-bundles-loop.t"],
-    use_mysql = True,
-    deps = [
-        "//eden/mononoke:blobimport",
-        "//eden/mononoke:mononoke",
-        "//eden/mononoke/mononoke_hg_sync_job:mononoke_hg_sync_job",
-    ],
-)
-
-dott_test(
     name = "packer",
     dott_files = ["test-packer.t"],
     deps = [
