@@ -156,6 +156,7 @@ dott_test(
         "//eden/mononoke:blobimport",
         "//eden/mononoke:mononoke",
         "//eden/mononoke/lfs_server:lfs_server",
+        "//eden/mononoke/tools/testtool:testtool",
     ],
 )
 
