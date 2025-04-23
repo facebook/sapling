@@ -19,33 +19,36 @@ use super::types;
 use crate::ExitCode;
 
 #[derive(Parser, Debug)]
-pub struct CommonOptions {
-    /// Directory to use for testing
-    #[clap(long, default_value_t = std::env::temp_dir().to_str().unwrap().to_string())]
-    pub test_dir: String,
-
-    /// Number of randomly generated files to use for benchmarking
-    #[clap(long, default_value_t = types::DEFAULT_NUMBER_OF_FILES)]
-    pub number_of_files: usize,
-
-    /// Size of each chunk in bytes
-    #[clap(long, default_value_t = types::DEFAULT_CHUNK_SIZE)]
-    pub chunk_size: usize,
-}
-
-#[derive(Parser, Debug)]
 #[clap(about = "Run benchmarks for EdenFS and OS-native file systems on Linux, macOS, and Windows")]
 pub enum BenchCmd {
     #[clap(about = "Run filesystem I/O benchmarks")]
     FsIo {
-        #[clap(flatten)]
-        common: CommonOptions,
+        /// Directory to use for testing
+        #[clap(long, default_value_t = std::env::temp_dir().to_str().unwrap().to_string())]
+        test_dir: String,
+
+        /// Number of randomly generated files to use for benchmarking
+        #[clap(long, default_value_t = types::DEFAULT_NUMBER_OF_FILES)]
+        number_of_files: usize,
+
+        /// Size of each chunk in bytes
+        #[clap(long, default_value_t = types::DEFAULT_CHUNK_SIZE)]
+        chunk_size: usize,
     },
 
     #[clap(about = "Run database I/O benchmarks")]
     DbIo {
-        #[clap(flatten)]
-        common: CommonOptions,
+        /// Directory to use for testing
+        #[clap(long, default_value_t = std::env::temp_dir().to_str().unwrap().to_string())]
+        test_dir: String,
+
+        /// Number of randomly generated files to use for benchmarking
+        #[clap(long, default_value_t = types::DEFAULT_NUMBER_OF_FILES)]
+        number_of_files: usize,
+
+        /// Size of each chunk in bytes
+        #[clap(long, default_value_t = types::DEFAULT_CHUNK_SIZE)]
+        chunk_size: usize,
     },
 
     #[clap(about = "Run filesystem traversal benchmark")]
@@ -60,10 +63,13 @@ pub enum BenchCmd {
 impl crate::Subcommand for BenchCmd {
     async fn run(&self) -> Result<ExitCode> {
         match self {
-            Self::FsIo { common } => match gen::TestDir::validate(&common.test_dir) {
+            Self::FsIo {
+                test_dir,
+                number_of_files,
+                chunk_size,
+            } => match gen::TestDir::validate(test_dir) {
                 Ok(test_dir) => {
-                    let random_data =
-                        gen::RandomData::new(common.number_of_files, common.chunk_size);
+                    let random_data = gen::RandomData::new(*number_of_files, *chunk_size);
                     println!(
                         "The random data generated with {} chunks with {:.0} KiB each, with the total size of {:.2} GiB.",
                         random_data.number_of_files,
@@ -78,10 +84,13 @@ impl crate::Subcommand for BenchCmd {
                 }
                 Err(e) => return Err(e),
             },
-            Self::DbIo { common } => match gen::TestDir::validate(&common.test_dir) {
+            Self::DbIo {
+                test_dir,
+                number_of_files,
+                chunk_size,
+            } => match gen::TestDir::validate(test_dir) {
                 Ok(test_dir) => {
-                    let random_data =
-                        gen::RandomData::new(common.number_of_files, common.chunk_size);
+                    let random_data = gen::RandomData::new(*number_of_files, *chunk_size);
                     println!(
                         "The random data generated with {} chunks with {:.0} KiB each, with the total size of {:.2} GiB.",
                         random_data.number_of_files,
