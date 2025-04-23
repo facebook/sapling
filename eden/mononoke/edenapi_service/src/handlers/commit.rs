@@ -135,6 +135,7 @@ const HASH_TO_LOCATION_BATCH_SIZE: usize = 100;
 const PHASES_CHECK_LIMIT: usize = 10;
 
 const COMMITS_PER_USER_RATE_LIMIT: &str = "commits_per_user";
+const LOCATION_TO_HASH_COUNT_RATE_LIMIT: &str = "location_to_hash_count";
 
 #[derive(Debug, Deserialize, StateData, StaticResponseExtender)]
 pub struct HashToLocationParams {
@@ -195,8 +196,11 @@ async fn translate_location<R: MononokeRepo>(
     Ok(answer)
 }
 
-/// Ratelimit commit creation
-async fn ratelimit_commit_creation(ctx: CoreContext) -> Result<(), Error> {
+async fn bump_counter_check_ratelimit(
+    ctx: CoreContext,
+    rate_limit_name: &str,
+    bump_value: f64,
+) -> Result<(), Error> {
     let rate_limiter = match ctx.session().rate_limiter() {
         Some(rate_limiter) => rate_limiter,
         None => {
@@ -221,7 +225,7 @@ async fn ratelimit_commit_creation(ctx: CoreContext) -> Result<(), Error> {
     ) {
         Some(limit) => limit,
         None => {
-            debug!(ctx.logger(), "No commits_per_user rate limit found");
+            debug!(ctx.logger(), "No {} rate limit found", rate_limit_name);
             return Ok(());
         }
     };
@@ -243,11 +247,12 @@ async fn ratelimit_commit_creation(ctx: CoreContext) -> Result<(), Error> {
         }
     };
 
-    let counter = build_counter(&ctx, category, COMMITS_PER_USER_RATE_LIMIT, client_main_id);
+    let counter = build_counter(&ctx, category, rate_limit_name, client_main_id);
     counter_check_and_bump(
         &ctx,
         counter,
-        COMMITS_PER_USER_RATE_LIMIT,
+        bump_value,
+        rate_limit_name,
         max_value,
         time_window,
         enforced,
@@ -275,6 +280,11 @@ impl SaplingRemoteApiHandler for LocationToHashHandler {
     ) -> HandlerResult<'async_trait, Self::Response> {
         let repo = ectx.repo();
         let slapi_flavour = ectx.slapi_flavour();
+
+        let ctx = repo.ctx().clone();
+        let bump: f64 = request.requests.iter().map(|r| r.count as f64).sum();
+        bump_counter_check_ratelimit(ctx, LOCATION_TO_HASH_COUNT_RATE_LIMIT, bump).await?;
+
         let hgid_list = request
             .requests
             .into_iter()
@@ -518,7 +528,7 @@ impl SaplingRemoteApiHandler for UploadHgChangesetsHandler {
         let changesets = request.changesets;
 
         let ctx = repo.ctx().clone();
-        ratelimit_commit_creation(ctx)
+        bump_counter_check_ratelimit(ctx, COMMITS_PER_USER_RATE_LIMIT, 1.0)
             .await
             .map_err(HttpError::e429)?;
 
@@ -581,7 +591,7 @@ impl SaplingRemoteApiHandler for UploadBonsaiChangesetHandler {
         let repo = &repo;
 
         let ctx = repo.ctx().clone();
-        ratelimit_commit_creation(ctx)
+        bump_counter_check_ratelimit(ctx, COMMITS_PER_USER_RATE_LIMIT, 1.0)
             .await
             .map_err(HttpError::e429)?;
 

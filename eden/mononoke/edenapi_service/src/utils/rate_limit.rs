@@ -49,6 +49,7 @@ fn make_key(prefix: &str, client_main_id: &str) -> String {
 pub async fn counter_check_and_bump<'a>(
     ctx: &'a CoreContext,
     counter: BoxGlobalTimeWindowCounter,
+    bump_value: f64,
     rate_limit_name: &'a str,
     max_value: f64,
     time_window: u32,
@@ -62,7 +63,7 @@ pub async fn counter_check_and_bump<'a>(
 
     match timeout(RATELIM_FETCH_TIMEOUT, counter.get(time_window)).await {
         Ok(Ok(count)) => {
-            let new_value = count + 1.0;
+            let new_value = count + bump_value;
             if new_value <= max_value {
                 debug!(
                     ctx.logger(),
@@ -71,7 +72,7 @@ pub async fn counter_check_and_bump<'a>(
                     count,
                     max_value,
                 );
-                counter.bump(1.0);
+                counter.bump(bump_value);
                 Ok(())
             } else if !enforced {
                 debug!(
@@ -104,7 +105,7 @@ pub async fn counter_check_and_bump<'a>(
                 ctx.logger(),
                 "Failed getting rate limiting counter {}: {:?}", rate_limit_name, e
             );
-            counter.bump(1.0);
+            counter.bump(bump_value);
             Ok(())
         }
         Err(_) => {
@@ -159,6 +160,7 @@ mod test {
         let result = counter_check_and_bump(
             &ctx,
             counter,
+            1.0,
             rate_limit_name,
             max_value,
             1,
@@ -174,6 +176,7 @@ mod test {
         let result = counter_check_and_bump(
             &ctx,
             counter,
+            1.0,
             rate_limit_name,
             max_value,
             1,
@@ -189,6 +192,7 @@ mod test {
         let result = counter_check_and_bump(
             &ctx,
             counter,
+            1.0,
             rate_limit_name,
             max_value,
             1,
@@ -205,6 +209,7 @@ mod test {
         let result = counter_check_and_bump(
             &ctx,
             counter,
+            1.0,
             rate_limit_name,
             max_value,
             1,

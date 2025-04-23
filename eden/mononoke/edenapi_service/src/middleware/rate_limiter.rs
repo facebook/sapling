@@ -92,6 +92,7 @@ impl Middleware for ThrottleMiddleware {
         match counter_check_and_bump(
             &ctx,
             counter,
+            1.0,
             EDENAPI_QPS_LIMIT,
             max_value,
             time_window,
