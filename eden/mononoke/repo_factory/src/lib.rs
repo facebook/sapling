@@ -73,6 +73,7 @@ use cacheblob::MemcacheOps;
 use cacheblob::new_cachelib_blobstore_no_lease;
 use cacheblob::new_memcache_blobstore;
 use caching_commit_graph_storage::CachingCommitGraphStorage;
+use caching_ext::CacheHandlerEncoding;
 use caching_ext::CacheHandlerFactory;
 use clientinfo::ClientEntryPoint;
 use clientinfo::ClientInfo;
@@ -102,6 +103,7 @@ use environment::BookmarkCacheAddress;
 use environment::BookmarkCacheDerivedData;
 use environment::BookmarkCacheKind;
 use environment::Caching;
+use environment::LocalCacheEncoding;
 use environment::MononokeEnvironment;
 use ephemeral_blobstore::ArcRepoEphemeralStore;
 use ephemeral_blobstore::RepoEphemeralStore;
@@ -719,14 +721,23 @@ impl RepoFactory {
 
     /// Returns a cache builder for the named pool if caching is enabled
     fn cache_handler_factory(&self, name: &str) -> Result<Option<CacheHandlerFactory>> {
+        fn map_encoding(encoding: LocalCacheEncoding) -> CacheHandlerEncoding {
+            match encoding {
+                LocalCacheEncoding::Abomonation => CacheHandlerEncoding::Abomonation,
+                LocalCacheEncoding::Bincode => CacheHandlerEncoding::Bincode,
+            }
+        }
+
         match self.env.caching {
-            Caching::Enabled(_) => Ok(Some(CacheHandlerFactory::Shared {
+            Caching::Enabled(config) => Ok(Some(CacheHandlerFactory::Shared {
                 cachelib_pool: volatile_pool(name)?,
                 memcache_client: MemcacheClient::new(self.env.fb)
                     .context("Failed to initialize memcache client")?,
+                encoding: map_encoding(config.encoding),
             })),
-            Caching::LocalOnly(_) => Ok(Some(CacheHandlerFactory::Local {
+            Caching::LocalOnly(config) => Ok(Some(CacheHandlerFactory::Local {
                 cachelib_pool: volatile_pool(name)?,
+                encoding: map_encoding(config.encoding),
             })),
             Caching::Disabled => Ok(None),
         }

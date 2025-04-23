@@ -14,6 +14,7 @@ use clap_old::ArgMatches;
 pub use cmdlib_caching::CachelibSettings;
 use environment::Caching;
 pub use environment::LocalCacheConfig;
+use environment::LocalCacheEncoding;
 use fbinit::FacebookInit;
 use once_cell::sync::Lazy;
 
@@ -183,6 +184,7 @@ pub(crate) fn parse_cachelib_shards(matches: &ArgMatches<'_>) -> LocalCacheConfi
     };
     LocalCacheConfig {
         blobstore_cache_shards,
+        encoding: LocalCacheEncoding::Abomonation,
     }
 }
 

@@ -29,9 +29,21 @@ use strum::EnumString;
 use tokio::runtime::Handle;
 
 #[derive(Copy, Clone, PartialEq, Eq)]
+pub enum LocalCacheEncoding {
+    /// Local cache uses abomonation for encoding
+    Abomonation,
+
+    /// Local cache uses bincode for encoding
+    Bincode,
+}
+
+#[derive(Copy, Clone, PartialEq, Eq)]
 pub struct LocalCacheConfig {
     /// Number of shards in the local blobstore cache
     pub blobstore_cache_shards: usize,
+
+    /// Encoding used by the local cache
+    pub encoding: LocalCacheEncoding,
 }
 
 #[derive(Copy, Clone, PartialEq, Eq)]

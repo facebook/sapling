@@ -12,6 +12,14 @@ use memcache::MemcacheClient;
 use crate::CachelibHandler;
 use crate::MemcacheHandler;
 
+pub enum CacheHandlerEncoding {
+    /// Entries are encoded using Abomonation
+    Abomonation,
+
+    /// Entries are encoded using Bincode
+    Bincode,
+}
+
 /// Builder to construct caches, depending on the desired caching mode.
 pub enum CacheHandlerFactory {
     /// Caching is via a local cache (cachelib) and a shared cache (memcache).
@@ -21,10 +29,19 @@ pub enum CacheHandlerFactory {
 
         /// The memcache client to use for shared caching.
         memcache_client: MemcacheClient,
+
+        /// Encoding used for local caching.
+        encoding: CacheHandlerEncoding,
     },
 
     /// Caching is via a local cache (cachelib) only.
-    Local { cachelib_pool: VolatileLruCachePool },
+    Local {
+        /// The cachelib pool to use for local caching.
+        cachelib_pool: VolatileLruCachePool,
+
+        /// Encoding used for local caching.
+        encoding: CacheHandlerEncoding,
+    },
 
     /// Caching is mocked for testing purposes, with items cached in an
     /// in-memory store.
@@ -41,9 +58,21 @@ impl CacheHandlerFactory {
         T: Abomonation + bincode::Encode + bincode::Decode<()> + Clone,
     {
         match self {
-            Self::Shared { cachelib_pool, .. } | Self::Local { cachelib_pool, .. } => {
-                cachelib_pool.clone().into()
+            Self::Shared {
+                cachelib_pool,
+                encoding,
+                ..
             }
+            | Self::Local {
+                cachelib_pool,
+                encoding,
+                ..
+            } => match encoding {
+                CacheHandlerEncoding::Abomonation => {
+                    CachelibHandler::Abomonation(cachelib_pool.clone())
+                }
+                CacheHandlerEncoding::Bincode => CachelibHandler::Bincode(cachelib_pool.clone()),
+            },
             Self::Mocked => CachelibHandler::create_mock(),
             Self::Noop => CachelibHandler::create_noop(),
         }

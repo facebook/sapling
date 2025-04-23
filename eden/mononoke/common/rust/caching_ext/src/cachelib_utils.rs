@@ -12,23 +12,18 @@ use std::time::Duration;
 use abomonation::Abomonation;
 use anyhow::Result;
 use cachelib::VolatileLruCachePool;
-use cachelib::abomonation_cache::get_cached;
-use cachelib::abomonation_cache::set_cached;
+use cachelib::abomonation_cache;
+use cachelib::bincode_cache;
 
 use crate::CachelibKey;
 use crate::mock_store::MockStore;
 
 #[derive(Clone)]
 pub enum CachelibHandler<T> {
-    Real(VolatileLruCachePool),
+    Abomonation(VolatileLruCachePool),
+    Bincode(VolatileLruCachePool),
     Mock(MockStore<T>),
     Noop,
-}
-
-impl<T> From<VolatileLruCachePool> for CachelibHandler<T> {
-    fn from(cache: VolatileLruCachePool) -> Self {
-        CachelibHandler::Real(cache)
-    }
 }
 
 impl<T: Abomonation + bincode::Encode + bincode::Decode<()> + Clone> CachelibHandler<T> {
@@ -55,7 +50,8 @@ impl<T: Abomonation + bincode::Encode + bincode::Decode<()> + Clone> CachelibHan
 
     pub fn get_cached(&self, key: &String) -> Result<Option<T>> {
         match self {
-            CachelibHandler::Real(ref cache) => get_cached(cache, key),
+            CachelibHandler::Abomonation(ref cache) => abomonation_cache::get_cached(cache, key),
+            CachelibHandler::Bincode(ref cache) => bincode_cache::get_cached(cache, key),
             CachelibHandler::Mock(store) => Ok(store.get(key)),
             CachelibHandler::Noop => Ok(None),
         }
@@ -63,7 +59,12 @@ impl<T: Abomonation + bincode::Encode + bincode::Decode<()> + Clone> CachelibHan
 
     pub fn set_cached(&self, key: &str, value: &T, ttl: Option<Duration>) -> Result<bool> {
         match self {
-            CachelibHandler::Real(ref cache) => set_cached(cache, key, value, ttl),
+            CachelibHandler::Abomonation(ref cache) => {
+                abomonation_cache::set_cached(cache, key, value, ttl)
+            }
+            CachelibHandler::Bincode(ref cache) => {
+                bincode_cache::set_cached(cache, key, value, ttl)
+            }
             CachelibHandler::Mock(store) => {
                 store.set(key, value.clone());
                 Ok(true)
@@ -84,7 +85,9 @@ impl<T: Abomonation + bincode::Encode + bincode::Decode<()> + Clone> CachelibHan
     pub(crate) fn gets_count(&self) -> usize {
         use std::sync::atomic::Ordering;
         match self {
-            CachelibHandler::Real(_) | CachelibHandler::Noop => unimplemented!(),
+            CachelibHandler::Abomonation(_)
+            | CachelibHandler::Bincode(_)
+            | CachelibHandler::Noop => unimplemented!(),
             CachelibHandler::Mock(MockStore { ref get_count, .. }) => {
                 get_count.load(Ordering::SeqCst)
             }
@@ -93,7 +96,9 @@ impl<T: Abomonation + bincode::Encode + bincode::Decode<()> + Clone> CachelibHan
 
     pub fn mock_store(&self) -> Option<&MockStore<T>> {
         match self {
-            CachelibHandler::Real(_) | CachelibHandler::Noop => None,
+            CachelibHandler::Abomonation(_)
+            | CachelibHandler::Bincode(_)
+            | CachelibHandler::Noop => None,
             CachelibHandler::Mock(ref mock) => Some(mock),
         }
     }

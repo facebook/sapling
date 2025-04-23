@@ -34,6 +34,7 @@ use mononoke_macros::mononoke;
 use stats::prelude::*;
 
 pub use crate::cachelib_utils::CachelibHandler;
+pub use crate::factory::CacheHandlerEncoding;
 pub use crate::factory::CacheHandlerFactory;
 pub use crate::memcache_utils::MemcacheHandler;
 pub use crate::mock_store::MockStoreStats;

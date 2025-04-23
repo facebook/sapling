@@ -33,11 +33,35 @@ impl ArgDefaults for CacheMode {
     }
 }
 
+#[derive(ValueEnum, Clone, Copy, Debug, PartialEq, Eq)]
+pub enum CacheEncoding {
+    /// Local cache uses abomonation for encoding
+    Abomonation,
+
+    /// Local cache uses bincode for encoding
+    Bincode,
+}
+
+impl ArgDefaults for CacheEncoding {
+    fn arg_defaults(&self) -> Vec<(&'static str, String)> {
+        vec![(
+            "cache_encoding",
+            self.to_possible_value()
+                .expect("default value must exist")
+                .get_name()
+                .to_string(),
+        )]
+    }
+}
+
 #[derive(Args, Debug)]
 pub struct CachelibArgs {
     /// Mode to initialize caching in.
     #[clap(long, value_enum, default_value_t = CacheMode::Enabled)]
     pub cache_mode: CacheMode,
+
+    #[clap(long, value_enum, default_value_t = CacheEncoding::Abomonation)]
+    pub cache_encoding: CacheEncoding,
 
     #[clap(long)]
     /// Disable cacheadmin for cachelib

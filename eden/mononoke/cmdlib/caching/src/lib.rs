@@ -13,8 +13,10 @@ mod settings;
 use environment::Caching;
 #[cfg(fbcode_build)]
 use environment::LocalCacheConfig;
+use environment::LocalCacheEncoding;
 use fbinit::FacebookInit;
 
+use crate::args::CacheEncoding;
 pub use crate::args::CacheMode;
 pub use crate::args::CachelibArgs;
 pub use crate::settings::CachelibSettings;
@@ -43,12 +45,19 @@ pub fn init_cachelib(
         facebook::init_cachelib_from_settings(fb, settings, enable_cacheadmin)
             .expect("cachelib initialize should always succeed");
 
+        let encoding = match args.cache_encoding {
+            CacheEncoding::Abomonation => LocalCacheEncoding::Abomonation,
+            CacheEncoding::Bincode => LocalCacheEncoding::Bincode,
+        };
+
         match args.cache_mode {
             CacheMode::Enabled => Caching::Enabled(LocalCacheConfig {
                 blobstore_cache_shards: args.cachelib_shards,
+                encoding,
             }),
             CacheMode::LocalOnly => Caching::LocalOnly(LocalCacheConfig {
                 blobstore_cache_shards: args.cachelib_shards,
+                encoding,
             }),
             CacheMode::Disabled => unreachable!(),
         }
