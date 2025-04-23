@@ -49,7 +49,6 @@ rust_library(
     autocargo = {"cargo_toml_dir": "errors"},
     deps = [
         "fbsource//third-party/rust:ascii",
-        "fbsource//third-party/rust:bincode",
         "fbsource//third-party/rust:thiserror",
         "//eden/mononoke/mercurial:mercurial_types",
         "//eden/mononoke/mononoke_types:mononoke_types",

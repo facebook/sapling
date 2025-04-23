@@ -70,8 +70,6 @@ pub enum ErrorKind {
     BadUploadBlob(HgBlob),
     #[error("HgParents are not in blob store {0:?}")]
     ParentsUnknown(HgParents),
-    #[error("Serialization of node failed {0} ({1})")]
-    SerializationFailed(HgNodeHash, bincode::Error),
     #[error("Root manifest is not a manifest (type {0})")]
     BadRootManifest(HgManifestId),
     #[error("Manifest type {0} does not match uploaded type {1}")]
