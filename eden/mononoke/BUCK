@@ -175,18 +175,6 @@ rust_binary(
 )
 
 rust_binary(
-    name = "revlogrepo",
-    srcs = ["cmds/revlogrepo.rs"],
-    named_deps = {
-        "clap-old": "fbsource//third-party/rust:clap-2",
-    },
-    deps = [
-        "//eden/mononoke/mercurial:mercurial_revlog",
-        "//eden/mononoke/mercurial:mercurial_types",
-    ],
-)
-
-rust_binary(
     name = "backfill_mapping",
     srcs = ["cmds/backfill_mapping.rs"],
     deps = [
