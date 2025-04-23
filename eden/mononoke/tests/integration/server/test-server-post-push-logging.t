@@ -16,27 +16,17 @@ setup configuration
 
 setup repo
 
-  $ hginit_treemanifest repo
-  $ cd repo
-  $ echo "a file content" > a
-  $ hg add a
-  $ hg ci -ma
+  $ testtool_drawdag --print-hg-hashes -R repo --derive-all --no-default-files <<EOF
+  > A
+  > # modify: A "a" "a file content\n"
+  > # bookmark: A master_bookmark
+  > # message: A "a"
+  > EOF
+  A=325f1a90ab08ff67e563266a259738c9bd04284d
 
-setup master bookmarks
+start mononoke
 
-  $ hg bookmark master_bookmark -r 'tip'
-
-verify content
-  $ hg log
-  commit:      0e7ec5675652
-  bookmark:    master_bookmark
-  user:        test
-  date:        Thu Jan 01 00:00:00 1970 +0000
-  summary:     a
-  
-
-  $ cd $TESTTMP
-  $ blobimport repo/.hg repo
+  $ start_and_wait_for_mononoke_server
 
 setup two repos: one will be used to push from, another will be used
 to pull these pushed commits
@@ -47,10 +37,6 @@ to pull these pushed commits
   $ hg pull ssh://user@dummy/repo
   pulling from ssh://user@dummy/repo
 
-start mononoke
-
-  $ start_and_wait_for_mononoke_server
-BEGIN Creation of new commits
 
 create new commits in repo2 and check that they are seen as outgoing
 
@@ -60,16 +46,16 @@ create new commits in repo2 and check that they are seen as outgoing
   $ hg add b_dir/b
   $ hg ci -mb
   $ hg push -r . --to master_bookmark --create --config extensions.pushrebase=
-  pushing rev bb0985934a0f to destination https://localhost:$LOCAL_PORT/edenapi/ bookmark master_bookmark
+  pushing rev 071266624f86 to destination https://localhost:$LOCAL_PORT/edenapi/ bookmark master_bookmark
   edenapi: queue 1 commit for upload
   edenapi: queue 2 files for upload
   edenapi: uploaded 2 files
   edenapi: queue 2 trees for upload
   edenapi: uploaded 2 trees
   edenapi: uploaded 1 changeset
-  pushrebasing stack (0e7ec5675652, bb0985934a0f] (1 commit) to remote bookmark master_bookmark
+  pushrebasing stack (325f1a90ab08, 071266624f86] (1 commit) to remote bookmark master_bookmark
   0 files updated, 0 files merged, 0 files removed, 0 files unresolved
-  updated remote bookmark master_bookmark to bb0985934a0f
+  updated remote bookmark master_bookmark to 071266624f86
 
   $ cat "$TESTTMP/scribe_logs/$COMMIT_SCRIBE_CATEGORY" | jq .repo_id
   0
@@ -84,17 +70,17 @@ create new commits in repo2 and check that they are seen as outgoing
   2
   2
   $ cat "$TESTTMP/scribe_logs/$COMMIT_SCRIBE_CATEGORY" | jq .changeset_id
-  "022352db2112d2f43ca2635686a6275ade50d612865551fa8d1f392b375e412e"
-  "022352db2112d2f43ca2635686a6275ade50d612865551fa8d1f392b375e412e"
+  "4a1bfca467c5d3861ae8d5788686650dc0afffbf6bc8fbe32887a59522c30cf0"
+  "4a1bfca467c5d3861ae8d5788686650dc0afffbf6bc8fbe32887a59522c30cf0"
   $ cat "$TESTTMP/scribe_logs/$COMMIT_SCRIBE_CATEGORY" | jq .bubble_id
   null
   null
   $ cat "$TESTTMP/scribe_logs/$COMMIT_SCRIBE_CATEGORY" | jq .parents
   [
-    "30c62517c166c69dc058930d510a6924d03d917d4e3a1354213faf4594d6e473"
+    "1482ddeb2a1515808f6e8aa50b06a429ecc778f66135f25d57c355823b1e9b4c"
   ]
   [
-    "30c62517c166c69dc058930d510a6924d03d917d4e3a1354213faf4594d6e473"
+    "1482ddeb2a1515808f6e8aa50b06a429ecc778f66135f25d57c355823b1e9b4c"
   ]
 Note: user_unix_name, user_identities and source_hostname are different between oss and fb context, so only test them in the facebook directory
 The timestamp is not stable, so count its digits instead to ensure it is not null
@@ -115,9 +101,9 @@ The timestamp is not stable, so count its digits instead to ensure it is not nul
   $ cat "$TESTTMP/scribe_logs/$BOOKMARK_SCRIBE_CATEGORY" | jq .bookmark_kind
   "publishing"
   $ cat "$TESTTMP/scribe_logs/$BOOKMARK_SCRIBE_CATEGORY" | jq .old_bookmark_value
-  "30c62517c166c69dc058930d510a6924d03d917d4e3a1354213faf4594d6e473"
+  "1482ddeb2a1515808f6e8aa50b06a429ecc778f66135f25d57c355823b1e9b4c"
   $ cat "$TESTTMP/scribe_logs/$BOOKMARK_SCRIBE_CATEGORY" | jq .new_bookmark_value
-  "022352db2112d2f43ca2635686a6275ade50d612865551fa8d1f392b375e412e"
+  "4a1bfca467c5d3861ae8d5788686650dc0afffbf6bc8fbe32887a59522c30cf0"
   $ cat "$TESTTMP/scribe_logs/$BOOKMARK_SCRIBE_CATEGORY" | jq .operation
   "pushrebase"
   $ cat "$TESTTMP/scribe_logs/$BOOKMARK_SCRIBE_CATEGORY" | jq .update_reason
@@ -128,7 +114,7 @@ The timestamp is not stable, so count its digits instead to ensure it is not nul
   $ hg add -q forcepushrebase
   $ hg ci -m forcepushrebase
   $ hg push -r . --to forcepushrebase --create --force --config extensions.pushrebase=
-  pushing rev 0c1e5152244c to destination https://localhost:$LOCAL_PORT/edenapi/ bookmark forcepushrebase
+  pushing rev a5b0fe1646b4 to destination https://localhost:$LOCAL_PORT/edenapi/ bookmark forcepushrebase
   edenapi: queue 1 commit for upload
   edenapi: queue 1 file for upload
   edenapi: uploaded 1 file
@@ -140,8 +126,8 @@ The timestamp is not stable, so count its digits instead to ensure it is not nul
   null
   "forcepushrebase"
   $ cat "$TESTTMP/scribe_logs/$COMMIT_SCRIBE_CATEGORY" | jq .changeset_id
-  "cf79ab3ba838b597ca4973ba397b4b687f54d9eed2f0edc4f950f3b80a68f8b3"
-  "cf79ab3ba838b597ca4973ba397b4b687f54d9eed2f0edc4f950f3b80a68f8b3"
+  "efb773fb49e1ebb720e998299840f573cd569c54ad96c0ad39027d4d7efbb447"
+  "efb773fb49e1ebb720e998299840f573cd569c54ad96c0ad39027d4d7efbb447"
   $ rm "$TESTTMP/scribe_logs/$COMMIT_SCRIBE_CATEGORY"
 
   $ cat "$TESTTMP/scribe_logs/$BOOKMARK_SCRIBE_CATEGORY" | jq .repo_name
@@ -153,7 +139,7 @@ The timestamp is not stable, so count its digits instead to ensure it is not nul
   $ cat "$TESTTMP/scribe_logs/$BOOKMARK_SCRIBE_CATEGORY" | jq .old_bookmark_value
   null
   $ cat "$TESTTMP/scribe_logs/$BOOKMARK_SCRIBE_CATEGORY" | jq .new_bookmark_value
-  "cf79ab3ba838b597ca4973ba397b4b687f54d9eed2f0edc4f950f3b80a68f8b3"
+  "efb773fb49e1ebb720e998299840f573cd569c54ad96c0ad39027d4d7efbb447"
   $ cat "$TESTTMP/scribe_logs/$BOOKMARK_SCRIBE_CATEGORY" | jq .operation
   "create"
   $ cat "$TESTTMP/scribe_logs/$BOOKMARK_SCRIBE_CATEGORY" | jq .update_reason
@@ -171,7 +157,7 @@ Use normal push (non-pushrebase).  Since we are not pushing to a public bookmark
   $ cat "$TESTTMP/scribe_logs/$COMMIT_SCRIBE_CATEGORY" | jq 'select(.is_public == false)' | jq .bookmark
   null
   $ cat "$TESTTMP/scribe_logs/$COMMIT_SCRIBE_CATEGORY" | jq 'select(.is_public == false)' | jq .changeset_id
-  "f76800ae3d688512180e7a0805ff18d39f7ea81617bce1aea4e11364584b007a"
+  "e2af88a3e2d349c9848c019d347f0210acb640bc2282cd8fcce48ac452de5beb"
   $ rm "$TESTTMP/scribe_logs/$COMMIT_SCRIBE_CATEGORY"
 
 Use infinitepush push
@@ -184,13 +170,13 @@ Use infinitepush push
   > EOF
 
 Stop tracking master_bookmark
-  $ hg up -q 0e7ec5675652
+  $ hg up -q $A
   $ echo infinitepush > infinitepush
   $ hg add -q infinitepush
   $ hg ci -m 'infinitepush'
   $ hg push -qr . --to "scratch/123" --create
   $ cat "$TESTTMP/scribe_logs/$COMMIT_SCRIBE_CATEGORY" | jq 'select(.is_public == false)' | jq .changeset_id
-  "06b8cee4d65704bcb81b988c1153daee3063d9e565f4d65e9e68475676b2438b"
+  "650cba20f2f6bb385ff6fe14c21e04f17da2ef121420f36a441c2187e168fd80"
 
   $ cat "$TESTTMP/scribe_logs/$BOOKMARK_SCRIBE_CATEGORY" | jq .repo_name
   "repo"
@@ -201,7 +187,7 @@ Stop tracking master_bookmark
   $ cat "$TESTTMP/scribe_logs/$BOOKMARK_SCRIBE_CATEGORY" | jq .old_bookmark_value
   null
   $ cat "$TESTTMP/scribe_logs/$BOOKMARK_SCRIBE_CATEGORY" | jq .new_bookmark_value
-  "06b8cee4d65704bcb81b988c1153daee3063d9e565f4d65e9e68475676b2438b"
+  "650cba20f2f6bb385ff6fe14c21e04f17da2ef121420f36a441c2187e168fd80"
   $ cat "$TESTTMP/scribe_logs/$BOOKMARK_SCRIBE_CATEGORY" | jq .operation
   "create"
   $ cat "$TESTTMP/scribe_logs/$BOOKMARK_SCRIBE_CATEGORY" | jq .update_reason
@@ -221,9 +207,9 @@ Update the scratch/123 bookmark
   $ cat "$TESTTMP/scribe_logs/$BOOKMARK_SCRIBE_CATEGORY" | jq .bookmark_kind
   "scratch"
   $ cat "$TESTTMP/scribe_logs/$BOOKMARK_SCRIBE_CATEGORY" | jq .old_bookmark_value
-  "06b8cee4d65704bcb81b988c1153daee3063d9e565f4d65e9e68475676b2438b"
+  "650cba20f2f6bb385ff6fe14c21e04f17da2ef121420f36a441c2187e168fd80"
   $ cat "$TESTTMP/scribe_logs/$BOOKMARK_SCRIBE_CATEGORY" | jq .new_bookmark_value
-  "cde64fba54d56734c1ee9c2c2c2f61bc70f8407d1bab219a7c2bee524df35386"
+  "023bd1e40aee6b505be293ba26f31796d350df57ff9d1be37ffd6ebcd95dfd9a"
   $ cat "$TESTTMP/scribe_logs/$BOOKMARK_SCRIBE_CATEGORY" | jq .operation
   "update"
   $ cat "$TESTTMP/scribe_logs/$BOOKMARK_SCRIBE_CATEGORY" | jq .update_reason
@@ -242,7 +228,7 @@ Delete the master_bookmark
   $ cat "$TESTTMP/scribe_logs/$BOOKMARK_SCRIBE_CATEGORY" | jq .bookmark_kind
   "publishing"
   $ cat "$TESTTMP/scribe_logs/$BOOKMARK_SCRIBE_CATEGORY" | jq .old_bookmark_value
-  "022352db2112d2f43ca2635686a6275ade50d612865551fa8d1f392b375e412e"
+  "4a1bfca467c5d3861ae8d5788686650dc0afffbf6bc8fbe32887a59522c30cf0"
   $ cat "$TESTTMP/scribe_logs/$BOOKMARK_SCRIBE_CATEGORY" | jq .new_bookmark_value
   null
   $ cat "$TESTTMP/scribe_logs/$BOOKMARK_SCRIBE_CATEGORY" | jq .operation
