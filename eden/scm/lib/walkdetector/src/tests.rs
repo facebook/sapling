@@ -11,6 +11,8 @@ use anyhow::Result;
 use types::RepoPathBuf;
 
 use crate::Detector;
+use crate::Walk;
+use crate::walk_node::WalkNode;
 
 fn p(p: impl AsRef<str>) -> RepoPathBuf {
     p.as_ref().to_string().try_into().unwrap()
@@ -91,4 +93,44 @@ fn test_bfs_walk() -> Result<()> {
     assert_eq!(detector.walks(), vec![(p("root"), 2)]);
 
     Ok(())
+}
+
+#[test]
+fn test_walk_node_insert() {
+    let mut node = WalkNode::default();
+
+    let epoch = Instant::now();
+
+    let foo_walk = Walk {
+        depth: 1,
+        last_access: epoch,
+    };
+    node.insert(&p("foo"), foo_walk);
+    // Can re-insert.
+    node.insert(&p("foo"), foo_walk);
+    assert_eq!(node.list(), vec![(p("foo"), foo_walk)]);
+
+    let baz_walk = Walk {
+        depth: 2,
+        last_access: epoch,
+    };
+    node.insert(&p("foo/bar/baz"), baz_walk);
+    assert_eq!(
+        node.list(),
+        vec![(p("foo"), foo_walk), (p("foo/bar/baz"), baz_walk)]
+    );
+
+    let root_walk = Walk {
+        depth: 0,
+        last_access: epoch,
+    };
+    node.insert(&p(""), root_walk);
+    assert_eq!(
+        node.list(),
+        vec![
+            (p(""), root_walk),
+            (p("foo"), foo_walk),
+            (p("foo/bar/baz"), baz_walk)
+        ]
+    );
 }

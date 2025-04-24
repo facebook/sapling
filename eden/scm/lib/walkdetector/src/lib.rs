@@ -7,6 +7,7 @@
 
 #[cfg(test)]
 mod tests;
+mod walk_node;
 
 use std::collections::HashMap;
 use std::collections::HashSet;
@@ -44,7 +45,7 @@ impl Default for Inner {
     }
 }
 
-#[derive(Debug)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub struct Walk {
     depth: usize,
     last_access: Instant,
