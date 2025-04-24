@@ -238,6 +238,9 @@ impl RepoPathBuf {
     }
 
     fn append(&mut self, s: &str) {
+        if s.is_empty() {
+            return;
+        }
         if !self.0.is_empty() {
             self.0.push(SEPARATOR);
         }
@@ -1632,5 +1635,11 @@ mod tests {
             repo_path("foo/bar").common_prefix(repo_path("foo/bar/baz/qux")),
             repo_path("foo/bar")
         );
+    }
+
+    #[test]
+    fn test_join_empty() {
+        let p = repo_path("foo");
+        assert_eq!(p.join(repo_path("")), repo_path_buf("foo"));
     }
 }
