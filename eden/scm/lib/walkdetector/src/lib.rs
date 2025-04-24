@@ -25,14 +25,23 @@ use types::RepoPathBuf;
 //  - Minimize memory usage.
 
 pub struct Detector {
-    min_dir_walk_threhsold: usize,
     inner: Mutex<Inner>,
 }
 
-#[derive(Default)]
 struct Inner {
+    min_dir_walk_threshold: usize,
     walks: HashMap<RepoPathBuf, Walk>,
     dirs: HashMap<RepoPathBuf, Dir>,
+}
+
+impl Default for Inner {
+    fn default() -> Self {
+        Self {
+            min_dir_walk_threshold: DEFAULT_MIN_DIR_WALK_THRESHOLD,
+            walks: Default::default(),
+            dirs: Default::default(),
+        }
+    }
 }
 
 #[derive(Debug)]
@@ -51,19 +60,28 @@ const DEFAULT_MIN_DIR_WALK_THRESHOLD: usize = 2;
 impl Detector {
     pub fn new() -> Self {
         Self {
-            min_dir_walk_threhsold: DEFAULT_MIN_DIR_WALK_THRESHOLD,
             inner: Default::default(),
         }
     }
 
+    #[cfg(test)]
+    fn set_min_dir_walk_threshold(&mut self, threshold: usize) {
+        self.inner.lock().min_dir_walk_threshold = threshold;
+    }
+
     /// Return list of (walk root dir, walk depth) representing active walks.
     pub fn walks(&self) -> Vec<(RepoPathBuf, usize)> {
-        self.inner
+        let mut walks = self
+            .inner
             .lock()
             .walks
             .iter()
             .map(|(root, walk)| (root.to_owned(), walk.depth))
-            .collect()
+            .collect::<Vec<_>>();
+
+        walks.sort_by(|a, b| a.0.as_str().cmp(b.0.as_str()));
+
+        walks
     }
 
     /// Observe a file (content) read of `path` at time `time`.
@@ -83,6 +101,8 @@ impl Detector {
             return Ok(());
         }
 
+        let dir_threshold = inner.min_dir_walk_threshold;
+
         let mut entry = match inner.dirs.entry(dir_path) {
             Entry::Occupied(entry) => entry,
             Entry::Vacant(entry) => entry.insert_entry(Dir {
@@ -93,10 +113,10 @@ impl Detector {
         let dir = entry.get_mut();
         dir.seen_files.insert(base_name);
 
-        if entry.get().is_walked(self.min_dir_walk_threhsold) {
+        if entry.get().is_walked(dir_threshold) {
             // Transition Dir entry to Walk.
             let (dir_path, _dir) = entry.remove_entry();
-            inner.insert_walk(time, dir_path);
+            inner.insert_walk(time, dir_path, 0);
         }
 
         Ok(())
@@ -125,13 +145,38 @@ impl Inner {
     }
 
     /// Insert a new Walk rooted at `dir`.
-    fn insert_walk(&mut self, time: Instant, dir: RepoPathBuf) {
-        self.walks.insert(
-            dir,
-            Walk {
-                depth: 0,
-                last_access: time,
-            },
-        );
+    fn insert_walk(&mut self, time: Instant, dir: RepoPathBuf, mut walk_depth: usize) {
+        let mut siblings = Vec::new();
+
+        for root in self.walks.keys() {
+            if dir.parent() == root.parent() {
+                siblings.push(root.to_owned());
+            }
+        }
+
+        if siblings.len() >= (self.min_dir_walk_threshold - 1) {
+            let max_sibling_depth = siblings.iter().fold(0, |max, sibling_path| {
+                max.max(self.walks.remove(sibling_path).map_or(0, |c| c.depth))
+            });
+
+            if let Some(parent) = dir.parent() {
+                walk_depth = max_sibling_depth.max(walk_depth) + 1;
+
+                if let Some(parent_walk) = self.walks.get_mut(parent) {
+                    parent_walk.last_access = time;
+                    parent_walk.depth = parent_walk.depth.max(walk_depth);
+                } else {
+                    self.insert_walk(time, parent.to_owned(), walk_depth);
+                }
+            }
+        } else {
+            self.walks.insert(
+                dir,
+                Walk {
+                    depth: walk_depth,
+                    last_access: time,
+                },
+            );
+        }
     }
 }
