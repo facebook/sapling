@@ -56,6 +56,7 @@ filtersuspectsymlink=true
 
 [experimental]
 exportstack-max-bytes=1M
+allow-non-interactive-editor=true
 
 log-implicit-follow-threshold=10000
 
