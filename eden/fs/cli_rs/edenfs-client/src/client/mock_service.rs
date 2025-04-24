@@ -24,6 +24,21 @@ use thrift_types::edenfs::*;
 use thrift_types::edenfs_config::EdenConfigData;
 use thrift_types::fb303_core::fb303_status;
 
+// The mock definitions will require updates whenever the EdenFS Thrift API
+// changes. Not all changes will require an update, only those that either:
+//   1. Add/Rename a new method to the interface
+//   2. Change the parameters or return type of a method
+//   3. Introduce a breaking Thrift API changes (e.g. rename a method)
+//
+// For more information on mocking external traits see:
+//   https://docs.rs/mockall/latest/mockall/#external-traits
+//
+// For reference, EdenService is defined here:
+//   https://www.internalfb.com/code/fbsource/fbcode/eden/fs/service/eden.thrift
+//
+// and StreamingEdenService is defined here:
+//   https://www.internalfb.com/code/fbsource/fbcode/eden/fs/service/streamingeden.thrift
+//
 mock! {
     pub EdenFsService {}
 
