@@ -391,6 +391,24 @@ impl RepoPath {
         }
     }
 
+    /// Splits self into a head component and tail path. If self is empty, `None` is returned.
+    /// If self has a single component, `Some((<component>, <empty path>))` is returned.
+    pub fn split_first_component(&self) -> Option<(&PathComponent, &RepoPath)> {
+        if self.is_empty() {
+            return None;
+        }
+        match self.0.find(SEPARATOR) {
+            Some(pos) => Some((
+                PathComponent::from_str_unchecked(&self.0[..pos]),
+                RepoPath::from_str_unchecked(&self.0[(pos + 1)..]),
+            )),
+            None => Some((
+                PathComponent::from_str_unchecked(&self.0),
+                RepoPath::empty(),
+            )),
+        }
+    }
+
     /// Returns an iterator over the parents of the current path.
     /// The `RepoPath` itself is not returned. The root of the repository represented by the empty
     /// `RepoPath` is always returned by this iterator except if the path is empty.
@@ -1420,6 +1438,21 @@ mod tests {
         assert_eq!(
             repo_path("foo/bar/baz").split_last_component(),
             Some((repo_path("foo/bar"), path_component("baz")))
+        );
+    }
+
+    #[test]
+    fn test_split_first_component() {
+        assert_eq!(RepoPath::empty().split_first_component(), None);
+
+        assert_eq!(
+            repo_path("foo").split_first_component(),
+            Some((path_component("foo"), RepoPath::empty()))
+        );
+
+        assert_eq!(
+            repo_path("foo/bar/baz").split_first_component(),
+            Some((path_component("foo"), repo_path("bar/baz")))
         );
     }
 
