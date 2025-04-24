@@ -14,17 +14,13 @@ Setup config
   $ cd $TESTTMP
 
 Setup repo
-  $ hginit_treemanifest repo
-  $ cd repo
-
-# Commit small file and blobimport
-  $ echo s > small
-  $ hg commit -Aqm "add small"
-
-  $ hg bookmark master_bookmark -r tip
-
-  $ cd ..
-  $ blobimport repo/.hg repo
+  $ testtool_drawdag --print-hg-hashes -R repo --derive-all --no-default-files <<EOF
+  > A
+  > # modify: A "smallfile" "s"
+  > # bookmark: A master_bookmark
+  > # message: A "add small"
+  > EOF
+  A=bf29acebdffb8ba38f01bb4cbb26b660f1d9ab0b
 
 Setup Mononoke
   $ start_and_wait_for_mononoke_server
@@ -78,6 +74,6 @@ Pull changes from Mononoke
   R large
 
   $ hg debugfilerevision
-  ee97b40ee584: copy and move large
+  a231a19086bc: copy and move large
    largeCopy: bin=1 lnk=0 flag=0 size=2000 copied='large'
    largeNew: bin=1 lnk=0 flag=0 size=2000 copied='large'
