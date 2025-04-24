@@ -5,10 +5,15 @@
 
 
 create an extension to enable non-test subtree extra
-  $ cat > $TESTTMP/subtree.py <<EOF
+  $ cat > $TESTTMP/prod_subtree_key.py <<EOF
   > from sapling.utils import subtreeutil
   > def extsetup(ui):
   >     subtreeutil.SUBTREE_KEY = "subtree"
+  > EOF
+  $ cat > $TESTTMP/test_subtree_key.py <<EOF
+  > from sapling.utils import subtreeutil
+  > def extsetup(ui):
+  >     subtreeutil.SUBTREE_KEY = "test_subtree"
   > EOF
 
 test subtree inspect for subtree metadata
@@ -48,36 +53,81 @@ test subtree inspect for subtree metadata
   test_subtree=[{"deepcopies":[{"from_commit":"9998a5c40732fc326e6f10a4f14437c7f8e8e7ae","from_path":"foo","to_path":"foo2"}],"v":1}]
 
 enable the new subtree key
-  $ setconfig extensions.subtreetestoverride=$TESTTMP/subtree.py
+  $ setconfig extensions.subtreetestoverride=$TESTTMP/prod_subtree_key.py
 
-tofix: make sure inspect command works for existing metadata
+make sure inspect command works for existing metadata
   $ hg subtree inspect -r .
-  no subtree metadata found for commit ceef88fb118b
+  {
+    "copies": [
+      {
+        "version": 1,
+        "from_commit": "9998a5c40732fc326e6f10a4f14437c7f8e8e7ae",
+        "from_path": "foo",
+        "to_path": "foo2",
+        "type": "deepcopy"
+      }
+    ]
+  }
 
-tofix: merge should use commit B (9998a5c40732) as the merge base
+make sure fold can combine old and new subtree keys
+  $ hg subtree copy -r $A --from-path foo --to-path foo3
+  copying foo to foo3
+  $ hg log -r . -T '{extras % "{extra}\n"}'
+  branch=default
+  subtree=[{"deepcopies":[{"from_commit":"d908813f0f7c9078810e26aad1e37bdb32013d4b","from_path":"foo","to_path":"foo3"}],"v":1}]
+  $ hg fold --from .^
+  2 changesets folded
+  0 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  $ hg log -r . -T '{extras % "{extra}\n"}'
+  branch=default
+  subtree=[{"deepcopies":[{"from_commit":"9998a5c40732fc326e6f10a4f14437c7f8e8e7ae","from_path":"foo","to_path":"foo2"},{"from_commit":"d908813f0f7c9078810e26aad1e37bdb32013d4b","from_path":"foo","to_path":"foo3"}],"v":1}]
+
+merge should use commit B (9998a5c40732) as the merge base
   $ echo "source" >> foo/x && hg ci -m "update foo"
   $ echo "dest" >> foo2/y && hg ci -m "update foo2"
   $ hg subtree merge --from-path foo --to-path foo2 -t :merge3
   computing merge base (timeout: 120 seconds)...
-  merge base: eed7ada653c1
-  merging foo2/x and foo/x to foo2/x
-  warning: 1 conflicts while merging foo2/x! (edit, then use 'hg resolve --mark')
-  0 files updated, 0 files merged, 0 files removed, 1 files unresolved
-  use 'hg resolve' to retry unresolved file merges or 'hg goto -C .' to abandon
-  [1]
+  merge base: 9998a5c40732
+  1 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  (subtree merge, don't forget to commit)
   $ hg st
   M foo2/x
-  ? foo2/x.orig
   $ hg diff
   diff --git a/foo2/x b/foo2/x
   --- a/foo2/x
   +++ b/foo2/x
-  @@ -1,1 +1,8 @@
+  @@ -1,1 +1,3 @@
    aaa
-  +<<<<<<< working copy: da6195d0c136 - test: update foo2
-  +||||||| base
-  +ccc
-  +=======
   +ccc
   +source
-  +>>>>>>> merge rev:    da6195d0c136 - test: update foo2
+  $ hg ci -m "merge foo to foo2"
+  $ hg subtree inspect
+  {
+    "merges": [
+      {
+        "version": 1,
+        "from_commit": "03dfd4b086085a00e29f7e8d55db1880e8bd0190",
+        "from_path": "foo",
+        "to_path": "foo2"
+      }
+    ]
+  }
+  $ hg log -r . -T '{extras % "{extra}\n"}'
+  branch=default
+  subtree=[{"merges":[{"from_commit":"03dfd4b086085a00e29f7e8d55db1880e8bd0190","from_path":"foo","to_path":"foo2"}],"v":1}]
+
+disable the new subtree key and make sure inspect command works for existing metadata
+  $ setconfig extensions.subtreetestoverride2=$TESTTMP/test_subtree_key.py
+  $ hg dbsh -c "print(sapling.utils.subtreeutil.SUBTREE_KEY)"
+  test_subtree
+  $ hg subtree inspect
+  {
+    "merges": [
+      {
+        "version": 1,
+        "from_commit": "03dfd4b086085a00e29f7e8d55db1880e8bd0190",
+        "from_path": "foo",
+        "to_path": "foo2"
+      }
+    ]
+  }

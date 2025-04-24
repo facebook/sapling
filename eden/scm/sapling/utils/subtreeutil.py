@@ -20,6 +20,7 @@ SUBTREE_BRANCH_KEY = "test_subtree_copy"
 SUBTREE_MERGE_KEY = "test_subtree_merge"
 
 TEST_SUBTREE_KEY = "test_subtree"
+PROD_SUBTREE_KEY = "subtree"
 # XXX: remove the 'test_' prefix when server-side support is ready
 SUBTREE_KEY = TEST_SUBTREE_KEY
 
@@ -34,7 +35,8 @@ def get_subtree_metadata_keys() -> Set[str]:
     existing metadata.
     """
     keys = get_deprecated_subtree_metadata_keys()
-    keys.add(SUBTREE_KEY)
+    keys.add(TEST_SUBTREE_KEY)
+    keys.add(PROD_SUBTREE_KEY)
     return keys
 
 
@@ -291,7 +293,7 @@ def get_subtree_branches(repo, node) -> List[SubtreeBranch]:
 
     extra = repo[node].extra()
     result = []
-    if metadata_list := _get_subtree_metadata(extra, SUBTREE_KEY):
+    if metadata_list := _get_subtree_metadata_by_subtree_keys(extra):
         for metadata in metadata_list:
             for branch_type in BranchType:
                 key = branch_type.to_key()
@@ -325,7 +327,7 @@ def get_subtree_branches(repo, node) -> List[SubtreeBranch]:
 def get_subtree_merges(repo, node) -> List[SubtreeMerge]:
     extra = repo[node].extra()
     result = []
-    if metadata_list := _get_subtree_metadata(extra, SUBTREE_KEY):
+    if metadata_list := _get_subtree_metadata_by_subtree_keys(extra):
         for metadata in metadata_list:
             for merge in metadata.get("merges", []):
                 result.append(
@@ -353,7 +355,7 @@ def get_subtree_merges(repo, node) -> List[SubtreeMerge]:
 def get_subtree_imports(repo, node):
     extra = repo[node].extra()
     result = []
-    if metadata_list := _get_subtree_metadata(extra, SUBTREE_KEY):
+    if metadata_list := _get_subtree_metadata_by_subtree_keys(extra):
         for metadata in metadata_list:
             for im in metadata.get("imports", []):
                 result.append(
@@ -377,6 +379,17 @@ def _get_subtree_metadata(extra, key):
         return json.loads(val_str)
     except json.JSONDecodeError:
         raise error.Abort(f"invalid {key} metadata: {val_str}")
+
+
+def _get_subtree_metadata_by_subtree_keys(extra):
+    if PROD_SUBTREE_KEY in extra and TEST_SUBTREE_KEY in extra:
+        raise error.Abort(_("commit extra contains multiple subtree keys"))
+
+    if metadata := _get_subtree_metadata(extra, PROD_SUBTREE_KEY):
+        return metadata
+    else:
+        # backward compatibility with existing metadata
+        return _get_subtree_metadata(extra, TEST_SUBTREE_KEY)
 
 
 def merge_subtree_metadata(repo, ctxs):
@@ -605,7 +618,7 @@ def extra_contains_shallow_copy(extra) -> bool:
     not have shallow copy type. It is used for newly incoming commits.
     """
     shallow_copy_key = BranchType.SHALLOW_COPY.to_key()
-    if metadata_list := _get_subtree_metadata(extra, SUBTREE_KEY):
+    if metadata_list := _get_subtree_metadata_by_subtree_keys(extra):
         for metadata in metadata_list:
             if shallow_copy_key in metadata:
                 return True
