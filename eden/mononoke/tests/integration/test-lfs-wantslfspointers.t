@@ -9,20 +9,15 @@
 
 Setup repo config (we use blob_files to share across Mononoke and API Server):
   $ LFS_THRESHOLD="1000" LFS_ROLLOUT_PERCENTAGE="0" setup_common_config "blob_files"
-  $ cd $TESTTMP
 
-Setup hg repo, create a commit there. No LFS blobs yet.
-  $ hginit_treemanifest repo
-  $ cd repo
-
-Commit small file
-  $ echo s > smallfile
-  $ hg commit -Aqm "add small file"
-  $ hg bookmark master_bookmark -r tip
-  $ cd ..
-
-Blobimport the hg repo to Mononoke
-  $ blobimport repo/.hg repo
+Setup repo
+  $ testtool_drawdag --print-hg-hashes -R repo --derive-all --no-default-files <<EOF
+  > A
+  > # modify: A "smallfile" "s"
+  > # bookmark: A master_bookmark
+  > # message: A "add small file"
+  > EOF
+  A=2b25f57407872c9532d1d270afb95c8764c54939
 
 Start Mononoke with LFS enabled.
   $ start_and_wait_for_mononoke_server
@@ -48,7 +43,7 @@ Perform LFS push
   $ echo "$LONG" > lfs-largefile
   $ hg commit -Aqm "add lfs-large files"
   $ hg push -r . --to master_bookmark -v
-  pushing rev 99262937f158 to destination mono:repo bookmark master_bookmark
+  pushing rev 778207df78d7 to destination mono:repo bookmark master_bookmark
   searching for changes
   validated revset for rebase
   1 changesets found
