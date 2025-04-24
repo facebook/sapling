@@ -1480,7 +1480,7 @@ function default_setup_blobimport() {
 }
 
 function default_setup() {
-  default_setup_blobimport "$BLOB_TYPE"
+  default_setup_drawdag "$@"
   echo "starting Mononoke"
 
   start_and_wait_for_mononoke_server "$@"

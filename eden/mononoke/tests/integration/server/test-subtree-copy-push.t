@@ -13,20 +13,14 @@
   > EOF
   $ setconfig extensions.subtreecopyreusetree=$TESTTMP/subtree.py
   $ BLOB_TYPE="blob_files" default_setup --scuba-log-file "$TESTTMP/log.json"
-  hg repo
-  o  C [draft;rev=2;26805aba1e60]
-  │
-  o  B [draft;rev=1;112478962961]
-  │
-  o  A [draft;rev=0;426bada5c675]
-  $
-  blobimporting
+  A=aa53d24251ff3f54b1b2c29ae02826701b2abeb0079f1bb13b8434b54cd87675
+  B=f8c75e41a0c4d29281df765f39de47bca1dcadfdc55ada4ccc2f6df567201658
+  C=e32a1e342cdb1e38e88466b4c1a01ae9f410024017aa21dc0a1c5da6b3963bf2
   starting Mononoke
   cloning repo in hg client 'repo2'
 
 subtree copy and push
-
-  $ hg up $C
+  $ hg up master_bookmark
   3 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ mkdir foo
   $ echo aaa > foo/file1
@@ -44,32 +38,32 @@ subtree copy and push
   aaa
   $ hg log -r . -T '{extras % "{extra}\n"}'
   branch=default
-  test_subtree=[{"copies":[{"from_commit":"8174a01c532cd975ecb875fb1556590dd776b29e","from_path":"foo","to_path":"bar"}],"v":1}]
+  test_subtree=[{"copies":[{"from_commit":"47a1c68b921ca59adb1975d5486c2e00f6fbb9a0","from_path":"foo","to_path":"bar"}],"v":1}]
 
   $ hg log -G -T '{node|short} {desc|firstline} {remotebookmarks}\n'
-  @  0154681d7fbd Subtree copy from 8174a01c532cd975ecb875fb1556590dd776b29e
+  @  67dba3575ef5 Subtree copy from 47a1c68b921ca59adb1975d5486c2e00f6fbb9a0
   │
-  o  64a6d9b95dad update foo/file2 remote/master_bookmark
+  o  ddfa87816335 update foo/file2 remote/master_bookmark
   │
-  o  8174a01c532c foo/file1 -> foo/file2
+  o  47a1c68b921c foo/file1 -> foo/file2
   │
-  o  4e1aaf1e01be add foo/file1
+  o  d350b243c628 add foo/file1
   │
-  o  26805aba1e60 C
+  o  d3b399ca8757 C
   │
-  o  112478962961 B
+  o  80521a640a0c B
   │
-  o  426bada5c675 A
+  o  20ca2a4749a4 A
   
 tofix: push should be succeeded after Mononoke support subtree copy metadata
   $ hg push -r . --to master_bookmark
-  pushing rev 0154681d7fbd to destination https://localhost:$LOCAL_PORT/edenapi/ bookmark master_bookmark
+  pushing rev 67dba3575ef5 to destination https://localhost:$LOCAL_PORT/edenapi/ bookmark master_bookmark
   edenapi: queue 1 commit for upload
   edenapi: queue 0 files for upload
   edenapi: queue 2 trees for upload
   edenapi: uploaded 2 trees
   edenapi: uploaded 0 changesets
-  abort: failed to upload commits to server: ['0154681d7fbd158106504e108410102927f6c837']
+  abort: failed to upload commits to server: ['67dba3575ef580491cf2544e2f0393b3812f7685']
   [255]
 
   $ rg "Incorrect copy info" $TESTTMP/log.json --no-filename | jq '.normal.edenapi_error'
