@@ -134,3 +134,44 @@ fn test_walk_node_insert() {
         ]
     );
 }
+
+#[test]
+fn test_walk_node_get() {
+    let mut node = WalkNode::default();
+
+    assert!(node.get(&p("")).is_none());
+    assert!(node.get(&p("foo")).is_none());
+    assert!(node.get(&p("foo/bar")).is_none());
+
+    let epoch = Instant::now();
+
+    let mut foo_walk = Walk {
+        depth: 1,
+        last_access: epoch,
+    };
+    node.insert(&p("foo"), foo_walk);
+
+    assert!(node.get(&p("")).is_none());
+    assert_eq!(node.get(&p("foo")), Some(&mut foo_walk));
+    assert!(node.get(&p("foo/bar")).is_none());
+
+    let mut foo_bar_walk = Walk {
+        depth: 2,
+        last_access: epoch,
+    };
+    node.insert(&p("foo/bar"), foo_bar_walk);
+
+    assert!(node.get(&p("")).is_none());
+    assert_eq!(node.get(&p("foo")), Some(&mut foo_walk));
+    assert_eq!(node.get(&p("foo/bar")), Some(&mut foo_bar_walk));
+
+    let mut root_walk = Walk {
+        depth: 0,
+        last_access: epoch,
+    };
+    node.insert(&p(""), root_walk);
+
+    assert_eq!(node.get(&p("")), Some(&mut root_walk));
+    assert_eq!(node.get(&p("foo")), Some(&mut foo_walk));
+    assert_eq!(node.get(&p("foo/bar")), Some(&mut foo_bar_walk));
+}

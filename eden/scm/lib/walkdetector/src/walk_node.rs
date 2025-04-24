@@ -23,6 +23,17 @@ pub(crate) struct WalkNode {
 }
 
 impl WalkNode {
+    /// Fetch active walk for `walk_root`, if any.
+    pub(crate) fn get(&mut self, walk_root: &RepoPath) -> Option<&mut Walk> {
+        match walk_root.split_first_component() {
+            Some((head, tail)) => self
+                .children
+                .get_mut(head)
+                .and_then(|child| child.get(tail)),
+            None => self.walk.as_mut(),
+        }
+    }
+
     /// Insert a new walk.
     pub(crate) fn insert(&mut self, walk_root: &RepoPath, walk: Walk) {
         match walk_root.split_first_component() {
