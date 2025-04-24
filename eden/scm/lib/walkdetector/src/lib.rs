@@ -100,6 +100,7 @@ impl Detector {
         let mut inner = self.inner.lock();
 
         if let Some(walk) = inner.node.get_containing(&dir_path) {
+            tracing::trace!(dir=%dir_path, "dir in walk");
             walk.last_access = time;
             return Ok(());
         }
@@ -136,6 +137,8 @@ impl Dir {
 impl Inner {
     /// Insert a new Walk rooted at `dir`.
     fn insert_walk(&mut self, time: Instant, dir: &RepoPath, mut walk_depth: usize) {
+        tracing::debug!(%dir, depth=walk_depth, "new walk");
+
         if let Some((parent_dir, name)) = dir.split_last_component() {
             if let Some(parent_node) = self.node.get_node(parent_dir) {
                 // If this walk already exists, there is no combining to be done.
@@ -144,20 +147,26 @@ impl Inner {
                     // want to merge into a walk on the parent.
 
                     let mut sibling_count = 0;
-                    let max_sibling_depth =
-                        parent_node
-                            .children
-                            .iter()
-                            .fold(0, |max, (_, sibling_node)| {
-                                if let Some(walk) = &sibling_node.walk {
-                                    sibling_count += 1;
-                                    max.max(walk.depth)
-                                } else {
-                                    max
-                                }
-                            });
+                    let max_sibling_depth = parent_node.child_walks().fold(0, |max, (_, walk)| {
+                        sibling_count += 1;
+                        max.max(walk.depth)
+                    });
 
                     if sibling_count >= (self.min_dir_walk_threshold - 1) {
+                        if tracing::enabled!(tracing::Level::DEBUG) {
+                            let siblings_display = parent_node
+                                .child_walks()
+                                .map(|(name, walk)| {
+                                    format!(
+                                        "{}:{}",
+                                        dir.parent().unwrap_or_default().join(name),
+                                        walk.depth
+                                    )
+                                })
+                                .collect::<Vec<_>>();
+                            tracing::debug!(siblings=?siblings_display, "combining with siblings");
+                        }
+
                         walk_depth = walk_depth.max(max_sibling_depth) + 1;
                         walk_depth = walk_depth.max(parent_node.walk.map_or(0, |w| w.depth));
                         self.insert_walk(time, parent_dir, walk_depth);
@@ -167,6 +176,7 @@ impl Inner {
             }
         }
 
+        tracing::debug!(%dir, depth=walk_depth, "inserting walk");
         self.node.insert(
             dir,
             Walk {

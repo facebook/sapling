@@ -743,6 +743,12 @@ impl AsRef<RepoPath> for PathComponent {
     }
 }
 
+impl AsRef<RepoPath> for PathComponentBuf {
+    fn as_ref(&self) -> &RepoPath {
+        RepoPath::from_str_unchecked(&self.0)
+    }
+}
+
 impl AsRef<[u8]> for PathComponent {
     fn as_ref(&self) -> &[u8] {
         self.as_byte_slice()

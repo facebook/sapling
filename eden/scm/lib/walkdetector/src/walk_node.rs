@@ -106,6 +106,12 @@ impl WalkNode {
         list
     }
 
+    pub(crate) fn child_walks(&self) -> impl Iterator<Item = (&PathComponentBuf, &Walk)> {
+        self.children
+            .iter()
+            .filter_map(|(name, node)| node.walk.as_ref().map(|w| (name, w)))
+    }
+
     /// Recursively remove all walks contained within a walk of depth `depth`.
     fn remove_contained(&mut self, depth: usize) {
         self.children.retain(|_name, child| {
