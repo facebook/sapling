@@ -63,7 +63,7 @@ pub struct RepoPathBuf(String);
 ///    * ``, empty, implies that paths can't start with, end or contain consecutive `SEPARATOR`s
 ///    * `.`, dot/period, unix current directory
 ///    * `..`, double dot, unix parent directory
-///      
+///
 /// TODO: There is more validation that could be done here. Windows has a broad list of illegal
 /// characters and reserved words.
 ///
@@ -71,6 +71,12 @@ pub struct RepoPathBuf(String);
 #[derive(Debug, Eq, PartialEq, Hash, RefCastCustom, Serialize)]
 #[repr(transparent)]
 pub struct RepoPath(str);
+
+impl Default for &RepoPath {
+    fn default() -> Self {
+        RepoPath::empty()
+    }
+}
 
 /// An owned version of a `PathComponent`. Not intended for mutation. RepoPathBuf is probably
 /// more appropriate for mutation.
@@ -539,6 +545,12 @@ impl TryFrom<String> for RepoPathBuf {
 
     fn try_from(s: String) -> Result<Self, Self::Error> {
         RepoPathBuf::from_string(s)
+    }
+}
+
+impl PartialEq<RepoPathBuf> for &RepoPath {
+    fn eq(&self, other: &RepoPathBuf) -> bool {
+        *self == other.as_repo_path()
     }
 }
 

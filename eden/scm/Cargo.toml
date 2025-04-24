@@ -194,6 +194,7 @@ members = [
   "lib/version",
   "lib/vfs",
   "lib/vlqencoding",
+  "lib/walkdetector",
   "lib/webview-app",
   "lib/workingcopy",
   "lib/workingcopy/repostate",
