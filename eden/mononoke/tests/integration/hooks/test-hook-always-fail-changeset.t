@@ -19,7 +19,7 @@
 Doesn no match regex - should pass
   $ mkcommit 1
   $ hg push -r . --to random_bookmark --create
-  pushing rev c2e526aacb51 to destination mono:repo bookmark random_bookmark
+  pushing rev 562a1c4bd38b to destination mono:repo bookmark random_bookmark
   searching for changes
   adding changesets
   adding manifests
@@ -32,7 +32,7 @@ Matches regex - should NOT pass
   $ hg up -q "min(all())"
   $ mkcommit 2
   $ hg push -r . --to master --create
-  pushing rev c9b2673d3218 to destination mono:repo bookmark master
+  pushing rev 2c1326a02a32 to destination mono:repo bookmark master
   searching for changes
   remote: Command failed
   remote:   Error:
@@ -42,7 +42,7 @@ Matches regex - should NOT pass
   [255]
   $ mkcommit another
   $ hg push -r . --to release_v1 --create
-  pushing rev cddcb6a5bb53 to destination mono:repo bookmark release_v1
+  pushing rev a59f7ad42784 to destination mono:repo bookmark release_v1
   searching for changes
   remote: Command failed
   remote:   Error:
@@ -59,11 +59,10 @@ Matches regex - should NOT pass
   > }'''
   > CONF
   > )
-  abort: repository `$TESTTMP/repo` already exists
   abort: destination 'repo2' is not empty
   $ force_update_configerator
   $ hg push -r . --to master --create
-  pushing rev cddcb6a5bb53 to destination mono:repo bookmark master
+  pushing rev a59f7ad42784 to destination mono:repo bookmark master
   searching for changes
   no changes found
   remote: Command failed

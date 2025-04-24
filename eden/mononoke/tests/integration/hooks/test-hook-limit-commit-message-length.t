@@ -25,7 +25,7 @@ Ok commit message - should pass
   $ touch file1
   $ hg ci -Aqm 123456789
   $ hg push -r . --to master_bookmark
-  pushing rev f95217ebe3a8 to destination mono:repo bookmark master_bookmark
+  pushing rev e2f5d34d7bba to destination mono:repo bookmark master_bookmark
   searching for changes
   adding changesets
   adding manifests
@@ -38,12 +38,12 @@ Commit message too long - should fail
   $ touch file2
   $ hg ci -Aqm "$(printf "%s\n%s" "foo" "123456")"
   $ hg push -r . --to master_bookmark
-  pushing rev 6ef9fe6a13fa to destination mono:repo bookmark master_bookmark
+  pushing rev 1575344098f0 to destination mono:repo bookmark master_bookmark
   searching for changes
   remote: Command failed
   remote:   Error:
   remote:     hooks failed:
-  remote:     limit_commit_message_length for 6ef9fe6a13fa92ed3a2fdc0843441c0511cd47f6: Commit message length for 'foo' (10) exceeds length limit (>= 10)
+  remote:     limit_commit_message_length for 1575344098f06ab21cd60256f3e7224c260abbb4: Commit message length for 'foo' (10) exceeds length limit (>= 10)
   abort: unexpected EOL, expected netstring digit
   [255]
 
@@ -53,11 +53,11 @@ Commit message too long (UTF-8 multibyte characters) - should fail
   $ touch file3
   $ hg ci -Aqm "$(printf "%s\n%s" "title_SHOULD BE STRIPPED IN MSG" "1234€")"
   $ hg push -r . --to master_bookmark
-  pushing rev e363a5d26663 to destination mono:repo bookmark master_bookmark
+  pushing rev a2202a3e7b6d to destination mono:repo bookmark master_bookmark
   searching for changes
   remote: Command failed
   remote:   Error:
   remote:     hooks failed:
-  remote:     limit_commit_message_length for e363a5d266639d657f163422864c1e0259f88760: Commit message length for 'title' (39) exceeds length limit (>= 10)
+  remote:     limit_commit_message_length for a2202a3e7b6d1e46820ab680c0230fd732a52d4b: Commit message length for 'title' (39) exceeds length limit (>= 10)
   abort: unexpected EOL, expected netstring digit
   [255]

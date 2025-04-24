@@ -605,6 +605,21 @@ identity_data = "{env.getenv("PROXY_ID_DATA")}"
 """.encode()
         )
 
+    # Setup Redaction Config
+    t = env.getenv("TESTTMP")
+    redaction_conf = f"{t}/configerator/scm/mononoke/redaction"
+    env.setenv("REDACTION_CONF", redaction_conf)
+    fs.mkdir(redaction_conf)
+    if not fs.exists(f"{redaction_conf}/redaction_sets"):
+        with fs.open(f"{redaction_conf}/redaction_sets", "w") as f:
+            f.write(
+                b"""
+{
+  "all_redactions": []
+}
+"""
+            )
+
     additional_mononoke_common_config = env.getenv("ADDITIONAL_MONONOKE_COMMON_CONFIG")
     if additional_mononoke_common_config:
         with fs.open("common/common.toml", "a") as f:

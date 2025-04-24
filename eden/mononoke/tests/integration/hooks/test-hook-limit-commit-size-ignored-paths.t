@@ -29,7 +29,7 @@ Test with ignored paths
   $ echo $LARGE_CONTENT > interfaces/1.graphql
   $ hg commit -Aqm msg
   $ hg push -r . --to master_bookmark
-  pushing rev 4b2f324c9502 to destination mono:repo bookmark master_bookmark
+  pushing rev a6ed0da68659 to destination mono:repo bookmark master_bookmark
   searching for changes
   adding changesets
   adding manifests
@@ -40,11 +40,11 @@ Test with ignored paths
   $ echo $LARGE_CONTENT > bin-1.tgz
   $ hg commit -Aqm msg
   $ hg push -r . --to master_bookmark
-  pushing rev 74cf48a19435 to destination mono:repo bookmark master_bookmark
+  pushing rev 326b3bee7ea9 to destination mono:repo bookmark master_bookmark
   searching for changes
   remote: Command failed
   remote:   Error:
   remote:     hooks failed:
-  remote:     limit_commit_size for 74cf48a1943545fc730f13c2e5855eabcfa99d48: Too large: 20 > 10.
+  remote:     limit_commit_size for 326b3bee7ea964835b68fa0e75fb978315f46626: Too large: 20 > 10.
   abort: unexpected EOL, expected netstring digit
   [255]

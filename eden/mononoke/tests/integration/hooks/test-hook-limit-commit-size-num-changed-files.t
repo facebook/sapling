@@ -22,7 +22,7 @@ Small commit, one file changed
   $ echo file > file
   $ hg ci -Aqm 1
   $ hg push -r . --to master_bookmark
-  pushing rev 4f751d63133d to destination mono:repo bookmark master_bookmark
+  pushing rev 2102434fc586 to destination mono:repo bookmark master_bookmark
   searching for changes
   adding changesets
   adding manifests
@@ -34,11 +34,11 @@ Large commit, a lot of files changed
   $ for x in $(seq 6); do echo $x > $x; done
   $ hg ci -Aqm 2
   $ hg push -r . --to master_bookmark
-  pushing rev bb41d2a5d8c3 to destination mono:repo bookmark master_bookmark
+  pushing rev f422eb1076af to destination mono:repo bookmark master_bookmark
   searching for changes
   remote: Command failed
   remote:   Error:
   remote:     hooks failed:
-  remote:     limit_commit_size for bb41d2a5d8c3492f085f4d276927533e79f269ae: Too many files: 6 > 5.
+  remote:     limit_commit_size for f422eb1076af36a91dcd23d84705f033014bba34: Too many files: 6 > 5.
   abort: unexpected EOL, expected netstring digit
   [255]

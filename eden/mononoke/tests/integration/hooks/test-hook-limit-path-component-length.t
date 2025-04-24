@@ -30,12 +30,12 @@ S200449
   $ touch "$DIR/$TOO_LARGE_FILE"
   $ hg ci -Aqm too_large
   $ hg push -r . --to master_bookmark
-  pushing rev 9af0f6fef03e to destination mono:repo bookmark master_bookmark
+  pushing rev a527eef669bc to destination mono:repo bookmark master_bookmark
   searching for changes
   remote: Command failed
   remote:   Error:
   remote:     hooks failed:
-  remote:     limit_path_length for 9af0f6fef03e3490dddf78cc54e01e787d8a0046: Path component length for "GQLG:Intern::PlatformToolViewerContextCallsiteMigrationRuleChangeRuleDescriptionResponsePayload::EntPlatformToolViewerContextCallsiteMigrationRuleAction::genPerformGraphQLPlatformToolViewerContextCallsiteMigrationRuleChangeRuleDescriptionMutationType.php.i" (256) exceeds length limit (>= 255)
+  remote:     limit_path_length for a527eef669bc53b8c175b62b22a66b84e1c1b6e5: Path component length for "GQLG:Intern::PlatformToolViewerContextCallsiteMigrationRuleChangeRuleDescriptionResponsePayload::EntPlatformToolViewerContextCallsiteMigrationRuleAction::genPerformGraphQLPlatformToolViewerContextCallsiteMigrationRuleChangeRuleDescriptionMutationType.php.i" (256) exceeds length limit (>= 255)
   abort: unexpected EOL, expected netstring digit
   [255]
 
@@ -44,7 +44,7 @@ S200449
   $ touch "$DIR/$NOT_TOO_LARGE_FILE"
   $ hg ci -Aqm not_too_large
   $ hg push -r . --to master_bookmark
-  pushing rev 7dfdeae7524e to destination mono:repo bookmark master_bookmark
+  pushing rev 330a172698db to destination mono:repo bookmark master_bookmark
   searching for changes
   adding changesets
   adding manifests

@@ -49,7 +49,7 @@ Negative testing
   $ echo "good" > good_file.txt
   $ hg ci -Aqm negative
   $ hg push -r . --to master_bookmark
-  pushing rev 7de92e406b02 to destination mono:repo bookmark master_bookmark
+  pushing rev 02f7f604f5e4 to destination mono:repo bookmark master_bookmark
   searching for changes
   adding changesets
   adding manifests
@@ -62,7 +62,7 @@ Tricky case - this should succeed, but looks very similar to cases that should n
   $ echo "good" > test-buck-out/buck-out-test/buck-out
   $ hg ci -Aqm negative
   $ hg push -r . --to master_bookmark
-  pushing rev 94d93052245d to destination mono:repo bookmark master_bookmark
+  pushing rev 59a1697a67a1 to destination mono:repo bookmark master_bookmark
   searching for changes
   adding changesets
   adding manifests
@@ -75,12 +75,12 @@ buck-out directory is not allowed in the root
   $ echo "bad" > buck-out/file
   $ hg ci -Aqm failure
   $ hg push -r . --to master_bookmark
-  pushing rev f8301844633b to destination mono:repo bookmark master_bookmark
+  pushing rev 2e29df6a828d to destination mono:repo bookmark master_bookmark
   searching for changes
   remote: Command failed
   remote:   Error:
   remote:     hooks failed:
-  remote:     block_files for f8301844633b60c2b4f8b990279394d831ab90c7: Blocked filename 'buck-out/file' matched name pattern '^buck-out/'. Rename or remove this file and try again.
+  remote:     block_files for 2e29df6a828daec5228e2142b806345778776871: Blocked filename 'buck-out/file' matched name pattern '^buck-out/'. Rename or remove this file and try again.
   abort: unexpected EOL, expected netstring digit
   [255]
 
@@ -90,12 +90,12 @@ buck-out directory is not allowed in any subdir
   $ echo "bad" > dir/buck-out/file
   $ hg ci -Aqm failure
   $ hg push -r . --to master_bookmark
-  pushing rev 409273951981 to destination mono:repo bookmark master_bookmark
+  pushing rev c2eff965c3d8 to destination mono:repo bookmark master_bookmark
   searching for changes
   remote: Command failed
   remote:   Error:
   remote:     hooks failed:
-  remote:     block_files for 40927395198136c0dc65978d4fec6a8bf8386d4d: Blocked filename 'dir/buck-out/file' matched name pattern '/buck-out/'. Rename or remove this file and try again.
+  remote:     block_files for c2eff965c3d873332c55d7dc2d29a73e91f31ffd: Blocked filename 'dir/buck-out/file' matched name pattern '/buck-out/'. Rename or remove this file and try again.
   abort: unexpected EOL, expected netstring digit
   [255]
 
@@ -104,12 +104,12 @@ DO_NOT_COMMIT_THIS_FILE_OR_YOU_WILL_BE_FIRED does the needful
   $ echo "bad" > important_DO_NOT_COMMIT_THIS_FILE_OR_YOU_WILL_BE_FIRED.txt
   $ hg ci -Aqm failure
   $ hg push -r . --to master_bookmark
-  pushing rev d1a6e60539c6 to destination mono:repo bookmark master_bookmark
+  pushing rev 21ab636d0b9f to destination mono:repo bookmark master_bookmark
   searching for changes
   remote: Command failed
   remote:   Error:
   remote:     hooks failed:
-  remote:     block_files for d1a6e60539c6d4cd8df0c1fd442dcba98ef76bdf: Blocked filename 'important_DO_NOT_COMMIT_THIS_FILE_OR_YOU_WILL_BE_FIRED.txt' matched name pattern 'DO_NOT_COMMIT_THIS_FILE_OR_YOU_WILL_BE_FIRED'. Rename or remove this file and try again.
+  remote:     block_files for 21ab636d0b9f382939cb3740b6a93909729142b7: Blocked filename 'important_DO_NOT_COMMIT_THIS_FILE_OR_YOU_WILL_BE_FIRED.txt' matched name pattern 'DO_NOT_COMMIT_THIS_FILE_OR_YOU_WILL_BE_FIRED'. Rename or remove this file and try again.
   abort: unexpected EOL, expected netstring digit
   [255]
 
@@ -119,12 +119,12 @@ Old fbmake leftovers cannot be committed
   $ echo "bad" > fbcode/_bin/file
   $ hg ci -Aqm failure
   $ hg push -r . --to master_bookmark
-  pushing rev 10b8f7a92bd1 to destination mono:repo bookmark master_bookmark
+  pushing rev 1c764df4be5b to destination mono:repo bookmark master_bookmark
   searching for changes
   remote: Command failed
   remote:   Error:
   remote:     hooks failed:
-  remote:     block_files for 10b8f7a92bd16630481eac34cac5b832edb9cb71: Blocked filename 'fbcode/_bin/file' matched name pattern '^fbcode/_bin/'. Rename or remove this file and try again.
+  remote:     block_files for 1c764df4be5b9a7f42ba5f9f5e2e64faea60f180: Blocked filename 'fbcode/_bin/file' matched name pattern '^fbcode/_bin/'. Rename or remove this file and try again.
   abort: unexpected EOL, expected netstring digit
   [255]
 
@@ -136,10 +136,10 @@ Cannot nest project dirs badly
   > done
   $ hg ci -Aqm failure
   $ hg push -r . --to master_bookmark |& grep -P 'remote:\s+block_files for' | sort
-  remote:     block_files for 5d971d690977075710cf1270860e2ab65015eeec: Blocked filename 'fbandroid/fbandroid/files' matched name pattern '^fbandroid/fbandroid/'. Rename or remove this file and try again.
-  remote:     block_files for 5d971d690977075710cf1270860e2ab65015eeec: Blocked filename 'fbcode/fbcode/files' matched name pattern '^fbcode/fbcode/'. Rename or remove this file and try again.
-  remote:     block_files for 5d971d690977075710cf1270860e2ab65015eeec: Blocked filename 'fbobjc/fbobjc/files' matched name pattern '^fbobjc/fbobjc/'. Rename or remove this file and try again.
-  remote:     block_files for 5d971d690977075710cf1270860e2ab65015eeec: Blocked filename 'xplat/xplat/files' matched name pattern '^xplat/xplat/'. Rename or remove this file and try again.
+  remote:     block_files for 1e6669d90ee6a9825c530a8332bcb0edd3dfd4a3: Blocked filename 'fbandroid/fbandroid/files' matched name pattern '^fbandroid/fbandroid/'. Rename or remove this file and try again.
+  remote:     block_files for 1e6669d90ee6a9825c530a8332bcb0edd3dfd4a3: Blocked filename 'fbcode/fbcode/files' matched name pattern '^fbcode/fbcode/'. Rename or remove this file and try again.
+  remote:     block_files for 1e6669d90ee6a9825c530a8332bcb0edd3dfd4a3: Blocked filename 'fbobjc/fbobjc/files' matched name pattern '^fbobjc/fbobjc/'. Rename or remove this file and try again.
+  remote:     block_files for 1e6669d90ee6a9825c530a8332bcb0edd3dfd4a3: Blocked filename 'xplat/xplat/files' matched name pattern '^xplat/xplat/'. Rename or remove this file and try again.
 
 Cannot put crud in xplat
   $ hg up -q "min(all())"
@@ -149,9 +149,9 @@ Cannot put crud in xplat
   > done
   $ hg ci -Aqm failure
   $ hg push -r . --to master_bookmark |& grep -P 'remote:\s+block_files for' | sort
-  remote:     block_files for 42bbe801bb55fd1eee91d4dbb56f5a5dc3f0f0ad: Blocked filename 'xplat/fbandroid/files' matched name pattern '^xplat/fbandroid/'. Rename or remove this file and try again.
-  remote:     block_files for 42bbe801bb55fd1eee91d4dbb56f5a5dc3f0f0ad: Blocked filename 'xplat/fbcode/files' matched name pattern '^xplat/fbcode/'. Rename or remove this file and try again.
-  remote:     block_files for 42bbe801bb55fd1eee91d4dbb56f5a5dc3f0f0ad: Blocked filename 'xplat/fbobjc/files' matched name pattern '^xplat/fbobjc/'. Rename or remove this file and try again.
+  remote:     block_files for ca38f237040d417466fcc1048ec6254f1ffdfb35: Blocked filename 'xplat/fbandroid/files' matched name pattern '^xplat/fbandroid/'. Rename or remove this file and try again.
+  remote:     block_files for ca38f237040d417466fcc1048ec6254f1ffdfb35: Blocked filename 'xplat/fbcode/files' matched name pattern '^xplat/fbcode/'. Rename or remove this file and try again.
+  remote:     block_files for ca38f237040d417466fcc1048ec6254f1ffdfb35: Blocked filename 'xplat/fbobjc/files' matched name pattern '^xplat/fbobjc/'. Rename or remove this file and try again.
 
 Owners files are disallowed
   $ hg up -C -q "min(all())"
@@ -160,12 +160,12 @@ Owners files are disallowed
   $ hg add good OWNERS
   $ hg ci -m 'owners'
   $ hg push -r . --to master_bookmark
-  pushing rev fb86edb43149 to destination mono:repo bookmark master_bookmark
+  pushing rev 4fb5a8e3ae8f to destination mono:repo bookmark master_bookmark
   searching for changes
   remote: Command failed
   remote:   Error:
   remote:     hooks failed:
-  remote:     block_files for fb86edb431492c799bfb61c60137272899084b19: Blocked filename 'OWNERS' matched name pattern '^OWNERS$'. Rename or remove this file and try again.
+  remote:     block_files for 4fb5a8e3ae8f09634fbe63d0de903285ffe95471: Blocked filename 'OWNERS' matched name pattern '^OWNERS$'. Rename or remove this file and try again.
   abort: unexpected EOL, expected netstring digit
   [255]
 
@@ -176,12 +176,12 @@ Owners files are disallowed
   adding owners
   $ hg ci -m 'owners'
   $ hg push -r . --to master_bookmark
-  pushing rev a2511fd15afb to destination mono:repo bookmark master_bookmark
+  pushing rev 99177114cd07 to destination mono:repo bookmark master_bookmark
   searching for changes
   remote: Command failed
   remote:   Error:
   remote:     hooks failed:
-  remote:     block_files for a2511fd15afb17f7227bcf57c4313cb38b48d246: Blocked filename 'owners' matched name pattern '^owners$'. Rename or remove this file and try again.
+  remote:     block_files for 99177114cd07e745baa4c4470f0c5d80e63ab3e1: Blocked filename 'owners' matched name pattern '^owners$'. Rename or remove this file and try again.
   abort: unexpected EOL, expected netstring digit
   [255]
 
@@ -193,12 +193,12 @@ Owners files are disallowed
   adding dir/owners
   $ hg ci -m 'owners'
   $ hg push -r . --to master_bookmark
-  pushing rev 8d6b816aa4f3 to destination mono:repo bookmark master_bookmark
+  pushing rev b742a1aa7e76 to destination mono:repo bookmark master_bookmark
   searching for changes
   remote: Command failed
   remote:   Error:
   remote:     hooks failed:
-  remote:     block_files for 8d6b816aa4f370227f2b8263e630aa0e15b3d1a3: Blocked filename 'dir/owners' matched name pattern '.*/owners$'. Rename or remove this file and try again.
+  remote:     block_files for b742a1aa7e76a2a3183aa36d4e53831578493b97: Blocked filename 'dir/owners' matched name pattern '.*/owners$'. Rename or remove this file and try again.
   abort: unexpected EOL, expected netstring digit
   [255]
 
@@ -212,7 +212,7 @@ But file with owners inside is fine
   $ hg -q addremove
   $ hg ci -m 'owners'
   $ hg push -r . --to master_bookmark
-  pushing rev c5cf7687c442 to destination mono:repo bookmark master_bookmark
+  pushing rev eb744398fce9 to destination mono:repo bookmark master_bookmark
   searching for changes
   adding changesets
   adding manifests
@@ -226,12 +226,12 @@ Cannot commit .git stuff into the repo
   $ hg -q addremove
   $ hg ci -m 'git'
   $ hg push -r . --to master_bookmark
-  pushing rev ad3e5bd3f2e3 to destination mono:repo bookmark master_bookmark
+  pushing rev 1bc4b64267b9 to destination mono:repo bookmark master_bookmark
   searching for changes
   remote: Command failed
   remote:   Error:
   remote:     hooks failed:
-  remote:     block_files for ad3e5bd3f2e3084dfd3c18dde9fc4d3642fc2637: Blocked filename 'dir/.git/HEAD' matched name pattern '/\.git/'. Rename or remove this file and try again.
+  remote:     block_files for 1bc4b64267b91310f557991f7667defebebf71be: Blocked filename 'dir/.git/HEAD' matched name pattern '/\.git/'. Rename or remove this file and try again.
   abort: unexpected EOL, expected netstring digit
   [255]
 
@@ -242,12 +242,12 @@ Cannot commit .git stuff into the repo root
   $ hg -q addremove
   $ hg ci -m 'git'
   $ hg push -r . --to master_bookmark
-  pushing rev cba7ce32b8b5 to destination mono:repo bookmark master_bookmark
+  pushing rev 5bec34e0a829 to destination mono:repo bookmark master_bookmark
   searching for changes
   remote: Command failed
   remote:   Error:
   remote:     hooks failed:
-  remote:     block_files for cba7ce32b8b5ad219c7a5610933ec7d05d3f47b6: Blocked filename '.git/HEAD' matched name pattern '^\.git/'. Rename or remove this file and try again.
+  remote:     block_files for 5bec34e0a82983a7897a7eac6e79e1bac2dee808: Blocked filename '.git/HEAD' matched name pattern '^\.git/'. Rename or remove this file and try again.
   abort: unexpected EOL, expected netstring digit
   [255]
 
@@ -258,7 +258,7 @@ Something.git is ok
   $ hg -q addremove
   $ hg ci -m 'ok'
   $ hg push -r . --to master_bookmark
-  pushing rev 6e5252e4e930 to destination mono:repo bookmark master_bookmark
+  pushing rev e80f6e0538ac to destination mono:repo bookmark master_bookmark
   searching for changes
   adding changesets
   adding manifests
@@ -272,7 +272,7 @@ The dot in the [.]git hook pattern isn't a wildcard that matches any character
   $ hg -q addremove
   $ hg ci -m 'ok'
   $ hg push -r . --to master_bookmark
-  pushing rev d47a144a1dc1 to destination mono:repo bookmark master_bookmark
+  pushing rev 644cd313ce02 to destination mono:repo bookmark master_bookmark
   searching for changes
   adding changesets
   adding manifests
@@ -291,7 +291,7 @@ The dot in the [.]git hook pattern isn't a wildcard that matches any character
   $ echo "{}" > not.watchmanconfig
   $ hg ci -Aqm ok
   $ hg push -r . --to master_bookmark
-  pushing rev 42d8ce9969fa to destination mono:repo bookmark master_bookmark
+  pushing rev c882e4db1af1 to destination mono:repo bookmark master_bookmark
   searching for changes
   adding changesets
   adding manifests
@@ -304,12 +304,12 @@ The dot in the [.]git hook pattern isn't a wildcard that matches any character
   $ echo "{}" > dir/.watchmanconfig
   $ hg ci -Aqm failure
   $ hg push -r . --to master_bookmark
-  pushing rev 95659407febd to destination mono:repo bookmark master_bookmark
+  pushing rev d3b5973e930b to destination mono:repo bookmark master_bookmark
   searching for changes
   remote: Command failed
   remote:   Error:
   remote:     hooks failed:
-  remote:     block_files for 95659407febd3cf89a15cfbfb04eff3ae6b3d23b: Blocked filename 'dir/.watchmanconfig' matched name pattern '.*/\.watchmanconfig$'. Rename or remove this file and try again.
+  remote:     block_files for d3b5973e930bdf71e079b84f78a70bf747191279: Blocked filename 'dir/.watchmanconfig' matched name pattern '.*/\.watchmanconfig$'. Rename or remove this file and try again.
   abort: unexpected EOL, expected netstring digit
   [255]
 
@@ -334,12 +334,12 @@ Pushing to experimental directories should not work
   $ echo "test" > fbcode/experimental/this_is_a_test/file
   $ hg ci -Aqm experimental
   $ hg push -r . --to master_bookmark
-  pushing rev 164dce8b98ef to destination mono:repo bookmark master_bookmark
+  pushing rev 212a10abff88 to destination mono:repo bookmark master_bookmark
   searching for changes
   remote: Command failed
   remote:   Error:
   remote:     hooks failed:
-  remote:     block_files for 164dce8b98ef7d21f81b57bf868d14a33acc84ee: Blocked filename 'fbcode/experimental/this_is_a_test/file' matched name pattern '^fbcode/experimental'. Rename or remove this file and try again.
+  remote:     block_files for 212a10abff88450a2707b1d73b2e76c4fb1f2be6: Blocked filename 'fbcode/experimental/this_is_a_test/file' matched name pattern '^fbcode/experimental'. Rename or remove this file and try again.
   abort: unexpected EOL, expected netstring digit
   [255]
 
@@ -357,7 +357,7 @@ Deleting from experimental directories should still be allowed
   $ hg rm fbcode/experimental/this_is_a_test/file
   $ hg ci -qm "delete this_is_a_test"
   $ hg push -r . --to master_bookmark
-  pushing rev 8592809d2854 to destination mono:repo bookmark master_bookmark
+  pushing rev c3afe991fb3d to destination mono:repo bookmark master_bookmark
   searching for changes
   adding changesets
   adding manifests

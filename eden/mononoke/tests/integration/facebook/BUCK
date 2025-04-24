@@ -130,6 +130,7 @@ dott_test(
         "//common/tools/thriftdbg:thriftdbg",
         "//eden/mononoke:blobimport",
         "//eden/mononoke:mononoke",
+        "//eden/mononoke/tools/testtool:testtool",
         "//security/source_control/verify_integrity:verify_integrity",
         "//security/source_control/verify_integrity/service:verify_integrity_service",
     ],
@@ -150,6 +151,7 @@ dott_test(
         "//common/tools/thriftdbg:thriftdbg",
         "//eden/mononoke:blobimport",
         "//eden/mononoke:mononoke",
+        "//eden/mononoke/tools/testtool:testtool",
         "//signedsources:fixtures",
     ],
 )

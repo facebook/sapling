@@ -26,7 +26,7 @@ Large commit
   $ for x in $(seq $(($OVERRIDE_BYTE_LIMIT))); do echo -n 1 > "${x}_b"; done
   $ hg ci -Aqm 1
   $ hg push -r . --to master_bookmark
-  pushing rev f67c0f33f0f5 to destination mono:repo bookmark master_bookmark
+  pushing rev 39b69ae8d77e to destination mono:repo bookmark master_bookmark
   searching for changes
   adding changesets
   adding manifests
@@ -38,11 +38,11 @@ Too large commit
   $ for x in $(seq $(($OVERRIDE_BYTE_LIMIT + 1))); do echo -n 1 > "${x}_b"; done
   $ hg ci -Aqm 1
   $ hg push -r . --to master_bookmark
-  pushing rev a998ef262b2a to destination mono:repo bookmark master_bookmark
+  pushing rev 87c73373ef62 to destination mono:repo bookmark master_bookmark
   searching for changes
   remote: Command failed
   remote:   Error:
   remote:     hooks failed:
-  remote:     limit_commit_size for a998ef262b2a9c8ad130d0fcb11a4577e0ff67a5: Too large: 11 > 10.
+  remote:     limit_commit_size for 87c73373ef62f716d0cb1adddec6ef0357f84425: Too large: 11 > 10.
   abort: unexpected EOL, expected netstring digit
   [255]

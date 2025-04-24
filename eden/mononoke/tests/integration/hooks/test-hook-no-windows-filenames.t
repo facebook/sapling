@@ -21,7 +21,7 @@
   $ echo "ok"  > "com"
   $ hg ci -Aqm success
   $ hg push -r . --to master_bookmark
-  pushing rev 2bdf0e02c487 to destination mono:repo bookmark master_bookmark
+  pushing rev 8c52c327cb35 to destination mono:repo bookmark master_bookmark
   searching for changes
   adding changesets
   adding manifests
@@ -33,12 +33,12 @@
   $ hg ci -Aqm failure
   warning: filename contains 'COM5', which is reserved on Windows: COM5
   $ hg push -r . --to master_bookmark
-  pushing rev 0a31cb8056d1 to destination mono:repo bookmark master_bookmark
+  pushing rev 6dfbf17e5980 to destination mono:repo bookmark master_bookmark
   searching for changes
   remote: Command failed
   remote:   Error:
   remote:     hooks failed:
-  remote:     no_windows_filenames for 0a31cb8056d10d69d6652e754aeee9ecdd5f9e7b: ABORT: Illegal windows filename: COM5. Name and path of file in windows should not match regex (^(?i)((((com|lpt)\d)|con|prn|aux|nul))($|\.))|<|>|:|"|/|\\|\||\?|\*|[\x00-\x1F]|(\.| )$
+  remote:     no_windows_filenames for 6dfbf17e598069dbfd793b9ab7ce26f28956704e: ABORT: Illegal windows filename: COM5. Name and path of file in windows should not match regex (^(?i)((((com|lpt)\d)|con|prn|aux|nul))($|\.))|<|>|:|"|/|\\|\||\?|\*|[\x00-\x1F]|(\.| )$
   abort: unexpected EOL, expected netstring digit
   [255]
 
@@ -47,12 +47,12 @@
   $ hg ci -Aqm failure
   warning: filename contains 'nul', which is reserved on Windows: nul.txt
   $ hg push -r . --to master_bookmark
-  pushing rev 7e7f8fb54a0b to destination mono:repo bookmark master_bookmark
+  pushing rev df11f23e77f0 to destination mono:repo bookmark master_bookmark
   searching for changes
   remote: Command failed
   remote:   Error:
   remote:     hooks failed:
-  remote:     no_windows_filenames for 7e7f8fb54a0b8f692fbf224a33476b864f11dfe9: ABORT: Illegal windows filename: nul.txt. Name and path of file in windows should not match regex (^(?i)((((com|lpt)\d)|con|prn|aux|nul))($|\.))|<|>|:|"|/|\\|\||\?|\*|[\x00-\x1F]|(\.| )$
+  remote:     no_windows_filenames for df11f23e77f014da530ce7e11942f12cfb7645c6: ABORT: Illegal windows filename: nul.txt. Name and path of file in windows should not match regex (^(?i)((((com|lpt)\d)|con|prn|aux|nul))($|\.))|<|>|:|"|/|\\|\||\?|\*|[\x00-\x1F]|(\.| )$
   abort: unexpected EOL, expected netstring digit
   [255]
 
@@ -62,12 +62,12 @@
   $ hg ci -Aqm failure
   warning: filename contains 'CoN', which is reserved on Windows: dir/CoN.txt
   $ hg push -r . --to master_bookmark
-  pushing rev 49604693a23c to destination mono:repo bookmark master_bookmark
+  pushing rev 3e9105459e59 to destination mono:repo bookmark master_bookmark
   searching for changes
   remote: Command failed
   remote:   Error:
   remote:     hooks failed:
-  remote:     no_windows_filenames for 49604693a23c85a9ee0f6036d330b535842610dc: ABORT: Illegal windows filename: dir/CoN.txt. Name and path of file in windows should not match regex (^(?i)((((com|lpt)\d)|con|prn|aux|nul))($|\.))|<|>|:|"|/|\\|\||\?|\*|[\x00-\x1F]|(\.| )$
+  remote:     no_windows_filenames for 3e9105459e595067752892deb360c438dcb92351: ABORT: Illegal windows filename: dir/CoN.txt. Name and path of file in windows should not match regex (^(?i)((((com|lpt)\d)|con|prn|aux|nul))($|\.))|<|>|:|"|/|\\|\||\?|\*|[\x00-\x1F]|(\.| )$
   abort: unexpected EOL, expected netstring digit
   [255]
 
@@ -76,7 +76,7 @@
   $ echo "ok" > dir/Icon.txt
   $ hg ci -Aqm success
   $ hg push -r . --to master_bookmark
-  pushing rev 74f01fef9e70 to destination mono:repo bookmark master_bookmark
+  pushing rev 31fccd21dd5a to destination mono:repo bookmark master_bookmark
   searching for changes
   adding changesets
   adding manifests
@@ -88,7 +88,7 @@
   $ echo "ok" > dir/Icom5
   $ hg ci -Aqm success
   $ hg push -r . --to master_bookmark
-  pushing rev 47222c857e63 to destination mono:repo bookmark master_bookmark
+  pushing rev e268f3d11d0d to destination mono:repo bookmark master_bookmark
   searching for changes
   adding changesets
   adding manifests
@@ -101,11 +101,11 @@
   $ hg ci -Aqm failure
   warning: filename contains 'con', which is reserved on Windows: con/foo
   $ hg push -r . --to master_bookmark
-  pushing rev 115c8cee8249 to destination mono:repo bookmark master_bookmark
+  pushing rev 10c460e53000 to destination mono:repo bookmark master_bookmark
   searching for changes
   remote: Command failed
   remote:   Error:
   remote:     hooks failed:
-  remote:     no_windows_filenames for 115c8cee824903baec5607a5b5d731f4a92e5859: ABORT: Illegal windows filename: con/foo. Name and path of file in windows should not match regex (^(?i)((((com|lpt)\d)|con|prn|aux|nul))($|\.))|<|>|:|"|/|\\|\||\?|\*|[\x00-\x1F]|(\.| )$
+  remote:     no_windows_filenames for 10c460e53000520521df87f44c12020fa6c65ad5: ABORT: Illegal windows filename: con/foo. Name and path of file in windows should not match regex (^(?i)((((com|lpt)\d)|con|prn|aux|nul))($|\.))|<|>|:|"|/|\\|\||\?|\*|[\x00-\x1F]|(\.| )$
   abort: unexpected EOL, expected netstring digit
   [255]

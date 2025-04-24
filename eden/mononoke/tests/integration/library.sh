@@ -1208,6 +1208,39 @@ function hook_test_setup() {
 ssh="$DUMMYSSH"
 EOF
 
+  testtool_drawdag -R "$REPONAME" --derive-all <<EOF 2>/dev/null
+A-B-C
+# bookmark: C master_bookmark
+# message: A "a"
+# message: B "b"
+# message: C "c"
+EOF
+
+  start_and_wait_for_mononoke_server
+
+  hg clone -q mono:"$REPONAME" repo2 --noupdate
+
+  cd repo2 || exit 1
+  cat >> .hg/hgrc <<EOF
+[extensions]
+pushrebase=
+amend=
+EOF
+}
+
+function hook_test_setup_deprecated() {
+  HOOKS_SCUBA_LOGGING_PATH="$TESTTMP/hooks-scuba.json" setup_mononoke_config
+
+  register_hooks "$@"
+
+  setup_common_hg_configs
+  cd "$TESTTMP" || exit 1
+
+  cat >> "$HGRCPATH" <<EOF
+[ui]
+ssh="$DUMMYSSH"
+EOF
+
   hginit_treemanifest "$REPONAME"
   cd "$REPONAME" || exit 1
   drawdag <<EOF

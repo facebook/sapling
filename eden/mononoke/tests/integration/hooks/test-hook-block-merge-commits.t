@@ -22,7 +22,7 @@
   $ hg up -q tip
   $ echo file1 > file1 && hg -q addremove && hg commit -m "file1"
   $ hg push -r . --to master_bookmark
-  pushing rev 8e911067eac2 to destination mono:repo bookmark master_bookmark
+  pushing rev 3c7ceb974a6f to destination mono:repo bookmark master_bookmark
   searching for changes
   adding changesets
   adding manifests
@@ -32,10 +32,10 @@
 
   $ hg prev
   0 files updated, 0 files merged, 1 files removed, 0 files unresolved
-  [26805a] C
+  [0a489c] c
   $ echo file2 > file2 && hg -q addremove && hg commit -m "file2"
   $ hg push -r . --to feature_bookmark --create
-  pushing rev 0c7057776586 to destination mono:repo bookmark feature_bookmark
+  pushing rev 71d10e5fbc60 to destination mono:repo bookmark feature_bookmark
   searching for changes
   adding changesets
   adding manifests
@@ -50,18 +50,18 @@
   $ hg commit -m "merge commit"
 Should fail
   $ hg push -r . --to master_bookmark
-  pushing rev abc80faa8edf to destination mono:repo bookmark master_bookmark
+  pushing rev 3b564bf6febc to destination mono:repo bookmark master_bookmark
   searching for changes
   remote: Command failed
   remote:   Error:
   remote:     hooks failed:
-  remote:     block_merge_commits for abc80faa8edf0e540ee85dafdf80bce11f68743f: You must not commit merge commits
+  remote:     block_merge_commits for 3b564bf6febcf080fa12039f93c70dfce5eaa796: You must not commit merge commits
   abort: unexpected EOL, expected netstring digit
   [255]
 
   $ hg metaedit -m "commit message with bypass @merge-commit in message"
   $ hg push -r . --to master_bookmark
-  pushing rev 5003ea84c31d to destination mono:repo bookmark master_bookmark
+  pushing rev 1275765c7903 to destination mono:repo bookmark master_bookmark
   searching for changes
   adding changesets
   adding manifests

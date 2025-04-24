@@ -24,7 +24,7 @@ Ok file path - should work
   $ touch 123456789
   $ hg ci -Aqm 1
   $ hg push -r . --to master_bookmark
-  pushing rev 2f6ac546dc81 to destination mono:repo bookmark master_bookmark
+  pushing rev f6dd4142eb31 to destination mono:repo bookmark master_bookmark
   searching for changes
   adding changesets
   adding manifests
@@ -37,12 +37,12 @@ File path too long - should fail
   $ touch 1234567890
   $ hg ci -Aqm 1
   $ hg push -r . --to master_bookmark
-  pushing rev 56fa24a52883 to destination mono:repo bookmark master_bookmark
+  pushing rev 9318eba87175 to destination mono:repo bookmark master_bookmark
   searching for changes
   remote: Command failed
   remote:   Error:
   remote:     hooks failed:
-  remote:     limit_path_length for 56fa24a5288379b752543077df52a8da6d6113ec: Path length for '1234567890' (10) exceeds length limit (>= 10)
+  remote:     limit_path_length for 9318eba871756ffacc9f241d4b673747b1f41126: Path length for '1234567890' (10) exceeds length limit (>= 10)
   abort: unexpected EOL, expected netstring digit
   [255]
 
@@ -52,11 +52,11 @@ File path too long (UTF-8 multibyte characters) - should fail
   $ touch 12345678€
   $ hg ci -Aqm 1
   $ hg push -r . --to master_bookmark
-  pushing rev 2aa9727c0ca2 to destination mono:repo bookmark master_bookmark
+  pushing rev a75c9951ef38 to destination mono:repo bookmark master_bookmark
   searching for changes
   remote: Command failed
   remote:   Error:
   remote:     hooks failed:
-  remote:     limit_path_length for 2aa9727c0ca277205aedda2a1acf9d077eafc9d5: Path length for '12345678\xe2\x82\xac' (11) exceeds length limit (>= 10) (esc)
+  remote:     limit_path_length for a75c9951ef38ca961a461967925b919bb00e11f0: Path length for '12345678\xe2\x82\xac' (11) exceeds length limit (>= 10) (esc)
   abort: unexpected EOL, expected netstring digit
   [255]

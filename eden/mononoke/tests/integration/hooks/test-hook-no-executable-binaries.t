@@ -24,7 +24,7 @@ Ok file path - should work
   $ touch normal_file
   $ hg ci -Aqm 1
   $ hg push -r . --to master_bookmark
-  pushing rev dd7648b00878 to destination mono:repo bookmark master_bookmark
+  pushing rev 7361a3d63c19 to destination mono:repo bookmark master_bookmark
   searching for changes
   adding changesets
   adding manifests
@@ -38,7 +38,7 @@ Executable script - should work
   $ chmod +x script.sh
   $ hg ci -Aqm 1
   $ hg push -r . --to master_bookmark
-  pushing rev 80f52f5bb249 to destination mono:repo bookmark master_bookmark
+  pushing rev d1ebe68695b8 to destination mono:repo bookmark master_bookmark
   searching for changes
   adding changesets
   adding manifests
@@ -52,12 +52,12 @@ Executable binary - should fail
   $ chmod +x binary_file.exe
   $ hg ci -Aqm 1
   $ hg push -r . --to master_bookmark
-  pushing rev 2738cc1d1b73 to destination mono:repo bookmark master_bookmark
+  pushing rev 0d53386c4469 to destination mono:repo bookmark master_bookmark
   searching for changes
   remote: Command failed
   remote:   Error:
   remote:     hooks failed:
-  remote:     no_executable_binaries for 2738cc1d1b73a4e6e196f8f2075c42e24e8f3abf: Executable file binary_file.exe can't be committed.
+  remote:     no_executable_binaries for 0d53386c44694545a23fddbfa4c0ca9f66ca0b31: Executable file binary_file.exe can't be committed.
   abort: unexpected EOL, expected netstring digit
   [255]
 
@@ -67,7 +67,7 @@ Non-executable binary file - should work
   $ echo -e "\x00\x12\x34\x56\x78" > binary_file
   $ hg ci -Aqm 1
   $ hg push -r . --to master_bookmark
-  pushing rev 93f08e97efc1 to destination mono:repo bookmark master_bookmark
+  pushing rev bed9f8bb859c to destination mono:repo bookmark master_bookmark
   searching for changes
   adding changesets
   adding manifests
@@ -83,12 +83,12 @@ Executable binary under specific directory - should fail
   $ chmod +x some_dir/binary_file.exe
   $ hg ci -Aqm 1
   $ hg push -r . --to master_bookmark
-  pushing rev 03e66567b425 to destination mono:repo bookmark master_bookmark
+  pushing rev 73cc5f390d08 to destination mono:repo bookmark master_bookmark
   searching for changes
   remote: Command failed
   remote:   Error:
   remote:     hooks failed:
-  remote:     no_executable_binaries for 03e66567b4257e9891da6db09f751d726a274fa9: Executable file some_dir/binary_file.exe can't be committed.
+  remote:     no_executable_binaries for 73cc5f390d08150565b59de4b65f53c5d361e33c: Executable file some_dir/binary_file.exe can't be committed.
   abort: unexpected EOL, expected netstring digit
   [255]
 
@@ -103,14 +103,13 @@ Executable binary under specific directory - should fail
   > }'''
   > CONF
   > )
-  abort: repository `$TESTTMP/repo` already exists
   abort: destination 'repo2' is not empty
   $ force_update_configerator
 
 Executable binary under allow-listed directory - should pass
 
   $ hg push -r . --to master_bookmark
-  pushing rev 03e66567b425 to destination mono:repo bookmark master_bookmark
+  pushing rev 73cc5f390d08 to destination mono:repo bookmark master_bookmark
   searching for changes
   adding changesets
   adding manifests
@@ -125,7 +124,7 @@ Executable binary allow-listed by sha256 and size that can be on any path -- sho
   $ chmod +x foo
   $ hg ci -Aqm 2
   $ hg push -r . --to master_bookmark
-  pushing rev 8a7b81d5132c to destination mono:repo bookmark master_bookmark
+  pushing rev e5184a5af6a6 to destination mono:repo bookmark master_bookmark
   searching for changes
   adding changesets
   adding manifests

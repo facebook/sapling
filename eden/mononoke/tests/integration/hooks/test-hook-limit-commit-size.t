@@ -24,7 +24,7 @@ Small commit
   $ for x in $(seq $BYTE_LIMIT); do echo -n 1 > $x; done
   $ hg ci -Aqm 1
   $ hg push -r . --to master_bookmark
-  pushing rev e6f2d01a954a to destination mono:repo bookmark master_bookmark
+  pushing rev a86be3e1945e to destination mono:repo bookmark master_bookmark
   searching for changes
   adding changesets
   adding manifests
@@ -37,12 +37,12 @@ Large file
   $ echo -n "$LARGE_CONTENT" > largefile
   $ hg ci -Aqm largefile
   $ hg push -r . --to master_bookmark
-  pushing rev b4b4dcaa16f9 to destination mono:repo bookmark master_bookmark
+  pushing rev 1b1ebc46c938 to destination mono:repo bookmark master_bookmark
   searching for changes
   remote: Command failed
   remote:   Error:
   remote:     hooks failed:
-  remote:     limit_commit_size for b4b4dcaa16f97662c6a6e70b6eb8c3af1aea8253: Too large: 11 > 10.
+  remote:     limit_commit_size for 1b1ebc46c9382a292384b87c11335846247cbb71: Too large: 11 > 10.
   abort: unexpected EOL, expected netstring digit
   [255]
 
@@ -51,19 +51,19 @@ Large commit
   $ for x in $(seq $(( $BYTE_LIMIT + 1))); do echo -n 1 > "${x}_b"; done
   $ hg ci -Aqm largecommit
   $ hg push -r . --to master_bookmark
-  pushing rev 0d437325fdc4 to destination mono:repo bookmark master_bookmark
+  pushing rev ec494c5c2916 to destination mono:repo bookmark master_bookmark
   searching for changes
   remote: Command failed
   remote:   Error:
   remote:     hooks failed:
-  remote:     limit_commit_size for 0d437325fdc4006bbd174b823446331bfa53a68d: Too large: 11 > 10.
+  remote:     limit_commit_size for ec494c5c29165309392568089483397dca03d4bf: Too large: 11 > 10.
   abort: unexpected EOL, expected netstring digit
   [255]
 
 Bypass
   $ hg commit --amend -m "@allow-large-files"
   $ hg push -r . --to master_bookmark
-  pushing rev dcf66a8e39a7 to destination mono:repo bookmark master_bookmark
+  pushing rev 16f05bdad479 to destination mono:repo bookmark master_bookmark
   searching for changes
   adding changesets
   adding manifests
@@ -88,7 +88,7 @@ Removing files whose total size is large should work
   R 8_b
   R 9_b
   $ hg push -r . --to master_bookmark
-  pushing rev f4021c22aa2d to destination mono:repo bookmark master_bookmark
+  pushing rev 2ba9603286b9 to destination mono:repo bookmark master_bookmark
   searching for changes
   adding changesets
   adding manifests

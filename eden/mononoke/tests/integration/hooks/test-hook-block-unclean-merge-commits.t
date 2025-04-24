@@ -19,7 +19,7 @@
   $ hg up -q tip
   $ echo file1 > file1 && hg -q addremove && hg commit -m "file1"
   $ hg push -r . --to master_bookmark
-  pushing rev 8e911067eac2 to destination mono:repo bookmark master_bookmark
+  pushing rev 3c7ceb974a6f to destination mono:repo bookmark master_bookmark
   searching for changes
   adding changesets
   adding manifests
@@ -29,10 +29,10 @@
 
   $ hg prev
   0 files updated, 0 files merged, 1 files removed, 0 files unresolved
-  [26805a] C
+  [0a489c] c
   $ echo file1differentcontent > file1 && hg -q addremove && hg commit -m "file1differentcontent"
   $ hg push -r . --to feature_bookmark --create
-  pushing rev 074f168de560 to destination mono:repo bookmark feature_bookmark
+  pushing rev 63a68d44f9cf to destination mono:repo bookmark feature_bookmark
   searching for changes
   adding changesets
   adding manifests
@@ -52,12 +52,12 @@
   $ hg commit -m "merge commit"
 Should fail
   $ hg push -r . --to master_bookmark
-  pushing rev 6b4021133ae5 to destination mono:repo bookmark master_bookmark
+  pushing rev 1688b90c1ac2 to destination mono:repo bookmark master_bookmark
   searching for changes
   remote: Command failed
   remote:   Error:
   remote:     hooks failed:
-  remote:     block_unclean_merge_commits for 6b4021133ae528b0305f8fe080af7c3bea865dc4: The bookmark matching regex master_bookmark can't have merge commits with conflicts, even if they have been resolved
+  remote:     block_unclean_merge_commits for 1688b90c1ac2fa656a7c1def6f97126896c8dddd: The bookmark matching regex master_bookmark can't have merge commits with conflicts, even if they have been resolved
   abort: unexpected EOL, expected netstring digit
   [255]
 
@@ -68,7 +68,7 @@ Should fail
   $ hg up -q tip
   $ echo file2 > file2 && hg -q addremove && hg commit -m "file2"
   $ hg push -r . --to new_bookmark_not_in_regex --create
-  pushing rev 70e3175a544f to destination mono:repo bookmark new_bookmark_not_in_regex
+  pushing rev 72703a82a860 to destination mono:repo bookmark new_bookmark_not_in_regex
   searching for changes
   adding changesets
   adding manifests
@@ -78,10 +78,10 @@ Should fail
 
   $ hg prev
   0 files updated, 0 files merged, 2 files removed, 0 files unresolved
-  [6b4021] merge commit
+  [1688b9] merge commit
   $ echo file2differentcontent > file1 && hg -q addremove && hg commit -m "file2differentcontent"
   $ hg push -r . --to feature_bookmark2 --create
-  pushing rev 6b9010cdcc53 to destination mono:repo bookmark feature_bookmark2
+  pushing rev 5db8ccea674a to destination mono:repo bookmark feature_bookmark2
   searching for changes
   adding changesets
   adding manifests
@@ -98,7 +98,7 @@ Should fail
   $ hg commit -m "merge commit"
 Should succeed
   $ hg push -r . --to new_bookmark_not_in_regex
-  pushing rev f036c4e283ca to destination mono:repo bookmark new_bookmark_not_in_regex
+  pushing rev 82e904315b12 to destination mono:repo bookmark new_bookmark_not_in_regex
   searching for changes
   adding changesets
   adding manifests

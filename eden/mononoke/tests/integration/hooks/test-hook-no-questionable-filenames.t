@@ -16,12 +16,12 @@ Attempt to add a filename with spaces in it
   $ echo "bad" > "test/foo bar"
   $ hg ci -Aqm success
   $ hg push -r . --to master_bookmark
-  pushing rev c60235ea2c7f to destination mono:repo bookmark master_bookmark
+  pushing rev 6e530c466555 to destination mono:repo bookmark master_bookmark
   searching for changes
   remote: Command failed
   remote:   Error:
   remote:     hooks failed:
-  remote:     no_questionable_filenames for c60235ea2c7ff0fbb5fd0e1e9906fb712b7853d0: ABORT: Illegal filename: test/foo bar. The file name cannot include spaces, apostrophes or start with hyphens.
+  remote:     no_questionable_filenames for 6e530c466555faea64db6bd6425dbfe684b65afc: ABORT: Illegal filename: test/foo bar. The file name cannot include spaces, apostrophes or start with hyphens.
   abort: unexpected EOL, expected netstring digit
   [255]
 
@@ -31,12 +31,12 @@ Attempt to add a filename with braces in it
   $ echo "bad" > "test/{foobar}"
   $ hg ci -Aqm success
   $ hg push -r . --to master_bookmark
-  pushing rev 8d7d42b0b3af to destination mono:repo bookmark master_bookmark
+  pushing rev 089829221aab to destination mono:repo bookmark master_bookmark
   searching for changes
   remote: Command failed
   remote:   Error:
   remote:     hooks failed:
-  remote:     no_questionable_filenames for 8d7d42b0b3afdb18551c0e69751d044c68e1906b: ABORT: Illegal filename: test/{foobar}. The file name cannot include brace(s).
+  remote:     no_questionable_filenames for 089829221aab7ce82a51c996ce41806affbfb765: ABORT: Illegal filename: test/{foobar}. The file name cannot include brace(s).
   abort: unexpected EOL, expected netstring digit
   [255]
 
@@ -45,12 +45,12 @@ Attempt to add a filename with a hypen at the start
   $ echo "good" > -testfile
   $ hg ci -Aqm good
   $ hg push -r . --to master_bookmark
-  pushing rev b2b56d66a707 to destination mono:repo bookmark master_bookmark
+  pushing rev 63e8cc599c6f to destination mono:repo bookmark master_bookmark
   searching for changes
   remote: Command failed
   remote:   Error:
   remote:     hooks failed:
-  remote:     no_questionable_filenames for b2b56d66a7073312c059555f1193c5183cf8d37f: ABORT: Illegal filename: -testfile. The file name cannot include spaces, apostrophes or start with hyphens.
+  remote:     no_questionable_filenames for 63e8cc599c6f7c9e52c088da857f9cb4b9499160: ABORT: Illegal filename: -testfile. The file name cannot include spaces, apostrophes or start with hyphens.
   abort: unexpected EOL, expected netstring digit
   [255]
 
@@ -59,11 +59,11 @@ Attempt to add a filename with an apostrophe in it
   $ echo "bad" > "test'file"
   $ hg ci -Aqm failure
   $ hg push -r . --to master_bookmark
-  pushing rev 11ee725a3317 to destination mono:repo bookmark master_bookmark
+  pushing rev c82854fd39eb to destination mono:repo bookmark master_bookmark
   searching for changes
   remote: Command failed
   remote:   Error:
   remote:     hooks failed:
-  remote:     no_questionable_filenames for 11ee725a331757675c477522b172ab35967903ef: ABORT: Illegal filename: test'file. The file name cannot include spaces, apostrophes or start with hyphens.
+  remote:     no_questionable_filenames for c82854fd39ebf2f9811187c8c32756d811dd2907: ABORT: Illegal filename: test'file. The file name cannot include spaces, apostrophes or start with hyphens.
   abort: unexpected EOL, expected netstring digit
   [255]

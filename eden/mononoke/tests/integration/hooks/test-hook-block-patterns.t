@@ -20,7 +20,7 @@ No marker, should work
   $ echo "foo" > foo
   $ hg ci -Aqm 1
   $ hg push -r . --to master_bookmark
-  pushing rev 8b8214d70c17 to destination mono:repo bookmark master_bookmark
+  pushing rev b27569b9b813 to destination mono:repo bookmark master_bookmark
   searching for changes
   adding changesets
   adding manifests
@@ -32,12 +32,12 @@ Has marker in the title
   $ echo "foo" >> foo
   $ hg ci -Aqm $"My imperfect commit\nI've used @""nocommit so it's never commited"
   $ hg push -r . --to master_bookmark
-  pushing rev 228cf1cc53cb to destination mono:repo bookmark master_bookmark
+  pushing rev c47f23c6877c to destination mono:repo bookmark master_bookmark
   searching for changes
   remote: Command failed
   remote:   Error:
   remote:     hooks failed:
-  remote:     block_commit_message_pattern for 228cf1cc53cb54cea0499f899fe8063b07b42e01: Message contains [@]nocommit (re)
+  remote:     block_commit_message_pattern for c47f23c6877c12dc04d6123604338f60359ad73b: Message contains [@]nocommit (re)
   abort: unexpected EOL, expected netstring digit
   [255]
   $ hg hide -q .
@@ -47,11 +47,11 @@ Has marker in a file, should fail
   $ echo "bar @""nocommit" > foo
   $ hg ci -Aqm 1
   $ hg push -r . --to master_bookmark
-  pushing rev b950c81d785b to destination mono:repo bookmark master_bookmark
+  pushing rev 439123601c36 to destination mono:repo bookmark master_bookmark
   searching for changes
   remote: Command failed
   remote:   Error:
   remote:     hooks failed:
-  remote:     block_content_pattern for b950c81d785b1d845bd12055189cb3b63c9c8a1b: File contains [@]nocommit: foo (re)
+  remote:     block_content_pattern for 439123601c36d157e6d3be53a1bbce33592ccdf3: File contains [@]nocommit: foo (re)
   abort: unexpected EOL, expected netstring digit
   [255]
