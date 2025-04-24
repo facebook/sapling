@@ -20,6 +20,9 @@ use edenfs_error::HasErrorHandlingStrategy;
 use fbinit::FacebookInit;
 use futures::future::BoxFuture;
 use futures::future::FutureExt;
+use futures::stream;
+use futures::stream::BoxStream;
+use futures::stream::StreamExt;
 pub use thrift_thriftclients::EdenService;
 use tokio::sync::Semaphore;
 
@@ -85,4 +88,25 @@ where
             Err(_) => panic!("Error joing tokio task."),
         })
         .boxed()
+}
+
+pub fn make_boxed_stream_result<T, StreamError, ApiError>(
+    results: Result<Vec<Result<T, StreamError>>, ApiError>,
+) -> BoxFuture<'static, Result<BoxStream<'static, Result<T, StreamError>>, ApiError>>
+where
+    T: Send + 'static,
+    StreamError: Send + 'static,
+    ApiError: Send + 'static,
+{
+    tokio::task::spawn(async move {
+        match results {
+            Ok(results) => Ok(stream::iter(results).boxed()),
+            Err(e) => Err(e),
+        }
+    })
+    .map(|r| match r {
+        Ok(r) => r,
+        Err(_) => panic!("Error joing tokio task."),
+    })
+    .boxed()
 }

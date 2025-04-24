@@ -25,7 +25,6 @@ use tokio::time;
 
 use crate::client::Client;
 use crate::client::EdenFsClient;
-use crate::instance::EdenFsInstance;
 use crate::types::Dtype;
 use crate::types::JournalPosition;
 use crate::utils::get_mount_point;
@@ -753,8 +752,8 @@ impl EdenFsClient {
     /// }
     /// ```
     #[cfg(fbcode_build)]
-    pub async fn stream_changes_since(
-        &self,
+    pub async fn stream_changes_since<'a>(
+        &'a self,
         mount_point: &Option<PathBuf>,
         throttle_time_ms: u64,
         position: JournalPosition,
@@ -764,7 +763,7 @@ impl EdenFsClient {
         excluded_roots: &Option<Vec<PathBuf>>,
         excluded_suffixes: &Option<Vec<String>>,
         include_vcs_roots: bool,
-    ) -> Result<Pin<Box<dyn Stream<Item = Result<ChangesSinceV2Result>> + Send>>> {
+    ) -> Result<Pin<Box<dyn Stream<Item = Result<ChangesSinceV2Result>> + Send + 'a>>> {
         struct State {
             mount_point: Option<PathBuf>,
             position: JournalPosition,
@@ -848,8 +847,7 @@ impl EdenFsClient {
                 state.pending_updates = false;
                 state.last = Instant::now();
 
-                let result = EdenFsInstance::global()
-                    .get_client()
+                let result = self
                     .get_changes_since(
                         &state.mount_point,
                         &state.position,
@@ -888,12 +886,14 @@ impl EdenFsClient {
 #[cfg(test)]
 mod tests {
     use std::sync::Arc;
+    use std::vec;
 
     use fbinit::FacebookInit;
 
     use crate::changes_since::ChangesSinceV2Result;
     use crate::changes_since::*;
     use crate::client::mock_client::make_boxed_future_result;
+    use crate::client::mock_client::make_boxed_stream_result;
     use crate::client::mock_service::MockEdenFsService;
 
     fn make_changes_since_result() -> ChangesSinceV2Result {
@@ -917,24 +917,89 @@ mod tests {
 
     #[fbinit::test]
     async fn test_get_changes_since(fb: FacebookInit) -> Result<()> {
+        // create client and mock_service
         let mut client = EdenFsClient::new(fb, PathBuf::new(), None);
         let mock_client = &mut *client;
         let mut mock_service = MockEdenFsService::new();
 
+        // create results for changesSinceV2
         let mut changes_since_result = make_changes_since_result();
         let position = changes_since_result.to_position.clone();
         changes_since_result.to_position.sequence_number += 10;
 
+        // setup mock_service to return results when changesSinceV2 is called
         let expected_result = changes_since_result.clone();
         mock_service.expect_changesSinceV2().returning(move |_| {
             let expected_result = expected_result.clone();
             make_boxed_future_result(Ok(expected_result.into()))
         });
+
+        // move mock_service into client
         mock_client.set_thrift_service(Arc::new(mock_service));
 
+        // invoke get_changes_since and check results
         let result = client
             .get_changes_since(&None, &position, &None, &None, &None, &None, &None, false)
             .await;
+        assert!(result.is_ok());
+        assert_eq!(result.unwrap(), changes_since_result);
+
+        Ok(())
+    }
+
+    #[fbinit::test]
+    async fn test_stream_changes_since(fb: FacebookInit) -> Result<()> {
+        // create client and mock_service
+        let mut client = EdenFsClient::new(fb, PathBuf::new(), None);
+        let mock_client = &mut *client;
+        let mut mock_service = MockEdenFsService::new();
+
+        // create results for changeSinceV2 and streamJournalChanged
+        let mut changes_since_result = make_changes_since_result();
+        let journal_changed_result = changes_since_result.to_position.clone();
+
+        // setup mock_service to return results when streamJournalChanged is called
+        let expected_result = journal_changed_result.clone();
+        mock_service
+            .expect_streamJournalChanged()
+            .returning(move |_| {
+                let expected_result = expected_result.clone();
+                let expected_result: Vec<
+                    Result<
+                        thrift_types::edenfs::JournalPosition,
+                        thrift_streaming_clients::errors::StreamJournalChangedStreamError,
+                    >,
+                > = vec![Ok(expected_result.into())];
+                make_boxed_stream_result(Ok(expected_result))
+            });
+
+        // setup mock_service to return results when changesSinceV2 is called
+        let position = changes_since_result.to_position.clone();
+        changes_since_result.to_position.sequence_number += 10;
+        let expected_result = changes_since_result.clone();
+        mock_service.expect_changesSinceV2().returning(move |_| {
+            let expected_result = expected_result.clone();
+            make_boxed_future_result(Ok(expected_result.into()))
+        });
+
+        // move mock_service into client
+        mock_client.set_thrift_service(Arc::new(mock_service));
+
+        // invoke stream_changes_since and check result
+        let result = client
+            .stream_changes_since(&None, 0, position, &None, &None, &None, &None, &None, false)
+            .await;
+        assert!(result.is_ok());
+
+        // Collect stream results
+        let results = result
+            .unwrap()
+            .collect::<Vec<Result<ChangesSinceV2Result>>>()
+            .await;
+        assert_eq!(results.len(), 1);
+
+        // Get result from collected stream and check result
+        let result = results.into_iter().next().unwrap();
         assert!(result.is_ok());
         assert_eq!(result.unwrap(), changes_since_result);
 
