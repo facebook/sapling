@@ -18,7 +18,8 @@ fn p(p: impl AsRef<str>) -> RepoPathBuf {
 
 #[test]
 fn test_walk_big_dir() -> Result<()> {
-    let detector = Detector::new();
+    let mut detector = Detector::new();
+    detector.min_dir_walk_threhsold = 2;
 
     assert_eq!(detector.walks().len(), 0);
 
@@ -31,8 +32,13 @@ fn test_walk_big_dir() -> Result<()> {
 
     detector.file_read(epoch, p("dir/b"))?;
 
-    // FIXME - should be a walk
-    assert_eq!(detector.walks().len(), 0);
+    assert_eq!(detector.walks(), vec![(p("dir"), 0)]);
+
+    detector.file_read(epoch, p("dir/c"))?;
+    detector.file_read(epoch, p("dir/d"))?;
+    detector.file_read(epoch, p("dir/e"))?;
+
+    assert_eq!(detector.walks(), vec![(p("dir"), 0)]);
 
     Ok(())
 }
