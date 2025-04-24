@@ -151,10 +151,10 @@ function merge_repo_a_to_large_repo {
   COMMIT_DATE="1985-09-04T00:00:00.00Z"
 
   print_section "Creating deletion commits"
-  REPOID="$LARGE_REPO_ID" with_stripped_logs megarepo_tool gradual-delete test_user \
-         "deletion commits for merge into large repo" \
-          "$IMPORTED_HEAD" "$SMALL_REPO_FOLDER" --even-chunk-size 2 \
-          --commit-date-rfc3339 "$COMMIT_DATE" 2>&1 | tee "$TESTTMP/gradual_delete.out"
+  with_stripped_logs mononoke_admin megarepo gradual-delete \
+    --repo-id "$LARGE_REPO_ID" -a test_user -m "deletion commits for merge into large repo" \
+    -i "$IMPORTED_HEAD" --even-chunk-size 2 --commit-date-rfc3339 "$COMMIT_DATE" \
+    "$SMALL_REPO_FOLDER" 2>&1 | tee "$TESTTMP/gradual_delete.out"
 
   LAST_DELETION_COMMIT=$(tail -n1 "$TESTTMP/gradual_delete.out")
   printf "\nLAST_DELETION_COMMIT: %s\n\n" "$LAST_DELETION_COMMIT"

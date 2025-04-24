@@ -170,6 +170,41 @@ test pre-merge deletes functionality
   8807f350542a43aa815abc0c250c4a79ba35fd5bb68594e3ce6555e6630d81c2
   090a140adb3da3f4a629014cd9625055d8bd992a967ad7fc7e4e4d74892c4b71
 
+test gradual-delete functionality
+  $ LAST_DELETION_BONSAI=$(mononoke_admin megarepo gradual-delete --repo-id 0 \
+  > --bookmark master_bookmark \
+  > -a author -m "gradual deletion" \
+  > --even-chunk-size 1 \
+  > --commit-date-rfc3339 "$COMMIT_DATE" \
+  > arvr fbcode 2>/dev/null | tail -1)
+  $ echo $LAST_DELETION_BONSAI
+  87e09c9ddd7190bf5b19f4003e7356779b8df5487ab5f7ecf794100301b9e64b
+  $ LAST_DELETION_COMMIT=$(mononoke_admin convert -R repo -f bonsai -t hg --derive $LAST_DELETION_BONSAI)
+  $ echo $LAST_DELETION_COMMIT
+  e7ee4708d8e0cd96c843ef598c7ad94882e42096
+
+  $ cd $TESTTMP/repo-pull
+  $ sl pull -q -r $LAST_DELETION_COMMIT
+  $ sl log --stat -r "reverse($LAST_DELETION_COMMIT % master_bookmark)"
+  commit:      e7ee4708d8e0
+  user:        author
+  date:        Wed Sep 04 00:00:00 1985 +0000
+  summary:     [MEGAREPO DELETE] gradual deletion (1)
+  
+   fbcode/fbcodfile_fbsource |  1 -
+   1 files changed, 0 insertions(+), 1 deletions(-)
+  
+  commit:      cd9e15c2d8e0
+  user:        author
+  date:        Wed Sep 04 00:00:00 1985 +0000
+  summary:     [MEGAREPO DELETE] gradual deletion (0)
+  
+   arvr/arvrfile_ovrsource |  1 -
+   1 files changed, 0 insertions(+), 1 deletions(-)
+  
+  $ sl files -r "$LAST_DELETION_COMMIT" arvr fbcode || echo "Directories have been deleted"
+  Directories have been deleted
+
 run mover
   $ mononoke_admin megarepo run-mover \
   > --source-repo-id 0 --target-repo-id 1 \

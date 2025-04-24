@@ -52,14 +52,11 @@ use live_commit_sync_config::LiveCommitSyncConfig;
 use manifest::Entry;
 use manifest::ManifestOps;
 use manifest::PathOrPrefix;
-use megarepolib::chunking::Chunker;
 use megarepolib::chunking::even_chunker_with_max_size;
 use megarepolib::commit_sync_config_utils::diff_small_repo_commit_sync_configs;
 use megarepolib::common::create_and_save_bonsai;
-use megarepolib::common::delete_files_in_chunks;
 use megarepolib::history_fixup_delete::HistoryFixupDeletes;
 use megarepolib::history_fixup_delete::create_history_fixup_deletes;
-use megarepolib::working_copy::get_working_copy_paths_by_prefixes;
 use metaconfig_types::CommitSyncConfigVersion;
 use metaconfig_types::MetadataDatabaseConfig;
 use metaconfig_types::RepoConfig;
@@ -112,7 +109,6 @@ use crate::cli::DELETION_CHUNK_SIZE;
 use crate::cli::DIFF_MAPPING_VERSIONS;
 use crate::cli::DRY_RUN;
 use crate::cli::EVEN_CHUNK_SIZE;
-use crate::cli::GRADUAL_DELETE;
 use crate::cli::GRADUAL_MERGE;
 use crate::cli::GRADUAL_MERGE_PROGRESS;
 use crate::cli::HEAD_BOOKMARK;
@@ -125,7 +121,6 @@ use crate::cli::MAPPING_VERSION_NAME;
 use crate::cli::MARK_NOT_SYNCED_COMMAND;
 use crate::cli::OVERWRITE;
 use crate::cli::PARENTS;
-use crate::cli::PATH;
 use crate::cli::PATH_PREFIX;
 use crate::cli::PATH_REGEX;
 use crate::cli::PATHS_FILE;
@@ -241,66 +236,6 @@ async fn run_history_fixup_delete<'a>(
     );
     delete_commits_correct_branch.reverse();
     for delete_commit in delete_commits_correct_branch {
-        println!("{}", delete_commit);
-    }
-
-    Ok(())
-}
-
-async fn run_gradual_delete<'a>(
-    ctx: &CoreContext,
-    matches: &MononokeMatches<'a>,
-    sub_m: &ArgMatches<'a>,
-) -> Result<(), Error> {
-    let repo: Repo =
-        args::not_shardmanager_compatible::open_repo(ctx.fb, &ctx.logger().clone(), matches)
-            .await?;
-
-    let delete_cs_args_factory = get_delete_commits_cs_args_factory(sub_m)?;
-
-    let chunker: Chunker<NonRootMPath> = {
-        let even_chunk_size: usize = sub_m
-            .value_of(EVEN_CHUNK_SIZE)
-            .ok_or_else(|| format_err!("{} is required", EVEN_CHUNK_SIZE))?
-            .parse::<usize>()?;
-        even_chunker_with_max_size(even_chunk_size)?
-    };
-
-    let parent_bcs_id = {
-        let hash = sub_m.value_of(COMMIT_HASH).unwrap().to_owned();
-        helpers::csid_resolve(ctx, &repo, hash).await?
-    };
-
-    let path_prefixes: Vec<_> = sub_m
-        .values_of(PATH)
-        .unwrap()
-        .map(NonRootMPath::new)
-        .collect::<Result<Vec<_>, Error>>()?;
-    info!(
-        ctx.logger(),
-        "Gathering working copy files under {:?}", path_prefixes
-    );
-    let paths =
-        get_working_copy_paths_by_prefixes(ctx, &repo, parent_bcs_id, path_prefixes).await?;
-    info!(ctx.logger(), "{} paths to be deleted", paths.len());
-
-    info!(ctx.logger(), "Starting deletion");
-    let delete_commits = delete_files_in_chunks(
-        ctx,
-        &repo,
-        parent_bcs_id,
-        paths,
-        &chunker,
-        &delete_cs_args_factory,
-        false, /* skip_last_chunk */
-    )
-    .await?;
-    info!(ctx.logger(), "Deletion finished");
-    info!(
-        ctx.logger(),
-        "Listing commits in an ancestor-descendant order"
-    );
-    for delete_commit in delete_commits {
         println!("{}", delete_commit);
     }
 
@@ -1046,7 +981,6 @@ fn main(fb: FacebookInit) -> Result<()> {
             (CATCHUP_VALIDATE_COMMAND, Some(sub_m)) => {
                 run_catchup_validate(ctx, &matches, sub_m).await
             }
-            (GRADUAL_DELETE, Some(sub_m)) => run_gradual_delete(ctx, &matches, sub_m).await,
             (GRADUAL_MERGE, Some(sub_m)) => run_gradual_merge(ctx, &matches, sub_m).await,
             (GRADUAL_MERGE_PROGRESS, Some(sub_m)) => {
                 run_gradual_merge_progress(ctx, &matches, sub_m).await

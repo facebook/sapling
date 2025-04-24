@@ -39,7 +39,6 @@ pub const DRY_RUN: &str = "dry-run";
 pub const EVEN_CHUNK_SIZE: &str = "even-chunk-size";
 pub const GRADUAL_MERGE_PROGRESS: &str = "gradual-merge-progress";
 pub const GRADUAL_MERGE: &str = "gradual-merge";
-pub const GRADUAL_DELETE: &str = "gradual-delete";
 pub const HEAD_BOOKMARK: &str = "head-bookmark";
 pub const HISTORY_FIXUP_DELETE: &str = "history-fixup-deletes";
 pub const INPUT_FILE: &str = "input-file";
@@ -52,7 +51,6 @@ pub const MARK_PUBLIC: &str = "mark-public";
 pub const OVERWRITE: &str = "overwrite";
 pub const PARENTS: &str = "parents";
 pub const PATH_REGEX: &str = "path-regex";
-pub const PATH: &str = "path";
 pub const PATH_PREFIX: &str = "path-prefix";
 pub const PATHS_FILE: &str = "paths-file";
 pub const PRE_DELETION_COMMIT: &str = "pre-deletion-commit";
@@ -205,33 +203,6 @@ pub fn setup_app<'a, 'b>() -> MononokeClapApp<'a, 'b> {
                 Arg::with_name(PATHS_FILE)
                     .long(PATHS_FILE)
                     .help("file containing paths to fixup separated by newlines")
-                    .takes_value(true)
-                    .required(true)
-                    .multiple(true),
-            );
-
-    // PLease don't move `add_light_resulting_commit_args` to be applied
-    // after `PATH` arg is added, as in that case `PATH` won't be the last
-    // positional argument
-    let gradual_delete_subcommand =
-        add_light_resulting_commit_args(SubCommand::with_name(GRADUAL_DELETE))
-            .about("create a set of delete commits for given paths")
-            .arg(
-                Arg::with_name(COMMIT_HASH)
-                    .help("commit from which to start deletion")
-                    .takes_value(true)
-                    .required(true),
-            )
-            .arg(
-                Arg::with_name(EVEN_CHUNK_SIZE)
-                    .help("chunk size for even chunking")
-                    .long(EVEN_CHUNK_SIZE)
-                    .takes_value(true)
-                    .required(true),
-            )
-            .arg(
-                Arg::with_name(PATH)
-                    .help("paths to delete")
                     .takes_value(true)
                     .required(true)
                     .multiple(true),
@@ -529,7 +500,6 @@ pub fn setup_app<'a, 'b>() -> MononokeClapApp<'a, 'b> {
         .subcommand(history_fixup_delete_subcommand)
         .subcommand(add_light_resulting_commit_args(gradual_merge_subcommand))
         .subcommand(gradual_merge_progress_subcommand)
-        .subcommand(gradual_delete_subcommand)
         .subcommand(manual_commit_sync_subcommand)
         .subcommand(add_light_resulting_commit_args(
             catchup_delete_head_subcommand,
