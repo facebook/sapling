@@ -194,7 +194,7 @@ def rewrite(repo, old, updates, head, newbases, commitopts, mutop=None):
         date = commitopts.get("date") or None
         extra = dict(commitopts.get("extra", old.extra()))
         extra.update(subtreeutil.merge_subtree_metadata(repo, updates))
-        subtreeutil.remove_old_subtree_keys_from_extra(extra)
+        subtreeutil.remove_old_subtree_keys_from_extra(repo.ui, extra)
         mutinfo = mutation.record(repo, extra, [c.node() for c in updates], mutop)
         loginfo = {
             "predecessors": " ".join(c.hex() for c in updates),

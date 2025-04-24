@@ -7,12 +7,7 @@
   $ . "${TEST_FIXTURES}/library.sh"
 
 Override subtree key to enable non-test subtree extra
-  $ cat > $TESTTMP/subtree.py <<EOF
-  > from sapling.utils import subtreeutil
-  > def extsetup(ui):
-  >     subtreeutil.SUBTREE_KEY = "subtree"
-  > EOF
-  $ setconfig extensions.subtreetestoverride=$TESTTMP/subtree.py
+  $ setconfig subtree.use-prod-subtree-key=True
   $ setconfig push.edenapi=true
   $ setconfig subtree.min-path-depth=1
   $ enable amend

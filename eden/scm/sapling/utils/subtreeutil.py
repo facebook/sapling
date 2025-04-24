@@ -19,13 +19,21 @@ CFG_ALLOW_ANY_SOURCE_COMMIT = "allow-any-source-commit"
 SUBTREE_BRANCH_KEY = "test_subtree_copy"
 SUBTREE_MERGE_KEY = "test_subtree_merge"
 
+# the test key is used when server does not support subtree
 TEST_SUBTREE_KEY = "test_subtree"
 PROD_SUBTREE_KEY = "subtree"
-# XXX: remove the 'test_' prefix when server-side support is ready
-SUBTREE_KEY = TEST_SUBTREE_KEY
 
 SUBTREE_METADATA_VERSION = 1  # current version of subtree metadata
 SUPPORTED_SUBTREE_METADATA_VERSIONS = {1}
+
+
+def get_subtree_key(ui) -> str:
+    """Get the key used in commit's extra for subtree metadata."""
+    return (
+        PROD_SUBTREE_KEY
+        if ui.configbool("subtree", "use-prod-subtree-key")
+        else TEST_SUBTREE_KEY
+    )
 
 
 def get_subtree_metadata_keys() -> Set[str]:
@@ -34,13 +42,16 @@ def get_subtree_metadata_keys() -> Set[str]:
     Includes deprecated keys that are kept for backward compatibility with
     existing metadata.
     """
-    keys = get_deprecated_subtree_metadata_keys()
-    keys.add(TEST_SUBTREE_KEY)
-    keys.add(PROD_SUBTREE_KEY)
+    keys = {
+        SUBTREE_BRANCH_KEY,
+        SUBTREE_MERGE_KEY,
+        TEST_SUBTREE_KEY,
+        PROD_SUBTREE_KEY,
+    }
     return keys
 
 
-def get_deprecated_subtree_metadata_keys() -> Set[str]:
+def get_deprecated_subtree_metadata_keys(ui) -> Set[str]:
     """Keys that are no longer in use.
 
     These keys will be removed from commit's extra after folding draft commits.
@@ -49,7 +60,7 @@ def get_deprecated_subtree_metadata_keys() -> Set[str]:
         SUBTREE_BRANCH_KEY,
         SUBTREE_MERGE_KEY,
     }
-    if SUBTREE_KEY != TEST_SUBTREE_KEY:
+    if get_subtree_key(ui) != TEST_SUBTREE_KEY:
         keys.add(TEST_SUBTREE_KEY)
     return keys
 
@@ -190,7 +201,7 @@ def gen_branch_info(
         for from_path, to_path in zip(from_paths, to_paths)
     ]
     metadata = _branches_to_dict(branches, version)
-    return _encode_subtree_metadata_list([metadata])
+    return _encode_subtree_metadata_list(repo.ui, [metadata])
 
 
 def _branches_to_dict(branches: List[SubtreeBranch], version: int):
@@ -206,17 +217,18 @@ def _branches_to_dict(branches: List[SubtreeBranch], version: int):
     return rs
 
 
-def _encode_subtree_metadata_list(subtree_metadata):
+def _encode_subtree_metadata_list(ui, subtree_metadata):
     subtree_metadata = sorted(subtree_metadata, key=lambda x: x["v"])
     val_str = json.dumps(subtree_metadata, separators=(",", ":"), sort_keys=True)
-    return {SUBTREE_KEY: val_str}
+    subtree_key = get_subtree_key(ui)
+    return {subtree_key: val_str}
 
 
 ### Generating metadata for imports
 
 
 def gen_import_info(
-    url, from_commit, from_paths, to_paths, version=SUBTREE_METADATA_VERSION
+    ui, url, from_commit, from_paths, to_paths, version=SUBTREE_METADATA_VERSION
 ):
     imports = [
         SubtreeImport(
@@ -229,7 +241,7 @@ def gen_import_info(
         for from_path, to_path in zip(from_paths, to_paths)
     ]
     metadata = _imports_to_dict(imports, version)
-    return _encode_subtree_metadata_list([metadata])
+    return _encode_subtree_metadata_list(ui, [metadata])
 
 
 def _imports_to_dict(imports: List[SubtreeImport], version: int):
@@ -260,7 +272,7 @@ def gen_merge_info(repo, subtree_merges, version=SUBTREE_METADATA_VERSION):
         for from_node, from_path, to_path in subtree_merges
     ]
     metadata = _merges_to_dict(merges, version)
-    return _encode_subtree_metadata_list([metadata])
+    return _encode_subtree_metadata_list(repo.ui, [metadata])
 
 
 def _merges_to_dict(merges: List[SubtreeMerge], version: int):
@@ -462,12 +474,12 @@ def merge_subtree_metadata(repo, ctxs):
 
     if not result:
         return {}
-    return _encode_subtree_metadata_list(result)
+    return _encode_subtree_metadata_list(repo.ui, result)
 
 
-def remove_old_subtree_keys_from_extra(extra):
+def remove_old_subtree_keys_from_extra(ui, extra):
     """Remove old subtree metadata keys from commit's extra after folding commits"""
-    for k in get_deprecated_subtree_metadata_keys():
+    for k in get_deprecated_subtree_metadata_keys(ui):
         if k in extra:
             del extra[k]
 

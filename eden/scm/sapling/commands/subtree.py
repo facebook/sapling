@@ -544,7 +544,7 @@ def _do_import(ui, repo, *args, **opts):
     from_commit = from_ctx.hex()
     # use the original `url` in the metadata, as the `giturl` may lost information
     # e.g.: "git+" prefix
-    extra = subtreeutil.gen_import_info(url, from_commit, from_paths, to_paths)
+    extra = subtreeutil.gen_import_info(ui, url, from_commit, from_paths, to_paths)
     summaryfooter = _gen_import_commit_msg(url, from_commit, from_paths, to_paths)
 
     editform = cmdutil.mergeeditform(repo[None], "subtree.import")

@@ -3,19 +3,6 @@
   $ setconfig subtree.allow-any-source-commit=True
   $ setconfig subtree.min-path-depth=1
 
-
-create an extension to enable non-test subtree extra
-  $ cat > $TESTTMP/prod_subtree_key.py <<EOF
-  > from sapling.utils import subtreeutil
-  > def extsetup(ui):
-  >     subtreeutil.SUBTREE_KEY = "subtree"
-  > EOF
-  $ cat > $TESTTMP/test_subtree_key.py <<EOF
-  > from sapling.utils import subtreeutil
-  > def extsetup(ui):
-  >     subtreeutil.SUBTREE_KEY = "test_subtree"
-  > EOF
-
 test subtree inspect for subtree metadata
   $ newclientrepo
   $ drawdag <<'EOS'
@@ -53,7 +40,9 @@ test subtree inspect for subtree metadata
   test_subtree=[{"deepcopies":[{"from_commit":"9998a5c40732fc326e6f10a4f14437c7f8e8e7ae","from_path":"foo","to_path":"foo2"}],"v":1}]
 
 enable the new subtree key
-  $ setconfig extensions.subtreetestoverride=$TESTTMP/prod_subtree_key.py
+  $ setconfig subtree.use-prod-subtree-key=True
+  $ hg dbsh -c "print(sapling.utils.subtreeutil.get_subtree_key(ui))"
+  subtree
 
 make sure inspect command works for existing metadata
   $ hg subtree inspect -r .
@@ -117,8 +106,8 @@ merge should use commit B (9998a5c40732) as the merge base
   subtree=[{"merges":[{"from_commit":"03dfd4b086085a00e29f7e8d55db1880e8bd0190","from_path":"foo","to_path":"foo2"}],"v":1}]
 
 disable the new subtree key and make sure inspect command works for existing metadata
-  $ setconfig extensions.subtreetestoverride2=$TESTTMP/test_subtree_key.py
-  $ hg dbsh -c "print(sapling.utils.subtreeutil.SUBTREE_KEY)"
+  $ setconfig subtree.use-prod-subtree-key=False
+  $ hg dbsh -c "print(sapling.utils.subtreeutil.get_subtree_key(ui))"
   test_subtree
   $ hg subtree inspect
   {
