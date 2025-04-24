@@ -175,3 +175,28 @@ fn test_walk_node_get() {
     assert_eq!(node.get(&p("foo")), Some(&mut foo_walk));
     assert_eq!(node.get(&p("foo/bar")), Some(&mut foo_bar_walk));
 }
+
+#[test]
+fn test_walk_get_containing() {
+    let mut node = WalkNode::default();
+
+    let dir = p("foo/bar/baz");
+
+    assert!(node.get_containing(&dir).is_none());
+
+    let epoch = Instant::now();
+
+    let mut walk = Walk {
+        depth: 0,
+        last_access: epoch,
+    };
+    node.insert(&p("foo/bar"), walk);
+
+    // Still not containing due to depth.
+    assert!(node.get_containing(&dir).is_none());
+
+    walk.depth = 1;
+    node.insert(&p("foo/bar"), walk);
+
+    assert_eq!(node.get_containing(&dir), Some(&mut walk));
+}

@@ -34,6 +34,26 @@ impl WalkNode {
         }
     }
 
+    /// Find active walk covering directory `dir`, if any.
+    pub(crate) fn get_containing(&mut self, dir: &RepoPath) -> Option<&mut Walk> {
+        match dir.split_first_component() {
+            Some((head, tail)) => {
+                if self
+                    .walk
+                    .as_mut()
+                    .is_some_and(|walk| walk.depth >= dir.components().count())
+                {
+                    self.walk.as_mut()
+                } else {
+                    self.children
+                        .get_mut(head)
+                        .and_then(|child| child.get_containing(tail))
+                }
+            }
+            None => self.walk.as_mut(),
+        }
+    }
+
     /// Insert a new walk.
     pub(crate) fn insert(&mut self, walk_root: &RepoPath, walk: Walk) {
         match walk_root.split_first_component() {
