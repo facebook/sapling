@@ -88,6 +88,8 @@ Sync all bookmarks moves
   [INFO] Connecting to https://localhost:$LOCAL_PORT/edenapi/, timeout 300s
   [INFO] Established EdenAPI connection
   [INFO] Initialized channels
+  [INFO] Read 1 entries
+  [INFO] 1 entries left after filtering
   [INFO] mononoke_host="*" dogfooding=false (glob)
   [INFO] Calculating segments for entry 1, from changeset None to changeset ChangesetId(Blake2(e32a1e342cdb1e38e88466b4c1a01ae9f410024017aa21dc0a1c5da6b3963bf2)), to generation 3
   [INFO] Done calculating segments for entry 1, from changeset None to changeset ChangesetId(Blake2(e32a1e342cdb1e38e88466b4c1a01ae9f410024017aa21dc0a1c5da6b3963bf2)), to generation 3 in *ms (glob)
@@ -180,6 +182,8 @@ Sync all bookmarks moves
   [INFO] Connecting to https://localhost:$LOCAL_PORT/edenapi/, timeout 300s
   [INFO] Established EdenAPI connection
   [INFO] Initialized channels
+  [INFO] Read 1 entries
+  [INFO] 1 entries left after filtering
   [INFO] mononoke_host="*" dogfooding=false (glob)
   [INFO] Calculating segments for entry 1, from changeset None to changeset ChangesetId(Blake2(e32a1e342cdb1e38e88466b4c1a01ae9f410024017aa21dc0a1c5da6b3963bf2)), to generation 3
   [INFO] Done calculating segments for entry 1, from changeset None to changeset ChangesetId(Blake2(e32a1e342cdb1e38e88466b4c1a01ae9f410024017aa21dc0a1c5da6b3963bf2)), to generation 3 in *ms (glob)

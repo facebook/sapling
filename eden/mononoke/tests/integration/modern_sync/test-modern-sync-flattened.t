@@ -68,6 +68,8 @@ Sync all bookmarks moves
   [INFO] Connecting to https://localhost:$LOCAL_PORT/edenapi/, timeout 300s
   [INFO] Established EdenAPI connection
   [INFO] Initialized channels
+  [INFO] Read 2 entries
+  [INFO] 2 entries left after filtering
   [INFO] Grouped 2 entries into 1 macro-entries
   [INFO] mononoke_host="*" dogfooding=false (glob)
   [INFO] Calculating segments for entry 2, from changeset None to changeset ChangesetId(Blake2(5b1c7130dde8e54b4285b9153d8e56d69fbf4ae685eaf9e9766cc409861995f8)), to generation 5

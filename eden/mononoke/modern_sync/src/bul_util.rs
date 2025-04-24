@@ -42,10 +42,11 @@ pub(crate) fn read_bookmark_update_log(
             match maybe_id {
                 Some(id) => {
                     let entries: Vec<_> = bookmark_update_log
-                        .read_next_bookmark_log_entries_same_bookmark_and_reason(
+                        .read_next_bookmark_log_entries(
                             ctx.clone(),
                             id,
                             single_db_query_entries_limit,
+                            Freshness::MaybeStale,
                         )
                         .try_collect()
                         .await

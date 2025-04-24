@@ -251,6 +251,7 @@ pub async fn sync(
                     Ok(())
                 }
                 Ok(mut entries) => {
+                    tracing::info!("Read {} entries", entries.len());
                     entries = entries
                         .iter()
                         .filter_map(|entry| {
@@ -266,6 +267,7 @@ pub async fn sync(
                             }
                         })
                         .collect::<Vec<BookmarkUpdateLogEntry>>();
+                    tracing::info!("{} entries left after filtering", entries.len());
 
                     if app_args.flatten_bul && !entries.is_empty() {
                         let original_size = entries.len();
