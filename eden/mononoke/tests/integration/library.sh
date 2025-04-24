@@ -1207,10 +1207,10 @@ function hook_test_setup() {
 [ui]
 ssh="$DUMMYSSH"
 EOF
-
+  MASTER_BOOKMARK_DRAWDAG="${MASTER_BOOKMARK:-master_bookmark}"
   testtool_drawdag -R "$REPONAME" --derive-all <<EOF 2>/dev/null
 A-B-C
-# bookmark: C master_bookmark
+# bookmark: C $MASTER_BOOKMARK_DRAWDAG
 # message: A "a"
 # message: B "b"
 # message: C "c"
