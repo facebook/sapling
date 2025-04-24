@@ -63,6 +63,7 @@ external_commands![
     cmddebugtestcommand,
     cmddebugtop,
     cmddebugwait,
+    cmddebugwalkdetector,
     // [[[end]]]
 ];
 

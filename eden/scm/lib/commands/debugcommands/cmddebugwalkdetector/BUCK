@@ -3,25 +3,22 @@ load("@fbcode_macros//build_defs:rust_library.bzl", "rust_library")
 oncall("sapling")
 
 rust_library(
-    name = "walkdetector",
+    name = "cmddebugwalkdetector",
     srcs = glob(["src/**/*.rs"]),
     autocargo = {"cargo_toml_config": {
-        "lib": {"name": "walkdetector"},
+        "lib": {"name": "cmddebugwalkdetector"},
         "package": {
             "authors": ["Meta Source Control Team <sourcecontrol-dev@meta.com>"],
             "homepage": "https://sapling-scm.com/",
-            "license": "MIT",
-            "name": "sapling-walkdetector",
+            "license": "GPL-2.0-only",
+            "name": "cmddebugwalkdetector",
             "repository": "https://github.com/facebook/sapling",
         },
     }},
     crate_root = "src/lib.rs",
-    test_deps = [
-        "fbsource//third-party/rust:anyhow",
-    ],
     deps = [
-        "fbsource//third-party/rust:parking_lot",
-        "fbsource//third-party/rust:tracing",
-        "//eden/scm/lib/types:types",
+        "//eden/scm/lib/clidispatch:clidispatch",
+        "//eden/scm/lib/commands/cmdutil:cmdutil",
+        "//eden/scm/lib/walkdetector:walkdetector",
     ],
 )

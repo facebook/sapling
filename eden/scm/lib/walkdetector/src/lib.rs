@@ -14,7 +14,6 @@ use std::collections::HashSet;
 use std::collections::hash_map::Entry;
 use std::time::Instant;
 
-use anyhow::Result;
 use parking_lot::Mutex;
 use types::PathComponentBuf;
 use types::RepoPath;
@@ -66,8 +65,7 @@ impl Detector {
         }
     }
 
-    #[cfg(test)]
-    fn set_min_dir_walk_threshold(&mut self, threshold: usize) {
+    pub fn set_min_dir_walk_threshold(&self, threshold: usize) {
         self.inner.lock().min_dir_walk_threshold = threshold;
     }
 
@@ -88,12 +86,12 @@ impl Detector {
     }
 
     /// Observe a file (content) read of `path` at time `time`.
-    pub fn file_read(&self, time: Instant, mut path: RepoPathBuf) -> Result<()> {
+    pub fn file_read(&self, time: Instant, mut path: RepoPathBuf) {
         tracing::trace!(?time, %path, "file_read");
 
         let (dir_path, base_name) = match path.pop() {
             // Shouldn't happen - implies a path of "" which is not valid for a file.
-            None => return Ok(()),
+            None => return,
             Some(part) => (path, part),
         };
 
@@ -102,7 +100,7 @@ impl Detector {
         if let Some(walk) = inner.node.get_containing(&dir_path) {
             tracing::trace!(dir=%dir_path, "dir in walk");
             walk.last_access = time;
-            return Ok(());
+            return;
         }
 
         let dir_threshold = inner.min_dir_walk_threshold;
@@ -122,8 +120,6 @@ impl Detector {
             let (dir_path, _dir) = entry.remove_entry();
             inner.insert_walk(time, &dir_path, 0);
         }
-
-        Ok(())
     }
 }
 
