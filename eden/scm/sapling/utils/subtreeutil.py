@@ -7,7 +7,7 @@ import json
 from collections import defaultdict
 from dataclasses import asdict, dataclass
 from enum import Enum
-from typing import List
+from typing import List, Set
 
 from .. import error, match as matchmod, node, pathutil, util
 from ..i18n import _
@@ -15,28 +15,42 @@ from ..i18n import _
 # this config is for testing purpose only
 CFG_ALLOW_ANY_SOURCE_COMMIT = "allow-any-source-commit"
 
-# todo: remove the 'test_' prefix when this feature is stable
+# SUBTREE_BRANCH_KEY and SUBTREE_MERGE_KEY are deprecated by SUBTREE_KEY
 SUBTREE_BRANCH_KEY = "test_subtree_copy"
 SUBTREE_MERGE_KEY = "test_subtree_merge"
 
+TEST_SUBTREE_KEY = "test_subtree"
 # XXX: remove the 'test_' prefix when server-side support is ready
-SUBTREE_KEY = "test_subtree"
+SUBTREE_KEY = TEST_SUBTREE_KEY
+
 SUBTREE_METADATA_VERSION = 1  # current version of subtree metadata
 SUPPORTED_SUBTREE_METADATA_VERSIONS = {1}
 
-# keys that are used for subtree operations, this list should
-# include the keys for both O(n) copy and O(1) copy
-SUBTREE_OPERATION_KEYS = [
-    SUBTREE_BRANCH_KEY,
-    SUBTREE_MERGE_KEY,
-    SUBTREE_KEY,
-]
 
-# keys will be removed from commit's extra after folding commits
-DEPRECATED_SUBTREE_METADATA_KEYS = [
-    SUBTREE_BRANCH_KEY,
-    SUBTREE_MERGE_KEY,
-]
+def get_subtree_metadata_keys() -> Set[str]:
+    """Keys used in subtree operations.
+
+    Includes deprecated keys that are kept for backward compatibility with
+    existing metadata.
+    """
+    keys = get_deprecated_subtree_metadata_keys()
+    keys.add(SUBTREE_KEY)
+    return keys
+
+
+def get_deprecated_subtree_metadata_keys() -> Set[str]:
+    """Keys that are no longer in use.
+
+    These keys will be removed from commit's extra after folding draft commits.
+    """
+    keys = {
+        SUBTREE_BRANCH_KEY,
+        SUBTREE_MERGE_KEY,
+    }
+    if SUBTREE_KEY != TEST_SUBTREE_KEY:
+        keys.add(TEST_SUBTREE_KEY)
+    return keys
+
 
 # the following is the format of subtree metadata
 # [
@@ -260,7 +274,7 @@ def _merges_to_dict(merges: List[SubtreeMerge], version: int):
 
 def get_subtree_metadata(extra):
     """Get the subtree metadata from commit's extra."""
-    return {k: v for k, v in extra.items() if k in SUBTREE_OPERATION_KEYS}
+    return {k: v for k, v in extra.items() if k in get_subtree_metadata_keys()}
 
 
 ### Getting subtree metadata: branches, imports, merges
@@ -440,7 +454,7 @@ def merge_subtree_metadata(repo, ctxs):
 
 def remove_old_subtree_keys_from_extra(extra):
     """Remove old subtree metadata keys from commit's extra after folding commits"""
-    for k in DEPRECATED_SUBTREE_METADATA_KEYS:
+    for k in get_deprecated_subtree_metadata_keys():
         if k in extra:
             del extra[k]
 
@@ -606,6 +620,6 @@ def check_commit_splitability(repo, node):
     metadata.
     """
     extra = repo[node].extra()
-    for key in SUBTREE_OPERATION_KEYS:
+    for key in get_subtree_metadata_keys():
         if key in extra:
             raise error.Abort(_("cannot split subtree copy/merge commits"))

@@ -11,7 +11,7 @@ import re
 
 from sapling import commands, error, extensions, registrar
 from sapling.i18n import _
-from sapling.utils.subtreeutil import SUBTREE_OPERATION_KEYS
+from sapling.utils.subtreeutil import get_subtree_metadata_keys
 
 
 cmdtable = {}
@@ -33,7 +33,7 @@ usedinternally = {
     "mutdate",
     "mutop",
     "mutsplit",
-} | set(SUBTREE_OPERATION_KEYS)
+} | set(get_subtree_metadata_keys())
 
 
 def extsetup(ui) -> None:
