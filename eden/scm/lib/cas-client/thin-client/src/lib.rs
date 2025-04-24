@@ -163,6 +163,8 @@ impl ThinCasClient {
                     cas_daemon_address: ExternalCASDaemonAddress::port(port),
                     address: server_address,
                     connection_count: self.connection_count as i32,
+                    use_bare_thrift_client: true,
+                    use_tls: false,
                     ..Default::default()
                 });
         } else if let Some(uds_path) = self.uds_path.clone() {
@@ -172,6 +174,8 @@ impl ThinCasClient {
                     cas_daemon_address: ExternalCASDaemonAddress::uds_path(uds_path.clone()),
                     address: server_address,
                     connection_count: self.connection_count as i32,
+                    use_bare_thrift_client: true,
+                    use_tls: false,
                     ..Default::default()
                 });
         } else {
@@ -181,7 +185,8 @@ impl ThinCasClient {
                 address: None,
                 connection_count: self.connection_count as i32,
                 cas_daemon_address: ExternalCASDaemonAddress::uds_path(socket_path),
-                socket_activation: true,
+                use_bare_thrift_client: true,
+                use_tls: false,
                 ..Default::default()
             };
             match &mut re_config.cas_client_config {
