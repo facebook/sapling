@@ -419,7 +419,7 @@ impl RepoPath {
 
     /// Returns an iterator over the ancestors of the current path.
     ///
-    /// This should be strictly equivalent to: `self.parents().rev()`.
+    /// Iterates closest ancestors first, including `self`.
     pub fn ancestors(&'_ self) -> Ancestors<'_> {
         Ancestors::new(self)
     }
@@ -926,9 +926,7 @@ pub struct Ancestors<'a> {
 
 impl<'a> Ancestors<'a> {
     pub fn new(path: &'a RepoPath) -> Self {
-        Ancestors {
-            path: path.parent(),
-        }
+        Ancestors { path: Some(path) }
     }
 }
 
@@ -1382,6 +1380,7 @@ mod tests {
     fn test_ancestors_on_regular_path() {
         let path = repo_path("foo/bar/baz/file.txt");
         let mut iter = path.ancestors();
+        assert_eq!(iter.next(), Some(repo_path("foo/bar/baz/file.txt")));
         assert_eq!(iter.next(), Some(repo_path("foo/bar/baz")));
         assert_eq!(iter.next(), Some(repo_path("foo/bar")));
         assert_eq!(iter.next(), Some(repo_path("foo")));
@@ -1391,7 +1390,9 @@ mod tests {
 
     #[test]
     fn test_ancestors_on_empty_path() {
-        assert_eq!(RepoPath::empty().ancestors().next(), None)
+        let mut iter = RepoPath::empty().ancestors();
+        assert_eq!(iter.next(), Some(repo_path("")));
+        assert_eq!(iter.next(), None);
     }
 
     quickcheck! {
@@ -1399,8 +1400,8 @@ mod tests {
            path.deref().parents().count() == path.deref().components().count()
         }
 
-       fn test_ancestors_equal_parents(path: RepoPathBuf) -> bool {
-           path.deref().ancestors().count() == path.deref().parents().count()
+       fn test_ancestors_relates_to_parents(path: RepoPathBuf) -> bool {
+           path.deref().ancestors().count() == path.deref().parents().count() + 1
        }
     }
 
