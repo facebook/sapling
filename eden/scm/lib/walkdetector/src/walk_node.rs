@@ -34,6 +34,17 @@ impl WalkNode {
         }
     }
 
+    /// Get existing WalkNode entry for specified root, if any.
+    pub(crate) fn get_node(&mut self, walk_root: &RepoPath) -> Option<&mut Self> {
+        match walk_root.split_first_component() {
+            Some((head, tail)) => self
+                .children
+                .get_mut(head)
+                .and_then(|child| child.get_node(tail)),
+            None => Some(self),
+        }
+    }
+
     /// Find active walk covering directory `dir`, if any.
     pub(crate) fn get_containing(&mut self, dir: &RepoPath) -> Option<&mut Walk> {
         match dir.split_first_component() {

@@ -19,6 +19,7 @@ use parking_lot::Mutex;
 use types::PathComponentBuf;
 use types::RepoPath;
 use types::RepoPathBuf;
+use walk_node::WalkNode;
 
 // Goals:
 //  - Aggressively detect walk and aggressively cancel walk.
@@ -31,7 +32,7 @@ pub struct Detector {
 
 struct Inner {
     min_dir_walk_threshold: usize,
-    walks: HashMap<RepoPathBuf, Walk>,
+    node: WalkNode,
     dirs: HashMap<RepoPathBuf, Dir>,
 }
 
@@ -39,7 +40,7 @@ impl Default for Inner {
     fn default() -> Self {
         Self {
             min_dir_walk_threshold: DEFAULT_MIN_DIR_WALK_THRESHOLD,
-            walks: Default::default(),
+            node: WalkNode::default(),
             dirs: Default::default(),
         }
     }
@@ -75,9 +76,10 @@ impl Detector {
         let mut walks = self
             .inner
             .lock()
-            .walks
-            .iter()
-            .map(|(root, walk)| (root.to_owned(), walk.depth))
+            .node
+            .list()
+            .into_iter()
+            .map(|(root, walk)| (root, walk.depth))
             .collect::<Vec<_>>();
 
         walks.sort_by(|a, b| a.0.as_str().cmp(b.0.as_str()));
@@ -97,7 +99,7 @@ impl Detector {
 
         let mut inner = self.inner.lock();
 
-        if let Some(walk) = inner.containing_walk(&dir_path) {
+        if let Some(walk) = inner.node.get_containing(&dir_path) {
             walk.last_access = time;
             return Ok(());
         }
@@ -117,7 +119,7 @@ impl Detector {
         if entry.get().is_walked(dir_threshold) {
             // Transition Dir entry to Walk.
             let (dir_path, _dir) = entry.remove_entry();
-            inner.insert_walk(time, dir_path, 0);
+            inner.insert_walk(time, &dir_path, 0);
         }
 
         Ok(())
@@ -132,52 +134,45 @@ impl Dir {
 }
 
 impl Inner {
-    /// Return Walk that contains `dir`, if any.
-    fn containing_walk(&mut self, dir: &RepoPath) -> Option<&mut Walk> {
-        self.walks.iter_mut().find_map(|(root, walk)| {
-            if let Some(suffix) = dir.strip_prefix(root, true) {
-                if suffix.components().count() <= walk.depth {
-                    return Some(walk);
-                }
-            }
-
-            None
-        })
-    }
-
     /// Insert a new Walk rooted at `dir`.
-    fn insert_walk(&mut self, time: Instant, dir: RepoPathBuf, mut walk_depth: usize) {
-        let mut siblings = Vec::new();
+    fn insert_walk(&mut self, time: Instant, dir: &RepoPath, mut walk_depth: usize) {
+        if let Some((parent_dir, name)) = dir.split_last_component() {
+            if let Some(parent_node) = self.node.get_node(parent_dir) {
+                // If this walk already exists, there is no combining to be done.
+                if parent_node.get(name.as_ref()).is_none() {
+                    // We are adding a new walk - check if it has sibling walks that we
+                    // want to merge into a walk on the parent.
 
-        for root in self.walks.keys() {
-            if dir.parent() == root.parent() {
-                siblings.push(root.to_owned());
-            }
-        }
+                    let mut sibling_count = 0;
+                    let max_sibling_depth =
+                        parent_node
+                            .children
+                            .iter()
+                            .fold(0, |max, (_, sibling_node)| {
+                                if let Some(walk) = &sibling_node.walk {
+                                    sibling_count += 1;
+                                    max.max(walk.depth)
+                                } else {
+                                    max
+                                }
+                            });
 
-        if siblings.len() >= (self.min_dir_walk_threshold - 1) {
-            let max_sibling_depth = siblings.iter().fold(0, |max, sibling_path| {
-                max.max(self.walks.remove(sibling_path).map_or(0, |c| c.depth))
-            });
-
-            if let Some(parent) = dir.parent() {
-                walk_depth = max_sibling_depth.max(walk_depth) + 1;
-
-                if let Some(parent_walk) = self.walks.get_mut(parent) {
-                    parent_walk.last_access = time;
-                    parent_walk.depth = parent_walk.depth.max(walk_depth);
-                } else {
-                    self.insert_walk(time, parent.to_owned(), walk_depth);
+                    if sibling_count >= (self.min_dir_walk_threshold - 1) {
+                        walk_depth = walk_depth.max(max_sibling_depth) + 1;
+                        walk_depth = walk_depth.max(parent_node.walk.map_or(0, |w| w.depth));
+                        self.insert_walk(time, parent_dir, walk_depth);
+                        return;
+                    }
                 }
             }
-        } else {
-            self.walks.insert(
-                dir,
-                Walk {
-                    depth: walk_depth,
-                    last_access: time,
-                },
-            );
         }
+
+        self.node.insert(
+            dir,
+            Walk {
+                depth: walk_depth,
+                last_access: time,
+            },
+        );
     }
 }

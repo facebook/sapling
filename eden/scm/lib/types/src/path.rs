@@ -755,6 +755,12 @@ impl AsRef<str> for PathComponent {
     }
 }
 
+impl PartialEq<PathComponentBuf> for PathComponent {
+    fn eq(&self, other: &PathComponentBuf) -> bool {
+        self == other.as_path_component()
+    }
+}
+
 impl ToOwned for PathComponent {
     type Owned = PathComponentBuf;
     fn to_owned(&self) -> Self::Owned {
