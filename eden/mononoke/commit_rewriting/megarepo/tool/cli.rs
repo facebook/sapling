@@ -21,9 +21,6 @@ use megarepolib::common::StackPosition;
 use mononoke_types::DateTime;
 
 pub const BACKFILL_NOOP_MAPPING: &str = "backfill-noop-mapping";
-pub const BONSAI_MERGE_P1: &str = "bonsai-merge-p1";
-pub const BONSAI_MERGE_P2: &str = "bonsai-merge-p2";
-pub const BONSAI_MERGE: &str = "bonsai-merge";
 pub const CATCHUP_DELETE_HEAD: &str = "create-catchup-head-deletion-commits";
 pub const CATCHUP_VALIDATE_COMMAND: &str = "catchup-validate";
 pub const CHANGESET: &str = "commit";
@@ -240,21 +237,6 @@ pub fn setup_app<'a, 'b>() -> MononokeClapApp<'a, 'b> {
                     .required(true)
                     .multiple(true),
             );
-
-    let bonsai_merge_subcommand = SubCommand::with_name(BONSAI_MERGE)
-        .about("create a bonsai merge commit")
-        .arg(
-            Arg::with_name(BONSAI_MERGE_P1)
-                .help("p1 of the merge")
-                .takes_value(true)
-                .required(true),
-        )
-        .arg(
-            Arg::with_name(BONSAI_MERGE_P2)
-                .help("p2 of the merge")
-                .takes_value(true)
-                .required(true),
-        );
 
     let gradual_merge_subcommand = SubCommand::with_name(GRADUAL_MERGE)
         .about("Gradually merge a list of deletion commits")
@@ -567,7 +549,6 @@ pub fn setup_app<'a, 'b>() -> MononokeClapApp<'a, 'b> {
         .with_source_and_target_repos()
         .build()
         .subcommand(history_fixup_delete_subcommand)
-        .subcommand(add_light_resulting_commit_args(bonsai_merge_subcommand))
         .subcommand(add_light_resulting_commit_args(gradual_merge_subcommand))
         .subcommand(gradual_merge_progress_subcommand)
         .subcommand(gradual_delete_subcommand)

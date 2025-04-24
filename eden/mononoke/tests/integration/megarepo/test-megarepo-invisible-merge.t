@@ -231,7 +231,7 @@ Prepare for the invisible merge
   > --bookmark ovrsource/moved_master \
   >  -a author -m "merge preparation" \
   >  --even-chunk-size 2 \
-  > --commit-date-rfc3339 "$COMMIT_DATE" 2>/dev/null 
+  > --commit-date-rfc3339 "$COMMIT_DATE" 2>/dev/null
   bffa0e47c22b600605917892c9c9a2604d1640dbac8ae8c88530e0f32bb2c965
   cad6246b8ea9efdb756e6adb2f1a2da2f8d9d43bdabfeceaa4a4213abd334b61
   $ mononoke_admin bookmarks --repo-id $FBS_REPOID get ovrsource/moved_master
@@ -258,7 +258,7 @@ Do the invisible merge by gradually merging TOMERGES into master
   >  CURRENT=$(hg log -r . -T "{node}")
   >  echo "Current: $CURRENT"
   >  echo "To merge: $TOMERGE"
-  >  MERGE=$(REPOID=$FBS_REPOID megarepo_tool --log-level=ERROR bonsai-merge $CURRENT $TOMERGE author "merge execution" --commit-date-rfc3339 "$COMMIT_DATE")
+  >  MERGE=$(mononoke_admin megarepo bonsai-merge --repo-id=$FBS_REPOID -i $CURRENT -i $TOMERGE -a author -m "merge execution" --commit-date-rfc3339 "$COMMIT_DATE")
   >  HGMERGE=$(mononoke_admin convert --repo-id=$FBS_REPOID --from bonsai --to hg --derive $MERGE)
   >  echo "Merged as (bonsai): $MERGE"
   >  echo "Merged as (hg): $HGMERGE"

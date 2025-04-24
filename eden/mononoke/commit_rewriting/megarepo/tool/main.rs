@@ -103,9 +103,6 @@ use tokio::io::AsyncBufReadExt;
 use tokio::io::BufReader;
 
 use crate::cli::BACKFILL_NOOP_MAPPING;
-use crate::cli::BONSAI_MERGE;
-use crate::cli::BONSAI_MERGE_P1;
-use crate::cli::BONSAI_MERGE_P2;
 use crate::cli::CATCHUP_DELETE_HEAD;
 use crate::cli::CATCHUP_VALIDATE_COMMAND;
 use crate::cli::CHANGESET;
@@ -313,37 +310,6 @@ async fn run_gradual_delete<'a>(
     for delete_commit in delete_commits {
         println!("{}", delete_commit);
     }
-
-    Ok(())
-}
-
-async fn run_bonsai_merge<'a>(
-    ctx: &CoreContext,
-    matches: &MononokeMatches<'a>,
-    sub_m: &ArgMatches<'a>,
-) -> Result<(), Error> {
-    let repo: Repo =
-        args::not_shardmanager_compatible::open_repo(ctx.fb, &ctx.logger().clone(), matches)
-            .await?;
-
-    let (p1, p2) = try_join(
-        async {
-            let p1 = sub_m.value_of(BONSAI_MERGE_P1).unwrap().to_owned();
-            helpers::csid_resolve(ctx, &repo, p1).await
-        },
-        async {
-            let p2 = sub_m.value_of(BONSAI_MERGE_P2).unwrap().to_owned();
-            helpers::csid_resolve(ctx, &repo, p2).await
-        },
-    )
-    .await?;
-
-    let cs_args = cs_args_from_matches(sub_m)?;
-
-    let merge_cs_id =
-        create_and_save_bonsai(ctx, &repo, vec![p1, p2], Default::default(), cs_args).await?;
-
-    println!("{}", merge_cs_id);
 
     Ok(())
 }
@@ -1146,7 +1112,6 @@ fn main(fb: FacebookInit) -> Result<()> {
             (BACKFILL_NOOP_MAPPING, Some(sub_m)) => {
                 run_backfill_noop_mapping(ctx, &matches, sub_m).await
             }
-            (BONSAI_MERGE, Some(sub_m)) => run_bonsai_merge(ctx, &matches, sub_m).await,
             (CHECK_PUSH_REDIRECTION_PREREQS, Some(sub_m)) => {
                 run_check_push_redirection_prereqs(ctx, &matches, sub_m).await
             }
