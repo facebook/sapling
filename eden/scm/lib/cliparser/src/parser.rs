@@ -136,6 +136,15 @@ impl From<Value> for i64 {
     }
 }
 
+impl From<Value> for Option<i64> {
+    fn from(v: Value) -> Self {
+        match v {
+            Value::Int(i) => i,
+            _ => panic!("programming error:  {:?} was converted to Option<i64>", v),
+        }
+    }
+}
+
 impl From<Value> for String {
     fn from(v: Value) -> Self {
         match v {
@@ -187,6 +196,12 @@ impl From<Value> for Vec<String> {
 impl From<i64> for Value {
     fn from(v: i64) -> Self {
         Value::Int(Some(v))
+    }
+}
+
+impl From<Option<i64>> for Value {
+    fn from(v: Option<i64>) -> Self {
+        Value::Int(v)
     }
 }
 
