@@ -320,3 +320,8 @@ ls -l behavior
   -rw....... foo (re)
   $ cd
 
+Warn about cd outside testtmp:
+
+  $ cd ..
+  warning: no longer inside TESTTMP
+  $ cd

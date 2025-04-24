@@ -1032,8 +1032,6 @@ Python utility:
   @@ -0,0 +1,1 @@
   +nonempty
 
-  $ cd ..
-
 # no segfault while importing a unified diff which start line is zero but chunk
 # size is non-zero
 

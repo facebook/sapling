@@ -915,6 +915,9 @@ def chdir(args: List[str], env: Env, stderr: BinaryIO, fs: ShellFS):
         return 1
     if fs.isdir(path):
         fs.chdir(path)
+        test_tmp = env.getenv("TESTTMP")
+        if test_tmp and not fs.cwd().startswith(test_tmp):
+            stderr.write("warning: no longer inside TESTTMP\n".encode())
         return 0
     else:
         stderr.write(f"cd: {path}: No such file or directory\n".encode())

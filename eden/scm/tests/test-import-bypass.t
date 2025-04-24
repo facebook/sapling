@@ -350,5 +350,3 @@ data. If not, diff both heads to debug it.
   
 #endif
 
-  $ cd ..
-
