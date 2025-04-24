@@ -6,6 +6,7 @@
  */
 
 mod bonsai_merge;
+pub mod check_prereqs;
 pub(crate) mod common;
 mod merge;
 mod move_commit;
@@ -20,6 +21,7 @@ use clap::Subcommand;
 use mononoke_app::MononokeApp;
 
 use self::bonsai_merge::BonsaiMergeArgs;
+use self::check_prereqs::CheckPrereqsArgs;
 use self::merge::MergeArgs;
 use self::move_commit::MoveArgs;
 use self::pre_merge_delete::PreMergeDeleteArgs;
@@ -44,6 +46,7 @@ enum MegarepoSubcommand {
     SyncDiamondMerge(SyncDiamondMergeArgs),
     PreMergeDelete(PreMergeDeleteArgs),
     BonsaiMerge(BonsaiMergeArgs),
+    CheckPrereqs(CheckPrereqsArgs),
 }
 
 pub async fn run(app: MononokeApp, args: CommandArgs) -> Result<()> {
@@ -59,6 +62,7 @@ pub async fn run(app: MononokeApp, args: CommandArgs) -> Result<()> {
         }
         MegarepoSubcommand::PreMergeDelete(args) => pre_merge_delete::run(&ctx, app, args).await?,
         MegarepoSubcommand::BonsaiMerge(args) => bonsai_merge::run(&ctx, app, args).await?,
+        MegarepoSubcommand::CheckPrereqs(args) => check_prereqs::run(&ctx, app, args).await?,
     }
 
     Ok(())

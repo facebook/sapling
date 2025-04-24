@@ -24,7 +24,6 @@ pub const BACKFILL_NOOP_MAPPING: &str = "backfill-noop-mapping";
 pub const CATCHUP_DELETE_HEAD: &str = "create-catchup-head-deletion-commits";
 pub const CATCHUP_VALIDATE_COMMAND: &str = "catchup-validate";
 pub const CHANGESET: &str = "commit";
-pub const CHECK_PUSH_REDIRECTION_PREREQS: &str = "check-push-redirection-prereqs";
 pub const CHUNKING_HINT_FILE: &str = "chunking-hint-file";
 pub const COMMIT_AUTHOR: &str = "commit-author";
 pub const COMMIT_BOOKMARK: &str = "bookmark";
@@ -58,11 +57,11 @@ pub const PATH_PREFIX: &str = "path-prefix";
 pub const PATHS_FILE: &str = "paths-file";
 pub const PRE_DELETION_COMMIT: &str = "pre-deletion-commit";
 pub const SELECT_PARENTS_AUTOMATICALLY: &str = "select-parents-automatically";
-pub const SOURCE_CHANGESET: &str = "source-changeset";
+
 pub const SYNC_COMMIT_AND_ANCESTORS: &str = "sync-commit-and-ancestors";
-pub const TARGET_CHANGESET: &str = "target-changeset";
+
 pub const TO_MERGE_CS_ID: &str = "to-merge-cs-id";
-pub const VERSION: &str = "version";
+
 pub const WAIT_SECS: &str = "wait-secs";
 
 pub fn cs_args_from_matches<'a>(sub_m: &ArgMatches<'a>) -> Result<ChangesetArgs, Error> {
@@ -445,27 +444,6 @@ pub fn setup_app<'a, 'b>() -> MononokeClapApp<'a, 'b> {
                 .required(false),
         );
 
-    let check_push_redirection_prereqs_subcommand = SubCommand::with_name(CHECK_PUSH_REDIRECTION_PREREQS)
-        .about("check the prerequisites of enabling push-redirection at a given commit with a given CommitSyncConfig version")
-        .arg(
-            Arg::with_name(SOURCE_CHANGESET)
-                .help("a source changeset hash or bookmark to check")
-                .takes_value(true)
-                .required(true),
-        )
-        .arg(
-            Arg::with_name(TARGET_CHANGESET)
-                .help("a target changeset hash or bookmark to check")
-                .takes_value(true)
-                .required(true),
-        )
-        .arg(
-            Arg::with_name(VERSION)
-                .help("a version to use")
-                .takes_value(true)
-                .required(true),
-        );
-
     let backfill_noop_mapping = SubCommand::with_name(BACKFILL_NOOP_MAPPING)
         .about(
             "
@@ -558,7 +536,6 @@ pub fn setup_app<'a, 'b>() -> MononokeClapApp<'a, 'b> {
         ))
         .subcommand(catchup_validate_subcommand)
         .subcommand(mark_not_synced_candidate)
-        .subcommand(check_push_redirection_prereqs_subcommand)
         .subcommand(backfill_noop_mapping)
         .subcommand(sync_commit_and_ancestors)
         .subcommand(diff_mapping_versions)

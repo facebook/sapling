@@ -36,11 +36,8 @@ use cross_repo_sync::CommitSyncContext;
 use cross_repo_sync::CommitSyncOutcome;
 use cross_repo_sync::CommitSyncer;
 use cross_repo_sync::ConcreteRepo as CrossRepo;
-use cross_repo_sync::Source;
-use cross_repo_sync::Target;
 use cross_repo_sync::find_toposorted_unsynced_ancestors;
 use cross_repo_sync::unsafe_sync_commit;
-use cross_repo_sync::verify_working_copy_with_version;
 use fbinit::FacebookInit;
 use filenodes::Filenodes;
 use filestore::FilestoreConfig;
@@ -106,7 +103,6 @@ use crate::cli::BACKFILL_NOOP_MAPPING;
 use crate::cli::CATCHUP_DELETE_HEAD;
 use crate::cli::CATCHUP_VALIDATE_COMMAND;
 use crate::cli::CHANGESET;
-use crate::cli::CHECK_PUSH_REDIRECTION_PREREQS;
 use crate::cli::CHUNKING_HINT_FILE;
 use crate::cli::COMMIT_BOOKMARK;
 use crate::cli::COMMIT_HASH;
@@ -135,11 +131,8 @@ use crate::cli::PATH_REGEX;
 use crate::cli::PATHS_FILE;
 use crate::cli::PRE_DELETION_COMMIT;
 use crate::cli::SELECT_PARENTS_AUTOMATICALLY;
-use crate::cli::SOURCE_CHANGESET;
 use crate::cli::SYNC_COMMIT_AND_ANCESTORS;
-use crate::cli::TARGET_CHANGESET;
 use crate::cli::TO_MERGE_CS_ID;
-use crate::cli::VERSION;
 use crate::cli::WAIT_SECS;
 use crate::cli::cs_args_from_matches;
 use crate::cli::get_catchup_head_delete_commits_cs_args_factory;
@@ -440,83 +433,6 @@ async fn run_manual_commit_sync<'a>(
     .await?;
     info!(ctx.logger(), "target cs id is {:?}", target_cs_id);
     Ok(())
-}
-
-async fn run_check_push_redirection_prereqs<'a>(
-    ctx: &CoreContext,
-    matches: &MononokeMatches<'a>,
-    sub_m: &ArgMatches<'a>,
-) -> Result<(), Error> {
-    let commit_syncer = create_commit_syncer_from_matches::<CrossRepo>(ctx, matches, None).await?;
-
-    let target_repo = commit_syncer.get_target_repo();
-    let source_repo = commit_syncer.get_source_repo();
-
-    info!(
-        ctx.logger(),
-        "Resolving source chageset in {}",
-        source_repo.repo_identity().name()
-    );
-    let source_cs_id = helpers::csid_resolve(
-        ctx,
-        source_repo,
-        sub_m
-            .value_of(SOURCE_CHANGESET)
-            .ok_or_else(|| format_err!("{} not set", SOURCE_CHANGESET))?,
-    )
-    .await?;
-
-    info!(
-        ctx.logger(),
-        "Resolving target changeset in {}",
-        target_repo.repo_identity().name()
-    );
-    let target_cs_id = helpers::csid_resolve(
-        ctx,
-        target_repo,
-        sub_m
-            .value_of(TARGET_CHANGESET)
-            .ok_or_else(|| format_err!("{} not set", TARGET_CHANGESET))?,
-    )
-    .await?;
-
-    let version = CommitSyncConfigVersion(
-        sub_m
-            .value_of(VERSION)
-            .ok_or_else(|| format_err!("{} not set", VERSION))?
-            .to_string(),
-    );
-
-    info!(
-        ctx.logger(),
-        "Checking push-redirection prerequisites for {}({})->{}({}), {:?}",
-        source_cs_id,
-        source_repo.repo_identity().name(),
-        target_cs_id,
-        target_repo.repo_identity().name(),
-        version,
-    );
-
-    let config_store = matches.config_store();
-    let live_commit_sync_config = get_live_commit_sync_config(
-        ctx,
-        ctx.fb,
-        matches,
-        config_store,
-        source_repo.repo_identity().id(),
-    )
-    .await
-    .context("building live_commit_sync_config")?;
-
-    verify_working_copy_with_version(
-        ctx,
-        &commit_syncer,
-        Source(source_cs_id),
-        Target(target_cs_id),
-        &version,
-        Arc::new(live_commit_sync_config),
-    )
-    .await
 }
 
 async fn run_catchup_delete_head<'a>(
@@ -1111,9 +1027,6 @@ fn main(fb: FacebookInit) -> Result<()> {
         match matches.subcommand() {
             (BACKFILL_NOOP_MAPPING, Some(sub_m)) => {
                 run_backfill_noop_mapping(ctx, &matches, sub_m).await
-            }
-            (CHECK_PUSH_REDIRECTION_PREREQS, Some(sub_m)) => {
-                run_check_push_redirection_prereqs(ctx, &matches, sub_m).await
             }
             (DIFF_MAPPING_VERSIONS, Some(sub_m)) => {
                 run_diff_mapping_versions(ctx, &matches, sub_m).await

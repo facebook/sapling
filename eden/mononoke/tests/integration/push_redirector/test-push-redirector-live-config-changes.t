@@ -193,9 +193,9 @@ Live change of the config, without Mononoke restart
   $ hg revert -r .^ 1
   $ hg commit --amend
   $ hg push -r . --to master_bookmark -q
-  $ quiet_grep "all is well" -- megarepo_tool_multirepo --source-repo-id $REPOIDLARGE --target-repo-id $REPOIDSMALL1 check-push-redirection-prereqs master_bookmark master_bookmark TEST_VERSION_NAME_LIVE_V1
+  $ quiet_grep "all is well" -- mononoke_admin megarepo check-prereqs --source-repo-id $REPOIDLARGE --target-repo-id $REPOIDSMALL1 --source-changeset bm=master_bookmark --target-changeset bm=master_bookmark --version TEST_VERSION_NAME_LIVE_V1
   * all is well! (glob)
-  $ quiet_grep "all is well" -- megarepo_tool_multirepo --source-repo-id $REPOIDLARGE --target-repo-id $REPOIDSMALL1 check-push-redirection-prereqs master_bookmark master_bookmark TEST_VERSION_NAME_LIVE_V2
+  $ quiet_grep "all is well" -- mononoke_admin megarepo check-prereqs --source-repo-id $REPOIDLARGE --target-repo-id $REPOIDSMALL1 --source-changeset bm=master_bookmark --target-changeset bm=master_bookmark --version TEST_VERSION_NAME_LIVE_V2
   * all is well! (glob)
   $ mononoke_admin cross-repo --source-repo-id $REPOIDLARGE --target-repo-id $REPOIDSMALL1 pushredirection change-mapping-version \
   > --author author \
@@ -255,11 +255,11 @@ Again, normal pushrebase with one commit
   $ hg log -T "{files % '{file}\n'}" -r master_bookmark
   specialsmallrepofolder_after_change/f
 
-  $ EXPECTED_RC=1 quiet_grep "NonRootMPath" -- megarepo_tool_multirepo --source-repo-id $REPOIDLARGE --target-repo-id $REPOIDSMALL1 check-push-redirection-prereqs master_bookmark master_bookmark TEST_VERSION_NAME_LIVE_V1
+  $ EXPECTED_RC=1 quiet_grep "NonRootMPath" -- mononoke_admin megarepo check-prereqs --source-repo-id $REPOIDLARGE --target-repo-id $REPOIDSMALL1 --source-changeset bm=master_bookmark --target-changeset bm=master_bookmark --version TEST_VERSION_NAME_LIVE_V1
   Some(NonRootMPath("special/f")) is a file in small-mon-1, but nonexistent in large-mon (under Some(NonRootMPath("specialsmallrepofolder1/f")))
   Some(NonRootMPath("special/f")) is a file in small-mon-1, but nonexistent in large-mon (under Some(NonRootMPath("specialsmallrepofolder1/f")))
   [1]
-  $ quiet_grep "all is well" -- megarepo_tool_multirepo --source-repo-id $REPOIDLARGE --target-repo-id $REPOIDSMALL1 check-push-redirection-prereqs master_bookmark master_bookmark TEST_VERSION_NAME_LIVE_V2
+  $ quiet_grep "all is well" -- mononoke_admin megarepo check-prereqs --source-repo-id $REPOIDLARGE --target-repo-id $REPOIDSMALL1 --source-changeset bm=master_bookmark --target-changeset bm=master_bookmark --version TEST_VERSION_NAME_LIVE_V2
   * all is well! (glob)
 
   $ sqlite3 "$TESTTMP/monsql/sqlite_dbs" "SELECT small_repo_id, large_repo_id, sync_map_version_name, source_repo FROM synced_commit_mapping";

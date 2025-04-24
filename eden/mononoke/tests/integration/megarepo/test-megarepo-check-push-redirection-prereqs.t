@@ -121,45 +121,45 @@ PART ONE: testing meg-mon <-> fbs-mon mapping verification
  * we're mostly testing for discrepancies in large repo
 
 Version A and B should be good wrt to TEST_VERSION_NAME and COMPLEX
-  $ quiet_grep "all is well" -- megarepo_tool_multirepo --source-repo-id $MEG_REPOID --target-repo-id $FBS_REPOID check-push-redirection-prereqs $MEG_A $FBS_A TEST_VERSION_NAME
+  $ quiet_grep "all is well" -- mononoke_admin megarepo check-prereqs --source-repo-id $MEG_REPOID --target-repo-id $FBS_REPOID --source-changeset hg=$MEG_A --target-changeset hg=$FBS_A --version TEST_VERSION_NAME
   * all is well! (glob)
 
-  $ quiet_grep "all is well" -- megarepo_tool_multirepo --source-repo-id $MEG_REPOID --target-repo-id $FBS_REPOID check-push-redirection-prereqs $MEG_A $FBS_A TEST_VERSION_NAME_COMPLEX
+  $ quiet_grep "all is well" -- mononoke_admin megarepo check-prereqs --source-repo-id $MEG_REPOID --target-repo-id $FBS_REPOID --source-changeset hg=$MEG_A --target-changeset hg=$FBS_A --version TEST_VERSION_NAME_COMPLEX
   * all is well! (glob)
 
-  $ quiet_grep "all is well" -- megarepo_tool_multirepo --source-repo-id $MEG_REPOID --target-repo-id $FBS_REPOID check-push-redirection-prereqs $MEG_B $FBS_B TEST_VERSION_NAME
+  $ quiet_grep "all is well" -- mononoke_admin megarepo check-prereqs --source-repo-id $MEG_REPOID --target-repo-id $FBS_REPOID --source-changeset hg=$MEG_B --target-changeset hg=$FBS_B --version TEST_VERSION_NAME
   * all is well! (glob)
 
-  $ quiet_grep "all is well" -- megarepo_tool_multirepo --source-repo-id $MEG_REPOID --target-repo-id $FBS_REPOID check-push-redirection-prereqs $MEG_B $FBS_B TEST_VERSION_NAME_COMPLEX
+  $ quiet_grep "all is well" -- mononoke_admin megarepo check-prereqs --source-repo-id $MEG_REPOID --target-repo-id $FBS_REPOID --source-changeset hg=$MEG_B --target-changeset hg=$FBS_B --version TEST_VERSION_NAME_COMPLEX
   * all is well! (glob)
 
 Same for version C with TEST_VERSION_NAME
-  $ quiet_grep "all is well" -- megarepo_tool_multirepo --source-repo-id $MEG_REPOID --target-repo-id $FBS_REPOID check-push-redirection-prereqs $MEG_C $FBS_C TEST_VERSION_NAME
+  $ quiet_grep "all is well" -- mononoke_admin megarepo check-prereqs --source-repo-id $MEG_REPOID --target-repo-id $FBS_REPOID --source-changeset hg=$MEG_C --target-changeset hg=$FBS_C --version TEST_VERSION_NAME
   * all is well! (glob)
 
 With COMPLEX mapping multiple paths are in wrong place (but the tool fails on first)
-  $ EXPECTED_RC=1 quiet_grep "NonRootMPath" -- megarepo_tool_multirepo --source-repo-id $MEG_REPOID --target-repo-id $FBS_REPOID check-push-redirection-prereqs $MEG_C $FBS_C TEST_VERSION_NAME_COMPLEX | sort
+  $ EXPECTED_RC=1 quiet_grep "NonRootMPath" -- mononoke_admin megarepo check-prereqs --source-repo-id $MEG_REPOID --target-repo-id $FBS_REPOID --source-changeset hg=$MEG_C --target-changeset hg=$FBS_C --version TEST_VERSION_NAME_COMPLEX | sort
   Some(NonRootMPath("a/b/c1/f")) is a file in fbs-mon, but nonexistent in meg-mon (under Some(NonRootMPath("ma/b/c1/f")))
   Some(NonRootMPath("a/b/c2/f")) is a file in fbs-mon, but nonexistent in meg-mon (under Some(NonRootMPath("ma/b/c2/f")))
   Some(NonRootMPath("d/e")) is a file in fbs-mon, but nonexistent in meg-mon (under Some(NonRootMPath("ma/b/c2/d/e")))
 
 In version E one file is missing
-  $ EXPECTED_RC=1 quiet_grep "NonRootMPath"  -- megarepo_tool_multirepo --source-repo-id $MEG_REPOID --target-repo-id $FBS_REPOID check-push-redirection-prereqs $MEG_E $FBS_C TEST_VERSION_NAME_COMPLEX
+  $ EXPECTED_RC=1 quiet_grep "NonRootMPath"  -- mononoke_admin megarepo check-prereqs --source-repo-id $MEG_REPOID --target-repo-id $FBS_REPOID --source-changeset hg=$MEG_E --target-changeset hg=$FBS_C --version TEST_VERSION_NAME_COMPLEX
   Some(NonRootMPath("d/e")) is a file in fbs-mon, but nonexistent in meg-mon (under Some(NonRootMPath("ma/b/c2/d/e")))
   [1]
 
 In version F the file is present but the contents are wrong
-  $ EXPECTED_RC=1 quiet_grep "NonRootMPath" -- megarepo_tool_multirepo --source-repo-id $MEG_REPOID --target-repo-id $FBS_REPOID check-push-redirection-prereqs $MEG_F $FBS_C TEST_VERSION_NAME_COMPLEX
+  $ EXPECTED_RC=1 quiet_grep "NonRootMPath" -- mononoke_admin megarepo check-prereqs --source-repo-id $MEG_REPOID --target-repo-id $FBS_REPOID --source-changeset hg=$MEG_F --target-changeset hg=$FBS_C --version TEST_VERSION_NAME_COMPLEX
   file differs between meg-mon (path: Some(NonRootMPath("ma/b/c2/d/e")), content_id: ContentId(Blake2(e6a553abb176f0acef0936e5d6e7930c8a590a62c07984bee8e3a8d5a2bb2ff9)), type: Regular) and fbs-mon (path: Some(NonRootMPath("d/e")), content_id: ContentId(Blake2(896ad5879a5df0403bfc93fc96507ad9c93b31b11f3d0fa05445da7918241e5d)), type: Regular)
   file differs between meg-mon (path: Some(NonRootMPath("ma/b/c2/d/e")), content_id: ContentId(Blake2(e6a553abb176f0acef0936e5d6e7930c8a590a62c07984bee8e3a8d5a2bb2ff9)), type: Regular) and fbs-mon (path: Some(NonRootMPath("d/e")), content_id: ContentId(Blake2(896ad5879a5df0403bfc93fc96507ad9c93b31b11f3d0fa05445da7918241e5d)), type: Regular)
   [1]
 
 Version G is good
-  $ quiet_grep "all is well" -- megarepo_tool_multirepo --source-repo-id $MEG_REPOID --target-repo-id $FBS_REPOID check-push-redirection-prereqs $MEG_G $FBS_C TEST_VERSION_NAME_COMPLEX
+  $ quiet_grep "all is well" -- mononoke_admin megarepo check-prereqs --source-repo-id $MEG_REPOID --target-repo-id $FBS_REPOID --source-changeset hg=$MEG_G --target-changeset hg=$FBS_C --version TEST_VERSION_NAME_COMPLEX
   * all is well! (glob)
 
 Version H has file vs directory conflict
-  $ EXPECTED_RC=1 quiet_grep "NonRootMPath" -- megarepo_tool_multirepo --source-repo-id $MEG_REPOID --target-repo-id $FBS_REPOID check-push-redirection-prereqs $MEG_H $FBS_C TEST_VERSION_NAME_COMPLEX
+  $ EXPECTED_RC=1 quiet_grep "NonRootMPath" -- mononoke_admin megarepo check-prereqs --source-repo-id $MEG_REPOID --target-repo-id $FBS_REPOID --source-changeset hg=$MEG_H --target-changeset hg=$FBS_C --version TEST_VERSION_NAME_COMPLEX
   Some(NonRootMPath("ma/b")) is a file in meg-mon, but nonexistent in fbs-mon (under Some(NonRootMPath("ma/b")))
   [1]
 
@@ -168,43 +168,43 @@ PART TWO: testing meg-mon <-> ovr-mon mapping verification
  * we're mostly testing for discrepancies in small repo
 
 Version A and B should be good wrt to TEST_VERSION_NAME and COMPLEX
-  $ quiet_grep "all is well" -- megarepo_tool_multirepo --source-repo-id $OVR_REPOID --target-repo-id $MEG_REPOID check-push-redirection-prereqs $OVR_A $MEG_A TEST_VERSION_NAME
+  $ quiet_grep "all is well" -- mononoke_admin megarepo check-prereqs --source-repo-id $OVR_REPOID --target-repo-id $MEG_REPOID --source-changeset hg=$OVR_A --target-changeset hg=$MEG_A --version TEST_VERSION_NAME
   * all is well! (glob)
 
-  $ quiet_grep "all is well" -- megarepo_tool_multirepo --source-repo-id $OVR_REPOID --target-repo-id $MEG_REPOID check-push-redirection-prereqs $OVR_A $MEG_A TEST_VERSION_NAME_COMPLEX
+  $ quiet_grep "all is well" -- mononoke_admin megarepo check-prereqs --source-repo-id $OVR_REPOID --target-repo-id $MEG_REPOID --source-changeset hg=$OVR_A --target-changeset hg=$MEG_A --version TEST_VERSION_NAME_COMPLEX
   * all is well! (glob)
 
-  $ quiet_grep "all is well" -- megarepo_tool_multirepo --source-repo-id $OVR_REPOID --target-repo-id $MEG_REPOID check-push-redirection-prereqs $OVR_B $MEG_B TEST_VERSION_NAME
+  $ quiet_grep "all is well" -- mononoke_admin megarepo check-prereqs --source-repo-id $OVR_REPOID --target-repo-id $MEG_REPOID --source-changeset hg=$OVR_B --target-changeset hg=$MEG_B --version TEST_VERSION_NAME
   * all is well! (glob)
 
-  $ quiet_grep "all is well" -- megarepo_tool_multirepo --source-repo-id $OVR_REPOID --target-repo-id $MEG_REPOID check-push-redirection-prereqs $OVR_B $MEG_B TEST_VERSION_NAME_COMPLEX
+  $ quiet_grep "all is well" -- mononoke_admin megarepo check-prereqs --source-repo-id $OVR_REPOID --target-repo-id $MEG_REPOID --source-changeset hg=$OVR_B --target-changeset hg=$MEG_B --version TEST_VERSION_NAME_COMPLEX
   * all is well! (glob)
 
 Same for version C
-  $ quiet_grep "all is well" -- megarepo_tool_multirepo --source-repo-id $OVR_REPOID --target-repo-id $MEG_REPOID check-push-redirection-prereqs $OVR_C $MEG_G TEST_VERSION_NAME
+  $ quiet_grep "all is well" -- mononoke_admin megarepo check-prereqs --source-repo-id $OVR_REPOID --target-repo-id $MEG_REPOID --source-changeset hg=$OVR_C --target-changeset hg=$MEG_G --version TEST_VERSION_NAME
   * all is well! (glob)
 
-  $ EXPECTED_RC=1 quiet_grep "NonRootMPath" -- megarepo_tool_multirepo --source-repo-id $OVR_REPOID --target-repo-id $MEG_REPOID check-push-redirection-prereqs $OVR_C $MEG_G TEST_VERSION_NAME_COMPLEX | sort
+  $ EXPECTED_RC=1 quiet_grep "NonRootMPath" -- mononoke_admin megarepo check-prereqs --source-repo-id $OVR_REPOID --target-repo-id $MEG_REPOID --source-changeset hg=$OVR_C --target-changeset hg=$MEG_G --version TEST_VERSION_NAME_COMPLEX | sort
   Some(NonRootMPath("ma/b/c1/f")) is a file in meg-mon, but nonexistent in ovr-mon (under Some(NonRootMPath("a/b/c1/f")))
   Some(NonRootMPath("ma/b/c2/d/e")) is a file in meg-mon, but nonexistent in ovr-mon (under Some(NonRootMPath("d/e")))
   Some(NonRootMPath("ma/b/c2/f")) is a file in meg-mon, but nonexistent in ovr-mon (under Some(NonRootMPath("a/b/c2/f")))
 
 In version E one file is missing
-  $ EXPECTED_RC=1 quiet_grep "NonRootMPath"  -- megarepo_tool_multirepo --source-repo-id $OVR_REPOID --target-repo-id $MEG_REPOID check-push-redirection-prereqs $OVR_E $MEG_G TEST_VERSION_NAME_COMPLEX
+  $ EXPECTED_RC=1 quiet_grep "NonRootMPath"  -- mononoke_admin megarepo check-prereqs --source-repo-id $OVR_REPOID --target-repo-id $MEG_REPOID --source-changeset hg=$OVR_E --target-changeset hg=$MEG_G --version TEST_VERSION_NAME_COMPLEX
   Some(NonRootMPath("ma/b/c2/d/e")) is a file in meg-mon, but nonexistent in ovr-mon (under Some(NonRootMPath("d/e")))
   [1]
 
 In version F the file is present but the contents are wrong
-  $ EXPECTED_RC=1 quiet_grep "NonRootMPath" -- megarepo_tool_multirepo --source-repo-id $OVR_REPOID --target-repo-id $MEG_REPOID check-push-redirection-prereqs $OVR_F $MEG_G TEST_VERSION_NAME_COMPLEX
+  $ EXPECTED_RC=1 quiet_grep "NonRootMPath" -- mononoke_admin megarepo check-prereqs --source-repo-id $OVR_REPOID --target-repo-id $MEG_REPOID --source-changeset hg=$OVR_F --target-changeset hg=$MEG_G --version TEST_VERSION_NAME_COMPLEX
   file differs between meg-mon (path: Some(NonRootMPath("ma/b/c2/d/e")), content_id: ContentId(Blake2(896ad5879a5df0403bfc93fc96507ad9c93b31b11f3d0fa05445da7918241e5d)), type: Regular) and ovr-mon (path: Some(NonRootMPath("d/e")), content_id: ContentId(Blake2(e6a553abb176f0acef0936e5d6e7930c8a590a62c07984bee8e3a8d5a2bb2ff9)), type: Regular)
   [1]
 
 Version G is good
-  $ quiet_grep "all is well" -- megarepo_tool_multirepo --source-repo-id $OVR_REPOID --target-repo-id $MEG_REPOID check-push-redirection-prereqs $OVR_G $MEG_G TEST_VERSION_NAME_COMPLEX
+  $ quiet_grep "all is well" -- mononoke_admin megarepo check-prereqs --source-repo-id $OVR_REPOID --target-repo-id $MEG_REPOID --source-changeset hg=$OVR_G --target-changeset hg=$MEG_G --version TEST_VERSION_NAME_COMPLEX
   * all is well! (glob)
 
 Version H has file vs directory conflict
-  $ EXPECTED_RC=1 quiet_grep "NonRootMPath" -- megarepo_tool_multirepo --source-repo-id $OVR_REPOID --target-repo-id $MEG_REPOID check-push-redirection-prereqs $OVR_H $MEG_G TEST_VERSION_NAME_COMPLEX | sort
+  $ EXPECTED_RC=1 quiet_grep "NonRootMPath" -- mononoke_admin megarepo check-prereqs --source-repo-id $OVR_REPOID --target-repo-id $MEG_REPOID --source-changeset hg=$OVR_H --target-changeset hg=$MEG_G --version TEST_VERSION_NAME_COMPLEX | sort
   Some(NonRootMPath("ma/b/c1/f")) is a file in meg-mon, but nonexistent in ovr-mon (under Some(NonRootMPath("a/b/c1/f")))
   Some(NonRootMPath("ma/b/c2/d/e")) is a file in meg-mon, but nonexistent in ovr-mon (under Some(NonRootMPath("d/e")))
   Some(NonRootMPath("ma/b/c2/f")) is a file in meg-mon, but nonexistent in ovr-mon (under Some(NonRootMPath("a/b/c2/f")))

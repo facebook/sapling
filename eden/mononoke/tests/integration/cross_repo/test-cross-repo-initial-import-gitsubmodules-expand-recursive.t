@@ -169,10 +169,10 @@ TODO(T174902563): Fix deletion of submodules in EXPAND submodule action.
 
 -- The check-push-redirection-prereqs should behave the same both ways but let's verify it (we had bugs where it didn't)
 -- (those outputs are still not correct but that's expected)
-  $ quiet_grep "all is well" -- with_stripped_logs megarepo_tool_multirepo --source-repo-id $SUBMODULE_REPO_ID --target-repo-id $LARGE_REPO_ID check-push-redirection-prereqs "heads/master_bookmark" "master_bookmark" "$LATEST_CONFIG_VERSION_NAME" | strip_glog | tee $TESTTMP/push_redir_prereqs_small_large
+  $ quiet_grep "all is well" -- with_stripped_logs mononoke_admin megarepo check-prereqs --source-repo-id $SUBMODULE_REPO_ID --target-repo-id $LARGE_REPO_ID --source-changeset bm=heads/master_bookmark --target-changeset bm=master_bookmark --version "$LATEST_CONFIG_VERSION_NAME" | strip_glog | tee $TESTTMP/push_redir_prereqs_small_large
   all is well!
 
-  $ quiet_grep "all is well" -- with_stripped_logs megarepo_tool_multirepo --source-repo-id $LARGE_REPO_ID --target-repo-id $SUBMODULE_REPO_ID check-push-redirection-prereqs "master_bookmark" "heads/master_bookmark" "$LATEST_CONFIG_VERSION_NAME" | strip_glog | tee $TESTTMP/push_redir_prereqs_large_small
+  $ quiet_grep "all is well" -- with_stripped_logs mononoke_admin megarepo check-prereqs --source-repo-id $LARGE_REPO_ID --target-repo-id $SUBMODULE_REPO_ID --source-changeset bm=master_bookmark --target-changeset bm=heads/master_bookmark --version "$LATEST_CONFIG_VERSION_NAME" | strip_glog | tee $TESTTMP/push_redir_prereqs_large_small
   all is well!
   $ diff -wbBdu $TESTTMP/push_redir_prereqs_small_large $TESTTMP/push_redir_prereqs_large_small
 
@@ -182,10 +182,10 @@ TODO(T174902563): Fix deletion of submodules in EXPAND submodule action.
   $ echo corrupt > smallrepofolder1/.x-repo-submodule-git-repo-b
   $ hg commit -m "submodule corruption"
   $ hg push -q --to master_bookmark
-  $ quiet_grep "mismatch" -- megarepo_tool_multirepo --source-repo-id $SUBMODULE_REPO_ID --target-repo-id $LARGE_REPO_ID check-push-redirection-prereqs "heads/master_bookmark" "master_bookmark" "$LATEST_CONFIG_VERSION_NAME" | strip_glog | tee $TESTTMP/push_redir_prereqs_small_large
+  $ quiet_grep "mismatch" -- mononoke_admin megarepo check-prereqs --source-repo-id $SUBMODULE_REPO_ID --target-repo-id $LARGE_REPO_ID --source-changeset bm=heads/master_bookmark --target-changeset bm=master_bookmark  --version "$LATEST_CONFIG_VERSION_NAME" | strip_glog | tee $TESTTMP/push_redir_prereqs_small_large
   submodule expansion mismatch: Failed to fetch content from content id 06a434694d9172d617062abd92f015f73978fb17dd6bcc54e708cd2c6f247970 file containing the submodule's git commit hash
 
-  $ quiet_grep "mismatch" -- megarepo_tool_multirepo --source-repo-id $LARGE_REPO_ID --target-repo-id $SUBMODULE_REPO_ID check-push-redirection-prereqs "master_bookmark" "heads/master_bookmark" "$LATEST_CONFIG_VERSION_NAME" | sort | tee $TESTTMP/push_redir_prereqs_large_small
+  $ quiet_grep "mismatch" -- mononoke_admin megarepo check-prereqs --source-repo-id $LARGE_REPO_ID --target-repo-id $SUBMODULE_REPO_ID --source-changeset bm=master_bookmark --target-changeset bm=heads/master_bookmark  --version "$LATEST_CONFIG_VERSION_NAME" | sort | tee $TESTTMP/push_redir_prereqs_large_small
   submodule expansion mismatch: Failed to fetch content from content id 06a434694d9172d617062abd92f015f73978fb17dd6bcc54e708cd2c6f247970 file containing the submodule's git commit hash
 
   $ diff -wbBdu $TESTTMP/push_redir_prereqs_small_large $TESTTMP/push_redir_prereqs_large_small
