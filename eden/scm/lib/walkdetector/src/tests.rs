@@ -110,6 +110,16 @@ fn test_walk_node_insert() {
     node.insert(&p("foo"), foo_walk);
     assert_eq!(node.list(), vec![(p("foo"), foo_walk)]);
 
+    // Don't insert since it is fully contained by "foo" walk.
+    node.insert(
+        &p("foo/bar"),
+        Walk {
+            depth: 0,
+            last_access: epoch,
+        },
+    );
+    assert_eq!(node.list(), vec![(p("foo"), foo_walk)]);
+
     let baz_walk = Walk {
         depth: 2,
         last_access: epoch,
@@ -133,6 +143,40 @@ fn test_walk_node_insert() {
             (p("foo/bar/baz"), baz_walk)
         ]
     );
+
+    // depth=1 doesn't contain any descendant walks - don't clear anything out.
+    let root_walk = Walk {
+        depth: 1,
+        last_access: epoch,
+    };
+    node.insert(&p(""), root_walk);
+    assert_eq!(
+        node.list(),
+        vec![
+            (p(""), root_walk),
+            (p("foo"), foo_walk),
+            (p("foo/bar/baz"), baz_walk)
+        ]
+    );
+
+    // depth=2 contains the "foo" walk - clear "foo" out.
+    let root_walk = Walk {
+        depth: 2,
+        last_access: epoch,
+    };
+    node.insert(&p(""), root_walk);
+    assert_eq!(
+        node.list(),
+        vec![(p(""), root_walk), (p("foo/bar/baz"), baz_walk)]
+    );
+
+    // Contains the "foo/bar/baz" walk.
+    let root_walk = Walk {
+        depth: 5,
+        last_access: epoch,
+    };
+    node.insert(&p(""), root_walk);
+    assert_eq!(node.list(), vec![(p(""), root_walk),]);
 }
 
 #[test]

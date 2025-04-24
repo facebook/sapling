@@ -18,8 +18,8 @@ use crate::Walk;
 /// order to merge walks.
 #[derive(Default)]
 pub(crate) struct WalkNode {
-    walk: Option<Walk>,
-    children: HashMap<PathComponentBuf, WalkNode>,
+    pub(crate) walk: Option<Walk>,
+    pub(crate) children: HashMap<PathComponentBuf, WalkNode>,
 }
 
 impl WalkNode {
@@ -38,11 +38,7 @@ impl WalkNode {
     pub(crate) fn get_containing(&mut self, dir: &RepoPath) -> Option<&mut Walk> {
         match dir.split_first_component() {
             Some((head, tail)) => {
-                if self
-                    .walk
-                    .as_mut()
-                    .is_some_and(|walk| walk.depth >= dir.components().count())
-                {
+                if self.contains(dir, 0) {
                     self.walk.as_mut()
                 } else {
                     self.children
@@ -54,8 +50,15 @@ impl WalkNode {
         }
     }
 
-    /// Insert a new walk.
+    /// Insert a new walk. Any redundant/contained walks will be removed. `walk` will not
+    /// be inserted if it is contained by an ancestor walk.
     pub(crate) fn insert(&mut self, walk_root: &RepoPath, walk: Walk) {
+        // If we completely overlap with the walk to be inserted, skip it. This shouldn't
+        // happen, but I want to guarantee there are no overlapping walks.
+        if self.contains(walk_root, walk.depth) {
+            return;
+        }
+
         match walk_root.split_first_component() {
             Some((head, tail)) => {
                 if let Some(child) = self.children.get_mut(head) {
@@ -68,7 +71,10 @@ impl WalkNode {
                     }
                 }
             }
-            None => self.walk = Some(walk),
+            None => {
+                self.walk = Some(walk);
+                self.remove_contained(walk.depth);
+            }
         }
     }
 
@@ -87,5 +93,27 @@ impl WalkNode {
         let mut list = Vec::new();
         inner(self, RepoPathBuf::new(), &mut list);
         list
+    }
+
+    /// Recursively remove all walks contained within a walk of depth `depth`.
+    fn remove_contained(&mut self, depth: usize) {
+        self.children.retain(|_name, child| {
+            if depth > 0 {
+                child.remove_contained(depth - 1);
+            }
+
+            if child.walk.as_ref().is_some_and(|w| w.depth < depth) {
+                child.walk = None;
+            }
+
+            child.walk.is_some() || !child.children.is_empty()
+        });
+    }
+
+    /// Reports whether self has a walk and the walk fully contains a descendant walk
+    /// rooted at `path` of depth `depth`.
+    fn contains(&self, path: &RepoPath, depth: usize) -> bool {
+        self.walk
+            .is_some_and(|w| w.depth >= (path.components().count() + depth))
     }
 }
