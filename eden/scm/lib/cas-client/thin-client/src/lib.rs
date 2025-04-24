@@ -136,7 +136,6 @@ impl ThinCasClient {
     }
 
     fn build(&self) -> Result<REClient> {
-        let start = Instant::now();
         let mut re_config = create_default_config();
 
         re_config.client_name = Some("sapling".to_string());
@@ -209,8 +208,6 @@ impl ThinCasClient {
             .with_config(re_config)
             .build()?;
 
-        let elapsed = start.elapsed();
-        tracing::debug!(target: "cas", "creating RE CAS client took {} ms", elapsed.as_millis());
         Ok(client)
     }
 }
