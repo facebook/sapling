@@ -66,12 +66,12 @@ pub type LocalBookmarksMap = HashMap<HgChangesetId, Vec<String>>;
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 pub struct WorkspaceRemoteBookmark {
     name: String,
-    commit: HgChangesetId,
+    commit: CloudChangesetId,
     remote: String,
 }
 
 impl WorkspaceRemoteBookmark {
-    pub fn new(remote: String, name: String, commit: HgChangesetId) -> anyhow::Result<Self> {
+    pub fn new(remote: String, name: String, commit: CloudChangesetId) -> anyhow::Result<Self> {
         ensure!(
             !name.is_empty(),
             "'commit cloud' failed: remote bookmark name cannot be empty"
@@ -91,7 +91,7 @@ impl WorkspaceRemoteBookmark {
         &self.name
     }
 
-    pub fn commit(&self) -> &HgChangesetId {
+    pub fn commit(&self) -> &CloudChangesetId {
         &self.commit
     }
 

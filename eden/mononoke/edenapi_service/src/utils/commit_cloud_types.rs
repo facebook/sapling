@@ -89,7 +89,13 @@ impl IntoCommitCloudType<CloudClientInfo> for ClientInfo {
 
 impl IntoCommitCloudType<WorkspaceRemoteBookmark> for RemoteBookmark {
     fn into_cc_type(self) -> Result<WorkspaceRemoteBookmark> {
-        WorkspaceRemoteBookmark::new(self.remote, self.name, self.node.unwrap_or_default().into())
+        WorkspaceRemoteBookmark::new(
+            self.remote,
+            self.name,
+            CloudChangesetId(Sha1::from_byte_array(
+                self.node.unwrap_or_default().into_byte_array(),
+            )),
+        )
     }
 }
 
@@ -140,7 +146,7 @@ impl FromCommitCloudType<WorkspaceRemoteBookmark> for RemoteBookmark {
         Ok(RemoteBookmark {
             name: cc.name().clone(),
             remote: cc.remote().clone(),
-            node: Some((*cc.commit()).into()),
+            node: Some(cc.commit().0.into_byte_array().into()),
         })
     }
 }

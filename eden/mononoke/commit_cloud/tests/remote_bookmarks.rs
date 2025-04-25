@@ -18,14 +18,16 @@ use commit_cloud::sql::ops::Insert;
 use commit_cloud::sql::ops::Update;
 use commit_cloud_types::RemoteBookmarksMap;
 use commit_cloud_types::WorkspaceRemoteBookmark;
+use commit_cloud_types::changeset::CloudChangesetId;
 use fbinit::FacebookInit;
-use mercurial_types::HgChangesetId;
 use mononoke_macros::mononoke;
+use mononoke_types::sha1_hash::Sha1;
 use sql_construct::SqlConstruct;
 
 #[mononoke::test]
 fn test_remote_bookmark_creation() {
-    let commit_id = HgChangesetId::from_str("2d7d4ba9ce0a6ffd222de7785b249ead9c51c536").unwrap();
+    let commit_id =
+        CloudChangesetId(Sha1::from_str("2d7d4ba9ce0a6ffd222de7785b249ead9c51c536").unwrap());
     let bookmark =
         WorkspaceRemoteBookmark::new("origin".to_string(), "bookmark_name".to_string(), commit_id);
     assert!(bookmark.is_ok());
@@ -37,7 +39,8 @@ fn test_remote_bookmark_creation() {
 
 #[mononoke::test]
 fn test_remote_bookmark_creation_empty_name() {
-    let commit_id = HgChangesetId::from_str("2d7d4ba9ce0a6ffd222de7785b249ead9c51c536").unwrap();
+    let commit_id =
+        CloudChangesetId(Sha1::from_str("2d7d4ba9ce0a6ffd222de7785b249ead9c51c536").unwrap());
     let bookmark = WorkspaceRemoteBookmark::new("origin".to_string(), "".to_string(), commit_id);
     assert!(bookmark.is_err());
     assert_eq!(
@@ -48,7 +51,8 @@ fn test_remote_bookmark_creation_empty_name() {
 
 #[mononoke::test]
 fn test_remote_bookmark_creation_empty_remote() {
-    let commit_id = HgChangesetId::from_str("2d7d4ba9ce0a6ffd222de7785b249ead9c51c536").unwrap();
+    let commit_id =
+        CloudChangesetId(Sha1::from_str("2d7d4ba9ce0a6ffd222de7785b249ead9c51c536").unwrap());
     let bookmark =
         WorkspaceRemoteBookmark::new("".to_string(), "bookmark_name".to_string(), commit_id);
     assert!(bookmark.is_err());
@@ -71,7 +75,7 @@ fn test_rbs_from_list_valid() {
     assert_eq!(bookmark.name(), &"bookmark_name".to_string());
     assert_eq!(
         *bookmark.commit(),
-        HgChangesetId::from_str("2d7d4ba9ce0a6ffd222de7785b249ead9c51c536").unwrap()
+        CloudChangesetId(Sha1::from_str("2d7d4ba9ce0a6ffd222de7785b249ead9c51c536").unwrap())
     );
     assert_eq!(bookmark.remote(), &"origin".to_string());
 }
@@ -89,7 +93,8 @@ fn test_rbs_from_list_invalid_format() {
 
 #[mononoke::test]
 fn test_rbs_to_list() {
-    let commit_id = HgChangesetId::from_str("2d7d4ba9ce0a6ffd222de7785b249ead9c51c536").unwrap();
+    let commit_id =
+        CloudChangesetId(Sha1::from_str("2d7d4ba9ce0a6ffd222de7785b249ead9c51c536").unwrap());
     let bookmark =
         WorkspaceRemoteBookmark::new("origin".to_string(), "bookmark_name".to_string(), commit_id)
             .unwrap();
@@ -113,8 +118,12 @@ async fn test_remote_bookmarks(_fb: FacebookInit) -> anyhow::Result<()> {
     let workspace = "user_testuser_default".to_owned();
     let renamed_workspace = "user_testuser_default_renamed".to_owned();
     let cc_ctx = CommitCloudContext::new(&workspace.clone(), &reponame.clone())?;
-    let hgid1 = HgChangesetId::from_str("2d7d4ba9ce0a6ffd222de7785b249ead9c51c536").unwrap();
-    let hgid2 = HgChangesetId::from_str("3e0e761030db6e479a7fb58b12881883f9f8c63f").unwrap();
+
+    let hgid2 =
+        CloudChangesetId(Sha1::from_str("3e0e761030db6e479a7fb58b12881883f9f8c63f").unwrap());
+    let hgid1 =
+        CloudChangesetId(Sha1::from_str("2d7d4ba9ce0a6ffd222de7785b249ead9c51c536").unwrap());
+
     let bookmark1 =
         WorkspaceRemoteBookmark::new("remote".to_owned(), "my_bookmark1".to_owned(), hgid1)?;
 
@@ -147,9 +156,12 @@ async fn test_remote_bookmarks(_fb: FacebookInit) -> anyhow::Result<()> {
     assert_eq!(res.len(), 2);
 
     let res_map: RemoteBookmarksMap = sql.get_as_map(reponame.clone(), workspace.clone()).await?;
-    assert_eq!(res_map.get(&hgid1).unwrap().to_vec(), vec![bookmark1]);
     assert_eq!(
-        res_map.get(&hgid2).unwrap().to_vec(),
+        res_map.get(&hgid1.into()).unwrap().to_vec(),
+        vec![bookmark1]
+    );
+    assert_eq!(
+        res_map.get(&hgid2.into()).unwrap().to_vec(),
         vec![bookmark2.clone()]
     );
 

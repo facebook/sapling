@@ -47,7 +47,7 @@ async fn test_history(_fb: FacebookInit) -> anyhow::Result<()> {
     let remote_bookmark1 = WorkspaceRemoteBookmark::new(
         "remote".to_owned(),
         "my_bookmark1".to_owned(),
-        HgChangesetId::from_str("2d7d4ba9ce0a6ffd222de7785b249ead9c51c536").unwrap(),
+        CloudChangesetId(Sha1::from_str("3e0e761030db6e479a7fb58b12881883f9f8c63f").unwrap()),
     )?;
 
     let local_bookmark1 = WorkspaceLocalBookmark::new(

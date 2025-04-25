@@ -61,7 +61,9 @@ impl WorkspaceHistory {
     pub fn remote_bookmarks_as_map(&self) -> RemoteBookmarksMap {
         let mut map = RemoteBookmarksMap::new();
         self.remote_bookmarks.iter().for_each(|bookmark| {
-            let value = map.entry(*bookmark.commit()).or_insert(vec![]);
+            let value = map
+                .entry(HgChangesetId::from(*bookmark.commit()))
+                .or_insert(vec![]);
             value.push(bookmark.clone())
         });
         map

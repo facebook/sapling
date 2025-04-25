@@ -9,6 +9,7 @@ use async_trait::async_trait;
 use clientinfo::ClientRequestInfo;
 use commit_cloud_types::RemoteBookmarksMap;
 use commit_cloud_types::WorkspaceRemoteBookmark;
+use commit_cloud_types::changeset::CloudChangesetId;
 use sql::Transaction;
 use sql_ext::mononoke_queries;
 
@@ -20,15 +21,13 @@ use crate::sql::ops::GetAsMap;
 use crate::sql::ops::Insert;
 use crate::sql::ops::SqlCommitCloud;
 use crate::sql::ops::Update;
-use crate::sql::utils::changeset_as_bytes;
-use crate::sql::utils::changeset_from_bytes;
 
 pub struct DeleteArgs {
     pub removed_bookmarks: Vec<String>,
 }
 
 mononoke_queries! {
-    read GetRemoteBookmarks(reponame: String, workspace: String) -> (String, String, Vec<u8>){
+    read GetRemoteBookmarks(reponame: String, workspace: String) -> (String, String, CloudChangesetId){
         mysql("SELECT `remote`, `name`, `node` FROM `remotebookmarks` WHERE `reponame`={reponame} AND `workspace`={workspace}")
         sqlite("SELECT `remote`, `name`, `commit` FROM `remotebookmarks` WHERE `reponame`={reponame} AND `workspace`={workspace}")
     }
@@ -38,7 +37,7 @@ mononoke_queries! {
         mysql("DELETE FROM `remotebookmarks` WHERE `reponame`={reponame} AND `workspace`={workspace} AND CONCAT(`remote`, '/', `name`) IN {removed_bookmarks}")
         sqlite( "DELETE FROM `remotebookmarks` WHERE `reponame`={reponame} AND `workspace`={workspace} AND CAST(`remote`||'/'||`name` AS BLOB) IN {removed_bookmarks}")
     }
-    write InsertRemoteBookmark(reponame: String, workspace: String, remote: String, name: String, commit:  Vec<u8>) {
+    write InsertRemoteBookmark(reponame: String, workspace: String, remote: String, name: String, commit:  CloudChangesetId) {
         none,
         mysql("INSERT INTO `remotebookmarks` (`reponame`, `workspace`, `remote`,`name`, `node` ) VALUES ({reponame}, {workspace}, {remote}, {name}, {commit})")
         sqlite("INSERT INTO `remotebookmarks` (`reponame`, `workspace`, `remote`,`name`, `commit` ) VALUES ({reponame}, {workspace}, {remote}, {name}, {commit})")
@@ -63,13 +62,7 @@ impl Get<WorkspaceRemoteBookmark> for SqlCommitCloud {
         )
         .await?;
         rows.into_iter()
-            .map(|(remote, name, commit)| {
-                WorkspaceRemoteBookmark::new(
-                    remote,
-                    name,
-                    changeset_from_bytes(&commit, self.uses_mysql)?,
-                )
-            })
+            .map(|(remote, name, commit)| WorkspaceRemoteBookmark::new(remote, name, commit))
             .collect::<anyhow::Result<Vec<WorkspaceRemoteBookmark>>>()
     }
 }
@@ -90,16 +83,12 @@ impl GetAsMap<RemoteBookmarksMap> for SqlCommitCloud {
 
         let mut map = RemoteBookmarksMap::new();
         for (remote, name, commit) in rows {
-            match changeset_from_bytes(&commit, self.uses_mysql) {
-                Ok(hgid) => {
-                    let rb = WorkspaceRemoteBookmark::new(remote, name, hgid)?;
-                    if let Some(val) = map.get_mut(&hgid) {
-                        val.push(rb);
-                    } else {
-                        map.insert(hgid, vec![rb]);
-                    }
-                }
-                Err(e) => return Err(e),
+            let rb = WorkspaceRemoteBookmark::new(remote, name, commit.clone())?;
+            let hgid = commit.into();
+            if let Some(val) = map.get_mut(&hgid) {
+                val.push(rb);
+            } else {
+                map.insert(hgid, vec![rb]);
             }
         }
         Ok(map)
@@ -123,7 +112,7 @@ impl Insert<WorkspaceRemoteBookmark> for SqlCommitCloud {
             &workspace,
             data.remote(),
             data.name(),
-            &changeset_as_bytes(data.commit(), self.uses_mysql)?,
+            data.commit(),
         )
         .await?;
         Ok(txn)

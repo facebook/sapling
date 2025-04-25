@@ -22,6 +22,7 @@ use sql::mysql_async::Value;
 
 #[derive(
     Clone,
+    Copy,
     Debug,
     PartialEq,
     mysql::OptTryFromRowField,

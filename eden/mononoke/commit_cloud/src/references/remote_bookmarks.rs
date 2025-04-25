@@ -10,7 +10,8 @@ use std::str::FromStr;
 use anyhow::ensure;
 use clientinfo::ClientRequestInfo;
 use commit_cloud_types::WorkspaceRemoteBookmark;
-use mercurial_types::HgChangesetId;
+use commit_cloud_types::changeset::CloudChangesetId;
+use mononoke_types::sha1_hash::Sha1;
 use sql::Transaction;
 
 use crate::CommitCloudContext;
@@ -30,8 +31,12 @@ pub fn rbs_from_list(bookmarks: &Vec<Vec<String>>) -> anyhow::Result<Vec<Workspa
                 "'commit cloud' failed: Invalid remote bookmark format for {}",
                 bookmark.join(" ")
             );
-            HgChangesetId::from_str(&bookmark[2]).and_then(|commit_id| {
-                WorkspaceRemoteBookmark::new(bookmark[0].clone(), bookmark[1].clone(), commit_id)
+            Sha1::from_str(&bookmark[2]).and_then(|commit_id| {
+                WorkspaceRemoteBookmark::new(
+                    bookmark[0].clone(),
+                    bookmark[1].clone(),
+                    CloudChangesetId(commit_id),
+                )
             })
         })
         .collect();
