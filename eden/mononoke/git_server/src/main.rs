@@ -9,6 +9,7 @@
 #![feature(never_type)]
 #![feature(let_chains)]
 #![feature(cursor_split)]
+#![feature(try_blocks)]
 
 use std::fs::File;
 use std::io::Write;

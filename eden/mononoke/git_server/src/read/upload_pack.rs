@@ -62,6 +62,7 @@ use crate::command::Command;
 use crate::command::FetchArgs;
 use crate::command::LsRefsArgs;
 use crate::command::RequestCommand;
+use crate::model::BundleUriOutcome;
 use crate::model::GitMethodInfo;
 use crate::model::RepositoryParams;
 use crate::model::RepositoryRequestContext;
@@ -339,7 +340,7 @@ pub async fn upload_pack(state: &mut State) -> Result<Response<Body>, HttpError>
         }
         Command::BundleUri => {
             let git_host = GitHost::from_state_mononoke_host(state)?;
-            let output = bundle_uri(&request_context, git_host).await;
+            let output = bundle_uri(state, &request_context, git_host).await;
             let output = output.map_err(HttpError::e500)?.try_into_response(state);
             output.map_err(HttpError::e500)
         }
@@ -350,6 +351,7 @@ pub async fn upload_pack(state: &mut State) -> Result<Response<Body>, HttpError>
 }
 
 async fn bundle_uri(
+    state: &mut State,
     request_context: &RepositoryRequestContext,
     git_host: GitHost,
 ) -> Result<impl TryIntoResponse, Error> {
@@ -360,15 +362,41 @@ async fn bundle_uri(
         let bundle_list = bundle_uri.get_latest_bundle_list().await?;
 
         if let Some(bundle_list) = bundle_list {
-            for bundle in bundle_list.bundles.iter() {
-                let uri = bundle_uri
-                    .get_url_for_bundle_handle(&request_context.ctx, &git_host, 60, &bundle.handle)
-                    .await?;
+            let bundle_list_out: Result<Vec<u8>, anyhow::Error> = try {
+                let mut bundle_list_out_buf: Vec<u8> = vec![];
+                for bundle in bundle_list.bundles.iter() {
+                    let uri = bundle_uri
+                        .get_url_for_bundle_handle(
+                            &request_context.ctx,
+                            &git_host,
+                            60,
+                            &bundle.handle,
+                        )
+                        .await?;
 
-                let str = format!("\nbundle.bundle_{}.uri={}", bundle.fingerprint, uri,);
-                out.extend_from_slice(str.as_bytes());
+                    let str = format!("\nbundle.bundle_{}.uri={}", bundle.fingerprint, uri,);
+                    bundle_list_out_buf.extend_from_slice(str.as_bytes());
+                }
+                bundle_list_out_buf
+            };
+            match bundle_list_out {
+                Ok(blo) => {
+                    state.put(BundleUriOutcome::Success(format!(
+                        "advertised {} bundles from bundle list {}",
+                        bundle_list.bundles.len(),
+                        bundle_list.bundle_list_num
+                    )));
+                    out.extend_from_slice(&blo[..])
+                }
+                Err(err) => {
+                    state.put(BundleUriOutcome::Error(format!("{:?}", err)));
+                }
             }
+        } else {
+            state.put(BundleUriOutcome::Success("bundle-list empty".to_string()));
         }
+    } else {
+        state.put(BundleUriOutcome::Success("client untrusted".to_string()));
     }
 
     let mut output = Vec::new();

@@ -14,6 +14,7 @@ use gotham_ext::middleware::request_context::RequestContext;
 use permission_checker::MononokeIdentitySetExt;
 use scuba_ext::MononokeScubaSampleBuilder;
 
+use crate::model::BundleUriOutcome;
 use crate::model::GitMethodInfo;
 use crate::model::PushValidationErrors;
 
@@ -26,6 +27,8 @@ pub enum MononokeGitScubaKey {
     Error,
     ErrorCount,
     PushValidationErrors,
+    BundleUriError,
+    BundleUriSuccess,
     PackfileReadError,
     PackfileSize,
     PackfileCommitCount,
@@ -43,6 +46,8 @@ impl AsRef<str> for MononokeGitScubaKey {
             Self::Error => "error",
             Self::ErrorCount => "error_count",
             Self::PushValidationErrors => "push_validation_errors",
+            Self::BundleUriError => "bundle_uri_error_msg",
+            Self::BundleUriSuccess => "bundle_uri_success_msg",
             Self::PackfileReadError => "packfile_read_error",
             Self::PackfileSize => "packfile_size",
             Self::PackfileCommitCount => "packfile_commit_count",
@@ -63,6 +68,7 @@ pub struct MononokeGitScubaHandler {
     request_context: Option<RequestContext>,
     method_info: Option<GitMethodInfo>,
     push_validation_errors: Option<PushValidationErrors>,
+    bundle_uri_outcome: Option<BundleUriOutcome>,
     client_username: Option<String>,
 }
 
@@ -101,6 +107,7 @@ impl MononokeGitScubaHandler {
         Self {
             request_context: state.try_borrow::<RequestContext>().cloned(),
             method_info: state.try_borrow::<GitMethodInfo>().cloned(),
+            bundle_uri_outcome: state.try_borrow::<BundleUriOutcome>().cloned(),
             push_validation_errors: state.try_borrow::<PushValidationErrors>().cloned(),
             client_username: state
                 .try_borrow::<MetadataState>()
@@ -129,6 +136,16 @@ impl MononokeGitScubaHandler {
                 MononokeGitScubaKey::PushValidationErrors,
                 push_validation_errors.to_string(),
             );
+        }
+        if let Some(outcome) = self.bundle_uri_outcome {
+            match outcome {
+                BundleUriOutcome::Success(success_msg) => {
+                    scuba.add(MononokeGitScubaKey::BundleUriSuccess, success_msg);
+                }
+                BundleUriOutcome::Error(error_msg) => {
+                    scuba.add(MononokeGitScubaKey::BundleUriError, error_msg);
+                }
+            }
         }
         if let Some(err) = info.first_error() {
             scuba.add(MononokeGitScubaKey::Error, format!("{:?}", err));

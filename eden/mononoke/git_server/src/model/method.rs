@@ -180,6 +180,12 @@ impl Display for PushValidationErrors {
     }
 }
 
+#[derive(Clone, StateData)]
+pub enum BundleUriOutcome {
+    Success(String),
+    Error(String),
+}
+
 #[cfg(test)]
 mod tests {
     use anyhow::Result;
