@@ -67,7 +67,7 @@ pub async fn run(ctx: &CoreContext, app: MononokeApp, args: MoveArgs) -> Result<
 
     let mapping_version = CommitSyncConfigVersion(args.mapping_version_name);
 
-    let live_commit_sync_config = get_live_commit_sync_config(ctx, &app, args.repo_args)
+    let live_commit_sync_config = get_live_commit_sync_config(ctx, &app, &args.repo_args)
         .await
         .context("building live_commit_sync_config")?;
 

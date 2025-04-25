@@ -9,6 +9,7 @@ mod backfill_noop_mapping;
 mod bonsai_merge;
 pub mod check_prereqs;
 pub(crate) mod common;
+mod diff_mapping_versions;
 mod gradual_delete;
 mod mark_not_synced;
 mod merge;
@@ -26,6 +27,7 @@ use mononoke_app::MononokeApp;
 use self::backfill_noop_mapping::BackfillNoopMappingArgs;
 use self::bonsai_merge::BonsaiMergeArgs;
 use self::check_prereqs::CheckPrereqsArgs;
+use self::diff_mapping_versions::DiffMappingVersionsArgs;
 use self::gradual_delete::GradualDeleteArgs;
 use self::mark_not_synced::MarkNotSyncedArgs;
 use self::merge::MergeArgs;
@@ -56,6 +58,7 @@ enum MegarepoSubcommand {
     PreMergeDelete(PreMergeDeleteArgs),
     BonsaiMerge(BonsaiMergeArgs),
     CheckPrereqs(CheckPrereqsArgs),
+    DiffMappingVersions(DiffMappingVersionsArgs),
 }
 
 pub async fn run(app: MononokeApp, args: CommandArgs) -> Result<()> {
@@ -77,6 +80,9 @@ pub async fn run(app: MononokeApp, args: CommandArgs) -> Result<()> {
         MegarepoSubcommand::BonsaiMerge(args) => bonsai_merge::run(&ctx, app, args).await?,
         MegarepoSubcommand::CheckPrereqs(args) => check_prereqs::run(&ctx, app, args).await?,
         MegarepoSubcommand::GradualDelete(args) => gradual_delete::run(&ctx, app, args).await?,
+        MegarepoSubcommand::DiffMappingVersions(args) => {
+            diff_mapping_versions::run(&ctx, app, args).await?
+        }
     }
 
     Ok(())

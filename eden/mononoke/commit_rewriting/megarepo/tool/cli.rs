@@ -33,7 +33,6 @@ pub const COMMIT_MESSAGE: &str = "commit-message";
 pub const DELETE_NO_LONGER_BOUND_FILES_FROM_LARGE_REPO: &str =
     "delete-no-longer-bound-files-from-large-repo";
 pub const DELETION_CHUNK_SIZE: &str = "deletion-chunk-size";
-pub const DIFF_MAPPING_VERSIONS: &str = "diff-mapping-versions";
 pub const DRY_RUN: &str = "dry-run";
 pub const EVEN_CHUNK_SIZE: &str = "even-chunk-size";
 pub const GRADUAL_MERGE_PROGRESS: &str = "gradual-merge-progress";
@@ -405,16 +404,6 @@ pub fn setup_app<'a, 'b>() -> MononokeClapApp<'a, 'b> {
                 .required(true),
         );
 
-    let diff_mapping_versions = SubCommand::with_name(DIFF_MAPPING_VERSIONS)
-        .about("Show difference between two mapping versions.")
-        .arg(
-            Arg::with_name(MAPPING_VERSION_NAME)
-                .help("list of mapping versions")
-                .takes_value(true)
-                .multiple(true)
-                .required(true),
-        );
-
     let delete_no_longer_bound_files_from_large_repo = SubCommand::with_name(DELETE_NO_LONGER_BOUND_FILES_FROM_LARGE_REPO)
         .about("
         Right after small and large are bound usually a majority of small repo files map to a single folder \
@@ -452,7 +441,6 @@ pub fn setup_app<'a, 'b>() -> MononokeClapApp<'a, 'b> {
         ))
         .subcommand(catchup_validate_subcommand)
         .subcommand(sync_commit_and_ancestors)
-        .subcommand(diff_mapping_versions)
         .subcommand(add_light_resulting_commit_args(
             delete_no_longer_bound_files_from_large_repo,
         ))

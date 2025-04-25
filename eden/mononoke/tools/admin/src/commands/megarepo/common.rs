@@ -23,7 +23,6 @@ use metaconfig_types::MetadataDatabaseConfig;
 use mononoke_api::Repo;
 use mononoke_app::MononokeApp;
 use mononoke_app::args::AsRepoArg;
-use mononoke_app::args::RepoArgs;
 use mononoke_types::DateTime;
 use pushredirect::SqlPushRedirectionConfigBuilder;
 use slog::info;
@@ -122,10 +121,10 @@ pub(crate) fn get_commit_factory(
 pub(crate) async fn get_live_commit_sync_config(
     _ctx: &CoreContext,
     app: &MononokeApp,
-    repo_args: RepoArgs,
+    repo_args: &impl AsRepoArg,
 ) -> Result<Arc<CfgrLiveCommitSyncConfig>> {
     let config_store = app.environment().config_store.clone();
-    let repo: Arc<Repo> = app.open_repo_unredacted(&repo_args).await?;
+    let repo: Arc<Repo> = app.open_repo_unredacted(repo_args).await?;
     let (_, repo_config) = app.repo_config(repo_args.as_repo_arg())?;
     let sql_factory: MetadataSqlFactory = MetadataSqlFactory::new(
         app.fb,

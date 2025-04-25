@@ -61,7 +61,6 @@ use metaconfig_types::CommitSyncConfigVersion;
 use mononoke_api::Repo;
 use mononoke_app::MononokeApp;
 use mononoke_app::args::ChangesetArgs;
-use mononoke_app::args::RepoArgs;
 use mononoke_app::args::SourceRepoArgs;
 use mononoke_app::args::TargetRepoArgs;
 use mononoke_types::BonsaiChangeset;
@@ -131,10 +130,9 @@ pub async fn run(ctx: &CoreContext, app: MononokeApp, args: SyncDiamondMergeArgs
 
     let repo_provider = repo_provider_from_mononoke_app(&app);
 
-    let live_commit_sync_config =
-        get_live_commit_sync_config(ctx, &app, RepoArgs::from_repo_id(source_repo_id.id()))
-            .await
-            .context("building live_commit_sync_config")?;
+    let live_commit_sync_config = get_live_commit_sync_config(ctx, &app, &args.source_repo)
+        .await
+        .context("building live_commit_sync_config")?;
 
     let source_repo_arc = Arc::new(source_repo);
     let target_repo_arc = Arc::new(target_repo);

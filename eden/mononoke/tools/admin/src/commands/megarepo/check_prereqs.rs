@@ -26,7 +26,6 @@ use futures::future::try_join;
 use metaconfig_types::CommitSyncConfigVersion;
 use mononoke_api::Repo;
 use mononoke_app::MononokeApp;
-use mononoke_app::args::RepoArgs;
 use mononoke_app::args::SourceRepoArgs;
 use mononoke_app::args::TargetRepoArgs;
 use repo_identity::RepoIdentityRef;
@@ -107,11 +106,9 @@ pub async fn run(ctx: &CoreContext, app: MononokeApp, args: CheckPrereqsArgs) ->
         version,
     );
 
-    let source_repo_id = source_repo.repo_identity().id();
-    let live_commit_sync_config =
-        get_live_commit_sync_config(ctx, &app, RepoArgs::from_repo_id(source_repo_id.id()))
-            .await
-            .context("building live_commit_sync_config")?;
+    let live_commit_sync_config = get_live_commit_sync_config(ctx, &app, &args.source_repo)
+        .await
+        .context("building live_commit_sync_config")?;
 
     let repo_provider = repo_provider_from_mononoke_app(&app);
 

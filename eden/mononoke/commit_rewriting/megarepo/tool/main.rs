@@ -45,12 +45,10 @@ use futures::TryStreamExt;
 use futures::future::try_join;
 use futures::future::try_join_all;
 use live_commit_sync_config::CfgrLiveCommitSyncConfig;
-use live_commit_sync_config::LiveCommitSyncConfig;
 use manifest::Entry;
 use manifest::ManifestOps;
 use manifest::PathOrPrefix;
 use megarepolib::chunking::even_chunker_with_max_size;
-use megarepolib::commit_sync_config_utils::diff_small_repo_commit_sync_configs;
 use megarepolib::common::create_and_save_bonsai;
 use megarepolib::history_fixup_delete::HistoryFixupDeletes;
 use megarepolib::history_fixup_delete::create_history_fixup_deletes;
@@ -88,7 +86,6 @@ use crate::cli::COMMIT_HASH;
 use crate::cli::COMMIT_HASH_CORRECT_HISTORY;
 use crate::cli::DELETE_NO_LONGER_BOUND_FILES_FROM_LARGE_REPO;
 use crate::cli::DELETION_CHUNK_SIZE;
-use crate::cli::DIFF_MAPPING_VERSIONS;
 use crate::cli::DRY_RUN;
 use crate::cli::EVEN_CHUNK_SIZE;
 use crate::cli::GRADUAL_MERGE;
@@ -428,116 +425,6 @@ async fn run_catchup_validate<'a>(
     Ok(())
 }
 
-async fn run_diff_mapping_versions<'a>(
-    ctx: &CoreContext,
-    matches: &MononokeMatches<'a>,
-    sub_m: &ArgMatches<'a>,
-) -> Result<(), Error> {
-    let config_store = matches.config_store();
-    let source_repo_id =
-        args::not_shardmanager_compatible::get_source_repo_id(config_store, matches)?;
-    let target_repo_id =
-        args::not_shardmanager_compatible::get_target_repo_id(config_store, matches)?;
-
-    let mapping_version_names = sub_m
-        .values_of(MAPPING_VERSION_NAME)
-        .ok_or_else(|| format_err!("{} is supposed to be set", MAPPING_VERSION_NAME))?;
-
-    let live_commit_sync_config =
-        get_live_commit_sync_config(ctx, ctx.fb, matches, config_store, source_repo_id)
-            .await
-            .context("building live_commit_sync_config")?;
-
-    let mut commit_sync_configs = vec![];
-    for version in mapping_version_names {
-        let version = CommitSyncConfigVersion(version.to_string());
-        let config = live_commit_sync_config
-            .get_commit_sync_config_by_version(target_repo_id, &version)
-            .await?;
-        commit_sync_configs.push(config);
-    }
-
-    if commit_sync_configs.len() != 2 {
-        return Err(format_err!(
-            "{} should have exactly 2 values",
-            MAPPING_VERSION_NAME
-        ));
-    }
-
-    // Validate that both versions related to the same config.
-    let from = commit_sync_configs.remove(0);
-    let to = commit_sync_configs.remove(0);
-    if from.large_repo_id != to.large_repo_id {
-        return Err(format_err!(
-            "different large repo ids: {} vs {}",
-            from.large_repo_id,
-            to.large_repo_id
-        ));
-    }
-
-    let small_repo_id = if from.large_repo_id == target_repo_id {
-        source_repo_id
-    } else {
-        target_repo_id
-    };
-
-    if !from.small_repos.contains_key(&small_repo_id) {
-        return Err(format_err!(
-            "{} doesn't have small repo id {}",
-            from.version_name,
-            small_repo_id,
-        ));
-    }
-
-    if !to.small_repos.contains_key(&small_repo_id) {
-        return Err(format_err!(
-            "{} doesn't have small repo id {}",
-            to.version_name,
-            small_repo_id,
-        ));
-    }
-
-    let from_small_commit_sync_config = from
-        .small_repos
-        .get(&small_repo_id)
-        .cloned()
-        .ok_or_else(|| format_err!("{} not found in {}", small_repo_id, from.version_name))?;
-    let to_small_commit_sync_config = to
-        .small_repos
-        .get(&small_repo_id)
-        .cloned()
-        .ok_or_else(|| format_err!("{} not found in {}", small_repo_id, to.version_name))?;
-
-    let diff = diff_small_repo_commit_sync_configs(
-        from_small_commit_sync_config,
-        to_small_commit_sync_config,
-    );
-
-    if let Some((from, to)) = diff.default_action_change {
-        println!("default action change: {:?} to {:?}", from, to);
-    }
-
-    let mut mapping_added = diff.mapping_added.into_iter().collect::<Vec<_>>();
-    mapping_added.sort();
-    for (path_from, path_to) in mapping_added {
-        println!("mapping added: {} => {}", path_from, path_to);
-    }
-
-    let mut mapping_changed = diff.mapping_changed.into_iter().collect::<Vec<_>>();
-    mapping_changed.sort();
-    for (path_from, (before, after)) in mapping_changed {
-        println!("mapping changed: {} => {} vs {}", path_from, before, after);
-    }
-
-    let mut mapping_removed = diff.mapping_removed.into_iter().collect::<Vec<_>>();
-    mapping_removed.sort();
-    for (path_from, path_to) in mapping_removed {
-        println!("mapping removed: {} => {}", path_from, path_to);
-    }
-
-    Ok(())
-}
-
 async fn run_sync_commit_and_ancestors<'a>(
     ctx: &CoreContext,
     matches: &MononokeMatches<'a>,
@@ -671,30 +558,6 @@ async fn find_mover_for_commit<R: cross_repo_sync::Repo>(
     Ok(mover)
 }
 
-async fn get_live_commit_sync_config(
-    _ctx: &CoreContext,
-    fb: FacebookInit,
-    matches: &MononokeMatches<'_>,
-    config_store: &ConfigStore,
-    repo_id: RepositoryId,
-) -> Result<CfgrLiveCommitSyncConfig> {
-    let (_, repo_config) = args::get_config_by_repoid(config_store, matches, repo_id)?;
-
-    let sql_factory: MetadataSqlFactory = MetadataSqlFactory::new(
-        fb,
-        repo_config.storage_config.metadata.clone(),
-        matches.mysql_options().clone(),
-        *matches.readonly_storage(),
-    )
-    .await?;
-    let builder = sql_factory
-        .open::<SqlPushRedirectionConfigBuilder>()
-        .await?;
-    let push_redirection_config = builder.build(Arc::new(SqlQueryConfig { caching: None }));
-
-    CfgrLiveCommitSyncConfig::new(config_store, Arc::new(push_redirection_config))
-}
-
 #[fbinit::main]
 fn main(fb: FacebookInit) -> Result<()> {
     let app = setup_app();
@@ -709,9 +572,6 @@ fn main(fb: FacebookInit) -> Result<()> {
 
     let subcommand_future = async {
         match matches.subcommand() {
-            (DIFF_MAPPING_VERSIONS, Some(sub_m)) => {
-                run_diff_mapping_versions(ctx, &matches, sub_m).await
-            }
             (MANUAL_COMMIT_SYNC, Some(sub_m)) => run_manual_commit_sync(ctx, &matches, sub_m).await,
             (SYNC_COMMIT_AND_ANCESTORS, Some(sub_m)) => {
                 run_sync_commit_and_ancestors(ctx, &matches, sub_m).await
