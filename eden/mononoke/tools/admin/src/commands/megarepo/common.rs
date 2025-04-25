@@ -7,22 +7,34 @@
 
 use std::sync::Arc;
 
+use anyhow::Context;
 use anyhow::Error;
 use anyhow::Result;
+use anyhow::format_err;
 use blobstore_factory::MetadataSqlFactory;
 use bookmarks::BookmarkKey;
 use context::CoreContext;
+use cross_repo_sync::CommitSyncer;
 use live_commit_sync_config::CfgrLiveCommitSyncConfig;
 use megarepolib::common::ChangesetArgs as MegarepoNewChangesetArgs;
 use megarepolib::common::ChangesetArgsFactory;
 use megarepolib::common::StackPosition;
+use metaconfig_types::MetadataDatabaseConfig;
 use mononoke_api::Repo;
 use mononoke_app::MononokeApp;
 use mononoke_app::args::AsRepoArg;
 use mononoke_app::args::RepoArgs;
 use mononoke_types::DateTime;
 use pushredirect::SqlPushRedirectionConfigBuilder;
+use slog::info;
+#[cfg(fbcode_build)]
+use sql_ext::facebook::MyAdmin;
+use sql_ext::replication::NoReplicaLagMonitor;
+use sql_ext::replication::ReplicaLagMonitor;
+use sql_ext::replication::WaitForReplicationConfig;
 use sql_query_config::SqlQueryConfigArc;
+use tokio_stream::Stream;
+use tokio_stream::StreamExt;
 
 #[derive(Debug, clap::Args, Clone)]
 pub(crate) struct ResultingChangesetArgs {
@@ -132,4 +144,68 @@ pub(crate) async fn get_live_commit_sync_config(
     )?);
 
     Ok(live_commit_sync_config)
+}
+
+pub(crate) async fn process_stream_and_wait_for_replication<R: cross_repo_sync::Repo>(
+    ctx: &CoreContext,
+    commit_syncer: &CommitSyncer<R>,
+    mut s: impl Stream<Item = Result<u64>> + std::marker::Unpin,
+) -> Result<(), Error> {
+    let small_repo = commit_syncer.get_small_repo();
+    let large_repo = commit_syncer.get_large_repo();
+    let small_repo_config = small_repo.repo_config();
+    let large_repo_config = large_repo.repo_config();
+    let small_storage_config_metadata = &small_repo_config.storage_config.metadata;
+    let large_storage_config_metadata = &large_repo_config.storage_config.metadata;
+    if small_storage_config_metadata != large_storage_config_metadata {
+        return Err(format_err!(
+            "{} and {} have different db metadata configs: {:?} vs {:?}",
+            small_repo.repo_identity().name(),
+            large_repo.repo_identity().name(),
+            small_storage_config_metadata,
+            large_storage_config_metadata,
+        ));
+    }
+
+    let db_address = match small_storage_config_metadata {
+        MetadataDatabaseConfig::Local(_) | MetadataDatabaseConfig::OssRemote(_) => None,
+        MetadataDatabaseConfig::Remote(remote_config) => {
+            Some(remote_config.primary.db_address.clone())
+        }
+    };
+
+    let wait_config = WaitForReplicationConfig::default().with_logger(ctx.logger());
+    let replica_lag_monitor: Arc<dyn ReplicaLagMonitor> = match db_address {
+        None => Arc::new(NoReplicaLagMonitor()),
+        Some(address) => {
+            #[cfg(fbcode_build)]
+            {
+                let my_admin = MyAdmin::new(ctx.fb).context("building myadmin client")?;
+                Arc::new(my_admin.single_shard_lag_monitor(address))
+            }
+            #[cfg(not(fbcode_build))]
+            {
+                let _address = address;
+                Arc::new(NoReplicaLagMonitor())
+            }
+        }
+    };
+
+    let mut total = 0;
+    let mut batch = 0;
+    while let Some(chunk_size) = s.try_next().await? {
+        total += chunk_size;
+
+        batch += chunk_size;
+        if batch < 100 {
+            continue;
+        }
+        info!(ctx.logger(), "processed {} changesets", total);
+        batch %= 100;
+        replica_lag_monitor
+            .wait_for_replication(&|| wait_config.clone())
+            .await?;
+    }
+
+    Ok(())
 }

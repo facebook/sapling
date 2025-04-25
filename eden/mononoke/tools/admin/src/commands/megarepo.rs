@@ -5,6 +5,7 @@
  * GNU General Public License version 2.
  */
 
+mod backfill_noop_mapping;
 mod bonsai_merge;
 pub mod check_prereqs;
 pub(crate) mod common;
@@ -21,6 +22,7 @@ use clap::Parser;
 use clap::Subcommand;
 use mononoke_app::MononokeApp;
 
+use self::backfill_noop_mapping::BackfillNoopMappingArgs;
 use self::bonsai_merge::BonsaiMergeArgs;
 use self::check_prereqs::CheckPrereqsArgs;
 use self::gradual_delete::GradualDeleteArgs;
@@ -40,6 +42,7 @@ pub struct CommandArgs {
 
 #[derive(Subcommand)]
 enum MegarepoSubcommand {
+    BackfillNoopMapping(BackfillNoopMappingArgs),
     /// Manage which repos are pushredirected to the large repo
     PushRedirection(PushRedirectionArgs),
     Merge(MergeArgs),
@@ -56,6 +59,9 @@ pub async fn run(app: MononokeApp, args: CommandArgs) -> Result<()> {
     let ctx = app.new_basic_context();
 
     match args.subcommand {
+        MegarepoSubcommand::BackfillNoopMapping(args) => {
+            backfill_noop_mapping::run(&ctx, app, args).await?
+        }
         MegarepoSubcommand::PushRedirection(args) => pushredirection::run(&ctx, app, args).await?,
         MegarepoSubcommand::Merge(args) => merge::run(&ctx, app, args).await?,
         MegarepoSubcommand::MoveCommit(args) => move_commit::run(&ctx, app, args).await?,

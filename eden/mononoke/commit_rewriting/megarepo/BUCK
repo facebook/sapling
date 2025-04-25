@@ -64,7 +64,6 @@ rust_binary(
         "fbsource//third-party/rust:tokio",
         "fbsource//third-party/rust:tokio-stream",
         ":megarepolib",
-        "//common/rust/shed/borrowed:borrowed",
         "//common/rust/shed/cached_config:cached_config",
         "//common/rust/shed/facet:facet",
         "//common/rust/shed/fbinit:fbinit",

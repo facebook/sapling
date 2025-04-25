@@ -20,7 +20,6 @@ use megarepolib::common::ChangesetArgsFactory;
 use megarepolib::common::StackPosition;
 use mononoke_types::DateTime;
 
-pub const BACKFILL_NOOP_MAPPING: &str = "backfill-noop-mapping";
 pub const CATCHUP_DELETE_HEAD: &str = "create-catchup-head-deletion-commits";
 pub const CATCHUP_VALIDATE_COMMAND: &str = "catchup-validate";
 pub const CHANGESET: &str = "commit";
@@ -415,33 +414,6 @@ pub fn setup_app<'a, 'b>() -> MononokeClapApp<'a, 'b> {
                 .required(false),
         );
 
-    let backfill_noop_mapping = SubCommand::with_name(BACKFILL_NOOP_MAPPING)
-        .about(
-            "
-            Given the list of commit identifiers resolve them to bonsai hashes in source \
-            and target repo and insert a sync commit mapping with specified version name. \
-            This is useful for initial backfill to mark commits that are identical between \
-            repositories. \
-            Input file can contain any commit identifier (e.g. bookmark name) \
-            but the safest approach is to use commit hashes (bonsai or hg). \
-            'source-repo' argument represents the small repo while 'target-repo' is the large repo.
-        ",
-        )
-        .arg(
-            Arg::with_name(INPUT_FILE)
-                .long(INPUT_FILE)
-                .help("list of commit hashes which are remapped with noop mapping")
-                .takes_value(true)
-                .required(true),
-        )
-        .arg(
-            Arg::with_name(MAPPING_VERSION_NAME)
-                .long(MAPPING_VERSION_NAME)
-                .help("name of the noop mapping that will be inserted")
-                .takes_value(true)
-                .required(true),
-        );
-
     let sync_commit_and_ancestors = SubCommand::with_name(SYNC_COMMIT_AND_ANCESTORS)
         .about(
             "
@@ -506,7 +478,6 @@ pub fn setup_app<'a, 'b>() -> MononokeClapApp<'a, 'b> {
         ))
         .subcommand(catchup_validate_subcommand)
         .subcommand(mark_not_synced_candidate)
-        .subcommand(backfill_noop_mapping)
         .subcommand(sync_commit_and_ancestors)
         .subcommand(diff_mapping_versions)
         .subcommand(add_light_resulting_commit_args(

@@ -19,7 +19,6 @@ use bonsai_hg_mapping::BonsaiHgMapping;
 use bookmarks::BookmarkKey;
 use bookmarks::BookmarkUpdateLog;
 use bookmarks::Bookmarks;
-use borrowed::borrowed;
 use cached_config::ConfigStore;
 use clap::ArgMatches;
 use clientinfo::ClientEntryPoint;
@@ -43,7 +42,6 @@ use filenodes::Filenodes;
 use filestore::FilestoreConfig;
 use fsnodes::RootFsnodeId;
 use futures::Stream;
-use futures::StreamExt;
 use futures::TryStreamExt;
 use futures::future::try_join;
 use futures::future::try_join_all;
@@ -89,14 +87,12 @@ use sql_ext::replication::WaitForReplicationConfig;
 use sql_query_config::SqlQueryConfig;
 use synced_commit_mapping::EquivalentWorkingCopyEntry;
 use synced_commit_mapping::SyncedCommitMapping;
-use synced_commit_mapping::SyncedCommitMappingEntry;
 use synced_commit_mapping::WorkingCopyEquivalence;
 use tokio::fs::File;
 use tokio::fs::read_to_string;
 use tokio::io::AsyncBufReadExt;
 use tokio::io::BufReader;
 
-use crate::cli::BACKFILL_NOOP_MAPPING;
 use crate::cli::CATCHUP_DELETE_HEAD;
 use crate::cli::CATCHUP_VALIDATE_COMMAND;
 use crate::cli::CHANGESET;
@@ -536,81 +532,6 @@ async fn run_mark_not_synced<'a>(
     Ok(())
 }
 
-async fn run_backfill_noop_mapping<'a>(
-    ctx: &CoreContext,
-    matches: &MononokeMatches<'a>,
-    sub_m: &ArgMatches<'a>,
-) -> Result<(), Error> {
-    let commit_syncer = create_commit_syncer_from_matches::<CrossRepo>(ctx, matches, None).await?;
-
-    let small_repo = commit_syncer.get_small_repo();
-    let large_repo = commit_syncer.get_large_repo();
-
-    info!(
-        ctx.logger(),
-        "small repo: {}, large repo: {}",
-        small_repo.repo_identity().name(),
-        large_repo.repo_identity().name(),
-    );
-    let mapping_version_name = sub_m
-        .value_of(MAPPING_VERSION_NAME)
-        .ok_or_else(|| format_err!("mapping-version-name is not specified"))?;
-    let mapping_version_name = CommitSyncConfigVersion(mapping_version_name.to_string());
-    if !commit_syncer.version_exists(&mapping_version_name).await? {
-        return Err(format_err!("{} version is not found", mapping_version_name));
-    }
-
-    let input_file = sub_m
-        .value_of(INPUT_FILE)
-        .ok_or_else(|| format_err!("input-file is not specified"))?;
-
-    let inputfile = File::open(&input_file)
-        .await
-        .with_context(|| format!("Failed to open {}", input_file))?;
-    let reader = BufReader::new(inputfile);
-
-    let s = tokio_stream::wrappers::LinesStream::new(reader.lines())
-        .map_err(Error::from)
-        .map_ok({
-            borrowed!(ctx, commit_syncer, mapping_version_name);
-            move |cs_id| async move {
-                let small_cs_id = helpers::csid_resolve(ctx, small_repo, cs_id.clone());
-
-                let large_cs_id = helpers::csid_resolve(ctx, large_repo, cs_id);
-
-                let (small_cs_id, large_cs_id) = try_join(small_cs_id, large_cs_id).await?;
-
-                let entry = SyncedCommitMappingEntry {
-                    large_repo_id: large_repo.repo_identity().id(),
-                    large_bcs_id: large_cs_id,
-                    small_repo_id: small_repo.repo_identity().id(),
-                    small_bcs_id: small_cs_id,
-                    version_name: Some(mapping_version_name.clone()),
-                    source_repo: Some(commit_syncer.get_source_repo_type()),
-                };
-                Ok(entry)
-            }
-        })
-        .try_buffer_unordered(100)
-        .chunks(100)
-        .then({
-            borrowed!(commit_syncer, ctx);
-            move |chunk| async move {
-                let mapping = commit_syncer.get_mapping();
-                let chunk: Result<Vec<_>, Error> = chunk.into_iter().collect();
-                let chunk = chunk?;
-                let len = chunk.len();
-                mapping.add_bulk(ctx, chunk).await?;
-                Result::<_, Error>::Ok(len as u64)
-            }
-        })
-        .boxed();
-
-    process_stream_and_wait_for_replication(ctx, matches, &commit_syncer, s).await?;
-
-    Ok(())
-}
-
 async fn run_diff_mapping_versions<'a>(
     ctx: &CoreContext,
     matches: &MononokeMatches<'a>,
@@ -960,9 +881,6 @@ fn main(fb: FacebookInit) -> Result<()> {
 
     let subcommand_future = async {
         match matches.subcommand() {
-            (BACKFILL_NOOP_MAPPING, Some(sub_m)) => {
-                run_backfill_noop_mapping(ctx, &matches, sub_m).await
-            }
             (DIFF_MAPPING_VERSIONS, Some(sub_m)) => {
                 run_diff_mapping_versions(ctx, &matches, sub_m).await
             }
