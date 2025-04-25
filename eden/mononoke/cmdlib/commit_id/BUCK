@@ -15,6 +15,7 @@ rust_library(
         "//eden/mononoke/bonsai_globalrev_mapping:bonsai_globalrev_mapping",
         "//eden/mononoke/bonsai_hg_mapping:bonsai_hg_mapping",
         "//eden/mononoke/bonsai_svnrev_mapping:bonsai_svnrev_mapping",
+        "//eden/mononoke/bookmarks:bookmarks",
         "//eden/mononoke/mercurial:mercurial_types",
         "//eden/mononoke/mononoke_types:mononoke_types",
         "//eden/mononoke/server/context:context",

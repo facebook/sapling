@@ -21,6 +21,8 @@ use bonsai_git_mapping::BonsaiGitMappingRef;
 use bonsai_globalrev_mapping::BonsaiGlobalrevMappingRef;
 use bonsai_hg_mapping::BonsaiHgMappingRef;
 use bonsai_svnrev_mapping::BonsaiSvnrevMappingRef;
+use bookmarks::BookmarkKey;
+use bookmarks::BookmarksRef;
 use clap::Arg;
 use clap::ArgAction;
 use clap::ArgGroup;
@@ -30,7 +32,9 @@ use clap::builder::ValueRange;
 use context::CoreContext;
 use faster_hex::hex_decode;
 use faster_hex::hex_string;
+use futures::TryStreamExt;
 use futures::future::join;
+use futures::stream::FuturesOrdered;
 use mercurial_types::HgChangesetId;
 use mononoke_types::ChangesetId;
 use mononoke_types::Globalrev;
@@ -762,5 +766,78 @@ impl fmt::Display for CommitId {
             CommitId::Svnrev(rev) => write!(f, "svn revision '{}'", rev),
             CommitId::Bookmark(bookmark) => write!(f, "bookmark '{}'", bookmark),
         }
+    }
+}
+
+/// Resolve commit hashes or bookmarks into ChangesetIds.
+pub async fn resolve_commit_ids(
+    ctx: &CoreContext,
+    repo: &(impl Repo + BookmarksRef),
+    commit_ids: impl IntoIterator<Item = &CommitId>,
+) -> Result<Vec<ChangesetId>, Error> {
+    commit_ids
+        .into_iter()
+        .map(|commit_id| async move {
+            match commit_id {
+                CommitId::BonsaiId(bonsai) => {
+                    IdentityScheme::Bonsai
+                        .parse_commit_id(ctx, repo, std::str::from_utf8(bonsai)?)
+                        .await
+                }
+                CommitId::HgId(hg) => {
+                    IdentityScheme::Hg
+                        .parse_commit_id(ctx, repo, std::str::from_utf8(hg)?)
+                        .await
+                }
+                CommitId::GitSha1(hash) => {
+                    IdentityScheme::Git
+                        .parse_commit_id(ctx, repo, std::str::from_utf8(hash)?)
+                        .await
+                }
+                CommitId::Globalrev(rev) => {
+                    IdentityScheme::Globalrev
+                        .parse_commit_id(ctx, repo, &rev.to_string())
+                        .await
+                }
+                CommitId::Svnrev(rev) => {
+                    IdentityScheme::Svnrev
+                        .parse_commit_id(ctx, repo, &rev.to_string())
+                        .await
+                }
+                CommitId::Bookmark(bookmark) => repo
+                    .bookmarks()
+                    .get(ctx.clone(), &BookmarkKey::new(bookmark)?)
+                    .await
+                    .and_then(|cs_id| {
+                        cs_id.ok_or_else(|| anyhow!("bookmark {} not found", bookmark))
+                    }),
+                CommitId::Resolve(cs_id_hash) => parse_commit_id(ctx, repo, cs_id_hash).await,
+                _ => Err(anyhow!("Unsupported commit id type"))?,
+            }
+        })
+        .collect::<FuturesOrdered<_>>()
+        .try_collect()
+        .await
+}
+
+/// Resolve a single commit ID.
+pub async fn resolve_commit_id(
+    ctx: &CoreContext,
+    repo: &(impl Repo + BookmarksRef),
+    commit_id: &CommitId,
+) -> Result<ChangesetId> {
+    let commit_ids = resolve_commit_ids(ctx, repo, Some(commit_id).into_iter()).await?;
+    Ok(commit_ids.into_iter().next().expect("commit id expected"))
+}
+
+pub async fn resolve_optional_commit_id(
+    ctx: &CoreContext,
+    repo: &(impl Repo + BookmarksRef),
+    commit_id: Option<&CommitId>,
+) -> Result<Option<ChangesetId>> {
+    if let Some(commit_id) = commit_id {
+        Ok(Some(resolve_commit_id(ctx, repo, commit_id).await?))
+    } else {
+        Ok(None)
     }
 }
