@@ -18,7 +18,6 @@ use commit_cloud_types::WorkspaceLocalBookmark;
 use commit_cloud_types::changeset::CloudChangesetId;
 use commit_cloud_types::references::WorkspaceRemoteBookmark;
 use fbinit::FacebookInit;
-use mercurial_types::HgChangesetId;
 use mononoke_macros::mononoke;
 use mononoke_types::Timestamp;
 use mononoke_types::sha1_hash::Sha1;
@@ -33,7 +32,7 @@ async fn test_history(_fb: FacebookInit) -> anyhow::Result<()> {
     use commit_cloud::sql::ops::GenericGet;
 
     // Create a workspace with heads and bookmarks
-    let sql = SqlCommitCloudBuilder::with_sqlite_in_memory()?.new(false);
+    let sql = SqlCommitCloudBuilder::with_sqlite_in_memory()?.new();
     let reponame = "test_repo".to_owned();
     let workspace = "user_testuser_default".to_owned();
     let renamed_workspace = "user_testuser_default_renamed".to_owned();
@@ -41,7 +40,9 @@ async fn test_history(_fb: FacebookInit) -> anyhow::Result<()> {
     let timestamp = Timestamp::now_as_secs();
 
     let head1 = WorkspaceHead {
-        commit: HgChangesetId::from_str("2d7d4ba9ce0a6ffd222de7785b249ead9c51c536").unwrap(),
+        commit: CloudChangesetId(
+            Sha1::from_str("2d7d4ba9ce0a6ffd222de7785b249ead9c51c536").unwrap(),
+        ),
     };
 
     let remote_bookmark1 = WorkspaceRemoteBookmark::new(

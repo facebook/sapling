@@ -9,7 +9,8 @@ use std::str::FromStr;
 
 use clientinfo::ClientRequestInfo;
 use commit_cloud_types::WorkspaceHead;
-use mercurial_types::HgChangesetId;
+use commit_cloud_types::changeset::CloudChangesetId;
+use mononoke_types::sha1_hash::Sha1;
 use sql::Transaction;
 
 use crate::CommitCloudContext;
@@ -21,7 +22,11 @@ use crate::sql::ops::Insert;
 #[allow(clippy::ptr_arg)]
 pub fn heads_from_list(s: &Vec<String>) -> anyhow::Result<Vec<WorkspaceHead>> {
     s.iter()
-        .map(|s| HgChangesetId::from_str(s).map(|commit| WorkspaceHead { commit }))
+        .map(|s| {
+            Sha1::from_str(s).map(|commit_id| WorkspaceHead {
+                commit: CloudChangesetId(commit_id),
+            })
+        })
         .collect()
 }
 
@@ -35,8 +40,8 @@ pub async fn update_heads(
     mut txn: Transaction,
     cri: Option<&ClientRequestInfo>,
     ctx: &CommitCloudContext,
-    removed_heads: Vec<HgChangesetId>,
-    new_heads: Vec<HgChangesetId>,
+    removed_heads: Vec<CloudChangesetId>,
+    new_heads: Vec<CloudChangesetId>,
 ) -> anyhow::Result<Transaction> {
     if !removed_heads.is_empty() {
         let delete_args = DeleteArgs {

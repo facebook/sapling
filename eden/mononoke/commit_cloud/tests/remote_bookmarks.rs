@@ -113,7 +113,7 @@ async fn test_remote_bookmarks(_fb: FacebookInit) -> anyhow::Result<()> {
     use commit_cloud::sql::ops::Get;
     use commit_cloud::sql::remote_bookmarks_ops::DeleteArgs;
 
-    let sql = SqlCommitCloudBuilder::with_sqlite_in_memory()?.new(false);
+    let sql = SqlCommitCloudBuilder::with_sqlite_in_memory()?.new();
     let reponame = "test_repo".to_owned();
     let workspace = "user_testuser_default".to_owned();
     let renamed_workspace = "user_testuser_default_renamed".to_owned();

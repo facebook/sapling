@@ -98,7 +98,7 @@ fn test_lbs_to_map() {
 
 #[mononoke::fbinit_test]
 async fn test_local_bookmarks(_fb: FacebookInit) -> anyhow::Result<()> {
-    let sql = SqlCommitCloudBuilder::with_sqlite_in_memory()?.new(false);
+    let sql = SqlCommitCloudBuilder::with_sqlite_in_memory()?.new();
     let reponame = "test_repo".to_owned();
     let workspace = "user_testuser_default".to_owned();
     let renamed_workspace = "user_testuser_default_renamed".to_owned();

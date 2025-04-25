@@ -18,7 +18,7 @@ use crate::changeset::CloudChangesetId;
 
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 pub struct WorkspaceHead {
-    pub commit: HgChangesetId,
+    pub commit: CloudChangesetId,
 }
 
 #[derive(Clone, Debug, PartialEq)]
@@ -108,7 +108,7 @@ pub type RemoteBookmarksMap = HashMap<HgChangesetId, Vec<WorkspaceRemoteBookmark
 
 pub struct ReferencesData {
     pub version: u64,
-    pub heads: Option<Vec<HgChangesetId>>,
+    pub heads: Option<Vec<CloudChangesetId>>,
     pub bookmarks: Option<HashMap<String, CloudChangesetId>>,
     pub heads_dates: Option<HashMap<HgChangesetId, i64>>,
     pub remote_bookmarks: Option<Vec<WorkspaceRemoteBookmark>>,
@@ -121,8 +121,8 @@ pub struct UpdateReferencesParams {
     pub workspace: String,
     pub reponame: String,
     pub version: u64,
-    pub removed_heads: Vec<HgChangesetId>,
-    pub new_heads: Vec<HgChangesetId>,
+    pub removed_heads: Vec<CloudChangesetId>,
+    pub new_heads: Vec<CloudChangesetId>,
     pub updated_bookmarks: HashMap<String, CloudChangesetId>,
     pub removed_bookmarks: Vec<String>,
     pub updated_remote_bookmarks: Option<Vec<WorkspaceRemoteBookmark>>,

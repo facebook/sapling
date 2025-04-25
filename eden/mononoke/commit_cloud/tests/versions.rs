@@ -20,7 +20,7 @@ use sql_construct::SqlConstruct;
 
 #[mononoke::fbinit_test]
 async fn test_versions(_fb: FacebookInit) -> anyhow::Result<()> {
-    let sql = SqlCommitCloudBuilder::with_sqlite_in_memory()?.new(false);
+    let sql = SqlCommitCloudBuilder::with_sqlite_in_memory()?.new();
     let reponame = "test_repo".to_owned();
     let workspace = "user/testuser/default".to_owned();
     let renamed_workspace = "user/testuser/renamed_workspace".to_owned();

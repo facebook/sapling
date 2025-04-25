@@ -16,16 +16,19 @@ use commit_cloud::sql::ops::Delete;
 use commit_cloud::sql::ops::Insert;
 use commit_cloud::sql::ops::Update;
 use commit_cloud_types::WorkspaceHead;
+use commit_cloud_types::changeset::CloudChangesetId;
 use fbinit::FacebookInit;
-use mercurial_types::HgChangesetId;
 use mononoke_macros::mononoke;
+use mononoke_types::sha1_hash::Sha1;
 use sql_construct::SqlConstruct;
 
 #[mononoke::test]
 fn test_heads_from_list_valid() {
     let input = vec!["2d7d4ba9ce0a6ffd222de7785b249ead9c51c536".to_string()];
     let expected = vec![WorkspaceHead {
-        commit: HgChangesetId::from_str("2d7d4ba9ce0a6ffd222de7785b249ead9c51c536").unwrap(),
+        commit: CloudChangesetId(
+            Sha1::from_str("2d7d4ba9ce0a6ffd222de7785b249ead9c51c536").unwrap(),
+        ),
     }];
     let result = heads_from_list(&input).unwrap();
     assert_eq!(result, expected);
@@ -41,7 +44,9 @@ fn test_heads_from_list_invalid() {
 #[mononoke::test]
 fn test_heads_to_list() {
     let input = vec![WorkspaceHead {
-        commit: HgChangesetId::from_str("2d7d4ba9ce0a6ffd222de7785b249ead9c51c536").unwrap(),
+        commit: CloudChangesetId(
+            Sha1::from_str("2d7d4ba9ce0a6ffd222de7785b249ead9c51c536").unwrap(),
+        ),
     }];
     let expected = vec!["2d7d4ba9ce0a6ffd222de7785b249ead9c51c536".to_string()];
     let result = heads_to_list(&input);
@@ -52,17 +57,21 @@ fn test_heads_to_list() {
 async fn test_heads(_fb: FacebookInit) -> anyhow::Result<()> {
     use commit_cloud::sql::heads_ops::DeleteArgs;
     use commit_cloud::sql::ops::Get;
-    let sql = SqlCommitCloudBuilder::with_sqlite_in_memory()?.new(false);
+    let sql = SqlCommitCloudBuilder::with_sqlite_in_memory()?.new();
     let reponame = "test_repo".to_owned();
     let workspace = "user_testuser_default".to_owned();
     let renamed_workspace = "user_testuser_default_renamed".to_owned();
     let cc_ctx = CommitCloudContext::new(&workspace.clone(), &reponame.clone())?;
     let head1 = WorkspaceHead {
-        commit: HgChangesetId::from_str("2d7d4ba9ce0a6ffd222de7785b249ead9c51c536").unwrap(),
+        commit: CloudChangesetId(
+            Sha1::from_str("2d7d4ba9ce0a6ffd222de7785b249ead9c51c536").unwrap(),
+        ),
     };
 
     let head2 = WorkspaceHead {
-        commit: HgChangesetId::from_str("3e0e761030db6e479a7fb58b12881883f9f8c63f").unwrap(),
+        commit: CloudChangesetId(
+            Sha1::from_str("3e0e761030db6e479a7fb58b12881883f9f8c63f").unwrap(),
+        ),
     };
     let mut txn = sql.connections.write_connection.start_transaction().await?;
     txn = sql

@@ -2028,10 +2028,7 @@ impl RepoFactory {
             .await
             .context(RepoFactoryError::SqlCommitCloud)?;
         Ok(Arc::new(CommitCloud::new(
-            sql_commit_cloud.new(matches!(
-                &repo_config.storage_config.metadata,
-                MetadataDatabaseConfig::Remote(_)
-            )),
+            sql_commit_cloud.new(),
             bonsai_hg_mapping.clone(),
             repo_derived_data.clone(),
             self.ctx(None),

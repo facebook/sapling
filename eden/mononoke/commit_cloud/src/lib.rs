@@ -40,7 +40,6 @@ use context::CoreContext;
 use facet::facet;
 #[cfg(fbcode_build)]
 use futures_stats::futures03::TimedFutureExt;
-use mercurial_types::HgChangesetId;
 use metaconfig_types::CommitCloudConfig;
 use mononoke_types::DateTime;
 use mononoke_types::Timestamp;
@@ -625,21 +624,23 @@ impl CommitCloud {
             _ => bail!("'rollback_workspace' failed: expected output from get_version"),
         };
 
-        let dst_heads: HashSet<HgChangesetId> = destination_workspace
+        let dst_heads: HashSet<CloudChangesetId> = destination_workspace
             .heads
             .iter()
             .map(|h| h.commit.clone())
             .collect();
 
         let current_workspace = fetch_references(cc_ctx, &self.storage).await?;
-        let current_heads: HashSet<HgChangesetId> = current_workspace
+        let current_heads: HashSet<CloudChangesetId> = current_workspace
             .heads
             .iter()
             .map(|h| h.commit.clone())
             .collect();
 
-        let new_heads: Vec<HgChangesetId> = dst_heads.difference(&current_heads).cloned().collect();
-        let old_heads: Vec<HgChangesetId> = current_heads.difference(&dst_heads).cloned().collect();
+        let new_heads: Vec<CloudChangesetId> =
+            dst_heads.difference(&current_heads).cloned().collect();
+        let old_heads: Vec<CloudChangesetId> =
+            current_heads.difference(&dst_heads).cloned().collect();
 
         let old_bookmarks: Vec<String> = current_workspace
             .local_bookmarks

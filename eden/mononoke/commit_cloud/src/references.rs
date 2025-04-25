@@ -97,7 +97,7 @@ pub(crate) async fn cast_references_data(
 
     // Start the pipeline with batches of 1000 heads.
     let chunks_iter = raw_references_data.heads.chunks(1000).map(|chunk| {
-        let chunk_heads: Vec<_> = chunk.iter().map(|head| head.commit).collect();
+        let chunk_heads: Vec<HgChangesetId> = chunk.iter().map(|head| head.commit.into()).collect();
         Ok::<_, anyhow::Error>(chunk_heads)
     });
 

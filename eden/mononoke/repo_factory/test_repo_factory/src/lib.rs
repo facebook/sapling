@@ -924,7 +924,7 @@ impl TestRepoFactory {
         repo_derived_data: &ArcRepoDerivedData,
     ) -> Result<ArcCommitCloud> {
         let cc = CommitCloud::new(
-            SqlCommitCloudBuilder::from_sql_connections(self.metadata_db.clone()).new(false),
+            SqlCommitCloudBuilder::from_sql_connections(self.metadata_db.clone()).new(),
             bonsai_hg_mapping.clone(),
             repo_derived_data.clone(),
             self.ctx.clone(),

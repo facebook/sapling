@@ -9,7 +9,7 @@ use ::sql_ext::mononoke_queries;
 use async_trait::async_trait;
 use clientinfo::ClientRequestInfo;
 use commit_cloud_types::WorkspaceHead;
-use mercurial_types::HgChangesetId;
+use commit_cloud_types::changeset::CloudChangesetId;
 use sql::Transaction;
 
 use crate::ctx::CommitCloudContext;
@@ -19,27 +19,24 @@ use crate::sql::ops::Get;
 use crate::sql::ops::Insert;
 use crate::sql::ops::SqlCommitCloud;
 use crate::sql::ops::Update;
-use crate::sql::utils::changeset_as_bytes;
-use crate::sql::utils::changeset_from_bytes;
-use crate::sql::utils::list_as_bytes;
 
 pub struct DeleteArgs {
-    pub removed_commits: Vec<HgChangesetId>,
+    pub removed_commits: Vec<CloudChangesetId>,
 }
 
 mononoke_queries! {
-    read GetHeads(reponame: String, workspace: String) -> (String, Vec<u8>){
+    read GetHeads(reponame: String, workspace: String) -> (String, CloudChangesetId){
         mysql("SELECT `reponame`, `node` FROM `heads` WHERE `reponame`={reponame} AND `workspace`={workspace} ORDER BY `seq`")
         sqlite("SELECT `reponame`, `commit` FROM `heads` WHERE `reponame`={reponame} AND `workspace`={workspace} ORDER BY `seq`")
     }
 
-    write DeleteHead(reponame: String, workspace: String, >list commits: Vec<u8>) {
+    write DeleteHead(reponame: String, workspace: String, >list commits: CloudChangesetId) {
         none,
         mysql("DELETE FROM `heads` WHERE `reponame`={reponame} AND `workspace`={workspace} AND `node` IN {commits}")
         sqlite("DELETE FROM `heads` WHERE `reponame`={reponame} AND `workspace`={workspace} AND `commit` IN {commits}")
     }
 
-    write InsertHead(reponame: String, workspace: String, commit: Vec<u8>) {
+    write InsertHead(reponame: String, workspace: String, commit: CloudChangesetId) {
         none,
         mysql("INSERT INTO `heads` (`reponame`, `workspace`, `node`) VALUES ({reponame}, {workspace}, {commit})")
         sqlite("INSERT INTO `heads` (`reponame`, `workspace`, `commit`) VALUES ({reponame}, {workspace}, {commit})")
@@ -57,11 +54,7 @@ impl Get<WorkspaceHead> for SqlCommitCloud {
         let rows =
             GetHeads::query(&self.connections.read_connection, &reponame, &workspace).await?;
         rows.into_iter()
-            .map(|(_reponame, commit)| {
-                Ok(WorkspaceHead {
-                    commit: changeset_from_bytes(&commit, self.uses_mysql)?,
-                })
-            })
+            .map(|(_reponame, commit)| Ok(WorkspaceHead { commit }))
             .collect::<anyhow::Result<Vec<WorkspaceHead>>>()
     }
 }
@@ -81,7 +74,7 @@ impl Insert<WorkspaceHead> for SqlCommitCloud {
             cri,
             &reponame,
             &workspace,
-            &changeset_as_bytes(&data.commit, self.uses_mysql)?,
+            &data.commit,
         )
         .await?;
         Ok(txn)
@@ -126,7 +119,7 @@ impl Delete<WorkspaceHead> for SqlCommitCloud {
             cri,
             &reponame,
             &workspace,
-            &list_as_bytes(args.removed_commits, self.uses_mysql)?,
+            args.removed_commits.as_slice(),
         )
         .await?;
         Ok(txn)

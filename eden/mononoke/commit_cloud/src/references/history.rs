@@ -92,7 +92,7 @@ impl WorkspaceHistory {
         self.heads
             .clone()
             .into_iter()
-            .map(|head| head.commit)
+            .map(|head| head.commit.into())
             .chain(lbs_heads)
             .chain(rbs_heads)
             .collect::<Vec<HgChangesetId>>()

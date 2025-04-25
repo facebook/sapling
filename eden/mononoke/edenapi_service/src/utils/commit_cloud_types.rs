@@ -49,8 +49,8 @@ impl IntoCommitCloudType<CloudUpdateReferencesParams> for UpdateReferencesParams
             workspace: self.workspace,
             reponame: self.reponame,
             version: self.version,
-            removed_heads: map_hgids(self.removed_heads),
-            new_heads: map_hgids(self.new_heads),
+            removed_heads: map_hg_into_cloud_ids(self.removed_heads)?,
+            new_heads: map_hg_into_cloud_ids(self.new_heads)?,
             updated_bookmarks: self
                 .updated_bookmarks
                 .into_iter()
@@ -121,7 +121,7 @@ impl IntoCommitCloudType<CloudSmartlogFilter> for SmartlogFilter {
 impl FromCommitCloudType<CloudReferencesData> for ReferencesData {
     fn from_cc_type(cc: CloudReferencesData) -> Result<Self> {
         Ok(ReferencesData {
-            heads: cc.heads.map(map_hgcsids),
+            heads: cc.heads.map(map_cloud_into_hg_ids),
             bookmarks: cc.bookmarks.map(|bms| {
                 bms.into_iter()
                     .map(|(name, node)| (name, HgId::from_byte_array(node.0.into_byte_array())))
@@ -208,10 +208,6 @@ impl FromCommitCloudType<CloudWorkspaceData> for WorkspaceData {
             timestamp: cc.timestamp,
         })
     }
-}
-
-fn map_hgids(hgids: Vec<HgId>) -> Vec<HgChangesetId> {
-    hgids.into_iter().map(|hg| hg.into()).collect()
 }
 
 fn map_hg_into_cloud_ids(hgids: Vec<HgId>) -> Result<Vec<CloudChangesetId>> {

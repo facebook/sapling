@@ -27,7 +27,9 @@ use sql::mysql_async::Value;
     PartialEq,
     mysql::OptTryFromRowField,
     Serialize,
-    Deserialize
+    Deserialize,
+    Eq,
+    Hash
 )]
 pub struct CloudChangesetId(pub Sha1);
 

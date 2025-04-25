@@ -25,7 +25,7 @@ async fn test_snapshots(_fb: FacebookInit) -> anyhow::Result<()> {
     use commit_cloud::sql::ops::Get;
     use commit_cloud::sql::snapshots_ops::DeleteArgs;
 
-    let sql = SqlCommitCloudBuilder::with_sqlite_in_memory()?.new(false);
+    let sql = SqlCommitCloudBuilder::with_sqlite_in_memory()?.new();
 
     let reponame = "test_repo".to_owned();
     let workspace = "user_testuser_default".to_owned();

@@ -10,10 +10,6 @@ rust_library(
         "src/**/*.rs",
         "schemas/*.sql",
     ]),
-    test_deps = [
-        "fbsource//third-party/rust:once_cell",
-        "//eden/mononoke/mononoke_macros:mononoke_macros",
-    ],
     deps = [
         "fbsource//third-party/rust:anyhow",
         "fbsource//third-party/rust:async-trait",

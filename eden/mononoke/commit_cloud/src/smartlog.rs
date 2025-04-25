@@ -36,7 +36,7 @@ impl RawSmartlogData {
             .heads
             .clone()
             .into_iter()
-            .map(|head| head.commit)
+            .map(|head| head.commit.into())
             .collect::<Vec<HgChangesetId>>();
 
         if flags.contains(&SmartlogFlag::AddRemoteBookmarks) {
