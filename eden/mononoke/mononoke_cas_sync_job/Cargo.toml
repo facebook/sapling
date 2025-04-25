@@ -16,12 +16,10 @@ bookmarks = { version = "0.1.0", path = "../bookmarks" }
 borrowed = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 cas_client = { version = "0.1.0", path = "../cas_client/client" }
 changesets_uploader = { version = "0.1.0", path = "../cas_client/changesets_uploader" }
-clap_old = { package = "clap", version = "2.34.0" }
+clap = { version = "4.5.30", features = ["derive", "env", "string", "unicode", "wrap_help"] }
 cloned = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
-cmdlib = { version = "0.1.0", path = "../cmdlib" }
 commit_graph = { version = "0.1.0", path = "../repo_attributes/commit_graph/commit_graph" }
 context = { version = "0.1.0", path = "../server/context" }
-dbbookmarks = { version = "0.1.0", path = "../bookmarks/dbbookmarks" }
 executor_lib = { version = "0.1.0", path = "../cmdlib/sharding" }
 facet = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 fbinit = { version = "0.2.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
@@ -31,6 +29,7 @@ futures_watchdog = { version = "0.1.0", path = "../common/futures_watchdog" }
 itertools = "0.14.0"
 mercurial_derivation = { version = "0.1.0", path = "../derived_data/mercurial_derivation" }
 metaconfig_types = { version = "0.1.0", path = "../metaconfig/types" }
+mononoke_app = { version = "0.1.0", path = "../cmdlib/mononoke_app" }
 mononoke_types = { version = "0.1.0", path = "../mononoke_types" }
 mutable_counters = { version = "0.1.0", path = "../mutable_counters" }
 repo_blobstore = { version = "0.1.0", path = "../blobrepo/repo_blobstore" }
