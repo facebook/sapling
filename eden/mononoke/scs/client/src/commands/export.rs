@@ -21,6 +21,7 @@ use anyhow::Result;
 use anyhow::bail;
 use bytesize::ByteSize;
 use cloned::cloned;
+use commit_id::CommitIdArgs;
 use futures::AsyncWrite;
 use futures::TryFutureExt;
 use futures::future::BoxFuture;
@@ -42,7 +43,6 @@ use tokio_stream::wrappers::ReceiverStream;
 use tokio_util::compat::TokioAsyncWriteCompatExt;
 
 use crate::ScscApp;
-use crate::args::commit_id::CommitIdArgs;
 use crate::args::commit_id::resolve_commit_id;
 use crate::args::path::PathArgs;
 use crate::args::progress::ProgressArgs;

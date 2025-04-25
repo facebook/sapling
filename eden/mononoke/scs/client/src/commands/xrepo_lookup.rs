@@ -10,13 +10,13 @@ use std::io::Write;
 
 use anyhow::Result;
 use anyhow::bail;
+use commit_id::CommitId;
+use commit_id::CommitIdArgs;
 use scs_client_raw::ScsClient;
 use scs_client_raw::thrift;
 use serde::Serialize;
 
 use crate::ScscApp;
-use crate::args::commit_id::CommitId;
-use crate::args::commit_id::CommitIdArgs;
 use crate::args::commit_id::SchemeArgs;
 use crate::args::commit_id::map_commit_ids;
 use crate::args::commit_id::resolve_commit_id;

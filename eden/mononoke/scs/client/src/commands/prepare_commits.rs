@@ -6,10 +6,10 @@
  */
 
 use anyhow::Result;
+use commit_id::CommitIdsArgs;
 use scs_client_raw::thrift;
 
 use crate::ScscApp;
-use crate::args::commit_id::CommitIdsArgs;
 use crate::args::commit_id::resolve_commit_ids;
 use crate::args::derived_data_type::DerivedDataTypeArgs;
 use crate::args::repo::RepoArgs;

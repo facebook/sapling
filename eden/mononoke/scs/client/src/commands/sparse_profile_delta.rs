@@ -9,12 +9,12 @@ use std::io::Write;
 
 use anyhow::Result;
 use anyhow::bail;
+use commit_id::CommitIdsArgs;
 use scs_client_raw::thrift;
 use serde::Serialize;
 use source_control_clients::errors::CommitSparseProfileDeltaPollError;
 
 use crate::ScscApp;
-use crate::args::commit_id::CommitIdsArgs;
 use crate::args::commit_id::resolve_commit_ids;
 use crate::args::repo::RepoArgs;
 use crate::args::sparse_profiles::SparseProfilesArgs;

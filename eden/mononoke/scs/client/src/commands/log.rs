@@ -9,11 +9,11 @@ use std::collections::HashSet;
 use std::io::Write;
 
 use anyhow::Result;
+use commit_id::CommitIdNames;
+use commit_id::NamedCommitIdsArgs;
 use scs_client_raw::thrift;
 
 use crate::ScscApp;
-use crate::args::commit_id::CommitIdNames;
-use crate::args::commit_id::NamedCommitIdsArgs;
 use crate::args::commit_id::SchemeArgs;
 use crate::args::commit_id::resolve_commit_ids;
 use crate::args::commit_id::resolve_optional_commit_id;

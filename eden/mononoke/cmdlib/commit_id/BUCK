@@ -8,6 +8,7 @@ rust_library(
     deps = [
         "fbsource//third-party/rust:anyhow",
         "fbsource//third-party/rust:clap",
+        "fbsource//third-party/rust:faster-hex",
         "fbsource//third-party/rust:futures",
         "fbsource//third-party/rust:strum",
         "//eden/mononoke/bonsai_git_mapping:bonsai_git_mapping",

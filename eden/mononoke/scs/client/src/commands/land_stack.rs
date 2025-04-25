@@ -11,12 +11,12 @@ use std::io::Write;
 use anyhow::Result;
 use anyhow::anyhow;
 use anyhow::bail;
+use commit_id::CommitIdsArgs;
 use maplit::btreeset;
 use scs_client_raw::thrift;
 use serde::Serialize;
 
 use crate::ScscApp;
-use crate::args::commit_id::CommitIdsArgs;
 use crate::args::commit_id::SchemeArgs;
 use crate::args::commit_id::map_commit_id;
 use crate::args::commit_id::map_commit_ids;

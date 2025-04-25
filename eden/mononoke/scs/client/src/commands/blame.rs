@@ -13,6 +13,7 @@ use std::io::Write;
 use anyhow::Result;
 use anyhow::format_err;
 use clap::Parser;
+use commit_id::CommitIdArgs;
 use maplit::btreeset;
 use scs_client_raw::thrift;
 use serde_json::json;
@@ -21,7 +22,6 @@ use unicode_truncate::UnicodeTruncateStr;
 use unicode_width::UnicodeWidthStr;
 
 use crate::ScscApp;
-use crate::args::commit_id::CommitIdArgs;
 use crate::args::commit_id::SchemeArgs;
 use crate::args::commit_id::map_commit_ids;
 use crate::args::commit_id::resolve_commit_id;

@@ -12,6 +12,7 @@ use std::io::Write;
 use anyhow::Result;
 use clap::Parser;
 use cloned::cloned;
+use commit_id::CommitIdArgs;
 use futures::TryFutureExt;
 use futures::future;
 use futures::stream;
@@ -20,7 +21,6 @@ use scs_client_raw::thrift;
 use serde_json::json;
 
 use crate::ScscApp;
-use crate::args::commit_id::CommitIdArgs;
 use crate::args::commit_id::resolve_commit_id;
 use crate::args::path::PathArgs;
 use crate::args::repo::RepoArgs;
