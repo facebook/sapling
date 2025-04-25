@@ -52,10 +52,8 @@ Setup config repo:
   pulling 'bfcfb67466' from 'mono:small-mon'
   pull failed: bfcfb67466 not found
   translated bfcfb674663c5438027bcde4a7ae5024c838f76a@large-mon to 11f848659bfcf77abd04f947883badd8efa88d26
-  pulling '11f848659bfcf77abd04f947883badd8efa88d26' from 'mono:small-mon'
   11f848659bfcf77abd04f947883badd8efa88d26
 
   $ hg log -r large-mon/master_bookmark -T '{node}\n' --config 'megarepo.transparent-lookup=large-mon' --config extensions.megarepo=
   translated bfcfb674663c5438027bcde4a7ae5024c838f76a@large-mon to 11f848659bfcf77abd04f947883badd8efa88d26
-  pulling '11f848659bfcf77abd04f947883badd8efa88d26' from 'mono:small-mon'
   11f848659bfcf77abd04f947883badd8efa88d26

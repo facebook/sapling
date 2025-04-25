@@ -85,8 +85,12 @@ def _xrepopull(repo, name, rewritepullrev=False) -> Optional[pullattempt]:
             return None
 
         localnode = xrepotranslate(repo, name)
-        if not localnode:
+        if not localnode or localnode in repo:
             return None
+
+        if not repo.ui.configbool("ui", "autopullcommits"):
+            return None
+
         return autopull.pullattempt(headnodes=[localnode])
 
     if rewritepullrev:
