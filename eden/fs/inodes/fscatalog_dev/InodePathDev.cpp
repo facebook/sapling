@@ -7,21 +7,22 @@
 
 #ifndef _WIN32
 
-#include "eden/fs/inodes/fscatalog_dev/InodePath.h"
+#include "eden/fs/inodes/fscatalog_dev/InodePathDev.h"
 
 namespace facebook::eden {
 
-InodePath::InodePath() noexcept : path_{'\0'} {}
+InodePathDev::InodePathDev() noexcept : path_{'\0'} {}
 
-const char* InodePath::c_str() const noexcept {
+const char* InodePathDev::c_str() const noexcept {
   return path_.data();
 }
 
-InodePath::operator RelativePathPiece() const noexcept {
+InodePathDev::operator RelativePathPiece() const noexcept {
   return RelativePathPiece{folly::StringPiece{c_str()}};
 }
 
-std::array<char, InodePath::kMaxPathLength>& InodePath::rawData() noexcept {
+std::array<char, InodePathDev::kMaxPathLength>&
+InodePathDev::rawData() noexcept {
   return path_;
 }
 

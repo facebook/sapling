@@ -31,14 +31,14 @@ namespace facebook::eden {
 namespace overlay {
 class OverlayDir;
 }
-class InodePath;
+class InodePathDev;
 
 /**
  * Class to manage the on disk data.
  */
-class FsFileContentStore : public FileContentStore {
+class FsFileContentStoreDev : public FileContentStore {
  public:
-  explicit FsFileContentStore(AbsolutePathPiece localDir)
+  explicit FsFileContentStoreDev(AbsolutePathPiece localDir)
       : localDir_{localDir} {}
 
   /**
@@ -180,7 +180,7 @@ class FsFileContentStore : public FileContentStore {
  private:
   FRIEND_TEST(OverlayTest, getFilePath);
   friend class RawOverlayTest;
-  friend class FsInodeCatalog;
+  friend class FsInodeCatalogDev;
 
   void initNewOverlay();
 
@@ -220,7 +220,7 @@ class FsFileContentStore : public FileContentStore {
    *
    * Returns a null-terminated InodePath value.
    */
-  static InodePath getFilePath(InodeNumber inodeNumber);
+  static InodePathDev getFilePath(InodeNumber inodeNumber);
 
   std::optional<overlay::OverlayDir> deserializeOverlayDir(
       InodeNumber inodeNumber);
@@ -253,9 +253,9 @@ class FsFileContentStore : public FileContentStore {
  * overlay's file system attributes and is responsible for obtaining and
  * releasing its locks ("initOverlay" and "close" respectively).
  */
-class FsInodeCatalog : public InodeCatalog {
+class FsInodeCatalogDev : public InodeCatalog {
  public:
-  explicit FsInodeCatalog(FsFileContentStore* core) : core_(core) {}
+  explicit FsInodeCatalogDev(FsFileContentStoreDev* core) : core_(core) {}
 
   bool supportsSemanticOperations() const override {
     return false;
@@ -307,7 +307,7 @@ class FsInodeCatalog : public InodeCatalog {
   std::optional<fsck::InodeInfo> loadInodeInfo(InodeNumber number) override;
 
  private:
-  FsFileContentStore* core_;
+  FsFileContentStoreDev* core_;
 };
 
 } // namespace facebook::eden

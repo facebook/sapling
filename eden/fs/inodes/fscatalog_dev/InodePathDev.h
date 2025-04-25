@@ -9,13 +9,13 @@
 
 #include <folly/Range.h>
 #include "eden/common/utils/PathFuncs.h"
-#include "eden/fs/inodes/fscatalog_dev/FsInodeCatalog.h"
+#include "eden/fs/inodes/fscatalog_dev/FsInodeCatalogDev.h"
 
 namespace facebook::eden {
 
-class InodePath {
+class InodePathDev {
  public:
-  explicit InodePath() noexcept;
+  explicit InodePathDev() noexcept;
 
   /**
    * The maximum path length for the path to a file inside the overlay
@@ -25,7 +25,7 @@ class InodePath {
    * 20 bytes for the inode number, and 1 byte for a null terminator.
    */
   static constexpr size_t kMaxPathLength =
-      2 + 1 + FsFileContentStore::kMaxDecimalInodeNumberLength + 1;
+      2 + 1 + FsFileContentStoreDev::kMaxDecimalInodeNumberLength + 1;
 
   const char* c_str() const noexcept;
   /* implicit */ operator RelativePathPiece() const noexcept;

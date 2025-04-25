@@ -7,7 +7,7 @@
 
 #ifndef _WIN32
 
-#include "eden/fs/inodes/fscatalog_dev/FsInodeCatalog.h"
+#include "eden/fs/inodes/fscatalog_dev/FsInodeCatalogDev.h"
 
 #include <boost/filesystem.hpp>
 #include <algorithm>
@@ -26,7 +26,7 @@
 #include "eden/common/utils/FileUtils.h"
 #include "eden/common/utils/PathFuncs.h"
 #include "eden/common/utils/Throw.h"
-#include "eden/fs/inodes/fscatalog_dev/InodePath.h"
+#include "eden/fs/inodes/fscatalog_dev/InodePathDev.h"
 #include "eden/fs/service/gen-cpp2/eden_types.h"
 #include "eden/fs/utils/EdenError.h"
 
@@ -66,39 +66,39 @@ constexpr uint32_t kOverlayVersion = 1;
 constexpr size_t kInfoHeaderSize =
     kInfoHeaderMagic.size() + sizeof(kOverlayVersion);
 
-constexpr folly::StringPiece FsFileContentStore::kHeaderIdentifierDir;
-constexpr folly::StringPiece FsFileContentStore::kHeaderIdentifierFile;
-constexpr uint32_t FsFileContentStore::kHeaderVersion;
-constexpr size_t FsFileContentStore::kHeaderLength;
-constexpr uint32_t FsFileContentStore::kNumShards;
+constexpr folly::StringPiece FsFileContentStoreDev::kHeaderIdentifierDir;
+constexpr folly::StringPiece FsFileContentStoreDev::kHeaderIdentifierFile;
+constexpr uint32_t FsFileContentStoreDev::kHeaderVersion;
+constexpr size_t FsFileContentStoreDev::kHeaderLength;
+constexpr uint32_t FsFileContentStoreDev::kNumShards;
 
 static void doFormatSubdirPath(
     uint64_t inodeNum,
     MutableStringPiece subdirPath) {
   constexpr char hexdigit[] = "0123456789abcdef";
-  XDCHECK_EQ(subdirPath.size(), FsFileContentStore::kShardDirPathLength);
+  XDCHECK_EQ(subdirPath.size(), FsFileContentStoreDev::kShardDirPathLength);
   subdirPath[0] = hexdigit[(inodeNum >> 4) & 0xf];
   subdirPath[1] = hexdigit[inodeNum & 0xf];
 }
 
-bool FsInodeCatalog::initialized() const {
+bool FsInodeCatalogDev::initialized() const {
   return core_->initialized();
 }
 
-void FsFileContentStore::formatSubdirPath(
+void FsFileContentStoreDev::formatSubdirPath(
     InodeNumber inodeNum,
     MutableStringPiece subdirPath) {
   return doFormatSubdirPath(inodeNum.get(), subdirPath);
 }
 
-void FsFileContentStore::formatSubdirShardPath(
+void FsFileContentStoreDev::formatSubdirShardPath(
     ShardID shardID,
     MutableStringPiece subdirPath) {
   XDCHECK_LE(shardID, 0xfful);
   return doFormatSubdirPath(shardID, subdirPath);
 }
 
-bool FsFileContentStore::initialize(
+bool FsFileContentStoreDev::initialize(
     bool createIfNonExisting,
     bool bypassLockFile) {
   // Read the info file.
@@ -143,7 +143,7 @@ bool FsFileContentStore::initialize(
   return overlayCreated;
 }
 
-std::optional<InodeNumber> FsInodeCatalog::initOverlay(
+std::optional<InodeNumber> FsInodeCatalogDev::initOverlay(
     bool createIfNonExisting,
     bool bypassLockFile) {
   bool overlayCreated = core_->initialize(createIfNonExisting, bypassLockFile);
@@ -154,25 +154,25 @@ std::optional<InodeNumber> FsInodeCatalog::initOverlay(
   return core_->tryLoadNextInodeNumber();
 }
 
-struct statfs FsFileContentStore::statFs() const {
+struct statfs FsFileContentStoreDev::statFs() const {
   struct statfs fs = {};
   fstatfs(infoFile_.fd(), &fs);
   return fs;
 }
 
-void FsFileContentStore::close() {
+void FsFileContentStoreDev::close() {
   dirFile_.close();
   infoFile_.close();
 }
 
-void FsInodeCatalog::close(std::optional<InodeNumber> inodeNumber) {
+void FsInodeCatalogDev::close(std::optional<InodeNumber> inodeNumber) {
   if (inodeNumber) {
     core_->saveNextInodeNumber(inodeNumber.value());
   }
   core_->close();
 }
 
-std::optional<InodeNumber> FsFileContentStore::tryLoadNextInodeNumber() {
+std::optional<InodeNumber> FsFileContentStoreDev::tryLoadNextInodeNumber() {
   // If we ever want to extend this file, it should be renamed and a proper
   // header with version number added. In the meantime, we enforce the file is
   // 8 bytes.
@@ -218,7 +218,7 @@ std::optional<InodeNumber> FsFileContentStore::tryLoadNextInodeNumber() {
   return InodeNumber{nextInodeNumber};
 }
 
-void FsFileContentStore::saveNextInodeNumber(InodeNumber nextInodeNumber) {
+void FsFileContentStoreDev::saveNextInodeNumber(InodeNumber nextInodeNumber) {
   auto nextInodeNumberPath =
       localDir_ + PathComponentPiece{kNextInodeNumberFile};
 
@@ -231,7 +231,7 @@ void FsFileContentStore::saveNextInodeNumber(InodeNumber nextInodeNumber) {
       .value();
 }
 
-void FsFileContentStore::readExistingOverlay(int infoFD) {
+void FsFileContentStoreDev::readExistingOverlay(int infoFD) {
   // Read the info file header
   std::array<uint8_t, kInfoHeaderSize> infoHeader;
   auto sizeRead = folly::readFull(infoFD, infoHeader.data(), infoHeader.size());
@@ -261,7 +261,7 @@ void FsFileContentStore::readExistingOverlay(int infoFD) {
   }
 }
 
-void FsFileContentStore::initNewOverlay() {
+void FsFileContentStoreDev::initNewOverlay() {
   // Make sure the overlay directory itself exists.  It's fine if it already
   // exists (although presumably it should be empty).
   auto result = ::mkdir(localDir_.value().c_str(), 0755);
@@ -305,28 +305,28 @@ void FsFileContentStore::initNewOverlay() {
       .value();
 }
 
-optional<overlay::OverlayDir> FsInodeCatalog::loadOverlayDir(
+optional<overlay::OverlayDir> FsInodeCatalogDev::loadOverlayDir(
     InodeNumber inodeNumber) {
   return core_->deserializeOverlayDir(inodeNumber);
 }
 
-std::optional<overlay::OverlayDir> FsInodeCatalog::loadAndRemoveOverlayDir(
+std::optional<overlay::OverlayDir> FsInodeCatalogDev::loadAndRemoveOverlayDir(
     InodeNumber inodeNumber) {
   auto result = loadOverlayDir(inodeNumber);
   removeOverlayDir(inodeNumber);
   return result;
 }
 
-void FsInodeCatalog::saveOverlayDir(
+void FsInodeCatalogDev::saveOverlayDir(
     InodeNumber inodeNumber,
     overlay::OverlayDir&& odir) {
   // Ask thrift to serialize it.
   auto serializedData = CompactSerializer::serialize<std::string>(odir);
 
   // Add header to the overlay directory.
-  auto header = FsFileContentStore::createHeader(
-      FsFileContentStore::kHeaderIdentifierDir,
-      FsFileContentStore::kHeaderVersion);
+  auto header = FsFileContentStoreDev::createHeader(
+      FsFileContentStoreDev::kHeaderIdentifierDir,
+      FsFileContentStoreDev::kHeaderVersion);
 
   std::array<struct iovec, 2> iov;
   iov[0].iov_base = header.data();
@@ -336,8 +336,8 @@ void FsInodeCatalog::saveOverlayDir(
   (void)core_->createOverlayFileImpl(inodeNumber, iov.data(), iov.size());
 }
 
-InodePath FsFileContentStore::getFilePath(InodeNumber inodeNumber) {
-  InodePath outPath;
+InodePathDev FsFileContentStoreDev::getFilePath(InodeNumber inodeNumber) {
+  InodePathDev outPath;
   auto& outPathArray = outPath.rawData();
   formatSubdirPath(
       inodeNumber,
@@ -353,16 +353,16 @@ InodePath FsFileContentStore::getFilePath(InodeNumber inodeNumber) {
   return outPath;
 }
 
-AbsolutePath FsFileContentStore::getAbsoluteFilePath(
+AbsolutePath FsFileContentStoreDev::getAbsoluteFilePath(
     InodeNumber inodeNumber) const {
   auto inodePath = getFilePath(inodeNumber);
   return localDir_ + RelativePathPiece(inodePath.c_str());
 }
 
-std::optional<overlay::OverlayDir> FsFileContentStore::deserializeOverlayDir(
+std::optional<overlay::OverlayDir> FsFileContentStoreDev::deserializeOverlayDir(
     InodeNumber inodeNumber) {
   // Open the file.  Return std::nullopt if the file does not exist.
-  auto path = FsFileContentStore::getFilePath(inodeNumber);
+  auto path = FsFileContentStoreDev::getFilePath(inodeNumber);
   int fd = openat(dirFile_.fd(), path.c_str(), O_RDWR | O_CLOEXEC | O_NOFOLLOW);
   if (fd == -1) {
     int err = errno;
@@ -392,15 +392,15 @@ std::optional<overlay::OverlayDir> FsFileContentStore::deserializeOverlayDir(
   }
 
   StringPiece contents{serializedData};
-  FsFileContentStore::validateHeader(
-      inodeNumber, contents, FsFileContentStore::kHeaderIdentifierDir);
-  contents.advance(FsFileContentStore::kHeaderLength);
+  FsFileContentStoreDev::validateHeader(
+      inodeNumber, contents, FsFileContentStoreDev::kHeaderIdentifierDir);
+  contents.advance(FsFileContentStoreDev::kHeaderLength);
 
   return CompactSerializer::deserialize<overlay::OverlayDir>(contents);
 }
 
-std::array<uint8_t, FsFileContentStore::kHeaderLength>
-FsFileContentStore::createHeader(
+std::array<uint8_t, FsFileContentStoreDev::kHeaderLength>
+FsFileContentStoreDev::createHeader(
     folly::StringPiece identifier,
     uint32_t version) {
   std::array<uint8_t, kHeaderLength> headerStorage;
@@ -426,7 +426,7 @@ FsFileContentStore::createHeader(
   return headerStorage;
 }
 
-std::variant<folly::File, InodeNumber> FsFileContentStore::openFile(
+std::variant<folly::File, InodeNumber> FsFileContentStoreDev::openFile(
     InodeNumber inodeNumber,
     folly::StringPiece headerId) {
   // Open the overlay file
@@ -447,9 +447,9 @@ std::variant<folly::File, InodeNumber> FsFileContentStore::openFile(
   return file;
 }
 
-std::variant<folly::File, InodeNumber> FsFileContentStore::openFileNoVerify(
+std::variant<folly::File, InodeNumber> FsFileContentStoreDev::openFileNoVerify(
     InodeNumber inodeNumber) {
-  auto path = FsFileContentStore::getFilePath(inodeNumber);
+  auto path = FsFileContentStoreDev::getFilePath(inodeNumber);
 
   int fd = openat(dirFile_.fd(), path.c_str(), O_RDWR | O_CLOEXEC | O_NOFOLLOW);
   folly::checkUnixError(
@@ -466,7 +466,7 @@ namespace {
 constexpr auto tmpPrefix = "tmp/"_sp;
 using InodeTmpPath = std::array<
     char,
-    tmpPrefix.size() + FsFileContentStore::kMaxDecimalInodeNumberLength + 1>;
+    tmpPrefix.size() + FsFileContentStoreDev::kMaxDecimalInodeNumberLength + 1>;
 
 InodeTmpPath getFileTmpPath(InodeNumber inodeNumber) {
   // It's substantially faster on XFS to create this temporary file in
@@ -482,7 +482,7 @@ InodeTmpPath getFileTmpPath(InodeNumber inodeNumber) {
 
 } // namespace
 
-folly::File FsFileContentStore::createOverlayFileImpl(
+folly::File FsFileContentStoreDev::createOverlayFileImpl(
     InodeNumber inodeNumber,
     iovec* iov,
     size_t iovCount) {
@@ -568,7 +568,7 @@ folly::File FsFileContentStore::createOverlayFileImpl(
   return file;
 }
 
-std::variant<folly::File, InodeNumber> FsFileContentStore::createOverlayFile(
+std::variant<folly::File, InodeNumber> FsFileContentStoreDev::createOverlayFile(
     InodeNumber inodeNumber,
     ByteRange contents) {
   auto header = createHeader(kHeaderIdentifierFile, kHeaderVersion);
@@ -581,7 +581,7 @@ std::variant<folly::File, InodeNumber> FsFileContentStore::createOverlayFile(
   return createOverlayFileImpl(inodeNumber, iov.data(), iov.size());
 }
 
-std::variant<folly::File, InodeNumber> FsFileContentStore::createOverlayFile(
+std::variant<folly::File, InodeNumber> FsFileContentStoreDev::createOverlayFile(
     InodeNumber inodeNumber,
     const IOBuf& contents) {
   // In the common case where there is just one element in the chain, use the
@@ -603,7 +603,7 @@ std::variant<folly::File, InodeNumber> FsFileContentStore::createOverlayFile(
   return createOverlayFileImpl(inodeNumber, iov.data(), iov.size());
 }
 
-void FsFileContentStore::validateHeader(
+void FsFileContentStoreDev::validateHeader(
     InodeNumber inodeNumber,
     folly::StringPiece contents,
     folly::StringPiece headerId) {
@@ -645,7 +645,7 @@ void FsFileContentStore::validateHeader(
   }
 }
 
-void FsFileContentStore::removeOverlayFile(InodeNumber inodeNumber) {
+void FsFileContentStoreDev::removeOverlayFile(InodeNumber inodeNumber) {
   auto path = getFilePath(inodeNumber);
   int result = ::unlinkat(dirFile_.fd(), path.c_str(), 0);
   if (result == 0) {
@@ -656,15 +656,15 @@ void FsFileContentStore::removeOverlayFile(InodeNumber inodeNumber) {
   }
 }
 
-void FsInodeCatalog::removeOverlayDir(InodeNumber inodeNumber) {
+void FsInodeCatalogDev::removeOverlayDir(InodeNumber inodeNumber) {
   core_->removeOverlayFile(inodeNumber);
 }
 
-bool FsFileContentStore::hasOverlayFile(InodeNumber inodeNumber) {
+bool FsFileContentStoreDev::hasOverlayFile(InodeNumber inodeNumber) {
   // TODO: It might be worth maintaining a memory-mapped set to rapidly
   // query whether the overlay has an entry for a particular inode.  As it is,
   // this function requires a syscall to see if the overlay has an entry.
-  auto path = FsFileContentStore::getFilePath(inodeNumber);
+  auto path = FsFileContentStoreDev::getFilePath(inodeNumber);
   struct stat st;
   if (0 == fstatat(dirFile_.fd(), path.c_str(), &st, AT_SYMLINK_NOFOLLOW)) {
     return S_ISREG(st.st_mode);
@@ -673,7 +673,7 @@ bool FsFileContentStore::hasOverlayFile(InodeNumber inodeNumber) {
   }
 }
 
-bool FsInodeCatalog::hasOverlayDir(InodeNumber inodeNumber) {
+bool FsInodeCatalogDev::hasOverlayDir(InodeNumber inodeNumber) {
   return core_->hasOverlayFile(inodeNumber);
 }
 
@@ -688,7 +688,7 @@ overlay::OverlayDir loadDirectoryChildren(folly::File& file) {
 }
 } // namespace
 
-std::optional<fsck::InodeInfo> FsFileContentStore::loadInodeInfo(
+std::optional<fsck::InodeInfo> FsFileContentStoreDev::loadInodeInfo(
     InodeNumber number) {
   auto inodeError = [number](auto&&... args) -> std::optional<fsck::InodeInfo> {
     return {fsck::InodeInfo(
@@ -706,43 +706,45 @@ std::optional<fsck::InodeInfo> FsFileContentStore::loadInodeInfo(
   }
 
   // Read the file header
-  std::array<char, FsFileContentStore::kHeaderLength> headerContents;
+  std::array<char, FsFileContentStoreDev::kHeaderLength> headerContents;
   auto readResult =
       folly::readFull(file.fd(), headerContents.data(), headerContents.size());
   if (readResult < 0) {
     int errnum = errno;
     return inodeError("error reading from file: ", folly::errnoStr(errnum));
-  } else if (readResult != FsFileContentStore::kHeaderLength) {
+  } else if (readResult != FsFileContentStoreDev::kHeaderLength) {
     return inodeError(fmt::format(
         "file was too short to contain overlay header: read {} bytes, expected {} bytes",
         readResult,
-        FsFileContentStore::kHeaderLength));
+        FsFileContentStoreDev::kHeaderLength));
   }
 
   // The first 4 bytes of the header are the file type identifier.
   static_assert(
-      FsFileContentStore::kHeaderIdentifierDir.size() ==
-          FsFileContentStore::kHeaderIdentifierFile.size(),
+      FsFileContentStoreDev::kHeaderIdentifierDir.size() ==
+          FsFileContentStoreDev::kHeaderIdentifierFile.size(),
       "both header IDs must have the same length");
   StringPiece typeID(
       headerContents.data(),
-      headerContents.data() + FsFileContentStore::kHeaderIdentifierDir.size());
+      headerContents.data() +
+          FsFileContentStoreDev::kHeaderIdentifierDir.size());
 
   // The next 4 bytes are the version ID.
   uint32_t versionBE;
   memcpy(
       &versionBE,
-      headerContents.data() + FsFileContentStore::kHeaderIdentifierDir.size(),
+      headerContents.data() +
+          FsFileContentStoreDev::kHeaderIdentifierDir.size(),
       sizeof(uint32_t));
   auto version = folly::Endian::big(versionBE);
-  if (version != FsFileContentStore::kHeaderVersion) {
+  if (version != FsFileContentStoreDev::kHeaderVersion) {
     return inodeError("unknown overlay file format version ", version);
   }
 
   fsck::InodeType type;
-  if (typeID == FsFileContentStore::kHeaderIdentifierDir) {
+  if (typeID == FsFileContentStoreDev::kHeaderIdentifierDir) {
     type = fsck::InodeType::Dir;
-  } else if (typeID == FsFileContentStore::kHeaderIdentifierFile) {
+  } else if (typeID == FsFileContentStoreDev::kHeaderIdentifierFile) {
     type = fsck::InodeType::File;
   } else {
     return inodeError(
@@ -761,7 +763,7 @@ std::optional<fsck::InodeInfo> FsFileContentStore::loadInodeInfo(
   }
 }
 
-std::optional<fsck::InodeInfo> FsInodeCatalog::loadInodeInfo(
+std::optional<fsck::InodeInfo> FsInodeCatalogDev::loadInodeInfo(
     InodeNumber number) {
   return core_->loadInodeInfo(number);
 }
