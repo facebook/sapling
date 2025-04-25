@@ -7,7 +7,6 @@
 
 use anyhow::Error;
 use anyhow::format_err;
-use bookmarks::BookmarkKey;
 use clap::App;
 use clap::Arg;
 use clap::ArgGroup;
@@ -28,8 +27,6 @@ pub const COMMIT_BOOKMARK: &str = "bookmark";
 pub const COMMIT_DATE_RFC3339: &str = "commit-date-rfc3339";
 pub const COMMIT_HASH: &str = "commit-hash";
 pub const COMMIT_MESSAGE: &str = "commit-message";
-pub const DELETE_NO_LONGER_BOUND_FILES_FROM_LARGE_REPO: &str =
-    "delete-no-longer-bound-files-from-large-repo";
 pub const DELETION_CHUNK_SIZE: &str = "deletion-chunk-size";
 pub const DRY_RUN: &str = "dry-run";
 pub const GRADUAL_MERGE_PROGRESS: &str = "gradual-merge-progress";
@@ -37,10 +34,8 @@ pub const HEAD_BOOKMARK: &str = "head-bookmark";
 pub const LAST_DELETION_COMMIT: &str = "last-deletion-commit";
 pub const MANUAL_COMMIT_SYNC: &str = "manual-commit-sync";
 pub const MAPPING_VERSION_NAME: &str = "mapping-version-name";
-pub const MARK_PUBLIC: &str = "mark-public";
 pub const PARENTS: &str = "parents";
 pub const PATH_REGEX: &str = "path-regex";
-pub const PATH_PREFIX: &str = "path-prefix";
 pub const PRE_DELETION_COMMIT: &str = "pre-deletion-commit";
 pub const SELECT_PARENTS_AUTOMATICALLY: &str = "select-parents-automatically";
 
@@ -49,38 +44,6 @@ pub const SYNC_COMMIT_AND_ANCESTORS: &str = "sync-commit-and-ancestors";
 pub const TO_MERGE_CS_ID: &str = "to-merge-cs-id";
 
 pub const WAIT_SECS: &str = "wait-secs";
-
-pub fn cs_args_from_matches<'a>(sub_m: &ArgMatches<'a>) -> Result<ChangesetArgs, Error> {
-    let message = sub_m
-        .value_of(COMMIT_MESSAGE)
-        .ok_or_else(|| format_err!("missing argument {}", COMMIT_MESSAGE))?
-        .to_string();
-    let author = sub_m
-        .value_of(COMMIT_AUTHOR)
-        .ok_or_else(|| format_err!("missing argument {}", COMMIT_AUTHOR))?
-        .to_string();
-    let datetime = sub_m
-        .value_of(COMMIT_DATE_RFC3339)
-        .map_or_else(|| Ok(DateTime::now()), DateTime::from_rfc3339)?;
-    let bookmark = sub_m
-        .value_of(COMMIT_BOOKMARK)
-        .map(BookmarkKey::new)
-        .transpose()?;
-    let mark_public = sub_m.is_present(MARK_PUBLIC);
-    if !mark_public && bookmark.is_some() {
-        return Err(format_err!(
-            "--mark-public is required if --bookmark is provided"
-        ));
-    }
-
-    Ok(ChangesetArgs {
-        author,
-        message,
-        datetime,
-        bookmark,
-        mark_public,
-    })
-}
 
 pub fn get_catchup_head_delete_commits_cs_args_factory<'a>(
     sub_m: &ArgMatches<'a>,
@@ -306,30 +269,6 @@ pub fn setup_app<'a, 'b>() -> MononokeClapApp<'a, 'b> {
                 .required(true),
         );
 
-    let delete_no_longer_bound_files_from_large_repo = SubCommand::with_name(DELETE_NO_LONGER_BOUND_FILES_FROM_LARGE_REPO)
-        .about("
-        Right after small and large are bound usually a majority of small repo files map to a single folder \
-        in large repo (let's call it DIR). Later these files from small repo might be bound to a another files in large repo \
-        however files in DIR might still exist in large repo. \
-        This command allows us to delete these files from DIR. It does so by finding all files in DIR and its subfolders \
-        that do not remap to a small repo and then deleting them. \
-        Note: if there are files in DIR that were never part of a bind, they will be deleted.
-        ")
-        .arg(
-            Arg::with_name(COMMIT_HASH)
-                .long(COMMIT_HASH)
-                .required(true)
-                .takes_value(true)
-                .help("hg/bonsai changeset id or bookmark"),
-        )
-        .arg(
-            Arg::with_name(PATH_PREFIX)
-                .long(PATH_PREFIX)
-                .required(true)
-                .takes_value(true)
-                .help("path prefix where to search for files to delete from"),
-        );
-
     args::MononokeAppBuilder::new("megarepo preparation tool")
         .with_advanced_args_hidden()
         .with_source_and_target_repos()
@@ -341,7 +280,4 @@ pub fn setup_app<'a, 'b>() -> MononokeClapApp<'a, 'b> {
         ))
         .subcommand(catchup_validate_subcommand)
         .subcommand(sync_commit_and_ancestors)
-        .subcommand(add_light_resulting_commit_args(
-            delete_no_longer_bound_files_from_large_repo,
-        ))
 }

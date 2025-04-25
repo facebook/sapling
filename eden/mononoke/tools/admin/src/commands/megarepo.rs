@@ -9,6 +9,7 @@ mod backfill_noop_mapping;
 mod bonsai_merge;
 pub mod check_prereqs;
 pub(crate) mod common;
+mod delete_no_longer_bound_files_from_large_repo;
 mod diff_mapping_versions;
 mod gradual_delete;
 mod gradual_merge;
@@ -29,6 +30,7 @@ use mononoke_app::MononokeApp;
 use self::backfill_noop_mapping::BackfillNoopMappingArgs;
 use self::bonsai_merge::BonsaiMergeArgs;
 use self::check_prereqs::CheckPrereqsArgs;
+use self::delete_no_longer_bound_files_from_large_repo::DeleteNoLongerBoundFilesFromLargeRepoArgs;
 use self::diff_mapping_versions::DiffMappingVersionsArgs;
 use self::gradual_delete::GradualDeleteArgs;
 use self::gradual_merge::GradualMergeArgs;
@@ -53,6 +55,7 @@ enum MegarepoSubcommand {
     BackfillNoopMapping(BackfillNoopMappingArgs),
     BonsaiMerge(BonsaiMergeArgs),
     CheckPrereqs(CheckPrereqsArgs),
+    DeleteNoLongerBoundFilesFromLargeRepo(DeleteNoLongerBoundFilesFromLargeRepoArgs),
     DiffMappingVersions(DiffMappingVersionsArgs),
     GradualDelete(GradualDeleteArgs),
     GradualMerge(GradualMergeArgs),
@@ -76,6 +79,9 @@ pub async fn run(app: MononokeApp, args: CommandArgs) -> Result<()> {
         }
         MegarepoSubcommand::BonsaiMerge(args) => bonsai_merge::run(&ctx, app, args).await?,
         MegarepoSubcommand::CheckPrereqs(args) => check_prereqs::run(&ctx, app, args).await?,
+        MegarepoSubcommand::DeleteNoLongerBoundFilesFromLargeRepo(args) => {
+            delete_no_longer_bound_files_from_large_repo::run(&ctx, app, args).await?
+        }
         MegarepoSubcommand::DiffMappingVersions(args) => {
             diff_mapping_versions::run(&ctx, app, args).await?
         }
