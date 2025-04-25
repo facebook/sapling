@@ -23,22 +23,18 @@ use mononoke_types::DateTime;
 pub const CATCHUP_DELETE_HEAD: &str = "create-catchup-head-deletion-commits";
 pub const CATCHUP_VALIDATE_COMMAND: &str = "catchup-validate";
 pub const CHANGESET: &str = "commit";
-pub const CHUNKING_HINT_FILE: &str = "chunking-hint-file";
 pub const COMMIT_AUTHOR: &str = "commit-author";
 pub const COMMIT_BOOKMARK: &str = "bookmark";
 pub const COMMIT_DATE_RFC3339: &str = "commit-date-rfc3339";
 pub const COMMIT_HASH: &str = "commit-hash";
-pub const COMMIT_HASH_CORRECT_HISTORY: &str = "commit-hash-correct-history";
 pub const COMMIT_MESSAGE: &str = "commit-message";
 pub const DELETE_NO_LONGER_BOUND_FILES_FROM_LARGE_REPO: &str =
     "delete-no-longer-bound-files-from-large-repo";
 pub const DELETION_CHUNK_SIZE: &str = "deletion-chunk-size";
 pub const DRY_RUN: &str = "dry-run";
-pub const EVEN_CHUNK_SIZE: &str = "even-chunk-size";
 pub const GRADUAL_MERGE_PROGRESS: &str = "gradual-merge-progress";
 pub const GRADUAL_MERGE: &str = "gradual-merge";
 pub const HEAD_BOOKMARK: &str = "head-bookmark";
-pub const HISTORY_FIXUP_DELETE: &str = "history-fixup-deletes";
 pub const LAST_DELETION_COMMIT: &str = "last-deletion-commit";
 pub const LIMIT: &str = "limit";
 pub const MANUAL_COMMIT_SYNC: &str = "manual-commit-sync";
@@ -47,7 +43,6 @@ pub const MARK_PUBLIC: &str = "mark-public";
 pub const PARENTS: &str = "parents";
 pub const PATH_REGEX: &str = "path-regex";
 pub const PATH_PREFIX: &str = "path-prefix";
-pub const PATHS_FILE: &str = "paths-file";
 pub const PRE_DELETION_COMMIT: &str = "pre-deletion-commit";
 pub const SELECT_PARENTS_AUTOMATICALLY: &str = "select-parents-automatically";
 
@@ -86,14 +81,6 @@ pub fn cs_args_from_matches<'a>(sub_m: &ArgMatches<'a>) -> Result<ChangesetArgs,
         datetime,
         bookmark,
         mark_public,
-    })
-}
-
-pub fn get_delete_commits_cs_args_factory<'a>(
-    sub_m: &ArgMatches<'a>,
-) -> Result<Box<dyn ChangesetArgsFactory>, Error> {
-    get_commit_factory(sub_m, |s, num| -> String {
-        format!("[MEGAREPO DELETE] {} ({})", s, num)
     })
 }
 
@@ -165,44 +152,6 @@ fn add_light_resulting_commit_args<'a, 'b>(subcommand: App<'a, 'b>) -> App<'a, '
 }
 
 pub fn setup_app<'a, 'b>() -> MononokeClapApp<'a, 'b> {
-    let history_fixup_delete_subcommand =
-        add_light_resulting_commit_args(SubCommand::with_name(HISTORY_FIXUP_DELETE))
-            .about("create a set of delete commits before the path fixup.")
-            .arg(
-                Arg::with_name(COMMIT_HASH)
-                    .help(
-                        "commit which we want to fixup (the
-                         files specified in paths file will be deleted there)",
-                    )
-                    .takes_value(true)
-                    .required(true),
-            )
-            .arg(
-                Arg::with_name(COMMIT_HASH_CORRECT_HISTORY)
-                    .help(
-                        "commit hash containing the files with correct
-                         history (the files specified in path files will be
-                         preserved there; all the other files will be deleted)",
-                    )
-                    .takes_value(true)
-                    .required(true),
-            )
-            .arg(
-                Arg::with_name(EVEN_CHUNK_SIZE)
-                    .help("chunk size for even chunking")
-                    .long(EVEN_CHUNK_SIZE)
-                    .takes_value(true)
-                    .required(true),
-            )
-            .arg(
-                Arg::with_name(PATHS_FILE)
-                    .long(PATHS_FILE)
-                    .help("file containing paths to fixup separated by newlines")
-                    .takes_value(true)
-                    .required(true)
-                    .multiple(true),
-            );
-
     let gradual_merge_subcommand = SubCommand::with_name(GRADUAL_MERGE)
         .about("Gradually merge a list of deletion commits")
         .arg(
@@ -432,7 +381,6 @@ pub fn setup_app<'a, 'b>() -> MononokeClapApp<'a, 'b> {
         .with_advanced_args_hidden()
         .with_source_and_target_repos()
         .build()
-        .subcommand(history_fixup_delete_subcommand)
         .subcommand(add_light_resulting_commit_args(gradual_merge_subcommand))
         .subcommand(gradual_merge_progress_subcommand)
         .subcommand(manual_commit_sync_subcommand)

@@ -73,7 +73,7 @@ Start mononoke server
   > file_with_incorrect_history2
   > EOF
   $ COMMIT_DATE="1985-09-04T00:00:00.00Z"
-  $ REPOID=$FBS_REPOID megarepo_tool history-fixup-deletes author "history fixup" master_bookmark correct_history_branch --paths-file paths_to_fixup --even-chunk-size 3 --commit-date-rfc3339 "$COMMIT_DATE" 2> /dev/null
+  $ mononoke_admin megarepo history-fixup-deletes --repo-id 0 -a author -m "history fixup" --commit master_bookmark --commit-correct-history correct_history_branch --paths-file paths_to_fixup --even-chunk-size 3 --commit-date-rfc3339 "$COMMIT_DATE" 2> /dev/null
   cee330c0c3ab8ee70923d9b750e8fb56579e3be4db9fb41a54b63578c975bc8a
   f72c4b95a6f2e49b28c830406a0921e00621615b174cefee9f9e31c57346ac5a
   4b4ada0c9b89b1d4679e18ddf2100d725d48721571363bbf527e78ab6dbf161d

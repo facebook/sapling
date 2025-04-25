@@ -11,6 +11,7 @@ pub mod check_prereqs;
 pub(crate) mod common;
 mod diff_mapping_versions;
 mod gradual_delete;
+mod history_fixup_deletes;
 mod mark_not_synced;
 mod merge;
 mod move_commit;
@@ -29,6 +30,7 @@ use self::bonsai_merge::BonsaiMergeArgs;
 use self::check_prereqs::CheckPrereqsArgs;
 use self::diff_mapping_versions::DiffMappingVersionsArgs;
 use self::gradual_delete::GradualDeleteArgs;
+use self::history_fixup_deletes::HistoryFixupDeletesArgs;
 use self::mark_not_synced::MarkNotSyncedArgs;
 use self::merge::MergeArgs;
 use self::move_commit::MoveArgs;
@@ -47,18 +49,19 @@ pub struct CommandArgs {
 #[derive(Subcommand)]
 enum MegarepoSubcommand {
     BackfillNoopMapping(BackfillNoopMappingArgs),
-    /// Manage which repos are pushredirected to the large repo
-    PushRedirection(PushRedirectionArgs),
-    MarkNotSynced(MarkNotSyncedArgs),
-    Merge(MergeArgs),
-    MoveCommit(MoveArgs),
-    RunMover(RunMoverArgs),
-    SyncDiamondMerge(SyncDiamondMergeArgs),
-    GradualDelete(GradualDeleteArgs),
-    PreMergeDelete(PreMergeDeleteArgs),
     BonsaiMerge(BonsaiMergeArgs),
     CheckPrereqs(CheckPrereqsArgs),
     DiffMappingVersions(DiffMappingVersionsArgs),
+    GradualDelete(GradualDeleteArgs),
+    HistoryFixupDeletes(HistoryFixupDeletesArgs),
+    MarkNotSynced(MarkNotSyncedArgs),
+    Merge(MergeArgs),
+    MoveCommit(MoveArgs),
+    PreMergeDelete(PreMergeDeleteArgs),
+    /// Manage which repos are pushredirected to the large repo
+    PushRedirection(PushRedirectionArgs),
+    RunMover(RunMoverArgs),
+    SyncDiamondMerge(SyncDiamondMergeArgs),
 }
 
 pub async fn run(app: MononokeApp, args: CommandArgs) -> Result<()> {
@@ -68,20 +71,23 @@ pub async fn run(app: MononokeApp, args: CommandArgs) -> Result<()> {
         MegarepoSubcommand::BackfillNoopMapping(args) => {
             backfill_noop_mapping::run(&ctx, app, args).await?
         }
-        MegarepoSubcommand::PushRedirection(args) => pushredirection::run(&ctx, app, args).await?,
+        MegarepoSubcommand::BonsaiMerge(args) => bonsai_merge::run(&ctx, app, args).await?,
+        MegarepoSubcommand::CheckPrereqs(args) => check_prereqs::run(&ctx, app, args).await?,
+        MegarepoSubcommand::DiffMappingVersions(args) => {
+            diff_mapping_versions::run(&ctx, app, args).await?
+        }
+        MegarepoSubcommand::GradualDelete(args) => gradual_delete::run(&ctx, app, args).await?,
+        MegarepoSubcommand::HistoryFixupDeletes(args) => {
+            history_fixup_deletes::run(&ctx, app, args).await?
+        }
         MegarepoSubcommand::MarkNotSynced(args) => mark_not_synced::run(&ctx, app, args).await?,
         MegarepoSubcommand::Merge(args) => merge::run(&ctx, app, args).await?,
         MegarepoSubcommand::MoveCommit(args) => move_commit::run(&ctx, app, args).await?,
+        MegarepoSubcommand::PreMergeDelete(args) => pre_merge_delete::run(&ctx, app, args).await?,
+        MegarepoSubcommand::PushRedirection(args) => pushredirection::run(&ctx, app, args).await?,
         MegarepoSubcommand::RunMover(args) => run_mover::run(&ctx, app, args).await?,
         MegarepoSubcommand::SyncDiamondMerge(args) => {
             sync_diamond_merge::run(&ctx, app, args).await?
-        }
-        MegarepoSubcommand::PreMergeDelete(args) => pre_merge_delete::run(&ctx, app, args).await?,
-        MegarepoSubcommand::BonsaiMerge(args) => bonsai_merge::run(&ctx, app, args).await?,
-        MegarepoSubcommand::CheckPrereqs(args) => check_prereqs::run(&ctx, app, args).await?,
-        MegarepoSubcommand::GradualDelete(args) => gradual_delete::run(&ctx, app, args).await?,
-        MegarepoSubcommand::DiffMappingVersions(args) => {
-            diff_mapping_versions::run(&ctx, app, args).await?
         }
     }
 

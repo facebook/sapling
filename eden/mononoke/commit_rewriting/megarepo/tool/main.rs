@@ -12,14 +12,12 @@ use anyhow::Error;
 use anyhow::Result;
 use anyhow::bail;
 use anyhow::format_err;
-use blobstore_factory::MetadataSqlFactory;
 use bonsai_git_mapping::BonsaiGitMapping;
 use bonsai_globalrev_mapping::BonsaiGlobalrevMapping;
 use bonsai_hg_mapping::BonsaiHgMapping;
 use bookmarks::BookmarkKey;
 use bookmarks::BookmarkUpdateLog;
 use bookmarks::Bookmarks;
-use cached_config::ConfigStore;
 use clap::ArgMatches;
 use clientinfo::ClientEntryPoint;
 use clientinfo::ClientInfo;
@@ -44,26 +42,19 @@ use fsnodes::RootFsnodeId;
 use futures::TryStreamExt;
 use futures::future::try_join;
 use futures::future::try_join_all;
-use live_commit_sync_config::CfgrLiveCommitSyncConfig;
 use manifest::Entry;
 use manifest::ManifestOps;
 use manifest::PathOrPrefix;
-use megarepolib::chunking::even_chunker_with_max_size;
 use megarepolib::common::create_and_save_bonsai;
-use megarepolib::history_fixup_delete::HistoryFixupDeletes;
-use megarepolib::history_fixup_delete::create_history_fixup_deletes;
 use metaconfig_types::CommitSyncConfigVersion;
 use metaconfig_types::RepoConfig;
 use mononoke_types::ChangesetId;
 use mononoke_types::FileChange;
-use mononoke_types::NonRootMPath;
-use mononoke_types::RepositoryId;
 use mononoke_types::path::MPath;
 use movers::Mover;
 use mutable_counters::MutableCounters;
 use phases::Phases;
 use pushrebase_mutation_mapping::PushrebaseMutationMapping;
-use pushredirect::SqlPushRedirectionConfigBuilder;
 use regex::Regex;
 use repo_blobstore::RepoBlobstore;
 use repo_blobstore::RepoBlobstoreRef;
@@ -75,23 +66,18 @@ use repo_identity::RepoIdentity;
 use repo_identity::RepoIdentityRef;
 use slog::info;
 use sql_query_config::SqlQueryConfig;
-use tokio::fs::read_to_string;
 
 use crate::cli::CATCHUP_DELETE_HEAD;
 use crate::cli::CATCHUP_VALIDATE_COMMAND;
 use crate::cli::CHANGESET;
-use crate::cli::CHUNKING_HINT_FILE;
 use crate::cli::COMMIT_BOOKMARK;
 use crate::cli::COMMIT_HASH;
-use crate::cli::COMMIT_HASH_CORRECT_HISTORY;
 use crate::cli::DELETE_NO_LONGER_BOUND_FILES_FROM_LARGE_REPO;
 use crate::cli::DELETION_CHUNK_SIZE;
 use crate::cli::DRY_RUN;
-use crate::cli::EVEN_CHUNK_SIZE;
 use crate::cli::GRADUAL_MERGE;
 use crate::cli::GRADUAL_MERGE_PROGRESS;
 use crate::cli::HEAD_BOOKMARK;
-use crate::cli::HISTORY_FIXUP_DELETE;
 use crate::cli::LAST_DELETION_COMMIT;
 use crate::cli::LIMIT;
 use crate::cli::MANUAL_COMMIT_SYNC;
@@ -99,7 +85,6 @@ use crate::cli::MAPPING_VERSION_NAME;
 use crate::cli::PARENTS;
 use crate::cli::PATH_PREFIX;
 use crate::cli::PATH_REGEX;
-use crate::cli::PATHS_FILE;
 use crate::cli::PRE_DELETION_COMMIT;
 use crate::cli::SELECT_PARENTS_AUTOMATICALLY;
 use crate::cli::SYNC_COMMIT_AND_ANCESTORS;
@@ -107,7 +92,6 @@ use crate::cli::TO_MERGE_CS_ID;
 use crate::cli::WAIT_SECS;
 use crate::cli::cs_args_from_matches;
 use crate::cli::get_catchup_head_delete_commits_cs_args_factory;
-use crate::cli::get_delete_commits_cs_args_factory;
 use crate::cli::get_gradual_merge_commits_cs_args_factory;
 use crate::cli::setup_app;
 
@@ -139,84 +123,6 @@ pub struct Repo(
     dyn Filenodes,
     SqlQueryConfig,
 );
-
-async fn run_history_fixup_delete<'a>(
-    ctx: &CoreContext,
-    matches: &MononokeMatches<'a>,
-    sub_m: &ArgMatches<'a>,
-) -> Result<(), Error> {
-    let repo: Repo =
-        args::not_shardmanager_compatible::open_repo(ctx.fb, &ctx.logger().clone(), matches)
-            .await?;
-
-    let delete_cs_args_factory = get_delete_commits_cs_args_factory(sub_m)?;
-
-    let even_chunk_size: usize = sub_m
-        .value_of(EVEN_CHUNK_SIZE)
-        .ok_or_else(|| {
-            format_err!(
-                "either {} or {} is required",
-                CHUNKING_HINT_FILE,
-                EVEN_CHUNK_SIZE
-            )
-        })?
-        .parse::<usize>()?;
-    let chunker = even_chunker_with_max_size(even_chunk_size)?;
-
-    let fixup_bcs_id = {
-        let hash = sub_m.value_of(COMMIT_HASH).unwrap().to_owned();
-        helpers::csid_resolve(ctx, &repo, hash).await?
-    };
-
-    let correct_bcs_id = {
-        let hash = sub_m
-            .value_of(COMMIT_HASH_CORRECT_HISTORY)
-            .unwrap()
-            .to_owned();
-        helpers::csid_resolve(ctx, &repo, hash).await?
-    };
-    let paths_file = sub_m.value_of(PATHS_FILE).unwrap().to_owned();
-    let s = read_to_string(&paths_file).await?;
-    let paths: Vec<NonRootMPath> = s
-        .lines()
-        .map(NonRootMPath::new)
-        .collect::<Result<Vec<NonRootMPath>>>()?;
-    let hfd = create_history_fixup_deletes(
-        ctx,
-        &repo,
-        fixup_bcs_id,
-        chunker,
-        delete_cs_args_factory,
-        correct_bcs_id,
-        paths,
-    )
-    .await?;
-
-    let HistoryFixupDeletes {
-        mut delete_commits_fixup_branch,
-        mut delete_commits_correct_branch,
-    } = hfd;
-
-    info!(
-        ctx.logger(),
-        "Listing deletion commits for fixup branch in top-to-bottom order (first commit is a descendant of the last)"
-    );
-    delete_commits_fixup_branch.reverse();
-    for delete_commit in delete_commits_fixup_branch {
-        println!("{}", delete_commit);
-    }
-
-    info!(
-        ctx.logger(),
-        "Listing deletion commits for branch with correct history in top-to-bottom order (first commit is a descendant of the last)"
-    );
-    delete_commits_correct_branch.reverse();
-    for delete_commit in delete_commits_correct_branch {
-        println!("{}", delete_commit);
-    }
-
-    Ok(())
-}
 
 async fn run_gradual_merge<'a>(
     ctx: &CoreContext,
@@ -587,9 +493,6 @@ fn main(fb: FacebookInit) -> Result<()> {
             (GRADUAL_MERGE, Some(sub_m)) => run_gradual_merge(ctx, &matches, sub_m).await,
             (GRADUAL_MERGE_PROGRESS, Some(sub_m)) => {
                 run_gradual_merge_progress(ctx, &matches, sub_m).await
-            }
-            (HISTORY_FIXUP_DELETE, Some(sub_m)) => {
-                run_history_fixup_delete(ctx, &matches, sub_m).await
             }
             (DELETE_NO_LONGER_BOUND_FILES_FROM_LARGE_REPO, Some(sub_m)) => {
                 run_delete_no_longer_bound_files_from_large_repo(ctx, &matches, sub_m).await

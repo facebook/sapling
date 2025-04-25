@@ -14,12 +14,10 @@ path = "tool/main.rs"
 [dependencies]
 anyhow = "1.0.95"
 blobstore = { version = "0.1.0", path = "../../blobstore" }
-blobstore_factory = { version = "0.1.0", path = "../../blobstore/factory" }
 bonsai_git_mapping = { version = "0.1.0", path = "../../bonsai_git_mapping" }
 bonsai_globalrev_mapping = { version = "0.1.0", path = "../../bonsai_globalrev_mapping" }
 bonsai_hg_mapping = { version = "0.1.0", path = "../../bonsai_hg_mapping" }
 bookmarks = { version = "0.1.0", path = "../../bookmarks" }
-cached_config = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 changesets_creation = { version = "0.1.0", path = "../../changesets/changesets_creation" }
 clap = "2.34.0"
 cmdlib = { version = "0.1.0", path = "../../cmdlib" }
@@ -34,7 +32,6 @@ filestore = { version = "0.1.0", path = "../../filestore" }
 fsnodes = { version = "0.1.0", path = "../../derived_data/fsnodes" }
 futures = { version = "0.3.30", features = ["async-await", "compat"] }
 itertools = "0.14.0"
-live_commit_sync_config = { version = "0.1.0", path = "../live_commit_sync_config" }
 manifest = { version = "0.1.0", path = "../../manifest" }
 maplit = "1.0"
 mercurial_derivation = { version = "0.1.0", path = "../../derived_data/mercurial_derivation" }
@@ -47,7 +44,6 @@ phases = { version = "0.1.0", path = "../../phases" }
 pushrebase = { version = "0.1.0", path = "../../pushrebase" }
 pushrebase_hooks = { version = "0.1.0", path = "../../pushrebase/pushrebase_hooks" }
 pushrebase_mutation_mapping = { version = "0.1.0", path = "../../pushrebase_mutation_mapping" }
-pushredirect = { version = "0.1.0", path = "../../megarepo_api/pushredirect" }
 regex = "1.11.1"
 repo_blobstore = { version = "0.1.0", path = "../../blobrepo/repo_blobstore" }
 repo_bookmark_attrs = { version = "0.1.0", path = "../../repo_attributes/repo_bookmark_attrs" }
