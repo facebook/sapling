@@ -41,7 +41,6 @@ use fbinit::FacebookInit;
 use filenodes::Filenodes;
 use filestore::FilestoreConfig;
 use fsnodes::RootFsnodeId;
-use futures::Stream;
 use futures::TryStreamExt;
 use futures::future::try_join;
 use futures::future::try_join_all;
@@ -56,7 +55,6 @@ use megarepolib::common::create_and_save_bonsai;
 use megarepolib::history_fixup_delete::HistoryFixupDeletes;
 use megarepolib::history_fixup_delete::create_history_fixup_deletes;
 use metaconfig_types::CommitSyncConfigVersion;
-use metaconfig_types::MetadataDatabaseConfig;
 use metaconfig_types::RepoConfig;
 use mononoke_types::ChangesetId;
 use mononoke_types::FileChange;
@@ -78,20 +76,8 @@ use repo_derived_data::RepoDerivedDataRef;
 use repo_identity::RepoIdentity;
 use repo_identity::RepoIdentityRef;
 use slog::info;
-use slog::warn;
-#[cfg(fbcode_build)]
-use sql_ext::facebook::MyAdmin;
-use sql_ext::replication::NoReplicaLagMonitor;
-use sql_ext::replication::ReplicaLagMonitor;
-use sql_ext::replication::WaitForReplicationConfig;
 use sql_query_config::SqlQueryConfig;
-use synced_commit_mapping::EquivalentWorkingCopyEntry;
-use synced_commit_mapping::SyncedCommitMapping;
-use synced_commit_mapping::WorkingCopyEquivalence;
-use tokio::fs::File;
 use tokio::fs::read_to_string;
-use tokio::io::AsyncBufReadExt;
-use tokio::io::BufReader;
 
 use crate::cli::CATCHUP_DELETE_HEAD;
 use crate::cli::CATCHUP_VALIDATE_COMMAND;
@@ -109,13 +95,10 @@ use crate::cli::GRADUAL_MERGE;
 use crate::cli::GRADUAL_MERGE_PROGRESS;
 use crate::cli::HEAD_BOOKMARK;
 use crate::cli::HISTORY_FIXUP_DELETE;
-use crate::cli::INPUT_FILE;
 use crate::cli::LAST_DELETION_COMMIT;
 use crate::cli::LIMIT;
 use crate::cli::MANUAL_COMMIT_SYNC;
 use crate::cli::MAPPING_VERSION_NAME;
-use crate::cli::MARK_NOT_SYNCED_COMMAND;
-use crate::cli::OVERWRITE;
 use crate::cli::PARENTS;
 use crate::cli::PATH_PREFIX;
 use crate::cli::PATH_REGEX;
@@ -445,93 +428,6 @@ async fn run_catchup_validate<'a>(
     Ok(())
 }
 
-async fn run_mark_not_synced<'a>(
-    ctx: &CoreContext,
-    matches: &MononokeMatches<'a>,
-    sub_m: &ArgMatches<'a>,
-) -> Result<(), Error> {
-    let commit_syncer = create_commit_syncer_from_matches::<CrossRepo>(ctx, matches, None).await?;
-
-    let small_repo = commit_syncer.get_small_repo();
-    let large_repo = commit_syncer.get_large_repo();
-    let mapping = commit_syncer.get_mapping();
-
-    let mapping_version_name = sub_m
-        .value_of(MAPPING_VERSION_NAME)
-        .ok_or_else(|| format_err!("{} is supposed to be set", MAPPING_VERSION_NAME))?;
-    let mapping_version_name = CommitSyncConfigVersion(mapping_version_name.to_string());
-    if !commit_syncer.version_exists(&mapping_version_name).await? {
-        return Err(format_err!("{} version is not found", mapping_version_name));
-    }
-
-    let overwrite = sub_m.is_present(OVERWRITE);
-
-    let input_file = sub_m
-        .value_of(INPUT_FILE)
-        .ok_or_else(|| format_err!("input-file is not specified"))?;
-    let inputfile = File::open(&input_file)
-        .await
-        .with_context(|| format!("Failed to open {}", input_file))?;
-    let reader = BufReader::new(inputfile);
-
-    let ctx = &ctx;
-    let mapping_version_name = &mapping_version_name;
-    let s = tokio_stream::wrappers::LinesStream::new(reader.lines())
-        .map_err(Error::from)
-        .map_ok(move |line| async move {
-            let cs_id = helpers::csid_resolve(ctx, large_repo, line).await?;
-
-            let existing_value = mapping
-                .get_equivalent_working_copy(
-                    ctx,
-                    large_repo.repo_identity().id(),
-                    cs_id,
-                    small_repo.repo_identity().id(),
-                )
-                .await?;
-
-            if overwrite {
-                if let Some(WorkingCopyEquivalence::WorkingCopy(_, _)) = existing_value {
-                    return Err(format_err!("unexpected working copy found for {}", cs_id));
-                }
-            } else if existing_value.is_some() {
-                info!(ctx.logger(), "{} already have mapping", cs_id);
-                return Ok(1);
-            }
-
-            let wc_entry = EquivalentWorkingCopyEntry {
-                large_repo_id: large_repo.repo_identity().id(),
-                large_bcs_id: cs_id,
-                small_repo_id: small_repo.repo_identity().id(),
-                small_bcs_id: None,
-                version_name: Some(mapping_version_name.clone()),
-            };
-            let res = if overwrite {
-                mapping
-                    .overwrite_equivalent_working_copy(ctx, wc_entry)
-                    .await?
-            } else {
-                mapping
-                    .insert_equivalent_working_copy(ctx, wc_entry)
-                    .await?
-            };
-            if !res {
-                warn!(
-                    ctx.logger(),
-                    "failed to insert NotSyncedMapping entry for {}", cs_id
-                );
-            }
-
-            // Processed a single entry
-            Ok(1)
-        })
-        .try_buffer_unordered(100);
-
-    process_stream_and_wait_for_replication(ctx, matches, &commit_syncer, s).await?;
-
-    Ok(())
-}
-
 async fn run_diff_mapping_versions<'a>(
     ctx: &CoreContext,
     matches: &MononokeMatches<'a>,
@@ -637,74 +533,6 @@ async fn run_diff_mapping_versions<'a>(
     mapping_removed.sort();
     for (path_from, path_to) in mapping_removed {
         println!("mapping removed: {} => {}", path_from, path_to);
-    }
-
-    Ok(())
-}
-
-async fn process_stream_and_wait_for_replication<'a, R: cross_repo_sync::Repo>(
-    ctx: &CoreContext,
-    matches: &MononokeMatches<'a>,
-    commit_syncer: &CommitSyncer<R>,
-    mut s: impl Stream<Item = Result<u64>> + std::marker::Unpin,
-) -> Result<(), Error> {
-    let config_store = matches.config_store();
-    let small_repo = commit_syncer.get_small_repo();
-    let large_repo = commit_syncer.get_large_repo();
-
-    let (_, small_repo_config) =
-        args::get_config_by_repoid(config_store, matches, small_repo.repo_identity().id())?;
-    let (_, large_repo_config) =
-        args::get_config_by_repoid(config_store, matches, large_repo.repo_identity().id())?;
-    if small_repo_config.storage_config.metadata != large_repo_config.storage_config.metadata {
-        return Err(format_err!(
-            "{} and {} have different db metadata configs: {:?} vs {:?}",
-            small_repo.repo_identity().name(),
-            large_repo.repo_identity().name(),
-            small_repo_config.storage_config.metadata,
-            large_repo_config.storage_config.metadata,
-        ));
-    }
-    let storage_config = small_repo_config.storage_config;
-
-    let db_address = match &storage_config.metadata {
-        MetadataDatabaseConfig::Local(_) | MetadataDatabaseConfig::OssRemote(_) => None,
-        MetadataDatabaseConfig::Remote(remote_config) => {
-            Some(remote_config.primary.db_address.clone())
-        }
-    };
-
-    let wait_config = WaitForReplicationConfig::default().with_logger(ctx.logger());
-    let replica_lag_monitor: Arc<dyn ReplicaLagMonitor> = match db_address {
-        None => Arc::new(NoReplicaLagMonitor()),
-        Some(address) => {
-            #[cfg(fbcode_build)]
-            {
-                let my_admin = MyAdmin::new(ctx.fb).context("building myadmin client")?;
-                Arc::new(my_admin.single_shard_lag_monitor(address))
-            }
-            #[cfg(not(fbcode_build))]
-            {
-                let _address = address;
-                Arc::new(NoReplicaLagMonitor())
-            }
-        }
-    };
-
-    let mut total = 0;
-    let mut batch = 0;
-    while let Some(chunk_size) = s.try_next().await? {
-        total += chunk_size;
-
-        batch += chunk_size;
-        if batch < 100 {
-            continue;
-        }
-        info!(ctx.logger(), "processed {} changesets", total);
-        batch %= 100;
-        replica_lag_monitor
-            .wait_for_replication(&|| wait_config.clone())
-            .await?;
     }
 
     Ok(())
@@ -885,9 +713,6 @@ fn main(fb: FacebookInit) -> Result<()> {
                 run_diff_mapping_versions(ctx, &matches, sub_m).await
             }
             (MANUAL_COMMIT_SYNC, Some(sub_m)) => run_manual_commit_sync(ctx, &matches, sub_m).await,
-            (MARK_NOT_SYNCED_COMMAND, Some(sub_m)) => {
-                run_mark_not_synced(ctx, &matches, sub_m).await
-            }
             (SYNC_COMMIT_AND_ANCESTORS, Some(sub_m)) => {
                 run_sync_commit_and_ancestors(ctx, &matches, sub_m).await
             }

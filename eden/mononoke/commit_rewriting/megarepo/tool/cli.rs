@@ -40,14 +40,11 @@ pub const GRADUAL_MERGE_PROGRESS: &str = "gradual-merge-progress";
 pub const GRADUAL_MERGE: &str = "gradual-merge";
 pub const HEAD_BOOKMARK: &str = "head-bookmark";
 pub const HISTORY_FIXUP_DELETE: &str = "history-fixup-deletes";
-pub const INPUT_FILE: &str = "input-file";
 pub const LAST_DELETION_COMMIT: &str = "last-deletion-commit";
 pub const LIMIT: &str = "limit";
 pub const MANUAL_COMMIT_SYNC: &str = "manual-commit-sync";
 pub const MAPPING_VERSION_NAME: &str = "mapping-version-name";
-pub const MARK_NOT_SYNCED_COMMAND: &str = "mark-not-synced";
 pub const MARK_PUBLIC: &str = "mark-public";
-pub const OVERWRITE: &str = "overwrite";
 pub const PARENTS: &str = "parents";
 pub const PATH_REGEX: &str = "path-regex";
 pub const PATH_PREFIX: &str = "path-prefix";
@@ -391,29 +388,6 @@ pub fn setup_app<'a, 'b>() -> MononokeClapApp<'a, 'b> {
                 .required(true),
         );
 
-    let mark_not_synced_candidate = SubCommand::with_name(MARK_NOT_SYNCED_COMMAND)
-        .about("mark all commits that do not have any mapping as not synced candidate, but leave those that have the mapping alone")
-        .arg(
-            Arg::with_name(MAPPING_VERSION_NAME)
-                .help("a version to use")
-                .takes_value(true)
-                .required(true),
-        )
-        .arg(
-            Arg::with_name(INPUT_FILE)
-                .long(INPUT_FILE)
-                .help("list of large repo commit hashes that should be considered to be marked as not sync candidate")
-                .takes_value(true)
-                .required(true)
-        )
-        .arg(
-            Arg::with_name(OVERWRITE)
-                .long(OVERWRITE)
-                .help("whether to overwrite existing values or not")
-                .takes_value(false)
-                .required(false),
-        );
-
     let sync_commit_and_ancestors = SubCommand::with_name(SYNC_COMMIT_AND_ANCESTORS)
         .about(
             "
@@ -477,7 +451,6 @@ pub fn setup_app<'a, 'b>() -> MononokeClapApp<'a, 'b> {
             catchup_delete_head_subcommand,
         ))
         .subcommand(catchup_validate_subcommand)
-        .subcommand(mark_not_synced_candidate)
         .subcommand(sync_commit_and_ancestors)
         .subcommand(diff_mapping_versions)
         .subcommand(add_light_resulting_commit_args(

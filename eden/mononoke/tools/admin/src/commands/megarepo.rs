@@ -10,6 +10,7 @@ mod bonsai_merge;
 pub mod check_prereqs;
 pub(crate) mod common;
 mod gradual_delete;
+mod mark_not_synced;
 mod merge;
 mod move_commit;
 mod pre_merge_delete;
@@ -26,6 +27,7 @@ use self::backfill_noop_mapping::BackfillNoopMappingArgs;
 use self::bonsai_merge::BonsaiMergeArgs;
 use self::check_prereqs::CheckPrereqsArgs;
 use self::gradual_delete::GradualDeleteArgs;
+use self::mark_not_synced::MarkNotSyncedArgs;
 use self::merge::MergeArgs;
 use self::move_commit::MoveArgs;
 use self::pre_merge_delete::PreMergeDeleteArgs;
@@ -45,6 +47,7 @@ enum MegarepoSubcommand {
     BackfillNoopMapping(BackfillNoopMappingArgs),
     /// Manage which repos are pushredirected to the large repo
     PushRedirection(PushRedirectionArgs),
+    MarkNotSynced(MarkNotSyncedArgs),
     Merge(MergeArgs),
     MoveCommit(MoveArgs),
     RunMover(RunMoverArgs),
@@ -63,6 +66,7 @@ pub async fn run(app: MononokeApp, args: CommandArgs) -> Result<()> {
             backfill_noop_mapping::run(&ctx, app, args).await?
         }
         MegarepoSubcommand::PushRedirection(args) => pushredirection::run(&ctx, app, args).await?,
+        MegarepoSubcommand::MarkNotSynced(args) => mark_not_synced::run(&ctx, app, args).await?,
         MegarepoSubcommand::Merge(args) => merge::run(&ctx, app, args).await?,
         MegarepoSubcommand::MoveCommit(args) => move_commit::run(&ctx, app, args).await?,
         MegarepoSubcommand::RunMover(args) => run_mover::run(&ctx, app, args).await?,
