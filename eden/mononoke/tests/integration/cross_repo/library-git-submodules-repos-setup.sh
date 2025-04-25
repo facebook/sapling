@@ -160,10 +160,11 @@ function merge_repo_a_to_large_repo {
   printf "\nLAST_DELETION_COMMIT: %s\n\n" "$LAST_DELETION_COMMIT"
 
   print_section "Creating gradual merge commit"
-  REPOID="$LARGE_REPO_ID" with_stripped_logs megarepo_tool gradual-merge \
-    test_user "gradual merge" --last-deletion-commit "$LAST_DELETION_COMMIT" \
-     --pre-deletion-commit "$IMPORTED_HEAD"  --bookmark "$MASTER_BOOKMARK_NAME" --limit 10 \
-     --commit-date-rfc3339 "$COMMIT_DATE" 2>&1 | tee "$TESTTMP/gradual_merge.out"
+  with_stripped_logs mononoke_admin megarepo gradual-merge \
+    --repo-id "$LARGE_REPO_ID" -a test_user -m "gradual merge" \
+    --last-deletion-commit -i "$LAST_DELETION_COMMIT" \
+    --pre-deletion-commit -i "$IMPORTED_HEAD"  --target-bookmark "$MASTER_BOOKMARK_NAME" --limit 10 \
+    --commit-date-rfc3339 "$COMMIT_DATE" 2>&1 | tee "$TESTTMP/gradual_merge.out"
 
   print_section "Changing commit sync mapping version"
   with_stripped_logs mononoke_x_repo_sync "$SUBMODULE_REPO_ID" "$LARGE_REPO_ID" \

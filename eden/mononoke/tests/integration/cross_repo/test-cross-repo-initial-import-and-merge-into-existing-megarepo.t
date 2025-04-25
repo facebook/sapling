@@ -134,12 +134,11 @@ Before config change
 -- use gradual merge to merge in just one commit (usually this one does sequence of merges)
   $ PREV_BOOK_VALUE=$(get_bookmark_value_edenapi $SMALL_REPO_NAME $MASTER_BOOKMARK)
   $ COMMIT_DATE="1985-09-04T00:00:00.00Z"
-  $ with_stripped_logs quiet_grep merging -- megarepo_tool gradual-merge \
-  > test_user \
-  > "gradual merge" \
-  > --pre-deletion-commit fa5173cebb32a908f52fd6f01b442a76f013bda5b3d4bbcf3e29af0227bbb74f \
-  > --last-deletion-commit ecc8ec74d00988653ae64ebf206a9ed42898449125b91f59ecd1d8a0a93f4a97 \
-  > --bookmark $MASTER_BOOKMARK \
+  $ with_stripped_logs quiet_grep merging -- mononoke_admin megarepo gradual-merge \
+  > --repo-id $LARGE_REPO_ID -a test_user -m "gradual merge" \
+  > --pre-deletion-commit -i fa5173cebb32a908f52fd6f01b442a76f013bda5b3d4bbcf3e29af0227bbb74f \
+  > --last-deletion-commit -i ecc8ec74d00988653ae64ebf206a9ed42898449125b91f59ecd1d8a0a93f4a97 \
+  > --target-bookmark $MASTER_BOOKMARK \
   > --limit 1 \
   > --commit-date-rfc3339 "$COMMIT_DATE"
   merging 1 commits
@@ -319,12 +318,12 @@ Before config change
 -- use gradual merge to merge in just one commit (usually this one does sequence of merges)
   $ PREV_BOOK_VALUE=$(get_bookmark_value_edenapi $SMALL_REPO_NAME $MASTER_BOOKMARK)
   $ COMMIT_DATE="2006-05-03T22:38:01.00Z"
-  $ with_stripped_logs quiet_grep merging -- megarepo_tool gradual-merge \
-  > test_user \
-  > "another merge" \
-  > --pre-deletion-commit 7b877236dc63b9df21954f78b6c8ce8b69a844e786fe58a2932de04ac685075d \
-  > --last-deletion-commit 0a9797a0fa6b3284b9d73ec43357f06a9b00d6fa402122d1bbfbeac16e3a2c39 \
-  > --bookmark $MASTER_BOOKMARK \
+  $ with_stripped_logs quiet_grep merging -- mononoke_admin megarepo gradual-merge \
+  > --repo-id $LARGE_REPO_ID -a test_user \
+  > -m "another merge" \
+  > --pre-deletion-commit -i 7b877236dc63b9df21954f78b6c8ce8b69a844e786fe58a2932de04ac685075d \
+  > --last-deletion-commit -i 0a9797a0fa6b3284b9d73ec43357f06a9b00d6fa402122d1bbfbeac16e3a2c39 \
+  > --target-bookmark $MASTER_BOOKMARK \
   > --limit 1 \
   > --commit-date-rfc3339 "$COMMIT_DATE"
   merging 1 commits

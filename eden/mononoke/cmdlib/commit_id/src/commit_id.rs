@@ -658,7 +658,7 @@ pub trait CommitIdNames: Clone {
     const NAMES: &'static [(&'static str, &'static str)];
 }
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 /// 0 or more commits IDs, some with names
 ///
 /// To define the names that are used, implement the `CommitIdNames` trait on a dummy struct.

@@ -33,10 +33,8 @@ pub const DELETE_NO_LONGER_BOUND_FILES_FROM_LARGE_REPO: &str =
 pub const DELETION_CHUNK_SIZE: &str = "deletion-chunk-size";
 pub const DRY_RUN: &str = "dry-run";
 pub const GRADUAL_MERGE_PROGRESS: &str = "gradual-merge-progress";
-pub const GRADUAL_MERGE: &str = "gradual-merge";
 pub const HEAD_BOOKMARK: &str = "head-bookmark";
 pub const LAST_DELETION_COMMIT: &str = "last-deletion-commit";
-pub const LIMIT: &str = "limit";
 pub const MANUAL_COMMIT_SYNC: &str = "manual-commit-sync";
 pub const MAPPING_VERSION_NAME: &str = "mapping-version-name";
 pub const MARK_PUBLIC: &str = "mark-public";
@@ -92,14 +90,6 @@ pub fn get_catchup_head_delete_commits_cs_args_factory<'a>(
     })
 }
 
-pub fn get_gradual_merge_commits_cs_args_factory<'a>(
-    sub_m: &ArgMatches<'a>,
-) -> Result<Box<dyn ChangesetArgsFactory>, Error> {
-    get_commit_factory(sub_m, |s, num| -> String {
-        format!("[MEGAREPO GRADUAL MERGE] {} ({})", s, num)
-    })
-}
-
 fn get_commit_factory<'a>(
     sub_m: &ArgMatches<'a>,
     msg_factory: impl Fn(&String, usize) -> String + Send + Sync + 'static,
@@ -152,43 +142,6 @@ fn add_light_resulting_commit_args<'a, 'b>(subcommand: App<'a, 'b>) -> App<'a, '
 }
 
 pub fn setup_app<'a, 'b>() -> MononokeClapApp<'a, 'b> {
-    let gradual_merge_subcommand = SubCommand::with_name(GRADUAL_MERGE)
-        .about("Gradually merge a list of deletion commits")
-        .arg(
-            Arg::with_name(LAST_DELETION_COMMIT)
-                .long(LAST_DELETION_COMMIT)
-                .help("Last deletion commit")
-                .takes_value(true)
-                .required(true),
-        )
-        .arg(
-            Arg::with_name(PRE_DELETION_COMMIT)
-                .long(PRE_DELETION_COMMIT)
-                .help("Commit right before the first deletion commit")
-                .takes_value(true)
-                .required(true),
-        )
-        .arg(
-            Arg::with_name(COMMIT_BOOKMARK)
-                .help("bookmark to point to resulting commits (no sanity checks, will move existing bookmark, be careful)")
-                .long(COMMIT_BOOKMARK)
-                .takes_value(true)
-        )
-        .arg(
-            Arg::with_name(DRY_RUN)
-                .long(DRY_RUN)
-                .help("Dry-run mode - doesn't do a merge, just validates")
-                .takes_value(false)
-                .required(false),
-        )
-        .arg(
-            Arg::with_name(LIMIT)
-                .long(LIMIT)
-                .help("how many commits to merge")
-                .takes_value(true)
-                .required(false),
-        );
-
     let gradual_merge_progress_subcommand = SubCommand::with_name(GRADUAL_MERGE_PROGRESS)
         .about("Display progress of the gradual merge as #MERGED_COMMITS/#TOTAL_COMMITS_TO_MERGE")
         .arg(
@@ -381,7 +334,6 @@ pub fn setup_app<'a, 'b>() -> MononokeClapApp<'a, 'b> {
         .with_advanced_args_hidden()
         .with_source_and_target_repos()
         .build()
-        .subcommand(add_light_resulting_commit_args(gradual_merge_subcommand))
         .subcommand(gradual_merge_progress_subcommand)
         .subcommand(manual_commit_sync_subcommand)
         .subcommand(add_light_resulting_commit_args(

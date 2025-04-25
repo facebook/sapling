@@ -54,9 +54,11 @@ Create small repo commits
   $ quiet with_stripped_logs mononoke_x_repo_sync "$SUBMODULE_REPO_ID"  "$LARGE_REPO_ID" \
   >   initial-import --no-progress-bar -i "$C" --version-name "$LATEST_CONFIG_VERSION_NAME"
 
-  $ REPOID="$LARGE_REPO_ID" quiet with_stripped_logs megarepo_tool gradual-merge \
-  >   test_user "gradual merge" --last-deletion-commit ca175120dfe7fb7fcb0d872e26ce331cb24c7d9ec457d599a40684527c65d63a \
-  >   --pre-deletion-commit ca175120dfe7fb7fcb0d872e26ce331cb24c7d9ec457d599a40684527c65d63a  --bookmark "$MASTER_BOOKMARK_NAME" --limit 10 \
+  $ quiet with_stripped_logs mononoke_admin megarepo gradual-merge \
+  >   --repo-id "$LARGE_REPO_ID" -a test_user -m "gradual merge" \
+  >   --last-deletion-commit -i ca175120dfe7fb7fcb0d872e26ce331cb24c7d9ec457d599a40684527c65d63a \
+  >   --pre-deletion-commit -i ca175120dfe7fb7fcb0d872e26ce331cb24c7d9ec457d599a40684527c65d63a  \
+  >   --target-bookmark "$MASTER_BOOKMARK_NAME" --limit 10 \
   >   --commit-date-rfc3339 "$COMMIT_DATE" 2>&1 | tee "$TESTTMP/gradual_merge.out"
 
   $ clone_and_log_large_repo "ca175120dfe7fb7fcb0d872e26ce331cb24c7d9ec457d599a40684527c65d63a"

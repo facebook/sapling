@@ -74,12 +74,9 @@ use crate::cli::COMMIT_BOOKMARK;
 use crate::cli::COMMIT_HASH;
 use crate::cli::DELETE_NO_LONGER_BOUND_FILES_FROM_LARGE_REPO;
 use crate::cli::DELETION_CHUNK_SIZE;
-use crate::cli::DRY_RUN;
-use crate::cli::GRADUAL_MERGE;
 use crate::cli::GRADUAL_MERGE_PROGRESS;
 use crate::cli::HEAD_BOOKMARK;
 use crate::cli::LAST_DELETION_COMMIT;
-use crate::cli::LIMIT;
 use crate::cli::MANUAL_COMMIT_SYNC;
 use crate::cli::MAPPING_VERSION_NAME;
 use crate::cli::PARENTS;
@@ -92,7 +89,6 @@ use crate::cli::TO_MERGE_CS_ID;
 use crate::cli::WAIT_SECS;
 use crate::cli::cs_args_from_matches;
 use crate::cli::get_catchup_head_delete_commits_cs_args_factory;
-use crate::cli::get_gradual_merge_commits_cs_args_factory;
 use crate::cli::setup_app;
 
 mod catchup;
@@ -123,49 +119,6 @@ pub struct Repo(
     dyn Filenodes,
     SqlQueryConfig,
 );
-
-async fn run_gradual_merge<'a>(
-    ctx: &CoreContext,
-    matches: &MononokeMatches<'a>,
-    sub_m: &ArgMatches<'a>,
-) -> Result<(), Error> {
-    let config_store = matches.config_store();
-    let repo: Repo =
-        args::not_shardmanager_compatible::open_repo(ctx.fb, ctx.logger(), matches).await?;
-
-    let last_deletion_commit = sub_m
-        .value_of(LAST_DELETION_COMMIT)
-        .ok_or_else(|| format_err!("last deletion commit is not specified"))?;
-    let pre_deletion_commit = sub_m
-        .value_of(PRE_DELETION_COMMIT)
-        .ok_or_else(|| format_err!("pre deletion commit is not specified"))?;
-    let bookmark = sub_m
-        .value_of(COMMIT_BOOKMARK)
-        .ok_or_else(|| format_err!("bookmark where to merge is not specified"))?;
-    let dry_run = sub_m.is_present(DRY_RUN);
-
-    let limit = args::get_usize_opt(sub_m, LIMIT);
-    let (_, repo_config) =
-        args::get_config_by_repoid(config_store, matches, repo.repo_identity().id())?;
-    let last_deletion_commit = helpers::csid_resolve(ctx, &repo, last_deletion_commit);
-    let pre_deletion_commit = helpers::csid_resolve(ctx, &repo, pre_deletion_commit);
-
-    let (last_deletion_commit, pre_deletion_commit) =
-        try_join(last_deletion_commit, pre_deletion_commit).await?;
-
-    let merge_changeset_args_factory = get_gradual_merge_commits_cs_args_factory(sub_m)?;
-    let params = gradual_merge::GradualMergeParams {
-        pre_deletion_commit,
-        last_deletion_commit,
-        bookmark_to_merge_into: BookmarkKey::new(bookmark)?,
-        merge_changeset_args_factory,
-        limit,
-        dry_run,
-    };
-    gradual_merge::gradual_merge(ctx, &repo, &params, &repo_config.pushrebase.flags).await?;
-
-    Ok(())
-}
 
 async fn run_gradual_merge_progress<'a>(
     ctx: &CoreContext,
@@ -490,7 +443,6 @@ fn main(fb: FacebookInit) -> Result<()> {
             (CATCHUP_VALIDATE_COMMAND, Some(sub_m)) => {
                 run_catchup_validate(ctx, &matches, sub_m).await
             }
-            (GRADUAL_MERGE, Some(sub_m)) => run_gradual_merge(ctx, &matches, sub_m).await,
             (GRADUAL_MERGE_PROGRESS, Some(sub_m)) => {
                 run_gradual_merge_progress(ctx, &matches, sub_m).await
             }

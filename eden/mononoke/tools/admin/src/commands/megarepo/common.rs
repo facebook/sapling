@@ -55,7 +55,7 @@ pub(crate) struct ResultingChangesetArgs {
     pub mark_public: bool,
 }
 
-#[derive(Debug, clap::Args)]
+#[derive(Debug, Clone, clap::Args)]
 pub(crate) struct LightResultingChangesetArgs {
     #[clap(long, short = 'm')]
     pub commit_message: String,
