@@ -110,14 +110,14 @@
 blobimport
   $ blobimport repo/.hg repo
 
-  $ megarepo_tool create-catchup-head-deletion-commits \
+  $ mononoke_admin megarepo create-catchup-head-deletion-commits \
   > --head-bookmark head_bookmark \
-  > --to-merge-cs-id small_repo_head_bookmark \
+  > --bookmark small_repo_head_bookmark \
   > --path-regex "^smallrepofiles.*" \
   > --deletion-chunk-size 3 \
-  > user "deletion commit" 
-  * using repo "repo" repoid RepositoryId(0) (glob)
-  * changeset resolved as: ChangesetId(Blake2(*)) (glob)
+  > --commit-author "user" \
+  > --repo-name "repo" \
+  > --commit-message "[MEGAREPO CATCHUP DELETE] deletion commit"
   * total files to delete is 6 (glob)
   * created bonsai #0. Deriving hg changeset for it to verify its correctness (glob)
   * derived *, pushrebasing... (glob)
@@ -145,12 +145,12 @@ blobimport
   │  hoistedname: head_bookmark
   │  user:        user
   │  date:        * (glob)
-  │  summary:     [MEGAREPO CATCHUP DELETE] deletion commit (1)
+  │  summary:     [MEGAREPO CATCHUP DELETE] deletion commit
   │
   o  commit:      * (glob)
   │  user:        user
   │  date:        * (glob)
-  │  summary:     [MEGAREPO CATCHUP DELETE] deletion commit (0)
+  │  summary:     [MEGAREPO CATCHUP DELETE] deletion commit
   │
   │ o  commit:      f910c17f2a72
   │ │  bookmark:    remote/small_repo_head_bookmark

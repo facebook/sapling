@@ -48,14 +48,11 @@ use repo_identity::RepoIdentity;
 use slog::info;
 use sql_query_config::SqlQueryConfig;
 
-use crate::cli::CATCHUP_DELETE_HEAD;
 use crate::cli::CATCHUP_VALIDATE_COMMAND;
 use crate::cli::CHANGESET;
 use crate::cli::COMMIT_BOOKMARK;
 use crate::cli::COMMIT_HASH;
-use crate::cli::DELETION_CHUNK_SIZE;
 use crate::cli::GRADUAL_MERGE_PROGRESS;
-use crate::cli::HEAD_BOOKMARK;
 use crate::cli::LAST_DELETION_COMMIT;
 use crate::cli::MANUAL_COMMIT_SYNC;
 use crate::cli::MAPPING_VERSION_NAME;
@@ -65,8 +62,6 @@ use crate::cli::PRE_DELETION_COMMIT;
 use crate::cli::SELECT_PARENTS_AUTOMATICALLY;
 use crate::cli::SYNC_COMMIT_AND_ANCESTORS;
 use crate::cli::TO_MERGE_CS_ID;
-use crate::cli::WAIT_SECS;
-use crate::cli::get_catchup_head_delete_commits_cs_args_factory;
 use crate::cli::setup_app;
 
 mod catchup;
@@ -183,54 +178,6 @@ async fn run_manual_commit_sync<'a>(
     Ok(())
 }
 
-async fn run_catchup_delete_head<'a>(
-    ctx: &CoreContext,
-    matches: &MononokeMatches<'a>,
-    sub_m: &ArgMatches<'a>,
-) -> Result<(), Error> {
-    let repo: Repo =
-        args::not_shardmanager_compatible::open_repo(ctx.fb, &ctx.logger().clone(), matches)
-            .await?;
-
-    let head_bookmark = sub_m
-        .value_of(HEAD_BOOKMARK)
-        .ok_or_else(|| format_err!("{} not set", HEAD_BOOKMARK))?;
-
-    let head_bookmark = BookmarkKey::new(head_bookmark)?;
-
-    let to_merge_cs_id = sub_m
-        .value_of(TO_MERGE_CS_ID)
-        .ok_or_else(|| format_err!("{} not set", TO_MERGE_CS_ID))?;
-    let to_merge_cs_id = helpers::csid_resolve(ctx, &repo, to_merge_cs_id).await?;
-
-    let path_regex = sub_m
-        .value_of(PATH_REGEX)
-        .ok_or_else(|| format_err!("{} not set", PATH_REGEX))?;
-    let path_regex = Regex::new(path_regex)?;
-
-    let deletion_chunk_size = args::get_usize(&sub_m, DELETION_CHUNK_SIZE, 10000);
-
-    let config_store = matches.config_store();
-    let cs_args_factory = get_catchup_head_delete_commits_cs_args_factory(sub_m)?;
-    let (_, repo_config) = args::not_shardmanager_compatible::get_config(config_store, matches)?;
-
-    let wait_secs = args::get_u64(&sub_m, WAIT_SECS, 0);
-
-    catchup::create_deletion_head_commits(
-        ctx,
-        &repo,
-        head_bookmark,
-        to_merge_cs_id,
-        path_regex,
-        deletion_chunk_size,
-        cs_args_factory,
-        &repo_config.pushrebase.flags,
-        wait_secs,
-    )
-    .await?;
-    Ok(())
-}
-
 async fn run_catchup_validate<'a>(
     ctx: &CoreContext,
     matches: &MononokeMatches<'a>,
@@ -323,9 +270,6 @@ fn main(fb: FacebookInit) -> Result<()> {
             }
 
             // All commands relevant to gradual merge
-            (CATCHUP_DELETE_HEAD, Some(sub_m)) => {
-                run_catchup_delete_head(ctx, &matches, sub_m).await
-            }
             (CATCHUP_VALIDATE_COMMAND, Some(sub_m)) => {
                 run_catchup_validate(ctx, &matches, sub_m).await
             }

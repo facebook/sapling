@@ -7,8 +7,10 @@
 
 mod backfill_noop_mapping;
 mod bonsai_merge;
+mod catchup;
 pub mod check_prereqs;
 pub(crate) mod common;
+mod create_catchup_head_deletion_commits;
 mod delete_no_longer_bound_files_from_large_repo;
 mod diff_mapping_versions;
 mod gradual_delete;
@@ -30,6 +32,7 @@ use mononoke_app::MononokeApp;
 use self::backfill_noop_mapping::BackfillNoopMappingArgs;
 use self::bonsai_merge::BonsaiMergeArgs;
 use self::check_prereqs::CheckPrereqsArgs;
+use self::create_catchup_head_deletion_commits::CreateCatchupHeadDeletionCommitsArgs;
 use self::delete_no_longer_bound_files_from_large_repo::DeleteNoLongerBoundFilesFromLargeRepoArgs;
 use self::diff_mapping_versions::DiffMappingVersionsArgs;
 use self::gradual_delete::GradualDeleteArgs;
@@ -61,6 +64,7 @@ enum MegarepoSubcommand {
     GradualMerge(GradualMergeArgs),
     HistoryFixupDeletes(HistoryFixupDeletesArgs),
     MarkNotSynced(MarkNotSyncedArgs),
+    CreateCatchupHeadDeletionCommits(CreateCatchupHeadDeletionCommitsArgs),
     Merge(MergeArgs),
     MoveCommit(MoveArgs),
     PreMergeDelete(PreMergeDeleteArgs),
@@ -96,6 +100,9 @@ pub async fn run(app: MononokeApp, args: CommandArgs) -> Result<()> {
         MegarepoSubcommand::PreMergeDelete(args) => pre_merge_delete::run(&ctx, app, args).await?,
         MegarepoSubcommand::PushRedirection(args) => pushredirection::run(&ctx, app, args).await?,
         MegarepoSubcommand::RunMover(args) => run_mover::run(&ctx, app, args).await?,
+        MegarepoSubcommand::CreateCatchupHeadDeletionCommits(args) => {
+            create_catchup_head_deletion_commits::run(&ctx, app, args).await?
+        }
         MegarepoSubcommand::SyncDiamondMerge(args) => {
             sync_diamond_merge::run(&ctx, app, args).await?
         }
