@@ -44,6 +44,7 @@ pub struct ThinCasClient {
     fetch_concurrency: usize,
     use_streaming_dowloads: bool,
     session_id: String,
+    use_persistent_caches: bool,
 }
 
 const DEFAULT_SCM_CAS_LOGS_DIR: &str = "scm_cas";
@@ -133,6 +134,7 @@ impl ThinCasClient {
                 downtime_on_failure: config
                     .get_or("cas", "downtime-on-failure", || Duration::from_secs(1))?,
             }),
+            use_persistent_caches: config.get_or("cas", "use-persistent-caches", || true)?,
         }))
     }
 
@@ -147,7 +149,7 @@ impl ThinCasClient {
         re_config.enable_scuba_logging = false;
         re_config.enable_cancellation = true;
 
-        let external_config = if let Some(port) = self.port {
+        let mut external_config = if let Some(port) = self.port {
             ExternalCASDaemonCfg {
                 cas_daemon_port: port,
                 cas_daemon_address: ExternalCASDaemonAddress::port(port),
@@ -174,6 +176,10 @@ impl ThinCasClient {
                 ..Default::default()
             }
         };
+
+        if self.use_persistent_caches {
+            external_config.client_label = "pc_enabled".to_string();
+        }
 
         re_config.cas_client_config = CASDaemonClientCfg::external_config(external_config);
 

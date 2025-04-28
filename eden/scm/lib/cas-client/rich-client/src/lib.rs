@@ -80,6 +80,8 @@ pub struct RichCasClient {
     private_cache_path: Option<String>,
     /// The size of the private cache (local cache).
     private_cache_size: ByteCount,
+    /// Whether to use persistent caches or not.
+    use_persistent_caches: bool,
 }
 
 pub fn init() {
@@ -186,6 +188,7 @@ impl RichCasClient {
                 downtime_on_failure: config
                     .get_or("cas", "downtime-on-failure", || Duration::from_secs(1))?,
             }),
+            use_persistent_caches: config.get_or("cas", "use-persistent-caches", || true)?,
         }))
     }
 
@@ -246,6 +249,11 @@ impl RichCasClient {
             embedded_config.cache_config.writable_cache = true;
         }
         embedded_config.rich_client_config.enable_rich_client = true;
+
+        if self.use_persistent_caches {
+            embedded_config.client_label = "pc_enabled".to_string();
+        }
+
         re_config.cas_client_config = CASDaemonClientCfg::embedded_config(embedded_config);
 
         #[cfg(target_os = "linux")]
