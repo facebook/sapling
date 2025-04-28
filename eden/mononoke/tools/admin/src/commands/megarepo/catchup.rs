@@ -111,7 +111,6 @@ pub async fn create_deletion_head_commits<'a>(
     Ok(())
 }
 
-#[allow(dead_code)]
 pub async fn validate(
     ctx: &CoreContext,
     repo: &Repo,

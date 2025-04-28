@@ -8,6 +8,8 @@
 mod backfill_noop_mapping;
 mod bonsai_merge;
 mod catchup;
+mod catchup_validate;
+use self::catchup_validate::CatchupValidateArgs;
 pub mod check_prereqs;
 pub(crate) mod common;
 mod create_catchup_head_deletion_commits;
@@ -72,6 +74,7 @@ enum MegarepoSubcommand {
     PushRedirection(PushRedirectionArgs),
     RunMover(RunMoverArgs),
     SyncDiamondMerge(SyncDiamondMergeArgs),
+    CatchupValidate(CatchupValidateArgs),
 }
 
 pub async fn run(app: MononokeApp, args: CommandArgs) -> Result<()> {
@@ -106,6 +109,7 @@ pub async fn run(app: MononokeApp, args: CommandArgs) -> Result<()> {
         MegarepoSubcommand::SyncDiamondMerge(args) => {
             sync_diamond_merge::run(&ctx, app, args).await?
         }
+        MegarepoSubcommand::CatchupValidate(args) => catchup_validate::run(&ctx, app, args).await?,
     }
 
     Ok(())
