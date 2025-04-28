@@ -5,6 +5,8 @@
  * GNU General Public License version 2.
  */
 
+#![feature(let_chains)]
+
 use std::borrow::Cow;
 use std::collections::HashMap;
 use std::collections::HashSet;
@@ -992,11 +994,18 @@ impl BookmarksCoordinator {
                         .unwrap_or(FALLBACK_WBC_POLL_INTERVAL_MS),
                     );
 
+                    let tailing_enabled = justknobs::eval(
+                        "scm/mononoke:wbc_update_by_scribe_tailer",
+                        None,
+                        Some(&repo_name),
+                    )
+                    .unwrap_or(false);
+
                     // Receiving a sync notification interrupts sleep/listen and forces
                     // waiting for all updaters to finish in the next iteration
                     let notified = notify_sync_start.notified();
 
-                    if let Some(sub) = bookmark_update_subscriber.as_mut() {
+                    if tailing_enabled && let Some(sub) = bookmark_update_subscriber.as_mut() {
                         let receiver_fut = sub.recv();
                         futures::pin_mut!(notified, receiver_fut);
                         match select(notified, receiver_fut).await {
