@@ -7,6 +7,7 @@
 
 use std::collections::HashMap;
 use std::collections::HashSet;
+use std::time::Instant;
 
 use types::PathComponentBuf;
 use types::RepoPath;
@@ -21,6 +22,7 @@ use crate::interesting_metadata;
 #[derive(Default)]
 pub(crate) struct WalkNode {
     pub(crate) walk: Option<Walk>,
+    pub(crate) last_access: Option<Instant>,
     pub(crate) children: HashMap<PathComponentBuf, WalkNode>,
 
     // Child directories that have a walked descendant "advanced" past our current
@@ -104,25 +106,52 @@ impl WalkNode {
         }
     }
 
+    /// Find or create node for `dir`.
+    pub(crate) fn get_or_create_node<'a>(&'a mut self, dir: &'a RepoPath) -> &'a mut Self {
+        match dir.split_first_component() {
+            Some((head, tail)) => {
+                if self.children.contains_key(head) {
+                    self.children
+                        .get_mut(head)
+                        .unwrap()
+                        .get_or_create_node(tail)
+                } else {
+                    self.children
+                        .entry(head.to_owned())
+                        .or_default()
+                        .get_or_create_node(tail)
+                }
+            }
+            None => self,
+        }
+    }
+
     /// Insert a new walk. Any redundant/contained walks will be removed. `walk` will not
     /// be inserted if it is contained by an ancestor walk.
-    pub(crate) fn insert_walk(&mut self, walk_root: &RepoPath, mut walk: Walk, threshold: usize) {
+    pub(crate) fn insert_walk(
+        &mut self,
+        walk_root: &RepoPath,
+        mut walk: Walk,
+        threshold: usize,
+    ) -> &mut Self {
         // If we completely overlap with the walk to be inserted, skip it. This shouldn't
         // happen, but I want to guarantee there are no overlapping walks.
         if self.contains(walk_root, walk.depth) {
-            return;
+            return self;
         }
 
         match walk_root.split_first_component() {
             Some((head, tail)) => {
-                if let Some(child) = self.children.get_mut(head) {
-                    child.insert_walk(tail, walk, threshold);
+                if self.children.contains_key(head) {
+                    self.children
+                        .get_mut(head)
+                        .unwrap()
+                        .insert_walk(tail, walk, threshold)
                 } else {
-                    let mut child = WalkNode::default();
-                    child.insert_walk(tail, walk, threshold);
-                    if self.children.insert(head.to_owned(), child).is_some() {
-                        tracing::warn!(name=%head, "WalkNode entry already existed");
-                    }
+                    self.children
+                        .entry(head.to_owned())
+                        .or_default()
+                        .insert_walk(tail, walk, threshold)
                 }
             }
             None => {
@@ -132,31 +161,10 @@ impl WalkNode {
 
                 if self.advanced_children.len() >= threshold {
                     walk.depth += 1;
-                    self.insert_walk(walk_root, walk, threshold);
-                }
-            }
-        }
-    }
-
-    pub(crate) fn insert_metadata(
-        &mut self,
-        walk_root: &RepoPath,
-        total_files: usize,
-        total_dirs: usize,
-    ) {
-        match walk_root.split_first_component() {
-            Some((head, tail)) => {
-                if let Some(child) = self.children.get_mut(head) {
-                    child.insert_metadata(tail, total_files, total_dirs);
+                    self.insert_walk(walk_root, walk, threshold)
                 } else {
-                    let mut child = WalkNode::default();
-                    child.insert_metadata(tail, total_files, total_dirs);
-                    self.children.insert(head.to_owned(), child);
+                    self
                 }
-            }
-            None => {
-                self.total_files = Some(total_files);
-                self.total_dirs = Some(total_dirs);
             }
         }
     }

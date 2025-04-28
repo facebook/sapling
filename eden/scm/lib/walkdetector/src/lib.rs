@@ -42,7 +42,6 @@ impl Default for Inner {
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub struct Walk {
     depth: usize,
-    last_access: Instant,
 }
 
 // How many children must be accessed in a directory to consider the directory "walked".
@@ -91,9 +90,10 @@ impl Detector {
 
         let (owner, suffix) = inner.node.get_or_create_owning_node(&dir_path);
 
-        if let Some(walk) = owner.walk.as_mut() {
+        owner.last_access = Some(time);
+
+        if owner.walk.is_some() {
             tracing::trace!(walk_root=%dir_path.strip_suffix(suffix, true).unwrap_or_default(), dir=%dir_path, "dir in walk");
-            walk.last_access = time;
             return;
         }
 
@@ -119,7 +119,10 @@ impl Detector {
             Some(num_files),
             Some(num_dirs),
         ) {
-            inner.node.insert_metadata(&path, num_files, num_dirs);
+            let node = inner.node.get_or_create_node(&path);
+            node.last_access = Some(time);
+            node.total_dirs = Some(num_dirs);
+            node.total_files = Some(num_files);
         }
     }
 }
@@ -140,14 +143,10 @@ impl Inner {
         // more work in a single traversal.
 
         tracing::debug!(%dir, depth=walk_depth, "inserting walk");
-        self.node.insert_walk(
-            dir,
-            Walk {
-                depth: walk_depth,
-                last_access: time,
-            },
-            self.min_dir_walk_threshold,
-        );
+        let walk_node =
+            self.node
+                .insert_walk(dir, Walk { depth: walk_depth }, self.min_dir_walk_threshold);
+        walk_node.last_access = Some(time);
 
         // Check if we should immediately promote this walk to parent directory. This is
         // similar to the ancestor advancement below, except that it can insert a new

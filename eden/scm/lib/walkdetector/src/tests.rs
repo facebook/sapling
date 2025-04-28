@@ -157,12 +157,7 @@ fn test_advanced_remainder() {
 fn test_walk_node_insert() {
     let mut node = WalkNode::default();
 
-    let epoch = Instant::now();
-
-    let foo_walk = Walk {
-        depth: 1,
-        last_access: epoch,
-    };
+    let foo_walk = Walk { depth: 1 };
     node.insert_walk(&p("foo"), foo_walk, TEST_MIN_DIR_WALK_THRESHOLD);
     // Can re-insert.
     node.insert_walk(&p("foo"), foo_walk, TEST_MIN_DIR_WALK_THRESHOLD);
@@ -171,28 +166,19 @@ fn test_walk_node_insert() {
     // Don't insert since it is fully contained by "foo" walk.
     node.insert_walk(
         &p("foo/bar"),
-        Walk {
-            depth: 0,
-            last_access: epoch,
-        },
+        Walk { depth: 0 },
         TEST_MIN_DIR_WALK_THRESHOLD,
     );
     assert_eq!(node.list_walks(), vec![(p("foo"), foo_walk)]);
 
-    let baz_walk = Walk {
-        depth: 2,
-        last_access: epoch,
-    };
+    let baz_walk = Walk { depth: 2 };
     node.insert_walk(&p("foo/bar/baz"), baz_walk, TEST_MIN_DIR_WALK_THRESHOLD);
     assert_eq!(
         node.list_walks(),
         vec![(p("foo"), foo_walk), (p("foo/bar/baz"), baz_walk)]
     );
 
-    let root_walk = Walk {
-        depth: 0,
-        last_access: epoch,
-    };
+    let root_walk = Walk { depth: 0 };
     node.insert_walk(&p(""), root_walk, TEST_MIN_DIR_WALK_THRESHOLD);
     assert_eq!(
         node.list_walks(),
@@ -204,10 +190,7 @@ fn test_walk_node_insert() {
     );
 
     // depth=1 doesn't contain any descendant walks - don't clear anything out.
-    let root_walk = Walk {
-        depth: 1,
-        last_access: epoch,
-    };
+    let root_walk = Walk { depth: 1 };
     node.insert_walk(&p(""), root_walk, TEST_MIN_DIR_WALK_THRESHOLD);
     assert_eq!(
         node.list_walks(),
@@ -219,10 +202,7 @@ fn test_walk_node_insert() {
     );
 
     // depth=2 contains the "foo" walk - clear "foo" out.
-    let root_walk = Walk {
-        depth: 2,
-        last_access: epoch,
-    };
+    let root_walk = Walk { depth: 2 };
     node.insert_walk(&p(""), root_walk, TEST_MIN_DIR_WALK_THRESHOLD);
     assert_eq!(
         node.list_walks(),
@@ -230,10 +210,7 @@ fn test_walk_node_insert() {
     );
 
     // Contains the "foo/bar/baz" walk.
-    let root_walk = Walk {
-        depth: 5,
-        last_access: epoch,
-    };
+    let root_walk = Walk { depth: 5 };
     node.insert_walk(&p(""), root_walk, TEST_MIN_DIR_WALK_THRESHOLD);
     assert_eq!(node.list_walks(), vec![(p(""), root_walk),]);
 }
@@ -246,32 +223,21 @@ fn test_walk_node_get() {
     assert!(node.get_walk(&p("foo")).is_none());
     assert!(node.get_walk(&p("foo/bar")).is_none());
 
-    let epoch = Instant::now();
-
-    let mut foo_walk = Walk {
-        depth: 1,
-        last_access: epoch,
-    };
+    let mut foo_walk = Walk { depth: 1 };
     node.insert_walk(&p("foo"), foo_walk, TEST_MIN_DIR_WALK_THRESHOLD);
 
     assert!(node.get_walk(&p("")).is_none());
     assert_eq!(node.get_walk(&p("foo")), Some(&mut foo_walk));
     assert!(node.get_walk(&p("foo/bar")).is_none());
 
-    let mut foo_bar_walk = Walk {
-        depth: 2,
-        last_access: epoch,
-    };
+    let mut foo_bar_walk = Walk { depth: 2 };
     node.insert_walk(&p("foo/bar"), foo_bar_walk, TEST_MIN_DIR_WALK_THRESHOLD);
 
     assert!(node.get_walk(&p("")).is_none());
     assert_eq!(node.get_walk(&p("foo")), Some(&mut foo_walk));
     assert_eq!(node.get_walk(&p("foo/bar")), Some(&mut foo_bar_walk));
 
-    let mut root_walk = Walk {
-        depth: 0,
-        last_access: epoch,
-    };
+    let mut root_walk = Walk { depth: 0 };
     node.insert_walk(&p(""), root_walk, TEST_MIN_DIR_WALK_THRESHOLD);
 
     assert_eq!(node.get_walk(&p("")), Some(&mut root_walk));
@@ -287,12 +253,7 @@ fn test_walk_get_containing_node() {
 
     assert!(node.get_containing_node(&dir).is_none());
 
-    let epoch = Instant::now();
-
-    let mut walk = Walk {
-        depth: 0,
-        last_access: epoch,
-    };
+    let mut walk = Walk { depth: 0 };
     node.insert_walk(&p("foo/bar"), walk, TEST_MIN_DIR_WALK_THRESHOLD);
 
     // Still not containing due to depth.
