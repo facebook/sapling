@@ -46,18 +46,28 @@ impl WalkNode {
     }
 
     /// Find active walk covering directory `dir`, if any.
-    pub(crate) fn get_containing(&mut self, dir: &RepoPath) -> Option<&mut Walk> {
+    /// Also returns the `dir` path suffix remaining after containing node.
+    pub(crate) fn get_containing<'a>(&'a mut self, dir: &'a RepoPath) -> Option<&'a mut Walk> {
+        self.get_containing_node(dir)
+            .and_then(|(n, _)| n.walk.as_mut())
+    }
+
+    /// Find node with active walk covering directory `dir`, if any.
+    pub(crate) fn get_containing_node<'a>(
+        &'a mut self,
+        dir: &'a RepoPath,
+    ) -> Option<(&'a mut Self, &'a RepoPath)> {
         match dir.split_first_component() {
             Some((head, tail)) => {
                 if self.contains(dir, 0) {
-                    self.walk.as_mut()
+                    Some((self, dir))
                 } else {
                     self.children
                         .get_mut(head)
-                        .and_then(|child| child.get_containing(tail))
+                        .and_then(|child| child.get_containing_node(tail))
                 }
             }
-            None => self.walk.as_mut(),
+            None => self.walk.map(|_| (self, dir)),
         }
     }
 

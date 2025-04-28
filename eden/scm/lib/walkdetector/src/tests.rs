@@ -246,6 +246,33 @@ fn test_walk_get_containing() {
 }
 
 #[test]
+fn test_walk_get_containing_node() {
+    let mut node = WalkNode::default();
+
+    let dir = p("foo/bar/baz");
+
+    assert!(node.get_containing_node(&dir).is_none());
+
+    let epoch = Instant::now();
+
+    let mut walk = Walk {
+        depth: 0,
+        last_access: epoch,
+    };
+    node.insert(&p("foo/bar"), walk);
+
+    // Still not containing due to depth.
+    assert!(node.get_containing_node(&dir).is_none());
+
+    walk.depth = 1;
+    node.insert(&p("foo/bar"), walk);
+
+    let (containing_node, suffix) = node.get_containing_node(&dir).unwrap();
+    assert_eq!(containing_node.walk, Some(walk));
+    assert_eq!(suffix, p("baz"));
+}
+
+#[test]
 fn test_dir_hints() -> Result<()> {
     let detector = Detector::new();
     detector.set_min_dir_walk_threshold(2);
