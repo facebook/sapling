@@ -2713,6 +2713,7 @@ def _dograft(ui, to_repo, *revs, from_repo=None, **opts):
                     ctx,
                     ctx.p1(),
                     ["local", "graft"],
+                    from_repo=from_repo,
                 )
             # report any conflicts
             if stats and stats[3] > 0:

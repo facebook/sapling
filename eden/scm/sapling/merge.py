@@ -2686,7 +2686,7 @@ def donativecheckout(repo, p1, p2, force, wc):
     return stats
 
 
-def graft(repo, ctx, pctx, labels, keepparent=False):
+def graft(to_repo, ctx, pctx, labels, keepparent=False, from_repo=None):
     """Do a graft-like merge.
 
     This is a merge where the merge ancestor is chosen such that one
@@ -2695,22 +2695,29 @@ def graft(repo, ctx, pctx, labels, keepparent=False):
     a single parent (if keepparent is False) and tries to duplicate any
     renames/copies appropriately.
 
+    from_repo - the source repo. This may be an external Git repo.
+    to_repo - the destination repo (typically the current working repo).
     ctx - changeset to rebase
     pctx - merge base, usually ctx.p1()
     labels - merge labels eg ['local', 'graft']
     keepparent - keep second parent if any
-
     """
+    if from_repo is None:
+        from_repo = to_repo
+    is_crossrepo = from_repo != to_repo
     # If we're grafting a descendant onto an ancestor, be sure to pass
     # mergeancestor=True to update. This does two things: 1) allows the merge if
     # the destination is the same as the parent of the ctx (so we can use graft
     # to copy commits), and 2) informs update that the incoming changes are
     # newer than the destination so it doesn't prompt about "remote changed foo
     # which local deleted".
-    mergeancestor = repo.changelog.isancestor(repo["."].node(), ctx.node())
+    if is_crossrepo:
+        mergeancestor = False
+    else:
+        mergeancestor = to_repo.changelog.isancestor(to_repo["."].node(), ctx.node())
 
     stats = merge(
-        repo,
+        to_repo,
         ctx,
         force=True,
         ancestor=pctx,
@@ -2724,11 +2731,12 @@ def graft(repo, ctx, pctx, labels, keepparent=False):
         parents.remove(pctx)
         pother = parents[0].node()
 
-    with repo.dirstate.parentchange():
-        repo.setparents(repo["."].node(), pother)
-        repo.dirstate.write(repo.currenttransaction())
-        # fix up dirstate for copies and renames
-        copies.duplicatecopies(repo, repo[None], ctx.rev(), pctx.rev())
+    with to_repo.dirstate.parentchange():
+        to_repo.setparents(to_repo["."].node(), pother)
+        to_repo.dirstate.write(to_repo.currenttransaction())
+        if not is_crossrepo:
+            # fix up dirstate for copies and renames
+            copies.duplicatecopies(to_repo, to_repo[None], ctx.rev(), pctx.rev())
     return stats
 
 
