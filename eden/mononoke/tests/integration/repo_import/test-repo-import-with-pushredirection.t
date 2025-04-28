@@ -93,7 +93,6 @@ Before the change
   > --batch-size 3 \
   > --bookmark-suffix "new_repo" \
   > --disable-phabricator-check \
-  > --disable-hg-sync-check \
   > --dest-bookmark new_bookmark \
   > --git-merge-rev-id master_bookmark \
   > --commit-author user \

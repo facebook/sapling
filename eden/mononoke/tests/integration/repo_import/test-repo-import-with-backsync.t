@@ -38,7 +38,6 @@ Setup configuration
   > --batch-size 3 \
   > --bookmark-suffix "imported" \
   > --disable-phabricator-check \
-  > --disable-hg-sync-check \
   > --dest-bookmark master_bookmark \
   > --git-merge-rev-id master_bookmark \
   > --commit-author user \
@@ -68,6 +67,7 @@ Setup configuration
   o  pre-move commit
   
 
+
 -- Try to import git repo again inside the small repo's directory (it should fail).
   $ cd "$TESTTMP"
   $ REPOID="$REPOIDLARGE"
@@ -78,7 +78,6 @@ Setup configuration
   > --batch-size 3 \
   > --bookmark-suffix "imported2" \
   > --disable-phabricator-check \
-  > --disable-hg-sync-check \
   > --dest-bookmark master_bookmark \
   > --git-merge-rev-id master_bookmark \
   > --commit-author user \
