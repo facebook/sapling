@@ -126,91 +126,21 @@ impl Detector {
 
 impl Inner {
     /// Insert a new Walk rooted at `dir`.
-    fn insert_walk(&mut self, time: Instant, dir: &RepoPath, mut walk_depth: usize) {
+    fn insert_walk(&mut self, time: Instant, dir: &RepoPath, walk_depth: usize) {
         tracing::debug!(%dir, depth=walk_depth, "new walk");
 
-        if let Some((parent_dir, name)) = dir.split_last_component() {
-            let mut merge_with_parent = false;
+        // Check if we should immediately promote this walk to parent directory. This is
+        // similar to the ancestor advancement below, except that it can insert a new
+        // walk.
+        if let Some((parent_dir, parent_depth)) = self.should_merge_into_parent(dir, walk_depth) {
+            self.insert_walk(time, parent_dir, parent_depth);
+            return;
+        }
 
-            if let Some(parent_node) = self.node.get_node(parent_dir) {
-                // If this walk already exists, there is no combining to be done.
-                if parent_node.get_walk(name.as_ref()).is_none() {
-                    // We are adding a new walk - check if it has sibling walks that we
-                    // want to merge into a walk on the parent.
-
-                    let mut sibling_count = 0;
-                    let max_sibling_depth = parent_node.child_walks().fold(0, |max, (_, walk)| {
-                        sibling_count += 1;
-                        max.max(walk.depth)
-                    });
-
-                    merge_with_parent = sibling_count >= (self.min_dir_walk_threshold - 1);
-
-                    if merge_with_parent {
-                        if tracing::enabled!(tracing::Level::DEBUG) {
-                            let siblings_display = parent_node
-                                .child_walks()
-                                .map(|(name, walk)| {
-                                    format!(
-                                        "{}:{}",
-                                        dir.parent().unwrap_or_default().join(name),
-                                        walk.depth
-                                    )
-                                })
-                                .collect::<Vec<_>>();
-                            tracing::debug!(siblings=?siblings_display, "combining with siblings");
-                        }
-
-                        walk_depth = walk_depth.max(max_sibling_depth);
-                        walk_depth = walk_depth.max(parent_node.walk.map_or(0, |w| w.depth));
-                    }
-                }
-
-                if !merge_with_parent
-                    && parent_node
-                        .total_dirs
-                        .is_some_and(|total| total < self.min_dir_walk_threshold)
-                {
-                    merge_with_parent = true;
-                    tracing::debug!("promoting due to few dirs");
-                }
-
-                if merge_with_parent {
-                    self.insert_walk(time, parent_dir, walk_depth + 1);
-                    return;
-                }
-            }
-
-            let mut to_insert = None;
-
-            // Check if we have a containing walk whose depth boundary should be increased.
-            if let Some((ancestor, suffix)) = self.node.get_containing_node(parent_dir) {
-                if let Some(ancestor_dir) = parent_dir.strip_suffix(suffix, true) {
-                    if let Some((head, _)) = suffix.split_first_component() {
-                        // Check if the containing walk's node has N children with descendants that
-                        // have pushed to the next depth. The idea is we want some confidence before
-                        // expanding a huge walk deeper, so we wait until we've seen depth
-                        // advancements that bubble up to at least N different children of the walk
-                        // root.
-                        if ancestor.advanced_children.insert(head.to_owned()) {
-                            if ancestor.advanced_children.len() >= self.min_dir_walk_threshold
-                                || ancestor
-                                    .total_dirs
-                                    .is_some_and(|total| total < self.min_dir_walk_threshold)
-                            {
-                                let depth = ancestor.walk.map_or(0, |w| w.depth) + 1;
-                                tracing::debug!(dir=%ancestor_dir, depth, "expanding walk boundary");
-                                to_insert = Some((time, ancestor_dir, depth));
-                            }
-                        }
-                    }
-                }
-            }
-
-            if let Some((time, dir, depth)) = to_insert {
-                self.insert_walk(time, dir, depth);
-                return;
-            }
+        // Check if we have a containing walk whose depth boundary should be increased.
+        if let Some((ancestor_dir, new_depth)) = self.should_advance_ancestor_walk(dir) {
+            self.insert_walk(time, ancestor_dir, new_depth);
+            return;
         }
 
         tracing::debug!(%dir, depth=walk_depth, "inserting walk");
@@ -221,5 +151,83 @@ impl Inner {
                 last_access: time,
             },
         );
+    }
+
+    /// If a new walk at `dir` should instead be promoted to a walk at dir's parent dir,
+    /// return (parent_dir, new_depth).
+    fn should_merge_into_parent<'a>(
+        &mut self,
+        dir: &'a RepoPath,
+        mut walk_depth: usize,
+    ) -> Option<(&'a RepoPath, usize)> {
+        let (parent_dir, name) = dir.split_last_component()?;
+        let parent_node = self.node.get_node(parent_dir)?;
+
+        // If this walk already exists, there is no combining to be done.
+        if parent_node.get_walk(name.as_ref()).is_some() {
+            return None;
+        }
+
+        // Check if there are sibling walks that we want to merge into a walk
+        // on the parent.
+
+        let mut sibling_count = 0;
+        let max_sibling_depth = parent_node.child_walks().fold(0, |max, (_, walk)| {
+            sibling_count += 1;
+            max.max(walk.depth)
+        });
+
+        if sibling_count >= (self.min_dir_walk_threshold - 1) {
+            if tracing::enabled!(tracing::Level::DEBUG) {
+                let siblings_display = parent_node
+                    .child_walks()
+                    .map(|(name, walk)| format!("{}:{}", parent_dir.join(name), walk.depth))
+                    .collect::<Vec<_>>();
+                tracing::debug!(siblings=?siblings_display, "combining with siblings");
+            }
+
+            walk_depth = walk_depth.max(max_sibling_depth);
+            walk_depth = walk_depth.max(parent_node.walk.map_or(0, |w| w.depth));
+            Some((parent_dir, walk_depth + 1))
+        } else if parent_node
+            .total_dirs
+            .is_some_and(|total| total < self.min_dir_walk_threshold)
+        {
+            tracing::debug!("promoting due to few dirs");
+            Some((parent_dir, walk_depth + 1))
+        } else {
+            None
+        }
+    }
+
+    /// If a walk at `dir` suggests we can advance the depth of a containing walk, return
+    /// (containing_dir, new_depth).
+    fn should_advance_ancestor_walk<'a>(
+        &mut self,
+        dir: &'a RepoPath,
+    ) -> Option<(&'a RepoPath, usize)> {
+        let parent_dir = dir.parent()?;
+        let (ancestor, suffix) = self.node.get_containing_node(parent_dir)?;
+        let ancestor_dir = parent_dir.strip_suffix(suffix, true)?;
+        let (head, _) = suffix.split_first_component()?;
+
+        // Check if the containing walk's node has N children with descendants that
+        // have pushed to the next depth. The idea is we want some confidence before
+        // expanding a huge walk deeper, so we wait until we've seen depth
+        // advancements that bubble up to at least N different children of the walk
+        // root.
+        if ancestor.advanced_children.insert(head.to_owned()) {
+            if ancestor.advanced_children.len() >= self.min_dir_walk_threshold
+                || ancestor
+                    .total_dirs
+                    .is_some_and(|total| total < self.min_dir_walk_threshold)
+            {
+                let depth = ancestor.walk.map_or(0, |w| w.depth) + 1;
+                tracing::debug!(dir=%ancestor_dir, depth, "expanding walk boundary");
+                return Some((ancestor_dir, depth));
+            }
+        }
+
+        None
     }
 }
