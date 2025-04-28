@@ -2581,7 +2581,14 @@ def graft(ui, repo, *revs, **opts):
         return _dograft(ui, repo, *revs, **opts)
 
 
-def _dograft(ui, repo, *revs, **opts):
+def _dograft(ui, to_repo, *revs, from_repo=None, **opts):
+    """copy commits from a different location
+
+    * from_repo: The source repo. This may be an external Git repo (e.g., in subtree graft).
+    * to_repo: The destination repo (typically the current working repo).
+    """
+    if from_repo is None:
+        from_repo = to_repo
     if revs and opts.get("rev"):
         ui.warn(
             _(
@@ -2607,67 +2614,67 @@ def _dograft(ui, repo, *revs, **opts):
 
         # read in unfinished revisions
         try:
-            nodes = repo.localvfs.readutf8("graftstate").splitlines()
-            revs = [repo[node].rev() for node in nodes]
+            nodes = to_repo.localvfs.readutf8("graftstate").splitlines()
+            revs = [from_repo[node].rev() for node in nodes]
         except IOError as inst:
             if inst.errno != errno.ENOENT:
                 raise
-            cmdutil.wrongtooltocontinue(repo, _("graft"))
+            cmdutil.wrongtooltocontinue(to_repo, _("graft"))
 
         if opts.get("continue"):
             cont = True
         if opts.get("abort"):
-            repo.localvfs.tryunlink("graftstate")
-            return update(ui, repo, node=".", clean=True)
+            to_repo.localvfs.tryunlink("graftstate")
+            return update(ui, to_repo, node=".", clean=True)
     else:
-        cmdutil.checkunfinished(repo)
-        cmdutil.bailifchanged(repo)
+        cmdutil.checkunfinished(to_repo)
+        cmdutil.bailifchanged(to_repo)
         if not revs:
             raise error.Abort(_("no revisions specified"))
-        revs = scmutil.revrange(repo, revs)
+        revs = scmutil.revrange(from_repo, revs)
 
     skipped = set()
     # check for merges
-    for rev in repo.revs("%ld and merge()", revs):
+    for rev in from_repo.revs("%ld and merge()", revs):
         ui.warn(_("skipping ungraftable merge revision %d\n") % rev)
         skipped.add(rev)
     # check subtree copy, import and merge commit
     for rev in revs:
         if rev in skipped:
             continue
-        if not subtreeutil.is_commit_graftable(repo, rev):
+        if not subtreeutil.is_commit_graftable(from_repo, rev):
             skipped.add(rev)
     revs = [r for r in revs if r not in skipped]
     if not revs:
         raise error.Abort(_("empty revision set was specified"))
 
-    # Don't check in the --continue case, in effect retaining --force across
-    # --continues. That's because without --force, any revisions we decided to
-    # skip would have been filtered out here, so they wouldn't have made their
-    # way to the graftstate. With --force, any revisions we would have otherwise
-    # skipped would not have been filtered out, and if they hadn't been applied
-    # already, they'd have been in the graftstate.
+    # When continuing an in-progress graft (--continue), or running in forced mode (--force),
+    # or using --from-path (e.g., for subtree grafts), skip the ancestor check.
+    #
+    # Normally, we skip grafting any revisions that are already ancestors of the destination
+    # commit. But in --continue or --force mode, the user has explicitly asked to apply
+    # everything, including commits that may have already been in history.
     if not (cont or opts.get("force") or opts.get("from_path")):
         # check for ancestors of dest branch
-        crev = repo["."].rev()
-        ancestors = repo.changelog.ancestors([crev], inclusive=True)
+        crev = to_repo["."].rev()
+        ancestors = to_repo.changelog.ancestors([crev], inclusive=True)
         # XXX make this lazy in the future
         # don't mutate while iterating, create a copy
         for rev in list(revs):
             if rev in ancestors:
-                ui.warn(_("skipping ancestor revision %s\n") % (repo[rev]))
+                ui.warn(_("skipping ancestor revision %s\n") % (to_repo[rev]))
                 # XXX remove on list is slow
                 revs.remove(rev)
 
         if not revs:
             return -1
 
-    from_paths = scmutil.rootrelpaths(repo["."], opts.get("from_path", []))
-    to_paths = scmutil.rootrelpaths(repo["."], opts.get("to_path", []))
+    from_paths = scmutil.rootrelpaths(from_repo["."], opts.get("from_path", []))
+    to_paths = scmutil.rootrelpaths(to_repo["."], opts.get("to_path", []))
 
-    for pos, ctx in enumerate(repo.set("%ld", revs)):
+    for pos, ctx in enumerate(from_repo.set("%ld", revs)):
         desc = '%s "%s"' % (ctx, ctx.description().split("\n", 1)[0])
-        names = repo.nodebookmarks(ctx.node())
+        names = from_repo.nodebookmarks(ctx.node())
         if names:
             desc += " (%s)" % " ".join(names)
         ui.status(_("grafting %s\n") % desc)
@@ -2695,11 +2702,11 @@ def _dograft(ui, repo, *revs, **opts):
         # we don't merge the first commit when continuing
         if not cont:
             # perform the graft merge with p1(rev) as 'ancestor'
-            with repo.ui.configoverride(
+            with to_repo.ui.configoverride(
                 {("ui", "forcemerge"): opts.get("tool", "")}, "graft"
             ):
                 stats = mergemod.graft(
-                    repo,
+                    to_repo,
                     ctx,
                     ctx.p1(),
                     ["local", "graft"],
@@ -2707,8 +2714,8 @@ def _dograft(ui, repo, *revs, **opts):
             # report any conflicts
             if stats and stats[3] > 0:
                 # write out state for --continue
-                nodelines = [repo[rev].hex() + "\n" for rev in revs[pos:]]
-                repo.localvfs.writeutf8("graftstate", "".join(nodelines))
+                nodelines = [from_repo[rev].hex() + "\n" for rev in revs[pos:]]
+                to_repo.localvfs.writeutf8("graftstate", "".join(nodelines))
                 extra = ""
                 if opts.get("user"):
                     extra += " --user %s" % util.shellquote(opts["user"])
@@ -2723,8 +2730,8 @@ def _dograft(ui, repo, *revs, **opts):
 
         # commit
         editor = cmdutil.getcommiteditor(editform="graft", **opts)
-        message, _is_from_user = _makegraftmessage(repo, ctx, opts)
-        node = repo.commit(
+        message, _is_from_user = _makegraftmessage(to_repo, ctx, opts)
+        node = to_repo.commit(
             text=message, user=user, date=date, extra=extra, editor=editor
         )
         if node is None:
@@ -2735,7 +2742,7 @@ def _dograft(ui, repo, *revs, **opts):
 
     # remove state when we complete successfully
     if not opts.get("dry_run"):
-        repo.localvfs.unlinkpath("graftstate", ignoremissing=True)
+        to_repo.localvfs.unlinkpath("graftstate", ignoremissing=True)
 
     return 0
 

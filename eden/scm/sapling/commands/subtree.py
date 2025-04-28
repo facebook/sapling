@@ -186,8 +186,10 @@ def subtree_graft(ui, repo, **opts):
         if not (from_paths and to_paths):
             raise error.Abort(_("must provide --from-path and --to-path"))
 
+    # XXX construct from_repo from external git url
+    from_repo = None
     with repo.wlock():
-        return _dograft(ui, repo, **opts)
+        return _dograft(ui, repo, from_repo=from_repo, **opts)
 
 
 @subtree_subcmd(
