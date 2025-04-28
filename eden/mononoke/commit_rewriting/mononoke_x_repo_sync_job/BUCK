@@ -41,7 +41,6 @@ rust_binary(
         "//eden/mononoke/megarepo_api:pushredirect",
         "//eden/mononoke/metaconfig:metaconfig_types",
         "//eden/mononoke/mononoke_api:mononoke_api",
-        "//eden/mononoke/mononoke_hg_sync_job:mononoke_hg_sync_job_helper_lib",
         "//eden/mononoke/mononoke_types:mononoke_types",
         "//eden/mononoke/mutable_counters:mutable_counters",
         "//eden/mononoke/repo_attributes/commit_graph/commit_graph:commit_graph",

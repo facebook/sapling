@@ -28,7 +28,6 @@ rust_binary(
         "//eden/mononoke/common/time_measuring:time_measuring",
         "//eden/mononoke/common/topo_sort:topo_sort",
         "//eden/mononoke/mercurial:mercurial_mutation",
-        "//eden/mononoke/mononoke_hg_sync_job:mononoke_hg_sync_job_helper_lib",
         "//eden/mononoke/mononoke_types:mononoke_types",
         "//eden/mononoke/mutable_counters:mutable_counters",
         "//eden/mononoke/phases:phases",
