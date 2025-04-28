@@ -23,6 +23,9 @@ define_flags! {
         /// Read directory info and inject into walk detector. Assumes input paths are relative to CWD.
         inject_dir_hints: bool = false,
 
+        /// Only test directory access. Implies --inject-dir-hints.
+        dirs_only: bool = false,
+
         #[args]
         args: Vec<String>,
     }
@@ -43,7 +46,7 @@ pub fn run(ctx: ReqCtx<DebugWalkDetectorOpts>) -> Result<u8> {
     for line in input.lines() {
         let file_path: RepoPathBuf = line?.try_into()?;
 
-        if ctx.opts.inject_dir_hints {
+        if ctx.opts.inject_dir_hints || ctx.opts.dirs_only {
             for parent in file_path.parents() {
                 let dir = cwd.join(parent.to_path());
                 if !seen_dirs.insert(dir.clone()) {
@@ -64,13 +67,20 @@ pub fn run(ctx: ReqCtx<DebugWalkDetectorOpts>) -> Result<u8> {
             }
         }
 
-        detector.file_read(file_path);
+        if !ctx.opts.dirs_only {
+            detector.file_read(file_path);
+        }
     }
 
     let mut output = ctx.io().output();
-    writeln!(output, "Final walks:")?;
 
+    writeln!(output, "File walks:")?;
     for (root, depth) in detector.file_walks() {
+        writeln!(output, "root: {root}, depth: {depth}")?;
+    }
+
+    writeln!(output, "\nDir walks:")?;
+    for (root, depth) in detector.dir_walks() {
         writeln!(output, "root: {root}, depth: {depth}")?;
     }
 
