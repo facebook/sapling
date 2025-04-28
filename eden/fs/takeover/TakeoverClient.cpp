@@ -102,7 +102,7 @@ TakeoverData takeoverMounts(
         }
       })
       .thenValue([&takeoverData](UnixSocket::Message&& msg) {
-        if (TakeoverData::isChunked(&msg.data)) {
+        if (TakeoverData::isFirstChunk(&msg.data)) {
           // Not Implemented Yet
         } else {
           for (auto& file : msg.files) {

@@ -339,12 +339,6 @@ folly::IOBuf TakeoverData::serializeError(
   return serializeErrorThrift(protocolCapabilities, ew);
 }
 
-bool TakeoverData::isChunked(IOBuf* buf) {
-  // We don't trim the buffer here
-  ProtocolCapabilitiesAndTrimSize result =
-      getProtocolCapabilitiesWithoutTrim(buf);
-  return result.protocolCapabilities & TakeoverCapabilities::CHUNKED_MESSAGE;
-}
 bool TakeoverData::isPing(const IOBuf* buf) {
   if (buf->length() == sizeof(uint32_t)) {
     folly::io::Cursor cursor(buf);
@@ -359,6 +353,23 @@ folly::IOBuf TakeoverData::serializePing() {
   folly::io::Appender app(&buf, 0);
   app.writeBE<uint32_t>(MessageType::PING);
   XLOGF(DBG8, "Serialized ping message");
+  return buf;
+}
+
+bool TakeoverData::isFirstChunk(const IOBuf* buf) {
+  if (buf->length() == sizeof(uint32_t)) {
+    folly::io::Cursor cursor(buf);
+    auto messageType = cursor.readBE<uint32_t>();
+    return messageType == MessageType::FIRST_CHUNK;
+  }
+  return false;
+}
+
+folly::IOBuf TakeoverData::serializeFirstChunk() {
+  IOBuf buf(IOBuf::CREATE, kHeaderLength);
+  folly::io::Appender app(&buf, 0);
+  app.writeBE<uint32_t>(MessageType::FIRST_CHUNK);
+  XLOGF(DBG8, "Serialized first chunk message");
   return buf;
 }
 

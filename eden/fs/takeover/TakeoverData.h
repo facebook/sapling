@@ -306,6 +306,11 @@ class TakeoverData {
   static folly::IOBuf serializePing();
 
   /**
+   * Create a FIRST_CHUNK message to send.
+   */
+  static folly::IOBuf serializeFirstChunk();
+
+  /**
    * Create a LAST_CHUNK message to send.
    */
   static folly::IOBuf serializeLastChunk();
@@ -325,18 +330,19 @@ class TakeoverData {
   static TakeoverData deserialize(UnixSocket::Message& msg);
 
   /**
-   * Check to see if the message is in chunks. This is used to determine if we
-   * should continue to read from the socket or not.
-   */
-  static bool isChunked(folly::IOBuf* buf);
-
-  /**
    * Checks to see if a message is of type PING
    */
   static bool isPing(const folly::IOBuf* buf);
 
   /**
-   * Checks to see if a message is of type LAST_CHUNK
+   * Checks to see if a message is of type FIRST_CHUNK. This is used to
+   * determine if we should continue to read from the socket or not.
+   */
+  static bool isFirstChunk(const folly::IOBuf* buf);
+
+  /**
+   * Checks to see if a message is of type LAST_CHUNK. This is used to
+   * determine if we should stop reading from the socket or not.
    */
   static bool isLastChunk(const folly::IOBuf* buf);
 
@@ -482,6 +488,7 @@ class TakeoverData {
     MOUNTS = 2,
     PING = 3,
     LAST_CHUNK = 4,
+    FIRST_CHUNK = 5,
   };
 
   /**
