@@ -30,7 +30,6 @@ use edenapi_types::cloud::ClientInfo;
 use edenapi_types::cloud::ReferencesData;
 use edenapi_types::cloud::RemoteBookmark;
 use edenapi_types::cloud::SmartlogFilter;
-use mercurial_types::HgChangesetId;
 use mononoke_types::sha1_hash::Sha1;
 
 pub trait FromCommitCloudType<T> {
@@ -154,12 +153,12 @@ impl FromCommitCloudType<WorkspaceRemoteBookmark> for RemoteBookmark {
 impl FromCommitCloudType<CloudSmartlogNode> for SmartlogNode {
     fn from_cc_type(cc: CloudSmartlogNode) -> Result<Self> {
         Ok(SmartlogNode {
-            node: cc.node.into(),
+            node: cc.node.0.into_byte_array().into(),
             phase: cc.phase,
             author: cc.author,
             date: cc.date,
             message: cc.message,
-            parents: map_hgcsids(cc.parents),
+            parents: map_cloud_into_hg_ids(cc.parents),
             bookmarks: cc.bookmarks,
             remote_bookmarks: cc.remote_bookmarks.map(rbs_from_cc_type).transpose()?,
         })
@@ -215,10 +214,6 @@ fn map_hg_into_cloud_ids(hgids: Vec<HgId>) -> Result<Vec<CloudChangesetId>> {
         .into_iter()
         .map(|hg| Ok(CloudChangesetId(Sha1::from_bytes(hg)?)))
         .collect()
-}
-
-fn map_hgcsids(hgids: Vec<HgChangesetId>) -> Vec<HgId> {
-    hgids.into_iter().map(|hg| hg.into()).collect()
 }
 
 fn map_cloud_into_hg_ids(c_ids: Vec<CloudChangesetId>) -> Vec<HgId> {

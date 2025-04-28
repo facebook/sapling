@@ -12,7 +12,7 @@ use commit_cloud_types::SmartlogFlag;
 use commit_cloud_types::SmartlogNode;
 use commit_cloud_types::WorkspaceHead;
 use commit_cloud_types::WorkspaceRemoteBookmark;
-use mercurial_types::HgChangesetId;
+use commit_cloud_types::changeset::CloudChangesetId;
 
 use crate::CommitCloud;
 use crate::Phase;
@@ -31,20 +31,20 @@ pub struct RawSmartlogData {
 impl RawSmartlogData {
     // Takes all the heads and bookmarks and returns them as a single Vec<HgChangesetId>
     // in order to create a  smartlog node list
-    pub fn collapse_into_vec(&self, flags: &[SmartlogFlag]) -> Vec<HgChangesetId> {
+    pub fn collapse_into_vec(&self, flags: &[SmartlogFlag]) -> Vec<CloudChangesetId> {
         let mut heads = self
             .heads
             .clone()
             .into_iter()
-            .map(|head| head.commit.into())
-            .collect::<Vec<HgChangesetId>>();
+            .map(|head| head.commit)
+            .collect::<Vec<CloudChangesetId>>();
 
         if flags.contains(&SmartlogFlag::AddRemoteBookmarks) {
             let mut rbs = self
                 .remote_bookmarks
                 .keys()
                 .cloned()
-                .collect::<Vec<HgChangesetId>>();
+                .collect::<Vec<CloudChangesetId>>();
             heads.append(&mut rbs);
         }
 
@@ -53,7 +53,7 @@ impl RawSmartlogData {
                 .local_bookmarks
                 .keys()
                 .cloned()
-                .collect::<Vec<HgChangesetId>>();
+                .collect::<Vec<CloudChangesetId>>();
             heads.append(&mut lbs);
         }
         heads
@@ -96,8 +96,8 @@ impl CommitCloud {
 
     pub fn make_smartlog_node(
         &self,
-        hgid: &HgChangesetId,
-        parents: &Vec<HgChangesetId>,
+        hgid: &CloudChangesetId,
+        parents: &Vec<CloudChangesetId>,
         node: &ChangesetInfo,
         local_bookmarks: &Option<Vec<String>>,
         remote_bookmarks: &Option<Vec<WorkspaceRemoteBookmark>>,

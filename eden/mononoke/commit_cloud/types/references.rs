@@ -61,7 +61,7 @@ impl WorkspaceLocalBookmark {
     }
 }
 
-pub type LocalBookmarksMap = HashMap<HgChangesetId, Vec<String>>;
+pub type LocalBookmarksMap = HashMap<CloudChangesetId, Vec<String>>;
 
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 pub struct WorkspaceRemoteBookmark {
@@ -104,7 +104,7 @@ impl WorkspaceRemoteBookmark {
     }
 }
 
-pub type RemoteBookmarksMap = HashMap<HgChangesetId, Vec<WorkspaceRemoteBookmark>>;
+pub type RemoteBookmarksMap = HashMap<CloudChangesetId, Vec<WorkspaceRemoteBookmark>>;
 
 pub struct ReferencesData {
     pub version: u64,

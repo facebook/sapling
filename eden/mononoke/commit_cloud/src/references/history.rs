@@ -12,8 +12,8 @@ use commit_cloud_types::RemoteBookmarksMap;
 use commit_cloud_types::SmartlogFlag;
 use commit_cloud_types::WorkspaceHead;
 use commit_cloud_types::WorkspaceLocalBookmark;
+use commit_cloud_types::changeset::CloudChangesetId;
 use commit_cloud_types::references::WorkspaceRemoteBookmark;
-use mercurial_types::HgChangesetId;
 use mononoke_types::Timestamp;
 
 use super::RawReferencesData;
@@ -50,9 +50,7 @@ impl WorkspaceHistory {
     pub fn local_bookmarks_as_map(&self) -> LocalBookmarksMap {
         let mut map = LocalBookmarksMap::new();
         self.local_bookmarks.iter().for_each(|bookmark| {
-            let value = map
-                .entry(bookmark.commit().clone().into())
-                .or_insert(vec![]);
+            let value = map.entry(*bookmark.commit()).or_insert(vec![]);
             value.push(bookmark.name().clone())
         });
         map
@@ -61,9 +59,7 @@ impl WorkspaceHistory {
     pub fn remote_bookmarks_as_map(&self) -> RemoteBookmarksMap {
         let mut map = RemoteBookmarksMap::new();
         self.remote_bookmarks.iter().for_each(|bookmark| {
-            let value = map
-                .entry(HgChangesetId::from(*bookmark.commit()))
-                .or_insert(vec![]);
+            let value = map.entry(*bookmark.commit()).or_insert(vec![]);
             value.push(bookmark.clone())
         });
         map
@@ -76,7 +72,7 @@ impl WorkspaceHistory {
         rbs: &RemoteBookmarksMap,
         lbs: &LocalBookmarksMap,
         flags: &[SmartlogFlag],
-    ) -> Vec<HgChangesetId> {
+    ) -> Vec<CloudChangesetId> {
         let lbs_heads = flags
             .contains(&SmartlogFlag::AddAllBookmarks)
             .then_some(lbs.keys().cloned())
@@ -92,10 +88,10 @@ impl WorkspaceHistory {
         self.heads
             .clone()
             .into_iter()
-            .map(|head| head.commit.into())
+            .map(|head| head.commit)
             .chain(lbs_heads)
             .chain(rbs_heads)
-            .collect::<Vec<HgChangesetId>>()
+            .collect::<Vec<CloudChangesetId>>()
     }
 }
 

@@ -25,12 +25,12 @@ use commit_cloud_types::SmartlogNode;
 use commit_cloud_types::UpdateReferencesParams;
 use commit_cloud_types::WorkspaceData;
 use commit_cloud_types::WorkspaceSharingData;
+use commit_cloud_types::changeset::CloudChangesetId;
 use commit_graph::CommitGraphRef;
 use futures::StreamExt;
 use futures::TryStreamExt;
 use futures::stream;
 use futures_util::future::try_join_all;
-use mercurial_types::HgChangesetId;
 use mononoke_api::ChangesetContext;
 use mononoke_api::ChangesetSpecifier;
 use mononoke_api::MononokeError;
@@ -145,13 +145,18 @@ impl<R: MononokeRepo> HgRepoContext<R> {
 
     async fn form_smartlog_with_info(
         &self,
-        hg_ids: Vec<HgChangesetId>,
+        c_ids: Vec<CloudChangesetId>,
         local_bookmarks: LocalBookmarksMap,
         remote_bookmarks: RemoteBookmarksMap,
         flags: &[SmartlogFlag],
     ) -> anyhow::Result<Vec<SmartlogNode>> {
         let ctx = self.ctx();
         let repo = self.repo_ctx().repo();
+
+        let hg_ids = c_ids
+            .into_iter()
+            .map(|c_id| c_id.into())
+            .collect::<Vec<_>>();
         let cs_ids = self.convert_changeset_ids(hg_ids).await?;
         let public_frontier = repo
             .commit_graph()
@@ -213,12 +218,17 @@ impl<R: MononokeRepo> HgRepoContext<R> {
                             .await;
                         match res {
                             Ok((hg_id, hg_parents)) => {
+                                let c_id = CloudChangesetId::from(hg_id);
+                                let parents_c_ids = hg_parents
+                                    .into_iter()
+                                    .map(CloudChangesetId::from)
+                                    .collect::<Vec<_>>();
                                 self.repo_ctx().repo().commit_cloud().make_smartlog_node(
-                                    &hg_id,
-                                    &hg_parents,
+                                    &c_id,
+                                    &parents_c_ids,
                                     &changeset.changeset_info().await?,
-                                    &lbs.get(&hg_id).cloned(),
-                                    &rbs.get(&hg_id).cloned(),
+                                    &lbs.get(&c_id).cloned(),
+                                    &rbs.get(&c_id).cloned(),
                                     &phase,
                                 )
                             }
