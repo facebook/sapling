@@ -5,6 +5,7 @@
  * GNU General Public License version 2.
  */
 
+use std::collections::HashSet;
 use std::io::BufRead;
 use std::io::BufReader;
 use std::io::Write;
@@ -13,11 +14,15 @@ use std::time::Instant;
 use clidispatch::ReqCtx;
 use cmdutil::Result;
 use cmdutil::define_flags;
+use types::RepoPathBuf;
 
 define_flags! {
     pub struct DebugWalkDetectorOpts {
         /// Dir walk threshold
         dir_walk_threshold: Option<i64>,
+
+        /// Read directory info and inject into walk detector. Assumes input paths are relative to CWD.
+        inject_dir_hints: bool = false,
 
         #[args]
         args: Vec<String>,
@@ -31,10 +36,36 @@ pub fn run(ctx: ReqCtx<DebugWalkDetectorOpts>) -> Result<u8> {
         detector.set_min_dir_walk_threshold(threshold as usize);
     }
 
+    let mut seen_dirs = HashSet::new();
+    let cwd = std::env::current_dir()?;
+
     let input = ctx.io().input();
     let input = BufReader::new(input);
     for line in input.lines() {
-        detector.file_read(Instant::now(), line.unwrap().try_into().unwrap());
+        let file_path: RepoPathBuf = line?.try_into()?;
+
+        if ctx.opts.inject_dir_hints {
+            for parent in file_path.parents() {
+                let dir = cwd.join(parent.to_path());
+                if !seen_dirs.insert(dir.clone()) {
+                    continue;
+                }
+
+                let mut num_files = 0;
+                let mut num_dirs = 0;
+                for entry in std::fs::read_dir(&dir)? {
+                    let file_type = entry?.file_type()?;
+                    if file_type.is_dir() {
+                        num_dirs += 1;
+                    } else if file_type.is_file() || file_type.is_symlink() {
+                        num_files += 1;
+                    }
+                }
+                detector.dir_read(Instant::now(), parent.to_owned(), num_files, num_dirs);
+            }
+        }
+
+        detector.file_read(Instant::now(), file_path);
     }
 
     let mut output = ctx.io().output();
