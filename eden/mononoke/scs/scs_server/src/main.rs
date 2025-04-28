@@ -124,6 +124,11 @@ struct ScsServerArgs {
     /// Sets the threshold for watchdog logging of top-level SCS methods. As a rule of thumb this should the same or lower than thrift_queue_timeout.
     #[clap(long, default_value = "500")]
     watchdog_method_max_poll: u64,
+    /// Load all repos in the tier at startup, even if they are configured to be deep sharded.
+    /// WARNING: Using this in any kind of production service will lead to the loading of potentially tens of thousands of repos,
+    /// considerably slowing down the startup. This flag primarily exists for the purpose of local testing with --filter-repos argument
+    #[clap(long, requires = "filter_repos")]
+    load_all_repos_in_tier: bool,
 }
 
 #[derive(ValueEnum, Clone, Copy, Debug, PartialEq, Eq)]
@@ -248,7 +253,11 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
 
     let scuba_builder = env.scuba_sample_builder.clone();
     // Service name is used for shallow or deep sharding.
-    let service_name = Some(ShardedService::SourceControlService);
+    let service_name = if args.load_all_repos_in_tier {
+        None
+    } else {
+        Some(ShardedService::SourceControlService)
+    };
     let repos_mgr = runtime.block_on(app.open_managed_repos(service_name))?;
     let mononoke = Arc::new(repos_mgr.make_mononoke_api()?);
     let megarepo_api = Arc::new(MegarepoApi::new(&app, mononoke.clone())?);
