@@ -621,40 +621,6 @@ make_rule_compatible_with(
     ],
 )
 
-# This java_binary() exists as a simple way to get //thrift/lib/java/src:thrift
-# and all of its transitive dependencies into one JAR file.
-make_rule_compatible_with(
-    name = "java-thrift-dependencies",
-    # Currently, //thrift/lib/java/src:thrift pulls in org.slf4j,
-    # org.iq80.snappy, and org.apache.commons.lang. org.iq80.snappy is the only
-    # one we keep.
-    blocklist = [
-        # Thrift only needs this dependency if the generated Java code uses
-        # `HashCodeBuilder`, which we do not.
-        "org.apache.commons.lang",
-
-        # The primary consumer of this JAR is Buck. Buck already has its own copy
-        # of slf4j that should be compatible with the one we are pulling in as
-        # part of this build. We decide to strip it rather than jarjar it.
-        "org.slf4j",
-
-        # Buck already bundles this; don't include it.
-        "javax.servlet",
-    ],
-    compatible_with = [
-        "ovr_config//os:linux",
-    ],
-    jar_style = "jar",
-    java_version = "8",
-    rule = java_binary,
-    runtime = "8",
-    deps = [
-        "//fb303/thrift:fb303_core-javadeprecated",
-        "//third-party-java/org.slf4j:slf4j-api",
-        "//thrift/lib/javadeprecated:thrift",
-    ],
-)
-
 # This java_binary() exists as a simple way to get the java-swift thrift runtime
 # and all of its transitive dependencies into one JAR file.
 make_rule_compatible_with(
