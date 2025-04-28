@@ -158,6 +158,13 @@ impl FileStore {
         if let (Some(aux_cache), Some(cas_client)) = (&self.aux_cache, &self.cas_client) {
             let aux_data = aux_cache.get(id)?;
             if let Some(aux_data) = aux_data {
+                if let Some(cas_threshold) = self.cas_cache_threshold_bytes {
+                    if aux_data.total_size > cas_threshold {
+                        // If the file's size exceeds the configured threshold, don't fetch it from CAS.
+                        return Ok(None);
+                    }
+                }
+
                 let (stats, maybe_blob) = cas_client.fetch_single_local_direct(&CasDigest {
                     hash: aux_data.blake3,
                     size: aux_data.total_size,
