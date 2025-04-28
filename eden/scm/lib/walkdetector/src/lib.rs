@@ -137,12 +137,6 @@ impl Inner {
             return;
         }
 
-        // Check if we have a containing walk whose depth boundary should be increased.
-        if let Some((ancestor_dir, new_depth)) = self.should_advance_ancestor_walk(dir) {
-            self.insert_walk(time, ancestor_dir, new_depth);
-            return;
-        }
-
         tracing::debug!(%dir, depth=walk_depth, "inserting walk");
         self.node.insert_walk(
             dir,
@@ -151,6 +145,11 @@ impl Inner {
                 last_access: time,
             },
         );
+
+        // Check if we have a containing walk whose depth boundary should be increased.
+        if let Some((ancestor_dir, new_depth)) = self.should_advance_ancestor_walk(dir) {
+            self.insert_walk(time, ancestor_dir, new_depth);
+        }
     }
 
     /// If a new walk at `dir` should instead be promoted to a walk at dir's parent dir,

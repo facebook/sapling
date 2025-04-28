@@ -119,6 +119,40 @@ fn test_bfs_walk() {
 }
 
 #[test]
+fn test_advanced_remainder() {
+    let detector = Detector::new();
+    detector.set_min_dir_walk_threshold(2);
+
+    let epoch = Instant::now();
+
+    detector.file_read(epoch, p("root/dir1/a"));
+    detector.file_read(epoch, p("root/dir1/b"));
+    detector.file_read(epoch, p("root/dir2/a"));
+    detector.file_read(epoch, p("root/dir2/b"));
+    assert_eq!(detector.walks(), vec![(p("root"), 1)]);
+
+    // This marks "root/dir1" as "advanced" child.
+    detector.file_read(epoch, p("root/dir1/dir1_1/a"));
+    detector.file_read(epoch, p("root/dir1/dir1_1/b"));
+    assert_eq!(
+        detector.walks(),
+        vec![(p("root"), 1), (p("root/dir1/dir1_1"), 0)]
+    );
+
+    // This marks "root/dir2" as "advanced" child, but the
+    // root/dir2/dir2_1 walk extends deeper than the advanced walk -
+    // don't remove it.
+    detector.file_read(epoch, p("root/dir2/dir2_1/dir2_1_1/a"));
+    detector.file_read(epoch, p("root/dir2/dir2_1/dir2_1_1/b"));
+    detector.file_read(epoch, p("root/dir2/dir2_1/dir2_1_2/a"));
+    detector.file_read(epoch, p("root/dir2/dir2_1/dir2_1_2/b"));
+    assert_eq!(
+        detector.walks(),
+        vec![(p("root"), 2), (p("root/dir2/dir2_1"), 1)]
+    );
+}
+
+#[test]
 fn test_walk_node_insert() {
     let mut node = WalkNode::default();
 
