@@ -60,8 +60,6 @@ rust_binary(
         "//eden/mononoke/bonsai_hg_mapping:bonsai_hg_mapping",
         "//eden/mononoke/bookmarks:bookmarks",
         "//eden/mononoke/cmdlib:cmdlib",
-        "//eden/mononoke/cmdlib:cmdlib_x_repo",
-        "//eden/mononoke/commit_rewriting/cross_repo_sync:cross_repo_sync",
         "//eden/mononoke/filenodes:filenodes",
         "//eden/mononoke/filestore:filestore",
         "//eden/mononoke/metaconfig:metaconfig_types",
