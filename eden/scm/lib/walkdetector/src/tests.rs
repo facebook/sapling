@@ -17,10 +17,12 @@ fn p(p: impl AsRef<str>) -> RepoPathBuf {
     p.as_ref().to_string().try_into().unwrap()
 }
 
+const TEST_MIN_DIR_WALK_THRESHOLD: usize = 2;
+
 #[test]
 fn test_walk_big_dir() {
     let detector = Detector::new();
-    detector.set_min_dir_walk_threshold(2);
+    detector.set_min_dir_walk_threshold(TEST_MIN_DIR_WALK_THRESHOLD);
 
     assert_eq!(detector.walks().len(), 0);
 
@@ -45,7 +47,7 @@ fn test_walk_big_dir() {
 #[test]
 fn test_bfs_walk() {
     let detector = Detector::new();
-    detector.set_min_dir_walk_threshold(2);
+    detector.set_min_dir_walk_threshold(TEST_MIN_DIR_WALK_THRESHOLD);
 
     let epoch = Instant::now();
 
@@ -121,7 +123,7 @@ fn test_bfs_walk() {
 #[test]
 fn test_advanced_remainder() {
     let detector = Detector::new();
-    detector.set_min_dir_walk_threshold(2);
+    detector.set_min_dir_walk_threshold(TEST_MIN_DIR_WALK_THRESHOLD);
 
     let epoch = Instant::now();
 
@@ -162,9 +164,9 @@ fn test_walk_node_insert() {
         depth: 1,
         last_access: epoch,
     };
-    node.insert_walk(&p("foo"), foo_walk);
+    node.insert_walk(&p("foo"), foo_walk, TEST_MIN_DIR_WALK_THRESHOLD);
     // Can re-insert.
-    node.insert_walk(&p("foo"), foo_walk);
+    node.insert_walk(&p("foo"), foo_walk, TEST_MIN_DIR_WALK_THRESHOLD);
     assert_eq!(node.list_walks(), vec![(p("foo"), foo_walk)]);
 
     // Don't insert since it is fully contained by "foo" walk.
@@ -174,6 +176,7 @@ fn test_walk_node_insert() {
             depth: 0,
             last_access: epoch,
         },
+        TEST_MIN_DIR_WALK_THRESHOLD,
     );
     assert_eq!(node.list_walks(), vec![(p("foo"), foo_walk)]);
 
@@ -181,7 +184,7 @@ fn test_walk_node_insert() {
         depth: 2,
         last_access: epoch,
     };
-    node.insert_walk(&p("foo/bar/baz"), baz_walk);
+    node.insert_walk(&p("foo/bar/baz"), baz_walk, TEST_MIN_DIR_WALK_THRESHOLD);
     assert_eq!(
         node.list_walks(),
         vec![(p("foo"), foo_walk), (p("foo/bar/baz"), baz_walk)]
@@ -191,7 +194,7 @@ fn test_walk_node_insert() {
         depth: 0,
         last_access: epoch,
     };
-    node.insert_walk(&p(""), root_walk);
+    node.insert_walk(&p(""), root_walk, TEST_MIN_DIR_WALK_THRESHOLD);
     assert_eq!(
         node.list_walks(),
         vec![
@@ -206,7 +209,7 @@ fn test_walk_node_insert() {
         depth: 1,
         last_access: epoch,
     };
-    node.insert_walk(&p(""), root_walk);
+    node.insert_walk(&p(""), root_walk, TEST_MIN_DIR_WALK_THRESHOLD);
     assert_eq!(
         node.list_walks(),
         vec![
@@ -221,7 +224,7 @@ fn test_walk_node_insert() {
         depth: 2,
         last_access: epoch,
     };
-    node.insert_walk(&p(""), root_walk);
+    node.insert_walk(&p(""), root_walk, TEST_MIN_DIR_WALK_THRESHOLD);
     assert_eq!(
         node.list_walks(),
         vec![(p(""), root_walk), (p("foo/bar/baz"), baz_walk)]
@@ -232,7 +235,7 @@ fn test_walk_node_insert() {
         depth: 5,
         last_access: epoch,
     };
-    node.insert_walk(&p(""), root_walk);
+    node.insert_walk(&p(""), root_walk, TEST_MIN_DIR_WALK_THRESHOLD);
     assert_eq!(node.list_walks(), vec![(p(""), root_walk),]);
 }
 
@@ -250,7 +253,7 @@ fn test_walk_node_get() {
         depth: 1,
         last_access: epoch,
     };
-    node.insert_walk(&p("foo"), foo_walk);
+    node.insert_walk(&p("foo"), foo_walk, TEST_MIN_DIR_WALK_THRESHOLD);
 
     assert!(node.get_walk(&p("")).is_none());
     assert_eq!(node.get_walk(&p("foo")), Some(&mut foo_walk));
@@ -260,7 +263,7 @@ fn test_walk_node_get() {
         depth: 2,
         last_access: epoch,
     };
-    node.insert_walk(&p("foo/bar"), foo_bar_walk);
+    node.insert_walk(&p("foo/bar"), foo_bar_walk, TEST_MIN_DIR_WALK_THRESHOLD);
 
     assert!(node.get_walk(&p("")).is_none());
     assert_eq!(node.get_walk(&p("foo")), Some(&mut foo_walk));
@@ -270,7 +273,7 @@ fn test_walk_node_get() {
         depth: 0,
         last_access: epoch,
     };
-    node.insert_walk(&p(""), root_walk);
+    node.insert_walk(&p(""), root_walk, TEST_MIN_DIR_WALK_THRESHOLD);
 
     assert_eq!(node.get_walk(&p("")), Some(&mut root_walk));
     assert_eq!(node.get_walk(&p("foo")), Some(&mut foo_walk));
@@ -291,13 +294,13 @@ fn test_walk_get_containing_node() {
         depth: 0,
         last_access: epoch,
     };
-    node.insert_walk(&p("foo/bar"), walk);
+    node.insert_walk(&p("foo/bar"), walk, TEST_MIN_DIR_WALK_THRESHOLD);
 
     // Still not containing due to depth.
     assert!(node.get_containing_node(&dir).is_none());
 
     walk.depth = 1;
-    node.insert_walk(&p("foo/bar"), walk);
+    node.insert_walk(&p("foo/bar"), walk, TEST_MIN_DIR_WALK_THRESHOLD);
 
     let (containing_node, suffix) = node.get_containing_node(&dir).unwrap();
     assert_eq!(containing_node.walk, Some(walk));
@@ -307,7 +310,7 @@ fn test_walk_get_containing_node() {
 #[test]
 fn test_dir_hints() {
     let detector = Detector::new();
-    detector.set_min_dir_walk_threshold(2);
+    detector.set_min_dir_walk_threshold(TEST_MIN_DIR_WALK_THRESHOLD);
 
     let epoch = Instant::now();
 
@@ -321,4 +324,41 @@ fn test_dir_hints() {
 
     // The walk bubbled straight up to "dir".
     assert_eq!(detector.walks(), vec![(p("dir"), 1)]);
+}
+
+#[test]
+fn test_advance_while_advancing() {
+    // Test that we can "advance" the walk depth twice in a row when
+    // the descendant walks have depths greater than zero.
+    let detector = Detector::new();
+    detector.set_min_dir_walk_threshold(TEST_MIN_DIR_WALK_THRESHOLD);
+
+    let epoch = Instant::now();
+
+    // Walk at root/, depth=1.
+    detector.file_read(epoch, p("root/dir1/a"));
+    detector.file_read(epoch, p("root/dir1/b"));
+    detector.file_read(epoch, p("root/dir2/a"));
+    detector.file_read(epoch, p("root/dir2/b"));
+    assert_eq!(detector.walks(), vec![(p("root"), 1)]);
+
+    // Walk at root/dir1/dir1_1, depth=1.
+    // Adds "dir1" advanced child to root/ walk.
+    detector.file_read(epoch, p("root/dir1/dir1_1/dir1_1_1/a"));
+    detector.file_read(epoch, p("root/dir1/dir1_1/dir1_1_1/b"));
+    detector.file_read(epoch, p("root/dir1/dir1_1/dir1_1_2/a"));
+    detector.file_read(epoch, p("root/dir1/dir1_1/dir1_1_2/b"));
+    assert_eq!(
+        detector.walks(),
+        vec![(p("root"), 1), (p("root/dir1/dir1_1"), 1)]
+    );
+
+    // Walk at root/dir2/dir2_1, depth=1.
+    // Adds "dir2" advanced child to root/ walk.
+    detector.file_read(epoch, p("root/dir2/dir2_1/dir2_1_1/a"));
+    detector.file_read(epoch, p("root/dir2/dir2_1/dir2_1_1/b"));
+    detector.file_read(epoch, p("root/dir2/dir2_1/dir2_1_2/a"));
+    detector.file_read(epoch, p("root/dir2/dir2_1/dir2_1_2/b"));
+
+    assert_eq!(detector.walks(), vec![(p("root"), 3)]);
 }

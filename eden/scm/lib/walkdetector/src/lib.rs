@@ -127,6 +127,9 @@ impl Detector {
 impl Inner {
     /// Insert a new Walk rooted at `dir`.
     fn insert_walk(&mut self, time: Instant, dir: &RepoPath, walk_depth: usize) {
+        // TODO: consider moving "should merge" logic into `WalkNode::insert_walk` to do
+        // more work in a single traversal.
+
         tracing::debug!(%dir, depth=walk_depth, "new walk");
 
         // Check if we should immediately promote this walk to parent directory. This is
@@ -144,6 +147,7 @@ impl Inner {
                 depth: walk_depth,
                 last_access: time,
             },
+            self.min_dir_walk_threshold,
         );
 
         // Check if we have a containing walk whose depth boundary should be increased.

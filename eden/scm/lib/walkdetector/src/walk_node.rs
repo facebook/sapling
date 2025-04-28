@@ -105,7 +105,7 @@ impl WalkNode {
 
     /// Insert a new walk. Any redundant/contained walks will be removed. `walk` will not
     /// be inserted if it is contained by an ancestor walk.
-    pub(crate) fn insert_walk(&mut self, walk_root: &RepoPath, walk: Walk) {
+    pub(crate) fn insert_walk(&mut self, walk_root: &RepoPath, mut walk: Walk, threshold: usize) {
         // If we completely overlap with the walk to be inserted, skip it. This shouldn't
         // happen, but I want to guarantee there are no overlapping walks.
         if self.contains(walk_root, walk.depth) {
@@ -115,10 +115,10 @@ impl WalkNode {
         match walk_root.split_first_component() {
             Some((head, tail)) => {
                 if let Some(child) = self.children.get_mut(head) {
-                    child.insert_walk(tail, walk);
+                    child.insert_walk(tail, walk, threshold);
                 } else {
                     let mut child = WalkNode::default();
-                    child.insert_walk(tail, walk);
+                    child.insert_walk(tail, walk, threshold);
                     if self.children.insert(head.to_owned(), child).is_some() {
                         tracing::warn!(name=%head, "WalkNode entry already existed");
                     }
@@ -128,6 +128,11 @@ impl WalkNode {
                 self.walk = Some(walk);
                 self.advanced_children.clear();
                 self.remove_contained(walk.depth);
+
+                if self.advanced_children.len() >= threshold {
+                    walk.depth += 1;
+                    self.insert_walk(walk_root, walk, threshold);
+                }
             }
         }
     }
@@ -157,17 +162,41 @@ impl WalkNode {
 
     /// Recursively remove all walks contained within a walk of depth `depth`.
     fn remove_contained(&mut self, depth: usize) {
-        self.children.retain(|_name, child| {
-            if depth > 0 {
-                child.remove_contained(depth - 1);
-            }
+        // Returns whether a walk exists at depth+1.
+        fn inner(node: &mut WalkNode, depth: usize, top: bool) -> bool {
+            let mut any_child_advanced = false;
 
-            if child.walk.as_ref().is_some_and(|w| w.depth < depth) {
-                child.walk = None;
-            }
+            node.children.retain(|name, child| {
+                let mut child_advanced = false;
 
-            child.walk.is_some() || !child.children.is_empty()
-        });
+                if child.walk.as_ref().is_some_and(|w| w.depth >= depth) {
+                    child_advanced = true;
+                } else {
+                    child.walk = None;
+                }
+
+                if depth > 0 {
+                    if inner(child, depth - 1, false) {
+                        child_advanced = true;
+                    }
+                }
+
+                if top && child_advanced {
+                    // Record if this top-level child has advanced children, meaning a
+                    // descendant walk that has pushed to depth+1.
+                    tracing::trace!(%name, "inserting advanced child during removal");
+                    node.advanced_children.insert(name.to_owned());
+                }
+
+                any_child_advanced = any_child_advanced || child_advanced;
+
+                child.walk.is_some() || !child.children.is_empty()
+            });
+
+            any_child_advanced
+        }
+
+        inner(self, depth, true);
     }
 
     /// Reports whether self has a walk and the walk fully contains a descendant walk
