@@ -6,22 +6,15 @@
  */
 
 use clap::Arg;
-use clap::ArgGroup;
 use clap::SubCommand;
 use cmdlib::args;
 use cmdlib::args::MononokeClapApp;
 
-pub const CHANGESET: &str = "commit";
 pub const COMMIT_BOOKMARK: &str = "bookmark";
 pub const COMMIT_HASH: &str = "commit-hash";
-pub const DRY_RUN: &str = "dry-run";
 pub const GRADUAL_MERGE_PROGRESS: &str = "gradual-merge-progress";
 pub const LAST_DELETION_COMMIT: &str = "last-deletion-commit";
-pub const MANUAL_COMMIT_SYNC: &str = "manual-commit-sync";
-pub const MAPPING_VERSION_NAME: &str = "mapping-version-name";
-pub const PARENTS: &str = "parents";
 pub const PRE_DELETION_COMMIT: &str = "pre-deletion-commit";
-pub const SELECT_PARENTS_AUTOMATICALLY: &str = "select-parents-automatically";
 
 pub const SYNC_COMMIT_AND_ANCESTORS: &str = "sync-commit-and-ancestors";
 
@@ -49,49 +42,6 @@ pub fn setup_app<'a, 'b>() -> MononokeClapApp<'a, 'b> {
                 .takes_value(true)
         );
 
-    let manual_commit_sync_subcommand = SubCommand::with_name(MANUAL_COMMIT_SYNC)
-        .about("Manually sync a commit from source repo to a target repo. It's usually used right after a big merge")
-        .arg(
-            Arg::with_name(CHANGESET)
-                .long(CHANGESET)
-                .help("Source repo changeset that will synced to target repo")
-                .takes_value(true)
-                .required(true),
-        )
-        .arg(
-            Arg::with_name(DRY_RUN)
-                .long(DRY_RUN)
-                .help("Dry-run mode - doesn't do a merge, just validates")
-                .takes_value(false)
-                .required(false),
-        )
-        .arg(
-            Arg::with_name(PARENTS)
-                .long(PARENTS)
-                .help("Parents of the new commit")
-                .takes_value(true)
-                .multiple(true)
-        )
-        .arg(
-            Arg::with_name(SELECT_PARENTS_AUTOMATICALLY)
-                .long(SELECT_PARENTS_AUTOMATICALLY)
-                .help("Finds parents automatically: takes parents in the source repo and finds equivalent commits in target repo. \
-                If parents are not remapped yet then this command will fail")
-                .takes_value(false)
-        )
-        .arg(
-            Arg::with_name(MAPPING_VERSION_NAME)
-                .long(MAPPING_VERSION_NAME)
-                .help("name of the noop mapping that will be inserted")
-                .takes_value(true)
-                .required(true),
-        )
-        .group(
-            ArgGroup::with_name("parents_group")
-                .args(&[SELECT_PARENTS_AUTOMATICALLY, PARENTS])
-                .required(true)
-        );
-
     let sync_commit_and_ancestors = SubCommand::with_name(SYNC_COMMIT_AND_ANCESTORS)
         .about(
             "
@@ -114,6 +64,5 @@ pub fn setup_app<'a, 'b>() -> MononokeClapApp<'a, 'b> {
         .with_source_and_target_repos()
         .build()
         .subcommand(gradual_merge_progress_subcommand)
-        .subcommand(manual_commit_sync_subcommand)
         .subcommand(sync_commit_and_ancestors)
 }

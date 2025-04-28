@@ -8,15 +8,23 @@
 use std::collections::HashMap;
 
 use anyhow::Error;
+use anyhow::Result;
 use anyhow::anyhow;
 use blobstore::Loadable;
+use cmdlib_cross_repo::create_single_direction_commit_syncer;
+use commit_id::parse_commit_id;
 use context::CoreContext;
 use cross_repo_sync::CommitSyncContext;
 use cross_repo_sync::CommitSyncer;
 use cross_repo_sync::Repo as CrossRepo;
 use cross_repo_sync::unsafe_always_rewrite_sync_commit;
+use futures::future::try_join_all;
 use metaconfig_types::CommitSyncConfigVersion;
+use mononoke_api::Repo;
+use mononoke_app::MononokeApp;
+use mononoke_app::args::SourceAndTargetRepoArgs;
 use mononoke_types::ChangesetId;
+use slog::info;
 
 /// This operation is useful immediately after a small repo is merged into a large repo.
 /// See example below
@@ -62,7 +70,7 @@ pub async fn manual_commit_sync<R: CrossRepo>(
         unsafe_always_rewrite_sync_commit(
             ctx,
             source_cs_id,
-            &commit_syncer,
+            commit_syncer,
             Some(remapped_parents),
             &mapping_version,
             CommitSyncContext::ManualCommitSync,
@@ -72,13 +80,88 @@ pub async fn manual_commit_sync<R: CrossRepo>(
         unsafe_always_rewrite_sync_commit(
             ctx,
             source_cs_id,
-            &commit_syncer,
+            commit_syncer,
             None,
             &mapping_version,
             CommitSyncContext::ManualCommitSync,
         )
         .await
     }
+}
+
+/// Manually sync a commit from source repo to a target repo. It's usually used right after a big merge
+#[derive(Debug, clap::Args)]
+pub struct ManualCommitSyncArgs {
+    #[clap(flatten)]
+    repo_args: SourceAndTargetRepoArgs,
+
+    /// Source repo changeset that will synced to target repo
+    #[clap(long)]
+    commit: String,
+
+    /// Parents of the new commit
+    #[clap(long, conflicts_with = "select_parents_automatically")]
+    parents: Vec<String>,
+
+    /// Finds parents automatically: takes parents in the source repo and finds equivalent commits in target repo.
+    /// If parents are not remapped yet then this command will fail
+    #[clap(long, conflicts_with = "parents")]
+    select_parents_automatically: bool,
+
+    /// Dry-run mode - doesn't do a merge, just validates
+    #[clap(long)]
+    dry_run: bool,
+
+    /// Name of the noop mapping that will be inserted
+    #[clap(long)]
+    mapping_version_name: String,
+}
+
+pub async fn run(ctx: &CoreContext, app: MononokeApp, args: ManualCommitSyncArgs) -> Result<()> {
+    let source_repo: Repo = app.open_repo(&args.repo_args.source_repo).await?;
+    info!(
+        ctx.logger(),
+        "using repo \"{}\" repoid {:?}",
+        source_repo.repo_identity().name(),
+        source_repo.repo_identity().id()
+    );
+
+    let target_repo: Repo = app.open_repo(&args.repo_args.target_repo).await?;
+    info!(
+        ctx.logger(),
+        "using repo \"{}\" repoid {:?}",
+        target_repo.repo_identity().name(),
+        target_repo.repo_identity().id()
+    );
+
+    let commit_syncer =
+        create_single_direction_commit_syncer(ctx, &app, source_repo.clone(), target_repo.clone())
+            .await?;
+    let target_repo_parents = if args.select_parents_automatically {
+        None
+    } else {
+        Some(
+            try_join_all(args.parents.iter().map(async |p| {
+                let id: ChangesetId = parse_commit_id(ctx, &target_repo, p).await?;
+                info!(ctx.logger(), "changeset resolved as: {:?}", id);
+                Result::<_>::Ok(id)
+            }))
+            .await?,
+        )
+    };
+    let source_cs = parse_commit_id(ctx, &source_repo, &args.commit).await?;
+    info!(ctx.logger(), "changeset resolved as: {:?}", source_cs);
+
+    let target_cs_id = manual_commit_sync(
+        ctx,
+        &commit_syncer,
+        source_cs,
+        target_repo_parents,
+        CommitSyncConfigVersion(args.mapping_version_name),
+    )
+    .await?;
+    info!(ctx.logger(), "target cs id is {:?}", target_cs_id);
+    Ok(())
 }
 
 #[cfg(test)]

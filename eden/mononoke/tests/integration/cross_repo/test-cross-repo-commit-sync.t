@@ -166,7 +166,7 @@ only the syncer can create the commit or they have to be imported some other way
   [1]
 
 but let's  say we synced that commit manually
-  $ megarepo_tool_multirepo --source-repo-id 2 --target-repo-id 0 manual-commit-sync --commit $FORGOTTEN --parents $FORGOTTEN_PARENT --mapping-version-name TEST_VERSION_NAME
+  $ mononoke_admin megarepo manual-commit-sync --source-repo-id 2 --target-repo-id 0 --commit $FORGOTTEN --parents $FORGOTTEN_PARENT --mapping-version-name TEST_VERSION_NAME
   * using repo "ovr-mon" repoid RepositoryId(2) (glob)
   * using repo "meg-mon" repoid RepositoryId(0) (glob)
   * changeset resolved as: ChangesetId(Blake2(a30a90f6e3e887c6ee6451dc4c7f9cd352c20495407eb912f9017641e300ca9a)) (glob)

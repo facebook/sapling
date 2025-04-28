@@ -33,8 +33,6 @@ use fbinit::FacebookInit;
 use filenodes::Filenodes;
 use filestore::FilestoreConfig;
 use futures::future::try_join;
-use futures::future::try_join_all;
-use metaconfig_types::CommitSyncConfigVersion;
 use metaconfig_types::RepoConfig;
 use mutable_counters::MutableCounters;
 use phases::Phases;
@@ -47,22 +45,16 @@ use repo_identity::RepoIdentity;
 use slog::info;
 use sql_query_config::SqlQueryConfig;
 
-use crate::cli::CHANGESET;
 use crate::cli::COMMIT_BOOKMARK;
 use crate::cli::COMMIT_HASH;
 use crate::cli::GRADUAL_MERGE_PROGRESS;
 use crate::cli::LAST_DELETION_COMMIT;
-use crate::cli::MANUAL_COMMIT_SYNC;
-use crate::cli::MAPPING_VERSION_NAME;
-use crate::cli::PARENTS;
 use crate::cli::PRE_DELETION_COMMIT;
-use crate::cli::SELECT_PARENTS_AUTOMATICALLY;
 use crate::cli::SYNC_COMMIT_AND_ANCESTORS;
 use crate::cli::setup_app;
 
 mod cli;
 mod gradual_merge;
-mod manual_commit_sync;
 
 #[derive(Clone)]
 #[facet::container]
@@ -126,53 +118,6 @@ async fn run_gradual_merge_progress<'a>(
     Ok(())
 }
 
-async fn run_manual_commit_sync<'a>(
-    ctx: &CoreContext,
-    matches: &MononokeMatches<'a>,
-    sub_m: &ArgMatches<'a>,
-) -> Result<(), Error> {
-    let commit_syncer = create_commit_syncer_from_matches::<Repo>(ctx, matches, None).await?;
-
-    let target_repo = commit_syncer.get_target_repo();
-    let target_repo_parents = if sub_m.is_present(SELECT_PARENTS_AUTOMATICALLY) {
-        None
-    } else {
-        let target_repo_parents = sub_m.values_of(PARENTS);
-        match target_repo_parents {
-            Some(target_repo_parents) => Some(
-                try_join_all(
-                    target_repo_parents
-                        .into_iter()
-                        .map(|p| helpers::csid_resolve(ctx, target_repo, p)),
-                )
-                .await?,
-            ),
-            None => Some(vec![]),
-        }
-    };
-
-    let source_cs = sub_m
-        .value_of(CHANGESET)
-        .ok_or_else(|| format_err!("{} not set", CHANGESET))?;
-    let source_repo = commit_syncer.get_source_repo();
-    let source_cs_id = helpers::csid_resolve(ctx, source_repo, source_cs).await?;
-
-    let mapping_version_name = sub_m
-        .value_of(MAPPING_VERSION_NAME)
-        .ok_or_else(|| format_err!("mapping-version-name is not specified"))?;
-
-    let target_cs_id = manual_commit_sync::manual_commit_sync(
-        ctx,
-        &commit_syncer,
-        source_cs_id,
-        target_repo_parents,
-        CommitSyncConfigVersion(mapping_version_name.to_string()),
-    )
-    .await?;
-    info!(ctx.logger(), "target cs id is {:?}", target_cs_id);
-    Ok(())
-}
-
 async fn run_sync_commit_and_ancestors<'a>(
     ctx: &CoreContext,
     matches: &MononokeMatches<'a>,
@@ -228,7 +173,6 @@ fn main(fb: FacebookInit) -> Result<()> {
 
     let subcommand_future = async {
         match matches.subcommand() {
-            (MANUAL_COMMIT_SYNC, Some(sub_m)) => run_manual_commit_sync(ctx, &matches, sub_m).await,
             (SYNC_COMMIT_AND_ANCESTORS, Some(sub_m)) => {
                 run_sync_commit_and_ancestors(ctx, &matches, sub_m).await
             }
