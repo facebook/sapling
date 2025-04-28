@@ -9,8 +9,8 @@ dott_test(
     name = "sqlblob",
     dott_files = glob(["*.t"]),
     deps = [
-        "//eden/mononoke:blobimport",
         "//eden/mononoke:mononoke",
         "//eden/mononoke:sqlblob_gc",
+        "//eden/mononoke/tools/testtool:testtool",
     ],
 )
