@@ -5112,7 +5112,7 @@ diffgraftopts = [
 ]
 
 
-def registerdiffgrafts(from_paths, to_paths, *ctxs):
+def registerdiffgrafts(from_paths, to_paths, *ctxs, is_crossrepo=False):
     """Register --from-path/--to-path manifest "grafts" in ctx's manifest.
 
     These grafts are applied temporarily before diff operations, allowing users
@@ -5125,7 +5125,7 @@ def registerdiffgrafts(from_paths, to_paths, *ctxs):
         return None
 
     subtreeutil.validate_path_size(from_paths, to_paths)
-    subtreeutil.validate_path_overlap(from_paths, to_paths)
+    subtreeutil.validate_path_overlap(from_paths, to_paths, is_crossrepo=is_crossrepo)
 
     for ctx in ctxs:
         manifest = ctx.manifest()

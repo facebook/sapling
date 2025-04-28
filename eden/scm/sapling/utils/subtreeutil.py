@@ -531,7 +531,7 @@ def validate_path_size(from_paths, to_paths, abort_on_empty=False):
         raise error.Abort(_("must provide --from-path and --to-path"))
 
 
-def validate_path_overlap(from_paths, to_paths):
+def validate_path_overlap(from_paths, to_paths, is_crossrepo=False):
     # Disallow overlapping --to-path to keep things simple.
     to_dirs = util.dirs(to_paths)
     seen = set()
@@ -540,6 +540,10 @@ def validate_path_overlap(from_paths, to_paths):
             raise error.Abort(_("overlapping --to-path entries"))
         seen.add(p)
 
+    if is_crossrepo:
+        # skip checking the overlap between from_paths and to_paths, since
+        # they are in different repos
+        return
     from_dirs = util.dirs(from_paths)
     for from_path, to_path in zip(from_paths, to_paths):
         if from_path in to_dirs or to_path in from_dirs:

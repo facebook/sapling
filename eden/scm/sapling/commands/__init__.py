@@ -2697,7 +2697,10 @@ def _dograft(ui, to_repo, *revs, from_repo=None, **opts):
 
         # Apply --from-path/--to-path mappings to manifest being grafted, and its
         # parent manifest.
-        cmdutil.registerdiffgrafts(from_paths, to_paths, ctx, ctx.p1())
+        is_crossrepo = from_repo != to_repo
+        cmdutil.registerdiffgrafts(
+            from_paths, to_paths, ctx, ctx.p1(), is_crossrepo=is_crossrepo
+        )
 
         # we don't merge the first commit when continuing
         if not cont:
