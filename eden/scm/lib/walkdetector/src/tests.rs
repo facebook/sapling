@@ -105,14 +105,7 @@ fn test_bfs_walk() {
     // Doesn't bubble up since advancement is still only under a single child "dir2".
     detector.file_read(epoch, p("root/dir2/dir2_2/dir2_2_1/a"));
     detector.file_read(epoch, p("root/dir2/dir2_2/dir2_2_1/b"));
-    assert_eq!(
-        detector.walks(),
-        vec![
-            (p("root"), 2),
-            (p("root/dir2/dir2_1/dir2_1_1"), 0),
-            (p("root/dir2/dir2_2/dir2_2_1"), 0)
-        ]
-    );
+    assert_eq!(detector.walks(), vec![(p("root"), 2), (p("root/dir2"), 2)]);
 
     // Now we also see a depth=3 access under "dir1" - expand depth.
     detector.file_read(epoch, p("root/dir1/dir1_1/dir1_1_1/a"));
@@ -131,26 +124,32 @@ fn test_advanced_remainder() {
     detector.file_read(epoch, p("root/dir1/b"));
     detector.file_read(epoch, p("root/dir2/a"));
     detector.file_read(epoch, p("root/dir2/b"));
-    assert_eq!(detector.walks(), vec![(p("root"), 1)]);
-
-    // This marks "root/dir1" as "advanced" child.
     detector.file_read(epoch, p("root/dir1/dir1_1/a"));
     detector.file_read(epoch, p("root/dir1/dir1_1/b"));
+
+    detector.file_read(epoch, p("root/dir2/dir2_1/a"));
+    detector.file_read(epoch, p("root/dir2/dir2_1/b"));
+    assert_eq!(detector.walks(), vec![(p("root"), 2)]);
+
+    // This marks "root/dir1" as "advanced" child.
+    detector.file_read(epoch, p("root/dir1/dir1_1/dir1_1_1/a"));
+    detector.file_read(epoch, p("root/dir1/dir1_1/dir1_1_1/b"));
     assert_eq!(
         detector.walks(),
-        vec![(p("root"), 1), (p("root/dir1/dir1_1"), 0)]
+        vec![(p("root"), 2), (p("root/dir1/dir1_1/dir1_1_1"), 0)]
     );
 
     // This marks "root/dir2" as "advanced" child, but the
     // root/dir2/dir2_1 walk extends deeper than the advanced walk -
     // don't remove it.
-    detector.file_read(epoch, p("root/dir2/dir2_1/dir2_1_1/a"));
-    detector.file_read(epoch, p("root/dir2/dir2_1/dir2_1_1/b"));
-    detector.file_read(epoch, p("root/dir2/dir2_1/dir2_1_2/a"));
-    detector.file_read(epoch, p("root/dir2/dir2_1/dir2_1_2/b"));
+    detector.file_read(epoch, p("root/dir2/dir2_1/dir2_1_1/dir2_1_1_1/a"));
+    detector.file_read(epoch, p("root/dir2/dir2_1/dir2_1_1/dir2_1_1_1/b"));
+    detector.file_read(epoch, p("root/dir2/dir2_1/dir2_1_1/dir2_1_1_2/a"));
+    detector.file_read(epoch, p("root/dir2/dir2_1/dir2_1_1/dir2_1_1_2/b"));
+
     assert_eq!(
         detector.walks(),
-        vec![(p("root"), 2), (p("root/dir2/dir2_1"), 1)]
+        vec![(p("root"), 3), (p("root/dir2/dir2_1/dir2_1_1"), 1)]
     );
 }
 
@@ -385,4 +384,27 @@ fn test_retain_interesting_metadata() {
     detector.file_read(epoch, p("root/dir1/dir1_1/a"));
     detector.file_read(epoch, p("root/dir1/dir1_1/b"));
     assert_eq!(detector.walks(), vec![(p("root"), 1), (p("root/dir1"), 1)]);
+}
+
+#[test]
+fn test_merge_cousins() {
+    let detector = Detector::new();
+    detector.set_min_dir_walk_threshold(TEST_MIN_DIR_WALK_THRESHOLD);
+
+    let epoch = Instant::now();
+
+    detector.dir_read(epoch, p("root"), 0, 1);
+
+    // Walk at root/, depth=1.
+    detector.file_read(epoch, p("root/foo/dir1/a"));
+    detector.file_read(epoch, p("root/foo/dir1/b"));
+    detector.file_read(epoch, p("root/foo/dir2/a"));
+    detector.file_read(epoch, p("root/foo/dir2/b"));
+    assert_eq!(detector.walks(), vec![(p("root"), 2)]);
+
+    detector.file_read(epoch, p("root/foo/dir1/dir1_1/a"));
+    detector.file_read(epoch, p("root/foo/dir1/dir1_1/b"));
+    detector.file_read(epoch, p("root/foo/dir2/dir2_1/a"));
+    detector.file_read(epoch, p("root/foo/dir2/dir2_1/b"));
+    assert_eq!(detector.walks(), vec![(p("root"), 3)]);
 }

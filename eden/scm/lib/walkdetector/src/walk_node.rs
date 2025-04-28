@@ -59,10 +59,10 @@ impl WalkNode {
     }
 
     /// Find node with active walk covering directory `dir`, if any.
-    pub(crate) fn get_containing_node<'a>(
+    pub(crate) fn get_containing_node<'a, 'b>(
         &'a mut self,
-        dir: &'a RepoPath,
-    ) -> Option<(&'a mut Self, &'a RepoPath)> {
+        dir: &'b RepoPath,
+    ) -> Option<(&'a mut Self, &'b RepoPath)> {
         match dir.split_first_component() {
             Some((head, tail)) => {
                 if self.contains(dir, 0) {
@@ -239,5 +239,19 @@ impl WalkNode {
             || self
                 .total_files
                 .is_some_and(|total| total < dir_walk_threshold)
+    }
+
+    pub(crate) fn iter(&self, mut cb: impl FnMut(&WalkNode, usize) -> bool) {
+        fn inner(node: &WalkNode, cb: &mut impl FnMut(&WalkNode, usize) -> bool, depth: usize) {
+            if !cb(node, depth) {
+                return;
+            }
+
+            for child in node.children.values() {
+                inner(child, cb, depth + 1);
+            }
+        }
+
+        inner(self, &mut cb, 0);
     }
 }

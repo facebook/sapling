@@ -139,16 +139,6 @@ impl Inner {
         // TODO: consider moving "should merge" logic into `WalkNode::insert_walk` to do
         // more work in a single traversal.
 
-        tracing::debug!(%dir, depth=walk_depth, "new walk");
-
-        // Check if we should immediately promote this walk to parent directory. This is
-        // similar to the ancestor advancement below, except that it can insert a new
-        // walk.
-        if let Some((parent_dir, parent_depth)) = self.should_merge_into_parent(dir, walk_depth) {
-            self.insert_walk(time, parent_dir, parent_depth);
-            return;
-        }
-
         tracing::debug!(%dir, depth=walk_depth, "inserting walk");
         self.node.insert_walk(
             dir,
@@ -158,6 +148,23 @@ impl Inner {
             },
             self.min_dir_walk_threshold,
         );
+
+        // Check if we should immediately promote this walk to parent directory. This is
+        // similar to the ancestor advancement below, except that it can insert a new
+        // walk.
+        if let Some((parent_dir, parent_depth)) = self.should_merge_into_parent(dir, walk_depth) {
+            self.insert_walk(time, parent_dir, parent_depth);
+            return;
+        }
+
+        // Check if we should merge with cousins (into grandparent).
+        // TODO: combine this with the merge-into-parent heuristic.
+        if self
+            .maybe_merge_into_grandparent(time, dir, walk_depth)
+            .is_some()
+        {
+            return;
+        }
 
         // Check if we have a containing walk whose depth boundary should be increased.
         if let Some((ancestor_dir, new_depth)) = self.should_advance_ancestor_walk(dir) {
@@ -218,6 +225,54 @@ impl Inner {
         }
     }
 
+    fn maybe_merge_into_grandparent(
+        &mut self,
+        time: Instant,
+        dir: &RepoPath,
+        mut walk_depth: usize,
+    ) -> Option<()> {
+        let parent_dir = dir.parent()?;
+        let grandparent_dir = parent_dir.parent()?;
+
+        let (ancestor, suffix) = self.node.get_containing_node(parent_dir)?;
+        if suffix.is_empty() {
+            return None;
+        }
+
+        let grandparent_node = ancestor.get_node(suffix.parent()?)?;
+
+        let mut cousin_count = 0;
+        grandparent_node.iter(|node, depth| -> bool {
+            if depth > 2 {
+                return false;
+            }
+
+            if depth == 2 {
+                if let Some(walk) = node.walk {
+                    cousin_count += 1;
+                    walk_depth = walk_depth.max(walk.depth);
+                }
+            }
+
+            true
+        });
+
+        if cousin_count >= self.min_dir_walk_threshold {
+            tracing::debug!(%dir, %grandparent_dir, cousin_count, "combining with cousins");
+            self.insert_walk(time, grandparent_dir, walk_depth + 2);
+            Some(())
+        } else if grandparent_node
+            .total_dirs
+            .is_some_and(|total| total < self.min_dir_walk_threshold)
+        {
+            tracing::debug!(%dir, "promoting cousins due to few dirs");
+            self.insert_walk(time, grandparent_dir, walk_depth + 2);
+            Some(())
+        } else {
+            None
+        }
+    }
+
     /// If a walk at `dir` suggests we can advance the depth of a containing walk, return
     /// (containing_dir, new_depth).
     fn should_advance_ancestor_walk<'a>(
@@ -235,11 +290,7 @@ impl Inner {
         // advancements that bubble up to at least N different children of the walk
         // root.
         if ancestor.advanced_children.insert(head.to_owned()) {
-            if ancestor.advanced_children.len() >= self.min_dir_walk_threshold
-                || ancestor
-                    .total_dirs
-                    .is_some_and(|total| total < self.min_dir_walk_threshold)
-            {
+            if ancestor.advanced_children.len() >= self.min_dir_walk_threshold {
                 let depth = ancestor.walk.map_or(0, |w| w.depth) + 1;
                 tracing::debug!(dir=%ancestor_dir, depth, "expanding walk boundary");
                 return Some((ancestor_dir, depth));
