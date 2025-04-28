@@ -26,22 +26,22 @@ fn test_walk_big_dir() {
     let detector = Detector::new();
     detector.set_min_dir_walk_threshold(TEST_MIN_DIR_WALK_THRESHOLD);
 
-    assert_eq!(detector.walks().len(), 0);
+    assert_eq!(detector.file_walks().len(), 0);
 
     detector.file_read(p("dir/a"));
     detector.file_read(p("dir/a"));
 
-    assert_eq!(detector.walks().len(), 0);
+    assert_eq!(detector.file_walks().len(), 0);
 
     detector.file_read(p("dir/b"));
 
-    assert_eq!(detector.walks(), vec![(p("dir"), 0)]);
+    assert_eq!(detector.file_walks(), vec![(p("dir"), 0)]);
 
     detector.file_read(p("dir/c"));
     detector.file_read(p("dir/d"));
     detector.file_read(p("dir/e"));
 
-    assert_eq!(detector.walks(), vec![(p("dir"), 0)]);
+    assert_eq!(detector.file_walks(), vec![(p("dir"), 0)]);
 }
 
 #[test]
@@ -52,13 +52,13 @@ fn test_bfs_walk() {
     detector.file_read(p("root/dir1/a"));
     detector.file_read(p("root/dir1/b"));
 
-    assert_eq!(detector.walks(), vec![(p("root/dir1"), 0)]);
+    assert_eq!(detector.file_walks(), vec![(p("root/dir1"), 0)]);
 
     detector.file_read(p("root/dir2/a"));
     detector.file_read(p("root/dir2/b"));
 
     // Raised walk up to parent directory with depth=1.
-    assert_eq!(detector.walks(), vec![(p("root"), 1)]);
+    assert_eq!(detector.file_walks(), vec![(p("root"), 1)]);
 
     // Now walk proceeds to the next level.
 
@@ -67,7 +67,7 @@ fn test_bfs_walk() {
 
     // Nothing combined yet.
     assert_eq!(
-        detector.walks(),
+        detector.file_walks(),
         vec![(p("root"), 1), (p("root/dir1/dir1_1"), 0)]
     );
 
@@ -75,19 +75,25 @@ fn test_bfs_walk() {
     detector.file_read(p("root/dir1/dir1_2/b"));
 
     // Now we get a second walk for root/dir1
-    assert_eq!(detector.walks(), vec![(p("root"), 1), (p("root/dir1"), 1)]);
+    assert_eq!(
+        detector.file_walks(),
+        vec![(p("root"), 1), (p("root/dir1"), 1)]
+    );
 
     // More reads in dir2 doesn't combine the walks
     detector.file_read(p("root/dir2/c"));
     detector.file_read(p("root/dir2/d"));
-    assert_eq!(detector.walks(), vec![(p("root"), 1), (p("root/dir1"), 1)]);
+    assert_eq!(
+        detector.file_walks(),
+        vec![(p("root"), 1), (p("root/dir1"), 1)]
+    );
 
     // Walking further in root/dir2 will combine up to root.
     detector.file_read(p("root/dir2/dir2_1/a"));
     detector.file_read(p("root/dir2/dir2_1/b"));
     detector.file_read(p("root/dir2/dir2_2/a"));
     detector.file_read(p("root/dir2/dir2_2/b"));
-    assert_eq!(detector.walks(), vec![(p("root"), 2)]);
+    assert_eq!(detector.file_walks(), vec![(p("root"), 2)]);
 
     // Walk boundary can advance after we see depth+1 access that bubbles up to 2
     // different children of root.
@@ -96,19 +102,22 @@ fn test_bfs_walk() {
 
     // So far only one advancement - doesn't expand root walk yet.
     assert_eq!(
-        detector.walks(),
+        detector.file_walks(),
         vec![(p("root"), 2), (p("root/dir2/dir2_1/dir2_1_1"), 0)]
     );
 
     // Doesn't bubble up since advancement is still only under a single child "dir2".
     detector.file_read(p("root/dir2/dir2_2/dir2_2_1/a"));
     detector.file_read(p("root/dir2/dir2_2/dir2_2_1/b"));
-    assert_eq!(detector.walks(), vec![(p("root"), 2), (p("root/dir2"), 2)]);
+    assert_eq!(
+        detector.file_walks(),
+        vec![(p("root"), 2), (p("root/dir2"), 2)]
+    );
 
     // Now we also see a depth=3 access under "dir1" - expand depth.
     detector.file_read(p("root/dir1/dir1_1/dir1_1_1/a"));
     detector.file_read(p("root/dir1/dir1_1/dir1_1_1/b"));
-    assert_eq!(detector.walks(), vec![(p("root"), 3)]);
+    assert_eq!(detector.file_walks(), vec![(p("root"), 3)]);
 }
 
 #[test]
@@ -125,13 +134,13 @@ fn test_advanced_remainder() {
 
     detector.file_read(p("root/dir2/dir2_1/a"));
     detector.file_read(p("root/dir2/dir2_1/b"));
-    assert_eq!(detector.walks(), vec![(p("root"), 2)]);
+    assert_eq!(detector.file_walks(), vec![(p("root"), 2)]);
 
     // This marks "root/dir1" as "advanced" child.
     detector.file_read(p("root/dir1/dir1_1/dir1_1_1/a"));
     detector.file_read(p("root/dir1/dir1_1/dir1_1_1/b"));
     assert_eq!(
-        detector.walks(),
+        detector.file_walks(),
         vec![(p("root"), 2), (p("root/dir1/dir1_1/dir1_1_1"), 0)]
     );
 
@@ -144,7 +153,7 @@ fn test_advanced_remainder() {
     detector.file_read(p("root/dir2/dir2_1/dir2_1_1/dir2_1_1_2/b"));
 
     assert_eq!(
-        detector.walks(),
+        detector.file_walks(),
         vec![(p("root"), 3), (p("root/dir2/dir2_1/dir2_1_1"), 1)]
     );
 }
@@ -347,7 +356,7 @@ fn test_dir_hints() {
     detector.file_read(p("dir/subdir/a"));
 
     // The walk bubbled straight up to "dir".
-    assert_eq!(detector.walks(), vec![(p("dir"), 1)]);
+    assert_eq!(detector.file_walks(), vec![(p("dir"), 1)]);
 }
 
 #[test]
@@ -362,7 +371,7 @@ fn test_advance_while_advancing() {
     detector.file_read(p("root/dir1/b"));
     detector.file_read(p("root/dir2/a"));
     detector.file_read(p("root/dir2/b"));
-    assert_eq!(detector.walks(), vec![(p("root"), 1)]);
+    assert_eq!(detector.file_walks(), vec![(p("root"), 1)]);
 
     // Walk at root/dir1/dir1_1, depth=1.
     // Adds "dir1" advanced child to root/ walk.
@@ -371,7 +380,7 @@ fn test_advance_while_advancing() {
     detector.file_read(p("root/dir1/dir1_1/dir1_1_2/a"));
     detector.file_read(p("root/dir1/dir1_1/dir1_1_2/b"));
     assert_eq!(
-        detector.walks(),
+        detector.file_walks(),
         vec![(p("root"), 1), (p("root/dir1/dir1_1"), 1)]
     );
 
@@ -382,7 +391,7 @@ fn test_advance_while_advancing() {
     detector.file_read(p("root/dir2/dir2_1/dir2_1_2/a"));
     detector.file_read(p("root/dir2/dir2_1/dir2_1_2/b"));
 
-    assert_eq!(detector.walks(), vec![(p("root"), 3)]);
+    assert_eq!(detector.file_walks(), vec![(p("root"), 3)]);
 }
 
 #[test]
@@ -398,13 +407,16 @@ fn test_retain_interesting_metadata() {
     detector.file_read(p("root/dir1/b"));
     detector.file_read(p("root/dir2/a"));
     detector.file_read(p("root/dir2/b"));
-    assert_eq!(detector.walks(), vec![(p("root"), 1)]);
+    assert_eq!(detector.file_walks(), vec![(p("root"), 1)]);
 
     // Walk at root/dir1/dir1_1, depth=1.
     // Test that we "remembered" root/dir1 metadata, so doot/dir1/dir1_1 is instantly promoted into walk on root/dir1.
     detector.file_read(p("root/dir1/dir1_1/a"));
     detector.file_read(p("root/dir1/dir1_1/b"));
-    assert_eq!(detector.walks(), vec![(p("root"), 1), (p("root/dir1"), 1)]);
+    assert_eq!(
+        detector.file_walks(),
+        vec![(p("root"), 1), (p("root/dir1"), 1)]
+    );
 }
 
 #[test]
@@ -419,13 +431,13 @@ fn test_merge_cousins() {
     detector.file_read(p("root/foo/dir1/b"));
     detector.file_read(p("root/foo/dir2/a"));
     detector.file_read(p("root/foo/dir2/b"));
-    assert_eq!(detector.walks(), vec![(p("root"), 2)]);
+    assert_eq!(detector.file_walks(), vec![(p("root"), 2)]);
 
     detector.file_read(p("root/foo/dir1/dir1_1/a"));
     detector.file_read(p("root/foo/dir1/dir1_1/b"));
     detector.file_read(p("root/foo/dir2/dir2_1/a"));
     detector.file_read(p("root/foo/dir2/dir2_1/b"));
-    assert_eq!(detector.walks(), vec![(p("root"), 3)]);
+    assert_eq!(detector.file_walks(), vec![(p("root"), 3)]);
 }
 
 #[test]
@@ -439,14 +451,14 @@ fn test_gc() {
     detector.set_now(epoch);
 
     detector.file_read(p("dir1/a"));
-    assert_eq!(detector.walks(), vec![]);
+    assert_eq!(detector.file_walks(), vec![]);
 
     epoch += Duration::from_secs(1);
     detector.set_now(epoch);
 
     // GC should run but not remove anything.
     detector.file_read(p("dir1/b"));
-    assert_eq!(detector.walks(), vec![(p("dir1"), 0)]);
+    assert_eq!(detector.file_walks(), vec![(p("dir1"), 0)]);
 
     epoch += Duration::from_secs(1);
     detector.set_now(epoch);
@@ -455,13 +467,13 @@ fn test_gc() {
     detector.file_read(p("dir1/c"));
     detector.file_read(p("dir2/a"));
     detector.file_read(p("some/deep/dir/a"));
-    assert_eq!(detector.walks(), vec![(p("dir1"), 0)]);
+    assert_eq!(detector.file_walks(), vec![(p("dir1"), 0)]);
 
     epoch += Duration::from_secs(1);
     detector.set_now(epoch);
 
     detector.file_read(p("dir2/b"));
-    assert_eq!(detector.walks(), vec![(p(""), 1)]);
+    assert_eq!(detector.file_walks(), vec![(p(""), 1)]);
 
     epoch += Duration::from_secs(1);
     detector.set_now(epoch);
@@ -470,15 +482,62 @@ fn test_gc() {
     detector.file_read(p("some/deep/dir/b"));
     // This should update access time for root walk.
     detector.file_read(p("dir3/a"));
-    assert_eq!(detector.walks(), vec![(p(""), 1)]);
+    assert_eq!(detector.file_walks(), vec![(p(""), 1)]);
 
     // Root walk still here since dir3/a refreshed access time.
     epoch += Duration::from_secs(1);
     detector.set_now(epoch);
-    assert_eq!(detector.walks(), vec![(p(""), 1)]);
+    assert_eq!(detector.file_walks(), vec![(p(""), 1)]);
 
     // Everything is GC'd.
     epoch += Duration::from_secs(1);
     detector.set_now(epoch);
-    assert_eq!(detector.walks(), vec![]);
+    assert_eq!(detector.file_walks(), vec![]);
+}
+
+#[test]
+fn test_dir_walk() {
+    let detector = Detector::new();
+    detector.set_min_dir_walk_threshold(TEST_MIN_DIR_WALK_THRESHOLD);
+
+    detector.dir_read(p(""), 2, 2);
+    assert_eq!(detector.dir_walks(), vec![]);
+
+    detector.dir_read(p("dir1"), 2, 2);
+    detector.dir_read(p("dir2"), 2, 2);
+    assert_eq!(detector.dir_walks(), vec![(p(""), 0)]);
+
+    detector.dir_read(p("dir1/dir1_1"), 2, 2);
+    detector.dir_read(p("dir1/dir1_2"), 2, 2);
+    detector.dir_read(p("dir2/dir2_1"), 2, 2);
+    detector.dir_read(p("dir2/dir2_2"), 2, 2);
+    assert_eq!(detector.dir_walks(), vec![(p(""), 1)]);
+
+    // Now we start seeing files walked.
+    detector.file_read(p("a"));
+    detector.file_read(p("b"));
+    assert_eq!(detector.file_walks(), vec![(p(""), 0)]);
+    // Directory walk still around since it is deeper than file walk.
+    assert_eq!(detector.dir_walks(), vec![(p(""), 1)]);
+
+    detector.file_read(p("dir1/a"));
+    detector.file_read(p("dir1/b"));
+    detector.file_read(p("dir2/a"));
+    detector.file_read(p("dir2/b"));
+    assert_eq!(detector.file_walks(), vec![(p(""), 1)]);
+    // Directory walk is redundant - remove it.
+    assert_eq!(detector.dir_walks(), vec![]);
+
+    detector.file_read(p("dir1/dir1_1/a"));
+    detector.file_read(p("dir1/dir1_1/b"));
+    detector.file_read(p("dir2/dir2_1/a"));
+    detector.file_read(p("dir2/dir2_1/b"));
+    assert_eq!(detector.file_walks(), vec![(p(""), 2)]);
+    assert_eq!(detector.dir_walks(), vec![]);
+
+    detector.dir_read(p("dir1/dir1_1/dir1_1_1"), 2, 2);
+    detector.dir_read(p("dir1/dir1_1/dir1_1_2"), 2, 2);
+    assert_eq!(detector.file_walks(), vec![(p(""), 2)]);
+    // No dir walk - depth=2 is already covered by file walk.
+    assert_eq!(detector.dir_walks(), vec![]);
 }

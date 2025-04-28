@@ -42,6 +42,8 @@ pub(crate) struct WalkNode {
     pub(crate) total_dirs: Option<usize>,
     // File names seen so far (only used before transitioning to walk).
     pub(crate) seen_files: HashSet<PathComponentBuf>,
+    // Dir names seen so far (only used before transitioning to walk).
+    pub(crate) seen_dirs: HashSet<PathComponentBuf>,
 }
 
 impl WalkNode {
@@ -52,7 +54,7 @@ impl WalkNode {
                 .children
                 .get_mut(head)
                 .and_then(|child| child.get_walk(walk_type, tail)),
-            None => self.get_walk_for_type(walk_type),
+            None => self.get_dominating_walk(walk_type),
         }
     }
 
@@ -84,7 +86,7 @@ impl WalkNode {
                 }
             }
             None => {
-                if self.get_walk_for_type(walk_type).is_some() {
+                if self.get_dominating_walk(walk_type).is_some() {
                     Some((self, dir))
                 } else {
                     None
@@ -216,6 +218,16 @@ impl WalkNode {
             .filter_map(move |(name, node)| node.get_walk_for_type(walk_type).map(|w| (name, w)))
     }
 
+    /// Get most "powerful" walk that covers `walk_type`. Basically, a file walk covers a
+    /// directory walk, so if walk_type=Directory, we return `self.file_walk ||
+    /// self.dir_walk`.
+    pub(crate) fn get_dominating_walk(&self, walk_type: WalkType) -> Option<&Walk> {
+        match walk_type {
+            WalkType::File => self.file_walk.as_ref(),
+            WalkType::Directory => self.file_walk.as_ref().or(self.dir_walk.as_ref()),
+        }
+    }
+
     pub(crate) fn get_walk_for_type(&self, walk_type: WalkType) -> Option<&Walk> {
         match walk_type {
             WalkType::File => self.file_walk.as_ref(),
@@ -227,6 +239,16 @@ impl WalkNode {
         match walk_type {
             WalkType::File => self.file_walk = walk,
             WalkType::Directory => self.dir_walk = walk,
+        }
+
+        // File walk implies directory walk, so clear out contained directory walk.
+        match (walk_type, walk, self.dir_walk) {
+            (WalkType::File, Some(Walk { depth }), Some(Walk { depth: dir_depth }))
+                if depth >= dir_depth =>
+            {
+                self.dir_walk = None;
+            }
+            _ => {}
         }
     }
 
@@ -300,7 +322,7 @@ impl WalkNode {
 
                 any_child_advanced = any_child_advanced || child_advanced;
 
-                child.get_walk_for_type(walk_type).is_some()
+                child.file_walk.is_some() || child.dir_walk.is_some()
                     || !child.children.is_empty()
                     // Keep node around if it has total file/dir hints that are likely to be useful.
                     || interesting_metadata(threshold, child.total_files, child.total_dirs)
@@ -319,16 +341,26 @@ impl WalkNode {
     /// Reports whether self has a walk and the walk fully contains a descendant walk
     /// rooted at `path` of depth `depth`.
     fn contains(&self, walk_type: WalkType, path: &RepoPath, depth: usize) -> bool {
-        self.get_walk_for_type(walk_type)
+        self.get_dominating_walk(walk_type)
             .is_some_and(|w| w.depth >= (path.components().count() + depth))
     }
 
     /// Return whether this Dir should be considered "walked".
-    pub(crate) fn is_walked(&self, dir_walk_threshold: usize) -> bool {
-        self.seen_files.len() >= dir_walk_threshold
-            || self
-                .total_files
-                .is_some_and(|total| total < dir_walk_threshold)
+    pub(crate) fn is_walked(&self, walk_type: WalkType, dir_walk_threshold: usize) -> bool {
+        match walk_type {
+            WalkType::File => {
+                self.seen_files.len() >= dir_walk_threshold
+                    || self
+                        .total_files
+                        .is_some_and(|total| total < dir_walk_threshold)
+            }
+            WalkType::Directory => {
+                self.seen_dirs.len() >= dir_walk_threshold
+                    || self
+                        .total_dirs
+                        .is_some_and(|total| total < dir_walk_threshold)
+            }
+        }
     }
 
     pub(crate) fn iter(&self, mut cb: impl FnMut(&WalkNode, usize) -> bool) {

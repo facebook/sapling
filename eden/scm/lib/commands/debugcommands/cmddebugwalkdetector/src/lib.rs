@@ -70,7 +70,7 @@ pub fn run(ctx: ReqCtx<DebugWalkDetectorOpts>) -> Result<u8> {
     let mut output = ctx.io().output();
     writeln!(output, "Final walks:")?;
 
-    for (root, depth) in detector.walks() {
+    for (root, depth) in detector.file_walks() {
         writeln!(output, "root: {root}, depth: {depth}")?;
     }
 

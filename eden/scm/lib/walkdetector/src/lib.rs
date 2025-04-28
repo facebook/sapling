@@ -92,8 +92,17 @@ impl Detector {
         self.inner.lock().gc_timeout = timeout;
     }
 
-    /// Return list of (walk root dir, walk depth) representing active walks.
-    pub fn walks(&self) -> Vec<(RepoPathBuf, usize)> {
+    /// Return list of (walk root dir, walk depth) representing active file content walks.
+    pub fn file_walks(&self) -> Vec<(RepoPathBuf, usize)> {
+        self.walks(WalkType::File)
+    }
+
+    /// Return list of (walk root dir, walk depth) representing active directory walks.
+    pub fn dir_walks(&self) -> Vec<(RepoPathBuf, usize)> {
+        self.walks(WalkType::Directory)
+    }
+
+    fn walks(&self, walk_type: WalkType) -> Vec<(RepoPathBuf, usize)> {
         let mut inner = self.inner.lock();
 
         let time = inner.now();
@@ -101,7 +110,7 @@ impl Detector {
 
         let mut walks = inner
             .node
-            .list_walks(WalkType::File)
+            .list_walks(walk_type)
             .into_iter()
             .map(|(root, walk)| (root, walk.depth))
             .collect::<Vec<_>>();
@@ -135,8 +144,8 @@ impl Detector {
 
         owner.last_access = Some(time);
 
-        if owner.get_walk_for_type(WalkType::File).is_some() {
-            tracing::trace!(walk_root=%dir_path.strip_suffix(suffix, true).unwrap_or_default(), dir=%dir_path, "dir in walk");
+        if owner.get_dominating_walk(WalkType::File).is_some() {
+            tracing::trace!(walk_root=%dir_path.strip_suffix(suffix, true).unwrap_or_default(), dir=%dir_path, "file's dir already in walk");
             return;
         }
 
@@ -144,15 +153,15 @@ impl Detector {
 
         my_dir.seen_files.insert(base_name);
 
-        if my_dir.is_walked(dir_threshold) {
+        if my_dir.is_walked(WalkType::File, dir_threshold) {
             my_dir.seen_files.clear();
-            inner.insert_walk(time, &dir_path, 0);
+            inner.insert_walk(time, WalkType::File, &dir_path, 0);
         }
     }
 
     /// Observe a directory read. `num_files` and `num_dirs` report the number of file and
     /// directory children of `path`, respectively.
-    pub fn dir_read(&self, path: RepoPathBuf, num_files: usize, num_dirs: usize) {
+    pub fn dir_read(&self, mut path: RepoPathBuf, num_files: usize, num_dirs: usize) {
         tracing::trace!(%path, num_files, num_dirs, "dir_read");
 
         let mut inner = self.inner.lock();
@@ -172,6 +181,33 @@ impl Detector {
             node.total_dirs = Some(num_dirs);
             node.total_files = Some(num_files);
         }
+
+        let (dir_path, base_name) = match path.pop() {
+            None => return,
+            Some(part) => (path, part),
+        };
+
+        let dir_threshold = inner.min_dir_walk_threshold;
+
+        let (owner, suffix) = inner
+            .node
+            .get_or_create_owning_node(WalkType::Directory, &dir_path);
+
+        owner.last_access = Some(time);
+
+        if owner.get_dominating_walk(WalkType::Directory).is_some() {
+            tracing::trace!(walk_root=%dir_path.strip_suffix(suffix, true).unwrap_or_default(), dir=%dir_path, "dir is already covered by an existing walk");
+            return;
+        }
+
+        let my_dir = owner;
+
+        my_dir.seen_dirs.insert(base_name);
+
+        if my_dir.is_walked(WalkType::Directory, dir_threshold) {
+            my_dir.seen_files.clear();
+            inner.insert_walk(time, WalkType::Directory, &dir_path, 0);
+        }
     }
 }
 
@@ -186,13 +222,19 @@ fn interesting_metadata(
 
 impl Inner {
     /// Insert a new Walk rooted at `dir`.
-    fn insert_walk(&mut self, time: Instant, dir: &RepoPath, walk_depth: usize) {
+    fn insert_walk(
+        &mut self,
+        time: Instant,
+        walk_type: WalkType,
+        dir: &RepoPath,
+        walk_depth: usize,
+    ) {
         // TODO: consider moving "should merge" logic into `WalkNode::insert_walk` to do
         // more work in a single traversal.
 
         tracing::debug!(%dir, depth=walk_depth, "inserting walk");
         let walk_node = self.node.insert_walk(
-            WalkType::File,
+            walk_type,
             dir,
             Walk { depth: walk_depth },
             self.min_dir_walk_threshold,
@@ -202,23 +244,25 @@ impl Inner {
         // Check if we should immediately promote this walk to parent directory. This is
         // similar to the ancestor advancement below, except that it can insert a new
         // walk.
-        if let Some((parent_dir, parent_depth)) = self.should_merge_into_parent(dir, walk_depth) {
-            self.insert_walk(time, parent_dir, parent_depth);
+        if let Some((parent_dir, parent_depth)) =
+            self.should_merge_into_parent(walk_type, dir, walk_depth)
+        {
+            self.insert_walk(time, walk_type, parent_dir, parent_depth);
             return;
         }
 
         // Check if we should merge with cousins (into grandparent).
         // TODO: combine this with the merge-into-parent heuristic.
         if self
-            .maybe_merge_into_grandparent(time, dir, walk_depth)
+            .maybe_merge_into_grandparent(time, walk_type, dir, walk_depth)
             .is_some()
         {
             return;
         }
 
         // Check if we have a containing walk whose depth boundary should be increased.
-        if let Some((ancestor_dir, new_depth)) = self.should_advance_ancestor_walk(dir) {
-            self.insert_walk(time, ancestor_dir, new_depth);
+        if let Some((ancestor_dir, new_depth)) = self.should_advance_ancestor_walk(walk_type, dir) {
+            self.insert_walk(time, walk_type, ancestor_dir, new_depth);
         }
     }
 
@@ -226,6 +270,7 @@ impl Inner {
     /// return (parent_dir, new_depth).
     fn should_merge_into_parent<'a>(
         &mut self,
+        walk_type: WalkType,
         dir: &'a RepoPath,
         mut walk_depth: usize,
     ) -> Option<(&'a RepoPath, usize)> {
@@ -241,7 +286,7 @@ impl Inner {
         let mut saw_self = false;
         let max_sibling_depth =
             parent_node
-                .child_walks(WalkType::File)
+                .child_walks(walk_type)
                 .fold(0, |max, (sibling, walk)| {
                     sibling_count += 1;
                     saw_self = name == sibling;
@@ -258,7 +303,7 @@ impl Inner {
         if sibling_count >= self.min_dir_walk_threshold {
             if tracing::enabled!(tracing::Level::DEBUG) {
                 let siblings_display = parent_node
-                    .child_walks(WalkType::File)
+                    .child_walks(walk_type)
                     .map(|(name, walk)| format!("{}:{}", parent_dir.join(name), walk.depth))
                     .collect::<Vec<_>>();
                 tracing::debug!(%dir, siblings=?siblings_display, "combining with siblings");
@@ -267,7 +312,7 @@ impl Inner {
             walk_depth = walk_depth.max(max_sibling_depth);
             walk_depth = walk_depth.max(
                 parent_node
-                    .get_walk_for_type(WalkType::File)
+                    .get_walk_for_type(walk_type)
                     .map_or(0, |w| w.depth),
             );
             Some((parent_dir, walk_depth + 1))
@@ -285,13 +330,14 @@ impl Inner {
     fn maybe_merge_into_grandparent(
         &mut self,
         time: Instant,
+        walk_type: WalkType,
         dir: &RepoPath,
         mut walk_depth: usize,
     ) -> Option<()> {
         let parent_dir = dir.parent()?;
         let grandparent_dir = parent_dir.parent()?;
 
-        let (ancestor, suffix) = self.node.get_containing_node(WalkType::File, parent_dir)?;
+        let (ancestor, suffix) = self.node.get_containing_node(walk_type, parent_dir)?;
         if suffix.is_empty() {
             return None;
         }
@@ -305,7 +351,7 @@ impl Inner {
             }
 
             if depth == 2 {
-                if let Some(walk) = node.get_walk_for_type(WalkType::File) {
+                if let Some(walk) = node.get_walk_for_type(walk_type) {
                     cousin_count += 1;
                     walk_depth = walk_depth.max(walk.depth);
                 }
@@ -316,14 +362,14 @@ impl Inner {
 
         if cousin_count >= self.min_dir_walk_threshold {
             tracing::debug!(%dir, %grandparent_dir, cousin_count, "combining with cousins");
-            self.insert_walk(time, grandparent_dir, walk_depth + 2);
+            self.insert_walk(time, walk_type, grandparent_dir, walk_depth + 2);
             Some(())
         } else if grandparent_node
             .total_dirs
             .is_some_and(|total| total < self.min_dir_walk_threshold)
         {
             tracing::debug!(%dir, "promoting cousins due to few dirs");
-            self.insert_walk(time, grandparent_dir, walk_depth + 2);
+            self.insert_walk(time, walk_type, grandparent_dir, walk_depth + 2);
             Some(())
         } else {
             None
@@ -334,10 +380,11 @@ impl Inner {
     /// (containing_dir, new_depth).
     fn should_advance_ancestor_walk<'a>(
         &mut self,
+        walk_type: WalkType,
         dir: &'a RepoPath,
     ) -> Option<(&'a RepoPath, usize)> {
         let parent_dir = dir.parent()?;
-        let (ancestor, suffix) = self.node.get_containing_node(WalkType::File, parent_dir)?;
+        let (ancestor, suffix) = self.node.get_containing_node(walk_type, parent_dir)?;
         let ancestor_dir = parent_dir.strip_suffix(suffix, true)?;
         let (head, _) = suffix.split_first_component()?;
 
@@ -346,11 +393,10 @@ impl Inner {
         // expanding a huge walk deeper, so we wait until we've seen depth
         // advancements that bubble up to at least N different children of the walk
         // root.
-        if ancestor.insert_advanced_child(WalkType::File, head.to_owned())
-            >= self.min_dir_walk_threshold
+        if ancestor.insert_advanced_child(walk_type, head.to_owned()) >= self.min_dir_walk_threshold
         {
             let depth = ancestor
-                .get_walk_for_type(WalkType::File)
+                .get_dominating_walk(walk_type)
                 .map_or(0, |w| w.depth)
                 + 1;
             tracing::debug!(dir=%ancestor_dir, depth, "expanding walk boundary");
