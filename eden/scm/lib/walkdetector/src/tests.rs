@@ -7,7 +7,6 @@
 
 use std::time::Instant;
 
-use anyhow::Result;
 use types::RepoPathBuf;
 
 use crate::Detector;
@@ -19,7 +18,7 @@ fn p(p: impl AsRef<str>) -> RepoPathBuf {
 }
 
 #[test]
-fn test_walk_big_dir() -> Result<()> {
+fn test_walk_big_dir() {
     let detector = Detector::new();
     detector.set_min_dir_walk_threshold(2);
 
@@ -41,12 +40,10 @@ fn test_walk_big_dir() -> Result<()> {
     detector.file_read(epoch, p("dir/e"));
 
     assert_eq!(detector.walks(), vec![(p("dir"), 0)]);
-
-    Ok(())
 }
 
 #[test]
-fn test_bfs_walk() -> Result<()> {
+fn test_bfs_walk() {
     let detector = Detector::new();
     detector.set_min_dir_walk_threshold(2);
 
@@ -119,8 +116,6 @@ fn test_bfs_walk() -> Result<()> {
     detector.file_read(epoch, p("root/dir1/dir1_1/dir1_1_1/a"));
     detector.file_read(epoch, p("root/dir1/dir1_1/dir1_1_1/b"));
     assert_eq!(detector.walks(), vec![(p("root"), 3)]);
-
-    Ok(())
 }
 
 #[test]
@@ -133,28 +128,28 @@ fn test_walk_node_insert() {
         depth: 1,
         last_access: epoch,
     };
-    node.insert(&p("foo"), foo_walk);
+    node.insert_walk(&p("foo"), foo_walk);
     // Can re-insert.
-    node.insert(&p("foo"), foo_walk);
-    assert_eq!(node.list(), vec![(p("foo"), foo_walk)]);
+    node.insert_walk(&p("foo"), foo_walk);
+    assert_eq!(node.list_walks(), vec![(p("foo"), foo_walk)]);
 
     // Don't insert since it is fully contained by "foo" walk.
-    node.insert(
+    node.insert_walk(
         &p("foo/bar"),
         Walk {
             depth: 0,
             last_access: epoch,
         },
     );
-    assert_eq!(node.list(), vec![(p("foo"), foo_walk)]);
+    assert_eq!(node.list_walks(), vec![(p("foo"), foo_walk)]);
 
     let baz_walk = Walk {
         depth: 2,
         last_access: epoch,
     };
-    node.insert(&p("foo/bar/baz"), baz_walk);
+    node.insert_walk(&p("foo/bar/baz"), baz_walk);
     assert_eq!(
-        node.list(),
+        node.list_walks(),
         vec![(p("foo"), foo_walk), (p("foo/bar/baz"), baz_walk)]
     );
 
@@ -162,9 +157,9 @@ fn test_walk_node_insert() {
         depth: 0,
         last_access: epoch,
     };
-    node.insert(&p(""), root_walk);
+    node.insert_walk(&p(""), root_walk);
     assert_eq!(
-        node.list(),
+        node.list_walks(),
         vec![
             (p(""), root_walk),
             (p("foo"), foo_walk),
@@ -177,9 +172,9 @@ fn test_walk_node_insert() {
         depth: 1,
         last_access: epoch,
     };
-    node.insert(&p(""), root_walk);
+    node.insert_walk(&p(""), root_walk);
     assert_eq!(
-        node.list(),
+        node.list_walks(),
         vec![
             (p(""), root_walk),
             (p("foo"), foo_walk),
@@ -192,9 +187,9 @@ fn test_walk_node_insert() {
         depth: 2,
         last_access: epoch,
     };
-    node.insert(&p(""), root_walk);
+    node.insert_walk(&p(""), root_walk);
     assert_eq!(
-        node.list(),
+        node.list_walks(),
         vec![(p(""), root_walk), (p("foo/bar/baz"), baz_walk)]
     );
 
@@ -203,17 +198,17 @@ fn test_walk_node_insert() {
         depth: 5,
         last_access: epoch,
     };
-    node.insert(&p(""), root_walk);
-    assert_eq!(node.list(), vec![(p(""), root_walk),]);
+    node.insert_walk(&p(""), root_walk);
+    assert_eq!(node.list_walks(), vec![(p(""), root_walk),]);
 }
 
 #[test]
 fn test_walk_node_get() {
     let mut node = WalkNode::default();
 
-    assert!(node.get(&p("")).is_none());
-    assert!(node.get(&p("foo")).is_none());
-    assert!(node.get(&p("foo/bar")).is_none());
+    assert!(node.get_walk(&p("")).is_none());
+    assert!(node.get_walk(&p("foo")).is_none());
+    assert!(node.get_walk(&p("foo/bar")).is_none());
 
     let epoch = Instant::now();
 
@@ -221,56 +216,31 @@ fn test_walk_node_get() {
         depth: 1,
         last_access: epoch,
     };
-    node.insert(&p("foo"), foo_walk);
+    node.insert_walk(&p("foo"), foo_walk);
 
-    assert!(node.get(&p("")).is_none());
-    assert_eq!(node.get(&p("foo")), Some(&mut foo_walk));
-    assert!(node.get(&p("foo/bar")).is_none());
+    assert!(node.get_walk(&p("")).is_none());
+    assert_eq!(node.get_walk(&p("foo")), Some(&mut foo_walk));
+    assert!(node.get_walk(&p("foo/bar")).is_none());
 
     let mut foo_bar_walk = Walk {
         depth: 2,
         last_access: epoch,
     };
-    node.insert(&p("foo/bar"), foo_bar_walk);
+    node.insert_walk(&p("foo/bar"), foo_bar_walk);
 
-    assert!(node.get(&p("")).is_none());
-    assert_eq!(node.get(&p("foo")), Some(&mut foo_walk));
-    assert_eq!(node.get(&p("foo/bar")), Some(&mut foo_bar_walk));
+    assert!(node.get_walk(&p("")).is_none());
+    assert_eq!(node.get_walk(&p("foo")), Some(&mut foo_walk));
+    assert_eq!(node.get_walk(&p("foo/bar")), Some(&mut foo_bar_walk));
 
     let mut root_walk = Walk {
         depth: 0,
         last_access: epoch,
     };
-    node.insert(&p(""), root_walk);
+    node.insert_walk(&p(""), root_walk);
 
-    assert_eq!(node.get(&p("")), Some(&mut root_walk));
-    assert_eq!(node.get(&p("foo")), Some(&mut foo_walk));
-    assert_eq!(node.get(&p("foo/bar")), Some(&mut foo_bar_walk));
-}
-
-#[test]
-fn test_walk_get_containing() {
-    let mut node = WalkNode::default();
-
-    let dir = p("foo/bar/baz");
-
-    assert!(node.get_containing(&dir).is_none());
-
-    let epoch = Instant::now();
-
-    let mut walk = Walk {
-        depth: 0,
-        last_access: epoch,
-    };
-    node.insert(&p("foo/bar"), walk);
-
-    // Still not containing due to depth.
-    assert!(node.get_containing(&dir).is_none());
-
-    walk.depth = 1;
-    node.insert(&p("foo/bar"), walk);
-
-    assert_eq!(node.get_containing(&dir), Some(&mut walk));
+    assert_eq!(node.get_walk(&p("")), Some(&mut root_walk));
+    assert_eq!(node.get_walk(&p("foo")), Some(&mut foo_walk));
+    assert_eq!(node.get_walk(&p("foo/bar")), Some(&mut foo_bar_walk));
 }
 
 #[test]
@@ -287,13 +257,13 @@ fn test_walk_get_containing_node() {
         depth: 0,
         last_access: epoch,
     };
-    node.insert(&p("foo/bar"), walk);
+    node.insert_walk(&p("foo/bar"), walk);
 
     // Still not containing due to depth.
     assert!(node.get_containing_node(&dir).is_none());
 
     walk.depth = 1;
-    node.insert(&p("foo/bar"), walk);
+    node.insert_walk(&p("foo/bar"), walk);
 
     let (containing_node, suffix) = node.get_containing_node(&dir).unwrap();
     assert_eq!(containing_node.walk, Some(walk));
@@ -301,7 +271,7 @@ fn test_walk_get_containing_node() {
 }
 
 #[test]
-fn test_dir_hints() -> Result<()> {
+fn test_dir_hints() {
     let detector = Detector::new();
     detector.set_min_dir_walk_threshold(2);
 
@@ -317,6 +287,4 @@ fn test_dir_hints() -> Result<()> {
 
     // The walk bubbled straight up to "dir".
     assert_eq!(detector.walks(), vec![(p("dir"), 1)]);
-
-    Ok(())
 }

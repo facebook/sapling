@@ -25,16 +25,23 @@ pub(crate) struct WalkNode {
     // Child directories that have a walked descendant "advanced" past our current
     // walk.depth.
     pub(crate) advanced_children: HashSet<PathComponentBuf>,
+
+    // Total file count in this directory (if hint available).
+    pub(crate) total_files: Option<usize>,
+    // Total directory count in this directory (if hint available).
+    pub(crate) total_dirs: Option<usize>,
+    // File names seen so far (only used before transitioning to walk).
+    pub(crate) seen_files: HashSet<PathComponentBuf>,
 }
 
 impl WalkNode {
     /// Fetch active walk for `walk_root`, if any.
-    pub(crate) fn get(&mut self, walk_root: &RepoPath) -> Option<&mut Walk> {
+    pub(crate) fn get_walk(&mut self, walk_root: &RepoPath) -> Option<&mut Walk> {
         match walk_root.split_first_component() {
             Some((head, tail)) => self
                 .children
                 .get_mut(head)
-                .and_then(|child| child.get(tail)),
+                .and_then(|child| child.get_walk(tail)),
             None => self.walk.as_mut(),
         }
     }
@@ -48,13 +55,6 @@ impl WalkNode {
                 .and_then(|child| child.get_node(tail)),
             None => Some(self),
         }
-    }
-
-    /// Find active walk covering directory `dir`, if any.
-    /// Also returns the `dir` path suffix remaining after containing node.
-    pub(crate) fn get_containing<'a>(&'a mut self, dir: &'a RepoPath) -> Option<&'a mut Walk> {
-        self.get_containing_node(dir)
-            .and_then(|(n, _)| n.walk.as_mut())
     }
 
     /// Find node with active walk covering directory `dir`, if any.
@@ -76,9 +76,36 @@ impl WalkNode {
         }
     }
 
+    /// Find node with active walk covering `dir`, or create new node for `dir`. This is a
+    /// single step to perform the common get-or-create operation in a single tree
+    /// traversal.
+    pub(crate) fn get_or_create_owning_node<'a>(
+        &'a mut self,
+        dir: &'a RepoPath,
+    ) -> (&'a mut Self, &'a RepoPath) {
+        match dir.split_first_component() {
+            Some((head, tail)) => {
+                if self.contains(dir, 0) {
+                    (self, dir)
+                } else if self.children.contains_key(head) {
+                    self.children
+                        .get_mut(head)
+                        .unwrap()
+                        .get_or_create_owning_node(tail)
+                } else {
+                    self.children
+                        .entry(head.to_owned())
+                        .or_default()
+                        .get_or_create_owning_node(tail)
+                }
+            }
+            None => (self, dir),
+        }
+    }
+
     /// Insert a new walk. Any redundant/contained walks will be removed. `walk` will not
     /// be inserted if it is contained by an ancestor walk.
-    pub(crate) fn insert(&mut self, walk_root: &RepoPath, walk: Walk) {
+    pub(crate) fn insert_walk(&mut self, walk_root: &RepoPath, walk: Walk) {
         // If we completely overlap with the walk to be inserted, skip it. This shouldn't
         // happen, but I want to guarantee there are no overlapping walks.
         if self.contains(walk_root, walk.depth) {
@@ -88,10 +115,10 @@ impl WalkNode {
         match walk_root.split_first_component() {
             Some((head, tail)) => {
                 if let Some(child) = self.children.get_mut(head) {
-                    child.insert(tail, walk);
+                    child.insert_walk(tail, walk);
                 } else {
                     let mut child = WalkNode::default();
-                    child.insert(tail, walk);
+                    child.insert_walk(tail, walk);
                     if self.children.insert(head.to_owned(), child).is_some() {
                         tracing::warn!(name=%head, "WalkNode entry already existed");
                     }
@@ -106,7 +133,7 @@ impl WalkNode {
     }
 
     /// List all active walks.
-    pub(crate) fn list(&self) -> Vec<(RepoPathBuf, Walk)> {
+    pub(crate) fn list_walks(&self) -> Vec<(RepoPathBuf, Walk)> {
         fn inner(node: &WalkNode, path: RepoPathBuf, list: &mut Vec<(RepoPathBuf, Walk)>) {
             if let Some(walk) = &node.walk {
                 list.push((path.clone(), walk.clone()));
@@ -148,5 +175,13 @@ impl WalkNode {
     fn contains(&self, path: &RepoPath, depth: usize) -> bool {
         self.walk
             .is_some_and(|w| w.depth >= (path.components().count() + depth))
+    }
+
+    /// Return whether this Dir should be considered "walked".
+    pub(crate) fn is_walked(&self, dir_walk_threshold: usize) -> bool {
+        self.seen_files.len() >= dir_walk_threshold
+            || self
+                .total_files
+                .is_some_and(|total| total < dir_walk_threshold)
     }
 }

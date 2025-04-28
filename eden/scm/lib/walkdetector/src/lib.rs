@@ -9,13 +9,9 @@
 mod tests;
 mod walk_node;
 
-use std::collections::HashMap;
-use std::collections::HashSet;
-use std::collections::hash_map::Entry;
 use std::time::Instant;
 
 use parking_lot::Mutex;
-use types::PathComponentBuf;
 use types::RepoPath;
 use types::RepoPathBuf;
 use walk_node::WalkNode;
@@ -32,7 +28,6 @@ pub struct Detector {
 struct Inner {
     min_dir_walk_threshold: usize,
     node: WalkNode,
-    dirs: HashMap<RepoPathBuf, Dir>,
 }
 
 impl Default for Inner {
@@ -40,7 +35,6 @@ impl Default for Inner {
         Self {
             min_dir_walk_threshold: DEFAULT_MIN_DIR_WALK_THRESHOLD,
             node: WalkNode::default(),
-            dirs: Default::default(),
         }
     }
 }
@@ -49,12 +43,6 @@ impl Default for Inner {
 pub struct Walk {
     depth: usize,
     last_access: Instant,
-}
-
-struct Dir {
-    total_files: Option<usize>,
-    total_dirs: Option<usize>,
-    seen_files: HashSet<PathComponentBuf>,
 }
 
 // How many children must be accessed in a directory to consider the directory "walked".
@@ -77,7 +65,7 @@ impl Detector {
             .inner
             .lock()
             .node
-            .list()
+            .list_walks()
             .into_iter()
             .map(|(root, walk)| (root, walk.depth))
             .collect::<Vec<_>>();
@@ -99,25 +87,22 @@ impl Detector {
 
         let mut inner = self.inner.lock();
 
-        if let Some(walk) = inner.node.get_containing(&dir_path) {
-            tracing::trace!(dir=%dir_path, "dir in walk");
+        let dir_threshold = inner.min_dir_walk_threshold;
+
+        let (owner, suffix) = inner.node.get_or_create_owning_node(&dir_path);
+
+        if let Some(walk) = owner.walk.as_mut() {
+            tracing::trace!(walk_root=%dir_path.strip_suffix(suffix, true).unwrap_or_default(), dir=%dir_path, "dir in walk");
             walk.last_access = time;
             return;
         }
 
-        let dir_threshold = inner.min_dir_walk_threshold;
+        let my_dir = owner;
 
-        let mut entry = match inner.dirs.entry(dir_path) {
-            Entry::Occupied(entry) => entry,
-            Entry::Vacant(entry) => entry.insert_entry(Dir::new(time)),
-        };
+        my_dir.seen_files.insert(base_name);
 
-        let dir = entry.get_mut();
-        dir.seen_files.insert(base_name);
-
-        if entry.get().is_walked(dir_threshold) {
-            // Transition Dir entry to Walk.
-            let (dir_path, _dir) = entry.remove_entry();
+        if my_dir.is_walked(dir_threshold) {
+            my_dir.seen_files.clear();
             inner.insert_walk(time, &dir_path, 0);
         }
     }
@@ -128,27 +113,14 @@ impl Detector {
         tracing::trace!(?time, %path, num_files, num_dirs, "dir_read");
 
         let mut inner = self.inner.lock();
-        let dir = inner.dirs.entry(path).or_insert_with(|| Dir::new(time));
-        dir.total_files = Some(num_files);
-        dir.total_dirs = Some(num_dirs);
-    }
-}
+        let (owner, _suffix) = inner.node.get_or_create_owning_node(&path);
 
-impl Dir {
-    fn new(time: Instant) -> Self {
-        Self {
-            total_files: None,
-            total_dirs: None,
-            seen_files: Default::default(),
+        if owner.walk.is_some() {
+            // directory already part of a walk - don't track metadata
+        } else {
+            owner.total_files = Some(num_files);
+            owner.total_dirs = Some(num_dirs);
         }
-    }
-
-    /// Return whether this Dir should be considered "walked".
-    fn is_walked(&self, dir_walk_threshold: usize) -> bool {
-        self.seen_files.len() >= dir_walk_threshold
-            || self
-                .total_files
-                .is_some_and(|total| total < dir_walk_threshold)
     }
 }
 
@@ -162,7 +134,7 @@ impl Inner {
 
             if let Some(parent_node) = self.node.get_node(parent_dir) {
                 // If this walk already exists, there is no combining to be done.
-                if parent_node.get(name.as_ref()).is_none() {
+                if parent_node.get_walk(name.as_ref()).is_none() {
                     // We are adding a new walk - check if it has sibling walks that we
                     // want to merge into a walk on the parent.
 
@@ -193,21 +165,20 @@ impl Inner {
                         walk_depth = walk_depth.max(parent_node.walk.map_or(0, |w| w.depth));
                     }
                 }
-            }
 
-            if !merge_with_parent
-                && self.dirs.get(parent_dir).is_some_and(|p| {
-                    p.total_dirs
+                if !merge_with_parent
+                    && parent_node
+                        .total_dirs
                         .is_some_and(|total| total < self.min_dir_walk_threshold)
-                })
-            {
-                merge_with_parent = true;
-                tracing::debug!("promoting due to few dirs");
-            }
+                {
+                    merge_with_parent = true;
+                    tracing::debug!("promoting due to few dirs");
+                }
 
-            if merge_with_parent {
-                self.insert_walk(time, parent_dir, walk_depth + 1);
-                return;
+                if merge_with_parent {
+                    self.insert_walk(time, parent_dir, walk_depth + 1);
+                    return;
+                }
             }
 
             let mut to_insert = None;
@@ -223,10 +194,9 @@ impl Inner {
                         // root.
                         if ancestor.advanced_children.insert(head.to_owned()) {
                             if ancestor.advanced_children.len() >= self.min_dir_walk_threshold
-                                || self.dirs.get(ancestor_dir).is_some_and(|d| {
-                                    d.total_dirs
-                                        .is_some_and(|total| total < self.min_dir_walk_threshold)
-                                })
+                                || ancestor
+                                    .total_dirs
+                                    .is_some_and(|total| total < self.min_dir_walk_threshold)
                             {
                                 let depth = ancestor.walk.map_or(0, |w| w.depth) + 1;
                                 tracing::debug!(dir=%ancestor_dir, depth, "expanding walk boundary");
@@ -244,7 +214,7 @@ impl Inner {
         }
 
         tracing::debug!(%dir, depth=walk_depth, "inserting walk");
-        self.node.insert(
+        self.node.insert_walk(
             dir,
             Walk {
                 depth: walk_depth,
