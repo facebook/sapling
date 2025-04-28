@@ -462,30 +462,32 @@ impl RepoPath {
 
     /// If `base` is a prefix of `self`, return suffix of `self`.
     pub fn strip_prefix(&self, base: &Self, case_sensitive: bool) -> Option<&Self> {
-        let mut self_components = self.components();
-        let mut base_components = base.components();
-        loop {
-            let self_pos = self_components.position;
-            match (self_components.next(), base_components.next()) {
-                (Some(s), Some(b)) => {
-                    if s == b {
-                        continue;
-                    }
+        if self.0.len() < base.0.len() {
+            return None;
+        }
 
-                    if !case_sensitive
-                        && (s.0.eq_ignore_ascii_case(&b.0)
-                            || s.0.to_lowercase() == b.0.to_lowercase())
-                    {
-                        continue;
-                    }
+        if base.is_empty() {
+            return Some(self);
+        }
 
-                    return None;
-                }
-                (Some(_) | None, None) => {
-                    return Some(Self::from_str_unchecked(&self.0[self_pos..]));
-                }
-                (None, Some(_)) => return None,
+        if self.0.len() != base.0.len() && self.0.as_bytes()[base.0.len()] != SEPARATOR_BYTE {
+            return None;
+        }
+
+        let prefix = &self.0[..base.0.len()];
+
+        if prefix == &base.0
+            || (!case_sensitive
+                && (prefix.eq_ignore_ascii_case(&base.0)
+                    || prefix.to_lowercase() == base.0.to_lowercase()))
+        {
+            if self.0.len() == base.0.len() {
+                Some(Self::empty())
+            } else {
+                Some(Self::from_str_unchecked(&self.0[base.0.len() + 1..]))
             }
+        } else {
+            None
         }
     }
 
