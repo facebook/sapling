@@ -9,7 +9,6 @@ use std::collections::HashSet;
 use std::io::BufRead;
 use std::io::BufReader;
 use std::io::Write;
-use std::time::Instant;
 
 use clidispatch::ReqCtx;
 use cmdutil::Result;
@@ -61,11 +60,11 @@ pub fn run(ctx: ReqCtx<DebugWalkDetectorOpts>) -> Result<u8> {
                         num_files += 1;
                     }
                 }
-                detector.dir_read(Instant::now(), parent.to_owned(), num_files, num_dirs);
+                detector.dir_read(parent.to_owned(), num_files, num_dirs);
             }
         }
 
-        detector.file_read(Instant::now(), file_path);
+        detector.file_read(file_path);
     }
 
     let mut output = ctx.io().output();

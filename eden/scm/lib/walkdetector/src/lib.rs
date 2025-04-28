@@ -28,6 +28,7 @@ pub struct Detector {
 struct Inner {
     min_dir_walk_threshold: usize,
     node: WalkNode,
+    stub_now: Option<Instant>,
 }
 
 impl Default for Inner {
@@ -35,6 +36,7 @@ impl Default for Inner {
         Self {
             min_dir_walk_threshold: DEFAULT_MIN_DIR_WALK_THRESHOLD,
             node: WalkNode::default(),
+            stub_now: None,
         }
     }
 }
@@ -58,6 +60,11 @@ impl Detector {
         self.inner.lock().min_dir_walk_threshold = threshold;
     }
 
+    #[cfg(test)]
+    pub fn set_now(&self, now: Instant) {
+        self.inner.lock().stub_now = Some(now);
+    }
+
     /// Return list of (walk root dir, walk depth) representing active walks.
     pub fn walks(&self) -> Vec<(RepoPathBuf, usize)> {
         let mut walks = self
@@ -74,9 +81,9 @@ impl Detector {
         walks
     }
 
-    /// Observe a file (content) read of `path` at time `time`.
-    pub fn file_read(&self, time: Instant, mut path: RepoPathBuf) {
-        tracing::trace!(?time, %path, "file_read");
+    /// Observe a file (content) read of `path`.
+    pub fn file_read(&self, mut path: RepoPathBuf) {
+        tracing::trace!(%path, "file_read");
 
         let (dir_path, base_name) = match path.pop() {
             // Shouldn't happen - implies a path of "" which is not valid for a file.
@@ -85,6 +92,8 @@ impl Detector {
         };
 
         let mut inner = self.inner.lock();
+
+        let time = inner.now();
 
         let dir_threshold = inner.min_dir_walk_threshold;
 
@@ -109,10 +118,12 @@ impl Detector {
 
     /// Observe a directory read. `num_files` and `num_dirs` report the number of file and
     /// directory children of `path`, respectively.
-    pub fn dir_read(&self, time: Instant, path: RepoPathBuf, num_files: usize, num_dirs: usize) {
-        tracing::trace!(?time, %path, num_files, num_dirs, "dir_read");
+    pub fn dir_read(&self, path: RepoPathBuf, num_files: usize, num_dirs: usize) {
+        tracing::trace!(%path, num_files, num_dirs, "dir_read");
 
         let mut inner = self.inner.lock();
+
+        let time = inner.now();
 
         if interesting_metadata(
             inner.min_dir_walk_threshold,
@@ -297,5 +308,9 @@ impl Inner {
         }
 
         None
+    }
+
+    fn now(&self) -> Instant {
+        self.stub_now.unwrap_or_else(Instant::now)
     }
 }
