@@ -344,8 +344,6 @@ def get_edenfs_environment() -> Dict[str, str]:
         # The following are used to identify RE platform
         "REMOTE_EXECUTION_SCM_REPO",
         "INSIDE_RE_WORKER",
-        # Allow jemalloc heap profiling env vars to be passed through
-        "MALLOC_CONF",
         # Used by tests to trigger error conditions in instrumented Rust code.
         "FAILPOINTS",
     ]
