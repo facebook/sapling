@@ -9,6 +9,7 @@
 mod tests;
 mod walk_node;
 
+use std::time::Duration;
 use std::time::Instant;
 
 use parking_lot::Mutex;
@@ -27,6 +28,9 @@ pub struct Detector {
 
 struct Inner {
     min_dir_walk_threshold: usize,
+    last_gc_time: Instant,
+    gc_interval: Duration,
+    gc_timeout: Duration,
     node: WalkNode,
     stub_now: Option<Instant>,
 }
@@ -35,6 +39,9 @@ impl Default for Inner {
     fn default() -> Self {
         Self {
             min_dir_walk_threshold: DEFAULT_MIN_DIR_WALK_THRESHOLD,
+            last_gc_time: Instant::now(),
+            gc_interval: DEFAULT_GC_INTERVAL,
+            gc_timeout: DEFAULT_GC_TIMEOUT,
             node: WalkNode::default(),
             stub_now: None,
         }
@@ -48,6 +55,12 @@ pub struct Walk {
 
 // How many children must be accessed in a directory to consider the directory "walked".
 const DEFAULT_MIN_DIR_WALK_THRESHOLD: usize = 2;
+
+// How often we garbage collect stale walks.
+const DEFAULT_GC_INTERVAL: Duration = Duration::from_secs(5);
+
+// How stale a walk must be before we remove it.
+const DEFAULT_GC_TIMEOUT: Duration = Duration::from_secs(5);
 
 impl Detector {
     pub fn new() -> Self {
@@ -65,11 +78,22 @@ impl Detector {
         self.inner.lock().stub_now = Some(now);
     }
 
+    pub fn set_gc_interval(&self, interval: Duration) {
+        self.inner.lock().gc_interval = interval;
+    }
+
+    pub fn set_gc_timeout(&self, timeout: Duration) {
+        self.inner.lock().gc_timeout = timeout;
+    }
+
     /// Return list of (walk root dir, walk depth) representing active walks.
     pub fn walks(&self) -> Vec<(RepoPathBuf, usize)> {
-        let mut walks = self
-            .inner
-            .lock()
+        let mut inner = self.inner.lock();
+
+        let time = inner.now();
+        inner.maybe_gc(time);
+
+        let mut walks = inner
             .node
             .list_walks()
             .into_iter()
@@ -94,6 +118,8 @@ impl Detector {
         let mut inner = self.inner.lock();
 
         let time = inner.now();
+
+        inner.maybe_gc(time);
 
         let dir_threshold = inner.min_dir_walk_threshold;
 
@@ -124,6 +150,8 @@ impl Detector {
         let mut inner = self.inner.lock();
 
         let time = inner.now();
+
+        inner.maybe_gc(time);
 
         if interesting_metadata(
             inner.min_dir_walk_threshold,
@@ -312,5 +340,15 @@ impl Inner {
 
     fn now(&self) -> Instant {
         self.stub_now.unwrap_or_else(Instant::now)
+    }
+
+    fn maybe_gc(&mut self, time: Instant) {
+        if time - self.last_gc_time < self.gc_interval {
+            return;
+        }
+
+        self.node.gc(self.gc_timeout, time);
+
+        self.last_gc_time = time;
     }
 }

@@ -7,6 +7,7 @@
 
 use std::collections::HashMap;
 use std::collections::HashSet;
+use std::time::Duration;
 use std::time::Instant;
 
 use types::PathComponentBuf;
@@ -261,5 +262,66 @@ impl WalkNode {
         }
 
         inner(self, &mut cb, 0);
+    }
+
+    /// Delete nodes not accessed within timeout.
+    /// Returns (num_deleted, num_remaining).
+    #[tracing::instrument(level = "debug", skip(self))]
+    pub(crate) fn gc(&mut self, timeout: Duration, now: Instant) -> (usize, usize) {
+        // Return (num_deleted, num_remaining, keep_me)
+        fn inner(
+            name: &str,
+            node: &mut WalkNode,
+            timeout: Duration,
+            now: Instant,
+        ) -> (usize, usize, bool) {
+            let mut deleted = 0;
+            let mut retained = 0;
+
+            node.children.retain(|name, child| {
+                let (d, r, keep) = inner(name.as_str(), child, timeout, now);
+
+                deleted += d;
+                retained += r;
+
+                if !keep {
+                    tracing::debug!(%name, "GCing node");
+                }
+
+                keep
+            });
+
+            let expired = node
+                .last_access
+                .is_none_or(|accessed| now - accessed >= timeout);
+
+            let keep_me = !expired || !node.children.is_empty();
+
+            if expired && keep_me {
+                tracing::debug!(%name, "GCing node with children");
+                node.clear_except_children();
+            }
+
+            (deleted, retained, keep_me)
+        }
+
+        let (deleted, remaining, keep_me) = inner("", self, timeout, now);
+        if !keep_me {
+            // At top level we have no parent to remove us, so just unset our fields.
+            tracing::debug!("GCing root node");
+            self.clear_except_children();
+        }
+
+        (deleted, remaining)
+    }
+
+    // Clear all fields except children.
+    fn clear_except_children(&mut self) {
+        self.walk.take();
+        self.last_access.take();
+        self.advanced_children.clear();
+        self.total_files.take();
+        self.total_dirs.take();
+        self.seen_files.clear();
     }
 }

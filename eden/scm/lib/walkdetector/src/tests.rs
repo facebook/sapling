@@ -5,6 +5,9 @@
  * LICENSE file in the root directory of this source tree.
  */
 
+use std::time::Duration;
+use std::time::Instant;
+
 use types::RepoPathBuf;
 
 use crate::Detector;
@@ -352,4 +355,59 @@ fn test_merge_cousins() {
     detector.file_read(p("root/foo/dir2/dir2_1/a"));
     detector.file_read(p("root/foo/dir2/dir2_1/b"));
     assert_eq!(detector.walks(), vec![(p("root"), 3)]);
+}
+
+#[test]
+fn test_gc() {
+    let detector = Detector::new();
+    detector.set_min_dir_walk_threshold(TEST_MIN_DIR_WALK_THRESHOLD);
+    detector.set_gc_interval(Duration::from_secs(1));
+    detector.set_gc_timeout(Duration::from_secs(2));
+
+    let mut epoch = Instant::now();
+    detector.set_now(epoch);
+
+    detector.file_read(p("dir1/a"));
+    assert_eq!(detector.walks(), vec![]);
+
+    epoch += Duration::from_secs(1);
+    detector.set_now(epoch);
+
+    // GC should run but not remove anything.
+    detector.file_read(p("dir1/b"));
+    assert_eq!(detector.walks(), vec![(p("dir1"), 0)]);
+
+    epoch += Duration::from_secs(1);
+    detector.set_now(epoch);
+
+    // This should keep dir1 walk alive.
+    detector.file_read(p("dir1/c"));
+    detector.file_read(p("dir2/a"));
+    detector.file_read(p("some/deep/dir/a"));
+    assert_eq!(detector.walks(), vec![(p("dir1"), 0)]);
+
+    epoch += Duration::from_secs(1);
+    detector.set_now(epoch);
+
+    detector.file_read(p("dir2/b"));
+    assert_eq!(detector.walks(), vec![(p(""), 1)]);
+
+    epoch += Duration::from_secs(1);
+    detector.set_now(epoch);
+
+    // GC should clear out some/deep/dir, so this should not result in walk.
+    detector.file_read(p("some/deep/dir/b"));
+    // This should update access time for root walk.
+    detector.file_read(p("dir3/a"));
+    assert_eq!(detector.walks(), vec![(p(""), 1)]);
+
+    // Root walk still here since dir3/a refreshed access time.
+    epoch += Duration::from_secs(1);
+    detector.set_now(epoch);
+    assert_eq!(detector.walks(), vec![(p(""), 1)]);
+
+    // Everything is GC'd.
+    epoch += Duration::from_secs(1);
+    detector.set_now(epoch);
+    assert_eq!(detector.walks(), vec![]);
 }
