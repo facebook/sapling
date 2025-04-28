@@ -113,15 +113,24 @@ impl Detector {
         tracing::trace!(?time, %path, num_files, num_dirs, "dir_read");
 
         let mut inner = self.inner.lock();
-        let (owner, _suffix) = inner.node.get_or_create_owning_node(&path);
 
-        if owner.walk.is_some() {
-            // directory already part of a walk - don't track metadata
-        } else {
-            owner.total_files = Some(num_files);
-            owner.total_dirs = Some(num_dirs);
+        if interesting_metadata(
+            inner.min_dir_walk_threshold,
+            Some(num_files),
+            Some(num_dirs),
+        ) {
+            inner.node.insert_metadata(&path, num_files, num_dirs);
         }
     }
+}
+
+fn interesting_metadata(
+    threshold: usize,
+    num_files: Option<usize>,
+    num_dirs: Option<usize>,
+) -> bool {
+    num_dirs.is_some_and(|dirs| dirs > 0 && dirs < threshold)
+        || num_files.is_some_and(|files| files > 0 && files < threshold)
 }
 
 impl Inner {
@@ -163,30 +172,36 @@ impl Inner {
         dir: &'a RepoPath,
         mut walk_depth: usize,
     ) -> Option<(&'a RepoPath, usize)> {
+        tracing::debug!(%dir, "should_merge_into_parent");
+
         let (parent_dir, name) = dir.split_last_component()?;
         let parent_node = self.node.get_node(parent_dir)?;
-
-        // If this walk already exists, there is no combining to be done.
-        if parent_node.get_walk(name.as_ref()).is_some() {
-            return None;
-        }
 
         // Check if there are sibling walks that we want to merge into a walk
         // on the parent.
 
         let mut sibling_count = 0;
-        let max_sibling_depth = parent_node.child_walks().fold(0, |max, (_, walk)| {
+        let mut saw_self = false;
+        let max_sibling_depth = parent_node.child_walks().fold(0, |max, (sibling, walk)| {
             sibling_count += 1;
+            saw_self = name == sibling;
             max.max(walk.depth)
         });
 
-        if sibling_count >= (self.min_dir_walk_threshold - 1) {
+        // This walk hasn't been inserted - count as sibling.
+        if !saw_self {
+            sibling_count += 1;
+        }
+
+        tracing::debug!(%dir, sibling_count, parent_dirs=?parent_node.total_dirs);
+
+        if sibling_count >= self.min_dir_walk_threshold {
             if tracing::enabled!(tracing::Level::DEBUG) {
                 let siblings_display = parent_node
                     .child_walks()
                     .map(|(name, walk)| format!("{}:{}", parent_dir.join(name), walk.depth))
                     .collect::<Vec<_>>();
-                tracing::debug!(siblings=?siblings_display, "combining with siblings");
+                tracing::debug!(%dir, siblings=?siblings_display, "combining with siblings");
             }
 
             walk_depth = walk_depth.max(max_sibling_depth);
@@ -196,7 +211,7 @@ impl Inner {
             .total_dirs
             .is_some_and(|total| total < self.min_dir_walk_threshold)
         {
-            tracing::debug!("promoting due to few dirs");
+            tracing::debug!(%dir, "promoting due to few dirs");
             Some((parent_dir, walk_depth + 1))
         } else {
             None

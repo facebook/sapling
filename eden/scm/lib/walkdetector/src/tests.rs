@@ -362,3 +362,27 @@ fn test_advance_while_advancing() {
 
     assert_eq!(detector.walks(), vec![(p("root"), 3)]);
 }
+
+#[test]
+fn test_retain_interesting_metadata() {
+    let detector = Detector::new();
+    detector.set_min_dir_walk_threshold(TEST_MIN_DIR_WALK_THRESHOLD);
+
+    let epoch = Instant::now();
+
+    // "interesting" metadata saying root/dir1 only has one directory
+    detector.dir_read(epoch, p("root/dir1"), 2, 1);
+
+    // Walk at root/, depth=1.
+    detector.file_read(epoch, p("root/dir1/a"));
+    detector.file_read(epoch, p("root/dir1/b"));
+    detector.file_read(epoch, p("root/dir2/a"));
+    detector.file_read(epoch, p("root/dir2/b"));
+    assert_eq!(detector.walks(), vec![(p("root"), 1)]);
+
+    // Walk at root/dir1/dir1_1, depth=1.
+    // Test that we "remembered" root/dir1 metadata, so doot/dir1/dir1_1 is instantly promoted into walk on root/dir1.
+    detector.file_read(epoch, p("root/dir1/dir1_1/a"));
+    detector.file_read(epoch, p("root/dir1/dir1_1/b"));
+    assert_eq!(detector.walks(), vec![(p("root"), 1), (p("root/dir1"), 1)]);
+}

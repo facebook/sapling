@@ -13,6 +13,7 @@ use types::RepoPath;
 use types::RepoPathBuf;
 
 use crate::Walk;
+use crate::interesting_metadata;
 
 /// Tree structure to track active walks. This makes it efficient to find a file's
 /// "containing" walk, and to efficiently discover a walk's siblings, cousins, etc. in
@@ -127,12 +128,35 @@ impl WalkNode {
             None => {
                 self.walk = Some(walk);
                 self.advanced_children.clear();
-                self.remove_contained(walk.depth);
+                self.remove_contained(walk.depth, threshold);
 
                 if self.advanced_children.len() >= threshold {
                     walk.depth += 1;
                     self.insert_walk(walk_root, walk, threshold);
                 }
+            }
+        }
+    }
+
+    pub(crate) fn insert_metadata(
+        &mut self,
+        walk_root: &RepoPath,
+        total_files: usize,
+        total_dirs: usize,
+    ) {
+        match walk_root.split_first_component() {
+            Some((head, tail)) => {
+                if let Some(child) = self.children.get_mut(head) {
+                    child.insert_metadata(tail, total_files, total_dirs);
+                } else {
+                    let mut child = WalkNode::default();
+                    child.insert_metadata(tail, total_files, total_dirs);
+                    self.children.insert(head.to_owned(), child);
+                }
+            }
+            None => {
+                self.total_files = Some(total_files);
+                self.total_dirs = Some(total_dirs);
             }
         }
     }
@@ -161,9 +185,9 @@ impl WalkNode {
     }
 
     /// Recursively remove all walks contained within a walk of depth `depth`.
-    fn remove_contained(&mut self, depth: usize) {
+    fn remove_contained(&mut self, depth: usize, threshold: usize) {
         // Returns whether a walk exists at depth+1.
-        fn inner(node: &mut WalkNode, depth: usize, top: bool) -> bool {
+        fn inner(node: &mut WalkNode, depth: usize, top: bool, threshold: usize) -> bool {
             let mut any_child_advanced = false;
 
             node.children.retain(|name, child| {
@@ -176,7 +200,7 @@ impl WalkNode {
                 }
 
                 if depth > 0 {
-                    if inner(child, depth - 1, false) {
+                    if inner(child, depth - 1, false, threshold) {
                         child_advanced = true;
                     }
                 }
@@ -190,13 +214,16 @@ impl WalkNode {
 
                 any_child_advanced = any_child_advanced || child_advanced;
 
-                child.walk.is_some() || !child.children.is_empty()
+                child.walk.is_some()
+                    || !child.children.is_empty()
+                    // Keep node around if it has total file/dir hints that are likely to be useful.
+                    || interesting_metadata(threshold, child.total_files, child.total_dirs)
             });
 
             any_child_advanced
         }
 
-        inner(self, depth, true);
+        inner(self, depth, true, threshold);
     }
 
     /// Reports whether self has a walk and the walk fully contains a descendant walk
