@@ -136,22 +136,6 @@ function mononoke {
   python_fn mononoke "$@"
 }
 
-function mononoke_hg_sync {
-  HG_REPO="$1"
-  shift
-  START_ID="$1"
-  shift
-
-  GLOG_minloglevel=5 "$MONONOKE_HG_SYNC" \
-    "${CACHE_ARGS[@]}" \
-    "${COMMON_ARGS[@]}" \
-    --retry-num 1 \
-    --repo-id $REPOID \
-    --mononoke-config-path "$TESTTMP/mononoke-config" \
-    --verify-server-bookmark-on-failure \
-     ssh://user@dummy/"$HG_REPO" "$@" sync-once --start-id "$START_ID"
-}
-
 function mononoke_cas_sync {
   HG_REPO_NAME="$1"
   shift
@@ -166,48 +150,6 @@ function mononoke_cas_sync {
     --mononoke-config-path "$TESTTMP/mononoke-config" \
      sync-loop --start-id "$START_ID" --batch-size 20
 }
-
-function mononoke_backup_sync {
-  HG_REPO="$1"
-  SYNC_MODE="$2"
-  START_ID="$3"
-  shift
-  shift
-  shift
-
-  GLOG_minloglevel=5 "$MONONOKE_HG_SYNC" \
-    "${CACHE_ARGS[@]}" \
-    "${COMMON_ARGS[@]}" \
-    --retry-num 1 \
-    --repo-id $REPOID \
-    --mononoke-config-path "$TESTTMP/mononoke-config" \
-    --verify-server-bookmark-on-failure \
-    --darkstorm-backup-repo-id "$BACKUP_REPO_ID" \
-    "mononoke://$(mononoke_address)/$HG_REPO" "$@" "$SYNC_MODE" --start-id "$START_ID"
-}
-
-function mononoke_backup_sync_loop_forever {
-  HG_REPO="$1"
-  START_ID="$2"
-  shift
-  shift
-
-  GLOG_minloglevel=5 "$MONONOKE_HG_SYNC" \
-    "${CACHE_ARGS[@]}" \
-    "${COMMON_ARGS[@]}" \
-    --retry-num 1 \
-    --repo-id $REPOID \
-    --mononoke-config-path "$TESTTMP/mononoke-config" \
-    --verify-server-bookmark-on-failure \
-    --darkstorm-backup-repo-id "$BACKUP_REPO_ID" \
-    "mononoke://$(mononoke_address)/$HG_REPO" "$@" \
-    sync-loop \
-    --start-id "$START_ID" \
-    --loop-forever  >> "$TESTTMP/backup_sync.out" 2>&1 &
-  export BACKUP_SYNC_PID=$!
-  echo "$BACKUP_SYNC_PID" >> "$DAEMON_PIDS"
-}
-
 
 function megarepo_tool {
   GLOG_minloglevel=5 "$MEGAREPO_TOOL" \
@@ -267,29 +209,6 @@ function mononoke_x_repo_sync() {
     "$@"
 }
 
-function mononoke_hg_sync_with_retry {
-  GLOG_minloglevel=5 "$MONONOKE_HG_SYNC" \
-    "${CACHE_ARGS[@]}" \
-    "${COMMON_ARGS[@]}" \
-    --base-retry-delay-ms 1 \
-    --repo-id $REPOID \
-    --mononoke-config-path "$TESTTMP"/mononoke-config \
-    --verify-server-bookmark-on-failure \
-     ssh://user@dummy/"$1" sync-once --start-id "$2"
-}
-
-function mononoke_hg_sync_with_failure_handler {
-  GLOG_minloglevel=5 "$MONONOKE_HG_SYNC" \
-    "${CACHE_ARGS[@]}" \
-    "${COMMON_ARGS[@]}" \
-    --retry-num 1 \
-    --repo-id $REPOID \
-    --mononoke-config-path "$TESTTMP"/mononoke-config \
-    --verify-server-bookmark-on-failure \
-    --lock-on-failure \
-     ssh://user@dummy/"$1" sync-once --start-id "$2"
-}
-
 function create_books_sqlite3_db {
   cat >> "$TESTTMP"/bookmarks.sql <<SQL
   CREATE TABLE IF NOT EXISTS bookmarks_update_log (
@@ -305,36 +224,6 @@ function create_books_sqlite3_db {
 SQL
 
   sqlite3 "$TESTTMP/monsql/sqlite_dbs" < "$TESTTMP"/bookmarks.sql
-}
-
-function mononoke_hg_sync_loop {
-  local repo="$1"
-  local start_id="$2"
-  shift
-  shift
-
-  GLOG_minloglevel=5 "$MONONOKE_HG_SYNC" \
-    "${CACHE_ARGS[@]}" \
-    "${COMMON_ARGS[@]}" \
-    --retry-num 1 \
-    --repo-id $REPOID \
-    --mononoke-config-path "$TESTTMP"/mononoke-config \
-    ssh://user@dummy/"$repo" sync-loop --start-id "$start_id" "$@"
-}
-
-function mononoke_hg_sync_loop_regenerate {
-  local repo="$1"
-  local start_id="$2"
-  shift
-  shift
-
-  GLOG_minloglevel=5 "$MONONOKE_HG_SYNC" \
-    "${CACHE_ARGS[@]}" \
-    "${COMMON_ARGS[@]}" \
-    --retry-num 1 \
-    --repo-id 0 \
-    --mononoke-config-path "$TESTTMP"/mononoke-config \
-    ssh://user@dummy/"$repo" sync-loop --start-id "$start_id" "$@"
 }
 
 function mononoke_modern_sync {
