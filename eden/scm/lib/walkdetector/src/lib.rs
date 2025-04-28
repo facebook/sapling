@@ -209,6 +209,38 @@ impl Inner {
                 self.insert_walk(time, parent_dir, walk_depth + 1);
                 return;
             }
+
+            let mut to_insert = None;
+
+            // Check if we have a containing walk whose depth boundary should be increased.
+            if let Some((ancestor, suffix)) = self.node.get_containing_node(parent_dir) {
+                if let Some(ancestor_dir) = parent_dir.strip_suffix(suffix, true) {
+                    if let Some((head, _)) = suffix.split_first_component() {
+                        // Check if the containing walk's node has N children with descendants that
+                        // have pushed to the next depth. The idea is we want some confidence before
+                        // expanding a huge walk deeper, so we wait until we've seen depth
+                        // advancements that bubble up to at least N different children of the walk
+                        // root.
+                        if ancestor.advanced_children.insert(head.to_owned()) {
+                            if ancestor.advanced_children.len() >= self.min_dir_walk_threshold
+                                || self.dirs.get(ancestor_dir).is_some_and(|d| {
+                                    d.total_dirs
+                                        .is_some_and(|total| total < self.min_dir_walk_threshold)
+                                })
+                            {
+                                let depth = ancestor.walk.map_or(0, |w| w.depth) + 1;
+                                tracing::debug!(dir=%ancestor_dir, depth, "expanding walk boundary");
+                                to_insert = Some((time, ancestor_dir, depth));
+                            }
+                        }
+                    }
+                }
+            }
+
+            if let Some((time, dir, depth)) = to_insert {
+                self.insert_walk(time, dir, depth);
+                return;
+            }
         }
 
         tracing::debug!(%dir, depth=walk_depth, "inserting walk");

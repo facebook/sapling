@@ -6,6 +6,7 @@
  */
 
 use std::collections::HashMap;
+use std::collections::HashSet;
 
 use types::PathComponentBuf;
 use types::RepoPath;
@@ -20,6 +21,10 @@ use crate::Walk;
 pub(crate) struct WalkNode {
     pub(crate) walk: Option<Walk>,
     pub(crate) children: HashMap<PathComponentBuf, WalkNode>,
+
+    // Child directories that have a walked descendant "advanced" past our current
+    // walk.depth.
+    pub(crate) advanced_children: HashSet<PathComponentBuf>,
 }
 
 impl WalkNode {
@@ -94,6 +99,7 @@ impl WalkNode {
             }
             None => {
                 self.walk = Some(walk);
+                self.advanced_children.clear();
                 self.remove_contained(walk.depth);
             }
         }

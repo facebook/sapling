@@ -92,6 +92,34 @@ fn test_bfs_walk() -> Result<()> {
     detector.file_read(epoch, p("root/dir2/dir2_2/b"));
     assert_eq!(detector.walks(), vec![(p("root"), 2)]);
 
+    // Walk boundary can advance after we see depth+1 access that bubbles up to 2
+    // different children of root.
+    detector.file_read(epoch, p("root/dir2/dir2_1/dir2_1_1/a"));
+    detector.file_read(epoch, p("root/dir2/dir2_1/dir2_1_1/b"));
+
+    // So far only one advancement - doesn't expand root walk yet.
+    assert_eq!(
+        detector.walks(),
+        vec![(p("root"), 2), (p("root/dir2/dir2_1/dir2_1_1"), 0)]
+    );
+
+    // Doesn't bubble up since advancement is still only under a single child "dir2".
+    detector.file_read(epoch, p("root/dir2/dir2_2/dir2_2_1/a"));
+    detector.file_read(epoch, p("root/dir2/dir2_2/dir2_2_1/b"));
+    assert_eq!(
+        detector.walks(),
+        vec![
+            (p("root"), 2),
+            (p("root/dir2/dir2_1/dir2_1_1"), 0),
+            (p("root/dir2/dir2_2/dir2_2_1"), 0)
+        ]
+    );
+
+    // Now we also see a depth=3 access under "dir1" - expand depth.
+    detector.file_read(epoch, p("root/dir1/dir1_1/dir1_1_1/a"));
+    detector.file_read(epoch, p("root/dir1/dir1_1/dir1_1_1/b"));
+    assert_eq!(detector.walks(), vec![(p("root"), 3)]);
+
     Ok(())
 }
 
