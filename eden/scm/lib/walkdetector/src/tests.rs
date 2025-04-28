@@ -244,3 +244,24 @@ fn test_walk_get_containing() {
 
     assert_eq!(node.get_containing(&dir), Some(&mut walk));
 }
+
+#[test]
+fn test_dir_hints() -> Result<()> {
+    let detector = Detector::new();
+    detector.set_min_dir_walk_threshold(2);
+
+    let epoch = Instant::now();
+
+    // Hint that "dir" has 0 files and 1 directory.
+    detector.dir_read(epoch, p("dir"), 0, 1);
+
+    // Hint that "dir/subdir" has 1 file and 0 directories.
+    detector.dir_read(epoch, p("dir/subdir"), 1, 0);
+
+    detector.file_read(epoch, p("dir/subdir/a"));
+
+    // The walk bubbled straight up to "dir".
+    assert_eq!(detector.walks(), vec![(p("dir"), 1)]);
+
+    Ok(())
+}

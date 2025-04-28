@@ -52,6 +52,8 @@ pub struct Walk {
 }
 
 struct Dir {
+    total_files: Option<usize>,
+    total_dirs: Option<usize>,
     seen_files: HashSet<PathComponentBuf>,
 }
 
@@ -107,9 +109,7 @@ impl Detector {
 
         let mut entry = match inner.dirs.entry(dir_path) {
             Entry::Occupied(entry) => entry,
-            Entry::Vacant(entry) => entry.insert_entry(Dir {
-                seen_files: Default::default(),
-            }),
+            Entry::Vacant(entry) => entry.insert_entry(Dir::new(time)),
         };
 
         let dir = entry.get_mut();
@@ -121,12 +121,34 @@ impl Detector {
             inner.insert_walk(time, &dir_path, 0);
         }
     }
+
+    /// Observe a directory read. `num_files` and `num_dirs` report the number of file and
+    /// directory children of `path`, respectively.
+    pub fn dir_read(&self, time: Instant, path: RepoPathBuf, num_files: usize, num_dirs: usize) {
+        tracing::trace!(?time, %path, num_files, num_dirs, "dir_read");
+
+        let mut inner = self.inner.lock();
+        let dir = inner.dirs.entry(path).or_insert_with(|| Dir::new(time));
+        dir.total_files = Some(num_files);
+        dir.total_dirs = Some(num_dirs);
+    }
 }
 
 impl Dir {
+    fn new(time: Instant) -> Self {
+        Self {
+            total_files: None,
+            total_dirs: None,
+            seen_files: Default::default(),
+        }
+    }
+
     /// Return whether this Dir should be considered "walked".
     fn is_walked(&self, dir_walk_threshold: usize) -> bool {
         self.seen_files.len() >= dir_walk_threshold
+            || self
+                .total_files
+                .is_some_and(|total| total < dir_walk_threshold)
     }
 }
 
@@ -136,6 +158,8 @@ impl Inner {
         tracing::debug!(%dir, depth=walk_depth, "new walk");
 
         if let Some((parent_dir, name)) = dir.split_last_component() {
+            let mut merge_with_parent = false;
+
             if let Some(parent_node) = self.node.get_node(parent_dir) {
                 // If this walk already exists, there is no combining to be done.
                 if parent_node.get(name.as_ref()).is_none() {
@@ -148,7 +172,9 @@ impl Inner {
                         max.max(walk.depth)
                     });
 
-                    if sibling_count >= (self.min_dir_walk_threshold - 1) {
+                    merge_with_parent = sibling_count >= (self.min_dir_walk_threshold - 1);
+
+                    if merge_with_parent {
                         if tracing::enabled!(tracing::Level::DEBUG) {
                             let siblings_display = parent_node
                                 .child_walks()
@@ -163,12 +189,25 @@ impl Inner {
                             tracing::debug!(siblings=?siblings_display, "combining with siblings");
                         }
 
-                        walk_depth = walk_depth.max(max_sibling_depth) + 1;
+                        walk_depth = walk_depth.max(max_sibling_depth);
                         walk_depth = walk_depth.max(parent_node.walk.map_or(0, |w| w.depth));
-                        self.insert_walk(time, parent_dir, walk_depth);
-                        return;
                     }
                 }
+            }
+
+            if !merge_with_parent
+                && self.dirs.get(parent_dir).is_some_and(|p| {
+                    p.total_dirs
+                        .is_some_and(|total| total < self.min_dir_walk_threshold)
+                })
+            {
+                merge_with_parent = true;
+                tracing::debug!("promoting due to few dirs");
+            }
+
+            if merge_with_parent {
+                self.insert_walk(time, parent_dir, walk_depth + 1);
+                return;
             }
         }
 
