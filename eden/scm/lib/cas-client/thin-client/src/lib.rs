@@ -17,6 +17,7 @@ use configmodel::Config;
 use configmodel::ConfigExt;
 use configmodel::convert::ByteCount;
 use configmodel::convert::FromConfigValue;
+use re_client_lib::CASDaemonClientCfg;
 use re_client_lib::ExternalCASDaemonAddress;
 use re_client_lib::ExternalCASDaemonCfg;
 #[cfg(not(target_os = "linux"))]
@@ -146,60 +147,35 @@ impl ThinCasClient {
         re_config.enable_scuba_logging = false;
         re_config.enable_cancellation = true;
 
-        let server_address = match re_config.cas_client_config {
-            re_client_lib::CASDaemonClientCfg::external_config(ref mut external_config) => {
-                external_config.address.clone()
+        let external_config = if let Some(port) = self.port {
+            ExternalCASDaemonCfg {
+                cas_daemon_port: port,
+                cas_daemon_address: ExternalCASDaemonAddress::port(port),
+                address: None,
+                connection_count: self.connection_count as i32,
+                ..Default::default()
             }
-            re_client_lib::CASDaemonClientCfg::embedded_config(ref mut embedded_config) => {
-                embedded_config.address.clone()
-            }
-            _ => None,
-        };
-
-        if let Some(port) = self.port {
-            re_config.cas_client_config =
-                re_client_lib::CASDaemonClientCfg::external_config(ExternalCASDaemonCfg {
-                    cas_daemon_port: port,
-                    cas_daemon_address: ExternalCASDaemonAddress::port(port),
-                    address: server_address,
-                    connection_count: self.connection_count as i32,
-                    ..Default::default()
-                });
         } else if let Some(uds_path) = self.uds_path.clone() {
-            re_config.cas_client_config =
-                re_client_lib::CASDaemonClientCfg::external_config(ExternalCASDaemonCfg {
-                    cas_daemon_port: 0,
-                    cas_daemon_address: ExternalCASDaemonAddress::uds_path(uds_path.clone()),
-                    address: server_address,
-                    connection_count: self.connection_count as i32,
-                    ..Default::default()
-                });
+            ExternalCASDaemonCfg {
+                cas_daemon_port: 0,
+                cas_daemon_address: ExternalCASDaemonAddress::uds_path(uds_path),
+                address: None,
+                connection_count: self.connection_count as i32,
+                ..Default::default()
+            }
         } else {
             let socket_path = std::env::var("CASD_SOCKET_PATH")
                 .unwrap_or(re_client_lib::DEFAULT_CASD_SOCKET.to_string());
-            let config = ExternalCASDaemonCfg {
+            ExternalCASDaemonCfg {
                 address: None,
                 connection_count: self.connection_count as i32,
                 cas_daemon_address: ExternalCASDaemonAddress::uds_path(socket_path),
                 socket_activation: true,
                 ..Default::default()
-            };
-            match &mut re_config.cas_client_config {
-                re_client_lib::CASDaemonClientCfg::external_config(ref mut external_config) => {
-                    *external_config = config.to_owned()
-                }
-                re_client_lib::CASDaemonClientCfg::external_with_fallback_config(
-                    ref mut external_with_fallback_config,
-                ) => external_with_fallback_config.external_cfg = config,
-                re_client_lib::CASDaemonClientCfg::embedded_config(_) => {
-                    // There's not any fields we can meaningfully carry over from the embedded config.
-                    // Clients could mistakenly set fields on embedded config then drop them here.
-                    re_config.cas_client_config =
-                        re_client_lib::CASDaemonClientCfg::external_config(config)
-                }
-                _ => {}
-            };
-        }
+            }
+        };
+
+        re_config.cas_client_config = CASDaemonClientCfg::external_config(external_config);
 
         #[cfg(target_os = "linux")]
         let client = REClient::new(self.session_id.clone(), 0, re_config);
