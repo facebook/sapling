@@ -7,43 +7,22 @@
   $ . "${TEST_FIXTURES}/library.sh"
 
 setup configuration
-  $ setup_common_config
-  $ cd $TESTTMP
-
-setup common configuration
-  $ cat >> $HGRCPATH <<EOF
-  > [ui]
-  > ssh="$DUMMYSSH"
-  > EOF
-
-setup repo
-  $ hginit_treemanifest repo
-  $ cd repo
-  $ hg debugdrawdag <<EOF
-  > C
-  > |
-  > B
-  > |
-  > A
-  > EOF
-
-create master bookmark
-  $ hg bookmark master_bookmark -r tip
-
-blobimport, succeeding
-  $ cd ..
-  $ blobimport repo/.hg repo
+  $ BLOB_TYPE="blob_files" default_setup_drawdag
+  A=aa53d24251ff3f54b1b2c29ae02826701b2abeb0079f1bb13b8434b54cd87675
+  B=f8c75e41a0c4d29281df765f39de47bca1dcadfdc55ada4ccc2f6df567201658
+  C=e32a1e342cdb1e38e88466b4c1a01ae9f410024017aa21dc0a1c5da6b3963bf2
 
 check the read sql path still works with readonly storage
   $ mononoke_admin --with-readonly-storage=true bookmarks -R repo log master_bookmark
-  * (master_bookmark) c3384961b16276f2db77df9d7c874bbe981cf0525bd6f84a502f919044f2dabd blobimport * (glob)
+  * (master_bookmark) e32a1e342cdb1e38e88466b4c1a01ae9f410024017aa21dc0a1c5da6b3963bf2 testmove * (glob)
 
 check that sql writes are blocked by readonly storage
-  $ mononoke_admin --with-readonly-storage=true bookmarks -R repo set another_bookmark 26805aba1e600a82e93661149f2313866a221a7b
-  Creating publishing bookmark another_bookmark at c3384961b16276f2db77df9d7c874bbe981cf0525bd6f84a502f919044f2dabd
+  $ mononoke_admin --with-readonly-storage=true bookmarks -R repo set another_bookmark $B
+  Creating publishing bookmark another_bookmark at f8c75e41a0c4d29281df765f39de47bca1dcadfdc55ada4ccc2f6df567201658
   * While executing InsertBookmarksImpl query (glob)
   
   Caused by:
       0: attempt to write a readonly database
       1: Error code 8: Attempt to write a readonly database
   [1]
+
