@@ -257,7 +257,7 @@ impl RichCasClient {
         re_config.cas_client_config = CASDaemonClientCfg::embedded_config(embedded_config);
 
         #[cfg(target_os = "linux")]
-        let client = REClient::new(self.session_id.clone(), CAS_SESSION_TTL, re_config);
+        let client = REClient::new(self.session_id.clone(), CAS_SESSION_TTL, re_config)?;
         #[cfg(not(target_os = "linux"))]
         let client = REClientBuilder::new(fbinit::expect_init())
             .with_config(re_config)

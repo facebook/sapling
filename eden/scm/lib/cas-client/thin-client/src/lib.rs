@@ -184,7 +184,7 @@ impl ThinCasClient {
         re_config.cas_client_config = CASDaemonClientCfg::external_config(external_config);
 
         #[cfg(target_os = "linux")]
-        let client = REClient::new(self.session_id.clone(), 0, re_config);
+        let client = REClient::new(self.session_id.clone(), 0, re_config)?;
         #[cfg(not(target_os = "linux"))]
         let client = REClientBuilder::new(fbinit::expect_init())
             .with_config(re_config)
