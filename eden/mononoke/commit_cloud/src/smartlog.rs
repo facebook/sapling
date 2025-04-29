@@ -29,7 +29,7 @@ pub struct RawSmartlogData {
     pub remote_bookmarks: RemoteBookmarksMap,
 }
 impl RawSmartlogData {
-    // Takes all the heads and bookmarks and returns them as a single Vec<HgChangesetId>
+    // Takes all the heads and bookmarks and returns them as a single Vec<CloudChangesetId>
     // in order to create a  smartlog node list
     pub fn collapse_into_vec(&self, flags: &[SmartlogFlag]) -> Vec<CloudChangesetId> {
         let mut heads = self

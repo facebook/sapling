@@ -108,6 +108,7 @@ pub(crate) async fn cast_references_data(
         // map [HgChangesetId] to [(HgChangesetId, BonsaiChangesetId)]
         .and_then(|heads| async move {
             Ok(stream::iter(
+                // TODO: Use bonsai_git mapping for git repos
                 bonsai_hg_mapping
                     .get(core_ctx, heads.into())
                     .await?
