@@ -2244,13 +2244,14 @@ def merge(
         force=force,
         labels=labels,
         wc=wc,
+        from_repo=from_repo,
     )
 
 
 @perftrace.tracefunc("Update")
 @util.timefunction("mergeupdate", 0, "ui")
 def _update(
-    repo,
+    to_repo,
     node,
     branchmerge=False,
     force=False,
@@ -2259,6 +2260,7 @@ def _update(
     labels=None,
     updatecheck=None,
     wc=None,
+    from_repo=None,
 ):
     """
     Perform a merge between the working directory and the given node
@@ -2311,30 +2313,39 @@ def _update(
     """
 
     assert node is not None
+    if from_repo is None:
+        from_repo = to_repo
+
+    ui = to_repo.ui
+    is_crossrepo = from_repo != to_repo
 
     # Positive indication we aren't using eden fastpath for eden integration tests.
-    if edenfs.requirement in repo.requirements:
-        repo.ui.debug("falling back to non-eden update code path: merge\n")
+    if edenfs.requirement in to_repo.requirements:
+        ui.debug("falling back to non-eden update code path: merge\n")
 
-    with repo.wlock():
+    with to_repo.wlock():
         if wc is None:
-            wc = repo[None]
+            wc = to_repo[None]
         pl = wc.parents()
         p1 = pl[0]
         pas = [None]
         if ancestor is not None:
-            pas = [repo[ancestor]]
+            # XXX: For cross-repo grafts, we only support the case where the merge ancestor
+            # belongs to from_repo.
+            pas = [from_repo[ancestor]]
 
         overwrite = force and not branchmerge
 
-        p2 = repo[node]
+        p2 = from_repo[node]
 
         fp1, fp2, xp1, xp2 = p1.node(), p2.node(), str(p1), str(p2)
 
         if pas[0] is None:
-            if repo.ui.configlist("merge", "preferancestor") == ["*"]:
-                cahs = repo.changelog.commonancestorsheads(p1.node(), p2.node())
-                pas = [repo[anc] for anc in (sorted(cahs) or [nullid])]
+            if is_crossrepo:
+                pas = [from_repo[nullid]]
+            elif ui.configlist("merge", "preferancestor") == ["*"]:
+                cahs = to_repo.changelog.commonancestorsheads(p1.node(), p2.node())
+                pas = [to_repo[anc] for anc in (sorted(cahs) or [nullid])]
             else:
                 pas = [p1.ancestor(p2, warn=branchmerge)]
 
@@ -2342,7 +2353,7 @@ def _update(
         if not overwrite:
             if len(pl) > 1:
                 raise error.Abort(_("outstanding uncommitted merge"))
-            ms = mergestate.read(repo)
+            ms = mergestate.read(to_repo)
             if list(ms.unresolved()):
                 raise error.Abort(_("outstanding merge conflicts"))
         if branchmerge:
@@ -2367,8 +2378,8 @@ def _update(
             if p1 == p2:  # no-op update
                 # call the hooks and exit early
                 if not wc.isinmemory():
-                    repo.hook("preupdate", throw=True, parent1=xp2, parent2="")
-                    repo.hook("update", parent1=xp2, parent2="", error=0)
+                    to_repo.hook("preupdate", throw=True, parent1=xp2, parent2="")
+                    to_repo.hook("update", parent1=xp2, parent2="", error=0)
                 return 0, 0, 0, 0
 
         if overwrite:
@@ -2376,7 +2387,7 @@ def _update(
         elif not branchmerge:
             pas = [p1]
 
-        followcopies = repo.ui.configbool("merge", "followcopies")
+        followcopies = ui.configbool("merge", "followcopies")
         if overwrite:
             followcopies = False
         elif not pas[0]:
@@ -2385,9 +2396,9 @@ def _update(
             followcopies = False
 
         ### calculate phase
-        with progress.spinner(repo.ui, "calculating merge actions"):
+        with progress.spinner(ui, "calculating merge actions"):
             actionbyfile = calculateupdates(
-                repo,
+                to_repo,
                 wc,
                 p2,
                 pas,
@@ -2399,7 +2410,7 @@ def _update(
 
         if updatecheck == "noconflict":
             paths = []
-            cwd = repo.getcwd()
+            cwd = to_repo.getcwd()
             for f, (m, args, msg) in actionbyfile.items():
                 if m not in (
                     ACTION_GET,
@@ -2409,7 +2420,7 @@ def _update(
                     ACTION_REMOVE_GET,
                     ACTION_PATH_CONFLICT_RESOLVE,
                 ):
-                    paths.append(repo.pathto(f, cwd))
+                    paths.append(to_repo.pathto(f, cwd))
 
             paths = sorted(paths)
             if len(paths) > 0:
@@ -2445,9 +2456,10 @@ def _update(
         if not branchmerge:  # just jump to the new rev
             fp1, fp2, xp1, xp2 = fp2, nullid, xp2, ""
         if not wc.isinmemory():
-            repo.hook("preupdate", throw=True, parent1=xp1, parent2=xp2)
+            # XXX: extend preupdate hook to support cross repo merge case
+            to_repo.hook("preupdate", throw=True, parent1=xp1, parent2=xp2)
             # note that we're in the middle of an update
-            repo.localvfs.writeutf8("updatestate", p2.hex())
+            to_repo.localvfs.writeutf8("updatestate", p2.hex())
 
         # Advertise fsmonitor when its presence could be useful.
         #
@@ -2459,11 +2471,11 @@ def _update(
         #
         # We only allow on Linux and MacOS because that's where fsmonitor is
         # considered stable.
-        fsmonitorwarning = repo.ui.configbool("fsmonitor", "warn_when_unused")
-        fsmonitorthreshold = repo.ui.configint("fsmonitor", "warn_update_file_count")
+        fsmonitorwarning = ui.configbool("fsmonitor", "warn_when_unused")
+        fsmonitorthreshold = ui.configint("fsmonitor", "warn_update_file_count")
         try:
             extensions.find("fsmonitor")
-            fsmonitorenabled = repo.ui.config("fsmonitor", "mode") != "off"
+            fsmonitorenabled = ui.config("fsmonitor", "mode") != "off"
             # We intentionally don't look at whether fsmonitor has disabled
             # itself because a) fsmonitor may have already printed a warning
             # b) we only care about the config state here.
@@ -2477,7 +2489,7 @@ def _update(
             and len(actions[ACTION_GET]) >= fsmonitorthreshold
             and sys.platform.startswith(("linux", "darwin"))
         ):
-            repo.ui.warn(
+            ui.warn(
                 _(
                     "(warning: large working directory being used without "
                     "fsmonitor enabled; enable fsmonitor to improve performance; "
@@ -2486,15 +2498,15 @@ def _update(
             )
 
         stats = applyupdates(
-            repo, actions, wc, p2, overwrite, labels=labels, ancestors=pas
+            to_repo, actions, wc, p2, overwrite, labels=labels, ancestors=pas
         )
 
         if not wc.isinmemory():
-            with repo.dirstate.parentchange():
-                repo.setparents(fp1, fp2)
-                recordupdates(repo, actions, branchmerge)
+            with to_repo.dirstate.parentchange():
+                to_repo.setparents(fp1, fp2)
+                recordupdates(to_repo, actions, branchmerge)
                 # update completed, clear state
-                util.unlink(repo.localvfs.join("updatestate"))
+                util.unlink(to_repo.localvfs.join("updatestate"))
 
                 # After recordupdates has finished, the checkout is considered
                 # finished and we should persist the sparse profile config
@@ -2503,10 +2515,10 @@ def _update(
                 # Ideally this would be part of some wider transaction framework
                 # that ensures these things all happen atomically, but that
                 # doesn't exist for the dirstate right now.
-                if hasattr(repo, "_persistprofileconfigs"):
-                    repo._persistprofileconfigs()
+                if hasattr(to_repo, "_persistprofileconfigs"):
+                    to_repo._persistprofileconfigs()
 
-    if git.isgitformat(repo) and not wc.isinmemory():
+    if git.isgitformat(to_repo) and not wc.isinmemory() and not is_crossrepo:
         if branchmerge:
             ctx = p1
             mctx = p2
@@ -2516,10 +2528,11 @@ def _update(
         git.submodulecheckout(ctx, force=force, mctx=mctx)
 
     if not wc.isinmemory():
-        repo.hook("update", parent1=xp1, parent2=xp2, error=stats[3])
+        # XXX: extend preupdate hook to support cross repo merge case
+        to_repo.hook("update", parent1=xp1, parent2=xp2, error=stats[3])
 
     # Log the number of files updated.
-    repo.ui.log("update_size", update_filecount=sum(stats))
+    ui.log("update_size", update_filecount=sum(stats))
 
     return stats
 
