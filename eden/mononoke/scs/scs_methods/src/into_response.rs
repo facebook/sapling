@@ -414,6 +414,7 @@ impl AsyncIntoResponseWith<thrift::CommitInfo> for ChangesetContext<Repo> {
             }),
             generation: generation.value() as i64,
             committer_date: committer_date.map(|date| date.timestamp()),
+            committer_tz: committer_date.map(|date| date.offset().local_minus_utc()),
             committer,
             linear_depth: Some(linear_depth as i64),
             ..Default::default()

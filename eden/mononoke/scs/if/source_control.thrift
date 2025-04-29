@@ -231,6 +231,9 @@ struct CommitInfo {
   /// This can be useful when using the commit_linear_history method. For example commit_linear_history(commit.id, skip=commit.linear_depth, limit=1)
   /// will return the root commit of the repository.
   13: optional i64 linear_depth;
+
+  /// The timezone the commit was committed in, in seconds after UTC.
+  14: optional i32 committer_tz;
 }
 
 struct BookmarkInfo {
