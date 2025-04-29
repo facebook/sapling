@@ -34,6 +34,7 @@ macro_rules! re_client {
         use re_client_lib::DownloadStreamRequest;
         use re_client_lib::REClientError;
         use re_client_lib::TCode;
+        use re_client_lib::UploadRequest;
         use re_client_lib::TDigest;
         use re_client_lib::THashAlgo;
         use re_client_lib::TStorageBackendType;
@@ -89,13 +90,14 @@ macro_rules! re_client {
 
         #[$crate::async_trait]
         impl $crate::CasClient for $struct {
-            fn fetch_single_local_direct(
+            /// Fetch a single blob from local CAS caches.
+            fn fetch_single_locally_cached(
                 &self,
                 digest: &$crate::CasDigest,
             ) -> Result<($crate::CasFetchedStats, Option<ScmBlob>)> {
                 #[cfg(target_os = "linux")]{
                     let (stats, data) = self.client()?
-                    .low_level_lookup_cache(self.metadata.clone(), to_re_digest(digest))?.unpack();
+                        .low_level_lookup_cache(self.metadata.clone(), to_re_digest(digest))?.unpack();
 
                     let parsed_stats = parse_stats(std::iter::empty(), stats);
 
@@ -109,6 +111,54 @@ macro_rules! re_client {
                 #[cfg(not(target_os = "linux"))]
                 return Ok(($crate::CasFetchedStats::default(), None));
             }
+
+
+            /// Upload blobs to CAS.
+            async fn upload(
+                &self,
+                blobs: Vec<ScmBlob>,
+            ) -> Result<Vec<$crate::CasDigest>> {
+
+                $crate::tracing::debug!(target: "cas", concat!(stringify!($struct), " uploading {} blobs"), blobs.len());
+
+                #[cfg(target_os = "linux")] {
+                    self.client()?
+                        .co_upload_inlined_blobs(
+                            self.metadata.clone(),
+                            blobs.into_iter().map(|blob| {
+                                blob.into_vec()
+                            }).collect()
+                        )
+                        .await??
+                        .digests
+                        .into_iter()
+                        .map(|digest_with_status| from_re_digest(&digest_with_status.digest))
+                        .collect::<$crate::Result<Vec<_>>>()
+                }
+
+                #[cfg(not(target_os = "linux"))] {
+                    self.client()?
+                    .upload(
+                        self.metadata.clone(),
+                        UploadRequest {
+                            inlined_blobs: Some(blobs.into_iter().map(|blob| {
+                                    blob.into_vec()
+                            }).collect()),
+                            upload_only_missing: true,
+                            ..Default::default()
+                        },
+                    )
+                    .await?
+                    .inlined_blobs_status
+                    .unwrap_or_default()
+                    .into_iter()
+                    .map(|digest_with_status| from_re_digest(&digest_with_status.digest))
+                    .collect::<$crate::Result<Vec<_>>>()
+                }
+            }
+
+
+            /// Fetch blobs from CAS.
             async fn fetch<'a>(
                 &'a self,
                 _fctx: $crate::FetchContext,
@@ -120,7 +170,7 @@ macro_rules! re_client {
                     .map(move |digests| async move {
                         if !self.cas_success_tracker.allow_request()? {
                             $crate::tracing::debug!(target: "cas", concat!(stringify!($struct), " skip fetching {} {}(s)"), digests.len(), log_name);
-                            return Err($crate::anyhow!("skip cas prefetching due to cas success tracker error rate limiting vioaltion"));
+                            return Err($crate::anyhow!("skip cas fetching due to cas success tracker error rate limiting vioaltion"));
                         }
                         if self.use_streaming_dowloads && digests.len() == 1 && digests.first().unwrap().size >= self.fetch_limit.value() {
                             // Single large file, fetch it via the streaming API to avoid memory issues on CAS side.
@@ -261,7 +311,7 @@ macro_rules! re_client {
                     .boxed()
             }
 
-        /// Prefetch digests into the cache.
+        /// Prefetch blobs into the CAS local caches.
         /// Returns a stream of (stats, digests_prefetched, digests_not_found) tuples.
         async fn prefetch<'a>(
             &'a self,

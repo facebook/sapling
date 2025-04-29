@@ -165,7 +165,7 @@ impl FileStore {
                     }
                 }
 
-                let (stats, maybe_blob) = cas_client.fetch_single_local_direct(&CasDigest {
+                let (stats, maybe_blob) = cas_client.fetch_single_locally_cached(&CasDigest {
                     hash: aux_data.blake3,
                     size: aux_data.total_size,
                 })?;

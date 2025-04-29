@@ -121,10 +121,11 @@ pub fn new(config: Arc<dyn Config>) -> anyhow::Result<Option<Arc<dyn CasClient>>
 #[auto_impl::auto_impl(&, Box, Arc)]
 pub trait CasClient: Sync + Send {
     /// Fetch a single blob from local CAS caches.
-    fn fetch_single_local_direct(
+    fn fetch_single_locally_cached(
         &self,
         digest: &CasDigest,
     ) -> anyhow::Result<(CasFetchedStats, Option<ScmBlob>)>;
+
     /// Fetch blobs from CAS.
     async fn fetch<'a>(
         &'a self,
@@ -139,7 +140,10 @@ pub trait CasClient: Sync + Send {
         )>,
     >;
 
-    /// Prefetch blobs into the CAS cache
+    /// Upload blobs to CAS.
+    async fn upload(&self, blobs: Vec<ScmBlob>) -> anyhow::Result<Vec<CasDigest>>;
+
+    /// Prefetch blobs into the CAS local caches.
     /// Returns a stream of (stats, digests_prefetched, digests_not_found) tuples.
     async fn prefetch<'a>(
         &'a self,

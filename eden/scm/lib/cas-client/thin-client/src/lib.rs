@@ -7,7 +7,6 @@
 
 use std::sync::Arc;
 use std::time::Duration;
-use std::time::Instant;
 
 use anyhow::Result;
 use cas_client::CasClient;

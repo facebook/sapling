@@ -162,7 +162,7 @@ impl TreeStore {
         if let (Some(tree_aux_store), Some(cas_client)) = (&self.tree_aux_store, &self.cas_client) {
             let aux_data = tree_aux_store.get(id)?;
             if let Some(aux_data) = aux_data {
-                let (stats, maybe_blob) = cas_client.fetch_single_local_direct(&CasDigest {
+                let (stats, maybe_blob) = cas_client.fetch_single_locally_cached(&CasDigest {
                     hash: aux_data.augmented_manifest_id,
                     size: aux_data.augmented_manifest_size,
                 })?;

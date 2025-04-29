@@ -33,6 +33,14 @@ impl ScmBlob {
         }
     }
 
+    pub fn into_vec(self) -> Vec<u8> {
+        match self {
+            Self::Bytes(bytes) => bytes.into(),
+            #[cfg(fbcode_build)]
+            Self::IOBuf(buf) => Vec::<u8>::from(buf),
+        }
+    }
+
     #[cfg(fbcode_build)]
     pub fn into_iobuf(self) -> iobuf::IOBufShared {
         match self {

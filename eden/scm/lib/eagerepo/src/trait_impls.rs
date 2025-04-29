@@ -183,7 +183,7 @@ impl ReadRootTreeIds for EagerRepoStore {
 #[async_trait::async_trait]
 impl CasClient for EagerRepoStore {
     /// Fetch a single blob from local CAS caches.
-    fn fetch_single_local_direct(
+    fn fetch_single_locally_cached(
         &self,
         digest: &CasDigest,
     ) -> anyhow::Result<(CasFetchedStats, Option<ScmBlob>)> {
@@ -191,6 +191,12 @@ impl CasClient for EagerRepoStore {
             .map_err(Into::into)
             .map(|data| (CasFetchedStats::default(), data.map(ScmBlob::Bytes)))
     }
+
+    /// Upload blobs to CAS.
+    async fn upload(&self, _blobs: Vec<ScmBlob>) -> anyhow::Result<Vec<CasDigest>> {
+        unimplemented!("EagerRepoStore does not support uploading blobs to CAS")
+    }
+
     async fn fetch<'a>(
         &'a self,
         _fctx: FetchContext,
