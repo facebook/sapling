@@ -922,10 +922,12 @@ impl TestRepoFactory {
         _repo_identity: &RepoIdentity,
         bonsai_hg_mapping: &ArcBonsaiHgMapping,
         repo_derived_data: &ArcRepoDerivedData,
+        bonsai_git_mapping: &ArcBonsaiGitMapping,
     ) -> Result<ArcCommitCloud> {
         let cc = CommitCloud::new(
             SqlCommitCloudBuilder::from_sql_connections(self.metadata_db.clone()).new(),
             bonsai_hg_mapping.clone(),
+            bonsai_git_mapping.clone(),
             repo_derived_data.clone(),
             self.ctx.clone(),
             DummyAclProvider::new(self.fb)?,

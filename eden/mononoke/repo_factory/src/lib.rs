@@ -2021,6 +2021,7 @@ impl RepoFactory {
         &self,
         repo_config: &ArcRepoConfig,
         bonsai_hg_mapping: &ArcBonsaiHgMapping,
+        bonsai_git_mapping: &ArcBonsaiGitMapping,
         repo_derived_data: &ArcRepoDerivedData,
     ) -> Result<ArcCommitCloud> {
         let sql_commit_cloud = self
@@ -2030,6 +2031,7 @@ impl RepoFactory {
         Ok(Arc::new(CommitCloud::new(
             sql_commit_cloud.new(),
             bonsai_hg_mapping.clone(),
+            bonsai_git_mapping.clone(),
             repo_derived_data.clone(),
             self.ctx(None),
             self.env.acl_provider.clone(),

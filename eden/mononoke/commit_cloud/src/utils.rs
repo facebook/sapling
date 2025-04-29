@@ -1,0 +1,57 @@
+/*
+ * Copyright (c) Meta Platforms, Inc. and affiliates.
+ *
+ * This software may be used and distributed according to the terms of the
+ * GNU General Public License version 2.
+ */
+
+use std::sync::Arc;
+
+use anyhow::Result;
+use bonsai_git_mapping::BonsaiGitMapping;
+use bonsai_hg_mapping::BonsaiHgMapping;
+use commit_cloud_types::ChangesetScheme;
+use commit_cloud_types::changeset::CloudChangesetId;
+use context::CoreContext;
+use mercurial_types::HgChangesetId;
+use mononoke_types::ChangesetId;
+use mononoke_types::hash::GitSha1;
+
+use crate::ctx::CommitCloudContext;
+
+pub(crate) async fn get_bonsai_from_cloud_ids(
+    ctx: &CoreContext,
+    cctx: &CommitCloudContext,
+    bonsai_hg_mapping: Arc<dyn BonsaiHgMapping>,
+    bonsai_git_mapping: Arc<dyn BonsaiGitMapping>,
+    cids: Vec<CloudChangesetId>,
+) -> Result<Vec<(CloudChangesetId, ChangesetId)>> {
+    match cctx.default_changeset_scheme {
+        ChangesetScheme::Hg => {
+            let hgids = cids
+                .iter()
+                .map(|cid| cid.clone().into())
+                .collect::<Vec<HgChangesetId>>();
+
+            bonsai_hg_mapping
+                .get(ctx, hgids.into())
+                .await?
+                .into_iter()
+                .map(|entry| Ok((entry.hg_cs_id.into(), entry.bcs_id)))
+                .collect()
+        }
+        ChangesetScheme::Git => {
+            let gitids = cids
+                .iter()
+                .map(|cid| GitSha1::from(cid.clone()))
+                .collect::<Vec<GitSha1>>();
+
+            bonsai_git_mapping
+                .get(ctx, gitids.into())
+                .await?
+                .into_iter()
+                .map(|entry| Ok((entry.git_sha1.into(), entry.bcs_id)))
+                .collect()
+        }
+    }
+}

@@ -9,7 +9,6 @@ use std::collections::HashMap;
 use std::path::PathBuf;
 
 use anyhow::ensure;
-use mercurial_types::HgChangesetId;
 use mononoke_types::Timestamp;
 use serde::Deserialize;
 use serde::Serialize;
@@ -110,7 +109,7 @@ pub struct ReferencesData {
     pub version: u64,
     pub heads: Option<Vec<CloudChangesetId>>,
     pub bookmarks: Option<HashMap<String, CloudChangesetId>>,
-    pub heads_dates: Option<HashMap<HgChangesetId, i64>>,
+    pub heads_dates: Option<HashMap<CloudChangesetId, i64>>,
     pub remote_bookmarks: Option<Vec<WorkspaceRemoteBookmark>>,
     pub snapshots: Option<Vec<CloudChangesetId>>,
     pub timestamp: Option<i64>,

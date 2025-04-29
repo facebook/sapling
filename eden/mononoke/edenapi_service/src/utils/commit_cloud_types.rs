@@ -133,7 +133,7 @@ impl FromCommitCloudType<CloudReferencesData> for ReferencesData {
             heads_dates: cc.heads_dates.map(|heads_dates| {
                 heads_dates
                     .into_iter()
-                    .map(|(hgcsid, date)| (hgcsid.into(), date))
+                    .map(|(hgcsid, date)| (HgId::from_byte_array(hgcsid.0.into_byte_array()), date))
                     .collect()
             }),
         })
