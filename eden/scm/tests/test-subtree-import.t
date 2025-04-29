@@ -9,7 +9,7 @@
 Prepare a git repo:
 
   $ . $TESTDIR/git.sh
-  $ git init -q gitrepo
+  $ git -c init.defaultBranch=main init -q gitrepo
   $ cd gitrepo
   $ git config core.autocrlf false
   $ echo 1 > alpha
@@ -79,7 +79,7 @@ Test subtree import failure cases
   $ hg subtree import --url $GIT_URL --rev b6c31add3e60ded7a9c9c803641edffb1dccd251 --from-path nonexistent_dir --to-path bar
   creating git repo at $TESTTMP/default-hgcache/gitrepos/* (glob)
   From file:/*/$TESTTMP/gitrepo (glob)
-   * [new ref]         4487c56011495a40ce2f6c632c24ae57a210747d -> remote/master
+   * [new ref]         4487c56011495a40ce2f6c632c24ae57a210747d -> remote/main
    * [new ref]         b6c31add3e60ded7a9c9c803641edffb1dccd251 -> refs/visibleheads/b6c31add3e60ded7a9c9c803641edffb1dccd251
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   abort: path 'nonexistent_dir' does not exist in commit b6c31add3e60
@@ -170,7 +170,7 @@ Test subtree import with branch name
   > A
   > EOS
   $ hg go $A -q
-  $ hg subtree import --url $GIT_URL --rev master --to-path bar -m "import gitrepo to bar"
+  $ hg subtree import --url $GIT_URL --rev main --to-path bar -m "import gitrepo to bar"
   using cached git repo at $TESTTMP/default-hgcache/gitrepos/* (glob)
   copying / to bar
   $ hg subtree inspect

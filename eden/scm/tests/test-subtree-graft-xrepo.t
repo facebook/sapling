@@ -9,7 +9,7 @@
 Prepare a git repo:
 
   $ . $TESTDIR/git.sh
-  $ git init -q gitrepo
+  $ git -c init.defaultBranch=main init -q gitrepo
   $ cd gitrepo
   $ git config core.autocrlf false
   $ echo "1\n2\n3\n4\n5" > a.txt
