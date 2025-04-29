@@ -10,9 +10,9 @@
 use anyhow::Result;
 use async_trait::async_trait;
 use clap::Parser;
-use edenfs_client::instance::EdenFsInstance;
 
 use crate::ExitCode;
+use crate::get_edenfs_instance;
 
 #[derive(Parser, Debug)]
 #[clap(about = "Print the daemon's process ID if running")]
@@ -21,7 +21,8 @@ pub struct PidCmd {}
 #[async_trait]
 impl crate::Subcommand for PidCmd {
     async fn run(&self) -> Result<ExitCode> {
-        let client = EdenFsInstance::global().get_client();
+        let instance = get_edenfs_instance();
+        let client = instance.get_client();
         let health = client.get_health(None).await;
 
         Ok(match health {

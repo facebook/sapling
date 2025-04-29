@@ -27,7 +27,6 @@ use clap::Parser;
 use dialoguer::Confirm;
 use edenfs_client::checkout::CheckoutConfig;
 use edenfs_client::checkout::find_checkout;
-use edenfs_client::instance::EdenFsInstance;
 #[cfg(target_os = "macos")]
 use edenfs_client::redirect::APFS_HELPER;
 use edenfs_client::redirect::REPO_SOURCE;
@@ -46,6 +45,7 @@ use tabular::row;
 
 use crate::ExitCode;
 use crate::Subcommand;
+use crate::get_edenfs_instance;
 
 #[derive(Parser, Debug)]
 #[clap(name = "redirect")]
@@ -179,7 +179,7 @@ impl RedirectCmd {
                 anyhow!("could not infer mount: could not determine current working directory")
             })?,
         };
-        let instance = EdenFsInstance::global();
+        let instance = get_edenfs_instance();
         let redirections = get_effective_redirs_for_mount(instance, mount)
             .with_context(|| anyhow!("Failed to get redirections for mount"))?;
 
@@ -201,7 +201,7 @@ impl RedirectCmd {
     ) -> Result<ExitCode> {
         let repo_path = remove_trailing_slash(repo_path);
         let redir_type = RedirectionType::from_str(redir_type)?;
-        let instance = EdenFsInstance::global();
+        let instance = get_edenfs_instance();
         let mount = match mount {
             Some(provided) => provided,
             None => expand_path_or_cwd("").with_context(|| {
@@ -232,7 +232,7 @@ impl RedirectCmd {
     }
 
     async fn unmount(&self, mount: Option<PathBuf>, force: bool) -> Result<ExitCode> {
-        let instance = EdenFsInstance::global();
+        let instance = get_edenfs_instance();
         let mount = match mount {
             Some(provided) => provided,
             None => expand_path_or_cwd("").with_context(|| {
@@ -290,7 +290,7 @@ impl RedirectCmd {
     }
 
     async fn del(&self, mount: Option<PathBuf>, repo_path: &Path, force: bool) -> Result<ExitCode> {
-        let instance = EdenFsInstance::global();
+        let instance = get_edenfs_instance();
         let mount = match mount {
             Some(provided) => provided,
             None => expand_path_or_cwd("").with_context(|| {
@@ -377,7 +377,7 @@ impl RedirectCmd {
         only_repo_source: bool,
         force: bool,
     ) -> Result<ExitCode> {
-        let instance = EdenFsInstance::global();
+        let instance = get_edenfs_instance();
         let mount = match mount {
             Some(provided) => provided,
             None => expand_path_or_cwd("").with_context(|| {
@@ -465,7 +465,7 @@ impl RedirectCmd {
             }
         }
 
-        let instance = EdenFsInstance::global();
+        let instance = get_edenfs_instance();
         let mounts = instance
             .get_configured_mounts_map()
             .with_context(|| anyhow!("could not get configured mounts map for EdenFS instance"))?;

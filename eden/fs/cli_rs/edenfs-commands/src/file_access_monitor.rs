@@ -16,7 +16,6 @@ use std::path::PathBuf;
 use anyhow::Result;
 use async_trait::async_trait;
 use clap::Parser;
-use edenfs_client::instance::EdenFsInstance;
 use edenfs_utils::path_from_bytes;
 use hg_util::path::expand_path;
 use serde::Deserialize;
@@ -24,6 +23,7 @@ use serde::Serialize;
 
 use crate::ExitCode;
 use crate::Subcommand;
+use crate::get_edenfs_instance;
 
 // This path should be the same as the path defined in
 // EdenServiceHandler.cpp::semifuture_startFileAccessMonitor
@@ -84,7 +84,7 @@ struct StartCmd {
 #[async_trait]
 impl crate::Subcommand for StartCmd {
     async fn run(&self) -> Result<ExitCode> {
-        let instance = EdenFsInstance::global();
+        let instance = get_edenfs_instance();
         let client = instance.get_client();
 
         // Check the temporary folder exists, otherwise create it
@@ -127,7 +127,7 @@ impl crate::Subcommand for StartCmd {
 }
 
 async fn stop_fam() -> Result<ExitCode> {
-    let instance = EdenFsInstance::global();
+    let instance = get_edenfs_instance();
     let client = instance.get_client();
 
     let stop_result = client.stop_file_access_monitor().await?;

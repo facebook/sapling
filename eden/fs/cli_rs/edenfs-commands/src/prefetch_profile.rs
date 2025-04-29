@@ -20,7 +20,6 @@ use async_trait::async_trait;
 use clap::Parser;
 use edenfs_client::checkout::CheckoutConfig;
 use edenfs_client::checkout::find_checkout;
-use edenfs_client::instance::EdenFsInstance;
 use edenfs_client::utils::expand_path_or_cwd;
 #[cfg(fbcode_build)]
 use edenfs_telemetry::EDEN_EVENTS_SCUBA;
@@ -30,6 +29,7 @@ use hg_util::path::expand_path;
 
 use crate::ExitCode;
 use crate::Subcommand;
+use crate::get_edenfs_instance;
 
 #[derive(Parser, Debug)]
 pub struct ActivationOptions {
@@ -198,7 +198,7 @@ pub enum PrefetchCmd {
 
 impl PrefetchCmd {
     async fn finish(&self, output_path: &PathBuf) -> Result<ExitCode> {
-        let instance = EdenFsInstance::global();
+        let instance = get_edenfs_instance();
         let client = instance.get_client();
 
         let files = client.stop_recording_backing_store_fetch().await?;
@@ -219,7 +219,7 @@ impl PrefetchCmd {
     }
 
     async fn record(&self) -> Result<ExitCode> {
-        let instance = EdenFsInstance::global();
+        let instance = get_edenfs_instance();
         let client = instance.get_client();
 
         client.start_recording_backing_store_fetch().await?;
@@ -249,7 +249,7 @@ impl PrefetchCmd {
     }
 
     async fn list(&self, checkout: &Path, json: bool) -> Result<ExitCode> {
-        let instance = EdenFsInstance::global();
+        let instance = get_edenfs_instance();
         let client_name = instance.client_name(checkout).with_context(|| {
             anyhow!(
                 "Failed to get client name for checkout {}",
@@ -276,7 +276,7 @@ impl PrefetchCmd {
     }
 
     async fn activate(&self, options: &ActivationOptions, profile_name: &str) -> Result<ExitCode> {
-        let instance = EdenFsInstance::global();
+        let instance = get_edenfs_instance();
         let client_name = instance.client_name(&options.checkout).with_context(|| {
             anyhow!(
                 "Failed to get client name for checkout {}",
@@ -315,7 +315,7 @@ impl PrefetchCmd {
         options: &ActivationOptions,
         num_dirs: u32,
     ) -> Result<ExitCode> {
-        let instance = EdenFsInstance::global();
+        let instance = get_edenfs_instance();
         let client_name = instance.client_name(&options.checkout).with_context(|| {
             anyhow!(
                 "Failed to get client name for checkout {}",
@@ -353,7 +353,7 @@ impl PrefetchCmd {
         options: &ActivationOptions,
         profile_name: &str,
     ) -> Result<ExitCode> {
-        let instance = EdenFsInstance::global();
+        let instance = get_edenfs_instance();
         let client_name = instance.client_name(&options.checkout).with_context(|| {
             anyhow!(
                 "Failed to get client name for checkout {}",
@@ -385,7 +385,7 @@ impl PrefetchCmd {
     }
 
     async fn deactivate_predictive(&self, options: &ActivationOptions) -> Result<ExitCode> {
-        let instance = EdenFsInstance::global();
+        let instance = get_edenfs_instance();
         let client_name = instance.client_name(&options.checkout).with_context(|| {
             anyhow!(
                 "Failed to get client name for checkout {}",
@@ -420,7 +420,7 @@ impl PrefetchCmd {
         options: &FetchOptions,
         json: bool,
     ) -> Result<ExitCode> {
-        let instance = EdenFsInstance::global();
+        let instance = get_edenfs_instance();
         let checkout_path = &options.options.checkout;
         let client_name = instance.client_name(checkout_path).with_context(|| {
             anyhow!(
@@ -499,7 +499,7 @@ impl PrefetchCmd {
         num_dirs: u32,
         if_active: bool,
     ) -> Result<ExitCode> {
-        let instance = EdenFsInstance::global();
+        let instance = get_edenfs_instance();
         let checkout_path = &options.options.checkout;
         let client_name = instance.client_name(checkout_path).with_context(|| {
             anyhow!(

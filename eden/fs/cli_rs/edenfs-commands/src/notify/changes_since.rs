@@ -13,12 +13,12 @@ use anyhow::Result;
 use async_trait::async_trait;
 use clap::Parser;
 use edenfs_client::changes_since::ChangesSinceV2Result;
-use edenfs_client::instance::EdenFsInstance;
 use edenfs_client::types::JournalPosition;
 use futures::StreamExt;
 use hg_util::path::expand_path;
 
 use crate::ExitCode;
+use crate::get_edenfs_instance;
 
 // TODO: add a --timeout flag
 #[derive(Parser, Debug)]
@@ -102,7 +102,7 @@ impl crate::Subcommand for ChangesSinceCmd {
 
     #[cfg(fbcode_build)]
     async fn run(&self) -> Result<ExitCode> {
-        let instance = EdenFsInstance::global();
+        let instance = get_edenfs_instance();
         let client = instance.get_client();
         let position = self
             .position

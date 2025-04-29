@@ -48,6 +48,7 @@ use subprocess::Exec;
 use subprocess::Redirection as SubprocessRedirection;
 
 use crate::ExitCode;
+use crate::get_edenfs_instance;
 
 #[cfg(target_os = "macos")]
 const PURGEABLE_DATA_UTIL: &str =
@@ -273,7 +274,7 @@ async fn ignored_usage_counts_for_mount(checkout: &EdenFsCheckout) -> Result<u64
     // FilteredFS mounts require a filterId to be passed into status calls
     let mut root_id_options = RootIdOptions::default();
 
-    let instance = EdenFsInstance::global();
+    let instance = get_edenfs_instance();
     let client = instance.get_client();
     let snapshot_info = client.get_current_snapshot_info(checkout.path()).await;
 
@@ -552,7 +553,7 @@ fn clean_buck_redirections(buck_redirections: HashSet<PathBuf>) -> Result<()> {
 
 #[cfg(target_os = "macos")]
 fn get_purgeable_size() -> Result<u64> {
-    let instance = EdenFsInstance::global();
+    let instance = get_edenfs_instance();
     let home_dir = instance
         .get_user_home_dir()
         .and_then(|x| x.to_str())
@@ -593,7 +594,7 @@ fn get_purgeable_size() -> Result<u64> {
 
 #[cfg(target_os = "macos")]
 fn clear_purgeable_space(purgeable_space: String) -> Result<()> {
-    let instance = EdenFsInstance::global();
+    let instance = get_edenfs_instance();
     let home_dir = instance
         .get_user_home_dir()
         .and_then(|x| x.to_str())
@@ -660,7 +661,7 @@ fn get_redirect_usage_count(
 #[async_trait]
 impl crate::Subcommand for DiskUsageCmd {
     async fn run(&self) -> Result<ExitCode> {
-        let instance = EdenFsInstance::global();
+        let instance = get_edenfs_instance();
 
         let mounts = self
             .get_mounts(instance)

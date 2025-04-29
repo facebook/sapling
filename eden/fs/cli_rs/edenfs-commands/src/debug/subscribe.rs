@@ -13,7 +13,6 @@ use anyhow::Result;
 use async_trait::async_trait;
 use clap::Parser;
 use edenfs_client::changes_since::ChangesSinceV2Result;
-use edenfs_client::instance::EdenFsInstance;
 use edenfs_client::types::JournalPosition;
 use edenfs_client::utils::get_mount_point;
 use edenfs_error::EdenFsError;
@@ -23,6 +22,7 @@ use serde::Serialize;
 use tokio::io::AsyncWriteExt;
 
 use crate::ExitCode;
+use crate::get_edenfs_instance;
 use crate::util::jsonrpc::ResponseBuilder;
 
 // Defines a few helper functions to make the debug format easier to read.
@@ -151,7 +151,7 @@ impl crate::Subcommand for SubscribeCmd {
 
     #[cfg(fbcode_build)]
     async fn run(&self) -> Result<ExitCode> {
-        let instance = EdenFsInstance::global();
+        let instance = get_edenfs_instance();
         let client = instance.get_client();
 
         let mount_point_path = get_mount_point(&self.mount_point)?;

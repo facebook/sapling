@@ -19,13 +19,13 @@ use edenfs_client::attributes::GetAttributesV2Request;
 use edenfs_client::attributes::SourceControlType;
 use edenfs_client::attributes::SourceControlTypeOrError;
 use edenfs_client::checkout::find_checkout;
-use edenfs_client::instance::EdenFsInstance;
 use edenfs_client::request_factory::RequestFactory;
 use edenfs_client::request_factory::send_requests;
 use edenfs_client::types::FileAttributes;
 use edenfs_client::utils::expand_path_or_cwd;
 
 use crate::ExitCode;
+use crate::get_edenfs_instance;
 
 #[derive(Parser, Debug)]
 pub struct CommonOptions {
@@ -102,7 +102,7 @@ pub enum StressCmd {
 #[async_trait]
 impl crate::Subcommand for StressCmd {
     async fn run(&self) -> Result<ExitCode> {
-        let instance = EdenFsInstance::global();
+        let instance = get_edenfs_instance();
         let client = instance.get_client();
 
         match self {

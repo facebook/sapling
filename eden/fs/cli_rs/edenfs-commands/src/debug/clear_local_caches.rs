@@ -10,9 +10,9 @@
 use anyhow::Result;
 use async_trait::async_trait;
 use clap::Parser;
-use edenfs_client::instance::EdenFsInstance;
 
 use crate::ExitCode;
+use crate::get_edenfs_instance;
 
 #[derive(Parser, Debug)]
 #[clap(about = "Clears local caches of objects stored in RocksDB")]
@@ -21,7 +21,7 @@ pub struct ClearLocalCachesCmd {}
 #[async_trait]
 impl crate::Subcommand for ClearLocalCachesCmd {
     async fn run(&self) -> Result<ExitCode> {
-        let instance = EdenFsInstance::global();
+        let instance = get_edenfs_instance();
         let client = instance.get_client();
 
         client.debug_clear_local_store_caches().await?;

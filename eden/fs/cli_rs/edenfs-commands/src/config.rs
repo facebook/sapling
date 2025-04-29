@@ -15,12 +15,12 @@ use anyhow::anyhow;
 use async_trait::async_trait;
 use clap::Parser;
 use edenfs_client::config::ConfigSourceType;
-use edenfs_client::instance::EdenFsInstance;
 #[cfg(windows)]
 use edenfs_utils::find_python;
 use hg_util::path::expand_path;
 
 use crate::ExitCode;
+use crate::get_edenfs_instance;
 
 #[derive(Parser, Debug)]
 #[clap(about = "Query EdenFS CLI configuration")]
@@ -29,7 +29,8 @@ pub struct CliConfigCmd {}
 #[async_trait]
 impl crate::Subcommand for CliConfigCmd {
     async fn run(&self) -> Result<ExitCode> {
-        let config = match EdenFsInstance::global().get_config() {
+        let instance = get_edenfs_instance();
+        let config = match instance.get_config() {
             Ok(config) => config,
             Err(e) => {
                 eprintln!("{}", e);
@@ -212,7 +213,7 @@ pub struct FsConfigCmd {
 #[async_trait]
 impl crate::Subcommand for FsConfigCmd {
     async fn run(&self) -> Result<ExitCode> {
-        let instance = EdenFsInstance::global();
+        let instance = get_edenfs_instance();
         let client = instance.get_client();
         let config_data = client.get_config_default().await?;
 

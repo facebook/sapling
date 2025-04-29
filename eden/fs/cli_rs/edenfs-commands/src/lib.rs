@@ -10,6 +10,7 @@
 use std::fs::File;
 use std::io::BufReader;
 use std::path::PathBuf;
+use std::sync::OnceLock;
 
 use anyhow::Context;
 use anyhow::Result;
@@ -46,6 +47,28 @@ mod util;
 // Used to determine whether we should gate off certain oxidized edenfsctl commands
 const ROLLOUT_JSON: &str = "edenfsctl_rollout.json";
 const EXPERIMENTAL_COMMANDS: &[&str] = &["remove"];
+
+// We create a single EdenFsInstance when starting up
+static EDENFS_INSTANCE: OnceLock<EdenFsInstance> = OnceLock::new();
+
+pub(crate) fn get_edenfs_instance() -> &'static EdenFsInstance {
+    EDENFS_INSTANCE
+        .get()
+        .expect("EdenFsInstance is not initialized")
+}
+
+fn init_edenfs_instance(config_dir: PathBuf, etc_eden_dir: PathBuf, home_dir: Option<PathBuf>) {
+    event!(
+        Level::TRACE,
+        ?config_dir,
+        ?etc_eden_dir,
+        ?home_dir,
+        "Creating EdenFsInstance"
+    );
+    EDENFS_INSTANCE
+        .set(EdenFsInstance::new(config_dir, etc_eden_dir, home_dir))
+        .expect("should be able to initialize EdenfsInstance")
+}
 
 type ExitCode = i32;
 
@@ -230,12 +253,19 @@ impl MainCommand {
     async fn dispatch(self) -> Result<ExitCode> {
         event!(Level::TRACE, cmd = ?self, "Dispatching");
 
+        // NOTE: keep until code that depends on EdenFsInstance::global() is removed.
         EdenFsInstance::init(
             get_config_dir(&self.config_dir, &self.subcommand.get_mount_path_override())?,
             get_etc_eden_dir(&self.etc_eden_dir),
             get_home_dir(&self.home_dir),
         );
-        // Use EdenFsInstance::global() to access the instance from now on
+
+        init_edenfs_instance(
+            get_config_dir(&self.config_dir, &self.subcommand.get_mount_path_override())?,
+            get_etc_eden_dir(&self.etc_eden_dir),
+            get_home_dir(&self.home_dir),
+        );
+        // Use get_edenfs_instance() to access the instance from now on
         self.subcommand.run().await
     }
 }
