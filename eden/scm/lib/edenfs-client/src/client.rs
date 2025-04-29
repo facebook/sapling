@@ -132,6 +132,8 @@ impl EdenFsClient {
             thrift_result.status.entries.len() as u64,
         );
 
+        tracing::debug!(target: "eden_info", eden_version=thrift_result.version);
+
         let mut result = BTreeMap::new();
         for (path_bytes, status) in thrift_result.status.entries {
             let path = match RepoPathBuf::from_utf8(path_bytes) {
