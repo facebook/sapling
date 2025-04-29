@@ -2669,7 +2669,12 @@ def _dograft(ui, to_repo, *revs, from_repo=None, **opts):
         if not revs:
             return -1
 
-    from_paths = scmutil.rootrelpaths(from_repo["."], opts.get("from_path", []))
+    is_crossrepo = from_repo != to_repo
+    if is_crossrepo:
+        # In cross-repo grafts, from_paths are expected to be root-relative already
+        from_paths = opts.get("from_path", [])
+    else:
+        from_paths = scmutil.rootrelpaths(from_repo["."], opts.get("from_path", []))
     to_paths = scmutil.rootrelpaths(to_repo["."], opts.get("to_path", []))
 
     for pos, ctx in enumerate(from_repo.set("%ld", revs)):
@@ -2697,7 +2702,6 @@ def _dograft(ui, to_repo, *revs, from_repo=None, **opts):
 
         # Apply --from-path/--to-path mappings to manifest being grafted, and its
         # parent manifest.
-        is_crossrepo = from_repo != to_repo
         cmdutil.registerdiffgrafts(
             from_paths, to_paths, ctx, ctx.p1(), is_crossrepo=is_crossrepo
         )
