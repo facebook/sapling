@@ -151,23 +151,6 @@ function mononoke_cas_sync {
      sync-loop --start-id "$START_ID" --batch-size 20
 }
 
-function megarepo_tool {
-  GLOG_minloglevel=5 "$MEGAREPO_TOOL" \
-    "${CACHE_ARGS[@]}" \
-    "${COMMON_ARGS[@]}" \
-    --repo-id $REPOID \
-    --mononoke-config-path "$TESTTMP"/mononoke-config \
-    "$@"
-}
-
-
-function megarepo_tool_multirepo {
-  GLOG_minloglevel=5 "$MEGAREPO_TOOL" \
-    "${CACHE_ARGS[@]}" \
-    "${COMMON_ARGS[@]}" \
-    --mononoke-config-path "$TESTTMP"/mononoke-config \
-    "$@"
-}
 
 function mononoke_walker {
   GLOG_minloglevel=5 "$MONONOKE_WALKER" \

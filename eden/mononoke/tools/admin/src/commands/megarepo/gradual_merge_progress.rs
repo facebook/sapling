@@ -9,17 +9,97 @@ use std::collections::HashMap;
 use std::collections::HashSet;
 use std::collections::VecDeque;
 
-use anyhow::Error;
+use anyhow::Result;
+use anyhow::anyhow;
 use bookmarks::BookmarkKey;
-use cmdlib::helpers;
+use bookmarks::BookmarksRef;
 use commit_graph::CommitGraphRef;
+use commit_id::CommitIdNames;
+use commit_id::NamedCommitIdsArgs;
+use commit_id::resolve_commit_id;
 use context::CoreContext;
 use futures::StreamExt;
 use megarepolib::common::StackPosition;
+use mononoke_api::Repo;
+use mononoke_app::MononokeApp;
+use mononoke_app::args::RepoArgs;
 use mononoke_types::ChangesetId;
 use slog::info;
 
-use crate::Repo;
+#[derive(Copy, Clone, Debug)]
+struct GradualMergeProgressCommitIdNames;
+
+impl CommitIdNames for GradualMergeProgressCommitIdNames {
+    const NAMES: &'static [(&'static str, &'static str)] = &[
+        (
+            "pre-deletion-commit",
+            "Include only descendants of the next commit",
+        ),
+        (
+            "last-deletion-commit",
+            "Exclude ancestors of the next commit",
+        ),
+    ];
+}
+
+#[derive(Debug, clap::Args)]
+pub struct GradualMergeProgressArgs {
+    #[clap(flatten)]
+    pub repo_args: RepoArgs,
+
+    #[clap(flatten)]
+    commit_ids_args: NamedCommitIdsArgs<GradualMergeProgressCommitIdNames>,
+
+    /// Bookmark to merge into
+    #[clap(long)]
+    target_bookmark: String,
+}
+
+pub async fn run(
+    ctx: &CoreContext,
+    app: MononokeApp,
+    args: GradualMergeProgressArgs,
+) -> Result<()> {
+    let repo: Repo = app.open_repo(&args.repo_args).await?;
+
+    let pre_deletion_commit = resolve_commit_id(
+        ctx,
+        &repo,
+        args.commit_ids_args
+            .named_commit_ids()
+            .get("pre-deletion-commit")
+            .ok_or(anyhow!("pre-deletion-commit is required"))?,
+    )
+    .await?;
+
+    let last_deletion_commit = resolve_commit_id(
+        ctx,
+        &repo,
+        args.commit_ids_args
+            .named_commit_ids()
+            .get("last-deletion-commit")
+            .ok_or(anyhow!("last-deletion-commit is required"))?,
+    )
+    .await?;
+
+    let bookmark_to_merge_into = BookmarkKey::new(&args.target_bookmark)?;
+
+    let (merged_count, total_count) = gradual_merge_progress(
+        ctx,
+        &repo,
+        &pre_deletion_commit,
+        &last_deletion_commit,
+        &bookmark_to_merge_into,
+    )
+    .await?;
+
+    info!(
+        ctx.logger(),
+        "Progress: {}/{} commits merged", merged_count, total_count
+    );
+
+    Ok(())
+}
 
 /// Get total number of commits to merge and list
 /// of commits that haven't been merged yet
@@ -29,7 +109,7 @@ async fn get_unmerged_commits_with_total_count(
     pre_deletion_commit: &ChangesetId,
     last_deletion_commit: &ChangesetId,
     bookmark_to_merge_into: &BookmarkKey,
-) -> Result<(usize, Vec<(ChangesetId, StackPosition)>), Error> {
+) -> Result<(usize, Vec<(ChangesetId, StackPosition)>)> {
     let commits_to_merge =
         find_all_commits_to_merge(ctx, repo, *pre_deletion_commit, *last_deletion_commit).await?;
 
@@ -60,7 +140,7 @@ pub async fn gradual_merge_progress(
     pre_deletion_commit: &ChangesetId,
     last_deletion_commit: &ChangesetId,
     bookmark_to_merge_into: &BookmarkKey,
-) -> Result<(usize, usize), Error> {
+) -> Result<(usize, usize)> {
     let (to_merge_count, unmerged_commits) = get_unmerged_commits_with_total_count(
         ctx,
         repo,
@@ -79,7 +159,7 @@ async fn find_all_commits_to_merge(
     repo: &Repo,
     pre_deletion_commit: ChangesetId,
     last_deletion_commit: ChangesetId,
-) -> Result<Vec<ChangesetId>, Error> {
+) -> Result<Vec<ChangesetId>> {
     info!(ctx.logger(), "Finding all commits to merge...");
     let commits_to_merge = repo
         .commit_graph()
@@ -100,7 +180,7 @@ async fn find_unmerged_commits(
     repo: &Repo,
     mut commits_to_merge: Vec<(ChangesetId, StackPosition)>,
     bookmark_to_merge_into: &BookmarkKey,
-) -> Result<Vec<(ChangesetId, StackPosition)>, Error> {
+) -> Result<Vec<(ChangesetId, StackPosition)>> {
     info!(
         ctx.logger(),
         "Finding commits that haven't been merged yet..."
@@ -112,7 +192,12 @@ async fn find_unmerged_commits(
         return Ok(vec![]);
     };
 
-    let bookmark_value = helpers::csid_resolve(ctx, repo, bookmark_to_merge_into).await?;
+    // let bookmark_value = helpers::csid_resolve(ctx, repo, bookmark_to_merge_into).await?;
+    let bookmark_value = repo
+        .bookmarks()
+        .get(ctx.clone(), bookmark_to_merge_into)
+        .await?
+        .ok_or_else(|| anyhow::anyhow!("Bookmark {bookmark_to_merge_into} doesn't exist"))?;
 
     // Let's check if any commits has been merged already - to do that it's enough
     // to check if the first commit has been merged or not i.e. check if this commit

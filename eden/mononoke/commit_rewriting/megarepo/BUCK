@@ -1,4 +1,3 @@
-load("@fbcode_macros//build_defs:rust_binary.bzl", "rust_binary")
 load("@fbcode_macros//build_defs:rust_library.bzl", "rust_library")
 
 oncall("scm_server_infra")
@@ -40,40 +39,5 @@ rust_library(
         "//eden/mononoke/repo_attributes/repo_derived_data:repo_derived_data",
         "//eden/mononoke/repo_attributes/repo_identity:repo_identity",
         "//eden/mononoke/server/context:context",
-    ],
-)
-
-rust_binary(
-    name = "megarepotool",
-    srcs = glob(["tool/**/*.rs"]),
-    named_deps = {"slog": "//common/rust/shed/tracing_slog_compat:tracing_slog_compat"},
-    deps = [
-        "fbsource//third-party/rust:anyhow",
-        "fbsource//third-party/rust:clap-2",
-        "fbsource//third-party/rust:futures",
-        ":megarepolib",
-        "//common/rust/shed/facet:facet",
-        "//common/rust/shed/fbinit:fbinit",
-        "//eden/mononoke/blobrepo:repo_blobstore",
-        "//eden/mononoke/bonsai_git_mapping:bonsai_git_mapping",
-        "//eden/mononoke/bonsai_globalrev_mapping:bonsai_globalrev_mapping",
-        "//eden/mononoke/bonsai_hg_mapping:bonsai_hg_mapping",
-        "//eden/mononoke/bookmarks:bookmarks",
-        "//eden/mononoke/cmdlib:cmdlib",
-        "//eden/mononoke/filenodes:filenodes",
-        "//eden/mononoke/filestore:filestore",
-        "//eden/mononoke/metaconfig:metaconfig_types",
-        "//eden/mononoke/mononoke_types:mononoke_types",
-        "//eden/mononoke/mutable_counters:mutable_counters",
-        "//eden/mononoke/phases:phases",
-        "//eden/mononoke/pushrebase_mutation_mapping:pushrebase_mutation_mapping",
-        "//eden/mononoke/repo_attributes/commit_graph/commit_graph:commit_graph",
-        "//eden/mononoke/repo_attributes/repo_bookmark_attrs:repo_bookmark_attrs",
-        "//eden/mononoke/repo_attributes/repo_cross_repo:repo_cross_repo",
-        "//eden/mononoke/repo_attributes/repo_derived_data:repo_derived_data",
-        "//eden/mononoke/repo_attributes/repo_identity:repo_identity",
-        "//eden/mononoke/repo_attributes/sql_query_config:sql_query_config",
-        "//eden/mononoke/server/context:context",
-        "//eden/scm/lib/clientinfo:clientinfo",
     ],
 )

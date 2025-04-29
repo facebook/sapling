@@ -17,6 +17,7 @@ mod delete_no_longer_bound_files_from_large_repo;
 mod diff_mapping_versions;
 mod gradual_delete;
 mod gradual_merge;
+mod gradual_merge_progress;
 mod history_fixup_deletes;
 mod manual_commit_sync;
 mod mark_not_synced;
@@ -41,6 +42,7 @@ use self::delete_no_longer_bound_files_from_large_repo::DeleteNoLongerBoundFiles
 use self::diff_mapping_versions::DiffMappingVersionsArgs;
 use self::gradual_delete::GradualDeleteArgs;
 use self::gradual_merge::GradualMergeArgs;
+use self::gradual_merge_progress::GradualMergeProgressArgs;
 use self::history_fixup_deletes::HistoryFixupDeletesArgs;
 use self::manual_commit_sync::ManualCommitSyncArgs;
 use self::mark_not_synced::MarkNotSyncedArgs;
@@ -69,6 +71,7 @@ enum MegarepoSubcommand {
     DiffMappingVersions(DiffMappingVersionsArgs),
     GradualDelete(GradualDeleteArgs),
     GradualMerge(GradualMergeArgs),
+    GradualMergeProgress(GradualMergeProgressArgs),
     HistoryFixupDeletes(HistoryFixupDeletesArgs),
     ManualCommitSync(ManualCommitSyncArgs),
     MarkNotSynced(MarkNotSyncedArgs),
@@ -103,6 +106,9 @@ pub async fn run(app: MononokeApp, args: CommandArgs) -> Result<()> {
         }
         MegarepoSubcommand::GradualDelete(args) => gradual_delete::run(&ctx, app, args).await?,
         MegarepoSubcommand::GradualMerge(args) => gradual_merge::run(&ctx, app, args).await?,
+        MegarepoSubcommand::GradualMergeProgress(args) => {
+            gradual_merge_progress::run(&ctx, app, args).await?
+        }
         MegarepoSubcommand::HistoryFixupDeletes(args) => {
             history_fixup_deletes::run(&ctx, app, args).await?
         }
