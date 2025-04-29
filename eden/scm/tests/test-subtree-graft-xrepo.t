@@ -52,13 +52,7 @@ Test subtree prefetch with an invalid commit hash
   creating git repo at $TESTTMP/default-hgcache/gitrepos/* (glob)
   fatal: git upload-pack: not our ref aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
   fatal: remote error: upload-pack: not our ref aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
-  abort: Resolve Git reference: ""
-  
-  Caused by:
-      [] is not a 40-byte hex string
-  
-  Stack backtrace:
-     0: <core::result::Result<types::hash::AbstractHashType<types::hgid::HgIdTypeInfo, 20>* (glob)
+  abort: unknown revision 'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa'!
 
 Prepare a Sapling repo:
 
@@ -72,16 +66,16 @@ Prepare a Sapling repo:
   $ hg go $B -q
 
 Test subtre prefetch
+tofix: subtree prfetch should not abort with unknow revision
   $ hg subtree prefetch --url $GIT_URL --rev 22cc654c7242ce76728ac8baaab057e3cdf7e024
-  creating git repo at $TESTTMP/default-hgcache/gitrepos/* (glob)
-  From file:/*/$TESTTMP/gitrepo (glob)
-   * [new ref]         2d03d263ac7869815998b556ccec69eb36edebda -> remote/master
-   * [new ref]         22cc654c7242ce76728ac8baaab057e3cdf7e024 -> refs/visibleheads/22cc654c7242ce76728ac8baaab057e3cdf7e024
-  1 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  using cached git repo at $TESTTMP/default-hgcache/gitrepos/* (glob)
+  abort: unknown revision '22cc654c7242ce76728ac8baaab057e3cdf7e024'!
+  [255]
 
 Test subtree graft
   $ hg subtree graft --url $GIT_URL --rev 22cc654c7242ce76728ac8baaab057e3cdf7e024 --from-path "" --to-path mygitrepo
   using cached git repo at $TESTTMP/default-hgcache/gitrepos/* (glob)
+  pulling '22cc654c7242ce76728ac8baaab057e3cdf7e024' from 'file:/*/$TESTTMP/gitrepo' (glob)
   grafting 22cc654c7242 "G1"
   $ hg show
   commit:      d4b49c908230
