@@ -45,6 +45,21 @@ Prepare a git repo:
 
   $ export GIT_URL=git+file://$TESTTMP/gitrepo
 
+
+Test subtree prefetch with an invalid commit hash
+  $ newclientrepo
+  $ hg subtree prefetch --url $GIT_URL --rev aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa 2>&1 | head -n 10
+  creating git repo at $TESTTMP/default-hgcache/gitrepos/* (glob)
+  fatal: git upload-pack: not our ref aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+  fatal: remote error: upload-pack: not our ref aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+  abort: Resolve Git reference: ""
+  
+  Caused by:
+      [] is not a 40-byte hex string
+  
+  Stack backtrace:
+     0: <core::result::Result<types::hash::AbstractHashType<types::hgid::HgIdTypeInfo, 20>* (glob)
+
 Prepare a Sapling repo:
 
   $ newclientrepo
