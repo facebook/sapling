@@ -2220,18 +2220,23 @@ def goto(
 
 
 def merge(
-    repo,
+    to_repo,
     node,
     force=False,
     ancestor=None,
     mergeancestor=False,
     labels=None,
     wc=None,
+    from_repo=None,
 ):
-    _prefetchlazychildren(repo, node)
+    if from_repo is None:
+        from_repo = to_repo
+    is_crossrepo = from_repo != to_repo
+    if not is_crossrepo:
+        _prefetchlazychildren(to_repo, node)
 
     return _update(
-        repo,
+        to_repo,
         node,
         branchmerge=True,
         ancestor=ancestor,
@@ -2723,6 +2728,7 @@ def graft(to_repo, ctx, pctx, labels, keepparent=False, from_repo=None):
         ancestor=pctx,
         mergeancestor=mergeancestor and not ctx.manifest().hasgrafts(),
         labels=labels,
+        from_repo=from_repo,
     )
 
     pother = nullid
