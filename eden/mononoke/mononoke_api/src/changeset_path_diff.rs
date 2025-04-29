@@ -14,6 +14,7 @@ use bytes::Bytes;
 use context::CoreContext;
 use derivative::Derivative;
 use futures::try_join;
+use git_types::git_lfs::format_lfs_pointer;
 use lazy_static::lazy_static;
 use mononoke_types::ContentMetadataV2;
 use mononoke_types::hash::GitSha1;
@@ -493,9 +494,30 @@ impl<R: MononokeRepo> ChangesetPathDiffContext<R> {
                             xdiff::FileContent::Inline(contents)
                         }
                         (_, UnifiedDiffMode::OmitContent) => {
-                            let content_id = file.metadata().await?.content_id;
+                            let metadata = file.metadata().await?;
+                            let file_change = path.file_change().await?;
+                            let git_lfs_pointer: Option<String> = file_change.and_then(|fc| {
+                                fc.git_lfs().and_then(|git_lfs| {
+                                    if git_lfs.is_lfs_pointer() {
+                                        Some(format_lfs_pointer(
+                                            metadata.sha256,
+                                            fc.size().unwrap_or_default(),
+                                        ))
+                                    } else {
+                                        None
+                                    }
+                                })
+                            });
                             xdiff::FileContent::Omitted {
-                                content_hash: format!("{}", content_id),
+                                content_hash: format!("{}", metadata.content_id),
+                                git_lfs_pointer: match justknobs::eval(
+                                    "scm/scmquery:diff_git_lfs_pointers",
+                                    None,
+                                    None,
+                                ) {
+                                    Ok(true) => git_lfs_pointer,
+                                    _ => None,
+                                },
                             }
                         }
                     };

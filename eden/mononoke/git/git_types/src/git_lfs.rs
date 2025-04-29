@@ -20,7 +20,7 @@ use mononoke_types::hash::Sha256;
 use regex::Regex;
 
 /// In line with https://github.com/git-lfs/git-lfs/blob/main/docs/spec.md
-fn format_lfs_pointer(sha256: Sha256, size: u64) -> String {
+pub fn format_lfs_pointer(sha256: Sha256, size: u64) -> String {
     format!(
         "version https://git-lfs.github.com/spec/v1\noid sha256:{sha256}\nsize {size}\n",
         sha256 = sha256,
