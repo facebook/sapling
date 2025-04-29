@@ -201,13 +201,9 @@ def clone(ui, url, destpath=None, update=True, pullnames=None, submodule=None):
                 # "nodes", otherwise to "names".
                 nodes = []
                 if update and update is not True:
-                    if len(update) == 40:
-                        try:
-                            nodes.append(bin(update))
-                        except TypeError:
-                            pass
-
-                    if not nodes:
+                    if update_node := try_get_node(update):
+                        nodes.append(update_node)
+                    else:
                         pullnames.append(update)
 
                 pullnames = util.dedup(pullnames)
@@ -224,6 +220,14 @@ def clone(ui, url, destpath=None, update=True, pullnames=None, submodule=None):
         if node is not None and node != nullid:
             hg.updatetotally(repo.ui, repo, node, None)
     return repo
+
+
+def try_get_node(maybe_hex: str) -> Optional[bytes]:
+    if len(maybe_hex) == 40:
+        try:
+            return bin(maybe_hex)
+        except TypeError:
+            return None
 
 
 def update_publicheads(repo, pullnames):
