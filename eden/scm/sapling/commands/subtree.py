@@ -736,11 +736,13 @@ def get_or_clone_git_repo(ui, url, from_rev=None):
             return None
 
         ui.status(_("using cached git repo at %s\n") % git_repo_dir)
+        nodes, pullnames = [], []
         if from_rev:
-            nodes = [git_repo[from_rev].node()]
-        else:
-            nodes = []
-        git.pull(git_repo, "default", nodes=nodes)
+            if from_node := git.try_get_node(from_rev):
+                nodes.append(from_node)
+            else:
+                pullnames.append(from_rev)
+        git.pull(git_repo, "default", names=pullnames, nodes=nodes)
         return git_repo
 
     url_hash = hashlib.sha256(url.encode("utf-8")).hexdigest()

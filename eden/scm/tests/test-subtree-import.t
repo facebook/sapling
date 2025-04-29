@@ -172,8 +172,6 @@ Test subtree import with branch name
   $ hg go $A -q
   $ hg subtree import --url $GIT_URL --rev master --to-path bar -m "import gitrepo to bar"
   using cached git repo at $TESTTMP/default-hgcache/gitrepos/* (glob)
-  From file:/*/$TESTTMP/gitrepo (glob)
-   * [new ref]         4487c56011495a40ce2f6c632c24ae57a210747d -> refs/visibleheads/4487c56011495a40ce2f6c632c24ae57a210747d
   copying / to bar
   $ hg subtree inspect
   {
