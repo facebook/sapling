@@ -2,13 +2,7 @@
 
 name: Mononoke Integration Linux
 
-on:
-  push:
-    branches:
-    - main
-  pull_request:
-    branches:
-    - main
+on: {}
 
 permissions:
   contents: read  #  to fetch code (actions/checkout)
