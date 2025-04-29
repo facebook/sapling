@@ -12,32 +12,32 @@ Prepare a git repo:
   $ git init -q gitrepo
   $ cd gitrepo
   $ git config core.autocrlf false
-  $ echo "1\n2\n3\n4\n5\n" > a.txt
+  $ echo "1\n2\n3\n4\n5" > a.txt
   $ git add a.txt
   $ git commit -q -m G1
 
-  $ echo "1a\n2\n3\n4\n5\n" > a.txt
+  $ echo "1a\n2\n3\n4\n5" > a.txt
   $ git add .
   $ git commit -q -m G2
 
-  $ echo "1a\n2\n3a\n4\n5\n" > a.txt
+  $ echo "1a\n2\n3a\n4\n5" > a.txt
   $ git add .
   $ git commit -q -m G3
 
   $ git log --graph
-  * commit 1ac30162f86b42e7c4e4effdf4d6dab2032483a2
+  * commit 2d03d263ac7869815998b556ccec69eb36edebda
   | Author: test <test@example.org>
   | Date:   Mon Jan 1 00:00:10 2007 +0000
   | 
   |     G3
   | 
-  * commit 01a40e59f19ee93c5782a9cf8ed780e981adc634
+  * commit 0e0bbd7f53d7f8dfa9ef6283f68e2aa5d274a185
   | Author: test <test@example.org>
   | Date:   Mon Jan 1 00:00:10 2007 +0000
   | 
   |     G2
   | 
-  * commit 9aadc4795874831ab6dc2f77d11ca6f69c3f6fab
+  * commit 22cc654c7242ce76728ac8baaab057e3cdf7e024
     Author: test <test@example.org>
     Date:   Mon Jan 1 00:00:10 2007 +0000
     
@@ -57,9 +57,36 @@ Prepare a Sapling repo:
   $ hg go $B -q
 
 Test subtre prefetch
-  $ hg subtree prefetch --url $GIT_URL --rev 9aadc4795874831ab6dc2f77d11ca6f69c3f6fab
+  $ hg subtree prefetch --url $GIT_URL --rev 22cc654c7242ce76728ac8baaab057e3cdf7e024
   creating git repo at $TESTTMP/default-hgcache/gitrepos/* (glob)
   From file:/*/$TESTTMP/gitrepo (glob)
-   * [new ref]         1ac30162f86b42e7c4e4effdf4d6dab2032483a2 -> remote/master
-   * [new ref]         9aadc4795874831ab6dc2f77d11ca6f69c3f6fab -> refs/visibleheads/9aadc4795874831ab6dc2f77d11ca6f69c3f6fab
+   * [new ref]         2d03d263ac7869815998b556ccec69eb36edebda -> remote/master
+   * [new ref]         22cc654c7242ce76728ac8baaab057e3cdf7e024 -> refs/visibleheads/22cc654c7242ce76728ac8baaab057e3cdf7e024
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
+
+Test subtree graft
+  $ hg subtree graft --url $GIT_URL --rev 22cc654c7242ce76728ac8baaab057e3cdf7e024 --from-path "" --to-path mygitrepo
+  using cached git repo at $TESTTMP/default-hgcache/gitrepos/* (glob)
+  grafting 22cc654c7242 "G1"
+  $ hg show
+  commit:      d4b49c908230
+  user:        test <test@example.org>
+  date:        Mon Jan 01 00:00:10 2007 +0000
+  files:       mygitrepo/a.txt
+  description:
+  Graft "G1"
+  
+  Grafted from 22cc654c7242ce76728ac8baaab057e3cdf7e024
+  - Grafted path  to mygitrepo
+  
+  
+  diff --git a/mygitrepo/a.txt b/mygitrepo/a.txt
+  new file mode 100644
+  --- /dev/null
+  +++ b/mygitrepo/a.txt
+  @@ -0,0 +1,5 @@
+  +1
+  +2
+  +3
+  +4
+  +5

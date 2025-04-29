@@ -205,6 +205,13 @@ def subtree_prefetch(ui, repo, *args, **opts):
             False,
             _("record the current user as committer"),
         ),
+        (
+            "",
+            "url",
+            "",
+            _("external repository url (EXPERIMENTAL)"),
+            _("URL"),
+        ),
     ]
     + commitopts
     + commitopts2
@@ -224,8 +231,14 @@ def subtree_graft(ui, repo, **opts):
         if not (from_paths and to_paths):
             raise error.Abort(_("must provide --from-path and --to-path"))
 
-    # XXX construct from_repo from external git url
-    from_repo = None
+    if url := opts.get("url"):
+        giturl = cloneuri.determine_git_uri(None, url)
+        if giturl is None:
+            raise error.Abort(_("unable to determine git url from '%s'") % url)
+        from_repo = get_or_clone_git_repo(ui, giturl)
+    else:
+        from_repo = repo
+
     with repo.wlock():
         return _dograft(ui, repo, from_repo=from_repo, **opts)
 
@@ -705,7 +718,7 @@ def abort_or_remove_paths(ui, repo, paths, subcmd, opts):
                 repo.wvfs.rmtree(path)
 
 
-def get_or_clone_git_repo(ui, url, from_rev):
+def get_or_clone_git_repo(ui, url, from_rev=None):
     def try_reuse_git_repo(git_repo_dir):
         """try to reuse an existing git repo, otherwise return None"""
         if not os.path.exists(git_repo_dir):
@@ -723,7 +736,10 @@ def get_or_clone_git_repo(ui, url, from_rev):
             return None
 
         ui.status(_("using cached git repo at %s\n") % git_repo_dir)
-        nodes = [git_repo[from_rev].node()]
+        if from_rev:
+            nodes = [git_repo[from_rev].node()]
+        else:
+            nodes = []
         git.pull(git_repo, "default", nodes=nodes)
         return git_repo
 
