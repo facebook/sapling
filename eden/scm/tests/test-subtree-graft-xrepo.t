@@ -97,3 +97,14 @@ Test subtree graft
   +3
   +4
   +5
+
+  $ hg subtree prefetch --url $GIT_URL --rev main
+  using cached git repo at $TESTTMP/default-hgcache/gitrepos/* (glob)
+  From file:/*/$TESTTMP/gitrepo (glob)
+   * [new ref]         2d03d263ac7869815998b556ccec69eb36edebda -> remote/main
+tofix: subtree graft a range of commits should work
+  $ hg subtree graft --url $GIT_URL --rev 0e0bbd7f53d7f8dfa9ef6283f68e2aa5d274a185:: --from-path "" --to-path mygitrepo
+  using cached git repo at $TESTTMP/default-hgcache/gitrepos/* (glob)
+  grafting 0e0bbd7f53d7 "G2"
+  abort: unknown revision '22cc654c7242ce76728ac8baaab057e3cdf7e024'!
+  [255]
