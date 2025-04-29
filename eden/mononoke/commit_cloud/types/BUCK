@@ -13,6 +13,7 @@ rust_library(
         "fbsource//third-party/rust:thiserror",
         "//common/rust/shed/sql:sql",
         "//eden/mononoke/mercurial:mercurial_types",
+        "//eden/mononoke/metaconfig:metaconfig_types",
         "//eden/mononoke/mononoke_types:mononoke_types",
     ],
 )

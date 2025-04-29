@@ -7,6 +7,7 @@
 
 use anyhow::ensure;
 use commit_cloud_helpers::sanity_check_workspace_name;
+use commit_cloud_types::ChangesetScheme;
 use commit_cloud_types::CommitCloudError;
 use commit_cloud_types::CommitCloudUserError;
 use permission_checker::MononokeIdentity;
@@ -16,6 +17,7 @@ pub struct CommitCloudContext {
     pub workspace: String,
     pub reponame: String,
     pub owner: Option<MononokeIdentity>,
+    pub default_changeset_scheme: ChangesetScheme,
 }
 
 impl CommitCloudContext {
@@ -29,6 +31,25 @@ impl CommitCloudContext {
             workspace: workspace.to_owned(),
             reponame: reponame.to_owned(),
             owner: None,
+            default_changeset_scheme: ChangesetScheme::Hg,
+        })
+    }
+
+    pub fn new_with_scheme(
+        workspace: &str,
+        reponame: &str,
+        default_changeset_scheme: ChangesetScheme,
+    ) -> anyhow::Result<Self> {
+        ensure!(
+            !workspace.is_empty() && !reponame.is_empty(),
+            "'commit cloud' failed: empty reponame or workspace"
+        );
+
+        Ok(Self {
+            workspace: workspace.to_owned(),
+            reponame: reponame.to_owned(),
+            owner: None,
+            default_changeset_scheme,
         })
     }
 
