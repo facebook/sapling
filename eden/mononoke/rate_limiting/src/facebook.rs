@@ -218,10 +218,6 @@ impl std::fmt::Debug for MononokeRateLimits {
 #[derive(Debug)]
 struct LoadLimitsInner {
     regional_egress_bytes: LoadLimitCounter,
-    regional_total_manifests: LoadLimitCounter,
-    regional_getpack_files: LoadLimitCounter,
-    regional_commits: LoadLimitCounter,
-    commits_per_author: LoadLimitCounter,
     commits_per_user: LoadLimitCounter,
     edenapi_qps: LoadLimitCounter,
 }
@@ -232,22 +228,6 @@ impl LoadLimitsInner {
             regional_egress_bytes: LoadLimitCounter {
                 category: category.clone(),
                 key: make_regional_limit_key("egress-bytes"),
-            },
-            regional_total_manifests: LoadLimitCounter {
-                category: category.clone(),
-                key: make_regional_limit_key("egress-total-manifests"),
-            },
-            regional_getpack_files: LoadLimitCounter {
-                category: category.clone(),
-                key: make_regional_limit_key("egress-getpack-files"),
-            },
-            regional_commits: LoadLimitCounter {
-                category: category.clone(),
-                key: make_regional_limit_key("egress-commits"),
-            },
-            commits_per_author: LoadLimitCounter {
-                category: category.clone(),
-                key: "commits_per_author".to_string(),
             },
             commits_per_user: LoadLimitCounter {
                 category: category.clone(),
@@ -274,10 +254,6 @@ impl MononokeRateLimits {
     fn counter(&self, metric: Metric, scope: Scope) -> &LoadLimitCounter {
         match (metric, scope) {
             (Metric::EgressBytes, Scope::Regional) => &self.load_limits.regional_egress_bytes,
-            (Metric::TotalManifests, Scope::Regional) => &self.load_limits.regional_total_manifests,
-            (Metric::GetpackFiles, Scope::Regional) => &self.load_limits.regional_getpack_files,
-            (Metric::Commits, Scope::Regional) => &self.load_limits.regional_commits,
-            (Metric::CommitsPerAuthor, Scope::Global) => &self.load_limits.commits_per_author,
             (Metric::CommitsPerUser, Scope::Global) => &self.load_limits.commits_per_user,
             (Metric::EdenApiQps, Scope::Global) => &self.load_limits.edenapi_qps,
             _ => panic!("Unsupported metric/scope combination"),

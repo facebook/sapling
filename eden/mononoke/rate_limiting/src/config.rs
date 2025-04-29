@@ -89,10 +89,6 @@ impl TryFrom<rate_limiting_config::FciMetricKey> for Metric {
     fn try_from(value: rate_limiting_config::FciMetricKey) -> Result<Self, Self::Error> {
         match value {
             rate_limiting_config::FciMetricKey::EgressBytes => Ok(Metric::EgressBytes),
-            rate_limiting_config::FciMetricKey::TotalManifests => Ok(Metric::TotalManifests),
-            rate_limiting_config::FciMetricKey::GetpackFiles => Ok(Metric::GetpackFiles),
-            rate_limiting_config::FciMetricKey::Commits => Ok(Metric::Commits),
-            rate_limiting_config::FciMetricKey::CommitsPerAuthor => Ok(Metric::CommitsPerAuthor),
             rate_limiting_config::FciMetricKey::CommitsPerUser => Ok(Metric::CommitsPerUser),
             rate_limiting_config::FciMetricKey::EdenApiQps => Ok(Metric::EdenApiQps),
             _ => Err(anyhow!("Invalid FciMetricKey")),
