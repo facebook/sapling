@@ -19,6 +19,7 @@ use types::HgId;
 use types::PathComponentBuf;
 
 use crate::ffi::ffi::Tree;
+use crate::ffi::ffi::TreeAuxData;
 use crate::ffi::ffi::TreeEntry;
 use crate::ffi::ffi::TreeEntryType;
 
@@ -90,7 +91,14 @@ impl TryFrom<Box<dyn storemodel::TreeEntry>> for Tree {
                 Ok((path, id, flag)) => TreeEntry::try_from_path_node(path, id, flag, &aux_map),
             })
             .collect::<Result<Vec<_>>>()?;
+        let aux_data = match value.aux_data()? {
+            Some(aux) => aux.into(),
+            None => TreeAuxData {
+                digest_size: 0,
+                digest_hash: [0u8; 32],
+            },
+        };
 
-        Ok(Tree { entries })
+        Ok(Tree { entries, aux_data })
     }
 }

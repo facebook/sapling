@@ -88,6 +88,7 @@ pub(crate) mod ffi {
 
     pub struct Tree {
         entries: Vec<TreeEntry>,
+        aux_data: TreeAuxData,
     }
 
     #[derive(Debug)]
