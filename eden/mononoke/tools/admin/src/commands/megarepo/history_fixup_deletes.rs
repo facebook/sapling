@@ -8,6 +8,10 @@
 use std::path::PathBuf;
 
 use anyhow::Result;
+use anyhow::anyhow;
+use commit_id::CommitIdNames;
+use commit_id::NamedCommitIdsArgs;
+use commit_id::resolve_commit_id;
 use context::CoreContext;
 use megarepolib::chunking::even_chunker_with_max_size;
 use megarepolib::history_fixup_delete::HistoryFixupDeletes;
@@ -22,40 +26,21 @@ use tokio::fs::read_to_string;
 use super::common::LightResultingChangesetArgs;
 use crate::commands::megarepo::common::get_delete_commits_cs_args_factory;
 
-// TODO: Delete this mod after D73586055 lands
-mod fake_commit_id {
-    use anyhow::Result;
-    use bonsai_git_mapping::BonsaiGitMappingRef;
-    use bonsai_globalrev_mapping::BonsaiGlobalrevMappingRef;
-    use bonsai_hg_mapping::BonsaiHgMappingRef;
-    use bonsai_svnrev_mapping::BonsaiSvnrevMappingRef;
-    use bookmarks::BookmarkKey;
-    use bookmarks::BookmarksRef;
-    use commit_id::parse_commit_id;
-    use context::CoreContext;
-    use mononoke_types::ChangesetId;
+#[derive(Copy, Clone, Debug)]
+struct HistoryFixupDeletesCommitIdNames;
 
-    pub trait Repo = BonsaiHgMappingRef
-        + BonsaiGitMappingRef
-        + BonsaiGlobalrevMappingRef
-        + BonsaiSvnrevMappingRef;
-
-    pub async fn parse_commit(
-        ctx: &CoreContext,
-        repo: &(impl Repo + BookmarksRef),
-        hash_or_bookmark: &str,
-    ) -> Result<ChangesetId> {
-        let hash_or_bookmark = hash_or_bookmark.to_string();
-        if let Ok(name) = BookmarkKey::new(hash_or_bookmark.clone()) {
-            if let Some(cs_id) = repo.bookmarks().get(ctx.clone(), &name).await? {
-                return Ok(cs_id);
-            }
-        }
-        parse_commit_id(ctx, repo, &hash_or_bookmark).await
-    }
+impl CommitIdNames for HistoryFixupDeletesCommitIdNames {
+    const NAMES: &'static [(&'static str, &'static str)] = &[
+        (
+            "fixup-commit",
+            "Commit which we want to fixup (the files specified in paths file will be deleted there)",
+        ),
+        (
+            "correct-history-commit",
+            "Commit containing the files with correct history (the files specified in path files will be preserved there; all the other files will be deleted)",
+        ),
+    ];
 }
-// TODO: Replace with `use commit_id::parse_commit;` after D73586055 lands
-use fake_commit_id::parse_commit;
 
 /// Create a set of delete commits before the path fixup.
 #[derive(Debug, clap::Args)]
@@ -66,13 +51,8 @@ pub struct HistoryFixupDeletesArgs {
     #[clap(flatten)]
     res_cs_args: LightResultingChangesetArgs,
 
-    /// Commit which we want to fixup (the files specified in paths file will be deleted there)
-    #[clap(long)]
-    commit: String,
-
-    /// Commit containing the files with correct history (the files specified in path files will be preserved there; all the other files will be deleted)
-    #[clap(long)]
-    commit_correct_history: String,
+    #[clap(flatten)]
+    commit_ids: NamedCommitIdsArgs<HistoryFixupDeletesCommitIdNames>,
 
     /// Chunk size for even chunking
     #[clap(long)]
@@ -89,8 +69,23 @@ pub async fn run(ctx: &CoreContext, app: MononokeApp, args: HistoryFixupDeletesA
     let delete_cs_args_factory = get_delete_commits_cs_args_factory(args.res_cs_args)?;
     let chunker = even_chunker_with_max_size(args.even_chunk_size)?;
 
-    let fixup_csid = parse_commit(ctx, &repo, &args.commit).await?;
-    let correct_csid = parse_commit(ctx, &repo, &args.commit_correct_history).await?;
+    let named_commit_ids = &args.commit_ids.named_commit_ids();
+    let fixup_csid = resolve_commit_id(
+        ctx,
+        &repo,
+        named_commit_ids
+            .get("fixup-commit")
+            .ok_or(anyhow!("fixup-commit is required"))?,
+    )
+    .await?;
+    let correct_csid = resolve_commit_id(
+        ctx,
+        &repo,
+        named_commit_ids
+            .get("correct-history-commit")
+            .ok_or(anyhow!("correct-history-commit is required"))?,
+    )
+    .await?;
 
     let s = read_to_string(args.paths_file).await?;
     let paths: Vec<NonRootMPath> = s
