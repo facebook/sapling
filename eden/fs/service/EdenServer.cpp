@@ -2827,7 +2827,6 @@ void EdenServer::accidentalUnmountRecovery() {
           INFO,
           "Mount point {} is not currently mounted, attempting to remount.",
           mountPath);
-      // TODO: Make sure the mount path exists
 
       folly::via(
           getServerState()->getThreadPool().get(),
@@ -2835,16 +2834,17 @@ void EdenServer::accidentalUnmountRecovery() {
            initialConfig = std::move(initialConfig),
            structuredLogger = structuredLogger_,
            mountPath,
-           &client]() mutable {
-            // TODO: Make sure the mount path exists
+           repoName = client.second.asString()]() mutable {
             return mount(std::move(initialConfig), /*readOnly=*/false)
-                .thenTry([mountPath, structuredLogger, &client](
+                .thenTry([mountPath,
+                          structuredLogger,
+                          repoName = std::move(repoName)](
                              folly::Try<std::shared_ptr<EdenMount>>&& result) {
                   bool success = result.hasValue();
                   std::string exceptionMessage =
                       success ? "" : result.exception().what().toStdString();
                   structuredLogger->logEvent(AccidentalUnmountRecovery{
-                      exceptionMessage, success, client.second.asString()});
+                      exceptionMessage, success, repoName});
                   if (success) {
                     XLOGF(
                         DBG3,
