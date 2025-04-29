@@ -2422,8 +2422,8 @@ def _update(
                 ):
                     paths.append(to_repo.pathto(f, cwd))
 
-            paths = sorted(paths)
-            if len(paths) > 0:
+            if paths:
+                paths = sorted(paths)
                 abort_on_conflicts(paths)
 
         # Convert to dictionary-of-lists format
