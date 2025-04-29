@@ -303,20 +303,37 @@ def onetimeclientsetup(ui):
 
     # prefetch files before update
     def applyupdates(
-        orig, repo, actions, wctx, mctx, overwrite, labels=None, ancestors=None
+        orig,
+        to_repo,
+        actions,
+        wctx,
+        mctx,
+        overwrite,
+        labels=None,
+        ancestors=None,
+        from_repo=None,
     ):
         # Don't prefetch GETs for in-memory merge. We likely don't need the file content
         # at all.
-        if shallowrepo.requirement in repo.requirements and not wctx.isinmemory():
+        if from_repo is None:
+            from_repo = to_repo
+        if shallowrepo.requirement in from_repo.requirements and not wctx.isinmemory():
             manifest = mctx.manifest()
             files = []
             for _f, args, msg in actions[merge.ACTION_GET]:
                 f2 = args[0]
                 files.append((f2, manifest[f2]))
             # batch fetch the needed files from the server
-            repo.fileservice.prefetch(files, fetchhistory=False)
+            from_repo.fileservice.prefetch(files, fetchhistory=False)
         return orig(
-            repo, actions, wctx, mctx, overwrite, labels=labels, ancestors=ancestors
+            to_repo,
+            actions,
+            wctx,
+            mctx,
+            overwrite,
+            labels=labels,
+            ancestors=ancestors,
+            from_repo=from_repo,
         )
 
     wrapfunction(merge, "applyupdates", applyupdates)

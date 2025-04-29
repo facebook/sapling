@@ -106,5 +106,5 @@ tofix: subtree graft a range of commits should work
   $ hg subtree graft --url $GIT_URL --rev 0e0bbd7f53d7f8dfa9ef6283f68e2aa5d274a185:: --from-path "" --to-path mygitrepo
   using cached git repo at $TESTTMP/default-hgcache/gitrepos/* (glob)
   grafting 0e0bbd7f53d7 "G2"
-  abort: unknown revision '22cc654c7242ce76728ac8baaab057e3cdf7e024'!
+  abort: unknown revision '0e0bbd7f53d7f8dfa9ef6283f68e2aa5d274a185'!
   [255]

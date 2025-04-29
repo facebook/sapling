@@ -1458,7 +1458,9 @@ def batchget(repo, mctx, wctx, actions):
 
 @perftrace.tracefunc("Apply Updates")
 @util.timefunction("applyupdates", 0, "ui")
-def applyupdates(repo, actions, wctx, mctx, overwrite, labels=None, ancestors=None):
+def applyupdates(
+    to_repo, actions, wctx, mctx, overwrite, labels=None, ancestors=None, from_repo=None
+):
     """apply the merge action list to the working directory
 
     wctx is the working copy context
@@ -1469,11 +1471,17 @@ def applyupdates(repo, actions, wctx, mctx, overwrite, labels=None, ancestors=No
     """
     perftrace.tracevalue("Actions", sum(len(v) for k, v in actions.items()))
 
+    if from_repo is None:
+        from_repo = to_repo
+    is_crossrepo = from_repo != to_repo
+    ui = to_repo.ui
+
     updated, merged, removed = 0, 0, 0
     other_node = mctx.node()
 
+    # XXX: add xrepo info to mergestate
     ms = mergestate.clean(
-        repo,
+        to_repo,
         node=wctx.p1().node(),
         other=other_node,
         # Ancestor can include the working copy, so we use this helper:
@@ -1503,13 +1511,17 @@ def applyupdates(repo, actions, wctx, mctx, overwrite, labels=None, ancestors=No
         f1, f2, fa, move, anc = args
         if f1 is not None:
             merge_prefetch.append(wctx[f1])
+        if is_crossrepo:
+            # For cross-repo merges the external git repo is not a lazy repo,
+            # so there’s no need to prefetch the files.
+            continue
         if f2 is not None:
             merge_prefetch.append(mctx[f2])
-        actx = repo[anc]
+        actx = from_repo[anc]
         if fa in actx:
             merge_prefetch.append(actx[fa])
-    if merge_prefetch and hasattr(repo, "fileservice"):
-        repo.fileservice.prefetch(
+    if merge_prefetch and hasattr(to_repo, "fileservice"):
+        to_repo.fileservice.prefetch(
             [
                 (fc.path(), fc.filenode())
                 for fc in merge_prefetch
@@ -1535,18 +1547,18 @@ def applyupdates(repo, actions, wctx, mctx, overwrite, labels=None, ancestors=No
         if f1 is None:
             fcl = filemerge.absentfilectx(wctx, fa)
         else:
-            repo.ui.debug(" preserving %s for resolve of %s\n" % (f1, f))
+            ui.debug(" preserving %s for resolve of %s\n" % (f1, f))
             fcl = wctx[f1]
         if f2 is None:
             fco = filemerge.absentfilectx(mctx, fa)
         else:
             fco = mctx[f2]
-        actx = repo[anc]
+        actx = from_repo[anc]
         if fa in actx:
             fca = actx[fa]
         else:
             # TODO: move to absentfilectx
-            fca = repo.filectx(f1, changeid=nullid, fileid=nullid)
+            fca = to_repo.filectx(f1, changeid=nullid, fileid=nullid)
         # Skip submodules for now
         if fcl.flags() == "m" or fco.flags() == "m":
             continue
@@ -1572,7 +1584,7 @@ def applyupdates(repo, actions, wctx, mctx, overwrite, labels=None, ancestors=No
     # remove renamed files after safely stored
     for f in moves:
         if wctx[f].lexists():
-            repo.ui.debug("removing %s\n" % f)
+            ui.debug("removing %s\n" % f)
             wctx[f].audit()
             wctx[f].remove()
 
@@ -1580,18 +1592,18 @@ def applyupdates(repo, actions, wctx, mctx, overwrite, labels=None, ancestors=No
     z = 0
 
     def userustworker():
-        return "remotefilelog" in repo.requirements and not wctx.isinmemory()
+        return "remotefilelog" in to_repo.requirements and not wctx.isinmemory()
 
     rustworkers = userustworker()
 
     # record path conflicts
     with (
-        progress.bar(repo.ui, _("updating"), _("files"), numupdates) as prog,
-        repo.ui.timesection("updateworker"),
+        progress.bar(ui, _("updating"), _("files"), numupdates) as prog,
+        ui.timesection("updateworker"),
     ):
         for f, args, msg in actions[ACTION_PATH_CONFLICT]:
             f1, fo = args
-            s = repo.ui.status
+            s = ui.status
             s(
                 _(
                     "%s: path conflict - a file or link has the same name as a "
@@ -1613,7 +1625,7 @@ def applyupdates(repo, actions, wctx, mctx, overwrite, labels=None, ancestors=No
         if rustworkers:
             # Flush any pending data to disk before forking workers, so the workers
             # don't all flush duplicate data.
-            repo.commitpending()
+            to_repo.commitpending()
 
             # Removing lots of files very quickly is known to cause FSEvents to
             # lose events which forces watchman to recrwawl the entire
@@ -1621,10 +1633,10 @@ def applyupdates(repo, actions, wctx, mctx, overwrite, labels=None, ancestors=No
             # minutes, slowing down all the other tools that rely on it. Thus
             # add a config that can be tweaked to specifically reduce the
             # amount of concurrency.
-            numworkers = repo.ui.configint(
-                "experimental", "numworkersremover", worker._numworkers(repo.ui)
+            numworkers = ui.configint(
+                "experimental", "numworkersremover", worker._numworkers(ui)
             )
-            remover = rustworker.removerworker(repo.wvfs.base, numworkers)
+            remover = rustworker.removerworker(to_repo.wvfs.base, numworkers)
             for f, args, msg in actions[ACTION_REMOVE] + actions[ACTION_REMOVE_GET]:
                 # The remove method will either return immediately or block if
                 # the internal worker queue is full.
@@ -1633,11 +1645,11 @@ def applyupdates(repo, actions, wctx, mctx, overwrite, labels=None, ancestors=No
                 prog.value = (z, f)
             retry = remover.wait()
             for f in retry:
-                repo.ui.debug("retrying %s\n" % f)
-                removeone(repo, wctx, f)
+                ui.debug("retrying %s\n" % f)
+                removeone(to_repo, wctx, f)
         else:
             for i, size, item in batchremove(
-                repo, wctx, actions[ACTION_REMOVE] + actions[ACTION_REMOVE_GET]
+                to_repo, wctx, actions[ACTION_REMOVE] + actions[ACTION_REMOVE_GET]
             ):
                 z += i
                 prog.value = (z, item)
@@ -1646,10 +1658,10 @@ def applyupdates(repo, actions, wctx, mctx, overwrite, labels=None, ancestors=No
 
         # resolve path conflicts (must come before getting)
         for f, args, msg in actions[ACTION_PATH_CONFLICT_RESOLVE]:
-            repo.ui.debug(" %s: %s -> pr\n" % (f, msg))
+            ui.debug(" %s: %s -> pr\n" % (f, msg))
             (f0,) = args
             if wctx[f0].lexists():
-                repo.ui.note(_("moving %s to %s\n") % (f0, f))
+                ui.note(_("moving %s to %s\n") % (f0, f))
                 wctx[f].audit()
                 wctx[f].write(wctx.filectx(f0), wctx.filectx(f0).flags())
                 wctx[f0].remove()
@@ -1662,15 +1674,15 @@ def applyupdates(repo, actions, wctx, mctx, overwrite, labels=None, ancestors=No
         get_actions = actions[ACTION_GET] + actions[ACTION_REMOVE_GET] + extra_gets
 
         if rustworkers:
-            numworkers = repo.ui.configint(
-                "experimental", "numworkerswriter", worker._numworkers(repo.ui)
+            numworkers = ui.configint(
+                "experimental", "numworkerswriter", worker._numworkers(ui)
             )
 
             writer = rustworker.writerworker(
-                repo.fileslog.filestore, repo.wvfs.base, numworkers
+                to_repo.fileslog.filestore, to_repo.wvfs.base, numworkers
             )
             fctx = mctx.filectx
-            slinkfix = util.iswindows and repo.wvfs._cansymlink
+            slinkfix = util.iswindows and to_repo.wvfs._cansymlink
             slinks = []
             ftof2 = {}
             for f, (f2, flags, backup), msg in get_actions:
@@ -1688,12 +1700,12 @@ def applyupdates(repo, actions, wctx, mctx, overwrite, labels=None, ancestors=No
 
             writesize, retry = writer.wait()
             for f, flag in retry:
-                repo.ui.debug("retrying %s\n" % f)
-                writesize += updateone(repo, fctx, wctx, f, ftof2.get(f, f), flag)
+                ui.debug("retrying %s\n" % f)
+                writesize += updateone(to_repo, fctx, wctx, f, ftof2.get(f, f), flag)
             if slinkfix:
-                nativecheckout.fixsymlinks(slinks, repo.wvfs.base)
+                nativecheckout.fixsymlinks(slinks, to_repo.wvfs.base)
         else:
-            for i, size, item in batchget(repo, mctx, wctx, get_actions):
+            for i, size, item in batchget(to_repo, mctx, wctx, get_actions):
                 z += i
                 writesize += size
                 prog.value = (z, item)
@@ -1702,34 +1714,34 @@ def applyupdates(repo, actions, wctx, mctx, overwrite, labels=None, ancestors=No
 
         # forget (manifest only, just log it) (must come first)
         for f, args, msg in actions[ACTION_FORGET]:
-            repo.ui.debug(" %s: %s -> f\n" % (f, msg))
+            ui.debug(" %s: %s -> f\n" % (f, msg))
             z += 1
             prog.value = (z, f)
 
         # re-add (manifest only, just log it)
         for f, args, msg in actions[ACTION_ADD]:
-            repo.ui.debug(" %s: %s -> a\n" % (f, msg))
+            ui.debug(" %s: %s -> a\n" % (f, msg))
             z += 1
             prog.value = (z, f)
 
         # re-add/mark as modified (manifest only, just log it)
         for f, args, msg in actions[ACTION_ADD_MODIFIED]:
-            repo.ui.debug(" %s: %s -> am\n" % (f, msg))
+            ui.debug(" %s: %s -> am\n" % (f, msg))
             z += 1
             prog.value = (z, f)
 
         # keep (noop, just log it)
         for f, args, msg in actions[ACTION_KEEP]:
-            repo.ui.debug(" %s: %s -> k\n" % (f, msg))
+            ui.debug(" %s: %s -> k\n" % (f, msg))
             # no progress
 
         # directory rename, move local
         for f, args, msg in actions[ACTION_DIR_RENAME_MOVE_LOCAL]:
-            repo.ui.debug(" %s: %s -> dm\n" % (f, msg))
+            ui.debug(" %s: %s -> dm\n" % (f, msg))
             z += 1
             prog.value = (z, f)
             f0, flags = args
-            repo.ui.note(_("moving %s to %s\n") % (f0, f))
+            ui.note(_("moving %s to %s\n") % (f0, f))
             wctx[f].audit()
             wctx[f].write(wctx.filectx(f0), flags)
             wctx[f0].remove()
@@ -1737,17 +1749,17 @@ def applyupdates(repo, actions, wctx, mctx, overwrite, labels=None, ancestors=No
 
         # local directory rename, get
         for f, args, msg in actions[ACTION_LOCAL_DIR_RENAME_GET]:
-            repo.ui.debug(" %s: %s -> dg\n" % (f, msg))
+            ui.debug(" %s: %s -> dg\n" % (f, msg))
             z += 1
             prog.value = (z, f)
             f0, flags = args
-            repo.ui.note(_("getting %s to %s\n") % (f0, f))
+            ui.note(_("getting %s to %s\n") % (f0, f))
             wctx[f].write(mctx.filectx(f0), flags)
             updated += 1
 
         # exec
         for f, args, msg in actions[ACTION_EXEC]:
-            repo.ui.debug(" %s: %s -> e\n" % (f, msg))
+            ui.debug(" %s: %s -> e\n" % (f, msg))
             z += 1
             prog.value = (z, f)
             (flags,) = args
@@ -1765,12 +1777,12 @@ def applyupdates(repo, actions, wctx, mctx, overwrite, labels=None, ancestors=No
 
         if usemergedriver:
             ms.commit()
-            with repo.ui.timesection("mergedriver"):
+            with ui.timesection("mergedriver"):
                 # This will return False if the function raises an exception.
-                failed = not driverpreprocess(repo, ms, wctx, labels=labels)
+                failed = not driverpreprocess(to_repo, ms, wctx, labels=labels)
             driverresolved = [f for f in ms.driverresolved()]
 
-            repo.ui.log("command_metrics", mergedriver_num_files=len(driverresolved))
+            ui.log("command_metrics", mergedriver_num_files=len(driverresolved))
 
             # If preprocess() marked any files as driver-resolved and we're
             # merging in-memory, abort on the assumption that driver scripts
@@ -1813,7 +1825,7 @@ def applyupdates(repo, actions, wctx, mctx, overwrite, labels=None, ancestors=No
             tocomplete = []
             completed = []
             for f, args, msg in mergeactions:
-                repo.ui.debug(" %s: %s -> m (premerge)\n" % (f, msg))
+                ui.debug(" %s: %s -> m (premerge)\n" % (f, msg))
                 z += 1
                 prog.value = (z, f)
                 wfctx = wctx[f]
@@ -1836,14 +1848,14 @@ def applyupdates(repo, actions, wctx, mctx, overwrite, labels=None, ancestors=No
             # merge
             files = []
             for f, args, msg in tocomplete:
-                repo.ui.debug(" %s: %s -> m (merge)\n" % (f, msg))
+                ui.debug(" %s: %s -> m (merge)\n" % (f, msg))
                 z += 1
                 prog.value = (z, f)
                 ms.resolve(f, wctx)
                 files.append(f)
-            reponame = repo.ui.config("fbscmquery", "reponame")
+            reponame = ui.config("fbscmquery", "reponame")
             command = " ".join(util.shellquote(a) for a in sys.argv)
-            repo.ui.log(
+            ui.log(
                 "manualmergefiles",
                 manual_merge_files=",".join(files),
                 auto_merge_files=",".join(completed),
@@ -1851,9 +1863,9 @@ def applyupdates(repo, actions, wctx, mctx, overwrite, labels=None, ancestors=No
                 repo=reponame,
             )
             if files:
-                repo.ui.log(
+                ui.log(
                     "merge_conflicts",
-                    command=repo.ui.cmdname,
+                    command=ui.cmdname,
                     full_command=command,
                     dest_hex=_gethex(wctx),
                     src_hex=_gethex(mctx),
@@ -1867,8 +1879,8 @@ def applyupdates(repo, actions, wctx, mctx, overwrite, labels=None, ancestors=No
         unresolved = ms.unresolvedcount()
 
         if usemergedriver and not unresolved and ms.mdstate() != "s":
-            with repo.ui.timesection("mergedriver"):
-                if not driverconclude(repo, ms, wctx, labels=labels):
+            with ui.timesection("mergedriver"):
+                if not driverconclude(to_repo, ms, wctx, labels=labels):
                     # XXX setting unresolved to at least 1 is a hack to make
                     # sure we error out
                     unresolved = max(unresolved, 1)
@@ -2498,7 +2510,14 @@ def _update(
             )
 
         stats = applyupdates(
-            to_repo, actions, wc, p2, overwrite, labels=labels, ancestors=pas
+            to_repo,
+            actions,
+            wc,
+            p2,
+            overwrite,
+            labels=labels,
+            ancestors=pas,
+            from_repo=from_repo,
         )
 
         if not wc.isinmemory():
