@@ -272,6 +272,7 @@ pub enum Metric {
     CommitsPerAuthor,
     CommitsPerUser,
     EdenApiQps,
+    LocationToHashCount,
 }
 
 #[derive(Debug, Copy, Clone, PartialEq)]

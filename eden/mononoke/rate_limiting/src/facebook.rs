@@ -220,6 +220,7 @@ struct LoadLimitsInner {
     regional_egress_bytes: LoadLimitCounter,
     commits_per_user: LoadLimitCounter,
     edenapi_qps: LoadLimitCounter,
+    location_to_hash_count: LoadLimitCounter,
 }
 
 impl LoadLimitsInner {
@@ -234,8 +235,12 @@ impl LoadLimitsInner {
                 key: "commits_per_author".to_string(),
             },
             edenapi_qps: LoadLimitCounter {
-                category,
+                category: category.clone(),
                 key: "edenapi_qps".to_string(),
+            },
+            location_to_hash_count: LoadLimitCounter {
+                category,
+                key: "location_to_hash_count".to_string(),
             },
         }
     }
@@ -256,6 +261,9 @@ impl MononokeRateLimits {
             (Metric::EgressBytes, Scope::Regional) => &self.load_limits.regional_egress_bytes,
             (Metric::CommitsPerUser, Scope::Global) => &self.load_limits.commits_per_user,
             (Metric::EdenApiQps, Scope::Global) => &self.load_limits.edenapi_qps,
+            (Metric::LocationToHashCount, Scope::Global) => {
+                &self.load_limits.location_to_hash_count
+            }
             _ => panic!("Unsupported metric/scope combination"),
         }
     }
