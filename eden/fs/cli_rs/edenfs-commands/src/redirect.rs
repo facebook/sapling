@@ -212,6 +212,7 @@ impl RedirectCmd {
         let config_dir = instance.config_directory(&client_name);
         let checkout = find_checkout(instance, &mount)?;
         try_add_redirection(
+            instance,
             &checkout,
             &config_dir,
             &repo_path,
@@ -254,7 +255,7 @@ impl RedirectCmd {
         checkout_config
             .remove_redirection_targets(&config_dir)
             .with_context(|| "Failed to remove redirection targets from config")?;
-        let redirs = get_effective_redirections(&checkout).with_context(|| {
+        let redirs = get_effective_redirections(instance, &checkout).with_context(|| {
             anyhow!(
                 "Could not get effective redirections for checkout {}",
                 checkout.path().display()
@@ -262,7 +263,7 @@ impl RedirectCmd {
         })?;
         for redir in redirs.values() {
             redir
-                .remove_existing(&checkout, false, force, "unmount")
+                .remove_existing(instance, &checkout, false, force, "unmount")
                 .await
                 .with_context(|| {
                     anyhow!(
@@ -273,12 +274,13 @@ impl RedirectCmd {
         }
 
         // recompute the current state and catch any failures
-        let recomputed_redirs = get_effective_redirections(&checkout).with_context(|| {
-            anyhow!(
-                "Could not get effective redirections for checkout {}",
-                checkout.path().display()
-            )
-        })?;
+        let recomputed_redirs =
+            get_effective_redirections(instance, &checkout).with_context(|| {
+                anyhow!(
+                    "Could not get effective redirections for checkout {}",
+                    checkout.path().display()
+                )
+            })?;
 
         for redir in recomputed_redirs.values() {
             if redir.state == RedirectionState::MatchesConfiguration {
@@ -329,7 +331,7 @@ impl RedirectCmd {
                     )
                 })?;
             redir
-                .remove_existing(&checkout, false, force, "del")
+                .remove_existing(instance, &checkout, false, force, "del")
                 .await
                 .with_context(|| {
                     format!(
@@ -349,12 +351,13 @@ impl RedirectCmd {
             return Ok(0);
         }
 
-        let effective_redirs = get_effective_redirections(&checkout).with_context(|| {
-            anyhow!(
-                "Could not get configured redirections for checkout {}",
-                checkout.path().display()
-            )
-        })?;
+        let effective_redirs =
+            get_effective_redirections(instance, &checkout).with_context(|| {
+                anyhow!(
+                    "Could not get configured redirections for checkout {}",
+                    checkout.path().display()
+                )
+            })?;
         if let Some(effective_redir) = effective_redirs.get(repo_path) {
             // This path isn't possible to trigger until we add profiles,
             // but let's be ready for it anyway.
@@ -385,7 +388,7 @@ impl RedirectCmd {
             })?,
         };
         let checkout = find_checkout(instance, &mount)?;
-        let redirs = get_effective_redirections(&checkout).with_context(|| {
+        let redirs = get_effective_redirections(instance, &checkout).with_context(|| {
             anyhow!(
                 "Could not get configured redirections for checkout {}",
                 checkout.path().display()
@@ -419,7 +422,7 @@ impl RedirectCmd {
                 continue;
             }
 
-            if let Err(e) = redir.apply(&checkout, force, "fixup").await {
+            if let Err(e) = redir.apply(instance, &checkout, force, "fixup").await {
                 eprintln!(
                     "Unable to apply redirection `{}`: {}",
                     redir.repo_path.display(),
@@ -428,12 +431,13 @@ impl RedirectCmd {
             }
         }
 
-        let effective_redirs = get_effective_redirections(&checkout).with_context(|| {
-            anyhow!(
-                "Failed to get effective redirections for checkout {}",
-                checkout.path().display()
-            )
-        })?;
+        let effective_redirs =
+            get_effective_redirections(instance, &checkout).with_context(|| {
+                anyhow!(
+                    "Failed to get effective redirections for checkout {}",
+                    checkout.path().display()
+                )
+            })?;
         for redir in effective_redirs.values() {
             if redir.state != RedirectionState::MatchesConfiguration {
                 // When --only-repo-source is passed, we may fail to fixup some redirections.

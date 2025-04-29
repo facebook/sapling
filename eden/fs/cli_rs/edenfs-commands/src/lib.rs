@@ -253,13 +253,6 @@ impl MainCommand {
     async fn dispatch(self) -> Result<ExitCode> {
         event!(Level::TRACE, cmd = ?self, "Dispatching");
 
-        // NOTE: keep until code that depends on EdenFsInstance::global() is removed.
-        EdenFsInstance::init(
-            get_config_dir(&self.config_dir, &self.subcommand.get_mount_path_override())?,
-            get_etc_eden_dir(&self.etc_eden_dir),
-            get_home_dir(&self.home_dir),
-        );
-
         init_edenfs_instance(
             get_config_dir(&self.config_dir, &self.subcommand.get_mount_path_override())?,
             get_etc_eden_dir(&self.etc_eden_dir),

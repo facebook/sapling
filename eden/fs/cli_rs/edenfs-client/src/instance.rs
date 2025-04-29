@@ -11,7 +11,7 @@
 //!
 //! # Examples
 //!
-//! ## Initializing the global instance
+//! ## Initializing an instance
 //!
 //! ```
 //! use edenfs_client::instance::EdenFsInstance;
@@ -19,15 +19,12 @@
 //! use edenfs_client::utils::get_etc_eden_dir;
 //! use edenfs_client::utils::get_home_dir;
 //!
-//! // Initialize the global instance
-//! EdenFsInstance::init(
+//! // Initialize the instance
+//! let instance = EdenFsInstance::new(
 //!     get_config_dir(&None, &None).unwrap(),
 //!     get_etc_eden_dir(&None),
 //!     get_home_dir(&None),
 //! );
-//!
-//! // Access the global instance
-//! let instance = EdenFsInstance::global();
 //! ```
 //!
 //! ## Getting EdenFS configuration
@@ -40,12 +37,11 @@
 //! use edenfs_client::utils::get_etc_eden_dir;
 //! use edenfs_client::utils::get_home_dir;
 //!
-//! EdenFsInstance::init(
+//! let instance = EdenFsInstance::new(
 //!     get_config_dir(&None, &None).unwrap(),
 //!     get_etc_eden_dir(&None),
 //!     get_home_dir(&None),
 //! );
-//! let instance = EdenFsInstance::global();
 //! match instance.get_config() {
 //!     Ok(config) => {
 //!         println!("Successfully loaded EdenFS configuration");
@@ -67,12 +63,11 @@
 //! use edenfs_client::utils::get_etc_eden_dir;
 //! use edenfs_client::utils::get_home_dir;
 //!
-//! EdenFsInstance::init(
+//! let instance = EdenFsInstance::new(
 //!     get_config_dir(&None, &None).unwrap(),
 //!     get_etc_eden_dir(&None),
 //!     get_home_dir(&None),
 //! );
-//! let instance = EdenFsInstance::global();
 //! match instance.get_configured_mounts_map() {
 //!     Ok(mounts) => {
 //!         println!("Configured mounts:");
@@ -91,7 +86,6 @@ use std::collections::BTreeMap;
 use std::fs::remove_file;
 use std::path::Path;
 use std::path::PathBuf;
-use std::sync::OnceLock;
 
 use anyhow::Context;
 use anyhow::anyhow;
@@ -109,10 +103,6 @@ use tracing::event;
 use util::lock::PathLock;
 
 use crate::client::EdenFsClient;
-
-// We create a single EdenFsInstance when starting up and utilize EdenFsInstance::global()
-// whenever we need to access it.
-static INSTANCE: OnceLock<EdenFsInstance> = OnceLock::new();
 
 // Default config and etc dirs
 #[cfg(unix)]
@@ -150,41 +140,7 @@ pub struct EdenFsInstance {
 }
 
 impl EdenFsInstance {
-    /// Returns a reference to the global `EdenFsInstance`.
-    ///
-    /// This method provides access to the global instance that was previously initialized
-    /// with [`init`](Self::init). It's the recommended way to access the `EdenFsInstance`
-    /// throughout your application.
-    ///
-    /// # Panics
-    ///
-    /// Panics if the global instance has not been initialized with [`init`](Self::init).
-    ///
-    /// # Examples
-    ///
-    /// ```
-    /// use edenfs_client::instance::EdenFsInstance;
-    /// use edenfs_client::utils::get_config_dir;
-    /// use edenfs_client::utils::get_etc_eden_dir;
-    /// use edenfs_client::utils::get_home_dir;
-    ///
-    /// EdenFsInstance::init(
-    ///     get_config_dir(&None, &None).unwrap(),
-    ///     get_etc_eden_dir(&None),
-    ///     get_home_dir(&None),
-    /// );
-    /// let instance = EdenFsInstance::global();
-    /// ```
-    pub fn global() -> &'static EdenFsInstance {
-        INSTANCE.get().expect("EdenFsInstance is not initialized")
-    }
-
     /// Creates a new `EdenFsInstance` with the specified paths.
-    ///
-    /// This constructor creates a new instance without setting it as the global instance.
-    /// If you want to initialize the global instance, use [`init`](Self::init) instead.
-    ///
-    /// This method is useful for testing or when you need to create multiple instances.
     ///
     /// # Parameters
     ///
@@ -218,49 +174,6 @@ impl EdenFsInstance {
         }
     }
 
-    /// Initializes the global `EdenFsInstance` with the specified paths.
-    ///
-    /// This method creates a new `EdenFsInstance` and sets it as the global instance
-    /// that can be accessed with [`global`](Self::global).
-    ///
-    /// # Parameters
-    ///
-    /// * `config_dir` - Path to the EdenFS configuration directory
-    /// * `etc_eden_dir` - Path to the system-wide EdenFS configuration directory
-    /// * `home_dir` - Optional path to the user's home directory
-    ///
-    /// # Panics
-    ///
-    /// Panics if the global instance has already been initialized.
-    ///
-    /// # Examples
-    ///
-    /// ```
-    /// use edenfs_client::instance::EdenFsInstance;
-    /// use edenfs_client::utils::get_config_dir;
-    /// use edenfs_client::utils::get_etc_eden_dir;
-    /// use edenfs_client::utils::get_home_dir;
-    ///
-    /// // Initialize the global instance
-    /// EdenFsInstance::init(
-    ///     get_config_dir(&None, &None).unwrap(),
-    ///     get_etc_eden_dir(&None),
-    ///     get_home_dir(&None),
-    /// );
-    /// ```
-    pub fn init(config_dir: PathBuf, etc_eden_dir: PathBuf, home_dir: Option<PathBuf>) {
-        event!(
-            Level::TRACE,
-            ?config_dir,
-            ?etc_eden_dir,
-            ?home_dir,
-            "Creating EdenFsInstance"
-        );
-        INSTANCE
-            .set(EdenFsInstance::new(config_dir, etc_eden_dir, home_dir))
-            .expect("should be able to initialize EdenfsInstance")
-    }
-
     /// Loads and returns the EdenFS configuration.
     ///
     /// This method loads the configuration from the system-wide and user-specific
@@ -279,12 +192,11 @@ impl EdenFsInstance {
     /// use edenfs_client::utils::get_etc_eden_dir;
     /// use edenfs_client::utils::get_home_dir;
     ///
-    /// EdenFsInstance::init(
+    /// let instance = EdenFsInstance::new(
     ///     get_config_dir(&None, &None).unwrap(),
     ///     get_etc_eden_dir(&None),
     ///     get_home_dir(&None),
     /// );
-    /// let instance = EdenFsInstance::global();
     /// match instance.get_config() {
     ///     Ok(config) => {
     ///         println!("Successfully loaded EdenFS configuration");
@@ -317,12 +229,11 @@ impl EdenFsInstance {
     /// use edenfs_client::utils::get_etc_eden_dir;
     /// use edenfs_client::utils::get_home_dir;
     ///
-    /// EdenFsInstance::init(
+    /// let instance = EdenFsInstance::new(
     ///     get_config_dir(&None, &None).unwrap(),
     ///     get_etc_eden_dir(&None),
     ///     get_home_dir(&None),
     /// );
-    /// let instance = EdenFsInstance::global();
     /// if let Some(home_dir) = instance.get_user_home_dir() {
     ///     println!("User home directory: {}", home_dir.display());
     /// }
@@ -374,12 +285,11 @@ impl EdenFsInstance {
     /// use edenfs_client::utils::get_etc_eden_dir;
     /// use edenfs_client::utils::get_home_dir;
     ///
-    /// EdenFsInstance::init(
+    /// let instance = EdenFsInstance::new(
     ///     get_config_dir(&None, &None).unwrap(),
     ///     get_etc_eden_dir(&None),
     ///     get_home_dir(&None),
     /// );
-    /// let instance = EdenFsInstance::global();
     ///
     /// // Get socket path without checking if it exists
     /// let socket_path = instance.get_socket_path(false).unwrap();
@@ -477,12 +387,11 @@ impl EdenFsInstance {
     /// use edenfs_client::utils::get_etc_eden_dir;
     /// use edenfs_client::utils::get_home_dir;
     ///
-    /// EdenFsInstance::init(
+    /// let instance = EdenFsInstance::new(
     ///     get_config_dir(&None, &None).unwrap(),
     ///     get_etc_eden_dir(&None),
     ///     get_home_dir(&None),
     /// );
-    /// let instance = EdenFsInstance::global();
     /// match instance.status_from_lock() {
     ///     Ok(_) => println!("EdenFS is running"),
     ///     Err(err) => println!("EdenFS status: {}", err),
@@ -542,12 +451,11 @@ impl EdenFsInstance {
     /// use edenfs_client::utils::get_etc_eden_dir;
     /// use edenfs_client::utils::get_home_dir;
     ///
-    /// EdenFsInstance::init(
+    /// let instance = EdenFsInstance::new(
     ///     get_config_dir(&None, &None).unwrap(),
     ///     get_etc_eden_dir(&None),
     ///     get_home_dir(&None),
     /// );
-    /// let instance = EdenFsInstance::global();
     /// match instance.get_configured_mounts_map() {
     ///     Ok(mounts) => {
     ///         println!("Configured mounts:");
@@ -593,12 +501,11 @@ impl EdenFsInstance {
     /// use edenfs_client::utils::get_etc_eden_dir;
     /// use edenfs_client::utils::get_home_dir;
     ///
-    /// EdenFsInstance::init(
+    /// let instance = EdenFsInstance::new(
     ///     get_config_dir(&None, &None).unwrap(),
     ///     get_etc_eden_dir(&None),
     ///     get_home_dir(&None),
     /// );
-    /// let instance = EdenFsInstance::global();
     /// let clients_dir = instance.clients_dir();
     /// println!("Clients directory: {}", clients_dir.display());
     /// ```
@@ -622,12 +529,11 @@ impl EdenFsInstance {
     /// use edenfs_client::utils::get_etc_eden_dir;
     /// use edenfs_client::utils::get_home_dir;
     ///
-    /// EdenFsInstance::init(
+    /// let instance = EdenFsInstance::new(
     ///     get_config_dir(&None, &None).unwrap(),
     ///     get_etc_eden_dir(&None),
     ///     get_home_dir(&None),
     /// );
-    /// let instance = EdenFsInstance::global();
     /// let logs_dir = instance.logs_dir();
     /// println!("Logs directory: {}", logs_dir.display());
     /// ```
@@ -651,12 +557,11 @@ impl EdenFsInstance {
     /// use edenfs_client::utils::get_etc_eden_dir;
     /// use edenfs_client::utils::get_home_dir;
     ///
-    /// EdenFsInstance::init(
+    /// let instance = EdenFsInstance::new(
     ///     get_config_dir(&None, &None).unwrap(),
     ///     get_etc_eden_dir(&None),
     ///     get_home_dir(&None),
     /// );
-    /// let instance = EdenFsInstance::global();
     /// let storage_dir = instance.storage_dir();
     /// println!("Storage directory: {}", storage_dir.display());
     /// ```
@@ -688,12 +593,11 @@ impl EdenFsInstance {
     /// use edenfs_client::utils::get_etc_eden_dir;
     /// use edenfs_client::utils::get_home_dir;
     ///
-    /// EdenFsInstance::init(
+    /// let instance = EdenFsInstance::new(
     ///     get_config_dir(&None, &None).unwrap(),
     ///     get_etc_eden_dir(&None),
     ///     get_home_dir(&None),
     /// );
-    /// let instance = EdenFsInstance::global();
     /// let path = Path::new("/path/to/checkout");
     /// match instance.client_name(path) {
     ///     Ok(name) => println!("Client name for {}: {}", path.display(), name),
@@ -740,12 +644,11 @@ impl EdenFsInstance {
     /// use edenfs_client::utils::get_etc_eden_dir;
     /// use edenfs_client::utils::get_home_dir;
     ///
-    /// EdenFsInstance::init(
+    /// let instance = EdenFsInstance::new(
     ///     get_config_dir(&None, &None).unwrap(),
     ///     get_etc_eden_dir(&None),
     ///     get_home_dir(&None),
     /// );
-    /// let instance = EdenFsInstance::global();
     /// let client_name = "my_client";
     /// let config_dir = instance.config_directory(client_name);
     /// println!(
@@ -782,12 +685,11 @@ impl EdenFsInstance {
     /// use edenfs_client::utils::get_etc_eden_dir;
     /// use edenfs_client::utils::get_home_dir;
     ///
-    /// EdenFsInstance::init(
+    /// let instance = EdenFsInstance::new(
     ///     get_config_dir(&None, &None).unwrap(),
     ///     get_etc_eden_dir(&None),
     ///     get_home_dir(&None),
     /// );
-    /// let instance = EdenFsInstance::global();
     /// let mount_point = Path::new("/path/to/mount");
     /// match instance.client_dir_for_mount_point(mount_point) {
     ///     Ok(dir) => println!("Client directory: {}", dir.display()),
@@ -844,12 +746,11 @@ impl EdenFsInstance {
     /// use edenfs_client::utils::get_etc_eden_dir;
     /// use edenfs_client::utils::get_home_dir;
     ///
-    /// EdenFsInstance::init(
+    /// let instance = EdenFsInstance::new(
     ///     get_config_dir(&None, &None).unwrap(),
     ///     get_etc_eden_dir(&None),
     ///     get_home_dir(&None),
     /// );
-    /// let instance = EdenFsInstance::global();
     /// let path = Path::new("/path/to/remove");
     /// match instance.remove_path_from_directory_map(path) {
     ///     Ok(_) => println!("Successfully removed path from directory map"),

@@ -103,7 +103,7 @@ pub enum StressCmd {
 impl crate::Subcommand for StressCmd {
     async fn run(&self) -> Result<ExitCode> {
         let instance = get_edenfs_instance();
-        let client = instance.get_client();
+        let client = Arc::new(instance.get_client());
 
         match self {
             Self::GetAttributesV2 {
@@ -145,7 +145,7 @@ impl crate::Subcommand for StressCmd {
                 let request_name = request_factory.request_name();
                 let num_requests = *num_requests;
                 let num_tasks = common.num_tasks;
-                send_requests(request_factory, num_requests, num_tasks)
+                send_requests(client, request_factory, num_requests, num_tasks)
                     .await
                     .with_context(|| {
                         anyhow!(
@@ -173,7 +173,6 @@ impl crate::Subcommand for StressCmd {
                         common.mount_point.display()
                     )
                 })?;
-                let client = Arc::new(client);
                 let attributes = attributes
                     .clone()
                     .unwrap_or(FileAttributes::all_attributes());

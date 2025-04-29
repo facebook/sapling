@@ -268,8 +268,8 @@ impl Redirection {
     /// Determine what bind redirection type should be used on macOS. There are currently only 2
     /// options: apfs or dmg. We default to the old behavior, apfs.
     #[cfg(target_os = "macos")]
-    pub fn determine_bind_redirection_type() -> DarwinBindRedirectionType {
-        let config_value = EdenFsInstance::global()
+    pub fn determine_bind_redirection_type(instance: &EdenFsInstance) -> DarwinBindRedirectionType {
+        let config_value = instance
             .get_config()
             .map(|config| config.redirections.darwin_redirection_type)
             .and_then(|ty| DarwinBindRedirectionType::from_str(&ty));
@@ -349,11 +349,17 @@ impl Redirection {
         }
     }
 
-    pub fn expand_target_abspath(&self, checkout: &EdenFsCheckout) -> Result<Option<PathBuf>> {
+    pub fn expand_target_abspath(
+        &self,
+        instance: &EdenFsInstance,
+        checkout: &EdenFsCheckout,
+    ) -> Result<Option<PathBuf>> {
         match self.redir_type {
             #[cfg(target_os = "macos")]
             RedirectionType::Bind => {
-                if Self::determine_bind_redirection_type() == DarwinBindRedirectionType::APFS {
+                if Self::determine_bind_redirection_type(instance)
+                    == DarwinBindRedirectionType::APFS
+                {
                     // Ideally we'd return information about the backing, but
                     // it is a bit awkward to determine this in all contexts;
                     // prior to creating the volume we don't know anything
@@ -393,13 +399,19 @@ impl Redirection {
         }
     }
 
-    pub fn update_target_abspath(&mut self, checkout: &EdenFsCheckout) -> Result<()> {
-        self.target = self.expand_target_abspath(checkout).with_context(|| {
-            format!(
-                "Failed to update target abspath for redirection: {}",
-                self.repo_path.display()
-            )
-        })?;
+    pub fn update_target_abspath(
+        &mut self,
+        instance: &EdenFsInstance,
+        checkout: &EdenFsCheckout,
+    ) -> Result<()> {
+        self.target = self
+            .expand_target_abspath(instance, checkout)
+            .with_context(|| {
+                format!(
+                    "Failed to update target abspath for redirection: {}",
+                    self.repo_path.display()
+                )
+            })?;
         Ok(())
     }
 
@@ -408,10 +420,13 @@ impl Redirection {
     }
 
     #[cfg(target_os = "linux")]
-    async fn _bind_mount_linux(&self, checkout_path: &Path, target: &Path) -> Result<()> {
-        let instance = EdenFsInstance::global();
+    async fn _bind_mount_linux(
+        &self,
+        instance: &EdenFsInstance,
+        checkout_path: &Path,
+        target: &Path,
+    ) -> Result<()> {
         let client = instance.get_client();
-
         let abs_mount_path_in_repo = checkout_path.join(&self.repo_path);
         if abs_mount_path_in_repo.exists() {
             // To deal with the case where someone has manually unmounted
@@ -588,11 +603,17 @@ impl Redirection {
     }
 
     #[cfg(target_os = "macos")]
-    fn _bind_mount_darwin(&self, checkout_path: &Path, target: &Path) -> Result<()> {
+    fn _bind_mount_darwin(
+        &self,
+        instance: &EdenFsInstance,
+        checkout_path: &Path,
+        target: &Path,
+    ) -> Result<()> {
         // We default to APFS since DMG redirections are experimental at this point
-        if Self::determine_bind_redirection_type() == DarwinBindRedirectionType::SYMLINK {
+        if Self::determine_bind_redirection_type(instance) == DarwinBindRedirectionType::SYMLINK {
             self._apply_symlink(checkout_path, target, false)
-        } else if Self::determine_bind_redirection_type() == DarwinBindRedirectionType::DMG {
+        } else if Self::determine_bind_redirection_type(instance) == DarwinBindRedirectionType::DMG
+        {
             self._bind_mount_darwin_dmg(checkout_path, target)
         } else {
             self._bind_mount_darwin_apfs(checkout_path)
@@ -605,17 +626,35 @@ impl Redirection {
     }
 
     #[cfg(target_os = "linux")]
-    async fn _bind_mount(&self, checkout: &Path, target: &Path, _force: bool) -> Result<()> {
-        self._bind_mount_linux(checkout, target).await
+    async fn _bind_mount(
+        &self,
+        instance: &EdenFsInstance,
+        checkout: &Path,
+        target: &Path,
+        _force: bool,
+    ) -> Result<()> {
+        self._bind_mount_linux(instance, checkout, target).await
     }
 
     #[cfg(target_os = "macos")]
-    async fn _bind_mount(&self, checkout: &Path, target: &Path, _force: bool) -> Result<()> {
-        self._bind_mount_darwin(checkout, target)
+    async fn _bind_mount(
+        &self,
+        instance: &EdenFsInstance,
+        checkout: &Path,
+        target: &Path,
+        _force: bool,
+    ) -> Result<()> {
+        self._bind_mount_darwin(instance, checkout, target)
     }
 
     #[cfg(target_os = "windows")]
-    async fn _bind_mount(&self, checkout: &Path, target: &Path, force: bool) -> Result<()> {
+    async fn _bind_mount(
+        &self,
+        _instance: &EdenFsInstance,
+        checkout: &Path,
+        target: &Path,
+        force: bool,
+    ) -> Result<()> {
         self._bind_mount_windows(checkout, target, force)
     }
 
@@ -627,10 +666,12 @@ impl Redirection {
     }
 
     #[cfg(target_os = "linux")]
-    async fn _bind_unmount_linux(&self, checkout: &EdenFsCheckout) -> Result<()> {
-        let instance = EdenFsInstance::global();
+    async fn _bind_unmount_linux(
+        &self,
+        instance: &EdenFsInstance,
+        checkout: &EdenFsCheckout,
+    ) -> Result<()> {
         let client = instance.get_client();
-
         client
             .remove_bind_mount(&checkout.path(), &self.repo_path)
             .await
@@ -649,9 +690,13 @@ impl Redirection {
     }
 
     #[cfg(target_os = "macos")]
-    fn _bind_unmount_darwin(&self, checkout: &EdenFsCheckout) -> Result<()> {
+    fn _bind_unmount_darwin(
+        &self,
+        instance: &EdenFsInstance,
+        checkout: &EdenFsCheckout,
+    ) -> Result<()> {
         let mount_path = checkout.path().join(&self.repo_path);
-        if Self::determine_bind_redirection_type() == DarwinBindRedirectionType::SYMLINK {
+        if Self::determine_bind_redirection_type(instance) == DarwinBindRedirectionType::SYMLINK {
             let repo_path = self.expand_repo_path(checkout);
             remove_symlink(&repo_path)
                 .with_context(|| format!("Failed to remove symlink {}", repo_path.display()))?;
@@ -689,18 +734,30 @@ impl Redirection {
     }
 
     #[cfg(target_os = "windows")]
-    async fn _bind_unmount(&self, checkout: &EdenFsCheckout) -> Result<()> {
+    async fn _bind_unmount(
+        &self,
+        _instance: &EdenFsInstance,
+        checkout: &EdenFsCheckout,
+    ) -> Result<()> {
         self._bind_unmount_windows(checkout)
     }
 
     #[cfg(target_os = "macos")]
-    async fn _bind_unmount(&self, checkout: &EdenFsCheckout) -> Result<()> {
-        self._bind_unmount_darwin(checkout)
+    async fn _bind_unmount(
+        &self,
+        instance: &EdenFsInstance,
+        checkout: &EdenFsCheckout,
+    ) -> Result<()> {
+        self._bind_unmount_darwin(instance, checkout)
     }
 
     #[cfg(target_os = "linux")]
-    async fn _bind_unmount(&self, checkout: &EdenFsCheckout) -> Result<()> {
-        self._bind_unmount_linux(checkout).await
+    async fn _bind_unmount(
+        &self,
+        instance: &EdenFsInstance,
+        checkout: &EdenFsCheckout,
+    ) -> Result<()> {
+        self._bind_unmount_linux(instance, checkout).await
     }
 
     /// Attempts to create a symlink at checkout_path/self.repo_path that points to target.
@@ -799,8 +856,8 @@ impl Redirection {
         Ok(())
     }
 
-    fn _is_deletable_path(&self, path: &Path) -> bool {
-        let deletable_paths = EdenFsInstance::global().get_config().map_or_else(
+    fn _is_deletable_path(&self, instance: &EdenFsInstance, path: &Path) -> bool {
+        let deletable_paths = instance.get_config().map_or_else(
             |_| Vec::new(),
             |config| config.redirections.redirect_fixup_deletable_paths,
         );
@@ -819,11 +876,12 @@ If this path should not be deleted automatically, please reach out to 'EdenFS Wi
 
     fn _handle_non_empty_dir(
         &self,
+        instance: &EdenFsInstance,
         checkout: &EdenFsCheckout,
         force_remove: bool,
         cli_name: &str,
     ) -> Result<RepoPathDisposition> {
-        if force_remove || self._is_deletable_path(&self.repo_path) {
+        if force_remove || self._is_deletable_path(instance, &self.repo_path) {
             println!(
                 "Redirection path found to be a non-empty directory. Attempting to remove this directory and its content."
             );
@@ -852,11 +910,12 @@ To detect and kill such processes, follow https://fburl.com/edenfs-redirection-n
 
     fn _handle_file_repo_path(
         &self,
+        instance: &EdenFsInstance,
         checkout: &EdenFsCheckout,
         force_remove: bool,
         cli_name: &str,
     ) -> Result<RepoPathDisposition> {
-        if force_remove || self._is_deletable_path(&self.repo_path) {
+        if force_remove || self._is_deletable_path(instance, &self.repo_path) {
             println!("Redirection path found to be a file. Attempting to remove this file.");
             match remove_file(&self.expand_repo_path(checkout)) {
                 Ok(_) => Ok(RepoPathDisposition::DoesNotExist),
@@ -884,6 +943,7 @@ To detect and kill such processes, follow https://fburl.com/edenfs-redirection-n
     #[async_recursion]
     pub async fn remove_existing(
         &self,
+        instance: &EdenFsInstance,
         checkout: &EdenFsCheckout,
         fail_if_bind_mount: bool,
         force_remove: bool,
@@ -909,16 +969,18 @@ To detect and kill such processes, follow https://fburl.com/edenfs-redirection-n
                     repo_path.display()
                 )));
             }
-            self._bind_unmount(checkout).await.with_context(|| {
-                format!("Failed to unmount bind mount {}", self.repo_path.display())
-            })?;
+            self._bind_unmount(instance, checkout)
+                .await
+                .with_context(|| {
+                    format!("Failed to unmount bind mount {}", self.repo_path.display())
+                })?;
 
             // Now that it is unmounted, re-assess and ideally
             // remove the empty directory that was the mount point
             // To avoid infinite recursion, tell the next call to fail if
             // the disposition is still a bind mount
             return self
-                .remove_existing(checkout, true, force_remove, cli_name)
+                .remove_existing(instance, checkout, true, force_remove, cli_name)
                 .await;
         }
 
@@ -933,11 +995,11 @@ To detect and kill such processes, follow https://fburl.com/edenfs-redirection-n
             || (self.redir_type == RedirectionType::Bind && cfg!(windows))
         {
             if disposition == RepoPathDisposition::IsNonEmptyDir {
-                return self._handle_non_empty_dir(checkout, force_remove, cli_name);
+                return self._handle_non_empty_dir(instance, checkout, force_remove, cli_name);
             }
 
             if disposition == RepoPathDisposition::IsFile {
-                return self._handle_file_repo_path(checkout, force_remove, cli_name);
+                return self._handle_file_repo_path(instance, checkout, force_remove, cli_name);
             }
         }
 
@@ -946,11 +1008,15 @@ To detect and kill such processes, follow https://fburl.com/edenfs-redirection-n
 
     pub async fn apply(
         &self,
+        instance: &EdenFsInstance,
         checkout: &EdenFsCheckout,
         force: bool,
         cli_name: &str,
     ) -> Result<()> {
-        let disposition = match self.remove_existing(checkout, false, force, cli_name).await {
+        let disposition = match self
+            .remove_existing(instance, checkout, false, force, cli_name)
+            .await
+        {
             Ok(d) => d,
             Err(e) => {
                 return Err(EdenFsError::Other(anyhow!(
@@ -969,25 +1035,30 @@ To detect and kill such processes, follow https://fburl.com/edenfs-redirection-n
         }
 
         if self.redir_type == RedirectionType::Bind {
-            let target = self.expand_target_abspath(checkout)?;
+            let target = self.expand_target_abspath(instance, checkout)?;
             match target {
-                Some(t) => self._bind_mount(&checkout.path(), &t, force).await,
+                Some(t) => {
+                    self._bind_mount(instance, &checkout.path(), &t, force)
+                        .await
+                }
                 None => Err(EdenFsError::Other(anyhow!(
                     "failed to expand target abspath for checkout {}",
                     &checkout.path().display()
                 ))),
             }
         } else if self.redir_type == RedirectionType::Symlink {
-            let target = self.expand_target_abspath(checkout).with_context(|| {
-                format!(
-                    "Failed to expand abspath for target {} in checkout {}",
-                    self.target
-                        .as_ref()
-                        .unwrap_or(&PathBuf::from("DoesNotExist"))
-                        .display(),
-                    checkout.path().display()
-                )
-            })?;
+            let target = self
+                .expand_target_abspath(instance, checkout)
+                .with_context(|| {
+                    format!(
+                        "Failed to expand abspath for target {} in checkout {}",
+                        self.target
+                            .as_ref()
+                            .unwrap_or(&PathBuf::from("DoesNotExist"))
+                            .display(),
+                        checkout.path().display()
+                    )
+                })?;
             match target {
                 Some(t) => self._apply_symlink(&checkout.path(), &t, force),
                 None => Err(EdenFsError::Other(anyhow!(
@@ -1145,18 +1216,25 @@ pub fn get_configured_redirections(
     Ok(redirs)
 }
 
-fn is_symlink_correct(redir: &Redirection, checkout: &EdenFsCheckout) -> Result<bool> {
-    if let Some(expected_target) = redir.expand_target_abspath(checkout).with_context(|| {
-        format!(
-            "Failed to expand abspath for target {} in checkout {}",
-            redir
-                .target
-                .as_ref()
-                .unwrap_or(&PathBuf::from("DoesNotExist"))
-                .display(),
-            checkout.path().display()
-        )
-    })? {
+fn is_symlink_correct(
+    instance: &EdenFsInstance,
+    redir: &Redirection,
+    checkout: &EdenFsCheckout,
+) -> Result<bool> {
+    if let Some(expected_target) = redir
+        .expand_target_abspath(instance, checkout)
+        .with_context(|| {
+            format!(
+                "Failed to expand abspath for target {} in checkout {}",
+                redir
+                    .target
+                    .as_ref()
+                    .unwrap_or(&PathBuf::from("DoesNotExist"))
+                    .display(),
+                checkout.path().display()
+            )
+        })?
+    {
         let expected_target = std::fs::canonicalize(&expected_target)
             .from_err()
             .with_context(|| {
@@ -1182,7 +1260,7 @@ pub fn get_effective_redirs_for_mount(
     mount: PathBuf,
 ) -> Result<BTreeMap<PathBuf, Redirection>> {
     let checkout = find_checkout(instance, &mount)?;
-    let mut redirections = get_effective_redirections(&checkout).with_context(|| {
+    let mut redirections = get_effective_redirections(instance, &checkout).with_context(|| {
         anyhow!(
             "Unable to retrieve redirections for checkout '{}'",
             mount.display()
@@ -1191,7 +1269,7 @@ pub fn get_effective_redirs_for_mount(
 
     redirections
         .values_mut()
-        .map(|v| v.update_target_abspath(&checkout))
+        .map(|v| v.update_target_abspath(instance, &checkout))
         .collect::<Result<Vec<()>, _>>()
         .with_context(|| anyhow!("failed to expand redirection target path"))?;
 
@@ -1202,6 +1280,7 @@ pub fn get_effective_redirs_for_mount(
 /// This is based on the explicitly configured settings but also factors in
 /// effective configuration by reading the mount table.
 pub fn get_effective_redirections(
+    instance: &EdenFsInstance,
     checkout: &EdenFsCheckout,
 ) -> Result<BTreeMap<PathBuf, Redirection>> {
     let mut redirs = BTreeMap::new();
@@ -1270,7 +1349,7 @@ pub fn get_effective_redirections(
             // be in the NOT_MOUNTED state.
             redir.state = RedirectionState::NotMounted;
         } else if redir.redir_type == RedirectionType::Symlink || cfg!(windows) {
-            if let Ok(is_correct) = is_symlink_correct(&redir, checkout) {
+            if let Ok(is_correct) = is_symlink_correct(instance, &redir, checkout) {
                 if !is_correct {
                     redir.state = RedirectionState::SymlinkIncorrect;
                 }
@@ -1408,6 +1487,7 @@ fn resolve_repo_relative_path(checkout: &EdenFsCheckout, repo_rel_path: &Path) -
 }
 
 pub async fn try_add_redirection(
+    instance: &EdenFsInstance,
     checkout: &EdenFsCheckout,
     config_dir: &Path,
     repo_path: &Path,
@@ -1445,7 +1525,7 @@ pub async fn try_add_redirection(
     // bring the redirection back online.
     // However, we keep this separate from the `redirs` list below for
     // the reasons stated in the comment above.
-    let effective_redirs = get_effective_redirections(checkout).with_context(|| {
+    let effective_redirs = get_effective_redirections(instance, checkout).with_context(|| {
         format!(
             "Failed to get effective redirections for checkout {}",
             checkout.path().display()
@@ -1515,18 +1595,24 @@ pub async fn try_add_redirection(
         }
     }
 
-    redir.apply(checkout, force, "add").await.with_context(|| {
-        format!(
-            "Failed to apply redirection '{}' for checkout {}",
-            redir.repo_path.display(),
-            checkout.path().display()
-        )
-    })?;
+    redir
+        .apply(instance, checkout, force, "add")
+        .await
+        .with_context(|| {
+            format!(
+                "Failed to apply redirection '{}' for checkout {}",
+                redir.repo_path.display(),
+                checkout.path().display()
+            )
+        })?;
 
     // If apply() was successful, we can expect that the `expand_target_abspath`
     // was successful and not handling the `Err` case.
     // Setting target here to make it part of eden checkout config.
-    redir.target = redir.expand_target_abspath(checkout).ok().flatten();
+    redir.target = redir
+        .expand_target_abspath(instance, checkout)
+        .ok()
+        .flatten();
 
     // We expressly allow replacing an existing configuration in order to
     // support a user with a local ad-hoc override for global- or profile-

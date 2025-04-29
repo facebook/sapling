@@ -85,7 +85,7 @@ pub async fn remove_active_eden_mount(context: &RemoveContext) -> Result<()> {
     let client = instance.get_client();
 
     match client
-        .unmount(&context.canonical_path, context.no_force)
+        .unmount(instance, &context.canonical_path, context.no_force)
         .await
     {
         Ok(_) => {

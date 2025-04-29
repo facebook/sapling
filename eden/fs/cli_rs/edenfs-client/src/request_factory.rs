@@ -14,7 +14,6 @@ use edenfs_error::Result;
 use tokio::task::JoinSet;
 
 use crate::client::EdenFsClient;
-use crate::instance::EdenFsInstance;
 
 pub(crate) type RequestParam = Box<Arc<EdenFsClient>>;
 pub(crate) type RequestResult = Box<(dyn Future<Output = Result<()>> + Send)>;
@@ -58,6 +57,7 @@ fn print_update(total: usize, finished: &mut usize) {
 }
 
 pub async fn send_requests<Factory>(
+    client: Arc<EdenFsClient>,
     factory: Arc<Factory>,
     num_requests: usize,
     num_tasks: usize,
@@ -88,12 +88,12 @@ where
         } else {
             requests_per_task + (num_requests % num_tasks)
         };
-        let fac = factory.clone();
+        let factory = factory.clone();
+        let client = client.clone();
         handles.spawn(async move {
-            let client = Arc::new(EdenFsInstance::global().get_client());
             for _ in 0..num_requests {
-                let fac = fac.clone();
-                let request = fac.make_request();
+                let factory = factory.clone();
+                let request = factory.make_request();
                 Box::into_pin(request(Box::new(client.clone()))).await?;
             }
             Ok(())

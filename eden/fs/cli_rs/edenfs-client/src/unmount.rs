@@ -23,7 +23,12 @@ use crate::client::EdenFsClient;
 use crate::instance::EdenFsInstance;
 
 impl EdenFsClient {
-    pub async fn unmount(&self, path: &Path, no_force: bool) -> Result<()> {
+    pub async fn unmount(
+        &self,
+        instance: &EdenFsInstance,
+        path: &Path,
+        no_force: bool,
+    ) -> Result<()> {
         let encoded_path = bytes_from_path(path.to_path_buf())
             .with_context(|| format!("Failed to encode path {}", path.display()))?;
 
@@ -35,7 +40,6 @@ impl EdenFsClient {
             useForce: !no_force,
             ..Default::default()
         };
-        let instance = EdenFsInstance::global();
         match self
             .with_thrift(|thrift| thrift.unmountV2(&unmount_argument))
             .await

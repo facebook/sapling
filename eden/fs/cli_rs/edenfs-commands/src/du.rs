@@ -436,22 +436,26 @@ fn get_backing_repos(checkouts: &[EdenFsCheckout]) -> HashSet<PathBuf> {
 fn get_redirections(
     checkouts: &[EdenFsCheckout],
 ) -> Result<(BTreeSet<(PathBuf, PathBuf)>, HashSet<PathBuf>)> {
+    let instance = get_edenfs_instance();
     let mut redirections = BTreeSet::new();
     let mut buck_redirections = HashSet::new();
 
     for checkout in checkouts.iter() {
-        for (_, redir) in get_effective_redirections(checkout).with_context(|| {
+        for (_, redir) in get_effective_redirections(instance, checkout).with_context(|| {
             format!(
                 "Failed to get redirections for {}",
                 checkout.path().display()
             )
         })? {
-            if let Some(target) = redir.expand_target_abspath(checkout).with_context(|| {
-                format!(
-                    "Failed to get redirection destination for {}",
-                    redir.repo_path.display()
-                )
-            })? {
+            if let Some(target) = redir
+                .expand_target_abspath(instance, checkout)
+                .with_context(|| {
+                    format!(
+                        "Failed to get redirection destination for {}",
+                        redir.repo_path.display()
+                    )
+                })?
+            {
                 redirections.insert((redir.repo_path(), target));
             }
 

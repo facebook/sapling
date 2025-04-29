@@ -703,8 +703,7 @@ impl EdenFsClient {
     /// use futures::StreamExt;
     ///
     /// // This example doesn't actually run the client, but demonstrates the API usage
-    /// async fn example_usage() {
-    ///     let instance = EdenFsInstance::global();
+    /// async fn example_usage(instance: &EdenFsInstance) {
     ///     let client = instance.get_client();
     ///
     ///     // Start monitoring from the current journal position
