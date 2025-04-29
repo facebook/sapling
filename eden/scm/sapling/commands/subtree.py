@@ -152,6 +152,44 @@ def subtree_import(ui, repo, *args, **opts):
 
 
 @subtree_subcmd(
+    "prefetch",
+    [
+        (
+            "",
+            "url",
+            "",
+            _("external repository url"),
+            _("URL"),
+        ),
+        (
+            "r",
+            "rev",
+            "",
+            _("external repository commit hash"),
+            _("REV"),
+        ),
+        ("f", "force", None, _("overwrite existing path")),
+    ],
+    _("-r REV [--from-path PATH] --to-path PATH ..."),
+)
+def subtree_prefetch(ui, repo, *args, **opts):
+    """prefetch commits from the external repository
+
+    Prefetches commits from the external repository and stores them in the
+    local cache.
+    """
+    from_rev = opts.get("rev")
+    if not from_rev:
+        raise error.Abort(_("must specify the external repository commit hash"))
+    url = opts.get("url")
+    if not url:
+        raise error.Abort(_("must specify the external repository url"))
+    giturl = cloneuri.determine_git_uri(None, url)
+
+    get_or_clone_git_repo(ui, giturl, from_rev)
+
+
+@subtree_subcmd(
     "graft",
     [
         ("r", "rev", [], _("revisions to graft"), _("REV")),
