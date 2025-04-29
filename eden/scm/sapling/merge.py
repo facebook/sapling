@@ -1196,7 +1196,7 @@ def manifestmerge(
     return actions
 
 
-def _resolvetrivial(repo, wctx, mctx, ancestor, actions):
+def _resolvetrivial(wctx, mctx, ancestor, actions):
     """Resolves false conflicts where the nodeid changed but the content
     remained the same."""
 
@@ -1220,7 +1220,7 @@ def _resolvetrivial(repo, wctx, mctx, ancestor, actions):
 @perftrace.tracefunc("Calculate Updates")
 @util.timefunction("calculateupdates", 0, "ui")
 def calculateupdates(
-    repo,
+    to_repo,
     wctx,
     mctx,
     ancestors,
@@ -1228,12 +1228,16 @@ def calculateupdates(
     force,
     acceptremote,
     followcopies,
+    from_repo=None,
 ):
     """Calculate the actions needed to merge mctx into wctx using ancestors"""
+    if from_repo is None:
+        from_repo = to_repo
+    ui = to_repo.ui
 
     if len(ancestors) == 1:  # default
         actions = manifestmerge(
-            repo,
+            to_repo,
             wctx,
             mctx,
             ancestors[0],
@@ -1242,10 +1246,10 @@ def calculateupdates(
             acceptremote,
             followcopies,
         )
-        _checkunknownfiles(repo, wctx, mctx, force, actions)
+        _checkunknownfiles(to_repo, wctx, mctx, force, actions)
 
     else:  # only when merge.preferancestor=* - the default
-        repo.ui.note(
+        ui.note(
             _("note: merging %s and %s using bids from ancestors %s\n")
             % (wctx, mctx, _(" and ").join(str(anc) for anc in ancestors))
         )
@@ -1253,9 +1257,9 @@ def calculateupdates(
         # Call for bids
         fbids = {}  # mapping filename to bids (action method to list af actions)
         for ancestor in ancestors:
-            repo.ui.note(_("\ncalculating bids for ancestor %s\n") % ancestor)
+            ui.note(_("\ncalculating bids for ancestor %s\n") % ancestor)
             actions = manifestmerge(
-                repo,
+                to_repo,
                 wctx,
                 mctx,
                 ancestor,
@@ -1265,11 +1269,11 @@ def calculateupdates(
                 followcopies,
                 forcefulldiff=True,
             )
-            _checkunknownfiles(repo, wctx, mctx, force, actions)
+            _checkunknownfiles(to_repo, wctx, mctx, force, actions)
 
             for f, a in sorted(actions.items()):
                 m, args, msg = a
-                repo.ui.debug(" %s: %s -> %s\n" % (f, msg, m))
+                ui.debug(" %s: %s -> %s\n" % (f, msg, m))
                 if f in fbids:
                     d = fbids[f]
                     if m in d:
@@ -1280,7 +1284,7 @@ def calculateupdates(
                     fbids[f] = {m: [a]}
 
         # Pick the best bid for each file
-        repo.ui.note(_("\nauction for merging merge bids\n"))
+        ui.note(_("\nauction for merging merge bids\n"))
         actions = {}
         dms = []  # filenames that have dm actions
         for f, bids in sorted(fbids.items()):
@@ -1289,39 +1293,39 @@ def calculateupdates(
             if len(bids) == 1:  # all bids are the same kind of method
                 m, l = list(bids.items())[0]
                 if all(a == l[0] for a in l[1:]):  # len(bids) is > 1
-                    repo.ui.note(_(" %s: consensus for %s\n") % (f, m))
+                    ui.note(_(" %s: consensus for %s\n") % (f, m))
                     actions[f] = l[0]
                     if m == ACTION_DIR_RENAME_MOVE_LOCAL:
                         dms.append(f)
                     continue
             # If keep is an option, just do it.
             if ACTION_KEEP in bids:
-                repo.ui.note(_(" %s: picking 'keep' action\n") % f)
+                ui.note(_(" %s: picking 'keep' action\n") % f)
                 actions[f] = bids[ACTION_KEEP][0]
                 continue
             # If there are gets and they all agree [how could they not?], do it.
             if ACTION_GET in bids:
                 ga0 = bids[ACTION_GET][0]
                 if all(a == ga0 for a in bids[ACTION_GET][1:]):
-                    repo.ui.note(_(" %s: picking 'get' action\n") % f)
+                    ui.note(_(" %s: picking 'get' action\n") % f)
                     actions[f] = ga0
                     continue
             # Same for symlink->file change
             if ACTION_REMOVE_GET in bids:
                 ga0 = bids[ACTION_REMOVE_GET][0]
                 if all(a == ga0 for a in bids[ACTION_REMOVE_GET][1:]):
-                    repo.ui.note(_(" %s: picking 'remove-then-get' action\n") % f)
+                    ui.note(_(" %s: picking 'remove-then-get' action\n") % f)
                     actions[f] = ga0
                     continue
             # TODO: Consider other simple actions such as mode changes
             # Handle inefficient democrazy.
-            repo.ui.note(_(" %s: multiple bids for merge action:\n") % f)
+            ui.note(_(" %s: multiple bids for merge action:\n") % f)
             for m, l in sorted(bids.items()):
                 for _f, args, msg in l:
-                    repo.ui.note("  %s -> %s\n" % (msg, m))
+                    ui.note("  %s -> %s\n" % (msg, m))
             # Pick random action. TODO: Instead, prompt user when resolving
             m, l = list(bids.items())[0]
-            repo.ui.warn(_(" %s: ambiguous merge - picked %s action\n") % (f, m))
+            ui.warn(_(" %s: ambiguous merge - picked %s action\n") % (f, m))
             actions[f] = l[0]
             if m == ACTION_DIR_RENAME_MOVE_LOCAL:
                 dms.append(f)
@@ -1335,9 +1339,9 @@ def calculateupdates(
                 # These two could be merged as first move and then delete ...
                 # but instead drop moving and just delete.
                 del actions[f]
-        repo.ui.note(_("end of auction\n\n"))
+        ui.note(_("end of auction\n\n"))
 
-    _resolvetrivial(repo, wctx, mctx, ancestors[0], actions)
+    _resolvetrivial(wctx, mctx, ancestors[0], actions)
 
     if wctx.rev() is None and not wctx.isinmemory():
         fractions = _forgetremoved(wctx, mctx, branchmerge)
@@ -2418,6 +2422,7 @@ def _update(
                 force,
                 mergeancestor,
                 followcopies,
+                from_repo=from_repo,
             )
 
         if updatecheck == "noconflict":
