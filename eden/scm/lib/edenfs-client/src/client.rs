@@ -127,6 +127,11 @@ impl EdenFsClient {
             start_time.elapsed().as_millis() as u64,
         );
 
+        hg_metrics::max_counter(
+            "edenclientstatus_length",
+            thrift_result.status.entries.len() as u64,
+        );
+
         let mut result = BTreeMap::new();
         for (path_bytes, status) in thrift_result.status.entries {
             let path = match RepoPathBuf::from_utf8(path_bytes) {
