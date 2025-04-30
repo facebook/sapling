@@ -191,6 +191,7 @@ TreeInode::~TreeInode() = default;
 
 ImmediateFuture<struct stat> TreeInode::stat(
     const ObjectFetchContextPtr& context) {
+  logAccess(*context);
   notifyParentOfStat(/*isFile=*/false, *context);
 
   auto st = getMount()->initStatData();
@@ -1224,6 +1225,7 @@ std::optional<ObjectId> TreeInode::getObjectId() const {
 
 ImmediateFuture<std::optional<Hash32>> TreeInode::getDigestHash(
     const ObjectFetchContextPtr& fetchContext) {
+  logAccess(*fetchContext);
   auto state = contents_.rlock();
 
   if (!state->isMaterialized()) {
@@ -1237,6 +1239,7 @@ ImmediateFuture<std::optional<Hash32>> TreeInode::getDigestHash(
 
 ImmediateFuture<std::optional<uint64_t>> TreeInode::getDigestSize(
     const ObjectFetchContextPtr& fetchContext) {
+  logAccess(*fetchContext);
   auto state = contents_.rlock();
 
   if (!state->isMaterialized()) {
@@ -1250,6 +1253,7 @@ ImmediateFuture<std::optional<uint64_t>> TreeInode::getDigestSize(
 
 ImmediateFuture<std::optional<TreeAuxData>> TreeInode::getTreeAuxData(
     const ObjectFetchContextPtr& fetchContext) {
+  logAccess(*fetchContext);
   auto state = contents_.rlock();
 
   if (!state->isMaterialized()) {

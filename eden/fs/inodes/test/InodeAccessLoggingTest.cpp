@@ -362,3 +362,21 @@ TEST_F(InodeAccessLoggingTest, fallocateFileNested) {
   EXPECT_EQ(1, getAccessCount());
 }
 #endif
+
+TEST_F(InodeAccessLoggingTest, statDirTopLevel) {
+  auto dirInode = mount_.getTreeInode("src"_relpath);
+  resetLogger();
+
+  dirInode->stat(ObjectFetchContext::getNullContext()).get(0ms);
+
+  EXPECT_EQ(1, getAccessCount());
+}
+
+TEST_F(InodeAccessLoggingTest, statDirNested) {
+  auto dirInode = mount_.getTreeInode("src/a/b"_relpath);
+  resetLogger();
+
+  dirInode->stat(ObjectFetchContext::getNullContext()).get(0ms);
+
+  EXPECT_EQ(1, getAccessCount());
+}
