@@ -164,7 +164,7 @@ def mononoke(args: List[str], stderr: BinaryIO, fs: ShellFS, env: Env) -> int:
     # Execute the command in the background
     with open(f"{test_tmp}/mononoke.out", "w") as outfile:
         try:
-            mononoke_pid = subprocess.Popen(
+            mononoke_proc = subprocess.Popen(
                 mononoke_command,
                 stdout=outfile,
                 stderr=outfile,
@@ -174,10 +174,10 @@ def mononoke(args: List[str], stderr: BinaryIO, fs: ShellFS, env: Env) -> int:
             stderr.write(
                 f"Error when running mononoke with command {mononoke_command} and stdout file {test_tmp}/mononoke.out\n".encode()
             )
-    env.setenv("MONONOKE_PID", str(mononoke_pid.pid))
+    env.setenv("MONONOKE_PID", str(mononoke_proc.pid))
     daemon_pids = env.getenv("DAEMON_PIDS")
     with fs.open(daemon_pids, "a") as f:
-        f.write(f"{mononoke_pid}\n".encode())
+        f.write(f"{mononoke_proc.pid}\n".encode())
 
     return 0
 
