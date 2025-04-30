@@ -47,6 +47,7 @@ use storemodel::InsertOpts;
 use storemodel::KeyStore;
 use storemodel::SerializationFormat;
 use storemodel::TreeEntry;
+use storemodel::basic_parse_tree;
 use types::AuxData;
 
 use super::util::try_local_content;
@@ -980,6 +981,18 @@ impl TreeEntry for ScmStoreTreeEntry {
 }
 
 impl storemodel::TreeStore for TreeStore {
+    fn get_local_tree(
+        &self,
+        path: &RepoPath,
+        id: HgId,
+    ) -> anyhow::Result<Option<Box<dyn TreeEntry>>> {
+        let data = match self.get_local_content(path, id)? {
+            None => return Ok(None),
+            Some(v) => v,
+        };
+        Ok(Some(basic_parse_tree(data.into_bytes(), self.format())?))
+    }
+
     fn get_tree_iter(
         &self,
         fctx: FetchContext,
