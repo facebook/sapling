@@ -1,6 +1,6 @@
 load("//windtunnel/cogwheel:defs.bzl", "cogwheel_test", "create_cogwheel_config")
 
-oncall("scm_server_infra")
+oncall("scm_server_treehugger")
 
 cogwheel_test(
     name = "cogwheel_edenapi_replay_test",
