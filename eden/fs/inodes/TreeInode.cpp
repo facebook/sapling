@@ -248,6 +248,7 @@ std::optional<ImmediateFuture<VirtualInode>> TreeInode::rlockGetOrFindChild(
   // Check to see if the entry is already loaded
   auto& entry = iter->second;
   if (auto inodePtr = entry.getInodePtr()) {
+    logAccess(*context);
     return VirtualInode{std::move(inodePtr)};
   }
 
@@ -258,6 +259,7 @@ std::optional<ImmediateFuture<VirtualInode>> TreeInode::rlockGetOrFindChild(
     return std::nullopt;
   }
 
+  logAccess(*context);
   // Note that a child's inode may be currently loading. If it's
   // currently being loaded there's no chance it's been
   // modified/materialized yet (it has to have been loaded prior),
@@ -287,6 +289,7 @@ TreeInode::loadChild(
     folly::Synchronized<TreeInodeState>::LockedPtr& contents,
     PathComponentPiece name,
     const ObjectFetchContextPtr& context) {
+  logAccess(*context);
   auto inodeLoadFuture = Future<unique_ptr<InodeBase>>::makeEmpty();
   InodePtr childInodePtr;
   InodeMap::PromiseVector promises;

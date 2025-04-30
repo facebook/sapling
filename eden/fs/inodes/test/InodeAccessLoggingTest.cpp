@@ -201,7 +201,7 @@ TEST_F(InodeAccessLoggingTest, ensureMaterializedSymlinkTopLevel) {
   linkInode->ensureMaterialized(ObjectFetchContext::getNullContext(), true)
       .get(0ms);
 
-  // 2 accesses logged, 1 for the symlink itself and 1 for the target
+  // 2 accesses logged for reading the symlink and the target FileInodes
   EXPECT_EQ(2, getAccessCount());
 }
 
@@ -220,8 +220,9 @@ TEST_F(InodeAccessLoggingTest, ensureMaterializedSymlinkNested) {
   linkInode->ensureMaterialized(ObjectFetchContext::getNullContext(), true)
       .get(0ms);
 
-  // 2 accesses logged, 1 for the symlink itself and 1 for the target
-  EXPECT_EQ(2, getAccessCount());
+  // 5 accesses logged, 2 for reading the symlink and the target FileInodes, and
+  // 3 for symlink resolution (src, src/a, src/a/b)
+  EXPECT_EQ(5, getAccessCount());
 }
 
 TEST_F(InodeAccessLoggingTest, readLinkFileTopLevel) {
@@ -379,4 +380,312 @@ TEST_F(InodeAccessLoggingTest, statDirNested) {
   dirInode->stat(ObjectFetchContext::getNullContext()).get(0ms);
 
   EXPECT_EQ(1, getAccessCount());
+}
+
+TEST_F(InodeAccessLoggingTest, getOrFindChildDirTopLevel) {
+  auto dirInode = mount_.getRootInode();
+  resetLogger();
+
+  dirInode->getOrFindChild("src"_pc, ObjectFetchContext::getNullContext(), true)
+      .get(0ms);
+
+  // No accesses logged because we don't log accesses to the root tree
+  EXPECT_EQ(0, getAccessCount());
+}
+
+TEST_F(InodeAccessLoggingTest, getOrFindChildDirNested) {
+  auto dirInode = mount_.getTreeInode("src/a"_relpath);
+  resetLogger();
+
+  dirInode->getOrFindChild("b"_pc, ObjectFetchContext::getNullContext(), true)
+      .get(0ms);
+
+  EXPECT_EQ(1, getAccessCount());
+}
+
+TEST_F(InodeAccessLoggingTest, getOrFindChildFileNested) {
+  auto dirInode = mount_.getTreeInode("src/a/b"_relpath);
+  resetLogger();
+
+  dirInode
+      ->getOrFindChild("1.txt"_pc, ObjectFetchContext::getNullContext(), true)
+      .get(0ms);
+
+  EXPECT_EQ(1, getAccessCount());
+}
+
+TEST_F(InodeAccessLoggingTest, getOrFindChildFileTopLevel) {
+  auto dirInode = mount_.getRootInode();
+  resetLogger();
+
+  dirInode
+      ->getOrFindChild(
+          "toplevel.txt"_pc, ObjectFetchContext::getNullContext(), true)
+      .get(0ms);
+
+  // No accesses logged because we don't log accesses to the root tree
+  EXPECT_EQ(0, getAccessCount());
+}
+
+TEST_F(InodeAccessLoggingTest, getOrLoadChildDirTopLevel) {
+  auto dirInode = mount_.getRootInode();
+  resetLogger();
+
+  dirInode->getOrLoadChild("src"_pc, ObjectFetchContext::getNullContext())
+      .get(0ms);
+
+  // No accesses logged because we don't log accesses to the root tree
+  EXPECT_EQ(0, getAccessCount());
+}
+
+TEST_F(InodeAccessLoggingTest, getOrLoadChildDirNested) {
+  auto dirInode = mount_.getTreeInode("src/a"_relpath);
+  resetLogger();
+
+  dirInode->getOrLoadChild("b"_pc, ObjectFetchContext::getNullContext())
+      .get(0ms);
+
+  EXPECT_EQ(1, getAccessCount());
+}
+
+TEST_F(InodeAccessLoggingTest, getOrLoadChildFileNested) {
+  auto dirInode = mount_.getTreeInode("src/a/b"_relpath);
+  resetLogger();
+
+  dirInode->getOrLoadChild("1.txt"_pc, ObjectFetchContext::getNullContext())
+      .get(0ms);
+
+  EXPECT_EQ(1, getAccessCount());
+}
+
+TEST_F(InodeAccessLoggingTest, getOrLoadChildFileTopLevel) {
+  auto dirInode = mount_.getRootInode();
+  resetLogger();
+
+  dirInode
+      ->getOrLoadChild("toplevel.txt"_pc, ObjectFetchContext::getNullContext())
+      .get(0ms);
+
+  // No accesses logged because we don't log accesses to the root tree
+  EXPECT_EQ(0, getAccessCount());
+}
+
+TEST_F(InodeAccessLoggingTest, getOrLoadChildTreeTopLevel) {
+  auto dirInode = mount_.getRootInode();
+  resetLogger();
+
+  dirInode->getOrLoadChildTree("src"_pc, ObjectFetchContext::getNullContext())
+      .get(0ms);
+
+  // No accesses logged because we don't log accesses to the root tree
+  EXPECT_EQ(0, getAccessCount());
+}
+
+TEST_F(InodeAccessLoggingTest, getOrLoadChildTreeNested) {
+  auto dirInode = mount_.getTreeInode("src/a"_relpath);
+  resetLogger();
+
+  dirInode->getOrLoadChildTree("b"_pc, ObjectFetchContext::getNullContext())
+      .get(0ms);
+
+  EXPECT_EQ(1, getAccessCount());
+}
+
+TEST_F(InodeAccessLoggingTest, getChildRecursiveDirTopLevel) {
+  auto rootInode = mount_.getRootInode();
+  resetLogger();
+
+  rootInode
+      ->getChildRecursive("src"_relpath, ObjectFetchContext::getNullContext())
+      .get(0ms);
+
+  // No accesses logged because we don't log accesses to the root tree
+  EXPECT_EQ(0, getAccessCount());
+}
+
+TEST_F(InodeAccessLoggingTest, getChildRecursiveFileTopLevel) {
+  auto rootInode = mount_.getRootInode();
+  resetLogger();
+
+  rootInode
+      ->getChildRecursive(
+          "toplevel.txt"_relpath, ObjectFetchContext::getNullContext())
+      .get(0ms);
+
+  // No accesses logged because we don't log accesses to the root tree
+  EXPECT_EQ(0, getAccessCount());
+}
+
+TEST_F(InodeAccessLoggingTest, getChildRecursiveDirNested) {
+  auto rootInode = mount_.getRootInode();
+  resetLogger();
+
+  rootInode
+      ->getChildRecursive(
+          "src/a/b"_relpath, ObjectFetchContext::getNullContext())
+      .get(0ms);
+
+  // 2 accesses logged, for src looking for a and for src/a looking for b -  we
+  // don't log the access to src because we don't log accesses to the root tree
+  EXPECT_EQ(2, getAccessCount());
+}
+
+TEST_F(InodeAccessLoggingTest, getChildRecursiveFileNested) {
+  auto rootInode = mount_.getRootInode();
+  resetLogger();
+
+  rootInode
+      ->getChildRecursive(
+          "src/a/b/1.txt"_relpath, ObjectFetchContext::getNullContext())
+      .get(0ms);
+
+  // 3 accesses logged, for src looking for a, for src/a looking for b, and for
+  // src/a/b looking for 1.txt -  we don't log the access to src because we
+  // don't log accesses to the root tree
+  EXPECT_EQ(3, getAccessCount());
+}
+
+TEST_F(InodeAccessLoggingTest, unlinkTopLevel) {
+  auto dirInode = mount_.getRootInode();
+  dirInode->mknod("made.txt"_pc, S_IFREG | 0644, 0, InvalidationRequired::No);
+  resetLogger();
+
+  dirInode
+      ->unlink(
+          "made.txt"_pc,
+          InvalidationRequired::No,
+          ObjectFetchContext::getNullContext())
+      .get(0ms);
+
+  // No accesses logged because we don't log accesses to the root tree
+  EXPECT_EQ(0, getAccessCount());
+}
+
+TEST_F(InodeAccessLoggingTest, unlinkNested) {
+  auto dirInode = mount_.getTreeInode("src/a/b"_relpath);
+  dirInode->mknod("made.txt"_pc, S_IFREG | 0644, 0, InvalidationRequired::No);
+  resetLogger();
+
+  dirInode
+      ->unlink(
+          "made.txt"_pc,
+          InvalidationRequired::No,
+          ObjectFetchContext::getNullContext())
+      .get(0ms);
+
+  EXPECT_EQ(1, getAccessCount());
+}
+
+TEST_F(InodeAccessLoggingTest, rmdirTopLevel) {
+  auto dirInode = mount_.getRootInode();
+  dirInode->mkdir("made"_pc, 0, InvalidationRequired::No);
+  resetLogger();
+
+  dirInode
+      ->rmdir(
+          "made"_pc,
+          InvalidationRequired::No,
+          ObjectFetchContext::getNullContext())
+      .get(0ms);
+
+  // No accesses logged because we don't log accesses to the root tree
+  EXPECT_EQ(0, getAccessCount());
+}
+
+TEST_F(InodeAccessLoggingTest, rmdirNested) {
+  auto dirInode = mount_.getTreeInode("src/a/b"_relpath);
+  dirInode->mkdir("made"_pc, 0, InvalidationRequired::No);
+  resetLogger();
+
+  dirInode
+      ->rmdir(
+          "made"_pc,
+          InvalidationRequired::No,
+          ObjectFetchContext::getNullContext())
+      .get(0ms);
+
+  EXPECT_EQ(1, getAccessCount());
+}
+
+TEST_F(InodeAccessLoggingTest, getChildrenTopLevelLoad) {
+  auto dirInode = mount_.getRootInode();
+  dirInode->mkdir("childdir1"_pc, 0, InvalidationRequired::No);
+  dirInode->mkdir("childdir2"_pc, 0, InvalidationRequired::No);
+  dirInode->mknod(
+      "childfile1.txt"_pc, S_IFREG | 0644, 0, InvalidationRequired::No);
+  dirInode->mknod(
+      "childfile2.txt"_pc, S_IFREG | 0644, 0, InvalidationRequired::No);
+  resetLogger();
+
+  auto futures =
+      dirInode->getChildren(ObjectFetchContext::getNullContext(), true);
+
+  std::for_each(futures.begin(), futures.end(), [](auto&& pair) {
+    std::move(pair.second).get(0ms);
+  });
+
+  // No accesses logged because we don't log accesses to the root tree
+  EXPECT_EQ(0, getAccessCount());
+}
+
+TEST_F(InodeAccessLoggingTest, getChildrenNestedLoad) {
+  auto dirInode = mount_.getTreeInode("src/a/b"_relpath);
+  dirInode->mkdir("childdir1"_pc, 0, InvalidationRequired::No);
+  dirInode->mkdir("childdir2"_pc, 0, InvalidationRequired::No);
+  dirInode->mknod(
+      "childfile1.txt"_pc, S_IFREG | 0644, 0, InvalidationRequired::No);
+  dirInode->mknod(
+      "childfile2.txt"_pc, S_IFREG | 0644, 0, InvalidationRequired::No);
+  resetLogger();
+
+  auto futures =
+      dirInode->getChildren(ObjectFetchContext::getNullContext(), true);
+
+  std::for_each(futures.begin(), futures.end(), [](auto&& pair) {
+    std::move(pair.second).get(0ms);
+  });
+
+  // logs the 1 existing child (1.txt) and the 4 newly created children
+  EXPECT_EQ(5, getAccessCount());
+}
+
+TEST_F(InodeAccessLoggingTest, getChildrenTopLevelNoLoad) {
+  auto dirInode = mount_.getRootInode();
+  dirInode->mkdir("childdir1"_pc, 0, InvalidationRequired::No);
+  dirInode->mkdir("childdir2"_pc, 0, InvalidationRequired::No);
+  dirInode->mknod(
+      "childfile1.txt"_pc, S_IFREG | 0644, 0, InvalidationRequired::No);
+  dirInode->mknod(
+      "childfile2.txt"_pc, S_IFREG | 0644, 0, InvalidationRequired::No);
+  resetLogger();
+
+  auto futures =
+      dirInode->getChildren(ObjectFetchContext::getNullContext(), false);
+
+  std::for_each(futures.begin(), futures.end(), [](auto&& pair) {
+    std::move(pair.second).get(0ms);
+  });
+
+  // No accesses logged because we don't log accesses to the root tree
+  EXPECT_EQ(0, getAccessCount());
+}
+
+TEST_F(InodeAccessLoggingTest, getChildrenNestedNoLoad) {
+  auto dirInode = mount_.getTreeInode("src/a/b"_relpath);
+  dirInode->mkdir("childdir1"_pc, 0, InvalidationRequired::No);
+  dirInode->mkdir("childdir2"_pc, 0, InvalidationRequired::No);
+  dirInode->mknod(
+      "childfile1.txt"_pc, S_IFREG | 0644, 0, InvalidationRequired::No);
+  dirInode->mknod(
+      "childfile2.txt"_pc, S_IFREG | 0644, 0, InvalidationRequired::No);
+  resetLogger();
+
+  auto futures =
+      dirInode->getChildren(ObjectFetchContext::getNullContext(), false);
+
+  std::for_each(futures.begin(), futures.end(), [](auto&& pair) {
+    std::move(pair.second).get(0ms);
+  });
+
+  EXPECT_EQ(5, getAccessCount());
 }
