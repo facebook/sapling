@@ -958,21 +958,6 @@ impl MononokeApp {
             .await
     }
 
-    pub async fn redaction_config_blobstore_for_darkstorm(
-        &self,
-    ) -> Result<Arc<RedactionConfigBlobstore>> {
-        let blobstore_config = self
-            .repo_configs()
-            .common
-            .redaction_config
-            .darkstorm_blobstore
-            .clone()
-            .ok_or_else(|| anyhow!("Configuration must have darkstorm blobstore"))?;
-        self.repo_factory
-            .redaction_config_blobstore_from_config(&blobstore_config)
-            .await
-    }
-
     fn redaction_scuba_builder(&self) -> Result<MononokeScubaSampleBuilder> {
         let params = &self.repo_configs().common.censored_scuba_params;
         let mut builder =

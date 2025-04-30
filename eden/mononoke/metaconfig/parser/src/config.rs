@@ -495,10 +495,6 @@ fn parse_common_config(
     let redaction_config = common.redaction_config;
     let redaction_config = RedactionConfig {
         blobstore: get_blobstore(&redaction_config.blobstore)?,
-        darkstorm_blobstore: match &redaction_config.darkstorm_blobstore {
-            Some(storage) => Some(get_blobstore(storage)?),
-            None => None,
-        },
         redaction_sets_location: redaction_config.redaction_sets_location,
     };
 
@@ -1505,7 +1501,6 @@ mod test {
                 },
                 redaction_config: RedactionConfig {
                     blobstore: main_storage_config.blobstore,
-                    darkstorm_blobstore: None,
                     redaction_sets_location: "loc".to_string(),
                 },
                 internal_identity: Identity {
