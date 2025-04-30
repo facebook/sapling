@@ -6,11 +6,6 @@ rust_python_library(
     name = "cpython-async",
     srcs = glob(["src/**/*.rs"]),
     autocargo = {"cargo_toml_config": {
-        "dependencies_override": {"dependencies": {"cpython": {
-            "features": ["python3-sys"],
-            "git": None,
-            "rev": None,
-        }}},
         "lib": {"name": "cpython-async"},
         "package": {"name": "sapling-cpython-async"},
     }},

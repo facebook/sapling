@@ -6,11 +6,6 @@ rust_python_library(
     name = "cliparser",
     srcs = glob(["src/**/*.rs"]),
     autocargo = {"cargo_toml_config": {
-        "dependencies_override": {"dependencies": {"cpython": {
-            "features": ["python3-sys"],
-            "git": None,
-            "rev": None,
-        }}},
         "features": {
             "default": [],
             "python": ["cpython"],
