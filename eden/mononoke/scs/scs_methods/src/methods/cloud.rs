@@ -12,7 +12,6 @@ use commit_cloud_types::SmartlogNode;
 use commit_cloud_types::WorkspaceData;
 use commit_cloud_types::WorkspaceRemoteBookmark as CloudWorkspaceRemoteBookmark;
 use context::CoreContext;
-use mononoke_api_hg::RepoContextHgExt;
 use scs_errors::ServiceError;
 use scs_errors::invalid_request;
 
@@ -30,7 +29,6 @@ impl SourceControlServiceImpl {
     ) -> Result<thrift::CloudWorkspaceInfoResponse, ServiceError> {
         let repo = self.repo(ctx, &params.workspace.repo).await?;
         let info = repo
-            .hg()
             .cloud_workspace(&params.workspace.name, &params.workspace.repo.name)
             .await
             .map_err(invalid_request)?;
@@ -56,7 +54,6 @@ impl SourceControlServiceImpl {
         let repo = self.repo(ctx, &params.repo).await?;
         let prefix = format!("{}{}/", USER_WORKSPACE_PREFIX, &params.user);
         let info = repo
-            .hg()
             .cloud_workspaces(&prefix, &params.repo.name)
             .await
             .map_err(invalid_request)?;
@@ -82,7 +79,6 @@ impl SourceControlServiceImpl {
         }
         let repo = self.repo(ctx, &params.workspace.repo).await?;
         repo.clone()
-            .hg()
             .cloud_workspace(&params.workspace.name, &params.workspace.repo.name)
             .await
             .map_err(invalid_request)?;
@@ -94,7 +90,6 @@ impl SourceControlServiceImpl {
             .collect::<Result<Vec<_>>>()
             .map_err(|e| ServiceError::Request(invalid_request(e.to_string())))?;
         let smartlog = repo
-            .hg()
             .cloud_smartlog(&params.workspace.name, &params.workspace.repo.name, &flags)
             .await?;
 

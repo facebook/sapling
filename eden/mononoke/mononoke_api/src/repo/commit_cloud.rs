@@ -31,30 +31,27 @@ use futures::StreamExt;
 use futures::TryStreamExt;
 use futures::stream;
 use futures_util::future::try_join_all;
-use mononoke_api::ChangesetContext;
-use mononoke_api::ChangesetSpecifier;
-use mononoke_api::MononokeError;
-use mononoke_api::MononokeRepo;
+use mercurial_types::HgChangesetId;
+use mononoke_types::ChangesetId;
 use phases::PhasesRef;
 
-use crate::HgRepoContext;
-impl<R: MononokeRepo> HgRepoContext<R> {
+use crate::ChangesetContext;
+use crate::ChangesetSpecifier;
+use crate::MononokeError;
+use crate::MononokeRepo;
+use crate::RepoContext;
+impl<R: MononokeRepo> RepoContext<R> {
     pub async fn cloud_workspace(
         &self,
         workspace: &str,
         reponame: &str,
     ) -> Result<WorkspaceData, MononokeError> {
         let mut cc_ctx = CommitCloudContext::new(workspace, reponame)?;
-        let authz = self.repo_ctx().authorization_context();
+        let authz = self.authorization_context();
         authz
-            .require_commitcloud_operation(self.ctx(), self.repo_ctx().repo(), &mut cc_ctx, "read")
+            .require_commitcloud_operation(self.ctx(), self.repo(), &mut cc_ctx, "read")
             .await?;
-        Ok(self
-            .repo_ctx()
-            .repo()
-            .commit_cloud()
-            .get_workspace(&cc_ctx)
-            .await?)
+        Ok(self.repo().commit_cloud().get_workspace(&cc_ctx).await?)
     }
 
     pub async fn cloud_workspaces(
@@ -63,7 +60,6 @@ impl<R: MononokeRepo> HgRepoContext<R> {
         reponame: &str,
     ) -> Result<Vec<WorkspaceData>, MononokeError> {
         Ok(self
-            .repo_ctx()
             .repo()
             .commit_cloud()
             .get_workspaces(prefix, reponame)
@@ -78,12 +74,11 @@ impl<R: MononokeRepo> HgRepoContext<R> {
         _client_info: Option<ClientInfo>,
     ) -> Result<ReferencesData, MononokeError> {
         let mut cc_ctx = CommitCloudContext::new(workspace, reponame)?;
-        let authz = self.repo_ctx().authorization_context();
+        let authz = self.authorization_context();
         authz
-            .require_commitcloud_operation(self.ctx(), self.repo_ctx().repo(), &mut cc_ctx, "read")
+            .require_commitcloud_operation(self.ctx(), self.repo(), &mut cc_ctx, "read")
             .await?;
         Ok(self
-            .repo_ctx()
             .repo()
             .commit_cloud()
             .get_references(&cc_ctx, version)
@@ -99,13 +94,12 @@ impl<R: MononokeRepo> HgRepoContext<R> {
             cc_ctx.check_workspace_name()?;
         }
 
-        let authz = self.repo_ctx().authorization_context();
+        let authz = self.authorization_context();
         authz
-            .require_commitcloud_operation(self.ctx(), self.repo_ctx().repo(), &mut cc_ctx, "write")
+            .require_commitcloud_operation(self.ctx(), self.repo(), &mut cc_ctx, "write")
             .await?;
 
         Ok(self
-            .repo_ctx()
             .repo()
             .commit_cloud()
             .update_references(&cc_ctx, params)
@@ -120,7 +114,6 @@ impl<R: MononokeRepo> HgRepoContext<R> {
     ) -> Result<SmartlogData, MononokeError> {
         let cc_ctx = CommitCloudContext::new(workspace, reponame)?;
         let raw_data = self
-            .repo_ctx()
             .repo()
             .commit_cloud()
             .get_smartlog_raw_info(&cc_ctx)
@@ -151,13 +144,22 @@ impl<R: MononokeRepo> HgRepoContext<R> {
         flags: &[SmartlogFlag],
     ) -> anyhow::Result<Vec<SmartlogNode>> {
         let ctx = self.ctx();
-        let repo = self.repo_ctx().repo();
+        let repo = self.repo();
 
         let hg_ids = c_ids
             .into_iter()
             .map(|c_id| c_id.into())
-            .collect::<Vec<_>>();
-        let cs_ids = self.convert_changeset_ids(hg_ids).await?;
+            .collect::<Vec<HgChangesetId>>();
+
+        // TODO(lmvasquezg): Use cloud changesetids here when cupporting smartlog endpoints
+        let cs_ids = self
+            .repo()
+            .get_hg_bonsai_mapping(self.ctx().clone(), hg_ids.to_vec())
+            .await?
+            .iter()
+            .map(|(_, bcs_id)| *bcs_id)
+            .collect::<Vec<ChangesetId>>();
+
         let public_frontier = repo
             .commit_graph()
             .ancestors_frontier_with(ctx, cs_ids.clone(), |csid| {
@@ -177,11 +179,7 @@ impl<R: MononokeRepo> HgRepoContext<R> {
             .ancestors_difference_stream(ctx, cs_ids, public_frontier.clone())
             .await?
             .map_ok({
-                |cs_id| async move {
-                    self.repo_ctx()
-                        .changeset(ChangesetSpecifier::Bonsai(cs_id))
-                        .await
-                }
+                |cs_id| async move { self.changeset(ChangesetSpecifier::Bonsai(cs_id)).await }
             })
             .map_err(MononokeError::from)
             .try_buffered(100)
@@ -192,7 +190,7 @@ impl<R: MononokeRepo> HgRepoContext<R> {
             try_join_all(
                 public_frontier
                     .into_iter()
-                    .map(|cs_id| self.repo_ctx().changeset(ChangesetSpecifier::Bonsai(cs_id))),
+                    .map(|cs_id| self.changeset(ChangesetSpecifier::Bonsai(cs_id))),
             )
             .await?
         } else {
@@ -223,7 +221,7 @@ impl<R: MononokeRepo> HgRepoContext<R> {
                                     .into_iter()
                                     .map(CloudChangesetId::from)
                                     .collect::<Vec<_>>();
-                                self.repo_ctx().repo().commit_cloud().make_smartlog_node(
+                                self.repo().commit_cloud().make_smartlog_node(
                                     &c_id,
                                     &parents_c_ids,
                                     &changeset.changeset_info().await?,
@@ -251,22 +249,12 @@ impl<R: MononokeRepo> HgRepoContext<R> {
     ) -> Result<WorkspaceSharingData, MononokeError> {
         let mut ctx = CommitCloudContext::new(workspace, reponame)?;
 
-        let authz = self.repo_ctx().authorization_context();
+        let authz = self.authorization_context();
         authz
-            .require_commitcloud_operation(
-                self.ctx(),
-                self.repo_ctx().repo(),
-                &mut ctx,
-                "maintainers",
-            )
+            .require_commitcloud_operation(self.ctx(), self.repo(), &mut ctx, "maintainers")
             .await?;
 
-        Ok(self
-            .repo_ctx()
-            .repo()
-            .commit_cloud()
-            .share_workspace(&ctx)
-            .await?)
+        Ok(self.repo().commit_cloud().share_workspace(&ctx).await?)
     }
 
     pub async fn cloud_update_archive(
@@ -277,13 +265,12 @@ impl<R: MononokeRepo> HgRepoContext<R> {
     ) -> Result<String, MononokeError> {
         let mut cc_ctx = CommitCloudContext::new(workspace, reponame)?;
 
-        let authz = self.repo_ctx().authorization_context();
+        let authz = self.authorization_context();
         authz
-            .require_commitcloud_operation(self.ctx(), self.repo_ctx().repo(), &mut cc_ctx, "write")
+            .require_commitcloud_operation(self.ctx(), self.repo(), &mut cc_ctx, "write")
             .await?;
 
         Ok(self
-            .repo_ctx()
             .repo()
             .commit_cloud()
             .update_workspace_archive(&cc_ctx, archived)
@@ -298,13 +285,12 @@ impl<R: MononokeRepo> HgRepoContext<R> {
     ) -> Result<String, MononokeError> {
         let mut ctx = CommitCloudContext::new(workspace, reponame)?;
 
-        let authz = self.repo_ctx().authorization_context();
+        let authz = self.authorization_context();
         authz
-            .require_commitcloud_operation(self.ctx(), self.repo_ctx().repo(), &mut ctx, "write")
+            .require_commitcloud_operation(self.ctx(), self.repo(), &mut ctx, "write")
             .await?;
 
         Ok(self
-            .repo_ctx()
             .repo()
             .commit_cloud()
             .rename_workspace(&ctx, new_workspace)
@@ -320,13 +306,12 @@ impl<R: MononokeRepo> HgRepoContext<R> {
     ) -> Result<SmartlogData, MononokeError> {
         let mut cc_ctx = CommitCloudContext::new(workspace, reponame)?;
 
-        let authz = self.repo_ctx().authorization_context();
+        let authz = self.authorization_context();
         authz
-            .require_commitcloud_operation(self.ctx(), self.repo_ctx().repo(), &mut cc_ctx, "read")
+            .require_commitcloud_operation(self.ctx(), self.repo(), &mut cc_ctx, "read")
             .await?;
 
         let history = self
-            .repo_ctx()
             .repo()
             .commit_cloud()
             .get_history_by(&cc_ctx, filter)
@@ -353,13 +338,12 @@ impl<R: MononokeRepo> HgRepoContext<R> {
         reponame: &str,
     ) -> Result<Vec<HistoricalVersion>, MononokeError> {
         let mut cc_ctx = CommitCloudContext::new(workspace, reponame)?;
-        let authz = self.repo_ctx().authorization_context();
+        let authz = self.authorization_context();
         authz
-            .require_commitcloud_operation(self.ctx(), self.repo_ctx().repo(), &mut cc_ctx, "read")
+            .require_commitcloud_operation(self.ctx(), self.repo(), &mut cc_ctx, "read")
             .await?;
 
         Ok(self
-            .repo_ctx()
             .repo()
             .commit_cloud()
             .get_historical_versions(&cc_ctx)
@@ -373,13 +357,12 @@ impl<R: MononokeRepo> HgRepoContext<R> {
         version: u64,
     ) -> Result<String, MononokeError> {
         let mut cc_ctx = CommitCloudContext::new(workspace, reponame)?;
-        let authz = self.repo_ctx().authorization_context();
+        let authz = self.authorization_context();
         authz
-            .require_commitcloud_operation(self.ctx(), self.repo_ctx().repo(), &mut cc_ctx, "write")
+            .require_commitcloud_operation(self.ctx(), self.repo(), &mut cc_ctx, "write")
             .await?;
 
         Ok(self
-            .repo_ctx()
             .repo()
             .commit_cloud()
             .rollback_workspace(&cc_ctx, version)

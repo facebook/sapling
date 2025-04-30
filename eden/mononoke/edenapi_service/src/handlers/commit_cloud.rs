@@ -88,6 +88,7 @@ async fn get_workspace<R: MononokeRepo>(
     repo: HgRepoContext<R>,
 ) -> anyhow::Result<WorkspaceDataResponse> {
     let cc_res = repo
+        .repo_ctx()
         .cloud_workspace(&request.workspace, &request.reponame)
         .await;
 
@@ -124,6 +125,7 @@ async fn get_workspaces<R: MononokeRepo>(
     repo: HgRepoContext<R>,
 ) -> anyhow::Result<WorkspacesDataResponse> {
     let cc_res = repo
+        .repo_ctx()
         .cloud_workspaces(&request.prefix, &request.reponame)
         .await;
     let res = match cc_res {
@@ -171,6 +173,7 @@ async fn get_references<R: MononokeRepo>(
         .map(ClientInfo::into_cc_type)
         .transpose()?;
     let cc_res = repo
+        .repo_ctx()
         .cloud_references(&request.workspace, &request.reponame, request.version, ci)
         .await;
     let res = match cc_res {
@@ -215,7 +218,7 @@ async fn update_references<R: MononokeRepo>(
     repo: HgRepoContext<R>,
 ) -> anyhow::Result<ReferencesDataResponse, Error> {
     let cc_params = request.into_cc_type()?;
-    let cc_res = repo.cloud_update_references(&cc_params).await;
+    let cc_res = repo.repo_ctx().cloud_update_references(&cc_params).await;
     let res = match cc_res {
         Ok(res) => Ok(ReferencesData::from_cc_type(res)?),
         Err(e) => {
@@ -263,6 +266,7 @@ async fn get_smartlog<R: MononokeRepo>(
         .map(GetSmartlogFlag::into_cc_type)
         .collect::<anyhow::Result<Vec<_>>>()?;
     let cc_res = repo
+        .repo_ctx()
         .cloud_smartlog(&request.workspace, &request.reponame, &flags)
         .await;
     let res = match cc_res {
@@ -298,6 +302,7 @@ async fn share_workspace<R: MononokeRepo>(
     repo: HgRepoContext<R>,
 ) -> anyhow::Result<CloudShareWorkspaceResponse, Error> {
     let cc_res = repo
+        .repo_ctx()
         .cloud_share_workspace(&request.workspace, &request.reponame)
         .await;
     let res = match cc_res {
@@ -334,6 +339,7 @@ async fn update_archive<R: MononokeRepo>(
 ) -> anyhow::Result<UpdateArchiveResponse, Error> {
     Ok(UpdateArchiveResponse {
         data: repo
+            .repo_ctx()
             .cloud_update_archive(&request.workspace, &request.reponame, request.archived)
             .await
             .map_err(ServerError::from),
@@ -365,6 +371,7 @@ async fn rename_workspace<R: MononokeRepo>(
 ) -> anyhow::Result<RenameWorkspaceResponse, Error> {
     Ok(RenameWorkspaceResponse {
         data: repo
+            .repo_ctx()
             .cloud_rename_workspace(
                 &request.workspace,
                 &request.reponame,
@@ -405,6 +412,7 @@ async fn get_smartlog_by_version<R: MononokeRepo>(
         .collect::<anyhow::Result<Vec<_>>>()?;
     let filter = request.filter.into_cc_type()?;
     let cc_res = repo
+        .repo_ctx()
         .cloud_smartlog_by_version(&request.workspace, &request.reponame, &filter, &flags)
         .await;
     let res = match cc_res {
@@ -440,6 +448,7 @@ async fn historical_versions<R: MononokeRepo>(
     repo: HgRepoContext<R>,
 ) -> anyhow::Result<HistoricalVersionsResponse, Error> {
     let cc_res = repo
+        .repo_ctx()
         .cloud_historical_versions(&request.workspace, &request.reponame)
         .await;
     let res = match cc_res {
@@ -482,6 +491,7 @@ async fn rollback_workspace<R: MononokeRepo>(
 ) -> anyhow::Result<RollbackWorkspaceResponse, Error> {
     Ok(RollbackWorkspaceResponse {
         data: repo
+            .repo_ctx()
             .cloud_rollback_workspace(&request.workspace, &request.reponame, request.version)
             .await
             .map_err(ServerError::from),

@@ -14,6 +14,7 @@ use std::sync::Arc;
 use std::time::SystemTime;
 use std::time::UNIX_EPOCH;
 
+use ::commit_cloud::CommitCloud;
 use ::commit_graph::ArcCommitGraph;
 use ::commit_graph::CommitGraph;
 use ::commit_graph::CommitGraphArc;
@@ -59,7 +60,6 @@ use bulk_derivation::BulkDerivation;
 use bundle_uri::GitBundleUri;
 use bytes::Bytes;
 use changeset_info::ChangesetInfo;
-use commit_cloud::CommitCloud;
 use context::CoreContext;
 use cross_repo_sync::CandidateSelectionHint;
 use cross_repo_sync::CommitSyncContext;
@@ -172,6 +172,7 @@ use crate::tree::TreeContext;
 use crate::tree::TreeId;
 use crate::xrepo::CandidateSelectionHintArgs;
 
+pub mod commit_cloud;
 pub mod commit_graph;
 pub mod create_bookmark;
 pub mod create_changeset;
