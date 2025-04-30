@@ -9,7 +9,6 @@ use std::fmt;
 use std::time::SystemTime;
 use std::time::UNIX_EPOCH;
 
-#[cfg(fbcode_build)]
 use anyhow::Result;
 use async_trait::async_trait;
 use bonsai_git_mapping::BonsaiGitMappingRef;
@@ -43,6 +42,20 @@ pub enum BookmarkOperation {
     Update(ChangesetId, ChangesetId),
     Pushrebase(Option<ChangesetId>, ChangesetId),
     Delete(ChangesetId),
+}
+
+impl BookmarkOperation {
+    pub fn new(old: Option<ChangesetId>, new: Option<ChangesetId>) -> Result<Self> {
+        let op = match (old, new) {
+            (None, Some(new)) => BookmarkOperation::Create(new),
+            (Some(old), None) => BookmarkOperation::Delete(old),
+            (Some(old), Some(new)) => BookmarkOperation::Update(old, new),
+            (None, None) => {
+                anyhow::bail!("Invalid BookmarkOperation: old and new changeset ids are None")
+            }
+        };
+        Ok(op)
+    }
 }
 
 impl std::fmt::Display for BookmarkOperation {

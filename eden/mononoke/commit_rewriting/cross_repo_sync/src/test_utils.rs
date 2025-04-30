@@ -33,6 +33,7 @@ use commit_transformation::upload_commits;
 use context::CoreContext;
 use filenodes::Filenodes;
 use filestore::FilestoreConfig;
+use git_source_of_truth::GitSourceOfTruthConfig;
 use live_commit_sync_config::LiveCommitSyncConfig;
 use live_commit_sync_config::TestLiveCommitSyncConfig;
 use live_commit_sync_config::TestLiveCommitSyncConfigSource;
@@ -133,6 +134,9 @@ pub struct TestRepo {
 
     #[facet]
     sql_query_config: SqlQueryConfig,
+
+    #[facet]
+    git_source_of_truth_config: dyn GitSourceOfTruthConfig,
 }
 
 pub fn xrepo_mapping_version_with_small_repo() -> CommitSyncConfigVersion {

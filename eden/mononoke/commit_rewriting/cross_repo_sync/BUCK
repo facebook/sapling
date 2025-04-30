@@ -68,6 +68,7 @@ rust_library(
         "//eden/mononoke/derived_data:fsnodes",
         "//eden/mononoke/filenodes:filenodes",
         "//eden/mononoke/filestore:filestore",
+        "//eden/mononoke/git_source_of_truth:git_source_of_truth",
         "//eden/mononoke/manifest:manifest",
         "//eden/mononoke/megarepo_api:commit_transformation",
         "//eden/mononoke/mercurial:mercurial_types",

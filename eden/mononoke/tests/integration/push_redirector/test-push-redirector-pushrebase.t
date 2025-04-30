@@ -39,6 +39,9 @@ Normal pushrebase with one commit
   "large-mon"
   "master_bookmark"
   "b83fcdec86997308b73b957a3037979c1d1d670929d02b663a183789dfd5a3fa"
+  "small-mon"
+  "master_bookmark"
+  "93637f57d04a2cb4852f044e4bfa7c7f961a7f6813ac4369a05dfbfe86bc531e"
 -- newcommit was correctly pushed to master_bookmark
   $ log -r master_bookmark
   @  newcommit [public;rev=2;ce81c7d38286] remote/master_bookmark
