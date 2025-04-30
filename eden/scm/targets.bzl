@@ -5,6 +5,12 @@ load("@fbcode_macros//build_defs/lib:rust_oss.bzl", "rust_oss")
 load("@fbsource//tools/build_defs:buckconfig.bzl", "read_bool")
 load("@fbsource//tools/target_determinator/macros:ci_hint.bzl", "ci_hint")
 
+def _set_default(obj, *keys):
+    for key in keys:
+        obj[key] = obj.get(key) or {}
+        obj = obj[key]
+    return obj
+
 def rust_python_library(deps = None, include_python_sys = False, include_cpython = True, **kwargs):
     if "versions" not in kwargs:
         kwargs["versions"] = {}
@@ -20,6 +26,8 @@ def rust_python_library(deps = None, include_python_sys = False, include_cpython
             kwargs3["test_env"]["ASAN_OPTIONS"] += ":use_sigaltstack=0"
         else:
             kwargs3["test_env"]["ASAN_OPTIONS"] = "use_sigaltstack=0"
+        cpython = _set_default(kwargs3, "autocargo", "cargo_toml_config", "dependencies_override", "dependencies", "cpython")
+        cpython["features"] = cpython.get("features") or ["python3-sys"]
     if include_python_sys:
         deps3.append("fbsource//third-party/rust:python3-sys")
 

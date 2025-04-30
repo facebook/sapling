@@ -8,7 +8,7 @@ edition = "2021"
 [dependencies]
 anyhow = "1.0.95"
 byteorder = "1.3"
-cpython = { version = "0.7.2", default-features = false }
+cpython = { version = "0.7.2", features = ["python3-sys"], default-features = false }
 pydag = { version = "0.1.0", path = "../pydag" }
 sapling-async-runtime = { version = "0.1.0", path = "../../../../lib/async-runtime" }
 sapling-cpython-ext = { version = "0.1.0", path = "../../../../lib/cpython-ext" }

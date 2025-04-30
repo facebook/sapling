@@ -6,6 +6,6 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
-cpython = { version = "0.7.2", default-features = false }
+cpython = { version = "0.7.2", features = ["python3-sys"], default-features = false }
 pyconfigloader = { version = "0.1.0", path = "../pyconfigloader" }
 sapling-network-doctor = { version = "0.1.0", path = "../../../../lib/doctor/network" }

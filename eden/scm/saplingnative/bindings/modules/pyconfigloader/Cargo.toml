@@ -6,7 +6,7 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
-cpython = { version = "0.7.2", default-features = false }
+cpython = { version = "0.7.2", features = ["python3-sys"], default-features = false }
 sapling-configloader = { version = "0.1.0", path = "../../../../lib/config/loader" }
 sapling-cpython-ext = { version = "0.1.0", path = "../../../../lib/cpython-ext" }
 sapling-repo-minimal-info = { version = "0.1.0", path = "../../../../lib/repo/repo-minimal-info" }
