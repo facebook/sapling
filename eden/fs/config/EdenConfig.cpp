@@ -28,7 +28,7 @@ constexpr PathComponentPiece kDefaultEdenDirectory{".eden"};
 
 std::pair<std::string_view, std::string_view> parseKey(
     std::string_view fullKey) {
-  auto pos = fullKey.find(":");
+  auto pos = fullKey.find(':');
   if (pos == std::string::npos) {
     EDEN_BUG() << "ConfigSetting key must contain a colon: " << fullKey;
   }
