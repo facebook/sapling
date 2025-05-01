@@ -817,12 +817,12 @@ mod sharded_augmented_manifest_tests {
     use filestore::FilestoreConfig;
     use fixtures::Linear;
     use fixtures::TestRepoFixture;
+    use manifest_augmented_tree::AugmentedTree;
     use mononoke_macros::mononoke;
     use repo_blobstore::RepoBlobstore;
     use repo_blobstore::RepoBlobstoreArc;
     use repo_derived_data::RepoDerivedData;
     use repo_identity::RepoIdentity;
-    use types::AugmentedTree;
 
     use super::*;
 

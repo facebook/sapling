@@ -18,6 +18,7 @@ async-trait = "0.1.86"
 fail = { version = "0.4", features = ["failpoints"] }
 futures = { version = "0.3.30", features = ["async-await", "compat"] }
 http = "0.2"
+manifest-augmented-tree = { version = "0.1.0", path = "../manifest-augmented-tree" }
 parking_lot = { version = "0.12.1", features = ["send_guard"] }
 sapling-cas-client = { version = "0.1.0", path = "../cas-client" }
 sapling-configmodel = { version = "0.1.0", path = "../config/model" }

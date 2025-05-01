@@ -20,14 +20,13 @@ use base64::engine::general_purpose::GeneralPurpose;
 use base64::engine::general_purpose::GeneralPurposeConfig;
 use blake3::Hasher as Blake3Hasher;
 use minibytes::Bytes;
-
-use crate::Blake3;
-use crate::CasDigest;
-use crate::FileType;
-use crate::HgId;
-use crate::Id20;
-use crate::PathComponentBuf;
-use crate::Sha1;
+use types::Blake3;
+use types::CasDigest;
+use types::FileType;
+use types::HgId;
+use types::Id20;
+use types::PathComponentBuf;
+use types::Sha1;
 
 // Bring back the pre 0.20 bevahiour and allow either padded or un-padded base64 strings at decode time.
 const STANDARD_INDIFFERENT: GeneralPurpose = GeneralPurpose::new(

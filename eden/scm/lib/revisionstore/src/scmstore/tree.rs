@@ -11,8 +11,6 @@ use std::sync::Arc;
 use std::time::Instant;
 
 use ::metrics::Counter;
-use ::types::AugmentedTree;
-use ::types::AugmentedTreeEntry;
 use ::types::CasDigest;
 use ::types::FetchContext;
 use ::types::HgId;
@@ -35,6 +33,8 @@ use edenapi_types::TreeAuxData;
 use fetch::FetchState;
 use flume::bounded;
 use flume::unbounded;
+use manifest_augmented_tree::AugmentedTree;
+use manifest_augmented_tree::AugmentedTreeEntry;
 use metrics::TREE_STORE_FETCH_METRICS;
 use minibytes::Bytes;
 use once_cell::sync::OnceCell;

@@ -39,6 +39,7 @@ rust_library(
         "//common/rust/shed/quickcheck_arbitrary_derive:quickcheck_arbitrary_derive",
         "//eden/scm/lib/blob:scm-blob",
         "//eden/scm/lib/dag/dag-types:dag-types",
+        "//eden/scm/lib/manifest-augmented-tree:manifest-augmented-tree",
         "//eden/scm/lib/minibytes:minibytes",
         "//eden/scm/lib/revisionstore:revisionstore_types",
         "//eden/scm/lib/types:types",

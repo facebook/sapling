@@ -122,6 +122,7 @@ members = [
   "lib/linelog",
   "lib/lz4-pyframe",
   "lib/manifest",
+  "lib/manifest-augmented-tree",
   "lib/manifest-tree",
   "lib/metalog",
   "lib/metrics",

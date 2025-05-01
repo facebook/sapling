@@ -82,6 +82,7 @@ rust_library(
         "//eden/scm/lib/http-client:http-client",
         "//eden/scm/lib/indexedlog:indexedlog",
         "//eden/scm/lib/lz4-pyframe:lz4-pyframe",
+        "//eden/scm/lib/manifest-augmented-tree:manifest-augmented-tree",
         "//eden/scm/lib/manifest-tree:manifest-tree",
         "//eden/scm/lib/metrics:metrics",
         "//eden/scm/lib/mincode:mincode",
