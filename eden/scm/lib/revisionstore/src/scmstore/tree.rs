@@ -1016,12 +1016,7 @@ impl TreeEntry for ScmStoreTreeEntry {
 
     /// Get the directory aux data of the tree.
     fn aux_data(&self) -> anyhow::Result<Option<TreeAuxData>> {
-        let entry = match &self.tree {
-            LazyTree::SaplingRemoteApi(entry) => entry,
-            // TODO: We should also support fetching tree metadata from local cache
-            _ => return Ok(None),
-        };
-        Ok(entry.tree_aux_data)
+        Ok(self.tree.aux_data())
     }
 }
 
