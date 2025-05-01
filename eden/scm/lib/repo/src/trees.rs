@@ -9,13 +9,13 @@ use std::sync::Arc;
 
 use anyhow::Result;
 use anyhow::bail;
+use blob::Blob;
 use commits_trait::DagCommits;
 use manifest_tree::ReadTreeManifest;
 use manifest_tree::TreeManifest;
 use manifest_tree::TreeStore;
 use metrics::Counter;
 use parking_lot::RwLock;
-use scm_blob::ScmBlob;
 use storemodel::BoxIterator;
 use storemodel::Bytes;
 use storemodel::InsertOpts;
@@ -129,15 +129,15 @@ impl KeyStore for CachingTreeStore {
         &self,
         fctx: FetchContext,
         keys: Vec<Key>,
-    ) -> Result<BoxIterator<Result<(Key, ScmBlob)>>> {
+    ) -> Result<BoxIterator<Result<(Key, Blob)>>> {
         self.key_store.get_content_iter(fctx, keys)
     }
 
-    fn get_local_content(&self, path: &RepoPath, hgid: HgId) -> Result<Option<ScmBlob>> {
+    fn get_local_content(&self, path: &RepoPath, hgid: HgId) -> Result<Option<Blob>> {
         self.key_store.get_local_content(path, hgid)
     }
 
-    fn get_content(&self, fctx: FetchContext, path: &RepoPath, hgid: HgId) -> Result<ScmBlob> {
+    fn get_content(&self, fctx: FetchContext, path: &RepoPath, hgid: HgId) -> Result<Blob> {
         self.key_store.get_content(fctx, path, hgid)
     }
 

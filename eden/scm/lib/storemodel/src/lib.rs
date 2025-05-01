@@ -27,6 +27,7 @@ use std::path::Path;
 use std::sync::Arc;
 
 use async_trait::async_trait;
+use blob::Blob;
 use edenapi_trait::SaplingRemoteApi;
 pub use edenapi_types::FileAuxData;
 pub use edenapi_types::TreeAuxData;
@@ -36,7 +37,6 @@ pub use minibytes;
 pub use minibytes::Bytes;
 use once_cell::sync::OnceCell;
 use parking_lot::RwLock;
-use scm_blob::ScmBlob;
 use serde::Deserialize;
 use serde::Serialize;
 pub use types;
@@ -68,7 +68,7 @@ pub trait KeyStore: Send + Sync {
         &self,
         _fctx: FetchContext,
         keys: Vec<Key>,
-    ) -> anyhow::Result<BoxIterator<anyhow::Result<(Key, ScmBlob)>>> {
+    ) -> anyhow::Result<BoxIterator<anyhow::Result<(Key, Blob)>>> {
         let store = self.clone_key_store();
         let iter = keys
             .into_iter()
@@ -86,19 +86,14 @@ pub trait KeyStore: Send + Sync {
 
     /// Read the content of the specified file without connecting to a remote server.
     /// Return `None` if the file is not available locally.
-    fn get_local_content(&self, _path: &RepoPath, _hgid: HgId) -> anyhow::Result<Option<ScmBlob>> {
+    fn get_local_content(&self, _path: &RepoPath, _hgid: HgId) -> anyhow::Result<Option<Blob>> {
         Ok(None)
     }
 
     /// Read the content of the specified file. Ask a remote server on demand.
     /// When fetching many files, use `get_content_iter` instead of calling
     /// this in a loop.
-    fn get_content(
-        &self,
-        fctx: FetchContext,
-        path: &RepoPath,
-        hgid: HgId,
-    ) -> anyhow::Result<ScmBlob> {
+    fn get_content(&self, fctx: FetchContext, path: &RepoPath, hgid: HgId) -> anyhow::Result<Blob> {
         // Handle "broken" implementation that returns Err(_) not Ok(None) on not found.
         if !fctx.mode().is_remote() {
             if let Ok(Some(data)) = self.get_local_content(path, hgid) {

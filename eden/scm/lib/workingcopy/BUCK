@@ -25,7 +25,7 @@ rust_library(
         "fbsource//third-party/rust:async-trait",
         "fbsource//third-party/rust:serde_json",
         "fbsource//third-party/rust:tempfile",
-        "//eden/scm/lib/blob:scm-blob",
+        "//eden/scm/lib/blob:blob",
     ],
     deps = [
         "fbsource//third-party/rust:anyhow",

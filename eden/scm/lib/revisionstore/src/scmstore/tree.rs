@@ -27,6 +27,7 @@ use ::types::tree::TreeItemFlag;
 use anyhow::Result;
 use anyhow::anyhow;
 use anyhow::bail;
+use blob::Blob;
 use cas_client::CasClient;
 use edenapi_types::FileAuxData;
 use edenapi_types::TreeAuxData;
@@ -41,7 +42,6 @@ use once_cell::sync::OnceCell;
 use progress_model::AggregatingProgressBar;
 use progress_model::ProgressBar;
 use progress_model::Registry;
-use scm_blob::ScmBlob;
 use storemodel::BoxIterator;
 use storemodel::InsertOpts;
 use storemodel::KeyStore;
@@ -148,7 +148,7 @@ impl Drop for TreeStore {
 }
 
 impl TreeStore {
-    pub(crate) fn get_local_content_direct(&self, id: &HgId) -> Result<Option<ScmBlob>> {
+    pub(crate) fn get_local_content_direct(&self, id: &HgId) -> Result<Option<Blob>> {
         let m = &TREE_STORE_FETCH_METRICS;
 
         if let Ok(Some(blob)) = self.get_local_content_cas_cache(id) {
@@ -162,7 +162,7 @@ impl TreeStore {
     pub(crate) fn get_indexedlog_caches_content_direct(
         &self,
         id: &HgId,
-    ) -> anyhow::Result<Option<ScmBlob>> {
+    ) -> anyhow::Result<Option<Blob>> {
         let m = &TREE_STORE_FETCH_METRICS;
         try_local_content!(id, self.indexedlog_cache, m.indexedlog.cache);
         try_local_content!(id, self.indexedlog_local, m.indexedlog.local);
@@ -202,9 +202,9 @@ impl TreeStore {
                 if let Some(blob) = maybe_blob {
                     TREE_STORE_FETCH_METRICS.cas.hit(1);
                     let augmented_tree = match blob {
-                        ScmBlob::Bytes(bytes) => AugmentedTree::try_deserialize(bytes.as_ref())?,
+                        Blob::Bytes(bytes) => AugmentedTree::try_deserialize(bytes.as_ref())?,
                         #[cfg(fbcode_build)]
-                        ScmBlob::IOBuf(buf) => AugmentedTree::try_deserialize(buf.cursor())?,
+                        Blob::IOBuf(buf) => AugmentedTree::try_deserialize(buf.cursor())?,
                     };
                     self.cache_child_aux_data(tree_aux_store, &augmented_tree)?;
                     return Ok(Some(augmented_tree));
@@ -215,11 +215,9 @@ impl TreeStore {
     }
 
     /// Fetch a tree from the local caches and convert it to a sapling tree blob.
-    fn get_local_content_cas_cache(&self, id: &HgId) -> Result<Option<ScmBlob>> {
+    fn get_local_content_cas_cache(&self, id: &HgId) -> Result<Option<Blob>> {
         match self.fetch_local_tree_cas_cache(id)? {
-            Some(augmented_tree) => Ok(Some(ScmBlob::Bytes(
-                augmented_tree.into_sapling_tree_blob()?,
-            ))),
+            Some(augmented_tree) => Ok(Some(Blob::Bytes(augmented_tree.into_sapling_tree_blob()?))),
             None => Ok(None),
         }
     }
@@ -870,23 +868,23 @@ impl HistoryStore for TreeStore {
 }
 
 impl storemodel::KeyStore for TreeStore {
-    fn get_local_content(&self, _path: &RepoPath, node: HgId) -> anyhow::Result<Option<ScmBlob>> {
+    fn get_local_content(&self, _path: &RepoPath, node: HgId) -> anyhow::Result<Option<Blob>> {
         if node.is_null() {
-            return Ok(Some(ScmBlob::Bytes(Default::default())));
+            return Ok(Some(Blob::Bytes(Default::default())));
         }
         self.get_local_content_direct(&node)
     }
 
-    fn get_content(&self, fctx: FetchContext, path: &RepoPath, node: Node) -> Result<ScmBlob> {
+    fn get_content(&self, fctx: FetchContext, path: &RepoPath, node: Node) -> Result<Blob> {
         if node.is_null() {
-            return Ok(ScmBlob::Bytes(Default::default()));
+            return Ok(Blob::Bytes(Default::default()));
         }
         let key = Key::new(path.to_owned(), node);
         match self
             .fetch_batch(fctx, std::iter::once(key.clone()), TreeAttributes::CONTENT)
             .single()?
         {
-            Some(entry) => Ok(ScmBlob::Bytes(
+            Some(entry) => Ok(Blob::Bytes(
                 entry.content.expect("no tree content").hg_content()?,
             )),
             None => Err(anyhow!("key {:?} not found in manifest", key)),
@@ -897,16 +895,16 @@ impl storemodel::KeyStore for TreeStore {
         &self,
         fctx: FetchContext,
         keys: Vec<Key>,
-    ) -> anyhow::Result<BoxIterator<anyhow::Result<(Key, ScmBlob)>>> {
+    ) -> anyhow::Result<BoxIterator<anyhow::Result<(Key, Blob)>>> {
         let fetched = self.fetch_batch(fctx, keys.into_iter(), TreeAttributes::CONTENT);
         let iter = fetched
             .into_iter()
-            .map(|entry| -> anyhow::Result<(Key, ScmBlob)> {
+            .map(|entry| -> anyhow::Result<(Key, Blob)> {
                 let (key, store_tree) = entry?;
                 let content = store_tree
                     .content
                     .ok_or_else(|| anyhow::format_err!("no content available"))?;
-                Ok((key, ScmBlob::Bytes(content.hg_content()?)))
+                Ok((key, Blob::Bytes(content.hg_content()?)))
             });
         Ok(Box::new(iter))
     }

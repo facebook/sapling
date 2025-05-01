@@ -12,13 +12,13 @@ use std::time::Instant;
 
 use anyhow::Result;
 use async_runtime::block_on;
+use blob::Blob;
 use cas_client::CasClient;
 use flume::Sender;
 use futures::StreamExt;
 use manifest_augmented_tree::AugmentedTree;
 use manifest_augmented_tree::AugmentedTreeWithDigest;
 use progress_model::ProgressBar;
-use scm_blob::ScmBlob;
 use tracing::field;
 use types::CasDigest;
 use types::CasDigestType;
@@ -281,9 +281,9 @@ impl FetchState {
                                 }
                                 Ok(Some(data)) => {
                                     let deserialization_result = match data {
-                                        ScmBlob::Bytes(bytes) => AugmentedTree::try_deserialize(bytes.as_ref()),
+                                        Blob::Bytes(bytes) => AugmentedTree::try_deserialize(bytes.as_ref()),
                                         #[cfg(fbcode_build)]
-                                        ScmBlob::IOBuf(buf) => AugmentedTree::try_deserialize(buf.cursor()),
+                                        Blob::IOBuf(buf) => AugmentedTree::try_deserialize(buf.cursor()),
                                     };
                                     match deserialization_result {
                                         Ok(tree) => {

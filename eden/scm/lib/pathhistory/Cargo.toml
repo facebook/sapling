@@ -24,8 +24,8 @@ tracing = { version = "0.1.41", features = ["attributes", "valuable"] }
 
 [dev-dependencies]
 async-trait = "0.1.86"
+blob = { version = "0.1.0", path = "../blob" }
 sapling-dev-logger = { version = "0.1.0", path = "../dev-logger" }
 sapling-manifest = { version = "0.1.0", path = "../manifest" }
-scm-blob = { version = "0.1.0", path = "../blob" }
 sha1 = "0.10.5"
 tokio = { version = "1.41.0", features = ["full", "test-util", "tracing"] }

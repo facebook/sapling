@@ -19,6 +19,7 @@ use std::time::SystemTime;
 use anyhow::Result;
 use anyhow::anyhow;
 use arc_swap::ArcSwap;
+use blob::Blob;
 use configloader::Config;
 use configloader::hg::PinnedConfig;
 use configloader::hg::RepoInfo;
@@ -31,7 +32,6 @@ use log::warn;
 use metrics::ods;
 use repo::RepoMinimalInfo;
 use repo::repo::Repo;
-use scm_blob::ScmBlob;
 use storemodel::BoxIterator;
 use storemodel::FileAuxData;
 use storemodel::FileStore;
@@ -176,7 +176,7 @@ impl BackingStore {
     }
 
     #[instrument(level = "trace", skip(self))]
-    pub fn get_blob(&self, fctx: FetchContext, node: &[u8]) -> Result<Option<ScmBlob>> {
+    pub fn get_blob(&self, fctx: FetchContext, node: &[u8]) -> Result<Option<Blob>> {
         self.maybe_reload().filestore.single(fctx, node)
     }
 
@@ -186,7 +186,7 @@ impl BackingStore {
     #[instrument(level = "trace", skip(self, resolve))]
     pub fn get_blob_batch<F>(&self, fctx: FetchContext, keys: Vec<Key>, resolve: F)
     where
-        F: Fn(usize, Result<Option<ScmBlob>>),
+        F: Fn(usize, Result<Option<Blob>>),
     {
         self.maybe_reload()
             .filestore
@@ -567,18 +567,18 @@ where
 }
 
 /// Read file content.
-impl LocalRemoteImpl<ScmBlob> for Arc<dyn FileStore> {
-    fn get_local_single(&self, path: &RepoPath, id: HgId) -> Result<Option<ScmBlob>> {
+impl LocalRemoteImpl<Blob> for Arc<dyn FileStore> {
+    fn get_local_single(&self, path: &RepoPath, id: HgId) -> Result<Option<Blob>> {
         self.get_local_content(path, id)
     }
-    fn get_single(&self, fctx: FetchContext, path: &RepoPath, id: HgId) -> Result<ScmBlob> {
+    fn get_single(&self, fctx: FetchContext, path: &RepoPath, id: HgId) -> Result<Blob> {
         self.get_content(fctx, path, id)
     }
     fn get_batch_iter(
         &self,
         fctx: FetchContext,
         keys: Vec<Key>,
-    ) -> Result<BoxIterator<Result<(Key, ScmBlob)>>> {
+    ) -> Result<BoxIterator<Result<(Key, Blob)>>> {
         Ok(Box::new(self.get_content_iter(fctx, keys)?))
     }
 }

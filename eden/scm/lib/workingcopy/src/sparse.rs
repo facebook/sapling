@@ -220,8 +220,8 @@ pub fn sparse_matcher(
 mod tests {
     use std::collections::BTreeMap;
 
+    use blob::Blob;
     use pathmatcher::Matcher;
-    use scm_blob::ScmBlob;
     use storemodel::KeyStore;
     use storemodel::minibytes::Bytes;
     use types::HgId;
@@ -522,13 +522,9 @@ inc
 
     #[async_trait::async_trait]
     impl KeyStore for StubCommit {
-        fn get_local_content(
-            &self,
-            path: &RepoPath,
-            hgid: HgId,
-        ) -> anyhow::Result<Option<ScmBlob>> {
+        fn get_local_content(&self, path: &RepoPath, hgid: HgId) -> anyhow::Result<Option<Blob>> {
             match self.file_id(path) {
-                Some(id) if id == hgid => Ok(Some(ScmBlob::Bytes(Bytes::copy_from_slice(
+                Some(id) if id == hgid => Ok(Some(Blob::Bytes(Bytes::copy_from_slice(
                     self.files.get(path).unwrap(),
                 )))),
                 _ => Ok(None),

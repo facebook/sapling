@@ -23,7 +23,7 @@ rust_library(
         "fbsource//third-party/rust:once_cell",
         "fbsource//third-party/rust:parking_lot",
         "fbsource//third-party/rust:serde",
-        "//eden/scm/lib/blob:scm-blob",
+        "//eden/scm/lib/blob:blob",
         "//eden/scm/lib/config/model:configmodel",
         "//eden/scm/lib/edenapi/trait:edenapi_trait",
         "//eden/scm/lib/edenapi/types:edenapi_types",

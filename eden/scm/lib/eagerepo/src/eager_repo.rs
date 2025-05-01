@@ -18,6 +18,7 @@ use std::path::PathBuf;
 use std::sync::Arc;
 
 use anyhow::anyhow;
+use blob::Blob;
 use dag::Dag;
 use dag::Group;
 use dag::Vertex;
@@ -50,7 +51,6 @@ use parking_lot::RawRwLock;
 use parking_lot::RwLock;
 use parking_lot::lock_api::RwLockReadGuard;
 use repourl::RepoUrl;
-use scm_blob::ScmBlob;
 use sha1::Digest;
 use sha1::Sha1;
 use storemodel::FileAuxData;
@@ -539,7 +539,7 @@ impl EagerRepo {
                                 return Ok(None); // Can't calculate because file is missing.
                             }
                             let (raw_data, copy_from) = Self::parse_file_blob_hg(bytes.unwrap());
-                            let aux_data = FileAuxData::from_content(&ScmBlob::Bytes(raw_data));
+                            let aux_data = FileAuxData::from_content(&Blob::Bytes(raw_data));
 
                             // Store a mapping from CasDigest to hg id so we can query augmented data by CasDigest.
                             self.add_cas_mapping(

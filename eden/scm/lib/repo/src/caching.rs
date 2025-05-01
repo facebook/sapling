@@ -11,10 +11,10 @@ use std::hash::Hash;
 use std::sync::Arc;
 
 use anyhow::Result;
+use blob::Blob;
 use lru_cache::LruCache;
 use metrics::Counter;
 use parking_lot::Mutex;
-use scm_blob::ScmBlob;
 use storemodel::BoxIterator;
 use storemodel::Bytes;
 use storemodel::InsertOpts;
@@ -130,7 +130,7 @@ impl KeyStore for CachingKeyStore {
         &self,
         fctx: FetchContext,
         keys: Vec<Key>,
-    ) -> Result<BoxIterator<Result<(Key, ScmBlob)>>> {
+    ) -> Result<BoxIterator<Result<(Key, Blob)>>> {
         let (keys, cached) = self.cached_multi(keys);
 
         let uncached = CachingIter {
@@ -139,13 +139,13 @@ impl KeyStore for CachingKeyStore {
         };
 
         Ok(Box::new(uncached.chain(
-            cached.into_iter().map(|(k, v)| Ok((k, ScmBlob::Bytes(v)))),
+            cached.into_iter().map(|(k, v)| Ok((k, Blob::Bytes(v)))),
         )))
     }
 
-    fn get_local_content(&self, path: &RepoPath, hgid: HgId) -> Result<Option<ScmBlob>> {
+    fn get_local_content(&self, path: &RepoPath, hgid: HgId) -> Result<Option<Blob>> {
         if let Some(cached) = self.cached_single(&hgid) {
-            Ok(Some(ScmBlob::Bytes(cached)))
+            Ok(Some(Blob::Bytes(cached)))
         } else {
             match self.store.get_local_content(path, hgid) {
                 Ok(Some(data)) => {
@@ -157,9 +157,9 @@ impl KeyStore for CachingKeyStore {
         }
     }
 
-    fn get_content(&self, fctx: FetchContext, path: &RepoPath, hgid: HgId) -> Result<ScmBlob> {
+    fn get_content(&self, fctx: FetchContext, path: &RepoPath, hgid: HgId) -> Result<Blob> {
         if let Some(cached) = self.cached_single(&hgid) {
-            Ok(ScmBlob::Bytes(cached))
+            Ok(Blob::Bytes(cached))
         } else {
             match self.store.get_content(fctx, path, hgid) {
                 Ok(data) => {
@@ -206,12 +206,12 @@ impl KeyStore for CachingKeyStore {
 
 // An Iterator that lazily populates tree cache during iteration.
 struct CachingIter {
-    iter: BoxIterator<Result<(Key, ScmBlob)>>,
+    iter: BoxIterator<Result<(Key, Blob)>>,
     cache: Arc<Mutex<dyn CachingKeyCache<HgId, Bytes>>>,
 }
 
 impl Iterator for CachingIter {
-    type Item = Result<(Key, ScmBlob)>;
+    type Item = Result<(Key, Blob)>;
 
     fn next(&mut self) -> Option<Self::Item> {
         match self.iter.next() {

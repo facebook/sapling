@@ -10,13 +10,13 @@ use types::Blake3;
 use types::Sha1;
 
 #[derive(Clone, Debug)]
-pub enum ScmBlob {
+pub enum Blob {
     Bytes(minibytes::Bytes),
     #[cfg(fbcode_build)]
     IOBuf(iobuf::IOBufShared),
 }
 
-impl ScmBlob {
+impl Blob {
     pub fn to_bytes(&self) -> minibytes::Bytes {
         match self {
             Self::Bytes(bytes) => bytes.clone(),
@@ -128,12 +128,12 @@ mod test {
     #[cfg(fbcode_build)]
     #[test]
     fn test_iobuf_sha1_and_blake3() {
-        let blob1 = ScmBlob::Bytes(minibytes::Bytes::from("hello world!"));
+        let blob1 = Blob::Bytes(minibytes::Bytes::from("hello world!"));
 
         let blob2 = {
             let mut iobuf = iobuf::IOBufShared::from("hello");
             iobuf.append_to_end(iobuf::IOBufShared::from(" world!"));
-            ScmBlob::IOBuf(iobuf)
+            Blob::IOBuf(iobuf)
         };
 
         assert_eq!(blob1.sha1(), blob2.sha1());

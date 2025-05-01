@@ -26,7 +26,7 @@ rust_library(
         "fbsource//third-party/rust:fs-err",
         "fbsource//third-party/rust:git2",
         "fbsource//third-party/rust:tracing",
-        "//eden/scm/lib/blob:scm-blob",
+        "//eden/scm/lib/blob:blob",
         "//eden/scm/lib/config/model:configmodel",
         "//eden/scm/lib/gitcompat:gitcompat",
         "//eden/scm/lib/progress/model:progress-model",

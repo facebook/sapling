@@ -62,7 +62,7 @@ macro_rules! try_local_content {
                 }
                 Ok(Some(data)) => {
                     $m.hits.increment();
-                    return Ok(Some(ScmBlob::Bytes(data)));
+                    return Ok(Some(Blob::Bytes(data)));
                 }
                 Err(err) => {
                     $m.errors.increment();

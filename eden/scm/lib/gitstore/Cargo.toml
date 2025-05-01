@@ -19,6 +19,7 @@ harness = false
 [dependencies]
 anyhow = "1.0.95"
 async-trait = "0.1.86"
+blob = { version = "0.1.0", path = "../blob" }
 fs-err = { version = "3", features = ["tokio"] }
 git2 = "0.20"
 sapling-configmodel = { version = "0.1.0", path = "../config/model" }
@@ -28,5 +29,4 @@ sapling-progress-model = { version = "0.1.0", path = "../progress/model" }
 sapling-spawn-ext = { version = "0.1.0", path = "../spawn-ext" }
 sapling-storemodel = { version = "0.1.0", path = "../storemodel" }
 sapling-types = { version = "0.1.0", path = "../types" }
-scm-blob = { version = "0.1.0", path = "../blob" }
 tracing = { version = "0.1.41", features = ["attributes", "valuable"] }

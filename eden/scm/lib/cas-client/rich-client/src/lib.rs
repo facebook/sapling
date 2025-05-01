@@ -9,6 +9,7 @@ use std::sync::Arc;
 use std::time::Duration;
 
 use anyhow::Result;
+use blob::Blob;
 use cas_client::CasClient;
 use cas_client::CasSuccessTracker;
 use cas_client::CasSuccessTrackerConfig;
@@ -31,7 +32,6 @@ use re_client_lib::RemoteFetchPolicy;
 use re_client_lib::create_default_config;
 #[cfg(target_os = "linux")]
 use rich_cas_client_wrapper::CASClientWrapper as REClient;
-use scm_blob::ScmBlob;
 
 pub const CAS_SOCKET_PATH: &str = "/run/casd/casd.socket";
 pub const CAS_SESSION_TTL: i64 = 600; // 10 minutes

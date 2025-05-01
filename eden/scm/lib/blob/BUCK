@@ -4,15 +4,15 @@ load("@fbcode_macros//build_defs/lib:rust_oss.bzl", "rust_oss")
 oncall("sapling")
 
 rust_library(
-    name = "scm-blob",
+    name = "blob",
     srcs = glob(["src/**/*.rs"]),
     autocargo = {"cargo_toml_config": {
-        "lib": {"name": "scm-blob"},
+        "lib": {"name": "blob"},
         "package": {
             "authors": ["Meta Source Control Team <sourcecontrol-dev@meta.com>"],
             "homepage": "https://sapling-scm.com/",
             "license": "MIT",
-            "name": "scm-blob",
+            "name": "blob",
             "repository": "https://github.com/facebook/sapling",
         },
     }},

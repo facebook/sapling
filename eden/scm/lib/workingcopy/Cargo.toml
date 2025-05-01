@@ -54,7 +54,7 @@ whoami = "1.5"
 
 [dev-dependencies]
 async-trait = "0.1.86"
-scm-blob = { version = "0.1.0", path = "../blob" }
+blob = { version = "0.1.0", path = "../blob" }
 tempfile = "3.15"
 
 [features]

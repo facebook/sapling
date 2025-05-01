@@ -5,13 +5,13 @@
  * LICENSE file in the root directory of this source tree.
  */
 
+use blob::Blob;
 use minibytes::Bytes;
 #[cfg(any(test, feature = "for-tests"))]
 use quickcheck::Arbitrary;
 #[cfg(any(test, feature = "for-tests"))]
 use quickcheck_arbitrary_derive::Arbitrary;
 use revisionstore_types::Metadata;
-use scm_blob::ScmBlob;
 use serde_derive::Deserialize;
 use serde_derive::Serialize;
 use thiserror::Error;
@@ -160,7 +160,7 @@ pub struct FileEntry {
 
 impl FileAuxData {
     /// Calculate `FileAuxData` from file content.
-    pub fn from_content(blob: &ScmBlob) -> Self {
+    pub fn from_content(blob: &Blob) -> Self {
         let total_size = blob.len() as _;
         Self {
             total_size,

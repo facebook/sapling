@@ -94,7 +94,7 @@ macro_rules! re_client {
             fn fetch_single_locally_cached(
                 &self,
                 digest: &$crate::CasDigest,
-            ) -> Result<($crate::CasFetchedStats, Option<ScmBlob>)> {
+            ) -> Result<($crate::CasFetchedStats, Option<Blob>)> {
                 #[cfg(target_os = "linux")]{
                     let (stats, data) = self.client()?
                         .low_level_lookup_cache(self.metadata.clone(), to_re_digest(digest))?.unpack();
@@ -104,7 +104,7 @@ macro_rules! re_client {
                     if data.is_null() {
                         return Ok((parsed_stats, None));
                     } else {
-                        return Ok((parsed_stats, Some(ScmBlob::IOBuf(data.into()))));
+                        return Ok((parsed_stats, Some(Blob::IOBuf(data.into()))));
                     }
                 }
 
@@ -116,7 +116,7 @@ macro_rules! re_client {
             /// Upload blobs to CAS.
             async fn upload(
                 &self,
-                blobs: Vec<ScmBlob>,
+                blobs: Vec<Blob>,
             ) -> Result<Vec<$crate::CasDigest>> {
 
                 $crate::tracing::debug!(target: "cas", concat!(stringify!($struct), " uploading {} blobs"), blobs.len());
@@ -164,7 +164,7 @@ macro_rules! re_client {
                 _fctx: $crate::FetchContext,
                 digests: &'a [$crate::CasDigest],
                 log_name: $crate::CasDigestType,
-            ) -> BoxStream<'a, $crate::Result<($crate::CasFetchedStats, Vec<($crate::CasDigest, Result<Option<ScmBlob>>)>)>>
+            ) -> BoxStream<'a, $crate::Result<($crate::CasFetchedStats, Vec<($crate::CasDigest, Result<Option<Blob>>)>)>>
             {
                 stream::iter(split_up_to_max_bytes(digests, self.fetch_limit.value()))
                     .map(move |digests| async move {
@@ -219,7 +219,7 @@ macro_rules! re_client {
                             }
 
                             self.cas_success_tracker.record_success();
-                            return Ok((stats, vec![(digest.to_owned(), Ok(Some(ScmBlob::Bytes(bytes.into()))))]));
+                            return Ok((stats, vec![(digest.to_owned(), Ok(Some(Blob::Bytes(bytes.into()))))]));
                         }
 
                         // Fetch digests via the regular API (download inlined digests).
@@ -275,10 +275,10 @@ macro_rules! re_client {
                                 #[cfg(target_os = "linux")]
                                 let (digest, status, data) = {
                                     let (digest, status, data) = blob.unpack();
-                                    (digest, status, ScmBlob::IOBuf(data.into()))
+                                    (digest, status, Blob::IOBuf(data.into()))
                                 };
                                 #[cfg(not(target_os = "linux"))]
-                                let (digest, status, data) = (blob.digest, blob.status, ScmBlob::Bytes(blob.blob.into()));
+                                let (digest, status, data) = (blob.digest, blob.status, Blob::Bytes(blob.blob.into()));
 
                                 let digest = from_re_digest(&digest)?;
                                 match status.code {

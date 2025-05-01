@@ -14,13 +14,13 @@ name = "rich_cas_client"
 
 [dependencies]
 anyhow = "1.0.95"
+blob = { version = "0.1.0", path = "../../blob" }
 futures = { version = "0.3.30", features = ["async-await", "compat"] }
 sapling-cas-client = { version = "0.1.0", path = ".." }
 sapling-clientinfo = { version = "0.1.0", path = "../../clientinfo" }
 sapling-configmodel = { version = "0.1.0", path = "../../config/model" }
 sapling-factory = { version = "0.1.0", path = "../../util/factory" }
 sapling-re-cas-common = { version = "0.1.0", path = "../re-cas-common" }
-scm-blob = { version = "0.1.0", path = "../../blob" }
 tracing = { version = "0.1.41", features = ["attributes", "valuable"] }
 
 [target.'cfg(target_os = "macos")'.dependencies]

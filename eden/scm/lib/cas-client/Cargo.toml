@@ -16,9 +16,9 @@ name = "cas_client"
 anyhow = "1.0.95"
 async-trait = "0.1.86"
 auto_impl = "1.2.1"
+blob = { version = "0.1.0", path = "../blob" }
 futures = { version = "0.3.30", features = ["async-await", "compat"] }
 sapling-configmodel = { version = "0.1.0", path = "../config/model" }
 sapling-factory = { version = "0.1.0", path = "../util/factory" }
 sapling-types = { version = "0.1.0", path = "../types" }
-scm-blob = { version = "0.1.0", path = "../blob" }
 tracing = { version = "0.1.41", features = ["attributes", "valuable"] }

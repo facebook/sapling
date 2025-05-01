@@ -13,9 +13,9 @@ use std::time::Duration;
 use std::time::SystemTime;
 use std::time::UNIX_EPOCH;
 
+use blob::Blob;
 use configmodel::Config;
 use futures::stream::BoxStream;
-use scm_blob::ScmBlob;
 pub use types::CasDigest;
 pub use types::CasDigestType;
 pub use types::CasFetchedStats;
@@ -124,7 +124,7 @@ pub trait CasClient: Sync + Send {
     fn fetch_single_locally_cached(
         &self,
         digest: &CasDigest,
-    ) -> anyhow::Result<(CasFetchedStats, Option<ScmBlob>)>;
+    ) -> anyhow::Result<(CasFetchedStats, Option<Blob>)>;
 
     /// Fetch blobs from CAS.
     async fn fetch<'a>(
@@ -136,12 +136,12 @@ pub trait CasClient: Sync + Send {
         'a,
         anyhow::Result<(
             CasFetchedStats,
-            Vec<(CasDigest, anyhow::Result<Option<ScmBlob>>)>,
+            Vec<(CasDigest, anyhow::Result<Option<Blob>>)>,
         )>,
     >;
 
     /// Upload blobs to CAS.
-    async fn upload(&self, blobs: Vec<ScmBlob>) -> anyhow::Result<Vec<CasDigest>>;
+    async fn upload(&self, blobs: Vec<Blob>) -> anyhow::Result<Vec<CasDigest>>;
 
     /// Prefetch blobs into the CAS local caches.
     /// Returns a stream of (stats, digests_prefetched, digests_not_found) tuples.

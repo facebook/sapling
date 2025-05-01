@@ -37,7 +37,7 @@ rust_library(
         "fbsource//third-party/rust:quickcheck",
         "fbsource//third-party/rust:tempfile",
         "fbsource//third-party/rust:walkdir",
-        "//eden/scm/lib/blob:scm-blob",
+        "//eden/scm/lib/blob:blob",
         "//eden/scm/lib/manifest-tree:manifest-tree",
         "//eden/scm/lib/types:types",
     ],

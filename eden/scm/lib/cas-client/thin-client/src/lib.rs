@@ -9,6 +9,7 @@ use std::sync::Arc;
 use std::time::Duration;
 
 use anyhow::Result;
+use blob::Blob;
 use cas_client::CasClient;
 use cas_client::CasSuccessTracker;
 use cas_client::CasSuccessTrackerConfig;
@@ -26,7 +27,6 @@ use re_client_lib::REClientBuilder;
 use re_client_lib::RESessionID;
 use re_client_lib::RemoteExecutionMetadata;
 use re_client_lib::create_default_config;
-use scm_blob::ScmBlob;
 #[cfg(target_os = "linux")]
 use thin_cas_client_wrapper::CASClientWrapper as REClient;
 

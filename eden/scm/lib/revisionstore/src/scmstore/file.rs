@@ -25,6 +25,7 @@ use anyhow::Result;
 use anyhow::anyhow;
 use anyhow::bail;
 use anyhow::ensure;
+use blob::Blob;
 use cas_client::CasClient;
 use flume::bounded;
 use flume::unbounded;
@@ -39,7 +40,6 @@ use progress_model::AggregatingProgressBar;
 use progress_model::ProgressBar;
 use progress_model::Registry;
 use rand::Rng;
-use scm_blob::ScmBlob;
 use storemodel::SerializationFormat;
 use tracing::debug;
 
@@ -141,7 +141,7 @@ static INDEXEDLOG_ROTATE_COUNT: Counter = Counter::new_counter("scmstore.indexed
 
 impl FileStore {
     /// Get the "local content" without going through the heavyweight "fetch" API.
-    pub(crate) fn get_local_content_direct(&self, id: &HgId) -> Result<Option<ScmBlob>> {
+    pub(crate) fn get_local_content_direct(&self, id: &HgId) -> Result<Option<Blob>> {
         let m = &FILE_STORE_FETCH_METRICS;
 
         if let Ok(Some(blob)) = self.get_local_content_cas_cache(id) {
@@ -154,7 +154,7 @@ impl FileStore {
         Ok(None)
     }
 
-    fn get_local_content_cas_cache(&self, id: &HgId) -> Result<Option<ScmBlob>> {
+    fn get_local_content_cas_cache(&self, id: &HgId) -> Result<Option<Blob>> {
         if let (Some(aux_cache), Some(cas_client)) = (&self.aux_cache, &self.cas_client) {
             let aux_data = aux_cache.get(id)?;
             if let Some(aux_data) = aux_data {

@@ -8,10 +8,10 @@
 use anyhow::Error;
 use anyhow::Result;
 use anyhow::bail;
+use blob::Blob;
 use edenapi_types::FileEntry;
 use format_util::split_file_metadata;
 use minibytes::Bytes;
-use scm_blob::ScmBlob;
 use storemodel::SerializationFormat;
 use types::HgId;
 use types::Id20;
@@ -36,7 +36,7 @@ pub(crate) enum LazyFile {
     SaplingRemoteApi(FileEntry, SerializationFormat),
 
     /// File content read from CAS (no hg header).
-    Cas(ScmBlob),
+    Cas(Blob),
 }
 
 impl std::fmt::Debug for LazyFile {
@@ -101,23 +101,23 @@ impl LazyFile {
 
     /// The file content, as would be found in the working copy (stripped of copy header), and the content header.
     /// Content header is `None` iff not available. If available but not set, content header is `Some(b"")`.
-    pub(crate) fn file_content(&self) -> Result<(ScmBlob, Option<Bytes>)> {
+    pub(crate) fn file_content(&self) -> Result<(Blob, Option<Bytes>)> {
         use LazyFile::*;
         Ok(match self {
             IndexedLog(entry, format) => {
                 let (content, header) = split_file_metadata(&entry.content()?, *format);
-                (ScmBlob::Bytes(content), header)
+                (Blob::Bytes(content), header)
             }
             Lfs(blob, ptr, format) => {
                 let content_header = match format {
                     SerializationFormat::Hg => Some(content_header_from_pointer(ptr)),
                     SerializationFormat::Git => None,
                 };
-                (ScmBlob::Bytes(blob.clone()), content_header)
+                (Blob::Bytes(blob.clone()), content_header)
             }
             SaplingRemoteApi(ref entry, format) => {
                 let (content, header) = split_file_metadata(&entry.data()?, *format);
-                (ScmBlob::Bytes(content), header)
+                (Blob::Bytes(content), header)
             }
             Cas(data) => (data.clone(), None),
         })

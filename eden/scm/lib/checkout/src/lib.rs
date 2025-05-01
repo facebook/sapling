@@ -1752,13 +1752,13 @@ mod test {
     use anyhow::Context;
     #[cfg(unix)]
     use anyhow::ensure;
+    use blob::Blob;
     use fs::create_dir;
     use manifest_tree::testutil::TestStore;
     use manifest_tree::testutil::make_tree_manifest_from_meta;
     use pathmatcher::AlwaysMatcher;
     use quickcheck::Arbitrary;
     use quickcheck::Gen;
-    use scm_blob::ScmBlob;
     use storemodel::KeyStore;
     use tempfile::TempDir;
     use types::testutil::generate_repo_paths;
@@ -2042,12 +2042,8 @@ mod test {
 
     #[async_trait::async_trait]
     impl KeyStore for DummyFileContentStore {
-        fn get_local_content(
-            &self,
-            _path: &RepoPath,
-            hgid: HgId,
-        ) -> anyhow::Result<Option<ScmBlob>> {
-            Ok(Some(ScmBlob::Bytes(hgid_file(&hgid).into())))
+        fn get_local_content(&self, _path: &RepoPath, hgid: HgId) -> anyhow::Result<Option<Blob>> {
+            Ok(Some(Blob::Bytes(hgid_file(&hgid).into())))
         }
 
         fn clone_key_store(&self) -> Box<dyn KeyStore> {

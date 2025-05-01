@@ -16,6 +16,7 @@ crate-type = ["lib", "staticlib"]
 [dependencies]
 anyhow = "1.0.95"
 arc-swap = { version = "1.5", features = ["weak"] }
+blob = { version = "0.1.0", path = "../blob" }
 cxx = "1.0.119"
 env_logger = "0.10"
 log = { version = "0.4.22", features = ["kv_unstable"] }
@@ -34,7 +35,6 @@ sapling-storemodel = { version = "0.1.0", path = "../storemodel" }
 sapling-testutil = { version = "0.1.0", path = "../util/testutil" }
 sapling-tracing-collector = { version = "0.1.0", path = "../tracing-collector" }
 sapling-types = { version = "0.1.0", path = "../types" }
-scm-blob = { version = "0.1.0", path = "../blob" }
 tracing = { version = "0.1.41", features = ["attributes", "valuable"] }
 tracing-subscriber = { version = "0.3.18", features = ["chrono", "env-filter", "json", "local-time", "parking_lot", "registry"] }
 

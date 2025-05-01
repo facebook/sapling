@@ -37,7 +37,7 @@ rust_library(
         "fbsource//third-party/rust:thiserror",
         ":type_macros",
         "//common/rust/shed/quickcheck_arbitrary_derive:quickcheck_arbitrary_derive",
-        "//eden/scm/lib/blob:scm-blob",
+        "//eden/scm/lib/blob:blob",
         "//eden/scm/lib/dag/dag-types:dag-types",
         "//eden/scm/lib/manifest-augmented-tree:manifest-augmented-tree",
         "//eden/scm/lib/minibytes:minibytes",
