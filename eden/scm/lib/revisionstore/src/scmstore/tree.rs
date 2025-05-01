@@ -175,9 +175,8 @@ impl TreeStore {
             return Ok(Some(basic_parse_tree(Bytes::default(), self.format())?));
         }
 
-        // TODO: Support fetching tree from CAS without serializing the sapling tree blob and parsing it back
-        if let Ok(Some(blob)) = self.get_local_content_cas_cache(&node) {
-            return Ok(Some(basic_parse_tree(blob.into_bytes(), self.format())?));
+        if let Ok(Some(tree)) = self.get_local_tree_cas_cache(&node) {
+            return Ok(Some(tree));
         }
 
         match self.get_indexedlog_caches_content_direct(&node)? {
@@ -186,7 +185,7 @@ impl TreeStore {
         }
     }
 
-    fn get_local_content_cas_cache(&self, id: &HgId) -> Result<Option<ScmBlob>> {
+    fn fetch_local_tree_cas_cache(&self, id: &HgId) -> Result<Option<AugmentedTree>> {
         if let (Some(tree_aux_store), Some(cas_client)) = (&self.tree_aux_store, &self.cas_client) {
             let aux_data = tree_aux_store.get(id)?;
             if let Some(aux_data) = aux_data {
@@ -202,39 +201,46 @@ impl TreeStore {
 
                 if let Some(blob) = maybe_blob {
                     TREE_STORE_FETCH_METRICS.cas.hit(1);
-
                     let augmented_tree = match blob {
                         ScmBlob::Bytes(bytes) => AugmentedTree::try_deserialize(bytes.as_ref())?,
                         #[cfg(fbcode_build)]
                         ScmBlob::IOBuf(buf) => AugmentedTree::try_deserialize(buf.cursor())?,
                     };
-
-                    return self
-                        .convert_augmented_tree_to_sapling_tree_blob(augmented_tree, tree_aux_store)
-                        .map(Some);
+                    self.cache_child_aux_data(tree_aux_store, &augmented_tree)?;
+                    return Ok(Some(augmented_tree));
                 }
             }
         }
         Ok(None)
     }
 
-    fn convert_augmented_tree_to_sapling_tree_blob(
-        &self,
-        augmented_tree: AugmentedTree,
-        tree_aux_store: &Arc<TreeAuxStore>,
-    ) -> Result<ScmBlob> {
-        let mut sapling_tree_blob = Vec::<u8>::with_capacity(augmented_tree.sapling_tree_blob_size);
-        augmented_tree.write_sapling_tree_blob(&mut sapling_tree_blob)?;
+    /// Fetch a tree from the local caches and convert it to a sapling tree blob.
+    fn get_local_content_cas_cache(&self, id: &HgId) -> Result<Option<ScmBlob>> {
+        match self.fetch_local_tree_cas_cache(id)? {
+            Some(augmented_tree) => Ok(Some(ScmBlob::Bytes(
+                augmented_tree.into_sapling_tree_blob()?,
+            ))),
+            None => Ok(None),
+        }
+    }
 
-        self.cache_child_aux_data(tree_aux_store, augmented_tree)?;
-
-        Ok(ScmBlob::Bytes(sapling_tree_blob.into()))
+    /// Fetch a tree from the local caches and return it as a TreeEntry.
+    fn get_local_tree_cas_cache(&self, id: &HgId) -> Result<Option<Box<dyn TreeEntry>>> {
+        if let Some(augmented_tree) = self.fetch_local_tree_cas_cache(id)? {
+            // TODO: Support fetching tree from CAS without serializing into the sapling tree blob and parsing it back
+            // as manifest_tree::TreeEntry
+            // Implement TreeEntry trait for AugmentedTree type directly
+            let sapling_tree_blob = augmented_tree.into_sapling_tree_blob()?;
+            let entry = storemodel::basic_parse_tree(sapling_tree_blob, SerializationFormat::Hg)?;
+            return Ok(Some(entry));
+        }
+        Ok(None)
     }
 
     fn cache_child_aux_data(
         &self,
         tree_aux_store: &Arc<TreeAuxStore>,
-        augmented_tree: AugmentedTree,
+        augmented_tree: &AugmentedTree,
     ) -> Result<()> {
         let filestore = if let Some(filestore) = &self.filestore {
             filestore
@@ -247,7 +253,7 @@ impl TreeStore {
             return Ok(());
         };
 
-        for (_path, entry) in augmented_tree.entries {
+        for (_path, entry) in augmented_tree.entries.iter() {
             match entry {
                 AugmentedTreeEntry::FileNode(file) => {
                     if !aux_cache.contains(file.filenode)? {
@@ -258,7 +264,7 @@ impl TreeStore {
                                 sha1: file.content_sha1,
                                 blake3: file.content_blake3,
                                 file_header_metadata: Some(
-                                    file.file_header_metadata.unwrap_or_default(),
+                                    file.file_header_metadata.clone().unwrap_or_default(),
                                 ),
                             },
                         )?;

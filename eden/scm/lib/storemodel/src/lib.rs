@@ -48,7 +48,6 @@ use types::PathComponent;
 use types::PathComponentBuf;
 use types::RepoPath;
 pub use types::SerializationFormat;
-use types::fetch_mode::FetchMode;
 pub use types::tree::TreeItemFlag;
 
 /// Boxed dynamic iterator. Similar to `BoxStream`.

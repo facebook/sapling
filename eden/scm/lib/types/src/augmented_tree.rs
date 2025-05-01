@@ -72,6 +72,12 @@ pub struct AugmentedTree {
 }
 
 impl AugmentedTree {
+    pub fn into_sapling_tree_blob(self) -> Result<Bytes> {
+        let mut w = io::Cursor::new(Vec::with_capacity(self.sapling_tree_blob_size));
+        self.write_sapling_tree_blob(&mut w)?;
+        Ok(w.into_inner().into())
+    }
+
     pub fn write_sapling_tree_blob(&self, mut w: impl Write) -> Result<()> {
         for (path, subentry) in self.entries.iter() {
             w.write_all(path.as_ref())?;
