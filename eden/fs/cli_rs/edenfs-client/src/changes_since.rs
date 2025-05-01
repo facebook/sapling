@@ -7,7 +7,6 @@
 
 use std::fmt;
 use std::path::PathBuf;
-use std::pin::Pin;
 use std::time::Duration;
 use std::time::Instant;
 
@@ -17,9 +16,9 @@ use edenfs_utils::bytes_from_path;
 use edenfs_utils::path_from_bytes;
 use edenfs_utils::prefix_paths;
 use edenfs_utils::strip_prefix_from_bytes;
-use futures::Stream;
 use futures::StreamExt;
 use futures::stream;
+use futures::stream::BoxStream;
 use serde::Serialize;
 use tokio::time;
 
@@ -762,8 +761,8 @@ impl EdenFsClient {
         excluded_roots: &Option<Vec<PathBuf>>,
         excluded_suffixes: &Option<Vec<String>>,
         include_vcs_roots: bool,
-    ) -> Result<Pin<Box<dyn Stream<Item = Result<ChangesSinceV2Result>> + Send + 'a>>> {
-        struct State {
+    ) -> Result<BoxStream<'a, Result<ChangesSinceV2Result>>> {
+        struct State<'a> {
             mount_point: Option<PathBuf>,
             position: JournalPosition,
             root: Option<PathBuf>,
@@ -772,7 +771,7 @@ impl EdenFsClient {
             excluded_roots: Option<Vec<PathBuf>>,
             excluded_suffixes: Option<Vec<String>>,
             include_vcs_roots: bool,
-            subscription: Pin<Box<dyn Stream<Item = Result<JournalPosition>> + Send>>,
+            subscription: BoxStream<'a, Result<JournalPosition>>,
             last: Instant,
             throttle: Duration,
             pending_updates: bool,
