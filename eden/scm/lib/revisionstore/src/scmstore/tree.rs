@@ -159,6 +159,33 @@ impl TreeStore {
         Ok(None)
     }
 
+    pub(crate) fn get_indexedlog_caches_content_direct(
+        &self,
+        id: &HgId,
+    ) -> anyhow::Result<Option<ScmBlob>> {
+        let m = &TREE_STORE_FETCH_METRICS;
+        try_local_content!(id, self.indexedlog_cache, m.indexedlog.cache);
+        try_local_content!(id, self.indexedlog_local, m.indexedlog.local);
+        Ok(None)
+    }
+
+    /// Fetch a tree from the local caches. If the tree is not found, return None.
+    pub fn get_local_tree_direct(&self, node: HgId) -> anyhow::Result<Option<Box<dyn TreeEntry>>> {
+        if node.is_null() {
+            return Ok(Some(basic_parse_tree(Bytes::default(), self.format())?));
+        }
+
+        // TODO: Support fetching tree from CAS without serializing the sapling tree blob and parsing it back
+        if let Ok(Some(blob)) = self.get_local_content_cas_cache(&node) {
+            return Ok(Some(basic_parse_tree(blob.into_bytes(), self.format())?));
+        }
+
+        match self.get_indexedlog_caches_content_direct(&node)? {
+            None => Ok(None),
+            Some(v) => Ok(Some(basic_parse_tree(v.into_bytes(), self.format())?)),
+        }
+    }
+
     fn get_local_content_cas_cache(&self, id: &HgId) -> Result<Option<ScmBlob>> {
         if let (Some(tree_aux_store), Some(cas_client)) = (&self.tree_aux_store, &self.cas_client) {
             let aux_data = tree_aux_store.get(id)?;
@@ -983,14 +1010,10 @@ impl TreeEntry for ScmStoreTreeEntry {
 impl storemodel::TreeStore for TreeStore {
     fn get_local_tree(
         &self,
-        path: &RepoPath,
+        _path: &RepoPath,
         id: HgId,
     ) -> anyhow::Result<Option<Box<dyn TreeEntry>>> {
-        let data = match self.get_local_content(path, id)? {
-            None => return Ok(None),
-            Some(v) => v,
-        };
-        Ok(Some(basic_parse_tree(data.into_bytes(), self.format())?))
+        self.get_local_tree_direct(id)
     }
 
     fn get_tree_iter(
