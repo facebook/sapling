@@ -11,6 +11,7 @@ use std::sync::Arc;
 use std::time::Instant;
 
 use ::metrics::Counter;
+use ::types::Blake3;
 use ::types::CasDigest;
 use ::types::FetchContext;
 use ::types::HgId;
@@ -36,6 +37,7 @@ use flume::bounded;
 use flume::unbounded;
 use manifest_augmented_tree::AugmentedTree;
 use manifest_augmented_tree::AugmentedTreeEntry;
+use manifest_augmented_tree::AugmentedTreeWithDigest;
 use metrics::TREE_STORE_FETCH_METRICS;
 use minibytes::Bytes;
 use once_cell::sync::OnceCell;
@@ -185,7 +187,10 @@ impl TreeStore {
         }
     }
 
-    fn fetch_local_tree_cas_cache(&self, id: &HgId) -> Result<Option<AugmentedTree>> {
+    fn fetch_local_tree_cas_cache(
+        &self,
+        id: &HgId,
+    ) -> Result<Option<(AugmentedTree, Blake3, u64)>> {
         if let (Some(tree_aux_store), Some(cas_client)) = (&self.tree_aux_store, &self.cas_client) {
             let aux_data = tree_aux_store.get(id)?;
             if let Some(aux_data) = aux_data {
@@ -207,7 +212,11 @@ impl TreeStore {
                         Blob::IOBuf(buf) => AugmentedTree::try_deserialize(buf.cursor())?,
                     };
                     self.cache_child_aux_data(tree_aux_store, &augmented_tree)?;
-                    return Ok(Some(augmented_tree));
+                    return Ok(Some((
+                        augmented_tree,
+                        aux_data.augmented_manifest_id,
+                        aux_data.augmented_manifest_size,
+                    )));
                 }
             }
         }
@@ -217,20 +226,28 @@ impl TreeStore {
     /// Fetch a tree from the local caches and convert it to a sapling tree blob.
     fn get_local_content_cas_cache(&self, id: &HgId) -> Result<Option<Blob>> {
         match self.fetch_local_tree_cas_cache(id)? {
-            Some(augmented_tree) => Ok(Some(Blob::Bytes(augmented_tree.into_sapling_tree_blob()?))),
+            Some((augmented_tree, _, _)) => {
+                Ok(Some(Blob::Bytes(augmented_tree.into_sapling_tree_blob()?)))
+            }
             None => Ok(None),
         }
     }
 
     /// Fetch a tree from the local caches and return it as a TreeEntry.
     fn get_local_tree_cas_cache(&self, id: &HgId) -> Result<Option<Box<dyn TreeEntry>>> {
-        if let Some(augmented_tree) = self.fetch_local_tree_cas_cache(id)? {
-            // TODO: Support fetching tree from CAS without serializing into the sapling tree blob and parsing it back
-            // as manifest_tree::TreeEntry
-            // Implement TreeEntry trait for AugmentedTree type directly
-            let sapling_tree_blob = augmented_tree.into_sapling_tree_blob()?;
-            let entry = storemodel::basic_parse_tree(sapling_tree_blob, SerializationFormat::Hg)?;
-            return Ok(Some(entry));
+        if let Some((augmented_tree, augmented_manifest_id, augmented_manifest_size)) =
+            self.fetch_local_tree_cas_cache(id)?
+        {
+            let tree = LazyTree::Cas(AugmentedTreeWithDigest {
+                augmented_manifest_id,
+                augmented_manifest_size,
+                augmented_tree,
+            });
+            let entry = ScmStoreTreeEntry {
+                tree,
+                basic_tree_entry: OnceCell::new(),
+            };
+            return Ok(Some(Box::new(entry)));
         }
         Ok(None)
     }
@@ -956,16 +973,13 @@ struct ScmStoreTreeEntry {
 impl ScmStoreTreeEntry {
     fn basic_tree_entry(&self) -> Result<&dyn TreeEntry> {
         self.basic_tree_entry
-            .get_or_try_init(|| {
-                let data = self.tree.hg_content()?;
-                let entry = storemodel::basic_parse_tree(data, SerializationFormat::Hg)?;
-                Ok(entry)
-            })
+            .get_or_try_init(|| Ok(Box::new(self.tree.manifest_tree_entry()?)))
             .map(Borrow::borrow)
     }
 }
 
 impl TreeEntry for ScmStoreTreeEntry {
+    // TODO (liubovd): We should support iter directly for CAS.
     fn iter(&self) -> Result<BoxIterator<Result<(PathComponentBuf, HgId, TreeItemFlag)>>> {
         self.basic_tree_entry()?.iter()
     }

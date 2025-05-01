@@ -90,10 +90,12 @@ impl LazyTree {
         })
     }
 
-    pub fn manifest_tree_entry(&mut self) -> Result<ManifestTreeEntry> {
+    pub fn manifest_tree_entry(&self) -> Result<ManifestTreeEntry> {
         // Currently revisionstore is only for hg format.
-        let format = SerializationFormat::Hg;
-        Ok(ManifestTreeEntry(self.hg_content()?, format))
+        Ok(ManifestTreeEntry(
+            self.hg_content()?,
+            SerializationFormat::Hg,
+        ))
     }
 
     pub(crate) fn parents(&self) -> Option<Parents> {
