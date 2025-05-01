@@ -243,11 +243,7 @@ impl TreeStore {
                 augmented_manifest_size,
                 augmented_tree,
             });
-            let entry = ScmStoreTreeEntry {
-                tree,
-                basic_tree_entry: OnceCell::new(),
-            };
-            return Ok(Some(Box::new(entry)));
+            return Ok(Some(Box::<ScmStoreTreeEntry>::new(tree.into())));
         }
         Ok(None)
     }
@@ -1020,6 +1016,17 @@ impl TreeEntry for ScmStoreTreeEntry {
     }
 }
 
+/// ScmStoreTreeEntry is a wrapper around a LazyTree that implements `TreeEntry` with aux data support.
+/// Basic tree entry is used to avoid multiple coversions of the same tree into the mercurial format.
+impl Into<ScmStoreTreeEntry> for LazyTree {
+    fn into(self) -> ScmStoreTreeEntry {
+        ScmStoreTreeEntry {
+            tree: self,
+            basic_tree_entry: OnceCell::new(),
+        }
+    }
+}
+
 impl storemodel::TreeStore for TreeStore {
     fn get_local_tree(
         &self,
@@ -1042,12 +1049,8 @@ impl storemodel::TreeStore for TreeStore {
                 let tree: LazyTree = store_tree
                     .content
                     .ok_or_else(|| anyhow::format_err!("no content available"))?;
-                // ScmStoreTreeEntry supports aux data.
-                let tree_entry = ScmStoreTreeEntry {
-                    tree,
-                    basic_tree_entry: OnceCell::new(),
-                };
-                Ok((key, Box::new(tree_entry)))
+                // returns ScmStoreTreeEntry that supports both file and tree aux data.
+                Ok((key, Box::<ScmStoreTreeEntry>::new(tree.into())))
             });
         Ok(Box::new(iter))
     }
