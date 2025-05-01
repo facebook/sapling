@@ -473,13 +473,41 @@ impl<R: MononokeRepo> ChangesetPathDiffContext<R> {
                     let file = path.file().await?.ok_or_else(|| {
                         MononokeError::from(Error::msg("assertion error: file should exist"))
                     })?;
+                    let metadata = file.metadata().await?;
+
+                    let git_lfs_pointer: Option<String> =
+                        match justknobs::eval("scm/scmquery:diff_git_lfs_pointers", None, None) {
+                            Ok(true) => {
+                                let file_change = path.file_change().await?;
+                                file_change.and_then(|fc| {
+                                    fc.git_lfs().and_then(|git_lfs| {
+                                        if git_lfs.is_lfs_pointer() {
+                                            Some(format_lfs_pointer(
+                                                metadata.sha256,
+                                                fc.size().unwrap_or_default(),
+                                            ))
+                                        } else {
+                                            None
+                                        }
+                                    })
+                                })
+                            }
+                            _ => None,
+                        };
+                    let diff_mode =
+                        if mode == UnifiedDiffMode::OmitContent || git_lfs_pointer.is_some() {
+                            UnifiedDiffMode::OmitContent
+                        } else {
+                            mode
+                        };
+
                     let file_type = match file_type {
                         FileType::Regular => xdiff::FileType::Regular,
                         FileType::Executable => xdiff::FileType::Executable,
                         FileType::Symlink => xdiff::FileType::Symlink,
                         FileType::GitSubmodule => xdiff::FileType::GitSubmodule,
                     };
-                    let contents = match (file_type, mode) {
+                    let contents = match (file_type, diff_mode) {
                         (xdiff::FileType::GitSubmodule, _) => {
                             let commit_hash_bytes = file.content_concat().await?;
                             let commit_hash = GitSha1::from_bytes(commit_hash_bytes)
@@ -493,33 +521,10 @@ impl<R: MononokeRepo> ChangesetPathDiffContext<R> {
                             let contents = file.content_concat().await?;
                             xdiff::FileContent::Inline(contents)
                         }
-                        (_, UnifiedDiffMode::OmitContent) => {
-                            let metadata = file.metadata().await?;
-                            let file_change = path.file_change().await?;
-                            let git_lfs_pointer: Option<String> = file_change.and_then(|fc| {
-                                fc.git_lfs().and_then(|git_lfs| {
-                                    if git_lfs.is_lfs_pointer() {
-                                        Some(format_lfs_pointer(
-                                            metadata.sha256,
-                                            fc.size().unwrap_or_default(),
-                                        ))
-                                    } else {
-                                        None
-                                    }
-                                })
-                            });
-                            xdiff::FileContent::Omitted {
-                                content_hash: format!("{}", metadata.content_id),
-                                git_lfs_pointer: match justknobs::eval(
-                                    "scm/scmquery:diff_git_lfs_pointers",
-                                    None,
-                                    None,
-                                ) {
-                                    Ok(true) => git_lfs_pointer,
-                                    _ => None,
-                                },
-                            }
-                        }
+                        (_, UnifiedDiffMode::OmitContent) => xdiff::FileContent::Omitted {
+                            content_hash: format!("{}", metadata.content_id),
+                            git_lfs_pointer,
+                        },
                     };
                     Ok(Some(xdiff::DiffFile {
                         path: path.path().to_string(),
