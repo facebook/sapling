@@ -68,7 +68,16 @@ def _getheads(repo):
 
 
 def _getbookmarks(repo):
-    return {n: nodemod.hex(v) for n, v in repo._bookmarks.items()}
+    ignored = repo.ui.configlist("commitcloud", "ignored-bookmarks")
+    if ignored:
+        matcher = bindings.pathmatcher.treematcher(ignored, False)
+        is_ignored = matcher.matches
+    else:
+
+        def is_ignored(_name):
+            return False
+
+    return {n: nodemod.hex(v) for n, v in repo._bookmarks.items() if not is_ignored(n)}
 
 
 def _getprotectedremotebookmarks(repo):

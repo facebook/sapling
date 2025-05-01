@@ -149,6 +149,7 @@ configitem("commitcloud", "pullsizelimit", 300)
 configitem("commitcloud", "sl_showremotebookmarks", default=False)
 configitem("commitcloud", "sl_showallbookmarks", default=False)
 configitem("commitcloud", "remotebookmarkssync", default=False)
+configitem("commitcloud", "ignored-bookmarks", default=None)
 configitem("infinitepushbackup", "enablestatus", default=True)
 configitem("infinitepushbackup", "maxheadstobackup", default=-1)
 # Use the http Edenapi protocol to fetch bookmarks
