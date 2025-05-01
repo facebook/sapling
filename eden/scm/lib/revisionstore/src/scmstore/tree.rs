@@ -1041,6 +1041,8 @@ impl storemodel::TreeStore for TreeStore {
         fctx: FetchContext,
         keys: Vec<Key>,
     ) -> anyhow::Result<BoxIterator<anyhow::Result<(Key, Box<dyn TreeEntry>)>>> {
+        // TreeAttributes::CONTENT means at least the content attribute is requested.
+        // In practice, files/trees aux data may be requested as well, but we don't know that here as it depends on the configs.
         let fetched = self.fetch_batch(fctx, keys.into_iter(), TreeAttributes::CONTENT);
         let iter = fetched
             .into_iter()
@@ -1066,7 +1068,7 @@ impl storemodel::TreeStore for TreeStore {
             .map(|entry| -> anyhow::Result<(Key, TreeAuxData)> {
                 let (key, store_tree) = entry?;
                 let aux = store_tree
-                    .aux_data
+                    .aux_data()
                     .ok_or_else(|| anyhow::anyhow!("aux data is missing from store tree"))?;
                 Ok((key, aux))
             });

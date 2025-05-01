@@ -204,7 +204,7 @@ impl FetchState {
             .filter_map(|(key, store_tree)| {
                 bar.increase_position(1);
 
-                let aux_data = match store_tree.aux_data.as_ref() {
+                let aux_data = match store_tree.aux_data() {
                     Some(aux_data) => {
                         tracing::trace!(target: "cas", ?key, ?aux_data, "found aux data for tree digest");
                         aux_data
