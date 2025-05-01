@@ -677,6 +677,45 @@ impl FileStore {
     pub fn format(&self) -> SerializationFormat {
         self.format
     }
+
+    pub fn prefetch(&self, keys: Vec<Key>) -> Result<Vec<Key>> {
+        self.metrics.write().api.hg_prefetch.call(keys.len());
+
+        let mut attrs = FileAttributes::CONTENT;
+        if self.prefetch_aux_data {
+            attrs |= FileAttributes::AUX;
+        }
+
+        self.fetch(
+            FetchContext::new_with_cause(
+                FetchMode::AllowRemote | FetchMode::IGNORE_RESULT,
+                FetchCause::SaplingPrefetch,
+            ),
+            keys,
+            attrs,
+        )
+        .missing()
+    }
+
+    pub fn metadata(&self, key: StoreKey) -> Result<StoreResult<ContentMetadata>> {
+        self.metrics.write().api.contentdatastore_metadata.call(0);
+
+        if let Some(cache) = &self.lfs_cache {
+            let result = cache.metadata(key.clone())?;
+            if matches!(result, StoreResult::Found(_)) {
+                return Ok(result);
+            }
+        }
+
+        if let Some(local) = &self.lfs_local {
+            let result = local.metadata(key.clone())?;
+            if matches!(result, StoreResult::Found(_)) {
+                return Ok(result);
+            }
+        }
+
+        Ok(StoreResult::NotFound(key))
+    }
 }
 
 impl HgIdDataStore for FileStore {
@@ -699,27 +738,6 @@ impl HgIdDataStore for FileStore {
 
     fn refresh(&self) -> Result<()> {
         self.refresh()
-    }
-}
-
-impl FileStore {
-    pub fn prefetch(&self, keys: Vec<Key>) -> Result<Vec<Key>> {
-        self.metrics.write().api.hg_prefetch.call(keys.len());
-
-        let mut attrs = FileAttributes::CONTENT;
-        if self.prefetch_aux_data {
-            attrs |= FileAttributes::AUX;
-        }
-
-        self.fetch(
-            FetchContext::new_with_cause(
-                FetchMode::AllowRemote | FetchMode::IGNORE_RESULT,
-                FetchCause::SaplingPrefetch,
-            ),
-            keys,
-            attrs,
-        )
-        .missing()
     }
 }
 
@@ -758,27 +776,5 @@ impl HgIdMutableDeltaStore for FileStore {
         self.metrics.write().api.hg_flush.call(0);
         self.flush()?;
         Ok(None)
-    }
-}
-
-impl FileStore {
-    pub fn metadata(&self, key: StoreKey) -> Result<StoreResult<ContentMetadata>> {
-        self.metrics.write().api.contentdatastore_metadata.call(0);
-
-        if let Some(cache) = &self.lfs_cache {
-            let result = cache.metadata(key.clone())?;
-            if matches!(result, StoreResult::Found(_)) {
-                return Ok(result);
-            }
-        }
-
-        if let Some(local) = &self.lfs_local {
-            let result = local.metadata(key.clone())?;
-            if matches!(result, StoreResult::Found(_)) {
-                return Ok(result);
-            }
-        }
-
-        Ok(StoreResult::NotFound(key))
     }
 }
