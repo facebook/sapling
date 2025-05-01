@@ -226,6 +226,7 @@ cpp_library(
         "//eden/fs/config:config_thrift-cpp2-types",
         "//eden/fs/fuse:fuse",
         "//eden/fs/inodes/fscatalog:fsinodecatalog",
+        "//eden/fs/inodes/fscatalog_dev:fsinodecatalog_dev",
         "//eden/fs/inodes/overlay:overlay_checker",
         "//eden/fs/inodes/overlay:serialization-cpp2-types",
         "//eden/fs/journal:journal",

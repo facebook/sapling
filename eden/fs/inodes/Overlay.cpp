@@ -119,6 +119,11 @@ std::unique_ptr<InodeCatalog> makeInodeCatalog(
     return std::make_unique<LMDBInodeCatalog>(
         static_cast<LMDBFileContentStore*>(fileContentStore));
   }
+  if (inodeCatalogType == InodeCatalogType::LegacyDev) {
+    XLOG(DBG4) << "LegacyDev overlay being used.";
+    return std::make_unique<FsInodeCatalogDev>(
+        static_cast<FsFileContentStoreDev*>(fileContentStore));
+  }
   XLOG(DBG4) << "Legacy overlay being used.";
   return std::make_unique<FsInodeCatalog>(
       static_cast<FsFileContentStore*>(fileContentStore));
@@ -136,6 +141,8 @@ std::unique_ptr<FileContentStore> makeFileContentStore(
 #else
   if (inodeCatalogType == InodeCatalogType::Legacy) {
     return std::make_unique<FsFileContentStore>(localDir);
+  } else if (inodeCatalogType == InodeCatalogType::LegacyDev) {
+    return std::make_unique<FsFileContentStoreDev>(localDir);
   } else {
     return std::make_unique<LMDBFileContentStore>(localDir, logger);
   }

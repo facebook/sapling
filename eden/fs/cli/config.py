@@ -120,7 +120,13 @@ SUPPORTED_MOUNT_PROTOCOLS: Set[str] = {
     PRJFS_MOUNT_PROTOCOL_STRING,
 }
 
-SUPPORTED_INODE_CATALOG_TYPES: Set[str] = {"legacy", "sqlite", "inmemory", "lmdb"}
+SUPPORTED_INODE_CATALOG_TYPES: Set[str] = {
+    "legacy",
+    "sqlite",
+    "inmemory",
+    "lmdb",
+    "legacydev",
+}
 
 # Create a readme file with this name in the mount point directory.
 # The intention is for this to contain instructions telling users what to do if their
