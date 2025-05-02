@@ -8,65 +8,94 @@
 
 setup configuration
   $ REPOTYPE="blob_files"
-  $ REPOID=0 REPONAME=meg-mon setup_common_config $REPOTYPE
-  $ REPOID=1 REPONAME=fbs-mon setup_common_config $REPOTYPE
+  $ FBS_REPO="fbs-mon"
+  $ MEG_REPO="meg-mon"
+  $ REPOID=0 REPONAME=$MEG_REPO setup_common_config $REPOTYPE
+  $ REPOID=1 REPONAME=$FBS_REPO setup_common_config $REPOTYPE
   $ setup_commitsyncmap
   $ setup_configerator_configs
   $ ls $TESTTMP/monsql/sqlite_dbs
   ls: cannot access *: No such file or directory (glob)
   [2]
 
+
 setup hg server repos
   $ function createfile { mkdir -p "$(dirname  $1)" && echo "$1" > "$1" && hg add -q "$1"; }
 
   $ cd $TESTTMP
-  $ hginit_treemanifest fbs-mon
-  $ cd fbs-mon
--- create an initial stack of commits, which will be the last_synced_commit
--- note that stack is important here, because we have a heuristic in mononoke_x_repo_sync_job
--- that looks at generation number to decide what is being merged.
-  $ createfile fbcode/fbcodefile_fbsource
-  $ hg -q ci -m "fbsource commit 1"
-  $ createfile arvr/arvrfile_fbsource
-  $ createfile otherfile_fbsource
-  $ hg -q ci -m "fbsource commit 2" && hg book -ir . fbsource_c1
+  $ testtool_drawdag --print-hg-hashes -R $FBS_REPO --derive-all --no-default-files <<EOF
+  > A-B
+  > C
+  > # message: A "fbsource commit 1"
+  > # modify: A "fbcode/fbcodefile_fbsource" "fbcode/fbcodefile_fbsource"
+  > # message: B "fbsource commit 2"
+  > # modify: B "arvr/arvrfile_fbsource" "arvr/arvrfile_fbsource"
+  > # modify: B "otherfile_fbsource" "otherfile_fbsource"
+  > # modify: B "b" "file_content"
+  > # bookmark: B fbsource_c1
+  > # message: C "to merge"
+  > # modify: C "arvr/tomerge" "arvr/tomerge"
+  > # bookmark: C to_merge
+  > EOF
+  A=ff190b38dcc48bacba77a5183c4cce7006852b85
+  B=45cdd1a0553a8972b9ba6344ea4ac396ce88a655
+  C=5b6a09b38022b07a87e13b38aaa28197b27495c3
 
-  $ hg up -q null
-  $ createfile arvr/tomerge
-  $ hg -q ci -m "to merge"
-  $ TOMERGE="$(hg log -r . -T '{node}')"
 
-  $ hg up -q fbsource_c1
+  $ testtool_drawdag --print-hg-hashes -R $MEG_REPO --derive-all --no-default-files <<EOF
+  > A
+  > # message: A "megarepo commit 1"
+  > # modify: A "fbcode/fbcodefile_fbsource" "fbcode/fbcodefile_fbsource"
+  > # modify: A ".fbsource-rest/arvr/arvrfile_fbsource" ".fbsource-rest/arvr/arvrfile_fbsource"
+  > # modify: A "otherfile_fbsource" "otherfile_fbsource"
+  > # modify: A ".ovrsource-rest/fbcode/fbcodefile_ovrsource" ".ovrsource-rest/fbcode/fbcodefile_ovrsource"
+  > # modify: A "arvr/arvrfile_ovrsource" "arvr/arvrfile_ovrsource"
+  > # modify: A "arvr-legacy/Research/researchfile_ovrsource" "arvr-legacy/Research/researchfile_ovrsource"
+  > # modify: A "arvr-legacy/otherfile_ovrsource" "arvr-legacy/otherfile_ovrsource"
+  > # bookmark: A master_bookmark
+  > EOF
+  A=abe2e94615b738949a81cbb940fbca24717cf22c
+ 
+  $ start_and_wait_for_mononoke_server
+
+
+-- Create merge commit
+  $ hg clone "mono:$FBS_REPO" $FBS_REPO
+  fetching lazy changelog
+  populating main commit graph
+  updating to tip
+  0 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  $ cd $FBS_REPO
+  $ hg pull -q -B fbsource_c1
+  $ hg checkout -q fbsource_c1
   $ hg up -q .
-  $ hg merge -q "$TOMERGE"
-  $ hg -q ci -m 'merge_commit' && hg book -ir . fbsource_master
+  $ hg merge -q "$C"
+  $ hg -q ci -m 'merge_commit'
+  $ hg push -q --to fbsource_master --create
 
+-- Clone megarepo
   $ cd $TESTTMP
-  $ hginit_treemanifest meg-mon
-  $ cd meg-mon
-  $ createfile fbcode/fbcodefile_fbsource
-  $ createfile .fbsource-rest/arvr/arvrfile_fbsource
-  $ createfile otherfile_fbsource
-  $ createfile .ovrsource-rest/fbcode/fbcodefile_ovrsource
-  $ createfile arvr/arvrfile_ovrsource
-  $ createfile arvr-legacy/otherfile_ovrsource
-  $ createfile arvr-legacy/Research/researchfile_ovrsource
-  $ hg -q ci -m "megarepo commit 1"
-  $ hg book -r . master_bookmark
-
-blobimport hg servers repos into Mononoke repos
-  $ cd $TESTTMP
-  $ REPOID=0 blobimport meg-mon/.hg meg-mon
-  $ REPOID=1 blobimport fbs-mon/.hg fbs-mon
+  $ hg clone "mono:$MEG_REPO" $MEG_REPO
+  fetching lazy changelog
+  populating main commit graph
+  updating to tip
+  7 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  $ cd $MEG_REPO
+  $ hg log
+  commit:      abe2e94615b7
+  bookmark:    remote/master_bookmark
+  hoistedname: master_bookmark
+  user:        author
+  date:        Thu Jan 01 00:00:00 1970 +0000
+  summary:     megarepo commit 1
+  
 
 get some bonsai hashes to avoid magic strings later
   $ FBSOURCE_C1_BONSAI=$(mononoke_admin bookmarks --repo-id 1 get fbsource_c1)
   $ FBSOURCE_MASTER_BONSAI=$(mononoke_admin bookmarks --repo-id 1 get fbsource_master)
   $ MEGAREPO_MERGE_BONSAI=$(mononoke_admin bookmarks --repo-id 0 get master_bookmark)
 
-setup hg client repos
-  $ hg clone -q mono:fbs-mon fbs-hg-cnt --noupdate
-  $ hg clone -q mono:meg-mon meg-hg-cnt --noupdate
+  $ cd $TESTTMP
 
 start mononoke server
   $ start_and_wait_for_mononoke_server
@@ -74,42 +103,42 @@ insert sync mapping entry
   $ add_synced_commit_mapping_entry 1 $FBSOURCE_C1_BONSAI 0 $MEGAREPO_MERGE_BONSAI TEST_VERSION_NAME
 
 run the sync again
-  $ mononoke_x_repo_sync 1 0 once --target-bookmark master_bookmark -B fbsource_master |& grep -v "using repo"
-  * Starting session with id * (glob)
-  * Starting up X Repo Sync from small repo fbs-mon to large repo meg-mon (glob)
-  * Syncing 1 commits and all of their unsynced ancestors (glob)
-  * Checking if * is already synced 1->0 (glob)
-  * 2 unsynced ancestors of 46bab414a4d4a87666622accf4af5e1450feba6bfd5f41467f5b5d671b41aa55 (glob)
-  * syncing 6d7f84d613e4cccb4ec27259b7b59335573cdd65ee5dc78887056a5eeb6e6a47 (glob)
-  * synced as * in *ms (glob)
-  * syncing 46bab414a4d4a87666622accf4af5e1450feba6bfd5f41467f5b5d671b41aa55 via pushrebase for master_bookmark (glob)
-  * synced as * in *ms (glob)
-  * successful sync (glob)
-  * X Repo Sync execution finished from small repo fbs-mon to large repo meg-mon (glob)
+  $ with_stripped_logs mononoke_x_repo_sync 1 0 once --target-bookmark master_bookmark -B fbsource_master |& grep -v "using repo"
+  Starting session with id * (glob)
+  Starting up X Repo Sync from small repo fbs-mon to large repo meg-mon
+  Syncing 1 commits and all of their unsynced ancestors (glob)
+  Checking if * is already synced 1->0 (glob)
+  2 unsynced ancestors of 185ab836cc4952b370393e74f342c5ab3dd6f56cadcb42a58ef48e01823076fd
+  syncing 9d41183ab69f7a8ccb85011c35ecbd7329d76bdc96e765459176bf4cc3fe1683
+  changeset 9d41183ab69f7a8ccb85011c35ecbd7329d76bdc96e765459176bf4cc3fe1683 synced as fc7956caaa6324fff247c4990221e10cb234309e3bc571cff00739f7c08adcbd in * (glob)
+  syncing 185ab836cc4952b370393e74f342c5ab3dd6f56cadcb42a58ef48e01823076fd via pushrebase for master_bookmark
+  changeset 185ab836cc4952b370393e74f342c5ab3dd6f56cadcb42a58ef48e01823076fd synced as 5d1ca261178e0ebb020ed452430815db8c00eaee93fe7cc7ccf8a8cadb3c7abe in * (glob)
+  successful sync (glob)
+  X Repo Sync execution finished from small repo fbs-mon to large repo meg-mon
   $ flush_mononoke_bookmarks
 
 check that the changes are synced
-  $ cd $TESTTMP/meg-hg-cnt
+  $ cd $MEG_REPO
   $ hg -q pull
   $ hg -q status --change master_bookmark 2>/dev/null
   A .fbsource-rest/arvr/tomerge
-  $ hg status --change 4523b8346e49
+  $ hg status --change 0f290f150a2b
   A .fbsource-rest/arvr/tomerge
   $ hg log -G
-  o    commit:      9c3b218de12e
+  o    commit:      597e4f00f62e
   ├─╮  bookmark:    remote/master_bookmark
   │ │  hoistedname: master_bookmark
   │ │  user:        test
   │ │  date:        Thu Jan 01 00:00:00 1970 +0000
   │ │  summary:     merge_commit
   │ │
-  │ o  commit:      4523b8346e49
-  │    user:        test
+  │ o  commit:      0f290f150a2b
+  │    user:        author
   │    date:        Thu Jan 01 00:00:00 1970 +0000
   │    summary:     to merge
   │
-  o  commit:      14e20a60e5f4
-     user:        test
+  @  commit:      abe2e94615b7
+     user:        author
      date:        Thu Jan 01 00:00:00 1970 +0000
      summary:     megarepo commit 1
   
