@@ -2330,6 +2330,7 @@ mod tests {
         Ok(())
     }
 
+    #[allow(unexpected_cfgs)]
     #[cfg(feature = "fb")]
     mod fb_test {
         use std::collections::BTreeMap;

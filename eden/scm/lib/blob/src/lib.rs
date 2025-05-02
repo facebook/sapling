@@ -5,6 +5,8 @@
  * LICENSE file in the root directory of this source tree.
  */
 
+#![allow(unexpected_cfgs)]
+
 use bytes::Buf;
 use types::Blake3;
 use types::Sha1;

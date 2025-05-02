@@ -28,6 +28,7 @@ pub use error::Errors;
 // Re-export
 pub use minibytes::Text;
 
+#[allow(unexpected_cfgs)]
 #[cfg(feature = "fb")]
 pub mod fb;
 

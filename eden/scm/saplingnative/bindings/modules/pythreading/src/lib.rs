@@ -523,6 +523,7 @@ pub fn trigger_rng_reseed(_py: Python) -> PyResult<PyNone> {
     Ok(PyNone)
 }
 
+#[allow(unexpected_cfgs)]
 #[cfg(test)]
 #[cfg(not(fbcode_build))]
 mod tests {

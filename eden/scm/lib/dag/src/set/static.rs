@@ -100,6 +100,7 @@ impl fmt::Debug for StaticSet {
 }
 
 // Test infra is unhappy about 'r#' yet (D20008157).
+#[allow(unexpected_cfgs)]
 #[cfg(not(fbcode_build))]
 #[cfg(test)]
 mod tests {

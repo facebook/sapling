@@ -403,6 +403,7 @@ struct AugmentedTreeDigestCalculator {
 }
 
 impl AugmentedTreeDigestCalculator {
+    #[allow(unexpected_cfgs)]
     fn new() -> Self {
         #[cfg(fbcode_build)]
         let key = blake3_constants::BLAKE3_HASH_KEY;

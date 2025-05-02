@@ -69,6 +69,7 @@ pub fn traced(filter: &str, func: impl FnOnce()) -> Vec<String> {
             // Buck unittest targets add "_unittest" suffix to crate names
             // that will affect the "target". Workaround it by removing the
             // suffix.
+            #[allow(unexpected_cfgs)]
             if cfg!(fbcode_build) {
                 s = s.replace("_unittest: ", ": ");
                 s = s.replace("_unittest::", "::");
