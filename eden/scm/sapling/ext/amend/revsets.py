@@ -5,7 +5,6 @@
 
 # revsets.py - revset definitions
 
-from __future__ import absolute_import
 
 from sapling import mutation, phases, registrar, revset, smartset
 from sapling.node import nullrev

@@ -5,7 +5,6 @@
 
 # movement.py - commands to move working parent like previous, next, etc.
 
-from __future__ import absolute_import
 
 from itertools import count
 

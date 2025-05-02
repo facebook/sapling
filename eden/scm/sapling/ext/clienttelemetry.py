@@ -11,8 +11,6 @@
 announceremotehostname = False
 """
 
-from __future__ import absolute_import
-
 import socket
 from typing import Any, Dict
 

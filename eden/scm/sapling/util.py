@@ -18,8 +18,6 @@ This contains helper routines that are independent of the SCM core and
 hide platform-specific details from the core.
 """
 
-from __future__ import absolute_import, print_function
-
 import abc
 import bz2
 import calendar

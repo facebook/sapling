@@ -11,8 +11,6 @@
 # debugshell extension
 """a python shell with repo, changelog & manifest objects"""
 
-from __future__ import absolute_import
-
 import io
 import shlex
 import sys

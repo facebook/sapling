@@ -4,7 +4,7 @@
 # GNU General Public License version 2.
 
 # remotefilectx.py - filectx/workingfilectx implementations for remotefilelog
-from __future__ import absolute_import
+
 
 import collections
 import time

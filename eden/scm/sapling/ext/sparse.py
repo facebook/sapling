@@ -115,8 +115,6 @@ The following options can be used to tune the behaviour of tree prefetching when
     force_full_prefetch_on_sparse_profile_change = False
 """
 
-from __future__ import division
-
 import collections
 import functools
 import hashlib

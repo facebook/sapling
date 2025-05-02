@@ -24,8 +24,6 @@ amend modified chunks into the corresponding non-public changesets.
     absorb.path = bold
 """
 
-from __future__ import absolute_import
-
 import bisect
 import collections
 import io

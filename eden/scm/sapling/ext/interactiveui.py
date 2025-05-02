@@ -5,7 +5,6 @@
 
 # interactiveui.py: display information and allow for left/right control
 
-from __future__ import absolute_import
 
 import os
 import sys

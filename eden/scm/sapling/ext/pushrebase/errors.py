@@ -5,7 +5,6 @@
 
 # errors.py - errors used by pushrebase
 
-from __future__ import absolute_import
 
 from sapling import error
 from sapling.i18n import _

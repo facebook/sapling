@@ -5,7 +5,6 @@
 
 # fileserverclient.py - client for communicating with the cache process
 
-from __future__ import absolute_import
 
 import struct
 import time

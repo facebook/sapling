@@ -12,7 +12,6 @@
 
 # @lint-ignore-every SPELL
 
-from __future__ import absolute_import
 
 import difflib
 import errno

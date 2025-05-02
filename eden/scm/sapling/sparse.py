@@ -5,7 +5,6 @@
 
 # sparse.py - functionality for sparse checkouts
 
-from __future__ import absolute_import
 
 from . import match as matchmod
 

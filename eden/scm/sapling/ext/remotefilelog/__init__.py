@@ -89,8 +89,6 @@ Configs:
     ``remotefilelog.http`` use HTTP (EdenAPI) instead of SSH to fetch data.
 """
 
-from __future__ import absolute_import
-
 import os
 import sys
 import time

@@ -5,7 +5,6 @@
 
 # undo.py: records data in revlog for future undo functionality
 
-from __future__ import absolute_import
 
 import bindings
 from bindings import cliparser

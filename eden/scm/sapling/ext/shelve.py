@@ -22,8 +22,6 @@ shelved change has a distinct name. For details, see the help for "hg
 shelve".
 """
 
-from __future__ import absolute_import
-
 import collections
 import errno
 import itertools

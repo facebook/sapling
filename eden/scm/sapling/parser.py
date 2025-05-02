@@ -21,7 +21,6 @@
 # an action is a tree node name, a tree label, and an optional match
 # __call__(program) parses program into a labeled tree
 
-from __future__ import absolute_import, print_function
 
 from . import encoding, error, util
 from .i18n import _

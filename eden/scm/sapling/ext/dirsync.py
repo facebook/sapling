@@ -40,8 +40,6 @@ create a rule for the subdirectory and prefix it with "exclude":
         exclude.projectX.dir2 = dir2/dir1/foo/bar
 """
 
-from __future__ import absolute_import
-
 from typing import Sized
 
 import bindings

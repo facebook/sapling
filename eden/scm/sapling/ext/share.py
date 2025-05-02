@@ -10,8 +10,6 @@
 
 """share a common history between several working directories"""
 
-from __future__ import absolute_import
-
 from sapling import error, hg, registrar
 from sapling.i18n import _
 

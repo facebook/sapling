@@ -47,8 +47,6 @@ following advice for resolution will be shown::
     nextpreferdraft = true
 """
 
-from __future__ import absolute_import
-
 import io
 
 from bindings import checkout as nativecheckout

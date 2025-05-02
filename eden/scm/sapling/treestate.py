@@ -5,8 +5,6 @@
 
 """tree-based dirstate combined with other (ex. fsmonitor) states"""
 
-from __future__ import absolute_import
-
 import errno
 import io
 

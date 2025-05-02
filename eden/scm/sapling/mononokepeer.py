@@ -29,7 +29,6 @@
 # or as hexadecimals:
 #   37 3a 00 68 65 6c 6c 6f 0a 2c
 
-from __future__ import absolute_import
 
 import json
 import os

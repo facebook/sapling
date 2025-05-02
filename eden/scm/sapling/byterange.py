@@ -22,7 +22,6 @@
 
 # $Id: byterange.py,v 1.9 2005/02/14 21:55:07 mstenner Exp $
 
-from __future__ import absolute_import
 
 import email
 import ftplib

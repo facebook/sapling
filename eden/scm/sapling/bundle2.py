@@ -149,8 +149,6 @@ future, dropping the stream may become an option for channel we do not care to
 preserve.
 """
 
-from __future__ import absolute_import, division
-
 import errno
 import os
 import re

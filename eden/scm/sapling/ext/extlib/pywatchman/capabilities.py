@@ -4,7 +4,6 @@
 # GNU General Public License version 2.
 
 # no unicode literals
-from __future__ import absolute_import, division, print_function
 
 
 def parse_version(vstr) -> int:

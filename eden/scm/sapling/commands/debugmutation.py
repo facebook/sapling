@@ -5,7 +5,6 @@
 
 # debugmutation.py - command processing for debug commands for mutation and visibility
 
-from __future__ import absolute_import
 
 from .. import mutation, node as nodemod, scmutil, util, visibility
 from ..i18n import _, _x

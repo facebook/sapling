@@ -42,8 +42,6 @@ httplib, but has several additional features:
   * implements ssl inline instead of in a different class
 """
 
-from __future__ import absolute_import
-
 # Many functions in this file have too many arguments.
 # pylint: disable=R0913
 import email

@@ -5,7 +5,6 @@
 
 # hint.py - utilities to register hint messages
 
-from __future__ import absolute_import
 
 from . import rcutil, util
 from .i18n import _

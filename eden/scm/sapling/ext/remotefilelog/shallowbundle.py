@@ -4,7 +4,7 @@
 # GNU General Public License version 2.
 
 # shallowbundle.py - bundle10 implementation for use with shallow repositories
-from __future__ import absolute_import
+
 
 from typing import Any, Iterable, Mapping, MutableMapping, Sequence
 

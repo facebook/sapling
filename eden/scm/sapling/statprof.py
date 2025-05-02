@@ -107,7 +107,6 @@ main thread's work patterns.
 """
 
 # no-check-code
-from __future__ import absolute_import, division, print_function
 
 import collections
 import contextlib

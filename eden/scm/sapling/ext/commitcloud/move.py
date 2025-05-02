@@ -3,7 +3,6 @@
 # This software may be used and distributed according to the terms of the
 # GNU General Public License version 2.
 
-from __future__ import absolute_import
 
 from sapling import error, node as nodemod, progress, templatefilters, util
 from sapling.i18n import _

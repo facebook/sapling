@@ -4,7 +4,7 @@
 # GNU General Public License version 2.
 
 # shallowrepo.py - shallow repository that uses remote filelogs
-from __future__ import absolute_import
+
 
 from sapling import progress, util
 from sapling.i18n import _

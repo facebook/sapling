@@ -52,8 +52,6 @@ server, rather than relying on the server to perform this computation.
     http = True
 """
 
-from __future__ import absolute_import
-
 import hashlib
 import os
 import struct

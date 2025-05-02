@@ -231,8 +231,6 @@ If you wish to use autoverb, you will need to enable it:
 
 """
 
-from __future__ import absolute_import
-
 import errno
 import os
 

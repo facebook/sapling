@@ -162,8 +162,6 @@ If set, wait for watchman to complete a full crawl before performing queries.
 # The issues related to nested repos are probably not fundamental
 # ones. Patches to fix them are welcome.
 
-from __future__ import absolute_import
-
 import os
 
 from sapling import error, extensions, filesystem, localrepo, registrar, util

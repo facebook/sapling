@@ -5,7 +5,6 @@
 
 # visibility.py - tracking visibility through visible heads
 
-from __future__ import absolute_import
 
 import bindings
 from sapling import node, util

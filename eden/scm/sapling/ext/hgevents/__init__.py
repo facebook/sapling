@@ -20,8 +20,6 @@ to support SCM-aware subscriptions:
 https://facebook.github.io/watchman/docs/scm-query.html.
 """
 
-from __future__ import absolute_import
-
 from sapling import extensions, filemerge, merge, perftrace, registrar
 from sapling.i18n import _
 

@@ -37,8 +37,6 @@ config example::
     fakedpid = 42
 """
 
-from __future__ import absolute_import
-
 import json
 
 from sapling import progress, registrar, util

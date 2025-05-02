@@ -5,7 +5,7 @@
 
 # remotefilelog.py - filelog implementation where filelog history is stored
 #                    remotely
-from __future__ import absolute_import
+
 
 import collections
 import os

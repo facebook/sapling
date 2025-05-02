@@ -16,8 +16,6 @@ This provides efficient delta storage with O(1) retrieve and append
 and O(changes) merge between branches.
 """
 
-from __future__ import absolute_import
-
 import errno
 import hashlib
 import heapq

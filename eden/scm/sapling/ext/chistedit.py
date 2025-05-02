@@ -23,8 +23,6 @@ considered a "potential conflict".  Please note that Mercurial's merge
 algorithm might still be able to merge these files without conflict.
 """
 
-from __future__ import print_function
-
 import functools
 import os
 from typing import List, Optional

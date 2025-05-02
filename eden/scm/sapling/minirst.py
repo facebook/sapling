@@ -23,8 +23,6 @@ Remember to update https://mercurial-scm.org/wiki/HelpStyleGuide
 when adding support for new constructs.
 """
 
-from __future__ import absolute_import
-
 import re
 import sys
 

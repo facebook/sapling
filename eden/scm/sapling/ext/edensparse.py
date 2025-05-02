@@ -67,8 +67,6 @@ Example
 
 """
 
-from __future__ import division
-
 from sapling import error, extensions, merge as mergemod, registrar
 from sapling.i18n import _
 

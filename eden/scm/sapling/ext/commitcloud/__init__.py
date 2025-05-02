@@ -109,8 +109,6 @@ Configs::
     enablestatus = False
 """
 
-from __future__ import absolute_import
-
 from sapling import extensions, localrepo, node as nodemod, registrar, smartset
 from sapling.i18n import _
 

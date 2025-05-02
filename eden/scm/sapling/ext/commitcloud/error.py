@@ -5,8 +5,6 @@
 
 """commit cloud errors"""
 
-from __future__ import absolute_import
-
 import traceback
 
 from sapling import error

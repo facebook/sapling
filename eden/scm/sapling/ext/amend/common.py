@@ -5,7 +5,6 @@
 
 # common.py - common utilities for building commands
 
-from __future__ import absolute_import
 
 from sapling import (
     cmdutil,

@@ -5,7 +5,6 @@
 
 # __init__.py - Watchman client for the fsmonitor extension
 
-from __future__ import absolute_import
 
 import ctypes
 import os

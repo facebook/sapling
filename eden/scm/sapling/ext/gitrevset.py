@@ -15,8 +15,6 @@ short version:
 
 """
 
-from __future__ import absolute_import
-
 import re
 from typing import Pattern
 

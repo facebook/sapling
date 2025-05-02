@@ -16,8 +16,6 @@
 # demand loading is per-package. Keeping demandimport in the mercurial package
 # would disable demand loading for any modules in mercurial.
 
-from __future__ import absolute_import
-
 import os
 
 from . import demandimportpy3 as demandimport

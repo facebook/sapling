@@ -4,7 +4,7 @@
 # GNU General Public License version 2.
 
 # sendunbundle.py - send unbundle wireproto command
-from __future__ import absolute_import
+
 
 from .. import error, hg, util
 from ..i18n import _

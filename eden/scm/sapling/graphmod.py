@@ -22,8 +22,6 @@ context of the graph returned. Type is a constant specifying the node type.
 Data depends on type.
 """
 
-from __future__ import absolute_import
-
 from . import dagop, smartset, util
 from .node import nullrev
 

@@ -10,8 +10,6 @@ bookmarks were previously located.
 
 """
 
-from __future__ import absolute_import
-
 import os
 import weakref
 from typing import Dict

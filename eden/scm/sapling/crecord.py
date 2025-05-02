@@ -13,7 +13,6 @@
 # This code is based on the Mark Edgington's crecord extension.
 # (Itself based on Bryan O'Sullivan's record extension.)
 
-from __future__ import absolute_import
 
 import io
 import os

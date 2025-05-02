@@ -25,8 +25,6 @@ to the user.
     collapse-obsolete = True
 """
 
-from __future__ import absolute_import
-
 import datetime
 import re
 import sys
