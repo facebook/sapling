@@ -390,6 +390,9 @@ class ObjectStore : public IObjectStore,
       const ObjectFetchContextPtr& context,
       folly::stop_watch<std::chrono::milliseconds> watch) const;
 
+  void maybeCacheTreeAndAuxInLocalStore(
+      const BackingStore::GetTreeResult& treeResult) const;
+
   folly::SemiFuture<BackingStore::GetTreeAuxResult> getTreeAuxDataImpl(
       const ObjectId& id,
       const ObjectFetchContextPtr& context,
