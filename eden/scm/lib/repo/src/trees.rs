@@ -173,6 +173,10 @@ impl KeyStore for CachingTreeStore {
 // Our caching is not aux aware, so just proxy all the higher level tree methods directly
 // to wrapped TreeStore.
 impl TreeStore for CachingTreeStore {
+    fn get_local_tree(&self, path: &RepoPath, id: HgId) -> Result<Option<Box<dyn TreeEntry>>> {
+        self.store.get_local_tree(path, id)
+    }
+
     fn get_remote_tree_iter(
         &self,
         keys: Vec<Key>,
