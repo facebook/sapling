@@ -23,7 +23,7 @@ using folly::StringPiece;
 using folly::io::Appender;
 using std::string;
 
-string toBinaryHash(string hex);
+string toBinaryHash(const string& hex);
 
 TEST(GitTree, testDeserialize) {
   // This is a hash for a tree object in https://github.com/facebook/nuclide.git
@@ -224,7 +224,7 @@ TEST(GitTree, testBadDeserialize) {
   EXPECT_ANY_THROW(deserializeGitTree(zero, &buf));
 }
 
-string toBinaryHash(string hex) {
+string toBinaryHash(const string& hex) {
   string bytes;
   folly::unhexlify(hex, bytes);
   return bytes;
