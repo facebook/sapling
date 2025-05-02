@@ -1094,6 +1094,11 @@ class EdenConfig : private ConfigSettingManager {
       100,
       this};
 
+  ConfigSetting<bool> hgForceDisableLocalStoreCaching{
+      "hg:force-disable-localstore",
+      false,
+      this};
+
   ConfigSetting<bool> hgEnableBlobMetaLocalStoreCaching{
       "hg:cache-blob-metadata-in-localstore",
       true,

@@ -316,6 +316,17 @@ void SaplingBackingStore::initializeOBCCounters() {
 
 BackingStore::LocalStoreCachingPolicy
 SaplingBackingStore::constructLocalStoreCachingPolicy() {
+  using PolicyType =
+      std::underlying_type_t<BackingStore::LocalStoreCachingPolicy>;
+  PolicyType result =
+      static_cast<PolicyType>(BackingStore::LocalStoreCachingPolicy::NoCaching);
+
+  if (config_->getEdenConfig()->hgForceDisableLocalStoreCaching.getValue()) {
+    // TODO: Instead of returning a NoCaching policy, we should just avoid
+    // creating the LocalStore object if this config is set
+    return static_cast<BackingStore::LocalStoreCachingPolicy>(result);
+  }
+
   bool shouldCacheTrees =
       config_->getEdenConfig()->hgEnableTreeLocalStoreCaching.getValue();
   bool shouldCacheBlobs =
@@ -324,11 +335,6 @@ SaplingBackingStore::constructLocalStoreCachingPolicy() {
       config_->getEdenConfig()->hgEnableBlobMetaLocalStoreCaching.getValue();
   bool shouldCacheTreeAuxData =
       config_->getEdenConfig()->hgEnableTreeMetaLocalStoreCaching.getValue();
-
-  using PolicyType =
-      std::underlying_type_t<BackingStore::LocalStoreCachingPolicy>;
-  PolicyType result =
-      static_cast<PolicyType>(BackingStore::LocalStoreCachingPolicy::NoCaching);
 
   if (shouldCacheTrees) {
     result |=
