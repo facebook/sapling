@@ -9,7 +9,7 @@ import socket
 
 from sapling import error
 
-from . import localservice, saplingremoteapiservice
+from . import gitservice, localservice, saplingremoteapiservice
 
 
 def get(ui, repo=None):
@@ -25,6 +25,8 @@ def get(ui, repo=None):
             ui,
             repo,
         )
+    elif servicetype == "git":
+        gitservice.GitService(ui)
     else:
         msg = "Unrecognized commitcloud.servicetype: %s" % servicetype
         raise error.Abort(msg)
