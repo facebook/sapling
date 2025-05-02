@@ -8,6 +8,9 @@
   $ . "${TEST_FIXTURES}/library-push-redirector.sh"
 
   $ init_two_small_one_large_repo
+  A=e258521a78f8e12bee03bda35489701d887c41fd
+  A=8ca76aa82bf928df58db99489fa17938e39774e4
+  A=6ebc043d84761f4b77f73e4a2034cf5669bb6a54
 
 -- get some bonsai hashes to avoid magic strings later
   $ FBSOURCE_MASTER_BONSAI=$(mononoke_admin bookmarks --repo-id 1 get master_bookmark)
@@ -18,18 +21,18 @@
   $ add_synced_commit_mapping_entry 1 $FBSOURCE_MASTER_BONSAI 0 $MEGAREPO_MERGE_BONSAI TEST_VERSION_NAME
   $ add_synced_commit_mapping_entry 2 $OVRSOURCE_MASTER_BONSAI 0 $MEGAREPO_MERGE_BONSAI TEST_VERSION_NAME
 
+-- start mononoke
+  $ start_and_wait_for_mononoke_server
+  $ sqlite3 "$TESTTMP/monsql/sqlite_dbs" "INSERT INTO mutable_counters (repo_id, name, value) VALUES (0, 'xreposync_from_2', 0)";
+  $ mononoke_x_repo_sync 2 0 tail --catch-up-once |& grep -E '(processing|skipping)'
+  * processing log entry * (glob)
+
 -- setup hg client repos
   $ cd "$TESTTMP"
   $ setconfig remotenames.selectivepulldefault=master_bookmark,somebookmark
   $ hg clone -q mono:fbs-mon fbs-hg-cnt --noupdate
   $ hg clone -q mono:ovr-mon ovr-hg-cnt --noupdate
   $ hg clone -q mono:meg-mon meg-hg-cnt --noupdate
-
--- start mononoke
-  $ start_and_wait_for_mononoke_server
-  $ sqlite3 "$TESTTMP/monsql/sqlite_dbs" "INSERT INTO mutable_counters (repo_id, name, value) VALUES (0, 'xreposync_from_2', 0)";
-  $ mononoke_x_repo_sync 2 0 tail --catch-up-once |& grep -E '(processing|skipping)'
-  * processing log entry * (glob)
 
 -- push to a bookmark that won't be synced
   $ cd "$TESTTMP"/ovr-hg-cnt
@@ -87,19 +90,19 @@
   Starting session with id * (glob)
   Starting up X Repo Sync from small repo ovr-mon to large repo meg-mon
   Syncing 3 commits and all of their unsynced ancestors
-  Checking if 1c0ab9ee548f45eaabe8e81d8a67b2cd0748dff1453fccbed0a67a153c1bb48b is already synced 2->0
-  1c0ab9ee548f45eaabe8e81d8a67b2cd0748dff1453fccbed0a67a153c1bb48b is already synced
-  Checking if 195e3fd3952a97ff2714800a399751f1f52ac87454e745f9871403db5a377696 is already synced 2->0
-  1 unsynced ancestors of 195e3fd3952a97ff2714800a399751f1f52ac87454e745f9871403db5a377696
-  syncing 195e3fd3952a97ff2714800a399751f1f52ac87454e745f9871403db5a377696
-  changeset 195e3fd3952a97ff2714800a399751f1f52ac87454e745f9871403db5a377696 synced as 5c59f83b8a6fb9b56902be03e0bda3d7bbf2bd629a1caead56a4a8385e5cc8f5 in * (glob)
+  Checking if 9f68d735e272dce827b1c41311f8e99a8ae9f10ed971f541f0ba1a76e606f832 is already synced 2->0
+  9f68d735e272dce827b1c41311f8e99a8ae9f10ed971f541f0ba1a76e606f832 is already synced
+  Checking if 1bb2a7206ca6be0c58d221310122be17839ac6969017d940aa6ef6ca8eec495f is already synced 2->0
+  1 unsynced ancestors of 1bb2a7206ca6be0c58d221310122be17839ac6969017d940aa6ef6ca8eec495f
+  syncing 1bb2a7206ca6be0c58d221310122be17839ac6969017d940aa6ef6ca8eec495f
+  changeset 1bb2a7206ca6be0c58d221310122be17839ac6969017d940aa6ef6ca8eec495f synced as 8213e7f8c5768f72236f6d18cf84dfe5f6af4266c13da41d7eae97873d46e593 in * (glob)
   successful sync
-  Checking if de4dfe2c590fda9c42549a2f6a2ea8eb7fab5b3b9690573e499e5814fff5ba7c is already synced 2->0
-  2 unsynced ancestors of de4dfe2c590fda9c42549a2f6a2ea8eb7fab5b3b9690573e499e5814fff5ba7c
-  syncing cdd71132c0062819766a1d6eb6c0b3384a4db3070c9936bd98920c142506f940
-  changeset cdd71132c0062819766a1d6eb6c0b3384a4db3070c9936bd98920c142506f940 synced as 9d6f30edf25f7b5d72295ff3dae947aee3f74dbbf09077f16e5ce0c970875b3e in * (glob)
-  syncing de4dfe2c590fda9c42549a2f6a2ea8eb7fab5b3b9690573e499e5814fff5ba7c
-  changeset de4dfe2c590fda9c42549a2f6a2ea8eb7fab5b3b9690573e499e5814fff5ba7c synced as 160490009025590980be0fd659300a0c9fc6cf39b05f2a922cf844f11919fc5d in * (glob)
+  Checking if 545278b8c8976a9d986b1ef0270e80cbf79ae8a7991af12fa437d19341d884a8 is already synced 2->0
+  2 unsynced ancestors of 545278b8c8976a9d986b1ef0270e80cbf79ae8a7991af12fa437d19341d884a8
+  syncing 814d6ccdf14dbc46142c13c098b59d316c98ee4dfd921f85a5d2186048142b24
+  changeset 814d6ccdf14dbc46142c13c098b59d316c98ee4dfd921f85a5d2186048142b24 synced as aa1d76f7d25dc8a93190a32de9c5784c3d2b57e0d0a3d92a52d98aca800f48b8 in * (glob)
+  syncing 545278b8c8976a9d986b1ef0270e80cbf79ae8a7991af12fa437d19341d884a8
+  changeset 545278b8c8976a9d986b1ef0270e80cbf79ae8a7991af12fa437d19341d884a8 synced as bf8d1698e43e07e19660eca448c1c155aae5673a3c8f81cc53880ffda469fe6d in * (glob)
   successful sync
   X Repo Sync execution finished from small repo ovr-mon to large repo meg-mon
 

@@ -9,6 +9,9 @@
   $ setconfig ui.ignorerevnum=false
 
   $ init_two_small_one_large_repo
+  A=e258521a78f8e12bee03bda35489701d887c41fd
+  A=8ca76aa82bf928df58db99489fa17938e39774e4
+  A=6ebc043d84761f4b77f73e4a2034cf5669bb6a54
 
 -- get some bonsai hashes to avoid magic strings later
   $ FBSOURCE_MASTER_BONSAI=$(mononoke_admin bookmarks --repo-id 1 get master_bookmark)
@@ -19,6 +22,8 @@
   $ add_synced_commit_mapping_entry 1 $FBSOURCE_MASTER_BONSAI 0 $MEGAREPO_MERGE_BONSAI TEST_VERSION_NAME
   $ add_synced_commit_mapping_entry 2 $OVRSOURCE_MASTER_BONSAI 0 $MEGAREPO_MERGE_BONSAI TEST_VERSION_NAME
 
+-- start mononoke
+  $ start_and_wait_for_mononoke_server
 -- setup hg client repos
   $ cd "$TESTTMP"
   $ setconfig remotenames.selectivepulldefault=master_bookmark,somebook,fbsource/somebook
@@ -26,8 +31,6 @@
   $ hg clone -q mono:ovr-mon ovr-hg-cnt --noupdate
   $ hg clone -q mono:meg-mon meg-hg-cnt --noupdate
 
--- start mononoke
-  $ start_and_wait_for_mononoke_server
 -- create an older version of fbsource_master, with a single simple change
   $ cd "$TESTTMP"/fbs-hg-cnt
   $ hg up -q master_bookmark
@@ -113,20 +116,20 @@
   $ hg pull -q
   $ hg up master_bookmark -q
   $ hg log -r ':' -T '{remotenames} {node} {date|shortdate} {desc}\n' | sort
-   094d073f382b989af68f25267225b2e44ccf43c3 1970-01-01 fbsource commit 8 (with removal of a moved path)
-   3b1e6b17c7fed77f139c75a5a241268d41d584f8 1970-01-01 fbsource commit 4 (with copy of preserved path into preserved path)
-   4fda77caf85f3399fcb637a871a5e621c6796a6d 1970-01-01 fbsource commit 9 (with removal of a preserved path)
-   5e3b9ed38bf2153213dd8dd8841a7772d1e27074 1970-01-01 fbsource commit 7 (with copy of preserved path into moved path)
-   763de6470427ef760e578a8dd87ecaae759cf9d1 1970-01-01 fbsource commit 6 (with copy of moved path into preserved path)
-   7c7fb16d4ed18604106835e59fee72344603afa7 1970-01-01 fbsource commit 5 (with copy of moved path into moved path)
-   83da1de25a2a199f98ede29c06bc22e54943cc47 1970-01-01 megarepo commit 1
-   99c848e3f5ff3ab7746fb71816748e2ba0d7da36 1970-01-01 fbsource commit 2
-   b0474d400edddcabef0a27ead293a6b99ae59490 1970-01-01 ovrsource commit 2
-   b06de5da9e40e0da6eda1f7b5c891711106d707b 1970-01-01 fbsource commit 3
-   e0cb430152c2dcc47b93a516344e3814ece60d4b 1970-01-01 fbsource commit 10
-  remote/fbsource/somebook d692e38644b938ccccc4192bd2f507955f3888c5 1970-01-01 non-master commit
+   0c12c1c9c608c370527323d530d71f6eb195a8d7 1970-01-01 fbsource commit 9 (with removal of a preserved path)
+   0e850883d3971709d8c651e78a6b67b016242f6d 1970-01-01 fbsource commit 7 (with copy of preserved path into moved path)
+   1da063ce35d2cebfdfec3d833d66a2dfa90a9826 1970-01-01 fbsource commit 4 (with copy of preserved path into preserved path)
+   59609a45b629de9dd9c4cd1b4ea287dd99310270 1970-01-01 fbsource commit 5 (with copy of moved path into moved path)
+   6ebc043d84761f4b77f73e4a2034cf5669bb6a54 1970-01-01 megarepo commit 1
+   8655945c2e0dbc72be804baa3a01c711b2de8808 1970-01-01 fbsource commit 6 (with copy of moved path into preserved path)
+   9f5f9903501d62c1222dbd6ca29ecd998b777a7a 1970-01-01 fbsource commit 8 (with removal of a moved path)
+   b44b30660223cd0fb02481332526b3dd65ad91e1 1970-01-01 fbsource commit 10
+   b86bf896aebc7f5bb680047fc7a151e86787412a 1970-01-01 fbsource commit 2
+   b9b15f2e79843b7430d15beaca47a61ae105a9f3 1970-01-01 ovrsource commit 2
+   da3cabacad4dabc8a7fbef4dcb951374ff29bd79 1970-01-01 fbsource commit 3
+  remote/fbsource/somebook 0d2d56e4a76414a34822d0630b4a09f6f44f1a87 1970-01-01 non-master commit
   remote/master_bookmark * 20*-*-* fbsource commit resume (glob)
-  $ export FORGOTTEN_PARENT=$(hg log -T "{node}" -r b0474d400edddcabef0a27ead293a6b99ae59490^)
+  $ export FORGOTTEN_PARENT=$(hg log -T "{node}" -r b9b15f2e79843b7430d15beaca47a61ae105a9f3^)
 
 -- Validate the synced entries
   $ REPOIDLARGE=0 validate_commit_sync 10 |& grep "Validated entry"
@@ -157,45 +160,45 @@ ovrsource has two problems
 (master not matching is not a real problem though)
   $ quiet_grep bookmark -- crossrepo_verify_bookmarks 0 2 | strip_glog | sort
   'ovr-mon' has a bookmark master_bookmark but it points to a commit that has no equivalent in 'meg-mon'. If it's a shared bookmark (e.g. master) that might mean that it points to a commit from another repository
-  inconsistent value of forgotten_bookmark: 'ovr-mon' has 36a934b2f08adf9ed2331b0e0dce29522584d085748a9f42d1ca7d1c7787306a, but 'meg-mon' bookmark points to None
+  inconsistent value of forgotten_bookmark: 'ovr-mon' has 15ea1fb0b1b27b9d23175d1e7169e43d515c9aa06acf287cd992cbaf4908718e, but 'meg-mon' bookmark points to None
 
 update-large-repo-bookmarks won't create commits by itself 
 only the syncer can create the commit or they have to be imported some other way
   $ quiet_grep Missing -- crossrepo_verify_bookmarks 0 2 --update-large-repo-bookmarks 
-  * Missing outcome for 36a934b2f08adf9ed2331b0e0dce29522584d085748a9f42d1ca7d1c7787306a from small repo (glob)
+  Error: Missing outcome for 15ea1fb0b1b27b9d23175d1e7169e43d515c9aa06acf287cd992cbaf4908718e from small repo
   [1]
 
 but let's  say we synced that commit manually
-  $ mononoke_admin megarepo manual-commit-sync --source-repo-id 2 --target-repo-id 0 --commit $FORGOTTEN --parents $FORGOTTEN_PARENT --mapping-version-name TEST_VERSION_NAME
-  * using repo "ovr-mon" repoid RepositoryId(2) (glob)
-  * using repo "meg-mon" repoid RepositoryId(0) (glob)
-  * changeset resolved as: ChangesetId(Blake2(a30a90f6e3e887c6ee6451dc4c7f9cd352c20495407eb912f9017641e300ca9a)) (glob)
-  * changeset resolved as: ChangesetId(Blake2(36a934b2f08adf9ed2331b0e0dce29522584d085748a9f42d1ca7d1c7787306a)) (glob)
-  * target cs id is Some(ChangesetId(Blake2(5ec36a79a341b4235da29af79ff591881a994b44c94acaa10c3f583bdef4f2fb))) (glob)
+  $ with_stripped_logs mononoke_admin megarepo manual-commit-sync --source-repo-id 2 --target-repo-id 0 --commit $FORGOTTEN --parents $FORGOTTEN_PARENT --mapping-version-name TEST_VERSION_NAME
+  using repo "ovr-mon" repoid RepositoryId(2) (glob)
+  using repo "meg-mon" repoid RepositoryId(0) (glob)
+  changeset resolved as: ChangesetId(Blake2(5e88c1738667e8b2f4ef54dd53d2ebfb42a6fc0997fd9c5d05cb3ae7e96d5330))
+  changeset resolved as: ChangesetId(Blake2(15ea1fb0b1b27b9d23175d1e7169e43d515c9aa06acf287cd992cbaf4908718e))
+  target cs id is Some(ChangesetId(Blake2(6f62563c84369fb14c82e97dc91a9f4bfe5ffa43db8f3cb7ea06b692c9f0d2e3)))
 
 it still doesn't have any data derived
-  $ mononoke_admin derived-data -R meg-mon exists -T changeset_info -i 5ec36a79a341b4235da29af79ff591881a994b44c94acaa10c3f583bdef4f2fb
-  Not Derived: 5ec36a79a341b4235da29af79ff591881a994b44c94acaa10c3f583bdef4f2fb
+  $ mononoke_admin derived-data -R meg-mon exists -T changeset_info -i 6f62563c84369fb14c82e97dc91a9f4bfe5ffa43db8f3cb7ea06b692c9f0d2e3
+  Not Derived: 6f62563c84369fb14c82e97dc91a9f4bfe5ffa43db8f3cb7ea06b692c9f0d2e3
 
 and tried again, this time in dry run mode with limit 0 to ensure such command wouldn't do anything
   $ crossrepo_verify_bookmarks 0 2 --update-large-repo-bookmarks --no-bookmark-updates --limit 0|& grep bookmark | strip_glog | sort
 
 it still doesn't have any data derived
-  $ mononoke_admin derived-data -R meg-mon exists -T changeset_info -i 5ec36a79a341b4235da29af79ff591881a994b44c94acaa10c3f583bdef4f2fb
-  Not Derived: 5ec36a79a341b4235da29af79ff591881a994b44c94acaa10c3f583bdef4f2fb
+  $ mononoke_admin derived-data -R meg-mon exists -T changeset_info -i 6f62563c84369fb14c82e97dc91a9f4bfe5ffa43db8f3cb7ea06b692c9f0d2e3
+  Not Derived: 6f62563c84369fb14c82e97dc91a9f4bfe5ffa43db8f3cb7ea06b692c9f0d2e3
 
 and tried again, this time in dry run mode with no limit
   $ quiet_grep bookmark -- crossrepo_verify_bookmarks 0 2 --update-large-repo-bookmarks --no-bookmark-updates --limit 2| strip_glog | sort
-  setting ovrsource/forgotten_bookmark 5ec36a79a341b4235da29af79ff591881a994b44c94acaa10c3f583bdef4f2fb
+  setting ovrsource/forgotten_bookmark 6f62563c84369fb14c82e97dc91a9f4bfe5ffa43db8f3cb7ea06b692c9f0d2e3
   skipping master_bookmark because it's a common bookmark
 
 and the data is derived
-  $ mononoke_admin derived-data -R meg-mon exists -T changeset_info -i 5ec36a79a341b4235da29af79ff591881a994b44c94acaa10c3f583bdef4f2fb
-  Derived: 5ec36a79a341b4235da29af79ff591881a994b44c94acaa10c3f583bdef4f2fb
+  $ mononoke_admin derived-data -R meg-mon exists -T changeset_info -i 6f62563c84369fb14c82e97dc91a9f4bfe5ffa43db8f3cb7ea06b692c9f0d2e3
+  Derived: 6f62563c84369fb14c82e97dc91a9f4bfe5ffa43db8f3cb7ea06b692c9f0d2e3
 
 and tried again
   $ quiet_grep bookmark -- crossrepo_verify_bookmarks 0 2 --update-large-repo-bookmarks | strip_glog | sort
-  setting ovrsource/forgotten_bookmark 5ec36a79a341b4235da29af79ff591881a994b44c94acaa10c3f583bdef4f2fb
+  setting ovrsource/forgotten_bookmark 6f62563c84369fb14c82e97dc91a9f4bfe5ffa43db8f3cb7ea06b692c9f0d2e3
   skipping master_bookmark because it's a common bookmark
 
 now the verification shouldn't return that error
