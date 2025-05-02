@@ -112,6 +112,8 @@ enum InodeCatalogType {
     InMemory,
     #[strum(serialize = "lmdb")]
     Lmdb,
+    #[strum(serialize = "legacydev")]
+    LegacyDev,
 }
 
 #[derive(Deserialize, Serialize, Debug)]

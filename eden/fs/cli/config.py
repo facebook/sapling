@@ -1597,7 +1597,10 @@ class EdenCheckout:
                     f'{", ".join(sorted(SUPPORTED_INODE_CATALOG_TYPES))}.'
                 )
             inode_catalog_type = inode_catalog_type.lower()
-            if sys.platform == "win32" and inode_catalog_type == "legacy":
+            if sys.platform == "win32" and inode_catalog_type in [
+                "legacy",
+                "legacydev",
+            ]:
                 raise CheckoutConfigCorruptedError(
                     "Legacy inode catalog (overlay) type not supported on Windows. "
                     "Use Sqlite or InMemory on Windows."
@@ -2209,7 +2212,7 @@ def create_checkout_config(
                 f'{", ".join(sorted(SUPPORTED_INODE_CATALOG_TYPES))}.'
             )
     overlay_type = overlay_type.lower()
-    if sys.platform == "win32" and overlay_type == "legacy":
+    if sys.platform == "win32" and overlay_type in ["legacy", "legacydev"]:
         raise Exception(
             "Legacy overlay (inode catalog) type not supported on Windows. "
             "Use Sqlite or InMemory on Windows."
