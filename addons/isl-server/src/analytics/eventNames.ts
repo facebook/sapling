@@ -95,6 +95,7 @@ export type TrackEventName =
   | 'PhabricatorCommentsShowInEditor'
   | 'PhabricatorCommentsInsetHide'
   | 'PhabricatorCommentsInsetShow'
+  | 'PhabricatorRollbackPlanEvent'
   | 'PrSubmitOperation'
   | 'PullOperation'
   | 'PullRevOperation'
@@ -168,7 +169,8 @@ export type TrackEventName =
   | 'PendingSlocCommand'
   | 'SplitSuggestionsDismissedForSevenDays'
   | 'WarnAboutRebaseOffWarm'
-  | 'SaplingISLUriHandlerHandle';
+  | 'SaplingISLUriHandlerHandle'
+  | 'CommitInfoFieldEditFieldClick';
 
 export type TrackErrorName =
   | 'BlameError'

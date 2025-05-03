@@ -11,6 +11,7 @@ import type {FieldConfig} from './types';
 import {Icon} from 'isl-components/Icon';
 import {extractTokens, TokensList} from 'isl-components/Tokens';
 import {Fragment} from 'react';
+import {tracker} from '../analytics';
 import {Copyable} from '../Copyable';
 import {T} from '../i18n';
 import {RenderMarkup} from './RenderMarkup';
@@ -216,13 +217,18 @@ function ClickToEditField({
     <div
       className={`commit-info-rendered-${kind}${editable ? '' : ' non-editable'}`}
       data-testid={`commit-info-rendered-${renderKey}`}
-      onClick={
-        startEditingField != null && kind !== 'read-only'
-          ? () => {
-              startEditingField();
-            }
-          : undefined
-      }
+      onClick={() => {
+        if (startEditingField != null && kind !== 'read-only') {
+          startEditingField();
+
+          tracker.track('CommitInfoFieldEditFieldClick', {
+            extras: {
+              fieldKey,
+              kind,
+            },
+          });
+        }
+      }}
       onKeyPress={
         startEditingField != null && kind !== 'read-only'
           ? e => {
