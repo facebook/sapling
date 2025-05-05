@@ -12,5 +12,6 @@ pub fn init_module(py: Python, package: &str) -> PyResult<PyModule> {
     let m = PyModule::new(py, &name)?;
     m.add(py, "VERSION", ::version::VERSION)?;
     m.add(py, "VERSION_HASH", ::version::VERSION_HASH)?;
+    m.add(py, "IS_FBCODE", cfg!(fbcode_build))?;
     Ok(m)
 }
