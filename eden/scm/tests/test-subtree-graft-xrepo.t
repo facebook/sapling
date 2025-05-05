@@ -24,7 +24,17 @@ Prepare a git repo:
   $ git add .
   $ git commit -q -m G3
 
+  $ git mv a.txt b.txt
+  $ git add .
+  $ git commit -q -m G4
+
   $ git log --graph
+  * commit e815a5c1f80404f40f8fe492f461e91b4cc0e976
+  | Author: test <test@example.org>
+  | Date:   Mon Jan 1 00:00:10 2007 +0000
+  | 
+  |     G4
+  | 
   * commit 2d03d263ac7869815998b556ccec69eb36edebda
   | Author: test <test@example.org>
   | Date:   Mon Jan 1 00:00:10 2007 +0000
@@ -101,9 +111,9 @@ Test subtree graft
   $ hg subtree prefetch --url $GIT_URL --rev main
   using cached git repo at $TESTTMP/default-hgcache/gitrepos/* (glob)
   From file:/*/$TESTTMP/gitrepo (glob)
-   * [new ref]         2d03d263ac7869815998b556ccec69eb36edebda -> remote/main
+   * [new ref]         e815a5c1f80404f40f8fe492f461e91b4cc0e976 -> remote/main
 subtree graft a range of commits should work
-  $ hg subtree graft --url $GIT_URL --rev 0e0bbd7f53d7f8dfa9ef6283f68e2aa5d274a185:: --from-path "" --to-path mygitrepo
+  $ hg subtree graft --url $GIT_URL --rev 0e0bbd7f53d7f8dfa9ef6283f68e2aa5d274a185::2d03d263ac7869815998b556ccec69eb36edebda --from-path "" --to-path mygitrepo
   using cached git repo at $TESTTMP/default-hgcache/gitrepos/* (glob)
   grafting 0e0bbd7f53d7 "G2"
   merging mygitrepo/a.txt and a.txt to mygitrepo/a.txt
@@ -138,3 +148,12 @@ subtree graft a range of commits should work
       2
       3
       4
+tofix: conflicts should not occur
+  $ hg subtree graft --url $GIT_URL --rev e815a5c1f80404f40f8fe492f461e91b4cc0e976 --from-path "" --to-path mygitrepo
+  using cached git repo at $TESTTMP/default-hgcache/gitrepos/* (glob)
+  grafting e815a5c1f804 "G4"
+  local [local] changed mygitrepo/a.txt which other [graft] deleted
+  use (c)hanged version, (d)elete, or leave (u)nresolved? u
+  abort: unresolved conflicts, can't continue
+  (use 'hg resolve' and 'hg graft --continue')
+  [255]
