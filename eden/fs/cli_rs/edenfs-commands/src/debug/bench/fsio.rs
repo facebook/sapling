@@ -10,10 +10,16 @@
 use std::fs::File;
 use std::io::Read;
 use std::io::Write;
+#[cfg(target_os = "linux")]
+use std::os::unix::process::CommandExt;
 use std::path::PathBuf;
+#[cfg(target_os = "linux")]
+use std::process::Command;
 use std::time::Instant;
 
 use anyhow::Result;
+#[cfg(target_os = "linux")]
+use anyhow::anyhow;
 use edenfs_client::client::Client;
 use edenfs_utils::bytes_from_path;
 use thrift_types::edenfs::GetFileContentResponse;
@@ -29,7 +35,11 @@ use super::types::BenchmarkType;
 use crate::get_edenfs_instance;
 
 /// Runs the MFMD write benchmark and returns the benchmark results
-pub fn bench_write_mfmd(test_dir: &TestDir, random_data: &RandomData) -> Result<Benchmark> {
+pub fn bench_write_mfmd(
+    test_dir: &TestDir,
+    random_data: &RandomData,
+    no_caches: bool,
+) -> Result<Benchmark> {
     let mut agg_create_dur = std::time::Duration::new(0, 0);
     let mut agg_write_dur = std::time::Duration::new(0, 0);
     for (chunk, path) in random_data
@@ -96,6 +106,17 @@ pub fn bench_write_mfmd(test_dir: &TestDir, random_data: &RandomData) -> Result<
         "ms",
         Some(4),
     );
+
+    #[cfg(target_os = "linux")]
+    {
+        if no_caches {
+            if let Err(e) = drop_kernel_caches() {
+                eprintln!("\nFailed to drop caches: {}\n", e);
+            } else {
+                println!("\nCaches dropped successfully after writes\n");
+            }
+        }
+    }
 
     Ok(result)
 }
@@ -205,7 +226,11 @@ pub async fn bench_thrift_read_mfmd(
 }
 
 /// Runs the SFMD write benchmark and returns the benchmark results
-pub fn bench_write_sfmd(test_dir: &TestDir, random_data: &RandomData) -> Result<Benchmark> {
+pub fn bench_write_sfmd(
+    test_dir: &TestDir,
+    random_data: &RandomData,
+    no_caches: bool,
+) -> Result<Benchmark> {
     let start = Instant::now();
     let mut file = File::create(test_dir.combined_data_path())?;
     for chunk in &random_data.chunks {
@@ -231,6 +256,17 @@ pub fn bench_write_sfmd(test_dir: &TestDir, random_data: &RandomData) -> Result<
         None,
     );
     result.add_metric("create() + write()", mb_per_second_write, "MiB/s", None);
+
+    #[cfg(target_os = "linux")]
+    {
+        if no_caches {
+            if let Err(e) = drop_kernel_caches() {
+                eprintln!("\nFailed to drop caches: {}\n", e);
+            } else {
+                println!("\nCaches dropped successfully after writes\n");
+            }
+        }
+    }
 
     Ok(result)
 }
@@ -307,4 +343,21 @@ fn split_fbsource_file_path(file_path: PathBuf) -> (PathBuf, PathBuf) {
     let repo_path: PathBuf = parts[..=fbsource_idx].iter().collect();
     let rel_file_path: PathBuf = parts[fbsource_idx + 1..].iter().collect();
     (repo_path, rel_file_path)
+}
+
+#[cfg(target_os = "linux")]
+fn drop_kernel_caches() -> Result<()> {
+    let status = Command::new("sh")
+        .arg("-c")
+        .arg("echo 3 > /proc/sys/vm/drop_caches")
+        .uid(0)
+        .gid(0)
+        .status()
+        .map_err(|e| anyhow!("Failed to execute shell: {}", e))?;
+
+    if status.success() {
+        Ok(())
+    } else {
+        Err(anyhow!("Failed to drop caches: {}", status))
+    }
 }

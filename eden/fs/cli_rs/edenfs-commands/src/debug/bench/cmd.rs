@@ -38,6 +38,11 @@ pub enum BenchCmd {
         /// Read file content through file system or via thrift.
         #[clap(long, value_enum, default_value_t = types::ReadFileMethod::Fs)]
         read_file_via: types::ReadFileMethod,
+
+        /// Whether to drop memory caches after writes.
+        /// Only supported on linux and needs root privilege to run.
+        #[clap(long)]
+        drop_kernel_caches: bool,
     },
 
     #[clap(about = "Run database I/O benchmarks")]
@@ -72,6 +77,7 @@ impl crate::Subcommand for BenchCmd {
                 number_of_files,
                 chunk_size,
                 read_file_via,
+                drop_kernel_caches,
             } => match gen::TestDir::validate(
                 test_dir,
                 *read_file_via == types::ReadFileMethod::Thrift,
@@ -84,7 +90,10 @@ impl crate::Subcommand for BenchCmd {
                         random_data.chunk_size as f64 / types::BYTES_IN_KILOBYTE as f64,
                         random_data.total_size() as f64 / types::BYTES_IN_GIGABYTE as f64
                     );
-                    println!("{}", fsio::bench_write_mfmd(&test_dir, &random_data)?);
+                    println!(
+                        "{}",
+                        fsio::bench_write_mfmd(&test_dir, &random_data, *drop_kernel_caches)?
+                    );
                     match read_file_via {
                         types::ReadFileMethod::Fs => {
                             println!("{}", fsio::bench_fs_read_mfmd(&test_dir, &random_data)?);
@@ -96,7 +105,10 @@ impl crate::Subcommand for BenchCmd {
                             );
                         }
                     }
-                    println!("{}", fsio::bench_write_sfmd(&test_dir, &random_data)?);
+                    println!(
+                        "{}",
+                        fsio::bench_write_sfmd(&test_dir, &random_data, *drop_kernel_caches)?
+                    );
                     match read_file_via {
                         types::ReadFileMethod::Fs => {
                             println!("{}", fsio::bench_fs_read_sfmd(&test_dir, &random_data)?);
