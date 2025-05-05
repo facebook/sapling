@@ -75,7 +75,7 @@ define_flags! {
         /// location of the backing repo to be used or created (EXPERIMENTAL)
         eden_backing_repo: String,
 
-        /// configure repo to run against AWS (EXPERIMENTAL)
+        /// configure repo to run against AWS (EXPERIMENTAL) (FBCODE)
         aws: bool,
 
         #[arg]
