@@ -95,7 +95,14 @@ class mergestate:
 
     @classmethod
     def clean(
-        cls, repo, node=None, other=None, labels=None, ancestors=None, inmemory=False
+        cls,
+        repo,
+        node=None,
+        other=None,
+        labels=None,
+        ancestors=None,
+        inmemory=False,
+        from_repo=None,
     ) -> "mergestate":
         """Initialize a brand new merge state, removing any existing state on disk."""
         shutil.rmtree(repo.localvfs.join("merge"), True)
@@ -106,6 +113,7 @@ class mergestate:
             rust_ms=rust_ms,
             ancestors=ancestors,
             inmemory=inmemory,
+            from_repo=from_repo,
         )
         return obj
 
@@ -121,20 +129,25 @@ class mergestate:
         # so it's set transiently there. It isn't read during `hg resolve`.
         ancestors = None
 
+        # XXX: construct from_repo from rust_ms
+        from_repo = repo
+
         obj = cls.__new__(cls)
         obj._init(
             repo=repo,
             rust_ms=rust_ms,
             ancestors=ancestors,
             inmemory=False,
+            from_repo=from_repo,
         )
         return obj
 
-    def __init__(self, repo, rust_ms, ancestors, inmemory):
+    def __init__(self, repo, rust_ms, ancestors, inmemory, from_repo=None):
         raise RuntimeError("Use mergestate.read() or mergestate.clean()")
 
-    def _init(self, repo, rust_ms, ancestors, inmemory):
+    def _init(self, repo, rust_ms, ancestors, inmemory, from_repo=None):
         self._repo = repo
+        self._from_repo = from_repo or repo
         self._ancestors = ancestors
         self._inmemory = inmemory
         self._rust_ms = rust_ms
@@ -154,11 +167,23 @@ class mergestate:
             "experimental", "optimize-in-memory-merge-state", True
         )
 
-    def reset(self, node=None, other=None, labels=None, ancestors=None, inmemory=False):
+    def reset(
+        self,
+        node=None,
+        other=None,
+        labels=None,
+        ancestors=None,
+        inmemory=False,
+        from_repo=None,
+    ):
         shutil.rmtree(self._repo.localvfs.join("merge"), True)
         rust_ms = rustworkingcopy.mergestate(node, other, labels)
         self._init(
-            repo=self._repo, rust_ms=rust_ms, ancestors=ancestors, inmemory=inmemory
+            repo=self._repo,
+            rust_ms=rust_ms,
+            ancestors=ancestors,
+            inmemory=inmemory,
+            from_repo=from_repo,
         )
         for var in ("localctx", "otherctx", "ancestorctxs"):
             if var in vars(self):
@@ -350,11 +375,11 @@ class mergestate:
         dnode = bin(hexdnode)
         onode = bin(hexonode)
         anode = bin(hexanode)
-        octx = self._repo[self._other]
+        octx = self._from_repo[self._other]
         extras = self.extras(dfile)
         anccommitnode = extras.get("ancestorlinknode")
         if anccommitnode:
-            actx = self._repo[anccommitnode]
+            actx = self._from_repo[anccommitnode]
         else:
             actx = None
 
@@ -364,7 +389,7 @@ class mergestate:
         fcd = self._filectxorabsent(dnode, wctx, dfile)
         fco = self._filectxorabsent(onode, octx, ofile)
         # TODO: move this to filectxorabsent
-        fca = self._repo.filectx(afile, fileid=anode, changeid=actx)
+        fca = self._from_repo.filectx(afile, fileid=anode, changeid=actx)
         # "premerge" x flags
         flo = fco.flags()
         fla = fca.flags()
@@ -1479,7 +1504,6 @@ def applyupdates(
     updated, merged, removed = 0, 0, 0
     other_node = mctx.node()
 
-    # XXX: add xrepo info to mergestate
     ms = mergestate.clean(
         to_repo,
         node=wctx.p1().node(),
@@ -1492,6 +1516,7 @@ def applyupdates(
         ),
         labels=labels,
         inmemory=wctx.isinmemory(),
+        from_repo=from_repo,
     )
 
     for from_path, to_path in mctx.manifest().diffgrafts():

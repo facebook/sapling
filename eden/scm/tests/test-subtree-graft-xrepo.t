@@ -102,9 +102,39 @@ Test subtree graft
   using cached git repo at $TESTTMP/default-hgcache/gitrepos/* (glob)
   From file:/*/$TESTTMP/gitrepo (glob)
    * [new ref]         2d03d263ac7869815998b556ccec69eb36edebda -> remote/main
-tofix: subtree graft a range of commits should work
+subtree graft a range of commits should work
   $ hg subtree graft --url $GIT_URL --rev 0e0bbd7f53d7f8dfa9ef6283f68e2aa5d274a185:: --from-path "" --to-path mygitrepo
   using cached git repo at $TESTTMP/default-hgcache/gitrepos/* (glob)
   grafting 0e0bbd7f53d7 "G2"
-  abort: unknown revision '0e0bbd7f53d7f8dfa9ef6283f68e2aa5d274a185'!
-  [255]
+  merging mygitrepo/a.txt and a.txt to mygitrepo/a.txt
+  grafting 2d03d263ac78 "G3"
+  merging mygitrepo/a.txt and a.txt to mygitrepo/a.txt
+  $ hg log -G -T '{node|short} {desc}\n' -p -r .^::
+  @  516708be4743 Graft "G3"
+  │
+  │  Grafted from 2d03d263ac7869815998b556ccec69eb36edebda
+  │  - Grafted path  to mygitrepo
+  │  diff --git a/mygitrepo/a.txt b/mygitrepo/a.txt
+  │  --- a/mygitrepo/a.txt
+  │  +++ b/mygitrepo/a.txt
+  │  @@ -1,5 +1,5 @@
+  │   1a
+  │   2
+  │  -3
+  │  +3a
+  │   4
+  │   5
+  │
+  o  ccd4e9b5eba6 Graft "G2"
+  │
+  ~  Grafted from 0e0bbd7f53d7f8dfa9ef6283f68e2aa5d274a185
+     - Grafted path  to mygitrepo
+     diff --git a/mygitrepo/a.txt b/mygitrepo/a.txt
+     --- a/mygitrepo/a.txt
+     +++ b/mygitrepo/a.txt
+     @@ -1,4 +1,4 @@
+     -1
+     +1a
+      2
+      3
+      4
