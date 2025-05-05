@@ -28,6 +28,8 @@ pub enum BenchmarkType {
     FsWriteSingleFile,
     FsReadSingleFile,
     FsTraversal,
+    ThriftReadMultipleFiles,
+    ThriftReadSingleFile,
     RocksDbWriteMultipleFiles,
     RocksDbReadMultipleFiles,
     LmdbWriteMultipleFiles,
@@ -43,6 +45,8 @@ impl std::fmt::Display for BenchmarkType {
             BenchmarkType::FsReadMultipleFiles => write!(f, "Filesystem Read Multiple Files"),
             BenchmarkType::FsWriteSingleFile => write!(f, "Filesystem Write Single File"),
             BenchmarkType::FsReadSingleFile => write!(f, "Filesystem Read Single File"),
+            BenchmarkType::ThriftReadMultipleFiles => write!(f, "Thrift Read Multiple File"),
+            BenchmarkType::ThriftReadSingleFile => write!(f, "Thrift Read Single File"),
             BenchmarkType::FsTraversal => write!(f, "Filesystem Traversal"),
             BenchmarkType::RocksDbWriteMultipleFiles => write!(f, "RocksDB Write Multiple Files"),
             BenchmarkType::RocksDbReadMultipleFiles => write!(f, "RocksDB Read Multiple Files"),
@@ -52,6 +56,12 @@ impl std::fmt::Display for BenchmarkType {
             BenchmarkType::SqliteReadMultipleFiles => write!(f, "SQLite Read Multiple Files"),
         }
     }
+}
+
+#[derive(Debug, Clone, PartialEq, clap::ValueEnum)]
+pub enum ReadFileMethod {
+    Fs,
+    Thrift,
 }
 
 /// Represents the result of a benchmark operation

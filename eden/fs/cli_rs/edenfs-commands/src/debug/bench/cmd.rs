@@ -21,7 +21,7 @@ use crate::ExitCode;
 #[derive(Parser, Debug)]
 #[clap(about = "Run benchmarks for EdenFS and OS-native file systems on Linux, macOS, and Windows")]
 pub enum BenchCmd {
-    #[clap(about = "Run filesystem I/O benchmarks")]
+    #[clap(about = "Run filesystem/thrift I/O benchmarks")]
     FsIo {
         /// Directory to use for testing
         #[clap(long, default_value_t = std::env::temp_dir().to_str().unwrap().to_string())]
@@ -34,6 +34,10 @@ pub enum BenchCmd {
         /// Size of each chunk in bytes
         #[clap(long, default_value_t = types::DEFAULT_CHUNK_SIZE)]
         chunk_size: usize,
+
+        /// Read file content through file system or via thrift.
+        #[clap(long, value_enum, default_value_t = types::ReadFileMethod::Fs)]
+        read_file_via: types::ReadFileMethod,
     },
 
     #[clap(about = "Run database I/O benchmarks")]
@@ -67,7 +71,11 @@ impl crate::Subcommand for BenchCmd {
                 test_dir,
                 number_of_files,
                 chunk_size,
-            } => match gen::TestDir::validate(test_dir) {
+                read_file_via,
+            } => match gen::TestDir::validate(
+                test_dir,
+                *read_file_via == types::ReadFileMethod::Thrift,
+            ) {
                 Ok(test_dir) => {
                     let random_data = gen::RandomData::new(*number_of_files, *chunk_size);
                     println!(
@@ -77,9 +85,26 @@ impl crate::Subcommand for BenchCmd {
                         random_data.total_size() as f64 / types::BYTES_IN_GIGABYTE as f64
                     );
                     println!("{}", fsio::bench_write_mfmd(&test_dir, &random_data)?);
-                    println!("{}", fsio::bench_read_mfmd(&test_dir, &random_data)?);
+                    match read_file_via {
+                        types::ReadFileMethod::Fs => {
+                            println!("{}", fsio::bench_fs_read_mfmd(&test_dir, &random_data)?);
+                        }
+                        types::ReadFileMethod::Thrift => {
+                            println!(
+                                "{}",
+                                fsio::bench_thrift_read_mfmd(&test_dir, &random_data).await?
+                            );
+                        }
+                    }
                     println!("{}", fsio::bench_write_sfmd(&test_dir, &random_data)?);
-                    println!("{}", fsio::bench_read_sfmd(&test_dir, &random_data)?);
+                    match read_file_via {
+                        types::ReadFileMethod::Fs => {
+                            println!("{}", fsio::bench_fs_read_sfmd(&test_dir, &random_data)?);
+                        }
+                        types::ReadFileMethod::Thrift => {
+                            println!("{}", fsio::bench_thrift_read_sfmd(&test_dir).await?);
+                        }
+                    }
                     test_dir.remove()?;
                 }
                 Err(e) => return Err(e),
@@ -88,7 +113,7 @@ impl crate::Subcommand for BenchCmd {
                 test_dir,
                 number_of_files,
                 chunk_size,
-            } => match gen::TestDir::validate(test_dir) {
+            } => match gen::TestDir::validate(test_dir, false) {
                 Ok(test_dir) => {
                     let random_data = gen::RandomData::new(*number_of_files, *chunk_size);
                     println!(
