@@ -23,7 +23,7 @@ namespace {
  * it doesn't matter.
  */
 bool isAllowlisted(
-    folly::StringPiece methodName,
+    std::string_view methodName,
     const std::vector<std::string>& methodAllowlist) {
   for (auto& name : methodAllowlist) {
     if (methodName == name) {
@@ -42,18 +42,18 @@ ThriftPermissionChecker::ThriftPermissionChecker(
     : serverState_{std::move(serverState)} {}
 
 void* ThriftPermissionChecker::getContext(
-    const char* /*fn_name*/,
+    std::string_view /*fn_name*/,
     apache::thrift::TConnectionContext* connectionContext) {
   return connectionContext;
 }
 
 void ThriftPermissionChecker::freeContext(
     void* /*ctx*/,
-    const char* /*fn_name*/) {
+    std::string_view /*fn_name*/) {
   // We don't own the connectionContext.
 }
 
-void ThriftPermissionChecker::preRead(void* ctx, const char* fn_name) {
+void ThriftPermissionChecker::preRead(void* ctx, std::string_view fn_name) {
   if (isAllowlisted(
           fn_name,
           serverState_->getReloadableConfig()

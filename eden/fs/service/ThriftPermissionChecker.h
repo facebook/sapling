@@ -28,11 +28,11 @@ class ThriftPermissionChecker : public apache::thrift::TProcessorEventHandler {
   explicit ThriftPermissionChecker(std::shared_ptr<ServerState> serverState);
 
   void* getContext(
-      const char* fn_name,
+      std::string_view fn_name,
       apache::thrift::TConnectionContext* connectionContext) override;
-  void freeContext(void* ctx, const char* fn_name) override;
+  void freeContext(void* ctx, std::string_view fn_name) override;
 
-  void preRead(void* ctx, const char* fn_name) override;
+  void preRead(void* ctx, std::string_view fn_name) override;
 
  private:
   std::shared_ptr<ServerState> serverState_;
