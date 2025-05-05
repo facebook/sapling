@@ -93,33 +93,61 @@ class mergestate:
 
     statepath = "merge/state2"
 
-    @staticmethod
-    def clean(repo, node=None, other=None, labels=None, ancestors=None, inmemory=False):
-        """Initialize a brand new merge state, removing any existing state on
-        disk."""
-        ms = mergestate(repo)
-        ms.reset(
-            node=node,
-            other=other,
-            labels=labels,
+    @classmethod
+    def clean(
+        cls, repo, node=None, other=None, labels=None, ancestors=None, inmemory=False
+    ) -> "mergestate":
+        """Initialize a brand new merge state, removing any existing state on disk."""
+        shutil.rmtree(repo.localvfs.join("merge"), True)
+        rust_ms = rustworkingcopy.mergestate(node, other, labels)
+        obj = cls.__new__(cls)
+        obj._init(
+            repo=repo,
+            rust_ms=rust_ms,
             ancestors=ancestors,
             inmemory=inmemory,
         )
-        return ms
+        return obj
 
-    @staticmethod
-    def read(repo):
+    @classmethod
+    def read(cls, repo) -> "mergestate":
         """Initialize the merge state, reading it from disk."""
-        ms = mergestate(repo)
-        ms._read(repo._rsrepo.workingcopy().mergestate())
-        return ms
+        rust_ms = repo._rsrepo.workingcopy().mergestate()
 
-    def __init__(self, repo):
-        """Initialize the merge state.
+        # Note: ancestors isn't written into the state file since the current
+        # state file predates it.
+        #
+        # It's only needed during `applyupdates` in the initial call to merge,
+        # so it's set transiently there. It isn't read during `hg resolve`.
+        ancestors = None
 
-        Do not use this directly! Instead call read() or clean()."""
+        obj = cls.__new__(cls)
+        obj._init(
+            repo=repo,
+            rust_ms=rust_ms,
+            ancestors=ancestors,
+            inmemory=False,
+        )
+        return obj
+
+    def __init__(self, repo, rust_ms, ancestors, inmemory):
+        raise RuntimeError("Use mergestate.read() or mergestate.clean()")
+
+    def _init(self, repo, rust_ms, ancestors, inmemory):
         self._repo = repo
+        self._ancestors = ancestors
+        self._inmemory = inmemory
+        self._rust_ms = rust_ms
+        if md := rust_ms.mergedriver():
+            self._readmergedriver = md[0]
+            self._mdstate = md[1]
+        else:
+            self._readmergedriver = None
+            self._mdstate = "s"
+
         self._dirty = False
+        self._results = {}
+        self._inmemory_to_be_merged = {}
 
         # Optimize various aspects during "in-memory" merges.
         self._optimize_inmemory = repo.ui.configbool(
@@ -128,41 +156,10 @@ class mergestate:
 
     def reset(self, node=None, other=None, labels=None, ancestors=None, inmemory=False):
         shutil.rmtree(self._repo.localvfs.join("merge"), True)
-
-        self._read(rustworkingcopy.mergestate(node, other, labels))
-
-        if ancestors:
-            self._ancestors = ancestors
-
-        self._inmemory = inmemory
-
-    def _read(self, rust_ms):
-        """Analyse each record content to restore a serialized state from disk
-
-        This function process "record" entry produced by the de-serialization
-        of on disk file.
-        """
-        self._rust_ms = rust_ms
-
-        if md := rust_ms.mergedriver():
-            self._readmergedriver = md[0]
-            self._mdstate = md[1]
-        else:
-            self._readmergedriver = None
-            self._mdstate = "s"
-
-        self._results = {}
-        self._dirty = False
-        self._inmemory = False
-
-        self._inmemory_to_be_merged = {}
-
-        # Note: _ancestors isn't written into the state file since the current
-        # state file predates it.
-        #
-        # It's only needed during `applyupdates` in the initial call to merge,
-        # so it's set transiently there. It isn't read during `hg resolve`.
-        self._ancestors = None
+        rust_ms = rustworkingcopy.mergestate(node, other, labels)
+        self._init(
+            repo=self._repo, rust_ms=rust_ms, ancestors=ancestors, inmemory=inmemory
+        )
         for var in ("localctx", "otherctx", "ancestorctxs"):
             if var in vars(self):
                 delattr(self, var)
