@@ -58,11 +58,12 @@ Prepare a git repo:
 
 Test subtree prefetch with an invalid commit hash
   $ newclientrepo
-  $ hg subtree prefetch --url $GIT_URL --rev aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa 2>&1 | head -n 10
+  $ hg subtree prefetch --url $GIT_URL --rev aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
   creating git repo at $TESTTMP/default-hgcache/gitrepos/* (glob)
   fatal: git upload-pack: not our ref aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
   fatal: remote error: upload-pack: not our ref aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
   abort: unknown revision 'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa'!
+  [255]
 
 Prepare a Sapling repo:
 
