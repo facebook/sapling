@@ -19,7 +19,7 @@ rust_library(
     deps = [
         "fbsource//third-party/rust:anyhow",
         "fbsource//third-party/rust:futures",
-        "fbsource//third-party/rust:governor",
+        "fbsource//third-party/rust:governor-old",
         "fbsource//third-party/rust:thiserror",
         "//eden/mononoke/mononoke_macros:mononoke_macros",
     ],
