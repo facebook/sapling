@@ -251,3 +251,34 @@ fn test_derived_dependency_tree() {
     });
     assert_eq!(recalc, "QX");
 }
+
+#[test]
+fn test_crate_rwlock() {
+    atom!(V, crate::RwLock<u32>);
+
+    // W = V + 1
+    atom!(W, u32, |store| {
+        mark_recalc('W');
+        let v = store.get::<V>().unwrap();
+        let v = *v.read();
+        Ok(Arc::new(v + 1))
+    });
+
+    let store = Store::new();
+    let v = store.set_rwlock::<V, _>(10);
+    assert_eq!(store.get::<W>().unwrap(), Arc::new(11));
+
+    // Reading `v` won't trigger recalc.
+    let recalc = track_recalc(|| {
+        assert_eq!(*v.read(), 10);
+        assert_eq!(store.get::<W>().unwrap(), Arc::new(11));
+    });
+    assert_eq!(recalc, "");
+
+    // Writing `v` triggers recalc. No need to `store.set::<V>`.
+    let recalc = track_recalc(|| {
+        *v.write() = 11;
+        assert_eq!(store.get::<W>().unwrap(), Arc::new(12));
+    });
+    assert_eq!(recalc, "W");
+}

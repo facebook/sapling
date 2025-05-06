@@ -53,6 +53,23 @@ impl Store {
         let value = value.downcast::<V::Value>().unwrap();
         Ok(value)
     }
+
+    /// Similar to `self.set(RwLock::new(value))`, but mark the value as changed
+    /// when the write lock guard is dropped.
+    /// Returns the `Arc<RwLock>` that can be modified and trigger store refresh.
+    #[must_use]
+    pub fn set_rwlock<V: Atom, T>(&self, value: T) -> Arc<V::Value>
+    where
+        V::Value: From<crate::RwLock<T>>,
+    {
+        let lock = crate::RwLock::new(value);
+        // safety: not calling unbalanced lock / unlock here.
+        let raw = unsafe { lock.raw() };
+        raw.touch_store_on_change::<V>(self);
+        let value: Arc<V::Value> = Arc::new(lock.into());
+        self.set::<V>(value.clone());
+        value
+    }
 }
 
 impl GetAtomValue for Store {
@@ -73,6 +90,24 @@ impl Default for StoreInner {
 // Right now the `key` is just a static type id.
 // In the future it might be extended to support `atomFamily` use-cases.
 type Key = TypeId;
+
+impl crate::lock::WrappedRwLock {
+    /// For an `RwLock`, mark `V` as changed when `RwLock::write` guard gets dropped.
+    fn touch_store_on_change<V: Atom>(&self, store: &Store) {
+        let key = key_of::<V>();
+        self.touch_store_on_change_impl(store, key);
+    }
+
+    fn touch_store_on_change_impl(&self, store: &Store, key: Key) {
+        let weak = Arc::downgrade(&store.inner);
+        let on_drop = move || {
+            if let Some(inner) = weak.upgrade() {
+                inner.write().touch(key);
+            }
+        };
+        let _ = self.on_unlock_exclusive.set(Box::new(on_drop));
+    }
+}
 
 // The following are internal implementation details.
 
@@ -110,7 +145,7 @@ struct ValueState {
     recalc: RecalcFunc,
 }
 
-type RecalcFunc = Arc<dyn Fn(&Store, Option<ArcAny>) -> Result<ArcAny>>;
+type RecalcFunc = Arc<dyn Fn(&Store, Option<ArcAny>) -> Result<ArcAny> + Send + Sync>;
 
 impl Store {
     fn get_impl(&self, key: Key, get_recalc: &dyn Fn() -> RecalcFunc) -> Result<ArcAny> {
@@ -307,6 +342,19 @@ impl StoreInner {
         };
         self.epoch = NonZeroUsize::new(next_epoch).unwrap();
         version
+    }
+
+    /// Bump the version of a value to mark it as changed.
+    /// This is only useful for values with interior mutability.
+    fn touch(&mut self, key: Key) {
+        if let Some(value_state) = self.values.get_mut(&key) {
+            let next_epoch = self.epoch.get().wrapping_add(1).max(1);
+            value_state.version = value_state.version.wrapping_add(1);
+            value_state
+                .checked_epoch
+                .store(next_epoch, Ordering::Release);
+            self.epoch = NonZeroUsize::new(next_epoch).unwrap();
+        }
     }
 }
 

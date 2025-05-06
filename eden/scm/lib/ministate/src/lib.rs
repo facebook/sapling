@@ -54,6 +54,7 @@
 //! ```
 
 mod atom;
+mod lock;
 mod macros;
 mod store;
 
@@ -64,4 +65,5 @@ pub use anyhow::Result;
 pub use atom::Atom;
 pub use atom::GetAtomValue;
 pub use atom::PrimitiveValue;
+pub use lock::RwLock;
 pub use store::Store;

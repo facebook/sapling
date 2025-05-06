@@ -12,6 +12,9 @@ macro_rules! atom {
     ($name:ident, RwLock<$value:ty>) => {
         $crate::atom!($name, mut RwLock<$value>);
     };
+    ($name:ident, $mod:ident :: RwLock<$value:ty>) => {
+        $crate::atom!($name, mut $mod :: RwLock<$value>);
+    };
     ($name:ident, Mutex<$value:ty>) => {
         $crate::atom!($name, mut Mutex<$value>);
     };
