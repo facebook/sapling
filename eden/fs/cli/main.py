@@ -832,6 +832,12 @@ class CloneCmd(Subcmd):
             nargs=argparse.REMAINDER,
             help=argparse.SUPPRESS,
         )
+        parser.add_argument(
+            "--preserved-vars",
+            "-p",
+            nargs="*",  # zero or more env vars can be passed
+            help=argparse.SUPPRESS,
+        )
 
         parser.add_argument(
             "--nfs",
@@ -1098,7 +1104,10 @@ is case-sensitive. This is not recommended and is intended only for testing."""
             # Sometimes this returns a non-zero exit code if it does not finish
             # startup within the default timeout.
             exit_code = daemon.start_edenfs_service(
-                instance, args.daemon_binary, args.edenfs_args
+                instance,
+                args.daemon_binary,
+                args.edenfs_args,
+                args.preserved_vars,
             )
             if exit_code != 0:
                 return exit_code
