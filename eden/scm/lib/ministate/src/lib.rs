@@ -57,6 +57,9 @@ mod atom;
 mod macros;
 mod store;
 
+#[cfg(test)]
+mod tests;
+
 pub use anyhow::Result;
 pub use atom::Atom;
 pub use atom::GetAtomValue;
