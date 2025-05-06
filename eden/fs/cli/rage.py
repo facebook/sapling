@@ -680,7 +680,11 @@ def print_system_mount_table(out: IOWithRedaction) -> None:
     try:
         section_title("Mount table:", out)
         output = subprocess.check_output(["mount"])
-        out.write(output.decode("utf-8", errors="backslashreplace"))
+        sorted_mounts = sorted(
+            output.decode("utf-8", errors="backslashreplace").split("\n")
+        )
+        for m in sorted_mounts:
+            out.write(f"{m}\n")
     except Exception as e:
         out.write(f"Error printing system mount table: {e}\n")
 
