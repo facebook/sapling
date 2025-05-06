@@ -646,7 +646,7 @@ def print_env_variables(
 ) -> None:
     try:
         section_title("Host environment variables:", out)
-        for k, v in os.environ.items():
+        for k, v in sorted(os.environ.items()):
             out.write(f"{k}={v}\n")
     except Exception as e:
         out.write(f"Error getting host environment variables: {e}\n")
@@ -666,7 +666,7 @@ def print_env_variables(
         if edenfs_instance_pid is not None:
             p = psutil.Process(edenfs_instance_pid)
             env_variables = p.environ()
-            for k, v in env_variables.items():
+            for k, v in sorted(env_variables.items()):
                 out.write(f"{k}={v}\n")
         else:
             out.write("EdenFS daemon pid could not be determined\n")
