@@ -2270,6 +2270,18 @@ class StartCmd(Subcmd):
             action="store_true",
             help="Run edenfs in the foreground, rather than daemonizing",
         )
+        parser.add_argument(
+            "--preserved-vars",
+            "-p",
+            nargs="*",  # zero or more env vars can be passed
+            help=(
+                "By default, the EdenFS daemon is started with a limited set "
+                "of environment variables. This option specifies additional "
+                "environment variables that should be preserved (or passed) "
+                "when starting a new daemon. NOTE: this should only contain "
+                "the names of the env vars, not their desired values."
+            ),
+        )
         if sys.platform != "win32":
             parser.add_argument(
                 "--takeover",
@@ -2351,14 +2363,16 @@ class StartCmd(Subcmd):
 
         if is_takeover and health_info.is_healthy():
             daemon.gracefully_restart_edenfs_service(
-                instance, daemon_binary, args.edenfs_args
+                instance, daemon_binary, args.edenfs_args, args.preserved_vars
             )
 
         if config_mod.should_migrate_mount_protocol_to_nfs(instance):
             config_mod._do_nfs_migration(instance, get_migration_success_message)
         if config_mod.should_migrate_inode_catalog_to_in_memory(instance):
             config_mod._do_in_memory_inode_catalog_migration(instance)
-        result = daemon.start_edenfs_service(instance, daemon_binary, args.edenfs_args)
+        result = daemon.start_edenfs_service(
+            instance, daemon_binary, args.edenfs_args, args.preserved_vars
+        )
 
         # show Eden ready notification only if there are any active eden mounts
         if instance.get_mount_paths():
@@ -2428,7 +2442,7 @@ class StartCmd(Subcmd):
                 cmd = ["strace", "-fttT", "-o", args.strace] + cmd
 
         # Wrap the command in sudo, if necessary
-        eden_env = daemon.get_edenfs_environment()
+        eden_env = daemon.get_edenfs_environment(args.preserved_vars)
         cmd, eden_env = daemon.prepare_edenfs_privileges(
             daemon_binary, cmd, eden_env, privhelper
         )

@@ -12,6 +12,8 @@ import subprocess
 import sys
 from typing import Dict, List, Optional, Sequence, Tuple
 
+import psutil
+
 from eden.fs.cli.config import EdenInstance
 from eden.fs.cli.util import HealthStatus
 from fb303_core.ttypes import fb303_status
@@ -128,6 +130,26 @@ class StartTest(testcase.EdenTestCase):
         # so the self.eden class doesn't really know it is running and that
         # it needs to be shut down.
         self.eden.run_cmd("stop")
+
+    def test_start_with_preserved_vars(self) -> None:
+        self.eden.shutdown()
+        self.assertFalse(self.eden.is_healthy())
+        self.eden.start(
+            preserved_env=["FOO_TEST_VAR", "FOO_TEST_VAR2"],
+            extra_env={
+                "FOO_TEST_VAR": "foo",
+                "FOO_TEST_VAR2": "bar",
+                "FOO_UNPRESERVED_TEST_VAR": "baz",
+            },
+            should_wait_for_daemon_healthy=True,
+        )
+        self.assertTrue(self.eden.is_healthy())
+
+        daemon_pid = self.eden.get_pid_via_thrift()
+        daemon_env = psutil.Process(daemon_pid).environ()
+        self.assertEqual(daemon_env["FOO_TEST_VAR"], "foo")
+        self.assertEqual(daemon_env["FOO_TEST_VAR2"], "bar")
+        self.assertNotIn("FOO_UNPRESERVED_TEST_VAR", daemon_env)
 
     def edenfsctl_args(self) -> List[str]:
         return ["-d", FindExe.EDEN_DAEMON]
