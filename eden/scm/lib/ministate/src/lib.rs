@@ -18,9 +18,10 @@
 //! store.set(countAtom, 1);
 //! ```
 //!
-//! ```ignore
+//! ```
 //! # use std::sync::Arc;
 //! # use ministate::atom;
+//! # let store = ministate::Store::new();
 //! // ministate
 //! atom!(CountAtom, u32, 0);
 //! store.set::<CountAtom>(1);
@@ -34,21 +35,30 @@
 //! const value = store.get(doubledCountAtom);
 //! ```
 //!
-//! ```ignore
+//! ```
 //! # use std::sync::Arc;
 //! # use ministate::atom;
 //! # atom!(CountAtom, u32, 1);
+//! # let store = ministate::Store::new();
 //! // ministate
 //! atom!(DoubledCountAtom, u32, |store| Ok(Arc::new(
 //!     *store.get::<CountAtom>()? * 2
 //! )));
 //! let value = store.get::<DoubledCountAtom>().unwrap();
+//! # assert_eq!(*value, 2);
+//! # store.set::<CountAtom>(3);
+//! # let value = store.get::<CountAtom>().unwrap();
+//! # assert_eq!(*value, 3);
+//! # let value = store.get::<DoubledCountAtom>().unwrap();
+//! # assert_eq!(*value, 6);
 //! ```
 
 mod atom;
 mod macros;
+mod store;
 
 pub use anyhow::Result;
 pub use atom::Atom;
 pub use atom::GetAtomValue;
 pub use atom::PrimitiveValue;
+pub use store::Store;
