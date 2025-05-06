@@ -598,7 +598,9 @@ class EdenfsNotHealthy(FixableProblem):
     def perform_fix(self) -> None:
         """Try to start EdenFS. If Eden is running, an exception will be thrown (and ignored)."""
         try:
-            daemon.start_edenfs_service(self._instance, None, None)
+            daemon.start_edenfs_service(
+                self._instance, daemon_binary=None, edenfs_args=None, preserved_env=None
+            )
         except Exception:
             # Eden start failed, or Eden is already running/starting. Either way,
             # check_fix will determine if the fix worked.
