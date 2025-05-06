@@ -60,10 +60,6 @@ pub(crate) mod ffi {
         LocalOnly,
         /// The fetch is only hits remote servers.
         RemoteOnly,
-        /// The fetch may hit remote servers and should prefetch optional data. For trees,
-        /// this means request optional child metadata. This will not trigger a remote child
-        /// metadata fetch if the tree is already available locally.
-        AllowRemotePrefetch,
     }
 
     #[repr(u8)]
@@ -238,7 +234,6 @@ impl From<ffi::FetchMode> for FetchMode {
     fn from(fetch_mode: ffi::FetchMode) -> Self {
         match fetch_mode {
             ffi::FetchMode::AllowRemote => FetchMode::AllowRemote,
-            ffi::FetchMode::AllowRemotePrefetch => FetchMode::AllowRemotePrefetch,
             ffi::FetchMode::RemoteOnly => FetchMode::RemoteOnly,
             ffi::FetchMode::LocalOnly => FetchMode::LocalOnly,
             _ => panic!("unknown fetch mode"),

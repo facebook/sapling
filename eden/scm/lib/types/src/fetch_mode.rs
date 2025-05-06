@@ -36,11 +36,6 @@ impl FetchMode {
     /// The fetch is only hits remote servers.
     pub const RemoteOnly: Self = Self::REMOTE;
 
-    /// The fetch may hit remote servers and should prefetch optional data. For trees,
-    /// this means request optional child metadata. This will not trigger a remote child
-    /// metadata fetch if the tree is already available locally.
-    pub const AllowRemotePrefetch: Self = Self::AllowRemote.union(Self::PREFETCH);
-
     pub fn is_local(self) -> bool {
         self == Self::LocalOnly
     }

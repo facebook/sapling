@@ -1752,7 +1752,6 @@ folly::Try<TreePtr> SaplingBackingStore::getTreeFromBackingStore(
             ObjectFetchContext::FetchedSource::Remote, type, stats_.copy());
         break;
       case sapling::FetchMode::AllowRemote:
-      case sapling::FetchMode::AllowRemotePrefetch:
         context->setFetchedSource(
             ObjectFetchContext::FetchedSource::Unknown, type, stats_.copy());
         break;
