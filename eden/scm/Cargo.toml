@@ -132,6 +132,7 @@ members = [
   "lib/minibench",
   "lib/minibench/examples",
   "lib/minibytes",
+  "lib/ministate",
   "lib/mpatch",
   "lib/mpatch-sys",
   "lib/mutationstore",
