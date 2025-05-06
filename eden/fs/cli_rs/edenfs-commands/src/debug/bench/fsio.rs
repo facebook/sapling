@@ -12,6 +12,7 @@ use std::io::Read;
 use std::io::Write;
 #[cfg(target_os = "linux")]
 use std::os::unix::process::CommandExt;
+use std::path::Path;
 use std::path::PathBuf;
 #[cfg(target_os = "linux")]
 use std::process::Command;
@@ -177,7 +178,7 @@ pub async fn bench_thrift_read_mfmd(
 
     for path in random_data.paths(test_dir) {
         let start = Instant::now();
-        let (repo_path, rel_file_path) = split_fbsource_file_path(path);
+        let (repo_path, rel_file_path) = split_fbsource_file_path(&path);
         let request = get_thrift_request(repo_path, rel_file_path)?;
         agg_req_build_dur += start.elapsed();
 
@@ -293,7 +294,7 @@ pub fn bench_fs_read_sfmd(test_dir: &TestDir, random_data: &RandomData) -> Resul
 pub async fn bench_thrift_read_sfmd(test_dir: &TestDir) -> Result<Benchmark> {
     let file_path = test_dir.combined_data_path();
     let start = Instant::now();
-    let (repo_path, rel_file_path) = split_fbsource_file_path(file_path);
+    let (repo_path, rel_file_path) = split_fbsource_file_path(&file_path);
     let request = get_thrift_request(repo_path, rel_file_path)?;
     let response = get_edenfs_instance()
         .get_client()
@@ -316,7 +317,7 @@ pub async fn bench_thrift_read_sfmd(test_dir: &TestDir) -> Result<Benchmark> {
     Ok(result)
 }
 
-fn get_thrift_request(
+pub fn get_thrift_request(
     repo_path: PathBuf,
     rel_file_path: PathBuf,
 ) -> Result<thrift_types::edenfs::GetFileContentRequest> {
@@ -334,7 +335,7 @@ fn get_thrift_request(
     Ok(req)
 }
 
-fn split_fbsource_file_path(file_path: PathBuf) -> (PathBuf, PathBuf) {
+pub fn split_fbsource_file_path(file_path: &Path) -> (PathBuf, PathBuf) {
     let parts: Vec<_> = file_path.iter().collect();
     let fbsource_idx = file_path
         .iter()

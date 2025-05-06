@@ -15,12 +15,17 @@ use std::path::PathBuf;
 use std::time::Instant;
 
 use anyhow::Result;
+use edenfs_client::client::Client;
 use indicatif::ProgressBar;
 use indicatif::ProgressStyle;
+use thrift_types::edenfs::ScmBlobOrError;
 
+use super::fsio::get_thrift_request;
+use super::fsio::split_fbsource_file_path;
 use super::types;
 use super::types::Benchmark;
 use super::types::BenchmarkType;
+use crate::get_edenfs_instance;
 
 struct TraversalProgress {
     file_count: usize,
@@ -90,8 +95,107 @@ fn traverse_directory(path: &Path, metrics: &mut TraversalProgress) -> Result<()
     Ok(())
 }
 
+pub async fn bench_traversal_thrift_read(dir_path: &str) -> Result<Benchmark> {
+    let path = Path::new(dir_path);
+    if !path.exists() || !path.is_dir() {
+        return Err(anyhow::anyhow!("Invalid directory path: {}", dir_path));
+    }
+
+    let mut traverse_progress = TraversalProgress::new();
+    traverse_directory(path, &mut traverse_progress)?;
+    let (file_count, duration, file_paths) = traverse_progress.finalize();
+
+    if duration <= 0.0 {
+        return Err(anyhow::anyhow!("Duration is less or equal to zero."));
+    }
+
+    let files_per_second = file_count as f64 / duration;
+
+    let mut result = Benchmark::new(BenchmarkType::FsTraversal);
+
+    result.add_metric("Traversal throughput", files_per_second, "files/s", Some(0));
+    result.add_metric("Total files", file_count as f64, "files", Some(0));
+
+    let read_progress = ProgressBar::new(file_count as u64);
+    read_progress.set_style(
+        ProgressStyle::default_bar()
+            .template("[{elapsed_precise}] {pos}/{len} files | {msg}")
+            .unwrap(),
+    );
+
+    let mut agg_read_dur = std::time::Duration::new(0, 0);
+    let mut total_bytes_read: u64 = 0;
+    let mut successful_reads = 0;
+
+    let client = get_edenfs_instance().get_client();
+    for path in file_paths {
+        if !path.is_file() {
+            read_progress.inc(1);
+            continue;
+        }
+
+        let start = Instant::now();
+        let (repo_path, rel_file_path) = split_fbsource_file_path(path);
+        let request = get_thrift_request(repo_path, rel_file_path)?;
+        let response = client
+            .with_thrift(|thrift| thrift.getFileContent(&request))
+            .await?;
+        agg_read_dur += start.elapsed();
+
+        match response.blob {
+            ScmBlobOrError::blob(blob) => {
+                total_bytes_read += blob.len() as u64;
+                read_progress.inc(1);
+                successful_reads += 1;
+            }
+            ScmBlobOrError::error(_) => {
+                read_progress.inc(1);
+            }
+            ScmBlobOrError::UnknownField(_) => {}
+        }
+
+        if agg_read_dur.as_secs_f64() > 0.0 {
+            read_progress.set_message(format!(
+                "{:.2} MiB/s",
+                total_bytes_read as f64
+                    / types::BYTES_IN_MEGABYTE as f64
+                    / agg_read_dur.as_secs_f64()
+            ));
+        }
+    }
+    read_progress.finish_and_clear();
+
+    if successful_reads == 0 {
+        return Err(anyhow::anyhow!("No files were successfully read."));
+    }
+
+    let avg_read_dur = agg_read_dur.as_secs_f64() / successful_reads as f64;
+    let avg_file_size = total_bytes_read as f64 / successful_reads as f64;
+    let avg_file_size_kb = avg_file_size / types::BYTES_IN_KILOBYTE as f64;
+
+    let mb_per_second =
+        total_bytes_read as f64 / types::BYTES_IN_MEGABYTE as f64 / agg_read_dur.as_secs_f64();
+
+    result.add_metric("Throughput ", mb_per_second, "MiB/s", Some(2));
+    result.add_metric(
+        "Average thrift read latency",
+        avg_read_dur * 1000.0,
+        "ms",
+        Some(4),
+    );
+    result.add_metric("Average file size", avg_file_size_kb, "KiB", Some(2));
+    result.add_metric(
+        "Total data read",
+        total_bytes_read as f64 / types::BYTES_IN_MEGABYTE as f64,
+        "MiB",
+        Some(2),
+    );
+
+    Ok(result)
+}
+
 /// Runs the filesystem traversal benchmark and returns the benchmark results
-pub fn bench_fs_traversal(dir_path: &str) -> Result<Benchmark> {
+pub fn bench_traversal_fs_read(dir_path: &str) -> Result<Benchmark> {
     let path = Path::new(dir_path);
     if !path.exists() || !path.is_dir() {
         return Err(anyhow::anyhow!("Invalid directory path: {}", dir_path));

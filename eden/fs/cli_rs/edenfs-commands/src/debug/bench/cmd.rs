@@ -60,11 +60,15 @@ pub enum BenchCmd {
         chunk_size: usize,
     },
 
-    #[clap(about = "Run filesystem traversal benchmark")]
-    FsTraversal {
+    #[clap(about = "Run traversal benchmark")]
+    Traversal {
         /// Directory to traverse
         #[clap(long)]
         dir: String,
+
+        /// Read file content through file system or via thrift during the traversal.
+        #[clap(long, value_enum, default_value_t = types::ReadFileMethod::Fs, help="read via fs or thrift")]
+        read_file_via: types::ReadFileMethod,
     },
 }
 
@@ -153,12 +157,19 @@ impl crate::Subcommand for BenchCmd {
                 }
                 Err(e) => return Err(e),
             },
-            Self::FsTraversal { dir } => {
+            Self::Traversal { dir, read_file_via } => {
                 println!(
                     "Running filesystem traversal benchmark on directory: {}",
                     dir
                 );
-                println!("{}", traversal::bench_fs_traversal(dir)?);
+                match read_file_via {
+                    types::ReadFileMethod::Fs => {
+                        println!("{}", traversal::bench_traversal_fs_read(dir)?);
+                    }
+                    types::ReadFileMethod::Thrift => {
+                        println!("{}", traversal::bench_traversal_thrift_read(dir).await?);
+                    }
+                }
             }
         }
 
