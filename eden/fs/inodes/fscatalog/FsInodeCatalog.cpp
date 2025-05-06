@@ -10,8 +10,6 @@
 #include "eden/fs/inodes/fscatalog/FsInodeCatalog.h"
 
 #include <boost/filesystem.hpp>
-#include <algorithm>
-#include <chrono>
 
 #include <folly/Exception.h>
 #include <folly/File.h>
