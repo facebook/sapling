@@ -62,6 +62,7 @@ class RageTest(testcase.EdenRepoTest):
         self.assertIn("\nList of running EdenFS processes:\n", output)
         self.assertIn("\nList of mount points:\n", output)
         self.assertIn(f"\nMount point info for path {self.mount}:\n", output)
-        self.assertIn("\nEnvironment variables:\n", output)
+        self.assertIn("\nHost environment variables:\n", output)
+        self.assertIn("\nEdenFS daemon environment variables:\n", output)
         self.assertIn("\nEdenFS config:\n", output)
         self.assertIn(f"{self.mount}\n", output)
