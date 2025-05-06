@@ -261,7 +261,7 @@ class VersionCmd(Subcmd):
 class InfoCmd(Subcmd):
     def setup_parser(self, parser: argparse.ArgumentParser) -> None:
         parser.add_argument(
-            "client", default=None, nargs="?", help="Path to the checkout"
+            "client", default=None, nargs=argparse.OPTIONAL, help="Path to the checkout"
         )
 
     def run(self, args: argparse.Namespace) -> int:
@@ -297,7 +297,10 @@ class DiskUsageCmd(Subcmd):
 
     def setup_parser(self, parser: argparse.ArgumentParser) -> None:
         parser.add_argument(
-            "mounts", default=[], nargs="*", help="Names of the mount points"
+            "mounts",
+            default=[],
+            nargs=argparse.ZERO_OR_MORE,
+            help="Names of the mount points",
         )
         group = parser.add_mutually_exclusive_group()
         group.add_argument(
@@ -835,7 +838,7 @@ class CloneCmd(Subcmd):
         parser.add_argument(
             "--preserved-vars",
             "-p",
-            nargs="*",  # zero or more env vars can be passed
+            nargs=argparse.ZERO_OR_MORE,
             help=argparse.SUPPRESS,
         )
 
@@ -1299,7 +1302,7 @@ class HealthReportCmd(Subcmd):
         parser.add_argument(
             "--mounts",
             default=[],
-            nargs="*",
+            nargs=argparse.ZERO_OR_MORE,
             help="path of the mount points",
             dest="mounts",
         )
@@ -1573,7 +1576,10 @@ class HealthReportCmd(Subcmd):
 class StraceCmd(Subcmd):
     def setup_parser(self, parser: argparse.ArgumentParser) -> None:
         parser.add_argument(
-            "checkout", default=None, nargs="?", help="Path to the checkout"
+            "checkout",
+            default=None,
+            nargs=argparse.OPTIONAL,
+            help="Path to the checkout",
         )
         parser.add_argument(
             "--reads",
@@ -1678,7 +1684,7 @@ class FsckCmd(Subcmd):
         parser.add_argument(
             "path",
             metavar="CHECKOUT_PATH",
-            nargs="*",
+            nargs=argparse.ZERO_OR_MORE,
             help="The path to an EdenFS checkout to verify.",
         )
         parser.add_argument(
@@ -1854,7 +1860,10 @@ class ChownCmd(Subcmd):
 class MountCmd(Subcmd):
     def setup_parser(self, parser: argparse.ArgumentParser) -> None:
         parser.add_argument(
-            "paths", nargs="*", metavar="path", help="The checkout mount path"
+            "paths",
+            nargs=argparse.ZERO_OR_MORE,
+            metavar="path",
+            help="The checkout mount path",
         )
         parser.add_argument(
             "--read-only", action="store_true", dest="read_only", help="Read only mount"
@@ -1955,7 +1964,10 @@ class RemoveCmd(Subcmd):
             help=argparse.SUPPRESS,
         )
         parser.add_argument(
-            "paths", nargs="+", metavar="path", help="The EdenFS checkout(s) to remove"
+            "paths",
+            nargs=argparse.ONE_OR_MORE,
+            metavar="path",
+            help="The EdenFS checkout(s) to remove",
         )
         parser.add_argument(
             "--no-force",
@@ -2212,7 +2224,7 @@ class UnmountCmd(Subcmd):
         parser.add_argument("--destroy", action="store_true", help=argparse.SUPPRESS)
         parser.add_argument(
             "paths",
-            nargs="+",
+            nargs=argparse.ONE_OR_MORE,
             metavar="path",
             help="Path where checkout should be unmounted from",
         )
@@ -2282,7 +2294,7 @@ class StartCmd(Subcmd):
         parser.add_argument(
             "--preserved-vars",
             "-p",
-            nargs="*",  # zero or more env vars can be passed
+            nargs=argparse.ZERO_OR_MORE,
             help=(
                 "By default, the EdenFS daemon is started with a limited set "
                 "of environment variables. This option specifies additional "
@@ -2574,7 +2586,7 @@ class RestartCmd(Subcmd):
         parser.add_argument(
             "--preserved-vars",
             "-p",
-            nargs="*",  # zero or more env vars can be passed
+            nargs=argparse.ZERO_OR_MORE,
             help=(
                 "By default, the EdenFS daemon is started with a limited set "
                 "of environment variables. This option specifies additional "

@@ -198,7 +198,7 @@ class ParentsCmd(Subcmd):
     def setup_parser(self, parser: argparse.ArgumentParser) -> None:
         parser.add_argument(
             "path",
-            nargs="?",
+            nargs=argparse.OPTIONAL,
             help="The path to an EdenFS mount point. Uses `pwd` by default.",
         )
 
@@ -792,7 +792,7 @@ class GcProcessFetchCmd(Subcmd):
     def setup_parser(self, parser: argparse.ArgumentParser) -> None:
         parser.add_argument(
             "mount",
-            nargs="?",
+            nargs=argparse.OPTIONAL,
             help="The path to an EdenFS mount point. If not specified,"
             " process fetch data will be cleared for all mounts.",
         )
@@ -833,7 +833,7 @@ class SubscribeCmd(Subcmd):
     def setup_parser(self, parser: argparse.ArgumentParser) -> None:
         parser.add_argument(
             "mount_point",
-            nargs="?",
+            nargs=argparse.OPTIONAL,
             help="The path to an EdenFS mount point. Uses `pwd` by default.",
         )
         parser.add_argument(
@@ -850,7 +850,7 @@ class HgCopyMapGetAllCmd(Subcmd):
     def setup_parser(self, parser: argparse.ArgumentParser) -> None:
         parser.add_argument(
             "path",
-            nargs="?",
+            nargs=argparse.OPTIONAL,
             help="The path to an EdenFS mount point. Uses `pwd` by default.",
         )
 
@@ -874,7 +874,7 @@ class HgDirstateCmd(Subcmd):
     def setup_parser(self, parser: argparse.ArgumentParser) -> None:
         parser.add_argument(
             "path",
-            nargs="?",
+            nargs=argparse.OPTIONAL,
             help="The path to an EdenFS mount point. Uses `pwd` by default.",
         )
 
@@ -994,7 +994,7 @@ class MaterializedCmd(Subcmd):
         parser.add_argument(
             "path",
             default=None,
-            nargs="?",
+            nargs=argparse.OPTIONAL,
             help="The path to the EdenFS mount point.  If a subdirectory inside "
             "a mount point is specified, only data about inodes under the "
             "specified subdirectory will be reported.",
@@ -1253,7 +1253,7 @@ class GetPathCmd(Subcmd):
     def setup_parser(self, parser: argparse.ArgumentParser) -> None:
         parser.add_argument(
             "path",
-            nargs="?",
+            nargs=argparse.OPTIONAL,
             help="The path to an EdenFS mount point. Uses `pwd` by default.",
         )
         parser.add_argument(
@@ -1291,7 +1291,7 @@ class UnloadInodesCmd(Subcmd):
         parser.add_argument(
             "age",
             type=float,
-            nargs="?",
+            nargs=argparse.OPTIONAL,
             default=0,
             help="Minimum age of the inodes to be unloaded in seconds",
         )
@@ -1456,7 +1456,7 @@ class LoggingCmd(Subcmd):
         parser.add_argument(
             "config",
             type=str,
-            nargs="?",
+            nargs=argparse.OPTIONAL,
             help="A log configuration string to use to modify the log settings.  See "
             "folly/logging/docs/Config.md (https://git.io/fNZhr)"
             " for syntax documentation.  The most basic syntax is CATEGORY=LEVEL.",
@@ -1544,7 +1544,7 @@ class DebugJournalSetMemoryLimitCmd(Subcmd):
         )
         parser.add_argument(
             "path",
-            nargs="?",
+            nargs=argparse.OPTIONAL,
             help="The path to an EdenFS mount point. Uses `pwd` by default.",
         )
 
@@ -1565,7 +1565,7 @@ class DebugJournalGetMemoryLimitCmd(Subcmd):
     def setup_parser(self, parser: argparse.ArgumentParser) -> None:
         parser.add_argument(
             "path",
-            nargs="?",
+            nargs=argparse.OPTIONAL,
             help="The path to an EdenFS mount point. Uses `pwd` by default.",
         )
 
@@ -1590,7 +1590,7 @@ class DebugFlushJournalCmd(Subcmd):
     def setup_parser(self, parser: argparse.ArgumentParser) -> None:
         parser.add_argument(
             "path",
-            nargs="?",
+            nargs=argparse.OPTIONAL,
             help="The path to an EdenFS mount point. Uses `pwd` by default.",
         )
 
@@ -1639,7 +1639,7 @@ class DebugJournalCmd(Subcmd):
         )
         parser.add_argument(
             "path",
-            nargs="?",
+            nargs=argparse.OPTIONAL,
             help="The path to an EdenFS mount point. Uses `pwd` by default.",
         )
 
@@ -1771,10 +1771,14 @@ class DebugThriftCmd(Subcmd):
             "--json", action="store_true", help="Attempt to encode the result as JSON."
         )
         parser.add_argument(
-            "function_name", nargs="?", help="The thrift function to call."
+            "function_name",
+            nargs=argparse.OPTIONAL,
+            help="The thrift function to call.",
         )
         parser.add_argument(
-            "args", nargs="*", help="The arguments to the thrift function."
+            "args",
+            nargs=argparse.ZERO_OR_MORE,
+            help="The arguments to the thrift function.",
         )
 
     def run(self, args: argparse.Namespace) -> int:
