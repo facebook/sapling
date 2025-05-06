@@ -2562,6 +2562,18 @@ class RestartCmd(Subcmd):
             choices=["fuse", "nfs"],
             help=migration_restart_help,
         )
+        parser.add_argument(
+            "--preserved-vars",
+            "-p",
+            nargs="*",  # zero or more env vars can be passed
+            help=(
+                "By default, the EdenFS daemon is started with a limited set "
+                "of environment variables. This option specifies additional "
+                "environment variables that should be preserved (or passed) "
+                "when starting a new daemon. NOTE: this should only contain "
+                "the names of the env vars, not their desired values."
+            ),
+        )
 
     def run(self, args: argparse.Namespace) -> int:
         self.args = args
@@ -2714,7 +2726,9 @@ class RestartCmd(Subcmd):
             # the process didn't start up correctly and continue directly to
             # our recovery logic.
             status = daemon.gracefully_restart_edenfs_service(
-                instance, daemon_binary=self.args.daemon_binary
+                instance,
+                daemon_binary=self.args.daemon_binary,
+                preserved_env=self.args.preserved_vars,
             )
             success = status == 0
             if success:
@@ -2731,11 +2745,16 @@ class RestartCmd(Subcmd):
     def _start(self, instance: EdenInstance) -> int:
         print("edenfs daemon is not currently running. Starting...")
         return daemon.start_edenfs_service(
-            instance, daemon_binary=self.args.daemon_binary
+            instance,
+            daemon_binary=self.args.daemon_binary,
+            preserved_env=self.args.preserved_vars,
         )
 
     def _full_restart(
-        self, instance: EdenInstance, old_pid: int, migrate_to: Optional[str]
+        self,
+        instance: EdenInstance,
+        old_pid: int,
+        migrate_to: Optional[str],
     ) -> int:
         print(
             """\
@@ -2797,7 +2816,9 @@ re-open these files after EdenFS is restarted.
 
     def _finish_restart(self, instance: EdenInstance) -> int:
         exit_code = daemon.start_edenfs_service(
-            instance, daemon_binary=self.args.daemon_binary
+            instance,
+            daemon_binary=self.args.daemon_binary,
+            preserved_env=self.args.preserved_vars,
         )
         if exit_code != 0:
             print("Failed to start edenfs daemon!", file=sys.stderr)
