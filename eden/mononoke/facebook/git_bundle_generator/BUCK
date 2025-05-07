@@ -1,5 +1,7 @@
 load("@fbcode_macros//build_defs:rust_binary.bzl", "rust_binary")
 load("@fbcode_macros//build_defs/lib:rust_oss.bzl", "rust_oss")
+load("//fbpkg:fbpkg.bzl", "fbpkg")
+load("//tupperware/cm/antlir2/bzl:buck2_container.bzl", "tw")
 
 oncall("scm_server_infra")
 
@@ -34,4 +36,19 @@ rust_binary(
     ] + ([] if rust_oss.is_oss_build() else [
         "//configerator/structs/privacy/data_schema/if:protocol-rust",
     ])) + ["//eden/mononoke/common/scuba_ext:scuba_ext"]),
+)
+
+tw.container(
+    name = "tw.mononoke.git_bundle_generator",
+    features = [
+        tw.build_fbpkg(
+            fbpkg.builder(
+                name = "mononoke.git_bundle_generator",
+                path_actions = {
+                    "git_bundle_generator": ":git_bundle_generator",
+                },
+            ),
+        ),
+    ],
+    oncall = "scm_server_infra",
 )
