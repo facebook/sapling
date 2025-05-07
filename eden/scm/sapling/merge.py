@@ -926,7 +926,7 @@ def checkpathconflicts(repo, wctx, mctx, actions):
 
 
 def manifestmerge(
-    repo,
+    to_repo,
     wctx,
     p2,
     pa,
@@ -935,6 +935,7 @@ def manifestmerge(
     acceptremote,
     followcopies,
     forcefulldiff=False,
+    from_repo=None,
 ):
     """
     Merge wctx and p2 with ancestor pa and generate merge action list
@@ -966,23 +967,44 @@ def manifestmerge(
                 continue
         return False
 
+    def files_equal(node1, node2, ctx1, ctx2, f1, f2) -> bool:
+        if ctx1.repo() == ctx2.repo():
+            return node1 == node2
+        elif node1 and node2:
+            # PERF: compare file content hash instead of file content and
+            # consider moving this to fctx.cmp()
+            return ctx1[f1].data() == ctx2[f2].data()
+        elif node1 is None and node2 is None:
+            return True
+        else:
+            return False
+
+    if from_repo is None:
+        from_repo = to_repo
+    is_crossrepo = from_repo != to_repo
+
+    ui = to_repo.ui
     copy = {}
 
     # manifests fetched in order are going to be faster, so prime the caches
     [x.manifest() for x in sorted(wctx.parents() + [p2, pa], key=scmutil.intrev)]
 
-    if followcopies:
-        copy = copies.mergecopies(repo, wctx, p2, pa)
+    # XXX: handle copy tracing for crossrepo merges
+    if followcopies and not is_crossrepo:
+        copy = copies.mergecopies(to_repo, wctx, p2, pa)
 
     boolbm = str(bool(branchmerge))
     boolf = str(bool(force))
-    shouldsparsematch = hasattr(repo, "sparsematch") and (
-        "eden" not in repo.requirements or "edensparse" in repo.requirements
+    # XXX: handle sparsematch for cross-repo merges
+    shouldsparsematch = (
+        hasattr(to_repo, "sparsematch")
+        and ("eden" not in to_repo.requirements or "edensparse" in to_repo.requirements)
+        and not is_crossrepo
     )
-    sparsematch = getattr(repo, "sparsematch", None) if shouldsparsematch else None
-    repo.ui.note(_("resolving manifests\n"))
-    repo.ui.debug(" branchmerge: %s, force: %s\n" % (boolbm, boolf))
-    repo.ui.debug(" ancestor: %s, local: %s, remote: %s\n" % (pa, wctx, p2))
+    sparsematch = getattr(to_repo, "sparsematch", None) if shouldsparsematch else None
+    ui.note(_("resolving manifests\n"))
+    ui.debug(" branchmerge: %s, force: %s\n" % (boolbm, boolf))
+    ui.debug(" ancestor: %s, local: %s, remote: %s\n" % (pa, wctx, p2))
 
     m1, m2, ma = wctx.manifest(), p2.manifest(), pa.manifest()
 
@@ -1002,7 +1024,7 @@ def manifestmerge(
         for copykey, copyvalue in copy.items():
             if copyvalue in relevantfiles:
                 relevantfiles.add(copykey)
-        matcher = scmutil.matchfiles(repo, relevantfiles)
+        matcher = scmutil.matchfiles(to_repo, relevantfiles)
 
     # For sparse repos, attempt to use the sparsematcher to narrow down
     # calculation.  Consider a typical rebase:
@@ -1023,11 +1045,11 @@ def manifestmerge(
             for copykey, copyvalue in copy.items():
                 if copyvalue in relevantfiles:
                     relevantfiles.add(copykey)
-            filesmatcher = scmutil.matchfiles(repo, relevantfiles)
+            filesmatcher = scmutil.matchfiles(to_repo, relevantfiles)
         else:
             filesmatcher = None
 
-        revs = {repo.dirstate.p1(), repo.dirstate.p2(), pa.node(), p2.node()}
+        revs = {to_repo.dirstate.p1(), to_repo.dirstate.p2(), pa.node(), p2.node()}
         revs -= {nullid, None}
         sparsematcher = sparsematch(*list(revs))
 
@@ -1037,12 +1059,12 @@ def manifestmerge(
         matcher = matchmod.intersectmatchers(matcher, sparsematcher)
 
     with perftrace.trace("Manifest Diff"):
-        if hasattr(repo, "resettreefetches"):
-            repo.resettreefetches()
+        if hasattr(to_repo, "resettreefetches"):
+            to_repo.resettreefetches()
         diff = _diff_manifests(m1, m2, matcher=matcher)
         perftrace.tracevalue("Differences", len(diff))
-        if hasattr(repo, "resettreefetches"):
-            perftrace.tracevalue("Tree Fetches", repo.resettreefetches())
+        if hasattr(to_repo, "resettreefetches"):
+            perftrace.tracevalue("Tree Fetches", to_repo.resettreefetches())
 
     if matcher is None:
         matcher = matchmod.always("", "")
@@ -1051,7 +1073,11 @@ def manifestmerge(
     for k, v in copy.items():
         reverse_copies[v].append(k)
 
-    subtree_branches = subtreeutil.get_subtree_branches(repo, p2)
+    # skip changed/subtree-copied conflict check for cross repo cases
+    if is_crossrepo:
+        subtree_branches = []
+    else:
+        subtree_branches = subtreeutil.get_subtree_branches(to_repo, p2)
     subtree_branch_dests = [b.to_path for b in subtree_branches]
 
     actions = {}
@@ -1070,7 +1096,7 @@ def manifestmerge(
         subtree_copy_dest = subtreeutil.find_enclosing_dest(f1, subtree_branch_dests)
         if subtree_copy_dest and (n1 != na or fl1 != fla):
             hint = _("use '@prog@ subtree copy' to re-create the directory branch")
-            if extra_hint := repo.ui.config("subtree", "copy-conflict-hint"):
+            if extra_hint := ui.config("subtree", "copy-conflict-hint"):
                 hint = f"{hint}. {extra_hint}"
             raise error.Abort(
                 _(
@@ -1096,9 +1122,13 @@ def manifestmerge(
                     )
             else:
                 nol = "l" not in fl1 + fl2 + fla
-                if n2 == na and fl2 == fla:  # remote unchanged
+                if (
+                    files_equal(n2, na, p2, pa, f2, fa) and fl2 == fla
+                ):  # remote unchanged
                     actions[f1] = (ACTION_KEEP, (), "remote unchanged")
-                elif n1 == na and fl1 == fla:  # local unchanged - use remote
+                elif (
+                    files_equal(n1, na, wctx, pa, f1, fa) and fl1 == fla
+                ):  # local unchanged - use remote
                     if fl1 == fl2:
                         actions[f1] = (ACTION_GET, (f2, fl2, False), "remote is newer")
                     else:
@@ -1107,9 +1137,13 @@ def manifestmerge(
                             (f2, fl2, False),
                             "flag differ",
                         )
-                elif nol and n2 == na:  # remote only changed 'x' (file executable)
+                elif nol and files_equal(
+                    n2, na, p2, pa, f2, fa
+                ):  # remote only changed 'x' (file executable)
                     actions[f1] = (ACTION_EXEC, (fl2,), "update permissions")
-                elif nol and n1 == na:  # local only changed 'x' (file executable)
+                elif nol and files_equal(
+                    n1, na, wctx, pa, f1, fa
+                ):  # local only changed 'x' (file executable)
                     actions[f1] = (ACTION_GET, (f2, fl1, False), "remote is newer")
                 else:  # both changed something
                     actions[f1] = (
@@ -1138,7 +1172,7 @@ def manifestmerge(
                         "prompt changed/deleted copy source",
                     )
             elif fa in ma:  # clean, a different, no remote
-                if n1 != na:
+                if not files_equal(n1, na, wctx, pa, f1, fa):
                     if acceptremote:
                         actions[f1] = (ACTION_REMOVE, None, "remote delete")
                     else:
@@ -1194,7 +1228,7 @@ def manifestmerge(
                         (f2, fl2, pa.node()),
                         "remote created, get or merge",
                     )
-            elif n2 != na:
+            elif not files_equal(n2, na, p2, pa, f2, fa):
                 if acceptremote:
                     actions[f1] = (
                         ACTION_CREATED,
@@ -1208,9 +1242,9 @@ def manifestmerge(
                         "prompt deleted/changed",
                     )
 
-    if repo.ui.configbool("experimental", "merge.checkpathconflicts"):
+    if ui.configbool("experimental", "merge.checkpathconflicts"):
         # If we are merging, look for path conflicts.
-        checkpathconflicts(repo, wctx, p2, actions)
+        checkpathconflicts(to_repo, wctx, p2, actions)
 
     return actions
 
@@ -1264,6 +1298,7 @@ def calculateupdates(
             force,
             acceptremote,
             followcopies,
+            from_repo=from_repo,
         )
         _checkunknownfiles(to_repo, wctx, mctx, force, actions)
 
@@ -1287,6 +1322,7 @@ def calculateupdates(
                 acceptremote,
                 followcopies,
                 forcefulldiff=True,
+                from_repo=from_repo,
             )
             _checkunknownfiles(to_repo, wctx, mctx, force, actions)
 
