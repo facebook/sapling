@@ -1095,12 +1095,10 @@ def manifestmerge(
                         "both created",
                     )
             else:
-                a = ma[fa]
-                fla = ma.flags(fa)
                 nol = "l" not in fl1 + fl2 + fla
-                if n2 == a and fl2 == fla:  # remote unchanged
+                if n2 == na and fl2 == fla:  # remote unchanged
                     actions[f1] = (ACTION_KEEP, (), "remote unchanged")
-                elif n1 == a and fl1 == fla:  # local unchanged - use remote
+                elif n1 == na and fl1 == fla:  # local unchanged - use remote
                     if fl1 == fl2:
                         actions[f1] = (ACTION_GET, (f2, fl2, False), "remote is newer")
                     else:
@@ -1109,9 +1107,9 @@ def manifestmerge(
                             (f2, fl2, False),
                             "flag differ",
                         )
-                elif nol and n2 == a:  # remote only changed 'x' (file executable)
+                elif nol and n2 == na:  # remote only changed 'x' (file executable)
                     actions[f1] = (ACTION_EXEC, (fl2,), "update permissions")
-                elif nol and n1 == a:  # local only changed 'x' (file executable)
+                elif nol and n1 == na:  # local only changed 'x' (file executable)
                     actions[f1] = (ACTION_GET, (f2, fl1, False), "remote is newer")
                 else:  # both changed something
                     actions[f1] = (
@@ -1140,7 +1138,7 @@ def manifestmerge(
                         "prompt changed/deleted copy source",
                     )
             elif fa in ma:  # clean, a different, no remote
-                if n1 != ma[fa]:
+                if n1 != na:
                     if acceptremote:
                         actions[f1] = (ACTION_REMOVE, None, "remote delete")
                     else:
@@ -1196,7 +1194,7 @@ def manifestmerge(
                         (f2, fl2, pa.node()),
                         "remote created, get or merge",
                     )
-            elif n2 != ma[fa]:
+            elif n2 != na:
                 if acceptremote:
                     actions[f1] = (
                         ACTION_CREATED,
