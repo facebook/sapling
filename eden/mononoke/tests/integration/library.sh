@@ -1369,6 +1369,8 @@ EOF
 function default_setup_drawdag() {
   setup_common_config "$BLOB_TYPE"
 
+  cd "$TESTTMP" || exit 1
+
   testtool_drawdag -R repo --derive-all <<EOF
 C
 |
