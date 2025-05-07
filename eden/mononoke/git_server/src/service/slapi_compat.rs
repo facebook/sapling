@@ -8,6 +8,7 @@
 use std::sync::Arc;
 use std::sync::atomic::AtomicBool;
 
+use anyhow::anyhow;
 use edenapi_service::context::ServerContext;
 use edenapi_service::handlers::HandlerInfo;
 use edenapi_service::handlers::JsonErrorFomatter;
@@ -73,7 +74,12 @@ where
         let query = Handler::QueryStringExtractor::take_from(&mut state);
         let content_encoding = ContentEncoding::from_state(&state);
 
-        let slapi_flavour = SlapiCommitIdentityScheme::Git;
+        if !Handler::SUPPORTED_FLAVOURS.contains(&SlapiCommitIdentityScheme::Git) {
+            return Err(gotham_ext::error::HttpError::e400(anyhow!(
+                "Unsupported SaplingRemoteApi flavour"
+            )));
+        }
+
         state.put(HandlerInfo::new(path.repo(), Handler::API_METHOD));
         let rctx = RequestContext::borrow_from(&state).clone();
         let gctx = GitServerContext::borrow_from(&state).clone();
@@ -94,7 +100,14 @@ where
             rd.add_request(&request);
         }
 
-        let ectx = SaplingRemoteApiContext::new(rctx, sctx, repo, path, query, slapi_flavour);
+        let ectx = SaplingRemoteApiContext::new(
+            rctx,
+            sctx,
+            repo,
+            path,
+            query,
+            SlapiCommitIdentityScheme::Git,
+        );
 
         match Handler::handler(ectx, request).await {
             Ok(responses) => Ok(encode_response_stream(
