@@ -38,7 +38,7 @@ use crate::service::uploader::peel_tag_target;
 use crate::util::mononoke_source_of_truth;
 
 const HOOK_WIKI_LINK: &str = "https://fburl.com/wiki/mb4wtk1j";
-const COMMIT_CLOUD_REF: &str = "refs/commitcloud/upload";
+const COMMIT_CLOUD_REF_PREFIX: &str = "refs/commitcloud/upload";
 
 /// Method responsible for creating, moving or deleting a git ref
 pub async fn set_ref(
@@ -158,7 +158,7 @@ async fn set_ref_inner(
         request_context.mononoke_repos.clone(),
     );
     // Check if the push is to a commit cloud ref, if yes then reject it with proper message
-    if ref_update.ref_name == COMMIT_CLOUD_REF {
+    if ref_update.ref_name.starts_with(COMMIT_CLOUD_REF_PREFIX) {
         return Err(anyhow::anyhow!(
             "Commit-cloud upload succeeded. Your commit is now backed up in Mononoke"
         ));
