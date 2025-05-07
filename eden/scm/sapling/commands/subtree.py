@@ -636,8 +636,8 @@ def _gen_import_commit_msg(url, from_commit, from_paths, to_paths):
 
 def gen_merge_commit_msg(subtree_merges):
     groups = defaultdict(list)
-    for from_node, from_path, to_path in subtree_merges:
-        groups[from_node].append((from_path, to_path))
+    for m in subtree_merges:
+        groups[m["from_commit"]].append((m["from_path"], m["to_path"]))
 
     msgs = []
     for from_node, paths in groups.items():

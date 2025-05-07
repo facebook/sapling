@@ -257,19 +257,22 @@ def _imports_to_dict(imports: List[SubtreeImport], version: int):
 
 def gen_merge_info(repo, subtree_merges, version=SUBTREE_METADATA_VERSION):
     merges = [
-        m for m in subtree_merges if is_source_commit_allowed(repo.ui, repo[m[0]])
+        m
+        for m in subtree_merges
+        if is_source_commit_allowed(repo.ui, repo[m["from_commit"]])
     ]
     if not merges:
         return {}
 
+    # XXX: handle cross-repo merge metadata
     merges = [
         SubtreeMerge(
             version=version,
-            from_commit=node.hex(from_node),
-            from_path=from_path,
-            to_path=to_path,
+            from_commit=node.hex(m["from_commit"]),
+            from_path=m["from_path"],
+            to_path=m["to_path"],
         )
-        for from_node, from_path, to_path in subtree_merges
+        for m in subtree_merges
     ]
     metadata = _merges_to_dict(merges, version)
     return _encode_subtree_metadata_list(repo.ui, [metadata])
