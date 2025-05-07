@@ -67,7 +67,7 @@ Example
 
 """
 
-from sapling import error, extensions, merge as mergemod, registrar
+from sapling import cmdutil, error, extensions, merge as mergemod, registrar
 from sapling.i18n import _
 
 from .sparse import (
@@ -152,7 +152,10 @@ subcmd = filteredfs.subcommand(
 )
 
 
-@subcmd("show", _common_config_opts)
+@subcmd(
+    "show",
+    _common_config_opts + cmdutil.templateopts,
+)
 def show(ui, repo, **opts) -> None:
     """show the currently enabled filter profile"""
     _showsubcmdlogic(ui, repo, opts)

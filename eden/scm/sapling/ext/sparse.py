@@ -2096,9 +2096,9 @@ def _showsubcmdlogic(ui, repo, opts) -> None:
         if not ui.plain():
             ui.status(_(f"No {flavortext} profile enabled\n"))
         return
-
     raw = repo.localvfs.readutf8("sparse")
     rawconfig = readsparseconfig(repo, raw)
+
     profiles = rawconfig.profiles
     include, exclude = rawconfig.toincludeexclude()
 
