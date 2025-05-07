@@ -8,11 +8,14 @@
 use std::sync::Arc;
 
 use blobrepo_hg::BlobRepoHg;
+use bonsai_git_mapping::BonsaiGitMappingArc;
+use bonsai_hg_mapping::BonsaiHgMappingArc;
 use borrowed::borrowed;
 use cloned::cloned;
 use commit_cloud::CommitCloudRef;
 use commit_cloud::Phase;
 use commit_cloud::ctx::CommitCloudContext;
+use commit_cloud::utils::get_bonsai_from_cloud_ids;
 use commit_cloud_types::ClientInfo;
 use commit_cloud_types::HistoricalVersion;
 use commit_cloud_types::LocalBookmarksMap;
@@ -31,7 +34,6 @@ use futures::StreamExt;
 use futures::TryStreamExt;
 use futures::stream;
 use futures_util::future::try_join_all;
-use mercurial_types::HgChangesetId;
 use mononoke_types::ChangesetId;
 use phases::PhasesRef;
 
@@ -122,6 +124,7 @@ impl<R: MononokeRepo> RepoContext<R> {
 
         let nodes = self
             .form_smartlog_with_info(
+                cc_ctx,
                 hg_ids,
                 raw_data.local_bookmarks,
                 raw_data.remote_bookmarks,
@@ -138,6 +141,7 @@ impl<R: MononokeRepo> RepoContext<R> {
 
     async fn form_smartlog_with_info(
         &self,
+        cc_ctx: CommitCloudContext,
         c_ids: Vec<CloudChangesetId>,
         local_bookmarks: LocalBookmarksMap,
         remote_bookmarks: RemoteBookmarksMap,
@@ -146,19 +150,17 @@ impl<R: MononokeRepo> RepoContext<R> {
         let ctx = self.ctx();
         let repo = self.repo();
 
-        let hg_ids = c_ids
-            .into_iter()
-            .map(|c_id| c_id.into())
-            .collect::<Vec<HgChangesetId>>();
-
-        // TODO(lmvasquezg): Use cloud changesetids here when cupporting smartlog endpoints
-        let cs_ids = self
-            .repo()
-            .get_hg_bonsai_mapping(self.ctx().clone(), hg_ids.to_vec())
-            .await?
-            .iter()
-            .map(|(_, bcs_id)| *bcs_id)
-            .collect::<Vec<ChangesetId>>();
+        let cs_ids = get_bonsai_from_cloud_ids(
+            ctx,
+            &cc_ctx,
+            repo.bonsai_hg_mapping_arc(),
+            repo.bonsai_git_mapping_arc(),
+            c_ids,
+        )
+        .await?
+        .into_iter()
+        .map(|(_, cs_id)| cs_id)
+        .collect::<Vec<ChangesetId>>();
 
         let public_frontier = repo
             .commit_graph()
@@ -322,7 +324,7 @@ impl<R: MononokeRepo> RepoContext<R> {
         let hg_ids = history.collapse_into_vec(&rbs, &lbs, flags);
 
         let nodes = self
-            .form_smartlog_with_info(hg_ids, lbs, rbs, flags)
+            .form_smartlog_with_info(cc_ctx, hg_ids, lbs, rbs, flags)
             .await?;
 
         Ok(SmartlogData {
