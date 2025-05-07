@@ -3,23 +3,17 @@
 # This software may be used and distributed according to the terms of the
 # GNU General Public License version 2.
 
-import hashlib
 import json
 import os
-import shutil
 import time
 from collections import defaultdict
-
-import bindings
 
 from .. import (
     cloneuri,
     cmdutil,
     context,
     error,
-    git,
     hg,
-    localrepo,
     match as matchmod,
     merge as mergemod,
     node,
@@ -27,7 +21,6 @@ from .. import (
     progress,
     registrar,
     scmutil,
-    util,
 )
 from ..cmdutil import (
     commitopts,
@@ -45,6 +38,7 @@ from ..utils import subtreeutil
 from ..utils.subtreeutil import (
     BranchType,
     gen_branch_info,
+    get_or_clone_git_repo,
     get_subtree_branches,
     get_subtree_imports,
     get_subtree_merges,
@@ -716,47 +710,3 @@ def abort_or_remove_paths(ui, repo, paths, subcmd, opts):
             cmdutil.remove(ui, repo, matcher, mark=False, force=True)
             if repo.wvfs.lexists(path):
                 repo.wvfs.rmtree(path)
-
-
-def get_or_clone_git_repo(ui, url, from_rev=None):
-    def try_reuse_git_repo(git_repo_dir):
-        """try to reuse an existing git repo, otherwise return None"""
-        if not os.path.exists(git_repo_dir):
-            return None
-        if not os.path.isdir(git_repo_dir):
-            # should not happen, but just in case
-            os.unlink(git_repo_dir)
-            return None
-
-        try:
-            git_repo = localrepo.localrepository(ui, git_repo_dir)
-        except Exception:
-            # invalid git repo directory, remove it
-            shutil.rmtree(git_repo_dir)
-            return None
-
-        ui.status(_("using cached git repo at %s\n") % git_repo_dir)
-        nodes, pullnames = [], []
-        if from_rev:
-            if from_node := git.try_get_node(from_rev):
-                nodes.append(from_node)
-            else:
-                pullnames.append(from_rev)
-        git.pull(git_repo, "default", names=pullnames, nodes=nodes)
-        return git_repo
-
-    url_hash = hashlib.sha256(url.encode("utf-8")).hexdigest()
-    if cache_dir := ui.config("remotefilelog", "cachepath"):
-        cache_dir = util.expandpath(cache_dir)
-        git_repo_dir = os.path.join(cache_dir, "gitrepos", url_hash)
-    else:
-        user_cache_dir = bindings.dirs.cache_dir()
-        git_repo_dir = os.path.join(user_cache_dir, "Sapling", "gitrepos", url_hash)
-
-    if git_repo := try_reuse_git_repo(git_repo_dir):
-        return git_repo
-    else:
-        ui.status(_("creating git repo at %s\n") % git_repo_dir)
-        # PERF: shallow clone, then partial checkout
-        git_repo = git.clone(ui, url, git_repo_dir, update=from_rev)
-        return git_repo
