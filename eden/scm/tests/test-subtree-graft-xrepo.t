@@ -1,5 +1,7 @@
 #require git no-windows
 
+  $ enable morestatus
+  $ setconfig morestatus.show=True
   $ eagerepo
   $ setconfig diff.git=True
   $ setconfig subtree.cheap-copy=False
@@ -176,3 +178,51 @@ XXX: handle cross-repo copy tracing
      +3a
      +4
      +5
+
+Test subtree graft with merge conflicts
+  $ newclientrepo
+  $ drawdag <<'EOS'
+  > B   # B/foo/a.txt = 1b\n2\n3\n4\n5\n
+  > |
+  > A   # A/foo/a.txt = 1\n2\n3\n4\n5\n
+  >     # drawdag.defaultfiles=false
+  > EOS
+  $ hg go $B -q
+  $ hg subtree graft --url $GIT_URL --rev 0e0bbd7f53d7f8dfa9ef6283f68e2aa5d274a185 --from-path "" --to-path foo
+  using cached git repo at $TESTTMP/default-hgcache/gitrepos/* (glob)
+  grafting 0e0bbd7f53d7 "G2"
+  merging foo/a.txt and a.txt to foo/a.txt
+  warning: 1 conflicts while merging foo/a.txt! (edit, then use 'hg resolve --mark')
+  abort: unresolved conflicts, can't continue
+  (use 'hg resolve' and 'hg graft --continue')
+  [255]
+  $ hg st
+  M foo/a.txt
+  ? foo/a.txt.orig
+  
+  # The repository is in an unfinished *graft* state.
+  # Unresolved merge conflicts (1):
+  # 
+  #     foo/a.txt
+  # 
+  # To mark files as resolved:  hg resolve --mark FILE
+  # To continue:                hg graft --continue
+  # To abort:                   hg graft --abort
+  $ hg diff
+  diff --git a/foo/a.txt b/foo/a.txt
+  --- a/foo/a.txt
+  +++ b/foo/a.txt
+  @@ -1,4 +1,8 @@
+  +<<<<<<< local: 3fccbb413558 - test: B
+   1b
+  +=======
+  +1a
+  +>>>>>>> graft: 0e0bbd7f53d7 - test: G2
+   2
+   3
+   4
+  $ echo "1a1b\n2\n3a\n4\n5" > foo/a.txt
+tofix: hg graft should work
+  $ hg graft --continue
+  abort: unknown revision '0e0bbd7f53d7f8dfa9ef6283f68e2aa5d274a185'!
+  [255]
