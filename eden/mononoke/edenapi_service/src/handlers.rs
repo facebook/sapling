@@ -69,10 +69,10 @@ mod blame;
 mod bookmarks;
 mod capabilities;
 mod commit;
-mod commit_cloud;
+pub mod commit_cloud;
 mod files;
 mod git_objects;
-mod handler;
+pub mod handler;
 mod history;
 mod land;
 mod lookup;
@@ -209,7 +209,7 @@ struct JsonError {
     request_id: String,
 }
 
-struct JsonErrorFomatter;
+pub struct JsonErrorFomatter;
 
 impl ErrorFormatter for JsonErrorFomatter {
     type Body = Vec<u8>;

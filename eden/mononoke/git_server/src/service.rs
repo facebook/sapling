@@ -9,6 +9,7 @@ mod bookmark_mover;
 mod error_formatter;
 mod reader;
 mod router;
+mod slapi_compat;
 mod uploader;
 
 pub use bookmark_mover::set_ref;
