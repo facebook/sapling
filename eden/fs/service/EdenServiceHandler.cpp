@@ -4170,7 +4170,7 @@ EdenServiceHandler::semifuture_globFiles(std::unique_ptr<GlobParams> params) {
 
       auto searchRoot = params->searchRoot_ref().value();
       size_t pos = 0;
-      while ((pos = searchRoot.find("\\", pos)) != std::string::npos) {
+      while ((pos = searchRoot.find('\\', pos)) != std::string::npos) {
         searchRoot.replace(pos, 1, "/");
       }
 
