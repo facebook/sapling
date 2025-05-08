@@ -129,8 +129,14 @@ class mergestate:
         # so it's set transiently there. It isn't read during `hg resolve`.
         ancestors = None
 
-        # XXX: construct from_repo from rust_ms
-        from_repo = repo
+        from_repo = None
+        if subtree_merges := rust_ms.subtree_merges():
+            from_repo_url = subtree_merges[0]["from_url"]
+            if from_repo_url:
+                with repo.ui.configoverride({("ui", "quiet"): True}):
+                    from_repo = subtreeutil.get_or_clone_git_repo(
+                        repo.ui, from_repo_url
+                    )
 
         obj = cls.__new__(cls)
         obj._init(
