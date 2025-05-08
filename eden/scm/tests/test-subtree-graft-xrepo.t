@@ -222,7 +222,25 @@ Test subtree graft with merge conflicts
    3
    4
   $ echo "1a1b\n2\n3a\n4\n5" > foo/a.txt
-tofix: hg graft should work
+  $ hg resolve --all --mark
+  (no more unresolved files)
+  continue: hg graft --continue
   $ hg graft --continue
-  abort: unknown revision '0e0bbd7f53d7f8dfa9ef6283f68e2aa5d274a185'!
-  [255]
+  grafting 0e0bbd7f53d7 "G2"
+  $ hg log -r . -p
+  commit:      c914ffc85eb4
+  user:        test <test@example.org>
+  date:        Mon Jan 01 00:00:10 2007 +0000
+  summary:     G2
+  
+  diff --git a/foo/a.txt b/foo/a.txt
+  --- a/foo/a.txt
+  +++ b/foo/a.txt
+  @@ -1,5 +1,5 @@
+  -1b
+  +1a1b
+   2
+  -3
+  +3a
+   4
+   5

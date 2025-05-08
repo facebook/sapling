@@ -261,6 +261,9 @@ class mergestate:
         """
         return self._rust_ms.subtree_merges()
 
+    def from_repo(self):
+        return self._from_repo
+
     def add_subtree_merge(self, from_node, from_path, to_path, from_repo_url=None):
         """Add a subtree merge record"""
         self._rust_ms.add_subtree_merge(from_node, from_path, to_path, from_repo_url)

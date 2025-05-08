@@ -2611,6 +2611,8 @@ def _dograft(ui, to_repo, *revs, from_repo=None, **opts):
         if revs and opts.get("abort"):
             raise error.Abort(_("can't specify --abort and revisions"))
 
+        ms = mergemod.mergestate.read(to_repo)
+        from_repo = ms.from_repo()
         # read in unfinished revisions
         try:
             nodes = to_repo.localvfs.readutf8("graftstate").splitlines()
