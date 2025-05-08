@@ -29,7 +29,6 @@ use crate::scmstore::tree::TreeEntryWithAux;
 /// A minimal tree enum that simply wraps the possible underlying tree types,
 /// with no processing.
 #[derive(Debug, Clone)]
-#[allow(dead_code)]
 pub(crate) enum LazyTree {
     /// An entry from a local IndexedLog. The contained Key's path might not match the requested Key's path.
     /// It may include the tree aux data if available

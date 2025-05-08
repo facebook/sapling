@@ -199,7 +199,16 @@ impl TreeStore {
 
         match self.get_indexedlog_caches_content_direct(&node)? {
             None => Ok(None),
-            Some(v) => Ok(Some(basic_parse_tree(v.into_bytes(), self.format())?)),
+            Some(blob) => {
+                let res: Box<ScmStoreTreeEntry> = Box::new(
+                    LazyTree::IndexedLog(TreeEntryWithAux {
+                        entry: Entry::new(node, blob.into_bytes(), Metadata::default()),
+                        tree_aux: self.get_local_aux_direct(&node)?,
+                    })
+                    .into(),
+                );
+                Ok(Some(res))
+            }
         }
     }
 
