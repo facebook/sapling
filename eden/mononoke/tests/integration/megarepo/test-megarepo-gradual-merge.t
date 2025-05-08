@@ -16,56 +16,52 @@ setup configuration
 
 setup hg server repo
 
-  $ hginit_treemanifest repo
-  $ cd repo
-  $ drawdag <<EOF
-  > C
-  > |
-  > B
-  > |
-  > A
+  $ testtool_drawdag --print-hg-hashes -R repo --derive-all <<EOF
+  > A-B-C
+  > D-E-F
+  > # bookmark: C head_bookmark
+  > # bookmark: F pre_deletion_commit
   > EOF
-  $ drawdag <<EOF
-  > F
-  > |
-  > E
-  > |
-  > D
-  > EOF
-  $ hg up -q tip
+  A=20ca2a4749a439b459125ef0f6a4f26e88ee7538
+  B=80521a640a0c8f51dcc128c2658b224d595840ac
+  C=d3b399ca8757acdb81c3681b052eb978db6768d8
+  D=201c657038eaf07b35da8038dbb804e288510bc5
+  E=568617fd5717c431962b3ebe8732567a5f6bc0f6
+  F=d43882032b87ce7b8392e90858b2715c258c1dbd
+
+  $ start_and_wait_for_mononoke_server
+  $ hg clone -q mono:repo repo --noupdate
+  $ cd repo 
+  $ hg up -q $F
   $ ls 
   D
   E
   F
+
   $ hg rm F && hg ci -m 'rm F'
   $ hg rm E && hg ci -m 'rm E'
-  $ hg book -r 0069ba24938a pre_deletion_commit
-  $ hg book -r c5d76fe4f0c0 last_deletion_commit 
-  $ hg book -r 26805aba1e60 head_bookmark
+  $ hg push -q -r . --to last_deletion_commit --create
   $ hg log -G -T '{node|short} {desc|firstline}\n'
-  @  c5d76fe4f0c0 rm E
+  @  9fd6e30353f9 rm E
   │
-  o  99cd22e92467 rm F
+  o  5ce0eb3262a7 rm F
   │
-  o  0069ba24938a F
+  o  d43882032b87 F
   │
-  o  cd488e83d208 E
+  o  568617fd5717 E
   │
-  o  058c1e1fb10a D
+  o  201c657038ea D
   
-  o  26805aba1e60 C
+  o  d3b399ca8757 C
   │
-  o  112478962961 B
+  o  80521a640a0c B
   │
-  o  426bada5c675 A
+  o  20ca2a4749a4 A
   
   $ hg book
-     head_bookmark             26805aba1e60
-     last_deletion_commit      c5d76fe4f0c0
-     pre_deletion_commit       0069ba24938a
+  no bookmarks set
 
   $ cd .. 
-  $ blobimport repo/.hg repo
   $ mononoke_admin megarepo gradual-merge \
   > --repo-id 0 -a stash \
   > -m "gradual merge" \
@@ -77,7 +73,7 @@ setup hg server repo
   * 3 total commits to merge (glob)
   * Finding commits that haven't been merged yet... (glob)
   * merging 1 commits (glob)
-  * Preparing to merge 9b65f1881b4fac85aa2f82ea599274472d58938ad1520e9306aa98942b5b2db3 (glob)
+  * Preparing to merge 8580abe13a55f056417a8e3fd2dd2744863634f3e4829c574df8c150d427ea82 (glob)
   * Created merge changeset * (glob)
   * Generated hg changeset * (glob)
   * Now running pushrebase... (glob)
@@ -93,20 +89,19 @@ setup hg server repo
   * 3 total commits to merge (glob)
   * Finding commits that haven't been merged yet... (glob)
   * merging 2 commits (glob)
-  * Preparing to merge afd03e5c132921683e0e7023556448c4dddd6dcf8d639d0743c638c5410413d2 (glob)
+  * Preparing to merge 167cdda0845f8591a9ac5819d6383a56037a49c8569ffada217efd5d46ac4834 (glob)
   * Created merge changeset * (glob)
   * Generated hg changeset * (glob)
   * Now running pushrebase... (glob)
   * Pushrebased to * (glob)
-  * Preparing to merge 0f74833ca121d604c4a32d9df3826d1b5d5b8d6191c6f4cd5ed0b323b2d3c288 (glob)
+  * Preparing to merge b2512cd96574be418a528a83a7e1e28c73e34fa4eac359083c381d2ae054cc39 (glob)
   * Created merge changeset * (glob)
   * Generated hg changeset * (glob)
   * Now running pushrebase... (glob)
   * Pushrebased to * (glob)
 
   $ cd "$TESTTMP"
-  $ hg clone -q mono:repo client --noupdate
-  $ cd client
+  $ cd repo
 
   $ start_and_wait_for_mononoke_server
 
@@ -120,24 +115,24 @@ setup hg server repo
   │ ├─╮
   │ │ o    * [MEGAREPO GRADUAL MERGE] gradual merge (0) (glob)
   │ │ ├─╮
-  │ │ │ o  c5d76fe4f0c0 rm E
+  │ │ │ @  9fd6e30353f9 rm E
   │ ├───╯
-  │ o │  99cd22e92467 rm F
+  │ o │  5ce0eb3262a7 rm F
   ├─╯ │
-  o   │  0069ba24938a F
+  o   │  d43882032b87 F
   │   │
-  o   │  cd488e83d208 E
+  o   │  568617fd5717 E
   │   │
-  o   │  058c1e1fb10a D
+  o   │  201c657038ea D
       │
-      o  26805aba1e60 C
+      o  d3b399ca8757 C
       │
-      o  112478962961 B
+      o  80521a640a0c B
       │
-      o  426bada5c675 A
+      o  20ca2a4749a4 A
   
   $ hg up head_bookmark
-  6 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  5 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ ls
   A
   B
