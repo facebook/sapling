@@ -37,7 +37,7 @@ subprocess = "0.2.9"
 sysinfo = "0.30.11"
 tabular = "0.2.0"
 termwiz = { version = "0.23", features = ["widgets"] }
-tokio = { version = "1.41.0", features = ["full", "test-util", "tracing"] }
+tokio = { version = "1.44.2", features = ["full", "test-util", "tracing"] }
 toml = "0.8.19"
 tracing = { version = "0.1.41", features = ["attributes", "valuable"] }
 
