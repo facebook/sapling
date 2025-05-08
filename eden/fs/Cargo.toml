@@ -5,10 +5,10 @@ cbindgen = { git = "https://github.com/mozilla/cbindgen.git", rev = "cf94b56ef35
 cxx = { package = "cxx", git = "https://github.com/facebookexperimental/cxx.git", rev = "fbe91091fd26aea4a30fd08b8f0230078f4db2ce" }
 cxx-build = { package = "cxx-build", git = "https://github.com/facebookexperimental/cxx.git", rev = "fbe91091fd26aea4a30fd08b8f0230078f4db2ce" }
 displaydoc = { git = "https://github.com/yaahc/displaydoc", rev = "7dc6e324b1788a6b7fb9f3a1953c512923a3e9f0" }
-google-cloud-gax = { git = "https://github.com/googleapis/google-cloud-rust.git", rev = "9f00dffe46fe5d50d9f7e3181c7e65d85be4ac8d" }
-google-cloud-gax-internal = { git = "https://github.com/googleapis/google-cloud-rust.git", rev = "9f00dffe46fe5d50d9f7e3181c7e65d85be4ac8d" }
-google-cloud-rpc = { git = "https://github.com/googleapis/google-cloud-rust.git", rev = "9f00dffe46fe5d50d9f7e3181c7e65d85be4ac8d" }
-google-cloud-wkt = { git = "https://github.com/googleapis/google-cloud-rust.git", rev = "9f00dffe46fe5d50d9f7e3181c7e65d85be4ac8d" }
+google-cloud-gax = { git = "https://github.com/googleapis/google-cloud-rust.git", rev = "e8e19354a374b673afa00c34ceb0a589cb2e25ff" }
+google-cloud-gax-internal = { git = "https://github.com/googleapis/google-cloud-rust.git", rev = "e8e19354a374b673afa00c34ceb0a589cb2e25ff" }
+google-cloud-rpc = { git = "https://github.com/googleapis/google-cloud-rust.git", rev = "e8e19354a374b673afa00c34ceb0a589cb2e25ff" }
+google-cloud-wkt = { git = "https://github.com/googleapis/google-cloud-rust.git", rev = "e8e19354a374b673afa00c34ceb0a589cb2e25ff" }
 graphql-parser = { git = "https://github.com/graphql-rust/graphql-parser", rev = "8d76425d83c40670570cc325f57c730262f07456" }
 imgui = { git = "https://github.com/imgui-rs/imgui-rs.git", rev = "2abba18c08fb5e70c699ba7992342e7ff8573b09" }
 imgui-sys = { git = "https://github.com/imgui-rs/imgui-rs.git", rev = "2abba18c08fb5e70c699ba7992342e7ff8573b09" }
