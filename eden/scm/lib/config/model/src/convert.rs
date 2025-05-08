@@ -268,6 +268,16 @@ impl FromConfigValue for Regex {
     }
 }
 
+#[cfg(feature = "convert-matcher")]
+impl FromConfigValue for pathmatcher::TreeMatcher {
+    fn try_from_str(s: &str) -> Result<Self> {
+        let parsed = parse_list(s);
+        let matcher =
+            Self::from_rules(parsed.into_iter(), false).map_err(|e| Error::Other(e.into()))?;
+        Ok(matcher)
+    }
+}
+
 /// Parse a configuration value as a list of comma/space separated strings.
 /// It is ported from `mercurial.config.parselist`.
 ///
@@ -548,6 +558,18 @@ mod tests {
 
         assert!(Regex::try_from_str("(oops").is_err());
 
+        Ok(())
+    }
+
+    #[cfg(feature = "convert-matcher")]
+    #[test]
+    fn test_matcher() -> anyhow::Result<()> {
+        use pathmatcher::Matcher;
+        use pathmatcher::RepoPath;
+        let m = pathmatcher::TreeMatcher::try_from_str("aaa, *z, !bz")?;
+        assert!(m.matches_file(RepoPath::from_str("aaa")?)?);
+        assert!(m.matches_file(RepoPath::from_str("zzz")?)?);
+        assert!(!m.matches_file(RepoPath::from_str("bz")?)?);
         Ok(())
     }
 }

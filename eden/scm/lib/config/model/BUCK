@@ -7,6 +7,7 @@ rust_library(
     srcs = glob(["src/**/*.rs"]),
     autocargo = {"cargo_toml_config": {
         "features": {
+            "convert-matcher": ["sapling-pathmatcher"],
             "convert-path": ["sapling-util"],
             "convert-regex": ["regex"],
         },
@@ -22,6 +23,7 @@ rust_library(
     }},
     crate_root = "src/lib.rs",
     features = [
+        "convert-matcher",
         "convert-path",
         "convert-regex",
     ],
@@ -32,6 +34,7 @@ rust_library(
         "fbsource//third-party/rust:thiserror",
         "fbsource//third-party/rust:twox-hash",
         "//eden/scm/lib/minibytes:minibytes",
+        "//eden/scm/lib/pathmatcher:pathmatcher",
         "//eden/scm/lib/util:util",
     ],
 )
