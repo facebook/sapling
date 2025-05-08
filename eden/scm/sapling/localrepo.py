@@ -3325,9 +3325,10 @@ def _remotenodes(repo):
         def isdraft(name):
             return False
 
-    # publicheads is an alternative method to define what "public" means.
-    # publicheads is a list of full names, i.e. <remote>/<name>.
-    publicheads = set(repo.ui.configlist("remotenames", "publicheads"))
+    # publicheads is a direct way to define what remotenames are "public".
+    # publicheads is a 'treematcher' constructed from a list of gitignore
+    # rules, like `<remote>/*`, `!<remote>/<draft>`, etc.
+    publicheads = repo.config.get.as_matcher("remotenames", "publicheads")
 
     remotebookmarks = repo._remotenames["bookmarks"]
     for fullname, nodes in remotebookmarks.items():
@@ -3335,7 +3336,7 @@ def _remotenodes(repo):
         # remote: remote, name: foo/bar
 
         if publicheads:
-            if fullname in publicheads:
+            if publicheads.matches(fullname):
                 publicnodes += nodes
             else:
                 draftnodes += nodes
