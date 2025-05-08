@@ -960,7 +960,7 @@ class ui:
 
         This function refers to input only; for output, see `ui.formatted()'.
         """
-        i = self.configbool("ui", "interactive")
+        i = self.configbool("ui", "interactive", None)
         if i is None:
             # some environments replace stdin without implementing isatty
             # usually those are non-interactive
@@ -1005,7 +1005,7 @@ class ui:
         if self.plain():
             return False
 
-        i = self.configbool("ui", "formatted")
+        i = self.configbool("ui", "formatted", None)
         if i is None:
             # some environments replace stdout without implementing isatty
             # usually those are non-interactive
