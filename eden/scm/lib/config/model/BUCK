@@ -6,6 +6,10 @@ rust_library(
     name = "configmodel",
     srcs = glob(["src/**/*.rs"]),
     autocargo = {"cargo_toml_config": {
+        "features": {
+            "convert-path": ["sapling-util"],
+            "convert-regex": ["regex"],
+        },
         "lib": {"name": "configmodel"},
         "package": {
             "authors": ["Meta Source Control Team <sourcecontrol-dev@meta.com>"],
@@ -17,6 +21,10 @@ rust_library(
         },
     }},
     crate_root = "src/lib.rs",
+    features = [
+        "convert-path",
+        "convert-regex",
+    ],
     deps = [
         "fbsource//third-party/rust:anyhow",
         "fbsource//third-party/rust:auto_impl",

@@ -6,6 +6,11 @@ rust_library(
     name = "auth",
     srcs = glob(["src/**/*.rs"]),
     autocargo = {"cargo_toml_config": {
+        "dependencies_override": {"dependencies": {
+            "sapling-configmodel": {"features": [
+                "convert-path",
+            ]},
+        }},
         "lib": {"name": "auth"},
         "package": {
             "authors": ["Meta Source Control Team <sourcecontrol-dev@meta.com>"],
