@@ -91,6 +91,22 @@ pub enum TreeMetadataMode {
 
 static TREESTORE_FLUSH_COUNT: Counter = Counter::new_counter("scmstore.tree.flush");
 
+#[derive(Debug, Clone)]
+pub struct TreeEntryWithAux {
+    entry: Entry,
+    tree_aux: Option<TreeAuxData>,
+}
+
+impl TreeEntryWithAux {
+    pub fn content(&self) -> Result<Bytes> {
+        self.entry.content()
+    }
+
+    pub fn node(&self) -> HgId {
+        self.entry.node()
+    }
+}
+
 #[derive(Clone)]
 pub struct TreeStore {
     /// The "local" indexedlog store. Stores content that is created locally.
@@ -497,7 +513,14 @@ impl TreeStore {
                     for key in pending.into_iter() {
                         if let Some(entry) = log.get_entry(&key.hgid)? {
                             tracing::trace!("{:?} found in {:?}", key, location);
-                            state.common.found(key, LazyTree::IndexedLog(entry).into());
+                            state.common.found(
+                                key,
+                                LazyTree::IndexedLog(TreeEntryWithAux {
+                                    entry,
+                                    tree_aux: None,
+                                })
+                                .into(),
+                            );
                             found_count += 1;
                         }
                         bar.increase_position(1);

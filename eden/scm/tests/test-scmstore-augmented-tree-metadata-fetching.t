@@ -351,16 +351,19 @@ Verify we do have tree locally, but don't have aux data locally:
       StoreTree {
           content: Some(
               IndexedLog(
-                  Entry {
-                      node: HgId("2aabbe46539594a3aede2a262ebfbcd3107ad10c"),
-                      metadata: Metadata {
-                          size: None,
-                          flags: None,
+                  TreeEntryWithAux {
+                      entry: Entry {
+                          node: HgId("2aabbe46539594a3aede2a262ebfbcd3107ad10c"),
+                          metadata: Metadata {
+                              size: None,
+                              flags: None,
+                          },
+                          content: OnceCell(Uninit),
+                          compressed_content: Some(
+                              b"\x8c\x00\x00\x00\xf1Mdir\x00ac934ed5f01e06c92b6c95661b2ccaf2a734509ft\nfile1\x00a58629e4c3c5a5d14b5810b2e35681bb84319167/\x00\xf0\x1c2\x00ecbe8b3047eb5d9bb298f516d451f64491812e07\n",
+                          ),
                       },
-                      content: OnceCell(Uninit),
-                      compressed_content: Some(
-                          b"\x8c\x00\x00\x00\xf1Mdir\x00ac934ed5f01e06c92b6c95661b2ccaf2a734509ft\nfile1\x00a58629e4c3c5a5d14b5810b2e35681bb84319167/\x00\xf0\x1c2\x00ecbe8b3047eb5d9bb298f516d451f64491812e07\n",
-                      ),
+                      tree_aux: None,
                   },
               ),
           ),
