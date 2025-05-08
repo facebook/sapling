@@ -206,7 +206,7 @@ impl GitSegmentedCommits {
 
         for (ref_name, value) in &refs {
             // Ignore symlink refs (usually just "*/HEAD"). They are handled elsewhere.
-            let id = match value {
+            let mut id = match value {
                 ReferenceValue::Sym(_) => continue,
                 ReferenceValue::Id(id) => *id,
             };
@@ -214,16 +214,44 @@ impl GitSegmentedCommits {
             match &names[..] {
                 ["refs", "remotes", name] => {
                     if remote_name_filter.should_import_remote_name(name)? {
-                        let should_import_to_dag = match existing_remotenames.get(*name) {
+                        let mut should_import_to_dag = match existing_remotenames.get(*name) {
                             Some(&existing_id) => existing_id != id,
                             None => true,
                         };
                         if should_import_to_dag {
-                            let mut opts = head_opts.clone();
-                            if remote_name_filter.is_main_remote_name(name) {
-                                opts.desired_group = Group::MASTER;
+                            // Resolve tags recursively.
+                            // Metalog references should not contain tags. Most users of metalog
+                            // expect references to be commits.
+                            let mut is_tag = false;
+                            while let Some(tag_data) = self
+                                .git_store
+                                .read_local_obj_optional(id, ObjectType::Tag)?
+                            {
+                                if let Some(target_id) = format_util::resolve_git_tag(&tag_data) {
+                                    is_tag = true;
+                                    id = target_id;
+                                } else {
+                                    break;
+                                }
                             }
-                            heads.push((Vertex::copy_from(id.as_ref()), opts));
+
+                            // If `id` is changed because of tag, re-calculate `should_import_to_dag`.
+                            // We caluclate `should_import_to_dag` first before reading tags, to
+                            // reduce overhead reading (known) non-tag objects.
+                            if is_tag {
+                                should_import_to_dag = match existing_remotenames.get(*name) {
+                                    Some(&existing_id) => existing_id != id,
+                                    None => true,
+                                };
+                            }
+
+                            if should_import_to_dag {
+                                let mut opts = head_opts.clone();
+                                if remote_name_filter.is_main_remote_name(name) {
+                                    opts.desired_group = Group::MASTER;
+                                }
+                                heads.push((Vertex::copy_from(id.as_ref()), opts));
+                            }
                         }
                         remotenames.insert(RefName::try_from(*name)?, id);
                     }
