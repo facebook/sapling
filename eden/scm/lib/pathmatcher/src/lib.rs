@@ -25,6 +25,7 @@ pub use pathmatcher_types::NegateMatcher;
 pub use pathmatcher_types::NeverMatcher;
 pub use pathmatcher_types::UnionMatcher;
 pub use pathmatcher_types::XorMatcher;
+pub use types::RepoPath;
 
 pub use crate::error::Error;
 pub use crate::exact_matcher::ExactMatcher;
@@ -47,7 +48,6 @@ mod test {
     use std::sync::Arc;
 
     use anyhow::Result;
-    use types::RepoPath;
 
     use super::*;
 
