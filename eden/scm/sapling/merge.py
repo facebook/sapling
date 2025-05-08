@@ -1553,8 +1553,11 @@ def applyupdates(
         from_repo=from_repo,
     )
 
+    from_repo_url = None
+    if is_crossrepo:
+        from_repo_url = from_repo.ui.config("paths", "default")
     for from_path, to_path in mctx.manifest().diffgrafts():
-        ms.add_subtree_merge(other_node, from_path, to_path)
+        ms.add_subtree_merge(other_node, from_path, to_path, from_repo_url)
 
     moves = []
     for m, l in actions.items():
