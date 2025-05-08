@@ -10,17 +10,21 @@
 use std::cell::RefCell;
 use std::sync::Arc;
 
-use configloader::Config;
 use configloader::config::ConfigSet;
 use configloader::config::Options;
 use configloader::convert::parse_list;
 use configloader::hg::ConfigSetHgExt;
 use configloader::hg::OptionsHgExt;
 use configloader::hg::RepoInfo;
+use configmodel::Config;
+use configmodel::Text;
+use configmodel::convert::ByteCount;
+use configmodel::convert::FromConfigValue;
 use cpython::*;
 use cpython_ext::PyNone;
 use cpython_ext::PyPath;
 use cpython_ext::PyPathBuf;
+use cpython_ext::error::AnyhowResultExt;
 use cpython_ext::error::Result;
 use cpython_ext::error::ResultPyErrExt;
 use repo_minimal_info::RepoMinimalInfo;
@@ -34,6 +38,7 @@ pub fn init_module(py: Python, package: &str) -> PyResult<PyModule> {
     m.add_class::<config>(py)?;
 
     m.add(py, "parselist", py_fn!(py, parselist(value: String)))?;
+    m.add(py, "unset_obj", unset::create_instance(py)?)?;
 
     impl_into::register(py);
 
@@ -81,10 +86,10 @@ py_class!(pub class config |py| {
         Ok(errors_to_str_vec(errors))
     }
 
-    def get(&self, section: &str, name: &str) -> PyResult<Option<PyString>> {
-        let cfg = self.cfg(py).borrow();
-
-        Ok(cfg.get(section, name).map(|v| PyString::new(py, &v)))
+    @property
+    def get(&self) -> PyResult<ConfigGetter> {
+        let cfg_obj = self.clone_ref(py);
+        ConfigGetter::create_instance(py, cfg_obj, Default::default())
     }
 
     def sources(
@@ -168,6 +173,147 @@ py_class!(pub class config |py| {
         self.cfg(py).borrow().files().iter().map(|(p, _)| p.as_path().try_into()).collect::<Result<Vec<PyPathBuf>>>().map_pyerr(py)
     }
 });
+
+#[derive(Default, Clone, Copy)]
+struct TypeDef {
+    convert: Option<fn(Python, &str) -> anyhow::Result<PyObject>>,
+    /// If set, it is not nullable.
+    default: Option<fn(Python) -> PyObject>,
+}
+
+impl TypeDef {
+    fn new(convert: fn(Python, &str) -> anyhow::Result<PyObject>) -> Self {
+        Self {
+            convert: Some(convert),
+            default: None,
+        }
+    }
+
+    fn with_default(mut self, default: fn(Python) -> PyObject) -> Self {
+        self.default = Some(default);
+        self
+    }
+}
+
+py_class!(class unset |_py| {});
+
+/// Unlike `Option`, distinguish between "set to None" and "not set".
+/// Use-case: `get.as_bool(x, y, None)` should return `None` instead of `False`
+/// for "not set" configs.
+enum PyOption {
+    Absent,
+    Present(PyObject),
+}
+
+impl<'s> FromPyObject<'s> for PyOption {
+    fn extract(py: Python, obj: &'s PyObject) -> PyResult<Self> {
+        if obj.cast_as::<unset>(py).is_ok() {
+            Ok(PyOption::Absent)
+        } else {
+            Ok(PyOption::Present(obj.clone_ref(py)))
+        }
+    }
+}
+
+py_class!(class ConfigGetter |py| {
+    data cfg_obj: config;
+    data type_def: TypeDef;
+
+    def __call__(&self, section: &str, name: &str, default: PyOption = PyOption::Absent) -> PyResult<Option<PyObject>> {
+        let cfg = self.cfg_obj(py).cfg(py);
+        let cfg = cfg.borrow();
+        let type_def = self.type_def(py);
+        let value: Option<Text> = cfg.get(section, name);
+        let convert = type_def.convert;
+        let implicit_default = type_def.default;
+        let value: Option<PyObject> = match (value, convert, implicit_default, default) {
+            (Some(text), None, _, _) => Some(PyString::new(py, &text).into_object()),
+            (Some(text), Some(convert), _, _) => Some(convert(py, &text).map_err(|e| PyErr::new::<exc::ValueError, _>(py, format!("invalid config {section}.{name}={text}: {e}")))?),
+            (None, _, None, PyOption::Absent) => None,
+            (None, _, Some(default_func), PyOption::Absent) => Some(default_func(py)),
+            (None, None, _, PyOption::Present(v)) => Some(v),
+            (None, Some(convert), _, PyOption::Present(v)) => match v.extract::<String>(py) {
+                // NOTE: 'default' could be before-convert (ex. str), or after-convert (not str).
+                Ok(s) => Some(convert(py, &s).map_err(|e| PyErr::new::<exc::ValueError, _>(py, format!("invalid default config {section}.{name}={s}: {e}")))?),
+                Err(_) => Some(v),
+            },
+        };
+        Ok(value)
+    }
+
+    /// Read as nullable str (default if no `as_*` is called).
+    @property
+    def as_str(&self) -> PyResult<Self> {
+        let cfg_obj = self.cfg_obj(py).clone_ref(py);
+        Self::create_instance(py, cfg_obj, Default::default())
+    }
+
+    /// Read as nullable integer.
+    @property
+    def as_int(&self) -> PyResult<Self> {
+        let type_def = TypeDef::new(|py, text| Ok(i64::try_from_str(text)?.to_py_object(py).into_object()));
+        self.with_type_def(py, type_def)
+    }
+
+    /// Read as bool. Missing values are treated as "false".
+    @property
+    def as_bool(&self) -> PyResult<Self> {
+        let type_def = TypeDef::new(|py, text| Ok(bool::try_from_str(text)?.to_py_object(py).into_object()));
+        let type_def = type_def.with_default(|py| py.False().into_object());
+        self.with_type_def(py, type_def)
+    }
+
+    /// Read as nullable bool.
+    @property
+    def as_optional_bool(&self) -> PyResult<Self> {
+        let type_def = TypeDef::new(|py, text| Ok(bool::try_from_str(text)?.to_py_object(py).into_object()));
+        self.with_type_def(py, type_def)
+    }
+
+    /// Read as list. Missing values are treated as an empty list.
+    @property
+    def as_list(&self) -> PyResult<Self> {
+        let type_def = TypeDef::new(|py, text| Ok(Vec::<String>::try_from_str(text)?.to_py_object(py).into_object()));
+        let type_def = type_def.with_default(|py| PyList::new(py, &[]).into_object());
+        self.with_type_def(py, type_def)
+    }
+
+    /// Read as byte count (ex. "1gb"). Missing values are treated as 0.
+    @property
+    def as_byte_count(&self) -> PyResult<Self> {
+        let type_def = TypeDef::new(|py, text| Ok(ByteCount::try_from_str(text)?.value().to_py_object(py).into_object()));
+        let type_def = type_def.with_default(|py| 0i32.to_py_object(py).into_object());
+        self.with_type_def(py, type_def)
+    }
+
+    /// Read as nullable (compiled) regex.
+    @property
+    def as_regex(&self) -> PyResult<Self> {
+        let type_def = TypeDef::new(|py, text| {
+            let native = pyregex::Regex::try_from_str(text)?;
+            Ok(pyregex::StringPattern::from_native(py, native).into_anyhow_result()?.into_object())
+        });
+        self.with_type_def(py, type_def)
+    }
+
+    /// Read as nullable (compiled) matcher.
+    /// Config value is a list of gitignore rules. Respect `!` and order matters.
+    @property
+    def as_matcher(&self) -> PyResult<Self> {
+        let type_def = TypeDef::new(|py, text| {
+            let native = pypathmatcher::TreeMatcher::try_from_str(text)?;
+            Ok(pypathmatcher::treematcher::from_native(py, native).into_anyhow_result()?.into_object())
+        });
+        self.with_type_def(py, type_def)
+    }
+});
+
+impl ConfigGetter {
+    fn with_type_def(&self, py: Python, def: TypeDef) -> PyResult<Self> {
+        let cfg_obj = self.cfg_obj(py).clone_ref(py);
+        Self::create_instance(py, cfg_obj, def)
+    }
+}
 
 fn path_to_info(py: Python, path: Option<PyPathBuf>) -> PyResult<Option<RepoMinimalInfo>> {
     // Ideally the callsite can provide `info` directly.
