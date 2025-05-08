@@ -35,7 +35,7 @@ rust_binary(
         "//manifold/clients/rust:manifold_client",
     ] + ([] if rust_oss.is_oss_build() else [
         "//configerator/structs/privacy/data_schema/if:protocol-rust",
-    ])) + ["//eden/mononoke/common/scuba_ext:scuba_ext"]),
+    ])) + ["//eden/mononoke/common/scuba_ext:scuba_ext"]) + ["//eden/mononoke/cmdlib/zk_leader_election:zk_leader_election"],
 )
 
 tw.container(
