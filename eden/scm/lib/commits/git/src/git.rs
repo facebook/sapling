@@ -205,9 +205,12 @@ impl GitSegmentedCommits {
         };
 
         for (ref_name, value) in &refs {
-            // Ignore symlink refs (usually just "*/HEAD"). They are handled elsewhere.
+            // Resolve symlink refs.
             let mut id = match value {
-                ReferenceValue::Sym(_) => continue,
+                ReferenceValue::Sym(name) => match self.git.lookup_reference_follow_links(name)? {
+                    None => continue,
+                    Some(id) => id,
+                },
                 ReferenceValue::Id(id) => *id,
             };
             let names: Vec<&str> = ref_name.splitn(3, '/').collect();
