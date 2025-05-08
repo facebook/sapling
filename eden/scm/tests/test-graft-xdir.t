@@ -732,7 +732,7 @@ Graft supports non-root relative paths
   $ cd my
   $ hg subtree graft -qr $C --from-path foo --to-path bar
   $ hg show
-  commit:      9f7302d2feef
+  commit:      32d15abcf9ef
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   files:       my/bar/file
@@ -740,7 +740,7 @@ Graft supports non-root relative paths
   Graft "C"
   
   Grafted from 48b96237613e0f4a5fb16198b55dd4a03ca3c527
-  - Grafted path foo to bar
+  - Grafted path my/foo to my/bar
   
   
   diff --git a/my/bar/file b/my/bar/file

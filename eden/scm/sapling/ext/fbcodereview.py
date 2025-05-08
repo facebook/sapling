@@ -167,9 +167,9 @@ def makebackoutmessage(orig, repo, message: str, node):
     return message
 
 
-def makegraftmessage(orig, repo, ctx, opts):
-    message, is_from_user = orig(repo, ctx, opts)
-    if not opts.get("from_path"):
+def makegraftmessage(orig, repo, ctx, opts, from_paths, to_paths):
+    message, is_from_user = orig(repo, ctx, opts, from_paths, to_paths)
+    if not from_paths:
         return message, is_from_user
 
     if is_from_user:

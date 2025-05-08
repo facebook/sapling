@@ -2737,7 +2737,9 @@ def _dograft(ui, to_repo, *revs, from_repo=None, **opts):
 
         # commit
         editor = cmdutil.getcommiteditor(editform="graft", **opts)
-        message, _is_from_user = _makegraftmessage(to_repo, ctx, opts)
+        message, _is_from_user = _makegraftmessage(
+            to_repo, ctx, opts, from_paths, to_paths
+        )
         node = to_repo.commit(
             text=message, user=user, date=date, extra=extra, editor=editor
         )
@@ -2754,7 +2756,7 @@ def _dograft(ui, to_repo, *revs, from_repo=None, **opts):
     return 0
 
 
-def _makegraftmessage(repo, ctx, opts):
+def _makegraftmessage(repo, ctx, opts, from_paths, to_paths):
     opts = dict(opts)
 
     if not opts.get("logfile") and not opts.get("message"):
@@ -2764,11 +2766,11 @@ def _makegraftmessage(repo, ctx, opts):
     is_from_user = description != ctx.description()
 
     message = []
-    if opts.get("from_path"):
+    if from_paths:
         # For xdir grafts, include "grafted from" breadcrumb by default.
         if opts.get("log") is not False:
             message.append("Grafted from %s" % ctx.hex())
-            for f, t in zip(opts.get("from_path"), opts.get("to_path")):
+            for f, t in zip(from_paths, to_paths):
                 message.append("- Grafted path %s to %s" % (f, t))
 
             # don't update the user provided title
