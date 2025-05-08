@@ -56,8 +56,8 @@ use storemodel::SerializationFormat;
 use types::HgId;
 use types::fetch_mode::FetchMode;
 
-use crate::ref_filter::GitRefFilter;
-use crate::ref_matcher::GitRefMatcher;
+use crate::ref_filter::GitRefMetaLogFilter;
+use crate::ref_matcher::GitRefPreliminaryMatcher;
 use crate::utils;
 
 /// Git commits with segments index.
@@ -163,7 +163,7 @@ impl GitSegmentedCommits {
     pub fn import_from_git(&mut self, metalog: &mut MetaLog) -> Result<()> {
         tracing::info!("updating metalog from git refs");
 
-        let matcher = GitRefMatcher::new();
+        let matcher = GitRefPreliminaryMatcher::new();
 
         let refs: BTreeMap<String, ReferenceValue> = self.git.list_references(Some(&matcher))?;
 
@@ -181,15 +181,15 @@ impl GitSegmentedCommits {
         let mut heads = Vec::new();
         let head_opts = VertexOptions::default();
 
-        let remote_name_filter: GitRefFilter = if self.is_dotgit {
-            GitRefFilter::new_for_dotgit(
+        let remote_name_filter: GitRefMetaLogFilter = if self.is_dotgit {
+            GitRefMetaLogFilter::new_for_dotgit(
                 &refs,
                 &existing_remotenames,
                 self.config_hoist.as_deref(),
                 &self.config_selective_pull_default,
             )?
         } else {
-            GitRefFilter::new_for_dotsl(&refs)?
+            GitRefMetaLogFilter::new_for_dotsl(&refs)?
         };
 
         for (ref_name, value) in &refs {

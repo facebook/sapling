@@ -14,8 +14,30 @@ use gitcompat::ReferenceValue;
 use refencode::RefName;
 use types::HgId;
 
-/// Help decide whether a Git ref should be imported or not.
-pub(crate) struct GitRefFilter<'a> {
+/// Decide whether a Git ref should be imported to metalog or not.
+///
+/// Happens after `GitRefPreliminaryFilter`.
+///
+/// UX considerations:
+/// - Local `master` tracking `origin/master`. While "standard" in Git,
+///   in production users are often confused with 2 "master"s.
+///
+///
+/// Scalability considerations:
+/// - `smartlog` output size: worse than O(N). shouldn't output
+///   thousands of lines (must limit output size).
+/// - `phase` calculation: worse than O(N). shouldn't have thousands
+///   of draft/public heads (might be optimizable).
+/// - importing git commits to segmented changelog: worse than O(N).
+///   shouldn't have thousands of heads to import (might be optimizable).
+///
+/// Decisions (might be unfamiliar to experienced Git users, but matches
+/// Sapling's behavior in a monorepo):
+/// - Turn the local `master` into an anonymous head if `origin/master`
+///   also exists.
+/// - Apply the "selective pull" idea, start with a limited set of remote
+///   refs (like, just "master"). Extend the list later with extra `pull`s.
+pub(crate) struct GitRefMetaLogFilter<'a> {
     refs: &'a BTreeMap<String, ReferenceValue>,
     // e.g. "origin/main"
     head_remotenames: HashSet<&'a str>,
@@ -28,7 +50,7 @@ pub(crate) struct GitRefFilter<'a> {
     is_dotgit: bool,
 }
 
-impl<'a> GitRefFilter<'a> {
+impl<'a> GitRefMetaLogFilter<'a> {
     /// Initialize for dotgit use-case.
     pub(crate) fn new_for_dotgit(
         refs: &'a BTreeMap<String, ReferenceValue>,
@@ -98,6 +120,12 @@ impl<'a> GitRefFilter<'a> {
             return false;
         }
         if self.is_dotgit {
+            // `git clone` by default fetches all remote refs, which hurts scalability
+            // (see struct-level docstring).
+            // `git clone --single-branch` is closer to what we want, but it is not
+            // the default, and we cannot rely on users knowing and using the flag.
+            // `sl clone` ("dotsl", not "dotgit") only fetches limited remote refs.
+            // It does not have this problem.
             if self.existing_remotenames.contains_key(name) || self.head_remotenames.contains(name)
             {
                 return true;
@@ -156,7 +184,8 @@ mod tests {
         selected.insert("b3".to_string());
 
         let filter =
-            GitRefFilter::new_for_dotgit(&refs, &existing_remotenames, None, &selected).unwrap();
+            GitRefMetaLogFilter::new_for_dotgit(&refs, &existing_remotenames, None, &selected)
+                .unwrap();
         // referred by HEAD (default)
         assert!(filter.should_import_remote_name("origin/b1"));
         // matches existing
@@ -176,7 +205,7 @@ mod tests {
     #[test]
     fn test_ref_filter_non_dotgit() {
         let refs = get_test_refs("remote");
-        let filter = GitRefFilter::new_for_dotsl(&refs).unwrap();
+        let filter = GitRefMetaLogFilter::new_for_dotsl(&refs).unwrap();
         // all local refs should be treated as bookmarks since Git does not write
         assert!(!filter.should_treat_local_ref_as_visible_head("main"));
         assert!(!filter.should_treat_local_ref_as_visible_head("foo"));
