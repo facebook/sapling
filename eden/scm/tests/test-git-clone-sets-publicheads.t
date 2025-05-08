@@ -25,4 +25,4 @@ Test git clone sets publicheads
   2 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ cd cloned
   $ hg config remotenames.publicheads
-  remote/foo,remote/main,remote/master
+  m/*,remote/foo,remote/main,remote/master
