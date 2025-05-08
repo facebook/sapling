@@ -362,6 +362,7 @@ fn packfile_stream_from_changesets<'a>(
         // packfile_items_futures.poll_next_unpin() in that case then we will end up returning Poll::Ready(None) and the stream will never get
         // polled again even though there are still items to be processed.
         if packfile_items_futures.is_empty() {
+            cx.waker().wake_by_ref();
             Poll::Pending
         } else {
             packfile_items_futures.poll_next_unpin(cx)
