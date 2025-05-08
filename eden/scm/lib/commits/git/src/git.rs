@@ -118,15 +118,23 @@ pub struct GitSegmentedCommits {
     dag: GitDag,
     dag_path: PathBuf,
     git: BareGit,
-    is_dotgit: bool,
     // Read from config
-    config_hoist: Option<Text>,
-    /// Matched remote refs (ex. "main") will be imported.
-    /// Implicit ref prefix: refs/remotes/{something}/
-    config_selective_pull_default: HashSet<String>,
-    /// Matched remote refs (ex. "m/*") will be imported.
-    /// Implicit ref prefix: refs/remotes/
-    config_import_remote_refs: Option<Box<dyn Matcher + Send + Sync>>,
+    relevant_config: RelevantConfig,
+}
+
+enum RelevantConfig {
+    /// ".sl" mode does not need those configs.
+    DotSl,
+    /// ".git" mode need those configs.
+    DotGit {
+        hoist: Option<Text>,
+        /// Matched remote refs (ex. "main") will be imported.
+        /// Implicit ref prefix: refs/remotes/{something}/
+        selective_pull_default: HashSet<String>,
+        /// Matched remote refs (ex. "m/*") will be imported.
+        /// Implicit ref prefix: refs/remotes/
+        import_remote_refs: Option<Box<dyn Matcher + Send + Sync>>,
+    },
 }
 
 impl DagCommits for GitSegmentedCommits {}
@@ -143,21 +151,27 @@ impl GitSegmentedCommits {
         let dag_path = dag_dir.to_path_buf();
         let git_path = git_dir.to_path_buf();
         let git = BareGit::from_git_dir_and_config(git_path, config);
-        let config_hoist = config.get("remotenames", "hoist");
-        let config_selective_pull_default =
-            config.get_or_default("remotenames", "selectivepulldefault")?;
-        let config_import_remote_refs = config
-            .get_opt::<TreeMatcher>("git", "import-remote-refs")?
-            .map(|v| Box::new(v) as Box<dyn Matcher + Send + Sync>);
+        let relevant_config = if is_dotgit {
+            let hoist = config.get("remotenames", "hoist");
+            let selective_pull_default =
+                config.get_or_default("remotenames", "selectivepulldefault")?;
+            let import_remote_refs = config
+                .get_opt::<TreeMatcher>("git", "import-remote-refs")?
+                .map(|v| Box::new(v) as Box<dyn Matcher + Send + Sync>);
+            RelevantConfig::DotGit {
+                hoist,
+                selective_pull_default,
+                import_remote_refs,
+            }
+        } else {
+            RelevantConfig::DotSl
+        };
         Ok(Self {
             git_store,
             dag,
             dag_path,
-            is_dotgit,
             git,
-            config_hoist,
-            config_selective_pull_default,
-            config_import_remote_refs,
+            relevant_config,
         })
     }
 
@@ -192,16 +206,19 @@ impl GitSegmentedCommits {
         let mut heads = Vec::new();
         let head_opts = VertexOptions::default();
 
-        let remote_name_filter: GitRefMetaLogFilter = if self.is_dotgit {
-            GitRefMetaLogFilter::new_for_dotgit(
+        let remote_name_filter: GitRefMetaLogFilter = match &self.relevant_config {
+            RelevantConfig::DotGit {
+                hoist,
+                selective_pull_default,
+                import_remote_refs,
+            } => GitRefMetaLogFilter::new_for_dotgit(
                 &refs,
                 &existing_remotenames,
-                self.config_hoist.as_deref(),
-                &self.config_selective_pull_default,
-                self.config_import_remote_refs.as_deref(),
-            )?
-        } else {
-            GitRefMetaLogFilter::new_for_dotsl(&refs)?
+                hoist.as_deref(),
+                selective_pull_default,
+                import_remote_refs.as_deref(),
+            )?,
+            RelevantConfig::DotSl => GitRefMetaLogFilter::new_for_dotsl(&refs)?,
         };
 
         for (ref_name, value) in &refs {
