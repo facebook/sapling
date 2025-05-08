@@ -19,7 +19,7 @@ fs-err = { version = "3", features = ["tokio"] }
 futures = { version = "0.3.30", features = ["async-await", "compat"] }
 paste = "1.0.14"
 sapling-commits-trait = { version = "0.1.0", path = "../trait" }
-sapling-configmodel = { version = "0.1.0", path = "../../config/model" }
+sapling-configmodel = { version = "0.1.0", path = "../../config/model", features = ["convert-matcher"] }
 sapling-dag = { version = "0.1.0", path = "../../dag" }
 sapling-factory = { version = "0.1.0", path = "../../util/factory" }
 sapling-format-util = { version = "0.1.0", path = "../../util/format-util" }
@@ -28,6 +28,7 @@ sapling-gitdag = { version = "0.1.0", path = "../../dag/gitdag" }
 sapling-gitstore = { version = "0.1.0", path = "../../gitstore" }
 sapling-metalog = { version = "0.1.0", path = "../../metalog" }
 sapling-minibytes = { version = "0.1.0", path = "../../minibytes" }
+sapling-pathmatcher = { version = "0.1.0", path = "../../pathmatcher" }
 sapling-pathmatcher-types = { version = "0.1.0", path = "../../pathmatcher/types" }
 sapling-refencode = { version = "0.1.0", path = "../../refencode" }
 sapling-spawn-ext = { version = "0.1.0", path = "../../spawn-ext" }

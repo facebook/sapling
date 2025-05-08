@@ -49,6 +49,8 @@ use gitstore::ObjectType;
 use metalog::MetaLog;
 use minibytes::Bytes;
 use paste::paste;
+use pathmatcher::Matcher;
+use pathmatcher::TreeMatcher;
 use refencode::RefName;
 use spawn_ext::CommandError;
 use storemodel::ReadRootTreeIds;
@@ -119,7 +121,12 @@ pub struct GitSegmentedCommits {
     is_dotgit: bool,
     // Read from config
     config_hoist: Option<Text>,
+    /// Matched remote refs (ex. "main") will be imported.
+    /// Implicit ref prefix: refs/remotes/{something}/
     config_selective_pull_default: HashSet<String>,
+    /// Matched remote refs (ex. "m/*") will be imported.
+    /// Implicit ref prefix: refs/remotes/
+    config_import_remote_refs: Option<Box<dyn Matcher + Send + Sync>>,
 }
 
 impl DagCommits for GitSegmentedCommits {}
@@ -139,6 +146,9 @@ impl GitSegmentedCommits {
         let config_hoist = config.get("remotenames", "hoist");
         let config_selective_pull_default =
             config.get_or_default("remotenames", "selectivepulldefault")?;
+        let config_import_remote_refs = config
+            .get_opt::<TreeMatcher>("git", "import-remote-refs")?
+            .map(|v| Box::new(v) as Box<dyn Matcher + Send + Sync>);
         Ok(Self {
             git_store,
             dag,
@@ -147,6 +157,7 @@ impl GitSegmentedCommits {
             git,
             config_hoist,
             config_selective_pull_default,
+            config_import_remote_refs,
         })
     }
 
@@ -187,6 +198,7 @@ impl GitSegmentedCommits {
                 &existing_remotenames,
                 self.config_hoist.as_deref(),
                 &self.config_selective_pull_default,
+                self.config_import_remote_refs.as_deref(),
             )?
         } else {
             GitRefMetaLogFilter::new_for_dotsl(&refs)?
@@ -201,7 +213,7 @@ impl GitSegmentedCommits {
             let names: Vec<&str> = ref_name.splitn(3, '/').collect();
             match &names[..] {
                 ["refs", "remotes", name] => {
-                    if remote_name_filter.should_import_remote_name(name) {
+                    if remote_name_filter.should_import_remote_name(name)? {
                         let should_import_to_dag = match existing_remotenames.get(*name) {
                             Some(&existing_id) => existing_id != id,
                             None => true,

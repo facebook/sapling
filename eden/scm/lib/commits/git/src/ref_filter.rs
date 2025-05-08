@@ -11,8 +11,10 @@ use std::sync::LazyLock;
 
 use anyhow::Result;
 use gitcompat::ReferenceValue;
+use pathmatcher_types::Matcher;
 use refencode::RefName;
 use types::HgId;
+use types::RepoPath;
 
 /// Decide whether a Git ref should be imported to metalog or not.
 ///
@@ -45,6 +47,8 @@ pub(crate) struct GitRefMetaLogFilter<'a> {
     existing_remotenames: &'a BTreeMap<RefName, HgId>,
     // e.g. "main", without "origin".
     selective_pull_default: &'a HashSet<String>,
+    // e.g. "refs/remotes/origin/*", "refs/remotes/m/*"
+    import_remote_refs: Option<&'a (dyn Matcher + Send + Sync)>,
     // e.g. "origin"
     hoist: &'a str,
     is_dotgit: bool,
@@ -57,12 +61,14 @@ impl<'a> GitRefMetaLogFilter<'a> {
         existing_remotenames: &'a BTreeMap<RefName, HgId>,
         hoist: Option<&'a str>,
         selective_pull_default: &'a HashSet<String>,
+        import_remote_refs: Option<&'a (dyn Matcher + Send + Sync)>,
     ) -> Result<Self> {
         Self::new(
             refs,
             existing_remotenames,
             hoist.unwrap_or("origin"),
             selective_pull_default,
+            import_remote_refs,
             true,
         )
     }
@@ -72,7 +78,7 @@ impl<'a> GitRefMetaLogFilter<'a> {
         // No need to use "existing_remotenames" for non-dotgit.
         static EMPTY_MAP: BTreeMap<RefName, HgId> = BTreeMap::new();
         static EMPTY_SET: LazyLock<HashSet<String>> = LazyLock::new(Default::default);
-        Self::new(refs, &EMPTY_MAP, "remote", &EMPTY_SET, false)
+        Self::new(refs, &EMPTY_MAP, "remote", &EMPTY_SET, None, false)
     }
 
     fn new(
@@ -80,6 +86,7 @@ impl<'a> GitRefMetaLogFilter<'a> {
         existing_remotenames: &'a BTreeMap<RefName, HgId>,
         hoist: &'a str,
         selective_pull_default: &'a HashSet<String>,
+        import_remote_refs: Option<&'a (dyn Matcher + Send + Sync)>,
         is_dotgit: bool,
     ) -> Result<Self> {
         // e.g. "origin/main"
@@ -109,15 +116,16 @@ impl<'a> GitRefMetaLogFilter<'a> {
             head_remotenames,
             existing_remotenames,
             selective_pull_default,
+            import_remote_refs,
             hoist,
             is_dotgit,
         })
     }
 
     /// Decides whether "refs/remotes/<name>" should be imported or not.
-    pub(crate) fn should_import_remote_name(&self, name: &str) -> bool {
+    pub(crate) fn should_import_remote_name(&self, name: &str) -> Result<bool> {
         if !name.contains('/') || name.ends_with("/HEAD") || name.starts_with("tags/") {
-            return false;
+            return Ok(false);
         }
         if self.is_dotgit {
             // `git clone` by default fetches all remote refs, which hurts scalability
@@ -126,18 +134,33 @@ impl<'a> GitRefMetaLogFilter<'a> {
             // the default, and we cannot rely on users knowing and using the flag.
             // `sl clone` ("dotsl", not "dotgit") only fetches limited remote refs.
             // It does not have this problem.
-            if self.existing_remotenames.contains_key(name) || self.head_remotenames.contains(name)
-            {
-                return true;
+            if self.existing_remotenames.contains_key(name) {
+                tracing::trace!(name, "should be imported (existing)");
+                return Ok(true);
+            }
+            if self.head_remotenames.contains(name) {
+                tracing::trace!(name, "should be imported (pointed by HEAD)");
+                return Ok(true);
+            }
+            if let Some(matcher) = self.import_remote_refs {
+                if let Ok(path) = RepoPath::from_str(name) {
+                    if matcher.matches_file(path)? {
+                        tracing::trace!(name, "should be imported (matches import_remote_refs)");
+                        return Ok(true);
+                    }
+                }
             }
             if let Some((_remote, rest)) = name.split_once('/') {
                 if self.selective_pull_default.contains(rest) {
-                    return true;
+                    tracing::trace!(name, "should be imported (matches selective_pull_default)");
+                    return Ok(true);
                 }
             }
-            false
+            tracing::trace!(name, "should not be imported (dotgit)");
+            Ok(false)
         } else {
-            true
+            tracing::trace!(name, "should be imported (dotsl)");
+            Ok(true)
         }
     }
 
@@ -171,10 +194,12 @@ impl<'a> GitRefMetaLogFilter<'a> {
 
 #[cfg(test)]
 mod tests {
+    use pathmatcher::TreeMatcher;
+
     use super::*;
 
     #[test]
-    fn test_ref_filter_dotgit() {
+    fn test_ref_filter_dotgit() -> Result<()> {
         let refs = get_test_refs("origin");
 
         let mut existing_remotenames = BTreeMap::new();
@@ -183,40 +208,51 @@ mod tests {
         let mut selected = HashSet::new();
         selected.insert("b3".to_string());
 
-        let filter =
-            GitRefMetaLogFilter::new_for_dotgit(&refs, &existing_remotenames, None, &selected)
-                .unwrap();
+        let import_remote_refs = TreeMatcher::from_rules(std::iter::once("m/*"), false)?;
+        let filter = GitRefMetaLogFilter::new_for_dotgit(
+            &refs,
+            &existing_remotenames,
+            None,
+            &selected,
+            Some(&import_remote_refs),
+        )
+        .unwrap();
         // referred by HEAD (default)
-        assert!(filter.should_import_remote_name("origin/b1"));
+        assert!(filter.should_import_remote_name("origin/b1")?);
         // matches existing
-        assert!(filter.should_import_remote_name("origin/b2"));
+        assert!(filter.should_import_remote_name("origin/b2")?);
         // matches config
-        assert!(filter.should_import_remote_name("origin/b3"));
+        assert!(filter.should_import_remote_name("origin/b3")?);
         // matches nothing
-        assert!(!filter.should_import_remote_name("origin/b4"));
+        assert!(!filter.should_import_remote_name("origin/b4")?);
+        // matches the import_remote_refs matcher
+        assert!(filter.should_import_remote_name("m/foo")?);
+
         assert!(filter.should_treat_local_ref_as_visible_head("main"));
         assert!(filter.should_treat_local_ref_as_visible_head("b1"));
         assert!(filter.should_treat_local_ref_as_visible_head("b4"));
         // detects main branch
         assert!(filter.is_main_remote_name("origin/b1"));
         assert!(!filter.is_main_remote_name("origin/b2"));
+        Ok(())
     }
 
     #[test]
-    fn test_ref_filter_non_dotgit() {
+    fn test_ref_filter_non_dotgit() -> Result<()> {
         let refs = get_test_refs("remote");
         let filter = GitRefMetaLogFilter::new_for_dotsl(&refs).unwrap();
         // all local refs should be treated as bookmarks since Git does not write
         assert!(!filter.should_treat_local_ref_as_visible_head("main"));
         assert!(!filter.should_treat_local_ref_as_visible_head("foo"));
         // all remote names should be imported. Except */HEAD
-        assert!(filter.should_import_remote_name("remote/main"));
-        assert!(filter.should_import_remote_name("remote/foo"));
-        assert!(filter.should_import_remote_name("upstream/bar"));
-        assert!(!filter.should_import_remote_name("upstream/HEAD"));
-        //
+        assert!(filter.should_import_remote_name("remote/main")?);
+        assert!(filter.should_import_remote_name("remote/foo")?);
+        assert!(filter.should_import_remote_name("upstream/bar")?);
+        assert!(!filter.should_import_remote_name("upstream/HEAD")?);
+        // detects main branch
         assert!(filter.is_main_remote_name("remote/b1"));
         assert!(!filter.is_main_remote_name("remote/b2"));
+        Ok(())
     }
 
     fn get_test_refs(remote: &str) -> BTreeMap<String, ReferenceValue> {

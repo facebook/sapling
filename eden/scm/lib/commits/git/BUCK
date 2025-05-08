@@ -6,6 +6,13 @@ rust_library(
     name = "commits-git",
     srcs = glob(["src/**/*.rs"]),
     autocargo = {"cargo_toml_config": {
+        "dependencies_override": {
+            "dependencies": {
+                "sapling-configmodel": {"features": [
+                    "convert-matcher",
+                ]},
+            },
+        },
         "lib": {"name": "commits-git"},
         "package": {
             "authors": ["Meta Source Control Team <sourcecontrol-dev@meta.com>"],
@@ -31,6 +38,7 @@ rust_library(
         "//eden/scm/lib/gitstore:gitstore",
         "//eden/scm/lib/metalog:metalog",
         "//eden/scm/lib/minibytes:minibytes",
+        "//eden/scm/lib/pathmatcher:pathmatcher",
         "//eden/scm/lib/pathmatcher/types:pathmatcher-types",
         "//eden/scm/lib/refencode:refencode",
         "//eden/scm/lib/spawn-ext:spawn-ext",
