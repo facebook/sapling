@@ -1595,6 +1595,15 @@ class EdenConfig : private ConfigSettingManager {
       this};
 
   /**
+   * The age threshold that the health-report command should utilize to check if
+   * the running EdenFS version is stale.
+   */
+  ConfigSetting<size_t> healthReportStaleVersionThresholdDays{
+      "notifications:health-report-stale-version-threshold-days",
+      30,
+      this};
+
+  /**
    * Whether EdenFS ready status should be shown via Windows
    * notifications
    */

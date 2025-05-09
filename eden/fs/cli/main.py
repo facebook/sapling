@@ -1295,6 +1295,8 @@ class HealthReportCmd(Subcmd):
             return remediation[self]
 
     running_version: str = ""
+    # a value of 0 turns off the stale version check
+    running_version_days_threshold = 30
     version_info: VersionInfo = VersionInfo()
     error_codes: Dict[ErrorCode, str] = {}
 
@@ -1349,16 +1351,19 @@ class HealthReportCmd(Subcmd):
         return True
 
     def is_eden_up_to_date(self) -> bool:
+        """Checks if running version is newer than a pre-configured threshold.
+        If provided threshold is 0, the check is skipped and returns True."""
         if (
-            self.version_info.ages_deltas is not None
-            and self.version_info.ages_deltas >= 30
+            self.running_version_days_threshold != 0
+            and self.version_info.ages_deltas is not None
+            and self.version_info.ages_deltas >= self.running_version_days_threshold
         ):
             self.error_codes[HealthReportCmd.ErrorCode.STALE_EDEN_VERSION] = (
                 "Running EdenFS version: "
                 + (self.version_info.running_version or "")
                 + ", installed EdenFS version: "
                 + (self.version_info.installed_version or "")
-                + ". The running EdenFS daemon is over 30 days out-of-date."
+                + f". The running EdenFS daemon is over {self.running_version_days_threshold} days out-of-date."
             )
             return False
         return True
@@ -1509,6 +1514,10 @@ class HealthReportCmd(Subcmd):
     def run(self, args: argparse.Namespace) -> int:
         instance = get_eden_instance(args)
         mounts = args.mounts or []
+        self.running_version_days_threshold = instance.get_config_int(
+            "notifications.health-report-stale-version-threshold-days",
+            self.running_version_days_threshold,
+        )
 
         # don't run health-report if there are no eden mounts
         if not instance.get_mount_paths():
