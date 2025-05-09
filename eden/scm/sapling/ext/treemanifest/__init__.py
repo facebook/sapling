@@ -110,9 +110,6 @@ command = registrar.command(cmdtable)
 # The default depth to fetch during tree fetches
 TREE_DEPTH_MAX = 2**16
 
-configtable = {}
-configitem = registrar.configitem(configtable)
-
 
 PACK_CATEGORY = "manifests"
 

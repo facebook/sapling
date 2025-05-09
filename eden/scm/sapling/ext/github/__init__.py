@@ -42,9 +42,6 @@ autopullpredicate = registrar.autopullpredicate()
 
 hint = registrar.hint()
 
-configtable = {}
-configitem = registrar.configitem(configtable)
-
 
 @hint("unlink-closed-pr")
 def unlink_closed_pr_hint() -> str:

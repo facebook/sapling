@@ -63,10 +63,6 @@ from sapling.namespaces import namespace
 from .pushrebase import isnonpushrebaseblocked
 
 
-configtable = {}
-configitem = registrar.configitem(configtable)
-
-
 cmdtable = {}
 command = registrar.command(cmdtable)
 namespacepredicate = registrar.namespacepredicate()

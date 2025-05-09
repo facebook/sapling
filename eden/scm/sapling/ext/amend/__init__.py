@@ -82,9 +82,6 @@ cmdtable.update(movement.cmdtable)
 cmdtable.update(split.cmdtable)
 cmdtable.update(unamend.cmdtable)
 
-configtable = {}
-configitem = registrar.configitem(configtable)
-
 
 testedwith = "ships-with-fb-ext"
 

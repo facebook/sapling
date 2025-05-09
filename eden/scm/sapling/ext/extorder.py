@@ -25,13 +25,10 @@ Please not that this extension modifies only order of loading extensions. It
 will not load them for you
 """
 
-from sapling import extensions, registrar
+from sapling import extensions
 
 
 testedwith = "ships-with-fb-ext"
-
-configtable = {}
-configitem = registrar.configitem(configtable)
 
 
 class MercurialExtOrderException(BaseException):

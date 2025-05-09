@@ -33,8 +33,6 @@ from sapling.i18n import _
 from sapling.namespaces import namespace
 from sapling.node import bin, hex
 
-configtable = {}
-configitem = registrar.configitem(configtable)
 
 # The other repo to translate commit hashes from.
 

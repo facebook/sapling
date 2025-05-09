@@ -133,9 +133,6 @@ hint = registrar.hint()
 revsetpredicate = registrar.revsetpredicate()
 templatekeyword = registrar.templatekeyword()
 
-configtable = {}
-configitem = registrar.configitem(configtable)
-
 
 # Use the http Edenapi protocol to fetch bookmarks
 

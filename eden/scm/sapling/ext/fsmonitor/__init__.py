@@ -178,9 +178,6 @@ testedwith = "ships-with-hg-core"
 cmdtable = {}
 command = registrar.command(cmdtable)
 
-configtable = {}
-configitem = registrar.configitem(configtable)
-
 
 # This extension is incompatible with the following incompatible extensions
 # and will disable itself when encountering one of these:

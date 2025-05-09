@@ -148,9 +148,6 @@ except Exception:
 cmdtable = {}
 command = registrar.command(cmdtable)
 
-configtable = {}
-configitem = registrar.configitem(configtable)
-
 
 testedwith = "ships-with-fb-ext"
 

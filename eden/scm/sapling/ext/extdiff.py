@@ -78,12 +78,6 @@ from sapling.node import nullid, short
 cmdtable = {}
 command = registrar.command(cmdtable)
 
-configtable = {}
-configitem = registrar.configitem(configtable)
-
-configitem("extdiff", r"opts\..*", default="", generic=True)
-
-configitem("diff-tools", r".*\.diffargs$", default=None, generic=True)
 
 # Note for extension authors: ONLY specify testedwith = 'ships-with-hg-core' for
 # extensions which SHIP WITH MERCURIAL. Non-mainline extensions should

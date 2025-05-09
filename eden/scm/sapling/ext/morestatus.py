@@ -18,7 +18,6 @@ from sapling import (
     localrepo,
     merge as mergemod,
     node as nodeutil,
-    registrar,
     scmutil,
 )
 from sapling.error import Abort
@@ -26,9 +25,6 @@ from sapling.extensions import wrapcommand
 from sapling.i18n import _
 
 UPDATEARGS = "updateargs"
-
-configtable = {}
-configitem = registrar.configitem(configtable)
 
 
 def prefixlines(raw):

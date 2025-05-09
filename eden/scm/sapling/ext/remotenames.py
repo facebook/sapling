@@ -66,9 +66,6 @@ from sapling.node import bin, hex, short
 cmdtable = {}
 command = registrar.command(cmdtable)
 
-configtable = {}
-configitem = registrar.configitem(configtable)
-
 
 # Perform a pull of remotenames for "push" command. This is racy and does not
 # always update remote bookmarks! The config option exists for testing purpose.

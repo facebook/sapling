@@ -53,9 +53,6 @@ testedwith = "ships-with-fb-ext"
 cmdtable = {}
 command = registrar.command(cmdtable)
 
-configtable = {}
-configitem = registrar.configitem(configtable)
-
 
 colortable = {
     "absorb.description": "yellow",

@@ -64,8 +64,6 @@ from sapling.templatekw import _hybrid
 
 from .extlib.phabricator import arcconfig, diffprops, graphql
 
-configtable = {}
-configitem = registrar.configitem(configtable)
 cmdtable = {}
 command = registrar.command(cmdtable)
 

@@ -84,9 +84,6 @@ logopts: List[Tuple[str, str, None, str]] = [
     ("", "all", None, _("shows all changesets in the repo"))
 ]
 
-configtable = {}
-configitem = registrar.configitem(configtable)
-
 
 rebasemsg: str = _(
     "you must use a bookmark with tracking "

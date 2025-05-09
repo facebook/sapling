@@ -20,14 +20,10 @@ to support SCM-aware subscriptions:
 https://facebook.github.io/watchman/docs/scm-query.html.
 """
 
-from sapling import extensions, filemerge, merge, perftrace, registrar
+from sapling import extensions, filemerge, merge, perftrace
 from sapling.i18n import _
 
 from ..extlib import watchmanclient
-
-
-configtable = {}
-configitem = registrar.configitem(configtable)
 
 
 # This extension is incompatible with the following extensions

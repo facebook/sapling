@@ -43,7 +43,7 @@ import errno
 import os
 import weakref
 
-from sapling import extensions, registrar, ui as uimod, util
+from sapling import extensions, ui as uimod, util
 from sapling.node import hex
 
 # Note for extension authors: ONLY specify testedwith = 'ships-with-hg-core' for
@@ -51,9 +51,6 @@ from sapling.node import hex
 # be specifying the version(s) of Mercurial they are tested with, or
 # leave the attribute unspecified.
 testedwith = "ships-with-hg-core"
-
-configtable = {}
-configitem = registrar.configitem(configtable)
 
 
 def lastui() -> None:

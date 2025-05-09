@@ -3,12 +3,6 @@
 # This software may be used and distributed according to the terms of the
 # GNU General Public License version 2.
 
-from sapling import registrar
-
-
-configtable = {}
-configitem = registrar.configitem(configtable)
-
 
 def reposetup(ui, repo):
     ui.setconfig(

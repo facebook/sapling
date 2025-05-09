@@ -67,9 +67,6 @@ testedwith = "ships-with-fb-ext"
 # Remove unsupported --limit option.
 logopts = [opt for opt in commands.logopts if opt[1] != "limit"]
 
-configtable = {}
-configitem = registrar.configitem(configtable)
-
 
 templatekeyword = registrar.templatekeyword()
 templatefunc = registrar.templatefunc()

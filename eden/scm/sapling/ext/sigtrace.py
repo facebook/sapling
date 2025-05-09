@@ -27,11 +27,7 @@ import sys
 import threading
 import time
 
-from sapling import registrar, tracing, util
-
-
-configtable = {}
-configitem = registrar.configitem(configtable)
+from sapling import tracing, util
 
 
 def printstacks(sig, currentframe) -> None:

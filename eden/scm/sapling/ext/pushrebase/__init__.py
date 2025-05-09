@@ -88,9 +88,6 @@ testedwith = "ships-with-fb-ext"
 cmdtable = {}
 command = registrar.command(cmdtable)
 
-configtable = {}
-configitem = registrar.configitem(configtable)
-
 
 rebaseparttype = "b2x:rebase"
 rebasepackparttype = "b2x:rebasepackpart"
