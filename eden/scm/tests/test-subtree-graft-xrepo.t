@@ -227,12 +227,11 @@ Test subtree graft with merge conflicts
   continue: hg graft --continue
   $ hg graft --continue
   grafting 0e0bbd7f53d7 "G2"
-  $ hg log -r . -p
-  commit:      c914ffc85eb4
-  user:        test <test@example.org>
-  date:        Mon Jan 01 00:00:10 2007 +0000
-  summary:     G2
+  $ hg log -T '{node|short} {desc}\n' -p -r .
+  b60e5eff9858 Graft "G2"
   
+  Grafted from 0e0bbd7f53d7f8dfa9ef6283f68e2aa5d274a185
+  - Grafted path  to foo
   diff --git a/foo/a.txt b/foo/a.txt
   --- a/foo/a.txt
   +++ b/foo/a.txt

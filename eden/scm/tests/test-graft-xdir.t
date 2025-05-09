@@ -542,12 +542,15 @@ Merge conflict - both sides modified:
   $ hg subtree graft --continue
   grafting dfb58fd2ac21 "B"
   $ hg show
-  commit:      2d9de56e5111
+  commit:      3ac6c5b6d37e
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   files:       bar/file
   description:
-  B
+  Graft "B"
+  
+  Grafted from dfb58fd2ac217c798317e8635e73d346568ceb29
+  - Grafted path foo to bar
   
   
   diff --git a/bar/file b/bar/file
@@ -590,12 +593,15 @@ Merge conflict - delete/modified:
   $ hg subtree graft --continue
   grafting a088319ec9f4 "B"
   $ hg show
-  commit:      5ce674a6db6a
+  commit:      ef6d87d5d13c
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   files:       bar/file
   description:
-  B
+  Graft "B"
+  
+  Grafted from a088319ec9f4a6b98f1f4cbd6389b16f4c0141dc
+  - Grafted path foo to bar
   
   
   diff --git a/bar/file b/bar/file

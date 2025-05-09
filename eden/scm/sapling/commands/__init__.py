@@ -2610,6 +2610,10 @@ def _dograft(ui, to_repo, *revs, from_repo=None, **opts):
             raise error.Abort(_("can't specify --continue and revisions"))
         if revs and opts.get("abort"):
             raise error.Abort(_("can't specify --abort and revisions"))
+        if opts.get("from_path") or opts.get("to_path"):
+            raise error.Abort(
+                _("--from-path/--to-path cannot be used with --continue or --abort")
+            )
 
         if not to_repo.localvfs.exists("graftstate"):
             cmdutil.wrongtooltocontinue(to_repo, _("graft"))
@@ -2625,12 +2629,23 @@ def _dograft(ui, to_repo, *revs, from_repo=None, **opts):
         # read in unfinished revisions
         nodes = to_repo.localvfs.readutf8("graftstate").splitlines()
         revs = [from_repo[node].rev() for node in nodes]
+        from_paths = [m["from_path"] for m in ms.subtree_merges]
+        to_paths = [m["to_path"] for m in ms.subtree_merges]
+        is_crossrepo = from_repo != to_repo
     else:
         cmdutil.checkunfinished(to_repo)
         cmdutil.bailifchanged(to_repo)
         if not revs:
             raise error.Abort(_("no revisions specified"))
         revs = scmutil.revrange(from_repo, revs)
+
+        is_crossrepo = from_repo != to_repo
+        if is_crossrepo:
+            # In cross-repo grafts, from_paths are expected to be root-relative already
+            from_paths = opts.get("from_path", [])
+        else:
+            from_paths = scmutil.rootrelpaths(from_repo["."], opts.get("from_path", []))
+        to_paths = scmutil.rootrelpaths(to_repo["."], opts.get("to_path", []))
 
     skipped = set()
     # check for merges
@@ -2667,14 +2682,6 @@ def _dograft(ui, to_repo, *revs, from_repo=None, **opts):
 
         if not revs:
             return -1
-
-    is_crossrepo = from_repo != to_repo
-    if is_crossrepo:
-        # In cross-repo grafts, from_paths are expected to be root-relative already
-        from_paths = opts.get("from_path", [])
-    else:
-        from_paths = scmutil.rootrelpaths(from_repo["."], opts.get("from_path", []))
-    to_paths = scmutil.rootrelpaths(to_repo["."], opts.get("to_path", []))
 
     for pos, ctx in enumerate(from_repo.set("%ld", revs)):
         desc = '%s "%s"' % (ctx, ctx.description().split("\n", 1)[0])
