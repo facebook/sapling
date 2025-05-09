@@ -77,6 +77,7 @@ _ignoreextensions = {
     "phabdiff",
     "phabstatus",
     "phrevset",
+    "preventpremegarepoupdateshook",
     "progress",
     "pullcreatemarkers",
     "purge",

@@ -338,8 +338,6 @@ Test extension help:
        morestatus    make status give a bit more context
        myparent
        ownercheck    prevent operations on repos not owned by the current user
-       preventpremegarepoupdateshook
-                     (no help text available)
        pushrebase    rebases commits during push
        rage          upload useful diagnostics and give instructions for asking
                      for help
@@ -1124,21 +1122,20 @@ Test -e / -c / -k combinations
   Commands:
   $ hg help -e|grep -E '^[A-Z].*:|^ debug'
   Extensions:
-   debugnetwork                  test network connections to the server
-   debugshell                    a python shell with repo, changelog & manifest
+   debugnetwork        test network connections to the server
+   debugshell          a python shell with repo, changelog & manifest objects
   $ hg help -k|grep -E '^[A-Z].*:|^ debug'
   Topics:
   Commands:
   Extensions:
-   debugnetwork                  test network connections to the server
-   debugshell                    a python shell with repo, changelog & manifest
+   debugnetwork        test network connections to the server
+   debugshell          a python shell with repo, changelog & manifest objects
   Extension Commands:
   $ hg help -c -k dates |grep -E '^(Topics|Extensions|Commands):'
   Commands:
   $ hg help -e -k a |grep -E '^(Topics|Extensions|Commands):'
   Extensions:
   $ hg help -e -c -k date |grep -E '^(Topics|Extensions|Commands):'
-  Extensions:
   Commands:
   $ hg help -c commit > /dev/null
   $ hg help -e -c commit > /dev/null
