@@ -108,7 +108,7 @@ impl SqlGitBundleMetadataStorage {
     /// Add new bundle-list to the DB as the latest bundle-list.
     /// The Bundles are expected to be in sorted order, increasingly, on
     /// Bundle.in_bundle_list_order.
-    pub async fn add_new_bundles(&self, bundles: &[Bundle]) -> Result<()> {
+    pub async fn add_new_bundles(&self, bundles: &[Bundle]) -> Result<u64> {
         let conn = &self.connections.write_connection;
         let txn = conn.start_transaction().await?;
 
@@ -133,7 +133,7 @@ impl SqlGitBundleMetadataStorage {
 
         txn.commit().await?;
 
-        Ok(())
+        Ok(new_bundle_list_num)
     }
 
     pub async fn get_latest_bundle_list(&self) -> Result<Option<BundleList>> {
