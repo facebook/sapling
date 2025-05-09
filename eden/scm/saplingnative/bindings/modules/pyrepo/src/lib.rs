@@ -51,6 +51,7 @@ pub fn init_module(py: Python, package: &str) -> PyResult<PyModule> {
 py_class!(pub class repo |py| {
     data inner: RwLock<Repo>;
     data inner_wc: RefCell<Option<Arc<RwLock<WorkingCopy>>>>;
+    data volatile_state_obj: PyDict;
 
     @staticmethod
     def initialize(path: PyPathBuf, config: &config, repo_config: Option<String>) -> PyResult<PyNone> {
@@ -62,7 +63,7 @@ py_class!(pub class repo |py| {
         let config = config.get_cfg(py);
         let abs_path = util::path::absolute(path.as_path()).map_pyerr(py)?;
         let repo = Repo::load_with_config(abs_path, config).map_pyerr(py)?;
-        Self::create_instance(py, RwLock::new(repo), RefCell::new(None))
+        Self::create_instance(py, RwLock::new(repo), RefCell::new(None), PyDict::new(py))
     }
 
     @property
@@ -267,11 +268,16 @@ py_class!(pub class repo |py| {
             (updated, 0, removed, 0)
         }).map_pyerr(py)
     }
+
+    @property
+    def volatile_state(&self) -> PyResult<PyDict> {
+        Ok(self.volatile_state_obj(py).clone_ref(py))
+    }
 });
 
 impl repo {
     pub fn from_native(py: Python, repo: Repo) -> PyResult<Self> {
-        Self::create_instance(py, RwLock::new(repo), Default::default())
+        Self::create_instance(py, RwLock::new(repo), Default::default(), PyDict::new(py))
     }
 }
 

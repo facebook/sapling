@@ -1573,6 +1573,11 @@ class localrepository:
         """
         return self.revs(expr, *args).iterctx()
 
+    @property
+    def volatile_state(self):
+        """Random temporary states attached to the repo object."""
+        return self._rsrepo.volatile_state
+
     def nodes(self, expr, *args):
         """Find revisions matching a revset and emit their nodes.
 
