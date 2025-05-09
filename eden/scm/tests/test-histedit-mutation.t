@@ -424,7 +424,7 @@ attempted later.
   
 
 
-  $ hg histedit -r 'c3accca457aa' --commands - << EOF --config experimental.evolution.track-operation=1
+  $ hg histedit -r 'c3accca457aa' --commands - << EOF
   > pick c3accca457aa 13 f
   > pick 49605d76b1f7 15 h
   > pick bd6d43595d7e 14 g
@@ -435,7 +435,7 @@ attempted later.
   Editing (4f4f997369d1), you may commit or record as needed now.
   (hg histedit --continue to resume)
   [1]
-  $ hg histedit --continue --config experimental.evolution.track-operation=1
+  $ hg histedit --continue
   $ hg log -G
   @  dd9cf9176a2d (draft) k
   │

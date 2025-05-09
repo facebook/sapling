@@ -148,13 +148,6 @@ coreconfigitem("edenfs", "tree-fetch-depth", default=3)
 coreconfigitem("email", "method", default="smtp")
 coreconfigitem("experimental", "bundle2-advertise", default=True)
 coreconfigitem("experimental", "disable-narrow-heads-ssh-server", default=True)
-coreconfigitem(
-    "experimental",
-    "evolution.effect-flags",
-    default=True,
-    alias=[("experimental", "effect-flags")],
-)
-coreconfigitem("experimental", "evolution.track-operation", default=True)
 coreconfigitem("experimental", "mmapindexthreshold", default=1)
 coreconfigitem("experimental", "format.compression", default="zlib")
 coreconfigitem("experimental", "graph.renderer", default="lines")

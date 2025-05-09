@@ -1400,7 +1400,7 @@ equivalents in destination
   $ hg up 1e9a3c00cbe90d236ac05ef61efcc5e40b7412bc && hg log -r .  # working dir is at rev 1e9a3c00cbe90d236ac05ef61efcc5e40b7412bc again
   0 files updated, 0 files merged, 1 files removed, 0 files unresolved
   1e9a3c00cbe9 b (rewritten using rebase as be1832deae9a) (no-eol)
-  $ hg rebase -r 1e9a3c00cbe90d236ac05ef61efcc5e40b7412bc -d 'max(desc(b))' --config experimental.evolution.track-operation=1
+  $ hg rebase -r 1e9a3c00cbe90d236ac05ef61efcc5e40b7412bc -d 'max(desc(b))'
   note: not rebasing 1e9a3c00cbe9 "b" (mybook), already in destination as be1832deae9a "b"
 Check that working directory and bookmark was updated to rev 3 although rev 2
 was skipped
