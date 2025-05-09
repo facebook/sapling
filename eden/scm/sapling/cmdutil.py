@@ -2514,7 +2514,7 @@ def _lookuplogtemplate(ui, tmpl, style):
         if tmpl:
             return logtemplatespec(templater.unquotestring(tmpl), None)
         else:
-            style = util.expandpath(ui.config("ui", "style"))
+            style = util.expandpath(ui.config("ui", "style", ""))
 
     if not tmpl and style:
         mapfile = style
