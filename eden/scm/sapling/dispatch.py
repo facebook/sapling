@@ -233,7 +233,7 @@ def runchgserver(args):
     ischgserver = True
     # Clean server - do not load any config files or repos.
     _initstdio()
-    ui = uimod.ui()
+    ui = uimod.ui.load()
     repo = None
     args = ["serve", "--cmdserver", "chgunix2"] + args
     cmd, func, args, globalopts, cmdopts, _foundaliases = _parse(ui, args)
