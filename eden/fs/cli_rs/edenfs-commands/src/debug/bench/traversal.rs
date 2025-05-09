@@ -30,19 +30,24 @@ use crate::get_edenfs_instance;
 struct TraversalProgress {
     file_count: usize,
     start_time: Instant,
-    progress_bar: ProgressBar,
+    progress_bar: Option<ProgressBar>,
     file_paths: Vec<PathBuf>,
 }
 
 impl TraversalProgress {
-    fn new() -> Self {
-        let progress_bar = ProgressBar::new_spinner();
-        progress_bar.set_style(
-            ProgressStyle::default_spinner()
-                .template("[{elapsed_precise}] {msg}")
-                .unwrap(),
-        );
-        progress_bar.set_message("0 files | 0 files/s");
+    fn new(no_progress: bool) -> Self {
+        let progress_bar = if no_progress {
+            None
+        } else {
+            let pb = ProgressBar::new_spinner();
+            pb.set_style(
+                ProgressStyle::default_spinner()
+                    .template("[{elapsed_precise}] {msg}")
+                    .unwrap(),
+            );
+            pb.set_message("0 files | 0 files/s");
+            Some(pb)
+        };
 
         Self {
             file_count: 0,
@@ -61,20 +66,24 @@ impl TraversalProgress {
     }
 
     fn update_progress(&mut self) {
-        let elapsed = self.start_time.elapsed().as_secs_f64();
-        if elapsed <= 0.0 {
-            return;
+        if let Some(pb) = &self.progress_bar {
+            let elapsed = self.start_time.elapsed().as_secs_f64();
+            if elapsed <= 0.0 {
+                return;
+            }
+            let files_per_second = self.file_count as f64 / elapsed;
+            pb.set_message(format!(
+                "{} files | {:.0} files/s",
+                self.file_count, files_per_second
+            ));
         }
-        let files_per_second = self.file_count as f64 / elapsed;
-        self.progress_bar.set_message(format!(
-            "{} files | {:.0} files/s",
-            self.file_count, files_per_second
-        ));
     }
 
     fn finalize(&self) -> (usize, f64, &Vec<PathBuf>) {
         let elapsed = self.start_time.elapsed().as_secs_f64();
-        self.progress_bar.finish_and_clear();
+        if let Some(pb) = &self.progress_bar {
+            pb.finish_and_clear();
+        }
         (self.file_count, elapsed, &self.file_paths)
     }
 }
@@ -95,13 +104,13 @@ fn traverse_directory(path: &Path, metrics: &mut TraversalProgress) -> Result<()
     Ok(())
 }
 
-pub async fn bench_traversal_thrift_read(dir_path: &str) -> Result<Benchmark> {
+pub async fn bench_traversal_thrift_read(dir_path: &str, no_progress: bool) -> Result<Benchmark> {
     let path = Path::new(dir_path);
     if !path.exists() || !path.is_dir() {
         return Err(anyhow::anyhow!("Invalid directory path: {}", dir_path));
     }
 
-    let mut traverse_progress = TraversalProgress::new();
+    let mut traverse_progress = TraversalProgress::new(no_progress);
     traverse_directory(path, &mut traverse_progress)?;
     let (file_count, duration, file_paths) = traverse_progress.finalize();
 
@@ -126,12 +135,17 @@ pub async fn bench_traversal_thrift_read(dir_path: &str) -> Result<Benchmark> {
         Some(0),
     );
 
-    let read_progress = ProgressBar::new(file_count as u64);
-    read_progress.set_style(
-        ProgressStyle::default_bar()
-            .template("[{elapsed_precise}] {pos}/{len} files | {msg}")
-            .unwrap(),
-    );
+    let read_progress = if no_progress {
+        None
+    } else {
+        let pb = ProgressBar::new(file_count as u64);
+        pb.set_style(
+            ProgressStyle::default_bar()
+                .template("[{elapsed_precise}] {pos}/{len} files | {msg}")
+                .unwrap(),
+        );
+        Some(pb)
+    };
 
     let mut agg_read_dur = std::time::Duration::new(0, 0);
     let mut total_bytes_read: u64 = 0;
@@ -140,7 +154,9 @@ pub async fn bench_traversal_thrift_read(dir_path: &str) -> Result<Benchmark> {
     let client = get_edenfs_instance().get_client();
     for path in file_paths {
         if !path.is_file() {
-            read_progress.inc(1);
+            if let Some(pb) = &read_progress {
+                pb.inc(1);
+            }
             continue;
         }
 
@@ -155,25 +171,33 @@ pub async fn bench_traversal_thrift_read(dir_path: &str) -> Result<Benchmark> {
         match response.blob {
             ScmBlobOrError::blob(blob) => {
                 total_bytes_read += blob.len() as u64;
-                read_progress.inc(1);
+                if let Some(pb) = &read_progress {
+                    pb.inc(1);
+                }
                 successful_reads += 1;
             }
             ScmBlobOrError::error(_) => {
-                read_progress.inc(1);
+                if let Some(pb) = &read_progress {
+                    pb.inc(1);
+                }
             }
             ScmBlobOrError::UnknownField(_) => {}
         }
 
-        if agg_read_dur.as_secs_f64() > 0.0 {
-            read_progress.set_message(format!(
-                "{:.2} MiB/s",
-                total_bytes_read as f64
-                    / types::BYTES_IN_MEGABYTE as f64
-                    / agg_read_dur.as_secs_f64()
-            ));
+        if agg_read_dur.as_secs_f64() > 0.0 && read_progress.is_some() {
+            if let Some(pb) = &read_progress {
+                pb.set_message(format!(
+                    "{:.2} MiB/s",
+                    total_bytes_read as f64
+                        / types::BYTES_IN_MEGABYTE as f64
+                        / agg_read_dur.as_secs_f64()
+                ));
+            }
         }
     }
-    read_progress.finish_and_clear();
+    if let Some(pb) = read_progress {
+        pb.finish_and_clear();
+    }
 
     if successful_reads == 0 {
         return Err(anyhow::anyhow!("No files were successfully read."));
@@ -210,13 +234,13 @@ pub async fn bench_traversal_thrift_read(dir_path: &str) -> Result<Benchmark> {
 }
 
 /// Runs the filesystem traversal benchmark and returns the benchmark results
-pub fn bench_traversal_fs_read(dir_path: &str) -> Result<Benchmark> {
+pub fn bench_traversal_fs_read(dir_path: &str, no_progress: bool) -> Result<Benchmark> {
     let path = Path::new(dir_path);
     if !path.exists() || !path.is_dir() {
         return Err(anyhow::anyhow!("Invalid directory path: {}", dir_path));
     }
 
-    let mut traverse_progress = TraversalProgress::new();
+    let mut traverse_progress = TraversalProgress::new(no_progress);
 
     traverse_directory(path, &mut traverse_progress)?;
 
@@ -243,12 +267,17 @@ pub fn bench_traversal_fs_read(dir_path: &str) -> Result<Benchmark> {
         Some(0),
     );
 
-    let read_progress = ProgressBar::new(file_count as u64);
-    read_progress.set_style(
-        ProgressStyle::default_bar()
-            .template("[{elapsed_precise}] {pos}/{len} files | {msg}")
-            .unwrap(),
-    );
+    let read_progress = if no_progress {
+        None
+    } else {
+        let pb = ProgressBar::new(file_count as u64);
+        pb.set_style(
+            ProgressStyle::default_bar()
+                .template("[{elapsed_precise}] {pos}/{len} files | {msg}")
+                .unwrap(),
+        );
+        Some(pb)
+    };
 
     let mut agg_open_dur = std::time::Duration::new(0, 0);
     let mut agg_read_dur = std::time::Duration::new(0, 0);
@@ -258,7 +287,9 @@ pub fn bench_traversal_fs_read(dir_path: &str) -> Result<Benchmark> {
 
     for path in file_paths {
         if !path.is_file() {
-            read_progress.inc(1);
+            if let Some(pb) = &read_progress {
+                pb.inc(1);
+            }
             continue;
         }
 
@@ -266,7 +297,9 @@ pub fn bench_traversal_fs_read(dir_path: &str) -> Result<Benchmark> {
         let mut file = match File::open(path) {
             Ok(f) => f,
             Err(_) => {
-                read_progress.inc(1);
+                if let Some(pb) = &read_progress {
+                    pb.inc(1);
+                }
                 continue;
             }
         };
@@ -278,19 +311,25 @@ pub fn bench_traversal_fs_read(dir_path: &str) -> Result<Benchmark> {
             successful_reads += 1;
         }
         agg_read_dur += start.elapsed();
-        read_progress.inc(1);
+        if let Some(pb) = &read_progress {
+            pb.inc(1);
+        }
 
-        if agg_read_dur.as_secs_f64() > 0.0 {
-            read_progress.set_message(format!(
-                "{:.2} MiB/s",
-                total_bytes_read as f64
-                    / types::BYTES_IN_MEGABYTE as f64
-                    / agg_read_dur.as_secs_f64()
-            ));
+        if agg_read_dur.as_secs_f64() > 0.0 && read_progress.is_some() {
+            if let Some(pb) = &read_progress {
+                pb.set_message(format!(
+                    "{:.2} MiB/s",
+                    total_bytes_read as f64
+                        / types::BYTES_IN_MEGABYTE as f64
+                        / agg_read_dur.as_secs_f64()
+                ));
+            }
         }
     }
 
-    read_progress.finish_and_clear();
+    if let Some(pb) = read_progress {
+        pb.finish_and_clear();
+    }
 
     if successful_reads == 0 {
         return Err(anyhow::anyhow!("No files were successfully read."));
