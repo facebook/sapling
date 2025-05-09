@@ -121,13 +121,15 @@ impl Detector {
     }
 
     /// Observe a file (content) read of `path`.
-    pub fn file_read(&self, mut path: RepoPathBuf) {
+    pub fn file_read(&self, path: impl AsRef<RepoPath>) {
+        let path = path.as_ref();
+
         tracing::trace!(%path, "file_read");
 
-        let (dir_path, base_name) = match path.pop() {
+        let (dir_path, base_name) = match path.split_last_component() {
             // Shouldn't happen - implies a path of "" which is not valid for a file.
             None => return,
-            Some(part) => (path, part),
+            Some((dir, base)) => (dir, base),
         };
 
         let mut inner = self.inner.lock();
@@ -140,7 +142,7 @@ impl Detector {
 
         let (owner, suffix) = inner
             .node
-            .get_or_create_owning_node(WalkType::File, &dir_path);
+            .get_or_create_owning_node(WalkType::File, dir_path);
 
         owner.last_access = Some(time);
 
@@ -151,17 +153,19 @@ impl Detector {
 
         let my_dir = owner;
 
-        my_dir.seen_files.insert(base_name);
+        my_dir.seen_files.insert(base_name.to_owned());
 
         if my_dir.is_walked(WalkType::File, dir_threshold) {
             my_dir.seen_files.clear();
-            inner.insert_walk(time, WalkType::File, &dir_path, 0);
+            inner.insert_walk(time, WalkType::File, dir_path, 0);
         }
     }
 
     /// Observe a directory read. `num_files` and `num_dirs` report the number of file and
     /// directory children of `path`, respectively.
-    pub fn dir_read(&self, mut path: RepoPathBuf, num_files: usize, num_dirs: usize) {
+    pub fn dir_read(&self, path: impl AsRef<RepoPath>, num_files: usize, num_dirs: usize) {
+        let path = path.as_ref();
+
         tracing::trace!(%path, num_files, num_dirs, "dir_read");
 
         let mut inner = self.inner.lock();
@@ -176,22 +180,22 @@ impl Detector {
             Some(num_files),
             Some(num_dirs),
         ) {
-            let node = inner.node.get_or_create_node(&path);
+            let node = inner.node.get_or_create_node(path);
             node.last_access = Some(time);
             node.total_dirs = Some(num_dirs);
             node.total_files = Some(num_files);
         }
 
-        let (dir_path, base_name) = match path.pop() {
+        let (dir_path, base_name) = match path.split_last_component() {
             None => return,
-            Some(part) => (path, part),
+            Some((dir, base)) => (dir, base),
         };
 
         let dir_threshold = inner.min_dir_walk_threshold;
 
         let (owner, suffix) = inner
             .node
-            .get_or_create_owning_node(WalkType::Directory, &dir_path);
+            .get_or_create_owning_node(WalkType::Directory, dir_path);
 
         owner.last_access = Some(time);
 
@@ -202,11 +206,11 @@ impl Detector {
 
         let my_dir = owner;
 
-        my_dir.seen_dirs.insert(base_name);
+        my_dir.seen_dirs.insert(base_name.to_owned());
 
         if my_dir.is_walked(WalkType::Directory, dir_threshold) {
             my_dir.seen_files.clear();
-            inner.insert_walk(time, WalkType::Directory, &dir_path, 0);
+            inner.insert_walk(time, WalkType::Directory, dir_path, 0);
         }
     }
 }
