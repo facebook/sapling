@@ -555,7 +555,7 @@ mod tests {
             Key::new(path, hgid)
         };
 
-        let fetches = store.fetches();
+        let fetches = store.prefetches();
 
         assert!(fetches.contains(&vec![get_tree_key(&tree1, ""), get_tree_key(&tree2, "")]));
         assert!(fetches.contains(&vec![get_tree_key(&tree1, "a"), get_tree_key(&tree2, "c")]));
