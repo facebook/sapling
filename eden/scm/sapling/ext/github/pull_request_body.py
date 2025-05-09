@@ -8,7 +8,7 @@ from typing import List, Tuple, Union
 
 from .gh_submit import Repository
 
-_HORIZONTAL_RULE = "---"
+_HORIZONTAL_RULE = "\n---"
 _SAPLING_FOOTER_MARKER = "[//]: # (BEGIN SAPLING FOOTER)"
 
 
