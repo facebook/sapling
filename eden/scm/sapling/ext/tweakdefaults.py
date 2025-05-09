@@ -232,14 +232,8 @@ def extsetup(ui) -> None:
     if pipei_bufsize != 4096 and util.iswindows:
         wrapfunction(util, "popen4", get_winpopen4(pipei_bufsize))
 
-    _fixpager(ui)
-
     # Change manifest template output
     templatekw.defaulttempl["manifest"] = "{node}"
-
-
-def reposetup(ui, repo) -> None:
-    _fixpager(ui)
 
 
 def tweakorder() -> None:
@@ -694,14 +688,6 @@ def diffcmd(orig, ui, repo, *args, **opts):
         output[filename] = {"adds": adds, "removes": removes, "isbinary": isbinary}
     ui.write("%s\n" % (json.dumps(output, sort_keys=True)))
     return res
-
-
-def _fixpager(ui) -> None:
-    # users may mistakenly set PAGER=less, which will affect "pager.pager".
-    # raw "less" does not support colors and is not friendly, add "-FRQX"
-    # automatically.
-    if ui.config("pager", "pager", "").strip() == "less":
-        ui.setconfig("pager", "pager", "less -FRQX")
 
 
 def get_winpopen4(pipei_bufsize):
