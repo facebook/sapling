@@ -92,25 +92,15 @@ rebasemsg: str = _(
     "you must use a bookmark with tracking "
     "or manually specify a destination for the rebase"
 )
-configitem(
-    "tweakdefaults",
-    "bmnodesthint",
-    default=_(
-        "set up tracking with `@prog@ book -t <destination>` "
-        "or manually supply --dest / -d"
-    ),
+bmnodesthint = _(
+    "set up tracking with `@prog@ book -t <destination>` "
+    "or manually supply --dest / -d"
 )
-configitem("tweakdefaults", "bmnodestmsg", default=rebasemsg)
-configitem(
-    "tweakdefaults",
-    "nodesthint",
-    default=_(
-        "set up tracking with `@prog@ book <name> -t <destination>` "
-        "or manually supply --dest / -d"
-    ),
+nodesthint = _(
+    "set up tracking with `@prog@ book <name> -t <destination>` "
+    "or manually supply --dest / -d"
 )
-configitem("tweakdefaults", "nodestmsg", default=rebasemsg)
-configitem("tweakdefaults", "singlecolonmsg", default=_("use of ':' is deprecated"))
+singlecolonmsg = _("use of ':' is deprecated")
 
 
 def uisetup(ui) -> None:
@@ -303,11 +293,11 @@ def pull(orig, ui, repo, *args, **opts):
     if (isrebase or update) and not dest:
         mess = None
         if isrebase and repo._activebookmark:
-            mess = ui.config("tweakdefaults", "bmnodestmsg")
-            hint = ui.config("tweakdefaults", "bmnodesthint")
+            mess = ui.config("tweakdefaults", "bmnodestmsg", default=rebasemsg)
+            hint = ui.config("tweakdefaults", "bmnodesthint", default=bmnodesthint)
         elif isrebase:
-            mess = ui.config("tweakdefaults", "nodestmsg")
-            hint = ui.config("tweakdefaults", "nodesthint")
+            mess = ui.config("tweakdefaults", "nodestmsg", default=rebasemsg)
+            hint = ui.config("tweakdefaults", "nodesthint", default=nodesthint)
         elif not opts.get("bookmark") and not opts.get("rev"):  # update
             mess = _("you must specify a destination for the update")
             hint = _("use `@prog@ pull --update --dest <destination>`")
@@ -490,7 +480,7 @@ def _analyzewrapper(orig, x, ui):
     ):
         if not util.istest():
             ui.deprecate("single-colon-revset", "':' is deprecated in revsets")
-        msg = ui.config("tweakdefaults", "singlecolonmsg")
+        msg = ui.config("tweakdefaults", "singlecolonmsg", default=singlecolonmsg)
         if abort:
             raise error.Abort("%s" % msg)
         if warn:
