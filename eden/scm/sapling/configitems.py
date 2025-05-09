@@ -176,14 +176,6 @@ coreconfigitem("merge", "checkignored", default="abort")
 coreconfigitem("merge", "followcopies", default=True)
 coreconfigitem("merge", "on-failure", default="continue")
 coreconfigitem("merge", "preferancestor", default=lambda: ["*"])
-coreconfigitem(
-    "merge-tools",
-    r".*\.args$",
-    default="$local $base $other",
-    generic=True,
-    priority=-1,
-)
-coreconfigitem("merge-tools", r".*\.priority$", default=0, generic=True, priority=-1)
 coreconfigitem("metalog", "track-config", default=True)
 coreconfigitem("mononokepeer", "sockettimeout", default=15.0)
 coreconfigitem("mutation", "enabled", default=True)
