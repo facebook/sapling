@@ -35,6 +35,7 @@ sapling-storemodel = { version = "0.1.0", path = "../storemodel" }
 sapling-testutil = { version = "0.1.0", path = "../util/testutil" }
 sapling-tracing-collector = { version = "0.1.0", path = "../tracing-collector" }
 sapling-types = { version = "0.1.0", path = "../types" }
+sapling-walkdetector = { version = "0.1.0", path = "../walkdetector" }
 tracing = { version = "0.1.41", features = ["attributes", "valuable"] }
 tracing-subscriber = { version = "0.3.18", features = ["chrono", "env-filter", "json", "local-time", "parking_lot", "registry"] }
 

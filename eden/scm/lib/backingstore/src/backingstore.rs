@@ -9,6 +9,7 @@ use std::collections::HashMap;
 use std::fmt;
 use std::path::Path;
 use std::path::PathBuf;
+use std::str::FromStr;
 use std::sync::Arc;
 use std::sync::atomic::AtomicBool;
 use std::sync::atomic::Ordering;
@@ -75,6 +76,28 @@ struct Inner {
     // Controlled by config "backingstore.reload-interval-secs".
     // Sets the maximum time since last reload until we force a reload (defaults to 5m).
     reload_interval: Duration,
+
+    walk_mode: WalkMode,
+    walk_detector: Arc<walkdetector::Detector>,
+}
+
+#[derive(Debug, Copy, Clone, PartialEq)]
+enum WalkMode {
+    // Don't observe walks.
+    Off,
+    // Watch for walks, but don't take any action.
+    Monitor,
+}
+
+impl FromStr for WalkMode {
+    type Err = anyhow::Error;
+
+    fn from_str(s: &str) -> std::result::Result<Self, Self::Err> {
+        match s {
+            "monitor" => Ok(Self::Monitor),
+            _ => Ok(Self::Off),
+        }
+    }
 }
 
 impl BackingStore {
@@ -172,6 +195,13 @@ impl BackingStore {
             reload_interval: config
                 .get_opt("backingstore", "reload-interval-secs")?
                 .unwrap_or(Duration::from_secs(300)),
+            walk_mode: WalkMode::from_str(
+                config
+                    .get("backingstore", "walk-mode")
+                    .unwrap_or_default()
+                    .as_ref(),
+            )?,
+            walk_detector: Arc::new(walkdetector::Detector::new()),
         })
     }
 
@@ -299,6 +329,17 @@ impl BackingStore {
             .map(|res| res.file_path.to_string())
             .collect();
         Ok(Some(result))
+    }
+
+    #[instrument(level = "trace", skip(self))]
+    pub fn witness_file_read(&self, path: &RepoPath) {
+        let inner = self.inner.load();
+
+        if inner.walk_mode == WalkMode::Off {
+            return;
+        }
+
+        inner.walk_detector.file_read(path);
     }
 
     // Fully reload the stores if:
@@ -452,6 +493,9 @@ impl Inner {
             already_reloading: AtomicBool::new(false),
             reload_check_interval: self.reload_check_interval,
             reload_interval: self.reload_interval,
+
+            walk_mode: self.walk_mode,
+            walk_detector: self.walk_detector.clone(),
         }
     }
 

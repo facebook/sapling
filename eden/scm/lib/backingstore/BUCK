@@ -110,5 +110,6 @@ rust_library(
         "//eden/scm/lib/tracing-collector:tracing-collector",
         "//eden/scm/lib/types:types",
         "//eden/scm/lib/util/testutil:testutil",
+        "//eden/scm/lib/walkdetector:walkdetector",
     ],
 )

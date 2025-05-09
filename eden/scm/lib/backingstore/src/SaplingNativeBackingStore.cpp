@@ -199,6 +199,10 @@ void SaplingNativeBackingStore::getBlobBatch(
         request.node.data(),
         request.cause,
     });
+
+    sapling_backingstore_witness_file_read(
+        *store_.get(),
+        rust::Str{request.path.view().data(), request.path.view().size()});
   }
 
   sapling_backingstore_get_blob_batch(

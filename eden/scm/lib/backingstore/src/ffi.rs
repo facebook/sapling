@@ -19,6 +19,7 @@ use iobuf::IOBuf;
 use storemodel::FileAuxData as ScmStoreFileAuxData;
 use types::FetchContext;
 use types::Key;
+use types::RepoPath;
 use types::fetch_cause::FetchCause;
 use types::fetch_mode::FetchMode;
 
@@ -225,6 +226,8 @@ pub(crate) mod ffi {
             suffixes: Vec<String>,
             prefixes: Vec<String>,
         ) -> Result<SharedPtr<GlobFilesResponse>>;
+
+        pub fn sapling_backingstore_witness_file_read(store: &BackingStore, path: &str);
 
         pub fn sapling_dogfooding_host(store: &BackingStore) -> Result<bool>;
     }
@@ -495,6 +498,17 @@ pub fn sapling_backingstore_get_glob_files(
         .get_glob_files(commit_id, suffixes, prefix_opt)
         .and_then(|opt| opt.ok_or_else(|| Error::msg("failed to retrieve glob file")))?;
     Ok(SharedPtr::new(ffi::GlobFilesResponse { files }))
+}
+
+pub fn sapling_backingstore_witness_file_read(store: &BackingStore, path: &str) {
+    match RepoPath::from_str(path) {
+        Ok(path) => {
+            store.witness_file_read(path);
+        }
+        Err(err) => {
+            tracing::warn!("invalid witnessed file path {path}: {err:?}");
+        }
+    }
 }
 
 #[cfg(test)]
