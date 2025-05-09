@@ -5678,7 +5678,6 @@ def rollback(ui, repo, **opts):
         ("", "style", "", _("template style to use"), _("STYLE")),
         ("6", "ipv6", None, _("use IPv6 in addition to IPv4")),
         ("", "certificate", "", _("SSL certificate file"), _("FILE")),
-        ("", "read-only", None, _("only allow read operations")),
     ],
     _("[OPTION]..."),
     optionalrepo=True,
