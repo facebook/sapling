@@ -51,6 +51,9 @@ pub enum Error {
     #[error("config {0}.{1} is not set")]
     NotSet(String, String),
 
+    #[error("config {0}.{1} is invalid: {2}")]
+    Invalid(String, String, Box<Error>),
+
     #[error("{0}")]
     Other(#[source] anyhow::Error),
 }

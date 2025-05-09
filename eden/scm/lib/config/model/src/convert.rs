@@ -8,6 +8,7 @@
 use std::borrow::Cow;
 use std::collections::HashSet;
 use std::hash::Hash;
+#[cfg(feature = "convert-path")]
 use std::path::PathBuf;
 use std::time::Duration;
 
