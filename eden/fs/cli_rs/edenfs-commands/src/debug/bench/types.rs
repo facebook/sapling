@@ -73,6 +73,36 @@ pub struct Benchmark {
     pub metrics: Vec<Metric>,
 }
 
+/// Represents the unit of measurement for a metric
+#[derive(Debug, Clone, PartialEq)]
+pub enum Unit {
+    /// Megabytes per second (throughput)
+    MiBps,
+    /// Milliseconds (latency)
+    Ms,
+    /// Files per second (traversal throughput)
+    FilesPerSecond,
+    /// Count of files
+    Files,
+    /// Kilobytes (file size)
+    KiB,
+    /// Megabytes (total data)
+    MiB,
+}
+
+impl std::fmt::Display for Unit {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Unit::MiBps => write!(f, "MiB/s"),
+            Unit::Ms => write!(f, "ms"),
+            Unit::FilesPerSecond => write!(f, "files/s"),
+            Unit::Files => write!(f, "files"),
+            Unit::KiB => write!(f, "KiB"),
+            Unit::MiB => write!(f, "MiB"),
+        }
+    }
+}
+
 /// Represents a metric with a name, value, unit, and precision
 #[derive(Debug, Clone)]
 pub struct Metric {
@@ -80,8 +110,8 @@ pub struct Metric {
     pub name: String,
     /// Value of the metric
     pub value: f64,
-    /// Unit of the metric (e.g., "MiB/s", "ms")
-    pub unit: String,
+    /// Unit of the metric (e.g., MiBps, Ms)
+    pub unit: Unit,
     /// Precision for display (number of decimal places)
     pub precision: u8,
 }
@@ -96,11 +126,11 @@ impl Benchmark {
     }
 
     /// Adds a metric with optional precision (defaults to 2)
-    pub fn add_metric(&mut self, name: &str, value: f64, unit: &str, precision: Option<u8>) {
+    pub fn add_metric(&mut self, name: &str, value: f64, unit: Unit, precision: Option<u8>) {
         self.metrics.push(Metric {
             name: name.to_string(),
             value,
-            unit: unit.to_string(),
+            unit,
             precision: precision.unwrap_or(2),
         });
     }
@@ -123,7 +153,7 @@ impl std::fmt::Display for Benchmark {
         let max_unit_len = self
             .metrics
             .iter()
-            .map(|metric| metric.unit.len())
+            .map(|metric| format!("{}", metric.unit).len())
             .max()
             .unwrap_or(0);
 

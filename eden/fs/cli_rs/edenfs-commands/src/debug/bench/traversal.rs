@@ -113,8 +113,18 @@ pub async fn bench_traversal_thrift_read(dir_path: &str) -> Result<Benchmark> {
 
     let mut result = Benchmark::new(BenchmarkType::FsTraversal);
 
-    result.add_metric("Traversal throughput", files_per_second, "files/s", Some(0));
-    result.add_metric("Total files", file_count as f64, "files", Some(0));
+    result.add_metric(
+        "Traversal throughput",
+        files_per_second,
+        types::Unit::FilesPerSecond,
+        Some(0),
+    );
+    result.add_metric(
+        "Total files",
+        file_count as f64,
+        types::Unit::Files,
+        Some(0),
+    );
 
     let read_progress = ProgressBar::new(file_count as u64);
     read_progress.set_style(
@@ -176,18 +186,23 @@ pub async fn bench_traversal_thrift_read(dir_path: &str) -> Result<Benchmark> {
     let mb_per_second =
         total_bytes_read as f64 / types::BYTES_IN_MEGABYTE as f64 / agg_read_dur.as_secs_f64();
 
-    result.add_metric("Throughput ", mb_per_second, "MiB/s", Some(2));
+    result.add_metric("Throughput ", mb_per_second, types::Unit::MiBps, Some(2));
     result.add_metric(
         "Average thrift read latency",
         avg_read_dur * 1000.0,
-        "ms",
+        types::Unit::Ms,
         Some(4),
     );
-    result.add_metric("Average file size", avg_file_size_kb, "KiB", Some(2));
+    result.add_metric(
+        "Average file size",
+        avg_file_size_kb,
+        types::Unit::KiB,
+        Some(2),
+    );
     result.add_metric(
         "Total data read",
         total_bytes_read as f64 / types::BYTES_IN_MEGABYTE as f64,
-        "MiB",
+        types::Unit::MiB,
         Some(2),
     );
 
@@ -215,8 +230,18 @@ pub fn bench_traversal_fs_read(dir_path: &str) -> Result<Benchmark> {
 
     let mut result = Benchmark::new(BenchmarkType::FsTraversal);
 
-    result.add_metric("Traversal throughput", files_per_second, "files/s", Some(0));
-    result.add_metric("Total files", file_count as f64, "files", Some(0));
+    result.add_metric(
+        "Traversal throughput",
+        files_per_second,
+        types::Unit::FilesPerSecond,
+        Some(0),
+    );
+    result.add_metric(
+        "Total files",
+        file_count as f64,
+        types::Unit::Files,
+        Some(0),
+    );
 
     let read_progress = ProgressBar::new(file_count as u64);
     read_progress.set_style(
@@ -282,21 +307,31 @@ pub fn bench_traversal_fs_read(dir_path: &str) -> Result<Benchmark> {
     result.add_metric(
         "open() + read() throughput ",
         mb_per_second,
-        "MiB/s",
+        types::Unit::MiBps,
         Some(2),
     );
-    result.add_metric("open() latency", avg_open_dur * 1000.0, "ms", Some(4));
+    result.add_metric(
+        "open() latency",
+        avg_open_dur * 1000.0,
+        types::Unit::Ms,
+        Some(4),
+    );
     result.add_metric(
         "Average read() latency",
         avg_read_dur * 1000.0,
-        "ms",
+        types::Unit::Ms,
         Some(4),
     );
-    result.add_metric("Average file size", avg_file_size_kb, "KiB", Some(2));
+    result.add_metric(
+        "Average file size",
+        avg_file_size_kb,
+        types::Unit::KiB,
+        Some(2),
+    );
     result.add_metric(
         "Total data read",
         total_bytes_read as f64 / types::BYTES_IN_MEGABYTE as f64,
-        "MiB",
+        types::Unit::MiB,
         Some(2),
     );
 
