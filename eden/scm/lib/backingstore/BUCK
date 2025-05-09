@@ -27,6 +27,7 @@ cpp_library(
     exported_deps = [
         "fbsource//third-party/rust:cxx-core",
         ":backingstore@header",
+        "//eden/common/utils:path",
         "//eden/fs/store:context",
         "//folly:function",
         "//folly:range",
@@ -61,6 +62,7 @@ rust_library(
     },
     cpp_deps = [
         ":sapling_native_backingstore",
+        "//eden/common/utils:path",
         "//eden/fs/store:context",
     ],
     crate_root = "src/lib.rs",

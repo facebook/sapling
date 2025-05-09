@@ -86,10 +86,18 @@ void SaplingNativeBackingStore::getTreeBatch(
     sapling::FetchMode fetch_mode,
     folly::FunctionRef<void(size_t, folly::Try<std::shared_ptr<Tree>>)>
         resolve) {
-  auto resolver = std::make_shared<GetTreeBatchResolver>(std::move(resolve));
   auto count = requests.size();
+  if (count == 0) {
+    return;
+  }
 
-  XLOGF(DBG7, "Import batch of trees with size:{}", count);
+  auto resolver = std::make_shared<GetTreeBatchResolver>(std::move(resolve));
+
+  XLOGF(
+      DBG7,
+      "Import batch of trees with size: {}, first path: {}",
+      count,
+      requests[0].path);
 
   std::vector<Request> raw_requests;
   raw_requests.reserve(count);
@@ -171,10 +179,18 @@ void SaplingNativeBackingStore::getBlobBatch(
     sapling::FetchMode fetch_mode,
     folly::FunctionRef<void(size_t, folly::Try<std::unique_ptr<folly::IOBuf>>)>
         resolve) {
-  auto resolver = std::make_shared<GetBlobBatchResolver>(std::move(resolve));
   auto count = requests.size();
+  if (count == 0) {
+    return;
+  }
 
-  XLOGF(DBG7, "Import blobs with size: {}", count);
+  auto resolver = std::make_shared<GetBlobBatchResolver>(std::move(resolve));
+
+  XLOGF(
+      DBG7,
+      "Import blobs with size: {}, first path: {}",
+      count,
+      requests[0].path);
 
   std::vector<Request> raw_requests;
   raw_requests.reserve(count);

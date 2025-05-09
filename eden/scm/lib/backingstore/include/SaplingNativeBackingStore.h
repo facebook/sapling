@@ -14,6 +14,7 @@
 #include <optional>
 #include <string_view>
 
+#include "eden/common/utils/PathFuncs.h"
 #include "eden/fs/store/ObjectFetchContext.h"
 #include "eden/scm/lib/backingstore/src/ffi.rs.h"
 
@@ -31,9 +32,14 @@ namespace sapling {
  */
 using NodeId = folly::ByteRange;
 using FetchCause = facebook::eden::ObjectFetchContext::Cause;
+using RepoPath = facebook::eden::RelativePathPiece;
 
 struct SaplingRequest {
+  // These two fields are typically borrowed from a
+  // SaplingImportRequest - be cognizant of lifetimes.
   NodeId node;
+  RepoPath path;
+
   FetchCause cause;
   // TODO: sapling::FetchMode mode;
   // TODO: sapling::ClientRequestInfo cri;

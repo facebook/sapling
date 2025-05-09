@@ -751,8 +751,11 @@ SaplingBackingStore::prepareRequests(
         importRequestsIdPair.second.first;
     ObjectFetchContext::Cause fetchCause =
         getHighestPriorityFetchCause(importRequestsForId);
-    requests.push_back(
-        sapling::SaplingRequest{importRequestsIdPair.first, fetchCause});
+    requests.push_back(sapling::SaplingRequest{
+        importRequestsIdPair.first,
+        importRequestsForId[0]->getRequest<T>()->proxyHash.path(),
+        fetchCause,
+    });
   }
 
   return std::make_pair(std::move(importRequestsMap), std::move(requests));
