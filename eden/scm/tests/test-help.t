@@ -354,7 +354,6 @@ Test extension help:
        stablerev     provide a way to expose the "stable" commit via a revset
        traceprof     (no help text available)
        undo          (no help text available)
-       win32mbcs     allow the use of MBCS paths with problematic encodings
 
 Only show documented aliases:
 

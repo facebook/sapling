@@ -17,8 +17,6 @@ ignore = {
     b"win32text",
 }
 
-if os.name != "nt":
-    ignore.add(b"win32mbcs")
 
 disabled = [ext.encode() for ext in extensions.disabled().keys() if ext not in ignore]
 
