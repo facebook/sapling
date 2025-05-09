@@ -14,7 +14,7 @@ import os
 
 from bindings import configloader, context
 
-from . import configitems, error, util
+from . import error, util
 from .i18n import _
 
 # unique object used to detect no default value has been provided when
@@ -45,13 +45,11 @@ class uiconfig:
             self._rctx = src._rctx
             self._rcfg = src._rcfg.clone()
             self._unserializable = src._unserializable.copy()
-            self._knownconfig = src._knownconfig
         else:
             self._rctx = rctx or context.context()
             self._rcfg = self._rctx.config()
             # map from IDs to unserializable Python objects.
             self._unserializable = {}
-            self._knownconfig = configitems.coreitems
 
         self.fixconfig()
 
@@ -191,53 +189,11 @@ class uiconfig:
         return value
 
     def _config(self, section, name, default=_unset):
-        value = itemdefault = default
-        item = self._knownconfig.get(section, {}).get(name)
-        alternates = [(section, name)]
-
-        if item is not None:
-            alternates.extend(item.alias)
-            if callable(item.default):
-                itemdefault = item.default()
-            else:
-                itemdefault = item.default
-        # fbonly: disabled in a hotfix because it's so expensive to fix
-        elif False:
-            msg = "accessing unregistered config item: '%s.%s'"
-            msg %= (section, name)
-            self.develwarn(msg, 2, "warn-config-unknown")
-
-        if default is _unset:
-            if item is None:
-                value = default
-            elif item.default is configitems.dynamicdefault:
-                value = None
-                msg = "config item requires an explicit default value: '%s.%s'"
-                msg %= (section, name)
-                self.develwarn(msg, 2, "warn-config-default")
-            else:
-                value = itemdefault
-        elif (
-            item is not None
-            and item.default is not configitems.dynamicdefault
-            and default != itemdefault
-        ):
-            msg = (
-                "specifying a mismatched default value for a registered "
-                "config item: '%s.%s' '%s'"
-            )
-            msg %= (section, name, default)
-            self.develwarn(msg, 2, "warn-config-default")
-
-        for s, n in alternates:
-            candidate = self._rcfg.get(s, n)
-            if candidate is not None:
-                value = candidate
-                value = self._unserializable.get(value, value)
-                section = s
-                name = n
-                break
-
+        value = default
+        candidate = self._rcfg.get(section, name)
+        if candidate is not None:
+            value = candidate
+            value = self._unserializable.get(value, value)
         return value
 
     def configsuboptions(self, section, name, default=_unset):
