@@ -88,17 +88,7 @@ configtable = {}
 configitem = registrar.configitem(configtable)
 
 configitem("grep", "command", default="xargs -0 grep")
-configitem(globaldata, createmarkersoperation, default=None)
 
-configitem("tweakdefaults", "singlecolonabort", default=False)
-configitem("tweakdefaults", "singlecolonwarn", default=False)
-configitem("tweakdefaults", "showupdated", default=False)
-
-configitem("tweakdefaults", "amendkeepdate", default=False)
-configitem("tweakdefaults", "graftkeepdate", default=False)
-configitem("tweakdefaults", "histeditkeepdate", default=False)
-configitem("tweakdefaults", "rebasekeepdate", default=False)
-configitem("tweakdefaults", "absorbkeepdate", default=False)
 
 rebasemsg: str = _(
     "you must use a bookmark with tracking "

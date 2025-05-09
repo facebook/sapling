@@ -46,7 +46,6 @@ configtable = {}
 configitem = registrar.configitem(configtable)
 
 configitem("github", "pull-request-include-reviewstack", default=True)
-configitem("github", "preserve-pull-request-description", default=False)
 
 
 @hint("unlink-closed-pr")

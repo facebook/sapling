@@ -138,16 +138,13 @@ configitem = registrar.configitem(configtable)
 
 configitem("commitcloud", "servicetype", default="remote")
 configitem("commitcloud", "scm_daemon_tcp_port", default=15432)
-configitem("commitcloud", "automigrate", default=False)
-configitem("commitcloud", "automigratehostworkspace", default=False)
-configitem("commitcloud", "synccheckoutlocations", default=False)
+
+
 configitem("commitcloud", "enablestatus", default=True)
 configitem("commitcloud", "enableprogress", default=True)
 configitem("commitcloud", "pullsizelimit", 300)
-configitem("commitcloud", "sl_showremotebookmarks", default=False)
-configitem("commitcloud", "sl_showallbookmarks", default=False)
-configitem("commitcloud", "remotebookmarkssync", default=False)
-configitem("commitcloud", "ignored-bookmarks", default=None)
+
+
 configitem("infinitepushbackup", "enablestatus", default=True)
 configitem("infinitepushbackup", "maxheadstobackup", default=-1)
 # Use the http Edenapi protocol to fetch bookmarks

@@ -29,7 +29,6 @@ from ..extlib import watchmanclient
 configtable = {}
 configitem = registrar.configitem(configtable)
 
-configitem("experimental", "fsmonitor.transaction_notify", default=False)
 
 # This extension is incompatible with the following extensions
 # and will disable itself when encountering one of these:

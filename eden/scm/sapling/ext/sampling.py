@@ -24,7 +24,7 @@ configtable = {}
 configitem = registrar.configitem(configtable)
 
 configitem("sampling", "filepath", default="")
-configitem("sampling", "debug", default=False)
+
 
 onehundredmb = 100 * 1024 * 1024
 

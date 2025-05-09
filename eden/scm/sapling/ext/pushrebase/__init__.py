@@ -91,7 +91,6 @@ command = registrar.command(cmdtable)
 configtable = {}
 configitem = registrar.configitem(configtable)
 
-configitem("pushrebase", "blocknonpushrebase", default=False)
 
 rebaseparttype = "b2x:rebase"
 rebasepackparttype = "b2x:rebasepackpart"

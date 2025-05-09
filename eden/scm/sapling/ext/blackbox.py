@@ -55,8 +55,7 @@ testedwith = "ships-with-hg-core"
 configtable = {}
 configitem = registrar.configitem(configtable)
 
-configitem("blackbox", "dirty", default=False)
-configitem("blackbox", "logsource", default=False)
+
 configitem("blackbox", "track", default=lambda: ["*"])
 
 

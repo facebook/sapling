@@ -30,8 +30,6 @@ UPDATEARGS = "updateargs"
 configtable = {}
 configitem = registrar.configitem(configtable)
 
-configitem("morestatus", "show", default=False)
-
 
 def prefixlines(raw):
     """Surround lineswith a comment char and a new line"""

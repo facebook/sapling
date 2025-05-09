@@ -85,9 +85,7 @@ cmdtable.update(unamend.cmdtable)
 configtable = {}
 configitem = registrar.configitem(configtable)
 
-configitem("amend", "alwaysnewest", default=False)
-configitem("amend", "date", default=None)
-configitem("amend", "education", default=None)
+
 configitem("commands", "amend.autorebase", default=True)
 configitem("update", "nextpreferdraft", default=True)
 

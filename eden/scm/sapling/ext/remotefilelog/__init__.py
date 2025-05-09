@@ -151,13 +151,11 @@ command = registrar.command(cmdtable)
 configtable = {}
 configitem = registrar.configitem(configtable)
 
-configitem("remotefilelog", "descendantrevfastpath", default=False)
+
 configitem("remotefilelog", "updatesharedcache", default=True)
-configitem("remotefilelog", "servercachepath", default=None)
-configitem("remotefilelog", "server", default=False)
 configitem("remotefilelog", "getpackversion", default=1)
 configitem("remotefilelog", "http", default=True)
-configitem("edenapi", "url", default=None)
+
 
 testedwith = "ships-with-fb-ext"
 

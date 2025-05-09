@@ -35,8 +35,6 @@ if os.name != "nt":
     configtable = {}
     configitem = registrar.configitem(configtable)
 
-    configitem("grpcheck", "groups", default=[])
-
     def _grpname2gid(name):
         try:
             return grp.getgrnam(name).gr_gid

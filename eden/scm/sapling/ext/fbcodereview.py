@@ -75,10 +75,9 @@ autopullpredicate = registrar.autopullpredicate()
 
 configitem("fbscmquery", "auto-username", "true")
 
-configitem("pullcreatemarkers", "check-local-versions", default=False)
 
 configitem("phrevset", "autopull", default=True)
-configitem("phrevset", "callsign", default=None)
+
 configitem("phrevset", "graphqlonly", default=True)
 configitem("phrevset", "abort-if-git-diff-unavailable", default=True)
 

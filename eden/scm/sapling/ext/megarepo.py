@@ -37,7 +37,7 @@ configtable = {}
 configitem = registrar.configitem(configtable)
 
 # The other repo to translate commit hashes from.
-configitem("megarepo", "transparent-lookup", default=None)
+
 
 namespacepredicate = registrar.namespacepredicate()
 autopullpredicate = registrar.autopullpredicate()

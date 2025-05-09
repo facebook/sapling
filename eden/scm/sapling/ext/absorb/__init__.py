@@ -56,7 +56,7 @@ command = registrar.command(cmdtable)
 configtable = {}
 configitem = registrar.configitem(configtable)
 
-configitem("absorb", "amendflag", default=None)
+
 configitem("absorb", "maxdescwidth", default=50)
 
 colortable = {
