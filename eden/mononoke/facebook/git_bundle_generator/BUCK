@@ -30,6 +30,7 @@ rust_binary(
         "fbsource//third-party/rust:sha1",
         "//eden/mononoke/git/protocol:protocol",
         "//eden/mononoke/metaconfig:metaconfig_types",
+        "//eden/mononoke/git/bundle_uri:bundle_uri",
         "//eden/mononoke/mononoke_api:mononoke_api",
         "//eden/mononoke/mononoke_macros:mononoke_macros",
         "//manifold/clients/rust:manifold_client",
