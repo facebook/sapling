@@ -601,7 +601,6 @@ class localrepository:
             # hgsql wants raw access to revlog. Disable modern features
             # unconditionally for hgsql.
             self.ui.setconfig("experimental", "narrow-heads", "false", "hgsql")
-            self.ui.setconfig("experimental", "rust-commits", "false", "hgsql")
             self.ui.setconfig("visibility", "enabled", "false", "hgsql")
 
         self._dirstatevalidatewarned = False
@@ -963,9 +962,7 @@ class localrepository:
             if r.startswith("exp-compression-"):
                 self.svfs.options["compengine"] = r[len("exp-compression-") :]
 
-        bypassrevlogtransaction = self.ui.configbool(
-            "experimental", "narrow-heads"
-        ) and self.ui.configbool("experimental", "rust-commits")
+        bypassrevlogtransaction = self.ui.configbool("experimental", "narrow-heads")
         self.svfs.options["bypass-revlog-transaction"] = bypassrevlogtransaction
 
     def _writerequirements(self):

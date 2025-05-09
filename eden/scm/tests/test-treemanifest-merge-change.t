@@ -6,8 +6,6 @@
 
 Disable Rust strip since it does not strip manifest revlog.
 
-  $ setconfig experimental.rust-commits=0
-
   $ hginit repo
   $ cd repo
   $ enable pushrebase

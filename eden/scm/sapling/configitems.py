@@ -156,9 +156,6 @@ coreconfigitem("experimental", "pathhistory.find-merge-conflicts", default=True)
 # Map rev to safe f64 range for Javascript consumption.
 coreconfigitem("experimental", "revf64compat", default=True)
 
-# load Rust-based HgCommits on changelog.
-coreconfigitem("experimental", "rust-commits", default=True)
-
 coreconfigitem("experimental", "uncommitondirtywdir", default=True)
 coreconfigitem(
     "format",
