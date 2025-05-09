@@ -534,7 +534,7 @@ class ui:
         """
         user = encoding.environ.get("HGUSER")
         if user is None:
-            user = self.config("ui", "username")
+            user = self.config("ui", "username") or self.config("ui", "user")
             if user is not None:
                 user = os.path.expandvars(user)
         if user is None and acceptempty:
