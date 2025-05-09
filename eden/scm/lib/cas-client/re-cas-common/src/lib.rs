@@ -95,6 +95,9 @@ macro_rules! re_client {
                 &self,
                 digest: &$crate::CasDigest,
             ) -> Result<($crate::CasFetchedStats, Option<Blob>)> {
+
+                $crate::tracing::trace!(target: "cas", concat!(stringify!($struct), " fetching {:?} digest from local cache"), digest);
+
                 #[cfg(target_os = "linux")]{
                     let (stats, data) = self.client()?
                         .low_level_lookup_cache(self.metadata.clone(), to_re_digest(digest))?.unpack();
