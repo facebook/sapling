@@ -377,8 +377,8 @@ def amend(ui, repo, *pats, **opts):
         noconflict = None
 
         # RESTACK_NO_CONFLICT requires IMM.
-        if conf == RESTACK_NO_CONFLICT and not ui.config(
-            "rebase", "experimental.inmemory", False
+        if conf == RESTACK_NO_CONFLICT and not ui.configbool(
+            "rebase", "experimental.inmemory"
         ):
             conf = RESTACK_DEFAULT
 

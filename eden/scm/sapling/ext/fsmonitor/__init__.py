@@ -292,7 +292,7 @@ class fsmonitorfilesystem(filesystem.physicalfilesystem):
         super(fsmonitorfilesystem, self).__init__(root, dirstate)
 
         self._mode = repo.ui.config("fsmonitor", "mode")
-        self._timeout = float(repo.ui.config("fsmonitor", "timeout"))
+        self._timeout = repo.ui.configwith(float, "fsmonitor", "timeout")
         self._watchmanclient = watchmanclient.getclientforrepo(repo)
 
 
