@@ -958,14 +958,6 @@ class localrepository:
         mmapindexthreshold = self.ui.configbytes("experimental", "mmapindexthreshold")
         if mmapindexthreshold is not None:
             self.svfs.options["mmapindexthreshold"] = mmapindexthreshold
-        withsparseread = self.ui.configbool("experimental", "sparse-read")
-        srdensitythres = float(
-            self.ui.config("experimental", "sparse-read.density-threshold")
-        )
-        srmingapsize = self.ui.configbytes("experimental", "sparse-read.min-gap-size")
-        self.svfs.options["with-sparse-read"] = withsparseread
-        self.svfs.options["sparse-read-density-threshold"] = srdensitythres
-        self.svfs.options["sparse-read-min-gap-size"] = srmingapsize
 
         for r in self.requirements:
             if r.startswith("exp-compression-"):
