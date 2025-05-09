@@ -86,9 +86,6 @@ configtable = {}
 configitem = registrar.configitem(configtable)
 
 
-configitem("commands", "amend.autorebase", default=True)
-configitem("update", "nextpreferdraft", default=True)
-
 testedwith = "ships-with-fb-ext"
 
 amendopts = [

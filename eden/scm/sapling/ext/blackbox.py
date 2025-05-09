@@ -56,9 +56,6 @@ configtable = {}
 configitem = registrar.configitem(configtable)
 
 
-configitem("blackbox", "track", default=lambda: ["*"])
-
-
 def lastui() -> None:
     return None
 

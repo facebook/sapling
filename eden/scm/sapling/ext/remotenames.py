@@ -70,22 +70,9 @@ configtable = {}
 configitem = registrar.configitem(configtable)
 
 
-configitem("remotenames", "bookmarks", default=True)
-configitem("remotenames", "calculatedistance", default=True)
-
-
-configitem("remotenames", "precachecurrent", default=True)
-configitem("remotenames", "precachedistance", default=True)
-
-
-configitem("remotenames", "resolvenodes", default=True)
-
-configitem("remotenames", "tracking", default=True)
-
-
 # Perform a pull of remotenames for "push" command. This is racy and does not
 # always update remote bookmarks! The config option exists for testing purpose.
-configitem("remotenames", "racy-pull-on-push", default=True)
+
 
 revsetpredicate = registrar.revsetpredicate()
 

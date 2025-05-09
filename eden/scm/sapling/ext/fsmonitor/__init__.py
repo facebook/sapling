@@ -181,19 +181,6 @@ command = registrar.command(cmdtable)
 configtable = {}
 configitem = registrar.configitem(configtable)
 
-configitem("fsmonitor", "blacklistusers", default=list)
-configitem("fsmonitor", "mode", default="on")
-configitem("fsmonitor", "timeout", default=10)
-
-configitem("fsmonitor", "dirstate-nonnormal-file-threshold", default=200)
-configitem("fsmonitor", "watchman-changed-file-threshold", default=200)
-
-configitem("fsmonitor", "fallback-on-watchman-exception", default=True)
-
-configitem("fsmonitor", "tcp-host", default="::1")
-configitem("fsmonitor", "tcp-port", default=12300)
-
-configitem("fsmonitor", "wait-full-crawl", default=True)
 
 # This extension is incompatible with the following incompatible extensions
 # and will disable itself when encountering one of these:

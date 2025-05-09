@@ -30,17 +30,8 @@ import time
 from sapling import registrar, tracing, util
 
 
-pathformat = "/tmp/trace-%(pid)s-%(time)s.log"
-mempathformat = "/tmp/memtrace-%(pid)s-%(time)s.log"
-
 configtable = {}
 configitem = registrar.configitem(configtable)
-
-configitem("sigtrace", "pathformat", default=pathformat)
-configitem("sigtrace", "signal", default="USR1")
-configitem("sigtrace", "mempathformat", default=mempathformat)
-configitem("sigtrace", "memsignal", default="USR2")
-configitem("sigtrace", "interval", default=0)
 
 
 def printstacks(sig, currentframe) -> None:

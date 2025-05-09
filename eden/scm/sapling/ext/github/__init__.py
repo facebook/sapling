@@ -45,8 +45,6 @@ hint = registrar.hint()
 configtable = {}
 configitem = registrar.configitem(configtable)
 
-configitem("github", "pull-request-include-reviewstack", default=True)
-
 
 @hint("unlink-closed-pr")
 def unlink_closed_pr_hint() -> str:

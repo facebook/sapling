@@ -9,22 +9,6 @@ from sapling import registrar
 configtable = {}
 configitem = registrar.configitem(configtable)
 
-configitem(
-    "preventpremegarepoupdates",
-    "message",
-    default=(
-        "Checking out commits from before megarepo merge is discouraged. "
-        "The resulting checkout will contain just the contents of one git subrepo. "
-        "Many tools might not work as expected. "
-        "Do you want to continue (Yn)?  $$ &Yes $$ &No"
-    ),
-)
-configitem(
-    "preventpremegarepoupdates",
-    "dangerrevset",
-    default="not(contains('.megarepo/remapping_state'))",
-)
-
 
 def reposetup(ui, repo):
     ui.setconfig(

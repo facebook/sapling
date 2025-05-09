@@ -57,8 +57,6 @@ configtable = {}
 configitem = registrar.configitem(configtable)
 
 
-configitem("absorb", "maxdescwidth", default=50)
-
 colortable = {
     "absorb.description": "yellow",
     "absorb.node": "blue bold",

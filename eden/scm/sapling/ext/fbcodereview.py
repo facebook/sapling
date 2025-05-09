@@ -73,15 +73,6 @@ namespacepredicate = registrar.namespacepredicate()
 templatekeyword = registrar.templatekeyword()
 autopullpredicate = registrar.autopullpredicate()
 
-configitem("fbscmquery", "auto-username", "true")
-
-
-configitem("phrevset", "autopull", default=True)
-
-configitem("phrevset", "graphqlonly", default=True)
-configitem("phrevset", "abort-if-git-diff-unavailable", default=True)
-
-configitem("fbcodereview", "hide-landed-commits", default=True)
 
 DIFFERENTIAL_REGEX: Pattern[str] = re.compile(
     "Differential Revision: http.+?/"  # Line start, URL

@@ -40,8 +40,6 @@ from sapling import alerts, dispatch, encoding, extensions, registrar, util
 configtable = {}
 configitem = registrar.configitem(configtable)
 
-configitem("errorredirect", "fancy-traceback", default=True)
-
 
 def _printtrace(ui, warning) -> bool:
     # Like dispatch.handlecommandexception, but avoids an unnecessary ui.log

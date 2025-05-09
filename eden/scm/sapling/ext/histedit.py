@@ -269,9 +269,6 @@ configtable = {}
 configitem = registrar.configitem(configtable)
 
 
-configitem("histedit", "linelen", default=80)
-
-
 # Note for extension authors: ONLY specify testedwith = 'ships-with-hg-core' for
 # extensions which SHIP WITH MERCURIAL. Non-mainline extensions should
 # be specifying the version(s) of Mercurial they are tested with, or

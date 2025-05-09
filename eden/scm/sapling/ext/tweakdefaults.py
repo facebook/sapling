@@ -87,8 +87,6 @@ logopts: List[Tuple[str, str, None, str]] = [
 configtable = {}
 configitem = registrar.configitem(configtable)
 
-configitem("grep", "command", default="xargs -0 grep")
-
 
 rebasemsg: str = _(
     "you must use a bookmark with tracking "

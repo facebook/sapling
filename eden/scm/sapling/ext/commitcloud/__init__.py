@@ -136,19 +136,8 @@ templatekeyword = registrar.templatekeyword()
 configtable = {}
 configitem = registrar.configitem(configtable)
 
-configitem("commitcloud", "servicetype", default="remote")
-configitem("commitcloud", "scm_daemon_tcp_port", default=15432)
 
-
-configitem("commitcloud", "enablestatus", default=True)
-configitem("commitcloud", "enableprogress", default=True)
-configitem("commitcloud", "pullsizelimit", 300)
-
-
-configitem("infinitepushbackup", "enablestatus", default=True)
-configitem("infinitepushbackup", "maxheadstobackup", default=-1)
 # Use the http Edenapi protocol to fetch bookmarks
-configitem("infinitepush", "httpbookmarks", default=True)
 
 
 def extsetup(ui):

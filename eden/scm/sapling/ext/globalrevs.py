@@ -66,10 +66,6 @@ from .pushrebase import isnonpushrebaseblocked
 configtable = {}
 configitem = registrar.configitem(configtable)
 
-configitem("globalrevs", "onlypushrebase", default=True)
-
-
-configitem("globalrevs", "startrev", default=0)
 
 cmdtable = {}
 command = registrar.command(cmdtable)

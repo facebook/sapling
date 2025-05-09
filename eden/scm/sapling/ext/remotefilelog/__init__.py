@@ -152,11 +152,6 @@ configtable = {}
 configitem = registrar.configitem(configtable)
 
 
-configitem("remotefilelog", "updatesharedcache", default=True)
-configitem("remotefilelog", "getpackversion", default=1)
-configitem("remotefilelog", "http", default=True)
-
-
 testedwith = "ships-with-fb-ext"
 
 repoclass = localrepo.localrepository
