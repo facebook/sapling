@@ -89,13 +89,23 @@ impl TraversalProgress {
 }
 
 /// Recursively traverses a directory and collects file paths, displaying progress
-fn traverse_directory(path: &Path, metrics: &mut TraversalProgress) -> Result<()> {
+///
+/// If follow_symlinks is true, symbolic links will be followed during traversal.
+/// Otherwise, symbolic links will be ignored.
+fn traverse_directory(
+    path: &Path,
+    metrics: &mut TraversalProgress,
+    follow_symlinks: bool,
+) -> Result<()> {
     if path.is_dir() {
         for entry in fs::read_dir(path)? {
             let entry = entry?;
             let path = entry.path();
+
             if path.is_dir() {
-                traverse_directory(&path, metrics)?;
+                if !path.is_symlink() || follow_symlinks {
+                    traverse_directory(&path, metrics, follow_symlinks)?;
+                }
             } else if path.is_file() {
                 metrics.add_file(path);
             }
@@ -104,14 +114,18 @@ fn traverse_directory(path: &Path, metrics: &mut TraversalProgress) -> Result<()
     Ok(())
 }
 
-pub async fn bench_traversal_thrift_read(dir_path: &str, no_progress: bool) -> Result<Benchmark> {
+pub async fn bench_traversal_thrift_read(
+    dir_path: &str,
+    follow_symlinks: bool,
+    no_progress: bool,
+) -> Result<Benchmark> {
     let path = Path::new(dir_path);
     if !path.exists() || !path.is_dir() {
         return Err(anyhow::anyhow!("Invalid directory path: {}", dir_path));
     }
 
     let mut traverse_progress = TraversalProgress::new(no_progress);
-    traverse_directory(path, &mut traverse_progress)?;
+    traverse_directory(path, &mut traverse_progress, follow_symlinks)?;
     let (file_count, duration, file_paths) = traverse_progress.finalize();
 
     if duration <= 0.0 {
@@ -234,7 +248,11 @@ pub async fn bench_traversal_thrift_read(dir_path: &str, no_progress: bool) -> R
 }
 
 /// Runs the filesystem traversal benchmark and returns the benchmark results
-pub fn bench_traversal_fs_read(dir_path: &str, no_progress: bool) -> Result<Benchmark> {
+pub fn bench_traversal_fs_read(
+    dir_path: &str,
+    follow_symlinks: bool,
+    no_progress: bool,
+) -> Result<Benchmark> {
     let path = Path::new(dir_path);
     if !path.exists() || !path.is_dir() {
         return Err(anyhow::anyhow!("Invalid directory path: {}", dir_path));
@@ -242,7 +260,7 @@ pub fn bench_traversal_fs_read(dir_path: &str, no_progress: bool) -> Result<Benc
 
     let mut traverse_progress = TraversalProgress::new(no_progress);
 
-    traverse_directory(path, &mut traverse_progress)?;
+    traverse_directory(path, &mut traverse_progress, follow_symlinks)?;
 
     let (file_count, duration, file_paths) = traverse_progress.finalize();
 

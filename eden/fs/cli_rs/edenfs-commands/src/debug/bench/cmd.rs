@@ -78,6 +78,10 @@ pub enum BenchCmd {
         #[clap(long, value_enum, default_value_t = types::ReadFileMethod::Fs, help="read via fs or thrift")]
         read_file_via: types::ReadFileMethod,
 
+        /// Whether to follow symbolic links during traversal
+        #[clap(long, default_value_t = false)]
+        follow_symlinks: bool,
+
         /// Disable progress bars in benchmarks
         #[clap(long)]
         no_progress: bool,
@@ -174,6 +178,7 @@ impl crate::Subcommand for BenchCmd {
             Self::Traversal {
                 dir,
                 read_file_via,
+                follow_symlinks,
                 no_progress,
             } => {
                 println!(
@@ -182,12 +187,24 @@ impl crate::Subcommand for BenchCmd {
                 );
                 match read_file_via {
                     types::ReadFileMethod::Fs => {
-                        println!("{}", traversal::bench_traversal_fs_read(dir, *no_progress)?);
+                        println!(
+                            "{}",
+                            traversal::bench_traversal_fs_read(
+                                dir,
+                                *follow_symlinks,
+                                *no_progress
+                            )?
+                        );
                     }
                     types::ReadFileMethod::Thrift => {
                         println!(
                             "{}",
-                            traversal::bench_traversal_thrift_read(dir, *no_progress).await?
+                            traversal::bench_traversal_thrift_read(
+                                dir,
+                                *follow_symlinks,
+                                *no_progress
+                            )
+                            .await?
                         );
                     }
                 }
