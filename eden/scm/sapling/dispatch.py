@@ -376,7 +376,9 @@ def dispatch(req):
             ret = ret or -1
     if ret is None:
         ret = 0
-    return ret & retmask
+    if retmask is not None:
+        ret = ret & retmask
+    return ret
 
 
 def _runcatch(req):
