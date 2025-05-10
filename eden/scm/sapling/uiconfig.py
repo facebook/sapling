@@ -19,7 +19,7 @@ from .i18n import _
 
 # unique object used to detect no default value has been provided when
 # retrieving configuration value.
-_unset = object()
+_unset = configloader.unset_obj
 
 
 def optional(func, s):
@@ -246,24 +246,12 @@ class uiconfig:
         >>> u.setconfig(s, 'invalid', 'somevalue')
         >>> try: u.configbool(s, 'invalid')
         ... except Exception as e: print(e)
-        foo.invalid is not a boolean ('somevalue')
+        invalid config foo.invalid=somevalue: invalid bool: somevalue
         """
-
-        v = self._config(section, name, default)
-        if v is None:
-            return v
-        if v is _unset:
-            if default is _unset:
-                return False
-            return default
-        if isinstance(v, bool):
-            return v
-        b = util.parsebool(v)
-        if b is None:
-            raise error.ConfigError(
-                _("%s.%s is not a boolean ('%s')") % (section, name, v)
-            )
-        return b
+        try:
+            return self._rcfg.get.as_bool(section, name, default)
+        except ValueError as e:
+            raise error.ConfigError(e)
 
     def configwith(self, convert, section, name, default=_unset, desc=None):
         """parse a configuration element with a conversion function
@@ -313,10 +301,12 @@ class uiconfig:
         >>> u.setconfig(s, 'invalid', 'somevalue')
         >>> try: u.configint(s, 'invalid')
         ... except Exception as e: print(e)
-        foo.invalid is not a valid integer ('somevalue')
+        invalid config foo.invalid=somevalue: invalid digit found in string
         """
-
-        return self.configwith(int, section, name, default, "integer")
+        try:
+            return self._rcfg.get.as_int(section, name, default)
+        except ValueError as e:
+            raise error.ConfigError(e)
 
     def configbytes(self, section, name, default=_unset):
         """parse a configuration element as a quantity in bytes
@@ -336,22 +326,12 @@ class uiconfig:
         >>> u.setconfig(s, 'invalid', 'somevalue')
         >>> try: u.configbytes(s, 'invalid')
         ... except Exception as e: print(e)
-        foo.invalid is not a byte quantity ('somevalue')
+        invalid config foo.invalid=somevalue: invalid float literal
         """
-
-        value = self._config(section, name, default)
-        if value is _unset:
-            if default is _unset:
-                default = 0
-            value = default
-        if not isinstance(value, str):
-            return value
         try:
-            return util.sizetoint(value)
-        except error.ParseError:
-            raise error.ConfigError(
-                _("%s.%s is not a byte quantity ('%s')") % (section, name, value)
-            )
+            return self._rcfg.get.as_byte_count(section, name, default)
+        except ValueError as e:
+            raise error.ConfigError(e)
 
     def configlist(self, section, name, default=_unset):
         """parse a configuration element as a list of comma/space separated
@@ -365,13 +345,7 @@ class uiconfig:
         >>> u.configlist(s, 'list2')
         ['this', 'is', 'a small', 'test']
         """
-        # default is not always a list
-        v = self.configwith(parselist, section, name, default, "list")
-        if isinstance(v, str):
-            return parselist(v)
-        elif v is None:
-            return []
-        return v
+        return self._rcfg.get.as_list(section, name, default)
 
     def configdate(self, section, name, default=_unset):
         """parse a configuration element as a tuple of ints

@@ -382,7 +382,7 @@ class ui:
         >>> u.setconfig(s, 'invalid', 'somevalue')
         >>> try: u.configbool(s, 'invalid')
         ... except Exception as e: print(e)
-        foo.invalid is not a boolean ('somevalue')
+        invalid config foo.invalid=somevalue: invalid bool: somevalue
         """
         return self._uiconfig.configbool(section, name, default)
 
@@ -428,7 +428,7 @@ class ui:
         >>> u.setconfig(s, 'invalid', 'somevalue')
         >>> try: u.configint(s, 'invalid')
         ... except Exception as e: print(e)
-        foo.invalid is not a valid integer ('somevalue')
+        invalid config foo.invalid=somevalue: invalid digit found in string
         """
         return self._uiconfig.configint(section, name, default)
 
@@ -450,7 +450,7 @@ class ui:
         >>> u.setconfig(s, 'invalid', 'somevalue')
         >>> try: u.configbytes(s, 'invalid')
         ... except Exception as e: print(e)
-        foo.invalid is not a byte quantity ('somevalue')
+        invalid config foo.invalid=somevalue: invalid float literal
         """
         return self._uiconfig.configbytes(section, name, default)
 
