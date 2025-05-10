@@ -155,7 +155,6 @@ struct HgImportTraceEvent : TraceEventBase {
 class SaplingBackingStore final : public BackingStore {
  public:
   using ImportRequestsList = std::vector<std::shared_ptr<SaplingImportRequest>>;
-  using SaplingNativeOptions = sapling::SaplingNativeBackingStoreOptions;
   using ImportRequestsMap = std::
       map<sapling::NodeId, std::pair<ImportRequestsList, RequestMetricsScope>>;
 

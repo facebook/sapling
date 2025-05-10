@@ -56,7 +56,6 @@ struct Inner {
     repo: Arc<Repo>,
 
     // We store these so we can maintain them when reloading ourself.
-    allow_retries: bool,
     extra_configs: Vec<PinnedConfig>,
 
     // State used to track the touch file and determine if we need to reload ourself.
@@ -101,9 +100,9 @@ impl FromStr for WalkMode {
 }
 
 impl BackingStore {
-    /// Initialize `BackingStore` with the `allow_retries` setting.
-    pub fn new<P: AsRef<Path>>(root: P, allow_retries: bool) -> Result<Self> {
-        Self::new_with_config(root.as_ref(), allow_retries, &[])
+    /// Initialize `BackingStore`.
+    pub fn new<P: AsRef<Path>>(root: P) -> Result<Self> {
+        Self::new_with_config(root.as_ref(), &[])
     }
 
     pub fn name(&self) -> Result<String> {
@@ -113,13 +112,9 @@ impl BackingStore {
         }
     }
 
-    /// Initialize `BackingStore` with the `allow_retries` setting and extra configs.
+    /// Initialize `BackingStore` with extra configs.
     /// This is used by benches/ to set cache path to control warm/code test cases.
-    pub fn new_with_config(
-        root: impl AsRef<Path>,
-        allow_retries: bool,
-        extra_configs: &[String],
-    ) -> Result<Self> {
+    pub fn new_with_config(root: impl AsRef<Path>, extra_configs: &[String]) -> Result<Self> {
         let extra_configs = extra_configs
             .iter()
             .map(|c| PinnedConfig::Raw(c.to_string().into(), "backingstore".into()))
@@ -128,7 +123,6 @@ impl BackingStore {
         Ok(Self {
             inner: ArcSwap::new(Arc::new(Self::new_inner(
                 root.as_ref(),
-                allow_retries,
                 &extra_configs,
                 touch_file_mtime(),
             )?)),
@@ -137,7 +131,6 @@ impl BackingStore {
 
     fn new_inner(
         root: &Path,
-        allow_retries: bool,
         extra_configs: &[PinnedConfig],
         touch_file_mtime: Option<SystemTime>,
     ) -> Result<Inner> {
@@ -145,13 +138,6 @@ impl BackingStore {
 
         let info = RepoMinimalInfo::from_repo_root(root.to_path_buf())?;
         let mut config = configloader::hg::embedded_load(RepoInfo::Disk(&info), extra_configs)?;
-
-        let source = "backingstore".into();
-        if !allow_retries {
-            config.set("lfs", "backofftimes", Some(""), &source);
-            config.set("lfs", "throttlebackofftimes", Some(""), &source);
-            config.set("edenapi", "max-retry-per-request", Some("0"), &source);
-        }
 
         // Allow overrideing scmstore.tree-metadata-mode for eden only.
         if let Some(mode) = config.get_nonempty("eden", "tree-metadata-mode") {
@@ -183,7 +169,6 @@ impl BackingStore {
             treestore,
             filestore,
             repo: Arc::new(repo),
-            allow_retries,
             extra_configs: extra_configs.to_vec(),
             create_time: Instant::now(),
             touch_file_mtime,
@@ -414,12 +399,7 @@ impl BackingStore {
             // There is no locking, so some cache writes could be missed by the reload.
             inner.flush();
 
-            match Self::new_inner(
-                inner.repo.path(),
-                inner.allow_retries,
-                &inner.extra_configs,
-                new_mtime,
-            ) {
+            match Self::new_inner(inner.repo.path(), &inner.extra_configs, new_mtime) {
                 Ok(mut new_inner) => {
                     new_inner.last_reload = Instant::now();
                     new_inner
@@ -484,7 +464,6 @@ impl Inner {
             filestore: self.filestore.clone(),
             treestore: self.treestore.clone(),
             repo: self.repo.clone(),
-            allow_retries: self.allow_retries,
             extra_configs: self.extra_configs.clone(),
 
             touch_file_mtime,

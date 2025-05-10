@@ -70,9 +70,7 @@ using ManifestId = std::array<uint8_t, 20>;
  */
 class SaplingNativeBackingStore {
  public:
-  SaplingNativeBackingStore(
-      std::string_view repository,
-      const SaplingNativeBackingStoreOptions& options);
+  explicit SaplingNativeBackingStore(std::string_view repository);
 
   std::string_view getRepoName() const {
     return repoName_;

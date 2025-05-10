@@ -49,10 +49,6 @@ pub(crate) mod ffi {
         type FetchCause;
     }
 
-    pub struct SaplingNativeBackingStoreOptions {
-        allow_retries: bool,
-    }
-
     #[repr(u8)]
     pub enum FetchMode {
         /// The fetch may hit remote servers.
@@ -154,10 +150,7 @@ pub(crate) mod ffi {
     extern "Rust" {
         type BackingStore;
 
-        pub unsafe fn sapling_backingstore_new(
-            repository: &[c_char],
-            options: &SaplingNativeBackingStoreOptions,
-        ) -> Result<Box<BackingStore>>;
+        pub unsafe fn sapling_backingstore_new(repository: &[c_char]) -> Result<Box<BackingStore>>;
 
         pub unsafe fn sapling_backingstore_get_name(store: &BackingStore) -> Result<String>;
 
@@ -291,15 +284,11 @@ fn select_cause(fetch_causes_iter: impl Iterator<Item = ffi::FetchCause>) -> Fet
     }
 }
 
-pub unsafe fn sapling_backingstore_new(
-    repository: &[c_char],
-    options: &ffi::SaplingNativeBackingStoreOptions,
-) -> Result<Box<BackingStore>> {
+pub unsafe fn sapling_backingstore_new(repository: &[c_char]) -> Result<Box<BackingStore>> {
     super::init::backingstore_global_init();
 
     let repo = CStr::from_ptr(repository.as_ptr()).to_str()?;
-    let store =
-        BackingStore::new(repo, options.allow_retries).map_err(|err| anyhow!("{:?}", err))?;
+    let store = BackingStore::new(repo).map_err(|err| anyhow!("{:?}", err))?;
     Ok(Box::new(store))
 }
 

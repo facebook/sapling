@@ -74,18 +74,6 @@ ObjectId hashFromRootId(const RootId& root) {
   return ObjectId::fromHex(root.value());
 }
 
-sapling::SaplingNativeBackingStoreOptions computeSaplingOptions() {
-  sapling::SaplingNativeBackingStoreOptions options{};
-  options.allow_retries = false;
-  return options;
-}
-
-sapling::SaplingNativeBackingStoreOptions computeTestSaplingOptions() {
-  sapling::SaplingNativeBackingStoreOptions options{};
-  options.allow_retries = false;
-  return options;
-}
-
 std::unique_ptr<SaplingBackingStoreOptions> computeRuntimeOptions(
     std::unique_ptr<SaplingBackingStoreOptions> options) {
   // No options are currently set. See D64436672 for an example on how to add
@@ -216,7 +204,7 @@ SaplingBackingStore::SaplingBackingStore(
       traceBus_{TraceBus<HgImportTraceEvent>::create(
           "hg",
           config_->getEdenConfig()->HgTraceBusCapacity.getValue())},
-      store_{repository.view(), computeSaplingOptions()} {
+      store_{repository.view()} {
   uint8_t numberThreads =
       config_->getEdenConfig()->numBackingstoreThreads.getValue();
   if (!numberThreads) {
@@ -269,7 +257,7 @@ SaplingBackingStore::SaplingBackingStore(
       traceBus_{TraceBus<HgImportTraceEvent>::create(
           "hg",
           config_->getEdenConfig()->HgTraceBusCapacity.getValue())},
-      store_{repository.view(), computeTestSaplingOptions()} {
+      store_{repository.view()} {
   uint8_t numberThreads =
       config_->getEdenConfig()->numBackingstoreThreads.getValue();
   if (!numberThreads) {
