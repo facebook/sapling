@@ -182,6 +182,7 @@ pub use crate::metadata::FileType;
 pub use crate::metadata::FsnodeId;
 pub use crate::metadata::Sha1;
 pub use crate::metadata::Sha256;
+pub use crate::path_history::PathHistoryEntries;
 pub use crate::path_history::PathHistoryEntry;
 pub use crate::path_history::PathHistoryRequest;
 pub use crate::path_history::PathHistoryRequestPaginationCursor;
