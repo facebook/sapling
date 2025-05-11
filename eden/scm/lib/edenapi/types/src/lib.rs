@@ -184,6 +184,7 @@ pub use crate::metadata::Sha1;
 pub use crate::metadata::Sha256;
 pub use crate::path_history::PathHistoryEntry;
 pub use crate::path_history::PathHistoryRequest;
+pub use crate::path_history::PathHistoryRequestPaginationCursor;
 pub use crate::path_history::PathHistoryResponse;
 pub use crate::segments::CommitGraphSegments;
 pub use crate::suffix_query::SuffixQueryRequest;
