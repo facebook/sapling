@@ -70,7 +70,7 @@ sharding_ext = { version = "0.1.0", path = "../cmdlib/sharding_ext" }
 slog = { package = "tracing_slog_compat", version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 strum = { version = "0.26.2", features = ["derive"] }
 thiserror = "2"
-tokio = { version = "1.44.2", features = ["full", "test-util", "tracing"] }
-tokio-stream = { version = "0.1.16", features = ["fs", "io-util", "net", "signal", "sync", "time"] }
-tokio-util = { version = "0.7.12", features = ["full"] }
+tokio = { version = "1.45.0", features = ["full", "test-util", "tracing"] }
+tokio-stream = { version = "0.1.17", features = ["fs", "io-util", "net", "signal", "sync", "time"] }
+tokio-util = { version = "0.7.15", features = ["full"] }
 topo_sort = { version = "0.1.0", path = "../common/topo_sort" }

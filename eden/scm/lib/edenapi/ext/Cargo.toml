@@ -24,4 +24,4 @@ sapling-edenapi_types = { version = "0.1.0", path = "../types" }
 sapling-minibytes = { version = "0.1.0", path = "../../minibytes" }
 sapling-types = { version = "0.1.0", path = "../../types" }
 sapling-vfs = { version = "0.1.0", path = "../../vfs" }
-tokio = { version = "1.44.2", features = ["full", "test-util", "tracing"] }
+tokio = { version = "1.45.0", features = ["full", "test-util", "tracing"] }

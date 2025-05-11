@@ -44,4 +44,4 @@ repo_identity = { version = "0.1.0", path = "../../repo_attributes/repo_identity
 rustc-hash = "2.1.0"
 scuba_ext = { version = "0.1.0", path = "../../common/scuba_ext" }
 tempfile = "3.15"
-tokio = { version = "1.44.2", features = ["full", "test-util", "tracing"] }
+tokio = { version = "1.45.0", features = ["full", "test-util", "tracing"] }
