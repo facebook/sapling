@@ -121,14 +121,15 @@ impl Detector {
     }
 
     /// Observe a file (content) read of `path`.
-    pub fn file_read(&self, path: impl AsRef<RepoPath>) {
+    /// Returns whether an active walk changed (either created or removed).
+    pub fn file_read(&self, path: impl AsRef<RepoPath>) -> bool {
         let path = path.as_ref();
 
         tracing::trace!(%path, "file_read");
 
         let (dir_path, base_name) = match path.split_last_component() {
             // Shouldn't happen - implies a path of "" which is not valid for a file.
-            None => return,
+            None => return false,
             Some((dir, base)) => (dir, base),
         };
 
@@ -136,7 +137,7 @@ impl Detector {
 
         let time = inner.now();
 
-        inner.maybe_gc(time);
+        let mut walk_changed = inner.maybe_gc(time);
 
         let dir_threshold = inner.min_dir_walk_threshold;
 
@@ -148,7 +149,7 @@ impl Detector {
 
         if owner.get_dominating_walk(WalkType::File).is_some() {
             tracing::trace!(walk_root=%dir_path.strip_suffix(suffix, true).unwrap_or_default(), dir=%dir_path, "file's dir already in walk");
-            return;
+            return walk_changed;
         }
 
         let my_dir = owner;
@@ -158,12 +159,16 @@ impl Detector {
         if my_dir.is_walked(WalkType::File, dir_threshold) {
             my_dir.seen_files.clear();
             inner.insert_walk(time, WalkType::File, dir_path, 0);
+            walk_changed = true;
         }
+
+        walk_changed
     }
 
     /// Observe a directory read. `num_files` and `num_dirs` report the number of file and
     /// directory children of `path`, respectively.
-    pub fn dir_read(&self, path: impl AsRef<RepoPath>, num_files: usize, num_dirs: usize) {
+    /// Returns whether an active walk changed (either created or removed).
+    pub fn dir_read(&self, path: impl AsRef<RepoPath>, num_files: usize, num_dirs: usize) -> bool {
         let path = path.as_ref();
 
         tracing::trace!(%path, num_files, num_dirs, "dir_read");
@@ -172,7 +177,7 @@ impl Detector {
 
         let time = inner.now();
 
-        inner.maybe_gc(time);
+        let mut walk_changed = inner.maybe_gc(time);
 
         // Fill in interesting metadata that informs detection of file content walks.
         if interesting_metadata(
@@ -187,7 +192,7 @@ impl Detector {
         }
 
         let (dir_path, base_name) = match path.split_last_component() {
-            None => return,
+            None => return walk_changed,
             Some((dir, base)) => (dir, base),
         };
 
@@ -201,7 +206,7 @@ impl Detector {
 
         if owner.get_dominating_walk(WalkType::Directory).is_some() {
             tracing::trace!(walk_root=%dir_path.strip_suffix(suffix, true).unwrap_or_default(), dir=%dir_path, "dir is already covered by an existing walk");
-            return;
+            return walk_changed;
         }
 
         let my_dir = owner;
@@ -211,7 +216,10 @@ impl Detector {
         if my_dir.is_walked(WalkType::Directory, dir_threshold) {
             my_dir.seen_files.clear();
             inner.insert_walk(time, WalkType::Directory, dir_path, 0);
+            walk_changed = true;
         }
+
+        walk_changed
     }
 }
 
@@ -414,9 +422,10 @@ impl Inner {
         self.stub_now.unwrap_or_else(Instant::now)
     }
 
-    fn maybe_gc(&mut self, time: Instant) {
+    /// Returns whether a walk was removed.
+    fn maybe_gc(&mut self, time: Instant) -> bool {
         if time - self.last_gc_time < self.gc_interval {
-            return;
+            return false;
         }
 
         let start = self.now();
@@ -430,5 +439,7 @@ impl Inner {
         }
 
         self.last_gc_time = time;
+
+        deleted_walks > 0
     }
 }

@@ -579,3 +579,29 @@ fn test_dir_walk() {
     // No dir walk - depth=2 is already covered by file walk.
     assert_eq!(detector.dir_walks(), vec![]);
 }
+
+#[test]
+fn test_walk_changed() {
+    let detector = Detector::new();
+    detector.set_min_dir_walk_threshold(TEST_MIN_DIR_WALK_THRESHOLD);
+    detector.set_gc_interval(Duration::from_secs(1));
+    detector.set_gc_timeout(Duration::from_secs(2));
+
+    let mut epoch = Instant::now();
+    detector.set_now(epoch);
+
+    // No walk.
+    assert!(!detector.file_read(p("dir1/a")));
+
+    // Yes walk.
+    assert!(detector.file_read(p("dir1/b")));
+
+    // No walk changes.
+    assert!(!detector.file_read(p("dir2/a")));
+
+    epoch += Duration::from_secs(5);
+    detector.set_now(epoch);
+
+    // GC removes walk
+    assert!(detector.file_read(p("dir2/a")));
+}
