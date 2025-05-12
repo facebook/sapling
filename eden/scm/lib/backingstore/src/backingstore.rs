@@ -20,7 +20,6 @@ use std::time::SystemTime;
 use anyhow::Result;
 use anyhow::anyhow;
 use arc_swap::ArcSwap;
-use arc_swap::ArcSwapOption;
 use blob::Blob;
 use configloader::Config;
 use configloader::hg::PinnedConfig;
@@ -32,6 +31,7 @@ use edenapi::configmodel::config::ContentHash;
 use edenapi::types::CommitId;
 use log::warn;
 use metrics::ods;
+use parking_lot::RwLock;
 use repo::RepoMinimalInfo;
 use repo::repo::Repo;
 use storemodel::BoxIterator;
@@ -46,11 +46,13 @@ use types::HgId;
 use types::Key;
 use types::RepoPath;
 
+use crate::prefetch::prefetch_manager;
+
 pub struct BackingStore {
     // ArcSwap is similar to RwLock, but has lower overhead for read operations.
     inner: ArcSwap<Inner>,
 
-    parent_hint: ArcSwapOption<String>,
+    parent_hint: Arc<RwLock<Option<String>>>,
 }
 
 struct Inner {
@@ -79,6 +81,7 @@ struct Inner {
     // Sets the maximum time since last reload until we force a reload (defaults to 5m).
     reload_interval: Duration,
 
+    prefetch_send: flume::Sender<()>,
     walk_mode: WalkMode,
     walk_detector: Arc<walkdetector::Detector>,
 }
@@ -89,6 +92,8 @@ enum WalkMode {
     Off,
     // Watch for walks, but don't take any action.
     Monitor,
+    // Prefetch files/trees based on observed walks.
+    Prefetch,
 }
 
 impl FromStr for WalkMode {
@@ -97,6 +102,7 @@ impl FromStr for WalkMode {
     fn from_str(s: &str) -> std::result::Result<Self, Self::Err> {
         match s {
             "monitor" => Ok(Self::Monitor),
+            "prefetch" => Ok(Self::Prefetch),
             _ => Ok(Self::Off),
         }
     }
@@ -123,13 +129,16 @@ impl BackingStore {
             .map(|c| PinnedConfig::Raw(c.to_string().into(), "backingstore".into()))
             .collect::<Vec<_>>();
 
+        let parent_hint = Arc::new(RwLock::default());
+
         Ok(Self {
             inner: ArcSwap::new(Arc::new(Self::new_inner(
                 root.as_ref(),
                 &extra_configs,
                 touch_file_mtime(),
+                parent_hint.clone(),
             )?)),
-            parent_hint: Default::default(),
+            parent_hint,
         })
     }
 
@@ -137,6 +146,7 @@ impl BackingStore {
         root: &Path,
         extra_configs: &[PinnedConfig],
         touch_file_mtime: Option<SystemTime>,
+        parent_hint: Arc<RwLock<Option<String>>>,
     ) -> Result<Inner> {
         constructors::init();
 
@@ -169,10 +179,32 @@ impl BackingStore {
             }
         }
 
+        let walk_mode = WalkMode::from_str(
+            config
+                .get("backingstore", "walk-mode")
+                .unwrap_or_default()
+                .as_ref(),
+        )?;
+
+        let repo = Arc::new(repo);
+        let walk_detector = Arc::new(walkdetector::Detector::new());
+
+        let prefetch_send = if walk_mode == WalkMode::Prefetch {
+            prefetch_manager(
+                repo.tree_resolver()?,
+                filestore.clone(),
+                parent_hint,
+                walk_detector.clone(),
+            )
+        } else {
+            // Stick a dummy channel in so we don't need to fuss with Option.
+            flume::bounded(0).0
+        };
+
         Ok(Inner {
             treestore,
             filestore,
-            repo: Arc::new(repo),
+            repo,
             extra_configs: extra_configs.to_vec(),
             create_time: Instant::now(),
             touch_file_mtime,
@@ -184,13 +216,9 @@ impl BackingStore {
             reload_interval: config
                 .get_opt("backingstore", "reload-interval-secs")?
                 .unwrap_or(Duration::from_secs(300)),
-            walk_mode: WalkMode::from_str(
-                config
-                    .get("backingstore", "walk-mode")
-                    .unwrap_or_default()
-                    .as_ref(),
-            )?,
-            walk_detector: Arc::new(walkdetector::Detector::new()),
+            prefetch_send,
+            walk_mode,
+            walk_detector,
         })
     }
 
@@ -328,14 +356,20 @@ impl BackingStore {
             return;
         }
 
-        inner.walk_detector.file_read(path);
+        let walk_changed = inner.walk_detector.file_read(path);
+        if !walk_changed {
+            return;
+        }
+
+        inner.notify_prefetch();
     }
 
     pub fn set_parent_hint(&self, parent_id: &str) {
         tracing::info!(parent_id, "setting parent hint");
 
-        self.parent_hint
-            .store(Some(Arc::new(parent_id.to_string())));
+        *self.parent_hint.write() = Some(parent_id.to_string());
+
+        self.maybe_reload().notify_prefetch();
     }
 
     // Fully reload the stores if:
@@ -410,7 +444,12 @@ impl BackingStore {
             // There is no locking, so some cache writes could be missed by the reload.
             inner.flush();
 
-            match Self::new_inner(inner.repo.path(), &inner.extra_configs, new_mtime) {
+            match Self::new_inner(
+                inner.repo.path(),
+                &inner.extra_configs,
+                new_mtime,
+                self.parent_hint.clone(),
+            ) {
                 Ok(mut new_inner) => {
                     new_inner.last_reload = Instant::now();
                     new_inner
@@ -484,6 +523,7 @@ impl Inner {
             reload_check_interval: self.reload_check_interval,
             reload_interval: self.reload_interval,
 
+            prefetch_send: self.prefetch_send.clone(),
             walk_mode: self.walk_mode,
             walk_detector: self.walk_detector.clone(),
         }
@@ -492,6 +532,14 @@ impl Inner {
     fn flush(&self) {
         self.filestore.flush().ok();
         self.treestore.flush().ok();
+    }
+
+    fn notify_prefetch(&self) {
+        if self.walk_mode != WalkMode::Prefetch {
+            return;
+        }
+
+        let _ = self.prefetch_send.try_send(());
     }
 }
 
