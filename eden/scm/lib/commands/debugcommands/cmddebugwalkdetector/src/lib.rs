@@ -63,12 +63,12 @@ pub fn run(ctx: ReqCtx<DebugWalkDetectorOpts>) -> Result<u8> {
                         num_files += 1;
                     }
                 }
-                detector.dir_read(parent.to_owned(), num_files, num_dirs);
+                detector.dir_loaded(parent, num_files, num_dirs);
             }
         }
 
         if !ctx.opts.dirs_only {
-            detector.file_read(file_path);
+            detector.file_loaded(file_path);
         }
     }
 

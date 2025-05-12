@@ -486,8 +486,8 @@ mod test {
         );
 
         // Trigger a walk.
-        detector.file_read(&foo_path);
-        detector.file_read(&bar_path);
+        detector.file_loaded(&foo_path);
+        detector.file_loaded(&bar_path);
 
         kick_manager.send(())?;
 

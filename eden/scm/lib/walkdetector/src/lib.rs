@@ -120,12 +120,12 @@ impl Detector {
         walks
     }
 
-    /// Observe a file (content) read of `path`.
+    /// Observe a "heavy" or remote file (content) read of `path`.
     /// Returns whether an active walk changed (either created or removed).
-    pub fn file_read(&self, path: impl AsRef<RepoPath>) -> bool {
+    pub fn file_loaded(&self, path: impl AsRef<RepoPath>) -> bool {
         let path = path.as_ref();
 
-        tracing::trace!(%path, "file_read");
+        tracing::trace!(%path, "file_loaded");
 
         let (dir_path, base_name) = match path.split_last_component() {
             // Shouldn't happen - implies a path of "" which is not valid for a file.
@@ -165,22 +165,27 @@ impl Detector {
         walk_changed
     }
 
-    /// Observe a "soft" file (content) access of `path`.
+    /// Observe a "soft" or cached file (content) access of `path`.
     /// This will not be tracked as a new walk, but will reset TTL of an existing walk.
     /// Returns whether an active walk changed (due to GC).
-    pub fn file_touched(&self, path: impl AsRef<RepoPath>) -> bool {
+    pub fn file_read(&self, path: impl AsRef<RepoPath>) -> bool {
         let path = path.as_ref();
-        tracing::trace!(%path, "file_touched");
-        self.touched(path, WalkType::File)
+        tracing::trace!(%path, "file_read");
+        self.mark_read(path, WalkType::File)
     }
 
-    /// Observe a directory read. `num_files` and `num_dirs` report the number of file and
-    /// directory children of `path`, respectively.
-    /// Returns whether an active walk changed (either created or removed).
-    pub fn dir_read(&self, path: impl AsRef<RepoPath>, num_files: usize, num_dirs: usize) -> bool {
+    /// Observe a directory being loaded (i.e. "heavy" or remote read). `num_files` and
+    /// `num_dirs` report the number of file and directory children of `path`,
+    /// respectively. Returns whether an active walk changed (either created or removed).
+    pub fn dir_loaded(
+        &self,
+        path: impl AsRef<RepoPath>,
+        num_files: usize,
+        num_dirs: usize,
+    ) -> bool {
         let path = path.as_ref();
 
-        tracing::trace!(%path, num_files, num_dirs, "dir_read");
+        tracing::trace!(%path, num_files, num_dirs, "dir_loaded");
 
         let mut inner = self.inner.lock();
 
@@ -231,16 +236,16 @@ impl Detector {
         walk_changed
     }
 
-    /// Observe a "soft" directory access of `path`.
+    /// Observe a "soft" or cached directory access of `path`.
     /// This will not be tracked as a new walk, but will reset TTL of an existing walk.
     /// Returns whether an active walk changed (due to GC).
-    pub fn dir_touched(&self, path: impl AsRef<RepoPath>) -> bool {
+    pub fn dir_read(&self, path: impl AsRef<RepoPath>) -> bool {
         let path = path.as_ref();
-        tracing::trace!(%path, "dir_touched");
-        self.touched(path, WalkType::Directory)
+        tracing::trace!(%path, "dir_read");
+        self.mark_read(path, WalkType::Directory)
     }
 
-    fn touched(&self, path: &RepoPath, wt: WalkType) -> bool {
+    fn mark_read(&self, path: &RepoPath, wt: WalkType) -> bool {
         let Some(dir) = path.parent() else {
             return false;
         };
