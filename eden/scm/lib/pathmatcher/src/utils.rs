@@ -187,7 +187,7 @@ pub fn plain_to_glob(plain: &str) -> String {
     result
 }
 
-pub(crate) fn make_glob_recursive(glob: &str) -> String {
+pub fn make_glob_recursive(glob: &str) -> String {
     if glob.is_empty() || glob.ends_with('/') {
         format!("{glob}**")
     } else {

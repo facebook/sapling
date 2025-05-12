@@ -19,6 +19,7 @@ arc-swap = { version = "1.5", features = ["weak"] }
 blob = { version = "0.1.0", path = "../blob" }
 cxx = "1.0.119"
 env_logger = "0.10"
+flume = "0.11.1"
 log = { version = "0.4.22", features = ["kv_unstable"] }
 parking_lot = { version = "0.12.1", features = ["send_guard"] }
 sapling-configloader = { version = "0.1.0", path = "../config/loader" }
@@ -41,6 +42,7 @@ tracing = { version = "0.1.41", features = ["attributes", "valuable"] }
 tracing-subscriber = { version = "0.3.18", features = ["chrono", "env-filter", "json", "local-time", "parking_lot", "registry"] }
 
 [dev-dependencies]
+rand_chacha = "0.3"
 sapling-manifest-tree = { version = "0.1.0", path = "../manifest-tree" }
 
 [features]

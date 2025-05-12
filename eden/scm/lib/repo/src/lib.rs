@@ -17,5 +17,6 @@ mod trait_impls;
 pub mod trees;
 
 pub use commits_trait::DagCommits;
+pub use manifest_tree::ReadTreeManifest;
 pub use repo::Repo;
 pub use repo_minimal_info::RepoMinimalInfo;

@@ -42,6 +42,7 @@ pub use crate::pattern::split_pattern;
 pub use crate::regex_matcher::RegexMatcher;
 pub use crate::tree_matcher::TreeMatcher;
 pub use crate::utils::expand_curly_brackets;
+pub use crate::utils::make_glob_recursive;
 pub use crate::utils::normalize_glob;
 pub use crate::utils::plain_to_glob;
 

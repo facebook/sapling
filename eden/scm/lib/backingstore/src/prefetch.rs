@@ -5,20 +5,130 @@
  * LICENSE file in the root directory of this source tree.
  */
 
+use std::collections::HashMap;
+use std::collections::HashSet;
 use std::collections::VecDeque;
 use std::mem;
 use std::sync::Arc;
 use std::sync::atomic::AtomicBool;
 use std::sync::atomic::Ordering;
+use std::time::Duration;
 use std::time::Instant;
 
 use manifest::Manifest;
-use pathmatcher::DynMatcher;
+use parking_lot::RwLock;
+use pathmatcher::DepthMatcher;
+use pathmatcher::IntersectMatcher;
+use pathmatcher::TreeMatcher;
+use pathmatcher::make_glob_recursive;
+use pathmatcher::plain_to_glob;
+use repo::ReadTreeManifest;
 use storemodel::FileStore;
 use types::FetchContext;
+use types::HgId;
 use types::Key;
 use types::RepoPathBuf;
 use types::fetch_mode::FetchMode;
+
+/// Launch an asynchronous prefetch manager to kick of file/dir prefetches when kicked via the
+/// returned channel. The prefetches are based on active fs walks, according to the walk detector
+/// (prefetching content makes the serial walks go faster). The manager and any active prefetches
+/// are canceled when all copies of the returned channel are dropped.
+pub(crate) fn prefetch_manager(
+    tree_resolver: Arc<dyn ReadTreeManifest + Send + Sync>,
+    file_store: Arc<dyn FileStore>,
+    current_commit_id: Arc<RwLock<Option<String>>>,
+    detector: Arc<walkdetector::Detector>,
+) -> flume::Sender<()> {
+    // We don't need to queue up lots of kicks. A single one will suffice.
+    let (send, recv) = flume::bounded(1);
+
+    const MAX_CONCURRENT_PREFETCHES: usize = 5;
+
+    std::thread::spawn(move || {
+        // Map in-progress walks to corresponding in-progress prefetch.
+        let mut prefetches = HashMap::<(RepoPathBuf, usize), PrefetchHandle>::new();
+
+        // Remember which active walks we have already finished prefetching (so we don't kick of a
+        // new prefetch).
+        let mut handled_prefetches = HashSet::<(RepoPathBuf, usize)>::new();
+
+        // Store the commit id we were prefetching for. When this changes (e.g. when eden checks out
+        // a new commit), we drop our existing state to start fresh on the new commit.
+        let mut prev_commit_id = None;
+
+        // Wait for kicks, or otherwise check every second. The intermittent check is important
+        // to notice that walks have stopped (because the kicks only happen on file/dir access,
+        // which could altogether stop).
+        while let Ok(_) | Err(flume::RecvTimeoutError::Timeout) =
+            recv.recv_timeout(Duration::from_secs(1))
+        {
+            let current_commit_id = match current_commit_id.read().as_ref() {
+                Some(commit_hex) => match HgId::from_hex(commit_hex.as_bytes()) {
+                    Ok(hgid) => hgid,
+                    Err(err) => {
+                        tracing::warn!(?err, commit_hex, "invalid commit hash");
+                        continue;
+                    }
+                },
+                None => {
+                    tracing::warn!("no commit when managing prefetches");
+                    continue;
+                }
+            };
+
+            if prev_commit_id
+                .as_ref()
+                .is_some_and(|id| *id != current_commit_id)
+            {
+                // Our "current" commit has changed. Clear existing prefetches out - they are likely
+                // doing pointless prefetching based on the old commit.
+                prefetches.clear();
+                handled_prefetches.clear();
+            }
+
+            prev_commit_id = Some(current_commit_id);
+
+            let mut active_walks: HashSet<(RepoPathBuf, usize)> =
+                detector.file_walks().into_iter().collect();
+
+            // Clear entries out of `handles_prefetches` once they disappear from active walks. If
+            // the walk resumes later, we should prefetch again, not assume it is "handled".
+            handled_prefetches.retain(|walk: &(RepoPathBuf, usize)| active_walks.contains(walk));
+
+            // Cancel prefetches that are done or don't correspond to an active walk anymore.
+            prefetches.retain(|walk, handle| active_walks.remove(walk) && !handle.is_canceled());
+
+            for new_walk in active_walks {
+                // We have already previously handled this walk.
+                if handled_prefetches.contains(&new_walk) {
+                    continue;
+                }
+
+                if prefetches.len() >= MAX_CONCURRENT_PREFETCHES {
+                    tracing::warn!(?new_walk, "not kicking off new walk - prefetches full");
+                    continue;
+                }
+
+                let mf = match tree_resolver.get(&current_commit_id) {
+                    Ok(mf) => mf,
+                    Err(err) => {
+                        tracing::error!(?err, %current_commit_id, "error fetching root manifest");
+                        continue;
+                    }
+                };
+
+                handled_prefetches.insert(new_walk.clone());
+
+                // Kick off the actual prefetch and store its handle. The prefetch will be canceled
+                // when we drop its handle.
+                prefetches.insert(new_walk.clone(), prefetch(mf, file_store.clone(), new_walk));
+            }
+        }
+    });
+
+    send
+}
 
 /// Start an async prefetch of file content by walking `manifest` using `matcher`,
 /// fetching file content of resultant files via `file_store`. Returns a handle
@@ -26,7 +136,7 @@ use types::fetch_mode::FetchMode;
 pub(crate) fn prefetch(
     manifest: impl Manifest + Send + Sync + 'static,
     file_store: Arc<dyn FileStore>,
-    matcher: DynMatcher,
+    walk: (RepoPathBuf, usize),
 ) -> PrefetchHandle {
     // The cancelation works by making our thread below return early when the handle has been
     // dropped. When it returns, it drops its manifest/file iterators, which will cause those
@@ -36,8 +146,26 @@ pub(crate) fn prefetch(
     let my_handle = handle.clone();
     // Sapling APIs are not async, so to achieve asynchronicity we create a new thread.
     std::thread::spawn(move || {
+        let _span = tracing::info_span!("prefetch", ?walk).entered();
+
         let mut file_count = 0;
         let start_time = Instant::now();
+
+        let dir_matcher = match TreeMatcher::from_rules(
+            std::iter::once(make_glob_recursive(&plain_to_glob(walk.0.as_str()))),
+            true,
+        ) {
+            Ok(matcher) => matcher,
+            Err(err) => {
+                tracing::error!(?err, "error constructing TreeMatcher");
+                return;
+            }
+        };
+
+        let start_depth = walk.0.components().count();
+        let depth_matcher = DepthMatcher::new(Some(start_depth), Some(start_depth + walk.1));
+
+        let matcher = IntersectMatcher::new(vec![Arc::new(dir_matcher), Arc::new(depth_matcher)]);
 
         // This iterator is populated async by the manifest iterator.
         let files = manifest.files(matcher);
@@ -53,6 +181,9 @@ pub(crate) fn prefetch(
             if batch.is_empty() {
                 return;
             }
+
+            let span = tracing::debug_span!("prefetching file content", batch_size = batch.len());
+            let _span = span.enter();
 
             file_count += batch.len();
 
@@ -144,10 +275,12 @@ impl Drop for PrefetchHandle {
 mod test {
     use std::time::Duration;
 
+    use anyhow::anyhow;
     use manifest::FileMetadata;
     use manifest_tree::TreeManifest;
     use manifest_tree::testutil::TestStore;
-    use pathmatcher::ExactMatcher;
+    use rand_chacha::ChaChaRng;
+    use rand_chacha::rand_core::SeedableRng;
 
     use super::*;
 
@@ -157,8 +290,8 @@ mod test {
 
         let file_store = store.clone() as Arc<dyn FileStore>;
 
-        let foo_path: RepoPathBuf = "foo".to_string().try_into()?;
-        let bar_path: RepoPathBuf = "bar".to_string().try_into()?;
+        let foo_path: RepoPathBuf = "dir/foo".to_string().try_into()?;
+        let bar_path: RepoPathBuf = "dir/dir2/bar".to_string().try_into()?;
 
         // Insert a couple files into the file store.
         let foo_hgid = file_store.insert_data(Default::default(), &foo_path, b"foo content")?;
@@ -177,20 +310,100 @@ mod test {
             FileMetadata::new(bar_hgid, types::FileType::Regular),
         )?;
 
-        // Only match foo_path.
-        let matcher = ExactMatcher::new(std::iter::once(&foo_path), true);
-
-        let handle = prefetch(mf, file_store, Arc::new(matcher));
+        // Prefetch for "dir/" at depth=0 (i.e. "dir/*").
+        let handle = prefetch(mf, file_store, ("dir".to_string().try_into()?, 0));
 
         // Wait for prefetch to complete.
         while !handle.is_canceled() {
             std::thread::sleep(Duration::from_millis(1));
         }
 
-        // We only fetched "foo" (due to the matcher).
+        // We only fetched "foo" (due to the depth limit).
         assert_eq!(
             store.fetches(),
             vec![Key::new(RepoPathBuf::new(), foo_hgid)]
+        );
+
+        Ok(())
+    }
+
+    struct StubTreeResolver(HashMap<HgId, TreeManifest>);
+
+    impl ReadTreeManifest for StubTreeResolver {
+        fn get(&self, commit_id: &HgId) -> anyhow::Result<TreeManifest> {
+            self.0
+                .get(commit_id)
+                .ok_or(anyhow!("no manifest for {commit_id}"))
+                .cloned()
+        }
+
+        fn get_root_id(&self, _commit_id: &HgId) -> anyhow::Result<HgId> {
+            unimplemented!()
+        }
+    }
+
+    #[test]
+    fn test_prefetch_manager() -> anyhow::Result<()> {
+        let detector = Arc::new(walkdetector::Detector::new());
+        detector.set_min_dir_walk_threshold(2);
+
+        let store = Arc::new(TestStore::new());
+
+        let file_store = store.clone() as Arc<dyn FileStore>;
+
+        let foo_path: RepoPathBuf = "dir/foo".to_string().try_into()?;
+        let bar_path: RepoPathBuf = "dir/bar".to_string().try_into()?;
+
+        // Insert a couple files into the file store.
+        let foo_hgid = file_store.insert_data(Default::default(), &foo_path, b"foo content")?;
+        let bar_hgid = file_store.insert_data(Default::default(), &bar_path, b"bar content")?;
+
+        let mut mf = TreeManifest::ephemeral(store.clone());
+
+        // Create corresponding manifest entries.
+        mf.insert(
+            foo_path.clone(),
+            FileMetadata::new(foo_hgid, types::FileType::Regular),
+        )?;
+
+        mf.insert(
+            bar_path.clone(),
+            FileMetadata::new(bar_hgid, types::FileType::Regular),
+        )?;
+
+        let mut rng = ChaChaRng::from_seed([0u8; 32]);
+        let stub_commit_id = HgId::random(&mut rng);
+
+        let tree_resolver = StubTreeResolver([(stub_commit_id, mf)].into());
+
+        let kick_manager = prefetch_manager(
+            Arc::new(tree_resolver),
+            file_store,
+            Arc::new(RwLock::new(Some(stub_commit_id.to_hex()))),
+            detector.clone(),
+        );
+
+        // Trigger a walk.
+        detector.file_read(&foo_path);
+        detector.file_read(&bar_path);
+
+        kick_manager.send(())?;
+
+        // Wait for prefetch to finish.
+        for _ in 0..10 {
+            if store.key_fetch_count() != 2 {
+                std::thread::sleep(Duration::from_millis(1));
+            }
+        }
+
+        let mut fetches = store.fetches();
+        fetches.sort();
+        assert_eq!(
+            fetches,
+            vec![
+                Key::new(RepoPathBuf::new(), foo_hgid),
+                Key::new(RepoPathBuf::new(), bar_hgid)
+            ]
         );
 
         Ok(())
