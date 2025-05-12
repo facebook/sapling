@@ -107,7 +107,7 @@ pub struct CasSyncArgs {
         long,
         help = "If set job will log individual bundle sync states to Scuba"
     )]
-    log_to_scuba: Option<bool>,
+    log_to_scuba: bool,
 
     #[clap(
         long,
@@ -122,7 +122,7 @@ pub struct CasSyncArgs {
         long = "leader-only",
         help = "If leader election is enabled, only one instance of the job will be running at a time for a repo"
     )]
-    leader_only: Option<bool>,
+    leader_only: bool,
 
     #[clap(flatten)]
     sharded_executor_args: ShardedExecutorArgs,

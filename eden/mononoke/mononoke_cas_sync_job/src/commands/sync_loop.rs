@@ -181,7 +181,7 @@ impl MononokeCasSyncProcessExecutor {
 
         let retry_num = args.retry_num.unwrap_or(DEFAULT_EXECUTION_RETRY_NUM);
 
-        let mode: ZkMode = args.leader_only.unwrap_or(false).into();
+        let mode: ZkMode = args.leader_only.into();
 
         retry_always(
             self.ctx.logger(),
@@ -309,7 +309,7 @@ async fn run_sync(
         repo.repo_identity().id()
     );
 
-    let log_to_scuba = app.args::<CasSyncArgs>()?.log_to_scuba.unwrap_or(false);
+    let log_to_scuba = app.args::<CasSyncArgs>()?.log_to_scuba;
     let mut scuba_sample = if log_to_scuba {
         MononokeScubaSampleBuilder::new(ctx.fb, SCUBA_TABLE)?
     } else {
