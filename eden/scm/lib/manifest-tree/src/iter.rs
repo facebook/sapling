@@ -9,28 +9,61 @@ use std::borrow::Borrow;
 use std::collections::btree_map;
 use std::mem;
 use std::sync::Arc;
-use std::sync::atomic::AtomicUsize;
-use std::sync::atomic::Ordering;
 
 use anyhow::Context;
 use anyhow::Error;
 use anyhow::Result;
-use anyhow::anyhow;
+use anyhow::bail;
 use flume::Receiver;
 use flume::Sender;
+use flume::WeakSender;
 use manifest::FsNodeMetadata;
+use once_cell::sync::Lazy;
 use pathmatcher::Matcher;
+use threadpool::ThreadPool;
 use types::Key;
 use types::PathComponentBuf;
 use types::RepoPath;
 use types::RepoPathBuf;
 
-use crate::THREAD_POOL;
 use crate::link::Durable;
 use crate::link::Ephemeral;
 use crate::link::Leaf;
 use crate::link::Link;
 use crate::store::InnerStore;
+
+/// A thread pool for performing parallel manifest iteration.
+/// On drop, in-progress iterations are canceled and threads are cleaned up.
+#[derive(Clone)]
+struct BfsIterPool {
+    #[allow(dead_code)]
+    pool: ThreadPool,
+    work_send: Sender<BfsWork>,
+}
+
+impl BfsIterPool {
+    fn new(thread_count: usize) -> Self {
+        let pool = ThreadPool::with_name("manifest-bfs-iter".to_string(), thread_count);
+
+        let (work_send, work_recv) = flume::unbounded::<BfsWork>();
+
+        for _ in 0..pool.max_count() {
+            let work_recv = work_recv.clone();
+            // Give worker a weak sender so the worker doesn't keep the work channel alive
+            // indefinitely (and will shut down properly when we the strong sender in BfsIterPool is
+            // dropped.
+            let work_send = work_send.downgrade();
+            pool.execute(move || {
+                let res = BfsIterPool::run(work_recv, work_send);
+                tracing::debug!(?res, "bfs worker exitted");
+            });
+        }
+
+        Self { pool, work_send }
+    }
+}
+
+static BFS_POOL: Lazy<BfsIterPool> = Lazy::new(|| BfsIterPool::new(10));
 
 pub fn bfs_iter<M: 'static + Matcher + Sync + Send>(
     store: InnerStore,
@@ -45,71 +78,44 @@ pub fn bfs_iter<M: 'static + Matcher + Sync + Send>(
     let (result_send, result_recv) =
         flume::bounded::<Result<(RepoPathBuf, FsNodeMetadata)>>(RESULT_QUEUE_SIZE);
 
-    // This channel carries BFS work to the workers threads.
-    let (work_send, work_recv) = flume::unbounded::<BfsWork>();
-
-    let worker = BfsWorker {
-        work_recv,
-        work_send,
+    let ctx = BfsContext {
         result_send,
-        pending: Arc::new(AtomicUsize::new(0)),
         store,
         matcher: Arc::new(matcher),
     };
 
     // Kick off the search at the roots.
-    worker
-        .publish_work(
-            roots
+    BFS_POOL
+        .work_send
+        .send(BfsWork {
+            work: roots
                 .iter()
                 .map(|root| (RepoPathBuf::new(), root.borrow().thread_copy()))
                 .collect(),
-        )
+            ctx,
+        })
         .unwrap();
-
-    let thread_count = THREAD_POOL.max_count();
-
-    for _ in 0..thread_count {
-        let worker = worker.clone();
-        THREAD_POOL.execute(move || {
-            // If the worker returns an error, that signals we should shutdown
-            // the whole operation.
-            if worker.run().is_err() {
-                worker.broadcast_shutdown(thread_count);
-            }
-        });
-    }
 
     Box::new(result_recv.into_iter())
 }
 
-enum BfsWork {
-    Walk(Vec<(RepoPathBuf, Link)>),
-    Shutdown,
+struct BfsWork {
+    work: Vec<(RepoPathBuf, Link)>,
+    ctx: BfsContext,
 }
 
 #[derive(Clone)]
-struct BfsWorker {
-    work_recv: Receiver<BfsWork>,
-    work_send: Sender<BfsWork>,
+struct BfsContext {
     result_send: Sender<Result<(RepoPathBuf, FsNodeMetadata)>>,
     matcher: Arc<dyn Matcher + Sync + Send>,
     store: InnerStore,
-    pending: Arc<AtomicUsize>,
 }
 
-impl BfsWorker {
+impl BfsIterPool {
     const BATCH_SIZE: usize = 5000;
 
-    fn run(&self) -> Result<()> {
-        for work in &self.work_recv {
-            let work = match work {
-                BfsWork::Walk(work) => work,
-                BfsWork::Shutdown => return Ok(()),
-            };
-
-            let work_len = work.len();
-
+    fn run(work_recv: Receiver<BfsWork>, work_send: WeakSender<BfsWork>) -> Result<()> {
+        'outer: for BfsWork { work, ctx } in work_recv {
             let keys: Vec<_> = work
                 .iter()
                 .filter_map(|(path, link)| {
@@ -121,7 +127,7 @@ impl BfsWorker {
                 })
                 .collect();
 
-            let _ = self.store.prefetch(keys);
+            let _ = ctx.store.prefetch(keys);
 
             let mut to_send = Vec::<(RepoPathBuf, Link)>::new();
             for (path, link) in work {
@@ -131,11 +137,16 @@ impl BfsWorker {
                         continue;
                     }
                     Ephemeral(children) => (children, None),
-                    Durable(entry) => match entry.materialize_links(&self.store, &path) {
+                    Durable(entry) => match entry.materialize_links(&ctx.store, &path) {
                         Ok(children) => (children, Some(entry.hgid)),
                         Err(e) => {
-                            self.result_send
-                                .send(Err(e).context("materialize_links in bfs_iter"))?;
+                            if ctx
+                                .result_send
+                                .send(Err(e).context("materialize_links in bfs_iter"))
+                                .is_err()
+                            {
+                                continue 'outer;
+                            }
                             continue;
                         }
                     },
@@ -144,56 +155,64 @@ impl BfsWorker {
                 for (component, link) in children.iter() {
                     let mut child_path = path.clone();
                     child_path.push(component.as_path_component());
-                    match link.matches(&self.matcher, &child_path) {
+                    match link.matches(&ctx.matcher, &child_path) {
                         Ok(true) => {
                             if let Leaf(file_metadata) = link.as_ref() {
-                                self.result_send
-                                    .send(Ok((child_path, FsNodeMetadata::File(*file_metadata))))?;
+                                if ctx
+                                    .result_send
+                                    .send(Ok((child_path, FsNodeMetadata::File(*file_metadata))))
+                                    .is_err()
+                                {
+                                    continue 'outer;
+                                }
                                 continue;
                             }
 
                             to_send.push((child_path, link.thread_copy()));
                             if to_send.len() >= Self::BATCH_SIZE {
-                                self.publish_work(mem::take(&mut to_send))?;
+                                Self::try_send(
+                                    &work_send,
+                                    BfsWork {
+                                        work: mem::take(&mut to_send),
+                                        ctx: ctx.clone(),
+                                    },
+                                )?;
                             }
                         }
                         Ok(false) => {}
-                        Err(e) => self
-                            .result_send
-                            .send(Err(e).context("matching in bfs_iter"))?,
+                        Err(e) => {
+                            if ctx
+                                .result_send
+                                .send(Err(e).context("matching in bfs_iter"))
+                                .is_err()
+                            {
+                                continue 'outer;
+                            }
+                        }
                     };
                 }
 
-                self.result_send
-                    .send(Ok((path, FsNodeMetadata::Directory(hgid))))?;
+                if ctx
+                    .result_send
+                    .send(Ok((path, FsNodeMetadata::Directory(hgid))))
+                    .is_err()
+                {
+                    continue 'outer;
+                }
             }
 
-            self.publish_work(to_send)?;
-
-            if self.pending.fetch_sub(work_len, Ordering::AcqRel) == work_len {
-                // If we processed the last work item (i.e. pending has become
-                // 0), return an error which will trigger the shutdown of all
-                // the worker threads.
-                return Err(anyhow!("walk done"));
+            if !to_send.is_empty() {
+                Self::try_send(&work_send, BfsWork { work: to_send, ctx })?;
             }
         }
 
-        unreachable!("worker owns channel send and recv - channel should not disconnect");
+        bail!("work channel disconnected (receiver)")
     }
 
-    fn publish_work(&self, to_send: Vec<(RepoPathBuf, Link)>) -> Result<()> {
-        if to_send.is_empty() {
-            return Ok(());
-        }
-
-        self.pending.fetch_add(to_send.len(), Ordering::AcqRel);
-        Ok(self.work_send.send(BfsWork::Walk(to_send))?)
-    }
-
-    fn broadcast_shutdown(&self, num_workers: usize) {
-        // I couldn't think of a better way to handle shutdown.
-        for _ in 0..num_workers {
-            self.work_send.send(BfsWork::Shutdown).unwrap();
+    fn try_send(work_send: &WeakSender<BfsWork>, work: BfsWork) -> Result<()> {
+        match work_send.upgrade() {
+            Some(send) => send.send(work).map_err(|err| err.into()),
+            None => bail!("work channel disconnected (sender)"),
         }
     }
 }
@@ -569,6 +588,18 @@ mod tests {
 
         assert!(fetches.contains(&vec![get_tree_key(&tree1, ""), get_tree_key(&tree2, "")]));
         assert!(fetches.contains(&vec![get_tree_key(&tree1, "a"), get_tree_key(&tree2, "c")]));
+    }
+
+    #[test]
+    fn test_pool_shutdown() {
+        let pool = BfsIterPool::new(1);
+
+        let weak_sender = pool.work_send.downgrade();
+
+        drop(pool);
+
+        // Check that the channel is closed.
+        assert!(weak_sender.upgrade().is_none());
     }
 
     fn dirs<M: 'static + Matcher + Sync + Send>(tree: &TreeManifest, matcher: M) -> Vec<String> {
