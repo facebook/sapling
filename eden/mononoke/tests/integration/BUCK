@@ -141,6 +141,8 @@ dott_test(
 
 dott_test(
     name = "lfs",
+    # These tests have been vetted to run well without network access. Please investigate any failure thoroughly before disabling.
+    disable_all_network_access_target = True,
     dott_files =
         [
             "test-push-protocol-lfs.t",

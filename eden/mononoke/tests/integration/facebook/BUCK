@@ -158,6 +158,8 @@ dott_test(
 
 dott_test(
     name = "lfs-server",
+    # These tests have been vetted to run well without network access. Please investigate any failure thoroughly before disabling.
+    disable_all_network_access_target = True,
     dott_files = glob(["test-lfs-server*.t"]),
     deps = [
         "//eden/mononoke:blobimport",
@@ -183,6 +185,7 @@ dott_test(
 
 dott_test(
     name = "server",
+    disable_all_network_access_target = True,
     dott_files = glob(
         [
             "test-metadata*.t",
