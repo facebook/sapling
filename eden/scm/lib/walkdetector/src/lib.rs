@@ -9,6 +9,7 @@
 mod tests;
 mod walk_node;
 
+use std::sync::atomic::AtomicBool;
 use std::sync::atomic::AtomicU64;
 use std::sync::atomic::Ordering;
 use std::time::Duration;
@@ -57,9 +58,12 @@ pub struct Walk {
     file_reads: AtomicU64,
     dir_loads: AtomicU64,
     dir_reads: AtomicU64,
+    logged_start: AtomicBool,
 }
 
 impl Walk {
+    const BIG_WALK_THRESHOLD: u64 = 10_000;
+
     fn new(depth: usize) -> Self {
         Self {
             depth,
@@ -78,14 +82,76 @@ impl Walk {
     }
 
     fn absorb_counters(&self, other: &Self) {
+        // Race conditions are not a big deal.
+        if other.logged_start.load(Ordering::Relaxed) {
+            self.logged_start.store(true, Ordering::Relaxed);
+        }
+
+        // Will not notice beginning of "big walk", but next file access (or GC) will.
         self.file_loads
-            .fetch_add(other.file_loads.load(Ordering::Relaxed), Ordering::Relaxed);
-        self.file_reads
-            .fetch_add(other.file_reads.load(Ordering::Relaxed), Ordering::Relaxed);
+            .fetch_add(other.file_loads.load(Ordering::Relaxed), Ordering::AcqRel);
         self.dir_loads
-            .fetch_add(other.dir_loads.load(Ordering::Relaxed), Ordering::Relaxed);
+            .fetch_add(other.dir_loads.load(Ordering::Relaxed), Ordering::AcqRel);
+        self.file_reads
+            .fetch_add(other.file_reads.load(Ordering::Relaxed), Ordering::AcqRel);
         self.dir_reads
-            .fetch_add(other.dir_reads.load(Ordering::Relaxed), Ordering::Relaxed);
+            .fetch_add(other.dir_reads.load(Ordering::Relaxed), Ordering::AcqRel);
+    }
+
+    fn inc_file_load(&self, root: &RepoPath, val: u64) {
+        if self.file_loads.fetch_add(val, Ordering::AcqRel) == Self::BIG_WALK_THRESHOLD - 1 {
+            self.maybe_log_big_walk(root);
+        }
+    }
+
+    fn inc_file_read(&self, root: &RepoPath, val: u64) {
+        if self.file_reads.fetch_add(val, Ordering::Relaxed) == Self::BIG_WALK_THRESHOLD - 1 {
+            self.maybe_log_big_walk(root);
+        }
+    }
+
+    fn inc_dir_load(&self, root: &RepoPath, val: u64) {
+        if self.dir_loads.fetch_add(val, Ordering::AcqRel) == Self::BIG_WALK_THRESHOLD - 1 {
+            self.maybe_log_big_walk(root);
+        }
+    }
+
+    fn inc_dir_read(&self, root: &RepoPath, val: u64) {
+        if self.dir_reads.fetch_add(val, Ordering::Relaxed) == Self::BIG_WALK_THRESHOLD - 1 {
+            self.maybe_log_big_walk(root);
+        }
+    }
+
+    fn maybe_log_big_walk(&self, root: &RepoPath) {
+        if self.logged_start.swap(true, Ordering::AcqRel) {
+            return;
+        }
+
+        tracing::info!(
+            %root,
+            file_loads = self.file_loads.load(Ordering::Relaxed),
+            file_reads = self.file_reads.load(Ordering::Relaxed),
+            dir_loads = self.dir_loads.load(Ordering::Relaxed),
+            dir_reads = self.dir_reads.load(Ordering::Relaxed),
+            "big walk started",
+        );
+    }
+
+    fn log_end(&self, root: &RepoPath) {
+        if self.file_loads.load(Ordering::Relaxed) >= Self::BIG_WALK_THRESHOLD
+            || self.file_reads.load(Ordering::Relaxed) >= Self::BIG_WALK_THRESHOLD
+            || self.dir_loads.load(Ordering::Relaxed) >= Self::BIG_WALK_THRESHOLD
+            || self.dir_reads.load(Ordering::Relaxed) >= Self::BIG_WALK_THRESHOLD
+        {
+            tracing::info!(
+                %root,
+                file_loads = self.file_loads.load(Ordering::Relaxed),
+                file_reads = self.file_reads.load(Ordering::Relaxed),
+                dir_loads = self.dir_loads.load(Ordering::Relaxed),
+                dir_reads = self.dir_reads.load(Ordering::Relaxed),
+                "big walk ended",
+            );
+        }
     }
 
     #[cfg(test)]
@@ -190,7 +256,7 @@ impl Detector {
 
         if let Some(walk) = owner.get_dominating_walk(WalkType::File) {
             tracing::trace!(walk_root=%dir_path.strip_suffix(suffix, true).unwrap_or_default(), dir=%dir_path, "file's dir already in walk");
-            walk.file_loads.fetch_add(1, Ordering::Relaxed);
+            walk.inc_file_load(dir_path.strip_suffix(suffix, true).unwrap_or_default(), 1);
             return walk_changed;
         }
 
@@ -268,7 +334,7 @@ impl Detector {
 
         if let Some(walk) = owner.get_dominating_walk(WalkType::Directory) {
             tracing::trace!(walk_root=%dir_path.strip_suffix(suffix, true).unwrap_or_default(), dir=%dir_path, "dir is already covered by an existing walk");
-            walk.dir_loads.fetch_add(1, Ordering::Relaxed);
+            walk.inc_dir_load(dir_path.strip_suffix(suffix, true).unwrap_or_default(), 1);
             return walk_changed;
         }
 
@@ -314,15 +380,16 @@ impl Detector {
         let walk_changed = inner.maybe_gc(time);
 
         // Bump last_access, but don't insert any new nodes/walks.
-        if let Some((walk_node, _)) = inner.node.get_owning_node(wt, dir) {
+        if let Some((walk_node, suffix)) = inner.node.get_owning_node(wt, dir) {
             walk_node.last_access = Some(time);
             if let Some(walk) = walk_node.get_dominating_walk(wt) {
+                let walk_root = dir.strip_suffix(suffix, true).unwrap_or_default();
                 match wt {
                     WalkType::File => {
-                        walk.file_reads.fetch_add(1, Ordering::Relaxed);
+                        walk.inc_file_read(walk_root, 1);
                     }
                     WalkType::Directory => {
-                        walk.dir_reads.fetch_add(1, Ordering::Relaxed);
+                        walk.inc_dir_read(walk_root, 1);
                     }
                 }
             }
