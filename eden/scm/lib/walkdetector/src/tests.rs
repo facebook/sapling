@@ -496,6 +496,44 @@ fn test_gc() {
 }
 
 #[test]
+fn test_gc_stats() {
+    let detector = Detector::new();
+    detector.set_min_dir_walk_threshold(TEST_MIN_DIR_WALK_THRESHOLD);
+
+    // Don't run GC automatically.
+    detector.set_gc_interval(Duration::from_secs(10));
+
+    let mut epoch = Instant::now();
+    detector.set_now(epoch);
+
+    detector.file_read(p("dir1/a"));
+    detector.file_read(p("dir1/b"));
+
+    detector.file_read(p("dir2/a"));
+
+    detector.file_read(p("dir3/dir4/a"));
+
+    epoch += Duration::from_secs(2);
+    detector.set_now(epoch);
+
+    // Refresh access time on dir3.
+    detector.file_read(p("dir3/dir4/b"));
+
+    // Manually run GC to check stats.
+    let (nodes_removed, nodes_remaining, walks_removed) =
+        detector.inner.lock().node.gc(Duration::from_secs(1), epoch);
+
+    // "dir1" and "dir2"
+    assert_eq!(nodes_removed, 2);
+
+    // root node and "dir3" and "dir4"
+    assert_eq!(nodes_remaining, 3);
+
+    // "dir1"
+    assert_eq!(walks_removed, 1);
+}
+
+#[test]
 fn test_dir_walk() {
     let detector = Detector::new();
     detector.set_min_dir_walk_threshold(TEST_MIN_DIR_WALK_THRESHOLD);

@@ -378,24 +378,26 @@ impl WalkNode {
     }
 
     /// Delete nodes not accessed within timeout.
-    /// Returns (num_deleted, num_remaining).
+    /// Returns (nodes_deleted, nodes_remaining, walks_deleted).
     #[tracing::instrument(level = "debug", skip(self))]
-    pub(crate) fn gc(&mut self, timeout: Duration, now: Instant) -> (usize, usize) {
-        // Return (num_deleted, num_remaining, keep_me)
+    pub(crate) fn gc(&mut self, timeout: Duration, now: Instant) -> (usize, usize, usize) {
+        // Return (nodes_deleted, nodes_remaining, walks_deleted, keep_me)
         fn inner(
             name: &str,
             node: &mut WalkNode,
             timeout: Duration,
             now: Instant,
-        ) -> (usize, usize, bool) {
+        ) -> (usize, usize, usize, bool) {
+            let mut walks_removed = 0;
             let mut deleted = 0;
             let mut retained = 0;
 
             node.children.retain(|name, child| {
-                let (d, r, keep) = inner(name.as_str(), child, timeout, now);
+                let (d, r, w, keep) = inner(name.as_str(), child, timeout, now);
 
                 deleted += d;
                 retained += r;
+                walks_removed += w;
 
                 if !keep {
                     tracing::debug!(%name, "GCing node");
@@ -410,22 +412,40 @@ impl WalkNode {
 
             let keep_me = !expired || !node.children.is_empty();
 
+            if expired && (node.file_walk.is_some() || node.dir_walk.is_some()) {
+                walks_removed += 1;
+            }
+
             if expired && keep_me {
                 tracing::debug!(%name, "GCing node with children");
                 node.clear_except_children();
             }
 
-            (deleted, retained, keep_me)
+            if keep_me {
+                retained += 1;
+            } else {
+                deleted += 1;
+            }
+
+            (deleted, retained, walks_removed, keep_me)
         }
 
-        let (deleted, remaining, keep_me) = inner("", self, timeout, now);
+        let (mut deleted, remaining, mut walks_deleted, keep_me) = inner("", self, timeout, now);
         if !keep_me {
+            // We don't actually delete the root node, so take one off.
+            deleted -= 1;
+
             // At top level we have no parent to remove us, so just unset our fields.
             tracing::debug!("GCing root node");
+
+            if self.file_walk.is_some() || self.dir_walk.is_some() {
+                walks_deleted += 1;
+            }
+
             self.clear_except_children();
         }
 
-        (deleted, remaining)
+        (deleted, remaining, walks_deleted)
     }
 
     // Clear all fields except children.

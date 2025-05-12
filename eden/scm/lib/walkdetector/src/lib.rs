@@ -419,7 +419,15 @@ impl Inner {
             return;
         }
 
-        self.node.gc(self.gc_timeout, time);
+        let start = self.now();
+
+        let (deleted_nodes, remaining_nodes, deleted_walks) = self.node.gc(self.gc_timeout, time);
+
+        let elapsed = start.elapsed();
+
+        if deleted_nodes > 0 || deleted_walks > 0 || elapsed > Duration::from_millis(5) {
+            tracing::debug!(elapsed=?start.elapsed(), deleted_nodes, remaining_nodes, deleted_walks, "GC complete");
+        }
 
         self.last_gc_time = time;
     }
