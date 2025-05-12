@@ -362,7 +362,7 @@ impl WalkNode {
     pub(crate) fn gc(&mut self, timeout: Duration, now: Instant) -> (usize, usize, usize) {
         // Return (nodes_deleted, nodes_remaining, walks_deleted, keep_me)
         fn inner(
-            name: &str,
+            path: &mut RepoPathBuf,
             node: &mut WalkNode,
             timeout: Duration,
             now: Instant,
@@ -372,15 +372,19 @@ impl WalkNode {
             let mut retained = 0;
 
             node.children.retain(|name, child| {
-                let (d, r, w, keep) = inner(name.as_str(), child, timeout, now);
+                path.push(name);
+
+                let (d, r, w, keep) = inner(path, child, timeout, now);
 
                 deleted += d;
                 retained += r;
                 walks_removed += w;
 
                 if !keep {
-                    tracing::trace!(%name, has_walk=child.has_walk(), "GCing node");
+                    tracing::trace!(%path, has_walk=child.has_walk(), "GCing node");
                 }
+
+                path.pop();
 
                 keep
             });
@@ -397,7 +401,7 @@ impl WalkNode {
             }
 
             if expired && keep_me {
-                tracing::trace!(%name, has_walk, "GCing node with children");
+                tracing::trace!(%path, has_walk, "GCing node with children");
                 node.clear_except_children();
             }
 
@@ -410,7 +414,8 @@ impl WalkNode {
             (deleted, retained, walks_removed, keep_me)
         }
 
-        let (mut deleted, remaining, mut walks_deleted, keep_me) = inner("", self, timeout, now);
+        let (mut deleted, remaining, mut walks_deleted, keep_me) =
+            inner(&mut RepoPathBuf::new(), self, timeout, now);
         if !keep_me {
             // We don't actually delete the root node, so take one off.
             deleted -= 1;
