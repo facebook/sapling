@@ -528,7 +528,7 @@ void SaplingBackingStore::getBlobBatch(
 folly::Try<BlobPtr> SaplingBackingStore::getBlobFromBackingStore(
     const HgProxyHash& hgInfo,
     sapling::FetchMode fetchMode) {
-  auto blob = store_.getBlob(hgInfo.byteHash(), fetchMode);
+  auto blob = store_.getBlob(hgInfo.byteHash(), hgInfo.path(), fetchMode);
 
   using GetBlobResult = folly::Try<BlobPtr>;
 
@@ -1293,8 +1293,8 @@ SaplingBackingStore::getTreeEnqueue(
 TreePtr SaplingBackingStore::getTreeLocal(
     const ObjectId& edenTreeId,
     const HgProxyHash& proxyHash) {
-  auto tree =
-      store_.getTree(proxyHash.byteHash(), sapling::FetchMode::LocalOnly);
+  auto tree = store_.getTree(
+      proxyHash.byteHash(), proxyHash.path(), sapling::FetchMode::LocalOnly);
 
   if (tree.hasValue() && tree.value()) {
     auto hgObjectIdFormat =
@@ -1313,6 +1313,7 @@ folly::Try<TreePtr> SaplingBackingStore::getTreeRemote(
     const ObjectFetchContextPtr& /*context*/) {
   auto tree = store_.getTree(
       manifestId.getBytes(),
+      path,
       sapling::FetchMode::RemoteOnly /*, sapling::ClientRequestInfo(context)*/);
 
   using GetTreeResult = folly::Try<TreePtr>;
@@ -1713,14 +1714,14 @@ folly::Try<TreePtr> SaplingBackingStore::getTreeFromBackingStore(
   if (path.empty()) {
     fetch_mode = sapling::FetchMode::LocalOnly;
   }
-  tree = store_.getTree(manifestId.getBytes(), fetch_mode);
+  tree = store_.getTree(manifestId.getBytes(), path, fetch_mode);
   if (tree.hasValue() && !tree.value() &&
       fetch_mode == sapling::FetchMode::LocalOnly) {
     // Mercurial might have just written the tree to the store. Refresh the
     // store and try again, this time allowing remote fetches.
     store_.flush();
     fetch_mode = sapling::FetchMode::AllowRemote;
-    tree = store_.getTree(manifestId.getBytes(), fetch_mode);
+    tree = store_.getTree(manifestId.getBytes(), path, fetch_mode);
   }
 
   using GetTreeResult = folly::Try<TreePtr>;

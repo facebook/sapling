@@ -67,6 +67,7 @@ std::optional<ManifestId> SaplingNativeBackingStore::getManifestNode(
 // overhead.
 folly::Try<std::shared_ptr<Tree>> SaplingNativeBackingStore::getTree(
     NodeId node,
+    RepoPath path,
     FetchMode fetch_mode) {
   XLOGF(DBG7, "Importing tree node={} from hgcache", folly::hexlify(node));
   return folly::makeTryWith([&] {
@@ -163,6 +164,7 @@ void SaplingNativeBackingStore::getTreeAuxDataBatch(
 // overhead.
 folly::Try<std::unique_ptr<folly::IOBuf>> SaplingNativeBackingStore::getBlob(
     NodeId node,
+    RepoPath path,
     FetchMode fetch_mode) {
   XLOGF(DBG7, "Importing blob node={} from hgcache", folly::hexlify(node));
   return folly::makeTryWith([&] {
