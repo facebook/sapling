@@ -28,6 +28,7 @@ use types::FetchContext;
 use types::HgId;
 use types::Key;
 use types::RepoPathBuf;
+use types::fetch_cause::FetchCause;
 use types::fetch_mode::FetchMode;
 
 /// Launch an asynchronous prefetch manager to kick of file/dir prefetches when kicked via the
@@ -276,7 +277,10 @@ pub(crate) fn prefetch(
             }
 
             // Use IGNORE_RESULT optimization since we don't care about the data.
-            let fctx = FetchContext::new(FetchMode::AllowRemote | FetchMode::IGNORE_RESULT);
+            let fctx = FetchContext::new_with_cause(
+                FetchMode::AllowRemote | FetchMode::IGNORE_RESULT,
+                FetchCause::EdenWalkPrefetch,
+            );
 
             // An important implementation detail for us: the scmstore FileStore spawns a thread
             // when you fetch more than 1_000 keys (i.e. this method will operate asynchronously if

@@ -17,6 +17,8 @@ pub enum FetchCause {
     EdenFs,
     // The fetch originated from a mixed EdenFS causes
     EdenMixed,
+    // The fetch originated from prefetch based on apparent EdenFS walk
+    EdenWalkPrefetch,
     // The fetch originated from a Sapling prefetch
     SaplingPrefetch,
     // Unknown orginination from Sapling
@@ -33,6 +35,7 @@ impl FetchCause {
             FetchCause::EdenThrift => "edenfs-thrift",
             FetchCause::EdenFs => "edenfs-fs",
             FetchCause::EdenMixed => "edenfs-mixed",
+            FetchCause::EdenWalkPrefetch => "eden-walk-prefetch",
             FetchCause::SaplingPrefetch => "sl-prefetch",
             FetchCause::SaplingUnknown => "sl-unknown",
             FetchCause::Unspecified => "unspecified",
@@ -50,6 +53,7 @@ impl std::str::FromStr for FetchCause {
             "edenfs-thrift" => Ok(FetchCause::EdenThrift),
             "edenfs-fs" => Ok(FetchCause::EdenFs),
             "edenfs-mixed" => Ok(FetchCause::EdenMixed),
+            "eden-walk-prefetch" => Ok(FetchCause::EdenWalkPrefetch),
             "sl-prefetch" => Ok(FetchCause::SaplingPrefetch),
             "sl-unknown" => Ok(FetchCause::SaplingUnknown),
             "unspecified" => Ok(FetchCause::Unspecified),
@@ -71,6 +75,7 @@ mod tests {
             FetchCause::EdenThrift,
             FetchCause::EdenFs,
             FetchCause::EdenMixed,
+            FetchCause::EdenWalkPrefetch,
             FetchCause::SaplingPrefetch,
             FetchCause::SaplingUnknown,
             FetchCause::Unspecified,
