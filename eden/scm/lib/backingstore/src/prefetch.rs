@@ -46,8 +46,10 @@ pub(crate) fn prefetch_manager(
     const MAX_CONCURRENT_PREFETCHES: usize = 5;
 
     std::thread::spawn(move || {
-        // Map in-progress walks to corresponding in-progress prefetch.
-        let mut prefetches = HashMap::<(RepoPathBuf, usize), PrefetchHandle>::new();
+        // Map in-progress walks to corresponding in-progress prefetch. We allow multiple
+        // in-prefetches for the same root path at different depths. This happens as the walk
+        // detector witnesses deeper accesses and expands the depth boundary.
+        let mut prefetches = HashMap::<RepoPathBuf, Vec<(usize, PrefetchHandle)>>::new();
 
         // Remember which active walks we have already finished prefetching (so we don't kick of a
         // new prefetch).
@@ -89,15 +91,34 @@ pub(crate) fn prefetch_manager(
 
             prev_commit_id = Some(current_commit_id);
 
-            let mut active_walks: HashSet<(RepoPathBuf, usize)> =
+            // Currently active walks according to the walk detector. Note that it will only report
+            // a single walk for any given root (e.g. as depth deepnds, [(root="foo", depth=1)] will
+            // become [(root="foo", depth=2)], _not_ including the depth=1 walk anymore).
+            let active_walks: HashMap<RepoPathBuf, usize> =
                 detector.file_walks().into_iter().collect();
 
             // Clear entries out of `handles_prefetches` once they disappear from active walks. If
             // the walk resumes later, we should prefetch again, not assume it is "handled".
-            handled_prefetches.retain(|walk: &(RepoPathBuf, usize)| active_walks.contains(walk));
+            handled_prefetches.retain(|walk: &(RepoPathBuf, usize)| {
+                active_walks
+                    .get(&walk.0)
+                    .is_some_and(|depth| *depth == walk.1)
+            });
 
             // Cancel prefetches that are done or don't correspond to an active walk anymore.
-            prefetches.retain(|walk, handle| active_walks.remove(walk) && !handle.is_canceled());
+            prefetches.retain(|walk, handles| {
+                if !active_walks.contains_key(walk) {
+                    // If there is no active walk for this root, clear out all prefetches (there
+                    // could be multiple at different depths). This cancels the prefetches when the
+                    // walk has stopped.
+                    return false;
+                }
+
+                // Clear out prefetches at depths that have completed.
+                handles.retain(|(_, handle)| !handle.is_canceled());
+
+                !handles.is_empty()
+            });
 
             for new_walk in active_walks {
                 // We have already previously handled this walk.
@@ -105,7 +126,31 @@ pub(crate) fn prefetch_manager(
                     continue;
                 }
 
-                if prefetches.len() >= MAX_CONCURRENT_PREFETCHES {
+                let mut depth_offset = None;
+
+                // Check if we are already prefetching this root at a shallow depth.
+                let existing_but_shallower = prefetches.get(&new_walk.0).and_then(|handles| {
+                    handles.last().and_then(|(depth, _)| {
+                        if depth < &new_walk.1 {
+                            Some(*depth)
+                        } else {
+                            None
+                        }
+                    })
+                });
+
+                if let Some(shallower_depth) = existing_but_shallower {
+                    // Keep the existing prefetch around and start the deeper prefetch so that the
+                    // two don't overlap. For example, if we are currently prefetching (root="foo",
+                    // depth=1) and we now see (root="foo", depth=2), we keep the first prefetch and
+                    // create a new prefetch (root="foo", min_depth=1, max_depth=2).
+                    depth_offset = Some(shallower_depth + 1);
+                    tracing::debug!(
+                        ?depth_offset,
+                        ?new_walk,
+                        "starting walk with additional depth offset due to existing walk"
+                    );
+                } else if prefetches.len() >= MAX_CONCURRENT_PREFETCHES {
                     tracing::warn!(?new_walk, "not kicking off new walk - prefetches full");
                     continue;
                 }
@@ -120,9 +165,17 @@ pub(crate) fn prefetch_manager(
 
                 handled_prefetches.insert(new_walk.clone());
 
+                let prefetches_for_this_root = prefetches.entry(new_walk.0.clone()).or_default();
+
                 // Kick off the actual prefetch and store its handle. The prefetch will be canceled
                 // when we drop its handle.
-                prefetches.insert(new_walk.clone(), prefetch(mf, file_store.clone(), new_walk));
+                prefetches_for_this_root.push((
+                    new_walk.1,
+                    prefetch(mf, file_store.clone(), new_walk, depth_offset),
+                ));
+
+                // Make sure the prefetches stay ordered by depth.
+                prefetches_for_this_root.sort_by_key(|(depth, _handle)| *depth);
             }
         }
     });
@@ -137,6 +190,7 @@ pub(crate) fn prefetch(
     manifest: impl Manifest + Send + Sync + 'static,
     file_store: Arc<dyn FileStore>,
     walk: (RepoPathBuf, usize),
+    depth_offset: Option<usize>,
 ) -> PrefetchHandle {
     // The cancelation works by making our thread below return early when the handle has been
     // dropped. When it returns, it drops its manifest/file iterators, which will cause those
@@ -146,7 +200,7 @@ pub(crate) fn prefetch(
     let my_handle = handle.clone();
     // Sapling APIs are not async, so to achieve asynchronicity we create a new thread.
     std::thread::spawn(move || {
-        let _span = tracing::info_span!("prefetch", ?walk).entered();
+        let _span = tracing::info_span!("prefetch", ?walk, ?depth_offset).entered();
 
         let mut file_count = 0;
         let start_time = Instant::now();
@@ -163,7 +217,13 @@ pub(crate) fn prefetch(
         };
 
         let start_depth = walk.0.components().count();
-        let depth_matcher = DepthMatcher::new(Some(start_depth), Some(start_depth + walk.1));
+        let depth_matcher = DepthMatcher::new(
+            // If we have a starting depth offset, increase the matcher's min_depth. This is so we
+            // skip prefetching work that is already being handled by another active prefetch for
+            // the same root at a shallow depth.
+            Some(start_depth + depth_offset.unwrap_or_default()),
+            Some(start_depth + walk.1),
+        );
 
         let matcher = IntersectMatcher::new(vec![Arc::new(dir_matcher), Arc::new(depth_matcher)]);
 
@@ -311,7 +371,12 @@ mod test {
         )?;
 
         // Prefetch for "dir/" at depth=0 (i.e. "dir/*").
-        let handle = prefetch(mf, file_store, ("dir".to_string().try_into()?, 0));
+        let handle = prefetch(
+            mf.clone(),
+            file_store.clone(),
+            ("dir".to_string().try_into()?, 0),
+            None,
+        );
 
         // Wait for prefetch to complete.
         while !handle.is_canceled() {
@@ -322,6 +387,23 @@ mod test {
         assert_eq!(
             store.fetches(),
             vec![Key::new(RepoPathBuf::new(), foo_hgid)]
+        );
+
+        // Prefetch for "dir/" at min_depth=1, max_depth=1 (i.e. "dir/dir2/*").
+        let handle = prefetch(mf, file_store, ("dir".to_string().try_into()?, 1), Some(1));
+
+        // Wait for prefetch to complete.
+        while !handle.is_canceled() {
+            std::thread::sleep(Duration::from_millis(1));
+        }
+
+        // We only additionally fetched "dir/dir2/bar" (i.e. did not redundantly fetch "dir/foo".
+        assert_eq!(
+            store.fetches(),
+            vec![
+                Key::new(RepoPathBuf::new(), foo_hgid),
+                Key::new(RepoPathBuf::new(), bar_hgid)
+            ]
         );
 
         Ok(())
