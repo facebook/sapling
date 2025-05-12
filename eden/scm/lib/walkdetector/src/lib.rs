@@ -9,7 +9,9 @@
 mod tests;
 mod walk_node;
 
+use std::sync::LazyLock;
 use std::sync::atomic::AtomicBool;
+use std::sync::atomic::AtomicI64;
 use std::sync::atomic::AtomicU64;
 use std::sync::atomic::Ordering;
 use std::time::Duration;
@@ -252,7 +254,7 @@ impl Detector {
             .node
             .get_or_create_owning_node(WalkType::File, dir_path);
 
-        owner.last_access = Some(time);
+        owner.last_access.store(time);
 
         if let Some(walk) = owner.get_dominating_walk(WalkType::File) {
             tracing::trace!(walk_root=%dir_path.strip_suffix(suffix, true).unwrap_or_default(), dir=%dir_path, "file's dir already in walk");
@@ -314,7 +316,7 @@ impl Detector {
             Some(num_dirs),
         ) {
             let node = inner.node.get_or_create_node(path);
-            node.last_access = Some(time);
+            node.last_access.store(time);
             node.total_dirs = Some(num_dirs);
             node.total_files = Some(num_files);
         }
@@ -330,7 +332,7 @@ impl Detector {
             .node
             .get_or_create_owning_node(WalkType::Directory, dir_path);
 
-        owner.last_access = Some(time);
+        owner.last_access.store(time);
 
         if let Some(walk) = owner.get_dominating_walk(WalkType::Directory) {
             tracing::trace!(walk_root=%dir_path.strip_suffix(suffix, true).unwrap_or_default(), dir=%dir_path, "dir is already covered by an existing walk");
@@ -381,7 +383,7 @@ impl Detector {
 
         // Bump last_access, but don't insert any new nodes/walks.
         if let Some((walk_node, suffix)) = inner.node.get_owning_node(wt, dir) {
-            walk_node.last_access = Some(time);
+            walk_node.last_access.store(time);
             if let Some(walk) = walk_node.get_dominating_walk(wt) {
                 let walk_root = dir.strip_suffix(suffix, true).unwrap_or_default();
                 match wt {
@@ -418,7 +420,7 @@ impl Inner {
         let walk_node = self
             .node
             .insert_walk(walk_type, dir, walk, self.min_dir_walk_threshold);
-        walk_node.last_access = Some(time);
+        walk_node.last_access.store(time);
 
         // Check if we should immediately promote this walk to parent directory. This is
         // similar to the ancestor advancement below, except that it can insert a new
@@ -592,5 +594,54 @@ fn should_merge_into_ancestor(
         Some(walk_depth + ancestor_distance)
     } else {
         None
+    }
+}
+
+/// Base epoch value for AtomicInstant. Instant::now isn't const, so we use LazyLock. We could use
+/// SystemTime::UNIX_EPOCH, but then we lose monotonicity.
+static EPOCH: LazyLock<Instant> = LazyLock::new(Instant::now);
+
+// Atomic instant with millisecond precision relative to EPOCH.
+// Negative value means "not set".
+struct AtomicInstant(AtomicI64);
+
+impl Default for AtomicInstant {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
+impl AtomicInstant {
+    /// Initialize an empty AtomicInstant. `load()` will return `None` until `store()` is called.
+    fn new() -> Self {
+        // Eagerly initialize EPOCH to reduce the chance an Instant::now() is smaller than EPOCH.
+        let _ = *EPOCH;
+
+        Self(AtomicI64::new(i64::MIN))
+    }
+
+    fn store(&self, value: Instant) {
+        self.0.store(
+            // It is theoretically possible for `value`` to be smaller than EPOCH. Do a saturating
+            // subtraction to 0, just in case. `duration_since` says it may panic in this case
+            // in the future.
+            value
+                .checked_duration_since(*EPOCH)
+                .unwrap_or_default()
+                .as_millis() as i64,
+            Ordering::Relaxed,
+        );
+    }
+
+    fn load(&self) -> Option<Instant> {
+        match self.0.load(Ordering::Relaxed) {
+            v if v < 0 => None,
+            v => Some(*EPOCH + Duration::from_millis(v as u64)),
+        }
+    }
+
+    /// Reset to "not set" state. `load()` will return `None` until `store()` is called.
+    fn reset(&self) {
+        self.0.store(i64::MIN, Ordering::Relaxed);
     }
 }

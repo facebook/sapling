@@ -14,6 +14,7 @@ use types::PathComponentBuf;
 use types::RepoPath;
 use types::RepoPathBuf;
 
+use crate::AtomicInstant;
 use crate::Walk;
 use crate::WalkType;
 use crate::interesting_metadata;
@@ -28,7 +29,7 @@ pub(crate) struct WalkNode {
     // Directory content walk, if any, rooted at this node.
     pub(crate) dir_walk: Option<Walk>,
 
-    pub(crate) last_access: Option<Instant>,
+    pub(crate) last_access: AtomicInstant,
     pub(crate) children: HashMap<PathComponentBuf, WalkNode>,
 
     // Child directories that have a walked descendant "advanced" past our current
@@ -411,6 +412,7 @@ impl WalkNode {
 
             let expired = node
                 .last_access
+                .load()
                 .is_none_or(|accessed| now - accessed >= timeout);
 
             let keep_me = !expired || !node.children.is_empty();
@@ -469,7 +471,7 @@ impl WalkNode {
     fn clear_except_children(&mut self) {
         self.file_walk.take();
         self.dir_walk.take();
-        self.last_access.take();
+        self.last_access.reset();
         self.advanced_file_children.clear();
         self.advanced_dir_children.clear();
         self.total_files.take();
