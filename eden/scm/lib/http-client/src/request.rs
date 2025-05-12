@@ -192,6 +192,8 @@ pub struct Request {
     convert_cert: bool,
     auth_proxy_socket_path: Option<String>,
     limit_response_buffering: bool,
+    read_buffer_size: Option<u64>,
+    write_buffer_size: Option<u64>,
 }
 
 static REQUEST_CREATION_LISTENERS: Lazy<RwLock<RequestCreationEventListeners>> =
@@ -285,6 +287,8 @@ impl Request {
             convert_cert: false,
             auth_proxy_socket_path: None,
             limit_response_buffering: false,
+            read_buffer_size: None,
+            write_buffer_size: None,
         }
     }
 
@@ -544,6 +548,20 @@ impl Request {
     /// wrong with the limiting itself.
     pub fn set_limit_response_buffering(&mut self, limit: bool) -> &mut Self {
         self.limit_response_buffering = limit;
+        self
+    }
+
+    /// Request a read buffer of the specified size, or the default value if None.
+    /// Corresponds to CURLOPT_BUFFERSIZE.
+    pub fn set_read_buffer_size(&mut self, size: Option<u64>) -> &mut Self {
+        self.read_buffer_size = size;
+        self
+    }
+
+    /// Request a write buffer of the specified size, or the default value if None.
+    /// Corresponds to CURLOPT_UPLOAD_BUFFERSIZE.
+    pub fn set_write_buffer_size(&mut self, size: Option<u64>) -> &mut Self {
+        self.write_buffer_size = size;
         self
     }
 
@@ -827,6 +845,14 @@ impl Request {
         if let Some(mts) = self.min_transfer_speed {
             easy.low_speed_limit(mts.min_bytes_per_second)?;
             easy.low_speed_time(mts.window)?;
+        }
+
+        if let Some(read_buffer_size) = self.read_buffer_size {
+            easy.buffer_size(read_buffer_size as usize)?;
+        }
+
+        if let Some(write_buffer_size) = self.write_buffer_size {
+            easy.upload_buffer_size(write_buffer_size as usize)?;
         }
 
         // Tell libcurl to report progress to the handler.
