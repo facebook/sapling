@@ -75,6 +75,17 @@ folly::Try<std::shared_ptr<Tree>> SaplingNativeBackingStore::getTree(
         *store_.get(),
         rust::Slice<const uint8_t>{node.data(), node.size()},
         fetch_mode);
+
+    if (tree) {
+      sapling_backingstore_witness_dir_read(
+          *store_.get(),
+          rust::Slice<const uint8_t>{
+              reinterpret_cast<const uint8_t*>(path.view().data()),
+              path.view().size()},
+          *tree,
+          fetch_mode == FetchMode::LocalOnly);
+    }
+
     return tree;
   });
 }
@@ -168,10 +179,19 @@ folly::Try<std::unique_ptr<folly::IOBuf>> SaplingNativeBackingStore::getBlob(
     FetchMode fetch_mode) {
   XLOGF(DBG7, "Importing blob node={} from hgcache", folly::hexlify(node));
   return folly::makeTryWith([&] {
-    return sapling_backingstore_get_blob(
+    auto blob = sapling_backingstore_get_blob(
         *store_.get(),
         rust::Slice<const uint8_t>{node.data(), node.size()},
         fetch_mode);
+
+    if (blob) {
+      sapling_backingstore_witness_file_read(
+          *store_.get(),
+          rust::Str{path.view().data(), path.view().size()},
+          fetch_mode == FetchMode::LocalOnly);
+    }
+
+    return blob;
   });
 }
 
@@ -204,7 +224,8 @@ void SaplingNativeBackingStore::getBlobBatch(
 
     sapling_backingstore_witness_file_read(
         *store_.get(),
-        rust::Str{request.path.view().data(), request.path.view().size()});
+        rust::Str{request.path.view().data(), request.path.view().size()},
+        fetch_mode == FetchMode::LocalOnly);
   }
 
   sapling_backingstore_get_blob_batch(

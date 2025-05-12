@@ -225,7 +225,18 @@ pub(crate) mod ffi {
             prefixes: Vec<String>,
         ) -> Result<SharedPtr<GlobFilesResponse>>;
 
-        pub fn sapling_backingstore_witness_file_read(store: &BackingStore, path: &str);
+        pub fn sapling_backingstore_witness_file_read(
+            store: &BackingStore,
+            path: &str,
+            local: bool,
+        );
+
+        pub fn sapling_backingstore_witness_dir_read(
+            store: &BackingStore,
+            path: &[u8],
+            tree: &Tree,
+            local: bool,
+        );
 
         pub fn sapling_dogfooding_host(store: &BackingStore) -> Result<bool>;
 
@@ -332,9 +343,10 @@ pub fn sapling_backingstore_get_tree_batch(
 ) {
     let keys: Vec<Key> = requests.iter().map(|req| req.key()).collect();
     let cause = select_cause(requests.iter().map(|req| req.cause));
+    let fetch_mode = FetchMode::from(fetch_mode);
 
     store.get_tree_batch(
-        FetchContext::new_with_cause(FetchMode::from(fetch_mode), cause),
+        FetchContext::new_with_cause(fetch_mode, cause),
         keys,
         |idx, result| {
             let result: Result<Box<dyn storemodel::TreeEntry>> =
@@ -353,21 +365,12 @@ pub fn sapling_backingstore_get_tree_batch(
                             requests[idx].path_len,
                         )
                     };
-                    match RepoPath::from_utf8(path_bytes) {
-                        Ok(path) => {
-                            let (mut num_files, mut num_dirs) = (0, 0);
-                            for entry in tree.entries.iter() {
-                                match entry.ttype {
-                                    TreeEntryType::Tree => num_dirs += 1,
-                                    _ => num_files += 1,
-                                }
-                            }
-                            store.witness_dir_read(path, num_files, num_dirs);
-                        }
-                        Err(err) => {
-                            tracing::warn!("invalid witnessed dir path {path_bytes:?}: {err:?}");
-                        }
-                    }
+                    sapling_backingstore_witness_dir_read(
+                        store,
+                        path_bytes,
+                        tree,
+                        fetch_mode.is_local(),
+                    );
                 }
             }
 
@@ -527,13 +530,38 @@ pub fn sapling_backingstore_get_glob_files(
     Ok(SharedPtr::new(ffi::GlobFilesResponse { files }))
 }
 
-pub fn sapling_backingstore_witness_file_read(store: &BackingStore, path: &str) {
+pub fn sapling_backingstore_witness_file_read(store: &BackingStore, path: &str, local: bool) {
     match RepoPath::from_str(path) {
         Ok(path) => {
-            store.witness_file_read(path);
+            store.witness_file_read(path, local);
         }
         Err(err) => {
             tracing::warn!("invalid witnessed file path {path}: {err:?}");
+        }
+    }
+}
+
+pub fn sapling_backingstore_witness_dir_read(
+    store: &BackingStore,
+    path: &[u8],
+    tree: &Tree,
+    local: bool,
+) {
+    match RepoPath::from_utf8(path) {
+        Ok(path) => {
+            let (mut num_files, mut num_dirs) = (0, 0);
+            if !local {
+                for entry in tree.entries.iter() {
+                    match entry.ttype {
+                        TreeEntryType::Tree => num_dirs += 1,
+                        _ => num_files += 1,
+                    }
+                }
+            }
+            store.witness_dir_read(path, local, num_files, num_dirs);
+        }
+        Err(err) => {
+            tracing::warn!("invalid witnessed dir path {path:?}: {err:?}");
         }
     }
 }
