@@ -111,11 +111,21 @@ struct BfsContext {
     store: InnerStore,
 }
 
+impl BfsContext {
+    fn canceled(&self) -> bool {
+        self.result_send.is_disconnected()
+    }
+}
+
 impl BfsIterPool {
     const BATCH_SIZE: usize = 5000;
 
     fn run(work_recv: Receiver<BfsWork>, work_send: WeakSender<BfsWork>) -> Result<()> {
         'outer: for BfsWork { work, ctx } in work_recv {
+            if ctx.canceled() {
+                continue;
+            }
+
             let keys: Vec<_> = work
                 .iter()
                 .filter_map(|(path, link)| {
@@ -170,13 +180,15 @@ impl BfsIterPool {
 
                             to_send.push((child_path, link.thread_copy()));
                             if to_send.len() >= Self::BATCH_SIZE {
-                                Self::try_send(
+                                if !Self::try_send(
                                     &work_send,
                                     BfsWork {
                                         work: mem::take(&mut to_send),
                                         ctx: ctx.clone(),
                                     },
-                                )?;
+                                )? {
+                                    continue 'outer;
+                                }
                             }
                         }
                         Ok(false) => {}
@@ -201,19 +213,31 @@ impl BfsIterPool {
                 }
             }
 
-            if !to_send.is_empty() {
-                Self::try_send(&work_send, BfsWork { work: to_send, ctx })?;
+            if !Self::try_send(&work_send, BfsWork { work: to_send, ctx })? {
+                continue 'outer;
             }
         }
 
         bail!("work channel disconnected (receiver)")
     }
 
-    fn try_send(work_send: &WeakSender<BfsWork>, work: BfsWork) -> Result<()> {
+    /// Publish work into the work queue. Propagates publish errors (indicating pool is shutting down).
+    /// Returns false if the walk operation has been canceled.
+    fn try_send(work_send: &WeakSender<BfsWork>, work: BfsWork) -> Result<bool> {
+        if work.ctx.canceled() {
+            return Ok(false);
+        }
+
+        if work.work.is_empty() {
+            return Ok(true);
+        }
+
         match work_send.upgrade() {
-            Some(send) => send.send(work).map_err(|err| err.into()),
+            Some(send) => send.send(work)?,
             None => bail!("work channel disconnected (sender)"),
         }
+
+        Ok(true)
     }
 }
 
