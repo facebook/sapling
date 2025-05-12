@@ -49,11 +49,11 @@ pub(crate) fn prefetch_manager(
         // Map in-progress walks to corresponding in-progress prefetch. We allow multiple
         // in-prefetches for the same root path at different depths. This happens as the walk
         // detector witnesses deeper accesses and expands the depth boundary.
-        let mut prefetches = HashMap::<RepoPathBuf, Vec<(usize, PrefetchHandle)>>::new();
+        let mut prefetches = HashMap::<(RepoPathBuf, bool), Vec<(usize, PrefetchHandle)>>::new();
 
         // Remember which active walks we have already finished prefetching (so we don't kick of a
         // new prefetch).
-        let mut handled_prefetches = HashSet::<(RepoPathBuf, usize)>::new();
+        let mut handled_prefetches = HashSet::<((RepoPathBuf, bool), usize)>::new();
 
         // Store the commit id we were prefetching for. When this changes (e.g. when eden checks out
         // a new commit), we drop our existing state to start fresh on the new commit.
@@ -94,12 +94,21 @@ pub(crate) fn prefetch_manager(
             // Currently active walks according to the walk detector. Note that it will only report
             // a single walk for any given root (e.g. as depth deepnds, [(root="foo", depth=1)] will
             // become [(root="foo", depth=2)], _not_ including the depth=1 walk anymore).
-            let active_walks: HashMap<RepoPathBuf, usize> =
-                detector.file_walks().into_iter().collect();
+            let active_walks: HashMap<(RepoPathBuf, bool), usize> = detector
+                .file_walks()
+                .into_iter()
+                .map(|(path, depth)| ((path, true), depth))
+                .chain(
+                    detector
+                        .dir_walks()
+                        .into_iter()
+                        .map(|(path, depth)| ((path, false), depth)),
+                )
+                .collect();
 
             // Clear entries out of `handles_prefetches` once they disappear from active walks. If
             // the walk resumes later, we should prefetch again, not assume it is "handled".
-            handled_prefetches.retain(|walk: &(RepoPathBuf, usize)| {
+            handled_prefetches.retain(|walk: &((RepoPathBuf, bool), usize)| {
                 active_walks
                     .get(&walk.0)
                     .is_some_and(|depth| *depth == walk.1)
@@ -189,7 +198,8 @@ pub(crate) fn prefetch_manager(
 pub(crate) fn prefetch(
     manifest: impl Manifest + Send + Sync + 'static,
     file_store: Arc<dyn FileStore>,
-    walk: (RepoPathBuf, usize),
+    // ((walk_root, fetch file contents), depth)
+    walk: ((RepoPathBuf, bool), usize),
     depth_offset: Option<usize>,
 ) -> PrefetchHandle {
     // The cancelation works by making our thread below return early when the handle has been
@@ -206,7 +216,7 @@ pub(crate) fn prefetch(
         let start_time = Instant::now();
 
         let dir_matcher = match TreeMatcher::from_rules(
-            std::iter::once(make_glob_recursive(&plain_to_glob(walk.0.as_str()))),
+            std::iter::once(make_glob_recursive(&plain_to_glob(walk.0.0.as_str()))),
             true,
         ) {
             Ok(matcher) => matcher,
@@ -216,7 +226,7 @@ pub(crate) fn prefetch(
             }
         };
 
-        let start_depth = walk.0.components().count();
+        let start_depth = walk.0.0.components().count();
         let depth_matcher = DepthMatcher::new(
             // If we have a starting depth offset, increase the matcher's min_depth. This is so we
             // skip prefetching work that is already being handled by another active prefetch for
@@ -276,6 +286,11 @@ pub(crate) fn prefetch(
             if my_handle.is_canceled() {
                 tracing::info!(elapsed=?start_time.elapsed(), file_count, "prefetch canceled");
                 return;
+            }
+
+            // Skip the file content fetching if we are only prefetching directories.
+            if !walk.0.1 {
+                continue;
             }
 
             match file {
@@ -374,7 +389,7 @@ mod test {
         let handle = prefetch(
             mf.clone(),
             file_store.clone(),
-            ("dir".to_string().try_into()?, 0),
+            (("dir".to_string().try_into()?, true), 0),
             None,
         );
 
@@ -390,7 +405,12 @@ mod test {
         );
 
         // Prefetch for "dir/" at min_depth=1, max_depth=1 (i.e. "dir/dir2/*").
-        let handle = prefetch(mf, file_store, ("dir".to_string().try_into()?, 1), Some(1));
+        let handle = prefetch(
+            mf,
+            file_store,
+            (("dir".to_string().try_into()?, true), 1),
+            Some(1),
+        );
 
         // Wait for prefetch to complete.
         while !handle.is_canceled() {
