@@ -29,9 +29,12 @@ use crate::get_edenfs_instance;
 
 struct TraversalProgress {
     file_count: usize,
+    dir_count: usize,
     start_time: Instant,
     progress_bar: Option<ProgressBar>,
     file_paths: Vec<PathBuf>,
+    total_read_dir_time: std::time::Duration,
+    total_dir_entries: usize,
 }
 
 impl TraversalProgress {
@@ -45,24 +48,39 @@ impl TraversalProgress {
                     .template("[{elapsed_precise}] {msg}")
                     .unwrap(),
             );
-            pb.set_message("0 files | 0 files/s");
+            pb.set_message("0 files | 0 dirs | 0 files/s | 0 dirs/s");
             Some(pb)
         };
 
         Self {
             file_count: 0,
+            dir_count: 0,
             start_time: Instant::now(),
             progress_bar,
             file_paths: Vec::new(),
+            total_read_dir_time: std::time::Duration::new(0, 0),
+            total_dir_entries: 0,
         }
     }
 
     fn add_file(&mut self, path: PathBuf) {
         self.file_count += 1;
         self.file_paths.push(path);
-        if self.file_count % 100 == 0 {
+        if (self.file_count + self.dir_count) % 100 == 0 {
             self.update_progress();
         }
+    }
+
+    fn add_dir(&mut self) {
+        self.dir_count += 1;
+        if (self.file_count + self.dir_count) % 100 == 0 {
+            self.update_progress();
+        }
+    }
+
+    fn add_read_dir_stats(&mut self, duration: std::time::Duration, entry_count: usize) {
+        self.total_read_dir_time += duration;
+        self.total_dir_entries += entry_count;
     }
 
     fn update_progress(&mut self) {
@@ -73,18 +91,26 @@ impl TraversalProgress {
             }
             let files_per_second = self.file_count as f64 / elapsed;
             pb.set_message(format!(
-                "{} files | {:.0} files/s",
-                self.file_count, files_per_second
+                "{} files | {} dirs | {:.0} files/s",
+                self.file_count, self.dir_count, files_per_second
             ));
         }
     }
 
-    fn finalize(&self) -> (usize, f64, &Vec<PathBuf>) {
+    fn finalize(&self) -> (usize, usize, f64, &Vec<PathBuf>, std::time::Duration, usize) {
         let elapsed = self.start_time.elapsed().as_secs_f64();
         if let Some(pb) = &self.progress_bar {
             pb.finish_and_clear();
         }
-        (self.file_count, elapsed, &self.file_paths)
+
+        (
+            self.file_count,
+            self.dir_count,
+            elapsed,
+            &self.file_paths,
+            self.total_read_dir_time,
+            self.total_dir_entries,
+        )
     }
 }
 
@@ -98,8 +124,23 @@ fn traverse_directory(
     follow_symlinks: bool,
 ) -> Result<()> {
     if path.is_dir() {
-        for entry in fs::read_dir(path)? {
-            let entry = entry?;
+        metrics.add_dir();
+
+        // Measure read_dir latency
+        let start_time = Instant::now();
+        let read_dir_result = fs::read_dir(path);
+        let read_dir_duration = start_time.elapsed();
+
+        let entries = read_dir_result?;
+
+        // Count entries in this directory
+        let entries: Vec<_> = entries.collect::<Result<Vec<_>, _>>()?;
+        let entry_count = entries.len();
+
+        // Add stats for this directory
+        metrics.add_read_dir_stats(read_dir_duration, entry_count);
+
+        for entry in entries {
             let path = entry.path();
 
             if path.is_dir() {
@@ -126,7 +167,20 @@ pub async fn bench_traversal_thrift_read(
 
     let mut traverse_progress = TraversalProgress::new(no_progress);
     traverse_directory(path, &mut traverse_progress, follow_symlinks)?;
-    let (file_count, duration, file_paths) = traverse_progress.finalize();
+    let (file_count, dir_count, duration, file_paths, total_read_dir_time, total_dir_entries) =
+        traverse_progress.finalize();
+
+    let avg_read_dir_latency = if dir_count > 0 {
+        total_read_dir_time.as_secs_f64() * 1000.0 / dir_count as f64
+    } else {
+        0.0
+    };
+
+    let avg_dir_size = if dir_count > 0 {
+        total_dir_entries as f64 / dir_count as f64
+    } else {
+        0.0
+    };
 
     if duration <= 0.0 {
         return Err(anyhow::anyhow!("Duration is less or equal to zero."));
@@ -143,9 +197,27 @@ pub async fn bench_traversal_thrift_read(
         Some(0),
     );
     result.add_metric(
+        "Average read_dir latency",
+        avg_read_dir_latency,
+        types::Unit::Ms,
+        Some(4),
+    );
+    result.add_metric(
+        "Average directory size",
+        avg_dir_size,
+        types::Unit::Files,
+        Some(2),
+    );
+    result.add_metric(
         "Total files",
         file_count as f64,
         types::Unit::Files,
+        Some(0),
+    );
+    result.add_metric(
+        "Total directories",
+        dir_count as f64,
+        types::Unit::Dirs,
         Some(0),
     );
 
@@ -262,7 +334,20 @@ pub fn bench_traversal_fs_read(
 
     traverse_directory(path, &mut traverse_progress, follow_symlinks)?;
 
-    let (file_count, duration, file_paths) = traverse_progress.finalize();
+    let (file_count, dir_count, duration, file_paths, total_read_dir_time, total_dir_entries) =
+        traverse_progress.finalize();
+
+    let avg_read_dir_latency = if dir_count > 0 {
+        total_read_dir_time.as_secs_f64() * 1000.0 / dir_count as f64
+    } else {
+        0.0
+    };
+
+    let avg_dir_size = if dir_count > 0 {
+        total_dir_entries as f64 / dir_count as f64
+    } else {
+        0.0
+    };
 
     if duration <= 0.0 {
         return Err(anyhow::anyhow!("Duration is less or equal to zero."));
@@ -279,9 +364,27 @@ pub fn bench_traversal_fs_read(
         Some(0),
     );
     result.add_metric(
+        "Average read_dir latency",
+        avg_read_dir_latency,
+        types::Unit::Ms,
+        Some(4),
+    );
+    result.add_metric(
+        "Average directory size",
+        avg_dir_size,
+        types::Unit::Files,
+        Some(2),
+    );
+    result.add_metric(
         "Total files",
         file_count as f64,
         types::Unit::Files,
+        Some(0),
+    );
+    result.add_metric(
+        "Total directories",
+        dir_count as f64,
+        types::Unit::Dirs,
         Some(0),
     );
 
