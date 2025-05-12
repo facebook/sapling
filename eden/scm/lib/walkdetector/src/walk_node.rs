@@ -49,11 +49,11 @@ pub(crate) struct WalkNode {
 
 impl WalkNode {
     /// Get existing WalkNode entry for specified dir, if any.
-    pub(crate) fn get_node(&mut self, dir: &RepoPath) -> Option<&mut Self> {
+    pub(crate) fn get_node(&self, dir: &RepoPath) -> Option<&Self> {
         match dir.split_first_component() {
             Some((head, tail)) => self
                 .children
-                .get_mut(head)
+                .get(head)
                 .and_then(|child| child.get_node(tail)),
             None => Some(self),
         }
@@ -61,6 +61,32 @@ impl WalkNode {
 
     /// Find node with active walk covering directory `dir`, if any.
     pub(crate) fn get_owning_node<'a, 'b>(
+        &'a self,
+        walk_type: WalkType,
+        dir: &'b RepoPath,
+    ) -> Option<(&'a Self, &'b RepoPath)> {
+        match dir.split_first_component() {
+            Some((head, tail)) => {
+                if self.contains(walk_type, dir, 0) {
+                    Some((self, dir))
+                } else {
+                    self.children
+                        .get(head)
+                        .and_then(|child| child.get_owning_node(walk_type, tail))
+                }
+            }
+            None => {
+                if self.get_dominating_walk(walk_type).is_some() {
+                    Some((self, dir))
+                } else {
+                    None
+                }
+            }
+        }
+    }
+
+    /// Find node with active walk covering directory `dir`, if any.
+    pub(crate) fn get_owning_node_mut<'a, 'b>(
         &'a mut self,
         walk_type: WalkType,
         dir: &'b RepoPath,
@@ -72,7 +98,7 @@ impl WalkNode {
                 } else {
                     self.children
                         .get_mut(head)
-                        .and_then(|child| child.get_owning_node(walk_type, tail))
+                        .and_then(|child| child.get_owning_node_mut(walk_type, tail))
                 }
             }
             None => {
@@ -410,10 +436,7 @@ impl WalkNode {
                 keep
             });
 
-            let expired = node
-                .last_access
-                .load()
-                .is_none_or(|accessed| now - accessed >= timeout);
+            let expired = node.expired(now, timeout);
 
             let keep_me = !expired || !node.children.is_empty();
             let has_walk = node.has_walk();
@@ -481,5 +504,11 @@ impl WalkNode {
 
     fn has_walk(&self) -> bool {
         self.file_walk.is_some() || self.dir_walk.is_some()
+    }
+
+    pub(crate) fn expired(&self, now: Instant, timeout: Duration) -> bool {
+        self.last_access
+            .load()
+            .is_none_or(|accessed| now - accessed >= timeout)
     }
 }

@@ -236,6 +236,12 @@ impl Detector {
 
         tracing::trace!(%path, "file_loaded");
 
+        // Try lightweight read-only path.
+        if let Some(walk_root) = self.mark_read(path, WalkType::File, true) {
+            tracing::trace!(%walk_root, file=%path, "file already in walk (fastpath)");
+            return false;
+        }
+
         let (dir_path, base_name) = match path.split_last_component() {
             // Shouldn't happen - implies a path of "" which is not valid for a file.
             None => return false,
@@ -257,7 +263,7 @@ impl Detector {
         owner.last_access.store(time);
 
         if let Some(walk) = owner.get_dominating_walk(WalkType::File) {
-            tracing::trace!(walk_root=%dir_path.strip_suffix(suffix, true).unwrap_or_default(), dir=%dir_path, "file's dir already in walk");
+            tracing::trace!(walk_root=%path.strip_suffix(suffix, true).unwrap_or_default(), file=%path, "file already in walk");
             walk.inc_file_load(dir_path.strip_suffix(suffix, true).unwrap_or_default(), 1);
             return walk_changed;
         }
@@ -283,11 +289,11 @@ impl Detector {
 
     /// Observe a "soft" or cached file (content) access of `path`.
     /// This will not be tracked as a new walk, but will reset TTL of an existing walk.
-    /// Returns whether an active walk changed (due to GC).
+    /// Returns whether path was covered by an active walk.
     pub fn file_read(&self, path: impl AsRef<RepoPath>) -> bool {
         let path = path.as_ref();
         tracing::trace!(%path, "file_read");
-        self.mark_read(path, WalkType::File)
+        self.mark_read(path, WalkType::File, false).is_some()
     }
 
     /// Observe a directory being loaded (i.e. "heavy" or remote read). `num_files` and
@@ -302,6 +308,12 @@ impl Detector {
         let path = path.as_ref();
 
         tracing::trace!(%path, num_files, num_dirs, "dir_loaded");
+
+        // Try lightweight read-only path.
+        if let Some(walk_root) = self.mark_read(path, WalkType::Directory, true) {
+            tracing::trace!(%walk_root, dir=%path, "dir already in walk (fastpath)");
+            return false;
+        }
 
         let mut inner = self.inner.write();
 
@@ -335,7 +347,7 @@ impl Detector {
         owner.last_access.store(time);
 
         if let Some(walk) = owner.get_dominating_walk(WalkType::Directory) {
-            tracing::trace!(walk_root=%dir_path.strip_suffix(suffix, true).unwrap_or_default(), dir=%dir_path, "dir is already covered by an existing walk");
+            tracing::trace!(walk_root=%dir_path.strip_suffix(suffix, true).unwrap_or_default(), dir=%path, "dir already in walk");
             walk.inc_dir_load(dir_path.strip_suffix(suffix, true).unwrap_or_default(), 1);
             return walk_changed;
         }
@@ -362,42 +374,50 @@ impl Detector {
 
     /// Observe a "soft" or cached directory access of `path`.
     /// This will not be tracked as a new walk, but will reset TTL of an existing walk.
-    /// Returns whether an active walk changed (due to GC).
+    /// Returns whether path was covered by an active walk.
     pub fn dir_read(&self, path: impl AsRef<RepoPath>) -> bool {
         let path = path.as_ref();
         tracing::trace!(%path, "dir_read");
-        self.mark_read(path, WalkType::Directory)
+        self.mark_read(path, WalkType::Directory, false).is_some()
     }
 
-    fn mark_read(&self, path: &RepoPath, wt: WalkType) -> bool {
-        let Some(dir) = path.parent() else {
-            return false;
-        };
+    /// "touch" any walk of type wt that covers `path` to update metrics and keep the walk alive.
+    /// Returns the root of walk, if any.
+    fn mark_read<'a>(
+        &'a self,
+        path: &'a RepoPath,
+        wt: WalkType,
+        heavy_read: bool,
+    ) -> Option<&'a RepoPath> {
+        let dir = path.parent()?;
 
-        let mut inner = self.inner.write();
+        let inner = self.inner.read();
 
         let time = inner.now();
 
-        // We need to run GC because we don't want to bump last_access on a node that should be collected.
-        let walk_changed = inner.maybe_gc(time);
-
         // Bump last_access, but don't insert any new nodes/walks.
         if let Some((walk_node, suffix)) = inner.node.get_owning_node(wt, dir) {
+            if walk_node.expired(time, inner.gc_timeout) {
+                // Don't resurrect a node that should be expired by GC.
+                return None;
+            }
+
             walk_node.last_access.store(time);
+
             if let Some(walk) = walk_node.get_dominating_walk(wt) {
                 let walk_root = dir.strip_suffix(suffix, true).unwrap_or_default();
-                match wt {
-                    WalkType::File => {
-                        walk.inc_file_read(walk_root, 1);
-                    }
-                    WalkType::Directory => {
-                        walk.inc_dir_read(walk_root, 1);
-                    }
-                }
+                match (wt, heavy_read) {
+                    (WalkType::File, false) => walk.inc_file_read(walk_root, 1),
+                    (WalkType::File, true) => walk.inc_file_load(walk_root, 1),
+                    (WalkType::Directory, false) => walk.inc_dir_read(walk_root, 1),
+                    (WalkType::Directory, true) => walk.inc_dir_load(walk_root, 1),
+                };
             }
+
+            return Some(dir.strip_suffix(suffix, true).unwrap_or_default());
         }
 
-        walk_changed
+        None
     }
 }
 
@@ -513,7 +533,7 @@ impl Inner {
         dir: &'a RepoPath,
     ) -> Option<(&'a RepoPath, usize)> {
         let parent_dir = dir.parent()?;
-        let (ancestor, suffix) = self.node.get_owning_node(walk_type, parent_dir)?;
+        let (ancestor, suffix) = self.node.get_owning_node_mut(walk_type, parent_dir)?;
         let ancestor_dir = parent_dir.strip_suffix(suffix, true)?;
         let (head, _) = suffix.split_first_component()?;
 

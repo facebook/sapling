@@ -623,8 +623,8 @@ fn test_touched() {
         epoch += Duration::from_secs(1);
         detector.set_now(epoch);
 
-        assert!(!detector.file_read(p("dir1/c")));
-        assert!(!detector.dir_read(p("dir2/c")));
+        assert!(detector.file_read(p("dir1/c")));
+        assert!(detector.dir_read(p("dir2/c")));
     }
 
     detector.file_loaded(p("something/else"));
@@ -634,10 +634,10 @@ fn test_touched() {
     assert_eq!(detector.file_walks().len(), 1);
     assert_eq!(detector.dir_walks().len(), 1);
 
-    // Test that the touched methods still run GC themselves.
+    // Test that the touched methods don't resurrect expired (but not collected) nodes.
     epoch += Duration::from_secs(5);
     detector.set_now(epoch);
-    assert!(detector.file_read(p("dir1/c")));
+    assert!(!detector.file_read(p("dir1/c")));
     assert!(detector.file_walks().is_empty());
     assert!(detector.dir_walks().is_empty());
 }
