@@ -513,6 +513,10 @@ class SaplingBackingStore final : public BackingStore {
       ObjectIdRange ids,
       const ObjectFetchContextPtr& context) override;
 
+  void workingCopyParentHint(const RootId& parent) override {
+    store_.workingCopyParentHint(parent);
+  }
+
   void processBlobImportRequests(
       std::vector<std::shared_ptr<SaplingImportRequest>>&& requests);
   void processTreeImportRequests(

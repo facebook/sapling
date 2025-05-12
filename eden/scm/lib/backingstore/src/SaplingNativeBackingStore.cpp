@@ -258,6 +258,10 @@ bool SaplingNativeBackingStore::dogfoodingHost() const {
   return sapling_dogfooding_host(*store_.get());
 }
 
+void SaplingNativeBackingStore::workingCopyParentHint(const RootId& parent) {
+  sapling_backingstore_set_parent_hint(*store_.get(), parent.value());
+}
+
 folly::Try<std::shared_ptr<GlobFilesResponse>>
 SaplingNativeBackingStore::getGlobFiles(
     // Human Readable 40b commit id

@@ -28,6 +28,7 @@ cpp_library(
         "fbsource//third-party/rust:cxx-core",
         ":backingstore@header",
         "//eden/common/utils:path",
+        "//eden/fs/model:model",
         "//eden/fs/store:context",
         "//folly:function",
         "//folly:range",

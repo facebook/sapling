@@ -389,11 +389,12 @@ FOLLY_NODISCARD ImmediateFuture<folly::Unit> EdenMount::initialize(
                       ParentCommit::RootIdPreference::To)};
             }
 
+            auto wcParent = parentCommit.getWorkingCopyParent();
+
             *parentState_.wlock() = ParentCommitState{
-                parent,
-                parentTree.tree,
-                parentCommit.getWorkingCopyParent(),
-                std::move(checkoutState)};
+                parent, parentTree.tree, wcParent, std::move(checkoutState)};
+
+            objectStore_->workingCopyParentHint(wcParent);
 
             // Record the transition from no snapshot to the current snapshot in
             // the journal.  This also sets things up so that we can carry the
@@ -1467,6 +1468,8 @@ ImmediateFuture<CheckoutResult> EdenMount::checkout(
   // checkout
   setLastCheckoutTime(EdenTimestamp{clock_->getRealtime()});
 
+  objectStore_->workingCopyParentHint(snapshotHash);
+
   auto journalDiffCallback = std::make_shared<JournalDiffCallback>();
 
   using RootTreeTuple = std::
@@ -2079,6 +2082,7 @@ void EdenMount::resetParent(const RootId& parent) {
 
   checkoutConfig_->setWorkingCopyParentCommit(parent);
   parentLock->workingCopyParentRootId = parent;
+  objectStore_->workingCopyParentHint(parent);
 
   journal_->recordHashUpdate(oldParent, parent);
 }

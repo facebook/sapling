@@ -15,6 +15,7 @@
 #include <string_view>
 
 #include "eden/common/utils/PathFuncs.h"
+#include "eden/fs/model/RootId.h"
 #include "eden/fs/store/ObjectFetchContext.h"
 #include "eden/scm/lib/backingstore/src/ffi.rs.h"
 
@@ -33,6 +34,7 @@ namespace sapling {
 using NodeId = folly::ByteRange;
 using FetchCause = facebook::eden::ObjectFetchContext::Cause;
 using RepoPath = facebook::eden::RelativePathPiece;
+using RootId = facebook::eden::RootId;
 
 struct SaplingRequest {
   // These two fields are typically borrowed from a
@@ -124,6 +126,8 @@ class SaplingNativeBackingStore {
       std::string_view commit_id,
       const std::vector<std::string>& suffixes,
       const std::vector<std::string>& prefixes);
+
+  void workingCopyParentHint(const RootId& parent);
 
   void flush();
 

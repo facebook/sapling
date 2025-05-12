@@ -20,6 +20,7 @@ use std::time::SystemTime;
 use anyhow::Result;
 use anyhow::anyhow;
 use arc_swap::ArcSwap;
+use arc_swap::ArcSwapOption;
 use blob::Blob;
 use configloader::Config;
 use configloader::hg::PinnedConfig;
@@ -48,6 +49,8 @@ use types::RepoPath;
 pub struct BackingStore {
     // ArcSwap is similar to RwLock, but has lower overhead for read operations.
     inner: ArcSwap<Inner>,
+
+    parent_hint: ArcSwapOption<String>,
 }
 
 struct Inner {
@@ -126,6 +129,7 @@ impl BackingStore {
                 &extra_configs,
                 touch_file_mtime(),
             )?)),
+            parent_hint: Default::default(),
         })
     }
 
@@ -325,6 +329,13 @@ impl BackingStore {
         }
 
         inner.walk_detector.file_read(path);
+    }
+
+    pub fn set_parent_hint(&self, parent_id: &str) {
+        tracing::info!(parent_id, "setting parent hint");
+
+        self.parent_hint
+            .store(Some(Arc::new(parent_id.to_string())));
     }
 
     // Fully reload the stores if:

@@ -223,6 +223,8 @@ pub(crate) mod ffi {
         pub fn sapling_backingstore_witness_file_read(store: &BackingStore, path: &str);
 
         pub fn sapling_dogfooding_host(store: &BackingStore) -> Result<bool>;
+
+        pub fn sapling_backingstore_set_parent_hint(store: &BackingStore, parent_id: &str);
     }
 }
 
@@ -466,6 +468,10 @@ pub fn sapling_backingstore_get_file_aux_batch(
 
 pub fn sapling_dogfooding_host(store: &BackingStore) -> Result<bool> {
     store.dogfooding_host()
+}
+
+pub fn sapling_backingstore_set_parent_hint(store: &BackingStore, parent_id: &str) {
+    store.set_parent_hint(parent_id);
 }
 
 pub fn sapling_backingstore_flush(store: &BackingStore) {
