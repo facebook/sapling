@@ -30,7 +30,10 @@ impl FetchContext {
     }
 
     pub fn sapling_prefetch() -> Self {
-        Self::new_with_cause(FetchMode::AllowRemote, FetchCause::SaplingPrefetch)
+        Self::new_with_cause(
+            FetchMode::AllowRemote | FetchMode::IGNORE_RESULT,
+            FetchCause::SaplingPrefetch,
+        )
     }
 
     pub fn new_with_cause(mode: FetchMode, cause: FetchCause) -> Self {
