@@ -8,6 +8,7 @@
 use std::time::Duration;
 use std::time::Instant;
 
+use types::RepoPath;
 use types::RepoPathBuf;
 
 use crate::Detector;
@@ -260,9 +261,13 @@ fn test_walk_node_insert() {
 fn test_walk_node_get() {
     let mut node = WalkNode::default();
 
-    assert!(node.get_walk(WalkType::File, &p("")).is_none());
-    assert!(node.get_walk(WalkType::File, &p("foo")).is_none());
-    assert!(node.get_walk(WalkType::File, &p("foo/bar")).is_none());
+    let get_walk = |node: &mut WalkNode, path: &RepoPath| -> Option<Walk> {
+        node.get_node(path).and_then(|node| node.file_walk)
+    };
+
+    assert!(get_walk(&mut node, &p("")).is_none());
+    assert!(get_walk(&mut node, &p("foo")).is_none());
+    assert!(get_walk(&mut node, &p("foo/bar")).is_none());
 
     let foo_walk = Walk { depth: 1 };
     node.insert_walk(
@@ -272,9 +277,9 @@ fn test_walk_node_get() {
         TEST_MIN_DIR_WALK_THRESHOLD,
     );
 
-    assert!(node.get_walk(WalkType::File, &p("")).is_none());
-    assert_eq!(node.get_walk(WalkType::File, &p("foo")), Some(&foo_walk));
-    assert!(node.get_walk(WalkType::File, &p("foo/bar")).is_none());
+    assert!(get_walk(&mut node, &p("")).is_none());
+    assert_eq!(get_walk(&mut node, &p("foo")), Some(foo_walk));
+    assert!(get_walk(&mut node, &p("foo/bar")).is_none());
 
     let foo_bar_walk = Walk { depth: 2 };
     node.insert_walk(
@@ -284,12 +289,9 @@ fn test_walk_node_get() {
         TEST_MIN_DIR_WALK_THRESHOLD,
     );
 
-    assert!(node.get_walk(WalkType::File, &p("")).is_none());
-    assert_eq!(node.get_walk(WalkType::File, &p("foo")), Some(&foo_walk));
-    assert_eq!(
-        node.get_walk(WalkType::File, &p("foo/bar")),
-        Some(&foo_bar_walk)
-    );
+    assert!(get_walk(&mut node, &p("")).is_none());
+    assert_eq!(get_walk(&mut node, &p("foo")), Some(foo_walk));
+    assert_eq!(get_walk(&mut node, &p("foo/bar")), Some(foo_bar_walk));
 
     let root_walk = Walk { depth: 0 };
     node.insert_walk(
@@ -299,12 +301,9 @@ fn test_walk_node_get() {
         TEST_MIN_DIR_WALK_THRESHOLD,
     );
 
-    assert_eq!(node.get_walk(WalkType::File, &p("")), Some(&root_walk));
-    assert_eq!(node.get_walk(WalkType::File, &p("foo")), Some(&foo_walk));
-    assert_eq!(
-        node.get_walk(WalkType::File, &p("foo/bar")),
-        Some(&foo_bar_walk)
-    );
+    assert_eq!(get_walk(&mut node, &p("")), Some(root_walk));
+    assert_eq!(get_walk(&mut node, &p("foo")), Some(foo_walk));
+    assert_eq!(get_walk(&mut node, &p("foo/bar")), Some(foo_bar_walk));
 }
 
 #[test]
@@ -313,7 +312,7 @@ fn test_walk_get_containing_node() {
 
     let dir = p("foo/bar/baz");
 
-    assert!(node.get_containing_node(WalkType::File, &dir).is_none());
+    assert!(node.get_owning_node(WalkType::File, &dir).is_none());
 
     let mut walk = Walk { depth: 0 };
     node.insert_walk(
@@ -324,7 +323,7 @@ fn test_walk_get_containing_node() {
     );
 
     // Still not containing due to depth.
-    assert!(node.get_containing_node(WalkType::File, &dir).is_none());
+    assert!(node.get_owning_node(WalkType::File, &dir).is_none());
 
     walk.depth = 1;
     node.insert_walk(
@@ -334,7 +333,7 @@ fn test_walk_get_containing_node() {
         TEST_MIN_DIR_WALK_THRESHOLD,
     );
 
-    let (containing_node, suffix) = node.get_containing_node(WalkType::File, &dir).unwrap();
+    let (containing_node, suffix) = node.get_owning_node(WalkType::File, &dir).unwrap();
     assert_eq!(
         containing_node.get_walk_for_type(WalkType::File),
         Some(&walk)

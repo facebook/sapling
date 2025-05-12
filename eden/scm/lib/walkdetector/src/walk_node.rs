@@ -47,20 +47,9 @@ pub(crate) struct WalkNode {
 }
 
 impl WalkNode {
-    /// Fetch active walk for `walk_root`, if any.
-    pub(crate) fn get_walk(&mut self, walk_type: WalkType, walk_root: &RepoPath) -> Option<&Walk> {
-        match walk_root.split_first_component() {
-            Some((head, tail)) => self
-                .children
-                .get_mut(head)
-                .and_then(|child| child.get_walk(walk_type, tail)),
-            None => self.get_dominating_walk(walk_type),
-        }
-    }
-
-    /// Get existing WalkNode entry for specified root, if any.
-    pub(crate) fn get_node(&mut self, walk_root: &RepoPath) -> Option<&mut Self> {
-        match walk_root.split_first_component() {
+    /// Get existing WalkNode entry for specified dir, if any.
+    pub(crate) fn get_node(&mut self, dir: &RepoPath) -> Option<&mut Self> {
+        match dir.split_first_component() {
             Some((head, tail)) => self
                 .children
                 .get_mut(head)
@@ -70,7 +59,7 @@ impl WalkNode {
     }
 
     /// Find node with active walk covering directory `dir`, if any.
-    pub(crate) fn get_containing_node<'a, 'b>(
+    pub(crate) fn get_owning_node<'a, 'b>(
         &'a mut self,
         walk_type: WalkType,
         dir: &'b RepoPath,
@@ -82,7 +71,7 @@ impl WalkNode {
                 } else {
                     self.children
                         .get_mut(head)
-                        .and_then(|child| child.get_containing_node(walk_type, tail))
+                        .and_then(|child| child.get_owning_node(walk_type, tail))
                 }
             }
             None => {
@@ -207,15 +196,6 @@ impl WalkNode {
         let mut list = Vec::new();
         inner(self, walk_type, RepoPathBuf::new(), &mut list);
         list
-    }
-
-    pub(crate) fn child_walks(
-        &self,
-        walk_type: WalkType,
-    ) -> impl Iterator<Item = (&PathComponentBuf, &Walk)> {
-        self.children
-            .iter()
-            .filter_map(move |(name, node)| node.get_walk_for_type(walk_type).map(|w| (name, w)))
     }
 
     /// Get most "powerful" walk that covers `walk_type`. Basically, a file walk covers a

@@ -253,7 +253,7 @@ impl Detector {
         let walk_changed = inner.maybe_gc(time);
 
         // Bump last_access, but don't do anything else.
-        if let Some((walk_node, _)) = inner.node.get_containing_node(wt, dir) {
+        if let Some((walk_node, _)) = inner.node.get_owning_node(wt, dir) {
             walk_node.last_access = Some(time);
         }
 
@@ -354,7 +354,7 @@ impl Inner {
         // Merging cousins willy nilly is too aggressive. We require that the cousins' parents are
         // already contained by a walk. This means we are only advancing a walk across one level,
         // not two.
-        let (ancestor, suffix) = self.node.get_containing_node(walk_type, parent_dir)?;
+        let (ancestor, suffix) = self.node.get_owning_node(walk_type, parent_dir)?;
         // If suffix is empty, the walk is for parent_dir itself. We want a higher walk.
         if suffix.is_empty() {
             return None;
@@ -382,7 +382,7 @@ impl Inner {
         dir: &'a RepoPath,
     ) -> Option<(&'a RepoPath, usize)> {
         let parent_dir = dir.parent()?;
-        let (ancestor, suffix) = self.node.get_containing_node(walk_type, parent_dir)?;
+        let (ancestor, suffix) = self.node.get_owning_node(walk_type, parent_dir)?;
         let ancestor_dir = parent_dir.strip_suffix(suffix, true)?;
         let (head, _) = suffix.split_first_component()?;
 
