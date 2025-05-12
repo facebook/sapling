@@ -512,8 +512,11 @@ fn test_gc_stats() {
     detector.file_loaded(p("dir3/dir4/b"));
 
     // Manually run GC to check stats.
-    let (nodes_removed, nodes_remaining, walks_removed) =
-        detector.inner.lock().node.gc(Duration::from_secs(1), epoch);
+    let (nodes_removed, nodes_remaining, walks_removed) = detector
+        .inner
+        .write()
+        .node
+        .gc(Duration::from_secs(1), epoch);
 
     // "dir1" and "dir2"
     assert_eq!(nodes_removed, 2);
@@ -647,7 +650,7 @@ fn test_counters() {
     let get_counters = |p: RepoPathBuf, wt: WalkType| {
         detector
             .inner
-            .lock()
+            .write()
             .node
             .get_node(&p)
             .and_then(|n| n.get_walk_for_type(wt))

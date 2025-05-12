@@ -15,7 +15,7 @@ use std::sync::atomic::Ordering;
 use std::time::Duration;
 use std::time::Instant;
 
-use parking_lot::Mutex;
+use parking_lot::RwLock;
 use types::RepoPath;
 use types::RepoPathBuf;
 use walk_node::WalkNode;
@@ -26,7 +26,7 @@ use walk_node::WalkNode;
 //  - Minimize memory usage.
 
 pub struct Detector {
-    inner: Mutex<Inner>,
+    inner: RwLock<Inner>,
 }
 
 struct Inner {
@@ -188,20 +188,20 @@ impl Detector {
     }
 
     pub fn set_min_dir_walk_threshold(&self, threshold: usize) {
-        self.inner.lock().min_dir_walk_threshold = threshold;
+        self.inner.write().min_dir_walk_threshold = threshold;
     }
 
     #[cfg(test)]
     pub fn set_now(&self, now: Instant) {
-        self.inner.lock().stub_now = Some(now);
+        self.inner.write().stub_now = Some(now);
     }
 
     pub fn set_gc_interval(&self, interval: Duration) {
-        self.inner.lock().gc_interval = interval;
+        self.inner.write().gc_interval = interval;
     }
 
     pub fn set_gc_timeout(&self, timeout: Duration) {
-        self.inner.lock().gc_timeout = timeout;
+        self.inner.write().gc_timeout = timeout;
     }
 
     /// Return list of (walk root dir, walk depth) representing active file content walks.
@@ -215,7 +215,7 @@ impl Detector {
     }
 
     fn walks(&self, walk_type: WalkType) -> Vec<(RepoPathBuf, usize)> {
-        let mut inner = self.inner.lock();
+        let mut inner = self.inner.write();
 
         let time = inner.now();
         inner.maybe_gc(time);
@@ -240,7 +240,7 @@ impl Detector {
             Some((dir, base)) => (dir, base),
         };
 
-        let mut inner = self.inner.lock();
+        let mut inner = self.inner.write();
 
         let time = inner.now();
 
@@ -301,7 +301,7 @@ impl Detector {
 
         tracing::trace!(%path, num_files, num_dirs, "dir_loaded");
 
-        let mut inner = self.inner.lock();
+        let mut inner = self.inner.write();
 
         let time = inner.now();
 
@@ -372,7 +372,7 @@ impl Detector {
             return false;
         };
 
-        let mut inner = self.inner.lock();
+        let mut inner = self.inner.write();
 
         let time = inner.now();
 
