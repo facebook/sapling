@@ -6,8 +6,10 @@
  */
 
 use std::collections::HashSet;
+use std::fs::File;
 use std::io::BufRead;
 use std::io::BufReader;
+use std::io::Read;
 use std::io::Write;
 use std::sync::Arc;
 
@@ -30,6 +32,9 @@ define_flags! {
         /// Submit file accesses to walk detector from multiple threads.
         threads: i64 = 1,
 
+        /// File to read input file paths from. Defaults to stdin.
+        input_file: Option<String>,
+
         #[args]
         args: Vec<String>,
     }
@@ -51,7 +56,12 @@ pub fn run(ctx: ReqCtx<DebugWalkDetectorOpts>) -> Result<u8> {
     let mut seen_dirs = HashSet::new();
     let cwd = std::env::current_dir()?;
 
-    let input = ctx.io().input();
+    let input: Box<dyn Read> = if let Some(path) = &ctx.opts.input_file {
+        Box::new(File::open(path)?)
+    } else {
+        Box::new(ctx.io().input())
+    };
+
     let input = BufReader::new(input);
     let mut work = Vec::new();
     for line in input.lines() {
