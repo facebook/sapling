@@ -294,17 +294,14 @@ impl Inner {
         // Check if we should immediately promote this walk to parent directory. This is
         // similar to the ancestor advancement below, except that it can insert a new
         // walk.
-        if let Some((parent_dir, parent_depth)) =
-            self.should_merge_into_parent(walk_type, dir, walk_depth)
-        {
-            self.insert_walk(time, walk_type, parent_dir, parent_depth);
+        if self.maybe_merge_into_parent(time, walk_type, dir).is_some() {
             return;
         }
 
-        // Check if we should merge with cousins (into grandparent).
-        // TODO: combine this with the merge-into-parent heuristic.
+        // Check if we should merge with cousins (into grandparent). This is similar to
+        // maybe_merge_into_grandparent in that it can insert a new walk.
         if self
-            .maybe_merge_into_grandparent(time, walk_type, dir, walk_depth)
+            .maybe_merge_into_grandparent(time, walk_type, dir)
             .is_some()
         {
             return;
@@ -316,114 +313,65 @@ impl Inner {
         }
     }
 
-    /// If a new walk at `dir` should instead be promoted to a walk at dir's parent dir,
-    /// return (parent_dir, new_depth).
-    fn should_merge_into_parent<'a>(
+    /// If `dir` (and its siblings) imply a walk at `dir.parent()`, insert a walk at `dir.parent()`.
+    fn maybe_merge_into_parent<'a>(
         &mut self,
+        time: Instant,
         walk_type: WalkType,
         dir: &'a RepoPath,
-        mut walk_depth: usize,
-    ) -> Option<(&'a RepoPath, usize)> {
-        tracing::debug!(%dir, "should_merge_into_parent");
+    ) -> Option<()> {
+        tracing::trace!(%dir, "maybe_merge_into_parent");
 
-        let (parent_dir, name) = dir.split_last_component()?;
+        let parent_dir = dir.parent()?;
         let parent_node = self.node.get_node(parent_dir)?;
 
-        // Check if there are sibling walks that we want to merge into a walk
-        // on the parent.
+        let walk_depth = should_merge_into_ancestor(
+            self.min_dir_walk_threshold,
+            walk_type,
+            dir,
+            parent_node,
+            1,
+        )?;
 
-        let mut sibling_count = 0;
-        let mut saw_self = false;
-        let max_sibling_depth =
-            parent_node
-                .child_walks(walk_type)
-                .fold(0, |max, (sibling, walk)| {
-                    sibling_count += 1;
-                    saw_self = name == sibling;
-                    max.max(walk.depth)
-                });
+        self.insert_walk(time, walk_type, parent_dir, walk_depth);
 
-        // This walk hasn't been inserted - count as sibling.
-        if !saw_self {
-            sibling_count += 1;
-        }
-
-        tracing::debug!(%dir, sibling_count, parent_dirs=?parent_node.total_dirs);
-
-        if sibling_count >= self.min_dir_walk_threshold {
-            if tracing::enabled!(tracing::Level::DEBUG) {
-                let siblings_display = parent_node
-                    .child_walks(walk_type)
-                    .map(|(name, walk)| format!("{}:{}", parent_dir.join(name), walk.depth))
-                    .collect::<Vec<_>>();
-                tracing::debug!(%dir, siblings=?siblings_display, "combining with siblings");
-            }
-
-            walk_depth = walk_depth.max(max_sibling_depth);
-            walk_depth = walk_depth.max(
-                parent_node
-                    .get_walk_for_type(walk_type)
-                    .map_or(0, |w| w.depth),
-            );
-            Some((parent_dir, walk_depth + 1))
-        } else if parent_node
-            .total_dirs
-            .is_some_and(|total| total < self.min_dir_walk_threshold)
-        {
-            tracing::debug!(%dir, "promoting due to few dirs");
-            Some((parent_dir, walk_depth + 1))
-        } else {
-            None
-        }
+        Some(())
     }
 
+    /// If `dir` (and its cousins) imply a walk at `dir.parent().parent()`, insert a walk
+    /// at `dir.parent().parent()`.
     fn maybe_merge_into_grandparent(
         &mut self,
         time: Instant,
         walk_type: WalkType,
         dir: &RepoPath,
-        mut walk_depth: usize,
     ) -> Option<()> {
+        tracing::trace!(%dir, "maybe_merge_into_parent");
+
         let parent_dir = dir.parent()?;
         let grandparent_dir = parent_dir.parent()?;
 
+        // Merging cousins willy nilly is too aggressive. We require that the cousins' parents are
+        // already contained by a walk. This means we are only advancing a walk across one level,
+        // not two.
         let (ancestor, suffix) = self.node.get_containing_node(walk_type, parent_dir)?;
+        // If suffix is empty, the walk is for parent_dir itself. We want a higher walk.
         if suffix.is_empty() {
             return None;
         }
 
         let grandparent_node = ancestor.get_node(suffix.parent()?)?;
+        let walk_depth = should_merge_into_ancestor(
+            self.min_dir_walk_threshold,
+            walk_type,
+            dir,
+            grandparent_node,
+            2,
+        )?;
 
-        let mut cousin_count = 0;
-        grandparent_node.iter(|node, depth| -> bool {
-            if depth > 2 {
-                return false;
-            }
+        self.insert_walk(time, walk_type, grandparent_dir, walk_depth);
 
-            if depth == 2 {
-                if let Some(walk) = node.get_walk_for_type(walk_type) {
-                    cousin_count += 1;
-                    walk_depth = walk_depth.max(walk.depth);
-                }
-            }
-
-            true
-        });
-
-        if cousin_count >= self.min_dir_walk_threshold {
-            tracing::debug!(%dir, %grandparent_dir, cousin_count, "combining with cousins");
-            self.insert_walk(time, walk_type, grandparent_dir, walk_depth + 2);
-            Some(())
-        } else if grandparent_node
-            .total_dirs
-            .is_some_and(|total| total < self.min_dir_walk_threshold)
-        {
-            tracing::debug!(%dir, "promoting cousins due to few dirs");
-            self.insert_walk(time, walk_type, grandparent_dir, walk_depth + 2);
-            Some(())
-        } else {
-            None
-        }
+        Some(())
     }
 
     /// If a walk at `dir` suggests we can advance the depth of a containing walk, return
@@ -479,5 +427,41 @@ impl Inner {
         self.last_gc_time = time;
 
         deleted_walks > 0
+    }
+}
+
+/// Check if existing walks at nodes `ancestor_distance` below `ancestor` should be "merged" into a
+/// new walk at `ancestor`. Returns depth of new walk to be inserted, if any.
+fn should_merge_into_ancestor(
+    min_dir_walk_threshold: usize,
+    walk_type: WalkType,
+    dir: &RepoPath,
+    ancestor: &WalkNode,
+    ancestor_distance: usize,
+) -> Option<usize> {
+    let mut kin_count = 0;
+    let mut walk_depth = 0;
+    ancestor.iter(|node, depth| -> bool {
+        if depth == ancestor_distance {
+            if let Some(walk) = node.get_walk_for_type(walk_type) {
+                kin_count += 1;
+                walk_depth = walk_depth.max(walk.depth);
+            }
+        }
+
+        depth < ancestor_distance
+    });
+
+    if kin_count >= min_dir_walk_threshold {
+        tracing::debug!(%dir, kin_count, ancestor_distance, "combining with collateral kin");
+        Some(walk_depth + ancestor_distance)
+    } else if ancestor
+        .total_dirs
+        .is_some_and(|total| total < min_dir_walk_threshold)
+    {
+        tracing::debug!(%dir, ancestor_distance, "promoting collateral kin due to few dirs");
+        Some(walk_depth + ancestor_distance)
+    } else {
+        None
     }
 }
