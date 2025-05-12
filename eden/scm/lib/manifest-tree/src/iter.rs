@@ -121,9 +121,8 @@ impl BfsWorker {
             let mut to_send = Vec::<(RepoPathBuf, Link)>::new();
             for (path, link) in work {
                 let (children, hgid) = match link.as_ref() {
-                    Leaf(file_metadata) => {
-                        self.result_send
-                            .send(Ok((path, FsNodeMetadata::File(*file_metadata))))?;
+                    Leaf(_) => {
+                        // Publishing file results is handled below before publishing work.
                         continue;
                     }
                     Ephemeral(children) => (children, None),
@@ -142,6 +141,12 @@ impl BfsWorker {
                     child_path.push(component.as_path_component());
                     match link.matches(&self.matcher, &child_path) {
                         Ok(true) => {
+                            if let Leaf(file_metadata) = link.as_ref() {
+                                self.result_send
+                                    .send(Ok((child_path, FsNodeMetadata::File(*file_metadata))))?;
+                                continue;
+                            }
+
                             to_send.push((child_path, link.thread_copy()));
                             if to_send.len() >= Self::BATCH_SIZE {
                                 self.publish_work(mem::take(&mut to_send))?;
