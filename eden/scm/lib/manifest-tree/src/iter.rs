@@ -37,8 +37,13 @@ pub fn bfs_iter<M: 'static + Matcher + Sync + Send>(
     roots: &[impl Borrow<Link>],
     matcher: M,
 ) -> Box<dyn Iterator<Item = Result<(RepoPathBuf, FsNodeMetadata)>>> {
+    // Pick a sizeable number since each result datum is not very large and we want to keep pipelines full.
+    // The important thing is it is less than infinity.
+    const RESULT_QUEUE_SIZE: usize = 10_000;
+
     // This channel carries iteration results to the calling code.
-    let (result_send, result_recv) = flume::unbounded::<Result<(RepoPathBuf, FsNodeMetadata)>>();
+    let (result_send, result_recv) =
+        flume::bounded::<Result<(RepoPathBuf, FsNodeMetadata)>>(RESULT_QUEUE_SIZE);
 
     // This channel carries BFS work to the workers threads.
     let (work_send, work_recv) = flume::unbounded::<BfsWork>();
