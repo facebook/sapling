@@ -45,9 +45,9 @@ Make sure we batch tree fetches well:
   TRACE tree_fetches: attrs=["content"] keys=["a/b@693cd354", "a/b@99574908", "a/b@d48eda77", "a/b@ee58f75d"]
   TRACE tree_fetches: attrs=["content"] keys=["a/b/c1@0c8dfc95", "a/b/c1@82bbf75d", "a/b/c2@0c8dfc95", "a/b/c2@1570ca89", "a/b/c2@e98395d2", "a/b/c3@cefe4a92"]
   TRACE file_fetches: attrs=["history"] length=Some(1) keys=["a/b/c1/file"]
-  TRACE tree_fetches: attrs=["content"] keys=["@b43060e0"]
-  TRACE tree_fetches: attrs=["content"] keys=["a@b6b00943"]
-  TRACE tree_fetches: attrs=["content"] keys=["a/b@98da63d7"]
+  TRACE tree_fetches: direct_content id=b43060e0b06d3379effd12eee228641c65ddbf88
+  TRACE tree_fetches: direct_content id=b6b0094313a66af0cdddaf4348b9335ff4fa443e
+  TRACE tree_fetches: direct_content id=98da63d7a232bc8b80c3d05a78679b7fc3b6ac0d
   TRACE file_fetches: attrs=["history"] length=Some(1) keys=["a/b/c2/file"]
 
 Make sure we batch fetch content for files needing merge:

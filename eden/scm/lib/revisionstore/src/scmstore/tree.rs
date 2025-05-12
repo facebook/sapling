@@ -169,6 +169,8 @@ impl TreeStore {
     pub(crate) fn get_local_content_direct(&self, id: &HgId) -> Result<Option<Blob>> {
         let m = &TREE_STORE_FETCH_METRICS;
 
+        tracing::trace!(target: "tree_fetches", %id, "direct_content");
+
         if let Ok(Some(blob)) = self.get_local_content_cas_cache(id) {
             return Ok(Some(blob));
         }
@@ -921,10 +923,22 @@ impl storemodel::KeyStore for TreeStore {
         self.get_local_content_direct(&node)
     }
 
-    fn get_content(&self, fctx: FetchContext, path: &RepoPath, node: Node) -> Result<Blob> {
+    fn get_content(&self, mut fctx: FetchContext, path: &RepoPath, node: Node) -> Result<Blob> {
         if node.is_null() {
             return Ok(Blob::Bytes(Default::default()));
         }
+
+        // This path is hot for code paths such as manifest-tree iter/diff. They tend to do big prefetches and then do single fetches.
+        // Optimize the single fetches by optimistically checking local caches directly (which skips the overhead of fetch_batch).
+        if fctx.mode().contains(FetchMode::LOCAL) {
+            if let Some(blob) = self.get_local_content(path, node)? {
+                return Ok(blob);
+            }
+
+            // Don't need to check local anymore, so remove from fetch mode.
+            fctx = FetchContext::new_with_cause(*fctx.mode() - FetchMode::LOCAL, *fctx.cause());
+        }
+
         let key = Key::new(path.to_owned(), node);
         match self
             .fetch_batch(fctx, std::iter::once(key.clone()), TreeAttributes::CONTENT)
