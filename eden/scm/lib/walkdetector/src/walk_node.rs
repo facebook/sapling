@@ -144,6 +144,9 @@ impl WalkNode {
         // If we completely overlap with the walk to be inserted, skip it. This shouldn't
         // happen, but I want to guarantee there are no overlapping walks.
         if self.contains(walk_type, walk_root, walk.depth) {
+            if let Some(existing) = self.get_walk_for_type(walk_type) {
+                existing.absorb_counters(&walk);
+            }
             return self;
         }
 
@@ -165,7 +168,7 @@ impl WalkNode {
                 self.clear_advanced_children(walk_type);
 
                 // This can have a side effect of adding to self.advanced_children.
-                self.remove_contained(walk_type, walk.depth, threshold);
+                self.remove_contained(walk_type, &walk, threshold);
 
                 if self.advanced_children_len(walk_type) >= threshold {
                     walk.depth += 1;
@@ -217,25 +220,35 @@ impl WalkNode {
         }
     }
 
-    fn set_walk_for_type(&mut self, walk_type: WalkType, walk: Option<Walk>) {
+    /// Set walk of `walk_type` to new_walk. Returns old walk, if any.
+    fn set_walk_for_type(&mut self, walk_type: WalkType, new_walk: Option<Walk>) -> Option<Walk> {
         // File walk implies directory walk, so clear out contained directory walk.
-        match (walk_type, &walk, &self.dir_walk) {
+        match (walk_type, &new_walk, &self.dir_walk) {
             (
                 WalkType::File,
-                Some(Walk { depth, .. }),
-                Some(Walk {
-                    depth: dir_depth, ..
-                }),
+                Some(new_walk @ Walk { depth, .. }),
+                Some(
+                    dir_walk @ Walk {
+                        depth: dir_depth, ..
+                    },
+                ),
             ) if depth >= dir_depth => {
+                new_walk.absorb_counters(dir_walk);
                 self.dir_walk = None;
             }
             _ => {}
         }
 
-        match walk_type {
-            WalkType::File => self.file_walk = walk,
-            WalkType::Directory => self.dir_walk = walk,
+        let old_walk = match walk_type {
+            WalkType::File => &mut self.file_walk,
+            WalkType::Directory => &mut self.dir_walk,
+        };
+
+        if let (Some(old), Some(new)) = (&old_walk, &new_walk) {
+            new.absorb_counters(old);
         }
+
+        std::mem::replace(old_walk, new_walk)
     }
 
     pub(crate) fn insert_advanced_child(
@@ -270,9 +283,10 @@ impl WalkNode {
     }
 
     /// Recursively remove all walks contained within a walk of depth `depth`.
-    fn remove_contained(&mut self, walk_type: WalkType, depth: usize, threshold: usize) {
+    fn remove_contained(&mut self, walk_type: WalkType, new_walk: &Walk, threshold: usize) {
         // Returns whether a walk exists at depth+1.
         fn inner(
+            new_walk: &Walk,
             node: &mut WalkNode,
             walk_type: WalkType,
             depth: usize,
@@ -289,12 +303,12 @@ impl WalkNode {
                     .is_some_and(|w| w.depth >= depth)
                 {
                     child_advanced = true;
-                } else {
-                    child.set_walk_for_type(walk_type, None);
+                } else if let Some(old_walk) = child.set_walk_for_type(walk_type, None) {
+                    new_walk.absorb_counters(&old_walk);
                 }
 
                 if depth > 0 {
-                    if inner(child, walk_type, depth - 1, false, threshold) {
+                    if inner(new_walk, child, walk_type, depth - 1, false, threshold) {
                         child_advanced = true;
                     }
                 }
@@ -308,7 +322,7 @@ impl WalkNode {
 
                 any_child_advanced = any_child_advanced || child_advanced;
 
-                child.file_walk.is_some() || child.dir_walk.is_some()
+                child.has_walk()
                     || !child.children.is_empty()
                     // Keep node around if it has total file/dir hints that are likely to be useful.
                     || interesting_metadata(threshold, child.total_files, child.total_dirs)
@@ -321,7 +335,7 @@ impl WalkNode {
             any_child_advanced
         }
 
-        inner(self, walk_type, depth, true, threshold);
+        inner(new_walk, self, walk_type, new_walk.depth, true, threshold);
     }
 
     /// Reports whether self has a walk and the walk fully contains a descendant walk

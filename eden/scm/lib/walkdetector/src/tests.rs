@@ -638,3 +638,37 @@ fn test_touched() {
     assert!(detector.file_walks().is_empty());
     assert!(detector.dir_walks().is_empty());
 }
+
+#[test]
+fn test_counters() {
+    let detector = Detector::new();
+    detector.set_min_dir_walk_threshold(TEST_MIN_DIR_WALK_THRESHOLD);
+
+    let get_counters = |p: RepoPathBuf, wt: WalkType| {
+        detector
+            .inner
+            .lock()
+            .node
+            .get_node(&p)
+            .and_then(|n| n.get_walk_for_type(wt))
+            .map(|w| w.counters())
+            .unwrap()
+    };
+
+    // Include initial counts when we first create the walk.
+    detector.dir_loaded(p("dir1/dir1_1"), 0, 0);
+    detector.dir_loaded(p("dir1/dir1_2"), 0, 0);
+    detector.dir_loaded(p("dir1/dir1_2"), 0, 0);
+    detector.dir_read(p("dir1/dir1_2"));
+    assert_eq!(get_counters(p("dir1"), WalkType::Directory), (0, 0, 3, 1));
+
+    // Propagate counts when we convert to file walk.
+    detector.file_loaded(p("dir1/a"));
+    detector.file_loaded(p("dir1/b"));
+    assert_eq!(get_counters(p("dir1"), WalkType::File), (2, 0, 3, 1));
+
+    // Propagate when combining walks.
+    detector.file_loaded(p("dir2/a"));
+    detector.file_loaded(p("dir2/b"));
+    assert_eq!(get_counters(p(""), WalkType::File), (4, 0, 3, 1));
+}

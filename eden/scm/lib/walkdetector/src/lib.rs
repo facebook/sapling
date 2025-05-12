@@ -66,6 +66,37 @@ impl Walk {
             ..Default::default()
         }
     }
+
+    fn for_type(t: WalkType, depth: usize, initial_loads: u64) -> Self {
+        let w = Self::new(depth);
+        let counter = match t {
+            WalkType::Directory => &w.dir_loads,
+            WalkType::File => &w.file_loads,
+        };
+        counter.fetch_add(initial_loads, Ordering::Relaxed);
+        w
+    }
+
+    fn absorb_counters(&self, other: &Self) {
+        self.file_loads
+            .fetch_add(other.file_loads.load(Ordering::Relaxed), Ordering::Relaxed);
+        self.file_reads
+            .fetch_add(other.file_reads.load(Ordering::Relaxed), Ordering::Relaxed);
+        self.dir_loads
+            .fetch_add(other.dir_loads.load(Ordering::Relaxed), Ordering::Relaxed);
+        self.dir_reads
+            .fetch_add(other.dir_reads.load(Ordering::Relaxed), Ordering::Relaxed);
+    }
+
+    #[cfg(test)]
+    fn counters(&self) -> (u64, u64, u64, u64) {
+        (
+            self.file_loads.load(Ordering::Relaxed),
+            self.file_reads.load(Ordering::Relaxed),
+            self.dir_loads.load(Ordering::Relaxed),
+            self.dir_reads.load(Ordering::Relaxed),
+        )
+    }
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -168,8 +199,14 @@ impl Detector {
         my_dir.seen_files.insert(base_name.to_owned());
 
         if my_dir.is_walked(WalkType::File, dir_threshold) {
+            let file_count = my_dir.seen_files.len();
             my_dir.seen_files.clear();
-            inner.insert_walk(time, WalkType::File, dir_path, 0);
+            inner.insert_walk(
+                time,
+                WalkType::File,
+                Walk::for_type(WalkType::File, 0, file_count as u64),
+                dir_path,
+            );
             walk_changed = true;
         }
 
@@ -240,8 +277,15 @@ impl Detector {
         my_dir.seen_dirs.insert(base_name.to_owned());
 
         if my_dir.is_walked(WalkType::Directory, dir_threshold) {
-            my_dir.seen_files.clear();
-            inner.insert_walk(time, WalkType::Directory, dir_path, 0);
+            let dir_count = my_dir.seen_dirs.len();
+            my_dir.seen_dirs.clear();
+            inner.insert_walk(
+                time,
+                WalkType::Directory,
+                Walk::for_type(WalkType::Directory, 0, dir_count as u64),
+                dir_path,
+            );
+
             walk_changed = true;
         }
 
@@ -300,22 +344,13 @@ fn interesting_metadata(
 impl Inner {
     /// Insert a new Walk rooted at `dir`.
     #[tracing::instrument(level = "debug", skip(self, time))]
-    fn insert_walk(
-        &mut self,
-        time: Instant,
-        walk_type: WalkType,
-        dir: &RepoPath,
-        walk_depth: usize,
-    ) {
+    fn insert_walk(&mut self, time: Instant, walk_type: WalkType, walk: Walk, dir: &RepoPath) {
         // TODO: consider moving "should merge" logic into `WalkNode::insert_walk` to do
         // more work in a single traversal.
 
-        let walk_node = self.node.insert_walk(
-            walk_type,
-            dir,
-            Walk::new(walk_depth),
-            self.min_dir_walk_threshold,
-        );
+        let walk_node = self
+            .node
+            .insert_walk(walk_type, dir, walk, self.min_dir_walk_threshold);
         walk_node.last_access = Some(time);
 
         // Check if we should immediately promote this walk to parent directory. This is
@@ -336,7 +371,7 @@ impl Inner {
 
         // Check if we have a containing walk whose depth boundary should be increased.
         if let Some((ancestor_dir, new_depth)) = self.should_advance_ancestor_walk(walk_type, dir) {
-            self.insert_walk(time, walk_type, ancestor_dir, new_depth);
+            self.insert_walk(time, walk_type, Walk::new(new_depth), ancestor_dir);
         }
     }
 
@@ -360,7 +395,7 @@ impl Inner {
             1,
         )?;
 
-        self.insert_walk(time, walk_type, parent_dir, walk_depth);
+        self.insert_walk(time, walk_type, Walk::new(walk_depth), parent_dir);
 
         Some(())
     }
@@ -396,7 +431,7 @@ impl Inner {
             2,
         )?;
 
-        self.insert_walk(time, walk_type, grandparent_dir, walk_depth);
+        self.insert_walk(time, walk_type, Walk::new(walk_depth), grandparent_dir);
 
         Some(())
     }
