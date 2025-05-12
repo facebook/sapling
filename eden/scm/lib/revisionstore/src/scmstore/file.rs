@@ -432,6 +432,10 @@ impl FileStore {
         };
 
         // Only kick off a thread if there's a substantial amount of work.
+        //
+        // NB: callers such as backingstore::prefetch assume asynchronous behavior when fetching
+        // more than 1k keys. If you change how this works, consider callers' expectations
+        // carefully.
         if keys_len > 1000 {
             let active_bar = Registry::main().get_active_progress_bar();
             std::thread::spawn(move || {
