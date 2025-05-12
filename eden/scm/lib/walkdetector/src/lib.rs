@@ -165,6 +165,15 @@ impl Detector {
         walk_changed
     }
 
+    /// Observe a "soft" file (content) access of `path`.
+    /// This will not be tracked as a new walk, but will reset TTL of an existing walk.
+    /// Returns whether an active walk changed (due to GC).
+    pub fn file_touched(&self, path: impl AsRef<RepoPath>) -> bool {
+        let path = path.as_ref();
+        tracing::trace!(%path, "file_touched");
+        self.touched(path, WalkType::File)
+    }
+
     /// Observe a directory read. `num_files` and `num_dirs` report the number of file and
     /// directory children of `path`, respectively.
     /// Returns whether an active walk changed (either created or removed).
@@ -217,6 +226,35 @@ impl Detector {
             my_dir.seen_files.clear();
             inner.insert_walk(time, WalkType::Directory, dir_path, 0);
             walk_changed = true;
+        }
+
+        walk_changed
+    }
+
+    /// Observe a "soft" directory access of `path`.
+    /// This will not be tracked as a new walk, but will reset TTL of an existing walk.
+    /// Returns whether an active walk changed (due to GC).
+    pub fn dir_touched(&self, path: impl AsRef<RepoPath>) -> bool {
+        let path = path.as_ref();
+        tracing::trace!(%path, "dir_touched");
+        self.touched(path, WalkType::Directory)
+    }
+
+    fn touched(&self, path: &RepoPath, wt: WalkType) -> bool {
+        let Some(dir) = path.parent() else {
+            return false;
+        };
+
+        let mut inner = self.inner.lock();
+
+        let time = inner.now();
+
+        // We need to run GC because we don't want to bump last_access on a node that should be collected.
+        let walk_changed = inner.maybe_gc(time);
+
+        // Bump last_access, but don't do anything else.
+        if let Some((walk_node, _)) = inner.node.get_containing_node(wt, dir) {
+            walk_node.last_access = Some(time);
         }
 
         walk_changed

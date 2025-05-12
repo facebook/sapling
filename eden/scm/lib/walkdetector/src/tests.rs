@@ -605,3 +605,44 @@ fn test_walk_changed() {
     // GC removes walk
     assert!(detector.file_read(p("dir2/a")));
 }
+
+#[test]
+fn test_touched() {
+    let detector = Detector::new();
+    detector.set_min_dir_walk_threshold(TEST_MIN_DIR_WALK_THRESHOLD);
+    detector.set_gc_interval(Duration::from_secs(1));
+    detector.set_gc_timeout(Duration::from_secs(2));
+
+    let mut epoch = Instant::now();
+    detector.set_now(epoch);
+
+    detector.file_read(p("dir1/a"));
+    detector.file_read(p("dir1/b"));
+    assert_eq!(detector.file_walks().len(), 1);
+
+    detector.dir_read(p("dir2/a"), 0, 0);
+    detector.dir_read(p("dir2/b"), 0, 0);
+    assert_eq!(detector.dir_walks().len(), 1);
+
+    for _ in 0..10 {
+        epoch += Duration::from_secs(1);
+        detector.set_now(epoch);
+
+        assert!(!detector.file_touched(p("dir1/c")));
+        assert!(!detector.dir_touched(p("dir2/c")));
+    }
+
+    detector.file_read(p("something/else"));
+    detector.dir_read(p("something/else"), 0, 0);
+
+    // Walks still around - not GC'd.
+    assert_eq!(detector.file_walks().len(), 1);
+    assert_eq!(detector.dir_walks().len(), 1);
+
+    // Test that the touched methods still run GC themselves.
+    epoch += Duration::from_secs(5);
+    detector.set_now(epoch);
+    assert!(detector.file_touched(p("dir1/c")));
+    assert!(detector.file_walks().is_empty());
+    assert!(detector.dir_walks().is_empty());
+}
