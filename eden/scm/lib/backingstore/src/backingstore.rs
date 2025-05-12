@@ -189,6 +189,18 @@ impl BackingStore {
         let repo = Arc::new(repo);
         let walk_detector = Arc::new(walkdetector::Detector::new());
 
+        if let Some(threshold) = config.get_opt("backingstore", "walk-threshold")? {
+            walk_detector.set_min_dir_walk_threshold(threshold);
+        }
+
+        if let Some(threshold) = config.get_opt("backingstore", "walk-gc-interval")? {
+            walk_detector.set_gc_interval(threshold);
+        }
+
+        if let Some(timeout) = config.get_opt("backingstore", "walk-gc-timeout")? {
+            walk_detector.set_gc_timeout(timeout);
+        }
+
         let prefetch_send = if walk_mode == WalkMode::Prefetch {
             prefetch_manager(
                 repo.tree_resolver()?,
