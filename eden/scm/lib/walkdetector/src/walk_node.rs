@@ -162,14 +162,16 @@ impl WalkNode {
                 }
             }
             None => {
-                self.set_walk_for_type(walk_type, Some(walk));
                 self.clear_advanced_children(walk_type);
+
+                // This can have a side effect of adding to self.advanced_children.
                 self.remove_contained(walk_type, walk.depth, threshold);
 
                 if self.advanced_children_len(walk_type) >= threshold {
                     walk.depth += 1;
                     self.insert_walk(walk_type, walk_root, walk, threshold)
                 } else {
+                    self.set_walk_for_type(walk_type, Some(walk));
                     self
                 }
             }
@@ -177,15 +179,15 @@ impl WalkNode {
     }
 
     /// List all active walks.
-    pub(crate) fn list_walks(&self, walk_type: WalkType) -> Vec<(RepoPathBuf, Walk)> {
+    pub(crate) fn list_walks(&self, walk_type: WalkType) -> Vec<(RepoPathBuf, usize)> {
         fn inner(
             node: &WalkNode,
             walk_type: WalkType,
             path: RepoPathBuf,
-            list: &mut Vec<(RepoPathBuf, Walk)>,
+            list: &mut Vec<(RepoPathBuf, usize)>,
         ) {
             if let Some(walk) = node.get_walk_for_type(walk_type) {
-                list.push((path.clone(), walk.clone()));
+                list.push((path.clone(), walk.depth));
             }
 
             for (name, child) in node.children.iter() {
@@ -216,19 +218,23 @@ impl WalkNode {
     }
 
     fn set_walk_for_type(&mut self, walk_type: WalkType, walk: Option<Walk>) {
-        match walk_type {
-            WalkType::File => self.file_walk = walk,
-            WalkType::Directory => self.dir_walk = walk,
-        }
-
         // File walk implies directory walk, so clear out contained directory walk.
-        match (walk_type, walk, self.dir_walk) {
-            (WalkType::File, Some(Walk { depth }), Some(Walk { depth: dir_depth }))
-                if depth >= dir_depth =>
-            {
+        match (walk_type, &walk, &self.dir_walk) {
+            (
+                WalkType::File,
+                Some(Walk { depth, .. }),
+                Some(Walk {
+                    depth: dir_depth, ..
+                }),
+            ) if depth >= dir_depth => {
                 self.dir_walk = None;
             }
             _ => {}
+        }
+
+        match walk_type {
+            WalkType::File => self.file_walk = walk,
+            WalkType::Directory => self.dir_walk = walk,
         }
     }
 

@@ -9,6 +9,8 @@
 mod tests;
 mod walk_node;
 
+use std::sync::atomic::AtomicU64;
+use std::sync::atomic::Ordering;
 use std::time::Duration;
 use std::time::Instant;
 
@@ -48,9 +50,22 @@ impl Default for Inner {
     }
 }
 
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+#[derive(Default, Debug)]
 pub struct Walk {
     depth: usize,
+    file_loads: AtomicU64,
+    file_reads: AtomicU64,
+    dir_loads: AtomicU64,
+    dir_reads: AtomicU64,
+}
+
+impl Walk {
+    fn new(depth: usize) -> Self {
+        Self {
+            depth,
+            ..Default::default()
+        }
+    }
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -108,12 +123,7 @@ impl Detector {
         let time = inner.now();
         inner.maybe_gc(time);
 
-        let mut walks = inner
-            .node
-            .list_walks(walk_type)
-            .into_iter()
-            .map(|(root, walk)| (root, walk.depth))
-            .collect::<Vec<_>>();
+        let mut walks = inner.node.list_walks(walk_type);
 
         walks.sort_by(|a, b| a.0.as_str().cmp(b.0.as_str()));
 
@@ -147,8 +157,9 @@ impl Detector {
 
         owner.last_access = Some(time);
 
-        if owner.get_dominating_walk(WalkType::File).is_some() {
+        if let Some(walk) = owner.get_dominating_walk(WalkType::File) {
             tracing::trace!(walk_root=%dir_path.strip_suffix(suffix, true).unwrap_or_default(), dir=%dir_path, "file's dir already in walk");
+            walk.file_loads.fetch_add(1, Ordering::Relaxed);
             return walk_changed;
         }
 
@@ -218,8 +229,9 @@ impl Detector {
 
         owner.last_access = Some(time);
 
-        if owner.get_dominating_walk(WalkType::Directory).is_some() {
+        if let Some(walk) = owner.get_dominating_walk(WalkType::Directory) {
             tracing::trace!(walk_root=%dir_path.strip_suffix(suffix, true).unwrap_or_default(), dir=%dir_path, "dir is already covered by an existing walk");
+            walk.dir_loads.fetch_add(1, Ordering::Relaxed);
             return walk_changed;
         }
 
@@ -257,9 +269,19 @@ impl Detector {
         // We need to run GC because we don't want to bump last_access on a node that should be collected.
         let walk_changed = inner.maybe_gc(time);
 
-        // Bump last_access, but don't do anything else.
+        // Bump last_access, but don't insert any new nodes/walks.
         if let Some((walk_node, _)) = inner.node.get_owning_node(wt, dir) {
             walk_node.last_access = Some(time);
+            if let Some(walk) = walk_node.get_dominating_walk(wt) {
+                match wt {
+                    WalkType::File => {
+                        walk.file_reads.fetch_add(1, Ordering::Relaxed);
+                    }
+                    WalkType::Directory => {
+                        walk.dir_reads.fetch_add(1, Ordering::Relaxed);
+                    }
+                }
+            }
         }
 
         walk_changed
@@ -291,7 +313,7 @@ impl Inner {
         let walk_node = self.node.insert_walk(
             walk_type,
             dir,
-            Walk { depth: walk_depth },
+            Walk::new(walk_depth),
             self.min_dir_walk_threshold,
         );
         walk_node.last_access = Some(time);
