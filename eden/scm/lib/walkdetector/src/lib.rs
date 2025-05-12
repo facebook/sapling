@@ -58,6 +58,7 @@ pub struct Walk {
     depth: usize,
     file_loads: AtomicU64,
     file_reads: AtomicU64,
+    file_preloads: AtomicU64,
     dir_loads: AtomicU64,
     dir_reads: AtomicU64,
     logged_start: AtomicBool,
@@ -98,6 +99,10 @@ impl Walk {
             .fetch_add(other.file_reads.load(Ordering::Relaxed), Ordering::AcqRel);
         self.dir_reads
             .fetch_add(other.dir_reads.load(Ordering::Relaxed), Ordering::AcqRel);
+        self.file_preloads.fetch_add(
+            other.file_preloads.load(Ordering::Relaxed),
+            Ordering::AcqRel,
+        );
     }
 
     fn inc_file_load(&self, root: &RepoPath, val: u64) {
@@ -133,6 +138,7 @@ impl Walk {
             %root,
             file_loads = self.file_loads.load(Ordering::Relaxed),
             file_reads = self.file_reads.load(Ordering::Relaxed),
+            file_preloads = self.file_preloads.load(Ordering::Relaxed),
             dir_loads = self.dir_loads.load(Ordering::Relaxed),
             dir_reads = self.dir_reads.load(Ordering::Relaxed),
             "big walk started",
@@ -142,6 +148,7 @@ impl Walk {
     fn log_end(&self, root: &RepoPath) {
         if self.file_loads.load(Ordering::Relaxed) >= Self::BIG_WALK_THRESHOLD
             || self.file_reads.load(Ordering::Relaxed) >= Self::BIG_WALK_THRESHOLD
+            || self.file_preloads.load(Ordering::Relaxed) >= Self::BIG_WALK_THRESHOLD
             || self.dir_loads.load(Ordering::Relaxed) >= Self::BIG_WALK_THRESHOLD
             || self.dir_reads.load(Ordering::Relaxed) >= Self::BIG_WALK_THRESHOLD
         {
@@ -149,6 +156,7 @@ impl Walk {
                 %root,
                 file_loads = self.file_loads.load(Ordering::Relaxed),
                 file_reads = self.file_reads.load(Ordering::Relaxed),
+                file_preloads = self.file_preloads.load(Ordering::Relaxed),
                 dir_loads = self.dir_loads.load(Ordering::Relaxed),
                 dir_reads = self.dir_reads.load(Ordering::Relaxed),
                 "big walk ended",
@@ -157,10 +165,11 @@ impl Walk {
     }
 
     #[cfg(test)]
-    fn counters(&self) -> (u64, u64, u64, u64) {
+    fn counters(&self) -> (u64, u64, u64, u64, u64) {
         (
             self.file_loads.load(Ordering::Relaxed),
             self.file_reads.load(Ordering::Relaxed),
+            self.file_preloads.load(Ordering::Relaxed),
             self.dir_loads.load(Ordering::Relaxed),
             self.dir_reads.load(Ordering::Relaxed),
         )
@@ -379,6 +388,23 @@ impl Detector {
         let path = path.as_ref();
         tracing::trace!(%path, "dir_read");
         self.mark_read(path, WalkType::Directory, false).is_some()
+    }
+
+    /// Record that a certain number of files have been preloaded. This has no functional purpose -
+    /// it is purely to measure the efficiency of this library when paired with a prefetch
+    /// mechanism.
+    pub fn files_preloaded(&self, walk_root: impl AsRef<RepoPath>, preload_count: u64) {
+        let walk_root = walk_root.as_ref();
+        tracing::trace!(%walk_root, preload_count, "files_preloaded");
+
+        let inner = self.inner.read();
+
+        if let Some(node) = inner.node.get_node(walk_root) {
+            if let Some(walk) = node.get_walk_for_type(WalkType::File) {
+                walk.file_preloads
+                    .fetch_add(preload_count, Ordering::Relaxed);
+            }
+        }
     }
 
     /// "touch" any walk of type wt that covers `path` to update metrics and keep the walk alive.
