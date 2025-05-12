@@ -379,7 +379,6 @@ impl WalkNode {
 
     /// Delete nodes not accessed within timeout.
     /// Returns (nodes_deleted, nodes_remaining, walks_deleted).
-    #[tracing::instrument(level = "debug", skip(self))]
     pub(crate) fn gc(&mut self, timeout: Duration, now: Instant) -> (usize, usize, usize) {
         // Return (nodes_deleted, nodes_remaining, walks_deleted, keep_me)
         fn inner(
@@ -400,7 +399,7 @@ impl WalkNode {
                 walks_removed += w;
 
                 if !keep {
-                    tracing::debug!(%name, "GCing node");
+                    tracing::trace!(%name, has_walk=child.has_walk(), "GCing node");
                 }
 
                 keep
@@ -411,13 +410,14 @@ impl WalkNode {
                 .is_none_or(|accessed| now - accessed >= timeout);
 
             let keep_me = !expired || !node.children.is_empty();
+            let has_walk = node.has_walk();
 
-            if expired && (node.file_walk.is_some() || node.dir_walk.is_some()) {
+            if expired && has_walk {
                 walks_removed += 1;
             }
 
             if expired && keep_me {
-                tracing::debug!(%name, "GCing node with children");
+                tracing::trace!(%name, has_walk, "GCing node with children");
                 node.clear_except_children();
             }
 
@@ -436,7 +436,7 @@ impl WalkNode {
             deleted -= 1;
 
             // At top level we have no parent to remove us, so just unset our fields.
-            tracing::debug!("GCing root node");
+            tracing::trace!("GCing root node");
 
             if self.file_walk.is_some() || self.dir_walk.is_some() {
                 walks_deleted += 1;
@@ -458,5 +458,9 @@ impl WalkNode {
         self.total_files.take();
         self.total_dirs.take();
         self.seen_files.clear();
+    }
+
+    fn has_walk(&self) -> bool {
+        self.file_walk.is_some() || self.dir_walk.is_some()
     }
 }
