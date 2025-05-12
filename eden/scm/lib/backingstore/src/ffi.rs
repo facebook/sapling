@@ -24,6 +24,8 @@ use types::fetch_cause::FetchCause;
 use types::fetch_mode::FetchMode;
 
 use crate::backingstore::BackingStore;
+use crate::ffi::ffi::Tree;
+use crate::ffi::ffi::TreeEntryType;
 
 #[cxx::bridge(namespace = sapling)]
 pub(crate) mod ffi {
@@ -93,6 +95,9 @@ pub(crate) mod ffi {
     pub struct Request {
         node: *const u8,
         cause: FetchCause,
+
+        path_data: *const c_char,
+        path_len: usize,
         // TODO: mode: FetchMode
         // TODO: cri: ClientRequestInfo
     }
@@ -336,9 +341,36 @@ pub fn sapling_backingstore_get_tree_batch(
                 result.and_then(|opt| opt.ok_or_else(|| Error::msg("no tree found")));
             let resolver = resolver.clone();
             let (error, tree) = match result.and_then(|list| list.try_into()) {
-                Ok(tree) => (String::default(), SharedPtr::new(tree)),
+                Ok(tree) => (String::default(), SharedPtr::<Tree>::new(tree)),
                 Err(error) => (format!("{:?}", error), SharedPtr::null()),
             };
+
+            if !requests[idx].path_data.is_null() {
+                if let Some(tree) = tree.as_ref() {
+                    let path_bytes: &[u8] = unsafe {
+                        std::slice::from_raw_parts(
+                            requests[idx].path_data as *const u8,
+                            requests[idx].path_len,
+                        )
+                    };
+                    match RepoPath::from_utf8(path_bytes) {
+                        Ok(path) => {
+                            let (mut num_files, mut num_dirs) = (0, 0);
+                            for entry in tree.entries.iter() {
+                                match entry.ttype {
+                                    TreeEntryType::Tree => num_dirs += 1,
+                                    _ => num_files += 1,
+                                }
+                            }
+                            store.witness_dir_read(path, num_files, num_dirs);
+                        }
+                        Err(err) => {
+                            tracing::warn!("invalid witnessed dir path {path_bytes:?}: {err:?}");
+                        }
+                    }
+                }
+            }
+
             unsafe { ffi::sapling_backingstore_get_tree_batch_handler(resolver, idx, error, tree) };
         },
     );

@@ -103,6 +103,8 @@ void SaplingNativeBackingStore::getTreeBatch(
     raw_requests.push_back(Request{
         request.node.data(),
         request.cause,
+        request.path.view().data(),
+        request.path.view().size(),
     });
   }
 

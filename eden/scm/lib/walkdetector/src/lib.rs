@@ -234,6 +234,7 @@ fn interesting_metadata(
 
 impl Inner {
     /// Insert a new Walk rooted at `dir`.
+    #[tracing::instrument(level = "debug", skip(self, time))]
     fn insert_walk(
         &mut self,
         time: Instant,
@@ -244,7 +245,6 @@ impl Inner {
         // TODO: consider moving "should merge" logic into `WalkNode::insert_walk` to do
         // more work in a single traversal.
 
-        tracing::debug!(%dir, depth=walk_depth, "inserting walk");
         let walk_node = self.node.insert_walk(
             walk_type,
             dir,

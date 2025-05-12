@@ -364,6 +364,22 @@ impl BackingStore {
         inner.notify_prefetch();
     }
 
+    #[instrument(level = "trace", skip(self))]
+    pub fn witness_dir_read(&self, path: &RepoPath, num_files: usize, num_dirs: usize) {
+        let inner = self.inner.load();
+
+        if inner.walk_mode == WalkMode::Off {
+            return;
+        }
+
+        let walk_changed = inner.walk_detector.dir_read(path, num_files, num_dirs);
+        if !walk_changed {
+            return;
+        }
+
+        inner.notify_prefetch();
+    }
+
     pub fn set_parent_hint(&self, parent_id: &str) {
         tracing::info!(parent_id, "setting parent hint");
 
