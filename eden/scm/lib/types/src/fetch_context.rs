@@ -64,6 +64,14 @@ impl FetchContext {
     pub fn inc_remote(&self, count: u64) {
         self.remote_fetch_count.fetch_add(count, Ordering::Relaxed);
     }
+
+    pub fn local_fetch_count(&self) -> u64 {
+        self.local_fetch_count.load(Ordering::Relaxed)
+    }
+
+    pub fn remote_fetch_count(&self) -> u64 {
+        self.remote_fetch_count.load(Ordering::Relaxed)
+    }
 }
 
 impl Default for FetchContext {

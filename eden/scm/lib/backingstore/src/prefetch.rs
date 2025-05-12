@@ -180,7 +180,13 @@ pub(crate) fn prefetch_manager(
                 // when we drop its handle.
                 prefetches_for_this_root.push((
                     new_walk.1,
-                    prefetch(mf, file_store.clone(), new_walk, depth_offset),
+                    prefetch(
+                        mf,
+                        file_store.clone(),
+                        detector.clone(),
+                        new_walk,
+                        depth_offset,
+                    ),
                 ));
 
                 // Make sure the prefetches stay ordered by depth.
@@ -198,6 +204,7 @@ pub(crate) fn prefetch_manager(
 pub(crate) fn prefetch(
     manifest: impl Manifest + Send + Sync + 'static,
     file_store: Arc<dyn FileStore>,
+    walk_detector: Arc<walkdetector::Detector>,
     // ((walk_root, fetch file contents), depth)
     walk: ((RepoPathBuf, bool), usize),
     depth_offset: Option<usize>,
@@ -245,7 +252,13 @@ pub(crate) fn prefetch(
 
         // Allow multiple concurrent file fetches to stack up.
         const MAX_CONCURRENT_FILE_FETCHES: usize = 5;
-        let mut file_fetches: VecDeque<Box<dyn Iterator<Item = _>>> = VecDeque::new();
+        let mut file_fetches: VecDeque<(FetchContext, Box<dyn Iterator<Item = _>>)> =
+            VecDeque::new();
+
+        let consume_file_fetch = |(fctx, iter): (FetchContext, Box<dyn Iterator<Item = _>>)| {
+            iter.for_each(drop);
+            walk_detector.files_preloaded(&walk.0.0, fctx.remote_fetch_count());
+        };
 
         let mut fetch_batch = |batch: &mut Vec<Key>| {
             if batch.is_empty() {
@@ -259,22 +272,21 @@ pub(crate) fn prefetch(
 
             // If file fetches are full, wait for first one to finish.
             if file_fetches.len() >= MAX_CONCURRENT_FILE_FETCHES {
-                file_fetches.pop_front().unwrap().for_each(drop);
+                consume_file_fetch(file_fetches.pop_front().unwrap());
             }
+
+            // Use IGNORE_RESULT optimization since we don't care about the data.
+            let fctx = FetchContext::new(FetchMode::AllowRemote | FetchMode::IGNORE_RESULT);
 
             // An important implementation detail for us: the scmstore FileStore spawns a thread
             // when you fetch more than 1_000 keys (i.e. this method will operate asynchronously if
             // we fetch more than 1k files). If that assumption changes, we will need to change what
             // we do here.
-            let fetch_res = file_store.get_content_iter(
-                // Use IGNORE_RESULT optimization since we don't care about the data.
-                FetchContext::new(FetchMode::AllowRemote | FetchMode::IGNORE_RESULT),
-                mem::take(batch),
-            );
+            let fetch_res = file_store.get_content_iter(fctx.clone(), mem::take(batch));
 
             match fetch_res {
                 Ok(iter) => {
-                    file_fetches.push_back(iter);
+                    file_fetches.push_back((fctx, iter));
                 }
                 Err(err) => {
                     tracing::error!(?err, "error prefetching file content");
@@ -317,7 +329,7 @@ pub(crate) fn prefetch(
                 return;
             }
 
-            fetch.for_each(drop);
+            consume_file_fetch(fetch);
         }
 
         // Make sure this doesn't get dropped early.
@@ -385,10 +397,13 @@ mod test {
             FileMetadata::new(bar_hgid, types::FileType::Regular),
         )?;
 
+        let detector = Arc::new(walkdetector::Detector::new());
+
         // Prefetch for "dir/" at depth=0 (i.e. "dir/*").
         let handle = prefetch(
             mf.clone(),
             file_store.clone(),
+            detector.clone(),
             (("dir".to_string().try_into()?, true), 0),
             None,
         );
@@ -408,6 +423,7 @@ mod test {
         let handle = prefetch(
             mf,
             file_store,
+            detector,
             (("dir".to_string().try_into()?, true), 1),
             Some(1),
         );
