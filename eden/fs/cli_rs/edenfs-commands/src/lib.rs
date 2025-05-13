@@ -72,7 +72,6 @@ fn init_edenfs_instance(config_dir: PathBuf, etc_eden_dir: PathBuf, home_dir: Op
             config_dir,
             etc_eden_dir,
             home_dir,
-            None,
         ))
         .expect("should be able to initialize EdenfsInstance")
 }

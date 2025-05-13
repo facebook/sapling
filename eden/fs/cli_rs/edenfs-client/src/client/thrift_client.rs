@@ -61,12 +61,7 @@ pub struct ThriftClient {
 
 #[async_trait]
 impl Client for ThriftClient {
-    fn new(
-        fb: FacebookInit,
-        use_case: Arc<UseCase>,
-        socket_file: PathBuf,
-        semaphore: Option<Semaphore>,
-    ) -> Self {
+    fn new(fb: FacebookInit, use_case: Arc<UseCase>, socket_file: PathBuf) -> Self {
         let connector = StreamingEdenFsConnector::new(fb, socket_file.clone());
         let connection = Mutex::new(EdenFsConnection {
             epoch: 0,
@@ -78,7 +73,7 @@ impl Client for ThriftClient {
             connector,
             connection,
             stats_handler: Box::new(NoopEdenFsClientStatsHandler {}),
-            semaphore: semaphore.unwrap_or(Semaphore::new(use_case.max_outstanding_requests())),
+            semaphore: Semaphore::new(use_case.max_outstanding_requests()),
         }
     }
 

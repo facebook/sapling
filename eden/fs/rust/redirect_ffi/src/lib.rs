@@ -96,7 +96,6 @@ pub fn list_redirections(
             config_dir.into(),
             etc_eden_dir.into(),
             None,
-            None,
         );
         let redirs = get_effective_redirs_for_mount(&instance, mount.into())?;
         let redirs_ffi = redirs

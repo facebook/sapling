@@ -919,7 +919,7 @@ mod tests {
     async fn test_get_changes_since(fb: FacebookInit) -> Result<()> {
         // create client and mock_service
         let use_case = Arc::new(UseCase::new(UseCaseId::EdenFsTests));
-        let mut client = EdenFsClient::new(fb, use_case, PathBuf::new(), None);
+        let mut client = EdenFsClient::new(fb, use_case, PathBuf::new());
         let mock_client = &mut *client;
         let mut mock_service = MockEdenFsService::new();
 
@@ -952,7 +952,7 @@ mod tests {
     async fn test_stream_changes_since(fb: FacebookInit) -> Result<()> {
         // create client and mock_service
         let use_case = Arc::new(UseCase::new(UseCaseId::EdenFsTests));
-        let mut client = EdenFsClient::new(fb, use_case, PathBuf::new(), None);
+        let mut client = EdenFsClient::new(fb, use_case, PathBuf::new());
         let mock_client = &mut *client;
         let mut mock_service = MockEdenFsService::new();
 

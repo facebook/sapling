@@ -26,7 +26,6 @@
 //!     get_config_dir(&None, &None).unwrap(),
 //!     get_etc_eden_dir(&None),
 //!     get_home_dir(&None),
-//!     None,
 //! );
 //! ```
 //!
@@ -46,7 +45,6 @@
 //!     get_config_dir(&None, &None).unwrap(),
 //!     get_etc_eden_dir(&None),
 //!     get_home_dir(&None),
-//!     None,
 //! );
 //! match instance.get_config() {
 //!     Ok(config) => {
@@ -75,7 +73,6 @@
 //!     get_config_dir(&None, &None).unwrap(),
 //!     get_etc_eden_dir(&None),
 //!     get_home_dir(&None),
-//!     None,
 //! );
 //! match instance.get_configured_mounts_map() {
 //!     Ok(mounts) => {
@@ -109,7 +106,6 @@ use edenfs_utils::get_executable;
 #[cfg(windows)]
 use edenfs_utils::strip_unc_prefix;
 use fbinit::expect_init;
-use tokio::sync::Semaphore;
 use tracing::Level;
 use tracing::event;
 use util::lock::PathLock;
@@ -177,7 +173,6 @@ impl EdenFsInstance {
     /// * `config_dir` - Path to the EdenFS configuration directory
     /// * `etc_eden_dir` - Path to the system-wide EdenFS configuration directory
     /// * `home_dir` - Optional path to the user's home directory
-    /// * `semaphore` - Optional semaphore to limit concurrent Thrift client requests. Default is 2048.
     ///
     /// # Examples
     ///
@@ -193,7 +188,6 @@ impl EdenFsInstance {
     ///     get_config_dir(&None, &None).unwrap(),
     ///     get_etc_eden_dir(&None),
     ///     get_home_dir(&None),
-    ///     None,
     /// );
     /// ```
     pub fn new(
@@ -201,7 +195,6 @@ impl EdenFsInstance {
         config_dir: PathBuf,
         etc_eden_dir: PathBuf,
         home_dir: Option<PathBuf>,
-        semaphore: Option<Semaphore>,
     ) -> EdenFsInstance {
         let socketfile = config_dir.join("socket");
         let use_case = Arc::new(UseCase::new(use_case_id));
@@ -210,12 +203,7 @@ impl EdenFsInstance {
             config_dir,
             etc_eden_dir,
             home_dir,
-            client: Arc::new(EdenFsClient::new(
-                expect_init(),
-                use_case,
-                socketfile,
-                semaphore,
-            )),
+            client: Arc::new(EdenFsClient::new(expect_init(), use_case, socketfile)),
         }
     }
 
@@ -243,7 +231,6 @@ impl EdenFsInstance {
     ///     get_config_dir(&None, &None).unwrap(),
     ///     get_etc_eden_dir(&None),
     ///     get_home_dir(&None),
-    ///     None,
     /// );
     /// match instance.get_config() {
     ///     Ok(config) => {
@@ -283,7 +270,6 @@ impl EdenFsInstance {
     ///     get_config_dir(&None, &None).unwrap(),
     ///     get_etc_eden_dir(&None),
     ///     get_home_dir(&None),
-    ///     None,
     /// );
     /// if let Some(home_dir) = instance.get_user_home_dir() {
     ///     println!("User home directory: {}", home_dir.display());
@@ -342,7 +328,6 @@ impl EdenFsInstance {
     ///     get_config_dir(&None, &None).unwrap(),
     ///     get_etc_eden_dir(&None),
     ///     get_home_dir(&None),
-    ///     None,
     /// );
     ///
     /// // Get socket path without checking if it exists
@@ -447,7 +432,6 @@ impl EdenFsInstance {
     ///     get_config_dir(&None, &None).unwrap(),
     ///     get_etc_eden_dir(&None),
     ///     get_home_dir(&None),
-    ///     None,
     /// );
     /// match instance.status_from_lock() {
     ///     Ok(_) => println!("EdenFS is running"),
@@ -514,7 +498,6 @@ impl EdenFsInstance {
     ///     get_config_dir(&None, &None).unwrap(),
     ///     get_etc_eden_dir(&None),
     ///     get_home_dir(&None),
-    ///     None,
     /// );
     /// match instance.get_configured_mounts_map() {
     ///     Ok(mounts) => {
@@ -567,7 +550,6 @@ impl EdenFsInstance {
     ///     get_config_dir(&None, &None).unwrap(),
     ///     get_etc_eden_dir(&None),
     ///     get_home_dir(&None),
-    ///     None,
     /// );
     /// let clients_dir = instance.clients_dir();
     /// println!("Clients directory: {}", clients_dir.display());
@@ -598,7 +580,6 @@ impl EdenFsInstance {
     ///     get_config_dir(&None, &None).unwrap(),
     ///     get_etc_eden_dir(&None),
     ///     get_home_dir(&None),
-    ///     None,
     /// );
     /// let logs_dir = instance.logs_dir();
     /// println!("Logs directory: {}", logs_dir.display());
@@ -629,7 +610,6 @@ impl EdenFsInstance {
     ///     get_config_dir(&None, &None).unwrap(),
     ///     get_etc_eden_dir(&None),
     ///     get_home_dir(&None),
-    ///     None,
     /// );
     /// let storage_dir = instance.storage_dir();
     /// println!("Storage directory: {}", storage_dir.display());
@@ -668,7 +648,6 @@ impl EdenFsInstance {
     ///     get_config_dir(&None, &None).unwrap(),
     ///     get_etc_eden_dir(&None),
     ///     get_home_dir(&None),
-    ///     None,
     /// );
     /// let path = Path::new("/path/to/checkout");
     /// match instance.client_name(path) {
@@ -722,7 +701,6 @@ impl EdenFsInstance {
     ///     get_config_dir(&None, &None).unwrap(),
     ///     get_etc_eden_dir(&None),
     ///     get_home_dir(&None),
-    ///     None,
     /// );
     /// let client_name = "my_client";
     /// let config_dir = instance.config_directory(client_name);
@@ -766,7 +744,6 @@ impl EdenFsInstance {
     ///     get_config_dir(&None, &None).unwrap(),
     ///     get_etc_eden_dir(&None),
     ///     get_home_dir(&None),
-    ///     None,
     /// );
     /// let mount_point = Path::new("/path/to/mount");
     /// match instance.client_dir_for_mount_point(mount_point) {
@@ -830,7 +807,6 @@ impl EdenFsInstance {
     ///     get_config_dir(&None, &None).unwrap(),
     ///     get_etc_eden_dir(&None),
     ///     get_home_dir(&None),
-    ///     None,
     /// );
     /// let path = Path::new("/path/to/remove");
     /// match instance.remove_path_from_directory_map(path) {

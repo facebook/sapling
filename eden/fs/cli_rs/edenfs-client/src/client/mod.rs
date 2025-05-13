@@ -22,7 +22,6 @@ use edenfs_error::ConnectAndRequestError;
 use edenfs_error::HasErrorHandlingStrategy;
 use edenfs_error::Result;
 use fbinit::FacebookInit;
-use tokio::sync::Semaphore;
 
 use crate::client::connector::Connector;
 use crate::client::connector::StreamingEdenFsConnector;
@@ -70,17 +69,11 @@ pub trait Client: Send + Sync {
     /// * `fb` - Facebook initialization context
     /// * `use_case` - Use case configuration settings
     /// * `socket_file` - Path to the EdenFS socket file
-    /// * `semaphore` - Optional semaphore to limit concurrent requests
     ///
     /// # Returns
     ///
     /// Returns a new `Client` instance.
-    fn new(
-        fb: FacebookInit,
-        use_case: Arc<UseCase>,
-        socket_file: PathBuf,
-        semaphore: Option<Semaphore>,
-    ) -> Self;
+    fn new(fb: FacebookInit, use_case: Arc<UseCase>, socket_file: PathBuf) -> Self;
 
     /// Sets a custom stats handler for the client.
     ///
@@ -167,19 +160,13 @@ impl EdenFsClient {
     ///
     /// * `fb` - Facebook initialization context
     ///
-    /// * `socket_file` - Path to the EdenFS socket file
-    /// * `semaphore` - Optional semaphore to limit concurrent requests
     /// * `use_case_id` - A unique identifier for a use case - used to access configuration settings and attribute usage to a given use case.
+    /// * `socket_file` - Path to the EdenFS socket file
     /// # Returns
     ///
     /// Returns a new `EdenFsClient` instance.
-    pub(crate) fn new(
-        fb: FacebookInit,
-        use_case: Arc<UseCase>,
-        socket_file: PathBuf,
-        semaphore: Option<Semaphore>,
-    ) -> Self {
-        Self(ThriftClient::new(fb, use_case, socket_file, semaphore))
+    pub(crate) fn new(fb: FacebookInit, use_case: Arc<UseCase>, socket_file: PathBuf) -> Self {
+        Self(ThriftClient::new(fb, use_case, socket_file))
     }
 }
 
