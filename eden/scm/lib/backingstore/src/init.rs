@@ -6,6 +6,7 @@
  */
 
 use std::io;
+use std::sync::Arc;
 use std::sync::Once;
 
 use tracing_subscriber::EnvFilter;
@@ -16,6 +17,19 @@ use tracing_subscriber::fmt::format::FmtSpan;
 use tracing_subscriber::layer::SubscriberExt;
 
 static RUST_INIT: Once = Once::new();
+
+macro_rules! maybe_add_scuba_logger {
+    ($var:ident) => {
+        // Tracing subscriber that logs to edenfs_events.
+        #[cfg(feature = "scuba")]
+        let $var = $var.with(edenfs_telemetry::TracingLogger::new(Arc::new(
+            edenfs_telemetry::QueueingScubaLogger::new(
+                edenfs_telemetry::new_scuba_logger(edenfs_telemetry::EDEN_EVENTS_SCUBA),
+                100,
+            ),
+        )));
+    };
+}
 
 /// We use this function to ensure everything we need to initialized as the Rust code may not be
 /// called when EdenFS starts. Right now it only calls `env_logger::init` so we can see logs from
@@ -28,7 +42,19 @@ pub fn backingstore_global_init() {
                 .with_span_events(FmtSpan::ACTIVE)
                 .with_ansi(false)
                 .with_writer(io::stderr);
-            let subscriber = Registry::default().with(env_filter.and_then(env_logger));
+
+            let subscriber = Registry::default().with(env_logger.with_filter(env_filter));
+
+            maybe_add_scuba_logger!(subscriber);
+
+            if let Err(e) = tracing::subscriber::set_global_default(subscriber) {
+                eprintln!("Failed to set rust tracing subscriber: {:?}", e);
+            }
+        } else {
+            let subscriber = Registry::default();
+
+            maybe_add_scuba_logger!(subscriber);
+
             if let Err(e) = tracing::subscriber::set_global_default(subscriber) {
                 eprintln!("Failed to set rust tracing subscriber: {:?}", e);
             }

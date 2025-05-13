@@ -163,6 +163,16 @@ impl BackingStore {
             );
         }
 
+        #[cfg(feature = "scuba")]
+        edenfs_telemetry::tracing_logger::set_logged_targets(
+            config
+                .get_or::<Vec<String>>("backingstore", "logged-tracing-targets", || {
+                    vec!["big_walk".to_string()]
+                })?
+                .into_iter()
+                .collect(),
+        );
+
         // Apply indexed log configs, which can affect edenfs behavior.
         indexedlog::config::configure(&config)?;
 

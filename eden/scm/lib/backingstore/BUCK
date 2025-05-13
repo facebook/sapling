@@ -68,7 +68,7 @@ rust_library(
     ],
     crate_root = "src/lib.rs",
     cxx_bridge = "src/ffi.rs",
-    features = select({
+    features = ["scuba"] + select({
         "DEFAULT": [],
         "fbcode//eden/scm/lib/backingstore:edenfs-include-cas": select({
             "DEFAULT": [],
@@ -101,6 +101,7 @@ rust_library(
         "fbsource//third-party/rust:tracing",
         "fbsource//third-party/rust:tracing-subscriber",
         "//common/rust/folly:iobuf",
+        "//eden/fs/rust/facebook/edenfs-telemetry:edenfs-telemetry",
         "//eden/scm/lib/blob:blob",
         "//eden/scm/lib/config/loader:configloader",
         "//eden/scm/lib/constructors:constructors",
