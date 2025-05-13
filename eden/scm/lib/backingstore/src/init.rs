@@ -6,11 +6,8 @@
  */
 
 use std::io;
-use std::sync::Arc;
 use std::sync::Once;
 
-use parking_lot::Mutex;
-use tracing_collector::TracingData;
 use tracing_subscriber::EnvFilter;
 use tracing_subscriber::Layer;
 use tracing_subscriber::Registry;
@@ -26,20 +23,17 @@ static RUST_INIT: Once = Once::new();
 pub fn backingstore_global_init() {
     RUST_INIT.call_once(|| {
         if let Some((var_name, _)) = identity::debug_env_var("LOG") {
-            let data = Arc::new(Mutex::new(TracingData::new()));
-            let collector = tracing_collector::TracingCollector::new(data);
             let env_filter = EnvFilter::from_env(var_name);
             let env_logger = FmtLayer::new()
                 .with_span_events(FmtSpan::ACTIVE)
                 .with_ansi(false)
                 .with_writer(io::stderr);
-            let subscriber = Registry::default()
-                .with(collector)
-                .with(env_filter.and_then(env_logger));
+            let subscriber = Registry::default().with(env_filter.and_then(env_logger));
             if let Err(e) = tracing::subscriber::set_global_default(subscriber) {
                 eprintln!("Failed to set rust tracing subscriber: {:?}", e);
             }
         }
+
         env_logger::init();
 
         edenapi::Builder::register_customize_build_func(eagerepo::edenapi_from_config);
