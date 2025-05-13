@@ -7,6 +7,7 @@ rust_library(
     srcs = glob(["src/**/*.rs"]),
     deps = [
         "fbsource//third-party/rust:anyhow",
+        "fbsource//third-party/rust:flume",
         "fbsource//third-party/rust:rand",
         "fbsource//third-party/rust:serde",
         "fbsource//third-party/rust:serde_derive",
