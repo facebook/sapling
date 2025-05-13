@@ -18,6 +18,8 @@ rust_library(
         "//common/rust/build_info:build_info",
         "//common/rust/devserver_fingerprint/devserver_fingerprint:devserver_fingerprint",
         "//common/rust/fbwhoami:fbwhoami",
+        "//common/rust/scribe/cat:scribe-cat",
+        "//common/rust/scuba:scuba",
         "//devx_www/cross_env_session_id:cross_env_session_id",
         "//eden/scm/lib/procinfo:procinfo",
     ],
