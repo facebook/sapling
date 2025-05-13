@@ -344,3 +344,30 @@ pub fn strip_prefix_from_bytes(prefix: &Option<PathBuf>, path: &[u8]) -> Vec<u8>
         path.to_vec()
     }
 }
+
+#[cfg(unix)]
+pub fn mount_point_for_path(path: &Path) -> Option<PathBuf> {
+    path.join(".eden").join("root").canonicalize().ok()
+}
+
+#[cfg(unix)]
+pub fn is_active_eden_mount(path: &Path) -> bool {
+    // For Linux and Mac, an active Eden mount should have a dir named ".eden" under the
+    // repo root and there should be a symlink named "root" which points to the repo root
+
+    match mount_point_for_path(path) {
+        Some(resolved) => resolved == path,
+        _ => false,
+    }
+}
+
+#[cfg(windows)]
+pub fn is_active_eden_mount(path: &Path) -> bool {
+    // For Windows, an active EdenFS mount should have a dir named ".eden" under the
+    // repo and there should be a file named "config" under the ".eden" dir
+    let config_path = path.join(".eden").join("config");
+    if !config_path.exists() {
+        return false;
+    }
+    true
+}

@@ -18,6 +18,7 @@ use anyhow::Result;
 use anyhow::anyhow;
 use edenfs_client::checkout::get_mounts;
 use edenfs_client::fsutil::forcefully_remove_dir_all;
+use edenfs_utils::is_active_eden_mount;
 
 use super::types::RemoveContext;
 use crate::get_edenfs_instance;
@@ -71,29 +72,6 @@ pub fn clean_mount_point(path: &Path) -> Result<()> {
     // on it from the code.
     forcefully_remove_dir_all(path)
         .with_context(|| anyhow!("Failed to remove repo directory {}", path.display()))
-}
-
-#[cfg(unix)]
-pub fn is_active_eden_mount(path: &Path) -> bool {
-    // For Linux and Mac, an active Eden mount should have a dir named ".eden" under the
-    // repo root and there should be a symlink named "root" which points to the repo root
-    let unix_eden_dot_dir_path = path.join(".eden").join("root");
-
-    match unix_eden_dot_dir_path.canonicalize() {
-        Ok(resolved_path) => resolved_path == path,
-        _ => false,
-    }
-}
-
-#[cfg(windows)]
-pub fn is_active_eden_mount(path: &Path) -> bool {
-    // For Windows, an active EdenFS mount should have a dir named ".eden" under the
-    // repo and there should be a file named "config" under the ".eden" dir
-    let config_path = path.join(".eden").join("config");
-    if !config_path.exists() {
-        return false;
-    }
-    true
 }
 
 pub async fn is_inactive_eden_mount(original_path: &Path) -> Result<bool> {

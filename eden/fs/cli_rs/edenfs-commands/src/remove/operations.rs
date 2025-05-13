@@ -10,6 +10,7 @@ use std::path::PathBuf;
 use anyhow::Context;
 use anyhow::Result;
 use anyhow::anyhow;
+use edenfs_utils::is_active_eden_mount;
 use fail::fail_point;
 use tracing::debug;
 use tracing::warn;
@@ -47,7 +48,7 @@ pub async fn classify_path(path: &str) -> Result<(PathBuf, PathType)> {
 
             debug!("{} is determined as a directory", path.display());
 
-            if utils::is_active_eden_mount(path) {
+            if is_active_eden_mount(path) {
                 debug!(
                     "path {} is determined to be an active EdenFS mount",
                     path.display()
