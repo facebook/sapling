@@ -4006,13 +4006,17 @@ def init(ui, dest=".", **opts):
     """
     destpath = ui.expandpath(dest)
     usegit = opts.get("git")
+    if usegit is None and ui.configbool("init", "prefer-git"):
+        # In the OSS build, non-git mode doesn't give you a usable repo.
+        ui.status_err(
+            _(
+                """Creating a ".sl" repo with Git compatible storage. For full "git" compatibility, create repo using "git init". See https://sapling-scm.com/docs/git/git_support_modes for more information."""
+            )
+        )
+        usegit = True
+
     if usegit:
         git.clone(ui, "", destpath)
-    elif usegit is None and ui.configbool("init", "prefer-git"):
-        # In the OSS build, non-git mode doesn't give you a usable repo.
-        raise error.Abort(
-            _("please use '@prog@ init --git %s' for a better experience") % dest
-        )
     elif ui.configbool("format", "use-eager-repo"):
         bindings.eagerepo.EagerRepo.open(destpath)
     else:
