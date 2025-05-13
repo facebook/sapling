@@ -115,6 +115,7 @@ use tracing::event;
 use util::lock::PathLock;
 
 use crate::client::EdenFsClient;
+use crate::use_case::UseCase;
 use crate::use_case::UseCaseId;
 
 // Default config and etc dirs
@@ -142,14 +143,14 @@ const CONFIG_JSON_MODE: u32 = 0o664;
 ///
 /// # Fields
 ///
-/// * `use_case_id` - A unique identifier for a use case - used to access configuration settings and attribute usage to a given use case.
+/// * `use_case` - Use case configuration settings
 /// * `config_dir` - Path to the EdenFS configuration directory
 /// * `etc_eden_dir` - Path to the system-wide EdenFS configuration directory
 /// * `home_dir` - Optional path to the user's home directory
 /// * `client` - An `EdenFsClient` for interacting with EdenFS Thrift endpoint.
 #[allow(dead_code)]
 pub struct EdenFsInstance {
-    use_case_id: UseCaseId,
+    use_case: Arc<UseCase>,
     config_dir: PathBuf,
     etc_eden_dir: PathBuf,
     home_dir: Option<PathBuf>,
@@ -203,14 +204,15 @@ impl EdenFsInstance {
         semaphore: Option<Semaphore>,
     ) -> EdenFsInstance {
         let socketfile = config_dir.join("socket");
+        let use_case = Arc::new(UseCase::new(use_case_id));
         Self {
-            use_case_id: use_case_id.clone(),
+            use_case: use_case.clone(),
             config_dir,
             etc_eden_dir,
             home_dir,
             client: Arc::new(EdenFsClient::new(
                 expect_init(),
-                use_case_id,
+                use_case,
                 socketfile,
                 semaphore,
             )),

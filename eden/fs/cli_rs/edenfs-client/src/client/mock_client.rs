@@ -12,6 +12,7 @@ use std::fmt::Display;
 use std::future::Future;
 use std::path::PathBuf;
 use std::result::Result;
+use std::sync::Arc;
 use std::time::Duration;
 
 use async_trait::async_trait;
@@ -32,7 +33,7 @@ use crate::client::EdenFsClientStatsHandler;
 use crate::client::NoopEdenFsClientStatsHandler;
 use crate::client::connector::StreamingEdenFsConnector;
 use crate::client::connector::StreamingEdenFsThriftClient;
-use crate::use_case::UseCaseId;
+use crate::use_case::UseCase;
 
 pub struct MockThriftClient {
     thrift_service: Option<StreamingEdenFsThriftClient>,
@@ -49,7 +50,7 @@ impl MockThriftClient {
 impl Client for MockThriftClient {
     fn new(
         _fb: FacebookInit,
-        _use_case_id: UseCaseId,
+        _use_case: Arc<UseCase>,
         _socket_file: PathBuf,
         _semaphore: Option<Semaphore>,
     ) -> Self {
