@@ -49,30 +49,6 @@ class FacebookBase2 : virtual public cpp2::FacebookServiceSvIf {
   int64_t getPid() override {
     return getpid();
   }
-
-  void exportThriftFuncHist(
-      const std::string& /*funcName*/,
-      ThriftFuncAction /*action*/,
-      folly::small_vector<int> /*percentiles*/,
-      int64_t /*bucketSize*/,
-      int64_t /*min*/,
-      int64_t /*max*/) {}
-
-  void exportThriftFuncHist(
-      const std::string& funcName,
-      ThriftFuncAction action,
-      int percentile,
-      int64_t bucketSize,
-      int64_t min,
-      int64_t max) {
-    exportThriftFuncHist(
-        funcName,
-        action,
-        folly::small_vector<int>({percentile}),
-        bucketSize,
-        min,
-        max);
-  }
 };
 
 /// Stub
