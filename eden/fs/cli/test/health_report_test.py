@@ -22,6 +22,7 @@ from eden.fs.cli.version import VersionInfo
 from eden.test_support.temporary_directory import TemporaryDirectoryMixin
 
 from ..main import HealthReportCmd
+from eden.fs.cli.main import HealthReportCmd
 
 # The version "20241030-165642" is the latest version.
 # The version "20240928-144752" is over 30 days old, which is considered stale.
@@ -282,6 +283,49 @@ class HealthReportTest(unittest.TestCase, TemporaryDirectoryMixin):
             },
         )
         self.assertEqual(result, 1)
+
+    @patch("eden.fs.cli.config.EdenInstance.get_mount_paths")
+    @patch("eden.fs.cli.config.EdenInstance.get_config_int")
+    @patch("eden.fs.cli.util.get_chef_log_path")
+    @patch("eden.fs.cli.doctor.facebook.check_x509.find_x509_path")
+    @patch("eden.fs.cli.doctor.facebook.check_x509.validate_x509")
+    @patch("eden.fs.cli.config.EdenInstance.get_running_version")
+    @patch("eden.fs.cli.version.get_version_info")
+    @patch("eden.fs.cli.util.HealthStatus.is_starting")
+    @patch("eden.fs.cli.util.HealthStatus.is_healthy")
+    def test_health_report_stale_version_check_disabled(
+        self,
+        mock_is_healthy: MagicMock,
+        mock_is_starting: MagicMock,
+        mock_get_version_info: MagicMock,
+        mock_get_running_version: MagicMock,
+        mock_validate_x509: MagicMock,
+        mock_find_x509_path: MagicMock,
+        mock_get_chef_log_path: MagicMock,
+        mock_get_config_int: MagicMock,
+        mock_get_mount_paths: MagicMock,
+    ) -> None:
+        mock_argument_parser, args, file_path = self.setup()
+        mock_get_mount_paths.return_value = [
+            "/data/users/vinigupta/configerator_test",
+            "/data/users/vinigupta/fbsource_test",
+            "/data/users/vinigupta/opsfiles_test",
+        ]
+        mock_get_chef_log_path.return_value = file_path
+        mock_get_running_version.return_value = stale_version
+        mock_get_version_info.return_value = stale_running_version_info
+        mock_is_starting.return_value = False
+        mock_is_healthy.return_value = True
+        mock_find_x509_path.return_value = ("some_cert_path",)
+        mock_validate_x509.return_value = True
+        mock_get_config_int.return_value = 0
+
+        test_health_report_cmd = HealthReportCmd(mock_argument_parser)
+        test_health_report_cmd.run(args)
+        self.assertNotIn(
+            HealthReportCmd.ErrorCode.STALE_EDEN_VERSION,
+            HealthReportCmd.error_codes,
+        )
 
     @patch("eden.fs.cli.config.EdenInstance.get_mount_paths")
     @patch("eden.fs.cli.util.get_chef_log_path")

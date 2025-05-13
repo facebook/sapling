@@ -27,6 +27,8 @@ cpp_library(
     exported_deps = [
         "fbsource//third-party/rust:cxx-core",
         ":backingstore@header",
+        "//eden/common/utils:path",
+        "//eden/fs/model:model",
         "//eden/fs/store:context",
         "//folly:function",
         "//folly:range",
@@ -61,11 +63,12 @@ rust_library(
     },
     cpp_deps = [
         ":sapling_native_backingstore",
+        "//eden/common/utils:path",
         "//eden/fs/store:context",
     ],
     crate_root = "src/lib.rs",
     cxx_bridge = "src/ffi.rs",
-    features = select({
+    features = ["scuba"] + select({
         "DEFAULT": [],
         "fbcode//eden/scm/lib/backingstore:edenfs-include-cas": select({
             "DEFAULT": [],
@@ -83,16 +86,22 @@ rust_library(
             "ovr_config//os:linux": {"rich_cas_client": "//eden/scm/lib/cas-client/rich-client:rich-cas-client"},
         }),
     }),
+    test_deps = [
+        "fbsource//third-party/rust:rand_chacha",
+        "//eden/scm/lib/manifest-tree:manifest-tree",
+    ],
     deps = [
         "fbsource//third-party/rust:anyhow",
         "fbsource//third-party/rust:arc-swap",
         "fbsource//third-party/rust:cxx",
         "fbsource//third-party/rust:env_logger",
+        "fbsource//third-party/rust:flume",
         "fbsource//third-party/rust:log",
         "fbsource//third-party/rust:parking_lot",
         "fbsource//third-party/rust:tracing",
         "fbsource//third-party/rust:tracing-subscriber",
         "//common/rust/folly:iobuf",
+        "//eden/fs/rust/facebook/edenfs-telemetry:edenfs-telemetry",
         "//eden/scm/lib/blob:blob",
         "//eden/scm/lib/config/loader:configloader",
         "//eden/scm/lib/constructors:constructors",
@@ -102,11 +111,12 @@ rust_library(
         "//eden/scm/lib/indexedlog:indexedlog",
         "//eden/scm/lib/manifest:manifest",
         "//eden/scm/lib/metrics:metrics",
+        "//eden/scm/lib/pathmatcher:pathmatcher",
         "//eden/scm/lib/progress/model:progress-model",
         "//eden/scm/lib/repo:repo",
         "//eden/scm/lib/storemodel:storemodel",
-        "//eden/scm/lib/tracing-collector:tracing-collector",
         "//eden/scm/lib/types:types",
         "//eden/scm/lib/util/testutil:testutil",
+        "//eden/scm/lib/walkdetector:walkdetector",
     ],
 )

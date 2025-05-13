@@ -54,9 +54,6 @@ from sapling.i18n import _
 
 from . import rebase
 
-configtable = {}
-configitem = registrar.configitem(configtable)
-configitem("shelve", "maxbackups", default=10)
 
 cmdtable = {}
 command = registrar.command(cmdtable)

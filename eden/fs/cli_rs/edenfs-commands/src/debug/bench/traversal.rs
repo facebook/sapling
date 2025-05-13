@@ -15,73 +15,138 @@ use std::path::PathBuf;
 use std::time::Instant;
 
 use anyhow::Result;
+use edenfs_client::client::Client;
 use indicatif::ProgressBar;
 use indicatif::ProgressStyle;
+use thrift_types::edenfs::ScmBlobOrError;
 
+use super::fsio::get_thrift_request;
+use super::fsio::split_fbsource_file_path;
 use super::types;
 use super::types::Benchmark;
 use super::types::BenchmarkType;
+use crate::get_edenfs_instance;
 
 struct TraversalProgress {
     file_count: usize,
+    dir_count: usize,
     start_time: Instant,
-    progress_bar: ProgressBar,
+    progress_bar: Option<ProgressBar>,
     file_paths: Vec<PathBuf>,
+    total_read_dir_time: std::time::Duration,
+    total_dir_entries: usize,
 }
 
 impl TraversalProgress {
-    fn new() -> Self {
-        let progress_bar = ProgressBar::new_spinner();
-        progress_bar.set_style(
-            ProgressStyle::default_spinner()
-                .template("[{elapsed_precise}] {msg}")
-                .unwrap(),
-        );
-        progress_bar.set_message("0 files | 0 files/s");
+    fn new(no_progress: bool) -> Self {
+        let progress_bar = if no_progress {
+            None
+        } else {
+            let pb = ProgressBar::new_spinner();
+            pb.set_style(
+                ProgressStyle::default_spinner()
+                    .template("[{elapsed_precise}] {msg}")
+                    .unwrap(),
+            );
+            pb.set_message("0 files | 0 dirs | 0 files/s | 0 dirs/s");
+            Some(pb)
+        };
 
         Self {
             file_count: 0,
+            dir_count: 0,
             start_time: Instant::now(),
             progress_bar,
             file_paths: Vec::new(),
+            total_read_dir_time: std::time::Duration::new(0, 0),
+            total_dir_entries: 0,
         }
     }
 
     fn add_file(&mut self, path: PathBuf) {
         self.file_count += 1;
         self.file_paths.push(path);
-        if self.file_count % 100 == 0 {
+        if (self.file_count + self.dir_count) % 100 == 0 {
             self.update_progress();
         }
     }
 
-    fn update_progress(&mut self) {
-        let elapsed = self.start_time.elapsed().as_secs_f64();
-        if elapsed <= 0.0 {
-            return;
+    fn add_dir(&mut self) {
+        self.dir_count += 1;
+        if (self.file_count + self.dir_count) % 100 == 0 {
+            self.update_progress();
         }
-        let files_per_second = self.file_count as f64 / elapsed;
-        self.progress_bar.set_message(format!(
-            "{} files | {:.0} files/s",
-            self.file_count, files_per_second
-        ));
     }
 
-    fn finalize(&self) -> (usize, f64, &Vec<PathBuf>) {
+    fn add_read_dir_stats(&mut self, duration: std::time::Duration, entry_count: usize) {
+        self.total_read_dir_time += duration;
+        self.total_dir_entries += entry_count;
+    }
+
+    fn update_progress(&mut self) {
+        if let Some(pb) = &self.progress_bar {
+            let elapsed = self.start_time.elapsed().as_secs_f64();
+            if elapsed <= 0.0 {
+                return;
+            }
+            let files_per_second = self.file_count as f64 / elapsed;
+            pb.set_message(format!(
+                "{} files | {} dirs | {:.0} files/s",
+                self.file_count, self.dir_count, files_per_second
+            ));
+        }
+    }
+
+    fn finalize(&self) -> (usize, usize, f64, &Vec<PathBuf>, std::time::Duration, usize) {
         let elapsed = self.start_time.elapsed().as_secs_f64();
-        self.progress_bar.finish_and_clear();
-        (self.file_count, elapsed, &self.file_paths)
+        if let Some(pb) = &self.progress_bar {
+            pb.finish_and_clear();
+        }
+
+        (
+            self.file_count,
+            self.dir_count,
+            elapsed,
+            &self.file_paths,
+            self.total_read_dir_time,
+            self.total_dir_entries,
+        )
     }
 }
 
 /// Recursively traverses a directory and collects file paths, displaying progress
-fn traverse_directory(path: &Path, metrics: &mut TraversalProgress) -> Result<()> {
+///
+/// If follow_symlinks is true, symbolic links will be followed during traversal.
+/// Otherwise, symbolic links will be ignored.
+fn traverse_directory(
+    path: &Path,
+    metrics: &mut TraversalProgress,
+    follow_symlinks: bool,
+) -> Result<()> {
     if path.is_dir() {
-        for entry in fs::read_dir(path)? {
-            let entry = entry?;
+        metrics.add_dir();
+
+        // Measure read_dir latency
+        let start_time = Instant::now();
+        let read_dir_result = fs::read_dir(path);
+        let read_dir_duration = start_time.elapsed();
+
+        let entries = read_dir_result?;
+
+        // Count entries in this directory
+        let entries: Vec<_> = entries.collect::<Result<Vec<_>, _>>()?;
+        let entry_count = entries.len();
+
+        // Add stats for this directory
+        metrics.add_read_dir_stats(read_dir_duration, entry_count);
+
+        for entry in entries {
             let path = entry.path();
+
             if path.is_dir() {
-                traverse_directory(&path, metrics)?;
+                if !path.is_symlink() || follow_symlinks {
+                    traverse_directory(&path, metrics, follow_symlinks)?;
+                }
             } else if path.is_file() {
                 metrics.add_file(path);
             }
@@ -90,18 +155,32 @@ fn traverse_directory(path: &Path, metrics: &mut TraversalProgress) -> Result<()
     Ok(())
 }
 
-/// Runs the filesystem traversal benchmark and returns the benchmark results
-pub fn bench_fs_traversal(dir_path: &str) -> Result<Benchmark> {
+pub async fn bench_traversal_thrift_read(
+    dir_path: &str,
+    follow_symlinks: bool,
+    no_progress: bool,
+) -> Result<Benchmark> {
     let path = Path::new(dir_path);
     if !path.exists() || !path.is_dir() {
         return Err(anyhow::anyhow!("Invalid directory path: {}", dir_path));
     }
 
-    let mut traverse_progress = TraversalProgress::new();
+    let mut traverse_progress = TraversalProgress::new(no_progress);
+    traverse_directory(path, &mut traverse_progress, follow_symlinks)?;
+    let (file_count, dir_count, duration, file_paths, total_read_dir_time, total_dir_entries) =
+        traverse_progress.finalize();
 
-    traverse_directory(path, &mut traverse_progress)?;
+    let avg_read_dir_latency = if dir_count > 0 {
+        total_read_dir_time.as_secs_f64() * 1000.0 / dir_count as f64
+    } else {
+        0.0
+    };
 
-    let (file_count, duration, file_paths) = traverse_progress.finalize();
+    let avg_dir_size = if dir_count > 0 {
+        total_dir_entries as f64 / dir_count as f64
+    } else {
+        0.0
+    };
 
     if duration <= 0.0 {
         return Err(anyhow::anyhow!("Duration is less or equal to zero."));
@@ -111,15 +190,215 @@ pub fn bench_fs_traversal(dir_path: &str) -> Result<Benchmark> {
 
     let mut result = Benchmark::new(BenchmarkType::FsTraversal);
 
-    result.add_metric("Traversal throughput", files_per_second, "files/s", Some(0));
-    result.add_metric("Total files", file_count as f64, "files", Some(0));
-
-    let read_progress = ProgressBar::new(file_count as u64);
-    read_progress.set_style(
-        ProgressStyle::default_bar()
-            .template("[{elapsed_precise}] {pos}/{len} files | {msg}")
-            .unwrap(),
+    result.add_metric(
+        "Traversal throughput",
+        files_per_second,
+        types::Unit::FilesPerSecond,
+        Some(0),
     );
+    result.add_metric(
+        "Average read_dir latency",
+        avg_read_dir_latency,
+        types::Unit::Ms,
+        Some(4),
+    );
+    result.add_metric(
+        "Average directory size",
+        avg_dir_size,
+        types::Unit::Files,
+        Some(2),
+    );
+    result.add_metric(
+        "Total files",
+        file_count as f64,
+        types::Unit::Files,
+        Some(0),
+    );
+    result.add_metric(
+        "Total directories",
+        dir_count as f64,
+        types::Unit::Dirs,
+        Some(0),
+    );
+
+    let read_progress = if no_progress {
+        None
+    } else {
+        let pb = ProgressBar::new(file_count as u64);
+        pb.set_style(
+            ProgressStyle::default_bar()
+                .template("[{elapsed_precise}] {pos}/{len} files | {msg}")
+                .unwrap(),
+        );
+        Some(pb)
+    };
+
+    let mut agg_read_dur = std::time::Duration::new(0, 0);
+    let mut total_bytes_read: u64 = 0;
+    let mut successful_reads = 0;
+
+    let client = get_edenfs_instance().get_client();
+    for path in file_paths {
+        if !path.is_file() {
+            if let Some(pb) = &read_progress {
+                pb.inc(1);
+            }
+            continue;
+        }
+
+        let start = Instant::now();
+        let (repo_path, rel_file_path) = split_fbsource_file_path(path);
+        let request = get_thrift_request(repo_path, rel_file_path)?;
+        let response = client
+            .with_thrift(|thrift| thrift.getFileContent(&request))
+            .await?;
+        agg_read_dur += start.elapsed();
+
+        match response.blob {
+            ScmBlobOrError::blob(blob) => {
+                total_bytes_read += blob.len() as u64;
+                if let Some(pb) = &read_progress {
+                    pb.inc(1);
+                }
+                successful_reads += 1;
+            }
+            ScmBlobOrError::error(_) => {
+                if let Some(pb) = &read_progress {
+                    pb.inc(1);
+                }
+            }
+            ScmBlobOrError::UnknownField(_) => {}
+        }
+
+        if agg_read_dur.as_secs_f64() > 0.0 && read_progress.is_some() {
+            if let Some(pb) = &read_progress {
+                pb.set_message(format!(
+                    "{:.2} MiB/s",
+                    total_bytes_read as f64
+                        / types::BYTES_IN_MEGABYTE as f64
+                        / agg_read_dur.as_secs_f64()
+                ));
+            }
+        }
+    }
+    if let Some(pb) = read_progress {
+        pb.finish_and_clear();
+    }
+
+    if successful_reads == 0 {
+        return Err(anyhow::anyhow!("No files were successfully read."));
+    }
+
+    let avg_read_dur = agg_read_dur.as_secs_f64() / successful_reads as f64;
+    let avg_file_size = total_bytes_read as f64 / successful_reads as f64;
+    let avg_file_size_kb = avg_file_size / types::BYTES_IN_KILOBYTE as f64;
+
+    let mb_per_second =
+        total_bytes_read as f64 / types::BYTES_IN_MEGABYTE as f64 / agg_read_dur.as_secs_f64();
+
+    result.add_metric("Throughput ", mb_per_second, types::Unit::MiBps, Some(2));
+    result.add_metric(
+        "Average thrift read latency",
+        avg_read_dur * 1000.0,
+        types::Unit::Ms,
+        Some(4),
+    );
+    result.add_metric(
+        "Average file size",
+        avg_file_size_kb,
+        types::Unit::KiB,
+        Some(2),
+    );
+    result.add_metric(
+        "Total data read",
+        total_bytes_read as f64 / types::BYTES_IN_MEGABYTE as f64,
+        types::Unit::MiB,
+        Some(2),
+    );
+
+    Ok(result)
+}
+
+/// Runs the filesystem traversal benchmark and returns the benchmark results
+pub fn bench_traversal_fs_read(
+    dir_path: &str,
+    follow_symlinks: bool,
+    no_progress: bool,
+) -> Result<Benchmark> {
+    let path = Path::new(dir_path);
+    if !path.exists() || !path.is_dir() {
+        return Err(anyhow::anyhow!("Invalid directory path: {}", dir_path));
+    }
+
+    let mut traverse_progress = TraversalProgress::new(no_progress);
+
+    traverse_directory(path, &mut traverse_progress, follow_symlinks)?;
+
+    let (file_count, dir_count, duration, file_paths, total_read_dir_time, total_dir_entries) =
+        traverse_progress.finalize();
+
+    let avg_read_dir_latency = if dir_count > 0 {
+        total_read_dir_time.as_secs_f64() * 1000.0 / dir_count as f64
+    } else {
+        0.0
+    };
+
+    let avg_dir_size = if dir_count > 0 {
+        total_dir_entries as f64 / dir_count as f64
+    } else {
+        0.0
+    };
+
+    if duration <= 0.0 {
+        return Err(anyhow::anyhow!("Duration is less or equal to zero."));
+    }
+
+    let files_per_second = file_count as f64 / duration;
+
+    let mut result = Benchmark::new(BenchmarkType::FsTraversal);
+
+    result.add_metric(
+        "Traversal throughput",
+        files_per_second,
+        types::Unit::FilesPerSecond,
+        Some(0),
+    );
+    result.add_metric(
+        "Average read_dir latency",
+        avg_read_dir_latency,
+        types::Unit::Ms,
+        Some(4),
+    );
+    result.add_metric(
+        "Average directory size",
+        avg_dir_size,
+        types::Unit::Files,
+        Some(2),
+    );
+    result.add_metric(
+        "Total files",
+        file_count as f64,
+        types::Unit::Files,
+        Some(0),
+    );
+    result.add_metric(
+        "Total directories",
+        dir_count as f64,
+        types::Unit::Dirs,
+        Some(0),
+    );
+
+    let read_progress = if no_progress {
+        None
+    } else {
+        let pb = ProgressBar::new(file_count as u64);
+        pb.set_style(
+            ProgressStyle::default_bar()
+                .template("[{elapsed_precise}] {pos}/{len} files | {msg}")
+                .unwrap(),
+        );
+        Some(pb)
+    };
 
     let mut agg_open_dur = std::time::Duration::new(0, 0);
     let mut agg_read_dur = std::time::Duration::new(0, 0);
@@ -129,7 +408,9 @@ pub fn bench_fs_traversal(dir_path: &str) -> Result<Benchmark> {
 
     for path in file_paths {
         if !path.is_file() {
-            read_progress.inc(1);
+            if let Some(pb) = &read_progress {
+                pb.inc(1);
+            }
             continue;
         }
 
@@ -137,7 +418,9 @@ pub fn bench_fs_traversal(dir_path: &str) -> Result<Benchmark> {
         let mut file = match File::open(path) {
             Ok(f) => f,
             Err(_) => {
-                read_progress.inc(1);
+                if let Some(pb) = &read_progress {
+                    pb.inc(1);
+                }
                 continue;
             }
         };
@@ -149,19 +432,25 @@ pub fn bench_fs_traversal(dir_path: &str) -> Result<Benchmark> {
             successful_reads += 1;
         }
         agg_read_dur += start.elapsed();
-        read_progress.inc(1);
+        if let Some(pb) = &read_progress {
+            pb.inc(1);
+        }
 
-        if agg_read_dur.as_secs_f64() > 0.0 {
-            read_progress.set_message(format!(
-                "{:.2} MiB/s",
-                total_bytes_read as f64
-                    / types::BYTES_IN_MEGABYTE as f64
-                    / agg_read_dur.as_secs_f64()
-            ));
+        if agg_read_dur.as_secs_f64() > 0.0 && read_progress.is_some() {
+            if let Some(pb) = &read_progress {
+                pb.set_message(format!(
+                    "{:.2} MiB/s",
+                    total_bytes_read as f64
+                        / types::BYTES_IN_MEGABYTE as f64
+                        / agg_read_dur.as_secs_f64()
+                ));
+            }
         }
     }
 
-    read_progress.finish_and_clear();
+    if let Some(pb) = read_progress {
+        pb.finish_and_clear();
+    }
 
     if successful_reads == 0 {
         return Err(anyhow::anyhow!("No files were successfully read."));
@@ -178,21 +467,31 @@ pub fn bench_fs_traversal(dir_path: &str) -> Result<Benchmark> {
     result.add_metric(
         "open() + read() throughput ",
         mb_per_second,
-        "MiB/s",
+        types::Unit::MiBps,
         Some(2),
     );
-    result.add_metric("open() latency", avg_open_dur * 1000.0, "ms", Some(4));
+    result.add_metric(
+        "open() latency",
+        avg_open_dur * 1000.0,
+        types::Unit::Ms,
+        Some(4),
+    );
     result.add_metric(
         "Average read() latency",
         avg_read_dur * 1000.0,
-        "ms",
+        types::Unit::Ms,
         Some(4),
     );
-    result.add_metric("Average file size", avg_file_size_kb, "KiB", Some(2));
+    result.add_metric(
+        "Average file size",
+        avg_file_size_kb,
+        types::Unit::KiB,
+        Some(2),
+    );
     result.add_metric(
         "Total data read",
         total_bytes_read as f64 / types::BYTES_IN_MEGABYTE as f64,
-        "MiB",
+        types::Unit::MiB,
         Some(2),
     );
 

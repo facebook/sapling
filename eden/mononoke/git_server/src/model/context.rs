@@ -15,6 +15,7 @@ use gotham::state::State;
 use gotham_derive::StateData;
 use gotham_ext::middleware::request_context::RequestContext;
 use metaconfig_parser::RepoConfigs;
+use mononoke_api::Mononoke;
 use mononoke_app::args::TLSArgs;
 use mononoke_repos::MononokeRepos;
 use repo_authorization::AuthorizationContext;
@@ -169,6 +170,14 @@ impl GitServerContext {
             .read()
             .expect("poisoned lock in git server context");
         Ok(inner.max_request_size)
+    }
+
+    pub fn repo_as_mononoke_api(&self) -> Result<Mononoke<mononoke_api::Repo>> {
+        let inner = self
+            .inner
+            .read()
+            .expect("poisoned lock in git server context");
+        inner.repos.repo_mgr.make_mononoke_api()
     }
 }
 

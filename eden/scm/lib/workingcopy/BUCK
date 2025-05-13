@@ -6,7 +6,10 @@ rust_library(
     name = "workingcopy",
     srcs = glob(["src/**/*.rs"]),
     autocargo = {"cargo_toml_config": {
-        "dependencies_override": {"dependencies": {"sapling-edenfs-client": {"optional": True}}},
+        "dependencies_override": {"dependencies": {
+            "sapling-configmodel": {"features": ["convert-path"]},
+            "sapling-edenfs-client": {"optional": True},
+        }},
         "features": {"eden": ["sapling-edenfs-client"]},
         "lib": {"name": "workingcopy"},
         "package": {

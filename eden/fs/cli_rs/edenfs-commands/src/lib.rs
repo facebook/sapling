@@ -17,6 +17,7 @@ use anyhow::Result;
 use async_trait::async_trait;
 use clap::Parser;
 use edenfs_client::instance::EdenFsInstance;
+use edenfs_client::use_case::UseCaseId;
 use edenfs_client::utils::get_config_dir;
 use edenfs_client::utils::get_etc_eden_dir;
 use edenfs_client::utils::get_home_dir;
@@ -67,10 +68,10 @@ fn init_edenfs_instance(config_dir: PathBuf, etc_eden_dir: PathBuf, home_dir: Op
     );
     EDENFS_INSTANCE
         .set(EdenFsInstance::new(
+            UseCaseId::EdenFsCtl,
             config_dir,
             etc_eden_dir,
             home_dir,
-            None,
         ))
         .expect("should be able to initialize EdenfsInstance")
 }

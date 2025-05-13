@@ -30,7 +30,7 @@ use pathmatcher::IntersectMatcher;
 use pathmatcher::Matcher;
 use pathmatcher::NeverMatcher;
 use pathmatcher::PatternKind;
-use pathmatcher::TreeMatcher;
+pub use pathmatcher::TreeMatcher;
 use pathmatcher::UnionMatcher;
 use pathmatcher::XorMatcher;
 use tracing::debug;
@@ -85,7 +85,7 @@ py_class!(pub class treematcher |py| {
 
     def __new__(_cls, rules: Vec<String>, case_sensitive: bool) -> PyResult<Self> {
         let matcher = TreeMatcher::from_rules(rules.into_iter(), case_sensitive).map_pyerr(py)?;
-        Self::create_instance(py, Arc::new(matcher))
+        Self::from_native(py, matcher)
     }
 
     def matches(&self, path: &PyPath) -> PyResult<bool> {
@@ -110,6 +110,12 @@ impl ExtractInnerRef for treematcher {
 
     fn extract_inner_ref<'a>(&'a self, py: Python<'a>) -> &'a Self::Inner {
         self.matcher(py)
+    }
+}
+
+impl treematcher {
+    pub fn from_native(py: Python, matcher: TreeMatcher) -> PyResult<Self> {
+        Self::create_instance(py, Arc::new(matcher))
     }
 }
 

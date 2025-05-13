@@ -133,6 +133,7 @@ pub struct HttpClientBuilder {
     max_files_per_batch: Option<usize>,
     max_trees_per_batch: Option<usize>,
     max_history_per_batch: Option<usize>,
+    max_path_history_per_batch: Option<usize>,
     max_location_to_hash_per_batch: Option<usize>,
     max_commit_mutations_per_batch: Option<usize>,
     max_commit_translate_id_per_batch: Option<usize>,
@@ -219,6 +220,7 @@ impl HttpClientBuilder {
         let max_files_per_batch = get_config(config, "edenapi", "maxfiles")?;
         let max_trees_per_batch = get_config(config, "edenapi", "maxtrees")?;
         let max_history_per_batch = get_config(config, "edenapi", "maxhistory")?;
+        let max_path_history_per_batch = get_config(config, "edenapi", "maxpathhistory")?;
         let max_location_to_hash_per_batch = get_config(config, "edenapi", "maxlocationtohash")?;
         let max_commit_mutations_per_batch = get_config(config, "edenapi", "maxcommitmutations")?;
         let max_commit_translate_id_per_batch =
@@ -314,6 +316,7 @@ impl HttpClientBuilder {
             max_files_per_batch,
             max_trees_per_batch,
             max_history_per_batch,
+            max_path_history_per_batch,
             max_location_to_hash_per_batch,
             max_commit_mutations_per_batch,
             max_commit_translate_id_per_batch,
@@ -409,6 +412,13 @@ impl HttpClientBuilder {
         self
     }
 
+    /// Maximum number of paths per path_history request. Larger requests will be
+    /// split up into concurrently-sent batches.
+    pub fn max_path_history_per_batch(mut self, size: Option<usize>) -> Self {
+        self.max_path_history_per_batch = size;
+        self
+    }
+
     /// Maximum number of locations per location to has request. Larger requests will be split up
     /// into concurrently-sent batches.
     pub fn max_location_to_hash_per_batch(mut self, size: Option<usize>) -> Self {
@@ -492,6 +502,7 @@ pub(crate) struct Config {
     pub(crate) max_files_per_batch: Option<usize>,
     pub(crate) max_trees_per_batch: Option<usize>,
     pub(crate) max_history_per_batch: Option<usize>,
+    pub(crate) max_path_history_per_batch: Option<usize>,
     pub(crate) max_location_to_hash_per_batch: Option<usize>,
     pub(crate) max_commit_mutations_per_batch: Option<usize>,
     pub(crate) max_commit_translate_id_per_batch: Option<usize>,
@@ -524,6 +535,7 @@ impl TryFrom<HttpClientBuilder> for Config {
             max_files_per_batch,
             max_trees_per_batch,
             max_history_per_batch,
+            max_path_history_per_batch,
             max_location_to_hash_per_batch,
             max_commit_mutations_per_batch,
             max_commit_translate_id_per_batch,
@@ -557,6 +569,7 @@ impl TryFrom<HttpClientBuilder> for Config {
         let max_files_per_batch = max_files_per_batch.filter(|n| *n > 0);
         let max_trees_per_batch = max_trees_per_batch.filter(|n| *n > 0);
         let max_history_per_batch = max_history_per_batch.filter(|n| *n > 0);
+        let max_path_history_per_batch = max_path_history_per_batch.filter(|n| *n > 0);
 
         Ok(Config {
             repo_name,
@@ -568,6 +581,7 @@ impl TryFrom<HttpClientBuilder> for Config {
             max_files_per_batch,
             max_trees_per_batch,
             max_history_per_batch,
+            max_path_history_per_batch,
             max_location_to_hash_per_batch,
             max_commit_mutations_per_batch,
             max_commit_translate_id_per_batch,

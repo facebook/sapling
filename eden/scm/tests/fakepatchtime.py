@@ -3,13 +3,7 @@
 
 from __future__ import absolute_import
 
-from sapling import extensions, patch as patchmod, registrar, util
-
-
-configtable = {}
-configitem = registrar.configitem(configtable)
-
-configitem("fakepatchtime", "fakenow", default=None)
+from sapling import extensions, patch as patchmod, util
 
 
 def internalpatch(

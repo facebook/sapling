@@ -48,6 +48,8 @@ use edenapi_types::HistoryEntry;
 use edenapi_types::IdenticalChangesetContent;
 use edenapi_types::LandStackResponse;
 use edenapi_types::LookupResponse;
+use edenapi_types::PathHistoryRequestPaginationCursor;
+use edenapi_types::PathHistoryResponse;
 use edenapi_types::ReferencesDataResponse;
 use edenapi_types::RenameWorkspaceRequest;
 use edenapi_types::RenameWorkspaceResponse;
@@ -74,6 +76,7 @@ use minibytes::Bytes;
 use types::FetchContext;
 use types::HgId;
 use types::Key;
+use types::RepoPathBuf;
 
 use crate::errors::SaplingRemoteApiError;
 use crate::response::Response;
@@ -127,6 +130,17 @@ pub trait SaplingRemoteApi: Send + Sync + 'static {
         length: Option<u32>,
     ) -> Result<Response<HistoryEntry>, SaplingRemoteApiError> {
         let _ = (keys, length);
+        Err(SaplingRemoteApiError::NotSupported)
+    }
+
+    async fn path_history(
+        &self,
+        commit: HgId,
+        paths: Vec<RepoPathBuf>,
+        limit: Option<u32>,
+        cursor: Vec<PathHistoryRequestPaginationCursor>,
+    ) -> Result<Response<PathHistoryResponse>, SaplingRemoteApiError> {
+        let _ = (commit, paths, limit, cursor);
         Err(SaplingRemoteApiError::NotSupported)
     }
 

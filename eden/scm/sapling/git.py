@@ -170,7 +170,7 @@ def clone(ui, url, destpath=None, update=True, pullnames=None, submodule=None):
             ret = initgitbare(ui, repo.svfs.join("git"))
             if ret != 0:
                 raise error.Abort(_("git clone was not successful"))
-            repo = initgit(repo, "git", url)
+            repo = initgit(repo, "git")
             if url:
                 if pullnames is None:
                     ls_remote_args = ["ls-remote", "--symref", url, "HEAD"]
@@ -288,7 +288,7 @@ def parse_symref_head(symref_head_output: str) -> Optional[str]:
     return None
 
 
-def initgit(repo, gitdir, giturl=None):
+def initgit(repo, gitdir):
     """Change a repo to be backed by a bare git repo in `gitdir`.
     This should only be called for newly created repos.
     """
@@ -300,8 +300,6 @@ def initgit(repo, gitdir, giturl=None):
         repo.storerequirements.add(GIT_STORE_REQUIREMENT)
         repo._writestorerequirements()
     # recreate the repo to pick up key changes
-    from . import hg
-
     repo = setup_repository(repo.baseui, repo.root).local()
     visibility.add(repo, repo.changelog.dageval(lambda: heads(all())))
     return repo

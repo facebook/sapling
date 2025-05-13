@@ -265,13 +265,6 @@ release = lock.release
 cmdtable = {}
 command = registrar.command(cmdtable)
 
-configtable = {}
-configitem = registrar.configitem(configtable)
-configitem("experimental", "histedit.autoverb", default=False)
-configitem("histedit", "defaultrev", default=configitem.dynamicdefault)
-configitem("histedit", "dropmissing", default=False)
-configitem("histedit", "linelen", default=80)
-configitem("histedit", "singletransaction", default=False)
 
 # Note for extension authors: ONLY specify testedwith = 'ships-with-hg-core' for
 # extensions which SHIP WITH MERCURIAL. Non-mainline extensions should

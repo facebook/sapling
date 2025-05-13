@@ -14,10 +14,8 @@ name = "repo"
 
 [dependencies]
 anyhow = "1.0.95"
-blob = { version = "0.1.0", path = "../blob" }
 fail = { version = "0.4", features = ["failpoints"] }
 fs-err = { version = "3", features = ["tokio"] }
-lru-cache = "0.1.2"
 once_cell = "1.12"
 parking_lot = { version = "0.12.1", features = ["send_guard"] }
 sapling-async-runtime = { version = "0.1.0", path = "../async-runtime" }
@@ -32,7 +30,6 @@ sapling-factory = { version = "0.1.0", path = "../util/factory" }
 sapling-identity = { version = "0.1.0", path = "../identity" }
 sapling-manifest-tree = { version = "0.1.0", path = "../manifest-tree" }
 sapling-metalog = { version = "0.1.0", path = "../metalog" }
-sapling-metrics = { version = "0.1.0", path = "../metrics" }
 sapling-repo-minimal-info = { version = "0.1.0", path = "repo-minimal-info" }
 sapling-repolock = { version = "0.1.0", path = "../repolock" }
 sapling-repourl = { version = "0.1.0", path = "url" }
@@ -48,7 +45,6 @@ thiserror = "2"
 tracing = { version = "0.1.41", features = ["attributes", "valuable"] }
 
 [dev-dependencies]
-rand_chacha = "0.3"
 tempfile = "3.15"
 
 [features]

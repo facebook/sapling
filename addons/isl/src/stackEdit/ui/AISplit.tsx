@@ -14,12 +14,15 @@ import {
   type UseStackEditState,
 } from './stackEditState';
 
+import * as stylex from '@stylexjs/stylex';
 import {Button} from 'isl-components/Button';
+import {ButtonWithDropdownTooltip} from 'isl-components/ButtonWithDropdownTooltip';
 import {InlineErrorBadge} from 'isl-components/ErrorNotice';
 import {Icon} from 'isl-components/Icon';
 import {Tooltip} from 'isl-components/Tooltip';
-import {useEffect, useState} from 'react';
+import {useEffect, useRef, useState} from 'react';
 import {randomId} from 'shared/utils';
+import {MinHeightTextField} from '../../CommitInfoView/MinHeightTextField';
 import {Column} from '../../ComponentUtils';
 import {useGeneratedFileStatuses} from '../../GeneratedFile';
 import {Internal} from '../../Internal';
@@ -29,6 +32,13 @@ import {t, T} from '../../i18n';
 import {GeneratedStatus} from '../../types';
 import {applyDiffSplit, diffCommit} from '../diffSplit';
 import {next} from '../revMath';
+
+const styles = stylex.create({
+  full: {
+    minWidth: '300px',
+    width: '100%',
+  },
+});
 
 type AISplitButtonProps = {
   stackEdit: UseStackEditState;
@@ -48,9 +58,6 @@ export function AISplitButton({stackEdit, commitStack, subStack, rev}: AISplitBu
     useFeatureFlagSync(Internal.featureFlags?.AICommitSplit) && splitCommitWithAI != null;
 
   const [loadingState, setLoadingState] = useState<AISplitButtonLoadingState>({type: 'READY'});
-
-  // Make first commit be emphasized if there's only one commit (size == 2 due to empty right commit)
-  const emphasize = rev === 0 && commitStack.size === 2;
 
   // Reset state if commitStack changes while in LOADING state. E.g., user manually updated commits locally.
   useEffect(() => {
@@ -87,6 +94,7 @@ export function AISplitButton({stackEdit, commitStack, subStack, rev}: AISplitBu
 
   const diffWithoutGeneratedFiles = useDiffWithoutGeneratedFiles(subStack, rev);
 
+  const [guidanceToAI, setGuidanceToAI] = useState('');
   const fetch = async () => {
     if (loadingState.type === 'LOADING' || splitCommitWithAI == null) {
       return;
@@ -99,12 +107,19 @@ export function AISplitButton({stackEdit, commitStack, subStack, rev}: AISplitBu
 
     const id = randomId();
     setLoadingState({type: 'LOADING', id});
+    const args =
+      guidanceToAI == null || guidanceToAI.trim() === ''
+        ? {}
+        : {
+            user_prompt: guidanceToAI.trim(),
+          };
+
     try {
       const result: ReadonlyArray<PartiallySelectedDiffCommit> = await tracker.operation(
         'AISplitButtonClick',
         'SplitSuggestionError',
         undefined,
-        () => splitCommitWithAI(diffWithoutGeneratedFiles),
+        () => splitCommitWithAI(diffWithoutGeneratedFiles, args),
       );
       setLoadingState(prev => {
         if (prev.type === 'LOADING' && prev.id === id) {
@@ -146,29 +161,62 @@ export function AISplitButton({stackEdit, commitStack, subStack, rev}: AISplitBu
   switch (loadingState.type) {
     case 'READY':
       return (
-        <Tooltip title={t('Automatically split this commit using AI')} placement="bottom">
-          <Button onClick={fetch} icon={!emphasize}>
-            <Icon icon="sparkle" />
-            <T>AI Split</T>
-          </Button>
+        <Tooltip title={t('Split this commit using AI')} placement="bottom">
+          <ButtonWithDropdownTooltip
+            label={<T>AI Split</T>}
+            data-testid="cwd-dropdown-button"
+            kind="icon"
+            icon={<Icon icon="sparkle" />}
+            onClick={fetch}
+            tooltip={
+              <DetailsDropdown
+                loadingState={loadingState}
+                submit={fetch}
+                guidanceToAI={guidanceToAI}
+                setGuidanceToAI={setGuidanceToAI}
+              />
+            }
+          />
         </Tooltip>
       );
     case 'LOADING':
       return (
         <Tooltip title={t('Split is working, click to cancel')} placement="bottom">
-          <Button onClick={cancel}>
-            <Icon icon="loading" />
-            <T>Splitting</T>
-          </Button>
+          <ButtonWithDropdownTooltip
+            label={<T>Splitting</T>}
+            data-testid="cwd-dropdown-button"
+            kind="icon"
+            icon={<Icon icon="loading" />}
+            onClick={cancel}
+            tooltip={
+              <DetailsDropdown
+                loadingState={loadingState}
+                submit={cancel}
+                guidanceToAI={guidanceToAI}
+                setGuidanceToAI={setGuidanceToAI}
+              />
+            }
+          />
         </Tooltip>
       );
     case 'ERROR':
       return (
         <Column alignStart>
-          <Button onClick={fetch}>
-            <Icon icon="sparkle" />
-            <T>Split this commit with AI</T>
-          </Button>
+          <ButtonWithDropdownTooltip
+            label={<T>AI Split</T>}
+            data-testid="cwd-dropdown-button"
+            kind="icon"
+            icon={<Icon icon="sparkle" />}
+            onClick={fetch}
+            tooltip={
+              <DetailsDropdown
+                loadingState={loadingState}
+                submit={fetch}
+                guidanceToAI={guidanceToAI}
+                setGuidanceToAI={setGuidanceToAI}
+              />
+            }
+          />
           <InlineErrorBadge error={loadingState.error} placement="bottom">
             <T>AI Split Failed</T>
           </InlineErrorBadge>
@@ -188,4 +236,34 @@ function useDiffWithoutGeneratedFiles(subStack: CommitStackState, rev: CommitRev
     ...diffForAllFiles,
     files: filesWithoutGeneratedFiles,
   };
+}
+
+function DetailsDropdown({
+  loadingState,
+  submit,
+  guidanceToAI,
+  setGuidanceToAI,
+}: {
+  loadingState: AISplitButtonLoadingState;
+  submit: () => unknown;
+  guidanceToAI: string;
+  setGuidanceToAI: React.Dispatch<React.SetStateAction<string>>;
+}) {
+  const ref = useRef(null);
+  return (
+    <Column alignStart>
+      <MinHeightTextField
+        ref={ref}
+        keepNewlines
+        containerXstyle={styles.full}
+        value={guidanceToAI}
+        onInput={e => setGuidanceToAI(e.currentTarget.value)}>
+        <T>Provide additional instructions to AI (optional)</T>
+      </MinHeightTextField>
+      <Button onClick={submit} style={{alignSelf: 'end'}} primary>
+        {loadingState.type === 'LOADING' ? <Icon icon="loading" /> : <Icon icon="sparkle" />}
+        {loadingState.type === 'LOADING' ? <T>Splitting</T> : <T>AI Split</T>}
+      </Button>
+    </Column>
+  );
 }

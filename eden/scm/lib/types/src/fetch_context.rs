@@ -5,24 +5,28 @@
  * LICENSE file in the root directory of this source tree.
  */
 
+use std::sync::Arc;
+use std::sync::atomic::AtomicU64;
+use std::sync::atomic::Ordering;
+
 use crate::fetch_cause::FetchCause;
 use crate::fetch_mode::FetchMode;
 
 /// A context for a fetch operation.
 /// The structure is extendable to support more context in the future
 /// (e.g. cause of the fetch, etc.)
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone)]
 pub struct FetchContext {
     mode: FetchMode,
     cause: FetchCause,
+
+    local_fetch_count: Arc<AtomicU64>,
+    remote_fetch_count: Arc<AtomicU64>,
 }
 
 impl FetchContext {
     pub fn new(mode: FetchMode) -> Self {
-        Self {
-            mode,
-            cause: FetchCause::Unspecified,
-        }
+        Self::new_with_cause(mode, FetchCause::Unspecified)
     }
 
     pub fn sapling_default() -> Self {
@@ -30,11 +34,19 @@ impl FetchContext {
     }
 
     pub fn sapling_prefetch() -> Self {
-        Self::new_with_cause(FetchMode::AllowRemote, FetchCause::SaplingPrefetch)
+        Self::new_with_cause(
+            FetchMode::AllowRemote | FetchMode::IGNORE_RESULT,
+            FetchCause::SaplingPrefetch,
+        )
     }
 
     pub fn new_with_cause(mode: FetchMode, cause: FetchCause) -> Self {
-        Self { mode, cause }
+        Self {
+            mode,
+            cause,
+            local_fetch_count: Default::default(),
+            remote_fetch_count: Default::default(),
+        }
     }
 
     pub fn mode(&self) -> &FetchMode {
@@ -43,6 +55,22 @@ impl FetchContext {
 
     pub fn cause(&self) -> &FetchCause {
         &self.cause
+    }
+
+    pub fn inc_local(&self, count: u64) {
+        self.local_fetch_count.fetch_add(count, Ordering::Relaxed);
+    }
+
+    pub fn inc_remote(&self, count: u64) {
+        self.remote_fetch_count.fetch_add(count, Ordering::Relaxed);
+    }
+
+    pub fn local_fetch_count(&self) -> u64 {
+        self.local_fetch_count.load(Ordering::Relaxed)
+    }
+
+    pub fn remote_fetch_count(&self) -> u64 {
+        self.remote_fetch_count.load(Ordering::Relaxed)
     }
 }
 

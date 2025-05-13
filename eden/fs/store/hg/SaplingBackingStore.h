@@ -155,7 +155,6 @@ struct HgImportTraceEvent : TraceEventBase {
 class SaplingBackingStore final : public BackingStore {
  public:
   using ImportRequestsList = std::vector<std::shared_ptr<SaplingImportRequest>>;
-  using SaplingNativeOptions = sapling::SaplingNativeBackingStoreOptions;
   using ImportRequestsMap = std::
       map<sapling::NodeId, std::pair<ImportRequestsList, RequestMetricsScope>>;
 
@@ -513,6 +512,10 @@ class SaplingBackingStore final : public BackingStore {
   FOLLY_NODISCARD virtual folly::SemiFuture<folly::Unit> prefetchBlobs(
       ObjectIdRange ids,
       const ObjectFetchContextPtr& context) override;
+
+  void workingCopyParentHint(const RootId& parent) override {
+    store_.workingCopyParentHint(parent);
+  }
 
   void processBlobImportRequests(
       std::vector<std::shared_ptr<SaplingImportRequest>>&& requests);

@@ -67,12 +67,6 @@ testedwith = "ships-with-fb-ext"
 # Remove unsupported --limit option.
 logopts = [opt for opt in commands.logopts if opt[1] != "limit"]
 
-configtable = {}
-configitem = registrar.configitem(configtable)
-
-configitem("smartlog", "collapse-obsolete", default=True)
-configitem("smartlog", "max-commit-threshold", default=1000)
-
 
 templatekeyword = registrar.templatekeyword()
 templatefunc = registrar.templatefunc()

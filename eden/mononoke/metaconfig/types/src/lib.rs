@@ -318,6 +318,8 @@ pub enum ShardedService {
     ModernSync,
     /// Bookmark Service
     BookmarkService,
+    /// GitBundleGenerator
+    GitBundleGenerator,
 }
 
 /// Indicates types of commit hashes used in a repo context.

@@ -178,22 +178,6 @@ testedwith = "ships-with-hg-core"
 cmdtable = {}
 command = registrar.command(cmdtable)
 
-configtable = {}
-configitem = registrar.configitem(configtable)
-
-configitem("fsmonitor", "blacklistusers", default=list)
-configitem("fsmonitor", "mode", default="on")
-configitem("fsmonitor", "timeout", default=10)
-configitem("fsmonitor", "track-ignore-files", default=False)
-configitem("fsmonitor", "dirstate-nonnormal-file-threshold", default=200)
-configitem("fsmonitor", "watchman-changed-file-threshold", default=200)
-configitem("fsmonitor", "warn-fresh-instance", default=False)
-configitem("fsmonitor", "fallback-on-watchman-exception", default=True)
-configitem("fsmonitor", "tcp", default=False)
-configitem("fsmonitor", "tcp-host", default="::1")
-configitem("fsmonitor", "tcp-port", default=12300)
-configitem("fsmonitor", "watchman-query-lock", default=False)
-configitem("fsmonitor", "wait-full-crawl", default=True)
 
 # This extension is incompatible with the following incompatible extensions
 # and will disable itself when encountering one of these:
@@ -292,7 +276,7 @@ class fsmonitorfilesystem(filesystem.physicalfilesystem):
         super(fsmonitorfilesystem, self).__init__(root, dirstate)
 
         self._mode = repo.ui.config("fsmonitor", "mode")
-        self._timeout = float(repo.ui.config("fsmonitor", "timeout"))
+        self._timeout = repo.ui.configwith(float, "fsmonitor", "timeout")
         self._watchmanclient = watchmanclient.getclientforrepo(repo)
 
 

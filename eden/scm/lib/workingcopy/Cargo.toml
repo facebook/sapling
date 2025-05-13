@@ -21,7 +21,7 @@ once_cell = "1.12"
 parking_lot = { version = "0.12.1", features = ["send_guard"] }
 regex = "1.11.1"
 sapling-async-runtime = { version = "0.1.0", path = "../async-runtime" }
-sapling-configmodel = { version = "0.1.0", path = "../config/model" }
+sapling-configmodel = { version = "0.1.0", path = "../config/model", features = ["convert-path"] }
 sapling-context = { version = "0.1.0", path = "../context" }
 sapling-edenfs-client = { version = "0.1.0", path = "../edenfs-client", optional = true }
 sapling-gitcompat = { version = "0.1.0", path = "../gitcompat" }
@@ -47,7 +47,7 @@ sapling-vfs = { version = "0.1.0", path = "../vfs" }
 serde = { version = "1.0.185", features = ["derive", "rc"] }
 serde_json = { version = "1.0.140", features = ["float_roundtrip", "unbounded_depth"] }
 thiserror = "2"
-tokio = { version = "1.41.0", features = ["full", "test-util", "tracing"] }
+tokio = { version = "1.45.0", features = ["full", "test-util", "tracing"] }
 tracing = { version = "0.1.41", features = ["attributes", "valuable"] }
 watchman_client = { version = "0.9.0", git = "https://github.com/facebook/watchman.git", branch = "main" }
 whoami = "1.5"

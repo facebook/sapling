@@ -17,6 +17,7 @@ use futures::try_join;
 use git_types::git_lfs::format_lfs_pointer;
 use lazy_static::lazy_static;
 use mononoke_types::ContentMetadataV2;
+use mononoke_types::NonRootMPath;
 use mononoke_types::hash::GitSha1;
 use regex::Regex;
 pub use xdiff::CopyInfo;
@@ -474,24 +475,9 @@ impl<R: MononokeRepo> ChangesetPathDiffContext<R> {
                         MononokeError::from(Error::msg("assertion error: file should exist"))
                     })?;
                     let metadata = file.metadata().await?;
-
-                    let git_lfs_pointer: Option<String> =
+                    let git_lfs_pointer =
                         match justknobs::eval("scm/scmquery:diff_git_lfs_pointers", None, None) {
-                            Ok(true) => {
-                                let file_change = path.file_change().await?;
-                                file_change.and_then(|fc| {
-                                    fc.git_lfs().and_then(|git_lfs| {
-                                        if git_lfs.is_lfs_pointer() {
-                                            Some(format_lfs_pointer(
-                                                metadata.sha256,
-                                                fc.size().unwrap_or_default(),
-                                            ))
-                                        } else {
-                                            None
-                                        }
-                                    })
-                                })
-                            }
+                            Ok(true) => Self::get_git_lfs_pointer(path, &metadata).await?,
                             _ => None,
                         };
                     let diff_mode =
@@ -537,6 +523,48 @@ impl<R: MononokeRepo> ChangesetPathDiffContext<R> {
             }
             None => Ok(None),
         }
+    }
+
+    async fn get_git_lfs_pointer(
+        path: &ChangesetPathContentContext<R>,
+        metadata: &ContentMetadataV2,
+    ) -> Result<Option<String>, MononokeError> {
+        let file_change = match path.file_change().await? {
+            Some(file_change) => Some(file_change),
+            None => {
+                // If the file is not touched in the current changeset,
+                // try checking the last changeset that touched the file
+                let non_root_mpath = NonRootMPath::try_from(path.path().clone())?;
+                let last_modified_cs = path
+                    .changeset()
+                    .path_with_history(non_root_mpath.clone())
+                    .await?
+                    .last_modified()
+                    .await?;
+                match last_modified_cs {
+                    Some(last_modified_cs) => last_modified_cs
+                        .file_changes()
+                        .await?
+                        .get(&non_root_mpath)
+                        .cloned(),
+                    None => None,
+                }
+            }
+        };
+        let git_lfs_pointer = file_change.and_then(|fc| {
+            fc.git_lfs().and_then(|git_lfs| {
+                if git_lfs.is_lfs_pointer() {
+                    Some(format_lfs_pointer(
+                        metadata.sha256,
+                        fc.size().unwrap_or_default(),
+                    ))
+                } else {
+                    None
+                }
+            })
+        });
+
+        Ok(git_lfs_pointer)
     }
 
     /// Renders the diff (in the git diff format).

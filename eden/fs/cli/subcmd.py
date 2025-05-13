@@ -229,7 +229,7 @@ def do_help(parser: argparse.ArgumentParser, help_args: List[str]) -> int:
 @subcmd("help", "Display command line usage information")
 class HelpCmd(Subcmd):
     def setup_parser(self, parser: argparse.ArgumentParser) -> None:
-        parser.add_argument("args", nargs="*")
+        parser.add_argument("args", nargs=argparse.ZERO_OR_MORE)
 
     def run(self, args: argparse.Namespace) -> int:
         return do_help(self.parent_parser, args.args)

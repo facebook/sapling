@@ -91,6 +91,9 @@ hoist=remote
 
 [subtree]
 min-path-depth=2
+
+[pull]
+buffer-commit-count = 5
 """
     if use_watchman:
         content += """

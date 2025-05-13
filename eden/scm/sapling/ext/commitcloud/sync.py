@@ -67,9 +67,8 @@ def _getheads(repo):
 
 
 def _getbookmarks(repo):
-    ignored = repo.ui.configlist("commitcloud", "ignored-bookmarks")
-    if ignored:
-        matcher = bindings.pathmatcher.treematcher(ignored, False)
+    matcher = repo.config.get.as_matcher("commitcloud", "ignored-bookmarks")
+    if matcher is not None:
         is_ignored = matcher.matches
     else:
 
@@ -648,7 +647,7 @@ def pullheadgroups(repo, remotepath, headgroups):
 
 
 def partitionheads(ui, heads):
-    sizelimit = int(ui.config("commitcloud", "pullsizelimit"))
+    sizelimit = ui.configint("commitcloud", "pullsizelimit")
     it = iter(heads)
     return list(iter(lambda: tuple(itertools.islice(it, sizelimit)), ()))
 

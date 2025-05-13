@@ -18,13 +18,8 @@ import os
 import sys
 import weakref
 
-from sapling import encoding, localrepo, registrar, util
+from sapling import encoding, localrepo, util
 
-configtable = {}
-configitem = registrar.configitem(configtable)
-
-configitem("sampling", "filepath", default="")
-configitem("sampling", "debug", default=False)
 
 onehundredmb = 100 * 1024 * 1024
 

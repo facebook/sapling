@@ -9,10 +9,10 @@
 #![feature(let_chains)]
 #![feature(try_blocks)]
 
-mod context;
+pub mod context;
 mod errors;
-mod handlers;
-mod middleware;
+pub mod handlers;
+pub mod middleware;
 mod scuba;
 pub mod utils;
 

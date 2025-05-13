@@ -1170,7 +1170,7 @@ x = 2
         assert!(cfg.get_or("foo", "bool1", || false).unwrap());
         assert_eq!(
             format!("{}", cfg.get_or("foo", "bool2", || true).unwrap_err()),
-            "invalid bool: unknown"
+            "config foo.bool2 is invalid: invalid bool: unknown"
         );
         assert_eq!(cfg.get_or("foo", "int1", || 42).unwrap(), -33);
         assert_eq!(

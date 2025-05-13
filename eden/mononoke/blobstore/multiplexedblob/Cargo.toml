@@ -12,7 +12,7 @@ anyhow = "1.0.95"
 blobstore = { version = "0.1.0", path = ".." }
 blobstore_stats = { version = "0.1.0", path = "../blobstore_stats" }
 chrono = { version = "0.4", features = ["clock", "serde", "std"], default-features = false }
-clap = { version = "4.5.30", features = ["derive", "env", "string", "unicode", "wrap_help"] }
+clap = { version = "4.5.38", features = ["derive", "env", "string", "unicode", "wrap_help"] }
 context = { version = "0.1.0", path = "../../server/context" }
 futures = { version = "0.3.30", features = ["async-await", "compat"] }
 futures_stats = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
@@ -24,5 +24,5 @@ scuba_ext = { version = "0.1.0", path = "../../common/scuba_ext" }
 slog = { package = "tracing_slog_compat", version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 strum = { version = "0.26.2", features = ["derive"] }
 thiserror = "2"
-tokio = { version = "1.41.0", features = ["full", "test-util", "tracing"] }
+tokio = { version = "1.45.0", features = ["full", "test-util", "tracing"] }
 twox-hash = "1.6.1"

@@ -313,6 +313,8 @@ class EdenFS:
         timeout: float = EDENFS_START_TIMEOUT,
         takeover_from: Optional[int] = None,
         extra_args: Optional[List[str]] = None,
+        preserved_env: Optional[List[str]] = None,
+        extra_env: Optional[Dict[str, str]] = None,
         should_wait_for_daemon_healthy: bool = True,
     ) -> None:
         """
@@ -336,7 +338,13 @@ class EdenFS:
             timeout += 90
 
         takeover = takeover_from is not None
-        self.spawn_nowait(gdb=use_gdb, takeover=takeover, extra_args=extra_args)
+        self.spawn_nowait(
+            gdb=use_gdb,
+            takeover=takeover,
+            extra_args=extra_args,
+            preserved_env=preserved_env,
+            extra_env=extra_env,
+        )
 
         process = self._process
         assert process is not None
@@ -384,6 +392,8 @@ class EdenFS:
         self,
         gdb: bool = False,
         takeover: bool = False,
+        preserved_env: Optional[List[str]] = None,
+        extra_env: Optional[Dict[str, str]] = None,
         extra_args: Optional[List[str]] = None,
     ) -> None:
         """
@@ -396,12 +406,19 @@ class EdenFS:
             "daemon", "--daemon-binary", FindExe.EDEN_DAEMON, "--foreground"
         )
 
+        if extra_env is not None:
+            env.update(extra_env)
+
         extra_daemon_args = self.get_extra_daemon_args()
         if extra_args:
             extra_daemon_args.extend(extra_args)
 
         if takeover:
             args.append("--takeover")
+
+        if preserved_env:
+            args.append("--preserved-vars")
+            args.extend(preserved_env)
 
         # If the EDEN_GDB environment variable is set, run eden inside gdb
         # so a developer can debug crashes

@@ -8,12 +8,13 @@
 use std::borrow::Cow;
 use std::collections::HashSet;
 use std::hash::Hash;
+#[cfg(feature = "convert-path")]
 use std::path::PathBuf;
 use std::time::Duration;
 
 use minibytes::Text;
+#[cfg(feature = "convert-regex")]
 use regex::Regex;
-use util::path::expand_path;
 
 use crate::Config;
 use crate::Error;
@@ -196,9 +197,10 @@ impl FromConfigValue for ByteCount {
     }
 }
 
+#[cfg(feature = "convert-path")]
 impl FromConfigValue for PathBuf {
     fn try_from_str(s: &str) -> Result<Self> {
-        Ok(expand_path(s))
+        Ok(util::path::expand_path(s))
     }
 }
 
@@ -259,10 +261,21 @@ impl<T: FromConfigValue> FromConfigValue for Option<T> {
     }
 }
 
+#[cfg(feature = "convert-regex")]
 impl FromConfigValue for Regex {
     fn try_from_str(s: &str) -> Result<Self> {
         Regex::new(s)
             .map_err(|err| Error::Convert(format!("error parsing '{s}' as regex: {err:?}")))
+    }
+}
+
+#[cfg(feature = "convert-matcher")]
+impl FromConfigValue for pathmatcher::TreeMatcher {
+    fn try_from_str(s: &str) -> Result<Self> {
+        let parsed = parse_list(s);
+        let matcher =
+            Self::from_rules(parsed.into_iter(), false).map_err(|e| Error::Other(e.into()))?;
+        Ok(matcher)
     }
 }
 
@@ -538,6 +551,7 @@ mod tests {
         Ok(())
     }
 
+    #[cfg(feature = "convert-regex")]
     #[test]
     fn test_regex() -> anyhow::Result<()> {
         let re = Regex::try_from_str("one|two")?;
@@ -545,6 +559,18 @@ mod tests {
 
         assert!(Regex::try_from_str("(oops").is_err());
 
+        Ok(())
+    }
+
+    #[cfg(feature = "convert-matcher")]
+    #[test]
+    fn test_matcher() -> anyhow::Result<()> {
+        use pathmatcher::Matcher;
+        use pathmatcher::RepoPath;
+        let m = pathmatcher::TreeMatcher::try_from_str("aaa, *z, !bz")?;
+        assert!(m.matches_file(RepoPath::from_str("aaa")?)?);
+        assert!(m.matches_file(RepoPath::from_str("zzz")?)?);
+        assert!(!m.matches_file(RepoPath::from_str("bz")?)?);
         Ok(())
     }
 }

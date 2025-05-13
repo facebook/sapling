@@ -74,7 +74,7 @@ py_class!(pub class dagalgo |py| {
         Ok(result.map(|v| PyBytes::new(py, v.as_ref())))
     }
 
-    /// Calculate parents of the given set.
+    /// Calculate heads of the given set.
     def heads(&self, set: Names) -> PyResult<Names> {
         Ok(Names(block_on(self.dag(py).heads(set.0)).map_pyerr(py)?))
     }

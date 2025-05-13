@@ -77,10 +77,14 @@ use edenapi_types::LandStackResponse;
 use edenapi_types::LookupRequest;
 use edenapi_types::LookupResponse;
 use edenapi_types::LookupResult;
+use edenapi_types::PathHistoryRequest;
+use edenapi_types::PathHistoryRequestPaginationCursor;
+use edenapi_types::PathHistoryResponse;
 use edenapi_types::PushVar;
 use edenapi_types::ReferencesDataResponse;
 use edenapi_types::RenameWorkspaceRequest;
 use edenapi_types::RenameWorkspaceResponse;
+use edenapi_types::RepoPathBuf;
 use edenapi_types::RollbackWorkspaceRequest;
 use edenapi_types::RollbackWorkspaceResponse;
 use edenapi_types::SaplingRemoteApiServerError;
@@ -192,6 +196,7 @@ pub mod paths {
     pub const FILES2: &str = "files2";
     pub const HEALTH_CHECK: &str = "health_check";
     pub const HISTORY: &str = "history";
+    pub const PATH_HISTORY: &str = "path_history";
     pub const LAND_STACK: &str = "land";
     pub const LOOKUP: &str = "lookup";
     pub const SET_BOOKMARK: &str = "bookmarks/set";
@@ -907,6 +912,46 @@ impl Client {
         Ok(Response { entries, stats })
     }
 
+    async fn path_history_attempt(
+        &self,
+        commit: HgId,
+        paths: Vec<RepoPathBuf>,
+        limit: Option<u32>,
+        cursor: Vec<PathHistoryRequestPaginationCursor>,
+    ) -> Result<Response<PathHistoryResponse>, SaplingRemoteApiError> {
+        tracing::info!("Requesting path_history for {} file(s)", paths.len());
+
+        if paths.is_empty() {
+            return Ok(Response::empty());
+        }
+
+        let requests = self.prepare_requests(
+            None,
+            paths::PATH_HISTORY,
+            paths,
+            self.config().max_path_history_per_batch,
+            self.config().min_batch_size,
+            |paths| {
+                let cursor_for_paths = cursor
+                    .clone()
+                    .into_iter()
+                    .filter(|c| paths.contains(&c.path))
+                    .collect();
+                let req = PathHistoryRequest {
+                    commit,
+                    paths,
+                    limit,
+                    cursor: cursor_for_paths,
+                };
+                self.log_request(&req, "path_history");
+                req
+            },
+            |url, _paths| url.clone(),
+        )?;
+
+        self.fetch::<PathHistoryResponse>(requests)
+    }
+
     async fn blame_attempt(
         &self,
         files: Vec<Key>,
@@ -1369,6 +1414,20 @@ impl SaplingRemoteApi for Client {
     ) -> Result<Response<HistoryEntry>, SaplingRemoteApiError> {
         self.with_retry(|this| this.history_attempt(keys.clone(), length.clone()).boxed())
             .await
+    }
+
+    async fn path_history(
+        &self,
+        commit: HgId,
+        paths: Vec<RepoPathBuf>,
+        limit: Option<u32>,
+        cursor: Vec<PathHistoryRequestPaginationCursor>,
+    ) -> Result<Response<PathHistoryResponse>, SaplingRemoteApiError> {
+        self.with_retry(|this| {
+            this.path_history_attempt(commit.clone(), paths.clone(), limit.clone(), cursor.clone())
+                .boxed()
+        })
+        .await
     }
 
     async fn trees(

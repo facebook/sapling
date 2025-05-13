@@ -5,6 +5,7 @@
  * LICENSE file in the root directory of this source tree.
  */
 
+mod depth_matcher;
 mod error;
 mod exact_matcher;
 mod gitignore_matcher;
@@ -25,7 +26,9 @@ pub use pathmatcher_types::NegateMatcher;
 pub use pathmatcher_types::NeverMatcher;
 pub use pathmatcher_types::UnionMatcher;
 pub use pathmatcher_types::XorMatcher;
+pub use types::RepoPath;
 
+pub use crate::depth_matcher::DepthMatcher;
 pub use crate::error::Error;
 pub use crate::exact_matcher::ExactMatcher;
 pub use crate::gitignore_matcher::GitignoreMatcher;
@@ -39,6 +42,7 @@ pub use crate::pattern::split_pattern;
 pub use crate::regex_matcher::RegexMatcher;
 pub use crate::tree_matcher::TreeMatcher;
 pub use crate::utils::expand_curly_brackets;
+pub use crate::utils::make_glob_recursive;
 pub use crate::utils::normalize_glob;
 pub use crate::utils::plain_to_glob;
 
@@ -47,7 +51,6 @@ mod test {
     use std::sync::Arc;
 
     use anyhow::Result;
-    use types::RepoPath;
 
     use super::*;
 

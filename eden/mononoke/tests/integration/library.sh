@@ -411,7 +411,7 @@ function get_bonsai_svnrev_mapping {
 }
 
 function get_bonsai_git_mapping {
-  sqlite3 "$TESTTMP/monsql/sqlite_dbs" "select hex(bcs_id), hex(git_sha1) from bonsai_git_mapping order by id";
+  sqlite3 "$TESTTMP/monsql/sqlite_dbs" "select hex(bcs_id), hex(git_sha1) from bonsai_git_mapping order by repo_id, bcs_id";
 }
 
 function get_bonsai_hg_mapping {
@@ -1368,6 +1368,8 @@ EOF
 
 function default_setup_drawdag() {
   setup_common_config "$BLOB_TYPE"
+
+  cd "$TESTTMP" || exit 1
 
   testtool_drawdag -R repo --derive-all <<EOF
 C

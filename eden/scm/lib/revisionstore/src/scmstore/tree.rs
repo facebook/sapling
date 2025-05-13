@@ -91,6 +91,22 @@ pub enum TreeMetadataMode {
 
 static TREESTORE_FLUSH_COUNT: Counter = Counter::new_counter("scmstore.tree.flush");
 
+#[derive(Debug, Clone)]
+pub struct TreeEntryWithAux {
+    entry: Entry,
+    tree_aux: Option<TreeAuxData>,
+}
+
+impl TreeEntryWithAux {
+    pub fn content(&self) -> Result<Bytes> {
+        self.entry.content()
+    }
+
+    pub fn node(&self) -> HgId {
+        self.entry.node()
+    }
+}
+
 #[derive(Clone)]
 pub struct TreeStore {
     /// The "local" indexedlog store. Stores content that is created locally.
@@ -153,6 +169,8 @@ impl TreeStore {
     pub(crate) fn get_local_content_direct(&self, id: &HgId) -> Result<Option<Blob>> {
         let m = &TREE_STORE_FETCH_METRICS;
 
+        tracing::trace!(target: "tree_fetches", %id, "direct_content");
+
         if let Ok(Some(blob)) = self.get_local_content_cas_cache(id) {
             return Ok(Some(blob));
         }
@@ -183,7 +201,16 @@ impl TreeStore {
 
         match self.get_indexedlog_caches_content_direct(&node)? {
             None => Ok(None),
-            Some(v) => Ok(Some(basic_parse_tree(v.into_bytes(), self.format())?)),
+            Some(blob) => {
+                let res: Box<ScmStoreTreeEntry> = Box::new(
+                    LazyTree::IndexedLog(TreeEntryWithAux {
+                        entry: Entry::new(node, blob.into_bytes(), Metadata::default()),
+                        tree_aux: self.get_local_aux_direct(&node)?,
+                    })
+                    .into(),
+                );
+                Ok(Some(res))
+            }
         }
     }
 
@@ -497,7 +524,14 @@ impl TreeStore {
                     for key in pending.into_iter() {
                         if let Some(entry) = log.get_entry(&key.hgid)? {
                             tracing::trace!("{:?} found in {:?}", key, location);
-                            state.common.found(key, LazyTree::IndexedLog(entry).into());
+                            state.common.found(
+                                key,
+                                LazyTree::IndexedLog(TreeEntryWithAux {
+                                    entry,
+                                    tree_aux: None,
+                                })
+                                .into(),
+                            );
                             found_count += 1;
                         }
                         bar.increase_position(1);
@@ -889,10 +923,22 @@ impl storemodel::KeyStore for TreeStore {
         self.get_local_content_direct(&node)
     }
 
-    fn get_content(&self, fctx: FetchContext, path: &RepoPath, node: Node) -> Result<Blob> {
+    fn get_content(&self, mut fctx: FetchContext, path: &RepoPath, node: Node) -> Result<Blob> {
         if node.is_null() {
             return Ok(Blob::Bytes(Default::default()));
         }
+
+        // This path is hot for code paths such as manifest-tree iter/diff. They tend to do big prefetches and then do single fetches.
+        // Optimize the single fetches by optimistically checking local caches directly (which skips the overhead of fetch_batch).
+        if fctx.mode().contains(FetchMode::LOCAL) {
+            if let Some(blob) = self.get_local_content(path, node)? {
+                return Ok(blob);
+            }
+
+            // Don't need to check local anymore, so remove from fetch mode.
+            fctx = FetchContext::new_with_cause(*fctx.mode() - FetchMode::LOCAL, *fctx.cause());
+        }
+
         let key = Key::new(path.to_owned(), node);
         match self
             .fetch_batch(fctx, std::iter::once(key.clone()), TreeAttributes::CONTENT)

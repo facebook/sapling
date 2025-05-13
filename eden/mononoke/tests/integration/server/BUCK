@@ -7,6 +7,8 @@ oncall("scm_server_treehugger")
 
 dott_test(
     name = "server",
+    # These tests have been vetted to run well without network access. Please investigate any failure thoroughly before disabling.
+    disable_all_network_access_target = True,
     dott_files =
         glob(
             [
@@ -29,6 +31,8 @@ dott_test(
 
 dott_test(
     name = "server-mysql",
+    # These tests have been vetted to run well without network access. Please investigate any failure thoroughly before disabling.
+    disable_all_network_access_target = True,
     dott_files =
         [
             "test-infinitepush-mutation.t",

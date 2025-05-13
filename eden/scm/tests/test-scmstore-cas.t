@@ -149,6 +149,7 @@ Make sure prefetch uses CAS:
   DEBUG cas: created client
   DEBUG cas: EagerRepoStore fetching 1 tree(s)
   DEBUG cas: EagerRepoStore fetching 1 tree(s)
+  DEBUG cas: EagerRepoStore fetching 1 tree(s)
   DEBUG cas: EagerRepoStore prefetching 2 file(s)
 
 Don't rewrite aux data to cache:

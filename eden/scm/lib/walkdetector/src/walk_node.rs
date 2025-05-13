@@ -14,6 +14,7 @@ use types::PathComponentBuf;
 use types::RepoPath;
 use types::RepoPathBuf;
 
+use crate::AtomicInstant;
 use crate::Walk;
 use crate::WalkType;
 use crate::interesting_metadata;
@@ -28,7 +29,7 @@ pub(crate) struct WalkNode {
     // Directory content walk, if any, rooted at this node.
     pub(crate) dir_walk: Option<Walk>,
 
-    pub(crate) last_access: Option<Instant>,
+    pub(crate) last_access: AtomicInstant,
     pub(crate) children: HashMap<PathComponentBuf, WalkNode>,
 
     // Child directories that have a walked descendant "advanced" past our current
@@ -47,30 +48,45 @@ pub(crate) struct WalkNode {
 }
 
 impl WalkNode {
-    /// Fetch active walk for `walk_root`, if any.
-    pub(crate) fn get_walk(&mut self, walk_type: WalkType, walk_root: &RepoPath) -> Option<&Walk> {
-        match walk_root.split_first_component() {
+    /// Get existing WalkNode entry for specified dir, if any.
+    pub(crate) fn get_node(&self, dir: &RepoPath) -> Option<&Self> {
+        match dir.split_first_component() {
             Some((head, tail)) => self
                 .children
-                .get_mut(head)
-                .and_then(|child| child.get_walk(walk_type, tail)),
-            None => self.get_dominating_walk(walk_type),
-        }
-    }
-
-    /// Get existing WalkNode entry for specified root, if any.
-    pub(crate) fn get_node(&mut self, walk_root: &RepoPath) -> Option<&mut Self> {
-        match walk_root.split_first_component() {
-            Some((head, tail)) => self
-                .children
-                .get_mut(head)
+                .get(head)
                 .and_then(|child| child.get_node(tail)),
             None => Some(self),
         }
     }
 
     /// Find node with active walk covering directory `dir`, if any.
-    pub(crate) fn get_containing_node<'a, 'b>(
+    pub(crate) fn get_owning_node<'a, 'b>(
+        &'a self,
+        walk_type: WalkType,
+        dir: &'b RepoPath,
+    ) -> Option<(&'a Self, &'b RepoPath)> {
+        match dir.split_first_component() {
+            Some((head, tail)) => {
+                if self.contains(walk_type, dir, 0) {
+                    Some((self, dir))
+                } else {
+                    self.children
+                        .get(head)
+                        .and_then(|child| child.get_owning_node(walk_type, tail))
+                }
+            }
+            None => {
+                if self.get_dominating_walk(walk_type).is_some() {
+                    Some((self, dir))
+                } else {
+                    None
+                }
+            }
+        }
+    }
+
+    /// Find node with active walk covering directory `dir`, if any.
+    pub(crate) fn get_owning_node_mut<'a, 'b>(
         &'a mut self,
         walk_type: WalkType,
         dir: &'b RepoPath,
@@ -82,7 +98,7 @@ impl WalkNode {
                 } else {
                     self.children
                         .get_mut(head)
-                        .and_then(|child| child.get_containing_node(walk_type, tail))
+                        .and_then(|child| child.get_owning_node_mut(walk_type, tail))
                 }
             }
             None => {
@@ -155,6 +171,9 @@ impl WalkNode {
         // If we completely overlap with the walk to be inserted, skip it. This shouldn't
         // happen, but I want to guarantee there are no overlapping walks.
         if self.contains(walk_type, walk_root, walk.depth) {
+            if let Some(existing) = self.get_walk_for_type(walk_type) {
+                existing.absorb_counters(&walk);
+            }
             return self;
         }
 
@@ -173,14 +192,16 @@ impl WalkNode {
                 }
             }
             None => {
-                self.set_walk_for_type(walk_type, Some(walk));
                 self.clear_advanced_children(walk_type);
-                self.remove_contained(walk_type, walk.depth, threshold);
+
+                // This can have a side effect of adding to self.advanced_children.
+                self.remove_contained(walk_type, &walk, threshold);
 
                 if self.advanced_children_len(walk_type) >= threshold {
                     walk.depth += 1;
                     self.insert_walk(walk_type, walk_root, walk, threshold)
                 } else {
+                    self.set_walk_for_type(walk_type, Some(walk));
                     self
                 }
             }
@@ -188,15 +209,15 @@ impl WalkNode {
     }
 
     /// List all active walks.
-    pub(crate) fn list_walks(&self, walk_type: WalkType) -> Vec<(RepoPathBuf, Walk)> {
+    pub(crate) fn list_walks(&self, walk_type: WalkType) -> Vec<(RepoPathBuf, usize)> {
         fn inner(
             node: &WalkNode,
             walk_type: WalkType,
             path: RepoPathBuf,
-            list: &mut Vec<(RepoPathBuf, Walk)>,
+            list: &mut Vec<(RepoPathBuf, usize)>,
         ) {
             if let Some(walk) = node.get_walk_for_type(walk_type) {
-                list.push((path.clone(), walk.clone()));
+                list.push((path.clone(), walk.depth));
             }
 
             for (name, child) in node.children.iter() {
@@ -207,15 +228,6 @@ impl WalkNode {
         let mut list = Vec::new();
         inner(self, walk_type, RepoPathBuf::new(), &mut list);
         list
-    }
-
-    pub(crate) fn child_walks(
-        &self,
-        walk_type: WalkType,
-    ) -> impl Iterator<Item = (&PathComponentBuf, &Walk)> {
-        self.children
-            .iter()
-            .filter_map(move |(name, node)| node.get_walk_for_type(walk_type).map(|w| (name, w)))
     }
 
     /// Get most "powerful" walk that covers `walk_type`. Basically, a file walk covers a
@@ -235,21 +247,35 @@ impl WalkNode {
         }
     }
 
-    fn set_walk_for_type(&mut self, walk_type: WalkType, walk: Option<Walk>) {
-        match walk_type {
-            WalkType::File => self.file_walk = walk,
-            WalkType::Directory => self.dir_walk = walk,
-        }
-
+    /// Set walk of `walk_type` to new_walk. Returns old walk, if any.
+    fn set_walk_for_type(&mut self, walk_type: WalkType, new_walk: Option<Walk>) -> Option<Walk> {
         // File walk implies directory walk, so clear out contained directory walk.
-        match (walk_type, walk, self.dir_walk) {
-            (WalkType::File, Some(Walk { depth }), Some(Walk { depth: dir_depth }))
-                if depth >= dir_depth =>
-            {
+        match (walk_type, &new_walk, &self.dir_walk) {
+            (
+                WalkType::File,
+                Some(new_walk @ Walk { depth, .. }),
+                Some(
+                    dir_walk @ Walk {
+                        depth: dir_depth, ..
+                    },
+                ),
+            ) if depth >= dir_depth => {
+                new_walk.absorb_counters(dir_walk);
                 self.dir_walk = None;
             }
             _ => {}
         }
+
+        let old_walk = match walk_type {
+            WalkType::File => &mut self.file_walk,
+            WalkType::Directory => &mut self.dir_walk,
+        };
+
+        if let (Some(old), Some(new)) = (&old_walk, &new_walk) {
+            new.absorb_counters(old);
+        }
+
+        std::mem::replace(old_walk, new_walk)
     }
 
     pub(crate) fn insert_advanced_child(
@@ -284,9 +310,10 @@ impl WalkNode {
     }
 
     /// Recursively remove all walks contained within a walk of depth `depth`.
-    fn remove_contained(&mut self, walk_type: WalkType, depth: usize, threshold: usize) {
+    fn remove_contained(&mut self, walk_type: WalkType, new_walk: &Walk, threshold: usize) {
         // Returns whether a walk exists at depth+1.
         fn inner(
+            new_walk: &Walk,
             node: &mut WalkNode,
             walk_type: WalkType,
             depth: usize,
@@ -303,12 +330,12 @@ impl WalkNode {
                     .is_some_and(|w| w.depth >= depth)
                 {
                     child_advanced = true;
-                } else {
-                    child.set_walk_for_type(walk_type, None);
+                } else if let Some(old_walk) = child.set_walk_for_type(walk_type, None) {
+                    new_walk.absorb_counters(&old_walk);
                 }
 
                 if depth > 0 {
-                    if inner(child, walk_type, depth - 1, false, threshold) {
+                    if inner(new_walk, child, walk_type, depth - 1, false, threshold) {
                         child_advanced = true;
                     }
                 }
@@ -322,7 +349,7 @@ impl WalkNode {
 
                 any_child_advanced = any_child_advanced || child_advanced;
 
-                child.file_walk.is_some() || child.dir_walk.is_some()
+                child.has_walk()
                     || !child.children.is_empty()
                     // Keep node around if it has total file/dir hints that are likely to be useful.
                     || interesting_metadata(threshold, child.total_files, child.total_dirs)
@@ -335,7 +362,7 @@ impl WalkNode {
             any_child_advanced
         }
 
-        inner(self, walk_type, depth, true, threshold);
+        inner(new_walk, self, walk_type, new_walk.depth, true, threshold);
     }
 
     /// Reports whether self has a walk and the walk fully contains a descendant walk
@@ -378,65 +405,110 @@ impl WalkNode {
     }
 
     /// Delete nodes not accessed within timeout.
-    /// Returns (num_deleted, num_remaining).
-    #[tracing::instrument(level = "debug", skip(self))]
-    pub(crate) fn gc(&mut self, timeout: Duration, now: Instant) -> (usize, usize) {
-        // Return (num_deleted, num_remaining, keep_me)
+    /// Returns (nodes_deleted, nodes_remaining, walks_deleted).
+    pub(crate) fn gc(&mut self, timeout: Duration, now: Instant) -> (usize, usize, usize) {
+        // Return (nodes_deleted, nodes_remaining, walks_deleted, keep_me)
         fn inner(
-            name: &str,
+            path: &mut RepoPathBuf,
             node: &mut WalkNode,
             timeout: Duration,
             now: Instant,
-        ) -> (usize, usize, bool) {
+        ) -> (usize, usize, usize, bool) {
+            let mut walks_removed = 0;
             let mut deleted = 0;
             let mut retained = 0;
 
             node.children.retain(|name, child| {
-                let (d, r, keep) = inner(name.as_str(), child, timeout, now);
+                path.push(name);
+
+                let (d, r, w, keep) = inner(path, child, timeout, now);
 
                 deleted += d;
                 retained += r;
+                walks_removed += w;
 
                 if !keep {
-                    tracing::debug!(%name, "GCing node");
+                    tracing::trace!(%path, has_walk=child.has_walk(), "GCing node");
                 }
+
+                path.pop();
 
                 keep
             });
 
-            let expired = node
-                .last_access
-                .is_none_or(|accessed| now - accessed >= timeout);
+            let expired = node.expired(now, timeout);
 
             let keep_me = !expired || !node.children.is_empty();
+            let has_walk = node.has_walk();
+
+            if expired && has_walk {
+                walks_removed += 1;
+                node.log_walk_end(&path);
+            }
 
             if expired && keep_me {
-                tracing::debug!(%name, "GCing node with children");
+                tracing::trace!(%path, has_walk, "GCing node with children");
                 node.clear_except_children();
             }
 
-            (deleted, retained, keep_me)
+            if keep_me {
+                retained += 1;
+            } else {
+                deleted += 1;
+            }
+
+            (deleted, retained, walks_removed, keep_me)
         }
 
-        let (deleted, remaining, keep_me) = inner("", self, timeout, now);
+        let (mut deleted, remaining, mut walks_deleted, keep_me) =
+            inner(&mut RepoPathBuf::new(), self, timeout, now);
         if !keep_me {
+            // We don't actually delete the root node, so take one off.
+            deleted -= 1;
+
             // At top level we have no parent to remove us, so just unset our fields.
-            tracing::debug!("GCing root node");
+            tracing::trace!("GCing root node");
+
+            if self.has_walk() {
+                walks_deleted += 1;
+                self.log_walk_end(RepoPath::empty());
+            }
+
             self.clear_except_children();
         }
 
-        (deleted, remaining)
+        (deleted, remaining, walks_deleted)
+    }
+
+    fn log_walk_end(&self, root: &RepoPath) {
+        if let Some(walk) = &self.file_walk {
+            walk.log_end(root);
+        }
+
+        if let Some(walk) = &self.dir_walk {
+            walk.log_end(root);
+        }
     }
 
     // Clear all fields except children.
     fn clear_except_children(&mut self) {
         self.file_walk.take();
         self.dir_walk.take();
-        self.last_access.take();
+        self.last_access.reset();
         self.advanced_file_children.clear();
         self.advanced_dir_children.clear();
         self.total_files.take();
         self.total_dirs.take();
         self.seen_files.clear();
+    }
+
+    fn has_walk(&self) -> bool {
+        self.file_walk.is_some() || self.dir_walk.is_some()
+    }
+
+    pub(crate) fn expired(&self, now: Instant, timeout: Duration) -> bool {
+        self.last_access
+            .load()
+            .is_none_or(|accessed| now - accessed >= timeout)
     }
 }

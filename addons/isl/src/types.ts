@@ -17,7 +17,7 @@ import type {ExportStack, ImportedStack, ImportStack} from 'shared/types/stack';
 import type {TypeaheadKind} from './CommitInfoView/types';
 import type {InternalTypes} from './InternalTypes';
 import type {Serializable} from './serialize';
-import type {DiffCommit, PartiallySelectedDiffCommit} from './stackEdit/diffSplitTypes';
+import type {Args, DiffCommit, PartiallySelectedDiffCommit} from './stackEdit/diffSplitTypes';
 
 export type Result<T> = {value: T; error?: undefined} | {value?: undefined; error: Error};
 
@@ -866,7 +866,7 @@ export type ClientToServerMessage =
       latestFields: InternalCommitMessageFields;
       suggestionId: string;
     }
-  | {type: 'splitCommitWithAI'; id: string; diffCommit: DiffCommit}
+  | {type: 'splitCommitWithAI'; id: string; diffCommit: DiffCommit; args: Args}
   | {type: 'gotUiState'; state: string}
   | CodeReviewProviderSpecificClientToServerMessages
   | PlatformSpecificClientToServerMessages

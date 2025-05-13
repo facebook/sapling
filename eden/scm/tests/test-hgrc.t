@@ -64,20 +64,17 @@ issue1829: wrong indentation
 
 make sure global options given on the cmdline take precedence
 
-  $ hg showconfig --config ui.verbose=True --quiet ui
-  ui.timeout=600
-  ui.color=auto
-  ui.paginate=true
-  ui.ignorerevnum=True
-  ui.slash=True
-  ui.interactive=False
-  ui.mergemarkers=detailed
-  ui.promptecho=True
-  ui.ignore.test=$RUNTESTDIR/gitignore
-  ui.ssh=* (glob)
-  ui.verbose=false
-  ui.debug=false
-  ui.quiet=true
+  $ hg showconfig --config ui.verbose=True ui.verbose
+  True
+(fixme: 'ui.verbose' config is not effective with --quiet)
+  $ hg showconfig --config ui.verbose=True --quiet ui.verbose
+  false
+  $ hg showconfig --verbose ui.verbose
+  true
+  $ hg showconfig --quiet ui.quiet
+  true
+  $ hg showconfig ui.quiet
+  [1]
 
   $ touch foobar/untracked
   $ cat >> foobar/.hg/hgrc <<EOF
@@ -148,13 +145,13 @@ customized hgrc
   $ hg showconfig
   $TESTTMP/hgrc:13: alias.log=log -g
   $TESTTMP/hgrc:11: defaults.identify=-n
+  $TESTTMP/hgrc:8: ui.style=~/.hgstyle
   $TESTTMP/hgrc:2: ui.debug=true
   $TESTTMP/hgrc:3: ui.fallbackencoding=ASCII
   $TESTTMP/hgrc:4: ui.quiet=true
   $TESTTMP/hgrc:5: ui.slash=true
   $TESTTMP/hgrc:6: ui.traceback=true
   $TESTTMP/hgrc:7: ui.verbose=true
-  $TESTTMP/hgrc:8: ui.style=~/.hgstyle
   $TESTTMP/hgrc:9: ui.logtemplate={node}
 
 plain hgrc

@@ -601,7 +601,6 @@ class localrepository:
             # hgsql wants raw access to revlog. Disable modern features
             # unconditionally for hgsql.
             self.ui.setconfig("experimental", "narrow-heads", "false", "hgsql")
-            self.ui.setconfig("experimental", "rust-commits", "false", "hgsql")
             self.ui.setconfig("visibility", "enabled", "false", "hgsql")
 
         self._dirstatevalidatewarned = False
@@ -958,22 +957,12 @@ class localrepository:
         mmapindexthreshold = self.ui.configbytes("experimental", "mmapindexthreshold")
         if mmapindexthreshold is not None:
             self.svfs.options["mmapindexthreshold"] = mmapindexthreshold
-        withsparseread = self.ui.configbool("experimental", "sparse-read")
-        srdensitythres = float(
-            self.ui.config("experimental", "sparse-read.density-threshold")
-        )
-        srmingapsize = self.ui.configbytes("experimental", "sparse-read.min-gap-size")
-        self.svfs.options["with-sparse-read"] = withsparseread
-        self.svfs.options["sparse-read-density-threshold"] = srdensitythres
-        self.svfs.options["sparse-read-min-gap-size"] = srmingapsize
 
         for r in self.requirements:
             if r.startswith("exp-compression-"):
                 self.svfs.options["compengine"] = r[len("exp-compression-") :]
 
-        bypassrevlogtransaction = self.ui.configbool(
-            "experimental", "narrow-heads"
-        ) and self.ui.configbool("experimental", "rust-commits")
+        bypassrevlogtransaction = self.ui.configbool("experimental", "narrow-heads")
         self.svfs.options["bypass-revlog-transaction"] = bypassrevlogtransaction
 
     def _writerequirements(self):
@@ -1583,6 +1572,11 @@ class localrepository:
         user aliases, consider calling ``scmutil.revrange()``.
         """
         return self.revs(expr, *args).iterctx()
+
+    @property
+    def volatile_state(self):
+        """Random temporary states attached to the repo object."""
+        return self._rsrepo.volatile_state
 
     def nodes(self, expr, *args):
         """Find revisions matching a revset and emit their nodes.
@@ -3325,9 +3319,10 @@ def _remotenodes(repo):
         def isdraft(name):
             return False
 
-    # publicheads is an alternative method to define what "public" means.
-    # publicheads is a list of full names, i.e. <remote>/<name>.
-    publicheads = set(repo.ui.configlist("remotenames", "publicheads"))
+    # publicheads is a direct way to define what remotenames are "public".
+    # publicheads is a 'treematcher' constructed from a list of gitignore
+    # rules, like `<remote>/*`, `!<remote>/<draft>`, etc.
+    publicheads = repo.config.get.as_matcher("remotenames", "publicheads")
 
     remotebookmarks = repo._remotenames["bookmarks"]
     for fullname, nodes in remotebookmarks.items():
@@ -3335,7 +3330,7 @@ def _remotenodes(repo):
         # remote: remote, name: foo/bar
 
         if publicheads:
-            if fullname in publicheads:
+            if publicheads.matches(fullname):
                 publicnodes += nodes
             else:
                 draftnodes += nodes

@@ -39,6 +39,7 @@ use edenapi_types::cloud::ClientInfo;
 use futures::FutureExt;
 use futures::StreamExt;
 use futures::stream;
+use gotham_ext::handler::SlapiCommitIdentityScheme;
 use mononoke_api::MononokeError;
 use mononoke_api::MononokeRepo;
 use mononoke_api::Repo;
@@ -72,6 +73,10 @@ impl SaplingRemoteApiHandler for CommitCloudWorkspace {
     const HTTP_METHOD: hyper::Method = hyper::Method::POST;
     const API_METHOD: SaplingRemoteApiMethod = SaplingRemoteApiMethod::CloudWorkspace;
     const ENDPOINT: &'static str = "/cloud/workspace";
+    const SUPPORTED_FLAVOURS: &'static [SlapiCommitIdentityScheme] = &[
+        SlapiCommitIdentityScheme::Hg,
+        SlapiCommitIdentityScheme::Git,
+    ];
 
     async fn handler(
         ectx: SaplingRemoteApiContext<Self::PathExtractor, Self::QueryStringExtractor, Repo>,
@@ -109,6 +114,10 @@ impl SaplingRemoteApiHandler for CommitCloudWorkspaces {
     const HTTP_METHOD: hyper::Method = hyper::Method::POST;
     const API_METHOD: SaplingRemoteApiMethod = SaplingRemoteApiMethod::CloudWorkspaces;
     const ENDPOINT: &'static str = "/cloud/workspaces";
+    const SUPPORTED_FLAVOURS: &'static [SlapiCommitIdentityScheme] = &[
+        SlapiCommitIdentityScheme::Hg,
+        SlapiCommitIdentityScheme::Git,
+    ];
 
     async fn handler(
         ectx: SaplingRemoteApiContext<Self::PathExtractor, Self::QueryStringExtractor, Repo>,
@@ -149,6 +158,10 @@ impl SaplingRemoteApiHandler for CommitCloudReferences {
     const HTTP_METHOD: hyper::Method = hyper::Method::POST;
     const API_METHOD: SaplingRemoteApiMethod = SaplingRemoteApiMethod::CloudReferences;
     const ENDPOINT: &'static str = "/cloud/references";
+    const SUPPORTED_FLAVOURS: &'static [SlapiCommitIdentityScheme] = &[
+        SlapiCommitIdentityScheme::Hg,
+        SlapiCommitIdentityScheme::Git,
+    ];
 
     async fn handler(
         ectx: SaplingRemoteApiContext<Self::PathExtractor, Self::QueryStringExtractor, Repo>,
@@ -202,6 +215,10 @@ impl SaplingRemoteApiHandler for CommitCloudUpdateReferences {
     const HTTP_METHOD: hyper::Method = hyper::Method::POST;
     const API_METHOD: SaplingRemoteApiMethod = SaplingRemoteApiMethod::CloudUpdateReferences;
     const ENDPOINT: &'static str = "/cloud/update_references";
+    const SUPPORTED_FLAVOURS: &'static [SlapiCommitIdentityScheme] = &[
+        SlapiCommitIdentityScheme::Hg,
+        SlapiCommitIdentityScheme::Git,
+    ];
 
     async fn handler(
         ectx: SaplingRemoteApiContext<Self::PathExtractor, Self::QueryStringExtractor, Repo>,
@@ -245,6 +262,10 @@ impl SaplingRemoteApiHandler for CommitCloudSmartlog {
     const HTTP_METHOD: hyper::Method = hyper::Method::POST;
     const API_METHOD: SaplingRemoteApiMethod = SaplingRemoteApiMethod::CloudSmartlog;
     const ENDPOINT: &'static str = "/cloud/smartlog";
+    const SUPPORTED_FLAVOURS: &'static [SlapiCommitIdentityScheme] = &[
+        SlapiCommitIdentityScheme::Hg,
+        SlapiCommitIdentityScheme::Git,
+    ];
 
     async fn handler(
         ectx: SaplingRemoteApiContext<Self::PathExtractor, Self::QueryStringExtractor, Repo>,
@@ -286,6 +307,10 @@ impl SaplingRemoteApiHandler for CommitCloudShareWorkspace {
     const HTTP_METHOD: hyper::Method = hyper::Method::POST;
     const API_METHOD: SaplingRemoteApiMethod = SaplingRemoteApiMethod::CloudShareWorkspace;
     const ENDPOINT: &'static str = "/cloud/share_workspace";
+    const SUPPORTED_FLAVOURS: &'static [SlapiCommitIdentityScheme] = &[
+        SlapiCommitIdentityScheme::Hg,
+        SlapiCommitIdentityScheme::Git,
+    ];
 
     async fn handler(
         ectx: SaplingRemoteApiContext<Self::PathExtractor, Self::QueryStringExtractor, Repo>,
@@ -322,6 +347,10 @@ impl SaplingRemoteApiHandler for CommitCloudUpdateArchive {
     const HTTP_METHOD: hyper::Method = hyper::Method::POST;
     const API_METHOD: SaplingRemoteApiMethod = SaplingRemoteApiMethod::CloudUpdateArchive;
     const ENDPOINT: &'static str = "/cloud/update_archive";
+    const SUPPORTED_FLAVOURS: &'static [SlapiCommitIdentityScheme] = &[
+        SlapiCommitIdentityScheme::Hg,
+        SlapiCommitIdentityScheme::Git,
+    ];
 
     async fn handler(
         ectx: SaplingRemoteApiContext<Self::PathExtractor, Self::QueryStringExtractor, Repo>,
@@ -354,6 +383,10 @@ impl SaplingRemoteApiHandler for CommitCloudRenameWorkspace {
     const HTTP_METHOD: hyper::Method = hyper::Method::POST;
     const API_METHOD: SaplingRemoteApiMethod = SaplingRemoteApiMethod::CloudRenameWorkspace;
     const ENDPOINT: &'static str = "/cloud/rename_workspace";
+    const SUPPORTED_FLAVOURS: &'static [SlapiCommitIdentityScheme] = &[
+        SlapiCommitIdentityScheme::Hg,
+        SlapiCommitIdentityScheme::Git,
+    ];
 
     async fn handler(
         ectx: SaplingRemoteApiContext<Self::PathExtractor, Self::QueryStringExtractor, Repo>,
@@ -390,6 +423,10 @@ impl SaplingRemoteApiHandler for CommitCloudSmartlogByVersion {
     const HTTP_METHOD: hyper::Method = hyper::Method::POST;
     const API_METHOD: SaplingRemoteApiMethod = SaplingRemoteApiMethod::CloudSmartlogByVersion;
     const ENDPOINT: &'static str = "/cloud/smartlog_by_version";
+    const SUPPORTED_FLAVOURS: &'static [SlapiCommitIdentityScheme] = &[
+        SlapiCommitIdentityScheme::Hg,
+        SlapiCommitIdentityScheme::Git,
+    ];
 
     async fn handler(
         ectx: SaplingRemoteApiContext<Self::PathExtractor, Self::QueryStringExtractor, Repo>,
@@ -432,6 +469,10 @@ impl SaplingRemoteApiHandler for CommitCloudHistoricalVersions {
     const HTTP_METHOD: hyper::Method = hyper::Method::POST;
     const API_METHOD: SaplingRemoteApiMethod = SaplingRemoteApiMethod::CloudHistoricalVersions;
     const ENDPOINT: &'static str = "/cloud/historical_versions";
+    const SUPPORTED_FLAVOURS: &'static [SlapiCommitIdentityScheme] = &[
+        SlapiCommitIdentityScheme::Hg,
+        SlapiCommitIdentityScheme::Git,
+    ];
 
     async fn handler(
         ectx: SaplingRemoteApiContext<Self::PathExtractor, Self::QueryStringExtractor, Repo>,
@@ -474,6 +515,10 @@ impl SaplingRemoteApiHandler for CommitCloudRollbackWorkspace {
     const HTTP_METHOD: hyper::Method = hyper::Method::POST;
     const API_METHOD: SaplingRemoteApiMethod = SaplingRemoteApiMethod::CloudRollbackWorkspace;
     const ENDPOINT: &'static str = "/cloud/rollback_workspace";
+    const SUPPORTED_FLAVOURS: &'static [SlapiCommitIdentityScheme] = &[
+        SlapiCommitIdentityScheme::Hg,
+        SlapiCommitIdentityScheme::Git,
+    ];
 
     async fn handler(
         ectx: SaplingRemoteApiContext<Self::PathExtractor, Self::QueryStringExtractor, Repo>,

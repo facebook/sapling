@@ -158,7 +158,7 @@ def custom_manifest_rule(name, manifest_file, targets):
 
     return list(targets.values())
 
-def dott_test(name, dott_files, deps, use_mysql = False, disable_all_network_access_target = True, enable_async_requests_worker = False, labels = ()):
+def dott_test(name, dott_files, deps, use_mysql = False, disable_all_network_access_target = False, enable_async_requests_worker = False, labels = ()):
     _dott_test(name, dott_files, deps, use_mysql, False, enable_async_requests_worker = enable_async_requests_worker, labels = labels)
 
     if use_mysql:

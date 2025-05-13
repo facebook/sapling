@@ -1,5 +1,7 @@
 #require git no-windows
 
+  $ enable morestatus
+  $ setconfig morestatus.show=True
   $ eagerepo
   $ setconfig diff.git=True
   $ setconfig subtree.cheap-copy=False
@@ -117,9 +119,7 @@ subtree graft a range of commits should work
   $ hg subtree graft --url $GIT_URL --rev 0e0bbd7f53d7f8dfa9ef6283f68e2aa5d274a185::2d03d263ac7869815998b556ccec69eb36edebda --from-path "" --to-path mygitrepo
   using cached git repo at $TESTTMP/default-hgcache/gitrepos/* (glob)
   grafting 0e0bbd7f53d7 "G2"
-  merging mygitrepo/a.txt and a.txt to mygitrepo/a.txt
   grafting 2d03d263ac78 "G3"
-  merging mygitrepo/a.txt and a.txt to mygitrepo/a.txt
   $ hg log -G -T '{node|short} {desc}\n' -p -r .^::
   @  516708be4743 Graft "G3"
   │
@@ -149,12 +149,97 @@ subtree graft a range of commits should work
       2
       3
       4
-tofix: conflicts should not occur
   $ hg subtree graft --url $GIT_URL --rev e815a5c1f80404f40f8fe492f461e91b4cc0e976 --from-path "" --to-path mygitrepo
   using cached git repo at $TESTTMP/default-hgcache/gitrepos/* (glob)
   grafting e815a5c1f804 "G4"
-  local [local] changed mygitrepo/a.txt which other [graft] deleted
-  use (c)hanged version, (d)elete, or leave (u)nresolved? u
+XXX: handle cross-repo copy tracing
+  $ hg log -G -T '{node|short} {desc}\n' -p -r .
+  @  dc73c8c4b2ea Graft "G4"
+  │
+  ~  Grafted from e815a5c1f80404f40f8fe492f461e91b4cc0e976
+     - Grafted path  to mygitrepo
+     diff --git a/mygitrepo/a.txt b/mygitrepo/a.txt
+     deleted file mode 100644
+     --- a/mygitrepo/a.txt
+     +++ /dev/null
+     @@ -1,5 +0,0 @@
+     -1a
+     -2
+     -3a
+     -4
+     -5
+     diff --git a/mygitrepo/b.txt b/mygitrepo/b.txt
+     new file mode 100644
+     --- /dev/null
+     +++ b/mygitrepo/b.txt
+     @@ -0,0 +1,5 @@
+     +1a
+     +2
+     +3a
+     +4
+     +5
+
+Test subtree graft with merge conflicts
+  $ newclientrepo
+  $ drawdag <<'EOS'
+  > B   # B/foo/a.txt = 1b\n2\n3\n4\n5\n
+  > |
+  > A   # A/foo/a.txt = 1\n2\n3\n4\n5\n
+  >     # drawdag.defaultfiles=false
+  > EOS
+  $ hg go $B -q
+  $ hg subtree graft --url $GIT_URL --rev 0e0bbd7f53d7f8dfa9ef6283f68e2aa5d274a185 --from-path "" --to-path foo
+  using cached git repo at $TESTTMP/default-hgcache/gitrepos/* (glob)
+  grafting 0e0bbd7f53d7 "G2"
+  merging foo/a.txt and a.txt to foo/a.txt
+  warning: 1 conflicts while merging foo/a.txt! (edit, then use 'hg resolve --mark')
   abort: unresolved conflicts, can't continue
   (use 'hg resolve' and 'hg graft --continue')
   [255]
+  $ hg st
+  M foo/a.txt
+  ? foo/a.txt.orig
+  
+  # The repository is in an unfinished *graft* state.
+  # Unresolved merge conflicts (1):
+  # 
+  #     foo/a.txt
+  # 
+  # To mark files as resolved:  hg resolve --mark FILE
+  # To continue:                hg graft --continue
+  # To abort:                   hg graft --abort
+  $ hg diff
+  diff --git a/foo/a.txt b/foo/a.txt
+  --- a/foo/a.txt
+  +++ b/foo/a.txt
+  @@ -1,4 +1,8 @@
+  +<<<<<<< local: 3fccbb413558 - test: B
+   1b
+  +=======
+  +1a
+  +>>>>>>> graft: 0e0bbd7f53d7 - test: G2
+   2
+   3
+   4
+  $ echo "1a1b\n2\n3a\n4\n5" > foo/a.txt
+  $ hg resolve --all --mark
+  (no more unresolved files)
+  continue: hg graft --continue
+  $ hg graft --continue
+  grafting 0e0bbd7f53d7 "G2"
+  $ hg log -T '{node|short} {desc}\n' -p -r .
+  b60e5eff9858 Graft "G2"
+  
+  Grafted from 0e0bbd7f53d7f8dfa9ef6283f68e2aa5d274a185
+  - Grafted path  to foo
+  diff --git a/foo/a.txt b/foo/a.txt
+  --- a/foo/a.txt
+  +++ b/foo/a.txt
+  @@ -1,5 +1,5 @@
+  -1b
+  +1a1b
+   2
+  -3
+  +3a
+   4
+   5

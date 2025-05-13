@@ -11,9 +11,7 @@
 #include <folly/Range.h>
 #include <gtest/gtest_prod.h>
 #include <array>
-#include <condition_variable>
 #include <optional>
-#include "eden/common/utils/DirType.h"
 #include "eden/common/utils/PathFuncs.h"
 #include "eden/fs/inodes/FileContentStore.h"
 #include "eden/fs/inodes/InodeCatalog.h"

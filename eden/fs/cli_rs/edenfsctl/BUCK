@@ -24,7 +24,7 @@ rust_binary(
         "fbsource//third-party/rust:tracing-subscriber",
         "//common/rust/shed/fbinit:fbinit",
         "//eden/fs/cli_rs/edenfs-commands:edenfs-commands",
-        "//eden/fs/cli_rs/facebook/edenfs-telemetry:edenfs-telemetry",
+        "//eden/fs/rust/facebook/edenfs-telemetry:edenfs-telemetry",
         "//eden/scm/lib/util/testutil:testutil",
     ],
 )

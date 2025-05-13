@@ -58,6 +58,8 @@ use edenapi_types::HistoricalVersionsResponse;
 use edenapi_types::HistoryEntry;
 use edenapi_types::Key;
 use edenapi_types::LandStackResponse;
+use edenapi_types::PathHistoryRequestPaginationCursor;
+use edenapi_types::PathHistoryResponse;
 use edenapi_types::ReferencesDataResponse;
 use edenapi_types::RenameWorkspaceRequest;
 use edenapi_types::RenameWorkspaceResponse;
@@ -87,7 +89,6 @@ use revisionstore::SaplingRemoteApiTreeStore;
 use types::FetchContext;
 use types::HgId;
 use types::RepoPathBuf;
-use types::fetch_cause::FetchCause;
 
 use crate::pyext::SaplingRemoteApiPyExt;
 use crate::stats::stats;
@@ -179,6 +180,16 @@ py_class!(pub class client |py| {
         length: Option<u32> = None
     ) -> PyResult<TStream<anyhow::Result<Serde<HistoryEntry>>>> {
         self.inner(py).as_ref().history_py(py, keys, length)
+    }
+
+    def path_history(
+        &self,
+        commit: Serde<HgId>,
+        paths: Vec<PyPathBuf>,
+        limit: Option<u32>,
+        cursor: Vec<Serde<PathHistoryRequestPaginationCursor>>,
+    ) -> PyResult<TStream<anyhow::Result<Serde<PathHistoryResponse>>>> {
+        self.inner(py).as_ref().path_history_py(py, commit, paths, limit, cursor)
     }
 
     def storetrees(

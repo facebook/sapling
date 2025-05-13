@@ -15,7 +15,7 @@ name = "clone"
 [dependencies]
 anyhow = "1.0.95"
 sapling-checkout = { version = "0.1.0", path = "../checkout" }
-sapling-configmodel = { version = "0.1.0", path = "../config/model" }
+sapling-configmodel = { version = "0.1.0", path = "../config/model", features = ["convert-path"] }
 sapling-context = { version = "0.1.0", path = "../context" }
 sapling-repo = { version = "0.1.0", path = "../repo" }
 sapling-types = { version = "0.1.0", path = "../types" }

@@ -3,11 +3,16 @@
 # This software may be used and distributed according to the terms of the
 # GNU General Public License version 2.
 
+import hashlib
 import json
+import os
+import shutil
 from collections import defaultdict
 from dataclasses import asdict, dataclass
 from enum import Enum
 from typing import List, Set
+
+import bindings
 
 from .. import error, match as matchmod, node, pathutil, util
 from ..i18n import _
@@ -257,19 +262,22 @@ def _imports_to_dict(imports: List[SubtreeImport], version: int):
 
 def gen_merge_info(repo, subtree_merges, version=SUBTREE_METADATA_VERSION):
     merges = [
-        m for m in subtree_merges if is_source_commit_allowed(repo.ui, repo[m[0]])
+        m
+        for m in subtree_merges
+        if is_source_commit_allowed(repo.ui, repo[m["from_commit"]])
     ]
     if not merges:
         return {}
 
+    # XXX: handle cross-repo merge metadata
     merges = [
         SubtreeMerge(
             version=version,
-            from_commit=node.hex(from_node),
-            from_path=from_path,
-            to_path=to_path,
+            from_commit=node.hex(m["from_commit"]),
+            from_path=m["from_path"],
+            to_path=m["to_path"],
         )
-        for from_node, from_path, to_path in subtree_merges
+        for m in subtree_merges
     ]
     metadata = _merges_to_dict(merges, version)
     return _encode_subtree_metadata_list(repo.ui, [metadata])
@@ -652,3 +660,49 @@ def check_commit_splitability(repo, node):
     for key in get_subtree_metadata_keys():
         if key in extra:
             raise error.Abort(_("cannot split subtree copy/merge commits"))
+
+
+def get_or_clone_git_repo(ui, url, from_rev=None):
+    def try_reuse_git_repo(git_repo_dir):
+        """try to reuse an existing git repo, otherwise return None"""
+        if not os.path.exists(git_repo_dir):
+            return None
+        if not os.path.isdir(git_repo_dir):
+            # should not happen, but just in case
+            os.unlink(git_repo_dir)
+            return None
+
+        try:
+            git_repo = localrepo.localrepository(ui, git_repo_dir)
+        except Exception:
+            # invalid git repo directory, remove it
+            shutil.rmtree(git_repo_dir)
+            return None
+
+        ui.status(_("using cached git repo at %s\n") % git_repo_dir)
+        nodes, pullnames = [], []
+        if from_rev:
+            if from_node := git.try_get_node(from_rev):
+                nodes.append(from_node)
+            else:
+                pullnames.append(from_rev)
+        git.pull(git_repo, "default", names=pullnames, nodes=nodes)
+        return git_repo
+
+    from .. import git, localrepo
+
+    url_hash = hashlib.sha256(url.encode("utf-8")).hexdigest()
+    if cache_dir := ui.config("remotefilelog", "cachepath"):
+        cache_dir = util.expandpath(cache_dir)
+        git_repo_dir = os.path.join(cache_dir, "gitrepos", url_hash)
+    else:
+        user_cache_dir = bindings.dirs.cache_dir()
+        git_repo_dir = os.path.join(user_cache_dir, "Sapling", "gitrepos", url_hash)
+
+    if git_repo := try_reuse_git_repo(git_repo_dir):
+        return git_repo
+    else:
+        ui.status(_("creating git repo at %s\n") % git_repo_dir)
+        # PERF: shallow clone, then partial checkout
+        git_repo = git.clone(ui, url, git_repo_dir, update=from_rev)
+        return git_repo

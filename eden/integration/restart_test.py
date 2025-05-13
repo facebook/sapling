@@ -9,7 +9,7 @@
 import subprocess
 import sys
 import typing
-from typing import Optional
+from typing import Dict, Optional, Union
 
 from eden.fs.cli.config import EdenInstance
 from eden.fs.cli.util import HealthStatus
@@ -37,8 +37,14 @@ class RestartTestBase(ServiceTestCaseBase):
 
         self.addCleanup(ensure_stopped)
 
-    def _spawn_restart(self, *args: str) -> PexpectSpawnType:
+    def _spawn_restart(
+        self,
+        *args: str,
+        extra_env: Optional[Dict[str, str]] = None,
+    ) -> PexpectSpawnType:
         edenfsctl, env = FindExe.get_edenfsctl_env()
+        if extra_env is not None:
+            env.update(extra_env)
         restart_cmd = (
             [edenfsctl, "--config-dir", str(self.eden_dir)]
             + self.get_required_eden_cli_args()
@@ -291,3 +297,39 @@ class RestartTest(RestartTestBase, PexpectAssertionMixin):
         )
         restart_process.expect_exact("Failed to start edenfs")
         self.assert_process_fails(restart_process, 1)
+
+    def test_restart_preserve_environment(self) -> None:
+        self._start_fake_edenfs()
+
+        # Run "eden restart"
+        # It should prompt since we are about to do a non-graceful restart.
+        p = self._spawn_restart(
+            "--preserved-vars",
+            "FOO_TEST_VAR",
+            "FOO_TEST_VAR2",
+            extra_env={
+                "FOO_TEST_VAR": "foo",
+                "FOO_TEST_VAR2": "bar",
+                "FOO_UNPRESERVED_TEST_VAR": "baz",
+            },
+        )
+        p.expect_exact("About to perform a full restart of EdenFS")
+        p.expect_exact(
+            "Note: this will temporarily disrupt access to your EdenFS-managed "
+            "repositories"
+        )
+        p.expect_exact("Proceed? [y/N] ")
+        p.sendline("y")
+        p.expect_exact("Starting fake edenfs daemon")
+        p.expect(r"Started EdenFS \(pid [0-9]+, session_id [0-9]+\)")
+        p.expect_exact("Successfully restarted EdenFS.")
+        p.expect_exact(
+            "Note: any programs running inside of an EdenFS-managed "
+            "directory will need to cd"
+        )
+        daemon_env = p.env
+        self.assertEqual(daemon_env["FOO_TEST_VAR"], "foo")
+        self.assertEqual(daemon_env["FOO_TEST_VAR2"], "bar")
+        self.assertNotIn("FOO_TEST_VAR3", daemon_env)
+        p.wait()
+        self.assertEqual(p.exitstatus, 0)

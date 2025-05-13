@@ -19,7 +19,6 @@ use commit_cloud_types::WorkspaceRemoteBookmark;
 use commit_cloud_types::WorkspaceSharingData as CloudWorkspaceSharingData;
 use commit_cloud_types::changeset::CloudChangesetId;
 use edenapi_types::GetSmartlogFlag;
-use edenapi_types::HgId;
 use edenapi_types::HistoricalVersion;
 use edenapi_types::SmartlogData;
 use edenapi_types::SmartlogNode;
@@ -31,6 +30,7 @@ use edenapi_types::cloud::ReferencesData;
 use edenapi_types::cloud::RemoteBookmark;
 use edenapi_types::cloud::SmartlogFilter;
 use mononoke_types::sha1_hash::Sha1;
+use types::Id20;
 
 pub trait FromCommitCloudType<T> {
     fn from_cc_type(cc: T) -> Result<Self>
@@ -48,8 +48,8 @@ impl IntoCommitCloudType<CloudUpdateReferencesParams> for UpdateReferencesParams
             workspace: self.workspace,
             reponame: self.reponame,
             version: self.version,
-            removed_heads: map_hg_into_cloud_ids(self.removed_heads)?,
-            new_heads: map_hg_into_cloud_ids(self.new_heads)?,
+            removed_heads: map_id_into_cloud_ids(self.removed_heads)?,
+            new_heads: map_id_into_cloud_ids(self.new_heads)?,
             updated_bookmarks: self
                 .updated_bookmarks
                 .into_iter()
@@ -69,8 +69,8 @@ impl IntoCommitCloudType<CloudUpdateReferencesParams> for UpdateReferencesParams
                 .removed_remote_bookmarks
                 .map(rbs_into_cc_type)
                 .transpose()?,
-            new_snapshots: map_hg_into_cloud_ids(self.new_snapshots)?,
-            removed_snapshots: map_hg_into_cloud_ids(self.removed_snapshots)?,
+            new_snapshots: map_id_into_cloud_ids(self.new_snapshots)?,
+            removed_snapshots: map_id_into_cloud_ids(self.removed_snapshots)?,
             client_info: self.client_info.map(|ci| ci.into_cc_type()).transpose()?,
         })
     }
@@ -120,20 +120,20 @@ impl IntoCommitCloudType<CloudSmartlogFilter> for SmartlogFilter {
 impl FromCommitCloudType<CloudReferencesData> for ReferencesData {
     fn from_cc_type(cc: CloudReferencesData) -> Result<Self> {
         Ok(ReferencesData {
-            heads: cc.heads.map(map_cloud_into_hg_ids),
+            heads: cc.heads.map(map_cloud_into_id_ids),
             bookmarks: cc.bookmarks.map(|bms| {
                 bms.into_iter()
-                    .map(|(name, node)| (name, HgId::from_byte_array(node.0.into_byte_array())))
+                    .map(|(name, node)| (name, Id20::from_byte_array(node.0.into_byte_array())))
                     .collect()
             }),
             remote_bookmarks: cc.remote_bookmarks.map(rbs_from_cc_type).transpose()?,
-            snapshots: cc.snapshots.map(map_cloud_into_hg_ids),
+            snapshots: cc.snapshots.map(map_cloud_into_id_ids),
             timestamp: cc.timestamp,
             version: cc.version,
             heads_dates: cc.heads_dates.map(|heads_dates| {
                 heads_dates
                     .into_iter()
-                    .map(|(hgcsid, date)| (HgId::from_byte_array(hgcsid.0.into_byte_array()), date))
+                    .map(|(idcsid, date)| (Id20::from_byte_array(idcsid.0.into_byte_array()), date))
                     .collect()
             }),
         })
@@ -158,7 +158,7 @@ impl FromCommitCloudType<CloudSmartlogNode> for SmartlogNode {
             author: cc.author,
             date: cc.date,
             message: cc.message,
-            parents: map_cloud_into_hg_ids(cc.parents),
+            parents: map_cloud_into_id_ids(cc.parents),
             bookmarks: cc.bookmarks,
             remote_bookmarks: cc.remote_bookmarks.map(rbs_from_cc_type).transpose()?,
         })
@@ -209,18 +209,17 @@ impl FromCommitCloudType<CloudWorkspaceData> for WorkspaceData {
     }
 }
 
-fn map_hg_into_cloud_ids(hgids: Vec<HgId>) -> Result<Vec<CloudChangesetId>> {
-    hgids
-        .into_iter()
-        .map(|hg| Ok(CloudChangesetId(Sha1::from_bytes(hg)?)))
+fn map_id_into_cloud_ids(ids: Vec<Id20>) -> Result<Vec<CloudChangesetId>> {
+    ids.into_iter()
+        .map(|id| Ok(CloudChangesetId(Sha1::from_bytes(id)?)))
         .collect()
 }
 
-fn map_cloud_into_hg_ids(c_ids: Vec<CloudChangesetId>) -> Vec<HgId> {
+fn map_cloud_into_id_ids(c_ids: Vec<CloudChangesetId>) -> Vec<Id20> {
     c_ids
         .into_iter()
-        .map(|c_id| HgId::from_byte_array(c_id.0.into_byte_array()))
-        .collect::<Vec<HgId>>()
+        .map(|c_id| Id20::from_byte_array(c_id.0.into_byte_array()))
+        .collect::<Vec<Id20>>()
 }
 
 fn rbs_into_cc_type(rbs: Vec<RemoteBookmark>) -> Result<Vec<WorkspaceRemoteBookmark>> {

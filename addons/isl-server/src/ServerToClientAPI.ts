@@ -944,7 +944,7 @@ export default class ServerToClientAPI {
         break;
       }
       case 'splitCommitWithAI': {
-        Internal.splitCommitWithAI?.(ctx, data.diffCommit).then(
+        Internal.splitCommitWithAI?.(ctx, data.diffCommit, data.args).then(
           (result: Result<ReadonlyArray<PartiallySelectedDiffCommit>>) => {
             this.postMessage({
               type: 'splitCommitWithAI',

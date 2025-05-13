@@ -61,7 +61,7 @@ class OverlayCmd(subcmd_mod.Subcmd):
             help="Copy the specified inode data to the destination path.",
         )
         parser.add_argument(
-            "path", nargs="?", help="The path to the EdenFS mount point."
+            "path", nargs=argparse.OPTIONAL, help="The path to the EdenFS mount point."
         )
 
     def run(self, args: argparse.Namespace) -> int:

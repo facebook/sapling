@@ -43,6 +43,10 @@ pub enum BenchCmd {
         /// Only supported on linux and needs root privilege to run.
         #[clap(long)]
         drop_kernel_caches: bool,
+
+        /// Disable progress bars in benchmarks
+        #[clap(long)]
+        no_progress: bool,
     },
 
     #[clap(about = "Run database I/O benchmarks")]
@@ -58,13 +62,29 @@ pub enum BenchCmd {
         /// Size of each chunk in bytes
         #[clap(long, default_value_t = types::DEFAULT_CHUNK_SIZE)]
         chunk_size: usize,
+
+        /// Disable progress bars in benchmarks
+        #[clap(long)]
+        no_progress: bool,
     },
 
-    #[clap(about = "Run filesystem traversal benchmark")]
-    FsTraversal {
+    #[clap(about = "Run traversal benchmark")]
+    Traversal {
         /// Directory to traverse
         #[clap(long)]
         dir: String,
+
+        /// Read file content through file system or via thrift during the traversal.
+        #[clap(long, value_enum, default_value_t = types::ReadFileMethod::Fs, help="read via fs or thrift")]
+        read_file_via: types::ReadFileMethod,
+
+        /// Whether to follow symbolic links during traversal
+        #[clap(long, default_value_t = false)]
+        follow_symlinks: bool,
+
+        /// Disable progress bars in benchmarks
+        #[clap(long)]
+        no_progress: bool,
     },
 }
 
@@ -78,6 +98,7 @@ impl crate::Subcommand for BenchCmd {
                 chunk_size,
                 read_file_via,
                 drop_kernel_caches,
+                no_progress: _,
             } => match gen::TestDir::validate(
                 test_dir,
                 *read_file_via == types::ReadFileMethod::Thrift,
@@ -125,6 +146,7 @@ impl crate::Subcommand for BenchCmd {
                 test_dir,
                 number_of_files,
                 chunk_size,
+                no_progress: _,
             } => match gen::TestDir::validate(test_dir, false) {
                 Ok(test_dir) => {
                     let random_data = gen::RandomData::new(*number_of_files, *chunk_size);
@@ -153,12 +175,39 @@ impl crate::Subcommand for BenchCmd {
                 }
                 Err(e) => return Err(e),
             },
-            Self::FsTraversal { dir } => {
+            Self::Traversal {
+                dir,
+                read_file_via,
+                follow_symlinks,
+                no_progress,
+            } => {
                 println!(
                     "Running filesystem traversal benchmark on directory: {}",
                     dir
                 );
-                println!("{}", traversal::bench_fs_traversal(dir)?);
+                match read_file_via {
+                    types::ReadFileMethod::Fs => {
+                        println!(
+                            "{}",
+                            traversal::bench_traversal_fs_read(
+                                dir,
+                                *follow_symlinks,
+                                *no_progress
+                            )?
+                        );
+                    }
+                    types::ReadFileMethod::Thrift => {
+                        println!(
+                            "{}",
+                            traversal::bench_traversal_thrift_read(
+                                dir,
+                                *follow_symlinks,
+                                *no_progress
+                            )
+                            .await?
+                        );
+                    }
+                }
             }
         }
 

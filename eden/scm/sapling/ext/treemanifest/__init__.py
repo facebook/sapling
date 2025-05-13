@@ -110,12 +110,6 @@ command = registrar.command(cmdtable)
 # The default depth to fetch during tree fetches
 TREE_DEPTH_MAX = 2**16
 
-configtable = {}
-configitem = registrar.configitem(configtable)
-
-configitem("treemanifest", "fetchdepth", default=TREE_DEPTH_MAX)
-configitem("treemanifest", "stickypushpath", default=True)
-configitem("treemanifest", "http", default=True)
 
 PACK_CATEGORY = "manifests"
 

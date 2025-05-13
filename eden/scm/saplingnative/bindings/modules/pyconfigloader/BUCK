@@ -5,11 +5,27 @@ oncall("sapling")
 rust_python_library(
     name = "pyconfigloader",
     srcs = glob(["src/**/*.rs"]),
+    autocargo = {
+        "cargo_toml_config": {
+            "dependencies_override": {
+                "dependencies": {
+                    "sapling-configmodel": {"features": [
+                        "convert-regex",
+                        "convert-matcher",
+                    ]},
+                },
+            },
+        },
+    },
     crate_root = "src/lib.rs",
     deps = [
+        "fbsource//third-party/rust:anyhow",
         "//eden/scm/lib/config/loader:configloader",
+        "//eden/scm/lib/config/model:configmodel",
         "//eden/scm/lib/cpython-ext:cpython-ext",
         "//eden/scm/lib/repo/repo-minimal-info:repo-minimal-info",
         "//eden/scm/lib/util:util",
+        "//eden/scm/saplingnative/bindings/modules/pypathmatcher:pypathmatcher",
+        "//eden/scm/saplingnative/bindings/modules/pyregex:pyregex",
     ],
 )

@@ -14,12 +14,12 @@ import os
 
 from bindings import configloader, context
 
-from . import configitems, error, util
+from . import error, util
 from .i18n import _
 
 # unique object used to detect no default value has been provided when
 # retrieving configuration value.
-_unset = object()
+_unset = configloader.unset_obj
 
 
 def optional(func, s):
@@ -45,13 +45,11 @@ class uiconfig:
             self._rctx = src._rctx
             self._rcfg = src._rcfg.clone()
             self._unserializable = src._unserializable.copy()
-            self._knownconfig = src._knownconfig
         else:
             self._rctx = rctx or context.context()
             self._rcfg = self._rctx.config()
             # map from IDs to unserializable Python objects.
             self._unserializable = {}
-            self._knownconfig = configitems.coreitems
 
         self.fixconfig()
 
@@ -191,53 +189,11 @@ class uiconfig:
         return value
 
     def _config(self, section, name, default=_unset):
-        value = itemdefault = default
-        item = self._knownconfig.get(section, {}).get(name)
-        alternates = [(section, name)]
-
-        if item is not None:
-            alternates.extend(item.alias)
-            if callable(item.default):
-                itemdefault = item.default()
-            else:
-                itemdefault = item.default
-        # fbonly: disabled in a hotfix because it's so expensive to fix
-        elif False:
-            msg = "accessing unregistered config item: '%s.%s'"
-            msg %= (section, name)
-            self.develwarn(msg, 2, "warn-config-unknown")
-
-        if default is _unset:
-            if item is None:
-                value = default
-            elif item.default is configitems.dynamicdefault:
-                value = None
-                msg = "config item requires an explicit default value: '%s.%s'"
-                msg %= (section, name)
-                self.develwarn(msg, 2, "warn-config-default")
-            else:
-                value = itemdefault
-        elif (
-            item is not None
-            and item.default is not configitems.dynamicdefault
-            and default != itemdefault
-        ):
-            msg = (
-                "specifying a mismatched default value for a registered "
-                "config item: '%s.%s' '%s'"
-            )
-            msg %= (section, name, default)
-            self.develwarn(msg, 2, "warn-config-default")
-
-        for s, n in alternates:
-            candidate = self._rcfg.get(s, n)
-            if candidate is not None:
-                value = candidate
-                value = self._unserializable.get(value, value)
-                section = s
-                name = n
-                break
-
+        value = default
+        candidate = self._rcfg.get(section, name)
+        if candidate is not None:
+            value = candidate
+            value = self._unserializable.get(value, value)
         return value
 
     def configsuboptions(self, section, name, default=_unset):
@@ -290,24 +246,12 @@ class uiconfig:
         >>> u.setconfig(s, 'invalid', 'somevalue')
         >>> try: u.configbool(s, 'invalid')
         ... except Exception as e: print(e)
-        foo.invalid is not a boolean ('somevalue')
+        invalid config foo.invalid=somevalue: invalid bool: somevalue
         """
-
-        v = self._config(section, name, default)
-        if v is None:
-            return v
-        if v is _unset:
-            if default is _unset:
-                return False
-            return default
-        if isinstance(v, bool):
-            return v
-        b = util.parsebool(v)
-        if b is None:
-            raise error.ConfigError(
-                _("%s.%s is not a boolean ('%s')") % (section, name, v)
-            )
-        return b
+        try:
+            return self._rcfg.get.as_bool(section, name, default)
+        except ValueError as e:
+            raise error.ConfigError(e)
 
     def configwith(self, convert, section, name, default=_unset, desc=None):
         """parse a configuration element with a conversion function
@@ -357,10 +301,12 @@ class uiconfig:
         >>> u.setconfig(s, 'invalid', 'somevalue')
         >>> try: u.configint(s, 'invalid')
         ... except Exception as e: print(e)
-        foo.invalid is not a valid integer ('somevalue')
+        invalid config foo.invalid=somevalue: invalid digit found in string
         """
-
-        return self.configwith(int, section, name, default, "integer")
+        try:
+            return self._rcfg.get.as_int(section, name, default)
+        except ValueError as e:
+            raise error.ConfigError(e)
 
     def configbytes(self, section, name, default=_unset):
         """parse a configuration element as a quantity in bytes
@@ -380,22 +326,12 @@ class uiconfig:
         >>> u.setconfig(s, 'invalid', 'somevalue')
         >>> try: u.configbytes(s, 'invalid')
         ... except Exception as e: print(e)
-        foo.invalid is not a byte quantity ('somevalue')
+        invalid config foo.invalid=somevalue: invalid float literal
         """
-
-        value = self._config(section, name, default)
-        if value is _unset:
-            if default is _unset:
-                default = 0
-            value = default
-        if not isinstance(value, str):
-            return value
         try:
-            return util.sizetoint(value)
-        except error.ParseError:
-            raise error.ConfigError(
-                _("%s.%s is not a byte quantity ('%s')") % (section, name, value)
-            )
+            return self._rcfg.get.as_byte_count(section, name, default)
+        except ValueError as e:
+            raise error.ConfigError(e)
 
     def configlist(self, section, name, default=_unset):
         """parse a configuration element as a list of comma/space separated
@@ -409,13 +345,7 @@ class uiconfig:
         >>> u.configlist(s, 'list2')
         ['this', 'is', 'a small', 'test']
         """
-        # default is not always a list
-        v = self.configwith(parselist, section, name, default, "list")
-        if isinstance(v, str):
-            return parselist(v)
-        elif v is None:
-            return []
-        return v
+        return self._rcfg.get.as_list(section, name, default)
 
     def configdate(self, section, name, default=_unset):
         """parse a configuration element as a tuple of ints

@@ -69,13 +69,14 @@ mod blame;
 mod bookmarks;
 mod capabilities;
 mod commit;
-mod commit_cloud;
+pub mod commit_cloud;
 mod files;
 mod git_objects;
-mod handler;
+pub mod handler;
 mod history;
 mod land;
 mod lookup;
+mod path_history;
 mod repos;
 mod suffix_query;
 mod trees;
@@ -121,6 +122,7 @@ pub enum SaplingRemoteApiMethod {
     Files2,
     GitObjects,
     History,
+    PathHistory,
     LandStack,
     Lookup,
     SetBookmark,
@@ -167,6 +169,7 @@ impl fmt::Display for SaplingRemoteApiMethod {
             Self::Files2 => "files2",
             Self::GitObjects => "git_objects",
             Self::History => "history",
+            Self::PathHistory => "path_history",
             Self::LandStack => "land_stack",
             Self::Lookup => "lookup",
             Self::SetBookmark => "set_bookmark",
@@ -209,7 +212,7 @@ struct JsonError {
     request_id: String,
 }
 
-struct JsonErrorFomatter;
+pub struct JsonErrorFomatter;
 
 impl ErrorFormatter for JsonErrorFomatter {
     type Body = Vec<u8>;
@@ -504,6 +507,7 @@ pub fn build_router<R: Send + Sync + Clone + 'static>(ctx: ServerContext<R>) -> 
         Handlers::setup::<files::UploadHgFilenodesHandler>(route);
         Handlers::setup::<git_objects::GitObjectsHandler>(route);
         Handlers::setup::<history::HistoryHandler>(route);
+        Handlers::setup::<path_history::PathHistoryHandler>(route);
         Handlers::setup::<land::LandStackHandler>(route);
         Handlers::setup::<lookup::LookupHandler>(route);
         Handlers::setup::<suffix_query::SuffixQueryHandler>(route);

@@ -233,7 +233,7 @@ def runchgserver(args):
     ischgserver = True
     # Clean server - do not load any config files or repos.
     _initstdio()
-    ui = uimod.ui()
+    ui = uimod.ui.load()
     repo = None
     args = ["serve", "--cmdserver", "chgunix2"] + args
     cmd, func, args, globalopts, cmdopts, _foundaliases = _parse(ui, args)
@@ -376,7 +376,9 @@ def dispatch(req):
             ret = ret or -1
     if ret is None:
         ret = 0
-    return ret & retmask
+    if retmask is not None:
+        ret = ret & retmask
+    return ret
 
 
 def _runcatch(req):
@@ -418,18 +420,6 @@ def _runcatch(req):
         pass
 
     def _runcatchfunc():
-        if realcmd == "serve" and "--read-only" in req.args:
-            req.args.remove("--read-only")
-
-            if not req.ui:
-                req.ui = uimod.ui.load()
-            req.ui.setconfig(
-                "hooks", "pretxnopen.readonlyrejectpush", rejectpush, "dispatch"
-            )
-            req.ui.setconfig(
-                "hooks", "prepushkey.readonlyrejectpush", rejectpush, "dispatch"
-            )
-
         if realcmd == "serve" and "--stdio" in cmdargs:
             # Uncontionally turn off narrow-heads. The hg servers use
             # full, revlog-based repos. Keep them using old revlog-based
@@ -1156,13 +1146,6 @@ def handlecommandexception(ui):
     alerts.print_matching_alerts_for_exception(ui, crash)
 
     return False  # re-raise the exception
-
-
-def rejectpush(ui, **kwargs):
-    ui.warn(_x("Permission denied - blocked by readonlyrejectpush hook\n"))
-    # mercurial hooks use unix process conventions for hook return values
-    # so a truthy return means failure
-    return True
 
 
 def getdebugmod(default=pdb):

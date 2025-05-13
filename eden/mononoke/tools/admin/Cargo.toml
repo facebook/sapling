@@ -38,7 +38,7 @@ changeset_info = { version = "0.1.0", path = "../../derived_data/changeset_info"
 changesets_creation = { version = "0.1.0", path = "../../changesets/changesets_creation" }
 changesets_uploader = { version = "0.1.0", path = "../../cas_client/changesets_uploader" }
 chrono = { version = "0.4", features = ["clock", "serde", "std"], default-features = false }
-clap = { version = "4.5.30", features = ["derive", "env", "string", "unicode", "wrap_help"] }
+clap = { version = "4.5.38", features = ["derive", "env", "string", "unicode", "wrap_help"] }
 cloned = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 cmdlib_cross_repo = { version = "0.1.0", path = "../../cmdlib/cross_repo" }
 cmdlib_displaying = { version = "0.1.0", path = "../../cmdlib/displaying" }
@@ -123,9 +123,9 @@ sql_commit_graph_storage = { version = "0.1.0", path = "../../repo_attributes/co
 sql_ext = { version = "0.1.0", path = "../../common/rust/sql_ext" }
 sql_query_config = { version = "0.1.0", path = "../../repo_attributes/sql_query_config" }
 synced_commit_mapping = { version = "0.1.0", path = "../../commit_rewriting/synced_commit_mapping" }
-tokio = { version = "1.41.0", features = ["full", "test-util", "tracing"] }
-tokio-stream = { version = "0.1.16", features = ["fs", "io-util", "net", "signal", "sync", "time"] }
-tokio-util = { version = "0.7.12", features = ["full"] }
+tokio = { version = "1.45.0", features = ["full", "test-util", "tracing"] }
+tokio-stream = { version = "0.1.17", features = ["fs", "io-util", "net", "signal", "sync", "time"] }
+tokio-util = { version = "0.7.15", features = ["full"] }
 unodes = { version = "0.1.0", path = "../../derived_data/unodes" }
 walkdir = "2.3"
 

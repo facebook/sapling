@@ -263,7 +263,8 @@ void Overlay::close() {
 #endif // !_WIN32
 
   inodeCatalog_->close(optNextInodeNumber);
-  if (fileContentStore_ && inodeCatalogType_ != InodeCatalogType::Legacy) {
+  if (fileContentStore_ && inodeCatalogType_ != InodeCatalogType::Legacy &&
+      inodeCatalogType_ != InodeCatalogType::LegacyDev) {
     fileContentStore_->close();
   }
 }

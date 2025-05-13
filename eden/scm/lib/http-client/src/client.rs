@@ -73,6 +73,9 @@ pub struct Config {
     pub unix_socket_path: Option<String>,
     pub verbose: bool,
     pub verbose_stats: bool,
+
+    pub read_buffer_size: Option<u64>,
+    pub write_buffer_size: Option<u64>,
 }
 
 impl Default for Config {
@@ -101,6 +104,9 @@ impl Default for Config {
             unix_socket_path: None,
             verbose: false,
             verbose_stats: false,
+
+            read_buffer_size: None,
+            write_buffer_size: None,
         }
     }
 }
@@ -430,6 +436,9 @@ impl HttpClient {
         req.set_verify_tls_host(!self.config.disable_tls_verification);
 
         req.set_limit_response_buffering(self.config.limit_response_buffering);
+
+        req.set_read_buffer_size(self.config.read_buffer_size);
+        req.set_write_buffer_size(self.config.write_buffer_size);
 
         req
     }

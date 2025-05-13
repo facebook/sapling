@@ -2610,27 +2610,42 @@ def _dograft(ui, to_repo, *revs, from_repo=None, **opts):
             raise error.Abort(_("can't specify --continue and revisions"))
         if revs and opts.get("abort"):
             raise error.Abort(_("can't specify --abort and revisions"))
+        if opts.get("from_path") or opts.get("to_path"):
+            raise error.Abort(
+                _("--from-path/--to-path cannot be used with --continue or --abort")
+            )
 
-        # read in unfinished revisions
-        try:
-            nodes = to_repo.localvfs.readutf8("graftstate").splitlines()
-            revs = [from_repo[node].rev() for node in nodes]
-        except IOError as inst:
-            if inst.errno != errno.ENOENT:
-                raise
+        if not to_repo.localvfs.exists("graftstate"):
             cmdutil.wrongtooltocontinue(to_repo, _("graft"))
 
-        if opts.get("continue"):
-            cont = True
         if opts.get("abort"):
             to_repo.localvfs.tryunlink("graftstate")
             return update(ui, to_repo, node=".", clean=True)
+
+        cont = True
+
+        ms = mergemod.mergestate.read(to_repo)
+        from_repo = ms.from_repo()
+        # read in unfinished revisions
+        nodes = to_repo.localvfs.readutf8("graftstate").splitlines()
+        revs = [from_repo[node].rev() for node in nodes]
+        from_paths = [m["from_path"] for m in ms.subtree_merges]
+        to_paths = [m["to_path"] for m in ms.subtree_merges]
+        is_crossrepo = from_repo != to_repo
     else:
         cmdutil.checkunfinished(to_repo)
         cmdutil.bailifchanged(to_repo)
         if not revs:
             raise error.Abort(_("no revisions specified"))
         revs = scmutil.revrange(from_repo, revs)
+
+        is_crossrepo = from_repo != to_repo
+        if is_crossrepo:
+            # In cross-repo grafts, from_paths are expected to be root-relative already
+            from_paths = opts.get("from_path", [])
+        else:
+            from_paths = scmutil.rootrelpaths(from_repo["."], opts.get("from_path", []))
+        to_paths = scmutil.rootrelpaths(to_repo["."], opts.get("to_path", []))
 
     skipped = set()
     # check for merges
@@ -2667,14 +2682,6 @@ def _dograft(ui, to_repo, *revs, from_repo=None, **opts):
 
         if not revs:
             return -1
-
-    is_crossrepo = from_repo != to_repo
-    if is_crossrepo:
-        # In cross-repo grafts, from_paths are expected to be root-relative already
-        from_paths = opts.get("from_path", [])
-    else:
-        from_paths = scmutil.rootrelpaths(from_repo["."], opts.get("from_path", []))
-    to_paths = scmutil.rootrelpaths(to_repo["."], opts.get("to_path", []))
 
     for pos, ctx in enumerate(from_repo.set("%ld", revs)):
         desc = '%s "%s"' % (ctx, ctx.description().split("\n", 1)[0])
@@ -2737,7 +2744,9 @@ def _dograft(ui, to_repo, *revs, from_repo=None, **opts):
 
         # commit
         editor = cmdutil.getcommiteditor(editform="graft", **opts)
-        message, _is_from_user = _makegraftmessage(to_repo, ctx, opts)
+        message, _is_from_user = _makegraftmessage(
+            to_repo, ctx, opts, from_paths, to_paths
+        )
         node = to_repo.commit(
             text=message, user=user, date=date, extra=extra, editor=editor
         )
@@ -2754,7 +2763,7 @@ def _dograft(ui, to_repo, *revs, from_repo=None, **opts):
     return 0
 
 
-def _makegraftmessage(repo, ctx, opts):
+def _makegraftmessage(repo, ctx, opts, from_paths, to_paths):
     opts = dict(opts)
 
     if not opts.get("logfile") and not opts.get("message"):
@@ -2764,11 +2773,11 @@ def _makegraftmessage(repo, ctx, opts):
     is_from_user = description != ctx.description()
 
     message = []
-    if opts.get("from_path"):
+    if from_paths:
         # For xdir grafts, include "grafted from" breadcrumb by default.
         if opts.get("log") is not False:
             message.append("Grafted from %s" % ctx.hex())
-            for f, t in zip(opts.get("from_path"), opts.get("to_path")):
+            for f, t in zip(from_paths, to_paths):
                 message.append("- Grafted path %s to %s" % (f, t))
 
             # don't update the user provided title
@@ -3997,13 +4006,17 @@ def init(ui, dest=".", **opts):
     """
     destpath = ui.expandpath(dest)
     usegit = opts.get("git")
+    if usegit is None and ui.configbool("init", "prefer-git"):
+        # In the OSS build, non-git mode doesn't give you a usable repo.
+        ui.status_err(
+            _(
+                """Creating a ".sl" repo with Git compatible storage. For full "git" compatibility, create repo using "git init". See https://sapling-scm.com/docs/git/git_support_modes for more information."""
+            )
+        )
+        usegit = True
+
     if usegit:
         git.clone(ui, "", destpath)
-    elif usegit is None and ui.configbool("init", "prefer-git"):
-        # In the OSS build, non-git mode doesn't give you a usable repo.
-        raise error.Abort(
-            _("please use '@prog@ init --git %s' for a better experience") % dest
-        )
     elif ui.configbool("format", "use-eager-repo"):
         bindings.eagerepo.EagerRepo.open(destpath)
     else:
@@ -5669,7 +5682,6 @@ def rollback(ui, repo, **opts):
         ("", "style", "", _("template style to use"), _("STYLE")),
         ("6", "ipv6", None, _("use IPv6 in addition to IPv4")),
         ("", "certificate", "", _("SSL certificate file"), _("FILE")),
-        ("", "read-only", None, _("only allow read operations")),
     ],
     _("[OPTION]..."),
     optionalrepo=True,

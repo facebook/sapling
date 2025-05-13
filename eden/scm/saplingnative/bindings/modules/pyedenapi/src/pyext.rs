@@ -57,6 +57,8 @@ use edenapi_types::HistoryEntry;
 use edenapi_types::IndexableId;
 use edenapi_types::LandStackResponse;
 use edenapi_types::LookupResult;
+use edenapi_types::PathHistoryRequestPaginationCursor;
+use edenapi_types::PathHistoryResponse;
 use edenapi_types::ReferencesDataResponse;
 use edenapi_types::RenameWorkspaceRequest;
 use edenapi_types::RenameWorkspaceResponse;
@@ -86,7 +88,6 @@ use revisionstore::StoreResult;
 use sha1::Digest;
 use types::FetchContext;
 use types::HgId;
-use types::fetch_cause::FetchCause;
 
 use crate::pytypes::PyStats;
 use crate::stats::stats;
@@ -95,6 +96,7 @@ use crate::util::meta_to_dict;
 use crate::util::to_contentid;
 use crate::util::to_keys;
 use crate::util::to_keys_with_parents;
+use crate::util::to_path;
 use crate::util::to_trees_upload_items;
 
 /// Extension trait allowing SaplingRemoteAPI methods to be called from Python code.
@@ -138,6 +140,30 @@ pub trait SaplingRemoteApiPyExt: SaplingRemoteApi {
         let keys = to_keys(py, &keys)?;
         let entries = py
             .allow_threads(|| block_unless_interrupted(self.history(keys, length)))
+            .map_pyerr(py)?
+            .map_pyerr(py)?
+            .entries;
+        Ok(entries.map_ok(Serde).map_err(Into::into).into())
+    }
+
+    fn path_history_py(
+        &self,
+        py: Python,
+        commit: Serde<HgId>,
+        paths: Vec<PyPathBuf>,
+        limit: Option<u32>,
+        cursor: Vec<Serde<PathHistoryRequestPaginationCursor>>,
+    ) -> PyResult<TStream<anyhow::Result<Serde<PathHistoryResponse>>>> {
+        let paths = paths
+            .into_iter()
+            .map(|path| to_path(py, &path).unwrap())
+            .collect();
+        let cursor = cursor.into_iter().map(|c| c.0).collect();
+
+        let entries = py
+            .allow_threads(|| {
+                block_unless_interrupted(self.path_history(commit.0, paths, limit, cursor))
+            })
             .map_pyerr(py)?
             .map_pyerr(py)?
             .entries;

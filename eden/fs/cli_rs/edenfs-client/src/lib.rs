@@ -29,4 +29,5 @@ pub mod scm_status;
 pub mod stats;
 pub mod types;
 pub mod unmount;
+pub mod use_case;
 pub mod utils;

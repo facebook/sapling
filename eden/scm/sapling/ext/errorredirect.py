@@ -34,13 +34,7 @@ import subprocess
 import sys
 import traceback
 
-from sapling import alerts, dispatch, encoding, extensions, registrar, util
-
-
-configtable = {}
-configitem = registrar.configitem(configtable)
-
-configitem("errorredirect", "fancy-traceback", default=True)
+from sapling import alerts, dispatch, encoding, extensions, util
 
 
 def _printtrace(ui, warning) -> bool:

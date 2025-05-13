@@ -9,8 +9,6 @@ use std::io;
 use std::sync::Arc;
 use std::sync::Once;
 
-use parking_lot::Mutex;
-use tracing_collector::TracingData;
 use tracing_subscriber::EnvFilter;
 use tracing_subscriber::Layer;
 use tracing_subscriber::Registry;
@@ -20,26 +18,48 @@ use tracing_subscriber::layer::SubscriberExt;
 
 static RUST_INIT: Once = Once::new();
 
+macro_rules! maybe_add_scuba_logger {
+    ($var:ident) => {
+        // Tracing subscriber that logs to edenfs_events.
+        #[cfg(feature = "scuba")]
+        let $var = $var.with(edenfs_telemetry::TracingLogger::new(Arc::new(
+            edenfs_telemetry::QueueingScubaLogger::new(
+                edenfs_telemetry::new_scuba_logger(edenfs_telemetry::EDEN_EVENTS_SCUBA),
+                100,
+            ),
+        )));
+    };
+}
+
 /// We use this function to ensure everything we need to initialized as the Rust code may not be
 /// called when EdenFS starts. Right now it only calls `env_logger::init` so we can see logs from
 /// `edenapi` and other crates. In longer term we should bridge the logs to folly logging.
 pub fn backingstore_global_init() {
     RUST_INIT.call_once(|| {
         if let Some((var_name, _)) = identity::debug_env_var("LOG") {
-            let data = Arc::new(Mutex::new(TracingData::new()));
-            let collector = tracing_collector::TracingCollector::new(data);
             let env_filter = EnvFilter::from_env(var_name);
             let env_logger = FmtLayer::new()
                 .with_span_events(FmtSpan::ACTIVE)
                 .with_ansi(false)
                 .with_writer(io::stderr);
-            let subscriber = Registry::default()
-                .with(collector)
-                .with(env_filter.and_then(env_logger));
+
+            let subscriber = Registry::default().with(env_logger.with_filter(env_filter));
+
+            maybe_add_scuba_logger!(subscriber);
+
+            if let Err(e) = tracing::subscriber::set_global_default(subscriber) {
+                eprintln!("Failed to set rust tracing subscriber: {:?}", e);
+            }
+        } else {
+            let subscriber = Registry::default();
+
+            maybe_add_scuba_logger!(subscriber);
+
             if let Err(e) = tracing::subscriber::set_global_default(subscriber) {
                 eprintln!("Failed to set rust tracing subscriber: {:?}", e);
             }
         }
+
         env_logger::init();
 
         edenapi::Builder::register_customize_build_func(eagerepo::edenapi_from_config);

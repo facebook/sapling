@@ -321,6 +321,14 @@ impl FileStore {
 
             let fetch_from_cas = fetch_remote && cas_client.is_some();
 
+            let mut prev_pending = state.pending_len();
+            let mut fetched_since_last_time = |state: &FetchState| -> u64 {
+                let new_pending = state.pending_len();
+                let diff = prev_pending.saturating_sub(new_pending);
+                prev_pending = new_pending;
+                diff as u64
+            };
+
             if fetch_local || fetch_from_cas {
                 if let Some(ref aux_cache) = aux_cache {
                     state.fetch_aux_indexedlog(
@@ -345,10 +353,14 @@ impl FileStore {
                     }
                 }
 
+                fctx.inc_local(fetched_since_last_time(&state));
+
                 // Then fetch from CAS since we essentially always expect a hit.
                 if let (Some(cas_client), true) = (&cas_client, fetch_remote) {
                     state.fetch_cas(cas_client);
                 }
+
+                fctx.inc_remote(fetched_since_last_time(&state));
 
                 // Finally fetch from local cache (shouldn't normally get here).
                 if fetch_local {
@@ -360,6 +372,8 @@ impl FileStore {
                         state.fetch_lfs(lfs_cache, StoreLocation::Cache);
                     }
                 }
+
+                fctx.inc_local(fetched_since_last_time(&state));
             } else if fetch_local {
                 // If not using CAS, fetch from cache first then local (hit rate in cache
                 // is typically much higher).
@@ -370,6 +384,8 @@ impl FileStore {
                 if let Some(ref indexedlog_local) = indexedlog_local {
                     state.fetch_indexedlog(indexedlog_local, StoreLocation::Local);
                 }
+
+                fctx.inc_local(fetched_since_last_time(&state));
 
                 if let Some(ref lfs_cache) = lfs_cache {
                     assert!(
@@ -386,6 +402,8 @@ impl FileStore {
                     );
                     state.fetch_lfs(lfs_local, StoreLocation::Local);
                 }
+
+                fctx.inc_local(fetched_since_last_time(&state));
             }
 
             if fetch_remote {
@@ -409,6 +427,8 @@ impl FileStore {
                         lfs_cache.clone(),
                     );
                 }
+
+                fctx.inc_remote(fetched_since_last_time(&state));
             }
 
             state.derive_computable(aux_cache.as_ref().map(|s| s.as_ref()));
@@ -432,6 +452,10 @@ impl FileStore {
         };
 
         // Only kick off a thread if there's a substantial amount of work.
+        //
+        // NB: callers such as backingstore::prefetch assume asynchronous behavior when fetching
+        // more than 1k keys. If you change how this works, consider callers' expectations
+        // carefully.
         if keys_len > 1000 {
             let active_bar = Registry::main().get_active_progress_bar();
             std::thread::spawn(move || {

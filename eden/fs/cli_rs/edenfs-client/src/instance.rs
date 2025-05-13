@@ -15,16 +15,17 @@
 //!
 //! ```no_run
 //! use edenfs_client::instance::EdenFsInstance;
+//! use edenfs_client::use_case::UseCaseId;
 //! use edenfs_client::utils::get_config_dir;
 //! use edenfs_client::utils::get_etc_eden_dir;
 //! use edenfs_client::utils::get_home_dir;
 //!
 //! // Initialize the instance
 //! let instance = EdenFsInstance::new(
+//!     UseCaseId::ExampleUseCase,
 //!     get_config_dir(&None, &None).unwrap(),
 //!     get_etc_eden_dir(&None),
 //!     get_home_dir(&None),
-//!     None,
 //! );
 //! ```
 //!
@@ -34,15 +35,16 @@
 //! use std::path::PathBuf;
 //!
 //! use edenfs_client::instance::EdenFsInstance;
+//! use edenfs_client::use_case::UseCaseId;
 //! use edenfs_client::utils::get_config_dir;
 //! use edenfs_client::utils::get_etc_eden_dir;
 //! use edenfs_client::utils::get_home_dir;
 //!
 //! let instance = EdenFsInstance::new(
+//!     UseCaseId::ExampleUseCase,
 //!     get_config_dir(&None, &None).unwrap(),
 //!     get_etc_eden_dir(&None),
 //!     get_home_dir(&None),
-//!     None,
 //! );
 //! match instance.get_config() {
 //!     Ok(config) => {
@@ -61,15 +63,16 @@
 //! use std::path::Path;
 //!
 //! use edenfs_client::instance::EdenFsInstance;
+//! use edenfs_client::use_case::UseCaseId;
 //! use edenfs_client::utils::get_config_dir;
 //! use edenfs_client::utils::get_etc_eden_dir;
 //! use edenfs_client::utils::get_home_dir;
 //!
 //! let instance = EdenFsInstance::new(
+//!     UseCaseId::ExampleUseCase,
 //!     get_config_dir(&None, &None).unwrap(),
 //!     get_etc_eden_dir(&None),
 //!     get_home_dir(&None),
-//!     None,
 //! );
 //! match instance.get_configured_mounts_map() {
 //!     Ok(mounts) => {
@@ -103,12 +106,13 @@ use edenfs_utils::get_executable;
 #[cfg(windows)]
 use edenfs_utils::strip_unc_prefix;
 use fbinit::expect_init;
-use tokio::sync::Semaphore;
 use tracing::Level;
 use tracing::event;
 use util::lock::PathLock;
 
 use crate::client::EdenFsClient;
+use crate::use_case::UseCase;
+use crate::use_case::UseCaseId;
 
 // Default config and etc dirs
 #[cfg(unix)]
@@ -135,10 +139,14 @@ const CONFIG_JSON_MODE: u32 = 0o664;
 ///
 /// # Fields
 ///
+/// * `use_case` - Use case configuration settings
 /// * `config_dir` - Path to the EdenFS configuration directory
 /// * `etc_eden_dir` - Path to the system-wide EdenFS configuration directory
 /// * `home_dir` - Optional path to the user's home directory
+/// * `client` - An `EdenFsClient` for interacting with EdenFS Thrift endpoint.
+#[allow(dead_code)]
 pub struct EdenFsInstance {
+    use_case: Arc<UseCase>,
     config_dir: PathBuf,
     etc_eden_dir: PathBuf,
     home_dir: Option<PathBuf>,
@@ -161,38 +169,41 @@ impl EdenFsInstance {
     ///
     /// # Parameters
     ///
+    /// * `use_case_id` - A unique identifier for a use case - used to access configuration settings and attribute usage to a given use case.
     /// * `config_dir` - Path to the EdenFS configuration directory
     /// * `etc_eden_dir` - Path to the system-wide EdenFS configuration directory
     /// * `home_dir` - Optional path to the user's home directory
-    /// * `semaphore` - Optional semaphore to limit concurrent Thrift client requests. Default is 2048.
     ///
     /// # Examples
     ///
     /// ```no_run
     /// use edenfs_client::instance::EdenFsInstance;
+    /// use edenfs_client::use_case::UseCaseId;
     /// use edenfs_client::utils::get_config_dir;
     /// use edenfs_client::utils::get_etc_eden_dir;
     /// use edenfs_client::utils::get_home_dir;
     ///
     /// let instance = EdenFsInstance::new(
+    ///     UseCaseId::ExampleUseCase,
     ///     get_config_dir(&None, &None).unwrap(),
     ///     get_etc_eden_dir(&None),
     ///     get_home_dir(&None),
-    ///     None,
     /// );
     /// ```
     pub fn new(
+        use_case_id: UseCaseId,
         config_dir: PathBuf,
         etc_eden_dir: PathBuf,
         home_dir: Option<PathBuf>,
-        semaphore: Option<Semaphore>,
     ) -> EdenFsInstance {
         let socketfile = config_dir.join("socket");
+        let use_case = Arc::new(UseCase::new(use_case_id));
         Self {
+            use_case: use_case.clone(),
             config_dir,
             etc_eden_dir,
             home_dir,
-            client: Arc::new(EdenFsClient::new(expect_init(), socketfile, semaphore)),
+            client: Arc::new(EdenFsClient::new(expect_init(), use_case, socketfile)),
         }
     }
 
@@ -210,15 +221,16 @@ impl EdenFsInstance {
     ///
     /// ```no_run
     /// use edenfs_client::instance::EdenFsInstance;
+    /// use edenfs_client::use_case::UseCaseId;
     /// use edenfs_client::utils::get_config_dir;
     /// use edenfs_client::utils::get_etc_eden_dir;
     /// use edenfs_client::utils::get_home_dir;
     ///
     /// let instance = EdenFsInstance::new(
+    ///     UseCaseId::ExampleUseCase,
     ///     get_config_dir(&None, &None).unwrap(),
     ///     get_etc_eden_dir(&None),
     ///     get_home_dir(&None),
-    ///     None,
     /// );
     /// match instance.get_config() {
     ///     Ok(config) => {
@@ -248,15 +260,16 @@ impl EdenFsInstance {
     ///
     /// ```no_run
     /// use edenfs_client::instance::EdenFsInstance;
+    /// use edenfs_client::use_case::UseCaseId;
     /// use edenfs_client::utils::get_config_dir;
     /// use edenfs_client::utils::get_etc_eden_dir;
     /// use edenfs_client::utils::get_home_dir;
     ///
     /// let instance = EdenFsInstance::new(
+    ///     UseCaseId::ExampleUseCase,
     ///     get_config_dir(&None, &None).unwrap(),
     ///     get_etc_eden_dir(&None),
     ///     get_home_dir(&None),
-    ///     None,
     /// );
     /// if let Some(home_dir) = instance.get_user_home_dir() {
     ///     println!("User home directory: {}", home_dir.display());
@@ -305,15 +318,16 @@ impl EdenFsInstance {
     ///
     /// ```no_run
     /// use edenfs_client::instance::EdenFsInstance;
+    /// use edenfs_client::use_case::UseCaseId;
     /// use edenfs_client::utils::get_config_dir;
     /// use edenfs_client::utils::get_etc_eden_dir;
     /// use edenfs_client::utils::get_home_dir;
     ///
     /// let instance = EdenFsInstance::new(
+    ///     UseCaseId::ExampleUseCase,
     ///     get_config_dir(&None, &None).unwrap(),
     ///     get_etc_eden_dir(&None),
     ///     get_home_dir(&None),
-    ///     None,
     /// );
     ///
     /// // Get socket path without checking if it exists
@@ -408,15 +422,16 @@ impl EdenFsInstance {
     ///
     /// ```no_run
     /// use edenfs_client::instance::EdenFsInstance;
+    /// use edenfs_client::use_case::UseCaseId;
     /// use edenfs_client::utils::get_config_dir;
     /// use edenfs_client::utils::get_etc_eden_dir;
     /// use edenfs_client::utils::get_home_dir;
     ///
     /// let instance = EdenFsInstance::new(
+    ///     UseCaseId::ExampleUseCase,
     ///     get_config_dir(&None, &None).unwrap(),
     ///     get_etc_eden_dir(&None),
     ///     get_home_dir(&None),
-    ///     None,
     /// );
     /// match instance.status_from_lock() {
     ///     Ok(_) => println!("EdenFS is running"),
@@ -473,15 +488,16 @@ impl EdenFsInstance {
     /// use std::path::Path;
     ///
     /// use edenfs_client::instance::EdenFsInstance;
+    /// use edenfs_client::use_case::UseCaseId;
     /// use edenfs_client::utils::get_config_dir;
     /// use edenfs_client::utils::get_etc_eden_dir;
     /// use edenfs_client::utils::get_home_dir;
     ///
     /// let instance = EdenFsInstance::new(
+    ///     UseCaseId::ExampleUseCase,
     ///     get_config_dir(&None, &None).unwrap(),
     ///     get_etc_eden_dir(&None),
     ///     get_home_dir(&None),
-    ///     None,
     /// );
     /// match instance.get_configured_mounts_map() {
     ///     Ok(mounts) => {
@@ -524,15 +540,16 @@ impl EdenFsInstance {
     ///
     /// ```no_run
     /// use edenfs_client::instance::EdenFsInstance;
+    /// use edenfs_client::use_case::UseCaseId;
     /// use edenfs_client::utils::get_config_dir;
     /// use edenfs_client::utils::get_etc_eden_dir;
     /// use edenfs_client::utils::get_home_dir;
     ///
     /// let instance = EdenFsInstance::new(
+    ///     UseCaseId::ExampleUseCase,
     ///     get_config_dir(&None, &None).unwrap(),
     ///     get_etc_eden_dir(&None),
     ///     get_home_dir(&None),
-    ///     None,
     /// );
     /// let clients_dir = instance.clients_dir();
     /// println!("Clients directory: {}", clients_dir.display());
@@ -553,15 +570,16 @@ impl EdenFsInstance {
     ///
     /// ```no_run
     /// use edenfs_client::instance::EdenFsInstance;
+    /// use edenfs_client::use_case::UseCaseId;
     /// use edenfs_client::utils::get_config_dir;
     /// use edenfs_client::utils::get_etc_eden_dir;
     /// use edenfs_client::utils::get_home_dir;
     ///
     /// let instance = EdenFsInstance::new(
+    ///     UseCaseId::ExampleUseCase,
     ///     get_config_dir(&None, &None).unwrap(),
     ///     get_etc_eden_dir(&None),
     ///     get_home_dir(&None),
-    ///     None,
     /// );
     /// let logs_dir = instance.logs_dir();
     /// println!("Logs directory: {}", logs_dir.display());
@@ -582,15 +600,16 @@ impl EdenFsInstance {
     ///
     /// ```no_run
     /// use edenfs_client::instance::EdenFsInstance;
+    /// use edenfs_client::use_case::UseCaseId;
     /// use edenfs_client::utils::get_config_dir;
     /// use edenfs_client::utils::get_etc_eden_dir;
     /// use edenfs_client::utils::get_home_dir;
     ///
     /// let instance = EdenFsInstance::new(
+    ///     UseCaseId::ExampleUseCase,
     ///     get_config_dir(&None, &None).unwrap(),
     ///     get_etc_eden_dir(&None),
     ///     get_home_dir(&None),
-    ///     None,
     /// );
     /// let storage_dir = instance.storage_dir();
     /// println!("Storage directory: {}", storage_dir.display());
@@ -619,15 +638,16 @@ impl EdenFsInstance {
     /// use std::path::Path;
     ///
     /// use edenfs_client::instance::EdenFsInstance;
+    /// use edenfs_client::use_case::UseCaseId;
     /// use edenfs_client::utils::get_config_dir;
     /// use edenfs_client::utils::get_etc_eden_dir;
     /// use edenfs_client::utils::get_home_dir;
     ///
     /// let instance = EdenFsInstance::new(
+    ///     UseCaseId::ExampleUseCase,
     ///     get_config_dir(&None, &None).unwrap(),
     ///     get_etc_eden_dir(&None),
     ///     get_home_dir(&None),
-    ///     None,
     /// );
     /// let path = Path::new("/path/to/checkout");
     /// match instance.client_name(path) {
@@ -671,15 +691,16 @@ impl EdenFsInstance {
     ///
     /// ```no_run
     /// use edenfs_client::instance::EdenFsInstance;
+    /// use edenfs_client::use_case::UseCaseId;
     /// use edenfs_client::utils::get_config_dir;
     /// use edenfs_client::utils::get_etc_eden_dir;
     /// use edenfs_client::utils::get_home_dir;
     ///
     /// let instance = EdenFsInstance::new(
+    ///     UseCaseId::ExampleUseCase,
     ///     get_config_dir(&None, &None).unwrap(),
     ///     get_etc_eden_dir(&None),
     ///     get_home_dir(&None),
-    ///     None,
     /// );
     /// let client_name = "my_client";
     /// let config_dir = instance.config_directory(client_name);
@@ -713,15 +734,16 @@ impl EdenFsInstance {
     /// use std::path::Path;
     ///
     /// use edenfs_client::instance::EdenFsInstance;
+    /// use edenfs_client::use_case::UseCaseId;
     /// use edenfs_client::utils::get_config_dir;
     /// use edenfs_client::utils::get_etc_eden_dir;
     /// use edenfs_client::utils::get_home_dir;
     ///
     /// let instance = EdenFsInstance::new(
+    ///     UseCaseId::ExampleUseCase,
     ///     get_config_dir(&None, &None).unwrap(),
     ///     get_etc_eden_dir(&None),
     ///     get_home_dir(&None),
-    ///     None,
     /// );
     /// let mount_point = Path::new("/path/to/mount");
     /// match instance.client_dir_for_mount_point(mount_point) {
@@ -775,15 +797,16 @@ impl EdenFsInstance {
     /// use std::path::Path;
     ///
     /// use edenfs_client::instance::EdenFsInstance;
+    /// use edenfs_client::use_case::UseCaseId;
     /// use edenfs_client::utils::get_config_dir;
     /// use edenfs_client::utils::get_etc_eden_dir;
     /// use edenfs_client::utils::get_home_dir;
     ///
     /// let instance = EdenFsInstance::new(
+    ///     UseCaseId::ExampleUseCase,
     ///     get_config_dir(&None, &None).unwrap(),
     ///     get_etc_eden_dir(&None),
     ///     get_home_dir(&None),
-    ///     None,
     /// );
     /// let path = Path::new("/path/to/remove");
     /// match instance.remove_path_from_directory_map(path) {

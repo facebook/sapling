@@ -8,6 +8,7 @@
 use std::collections::hash_map::DefaultHasher;
 use std::hash::Hash;
 use std::hash::Hasher;
+use std::string::ToString;
 use std::sync::Arc;
 use std::sync::RwLock;
 use std::time::Duration;
@@ -263,7 +264,7 @@ pub struct LoadShedLimit {
     target: Option<Target>,
 }
 
-#[derive(Debug, Copy, Clone, PartialEq)]
+#[derive(Debug, Copy, Clone, PartialEq, strum::Display)]
 pub enum Metric {
     EgressBytes,
     TotalManifests,

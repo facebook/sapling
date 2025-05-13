@@ -20,6 +20,7 @@ mod auxdata;
 mod backingstore;
 mod ffi;
 mod init;
+mod prefetch;
 mod request;
 mod tree;
 

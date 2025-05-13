@@ -12,6 +12,7 @@ use std::io::Read;
 use std::io::Write;
 #[cfg(target_os = "linux")]
 use std::os::unix::process::CommandExt;
+use std::path::Path;
 use std::path::PathBuf;
 #[cfg(target_os = "linux")]
 use std::process::Command;
@@ -80,30 +81,35 @@ pub fn bench_write_mfmd(
     result.add_metric(
         "create() + write() + sync() throughput",
         mb_per_second_e2e,
-        "MiB/s",
+        types::Unit::MiBps,
         None,
     );
     result.add_metric(
         "create() + write() throughput",
         mb_per_second_create_write,
-        "MiB/s",
+        types::Unit::MiBps,
         None,
     );
 
     // Add latency metrics
-    result.add_metric("create() latency", avg_create_dur * 1000.0, "ms", Some(4));
+    result.add_metric(
+        "create() latency",
+        avg_create_dur * 1000.0,
+        types::Unit::Ms,
+        Some(4),
+    );
 
     let chunk_size_kb = random_data.chunk_size as f64 / types::BYTES_IN_KILOBYTE as f64;
     result.add_metric(
         &format!("write() {:.0} KiB latency", chunk_size_kb),
         avg_write_dur * 1000.0,
-        "ms",
+        types::Unit::Ms,
         Some(4),
     );
     result.add_metric(
         &format!("sync() {:.0} KiB latency", chunk_size_kb),
         avg_sync_dur * 1000.0,
-        "ms",
+        types::Unit::Ms,
         Some(4),
     );
 
@@ -143,23 +149,33 @@ pub fn bench_fs_read_mfmd(test_dir: &TestDir, random_data: &RandomData) -> Resul
     let mut result = Benchmark::new(BenchmarkType::FsReadMultipleFiles);
 
     // Add throughput metrics
-    result.add_metric("open() + read() throughput", mb_per_second, "MiB/s", None);
+    result.add_metric(
+        "open() + read() throughput",
+        mb_per_second,
+        types::Unit::MiBps,
+        None,
+    );
 
     // Add latency metrics
-    result.add_metric("open() latency", avg_open_dur * 1000.0, "ms", Some(4));
+    result.add_metric(
+        "open() latency",
+        avg_open_dur * 1000.0,
+        types::Unit::Ms,
+        Some(4),
+    );
 
     let chunk_size_kb = random_data.chunk_size as f64 / types::BYTES_IN_KILOBYTE as f64;
     result.add_metric(
         &format!("read() {:.0} KiB latency", chunk_size_kb),
         avg_read_dur * 1000.0,
-        "ms",
+        types::Unit::Ms,
         Some(4),
     );
 
     result.add_metric(
         &format!("total {:.0} KiB latency", chunk_size_kb),
         (avg_read_dur + avg_open_dur) * 1000.0,
-        "ms",
+        types::Unit::Ms,
         Some(4),
     );
 
@@ -177,7 +193,7 @@ pub async fn bench_thrift_read_mfmd(
 
     for path in random_data.paths(test_dir) {
         let start = Instant::now();
-        let (repo_path, rel_file_path) = split_fbsource_file_path(path);
+        let (repo_path, rel_file_path) = split_fbsource_file_path(&path);
         let request = get_thrift_request(repo_path, rel_file_path)?;
         agg_req_build_dur += start.elapsed();
 
@@ -196,13 +212,13 @@ pub async fn bench_thrift_read_mfmd(
     let mut result = Benchmark::new(BenchmarkType::ThriftReadMultipleFiles);
 
     // Add throughput measurements
-    result.add_metric("throughput", mb_per_second, "MiB/s", None);
+    result.add_metric("throughput", mb_per_second, types::Unit::MiBps, None);
 
     // Add latency measurements
     result.add_metric(
         "request build latency",
         avg_req_build_dur * 1000.0,
-        "ms",
+        types::Unit::Ms,
         Some(4),
     );
 
@@ -210,7 +226,7 @@ pub async fn bench_thrift_read_mfmd(
     result.add_metric(
         &format!("getFileContent() {:.0} KiB latency", chunk_size_kb),
         avg_read_dur * 1000.0,
-        "ms",
+        types::Unit::Ms,
         Some(4),
     );
 
@@ -218,7 +234,7 @@ pub async fn bench_thrift_read_mfmd(
     result.add_metric(
         &format!("total {:.0} KiB latency", chunk_size_kb),
         (avg_read_dur + avg_req_build_dur) * 1000.0,
-        "ms",
+        types::Unit::Ms,
         Some(4),
     );
 
@@ -252,10 +268,15 @@ pub fn bench_write_sfmd(
     result.add_metric(
         "create() + write() + sync() throughput",
         mb_per_second_e2e,
-        "MiB/s",
+        types::Unit::MiBps,
         None,
     );
-    result.add_metric("create() + write()", mb_per_second_write, "MiB/s", None);
+    result.add_metric(
+        "create() + write()",
+        mb_per_second_write,
+        types::Unit::MiBps,
+        None,
+    );
 
     #[cfg(target_os = "linux")]
     {
@@ -284,7 +305,12 @@ pub fn bench_fs_read_sfmd(test_dir: &TestDir, random_data: &RandomData) -> Resul
     let mut result = Benchmark::new(BenchmarkType::FsReadSingleFile);
 
     // Add throughput metrics
-    result.add_metric("open() + read() throughput", mb_per_second, "MiB/s", None);
+    result.add_metric(
+        "open() + read() throughput",
+        mb_per_second,
+        types::Unit::MiBps,
+        None,
+    );
 
     Ok(result)
 }
@@ -293,7 +319,7 @@ pub fn bench_fs_read_sfmd(test_dir: &TestDir, random_data: &RandomData) -> Resul
 pub async fn bench_thrift_read_sfmd(test_dir: &TestDir) -> Result<Benchmark> {
     let file_path = test_dir.combined_data_path();
     let start = Instant::now();
-    let (repo_path, rel_file_path) = split_fbsource_file_path(file_path);
+    let (repo_path, rel_file_path) = split_fbsource_file_path(&file_path);
     let request = get_thrift_request(repo_path, rel_file_path)?;
     let response = get_edenfs_instance()
         .get_client()
@@ -311,12 +337,12 @@ pub async fn bench_thrift_read_sfmd(test_dir: &TestDir) -> Result<Benchmark> {
     let mut result = Benchmark::new(BenchmarkType::ThriftReadSingleFile);
 
     // Add throughput metrics
-    result.add_metric("throughput", mb_per_second, "MiB/s", None);
+    result.add_metric("throughput", mb_per_second, types::Unit::MiBps, None);
 
     Ok(result)
 }
 
-fn get_thrift_request(
+pub fn get_thrift_request(
     repo_path: PathBuf,
     rel_file_path: PathBuf,
 ) -> Result<thrift_types::edenfs::GetFileContentRequest> {
@@ -334,7 +360,7 @@ fn get_thrift_request(
     Ok(req)
 }
 
-fn split_fbsource_file_path(file_path: PathBuf) -> (PathBuf, PathBuf) {
+pub fn split_fbsource_file_path(file_path: &Path) -> (PathBuf, PathBuf) {
     let parts: Vec<_> = file_path.iter().collect();
     let fbsource_idx = file_path
         .iter()

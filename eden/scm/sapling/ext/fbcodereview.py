@@ -64,8 +64,6 @@ from sapling.templatekw import _hybrid
 
 from .extlib.phabricator import arcconfig, diffprops, graphql
 
-configtable = {}
-configitem = registrar.configitem(configtable)
 cmdtable = {}
 command = registrar.command(cmdtable)
 
@@ -73,16 +71,6 @@ namespacepredicate = registrar.namespacepredicate()
 templatekeyword = registrar.templatekeyword()
 autopullpredicate = registrar.autopullpredicate()
 
-configitem("fbscmquery", "auto-username", "true")
-
-configitem("pullcreatemarkers", "check-local-versions", default=False)
-
-configitem("phrevset", "autopull", default=True)
-configitem("phrevset", "callsign", default=None)
-configitem("phrevset", "graphqlonly", default=True)
-configitem("phrevset", "abort-if-git-diff-unavailable", default=True)
-
-configitem("fbcodereview", "hide-landed-commits", default=True)
 
 DIFFERENTIAL_REGEX: Pattern[str] = re.compile(
     "Differential Revision: http.+?/"  # Line start, URL
@@ -167,9 +155,9 @@ def makebackoutmessage(orig, repo, message: str, node):
     return message
 
 
-def makegraftmessage(orig, repo, ctx, opts):
-    message, is_from_user = orig(repo, ctx, opts)
-    if not opts.get("from_path"):
+def makegraftmessage(orig, repo, ctx, opts, from_paths, to_paths):
+    message, is_from_user = orig(repo, ctx, opts, from_paths, to_paths)
+    if not from_paths:
         return message, is_from_user
 
     if is_from_user:

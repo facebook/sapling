@@ -6,6 +6,11 @@ rust_library(
     name = "configmodel",
     srcs = glob(["src/**/*.rs"]),
     autocargo = {"cargo_toml_config": {
+        "features": {
+            "convert-matcher": ["sapling-pathmatcher"],
+            "convert-path": ["sapling-util"],
+            "convert-regex": ["regex"],
+        },
         "lib": {"name": "configmodel"},
         "package": {
             "authors": ["Meta Source Control Team <sourcecontrol-dev@meta.com>"],
@@ -17,6 +22,11 @@ rust_library(
         },
     }},
     crate_root = "src/lib.rs",
+    features = [
+        "convert-matcher",
+        "convert-path",
+        "convert-regex",
+    ],
     deps = [
         "fbsource//third-party/rust:anyhow",
         "fbsource//third-party/rust:auto_impl",
@@ -24,6 +34,7 @@ rust_library(
         "fbsource//third-party/rust:thiserror",
         "fbsource//third-party/rust:twox-hash",
         "//eden/scm/lib/minibytes:minibytes",
+        "//eden/scm/lib/pathmatcher:pathmatcher",
         "//eden/scm/lib/util:util",
     ],
 )

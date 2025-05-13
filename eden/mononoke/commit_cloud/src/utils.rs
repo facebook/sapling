@@ -19,7 +19,7 @@ use mononoke_types::hash::GitSha1;
 
 use crate::ctx::CommitCloudContext;
 
-pub(crate) async fn get_bonsai_from_cloud_ids(
+pub async fn get_bonsai_from_cloud_ids(
     ctx: &CoreContext,
     cctx: &CommitCloudContext,
     bonsai_hg_mapping: Arc<dyn BonsaiHgMapping>,

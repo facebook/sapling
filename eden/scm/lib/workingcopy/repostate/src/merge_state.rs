@@ -18,6 +18,7 @@ use anyhow::bail;
 use byteorder::BigEndian;
 use byteorder::ReadBytesExt;
 use byteorder::WriteBytesExt;
+use serde::Serialize;
 use types::HgId;
 use types::RepoPath;
 use types::RepoPathBuf;
@@ -69,8 +70,7 @@ pub struct MergeState {
     local: Option<HgId>,
     other: Option<HgId>,
 
-    // subtree merge info: [(from_commit, from_path, to_path)]
-    subtree_merges: Vec<(HgId, RepoPathBuf, RepoPathBuf)>,
+    subtree_merges: Vec<SubtreeMerge>,
 
     // contextual labels for local/other/base
     labels: Vec<String>,
@@ -151,11 +151,18 @@ impl MergeState {
         from_commit: HgId,
         from_path: RepoPathBuf,
         to_path: RepoPathBuf,
+        from_url: Option<String>,
     ) {
-        self.subtree_merges.push((from_commit, from_path, to_path));
+        let subtree_merge = SubtreeMerge {
+            from_commit,
+            from_path,
+            to_path,
+            from_url,
+        };
+        self.subtree_merges.push(subtree_merge);
     }
 
-    pub fn subtree_merges(&self) -> &[(HgId, RepoPathBuf, RepoPathBuf)] {
+    pub fn subtree_merges(&self) -> &[SubtreeMerge] {
         &self.subtree_merges
     }
 
@@ -268,20 +275,33 @@ impl MergeState {
                     );
                 }
                 b'S' => {
-                    let (first, mut rest) = split_strings(record_data)?;
-
-                    if rest.len() != 2 {
-                        bail!("subtree merge should have two paths: {} {:?}", first, rest);
-                    }
-
+                    let (first, rest) = split_strings(record_data)?;
                     let from_commit =
                         HgId::from_hex(first.as_bytes()).context("subtree merge from-commit")?;
 
-                    if let (Some(to_path), Some(from_path)) = (rest.pop(), rest.pop()) {
-                        let from_path = from_path.try_into().context("subtree from-path")?;
-                        let to_path = to_path.try_into().context("subtree to-path")?;
-                        ms.subtree_merges.push((from_commit, from_path, to_path));
-                    }
+                    let (from_path, to_path, from_url) = match rest.as_slice() {
+                        [from_path, to_path] => (from_path.clone(), to_path.clone(), None),
+                        [from_path, to_path, from_url] => {
+                            (from_path.clone(), to_path.clone(), Some(from_url.clone()))
+                        }
+                        _ => {
+                            bail!(
+                                "subtree merge should have two paths and an optional from-url: {} {:?}",
+                                first,
+                                rest
+                            );
+                        }
+                    };
+
+                    let from_path = from_path.try_into().context("subtree from-path")?;
+                    let to_path = to_path.try_into().context("subtree to-path")?;
+                    let subtree_merge = SubtreeMerge {
+                        from_commit,
+                        from_path,
+                        to_path,
+                        from_url,
+                    };
+                    ms.subtree_merges.push(subtree_merge);
                 }
                 b'f' => {
                     let (first, mut rest) = split_strings(record_data)?;
@@ -363,8 +383,16 @@ impl MergeState {
             write_record(w, b'O', &other.to_hex(), &Vec::<&str>::new())?;
         }
 
-        for (from_commit, from_path, to_path) in &self.subtree_merges {
-            write_record(w, b'S', &from_commit.to_hex(), &[from_path, to_path])?;
+        for subtree_merge in &self.subtree_merges {
+            let commit = &subtree_merge.from_commit().to_hex();
+            let mut rest = vec![
+                subtree_merge.from_path().as_str(),
+                subtree_merge.to_path().as_str(),
+            ];
+            if let Some(url) = subtree_merge.from_url() {
+                rest.push(url);
+            }
+            write_record(w, b'S', commit, &rest)?;
         }
 
         if let Some((md, mds)) = &self.merge_driver {
@@ -434,12 +462,27 @@ impl std::fmt::Debug for MergeState {
 
         if !self.subtree_merges.is_empty() {
             writeln!(f, "subtree merges:")?;
-            for (from_commit, from_path, to_path) in &self.subtree_merges {
-                writeln!(
-                    f,
-                    "  from_commit: {}, from: {}, to: {}",
-                    from_commit, from_path, to_path
-                )?;
+            for subtree_merge in &self.subtree_merges {
+                let from_commit = subtree_merge.from_commit();
+                let from_path = subtree_merge.from_path();
+                let to_path = subtree_merge.to_path();
+                let from_url = subtree_merge.from_url();
+                match from_url {
+                    None => {
+                        writeln!(
+                            f,
+                            "  from_commit: {}, from: {}, to: {}",
+                            from_commit, from_path, to_path
+                        )?;
+                    }
+                    Some(url) => {
+                        writeln!(
+                            f,
+                            "  from_commit: {}, from: {}, to: {}, url: {}",
+                            from_commit, from_path, to_path, url
+                        )?;
+                    }
+                }
             }
         }
 
@@ -529,6 +572,34 @@ impl std::fmt::Debug for MergeState {
         }
 
         Ok(())
+    }
+}
+
+/// SubtreeMerge stores metadata for subtree merge operations: subtree graft and subtree merge
+#[derive(Debug, PartialEq, Clone, Serialize)]
+pub struct SubtreeMerge {
+    from_commit: HgId,
+    from_path: RepoPathBuf,
+    to_path: RepoPathBuf,
+    // The external repo URL (present only for cross-repo merges)
+    from_url: Option<String>,
+}
+
+impl SubtreeMerge {
+    pub fn from_commit(&self) -> &HgId {
+        &self.from_commit
+    }
+
+    pub fn from_path(&self) -> &RepoPath {
+        &self.from_path
+    }
+
+    pub fn to_path(&self) -> &RepoPath {
+        &self.to_path
+    }
+
+    pub fn from_url(&self) -> Option<&str> {
+        self.from_url.as_deref()
     }
 }
 
@@ -676,29 +747,60 @@ mod test {
     }
 
     #[test]
-    fn test_subtree_merges() -> Result<()> {
+    fn test_subtree_merges_without_url() -> Result<()> {
         let mut ms = MergeState::default();
         assert!(ms.subtree_merges().is_empty());
 
         let from_path = RepoPathBuf::from_string("foo/a".to_string())?;
         let to_path = RepoPathBuf::from_string("foo/b".to_string())?;
         let from_commit = HgId::from_byte_array([0x11; HgId::len()]);
+        let from_url = None;
 
-        ms.add_subtree_merge(from_commit, from_path.clone(), to_path.clone());
-        assert_eq!(
-            ms.subtree_merges(),
-            &[(from_commit, from_path.clone(), to_path.clone())],
-        );
+        let subtree_merge = SubtreeMerge {
+            from_commit: from_commit.clone(),
+            from_path: from_path.clone(),
+            to_path: to_path.clone(),
+            from_url: from_url.clone(),
+        };
+
+        ms.add_subtree_merge(from_commit, from_path.clone(), to_path.clone(), from_url);
+        assert_eq!(ms.subtree_merges(), &[subtree_merge.clone()]);
 
         let mut data = Vec::new();
         ms.serialize(&mut data)?;
 
         let mut buffer = &data[..];
         let ms2 = MergeState::deserialize(&mut buffer)?;
-        assert_eq!(
-            ms2.subtree_merges(),
-            &[(from_commit, from_path.clone(), to_path.clone())],
-        );
+        assert_eq!(ms2.subtree_merges(), &[subtree_merge]);
+        Ok(())
+    }
+
+    #[test]
+    fn test_subtree_merges_with_url() -> Result<()> {
+        let mut ms = MergeState::default();
+        assert!(ms.subtree_merges().is_empty());
+
+        let from_path = RepoPathBuf::from_string("foo/a".to_string())?;
+        let to_path = RepoPathBuf::from_string("foo/b".to_string())?;
+        let from_commit = HgId::from_byte_array([0x11; HgId::len()]);
+        let from_url = Some("https://github.com/foo/bar.git".to_string());
+
+        let subtree_merge = SubtreeMerge {
+            from_commit: from_commit.clone(),
+            from_path: from_path.clone(),
+            to_path: to_path.clone(),
+            from_url: from_url.clone(),
+        };
+
+        ms.add_subtree_merge(from_commit, from_path.clone(), to_path.clone(), from_url);
+        assert_eq!(ms.subtree_merges(), &[subtree_merge.clone()]);
+
+        let mut data = Vec::new();
+        ms.serialize(&mut data)?;
+
+        let mut buffer = &data[..];
+        let ms2 = MergeState::deserialize(&mut buffer)?;
+        assert_eq!(ms2.subtree_merges(), &[subtree_merge]);
         Ok(())
     }
 }

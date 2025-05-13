@@ -6,6 +6,12 @@ rust_library(
     name = "cmdclone",
     srcs = glob(["src/**/*.rs"]),
     autocargo = {"cargo_toml_config": {
+        "dependencies_override": {"dependencies": {
+            "sapling-configmodel": {"features": [
+                "convert-regex",
+                "convert-path",
+            ]},
+        }},
         "lib": {"name": "cmdclone"},
         "package": {
             "authors": ["Meta Source Control Team <sourcecontrol-dev@meta.com>"],

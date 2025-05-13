@@ -5,7 +5,9 @@
  * GNU General Public License version 2.
  */
 
+use std::collections::HashMap;
 use std::sync::Arc;
+use std::sync::LazyLock;
 use std::sync::RwLock;
 
 use anyhow::Error;
@@ -25,11 +27,19 @@ use crate::FciMetric;
 use crate::LoadShedResult;
 use crate::Metric;
 use crate::MononokeRateLimitConfig;
+use crate::RateLimit;
 use crate::RateLimitBody;
 use crate::RateLimitReason;
 use crate::RateLimitResult;
 use crate::RateLimiter;
 use crate::Scope;
+
+pub static MAIN_IDS_THRESHOLDS: LazyLock<HashMap<&'static str, f64>> = LazyLock::new(|| {
+    let mut main_id_to_threshold = HashMap::new();
+    main_id_to_threshold.insert("MACHINE_TIER:snc", 0.9);
+    main_id_to_threshold.insert("MACHINE_TIER:ash", 0.9);
+    main_id_to_threshold
+});
 
 pub fn create_rate_limiter(
     fb: FacebookInit,
@@ -73,6 +83,30 @@ pub fn log_or_enforce_status(
     }
 }
 
+async fn check_and_log_close_to_limit(
+    fb: FacebookInit,
+    counter: &LoadLimitCounter,
+    main_id: &str,
+    limit: &RateLimit,
+    scuba: &mut MononokeScubaSampleBuilder,
+) -> Result<(), Error> {
+    if let Some(&threshold) = MAIN_IDS_THRESHOLDS.get(main_id) {
+        let adjusted_limit = threshold * limit.body.raw_config.limit;
+        if loadlimiter::should_throttle(fb, counter, adjusted_limit, limit.fci_metric.window)
+            .await?
+        {
+            let msg = format!(
+                "Rate limit close to exhaustion: {}% of {} in {}s",
+                threshold * 100.0,
+                limit.fci_metric.metric,
+                limit.fci_metric.window.as_secs()
+            );
+            scuba.log_with_msg("Ratelimit close to exhaustion", Some(msg));
+        }
+    }
+    Ok(())
+}
+
 #[async_trait]
 impl RateLimiter for MononokeRateLimits {
     async fn check_rate_limit(
@@ -93,9 +127,11 @@ impl RateLimiter for MononokeRateLimits {
                 continue;
             }
 
+            let counter = self.counter(fci_metric.metric, fci_metric.scope);
+
             if loadlimiter::should_throttle(
                 self.fb,
-                self.counter(fci_metric.metric, fci_metric.scope),
+                counter,
                 limit.body.raw_config.limit,
                 limit.fci_metric.window,
             )
@@ -107,6 +143,8 @@ impl RateLimiter for MononokeRateLimits {
                     }
                     RateLimitResult::Fail(reason) => RateLimitResult::Fail(reason),
                 };
+            } else if let Some(main_id) = main_id {
+                check_and_log_close_to_limit(self.fb, counter, main_id, limit, scuba).await?;
             }
         }
         Ok(RateLimitResult::Pass)
@@ -218,6 +256,10 @@ impl std::fmt::Debug for MononokeRateLimits {
 #[derive(Debug)]
 struct LoadLimitsInner {
     regional_egress_bytes: LoadLimitCounter,
+    regional_total_manifests: LoadLimitCounter,
+    regional_getpack_files: LoadLimitCounter,
+    regional_commits: LoadLimitCounter,
+    commits_per_author: LoadLimitCounter,
     commits_per_user: LoadLimitCounter,
     edenapi_qps: LoadLimitCounter,
     location_to_hash_count: LoadLimitCounter,
@@ -229,6 +271,22 @@ impl LoadLimitsInner {
             regional_egress_bytes: LoadLimitCounter {
                 category: category.clone(),
                 key: make_regional_limit_key("egress-bytes"),
+            },
+            regional_total_manifests: LoadLimitCounter {
+                category: category.clone(),
+                key: make_regional_limit_key("egress-total-manifests"),
+            },
+            regional_getpack_files: LoadLimitCounter {
+                category: category.clone(),
+                key: make_regional_limit_key("egress-getpack-files"),
+            },
+            regional_commits: LoadLimitCounter {
+                category: category.clone(),
+                key: make_regional_limit_key("egress-commits"),
+            },
+            commits_per_author: LoadLimitCounter {
+                category: category.clone(),
+                key: "commits_per_author".to_string(),
             },
             commits_per_user: LoadLimitCounter {
                 category: category.clone(),
@@ -259,6 +317,10 @@ impl MononokeRateLimits {
     fn counter(&self, metric: Metric, scope: Scope) -> &LoadLimitCounter {
         match (metric, scope) {
             (Metric::EgressBytes, Scope::Regional) => &self.load_limits.regional_egress_bytes,
+            (Metric::TotalManifests, Scope::Regional) => &self.load_limits.regional_total_manifests,
+            (Metric::GetpackFiles, Scope::Regional) => &self.load_limits.regional_getpack_files,
+            (Metric::Commits, Scope::Regional) => &self.load_limits.regional_commits,
+            (Metric::CommitsPerAuthor, Scope::Global) => &self.load_limits.commits_per_author,
             (Metric::CommitsPerUser, Scope::Global) => &self.load_limits.commits_per_user,
             (Metric::EdenApiQps, Scope::Global) => &self.load_limits.edenapi_qps,
             (Metric::LocationToHashCount, Scope::Global) => {

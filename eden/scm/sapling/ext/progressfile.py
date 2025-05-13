@@ -45,10 +45,6 @@ from sapling.extensions import wrapfunction
 
 testedwith = "ships-with-fb-ext"
 
-configtable = {}
-configitem = registrar.configitem(configtable)
-
-configitem("progress", "statefile", default="")
 
 _pid = None
 

@@ -7,15 +7,14 @@
 
 #![allow(dead_code)]
 
-pub mod caching;
 pub mod constants;
 pub mod errors;
-pub mod files;
 mod init;
 pub mod repo;
 mod trait_impls;
 pub mod trees;
 
 pub use commits_trait::DagCommits;
+pub use manifest_tree::ReadTreeManifest;
 pub use repo::Repo;
 pub use repo_minimal_info::RepoMinimalInfo;

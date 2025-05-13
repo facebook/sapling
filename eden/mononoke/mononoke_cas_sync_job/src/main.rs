@@ -37,7 +37,7 @@ use futures_watchdog::WatchdogExt;
 use metaconfig_types::RepoConfig;
 use mononoke_app::MononokeApp;
 use mononoke_app::MononokeAppBuilder;
-use mononoke_app::args::RepoArgs;
+use mononoke_app::args::OptRepoArgs;
 use mononoke_app::monitoring::AliveService;
 use mononoke_app::monitoring::MonitoringAppExtension;
 use mononoke_types::RepositoryId;
@@ -107,7 +107,7 @@ pub struct CasSyncArgs {
         long,
         help = "If set job will log individual bundle sync states to Scuba"
     )]
-    log_to_scuba: Option<bool>,
+    log_to_scuba: bool,
 
     #[clap(
         long,
@@ -122,13 +122,13 @@ pub struct CasSyncArgs {
         long = "leader-only",
         help = "If leader election is enabled, only one instance of the job will be running at a time for a repo"
     )]
-    leader_only: Option<bool>,
+    leader_only: bool,
 
     #[clap(flatten)]
     sharded_executor_args: ShardedExecutorArgs,
 
     #[clap(flatten)]
-    pub repo: RepoArgs,
+    pub repo: OptRepoArgs,
 }
 
 pub struct PipelineState<T> {

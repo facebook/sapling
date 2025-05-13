@@ -16,8 +16,6 @@ setup configuration
   A=aa53d24251ff3f54b1b2c29ae02826701b2abeb0079f1bb13b8434b54cd87675
   B=f8c75e41a0c4d29281df765f39de47bca1dcadfdc55ada4ccc2f6df567201658
   C=e32a1e342cdb1e38e88466b4c1a01ae9f410024017aa21dc0a1c5da6b3963bf2
-  $ cd $TESTTMP
-  $ hg clone mono:repo repo -q
 
   $ LOG_FILE="$TESTTMP/log_file"
   $ streaming_clone --scuba-log-file "$LOG_FILE" create --dot-hg-path "$TESTTMP/repo/.hg"
@@ -38,6 +36,7 @@ Try creating again, this should fail
   [1]
 
   $ start_and_wait_for_mononoke_server
+  $ cd "$TESTTMP"
   $ hg clone mono:repo repo-streamclone
   Cloning repo into $TESTTMP/repo-streamclone
   fetching changelog

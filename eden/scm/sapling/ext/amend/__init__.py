@@ -82,14 +82,6 @@ cmdtable.update(movement.cmdtable)
 cmdtable.update(split.cmdtable)
 cmdtable.update(unamend.cmdtable)
 
-configtable = {}
-configitem = registrar.configitem(configtable)
-
-configitem("amend", "alwaysnewest", default=False)
-configitem("amend", "date", default=None)
-configitem("amend", "education", default=None)
-configitem("commands", "amend.autorebase", default=True)
-configitem("update", "nextpreferdraft", default=True)
 
 testedwith = "ships-with-fb-ext"
 
@@ -377,8 +369,8 @@ def amend(ui, repo, *pats, **opts):
         noconflict = None
 
         # RESTACK_NO_CONFLICT requires IMM.
-        if conf == RESTACK_NO_CONFLICT and not ui.config(
-            "rebase", "experimental.inmemory", False
+        if conf == RESTACK_NO_CONFLICT and not ui.configbool(
+            "rebase", "experimental.inmemory"
         ):
             conf = RESTACK_DEFAULT
 

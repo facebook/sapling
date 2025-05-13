@@ -152,7 +152,7 @@ std::vector<std::unordered_map<std::string, std::string>> parseProcSmaps(
   std::unordered_map<std::string, std::string> currentMap;
 
   for (std::string line; getline(input, line);) {
-    if (line.find("-") != std::string::npos) {
+    if (line.find('-') != std::string::npos) {
       if (!currentMap.empty()) {
         entryList.push_back(currentMap);
         currentMap.clear();

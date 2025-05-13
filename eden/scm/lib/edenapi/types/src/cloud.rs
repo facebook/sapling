@@ -12,7 +12,7 @@ use quickcheck_arbitrary_derive::Arbitrary;
 use serde_derive::Deserialize;
 use serde_derive::Serialize;
 use type_macros::auto_wire;
-use types::HgId;
+use types::Id20;
 
 use crate::ServerError;
 
@@ -63,11 +63,11 @@ pub struct UpdateReferencesParams {
     #[id(2)]
     pub version: u64,
     #[id(3)]
-    pub removed_heads: Vec<HgId>,
+    pub removed_heads: Vec<Id20>,
     #[id(4)]
-    pub new_heads: Vec<HgId>,
+    pub new_heads: Vec<Id20>,
     #[id(5)]
-    pub updated_bookmarks: HashMap<String, HgId>,
+    pub updated_bookmarks: HashMap<String, Id20>,
     #[id(6)]
     pub removed_bookmarks: Vec<String>,
     #[id(7)]
@@ -75,9 +75,9 @@ pub struct UpdateReferencesParams {
     #[id(8)]
     pub removed_remote_bookmarks: Option<Vec<RemoteBookmark>>,
     #[id(9)]
-    pub new_snapshots: Vec<HgId>,
+    pub new_snapshots: Vec<Id20>,
     #[id(10)]
-    pub removed_snapshots: Vec<HgId>,
+    pub removed_snapshots: Vec<Id20>,
     #[id(11)]
     pub client_info: Option<ClientInfo>,
 }
@@ -103,15 +103,15 @@ pub struct ReferencesData {
     #[id(0)]
     pub version: u64,
     #[id(1)]
-    pub heads: Option<Vec<HgId>>,
+    pub heads: Option<Vec<Id20>>,
     #[id(2)]
-    pub bookmarks: Option<HashMap<String, HgId>>,
+    pub bookmarks: Option<HashMap<String, Id20>>,
     #[id(3)]
-    pub heads_dates: Option<HashMap<HgId, i64>>,
+    pub heads_dates: Option<HashMap<Id20, i64>>,
     #[id(4)]
     pub remote_bookmarks: Option<Vec<RemoteBookmark>>,
     #[id(5)]
-    pub snapshots: Option<Vec<HgId>>,
+    pub snapshots: Option<Vec<Id20>>,
     #[id(6)]
     pub timestamp: Option<i64>,
 }
@@ -125,7 +125,7 @@ pub struct RemoteBookmark {
     #[id(1)]
     pub name: String,
     #[id(2)]
-    pub node: Option<HgId>,
+    pub node: Option<Id20>,
 }
 
 #[auto_wire]
@@ -203,7 +203,7 @@ impl Default for GetSmartlogFlag {
 #[cfg_attr(any(test, feature = "for-tests"), derive(Arbitrary))]
 pub struct SmartlogNode {
     #[id(0)]
-    pub node: HgId,
+    pub node: Id20,
     #[id(1)]
     pub phase: String,
     #[id(2)]
@@ -213,7 +213,7 @@ pub struct SmartlogNode {
     #[id(4)]
     pub message: String,
     #[id(5)]
-    pub parents: Vec<HgId>,
+    pub parents: Vec<Id20>,
     #[id(6)]
     pub bookmarks: Vec<String>,
     #[id(7)]

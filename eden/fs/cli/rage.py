@@ -290,6 +290,7 @@ def print_diagnostic_info(
     print_running_eden_process(out)
     print_crashed_edenfs_logs(processor, out, dry_run)
 
+    edenfs_instance_pid = None
     if health_status.is_healthy():
         # assign to variable to make type checker happy :(
         edenfs_instance_pid = health_status.pid
@@ -359,7 +360,7 @@ def print_diagnostic_info(
 
     print_third_party_vscode_extensions(instance, out)
 
-    print_env_variables(out)
+    print_env_variables(out, edenfs_instance_pid)
     print_system_mount_table(out)
 
     section_title("Disk Space Usage:", out)
@@ -640,13 +641,37 @@ def print_counters(
         out.write(f"Error getting {counter_type} Thrift counters: {e}\n")
 
 
-def print_env_variables(out: IOWithRedaction) -> None:
+def print_env_variables(
+    out: IOWithRedaction, edenfs_instance_pid: Optional[int]
+) -> None:
     try:
-        section_title("Environment variables:", out)
-        for k, v in os.environ.items():
+        section_title("Host environment variables:", out)
+        for k, v in sorted(os.environ.items()):
             out.write(f"{k}={v}\n")
     except Exception as e:
-        out.write(f"Error getting environment variables: {e}\n")
+        out.write(f"Error getting host environment variables: {e}\n")
+
+    # The running daemon may have different environment variable values than
+    # the host. Print both.
+    # TODO: It would be nice to show a diff of the host vs daemon env vars.
+    try:
+        section_title("EdenFS daemon environment variables:", out)
+
+        # On some Windows hosts, we're unable to load the psutil_windows DLL:
+        # ImportError: DLL load failed while importing _psutil_windows: The specified module could not be found.
+        #
+        # Put the import in the try/catch for now.
+        import psutil
+
+        if edenfs_instance_pid is not None:
+            p = psutil.Process(edenfs_instance_pid)
+            env_variables = p.environ()
+            for k, v in sorted(env_variables.items()):
+                out.write(f"{k}={v}\n")
+        else:
+            out.write("EdenFS daemon pid could not be determined\n")
+    except Exception as e:
+        out.write(f"Error getting EdenFS daemon environment variables: {e}")
 
 
 def print_system_mount_table(out: IOWithRedaction) -> None:
@@ -655,7 +680,11 @@ def print_system_mount_table(out: IOWithRedaction) -> None:
     try:
         section_title("Mount table:", out)
         output = subprocess.check_output(["mount"])
-        out.write(output.decode("utf-8", errors="backslashreplace"))
+        sorted_mounts = sorted(
+            output.decode("utf-8", errors="backslashreplace").split("\n")
+        )
+        for m in sorted_mounts:
+            out.write(f"{m}\n")
     except Exception as e:
         out.write(f"Error printing system mount table: {e}\n")
 

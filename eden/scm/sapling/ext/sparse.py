@@ -151,8 +151,6 @@ from sapling.thirdparty import attr
 
 cmdtable = {}
 command = registrar.command(cmdtable)
-configtable = {}
-configitem = registrar.configitem(configtable)
 testedwith = "ships-with-fb-ext"
 colortable = {
     "sparse.profile.active": "brightyellow:yellow+bold",
@@ -164,20 +162,6 @@ colortable = {
 }
 
 cwdrealtivepatkinds = ("glob", "relpath")
-
-
-configitem(
-    "sparse",
-    "largecheckouthint",
-    default=False,
-    alias=[("perftweaks", "largecheckouthint")],
-)
-configitem(
-    "sparse",
-    "largecheckoutcount",
-    default=0,
-    alias=[("perftweaks", "largecheckoutcount")],
-)
 
 profilecachefile = "sparseprofileconfigs"
 
@@ -558,7 +542,7 @@ def _trackdirstatesizes(lui: "uimod.ui", repo: "localrepo.localrepository") -> N
         lui.log("dirstate_size", dirstate_size=dirstatesize)
         if (
             repo.ui.configbool("sparse", "largecheckouthint")
-            and dirstatesize >= repo.ui.configint("sparse", "largecheckoutcount")
+            and dirstatesize >= (repo.ui.configint("sparse", "largecheckoutcount") or 0)
             and (_hassparse(repo) and not _isedensparse(repo))
         ):
             hintutil.trigger("sparse-largecheckout", dirstatesize, repo)
@@ -2096,9 +2080,9 @@ def _showsubcmdlogic(ui, repo, opts) -> None:
         if not ui.plain():
             ui.status(_(f"No {flavortext} profile enabled\n"))
         return
-
     raw = repo.localvfs.readutf8("sparse")
     rawconfig = readsparseconfig(repo, raw)
+
     profiles = rawconfig.profiles
     include, exclude = rawconfig.toincludeexclude()
 
