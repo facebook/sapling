@@ -15,7 +15,7 @@ async_requests = { version = "0.1.0", path = "../lib" }
 async_requests_client = { version = "0.1.0", path = "../async_requests_client" }
 async_requests_types_thrift = { version = "0.1.0", path = "../if" }
 blobstore = { version = "0.1.0", path = "../../blobstore" }
-clap = { version = "4.5.30", features = ["derive", "env", "string", "unicode", "wrap_help"] }
+clap = { version = "4.5.38", features = ["derive", "env", "string", "unicode", "wrap_help"] }
 cloned = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 cmdlib_logging = { version = "0.1.0", path = "../../cmdlib/log" }
 context = { version = "0.1.0", path = "../../server/context" }

@@ -13,7 +13,7 @@ abomonation_derive = "0.5"
 anyhow = "1.0.95"
 async-trait = "0.1.86"
 bincode = { version = "2", features = ["serde"] }
-clap = { version = "4.5.30", features = ["derive", "env", "string", "unicode", "wrap_help"] }
+clap = { version = "4.5.38", features = ["derive", "env", "string", "unicode", "wrap_help"] }
 commit_graph_thrift = { version = "0.1.0", path = "if" }
 context = { version = "0.1.0", path = "../../../server/context" }
 either = "1.5"
