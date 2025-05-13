@@ -19,6 +19,7 @@ use gotham_ext::response::BytesBody;
 use gotham_ext::response::TryIntoResponse;
 use http::Response;
 use hyper::Body;
+use hyper::HeaderMap;
 use packetline::encode::flush_to_write;
 use packetline::encode::write_text_packetline;
 use protocol::generator::ls_refs_response;
@@ -42,6 +43,7 @@ const UPLOAD_PACK_CAPABILITIES: &[&str] = &[
 const RECEIVE_PACK_CAPABILITIES: &str =
     "report-status atomic delete-refs quiet ofs-delta object-format=sha1";
 const BUNDLE_URI_CAPABILITY: &str = "bundle-uri";
+const USE_BUNDLE_URI: &str = "x-git-use-bundle-uri";
 
 const VERSION: &str = "2";
 
@@ -49,6 +51,7 @@ async fn advertise_capability(
     request_context: RepositoryRequestContext,
     service_type: Service,
     repo_name: &str,
+    use_bundle_uri: Option<bool>,
 ) -> Result<Vec<u8>, Error> {
     let client_untrusted = request_context.ctx.metadata().client_untrusted();
 
@@ -62,7 +65,7 @@ async fn advertise_capability(
     flush_to_write(&mut output).await?;
     match service_type {
         Service::GitUploadPack => {
-            read_advertisement(&mut output, repo_name, client_untrusted).await?
+            read_advertisement(&mut output, repo_name, client_untrusted, use_bundle_uri).await?
         }
         Service::GitReceivePack => write_advertisement(request_context, &mut output).await?,
     }
@@ -74,19 +77,24 @@ async fn read_advertisement(
     output: &mut Vec<u8>,
     repo_name: &str,
     client_untrusted: bool,
+    use_bundle_uri: Option<bool>,
 ) -> Result<(), Error> {
     write_text_packetline(format!("version {}", VERSION).as_bytes(), output).await?;
     for capability in UPLOAD_PACK_CAPABILITIES {
         write_text_packetline(capability.as_bytes(), output).await?;
     }
-    if justknobs::eval(
-        "scm/mononoke:git_bundle_uri_capability",
-        None,
-        Some(repo_name),
-    )
-    .unwrap_or(false)
-        && !client_untrusted
-    {
+    let bundle_uri_enabled = if let Some(bundle_uri) = use_bundle_uri {
+        bundle_uri
+    } else {
+        justknobs::eval(
+            "scm/mononoke:git_bundle_uri_capability",
+            None,
+            Some(repo_name),
+        )
+        .unwrap_or(false)
+    };
+
+    if bundle_uri_enabled && !client_untrusted {
         write_text_packetline(BUNDLE_URI_CAPABILITY.as_bytes(), output).await?;
     }
     Ok(())
@@ -150,7 +158,13 @@ pub async fn capability_advertisement(state: &mut State) -> Result<Response<Body
     let request_context = RepositoryRequestContext::instantiate(state, git_method_info)
         .await
         .map_err(HttpError::e403)?;
-    let output = advertise_capability(request_context, service_type, &repo_name)
+
+    let headers = HeaderMap::borrow_from(state);
+    let use_bundle_uri = headers
+        .get(USE_BUNDLE_URI)
+        .and_then(|x| x.to_str().ok())
+        .and_then(|x| x.parse().ok());
+    let output = advertise_capability(request_context, service_type, &repo_name, use_bundle_uri)
         .await
         .map_err(HttpError::e500)?;
     let service_type = ServiceType::borrow_from(state).service;
