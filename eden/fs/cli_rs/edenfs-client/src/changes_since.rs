@@ -893,6 +893,7 @@ mod tests {
     use crate::client::mock_client::make_boxed_future_result;
     use crate::client::mock_client::make_boxed_stream_result;
     use crate::client::mock_service::MockEdenFsService;
+    use crate::use_case::UseCaseId;
 
     fn make_changes_since_result() -> ChangesSinceV2Result {
         ChangesSinceV2Result {
@@ -916,7 +917,7 @@ mod tests {
     #[fbinit::test]
     async fn test_get_changes_since(fb: FacebookInit) -> Result<()> {
         // create client and mock_service
-        let mut client = EdenFsClient::new(fb, PathBuf::new(), None);
+        let mut client = EdenFsClient::new(fb, UseCaseId::EdenFsTests, PathBuf::new(), None);
         let mock_client = &mut *client;
         let mut mock_service = MockEdenFsService::new();
 
@@ -948,7 +949,7 @@ mod tests {
     #[fbinit::test]
     async fn test_stream_changes_since(fb: FacebookInit) -> Result<()> {
         // create client and mock_service
-        let mut client = EdenFsClient::new(fb, PathBuf::new(), None);
+        let mut client = EdenFsClient::new(fb, UseCaseId::EdenFsTests, PathBuf::new(), None);
         let mock_client = &mut *client;
         let mut mock_service = MockEdenFsService::new();
 

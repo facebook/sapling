@@ -27,6 +27,7 @@ use crate::client::NoopEdenFsClientStatsHandler;
 use crate::client::connector::Connector;
 use crate::client::connector::StreamingEdenFsConnector;
 use crate::client::connector::StreamingEdenFsThriftClientFuture;
+use crate::use_case::UseCaseId;
 
 // This value was selected semi-randomly and should be revisited in the future. Anecdotally, we
 // have seen EdenFS struggle with <<< 2048 outstanding requests, but the exact number depends
@@ -48,7 +49,9 @@ const MAX_RETRY_ATTEMPTS: usize = 3;
 /// - Connection management and reconnection if EdenFS restarts
 /// - Request retries based on error types
 /// - Concurrency limiting to prevent overloading the EdenFS server
+#[allow(dead_code)]
 pub struct ThriftClient {
+    use_case_id: UseCaseId,
     connector: StreamingEdenFsConnector,
     connection: Mutex<EdenFsConnection<StreamingEdenFsThriftClientFuture>>,
     stats_handler: Box<dyn EdenFsClientStatsHandler + Send + Sync>,
@@ -62,7 +65,12 @@ pub struct ThriftClient {
 
 #[async_trait]
 impl Client for ThriftClient {
-    fn new(fb: FacebookInit, socket_file: PathBuf, semaphore: Option<Semaphore>) -> Self {
+    fn new(
+        fb: FacebookInit,
+        use_case_id: UseCaseId,
+        socket_file: PathBuf,
+        semaphore: Option<Semaphore>,
+    ) -> Self {
         let connector = StreamingEdenFsConnector::new(fb, socket_file.clone());
         let connection = Mutex::new(EdenFsConnection {
             epoch: 0,
@@ -70,6 +78,7 @@ impl Client for ThriftClient {
         });
 
         Self {
+            use_case_id,
             connector,
             connection,
             stats_handler: Box::new(NoopEdenFsClientStatsHandler {}),

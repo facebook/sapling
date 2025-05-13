@@ -7,15 +7,17 @@
 
 use strum::IntoStaticStr;
 
-#[derive(IntoStaticStr, Clone, Debug, PartialEq, Eq, Hash)]
+#[derive(Clone, Debug, Eq, IntoStaticStr, Hash, PartialEq)]
 #[strum(serialize_all = "kebab_case")]
+#[repr(u32)]
 pub enum UseCaseId {
-    ExampleUseCase,
-    MeerakatCli,
     #[strum(serialize = "edenfsctl")]
     EdenFsCtl,
+    EdenFsTests,
+    ExampleUseCase,
+    MeerakatCli,
     RedirectFfi,
-    WatchActiveCommit,
     #[strum(serialize = "testifyd")]
     TestifyDaemon,
+    WatchActiveCommit,
 }

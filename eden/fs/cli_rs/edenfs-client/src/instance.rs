@@ -204,11 +204,16 @@ impl EdenFsInstance {
     ) -> EdenFsInstance {
         let socketfile = config_dir.join("socket");
         Self {
-            use_case_id,
+            use_case_id: use_case_id.clone(),
             config_dir,
             etc_eden_dir,
             home_dir,
-            client: Arc::new(EdenFsClient::new(expect_init(), socketfile, semaphore)),
+            client: Arc::new(EdenFsClient::new(
+                expect_init(),
+                use_case_id,
+                socketfile,
+                semaphore,
+            )),
         }
     }
 

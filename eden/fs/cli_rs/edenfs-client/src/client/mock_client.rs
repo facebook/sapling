@@ -32,6 +32,7 @@ use crate::client::EdenFsClientStatsHandler;
 use crate::client::NoopEdenFsClientStatsHandler;
 use crate::client::connector::StreamingEdenFsConnector;
 use crate::client::connector::StreamingEdenFsThriftClient;
+use crate::use_case::UseCaseId;
 
 pub struct MockThriftClient {
     thrift_service: Option<StreamingEdenFsThriftClient>,
@@ -46,7 +47,12 @@ impl MockThriftClient {
 
 #[async_trait]
 impl Client for MockThriftClient {
-    fn new(_fb: FacebookInit, _socket_file: PathBuf, _semaphore: Option<Semaphore>) -> Self {
+    fn new(
+        _fb: FacebookInit,
+        _use_case_id: UseCaseId,
+        _socket_file: PathBuf,
+        _semaphore: Option<Semaphore>,
+    ) -> Self {
         Self {
             thrift_service: None,
             stats_handler: Box::new(NoopEdenFsClientStatsHandler {}),
