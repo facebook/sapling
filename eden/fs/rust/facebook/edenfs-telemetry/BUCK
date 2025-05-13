@@ -15,6 +15,7 @@ rust_library(
         "fbsource//third-party/rust:sysinfo",
         "fbsource//third-party/rust:tokio",
         "fbsource//third-party/rust:tracing",
+        "fbsource//third-party/rust:tracing-subscriber",
         "fbsource//third-party/rust:whoami",
         "//common/rust/build_info:build_info",
         "//common/rust/devserver_fingerprint/devserver_fingerprint:devserver_fingerprint",
