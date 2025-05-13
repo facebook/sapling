@@ -37,7 +37,7 @@ use futures_watchdog::WatchdogExt;
 use metaconfig_types::RepoConfig;
 use mononoke_app::MononokeApp;
 use mononoke_app::MononokeAppBuilder;
-use mononoke_app::args::RepoArgs;
+use mononoke_app::args::OptRepoArgs;
 use mononoke_app::monitoring::AliveService;
 use mononoke_app::monitoring::MonitoringAppExtension;
 use mononoke_types::RepositoryId;
@@ -128,7 +128,7 @@ pub struct CasSyncArgs {
     sharded_executor_args: ShardedExecutorArgs,
 
     #[clap(flatten)]
-    pub repo: RepoArgs,
+    pub repo: OptRepoArgs,
 }
 
 pub struct PipelineState<T> {

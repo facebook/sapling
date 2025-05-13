@@ -270,7 +270,12 @@ pub async fn run(app: MononokeApp, args: CommandArgs) -> Result<()> {
             .block_and_execute(&logger, Arc::new(AtomicBool::new(false)))
             .await
     } else {
-        let repo: Repo = process.app.clone().open_repo(&app_args.repo).await?;
+        let repo_arg = app_args
+            .repo
+            .as_repo_arg()
+            .clone()
+            .ok_or(anyhow::anyhow!("Running unsharded mode with no repo arg"))?;
+        let repo: Repo = process.app.clone().open_repo(&repo_arg).await?;
         let repo_name = repo.repo_identity.name().to_string();
 
         let executor = MononokeCasSyncProcessExecutor::new(
