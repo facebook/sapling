@@ -9,7 +9,7 @@ rust_library(
     named_deps = {"slog": "//common/rust/shed/tracing_slog_compat:tracing_slog_compat"},
     test_deps = ["//eden/mononoke/mononoke_macros:mononoke_macros"],
     deps = [
-        "fbsource//third-party/rust:governor-old",
+        "fbsource//third-party/rust:governor",
         "//common/rust/shed/fbinit:fbinit",
         "//common/rust/shed/slog_glog_fmt:slog_glog_fmt",
         "//eden/mononoke/common/async_limiter:async_limiter",
