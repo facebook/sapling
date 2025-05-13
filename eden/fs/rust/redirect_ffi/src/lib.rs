@@ -14,6 +14,7 @@ use edenfs_client::redirect::Redirection;
 use edenfs_client::redirect::RedirectionState;
 use edenfs_client::redirect::RedirectionType;
 use edenfs_client::redirect::get_effective_redirs_for_mount;
+use edenfs_client::use_case::UseCaseId;
 
 #[cxx::bridge]
 mod ffi {
@@ -90,7 +91,13 @@ pub fn list_redirections(
         .build()?;
     // Execute code from within the new runtime
     let handle = rt.spawn_blocking(|| {
-        let instance = EdenFsInstance::new(config_dir.into(), etc_eden_dir.into(), None, None);
+        let instance = EdenFsInstance::new(
+            UseCaseId::RedirectFfi,
+            config_dir.into(),
+            etc_eden_dir.into(),
+            None,
+            None,
+        );
         let redirs = get_effective_redirs_for_mount(&instance, mount.into())?;
         let redirs_ffi = redirs
             .values()
