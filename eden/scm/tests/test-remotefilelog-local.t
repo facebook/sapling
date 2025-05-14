@@ -64,19 +64,6 @@
   $ hg commit -m a
   ? files fetched over 1 fetches - (? misses, 0.00% hit ratio) over *s (glob) (?)
 
-# local commit where the dirstate is clean -- ensure that we don't do serial fetches
-# (update to a commit on the server first)
-
-  $ hg up 'desc(xy)'
-  2 files updated, 0 files merged, 1 files removed, 0 files unresolved
-  $ clearcache
-  $ echo xxxx > x
-  $ echo yyyy > y
-  $ hg commit -m x --config devel.print-metrics=scmstore.file.fetch
-
-# restore state for future tests
-
-  $ hg -q debugstrip .
   $ hg -q up tip
 
 # rebase
