@@ -8,7 +8,7 @@ from typing import List, Tuple, Union
 
 from .gh_submit import Repository
 
-_HORIZONTAL_RULE = "\n---"
+_HORIZONTAL_RULE = "---"
 _SAPLING_FOOTER_MARKER = "[//]: # (BEGIN SAPLING FOOTER)"
 
 
@@ -37,6 +37,7 @@ def create_pull_request_title_and_body(
     >>> reviewstack_url = "https://reviewstack.dev/facebook/sapling/pull/42"
     >>> print(body.replace(reviewstack_url, "{reviewstack_url}"))
     Second line of message.
+    <BLANKLINE>
     ---
     [//]: # (BEGIN SAPLING FOOTER)
     Stack created with [Sapling](https://sapling-scm.com). Best reviewed with [ReviewStack]({reviewstack_url}).
@@ -58,6 +59,7 @@ def create_pull_request_title_and_body(
     >>> print(body.replace(reviewstack_url, "{reviewstack_url}"))
     Second line of message.
     <BLANKLINE>
+    <BLANKLINE>
     ---
     [//]: # (BEGIN SAPLING FOOTER)
     Stack created with [Sapling](https://sapling-scm.com). Best reviewed with [ReviewStack]({reviewstack_url}).
@@ -73,6 +75,7 @@ def create_pull_request_title_and_body(
     The original commit message.
     >>> print(body)
     Second line of message.
+    <BLANKLINE>
     <BLANKLINE>
     ---
     [//]: # (BEGIN SAPLING FOOTER)
@@ -115,6 +118,8 @@ def create_pull_request_title_and_body(
         extra.append(bulleted_list)
     if extra:
         if body and not body.endswith("\n"):
+            body += "\n"
+        if body:
             body += "\n"
         body += "\n".join([_HORIZONTAL_RULE, _SAPLING_FOOTER_MARKER] + extra)
     return title, body
