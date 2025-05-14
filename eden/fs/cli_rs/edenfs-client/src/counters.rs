@@ -21,4 +21,11 @@ impl EdenFsClient {
             .with_context(|| "failed to get regex counters")
             .map_err(EdenFsError::from)
     }
+
+    pub async fn get_selected_counters(&self, keys: &[String]) -> Result<BTreeMap<String, i64>> {
+        self.with_thrift(|thrift| thrift.getSelectedCounters(keys))
+            .await
+            .with_context(|| "failed to get selected counters")
+            .map_err(EdenFsError::from)
+    }
 }
