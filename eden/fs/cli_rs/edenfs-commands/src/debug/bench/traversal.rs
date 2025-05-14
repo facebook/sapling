@@ -197,7 +197,7 @@ pub async fn bench_traversal_thrift_read(
         Some(0),
     );
     result.add_metric(
-        "Average read_dir latency",
+        "Average read_dir() latency",
         avg_read_dir_latency,
         types::Unit::Ms,
         Some(4),
@@ -364,7 +364,7 @@ pub fn bench_traversal_fs_read(
         Some(0),
     );
     result.add_metric(
-        "Average read_dir latency",
+        "Average read_dir() latency",
         avg_read_dir_latency,
         types::Unit::Ms,
         Some(4),
