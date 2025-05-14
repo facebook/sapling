@@ -199,6 +199,16 @@ pub(crate) fn prefetch_manager(
     send
 }
 
+macro_rules! info_if {
+    ($cond:expr, $kind:ident, $($rest:tt)*) => {
+        if $cond {
+            tracing::$kind!(tracing::Level::INFO, $($rest)*)
+        } else {
+            tracing::$kind!(tracing::Level::DEBUG, $($rest)*)
+        }
+    };
+}
+
 /// Start an async prefetch of file content by walking `manifest` using `matcher`,
 /// fetching file content of resultant files via `file_store`. Returns a handle
 /// that will cancel the prefetch on drop.
@@ -218,11 +228,9 @@ pub(crate) fn prefetch(
     let my_handle = handle.clone();
     // Sapling APIs are not async, so to achieve asynchronicity we create a new thread.
     std::thread::spawn(move || {
-        let _span = if walk.1 > 2 {
-            tracing::info_span!("prefetch", ?walk, ?depth_offset).entered()
-        } else {
-            tracing::debug_span!("prefetch", ?walk, ?depth_offset).entered()
-        };
+        let interesting_walk = walk.1 > 2;
+
+        let _span = info_if!(interesting_walk, span, "prefetch", ?walk, ?depth_offset).entered();
 
         let mut file_count = 0;
         let start_time = Instant::now();
@@ -304,7 +312,7 @@ pub(crate) fn prefetch(
 
         for file in files {
             if my_handle.is_canceled() {
-                tracing::info!(elapsed=?start_time.elapsed(), file_count, "prefetch canceled");
+                info_if!(interesting_walk, event, elapsed=?start_time.elapsed(), file_count, "prefetch canceled");
                 return;
             }
 
@@ -333,7 +341,7 @@ pub(crate) fn prefetch(
         // Wait for any remaining file fetches to finish.
         for fetch in file_fetches {
             if my_handle.is_canceled() {
-                tracing::info!(elapsed=?start_time.elapsed(), file_count, "prefetch canceled");
+                info_if!(interesting_walk, event, elapsed=?start_time.elapsed(), file_count, "prefetch canceled");
                 return;
             }
 
@@ -343,7 +351,7 @@ pub(crate) fn prefetch(
         // Make sure this doesn't get dropped early.
         drop(my_handle);
 
-        tracing::info!(elapsed=?start_time.elapsed(), file_count, "prefetch complete");
+        info_if!(interesting_walk, event, elapsed=?start_time.elapsed(), file_count, "prefetch complete");
     });
 
     handle
