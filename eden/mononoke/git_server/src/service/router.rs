@@ -122,5 +122,9 @@ pub fn build_router(context: GitServerContext) -> Router {
 
         route.get("/health_check").to(health_handler);
         GitHandlers::setup::<edenapi_service::handlers::commit_cloud::CommitCloudWorkspace>(route);
+        GitHandlers::setup::<edenapi_service::handlers::commit_cloud::CommitCloudReferences>(route);
+        GitHandlers::setup::<edenapi_service::handlers::commit_cloud::CommitCloudUpdateReferences>(
+            route,
+        );
     })
 }
