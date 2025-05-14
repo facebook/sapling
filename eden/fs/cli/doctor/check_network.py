@@ -40,7 +40,7 @@ class NetworkSpeedProblem(Problem):
 class NetworkSlowSpeedProblem(Problem):
     def __init__(self, speeds: list[float]) -> None:
         super().__init__(
-            f"Slow network speed detected: Average download speed {speeds[0]}Mbit/s slower than 50 Mbit/s, or average upload speed {speeds[1]}Mbit/s slower than 10 Mbit/s",
+            f"Slow network speed detected: {form_network_speed_message(speeds[0], speeds[1])}",
             severity=ProblemSeverity.POTENTIALLY_SERIOUS,
             remediation=f"Please check if anything is consuming an excess amount of bandwidth on your network.{get_netinfo_link()}",
         )
@@ -62,6 +62,17 @@ class ConnectivityProblem(Problem):
             remediation="Please check your network connection. If you are connected to the VPN, please try reconnecting.",
             severity=ProblemSeverity.ERROR,
         )
+
+
+def form_network_speed_message(download_speed: float, upload_speed: float) -> str:
+    slow_download = download_speed < MIN_DOWNLOAD_SPEED
+    slow_upload = upload_speed < MIN_UPLOAD_SPEED
+    if slow_download and slow_upload:
+        return f"Average download speed {download_speed:.2f} Mbit/s slower than {int(MIN_DOWNLOAD_SPEED)} Mbit/s, and average upload speed {upload_speed:.2f}Mbit/s slower than {int(MIN_UPLOAD_SPEED)} Mbit/s"
+    if slow_download:
+        return f"Average download speed {download_speed:.2f} Mbit/s slower than {int(MIN_DOWNLOAD_SPEED)} Mbit/s"
+    else:
+        return f"Average upload speed {upload_speed:.2f} Mbit/s slower than {int(MIN_UPLOAD_SPEED)} Mbit/s"
 
 
 def parse_latency(latency: str) -> float:

@@ -3095,7 +3095,7 @@ Please check if anything is causing high ping on your network.{get_netinfo_link(
         self.assertEqual(problems[0], "NetworkLatencyProblem")
 
     @patch("subprocess.run")
-    def test_network_speed_fail(
+    def test_network_speed_fail_download(
         self,
         mock_subprocess_run: MagicMock,
     ) -> None:
@@ -3120,7 +3120,83 @@ debugnetwork: Speed: (round 2) uploaded 50.0 MB in 132.3 ms (31.7047 Mbit/s, 37.
             out.getvalue(),
             f"""\
 <yellow>- Found problem:<reset>
-Slow network speed detected: Average download speed 47.4738Mbit/s slower than 50 Mbit/s, or average upload speed 31.4373Mbit/s slower than 10 Mbit/s
+Slow network speed detected: Average download speed 47.47 Mbit/s slower than 50 Mbit/s
+Please check if anything is consuming an excess amount of bandwidth on your network.{get_netinfo_link()}
+
+""",
+        )
+        self.assertEqual(mock_subprocess_run.call_count, 3)
+        self.assertEqual(len(fixer.problem_types), 1)
+        self.assertEqual(fixer.num_fixed_problems, 0)
+        self.assertEqual(fixer.num_manual_fixes, 1)
+        problems = sorted(fixer.problem_manual_fixes)
+        self.assertEqual(problems[0], "NetworkSlowSpeedProblem")
+
+    @patch("subprocess.run")
+    def test_network_speed_fail_upload(
+        self,
+        mock_subprocess_run: MagicMock,
+    ) -> None:
+        mock_subprocess_run.side_effect = [
+            None,
+            None,
+            subprocess.CompletedProcess(
+                "",
+                0,
+                stdout="""
+debugnetwork: Latency: 646.2 us (average of 5 round-trips)
+debugnetwork: Speed: (round 1) downloaded 250 MB in 437.5 ms (52.9385 Mbit/s, 57.147 MiB/s)
+debugnetwork: Speed: (round 2) downloaded 250 MB in 446.1 ms (52.0091 Mbit/s, 56.039 MiB/s)
+debugnetwork: Speed: (round 1) uploaded 15.0 MB in 134.6 ms (9.1699 Mbit/s, 37.157 MiB/s)
+debugnetwork: Speed: (round 2) uploaded 15.0 MB in 132.3 ms (9.7047 Mbit/s, 37.795 MiB/s)
+""",
+            ),
+        ]
+        fixer, out, checkout = self.setUpEdenNetworkTest()
+
+        self.assertEqual(
+            out.getvalue(),
+            f"""\
+<yellow>- Found problem:<reset>
+Slow network speed detected: Average upload speed 9.44 Mbit/s slower than 10 Mbit/s
+Please check if anything is consuming an excess amount of bandwidth on your network.{get_netinfo_link()}
+
+""",
+        )
+        self.assertEqual(mock_subprocess_run.call_count, 3)
+        self.assertEqual(len(fixer.problem_types), 1)
+        self.assertEqual(fixer.num_fixed_problems, 0)
+        self.assertEqual(fixer.num_manual_fixes, 1)
+        problems = sorted(fixer.problem_manual_fixes)
+        self.assertEqual(problems[0], "NetworkSlowSpeedProblem")
+
+    @patch("subprocess.run")
+    def test_network_speed_fail_both(
+        self,
+        mock_subprocess_run: MagicMock,
+    ) -> None:
+        mock_subprocess_run.side_effect = [
+            None,
+            None,
+            subprocess.CompletedProcess(
+                "",
+                0,
+                stdout="""
+debugnetwork: Latency: 17.14 ms (average of 5 round-trips)
+debugnetwork: Speed: (round 1) downloaded 10.0 MB in 1.635 s (40.31 Mbit/s, 6.12 MiB/s)
+debugnetwork: Speed: (round 2) downloaded 10.0 MB in 1.439 s (42.31 Mbit/s, 6.95 MiB/s)
+debugnetwork: Speed: (round 1) uploaded 2.00 MB in 1.143 s (11.68 Mbit/s, 1.75 MiB/s)
+debugnetwork: Speed: (round 2) uploaded 2.00 MB in 609.6 ms (7.52 Mbit/s, 3.28 MiB/s)
+""",
+            ),
+        ]
+        fixer, out, checkout = self.setUpEdenNetworkTest()
+
+        self.assertEqual(
+            out.getvalue(),
+            f"""\
+<yellow>- Found problem:<reset>
+Slow network speed detected: Average download speed 41.31 Mbit/s slower than 50 Mbit/s, and average upload speed 9.60Mbit/s slower than 10 Mbit/s
 Please check if anything is consuming an excess amount of bandwidth on your network.{get_netinfo_link()}
 
 """,
