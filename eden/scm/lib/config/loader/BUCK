@@ -87,6 +87,7 @@ rust_library(
         "fbsource//third-party/rust:zstd",
         "//common/rust/fbwhoami:fbwhoami",
         "//common/rust/shed/hostcaps:hostcaps",
+        "//eden/scm/lib/config/fb/remote-loader:remote-loader",
         "//eden/scm/lib/hgtime:hgtime",
         "//eden/scm/lib/http-client:http-client",
         "//eden/scm/lib/io:io",
