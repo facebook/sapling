@@ -837,7 +837,7 @@ def expushcmd(orig, ui, repo, dest=None, **opts):
             to = opts.get("to") or _guesspushtobookmark(repo, pushnode, remotename)
             if not to:
                 raise error.Abort(_("use '--to' to specify destination bookmark"))
-        return git.push(repo, dest, pushnode, to, force=force)
+        return git.push(repo, dest, [(pushnode, to)], force=force)
 
     # during the upgrade from old to new remotenames, tooling that uses --force
     # will continue working if remotenames.forcecompat is enabled
