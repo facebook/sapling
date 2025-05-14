@@ -148,6 +148,21 @@ TreePtr fromRawTree(
       XLOGF(WARN, "Ignoring directory entry: {}", ex.what());
     }
   }
+  if (tree->aux_data.digest_size != 0) {
+    XLOGF(
+        DBG5,
+        "Tree aux data returned from Sapling backing store when tree(id={}) is queried",
+        edenTreeId);
+    return std::make_shared<TreePtr::element_type>(
+        edenTreeId,
+        std::move(entries),
+        std::make_shared<TreeAuxDataPtr::element_type>(
+            Hash32{tree->aux_data.digest_hash}, tree->aux_data.digest_size));
+  }
+  XLOGF(
+      DBG5,
+      "No tree aux data returned from Sapling backing store when tree(id={}) is queried",
+      edenTreeId);
   return std::make_shared<TreePtr::element_type>(
       std::move(entries), edenTreeId);
 }

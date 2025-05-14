@@ -580,11 +580,9 @@ cpp_library(
     name = "thrift_get_object_impl",
     srcs = ["ThriftGetObjectImpl.cpp"],
     headers = ["ThriftGetObjectImpl.h"],
-    deps = [
-        ":thrift_util",
-    ],
     exported_deps = [
         ":thrift-cpp2-types",
+        ":thrift_util",
         "//eden/common/utils:option_set",
         "//eden/fs/inodes:inodes",
         "//eden/fs/model:model",
