@@ -488,6 +488,13 @@ struct ObjectStoreStats : StatsGroup<ObjectStoreStats> {
   Counter getBlobFromBackingStore{"object_store.get_blob.backing_store"};
   Counter getBlobFailed{"object_store.get_blob_failed"};
 
+  Counter prewarmTreeAuxCacheForTreeFetchedFromLocalStore{
+      "object_store.prewarm_tree_aux.local_store_tree"};
+  Counter prewarmTreeAuxMemCacheForTreeFromBackingStore{
+      "object_store.prewarm_tree_aux.mem.backing_store_tree"};
+  Counter prewarmTreeAuxLocalCacheForTreeFromBackingStore{
+      "object_store.prewarm_tree_aux.local.backing_store_tree"};
+
   Counter getTreeFromMemory{"object_store.get_tree.memory"};
   Counter getTreeFromLocalStore{"object_store.get_tree.local_store"};
   Counter getTreeFromBackingStore{"object_store.get_tree.backing_store"};

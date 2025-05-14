@@ -558,6 +558,20 @@ class EdenConfig : private ConfigSettingManager {
       false,
       this};
 
+  ConfigSetting<bool> warmTreeAuxCacheIfTreeFromLocalStore{
+      "store:warm-aux-cache-tree-local-store",
+      false,
+      this};
+
+  ConfigSetting<bool> warmTreeAuxLocalCacheIfTreeFromBackingStore{
+      "store:warm-aux-local-cache-tree-backing-store",
+      false,
+      this};
+
+  ConfigSetting<bool> warmTreeAuxMemCacheIfTreeFromBackingStore{
+      "store:warm-aux-mem-cache-tree-backing-store",
+      false,
+      this};
   // [fuse]
 
   /**

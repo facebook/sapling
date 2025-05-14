@@ -38,7 +38,7 @@ class SaplingImportRequestQueue {
   /**
    * Enqueue a tree request to the queue.
    *
-   * Return a future that will complete when the blob request completes.
+   * Return a future that will complete when the tree request completes.
    */
   ImmediateFuture<TreePtr> enqueueTree(
       std::shared_ptr<SaplingImportRequest> request);
@@ -46,7 +46,8 @@ class SaplingImportRequestQueue {
   /**
    * Enqueue a blob aux data request to the queue.
    *
-   * Return a future that will complete when the aux data request completes.
+   * Return a future that will complete when the blob aux data request
+   * completes.
    */
   ImmediateFuture<BlobAuxDataPtr> enqueueBlobAux(
       std::shared_ptr<SaplingImportRequest> request);
@@ -54,7 +55,8 @@ class SaplingImportRequestQueue {
   /**
    * Enqueue a tree aux data request to the queue.
    *
-   * Return a future that will complete when the aux data request completes.
+   * Return a future that will complete when the tree aux data request
+   * completes.
    */
   ImmediateFuture<TreeAuxDataPtr> enqueueTreeAux(
       std::shared_ptr<SaplingImportRequest> request);
