@@ -62,6 +62,8 @@ class FilteredBackingStore
     return backingStore_->getLocalStoreCachingPolicy();
   }
 
+  void workingCopyParentHint(const RootId& parent) override;
+
   /**
    * Encodes an underlying RootId in the RootId format used by
    * FilteredBackingStore. This format is as follows:

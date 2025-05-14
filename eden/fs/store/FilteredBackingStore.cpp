@@ -462,6 +462,12 @@ RootId FilteredBackingStore::parseRootId(folly::StringPiece rootId) {
       std::move(parsedRootId).value(), std::move(filterId))};
 }
 
+void FilteredBackingStore::workingCopyParentHint(const RootId& parent) {
+  // Pass along the root id sans filter id.
+  auto [startingRootId, _] = parseFilterIdFromRootId(parent);
+  backingStore_->workingCopyParentHint(startingRootId);
+}
+
 std::string FilteredBackingStore::renderRootId(const RootId& rootId) {
   auto [underlyingRootId, _] = parseFilterIdFromRootId(rootId);
   return backingStore_->renderRootId(underlyingRootId);
