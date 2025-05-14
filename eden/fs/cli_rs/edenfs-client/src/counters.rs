@@ -28,4 +28,18 @@ impl EdenFsClient {
             .with_context(|| "failed to get selected counters")
             .map_err(EdenFsError::from)
     }
+
+    pub async fn get_counters(&self) -> Result<BTreeMap<String, i64>> {
+        self.with_thrift(|thrift| thrift.getCounters())
+            .await
+            .with_context(|| "failed to get counters")
+            .map_err(EdenFsError::from)
+    }
+
+    pub async fn get_counter(&self, key: &str) -> Result<i64> {
+        self.with_thrift(|thrift| thrift.getCounter(key))
+            .await
+            .with_context(|| format!("failed to get counter for key {}", key))
+            .map_err(EdenFsError::from)
+    }
 }
