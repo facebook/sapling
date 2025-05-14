@@ -285,7 +285,7 @@ def get_edenfs_environment(
     eden_env = {}
 
     # Errors from Rust will be logged to the edenfs log.
-    eden_env["EDENSCM_LOG"] = "error"
+    eden_env["EDENSCM_LOG"] = "error,walkdetector=info,backingstore::prefetch=info"
 
     if sys.platform != "win32":
         # Reset $PATH to the following contents, so that everyone has the

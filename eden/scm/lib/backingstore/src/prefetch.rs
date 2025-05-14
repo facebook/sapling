@@ -218,7 +218,11 @@ pub(crate) fn prefetch(
     let my_handle = handle.clone();
     // Sapling APIs are not async, so to achieve asynchronicity we create a new thread.
     std::thread::spawn(move || {
-        let _span = tracing::info_span!("prefetch", ?walk, ?depth_offset).entered();
+        let _span = if walk.1 > 2 {
+            tracing::info_span!("prefetch", ?walk, ?depth_offset).entered()
+        } else {
+            tracing::debug_span!("prefetch", ?walk, ?depth_offset).entered()
+        };
 
         let mut file_count = 0;
         let start_time = Instant::now();
