@@ -4,7 +4,7 @@
 # GNU General Public License version 2.
 
 
-from sapling import edenapi_upload, node as nodemod
+from sapling import edenapi_upload, git, node as nodemod
 from sapling.i18n import _, _n
 
 
@@ -78,14 +78,26 @@ def upload(repo, revs, force=False, localbackupstate=None):
             component="commitcloud",
         )
 
-    draftnodes = list(repo.dageval(lambda: draft() & ancestors(missingheads)))
+    if git.isgitformat(repo):
+        # Use `git push` to upload the commits.
+        pairs = [
+            (h, f"refs/commitcloud/upload{i}")
+            for i, h in enumerate(sorted(missingheads))
+        ]
+        ret = git.push(repo, "default", pairs)
+        if ret == 0:
+            newuploaded, failednodes = missingheads, []
+        else:
+            newuploaded, failednodes = [], missingheads
+    else:
+        draftnodes = list(repo.dageval(lambda: draft() & ancestors(missingheads)))
 
-    # If the only draft nodes are the missing heads then we can skip the
-    # known checks, as we know they are all missing.
-    skipknowncheck = len(draftnodes) == len(missingheads)
-    newuploaded, failednodes = edenapi_upload.uploadhgchangesets(
-        repo, draftnodes, force, skipknowncheck
-    )
+        # If the only draft nodes are the missing heads then we can skip the
+        # known checks, as we know they are all missing.
+        skipknowncheck = len(draftnodes) == len(missingheads)
+        newuploaded, failednodes = edenapi_upload.uploadhgchangesets(
+            repo, draftnodes, force, skipknowncheck
+        )
 
     # Uploaded heads are all heads that have been filtered or uploaded and also heads of the 'newuploaded' nodes.
 
