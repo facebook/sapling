@@ -16,6 +16,8 @@ use std::path::PathBuf;
 use anyhow::Result;
 use async_trait::async_trait;
 use clap::Parser;
+use edenfs_utils::is_active_eden_mount;
+use edenfs_utils::mount_point_for_path;
 use hg_util::path::expand_path;
 use serde::Deserialize;
 use serde::Serialize;
@@ -45,10 +47,10 @@ pub struct FileAccessMonitorCmd {
 #[clap(about = "Start File Access Monitor. File access events are logged to the output file.")]
 struct StartCmd {
     #[clap(
-        help = "A list of paths that FAM should use as filters when monitoring file access events.",
+        help = "A list of paths that FAM should use as filters when monitoring file access events.\nIf no path is provided, the eden mount point will be used if FAM is run under an eden repo. Otherwise, FAM exits.",
         short = 'p',
         long = "paths",
-        required = true
+        required = false
     )]
     paths: Vec<String>,
 
@@ -92,13 +94,34 @@ impl crate::Subcommand for StartCmd {
             std::fs::create_dir_all(tmp_dir_path)?;
         }
 
-        println!("Starting File Access Monitor");
-
         let mut monitor_paths: Vec<PathBuf> = Vec::new();
 
         for path in &self.paths {
             monitor_paths.push(expand_path(path));
         }
+
+        if monitor_paths.is_empty() {
+            // check cwd and if it's an eden-managed path then we use the eden mount
+            // point as the default path to monitor
+            let cwd = std::env::current_dir()?;
+            match mount_point_for_path(&cwd) {
+                Some(mount_point) => {
+                    println!(
+                        "No monitor path provided.\nActive eden mount detected, monitoring {}",
+                        mount_point.display()
+                    );
+                    monitor_paths.push(mount_point);
+                }
+                _ => {
+                    println!(
+                        "No monitor path provided and the current working directory is not managed by eden.\nFile Access Monitor existing.",
+                    );
+                    return Ok(1);
+                }
+            }
+        }
+
+        println!("Starting File Access Monitor");
 
         let output_path = self.output.as_ref().map(expand_path);
 
