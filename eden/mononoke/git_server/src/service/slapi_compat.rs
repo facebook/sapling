@@ -55,7 +55,7 @@ where
         route
             .request(
                 vec![Handler::HTTP_METHOD],
-                &format!("/:repo{}", Handler::ENDPOINT),
+                &format!("/slapigit/:repo{}", Handler::ENDPOINT),
             )
             .with_path_extractor::<Handler::PathExtractor>()
             .with_query_string_extractor::<Handler::QueryStringExtractor>()
