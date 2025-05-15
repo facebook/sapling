@@ -25,6 +25,7 @@ pub enum UseCaseId {
     #[strum(serialize = "testifyd")]
     TestifyDaemon,
     WatchActiveCommit,
+    Hack,
 }
 
 pub struct UseCase {
@@ -36,11 +37,14 @@ pub struct UseCase {
 impl UseCase {
     pub fn new(id: UseCaseId) -> Self {
         // TODO: retrieve use case specifics from configerator
-        let oncall = "scm_client_infra".to_string();
+        let oncall = match id {
+            UseCaseId::Hack => "hack",
+            _ => "scm_client_infra",
+        };
         let max_outstanding_requests = DEFAULT_MAX_OUTSTANDING_REQUESTS;
         Self {
             id,
-            oncall,
+            oncall: oncall.to_string(),
             max_outstanding_requests,
         }
     }
