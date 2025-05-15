@@ -21,7 +21,7 @@ anyhow = "1.0.95"
 async-trait = "0.1.86"
 blob = { version = "0.1.0", path = "../blob" }
 fs-err = { version = "3", features = ["tokio"] }
-git2 = "0.20"
+git2 = "0.20.2"
 sapling-configmodel = { version = "0.1.0", path = "../config/model" }
 sapling-factory = { version = "0.1.0", path = "../util/factory" }
 sapling-gitcompat = { version = "0.1.0", path = "../gitcompat" }
