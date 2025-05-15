@@ -7,15 +7,16 @@
 
 import './PullRequest.css';
 
-import type {GitHubPullRequestParams} from './recoil';
+import type { GitHubPullRequestParams } from './recoil';
 
 import CenteredSpinner from './CenteredSpinner';
 import DiffView from './DiffView';
+import PullRequestChangeCount from './PullRequestChangeCount';
 import PullRequestLabels from './PullRequestLabels';
 import PullRequestReviewers from './PullRequestReviewers';
 import PullRequestSignals from './PullRequestSignals';
 import TrustedRenderedMarkdown from './TrustedRenderedMarkdown';
-import {stripStackInfoFromBodyHTML} from './ghstackUtils';
+import { stripStackInfoFromBodyHTML } from './ghstackUtils';
 import {
   gitHubPullRequest,
   gitHubOrgAndRepo,
@@ -24,10 +25,10 @@ import {
   gitHubPullRequestComparableVersions,
   gitHubPullRequestVersionDiff,
 } from './recoil';
-import {stripStackInfoFromSaplingBodyHTML} from './saplingStack';
-import {stackedPullRequest} from './stackState';
-import {Box, Text} from '@primer/react';
-import {Suspense, useEffect} from 'react';
+import { stripStackInfoFromSaplingBodyHTML } from './saplingStack';
+import { stackedPullRequest } from './stackState';
+import { Box, Text } from '@primer/react';
+import { Suspense, useEffect } from 'react';
 import {
   useRecoilValue,
   useRecoilValueLoadable,
@@ -55,13 +56,13 @@ function PullRequestBootstrap() {
   const number = useRecoilValue(gitHubPullRequestID);
   const orgAndRepo = useRecoilValue(gitHubOrgAndRepo);
   if (number != null && orgAndRepo != null) {
-    return <PullRequestWithParams params={{orgAndRepo, number}} />;
+    return <PullRequestWithParams params={{ orgAndRepo, number }} />;
   } else {
     return <Text>This is not a URL for a pull request.</Text>;
   }
 }
 
-function PullRequestWithParams({params}: {params: GitHubPullRequestParams}) {
+function PullRequestWithParams({ params }: { params: GitHubPullRequestParams }) {
   // When useRefreshPullRequest() is used to update gitHubPullRequestForParams,
   // we expect *most* of the data that comes back to be the same as before.
   // As such, we would prefer to avoid triggering <Suspense>, as the user would
@@ -104,7 +105,7 @@ function PullRequestDetails() {
   }
 
   const stack = pullRequestStack.contents;
-  const {bodyHTML} = pullRequest;
+  const { bodyHTML } = pullRequest;
   let pullRequestBodyHTML;
   switch (stack.type) {
     case 'no-stack':
@@ -133,9 +134,22 @@ function PullRequestDetails() {
       </Box>
       <PullRequestSignals />
       <Suspense fallback={<CenteredSpinner />}>
-        <PullRequestVersionDiff />
+        <div>
+          <div
+            style={{
+              display: "flex",
+              flexDirection: "row",
+              gap: ".5rem",
+              paddingBottom: ".5rem"
+            }}
+          >
+            <PullRequestChangeCount />
+          </div>
+          <PullRequestVersionDiff />
+        </div>
       </Suspense>
     </Box>
+
   );
 }
 
@@ -147,6 +161,8 @@ function PullRequestVersionDiff() {
     return (
       <Suspense
         fallback={<CenteredSpinner message={'Loading ' + diff.diff.length + ' changes...'} />}>
+        <div className="line-count">
+        </div>
         <DiffView diff={diff.diff} isPullRequest={true} />
       </Suspense>
     );
