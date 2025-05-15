@@ -8,6 +8,7 @@
 mod connector;
 pub mod mock_client;
 pub mod mock_service;
+pub mod thrift;
 pub mod thrift_client;
 
 use std::fmt::Debug;
