@@ -86,7 +86,7 @@ impl Client for ThriftClient {
             connector,
             connection,
             stats_handler: Box::new(NoopEdenFsClientStatsHandler {}),
-            semaphore: Semaphore::new(use_case.max_outstanding_requests()),
+            semaphore: Semaphore::new(use_case.max_concurrent_requests()),
         }
     }
 
@@ -111,7 +111,7 @@ impl Client for ThriftClient {
         T: Send,
         E: HasErrorHandlingStrategy + Debug + Display,
     {
-        // Acquire a permit from the semaphore. This will block if we have too many outstanding requests.
+        // Acquire a permit from the semaphore. This will block if we have too many concurrent requests.
         let _permit = self
             .semaphore
             .acquire()
