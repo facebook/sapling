@@ -475,11 +475,16 @@ impl<R: MononokeRepo> ChangesetPathDiffContext<R> {
                         MononokeError::from(Error::msg("assertion error: file should exist"))
                     })?;
                     let metadata = file.metadata().await?;
-                    let git_lfs_pointer =
-                        match justknobs::eval("scm/scmquery:diff_git_lfs_pointers", None, None) {
-                            Ok(true) => Self::get_git_lfs_pointer(path, &metadata).await?,
-                            _ => None,
-                        };
+                    let git_lfs_pointer = if path
+                        .repo_ctx()
+                        .config()
+                        .git_configs
+                        .git_lfs_interpret_pointers
+                    {
+                        Self::get_git_lfs_pointer(path, &metadata).await?
+                    } else {
+                        None
+                    };
                     let diff_mode =
                         if mode == UnifiedDiffMode::OmitContent || git_lfs_pointer.is_some() {
                             UnifiedDiffMode::OmitContent
