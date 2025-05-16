@@ -7,61 +7,96 @@
 
 pub(crate) const REMOTE_CONFIG_SNAPSHOT: &str = r#"
 {
-    "use_cases": {
-      "buck2": {
-          "use_case_id": "buck2",
-          "oncall": "build_infra",
-          "config": {
-            "edenfs_limits": {
-              "max_concurrent_requests": 2048
-            }
+  "use_cases": {
+    "buck2": {
+        "use_case_id": "buck2",
+        "oncall": "build_infra",
+        "config": {
+          "edenfs_limits": {
+            "max_concurrent_requests": 2048
           }
-      },
-      "edenfsctl": {
-          "use_case_id": "edenfsctl",
-          "oncall": "scm_client_infra",
-          "config": {
-            "edenfs_limits": {
-              "max_concurrent_requests": 512
-            }
+        }
+    },
+    "eden-fs-tests": {
+        "use_case_id": "eden-fs-tests",
+        "oncall": "scm_client_infra",
+        "config": {
+          "edenfs_limits": {
+            "max_concurrent_requests": 512
           }
-      },
-      "meerkat-cli": {
-          "use_case_id": "meerkat-cli",
-          "oncall": "devx_www",
-          "config": {
-            "edenfs_limits": {
-              "max_concurrent_requests": 512
-            }
+        }
+    },
+    "edenfsctl": {
+        "use_case_id": "edenfsctl",
+        "oncall": "scm_client_infra",
+        "config": {
+          "edenfs_limits": {
+            "max_concurrent_requests": 512
           }
-      },
-      "redirect-ffi": {
-          "use_case_id": "redirect-ffi",
-          "oncall": "scm_client_infra",
-          "config": {
-            "edenfs_limits": {
-              "max_concurrent_requests": 512
-            }
+        }
+    },
+    "example-use-case": {
+        "use_case_id": "example-use-case",
+        "oncall": "scm_client_infra",
+        "config": {
+          "edenfs_limits": {
+            "max_concurrent_requests": 512
           }
-      },
-      "testifyd": {
-          "use_case_id": "testifyd",
-          "oncall": "testing_frameworks",
-          "config": {
-            "edenfs_limits": {
-              "max_concurrent_requests": 512
-            }
+        }
+    },
+    "flow": {
+        "use_case_id": "flow",
+        "oncall": "flow",
+        "config": {
+          "edenfs_limits": {
+            "max_concurrent_requests": 512
           }
-      },
-      "watch-active-commit": {
-          "use_case_id": "watch-active-commit",
-          "oncall": "devenv_integrations",
-          "config": {
-            "edenfs_limits": {
-              "max_concurrent_requests": 512
-            }
+        }
+    },
+    "hack": {
+        "use_case_id": "hack",
+        "oncall": "hack",
+        "config": {
+          "edenfs_limits": {
+            "max_concurrent_requests": 512
           }
-      }
+        }
+    },
+    "meerkat-cli": {
+        "use_case_id": "meerkat-cli",
+        "oncall": "devx_www",
+        "config": {
+          "edenfs_limits": {
+            "max_concurrent_requests": 512
+          }
+        }
+    },
+    "redirect-ffi": {
+        "use_case_id": "redirect-ffi",
+        "oncall": "scm_client_infra",
+        "config": {
+          "edenfs_limits": {
+            "max_concurrent_requests": 512
+          }
+        }
+    },
+    "testifyd": {
+        "use_case_id": "testifyd",
+        "oncall": "testing_frameworks",
+        "config": {
+          "edenfs_limits": {
+            "max_concurrent_requests": 512
+          }
+        }
+    },
+    "watch-active-commit": {
+        "use_case_id": "watch-active-commit",
+        "oncall": "devenv_integrations",
+        "config": {
+          "edenfs_limits": {
+            "max_concurrent_requests": 512
+          }
+        }
     }
   }
 }
