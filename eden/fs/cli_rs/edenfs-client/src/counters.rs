@@ -23,7 +23,6 @@ const COUNTER_EDENAPI_TREES_REQUESTS: &str = "scmstore.tree.fetch.edenapi.reques
 // LFS backend counters
 const COUNTER_LFS_BLOBS_KEYS: &str = "scmstore.file.fetch.lfs.keys";
 const COUNTER_LFS_BLOBS_REQUESTS: &str = "scmstore.file.fetch.lfs.requests";
-const COUNTER_LFS_TREES_KEYS: &str = "scmstore.tree.fetch.lfs.keys";
 const COUNTER_LFS_TREES_REQUESTS: &str = "scmstore.tree.fetch.lfs.requests";
 
 // CAS backend counters
@@ -58,6 +57,14 @@ const COUNTER_IN_MEMORY_BLOBS_HITS: &str = "blob_cache.get_hit.sum";
 const COUNTER_IN_MEMORY_BLOBS_MISSES: &str = "blob_cache.get_miss.sum";
 const COUNTER_IN_MEMORY_TREES_HITS: &str = "tree_cache.get_hit.sum";
 const COUNTER_IN_MEMORY_TREES_MISSES: &str = "tree_cache.get_miss.sum";
+
+// File metadata counters
+const COUNTER_METADATA_MEMORY: &str = "object_store.get_blob_metadata.memory.count";
+const COUNTER_METADATA_LOCAL_STORE: &str = "object_store.get_blob_metadata.local_store.count";
+const COUNTER_METADATA_BACKING_STORE: &str = "object_store.get_blob_metadata.backing_store.count";
+const COUNTER_METADATA_AUX_COMPUTED: &str = "scmstore.file.fetch.aux.cache.computed";
+const COUNTER_METADATA_AUX_HITS: &str = "scmstore.file.fetch.aux.cache.hits";
+const COUNTER_METADATA_AUX_MISSES: &str = "scmstore.file.fetch.aux.cache.misses";
 
 // CAS local cache counters - file blobs
 // Note: We don't have cas_direct.local_cache.misses, as these are generally retried via a non-direct code path.
@@ -428,6 +435,24 @@ impl Sub for LocalCacheTelemetryCounters {
     }
 }
 
+/// EdenFS file metadata telemetry
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct FileMetadataTelemetry {
+    // The number of times the file metadata was successfully fetched from the in-memory cache
+    pub fetched_from_inmemory_cache: i64,
+    // The number of times the file metadata was successfully fetched from the local store cache
+    pub fetched_from_local_store_cache: i64,
+    // The number of times the file metadata was successfully fetched from the backing store
+    // This can come from both local backing store aux cache or remote if not found.
+    pub fetched_from_backing_store: i64,
+    // The number of times the file metadata was successfully fetched from the backing store but was cached.
+    pub fetched_from_backing_store_cached: i64,
+    // The number of times the file metadata was computed from the file content present in the backing store cache
+    pub fetched_from_backing_store_computed: i64,
+    // The number of times the file metadata was not found in any cache and had to be fetched from the remote
+    pub fetched_from_remote: i64,
+}
+
 /// EdenFS cummulative counters
 /// This is a subset of the counters that are available as part of the EdenFS telemetry
 /// Only covers cumulative counters that are incremented on operations during the lifetime of the EdenFS daemon
@@ -438,6 +463,27 @@ pub struct TelemetryCounters {
     pub thrift_stats: ThriftTelemetryCounters,
     pub backend_stats: RemoteBackendTelemetryCounters,
     pub local_cache_stats: LocalCacheTelemetryCounters,
+    pub file_metadata_stats: Option<FileMetadataTelemetry>,
+}
+
+impl Sub for FileMetadataTelemetry {
+    type Output = Self;
+
+    fn sub(self, rhs: Self) -> Self::Output {
+        Self {
+            fetched_from_inmemory_cache: self.fetched_from_inmemory_cache
+                - rhs.fetched_from_inmemory_cache,
+            fetched_from_local_store_cache: self.fetched_from_local_store_cache
+                - rhs.fetched_from_local_store_cache,
+            fetched_from_backing_store: self.fetched_from_backing_store
+                - rhs.fetched_from_backing_store,
+            fetched_from_backing_store_cached: self.fetched_from_backing_store_cached
+                - rhs.fetched_from_backing_store_cached,
+            fetched_from_backing_store_computed: self.fetched_from_backing_store_computed
+                - rhs.fetched_from_backing_store_computed,
+            fetched_from_remote: self.fetched_from_remote - rhs.fetched_from_remote,
+        }
+    }
 }
 
 impl Sub for TelemetryCounters {
@@ -449,6 +495,11 @@ impl Sub for TelemetryCounters {
             thrift_stats: self.thrift_stats - rhs.thrift_stats,
             backend_stats: self.backend_stats - rhs.backend_stats,
             local_cache_stats: self.local_cache_stats - rhs.local_cache_stats,
+            file_metadata_stats: match (self.file_metadata_stats, rhs.file_metadata_stats) {
+                (Some(lhs), Some(rhs)) => Some(lhs - rhs),
+                (lhs, None) => lhs,
+                (None, _) => None,
+            },
         }
     }
 }
@@ -568,6 +619,15 @@ impl EdenFsClient {
             COUNTER_IN_MEMORY_TREES_MISSES,
         ];
 
+        let file_metadata_counters = [
+            COUNTER_METADATA_MEMORY,
+            COUNTER_METADATA_LOCAL_STORE,
+            COUNTER_METADATA_BACKING_STORE,
+            COUNTER_METADATA_AUX_COMPUTED,
+            COUNTER_METADATA_AUX_HITS,
+            COUNTER_METADATA_AUX_MISSES,
+        ];
+
         // Combine all counter keys into a single vector
         let mut keys: Vec<String> = Vec::new();
         keys.extend(filesystem_counters.iter().map(|&s| s.to_string()));
@@ -579,6 +639,7 @@ impl EdenFsClient {
         keys.extend(lfs_cache_counters.iter().map(|&s| s.to_string()));
         keys.extend(local_store_cache_counters.iter().map(|&s| s.to_string()));
         keys.extend(in_memory_cache_counters.iter().map(|&s| s.to_string()));
+        keys.extend(file_metadata_counters.iter().map(|&s| s.to_string()));
 
         // Fetch the counters
         let counters = self.get_selected_counters(&keys).await?;
@@ -700,6 +761,22 @@ impl EdenFsClient {
                         .unwrap_or(&0),
                 }),
             },
+            file_metadata_stats: Some(FileMetadataTelemetry {
+                fetched_from_inmemory_cache: *counters.get(COUNTER_METADATA_MEMORY).unwrap_or(&0),
+                fetched_from_local_store_cache: *counters
+                    .get(COUNTER_METADATA_LOCAL_STORE)
+                    .unwrap_or(&0),
+                fetched_from_backing_store: *counters
+                    .get(COUNTER_METADATA_BACKING_STORE)
+                    .unwrap_or(&0),
+                fetched_from_backing_store_cached: *counters
+                    .get(COUNTER_METADATA_AUX_HITS)
+                    .unwrap_or(&0),
+                fetched_from_backing_store_computed: *counters
+                    .get(COUNTER_METADATA_AUX_COMPUTED)
+                    .unwrap_or(&0),
+                fetched_from_remote: *counters.get(COUNTER_METADATA_AUX_MISSES).unwrap_or(&0),
+            }),
         };
 
         Ok(telemetry_counters)
