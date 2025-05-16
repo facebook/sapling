@@ -21,6 +21,7 @@ pub mod glob_files;
 pub mod instance;
 pub mod journal;
 pub mod local_store;
+pub mod methods;
 mod mounttable;
 pub mod readdir;
 pub mod redirect;
