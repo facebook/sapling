@@ -6,6 +6,7 @@
  */
 
 mod helpers;
+mod remote_config_snapshot;
 mod thrift_types;
 pub mod use_case;
 
