@@ -59,6 +59,7 @@ use uuid::Uuid;
 
 use crate::client::Client;
 use crate::instance::EdenFsInstance;
+use crate::methods::EdenThriftMethod;
 use crate::redirect::REPO_SOURCE;
 use crate::redirect::Redirection;
 use crate::redirect::RedirectionType;
@@ -1007,7 +1008,12 @@ impl EdenFsCheckout {
                 ..Default::default()
             };
             client
-                .with_thrift(|thrift| thrift.predictiveGlobFiles(&glob_params))
+                .with_thrift(|thrift| {
+                    (
+                        thrift.predictiveGlobFiles(&glob_params),
+                        EdenThriftMethod::PredictiveGlobFiles,
+                    )
+                })
                 .await
                 .with_context(|| "Failed predictiveGlobFiles() thrift call")?;
             Ok(())
@@ -1022,7 +1028,12 @@ impl EdenFsCheckout {
                 ..Default::default()
             };
             let res = client
-                .with_thrift(|thrift| thrift.prefetchFiles(&prefetch_params))
+                .with_thrift(|thrift| {
+                    (
+                        thrift.prefetchFiles(&prefetch_params),
+                        EdenThriftMethod::PrefetchFiles,
+                    )
+                })
                 .await;
 
             match res {
@@ -1041,7 +1052,9 @@ impl EdenFsCheckout {
                         ..Default::default()
                     };
                     client
-                        .with_thrift(|thrift| thrift.globFiles(&glob_params))
+                        .with_thrift(|thrift| {
+                            (thrift.globFiles(&glob_params), EdenThriftMethod::GlobFiles)
+                        })
                         .await
                         .with_context(|| "Failed globFiles() thrift call")?;
                     Ok(())
@@ -1231,7 +1244,7 @@ pub async fn get_mounts(instance: &EdenFsInstance) -> Result<BTreeMap<PathBuf, E
     let client = instance.get_client();
     let mounted_checkouts = match client
         .with_thrift_with_timeouts(Some(Duration::from_secs(3)), None, |thrift| {
-            thrift.listMounts()
+            (thrift.listMounts(), EdenThriftMethod::ListMounts)
         })
         .await
     {

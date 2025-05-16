@@ -19,6 +19,7 @@ use edenfs_utils::bytes_from_path;
 
 use crate::client::Client;
 use crate::client::EdenFsClient;
+use crate::methods::EdenThriftMethod;
 use crate::request_factory::RequestFactory;
 use crate::request_factory::RequestParam;
 use crate::request_factory::RequestResult;
@@ -458,15 +459,20 @@ impl EdenFsClient {
             scope: scope.map(Into::into),
             ..Default::default()
         };
-        self.with_thrift(|thrift| thrift.getAttributesFromFilesV2(&params))
-            .await
-            .map_err(|e| {
-                EdenFsError::Other(anyhow!(
-                    "failed to get getAttributesFromFilesV2 result: {:?}",
-                    e
-                ))
-            })
-            .map(Into::into)
+        self.with_thrift(|thrift| {
+            (
+                thrift.getAttributesFromFilesV2(&params),
+                EdenThriftMethod::GetAttributesFromFilesV2,
+            )
+        })
+        .await
+        .map_err(|e| {
+            EdenFsError::Other(anyhow!(
+                "failed to get getAttributesFromFilesV2 result: {:?}",
+                e
+            ))
+        })
+        .map(Into::into)
     }
 }
 

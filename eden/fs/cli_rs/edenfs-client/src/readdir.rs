@@ -28,6 +28,7 @@ use crate::attributes::SourceControlType;
 use crate::attributes::SourceControlTypeOrError;
 use crate::client::Client;
 use crate::client::EdenFsClient;
+use crate::methods::EdenThriftMethod;
 use crate::types::FileAttributes;
 use crate::types::SyncBehavior;
 use crate::types::TryIntoFileAttributeBitmask;
@@ -111,7 +112,7 @@ impl EdenFsClient {
             "Issuing readdir request with the following params: {:?}",
             &params
         );
-        self.with_thrift(|t| t.readdir(&params))
+        self.with_thrift(|t| (t.readdir(&params), EdenThriftMethod::ReadDir))
             .await
             .map_err(|e| EdenFsError::Other(anyhow!("failed to get readdir result: {:?}", e)))
             .map(Into::into)

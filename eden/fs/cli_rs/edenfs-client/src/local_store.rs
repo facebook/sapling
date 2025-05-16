@@ -11,23 +11,39 @@ use edenfs_error::Result;
 
 use crate::client::Client;
 use crate::client::EdenFsClient;
+use crate::methods::EdenThriftMethod;
 
 impl EdenFsClient {
     pub async fn debug_clear_local_store_caches(&self) -> Result<()> {
-        self.with_thrift(|thrift| thrift.debugClearLocalStoreCaches())
-            .await
-            .map_err(|_| EdenFsError::Other(anyhow!("failed to call debugClearLocalStoreCaches")))
+        self.with_thrift(|thrift| {
+            (
+                thrift.debugClearLocalStoreCaches(),
+                EdenThriftMethod::DebugClearLocalStoreCaches,
+            )
+        })
+        .await
+        .map_err(|_| EdenFsError::Other(anyhow!("failed to call debugClearLocalStoreCaches")))
     }
 
     pub async fn debug_compact_local_storage(&self) -> Result<()> {
-        self.with_thrift(|thrift| thrift.debugCompactLocalStorage())
-            .await
-            .map_err(|_| EdenFsError::Other(anyhow!("failed to call debugCompactLocalStorage")))
+        self.with_thrift(|thrift| {
+            (
+                thrift.debugCompactLocalStorage(),
+                EdenThriftMethod::DebugCompactLocalStorage,
+            )
+        })
+        .await
+        .map_err(|_| EdenFsError::Other(anyhow!("failed to call debugCompactLocalStorage")))
     }
 
     pub async fn clear_and_compact_local_store(&self) -> Result<()> {
-        self.with_thrift(|thrift| thrift.clearAndCompactLocalStore())
-            .await
-            .map_err(|_| EdenFsError::Other(anyhow!("failed to call clearAndCompactLocalStore")))
+        self.with_thrift(|thrift| {
+            (
+                thrift.clearAndCompactLocalStore(),
+                EdenThriftMethod::ClearAndCompactLocalStore,
+            )
+        })
+        .await
+        .map_err(|_| EdenFsError::Other(anyhow!("failed to call clearAndCompactLocalStore")))
     }
 }

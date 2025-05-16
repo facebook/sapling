@@ -28,6 +28,7 @@ use crate::client::connector::Connector;
 use crate::client::connector::StreamingEdenFsConnector;
 #[cfg(not(test))]
 use crate::client::thrift_client::ThriftClient;
+use crate::methods::EdenThriftMethod;
 use crate::use_case::UseCase;
 #[cfg(test)]
 pub type ThriftClient = crate::client::mock_client::MockThriftClient;
@@ -105,7 +106,9 @@ pub trait Client: Send + Sync {
         f: F,
     ) -> std::result::Result<T, ConnectAndRequestError<E>>
     where
-        F: Fn(&<StreamingEdenFsConnector as Connector>::Client) -> Fut + Send + Sync,
+        F: Fn(&<StreamingEdenFsConnector as Connector>::Client) -> (Fut, EdenThriftMethod)
+            + Send
+            + Sync,
         Fut: Future<Output = Result<T, E>> + Send,
         T: Send,
         E: HasErrorHandlingStrategy + Debug + Display,
@@ -136,7 +139,9 @@ pub trait Client: Send + Sync {
         f: F,
     ) -> std::result::Result<T, ConnectAndRequestError<E>>
     where
-        F: Fn(&<StreamingEdenFsConnector as Connector>::Client) -> Fut + Send + Sync,
+        F: Fn(&<StreamingEdenFsConnector as Connector>::Client) -> (Fut, EdenThriftMethod)
+            + Send
+            + Sync,
         Fut: Future<Output = Result<T, E>> + Send,
         T: Send,
         E: HasErrorHandlingStrategy + Debug + Display;

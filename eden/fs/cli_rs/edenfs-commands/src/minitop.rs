@@ -33,6 +33,7 @@ use crossterm::style;
 use crossterm::terminal;
 use edenfs_client::client::Client;
 use edenfs_client::client::EdenFsClient;
+use edenfs_client::methods::EdenThriftMethod;
 use edenfs_utils::humantime::HumanTime;
 use edenfs_utils::humantime::TimeUnit;
 use edenfs_utils::path_from_bytes;
@@ -449,7 +450,12 @@ impl crate::Subcommand for MinitopCmd {
             // Update currently tracked processes (and add new ones if they haven't been tracked yet)
             let refresh_rate_secs = self.refresh_rate.as_secs().try_into()?;
             let counts = client
-                .with_thrift(|thrift| thrift.getAccessCounts(refresh_rate_secs))
+                .with_thrift(|thrift| {
+                    (
+                        thrift.getAccessCounts(refresh_rate_secs),
+                        EdenThriftMethod::GetAccessCounts,
+                    )
+                })
                 .await?;
 
             for (mount, accesses) in &counts.accessesByMount {

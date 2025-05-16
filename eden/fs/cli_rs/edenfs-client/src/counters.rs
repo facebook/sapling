@@ -14,6 +14,7 @@ use edenfs_error::Result;
 
 use crate::client::Client;
 use crate::client::EdenFsClient;
+use crate::methods::EdenThriftMethod;
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 /// EdenFS filesystem counters
@@ -383,28 +384,38 @@ impl Sub for TelemetryCounters {
 
 impl EdenFsClient {
     pub async fn get_regex_counters(&self, arg_regex: &str) -> Result<BTreeMap<String, i64>> {
-        self.with_thrift(|thrift| thrift.getRegexCounters(arg_regex))
-            .await
-            .with_context(|| "failed to get regex counters")
-            .map_err(EdenFsError::from)
+        self.with_thrift(|thrift| {
+            (
+                thrift.getRegexCounters(arg_regex),
+                EdenThriftMethod::GetRegexCounters,
+            )
+        })
+        .await
+        .with_context(|| "failed to get regex counters")
+        .map_err(EdenFsError::from)
     }
 
     pub async fn get_selected_counters(&self, keys: &[String]) -> Result<BTreeMap<String, i64>> {
-        self.with_thrift(|thrift| thrift.getSelectedCounters(keys))
-            .await
-            .with_context(|| "failed to get selected counters")
-            .map_err(EdenFsError::from)
+        self.with_thrift(|thrift| {
+            (
+                thrift.getSelectedCounters(keys),
+                EdenThriftMethod::GetSelectedCounters,
+            )
+        })
+        .await
+        .with_context(|| "failed to get selected counters")
+        .map_err(EdenFsError::from)
     }
 
     pub async fn get_counters(&self) -> Result<BTreeMap<String, i64>> {
-        self.with_thrift(|thrift| thrift.getCounters())
+        self.with_thrift(|thrift| (thrift.getCounters(), EdenThriftMethod::GetCounters))
             .await
             .with_context(|| "failed to get counters")
             .map_err(EdenFsError::from)
     }
 
     pub async fn get_counter(&self, key: &str) -> Result<i64> {
-        self.with_thrift(|thrift| thrift.getCounter(key))
+        self.with_thrift(|thrift| (thrift.getCounter(key), EdenThriftMethod::GetCounter))
             .await
             .with_context(|| format!("failed to get counter for key {}", key))
             .map_err(EdenFsError::from)

@@ -16,6 +16,7 @@ use std::time::Instant;
 
 use anyhow::Result;
 use edenfs_client::client::Client;
+use edenfs_client::methods::EdenThriftMethod;
 use indicatif::ProgressBar;
 use indicatif::ProgressStyle;
 use thrift_types::edenfs::ScmBlobOrError;
@@ -250,7 +251,12 @@ pub async fn bench_traversal_thrift_read(
         let (repo_path, rel_file_path) = split_fbsource_file_path(path);
         let request = get_thrift_request(repo_path, rel_file_path)?;
         let response = client
-            .with_thrift(|thrift| thrift.getFileContent(&request))
+            .with_thrift(|thrift| {
+                (
+                    thrift.getFileContent(&request),
+                    EdenThriftMethod::GetFileContent,
+                )
+            })
             .await?;
         agg_read_dur += start.elapsed();
 

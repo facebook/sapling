@@ -24,6 +24,7 @@ use tokio::time;
 
 use crate::client::Client;
 use crate::client::EdenFsClient;
+use crate::methods::EdenThriftMethod;
 use crate::types::Dtype;
 use crate::types::JournalPosition;
 use crate::utils::get_mount_point;
@@ -625,7 +626,12 @@ impl EdenFsClient {
             ..Default::default()
         };
         let mut result: ChangesSinceV2Result = self
-            .with_thrift(|thrift| thrift.changesSinceV2(&params))
+            .with_thrift(|thrift| {
+                (
+                    thrift.changesSinceV2(&params),
+                    EdenThriftMethod::ChangesSinceV2,
+                )
+            })
             .await
             .map(|r| r.into())
             .from_err()?;

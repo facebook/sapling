@@ -32,6 +32,7 @@ use crate::client::EdenFsClientStatsHandler;
 use crate::client::NoopEdenFsClientStatsHandler;
 use crate::client::connector::StreamingEdenFsConnector;
 use crate::client::connector::StreamingEdenFsThriftClient;
+use crate::methods::EdenThriftMethod;
 use crate::use_case::UseCase;
 
 pub struct MockThriftClient {
@@ -68,13 +69,16 @@ impl Client for MockThriftClient {
         f: F,
     ) -> std::result::Result<T, ConnectAndRequestError<E>>
     where
-        F: Fn(&<StreamingEdenFsConnector as Connector>::Client) -> Fut + Send + Sync,
+        F: Fn(&<StreamingEdenFsConnector as Connector>::Client) -> (Fut, EdenThriftMethod)
+            + Send
+            + Sync,
         Fut: Future<Output = Result<T, E>> + Send,
         T: Send,
         E: HasErrorHandlingStrategy + Debug + Display,
     {
         let service = self.thrift_service.clone().unwrap();
-        f(&service).await.map_err(|e| e.into())
+        let (fut, _method) = f(&service);
+        fut.await.map_err(|e| e.into())
     }
 }
 

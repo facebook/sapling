@@ -17,6 +17,7 @@ use thrift_types::edenfs::OsDtype;
 
 use crate::client::Client;
 use crate::client::EdenFsClient;
+use crate::methods::EdenThriftMethod;
 use crate::types::OSName;
 use crate::types::SyncBehavior;
 
@@ -98,7 +99,7 @@ impl EdenFsClient {
             sync: sync.map(Into::into).unwrap_or_default(),
             ..Default::default()
         };
-        self.with_thrift(|thrift| thrift.globFiles(&glob_params))
+        self.with_thrift(|thrift| (thrift.globFiles(&glob_params), EdenThriftMethod::GlobFiles))
             .await
             .map_err(|err| {
                 EdenFsError::Other(anyhow!(

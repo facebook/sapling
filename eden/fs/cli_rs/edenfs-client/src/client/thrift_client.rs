@@ -28,6 +28,7 @@ use crate::client::NoopEdenFsClientStatsHandler;
 use crate::client::connector::Connector;
 use crate::client::connector::StreamingEdenFsConnector;
 use crate::client::connector::StreamingEdenFsThriftClientFuture;
+use crate::methods::EdenThriftMethod;
 use crate::use_case::UseCase;
 
 // Number of attempts to make for a given Thrift request before giving up.
@@ -91,7 +92,9 @@ impl Client for ThriftClient {
         f: F,
     ) -> std::result::Result<T, ConnectAndRequestError<E>>
     where
-        F: Fn(&<StreamingEdenFsConnector as Connector>::Client) -> Fut + Send + Sync,
+        F: Fn(&<StreamingEdenFsConnector as Connector>::Client) -> (Fut, EdenThriftMethod)
+            + Send
+            + Sync,
         Fut: Future<Output = Result<T, E>> + Send,
         T: Send,
         E: HasErrorHandlingStrategy + Debug + Display,
@@ -116,9 +119,8 @@ impl Client for ThriftClient {
                     .clone()
                     .await
                     .map_err(|e| ConnectAndRequestError::ConnectionError(e))?;
-
-                f(&client)
-                    .await
+                let (fut, _method) = f(&client);
+                fut.await
                     .map_err(|e| ConnectAndRequestError::RequestError(e))
             }
             .await;

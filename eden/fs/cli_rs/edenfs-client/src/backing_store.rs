@@ -15,6 +15,7 @@ use edenfs_error::Result;
 
 use crate::client::Client;
 use crate::client::EdenFsClient;
+use crate::methods::EdenThriftMethod;
 
 #[derive(Debug, Clone)]
 pub struct FetchedFiles {
@@ -31,16 +32,26 @@ impl From<thrift_types::edenfs::GetFetchedFilesResult> for FetchedFiles {
 
 impl EdenFsClient {
     pub async fn stop_recording_backing_store_fetch(&self) -> Result<FetchedFiles> {
-        self.with_thrift(|thrift| thrift.stopRecordingBackingStoreFetch())
-            .await
-            .with_context(|| anyhow!("stopRecordingBackingStoreFetch thrift call failed"))
-            .map(|fetched_files| fetched_files.into())
-            .map_err(EdenFsError::from)
+        self.with_thrift(|thrift| {
+            (
+                thrift.stopRecordingBackingStoreFetch(),
+                EdenThriftMethod::StopRecordingBackingStoreFetch,
+            )
+        })
+        .await
+        .with_context(|| anyhow!("stopRecordingBackingStoreFetch thrift call failed"))
+        .map(|fetched_files| fetched_files.into())
+        .map_err(EdenFsError::from)
     }
     pub async fn start_recording_backing_store_fetch(&self) -> Result<()> {
-        self.with_thrift(|thrift| thrift.startRecordingBackingStoreFetch())
-            .await
-            .with_context(|| anyhow!("startRecordingBackingStoreFetch thrift call failed"))
-            .map_err(EdenFsError::from)
+        self.with_thrift(|thrift| {
+            (
+                thrift.startRecordingBackingStoreFetch(),
+                EdenThriftMethod::StartRecordingBackingStoreFetch,
+            )
+        })
+        .await
+        .with_context(|| anyhow!("startRecordingBackingStoreFetch thrift call failed"))
+        .map_err(EdenFsError::from)
     }
 }

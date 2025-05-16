@@ -15,6 +15,7 @@ use edenfs_utils::bytes_from_path;
 
 use crate::client::Client;
 use crate::client::EdenFsClient;
+use crate::methods::EdenThriftMethod;
 use crate::types::RootIdOptions;
 
 #[derive(Copy, Clone, Debug, Eq, PartialEq, Ord, PartialOrd, Hash)]
@@ -87,9 +88,14 @@ impl EdenFsClient {
             rootIdOptions: root_id_options.map(|r| r.into()),
             ..Default::default()
         };
-        self.with_thrift(|thrift| thrift.getScmStatusV2(&get_scm_status_params))
-            .await
-            .map(|scm_status| scm_status.into())
-            .map_err(|_| EdenFsError::Other(anyhow!("failed to get scm status v2 result")))
+        self.with_thrift(|thrift| {
+            (
+                thrift.getScmStatusV2(&get_scm_status_params),
+                EdenThriftMethod::GetScmStatusV2,
+            )
+        })
+        .await
+        .map(|scm_status| scm_status.into())
+        .map_err(|_| EdenFsError::Other(anyhow!("failed to get scm status v2 result")))
     }
 }

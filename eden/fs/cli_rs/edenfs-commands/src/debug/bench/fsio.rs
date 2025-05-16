@@ -22,6 +22,7 @@ use anyhow::Result;
 #[cfg(target_os = "linux")]
 use anyhow::anyhow;
 use edenfs_client::client::Client;
+use edenfs_client::methods::EdenThriftMethod;
 use edenfs_utils::bytes_from_path;
 use thrift_types::edenfs::GetFileContentResponse;
 use thrift_types::edenfs::MountId;
@@ -199,7 +200,12 @@ pub async fn bench_thrift_read_mfmd(
 
         let start = Instant::now();
         let response: GetFileContentResponse = client
-            .with_thrift(|thrift| thrift.getFileContent(&request))
+            .with_thrift(|thrift| {
+                (
+                    thrift.getFileContent(&request),
+                    EdenThriftMethod::GetFileContent,
+                )
+            })
             .await?;
         agg_read_dur += start.elapsed();
         assert!(matches!(response.blob, ScmBlobOrError::blob(_)));
@@ -323,7 +329,12 @@ pub async fn bench_thrift_read_sfmd(test_dir: &TestDir) -> Result<Benchmark> {
     let request = get_thrift_request(repo_path, rel_file_path)?;
     let response = get_edenfs_instance()
         .get_client()
-        .with_thrift(|thrift| thrift.getFileContent(&request))
+        .with_thrift(|thrift| {
+            (
+                thrift.getFileContent(&request),
+                EdenThriftMethod::GetFileContent,
+            )
+        })
         .await?;
     let agg_dur = start.elapsed().as_secs_f64();
     assert!(matches!(response.blob, ScmBlobOrError::blob(_)));
