@@ -26,6 +26,7 @@ parking_lot = { version = "0.12.1", features = ["send_guard"] }
 pathdiff = "0.2"
 regex = "1.11.1"
 sapling-atomicfile = { version = "0.1.0", path = "../../../scm/lib/atomicfile" }
+sapling-http-client = { version = "0.1.0", path = "../../../scm/lib/http-client" }
 sapling-thrift-types = { version = "0.1.0", path = "../../../scm/lib/thrift-types" }
 sapling-util = { version = "0.1.0", path = "../../../scm/lib/util" }
 serde = { version = "1.0.185", features = ["derive", "rc"] }
