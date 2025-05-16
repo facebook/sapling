@@ -19,6 +19,7 @@ use edenfs_error::ErrorHandlingStrategy;
 use edenfs_error::HasErrorHandlingStrategy;
 use edenfs_error::Result;
 use edenfs_telemetry::EdenSample;
+use edenfs_telemetry::QueueingScubaLogger;
 use edenfs_telemetry::SampleLogger;
 use edenfs_telemetry::create_logger;
 use fbinit::FacebookInit;
@@ -38,7 +39,8 @@ use crate::methods::EdenThriftMethod;
 use crate::use_case::UseCase;
 
 lazy_static! {
-    static ref SCUBA_CLIENT: Arc<dyn SampleLogger> = create_logger("edenfs_client".to_string());
+    static ref SCUBA_CLIENT: QueueingScubaLogger =
+        QueueingScubaLogger::new(create_logger("edenfs_client".to_string()), 1000);
 }
 
 // Number of attempts to make for a given Thrift request before giving up.
