@@ -19,9 +19,45 @@ pub(crate) const REMOTE_CONFIG_SNAPSHOT: &str = r#"
           }
         }
     },
+    "eden-fs-tests": {
+        "use_case_id": "eden-fs-tests",
+        "oncall": "scm_client_infra",
+        "config": {
+          "edenfs_limits": {
+            "max_concurrent_requests": 512
+          }
+        }
+    },
     "edenfsctl": {
         "use_case_id": "edenfsctl",
         "oncall": "scm_client_infra",
+        "config": {
+          "edenfs_limits": {
+            "max_concurrent_requests": 536870911
+          }
+        }
+    },
+    "example-use-case": {
+        "use_case_id": "example-use-case",
+        "oncall": "scm_client_infra",
+        "config": {
+          "edenfs_limits": {
+            "max_concurrent_requests": 512
+          }
+        }
+    },
+    "flow": {
+        "use_case_id": "flow",
+        "oncall": "flow",
+        "config": {
+          "edenfs_limits": {
+            "max_concurrent_requests": 512
+          }
+        }
+    },
+    "hack": {
+        "use_case_id": "hack",
+        "oncall": "hack",
         "config": {
           "edenfs_limits": {
             "max_concurrent_requests": 512
