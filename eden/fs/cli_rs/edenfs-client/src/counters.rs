@@ -5,6 +5,81 @@
  * GNU General Public License version 2.
  */
 
+// Counter names used for telemetry
+
+// Filesystem counters (intially fuse, but will change to support other platforms)
+const COUNTER_FUSE_OPEN: &str = "fuse.open_successful.sum";
+const COUNTER_FUSE_READ: &str = "fuse.read_successful.sum";
+const COUNTER_FUSE_READDIR: &str = "fuse.readdir_successful.sum";
+const COUNTER_FUSE_WRITE: &str = "fuse.write_successful.sum";
+const COUNTER_FUSE_GETATTR: &str = "fuse.getattr_successful.sum";
+
+// EdenAPI backend counters
+const COUNTER_EDENAPI_BLOBS_KEYS: &str = "scmstore.file.fetch.edenapi.keys";
+const COUNTER_EDENAPI_BLOBS_REQUESTS: &str = "scmstore.file.fetch.edenapi.requests";
+const COUNTER_EDENAPI_TREES_KEYS: &str = "scmstore.tree.fetch.edenapi.keys";
+const COUNTER_EDENAPI_TREES_REQUESTS: &str = "scmstore.tree.fetch.edenapi.requests";
+
+// LFS backend counters
+const COUNTER_LFS_BLOBS_KEYS: &str = "scmstore.file.fetch.lfs.keys";
+const COUNTER_LFS_BLOBS_REQUESTS: &str = "scmstore.file.fetch.lfs.requests";
+const COUNTER_LFS_TREES_KEYS: &str = "scmstore.tree.fetch.lfs.keys";
+const COUNTER_LFS_TREES_REQUESTS: &str = "scmstore.tree.fetch.lfs.requests";
+
+// CAS backend counters
+const COUNTER_CAS_BLOBS_HITS: &str = "scmstore.file.fetch.cas.hits";
+const COUNTER_CAS_BLOBS_MISSES: &str = "scmstore.file.fetch.cas.misses";
+const COUNTER_CAS_BLOBS_REQUESTS: &str = "scmstore.file.fetch.cas.requests";
+const COUNTER_CAS_TREES_HITS: &str = "scmstore.tree.fetch.cas.hits";
+const COUNTER_CAS_TREES_MISSES: &str = "scmstore.tree.fetch.cas.misses";
+const COUNTER_CAS_TREES_REQUESTS: &str = "scmstore.tree.fetch.cas.requests";
+
+// Sapling cache counters (known as indexedlog/hgcache)
+const COUNTER_INDEXEDLOG_BLOBS_HITS: &str = "scmstore.file.fetch.indexedlog.cache.hits";
+const COUNTER_INDEXEDLOG_BLOBS_MISSES: &str = "scmstore.file.fetch.indexedlog.cache.misses";
+const COUNTER_INDEXEDLOG_BLOBS_REQUESTS: &str = "scmstore.file.fetch.indexedlog.cache.requests";
+const COUNTER_INDEXEDLOG_TREES_HITS: &str = "scmstore.tree.fetch.indexedlog.cache.hits";
+const COUNTER_INDEXEDLOG_TREES_MISSES: &str = "scmstore.tree.fetch.indexedlog.cache.misses";
+const COUNTER_INDEXEDLOG_TREES_REQUESTS: &str = "scmstore.tree.fetch.indexedlog.cache.requests";
+
+// Sapling LFS cache counters
+const COUNTER_LFS_CACHE_BLOBS_KEYS: &str = "scmstore.file.fetch.lfs.cache.keys";
+const COUNTER_LFS_CACHE_BLOBS_MISSES: &str = "scmstore.file.fetch.lfs.cache.misses";
+const COUNTER_LFS_CACHE_BLOBS_REQUESTS: &str = "scmstore.file.fetch.lfs.cache.requests";
+
+// RocksDB local store cache counters
+const COUNTER_LOCAL_STORE_BLOBS_HITS: &str = "local_store.get_blob_success.sum";
+const COUNTER_LOCAL_STORE_BLOBS_MISSES: &str = "local_store.get_blob_failure.sum";
+const COUNTER_LOCAL_STORE_TREES_HITS: &str = "local_store.get_tree_success.sum";
+const COUNTER_LOCAL_STORE_TREES_MISSES: &str = "local_store.get_tree_failure.sum";
+
+// In-memory cache counters
+const COUNTER_IN_MEMORY_BLOBS_HITS: &str = "blob_cache.get_hit.sum";
+const COUNTER_IN_MEMORY_BLOBS_MISSES: &str = "blob_cache.get_miss.sum";
+const COUNTER_IN_MEMORY_TREES_HITS: &str = "tree_cache.get_hit.sum";
+const COUNTER_IN_MEMORY_TREES_MISSES: &str = "tree_cache.get_miss.sum";
+
+// CAS local cache counters - file blobs
+// Note: We don't have cas_direct.local_cache.misses, as these are generally retried via a non-direct code path.
+const COUNTER_CAS_LOCAL_CACHE_BLOBS_HITS: &str = "scmstore.file.fetch.cas.local_cache.hits.files";
+const COUNTER_CAS_DIRECT_LOCAL_CACHE_BLOBS_HITS: &str =
+    "scmstore.file.fetch.cas_direct.local_cache.hits.files";
+const COUNTER_CAS_LOCAL_CACHE_BLOBS_MISSES: &str =
+    "scmstore.file.fetch.cas.local_cache.misses.files";
+const COUNTER_CAS_LOCAL_CACHE_BLOBS_LMDB_HITS: &str =
+    "scmstore.file.fetch.cas.local_cache.lmdb.hits";
+const COUNTER_CAS_DIRECT_LOCAL_CACHE_BLOBS_LMDB_HITS: &str =
+    "scmstore.file.fetch.cas_direct.local_cache.lmdb.hits";
+const COUNTER_CAS_LOCAL_CACHE_TREES_HITS: &str = "scmstore.tree.fetch.cas.local_cache.hits.files";
+const COUNTER_CAS_DIRECT_LOCAL_CACHE_TREES_HITS: &str =
+    "scmstore.tree.fetch.cas_direct.local_cache.hits.files";
+const COUNTER_CAS_LOCAL_CACHE_TREES_MISSES: &str =
+    "scmstore.tree.fetch.cas.local_cache.misses.files";
+const COUNTER_CAS_LOCAL_CACHE_TREES_LMDB_HITS: &str =
+    "scmstore.tree.fetch.cas.local_cache.lmdb.hits";
+const COUNTER_CAS_DIRECT_LOCAL_CACHE_TREES_LMDB_HITS: &str =
+    "scmstore.tree.fetch.cas_direct.local_cache.lmdb.hits";
+
 use std::collections::BTreeMap;
 use std::ops::Sub;
 
@@ -84,12 +159,11 @@ impl Sub for EdenApiBackendTelemetryCounters {
 
 /// LFS backend counters
 /// There are no misses as Mononoke is the source of truth for the data
+/// LFS is not used for fetching trees
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct LfsBackendTelemetryCounters {
     /// The number of file content fetches from the LFS backend
     pub lfs_fetches_blobs: i64,
-    /// The number of tree fetches from the LFS backend
-    pub lfs_fetches_trees: i64,
     /// Total number of http requests performed to the LFS backend combined for files and trees
     pub lfs_requests: i64,
 }
@@ -100,7 +174,6 @@ impl Sub for LfsBackendTelemetryCounters {
     fn sub(self, rhs: Self) -> Self::Output {
         Self {
             lfs_fetches_blobs: self.lfs_fetches_blobs - rhs.lfs_fetches_blobs,
-            lfs_fetches_trees: self.lfs_fetches_trees - rhs.lfs_fetches_trees,
             lfs_requests: self.lfs_requests - rhs.lfs_requests,
         }
     }
@@ -118,6 +191,8 @@ pub struct CASCBackendTelemetryCounters {
     pub cas_fetches_trees: i64,
     /// The number of tree fetches from the CAS backend that were not found
     pub cas_missing_trees: i64,
+    /// Total number of requests performed to the CAS backend combined for files and trees
+    pub cas_requests: i64,
 }
 
 impl Sub for CASCBackendTelemetryCounters {
@@ -129,6 +204,7 @@ impl Sub for CASCBackendTelemetryCounters {
             cas_missing_blobs: self.cas_missing_blobs - rhs.cas_missing_blobs,
             cas_fetches_trees: self.cas_fetches_trees - rhs.cas_fetches_trees,
             cas_missing_trees: self.cas_missing_trees - rhs.cas_missing_trees,
+            cas_requests: self.cas_requests - rhs.cas_requests,
         }
     }
 }
@@ -192,14 +268,13 @@ impl Sub for SaplingCacheTelemetryCounters {
     }
 }
 
+/// Sapling LFS Cache counters
+/// The cache is only used for storing file content
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct SaplingLFSCacheTelemetryCounters {
     // Blobs
     pub sapling_lfs_cache_blobs_hits: i64,
     pub sapling_lfs_cache_blobs_misses: i64,
-    // Trees
-    pub sapling_lfs_cache_trees_hits: i64,
-    pub sapling_lfs_cache_trees_misses: i64,
 }
 impl Sub for SaplingLFSCacheTelemetryCounters {
     type Output = Self;
@@ -210,10 +285,6 @@ impl Sub for SaplingLFSCacheTelemetryCounters {
                 - rhs.sapling_lfs_cache_blobs_hits,
             sapling_lfs_cache_blobs_misses: self.sapling_lfs_cache_blobs_misses
                 - rhs.sapling_lfs_cache_blobs_misses,
-            sapling_lfs_cache_trees_hits: self.sapling_lfs_cache_trees_hits
-                - rhs.sapling_lfs_cache_trees_hits,
-            sapling_lfs_cache_trees_misses: self.sapling_lfs_cache_trees_misses
-                - rhs.sapling_lfs_cache_trees_misses,
         }
     }
 }
@@ -419,5 +490,214 @@ impl EdenFsClient {
             .await
             .with_context(|| format!("failed to get counter for key {}", key))
             .map_err(EdenFsError::from)
+    }
+
+    /// Fetch telemetry counters from EdenFS and return them as a TelemetryCounters struct.
+    /// This method fetches all the counters needed to fill the TelemetryCounters struct.
+    pub async fn get_telemetry_counters(&self) -> Result<TelemetryCounters> {
+        // Define the counter keys we need to fetch, organized by category
+        let filesystem_counters = [
+            COUNTER_FUSE_OPEN,
+            COUNTER_FUSE_READ,
+            COUNTER_FUSE_READDIR,
+            COUNTER_FUSE_WRITE,
+            COUNTER_FUSE_GETATTR,
+        ];
+
+        let cas_local_cache_counters = [
+            COUNTER_CAS_LOCAL_CACHE_BLOBS_HITS,
+            COUNTER_CAS_DIRECT_LOCAL_CACHE_BLOBS_HITS,
+            COUNTER_CAS_LOCAL_CACHE_BLOBS_MISSES,
+            COUNTER_CAS_LOCAL_CACHE_TREES_HITS,
+            COUNTER_CAS_DIRECT_LOCAL_CACHE_TREES_HITS,
+            COUNTER_CAS_LOCAL_CACHE_TREES_MISSES,
+            COUNTER_CAS_LOCAL_CACHE_BLOBS_LMDB_HITS,
+            COUNTER_CAS_DIRECT_LOCAL_CACHE_BLOBS_LMDB_HITS,
+            COUNTER_CAS_LOCAL_CACHE_TREES_LMDB_HITS,
+            COUNTER_CAS_DIRECT_LOCAL_CACHE_TREES_LMDB_HITS,
+        ];
+
+        let edenapi_backend_counters = [
+            COUNTER_EDENAPI_BLOBS_KEYS,
+            COUNTER_EDENAPI_TREES_KEYS,
+            COUNTER_EDENAPI_BLOBS_REQUESTS,
+            COUNTER_EDENAPI_TREES_REQUESTS,
+        ];
+
+        let lfs_backend_counters = [COUNTER_LFS_BLOBS_KEYS, COUNTER_LFS_BLOBS_REQUESTS];
+
+        let cas_backend_counters = [
+            COUNTER_CAS_BLOBS_HITS,
+            COUNTER_CAS_BLOBS_MISSES,
+            COUNTER_CAS_BLOBS_REQUESTS,
+            COUNTER_CAS_TREES_HITS,
+            COUNTER_CAS_TREES_MISSES,
+            COUNTER_CAS_TREES_REQUESTS,
+        ];
+
+        let indexedlog_cache_counters = [
+            COUNTER_INDEXEDLOG_BLOBS_HITS,
+            COUNTER_INDEXEDLOG_BLOBS_MISSES,
+            COUNTER_INDEXEDLOG_BLOBS_REQUESTS,
+            COUNTER_INDEXEDLOG_TREES_HITS,
+            COUNTER_INDEXEDLOG_TREES_MISSES,
+            COUNTER_INDEXEDLOG_TREES_REQUESTS,
+        ];
+
+        let lfs_cache_counters = [
+            COUNTER_LFS_CACHE_BLOBS_KEYS,
+            COUNTER_LFS_CACHE_BLOBS_MISSES,
+            COUNTER_LFS_CACHE_BLOBS_REQUESTS,
+        ];
+
+        let local_store_cache_counters = [
+            COUNTER_LOCAL_STORE_BLOBS_HITS,
+            COUNTER_LOCAL_STORE_BLOBS_MISSES,
+            COUNTER_LOCAL_STORE_TREES_HITS,
+            COUNTER_LOCAL_STORE_TREES_MISSES,
+        ];
+
+        let in_memory_cache_counters = [
+            COUNTER_IN_MEMORY_BLOBS_HITS,
+            COUNTER_IN_MEMORY_BLOBS_MISSES,
+            COUNTER_IN_MEMORY_TREES_HITS,
+            COUNTER_IN_MEMORY_TREES_MISSES,
+        ];
+
+        // Combine all counter keys into a single vector
+        let mut keys: Vec<String> = Vec::new();
+        keys.extend(filesystem_counters.iter().map(|&s| s.to_string()));
+        keys.extend(cas_local_cache_counters.iter().map(|&s| s.to_string()));
+        keys.extend(edenapi_backend_counters.iter().map(|&s| s.to_string()));
+        keys.extend(lfs_backend_counters.iter().map(|&s| s.to_string()));
+        keys.extend(cas_backend_counters.iter().map(|&s| s.to_string()));
+        keys.extend(indexedlog_cache_counters.iter().map(|&s| s.to_string()));
+        keys.extend(lfs_cache_counters.iter().map(|&s| s.to_string()));
+        keys.extend(local_store_cache_counters.iter().map(|&s| s.to_string()));
+        keys.extend(in_memory_cache_counters.iter().map(|&s| s.to_string()));
+
+        // Fetch the counters
+        let counters = self.get_selected_counters(&keys).await?;
+
+        // Create the TelemetryCounters struct
+        let telemetry_counters = TelemetryCounters {
+            fs_stats: FilesystemTelemetryCounters {
+                syscall_opens: *counters.get(COUNTER_FUSE_OPEN).unwrap_or(&0),
+                syscall_reads: *counters.get(COUNTER_FUSE_READ).unwrap_or(&0),
+                syscall_readdirs: *counters.get(COUNTER_FUSE_READDIR).unwrap_or(&0),
+                syscall_writes: *counters.get(COUNTER_FUSE_WRITE).unwrap_or(&0),
+                syscall_stats: *counters.get(COUNTER_FUSE_GETATTR).unwrap_or(&0),
+            },
+            thrift_stats: ThriftTelemetryCounters {},
+            backend_stats: RemoteBackendTelemetryCounters {
+                edenapi_backend: Some(EdenApiBackendTelemetryCounters {
+                    edenapi_fetches_blobs: *counters.get(COUNTER_EDENAPI_BLOBS_KEYS).unwrap_or(&0),
+                    edenapi_fetches_trees: *counters.get(COUNTER_EDENAPI_TREES_KEYS).unwrap_or(&0),
+                    edenapi_requests: *counters.get(COUNTER_EDENAPI_BLOBS_REQUESTS).unwrap_or(&0)
+                        + *counters.get(COUNTER_EDENAPI_TREES_REQUESTS).unwrap_or(&0),
+                }),
+                casc_backend: Some(CASCBackendTelemetryCounters {
+                    cas_fetches_blobs: *counters.get(COUNTER_CAS_BLOBS_HITS).unwrap_or(&0),
+                    cas_missing_blobs: *counters.get(COUNTER_CAS_BLOBS_MISSES).unwrap_or(&0),
+                    cas_fetches_trees: *counters.get(COUNTER_CAS_TREES_HITS).unwrap_or(&0),
+                    cas_missing_trees: *counters.get(COUNTER_CAS_TREES_MISSES).unwrap_or(&0),
+                    // Total number of requests performed to the CAS backend combined for files and trees
+                    cas_requests: *counters.get(COUNTER_CAS_BLOBS_REQUESTS).unwrap_or(&0)
+                        + *counters.get(COUNTER_CAS_TREES_REQUESTS).unwrap_or(&0),
+                }),
+                lfs_backend: Some(LfsBackendTelemetryCounters {
+                    lfs_fetches_blobs: *counters.get(COUNTER_LFS_BLOBS_KEYS).unwrap_or(&0),
+                    lfs_requests: *counters.get(COUNTER_LFS_BLOBS_REQUESTS).unwrap_or(&0)
+                        + *counters.get(COUNTER_LFS_TREES_REQUESTS).unwrap_or(&0),
+                }),
+            },
+            local_cache_stats: LocalCacheTelemetryCounters {
+                sapling_cache: Some(SaplingCacheTelemetryCounters {
+                    sapling_cache_blobs_hits: *counters
+                        .get(COUNTER_INDEXEDLOG_BLOBS_HITS)
+                        .unwrap_or(&0),
+                    sapling_cache_blobs_misses: *counters
+                        .get(COUNTER_INDEXEDLOG_BLOBS_MISSES)
+                        .unwrap_or(&0),
+                    sapling_cache_trees_hits: *counters
+                        .get(COUNTER_INDEXEDLOG_TREES_HITS)
+                        .unwrap_or(&0),
+                    sapling_cache_trees_misses: *counters
+                        .get(COUNTER_INDEXEDLOG_TREES_MISSES)
+                        .unwrap_or(&0),
+                }),
+                sapling_lfs_cache: Some(SaplingLFSCacheTelemetryCounters {
+                    sapling_lfs_cache_blobs_hits: *counters
+                        .get(COUNTER_LFS_CACHE_BLOBS_KEYS)
+                        .unwrap_or(&0)
+                        - *counters.get(COUNTER_LFS_CACHE_BLOBS_MISSES).unwrap_or(&0),
+                    sapling_lfs_cache_blobs_misses: *counters
+                        .get(COUNTER_LFS_CACHE_BLOBS_MISSES)
+                        .unwrap_or(&0),
+                }),
+                casc_local_cache: Some(CASCLocalCacheTelemetryCounters {
+                    cas_local_cache_blobs_hits: *counters
+                        .get(COUNTER_CAS_LOCAL_CACHE_BLOBS_HITS)
+                        .unwrap_or(&0)
+                        + *counters
+                            .get(COUNTER_CAS_DIRECT_LOCAL_CACHE_BLOBS_HITS)
+                            .unwrap_or(&0),
+                    cas_local_cache_blobs_lmdb_hits: *counters
+                        .get(COUNTER_CAS_LOCAL_CACHE_BLOBS_LMDB_HITS)
+                        .unwrap_or(&0)
+                        + *counters
+                            .get(COUNTER_CAS_DIRECT_LOCAL_CACHE_BLOBS_LMDB_HITS)
+                            .unwrap_or(&0),
+                    cas_local_cache_blobs_misses: *counters
+                        .get(COUNTER_CAS_LOCAL_CACHE_BLOBS_MISSES)
+                        .unwrap_or(&0),
+                    cas_local_cache_trees_hits: *counters
+                        .get(COUNTER_CAS_LOCAL_CACHE_TREES_HITS)
+                        .unwrap_or(&0)
+                        + *counters
+                            .get(COUNTER_CAS_DIRECT_LOCAL_CACHE_TREES_HITS)
+                            .unwrap_or(&0),
+                    cas_local_cache_trees_lmdb_hits: *counters
+                        .get(COUNTER_CAS_LOCAL_CACHE_TREES_LMDB_HITS)
+                        .unwrap_or(&0)
+                        + *counters
+                            .get(COUNTER_CAS_DIRECT_LOCAL_CACHE_TREES_LMDB_HITS)
+                            .unwrap_or(&0),
+                    cas_local_cache_trees_misses: *counters
+                        .get(COUNTER_CAS_LOCAL_CACHE_TREES_MISSES)
+                        .unwrap_or(&0),
+                }),
+                local_store_cache: Some(LocalStoreCacheTelemetryCounters {
+                    local_store_cache_blobs_hits: *counters
+                        .get(COUNTER_LOCAL_STORE_BLOBS_HITS)
+                        .unwrap_or(&0),
+                    local_store_cache_blobs_misses: *counters
+                        .get(COUNTER_LOCAL_STORE_BLOBS_MISSES)
+                        .unwrap_or(&0),
+                    local_store_cache_trees_hits: *counters
+                        .get(COUNTER_LOCAL_STORE_TREES_HITS)
+                        .unwrap_or(&0),
+                    local_store_cache_trees_misses: *counters
+                        .get(COUNTER_LOCAL_STORE_TREES_MISSES)
+                        .unwrap_or(&0),
+                }),
+                in_memory_local_cache: Some(InMemoryCacheTelemetryCounters {
+                    in_memory_cache_blobs_hits: *counters
+                        .get(COUNTER_IN_MEMORY_BLOBS_HITS)
+                        .unwrap_or(&0),
+                    in_memory_cache_blobs_misses: *counters
+                        .get(COUNTER_IN_MEMORY_BLOBS_MISSES)
+                        .unwrap_or(&0),
+                    in_memory_cache_trees_hits: *counters
+                        .get(COUNTER_IN_MEMORY_TREES_HITS)
+                        .unwrap_or(&0),
+                    in_memory_cache_trees_misses: *counters
+                        .get(COUNTER_IN_MEMORY_TREES_MISSES)
+                        .unwrap_or(&0),
+                }),
+            },
+        };
+
+        Ok(telemetry_counters)
     }
 }
