@@ -430,7 +430,7 @@ impl Sub for LocalCacheTelemetryCounters {
 
 /// EdenFS cummulative counters
 /// This is a subset of the counters that are available as part of the EdenFS telemetry
-/// Only covers cumulative counters that are incremented on operations during the lifetime of the EdenFS process
+/// Only covers cumulative counters that are incremented on operations during the lifetime of the EdenFS daemon
 /// It is possible to snapshot the counters and compare them to a previous snapshot
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct TelemetryCounters {
@@ -494,6 +494,10 @@ impl EdenFsClient {
 
     /// Fetch telemetry counters from EdenFS and return them as a TelemetryCounters struct.
     /// This method fetches all the counters needed to fill the TelemetryCounters struct.
+    ///
+    /// The counters returned are cumulative counters for the lifetime of the EdenFS process.
+    /// Please use the `get_telemetry_counter_delta` method using
+    /// with a snapshot of the counters collected at the beginning of your workflow using `get_telemetry_counters`
     pub async fn get_telemetry_counters(&self) -> Result<TelemetryCounters> {
         // Define the counter keys we need to fetch, organized by category
         let filesystem_counters = [
@@ -699,5 +703,16 @@ impl EdenFsClient {
         };
 
         Ok(telemetry_counters)
+    }
+
+    /// Calculates the difference in EdenFS telemetry counters between the current state and a given initial state.
+    ///
+    /// This function retrieves the current telemetry counters and subtracts the provided initial counters from them.
+    pub async fn get_telemetry_counter_delta(
+        &self,
+        initial_counters: TelemetryCounters,
+    ) -> Result<TelemetryCounters> {
+        let current_counters = self.get_telemetry_counters().await?;
+        Ok(current_counters - initial_counters)
     }
 }
