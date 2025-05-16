@@ -596,7 +596,6 @@ identity_data = "proxy"
 
 [redaction_config]
 blobstore = "{blobstorename}"
-darkstorm_blobstore = "{blobstorename}"
 redaction_sets_location = "scm/mononoke/redaction/redaction_sets"
 
 [[trusted_parties_allowlist]]
