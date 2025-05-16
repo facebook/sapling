@@ -76,7 +76,7 @@ def buildSmallChange(
         return ChangeNotification(
             smallChange=SmallChangeNotification(
                 replaced=Replaced(
-                    fileType=Dtype.REGULAR,
+                    fileType=fileType,
                     from_PY_RESERVED_KEYWORD=from_path,
                     to=to_path,
                 )
