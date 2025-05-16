@@ -18,6 +18,7 @@ use configmodel::ConfigExt;
 use configmodel::convert::ByteCount;
 use configmodel::convert::FromConfigValue;
 use re_client_lib::CASDaemonClientCfg;
+use re_client_lib::ClientBuilderCommonMethods;
 use re_client_lib::EmbeddedCASDaemonClientCfg;
 #[cfg(not(target_os = "linux"))]
 use re_client_lib::REClient;
