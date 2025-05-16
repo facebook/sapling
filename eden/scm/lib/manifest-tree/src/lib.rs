@@ -808,7 +808,7 @@ impl TreeManifest {
     }
 }
 
-pub trait ReadTreeManifest {
+pub trait ReadTreeManifest: Send + Sync + 'static {
     fn get(&self, commit_id: &HgId) -> Result<TreeManifest>;
     fn get_root_id(&self, commit_id: &HgId) -> Result<HgId>;
 }

@@ -36,7 +36,7 @@ use types::fetch_mode::FetchMode;
 /// (prefetching content makes the serial walks go faster). The manager and any active prefetches
 /// are canceled when all copies of the returned channel are dropped.
 pub(crate) fn prefetch_manager(
-    tree_resolver: Arc<dyn ReadTreeManifest + Send + Sync>,
+    tree_resolver: Arc<dyn ReadTreeManifest>,
     file_store: Arc<dyn FileStore>,
     current_commit_id: Arc<RwLock<Option<String>>>,
     detector: Arc<walkdetector::Detector>,

@@ -86,7 +86,7 @@ pub struct Repo {
     eager_store: Option<EagerRepoStore>,
     locker: Arc<RepoLocker>,
     cas_client: OnceCell<Option<Arc<dyn CasClient>>>,
-    tree_resolver: OnceCell<Arc<dyn ReadTreeManifest + Send + Sync>>,
+    tree_resolver: OnceCell<Arc<dyn ReadTreeManifest>>,
 }
 
 impl Repo {

@@ -56,7 +56,7 @@ use crate::watchman_client::DeferredWatchmanClient;
 use crate::watchman_client::connect_watchman_async;
 use crate::workingcopy::WorkingCopy;
 
-type ArcReadTreeManifest = Arc<dyn ReadTreeManifest + Send + Sync>;
+type ArcReadTreeManifest = Arc<dyn ReadTreeManifest>;
 
 pub struct WatchmanFileSystem {
     client: Arc<DeferredWatchmanClient>,
