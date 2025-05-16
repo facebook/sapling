@@ -2,16 +2,18 @@
 
 [ReviewStack](https://sapling-scm.com/docs/addons/reviewstack) is a novel user interface for GitHub pull requests with custom support for _stacked changes_. The user experience is inspired by Meta's internal code review tool, but leverages [GitHub's design system](https://primer.style/) to achieve a look and feel that is familiar to GitHub users:
 
-![](./docs/reviewstack-demo.gif)
+![Demo](./docs/reviewstack-demo.gif)
 
-A hosted instance of ReviewStack is publicly available at https://reviewstack.dev/.
+A hosted instance of ReviewStack is publicly available at [https://reviewstack.dev/](https://reviewstack.dev/).
 Note that it has _no server component_ (though it does leverage [Netlify's OAuth signing to authenticate with GitHub](https://docs.netlify.com/visitor-access/oauth-provider-tokens/)).
 
 ## Local Development
 
-- Run `yarn` in the `addons/` folder to install all the dependencies.
-- Run `yarn codegen` in the `addons/reviewstack` to build the generated code.
-- Run `yarn start` in the `addons/reviewstack.dev` folder to run a local instance of ReviewStack.
+- Run `yarn` in the `eden/contrib/reviewstack` folder to install all the dependencies.
+- Run `yarn codegen` in the `eden/contrib/reviewstack` to build the generated code.
+- Run `yarn start` in the `eden/contrib/reviewstack.dev` folder to run a local instance of ReviewStack.
+
+If you make any changes locally, you'll need to regenerate the files and restart your server
 
 The development environment was created using
 [Create React App](https://create-react-app.dev/), so it should be available on `http://localhost:3000/` by default.
@@ -19,7 +21,7 @@ The development environment was created using
 If you have already authenticated with the [GitHub CLI](https://cli.github.com/) `gh`,
 you can run:
 
-```
+```bash
 gh auth status -t
 ```
 
