@@ -11,13 +11,19 @@ use std::future::Future;
 use std::path::PathBuf;
 use std::sync::Arc;
 use std::time::Duration;
+use std::time::Instant;
 
 use async_trait::async_trait;
 use edenfs_error::ConnectAndRequestError;
 use edenfs_error::ErrorHandlingStrategy;
 use edenfs_error::HasErrorHandlingStrategy;
 use edenfs_error::Result;
+use edenfs_telemetry::EdenSample;
+use edenfs_telemetry::SampleLogger;
+use edenfs_telemetry::create_logger;
 use fbinit::FacebookInit;
+use futures_stats::TimedTryFutureExt;
+use lazy_static::lazy_static;
 use parking_lot::Mutex;
 use tokio::sync::Semaphore;
 
@@ -30,6 +36,10 @@ use crate::client::connector::StreamingEdenFsConnector;
 use crate::client::connector::StreamingEdenFsThriftClientFuture;
 use crate::methods::EdenThriftMethod;
 use crate::use_case::UseCase;
+
+lazy_static! {
+    static ref SCUBA_CLIENT: Arc<dyn SampleLogger> = create_logger("edenfs_client".to_string());
+}
 
 // Number of attempts to make for a given Thrift request before giving up.
 const MAX_RETRY_ATTEMPTS: usize = 3;
@@ -109,30 +119,40 @@ impl Client for ThriftClient {
         let mut connection = (*self.connection.lock()).clone();
         let mut attempts = 0;
         let mut retries = 0;
-
+        let mut sample = EdenSample::new();
         loop {
             attempts += 1;
-
+            let start = Instant::now();
             let result = async {
-                let client = connection
-                    .client
-                    .clone()
-                    .await
-                    .map_err(|e| ConnectAndRequestError::ConnectionError(e))?;
-                let (fut, _method) = f(&client);
+                let client = connection.client.clone().await.map_err(|e| {
+                    (
+                        ConnectAndRequestError::ConnectionError(e),
+                        EdenThriftMethod::Unknown,
+                    )
+                })?;
+                let (fut, method) = f(&client);
                 fut.await
-                    .map_err(|e| ConnectAndRequestError::RequestError(e))
+                    .map(|res| (res, method))
+                    .map_err(|e| (ConnectAndRequestError::RequestError(e), method))
             }
+            .try_timed()
             .await;
-
-            let error = match result {
-                Ok(result) => {
+            sample.add_int("wall_clock_duration_ms", start.elapsed().as_millis() as i64);
+            sample.add_int("attempts", attempts as i64);
+            sample.add_int("retries", retries as i64);
+            sample.add_string("use_case", self.use_case.name());
+            let (error, method) = match result {
+                Ok((stats, (result, method))) => {
                     self.stats_handler.on_success(attempts, retries);
+                    sample.add_int("success", true as i64);
+                    sample.add_int("duration_ms", stats.completion_time.as_millis() as i64);
+                    sample.add_string("method", method.name());
+                    let _ = SCUBA_CLIENT.log(sample); // Ideally log should be infalliable, but since its not we don't want to fail the request
                     break Ok(result);
                 }
                 Err(e) => e,
             };
-
+            sample.add_string("method", method.name());
             match error.get_error_handling_strategy() {
                 ErrorHandlingStrategy::Reconnect => {
                     // Our connection to EdenFS broke.
@@ -161,11 +181,16 @@ impl Client for ThriftClient {
                     );
                 }
                 ErrorHandlingStrategy::Abort => {
+                    sample.fail(format!("{:?}", error).as_str());
+                    let _ = SCUBA_CLIENT.log(sample);
                     break Err(error);
                 }
             };
 
             if attempts > MAX_RETRY_ATTEMPTS {
+                sample.fail(format!("{:?}", error).as_str());
+                sample.add_bool("max_retry_reached", true);
+                let _ = SCUBA_CLIENT.log(sample);
                 break Err(error);
             }
         }

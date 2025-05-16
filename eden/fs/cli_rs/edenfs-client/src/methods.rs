@@ -8,6 +8,8 @@
 use strum::IntoStaticStr;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, IntoStaticStr)]
+#[strum(serialize_all = "kebab_case")]
+#[repr(u32)]
 pub enum EdenThriftMethod {
     GetAttributesFromFilesV2,
     GetFileContent,
@@ -41,4 +43,11 @@ pub enum EdenThriftMethod {
     ListMounts,
     StreamStartStatus,
     GetDaemonInfo,
+    Unknown,
+}
+
+impl EdenThriftMethod {
+    pub fn name(&self) -> &'static str {
+        self.into()
+    }
 }
