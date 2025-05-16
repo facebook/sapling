@@ -17,7 +17,7 @@ commit_graph = { version = "0.1.0", path = "../../repo_attributes/commit_graph/c
 context = { version = "0.1.0", path = "../../server/context" }
 filestore = { version = "0.1.0", path = "../../filestore" }
 git_ref_content_mapping = { version = "0.1.0", path = "../../git_ref_content_mapping" }
-gix-hash = "0.16.0"
+gix-hash = "0.18.0"
 import_tools = { version = "0.1.0", path = "../import_tools" }
 mononoke_api = { version = "0.1.0", path = "../../mononoke_api" }
 mononoke_types = { version = "0.1.0", path = "../../mononoke_types" }

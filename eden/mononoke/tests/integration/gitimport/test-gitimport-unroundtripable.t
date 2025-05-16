@@ -36,7 +36,6 @@
           time: Time {
               seconds: 946684800,
               offset: 0,
-              sign: Plus,
           },
       },
       committer: Signature {
@@ -45,7 +44,6 @@
           time: Time {
               seconds: 946684800,
               offset: 0,
-              sign: Plus,
           },
       },
       encoding: Some(

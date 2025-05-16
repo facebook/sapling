@@ -18,16 +18,16 @@ bytes = { version = "1.9.0", features = ["serde"] }
 fbthrift = { version = "0.0.1+unstable", git = "https://github.com/facebook/fbthrift.git", branch = "main" }
 flate2 = { version = "1.0.33", features = ["rust_backend"], default-features = false }
 futures = { version = "0.3.30", features = ["async-await", "compat"] }
-gix-features = { version = "0.40.0", features = ["parallel", "rustsha1"] }
-gix-hash = "0.16.0"
-gix-object = "0.47.0"
-gix-pack = "0.57.0"
+gix-hash = "0.18.0"
+gix-object = "0.49.1"
+gix-pack = "0.59.1"
 mononoke_types = { version = "0.1.0", path = "../../mononoke_types" }
 packfile_thrift = { version = "0.1.0", path = "if" }
 pin-project = "0.4.30"
 quickcheck = "1.0"
 rustc-hash = "2.1.0"
 sha1 = "0.10.5"
+sha1-checked = "0.10.0"
 thiserror = "2"
 tokio = { version = "1.45.0", features = ["full", "test-util", "tracing"] }
 
@@ -35,5 +35,6 @@ tokio = { version = "1.45.0", features = ["full", "test-util", "tracing"] }
 fbinit = { version = "0.2.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 fbinit-tokio = { version = "0.1.2", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 git_delta = { version = "0.1.0", path = "../../third_party/git_delta" }
+gix-features = { version = "0.42.1", features = ["parallel"] }
 mononoke_macros = { version = "0.1.0", path = "../../mononoke_macros" }
 tempfile = "3.15"

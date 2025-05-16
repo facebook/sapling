@@ -16,7 +16,7 @@ bookmarks = { version = "0.1.0", path = "../../bookmarks" }
 bookmarks_movement = { version = "0.1.0", path = "../../bookmarks/bookmarks_movement" }
 borrowed = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 bytes = { version = "1.9.0", features = ["serde"] }
-chrono = { version = "0.4", features = ["clock", "serde", "std"], default-features = false }
+chrono = { version = "=0.4.39", features = ["clock", "serde", "std"], default-features = false }
 cloned = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 commit_cloud_helpers = { version = "0.1.0", path = "../../commit_cloud/helpers" }
 commit_cloud_types = { version = "0.1.0", path = "../../commit_cloud/types" }
@@ -33,7 +33,7 @@ futures_ext = { version = "0.1.0", git = "https://github.com/facebookexperimenta
 futures_stats = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 futures_watchdog = { version = "0.1.0", path = "../../common/futures_watchdog" }
 git_types = { version = "0.1.0", path = "../../git/git_types" }
-gix-hash = "0.16.0"
+gix-hash = "0.18.0"
 hooks = { version = "0.1.0", path = "../../hooks" }
 itertools = "0.14.0"
 justknobs = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }

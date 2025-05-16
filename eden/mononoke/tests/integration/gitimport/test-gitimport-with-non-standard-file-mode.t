@@ -54,8 +54,8 @@
 # Import it into Mononoke
   $ with_stripped_logs gitimport "$GIT_REPO_ORIGIN" --derive-hg --generate-bookmarks full-repo | head -6
   using repo "repo" repoid RepositoryId(0)
-  Execution error: gitimport failed
-  
-  Caused by:
-      0: find_file_changes
-      1: Encountered non-standard file mode 0o100744 for file file2 with Object ID f138820097c8ef62a012205db0b1701df516f6d5
+  GitRepo:$TESTTMP/origin/repo-git commit 4 of 4 - Oid:6887491e => Bid:788ba976, repo: $TESTTMP/origin/repo-git
+  Hg: Sha1(8ce3eae44760b500bf3f2c3922a95dcd3c908e9e): HgManifestId(HgNodeHash(Sha1(009adbc8d457927d2e1883c08b0692bc45089839)))
+  Hg: Sha1(e8615d6f149b876be0a2f30a1c5bf0c42bf8e136): HgManifestId(HgNodeHash(Sha1(d92f8d2d10e61e62f65acf25cdd638ea214f267f)))
+  Hg: Sha1(b00ebe1d3f3fef10a2398ed593b8179ef43cb625): HgManifestId(HgNodeHash(Sha1(6603f73278e14012863aa605262e87af7456b577)))
+  Hg: Sha1(6887491e28eae67dbedc26e16422bfd39c60caaa): HgManifestId(HgNodeHash(Sha1(6603f73278e14012863aa605262e87af7456b577)))

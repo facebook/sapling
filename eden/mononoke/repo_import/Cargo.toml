@@ -33,7 +33,7 @@ filestore = { version = "0.1.0", path = "../filestore" }
 futures = { version = "0.3.30", features = ["async-await", "compat"] }
 git_ref_content_mapping = { version = "0.1.0", path = "../git_ref_content_mapping" }
 git_source_of_truth = { version = "0.1.0", path = "../git_source_of_truth" }
-gix-hash = "0.16.0"
+gix-hash = "0.18.0"
 import_direct = { version = "0.1.0", path = "../git/import_direct" }
 import_tools = { version = "0.1.0", path = "../git/import_tools" }
 itertools = "0.14.0"

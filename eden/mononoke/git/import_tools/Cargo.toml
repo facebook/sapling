@@ -30,9 +30,10 @@ futures = { version = "0.3.30", features = ["async-await", "compat"] }
 futures_stats = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 git_symbolic_refs = { version = "0.1.0", path = "../../git_symbolic_refs" }
 git_types = { version = "0.1.0", path = "../git_types" }
-gix-actor = "0.33.1"
-gix-hash = "0.16.0"
-gix-object = "0.47.0"
+gix-actor = "0.35.1"
+gix-date = "0.10.1"
+gix-hash = "0.18.0"
+gix-object = "0.49.1"
 http = "0.2"
 hyper = { version = "0.14.26", features = ["client", "http1", "http2", "stream"] }
 hyper-openssl = "0.9"

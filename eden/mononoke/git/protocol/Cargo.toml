@@ -28,10 +28,10 @@ futures_stats = { version = "0.1.0", git = "https://github.com/facebookexperimen
 git_ref_content_mapping = { version = "0.1.0", path = "../../git_ref_content_mapping" }
 git_symbolic_refs = { version = "0.1.0", path = "../../git_symbolic_refs" }
 git_types = { version = "0.1.0", path = "../git_types" }
-gix-features = { version = "0.40.0", features = ["parallel", "rustsha1"] }
-gix-hash = "0.16.0"
-gix-object = "0.47.0"
-gix-pack = "0.57.0"
+gix-features = { version = "0.42.1", features = ["parallel"] }
+gix-hash = "0.18.0"
+gix-object = "0.49.1"
+gix-pack = "0.59.1"
 manifest = { version = "0.1.0", path = "../../manifest" }
 metaconfig_types = { version = "0.1.0", path = "../../metaconfig/types" }
 mononoke_types = { version = "0.1.0", path = "../../mononoke_types" }

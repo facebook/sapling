@@ -14,5 +14,5 @@ name = "debugtop"
 
 [dependencies]
 anyhow = "1.0.95"
-chrono = { version = "0.4", features = ["clock", "serde", "std"], default-features = false }
+chrono = { version = "=0.4.39", features = ["clock", "serde", "std"], default-features = false }
 sapling-runlog = { version = "0.1.0", path = "../runlog" }

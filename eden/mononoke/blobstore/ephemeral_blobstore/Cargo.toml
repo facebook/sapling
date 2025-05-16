@@ -16,7 +16,7 @@ async-trait = "0.1.86"
 bincode = { version = "2", features = ["serde"] }
 blobstore = { version = "0.1.0", path = ".." }
 bonsai_globalrev_mapping = { version = "0.1.0", path = "../../bonsai_globalrev_mapping" }
-chrono = { version = "0.4", features = ["clock", "serde", "std"], default-features = false }
+chrono = { version = "=0.4.39", features = ["clock", "serde", "std"], default-features = false }
 commit_graph = { version = "0.1.0", path = "../../repo_attributes/commit_graph/commit_graph" }
 commit_graph_types = { version = "0.1.0", path = "../../repo_attributes/commit_graph/commit_graph_types" }
 context = { version = "0.1.0", path = "../../server/context" }
