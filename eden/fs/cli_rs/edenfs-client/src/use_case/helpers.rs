@@ -10,12 +10,10 @@ use std::collections::HashSet;
 use anyhow::Result;
 use anyhow::bail;
 
-#[allow(dead_code)]
-fn config_url(is_pub: bool) -> String {
+pub(crate) fn config_url(is_pub: bool) -> String {
     format!("https://{}/hg/config/", interngraph_host(is_pub))
 }
 
-#[allow(dead_code)]
 fn interngraph_host(is_pub: bool) -> &'static str {
     if is_pub {
         "interngraph.internmc.facebook.com"
@@ -24,8 +22,10 @@ fn interngraph_host(is_pub: bool) -> &'static str {
     }
 }
 
-#[allow(dead_code)]
-fn get_http_config(is_pub: bool, proxy_sock_path: Option<&str>) -> Result<http_client::Config> {
+pub(crate) fn get_http_config(
+    is_pub: bool,
+    proxy_sock_path: Option<&str>,
+) -> Result<http_client::Config> {
     let mut http_config = http_client::Config::default();
     if is_pub {
         let proxy_sock = match proxy_sock_path {

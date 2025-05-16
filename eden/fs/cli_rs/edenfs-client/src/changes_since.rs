@@ -895,6 +895,7 @@ mod tests {
     use crate::client::mock_service::MockEdenFsService;
     use crate::use_case::UseCase;
     use crate::use_case::UseCaseId;
+    use crate::utils::get_config_dir;
 
     fn make_changes_since_result() -> ChangesSinceV2Result {
         ChangesSinceV2Result {
@@ -918,7 +919,8 @@ mod tests {
     #[fbinit::test]
     async fn test_get_changes_since(fb: FacebookInit) -> Result<()> {
         // create client and mock_service
-        let use_case = Arc::new(UseCase::new(UseCaseId::EdenFsTests));
+        let config_dir = get_config_dir(&None, &None)?;
+        let use_case = Arc::new(UseCase::new(&config_dir, UseCaseId::EdenFsTests));
         let mut client = EdenFsClient::new(fb, use_case, PathBuf::new());
         let mock_client = &mut *client;
         let mut mock_service = MockEdenFsService::new();
@@ -951,7 +953,8 @@ mod tests {
     #[fbinit::test]
     async fn test_stream_changes_since(fb: FacebookInit) -> Result<()> {
         // create client and mock_service
-        let use_case = Arc::new(UseCase::new(UseCaseId::EdenFsTests));
+        let config_dir = get_config_dir(&None, &None)?;
+        let use_case = Arc::new(UseCase::new(&config_dir, UseCaseId::EdenFsTests));
         let mut client = EdenFsClient::new(fb, use_case, PathBuf::new());
         let mock_client = &mut *client;
         let mut mock_service = MockEdenFsService::new();

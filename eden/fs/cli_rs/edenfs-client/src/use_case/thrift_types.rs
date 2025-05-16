@@ -17,25 +17,37 @@
 
 #![allow(non_camel_case_types)]
 pub mod scm_usecases_types {
+    use serde::Deserialize;
+    use serde::Serialize;
 
-    #[derive(Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
+    #[derive(
+        Clone,
+        Debug,
+        PartialEq,
+        Eq,
+        PartialOrd,
+        Ord,
+        Hash,
+        Serialize,
+        Deserialize
+    )]
     pub struct EdenFSUseCaseLimits {
         pub max_concurrent_requests: i32,
     }
 
-    #[derive(Clone, PartialEq)]
+    #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
     pub struct ScmUseCaseConfig {
         pub edenfs_limits: EdenFSUseCaseLimits,
     }
 
-    #[derive(Clone, PartialEq)]
+    #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
     pub struct ScmUseCase {
         pub use_case_id: ::std::string::String,
         pub oncall: ::std::string::String,
         pub config: ScmUseCaseConfig,
     }
 
-    #[derive(Clone, PartialEq)]
+    #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
     pub struct ScmUseCases {
         pub use_cases: ::std::collections::BTreeMap<::std::string::String, ScmUseCase>,
     }

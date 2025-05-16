@@ -197,7 +197,7 @@ impl EdenFsInstance {
         home_dir: Option<PathBuf>,
     ) -> EdenFsInstance {
         let socketfile = config_dir.join("socket");
-        let use_case = Arc::new(UseCase::new(use_case_id));
+        let use_case = Arc::new(UseCase::new(&config_dir, use_case_id));
         Self {
             use_case: use_case.clone(),
             config_dir,
