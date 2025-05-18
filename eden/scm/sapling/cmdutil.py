@@ -2151,16 +2151,18 @@ class changeset_printer:
         if self.footer:
             self.ui.write(self.footer)
 
-    def show(self, ctx, copies=None, matchfn=None, hunksfilterfn=None, **props):
+    def show(
+        self, ctx, copies=None, subdag=None, matchfn=None, hunksfilterfn=None, **props
+    ):
         props = props
         if self.buffered:
             self.ui.pushbuffer(labeled=True)
-            self._show(ctx, copies, matchfn, hunksfilterfn, props)
+            self._show(ctx, copies, subdag, matchfn, hunksfilterfn, props)
             self.hunk[ctx.rev()] = self.ui.popbufferlist()
         else:
-            self._show(ctx, copies, matchfn, hunksfilterfn, props)
+            self._show(ctx, copies, subdag, matchfn, hunksfilterfn, props)
 
-    def _show(self, ctx, copies, matchfn, hunksfilterfn, props):
+    def _show(self, ctx, copies, subdag, matchfn, hunksfilterfn, props):
         """show a single changeset or file revision"""
         changenode = ctx.node()
         rev = ctx.rev()
@@ -2285,7 +2287,7 @@ class jsonchangeset(changeset_printer):
         else:
             self.ui.write("[]\n")
 
-    def _show(self, ctx, copies, matchfn, hunksfilterfn, props):
+    def _show(self, ctx, copies, subdag, matchfn, hunksfilterfn, props):
         """show a single changeset or file revision"""
         rev = ctx.rev()
         if rev is None:
@@ -2455,7 +2457,7 @@ class changeset_templater(changeset_printer):
             self.footer += templater.stringify(self.t(self._parts["docfooter"]))
         return super(changeset_templater, self).close()
 
-    def _show(self, ctx, copies, matchfn, hunksfilterfn, props):
+    def _show(self, ctx, copies, subdag, matchfn, hunksfilterfn, props):
         """show a single changeset or file revision"""
         props = props.copy()
         props.update(templatekw.keywords)
@@ -2464,7 +2466,7 @@ class changeset_templater(changeset_printer):
         props["repo"] = self.repo
         props["ui"] = self.repo.ui
         props["index"] = index = next(self._counter)
-        props["revcache"] = {"copies": copies}
+        props["revcache"] = {"copies": copies, "subdag": subdag}
         props["cache"] = self.cache
 
         # write separator, which wouldn't work well with the header part below
