@@ -896,6 +896,40 @@ def showparents(**args) -> _hybrid:
     )
 
 
+@templatekeyword("grandparents")
+def showgrandparents(**args) -> _hybrid:
+    """List of strings. The grandparents of the changeset in "rev:node" format."""
+    repo, ctx, revcache = args["repo"], args["ctx"], args["revcache"]
+    subdag = revcache.get("subdag")
+    if subdag is None:
+        raise error.ProgrammingError("subdag not found in revcache")
+
+    cl = repo.changelog
+    node = ctx.node()
+    direct_pnodes = cl.dag.parents([node])
+    indirect_pnodes = subdag.parents([node])
+    gpnodes = indirect_pnodes - direct_pnodes
+    gpctxs = [repo[n] for n in gpnodes]
+    gprevs = cl.torevs(gpnodes)
+
+    grandparents = [
+        [
+            ("rev", scmutil.revf64encode(gpctx.rev())),
+            ("node", gpctx.hex()),
+            ("phase", gpctx.phasestr()),
+        ]
+        for gpctx in gpctxs
+    ]
+    f = _showlist("grandparent", grandparents, args)
+    return _hybrid(
+        f,
+        gprevs,
+        lambda x: {"ctx": repo[x]},
+        lambda x: scmutil.formatchangeid(repo[x]),
+        keytype=int,
+    )
+
+
 @templatekeyword("phase")
 def showphase(repo, ctx, templ, **args):
     """String. The changeset phase name."""

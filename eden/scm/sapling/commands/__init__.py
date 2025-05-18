@@ -65,6 +65,7 @@ from .. import (
     sshserver,
     streamclone,
     templatekw,
+    templater,
     ui as uimod,
     util,
 )
@@ -4324,7 +4325,13 @@ def log(ui, repo, *pats, **opts):
     displayer = cmdutil.show_changeset(ui, repo, opts, buffered=True)
 
     template = opts.get("template") or ""
-    ctxstream = revs.prefetchbytemplate(repo, template).iterctx()
+    symbols = templater.extractsymbols(repo, template)
+    subdag = None
+    if symbols is not None and "grandparents" in symbols:
+        cl = repo.changelog
+        subdag = cl.dag.subdag(cl.tonodes(revs))
+        ui.debug("commands.log(): finished computing subdag\n")
+    ctxstream = revs.prefetchbysymbols(symbols).iterctx()
     for ctx in ctxstream:
         if count == limit:
             break
@@ -4345,7 +4352,11 @@ def log(ui, repo, *pats, **opts):
         else:
             revhunksfilter = None
         displayer.show(
-            ctx, copies=copies, matchfn=revmatchfn, hunksfilterfn=revhunksfilter
+            ctx,
+            copies=copies,
+            subdag=subdag,
+            matchfn=revmatchfn,
+            hunksfilterfn=revhunksfilter,
         )
         if displayer.flush(ctx):
             count += 1
