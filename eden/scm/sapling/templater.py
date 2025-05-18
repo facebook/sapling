@@ -342,6 +342,27 @@ def gettemplate(exp, context):
     raise error.ParseError(_("expected template specifier"))
 
 
+def extractsymbols(repo, templ):
+    """Parse template and extract symbols for smartset to prefetch.
+
+    Returns None for empty templates,
+    so that callers can fallback to the default template;
+
+    Returns a set of symbols otherwise -
+    Note that the set can be empty iff no symbols are found.
+    """
+    ast = parseexpandaliases(repo, templ)
+    if not ast:
+        # empty template
+        return None
+    symbols = set()
+    for t in parser.walktree(ast):
+        if len(t) < 2 or t[0] != "symbol":
+            continue
+        symbols.add(t[1])
+    return symbols
+
+
 def findsymbolicname(arg):
     """Find symbolic name for the given compiled expression; returns None
     if nothing found reliably"""
