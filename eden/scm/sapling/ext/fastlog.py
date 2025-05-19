@@ -136,16 +136,6 @@ def dirmatches(files, paths) -> bool:
     return False
 
 
-def originator(parentfunc, rev):
-    """originator(repo, rev)
-    Yield parents of rev from repo in reverse order
-    """
-    # Use set(nullrev, rev) to iterate until termination
-    for p in lazyparents(rev, set([nullrev, rev]), parentfunc):
-        if rev != p:
-            yield p
-
-
 def fastlogfollow(orig, repo, subset, x, name, followfirst: bool = False):
     if followfirst:
         # fastlog does not support followfirst=True
