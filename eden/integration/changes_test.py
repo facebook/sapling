@@ -557,11 +557,6 @@ class ChangesTestCommon(testBase):
 
 @testcase.eden_repo_test
 class ChangesTestNix(JournalTestBase):
-    def setUp(self) -> None:
-        if sys.platform == "win32":
-            self.skipTest("Non-Windows test")
-        return super().setUp()
-
     def test_add_file(self):
         # When adding a file, it is technically written to so there's an additional modified operation
         changes = self.setup_test_add_file()

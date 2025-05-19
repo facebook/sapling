@@ -34,6 +34,7 @@ if sys.platform == "win32":
         "clone_test.CloneFakeEdenFSTestManaged": True,
         "clone_test.CloneTestHg": True,
         "config_test.ConfigTest": True,
+        "changes_test.ChangesTestNix": True,
         "corrupt_overlay_test.CorruptOverlayTest": True,  # Corrupts the file overlay that isn't available on Windows
         "debug_getpath_test.DebugGetPathTestHg": True,
         "doteden_test.DotEdenTestHg": [
