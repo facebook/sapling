@@ -220,33 +220,11 @@ def fastlogfollow(orig, repo, subset, x, name, followfirst: bool = False):
     rev = startrev
 
     parents = repo.changelog.parentrevs
-    public = set()
-
-    # Our criterion for invoking fastlog is finding a single
-    # common public ancestor from the current head.  First we
-    # have to walk back through drafts to find all interesting
-    # public parents.  Typically this will just be one, but if
-    # there are merged drafts, we may have multiple parents.
-    if repo[rev].ispublic():
-        public.add(rev)
-    else:
-        queue = deque()
-        queue.append(rev)
-        seen = set()
-        while queue:
-            cur = queue.popleft()
-            if cur not in seen:
-                seen.add(cur)
-                if repo[cur].mutable():
-                    for p in parents(cur):
-                        if p != nullrev:
-                            queue.append(p)
-                else:
-                    public.add(cur)
 
     def fastlog(repo, startrev, dirs, files):
         if len(dirs) + len(files) != 1:
             raise MultiPathError()
+        public = findpublic(rev)
         draft_revs = []
         for parent in lazyparents(startrev, public, parents):
             if dirmatches(repo[parent].files(), dirs.union(files)):
@@ -269,6 +247,32 @@ def fastlogfollow(orig, repo, subset, x, name, followfirst: bool = False):
         log = FastLog(reponame, "hg", start_node, path, repo)
         for node in log.generate_nodes():
             yield repo.changelog.rev(node)
+
+    def findpublic(rev):
+        public = set()
+
+        # Our criterion for invoking fastlog is finding a single
+        # common public ancestor from the current head.  First we
+        # have to walk back through drafts to find all interesting
+        # public parents.  Typically this will just be one, but if
+        # there are merged drafts, we may have multiple parents.
+        if repo[rev].ispublic():
+            public.add(rev)
+        else:
+            queue = deque()
+            queue.append(rev)
+            seen = set()
+            while queue:
+                cur = queue.popleft()
+                if cur not in seen:
+                    seen.add(cur)
+                    if repo[cur].mutable():
+                        for p in parents(cur):
+                            if p != nullrev:
+                                queue.append(p)
+                    else:
+                        public.add(cur)
+        return public
 
     def undorenames(ctx, files):
         """mutate files to undo any file renames in ctx"""
