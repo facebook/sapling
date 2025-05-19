@@ -128,14 +128,27 @@ def gracefully_restart_edenfs_service(
     edenfs_args: Optional[List[str]] = None,
     preserved_env: Optional[List[str]] = None,
 ) -> int:
-    """Gracefully restart the EdenFS service"""
-    return _start_edenfs_service(
+    """
+    Gracefully restart the EdenFS service
+    This function ensures a seamless transition from the old EdenFS instance to the new one.
+    It prevents the auto unmount recovery task from interfering with the restart process.
+    """
+    # Set the intentionally unmounted flag for all mounts to prevent auto unmount recovery
+    # during the restart process. This ensures that the old EdenFS mounts are not recovered
+    # while the new instance is taking over.
+    instance.set_intentionally_unmounted_for_all_mounts()
+    # Start the new EdenFS service, taking over from the old instance.
+    result = _start_edenfs_service(
         instance=instance,
         daemon_binary=daemon_binary,
         edenfs_args=edenfs_args,
         preserved_env=preserved_env,
         takeover=True,
     )
+    # Clear the intentionally unmounted flag after the restart is complete.
+    # This allows the auto unmount recovery task to resume its normal operation.
+    instance.clear_intentionally_unmounted_for_all_mounts()
+    return result
 
 
 def _start_edenfs_service(
