@@ -23,10 +23,12 @@ use ephemeral_blobstore::StorageLocation;
 use filestore::FilestoreConfigRef;
 use futures::StreamExt;
 use futures::stream;
+use gotham_ext::handler::SlapiCommitIdentityScheme;
 use mercurial_types::HgChangesetId;
 use mercurial_types::HgFileNodeId;
 use mercurial_types::HgManifestId;
 use mercurial_types::HgNodeHash;
+use mononoke_api::ChangesetSpecifier;
 use mononoke_api::MononokeRepo;
 use mononoke_api::Repo;
 use mononoke_api_hg::HgDataId;
@@ -183,6 +185,13 @@ async fn check_request_item<R: MononokeRepo>(
             .hg_changeset_exists(HgChangesetId::new(HgNodeHash::from(id)))
             .await?
             .into(),
+        AnyId::GitChangesetId(id) => {
+            let specifier = ChangesetSpecifier::GitSha1(id.into());
+            match repo.repo_ctx().resolve_specifier(specifier).await? {
+                Some(_) => Lookup::Present(None),
+                None => Lookup::NotPresent,
+            }
+        }
     };
     let result = match lookup {
         Lookup::NotPresent => LookupResult::NotPresent(IndexableId {
@@ -217,6 +226,10 @@ impl SaplingRemoteApiHandler for LookupHandler {
     const HTTP_METHOD: hyper::Method = hyper::Method::POST;
     const API_METHOD: SaplingRemoteApiMethod = SaplingRemoteApiMethod::Lookup;
     const ENDPOINT: &'static str = "/lookup";
+    const SUPPORTED_FLAVOURS: &'static [SlapiCommitIdentityScheme] = &[
+        SlapiCommitIdentityScheme::Hg,
+        SlapiCommitIdentityScheme::Git,
+    ];
 
     async fn handler(
         ectx: SaplingRemoteApiContext<Self::PathExtractor, Self::QueryStringExtractor, Repo>,

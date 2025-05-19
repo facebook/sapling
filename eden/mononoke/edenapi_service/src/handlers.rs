@@ -75,7 +75,7 @@ mod git_objects;
 pub mod handler;
 mod history;
 mod land;
-mod lookup;
+pub mod lookup;
 mod path_history;
 mod repos;
 mod suffix_query;

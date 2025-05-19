@@ -126,5 +126,6 @@ pub fn build_router(context: GitServerContext) -> Router {
         GitHandlers::setup::<edenapi_service::handlers::commit_cloud::CommitCloudUpdateReferences>(
             route,
         );
+        GitHandlers::setup::<edenapi_service::handlers::lookup::LookupHandler>(route);
     })
 }
