@@ -66,6 +66,12 @@ const COUNTER_METADATA_AUX_COMPUTED: &str = "scmstore.file.fetch.aux.cache.compu
 const COUNTER_METADATA_AUX_HITS: &str = "scmstore.file.fetch.aux.cache.hits";
 const COUNTER_METADATA_AUX_MISSES: &str = "scmstore.file.fetch.aux.cache.misses";
 
+// Tree metadata counters
+const COUNTER_TREE_METADATA_MEMORY: &str = "object_store.get_tree_metadata.memory.count";
+const COUNTER_TREE_METADATA_LOCAL_STORE: &str = "object_store.get_tree_metadata.local_store.count";
+const COUNTER_TREE_METADATA_BACKING_STORE: &str =
+    "object_store.get_tree_metadata.backing_store.count";
+
 // CAS local cache counters - file blobs
 // Note: We don't have cas_direct.local_cache.misses, as these are generally retried via a non-direct code path.
 const COUNTER_CAS_LOCAL_CACHE_BLOBS_HITS: &str = "scmstore.file.fetch.cas.local_cache.hits.files";
@@ -103,15 +109,15 @@ use crate::methods::EdenThriftMethod;
 /// The exact VFS implementation depends on the platform
 pub struct FilesystemTelemetryCounters {
     // The number of successful open filesystem operations.
-    pub syscall_opens: i64,
+    pub syscall_opens: u64,
     // The number of successful read operations.
-    pub syscall_reads: i64,
+    pub syscall_reads: u64,
     // The number of successful readdir operations.
-    pub syscall_readdirs: i64,
+    pub syscall_readdirs: u64,
     // The number of successful write operations.
-    pub syscall_writes: i64,
+    pub syscall_writes: u64,
     // The number of successful stat operations.
-    pub syscall_stats: i64,
+    pub syscall_stats: u64,
 }
 
 impl Sub for FilesystemTelemetryCounters {
@@ -145,11 +151,11 @@ impl Sub for ThriftTelemetryCounters {
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct EdenApiBackendTelemetryCounters {
     /// The number of file content fetches from the EdenAPI backend
-    pub edenapi_fetches_blobs: i64,
+    pub edenapi_fetches_blobs: u64,
     /// The number of tree fetches from the EdenAPI backend
-    pub edenapi_fetches_trees: i64,
+    pub edenapi_fetches_trees: u64,
     /// Total number of http requests performed to the EdenAPI backend combined for files and trees
-    pub edenapi_requests: i64,
+    pub edenapi_requests: u64,
 }
 
 impl Sub for EdenApiBackendTelemetryCounters {
@@ -170,9 +176,9 @@ impl Sub for EdenApiBackendTelemetryCounters {
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct LfsBackendTelemetryCounters {
     /// The number of file content fetches from the LFS backend
-    pub lfs_fetches_blobs: i64,
+    pub lfs_fetches_blobs: u64,
     /// Total number of http requests performed to the LFS backend combined for files and trees
-    pub lfs_requests: i64,
+    pub lfs_requests: u64,
 }
 
 impl Sub for LfsBackendTelemetryCounters {
@@ -191,15 +197,15 @@ impl Sub for LfsBackendTelemetryCounters {
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct CASCBackendTelemetryCounters {
     /// The number of file content fetches from the CAS backend
-    pub cas_fetches_blobs: i64,
+    pub cas_fetches_blobs: u64,
     /// The number of file content fetches from the CAS backend that were not found
-    pub cas_missing_blobs: i64,
+    pub cas_missing_blobs: u64,
     /// The number of tree fetches from the CAS backend
-    pub cas_fetches_trees: i64,
+    pub cas_fetches_trees: u64,
     /// The number of tree fetches from the CAS backend that were not found
-    pub cas_missing_trees: i64,
+    pub cas_missing_trees: u64,
     /// Total number of requests performed to the CAS backend combined for files and trees
-    pub cas_requests: i64,
+    pub cas_requests: u64,
 }
 
 impl Sub for CASCBackendTelemetryCounters {
@@ -253,11 +259,11 @@ impl Sub for RemoteBackendTelemetryCounters {
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct SaplingCacheTelemetryCounters {
     // Blobs
-    pub sapling_cache_blobs_hits: i64,
-    pub sapling_cache_blobs_misses: i64,
+    pub sapling_cache_blobs_hits: u64,
+    pub sapling_cache_blobs_misses: u64,
     // Trees
-    pub sapling_cache_trees_hits: i64,
-    pub sapling_cache_trees_misses: i64,
+    pub sapling_cache_trees_hits: u64,
+    pub sapling_cache_trees_misses: u64,
 }
 
 impl Sub for SaplingCacheTelemetryCounters {
@@ -280,8 +286,8 @@ impl Sub for SaplingCacheTelemetryCounters {
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct SaplingLFSCacheTelemetryCounters {
     // Blobs
-    pub sapling_lfs_cache_blobs_hits: i64,
-    pub sapling_lfs_cache_blobs_misses: i64,
+    pub sapling_lfs_cache_blobs_hits: u64,
+    pub sapling_lfs_cache_blobs_misses: u64,
 }
 impl Sub for SaplingLFSCacheTelemetryCounters {
     type Output = Self;
@@ -300,16 +306,16 @@ impl Sub for SaplingLFSCacheTelemetryCounters {
 pub struct CASCLocalCacheTelemetryCounters {
     // Blobs
     /// Total number of blobs fetched from the CAS local cache layers (on-disk cache and lmdb cache layer)
-    pub cas_local_cache_blobs_hits: i64,
+    pub cas_local_cache_blobs_hits: u64,
     /// Blobs fetched from lmdb cache layer
-    pub cas_local_cache_blobs_lmdb_hits: i64,
-    pub cas_local_cache_blobs_misses: i64,
+    pub cas_local_cache_blobs_lmdb_hits: u64,
+    pub cas_local_cache_blobs_misses: u64,
     // Trees
     /// Total number of trees fetched from the CAS local cache layers (on-disk cache and lmdb cache layer)
-    pub cas_local_cache_trees_hits: i64,
+    pub cas_local_cache_trees_hits: u64,
     /// Trees fetched from lmdb cache layer
-    pub cas_local_cache_trees_lmdb_hits: i64,
-    pub cas_local_cache_trees_misses: i64,
+    pub cas_local_cache_trees_lmdb_hits: u64,
+    pub cas_local_cache_trees_misses: u64,
 }
 
 impl Sub for CASCLocalCacheTelemetryCounters {
@@ -336,11 +342,11 @@ impl Sub for CASCLocalCacheTelemetryCounters {
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct LocalStoreCacheTelemetryCounters {
     // Blobs
-    pub local_store_cache_blobs_hits: i64,
-    pub local_store_cache_blobs_misses: i64,
+    pub local_store_cache_blobs_hits: u64,
+    pub local_store_cache_blobs_misses: u64,
     // Trees
-    pub local_store_cache_trees_hits: i64,
-    pub local_store_cache_trees_misses: i64,
+    pub local_store_cache_trees_hits: u64,
+    pub local_store_cache_trees_misses: u64,
 }
 
 impl Sub for LocalStoreCacheTelemetryCounters {
@@ -363,11 +369,11 @@ impl Sub for LocalStoreCacheTelemetryCounters {
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct InMemoryCacheTelemetryCounters {
     // Blobs
-    pub in_memory_cache_blobs_hits: i64,
-    pub in_memory_cache_blobs_misses: i64,
+    pub in_memory_cache_blobs_hits: u64,
+    pub in_memory_cache_blobs_misses: u64,
     // Trees
-    pub in_memory_cache_trees_hits: i64,
-    pub in_memory_cache_trees_misses: i64,
+    pub in_memory_cache_trees_hits: u64,
+    pub in_memory_cache_trees_misses: u64,
 }
 
 impl Sub for InMemoryCacheTelemetryCounters {
@@ -439,18 +445,44 @@ impl Sub for LocalCacheTelemetryCounters {
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct FileMetadataTelemetry {
     // The number of times the file metadata was successfully fetched from the in-memory cache
-    pub fetched_from_inmemory_cache: i64,
+    pub fetched_from_inmemory_cache: u64,
     // The number of times the file metadata was successfully fetched from the local store cache
-    pub fetched_from_local_store_cache: i64,
+    pub fetched_from_local_store_cache: u64,
     // The number of times the file metadata was successfully fetched from the backing store
     // This can come from both local backing store aux cache or remote if not found.
-    pub fetched_from_backing_store: i64,
+    pub fetched_from_backing_store: u64,
     // The number of times the file metadata was successfully fetched from the backing store but was cached.
-    pub fetched_from_backing_store_cached: i64,
+    pub fetched_from_backing_store_cached: u64,
     // The number of times the file metadata was computed from the file content present in the backing store cache
-    pub fetched_from_backing_store_computed: i64,
+    pub fetched_from_backing_store_computed: u64,
     // The number of times the file metadata was not found in any cache and had to be fetched from the remote
-    pub fetched_from_remote: i64,
+    pub fetched_from_remote: u64,
+}
+
+/// EdenFS tree metadata telemetry
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct TreeMetadataTelemetry {
+    // The number of times the tree metadata was successfully fetched from the in-memory cache
+    pub fetched_from_inmemory_cache: u64,
+    // The number of times the tree metadata was successfully fetched from the local store cache
+    pub fetched_from_local_store_cache: u64,
+    // The number of times the tree metadata was successfully fetched from the backing store
+    pub fetched_from_backing_store: u64,
+}
+
+impl Sub for TreeMetadataTelemetry {
+    type Output = Self;
+
+    fn sub(self, rhs: Self) -> Self::Output {
+        Self {
+            fetched_from_inmemory_cache: self.fetched_from_inmemory_cache
+                - rhs.fetched_from_inmemory_cache,
+            fetched_from_local_store_cache: self.fetched_from_local_store_cache
+                - rhs.fetched_from_local_store_cache,
+            fetched_from_backing_store: self.fetched_from_backing_store
+                - rhs.fetched_from_backing_store,
+        }
+    }
 }
 
 /// EdenFS cummulative counters
@@ -464,6 +496,7 @@ pub struct TelemetryCounters {
     pub backend_stats: RemoteBackendTelemetryCounters,
     pub local_cache_stats: LocalCacheTelemetryCounters,
     pub file_metadata_stats: Option<FileMetadataTelemetry>,
+    pub tree_metadata_stats: Option<TreeMetadataTelemetry>,
 }
 
 impl Sub for FileMetadataTelemetry {
@@ -496,6 +529,11 @@ impl Sub for TelemetryCounters {
             backend_stats: self.backend_stats - rhs.backend_stats,
             local_cache_stats: self.local_cache_stats - rhs.local_cache_stats,
             file_metadata_stats: match (self.file_metadata_stats, rhs.file_metadata_stats) {
+                (Some(lhs), Some(rhs)) => Some(lhs - rhs),
+                (lhs, None) => lhs,
+                (None, _) => None,
+            },
+            tree_metadata_stats: match (self.tree_metadata_stats, rhs.tree_metadata_stats) {
                 (Some(lhs), Some(rhs)) => Some(lhs - rhs),
                 (lhs, None) => lhs,
                 (None, _) => None,
@@ -628,6 +666,12 @@ impl EdenFsClient {
             COUNTER_METADATA_AUX_MISSES,
         ];
 
+        let tree_metadata_counters = [
+            COUNTER_TREE_METADATA_MEMORY,
+            COUNTER_TREE_METADATA_LOCAL_STORE,
+            COUNTER_TREE_METADATA_BACKING_STORE,
+        ];
+
         // Combine all counter keys into a single vector
         let mut keys: Vec<String> = Vec::new();
         keys.extend(filesystem_counters.iter().map(|&s| s.to_string()));
@@ -640,6 +684,7 @@ impl EdenFsClient {
         keys.extend(local_store_cache_counters.iter().map(|&s| s.to_string()));
         keys.extend(in_memory_cache_counters.iter().map(|&s| s.to_string()));
         keys.extend(file_metadata_counters.iter().map(|&s| s.to_string()));
+        keys.extend(tree_metadata_counters.iter().map(|&s| s.to_string()));
 
         // Fetch the counters
         let counters = self.get_selected_counters(&keys).await?;
@@ -647,135 +692,156 @@ impl EdenFsClient {
         // Create the TelemetryCounters struct
         let telemetry_counters = TelemetryCounters {
             fs_stats: FilesystemTelemetryCounters {
-                syscall_opens: *counters.get(COUNTER_FUSE_OPEN).unwrap_or(&0),
-                syscall_reads: *counters.get(COUNTER_FUSE_READ).unwrap_or(&0),
-                syscall_readdirs: *counters.get(COUNTER_FUSE_READDIR).unwrap_or(&0),
-                syscall_writes: *counters.get(COUNTER_FUSE_WRITE).unwrap_or(&0),
-                syscall_stats: *counters.get(COUNTER_FUSE_GETATTR).unwrap_or(&0),
+                syscall_opens: *counters.get(COUNTER_FUSE_OPEN).unwrap_or(&0) as u64,
+                syscall_reads: *counters.get(COUNTER_FUSE_READ).unwrap_or(&0) as u64,
+                syscall_readdirs: *counters.get(COUNTER_FUSE_READDIR).unwrap_or(&0) as u64,
+                syscall_writes: *counters.get(COUNTER_FUSE_WRITE).unwrap_or(&0) as u64,
+                syscall_stats: *counters.get(COUNTER_FUSE_GETATTR).unwrap_or(&0) as u64,
             },
             thrift_stats: ThriftTelemetryCounters {},
             backend_stats: RemoteBackendTelemetryCounters {
                 edenapi_backend: Some(EdenApiBackendTelemetryCounters {
-                    edenapi_fetches_blobs: *counters.get(COUNTER_EDENAPI_BLOBS_KEYS).unwrap_or(&0),
-                    edenapi_fetches_trees: *counters.get(COUNTER_EDENAPI_TREES_KEYS).unwrap_or(&0),
-                    edenapi_requests: *counters.get(COUNTER_EDENAPI_BLOBS_REQUESTS).unwrap_or(&0)
-                        + *counters.get(COUNTER_EDENAPI_TREES_REQUESTS).unwrap_or(&0),
+                    edenapi_fetches_blobs: *counters.get(COUNTER_EDENAPI_BLOBS_KEYS).unwrap_or(&0)
+                        as u64,
+                    edenapi_fetches_trees: *counters.get(COUNTER_EDENAPI_TREES_KEYS).unwrap_or(&0)
+                        as u64,
+                    edenapi_requests: (*counters.get(COUNTER_EDENAPI_BLOBS_REQUESTS).unwrap_or(&0)
+                        + *counters.get(COUNTER_EDENAPI_TREES_REQUESTS).unwrap_or(&0))
+                        as u64,
                 }),
                 casc_backend: Some(CASCBackendTelemetryCounters {
-                    cas_fetches_blobs: *counters.get(COUNTER_CAS_BLOBS_HITS).unwrap_or(&0),
-                    cas_missing_blobs: *counters.get(COUNTER_CAS_BLOBS_MISSES).unwrap_or(&0),
-                    cas_fetches_trees: *counters.get(COUNTER_CAS_TREES_HITS).unwrap_or(&0),
-                    cas_missing_trees: *counters.get(COUNTER_CAS_TREES_MISSES).unwrap_or(&0),
+                    cas_fetches_blobs: *counters.get(COUNTER_CAS_BLOBS_HITS).unwrap_or(&0) as u64,
+                    cas_missing_blobs: *counters.get(COUNTER_CAS_BLOBS_MISSES).unwrap_or(&0) as u64,
+                    cas_fetches_trees: *counters.get(COUNTER_CAS_TREES_HITS).unwrap_or(&0) as u64,
+                    cas_missing_trees: *counters.get(COUNTER_CAS_TREES_MISSES).unwrap_or(&0) as u64,
                     // Total number of requests performed to the CAS backend combined for files and trees
-                    cas_requests: *counters.get(COUNTER_CAS_BLOBS_REQUESTS).unwrap_or(&0)
-                        + *counters.get(COUNTER_CAS_TREES_REQUESTS).unwrap_or(&0),
+                    cas_requests: (*counters.get(COUNTER_CAS_BLOBS_REQUESTS).unwrap_or(&0)
+                        + *counters.get(COUNTER_CAS_TREES_REQUESTS).unwrap_or(&0))
+                        as u64,
                 }),
                 lfs_backend: Some(LfsBackendTelemetryCounters {
-                    lfs_fetches_blobs: *counters.get(COUNTER_LFS_BLOBS_KEYS).unwrap_or(&0),
-                    lfs_requests: *counters.get(COUNTER_LFS_BLOBS_REQUESTS).unwrap_or(&0)
-                        + *counters.get(COUNTER_LFS_TREES_REQUESTS).unwrap_or(&0),
+                    lfs_fetches_blobs: *counters.get(COUNTER_LFS_BLOBS_KEYS).unwrap_or(&0) as u64,
+                    lfs_requests: (*counters.get(COUNTER_LFS_BLOBS_REQUESTS).unwrap_or(&0)
+                        + *counters.get(COUNTER_LFS_TREES_REQUESTS).unwrap_or(&0))
+                        as u64,
                 }),
             },
             local_cache_stats: LocalCacheTelemetryCounters {
                 sapling_cache: Some(SaplingCacheTelemetryCounters {
                     sapling_cache_blobs_hits: *counters
                         .get(COUNTER_INDEXEDLOG_BLOBS_HITS)
-                        .unwrap_or(&0),
+                        .unwrap_or(&0) as u64,
                     sapling_cache_blobs_misses: *counters
                         .get(COUNTER_INDEXEDLOG_BLOBS_MISSES)
-                        .unwrap_or(&0),
+                        .unwrap_or(&0) as u64,
                     sapling_cache_trees_hits: *counters
                         .get(COUNTER_INDEXEDLOG_TREES_HITS)
-                        .unwrap_or(&0),
+                        .unwrap_or(&0) as u64,
                     sapling_cache_trees_misses: *counters
                         .get(COUNTER_INDEXEDLOG_TREES_MISSES)
-                        .unwrap_or(&0),
+                        .unwrap_or(&0) as u64,
                 }),
                 sapling_lfs_cache: Some(SaplingLFSCacheTelemetryCounters {
-                    sapling_lfs_cache_blobs_hits: *counters
+                    sapling_lfs_cache_blobs_hits: (*counters
                         .get(COUNTER_LFS_CACHE_BLOBS_KEYS)
                         .unwrap_or(&0)
-                        - *counters.get(COUNTER_LFS_CACHE_BLOBS_MISSES).unwrap_or(&0),
+                        - *counters.get(COUNTER_LFS_CACHE_BLOBS_MISSES).unwrap_or(&0))
+                        as u64,
                     sapling_lfs_cache_blobs_misses: *counters
                         .get(COUNTER_LFS_CACHE_BLOBS_MISSES)
-                        .unwrap_or(&0),
+                        .unwrap_or(&0) as u64,
                 }),
                 casc_local_cache: Some(CASCLocalCacheTelemetryCounters {
-                    cas_local_cache_blobs_hits: *counters
+                    cas_local_cache_blobs_hits: (*counters
                         .get(COUNTER_CAS_LOCAL_CACHE_BLOBS_HITS)
                         .unwrap_or(&0)
                         + *counters
                             .get(COUNTER_CAS_DIRECT_LOCAL_CACHE_BLOBS_HITS)
-                            .unwrap_or(&0),
-                    cas_local_cache_blobs_lmdb_hits: *counters
+                            .unwrap_or(&0)) as u64,
+                    cas_local_cache_blobs_lmdb_hits: (*counters
                         .get(COUNTER_CAS_LOCAL_CACHE_BLOBS_LMDB_HITS)
                         .unwrap_or(&0)
                         + *counters
                             .get(COUNTER_CAS_DIRECT_LOCAL_CACHE_BLOBS_LMDB_HITS)
-                            .unwrap_or(&0),
+                            .unwrap_or(&0))
+                        as u64,
                     cas_local_cache_blobs_misses: *counters
                         .get(COUNTER_CAS_LOCAL_CACHE_BLOBS_MISSES)
-                        .unwrap_or(&0),
-                    cas_local_cache_trees_hits: *counters
+                        .unwrap_or(&0) as u64,
+                    cas_local_cache_trees_hits: (*counters
                         .get(COUNTER_CAS_LOCAL_CACHE_TREES_HITS)
                         .unwrap_or(&0)
                         + *counters
                             .get(COUNTER_CAS_DIRECT_LOCAL_CACHE_TREES_HITS)
-                            .unwrap_or(&0),
-                    cas_local_cache_trees_lmdb_hits: *counters
+                            .unwrap_or(&0)) as u64,
+                    cas_local_cache_trees_lmdb_hits: (*counters
                         .get(COUNTER_CAS_LOCAL_CACHE_TREES_LMDB_HITS)
                         .unwrap_or(&0)
                         + *counters
                             .get(COUNTER_CAS_DIRECT_LOCAL_CACHE_TREES_LMDB_HITS)
-                            .unwrap_or(&0),
+                            .unwrap_or(&0))
+                        as u64,
                     cas_local_cache_trees_misses: *counters
                         .get(COUNTER_CAS_LOCAL_CACHE_TREES_MISSES)
-                        .unwrap_or(&0),
+                        .unwrap_or(&0) as u64,
                 }),
                 local_store_cache: Some(LocalStoreCacheTelemetryCounters {
                     local_store_cache_blobs_hits: *counters
                         .get(COUNTER_LOCAL_STORE_BLOBS_HITS)
-                        .unwrap_or(&0),
+                        .unwrap_or(&0) as u64,
                     local_store_cache_blobs_misses: *counters
                         .get(COUNTER_LOCAL_STORE_BLOBS_MISSES)
-                        .unwrap_or(&0),
+                        .unwrap_or(&0) as u64,
                     local_store_cache_trees_hits: *counters
                         .get(COUNTER_LOCAL_STORE_TREES_HITS)
-                        .unwrap_or(&0),
+                        .unwrap_or(&0) as u64,
                     local_store_cache_trees_misses: *counters
                         .get(COUNTER_LOCAL_STORE_TREES_MISSES)
-                        .unwrap_or(&0),
+                        .unwrap_or(&0) as u64,
                 }),
                 in_memory_local_cache: Some(InMemoryCacheTelemetryCounters {
                     in_memory_cache_blobs_hits: *counters
                         .get(COUNTER_IN_MEMORY_BLOBS_HITS)
-                        .unwrap_or(&0),
+                        .unwrap_or(&0) as u64,
                     in_memory_cache_blobs_misses: *counters
                         .get(COUNTER_IN_MEMORY_BLOBS_MISSES)
-                        .unwrap_or(&0),
+                        .unwrap_or(&0) as u64,
                     in_memory_cache_trees_hits: *counters
                         .get(COUNTER_IN_MEMORY_TREES_HITS)
-                        .unwrap_or(&0),
+                        .unwrap_or(&0) as u64,
                     in_memory_cache_trees_misses: *counters
                         .get(COUNTER_IN_MEMORY_TREES_MISSES)
-                        .unwrap_or(&0),
+                        .unwrap_or(&0) as u64,
                 }),
             },
             file_metadata_stats: Some(FileMetadataTelemetry {
-                fetched_from_inmemory_cache: *counters.get(COUNTER_METADATA_MEMORY).unwrap_or(&0),
+                fetched_from_inmemory_cache: *counters.get(COUNTER_METADATA_MEMORY).unwrap_or(&0)
+                    as u64,
                 fetched_from_local_store_cache: *counters
                     .get(COUNTER_METADATA_LOCAL_STORE)
-                    .unwrap_or(&0),
+                    .unwrap_or(&0) as u64,
                 fetched_from_backing_store: *counters
                     .get(COUNTER_METADATA_BACKING_STORE)
-                    .unwrap_or(&0),
+                    .unwrap_or(&0) as u64,
                 fetched_from_backing_store_cached: *counters
                     .get(COUNTER_METADATA_AUX_HITS)
-                    .unwrap_or(&0),
+                    .unwrap_or(&0) as u64,
                 fetched_from_backing_store_computed: *counters
                     .get(COUNTER_METADATA_AUX_COMPUTED)
-                    .unwrap_or(&0),
-                fetched_from_remote: *counters.get(COUNTER_METADATA_AUX_MISSES).unwrap_or(&0),
+                    .unwrap_or(&0) as u64,
+                fetched_from_remote: *counters.get(COUNTER_METADATA_AUX_MISSES).unwrap_or(&0)
+                    as u64,
+            }),
+            tree_metadata_stats: Some(TreeMetadataTelemetry {
+                fetched_from_inmemory_cache: *counters
+                    .get(COUNTER_TREE_METADATA_MEMORY)
+                    .unwrap_or(&0) as u64,
+                fetched_from_local_store_cache: *counters
+                    .get(COUNTER_TREE_METADATA_LOCAL_STORE)
+                    .unwrap_or(&0) as u64,
+                fetched_from_backing_store: *counters
+                    .get(COUNTER_TREE_METADATA_BACKING_STORE)
+                    .unwrap_or(&0) as u64,
             }),
         };
 
