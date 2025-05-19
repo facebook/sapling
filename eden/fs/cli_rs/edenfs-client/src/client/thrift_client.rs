@@ -139,7 +139,7 @@ impl Client for ThriftClient {
             }
             .try_timed()
             .await;
-            sample.add_int("wall_clock_duration_ms", start.elapsed().as_millis() as i64);
+            sample.add_int("wall_clock_duration_us", start.elapsed().as_micros() as i64);
             sample.add_int("attempts", attempts as i64);
             sample.add_int("retries", retries as i64);
             sample.add_string("use_case", self.use_case.name());
@@ -147,7 +147,7 @@ impl Client for ThriftClient {
                 Ok((stats, (result, method))) => {
                     self.stats_handler.on_success(attempts, retries);
                     sample.add_int("success", true as i64);
-                    sample.add_int("duration_ms", stats.completion_time.as_millis() as i64);
+                    sample.add_int("duration_us", stats.completion_time.as_micros() as i64);
                     sample.add_string("method", method.name());
                     let _ = SCUBA_CLIENT.log(sample); // Ideally log should be infalliable, but since its not we don't want to fail the request
                     break Ok(result);
