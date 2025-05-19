@@ -623,9 +623,15 @@ impl EdenFsClient {
                         as u64,
                 }),
                 casc_backend: Some(CASCBackendTelemetryCounters {
-                    cas_fetches_blobs: *counters.get(COUNTER_CAS_BLOBS_HITS).unwrap_or(&0) as u64,
+                    cas_fetches_blobs: *counters.get(COUNTER_CAS_BLOBS_HITS).unwrap_or(&0) as u64
+                        - *counters
+                            .get(COUNTER_CAS_LOCAL_CACHE_BLOBS_HITS)
+                            .unwrap_or(&0) as u64,
                     cas_missing_blobs: *counters.get(COUNTER_CAS_BLOBS_MISSES).unwrap_or(&0) as u64,
-                    cas_fetches_trees: *counters.get(COUNTER_CAS_TREES_HITS).unwrap_or(&0) as u64,
+                    cas_fetches_trees: *counters.get(COUNTER_CAS_TREES_HITS).unwrap_or(&0) as u64
+                        - *counters
+                            .get(COUNTER_CAS_LOCAL_CACHE_TREES_HITS)
+                            .unwrap_or(&0) as u64,
                     cas_missing_trees: *counters.get(COUNTER_CAS_TREES_MISSES).unwrap_or(&0) as u64,
                     // Total number of requests performed to the CAS backend combined for files and trees
                     cas_requests: (*counters.get(COUNTER_CAS_BLOBS_REQUESTS).unwrap_or(&0)
