@@ -25,6 +25,8 @@ from .thrift_objects import buildSmallChange
 
 
 class JournalTestBase(testcase.EdenRepoTest):
+    git_test_supported = False
+
     def edenfs_extra_config(self) -> Optional[Dict[str, List[str]]]:
         configs = super().edenfs_extra_config()
         if configs:
@@ -43,9 +45,6 @@ class JournalTestBase(testcase.EdenRepoTest):
     def setUp(self) -> None:
         # needs to be done before set up because these need to be created
         # for populate_repo() and the supers set up will call this.
-        if self.repo_type == "git":
-            self.skipTest("File watching is not enabled on git")
-
         self.commit0 = ""
         self.commit1 = ""
 
