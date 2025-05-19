@@ -328,6 +328,7 @@ elif sys.platform.startswith("darwin"):
 if sys.platform != "win32":
     TEST_DISABLED.update(
         {
+            "changes_test.ChangesTestWin": True,
             "corrupt_overlay_test.CorruptSqliteOverlayTest": True,
             "invalidate_test.InvalidateTest": True,
             "windows_fsck_test.WindowsFsckTest": True,

@@ -954,11 +954,6 @@ class ChangesTestNix(JournalTestBase):
 
 @testcase.eden_repo_test
 class ChangesTestWin(WindowsJournalTestBase):
-    def setUp(self) -> None:
-        if sys.platform != "win32":
-            self.skipTest("Windows only test")
-        return super().setUp()
-
     def test_add_file(self):
         # In windows, the file is created and then modified in projfs, then eden gets
         # a single ADDED notification
