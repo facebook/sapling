@@ -48,8 +48,8 @@ def extsetup(ui) -> None:
     extensions.wrapfunction(revset, "_follow", fastlogfollow)
 
 
-def lazyparents(rev, public, parentfunc):
-    """lazyparents(rev, public)
+def lazyparents(rev, path, public, parentfunc):
+    """lazyparents(rev, path, public, parentfunc)
     Lazily yield parents of rev in reverse order until all nodes
     in public have been reached or all revs have been exhausted
 
@@ -85,26 +85,27 @@ def lazyparents(rev, public, parentfunc):
     10 9 8 7 6 5 4 3 2 1
     """
     seen = set()
-    heap = [-rev]
+    heap = [(-rev, path)]
 
     while heap:
-        cur = -(heapq.heappop(heap))
-        if cur not in seen:
-            seen.add(cur)
-            yield cur
+        cur, cur_path = heapq.heappop(heap)
+        cur = -cur
+        if (cur, cur_path) not in seen:
+            seen.add((cur, cur_path))
+            yield (cur, cur_path)
 
             published = cur in public
             if published:
                 # Down to one public ancestor; end generation
                 if len(public) == 1:
                     return
-                public.remove(cur)
+                del public[cur]
 
             for p in parentfunc(cur):
                 if p != nullrev:
-                    heapq.heappush(heap, -p)
+                    heapq.heappush(heap, (-p, path))
                     if published:
-                        public.add(p)
+                        public[p] = path
 
 
 def dirmatches(files, paths) -> bool:
@@ -224,9 +225,11 @@ def fastlogfollow(orig, repo, subset, x, name, followfirst: bool = False):
     def fastlog(repo, startrev, dirs, files):
         if len(dirs) + len(files) != 1:
             raise MultiPathError()
-        public = findpublic(rev)
+
+        path = next(iter(dirs.union(files)))
+        public = findpublic(startrev, path)
         draft_revs = []
-        for parent in lazyparents(startrev, public, parents):
+        for parent, _path in lazyparents(startrev, path, public, parents):
             if dirmatches(repo[parent].files(), dirs.union(files)):
                 draft_revs.append(parent)
             # Undo relevant file renames in parent so we end up
@@ -248,30 +251,29 @@ def fastlogfollow(orig, repo, subset, x, name, followfirst: bool = False):
         for node in log.generate_nodes():
             yield repo.changelog.rev(node)
 
-    def findpublic(rev):
-        public = set()
-
+    def findpublic(rev, path):
+        public = dict()
         # Our criterion for invoking fastlog is finding a single
         # common public ancestor from the current head.  First we
         # have to walk back through drafts to find all interesting
         # public parents.  Typically this will just be one, but if
         # there are merged drafts, we may have multiple parents.
         if repo[rev].ispublic():
-            public.add(rev)
+            public[rev] = path
         else:
             queue = deque()
-            queue.append(rev)
-            seen = set()
+            queue.append((rev, path))
+            seen = set((rev, path))
             while queue:
-                cur = queue.popleft()
-                if cur not in seen:
-                    seen.add(cur)
+                cur, cur_path = queue.popleft()
+                if (cur, cur_path) not in seen:
+                    seen.add((cur, cur_path))
                     if repo[cur].mutable():
                         for p in parents(cur):
                             if p != nullrev:
-                                queue.append(p)
+                                queue.append((p, cur_path))
                     else:
-                        public.add(cur)
+                        public[cur] = cur_path
         return public
 
     def undorenames(ctx, files):
