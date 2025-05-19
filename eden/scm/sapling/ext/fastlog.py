@@ -249,14 +249,13 @@ def fastlogfollow(orig, repo, subset, x, name, followfirst: bool = False):
             raise MultiPathError()
         draft_revs = []
         for parent in lazyparents(startrev, public, parents):
+            if dirmatches(repo[parent].files(), dirs.union(files)):
+                draft_revs.append(parent)
             # Undo relevant file renames in parent so we end up
             # passing the renamee to scmquery. Note that this will not
             # work for non-linear drafts where a file does not have
             # linear rename history.
             undorenames(repo[parent], files)
-
-            if dirmatches(repo[parent].files(), dirs.union(files)):
-                draft_revs.append(parent)
 
         repo.ui.debug("found common parent at %s\n" % repo[parent].hex())
 
