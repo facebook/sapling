@@ -5,94 +5,6 @@
  * GNU General Public License version 2.
  */
 
-// Counter names used for telemetry
-
-// Filesystem counters (intially fuse, but will change to support other platforms)
-const COUNTER_FUSE_OPEN: &str = "fuse.open_successful.sum";
-const COUNTER_FUSE_READ: &str = "fuse.read_successful.sum";
-const COUNTER_FUSE_READDIR: &str = "fuse.readdir_successful.sum";
-const COUNTER_FUSE_WRITE: &str = "fuse.write_successful.sum";
-const COUNTER_FUSE_GETATTR: &str = "fuse.getattr_successful.sum";
-
-// EdenAPI backend counters
-const COUNTER_EDENAPI_BLOBS_KEYS: &str = "scmstore.file.fetch.edenapi.keys";
-const COUNTER_EDENAPI_BLOBS_REQUESTS: &str = "scmstore.file.fetch.edenapi.requests";
-const COUNTER_EDENAPI_TREES_KEYS: &str = "scmstore.tree.fetch.edenapi.keys";
-const COUNTER_EDENAPI_TREES_REQUESTS: &str = "scmstore.tree.fetch.edenapi.requests";
-
-// LFS backend counters
-const COUNTER_LFS_BLOBS_KEYS: &str = "scmstore.file.fetch.lfs.keys";
-const COUNTER_LFS_BLOBS_REQUESTS: &str = "scmstore.file.fetch.lfs.requests";
-const COUNTER_LFS_TREES_REQUESTS: &str = "scmstore.tree.fetch.lfs.requests";
-
-// CAS backend counters
-const COUNTER_CAS_BLOBS_HITS: &str = "scmstore.file.fetch.cas.hits";
-const COUNTER_CAS_BLOBS_MISSES: &str = "scmstore.file.fetch.cas.misses";
-const COUNTER_CAS_BLOBS_REQUESTS: &str = "scmstore.file.fetch.cas.requests";
-const COUNTER_CAS_TREES_HITS: &str = "scmstore.tree.fetch.cas.hits";
-const COUNTER_CAS_TREES_MISSES: &str = "scmstore.tree.fetch.cas.misses";
-const COUNTER_CAS_TREES_REQUESTS: &str = "scmstore.tree.fetch.cas.requests";
-
-// Sapling cache counters (known as indexedlog/hgcache)
-const COUNTER_INDEXEDLOG_BLOBS_HITS: &str = "scmstore.file.fetch.indexedlog.cache.hits";
-const COUNTER_INDEXEDLOG_BLOBS_MISSES: &str = "scmstore.file.fetch.indexedlog.cache.misses";
-const COUNTER_INDEXEDLOG_BLOBS_REQUESTS: &str = "scmstore.file.fetch.indexedlog.cache.requests";
-const COUNTER_INDEXEDLOG_TREES_HITS: &str = "scmstore.tree.fetch.indexedlog.cache.hits";
-const COUNTER_INDEXEDLOG_TREES_MISSES: &str = "scmstore.tree.fetch.indexedlog.cache.misses";
-const COUNTER_INDEXEDLOG_TREES_REQUESTS: &str = "scmstore.tree.fetch.indexedlog.cache.requests";
-
-// Sapling LFS cache counters
-const COUNTER_LFS_CACHE_BLOBS_KEYS: &str = "scmstore.file.fetch.lfs.cache.keys";
-const COUNTER_LFS_CACHE_BLOBS_MISSES: &str = "scmstore.file.fetch.lfs.cache.misses";
-const COUNTER_LFS_CACHE_BLOBS_REQUESTS: &str = "scmstore.file.fetch.lfs.cache.requests";
-
-// RocksDB local store cache counters
-const COUNTER_LOCAL_STORE_BLOBS_HITS: &str = "local_store.get_blob_success.sum";
-const COUNTER_LOCAL_STORE_BLOBS_MISSES: &str = "local_store.get_blob_failure.sum";
-const COUNTER_LOCAL_STORE_TREES_HITS: &str = "local_store.get_tree_success.sum";
-const COUNTER_LOCAL_STORE_TREES_MISSES: &str = "local_store.get_tree_failure.sum";
-
-// In-memory cache counters
-const COUNTER_IN_MEMORY_BLOBS_HITS: &str = "blob_cache.get_hit.sum";
-const COUNTER_IN_MEMORY_BLOBS_MISSES: &str = "blob_cache.get_miss.sum";
-const COUNTER_IN_MEMORY_TREES_HITS: &str = "tree_cache.get_hit.sum";
-const COUNTER_IN_MEMORY_TREES_MISSES: &str = "tree_cache.get_miss.sum";
-
-// File metadata counters
-const COUNTER_METADATA_MEMORY: &str = "object_store.get_blob_metadata.memory.count";
-const COUNTER_METADATA_LOCAL_STORE: &str = "object_store.get_blob_metadata.local_store.count";
-const COUNTER_METADATA_BACKING_STORE: &str = "object_store.get_blob_metadata.backing_store.count";
-const COUNTER_METADATA_AUX_COMPUTED: &str = "scmstore.file.fetch.aux.cache.computed";
-const COUNTER_METADATA_AUX_HITS: &str = "scmstore.file.fetch.aux.cache.hits";
-const COUNTER_METADATA_AUX_MISSES: &str = "scmstore.file.fetch.aux.cache.misses";
-
-// Tree metadata counters
-const COUNTER_TREE_METADATA_MEMORY: &str = "object_store.get_tree_metadata.memory.count";
-const COUNTER_TREE_METADATA_LOCAL_STORE: &str = "object_store.get_tree_metadata.local_store.count";
-const COUNTER_TREE_METADATA_BACKING_STORE: &str =
-    "object_store.get_tree_metadata.backing_store.count";
-
-// CAS local cache counters - file blobs
-// Note: We don't have cas_direct.local_cache.misses, as these are generally retried via a non-direct code path.
-const COUNTER_CAS_LOCAL_CACHE_BLOBS_HITS: &str = "scmstore.file.fetch.cas.local_cache.hits.files";
-const COUNTER_CAS_DIRECT_LOCAL_CACHE_BLOBS_HITS: &str =
-    "scmstore.file.fetch.cas_direct.local_cache.hits.files";
-const COUNTER_CAS_LOCAL_CACHE_BLOBS_MISSES: &str =
-    "scmstore.file.fetch.cas.local_cache.misses.files";
-const COUNTER_CAS_LOCAL_CACHE_BLOBS_LMDB_HITS: &str =
-    "scmstore.file.fetch.cas.local_cache.lmdb.hits";
-const COUNTER_CAS_DIRECT_LOCAL_CACHE_BLOBS_LMDB_HITS: &str =
-    "scmstore.file.fetch.cas_direct.local_cache.lmdb.hits";
-const COUNTER_CAS_LOCAL_CACHE_TREES_HITS: &str = "scmstore.tree.fetch.cas.local_cache.hits.files";
-const COUNTER_CAS_DIRECT_LOCAL_CACHE_TREES_HITS: &str =
-    "scmstore.tree.fetch.cas_direct.local_cache.hits.files";
-const COUNTER_CAS_LOCAL_CACHE_TREES_MISSES: &str =
-    "scmstore.tree.fetch.cas.local_cache.misses.files";
-const COUNTER_CAS_LOCAL_CACHE_TREES_LMDB_HITS: &str =
-    "scmstore.tree.fetch.cas.local_cache.lmdb.hits";
-const COUNTER_CAS_DIRECT_LOCAL_CACHE_TREES_LMDB_HITS: &str =
-    "scmstore.tree.fetch.cas_direct.local_cache.lmdb.hits";
-
 use std::collections::BTreeMap;
 use std::ops::Sub;
 
@@ -102,6 +14,7 @@ use edenfs_error::Result;
 
 use crate::client::Client;
 use crate::client::EdenFsClient;
+use crate::counter_names::*;
 use crate::methods::EdenThriftMethod;
 
 #[derive(Debug, Clone, PartialEq, Eq)]

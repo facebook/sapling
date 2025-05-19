@@ -12,6 +12,7 @@ pub mod changes_since;
 pub mod checkout;
 pub mod client;
 pub mod config;
+pub mod counter_names;
 pub mod counters;
 pub mod current_snapshot;
 pub mod daemon_info;
