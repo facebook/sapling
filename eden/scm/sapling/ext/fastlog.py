@@ -101,11 +101,10 @@ def lazyparents(rev, path, public, parentfunc):
                     return
                 del public[cur]
 
-            for p in parentfunc(cur):
-                if p != nullrev:
-                    heapq.heappush(heap, (-p, path))
-                    if published:
-                        public[p] = path
+            for p_rev, p_path in parentfunc(cur, cur_path):
+                heapq.heappush(heap, (-p_rev, p_path))
+                if published:
+                    public[p_rev] = p_path
 
 
 def dirmatches(files, paths) -> bool:
@@ -220,14 +219,12 @@ def fastlogfollow(orig, repo, subset, x, name, followfirst: bool = False):
 
     rev = startrev
 
-    parents = repo.changelog.parentrevs
-
     def fastlog(repo, startrev, dirs, files):
         if len(dirs) + len(files) != 1:
             raise MultiPathError()
 
         path = next(iter(dirs.union(files)))
-        public = findpublic(startrev, path)
+        public = findpublic(startrev, path, parents)
         draft_revs = []
         for parent, _path in lazyparents(startrev, path, public, parents):
             if dirmatches(repo[parent].files(), dirs.union(files)):
@@ -251,7 +248,7 @@ def fastlogfollow(orig, repo, subset, x, name, followfirst: bool = False):
         for node in log.generate_nodes():
             yield repo.changelog.rev(node)
 
-    def findpublic(rev, path):
+    def findpublic(rev, path, parentfunc):
         public = dict()
         # Our criterion for invoking fastlog is finding a single
         # common public ancestor from the current head.  First we
@@ -269,12 +266,16 @@ def fastlogfollow(orig, repo, subset, x, name, followfirst: bool = False):
                 if (cur, cur_path) not in seen:
                     seen.add((cur, cur_path))
                     if repo[cur].mutable():
-                        for p in parents(cur):
-                            if p != nullrev:
-                                queue.append((p, cur_path))
+                        for p_rev, p_path in parentfunc(cur, cur_path):
+                            queue.append((p_rev, p_path))
                     else:
                         public[cur] = cur_path
         return public
+
+    def parents(rev, path):
+        for p in repo.changelog.parentrevs(rev):
+            if p != nullrev:
+                yield p, path
 
     def undorenames(ctx, files):
         """mutate files to undo any file renames in ctx"""
