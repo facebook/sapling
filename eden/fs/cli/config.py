@@ -942,10 +942,13 @@ Do you want to run `eden mount %s` instead?"""
             # If the unmount succeeded, create a file in the client directory
             # to indicate that the unmount was intentional. This will prevent
             # periodic unmount recovery from remount this repo.
-            mount_path = Path(path).resolve(strict=False)
-            client_dir = self._get_client_dir_for_mount_point(mount_path)
-            intentionally_unmounted_dir = client_dir / INTENTIONALLY_UNMOUNTED
-            intentionally_unmounted_dir.touch()
+            self._set_intentionally_unmounted(path)
+
+    def _set_intentionally_unmounted(self, path: str) -> None:
+        mount_path = Path(path).resolve(strict=False)
+        client_dir = self._get_client_dir_for_mount_point(mount_path)
+        intentionally_unmounted_file = client_dir / INTENTIONALLY_UNMOUNTED
+        intentionally_unmounted_file.touch()
 
     def destroy_mount(
         self, path: Union[Path, str], preserve_mount_point: bool = False
