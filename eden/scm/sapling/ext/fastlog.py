@@ -254,7 +254,7 @@ def fastlogfollow(orig, repo, subset, x, name, followfirst: bool = False):
                 else:
                     public.add(cur)
 
-    def fastlog(repo, startrev, dirs, files, localmatch):
+    def fastlog(repo, startrev, dirs, files):
         if len(dirs) + len(files) != 1:
             raise MultiPathError()
         draft_revs = []
@@ -293,7 +293,7 @@ def fastlogfollow(orig, repo, subset, x, name, followfirst: bool = False):
             files.add(src)
 
     try:
-        revgen = fastlog(repo, rev, dirs, files, dirmatches)
+        revgen = fastlog(repo, rev, dirs, files)
     except MultiPathError:
         repo.ui.debug("fastlog: not used for multiple paths\n")
         return orig(repo, subset, x, name, followfirst)
