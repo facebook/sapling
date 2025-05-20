@@ -24,17 +24,17 @@ use crate::methods::EdenThriftMethod;
 /// The exact VFS implementation depends on the platform
 pub struct FilesystemTelemetryCounters {
     // The number of successful open filesystem operations.
-    pub syscall_opens: u64,
+    pub syscall_open: u64,
     // The number of successful read operations.
-    pub syscall_reads: u64,
+    pub syscall_read: u64,
     // The number of successful readdir operations.
-    pub syscall_readdirs: u64,
+    pub syscall_readdir: u64,
     // The number of successful readdirplus operations.
     pub syscall_readdirplus: u64,
     // The number of successful write operations.
-    pub syscall_writes: u64,
+    pub syscall_write: u64,
     // The number of successful stat operations.
-    pub syscall_stats: u64,
+    pub syscall_stat: u64,
     // The number of successful access operations.
     pub syscall_access: u64,
 }
@@ -44,12 +44,12 @@ impl Sub for FilesystemTelemetryCounters {
 
     fn sub(self, rhs: Self) -> Self::Output {
         Self {
-            syscall_opens: self.syscall_opens - rhs.syscall_opens,
-            syscall_reads: self.syscall_reads - rhs.syscall_reads,
-            syscall_readdirs: self.syscall_readdirs - rhs.syscall_readdirs,
+            syscall_open: self.syscall_open - rhs.syscall_open,
+            syscall_read: self.syscall_read - rhs.syscall_read,
+            syscall_readdir: self.syscall_readdir - rhs.syscall_readdir,
             syscall_readdirplus: self.syscall_readdirplus - rhs.syscall_readdirplus,
-            syscall_writes: self.syscall_writes - rhs.syscall_writes,
-            syscall_stats: self.syscall_stats - rhs.syscall_stats,
+            syscall_write: self.syscall_write - rhs.syscall_write,
+            syscall_stat: self.syscall_stat - rhs.syscall_stat,
             syscall_access: self.syscall_access - rhs.syscall_access,
         }
     }
@@ -514,8 +514,8 @@ impl CrawlingScore {
         }
 
         // Get filesystem operations
-        let fs_open_plus_read = counters.fs_stats.syscall_opens + counters.fs_stats.syscall_reads;
-        let fs_readdir = counters.fs_stats.syscall_readdirs + counters.fs_stats.syscall_readdirplus;
+        let fs_open_plus_read = counters.fs_stats.syscall_open + counters.fs_stats.syscall_read;
+        let fs_readdir = counters.fs_stats.syscall_readdir + counters.fs_stats.syscall_readdirplus;
 
         Self {
             remote_blob_fetches,
@@ -750,12 +750,12 @@ impl EdenFsClient {
         // Create the TelemetryCounters struct
         let telemetry_counters = TelemetryCounters {
             fs_stats: FilesystemTelemetryCounters {
-                syscall_opens: *counters.get(COUNTER_FS_OPEN).unwrap_or(&0) as u64,
-                syscall_reads: *counters.get(COUNTER_FS_READ).unwrap_or(&0) as u64,
-                syscall_readdirs: *counters.get(COUNTER_FS_READDIR).unwrap_or(&0) as u64,
+                syscall_open: *counters.get(COUNTER_FS_OPEN).unwrap_or(&0) as u64,
+                syscall_read: *counters.get(COUNTER_FS_READ).unwrap_or(&0) as u64,
+                syscall_readdir: *counters.get(COUNTER_FS_READDIR).unwrap_or(&0) as u64,
                 syscall_readdirplus: *counters.get(COUNTER_FS_READDIRPLUS).unwrap_or(&0) as u64,
-                syscall_writes: *counters.get(COUNTER_FS_WRITE).unwrap_or(&0) as u64,
-                syscall_stats: *counters.get(COUNTER_FS_GETATTR).unwrap_or(&0) as u64,
+                syscall_write: *counters.get(COUNTER_FS_WRITE).unwrap_or(&0) as u64,
+                syscall_stat: *counters.get(COUNTER_FS_GETATTR).unwrap_or(&0) as u64,
                 syscall_access: *counters.get(COUNTER_FS_ACCESS).unwrap_or(&0) as u64,
             },
             thrift_stats: ThriftTelemetryCounters {},
