@@ -9,12 +9,14 @@ use std::collections::BTreeMap;
 use std::sync::Arc;
 
 use anyhow::Result;
+use anyhow::bail;
 use async_runtime::block_on;
 use commits::DagCommits;
 use dag::CloneData;
 use dag::Group;
 use dag::Vertex;
 use dag::VertexListWithOptions;
+use dag::ops::IdConvert;
 use edenapi::SaplingRemoteApi;
 use edenapi::configmodel::Config;
 use edenapi::configmodel::ConfigExt;
@@ -84,6 +86,10 @@ pub fn clone(
         .map(|(bm, id)| Ok((convert_to_remote(config, bm)?, id.clone())))
         .collect::<Result<_>>()?;
 
+    if !config.get_or_default("experimental", "skip-verify-references-on-clone")? {
+        verify_references(commits.as_ref(), &bookmarks_refnames)?;
+    }
+
     let all = block_on(commits.all())?;
     let tip = block_on(all.first())?;
     if let Some(tip) = tip {
@@ -93,6 +99,30 @@ pub fn clone(
     metalog.commit(CommitOptions::default())?;
 
     Ok(bookmarks)
+}
+
+fn verify_references(commits: &dyn IdConvert, references: &BTreeMap<RefName, HgId>) -> Result<()> {
+    let vertexes: Vec<Vertex> = references
+        .values()
+        .map(|id| Vertex::copy_from(id.as_ref()))
+        .collect();
+    if block_on(commits.vertex_id_batch(&vertexes)).is_err() {
+        // Figure out which ref is bad.
+        let mut bad_ref_messages = Vec::new();
+        for (name, id) in references {
+            let vertex = Vertex::copy_from(id.as_ref());
+            if !block_on(commits.contains_vertex_name(&vertex))? {
+                bad_ref_messages.push(format!("{}={}", name, id.to_hex()));
+            }
+        }
+        if !bad_ref_messages.is_empty() {
+            bail!(
+                "unexpected pull: missing {} in commit graph",
+                bad_ref_messages.join(", ")
+            );
+        }
+    }
+    Ok(())
 }
 
 /// Download an update of the main bookmark via fast pull endpoint.  Returns
