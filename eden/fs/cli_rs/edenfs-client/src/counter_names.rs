@@ -15,6 +15,7 @@ pub mod fs_counters {
     pub const COUNTER_FS_READDIR: &str = "nfs.readdir_successful.sum";
     pub const COUNTER_FS_WRITE: &str = "nfs.write_successful.sum";
     pub const COUNTER_FS_GETATTR: &str = "nfs.getattr_successful.sum";
+    pub const COUNTER_FS_ACCESS: &str = "nfs.access_successful.sum";
 }
 
 #[cfg(target_os = "windows")]
@@ -24,6 +25,7 @@ pub mod fs_counters {
     pub const COUNTER_FS_READDIR: &str = "prjfs.readdir_successful.sum";
     pub const COUNTER_FS_WRITE: &str = "prjfs.write_successful.sum"; // placeholder, does not exist
     pub const COUNTER_FS_GETATTR: &str = "prjfs.getattr_successful.sum"; // placeholder, does not exist
+    pub const COUNTER_FS_ACCESS: &str = "prjfs.access_successful.sum";
 }
 
 // Filesystem counters for FUSE
@@ -34,6 +36,7 @@ pub mod fs_counters {
     pub const COUNTER_FS_READDIR: &str = "fuse.readdir_successful.sum";
     pub const COUNTER_FS_WRITE: &str = "fuse.write_successful.sum";
     pub const COUNTER_FS_GETATTR: &str = "fuse.getattr_successful.sum";
+    pub const COUNTER_FS_ACCESS: &str = "fuse.access_successful.sum";
 }
 
 // Re-export the filesystem counters
