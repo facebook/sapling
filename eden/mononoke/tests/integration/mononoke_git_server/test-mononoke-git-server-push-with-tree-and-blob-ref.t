@@ -4,6 +4,8 @@
 # GNU General Public License found in the LICENSE file in the root
 # directory of this source tree.
 
+  $ export GIT_CONTENT_REFS_SCRIBE_CATEGORY=mononoke_git_content_refs
+  $ export MONONOKE_TEST_SCRIBE_LOGGING_DIRECTORY=$TESTTMP/scribe_logs/
   $ . "${TEST_FIXTURES}/library.sh"
   $ REPOTYPE="blob_files"
   $ setup_common_config $REPOTYPE
@@ -29,6 +31,10 @@
   done.
   $ cd $GIT_REPO
   $ current_head=$(git rev-parse HEAD)
+
+# Enable logging of content ref updates
+  $ mkdir -p $TESTTMP/scribe_logs
+  $ touch $TESTTMP/scribe_logs/$GIT_CONTENT_REFS_SCRIBE_CATEGORY
 
 # Import it into Mononoke
   $ cd "$TESTTMP"
@@ -73,3 +79,18 @@
 # Verify that we get the same Git repo back that we started with
   $ git rev-list --objects --all | git cat-file --batch-check='%(objectname) %(objecttype) %(rest)' | sort > $TESTTMP/new_object_list
   $ diff -w $TESTTMP/new_object_list $TESTTMP/object_list
+
+# Validate if the content refs moves got logged by Mononoke Git Content Refs logger
+  $ cat "$TESTTMP/scribe_logs/$GIT_CONTENT_REFS_SCRIBE_CATEGORY" | sort | jq '{repo_name,ref_name,git_hash,object_type}'
+  {
+    "repo_name": "repo",
+    "ref_name": "heads/new_branch",
+    "git_hash": "215c6866a56fcc82c4b848cc199a4813e4a4c9bf",
+    "object_type": "tree"
+  }
+  {
+    "repo_name": "repo",
+    "ref_name": "tags/push_tag",
+    "git_hash": "37741cfae6de6b691451fee448c5c3e160f454a5",
+    "object_type": "blob"
+  }

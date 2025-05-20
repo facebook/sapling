@@ -1019,7 +1019,11 @@ sparse_profiles_location="{sparse_profiles_location}"
 """
         )
 
-    if env.getenv("COMMIT_SCRIBE_CATEGORY") or env.getenv("BOOKMARK_SCRIBE_CATEGORY"):
+    if (
+        env.getenv("COMMIT_SCRIBE_CATEGORY")
+        or env.getenv("BOOKMARK_SCRIBE_CATEGORY")
+        or env.getenv("GIT_CONTENT_REFS_SCRIBE_CATEGORY")
+    ):
         append_config("[update_logging_config]")
 
     if env.getenv("BOOKMARK_SCRIBE_CATEGORY"):
@@ -1035,6 +1039,16 @@ bookmark_logging_destination = {{ scribe = {{ scribe_category = "{bookmark_scrib
         append_config(
             f"""
 new_commit_logging_destination = {{ scribe = {{ scribe_category = "{commit_scribe_category}" }} }}
+"""
+        )
+
+    if env.getenv("GIT_CONTENT_REFS_SCRIBE_CATEGORY"):
+        git_content_refs_scribe_category = env.getenv(
+            "GIT_CONTENT_REFS_SCRIBE_CATEGORY"
+        )
+        append_config(
+            f"""
+git_content_refs_logging_destination = {{ scribe = {{ scribe_category = "{git_content_refs_scribe_category}" }} }}
 """
         )
 
