@@ -23,6 +23,29 @@ using std::string;
 
 namespace facebook::eden {
 
+folly::Future<UnixSocket::Message> receiveTakeoverDataMessage(
+    FutureUnixSocket& socket,
+    UnixSocket::Message&& msg,
+    const std::chrono::seconds& takeoverReceiveTimeout) {
+  // Read the rest of the data from socket.
+  auto timeout = std::chrono::seconds(takeoverReceiveTimeout);
+  return socket.receive(timeout).thenValue(
+      [msg = std::move(msg)](UnixSocket::Message&& nextMsg) mutable {
+        if (TakeoverData::isLastChunk(&nextMsg.data)) {
+          // We received the last chunk, so we have all the takeover data.
+          XLOGF(DBG7, "Client get the last chunk msg");
+          return folly::makeFuture<UnixSocket::Message>(std::move(msg));
+        } else {
+          // call the function recursively to receive the rest of the data
+          // from the socket
+          // Not implemented yet. For now, it just sends an error message.
+          return folly::makeFuture<UnixSocket::Message>(
+              folly::exception_wrapper(
+                  std::runtime_error("The last chunk msg didn't received")));
+        }
+      });
+}
+
 TakeoverData takeoverMounts(
     AbsolutePathPiece socketPath,
     const std::chrono::seconds& takeoverReceiveTimeout,
@@ -60,8 +83,8 @@ TakeoverData takeoverMounts(
                   &takeoverReceiveTimeout](UnixSocket::Message&& msg) mutable {
         if (TakeoverData::isPing(&msg.data)) {
           if (shouldPing) {
-            // Just send an empty message back here, the server knows it sent a
-            // ping so it does not need to parse the message.
+            // Just send an empty message back here, the server knows it sent
+            // a ping so it does not need to parse the message.
             UnixSocket::Message ping;
             return socket.send(std::move(ping))
                 .thenValue([&socket,
@@ -93,15 +116,27 @@ TakeoverData takeoverMounts(
           return folly::makeFuture<UnixSocket::Message>(std::move(msg));
         }
       })
-      .thenValue([&takeoverData](UnixSocket::Message&& msg) {
+      .thenValue([&socket, &takeoverReceiveTimeout](UnixSocket::Message&& msg) {
         if (TakeoverData::isFirstChunk(&msg.data)) {
-          // Not Implemented Yet
+          // TakeoverData is sent in chunks. Receive the first chunk and
+          // call a recursive function to receive the rest of the data.
+          auto timeout = std::chrono::seconds(takeoverReceiveTimeout);
+          return socket.receive(timeout).thenValue(
+              [&socket,
+               &takeoverReceiveTimeout](UnixSocket::Message&& msg) mutable {
+                return receiveTakeoverDataMessage(
+                    socket, std::move(msg), takeoverReceiveTimeout);
+              });
         } else {
-          for (auto& file : msg.files) {
-            XLOGF(DBG7, "received fd for takeover: {}", file.fd());
-          }
-          takeoverData = TakeoverData::deserialize(msg);
+          // Older versions of EdenFS will not send data in chunks
+          return folly::makeFuture<UnixSocket::Message>(std::move(msg));
         }
+      })
+      .thenValue([&takeoverData](UnixSocket::Message&& msg) {
+        for (auto& file : msg.files) {
+          XLOGF(DBG7, "received fd for takeover: {}", file.fd());
+        }
+        takeoverData = TakeoverData::deserialize(msg);
       })
       .thenError([&expectedException](folly::exception_wrapper&& ew) {
         expectedException = std::move(ew);

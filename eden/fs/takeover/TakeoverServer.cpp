@@ -90,13 +90,27 @@ class TakeoverServer::ConnHandler {
     State(folly::EventBase* evb, folly::File socket)
         : socket{evb, std::move(socket)} {}
 
+    // TakeoverCapabilities::PING is set if the server should send a
+    // "ready" ping to the client.
     bool shouldPing = false;
+
+    // TakeoverCapabilities::CHUNKED_MESSAGE is set if the server supports
+    // chunked messages.
+    bool shouldChunk = false;
+
     // FutureUnixSocket must always be accessed on the EventBase.
     FutureUnixSocket socket;
     int32_t protocolVersion =
         TakeoverData::kTakeoverProtocolVersionNeverSupported;
     uint64_t protocolCapabilities = 0;
   };
+
+  FOLLY_NODISCARD folly::Future<folly::Unit> sendTakeoverDataMessage(
+      State& state,
+      UnixSocket::Message&& msg);
+  FOLLY_NODISCARD folly::Future<folly::Unit> sendTakeoverDataMessageInChunks(
+      State& state,
+      UnixSocket::Message&& msg);
 
   TakeoverServer* const server_;
   const uint64_t supportedCapabilities_;
@@ -185,6 +199,9 @@ Future<Unit> TakeoverServer::ConnHandler::start() noexcept {
 
         state.shouldPing =
             (state.protocolCapabilities & TakeoverCapabilities::PING);
+        state.shouldChunk =
+            (state.protocolCapabilities &
+             TakeoverCapabilities::CHUNKED_MESSAGE);
         return server_->getTakeoverHandler()->startTakeoverShutdown();
       })
       .via(server_->eventBase_)
@@ -294,7 +311,7 @@ Future<Unit> TakeoverServer::ConnHandler::sendTakeoverData(
       "Sending takeover data to new process: {} bytes",
       msg.data.computeChainDataLength());
 
-  return state.socket.send(std::move(msg))
+  return sendTakeoverDataMessage(state, std::move(msg))
       .thenTry([promise = std::move(data.takeoverComplete)](
                    folly::Try<Unit>&& sendResult) mutable {
         if (sendResult.hasException()) {
@@ -304,6 +321,35 @@ Future<Unit> TakeoverServer::ConnHandler::sendTakeoverData(
           promise.setValue(std::nullopt);
         }
       });
+}
+
+Future<Unit> TakeoverServer::ConnHandler::sendTakeoverDataMessage(
+    State& state,
+    UnixSocket::Message&& msg) {
+  if (state.shouldChunk) {
+    UnixSocket::Message firstChunkMsg;
+    firstChunkMsg.data = TakeoverData::serializeFirstChunk();
+
+    return state.socket.send(std::move(firstChunkMsg))
+        .thenValue([this, &msg, &state](auto&&) {
+          // Send the takeover data in chunks
+          // TODO: Change this to use a proper chunking algorithm
+          return sendTakeoverDataMessageInChunks(state, std::move(msg));
+        })
+        .thenValue([&state](auto&&) mutable {
+          UnixSocket::Message lastChunckMsg;
+          lastChunckMsg.data = TakeoverData::serializeLastChunk();
+          return state.socket.send(std::move(lastChunckMsg));
+        });
+  } else {
+    return state.socket.send(std::move(msg));
+  }
+}
+
+Future<Unit> TakeoverServer::ConnHandler::sendTakeoverDataMessageInChunks(
+    State& state,
+    UnixSocket::Message&& msg) {
+  return state.socket.send(std::move(msg));
 }
 
 TakeoverServer::TakeoverServer(

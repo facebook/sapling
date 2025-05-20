@@ -79,7 +79,8 @@ const uint64_t kSupportedCapabilities = TakeoverCapabilities::FUSE |
     TakeoverCapabilities::RESULT_TYPE_SERIALIZATION |
     TakeoverCapabilities::ORDERED_FDS | TakeoverCapabilities::OPTIONAL_MOUNTD |
     TakeoverCapabilities::CAPABILITY_MATCHING |
-    TakeoverCapabilities::INCLUDE_HEADER_SIZE;
+    TakeoverCapabilities::INCLUDE_HEADER_SIZE |
+    TakeoverCapabilities::CHUNKED_MESSAGE;
 
 std::optional<int32_t> TakeoverData::computeCompatibleVersion(
     const std::set<int32_t>& versions,
@@ -158,7 +159,8 @@ uint64_t TakeoverData::versionToCapabilities(int32_t version) {
           TakeoverCapabilities::ORDERED_FDS |
           TakeoverCapabilities::OPTIONAL_MOUNTD |
           TakeoverCapabilities::CAPABILITY_MATCHING |
-          TakeoverCapabilities::INCLUDE_HEADER_SIZE;
+          TakeoverCapabilities::INCLUDE_HEADER_SIZE |
+          TakeoverCapabilities::CHUNKED_MESSAGE;
   }
   throwf<std::runtime_error>("Unsupported version: {}", version);
 }
@@ -208,7 +210,8 @@ int32_t TakeoverData::capabilitiesToVersion(uint64_t capabilities) {
        TakeoverCapabilities::ORDERED_FDS |
        TakeoverCapabilities::OPTIONAL_MOUNTD |
        TakeoverCapabilities::CAPABILITY_MATCHING |
-       TakeoverCapabilities::INCLUDE_HEADER_SIZE)) {
+       TakeoverCapabilities::INCLUDE_HEADER_SIZE |
+       TakeoverCapabilities::CHUNKED_MESSAGE)) {
     return kTakeoverProtocolVersionSeven;
   }
 
