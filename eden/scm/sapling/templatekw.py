@@ -900,18 +900,19 @@ def showparents(**args) -> _hybrid:
 def showgrandparents(**args) -> _hybrid:
     """List of strings. The grandparents of the changeset in "rev:node" format."""
     repo, ctx, revcache = args["repo"], args["ctx"], args["revcache"]
-    subdag = revcache.get("subdag")
-    if subdag is None:
-        raise error.ProgrammingError("subdag not found in revcache")
-
     cl = repo.changelog
-    node = ctx.node()
-    direct_pnodes = cl.dag.parents([node])
-    indirect_pnodes = subdag.parents([node])
-    gpnodes = indirect_pnodes - direct_pnodes
-    gpctxs = [repo[n] for n in gpnodes]
-    gprevs = cl.torevs(gpnodes)
 
+    gpnodes = revcache.get("gpnodes")
+    if gpnodes is None:
+        subdag = revcache.get("subdag")
+        if subdag is None:
+            raise error.ProgrammingError("no gpnodes or subdag in revcache")
+        node = ctx.node()
+        direct_pnodes = cl.dag.parents([node])
+        indirect_pnodes = subdag.parents([node])
+        gpnodes = indirect_pnodes - direct_pnodes
+    gprevs = cl.torevs(gpnodes)
+    gpctxs = [repo[n] for n in gpnodes]
     grandparents = [
         [
             ("rev", scmutil.revf64encode(gpctx.rev())),

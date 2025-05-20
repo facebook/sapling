@@ -36,6 +36,21 @@ Specify revs where direct parents are NOT always present.
   d parents: [c] grandparents: []
   g parents: [e] grandparents: [c]
 
+Test log --graph which doesn't involve subdag computation.
+
+  $ hg log --graph -r 'a + h + c + d + g' -T '{desc} parents: [{parents % "{desc}"}] grandparents: [{grandparents % "{desc}"}]\n' --debug
+  o  g parents: [e] grandparents: [c]
+  ╷
+  ╷ o  d parents: [c] grandparents: []
+  ╭─╯
+  │ o  h parents: [b] grandparents: [a]
+  │ ╷
+  o ╷  c parents: [b] grandparents: [a]
+  ├─╯
+  o  a parents: [] grandparents: []
+
+  >>> assert 'computing subdag' not in _
+
 Confirm that the subdag is only computed when "grandparents" is requested in the template.
 
   $ hg log -T '{desc} parents: [{parents % "{desc}"}]\n' --debug
@@ -48,4 +63,5 @@ Confirm that the subdag is only computed when "grandparents" is requested in the
   c parents: [b]
   b parents: [a]
   a parents: []
+
   >>> assert 'computing subdag' not in _
