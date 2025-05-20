@@ -197,16 +197,20 @@ def fastlogfollow(orig, repo, subset, x, name, followfirst: bool = False):
 
         path = next(iter(dirs.union(files)))
         public = findpublic(startrev, path, parents)
-        draft_revs = []
+        matched_revs = []
         for parent, path in lazyparents(startrev, path, public, parents):
             if any(path_starts_with(f, path) for f in repo[parent].files()):
-                draft_revs.append(parent)
+                matched_revs.append(parent)
 
         repo.ui.debug(
             "found common parent at %s with path '%s'\n" % (repo[parent].hex(), path)
         )
 
-        yield from draft_revs
+        # avoid duplicates, as `Fastlog` below will include it as well.
+        if matched_revs and matched_revs[-1] == parent:
+            matched_revs.pop()
+
+        yield from matched_revs
 
         start_node = repo[parent].node()
         log = FastLog(reponame, "hg", start_node, path, repo)
