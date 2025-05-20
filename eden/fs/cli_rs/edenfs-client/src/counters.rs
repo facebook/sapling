@@ -29,6 +29,8 @@ pub struct FilesystemTelemetryCounters {
     pub syscall_reads: u64,
     // The number of successful readdir operations.
     pub syscall_readdirs: u64,
+    // The number of successful readdirplus operations.
+    pub syscall_readdirplus: u64,
     // The number of successful write operations.
     pub syscall_writes: u64,
     // The number of successful stat operations.
@@ -45,6 +47,7 @@ impl Sub for FilesystemTelemetryCounters {
             syscall_opens: self.syscall_opens - rhs.syscall_opens,
             syscall_reads: self.syscall_reads - rhs.syscall_reads,
             syscall_readdirs: self.syscall_readdirs - rhs.syscall_readdirs,
+            syscall_readdirplus: self.syscall_readdirplus - rhs.syscall_readdirplus,
             syscall_writes: self.syscall_writes - rhs.syscall_writes,
             syscall_stats: self.syscall_stats - rhs.syscall_stats,
             syscall_access: self.syscall_access - rhs.syscall_access,
@@ -464,7 +467,7 @@ pub struct CrawlingScore {
     pub local_cache_tree_hits: u64,
     /// Total number of filesystem open and read operations
     pub fs_open_plus_read: u64,
-    /// Total number of filesystem readdir operations
+    /// Total number of filesystem readdir operations (includes both readdir and readdirplus)
     pub fs_readdir: u64,
 }
 
@@ -512,7 +515,7 @@ impl CrawlingScore {
 
         // Get filesystem operations
         let fs_open_plus_read = counters.fs_stats.syscall_opens + counters.fs_stats.syscall_reads;
-        let fs_readdir = counters.fs_stats.syscall_readdirs;
+        let fs_readdir = counters.fs_stats.syscall_readdirs + counters.fs_stats.syscall_readdirplus;
 
         Self {
             remote_blob_fetches,
@@ -646,6 +649,7 @@ impl EdenFsClient {
             COUNTER_FS_OPEN,
             COUNTER_FS_READ,
             COUNTER_FS_READDIR,
+            COUNTER_FS_READDIRPLUS,
             COUNTER_FS_WRITE,
             COUNTER_FS_GETATTR,
             COUNTER_FS_ACCESS,
@@ -749,6 +753,7 @@ impl EdenFsClient {
                 syscall_opens: *counters.get(COUNTER_FS_OPEN).unwrap_or(&0) as u64,
                 syscall_reads: *counters.get(COUNTER_FS_READ).unwrap_or(&0) as u64,
                 syscall_readdirs: *counters.get(COUNTER_FS_READDIR).unwrap_or(&0) as u64,
+                syscall_readdirplus: *counters.get(COUNTER_FS_READDIRPLUS).unwrap_or(&0) as u64,
                 syscall_writes: *counters.get(COUNTER_FS_WRITE).unwrap_or(&0) as u64,
                 syscall_stats: *counters.get(COUNTER_FS_GETATTR).unwrap_or(&0) as u64,
                 syscall_access: *counters.get(COUNTER_FS_ACCESS).unwrap_or(&0) as u64,
