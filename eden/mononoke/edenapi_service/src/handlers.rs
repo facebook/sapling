@@ -75,6 +75,7 @@ mod git_objects;
 pub mod handler;
 mod history;
 mod land;
+mod legacy;
 pub mod lookup;
 mod path_history;
 mod repos;
@@ -100,6 +101,7 @@ pub enum SaplingRemoteApiMethod {
     CloudHistoricalVersions,
     CloudReferences,
     CloudRenameWorkspace,
+    CloudRollbackWorkspace,
     CloudShareWorkspace,
     CloudSmartlog,
     CloudSmartlogByVersion,
@@ -107,7 +109,6 @@ pub enum SaplingRemoteApiMethod {
     CloudUpdateReferences,
     CloudWorkspace,
     CloudWorkspaces,
-    CloudRollbackWorkspace,
     CommitGraphSegments,
     CommitGraphV2,
     CommitHashLookup,
@@ -122,10 +123,11 @@ pub enum SaplingRemoteApiMethod {
     Files2,
     GitObjects,
     History,
-    PathHistory,
     LandStack,
     Lookup,
+    PathHistory,
     SetBookmark,
+    StreamingClone,
     SuffixQuery,
     Trees,
     UploadBonsaiChangeset,
@@ -147,6 +149,7 @@ impl fmt::Display for SaplingRemoteApiMethod {
             Self::CloudHistoricalVersions => "cloud_historical_versions",
             Self::CloudReferences => "cloud_references",
             Self::CloudRenameWorkspace => "cloud_rename_workspace",
+            Self::CloudRollbackWorkspace => "cloud_rollback_workspace",
             Self::CloudShareWorkspace => "cloud_share_workspace",
             Self::CloudSmartlog => "cloud_smartlog",
             Self::CloudSmartlogByVersion => "cloud_smartlog_by_version",
@@ -154,7 +157,6 @@ impl fmt::Display for SaplingRemoteApiMethod {
             Self::CloudUpdateReferences => "cloud_update_references",
             Self::CloudWorkspace => "cloud_workspace",
             Self::CloudWorkspaces => "cloud_workspaces",
-            Self::CloudRollbackWorkspace => "cloud_rollback_workspace",
             Self::CommitGraphSegments => "commit_graph_segments",
             Self::CommitGraphV2 => "commit_graph_v2",
             Self::CommitHashLookup => "commit_hash_lookup",
@@ -169,10 +171,11 @@ impl fmt::Display for SaplingRemoteApiMethod {
             Self::Files2 => "files2",
             Self::GitObjects => "git_objects",
             Self::History => "history",
-            Self::PathHistory => "path_history",
             Self::LandStack => "land_stack",
             Self::Lookup => "lookup",
+            Self::PathHistory => "path_history",
             Self::SetBookmark => "set_bookmark",
+            Self::StreamingClone => "streaming_clone",
             Self::SuffixQuery => "suffix_query",
             Self::Trees => "trees",
             Self::UploadBonsaiChangeset => "upload_bonsai_changeset",
