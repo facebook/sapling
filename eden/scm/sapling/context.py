@@ -1155,14 +1155,10 @@ class basefilectx:
     def _edenapi_annotate(self, linenumber=False, diffopts=None):
         def inner(filectx, linenumber):
             repo = filectx.repo()
-
-            blame = next(
-                iter(
-                    repo.edenapi.blame(
-                        [{"path": filectx.path(), "node": filectx.hex()}]
-                    )
-                )
-            )["data"]
+            blame_response = repo.edenapi.blame(
+                [{"path": filectx.path(), "node": filectx.hex()}]
+            )
+            blame = next(iter(blame_response))["data"]
 
             if not "Ok" in blame:
                 repo.ui.note_err(
@@ -1175,6 +1171,8 @@ class basefilectx:
 
             # Prefetch commit and parent nodes.
             tofetch = bindings.dag.nameset(blame["commits"])
+            lastnode = tofetch.last()
+
             tofetch += repo.changelog.dag.parents(tofetch)
             repo.changelog.filternodes(tofetch)
 
@@ -1189,7 +1187,19 @@ class basefilectx:
                     lineno = bool(linenumber) and rng["origin_line_offset"] + i + 1
                     lines.append(annotateline(ctx=ctx, lineno=lineno, path=path))
 
-            return lines, filectx.data()
+            curr = (lines, filectx.data())
+
+            if subtree_copy := subtreeutil.find_subtree_copy(
+                repo, lastnode, filectx.path()
+            ):
+                from_commit, from_path = subtree_copy
+                copysource = inner(repo[from_commit][from_path], linenumber)
+            else:
+                copysource = None
+            copies = [copysource] if copysource else []
+            curr = annotate.annotatepair(copies, curr, diffopts=None)
+
+            return curr
 
         if diffopts and any(
             getattr(diffopts, wsopt)

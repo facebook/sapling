@@ -61,7 +61,7 @@ use test subtree key so server does not follow subtree copy for blame
   o  7ac2e4266f1b A
   
   $ hg blame bar/file3
-  6b0de5ec81d4: xxx
+  7ac2e4266f1b: xxx
 
   $ hg subtree copy -r . --from-path foo --to-path baz
   copying foo to baz
@@ -99,5 +99,5 @@ use test subtree key so server does not follow subtree copy for blame
   o  7ac2e4266f1b A
   
   $ hg blame baz/file3
-  35ee8b2028dd: xxx
+  7ac2e4266f1b: xxx
   35ee8b2028dd: yyy
