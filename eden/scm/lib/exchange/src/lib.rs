@@ -79,17 +79,17 @@ pub fn clone(
         block_on(commits.import_pull_data(clone_data, &head_opts))?;
     }
 
+    let bookmarks_refnames: BTreeMap<RefName, HgId> = bookmarks
+        .iter()
+        .map(|(bm, id)| Ok((convert_to_remote(config, bm)?, id.clone())))
+        .collect::<Result<_>>()?;
+
     let all = block_on(commits.all())?;
     let tip = block_on(all.first())?;
     if let Some(tip) = tip {
         metalog.set("tip", tip.as_ref())?;
     }
-    metalog.set_remotenames(
-        &bookmarks
-            .iter()
-            .map(|(bm, id)| Ok((convert_to_remote(config, bm)?, id.clone())))
-            .collect::<Result<_>>()?,
-    )?;
+    metalog.set_remotenames(&bookmarks_refnames)?;
     metalog.commit(CommitOptions::default())?;
 
     Ok(bookmarks)
