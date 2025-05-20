@@ -29,6 +29,8 @@ pub enum CountersCmd {
     StartRecording(StartRecordingCmd),
     #[clap(about = "Finalize recording and print the delta as JSON")]
     Finalize(FinalizeCmd),
+    #[clap(about = "Get counters from EdenFS daemon start (no delta calculation)")]
+    FromStart(FromStartCmd),
 }
 
 #[derive(Parser, Debug)]
@@ -54,12 +56,19 @@ pub struct FinalizeCmd {
     score: bool,
 }
 
+#[derive(Parser, Debug)]
+pub struct FromStartCmd {
+    #[clap(long, help = "Print only the crawling score")]
+    score: bool,
+}
+
 #[async_trait]
 impl Subcommand for CountersCmd {
     async fn run(&self) -> Result<ExitCode> {
         match self {
             CountersCmd::StartRecording(cmd) => cmd.run().await,
             CountersCmd::Finalize(cmd) => cmd.run().await,
+            CountersCmd::FromStart(cmd) => cmd.run().await,
         }
     }
 }
@@ -125,5 +134,25 @@ impl FinalizeCmd {
         fs::remove_file(&path)?;
         // Calculate the delta
         Ok(current_counters - snapshot_counters)
+    }
+}
+
+#[async_trait]
+impl Subcommand for FromStartCmd {
+    async fn run(&self) -> Result<ExitCode> {
+        let instance = get_edenfs_instance();
+        let client = instance.get_client();
+        if self.score {
+            let score = client
+                .get_telemetry_counters()
+                .await?
+                .get_crawling_score()
+                .to_json_pretty()?;
+            println!("{}", score);
+        } else {
+            let counters = client.get_telemetry_counters().await?.to_json_pretty()?;
+            println!("{}", counters);
+        }
+        Ok(0)
     }
 }
