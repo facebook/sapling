@@ -60,6 +60,7 @@ use mononoke_types::FileChange;
 pub use mononoke_types::Generation;
 use mononoke_types::NonRootMPath;
 use mononoke_types::SkeletonManifestId;
+use mononoke_types::SubtreeChange;
 use mononoke_types::Svnrev;
 use mononoke_types::path::MPath;
 use mononoke_types::skeleton_manifest_v2::SkeletonManifestV2;
@@ -747,6 +748,14 @@ impl<R: MononokeRepo> ChangesetContext<R> {
 
     pub async fn subtree_change_count(&self) -> Result<usize, MononokeError> {
         Ok(self.changeset_info().await?.subtree_change_count())
+    }
+
+    pub async fn subtree_changes(
+        &self,
+    ) -> Result<SortedVectorMap<MPath, SubtreeChange>, MononokeError> {
+        let bonsai = self.bonsai_changeset().await?;
+        let bonsai = bonsai.into_mut();
+        Ok(bonsai.subtree_changes)
     }
 
     /// Returns `true` if this commit is an ancestor of `other_commit`.  A commit is considered its

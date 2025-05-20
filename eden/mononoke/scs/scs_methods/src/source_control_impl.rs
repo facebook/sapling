@@ -1323,6 +1323,11 @@ impl SourceControlService for SourceControlServiceThriftImpl {
             params: thrift::CommitRunHooksParams,
         ) -> Result<thrift::CommitRunHooksResponse, service::CommitRunHooksExn>;
 
+        async fn commit_subtree_changes(
+            commit: thrift::CommitSpecifier,
+            params: thrift::CommitSubtreeChangesParams,
+        ) -> Result<thrift::CommitSubtreeChangesResponse, service::CommitSubtreeChangesExn>;
+
         async fn commit_lookup_xrepo(
             commit: thrift::CommitSpecifier,
             params: thrift::CommitLookupXRepoParams,

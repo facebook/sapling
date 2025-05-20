@@ -374,6 +374,12 @@ impl AddScubaParams for thrift::CommitRunHooksParams {
     }
 }
 
+impl AddScubaParams for thrift::CommitSubtreeChangesParams {
+    fn add_scuba_params(&self, scuba: &mut MononokeScubaSampleBuilder) {
+        self.identity_schemes.add_scuba_params(scuba);
+    }
+}
+
 impl AddScubaParams for thrift::CommitLookupXRepoParams {
     fn add_scuba_params(&self, scuba: &mut MononokeScubaSampleBuilder) {
         scuba.add("other_repo", self.other_repo.name.as_str());

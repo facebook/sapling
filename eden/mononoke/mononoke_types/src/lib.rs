@@ -101,6 +101,7 @@ pub use redaction_key_list::RedactionKeyList;
 pub use repo::REPO_PREFIX_REGEX;
 pub use repo::RepositoryId;
 pub use sorted_vector_trie_map::SortedVectorTrieMap;
+pub use subtree_change::SubtreeChange;
 pub use svnrev::Svnrev;
 pub use thrift_convert::ThriftConvert;
 pub use trie_map::TrieMap;

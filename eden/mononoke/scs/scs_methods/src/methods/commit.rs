@@ -1202,6 +1202,23 @@ impl SourceControlServiceImpl {
         })
     }
 
+    pub(crate) async fn commit_subtree_changes(
+        &self,
+        ctx: CoreContext,
+        commit: thrift::CommitSpecifier,
+        params: thrift::CommitSubtreeChangesParams,
+    ) -> Result<thrift::CommitSubtreeChangesResponse, scs_errors::ServiceError> {
+        let (repo, changeset) = self.repo_changeset(ctx, &commit).await?;
+        let subtree_changes = changeset.subtree_changes().await?;
+        let subtree_changes = subtree_changes
+            .into_response_with(&(repo, params.identity_schemes))
+            .await?;
+        Ok(thrift::CommitSubtreeChangesResponse {
+            subtree_changes,
+            ..Default::default()
+        })
+    }
+
     /// Do a cross-repo lookup to see if a commit exists under a different hash in another repo
     pub(crate) async fn commit_lookup_xrepo(
         &self,
