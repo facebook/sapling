@@ -110,7 +110,7 @@ class TakeoverServer::ConnHandler {
       UnixSocket::Message&& msg);
   FOLLY_NODISCARD folly::Future<folly::Unit> sendTakeoverDataMessageInChunks(
       State& state,
-      UnixSocket::Message&& msg);
+      std::unique_ptr<folly::IOBuf> msgData);
 
   TakeoverServer* const server_;
   const uint64_t supportedCapabilities_;
@@ -331,14 +331,24 @@ Future<Unit> TakeoverServer::ConnHandler::sendTakeoverDataMessage(
     State& state,
     UnixSocket::Message&& msg) {
   if (state.shouldChunk) {
-    UnixSocket::Message firstChunkMsg;
-    firstChunkMsg.data = TakeoverData::serializeFirstChunk();
+    UnixSocket::Message firstChunkFlagMsg;
+    firstChunkFlagMsg.data = TakeoverData::serializeFirstChunk();
 
-    return state.socket.send(std::move(firstChunkMsg))
+    return state.socket.send(std::move(firstChunkFlagMsg))
         .thenValue([this, &msg, &state](auto&&) {
-          // Send the takeover data in chunks
-          // TODO: Change this to use a proper chunking algorithm
-          return sendTakeoverDataMessageInChunks(state, std::move(msg));
+          XLOGF(DBG7, "first chunk FLAG msg sent");
+
+          // Create a new message with the first chunk
+          // Only the first chunk of message has msg.files
+          // The rest of the chunks will have empty msg.files
+          UnixSocket::Message fisrtChunkMsgWithFiles{
+              *(msg.data.cloneOne()), std::move(msg.files)};
+
+          return state.socket.send(std::move(fisrtChunkMsgWithFiles))
+              .thenValue([this, msg = std::move(msg), &state](auto&&) {
+                return sendTakeoverDataMessageInChunks(
+                    state, std::make_unique<folly::IOBuf>(msg.data));
+              });
         })
         .thenValue([&state](auto&&) mutable {
           UnixSocket::Message lastChunckMsg;
@@ -352,8 +362,25 @@ Future<Unit> TakeoverServer::ConnHandler::sendTakeoverDataMessage(
 
 Future<Unit> TakeoverServer::ConnHandler::sendTakeoverDataMessageInChunks(
     State& state,
-    UnixSocket::Message&& msg) {
-  return state.socket.send(std::move(msg));
+    std::unique_ptr<folly::IOBuf> msgData) {
+  // Pop the first chunk from the msgData because it was already sent
+  msgData = msgData->pop();
+  if (!msgData) {
+    return folly::makeFuture();
+  }
+
+  // Create a new message chunk. Note: these message chunks don't have files
+  UnixSocket::Message chunkMsg(std::move(*(msgData->cloneOne())));
+  return state.socket
+      .send(std::move(chunkMsg))
+      // Recursively send the rest of the data
+      .thenValue([this, msgData = std::move(msgData), &state](auto&&) mutable {
+        return sendTakeoverDataMessageInChunks(state, std::move(msgData));
+      })
+      .thenError([](folly::exception_wrapper&& ew) {
+        XLOGF(ERR, "error while sending takeover data chunks: {}", ew.what());
+        return folly::makeFuture<Unit>(std::move(ew));
+      });
 }
 
 TakeoverServer::TakeoverServer(

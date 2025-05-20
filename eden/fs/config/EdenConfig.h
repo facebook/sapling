@@ -245,7 +245,8 @@ class EdenConfig : private ConfigSettingManager {
 
   /**
    * Takeover receive timeout in seconds. This is the time that the client will
-   * wait for the server to send the takeover data.
+   * wait for the server to send the takeover data. This timeout applies to each
+   * chunk of data when sending data in chunks.
    */
   ConfigSetting<std::chrono::nanoseconds> takeoverReceiveTimeout{
       "core:takeover-receive-timeout",

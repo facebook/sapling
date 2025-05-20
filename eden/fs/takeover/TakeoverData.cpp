@@ -26,6 +26,25 @@ using apache::thrift::CompactSerializer;
 using folly::IOBuf;
 using std::string;
 
+/**
+ * Maximum size of a chunked message in bytes.
+ * Message chunking happens after TakeoverData serialization.
+ *
+ * This 512 MB size is chosen based on the following calculations:
+ * If we want to run a graceful restart for 30 million inodes, the TakeoverData
+ * size would be approximately ~5GB. Multiplying this number by 2, we estimate
+ * the maximum Takeover size to be ~10GB. With a chunk size of 0.5GB, this
+ * results in 20 chunks. Since we use recursion to send TakeoverData, a
+ * recursion depth of 20 is safe and won't cause a stack overflow.
+ * The chunk size should be large enough to avoid the overhead of
+ * sending multiple chunks, and smaller than 1 GB (the maximum data length that
+ * we chose for transferring eden TakeoverData over UnixSocket).
+ */
+DEFINE_int64(
+    maximumChunkSize,
+    512 * 1024 * 1024, // 512 MB
+    "Maximum size of a chunked message in bytes");
+
 namespace facebook::eden {
 #ifndef _WIN32
 namespace {
@@ -582,7 +601,7 @@ void TakeoverData::serializeHeader(
 }
 
 IOBuf TakeoverData::serializeThrift(uint64_t protocolCapabilities) {
-  folly::IOBufQueue bufQ;
+  folly::IOBufQueue bufQ{folly::IOBufQueue::cacheChainLength()};
 
   serializeHeader(protocolCapabilities, bufQ);
 
@@ -637,7 +656,33 @@ IOBuf TakeoverData::serializeThrift(uint64_t protocolCapabilities) {
     CompactSerializer::serialize(serialized, &bufQ);
   }
 
-  return std::move(*bufQ.move());
+  if (protocolCapabilities & TakeoverCapabilities::CHUNKED_MESSAGE) {
+    // At this point, bufQ can be a chain of multiple IOBufs because of how
+    // serializeHeader and the mounts' serialization are implemented.
+    // To efficiently split it into chunks later, we need to coalesce all the
+    // chains into one. This simplifies the process of splitting the data into
+    // chunks of a maximum size (FLAGS_maximumChunkSize).
+
+    // Move the buffer queue to an IOBuf, and leaving buffer queue empty.
+    auto tempBuf = bufQ.move();
+    // Coalesce the chains within the IOBuf into a single chain.
+    tempBuf->coalesce();
+    // Append the now single-chain IOBuf back to the buffer queue.
+    bufQ.append(std::move(tempBuf));
+
+    auto chunk = bufQ.splitAtMost(FLAGS_maximumChunkSize);
+    while (bufQ.chainLength() > 0) {
+      chunk->appendToChain(bufQ.splitAtMost(FLAGS_maximumChunkSize));
+    }
+    XLOGF(
+        INFO,
+        "Serialized {} bytes TakeoverData in {} chunks",
+        chunk->computeChainDataLength(),
+        chunk->countChainElements());
+    return std::move(*chunk);
+  } else {
+    return std::move(*bufQ.move());
+  }
 }
 
 folly::IOBuf TakeoverData::serializeErrorThrift(

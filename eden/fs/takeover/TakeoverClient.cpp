@@ -30,18 +30,25 @@ folly::Future<UnixSocket::Message> receiveTakeoverDataMessage(
   // Read the rest of the data from socket.
   auto timeout = std::chrono::seconds(takeoverReceiveTimeout);
   return socket.receive(timeout).thenValue(
-      [msg = std::move(msg)](UnixSocket::Message&& nextMsg) mutable {
+      [msg = std::move(msg), &socket, &takeoverReceiveTimeout](
+          UnixSocket::Message&& nextMsg) mutable {
         if (TakeoverData::isLastChunk(&nextMsg.data)) {
-          // We received the last chunk, so we have all the takeover data.
-          XLOGF(DBG7, "Client get the last chunk msg");
+          XLOGF(DBG7, "Client received the last chunk msg");
+          // We have all the msg chunks. Now we can connect all the msg data
+          // chains together
+          msg.data.coalesce();
           return folly::makeFuture<UnixSocket::Message>(std::move(msg));
         } else {
-          // call the function recursively to receive the rest of the data
-          // from the socket
-          // Not implemented yet. For now, it just sends an error message.
-          return folly::makeFuture<UnixSocket::Message>(
-              folly::exception_wrapper(
-                  std::runtime_error("The last chunk msg didn't received")));
+          XLOGF(DBG7, "Client received a new chunk msg");
+          // Append the next data chunk to the end of the current msg chain.
+          // clone() creates a new heap allocated IOBuf that points to the same
+          // underlying buffer. This underlying buffer is reference-counted and
+          // will remain alive as long as there is at least one IOBuf
+          // referencing it.
+          msg.data.appendToChain(nextMsg.data.clone());
+          // these chunks do not have file descriptors, so we can ignore them
+          return receiveTakeoverDataMessage(
+              socket, std::move(msg), takeoverReceiveTimeout);
         }
       });
 }
@@ -124,6 +131,8 @@ TakeoverData takeoverMounts(
           return socket.receive(timeout).thenValue(
               [&socket,
                &takeoverReceiveTimeout](UnixSocket::Message&& msg) mutable {
+                // Only the first chunk has the file descriptors. The rest of
+                // the chunks will have empty msg.files
                 return receiveTakeoverDataMessage(
                     socket, std::move(msg), takeoverReceiveTimeout);
               });
