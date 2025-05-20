@@ -412,6 +412,13 @@ pub struct TelemetryCounters {
     pub tree_metadata_stats: Option<TreeMetadataTelemetry>,
 }
 
+impl TelemetryCounters {
+    /// Returns a CrawlingScore that aggregates the total amount of fetches from remote backends and local caches
+    pub fn get_crawling_score(&self) -> CrawlingScore {
+        CrawlingScore::from_telemetry(self)
+    }
+}
+
 impl Sub for FileMetadataTelemetry {
     type Output = Self;
 
@@ -428,6 +435,122 @@ impl Sub for FileMetadataTelemetry {
             fetched_from_backing_store_computed: self.fetched_from_backing_store_computed
                 - rhs.fetched_from_backing_store_computed,
             fetched_from_remote: self.fetched_from_remote - rhs.fetched_from_remote,
+        }
+    }
+}
+
+/// CrawlingScore aggregates the total amount of fetches from remote backends and local caches, as well as amount of
+/// filesystem operations performed during the workload.
+/// This provides a summary of how much data was fetched during a workload
+/// Please, note that this is approximate as if blob accessed multiple times during the workload
+/// it will be counted every time it was accessed. The same applies to trees.
+/// For the remote fetches some fetches might be triggered by the prefetching logic and not on the critical path of the workload.
+/// In this cases, they will be accounted as both remote and local cache fetches.
+/// Finally, any data served from filesystem cache will not be accounted for as they do not come to EdenFS.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct CrawlingScore {
+    /// Total number of blob fetches from remote backends
+    pub remote_blob_fetches: u64,
+    /// Total number of tree fetches from remote backends
+    pub remote_tree_fetches: u64,
+    /// Total number of blob hits from local caches
+    pub local_cache_blob_hits: u64,
+    /// Total number of tree hits from local caches
+    pub local_cache_tree_hits: u64,
+    /// Total number of filesystem open and read operations
+    pub fs_open_plus_read: u64,
+    /// Total number of filesystem readdir operations
+    pub fs_readdir: u64,
+}
+
+impl CrawlingScore {
+    /// Creates a new CrawlingScore by aggregating data from TelemetryCounters
+    pub fn from_telemetry(counters: &TelemetryCounters) -> Self {
+        let mut remote_blob_fetches = 0;
+        let mut remote_tree_fetches = 0;
+        let mut local_cache_blob_hits = 0;
+        let mut local_cache_tree_hits = 0;
+
+        // Aggregate remote backend fetches
+        if let Some(edenapi) = &counters.backend_stats.edenapi_backend {
+            remote_blob_fetches += edenapi.edenapi_fetches_blobs;
+            remote_tree_fetches += edenapi.edenapi_fetches_trees;
+        }
+        if let Some(casc) = &counters.backend_stats.casc_backend {
+            remote_blob_fetches += casc.cas_fetches_blobs;
+            remote_tree_fetches += casc.cas_fetches_trees;
+        }
+        if let Some(lfs) = &counters.backend_stats.lfs_backend {
+            remote_blob_fetches += lfs.lfs_fetches_blobs;
+        }
+
+        // Aggregate local cache hits
+        if let Some(sapling) = &counters.local_cache_stats.sapling_cache {
+            local_cache_blob_hits += sapling.sapling_cache_blobs_hits;
+            local_cache_tree_hits += sapling.sapling_cache_trees_hits;
+        }
+        if let Some(sapling_lfs) = &counters.local_cache_stats.sapling_lfs_cache {
+            local_cache_blob_hits += sapling_lfs.sapling_lfs_cache_blobs_hits;
+        }
+        if let Some(casc_local) = &counters.local_cache_stats.casc_local_cache {
+            local_cache_blob_hits += casc_local.cas_local_cache_blobs_hits;
+            local_cache_tree_hits += casc_local.cas_local_cache_trees_hits;
+        }
+        if let Some(local_store) = &counters.local_cache_stats.local_store_cache {
+            local_cache_blob_hits += local_store.local_store_cache_blobs_hits;
+            local_cache_tree_hits += local_store.local_store_cache_trees_hits;
+        }
+        if let Some(in_memory) = &counters.local_cache_stats.in_memory_local_cache {
+            local_cache_blob_hits += in_memory.in_memory_cache_blobs_hits;
+            local_cache_tree_hits += in_memory.in_memory_cache_trees_hits;
+        }
+
+        // Get filesystem operations
+        let fs_open_plus_read = counters.fs_stats.syscall_opens + counters.fs_stats.syscall_reads;
+        let fs_readdir = counters.fs_stats.syscall_readdirs;
+
+        Self {
+            remote_blob_fetches,
+            remote_tree_fetches,
+            local_cache_blob_hits,
+            local_cache_tree_hits,
+            fs_open_plus_read,
+            fs_readdir,
+        }
+    }
+
+    /// Returns the total number of remote fetches (blobs + trees)
+    pub fn total_remote_fetches(&self) -> u64 {
+        self.remote_blob_fetches + self.remote_tree_fetches
+    }
+
+    /// Returns the total number of local cache hits (blobs + trees)
+    pub fn total_local_cache_hits(&self) -> u64 {
+        self.local_cache_blob_hits + self.local_cache_tree_hits
+    }
+
+    /// Returns the total number of fetches and hits (remote + local cache)
+    pub fn total_access_score(&self) -> u64 {
+        self.total_remote_fetches() + self.total_local_cache_hits()
+    }
+
+    /// Returns the total number of filesystem operations (open + read + readdir)
+    pub fn total_filesystem_ops(&self) -> u64 {
+        self.fs_open_plus_read + self.fs_readdir
+    }
+}
+
+impl Sub for CrawlingScore {
+    type Output = Self;
+
+    fn sub(self, rhs: Self) -> Self::Output {
+        Self {
+            remote_blob_fetches: self.remote_blob_fetches - rhs.remote_blob_fetches,
+            remote_tree_fetches: self.remote_tree_fetches - rhs.remote_tree_fetches,
+            local_cache_blob_hits: self.local_cache_blob_hits - rhs.local_cache_blob_hits,
+            local_cache_tree_hits: self.local_cache_tree_hits - rhs.local_cache_tree_hits,
+            fs_open_plus_read: self.fs_open_plus_read - rhs.fs_open_plus_read,
+            fs_readdir: self.fs_readdir - rhs.fs_readdir,
         }
     }
 }
@@ -770,11 +893,20 @@ impl EdenFsClient {
     /// Calculates the difference in EdenFS telemetry counters between the current state and a given initial state.
     ///
     /// This function retrieves the current telemetry counters and subtracts the provided initial counters from them.
-    pub async fn get_telemetry_counter_delta(
+    pub async fn get_telemetry_counters_delta(
         &self,
         initial_counters: TelemetryCounters,
     ) -> Result<TelemetryCounters> {
         let current_counters = self.get_telemetry_counters().await?;
         Ok(current_counters - initial_counters)
+    }
+
+    /// Calculates the EdenFS crawling score delta between the current state and a given initial state.
+    pub async fn get_crawling_score_delta(
+        &self,
+        initial_counters: TelemetryCounters,
+    ) -> Result<CrawlingScore> {
+        let counters = self.get_telemetry_counters_delta(initial_counters).await?;
+        Ok(counters.get_crawling_score())
     }
 }
