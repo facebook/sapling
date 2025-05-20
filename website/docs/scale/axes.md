@@ -67,7 +67,7 @@ Sapling defaults to not downloading every bookmark from the server. Instead, dur
 
 During a normal distributed source control pull or clone you download all the new files and trees that have been changed, resulting in your local client having all of history. In a large repository, this quantity of data may be so large that it is slow and impractical to download all of it to individual clients.
 
-Sapling, on the other hand, does not downloald tree and file data durings pull and clones. That data is left on the server, and the Sapling client downloads it on demand when later required, such as during a checkout.  The on demand nature of Sapling commands requires carefully designed algorithms to ensure data is fetched efficiently and in parallel.
+Sapling, on the other hand, does not download tree and file data durings pull and clones. That data is left on the server, and the Sapling client downloads it on demand when later required, such as during a checkout.  The on demand nature of Sapling commands requires carefully designed algorithms to ensure data is fetched efficiently and in parallel.
 
 Lazily downloading data means Sapling may need network access to perform operations that would traditionally be doable offline.  To support some offline work, Sapling keeps all of the downloaded data in a local cache with a bounded size.  This cache generally contains enough data to move between, inspect, commit, and amend on any of your recently in-progress commits.
 
