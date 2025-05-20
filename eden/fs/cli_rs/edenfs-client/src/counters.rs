@@ -19,7 +19,7 @@ use crate::client::EdenFsClient;
 use crate::counter_names::*;
 use crate::methods::EdenThriftMethod;
 
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 /// EdenFS filesystem counters
 /// The exact VFS implementation depends on the platform
 pub struct FilesystemTelemetryCounters {
@@ -55,7 +55,7 @@ impl Sub for FilesystemTelemetryCounters {
     }
 }
 
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct ThriftTelemetryCounters {}
 
 impl Sub for ThriftTelemetryCounters {
@@ -69,7 +69,7 @@ impl Sub for ThriftTelemetryCounters {
 /// Remote backends
 /// EdenAPI backend counters
 /// There are no misses as Mononoke is the source of truth for the data
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct EdenApiBackendTelemetryCounters {
     /// The number of file content fetches from the EdenAPI backend
     pub edenapi_fetches_blobs: u64,
@@ -94,7 +94,7 @@ impl Sub for EdenApiBackendTelemetryCounters {
 /// LFS backend counters
 /// There are no misses as Mononoke is the source of truth for the data
 /// LFS is not used for fetching trees
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct LfsBackendTelemetryCounters {
     /// The number of file content fetches from the LFS backend
     pub lfs_fetches_blobs: u64,
@@ -115,7 +115,7 @@ impl Sub for LfsBackendTelemetryCounters {
 
 /// CASd backend counters
 /// There could be misses as the storage layer is TTL based
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct CASCBackendTelemetryCounters {
     /// The number of file content fetches from the CAS backend
     pub cas_fetches_blobs: u64,
@@ -145,7 +145,7 @@ impl Sub for CASCBackendTelemetryCounters {
 
 /// Remote backend counters to track the number of fetches from the remote backends
 /// typically with much higher latency than the local caches
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct RemoteBackendTelemetryCounters {
     pub edenapi_backend: Option<EdenApiBackendTelemetryCounters>,
     pub casc_backend: Option<CASCBackendTelemetryCounters>,
@@ -177,7 +177,7 @@ impl Sub for RemoteBackendTelemetryCounters {
 }
 
 /// Local caches (sapling "local" cache is skipped as it serves only a few fetches only for commits made locally)
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct SaplingCacheTelemetryCounters {
     // Blobs
     pub sapling_cache_blobs_hits: u64,
@@ -204,7 +204,7 @@ impl Sub for SaplingCacheTelemetryCounters {
 
 /// Sapling LFS Cache counters
 /// The cache is only used for storing file content
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct SaplingLFSCacheTelemetryCounters {
     // Blobs
     pub sapling_lfs_cache_blobs_hits: u64,
@@ -223,7 +223,7 @@ impl Sub for SaplingLFSCacheTelemetryCounters {
     }
 }
 
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct CASCLocalCacheTelemetryCounters {
     // Blobs
     /// Total number of blobs fetched from the CAS local cache layers (on-disk cache and lmdb cache layer)
@@ -260,7 +260,7 @@ impl Sub for CASCLocalCacheTelemetryCounters {
     }
 }
 
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct LocalStoreCacheTelemetryCounters {
     // Blobs
     pub local_store_cache_blobs_hits: u64,
@@ -287,7 +287,7 @@ impl Sub for LocalStoreCacheTelemetryCounters {
     }
 }
 
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct InMemoryCacheTelemetryCounters {
     // Blobs
     pub in_memory_cache_blobs_hits: u64,
@@ -314,7 +314,7 @@ impl Sub for InMemoryCacheTelemetryCounters {
     }
 }
 
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct LocalCacheTelemetryCounters {
     /// Shared Sapling Cache counters (known also as hgcache)
     pub sapling_cache: Option<SaplingCacheTelemetryCounters>,
@@ -363,7 +363,7 @@ impl Sub for LocalCacheTelemetryCounters {
 }
 
 /// EdenFS file metadata telemetry
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct FileMetadataTelemetry {
     // The number of times the file metadata was successfully fetched from the in-memory cache
     pub fetched_from_inmemory_cache: u64,
@@ -381,7 +381,7 @@ pub struct FileMetadataTelemetry {
 }
 
 /// EdenFS tree metadata telemetry
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct TreeMetadataTelemetry {
     // The number of times the tree metadata was successfully fetched from the in-memory cache
     pub fetched_from_inmemory_cache: u64,
@@ -410,7 +410,7 @@ impl Sub for TreeMetadataTelemetry {
 /// This is a subset of the counters that are available as part of the EdenFS telemetry
 /// Only covers cumulative counters that are incremented on operations during the lifetime of the EdenFS daemon
 /// It is possible to snapshot the counters and compare them to a previous snapshot
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct TelemetryCounters {
     pub fs_stats: FilesystemTelemetryCounters,
     pub thrift_stats: ThriftTelemetryCounters,
@@ -424,6 +424,25 @@ impl TelemetryCounters {
     /// Returns a CrawlingScore that aggregates the total amount of fetches from remote backends and local caches
     pub fn get_crawling_score(&self) -> CrawlingScore {
         CrawlingScore::from_telemetry(self)
+    }
+
+    /// Serialize the TelemetryCounters to a JSON string
+    pub fn to_json(&self) -> Result<String> {
+        serde_json::to_string(self)
+            .map_err(|e| EdenFsError::from(anyhow::anyhow!("Failed to serialize to JSON: {}", e)))
+    }
+
+    /// Serialize the TelemetryCounters to a pretty-printed JSON string
+    pub fn to_json_pretty(&self) -> Result<String> {
+        serde_json::to_string_pretty(self)
+            .map_err(|e| EdenFsError::from(anyhow::anyhow!("Failed to serialize to JSON: {}", e)))
+    }
+
+    /// Deserialize a TelemetryCounters from a JSON string
+    pub fn from_json(json: &str) -> Result<Self> {
+        serde_json::from_str(json).map_err(|e| {
+            EdenFsError::from(anyhow::anyhow!("Failed to deserialize from JSON: {}", e))
+        })
     }
 }
 
