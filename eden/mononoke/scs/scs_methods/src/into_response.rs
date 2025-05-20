@@ -385,6 +385,7 @@ impl AsyncIntoResponseWith<thrift::CommitInfo> for ChangesetContext<Repo> {
             committer_date,
             committer,
             linear_depth,
+            subtree_change_count,
         ) = try_join!(
             map_commit_identity(&self, identity_schemes),
             self.message(),
@@ -397,6 +398,7 @@ impl AsyncIntoResponseWith<thrift::CommitInfo> for ChangesetContext<Repo> {
             self.committer_date(),
             self.committer(),
             self.linear_depth(),
+            self.subtree_change_count(),
         )?;
         Ok(thrift::CommitInfo {
             ids,
@@ -417,6 +419,7 @@ impl AsyncIntoResponseWith<thrift::CommitInfo> for ChangesetContext<Repo> {
             committer_tz: committer_date.map(|date| date.offset().local_minus_utc()),
             committer,
             linear_depth: Some(linear_depth as i64),
+            subtree_change_count: Some(subtree_change_count as i64),
             ..Default::default()
         })
     }

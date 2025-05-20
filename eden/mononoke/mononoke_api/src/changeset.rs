@@ -745,6 +745,10 @@ impl<R: MononokeRepo> ChangesetContext<R> {
         Ok(bonsai.file_changes)
     }
 
+    pub async fn subtree_change_count(&self) -> Result<usize, MononokeError> {
+        Ok(self.changeset_info().await?.subtree_change_count())
+    }
+
     /// Returns `true` if this commit is an ancestor of `other_commit`.  A commit is considered its
     /// own ancestor for the purpose of this call.
     pub async fn is_ancestor_of(&self, other_commit: ChangesetId) -> Result<bool, MononokeError> {
