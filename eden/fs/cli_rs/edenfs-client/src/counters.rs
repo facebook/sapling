@@ -466,11 +466,12 @@ impl Sub for FileMetadataTelemetry {
     }
 }
 
-/// CrawlingScore aggregates the total amount of fetches from remote backends and local caches, as well as amount of
+/// CrawlingScore aggregates the total amount of fetches from remote backends and local caches hits, as well as amount of
 /// filesystem operations performed during the workload.
 /// This provides a summary of how much data was fetched during a workload
 /// Please, note that this is approximate as if blob accessed multiple times during the workload
 /// it will be counted every time it was accessed. The same applies to trees.
+/// For example, read of a large file will be counted many times as the file is read in chunks.
 /// For the remote fetches some fetches might be triggered by the prefetching logic and not on the critical path of the workload.
 /// In this cases, they will be accounted as both remote and local cache fetches.
 /// Finally, any data served from filesystem cache will not be accounted for as they do not come to EdenFS.
