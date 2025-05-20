@@ -2151,18 +2151,18 @@ class changeset_printer:
         if self.footer:
             self.ui.write(self.footer)
 
-    def show(
-        self, ctx, copies=None, subdag=None, matchfn=None, hunksfilterfn=None, **props
-    ):
+    def show(self, ctx, revcache=None, matchfn=None, hunksfilterfn=None, **props):
         props = props
+        if revcache is None:
+            revcache = {}
         if self.buffered:
             self.ui.pushbuffer(labeled=True)
-            self._show(ctx, copies, subdag, matchfn, hunksfilterfn, props)
+            self._show(ctx, revcache, matchfn, hunksfilterfn, props)
             self.hunk[ctx.rev()] = self.ui.popbufferlist()
         else:
-            self._show(ctx, copies, subdag, matchfn, hunksfilterfn, props)
+            self._show(ctx, revcache, matchfn, hunksfilterfn, props)
 
-    def _show(self, ctx, copies, subdag, matchfn, hunksfilterfn, props):
+    def _show(self, ctx, revcache, matchfn, hunksfilterfn, props):
         """show a single changeset or file revision"""
         changenode = ctx.node()
         rev = ctx.rev()
@@ -2209,6 +2209,7 @@ class changeset_printer:
             self.ui.write(
                 columns["files"] % " ".join(ctx.files()), label="ui.note log.files"
             )
+        copies = revcache.get("copies")
         if copies and self.ui.verbose:
             copies = ["%s (%s)" % c for c in copies]
             self.ui.write(
@@ -2287,7 +2288,7 @@ class jsonchangeset(changeset_printer):
         else:
             self.ui.write("[]\n")
 
-    def _show(self, ctx, copies, subdag, matchfn, hunksfilterfn, props):
+    def _show(self, ctx, revcache, matchfn, hunksfilterfn, props):
         """show a single changeset or file revision"""
         rev = ctx.rev()
         if rev is None:
@@ -2362,6 +2363,7 @@ class jsonchangeset(changeset_printer):
                 _x(',\n  "files": [%s]') % ", ".join("%s" % j(f) for f in ctx.files())
             )
 
+            copies = revcache.get("copies")
             if copies:
                 self.ui.write(
                     _x(',\n  "copies": {%s}')
@@ -2457,7 +2459,7 @@ class changeset_templater(changeset_printer):
             self.footer += templater.stringify(self.t(self._parts["docfooter"]))
         return super(changeset_templater, self).close()
 
-    def _show(self, ctx, copies, subdag, matchfn, hunksfilterfn, props):
+    def _show(self, ctx, revcache, matchfn, hunksfilterfn, props):
         """show a single changeset or file revision"""
         props = props.copy()
         props.update(templatekw.keywords)
@@ -2466,7 +2468,7 @@ class changeset_templater(changeset_printer):
         props["repo"] = self.repo
         props["ui"] = self.repo.ui
         props["index"] = index = next(self._counter)
-        props["revcache"] = {"copies": copies, "subdag": subdag}
+        props["revcache"] = revcache
         props["cache"] = self.cache
 
         # write separator, which wouldn't work well with the header part below
@@ -3518,9 +3520,10 @@ def displaygraph(
                 parents = []
         elif show_abbreviated_ancestors is ShowAbbreviatedAncestorsWhen.NEVER:
             parents = [p for p in parents if p[0] != graphmod.MISSINGPARENT]
+        revcache = {"copies": copies}
         width = renderer.width(rev, parents)
         displayer.show(
-            ctx, copies=copies, matchfn=revmatchfn, _graphwidth=width, **props
+            ctx, revcache=revcache, matchfn=revmatchfn, _graphwidth=width, **props
         )
         # The Rust graph renderer works with unicode.
         msg = "".join(

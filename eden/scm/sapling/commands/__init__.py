@@ -4351,10 +4351,10 @@ def log(ui, repo, *pats, **opts):
             revhunksfilter = hunksfilter(rev)
         else:
             revhunksfilter = None
+        revcache = {"copies": copies, "subdag": subdag}
         displayer.show(
             ctx,
-            copies=copies,
-            subdag=subdag,
+            revcache=revcache,
             matchfn=revmatchfn,
             hunksfilterfn=revhunksfilter,
         )
