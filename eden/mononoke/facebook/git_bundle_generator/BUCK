@@ -13,7 +13,7 @@ rust_binary(
     } | ({} if rust_oss.is_oss_build() else {
     }),
     test_deps = [],
-    deps = (([
+    deps = ((([
         "fbsource//third-party/rust:anyhow",
         "fbsource//third-party/rust:async-trait",
         "fbsource//third-party/rust:clap",
@@ -36,7 +36,7 @@ rust_binary(
         "//manifold/clients/rust:manifold_client",
     ] + ([] if rust_oss.is_oss_build() else [
         "//configerator/structs/privacy/data_schema/if:protocol-rust",
-    ])) + ["//eden/mononoke/common/scuba_ext:scuba_ext"]) + ["//eden/mononoke/cmdlib/zk_leader_election:zk_leader_election"],
+    ])) + ["//eden/mononoke/common/scuba_ext:scuba_ext"]) + ["//eden/mononoke/cmdlib/zk_leader_election:zk_leader_election"]) + ["//common/rust/shed/futures_stats:futures_stats"],
 )
 
 tw.container(
