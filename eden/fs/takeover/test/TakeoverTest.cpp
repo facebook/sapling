@@ -79,6 +79,7 @@ Future<TakeoverData> takeoverViaEventBase(
     promise.setWith([&] {
       return takeoverMounts(
           path,
+          /*takeoverReceiveTimeout*/ std::chrono::seconds(150),
           /*shouldThrowDuringTakeover=*/false,
           /*shouldPing=*/true,
           supportedVersions,

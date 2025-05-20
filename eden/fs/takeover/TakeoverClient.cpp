@@ -21,19 +21,11 @@
 using apache::thrift::CompactSerializer;
 using std::string;
 
-/**
- * Five minutes is a high default value.  This could be lowered back to one
- * minute after takeover no longer does O(loaded) expensive save operations.
- */
-DEFINE_int32(
-    takeoverReceiveTimeout,
-    300,
-    "Timeout for receiving takeover data from old process in seconds");
-
 namespace facebook::eden {
 
 TakeoverData takeoverMounts(
     AbsolutePathPiece socketPath,
+    const std::chrono::seconds& takeoverReceiveTimeout,
     bool shouldThrowDuringTakeover,
     bool shouldPing,
     const std::set<int32_t>& supportedVersions,
@@ -57,14 +49,15 @@ TakeoverData takeoverMounts(
             return socket.send(
                 CompactSerializer::serialize<folly::IOBufQueue>(query).move());
           })
-      .thenValue([&socket](auto&&) {
+      .thenValue([&socket, &takeoverReceiveTimeout](auto&&) {
         // Wait for a response. this will either be a "ready" ping or the
         // takeover data depending on the server protocol
-        auto timeout = std::chrono::seconds(FLAGS_takeoverReceiveTimeout);
-        return socket.receive(timeout);
+        return socket.receive(takeoverReceiveTimeout);
       })
-      .thenValue([&socket, shouldPing, shouldThrowDuringTakeover](
-                     UnixSocket::Message&& msg) mutable {
+      .thenValue([&socket,
+                  shouldPing,
+                  shouldThrowDuringTakeover,
+                  &takeoverReceiveTimeout](UnixSocket::Message&& msg) mutable {
         if (TakeoverData::isPing(&msg.data)) {
           if (shouldPing) {
             // Just send an empty message back here, the server knows it sent a
@@ -72,7 +65,8 @@ TakeoverData takeoverMounts(
             UnixSocket::Message ping;
             return socket.send(std::move(ping))
                 .thenValue([&socket,
-                            shouldThrowDuringTakeover](auto&&) mutable {
+                            shouldThrowDuringTakeover,
+                            &takeoverReceiveTimeout](auto&&) mutable {
                   // Possibly simulate a takeover error during data transfer
                   // for testing purposes. While we would prefer to use
                   // fault injection here, it's not possible to inject an
@@ -85,9 +79,7 @@ TakeoverData takeoverMounts(
                             std::runtime_error("simulated takeover error")));
                   }
                   // Wait for the takeover data response
-                  auto timeout =
-                      std::chrono::seconds(FLAGS_takeoverReceiveTimeout);
-                  return socket.receive(timeout);
+                  return socket.receive(takeoverReceiveTimeout);
                 });
           } else {
             // This should only be hit during integration tests.

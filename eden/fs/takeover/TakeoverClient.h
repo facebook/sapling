@@ -19,6 +19,7 @@ namespace facebook::eden {
  */
 TakeoverData takeoverMounts(
     AbsolutePathPiece socketPath,
+    const std::chrono::seconds& takeoverReceiveTimeout,
     // the following parameters are present for testing purposes and should not
     // normally be used in the production build.
     bool shouldThrowDuringTakeover = false,

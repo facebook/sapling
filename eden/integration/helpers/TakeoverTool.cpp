@@ -59,13 +59,19 @@ int main(int argc, char* argv[]) {
   auto takeoverSocketPath = edenDir + "takeover"_pc;
 
   facebook::eden::TakeoverData data;
+  const std::chrono::seconds& takeoverReceiveTimeout =
+      std::chrono::seconds(150);
   if (FLAGS_takeoverVersion == 0) {
     data = facebook::eden::takeoverMounts(
-        takeoverSocketPath, FLAGS_shouldThrowDuringTakeover, FLAGS_shouldPing);
+        takeoverSocketPath,
+        takeoverReceiveTimeout,
+        FLAGS_shouldThrowDuringTakeover,
+        FLAGS_shouldPing);
   } else {
     auto takeoverVersion = std::set<int32_t>{FLAGS_takeoverVersion};
     data = facebook::eden::takeoverMounts(
         takeoverSocketPath,
+        takeoverReceiveTimeout,
         FLAGS_shouldThrowDuringTakeover,
         FLAGS_shouldPing,
         takeoverVersion);

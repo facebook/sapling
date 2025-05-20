@@ -1154,6 +1154,11 @@ namespace {
 bool shouldThrowDuringTakeover(const EdenConfig& config) {
   return config.clientThrowsDuringTakeover.getValue();
 }
+
+std::chrono::seconds getTakeoverTimeoutSeconds(const EdenConfig& config) {
+  return std::chrono::duration_cast<std::chrono::seconds>(
+      config.takeoverReceiveTimeout.getValue());
+}
 } // namespace
 
 Future<Unit> EdenServer::prepareImpl(std::shared_ptr<StartupLogger> logger) {
@@ -1190,9 +1195,11 @@ Future<Unit> EdenServer::prepareImpl(std::shared_ptr<StartupLogger> logger) {
     logger->log(
         "Requesting existing edenfs process to gracefully "
         "transfer its mount points...");
+    auto edenConfig = serverState_->getEdenConfig();
     takeoverData = takeoverMounts(
         takeoverPath,
-        shouldThrowDuringTakeover(*serverState_->getEdenConfig()));
+        getTakeoverTimeoutSeconds(*edenConfig),
+        shouldThrowDuringTakeover(*edenConfig));
     logger->log(
         "Received takeover information for ",
         takeoverData.mountPoints.size(),
