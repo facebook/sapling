@@ -15,6 +15,7 @@ pub use crate::bookmark_logger::BookmarkInfo;
 pub use crate::bookmark_logger::BookmarkOperation;
 pub use crate::bookmark_logger::PlainBookmarkInfo;
 pub use crate::bookmark_logger::log_bookmark_operation;
+pub use crate::bookmark_logger::log_git_content_ref;
 pub use crate::commit_logger::CommitInfo;
 pub use crate::commit_logger::find_draft_ancestors;
 pub use crate::commit_logger::log_new_commits;

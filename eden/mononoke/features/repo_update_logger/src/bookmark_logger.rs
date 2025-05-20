@@ -30,6 +30,8 @@ use logger_ext::Loggable;
 use metaconfig_types::RepoConfigRef;
 #[cfg(fbcode_build)]
 use mononoke_bookmark_rust_logger::MononokeBookmarkLogger;
+#[cfg(fbcode_build)]
+use mononoke_git_content_refs_rust_logger::MononokeGitContentRefsLogger;
 use mononoke_types::ChangesetId;
 use repo_identity::RepoIdentityRef;
 use serde_derive::Serialize;
@@ -166,6 +168,52 @@ impl Loggable for GitBookmarkInfo {
     }
 }
 
+#[derive(Serialize)]
+pub struct GitContentRefInfo {
+    pub repo_name: String,
+    pub ref_name: String,
+    pub git_hash: String,
+    pub object_type: String,
+}
+
+#[async_trait]
+impl Loggable for GitContentRefInfo {
+    #[cfg(fbcode_build)]
+    async fn log_to_logger(&self, ctx: &CoreContext) -> Result<()> {
+        // Without override, WhenceScribeLogged is set to default which will cause
+        // data being logged to "/sandbox" category if service is run from devserver.
+        // But currently we use Logger only if we're in prod (as config implies), so
+        // we should log to prod too, even from devserver.
+        // For example, we can land a commit to prod from devserver, and logging for
+        // this commit should go to prod, not to sandbox.
+        MononokeGitContentRefsLogger::override_whence_scribe_logged(
+            ctx.fb,
+            WhenceScribeLogged::PROD,
+        );
+        let mut ref_logger = MononokeGitContentRefsLogger::new(ctx.fb);
+        ref_logger.set_repo_name(self.repo_name.clone());
+        ref_logger.set_ref_name(self.ref_name.clone());
+        ref_logger.set_git_hash(self.git_hash.clone());
+        ref_logger.set_object_type(self.object_type.clone());
+        ref_logger.log_async()?;
+        Ok(())
+    }
+}
+
+pub async fn log_git_content_ref(
+    ctx: &CoreContext,
+    repo: &impl RepoConfigRef,
+    info: &GitContentRefInfo,
+) {
+    if let Some(git_content_ref_logging_destination) = &repo
+        .repo_config()
+        .update_logging_config
+        .git_content_refs_logging_destination
+    {
+        info.log(ctx, git_content_ref_logging_destination).await
+    }
+}
+
 #[derive(Serialize, Clone, Debug, Default)]
 pub struct PlainBookmarkInfo {
     pub repo_name: String,
@@ -265,9 +313,7 @@ pub async fn log_bookmark_operation(
                 )
                 .await
                 .map(|entry| {
-                    entry.map_or(false, |entry| {
-                        entry.source_of_truth == GitSourceOfTruth::Mononoke
-                    })
+                    entry.is_some_and(|entry| entry.source_of_truth == GitSourceOfTruth::Mononoke)
                 })
                 .unwrap_or(false);
             // Only log Git bookmarks if the Git repo is SoT'd in Mononoke
