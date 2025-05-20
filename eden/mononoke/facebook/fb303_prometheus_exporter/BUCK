@@ -1,0 +1,17 @@
+load("@fbcode_macros//build_defs:rust_library.bzl", "rust_library")
+
+oncall("scm_server_infra")
+
+rust_library(
+    name = "fb303_prometheus_exporter",
+    srcs = glob(["src/**/*.rs"]),
+    deps = [
+        "fbsource//third-party/rust:anyhow",
+        "fbsource//third-party/rust:gotham",
+        "fbsource//third-party/rust:hyper",
+        "fbsource//third-party/rust:tokio",
+        "//common/rust/gflags:gflags",
+        "//common/rust/shed/fbinit:fbinit",
+        "//fb303/thrift:fb303_core-rust-thriftclients",
+    ],
+)
