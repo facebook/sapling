@@ -14,7 +14,9 @@ use std::path::PathBuf;
 use anyhow::Result;
 use async_trait::async_trait;
 use clap::Parser;
+use edenfs_client::counters::CrawlingScore;
 use edenfs_client::counters::TelemetryCounters;
+use serde_json::Value;
 
 use crate::ExitCode;
 use crate::Subcommand;
@@ -54,12 +56,18 @@ pub struct FinalizeCmd {
 
     #[clap(long, help = "Print only the crawling score")]
     score: bool,
+
+    #[clap(long, help = "Print the entire result")]
+    full: bool,
 }
 
 #[derive(Parser, Debug)]
 pub struct FromStartCmd {
     #[clap(long, help = "Print only the crawling score")]
     score: bool,
+
+    #[clap(long, help = "Print the entire result")]
+    full: bool,
 }
 
 #[async_trait]
@@ -96,6 +104,79 @@ impl Subcommand for StartRecordingCmd {
     }
 }
 
+/// Recursively filter out zero values and empty objects/arrays from a JSON value
+fn filter_zero_values(value: Value) -> Option<Value> {
+    match value {
+        Value::Object(obj) => {
+            let filtered: serde_json::Map<String, Value> = obj
+                .into_iter()
+                .filter_map(|(k, v)| filter_zero_values(v).map(|filtered_v| (k, filtered_v)))
+                .collect();
+
+            if filtered.is_empty() {
+                None
+            } else {
+                Some(Value::Object(filtered))
+            }
+        }
+        Value::Array(arr) => {
+            let filtered: Vec<Value> = arr.into_iter().filter_map(filter_zero_values).collect();
+
+            if filtered.is_empty() {
+                None
+            } else {
+                Some(Value::Array(filtered))
+            }
+        }
+        Value::Number(n) => {
+            if n.is_i64() && n.as_i64() == Some(0) {
+                None
+            } else {
+                Some(Value::Number(n))
+            }
+        }
+        Value::String(s) => {
+            if s.is_empty() {
+                None
+            } else {
+                Some(Value::String(s))
+            }
+        }
+        Value::Bool(b) => Some(Value::Bool(b)),
+        Value::Null => None,
+    }
+}
+
+/// Convert TelemetryCounters to a pretty-printed JSON string with zero values filtered out
+fn to_filtered_json_pretty(counters: &TelemetryCounters) -> Result<String> {
+    // First convert to a JSON value
+    let json_value: Value = serde_json::to_value(counters)?;
+
+    // Filter out zero values
+    let filtered_value =
+        filter_zero_values(json_value).unwrap_or(Value::Object(serde_json::Map::new()));
+
+    // Convert back to a pretty-printed string
+    let pretty = serde_json::to_string_pretty(&filtered_value)?;
+
+    Ok(pretty)
+}
+
+/// Convert CrawlingScore to a pretty-printed JSON string with zero values filtered out
+fn crawling_score_to_filtered_json_pretty(score: &CrawlingScore) -> Result<String> {
+    // First convert to a JSON value
+    let json_value: Value = serde_json::to_value(score)?;
+
+    // Filter out zero values
+    let filtered_value =
+        filter_zero_values(json_value).unwrap_or(Value::Object(serde_json::Map::new()));
+
+    // Convert back to a pretty-printed string
+    let pretty = serde_json::to_string_pretty(&filtered_value)?;
+
+    Ok(pretty)
+}
+
 #[async_trait]
 impl Subcommand for FinalizeCmd {
     async fn run(&self) -> Result<ExitCode> {
@@ -104,14 +185,20 @@ impl Subcommand for FinalizeCmd {
                 .get_telemetry_counters_delta_from_snapshot(&self.snapshot_path)
                 .await?
                 .get_crawling_score();
-            let json = score.to_json_pretty()?;
-            println!("{}", json);
+            if self.full {
+                println!("{}", score.to_json_pretty()?);
+            } else {
+                println!("{}", crawling_score_to_filtered_json_pretty(&score)?);
+            };
         } else {
             let counters = self
                 .get_telemetry_counters_delta_from_snapshot(&self.snapshot_path)
                 .await?;
-            let json = counters.to_json_pretty()?;
-            println!("{}", json);
+            if self.full {
+                println!("{}", counters.to_json_pretty()?);
+            } else {
+                println!("{}", to_filtered_json_pretty(&counters)?);
+            }
         }
         Ok(0)
     }
@@ -143,15 +230,20 @@ impl Subcommand for FromStartCmd {
         let instance = get_edenfs_instance();
         let client = instance.get_client();
         if self.score {
-            let score = client
-                .get_telemetry_counters()
-                .await?
-                .get_crawling_score()
-                .to_json_pretty()?;
-            println!("{}", score);
+            let counters = client.get_telemetry_counters().await?;
+            let score = counters.get_crawling_score();
+            if self.full {
+                println!("{}", score.to_json_pretty()?);
+            } else {
+                println!("{}", crawling_score_to_filtered_json_pretty(&score)?);
+            }
         } else {
-            let counters = client.get_telemetry_counters().await?.to_json_pretty()?;
-            println!("{}", counters);
+            let counters = client.get_telemetry_counters().await?;
+            if self.full {
+                println!("{}", counters.to_json_pretty()?);
+            } else {
+                println!("{}", to_filtered_json_pretty(&counters)?);
+            }
         }
         Ok(0)
     }
