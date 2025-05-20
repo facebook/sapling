@@ -706,3 +706,30 @@ def get_or_clone_git_repo(ui, url, from_rev=None):
         # PERF: shallow clone, then partial checkout
         git_repo = git.clone(ui, url, git_repo_dir, update=from_rev)
         return git_repo
+
+
+def find_subtree_copy(repo, node, path):
+    """find the source commit and path of a subtree copy (directory branch)"""
+    branches = get_subtree_branches(repo, node)
+    for branch in branches:
+        if path_starts_with(path, branch.to_path):
+            source_path = branch.from_path + path[len(branch.to_path) :]
+            return (branch.from_commit, source_path)
+    return None
+
+
+def path_starts_with(path, prefix):
+    """Return True if 'path' is the same as 'prefix' or lives underneath it.
+
+    Examples
+    --------
+    >>> path_starts_with("/var/log/nginx/error.log", "/var/log")
+    True
+    >>> path_starts_with("/var/logs", "/var/log")   # subtle typo
+    False
+    >>> path_starts_with("src/module/util.py", "src")  # relative paths fine
+    True
+    """
+    if path == prefix:
+        return True
+    return path.startswith(prefix + "/")

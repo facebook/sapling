@@ -199,7 +199,7 @@ def fastlogfollow(orig, repo, subset, x, name, followfirst: bool = False):
         public = findpublic(startrev, path, parents)
         matched_revs = []
         for parent, path in lazyparents(startrev, path, public, parents):
-            if any(path_starts_with(f, path) for f in repo[parent].files()):
+            if any(subtreeutil.path_starts_with(f, path) for f in repo[parent].files()):
                 matched_revs.append(parent)
 
         repo.ui.debug(
@@ -262,7 +262,7 @@ def fastlogfollow(orig, repo, subset, x, name, followfirst: bool = False):
         # XXX: handle subtree merge
 
         # subtree copy
-        if copy_source := find_subtree_copy(rev, path):
+        if copy_source := subtreeutil.find_subtree_copy(repo, rev, path):
             source_commit, source_path = copy_source
             yield repo[source_commit].rev(), source_path
         else:
@@ -273,31 +273,6 @@ def fastlogfollow(orig, repo, subset, x, name, followfirst: bool = False):
             for p in repo.changelog.parentrevs(rev):
                 if p != nullrev:
                     yield p, path
-
-    def find_subtree_copy(rev, path):
-        """find the source commit and path of a subtree copy (directory branch)"""
-        branches = subtreeutil.get_subtree_branches(repo, rev)
-        for branch in branches:
-            if path_starts_with(path, branch.to_path):
-                source_path = branch.from_path + path[len(branch.to_path) :]
-                return (branch.from_commit, source_path)
-        return None
-
-    def path_starts_with(path, prefix):
-        """Return True if 'path' is the same as 'prefix' or lives underneath it.
-
-        Examples
-        --------
-        >>> path_starts_with("/var/log/nginx/error.log", "/var/log")
-        True
-        >>> path_starts_with("/var/logs", "/var/log")   # subtle typo
-        False
-        >>> path_starts_with("src/module/util.py", "src")  # relative paths fine
-        True
-        """
-        if path == prefix:
-            return True
-        return path.startswith(prefix + "/")
 
     try:
         revgen = fastlog(repo, rev, dirs, files)
