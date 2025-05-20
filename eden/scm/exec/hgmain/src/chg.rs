@@ -99,6 +99,11 @@ fn should_call_chg(args: &[String]) -> (bool, &'static str) {
         return (false, "debugpython");
     }
 
+    // do not use chg in dev build, unless in tests
+    if ::version::VERSION.ends_with("dev") && std::env::var_os("TESTTMP").is_none() {
+        return (false, "dev");
+    }
+
     // Bash might translate `<(...)` to `/dev/fd/x` instead of using a real fifo. That
     // path resolves to different fd by the chg server. Therefore chg cannot be used.
     if cfg!(unix)
