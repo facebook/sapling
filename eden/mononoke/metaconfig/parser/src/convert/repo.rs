@@ -757,6 +757,9 @@ impl Convert for RawUpdateLoggingConfig {
         Ok(UpdateLoggingConfig {
             bookmark_logging_destination: self.bookmark_logging_destination.convert()?,
             new_commit_logging_destination: self.new_commit_logging_destination.convert()?,
+            git_content_refs_logging_destination: self
+                .git_content_refs_logging_destination
+                .convert()?,
         })
     }
 }

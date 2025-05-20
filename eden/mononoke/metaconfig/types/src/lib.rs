@@ -1897,6 +1897,8 @@ pub struct UpdateLoggingConfig {
     pub bookmark_logging_destination: Option<LoggingDestination>,
     /// Destination where new commits are logged to
     pub new_commit_logging_destination: Option<LoggingDestination>,
+    /// Destination where updates to git content refs are logged to
+    pub git_content_refs_logging_destination: Option<LoggingDestination>,
 }
 
 /// Configuration for the commit graph

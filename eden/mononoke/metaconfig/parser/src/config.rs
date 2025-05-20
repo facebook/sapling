@@ -951,6 +951,7 @@ mod test {
 
             [update_logging_config]
             new_commit_logging_destination = { scribe = { scribe_category = "cat" } }
+            git_content_refs_logging_destination = { logger = {} }
 
             [commit_graph_config]
             scuba_table = "commit_graph"
@@ -1347,6 +1348,7 @@ mod test {
                     new_commit_logging_destination: Some(LoggingDestination::Scribe {
                         scribe_category: "cat".to_string(),
                     }),
+                    git_content_refs_logging_destination: Some(LoggingDestination::Logger),
                 },
                 commit_graph_config: CommitGraphConfig {
                     scuba_table: Some("commit_graph".to_string()),
