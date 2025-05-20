@@ -28,6 +28,7 @@ pub use facebook::scribe_repo_event_publisher::ScribeRepoEventPublisher;
 pub use notification_filter::AllBookmarksFilter;
 #[cfg(not(fbcode_build))]
 pub use oss::UnsupportedRepoEventPublisher;
+use repo_update_logger::GitContentRefInfo;
 use repo_update_logger::PlainBookmarkInfo;
 use tokio::sync::broadcast;
 
@@ -48,4 +49,10 @@ pub trait RepoEventPublisher {
         &self,
         repo_name: &RepoName,
     ) -> Result<broadcast::Receiver<PlainBookmarkInfo>>;
+
+    /// Subscribe to git content ref create/update/delete notifications for the repo.
+    fn subscribe_for_content_refs_updates(
+        &self,
+        repo_name: &RepoName,
+    ) -> Result<broadcast::Receiver<GitContentRefInfo>>;
 }

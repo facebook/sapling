@@ -168,7 +168,7 @@ impl Loggable for GitBookmarkInfo {
     }
 }
 
-#[derive(Serialize)]
+#[derive(Serialize, Clone, Debug)]
 pub struct GitContentRefInfo {
     pub repo_name: String,
     pub ref_name: String,

@@ -2100,4 +2100,12 @@ impl MetadataCacheConfig {
             _ => None,
         }
     }
+
+    /// Returns the scribe category to tail for content refs cache updates if it exists
+    pub fn content_refs_scribe_category(&self) -> Option<String> {
+        match &self.content_refs_update_mode {
+            Some(MetadataCacheUpdateMode::Tailing { category }) => Some(category.to_string()),
+            _ => None,
+        }
+    }
 }

@@ -9,6 +9,7 @@
 //!
 //! Trait allowing the caller to determine if notification needs to be sent for the given payload.
 
+use repo_update_logger::GitContentRefInfo;
 use repo_update_logger::PlainBookmarkInfo;
 
 /// Trait allowing the caller to determine if notification needs to be sent for the given payload.
@@ -30,5 +31,13 @@ pub struct OnlyTagsFilter;
 impl NotificationFilter<PlainBookmarkInfo> for OnlyTagsFilter {
     fn should_notify(&self, payload: &PlainBookmarkInfo) -> bool {
         payload.bookmark_name.contains("tags/")
+    }
+}
+
+pub struct AllContentRefsFilter;
+
+impl NotificationFilter<GitContentRefInfo> for AllContentRefsFilter {
+    fn should_notify(&self, _payload: &GitContentRefInfo) -> bool {
+        true
     }
 }

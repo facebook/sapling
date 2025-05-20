@@ -6,6 +6,7 @@
  */
 
 use anyhow::Result;
+use repo_update_logger::GitContentRefInfo;
 use repo_update_logger::PlainBookmarkInfo;
 use tokio::sync::broadcast;
 
@@ -27,5 +28,12 @@ impl RepoEventPublisher for UnsupportedRepoEventPublisher {
         repo_name: &RepoName,
     ) -> Result<broadcast::Receiver<PlainBookmarkInfo>> {
         anyhow::bail!("Subscription to tag updates is not supported in OSS mode");
+    }
+
+    fn subscribe_for_content_refs_updates(
+        &self,
+        repo_name: &RepoName,
+    ) -> Result<broadcast::Receiver<GitContentRefInfo>> {
+        anyhow::bail!("Subscription to content refs updates is not supported in OSS mode");
     }
 }
