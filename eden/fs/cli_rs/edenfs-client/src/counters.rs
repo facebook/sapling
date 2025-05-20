@@ -11,6 +11,8 @@ use std::ops::Sub;
 use anyhow::Context;
 use edenfs_error::EdenFsError;
 use edenfs_error::Result;
+use serde::Deserialize;
+use serde::Serialize;
 
 use crate::client::Client;
 use crate::client::EdenFsClient;
@@ -450,7 +452,7 @@ impl Sub for FileMetadataTelemetry {
 /// For the remote fetches some fetches might be triggered by the prefetching logic and not on the critical path of the workload.
 /// In this cases, they will be accounted as both remote and local cache fetches.
 /// Finally, any data served from filesystem cache will not be accounted for as they do not come to EdenFS.
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct CrawlingScore {
     /// Total number of blob fetches from remote backends
     pub remote_blob_fetches: u64,
@@ -540,6 +542,18 @@ impl CrawlingScore {
     /// Returns the total number of filesystem operations (open + read + readdir)
     pub fn total_filesystem_ops(&self) -> u64 {
         self.fs_open_plus_read + self.fs_readdir
+    }
+
+    /// Serialize the CrawlingScore to a JSON string
+    pub fn to_json(&self) -> Result<String> {
+        serde_json::to_string(self)
+            .map_err(|e| EdenFsError::from(anyhow::anyhow!("Failed to serialize to JSON: {}", e)))
+    }
+
+    /// Serialize the CrawlingScore to a pretty-printed JSON string
+    pub fn to_json_pretty(&self) -> Result<String> {
+        serde_json::to_string_pretty(self)
+            .map_err(|e| EdenFsError::from(anyhow::anyhow!("Failed to serialize to JSON: {}", e)))
     }
 }
 
