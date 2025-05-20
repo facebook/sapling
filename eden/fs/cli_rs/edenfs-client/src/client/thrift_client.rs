@@ -26,6 +26,9 @@ use fbinit::FacebookInit;
 use futures_stats::TimedTryFutureExt;
 use lazy_static::lazy_static;
 use parking_lot::Mutex;
+use rand::Rng;
+use rand::distributions::Alphanumeric;
+use rand::thread_rng;
 use tokio::sync::Semaphore;
 
 use crate::client::Client;
@@ -64,6 +67,7 @@ pub struct ThriftClient {
     connector: StreamingEdenFsConnector,
     connection: Mutex<EdenFsConnection<StreamingEdenFsThriftClientFuture>>,
     stats_handler: Box<dyn EdenFsClientStatsHandler + Send + Sync>,
+    session_id: String,
     /// Eden has limits on concurrency and will return server overloaded (or timeout) errors if we
     /// send too many. Experimentally, even for large builds (see details in D36136516), we don't
     /// get much performance improvement beyond 2K concurrent requests, regardless of whether Eden
@@ -87,6 +91,7 @@ impl Client for ThriftClient {
             connection,
             stats_handler: Box::new(NoopEdenFsClientStatsHandler {}),
             semaphore: Semaphore::new(use_case.max_concurrent_requests()),
+            session_id: generate_id(),
         }
     }
 
@@ -143,6 +148,8 @@ impl Client for ThriftClient {
             sample.add_int("attempts", attempts as i64);
             sample.add_int("retries", retries as i64);
             sample.add_string("use_case", self.use_case.name());
+            sample.add_string("session_id", &self.session_id);
+            sample.add_string("request_id", generate_id().as_str());
             let (error, method) = match result {
                 Ok((stats, (result, method))) => {
                     self.stats_handler.on_success(attempts, retries);
@@ -197,4 +204,12 @@ impl Client for ThriftClient {
             }
         }
     }
+}
+
+fn generate_id() -> String {
+    thread_rng()
+        .sample_iter(Alphanumeric)
+        .take(8)
+        .map(char::from)
+        .collect()
 }

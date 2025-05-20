@@ -44,6 +44,7 @@ rust_library(
         "fbsource//third-party/rust:libc",
         "fbsource//third-party/rust:parking_lot",
         "fbsource//third-party/rust:pathdiff",
+        "fbsource//third-party/rust:rand",
         "fbsource//third-party/rust:regex",
         "fbsource//third-party/rust:serde",
         "fbsource//third-party/rust:serde_json",
