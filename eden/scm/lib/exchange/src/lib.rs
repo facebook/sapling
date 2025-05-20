@@ -29,13 +29,12 @@ use types::HgId;
 
 // TODO: move to a bookmarks crate
 pub fn convert_to_remote(config: &dyn Config, bookmark: &str) -> Result<RefName> {
-    // FIXME: "hoist" is not the right config here.
-    Ok(format!(
-        "{}/{}",
-        config.must_get::<String>("remotenames", "hoist")?,
-        bookmark
-    )
-    .try_into()?)
+    let rename = config.get_opt::<String>("remotenames", "rename.default")?;
+    let name = match rename.as_ref() {
+        Some(s) if !s.trim().is_empty() => s.trim(),
+        _ => "default",
+    };
+    Ok(format!("{}/{}", name, bookmark).try_into()?)
 }
 
 /// Download initial commit data via fast pull endpoint. Returns hash of bookmarks, if any.
