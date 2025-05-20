@@ -27,6 +27,7 @@ from collections import deque
 from sapling import error, extensions, match as matchmod, revset, smartset
 from sapling.i18n import _
 from sapling.node import bin, hex, nullrev
+from sapling.utils import subtreeutil
 
 from .extlib.phabricator import graphql
 
@@ -107,35 +108,6 @@ def lazyparents(rev, path, public, parentfunc):
                     public[p_rev] = p_path
 
 
-def dirmatches(files, paths) -> bool:
-    """dirmatches(files, paths)
-    Return true if any files match directories in paths
-    Expects paths to end in '/' if they are directories.
-
-    >>> dirmatches(['holy/grail'], ['holy/'])
-    True
-    >>> dirmatches(['holy/grail'], ['holly/'])
-    False
-    >>> dirmatches(['holy/grail'], ['holy/grail'])
-    True
-    >>> dirmatches(['holy/grail'], ['holy/grail1'])
-    False
-    >>> dirmatches(['holy/grail1'], ['holy/grail'])
-    False
-    """
-    assert paths
-    for path in paths:
-        if path[-1] == "/":
-            for f in files:
-                if f.startswith(path):
-                    return True
-        else:
-            for f in files:
-                if f == path:
-                    return True
-    return False
-
-
 def fastlogfollow(orig, repo, subset, x, name, followfirst: bool = False):
     if followfirst:
         # fastlog does not support followfirst=True
@@ -204,7 +176,7 @@ def fastlogfollow(orig, repo, subset, x, name, followfirst: bool = False):
     wvfs = repo.wvfs
 
     if wvfs.isdir(path) and not wvfs.islink(path):
-        dirs.add(path + "/")
+        dirs.add(path)
     else:
         if repo.ui.configbool("fastlog", "files"):
             files.add(path)
@@ -226,21 +198,14 @@ def fastlogfollow(orig, repo, subset, x, name, followfirst: bool = False):
         path = next(iter(dirs.union(files)))
         public = findpublic(startrev, path, parents)
         draft_revs = []
-        for parent, _path in lazyparents(startrev, path, public, parents):
-            if dirmatches(repo[parent].files(), dirs.union(files)):
+        for parent, path in lazyparents(startrev, path, public, parents):
+            if any(path_starts_with(f, path) for f in repo[parent].files()):
                 draft_revs.append(parent)
-            # Undo relevant file renames in parent so we end up
-            # passing the renamee to scmquery. Note that this will not
-            # work for non-linear drafts where a file does not have
-            # linear rename history.
-            undorenames(repo[parent], files)
 
-        repo.ui.debug("found common parent at %s\n" % repo[parent].hex())
+        repo.ui.debug(
+            "found common parent at %s with path '%s'\n" % (repo[parent].hex(), path)
+        )
 
-        if len(dirs) + len(files) != 1:
-            raise MultiPathError()
-
-        path = next(iter(dirs.union(files)))
         yield from draft_revs
 
         start_node = repo[parent].node()
@@ -273,20 +238,45 @@ def fastlogfollow(orig, repo, subset, x, name, followfirst: bool = False):
         return public
 
     def parents(rev, path):
-        for p in repo.changelog.parentrevs(rev):
-            if p != nullrev:
-                yield p, path
+        # XXX: handle subtree merge
 
-    def undorenames(ctx, files):
-        """mutate files to undo any file renames in ctx"""
-        renamed = []
-        for f in files:
-            r = f in ctx and ctx[f].renamed()
-            if r:
-                renamed.append((r[0], f))
-        for src, dst in renamed:
-            files.remove(dst)
-            files.add(src)
+        # subtree copy
+        if copy_source := find_subtree_copy(rev, path):
+            source_commit, source_path = copy_source
+            yield repo[source_commit].rev(), source_path
+        else:
+            ctx = repo[rev]
+            # regular copy
+            if r := (path in ctx and ctx[path].renamed()):
+                path = r[0]
+            for p in repo.changelog.parentrevs(rev):
+                if p != nullrev:
+                    yield p, path
+
+    def find_subtree_copy(rev, path):
+        """find the source commit and path of a subtree copy (directory branch)"""
+        branches = subtreeutil.get_subtree_branches(repo, rev)
+        for branch in branches:
+            if path_starts_with(path, branch.to_path):
+                source_path = branch.from_path + path[len(branch.to_path) :]
+                return (branch.from_commit, source_path)
+        return None
+
+    def path_starts_with(path, prefix):
+        """Return True if 'path' is the same as 'prefix' or lives underneath it.
+
+        Examples
+        --------
+        >>> path_starts_with("/var/log/nginx/error.log", "/var/log")
+        True
+        >>> path_starts_with("/var/logs", "/var/log")   # subtle typo
+        False
+        >>> path_starts_with("src/module/util.py", "src")  # relative paths fine
+        True
+        """
+        if path == prefix:
+            return True
+        return path.startswith(prefix + "/")
 
     try:
         revgen = fastlog(repo, rev, dirs, files)
