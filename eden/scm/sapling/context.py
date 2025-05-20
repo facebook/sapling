@@ -37,7 +37,6 @@ from . import (
     revlog,
     scmutil,
     util,
-    visibility,
 )
 from .i18n import _
 from .node import (
