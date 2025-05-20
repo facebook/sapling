@@ -9,7 +9,7 @@ use std::collections::BTreeMap;
 use std::sync::Arc;
 
 use anyhow::Result;
-use async_runtime::block_unless_interrupted as block_on;
+use async_runtime::block_on;
 use commits::DagCommits;
 use dag::CloneData;
 use dag::Group;
@@ -50,7 +50,7 @@ pub fn clone(
 ) -> Result<BTreeMap<String, HgId>> {
     // The "bookmarks" API result is unordered.
     let bookmarks =
-        block_on(edenapi.bookmarks(bookmark_names.clone()))?.map_err(|e| e.tag_network())?;
+        block_on(edenapi.bookmarks(bookmark_names.clone())).map_err(|e| e.tag_network())?;
     let bookmarks = bookmarks
         .into_iter()
         .filter_map(|bm| bm.hgid.map(|id| (bm.bookmark, id)))
@@ -67,20 +67,20 @@ pub fn clone(
         .collect();
 
     let segments =
-        block_on(edenapi.commit_graph_segments(heads, vec![]))?.map_err(|e| e.tag_network())?;
+        block_on(edenapi.commit_graph_segments(heads, vec![])).map_err(|e| e.tag_network())?;
     let clone_data = CommitGraphSegments { segments }.try_into()?;
 
     if config.get_or_default::<bool>("clone", "use-import-clone")? {
-        block_on(commits.import_clone_data(clone_data))??;
+        block_on(commits.import_clone_data(clone_data))?;
     } else {
         // All lazy heads should be in the MASTER group.
         let head_opts =
             VertexListWithOptions::from(head_vertexes).with_desired_group(Group::MASTER);
-        block_on(commits.import_pull_data(clone_data, &head_opts))??;
+        block_on(commits.import_pull_data(clone_data, &head_opts))?;
     }
 
-    let all = block_on(commits.all())??;
-    let tip = block_on(all.first())??;
+    let all = block_on(commits.all())?;
+    let tip = block_on(all.first())?;
     if let Some(tip) = tip {
         metalog.set("tip", tip.as_ref())?;
     }
@@ -110,7 +110,7 @@ pub fn fast_pull(
         .collect::<Vec<_>>();
 
     let segments =
-        block_on(edenapi.commit_graph_segments(missing, common))?.map_err(|e| e.tag_network())?;
+        block_on(edenapi.commit_graph_segments(missing, common)).map_err(|e| e.tag_network())?;
     let pull_data: CloneData<Vertex> = CommitGraphSegments { segments }.try_into()?;
 
     let commit_count = pull_data.flat_segments.vertex_count();
@@ -118,6 +118,6 @@ pub fn fast_pull(
     block_on(commits.import_pull_data(
         pull_data,
         &VertexListWithOptions::from(missing_vertexes).with_desired_group(Group::MASTER),
-    ))??;
+    ))?;
     Ok((commit_count, segment_count as u64))
 }
