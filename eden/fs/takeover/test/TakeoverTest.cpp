@@ -572,6 +572,92 @@ TEST(Takeover, manyMounts) {
   }
 }
 
+TEST(Takeover, manyInodes) {
+  TemporaryDirectory tmpDir("eden_takeover_test");
+  AbsolutePath tmpDirPath = canonicalPath(tmpDir.path().string());
+
+  // Build the TakeoverData object
+  TakeoverData serverData;
+  auto lockFilePath = tmpDirPath + "lock"_pc;
+  serverData.lockFile = folly::File{lockFilePath.view(), O_RDWR | O_CREAT};
+  auto thriftSocketPath = tmpDirPath + "thrift"_pc;
+  serverData.thriftSocket =
+      folly::File{thriftSocketPath.view(), O_RDWR | O_CREAT};
+  auto mountdSocketPath = tmpDirPath + "mountd"_pc;
+  serverData.mountdServerSocket =
+      folly::File{mountdSocketPath.view(), O_RDWR | O_CREAT};
+
+  // Build a TakeoverData which is a large message(length=1102721166).
+  // Here we create a mount with 7 million inodes. The size of this
+  // TakeoverData will be 1102721166 bytes.
+
+  // This size is larger than 1 GB (the maximum data lentgh that we chose for
+  // transfering eden TakeoverData over UnixSocket). The TakeoverServer should
+  // split the data into multiple chunks and send them in sequence.
+
+  constexpr int64_t numInodes = 7000000;
+
+  auto mountPath =
+      tmpDirPath + RelativePathPiece{folly::to<string>("mounts/foo/test")};
+  auto stateDirectory =
+      tmpDirPath + RelativePathPiece{folly::to<string>("client")};
+  auto fusePath = tmpDirPath + PathComponentPiece{folly::to<string>("fuse")};
+  SerializedInodeMap inodeMap;
+  inodeMap.unloadedInodes_ref()->reserve(numInodes);
+  for (int64_t i = 0; i < numInodes; ++i) {
+    SerializedInodeMapEntry entry;
+    entry.inodeNumber_ref() = i;
+    entry.parentInode_ref() = 0;
+    // The name and hash are chosen to be long enough to make the message
+    // larger than 1 GB.
+    entry.name_ref() = folly::to<string>(
+        "example_inode_name______________choose_a_big_name______________", i);
+    entry.isUnlinked_ref() = false;
+    entry.numFsReferences_ref() = 1;
+    entry.hash_ref() = folly::to<string>(
+        "example_inode_hash______________choose_a_big_hash______________", i);
+    entry.mode_ref() = 0644;
+    inodeMap.unloadedInodes_ref()->emplace_back(std::move(entry));
+  }
+  serverData.mountPoints.emplace_back(
+      mountPath,
+      stateDirectory,
+      FuseChannelData{
+          folly::File{fusePath.view(), O_RDWR | O_CREAT}, fuse_init_out{}},
+      std::move(inodeMap));
+
+  // Perform the takeover
+  auto serverSendFuture = serverData.takeoverComplete.getFuture();
+  TestHandler handler{std::move(serverData)};
+  auto result = runTakeover(tmpDir, &handler);
+  ASSERT_TRUE(serverSendFuture.hasValue());
+  EXPECT_TRUE(result.hasValue());
+  const auto& clientData = result.value();
+
+  // Make sure the received lock file and thrift socket FDs are correct
+  checkExpectedFile(clientData.lockFile.fd(), lockFilePath);
+  checkExpectedFile(clientData.thriftSocket.fd(), thriftSocketPath);
+  checkExpectedFile(clientData.mountdServerSocket->fd(), mountdSocketPath);
+
+  // Make sure the received mount information is only for one mount
+  ASSERT_EQ(1, clientData.mountPoints.size());
+
+  // Make sure the received mount information is correct
+  const auto& mountInfo = clientData.mountPoints[0];
+  auto expectedMountPath =
+      tmpDirPath + RelativePathPiece{folly::to<string>("mounts/foo/test")};
+  EXPECT_EQ(expectedMountPath, mountInfo.mountPath);
+
+  auto expectedClientPath =
+      tmpDirPath + RelativePathPiece{folly::to<string>("client")};
+  EXPECT_EQ(expectedClientPath, mountInfo.stateDirectory);
+  auto expectedFusePath =
+      tmpDirPath + PathComponentPiece{folly::to<string>("fuse")};
+  auto& fuseChannelData = std::get<FuseChannelData>(mountInfo.channelInfo);
+  checkExpectedFile(fuseChannelData.fd.fd(), expectedFusePath);
+  EXPECT_EQ(numInodes, mountInfo.inodeMap.unloadedInodes_ref()->size());
+}
+
 TEST(Takeover, error) {
   TemporaryDirectory tmpDir("eden_takeover_test");
   ErrorHandler handler;
