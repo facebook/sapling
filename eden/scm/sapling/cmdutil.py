@@ -3520,7 +3520,13 @@ def displaygraph(
                 parents = []
         elif show_abbreviated_ancestors is ShowAbbreviatedAncestorsWhen.NEVER:
             parents = [p for p in parents if p[0] != graphmod.MISSINGPARENT]
-        revcache = {"copies": copies}
+        gprevs = [p[1] for p in parents if p[0] == graphmod.GRANDPARENT]
+        if all(isinstance(gp, bytes) for gp in gprevs):
+            # parents are already nodes (when called from ext/commitcloud/commands.py)
+            gpnodes = gprevs
+        else:
+            gpnodes = repo.changelog.tonodes(gprevs)
+        revcache = {"copies": copies, "gpnodes": gpnodes}
         width = renderer.width(rev, parents)
         displayer.show(
             ctx, revcache=revcache, matchfn=revmatchfn, _graphwidth=width, **props
