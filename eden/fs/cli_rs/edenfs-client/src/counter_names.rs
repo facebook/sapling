@@ -7,12 +7,37 @@
 
 // Counter names used for telemetry
 
-// Filesystem counters (intially fuse, but will change to support other platforms)
-pub const COUNTER_FUSE_OPEN: &str = "fuse.open_successful.sum";
-pub const COUNTER_FUSE_READ: &str = "fuse.read_successful.sum";
-pub const COUNTER_FUSE_READDIR: &str = "fuse.readdir_successful.sum";
-pub const COUNTER_FUSE_WRITE: &str = "fuse.write_successful.sum";
-pub const COUNTER_FUSE_GETATTR: &str = "fuse.getattr_successful.sum";
+// Filesystem counters
+#[cfg(target_os = "macos")]
+pub mod fs_counters {
+    pub const COUNTER_FS_OPEN: &str = "nfs.open_successful.sum"; // placeholder, does not exist
+    pub const COUNTER_FS_READ: &str = "nfs.read_successful.sum";
+    pub const COUNTER_FS_READDIR: &str = "nfs.readdir_successful.sum";
+    pub const COUNTER_FS_WRITE: &str = "nfs.write_successful.sum";
+    pub const COUNTER_FS_GETATTR: &str = "nfs.getattr_successful.sum";
+}
+
+#[cfg(target_os = "windows")]
+pub mod fs_counters {
+    pub const COUNTER_FS_OPEN: &str = "prjfs.open_successful.sum"; // placeholder, does not exist
+    pub const COUNTER_FS_READ: &str = "prjfs.read_successful.sum";
+    pub const COUNTER_FS_READDIR: &str = "prjfs.readdir_successful.sum";
+    pub const COUNTER_FS_WRITE: &str = "prjfs.write_successful.sum"; // placeholder, does not exist
+    pub const COUNTER_FS_GETATTR: &str = "prjfs.getattr_successful.sum"; // placeholder, does not exist
+}
+
+// Filesystem counters for FUSE
+#[cfg(not(any(target_os = "macos", target_os = "windows")))]
+pub mod fs_counters {
+    pub const COUNTER_FS_OPEN: &str = "fuse.open_successful.sum";
+    pub const COUNTER_FS_READ: &str = "fuse.read_successful.sum";
+    pub const COUNTER_FS_READDIR: &str = "fuse.readdir_successful.sum";
+    pub const COUNTER_FS_WRITE: &str = "fuse.write_successful.sum";
+    pub const COUNTER_FS_GETATTR: &str = "fuse.getattr_successful.sum";
+}
+
+// Re-export the filesystem counters
+pub use fs_counters::*;
 
 // EdenAPI backend counters
 pub const COUNTER_EDENAPI_BLOBS_KEYS: &str = "scmstore.file.fetch.edenapi.keys";

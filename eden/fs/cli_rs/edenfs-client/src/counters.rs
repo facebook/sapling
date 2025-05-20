@@ -626,11 +626,11 @@ impl EdenFsClient {
     pub async fn get_telemetry_counters(&self) -> Result<TelemetryCounters> {
         // Define the counter keys we need to fetch, organized by category
         let filesystem_counters = [
-            COUNTER_FUSE_OPEN,
-            COUNTER_FUSE_READ,
-            COUNTER_FUSE_READDIR,
-            COUNTER_FUSE_WRITE,
-            COUNTER_FUSE_GETATTR,
+            COUNTER_FS_OPEN,
+            COUNTER_FS_READ,
+            COUNTER_FS_READDIR,
+            COUNTER_FS_WRITE,
+            COUNTER_FS_GETATTR,
         ];
 
         let cas_local_cache_counters = [
@@ -728,11 +728,11 @@ impl EdenFsClient {
         // Create the TelemetryCounters struct
         let telemetry_counters = TelemetryCounters {
             fs_stats: FilesystemTelemetryCounters {
-                syscall_opens: *counters.get(COUNTER_FUSE_OPEN).unwrap_or(&0) as u64,
-                syscall_reads: *counters.get(COUNTER_FUSE_READ).unwrap_or(&0) as u64,
-                syscall_readdirs: *counters.get(COUNTER_FUSE_READDIR).unwrap_or(&0) as u64,
-                syscall_writes: *counters.get(COUNTER_FUSE_WRITE).unwrap_or(&0) as u64,
-                syscall_stats: *counters.get(COUNTER_FUSE_GETATTR).unwrap_or(&0) as u64,
+                syscall_opens: *counters.get(COUNTER_FS_OPEN).unwrap_or(&0) as u64,
+                syscall_reads: *counters.get(COUNTER_FS_READ).unwrap_or(&0) as u64,
+                syscall_readdirs: *counters.get(COUNTER_FS_READDIR).unwrap_or(&0) as u64,
+                syscall_writes: *counters.get(COUNTER_FS_WRITE).unwrap_or(&0) as u64,
+                syscall_stats: *counters.get(COUNTER_FS_GETATTR).unwrap_or(&0) as u64,
             },
             thrift_stats: ThriftTelemetryCounters {},
             backend_stats: RemoteBackendTelemetryCounters {
