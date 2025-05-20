@@ -80,7 +80,7 @@ impl SqlBookmarksSubscription {
             .flatten()
             .unwrap_or(0);
 
-        let tok: i32 = rand::thread_rng().gen();
+        let tok: i32 = rand::thread_rng().r#gen();
         let (txn, bookmarks) = SelectAllUnordered::maybe_traced_query_with_transaction(
             txn,
             ctx.client_request_info(),

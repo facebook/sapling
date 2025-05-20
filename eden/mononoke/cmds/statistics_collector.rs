@@ -712,7 +712,7 @@ async fn async_main(app: MononokeApp) -> Result<(), Error> {
         None => {
             let maybe_repo_arg = args.repo.as_repo_arg();
             let (repo_name, _) = match maybe_repo_arg {
-                Some(ref repo_arg) => process.app.repo_config(repo_arg)?,
+                Some(repo_arg) => process.app.repo_config(repo_arg)?,
                 None => anyhow::bail!(
                     "Repo name or ID not provided. Either sharded-service-name or repo id/name should be provided."
                 ),

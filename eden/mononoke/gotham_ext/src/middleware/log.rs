@@ -187,7 +187,7 @@ impl LogMiddleware {
             Self::TestFriendly => {
                 log_request_test_friendly(state, entry);
             }
-            Self::Slog(ref logger) => {
+            Self::Slog(logger) => {
                 log_request_slog(logger, state, entry);
             }
         }

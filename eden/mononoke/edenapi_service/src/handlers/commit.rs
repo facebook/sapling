@@ -294,7 +294,9 @@ impl SaplingRemoteApiHandler for LocationToHashHandler {
     }
 }
 
-pub async fn hash_to_location(state: &mut State) -> Result<impl TryIntoResponse, HttpError> {
+pub async fn hash_to_location(
+    state: &mut State,
+) -> Result<impl TryIntoResponse + use<>, HttpError> {
     async fn hg_hash_to_location_chunk<R: MononokeRepo>(
         hg_repo_ctx: HgRepoContext<R>,
         master_heads: Vec<HgChangesetId>,
@@ -413,7 +415,7 @@ pub async fn hash_to_location(state: &mut State) -> Result<impl TryIntoResponse,
     Ok(cbor_response)
 }
 
-pub async fn revlog_data(state: &mut State) -> Result<impl TryIntoResponse, HttpError> {
+pub async fn revlog_data(state: &mut State) -> Result<impl TryIntoResponse + use<>, HttpError> {
     let params = RevlogDataParams::take_from(state);
 
     state.put(HandlerInfo::new(

@@ -1375,7 +1375,7 @@ impl IdMap {
     }
 }
 
-fn get_parents_func_from_ascii(text: &str) -> impl Fn(Vertex) -> Result<Vec<Vertex>> {
+fn get_parents_func_from_ascii(text: &str) -> impl Fn(Vertex) -> Result<Vec<Vertex>> + use<> {
     let parents = ::drawdag::parse(text);
     move |name: Vertex| -> Result<Vec<Vertex>> {
         Ok(parents[&String::from_utf8(name.as_ref().to_vec()).unwrap()]

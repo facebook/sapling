@@ -82,10 +82,8 @@ impl LazyTree {
     pub(crate) fn indexedlog_cache_entry(&self, node: Id20) -> Result<Option<Entry>> {
         use LazyTree::*;
         Ok(match self {
-            IndexedLog(ref entry_with_aux) => Some(entry_with_aux.entry.clone()),
-            SaplingRemoteApi(ref entry) => {
-                Some(Entry::new(node, entry.data()?, Metadata::default()))
-            }
+            IndexedLog(entry_with_aux) => Some(entry_with_aux.entry.clone()),
+            SaplingRemoteApi(entry) => Some(Entry::new(node, entry.data()?, Metadata::default())),
             // Don't write CAS entries to local cache.
             Cas(_) => None,
             Null => None,

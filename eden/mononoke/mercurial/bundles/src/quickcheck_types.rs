@@ -90,7 +90,7 @@ impl CgPartSequence {
 
     /// Combine all the changesets, manifests and filelogs into a single stream.
     #[cfg(test)]
-    pub fn to_stream(&self) -> impl Stream<Item = Result<changegroup::Part>> {
+    pub fn to_stream(&self) -> impl Stream<Item = Result<changegroup::Part>> + use<> {
         let part_results: Vec<_> = self.as_iter().cloned().map(Ok).collect();
         stream::iter(part_results)
     }

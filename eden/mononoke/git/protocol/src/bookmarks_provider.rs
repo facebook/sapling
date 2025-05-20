@@ -62,7 +62,7 @@ pub(crate) async fn bookmarks(
         .collect::<FxHashMap<_, _>>();
     // In case the requested refs include specified refs with value and those refs are not
     // bookmarks known at the server, we need to manually include them in the output
-    if let RequestedRefs::IncludedWithValue(ref ref_value_map) = requested_refs {
+    if let RequestedRefs::IncludedWithValue(ref_value_map) = requested_refs {
         for (ref_name, ref_value) in ref_value_map {
             bookmarks.insert(
                 BookmarkKey::with_name(ref_name.as_str().try_into()?),

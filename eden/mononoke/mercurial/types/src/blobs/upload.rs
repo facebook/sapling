@@ -208,8 +208,8 @@ impl UploadHgFileContents {
         ContentBlobMeta,
         // The future that does the upload and the future that computes the node ID/metadata are
         // split up to allow greater parallelism.
-        impl Future<Output = Result<()>> + Send,
-        impl Future<Output = Result<(HgFileNodeId, Bytes, u64)>> + Send,
+        impl Future<Output = Result<()>> + Send + use<>,
+        impl Future<Output = Result<(HgFileNodeId, Bytes, u64)>> + Send + use<>,
     ) {
         let (cbmeta, upload_fut, compute_fut) = match self {
             UploadHgFileContents::ContentUploaded(cbmeta) => {
@@ -327,7 +327,7 @@ impl UploadHgFileContents {
         blobstore: &Arc<dyn Blobstore>,
         content_id: ContentId,
         copy_from: Option<(NonRootMPath, HgFileNodeId)>,
-    ) -> impl Future<Output = Result<Bytes>> + Send {
+    ) -> impl Future<Output = Result<Bytes>> + Send + use<> {
         cloned!(blobstore);
 
         async move {
@@ -352,7 +352,7 @@ impl UploadHgFileContents {
         metadata: Bytes,
         p1: Option<HgFileNodeId>,
         p2: Option<HgFileNodeId>,
-    ) -> impl Future<Output = Result<HgFileNodeId>> + Send {
+    ) -> impl Future<Output = Result<HgFileNodeId>> + Send + use<> {
         cloned!(blobstore);
         async move {
             let file_bytes = async_stream::stream! {

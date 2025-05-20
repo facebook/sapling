@@ -67,14 +67,13 @@ impl InnerStore {
 
     pub fn prefetch(&self, keys: impl IntoIterator<Item = Key>) -> Result<()> {
         let keys: Vec<Key> = keys.into_iter().collect();
-        tracing::debug_span!(
-            "tree::store::prefetch",
-            ids = {
-                let ids: Vec<String> = keys.iter().map(|k| k.hgid.to_hex()).collect();
-                &AsRef::<str>::as_ref(&ids.join(" "))
-            }
-        )
-        .in_scope(|| self.tree_store.prefetch(keys))
+        let ids = keys
+            .iter()
+            .map(|k| k.hgid.to_hex())
+            .collect::<Vec<String>>()
+            .join(" ");
+        tracing::debug_span!("tree::store::prefetch", ids = &ids)
+            .in_scope(|| self.tree_store.prefetch(keys))
     }
 }
 

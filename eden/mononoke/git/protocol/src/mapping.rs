@@ -39,11 +39,11 @@ use crate::utils::symref_target;
 
 /// Get the refs (branches, tags) and their corresponding object ids
 /// The input refs should be of the form `refs/<ref_name>`
-pub async fn ref_oid_mapping(
+pub async fn ref_oid_mapping<T: Repo, U: IntoIterator<Item = String>>(
     ctx: &CoreContext,
-    repo: &impl Repo,
-    requested_refs: impl IntoIterator<Item = String>,
-) -> Result<impl Iterator<Item = (String, ObjectId)>> {
+    repo: &T,
+    requested_refs: U,
+) -> Result<impl Iterator<Item = (String, ObjectId)> + use<T, U>> {
     let requested_refs = RequestedRefs::Included(
         requested_refs
             .into_iter()

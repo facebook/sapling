@@ -543,7 +543,13 @@ fn git_store_request(
     ctx: &CoreContext,
     git_id: ObjectId,
     git_bytes: Bytes,
-) -> Result<(StoreRequest, impl Stream<Item = Result<Bytes, Error>>), Error> {
+) -> Result<
+    (
+        StoreRequest,
+        impl Stream<Item = Result<Bytes, Error>> + use<>,
+    ),
+    Error,
+> {
     let size = git_bytes.len().try_into()?;
     let git_sha1 =
         hash::RichGitSha1::from_bytes(Bytes::copy_from_slice(git_id.as_bytes()), "blob", size)?;

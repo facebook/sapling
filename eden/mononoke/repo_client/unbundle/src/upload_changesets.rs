@@ -100,7 +100,7 @@ impl NewBlobs {
         };
 
         let (entries, root_manifest) = match manifests.get(&root_key) {
-            Some((ref manifest_content, ref p1, ref p2, ref manifest_root)) => {
+            Some((manifest_content, p1, p2, manifest_root)) => {
                 let (entries, counters) = Self::walk_helper(
                     &RepoPath::root(),
                     manifest_content,

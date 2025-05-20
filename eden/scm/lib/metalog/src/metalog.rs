@@ -762,12 +762,14 @@ mod tests {
         orig_metalog.commit(commit_opt("third_commit", 33)).unwrap();
         let root_ids = MetaLog::list_roots(&dir).unwrap();
 
-        std::env::set_var("HGFORCEMETALOGROOT", hex::encode(root_ids[2]));
+        // TODO: Audit that the environment access only happens in single-threaded code.
+        unsafe { std::env::set_var("HGFORCEMETALOGROOT", hex::encode(root_ids[2])) };
         let metalog = MetaLog::open_from_env(dir.as_ref()).unwrap();
         assert_eq!(metalog.message(), "second_commit");
         assert_eq!(metalog.get("a").unwrap().unwrap(), b"1");
 
-        std::env::remove_var("HGFORCEMETALOGROOT");
+        // TODO: Audit that the environment access only happens in single-threaded code.
+        unsafe { std::env::remove_var("HGFORCEMETALOGROOT") };
         let metalog = MetaLog::open_from_env(dir.as_ref()).unwrap();
         assert_eq!(metalog.message(), "third_commit");
     }

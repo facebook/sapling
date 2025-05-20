@@ -175,7 +175,10 @@ impl GitRepoReader {
     }
 
     /// Read `oid` from the git store
-    pub fn get_object(&self, oid: &gix_hash::oid) -> impl Future<Output = Result<ObjectContent>> {
+    pub fn get_object(
+        &self,
+        oid: &gix_hash::oid,
+    ) -> impl Future<Output = Result<ObjectContent>> + use<> {
         let outstanding_requests = self.outstanding_requests.clone();
         let send_request = self.send_request.clone();
         let oid = oid.to_owned();

@@ -253,7 +253,7 @@ macro_rules! impl_typed_hash_no_context {
     {
         hash_type => $typed: ty,
         thrift_type => $thrift_typed: path,
-        blobstore_key => $blobstore_key: expr,
+        blobstore_key => $blobstore_key: expr_2021,
     } => {
         impl $typed {
             pub const fn new(blake2: $crate::private::Blake2) -> Self {
@@ -467,7 +467,7 @@ macro_rules! impl_typed_context {
     {
         hash_type => $typed: ident,
         context_type => $typed_context: ident,
-        context_key => $key: expr,
+        context_key => $key: expr_2021,
     } => {
         /// Context for incrementally computing a hash.
         #[derive(Clone)]
@@ -512,7 +512,7 @@ macro_rules! impl_typed_hash {
         thrift_hash_type => $thrift_hash_type: path,
         value_type => $value_type: ty,
         context_type => $typed_context: ident,
-        context_key => $key: expr,
+        context_key => $key: expr_2021,
     } => {
         $crate::impl_typed_hash_no_context! {
             hash_type => $typed,

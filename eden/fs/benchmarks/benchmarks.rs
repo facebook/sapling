@@ -39,7 +39,7 @@ mod pthread {
     const PTHREAD_CANCEL_DISABLE: c_int = 0;
     const PTHREAD_CANCEL_ASYNCHRONOUS: c_int = 1;
 
-    extern "C" {
+    unsafe extern "C" {
         fn pthread_setcancelstate(__state: c_int, __oldstate: *mut c_int) -> c_int;
         fn pthread_setcanceltype(__type: c_int, __oldtype: *mut c_int) -> c_int;
     }

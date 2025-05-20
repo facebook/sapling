@@ -973,7 +973,7 @@ impl MononokeApp {
 
     fn override_blobconfig(&self, blob_config: &mut BlobConfig, id: u64) -> Result<()> {
         match blob_config {
-            BlobConfig::MultiplexedWal { ref blobstores, .. } => {
+            &mut BlobConfig::MultiplexedWal { ref blobstores, .. } => {
                 let sought_id = BlobstoreId::new(id);
                 let inner_blob_config = blobstores
                     .iter()

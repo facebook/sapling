@@ -58,7 +58,7 @@ impl EdenFsClient {
 
     pub fn get_active_filter_id(&self, commit: HgId) -> Result<Option<String>, anyhow::Error> {
         match &self.filter_generator {
-            Some(gen) => gen.active_filter_id(commit),
+            Some(r#gen) => r#gen.active_filter_id(commit),
             None => Ok(None),
         }
     }

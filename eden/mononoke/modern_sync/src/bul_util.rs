@@ -71,7 +71,7 @@ pub async fn get_one_entry(
     ctx: &CoreContext,
     bookmark_update_log: Arc<dyn BookmarkUpdateLog>,
     entry_id: BookmarkUpdateLogId,
-) -> impl stream::Stream<Item = Result<BookmarkUpdateLogEntry, Error>> {
+) -> impl stream::Stream<Item = Result<BookmarkUpdateLogEntry, Error>> + use<> {
     let entries: Vec<Result<BookmarkUpdateLogEntry, Error>> = bookmark_update_log
         .read_next_bookmark_log_entries(ctx.clone(), entry_id, 1, Freshness::MaybeStale)
         .collect()

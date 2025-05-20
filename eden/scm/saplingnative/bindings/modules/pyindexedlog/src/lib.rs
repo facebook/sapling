@@ -154,7 +154,7 @@ fn to_bound<'a>(py: Python, key: Option<&'a PyBytes>, inclusive: bool) -> Bound<
 fn to_index_func(
     py: Python,
     func: PyObject,
-) -> impl Fn(&[u8]) -> Vec<IndexOutput> + Send + Sync + 'static {
+) -> impl Fn(&[u8]) -> Vec<IndexOutput> + Send + Sync + 'static + use<> {
     let func = func.clone_ref(py);
     move |data: &[u8]| -> Vec<IndexOutput> {
         let gil_guard = Python::acquire_gil();
@@ -164,15 +164,19 @@ fn to_index_func(
         let result: Vec<PyObject> = result.extract(py).unwrap();
         result
             .into_iter()
-            .map(|obj| {
-                if let Ok(obj) = obj.extract::<PyBytes>(py) {
+            .map(|obj| match obj.extract::<PyBytes>(py) {
+                Ok(obj) => {
                     let out: &[u8] = obj.data(py);
                     IndexOutput::Owned(out.to_vec().into_boxed_slice())
-                } else if let Ok((start, end)) = obj.extract::<(u64, u64)>(py) {
-                    return IndexOutput::Reference(start..end);
-                } else {
-                    panic!("python index function returned unknown value")
                 }
+                _ => match obj.extract::<(u64, u64)>(py) {
+                    Ok((start, end)) => {
+                        return IndexOutput::Reference(start..end);
+                    }
+                    _ => {
+                        panic!("python index function returned unknown value")
+                    }
+                },
             })
             .collect()
     }

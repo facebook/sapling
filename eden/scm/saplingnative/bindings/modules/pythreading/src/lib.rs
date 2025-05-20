@@ -334,8 +334,8 @@ py_class!(class RGenerator |py| {
     // Whether iteration was completed.
     data itercompleted: Cell<bool>;
 
-    def __new__(_cls, gen: PyObject) -> PyResult<Self> {
-        Self::init(py, gen)
+    def __new__(_cls, r#gen: PyObject) -> PyResult<Self> {
+        Self::init(py, r#gen)
     }
 
     /// Obtains an iterator that iterates from the beginning.
@@ -374,12 +374,12 @@ py_class!(class RGenerator |py| {
 
     def __traverse__(&self, visit) {
         let iterlist = self.iterlist(py).borrow();
-        if let Some(ref obj) = &*iterlist {
+        if let Some(obj) = &*iterlist {
             visit.call(obj)?
         }
         drop(iterlist);
         let iternext = self.iternext(py).borrow();
-        if let Some(ref obj) = &*iternext {
+        if let Some(obj) = &*iternext {
             visit.call(obj)?
         }
         Ok(())
@@ -397,8 +397,8 @@ py_class!(class RGenerator |py| {
 });
 
 impl RGenerator {
-    pub(crate) fn init(py: Python, gen: PyObject) -> PyResult<Self> {
-        let iter = gen.iter(py)?.into_object();
+    pub(crate) fn init(py: Python, r#gen: PyObject) -> PyResult<Self> {
+        let iter = r#gen.iter(py)?.into_object();
         let next = match iter.getattr(py, "__next__") {
             Err(_) => iter.getattr(py, "next")?,
             Ok(next) => next,
@@ -454,7 +454,7 @@ py_class!(class RGeneratorIter |py| {
 
     def __traverse__(&self, visit) {
         let rgen = self.rgen(py).borrow();
-        if let Some(ref obj) = &*rgen {
+        if let Some(obj) = &*rgen {
             visit.call(obj)?
         }
         Ok(())
@@ -518,7 +518,7 @@ pub fn trigger_rng_reseed(_py: Python) -> PyResult<PyNone> {
 
     let mut rng = rand::thread_rng();
     for _ in 0..16 {
-        let _ = rng.gen::<u32>();
+        let _ = rng.r#gen::<u32>();
     }
     Ok(PyNone)
 }
@@ -534,8 +534,8 @@ mod tests {
     #[test]
     fn test_rgenerator_iter_multi_threads() {
         let rgen = with_py(|py| {
-            let gen = py.eval("(i for i in range(1000))", None, None).unwrap();
-            RGenerator::init(py, gen).unwrap()
+            let r#gen = py.eval("(i for i in range(1000))", None, None).unwrap();
+            RGenerator::init(py, r#gen).unwrap()
         });
         let mut rgen_list = Vec::new();
         let n = 40;

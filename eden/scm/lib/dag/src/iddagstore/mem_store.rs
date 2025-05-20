@@ -73,7 +73,7 @@ impl IdDagStore for MemStore {
             .get_head_index(level)
             .and_then(|head_index| head_index.range(id..).next())
             .map(|(_, store_id)| self.get_segment(store_id));
-        if let Some(ref seg) = &answer {
+        if let Some(seg) = &answer {
             if seg.span()?.low > id {
                 return Ok(None);
             }

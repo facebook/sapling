@@ -569,8 +569,7 @@ fn find_roots(commits: &HashSet<BonsaiChangeset>) -> HashMap<ChangesetId, ChildI
     for commit in commits {
         for (index, parent) in commit.parents().enumerate() {
             if !commits_set.contains(&parent) {
-                let ChildIndex(ref mut max_index) =
-                    roots.entry(parent.clone()).or_insert(ChildIndex(0));
+                let ChildIndex(max_index) = roots.entry(parent.clone()).or_insert(ChildIndex(0));
                 *max_index = max(index, *max_index);
             }
         }
@@ -685,12 +684,14 @@ async fn find_changed_files_between_manifests(
     Ok(paths)
 }
 
-pub async fn find_bonsai_diff(
+pub async fn find_bonsai_diff<T: Repo>(
     ctx: &CoreContext,
-    repo: &impl Repo,
+    repo: &T,
     ancestor: ChangesetId,
     descendant: ChangesetId,
-) -> Result<impl TryStream<Ok = BonsaiDiffFileChange<(FileType, HgFileNodeId)>, Error = Error>> {
+) -> Result<
+    impl TryStream<Ok = BonsaiDiffFileChange<(FileType, HgFileNodeId)>, Error = Error> + use<T>,
+> {
     let (d_mf, a_mf) = try_join(
         id_to_manifestid(ctx, repo, descendant),
         id_to_manifestid(ctx, repo, ancestor),

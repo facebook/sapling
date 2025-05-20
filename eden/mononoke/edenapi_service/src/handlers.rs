@@ -371,7 +371,10 @@ where
     build_response(res, state, &JsonErrorFomatter)
 }
 
-pub fn monitor_request<S, T>(state: &State, stream: S) -> impl Stream<Item = T> + Send + 'static
+pub fn monitor_request<S, T>(
+    state: &State,
+    stream: S,
+) -> impl Stream<Item = T> + Send + 'static + use<S, T>
 where
     S: Stream<Item = T> + Send + 'static,
 {

@@ -397,15 +397,18 @@ impl Repo {
     }
 
     pub fn remote_bookmarks(&self) -> Result<BTreeMap<RefName, HgId>> {
-        self.metalog()?.read().get_remotenames()
+        let x = self.metalog()?.read().get_remotenames();
+        x
     }
 
     pub fn set_remote_bookmarks(&self, names: &BTreeMap<RefName, HgId>) -> Result<()> {
-        self.metalog()?.write().set_remotenames(names)
+        let x = self.metalog()?.write().set_remotenames(names);
+        x
     }
 
     pub fn local_bookmarks(&self) -> Result<BTreeMap<RefName, HgId>> {
-        self.metalog()?.read().get_bookmarks()
+        let x = self.metalog()?.read().get_bookmarks();
+        x
     }
 
     pub fn add_requirement(&mut self, requirement: &str) -> Result<()> {

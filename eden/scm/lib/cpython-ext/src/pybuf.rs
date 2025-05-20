@@ -51,18 +51,20 @@ unsafe impl<T> Send for SimplePyBuf<T> {}
 unsafe impl<T> Sync for SimplePyBuf<T> {}
 
 unsafe fn is_safe_type(obj: &PyObject) -> bool {
-    if cpy::PyByteArray_Check(obj.as_ptr()) != 0 {
-        return true;
-    }
-    if cpy::PyBytes_Check(obj.as_ptr()) != 0 {
-        return true;
-    }
-    {
-        if cpy::PyMemoryView_Check(obj.as_ptr()) != 0 {
+    unsafe {
+        if cpy::PyByteArray_Check(obj.as_ptr()) != 0 {
             return true;
         }
+        if cpy::PyBytes_Check(obj.as_ptr()) != 0 {
+            return true;
+        }
+        {
+            if cpy::PyMemoryView_Check(obj.as_ptr()) != 0 {
+                return true;
+            }
+        }
+        false
     }
-    false
 }
 
 impl<T: Copy> SimplePyBuf<T> {

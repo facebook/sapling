@@ -213,7 +213,7 @@ pub fn log_bookmark_deletion_result(
         Ok(()) => {
             scuba_sample.add(SUCCESS, 1);
         }
-        Err(ref err) => {
+        Err(err) => {
             scuba_sample.add(SUCCESS, 0).add(ERROR, format!("{}", err));
         }
     }
@@ -261,7 +261,7 @@ pub fn log_bookmark_update_result(
             scuba_sample.add(SUCCESS, 1);
             scuba_sample.log();
         }
-        Err(ref err) => {
+        Err(err) => {
             error!(
                 ctx.logger(),
                 "failed to sync bookmark update log #{}, {}", entry_id, err

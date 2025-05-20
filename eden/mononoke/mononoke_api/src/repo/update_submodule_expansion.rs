@@ -362,7 +362,7 @@ impl<R: MononokeRepo> RepoContext<R> {
         for file_change in rebased_bcs.file_changes.values_mut() {
             match file_change {
                 FileChange::Change(fc) => {
-                    if let Some((_, ref mut parent)) = fc.copy_from_mut() {
+                    if let Some((_, parent)) = fc.copy_from_mut() {
                         *parent = target_cs_id;
                     }
                 }

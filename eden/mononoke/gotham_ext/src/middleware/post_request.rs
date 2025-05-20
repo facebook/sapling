@@ -192,7 +192,7 @@ impl PostResponseCallbacks {
 // Hostname of the client is for non-critical use only (best-effort lookup):
 pub fn resolve_hostname(
     metadata_state: &MetadataState,
-) -> impl Future<Output = Option<String>> + 'static {
+) -> impl Future<Output = Option<String>> + 'static + use<> {
     // XXX: Can't make this an async fn because the resulting Future would
     // have a non-'static lifetime (due to the &ClientIdentity argument).
 

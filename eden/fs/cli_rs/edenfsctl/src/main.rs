@@ -347,7 +347,7 @@ mod tests {
     use super::should_use_rust_help;
 
     macro_rules! args {
-        ( $( $x:expr ),* ) => (
+        ( $( $x:expr_2021 ),* ) => (
             {
                 let mut v = Vec::new();
                 $(

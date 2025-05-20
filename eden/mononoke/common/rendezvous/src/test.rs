@@ -80,7 +80,8 @@ impl MockStore {
 
     pub fn callback(
         &self,
-    ) -> impl FnOnce(HashSet<u64>) -> BoxFuture<'static, Result<HashMap<u64, u64>, Error>> {
+    ) -> impl FnOnce(HashSet<u64>) -> BoxFuture<'static, Result<HashMap<u64, u64>, Error>> + use<>
+    {
         let this = self.clone();
         move |keys| {
             async move {

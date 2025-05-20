@@ -120,7 +120,7 @@ impl GitMethodInfo {
         let (method, variants) = match command {
             Command::LsRefs(_) => (GitMethod::LsRefs, vec![GitMethodVariant::Standard]),
             Command::BundleUri => (GitMethod::BundleURI, vec![GitMethodVariant::Standard]),
-            Command::Fetch(ref fetch_args) => {
+            Command::Fetch(fetch_args) => {
                 let method = if fetch_args.haves.is_empty() && fetch_args.done {
                     GitMethod::Clone
                 } else {
@@ -138,7 +138,7 @@ impl GitMethodInfo {
                 }
                 (method, variants)
             }
-            Command::Push(ref push_args) => {
+            Command::Push(push_args) => {
                 if push_args.is_shallow() {
                     (GitMethod::Push, vec![GitMethodVariant::Shallow])
                 } else {

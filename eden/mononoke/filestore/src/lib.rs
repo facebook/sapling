@@ -270,11 +270,21 @@ pub async fn exists<B: Blobstore>(
 /// be determined or if opening the file failed. File contents are returned in chunks configured by
 /// FilestoreConfig::read_chunk_size - this defines the max chunk size, but they may be shorter
 /// (not just the final chunks - any of them). Chunks are guaranteed to have non-zero size.
-pub async fn fetch_with_size<'a, B: Blobstore + Clone + 'a>(
+pub async fn fetch_with_size<
+    'a,
+    B: Blobstore + Clone + 'a,
+    T: Borrow<CoreContext> + Clone + Send + Sync + 'a,
+>(
     blobstore: B,
-    ctx: impl Borrow<CoreContext> + Clone + Send + Sync + 'a,
+    ctx: T,
     key: &FetchKey,
-) -> Result<Option<(impl Stream<Item = Result<Bytes, Error>> + 'a, u64)>, Error> {
+) -> Result<
+    Option<(
+        impl Stream<Item = Result<Bytes, Error>> + use<'a, B, T>,
+        u64,
+    )>,
+    Error,
+> {
     let content_id =
         key.load(ctx.borrow(), &blobstore)
             .await
@@ -297,12 +307,22 @@ pub async fn fetch_with_size<'a, B: Blobstore + Clone + 'a>(
 ///
 /// Requests for data beyond the end of the file will return only the part of
 /// the file that overlaps with the requested range, if any.
-pub async fn fetch_range_with_size<'a, B: Blobstore + Clone + 'a>(
+pub async fn fetch_range_with_size<
+    'a,
+    B: Blobstore + Clone + 'a,
+    T: Borrow<CoreContext> + Clone + Send + Sync + 'a,
+>(
     blobstore: B,
-    ctx: impl Borrow<CoreContext> + Clone + Send + Sync + 'a,
+    ctx: T,
     key: &FetchKey,
     range: Range,
-) -> Result<Option<(impl Stream<Item = Result<Bytes, Error>> + 'a, u64)>, Error> {
+) -> Result<
+    Option<(
+        impl Stream<Item = Result<Bytes, Error>> + use<'a, B, T>,
+        u64,
+    )>,
+    Error,
+> {
     let content_id =
         key.load(ctx.borrow(), &blobstore)
             .await
@@ -319,11 +339,15 @@ pub async fn fetch_range_with_size<'a, B: Blobstore + Clone + 'a>(
 }
 
 /// This function has the same functionality as fetch_with_size, but doesn't return the file size.
-pub async fn fetch<'a, B: Blobstore + Clone + 'a>(
+pub async fn fetch<
+    'a,
+    B: Blobstore + Clone + 'a,
+    T: Borrow<CoreContext> + Clone + Send + Sync + 'a,
+>(
     blobstore: B,
-    ctx: impl Borrow<CoreContext> + Clone + Send + Sync + 'a,
+    ctx: T,
     key: &FetchKey,
-) -> Result<Option<impl Stream<Item = Result<Bytes, Error>> + 'a>, Error> {
+) -> Result<Option<impl Stream<Item = Result<Bytes, Error>> + use<'a, B, T>>, Error> {
     let res = fetch_with_size(blobstore, ctx, key).await?;
     Ok(res.map(|(stream, _len)| stream))
 }
@@ -426,7 +450,7 @@ pub async fn fetch_range<'a, B: Blobstore>(
     ctx: &'a CoreContext,
     key: &FetchKey,
     range: Range,
-) -> Result<Option<impl Stream<Item = Result<Bytes, Error>> + 'a>, Error> {
+) -> Result<Option<impl Stream<Item = Result<Bytes, Error>> + use<'a, B>>, Error> {
     let res = fetch_range_with_size(blobstore, ctx, key, range).await?;
     Ok(res.map(|(stream, _len)| stream))
 }
@@ -490,7 +514,7 @@ pub fn store_bytes<B: Blobstore + Clone + 'static>(
     bytes: Bytes,
 ) -> (
     (ContentId, u64),
-    impl Future<Output = Result<(), Error>> + Send,
+    impl Future<Output = Result<(), Error>> + Send + use<B>,
 ) {
     // NOTE: Like in other places in the Filestore, we assume that the size of buffers being passed
     // in can be represented in 64 bits (which is OK for the world we live in).

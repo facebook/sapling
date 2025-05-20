@@ -543,13 +543,10 @@ impl LfsBlobsStore {
 
             LfsBlobsStore::IndexedLog(log) => log.get(hash, size)?,
 
-            LfsBlobsStore::Union(first, second) => {
-                if let Some(blob) = first.get(hash, size)? {
-                    Some(blob)
-                } else {
-                    second.get(hash, size)?
-                }
-            }
+            LfsBlobsStore::Union(first, second) => match first.get(hash, size)? {
+                Some(blob) => Some(blob),
+                _ => second.get(hash, size)?,
+            },
         };
 
         Ok(blob)
@@ -2358,7 +2355,9 @@ mod tests {
                 self.0.load(Ordering::Relaxed)
             }
 
-            fn as_callback(&self) -> impl Fn(Sha256, Bytes) -> Result<()> + Send + Clone + 'static {
+            fn as_callback(
+                &self,
+            ) -> impl Fn(Sha256, Bytes) -> Result<()> + Send + Clone + 'static + use<> {
                 let this = self.clone();
                 move |_, _| {
                     this.set();
@@ -2410,7 +2409,8 @@ mod tests {
             let server = mockito::Server::new();
             let config = make_lfs_config(&server, &cachedir, "test_lfs_proxy_no_http");
 
-            set_var("https_proxy", "fwdproxy:8082");
+            // TODO: Audit that the environment access only happens in single-threaded code.
+            unsafe { set_var("https_proxy", "fwdproxy:8082") };
 
             let lfs = Arc::new(LfsStore::rotated(&lfsdir, &config)?);
             let remote = LfsClient::new(lfs, None, &config)?;
@@ -2443,7 +2443,8 @@ mod tests {
             let server = mockito::Server::new();
             let config = make_lfs_config(&server, &cachedir, "test_lfs_proxy_http");
 
-            set_var("https_proxy", "http://fwdproxy:8082");
+            // TODO: Audit that the environment access only happens in single-threaded code.
+            unsafe { set_var("https_proxy", "http://fwdproxy:8082") };
 
             let lfs = Arc::new(LfsStore::rotated(&lfsdir, &config)?);
             let remote = LfsClient::new(lfs, None, &config)?;
@@ -2479,8 +2480,10 @@ mod tests {
 
             let _m2 = get_lfs_download_mock(&mut server, 200, blob);
 
-            set_var("http_proxy", "http://shouldnt-touch-this:8082");
-            set_var("NO_PROXY", "localhost,127.0.0.1");
+            // TODO: Audit that the environment access only happens in single-threaded code.
+            unsafe { set_var("http_proxy", "http://shouldnt-touch-this:8082") };
+            // TODO: Audit that the environment access only happens in single-threaded code.
+            unsafe { set_var("NO_PROXY", "localhost,127.0.0.1") };
 
             let lfs = Arc::new(LfsStore::rotated(&lfsdir, &config)?);
             let remote = LfsClient::new(lfs, None, &config)?;

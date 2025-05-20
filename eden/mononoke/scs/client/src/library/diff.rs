@@ -218,15 +218,15 @@ async fn make_file_diff_request(
 
 /// Given the paths and sizes of files to diff returns the stream of renderable
 /// structs. The sizes are used to avoid hitting size limit when doing batch requests.
-pub(crate) fn diff_files(
+pub(crate) fn diff_files<T: IntoIterator<Item = (thrift::CommitFileDiffsParamsPathPair, i64)>>(
     connection: &ScsClient,
     commit: thrift::CommitSpecifier,
     other_commit_id: Option<thrift::CommitId>,
-    paths_sizes: impl IntoIterator<Item = (thrift::CommitFileDiffsParamsPathPair, i64)>,
+    paths_sizes: T,
     diff_size_limit: Option<i64>,
     diff_format: thrift::DiffFormat,
     context: i64,
-) -> impl Stream<Item = Result<impl Render<Args = ()>>> {
+) -> impl Stream<Item = Result<impl Render<Args = ()> + use<T>>> + use<T> {
     let mut size_sum: i64 = 0;
     let mut path_count: i64 = 0;
     let mut paths = Vec::new();

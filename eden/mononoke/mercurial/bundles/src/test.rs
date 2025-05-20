@@ -80,8 +80,8 @@ impl<'a> Debug for ByteBuf<'a> {
 
 #[mononoke::test]
 fn test_parse_bzip2() {
-    let gen = Gen::new(20);
-    let mut quickcheck = QuickCheck::new().gen(gen);
+    let r#gen = Gen::new(20);
+    let mut quickcheck = QuickCheck::new().r#gen(r#gen);
     quickcheck.quickcheck(parse_bzip2 as fn(PartialWithErrors<GenWouldBlock>) -> ());
 }
 
@@ -91,8 +91,8 @@ fn parse_bzip2(read_ops: PartialWithErrors<GenWouldBlock>) {
 
 #[mononoke::test]
 fn test_parse_uncompressed() {
-    let gen = Gen::new(20);
-    let mut quickcheck = QuickCheck::new().gen(gen);
+    let r#gen = Gen::new(20);
+    let mut quickcheck = QuickCheck::new().r#gen(r#gen);
     quickcheck.quickcheck(parse_uncompressed as fn(PartialWithErrors<GenWouldBlock>) -> ());
 }
 
@@ -424,8 +424,8 @@ fn verify_cg2(runtime: &Runtime, stream: BoxStream<'static, Result<changegroup::
 
 #[mononoke::test]
 fn test_parse_wirepack() {
-    let gen = Gen::new(20);
-    let mut quickcheck = QuickCheck::new().gen(gen);
+    let r#gen = Gen::new(20);
+    let mut quickcheck = QuickCheck::new().r#gen(r#gen);
     quickcheck.quickcheck(parse_wirepack as fn(PartialWithErrors<GenWouldBlock>) -> ());
 }
 

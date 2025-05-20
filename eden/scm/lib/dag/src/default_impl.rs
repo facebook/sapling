@@ -148,7 +148,7 @@ pub(crate) async fn subdag(this: &(impl DagAlgorithm + ?Sized), set: Set) -> Res
 }
 
 /// Convert `Set` to a `Parents` implementation that only returns vertexes in the set.
-pub(crate) async fn set_to_parents(set: &Set) -> Result<Option<impl Parents>> {
+pub(crate) async fn set_to_parents(set: &Set) -> Result<Option<impl Parents + use<>>> {
     let (id_set, id_map) = match set.to_id_set_and_id_map_in_o1() {
         Some(v) => v,
         None => return Ok(None),

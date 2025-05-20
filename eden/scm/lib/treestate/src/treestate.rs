@@ -696,7 +696,7 @@ mod tests {
         let mut state = TreeState::new(directory, true).expect("open").0;
         let mut rng = ChaChaRng::from_seed([0; 32]);
         for path in &SAMPLE_PATHS {
-            let file = rng.gen();
+            let file = rng.r#gen();
             state.insert(path, &file).expect("insert");
         }
         state
@@ -708,7 +708,7 @@ mod tests {
         let mut state = new_treestate(dir.path());
         let mut rng = ChaChaRng::from_seed([0; 32]);
         for path in &SAMPLE_PATHS {
-            let file: FileStateV2 = rng.gen();
+            let file: FileStateV2 = rng.r#gen();
             assert_eq!(state.get(path).unwrap().unwrap(), &file);
         }
         assert_eq!(state.len(), SAMPLE_PATHS.len());
@@ -737,7 +737,7 @@ mod tests {
                 .expect("open");
         let mut rng = ChaChaRng::from_seed([0; 32]);
         for path in &SAMPLE_PATHS {
-            let file: FileStateV2 = rng.gen();
+            let file: FileStateV2 = rng.r#gen();
             assert_eq!(state.get(path).unwrap().unwrap(), &file);
         }
         assert_eq!(state.len(), SAMPLE_PATHS.len());
@@ -753,7 +753,7 @@ mod tests {
                 .expect("open");
         let mut rng = ChaChaRng::from_seed([0; 32]);
         for path in &SAMPLE_PATHS {
-            let file: FileStateV2 = rng.gen();
+            let file: FileStateV2 = rng.r#gen();
             assert_eq!(state.get(path).unwrap().unwrap(), &file);
         }
         assert_eq!(state.len(), SAMPLE_PATHS.len());
@@ -795,7 +795,7 @@ mod tests {
         let mut state = TreeState::new(dir.as_ref(), true).expect("open").0;
 
         let mut rng = ChaChaRng::from_seed([0; 32]);
-        let mut file = rng.gen();
+        let mut file = rng.r#gen();
         state.insert(b"dir/file", &file).unwrap();
         assert_eq!(
             state.normalize_path(b"dir/file").unwrap().as_ref(),
@@ -830,7 +830,7 @@ mod tests {
         let mut state = TreeState::new(dir.as_ref(), false).expect("open").0;
 
         let mut rng = ChaChaRng::from_seed([0; 32]);
-        let mut file = rng.gen();
+        let mut file = rng.r#gen();
         state.insert(b"dir/file", &file).unwrap();
         assert_eq!(
             std::str::from_utf8(state.normalize_path(b"dir/file").unwrap().as_ref()).unwrap(),
@@ -980,9 +980,9 @@ mod tests {
         assert_eq!(ts.pending_change_count(), 0);
 
         let mut rng = ChaChaRng::from_seed([0; 32]);
-        ts.insert("foo", &rng.gen())?;
-        ts.insert("bar", &rng.gen())?;
-        ts.insert("baz", &rng.gen())?;
+        ts.insert("foo", &rng.r#gen())?;
+        ts.insert("bar", &rng.r#gen())?;
+        ts.insert("baz", &rng.r#gen())?;
         assert_eq!(ts.pending_change_count(), 3);
 
         ts.remove("foo")?;
@@ -1008,7 +1008,7 @@ mod tests {
         let mut ts = TreeState::new(dir.path(), false)?.0;
 
         let mut rng = ChaChaRng::from_seed([0; 32]);
-        ts.insert("a/b/c/d", &rng.gen())?;
+        ts.insert("a/b/c/d", &rng.r#gen())?;
 
         assert_eq!(ts.normalize_path(b"A").unwrap().as_ref(), b"A");
         assert_eq!(ts.normalize_path(b"A/a").unwrap().as_ref(), b"a/a");

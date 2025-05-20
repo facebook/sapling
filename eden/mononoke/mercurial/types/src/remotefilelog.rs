@@ -30,7 +30,7 @@ pub fn convert_parents_to_remotefilelog_format<'a>(
         HgParents::Two(p1, p2) => (p1.clone(), p2.clone()),
     };
 
-    if let Some((ref copied_from, copied_rev)) = copyfrom {
+    if let Some((copied_from, copied_rev)) = copyfrom {
         // Mercurial has a complicated copy/renames logic.
         // If (path1, filenode1) is copied/renamed from (path2, filenode2),
         // filenode1's p1 is set to filenode2, and copy_from path is set to path2

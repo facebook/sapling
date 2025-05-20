@@ -171,7 +171,8 @@ mod env_lock {
     fn env_reset() {
         for name in ["https_proxy", "http_proxy", "NO_PROXY"] {
             if std::env::var_os(name).is_some() {
-                std::env::remove_var(name)
+                // TODO: Audit that the environment access only happens in single-threaded code.
+                unsafe { std::env::remove_var(name) }
             }
         }
     }

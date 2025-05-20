@@ -78,7 +78,7 @@ pub(crate) trait StressTestRunner {
 }
 
 macro_rules! maybe_print_timing {
-    ($print_timing:expr, $fun:expr) => {
+    ($print_timing:expr_2021, $fun:expr_2021) => {
         if $print_timing {
             Box::pin(async {
                 let before = Instant::now();

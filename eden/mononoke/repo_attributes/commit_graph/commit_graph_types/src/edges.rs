@@ -50,7 +50,7 @@ impl ChangesetNode {
             skip_tree_depth: self.skip_tree_depth as i64,
             p1_linear_depth: self.p1_linear_depth as i64,
             subtree_source_generation: Some(self.subtree_source_generation.value() as i64)
-                .filter(|gen| *gen != self.generation.value() as i64)
+                .filter(|r#gen| *r#gen != self.generation.value() as i64)
                 .map(thrift::Generation),
             subtree_source_depth: Some(self.subtree_source_depth as i64)
                 .filter(|depth| *depth != self.skip_tree_depth as i64),
@@ -63,7 +63,7 @@ impl ChangesetNode {
             generation: Generation::new(node.generation.0 as u64),
             subtree_source_generation: Generation::new(
                 node.subtree_source_generation
-                    .map_or(node.generation.0, |gen| gen.0) as u64,
+                    .map_or(node.generation.0, |r#gen| r#gen.0) as u64,
             ),
             skip_tree_depth: node.skip_tree_depth as u64,
             p1_linear_depth: node.p1_linear_depth as u64,
@@ -354,7 +354,7 @@ impl CompactChangesetEdges {
             skip_tree_skew_ancestor: self.skip_tree_skew_ancestor.map(|id| id.get() as i32),
             p1_linear_skew_ancestor: self.p1_linear_skew_ancestor.map(|id| id.get() as i32),
             subtree_source_generation: Some(self.subtree_source_generation as i32)
-                .filter(|gen| *gen != self.generation as i32),
+                .filter(|r#gen| *r#gen != self.generation as i32),
             subtree_source_depth: Some(self.subtree_source_depth as i32)
                 .filter(|depth| *depth != self.skip_tree_depth as i32),
             subtree_sources: Some(

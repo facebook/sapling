@@ -243,7 +243,7 @@ impl LoggingArgs {
     fn create_root_log_drain(
         &self,
         fb: FacebookInit,
-    ) -> Result<impl Drain<Ok = (), Err = Never> + Clone> {
+    ) -> Result<impl Drain<Ok = (), Err = Never> + Clone + use<>> {
         self.setup_panic_handler();
 
         let stdlog_env = "RUST_LOG";

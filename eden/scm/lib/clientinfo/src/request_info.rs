@@ -301,8 +301,10 @@ mod tests {
     #[test]
     fn test_static_client_requst_info_with_env_vars() {
         let correlator = "test1234";
-        set_var(ENV_SAPLING_CLIENT_CORRELATOR, correlator);
-        set_var(ENV_SAPLING_CLIENT_ENTRY_POINT, "isl");
+        // TODO: Audit that the environment access only happens in single-threaded code.
+        unsafe { set_var(ENV_SAPLING_CLIENT_CORRELATOR, correlator) };
+        // TODO: Audit that the environment access only happens in single-threaded code.
+        unsafe { set_var(ENV_SAPLING_CLIENT_ENTRY_POINT, "isl") };
         let cri = get_client_request_info();
         assert_eq!(cri.entry_point, ClientEntryPoint::InteractiveSmartlog);
         assert_eq!(cri.correlator, correlator.to_owned());

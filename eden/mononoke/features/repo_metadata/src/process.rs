@@ -48,13 +48,13 @@ use crate::types::TextFileMetadata;
 
 /// Produces stream of file and directory metadata items for the given
 /// bookmark in the given repo
-pub async fn repo_metadata_for_bookmark<'a>(
+pub async fn repo_metadata_for_bookmark<'a, T: Repo>(
     ctx: &'a CoreContext,
-    repo: &'a impl Repo,
+    repo: &'a T,
     bookmark: &BookmarkKey,
     cs_id: ChangesetId,
     mode: RepoMetadataLoggerMode,
-) -> Result<impl Stream<Item = Result<MetadataItem>> + 'a> {
+) -> Result<impl Stream<Item = Result<MetadataItem>> + use<'a, T>> {
     match mode {
         RepoMetadataLoggerMode::Full => process_changeset(ctx, repo, cs_id).await,
         RepoMetadataLoggerMode::Incremental => {

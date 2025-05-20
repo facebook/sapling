@@ -22,7 +22,7 @@ pub use write_ahead_log::SqlBlobstoreWal;
 #[derive(Clone, Debug, Eq, PartialEq, Hash, mysql::OptTryFromRowField)]
 pub struct OperationKey(pub Uuid);
 impl OperationKey {
-    pub fn gen() -> OperationKey {
+    pub fn r#gen() -> OperationKey {
         OperationKey(Uuid::new_v4())
     }
 

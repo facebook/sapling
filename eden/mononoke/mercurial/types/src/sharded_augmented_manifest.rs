@@ -259,10 +259,10 @@ impl ShardedHgAugmentedManifest {
     ) -> Result<()> {
         w.write_all(path.as_ref())?;
         let (tag, sapling_hash) = match augmented_manifest_entry {
-            HgAugmentedManifestEntry::DirectoryNode(ref directory) => {
+            HgAugmentedManifestEntry::DirectoryNode(directory) => {
                 (Type::Tree.augmented_manifest_suffix()?, directory.treenode)
             }
-            HgAugmentedManifestEntry::FileNode(ref file) => {
+            HgAugmentedManifestEntry::FileNode(file) => {
                 let tag = Type::File(file.file_type).augmented_manifest_suffix()?;
                 (tag, file.filenode)
             }
@@ -282,16 +282,16 @@ impl ShardedHgAugmentedManifest {
     ) -> Result<()> {
         // Representation of content addressed Digest.
         let (id, size) = match augmented_manifest_entry {
-            HgAugmentedManifestEntry::DirectoryNode(ref directory) => (
+            HgAugmentedManifestEntry::DirectoryNode(directory) => (
                 directory.augmented_manifest_id,
                 directory.augmented_manifest_size,
             ),
-            HgAugmentedManifestEntry::FileNode(ref file) => (file.content_blake3, file.total_size),
+            HgAugmentedManifestEntry::FileNode(file) => (file.content_blake3, file.total_size),
         };
         w.write_all(id.to_hex().as_bytes())?;
         w.write_all(b" ")?;
         w.write_all(size.to_string().as_bytes())?;
-        if let HgAugmentedManifestEntry::FileNode(ref file) = augmented_manifest_entry {
+        if let HgAugmentedManifestEntry::FileNode(file) = augmented_manifest_entry {
             w.write_all(b" ")?;
             w.write_all(file.content_sha1.to_hex().as_bytes())?;
             w.write_all(b" ")?;

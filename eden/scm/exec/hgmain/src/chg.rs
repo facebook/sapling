@@ -15,7 +15,7 @@ use libc::c_char;
 use libc::c_int;
 
 #[cfg_attr(not(fb_buck_build), link(name = "chg", kind = "static"))]
-extern "C" {
+unsafe extern "C" {
     fn chg_main(
         argc: c_int,
         argv: *mut *mut c_char,
@@ -57,7 +57,8 @@ fn args_to_local_cstrings() -> Vec<CString> {
 /// into `name=value` `CString`s, suitable
 /// to be passed as `envp` to `chg_main`
 fn env_to_local_cstrings() -> Vec<CString> {
-    std::env::set_var("CHGHG", std::env::current_exe().unwrap());
+    // TODO: Audit that the environment access only happens in single-threaded code.
+    unsafe { std::env::set_var("CHGHG", std::env::current_exe().unwrap()) };
     std::env::vars_os()
         .map(|(name, value)| {
             let mut envstr = OsString::new();

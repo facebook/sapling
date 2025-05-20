@@ -13,7 +13,7 @@ use clap::Parser;
 
 use super::dbio;
 use super::fsio;
-use super::gen;
+use super::r#gen;
 use super::traversal;
 use super::types;
 use crate::ExitCode;
@@ -99,12 +99,12 @@ impl crate::Subcommand for BenchCmd {
                 read_file_via,
                 drop_kernel_caches,
                 no_progress: _,
-            } => match gen::TestDir::validate(
+            } => match r#gen::TestDir::validate(
                 test_dir,
                 *read_file_via == types::ReadFileMethod::Thrift,
             ) {
                 Ok(test_dir) => {
-                    let random_data = gen::RandomData::new(*number_of_files, *chunk_size);
+                    let random_data = r#gen::RandomData::new(*number_of_files, *chunk_size);
                     println!(
                         "The random data generated with {} chunks with {:.0} KiB each, with the total size of {:.2} GiB.",
                         random_data.number_of_files,
@@ -147,9 +147,9 @@ impl crate::Subcommand for BenchCmd {
                 number_of_files,
                 chunk_size,
                 no_progress: _,
-            } => match gen::TestDir::validate(test_dir, false) {
+            } => match r#gen::TestDir::validate(test_dir, false) {
                 Ok(test_dir) => {
-                    let random_data = gen::RandomData::new(*number_of_files, *chunk_size);
+                    let random_data = r#gen::RandomData::new(*number_of_files, *chunk_size);
                     println!(
                         "The random data generated with {} chunks with {:.0} KiB each, with the total size of {:.2} GiB.",
                         random_data.number_of_files,

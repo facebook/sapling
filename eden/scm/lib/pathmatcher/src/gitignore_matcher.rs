@@ -153,7 +153,7 @@ impl GitignoreMatcher {
         let path = path.as_ref();
         // Everything is ignored regardless if this directory is ignored.
         if self.ignored {
-            if let Some(ref mut explain) = explain {
+            if let Some(explain) = explain {
                 explain.parent_ignored(path, root);
             }
             return MatchResult::Ignored;
@@ -161,7 +161,7 @@ impl GitignoreMatcher {
 
         // If explain information is requested, always check this (parent)
         // directory to explain overridden rules.
-        if let Some(ref mut explain) = explain {
+        if let Some(explain) = explain {
             let matched = self.ignore.matched(path, is_dir);
             match matched {
                 Match::Ignore(glob) => explain.add_glob(glob),

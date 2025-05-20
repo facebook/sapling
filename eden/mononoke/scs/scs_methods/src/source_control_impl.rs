@@ -470,7 +470,7 @@ impl SourceControlServiceImpl {
         &self,
         ctx: CoreContext,
         specifier: ChangesetSpecifier,
-    ) -> impl FnOnce(RepoEphemeralStore) -> BoxFuture<'static, anyhow::Result<Option<BubbleId>>>
+    ) -> impl FnOnce(RepoEphemeralStore) -> BoxFuture<'static, anyhow::Result<Option<BubbleId>>> + use<>
     {
         move |ephemeral| async move { specifier.bubble_id(&ctx, ephemeral).await }.boxed()
     }
@@ -1082,11 +1082,11 @@ fn check_memory_usage(
 
 // Define a macro to construct a CoreContext based on the thrift parameters.
 macro_rules! create_ctx {
-    ( $service_impl:expr, $method_name:ident, $req_ctxt:ident, $params_name:ident ) => {
+    ( $service_impl:expr_2021, $method_name:ident, $req_ctxt:ident, $params_name:ident ) => {
         $service_impl.create_ctx(stringify!($method_name), $req_ctxt, None, &$params_name)
     };
 
-    ( $service_impl:expr, $method_name:ident, $req_ctxt:ident, $obj_name:ident, $params_name:ident ) => {
+    ( $service_impl:expr_2021, $method_name:ident, $req_ctxt:ident, $obj_name:ident, $params_name:ident ) => {
         $service_impl.create_ctx(
             stringify!($method_name),
             $req_ctxt,

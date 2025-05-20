@@ -71,7 +71,7 @@ impl CommitGraphBulkFetcher {
         range: Range<u64>,
         sql_chunk_size: u64,
         read_from_master: bool,
-    ) -> impl Stream<Item = Result<BulkFetcherStreamItem>> {
+    ) -> impl Stream<Item = Result<BulkFetcherStreamItem>> + use<> {
         self.stream_impl(
             ctx,
             range,
@@ -92,7 +92,7 @@ impl CommitGraphBulkFetcher {
         range: Range<u64>,
         sql_chunk_size: u64,
         read_from_master: bool,
-    ) -> impl Stream<Item = Result<BulkFetcherStreamItem>> {
+    ) -> impl Stream<Item = Result<BulkFetcherStreamItem>> + use<> {
         self.stream_impl(
             ctx,
             range,
@@ -109,7 +109,7 @@ impl CommitGraphBulkFetcher {
         sql_chunk_size: u64,
         read_from_master: bool,
         direction: Direction,
-    ) -> impl Stream<Item = Result<BulkFetcherStreamItem>> {
+    ) -> impl Stream<Item = Result<BulkFetcherStreamItem>> + use<> {
         struct StreamState {
             storage: Arc<SqlCommitGraphStorage>,
             ctx: CoreContext,

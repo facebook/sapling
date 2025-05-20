@@ -251,7 +251,8 @@ impl<R: MononokeRepo> HgRepoContext<R> {
     pub async fn download_file(
         &self,
         upload_token: UploadToken,
-    ) -> Result<Option<impl Stream<Item = Result<Bytes, Error>> + 'static>, MononokeError> {
+    ) -> Result<Option<impl Stream<Item = Result<Bytes, Error>> + 'static + use<R>>, MononokeError>
+    {
         Ok(filestore::fetch(
             self.bubble_blobstore(upload_token.data.bubble_id.map(BubbleId::new))
                 .await?,
@@ -461,13 +462,16 @@ impl<R: MononokeRepo> HgRepoContext<R> {
     ///
     /// This method is equivalent to Mercurial's `gettreepack` wire protocol
     /// command.
-    pub fn trees_under_path(
+    pub fn trees_under_path<
+        T: IntoIterator<Item = HgManifestId>,
+        U: IntoIterator<Item = HgManifestId>,
+    >(
         &self,
         path: MPath,
-        root_versions: impl IntoIterator<Item = HgManifestId>,
-        base_versions: impl IntoIterator<Item = HgManifestId>,
+        root_versions: T,
+        base_versions: U,
         depth: Option<usize>,
-    ) -> impl TryStream<Ok = (HgTreeContext<R>, MPath), Error = MononokeError> {
+    ) -> impl TryStream<Ok = (HgTreeContext<R>, MPath), Error = MononokeError> + use<R, T, U> {
         let ctx = self.ctx().clone();
         let repo = self.repo_ctx.repo();
         let args = GettreepackArgs {
@@ -730,7 +734,9 @@ impl<R: MononokeRepo> HgRepoContext<R> {
         common: Vec<HgChangesetId>,
         heads: Vec<HgChangesetId>,
     ) -> Result<
-        impl Stream<Item = Result<(HgChangesetId, Vec<HgChangesetId>), MononokeError>> + 'static,
+        impl Stream<Item = Result<(HgChangesetId, Vec<HgChangesetId>), MononokeError>>
+        + 'static
+        + use<R>,
         MononokeError,
     > {
         let ctx = self.ctx().clone();

@@ -76,7 +76,7 @@ pub(crate) fn minimize_file_change_set<I: IntoIterator<Item = (NonRootMPath, Fil
 
     let filtered_removes = removes
         .into_iter()
-        .filter(|(ref mpath, _)| !prefix_path_was_added(mpath.clone()));
+        .filter(|(mpath, _)| !prefix_path_was_added(mpath.clone()));
     let mut result: SortedVectorMap<_, _> = filtered_removes.collect();
     result.append(&mut adds);
     result

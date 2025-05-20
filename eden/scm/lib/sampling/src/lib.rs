@@ -137,7 +137,7 @@ impl SamplingConfig {
 /// can be any serde type, not just tracing's limited `Value`.
 #[macro_export]
 macro_rules! log {
-    (target: $target:expr $(, $key:ident = $value:expr)*) => {
+    (target: $target:expr_2021 $(, $key:ident = $value:expr_2021)*) => {
         'block: {
             if let Some(Some(config)) = $crate::CONFIG.get() {
                 if let Some(category) = config.category($target) {
@@ -152,7 +152,7 @@ macro_rules! log {
 /// Log an event to the `sl_events` tracing target.
 #[macro_export]
 macro_rules! log_event {
-    ($event_type:expr $(, $key:ident = $value:expr )*) => {
+    ($event_type:expr_2021 $(, $key:ident = $value:expr_2021 )*) => {
         let correlator = $crate::get_client_request_info().correlator;
 
         tracing::info!(

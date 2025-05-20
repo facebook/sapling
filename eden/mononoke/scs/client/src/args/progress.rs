@@ -56,11 +56,15 @@ pub(crate) enum ProgressRender<I: Render<Args = ()>> {
 }
 
 impl ProgressArgs {
-    pub(crate) fn render_progress<I: Render<Args = ()> + 'static>(
+    pub(crate) fn render_progress<
+        I: Render<Args = ()> + 'static,
+        T: Stream<Item = Result<I>> + Send + 'static,
+        U: Fn() -> ProgressOutput + Send + Clone + 'static,
+    >(
         &self,
-        render_stream: impl Stream<Item = Result<I>> + Send + 'static,
-        get_progress: impl Fn() -> ProgressOutput + Send + Clone + 'static,
-    ) -> impl Stream<Item = Result<ProgressRender<I>>> + Send + 'static {
+        render_stream: T,
+        get_progress: U,
+    ) -> impl Stream<Item = Result<ProgressRender<I>>> + Send + 'static + use<I, T, U> {
         if self.no_progress {
             return render_stream.map_ok(ProgressRender::Item).left_stream();
         }

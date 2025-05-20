@@ -194,7 +194,7 @@ async fn insert_filenodes(
         ));
 
         if let Some(ref copyinfo) = filenode.info.copyfrom {
-            let (ref frompath, ref fromnode) = copyinfo;
+            let (frompath, fromnode) = copyinfo;
             let from_pwh = PathHash::from_repo_path(frompath);
             if from_pwh.is_tree != ph.is_tree {
                 let e = ErrorKind::InvalidCopy(filenode.path.clone(), frompath.clone());

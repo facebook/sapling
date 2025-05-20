@@ -41,7 +41,7 @@ unsafe impl RawRwLockTrait for WrappedRwLock {
     }
 
     unsafe fn unlock_shared(&self) {
-        self.inner.unlock_shared()
+        unsafe { self.inner.unlock_shared() }
     }
 
     fn lock_exclusive(&self) {
@@ -53,9 +53,11 @@ unsafe impl RawRwLockTrait for WrappedRwLock {
     }
 
     unsafe fn unlock_exclusive(&self) {
-        self.inner.unlock_exclusive();
-        if let Some(f) = self.on_unlock_exclusive.get() {
-            f()
+        unsafe {
+            self.inner.unlock_exclusive();
+            if let Some(f) = self.on_unlock_exclusive.get() {
+                f()
+            }
         }
     }
 }

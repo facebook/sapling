@@ -288,20 +288,26 @@ impl Iterator for FetchResponseHeaders {
     type Item = Bytes;
 
     fn next(&mut self) -> Option<Self::Item> {
-        if let Some(acknowledgements) = self.acknowledgements.take() {
-            Some(acknowledgements)
-        } else if !self.include_pack() {
-            // If we are not sending the packfile, we do not send any other section
-            // except acknowledgements
-            None
-        } else if let Some(shallow_info) = self.shallow_info.take() {
-            Some(shallow_info)
-        } else if let Some(wanted_refs) = self.wanted_refs.take() {
-            Some(wanted_refs)
-        } else if let Some(packfile_uris) = self.packfile_uris.take() {
-            Some(packfile_uris)
-        } else {
-            self.pack_header.take()
+        match self.acknowledgements.take() {
+            Some(acknowledgements) => Some(acknowledgements),
+            _ => {
+                if !self.include_pack() {
+                    // If we are not sending the packfile, we do not send any other section
+                    // except acknowledgements
+                    None
+                } else {
+                    match self.shallow_info.take() {
+                        Some(shallow_info) => Some(shallow_info),
+                        _ => match self.wanted_refs.take() {
+                            Some(wanted_refs) => Some(wanted_refs),
+                            _ => match self.packfile_uris.take() {
+                                Some(packfile_uris) => Some(packfile_uris),
+                                _ => self.pack_header.take(),
+                            },
+                        },
+                    }
+                }
+            }
         }
     }
 }
@@ -354,7 +360,7 @@ async fn bundle_uri(
     state: &mut State,
     request_context: &RepositoryRequestContext,
     git_host: GitHost,
-) -> Result<impl TryIntoResponse, Error> {
+) -> Result<impl TryIntoResponse + use<>, Error> {
     let mut out: Vec<u8> = b"bundle.version=1\nbundle.mode=all".into();
 
     if !request_context.ctx.metadata().client_untrusted() {
@@ -416,7 +422,7 @@ async fn bundle_uri(
 pub async fn ls_refs(
     request_context: &RepositoryRequestContext,
     args: LsRefsArgs,
-) -> Result<impl TryIntoResponse, Error> {
+) -> Result<impl TryIntoResponse + use<>, Error> {
     let response = ls_refs_response(
         &request_context.ctx,
         &request_context.repo,
@@ -434,7 +440,7 @@ pub async fn fetch(
     request_context: &RepositoryRequestContext,
     args: FetchArgs,
     scuba_handler: MononokeGitScubaHandler,
-) -> Result<impl TryIntoResponse, Error> {
+) -> Result<impl TryIntoResponse + use<>, Error> {
     let (writer, reader) = mpsc::channel::<Bytes>(100_000_000);
     let (progress_writer, mut progress_reader) = mpsc::channel::<String>(50);
     let (error_writer, mut err_reader) = mpsc::channel::<String>(50);
@@ -558,7 +564,9 @@ async fn git_fetch_message(request_context: &RepositoryRequestContext) -> Result
 }
 
 /// Generate packline encoded error response that Git client understands
-async fn git_error_message(error: &anyhow::Error) -> Result<impl TryIntoResponse, HttpError> {
+async fn git_error_message(
+    error: &anyhow::Error,
+) -> Result<impl TryIntoResponse + use<>, HttpError> {
     let error_message = format!("{:?}", error);
     let mut buf = Vec::with_capacity(error_message.len());
     write_error_channel(error_message.as_ref(), &mut buf)

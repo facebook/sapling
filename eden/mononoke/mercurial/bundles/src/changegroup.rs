@@ -79,8 +79,8 @@ mod test {
         // Each test case gets pretty big (O(size**2) parts (because of
         // filelogs), each part with O(size) deltas), so reduce the size a bit
         // and generate a smaller number of test cases.
-        let gen = Gen::new(50);
-        let mut quickcheck = QuickCheck::new().gen(gen).tests(50);
+        let r#gen = Gen::new(50);
+        let mut quickcheck = QuickCheck::new().r#gen(r#gen).tests(50);
         // Use NoErrors here because:
         // - AsyncWrite impls aren't supposed to return Interrupted errors.
         // - WouldBlock would require parking and unparking the task, which
@@ -98,8 +98,8 @@ mod test {
     #[mononoke::test]
     fn test_roundtrip_giant() {
         // Test a smaller number of cases with much larger inputs.
-        let gen = Gen::new(200);
-        let mut quickcheck = QuickCheck::new().gen(gen).tests(1);
+        let r#gen = Gen::new(200);
+        let mut quickcheck = QuickCheck::new().r#gen(r#gen).tests(1);
         quickcheck.quickcheck(
             roundtrip
                 as fn(

@@ -38,7 +38,7 @@ pub struct FetchMetrics {
 
 /// Define a static Counter for FetchMetrics fields, and then construct a static FetchMetrics instance.
 macro_rules! static_fetch_metrics {
-    ($name:ident, $prefix:expr) => {
+    ($name:ident, $prefix:expr_2021) => {
         paste::paste! {
             mod [<fetch_metrics_ $name:lower>] {
                 pub static REQUESTS: ::metrics::Counter = ::metrics::Counter::new_counter(concat!($prefix, ".requests"));
@@ -194,7 +194,7 @@ impl WriteMetrics {
         self.err += keys;
     }
 
-    pub(crate) fn metrics(&self) -> impl Iterator<Item = (&'static str, usize)> {
+    pub(crate) fn metrics(&self) -> impl Iterator<Item = (&'static str, usize)> + use<> {
         [("items", self.items), ("ok", self.ok), ("err", self.err)]
             .into_iter()
             .filter(|&(_, v)| v != 0)
@@ -230,7 +230,7 @@ impl ApiMetrics {
         }
     }
 
-    pub(crate) fn metrics(&self) -> impl Iterator<Item = (&'static str, usize)> {
+    pub(crate) fn metrics(&self) -> impl Iterator<Item = (&'static str, usize)> + use<> {
         [
             ("calls", self.calls),
             ("keys", self.keys),

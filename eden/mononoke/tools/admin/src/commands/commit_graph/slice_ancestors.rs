@@ -62,8 +62,8 @@ pub async fn slice_ancestors(
                         ))
                     })
                     .buffered(5)
-                    .try_filter_map(|(cs_id, gen)| async move {
-                        if gen.value() >= args.min_generation {
+                    .try_filter_map(|(cs_id, r#gen)| async move {
+                        if r#gen.value() >= args.min_generation {
                             Ok(Some(cs_id))
                         } else {
                             Ok(None)

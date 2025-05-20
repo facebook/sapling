@@ -1011,7 +1011,8 @@ pub(crate) mod tests {
     #[test]
     fn test_parse_include_expand() {
         use std::env;
-        env::set_var("FOO", "f");
+        // TODO: Audit that the environment access only happens in single-threaded code.
+        unsafe { env::set_var("FOO", "f") };
 
         let dir = TempDir::with_prefix("test_parse_include_expand.").unwrap();
         write_file(

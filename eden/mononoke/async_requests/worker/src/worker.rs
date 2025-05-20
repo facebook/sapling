@@ -191,7 +191,7 @@ impl AsyncMethodRequestWorker {
         ctx: &CoreContext,
         queue: Arc<AsyncMethodRequestQueue>,
         will_exit: Arc<AtomicBool>,
-    ) -> impl Stream<Item = (RequestId, AsynchronousRequestParams)> {
+    ) -> impl Stream<Item = (RequestId, AsynchronousRequestParams)> + use<> {
         let claimed_by = ClaimedBy(self.name.clone());
         let sleep_time = Duration::from_millis(DEQUEUE_STREAM_SLEEP_TIME);
         Self::request_stream_inner(

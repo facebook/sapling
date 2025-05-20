@@ -293,7 +293,7 @@ macro_rules! assert_trace_rename {
 }
 
 macro_rules! assert_path_copies {
-    ($copy_trace:ident $src:tt $dst:tt, [$( $key:expr => $val:expr ),*]) => {{
+    ($copy_trace:ident $src:tt $dst:tt, [$( $key:expr_2021 => $val:expr_2021 ),*]) => {{
         let src = vertex_from_str(stringify!($src));
         let dst = vertex_from_str(stringify!($dst));
         let result = $copy_trace

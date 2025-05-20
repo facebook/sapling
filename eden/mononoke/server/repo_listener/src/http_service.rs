@@ -102,11 +102,11 @@ impl HttpError {
         };
 
         let body = match self {
-            Self::BadRequest(ref e) => Body::from(format!("{:#}", e)),
+            Self::BadRequest(e) => Body::from(format!("{:#}", e)),
             Self::Forbidden => Body::empty(),
             Self::NotFound => Body::empty(),
             Self::MethodNotAllowed => Body::empty(),
-            Self::InternalServerError(ref e) => Body::from(format!("{:#}", e)),
+            Self::InternalServerError(e) => Body::from(format!("{:#}", e)),
         };
 
         Response::builder().status(status).body(body)

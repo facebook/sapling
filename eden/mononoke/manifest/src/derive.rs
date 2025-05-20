@@ -62,7 +62,10 @@ pub async fn flatten_subentries<Store, TreeId, Leaf, Ctx, TrieMapType>(
     ctx: &CoreContext,
     blobstore: &Store,
     subentries: TreeInfoSubentries<TreeId, Leaf, Ctx, TrieMapType>,
-) -> Result<impl Iterator<Item = (MPathElement, (Option<Ctx>, Entry<TreeId, Leaf>))>>
+) -> Result<
+    impl Iterator<Item = (MPathElement, (Option<Ctx>, Entry<TreeId, Leaf>))>
+    + use<Store, TreeId, Leaf, Ctx, TrieMapType>,
+>
 where
     TrieMapType: TrieMapOps<Store, Entry<TreeId, Leaf>>,
 {

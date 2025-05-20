@@ -54,7 +54,7 @@ pub fn repo_handler(mononoke: Arc<Mononoke<Repo>>, repo_name: &str) -> anyhow::R
     };
     let maybe_backup_repo_source = match &base.backup_repo_config {
         None => None,
-        Some(ref backup_repo_config) => {
+        Some(backup_repo_config) => {
             let (orig_repo_name, source_repo_name) = (
                 source_repo.repo_identity().name(),
                 &backup_repo_config.source_repo_name,

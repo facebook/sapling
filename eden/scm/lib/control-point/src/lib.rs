@@ -190,7 +190,8 @@ mod tests {
         let dir = TempDir::with_prefix("testdir.").expect("tempdir");
         let file = dir.path().join("control_point_file");
         let response_file = file.with_extension("response");
-        std::env::set_var(FILE_NAME_ENV, &file);
+        // TODO: Audit that the environment access only happens in single-threaded code.
+        unsafe { std::env::set_var(FILE_NAME_ENV, &file) };
 
         set_actions(
             &file,

@@ -29,8 +29,8 @@ use thrift_types::edenfs::MountId;
 use thrift_types::edenfs::ScmBlobOrError;
 use thrift_types::edenfs::SyncBehavior;
 
-use super::gen::RandomData;
-use super::gen::TestDir;
+use super::r#gen::RandomData;
+use super::r#gen::TestDir;
 use super::types;
 use super::types::Benchmark;
 use super::types::BenchmarkType;

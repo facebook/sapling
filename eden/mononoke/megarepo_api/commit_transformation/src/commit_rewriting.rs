@@ -518,7 +518,7 @@ pub fn create_directory_source_to_target_multi_mover(
 ) -> Result<DirectoryMultiMover, Error> {
     // We apply the longest prefix first
     let mut overrides = mapping_rules.overrides.into_iter().collect::<Vec<_>>();
-    overrides.sort_unstable_by_key(|(ref prefix, _)| prefix.len());
+    overrides.sort_unstable_by_key(|(prefix, _)| prefix.len());
     overrides.reverse();
     let prefix = MPath::new(mapping_rules.default_prefix)?;
 

@@ -406,7 +406,7 @@ fn get_changeset_stream(
     changeset: Option<HgNodeHash>,
     skip: Option<usize>,
     commits_limit: Option<usize>,
-) -> impl Stream<Item = Result<(RevIdx, HgNodeHash), Error>> + 'static {
+) -> impl Stream<Item = Result<(RevIdx, HgNodeHash), Error>> + 'static + use<> {
     let changesets = match changeset {
         Some(hash) => {
             let maybe_idx = revlogrepo.get_rev_idx_for_changeset(HgChangesetId::new(hash));

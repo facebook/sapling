@@ -1300,8 +1300,10 @@ impl<R: MononokeRepo> RepoContext<R> {
         prefix: Option<&str>,
         after: Option<&str>,
         limit: Option<u64>,
-    ) -> Result<impl Stream<Item = Result<(String, ChangesetId), MononokeError>> + '_, MononokeError>
-    {
+    ) -> Result<
+        impl Stream<Item = Result<(String, ChangesetId), MononokeError>> + use<'_, R>,
+        MononokeError,
+    > {
         if include_scratch {
             if prefix.is_none() {
                 return Err(MononokeError::InvalidRequest(

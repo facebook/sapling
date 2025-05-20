@@ -71,9 +71,9 @@ impl LazyFile {
     fn hgid(&self) -> Option<HgId> {
         use LazyFile::*;
         match self {
-            IndexedLog(ref entry, _) => Some(entry.node()),
-            Lfs(_, ref ptr, _) => Some(ptr.hgid()),
-            SaplingRemoteApi(ref entry, _) => Some(entry.key().hgid),
+            IndexedLog(entry, _) => Some(entry.node()),
+            Lfs(_, ptr, _) => Some(ptr.hgid()),
+            SaplingRemoteApi(entry, _) => Some(entry.key().hgid),
             Cas(_) => None,
         }
     }
@@ -115,7 +115,7 @@ impl LazyFile {
                 };
                 (Blob::Bytes(blob.clone()), content_header)
             }
-            SaplingRemoteApi(ref entry, format) => {
+            SaplingRemoteApi(entry, format) => {
                 let (content, header) = split_file_metadata(&entry.data()?, *format);
                 (Blob::Bytes(content), header)
             }
@@ -127,9 +127,9 @@ impl LazyFile {
     pub(crate) fn hg_content(&self) -> Result<Bytes> {
         use LazyFile::*;
         Ok(match self {
-            IndexedLog(ref entry, _) => entry.content()?,
-            Lfs(ref blob, ref ptr, _) => rebuild_metadata(blob.clone(), ptr),
-            SaplingRemoteApi(ref entry, _) => entry.data()?,
+            IndexedLog(entry, _) => entry.content()?,
+            Lfs(blob, ptr, _) => rebuild_metadata(blob.clone(), ptr),
+            SaplingRemoteApi(entry, _) => entry.data()?,
             Cas(_) => bail!("CAS data has no copy info"),
         })
     }
@@ -137,12 +137,12 @@ impl LazyFile {
     pub(crate) fn metadata(&self) -> Result<Metadata> {
         use LazyFile::*;
         Ok(match self {
-            IndexedLog(ref entry, _) => entry.metadata().clone(),
-            Lfs(_, ref ptr, _) => Metadata {
+            IndexedLog(entry, _) => entry.metadata().clone(),
+            Lfs(_, ptr, _) => Metadata {
                 size: Some(ptr.size()),
                 flags: None,
             },
-            SaplingRemoteApi(ref entry, _) => entry.metadata()?.clone(),
+            SaplingRemoteApi(entry, _) => entry.metadata()?.clone(),
             Cas(data) => Metadata {
                 size: Some(data.len() as u64),
                 flags: None,
@@ -154,8 +154,8 @@ impl LazyFile {
     pub(crate) fn indexedlog_cache_entry(&self, node: Id20) -> Result<Option<Entry>> {
         use LazyFile::*;
         Ok(match self {
-            IndexedLog(ref entry, _) => Some(entry.clone()),
-            SaplingRemoteApi(ref entry, _) => {
+            IndexedLog(entry, _) => Some(entry.clone()),
+            SaplingRemoteApi(entry, _) => {
                 Some(Entry::new(node, entry.data()?, entry.metadata()?.clone()))
             }
             // LFS Files should be written to LfsCache instead

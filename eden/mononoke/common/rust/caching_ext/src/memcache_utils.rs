@@ -46,7 +46,7 @@ impl MemcacheHandler {
 
     pub async fn get(&self, key: String) -> Result<Option<Bytes>> {
         match self {
-            MemcacheHandler::Real(ref client) => {
+            MemcacheHandler::Real(client) => {
                 client.get(key).await.map(|value| value.map(Bytes::from))
             }
             MemcacheHandler::Mock(store) => Ok(store.get(&key)),
@@ -61,7 +61,7 @@ impl MemcacheHandler {
         V: 'static,
     {
         match self {
-            MemcacheHandler::Real(ref client) => client.set(key, value).await,
+            MemcacheHandler::Real(client) => client.set(key, value).await,
             MemcacheHandler::Mock(store) => {
                 store.set(&key, value.into());
                 Ok(())
@@ -77,7 +77,7 @@ impl MemcacheHandler {
         V: 'static,
     {
         match self {
-            MemcacheHandler::Real(ref client) => client.set_with_ttl(key, value, duration).await,
+            MemcacheHandler::Real(client) => client.set_with_ttl(key, value, duration).await,
             MemcacheHandler::Mock(_) => {
                 // For now we ignore TTLs here
                 self.set(key, value).await
@@ -99,16 +99,14 @@ impl MemcacheHandler {
         use std::sync::atomic::Ordering;
         match self {
             MemcacheHandler::Real(_) | MemcacheHandler::Noop => unimplemented!(),
-            MemcacheHandler::Mock(MockStore { ref get_count, .. }) => {
-                get_count.load(Ordering::SeqCst)
-            }
+            MemcacheHandler::Mock(MockStore { get_count, .. }) => get_count.load(Ordering::SeqCst),
         }
     }
 
     pub fn mock_store(&self) -> Option<&MockStore<Bytes>> {
         match self {
             MemcacheHandler::Real(_) | MemcacheHandler::Noop => None,
-            MemcacheHandler::Mock(ref mock) => Some(mock),
+            MemcacheHandler::Mock(mock) => Some(mock),
         }
     }
 }

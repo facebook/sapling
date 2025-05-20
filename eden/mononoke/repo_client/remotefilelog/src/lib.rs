@@ -111,14 +111,14 @@ fn rescue_redacted(res: Result<(Bytes, FileBytes)>) -> Result<(Bytes, FileBytes)
 /// Create a blob for getpack v1. This returns a future that resolves with an estimated weight for
 /// this blob (this is NOT trying to be correct, it's just a rough estimate!), and the blob's
 /// bytes.
-pub async fn create_getpack_v1_blob(
+pub async fn create_getpack_v1_blob<T: RepoLike>(
     ctx: &CoreContext,
-    repo: &impl RepoLike,
+    repo: &T,
     node: HgFileNodeId,
     validate_hash: bool,
 ) -> Result<(
     GetpackBlobInfo,
-    impl Future<Output = Result<(HgFileNodeId, Bytes)>>,
+    impl Future<Output = Result<(HgFileNodeId, Bytes)>> + use<T>,
 )> {
     let RemotefilelogBlob { kind, data } = prepare_blob(
         ctx,
@@ -153,15 +153,15 @@ pub async fn create_getpack_v1_blob(
 
 /// Create a blob for getpack v2. See v1 above for general details. This also returns Metadata,
 /// which is present in the v2 version of the protocol.
-pub async fn create_getpack_v2_blob(
+pub async fn create_getpack_v2_blob<T: RepoLike>(
     ctx: &CoreContext,
-    repo: &impl RepoLike,
+    repo: &T,
     node: HgFileNodeId,
     lfs_params: SessionLfsParams,
     validate_hash: bool,
 ) -> Result<(
     GetpackBlobInfo,
-    impl Future<Output = Result<(HgFileNodeId, Bytes, Metadata)>>,
+    impl Future<Output = Result<(HgFileNodeId, Bytes, Metadata)>> + use<T>,
 )> {
     let RemotefilelogBlob { kind, data } =
         prepare_blob(ctx, repo, node, lfs_params, validate_hash).await?;
@@ -236,21 +236,21 @@ pub async fn create_raw_filenode_blob(
 /// Get ancestors of all filenodes
 /// Current implementation might be inefficient because it might re-fetch the same filenode a few
 /// times
-pub fn get_unordered_file_history_for_multiple_nodes(
+pub fn get_unordered_file_history_for_multiple_nodes<
+    T: RepoLike
+        + RepoIdentityRef
+        + FilenodesRef
+        + CommitGraphRef
+        + BonsaiHgMappingRef
+        + Clone
+        + 'static,
+>(
     ctx: &CoreContext,
-    repo: &(
-         impl RepoLike
-         + RepoIdentityRef
-         + FilenodesRef
-         + CommitGraphRef
-         + BonsaiHgMappingRef
-         + Clone
-         + 'static
-     ),
+    repo: &T,
     filenodes: HashSet<HgFileNodeId>,
     path: &NonRootMPath,
     allow_short_getpack_history: bool,
-) -> impl Stream<Item = Result<HgFileHistoryEntry>> {
+) -> impl Stream<Item = Result<HgFileHistoryEntry>> + use<T> {
     let limit = if allow_short_getpack_history {
         const REMOTEFILELOG_FILE_HISTORY_LIMIT: u64 = 1000;
         Some(REMOTEFILELOG_FILE_HISTORY_LIMIT)

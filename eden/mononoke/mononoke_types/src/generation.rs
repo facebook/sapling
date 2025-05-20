@@ -22,8 +22,8 @@ pub const FIRST_GENERATION: Generation = Generation(1);
 
 impl Generation {
     /// Creates new generation number
-    pub fn new(gen: u64) -> Self {
-        Generation(gen)
+    pub fn new(r#gen: u64) -> Self {
+        Generation(r#gen)
     }
 
     /// Create a maximum possible generation number

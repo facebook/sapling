@@ -615,7 +615,7 @@ impl ShardedProcessHandler {
                     // and SM thinks this repo is not even present on the server. In such a case,
                     // SM might try to add this repo back. We need to finish cleanup and then
                     // continue with addition.
-                    Cleanup(ref mut repo_cleanup_process) => {
+                    Cleanup(repo_cleanup_process) => {
                         info!(
                             self.logger,
                             "Adding of shard {} will require dropping it first due to pending cleanup.",
@@ -815,7 +815,7 @@ impl ShardedProcessHandler {
         let mut guarded_repo_map = self.runtime_handle.block_on(self.repo_map.write());
         {
             guarded_repo_map.retain(|repo_name, repo_process| match repo_process {
-                Execution(ref mut repo_execution_process) => {
+                Execution(repo_execution_process) => {
                     match repo_execution_process.is_terminated(&self.runtime_handle, &self.logger) {
                         Ok(true) => {
                             error!(

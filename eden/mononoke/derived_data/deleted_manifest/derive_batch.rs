@@ -145,7 +145,7 @@ impl<Manifest: DeletedManifestCommon> DeletedManifestDeriver<Manifest> {
         unfold_node: UnfoldNode<Manifest>,
     ) -> Result<(
         FoldNode<Manifest>,
-        impl IntoIterator<Item = UnfoldNode<Manifest>>,
+        impl IntoIterator<Item = UnfoldNode<Manifest>> + use<Manifest>,
     )> {
         let UnfoldNode {
             path_element,

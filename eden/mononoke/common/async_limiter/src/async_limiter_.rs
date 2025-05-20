@@ -62,7 +62,9 @@ impl AsyncLimiter {
     /// to the number of pending accesses. Note that this isn't an async fn so as to not capture a
     /// reference to &self in the future returned by this method, which makes it more suitable for
     /// use in e.g. a futures 0.1 context.
-    pub fn access(&self) -> impl Future<Output = Result<(), Error>> + 'static + Send + Sync {
+    pub fn access(
+        &self,
+    ) -> impl Future<Output = Result<(), Error>> + 'static + Send + Sync + use<> {
         let (send, recv) = oneshot::channel();
         let dispatch = self.dispatch.clone();
 

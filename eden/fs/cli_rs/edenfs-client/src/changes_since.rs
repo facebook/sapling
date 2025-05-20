@@ -638,9 +638,7 @@ impl EdenFsClient {
         // Temporary code to strip prefix from paths - will be removed when implemented in daemon
         if root.is_some() {
             result.changes.iter_mut().for_each(|c| match c {
-                ChangeNotification::LargeChange(LargeChangeNotification::DirectoryRenamed(
-                    ref mut d,
-                )) => {
+                ChangeNotification::LargeChange(LargeChangeNotification::DirectoryRenamed(d)) => {
                     d.from = strip_prefix_from_bytes(root, &d.from);
                     d.to = strip_prefix_from_bytes(root, &d.to);
                 }

@@ -138,19 +138,23 @@ pub struct CachedPrefetchedChangesetEdges {
 impl Abomonation for CachedPrefetchedChangesetEdges {
     #[inline(always)]
     unsafe fn entomb<W: Write>(&self, write: &mut W) -> IoResult<()> {
-        // SAFETY: This implementation matches the proc-macro-generated version but with `prefetched_edges` excluded, and matches the exhume method below.
-        self.inner.entomb(write)?;
-        // We deliberately do not entomb the contents of `prefetched_edges`.  It will be re-initialized when exhumed.
-        Ok(())
+        unsafe {
+            // SAFETY: This implementation matches the proc-macro-generated version but with `prefetched_edges` excluded, and matches the exhume method below.
+            self.inner.entomb(write)?;
+            // We deliberately do not entomb the contents of `prefetched_edges`.  It will be re-initialized when exhumed.
+            Ok(())
+        }
     }
 
     #[inline(always)]
     unsafe fn exhume<'a, 'b>(&'a mut self, bytes: &'b mut [u8]) -> Option<&'b mut [u8]> {
-        // SAFETY: This implementation matches the proc-macro-generated version but with `prefetched_edges` re-initialized, and matches the entomb method above.
-        let bytes = self.inner.exhume(bytes)?;
-        // Re-initialize `prefetched_edges` as its contents were not entombed.
-        std::ptr::write(&mut self.prefetched_edges, HashMap::new());
-        Some(bytes)
+        unsafe {
+            // SAFETY: This implementation matches the proc-macro-generated version but with `prefetched_edges` re-initialized, and matches the entomb method above.
+            let bytes = self.inner.exhume(bytes)?;
+            // Re-initialize `prefetched_edges` as its contents were not entombed.
+            std::ptr::write(&mut self.prefetched_edges, HashMap::new());
+            Some(bytes)
+        }
     }
 
     #[inline(always)]

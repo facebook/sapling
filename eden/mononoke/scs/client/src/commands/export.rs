@@ -117,7 +117,7 @@ async fn stream_tree_elements(
     connection: &ScsClient,
     commit: &thrift::CommitSpecifier,
     path: &str,
-) -> Result<impl Stream<Item = Result<String>>> {
+) -> Result<impl Stream<Item = Result<String>> + use<>> {
     let tree = thrift::TreeSpecifier::by_commit_path(thrift::CommitPathSpecifier {
         commit: commit.clone(),
         path: path.to_string(),

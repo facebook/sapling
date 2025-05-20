@@ -169,11 +169,11 @@ impl<R: MononokeRepo> Mononoke<R> {
     }
 
     /// Returns an `Iterator` over all repo names.
-    pub fn repo_names(&self) -> impl Iterator<Item = String> {
+    pub fn repo_names(&self) -> impl Iterator<Item = String> + use<R> {
         self.repos.iter_names()
     }
 
-    pub fn repos(&self) -> impl Iterator<Item = Arc<R>> {
+    pub fn repos(&self) -> impl Iterator<Item = Arc<R>> + use<R> {
         self.repos.iter()
     }
 

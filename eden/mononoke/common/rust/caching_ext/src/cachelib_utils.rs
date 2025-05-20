@@ -50,8 +50,8 @@ impl<T: Abomonation + bincode::Encode + bincode::Decode<()> + Clone> CachelibHan
 
     pub fn get_cached(&self, key: &String) -> Result<Option<T>> {
         match self {
-            CachelibHandler::Abomonation(ref cache) => abomonation_cache::get_cached(cache, key),
-            CachelibHandler::Bincode(ref cache) => bincode_cache::get_cached(cache, key),
+            CachelibHandler::Abomonation(cache) => abomonation_cache::get_cached(cache, key),
+            CachelibHandler::Bincode(cache) => bincode_cache::get_cached(cache, key),
             CachelibHandler::Mock(store) => Ok(store.get(key)),
             CachelibHandler::Noop => Ok(None),
         }
@@ -59,12 +59,10 @@ impl<T: Abomonation + bincode::Encode + bincode::Decode<()> + Clone> CachelibHan
 
     pub fn set_cached(&self, key: &str, value: &T, ttl: Option<Duration>) -> Result<bool> {
         match self {
-            CachelibHandler::Abomonation(ref cache) => {
+            CachelibHandler::Abomonation(cache) => {
                 abomonation_cache::set_cached(cache, key, value, ttl)
             }
-            CachelibHandler::Bincode(ref cache) => {
-                bincode_cache::set_cached(cache, key, value, ttl)
-            }
+            CachelibHandler::Bincode(cache) => bincode_cache::set_cached(cache, key, value, ttl),
             CachelibHandler::Mock(store) => {
                 store.set(key, value.clone());
                 Ok(true)
@@ -88,9 +86,7 @@ impl<T: Abomonation + bincode::Encode + bincode::Decode<()> + Clone> CachelibHan
             CachelibHandler::Abomonation(_)
             | CachelibHandler::Bincode(_)
             | CachelibHandler::Noop => unimplemented!(),
-            CachelibHandler::Mock(MockStore { ref get_count, .. }) => {
-                get_count.load(Ordering::SeqCst)
-            }
+            CachelibHandler::Mock(MockStore { get_count, .. }) => get_count.load(Ordering::SeqCst),
         }
     }
 
@@ -99,7 +95,7 @@ impl<T: Abomonation + bincode::Encode + bincode::Decode<()> + Clone> CachelibHan
             CachelibHandler::Abomonation(_)
             | CachelibHandler::Bincode(_)
             | CachelibHandler::Noop => None,
-            CachelibHandler::Mock(ref mock) => Some(mock),
+            CachelibHandler::Mock(mock) => Some(mock),
         }
     }
 }

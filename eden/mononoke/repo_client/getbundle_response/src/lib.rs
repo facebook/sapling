@@ -275,8 +275,8 @@ async fn call_difference_of_union_of_ancestors_revset(
     let Params { heads, excludes } = params;
 
     let mut notified_expensive_getbundle = false;
-    let min_heads_gen_num = heads.iter().map(|(_, gen)| gen).min();
-    let max_excludes_gen_num = excludes.iter().map(|(_, gen)| gen).max();
+    let min_heads_gen_num = heads.iter().map(|(_, r#gen)| r#gen).min();
+    let max_excludes_gen_num = excludes.iter().map(|(_, r#gen)| r#gen).max();
     match (min_heads_gen_num, max_excludes_gen_num) {
         (Some(min_heads), Some(max_excludes)) => {
             if min_heads.difference_from(*max_excludes).unwrap_or(0) > GETBUNDLE_COMMIT_NUM_WARN {

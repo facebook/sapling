@@ -405,7 +405,7 @@ pub fn progress_stream<InStream, PS, Payload, SS, K>(
     quiet: bool,
     progress_state: &PS,
     s: InStream,
-) -> impl Stream<Item = Result<(K, Payload, Option<SS>), Error>>
+) -> impl Stream<Item = Result<(K, Payload, Option<SS>), Error>> + use<InStream, PS, Payload, SS, K>
 where
     InStream: Stream<Item = Result<(K, Payload, Option<SS>), Error>> + 'static + Send,
     PS: 'static + Send + Clone + ProgressRecorder<SS> + ProgressReporter,

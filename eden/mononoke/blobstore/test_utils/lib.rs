@@ -80,7 +80,7 @@ impl<T> Tickable<T> {
     }
 
     // Register this task on the tick queue and wait for it to progress.
-    pub fn on_tick(&self) -> impl Future<Output = Result<()>> {
+    pub fn on_tick(&self) -> impl Future<Output = Result<()>> + use<T> {
         let (send, recv) = oneshot::channel();
         let mut queue = self.queue.lock().unwrap();
         queue.push_back(send);

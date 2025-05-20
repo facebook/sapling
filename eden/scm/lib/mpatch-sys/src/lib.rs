@@ -28,7 +28,7 @@ pub struct mpatch_frag {
     pub data: *const c_char,
 }
 
-extern "C" {
+unsafe extern "C" {
     pub fn mpatch_decode(bin: *const c_char, len: isize, res: *mut *mut mpatch_flist) -> c_int;
 
     pub fn mpatch_calcsize(len: isize, l: *mut mpatch_flist) -> isize;

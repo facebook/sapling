@@ -571,8 +571,8 @@ impl BookmarkOrRegex {
     /// Checks whether a given Bookmark matches this bookmark or regex
     pub fn matches(&self, bookmark: &BookmarkKey) -> bool {
         match self {
-            BookmarkOrRegex::Bookmark(ref bm) => bm.eq(bookmark),
-            BookmarkOrRegex::Regex(ref re) => re.is_match(&bookmark.to_string()),
+            BookmarkOrRegex::Bookmark(bm) => bm.eq(bookmark),
+            BookmarkOrRegex::Regex(re) => re.is_match(&bookmark.to_string()),
         }
     }
 }
@@ -1085,12 +1085,10 @@ impl BlobConfig {
     pub fn apply_sampling_multiplier(&mut self, multiplier: NonZeroU64) {
         match self {
             Self::MultiplexedWal {
-                ref mut scuba_sample_rate,
-                ..
+                scuba_sample_rate, ..
             }
             | Self::Logging {
-                ref mut scuba_sample_rate,
-                ..
+                scuba_sample_rate, ..
             } => {
                 // NOTE: We unwrap here because we're multiplying two non zero numbers.
                 *scuba_sample_rate =

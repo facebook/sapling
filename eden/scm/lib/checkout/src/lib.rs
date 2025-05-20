@@ -1835,13 +1835,13 @@ mod test {
 
     fn generate_trees(tree_size: usize, count: usize) -> Vec<Vec<(RepoPathBuf, FileMetadata)>> {
         let mut result = vec![];
-        let mut gen = Gen::new(5);
-        let paths = generate_repo_paths(tree_size * count, &mut gen);
+        let mut r#gen = Gen::new(5);
+        let paths = generate_repo_paths(tree_size * count, &mut r#gen);
 
         for i in 0..count {
             let mut tree = vec![];
             for idx in 0..tree_size {
-                let meta = FileMetadata::arbitrary(&mut gen);
+                let meta = FileMetadata::arbitrary(&mut r#gen);
                 let path = paths.get(i * tree_size / 2 + idx).unwrap().clone();
                 tree.push((path, meta));
             }

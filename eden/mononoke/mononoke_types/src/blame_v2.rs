@@ -1582,7 +1582,7 @@ mod test {
         () => {
             VecMap::new()
         };
-        ( $( $k:expr => $v:expr ),* $(,)? ) => {
+        ( $( $k:expr_2021 => $v:expr_2021 ),* $(,)? ) => {
             {
                 let mut v = VecMap::new();
                 $( v.insert($k, $v); )*

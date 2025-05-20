@@ -32,7 +32,8 @@ fn main() {
 }
 
 fn run_child(rust_log: &str) -> String {
-    std::env::set_var("RUST_LOG", rust_log);
+    // TODO: Audit that the environment access only happens in single-threaded code.
+    unsafe { std::env::set_var("RUST_LOG", rust_log) };
     let exe = std::env::current_exe().unwrap();
     let out = Command::new(exe)
         .args([MESSAGE])

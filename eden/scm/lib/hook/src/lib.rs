@@ -228,7 +228,7 @@ impl Hooks {
 /// Converts a `dyn Serialize` to env vars used by shell hooks.
 fn to_env_vars(
     kwargs: &dyn Serialize,
-) -> Result<impl IntoIterator<Item = (String, Option<String>)>> {
+) -> Result<impl IntoIterator<Item = (String, Option<String>)> + use<>> {
     let args = serde_json::to_value(kwargs)?;
     let map = match args {
         Value::Object(map) => map,

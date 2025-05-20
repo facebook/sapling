@@ -288,7 +288,7 @@ async fn store_file<R: MononokeRepo>(
 }
 
 /// Upload content of a file requested by the client.
-pub async fn upload_file(state: &mut State) -> Result<impl TryIntoResponse, HttpError> {
+pub async fn upload_file(state: &mut State) -> Result<impl TryIntoResponse + use<>, HttpError> {
     let params = UploadFileParams::take_from(state);
     let query_string = UploadFileQueryString::take_from(state);
 
@@ -399,17 +399,20 @@ async fn store_hg_filenode<R: MononokeRepo>(
 
     // If a file is both merged and copied, we must store the parent in the "p2" field and leave the "p1" field null.
     // Detect that through the presence of copy metadata.
-    if let Some(_copy_from) = File::extract_copied_from(&metadata)? {
-        ensure!(
-            p2.is_none(),
-            "Copy metadata is not valid for merged filenodes: {}",
-            filenode
-        );
-        repo.store_hg_filenode(filenode, None, p1, content_id, content_size, metadata)
-            .await?;
-    } else {
-        repo.store_hg_filenode(filenode, p1, p2, content_id, content_size, metadata)
-            .await?;
+    match File::extract_copied_from(&metadata)? {
+        Some(_copy_from) => {
+            ensure!(
+                p2.is_none(),
+                "Copy metadata is not valid for merged filenodes: {}",
+                filenode
+            );
+            repo.store_hg_filenode(filenode, None, p1, content_id, content_size, metadata)
+                .await?;
+        }
+        _ => {
+            repo.store_hg_filenode(filenode, p1, p2, content_id, content_size, metadata)
+                .await?;
+        }
     }
 
     Ok(UploadTokensResponse {

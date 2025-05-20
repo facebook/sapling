@@ -71,15 +71,15 @@ impl Parents {
     pub fn p1(&self) -> Option<&HgId> {
         match self {
             Parents::None => None,
-            Parents::One(ref p1) => Some(p1),
-            Parents::Two(ref p1, _) => Some(p1),
+            Parents::One(p1) => Some(p1),
+            Parents::Two(p1, _) => Some(p1),
         }
     }
 
     pub fn p2(&self) -> Option<&HgId> {
         match self {
             Parents::None | Parents::One(_) => None,
-            Parents::Two(_, ref p2) => Some(p2),
+            Parents::Two(_, p2) => Some(p2),
         }
     }
 
