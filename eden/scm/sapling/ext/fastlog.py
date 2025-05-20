@@ -213,9 +213,26 @@ def fastlogfollow(orig, repo, subset, x, name, followfirst: bool = False):
         yield from matched_revs
 
         start_node = repo[parent].node()
-        log = FastLog(reponame, "hg", start_node, path, repo)
-        for node in log.generate_nodes():
-            yield repo.changelog.rev(node)
+        while True:
+            log = FastLog(reponame, "hg", start_node, path, repo)
+            last_rev = None
+            for node in log.generate_nodes():
+                last_rev = repo.changelog.rev(node)
+                yield last_rev
+
+            # log history returned by server (via `FastLog`) does not follow copy, the following
+            # logic handle the copy on Sapling side.
+            if last_rev is not None:
+                next_parents = list(parents(last_rev, path))
+                # XXX: only handle non-merge commits
+                if len(next_parents) == 1:
+                    next_rev, next_path = next_parents[0]
+                    # copy -- continue query server with new start_node and path
+                    if next_path != path:
+                        start_node = repo[next_rev].node()
+                        path = next_path
+                        continue
+            break
 
     def findpublic(rev, path, parentfunc):
         public = dict()
