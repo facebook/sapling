@@ -807,9 +807,7 @@ impl EdenFsClient {
                 }),
                 lfs_backend: Some(LfsBackendTelemetryCounters {
                     lfs_fetches_blobs: *counters.get(COUNTER_LFS_BLOBS_KEYS).unwrap_or(&0) as u64,
-                    lfs_requests: (*counters.get(COUNTER_LFS_BLOBS_REQUESTS).unwrap_or(&0)
-                        + *counters.get(COUNTER_LFS_TREES_REQUESTS).unwrap_or(&0))
-                        as u64,
+                    lfs_requests: *counters.get(COUNTER_LFS_BLOBS_REQUESTS).unwrap_or(&0) as u64,
                 }),
             },
             local_cache_stats: LocalCacheTelemetryCounters {

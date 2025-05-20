@@ -54,11 +54,6 @@ pub const COUNTER_EDENAPI_TREES_REQUESTS: &str = "scmstore.tree.fetch.edenapi.re
 // LFS backend counters
 pub const COUNTER_LFS_BLOBS_KEYS: &str = "scmstore.file.fetch.lfs.keys";
 pub const COUNTER_LFS_BLOBS_REQUESTS: &str = "scmstore.file.fetch.lfs.requests";
-pub const COUNTER_LFS_TREES_REQUESTS: &str = "scmstore.tree.fetch.lfs.requests";
-
-// LFS is not used for trees, so we only have blob counters
-pub const FILE_LFS_PREFIX: &str = "scmstore.file.fetch.lfs";
-pub const TREE_LFS_PREFIX: &str = "scmstore.tree.fetch.lfs";
 
 // CAS backend counters
 pub const COUNTER_CAS_BLOBS_HITS: &str = "scmstore.file.fetch.cas.hits";
