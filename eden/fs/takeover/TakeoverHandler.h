@@ -39,6 +39,14 @@ class TakeoverHandler {
   virtual folly::Future<TakeoverData> startTakeoverShutdown() = 0;
 
   virtual void closeStorage() = 0;
+
+  /*
+   * This is a temporary function that override
+   * TakeoverCapabilities::CHUNKED_MESSAGE. We use it to control the protocol
+   * roll out through Eden config. This function should removed after the roll
+   * out has completed.
+   */
+  virtual bool shouldChunkTakeoverData() = 0;
 };
 
 } // namespace facebook::eden

@@ -2528,6 +2528,10 @@ void EdenServer::stop() {
   server_->stop();
 }
 
+bool EdenServer::shouldChunkTakeoverData() {
+  return serverState_->getEdenConfig()->shouldChunkTakeoverData.getValue();
+}
+
 folly::Future<TakeoverData> EdenServer::startTakeoverShutdown() {
 #ifndef _WIN32
   // Make sure we aren't already shutting down, then update our state

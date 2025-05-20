@@ -252,6 +252,16 @@ class EdenConfig : private ConfigSettingManager {
       std::chrono::seconds(150),
       this};
 
+  /**
+   * Temporary config to control roll out of
+   * TakeoverCapabilities::CHUNKED_MESSAGE protocol
+   * Delete this config when rollout is 100% complete
+   */
+  ConfigSetting<bool> shouldChunkTakeoverData{
+      "core:should-chunk-takeover-data",
+      false,
+      this};
+
   // [config]
 
   /**

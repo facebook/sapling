@@ -202,6 +202,10 @@ Future<Unit> TakeoverServer::ConnHandler::start() noexcept {
         state.shouldChunk =
             (state.protocolCapabilities &
              TakeoverCapabilities::CHUNKED_MESSAGE);
+
+        state.shouldChunk =
+            server_->getTakeoverHandler()->shouldChunkTakeoverData();
+
         return server_->getTakeoverHandler()->startTakeoverShutdown();
       })
       .via(server_->eventBase_)

@@ -264,6 +264,14 @@ class EdenServer : private TakeoverHandler {
    */
   folly::Future<TakeoverData> startTakeoverShutdown() override;
 
+  /*
+   * This is a temporary function that override
+   * TakeoverCapabilities::CHUNKED_MESSAGE. We use it to control the protocol
+   * roll out through eden config. This function should remove after roll out
+   * completes to 100%
+   */
+  bool shouldChunkTakeoverData() override;
+
   /**
    * Mount and return an EdenMount.
    */
