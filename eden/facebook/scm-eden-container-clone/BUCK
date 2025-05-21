@@ -12,5 +12,6 @@ rust_binary(
         "fbsource//third-party/rust:tracing-subscriber",
         "//common/rust/shed/fbinit:fbinit",
         "//eden/facebook/scm-eden-container-clone/eden_config:eden_config",
+        "//eden/scm/lib/shell:shell",
     ],
 )
