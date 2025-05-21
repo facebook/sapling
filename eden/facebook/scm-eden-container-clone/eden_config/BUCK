@@ -1,0 +1,12 @@
+load("@fbcode_macros//build_defs:rust_library.bzl", "rust_library")
+
+oncall("scm_client_infra")
+
+rust_library(
+    name = "eden_config",
+    srcs = glob(["src/**/*.rs"]),
+    visibility = [
+        "//eden/facebook/scm-eden-container-clone/...",
+    ],
+    deps = [],
+)
