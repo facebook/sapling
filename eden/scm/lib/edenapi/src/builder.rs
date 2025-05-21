@@ -210,6 +210,9 @@ impl HttpClientBuilder {
         let max_requests = get_config(config, "edenapi", "max-concurrent-requests")?
             .or(get_config(config, "edenapi", "maxrequests")?);
 
+        let max_requests_per_batch =
+            get_config(config, "edenapi", "max-concurrent-requests-per-batch")?;
+
         let try_route_consistently =
             get_config(config, "edenapi", "try-route-consistently")?.unwrap_or_default();
 
@@ -305,6 +308,7 @@ impl HttpClientBuilder {
         let mut http_config = hg_http::http_config(config, &server_url)?;
         http_config.verbose_stats |= debug;
         http_config.max_concurrent_requests = max_requests;
+        http_config.max_concurrent_requests_per_batch = max_requests_per_batch;
 
         let builder = HttpClientBuilder {
             repo_name,
