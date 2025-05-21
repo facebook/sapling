@@ -9,10 +9,12 @@ rust_binary(
     deps = [
         "fbsource//third-party/rust:anyhow",
         "fbsource//third-party/rust:clap",
+        "fbsource//third-party/rust:tokio",
         "fbsource//third-party/rust:tracing",
         "fbsource//third-party/rust:tracing-subscriber",
         "//common/rust/shed/fbinit:fbinit",
         "//eden/facebook/scm-eden-container-clone/eden_config:eden_config",
+        "//eden/fs/cli_rs/edenfs-client:edenfs-client",
         "//eden/scm/lib/shell:shell",
     ],
 )
