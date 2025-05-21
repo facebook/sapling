@@ -89,8 +89,13 @@ impl UseCase {
     fn get_use_case(&self) -> Option<ScmUseCase> {
         let is_pub = cpe::x2p::supports_vpnless();
         let config_url = helpers::config_url(is_pub);
-        //TODO: get proxy_sock_path (None for !is_pub, Some(http_proxy_path) for is_pub)
-        let http_config = helpers::get_http_config(is_pub, None).ok()?;
+        let proxy_url = cpe::x2p::proxy_url_http1();
+        let proxy_sock_path: Option<&str> = if proxy_url.is_empty() {
+            None
+        } else {
+            Some(&proxy_url)
+        };
+        let http_config = helpers::get_http_config(is_pub, proxy_sock_path).ok()?;
         let cache_path = self.config_dir.join("scm_use_cases");
         let config: ScmUseCases = get_remote_configs(
             is_pub,
