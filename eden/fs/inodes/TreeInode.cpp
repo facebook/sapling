@@ -922,7 +922,7 @@ void TreeInode::childMaterialized(
     const RenameLock& renameLock,
     PathComponentPiece childName) {
   auto startTime = std::chrono::system_clock::now();
-  bool wasAlreadyMaterialized;
+  bool wasAlreadyMaterialized = false;
   {
     auto contents = contents_.wlock();
     wasAlreadyMaterialized = contents->isMaterialized();
@@ -980,7 +980,7 @@ void TreeInode::childDematerialized(
     PathComponentPiece childName,
     ObjectId childScmHash) {
   auto startTime = std::chrono::system_clock::now();
-  bool wasAlreadyMaterialized;
+  bool wasAlreadyMaterialized = false;
   {
     auto contents = contents_.wlock();
     wasAlreadyMaterialized = contents->isMaterialized();
@@ -3041,6 +3041,7 @@ ImmediateFuture<Unit> TreeInode::computeDiff(
 
   // Now process all of the deferred work.
   std::vector<ImmediateFuture<Unit>> deferredFutures;
+  deferredFutures.reserve(deferredEntries.size());
   for (auto& entry : deferredEntries) {
     deferredFutures.push_back(entry->run());
   }
@@ -3058,7 +3059,7 @@ ImmediateFuture<Unit> TreeInode::computeDiff(
             return collectAll(std::move(deferredFutures));
           })
       .thenValue([self = std::move(self),
-                  currentPath = RelativePath{std::move(currentPath)},
+                  currentPath = RelativePath{currentPath},
                   context,
                   // Capture ignore to ensure it remains valid until all of our
                   // children's diff operations complete.
@@ -3907,7 +3908,7 @@ ImmediateFuture<InvalidationRequired> TreeInode::checkoutUpdateEntry(
                   CaseSensitivity::Insensitive);
             }
 
-            bool inserted;
+            bool inserted = false;
             {
               auto contents = parentInode->contents_.wlock();
               auto ret = contents->entries.emplace(
@@ -3961,7 +3962,7 @@ folly::Try<folly::Unit> TreeInode::nfsInvalidateCacheEntryForGC(
   if (auto* nfsdChannel = getMount()->getNfsdChannel()) {
     const auto path = getPath();
     if (path.has_value()) {
-      // The contents lock is held by nfsInvalidateCacheEntryForGC
+      // The contents lock is held by invalidateChildrenNotMaterialized
       auto mode = getMetadataLocked(state.entries).mode;
       nfsdChannel->invalidate(
           getMount()->getPath() + *path + name,
@@ -4404,9 +4405,10 @@ ImmediateFuture<uint64_t> TreeInode::invalidateChildrenNotMaterialized(
 
   return getLoadedOrRememberedTreeChildren(this, getInodeMap(), context)
       .thenValue([context = context.copy(),
-                  cutoff](std::vector<TreeInodePtr> treeChildren) {
+                  cutoff](const std::vector<TreeInodePtr>& treeChildren) {
         std::vector<ImmediateFuture<uint64_t>> futures;
 
+        futures.reserve(treeChildren.size());
         for (auto& tree : treeChildren) {
           futures.push_back(
               tree->invalidateChildrenNotMaterialized(cutoff, context));
