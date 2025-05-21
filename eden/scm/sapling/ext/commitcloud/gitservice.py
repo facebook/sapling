@@ -5,43 +5,20 @@
 
 from __future__ import absolute_import
 
-from . import baseservice
+from . import baseservice, saplingremoteapiservice
 
 
-class GitService(baseservice.BaseService):
+class GitService(
+    saplingremoteapiservice.SaplingRemoteAPIService, baseservice.BaseService
+):
     """Remote commit-cloud service for git repos"""
 
-    def __init__(self, ui):
-        raise NotImplementedError  # Not supported for git repos yet
+    def __init__(self, ui, repo):
         self.ui = ui
+        self.repo = repo
 
     def check(self):
         return True
-
-    def getreferences(
-        self,
-        reponame,
-        workspace,
-        baseversion,
-        clientinfo=None,
-    ):
-        raise NotImplementedError  # Not supported for git repos yet
-
-    def updatereferences(
-        self,
-        reponame,
-        workspace,
-        version,
-        oldheads=None,
-        newheads=None,
-        oldbookmarks=None,
-        newbookmarks=None,
-        oldremotebookmarks=None,
-        newremotebookmarks=None,
-        clientinfo=None,
-        logopts={},
-    ):
-        raise NotImplementedError  # Not supported for git repos yet
 
     def getsmartlog(self, reponame, workspace, repo, limit, flags=[]):
         raise NotImplementedError  # Not supported for git repos yet

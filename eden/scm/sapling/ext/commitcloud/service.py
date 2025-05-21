@@ -25,7 +25,7 @@ def get(ui, repo=None):
             repo,
         )
     elif servicetype == "git":
-        gitservice.GitService(ui)
+        return gitservice.GitService(ui, repo)
     else:
         msg = "Unrecognized commitcloud.servicetype: %s" % servicetype
         raise error.Abort(msg)
