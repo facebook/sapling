@@ -1,4 +1,5 @@
 load("@fbcode_macros//build_defs:rust_binary.bzl", "rust_binary")
+load("//fbpkg:fbpkg.bzl", "fbpkg")
 
 oncall("scm_client_infra")
 
@@ -14,4 +15,11 @@ rust_binary(
         "//eden/facebook/scm-eden-container-clone/eden_config:eden_config",
         "//eden/scm/lib/shell:shell",
     ],
+)
+
+fbpkg.builder(
+    name = "scm.eden_container_clone",
+    path_actions = {
+        "scm-eden-container-clone": "//eden/facebook/scm-eden-container-clone:scm-eden-container-clone",
+    },
 )
