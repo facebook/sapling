@@ -8,6 +8,7 @@ rust_binary(
     srcs = glob(["src/**/*.rs"]),
     deps = [
         "fbsource//third-party/rust:anyhow",
+        "fbsource//third-party/rust:chrono",
         "fbsource//third-party/rust:clap",
         "fbsource//third-party/rust:tokio",
         "fbsource//third-party/rust:tracing",
