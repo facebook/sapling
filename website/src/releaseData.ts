@@ -15,7 +15,7 @@ function findAssetWithFilenameSubstr(searchString: string) {
       return asset;
     }
   }
-  return null;
+  throw new Error(`Releases (rawReleaseData.ts) do not include ${searchString}`);
 }
 
 export const latestReleaseVersion = latestReleaseAssets.name;
