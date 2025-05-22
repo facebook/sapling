@@ -313,6 +313,13 @@ export type CommitInfo = {
    * other merged-in repos) have no parents.
    */
   parents: ReadonlyArray<Hash>;
+  /**
+   * Grandparents are the closest but indirect ancestors in a set of commits .
+   * In ISL, this is used for connecting nodes whose direct parents are NOT present.
+   * Note that this field will be empty by design when direct parents are already present in the set.
+   * See eden/scm/tests/test-template-grandparents.t for examples.
+   */
+  grandparents: ReadonlyArray<Hash>;
   phase: CommitPhaseType;
   /**
    * Whether this commit is the "." (working directory parent).

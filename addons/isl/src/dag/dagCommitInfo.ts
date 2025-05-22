@@ -49,6 +49,7 @@ const CommitInfoExtRecord = Record<CommitInfoExtProps>({
   title: '',
   hash: '',
   parents: [],
+  grandparents: [],
   phase: 'draft',
   isDot: false,
   author: '',
@@ -117,6 +118,10 @@ export class DagCommitInfo extends SelfUpdate<CommitInfoExtRecord> {
 
   public get parents(): ReadonlyArray<Hash> {
     return this.inner.parents;
+  }
+
+  public get grandparents(): ReadonlyArray<Hash> {
+    return this.inner.grandparents;
   }
 
   get phase(): CommitPhaseType {

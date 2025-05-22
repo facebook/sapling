@@ -23,6 +23,7 @@ describe('Dag', () => {
     title: '',
     hash: '',
     parents: [],
+    grandparents: [],
     phase: DRAFT,
     isDot: false,
     author: '',
