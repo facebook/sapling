@@ -4,7 +4,7 @@ sidebar_position: 3
 
 ## amend | am
 <!--
-  @generated SignedSource<<b06b5a1332b4ac0afab84ba76196baf7>>
+  @generated SignedSource<<8e240491fced53664751d1b5fe447fd5>>
   Run `./scripts/generate-command-markdown.py` to regenerate.
 -->
 
@@ -52,6 +52,7 @@ conflict resolution process. Alternatively:
 | `-A`| `--addremove`| | mark new/missing files as added/removed before committing|
 | `-e`| `--edit`| | prompt to edit the commit message|
 | `-i`| `--interactive`| | use interactive mode|
+| | `--no-move-detection`| | disable automatic file move detection|
 | | `--rebase`| | rebases children after the amend|
 | | `--to`| | amend to a specific commit in the current stack|
 | `-T`| `--template`| | display with template|
@@ -61,5 +62,4 @@ conflict resolution process. Alternatively:
 | `-l`| `--logfile`| | read commit message from file|
 | `-d`| `--date`| | record the specified date as commit date|
 | `-u`| `--user`| | record the specified user as committer|
-| | `--no-move-detection`| | disable automatic file move detection|
 | | `--stack`| | incorporate corrections into stack. see &#x27;sl help absorb&#x27; for details|

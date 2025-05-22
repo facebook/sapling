@@ -4,7 +4,7 @@ sidebar_position: 10
 
 ## commit | ci
 <!--
-  @generated SignedSource<<66d08f77a3ddb8942313f00044fa03c5>>
+  @generated SignedSource<<468ebe5a2087c8973f27dd899b7e1648>>
   Run `./scripts/generate-command-markdown.py` to regenerate.
 -->
 
@@ -60,10 +60,10 @@ sl commit --exclude "set:binary()"
 | `-e`| `--edit`| | invoke editor on commit messages|
 | `-i`| `--interactive`| | use interactive mode|
 | `-M`| `--reuse-message`| | reuse commit message from REV|
+| | `--no-move-detection`| | disable automatic file move detection|
 | `-I`| `--include`| | include files matching the given patterns|
 | `-X`| `--exclude`| | exclude files matching the given patterns|
 | `-m`| `--message`| | use text as commit message|
 | `-l`| `--logfile`| | read commit message from file|
 | `-d`| `--date`| | record the specified date as commit date|
 | `-u`| `--user`| | record the specified user as committer|
-| | `--no-move-detection`| | disable automatic file move detection|

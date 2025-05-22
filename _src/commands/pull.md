@@ -4,7 +4,7 @@ sidebar_position: 28
 
 ## pull
 <!--
-  @generated SignedSource<<4e2d9f1d07afc1e3f83b9310e6a034e3>>
+  @generated SignedSource<<5848114c0eff53183509abd5df02002b>>
   Run `./scripts/generate-command-markdown.py` to regenerate.
 -->
 
@@ -33,7 +33,9 @@ sl pull
 
 - pull a bookmark named my-branch from source my-fork:
 
+```
 sl pull my-fork --bookmark my-branch
+```
 
 You can use `.` for BOOKMARK to specify the active bookmark.
 

@@ -110,7 +110,7 @@
       "addremove",
       "addrm"
     ],
-    "doc": "add all new files, delete all missing files\n\n    Start tracking all new files and stop tracking all missing files\n    in the working copy. As with :prog:`add`, these changes take\n    effect at the next commit.\n\n    Unless file names are given, new files are ignored if they match any of\n    the patterns in ``.gitignore``.\n\n    Use the ``-s/--similarity`` option to detect renamed files. This\n    option takes a percentage between 0 (disabled) and 100 (files must\n    be identical) as its parameter. With a parameter greater than 0,\n    this compares every removed file with every added file and records\n    those similar enough as renames. Detecting renamed files this way\n    can be expensive. After using this option, :prog:`status -C` can be\n    used to check which files were identified as moved or renamed. If\n    not specified, ``-s/--similarity`` defaults to 100 and only renames of\n    identical files are detected.\n\n    .. container:: verbose\n\n       Examples:\n\n         - Files bar.c and foo.c are new,\n           while foobar.c has been removed (without using :prog:`remove`)\n           from the repository::\n\n             $ ls\n             bar.c foo.c\n             $ @prog@ status\n             ! foobar.c\n             ? bar.c\n             ? foo.c\n             $ @prog@ addremove\n             adding bar.c\n             adding foo.c\n             removing foobar.c\n             $ @prog@ status\n             A bar.c\n             A foo.c\n             R foobar.c\n\n         - A file foobar.c was moved to foo.c without using :prog:`rename`.\n           Afterwards, it was edited slightly::\n\n             $ ls\n             foo.c\n             $ @prog@ status\n             ! foobar.c\n             ? foo.c\n             $ @prog@ addremove --similarity 90\n             removing foobar.c\n             adding foo.c\n             recording removal of foobar.c as rename to foo.c (94% similar)\n             $ @prog@ status -C\n             A foo.c\n               foobar.c\n             R foobar.c\n\n    Returns 0 if all files are successfully added/removed.\n    ",
+    "doc": "add all new files, delete all missing files\n\n    Start tracking all new files and stop tracking all missing files\n    in the working copy. As with :prog:`add`, these changes take\n    effect at the next commit.\n\n    Unless file names are given, new files are ignored if they match any of\n    the patterns in ``.gitignore``.\n\n    Use the ``-s/--similarity`` option to detect renamed files. This\n    option takes a percentage between 0 (disabled) and 100 (files must\n    be identical) as its parameter. With a parameter greater than 0,\n    this compares every removed file with every added file and records\n    those similar enough as renames. Detecting renamed files this way\n    can be expensive. After using this option, :prog:`status -C` can be\n    used to check which files were identified as moved or renamed. If\n    not specified, ``-s/--similarity`` defaults to 100, only marking\n    identical files renamed.\n\n    .. container:: verbose\n\n       Examples:\n\n         - Files bar.c and foo.c are new,\n           while foobar.c has been removed (without using :prog:`remove`)\n           from the repository::\n\n             $ ls\n             bar.c foo.c\n             $ @prog@ status\n             ! foobar.c\n             ? bar.c\n             ? foo.c\n             $ @prog@ addremove\n             adding bar.c\n             adding foo.c\n             removing foobar.c\n             $ @prog@ status\n             A bar.c\n             A foo.c\n             R foobar.c\n\n         - A file foobar.c was moved to foo.c without using :prog:`rename`.\n           Afterwards, it was edited slightly::\n\n             $ ls\n             foo.c\n             $ @prog@ status\n             ! foobar.c\n             ? foo.c\n             $ @prog@ addremove --similarity 90\n             removing foobar.c\n             adding foo.c\n             recording removal of foobar.c as rename to foo.c (94% similar)\n             $ @prog@ status -C\n             A foo.c\n               foobar.c\n             R foobar.c\n\n    Returns 0 if all files are successfully added/removed.\n    ",
     "args": [
       {
         "shortname": "s",
@@ -164,6 +164,12 @@
         "fullname": "interactive",
         "default": null,
         "description": "use interactive mode"
+      },
+      {
+        "shortname": "",
+        "fullname": "no-move-detection",
+        "default": null,
+        "description": "disable automatic file move detection"
       },
       {
         "shortname": "",
@@ -233,9 +239,9 @@
       },
       {
         "shortname": "",
-        "fullname": "no-move-detection",
-        "default": null,
-        "description": "disable automatic file move detection"
+        "fullname": "message-field",
+        "default": [],
+        "description": "rewrite fields of commit message (e.g. --message-field=Summary='New Summary' to update or --message-field=-Summary to remove) (EXPERIMENTAL)"
       },
       {
         "shortname": "",
@@ -715,7 +721,7 @@
         "shortname": "",
         "fullname": "aws",
         "default": false,
-        "description": "configure repo to run against AWS (EXPERIMENTAL)"
+        "description": "configure repo to run against AWS (EXPERIMENTAL) (FBCODE)"
       }
     ],
     "subcommands": null
@@ -759,6 +765,18 @@
         "description": "reuse commit message from REV"
       },
       {
+        "shortname": "",
+        "fullname": "no-automv",
+        "default": null,
+        "description": "disable automatic file move detection (DEPRECATED)"
+      },
+      {
+        "shortname": "",
+        "fullname": "no-move-detection",
+        "default": null,
+        "description": "disable automatic file move detection"
+      },
+      {
         "shortname": "I",
         "fullname": "include",
         "default": [],
@@ -796,6 +814,12 @@
       },
       {
         "shortname": "",
+        "fullname": "message-field",
+        "default": [],
+        "description": "rewrite fields of commit message (e.g. --message-field=Summary='New Summary' to update or --message-field=-Summary to remove) (EXPERIMENTAL)"
+      },
+      {
+        "shortname": "",
         "fullname": "rebase",
         "default": null,
         "description": "(with --amend) rebases children after the amend (DEPRECATED)"
@@ -823,18 +847,6 @@
         "fullname": "template",
         "default": "",
         "description": "(with --amend) display with template (DEPRECATED)"
-      },
-      {
-        "shortname": "",
-        "fullname": "no-automv",
-        "default": null,
-        "description": "disable automatic file move detection (DEPRECATED)"
-      },
-      {
-        "shortname": "",
-        "fullname": "no-move-detection",
-        "default": null,
-        "description": "disable automatic file move detection"
       }
     ],
     "subcommands": null
@@ -1047,7 +1059,7 @@
       "fold",
       "squash"
     ],
-    "doc": "combine multiple commits into a single commit\n\n    With ``--from``, fold all of the commit linearly between the current\n    commit and the specified commit.\n\n    With ``--exact``, fold only the specified commits while ignoring the\n    current commit. The given commits must form a linear, continuous\n    chain.\n\n    .. container:: verbose\n\n     Some examples:\n\n     - Fold from the current commit to its parent::\n\n         @prog@ fold --from .^\n\n     - Fold all draft commits into the current commit::\n\n         @prog@ fold --from 'draft()'\n\n       See :prog:`help phases` for more about draft commits and\n       :prog:`help revsets` for more about the `draft()` keyword.\n\n     - Fold commits between e254371c1 and be57079e4 into the current commit::\n\n         @prog@ fold --from e254371c1::be57079e4\n\n     - Fold commits e254371c1 and be57079e4:\n\n        @prog@ fold \"e254371c1 + be57079e4\" --exact\n\n     - Only fold commits linearly between foo and .::\n\n         @prog@ fold foo::. --exact\n    ",
+    "doc": "combine multiple commits into a single commit\n\n    With ``--from``, fold all of the commit linearly between the current\n    commit and the specified commit.\n\n    With ``--exact``, fold only the specified commits while ignoring the\n    current commit. The given commits must form a linear, continuous\n    chain.\n\n    .. container:: verbose\n\n     Some examples:\n\n     - Fold from the current commit to its parent::\n\n         @prog@ fold --from .^\n\n     - Fold all draft commits into the current commit::\n\n         @prog@ fold --from 'draft()'\n\n       See :prog:`help phases` for more about draft commits and\n       :prog:`help revsets` for more about the `draft()` keyword.\n\n     - Fold commits between e254371c1 and be57079e4 into the current commit::\n\n         @prog@ fold --from e254371c1::be57079e4\n\n     - Fold commits e254371c1 and be57079e4::\n\n         @prog@ fold \"e254371c1 + be57079e4\" --exact\n\n     - Only fold commits linearly between foo and .::\n\n         @prog@ fold foo::. --exact\n    ",
     "args": [
       {
         "shortname": "r",
@@ -1275,6 +1287,12 @@
         "fullname": "user",
         "default": "",
         "description": "record the specified user as committer"
+      },
+      {
+        "shortname": "",
+        "fullname": "message-field",
+        "default": [],
+        "description": "rewrite fields of commit message (e.g. --message-field=Summary='New Summary' to update or --message-field=-Summary to remove) (EXPERIMENTAL)"
       },
       {
         "shortname": "t",
@@ -1716,6 +1734,12 @@
         "description": "record the specified user as committer"
       },
       {
+        "shortname": "",
+        "fullname": "message-field",
+        "default": [],
+        "description": "rewrite fields of commit message (e.g. --message-field=Summary='New Summary' to update or --message-field=-Summary to remove) (EXPERIMENTAL)"
+      },
+      {
         "shortname": "T",
         "fullname": "template",
         "default": "",
@@ -2042,7 +2066,7 @@
     "aliases": [
       "pull"
     ],
-    "doc": "pull commits from the specified source\n\n    Pull commits from a remote repository to a local one. This command modifies\n    the commit graph, but doesn't mutate local commits or the working copy.\n\n    Use ``-B/--bookmark`` to specify a remote bookmark to pull. For Git\n    repos, remote bookmarks correspond to branches. If no bookmark is\n    specified, a default set of relevant remote names are pulled.\n\n    If SOURCE is omitted, the default path is used. Use :prog:`path\n    --add` to add a named source.\n\n    See :prog:`help urls` and :prog:`help path` for more information.\n\n    .. container:: verbose\n\n      Examples:\n\n      - pull relevant remote bookmarks from default source::\n\n          @prog@ pull\n\n      - pull a bookmark named my-branch from source my-fork:\n\n          @prog@ pull my-fork --bookmark my-branch\n\n    .. container:: verbose\n\n        You can use ``.`` for BOOKMARK to specify the active bookmark.\n\n    Returns 0 on success, 1 on failure, including if ``--update`` was\n    specified but the update had unresolved conflicts.\n    ",
+    "doc": "pull commits from the specified source\n\n    Pull commits from a remote repository to a local one. This command modifies\n    the commit graph, but doesn't mutate local commits or the working copy.\n\n    Use ``-B/--bookmark`` to specify a remote bookmark to pull. For Git\n    repos, remote bookmarks correspond to branches. If no bookmark is\n    specified, a default set of relevant remote names are pulled.\n\n    If SOURCE is omitted, the default path is used. Use :prog:`path\n    --add` to add a named source.\n\n    See :prog:`help urls` and :prog:`help path` for more information.\n\n    .. container:: verbose\n\n      Examples:\n\n      - pull relevant remote bookmarks from default source::\n\n          @prog@ pull\n\n      - pull a bookmark named my-branch from source my-fork::\n\n          @prog@ pull my-fork --bookmark my-branch\n\n    .. container:: verbose\n\n        You can use ``.`` for BOOKMARK to specify the active bookmark.\n\n    Returns 0 on success, 1 on failure, including if ``--update`` was\n    specified but the update had unresolved conflicts.\n    ",
     "args": [
       {
         "shortname": "u",
@@ -2768,7 +2792,7 @@
       "unamend",
       "una"
     ],
-    "doc": "undo the last amend operation on the current commit\n\n    Reverse the effects of an :prog:`amend` operation. Hides the current commit\n    and checks out the previous version of the commit. :prog:`unamend` does not\n    revert the state of the working copy, so changes that were added to the\n    commit in the last amend operation become pending changes in the working\n    copy.\n\n    :prog:`unamend` cannot be run on amended commits that have children. In\n    other words, you cannot unamend an amended commit in the middle of a\n    stack.\n\n    .. note::\n\n        Running :prog:`unamend` is similar to running :prog:`undo --keep`\n        immediately after :prog:`amend`. However, unlike :prog:`undo`, which can\n        only undo an amend if it was the last operation you performed,\n        :prog:`unamend` can unamend any draft amended commit in the graph that\n        does not have children.\n\n    .. container:: verbose\n\n      Although :prog:`unamend` is typically used to reverse the effects of\n      :prog:`amend`, it actually rolls back the current commit to its previous\n      version, regardless of whether the changes resulted from an :prog:`amend`\n      operation or from another operation, such as :prog:`rebase`.\n    ",
+    "doc": "undo the last amend operation on the current commit\n\n    Reverse the effects of an :prog:`amend` operation. Hides the current commit\n    and checks out the previous version of the commit. :prog:`unamend` does not\n    revert the state of the working copy, so changes that were added to the\n    commit in the last amend operation become pending changes in the working\n    copy.\n\n    :prog:`unamend` cannot be run on amended commits that have children. In\n    other words, you cannot unamend an amended commit in the middle of a\n    stack.\n\n    .. note::\n\n        Running :prog:`unamend` is similar to running :prog:`undo --keep`\n        immediately after :prog:`amend`. However, unlike :prog:`undo`, which can\n        only undo an amend if it was the last operation you performed,\n        :prog:`unamend` can unamend any draft amended commit in the graph that\n        does not have children.\n\n    .. container:: verbose\n\n      Although :prog:`unamend` is typically used to reverse the effects of\n      :prog:`amend`, it actually rolls back the current commit to its previous\n      version, regardless of whether the changes resulted from an :prog:`amend`\n      operation or from another operation. We disallow :prog:`unamend` if the\n      predecessor's parents don't match the current commit's parents to avoid\n      unexpected behavior after, for example, :prog:`rebase`.\n    ",
     "args": [],
     "subcommands": null
   },
@@ -2806,7 +2830,7 @@
     "aliases": [
       "undo"
     ],
-    "doc": "undo the last local command\n\n    Reverse the effects of the last local command. A local command is one that\n    changed the currently checked out commit, that modified the contents of\n    local commits, or that changed local bookmarks. Examples of local commands\n    include :prog:`goto`, :prog:`commit`, :prog:`amend`, and :prog:`rebase`.\n\n    You cannot use :prog:`undo` to undo uncommited changes in the working copy,\n    or changes to remote bookmarks.\n\n    You can run :prog:`undo` multiple times to undo a series of local commands.\n    Alternatively, you can explicitly specify the number of local commands to\n    undo using ``--step``. This number can also be specified as a positional\n    argument.\n\n    To undo the effects of :prog:`undo`, run :prog:`redo`. Run\n    :prog:`help redo` for more information.\n\n\n    Include ``--keep`` to preserve the state of the working copy. For example,\n    specify ``--keep`` when running :prog:`undo` to reverse the effects of an\n    :prog:`commit` or :prog:`amend` operation while still preserving changes\n    in the working copy. These changes will appear as pending changes.\n\n    Specify ``--preview`` to see a graphical display that shows what\n    your smartlog will look like after you run the command. Specify\n    ``--interactive`` for an interactive version of this preview in which\n    you can step backwards and forwards in the undo history.\n\n\n    .. note::\n\n       :prog:`undo` cannot be used with non-local commands, or with commands\n       that are read-only. :prog:`undo` will skip over these commands in the\n       undo history.\n\n       For hybrid commands that result in both local and remote changes,\n       :prog:`undo` will undo the local changes, but not the remote changes.\n       For example, `@prog@ pull --rebase` might move remote/master and also\n       rebase local commits. In this situation, :prog:`undo` will revert the\n       rebase, but not the change to remote/master.\n\n    .. container:: verbose\n\n        Branch limits the scope of an undo to a group of local (draft)\n        changectxs, identified by any one member of this group.\n    ",
+    "doc": "undo the last local command\n\n    Reverse the effects of the last local command. A local command is one that\n    changed the currently checked out commit, that modified the contents of\n    local commits, or that changed local bookmarks. Examples of local commands\n    include :prog:`goto`, :prog:`commit`, :prog:`amend`, and :prog:`rebase`.\n\n    You cannot use :prog:`undo` to undo uncommitted changes in the working copy,\n    or changes to remote bookmarks.\n\n    You can run :prog:`undo` multiple times to undo a series of local commands.\n    Alternatively, you can explicitly specify the number of local commands to\n    undo using ``--step``. This number can also be specified as a positional\n    argument.\n\n    To undo the effects of :prog:`undo`, run :prog:`redo`. Run\n    :prog:`help redo` for more information.\n\n\n    Include ``--keep`` to preserve the state of the working copy. For example,\n    specify ``--keep`` when running :prog:`undo` to reverse the effects of an\n    :prog:`commit` or :prog:`amend` operation while still preserving changes\n    in the working copy. These changes will appear as pending changes.\n\n    Specify ``--preview`` to see a graphical display that shows what\n    your smartlog will look like after you run the command. Specify\n    ``--interactive`` for an interactive version of this preview in which\n    you can step backwards and forwards in the undo history.\n\n\n    .. note::\n\n       :prog:`undo` cannot be used with non-local commands, or with commands\n       that are read-only. :prog:`undo` will skip over these commands in the\n       undo history.\n\n       For hybrid commands that result in both local and remote changes,\n       :prog:`undo` will undo the local changes, but not the remote changes.\n       For example, `@prog@ pull --rebase` might move remote/master and also\n       rebase local commits. In this situation, :prog:`undo` will revert the\n       rebase, but not the change to remote/master.\n\n    .. container:: verbose\n\n        Branch limits the scope of an undo to a group of local (draft)\n        changectxs, identified by any one member of this group.\n    ",
     "args": [
       {
         "shortname": "a",

@@ -4,7 +4,7 @@ sidebar_position: 2
 
 ## addremove | addrm
 <!--
-  @generated SignedSource<<eb5d9f6de3184c7ef9c08f84af268cf3>>
+  @generated SignedSource<<28bc13a7c29c7a4d62749b1e6ab8b384>>
   Run `./scripts/generate-command-markdown.py` to regenerate.
 -->
 
@@ -25,8 +25,8 @@ this compares every removed file with every added file and records
 those similar enough as renames. Detecting renamed files this way
 can be expensive. After using this option, `sl status -C` can be
 used to check which files were identified as moved or renamed. If
-not specified, `-s/--similarity` defaults to 100 and only renames of
-identical files are detected.
+not specified, `-s/--similarity` defaults to 100, only marking
+identical files renamed.
 
 Examples:
 

@@ -110,7 +110,7 @@
       "addremove",
       "addrm"
     ],
-    "doc": "\n**add all new files, delete all missing files**\n\nStart tracking all new files and stop tracking all missing files\nin the working copy. As with `sl add`, these changes take\neffect at the next commit.\n\nUnless file names are given, new files are ignored if they match any of\nthe patterns in `.gitignore`.\n\nUse the `-s/--similarity` option to detect renamed files. This\noption takes a percentage between 0 (disabled) and 100 (files must\nbe identical) as its parameter. With a parameter greater than 0,\nthis compares every removed file with every added file and records\nthose similar enough as renames. Detecting renamed files this way\ncan be expensive. After using this option, `sl status -C` can be\nused to check which files were identified as moved or renamed. If\nnot specified, `-s/--similarity` defaults to 100 and only renames of\nidentical files are detected.\n\nExamples:\n\n- Files bar.c and foo.c are new,  while foobar.c has been removed (without using `sl remove`)  from the repository:\n\n```\n$ ls\nbar.c foo.c\n$ sl status\n! foobar.c\n? bar.c\n? foo.c\n$ sl addremove\nadding bar.c\nadding foo.c\nremoving foobar.c\n$ sl status\nA bar.c\nA foo.c\nR foobar.c\n```\n\n- A file foobar.c was moved to foo.c without using `sl rename`.  Afterwards, it was edited slightly:\n\n```\n$ ls\nfoo.c\n$ sl status\n! foobar.c\n? foo.c\n$ sl addremove --similarity 90\nremoving foobar.c\nadding foo.c\nrecording removal of foobar.c as rename to foo.c (94% similar)\n$ sl status -C\nA foo.c\n  foobar.c\nR foobar.c\n```\n\nReturns 0 if all files are successfully added/removed.\n",
+    "doc": "\n**add all new files, delete all missing files**\n\nStart tracking all new files and stop tracking all missing files\nin the working copy. As with `sl add`, these changes take\neffect at the next commit.\n\nUnless file names are given, new files are ignored if they match any of\nthe patterns in `.gitignore`.\n\nUse the `-s/--similarity` option to detect renamed files. This\noption takes a percentage between 0 (disabled) and 100 (files must\nbe identical) as its parameter. With a parameter greater than 0,\nthis compares every removed file with every added file and records\nthose similar enough as renames. Detecting renamed files this way\ncan be expensive. After using this option, `sl status -C` can be\nused to check which files were identified as moved or renamed. If\nnot specified, `-s/--similarity` defaults to 100, only marking\nidentical files renamed.\n\nExamples:\n\n- Files bar.c and foo.c are new,  while foobar.c has been removed (without using `sl remove`)  from the repository:\n\n```\n$ ls\nbar.c foo.c\n$ sl status\n! foobar.c\n? bar.c\n? foo.c\n$ sl addremove\nadding bar.c\nadding foo.c\nremoving foobar.c\n$ sl status\nA bar.c\nA foo.c\nR foobar.c\n```\n\n- A file foobar.c was moved to foo.c without using `sl rename`.  Afterwards, it was edited slightly:\n\n```\n$ ls\nfoo.c\n$ sl status\n! foobar.c\n? foo.c\n$ sl addremove --similarity 90\nremoving foobar.c\nadding foo.c\nrecording removal of foobar.c as rename to foo.c (94% similar)\n$ sl status -C\nA foo.c\n  foobar.c\nR foobar.c\n```\n\nReturns 0 if all files are successfully added/removed.\n",
     "args": [
       {
         "shortname": "s",
@@ -164,6 +164,12 @@
         "fullname": "interactive",
         "default": null,
         "description": "use interactive mode"
+      },
+      {
+        "shortname": "",
+        "fullname": "no-move-detection",
+        "default": null,
+        "description": "disable automatic file move detection"
       },
       {
         "shortname": "",
@@ -233,9 +239,9 @@
       },
       {
         "shortname": "",
-        "fullname": "no-move-detection",
-        "default": null,
-        "description": "disable automatic file move detection"
+        "fullname": "message-field",
+        "default": [],
+        "description": "rewrite fields of commit message (e.g. --message-field=Summary='New Summary' to update or --message-field=-Summary to remove) (EXPERIMENTAL)"
       },
       {
         "shortname": "",
@@ -715,7 +721,7 @@
         "shortname": "",
         "fullname": "aws",
         "default": false,
-        "description": "configure repo to run against AWS (EXPERIMENTAL)"
+        "description": "configure repo to run against AWS (EXPERIMENTAL) (FBCODE)"
       }
     ],
     "subcommands": null
@@ -759,6 +765,18 @@
         "description": "reuse commit message from REV"
       },
       {
+        "shortname": "",
+        "fullname": "no-automv",
+        "default": null,
+        "description": "disable automatic file move detection (DEPRECATED)"
+      },
+      {
+        "shortname": "",
+        "fullname": "no-move-detection",
+        "default": null,
+        "description": "disable automatic file move detection"
+      },
+      {
         "shortname": "I",
         "fullname": "include",
         "default": [],
@@ -796,6 +814,12 @@
       },
       {
         "shortname": "",
+        "fullname": "message-field",
+        "default": [],
+        "description": "rewrite fields of commit message (e.g. --message-field=Summary='New Summary' to update or --message-field=-Summary to remove) (EXPERIMENTAL)"
+      },
+      {
+        "shortname": "",
         "fullname": "rebase",
         "default": null,
         "description": "(with --amend) rebases children after the amend (DEPRECATED)"
@@ -823,18 +847,6 @@
         "fullname": "template",
         "default": "",
         "description": "(with --amend) display with template (DEPRECATED)"
-      },
-      {
-        "shortname": "",
-        "fullname": "no-automv",
-        "default": null,
-        "description": "disable automatic file move detection (DEPRECATED)"
-      },
-      {
-        "shortname": "",
-        "fullname": "no-move-detection",
-        "default": null,
-        "description": "disable automatic file move detection"
       }
     ],
     "subcommands": null
@@ -1047,7 +1059,7 @@
       "fold",
       "squash"
     ],
-    "doc": "\n**combine multiple commits into a single commit**\n\nWith `--from`, fold all of the commit linearly between the current\ncommit and the specified commit.\n\nWith `--exact`, fold only the specified commits while ignoring the\ncurrent commit. The given commits must form a linear, continuous\nchain.\n\nSome examples:\n\n- Fold from the current commit to its parent:\n\n```\nsl fold --from .^\n```\n\n- Fold all draft commits into the current commit:\n\n```\nsl fold --from 'draft()'\n```\n\nSee `sl help phases` for more about draft commits and\n`sl help revsets` for more about the `draft()` keyword.\n\n- Fold commits between e254371c1 and be57079e4 into the current commit:\n\n```\nsl fold --from e254371c1::be57079e4\n```\n\n- Fold commits e254371c1 and be57079e4:\n\nsl fold &quot;e254371c1 + be57079e4&quot; --exact\n\n- Only fold commits linearly between foo and .:\n\n```\nsl fold foo::. --exact\n```\n",
+    "doc": "\n**combine multiple commits into a single commit**\n\nWith `--from`, fold all of the commit linearly between the current\ncommit and the specified commit.\n\nWith `--exact`, fold only the specified commits while ignoring the\ncurrent commit. The given commits must form a linear, continuous\nchain.\n\nSome examples:\n\n- Fold from the current commit to its parent:\n\n```\nsl fold --from .^\n```\n\n- Fold all draft commits into the current commit:\n\n```\nsl fold --from 'draft()'\n```\n\nSee `sl help phases` for more about draft commits and\n`sl help revsets` for more about the `draft()` keyword.\n\n- Fold commits between e254371c1 and be57079e4 into the current commit:\n\n```\nsl fold --from e254371c1::be57079e4\n```\n\n- Fold commits e254371c1 and be57079e4:\n\n```\nsl fold \"e254371c1 + be57079e4\" --exact\n```\n\n- Only fold commits linearly between foo and .:\n\n```\nsl fold foo::. --exact\n```\n",
     "args": [
       {
         "shortname": "r",
@@ -1275,6 +1287,12 @@
         "fullname": "user",
         "default": "",
         "description": "record the specified user as committer"
+      },
+      {
+        "shortname": "",
+        "fullname": "message-field",
+        "default": [],
+        "description": "rewrite fields of commit message (e.g. --message-field=Summary='New Summary' to update or --message-field=-Summary to remove) (EXPERIMENTAL)"
       },
       {
         "shortname": "t",
@@ -1716,6 +1734,12 @@
         "description": "record the specified user as committer"
       },
       {
+        "shortname": "",
+        "fullname": "message-field",
+        "default": [],
+        "description": "rewrite fields of commit message (e.g. --message-field=Summary='New Summary' to update or --message-field=-Summary to remove) (EXPERIMENTAL)"
+      },
+      {
         "shortname": "T",
         "fullname": "template",
         "default": "",
@@ -2042,7 +2066,7 @@
     "aliases": [
       "pull"
     ],
-    "doc": "\n**pull commits from the specified source**\n\nPull commits from a remote repository to a local one. This command modifies\nthe commit graph, but doesn&#x27;t mutate local commits or the working copy.\n\nUse `-B/--bookmark` to specify a remote bookmark to pull. For Git\nrepos, remote bookmarks correspond to branches. If no bookmark is\nspecified, a default set of relevant remote names are pulled.\n\nIf SOURCE is omitted, the default path is used. Use `sl path\n--add` to add a named source.\n\nSee `sl help urls` and `sl help path` for more information.\n\nExamples:\n\n- pull relevant remote bookmarks from default source:\n\n```\nsl pull\n```\n\n- pull a bookmark named my-branch from source my-fork:\n\nsl pull my-fork --bookmark my-branch\n\nYou can use `.` for BOOKMARK to specify the active bookmark.\n\nReturns 0 on success, 1 on failure, including if `--update` was\nspecified but the update had unresolved conflicts.\n",
+    "doc": "\n**pull commits from the specified source**\n\nPull commits from a remote repository to a local one. This command modifies\nthe commit graph, but doesn&#x27;t mutate local commits or the working copy.\n\nUse `-B/--bookmark` to specify a remote bookmark to pull. For Git\nrepos, remote bookmarks correspond to branches. If no bookmark is\nspecified, a default set of relevant remote names are pulled.\n\nIf SOURCE is omitted, the default path is used. Use `sl path\n--add` to add a named source.\n\nSee `sl help urls` and `sl help path` for more information.\n\nExamples:\n\n- pull relevant remote bookmarks from default source:\n\n```\nsl pull\n```\n\n- pull a bookmark named my-branch from source my-fork:\n\n```\nsl pull my-fork --bookmark my-branch\n```\n\nYou can use `.` for BOOKMARK to specify the active bookmark.\n\nReturns 0 on success, 1 on failure, including if `--update` was\nspecified but the update had unresolved conflicts.\n",
     "args": [
       {
         "shortname": "u",
@@ -2768,7 +2792,7 @@
       "unamend",
       "una"
     ],
-    "doc": "\n**undo the last amend operation on the current commit**\n\nReverse the effects of an `sl amend` operation. Hides the current commit\nand checks out the previous version of the commit. `sl unamend` does not\nrevert the state of the working copy, so changes that were added to the\ncommit in the last amend operation become pending changes in the working\ncopy.\n\n`sl unamend` cannot be run on amended commits that have children. In\nother words, you cannot unamend an amended commit in the middle of a\nstack.\n\nRunning `sl unamend` is similar to running `sl undo --keep`\nimmediately after `sl amend`. However, unlike `sl undo`, which can\nonly undo an amend if it was the last operation you performed,\n`sl unamend` can unamend any draft amended commit in the graph that\ndoes not have children.\n\nAlthough `sl unamend` is typically used to reverse the effects of\n`sl amend`, it actually rolls back the current commit to its previous\nversion, regardless of whether the changes resulted from an `sl amend`\noperation or from another operation, such as `sl rebase`.\n",
+    "doc": "\n**undo the last amend operation on the current commit**\n\nReverse the effects of an `sl amend` operation. Hides the current commit\nand checks out the previous version of the commit. `sl unamend` does not\nrevert the state of the working copy, so changes that were added to the\ncommit in the last amend operation become pending changes in the working\ncopy.\n\n`sl unamend` cannot be run on amended commits that have children. In\nother words, you cannot unamend an amended commit in the middle of a\nstack.\n\nRunning `sl unamend` is similar to running `sl undo --keep`\nimmediately after `sl amend`. However, unlike `sl undo`, which can\nonly undo an amend if it was the last operation you performed,\n`sl unamend` can unamend any draft amended commit in the graph that\ndoes not have children.\n\nAlthough `sl unamend` is typically used to reverse the effects of\n`sl amend`, it actually rolls back the current commit to its previous\nversion, regardless of whether the changes resulted from an `sl amend`\noperation or from another operation. We disallow `sl unamend` if the\npredecessor&#x27;s parents don&#x27;t match the current commit&#x27;s parents to avoid\nunexpected behavior after, for example, `sl rebase`.\n",
     "args": [],
     "subcommands": null
   },
@@ -2806,7 +2830,7 @@
     "aliases": [
       "undo"
     ],
-    "doc": "\n**undo the last local command**\n\nReverse the effects of the last local command. A local command is one that\nchanged the currently checked out commit, that modified the contents of\nlocal commits, or that changed local bookmarks. Examples of local commands\ninclude `sl goto`, `sl commit`, `sl amend`, and `sl rebase`.\n\nYou cannot use `sl undo` to undo uncommited changes in the working copy,\nor changes to remote bookmarks.\n\nYou can run `sl undo` multiple times to undo a series of local commands.\nAlternatively, you can explicitly specify the number of local commands to\nundo using `--step`. This number can also be specified as a positional\nargument.\n\nTo undo the effects of `sl undo`, run `sl redo`. Run\n`sl help redo` for more information.\n\nInclude `--keep` to preserve the state of the working copy. For example,\nspecify `--keep` when running `sl undo` to reverse the effects of an\n`sl commit` or `sl amend` operation while still preserving changes\nin the working copy. These changes will appear as pending changes.\n\nSpecify `--preview` to see a graphical display that shows what\nyour smartlog will look like after you run the command. Specify\n`--interactive` for an interactive version of this preview in which\nyou can step backwards and forwards in the undo history.\n\n`sl undo` cannot be used with non-local commands, or with commands\nthat are read-only. `sl undo` will skip over these commands in the\nundo history.\n\nFor hybrid commands that result in both local and remote changes,\n`sl undo` will undo the local changes, but not the remote changes.\nFor example, `sl pull --rebase` might move remote/master and also\nrebase local commits. In this situation, `sl undo` will revert the\nrebase, but not the change to remote/master.\n\nBranch limits the scope of an undo to a group of local (draft)\nchangectxs, identified by any one member of this group.\n",
+    "doc": "\n**undo the last local command**\n\nReverse the effects of the last local command. A local command is one that\nchanged the currently checked out commit, that modified the contents of\nlocal commits, or that changed local bookmarks. Examples of local commands\ninclude `sl goto`, `sl commit`, `sl amend`, and `sl rebase`.\n\nYou cannot use `sl undo` to undo uncommitted changes in the working copy,\nor changes to remote bookmarks.\n\nYou can run `sl undo` multiple times to undo a series of local commands.\nAlternatively, you can explicitly specify the number of local commands to\nundo using `--step`. This number can also be specified as a positional\nargument.\n\nTo undo the effects of `sl undo`, run `sl redo`. Run\n`sl help redo` for more information.\n\nInclude `--keep` to preserve the state of the working copy. For example,\nspecify `--keep` when running `sl undo` to reverse the effects of an\n`sl commit` or `sl amend` operation while still preserving changes\nin the working copy. These changes will appear as pending changes.\n\nSpecify `--preview` to see a graphical display that shows what\nyour smartlog will look like after you run the command. Specify\n`--interactive` for an interactive version of this preview in which\nyou can step backwards and forwards in the undo history.\n\n`sl undo` cannot be used with non-local commands, or with commands\nthat are read-only. `sl undo` will skip over these commands in the\nundo history.\n\nFor hybrid commands that result in both local and remote changes,\n`sl undo` will undo the local changes, but not the remote changes.\nFor example, `sl pull --rebase` might move remote/master and also\nrebase local commits. In this situation, `sl undo` will revert the\nrebase, but not the change to remote/master.\n\nBranch limits the scope of an undo to a group of local (draft)\nchangectxs, identified by any one member of this group.\n",
     "args": [
       {
         "shortname": "a",
