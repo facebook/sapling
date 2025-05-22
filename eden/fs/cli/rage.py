@@ -16,10 +16,26 @@ import shlex
 import shutil
 import subprocess
 import sys
+import time
 import traceback
 from datetime import datetime, timedelta
+from functools import wraps
 from pathlib import Path
-from typing import Callable, cast, Dict, Generator, IO, Iterable, List, Optional, Tuple
+from typing import (
+    Any,
+    Callable,
+    cast,
+    Dict,
+    Generator,
+    IO,
+    Iterable,
+    List,
+    Optional,
+    Tuple,
+    TypeVar,
+)
+
+T = TypeVar("T")
 
 from eden.scm.sapling import redact
 
@@ -112,9 +128,40 @@ THRIFT_COUNTER_REGEX = (
     r"thrift\.(EdenService|BaseService)\..*(time|num_samples|num_calls).*"
 )
 
+time_list: Dict[str, str] = {}  # Mapping of function names to duration strings
+
 
 def section_title(message: str, out: IOWithRedaction) -> None:
     out.write(util_mod.underlined(message))
+
+
+def print_top_5_items(input_dict: Dict[str, str], out: IOWithRedaction) -> None:
+    section_title("Top 5 time consumption", out)
+    # Sort the dictionary items by their numeric values (converted to float)
+    sorted_items = sorted(input_dict.items(), key=lambda x: float(x[1]), reverse=True)
+
+    top_5_dict = {k: f"{v}s" for k, v in sorted_items[:5]}
+
+    for key, value in top_5_dict.items():
+        out.write(f"{key}: {value}\n")
+
+
+T = TypeVar("T")
+
+
+def timer_decorator(func: Callable[..., T]) -> Callable[..., T]:
+    @wraps(func)
+    def wrapper(*args: Any, **kwargs: Any) -> T:
+        start_time = time.time()
+        result = func(*args, **kwargs)
+        end_time = time.time()
+        duration = end_time - start_time
+        if args[0]:
+            args[0].write(f"\n{func.__name__} took {duration:.2f} seconds\n")
+        time_list[func.__name__] = f"{duration:.2f}"
+        return result
+
+    return wrapper
 
 
 def get_watchman_log_path() -> Optional[Path]:
@@ -173,55 +220,18 @@ def get_config_log_path() -> Optional[Path]:
     return None
 
 
-def print_diagnostic_info(
-    instance: EdenInstance, unsafe_out: IO[bytes], dry_run: bool
-) -> None:
-    # Wrap output stream with redaction logic so that we don't print secrets
-    # (such as auth tokens) to the output buffer.
-    out = IOWithRedaction(unsafe_out)
-
-    section_title("System info:", out)
-    user = getpass.getuser()
-    host = hostname_mod.get_normalized_hostname()
-    net_env = get_networking_environment()
-    header = (
-        f"User                    : {user}\n"
-        f"Hostname                : {host}\n"
-        f"Version                 : {version_mod.get_current_version()}\n"
-    )
-
-    if net_env:
-        header += f"Network                 : {net_env}\n"
-
-    out.write(header)
-    if sys.platform != "win32":
-        # We attempt to report the RPM version on Linux as well as Mac, since Mac OS
-        # can use RPMs as well.  If the RPM command fails this will just report that
-        # and will continue reporting the rest of the rage data.
-        print_rpm_version(out)
-    print_os_version(out)
-    if sys.platform == "darwin":
-        cpu = "arm64" if util_mod.is_apple_silicon() else "x86_64"
-        out.write(f"Architecture            : {cpu}\n")
-
-    health_status = instance.check_health()
-    if health_status.is_healthy():
-        section_title("Build info:", out)
-        debug_mod.do_buildinfo(instance, out.wrapped)
-        out.write("uptime: ")
-        instance.do_uptime(pretty=False, out=out.wrapped)
-
-    # Running eden doctor inside a hanged eden checkout can cause issues.
-    # We will disable this until we figure out a work-around.
-    # TODO(T113845692)
-    # print_eden_doctor_report(instance, out)
-
+@timer_decorator
+def print_host_dashboard(out: IOWithRedaction, host: str) -> None:
     host_dashboard_url = get_host_dashboard_url(host, datetime.now())
     if host_dashboard_url:
         section_title("Host dashboard:", out)
         out.write(f"{host_dashboard_url}\n")
 
-    processor = instance.get_config_value("rage.reporter", default="")
+
+@timer_decorator
+def get_eden_logs(
+    out: IOWithRedaction, processor: str, instance: EdenInstance, dry_run: bool
+) -> None:
     if not dry_run and processor:
         section_title("Verbose EdenFS logs:", out)
         paste_output(
@@ -232,6 +242,10 @@ def print_diagnostic_info(
             out,
             dry_run,
         )
+
+
+@timer_decorator
+def print_watchman_log(out: IOWithRedaction, processor: str, dry_run: bool) -> None:
     watchman_log_path = get_watchman_log_path()
 
     if watchman_log_path:
@@ -248,8 +262,10 @@ def print_diagnostic_info(
             dry_run,
         )
 
-    upgrade_log_path = get_upgrade_log_path()
 
+@timer_decorator
+def print_upgrade_path(out: IOWithRedaction, processor: str, dry_run: bool) -> None:
+    upgrade_log_path = get_upgrade_log_path()
     if upgrade_log_path:
         section_title("EdenFS Upgrade logs:", out)
         out.write(f"Logs from: {upgrade_log_path}\n")
@@ -267,8 +283,10 @@ def print_diagnostic_info(
         section_title("EdenFS Upgrade logs:", out)
         out.write("Log file does not exist\n")
 
-    config_log_path = get_config_log_path()
 
+@timer_decorator
+def print_config_path(out: IOWithRedaction, processor: str, dry_run: bool) -> None:
+    config_log_path = get_config_log_path()
     if config_log_path:
         section_title("EdenFS Config logs:", out)
         out.write(f"Logs from: {config_log_path}\n")
@@ -286,20 +304,109 @@ def print_diagnostic_info(
         section_title("EdenFS Config logs:", out)
         out.write("Log file does not exist\n")
 
-    print_tail_of_log_file(instance.get_log_path(), out)
+
+def print_diagnostic_info(
+    instance: EdenInstance, unsafe_out: IO[bytes], dry_run: bool
+) -> None:
+    # Wrap output stream with redaction logic so that we don't print secrets
+    # (such as auth tokens) to the output buffer.
+    out = IOWithRedaction(unsafe_out)
+    host = hostname_mod.get_normalized_hostname()
+    health_status = instance.check_health()
+    edenfs_instance_pid = None
+    if health_status.is_healthy():
+        # assign to variable to make type checker happy :(
+        edenfs_instance_pid = health_status.pid
+
+    print_system_info(out, host)
+
+    # Running eden doctor inside a hanged eden checkout can cause issues.
+    # We will disable this until we figure out a work-around.
+    # TODO(T113845692)
+    # print_eden_doctor_report(instance, out)
+
+    print_build_info(out, host, instance)
+    print_host_dashboard(out, host)
+
+    processor = instance.get_config_value("rage.reporter", default="")
+    get_eden_logs(out, processor, instance, dry_run)
+
+    print_watchman_log(out, processor, dry_run)
+    print_upgrade_path(out, processor, dry_run)
+    print_config_path(out, processor, dry_run)
+
+    print_tail_of_log_file(out, instance.get_log_path())
     print_running_eden_process(out)
-    print_crashed_edenfs_logs(processor, out, dry_run)
+    print_crashed_edenfs_logs(out, processor, dry_run)
 
     edenfs_instance_pid = None
     if health_status.is_healthy():
         # assign to variable to make type checker happy :(
         edenfs_instance_pid = health_status.pid
-        if edenfs_instance_pid is not None:
-            print_edenfs_process_tree(edenfs_instance_pid, out)
-            if not dry_run and processor:
-                trace_running_edenfs(processor, edenfs_instance_pid, out, dry_run)
+        if health_status.is_healthy():
+            if edenfs_instance_pid is not None:
+                print_edenfs_process_tree(out, edenfs_instance_pid)
+                if not dry_run and processor:
+                    trace_running_edenfs(out, processor, edenfs_instance_pid, dry_run)
 
-    print_eden_redirections(instance, out)
+    print_eden_redirections(out, instance)
+
+    print_eden_mounts(out, instance)
+    if health_status.is_healthy():
+        print_memory_usage(out, instance)
+        # TODO(zeyi): enable this when memory usage collecting is implemented on Windows
+
+    print_counters(out, instance, "EdenFS", top_mod.COUNTER_REGEX)
+    print_counters(
+        out,
+        instance,
+        "Thrift",
+        THRIFT_COUNTER_REGEX,
+    )
+
+    if health_status.is_healthy() and not dry_run and processor:
+        print_recent_events(out, processor, dry_run)
+
+    if sys.platform == "win32":
+        print_counters(instance, "Prjfs", r"prjfs\..*", out)
+
+    print_eden_config(out, instance, processor, dry_run)
+
+    print_prefetch_profiles_list(out, instance)
+
+    print_third_party_vscode_extensions(out, instance)
+
+    print_system_mount_table(out)
+    print_env_variables(out, edenfs_instance_pid)
+
+    get_disk_space_usauge(out, processor, dry_run)
+
+    print_eden_doctor(out, processor, dry_run)
+
+    print_system_load(out)
+
+    get_quickstack(out, instance, processor, dry_run)
+
+    print_ulimits(out)
+
+    print_top_5_items(time_list, out)
+
+
+@timer_decorator
+def print_memory_usage(out: IOWithRedaction, instance: EdenInstance) -> None:
+    # TODO(zeyi): enable this when memory usage collecting is implemented on Windows
+    with io.StringIO() as stats_stream:
+        stats_mod.do_stats_general(
+            instance,
+            # pyre-fixme[6]: For 1st argument expected `TextIOWrapper[Any]` but
+            #  got `StringIO`.
+            stats_mod.StatsGeneralOptions(out=stats_stream),
+        )
+        out.write(stats_stream.getvalue())
+
+
+@timer_decorator
+def print_eden_mounts(out: IOWithRedaction, instance: EdenInstance) -> None:
     section_title("List of mount points:", out)
     mountpoint_paths = []
     for key in sorted(instance.get_mount_paths()):
@@ -329,40 +436,47 @@ def print_diagnostic_info(
         checkout_data.update(mount_data)
         for k, v in checkout_data.items():
             out.write("{:>20} : {}\n".format(k, v))
-    if health_status.is_healthy():
-        # TODO(zeyi): enable this when memory usage collecting is implemented on Windows
-        with io.StringIO() as stats_stream:
-            stats_mod.do_stats_general(
-                instance,
-                # pyre-fixme[6]: For 1st argument expected `TextIOWrapper[Any]` but
-                #  got `StringIO`.
-                stats_mod.StatsGeneralOptions(out=stats_stream),
-            )
-            out.write(stats_stream.getvalue())
 
-    print_counters(instance, "EdenFS", top_mod.COUNTER_REGEX, out)
-    print_counters(
-        instance,
-        "Thrift",
-        THRIFT_COUNTER_REGEX,
-        out,
+
+@timer_decorator
+def print_build_info(out: IOWithRedaction, host: str, instance: EdenInstance) -> None:
+    health_status = instance.check_health()
+    if health_status.is_healthy():
+        section_title("Build info:", out)
+        debug_mod.do_buildinfo(instance, out.wrapped)
+        out.write("uptime: ")
+        instance.do_uptime(pretty=False, out=out.wrapped)
+
+
+@timer_decorator
+def print_system_info(out: IOWithRedaction, host: str) -> None:
+    section_title("System info:", out)
+    user = getpass.getuser()
+    host = hostname_mod.get_normalized_hostname()
+    net_env = get_networking_environment()
+    header = (
+        f"User                    : {user}\n"
+        f"Hostname                : {host}\n"
+        f"Version                 : {version_mod.get_current_version()}\n"
     )
 
-    if health_status.is_healthy() and not dry_run and processor:
-        print_recent_events(processor, out, dry_run)
+    if net_env:
+        header += f"Network                 : {net_env}\n"
 
-    if sys.platform == "win32":
-        print_counters(instance, "Prjfs", r"prjfs\..*", out)
+    out.write(header)
+    if sys.platform != "win32":
+        # We attempt to report the RPM version on Linux as well as Mac, since Mac OS
+        # can use RPMs as well.  If the RPM command fails this will just report that
+        # and will continue reporting the rest of the rage data.
+        print_rpm_version(out)
+    print_os_version(out)
+    if sys.platform == "darwin":
+        cpu = "arm64" if util_mod.is_apple_silicon() else "x86_64"
+        out.write(f"Architecture            : {cpu}\n")
 
-    print_eden_config(instance, processor, out, dry_run)
 
-    print_prefetch_profiles_list(instance, out)
-
-    print_third_party_vscode_extensions(instance, out)
-
-    print_env_variables(out, edenfs_instance_pid)
-    print_system_mount_table(out)
-
+@timer_decorator
+def get_disk_space_usauge(out: IOWithRedaction, processor: str, dry_run: bool) -> None:
     section_title("Disk Space Usage:", out)
     paste_output(
         lambda sink: print_disk_space_usage(sink),
@@ -371,12 +485,12 @@ def print_diagnostic_info(
         dry_run,
     )
 
-    print_eden_doctor(processor, out, dry_run)
 
-    print_system_load(out)
-
+@timer_decorator
+def get_quickstack(
+    out: IOWithRedaction, instance: EdenInstance, processor: str, dry_run: bool
+) -> None:
     quickstack_cmd = get_quickstack_cmd(instance)
-
     if quickstack_cmd:
         section_title("Quickstack:", out)
         paste_output(
@@ -385,8 +499,6 @@ def print_diagnostic_info(
             out,
             dry_run,
         )
-
-    print_ulimits(out)
 
 
 def report_edenfs_bug(instance: EdenInstance, reporter: str) -> None:
@@ -449,7 +561,8 @@ def print_os_version(out: IOWithRedaction) -> None:
     out.write(f"OS Version              : {version}\n")
 
 
-def print_eden_doctor_report(instance: EdenInstance, out: IOWithRedaction) -> None:
+@timer_decorator
+def print_eden_doctor_report(out: IOWithRedaction, instance: EdenInstance) -> None:
     doctor_output = io.StringIO()
     try:
         doctor_rc = doctor_mod.cure_what_ails_you(
@@ -531,7 +644,8 @@ def paste_output(
         return 1
 
 
-def print_tail_of_log_file(path: Path, out: IOWithRedaction) -> None:
+@timer_decorator
+def print_tail_of_log_file(out: IOWithRedaction, path: Path) -> None:
     try:
         section_title("Most recent EdenFS logs:", out)
         LOG_AMOUNT = 20 * 1024
@@ -569,6 +683,7 @@ def _get_running_eden_process_windows() -> List[Tuple[str, str, str, str, str, s
     return lines
 
 
+@timer_decorator
 def print_running_eden_process(out: IOWithRedaction) -> None:
     try:
         section_title("List of running EdenFS processes:", out)
@@ -597,7 +712,8 @@ def print_running_eden_process(out: IOWithRedaction) -> None:
         out.write(f"{traceback.format_exc()}\n")
 
 
-def print_edenfs_process_tree(pid: int, out: IOWithRedaction) -> None:
+@timer_decorator
+def print_edenfs_process_tree(out: IOWithRedaction, pid: int) -> None:
     if sys.platform != "linux":
         return
     try:
@@ -613,7 +729,8 @@ def print_edenfs_process_tree(pid: int, out: IOWithRedaction) -> None:
         out.write(f"Error getting edenfs process tree: {e}\n")
 
 
-def print_eden_redirections(instance: EdenInstance, out: IOWithRedaction) -> None:
+@timer_decorator
+def print_eden_redirections(out: IOWithRedaction, instance: EdenInstance) -> None:
     try:
         section_title("EdenFS redirections:", out)
         checkouts = instance.get_checkouts()
@@ -628,8 +745,9 @@ def print_eden_redirections(instance: EdenInstance, out: IOWithRedaction) -> Non
         out.write(f"{traceback.format_exc()}\n")
 
 
+@timer_decorator
 def print_counters(
-    instance: EdenInstance, counter_type: str, regex: str, out: IOWithRedaction
+    out: IOWithRedaction, instance: EdenInstance, counter_type: str, regex: str
 ) -> None:
     try:
         section_title(f"{counter_type} counters:", out)
@@ -641,6 +759,7 @@ def print_counters(
         out.write(f"Error getting {counter_type} Thrift counters: {e}\n")
 
 
+@timer_decorator
 def print_env_variables(
     out: IOWithRedaction, edenfs_instance_pid: Optional[int]
 ) -> None:
@@ -674,6 +793,7 @@ def print_env_variables(
         out.write(f"Error getting EdenFS daemon environment variables: {e}")
 
 
+@timer_decorator
 def print_system_mount_table(out: IOWithRedaction) -> None:
     if sys.platform == "win32":
         return
@@ -723,6 +843,7 @@ def print_disk_space_usage(out: IOWithRedaction) -> None:
             out.write(f"Error running {cmd}: {e}\n\n")
 
 
+@timer_decorator
 def print_system_load(out: IOWithRedaction) -> None:
     if sys.platform not in ("darwin", "linux"):
         return
@@ -768,7 +889,8 @@ def run_cmd(
         out.write(f"Command {' '.join(cmd)} timed out after {timeout} seconds\n")
 
 
-def print_eden_doctor(processor: str, out: IOWithRedaction, dry_run: bool) -> None:
+@timer_decorator
+def print_eden_doctor(out: IOWithRedaction, processor: str, dry_run: bool) -> None:
     section_title("EdenFS doctor:", out)
     cmd = ["edenfsctl", "doctor"]
     try:
@@ -782,8 +904,9 @@ def print_eden_doctor(processor: str, out: IOWithRedaction, dry_run: bool) -> No
         out.write(f"Error printing {cmd}: {e}\n")
 
 
+@timer_decorator
 def print_eden_config(
-    instance: EdenInstance, processor: str, out: IOWithRedaction, dry_run: bool
+    out: IOWithRedaction, instance: EdenInstance, processor: str, dry_run: bool
 ) -> None:
     section_title("EdenFS config:", out)
     fsconfig_cmd = ["edenfsctl", "fsconfig", "--all"]
@@ -804,7 +927,8 @@ def print_eden_config(
         out.write(f"Error printing EdenFS config: {e}\n")
 
 
-def print_prefetch_profiles_list(instance: EdenInstance, out: IOWithRedaction) -> None:
+@timer_decorator
+def print_prefetch_profiles_list(out: IOWithRedaction, instance: EdenInstance) -> None:
     try:
         section_title("Prefetch Profiles list:", out)
         checkouts = instance.get_checkouts()
@@ -832,9 +956,11 @@ def print_prefetch_profiles_list(instance: EdenInstance, out: IOWithRedaction) -
         out.write(f"Error printing Prefetch Profiles list: {e}\n")
 
 
+@timer_decorator
 def print_crashed_edenfs_logs(
-    processor: str, out: IOWithRedaction, dry_run: bool
+    out: IOWithRedaction, processor: str, dry_run: bool
 ) -> None:
+    section_title("EdenFS crashes and dumps:", out)
     if sys.platform == "darwin":
         crashes_paths = [
             Path("/Library/Logs/DiagnosticReports"),
@@ -849,6 +975,7 @@ def print_crashed_edenfs_logs(
         )
         crashes_paths = [Path(winreg.QueryValueEx(key, "DumpFolder")[0])]
     else:
+        out.write("No crashes found\n")
         return
 
     section_title("EdenFS crashes and dumps:", out)
@@ -884,17 +1011,19 @@ def print_crashed_edenfs_logs(
     out.write("\n")
 
 
+@timer_decorator
 def trace_running_edenfs(
-    processor: str, pid: int, out: IOWithRedaction, dry_run: bool
+    out: IOWithRedaction, processor: str, pid: int, dry_run: bool
 ) -> None:
+    section_title("EdenFS process trace", out)
     if sys.platform == "darwin":
         trace_fn = print_sample_trace
     elif sys.platform == "win32":
         trace_fn = print_cdb_backtrace
     else:
+        out.write("Traces are logged only for Windows and MacOS\n")
         return
 
-    section_title("EdenFS process trace", out)
     try:
         # pyre-fixme[10]: Name `trace_fn` is used but not defined.
         paste_output(lambda sink: trace_fn(pid, sink), processor, out, dry_run)
@@ -902,7 +1031,8 @@ def trace_running_edenfs(
         out.write(f"Error getting EdenFS trace:{e}.\n")
 
 
-def print_recent_events(processor: str, out: IOWithRedaction, dry_run: bool) -> None:
+@timer_decorator
+def print_recent_events(out: IOWithRedaction, processor: str, dry_run: bool) -> None:
     section_title("EdenFS recent events", out)
     for opt in ["thrift", "sl", "inode"]:
         trace_cmd = [
@@ -982,8 +1112,9 @@ def print_sample_trace(pid: int, sink: IO[bytes]) -> None:
     )
 
 
+@timer_decorator
 def print_third_party_vscode_extensions(
-    instance: EdenInstance, out: IOWithRedaction
+    out: IOWithRedaction, instance: EdenInstance
 ) -> None:
     problematic_extensions = (
         VSCodeExtensionsChecker().find_problematic_vscode_extensions(instance)
@@ -1007,6 +1138,7 @@ def print_third_party_vscode_extensions(
         out.write("None\n")
 
 
+@timer_decorator
 def print_ulimits(out: IOWithRedaction) -> None:
     if sys.platform == "win32":
         return
