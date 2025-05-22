@@ -12,6 +12,7 @@ use anyhow::Error;
 use anyhow::Result;
 use anyhow::anyhow;
 use context::CoreContext;
+use rate_limiting::RateLimit;
 use sha2::Digest;
 use sha2::Sha256;
 use slog::debug;
@@ -50,12 +51,13 @@ pub async fn counter_check_and_bump<'a>(
     ctx: &'a CoreContext,
     counter: BoxGlobalTimeWindowCounter,
     bump_value: f64,
-    rate_limit_name: &'a str,
-    max_value: f64,
-    time_window: u32,
+    rate_limit: RateLimit,
     enforced: bool,
     scuba_extras: HashMap<&'a str, &'a str>,
 ) -> Result<(), Error> {
+    let max_value = rate_limit.body.raw_config.limit;
+    let time_window = rate_limit.fci_metric.window.as_secs() as u32;
+
     let mut scuba = ctx.scuba().clone();
     for (key, val) in scuba_extras {
         scuba.add(key, val);
@@ -65,43 +67,30 @@ pub async fn counter_check_and_bump<'a>(
         Ok(Ok(count)) => {
             let new_value = count + bump_value;
             if new_value <= max_value {
-                debug!(
-                    ctx.logger(),
-                    "Rate-limiting counter {} ({}) does not exceed threshold {} if bumped",
-                    rate_limit_name,
-                    count,
-                    max_value,
-                );
                 counter.bump(bump_value);
                 Ok(())
             } else if !enforced {
                 debug!(
                     ctx.logger(),
-                    "Rate-limiting counter {} ({}) exceeds threshold {} if bumped, but enforcement is disabled",
-                    rate_limit_name,
+                    "Rate-limiting counter {:?} (current value:  {}) exceeds threshold {} if bumped, but enforcement is disabled",
+                    rate_limit,
                     count,
                     max_value,
                 );
                 let log_tag = "Request would have been rejected due to rate limiting, but enforcement is disabled";
-                let msg = format!(
-                    "Rate limit exceeded: {}, limit: {} (log only)",
-                    rate_limit_name, max_value
-                );
+                let msg = format!("Rate limit exceeded: {:?} (log only)", rate_limit);
                 scuba.log_with_msg(log_tag, msg);
                 Ok(())
             } else {
                 debug!(
                     ctx.logger(),
-                    "Rate-limiting counter {} ({}) exceeds threshold {} if bumped. Blocking request",
-                    rate_limit_name,
+                    "Rate-limiting counter {:?} (current_value: {}) exceeds threshold {} if bumped. Blocking request",
+                    rate_limit,
                     count,
                     max_value,
                 );
                 let log_tag = "Request rejected due to rate limiting";
-                let msg = format!(
-                    "Rate limit exceeded: {}, limit: {} (enforced)",
-                    rate_limit_name, max_value
-                );
+                let msg = format!("Rate limit exceeded: {:?} (enforced)", rate_limit);
                 scuba.log_with_msg(log_tag, msg.clone());
                 Err(anyhow!(msg))
             }
@@ -111,14 +100,14 @@ pub async fn counter_check_and_bump<'a>(
             // or it's not been long enough. Bump and continue.
             debug!(
                 ctx.logger(),
-                "Failed getting rate limiting counter {}: {:?}", rate_limit_name, e
+                "Failed getting rate limiting counter {:?}: {}", rate_limit, e
             );
             counter.bump(bump_value);
             Ok(())
         }
         Err(_) => {
             let log_tag = "Rate limiting counter fetch timed out";
-            let msg = format!("Rate limit {}: Timed out", rate_limit_name);
+            let msg = format!("Rate limit {:?}: Timed out", rate_limit);
             scuba.log_with_msg(log_tag, Some(msg));
             // Fail open to prevent DoS as we can't check the rate limit
             Ok(())
@@ -134,6 +123,12 @@ mod test {
     use async_trait::async_trait;
     use fbinit::FacebookInit;
     use mononoke_macros::mononoke;
+    use rate_limiting::FciMetric;
+    use rate_limiting::Metric;
+    use rate_limiting::RateLimitBody;
+    use rate_limiting::RateLimitStatus;
+    use rate_limiting::Scope;
+    use rate_limiting::Target;
     use time_window_counter::GlobalTimeWindowCounter;
 
     use super::*;
@@ -157,9 +152,23 @@ mod test {
     #[mononoke::fbinit_test]
     async fn test_counter_check_and_bump(fb: FacebookInit) {
         let ctx = CoreContext::test_mock(fb);
-        let rate_limit_name = "test";
         let max_value = 10.0;
         let scuba_extras = HashMap::new();
+
+        let limit = RateLimit {
+            body: RateLimitBody {
+                raw_config: rate_limiting_config::RateLimitBody {
+                    limit: max_value,
+                    status: RateLimitStatus::Enforced,
+                },
+            },
+            fci_metric: FciMetric {
+                metric: Metric::Commits,
+                window: Duration::from_secs(1),
+                scope: Scope::Global,
+            },
+            target: Some(Target::MainClientId("test_target".to_string())),
+        };
 
         // Test case: Counter below maximum value
         let counter = Box::new(MockBoxGlobalTimeWindowCounter {
@@ -169,9 +178,7 @@ mod test {
             &ctx,
             counter,
             1.0,
-            rate_limit_name,
-            max_value,
-            1,
+            limit.clone(),
             true,
             scuba_extras.clone(),
         )
@@ -185,9 +192,7 @@ mod test {
             &ctx,
             counter,
             1.0,
-            rate_limit_name,
-            max_value,
-            1,
+            limit.clone(),
             true,
             scuba_extras.clone(),
         )
@@ -201,9 +206,7 @@ mod test {
             &ctx,
             counter,
             1.0,
-            rate_limit_name,
-            max_value,
-            1,
+            limit.clone(),
             true,
             scuba_extras.clone(),
         )
@@ -214,17 +217,8 @@ mod test {
         let counter = Box::new(MockBoxGlobalTimeWindowCounter {
             count: Arc::new(Mutex::new(11.0)),
         });
-        let result = counter_check_and_bump(
-            &ctx,
-            counter,
-            1.0,
-            rate_limit_name,
-            max_value,
-            1,
-            false,
-            scuba_extras.clone(),
-        )
-        .await;
+        let result =
+            counter_check_and_bump(&ctx, counter, 1.0, limit, false, scuba_extras.clone()).await;
         assert!(result.is_ok());
     }
 }

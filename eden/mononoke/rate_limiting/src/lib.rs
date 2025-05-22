@@ -284,9 +284,9 @@ pub enum Scope {
 
 #[derive(Debug, Copy, Clone, PartialEq)]
 pub struct FciMetric {
-    metric: Metric,
+    pub metric: Metric,
     pub window: Duration,
-    scope: Scope,
+    pub scope: Scope,
 }
 
 #[must_use]

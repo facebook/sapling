@@ -236,8 +236,6 @@ async fn bump_counter_check_ratelimit(
         RateLimitStatus::Enforced => true,
         _ => panic!("Invalid limit status: {:?}", limit.body.raw_config.status),
     };
-    let max_value = limit.body.raw_config.limit;
-    let time_window = limit.fci_metric.window.as_secs() as u32;
 
     let client_main_id = match &client_request_info.main_id {
         Some(client_main_id) => client_main_id,
@@ -252,9 +250,7 @@ async fn bump_counter_check_ratelimit(
         &ctx,
         counter,
         bump_value,
-        rate_limit_name,
-        max_value,
-        time_window,
+        limit,
         enforced,
         hashmap! {"client_main_id" => client_main_id.as_str() },
     )
