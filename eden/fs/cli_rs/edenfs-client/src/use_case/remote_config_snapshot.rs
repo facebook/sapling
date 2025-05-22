@@ -82,6 +82,15 @@ pub(crate) const REMOTE_CONFIG_SNAPSHOT: &str = r#"
           }
         }
     },
+    "scm-eden-container": {
+        "use_case_id": "scm-eden-container",
+        "oncall": "scm_server_infra",
+        "config": {
+          "edenfs_limits": {
+            "max_concurrent_requests": 512
+          }
+        }
+    },
     "testifyd": {
         "use_case_id": "testifyd",
         "oncall": "testing_frameworks",
