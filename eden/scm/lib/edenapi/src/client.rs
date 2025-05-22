@@ -341,6 +341,8 @@ impl Client {
             req.set_accept_encoding([encoding.clone()]);
         }
 
+        req.set_follow_redirects(config.http_config.follow_redirects);
+
         if let Some(mts) = config.handler_min_transfer_speeds.get(base_path) {
             tracing::trace!(
                 ?mts,

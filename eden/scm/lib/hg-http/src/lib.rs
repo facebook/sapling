@@ -108,6 +108,13 @@ pub fn http_config(
         hc.limit_response_buffering = limit;
     }
 
+    if let Some(follow) = config
+        .get_opt("http", "follow-redirects")
+        .unwrap_or_default()
+    {
+        hc.follow_redirects = follow;
+    }
+
     let using_auth_proxy = hc.unix_socket_path.is_some()
         && url_for_auth
             .domain()

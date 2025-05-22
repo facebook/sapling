@@ -20,6 +20,7 @@ use std::time::SystemTime;
 use clientinfo::CLIENT_INFO_HEADER;
 use curl::easy::HttpVersion;
 use curl::easy::List;
+use curl::easy::PostRedirections;
 use curl_sys::CURLOPTTYPE_LONG;
 use curl_sys::CURLoption;
 use http::header;
@@ -194,6 +195,7 @@ pub struct Request {
     limit_response_buffering: bool,
     read_buffer_size: Option<u64>,
     write_buffer_size: Option<u64>,
+    follow_redirects: bool,
 }
 
 static REQUEST_CREATION_LISTENERS: Lazy<RwLock<RequestCreationEventListeners>> =
@@ -289,6 +291,7 @@ impl Request {
             limit_response_buffering: false,
             read_buffer_size: None,
             write_buffer_size: None,
+            follow_redirects: true,
         }
     }
 
@@ -396,6 +399,12 @@ impl Request {
         self.set_header("Content-Type", "application/cbor")
             .set_body(serde_cbor::to_vec(value)?);
         Ok(self)
+    }
+
+    /// Enables or disables following redirects (equivalent to CURLOPT_FOLLOWLOCATION or -L flag).
+    pub fn set_follow_redirects(&mut self, follow_redirects: bool) -> &mut Self {
+        self.follow_redirects = follow_redirects;
+        self
     }
 
     /// Set a request header.
@@ -709,6 +718,10 @@ impl Request {
         easy.url(url.as_str())?;
         easy.verbose(self.verbose)?;
         easy.unix_socket_path(self.auth_proxy_socket_path)?;
+        if self.follow_redirects {
+            easy.follow_location(true)?;
+            easy.post_redirections(PostRedirections::new().redirect_all(true))?;
+        }
 
         match std::env::var("HTTP_PROXY") {
             Ok(proxy) => easy.proxy(&proxy)?,
