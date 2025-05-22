@@ -12,9 +12,6 @@
 //!
 //! [1]: https://github.com/facebook/sapling
 
-/// Modify this module for remote (configerator) config loading.
-pub(crate) use remote_loader;
-
 /// Modify this module for dynamic (conditional) system config.
 pub(crate) mod dynamic_system;
 pub(crate) mod remote_config_snapshot;
@@ -24,6 +21,7 @@ pub(crate) mod static_system;
 
 /// Supporting libraries.
 pub(crate) mod internalconfig;
+pub(crate) mod internalconfigs;
 pub(crate) mod thrift_types;
 
 mod mode;
