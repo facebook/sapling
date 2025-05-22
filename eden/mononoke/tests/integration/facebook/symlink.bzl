@@ -1,5 +1,5 @@
 load(
-    "//eden/mononoke/tests/integration/facebook:symlink_impl.bzl?v2_only",
+    "//eden/mononoke/tests/integration/facebook:symlink_impl.bzl",
     "symlink_v2",
 )
 
