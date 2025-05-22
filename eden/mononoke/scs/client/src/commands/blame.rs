@@ -13,7 +13,7 @@ use std::io::Write;
 use anyhow::Result;
 use anyhow::format_err;
 use clap::Parser;
-use commit_id::CommitIdArgs;
+use commit_id_types::CommitIdArgs;
 use maplit::btreeset;
 use scs_client_raw::thrift;
 use serde_json::json;

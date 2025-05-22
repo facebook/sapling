@@ -21,7 +21,7 @@ use anyhow::Result;
 use anyhow::bail;
 use bytesize::ByteSize;
 use cloned::cloned;
-use commit_id::CommitIdArgs;
+use commit_id_types::CommitIdArgs;
 use futures::AsyncWrite;
 use futures::TryFutureExt;
 use futures::future::BoxFuture;

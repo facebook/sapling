@@ -15,7 +15,7 @@ use std::num::NonZeroU64;
 use anyhow::Error;
 use anyhow::format_err;
 use clap::Args;
-use commit_id::CommitId;
+use commit_id_types::CommitId;
 use faster_hex::hex_string;
 use futures::future::FutureExt;
 use futures::future::try_join_all;

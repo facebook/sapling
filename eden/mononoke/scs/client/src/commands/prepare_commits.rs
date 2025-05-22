@@ -6,7 +6,7 @@
  */
 
 use anyhow::Result;
-use commit_id::CommitIdsArgs;
+use commit_id_types::CommitIdsArgs;
 use scs_client_raw::thrift;
 
 use crate::ScscApp;

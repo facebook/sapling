@@ -9,7 +9,7 @@ use std::io::Write;
 
 use anyhow::Result;
 use anyhow::bail;
-use commit_id::CommitIdsArgs;
+use commit_id_types::CommitIdsArgs;
 use scs_client_raw::thrift;
 use serde::Serialize;
 use source_control_clients::errors::CommitSparseProfileDeltaPollError;

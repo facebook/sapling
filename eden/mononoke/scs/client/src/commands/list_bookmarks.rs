@@ -11,7 +11,7 @@ use std::collections::HashSet;
 use std::io::Write;
 
 use anyhow::Result;
-use commit_id::CommitIdsArgs;
+use commit_id_types::CommitIdsArgs;
 use futures::stream;
 use futures::stream::Stream;
 use futures::stream::StreamExt;

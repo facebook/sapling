@@ -13,7 +13,7 @@ use std::io::Write;
 use anyhow::Result;
 use anyhow::anyhow;
 use anyhow::bail;
-use commit_id::CommitIdArgs;
+use commit_id_types::CommitIdArgs;
 use futures::stream;
 use futures::stream::StreamExt;
 use scs_client_raw::thrift;
