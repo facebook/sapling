@@ -106,20 +106,6 @@ Then install:
 sudo apt install -y ./{ubuntu22.name}
 </CodeBlock>
 
-#### Ubuntu 20.04
-
-Download using `curl`:
-
-<CodeBlock>
-curl -L -o {ubuntu20.name} {ubuntu20.url}
-</CodeBlock>
-
-Then install:
-
-<CodeBlock>
-sudo apt install -y ./{ubuntu20.name}
-</CodeBlock>
-
 #### Arch Linux (AUR)
 
 <CodeBlock>
