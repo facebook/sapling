@@ -5,12 +5,21 @@
 # directory of this source tree.
 
   $ export GIT_CONTENT_REFS_SCRIBE_CATEGORY=mononoke_git_content_refs
+  $ export CONTENT_REFS_SCRIBE_CATEGORY=mononoke_git_content_refs
   $ export MONONOKE_TEST_SCRIBE_LOGGING_DIRECTORY=$TESTTMP/scribe_logs/
   $ . "${TEST_FIXTURES}/library.sh"
   $ REPOTYPE="blob_files"
   $ setup_common_config $REPOTYPE
   $ GIT_REPO_ORIGIN="${TESTTMP}/origin/repo-git"
   $ GIT_REPO="${TESTTMP}/repo-git"
+
+  $ merge_just_knobs <<EOF
+  > {
+  >   "bools": {
+  >     "scm/mononoke:enable_git_ref_content_mapping_caching": true
+  >   }
+  > }
+  > EOF
 
 # Setup git repository
   $ mkdir -p "$GIT_REPO_ORIGIN"

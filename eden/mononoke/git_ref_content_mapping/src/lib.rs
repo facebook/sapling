@@ -5,6 +5,7 @@
  * GNU General Public License version 2.
  */
 
+mod cache;
 mod sql;
 
 use anyhow::Result;
@@ -12,6 +13,7 @@ use async_trait::async_trait;
 use mononoke_types::RepositoryId;
 use mononoke_types::hash::GitSha1;
 
+pub use crate::cache::CachedGitRefContentMapping;
 pub use crate::sql::SqlGitRefContentMapping;
 pub use crate::sql::SqlGitRefContentMappingBuilder;
 
