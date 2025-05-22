@@ -1354,7 +1354,8 @@ class HealthReportCmd(Subcmd):
         """Checks if running version is newer than a pre-configured threshold.
         If provided threshold is 0, the check is skipped and returns True."""
         if (
-            self.running_version_days_threshold != 0
+            sys.platform == "win32"
+            and self.running_version_days_threshold != 0
             and self.version_info.ages_deltas is not None
             and self.version_info.ages_deltas >= self.running_version_days_threshold
         ):

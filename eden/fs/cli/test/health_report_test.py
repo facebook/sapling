@@ -9,6 +9,7 @@
 import argparse
 import json
 import os
+import sys
 
 import tempfile
 import time
@@ -72,6 +73,8 @@ acceptable_running_version_info = VersionInfo(
     True,  # is eden running
     True,  # is dev version
 )
+
+windows_only: bool = sys.platform == "win32"
 
 
 class HealthReportTest(unittest.TestCase, TemporaryDirectoryMixin):
@@ -240,6 +243,7 @@ class HealthReportTest(unittest.TestCase, TemporaryDirectoryMixin):
 
         self.assertEqual(result, 1)
 
+    @unittest.skipUnless(windows_only, "Test only runs on Windows")
     @patch("eden.fs.cli.config.EdenInstance.get_mount_paths")
     @patch("eden.fs.cli.util.get_chef_log_path")
     @patch("eden.fs.cli.doctor.facebook.check_x509.find_x509_path")
@@ -283,6 +287,7 @@ class HealthReportTest(unittest.TestCase, TemporaryDirectoryMixin):
         )
         self.assertEqual(result, 1)
 
+    @unittest.skipUnless(windows_only, "Test only runs on Windows")
     @patch("eden.fs.cli.config.EdenInstance.get_mount_paths")
     @patch("eden.fs.cli.config.EdenInstance.get_config_int")
     @patch("eden.fs.cli.util.get_chef_log_path")
@@ -326,6 +331,7 @@ class HealthReportTest(unittest.TestCase, TemporaryDirectoryMixin):
             HealthReportCmd.error_codes,
         )
 
+    @unittest.skipUnless(windows_only, "Test only runs on Windows")
     @patch("eden.fs.cli.config.EdenInstance.get_mount_paths")
     @patch("eden.fs.cli.util.get_chef_log_path")
     @patch("eden.fs.cli.doctor.facebook.check_x509.find_x509_path")
