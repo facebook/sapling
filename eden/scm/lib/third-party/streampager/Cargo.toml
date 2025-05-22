@@ -17,7 +17,7 @@ name = "streampager"
 dirs = "6.0"
 enum_dispatch = "0.3.13"
 lru = { version = "=0.12.4", default-features = false }
-memmap2 = "0.5.10"
+memmap2 = "0.9.5"
 notify = { version = "5", optional = true }
 regex = "1.11.1"
 scopeguard = "1.2.0"
