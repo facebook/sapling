@@ -58,7 +58,5 @@
 # Push all the changes made so far
   $ git_client push origin $COMMIT_A:refs/commitcloud/upload_1 $COMMIT_A:refs/commitcloud/upload_2 
   To https://localhost:$LOCAL_PORT/repos/git/ro/repo.git
-   ! [remote rejected] e8b927ed84aa5ab33aeada81770a2aaa94f111be -> refs/commitcloud/upload_1 (Commit-cloud upload succeeded. Your commit is now backed up in Mononoke)
-   ! [remote rejected] e8b927ed84aa5ab33aeada81770a2aaa94f111be -> refs/commitcloud/upload_2 (Commit-cloud upload succeeded. Your commit is now backed up in Mononoke)
-  error: failed to push some refs to 'https://localhost:$LOCAL_PORT/repos/git/ro/repo.git'
-  [1]
+   * [new reference]   e8b927ed84aa5ab33aeada81770a2aaa94f111be -> refs/commitcloud/upload_1
+   * [new reference]   e8b927ed84aa5ab33aeada81770a2aaa94f111be -> refs/commitcloud/upload_2
