@@ -377,7 +377,7 @@ def amend(ui, repo, *pats, **opts):
         # If they explicitly disabled the old behavior, disable the new behavior
         # too, for now.
         # internal config: commands.amend.autorebase
-        if ui.configbool("commands", "amend.autorebase") is False:
+        if ui.configbool("commands", "amend.autorebase", True) is False:
             # In the future we'll add a nag message here.
             conf = RESTACK_NEVER
 
