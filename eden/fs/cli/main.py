@@ -1296,7 +1296,7 @@ class HealthReportCmd(Subcmd):
 
     running_version: str = ""
     # a value of 0 turns off the stale version check
-    running_version_days_threshold = 30
+    running_version_days_threshold = 45
     version_info: VersionInfo = VersionInfo()
     error_codes: Dict[ErrorCode, str] = {}
 

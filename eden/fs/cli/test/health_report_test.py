@@ -22,13 +22,12 @@ from eden.fs.cli.version import VersionInfo
 from eden.test_support.temporary_directory import TemporaryDirectoryMixin
 
 from ..main import HealthReportCmd
-from eden.fs.cli.main import HealthReportCmd
 
 # The version "20241030-165642" is the latest version.
-# The version "20240928-144752" is over 30 days old, which is considered stale.
-# The version "20241010-189752" is less than 30 days old, which is considered acceptable.
+# The version "20240910-144752" is over 45 days old, which is considered stale.
+# The version "20241010-189752" is less than 45 days old, which is considered acceptable.
 LATEST_VERSION_STR = "20241030-165642"
-STALE_VERSION_STR = "20240928-144752"
+STALE_VERSION_STR = "20240910-144752"
 ACCEPTABLE_VERSION_STR = "20241010-189752"
 
 
@@ -279,7 +278,7 @@ class HealthReportTest(unittest.TestCase, TemporaryDirectoryMixin):
         self.assertEqual(
             HealthReportCmd.error_codes,
             {
-                HealthReportCmd.ErrorCode.STALE_EDEN_VERSION: "Running EdenFS version: 20240928-144752, installed EdenFS version: 20241030-165642. The running EdenFS daemon is over 30 days out-of-date."
+                HealthReportCmd.ErrorCode.STALE_EDEN_VERSION: "Running EdenFS version: 20240910-144752, installed EdenFS version: 20241030-165642. The running EdenFS daemon is over 45 days out-of-date."
             },
         )
         self.assertEqual(result, 1)

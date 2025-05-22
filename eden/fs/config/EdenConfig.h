@@ -1634,7 +1634,7 @@ class EdenConfig : private ConfigSettingManager {
    */
   ConfigSetting<size_t> healthReportStaleVersionThresholdDays{
       "notifications:health-report-stale-version-threshold-days",
-      30,
+      45,
       this};
 
   /**
