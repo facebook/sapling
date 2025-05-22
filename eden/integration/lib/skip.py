@@ -449,9 +449,11 @@ if "SANDCASTLE" in os.environ:
             class_skipped.append(method_name)
 
     # We don't have passwordless sudo on sandcastle
-    TEST_DISABLED["changes_test.ChangesTestNix"] = [
-        "test_modify_folder_chown",
-    ]
+    # Disable if it's not already disabled
+    if TEST_DISABLED.get("changes_test.ChangesTestNix") is None:
+        TEST_DISABLED["changes_test.ChangesTestNix"] = [
+            "test_modify_folder_chown",
+        ]
 
 try:
     from eden.integration.facebook.lib.skip import add_fb_specific_skips
