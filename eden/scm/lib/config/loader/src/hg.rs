@@ -760,7 +760,7 @@ pub fn calculate_internalconfig(
     domain_override: Option<crate::fb::internalconfig::Domain>,
 ) -> Result<ConfigSet> {
     use crate::fb::internalconfig::Generator;
-    let mut r#gen = Generator::new(
+    let mut g = Generator::new(
         mode,
         repo_name,
         config_dir,
@@ -769,9 +769,9 @@ pub fn calculate_internalconfig(
         allow_remote_snapshot,
     )?;
     if let Some(domain) = domain_override {
-        r#gen.domain = domain;
+        g.domain = domain;
     }
-    r#gen.execute(canary)
+    g.execute(canary)
 }
 
 #[cfg(feature = "fb")]
