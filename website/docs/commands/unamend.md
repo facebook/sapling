@@ -4,7 +4,7 @@ sidebar_position: 42
 
 ## unamend | una
 <!--
-  @generated SignedSource<<1ac9652d2016c5018141767ffd7b8d7e>>
+  @generated SignedSource<<400fd31712ea4f413d5174e0e5266b20>>
   Run `./scripts/generate-command-markdown.py` to regenerate.
 -->
 
@@ -30,6 +30,8 @@ does not have children.
 Although `sl unamend` is typically used to reverse the effects of
 `sl amend`, it actually rolls back the current commit to its previous
 version, regardless of whether the changes resulted from an `sl amend`
-operation or from another operation, such as `sl rebase`.
+operation or from another operation. We disallow `sl unamend` if the
+predecessor&#x27;s parents don&#x27;t match the current commit&#x27;s parents to avoid
+unexpected behavior after, for example, `sl rebase`.
 
 
