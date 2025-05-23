@@ -6,6 +6,7 @@
  */
 
 #include "eden/scm/lib/backingstore/include/SaplingNativeBackingStore.h"
+
 #include "eden/scm/lib/backingstore/src/ffi.rs.h" // @manual
 
 #include <folly/Range.h>
@@ -68,6 +69,7 @@ std::optional<ManifestId> SaplingNativeBackingStore::getManifestNode(
 folly::Try<std::shared_ptr<Tree>> SaplingNativeBackingStore::getTree(
     NodeId node,
     RepoPath path,
+    FetchCause cause,
     FetchMode fetch_mode) {
   XLOGF(DBG7, "Importing tree node={} from hgcache", folly::hexlify(node));
   return folly::makeTryWith([&] {
@@ -176,6 +178,7 @@ void SaplingNativeBackingStore::getTreeAuxDataBatch(
 folly::Try<std::unique_ptr<folly::IOBuf>> SaplingNativeBackingStore::getBlob(
     NodeId node,
     RepoPath path,
+    FetchCause cause,
     FetchMode fetch_mode) {
   XLOGF(DBG7, "Importing blob node={} from hgcache", folly::hexlify(node));
   return folly::makeTryWith([&] {

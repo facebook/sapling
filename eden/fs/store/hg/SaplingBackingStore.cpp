@@ -542,8 +542,10 @@ void SaplingBackingStore::getBlobBatch(
 
 folly::Try<BlobPtr> SaplingBackingStore::getBlobFromBackingStore(
     const HgProxyHash& hgInfo,
+    const ObjectFetchContextPtr& context,
     sapling::FetchMode fetchMode) {
-  auto blob = store_.getBlob(hgInfo.byteHash(), hgInfo.path(), fetchMode);
+  auto blob = store_.getBlob(
+      hgInfo.byteHash(), hgInfo.path(), context->getCause(), fetchMode);
 
   using GetBlobResult = folly::Try<BlobPtr>;
 
@@ -1238,7 +1240,7 @@ folly::SemiFuture<BackingStore::GetTreeResult> SaplingBackingStore::getTree(
       folly::Range{&proxyHash, 1},
       ObjectFetchContext::ObjectType::Tree);
 
-  if (auto tree = getTreeLocal(id, proxyHash)) {
+  if (auto tree = getTreeLocal(id, context, proxyHash)) {
     XLOGF(
         DBG5,
         "imported tree of '{}', {} from hgcache",
@@ -1307,9 +1309,13 @@ SaplingBackingStore::getTreeEnqueue(
 
 TreePtr SaplingBackingStore::getTreeLocal(
     const ObjectId& edenTreeId,
+    const ObjectFetchContextPtr& context,
     const HgProxyHash& proxyHash) {
   auto tree = store_.getTree(
-      proxyHash.byteHash(), proxyHash.path(), sapling::FetchMode::LocalOnly);
+      proxyHash.byteHash(),
+      proxyHash.path(),
+      context->getCause(),
+      sapling::FetchMode::LocalOnly);
 
   if (tree.hasValue() && tree.value()) {
     auto hgObjectIdFormat =
@@ -1325,10 +1331,11 @@ folly::Try<TreePtr> SaplingBackingStore::getTreeRemote(
     const RelativePath& path,
     const Hash20& manifestId,
     const ObjectId& edenTreeId,
-    const ObjectFetchContextPtr& /*context*/) {
+    const ObjectFetchContextPtr& context) {
   auto tree = store_.getTree(
       manifestId.getBytes(),
       path,
+      context->getCause(),
       sapling::FetchMode::RemoteOnly /*, sapling::ClientRequestInfo(context)*/);
 
   using GetTreeResult = folly::Try<TreePtr>;
@@ -1365,7 +1372,7 @@ folly::SemiFuture<BackingStore::GetBlobResult> SaplingBackingStore::getBlob(
       folly::Range{&proxyHash, 1},
       ObjectFetchContext::ObjectType::Blob);
 
-  auto blob = getBlobLocal(proxyHash);
+  auto blob = getBlobLocal(proxyHash, context);
   if (blob.hasValue() && blob.value()) {
     stats_->increment(&SaplingBackingStoreStats::fetchBlobSuccess);
     if (store_.dogfoodingHost()) {
@@ -1729,14 +1736,16 @@ folly::Try<TreePtr> SaplingBackingStore::getTreeFromBackingStore(
   if (path.empty()) {
     fetch_mode = sapling::FetchMode::LocalOnly;
   }
-  tree = store_.getTree(manifestId.getBytes(), path, fetch_mode);
+  tree = store_.getTree(
+      manifestId.getBytes(), path, context->getCause(), fetch_mode);
   if (tree.hasValue() && !tree.value() &&
       fetch_mode == sapling::FetchMode::LocalOnly) {
     // Mercurial might have just written the tree to the store. Refresh the
     // store and try again, this time allowing remote fetches.
     store_.flush();
     fetch_mode = sapling::FetchMode::AllowRemote;
-    tree = store_.getTree(manifestId.getBytes(), path, fetch_mode);
+    tree = store_.getTree(
+        manifestId.getBytes(), path, context->getCause(), fetch_mode);
   }
 
   using GetTreeResult = folly::Try<TreePtr>;

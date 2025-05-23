@@ -4823,6 +4823,9 @@ EdenServiceHandler::semifuture_debugGetBlob(
               edenMount, id, std::move(blob), DataFetchOrigin::DISK_CACHE);
         }));
   }
+
+  auto& context = helper->getFetchContext();
+
   if (originFlags.contains(FROMWHERE_LOCAL_BACKING_STORE)) {
     auto proxyHash = HgProxyHash::load(
         server_->getLocalStore().get(),
@@ -4836,7 +4839,7 @@ EdenServiceHandler::semifuture_debugGetBlob(
     blobFutures.emplace_back(transformToBlobFromOrigin(
         edenMount,
         id,
-        saplingBackingStore->getBlobLocal(proxyHash),
+        saplingBackingStore->getBlobLocal(proxyHash, context),
         DataFetchOrigin::LOCAL_BACKING_STORE));
   }
   if (originFlags.contains(FROMWHERE_REMOTE_BACKING_STORE)) {
@@ -4851,16 +4854,15 @@ EdenServiceHandler::semifuture_debugGetBlob(
     blobFutures.emplace_back(transformToBlobFromOrigin(
         edenMount,
         id,
-        saplingBackingStore->getBlobRemote(proxyHash),
+        saplingBackingStore->getBlobRemote(proxyHash, context),
         DataFetchOrigin::REMOTE_BACKING_STORE));
   }
   if (originFlags.contains(FROMWHERE_ANYWHERE)) {
     blobFutures.emplace_back(
-        store->getBlob(id, helper->getFetchContext())
-            .thenTry([edenMount, id](auto&& blob) {
-              return transformToBlobFromOrigin(
-                  edenMount, id, std::move(blob), DataFetchOrigin::ANYWHERE);
-            }));
+        store->getBlob(id, context).thenTry([edenMount, id](auto&& blob) {
+          return transformToBlobFromOrigin(
+              edenMount, id, std::move(blob), DataFetchOrigin::ANYWHERE);
+        }));
   }
 
   return wrapImmediateFuture(
@@ -5007,6 +5009,8 @@ EdenServiceHandler::semifuture_debugGetTree(
         }));
   }
 
+  auto& context = helper->getFetchContext();
+
   if (originFlags.contains(FROMWHERE_LOCAL_BACKING_STORE)) {
     auto proxyHash = HgProxyHash::load(
         server_->getLocalStore().get(),
@@ -5022,7 +5026,7 @@ EdenServiceHandler::semifuture_debugGetTree(
         edenMount,
         id,
         folly::Try<std::shared_ptr<const Tree>>{
-            saplingBackingStore->getTreeLocal(id, proxyHash)},
+            saplingBackingStore->getTreeLocal(id, context, proxyHash)},
         DataFetchOrigin::LOCAL_BACKING_STORE));
   }
 
@@ -5039,10 +5043,7 @@ EdenServiceHandler::semifuture_debugGetTree(
         edenMount,
         id,
         saplingBackingStore->getTreeRemote(
-            proxyHash.path().copy(),
-            proxyHash.revHash(),
-            id,
-            helper->getFetchContext()),
+            proxyHash.path().copy(), proxyHash.revHash(), id, context),
         DataFetchOrigin::REMOTE_BACKING_STORE));
   }
 

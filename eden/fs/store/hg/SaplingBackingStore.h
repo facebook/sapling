@@ -370,6 +370,7 @@ class SaplingBackingStore final : public BackingStore {
    */
   TreePtr getTreeLocal(
       const ObjectId& edenTreeId,
+      const ObjectFetchContextPtr& context,
       const HgProxyHash& proxyHash);
 
   /**
@@ -460,22 +461,29 @@ class SaplingBackingStore final : public BackingStore {
    */
   folly::Try<BlobPtr> getBlobFromBackingStore(
       const HgProxyHash& hgInfo,
+      const ObjectFetchContextPtr& context,
       sapling::FetchMode fetchMode);
 
   /**
    * Imports the blob identified by the given hash from the hg cache.
    * Returns nullptr if not found.
    */
-  folly::Try<BlobPtr> getBlobLocal(const HgProxyHash& hgInfo) {
-    return getBlobFromBackingStore(hgInfo, sapling::FetchMode::LocalOnly);
+  folly::Try<BlobPtr> getBlobLocal(
+      const HgProxyHash& hgInfo,
+      const ObjectFetchContextPtr& context) {
+    return getBlobFromBackingStore(
+        hgInfo, context, sapling::FetchMode::LocalOnly);
   }
 
   /**
    * Imports the blob identified by the given hash from the remote store.
    * Returns nullptr if not found.
    */
-  folly::Try<BlobPtr> getBlobRemote(const HgProxyHash& hgInfo) {
-    return getBlobFromBackingStore(hgInfo, sapling::FetchMode::RemoteOnly);
+  folly::Try<BlobPtr> getBlobRemote(
+      const HgProxyHash& hgInfo,
+      const ObjectFetchContextPtr& context) {
+    return getBlobFromBackingStore(
+        hgInfo, context, sapling::FetchMode::RemoteOnly);
   }
 
   folly::SemiFuture<GetBlobAuxResult> getBlobAuxData(
