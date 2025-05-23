@@ -48,7 +48,7 @@ mod util;
 
 // Used to determine whether we should gate off certain oxidized edenfsctl commands
 const ROLLOUT_JSON: &str = "edenfsctl_rollout.json";
-const EXPERIMENTAL_COMMANDS: &[&str] = &["remove"];
+const EXPERIMENTAL_COMMANDS: &[&str] = &["glob", "remove"];
 
 // We create a single EdenFsInstance when starting up
 static EDENFS_INSTANCE: OnceLock<EdenFsInstance> = OnceLock::new();
@@ -153,7 +153,7 @@ pub enum TopLevelSubcommand {
     Uptime(crate::uptime::UptimeCmd),
     #[cfg(target_os = "macos")]
     FileAccessMonitor(crate::file_access_monitor::FileAccessMonitorCmd),
-    // Glob(crate::glob::GlobCmd),
+    Glob(crate::glob::GlobCmd),
 }
 
 impl TopLevelSubcommand {
@@ -182,7 +182,7 @@ impl TopLevelSubcommand {
             Uptime(cmd) => cmd,
             #[cfg(target_os = "macos")]
             FileAccessMonitor(cmd) => cmd,
-            // Glob(cmd) => cmd,
+            Glob(cmd) => cmd,
         }
     }
 
@@ -211,7 +211,7 @@ impl TopLevelSubcommand {
             TopLevelSubcommand::Uptime(_) => "uptime",
             #[cfg(target_os = "macos")]
             TopLevelSubcommand::FileAccessMonitor(_) => "file-access-monitor",
-            // TopLevelSubcommand::Glob(_) => "glob",
+            TopLevelSubcommand::Glob(_) => "glob",
         }
     }
 }

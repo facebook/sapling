@@ -18,18 +18,21 @@ use crate::get_edenfs_instance;
 
 #[derive(Parser, Debug)]
 #[clap(
-    about = "Print matching filenames",
-    long_about = "Print matching filenames. Glob patterns can be provided via a pattern file. This command does not do any filtering based on source control state or gitignore files."
+    about = "Print matching filenames. Glob patterns can be provided via a pattern file. This command does not do any filtering based on source control state or gitignore files."
 )]
 pub struct GlobCmd {
-    #[clap(long, help = "Specify path to repo root (default: root of cwd)")]
-    repo: PathBuf,
+    #[clap(
+        long,
+        alias = "repo",
+        help = "Specify path to repo root (default: root of cwd)"
+    )]
+    mount_point: Option<PathBuf>,
 
     #[clap(
         long,
         help = "Obtain patterns to match from FILE, one per line. If FILE is - , read patterns from standard input."
     )]
-    pattern_file: PathBuf,
+    pattern_file: Option<PathBuf>,
 
     // Technically, we use fnmatch, but it uses glob for pattern strings.
     // source: https://man7.org/linux/man-pages/man3/fnmatch.3.html
@@ -69,7 +72,7 @@ pub struct GlobCmd {
 #[async_trait]
 impl crate::Subcommand for GlobCmd {
     async fn run(&self) -> Result<ExitCode> {
-        let instance = get_edenfs_instance();
+        let _instance = get_edenfs_instance();
         Ok(0)
     }
 }
