@@ -71,7 +71,7 @@ impl Default for Inner {
 }
 
 // How many children must be accessed in a directory to consider the directory "walked".
-const DEFAULT_WALK_THRESHOLD: usize = 2;
+const DEFAULT_WALK_THRESHOLD: usize = 3;
 
 // Walk threshold multiplier for shallow walks.
 const DEFAULT_STRICT_MULTIPLIER: usize = 10;
@@ -83,10 +83,10 @@ const DEFAULT_LAX_DEPTH: usize = 0;
 const DEFAULT_WALK_RATIO: f64 = 0.05;
 
 // How often we garbage collect stale walks.
-const DEFAULT_GC_INTERVAL: Duration = Duration::from_secs(5);
+const DEFAULT_GC_INTERVAL: Duration = Duration::from_secs(1);
 
 // How stale a walk must be before we remove it.
-const DEFAULT_GC_TIMEOUT: Duration = Duration::from_secs(5);
+const DEFAULT_GC_TIMEOUT: Duration = Duration::from_secs(2);
 
 impl Detector {
     pub fn new() -> Self {
