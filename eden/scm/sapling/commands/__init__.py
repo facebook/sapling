@@ -2587,8 +2587,7 @@ def _dograft(ui, to_repo, *revs, from_repo=None, **opts):
     * from_repo: The source repo. This may be an external Git repo (e.g., in subtree graft).
     * to_repo: The destination repo (typically the current working repo).
     """
-    if from_repo is None:
-        from_repo = to_repo
+    from_repo = from_repo or to_repo
     if revs and opts.get("rev"):
         ui.warn(
             _(

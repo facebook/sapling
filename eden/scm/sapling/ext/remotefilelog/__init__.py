@@ -303,8 +303,7 @@ def onetimeclientsetup(ui):
     ):
         # Don't prefetch GETs for in-memory merge. We likely don't need the file content
         # at all.
-        if from_repo is None:
-            from_repo = to_repo
+        from_repo = from_repo or to_repo
         if shallowrepo.requirement in from_repo.requirements and not wctx.isinmemory():
             manifest = mctx.manifest()
             files = []

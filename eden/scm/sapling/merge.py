@@ -988,8 +988,7 @@ def manifestmerge(
         else:
             return False
 
-    if from_repo is None:
-        from_repo = to_repo
+    from_repo = from_repo or to_repo
     is_crossrepo = not to_repo.is_same_repo(from_repo)
 
     ui = to_repo.ui
@@ -1293,8 +1292,7 @@ def calculateupdates(
     from_repo=None,
 ):
     """Calculate the actions needed to merge mctx into wctx using ancestors"""
-    if from_repo is None:
-        from_repo = to_repo
+    from_repo = from_repo or to_repo
     ui = to_repo.ui
 
     if len(ancestors) == 1:  # default
