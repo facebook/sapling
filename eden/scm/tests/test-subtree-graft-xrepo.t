@@ -89,7 +89,7 @@ Test subtree graft
   using cached git repo at $TESTTMP/default-hgcache/gitrepos/* (glob)
   grafting 22cc654c7242 "G1"
   $ hg show
-  commit:      d4b49c908230
+  commit:      7a8f5deb02f1
   user:        test <test@example.org>
   date:        Mon Jan 01 00:00:10 2007 +0000
   files:       mygitrepo/a.txt
@@ -97,7 +97,7 @@ Test subtree graft
   Graft "G1"
   
   Grafted from 22cc654c7242ce76728ac8baaab057e3cdf7e024
-  - Grafted path  to mygitrepo
+  - Grafted root directory to mygitrepo
   
   
   diff --git a/mygitrepo/a.txt b/mygitrepo/a.txt
@@ -121,10 +121,10 @@ subtree graft a range of commits should work
   grafting 0e0bbd7f53d7 "G2"
   grafting 2d03d263ac78 "G3"
   $ hg log -G -T '{node|short} {desc}\n' -p -r .^::
-  @  516708be4743 Graft "G3"
+  @  7cab83e56186 Graft "G3"
   │
   │  Grafted from 2d03d263ac7869815998b556ccec69eb36edebda
-  │  - Grafted path  to mygitrepo
+  │  - Grafted root directory to mygitrepo
   │  diff --git a/mygitrepo/a.txt b/mygitrepo/a.txt
   │  --- a/mygitrepo/a.txt
   │  +++ b/mygitrepo/a.txt
@@ -136,10 +136,10 @@ subtree graft a range of commits should work
   │   4
   │   5
   │
-  o  ccd4e9b5eba6 Graft "G2"
+  o  3f234162f88b Graft "G2"
   │
   ~  Grafted from 0e0bbd7f53d7f8dfa9ef6283f68e2aa5d274a185
-     - Grafted path  to mygitrepo
+     - Grafted root directory to mygitrepo
      diff --git a/mygitrepo/a.txt b/mygitrepo/a.txt
      --- a/mygitrepo/a.txt
      +++ b/mygitrepo/a.txt
@@ -154,10 +154,10 @@ subtree graft a range of commits should work
   grafting e815a5c1f804 "G4"
 XXX: handle cross-repo copy tracing
   $ hg log -G -T '{node|short} {desc}\n' -p -r .
-  @  dc73c8c4b2ea Graft "G4"
+  @  288019d70393 Graft "G4"
   │
   ~  Grafted from e815a5c1f80404f40f8fe492f461e91b4cc0e976
-     - Grafted path  to mygitrepo
+     - Grafted root directory to mygitrepo
      diff --git a/mygitrepo/a.txt b/mygitrepo/a.txt
      deleted file mode 100644
      --- a/mygitrepo/a.txt
@@ -228,10 +228,10 @@ Test subtree graft with merge conflicts
   $ hg graft --continue
   grafting 0e0bbd7f53d7 "G2"
   $ hg log -T '{node|short} {desc}\n' -p -r .
-  b60e5eff9858 Graft "G2"
+  8d8e19c83f75 Graft "G2"
   
   Grafted from 0e0bbd7f53d7f8dfa9ef6283f68e2aa5d274a185
-  - Grafted path  to foo
+  - Grafted root directory to foo
   diff --git a/foo/a.txt b/foo/a.txt
   --- a/foo/a.txt
   +++ b/foo/a.txt

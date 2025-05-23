@@ -2779,7 +2779,7 @@ def _makegraftmessage(repo, ctx, opts, from_paths, to_paths):
         if opts.get("log") is not False:
             message.append("Grafted from %s" % ctx.hex())
             for f, t in zip(from_paths, to_paths):
-                message.append("- Grafted path %s to %s" % (f, t))
+                message.append("- Grafted %s to %s" % (f or "root directory", t))
 
             # don't update the user provided title
             if not is_from_user:
