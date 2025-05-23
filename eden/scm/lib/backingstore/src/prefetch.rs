@@ -31,6 +31,16 @@ use types::RepoPathBuf;
 use types::fetch_cause::FetchCause;
 use types::fetch_mode::FetchMode;
 
+macro_rules! info_if {
+    ($cond:expr, $kind:ident, $($rest:tt)*) => {
+        if $cond {
+            tracing::$kind!(tracing::Level::INFO, $($rest)*)
+        } else {
+            tracing::$kind!(tracing::Level::DEBUG, $($rest)*)
+        }
+    };
+}
+
 /// Launch an asynchronous prefetch manager to kick of file/dir prefetches when kicked via the
 /// returned channel. The prefetches are based on active fs walks, according to the walk detector
 /// (prefetching content makes the serial walks go faster). The manager and any active prefetches
@@ -161,7 +171,7 @@ pub(crate) fn prefetch_manager(
                         "starting walk with additional depth offset due to existing walk"
                     );
                 } else if prefetches.len() >= MAX_CONCURRENT_PREFETCHES {
-                    tracing::warn!(?new_walk, "not kicking off new walk - prefetches full");
+                    tracing::debug!(?new_walk, "not kicking off new walk - prefetches full");
                     continue;
                 }
 
@@ -199,15 +209,8 @@ pub(crate) fn prefetch_manager(
     send
 }
 
-macro_rules! info_if {
-    ($cond:expr, $kind:ident, $($rest:tt)*) => {
-        if $cond {
-            tracing::$kind!(tracing::Level::INFO, $($rest)*)
-        } else {
-            tracing::$kind!(tracing::Level::DEBUG, $($rest)*)
-        }
-    };
-}
+// Arbitrary cutoff for more verbose logging.
+const INTERESTING_DEPTH: usize = 7;
 
 /// Start an async prefetch of file content by walking `manifest` using `matcher`,
 /// fetching file content of resultant files via `file_store`. Returns a handle
@@ -227,7 +230,7 @@ pub(crate) fn prefetch(
     let my_handle = handle.clone();
     // Sapling APIs are not async, so to achieve asynchronicity we create a new thread.
     std::thread::spawn(move || {
-        let interesting_walk = walk_depth > 2;
+        let interesting_walk = walk_depth >= INTERESTING_DEPTH;
 
         let _span = info_if!(interesting_walk, span, "prefetch", %walk_root, walk_depth, want_file_content, ?depth_offset).entered();
 
