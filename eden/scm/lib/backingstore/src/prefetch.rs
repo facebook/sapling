@@ -216,8 +216,7 @@ pub(crate) fn prefetch(
     manifest: impl Manifest + Send + Sync + 'static,
     file_store: Arc<dyn FileStore>,
     walk_detector: Arc<walkdetector::Detector>,
-    // ((walk_root, fetch file contents), depth)
-    walk: ((RepoPathBuf, bool), usize),
+    ((walk_root, want_file_content), walk_depth): ((RepoPathBuf, bool), usize),
     depth_offset: Option<usize>,
 ) -> PrefetchHandle {
     // The cancelation works by making our thread below return early when the handle has been
@@ -228,15 +227,15 @@ pub(crate) fn prefetch(
     let my_handle = handle.clone();
     // Sapling APIs are not async, so to achieve asynchronicity we create a new thread.
     std::thread::spawn(move || {
-        let interesting_walk = walk.1 > 2;
+        let interesting_walk = walk_depth > 2;
 
-        let _span = info_if!(interesting_walk, span, "prefetch", ?walk, ?depth_offset).entered();
+        let _span = info_if!(interesting_walk, span, "prefetch", %walk_root, walk_depth, want_file_content, ?depth_offset).entered();
 
         let mut file_count = 0;
         let start_time = Instant::now();
 
         let dir_matcher = match TreeMatcher::from_rules(
-            std::iter::once(make_glob_recursive(&plain_to_glob(walk.0.0.as_str()))),
+            std::iter::once(make_glob_recursive(&plain_to_glob(walk_root.as_str()))),
             true,
         ) {
             Ok(matcher) => matcher,
@@ -246,13 +245,21 @@ pub(crate) fn prefetch(
             }
         };
 
-        let start_depth = walk.0.0.components().count();
+        let walk_depth = if want_file_content {
+            walk_depth
+        } else {
+            // The DepthMatcher is relative to file path depth. To fetch directories at depth=N, we
+            // need to pretend we are fetching files at depth=N+1.
+            walk_depth + 1
+        };
+
+        let start_depth = walk_root.components().count();
         let depth_matcher = DepthMatcher::new(
             // If we have a starting depth offset, increase the matcher's min_depth. This is so we
             // skip prefetching work that is already being handled by another active prefetch for
             // the same root at a shallow depth.
             Some(start_depth + depth_offset.unwrap_or_default()),
-            Some(start_depth + walk.1),
+            Some(start_depth + walk_depth),
         );
 
         let matcher = IntersectMatcher::new(vec![Arc::new(dir_matcher), Arc::new(depth_matcher)]);
@@ -270,7 +277,7 @@ pub(crate) fn prefetch(
 
         let consume_file_fetch = |(fctx, iter): (FetchContext, Box<dyn Iterator<Item = _>>)| {
             iter.for_each(drop);
-            walk_detector.files_preloaded(&walk.0.0, fctx.remote_fetch_count());
+            walk_detector.files_preloaded(&walk_root, fctx.remote_fetch_count());
         };
 
         let mut fetch_batch = |batch: &mut Vec<Key>| {
@@ -317,7 +324,7 @@ pub(crate) fn prefetch(
             }
 
             // Skip the file content fetching if we are only prefetching directories.
-            if !walk.0.1 {
+            if !want_file_content {
                 continue;
             }
 
@@ -384,6 +391,7 @@ mod test {
     use manifest_tree::testutil::TestStore;
     use rand_chacha::ChaChaRng;
     use rand_chacha::rand_core::SeedableRng;
+    use storemodel::KeyStore;
 
     use super::*;
 
@@ -456,6 +464,66 @@ mod test {
                 Key::new(RepoPathBuf::new(), foo_hgid),
                 Key::new(RepoPathBuf::new(), bar_hgid)
             ]
+        );
+
+        Ok(())
+    }
+
+    #[test]
+    fn test_prefetch_dirs() -> anyhow::Result<()> {
+        let store = Arc::new(TestStore::new());
+
+        let file_store = store.clone() as Arc<dyn FileStore>;
+
+        let foo_path: RepoPathBuf = "dir/foo".to_string().try_into()?;
+        let bar_path: RepoPathBuf = "dir/dir2/bar".to_string().try_into()?;
+
+        // Insert a couple files into the file store.
+        let foo_hgid = file_store.insert_data(Default::default(), &foo_path, b"foo content")?;
+        let bar_hgid = file_store.insert_data(Default::default(), &bar_path, b"bar content")?;
+
+        let mut mf = TreeManifest::ephemeral(store.clone());
+
+        // Create corresponding manifest entries.
+        mf.insert(
+            foo_path.clone(),
+            FileMetadata::new(foo_hgid, types::FileType::Regular),
+        )?;
+
+        mf.insert(
+            bar_path.clone(),
+            FileMetadata::new(bar_hgid, types::FileType::Regular),
+        )?;
+
+        for (path, _id, text, _p1, _p2) in mf.finalize(Vec::new())? {
+            store.insert_data(Default::default(), &path, text.as_ref())?;
+        }
+
+        let detector = Arc::new(walkdetector::Detector::new());
+
+        // Prefetch directories for "" at depth=0 (i.e. "*"). This should fetch directory "dir".
+        let handle = prefetch(
+            mf.clone(),
+            file_store.clone(),
+            detector.clone(),
+            (("".to_string().try_into()?, false), 0),
+            None,
+        );
+
+        // Wait for prefetch to complete.
+        while !handle.is_canceled() {
+            std::thread::sleep(Duration::from_millis(1));
+        }
+
+        // We fetched the root dir and "dir/" (but not "dir/dir2").
+        assert_eq!(
+            store
+                .prefetches()
+                .into_iter()
+                .flatten()
+                .map(|k| k.path)
+                .collect::<Vec<RepoPathBuf>>(),
+            vec!["".to_string().try_into()?, "dir".to_string().try_into()?]
         );
 
         Ok(())
