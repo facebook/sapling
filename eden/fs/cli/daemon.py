@@ -298,7 +298,7 @@ def get_edenfs_environment(
     eden_env = {}
 
     # Errors from Rust will be logged to the edenfs log.
-    eden_env["EDENSCM_LOG"] = (
+    eden_env["SL_LOG"] = (
         "clienttelemetry=info,error,walkdetector=info,backingstore::prefetch=info"
     )
 
