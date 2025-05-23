@@ -21,7 +21,7 @@ harness = false
 anyhow = "1.0.95"
 dirs = "6.0"
 faccess = "0.2.4"
-filetime = { version = "0.2.9", optional = true }
+filetime = { version = "0.2.25", optional = true }
 hostcaps = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 hostname = "0.3"
 regex = { version = "1.11.1", optional = true }
