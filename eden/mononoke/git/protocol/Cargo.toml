@@ -41,7 +41,7 @@ rayon = "1.9.0"
 repo_blobstore = { version = "0.1.0", path = "../../blobrepo/repo_blobstore" }
 repo_derived_data = { version = "0.1.0", path = "../../repo_attributes/repo_derived_data" }
 repo_identity = { version = "0.1.0", path = "../../repo_attributes/repo_identity" }
-rustc-hash = "2.1.0"
+rustc-hash = "2.1.1"
 scuba_ext = { version = "0.1.0", path = "../../common/scuba_ext" }
 tempfile = "3.15"
 tokio = { version = "1.45.0", features = ["full", "test-util", "tracing"] }
